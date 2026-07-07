@@ -46,14 +46,14 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             {
                 HandleControl();
                 if (state.Status == RunStatus.Aborted) { SaveAndReport(); return 2; }
-                if (state.Status is RunStatus.Paused or RunStatus.NeedsHuman)
+                if (!opts.DryRun && state.Status is RunStatus.Paused or RunStatus.NeedsHuman)
                 {
                     PushIdleSnapshot();
                     Thread.Sleep(800);
                     continue;
                 }
 
-                if (_backoffUntil is { } until)
+                if (!opts.DryRun && _backoffUntil is { } until)
                 {
                     if (DateTime.UtcNow < until) { PushIdleSnapshot(); Thread.Sleep(1000); continue; }
                     _backoffUntil = null;
