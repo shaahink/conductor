@@ -34,6 +34,39 @@ must never disrupt an in-flight run.
   "processes" lane showing nested CLI invocations (agent bash tools + conductor gates + hooks) with
   live status, à la Claude Code's tool tree.
 
+## Enforced rituals / "batteries" & skills (research + implement)
+The agent is *told* the rules; conductor should also *enforce* the safe ones so AFK runs stay clean.
+- **Branch hygiene.** Optionally create/checkout the per-stage branch (`feat/loom-l<stage>`) itself and
+  assert `branchPattern` before letting a session commit (today it only warns).
+- **Commit/push discipline.** After a green session: assert working tree is clean (commit-or-revert
+  policy), assert the branch is pushed, assert per-checkpoint commit convention — surface violations.
+- **Git safety.** Refuse to run on a detached HEAD / wrong remote; guard against force-push; ensure
+  `.conductor/` stays gitignored except REPORT.md.
+- **Skill batteries** (composable, opt-in per plan, bounded, resume-friendly): pre-session ritual
+  checklist, definition-of-done recap from the doc, recent-failure digest, repo-map/hot-files,
+  lessons brief (see learning pipeline). Design as pluggable `IPromptBattery` sections.
+- Deliverable: research common practices, report findings, and define which become enforced vs advisory.
+
+## Reporting fidelity (AFK)
+- Mid-session, the checkpoint table stays TODO until the agent writes the tracker at the end, and the
+  header "▸ L1.1" can lag the agent's real focus (it's the first not-done row). Improve by:
+  - Writing REPORT.md on a heartbeat during long sessions (not only between sessions) with the latest
+    agent tool-calls + current thinking, so the AFK GitHub view reflects live progress.
+  - Encouraging incremental tracker updates in the ritual, and/or inferring an in-progress checkpoint.
+
+## Lifecycle: pause → redeploy → resume (verify + document)
+- Common flow: pause today, deploy a new conductor build, resume tomorrow. Mostly supported already
+  (control `pause`, atomic `state.json`, pid lock, crash recovery→resume). Consolidate and document:
+  - `conductor pause` (or `Q` quit-after-session) → clean stop at a session boundary.
+  - Swap `bin\conductor.exe` (state schema is additive/back-compatible — covered by StateCompatTests).
+  - `conductor run` → resumes from `state.json` (fix/resume/phase-gate/audit all persisted).
+  - Add a `conductor doctor`/`status --verbose` that prints exactly what will happen on resume.
+
+## Zero-config bootstrap ("just run it in the folder")
+- `conductor` with no plan in the cwd should offer to scaffold: detect repo, tracker, gates
+  (build/test/lint by ecosystem), write a starter `conductor.plan.json`, then run.
+- Auto-detect ecosystem batteries (dotnet/node/pnpm/cargo…) for sensible default gates.
+
 ## Research + polish (queued)
 - Survey comparable autonomous multi-session/agent orchestrators; blend useful patterns.
 - Color-coding/readability + beauty pass inspired by opencode / Claude Code terminals.

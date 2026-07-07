@@ -339,8 +339,8 @@ public static class DashboardRenderer
                 Add("Q", "quit"); Add("A", "abort");
                 break;
         }
-        // Pop-out viewers are available whenever there is buffered output.
-        actions.Add("[grey][[T]] think · [[O]] output · [[D]] docs · [[V]] git · [[X]] prompt[/]");
+        // Pop-out viewers + inject are available whenever a session/buffer exists.
+        actions.Add("[grey][[T]] think · [[O]] output · [[D]] docs · [[V]] git · [[X]] prompt · [[I]] inject[/]");
         return "[grey]" + string.Join("  ", actions) + "[/]";
     }
 
@@ -366,6 +366,18 @@ public static class DashboardRenderer
     }
 
     private static string TrimTo(string s, int max) { s = (s ?? "").Replace("\t", "    "); return max > 0 && s.Length > max ? s[..(max - 1)] + "…" : s; }
+
+    /// <summary>Full-screen input box for the `I` inject action.</summary>
+    public static IRenderable BuildInput(string buffer, int width, int height)
+    {
+        var body = new Rows(
+            new Markup("[grey]Type an instruction for the agent. It is queued to `.conductor/queue/` and injected into the next session prompt (linked as the next workflow step).[/]"),
+            new Markup(""),
+            new Markup($"[bold]▸[/] {Esc(buffer)}[blink]▌[/]"),
+            new Markup(""),
+            new Markup("[grey]Enter submit · Esc cancel · Backspace edit[/]"));
+        return new Panel(body).Header("[bold]inject instruction[/]").Expand().Border(BoxBorder.Double);
+    }
 
 
     public static string StatusColor(string status) => status switch

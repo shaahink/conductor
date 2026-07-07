@@ -222,6 +222,9 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         };
         var logsDir = Path.Combine(plan.StateDir, "logs");
         File.WriteAllText(Path.Combine(logsDir, $"session-{rec.Number:000}.prompt.md"), prompt);
+        // Queued human instructions are now baked into this prompt — mark them consumed so the next
+        // session doesn't re-inject them (files are renamed .done, not deleted — chain stays intact).
+        InstructionQueue.ConsumeAll(plan);
         var rawLog = Path.Combine(logsDir, $"session-{rec.Number:000}.jsonl");
 
         var startHead = Git.Head(plan.Repo);

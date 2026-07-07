@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text;
 using Conductor.Core;
 using Conductor.Models;
 using Spectre.Console;
@@ -32,6 +33,9 @@ public sealed class LiveDashboard : IProgressSink
     private string _modalTitle = "";
     private List<string> _modalLines = new();
     private int _modalOffset;
+
+    private bool _inputActive;
+    private readonly StringBuilder _inputBuffer = new();
 
     public LiveDashboard(PlanConfig? plan = null) => _plan = plan;
 
@@ -124,6 +128,7 @@ public sealed class LiveDashboard : IProgressSink
 
     private IRenderable BuildTarget()
     {
+        if (_inputActive) return DashboardRenderer.BuildInput(_inputBuffer.ToString(), SafeWidth(), SafeHeight());
         if (_modal != Modal.None)
         {
             List<string> lines;
@@ -158,7 +163,9 @@ public sealed class LiveDashboard : IProgressSink
         {
             while (Console.KeyAvailable)
             {
-                var key = Console.ReadKey(intercept: true).Key;
+                var ki = Console.ReadKey(intercept: true);
+                if (_inputActive) { HandleInputKey(ki); continue; }
+                var key = ki.Key;
                 if (_modal != Modal.None) { HandleModalKey(key); continue; }
                 switch (key)
                 {
@@ -167,6 +174,7 @@ public sealed class LiveDashboard : IProgressSink
                     case ConsoleKey.D: OpenModal(Modal.Docs); break;
                     case ConsoleKey.V: OpenModal(Modal.Git); break;
                     case ConsoleKey.X: OpenModal(Modal.Prompt); break;
+                    case ConsoleKey.I when _plan != null: _inputActive = true; _inputBuffer.Clear(); break;
                     case ConsoleKey.P: _keys.Enqueue(ControlAction.PauseAfterSession); break;
                     case ConsoleKey.R: _keys.Enqueue(ControlAction.ResumeRun); break;
                     case ConsoleKey.A: _keys.Enqueue(ControlAction.AbortNow); break;
@@ -177,6 +185,37 @@ public sealed class LiveDashboard : IProgressSink
             }
         }
         catch (InvalidOperationException) { /* input redirected */ }
+    }
+
+    private void HandleInputKey(ConsoleKeyInfo ki)
+    {
+        switch (ki.Key)
+        {
+            case ConsoleKey.Enter:
+                var text = _inputBuffer.ToString().Trim();
+                _inputActive = false;
+                if (text.Length > 0 && _plan != null)
+                {
+                    try
+                    {
+                        var prev = InstructionQueue.List(_plan).LastOrDefault()?.File;
+                        InstructionQueue.Write(_plan, text, prev);
+                        Log($"[injected] queued instruction for next session: {text}");
+                    }
+                    catch (Exception ex) { Log($"[injected] failed to queue: {ex.Message}"); }
+                }
+                _inputBuffer.Clear();
+                break;
+            case ConsoleKey.Escape:
+                _inputActive = false; _inputBuffer.Clear();
+                break;
+            case ConsoleKey.Backspace:
+                if (_inputBuffer.Length > 0) _inputBuffer.Remove(_inputBuffer.Length - 1, 1);
+                break;
+            default:
+                if (!char.IsControl(ki.KeyChar)) _inputBuffer.Append(ki.KeyChar);
+                break;
+        }
     }
 
     private void HandleModalKey(ConsoleKey key)

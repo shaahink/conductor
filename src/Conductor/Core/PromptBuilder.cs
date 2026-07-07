@@ -67,7 +67,13 @@ public sealed class PromptBuilder(PlanConfig plan)
         var path = Path.Combine(plan.PlanDir, plan.TemplatesDir, templateFile);
         var text = File.Exists(path) ? File.ReadAllText(path) : BuiltIn(templateFile);
         foreach (var (k, v) in vars) text = text.Replace("{" + k + "}", v);
-        return text.Trim();
+        text = text.Trim();
+
+        // Human-injected instructions (from the TUI `I` key / `.conductor/queue/`) are appended to
+        // every session prompt so they're delivered even if a custom template omits the placeholder.
+        var queued = InstructionQueue.PromptSection(plan);
+        if (queued.Length > 0) text += "\n\n" + queued;
+        return text;
     }
 
     internal static string BuiltIn(string name) => name switch
