@@ -183,8 +183,8 @@ public static class DashboardRenderer
     // ---------------------------------------------------------------- left column (plan + stage)
 
     private static IRenderable LeftColumn(DashboardState st)
-        => new Rows(new Panel(PlanTable(st)).Header("plan").Expand(),
-                    new Panel(StageTable(st)).Header($"stage {Esc(st.Snap.StageId)}").Expand());
+        => new Rows(new Panel(PlanTable(st)).Header("[aqua]plan[/]").Expand().Border(BoxBorder.Rounded),
+                    new Panel(StageTable(st)).Header($"[aqua]stage {Esc(st.Snap.StageId)}[/]").Expand().Border(BoxBorder.Rounded));
 
     private static IRenderable PlanTable(DashboardState st)
     {
@@ -229,11 +229,11 @@ public static class DashboardRenderer
     // ---------------------------------------------------------------- right column (thinking + gates)
 
     private static IRenderable RightColumn(DashboardState st)
-        => new Rows(new Panel(ThinkingBody(st)).Header("thinking [grey](T to expand)[/]").Expand(),
-                    new Panel(GateBody(st)).Header("gates").Expand());
+        => new Rows(new Panel(ThinkingBody(st)).Header("[aqua]thinking[/] [grey](T)[/]").Expand().Border(BoxBorder.Rounded),
+                    new Panel(GateBody(st)).Header("[aqua]gates[/]").Expand().Border(BoxBorder.Rounded));
 
     private static IRenderable ThinkingPanel(DashboardState st)
-        => new Panel(ThinkingBody(st)).Header("thinking [grey](T to expand)[/]").Expand();
+        => new Panel(ThinkingBody(st)).Header("[aqua]thinking[/] [grey](T)[/]").Expand().Border(BoxBorder.Rounded);
 
     private static IRenderable ThinkingBody(DashboardState st)
     {
@@ -279,7 +279,7 @@ public static class DashboardRenderer
         IRenderable body = st.Agent.Count > 0
             ? new Rows(st.Agent.Select(a => (IRenderable)new Markup(AgentLine(a))).ToArray())
             : new Markup("[grey](no agent output yet)[/]");
-        return new Panel(body).Header("agent [grey](O to expand)[/]").Expand();
+        return new Panel(body).Header("[aqua]agent[/] [grey](O)[/]").Expand().Border(BoxBorder.Rounded);
     }
 
     private static string AgentLine(DashboardState.AgentLine a)
@@ -305,7 +305,7 @@ public static class DashboardRenderer
             rows.Add(new Markup("[bold]gates:[/] " + Esc(st.Snap.GateSummary)));
         rows.AddRange(st.Log.Select(l => (IRenderable)new Markup("[grey]" + Esc(l) + "[/]")));
         rows.Add(new Markup(ActionBar(st.Snap.Status)));
-        return new Panel(new Rows(rows)).Header("conductor").Expand();
+        return new Panel(new Rows(rows)).Header("[aqua]conductor[/]").Expand().Border(BoxBorder.Rounded);
     }
 
     /// <summary>State-machine action bar: only the actions valid in the current status are shown.</summary>
