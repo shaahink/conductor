@@ -9,7 +9,9 @@ stage progress.
 
 ## Current state (2026-07-07)
 - **Active branch:** `feat/dashboard-v2` in worktree `C:\Code\conductor-dev`
-- **Master:** original baseline (pre-v2) — repo is `https://github.com/shaahink/Conductor`
+- **Master:** original baseline (pre-v2)
+- **GitHub:** `https://github.com/shaahink/conductor` (private) — default branch `feat/dashboard-v2`
+  (has all v2 work); `master` = pre-v2 baseline. Pull with `git clone` or `git fetch origin`.
 - **v2 committed** — MVVM refactor, header-stacking fix, thinking dedup, cost separation, activity
   indicator, state-machine action bar, checkpoint titles, token totals, offline `preview` command,
   gate rework (one battery/phase, HEAD-sha cache, stage filter, live timers), scrollable pop-out
