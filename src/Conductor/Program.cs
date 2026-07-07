@@ -26,7 +26,7 @@ app.Configure(c =>
     c.AddCommand<SkipCommand>("skip")
         .WithDescription("Skip the current stage and flag it for human review.");
     c.AddCommand<InjectCommand>("inject")
-        .WithDescription("Queue an instruction for the agent's next session (also available via [I] in the dashboard).");
+        .WithDescription("Queue an instruction for the agent's next session (also available via the I key in the dashboard).");
     c.AddCommand<AbortCommand>("abort")
         .WithDescription("Kill the session and stop the conductor.");
     c.SetExceptionHandler((ex, _) =>

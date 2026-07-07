@@ -90,6 +90,15 @@ than *fix* risky/low-priority items). Better pipeline options:
 - **Resume with enhanced prompts** — when resuming after an interrupt, inject a short "you were
   interrupted because X" context into the resume prompt (already partly there in the base template).
 
+## Token/pipeline efficiency — faster delivery, less chatter
+- Review the agent↔conductor back-and-forth; optimise prompts + rituals for lower token use without
+  losing quality. The agent runs the full battery in its ritual AND conductor re-runs it — collapse
+  to one source of truth to cut tokens/time.
+- Terser session prompt templates: drop boilerplate, keep only the contract rules; stick tightly to
+  the expected deliverable.
+- Optional planning step for complex checkpoints (agent decides whether to plan first, not forced).
+- Track token-cost-per-checkpoint to detect bloat early.
+
 ## Research + polish (queued)
 - Survey comparable autonomous multi-session/agent orchestrators; blend useful patterns.
 - Color-coding/readability + beauty pass inspired by opencode / Claude Code terminals.

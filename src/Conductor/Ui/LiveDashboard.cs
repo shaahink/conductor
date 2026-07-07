@@ -97,6 +97,12 @@ public sealed class LiveDashboard : IProgressSink
     /// <summary>Offline preview: render the seeded state (animated) until a key is pressed.</summary>
     public void RunPreview()
     {
+        // Redirected output (CI / piped) can't host a Live region — render one static frame instead.
+        if (Console.IsOutputRedirected || Console.IsInputRedirected)
+        {
+            AnsiConsole.Write(BuildTarget());
+            return;
+        }
         AnsiConsole.Live(new Text(""))
             .AutoClear(false)
             .Overflow(VerticalOverflow.Crop)
