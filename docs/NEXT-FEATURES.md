@@ -79,6 +79,17 @@ than *fix* risky/low-priority items). Better pipeline options:
   (build/test/lint by ecosystem), write a starter `conductor.plan.json`, then run.
 - Auto-detect ecosystem batteries (dotnet/node/pnpm/cargo…) for sensible default gates.
 
+## Observability & diagnostics (next iteration)
+- **Serilog structured logging** — replace StringBuilder/Console.WriteLine with proper structured logging
+  (Serilog, file+console sinks, levels). No more silent failures. Include session id, stage, attempt,
+  gate name as context properties.
+- **Diagnostic console** — a simulated scrollable log view in the dashboard (like Claude Code's debug
+  pane) so you can watch what conductor is doing without tailing the log file.
+- **Graceful Ctrl+C** — already safe (state saved, sessions resumed), but enhance: on Ctrl+C, write a
+  final heartbeat REPORT.md, queue resume, flush logs, then exit — zero log loss.
+- **Resume with enhanced prompts** — when resuming after an interrupt, inject a short "you were
+  interrupted because X" context into the resume prompt (already partly there in the base template).
+
 ## Research + polish (queued)
 - Survey comparable autonomous multi-session/agent orchestrators; blend useful patterns.
 - Color-coding/readability + beauty pass inspired by opencode / Claude Code terminals.
