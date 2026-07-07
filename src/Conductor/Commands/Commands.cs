@@ -130,6 +130,27 @@ public sealed class ReportCommand : Command<PlanSettings>
     }
 }
 
+/// <summary>Offline dashboard preview: renders the current plan/tracker state (read-only) with
+/// representative synthetic session data, so the UI can be verified without running the plan.</summary>
+public sealed class PreviewCommand : Command<PlanSettings>
+{
+    public override int Execute(CommandContext context, PlanSettings settings)
+    {
+        var plan = PlanConfig.Load(settings.ResolvePlanPath());
+        var statePath = Path.Combine(plan.StateDir, "state.json");
+        var state = RunState.LoadOrNew(statePath, plan.Name);
+        TrackerSnapshot track;
+        try { track = TrackerParser.ParseFile(plan.TrackerPath); }
+        catch { track = new TrackerSnapshot(); }
+
+        var dash = new LiveDashboard();
+        DashboardPreview.Seed(dash, plan, state, track);
+        AnsiConsole.MarkupLine("[grey]rendering preview — press any key to exit…[/]");
+        dash.RunPreview();
+        return 0;
+    }
+}
+
 /// <summary>Writes the control file consumed by a running conductor (works from any terminal).</summary>
 public abstract class CtlCommand(string command, string explanation) : Command<PlanSettings>
 {

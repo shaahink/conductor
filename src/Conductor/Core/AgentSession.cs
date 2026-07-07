@@ -129,8 +129,10 @@ public sealed class AgentSession : IDisposable
             case "reasoning":
                 if (part.TryGetProperty("text", out var rtxt))
                 {
+                    // Push full reasoning text (no truncation) — the buffer dedups growing snapshots
+                    // and the pop-out pager shows it in full; the live panel clips for display.
                     var s = (rtxt.GetString() ?? "").Trim();
-                    if (s.Length > 0) Push("thinking", Trunc(s, 220));
+                    if (s.Length > 0) Push("thinking", s);
                 }
                 break;
             case "tool_use":

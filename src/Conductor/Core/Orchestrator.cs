@@ -791,6 +791,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             SessionCostUsd = agent.CostUsd ?? 0m,
             SessionElapsed = DateTime.UtcNow - agent.StartedUtc,
             LastActivityAgoSec = (DateTime.UtcNow - agent.LastActivityUtc).TotalSeconds,
+            AgentActive = true,
         });
 
     private void PushIdleSnapshot()
@@ -802,42 +803,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     }
 
     private DashboardSnapshot BaseSnapshot(TrackerSnapshot track)
-    {
-        var stage = plan.Stages.FirstOrDefault(s => s.Id == state.CurrentStage);
-        return new DashboardSnapshot
-        {
-            PlanName = plan.Name,
-            Status = state.Status.ToString(),
-            AttentionReason = state.AttentionReason,
-            StageId = state.CurrentStage ?? "-",
-            StageTitle = stage?.Title ?? "",
-            DoneCount = track.Checkpoints.Count(c => c.IsDone),
-            TotalCount = track.Checkpoints.Count,
-            TotalCostUsd = state.TotalCostUsd,
-            TokensInput = state.TotalTokensInput,
-            TokensOutput = state.TotalTokensOutput,
-            TokensReasoning = state.TotalTokensReasoning,
-            CurrentCheckpoint = state.CurrentStage != null
-                ? (track.ForStage(state.CurrentStage).FirstOrDefault(c => !c.IsDone)?.Id ?? "")
-                : "",
-            GateSummary = _lastGates != null ? GateRunner.Summary(_lastGates) : "",
-            Branch = "", // avoid a git call per tick; report has it
-            BackoffUntilUtc = _backoffUntil,
-            SessionNumber = state.SessionCounter,
-            SessionKind = state.Status.ToString(),
-            StageCheckpoints = state.CurrentStage != null
-                ? track.ForStage(state.CurrentStage).Select(c => (c.Id, c.Status)).ToList()
-                : new List<(string, string)>(),
-            StageOverview = plan.Stages.Select(s =>
-            {
-                var rows = track.ForStage(s.Id).ToList();
-                var st = state.SkippedStages.Contains(s.Id) ? "skipped"
-                    : rows.Count > 0 && rows.All(r => r.IsDone) ? "done"
-                    : s.Id == state.CurrentStage ? "active" : "todo";
-                return (s.Id, rows.Count(r => r.IsDone), rows.Count, st);
-            }).ToList(),
-        };
-    }
+        => SnapshotBuilder.Build(plan, state, track,
+            _lastGates != null ? GateRunner.Summary(_lastGates) : "", _backoffUntil);
 
     private void Save() => state.Save(statePath);
 

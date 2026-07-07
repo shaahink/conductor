@@ -1,19 +1,25 @@
 using System.Collections.Concurrent;
 using Conductor.Core;
 using Spectre.Console;
-using Spectre.Console.Rendering;
 
 namespace Conductor.Ui;
 
-/// <summary>Full-screen live dashboard for when you're behind the laptop.</summary>
+/// <summary>
+/// Full-screen live dashboard. Owns the thread-safe buffers, drains agent/log/gate events on the
+/// UI thread, builds an immutable <see cref="DashboardState"/>, and hands it to the pure
+/// <see cref="DashboardRenderer"/>. Producers (orchestrator threads) only enqueue; the single UI
+/// thread reads — so rendering is glitch-free with no cross-thread mutation of render state.
+/// </summary>
 public sealed class LiveDashboard : IProgressSink
 {
     private readonly object _gate = new();
-    private readonly List<(string Kind, string Text, DateTime Utc)> _tail = new();
-    private readonly List<(string Text, DateTime Utc)> _thinking = new();
+    private readonly List<DashboardState.AgentLine> _agent = new();
+    private readonly ReasoningBuffer _thinking = new();
     private readonly List<string> _log = new();
     private readonly ConcurrentQueue<ControlAction> _keys = new();
     private DashboardSnapshot _snap = new();
+    private IReadOnlyList<GateProgress> _gates = Array.Empty<GateProgress>();
+    private int _tick;
 
     public void Log(string line)
     {
@@ -30,48 +36,59 @@ public sealed class LiveDashboard : IProgressSink
         {
             if (ev.Kind == "thinking")
             {
-                _thinking.Add((ev.Text, ev.Utc));
-                if (_thinking.Count > 300) _thinking.RemoveRange(0, 100);
+                _thinking.Add(ev.Text, ev.Utc);
             }
             else
             {
-                _tail.Add((ev.Kind, ev.Text, ev.Utc));
-                if (_tail.Count > 400) _tail.RemoveRange(0, 100);
+                _agent.Add(new DashboardState.AgentLine(ev.Kind, ev.Text, ev.Utc));
+                if (_agent.Count > 500) _agent.RemoveRange(0, 100);
             }
         }
     }
 
     public void Snapshot(DashboardSnapshot snap) { lock (_gate) _snap = snap; }
 
+    public void GateProgress(IReadOnlyList<GateProgress> gates) { lock (_gate) _gates = gates; }
+
     public ControlAction? PollControl() => _keys.TryDequeue(out var a) ? a : null;
 
     /// <summary>Runs on the main thread until the orchestrator task completes.</summary>
     public void RunUiLoop(Task orchestrator)
     {
-        var layout = new Layout("root").SplitRows(
-            new Layout("header").Size(6),
-            new Layout("body").SplitColumns(
-                new Layout("left").Ratio(2),
-                new Layout("right").SplitRows(
-                    new Layout("agent").Ratio(3),
-                    new Layout("thinking").Ratio(2))),
-            new Layout("footer").Size(9));
-
-        AnsiConsole.Live(layout)
+        AnsiConsole.Live(new Text(""))
             .AutoClear(false)
             .Overflow(VerticalOverflow.Crop)
+            .Cropping(VerticalOverflowCropping.Bottom)
             .Start(ctx =>
             {
                 while (!orchestrator.IsCompleted)
                 {
                     PollKeys();
-                    Render(layout);
+                    ctx.UpdateTarget(DashboardRenderer.BuildRoot(BuildState()));
                     ctx.Refresh();
-                    Thread.Sleep(300);
+                    Thread.Sleep(250);
                 }
-                Render(layout);
+                ctx.UpdateTarget(DashboardRenderer.BuildRoot(BuildState()));
                 ctx.Refresh();
             });
+    }
+
+    private DashboardState BuildState()
+    {
+        lock (_gate)
+        {
+            var snap = _gates.Count > 0 ? _snap with { Gates = _gates } : _snap;
+            return new DashboardState
+            {
+                Snap = snap,
+                Agent = _agent.Skip(Math.Max(0, _agent.Count - 15)).ToArray(),
+                Thinking = _thinking.Recent(10).Select(e => new DashboardState.ThinkingLine(e.Utc, e.Text)).ToArray(),
+                Log = _log.Skip(Math.Max(0, _log.Count - 5)).ToArray(),
+                Width = SafeWidth(),
+                Height = SafeHeight(),
+                Tick = _tick++,
+            };
+        }
     }
 
     private void PollKeys()
@@ -97,111 +114,27 @@ public sealed class LiveDashboard : IProgressSink
         catch (InvalidOperationException) { /* input redirected */ }
     }
 
-    private void Render(Layout layout)
+    private static int SafeWidth() { try { return Math.Max(80, Console.WindowWidth); } catch { return 120; } }
+    private static int SafeHeight() { try { return Math.Max(24, Console.WindowHeight); } catch { return 40; } }
+
+    /// <summary>Offline preview: render the seeded state (animated spinner) until a key is pressed.
+    /// No orchestration, no writes — used by `conductor preview` to verify the UI without a run.</summary>
+    public void RunPreview()
     {
-        DashboardSnapshot s;
-        List<(string Kind, string Text, DateTime Utc)> tail;
-        List<(string Text, DateTime Utc)> thinking;
-        List<string> log;
-        lock (_gate)
-        {
-            s = _snap;
-            tail = _tail.TakeLast(15).ToList();
-            thinking = _thinking.TakeLast(8).ToList();
-            log = _log.TakeLast(6).ToList();
-        }
-
-        var statusColor = s.Status switch
-        {
-            "Running" => "green",
-            "VerifyingGates" => "yellow",
-            "Backoff" => "orange1",
-            "Paused" => "grey",
-            "NeedsHuman" => "red",
-            "Completed" => "aqua",
-            "Aborted" => "red",
-            _ => "silver",
-        };
-        var tokens = s.TokensInput + s.TokensOutput > 0
-            ? $" · tokens {Human(s.TokensInput)}in/{Human(s.TokensOutput)}out" + (s.TokensReasoning > 0 ? $"/{Human(s.TokensReasoning)}think" : "")
-            : "";
-        var header = new Rows(
-            new Markup($"[bold aqua]Conductor[/] — [bold]{Esc(s.PlanName)}[/]   [{statusColor}]● {Esc(s.Status)}[/]" +
-                       (s.AttentionReason != null ? $"  [red]{Esc(s.AttentionReason)}[/]" : "")),
-            new Markup($"stage [bold]{Esc(s.StageId)}[/] {Esc(s.StageTitle)} · session #{s.SessionNumber} {Esc(s.SessionKind)}" +
-                       (s.Attempt > 0 ? $" · attempt {s.Attempt}/{s.MaxAttempts}" : "") +
-                       (s.ResumeCount > 0 ? $" · resume {s.ResumeCount}" : "") +
-                       (!string.IsNullOrEmpty(s.CurrentCheckpoint) ? $" · [aqua]▸ {Esc(s.CurrentCheckpoint)}[/]" : "")),
-            new Markup($"checkpoints [bold]{s.DoneCount}/{s.TotalCount}[/] · cost [bold]${s.TotalCostUsd:0.0000}[/]" +
-                       (s.SessionCostUsd > 0 ? $" (session ${s.SessionCostUsd:0.0000})" : "") + tokens +
-                       (s.SessionElapsed > TimeSpan.Zero ? $" · elapsed {s.SessionElapsed:hh\\:mm\\:ss} · last output {s.LastActivityAgoSec:0}s ago" : "") +
-                       (s.BackoffUntilUtc != null ? $" · [orange1]backoff until {s.BackoffUntilUtc:HH:mm} UTC[/]" : "")));
-        layout["header"].Update(new Panel(header).Expand());
-
-        var stages = new Table().Border(TableBorder.Rounded).Expand();
-        stages.AddColumn("Stage");
-        stages.AddColumn("Done");
-        stages.AddColumn("State");
-        foreach (var (id, doneN, total, st) in s.StageOverview)
-        {
-            var mark = st switch
+        AnsiConsole.Live(new Text(""))
+            .AutoClear(false)
+            .Overflow(VerticalOverflow.Crop)
+            .Cropping(VerticalOverflowCropping.Bottom)
+            .Start(ctx =>
             {
-                "done" => "[green]done[/]",
-                "active" => "[bold yellow]← active[/]",
-                "skipped" => "[red]skipped[/]",
-                _ => "[grey]todo[/]",
-            };
-            stages.AddRow(Esc(id), $"{doneN}/{total}", mark);
-        }
-        var current = new Table().Border(TableBorder.Rounded).Expand();
-        current.AddColumn("Checkpoint");
-        current.AddColumn("Status");
-        foreach (var (id, st) in s.StageCheckpoints)
-        {
-            var color = st.StartsWith("DONE", StringComparison.OrdinalIgnoreCase) ? "green"
-                : st.StartsWith("BLOCKED", StringComparison.OrdinalIgnoreCase) ? "red"
-                : st.StartsWith("IN", StringComparison.OrdinalIgnoreCase) ? "yellow" : "grey";
-            current.AddRow(Esc(id), $"[{color}]{Esc(st)}[/]");
-        }
-        layout["left"].Update(new Rows(
-            new Panel(stages).Header("plan"),
-            new Panel(current).Header($"stage {Esc(s.StageId)}")));
-
-        // agent activity (text/tool/result) — auto-tailed
-        IRenderable agentBody = tail.Count > 0
-            ? new Rows(tail.Select(t => (IRenderable)new Markup(Clip(t.Kind, t.Text, t.Utc))).ToArray())
-            : new Markup("[grey](no agent output yet)[/]");
-        layout["agent"].Update(new Panel(agentBody).Header("agent").Expand());
-
-        // thinking lane — dim, auto-tailed
-        IRenderable thinkBody = thinking.Count > 0
-            ? new Rows(thinking.Select(t => (IRenderable)new Markup($"[grey37]{t.Utc:HH:mm:ss} ~ {Esc(t.Text)}[/]")).ToArray())
-            : new Markup("[grey](no thinking captured — needs --thinking + --format json)[/]");
-        layout["thinking"].Update(new Panel(thinkBody).Header("thinking").Expand());
-
-        var footerRows = new List<IRenderable>();
-        if (!string.IsNullOrEmpty(s.GateSummary))
-            footerRows.Add(new Markup("[bold]gates:[/] " + Esc(s.GateSummary)));
-        footerRows.AddRange(log.Select(l => (IRenderable)new Markup("[grey]" + Esc(l) + "[/]")));
-        footerRows.Add(new Markup("[grey][[P]]ause  [[R]]esume  [[K]]ill session  [[S]]kip stage  [[Q]]uit after session  [[A]]bort now[/]"));
-        layout["footer"].Update(new Panel(new Rows(footerRows)).Header("conductor").Expand());
+                while (true)
+                {
+                    try { if (Console.KeyAvailable) { Console.ReadKey(intercept: true); break; } }
+                    catch (InvalidOperationException) { break; }
+                    ctx.UpdateTarget(DashboardRenderer.BuildRoot(BuildState()));
+                    ctx.Refresh();
+                    Thread.Sleep(120);
+                }
+            });
     }
-
-    private static string Clip(string kind, string text, DateTime utc)
-    {
-        var (glyph, color) = kind switch
-        {
-            "tool" => ("»", "deepskyblue1"),
-            "text" => ("·", "silver"),
-            "result" => ("◆", "aqua"),
-            "stderr" => ("!", "orange1"),
-            "system" => ("○", "grey"),
-            _ => (" ", "grey"),
-        };
-        return $"[{color}]{utc:HH:mm:ss} {glyph} {Esc(text)}[/]";
-    }
-
-    private static string Human(long n) => n >= 1_000_000 ? $"{n / 1_000_000.0:0.0}M" : n >= 1000 ? $"{n / 1000.0:0.0}k" : n.ToString();
-
-    private static string Esc(string s) => Markup.Escape(s);
 }
