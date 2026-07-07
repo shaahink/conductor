@@ -64,7 +64,7 @@ public sealed class RunCommand : Command<RunCommand.Settings>
             return orch.Run(cts.Token);
         }
 
-        var dash = new LiveDashboard();
+        var dash = new LiveDashboard(plan);
         var orchestrator = new Orchestrator(plan, state, statePath, dash, opts);
         var task = Task.Run(() => orchestrator.Run(cts.Token));
         dash.RunUiLoop(task);
@@ -143,7 +143,7 @@ public sealed class PreviewCommand : Command<PlanSettings>
         try { track = TrackerParser.ParseFile(plan.TrackerPath); }
         catch { track = new TrackerSnapshot(); }
 
-        var dash = new LiveDashboard();
+        var dash = new LiveDashboard(plan);
         DashboardPreview.Seed(dash, plan, state, track);
         AnsiConsole.MarkupLine("[grey]rendering preview — press any key to exit…[/]");
         dash.RunPreview();

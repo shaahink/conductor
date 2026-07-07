@@ -340,11 +340,33 @@ public static class DashboardRenderer
                 break;
         }
         // Pop-out viewers are available whenever there is buffered output.
-        actions.Add("[grey][[T]] think · [[O]] output[/]");
+        actions.Add("[grey][[T]] think · [[O]] output · [[D]] docs · [[V]] git · [[X]] prompt[/]");
         return "[grey]" + string.Join("  ", actions) + "[/]";
     }
 
-    // ---------------------------------------------------------------- helpers
+    // ---------------------------------------------------------------- modal (scrollable pager)
+
+    /// <summary>Full-screen scrollable pager for T/O/D/V/X pop-outs. <paramref name="lines"/> are the
+    /// full content; <paramref name="offset"/> is the top visible line.</summary>
+    public static IRenderable BuildModal(string title, IReadOnlyList<string> lines, int offset, int width, int height)
+    {
+        var inner = Math.Max(3, height - 4);       // rows available for content inside the panel
+        var total = lines.Count;
+        var maxOffset = Math.Max(0, total - inner);
+        offset = Math.Clamp(offset, 0, maxOffset);
+        var window = lines.Skip(offset).Take(inner).Select(l => (IRenderable)new Markup(Esc(TrimTo(l, width - 6)))).ToArray();
+
+        var body = window.Length > 0 ? new Rows(window) : (IRenderable)new Markup("[grey](empty)[/]");
+        var pos = total == 0 ? "empty" : $"{offset + 1}-{Math.Min(offset + inner, total)} / {total}";
+        var footer = $"[grey]{Esc(pos)}   ↑/↓ PgUp/PgDn Home/End scroll · Esc/q close[/]";
+        return new Panel(new Rows(body, new Markup(""), new Markup(footer)))
+            .Header($"[bold]{Esc(title)}[/]")
+            .Expand()
+            .Border(BoxBorder.Rounded);
+    }
+
+    private static string TrimTo(string s, int max) { s = (s ?? "").Replace("\t", "    "); return max > 0 && s.Length > max ? s[..(max - 1)] + "…" : s; }
+
 
     public static string StatusColor(string status) => status switch
     {
