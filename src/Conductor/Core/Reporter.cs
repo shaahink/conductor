@@ -11,7 +11,7 @@ public static class Reporter
 
     public static string ReportPath(PlanConfig plan) => Path.Combine(plan.StateDir, "REPORT.md");
 
-    public static string Build(PlanConfig plan, RunState state, TrackerSnapshot track, IReadOnlyList<GateResult>? lastGates)
+    public static string Build(PlanConfig plan, RunState state, TrackerSnapshot track, IReadOnlyList<GateResult>? lastGates, string? liveActivity = null)
     {
         var sb = new StringBuilder();
         var done = track.Checkpoints.Count(c => c.IsDone);
@@ -39,6 +39,14 @@ public static class Reporter
         if (state.SkippedStages.Count > 0)
             sb.AppendLine($"**⚠ Skipped stages (need human review):** {string.Join(", ", state.SkippedStages)}");
         sb.AppendLine();
+
+        if (!string.IsNullOrWhiteSpace(liveActivity))
+        {
+            sb.AppendLine("## Latest activity (live)");
+            sb.AppendLine();
+            sb.AppendLine(liveActivity);
+            sb.AppendLine();
+        }
 
         sb.AppendLine("## Stage progress");
         sb.AppendLine();
@@ -140,12 +148,17 @@ public static class Reporter
         return sb.ToString();
     }
 
-    public static void WriteAndPublish(PlanConfig plan, RunState state, TrackerSnapshot track, IReadOnlyList<GateResult>? lastGates, Action<string> log)
+    public static void WriteAndPublish(PlanConfig plan, RunState state, TrackerSnapshot track, IReadOnlyList<GateResult>? lastGates, Action<string> log, string? liveActivity = null, string? commitMessage = null)
     {
+        string newContent;
+        string path = ReportPath(plan);
+        string? old;
         try
         {
             Directory.CreateDirectory(plan.StateDir);
-            File.WriteAllText(ReportPath(plan), Build(plan, state, track, lastGates), Utf8Bom);
+            newContent = Build(plan, state, track, lastGates, liveActivity);
+            old = File.Exists(path) ? File.ReadAllText(path) : null;
+            File.WriteAllText(path, newContent, Utf8Bom);
         }
         catch (Exception ex)
         {
@@ -154,13 +167,17 @@ public static class Reporter
         }
 
         if (!plan.Report.Commit) return;
+        // Skip no-op commits: if nothing but the timestamp changed, don't add to the git history
+        // (this removes the duplicate "chore(conductor): … — Idle" commits).
+        if (old != null && Normalize(old) == Normalize(newContent)) return;
+
         var rel = ".conductor/REPORT.md";
         var add = Git.Exec(plan.Repo, "add", "--force", rel);
         if (add.ExitCode != 0) { log($"report git add failed: {GateRunner.TailOf(add.Output, 3)}"); return; }
         var last = state.History.LastOrDefault();
-        var msg = last != null
+        var msg = commitMessage ?? (last != null
             ? $"chore(conductor): s{last.Number} {last.Stage} {last.Outcome?.ToString() ?? "running"} — {state.Status}"
-            : $"chore(conductor): {state.Status}";
+            : $"chore(conductor): {state.Status}");
         var commit = Git.Exec(plan.Repo, "commit", "-m", msg, "--", rel);
         // exit 1 with "nothing to commit" is fine
         if (commit.ExitCode == 0 && plan.Report.Push)
@@ -169,6 +186,10 @@ public static class Reporter
             if (push.ExitCode != 0) log($"report push failed: {GateRunner.TailOf(push.Output, 3)}");
         }
     }
+
+    /// <summary>Strip the volatile timestamp line so timestamp-only rewrites don't produce commits.</summary>
+    private static string Normalize(string s)
+        => string.Join("\n", s.Replace("\r\n", "\n").Split('\n').Where(l => !l.StartsWith("_Updated ", StringComparison.Ordinal)));
 
     private static string Short(string sha) => sha.Length >= 7 ? sha[..7] : sha;
 

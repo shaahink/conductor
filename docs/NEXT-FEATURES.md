@@ -47,6 +47,18 @@ The agent is *told* the rules; conductor should also *enforce* the safe ones so 
   lessons brief (see learning pipeline). Design as pluggable `IPromptBattery` sections.
 - Deliverable: research common practices, report findings, and define which become enforced vs advisory.
 
+- Gate: optionally fail phase-confirm if the handover lists an unacknowledged critical gap.
+
+## Handover gaps → follow-up work (close the loop)
+The audit fixes what it can, then writes an honest handover listing what's still weak / shortcut /
+deferred. Today those noted gaps can persist (audit is `maxAttempts:1`, and it may *document* rather
+than *fix* risky/low-priority items). Better pipeline options:
+- Parse the handover's "weak / deferred / bugs-not-fixed" bullets into tracked follow-up items
+  (e.g. `.conductor/followups.md` or synthetic checkpoints) so they're not silently forgotten.
+- Feed them into the next phase's session prompt as "known debts to address if cheap".
+- Optionally allow >1 audit pass, or a dedicated "harden" session when the handover flags material gaps.
+- Gate: optionally fail phase-confirm if the handover lists an unacknowledged critical gap.
+
 ## Reporting fidelity (AFK)
 - Mid-session, the checkpoint table stays TODO until the agent writes the tracker at the end, and the
   header "▸ L1.1" can lag the agent's real focus (it's the first not-done row). Improve by:

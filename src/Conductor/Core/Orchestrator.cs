@@ -26,6 +26,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     private readonly string _controlPath = Path.Combine(plan.StateDir, "control.json");
     private readonly string _logPath = Path.Combine(plan.StateDir, "conductor.log");
     private DateTime? _backoffUntil;
+    private readonly List<(string Kind, string Text, DateTime Utc)> _activity = new();
 
     // ---------------------------------------------------------------- main loop
 
@@ -239,9 +240,11 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         using (var agent = AgentSession.Start(plan.Agent, plan.Repo, prompt, rec.ClaudeSessionId,
                    kind == SessionKind.Resume ? rec.ClaudeSessionId : null, rawLog))
         {
+            _activity.Clear();
+            var lastHeartbeat = DateTime.UtcNow;
             while (!agent.HasExited)
             {
-                while (agent.TryDequeue(out var ev)) sink.AgentEvent(ev);
+                while (agent.TryDequeue(out var ev)) { sink.AgentEvent(ev); TrackActivity(ev); }
                 var ctl = HandleControl(inSession: true);
                 if (ctl == ControlAction.KillSession) { killedByUser = true; Log("kill requested"); agent.Kill(); }
                 if (ctl == ControlAction.AbortNow) { killedByUser = true; state.Status = RunStatus.Aborted; Log("abort requested"); agent.Kill(); }
@@ -259,10 +262,16 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     agent.Kill();
                 }
                 PushSessionSnapshot(agent, rec, stage, attempt, maxAttempts, preTrack);
+                // AFK heartbeat: refresh+commit REPORT.md mid-session so the GitHub view reflects live progress.
+                if (plan.Report.HeartbeatMinutes > 0 && (DateTime.UtcNow - lastHeartbeat).TotalMinutes >= plan.Report.HeartbeatMinutes)
+                {
+                    lastHeartbeat = DateTime.UtcNow;
+                    HeartbeatReport(rec, stage, agent, preTrack);
+                }
                 Thread.Sleep(400);
             }
             var exit = agent.WaitForExitCode();
-            while (agent.TryDequeue(out var ev)) sink.AgentEvent(ev);
+            while (agent.TryDequeue(out var ev)) { sink.AgentEvent(ev); TrackActivity(ev); }
             agent.ReapStrays();
 
             rec.EndedUtc = DateTime.UtcNow;
@@ -838,6 +847,53 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             _lastGates != null ? GateRunner.Summary(_lastGates) : "", _backoffUntil);
 
     private void Save() => state.Save(statePath);
+
+    /// <summary>Keep a small ring buffer of recent agent activity for the AFK live-activity report.</summary>
+    private void TrackActivity(AgentEvent ev)
+    {
+        if (ev.Kind is not ("tool" or "text" or "result" or "thinking")) return;
+        _activity.Add((ev.Kind, ev.Text, ev.Utc));
+        if (_activity.Count > 60) _activity.RemoveRange(0, 20);
+    }
+
+    /// <summary>Markdown of the latest agent activity (tool calls + thinking) for REPORT.md.</summary>
+    private string BuildActivitySection(SessionRecord rec, AgentSession agent)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"_Session #{rec.Number} ({rec.Kind}) · running {(DateTime.UtcNow - agent.StartedUtc).TotalMinutes:0}m · " +
+                      $"last output {(DateTime.UtcNow - agent.LastActivityUtc).TotalSeconds:0}s ago" +
+                      (agent.CostUsd is { } c ? $" · ${c:0.0000}" : "") + "_");
+        sb.AppendLine();
+        var think = _activity.Where(a => a.Kind == "thinking").TakeLast(3).ToList();
+        if (think.Count > 0)
+        {
+            sb.AppendLine("**Thinking:**");
+            foreach (var t in think) sb.AppendLine($"> {Trunc(t.Text.Replace("\n", " "), 300)}");
+            sb.AppendLine();
+        }
+        var acts = _activity.Where(a => a.Kind != "thinking").TakeLast(10).ToList();
+        if (acts.Count > 0)
+        {
+            sb.AppendLine("**Recent actions:**");
+            foreach (var a in acts)
+            {
+                var glyph = a.Kind switch { "tool" => "»", "result" => "◆", _ => "·" };
+                sb.AppendLine($"- `{a.Utc.ToLocalTime():HH:mm:ss}` {glyph} {Trunc(a.Text.Replace("\n", " "), 160)}");
+            }
+        }
+        return sb.ToString().TrimEnd();
+    }
+
+    private void HeartbeatReport(SessionRecord rec, StageConfig stage, AgentSession agent, TrackerSnapshot track)
+    {
+        try
+        {
+            var cp = track.ForStage(stage.Id).FirstOrDefault(c => !c.IsDone)?.Id ?? stage.Id;
+            var msg = $"chore(conductor): s{rec.Number} {stage.Id} working ▸{cp} @ {DateTime.Now:HH:mm}";
+            Reporter.WriteAndPublish(plan, state, track, _lastGates, Log, BuildActivitySection(rec, agent), msg);
+        }
+        catch (Exception ex) { Log($"heartbeat report failed: {ex.Message}"); }
+    }
 
     private void SaveAndReport()
     {

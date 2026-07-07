@@ -103,13 +103,22 @@
     "maxBackoffs": 10
   },
 
-  "report": { "commit": true, "push": true },
+  "report": { "commit": true, "push": true, "heartbeatMinutes": 10 },
 
   // Optional: plug any notifier here; {message} is substituted.
   // Example (Windows toast via BurntToast, if installed):
   //   "command": "powershell.exe",
   //   "args": ["-NoProfile", "-Command", "New-BurntToastNotification -Text 'Conductor', '{message}'"]
   "notify": { "command": "", "args": [] },
+
+  // Optional: on-demand status reporter (dashboard `G` key). Runs in a scratch directory with
+  // all context embedded in the prompt — read-only by construction. Set enabled:true to use.
+  "statusAgent": {
+    "enabled": false,
+    "command": "opencode",
+    "args": ["run", "{prompt}", "-m", "deepseek/deepseek-v4-pro"],
+    "timeoutMinutes": 5
+  },
 
   "templatesDir": "templates",
   "promptExtra": ""

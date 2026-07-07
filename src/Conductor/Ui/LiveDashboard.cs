@@ -17,7 +17,7 @@ namespace Conductor.Ui;
 /// </summary>
 public sealed class LiveDashboard : IProgressSink
 {
-    private enum Modal { None, Thinking, Output, Docs, Git, Prompt }
+    private enum Modal { None, Thinking, Output, Docs, Git, Prompt, Status }
 
     private readonly object _gate = new();
     private readonly List<DashboardState.AgentLine> _agent = new();
@@ -36,6 +36,9 @@ public sealed class LiveDashboard : IProgressSink
 
     private bool _inputActive;
     private readonly StringBuilder _inputBuffer = new();
+
+    private volatile bool _statusRunning;
+    private List<string> _statusLines = new();
 
     public LiveDashboard(PlanConfig? plan = null) => _plan = plan;
 
@@ -122,6 +125,7 @@ public sealed class LiveDashboard : IProgressSink
             case ConsoleKey.D: OpenModal(Modal.Docs); break;
             case ConsoleKey.V: OpenModal(Modal.Git); break;
             case ConsoleKey.X: OpenModal(Modal.Prompt); break;
+            case ConsoleKey.G when _plan?.StatusAgent is { Enabled: true }: StartStatusAgent(); break;
             default: _quitPreview = true; break;
         }
     }
@@ -129,6 +133,14 @@ public sealed class LiveDashboard : IProgressSink
     private IRenderable BuildTarget()
     {
         if (_inputActive) return DashboardRenderer.BuildInput(_inputBuffer.ToString(), SafeWidth(), SafeHeight());
+        if (_modal == Modal.Status)
+        {
+            List<string> lines;
+            lock (_gate) lines = _statusRunning
+                ? new List<string> { "status agent is analysing the run…", "", "(this can take a few seconds — Esc to close)" }
+                : _statusLines;
+            return DashboardRenderer.BuildModal("status report" + (_statusRunning ? " (running…)" : ""), lines, _modalOffset, SafeWidth(), SafeHeight());
+        }
         if (_modal != Modal.None)
         {
             List<string> lines;
@@ -137,6 +149,30 @@ public sealed class LiveDashboard : IProgressSink
             return DashboardRenderer.BuildModal(title, lines, _modalOffset, SafeWidth(), SafeHeight());
         }
         return DashboardRenderer.BuildRoot(BuildState());
+    }
+
+    private void StartStatusAgent()
+    {
+        if (_plan?.StatusAgent is not { } cfg || _statusRunning) { _modal = Modal.Status; return; }
+        lock (_gate) { _modal = Modal.Status; _modalOffset = 0; _statusRunning = true; _statusLines = new(); }
+
+        // Snapshot context on the UI thread; run the agent off-thread so the dashboard stays live.
+        var snap = _snap with { Gates = _gates };
+        var recentAgent = _agent.TakeLast(12).Select(a => $"{Glyph(a.Kind)} {a.Text}").ToList();
+        var recentThinking = _thinking.Recent(8).Select(e => e.Text).ToList();
+        var repo = _plan.Repo;
+
+        Task.Run(() =>
+        {
+            var git = GitView.Summary(repo);
+            var prompt = StatusAgent.BuildPrompt(snap, git, recentAgent, recentThinking);
+            var report = StatusAgent.Run(cfg, prompt);
+            lock (_gate)
+            {
+                _statusLines = report.Replace("\r\n", "\n").Split('\n').ToList();
+                _statusRunning = false;
+            }
+        });
     }
 
     private DashboardState BuildState()
@@ -175,6 +211,7 @@ public sealed class LiveDashboard : IProgressSink
                     case ConsoleKey.V: OpenModal(Modal.Git); break;
                     case ConsoleKey.X: OpenModal(Modal.Prompt); break;
                     case ConsoleKey.I when _plan != null: _inputActive = true; _inputBuffer.Clear(); break;
+                    case ConsoleKey.G when _plan?.StatusAgent is { Enabled: true }: StartStatusAgent(); break;
                     case ConsoleKey.P: _keys.Enqueue(ControlAction.PauseAfterSession); break;
                     case ConsoleKey.R: _keys.Enqueue(ControlAction.ResumeRun); break;
                     case ConsoleKey.A: _keys.Enqueue(ControlAction.AbortNow); break;
@@ -221,7 +258,8 @@ public sealed class LiveDashboard : IProgressSink
     private void HandleModalKey(ConsoleKey key)
     {
         const int page = 12;
-        var max = Math.Max(0, _modalLines.Count - 1);
+        var count = _modal == Modal.Status ? _statusLines.Count : _modalLines.Count;
+        var max = Math.Max(0, count - 1);
         switch (key)
         {
             case ConsoleKey.Escape or ConsoleKey.Q: _modal = Modal.None; break;

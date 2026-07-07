@@ -24,6 +24,8 @@ public sealed class PlanConfig
     /// session, full battery only when a stage's checkpoints are all DONE). Default perSession.</summary>
     public string GatePolicy { get; set; } = "perSession";
     public AuditConfig? Audit { get; set; }
+    /// <summary>On-demand read-only "what's the status?" agent (dashboard `G` key). Default null → disabled.</summary>
+    public StatusAgentConfig? StatusAgent { get; set; }
     public LimitsConfig Limits { get; set; } = new();
     public ReportConfig Report { get; set; } = new();
     public NotifyConfig? Notify { get; set; }
@@ -102,6 +104,17 @@ public sealed class AdvisorConfig
     public int TimeoutMinutes { get; set; } = 6;
 }
 
+/// <summary>On-demand "what's the status?" agent (dashboard `G` key). Runs read-only: all context is
+/// embedded in the prompt and it executes in a scratch cwd, so it can't touch the working repo.</summary>
+public sealed class StatusAgentConfig
+{
+    public bool Enabled { get; set; } = true;
+    public string Command { get; set; } = "opencode";
+    /// <summary>Placeholders: {prompt}</summary>
+    public List<string> Args { get; set; } = new() { "run", "{prompt}", "-m", "deepseek/deepseek-v4-pro" };
+    public int TimeoutMinutes { get; set; } = 5;
+}
+
 public sealed class StageConfig
 {
     public string Id { get; set; } = "";
@@ -163,6 +176,9 @@ public sealed class ReportConfig
 {
     public bool Commit { get; set; } = true;
     public bool Push { get; set; } = true;
+    /// <summary>During a long session, rewrite+commit REPORT.md every N minutes with the latest agent
+    /// activity so the AFK GitHub view reflects live progress. 0 = only report at session boundaries.</summary>
+    public int HeartbeatMinutes { get; set; }
 }
 
 public sealed class NotifyConfig
