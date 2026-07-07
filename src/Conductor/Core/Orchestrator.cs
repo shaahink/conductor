@@ -66,6 +66,20 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     NeedsHuman($"tracker {plan.Tracker} has no parseable checkpoint rows — check the table format");
                     continue;
                 }
+
+                // perPhase: a completed stage owes a full-battery verification (then audit) before we advance.
+                if (plan.PerPhaseGates && state.PendingPhaseGate != null)
+                {
+                    if (opts.DryRun)
+                    {
+                        sink.Log($"--- DRY RUN: would run the FULL-battery phase gate for stage {state.PendingPhaseGate.StageId} (nothing executed) ---");
+                        return 0;
+                    }
+                    RunPhaseGate(state.PendingPhaseGate, ct);
+                    if (opts.Once && state.PendingAudit == null && state.PendingFix == null) return 0;
+                    continue;
+                }
+
                 var allDone = AllEffectivelyDone(track);
                 if (allDone && state.PendingFix == null && state.PendingResume == null)
                 {
@@ -85,6 +99,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 if (stage.Id != state.CurrentStage)
                 {
                     state.CurrentStage = stage.Id;
+                    state.CurrentStageStartHead = Git.Head(plan.Repo);
                     state.AttemptsThisStage = 0;
                     state.PendingFix = null;
                     Log($"stage → {stage.Id} {stage.Title}");
@@ -97,8 +112,28 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     continue;
                 }
 
+                // perPhase: this stage's rows are all DONE but it isn't confirmed yet, and no fix/resume/audit
+                // is queued → owe a full-battery phase gate rather than another deliver session.
+                if (plan.PerPhaseGates && track.StageDone(stage.Id)
+                    && state.PendingFix == null && state.PendingResume == null && state.PendingAudit == null)
+                {
+                    if (opts.DryRun)
+                    {
+                        sink.Log($"--- DRY RUN: stage {stage.Id} checkpoints all DONE — would run the full-battery phase gate next (nothing executed) ---");
+                        return 0;
+                    }
+                    state.PendingPhaseGate = new PendingPhaseGate
+                    {
+                        StageId = stage.Id,
+                        StageStartHead = state.CurrentStageStartHead ?? Git.Head(plan.Repo),
+                    };
+                    Log($"stage {stage.Id} checkpoints all DONE — scheduling full-battery phase gate");
+                    Save();
+                    continue;
+                }
+
                 var maxAttempts = MaxAttempts(stage);
-                if (state.AttemptsThisStage >= maxAttempts)
+                if (state.AttemptsThisStage >= maxAttempts && state.PendingAudit == null)
                 {
                     if (!EscalateExhaustedStage(stage, track, maxAttempts)) continue; // paused/skip handled inside
                 }
@@ -111,7 +146,9 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
                 if (opts.DryRun)
                 {
-                    var kind = state.PendingResume != null ? SessionKind.Resume : state.PendingFix != null ? SessionKind.Fix : SessionKind.Deliver;
+                    var kind = state.PendingResume != null ? SessionKind.Resume
+                        : state.PendingAudit != null ? SessionKind.Audit
+                        : state.PendingFix != null ? SessionKind.Fix : SessionKind.Deliver;
                     var prompt = BuildPrompt(kind, stage, state.SessionCounter + 1, state.AttemptsThisStage + 1, maxAttempts);
                     sink.Log($"--- DRY RUN: would start session #{state.SessionCounter + 1} ({kind}, stage {stage.Id}) with prompt: ---");
                     sink.Log(prompt);
@@ -159,10 +196,13 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
     private void RunSession(StageConfig stage, TrackerSnapshot preTrack, CancellationToken ct)
     {
-        // consume pending fix/resume — they describe THIS session
+        // consume pending fix/resume/audit — they describe THIS session
         var pendingResume = state.PendingResume; state.PendingResume = null;
+        var pendingAudit = state.PendingAudit; state.PendingAudit = null;
         var pendingFix = state.PendingFix; state.PendingFix = null;
-        var kind = pendingResume != null ? SessionKind.Resume : pendingFix != null ? SessionKind.Fix : SessionKind.Deliver;
+        var kind = pendingResume != null ? SessionKind.Resume
+            : pendingAudit != null ? SessionKind.Audit
+            : pendingFix != null ? SessionKind.Fix : SessionKind.Deliver;
 
         state.SessionCounter++;
         var attempt = state.AttemptsThisStage + 1;
@@ -170,6 +210,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         var prompt = kind switch
         {
             SessionKind.Resume => _prompts.Resume(stage, state.SessionCounter, attempt, maxAttempts, pendingResume!),
+            SessionKind.Audit => _prompts.Audit(stage, state.SessionCounter, pendingAudit!, state.CurrentStageStartHead ?? "HEAD~1"),
             SessionKind.Fix => _prompts.Fix(stage, state.SessionCounter, attempt, maxAttempts, pendingFix!),
             _ => _prompts.Deliver(stage, state.SessionCounter, attempt, maxAttempts),
         };
@@ -179,6 +220,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             Number = state.SessionCounter,
             Stage = stage.Id,
             Kind = kind,
+            Attempt = attempt,
             StartedUtc = DateTime.UtcNow,
             ClaudeSessionId = pendingResume?.ClaudeSessionId ?? Guid.NewGuid().ToString(),
             ResumeCount = pendingResume?.ResumeCount ?? 0,
@@ -195,6 +237,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             (kind == SessionKind.Resume ? $" (resume #{rec.ResumeCount} of {rec.ClaudeSessionId[..8]})" : ""));
 
         bool stalled = false, timedOut = false, killedByUser = false;
+        GateRunner.RunHook(plan, plan.Setup, "setup", Log, ct);
         using (var agent = AgentSession.Start(plan.Agent, plan.Repo, prompt, rec.ClaudeSessionId,
                    kind == SessionKind.Resume ? rec.ClaudeSessionId : null, rawLog))
         {
@@ -222,10 +265,15 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             }
             var exit = agent.WaitForExitCode();
             while (agent.TryDequeue(out var ev)) sink.AgentEvent(ev);
+            agent.ReapStrays();
 
             rec.EndedUtc = DateTime.UtcNow;
             rec.CostUsd = agent.CostUsd;
             rec.NumTurns = agent.NumTurns;
+            rec.TokensInput = agent.TokensInput;
+            rec.TokensOutput = agent.TokensOutput;
+            rec.TokensReasoning = agent.TokensReasoning;
+            rec.TokensCacheRead = agent.TokensCacheRead;
             rec.ResultSummary = ExtractSessionResult(agent.ResultText);
             Log($"session #{rec.Number} exited (code {exit}, {(rec.EndedUtc - rec.StartedUtc).Value.TotalMinutes:0}m" +
                 (agent.CostUsd.HasValue ? $", ${agent.CostUsd:0.00}" : "") + ")");
@@ -272,13 +320,74 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     private void EvaluateSession(SessionRecord rec, StageConfig stage, TrackerSnapshot preTrack, string startHead,
         bool stalled, bool timedOut, bool killedByUser, bool agentErrored, CancellationToken ct)
     {
+        // Handle non-finishing sessions before spending ~minutes on the gate battery.
+        if (killedByUser)
+        {
+            rec.Outcome = SessionOutcome.KilledByUser;
+            state.Status = RunStatus.Paused;
+            Log("session killed by user — pausing (conductor resume to continue)");
+            SaveAndReport();
+            return;
+        }
+        if (stalled || timedOut)
+        {
+            rec.Outcome = stalled ? SessionOutcome.Stalled : SessionOutcome.TimedOut;
+            state.AttemptsThisStage++;
+            if (rec.ResumeCount < plan.Limits.MaxResumesPerSession)
+            {
+                QueueResume(rec, stalled ? "session stalled (no output)" : "session hit the hard timeout");
+                Log($"will resume agent session (resume {rec.ResumeCount + 1}/{plan.Limits.MaxResumesPerSession})");
+            }
+            else
+            {
+                var verdict = ConsultAdvisor(rec, stage, TrackerParser.ParseFile(plan.TrackerPath), "resume budget exhausted after stall/timeout");
+                ApplyVerdict(verdict, rec, stage, defaultAction: "retry");
+            }
+            state.Status = RunStatus.Idle;
+            SaveAndReport();
+            return;
+        }
+
+        // Audit session: its fixes are confirmed by the full-battery phase gate that runs next,
+        // so we don't run gates inline — just record it and schedule re-verification.
+        if (rec.Kind == SessionKind.Audit)
+        {
+            rec.NewCommits = Git.CommitsSince(plan.Repo, startHead);
+            rec.Outcome = SessionOutcome.Progress;
+            if (!state.AuditedStages.Contains(stage.Id)) state.AuditedStages.Add(stage.Id);
+            state.PendingAudit = null;
+            state.PendingPhaseGate = new PendingPhaseGate
+            {
+                StageId = stage.Id,
+                StageStartHead = state.CurrentStageStartHead ?? startHead,
+            };
+            state.Status = RunStatus.Idle;
+            Log($"audit session #{rec.Number} complete ({rec.NewCommits.Count} commits) — re-verifying phase {stage.Id} with full battery");
+            SaveAndReport();
+            return;
+        }
+
         state.Status = RunStatus.VerifyingGates;
         Save();
         PushIdleSnapshot();
-        Log("verifying independently: gate battery + git + tracker diff");
-        var gates = GateRunner.RunAll(plan, Log, ct);
+        // perPhase: cheap per-session check (fast-tier gates only); the full battery runs at phase end.
+        Log(plan.PerPhaseGates
+            ? "verifying independently: fast gates + git + tracker diff (full battery at phase end)"
+            : "verifying independently: gate battery + git + tracker diff");
+        var gates = RunGateBattery(ct, fastOnly: plan.PerPhaseGates);
         _lastGates = gates;
         rec.GateSummary = GateRunner.Summary(gates);
+
+        // A gate cut short by Ctrl+C / abort is not a real failure — don't burn a fix on it.
+        if (ct.IsCancellationRequested)
+        {
+            rec.Outcome = SessionOutcome.Interrupted;
+            QueueResume(rec, "conductor was cancelled during gate verification");
+            state.Status = RunStatus.Idle;
+            Log("verification interrupted — will re-verify on resume (no fix queued)");
+            SaveAndReport();
+            return;
+        }
 
         var postTrack = TrackerParser.ParseFile(plan.TrackerPath);
         rec.NewCommits = Git.CommitsSince(plan.Repo, startHead);
@@ -292,34 +401,6 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         var dirty = Git.IsDirty(plan.Repo);
 
         Log($"verdict inputs: gates {(gatesGreen ? "green" : "RED")} · commits {rec.NewCommits.Count} · newly DONE [{string.Join(",", rec.NewlyDone)}] · dirty {(dirty ? "YES" : "no")}");
-
-        if (killedByUser)
-        {
-            rec.Outcome = SessionOutcome.KilledByUser;
-            state.Status = RunStatus.Paused;
-            Log("session killed by user — pausing (conductor resume to continue)");
-            SaveAndReport();
-            return;
-        }
-
-        if (stalled || timedOut)
-        {
-            rec.Outcome = stalled ? SessionOutcome.Stalled : SessionOutcome.TimedOut;
-            state.AttemptsThisStage++;
-            if (rec.ResumeCount < plan.Limits.MaxResumesPerSession)
-            {
-                QueueResume(rec, stalled ? "session stalled (no output)" : "session hit the hard timeout");
-                Log($"will resume agent session (resume {rec.ResumeCount + 1}/{plan.Limits.MaxResumesPerSession})");
-            }
-            else
-            {
-                var verdict = ConsultAdvisor(rec, stage, postTrack, "resume budget exhausted after stall/timeout");
-                ApplyVerdict(verdict, rec, stage, defaultAction: "retry");
-            }
-            state.Status = state.Status == RunStatus.VerifyingGates ? RunStatus.Idle : state.Status;
-            SaveAndReport();
-            return;
-        }
 
         if (newlyBlocked.Count > 0 && plan.PauseOnBlocked)
         {
@@ -335,6 +416,17 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             state.PendingFix = null;
             if (dirty) Log($"note: working tree left dirty after green session: {Git.DirtySummary(plan.Repo)}");
             Log($"session #{rec.Number} {rec.Outcome} — {(rec.NewlyDone.Count > 0 ? string.Join(", ", rec.NewlyDone) + " done" : "no checkpoint flipped yet")}");
+
+            // perPhase: if this session completed the stage, schedule the full-battery phase gate.
+            if (plan.PerPhaseGates && postTrack.StageDone(stage.Id))
+            {
+                state.PendingPhaseGate = new PendingPhaseGate
+                {
+                    StageId = stage.Id,
+                    StageStartHead = state.CurrentStageStartHead ?? startHead,
+                };
+                Log($"stage {stage.Id} checkpoints all DONE — scheduling full-battery phase gate");
+            }
         }
         else
         {
@@ -356,13 +448,91 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         SaveAndReport();
     }
 
+    /// <summary>Full-battery verification of a stage whose checkpoints are all DONE (perPhase policy).
+    /// Green → queue the auto-fix audit (once) or confirm the stage; red → queue a fix and stay on the stage.</summary>
+    private void RunPhaseGate(PendingPhaseGate pg, CancellationToken ct)
+    {
+        state.Status = RunStatus.VerifyingGates;
+        Save();
+        PushIdleSnapshot();
+        Log($"phase gate {pg.StageId}: running FULL battery to confirm the phase");
+        var gates = RunGateBattery(ct, fastOnly: false);
+        _lastGates = gates;
+
+        if (ct.IsCancellationRequested)
+        {
+            state.Status = RunStatus.Idle;
+            Log("phase gate interrupted — will re-run on resume");
+            Save();
+            return;
+        }
+
+        if (GateRunner.AllRequiredPassed(gates))
+        {
+            if (plan.Audit is { Enabled: true } && !state.AuditedStages.Contains(pg.StageId))
+            {
+                state.PendingAudit = new PendingAudit { StageId = pg.StageId, StageStartHead = pg.StageStartHead };
+                state.PendingPhaseGate = null;
+                state.Status = RunStatus.Idle;
+                Log($"phase {pg.StageId} full battery GREEN — queuing auto-fix audit session");
+                SaveAndReport();
+            }
+            else
+            {
+                ConfirmStage(pg.StageId);
+            }
+        }
+        else
+        {
+            state.AttemptsThisStage++;
+            state.PendingFix = new PendingFix
+            {
+                FromSession = state.History.LastOrDefault()?.Number ?? 0,
+                GateFailures = GateRunner.FailureDetails(gates),
+                ProgressSummary = $"phase {pg.StageId} full battery is RED although its checkpoints read DONE — make the claims true",
+            };
+            state.PendingPhaseGate = null;
+            state.Status = RunStatus.Idle;
+            Log($"phase {pg.StageId} full battery RED — queuing fix session (attempt {state.AttemptsThisStage}/{MaxAttempts(CurrentStageConfig())})");
+            SaveAndReport();
+        }
+    }
+
+    private void ConfirmStage(string id)
+    {
+        if (!state.ConfirmedStages.Contains(id)) state.ConfirmedStages.Add(id);
+        state.PendingPhaseGate = null;
+        state.PendingAudit = null;
+        state.PendingFix = null;
+        state.AttemptsThisStage = 0;
+        state.Status = RunStatus.Idle;
+        Log($"✓ phase {id} CONFIRMED (full battery green{(state.AuditedStages.Contains(id) ? " + audit" : "")}) — advancing");
+        SaveAndReport();
+    }
+
+    private StageConfig CurrentStageConfig()
+        => plan.Stages.FirstOrDefault(s => s.Id == state.CurrentStage) ?? plan.Stages[^1];
+
     // ---------------------------------------------------------------- decisions
 
+    private IReadOnlyList<GateResult> RunGateBattery(CancellationToken ct, bool fastOnly = false)
+    {
+        GateRunner.RunHook(plan, plan.Setup, "setup", Log, ct);
+        var gates = GateRunner.RunAll(plan, Log, ct, fastOnly);
+        GateRunner.RunHook(plan, plan.Teardown, "teardown", Log, ct);
+        return gates;
+    }
+
     private StageConfig? SelectStage(TrackerSnapshot track)
-        => plan.Stages.FirstOrDefault(s => !track.StageDone(s.Id) && !state.SkippedStages.Contains(s.Id));
+        => plan.Stages.FirstOrDefault(s => !StageComplete(s.Id, track) && !state.SkippedStages.Contains(s.Id));
 
     private bool AllEffectivelyDone(TrackerSnapshot track)
-        => plan.Stages.All(s => track.StageDone(s.Id) || state.SkippedStages.Contains(s.Id));
+        => plan.Stages.All(s => StageComplete(s.Id, track) || state.SkippedStages.Contains(s.Id));
+
+    /// <summary>Under perPhase, a stage is "complete" only once its full battery (and audit) confirmed it —
+    /// so a stage whose tracker rows read DONE but whose phase-gate is red is never advanced past.</summary>
+    private bool StageComplete(string id, TrackerSnapshot track)
+        => plan.PerPhaseGates ? state.ConfirmedStages.Contains(id) : track.StageDone(id);
 
     private int MaxAttempts(StageConfig stage) => Math.Max(1, stage.Sessions * plan.Limits.StageSlackFactor);
 
@@ -461,7 +631,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         state.Status = RunStatus.VerifyingGates;
         Save();
         PushIdleSnapshot();
-        var gates = GateRunner.RunAll(plan, Log, ct);
+        var gates = RunGateBattery(ct);
         _lastGates = gates;
         state.Status = RunStatus.Idle;
         if (GateRunner.AllRequiredPassed(gates)) return true;
@@ -588,6 +758,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     private string BuildPrompt(SessionKind kind, StageConfig stage, int sessionNumber, int attempt, int maxAttempts) => kind switch
     {
         SessionKind.Resume => _prompts.Resume(stage, sessionNumber, attempt, maxAttempts, state.PendingResume!),
+        SessionKind.Audit => _prompts.Audit(stage, sessionNumber, state.PendingAudit!, state.CurrentStageStartHead ?? "HEAD~1"),
         SessionKind.Fix => _prompts.Fix(stage, sessionNumber, attempt, maxAttempts, state.PendingFix!),
         _ => _prompts.Deliver(stage, sessionNumber, attempt, maxAttempts),
     };
@@ -616,6 +787,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             SessionKind = rec.Kind.ToString(),
             Attempt = attempt,
             MaxAttempts = maxAttempts,
+            ResumeCount = rec.ResumeCount,
+            SessionCostUsd = agent.CostUsd ?? 0m,
             SessionElapsed = DateTime.UtcNow - agent.StartedUtc,
             LastActivityAgoSec = (DateTime.UtcNow - agent.LastActivityUtc).TotalSeconds,
         });
@@ -641,6 +814,12 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             DoneCount = track.Checkpoints.Count(c => c.IsDone),
             TotalCount = track.Checkpoints.Count,
             TotalCostUsd = state.TotalCostUsd,
+            TokensInput = state.TotalTokensInput,
+            TokensOutput = state.TotalTokensOutput,
+            TokensReasoning = state.TotalTokensReasoning,
+            CurrentCheckpoint = state.CurrentStage != null
+                ? (track.ForStage(state.CurrentStage).FirstOrDefault(c => !c.IsDone)?.Id ?? "")
+                : "",
             GateSummary = _lastGates != null ? GateRunner.Summary(_lastGates) : "",
             Branch = "", // avoid a git call per tick; report has it
             BackoffUntilUtc = _backoffUntil,

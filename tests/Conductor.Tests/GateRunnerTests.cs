@@ -61,4 +61,31 @@ public class GateRunnerTests
         Assert.Contains("Gate `fail` FAILED (exit 2", details);
         Assert.Contains("line-two", details);
     }
+
+    [Fact]
+    public void FastOnlyRunsOnlyFastTierGates()
+    {
+        var plan = Plan(
+            new GateConfig { Name = "build", Command = "exit 0", Tier = "fast", TimeoutMinutes = 1 },
+            new GateConfig { Name = "tests", Command = "exit 0", Tier = "full", TimeoutMinutes = 1 });
+        var results = GateRunner.RunAll(plan, fastOnly: true);
+        Assert.Single(results);
+        Assert.Equal("build", results[0].Name);
+    }
+
+    [Fact]
+    public void ParallelGatesAllRunAndKeepOrderAndExitCodes()
+    {
+        var plan = Plan(
+            new GateConfig { Name = "build", Command = "exit 0", TimeoutMinutes = 1 },
+            new GateConfig { Name = "a", Command = "Start-Sleep -Milliseconds 200; exit 0", Parallel = true, TimeoutMinutes = 1 },
+            new GateConfig { Name = "b", Command = "Start-Sleep -Milliseconds 200; exit 7", Parallel = true, TimeoutMinutes = 1 });
+        var results = GateRunner.RunAll(plan);
+        // batch runs concurrently but results keep the configured order
+        Assert.Equal(new[] { "build", "a", "b" }, results.Select(r => r.Name));
+        Assert.True(results[0].Passed);
+        Assert.True(results[1].Passed);
+        Assert.Equal(7, results[2].ExitCode);
+        Assert.False(GateRunner.AllRequiredPassed(results));
+    }
 }

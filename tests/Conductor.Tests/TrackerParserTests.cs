@@ -78,7 +78,7 @@ public class TrackerParserTests
         if (!File.Exists(path)) return; // machine-specific — skip elsewhere
         var t = TrackerParser.ParseFile(path);
         Assert.Equal(35, t.Checkpoints.Count); // L0.1–L8.1 (3+5+4+3+4+5+6+4+1)
-        Assert.All(t.Checkpoints, c => Assert.False(c.IsDone)); // fresh plan
-        Assert.Contains("L0", t.Checkpoints.Select(c => c.StageId));
+        Assert.Contains("L0", t.Checkpoints.Select(c => c.StageId)); // stage grouping works
+        Assert.All(t.Checkpoints, c => Assert.False(string.IsNullOrWhiteSpace(c.Id)));
     }
 }

@@ -4,7 +4,7 @@ namespace Conductor.Models;
 
 public enum RunStatus { Idle, Running, VerifyingGates, Backoff, Paused, NeedsHuman, Completed, Aborted }
 
-public enum SessionKind { Deliver, Fix, Resume }
+public enum SessionKind { Deliver, Fix, Resume, Audit }
 
 public enum SessionOutcome
 {
@@ -35,6 +35,11 @@ public sealed class SessionRecord
     public string GateSummary { get; set; } = "";
     public decimal? CostUsd { get; set; }
     public int? NumTurns { get; set; }
+    public long? TokensInput { get; set; }
+    public long? TokensOutput { get; set; }
+    public long? TokensReasoning { get; set; }
+    public long? TokensCacheRead { get; set; }
+    public int Attempt { get; set; }
     public string ResultSummary { get; set; } = "";
 }
 
@@ -53,11 +58,29 @@ public sealed class PendingResume
     public int ResumeCount { get; set; }
 }
 
+/// <summary>A stage whose checkpoints are all DONE and now owes a full-battery verification
+/// (and, once green, an audit). Persisted so an interrupted phase-gate run is redone on restart.</summary>
+public sealed class PendingPhaseGate
+{
+    public string StageId { get; set; } = "";
+    /// <summary>Commit HEAD when the stage's last checkpoint flipped DONE — the audit diffs from here.</summary>
+    public string StageStartHead { get; set; } = "";
+}
+
+/// <summary>A stage whose full battery is green and now owes an auto-fix audit + honest handover.</summary>
+public sealed class PendingAudit
+{
+    public string StageId { get; set; } = "";
+    public string StageStartHead { get; set; } = "";
+}
+
 public sealed class RunState
 {
     public string PlanName { get; set; } = "";
     public RunStatus Status { get; set; } = RunStatus.Idle;
     public string? CurrentStage { get; set; }
+    /// <summary>Git HEAD when the current stage was first entered — the audit diffs from here.</summary>
+    public string? CurrentStageStartHead { get; set; }
     public int SessionCounter { get; set; }
     public int AttemptsThisStage { get; set; }
     public int ConsecutiveBackoffs { get; set; }
@@ -66,10 +89,20 @@ public sealed class RunState
     public List<string> SkippedStages { get; set; } = new();
     public PendingFix? PendingFix { get; set; }
     public PendingResume? PendingResume { get; set; }
+    public PendingPhaseGate? PendingPhaseGate { get; set; }
+    public PendingAudit? PendingAudit { get; set; }
+    /// <summary>Stages whose full battery has passed (and audit completed). SelectStage skips these,
+    /// so a stage with red phase-gates is never advanced past even when its tracker rows read DONE.</summary>
+    public List<string> ConfirmedStages { get; set; } = new();
+    /// <summary>Stages whose auto-fix audit has completed, to avoid re-auditing on resume.</summary>
+    public List<string> AuditedStages { get; set; } = new();
     public List<SessionRecord> History { get; set; } = new();
     public DateTime? UpdatedUtc { get; set; }
 
     public decimal TotalCostUsd => History.Sum(h => h.CostUsd ?? 0m);
+    public long TotalTokensInput => History.Sum(h => h.TokensInput ?? 0);
+    public long TotalTokensOutput => History.Sum(h => h.TokensOutput ?? 0);
+    public long TotalTokensReasoning => History.Sum(h => h.TokensReasoning ?? 0);
 
     public static RunState LoadOrNew(string path, string planName)
     {

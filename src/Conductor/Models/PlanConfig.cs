@@ -14,8 +14,16 @@ public sealed class PlanConfig
     public bool PauseOnBlocked { get; set; } = true;
     public AgentConfig Agent { get; set; } = new();
     public AdvisorConfig? Advisor { get; set; }
+    /// <summary>Optional clean-slate command run before each agent session and before each gate battery.</summary>
+    public HookConfig? Setup { get; set; }
+    /// <summary>Optional command run after each gate battery to stop anything the session/gates left running.</summary>
+    public HookConfig? Teardown { get; set; }
     public List<StageConfig> Stages { get; set; } = new();
     public List<GateConfig> Gates { get; set; } = new();
+    /// <summary>"perSession" (full battery after every session) or "perPhase" (fast-tier gates per
+    /// session, full battery only when a stage's checkpoints are all DONE). Default perSession.</summary>
+    public string GatePolicy { get; set; } = "perSession";
+    public AuditConfig? Audit { get; set; }
     public LimitsConfig Limits { get; set; } = new();
     public ReportConfig Report { get; set; } = new();
     public NotifyConfig? Notify { get; set; }
@@ -26,6 +34,7 @@ public sealed class PlanConfig
     [JsonIgnore] public string PlanDir => Path.GetDirectoryName(PlanFilePath) ?? ".";
     [JsonIgnore] public string StateDir => Path.Combine(Repo, ".conductor");
     [JsonIgnore] public string TrackerPath => Path.Combine(Repo, Tracker);
+    [JsonIgnore] public bool PerPhaseGates => GatePolicy.Equals("perPhase", StringComparison.OrdinalIgnoreCase);
 
     public static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -74,6 +83,15 @@ public sealed class AgentConfig
     public string Output { get; set; } = "stream-json";
 }
 
+public sealed class HookConfig
+{
+    /// <summary>PowerShell command line, run with real exit-code capture. Best-effort: a nonzero exit never blocks the run.</summary>
+    public string Command { get; set; } = "";
+    /// <summary>Working dir relative to repo root (default: repo root).</summary>
+    public string? Cwd { get; set; }
+    public int TimeoutMinutes { get; set; } = 3;
+}
+
 public sealed class AdvisorConfig
 {
     public bool Enabled { get; set; } = true;
@@ -105,7 +123,21 @@ public sealed class GateConfig
     public bool Optional { get; set; }
     /// <summary>Skip the gate while this repo-relative path does not exist yet.</summary>
     public string? SkipIfMissing { get; set; }
+    /// <summary>"fast" gates also run per-session under perPhase policy; "full" gates run only at
+    /// phase end (and every session under perSession policy). Default "full".</summary>
+    public string Tier { get; set; } = "full";
+    /// <summary>Gates sharing a truthy parallel flag run concurrently within their battery.</summary>
+    public bool Parallel { get; set; }
     public int TimeoutMinutes { get; set; } = 20;
+
+    [JsonIgnore] public bool IsFast => Tier.Equals("fast", StringComparison.OrdinalIgnoreCase);
+}
+
+public sealed class AuditConfig
+{
+    public bool Enabled { get; set; } = true;
+    /// <summary>Max audit sessions per phase before giving up and moving on (or escalating).</summary>
+    public int MaxAttempts { get; set; } = 1;
 }
 
 public sealed class LimitsConfig

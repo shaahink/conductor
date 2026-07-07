@@ -24,8 +24,18 @@ public static class Reporter
         sb.AppendLine($"_Updated {DateTime.UtcNow:yyyy-MM-dd HH:mm} UTC · branch `{branch}` · HEAD `{Short(head)}`_");
         sb.AppendLine();
         sb.AppendLine($"**Status:** {state.Status}{(state.AttentionReason != null ? $" — {state.AttentionReason}" : "")}");
-        sb.AppendLine($"**Stage:** {state.CurrentStage ?? "-"}{(stage != null ? $" — {stage.Title}" : "")} · attempts used {state.AttemptsThisStage}");
-        sb.AppendLine($"**Checkpoints:** {done}/{track.Checkpoints.Count} done · **Sessions run:** {state.SessionCounter} · **Cost:** ${state.TotalCostUsd:0.00}");
+        sb.AppendLine($"**Stage:** {state.CurrentStage ?? "-"}{(stage != null ? $" — {stage.Title}" : "")} · attempts used {state.AttemptsThisStage}" +
+                      (NextCheckpoint(track, state.CurrentStage) is { } nc ? $" · working ▸ {nc}" : ""));
+        sb.AppendLine($"**Checkpoints:** {done}/{track.Checkpoints.Count} done · **Sessions run:** {state.SessionCounter} · **Cost:** ${state.TotalCostUsd:0.0000}" +
+                      (state.TotalTokensInput + state.TotalTokensOutput > 0
+                          ? $" · **Tokens:** {state.TotalTokensInput:n0} in / {state.TotalTokensOutput:n0} out" + (state.TotalTokensReasoning > 0 ? $" / {state.TotalTokensReasoning:n0} think" : "")
+                          : ""));
+        if (state.ConfirmedStages.Count > 0)
+            sb.AppendLine($"**Confirmed phases:** {string.Join(", ", state.ConfirmedStages)}");
+        if (state.PendingPhaseGate != null)
+            sb.AppendLine($"**Pending:** full-battery phase gate for {state.PendingPhaseGate.StageId}");
+        if (state.PendingAudit != null)
+            sb.AppendLine($"**Pending:** auto-fix audit for {state.PendingAudit.StageId}");
         if (state.SkippedStages.Count > 0)
             sb.AppendLine($"**⚠ Skipped stages (need human review):** {string.Join(", ", state.SkippedStages)}");
         sb.AppendLine();
@@ -39,7 +49,8 @@ public static class Reporter
             var rows = track.ForStage(s.Id).ToList();
             var d = rows.Count(r => r.IsDone);
             var st = state.SkippedStages.Contains(s.Id) ? "SKIPPED ⚠"
-                : rows.Count > 0 && d == rows.Count ? "done"
+                : state.ConfirmedStages.Contains(s.Id) ? "confirmed ✓"
+                : rows.Count > 0 && d == rows.Count ? (plan.PerPhaseGates ? "gating…" : "done")
                 : s.Id == state.CurrentStage ? "**← active**"
                 : rows.Any(r => r.IsDone || r.IsInProgress) ? "partial"
                 : "todo";
@@ -49,14 +60,45 @@ public static class Reporter
 
         sb.AppendLine("## Sessions");
         sb.AppendLine();
-        sb.AppendLine("| # | Stage | Kind | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost |");
-        sb.AppendLine("|---|---|---|---|---|---|---|---|---|---|");
+        sb.AppendLine("| # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |");
+        sb.AppendLine("|---|---|---|---|---|---|---|---|---|---|---|---|");
         foreach (var h in state.History.TakeLast(30))
         {
             var dur = h.EndedUtc.HasValue ? (h.EndedUtc.Value - h.StartedUtc).ToString(@"h\:mm") : "…";
-            sb.AppendLine($"| {h.Number} | {h.Stage} | {h.Kind} | {h.StartedUtc:MM-dd HH:mm} | {dur} | {h.Outcome?.ToString() ?? "running"} | {string.Join(" ", h.NewlyDone)} | {h.NewCommits.Count} | {h.GateSummary} | {(h.CostUsd.HasValue ? "$" + h.CostUsd.Value.ToString("0.00") : "")} |");
+            var att = h.Attempt > 0 ? h.Attempt.ToString() + (h.ResumeCount > 0 ? $"r{h.ResumeCount}" : "") : "";
+            var toks = (h.TokensInput ?? 0) + (h.TokensOutput ?? 0) > 0 ? $"{h.TokensInput ?? 0:n0}/{h.TokensOutput ?? 0:n0}" : "";
+            sb.AppendLine($"| {h.Number} | {h.Stage} | {h.Kind} | {att} | {h.StartedUtc:MM-dd HH:mm} | {dur} | {h.Outcome?.ToString() ?? "running"} | {string.Join(" ", h.NewlyDone)} | {h.NewCommits.Count} | {h.GateSummary} | {(h.CostUsd.HasValue ? "$" + h.CostUsd.Value.ToString("0.0000") : "")} | {toks} |");
         }
         sb.AppendLine();
+
+        // per-session commit detail (recent sessions that committed) — so you can review without digging into git
+        var withCommits = state.History.Where(h => h.NewCommits.Count > 0).TakeLast(8).ToList();
+        if (withCommits.Count > 0)
+        {
+            sb.AppendLine("### Commits by session");
+            sb.AppendLine();
+            foreach (var h in withCommits)
+            {
+                sb.AppendLine($"- **s{h.Number} ({h.Stage} {h.Kind})** — {h.NewCommits.Count} commit(s):");
+                foreach (var c in h.NewCommits.Take(12)) sb.AppendLine($"  - {c}");
+            }
+            sb.AppendLine();
+        }
+
+        // phase handovers written by audit sessions
+        var handoverDir = Path.Combine(plan.StateDir, "handovers");
+        if (Directory.Exists(handoverDir))
+        {
+            var files = Directory.GetFiles(handoverDir, "*.md").OrderBy(f => f).ToList();
+            if (files.Count > 0)
+            {
+                sb.AppendLine("## Phase handovers (audit)");
+                sb.AppendLine();
+                foreach (var f in files)
+                    sb.AppendLine($"- `.conductor/handovers/{Path.GetFileName(f)}`");
+                sb.AppendLine();
+            }
+        }
 
         if (lastGates is { Count: > 0 })
         {
@@ -129,4 +171,7 @@ public static class Reporter
     }
 
     private static string Short(string sha) => sha.Length >= 7 ? sha[..7] : sha;
+
+    private static string? NextCheckpoint(TrackerSnapshot track, string? stageId)
+        => stageId == null ? null : track.ForStage(stageId).FirstOrDefault(c => !c.IsDone)?.Id;
 }

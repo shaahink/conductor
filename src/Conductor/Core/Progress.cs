@@ -27,6 +27,13 @@ public sealed record DashboardSnapshot
     public int DoneCount { get; init; }
     public int TotalCount { get; init; }
     public decimal TotalCostUsd { get; init; }
+    public decimal SessionCostUsd { get; init; }
+    public long TokensInput { get; init; }
+    public long TokensOutput { get; init; }
+    public long TokensReasoning { get; init; }
+    /// <summary>First not-done checkpoint in the active stage — what the session is working toward.</summary>
+    public string CurrentCheckpoint { get; init; } = "";
+    public int ResumeCount { get; init; }
     public string GateSummary { get; init; } = "";
     public string Branch { get; init; } = "";
     public DateTime? BackoffUntilUtc { get; init; }

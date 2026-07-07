@@ -1,0 +1,109 @@
+{
+  // Conductor plan for the Loom mega phase (DevContext2-ui) — opencode variant.
+  // Identical to loom.plan.json except the acting agent runs on opencode/deepseek-v4-pro
+  // (the advisor already did). Docs remain the authority; this file only tells conductor
+  // where things are and how to spawn/verify sessions.
+  "name": "Loom",
+  "repo": "C:/code/DevContext2-ui",
+  "tracker": "LOOM-START.md",
+  "planDoc": "docs/dev/briefs/proposal-loom.md",
+  "branchPattern": "^feat/(loom-|meridian-m0)",
+  "pauseOnBlocked": true,
+
+  // Acting agent on opencode. output:"opencode-json" makes conductor parse opencode's
+  // `--format json` event stream (text / reasoning / tool / cost / tokens) — so the dashboard
+  // shows the thinking process and real cost/tokens. --thinking emits reasoning events;
+  // --share prints a live opncd.ai URL for phone viewing; --auto is the headless equivalent of
+  // claude's --dangerously-skip-permissions. Resume uses --continue: opencode's -s/--session
+  // expects an existing id and won't take conductor's generated GUID, and the conductor.lock
+  // guarantees one conductor per repo so --continue reliably targets the agent's last session.
+  "agent": {
+    "command": "opencode",
+    "args": [
+      "run", "-m", "deepseek/deepseek-v4-pro", "--auto", "--thinking", "--share", "--format", "json", "{prompt}"
+    ],
+    "resumeArgs": [
+      "run", "-m", "deepseek/deepseek-v4-pro", "--auto", "--thinking", "--share", "--format", "json", "--continue", "{prompt}"
+    ],
+    "output": "opencode-json"
+  },
+
+  // Clean-slate discipline so an independent gate run never collides with a process a
+  // session or a prior gate left behind. setup runs before every agent session AND before
+  // every gate battery; teardown runs after every gate battery. build-server shutdown frees
+  // MSBuild/Roslyn output-DLL locks; stopping stray app servers frees bin\*.dll. (The Windows
+  // job object in AgentSession/ProcessRunner already reaps most strays; these hooks are the
+  // deterministic backstop for anything that escaped or was started outside conductor.)
+  "setup": {
+    "command": "dotnet build-server shutdown; Get-Process DevContext.Server,DevContext.Cli -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; exit 0",
+    "timeoutMinutes": 2
+  },
+  "teardown": {
+    "command": "Get-Process DevContext.Server,DevContext.Cli -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; dotnet build-server shutdown; exit 0",
+    "timeoutMinutes": 2
+  },
+
+  // Cheap second brain for stuck/failed sessions — deepseek via opencode so it
+  // still works when the primary agent's quota is the thing that broke.
+  "advisor": {
+    "enabled": true,
+    "command": "opencode",
+    "args": ["run", "{prompt}", "-m", "deepseek/deepseek-v4-pro"],
+    "output": "text",
+    "timeoutMinutes": 6
+  },
+
+  "stages": [
+    { "id": "L0", "title": "Truth harness", "sessions": 2 },
+    { "id": "L1", "title": "Identity spine", "sessions": 2 },
+    { "id": "L2", "title": "BodyFacts + seam detectors", "sessions": 3 },
+    { "id": "L3", "title": "Semantic-lite tier", "sessions": 2 },
+    { "id": "L4", "title": "Flows + projections", "sessions": 2 },
+    { "id": "L5", "title": "MCP v2 cold-agent ergonomics", "sessions": 2 },
+    { "id": "L6", "title": "Workbench repair", "sessions": 3 },
+    { "id": "L7", "title": "Repo-shape coverage", "sessions": 2 },
+    { "id": "L8", "title": "Close-out", "sessions": 1 }
+  ],
+
+  // Gate policy: "perPhase" runs only fast-tier gates (build) after each session for a cheap
+  // compile check, and the FULL battery once when a stage's checkpoints are all DONE. The agent
+  // already gates in its own ritual, so this cuts the heavy tests/mcp-qa runs from every session
+  // down to once per phase. `parallel:true` gates run concurrently within the battery.
+  "gatePolicy": "perPhase",
+
+  // Auto-fix audit at the end of every phase: after the full battery is green, an audit session
+  // reviews the phase diff, fixes bugs / shallow impls / missing edge cases, re-verifies, and
+  // writes an honest handover to .conductor/handovers/<stage>.md before the plan advances.
+  "audit": { "enabled": true, "maxAttempts": 1 },
+
+  // The gate battery — conductor re-runs this itself and never trusts the agent's word for it.
+  // Real exit codes only. tier "fast" also runs per-session; tests uses --no-build (the fast
+  // build gate already compiled) and runs in parallel with the frontend pnpm-check.
+  "gates": [
+    { "name": "build", "command": "dotnet build DevContext.slnx", "tier": "fast", "timeoutMinutes": 15 },
+    { "name": "tests", "command": "dotnet test DevContext.slnx --filter \"Category!=Eval\" --no-build", "parallel": true, "timeoutMinutes": 30 },
+    { "name": "pnpm-check", "command": "pnpm check", "cwd": "src/DevContext.App", "parallel": true, "timeoutMinutes": 15 },
+    { "name": "mcp-qa", "command": "node eval/mcp-qa/run.js --quiet", "skipIfMissing": "eval/mcp-qa/run.js", "timeoutMinutes": 15 },
+    { "name": "loom-guards", "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/loom-guards.ps1", "skipIfMissing": "scripts/loom-guards.ps1", "timeoutMinutes": 5 }
+  ],
+
+  "limits": {
+    "stallMinutes": 12,
+    "sessionTimeoutMinutes": 240,
+    "maxResumesPerSession": 2,
+    "stageSlackFactor": 2,
+    "backoffMinutes": 30,
+    "maxBackoffs": 10
+  },
+
+  "report": { "commit": true, "push": true },
+
+  // Optional: plug any notifier here; {message} is substituted.
+  // Example (Windows toast via BurntToast, if installed):
+  //   "command": "powershell.exe",
+  //   "args": ["-NoProfile", "-Command", "New-BurntToastNotification -Text 'Conductor', '{message}'"]
+  "notify": { "command": "", "args": [] },
+
+  "templatesDir": "templates",
+  "promptExtra": ""
+}

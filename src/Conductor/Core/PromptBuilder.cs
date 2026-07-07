@@ -28,6 +28,14 @@ public sealed class PromptBuilder(PlanConfig plan)
         return Render("resume.md", vars);
     }
 
+    public string Audit(StageConfig stage, int sessionNumber, Models.PendingAudit audit, string stageStartHead)
+    {
+        var vars = Vars(stage, sessionNumber, 1, 1);
+        vars["diffBase"] = stageStartHead;
+        vars["handoverPath"] = $".conductor/handovers/{stage.Id}.md";
+        return Render("audit.md", vars);
+    }
+
     public string Advisor(StageConfig stage, string outcome, string gates, string commits, string handoff, string tail, int attempt, int maxAttempts)
     {
         var vars = Vars(stage, 0, attempt, maxAttempts);
@@ -130,6 +138,34 @@ public sealed class PromptBuilder(PlanConfig plan)
             - resume: resume the interrupted agent session to finish in-flight work
             - skip: park this stage for human review later and move on
             - human: a human must intervene before anything else runs
+            """,
+        "audit.md" => """
+            You are an AUDIT session inside the "{planName}" mega plan, launched by the Conductor orchestrator after stage {stage} — {stageTitle} passed its full gate battery (session #{sessionNumber}).
+
+            Work in: {repo}
+
+            The stage's checkpoints are DONE and gates are green — now harden the work before the plan advances. Review everything this phase produced: `git diff {diffBase}..HEAD` (and the files it touched).
+
+            Do a rigorous STATIC AUDIT of the phase's changes and ACT on what you find:
+            1. Correctness bugs, race conditions, resource leaks, unhandled errors.
+            2. Shallow / stubbed implementations that only satisfy the happy path or the truth tests superficially — deepen them so they are genuinely correct.
+            3. Missing edge cases (empty/null, boundary, large input, concurrency, failure paths) — add handling and tests.
+            4. Refactoring opportunities that reduce real risk or duplication (only if low-risk and clearly worth it).
+            Ratchet-only: never weaken gates, goldens, or truth files. Fix root causes; add tests for anything you fix.
+
+            Then:
+            - Re-run the full gate battery; keep it green.
+            - Commit your fixes with clear messages; push the branch.
+            - Write an HONEST phase handover to `{handoverPath}` (create the folder if needed) covering, truthfully:
+              * what is solid and proven (with evidence paths),
+              * what is shortcut / weak / assumed / not fully covered,
+              * bugs found and whether fixed or deferred,
+              * risks the next phase should watch, and concrete follow-ups.
+              Do not oversell. If something is thin, say so plainly. Commit and push this file.
+
+            If you find an issue that needs a human decision, add a line starting `HUMAN:` to the tracker handoff, commit, push, and stop.
+            End by printing one paragraph starting with `SESSION-RESULT:` summarising the audit verdict and what you changed.
+            {stageNotes}{extra}
             """,
         _ => throw new ArgumentException($"No built-in template named {name}"),
     };

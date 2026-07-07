@@ -62,4 +62,45 @@ public class RunStateTests
             File.Delete(path + ".corrupt");
         }
     }
+
+    [Fact]
+    public void RoundTripsPhaseGateAuditAndTokenState()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"conductor-test-{Guid.NewGuid():N}.json");
+        try
+        {
+            var s = new RunState
+            {
+                PlanName = "Loom",
+                CurrentStage = "L1",
+                CurrentStageStartHead = "abc1234",
+                ConfirmedStages = { "L0" },
+                AuditedStages = { "L0" },
+                PendingPhaseGate = new PendingPhaseGate { StageId = "L1", StageStartHead = "def5678" },
+                PendingAudit = new PendingAudit { StageId = "L1", StageStartHead = "def5678" },
+                History =
+                {
+                    new SessionRecord
+                    {
+                        Number = 3, Stage = "L1", Kind = SessionKind.Audit, Attempt = 2,
+                        StartedUtc = DateTime.UtcNow, EndedUtc = DateTime.UtcNow,
+                        Outcome = SessionOutcome.Progress, CostUsd = 0.5m,
+                        TokensInput = 1000, TokensOutput = 200, TokensReasoning = 50, TokensCacheRead = 900,
+                    },
+                },
+            };
+            s.Save(path);
+            var loaded = RunState.LoadOrNew(path, "x");
+            Assert.Contains("L0", loaded.ConfirmedStages);
+            Assert.Contains("L0", loaded.AuditedStages);
+            Assert.Equal("L1", loaded.PendingPhaseGate!.StageId);
+            Assert.Equal("def5678", loaded.PendingAudit!.StageStartHead);
+            Assert.Equal("abc1234", loaded.CurrentStageStartHead);
+            Assert.Equal(SessionKind.Audit, loaded.History.Single().Kind);
+            Assert.Equal(1000, loaded.TotalTokensInput);
+            Assert.Equal(200, loaded.TotalTokensOutput);
+            Assert.Equal(50, loaded.TotalTokensReasoning);
+        }
+        finally { File.Delete(path); }
+    }
 }

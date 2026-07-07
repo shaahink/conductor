@@ -25,6 +25,7 @@ public static class ProcessRunner
         var sb = new StringBuilder();
         var gate = new object();
         var sw = Stopwatch.StartNew();
+        using var job = new JobObject();
         using var p = new Process { StartInfo = psi };
         p.OutputDataReceived += (_, e) => { if (e.Data != null) lock (gate) sb.AppendLine(e.Data); };
         p.ErrorDataReceived += (_, e) => { if (e.Data != null) lock (gate) sb.AppendLine(e.Data); };
@@ -37,6 +38,7 @@ public static class ProcessRunner
         {
             return new ProcResult(-1, $"failed to start '{fileName}': {ex.Message}", false, sw.Elapsed);
         }
+        job.Assign(p);
         p.BeginOutputReadLine();
         p.BeginErrorReadLine();
 
