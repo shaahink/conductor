@@ -1,0 +1,82 @@
+{
+  // Conductor plan for the Loom mega phase (DevContext2-ui).
+  // Docs are the authority — this file only tells conductor where things are
+  // and how to spawn/verify sessions.
+  "name": "Loom",
+  "repo": "C:/code/DevContext2-ui",
+  "tracker": "LOOM-START.md",
+  "planDoc": "docs/dev/briefs/proposal-loom.md",
+  "branchPattern": "^feat/(loom-|meridian-m0)",
+  "pauseOnBlocked": true,
+
+  "agent": {
+    "command": "claude",
+    "args": [
+      "-p", "{prompt}",
+      "--output-format", "stream-json",
+      "--verbose",
+      "--dangerously-skip-permissions",
+      "--session-id", "{sessionId}"
+    ],
+    "resumeArgs": [
+      "-p", "{prompt}",
+      "--output-format", "stream-json",
+      "--verbose",
+      "--dangerously-skip-permissions",
+      "--resume", "{claudeSessionId}"
+    ],
+    "output": "stream-json"
+  },
+
+  // Cheap second brain for stuck/failed sessions — deepseek via opencode so it
+  // still works when the Claude quota is the thing that broke.
+  "advisor": {
+    "enabled": true,
+    "command": "opencode",
+    "args": ["run", "{prompt}", "-m", "deepseek/deepseek-v4-pro"],
+    "output": "text",
+    "timeoutMinutes": 6
+  },
+
+  "stages": [
+    { "id": "L0", "title": "Truth harness", "sessions": 2 },
+    { "id": "L1", "title": "Identity spine", "sessions": 2 },
+    { "id": "L2", "title": "BodyFacts + seam detectors", "sessions": 3 },
+    { "id": "L3", "title": "Semantic-lite tier", "sessions": 2 },
+    { "id": "L4", "title": "Flows + projections", "sessions": 2 },
+    { "id": "L5", "title": "MCP v2 cold-agent ergonomics", "sessions": 2 },
+    { "id": "L6", "title": "Workbench repair", "sessions": 3 },
+    { "id": "L7", "title": "Repo-shape coverage", "sessions": 2 },
+    { "id": "L8", "title": "Close-out", "sessions": 1 }
+  ],
+
+  // The gate battery — conductor re-runs this itself after every session and
+  // never trusts the agent's word for it. Real exit codes only.
+  "gates": [
+    { "name": "build", "command": "dotnet build DevContext.slnx", "timeoutMinutes": 15 },
+    { "name": "tests", "command": "dotnet test DevContext.slnx --filter \"Category!=Eval\"", "timeoutMinutes": 30 },
+    { "name": "pnpm-check", "command": "pnpm check", "cwd": "src/DevContext.App", "timeoutMinutes": 15 },
+    { "name": "mcp-qa", "command": "node eval/mcp-qa/run.js --quiet", "skipIfMissing": "eval/mcp-qa/run.js", "timeoutMinutes": 15 },
+    { "name": "loom-guards", "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/loom-guards.ps1", "skipIfMissing": "scripts/loom-guards.ps1", "timeoutMinutes": 5 }
+  ],
+
+  "limits": {
+    "stallMinutes": 12,
+    "sessionTimeoutMinutes": 240,
+    "maxResumesPerSession": 2,
+    "stageSlackFactor": 2,
+    "backoffMinutes": 30,
+    "maxBackoffs": 10
+  },
+
+  "report": { "commit": true, "push": true },
+
+  // Optional: plug any notifier here; {message} is substituted.
+  // Example (Windows toast via BurntToast, if installed):
+  //   "command": "powershell.exe",
+  //   "args": ["-NoProfile", "-Command", "New-BurntToastNotification -Text 'Conductor', '{message}'"]
+  "notify": { "command": "", "args": [] },
+
+  "templatesDir": "templates",
+  "promptExtra": ""
+}
