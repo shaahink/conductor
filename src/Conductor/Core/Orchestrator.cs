@@ -119,15 +119,10 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 {
                     if (opts.DryRun)
                     {
-                        sink.Log($"--- DRY RUN: stage {stage.Id} checkpoints all DONE — would run the full-battery phase gate next (nothing executed) ---");
+                        sink.Log($"--- DRY RUN: stage {stage.Id} checkpoints all DONE — would schedule the audit / full-battery phase gate next (nothing executed) ---");
                         return 0;
                     }
-                    state.PendingPhaseGate = new PendingPhaseGate
-                    {
-                        StageId = stage.Id,
-                        StageStartHead = state.CurrentStageStartHead ?? Git.Head(plan.Repo),
-                    };
-                    Log($"stage {stage.Id} checkpoints all DONE — scheduling full-battery phase gate");
+                    ScheduleGateOrAudit(stage.Id, state.CurrentStageStartHead ?? Git.Head(plan.Repo));
                     Save();
                     continue;
                 }
@@ -417,15 +412,10 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             if (dirty) Log($"note: working tree left dirty after green session: {Git.DirtySummary(plan.Repo)}");
             Log($"session #{rec.Number} {rec.Outcome} — {(rec.NewlyDone.Count > 0 ? string.Join(", ", rec.NewlyDone) + " done" : "no checkpoint flipped yet")}");
 
-            // perPhase: if this session completed the stage, schedule the full-battery phase gate.
+            // perPhase: if this session completed the stage, schedule the audit / confirming battery.
             if (plan.PerPhaseGates && postTrack.StageDone(stage.Id))
             {
-                state.PendingPhaseGate = new PendingPhaseGate
-                {
-                    StageId = stage.Id,
-                    StageStartHead = state.CurrentStageStartHead ?? startHead,
-                };
-                Log($"stage {stage.Id} checkpoints all DONE — scheduling full-battery phase gate");
+                ScheduleGateOrAudit(stage.Id, state.CurrentStageStartHead ?? startHead);
             }
         }
         else
@@ -449,25 +439,44 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     }
 
     /// <summary>Full-battery verification of a stage whose checkpoints are all DONE (perPhase policy).
-    /// Green → queue the auto-fix audit (once) or confirm the stage; red → queue a fix and stay on the stage.</summary>
+    /// Under the reworked flow the audit runs first, so this is the single confirming battery. Skips
+    /// the run entirely when the tree is unchanged since the last green battery (HEAD-sha cache).</summary>
     private void RunPhaseGate(PendingPhaseGate pg, CancellationToken ct)
     {
-        state.Status = RunStatus.VerifyingGates;
-        Save();
-        PushIdleSnapshot();
-        Log($"phase gate {pg.StageId}: running FULL battery to confirm the phase");
-        var gates = RunGateBattery(ct, fastOnly: false);
-        _lastGates = gates;
+        var head = Git.Head(plan.Repo);
+        var sig = GateRunner.BatterySignature(plan, head, pg.StageId);
+        IReadOnlyList<GateResult> gates;
+        bool green;
 
-        if (ct.IsCancellationRequested)
+        if (sig == state.LastGreenGateSig)
         {
-            state.Status = RunStatus.Idle;
-            Log("phase gate interrupted — will re-run on resume");
+            Log($"phase gate {pg.StageId}: tree unchanged since last green battery ({Short(head)}) — reusing result, skipping rerun");
+            green = true;
+            gates = _lastGates ?? Array.Empty<GateResult>();
+        }
+        else
+        {
+            state.Status = RunStatus.VerifyingGates;
             Save();
-            return;
+            PushIdleSnapshot();
+            Log($"phase gate {pg.StageId}: running FULL battery at {Short(head)} to confirm the phase");
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            gates = RunGateBattery(ct, fastOnly: false);
+            _lastGates = gates;
+
+            if (ct.IsCancellationRequested)
+            {
+                state.Status = RunStatus.Idle;
+                Log("phase gate interrupted — will re-run on resume");
+                Save();
+                return;
+            }
+            green = GateRunner.AllRequiredPassed(gates);
+            Log($"phase gate {pg.StageId} finished in {sw.Elapsed.TotalSeconds:0}s — {(green ? "GREEN" : "RED")}: {GateRunner.Summary(gates)}");
+            if (green) state.LastGreenGateSig = sig;
         }
 
-        if (GateRunner.AllRequiredPassed(gates))
+        if (green)
         {
             if (plan.Audit is { Enabled: true } && !state.AuditedStages.Contains(pg.StageId))
             {
@@ -498,6 +507,25 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         }
     }
 
+    /// <summary>A stage's checkpoints are all DONE: schedule the audit first (single battery runs after
+    /// it) or, if audit is disabled/done, the confirming full battery.</summary>
+    private void ScheduleGateOrAudit(string stageId, string startHead)
+    {
+        if (plan.Audit is { Enabled: true } && !state.AuditedStages.Contains(stageId))
+        {
+            state.PendingAudit = new PendingAudit { StageId = stageId, StageStartHead = startHead };
+            state.PendingPhaseGate = null;
+            Log($"stage {stageId} checkpoints all DONE — scheduling auto-fix audit (single confirming battery runs after it)");
+        }
+        else
+        {
+            state.PendingPhaseGate = new PendingPhaseGate { StageId = stageId, StageStartHead = startHead };
+            Log($"stage {stageId} checkpoints all DONE — scheduling full-battery phase gate");
+        }
+    }
+
+    private static string Short(string sha) => string.IsNullOrEmpty(sha) ? "?" : sha.Length >= 7 ? sha[..7] : sha;
+
     private void ConfirmStage(string id)
     {
         if (!state.ConfirmedStages.Contains(id)) state.ConfirmedStages.Add(id);
@@ -518,7 +546,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     private IReadOnlyList<GateResult> RunGateBattery(CancellationToken ct, bool fastOnly = false)
     {
         GateRunner.RunHook(plan, plan.Setup, "setup", Log, ct);
-        var gates = GateRunner.RunAll(plan, Log, ct, fastOnly);
+        var gates = GateRunner.RunAll(plan, Log, ct, fastOnly, state.CurrentStage, sink.GateProgress);
         GateRunner.RunHook(plan, plan.Teardown, "teardown", Log, ct);
         return gates;
     }

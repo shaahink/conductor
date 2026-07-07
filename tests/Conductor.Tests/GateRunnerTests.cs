@@ -88,4 +88,52 @@ public class GateRunnerTests
         Assert.Equal(7, results[2].ExitCode);
         Assert.False(GateRunner.AllRequiredPassed(results));
     }
+
+    [Fact]
+    public void StageFilterRunsOnlyMatchingStages()
+    {
+        var plan = Plan(
+            new GateConfig { Name = "build", Command = "exit 0", TimeoutMinutes = 1 },
+            new GateConfig { Name = "mcp-qa", Command = "exit 0", Stages = new() { "L5", "L8" }, TimeoutMinutes = 1 });
+
+        var onL1 = GateRunner.RunAll(plan, currentStage: "L1");
+        Assert.Equal(new[] { "build" }, onL1.Select(r => r.Name)); // mcp-qa filtered out on L1
+
+        var onL5 = GateRunner.RunAll(plan, currentStage: "L5");
+        Assert.Equal(new[] { "build", "mcp-qa" }, onL5.Select(r => r.Name));
+    }
+
+    [Fact]
+    public void AppliesToStageIsCaseInsensitiveAndDefaultsToAll()
+    {
+        Assert.True(new GateConfig().AppliesToStage("L1"));                       // no filter → all
+        Assert.True(new GateConfig { Stages = new() { "l5" } }.AppliesToStage("L5"));
+        Assert.False(new GateConfig { Stages = new() { "L5" } }.AppliesToStage("L1"));
+    }
+
+    [Fact]
+    public void BatterySignatureChangesWithHeadAndStage()
+    {
+        var plan = Plan(
+            new GateConfig { Name = "build", Command = "exit 0" },
+            new GateConfig { Name = "mcp-qa", Command = "exit 0", Stages = new() { "L5" } });
+
+        var l1a = GateRunner.BatterySignature(plan, "sha1", "L1");
+        var l1b = GateRunner.BatterySignature(plan, "sha2", "L1"); // different HEAD
+        var l5 = GateRunner.BatterySignature(plan, "sha1", "L5");  // different gate-set (mcp-qa applies)
+
+        Assert.NotEqual(l1a, l1b);
+        Assert.NotEqual(l1a, l5);
+        Assert.Equal(l1a, GateRunner.BatterySignature(plan, "sha1", "L1")); // stable
+    }
+
+    [Fact]
+    public void LiveGateProgressReportsRunningThenFinal()
+    {
+        var plan = Plan(new GateConfig { Name = "build", Command = "exit 0", TimeoutMinutes = 1 });
+        var states = new List<string>();
+        GateRunner.RunAll(plan, onGates: g => { if (g.Count > 0) states.Add(g[0].State); });
+        Assert.Contains("running", states);
+        Assert.Contains("pass", states);
+    }
 }

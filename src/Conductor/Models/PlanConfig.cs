@@ -128,9 +128,15 @@ public sealed class GateConfig
     public string Tier { get; set; } = "full";
     /// <summary>Gates sharing a truthy parallel flag run concurrently within their battery.</summary>
     public bool Parallel { get; set; }
+    /// <summary>If set, this gate only runs while the current stage id is in this list (doc-scoped
+    /// gates, e.g. mcp-qa on MCP phases only). Empty/null = runs on every stage.</summary>
+    public List<string>? Stages { get; set; }
     public int TimeoutMinutes { get; set; } = 20;
 
     [JsonIgnore] public bool IsFast => Tier.Equals("fast", StringComparison.OrdinalIgnoreCase);
+
+    public bool AppliesToStage(string? stageId)
+        => Stages is not { Count: > 0 } || (stageId != null && Stages.Contains(stageId, StringComparer.OrdinalIgnoreCase));
 }
 
 public sealed class AuditConfig

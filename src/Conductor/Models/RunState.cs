@@ -97,6 +97,9 @@ public sealed class RunState
     /// <summary>Stages whose auto-fix audit has completed, to avoid re-auditing on resume.</summary>
     public List<string> AuditedStages { get; set; } = new();
     public List<SessionRecord> History { get; set; } = new();
+    /// <summary>Signature (HEAD sha + gate-set) of the last full battery that passed green — lets the
+    /// orchestrator skip re-running an identical battery on an unchanged tree (e.g. across restarts).</summary>
+    public string? LastGreenGateSig { get; set; }
     public DateTime? UpdatedUtc { get; set; }
 
     public decimal TotalCostUsd => History.Sum(h => h.CostUsd ?? 0m);

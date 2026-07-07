@@ -162,6 +162,7 @@ public static class DashboardRenderer
     private static string GateChips(IReadOnlyList<GateProgress> gates)
     {
         if (gates.Count == 0) return "";
+        var now = DateTime.UtcNow;
         return string.Join("  ", gates.Select(g =>
         {
             var (color, glyph) = g.State switch
@@ -173,7 +174,8 @@ public static class DashboardRenderer
                 "skip" => ("grey", "-"),
                 _ => ("grey35", "·"),
             };
-            var t = g.Elapsed > TimeSpan.Zero ? $" {Fmt(g.Elapsed)}" : "";
+            var el = g.LiveElapsed(now);
+            var t = el > TimeSpan.Zero ? $" {Fmt(el)}" : "";
             return $"[{color}]{Esc(g.Name)}{glyph}{t}[/]";
         }));
     }
@@ -251,6 +253,7 @@ public static class DashboardRenderer
         var t = new Table().Border(TableBorder.None).Expand();
         t.AddColumn("gate");
         t.AddColumn("state");
+        var now = DateTime.UtcNow;
         foreach (var g in gates)
         {
             var (color, label) = g.State switch
@@ -262,7 +265,8 @@ public static class DashboardRenderer
                 "skip" => ("grey", "- skip"),
                 _ => ("grey35", "pending"),
             };
-            var el = g.Elapsed > TimeSpan.Zero ? $" [grey]{Fmt(g.Elapsed)}[/]" : "";
+            var live = g.LiveElapsed(now);
+            var el = live > TimeSpan.Zero ? $" [grey]{Fmt(live)}[/]" : "";
             t.AddRow(Esc(g.Name), $"[{color}]{label}[/]{el}");
         }
         return t;

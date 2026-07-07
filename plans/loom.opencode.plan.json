@@ -79,11 +79,18 @@
   // The gate battery — conductor re-runs this itself and never trusts the agent's word for it.
   // Real exit codes only. tier "fast" also runs per-session; tests uses --no-build (the fast
   // build gate already compiled) and runs in parallel with the frontend pnpm-check.
+  //
+  // Doc-derived stage scoping (proposal-loom.md): build+tests run every phase; loom-guards is
+  // created in L1 (skipIfMissing guards earlier phases); pnpm-check only where the UI is touched
+  // (L4 projections, L6 workbench, L8 close-out); mcp-qa (the slow cold-agent QA) only where it
+  // matters — L2 checkout depth, L4 MCP consume, L5 "QA becomes the gate", L7 archetypes, L8
+  // close-out. Under perPhase the full battery runs ONCE per phase (after the audit), and a
+  // HEAD-sha cache skips reruns on an unchanged tree.
   "gates": [
     { "name": "build", "command": "dotnet build DevContext.slnx", "tier": "fast", "timeoutMinutes": 15 },
     { "name": "tests", "command": "dotnet test DevContext.slnx --filter \"Category!=Eval\" --no-build", "parallel": true, "timeoutMinutes": 30 },
-    { "name": "pnpm-check", "command": "pnpm check", "cwd": "src/DevContext.App", "parallel": true, "timeoutMinutes": 15 },
-    { "name": "mcp-qa", "command": "node eval/mcp-qa/run.js --quiet", "skipIfMissing": "eval/mcp-qa/run.js", "timeoutMinutes": 15 },
+    { "name": "pnpm-check", "command": "pnpm check", "cwd": "src/DevContext.App", "parallel": true, "stages": ["L4", "L6", "L8"], "timeoutMinutes": 15 },
+    { "name": "mcp-qa", "command": "node eval/mcp-qa/run.js --quiet", "skipIfMissing": "eval/mcp-qa/run.js", "stages": ["L2", "L4", "L5", "L7", "L8"], "timeoutMinutes": 15 },
     { "name": "loom-guards", "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/loom-guards.ps1", "skipIfMissing": "scripts/loom-guards.ps1", "timeoutMinutes": 5 }
   ],
 

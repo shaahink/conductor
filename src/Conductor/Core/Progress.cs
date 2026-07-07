@@ -11,10 +11,14 @@ public enum ControlAction
 }
 
 /// <summary>Live status of one gate in the current battery (for the dashboard's gate timers).</summary>
-public sealed record GateProgress(string Name, string State, TimeSpan Elapsed)
+public sealed record GateProgress(string Name, string State, TimeSpan Elapsed, DateTime? StartUtc = null)
 {
     // State ∈ pending | running | pass | fail | warn | skip
     public static GateProgress Pending(string name) => new(name, "pending", TimeSpan.Zero);
+
+    /// <summary>Live elapsed: ticks up for a running gate; fixed duration once finished.</summary>
+    public TimeSpan LiveElapsed(DateTime nowUtc)
+        => State == "running" && StartUtc is { } s ? nowUtc - s : Elapsed;
 }
 
 /// <summary>Immutable view of the run for rendering (dashboard / plain log).</summary>

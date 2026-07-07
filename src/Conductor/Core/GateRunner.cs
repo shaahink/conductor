@@ -10,10 +10,31 @@ public sealed record GateResult(string Name, bool Passed, bool Skipped, bool Opt
 public static class GateRunner
 {
     /// <param name="fastOnly">When true, only run gates tagged tier "fast" (per-session under perPhase policy).</param>
-    public static List<GateResult> RunAll(PlanConfig plan, Action<string>? onProgress = null, CancellationToken ct = default, bool fastOnly = false)
+    /// <param name="currentStage">Gates with a Stages filter only run when the current stage matches.</param>
+    /// <param name="onGates">Live per-gate status callback (dashboard timers).</param>
+    public static List<GateResult> RunAll(PlanConfig plan, Action<string>? onProgress = null, CancellationToken ct = default,
+        bool fastOnly = false, string? currentStage = null, Action<IReadOnlyList<GateProgress>>? onGates = null)
     {
-        var gates = fastOnly ? plan.Gates.Where(g => g.IsFast).ToList() : plan.Gates.ToList();
+        var gates = plan.Gates
+            .Where(g => (!fastOnly || g.IsFast) && g.AppliesToStage(currentStage))
+            .ToList();
         var results = new GateResult?[gates.Count];
+
+        // Live status array shared across the (possibly parallel) gate threads.
+        var live = gates.Select(g => GateProgress.Pending(g.Name)).ToArray();
+        var liveGate = new object();
+        void Emit() { if (onGates != null) { lock (liveGate) onGates(live.ToArray()); } }
+        void Mark(int i, GateProgress gp) { lock (liveGate) live[i] = gp; Emit(); }
+        Emit();
+
+        GateResult RunTracked(int i)
+        {
+            Mark(i, new GateProgress(gates[i].Name, "running", TimeSpan.Zero, DateTime.UtcNow));
+            var r = RunOne(plan, gates[i], onProgress, ct);
+            var state = r.Skipped ? "skip" : r.Passed ? "pass" : r.Optional ? "warn" : "fail";
+            Mark(i, new GateProgress(gates[i].Name, state, r.Duration));
+            return r;
+        }
 
         // Walk in listed order; a non-parallel gate is a barrier (runs alone), consecutive
         // parallel gates run concurrently as one batch. Lets `build` gate everyone before the
@@ -24,7 +45,7 @@ public static class GateRunner
             if (batch.Count == 0) return;
             var idx = batch.ToList();
             Parallel.ForEach(idx, new ParallelOptions { MaxDegreeOfParallelism = idx.Count },
-                i => results[i] = RunOne(plan, gates[i], onProgress, ct));
+                i => results[i] = RunTracked(i));
             batch.Clear();
         }
 
@@ -33,12 +54,19 @@ public static class GateRunner
             if (ct.IsCancellationRequested) { Flush(); break; }
             if (gates[i].Parallel) { batch.Add(i); continue; }
             Flush();
-            results[i] = RunOne(plan, gates[i], onProgress, ct);
+            results[i] = RunTracked(i);
         }
         Flush();
 
         // any not-yet-populated slots (e.g. cancelled before reached) get a skipped placeholder
         return results.Select((r, i) => r ?? new GateResult(gates[i].Name, false, true, gates[i].Optional, 0, TimeSpan.Zero, "not run (cancelled)")).ToList();
+    }
+
+    /// <summary>Signature of the full gate battery for a given tree state — used to skip identical reruns.</summary>
+    public static string BatterySignature(PlanConfig plan, string headSha, string? currentStage)
+    {
+        var names = plan.Gates.Where(g => g.AppliesToStage(currentStage)).Select(g => g.Name).OrderBy(n => n);
+        return headSha + "|" + string.Join(",", names);
     }
 
     private static GateResult RunOne(PlanConfig plan, GateConfig g, Action<string>? onProgress, CancellationToken ct)
