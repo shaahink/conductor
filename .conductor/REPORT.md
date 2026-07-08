@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 07:06 UTC · branch `feat/baton` · HEAD `6841c35`_
+_Updated 2026-07-08 07:16 UTC · branch `feat/baton` · HEAD `ce7623d`_
 
-**Status:** Idle
+**Status:** Running
 **Stage:** B2 — Event-sourced backbone + provider decoupling · attempts used 0 · working ▸ B2.3
-**Checkpoints:** 15/65 done · **Sessions run:** 12 · **Cost:** $0.4712 · **Tokens:** 197,790 in / 188,809 out / 88,152 think
+**Checkpoints:** 15/65 done · **Sessions run:** 13 · **Cost:** $0.4712 · **Tokens:** 197,790 in / 188,809 out / 88,152 think
 **Confirmed phases:** B0, B1
+
+## Latest activity (live)
+
+_Session #13 (Deliver) · running 10m · last output 4s ago · $0.0492_
+
+**Thinking:**
+> 3 files changed — well within the ~15 file diff budget.  Now let me create the evidence file and update CONDUCTOR-START.md.  The test count went from 96 to 98 (+2: InterruptedSessionIsDetectedFromTruncatedEventStream, NoInterruptedSessionWhenAllSessionsHaveFinishedEvents).  Let me now produce the ev…
+> The evidence file only has the targeted test output. Let me add the full battery output too.
+> Now update CONDUCTOR-START.md: - Overwrite the `## Handoff` block - Update the B2.3 checkpoint row
+
+**Recent actions:**
+- `08:15:11` » edit tests\Conductor.Tests\RunStateProjectionTests.cs
+- `08:15:11` · The parity test for mixed complete+interrupted streams is fundamentally flawed — the projection correctly KNOWS about the interrupted session (that's the point …
+- `08:15:36` » bash dotnet build Conductor.slnx 2>&1; if ($?) { dotnet test Conductor.slnx --logger "console;verbosity=detailed" 2>&1 }
+- `08:15:42` » bash git diff --stat
+- `08:15:43` · All 98 tests pass, build 0w/0e. B2.3 complete. Let me verify the diff and check test count then create evidence:
+- `08:15:52` » bash dotnet test Conductor.slnx --filter "FullyQualifiedName~RunStateProjectionTests" --logger "console;verbosity=detailed" 2>&1
+- `08:15:59` · Diff: 3 files (+154/-11) — clean. Let me produce the evidence artifact and update the tracker:
+- `08:16:07` » bash dotnet test Conductor.slnx --filter "FullyQualifiedName~RunStateProjectionTests" 2>&1 | Out-File -LiteralPath "docs/baton/evidence/B2.3-gate.txt" -Encoding…
+- `08:16:22` » write docs\baton\evidence\B2.3-gate.txt
+- `08:16:22` · Let me produce a proper evidence file with full battery:
 
 ## Stage progress
 
@@ -41,6 +62,7 @@ _Updated 2026-07-08 07:06 UTC · branch `feat/baton` · HEAD `6841c35`_
 | 10 | B1 | Audit | 1 | 07-08 06:04 | 0:17 | Progress |  | 3 |  | $0.0289 | 1,492/13,453 |
 | 11 | B2 | Deliver | 1 | 07-08 06:22 | 0:24 | Advanced | B2.1 | 4 | build:OK | $0.0441 | 2,334/21,533 |
 | 12 | B2 | Deliver | 1 | 07-08 06:47 | 0:18 | Advanced | B2.2 | 3 | build:OK | $0.0334 | 1,778/18,546 |
+| 13 | B2 | Deliver | 1 | 07-08 07:06 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
