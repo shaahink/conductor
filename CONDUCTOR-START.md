@@ -7,22 +7,24 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #26 (B4, deliver) — landed **B4.1**: AltScreen guard (alt-screen buffer + hide/show
-      cursor, restore on EVERY exit path: using/finally, exception, SIGINT/TERM/QUIT, ProcessExit;
-      idempotent; redirected→inert). Wired into RunUiLoop + RunPreview. 3 headless tests. 164→167.
-stage: **B4 IN PROGRESS** — B4.1 DONE. Next B4.2 (Spectre Layout rebuild of BuildRoot).
-gate: GREEN — build 0w/0e; 167 tests pass. Redirected `conductor preview` exit 0, renders inline,
-      emits NO alt-screen escapes (guard inert when redirected) — verified as running artifact.
-qa: session #18/B3 PASS — re-ran gate (build 0w/0e, 167 tests, ratchet up from 149). Verified
-      claim-1 via tests (22 confirm-gate/owner-approval/control-file pass); claim-2 via running exe
-      (`conductor abort` refuses without --yes, exit 2; approve/retry/rollback/goto verbs live).
-      Sessions #19–25 only produced stalled heartbeat commits — no B4 work had actually landed.
-next: **B4.2** — rebuild DashboardRenderer.BuildRoot on Spectre Layout/Grid/Panel/Rule; keep the pure
-      DashboardState→IRenderable split; no header stacking at small heights (DashboardRendererTests).
-trap: push may fail (github.com unreachable per #18). Manual TUI alt-screen restore needs a real TTY
-      to eyeball — headless test asserts the byte sequences only.
+last: session #27 (B4, deliver) — landed **B4.2**: rebuilt DashboardRenderer.BuildRoot as one
+      declarative Spectre Layout tree. Header→two-col Grid (identity | metrics, both NoWrap so
+      metrics never get pushed out — F-5 stays retired); body→nested Layout regions; footer→action
+      bar first + Rule-separated log. Retired CompactHeaderPanel/LeftColumn/RightColumn. +2 tests. 167→172.
+stage: **B4 IN PROGRESS** — B4.1, B4.2 DONE. Next B4.3 (hierarchical plan tree + filter/search).
+gate: GREEN — build 0w/0e; 172 tests pass; DashboardRendererTests 27/27. `conductor preview`
+      redirected exit 0, renders new Grid header (checkpoints/cost/tokens) + log Rule, no alt-screen
+      escapes leaked — verified as running artifact.
+qa: session #26/B4.1 PASS — re-ran gate (build 0w/0e, 167 tests). Verified claim-1 via tests (3
+      AltScreenTests: enter/leave emitted, idempotent, redirected no-op); claim-2 via running exe
+      (`conductor preview` redirected exit 0, 3392 chars, NO alt-screen escapes — matches B4.1-gate.txt).
+next: **B4.3** — hierarchical plan tree: stages with expandable sub-checkpoints, per-stage columns
+      (done/attempts/last-outcome/cost), collapse/expand, filter (todo/active/failed) + search.
+trap: redirected `preview` reports SafeWidth=120 while AnsiConsole surface is 80 → header metrics
+      wrap in that artifact only (pre-existing RunPreview mismatch, NOT BuildRoot; matched widths are
+      clean per renderer tests). Manual TUI still needs a real TTY to eyeball. push may fail (github).
 dirty: none tracked.
-evidence: B4.1-gate.txt
+evidence: B4.2-gate.txt
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -68,7 +70,7 @@ never silent renumbering.
 | B3.4 | Budget/token caps (limits.maxRunCostUsd/maxRunTokens) + approval mode | DONE | 157cdc8 | docs/baton/evidence/B3.4-gate.txt |
 | B3.5 | Graceful Ctrl+C (final heartbeat + queue-resume + flush) | DONE | 157cdc8 | docs/baton/evidence/B3.4-gate.txt |
 | B4.1 | Alternate-screen buffer with clean restore on exit/crash | DONE | c6d5efb | docs/baton/evidence/B4.1-gate.txt |
-| B4.2 | Spectre Layout rebuild of DashboardRenderer.BuildRoot | TODO | | |
+| B4.2 | Spectre Layout rebuild of DashboardRenderer.BuildRoot | DONE | d3aa1a5 | docs/baton/evidence/B4.2-gate.txt |
 | B4.3 | Hierarchical plan tree (sub-checkpoints; expand/collapse; per-stage cost/attempts/last-outcome) | TODO | | |
 | B4.4 | Severity model (INFO/WARN/ERROR/SUCCESS/WAITING/HUMAN) + clearer header labels | TODO | | |
 | B4.5 | Structured thinking pane (Goal/Hypothesis/Evidence/Action) + tool-call folding | TODO | | |
