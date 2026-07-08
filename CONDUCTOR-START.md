@@ -8,16 +8,19 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #55 (B9.2+9.3) — delivered B9.2 (IPlanner/CheckpointPlanner + orchestrator
-       integration) and B9.3 (McpTaskServer: MCP JSON-RPC 2.0 stdio server exposing
-       task_list/task_update/task_add with journal-persist across sessions).
-stage: B9.1 DONE. B9.2 DONE. **B9.3 DONE** — MCP task server + 7 tests landed.
-       B9.4–B9.5 NOT started. McpTaskServer is not yet registered with the agent-config;
-       that integration (plus the actual orchestrator journal-fold on resume) is B9.4's job.
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 349 tests pass (+7 from B9.3).
+last: session #57 (B9.4) — delivered cooperative soft-break + hard fallback + MCP journal fold.
+stage: B9.1–B9.3 DONE. **B9.4 DONE** — SoftBreakRequested event, signal file, task-graph-aware
+       RolledOver resume hint, MCP journal merged into events.jsonl after session exit.
+       B9.4 land: Orchestrator polls live tokens in the session loop against SoftBreakRatio
+       (default 0.8 of MaxSessionTokens), emits softBreakRequested, writes .conductor/soft-break
+       file; hard ceiling still RollsOver with next sub-task in the log line. McpTaskServer
+       journal is folded into the event log post-session. 14 new tests.
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 363 tests pass (+14 SoftBreakTests).
 dirty: none.
-next: B9.4 (cooperative soft-break + hard fallback + register MCP server with agent).
-evidence: 92371d7 (B9.3 commit), 87a7c72 (B9.2 commit)
+next: B9.5 (task views in CLI/TUI/Telegram).
+evidence: docs/baton/evidence/B9.4-gate.txt
+qa: B9.2 PlannerTests 6/6 pass, B9.3 McpTaskServerTests 7/7 pass, 349→363 total. Verdict PASS.
+     McpTaskServer has no production wiring (known — B9.4 adds journal fold; full wire-in deferred).
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -89,7 +92,7 @@ never silent renumbering.
 | B9.1 | Task graph model + event-sourced store (TaskAdded/TaskStatusChanged) beneath the checkpoint table | DONE | a0eda3c | commit msg (build 0w/0e, 336 tests pass) |
 | B9.2 | Planner persona decomposes active checkpoint → ordered sub-tasks | DONE | 87a7c72 | tests/Conductor.Tests/PlannerTests.cs (6 tests) |
 | B9.3 | MCP task server (task_list/task_update/task_add) — persists agent todo list across sessions | DONE | 92371d7 | tests/Conductor.Tests/McpTaskServerTests.cs (7 tests) |
-| B9.4 | Cooperative soft-break (finish sub-task→handoff→fresh session) + hard token-ceiling fresh-start fallback | TODO | | |
+| B9.4 | Cooperative soft-break (finish sub-task→handoff→fresh session) + hard token-ceiling fresh-start fallback | DONE | befbd77 | docs/baton/evidence/B9.4-gate.txt |
 | B9.5 | Task views in CLI/TUI/Telegram | TODO | | |
 | B10.1 | stages[].dependsOn graph + smarter ready-stage ordering (sequential exec preserved) | TODO | | |
 | B10.2 | First-class hierarchical stages in state + reports | TODO | | |

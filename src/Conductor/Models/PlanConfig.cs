@@ -470,6 +470,12 @@ public sealed class LimitsConfig
     /// with a compact handoff and the next session starts fresh (no attempt burned, B8.5).
     /// null = no per-session limit.</summary>
     public long? MaxSessionTokens { get; set; }
+    /// <summary>Soft-break token threshold: when live tokens exceed this (as a fraction of
+    /// <c>MaxSessionTokens</c>), the orchestrator injects a "finish current sub-task, write
+    /// handoff, end cleanly" nudge signal for the agent (B9.4). Default 0.8 (80%). The
+    /// nudge is cooperative — the hard <c>MaxSessionTokens</c> ceiling is the safety net.
+    /// Only active when <c>MaxSessionTokens</c> is set. null = 0.8 (default).</summary>
+    public double? SoftBreakRatio { get; set; }
 }
 
 /// <summary>Opt-in prompt batteries that inject bounded context into every session prompt (B8.5).

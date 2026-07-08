@@ -36,6 +36,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     private DateTime? _backoffUntil;
     private readonly List<(string Kind, string Text, DateTime Utc)> _activity = new();
     private readonly HashSet<string> _decomposedCheckpoints = new(StringComparer.Ordinal);
+    private bool _softBreakSignalled;
 
     // Correlation state attached to every structured log line (B2.5): runId + stage + session number
     // come from RunState; the gate marker is set while a battery runs.
@@ -338,6 +339,9 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         state.History.Add(rec);
         state.Status = RunStatus.Running;
         Save();
+        _softBreakSignalled = false;
+        // B9.4: clean up any stale soft-break signal from a previous session
+        CleanSoftBreakSignal();
         Log($"session #{rec.Number} start — {kind} {stage.Id} attempt {attempt}/{maxAttempts}" +
             (kind == SessionKind.Resume ? $" (resume #{rec.ResumeCount} of {rec.ClaudeSessionId[..8]})" : ""));
         events.Emit(new SessionStarted
@@ -363,6 +367,9 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             while (!agent.HasExited)
             {
                 while (agent.TryDequeue(out var ev)) { sink.AgentEvent(ev); TrackActivity(ev); }
+                // B9.4: soft-break — when live tokens cross the soft threshold, write a cooperative
+                // nudge for the agent to finish the current sub-task and hand off cleanly.
+                CheckSoftBreak(agent, preTrack);
                 var ctl = HandleControl(inSession: true);
                 if (ctl == ControlAction.KillSession) { killedByUser = true; Log("kill requested"); agent.Kill(); }
                 if (ctl == ControlAction.AbortNow) { killedByUser = true; state.Status = RunStatus.Aborted; Log("abort requested"); agent.Kill(); }
@@ -403,6 +410,10 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             Log($"session #{rec.Number} exited (code {exit}, {(rec.EndedUtc - rec.StartedUtc).Value.TotalMinutes:0}m" +
                 (agent.CostUsd.HasValue ? $", ${agent.CostUsd:0.00}" : "") + ")");
 
+            // B9.4: fold any MCP journal entries into the main event log so agent-initiated
+            // task status changes survive the session.
+            FoldMcpJournal();
+
             if (ct.IsCancellationRequested)
             {
                 rec.Outcome = SessionOutcome.Interrupted;
@@ -437,13 +448,15 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             }
             state.ConsecutiveBackoffs = 0;
 
-            // B8.5: per-session token budget — if the session exceeded maxSessionTokens, end it
-            // as RolledOver so the next session starts fresh with no attempt burned.
+            // B8.5/B9.4: per-session token budget — if the session exceeded maxSessionTokens, end it
+            // as RolledOver so the next session starts fresh with no attempt burned. B9.4 adds
+            // task-graph-aware resume: the next session knows which sub-task to continue from.
             if (plan.Limits.MaxSessionTokens is { } maxTok && rec.TokensTotal >= maxTok)
             {
                 rec.Outcome = SessionOutcome.RolledOver;
                 rec.ResultSummary = ExtractSessionResult(agent.ResultText);
-                Log($"session #{rec.Number} rolled over — {rec.TokensTotal / 1000.0:0.#}k tokens ≥ {maxTok / 1000.0:0.#}k limit, handoff written");
+                var resumeCtx = BuildRolloverResumeHint(preTrack);
+                Log($"session #{rec.Number} rolled over — {rec.TokensTotal / 1000.0:0.#}k tokens ≥ {maxTok / 1000.0:0.#}k limit, handoff written{(resumeCtx != null ? $" · {resumeCtx}" : "")}");
                 ReflectionStep(rec);
                 SaveAndReport();
                 return;
@@ -1514,6 +1527,105 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         {
             File.WriteAllText(followupsPath, sb.ToString().TrimEnd() + Environment.NewLine, Encoding.UTF8);
             Log($"followups: {added} new item(s) from {stageId} audit tracked in followups.md");
+        }
+    }
+
+    // ---------------------------------------------------------------- B9.4: soft-break + MCP journal
+
+    /// <summary>B9.4: Check whether the live agent token count has crossed the soft-break threshold
+    /// and if so, emit a <c>SoftBreakRequested</c> event and write a nudge signal file. Only fires
+    /// once per session — one nudge is enough.</summary>
+    private void CheckSoftBreak(AgentSession agent, TrackerSnapshot preTrack)
+    {
+        if (_softBreakSignalled) return;
+        var threshold = ComputeSoftThreshold();
+        if (threshold == null) return;
+
+        var liveTokens = (agent.TokensInput ?? 0) + (agent.TokensOutput ?? 0)
+            + (agent.TokensReasoning ?? 0) + (agent.TokensCacheRead ?? 0);
+        if (liveTokens < threshold.Value) return;
+
+        _softBreakSignalled = true;
+        var activeCp = preTrack.Checkpoints.FirstOrDefault(c => !c.IsDone)?.Id;
+        var signalFile = Path.Combine(plan.StateDir, "soft-break");
+        File.WriteAllText(signalFile, $"finish-subtask-and-handoff:{DateTime.UtcNow:o}");
+
+        events.Emit(new SoftBreakRequested
+        {
+            LiveTokens = liveTokens,
+            TokenBudget = plan.Limits.MaxSessionTokens!.Value,
+            CurrentCheckpointId = activeCp,
+        });
+        Log($"soft-break: {liveTokens / 1000.0:0.#}k tokens ≥ {threshold.Value / 1000.0:0.#}k threshold — nudge written, session should hand off cleanly");
+        // Push an attention status so the TUI reflects the soft-break
+        sink.Log($"[soft-break] {liveTokens / 1000.0:0.#}k/{plan.Limits.MaxSessionTokens!.Value / 1000.0:0.#}k tokens — agent has been nudged to hand off");
+    }
+
+    /// <summary>Compute the absolute token threshold for the soft-break, or null if soft-break is
+    /// disabled (no <c>MaxSessionTokens</c> configured).</summary>
+    private long? ComputeSoftThreshold()
+    {
+        if (plan.Limits.MaxSessionTokens is not { } max) return null;
+        var ratio = plan.Limits.SoftBreakRatio is { } r and > 0 and <= 1.0
+            ? r : 0.8;
+        return (long)(max * ratio);
+    }
+
+    /// <summary>B9.4: remove the soft-break signal file if it exists from a prior session.</summary>
+    private void CleanSoftBreakSignal()
+    {
+        var signalFile = Path.Combine(plan.StateDir, "soft-break");
+        try { if (File.Exists(signalFile)) File.Delete(signalFile); }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
+
+    /// <summary>B9.4: fold any MCP journal entries into the main event log. The McpTaskServer writes
+    /// task updates to a side journal to avoid concurrent-write races; after the agent exits the
+    /// journal is safe to merge. Merged entries are deleted so they aren't duplicated next time.</summary>
+    private void FoldMcpJournal()
+    {
+        var journalPath = Path.Combine(plan.StateDir, "mcp-journal.jsonl");
+        if (!File.Exists(journalPath)) return;
+        try
+        {
+            var journalEvents = EventLog.ReadAll(journalPath);
+            if (journalEvents.Count == 0) return;
+            foreach (var evt in journalEvents)
+                events.Emit(evt);
+            File.Delete(journalPath);
+            Log($"MCP journal folded: {journalEvents.Count} event(s) merged into event log");
+        }
+        catch (Exception ex)
+        {
+            Log($"MCP journal fold failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>B9.4: Build a human-readable hint about which sub-task the next session should
+    /// resume from. Reads the task graph from the event log, finds the active checkpoint, and
+    /// returns the first pending sub-task's title.</summary>
+    private string? BuildRolloverResumeHint(TrackerSnapshot preTrack)
+    {
+        var eventsPath = Path.Combine(plan.StateDir, "events.jsonl");
+        if (!File.Exists(eventsPath)) return null;
+        try
+        {
+            var allEvents = EventLog.ReadAll(eventsPath);
+            var taskGraph = new TaskGraph();
+            taskGraph.Fold(allEvents);
+            var activeCp = preTrack.ForStage(state.CurrentStage ?? "")
+                .FirstOrDefault(c => !c.IsDone);
+            if (activeCp == null) return null;
+            var next = taskGraph.CurrentTask(activeCp.Id);
+            return next != null
+                ? $"next sub-task: {next.Title} [{next.Status}]"
+                : null;
+        }
+        catch (Exception ex)
+        {
+            Log($"task-graph resume hint failed: {ex.Message}");
+            return null;
         }
     }
 }

@@ -1,0 +1,144 @@
+﻿=== B9.4 gate battery ===
+
+Build: dotnet build Conductor.slnx
+Result: 0 warnings, 0 errors (net10.0, warnings-as-errors)
+
+Tests: dotnet test Conductor.slnx
+Result: 363 passed, 0 failed, 0 skipped (+14 SoftBreakTests)
+
+--- New B9.4 test details ---
+
+Build started 08/07/2026 23:08:44.
+     1>Project "C:\Code\conductor-baton\Conductor.slnx" on node 1 (Restore target(s)).
+     1>ValidateSolutionConfiguration:
+         Building solution configuration "Debug|Any CPU".
+       _GetAllRestoreProjectPathItems:
+         Determining projects to restore...
+     1>Project "C:\Code\conductor-baton\Conductor.slnx" (1) is building "C:\Code\conductor-baton\src\Conductor\Conductor.csproj" (2:6) on node 1 (_GenerateProjectRestoreGraph target(s)).
+     2>AddPrunePackageReferences:
+         Loading prune package data from PrunePackageData folder
+         Failed to load prune package data from PrunePackageData folder, loading from targeting packs instead
+     1>Project "C:\Code\conductor-baton\Conductor.slnx" (1) is building "C:\Code\conductor-baton\tests\Conductor.Tests\Conductor.Tests.csproj" (3:5) on node 2 (_GenerateProjectRestoreGraph target(s)).
+     3>AddPrunePackageReferences:
+         Loading prune package data from PrunePackageData folder
+         Failed to load prune package data from PrunePackageData folder, loading from targeting packs instead
+     2>AddPrunePackageReferences:
+         Looking for targeting packs in C:\Program Files\dotnet\packs\Microsoft.NETCore.App.Ref
+         Pack directories found: C:\Program Files\dotnet\packs\Microsoft.NETCore.App.Ref\10.0.1
+         C:\Program Files\dotnet\packs\Microsoft.NETCore.App.Ref\10.0.9
+     3>AddPrunePackageReferences:
+         Looking for targeting packs in C:\Program Files\dotnet\packs\Microsoft.NETCore.App.Ref
+         Pack directories found: C:\Program Files\dotnet\packs\Microsoft.NETCore.App.Ref\10.0.1
+         C:\Program Files\dotnet\packs\Microsoft.NETCore.App.Ref\10.0.9
+     2>AddPrunePackageReferences:
+         Found package overrides file C:\Program Files\dotnet\packs\Microsoft.NETCore.App.Ref\10.0.9\data\PackageOverrides.txt
+     3>AddPrunePackageReferences:
+         Found package overrides file C:\Program Files\dotnet\packs\Microsoft.NETCore.App.Ref\10.0.9\data\PackageOverrides.txt
+     3>Done Building Project "C:\Code\conductor-baton\tests\Conductor.Tests\Conductor.Tests.csproj" (_GenerateProjectRestoreGraph target(s)).
+     2>Done Building Project "C:\Code\conductor-baton\src\Conductor\Conductor.csproj" (_GenerateProjectRestoreGraph target(s)).
+     1>Restore:
+         X.509 certificate chain validation will use the default trust store selected by .NET for code signing.
+         X.509 certificate chain validation will use the default trust store selected by .NET for timestamping.
+         Assets file has not changed. Skipping assets file writing. Path: C:\Code\conductor-baton\tests\Conductor.Tests\obj\project.assets.json
+         Assets file has not changed. Skipping assets file writing. Path: C:\Code\conductor-baton\src\Conductor\obj\project.assets.json
+         Restored C:\Code\conductor-baton\tests\Conductor.Tests\Conductor.Tests.csproj (in 73 ms).
+         Restored C:\Code\conductor-baton\src\Conductor\Conductor.csproj (in 73 ms).
+         
+         NuGet Config files used:
+             C:\Users\shahi\AppData\Roaming\NuGet\NuGet.Config
+             C:\Program Files (x86)\NuGet\Config\Microsoft.VisualStudio.FallbackLocation.config
+             C:\Program Files (x86)\NuGet\Config\Microsoft.VisualStudio.Offline.config
+         
+         Feeds used:
+             https://api.nuget.org/v3/index.json
+             C:\Program Files (x86)\Microsoft SDKs\NuGetPackages\
+             C:\Program Files\dotnet\library-packs
+         All projects are up-to-date for restore.
+     1>Done Building Project "C:\Code\conductor-baton\Conductor.slnx" (Restore target(s)).
+   1:2>Project "C:\Code\conductor-baton\Conductor.slnx" on node 1 (VSTest target(s)).
+     1>ValidateSolutionConfiguration:
+         Building solution configuration "Debug|Any CPU".
+   1:2>Project "C:\Code\conductor-baton\Conductor.slnx" (1:2) is building "C:\Code\conductor-baton\tests\Conductor.Tests\Conductor.Tests.csproj" (3:6) on node 2 (VSTest target(s)).
+     3>BuildProject:
+         Build started, please wait...
+   3:6>Project "C:\Code\conductor-baton\tests\Conductor.Tests\Conductor.Tests.csproj" (3:6) is building "C:\Code\conductor-baton\tests\Conductor.Tests\Conductor.Tests.csproj" (3:7) on node 2 (default targets).
+   3:7>Project "C:\Code\conductor-baton\tests\Conductor.Tests\Conductor.Tests.csproj" (3:7) is building "C:\Code\conductor-baton\src\Conductor\Conductor.csproj" (2:9) on node 1 (default targets).
+     2>GenerateTargetFrameworkMonikerAttribute:
+       Skipping target "GenerateTargetFrameworkMonikerAttribute" because all output files are up-to-date with respect to the input files.
+       CoreGenerateAssemblyInfo:
+       Skipping target "CoreGenerateAssemblyInfo" because all output files are up-to-date with respect to the input files.
+       _GenerateSourceLinkFile:
+         Source Link file 'obj\Debug\net10.0\Conductor.sourcelink.json' is up-to-date.
+       CoreCompile:
+       Skipping target "CoreCompile" because all output files are up-to-date with respect to the input files.
+       _CreateAppHost:
+       Skipping target "_CreateAppHost" because all output files are up-to-date with respect to the input files.
+       _CopyOutOfDateSourceItemsToOutputDirectory:
+       Skipping target "_CopyOutOfDateSourceItemsToOutputDirectory" because all output files are up-to-date with respect to the input files.
+       GenerateBuildDependencyFile:
+       Skipping target "GenerateBuildDependencyFile" because all output files are up-to-date with respect to the input files.
+       GenerateBuildRuntimeConfigurationFiles:
+       Skipping target "GenerateBuildRuntimeConfigurationFiles" because all output files are up-to-date with respect to the input files.
+       CopyFilesToOutputDirectory:
+         Conductor -> C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.dll
+     2>Done Building Project "C:\Code\conductor-baton\src\Conductor\Conductor.csproj" (default targets).
+     3>GenerateTargetFrameworkMonikerAttribute:
+       Skipping target "GenerateTargetFrameworkMonikerAttribute" because all output files are up-to-date with respect to the input files.
+       CoreGenerateAssemblyInfo:
+       Skipping target "CoreGenerateAssemblyInfo" because all output files are up-to-date with respect to the input files.
+       _GenerateSourceLinkFile:
+         Source Link file 'obj\Debug\net10.0\Conductor.Tests.sourcelink.json' is up-to-date.
+       CoreCompile:
+       Skipping target "CoreCompile" because all output files are up-to-date with respect to the input files.
+       _CopyOutOfDateSourceItemsToOutputDirectory:
+       Skipping target "_CopyOutOfDateSourceItemsToOutputDirectory" because all output files are up-to-date with respect to the input files.
+       GenerateBuildDependencyFile:
+       Skipping target "GenerateBuildDependencyFile" because all output files are up-to-date with respect to the input files.
+       GenerateBuildRuntimeConfigurationFiles:
+       Skipping target "GenerateBuildRuntimeConfigurationFiles" because all output files are up-to-date with respect to the input files.
+       CopyFilesToOutputDirectory:
+         Conductor.Tests -> C:\Code\conductor-baton\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll
+     3>Done Building Project "C:\Code\conductor-baton\tests\Conductor.Tests\Conductor.Tests.csproj" (default targets).
+     3>BuildProject:
+         Build completed.
+         
+Test run for C:\Code\conductor-baton\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v2.8.2+699d445a1a (64-bit .NET 10.0.9)
+[xUnit.net 00:00:00.12]   Discovering: Conductor.Tests
+[xUnit.net 00:00:00.27]   Discovered:  Conductor.Tests
+[xUnit.net 00:00:00.28]   Starting:    Conductor.Tests
+  Passed Conductor.Tests.SoftBreakTests.BuildResumeHint_InProgressTask_IsFirstCandidate [9 ms]
+  Passed Conductor.Tests.SoftBreakTests.SoftThreshold_RoundsDown [6 ms]
+  Passed Conductor.Tests.SoftBreakTests.SoftBreakSignalFile_WrittenWithContext [22 ms]
+  Passed Conductor.Tests.SoftBreakTests.SoftThreshold_DefaultRatio_0_8 [< 1 ms]
+  Passed Conductor.Tests.SoftBreakTests.SoftBreakRequested_JsonContainsTypeDiscriminator [132 ms]
+  Passed Conductor.Tests.SoftBreakTests.BuildResumeHint_FindsNextPendingTask [< 1 ms]
+  Passed Conductor.Tests.SoftBreakTests.SoftThreshold_NullWhenNoMax [< 1 ms]
+  Passed Conductor.Tests.SoftBreakTests.BuildResumeHint_AllDone_ReturnsNull [< 1 ms]
+  Passed Conductor.Tests.SoftBreakTests.SoftBreak_WhenTokensAboveThreshold [< 1 ms]
+[xUnit.net 00:00:00.59]   Finished:    Conductor.Tests
+  Passed Conductor.Tests.SoftBreakTests.NoSoftBreak_WhenTokensBelowThreshold [< 1 ms]
+  Passed Conductor.Tests.SoftBreakTests.McpJournalFold_MergesEventsIntoEventLog [39 ms]
+  Passed Conductor.Tests.SoftBreakTests.SoftThreshold_CustomRatio [< 1 ms]
+  Passed Conductor.Tests.SoftBreakTests.SoftBreakRequested_RoundTripsThroughSourceGen [15 ms]
+  Passed Conductor.Tests.SoftBreakTests.SoftBreakSignalFile_CanBeCleanedUp [2 ms]
+
+Test Run Successful.
+Total tests: 14
+     Passed: 14
+ Total time: 1.3433 Seconds
+     3>Done Building Project "C:\Code\conductor-baton\tests\Conductor.Tests\Conductor.Tests.csproj" (VSTest target(s)).
+     1>Done Building Project "C:\Code\conductor-baton\Conductor.slnx" (VSTest target(s)).
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:05.15
+
+--- Changes ---
+src/Conductor/Models/PlanConfig.cs: +SoftBreakRatio on LimitsConfig
+src/Conductor/Core/Events/ConductorEvent.cs: +SoftBreakRequested event type
+src/Conductor/Core/Orchestrator.cs: soft-break detection, MCP journal fold, task-graph-aware rollover
+tests/Conductor.Tests/SoftBreakTests.cs: 14 tests (threshold, signal, resume, fold)

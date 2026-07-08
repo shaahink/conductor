@@ -31,6 +31,7 @@ namespace Conductor.Core.Events;
 [JsonDerivedType(typeof(McpCallFinished),       "mcpCallFinished")]
 [JsonDerivedType(typeof(TaskAdded),             "taskAdded")]
 [JsonDerivedType(typeof(TaskStatusChanged),     "taskStatusChanged")]
+[JsonDerivedType(typeof(SoftBreakRequested),    "softBreakRequested")]
 public abstract record ConductorEvent
 {
     /// <summary>Monotonic 1-based ordinal within the log (continues across restarts). Stamped by
@@ -203,6 +204,19 @@ public sealed record TaskStatusChanged : ConductorEvent
 {
     public required string TaskId { get; init; }
     public required string Status { get; init; }
+}
+
+/// <summary>
+/// The soft-break threshold was crossed mid-session (B9.4): live tokens exceeded the
+/// <c>SoftBreakRatio</c> fraction of <c>MaxSessionTokens</c>. A cooperative nudge signal
+/// was written for the agent to finish the current sub-task, write a handoff, and end
+/// cleanly. The hard <c>MaxSessionTokens</c> ceiling remains as the safety net.
+/// </summary>
+public sealed record SoftBreakRequested : ConductorEvent
+{
+    public long LiveTokens { get; init; }
+    public long TokenBudget { get; init; }
+    public string? CurrentCheckpointId { get; init; }
 }
 
 /// <summary>Source-generated (de)serialisation for the event log — NDJSON, compact, camelCase, string
