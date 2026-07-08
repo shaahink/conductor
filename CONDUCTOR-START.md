@@ -56,7 +56,7 @@ never silent renumbering.
 | B1.5 | Read-order context battery (mandated docs per plan) | DONE | 01c1732 | docs/baton/evidence/B1.5-gate.txt |
 | B1.6 | conductor new-plan --template {minimal,dotnet,node,shamshir}; schema version + fail-fast validation | DONE | c3fa637 | docs/baton/evidence/B1.6-gate.txt |
 | B1.7 | Shamshir iter-parity-pipeline TRACKER.md authored + parsed via default provider (unit test) | DONE | 8701aff | docs/baton/evidence/B1.7-gate.txt |
-| B2.1 | ConductorEvent schema + append-only events.jsonl writer (additive, alongside state.json) | DONE | (pending) | docs/baton/evidence/B2.1-gate.txt |
+| B2.1 | ConductorEvent schema + append-only events.jsonl writer (additive, alongside state.json) | DONE | d5ebd12 | docs/baton/evidence/B2.1-gate.txt |
 | B2.2 | Projections: RunState rebuilt by folding the log; StateCompat parity tests | TODO | | |
 | B2.3 | Crash recovery replays the event log (not just state.json) | TODO | | |
 | B2.4 | IAgentProvider + Opencode/Claude/GenericText adapters; Orchestrator provider-switch removed | TODO | | |
