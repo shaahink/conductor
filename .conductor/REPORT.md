@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 20:47 UTC · branch `feat/baton` · HEAD `0969747`_
+_Updated 2026-07-08 20:58 UTC · branch `feat/baton` · HEAD `cccaf47`_
 
-**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B7 — Specialist sub-agent personas · attempts used 0
-**Checkpoints:** 43/65 done · **Sessions run:** 46 · **Cost:** $1.8456 · **Tokens:** 1,038,372 in / 651,712 out / 288,745 think
+**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B8 — Brain layer · attempts used 0 · working ▸ B8.1
+**Checkpoints:** 43/65 done · **Sessions run:** 47 · **Cost:** $1.8456 · **Tokens:** 1,038,372 in / 651,712 out / 288,745 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7
+
+## Latest activity (live)
+
+_Session #47 (Deliver) · running 10m · last output 1s ago · $0.0583_
+
+**Thinking:**
+> Now I need to add the token rollover check. I'll add it at the end of RunSession, before EvaluateSession is called (or after but before the return). The check should happen during the session loop. Let me add it after the session's token data is collected:  Actually, looking at the code flow, the to…
+> I'll add the token rollover check right before EvaluateSession:
+> Now I need to add: 1. The `ReflectionStep` method 2. The `HandleReviewStage` method   3. The `ParseFollowups` method / logic 4. A `TokensTotal` property on SessionRecord (I referenced it above but it doesn't exist yet) 5. Integration of reflection into EvaluateSession for normal session outcomes 6. …
+
+**Recent actions:**
+- `21:57:23` » edit src\Conductor\Core\Orchestrator.cs
+- `21:57:23` · Now fix the `BuildPromptBuilder` in Orchestrator:
+- `21:57:29` » read src\Conductor\Core\Orchestrator.cs
+- `21:57:29` · Now add battery section injection in RunSession. Let me re-read the prompt building section:
+- `21:57:37` » edit src\Conductor\Core\Orchestrator.cs
+- `21:57:44` » read src\Conductor\Core\Orchestrator.cs
+- `21:57:44` · Now add token rollover check. Let me find the right location in RunSession:
+- `21:57:51` » edit src\Conductor\Core\Orchestrator.cs
+- `21:57:57` » edit {"filePath":"C:\\Code\\conductor-baton\\src\\Conductor\\Models\\RunState.cs","newString":"    public long TokensCacheRead { get; set; }\n    public in…
+- `21:57:57` · Now add `TokensTotal` property to `SessionRecord`:
 
 ## Stage progress
 
@@ -19,7 +40,7 @@ _Updated 2026-07-08 20:47 UTC · branch `feat/baton` · HEAD `0969747`_
 | B5 | Observability & health | 4/4 | confirmed ✓ |
 | B6 | AFK + two-way Telegram | 5/5 | confirmed ✓ |
 | B7 | Specialist sub-agent personas | 3/3 | confirmed ✓ |
-| B8 | Brain layer | 0/5 | todo |
+| B8 | Brain layer | 0/5 | **← active** |
 | B9 | Task graph + smart session management | 0/5 | todo |
 | B10 | Advanced orchestration | 0/4 | todo |
 | B11 | Close-out + Shamshir owner-gated proof | 0/4 | todo |
@@ -29,7 +50,6 @@ _Updated 2026-07-08 20:47 UTC · branch `feat/baton` · HEAD `0969747`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 17 | B2 | Audit | 1 | 07-08 08:29 | 0:19 | Progress |  | 2 |  | $0.0312 | 1,801/11,248 |
 | 18 | B3 | Deliver | 1 | 07-08 08:49 | 0:29 | Advanced | B3.1 B3.2 B3.3 B3.4 B3.5 | 7 | build:OK | $0.1464 | 90,298/38,170 |
 | 19 | B3 | Audit | 1 | 07-08 09:19 | 0:19 | Progress |  | 3 |  | $0.0385 | 2,178/19,271 |
 | 20 | B4 | Deliver | 1 | 07-08 09:39 | 0:12 | Stalled |  | 0 |  |  |  |
@@ -59,6 +79,7 @@ _Updated 2026-07-08 20:47 UTC · branch `feat/baton` · HEAD `0969747`_
 | 44 | B7 | Audit | 1 | 07-08 20:20 | 0:05 | Progress |  | 1 |  | $0.0380 | 52,381/7,163 |
 | 45 | B7 | Fix | 2 | 07-08 20:27 | 0:04 | Interrupted |  | 0 |  |  |  |
 | 46 | B7 | Resume | 2r1 | 07-08 20:31 | 0:15 | Progress |  | 3 | build:OK | $0.0411 | 39,768/8,661 |
+| 47 | B8 | Deliver | 1 | 07-08 20:48 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
