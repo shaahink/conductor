@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 14:33 UTC · branch `feat/baton` · HEAD `f35a7d4`_
+_Updated 2026-07-08 14:43 UTC · branch `feat/baton` · HEAD `b13cafb`_
 
-**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 0 · working ▸ B4.3
-**Checkpoints:** 26/65 done · **Sessions run:** 27 · **Cost:** $0.9597 · **Tokens:** 434,253 in / 359,824 out / 164,727 think
+**Checkpoints:** 26/65 done · **Sessions run:** 28 · **Cost:** $0.9597 · **Tokens:** 434,253 in / 359,824 out / 164,727 think
 **Confirmed phases:** B0, B1, B2, B3
+
+## Latest activity (live)
+
+_Session #28 (Deliver) · running 10m · last output 48s ago · $0.0060_
+
+**Thinking:**
+> I'm mapping out the structure for B4.3—a hierarchical plan tree where each stage can expand to show sub-checkpoints, with columns tracking completion status, attempt counts, outcomes, and costs. The interface needs collapse/expand functionality plus filtering options for todo/active/failed states an…
+> I'm sketching out the hierarchical plan tree structure with expandable stages, each showing done/attempts/last outcome/cost columns, plus filtering and search capabilities. The main architectural choice is keeping the `DashboardRenderer` pure and testable, with separate panels for the stage overview…
+> I'm moving on to design B4.3, which needs a hierarchical plan tree with expandable stages and sub-checkpoints, along with per-stage tracking for completion status, attempts, outcomes, and costs. The component should support filtering by todo, active, and failed states.  The current architecture spli…
+
+**Recent actions:**
+- `15:35:27` · QA verdict: **PASS** — B4.2 gate re-runs green (build 0w/0e, 172 tests, DashboardRendererTests 27/27); claim-1 verified via tests, claim-2 via running exe (prev…
+- `15:35:27` » read src\Conductor\Core\TrackerParser.cs
+- `15:35:27` » read src\Conductor\Models\RunState.cs
+- `15:36:12` » read src\Conductor\Ui\LiveDashboard.cs
+- `15:36:12` · QA verified. Now reading the interactive dashboard and plan model to design B4.3.
+- `15:38:25` » bash Select-String -Path "src\Conductor\Models\PlanConfig.cs" -Pattern "class StageConfig|public string Id|public string\? Title|public string Title|class PlanC…
+- `15:38:25` » read src\Conductor\Core\StatusAgent.cs
+- `15:38:25` · Let me check the plan model (stage Id/Title) and StatusAgent before designing B4.3.
+- `15:42:26` » todowrite 6 todos
+- `15:42:26` · QA verdict: **PASS**. Now I'll build B4.3 (hierarchical plan tree). Let me set up my task list and start implementing.
 
 ## Stage progress
 
@@ -56,6 +77,7 @@ _Updated 2026-07-08 14:33 UTC · branch `feat/baton` · HEAD `f35a7d4`_
 | 25 | B4 | Resume | 6r2 | 07-08 10:45 | 0:12 | Stalled |  | 0 |  |  |  |
 | 26 | B4 | Deliver | 1 | 07-08 14:03 | 0:11 | Advanced | B4.1 | 3 | build:OK | $0.0175 | 1,259/9,081 |
 | 27 | B4 | Deliver | 1 | 07-08 14:15 | 0:17 | Advanced | B4.2 | 3 | build:OK | $0.0254 | 1,700/14,236 |
+| 28 | B4 | Deliver | 1 | 07-08 14:33 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
