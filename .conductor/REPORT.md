@@ -1,32 +1,12 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 23:01 UTC · branch `feat/baton` · HEAD `5cb82f2`_
+_Updated 2026-07-08 23:02 UTC · branch `feat/baton` · HEAD `083ff33`_
 
-**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B10 — Advanced orchestration · attempts used 0 · working ▸ B10.2
-**Checkpoints:** 54/65 done · **Sessions run:** 59 · **Cost:** $2.3817 · **Tokens:** 1,627,380 in / 780,075 out / 360,044 think
+**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B10 — Advanced orchestration · attempts used 0
+**Checkpoints:** 57/65 done · **Sessions run:** 59 · **Cost:** $2.5355 · **Tokens:** 1,823,309 in / 806,711 out / 375,182 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9
-
-## Latest activity (live)
-
-_Session #59 (Deliver) · running 20m · last output 1s ago · $0.1499_
-
-**Thinking:**
-> Let me get the exact test results for the commit message, then commit.
-> B10.4 committed. Now let me update the tracker and do the post-session ritual.
-> Now let me do the post-session ritual:  1. Re-run the full gate battery 2. Update the handoff block in CONDUCTOR-START.md 3. Commit the tracker update 4. Push  Let me run the full battery one more time for the final evidence.
-
-**Recent actions:**
-- `00:00:34` » bash dotnet test Conductor.slnx 2>&1
-- `00:00:39` · 406 tests pass. Let me check diff stats and commit:
-- `00:00:39` » bash git diff --stat HEAD
-- `00:00:48` » write docs\baton\evidence\B10.4-gate.txt
-- `00:00:53` » bash git add src/Conductor/Models/PlanConfig.cs src/Conductor/Core/PromptBuilder.cs plans/conductor.self.plan.json tests/Conductor.Tests/B10_4Tests.cs docs/bato…
-- `00:00:59` » bash git commit -m "feat(bB10.4): collapse double gate battery — single source of truth  Build: dotnet build Conductor.slnx — 0 warnings, 0 errors (net10.0) Tes…
-- `00:01:04` » edit CONDUCTOR-START.md
-- `00:01:04` · Update tracker for B10.4:
-- `00:01:10` · Now do post-session ritual — final gate battery, handoff, commit, push:
-- `00:01:28` » bash dotnet build Conductor.slnx 2>&1; dotnet test Conductor.slnx 2>&1
+**Pending:** auto-fix audit for B10
 
 ## Stage progress
 
@@ -42,7 +22,7 @@ _Session #59 (Deliver) · running 20m · last output 1s ago · $0.1499_
 | B7 | Specialist sub-agent personas | 3/3 | confirmed ✓ |
 | B8 | Brain layer | 5/5 | confirmed ✓ |
 | B9 | Task graph + smart session management | 5/5 | confirmed ✓ |
-| B10 | Advanced orchestration | 1/4 | **← active** |
+| B10 | Advanced orchestration | 4/4 | gating… |
 | B11 | Close-out + Shamshir owner-gated proof | 0/4 | todo |
 | B12 | Controlled parallelism | 0/4 | todo |
 
@@ -79,14 +59,10 @@ _Session #59 (Deliver) · running 20m · last output 1s ago · $0.1499_
 | 56 | B9 | Deliver | 1 | 07-08 22:11 | 0:11 | Advanced | B9.5 | 3 | build:OK | $0.0527 | 61,772/11,888 |
 | 57 | B9 | Audit | 1 | 07-08 22:23 | 0:08 | Progress |  | 1 |  | $0.0725 | 97,126/11,226 |
 | 58 | B10 | Deliver | 1 | 07-08 22:33 | 0:07 | Advanced | B10.1 | 2 | build:OK | $0.0385 | 45,295/10,325 |
-| 59 | B10 | Deliver | 1 | 07-08 22:41 | … | running |  | 0 |  |  |  |
+| 59 | B10 | Deliver | 1 | 07-08 22:41 | 0:20 | Advanced | B10.2 B10.3 B10.4 | 6 | build:OK | $0.1538 | 195,929/26,636 |
 
 ### Commits by session
 
-- **s47 (B8 Deliver)** — 3 commit(s):
-  - 4038578 chore(bB8): update tracker — all 5 B8 checkpoints DONE, commit a50c15f
-  - a50c15f feat(bB8): brain layer — reflection, lessons battery, self-review, followups, IPromptBattery, token rollover
-  - 54fae19 chore(conductor): s47 B8 working ▸B8.1 @ 21:58
 - **s48 (B8 Audit)** — 2 commit(s):
   - 7729e12 docs(bB8): audit handover — honest review of solid/wip/deferred, 4 followups tracked
   - e3dc7ec fix(bB8): audit — remove dead StartReviewSession + unused ReflectionStep param + dry-run battery section parity + UTF-8 followups encoding
@@ -112,6 +88,13 @@ _Session #59 (Deliver) · running 20m · last output 1s ago · $0.1499_
 - **s58 (B10 Deliver)** — 2 commit(s):
   - 0f9d2a0 chore(bB10.1): fill commit hash in tracker row
   - 9750665 feat(bB10.1): dependsOn graph + ready-stage ordering with cycle detection
+- **s59 (B10 Deliver)** — 6 commit(s):
+  - 083ff33 chore(bB10): mark B10.2-B10.4 DONE — B10 stage complete
+  - ec07197 chore(conductor): s59 B10 working ▸B10.2 @ 00:01
+  - 5cb82f2 feat(bB10.4): collapse double gate battery — single source of truth
+  - 6fa8938 feat(bB10.3): per-stage pre/post hooks
+  - af5ef30 chore(conductor): s59 B10 working ▸B10.2 @ 23:51
+  - 0e1c1f7 feat(bB10.2): first-class hierarchical stages in model/state/report/tree
 
 ## Phase handovers (audit)
 
@@ -132,20 +115,20 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: B10.1 landed — `StageConfig.DependsOn: List<string>?`, cycle/self/unknown-dep validation at load, and `SelectStage()` rewritten with `IsReady()` that gates stage eligibility on all dependencies being satisfied. 7 new tests (379 total, all green), build 0w/0e. Branch pushed clean. B10.2 (hierarchical stages) is next. What was hard: keeping the ready-stage logic minimal while ensuring skipped stages unblock dependents — the `DepSatisfied()` helper treats confirmed/done AND skipped as equivalently "done", matching existing `AllEffectivelyDone` semantics without duplicating the stage-done check in two places.
+> SESSION-RESULT: B10 (Advanced orchestration) COMPLETE. Landed B10.2 (hierarchical stages — `ParentId` + `Depth` with indented rendering in TUI+report, 12 tests), B10.3 (per-stage pre/post hooks via `RunStageHook`, 10 tests), and B10.4 (battery collapse — agent instructed to skip its own build+test ritual, Conductor is sole verifier, 5 tests). Full battery GREEN: 406 tests pass (+27), build 0w/0e under warnings-as-errors. 6 files changed across B10.2-4 (within budget). All pushed to `feat/baton`. Next session: B11.1 (cross-platform gate runner). What was hard this session: B10.4's battery collapse needed to avoid over-engineering — the prompt-level approach (a boolean toggle + `{batteryCollap…
 
 ## Tracker handoff
 
 ```
-last: session #59 (B10.1) — delivered dependsOn graph + ready-stage ordering.
-stage: B10 in progress — B10.1 DONE.
-       B10.1 land: StageConfig.DependsOn: List<string>?; cycle/self/unknown-dep validation at load;
-       SelectStage() replaced with IsReady() that checks all deps satisfied before a stage is eligible.
-       Original plan.Stages order preserved among ready stages. 7 new tests (B10_1DependsOnTests).
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 379 tests pass (+7 B10.1 tests).
+last: session #59 (B10.2-B10.4) — all B10 checkpoints DONE.
+stage: B10 COMPLETE — B10.2 hierarchical stages, B10.3 pre/post hooks, B10.4 battery collapse.
+       B10.2 land: StageConfig.ParentId + StageProgress.Depth; indented rendering in PlanTree + Reporter.
+       B10.3 land: StageConfig.PreHook/PostHook; RunState.PreHookRunStages; pre-hook blocks (NeedsHuman).
+       B10.4 land: PlanConfig.BatteryCollapse; agent prompted to skip build+test; Conductor sole verifier.
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 406 tests pass (+27 B10.2-4 tests).
 dirty: none.
-next: B10.2 (hierarchical stages in model/state/report/tree).
-evidence: docs/baton/evidence/B10.1-gate.txt
-qa: B9.5 gate re-verified: TaskViewTests 4/4 pass, CLI `conductor tasks --help` renders, TUI U key
-      wired, Telegram BuildTasksText() wired. Verdict PASS — no regressions.
+next: B11.1 (cross-platform gate runner).
+evidence: docs/baton/evidence/B10.2-gate.txt, B10.3-gate.txt, B10.4-gate.txt
+qa: B10.1 gate re-verified: 7/7 DependsOn tests pass, IsReady() logic confirmed in Orchestrator.cs:790-796.
+    Verdict PASS — dependOn graph correct, no regressions. Also verified: B9.5 task views (TaskViewTests 4/4).
 ```
