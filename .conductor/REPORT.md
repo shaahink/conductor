@@ -1,12 +1,12 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 20:20 UTC · branch `feat/baton` · HEAD `bd318f8`_
+_Updated 2026-07-08 20:26 UTC · branch `feat/baton` · HEAD `99209bf`_
 
 **Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B7 — Specialist sub-agent personas · attempts used 0
-**Checkpoints:** 43/65 done · **Sessions run:** 43 · **Cost:** $1.7664 · **Tokens:** 946,223 in / 635,888 out / 274,894 think
+**Checkpoints:** 43/65 done · **Sessions run:** 44 · **Cost:** $1.8045 · **Tokens:** 998,604 in / 643,051 out / 281,141 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6
-**Pending:** auto-fix audit for B7
+**Pending:** full-battery phase gate for B7
 
 ## Stage progress
 
@@ -30,7 +30,6 @@ _Updated 2026-07-08 20:20 UTC · branch `feat/baton` · HEAD `bd318f8`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 14 | B2 | Deliver | 1 | 07-08 07:17 | 0:22 | Advanced | B2.4 | 4 | build:OK | $0.0395 | 1,813/20,904 |
 | 15 | B2 | Deliver | 1 | 07-08 07:40 | 0:36 | Advanced | B2.5 | 7 | build:OK | $0.0666 | 3,900/25,958 |
 | 16 | B2 | Deliver | 1 | 07-08 08:16 | 0:12 | Advanced | B2.6 | 2 | build:OK | $0.0683 | 66,649/18,804 |
 | 17 | B2 | Audit | 1 | 07-08 08:29 | 0:19 | Progress |  | 2 |  | $0.0312 | 1,801/11,248 |
@@ -60,13 +59,10 @@ _Updated 2026-07-08 20:20 UTC · branch `feat/baton` · HEAD `bd318f8`_
 | 41 | B6 | Deliver | 1 | 07-08 19:45 | 0:07 | Advanced | B6.5 | 1 | build:OK | $0.0311 | 29,170/7,885 |
 | 42 | B6 | Audit | 1 | 07-08 19:54 | 0:06 | Progress |  | 1 |  | $0.0606 | 87,266/8,743 |
 | 43 | B7 | Deliver | 1 | 07-08 20:00 | 0:19 | Advanced | B7.1 B7.2 B7.3 | 2 | build:OK | $0.0911 | 77,080/28,917 |
+| 44 | B7 | Audit | 1 | 07-08 20:20 | 0:05 | Progress |  | 1 |  | $0.0380 | 52,381/7,163 |
 
 ### Commits by session
 
-- **s35 (B5 Deliver)** — 3 commit(s):
-  - f638b98 chore(bB5.2): fill B5.2 commit hash in tracker (6c876e5)
-  - 6c876e5 feat(bB5.2): replay / time-travel viewer reconstructs a past run from the event log
-  - f2d8566 chore(conductor): s35 B5 working ▸B5.2 @ 18:20
 - **s36 (B5 Deliver)** — 4 commit(s):
   - c7afad7 chore(bB5.3): fill B5.3 commit hash in tracker (17642cf)
   - 17642cf feat(bB5.3): AI-health metrics folded from the event log (health panel + report section)
@@ -89,6 +85,8 @@ _Updated 2026-07-08 20:20 UTC · branch `feat/baton` · HEAD `bd318f8`_
 - **s43 (B7 Deliver)** — 2 commit(s):
   - bd318f8 feat(bB7): Specialist sub-agent personas — B7.1-B7.3
   - 9c3f7fd chore(conductor): s43 B7 working ▸B7.1 @ 21:10
+- **s44 (B7 Audit)** — 1 commit(s):
+  - 99209bf fix(b7): audit fixes — path traversal guard, IO error resilience, dead field, hyphen regex (session #44)
 
 ## Phase handovers (audit)
 
@@ -99,6 +97,7 @@ _Updated 2026-07-08 20:20 UTC · branch `feat/baton` · HEAD `bd318f8`_
 - `.conductor/handovers/B4.md`
 - `.conductor/handovers/B5.md`
 - `.conductor/handovers/B6.md`
+- `.conductor/handovers/B7.md`
 
 ## Last gate run
 
@@ -106,7 +105,7 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: B7.1–B7.3 landed (commit `bd318f8`). Per-stage AgentConfig override with C#-default-aware Merge; 9 persona templates at `plans/personas/` + built-in fallback registry; PromptBuilder prepends persona system prompt ahead of contract rules; persona surfaced in SessionStarted event, dashboard header, reporter stage line, and timeline. 306 tests green (11 new), 0w/0e. B6.5 QA reconfirmed (3 Shamshir tests pass, evidence content-asserted). Pre-existing flaky test `ReadAllSucceedsWhileLiveWriterHoldsTheFile` fails ~50% (timing-dependent event log flush) — not introduced by B7, should be hardened. Next session: B8 (brain layer — reflection, lessons, self-review) or B7 audit. What was…
+> SESSION-RESULT: B7 audit green — 4 bugs found and fixed (path traversal guard in PersonaRegistry, unhandled IOException with fallback, dead `_personas` field removed from Orchestrator, `\w+`→`[\w-]+` regex fix for hyphenated persona names). Gate battery: build 0w/0e, 306 tests pass. Three non-blocking weaknesses tracked in `.conductor/handovers/B7.md`: built-in/disk persona prompt divergence (D-01), persona leakage into audit/advisor prompts (D-02), and PersonaRegistry lacking a logger in the production DI path (D-03) — all deferred to B8.
 
 ## Tracker handoff
 
