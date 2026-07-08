@@ -1,37 +1,16 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 02:31 UTC · branch `feat/baton` · HEAD `1d29980`_
+_Updated 2026-07-08 02:35 UTC · branch `feat/baton` · HEAD `8ca4439`_
 
-**Status:** Running
+**Status:** NeedsHuman — checkpoint(s) newly BLOCKED: B0.3 — see tracker handoff
 **Stage:** B0 — Repo modernisation + self-hosting harness · attempts used 0 · working ▸ B0.3
-**Checkpoints:** 3/65 done · **Sessions run:** 2 · **Cost:** $0.0617 · **Tokens:** 55,932 in / 18,595 out / 6,232 think
-
-## Latest activity (live)
-
-_Session #2 (Deliver) · running 20m · last output 3s ago · $0.0710_
-
-**Thinking:**
-> Line 12 and 13 have interesting content: "flips first TODO→DONE" where the → is the Unicode RIGHT ARROW (→) character (U+2192). That seems to have some encoding behavior. But that's just comments, shouldn't affect execution.  Wait, line 12: `#   success  - flips first TODO→DONE, co`. Let me check if…
-> Now let me test this rewritten version. I've simplified it significantly and added "RX-MATCH:" prefix to debug messages so I can see them.
-> The rewritten script works perfectly! The tracker gets flipped (B0.1 is now DONE), and all the events are emitted correctly. The "RX-MATCH:" debug messages appear too.  So the issue with the previous version was something subtle in how the original script was structured. It could have been: 1. The `…
-
-**Recent actions:**
-- `03:29:42` » bash $tempDir = Join-Path $env:TEMP "fake-debug6"; Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue; New-Item -ItemType Directory $tempDir -Fo…
-- `03:29:49` » bash $tempDir = Join-Path $env:TEMP "fake-debug6"; Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue; New-Item -ItemType Directory $tempDir -Fo…
-- `03:29:58` » bash $testScript = Join-Path $env:TEMP "test-simple.ps1"; @' param([string]$Repo) Write-Output "START" Write-Output "Repo is $Repo" $tracker = Get-ChildItem $Re…
-- `03:30:11` » bash $ErrorActionPreference = "Stop"; try { $null = [System.Management.Automation.PSParser]::Tokenize((Get-Content "C:\Code\conductor-baton\tools\fake-agent.ps1…
-- `03:30:29` » bash $ErrorActionPreference = "Stop"; $tempDir = Join-Path $env:TEMP "min-repro"; Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue; New-Item -…
-- `03:30:36` » bash $content = Get-Content "C:\Code\conductor-baton\tools\fake-agent.ps1" -Raw; Write-Output "Content length: $($content.Length)"; Write-Output "First 50 chars…
-- `03:30:44` » bash $tempDir = Join-Path $env:TEMP "fake-copy-test"; Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue; New-Item -ItemType Directory $tempDir …
-- `03:30:52` » bash $bytes = [System.IO.File]::ReadAllBytes("C:\Code\conductor-baton\tools\fake-agent.ps1"); Write-Output "Byte count: $($bytes.Length)"; Write-Output "BOM: $(…
-- `03:31:15` » write tools\fake-agent.ps1
-- `03:31:23` » bash $tempDir = Join-Path $env:TEMP "fake-v2-test"; Remove-Item $tempDir -Recurse -Force -ErrorAction SilentlyContinue; New-Item -ItemType Directory $tempDir -F…
+**Checkpoints:** 4/65 done · **Sessions run:** 2 · **Cost:** $0.1508 · **Tokens:** 120,287 in / 45,747 out / 26,390 think
 
 ## Stage progress
 
 | Stage | Title | Done | State |
 |---|---|---|---|
-| B0 | Repo modernisation + self-hosting harness | 3/6 | **← active** |
+| B0 | Repo modernisation + self-hosting harness | 4/6 | **← active** |
 | B1 | Decouple Loom + pluggable progress providers | 0/7 | todo |
 | B2 | Event-sourced backbone + provider decoupling | 0/6 | todo |
 | B3 | Safety, owner-gates & process control | 0/5 | todo |
@@ -50,7 +29,7 @@ _Session #2 (Deliver) · running 20m · last output 3s ago · $0.0710_
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | B0 | Deliver | 1 | 07-08 01:46 | 0:24 | Advanced | B0.1 B0.2 B0.6 | 6 | build:OK | $0.0617 | 55,932/18,595 |
-| 2 | B0 | Deliver | 1 | 07-08 02:11 | … | running |  | 0 |  |  |  |
+| 2 | B0 | Deliver | 1 | 07-08 02:11 | 0:23 | running | B0.5 | 5 | build:OK | $0.0890 | 64,355/27,152 |
 
 ### Commits by session
 
@@ -61,6 +40,12 @@ _Session #2 (Deliver) · running 20m · last output 3s ago · $0.0710_
   - cf378f0 feat(bB0.2): analyzers + warnings-as-errors under a curated ruleset
   - 956fb32 chore(conductor): s1 B0 working ▸B0.1 @ 02:56
   - b3f1499 feat(bB0.1): migrate to net10.0 + central build/package management
+- **s2 (B0 Deliver)** — 5 commit(s):
+  - 8ca4439 docs(bB0): tracker — B0.4/B0.5 commit hashes; B0.3 BLOCKED, B0.4 IN PROGRESS
+  - bdc5041 feat(bB0.4): extend fake-agent.ps1 — opencode-json format, Baton tracker regex, 4 modes
+  - 62a819e feat(bB0.5): baseline audit doc — 40+ file:line citations across 25 source files
+  - 439a27b chore(conductor): s2 B0 working ▸B0.3 @ 03:31
+  - 1d29980 chore(conductor): s2 B0 working ▸B0.3 @ 03:21
 
 ## Last gate run
 
@@ -68,22 +53,22 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: Landed three B0 checkpoints on `feat/baton` with real proof, all under a green battery (net10, `dotnet build Conductor.slnx` 0w/0e under warnings-as-errors, `dotnet test` 56 pass). **B0.1** (`b3f1499`) migrated both projects to `net10.0` via a root `Directory.Build.props` + central `Directory.Packages.props`, verified `Conductor.slnx`. **B0.2** (`cf378f0`) turned on Meziantou + NetAnalyzers with a curated `.editorconfig` and `TreatWarningsAsErrors`, and fixed the code rather than the ruleset (A17): `Program`→`RunAsync`, four `System.Threading.Lock` migrations, `StringComparison.Ordinal`, an error-surfacing fire-and-forget, `ArgumentException` param name, and a `using` CTS. **…
+> SESSION-RESULT: Landed **B0.5** (baseline audit — 40+ file:line citations across 25 source files, covering provider coupling, Loom-isms, mutable-RunState, dashboard split, token-lag F-3, heartbeat F-4, cross-cutting duplication, sync-blocking, monolithic Orchestrator, and 14 debt items with B-stage targets) and **B0.4** partial (fake-agent.ps1 fully rewritten to opencode-json with Baton-compatible tracker regex, all 4 modes verified standalone). B0.3 dry-run and B0.4 `--once` smoke are BLOCKED by the running conductor driver (pid 27760 holding `.conductor` lock). Gate battery is GREEN (build 0w/0e, 56 tests pass). Next session should run B0.3's dry-run the moment the driver is idle, then exe…
 
 ## Tracker handoff
 
 ```
-last: session #1 (B0, deliver) — landed **B0.1** (net10 + central build/packages), **B0.2**
-      (analyzers + warnings-as-errors, curated ruleset, real fixes), **B0.6** (ADR-0001 + ADR-0002).
-stage: **B0 IN PROGRESS** — B0.1/B0.2/B0.6 DONE; B0.3/B0.4/B0.5 TODO.
-gate: GREEN on net10 — `dotnet build Conductor.slnx` 0w/0e (warnings-as-errors); `dotnet test` 56 pass.
-      Evidence: docs/baton/evidence/B0.1-gate.txt, B0.2-gate.txt.
-qa: previous (plan-authoring) session PASS — 56 tests verified; stable driver compiled the real B0
-    prompt (.conductor/logs/session-001.prompt.md, 3930B) + tracker parses 65 rows. No findings.
-next: **B0.5** (baseline audit doc, file:line citations — doc-only, safe now) then **B0.3/B0.4**.
-trap: B0.3/B0.4 need `conductor.exe run --dry-run/--once` but the LIVE driver holds .conductor lock
-      while a session runs — do NOT spawn a nested driver mid-session (state.json corruption risk);
-      run them when the driver is idle. Ratchet followups owed: MA0045 (B2), MA0002 (post-B2), MA0009 (B1.4).
-dirty: none tracked (.conductor/ is driver runtime, internally gitignored).
-evidence: docs/baton/evidence/B0.1-gate.txt, docs/baton/evidence/B0.2-gate.txt, docs/baton/adr/000{1,2}-*.md
+last: session #2 (B0, deliver) — landed **B0.5** (baseline audit, 40+ file:line citations) and
+      **B0.4** (fake-agent.ps1 rewritten: opencode-json, Baton tracker regex, 4 modes verified standalone).
+stage: **B0 IN PROGRESS** — B0.1/B0.2/B0.5/B0.6 DONE; B0.3/B0.4 IN PROGRESS (BLOCKED by driver lock).
+gate: GREEN — `dotnet build Conductor.slnx` 0w/0e; `dotnet test` 56 pass.
+      Evidence: B0.1-gate.txt, B0.2-gate.txt, B0.5-gate.txt, B0.4-gate.txt (standalone).
+qa: session #1 PASS — MA0004 enforced, ADR-0001 substantive, build+56 tests green. No findings.
+next: unblock **B0.3** (dry-run verify) when driver idle — run `conductor.exe run --dry-run -p
+      plans/conductor.self.plan.json`, capture output as evidence. Then **B0.4** full `--once` smoke.
+HUMAN: B0.3/B0.4 require `conductor.exe run --dry-run/--once` but the driver (pid 27760) holds
+      the .conductor lock. Awaiting session end / idle window to complete.
+trap: ratchet followups owed — MA0045 (B2), MA0002 (post-B2), MA0009 (B1.4).
+dirty: none tracked.
+evidence: B0.1-gate.txt, B0.2-gate.txt, B0.5-gate.txt, B0.4-gate.txt, audits/B0-baseline.md, adr/000{1,2}-*.md
 ```
