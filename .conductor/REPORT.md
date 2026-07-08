@@ -1,6 +1,6 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 05:36 UTC · branch `feat/baton` · HEAD `4b003cb`_
+_Updated 2026-07-08 05:46 UTC · branch `feat/baton` · HEAD `2330361`_
 
 **Status:** Running
 **Stage:** B1 — Decouple Loom + pluggable progress providers · attempts used 0 · working ▸ B1.4
@@ -9,24 +9,24 @@ _Updated 2026-07-08 05:36 UTC · branch `feat/baton` · HEAD `4b003cb`_
 
 ## Latest activity (live)
 
-_Session #8 (Deliver) · running 10m · last output 88s ago · $0.0072_
+_Session #8 (Deliver) · running 20m · last output 4s ago · $0.0275_
 
 **Thinking:**
-> ADR-0001 deferred MA0009 (regex timeouts) to this checkpoint, affecting 7 sites, so I need to escalate MA0009 to error severity and add timeout constraints to all regex patterns. I'm checking the .editorconfig for MA0009's current severity level and locating all regex usages across the codebase, sta…
-> I'm identifying the regex sites that need timeout handling — there are several instances across different files where regex operations are being called without proper timeout protection.  The key design question is whether to keep using `[GeneratedRegex]` for the default case to maintain byte-identi…
-> I need to verify that the `plan` variable is accessible within the Orchestrator's HandoffWantsHuman method by checking the relevant sections of the code.
+> I'm going to run the filtered test for the irregular-id case and add that specific result to the evidence file so it clearly shows the B1.4 value.
+> I need to update the CONDUCTOR-START.md file with the Handoff block and B1.4 checkpoint row, then commit the changes. Based on the git history pattern, I should follow the convention of separate commits—one for the code changes with a `feat(bB1.N)` message and another for the tracker documentation w…
+> I need to update the CONDUCTOR-START.md file with the B1.4 completion details—marking it as DONE with commit hash 2330361 and the evidence file path. I'm restructuring the Handoff block to stay within the 12-line limit while capturing the key information about landing the configurable ProgressConven…
 
 **Recent actions:**
-- `06:31:05` » read tests\Conductor.Tests\TrackerParserTests.cs
-- `06:31:05` » grep MA0009
-- `06:31:05` » grep GeneratedRegex|new Regex|Regex\.Match|Regex\.Replace|Regex\.IsMatch
-- `06:34:40` » read src\Conductor\Core\DocsExtractor.cs
-- `06:34:41` » read src\Conductor\Core\Advisor.cs
-- `06:34:41` » read .editorconfig
-- `06:34:42` » read src\Conductor\Core\Orchestrator.cs
-- `06:34:42` · Now let me read the regex sites I must fix for the MA0009 ratchet, plus the editorconfig line and Orchestrator's human-token check.
-- `06:34:53` » read src\Conductor\Core\Orchestrator.cs
-- `06:34:53` » read src\Conductor\Core\Orchestrator.cs
+- `06:44:41` · Let me append the focused irregular-id test result to the evidence, so it explicitly demonstrates B1.4's value.
+- `06:44:43` » bash $out = "docs/baton/evidence/B1.4-gate.txt" "" | Out-File -FilePath $out -Append -Encoding utf8 "--- focused proof: ProgressConventionsTests (irregular ids …
+- `06:45:01` · Build green, 73 tests, MA0009 now error. Let me commit the code (to get a hash for the tracker row), then update the tracker. First, review what's staged.
+- `06:45:01` » bash git -C C:\Code\conductor-baton status --short
+- `06:45:09` » bash cd C:\Code\conductor-baton git add .conductor/followups.md .editorconfig src/Conductor/Core/Advisor.cs src/Conductor/Core/DocsExtractor.cs src/Conductor/Co…
+- `06:45:27` » bash cd C:\Code\conductor-baton $msg = @' feat(bB1.4): configurable progress conventions + ratchet MA0009  Per-plan conventions on PlanConfig.Conventions (B1.4,…
+- `06:45:33` » bash git -C C:\Code\conductor-baton rev-parse --short HEAD
+- `06:46:07` · Commit `2330361`. Now update the tracker: the Handoff block and the B1.4 row.
+- `06:46:07` » edit CONDUCTOR-START.md
+- `06:46:14` » edit CONDUCTOR-START.md
 
 ## Stage progress
 
