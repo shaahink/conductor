@@ -1,6 +1,6 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 08:00 UTC · branch `feat/baton` · HEAD `3836bf7`_
+_Updated 2026-07-08 08:10 UTC · branch `feat/baton` · HEAD `02da5a0`_
 
 **Status:** Running
 **Stage:** B2 — Event-sourced backbone + provider decoupling · attempts used 0 · working ▸ B2.5
@@ -9,24 +9,24 @@ _Updated 2026-07-08 08:00 UTC · branch `feat/baton` · HEAD `3836bf7`_
 
 ## Latest activity (live)
 
-_Session #15 (Deliver) · running 20m · last output 3s ago · $0.0305_
+_Session #15 (Deliver) · running 30m · last output 7s ago · $0.0505_
 
 **Thinking:**
-> I see the issue now—RecoverFromCrash tries to read events.jsonl right after the EventLog constructor creates and opens it for appending, causing a file sharing violation. I need to check how EventLog is initialized and what FileShare settings it's using.
-> The DrainAsync opens the FileStream with `FileShare.Read`, which allows other readers to access it. `File.ReadAllLines` also opens with `FileShare.Read` by default, so two readers sharing read access shouldn't cause a conflict. The real issue is that the FileStream is opened for writing with `FileAc…
-> I need to handle the file locking issue by opening the file with `FileShare.ReadWrite` permissions, which allows reading while another process has it open for writing. I'm creating a helper method that uses a FileStream with these shared access settings and wraps it in a StreamReader to read all the…
+> I'm refining the exception handling for the control.json parsing logic—narrowing the catch block to specifically handle IOException, JsonException, and UnauthorizedAccessException, with a comment explaining why malformed files return null. Now I'm going to apply these catch-audit edits systematicall…
+> I'm looking at the exception handling in those two catch blocks—when `_progress.Read(plan)` throws, it could be an InvalidOperationException or IOException from missing scripts or malformed JSON. For snapshot and report rendering, falling back to an empty tracker is reasonable, but I should make sur…
+> Looking at line 51 in DocsExtractor.cs to understand the context around that location.
 
 **Recent actions:**
-- `08:58:12` » bash $s="C:\Users\shahi\AppData\Local\Temp\opencode\b25run"; & "C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.exe" run --once --no-dashboard…
-- `08:58:30` · A stray process from the crashed first run holds the event log. Let me find and clean up (without touching the driver, pid 30060):
-- `08:58:31` » bash Get-CimInstance Win32_Process -Filter "name='conductor.exe' OR name='powershell.exe'" | Where-Object { $_.CommandLine -like "*b25run*" } | Select-Object Pr…
-- `08:58:48` · Transient lock from the crashed first run. Let me clean the scratch state and re-run fresh:
-- `08:58:49` » bash $s="C:\Users\shahi\AppData\Local\Temp\opencode\b25run"; Remove-Item -Recurse -Force "$s\.conductor" -ErrorAction SilentlyContinue; & "C:\Code\conductor-bat…
-- `08:59:09` · This reproduces on a fresh state — a real bug. Let me inspect `RecoverFromCrash` and `EventLog.ReadAll`/constructor:
-- `08:59:09` » read src\Conductor\Core\Orchestrator.cs
-- `08:59:18` » read src\Conductor\Core\Events\EventLog.cs
-- `08:59:45` » read src\Conductor\Core\Events\EventLog.cs
-- `08:59:45` · The DrainAsync writer holds the file (`FileAccess.Write, FileShare.Read`), but `ReadAll` uses `File.ReadAllLines` (`FileShare.Read`, which excludes Write) → sha…
+- `09:08:55` » edit src\Conductor\Core\Orchestrator.cs
+- `09:09:03` » edit src\Conductor\Core\Orchestrator.cs
+- `09:09:21` » edit src\Conductor\Core\Orchestrator.cs
+- `09:09:34` » edit src\Conductor\Core\Orchestrator.cs
+- `09:09:45` » edit src\Conductor\Core\Orchestrator.cs
+- `09:09:53` » read src\Conductor\Core\DocsExtractor.cs
+- `09:09:53` · Now DocsExtractor, AgentSession, InstructionQueue, StatusAgent, Commands, LiveDashboard. Let me view the needed contexts:
+- `09:10:05` » edit src\Conductor\Core\DocsExtractor.cs
+- `09:10:15` » edit src\Conductor\Core\AgentSession.cs
+- `09:10:15` · Now AgentSession.cs — the bare swallows at 93, 108, 126, 131-133:
 
 ## Stage progress
 
