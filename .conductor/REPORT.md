@@ -1,12 +1,11 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 18:20 UTC · branch `feat/baton` · HEAD `b659e70`_
+_Updated 2026-07-08 18:21 UTC · branch `feat/baton` · HEAD `710500f`_
 
 **Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B5 — Observability & health · attempts used 0
 **Checkpoints:** 35/65 done · **Sessions run:** 38 · **Cost:** $1.4561 · **Tokens:** 660,836 in / 550,470 out / 237,896 think
-**Confirmed phases:** B0, B1, B2, B3, B4
-**Pending:** full-battery phase gate for B5
+**Confirmed phases:** B0, B1, B2, B3, B4, B5
 
 ## Stage progress
 
@@ -17,7 +16,7 @@ _Updated 2026-07-08 18:20 UTC · branch `feat/baton` · HEAD `b659e70`_
 | B2 | Event-sourced backbone + provider decoupling | 6/6 | confirmed ✓ |
 | B3 | Safety, owner-gates & process control | 5/5 | confirmed ✓ |
 | B4 | TUI overhaul (alt-screen + tree) | 7/7 | confirmed ✓ |
-| B5 | Observability & health | 4/4 | gating… |
+| B5 | Observability & health | 4/4 | confirmed ✓ |
 | B6 | AFK + two-way Telegram | 0/5 | todo |
 | B7 | Specialist sub-agent personas | 0/3 | todo |
 | B8 | Brain layer | 0/5 | todo |
@@ -109,7 +108,7 @@ _Updated 2026-07-08 18:20 UTC · branch `feat/baton` · HEAD `b659e70`_
 
 ## Last gate run
 
-build:OK
+build:OK · tests:OK
 
 ## Last session result
 
