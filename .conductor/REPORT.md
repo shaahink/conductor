@@ -1,32 +1,11 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 17:20 UTC · branch `feat/baton` · HEAD `aa0b2c5`_
+_Updated 2026-07-08 17:30 UTC · branch `feat/baton` · HEAD `f638b98`_
 
-**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B5 — Observability & health · attempts used 0 · working ▸ B5.2
-**Checkpoints:** 32/65 done · **Sessions run:** 35 · **Cost:** $1.2380 · **Tokens:** 508,686 in / 475,658 out / 204,862 think
+**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B5 — Observability & health · attempts used 0 · working ▸ B5.3
+**Checkpoints:** 33/65 done · **Sessions run:** 35 · **Cost:** $1.2750 · **Tokens:** 510,405 in / 495,635 out / 208,186 think
 **Confirmed phases:** B0, B1, B2, B3, B4
-
-## Latest activity (live)
-
-_Session #35 (Deliver) · running 10m · last output 2s ago · $0.0155_
-
-**Thinking:**
-> I'm mapping out the changes needed: adding a Replay modal type, wiring up F8 key handling in both preview and live modes, creating the replay modal case, implementing the ReplayLines method, updating the action bar to show the F8 shortcut, and integrating the Reporter's replay reading functionality.
-> I need to refine the switch statements to be more specific, particularly by adding the preview-specific default case that sets `_quitPreview = true`, and I should also include the F8 key handling in the HandlePreviewKey function.
-> I'm noticing that `ReadTimeline` doesn't have the null argument validation I added to `ReadReplay`, but since the code builds without issues, the analyzer rule CA1062 must be disabled or not applying here—I'll keep the validation consistent in `ReadReplay` anyway.  Now I'm moving on to the CLI `Repl…
-
-**Recent actions:**
-- `18:18:52` · Now the live `PollKeys` switch (line ~297) and its pending-confirm passthrough list (line ~323):
-- `18:18:52` » edit src\Conductor\Ui\LiveDashboard.cs
-- `18:19:01` » edit src\Conductor\Ui\LiveDashboard.cs
-- `18:19:09` · Now the `OpenModal` case + `ReplayLines()` provider (next to `TimelineLines`):
-- `18:19:09` » edit src\Conductor\Ui\LiveDashboard.cs
-- `18:19:26` » edit src\Conductor\Ui\LiveDashboard.cs
-- `18:19:40` · Now add `Reporter.ReadReplay` next to `ReadTimeline`:
-- `18:19:40` » edit src\Conductor\Core\Reporter.cs
-- `18:20:20` · Now add the `ReplayCommand` to Commands.cs (after ReportCommand):
-- `18:20:21` » edit {"filePath":"C:\\Code\\conductor-baton\\src\\Conductor\\Commands\\Commands.cs","newString":"/// <summary>Offline dashboard preview: renders the curren…
 
 ## Stage progress
 
@@ -37,7 +16,7 @@ _Session #35 (Deliver) · running 10m · last output 2s ago · $0.0155_
 | B2 | Event-sourced backbone + provider decoupling | 6/6 | confirmed ✓ |
 | B3 | Safety, owner-gates & process control | 5/5 | confirmed ✓ |
 | B4 | TUI overhaul (alt-screen + tree) | 7/7 | confirmed ✓ |
-| B5 | Observability & health | 1/4 | **← active** |
+| B5 | Observability & health | 2/4 | **← active** |
 | B6 | AFK + two-way Telegram | 0/5 | todo |
 | B7 | Specialist sub-agent personas | 0/3 | todo |
 | B8 | Brain layer | 0/5 | todo |
@@ -79,14 +58,10 @@ _Session #35 (Deliver) · running 10m · last output 2s ago · $0.0155_
 | 32 | B4 | Deliver | 1 | 07-08 15:58 | 0:20 | Advanced | B4.7 | 5 | build:OK | $0.0360 | 2,120/14,866 |
 | 33 | B4 | Audit | 1 | 07-08 16:18 | 0:14 | Progress |  | 2 |  | $0.0191 | 1,034/10,114 |
 | 34 | B5 | Deliver | 1 | 07-08 16:33 | 0:36 | Advanced | B5.1 | 5 | build:OK | $0.0634 | 2,544/24,659 |
-| 35 | B5 | Deliver | 1 | 07-08 17:10 | … | running |  | 0 |  |  |  |
+| 35 | B5 | Deliver | 1 | 07-08 17:10 | 0:19 | Advanced | B5.2 | 3 | build:OK | $0.0370 | 1,719/19,977 |
 
 ### Commits by session
 
-- **s27 (B4 Deliver)** — 3 commit(s):
-  - f35a7d4 chore(bB4.2): record B4.2 commit hash d3aa1a5 in tracker
-  - d3aa1a5 feat(bB4.2): Spectre Layout rebuild of DashboardRenderer.BuildRoot
-  - 40152e6 chore(conductor): s27 B4 working ▸B4.2 @ 15:25
 - **s28 (B4 Deliver)** — 5 commit(s):
   - 2569377 chore(conductor): s28 B4 working ▸B4.3 @ 16:03
   - db3c8bd docs(bB4.3): record B4.3 commit sha in tracker row
@@ -124,6 +99,10 @@ _Session #35 (Deliver) · running 10m · last output 2s ago · $0.0155_
   - a13785a chore(conductor): s34 B5 working ▸B5.1 @ 18:03
   - 79cd612 chore(conductor): s34 B5 working ▸B5.1 @ 17:53
   - 89370ae chore(conductor): s34 B5 working ▸B5.1 @ 17:43
+- **s35 (B5 Deliver)** — 3 commit(s):
+  - f638b98 chore(bB5.2): fill B5.2 commit hash in tracker (6c876e5)
+  - 6c876e5 feat(bB5.2): replay / time-travel viewer reconstructs a past run from the event log
+  - f2d8566 chore(conductor): s35 B5 working ▸B5.2 @ 18:20
 
 ## Phase handovers (audit)
 
@@ -139,25 +118,27 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: Landed **B5.1** — the `Timeline` projection (`src/Conductor/Core/Events/Timeline.cs`): a pure, deterministic fold over `.conductor/events.jsonl` into ordered state transitions, each with wall-clock time and a computed duration (session/stage/run spans from start↔finish timestamps, gate span from the engine-measured `durationMs`, point events carry none). It's surfaced two ways off the *same* fold: a REPORT.md `## Timeline` section (`Reporter.ReadTimeline`, I/O-safe) and a TUI `L`-key timeline modal reusing the tested modal pager. `TokenDelta` is deliberately excluded (LiveMetrics owns accrual) to honor the B5 trap: no parallel bookkeeping store that can drift. Gates are **GRE…
+> SESSION-RESULT: Landed **B5.2** (replay / time-travel) on `feat/baton` — a pure `Replay` projection folding `.conductor/events.jsonl` into ordered steps, each transition paired with the run state reconstructed *as of* that moment (stage/sessions/gates/checkpoints/cost/tokens), surfaced via a new `conductor replay <path|dir|plan>` CLI verb and a TUI **F8** modal. It reuses the already-tested `Timeline.Build` (one renderer for replay + the REPORT.md timeline) and accrues cost/tokens from `SessionFinished` so the terminal state provably equals `RunStateProjection.Fold` (no drift — the B5 trap). Gate is GREEN: `dotnet build` 0w/0e (net10, warnings-as-errors), `dotnet test` 238 pass (231→238, +7 …
 
 ## Tracker handoff
 
 ```
-last: session #34 (B5.1, deliver) — landed **B5.1**: `Timeline` projection (pure fold over the event
-      log → ordered transitions with durations) + REPORT.md `## Timeline` section + TUI timeline modal
-      (`L` key). Session/stage/run spans computed from start↔finish ts; gate span from durationMs;
-      TokenDelta excluded (LiveMetrics owns accrual — B5 trap: no drift store). +10 tests. 221→231.
-stage: **B5 IN PROGRESS** — B5.1 DONE. Next: B5.2 (replay/time-travel F8) → B5.3 → B5.4.
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 231 tests pass. Real events.jsonl folded via
-      3× `--once` smoke (runId 4821958…) → REPORT timeline with correct spans. B5.1-gate.txt.
-qa: session #33/B4 audit PASS — re-ran gate (build 0w/0e, 221 tests). Claim-1: 8 severity/idempotent-
-     restore tests green. Claim-2: in-tree preview exit 0, clean frame, 'sessions unreported' label. No findings.
-next: **B5.2** — replay/time-travel viewer (`conductor replay <run>` + TUI F8) reconstructs a past run
-      from events.jsonl in order; reuse Timeline.Build + the tested modal pager. See B5.md R5.2.
-trap: timeline is a PURE fold over the single event log — never a parallel store (B5 trap). Everything
-      B5 (replay/health/confidence) reads the same log. Durations are computed, not persisted. Tracker
-      B5.1 (this row) ≠ conductor-DEBT.md's "B5.1" (that's a LiveMetrics-wiring followup, FU-B2-1).
+last: session #35 (B5.2, deliver) — landed **B5.2**: `Replay` projection (pure fold → ordered steps,
+      each transition paired with the run state reconstructed AS OF that point: stage/sessions/gates/
+      checkpoints/cost/tokens) + `conductor replay <path|dir|plan>` CLI + TUI **F8** modal. Reuses
+      Timeline.Build (one renderer) + the tested modal pager. +7 tests. 231→238.
+stage: **B5 IN PROGRESS** — B5.1, B5.2 DONE. Next: B5.3 (AI-health metrics) → B5.4.
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 238 tests pass. Real recorded run (runId qa1)
+      replayed via the in-tree `replay` verb → 8 transitions with correct time-travel state. B5.2-gate.txt.
+qa: session #34/B5.1 deliver PASS — re-ran gate (build 0w/0e, 231 tests). Claim-1: 12 Timeline/Reporter
+     tests green. Claim-2: in-tree `report` folded events.jsonl → `## Timeline` w/ correct computed spans. No findings.
+next: **B5.3** — AI-health metrics (retry rate, same-command repetition, same-failure loops, tool
+      oscillation, context saturation) as PURE folds over events.jsonl; health panel + report section.
+      Conservative thresholds (false "looping" alarms erode trust — unit-test them). See B5.md R5.3.
+trap: every B5 projection is a PURE fold over the single event log — never a parallel store that can
+      drift (B5 trap). Replay's terminal cost/tokens == RunStateProjection.Fold (proven, no drift).
+      NB: current schema has no Thought/ToolCalled/Command events — B5.3 metrics must derive from the
+      transitions that ARE logged (sessions/gates/outcomes/attention), or emit new events first.
 dirty: none.
-evidence: docs/baton/evidence/B5.1-gate.txt
+evidence: docs/baton/evidence/B5.2-gate.txt
 ```
