@@ -1,12 +1,12 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 22:23 UTC · branch `feat/baton` · HEAD `8c4aa1e`_
+_Updated 2026-07-08 22:32 UTC · branch `feat/baton` · HEAD `c603a3e`_
 
 **Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B9 — Task graph + smart session management · attempts used 0
-**Checkpoints:** 53/65 done · **Sessions run:** 56 · **Cost:** $2.2707 · **Tokens:** 1,484,959 in / 758,524 out / 347,241 think
+**Checkpoints:** 53/65 done · **Sessions run:** 57 · **Cost:** $2.3432 · **Tokens:** 1,582,085 in / 769,750 out / 355,633 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8
-**Pending:** auto-fix audit for B9
+**Pending:** full-battery phase gate for B9
 
 ## Stage progress
 
@@ -30,7 +30,6 @@ _Updated 2026-07-08 22:23 UTC · branch `feat/baton` · HEAD `8c4aa1e`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 27 | B4 | Deliver | 1 | 07-08 14:15 | 0:17 | Advanced | B4.2 | 3 | build:OK | $0.0254 | 1,700/14,236 |
 | 28 | B4 | Deliver | 1 | 07-08 14:33 | 0:30 | Advanced | B4.3 | 5 | build:OK | $0.0429 | 2,087/23,142 |
 | 29 | B4 | Deliver | 1 | 07-08 15:04 | 0:12 | Advanced | B4.4 | 3 | build:OK | $0.0567 | 62,572/12,919 |
 | 30 | B4 | Deliver | 1 | 07-08 15:16 | 0:21 | Advanced | B4.5 | 7 | build:OK | $0.0351 | 2,137/17,812 |
@@ -60,11 +59,10 @@ _Updated 2026-07-08 22:23 UTC · branch `feat/baton` · HEAD `8c4aa1e`_
 | 54 | B9 | Deliver | 1 | 07-08 21:33 | 0:21 | Advanced | B9.2 B9.3 | 5 | build:OK | $0.0818 | 59,955/26,063 |
 | 55 | B9 | Deliver | 1 | 07-08 21:55 | 0:16 | Advanced | B9.4 | 3 | build:OK | $0.0719 | 73,232/17,129 |
 | 56 | B9 | Deliver | 1 | 07-08 22:11 | 0:11 | Advanced | B9.5 | 3 | build:OK | $0.0527 | 61,772/11,888 |
+| 57 | B9 | Audit | 1 | 07-08 22:23 | 0:08 | Progress |  | 1 |  | $0.0725 | 97,126/11,226 |
 
 ### Commits by session
 
-- **s44 (B7 Audit)** — 1 commit(s):
-  - 99209bf fix(b7): audit fixes — path traversal guard, IO error resilience, dead field, hyphen regex (session #44)
 - **s46 (B7 Resume)** — 3 commit(s):
   - 3d2d328 fix(bB7): eliminate EventLog drain-task scheduling race with ManualResetEventSlim
   - 0c3998b chore(conductor): s46 B7 working ▸B7 @ 21:41
@@ -93,6 +91,8 @@ _Updated 2026-07-08 22:23 UTC · branch `feat/baton` · HEAD `8c4aa1e`_
   - 8c4aa1e chore(bB9.5): fill commit hash in tracker row
   - 1fa665c feat(bB9.5): task views in CLI/TUI/Telegram
   - bb0e899 chore(conductor): s56 B9 working ▸B9.5 @ 23:21
+- **s57 (B9 Audit)** — 1 commit(s):
+  - c603a3e fix(bB9): audit — validate MCP task args + reject invalid status/non-existent task, unique task IDs, skip duplicate TaskAdded, clean whitespace titles, harden soft-break nulls
 
 ## Phase handovers (audit)
 
@@ -105,6 +105,7 @@ _Updated 2026-07-08 22:23 UTC · branch `feat/baton` · HEAD `8c4aa1e`_
 - `.conductor/handovers/B6.md`
 - `.conductor/handovers/B7.md`
 - `.conductor/handovers/B8.md`
+- `.conductor/handovers/B9.md`
 
 ## Last gate run
 
@@ -112,7 +113,7 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: Stage B9 complete — all 5 checkpoints (B9.1–B9.5) landed. B9.5 delivered `conductor tasks` CLI command (Spectre table grouped by checkpoint), TUI tasks pane (Modal.Tasks on U key, live event-log fold into scrollable modal), and Telegram `/tasks` handler (HTML-formatted per-checkpoint task list). Build 0w/0e, 367 tests pass (+4 TaskViewTests). Branch pushed clean. 5 files changed (well within ~15 budget). Next: B10.1 (dependsOn graph + smarter ready-stage ordering). What was hard: the three views (CLI/TUI/TG) share the same pipeline (event log → TaskGraph fold → per-checkpoint display) but each has a different rendering target — Spectre table, plain lines for BuildModal, Telec…
+> SESSION-RESULT: B9 audit GREEN — 6 bugs fixed: MCP `task_update` now rejects non-existent tasks and invalid status strings, `task_add` generates unique IDs to prevent collision, `TaskGraph.Fold` skips duplicate `TaskAdded` to prevent orphaned entries, `CheckpointPlanner` handles whitespace-only titles, and `CheckSoftBreak` nulls hardened. 372 tests pass (0w/0e). Handover written with 4 tracked followups — the largest remaining gap is `McpTaskServer` production wiring (FU-B9-01): journal fold works but the server isn't yet spawned as a child process for the agent's MCP client. 3 other deferred items: `BuildRolloverResumeHint` full-log re-read perf, `TaskGraph` thread-safety for B12, and `task…
 
 ## Tracker handoff
 
