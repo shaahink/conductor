@@ -1,12 +1,12 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 19:53 UTC · branch `feat/baton` · HEAD `d054c9c`_
+_Updated 2026-07-08 20:00 UTC · branch `feat/baton` · HEAD `5317709`_
 
 **Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B6 — AFK + two-way Telegram · attempts used 0
-**Checkpoints:** 40/65 done · **Sessions run:** 41 · **Cost:** $1.6148 · **Tokens:** 781,877 in / 598,228 out / 260,653 think
+**Checkpoints:** 40/65 done · **Sessions run:** 42 · **Cost:** $1.6754 · **Tokens:** 869,143 in / 606,971 out / 266,930 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5
-**Pending:** auto-fix audit for B6
+**Pending:** full-battery phase gate for B6
 
 ## Stage progress
 
@@ -30,7 +30,6 @@ _Updated 2026-07-08 19:53 UTC · branch `feat/baton` · HEAD `d054c9c`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 12 | B2 | Deliver | 1 | 07-08 06:47 | 0:18 | Advanced | B2.2 | 3 | build:OK | $0.0334 | 1,778/18,546 |
 | 13 | B2 | Deliver | 1 | 07-08 07:06 | 0:10 | Advanced | B2.3 | 3 | build:OK | $0.0551 | 66,865/13,343 |
 | 14 | B2 | Deliver | 1 | 07-08 07:17 | 0:22 | Advanced | B2.4 | 4 | build:OK | $0.0395 | 1,813/20,904 |
 | 15 | B2 | Deliver | 1 | 07-08 07:40 | 0:36 | Advanced | B2.5 | 7 | build:OK | $0.0666 | 3,900/25,958 |
@@ -60,12 +59,10 @@ _Updated 2026-07-08 19:53 UTC · branch `feat/baton` · HEAD `d054c9c`_
 | 39 | B6 | Deliver | 1 | 07-08 18:21 | 0:26 | Advanced | B6.1 B6.2 B6.3 B6.4 | 3 | build:OK | $0.1276 | 91,871/39,873 |
 | 40 | B6 | Deliver | 1 | 07-08 18:48 | … | running |  | 0 |  |  |  |
 | 41 | B6 | Deliver | 1 | 07-08 19:45 | 0:07 | Advanced | B6.5 | 1 | build:OK | $0.0311 | 29,170/7,885 |
+| 42 | B6 | Audit | 1 | 07-08 19:54 | 0:06 | Progress |  | 1 |  | $0.0606 | 87,266/8,743 |
 
 ### Commits by session
 
-- **s33 (B4 Audit)** — 2 commit(s):
-  - fd4e327 fix(bB4): audit-harden TUI — fix status-agent UI-thread race, wire severity model, harden alt-screen restore
-  - 3f46d73 chore(conductor): s33 B4 working ▸B4 @ 17:28
 - **s34 (B5 Deliver)** — 5 commit(s):
   - a8d50f3 chore(bB5.1): fill B5.1 commit hash in tracker (69d70c2)
   - 69d70c2 feat(bB5.1): timeline view (transitions with duration) from the event log
@@ -93,6 +90,8 @@ _Updated 2026-07-08 19:53 UTC · branch `feat/baton` · HEAD `d054c9c`_
   - 9f4a0ee chore(conductor): s39 B6 working ▸B6.1 @ 19:31
 - **s41 (B6 Deliver)** — 1 commit(s):
   - d054c9c feat(bB6.5): Shamshir P-0 + P0.1 headless acceptance — B6 COMPLETE
+- **s42 (B6 Audit)** — 1 commit(s):
+  - 5317709 fix(bB6): audit-harden Telegram + reporter — fix shutdown race, bare catch, thread-safety, unused import
 
 ## Phase handovers (audit)
 
@@ -102,6 +101,7 @@ _Updated 2026-07-08 19:53 UTC · branch `feat/baton` · HEAD `d054c9c`_
 - `.conductor/handovers/B3.md`
 - `.conductor/handovers/B4.md`
 - `.conductor/handovers/B5.md`
+- `.conductor/handovers/B6.md`
 
 ## Last gate run
 
@@ -109,7 +109,7 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: Stage B6 is DONE. All 5 checkpoints landed (Telegram IHostedService + push + /status, two-way inline-keyboard control.json with allowlist+confirm, richer REPORT.md with clean heartbeat, WebhookNotifier for Discord/Slack/generic, Shamshir P-0+P0.1 headless acceptance). Gate battery green: build 0w/0e (net10, warnings-as-errors), 295 tests pass. QA of previous session (B5.4) verified: 24 B5_4 tests green, Reporter confidence wiring confirmed at Reporter.cs:138-147. B6.5 acceptance proven by stable driver dry-run + --once against fresh Shamshir plan with irregular stage-ids (P-0, P0.1). What was hard: the `--once` headless session couldn't complete because the temp dir had no re…
+> SESSION-RESULT: Audit verdict: B6 delivery is **solid** — TelegramService, two-way control, richer REPORT.md with clean heartbeat, WebhookNotifier, and Shamshir dry-run acceptance all pass the gate battery (build 0w/0e, 295 tests). Fixed 5 issues: shutdown race where Dispose could outrun background loops (stop awaiting `Task.WhenAll`), bare catch→specific exceptions in `BuildStatusText`, thread-unsafe static cache in `Reporter.GetRemoteUrl` (added `Lock`), unused import in `WebhookNotifier`, and a stale doc comment. Deferred as tracked followups in `.conductor/handovers/B6.md`: no mock-Telegram integration test (B6.1 gate spec unimplemented), no live Telegram API test, no send-queue drain on…
 
 ## Tracker handoff
 
