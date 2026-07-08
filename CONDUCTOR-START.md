@@ -43,8 +43,8 @@ never silent renumbering.
 | B0.1 | net10 migration + Directory.Build.props + Directory.Packages.props (verify existing Conductor.slnx) | DONE | b3f1499 | docs/baton/evidence/B0.1-gate.txt |
 | B0.2 | .editorconfig + Meziantou.Analyzer + NetAnalyzers, curated ruleset, warnings-as-errors, 56 tests green | DONE | cf378f0 | docs/baton/evidence/B0.2-gate.txt |
 | B0.3 | CONDUCTOR-START.md + plans/conductor.self.plan.json + self-plan gates | BLOCKED | | (driver-locked: pid 27760 holds .conductor lock) |
-| B0.4 | fake-agent.ps1 scenarios extended; self-loop token-free smoke via --dry-run/--once | IN PROGRESS | (pending) | docs/baton/evidence/B0.4-gate.txt (script verified standalone; --once smoke blocked) |
-| B0.5 | Baseline audit doc (current coupling/debt) written as B0 evidence | DONE | (pending) | docs/baton/evidence/B0.5-gate.txt, docs/baton/audits/B0-baseline.md |
+| B0.4 | fake-agent.ps1 scenarios extended; self-loop token-free smoke via --dry-run/--once | IN PROGRESS | bdc5041 | docs/baton/evidence/B0.4-gate.txt (script verified standalone; --once smoke blocked) |
+| B0.5 | Baseline audit doc (current coupling/debt) written as B0 evidence | DONE | 62a819e | docs/baton/evidence/B0.5-gate.txt, docs/baton/audits/B0-baseline.md |
 | B0.6 | ADR-0001 (tooling/ruleset rationale) + ADR-0002 (event-sourcing decision) | DONE | cf378f0,d416ead | docs/baton/adr/0001-tooling-and-ruleset.md, docs/baton/adr/0002-event-sourcing.md |
 | B1.1 | Move plans/loom* + templates → examples/loom/; Loom loads + --dry-run green from new path | TODO | | |
 | B1.2 | IProgressProvider abstraction + MarkdownTableProvider (today's parser, zero behaviour change) | TODO | | |
