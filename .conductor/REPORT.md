@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 06:47 UTC · branch `feat/baton` · HEAD `c3303e0`_
+_Updated 2026-07-08 06:57 UTC · branch `feat/baton` · HEAD `1037ada`_
 
-**Status:** Idle
+**Status:** Running
 **Stage:** B2 — Event-sourced backbone + provider decoupling · attempts used 0 · working ▸ B2.2
-**Checkpoints:** 14/65 done · **Sessions run:** 11 · **Cost:** $0.4377 · **Tokens:** 196,012 in / 170,263 out / 83,850 think
+**Checkpoints:** 14/65 done · **Sessions run:** 12 · **Cost:** $0.4377 · **Tokens:** 196,012 in / 170,263 out / 83,850 think
 **Confirmed phases:** B0, B1
+
+## Latest activity (live)
+
+_Session #12 (Deliver) · running 10m · last output 12s ago · $0.0146_
+
+**Thinking:**
+> The events contain all the necessary information for reconstruction. The fold logic should properly restore parity since the enum parsing handles the PascalCase format correctly—"Deliver" and "Advanced" both parse without issues. The SessionCounter fold is tracking the maximum number at 2.  Now I'm …
+> I should build and check for analyzer errors before moving on to writing tests.
+> Now I'm setting up the test fixtures and making sure they get properly copied to the output directory when the tests run. I need to check how the test project file is configured to include those fixture files as content.
+
+**Recent actions:**
+- `07:55:53` » todowrite 4 todos
+- `07:55:53` · QA of session #11 (B2.1) is **PASS** — gate green, both claims verified, no findings. Now let me set up my task list and deliver B2.2.
+- `07:56:17` · Now let me create the `RunStateProjection` fold. First let me check the SessionRecord list types to use correct initializers.
+- `07:56:17` » write src\Conductor\Core\Events\RunStateProjection.cs
+- `07:56:44` · Now the parity contract:
+- `07:56:44` » write src\Conductor\Core\Events\StateProjectionParity.cs
+- `07:56:51` · Let me build to catch analyzer issues before writing tests.
+- `07:56:59` » bash cd C:\Code\conductor-baton; dotnet build Conductor.slnx 2>&1 | Select-Object -Last 12
+- `07:57:06` · Build green. Let me capture the real recorded run as a fixture and check how the test project includes content files.
+- `07:57:06` » read tests\Conductor.Tests\Conductor.Tests.csproj
 
 ## Stage progress
 
@@ -40,6 +61,7 @@ _Updated 2026-07-08 06:47 UTC · branch `feat/baton` · HEAD `c3303e0`_
 | 9 | B1 | Deliver | 1 | 07-08 05:48 | 0:15 | Advanced | B1.5 B1.6 B1.7 | 7 | build:OK | $0.0744 | 63,136/21,354 |
 | 10 | B1 | Audit | 1 | 07-08 06:04 | 0:17 | Progress |  | 3 |  | $0.0289 | 1,492/13,453 |
 | 11 | B2 | Deliver | 1 | 07-08 06:22 | 0:24 | Advanced | B2.1 | 4 | build:OK | $0.0441 | 2,334/21,533 |
+| 12 | B2 | Deliver | 1 | 07-08 06:47 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
