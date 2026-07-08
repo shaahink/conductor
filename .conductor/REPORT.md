@@ -1,32 +1,12 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 08:39 UTC · branch `feat/baton` · HEAD `270374e`_
+_Updated 2026-07-08 08:48 UTC · branch `feat/baton` · HEAD `4bfae61`_
 
-**Status:** Running
+**Status:** Idle
 **Stage:** B2 — Event-sourced backbone + provider decoupling · attempts used 0
-**Checkpoints:** 19/65 done · **Sessions run:** 17 · **Cost:** $0.7007 · **Tokens:** 337,017 in / 267,818 out / 120,969 think
+**Checkpoints:** 19/65 done · **Sessions run:** 17 · **Cost:** $0.7319 · **Tokens:** 338,818 in / 279,066 out / 128,947 think
 **Confirmed phases:** B0, B1
-
-## Latest activity (live)
-
-_Session #17 (Audit) · running 10m · last output 0s ago · $0.0121_
-
-**Thinking:**
-> The cleanest approach is to pass the conductor session number directly to `AgentSession.Start` so the TokenDelta receives the correct SessionId. Since `EventLog.Emit` doesn't stamp SessionId itself—that's per-event—the emitting site needs to set it explicitly. I'll add a `conductorSessionId` paramet…
-> I'm thinking through how to test that TokenDelta events properly carry the session ID when flowing through AgentSession's EventLog, and that LiveMetrics correctly folds them. The challenge is that AgentSession spawns a real process, making it hard to isolate. A cleaner approach would be to verify at…
-> I'm realizing I made a mistake with my string replacement — I inserted the new method before `ReadAllSucceedsWhileLiveWriterHoldsTheFile` but then added a closing brace that shut the class prematurely, which means the original method got cut off or lost in the process.
-
-**Recent actions:**
-- `09:37:52` » bash git diff db750a2ff8863a84a3cf0a3dff01b8165496bb94..HEAD -- src/Conductor/Conductor.csproj Directory.Packages.props; echo "===NoWarn/pragma scan==="; git di…
-- `09:38:01` · No analyzer suppressions - good. Now let me fix the primary bug. The fix: stamp `SessionId` on `TokenDelta`. The cleanest approach is to pass the current sessio…
-- `09:38:01` » read src\Conductor\Core\Orchestrator.cs
-- `09:38:21` · I've confirmed the primary bug: `TokenDelta` events are persisted without `SessionId`, so `LiveMetrics.ForSession` (the B2.6 deliverable) always returns zero ag…
-- `09:38:21` » edit src\Conductor\Core\AgentSession.cs
-- `09:38:31` » edit src\Conductor\Core\AgentSession.cs
-- `09:38:40` » edit src\Conductor\Core\Orchestrator.cs
-- `09:38:40` · Now update the Orchestrator call site to pass the conductor session number:
-- `09:39:02` · Now let me add a value-only test locking the fixed invariant: a `TokenDelta` with a `SessionId` survives the `EventLog` on-disk round-trip (Emit must not clobbe…
-- `09:39:02` » edit tests\Conductor.Tests\EventLogTests.cs
+**Pending:** full-battery phase gate for B2
 
 ## Stage progress
 
@@ -66,18 +46,10 @@ _Session #17 (Audit) · running 10m · last output 0s ago · $0.0121_
 | 14 | B2 | Deliver | 1 | 07-08 07:17 | 0:22 | Advanced | B2.4 | 4 | build:OK | $0.0395 | 1,813/20,904 |
 | 15 | B2 | Deliver | 1 | 07-08 07:40 | 0:36 | Advanced | B2.5 | 7 | build:OK | $0.0666 | 3,900/25,958 |
 | 16 | B2 | Deliver | 1 | 07-08 08:16 | 0:12 | Advanced | B2.6 | 2 | build:OK | $0.0683 | 66,649/18,804 |
-| 17 | B2 | Audit | 1 | 07-08 08:29 | … | running |  | 0 |  |  |  |
+| 17 | B2 | Audit | 1 | 07-08 08:29 | 0:19 | Progress |  | 2 |  | $0.0312 | 1,801/11,248 |
 
 ### Commits by session
 
-- **s9 (B1 Deliver)** — 7 commit(s):
-  - de42b0b chore: fill B1.6/B1.7 commit hashes in tracker
-  - 89e1a11 chore: B1 complete (7/7) — update handoff + checkpoint rows
-  - 8701aff feat(bB1.7): Shamshir parity-pipeline TRACKER.md parse test
-  - c3fa637 feat(bB1.6): new-plan scaffold + schema version validation
-  - 98a17c2 chore(conductor): s9 B1 working ▸B1.5 @ 06:58
-  - 7e14776 chore: fill B1.5 commit hash in tracker
-  - 01c1732 feat(bB1.5): read-order context battery
 - **s10 (B1 Audit)** — 3 commit(s):
   - d8d8b89 docs(bB1-audit): honest B1 phase handover + tracked followups
   - a952084 fix(bB1-audit): stage-coherent new-plan scaffold + whitespace-tolerant status
@@ -111,11 +83,15 @@ _Session #17 (Audit) · running 10m · last output 0s ago · $0.0121_
 - **s16 (B2 Deliver)** — 2 commit(s):
   - 3707016 feat(bB2.6): TokenDelta events per step_finish + LiveMetrics projection + live dashboard tokens
   - 188d3fe chore(conductor): s16 B2 working ▸B2.6 @ 09:26
+- **s17 (B2 Audit)** — 2 commit(s):
+  - 4bfae61 fix(bB2.6): stamp sessionId on persisted TokenDelta so LiveMetrics.ForSession folds real logs
+  - a20eef0 chore(conductor): s17 B2 working ▸B2 @ 09:39
 
 ## Phase handovers (audit)
 
 - `.conductor/handovers/B0.md`
 - `.conductor/handovers/B1.md`
+- `.conductor/handovers/B2.md`
 
 ## Last gate run
 
@@ -123,7 +99,7 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: B2.6 landed — TokenDelta event type (source-gen round-trip), AgentStreamState.EmitTokenDelta delegate wired through AgentSession → IEventSink, OpencodeProvider emits per step_finish, LiveMetrics projection folds deltas per-session + run-wide, dashboard TokenLine now includes live session tokens (F-3 fixed following the cost-line pattern). Stage B2 is COMPLETE. 125 tests green, build 0w/0e, commit 3707016 pushed. Next session picks up B3.1 (destructive-action confirm in TUI + CLI). What was hard: the design decision of WHERE to wire the token-delta emit — the provider layer (OpencodeProvider) has the delta values but no event sink; the solution was a secondary optional delegat…
+> SESSION-RESULT: B2 (event-sourced backbone + provider decoupling + Host/DI/logging) is genuinely load-bearing and passed audit — the event log is emitted additively at every transition, fold parity is proven against two fixtures (with the guard itself guarded), crash recovery replays the log, the provider `switch` is really gone behind `IAgentProvider`, the host composes via DI with fail-fast Options validation + Serilog correlation, and every `catch {}` in the diff is now typed/handled (FU-B0-6 closed). I found and **fixed one real, silent B2.6 defect**: persisted `TokenDelta` events never carried a `sessionId` (`EventLog.Emit` stamps only Seq/Ts/RunId), so `LiveMetrics.ForSession` — the B2…
 
 ## Tracker handoff
 
