@@ -8,24 +8,22 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #32 (B4.7, deliver) — landed **B4.7**: live-consistent token line + doc-on-select.
-      Token line now breaks out the running session delta as `(session Nk)`, matching the cost
-      line's `(session $…)` (F-3 at the display layer). Plan tree gains a ↑/↓ selection cursor;
-      `D` opens the *selected* row's owning-stage doc (checkpoint→stage resolved). +6 tests. 215→221.
-stage: **B4 COMPLETE** — B4.1–B4.7 all DONE. Next: B4 per-phase audit (self-plan audit=on) → B5.1.
-gate: GREEN — build 0w/0e; 221 tests pass. In-tree `preview` exit 0; header "(F/↑↓/D)", action bar
-      "[↑↓] select · [D] docs". B4.7-gate.txt, B4.7-tokens-preview.txt, B4.7-docselect-preview.txt.
-qa: session #31/B4.6 PASS — re-ran gate (build 0w/0e, 215 tests). Claim-1: 9 CommandHistory tests
-     green. Claim-2: in-tree preview exit 0, action bar shows "[O] history"+"[F] filter". No findings.
-     (Stable driver's preview shows master's "[O] output" — it predates B4.6, as designed.)
-next: **B4 audit** then **B5.1** (timeline view from the event log). See conductor-DEBT.md — its
-      "B4.7 async ratchet" is a *followup* section, NOT this stage's B4.7 (which is R4.7, now done).
-trap: doc-on-select is stage-granular (docs are per-stage sections; a checkpoint row resolves to its
-      owning stage via PlanTree.StageForRow). ↑/↓ now navigate the plan tree (previously unmapped →
-      cancelled a pending confirm). Stable-driver dry-run blocked by the live orchestrator's plan lock
-      (pid) — expected while it drives me; the build+test battery is the authoritative gate.
+last: session #34 (B5.1, deliver) — landed **B5.1**: `Timeline` projection (pure fold over the event
+      log → ordered transitions with durations) + REPORT.md `## Timeline` section + TUI timeline modal
+      (`L` key). Session/stage/run spans computed from start↔finish ts; gate span from durationMs;
+      TokenDelta excluded (LiveMetrics owns accrual — B5 trap: no drift store). +10 tests. 221→231.
+stage: **B5 IN PROGRESS** — B5.1 DONE. Next: B5.2 (replay/time-travel F8) → B5.3 → B5.4.
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 231 tests pass. Real events.jsonl folded via
+      3× `--once` smoke (runId 4821958…) → REPORT timeline with correct spans. B5.1-gate.txt.
+qa: session #33/B4 audit PASS — re-ran gate (build 0w/0e, 221 tests). Claim-1: 8 severity/idempotent-
+     restore tests green. Claim-2: in-tree preview exit 0, clean frame, 'sessions unreported' label. No findings.
+next: **B5.2** — replay/time-travel viewer (`conductor replay <run>` + TUI F8) reconstructs a past run
+      from events.jsonl in order; reuse Timeline.Build + the tested modal pager. See B5.md R5.2.
+trap: timeline is a PURE fold over the single event log — never a parallel store (B5 trap). Everything
+      B5 (replay/health/confidence) reads the same log. Durations are computed, not persisted. Tracker
+      B5.1 (this row) ≠ conductor-DEBT.md's "B5.1" (that's a LiveMetrics-wiring followup, FU-B2-1).
 dirty: none.
-evidence: B4.7-gate.txt, B4.7-tokens-preview.txt, B4.7-docselect-preview.txt
+evidence: docs/baton/evidence/B5.1-gate.txt
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -77,7 +75,7 @@ never silent renumbering.
 | B4.5 | Structured thinking pane (Goal/Hypothesis/Evidence/Action) + tool-call folding | DONE | 5b9db37 | docs/baton/evidence/B4.5-gate.txt, docs/baton/evidence/B4.5-preview.txt |
 | B4.6 | Command history search + filters (/build /git /test; commands/thoughts/errors) | DONE | f4f2997 | docs/baton/evidence/B4.6-gate.txt, docs/baton/evidence/B4.6-preview.txt |
 | B4.7 | Live-consistent token line + plan-tree filter/search for large plans; doc-on-select | DONE | 1f61578, c1edb3b | docs/baton/evidence/B4.7-gate.txt, docs/baton/evidence/B4.7-tokens-preview.txt, docs/baton/evidence/B4.7-docselect-preview.txt |
-| B5.1 | Timeline view (transitions with duration) from the event log | TODO | | |
+| B5.1 | Timeline view (transitions with duration) from the event log | DONE | <commit> | docs/baton/evidence/B5.1-gate.txt |
 | B5.2 | Replay / time-travel (F8) reconstructs a past run from events.jsonl | TODO | | |
 | B5.3 | AI-health metrics (retry rate, command repetition, failure loops, tool oscillation, context saturation) | TODO | | |
 | B5.4 | Confidence tracking per checkpoint (evidence count) + MCP call metrics + repo strip | TODO | | |

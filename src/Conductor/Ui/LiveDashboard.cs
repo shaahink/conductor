@@ -17,7 +17,7 @@ namespace Conductor.Ui;
 /// </summary>
 public sealed class LiveDashboard : IProgressSink
 {
-    private enum Modal { None, Thinking, Output, Docs, Git, Prompt, Status }
+    private enum Modal { None, Thinking, Output, Docs, Git, Prompt, Status, Timeline }
 
     private readonly Lock _gate = new();
     private readonly List<DashboardState.AgentLine> _agent = new();
@@ -163,6 +163,7 @@ public sealed class LiveDashboard : IProgressSink
             case ConsoleKey.D: OpenModal(Modal.Docs); break;
             case ConsoleKey.V: OpenModal(Modal.Git); break;
             case ConsoleKey.X: OpenModal(Modal.Prompt); break;
+            case ConsoleKey.L: OpenModal(Modal.Timeline); break;
             case ConsoleKey.G when _plan?.StatusAgent is { Enabled: true }: StartStatusAgent(); break;
             case ConsoleKey.F: _tree = _tree with { Filter = PlanTree.NextFilter(_tree.Filter) }; break;
             case ConsoleKey.E: _tree = _tree with { ExpandAll = !_tree.ExpandAll }; break;
@@ -293,6 +294,7 @@ public sealed class LiveDashboard : IProgressSink
                     case ConsoleKey.D: OpenModal(Modal.Docs); break;
                     case ConsoleKey.V: OpenModal(Modal.Git); break;
                     case ConsoleKey.X: OpenModal(Modal.Prompt); break;
+                    case ConsoleKey.L: OpenModal(Modal.Timeline); break;
                     case ConsoleKey.I when _plan != null: _inputActive = true; _inputBuffer.Clear(); break;
                     case ConsoleKey.G when _plan?.StatusAgent is { Enabled: true }: StartStatusAgent(); break;
                     case ConsoleKey.F: _tree = _tree with { Filter = PlanTree.NextFilter(_tree.Filter) }; break;
@@ -318,7 +320,7 @@ public sealed class LiveDashboard : IProgressSink
                           else Log("Press K again to confirm KILL (any other key cancels)", LogSeverity.Waiting); }
                         break;
                     case ConsoleKey.Q: _pendingConfirm = null; _keys.Enqueue(ControlAction.StopAfterSession); break;
-                    case ConsoleKey.T or ConsoleKey.O or ConsoleKey.D or ConsoleKey.V or ConsoleKey.X or ConsoleKey.I or ConsoleKey.G:
+                    case ConsoleKey.T or ConsoleKey.O or ConsoleKey.D or ConsoleKey.V or ConsoleKey.X or ConsoleKey.L or ConsoleKey.I or ConsoleKey.G:
                         break; // handled above — non-destructive keys don't cancel pending confirm
                     default: _pendingConfirm = null; break; // any unmapped key cancels
                 }
@@ -415,6 +417,7 @@ public sealed class LiveDashboard : IProgressSink
             Modal.Docs => ($"docs · stage {SelectedDocStage()}", DocsLines()),
             Modal.Git => ("git", GitLines()),
             Modal.Prompt => ("compiled prompt (current session)", PromptLines()),
+            Modal.Timeline => ("timeline · transitions from the event log", TimelineLines()),
             _ => ("", new List<string>()),
         };
         lock (_gate) { _modal = kind; _modalTitle = title; _modalLines = lines; _modalOffset = Math.Max(0, lines.Count - 1); }
@@ -482,6 +485,17 @@ public sealed class LiveDashboard : IProgressSink
 
     private List<string> GitLines()
         => _plan == null ? new() { "(git unavailable in preview)" } : Split(GitView.Summary(_plan.Repo));
+
+    /// <summary>Folds the append-only event log into the timeline modal (B5.1) — transitions with
+    /// durations, from the same <c>events.jsonl</c> the REPORT.md Timeline section reads. Captured once
+    /// on open; tolerant of a missing/locked log (renders a hint rather than throwing).</summary>
+    private List<string> TimelineLines()
+    {
+        if (_plan == null) return new() { "(timeline unavailable in preview)" };
+        var entries = Reporter.ReadTimeline(_plan);
+        if (entries.Count == 0) return new() { "(no events recorded yet — the timeline populates as the run emits events)" };
+        return entries.Select(Conductor.Core.Events.Timeline.Format).ToList();
+    }
 
     private List<string> PromptLines()
     {

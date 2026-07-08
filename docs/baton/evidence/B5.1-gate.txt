@@ -1,0 +1,82 @@
+# B5.1 evidence — Timeline view (transitions with duration) from the event log
+# Produced: 2026-07-08 18:05  (session #34, stage B5, attempt 1)
+# In-tree build: C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.dll
+#
+# WHY the in-tree build (not the STABLE driver) produced the timeline artifact:
+#   B5.1 adds NEW behaviour (the Timeline projection + REPORT.md section + TUI modal) that exists
+#   ONLY in this worktree's build. The STABLE bin\conductor.exe from master cannot render a timeline,
+#   so the artifact can only come from the in-tree binary. The STABLE driver still JUDGES this
+#   checkpoint the usual way (build gate + tests + new commit + tracker row flip).
+# =============================================================================
+
+### GATE BATTERY (green) ###
+$ dotnet build Conductor.slnx
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+$ dotnet test Conductor.slnx
+Passed!  - Failed:     0, Passed:   231, Skipped:     0, Total:   231 - Conductor.Tests.dll (net10.0)
+# 221 → 231 : +10 tests
+#   TimelineTests (8):
+#     SessionDurationIsTheSpanBetweenStartedAndFinished   (durations correct on a REAL recorded stream)
+#     SessionStartedRowHasNoDurationAndPreservesOrder     (point event; Seq order)
+#     GateEntryCarriesTheEngineMeasuredDuration           (GateFinished.DurationMs → entry)
+#     CheckpointConfirmedIsAPointEventWithNoDuration
+#     FoldIsDeterministicRegardlessOfInputOrder           (pure fold, ordered by Seq)
+#     StageAndRunSpansAreMeasuredAndEveryKindRenders      (all 7 EntryKinds; stage=36m, run=40m)
+#     TokenDeltasAreExcludedFromTheTransitionTimeline     (B5 trap: transitions only, no drift store)
+#     EmptyLogYieldsEmptyTimeline
+#   ReporterTests (2):
+#     BuildRendersTimelineSectionFromTheEventLog          (## Timeline derives from the folded log)
+#     BuildOmitsTimelineSectionWhenNoEvents
+
+### REAL RUN — timeline folded from a recorded events.jsonl ###
+# Harness: tools/fake-agent.ps1 (token-free), plan B5Smoke (opencode-json, perPhase, audit off),
+#   temp git repo C:/Users/shahi/AppData/Local/Temp/opencode/b5-smoke. Three `--once` invocations:
+#   #1 deliver S1.1, #2 deliver S1.2, then the full-battery phase gate → stage S1 CONFIRMED.
+# runId 48219580e7494d78a3b5f221e07efdb5 · 18 events across 2 sessions + phase gate (one stream).
+#
+# Command that produced the artifact:
+#   dotnet run --project src\Conductor -- report -p <smoke plan>   →  .conductor/REPORT.md
+#
+# Durations are computed by the pure fold (Timeline.Build), NOT stored:
+#   - session span  = SessionFinished.ts − SessionStarted.ts   (#1 = 2.2s, #2 = 2.1s)
+#   - gate span     = GateFinished.durationMs                   (build ≈ 0.5s / 0.4s)
+#   - stage span    = StageConfirmed.ts − StageEntered.ts       (S1 = 36.4s across the resumes)
+#   - point events  = no duration                               (checkpoint confirmed, run started)
+# TokenDelta events (seq 4,5,11,12) are intentionally EXCLUDED — LiveMetrics owns token accrual;
+# the timeline is state transitions only (B5 trap: no parallel bookkeeping store that can drift).
+#
+# --- .conductor/REPORT.md → "## Timeline" section (glyphs are UTF-8 in the file; ◆▸•▪✓) ---
+## Timeline
+
+_Transitions with duration, from the event log (`.conductor/events.jsonl`)._
+
+```
+07-08 18:02:56  ◆ run started · B5Smoke
+07-08 18:02:56  ▸ stage S1 entered — Smoke
+07-08 18:02:56  • session #1 S1 Deliver started (attempt 1/4)
+07-08 18:02:58  ▪ gate build pass [session]  (0.5s)
+07-08 18:02:59  • session #1 S1 → Advanced · done S1.1 · 1 commit(s)  (2.2s)
+07-08 18:02:59  ✓ checkpoint S1.1 confirmed
+07-08 18:03:14  ◆ run resumed · B5Smoke
+07-08 18:03:14  • session #2 S1 Deliver started (attempt 1/4)
+07-08 18:03:16  ▪ gate build pass [session]  (0.5s)
+07-08 18:03:16  • session #2 S1 → Advanced · done S1.2 · 1 commit(s)  (2.1s)
+07-08 18:03:16  ✓ checkpoint S1.2 confirmed
+07-08 18:03:32  ◆ run resumed · B5Smoke
+07-08 18:03:33  ▪ gate build pass [phase]  (0.4s)
+07-08 18:03:33  ▸ stage S1 confirmed  (36.4s)
+```
+
+### TUI — timeline modal wired (L key) ###
+conductor preview action bar now advertises the pop-out; L opens the timeline modal (same fold):
+  [T] think · [O] history · [L] timeline · [C] fold · [up/down] select · [D] docs · [V] git · [X] prompt ·
+
+### QA of previous session (#33, B4 audit) — VERDICT: PASS ###
+# Re-ran its stated gate: build 0w/0e, 221 tests green (baseline before this session's +10).
+# Claim 1 (tests): 8 targeted green — DashboardRendererTests.SeverityGlyphMapsEveryLevel/
+#   SeverityColorMatchesGlyph + AltScreenTests.RestoreIsIdempotent (the audit's severity-wire + restore-hardening).
+# Claim 2 (running artifact): in-tree `preview` exit 0, single clean frame, reworded 'sessions unreported'
+#   label present, action bar intact. No findings; the B4-audit concurrency/severity/restore fixes hold.

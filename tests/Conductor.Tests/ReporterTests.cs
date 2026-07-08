@@ -1,4 +1,5 @@
 using Conductor.Core;
+using Conductor.Core.Events;
 using Conductor.Models;
 
 namespace Conductor.Tests;
@@ -23,6 +24,40 @@ public class ReporterTests
             new TrackerSnapshot(), null, "**Recent actions:**\n- did a thing");
         Assert.Contains("Latest activity (live)", report);
         Assert.Contains("did a thing", report);
+    }
+
+    [Fact]
+    public void BuildRendersTimelineSectionFromTheEventLog()
+    {
+        // B5.1: the report's Timeline section derives from the folded event log (no parallel store).
+        const string ndjson = """
+        {"type":"runStarted","plan":"T","repo":"C:/r","resumed":false,"seq":1,"ts":"2026-07-08T06:53:00Z","runId":"r"}
+        {"type":"sessionStarted","number":1,"stageId":"S1","kind":"Deliver","attempt":1,"maxAttempts":6,"agentSessionId":"a","seq":2,"ts":"2026-07-08T06:53:01Z","runId":"r","sessionId":"1"}
+        {"type":"sessionFinished","number":1,"stageId":"S1","outcome":"Advanced","newlyDone":["S1.1"],"seq":3,"ts":"2026-07-08T06:53:06Z","runId":"r","sessionId":"1"}
+        """;
+        var path = Path.Combine(Path.GetTempPath(), $"conductor-rep-{Guid.NewGuid():N}.jsonl");
+        File.WriteAllText(path, ndjson);
+        try
+        {
+            var timeline = Timeline.Build(EventLog.ReadAll(path));
+            var report = Reporter.Build(PlanIn(Path.GetTempPath()), new RunState { PlanName = "T" },
+                new TrackerSnapshot(), null, null, timeline);
+
+            Assert.Contains("## Timeline", report);
+            Assert.Contains("events.jsonl", report);
+            Assert.Contains("session #1 S1 Deliver started", report);
+            Assert.Contains("session #1 S1 → Advanced", report);
+            Assert.Contains("(5.0s)", report);           // the session span duration
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public void BuildOmitsTimelineSectionWhenNoEvents()
+    {
+        var report = Reporter.Build(PlanIn(Path.GetTempPath()), new RunState { PlanName = "T" },
+            new TrackerSnapshot(), null, null, timeline: null);
+        Assert.DoesNotContain("## Timeline", report);
     }
 
     [Fact]

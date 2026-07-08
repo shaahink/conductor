@@ -1,4 +1,5 @@
 using System.Text;
+using Conductor.Core.Events;
 using Conductor.Models;
 
 namespace Conductor.Core;
@@ -11,7 +12,8 @@ public static class Reporter
 
     public static string ReportPath(PlanConfig plan) => Path.Combine(plan.StateDir, "REPORT.md");
 
-    public static string Build(PlanConfig plan, RunState state, TrackerSnapshot track, IReadOnlyList<GateResult>? lastGates, string? liveActivity = null)
+    public static string Build(PlanConfig plan, RunState state, TrackerSnapshot track, IReadOnlyList<GateResult>? lastGates, string? liveActivity = null,
+        IReadOnlyList<Timeline.TimelineEntry>? timeline = null)
     {
         var sb = new StringBuilder();
         var done = track.Checkpoints.Count(c => c.IsDone);
@@ -78,6 +80,21 @@ public static class Reporter
             sb.AppendLine($"| {h.Number} | {h.Stage} | {h.Kind} | {att} | {h.StartedUtc:MM-dd HH:mm} | {dur} | {h.Outcome?.ToString() ?? "running"} | {string.Join(" ", h.NewlyDone)} | {h.NewCommits.Count} | {h.GateSummary} | {(h.CostUsd.HasValue ? "$" + h.CostUsd.Value.ToString("0.0000") : "")} | {toks} |");
         }
         sb.AppendLine();
+
+        // Timeline (B5.1): state transitions with durations, folded from the event log. Every row here
+        // derives from .conductor/events.jsonl — the single source (B5 trap: no parallel store).
+        if (timeline is { Count: > 0 })
+        {
+            sb.AppendLine("## Timeline");
+            sb.AppendLine();
+            sb.AppendLine("_Transitions with duration, from the event log (`.conductor/events.jsonl`)._");
+            sb.AppendLine();
+            sb.AppendLine("```");
+            foreach (var e in timeline.TakeLast(40))
+                sb.AppendLine(Timeline.Format(e));
+            sb.AppendLine("```");
+            sb.AppendLine();
+        }
 
         // per-session commit detail (recent sessions that committed) — so you can review without digging into git
         var withCommits = state.History.Where(h => h.NewCommits.Count > 0).TakeLast(8).ToList();
@@ -156,7 +173,7 @@ public static class Reporter
         try
         {
             Directory.CreateDirectory(plan.StateDir);
-            newContent = Build(plan, state, track, lastGates, liveActivity);
+            newContent = Build(plan, state, track, lastGates, liveActivity, ReadTimeline(plan));
             old = File.Exists(path) ? File.ReadAllText(path) : null;
             File.WriteAllText(path, newContent, Utf8Bom);
         }
@@ -190,6 +207,22 @@ public static class Reporter
     /// <summary>Strip the volatile timestamp line so timestamp-only rewrites don't produce commits.</summary>
     private static string Normalize(string s)
         => string.Join("\n", s.Replace("\r\n", "\n").Split('\n').Where(l => !l.StartsWith("_Updated ", StringComparison.Ordinal)));
+
+    /// <summary>Fold the append-only event log into a timeline for the report, tolerating a missing or
+    /// unreadable log (a run may not have emitted events yet, or the log may be locked mid-write) —
+    /// the report renders without the Timeline section rather than failing (A15: no crash on I/O).</summary>
+    public static IReadOnlyList<Timeline.TimelineEntry> ReadTimeline(PlanConfig plan)
+    {
+        try
+        {
+            var path = Path.Combine(plan.StateDir, "events.jsonl");
+            return Timeline.Build(EventLog.ReadAll(path));
+        }
+        catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException or UnauthorizedAccessException)
+        {
+            return [];
+        }
+    }
 
     private static string Short(string sha) => sha.Length >= 7 ? sha[..7] : sha;
 
