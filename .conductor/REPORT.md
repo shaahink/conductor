@@ -1,6 +1,6 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 08:59 UTC · branch `feat/baton` · HEAD `c05b4ff`_
+_Updated 2026-07-08 09:09 UTC · branch `feat/baton` · HEAD `a48b3bd`_
 
 **Status:** Running
 **Stage:** B3 — Safety, owner-gates & process control · attempts used 0 · working ▸ B3.1
@@ -9,24 +9,24 @@ _Updated 2026-07-08 08:59 UTC · branch `feat/baton` · HEAD `c05b4ff`_
 
 ## Latest activity (live)
 
-_Session #18 (Deliver) · running 10m · last output 0s ago · $0.0441_
+_Session #18 (Deliver) · running 20m · last output 6s ago · $0.0913_
 
 **Thinking:**
-> Build succeeded with 0 warnings and 0 errors. Now let me run the tests to make sure everything passes.
-> All 126 tests pass. Now I need to add tests for the confirm-gating behavior. The B3.1 gate says: "unit/headless test — finger-slip without confirm does not skip; confirmed path does."  Let me add tests for: 1. The `ConfirmMessage` helper (returns correct messages for each destructive action) 2. The …
-> Let me add tests at the end of the DashboardRendererTests file. I'll add: 1. Test that confirm prompt is rendered in the footer when set 2. Test that confirm prompt only appears for destructive actions (A/K/S) 3. Test that narrow/short terminals with confirm prompt still render  Actually, let me als…
+> Let me see the rest of HandleControl, especially the AbortNow case:
+> Now let me implement the new control verbs. I'll add them to `HandleControl`:
+> Now I need to add these commands to `ReadControlFile`. But `Goto` needs a `stageId` parameter. Let me handle that in the ReadControlFile parsing — if the command is "goto", also read the "stageId" field.  Also need to handle PauseAfterStage in ConfirmStage.
 
 **Recent actions:**
-- `09:57:50` » read src\Conductor\Commands\Commands.cs
-- `09:57:50` · Let me check how commands are registered to verify the Settings type change doesn't break anything:
-- `09:57:56` · Now let me build to verify everything compiles:
-- `09:58:04` » bash dotnet build Conductor.slnx 2>&1
-- `09:58:14` · Build passes clean. Now let me run the tests:
-- `09:58:23` » bash dotnet test Conductor.slnx 2>&1
-- `09:58:54` » read tests\Conductor.Tests\DashboardRendererTests.cs
-- `09:58:54` · All 126 tests pass. Now I need to add focused tests for B3.1. The gate requires: "finger-slip without confirm does not skip; confirmed path does." Let me add te…
-- `09:59:07` » write src\Conductor\Core\ConfirmGate.cs
-- `09:59:07` · Let me create a simple, testable `ConfirmGate` helper to encapsulate the confirm logic, then wire it into LiveDashboard and PlainSink:
+- `10:08:16` » edit src\Conductor\Models\RunState.cs
+- `10:08:16` · First, add new control actions and the `PauseAfterStage` flag:
+- `10:08:21` » grep class Git
+- `10:08:26` » read src\Conductor\Core\Git.cs
+- `10:08:36` » read src\Conductor\Core\Orchestrator.cs
+- `10:08:36` · Now implement the process control verbs in Orchestrator:
+- `10:08:41` » read src\Conductor\Core\Orchestrator.cs
+- `10:08:51` » edit src\Conductor\Core\Orchestrator.cs
+- `10:09:00` » edit src\Conductor\Core\Orchestrator.cs
+- `10:09:00` · Now update `ReadControlFile` for new commands, and handle `PauseAfterStage` in `ConfirmStage`:
 
 ## Stage progress
 
