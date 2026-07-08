@@ -17,6 +17,7 @@
   "planDoc": "docs/baton/BATON-BRIEF.md",
   "branchPattern": "^feat/baton",
   "pauseOnBlocked": false,
+  "batteryCollapse": true,
 
   // Acting agent: opencode/deepseek-v4-pro (same as the Loom run). provider "opencode" selects the
   // IAgentProvider adapter (B2.4) that parses opencode's --format json stream (text/reasoning/tool/

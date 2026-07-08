@@ -48,6 +48,11 @@ public sealed class PlanConfig
     public string PromptExtra { get; set; } = "";
     /// <summary>Opt-in prompt batteries for bounded context injection (B8.5). null = none.</summary>
     public BatteriesConfig? Batteries { get; set; }
+    /// <summary>When true, the agent is instructed to skip its own pre-session build+test ritual
+    /// and defer to Conductor's battery, which remains the single source of truth (B10.4). This
+    /// saves ~30-50% of agent-output tokens that were spent echoing build/test output that Conductor
+    /// re-runs anyway. Default false (back-compat).</summary>
+    public bool BatteryCollapse { get; set; }
     /// <summary>Mandated docs to read in order at session start (paths relative to repo root).
     /// Rendered as an ordered list in the session prompt. Empty/null = no list rendered (B1.5).</summary>
     public List<string>? ReadOrder { get; set; }

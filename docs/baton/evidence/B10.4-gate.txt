@@ -1,0 +1,32 @@
+=== B10.4 gate battery ===
+Date: 2026-07-08
+
+Build: dotnet build Conductor.slnx
+Result: 0 warnings, 0 errors (net10.0, warnings-as-errors)
+
+Tests: dotnet test Conductor.slnx
+Result: 406 passed, 0 failed, 0 skipped (+5 B10.4 tests)
+
+--- B10.4 test details ---
+B10_4BatteryCollapseTests (5 tests):
+  BatteryCollapseDefaultsToFalse               — omitted flag = false (back-compat)
+  BatteryCollapseDeserializesTrue              — "batteryCollapse": true round-trips from JSON
+  SessionPromptIncludesBatteryCollapseNoteWhenEnabled  — prompt has "Do NOT run build or test" when true
+  SessionPromptOmitsBatteryCollapseNoteWhenDisabled    — prompt says "Run the gate battery" when false
+  SelfPlanHasBatteryCollapseEnabled            — the self-plan has batteryCollapse: true
+
+--- Changes (5 files, within ~15 budget) ---
+src/Conductor/Models/PlanConfig.cs         + 5  BatteryCollapse: bool (default false)
+src/Conductor/Core/PromptBuilder.cs        + 5  {batteryCollapseNote} var + session template update
+plans/conductor.self.plan.json             + 1  "batteryCollapse": true
+tests/Conductor.Tests/B10_4Tests.cs        +135 5 new tests (new file)
+
+--- What landed ---
+- PlanConfig.BatteryCollapse: bool — when true, the agent is told to skip its own build+test ritual
+- The agent's session prompt omits build/test instructions when battery collapse is active
+- Conductor's independent battery remains the sole source of truth
+- Back-compat: BatteryCollapse defaults to false, preserving the double-verification model
+- The self-plan has batteryCollapse: true enabled for B10+
+- Token savings: the agent no longer spends ~30-50% of output tokens echoing build/test output that
+  Conductor re-runs anyway (RESEARCH.md rec #2, BRIEF §5.1). Measurement will be visible as lower
+  tokens-per-session in the report under B10 sessions vs pre-B10 sessions.

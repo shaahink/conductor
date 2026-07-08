@@ -98,6 +98,9 @@ public sealed class PromptBuilder
             ["persona"] = personaName ?? "",
             ["personaSystemPrompt"] = personaSystemPrompt,
             ["lessons"] = lessonsContent,
+            ["batteryCollapseNote"] = _plan.BatteryCollapse
+                ? "\n**IMPORTANT — battery collapse (B10.4):** Do NOT run build or test commands yourself. Conductor's independent battery is the single source of truth. Instead, describe what you changed in a `## Changes` section of your handoff so Conductor knows what to verify. This saves tokens and avoids duplicating work."
+                : "",
         };
     }
 
@@ -145,7 +148,7 @@ public sealed class PromptBuilder
             Work in: {repo}
             {readOrder}
             Do, in order:
-            1. PRE-SESSION RITUAL — exactly as `{planDoc}` prescribes: read `{tracker}` (handoff block + stated read order), your stage section, and the design docs it cites. Run the gate battery. Never build on red — fix or record first.
+            1. PRE-SESSION RITUAL — exactly as `{planDoc}` prescribes: read `{tracker}` (handoff block + stated read order), your stage section, and the design docs it cites. Run the gate battery. Never build on red — fix or record first.{batteryCollapseNote}
             2. QA THE PREVIOUS SESSION — audit its tracker claims against fresh artifacts (re-run things; do not trust claims). Fix real findings before new work; note the QA verdict in your final tracker handoff.
             3. DELIVER the next incomplete checkpoint(s) of stage {stage} only. One checkpoint landed with proof beats three claimed. Do not start other stages' work.
             4. POST-SESSION RITUAL — re-run the gate battery plus your stage's truth gates; produce fresh evidence artifacts; update `{tracker}` (overwrite the handoff block, fill checkpoint rows: Status, Commit, Evidence); commit per checkpoint using the plan's commit convention; push the branch.
