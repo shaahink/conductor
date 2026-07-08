@@ -78,6 +78,9 @@ public sealed class LiveDashboard : IProgressSink
     /// <summary>Runs on the main thread until the orchestrator task completes.</summary>
     public void RunUiLoop(Task orchestrator)
     {
+        // Alt-screen buffer: the dashboard owns a scratch screen and the user's scrollback + prompt
+        // are restored on every exit path (normal, exception, Ctrl+C). Redirected output → inert.
+        using var alt = AltScreen.Enter();
         AnsiConsole.Live(new Text(""))
             .AutoClear(false)
             .Overflow(VerticalOverflow.Crop)
@@ -105,6 +108,7 @@ public sealed class LiveDashboard : IProgressSink
             AnsiConsole.Write(BuildTarget());
             return;
         }
+        using var alt = AltScreen.Enter();
         AnsiConsole.Live(new Text(""))
             .AutoClear(false)
             .Overflow(VerticalOverflow.Crop)

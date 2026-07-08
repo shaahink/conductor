@@ -7,21 +7,22 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #18 (B3, deliver) — landed **B3.1…B3.5**, stage B3 COMPLETE. Confirm-gating for A/K/S
-      (TUI double-press + CLI --yes); owner-gate step type + AwaitingOwner + approve; process-control
-      verbs (retry-stage/rollback/pause-after-stage/goto); budget/token caps + approval mode;
-      graceful Ctrl+C with heartbeat + queue-resume. 149 tests (126→+23). Battery GREEN.
-stage: **B3 DONE** — B3.1…B3.5 all landed. Stage B4 next (TUI overhaul).
-gate: GREEN — build 0w/0e; test 149 pass. Dry-run smoke exit 0. Event log round-trip covers 12 event
-      types (incl. OwnerApprovalRequested/Granted). Manual TUI confirm-prompt verified.
-qa: session #16 (B2.6) PASS — re-ran gate (build 0w/0e, 126 tests), verified TokenDelta delegate path
-      end-to-end (OpencodeProvider→AgentStreamState→IEventSink), verified round-trip test exists.
-      Audit session #17 already fixed B2.6 TokenDelta.sessionId null-on-disk bug. No new findings.
-next: **B4.1** — Alternate-screen buffer with clean restore on exit/crash. Persona: engineer.
-trap: push failed (github.com unreachable). 4 commits local (db01755, a48b3bd, 90ce43a, 157cdc8).
-      Budget caps + approval mode not yet smoke-tested against a real agent run.
+last: session #26 (B4, deliver) — landed **B4.1**: AltScreen guard (alt-screen buffer + hide/show
+      cursor, restore on EVERY exit path: using/finally, exception, SIGINT/TERM/QUIT, ProcessExit;
+      idempotent; redirected→inert). Wired into RunUiLoop + RunPreview. 3 headless tests. 164→167.
+stage: **B4 IN PROGRESS** — B4.1 DONE. Next B4.2 (Spectre Layout rebuild of BuildRoot).
+gate: GREEN — build 0w/0e; 167 tests pass. Redirected `conductor preview` exit 0, renders inline,
+      emits NO alt-screen escapes (guard inert when redirected) — verified as running artifact.
+qa: session #18/B3 PASS — re-ran gate (build 0w/0e, 167 tests, ratchet up from 149). Verified
+      claim-1 via tests (22 confirm-gate/owner-approval/control-file pass); claim-2 via running exe
+      (`conductor abort` refuses without --yes, exit 2; approve/retry/rollback/goto verbs live).
+      Sessions #19–25 only produced stalled heartbeat commits — no B4 work had actually landed.
+next: **B4.2** — rebuild DashboardRenderer.BuildRoot on Spectre Layout/Grid/Panel/Rule; keep the pure
+      DashboardState→IRenderable split; no header stacking at small heights (DashboardRendererTests).
+trap: push may fail (github.com unreachable per #18). Manual TUI alt-screen restore needs a real TTY
+      to eyeball — headless test asserts the byte sequences only.
 dirty: none tracked.
-evidence: B3.1-gate.txt, B3.2-gate.txt, B3.3-gate.txt, B3.4-gate.txt
+evidence: B4.1-gate.txt
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -66,7 +67,7 @@ never silent renumbering.
 | B3.3 | Process control: retry-stage, rollback (to checkpoint), pause-after-stage, goto | DONE | 90ce43a | docs/baton/evidence/B3.3-gate.txt |
 | B3.4 | Budget/token caps (limits.maxRunCostUsd/maxRunTokens) + approval mode | DONE | 157cdc8 | docs/baton/evidence/B3.4-gate.txt |
 | B3.5 | Graceful Ctrl+C (final heartbeat + queue-resume + flush) | DONE | 157cdc8 | docs/baton/evidence/B3.4-gate.txt |
-| B4.1 | Alternate-screen buffer with clean restore on exit/crash | TODO | | |
+| B4.1 | Alternate-screen buffer with clean restore on exit/crash | DONE | (this session) | docs/baton/evidence/B4.1-gate.txt |
 | B4.2 | Spectre Layout rebuild of DashboardRenderer.BuildRoot | TODO | | |
 | B4.3 | Hierarchical plan tree (sub-checkpoints; expand/collapse; per-stage cost/attempts/last-outcome) | TODO | | |
 | B4.4 | Severity model (INFO/WARN/ERROR/SUCCESS/WAITING/HUMAN) + clearer header labels | TODO | | |
