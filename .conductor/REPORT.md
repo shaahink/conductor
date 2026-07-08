@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 08:16 UTC · branch `feat/baton` · HEAD `77c72ad`_
+_Updated 2026-07-08 08:26 UTC · branch `feat/baton` · HEAD `15d09a0`_
 
-**Status:** Idle
+**Status:** Running
 **Stage:** B2 — Event-sourced backbone + provider decoupling · attempts used 0 · working ▸ B2.6
-**Checkpoints:** 18/65 done · **Sessions run:** 15 · **Cost:** $0.6324 · **Tokens:** 270,368 in / 249,014 out / 113,557 think
+**Checkpoints:** 18/65 done · **Sessions run:** 16 · **Cost:** $0.6324 · **Tokens:** 270,368 in / 249,014 out / 113,557 think
 **Confirmed phases:** B0, B1
+
+## Latest activity (live)
+
+_Session #16 (Deliver) · running 10m · last output 2s ago · $0.0576_
+
+**Thinking:**
+> Now let me build and run all tests.
+> 125 tests pass (118 → +7 new tests: 2 AgentProvider, 4 LiveMetrics, 1 DashboardRenderer). Build 0w/0e.  Now let me do the full evidence: 1. Run the full gate battery (build + test) 2. Do a real --once smoke test to verify that TokenDelta events actually appear in the events.jsonl 3. Update CONDUCTOR…
+> Wait, I need to use `--dry-run` because opencode won't actually be available or produce real step_finish events. A dry-run won't spawn an agent session at all so there won't be any TokenDelta events.  Actually, the point of B2.6 is the infrastructure. The real TokenDelta events will only appear in a…
+
+**Recent actions:**
+- `09:25:45` » grep class DashboardRendererTests
+- `09:25:49` » read tests\Conductor.Tests\DashboardRendererTests.cs
+- `09:25:52` » read tests\Conductor.Tests\DashboardRendererTests.cs
+- `09:26:00` » edit tests\Conductor.Tests\DashboardRendererTests.cs
+- `09:26:04` · Now build and run all tests:
+- `09:26:06` » bash dotnet build Conductor.slnx 2>&1
+- `09:26:18` » bash dotnet test Conductor.slnx --no-build 2>&1 | Select-String -Pattern "Passed|Failed|Total"
+- `09:26:27` · 125 tests pass, 0w/0e (118→+7). Let me now do a real --once smoke to verify TokenDelta events appear in `events.jsonl`:
+- `09:26:27` » bash $base = Join-Path $env:TEMP "b26-smoke-$([System.Guid]::NewGuid().ToString('N').Substring(0,8))"; New-Item -ItemType Directory -Path $base -Force | Out-Nul…
+- `09:26:44` » bash & (Resolve-Path "src\Conductor\bin\Debug\net10.0\conductor.exe") run --dry-run --no-dashboard -p "C:\Users\shahi\AppData\Local\Temp\b26-smoke-cdd758b5\plan…
 
 ## Stage progress
 
@@ -44,6 +65,7 @@ _Updated 2026-07-08 08:16 UTC · branch `feat/baton` · HEAD `77c72ad`_
 | 13 | B2 | Deliver | 1 | 07-08 07:06 | 0:10 | Advanced | B2.3 | 3 | build:OK | $0.0551 | 66,865/13,343 |
 | 14 | B2 | Deliver | 1 | 07-08 07:17 | 0:22 | Advanced | B2.4 | 4 | build:OK | $0.0395 | 1,813/20,904 |
 | 15 | B2 | Deliver | 1 | 07-08 07:40 | 0:36 | Advanced | B2.5 | 7 | build:OK | $0.0666 | 3,900/25,958 |
+| 16 | B2 | Deliver | 1 | 07-08 08:16 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
