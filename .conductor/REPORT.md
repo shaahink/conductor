@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 04:49 UTC · branch `feat/baton` · HEAD `d0f5fbe`_
+_Updated 2026-07-08 04:59 UTC · branch `feat/baton` · HEAD `eaca98c`_
 
-**Status:** Idle
+**Status:** Running
 **Stage:** B1 — Decouple Loom + pluggable progress providers · attempts used 0 · working ▸ B1.3
-**Checkpoints:** 8/65 done · **Sessions run:** 6 · **Cost:** $0.2317 · **Tokens:** 125,611 in / 87,305 out / 43,065 think
+**Checkpoints:** 8/65 done · **Sessions run:** 7 · **Cost:** $0.2317 · **Tokens:** 125,611 in / 87,305 out / 43,065 think
 **Confirmed phases:** B0
+
+## Latest activity (live)
+
+_Session #7 (Deliver) · running 10m · last output 3s ago · $0.0031_
+
+**Thinking:**
+> I see there's already a tracker file from B1.7's deliverable in the examples. Let me examine the PlanConfig model to understand what's needed for B1.3, which involves the ScriptProvider and PlanCheckpointProvider components.
+> I'm thinking through how to implement the new providers for B1.3 — a `ScriptProvider` that executes plan-configured commands and returns checkpoint states as JSON, plus a `PlanCheckpointProvider` for checkpoints defined in the plan itself. The question is whether I need to wire provider selection in…
+> I'm working through the design for ScriptProvider, which will execute plan-configured commands and return checkpoint states as JSON, alongside PlanCheckpointProvider for managing checkpoints declared in the plan. I need to examine how the provider gets instantiated in Orchestrator and understand the…
+
+**Recent actions:**
+- `05:55:45` » bash cd C:\Code\conductor-baton; Get-ChildItem -Recurse src/Conductor/Models -File | Select-Object FullName
+- `05:55:45` · QA verdict: session #6 (B1.2) PASS — 7 TrackerParserTests green including the byte-identical provider test; Orchestrator reads via `_progress.Read` at all 5 sit…
+- `05:55:45` » grep class PlanConfig|TrackerPath|public string.*Tracker|public.*Repo
+- `05:55:51` » read src\Conductor\Models\PlanConfig.cs
+- `05:56:21` » bash cd C:\Code\conductor-baton; Get-ChildItem -Recurse src/Conductor -File -Filter *.cs | Select-Object FullName
+- `05:56:21` · Now let me look at how commands/gates are executed so `ScriptProvider` reuses the existing process pattern.
+- `05:56:21` » grep ProcessStartInfo|powershell|pwsh|RunPowerShell|RunCommand|Process.Start
+- `05:58:32` » read src\Conductor\Core\ProcessRunner.cs
+- `05:59:02` » read src\Conductor\Core\Orchestrator.cs
+- `05:59:02` · Now let me look at the Orchestrator constructor to understand how to wire provider selection.
 
 ## Stage progress
 
@@ -35,6 +56,7 @@ _Updated 2026-07-08 04:49 UTC · branch `feat/baton` · HEAD `d0f5fbe`_
 | 4 | B0 | Audit | 1 | 07-08 03:54 | 0:08 | Progress |  | 1 |  | $0.0116 | 1,138/6,511 |
 | 5 | B1 | Deliver | 1 | 07-08 04:02 | 0:12 | Advanced | B1.1 | 3 | build:OK | $0.0221 | 1,245/10,975 |
 | 6 | B1 | Deliver | 1 | 07-08 04:15 | 0:33 | Advanced | B1.2 | 5 | build:OK | $0.0241 | 1,297/10,939 |
+| 7 | B1 | Deliver | 1 | 07-08 04:49 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
