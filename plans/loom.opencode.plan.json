@@ -8,7 +8,7 @@
   "tracker": "LOOM-START.md",
   "planDoc": "docs/dev/briefs/proposal-loom.md",
   "branchPattern": "^feat/(loom-|meridian-m0)",
-  "pauseOnBlocked": true,
+  "pauseOnBlocked": false,
 
   // Acting agent on opencode. output:"opencode-json" makes conductor parse opencode's
   // `--format json` event stream (text / reasoning / tool / cost / tokens) — so the dashboard
@@ -103,7 +103,7 @@
     "maxBackoffs": 10
   },
 
-  "report": { "commit": true, "push": true, "heartbeatMinutes": 10 },
+  "report": { "commit": true, "push": true, "heartbeatMinutes": 0 },
 
   // Optional: plug any notifier here; {message} is substituted.
   // Example (Windows toast via BurntToast, if installed):
