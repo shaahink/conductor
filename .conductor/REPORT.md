@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 14:15 UTC · branch `feat/baton` · HEAD `71f32e5`_
+_Updated 2026-07-08 14:25 UTC · branch `feat/baton` · HEAD `fabd00f`_
 
-**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 0 · working ▸ B4.2
-**Checkpoints:** 25/65 done · **Sessions run:** 26 · **Cost:** $0.9343 · **Tokens:** 432,553 in / 345,588 out / 160,702 think
+**Checkpoints:** 25/65 done · **Sessions run:** 27 · **Cost:** $0.9343 · **Tokens:** 432,553 in / 345,588 out / 160,702 think
 **Confirmed phases:** B0, B1, B2, B3
+
+## Latest activity (live)
+
+_Session #27 (Deliver) · running 10m · last output 0s ago · $0.0138_
+
+**Thinking:**
+> I should check for any lingering references to those removed helper components before building, so let me search the codebase to make sure they're completely cleaned up.
+> The build is clean, so now I'm adding a regression test specifically for the header stacking issue at small heights—this is the key validation for stage B4.2. I want to verify that "Conductor" appears exactly once across a range of small viewport heights rather than stacking, which is what this stag…
+> Looking at the test counts for DashboardRendererTests, I'm tallying up the individual test cases across different test groups to verify we've got 27 passing tests total, including the 5 new ones that were added.  Now I need to run the full test suite to make sure there are no regressions in other ar…
+
+**Recent actions:**
+- `15:23:44` · Now replace `LeftColumn`/`RightColumn` with individual panel builders:
+- `15:23:45` » edit src\Conductor\Ui\DashboardRenderer.cs
+- `15:24:00` » edit src\Conductor\Ui\DashboardRenderer.cs
+- `15:24:20` · Now rewrite `FooterPanel` — action bar first (never cropped), then confirm/gates, then a `Rule`-separated log:
+- `15:24:20` » edit src\Conductor\Ui\DashboardRenderer.cs
+- `15:24:28` · Let me build to catch any errors and check for leftover references.
+- `15:24:33` » bash dotnet build Conductor.slnx 2>&1 | Select-Object -Last 20
+- `15:25:18` · Build is green (0w/0e). Now let me add focused regression tests for the B4.2 rebuild — that the Grid header shows identity + metrics in separate columns, and th…
+- `15:25:18` » edit tests\Conductor.Tests\DashboardRendererTests.cs
+- `15:25:33` » bash dotnet test Conductor.slnx --filter "FullyQualifiedName~DashboardRendererTests" 2>&1 | Select-Object -Last 12
 
 ## Stage progress
 
@@ -55,6 +76,7 @@ _Updated 2026-07-08 14:15 UTC · branch `feat/baton` · HEAD `71f32e5`_
 | 24 | B4 | Resume | 5r1 | 07-08 10:33 | 0:12 | Stalled |  | 0 |  |  |  |
 | 25 | B4 | Resume | 6r2 | 07-08 10:45 | 0:12 | Stalled |  | 0 |  |  |  |
 | 26 | B4 | Deliver | 1 | 07-08 14:03 | 0:11 | Advanced | B4.1 | 3 | build:OK | $0.0175 | 1,259/9,081 |
+| 27 | B4 | Deliver | 1 | 07-08 14:15 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
