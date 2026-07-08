@@ -1,32 +1,11 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 07:37 UTC · branch `feat/baton` · HEAD `c961587`_
+_Updated 2026-07-08 07:40 UTC · branch `feat/baton` · HEAD `43b3cba`_
 
-**Status:** Running
-**Stage:** B2 — Event-sourced backbone + provider decoupling · attempts used 0 · working ▸ B2.4
-**Checkpoints:** 16/65 done · **Sessions run:** 14 · **Cost:** $0.5263 · **Tokens:** 264,655 in / 202,152 out / 95,411 think
+**Status:** Idle
+**Stage:** B2 — Event-sourced backbone + provider decoupling · attempts used 0 · working ▸ B2.5
+**Checkpoints:** 17/65 done · **Sessions run:** 14 · **Cost:** $0.5658 · **Tokens:** 266,468 in / 223,056 out / 102,300 think
 **Confirmed phases:** B0, B1
-
-## Latest activity (live)
-
-_Session #14 (Deliver) · running 20m · last output 8s ago · $0.0325_
-
-**Thinking:**
-> I need to maintain backward compatibility with the stable driver by keeping the `output` field while adding `provider` additively, since the stable driver won't recognize the new field but will safely ignore it during deserialization.
-> The self-plan validation goes through PlanConfig.Load, and since the STABLE driver's PlanConfig lacks a Provider field, JSON deserialization safely ignores it thanks to PropertyNameCaseInsensitive and non-strict handling. System.Text.Json's default behavior of ignoring unknown properties keeps backw…
-> I need to check git status to see the untracked files since the diff stat won't show them.
-
-**Recent actions:**
-- `08:36:30` » bash & "src\Conductor\bin\Debug\net10.0\conductor.exe" run --dry-run -p "C:\Users\shahi\AppData\Local\Temp\opencode\b24-loom\loom-parity.plan.json" 2>&1 | Selec…
-- `08:36:39` » read plans\conductor.self.plan.json
-- `08:36:39` · The opencode-json Loom-shaped plan loads and dry-runs green — the provider is constructed via the factory on the new code path. Now let me clean up the temp art…
-- `08:36:57` · I'll keep `output` (the STABLE driver needs it) and additively add the explicit `provider` field — the STABLE driver ignores unknown JSON fields, so this is bac…
-- `08:36:57` » edit plans\conductor.self.plan.json
-- `08:37:09` · Now run the full gate battery for the post-session ritual and clean up temp:
-- `08:37:10` » bash Remove-Item -Recurse -Force "C:\Users\shahi\AppData\Local\Temp\opencode\b24-loom" -ErrorAction SilentlyContinue; git diff --stat
-- `08:37:17` » bash dotnet build Conductor.slnx 2>&1 | Select-Object -Last 5; Write-Output "=====TEST====="; dotnet test Conductor.slnx --no-build 2>&1 | Select-Object -Last 4
-- `08:37:25` · Battery green (build 0w/0e, 113 tests). Diff is well within budget. Let me check untracked new files:
-- `08:37:26` » bash git status --short
 
 ## Stage progress
 
@@ -34,7 +13,7 @@ _Session #14 (Deliver) · running 20m · last output 8s ago · $0.0325_
 |---|---|---|---|
 | B0 | Repo modernisation + self-hosting harness | 6/6 | confirmed ✓ |
 | B1 | Decouple Loom + pluggable progress providers | 7/7 | confirmed ✓ |
-| B2 | Event-sourced backbone + provider decoupling | 3/6 | **← active** |
+| B2 | Event-sourced backbone + provider decoupling | 4/6 | **← active** |
 | B3 | Safety, owner-gates & process control | 0/5 | todo |
 | B4 | TUI overhaul (alt-screen + tree) | 0/7 | todo |
 | B5 | Observability & health | 0/4 | todo |
@@ -63,16 +42,10 @@ _Session #14 (Deliver) · running 20m · last output 8s ago · $0.0325_
 | 11 | B2 | Deliver | 1 | 07-08 06:22 | 0:24 | Advanced | B2.1 | 4 | build:OK | $0.0441 | 2,334/21,533 |
 | 12 | B2 | Deliver | 1 | 07-08 06:47 | 0:18 | Advanced | B2.2 | 3 | build:OK | $0.0334 | 1,778/18,546 |
 | 13 | B2 | Deliver | 1 | 07-08 07:06 | 0:10 | Advanced | B2.3 | 3 | build:OK | $0.0551 | 66,865/13,343 |
-| 14 | B2 | Deliver | 1 | 07-08 07:17 | … | running |  | 0 |  |  |  |
+| 14 | B2 | Deliver | 1 | 07-08 07:17 | 0:22 | Advanced | B2.4 | 4 | build:OK | $0.0395 | 1,813/20,904 |
 
 ### Commits by session
 
-- **s6 (B1 Deliver)** — 5 commit(s):
-  - d0f5fbe docs(bB1.2): tracker — B1.2 DONE (ac306f5), handoff + QA verdict for session #6
-  - 8406002 chore(conductor): s6 B1 working ▸B1.2 @ 05:45
-  - ac306f5 feat(bB1.2): IProgressProvider seam + MarkdownTableProvider (byte-identical default)
-  - c2d32f6 chore(conductor): s6 B1 working ▸B1.2 @ 05:35
-  - 8fb628c chore(conductor): s6 B1 working ▸B1.2 @ 05:25
 - **s7 (B1 Deliver)** — 5 commit(s):
   - 7069c6c docs(bB1.3): tracker — B1.3 DONE (3e0fdbd), handoff + QA verdict for session #7
   - 3e0fdbd feat(bB1.3): ScriptProvider + PlanCheckpointProvider + fail-fast factory
@@ -109,6 +82,11 @@ _Session #14 (Deliver) · running 20m · last output 8s ago · $0.0325_
   - 6936490 chore: fill B2.3 commit hash in tracker (a5a6b85)
   - a5a6b85 feat(bB2.3): crash recovery replays the event log
   - bf15c10 chore(conductor): s13 B2 working ▸B2.3 @ 08:16
+- **s14 (B2 Deliver)** — 4 commit(s):
+  - 43b3cba chore: fill B2.4 commit hash in tracker (8e1ceb4)
+  - 8e1ceb4 feat(bB2.4): IAgentProvider adapters; remove Orchestrator provider-switch
+  - f4bff00 chore(conductor): s14 B2 working ▸B2.4 @ 08:37
+  - c961587 chore(conductor): s14 B2 working ▸B2.4 @ 08:27
 
 ## Phase handovers (audit)
 
@@ -121,26 +99,24 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: B2.3 landed — `RunStateProjection.FindInterruptedSession` detects unmatched SessionStarted events from the log, and `RecoverFromCrash` now has an event-log-based recovery leg as a safety net (additive — state.json recovery still primary). 98 tests (96→+2), build 0w/0e, clean working tree, pushed. Next: B2.4 (`IAgentProvider` + adapters). The hard part: designing the recovery complement so it doesn't destabilise the existing state.json path — the event log knows about crashes state.json doesn't (double-hard kill mid-session), but state.json still owns the transient control fields the log can't yet carry, so the two must coexist without conflicting (e.g., must not double-queue …
+> SESSION-RESULT: Landed **B2.4** — introduced `IAgentProvider` with `Opencode`/`Claude`/`GenericText` adapters; `AgentSession` now delegates every stdout line to its provider (all wire-format parsing extracted verbatim), and the Orchestrator dropped its `LimitRx` field, deferring usage-limit detection to `provider.DetectsUsageLimit` — the `output` switch is gone (F-2/D-11). Added `AgentConfig.Provider` (selects the adapter, falls back to legacy `output` inference so every existing plan is unchanged; the self-plan sets `provider=opencode` additively while keeping `output` for the STABLE master driver, which ignores the unknown field). Gate battery GREEN: build 0w/0e, 113 tests (98→+15 `AgentPr…
 
 ## Tracker handoff
 
 ```
-last: session #13 (B2, deliver) — landed **B2.3**. `RunStateProjection.FindInterruptedSession` detects
-      SessionStarted without matching SessionFinished from the event log; `RecoverFromCrash` enhanced
-      with event-log-based recovery as a safety net (state.json still authoritative for transient fields).
-      98 tests (96→+2). Additive — no cutover, state.json recovery still works.
-stage: **B2 IN PROGRESS** — B2.1, B2.2, B2.3 DONE; B2.4…B2.6 TODO. Battery GREEN.
-gate: GREEN — build 0w/0e; test 98 pass. Recovery tests: truncated-stream detection + all-complete
-      negative case both green.
-qa: session #12 (B2.2 deliver) PASS — (1) 5 EventLogTests + 4 RunStateProjectionTests green;
-      (2) parity fixture (real 11-event recorded run) independently verified — diff empty,
-      guard-the-guard catches divergence. No findings.
-next: **B2.4** — IAgentProvider abstraction + Opencode/Claude/GenericText adapters; Orchestrator
-      provider-switch removed; plan selects by `agent.provider` (default inferred from output for
-      back-compat).
-trap: event-log recovery is a safety net; the state.json path stays the primary crash detector
-      because transient control fields (AttemptsThisStage, Pending*, etc.) still live there.
+last: session #14 (B2, deliver) — landed **B2.4**. `IAgentProvider` + Opencode/Claude/GenericText
+      adapters; `AgentSession` delegates all wire parsing to the provider; Orchestrator dropped its
+      `LimitRx` and uses `provider.DetectsUsageLimit`. `AgentConfig.Provider` selects the adapter
+      (infers from legacy `output` when unset). 113 tests (98→+15). Additive — parsing byte-identical.
+stage: **B2 IN PROGRESS** — B2.1…B2.4 DONE; B2.5, B2.6 TODO. Battery GREEN.
+gate: GREEN — build 0w/0e; test 113 pass. Truth gate: opencode/claude/text captured-sample parse
+      tests + factory selection all green; Loom-shaped opencode-json plan dry-runs via new path.
+qa: session #13 (B2.3 deliver) PASS — (1) recovery + 6 projection tests green; (2) RecoverFromCrash
+      reads events.jsonl via FindInterruptedSession (in-tree build emits it per B2.1 artifact). No findings.
+next: **B2.5** — Host/DI/Options (validated) + Microsoft.Extensions.Logging + Serilog file+console
+      sinks with correlation scope (runId/sessionId/stage/gate); audit every `catch {}` (no silent swallow).
+trap: `output` is kept everywhere for STABLE-driver back-compat (it ignores the new `provider` field);
+      `provider` is preferred only when set. Parsing was relocated, not changed — no stall/limit regression.
 dirty: none tracked.
-evidence: B2.3-gate.txt (+ earlier)
+evidence: B2.4-gate.txt (+ earlier)
 ```
