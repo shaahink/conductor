@@ -1,6 +1,6 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 07:50 UTC · branch `feat/baton` · HEAD `69003d2`_
+_Updated 2026-07-08 08:00 UTC · branch `feat/baton` · HEAD `3836bf7`_
 
 **Status:** Running
 **Stage:** B2 — Event-sourced backbone + provider decoupling · attempts used 0 · working ▸ B2.5
@@ -9,24 +9,24 @@ _Updated 2026-07-08 07:50 UTC · branch `feat/baton` · HEAD `69003d2`_
 
 ## Latest activity (live)
 
-_Session #15 (Deliver) · running 10m · last output 1s ago · $0.0116_
+_Session #15 (Deliver) · running 20m · last output 3s ago · $0.0305_
 
 **Thinking:**
-> I'm adding correlation fields to track session and gate context—setting `_curSessionId` at the start of a session and clearing it when done, and using `_curGate` to identify which gate is running, either as "battery" during RunGateBattery or with more granular gate names depending on where the loggi…
-> I'm refactoring PlanConfig to make validation reusable by extracting an internal method that collects errors into a list, then having the main validation method call it.
-> I need to clean up the CollectErrors function by removing the throw block that I've already moved over to Validate.
+> I see the issue now—RecoverFromCrash tries to read events.jsonl right after the EventLog constructor creates and opens it for appending, causing a file sharing violation. I need to check how EventLog is initialized and what FileShare settings it's using.
+> The DrainAsync opens the FileStream with `FileShare.Read`, which allows other readers to access it. `File.ReadAllLines` also opens with `FileShare.Read` by default, so two readers sharing read access shouldn't cause a conflict. The real issue is that the FileStream is opened for writing with `FileAc…
+> I need to handle the file locking issue by opening the file with `FileShare.ReadWrite` permissions, which allows reading while another process has it open for writing. I'm creating a helper method that uses a FileStream with these shared access settings and wraps it in a StreamReader to read all the…
 
 **Recent actions:**
-- `08:48:20` » read src\Conductor\Core\Events\EventLog.cs
-- `08:48:47` » grep rec\.Number|new SessionRecord|RunGateBattery|GateRunner\.Run|private.*Gate|RunPhaseGate|SessionStarted
-- `08:48:47` · Let me find where sessions and gates are run in the Orchestrator to place correlation.
-- `08:49:47` · Now I'll implement. First the packages:
-- `08:49:47` » edit Directory.Packages.props
-- `08:49:55` » edit src\Conductor\Conductor.csproj
-- `08:50:04` · Now refactor `PlanConfig` to expose validation for the Options validator:
-- `08:50:04` » edit src\Conductor\Models\PlanConfig.cs
-- `08:50:13` » edit {"filePath":"C:\\Code\\conductor-baton\\src\\Conductor\\Models\\PlanConfig.cs","newString":"        if (Gates.Any(g => string.IsNullOrWhiteSpace(g.Com…
-- `08:50:20` » read src\Conductor\Models\PlanConfig.cs
+- `08:58:12` » bash $s="C:\Users\shahi\AppData\Local\Temp\opencode\b25run"; & "C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.exe" run --once --no-dashboard…
+- `08:58:30` · A stray process from the crashed first run holds the event log. Let me find and clean up (without touching the driver, pid 30060):
+- `08:58:31` » bash Get-CimInstance Win32_Process -Filter "name='conductor.exe' OR name='powershell.exe'" | Where-Object { $_.CommandLine -like "*b25run*" } | Select-Object Pr…
+- `08:58:48` · Transient lock from the crashed first run. Let me clean the scratch state and re-run fresh:
+- `08:58:49` » bash $s="C:\Users\shahi\AppData\Local\Temp\opencode\b25run"; Remove-Item -Recurse -Force "$s\.conductor" -ErrorAction SilentlyContinue; & "C:\Code\conductor-bat…
+- `08:59:09` · This reproduces on a fresh state — a real bug. Let me inspect `RecoverFromCrash` and `EventLog.ReadAll`/constructor:
+- `08:59:09` » read src\Conductor\Core\Orchestrator.cs
+- `08:59:18` » read src\Conductor\Core\Events\EventLog.cs
+- `08:59:45` » read src\Conductor\Core\Events\EventLog.cs
+- `08:59:45` · The DrainAsync writer holds the file (`FileAccess.Write, FileShare.Read`), but `ReadAll` uses `File.ReadAllLines` (`FileShare.Read`, which excludes Write) → sha…
 
 ## Stage progress
 
