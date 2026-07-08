@@ -53,21 +53,43 @@ public static class Reporter
 
         sb.AppendLine("## Stage progress");
         sb.AppendLine();
-        sb.AppendLine("| Stage | Title | Done | State |");
+        sb.AppendLine("| Stage | Title | Progress | State |");
         sb.AppendLine("|---|---|---|---|");
         foreach (var s in plan.Stages)
         {
             var rows = track.ForStage(s.Id).ToList();
             var d = rows.Count(r => r.IsDone);
+            var bar = ProgressBar(d, rows.Count);
             var st = state.SkippedStages.Contains(s.Id) ? "SKIPPED ⚠"
                 : state.ConfirmedStages.Contains(s.Id) ? "confirmed ✓"
                 : rows.Count > 0 && d == rows.Count ? (plan.PerPhaseGates ? "gating…" : "done")
                 : s.Id == state.CurrentStage ? "**← active**"
                 : rows.Any(r => r.IsDone || r.IsInProgress) ? "partial"
                 : "todo";
-            sb.AppendLine($"| {s.Id} | {s.Title} | {d}/{rows.Count} | {st} |");
+            sb.AppendLine($"| {s.Id} | {s.Title} | {bar} {d}/{rows.Count} | {st} |");
         }
         sb.AppendLine();
+
+        // Collapsible per-stage checkpoint details
+        foreach (var s in plan.Stages)
+        {
+            var rows = track.ForStage(s.Id).ToList();
+            if (rows.Count == 0) continue;
+            var d = rows.Count(r => r.IsDone);
+            sb.AppendLine($"<details>{(d == rows.Count ? " ✅" : "")}<summary>{s.Id} — {s.Title} ({d}/{rows.Count})</summary>");
+            sb.AppendLine();
+            sb.AppendLine("| # | Title | Status | Commit |");
+            sb.AppendLine("|---|---|---|---|");
+            foreach (var r in rows)
+            {
+                var statusIcon = r.IsDone ? "✅ DONE" : r.IsInProgress ? "🔄 IN PROGRESS" : r.IsBlocked ? "🚫 BLOCKED" : "⬜ TODO";
+                var commitLink = FormatCommitLink(plan, r.Commit);
+                sb.AppendLine($"| {r.Id} | {r.Title} | {statusIcon} | {commitLink} |");
+            }
+            sb.AppendLine();
+            sb.AppendLine("</details>");
+            sb.AppendLine();
+        }
 
         sb.AppendLine("## Sessions");
         sb.AppendLine();
@@ -165,7 +187,12 @@ public static class Reporter
             foreach (var h in withCommits)
             {
                 sb.AppendLine($"- **s{h.Number} ({h.Stage} {h.Kind})** — {h.NewCommits.Count} commit(s):");
-                foreach (var c in h.NewCommits.Take(12)) sb.AppendLine($"  - {c}");
+                foreach (var c in h.NewCommits.Take(12))
+                {
+                    var sha = c.Split(' ')[0];
+                    var link = FormatCommitLink(plan, sha);
+                    sb.AppendLine($"  - {link} {c[(sha.Length)..].TrimStart()}");
+                }
             }
             sb.AppendLine();
         }
@@ -248,6 +275,12 @@ public static class Reporter
         // Skip no-op commits: if nothing but the timestamp changed, don't add to the git history
         // (this removes the duplicate "chore(conductor): … — Idle" commits).
         if (old != null && Normalize(old) == Normalize(newContent)) return;
+
+        // B6.3: clean heartbeat — heartbeat writes update REPORT.md on disk but never produce a git
+        // commit. The file is visible locally (and can be served by the TUI/Telegram), but the
+        // feature branch history stays clean (F-4).
+        var isHeartbeat = commitMessage != null && commitMessage.StartsWith("chore(conductor):", StringComparison.Ordinal);
+        if (isHeartbeat) return;
 
         var rel = ".conductor/REPORT.md";
         var add = Git.Exec(plan.Repo, "add", "--force", rel);
@@ -354,4 +387,55 @@ public static class Reporter
 
     private static string? NextCheckpoint(TrackerSnapshot track, string? stageId)
         => stageId == null ? null : track.ForStage(stageId).FirstOrDefault(c => !c.IsDone)?.Id;
+
+    /// <summary>Unicode progress bar: █ for done, ░ for remaining, 20 chars wide.</summary>
+    private static string ProgressBar(int done, int total)
+    {
+        if (total <= 0) return "";
+        const int width = 10;
+        var filled = (int)Math.Round((double)done / total * width);
+        return new string('█', Math.Min(filled, width)) + new string('░', width - filled);
+    }
+
+    /// <summary>Format a commit SHA as a link to the remote if a GitHub/remote URL is available,
+    /// otherwise just the short SHA.</summary>
+    private static string FormatCommitLink(PlanConfig plan, string commit)
+    {
+        var sha = Short(commit);
+        if (string.IsNullOrWhiteSpace(commit) || commit == "-" || commit == "?") return sha;
+        var remote = GetRemoteUrl(plan.Repo);
+        if (remote == null) return $"`{sha}`";
+        return $"[`{sha}`]({remote}/commit/{commit})";
+    }
+
+    private static string? _cachedRemoteUrl;
+    private static string? _cachedRemoteRepo;
+
+    private static string? GetRemoteUrl(string repo)
+    {
+        if (_cachedRemoteRepo == repo && _cachedRemoteUrl != null) return _cachedRemoteUrl;
+        try
+        {
+            var result = Git.Exec(repo, "remote", "get-url", "origin");
+            if (result.ExitCode != 0) return null;
+            var url = result.Output.Trim();
+            // Convert git@github.com:owner/repo.git → https://github.com/owner/repo
+            if (url.StartsWith("git@", StringComparison.Ordinal))
+            {
+                var parts = url.Split('@', ':');
+                if (parts.Length >= 3)
+                {
+                    url = $"https://{parts[1]}/{parts[2].Replace(".git", "", StringComparison.Ordinal)}";
+                }
+            }
+            else
+            {
+                url = url.Replace(".git", "", StringComparison.Ordinal);
+            }
+            _cachedRemoteUrl = url;
+            _cachedRemoteRepo = repo;
+            return url;
+        }
+        catch { return null; }
+    }
 }

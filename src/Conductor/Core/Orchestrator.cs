@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Conductor.Core.Events;
+using Conductor.Core.Integrations;
 using Conductor.Core.Planning;
 using Conductor.Core.Providers;
 using Conductor.Models;
@@ -16,7 +17,7 @@ public sealed record RunOptions(bool DryRun, bool Once, int MaxSessions);
 ///   independently verify (gates + git + tracker diff) → record, report, decide next.
 /// Every transition is persisted, so killing conductor at any point is recoverable.
 /// </summary>
-public sealed class Orchestrator(PlanConfig plan, RunState state, string statePath, IProgressSink sink, IEventSink events, RunOptions opts, ILogger<Orchestrator> logger)
+public sealed class Orchestrator(PlanConfig plan, RunState state, string statePath, IProgressSink sink, IEventSink events, RunOptions opts, ILogger<Orchestrator> logger, ITelegramService telegram, WebhookNotifier webhooks)
 {
     private readonly PromptBuilder _prompts = new(plan);
     private readonly IProgressProvider _progress = ProgressProviderFactory.Create(plan);
@@ -612,6 +613,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             Log($"owner-gate: stage {id} green — awaiting owner approval (run `conductor approve` or press R in the TUI)");
             SaveAndReport();
             Notify($"Conductor {plan.Name}: stage {id} is green and awaiting owner approval");
+            _ = telegram.PushWithKeyboardAsync($"Stage {id} green — owner approval needed",
+                [("Approve", "approve")]);
             return;
         }
         if (!state.ConfirmedStages.Contains(id)) state.ConfirmedStages.Add(id);
@@ -844,6 +847,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         Log($"🛑 NEEDS HUMAN: {reason}");
         SaveAndReport();
         Notify($"Conductor {plan.Name}: needs attention — {reason}");
+        _ = telegram.PushWithKeyboardAsync(reason, [("Resume", "resume"), ("Skip Stage", "skip")]);
     }
 
     /// <summary>Returns true if the run is now parked at <c>AwaitingOwner</c> due to a budget cap.</summary>
@@ -1255,6 +1259,11 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
     private void Notify(string message)
     {
+        // B6: push to Telegram (fire-and-forget — the hosted service owns its own queue).
+        _ = telegram.PushAsync(message);
+        // B6.4: fire webhook notifications (generic/Discord/Slack).
+        webhooks.FireAsync(message);
+
         var n = plan.Notify;
         if (n == null || string.IsNullOrWhiteSpace(n.Command)) return;
         try

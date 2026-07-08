@@ -43,6 +43,7 @@ public sealed class PlanConfig
     public LimitsConfig Limits { get; set; } = new();
     public ReportConfig Report { get; set; } = new();
     public NotifyConfig? Notify { get; set; }
+    public TelegramConfig? Telegram { get; set; }
     public string TemplatesDir { get; set; } = "templates";
     public string PromptExtra { get; set; } = "";
     /// <summary>Mandated docs to read in order at session start (paths relative to repo root).
@@ -417,4 +418,29 @@ public sealed class NotifyConfig
     /// <summary>Command run on needs-attention / completion. Placeholders in args: {message}</summary>
     public string Command { get; set; } = "";
     public List<string> Args { get; set; } = new();
+    public WebhookNotifyConfig? Webhook { get; set; }
+    public WebhookNotifyConfig? Discord { get; set; }
+    public WebhookNotifyConfig? Slack { get; set; }
+}
+
+public sealed class WebhookNotifyConfig
+{
+    public string Url { get; set; } = "";
+    public Dictionary<string, string>? Headers { get; set; }
+}
+
+/// <summary>Telegram bot config for AFK observability + two-way control (B6).
+/// Bot token is read from the <c>CONDUCTOR_TELEGRAM_TOKEN</c> environment variable (never committed).</summary>
+public sealed class TelegramConfig
+{
+    /// <summary>Allowed chat IDs; an empty list means no commands are accepted (push-only).
+    /// Use numeric IDs (int64 strings) — get them from @userinfobot on Telegram.</summary>
+    public List<string> AllowedChatIds { get; set; } = new();
+
+    /// <summary>How often to poll getUpdates when idle (seconds). Default 4.</summary>
+    public int PollIntervalSeconds { get; set; } = 4;
+
+    /// <summary>If true, write control.json on callback queries from allowed chats (B6.2).
+    /// Default false until B6.2 lands.</summary>
+    public bool EnableTwoWay { get; set; }
 }

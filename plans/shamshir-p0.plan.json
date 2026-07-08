@@ -1,0 +1,51 @@
+{
+  "name": "Shamshir (P-0 + P0.1 acceptance)",
+  "repo": "C:/Code/conductor-baton",
+  "tracker": "examples/shamshir/parity-pipeline.TRACKER.md",
+  "planDoc": "docs/baton/stages/B6.md",
+  "pauseOnBlocked": true,
+
+  "agent": {
+    "command": "opencode",
+    "args": [
+      "run", "-m", "deepseek/deepseek-v4-pro", "--auto", "--format", "json", "{prompt}"
+    ],
+    "provider": "opencode"
+  },
+
+  "conventions": {
+    "stageIdPattern": "(?<stage>[A-Za-z]+-?\\d+)(?:\\.\\d+)?[a-z]?",
+    "handoffMarker": "## Handoff",
+    "humanToken": "HUMAN:",
+    "status": {
+      "done": ["DONE"],
+      "blocked": ["BLOCKED"],
+      "inProgress": ["IN PROGRESS"],
+      "todo": ["TODO"]
+    }
+  },
+
+  "stages": [
+    { "id": "P-0", "title": "Land the working tree deliberately", "sessions": 2 },
+    { "id": "P0.1", "title": "1/4-sizing FakeTransport parity test", "sessions": 2 }
+  ],
+
+  "gates": [
+    { "name": "build", "command": "dotnet build Conductor.slnx", "tier": "fast", "timeoutMinutes": 5 },
+    { "name": "test", "command": "dotnet test Conductor.slnx", "tier": "full", "timeoutMinutes": 10 }
+  ],
+
+  "gatePolicy": "perPhase",
+
+  "limits": {
+    "stallMinutes": 12,
+    "sessionTimeoutMinutes": 120,
+    "maxResumesPerSession": 1,
+    "stageSlackFactor": 2
+  },
+
+  "report": {
+    "commit": false,
+    "push": false
+  }
+}

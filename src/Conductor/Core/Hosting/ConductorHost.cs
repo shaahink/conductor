@@ -1,4 +1,5 @@
 using Conductor.Core.Events;
+using Conductor.Core.Integrations;
 using Conductor.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -74,6 +75,23 @@ public static class ConductorHost
         builder.Services.AddSingleton(opts);
         builder.Services.AddSingleton(sink);
         builder.Services.AddSingleton(events);
+
+        // B6: Telegram bot — registered as both IHostedService and ITelegramService.
+        // When no Telegram config is present, a no-op stub satisfies the interface.
+        if (plan.Telegram != null)
+        {
+            builder.Services.AddSingleton<TelegramService>();
+            builder.Services.AddSingleton<ITelegramService>(sp => sp.GetRequiredService<TelegramService>());
+            builder.Services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<TelegramService>());
+        }
+        else
+        {
+            builder.Services.AddSingleton<ITelegramService>(new NoOpTelegramService());
+        }
+
+        // B6.4: Webhook notifier (generic/Discord/Slack) — fire-and-forget HTTP POST.
+        builder.Services.AddSingleton<WebhookNotifier>();
+
         builder.Services.AddSingleton(sp => new Orchestrator(
             sp.GetRequiredService<PlanConfig>(),
             sp.GetRequiredService<RunState>(),
@@ -81,7 +99,9 @@ public static class ConductorHost
             sp.GetRequiredService<IProgressSink>(),
             sp.GetRequiredService<IEventSink>(),
             sp.GetRequiredService<RunOptions>(),
-            sp.GetRequiredService<ILogger<Orchestrator>>()));
+            sp.GetRequiredService<ILogger<Orchestrator>>(),
+            sp.GetRequiredService<ITelegramService>(),
+            sp.GetRequiredService<WebhookNotifier>()));
 
         var host = builder.Build();
         ValidateOptionsOnStart(host.Services, plan);

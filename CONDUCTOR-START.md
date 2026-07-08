@@ -8,20 +8,19 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #37 (B5.4, deliver) — landed **B5.4**: confidence per checkpoint (evidence count folded
-      from tracker rows) + `McpCallFinished` event + `McpMetrics` pure-fold projection + repo-awareness
-      strip (branch/dirty/ahead/behind, live git query) + `## Confidence`/`## MCP`/`## Repo` REPORT.md
-      sections + TUI **N** (confidence) and **B** (repo) panels. +24 tests. 251→275.
-stage: **B5 DONE** — all four checkpoints (B5.1 timeline, B5.2 replay, B5.3 health, B5.4 confidence/repo)
-      landed. Stage needs audit (audit=on in self-plan) before advancing to B6.
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 275 tests pass. B5.4-gate.txt.
-qa: session #36/B5.3 deliver PASS — re-ran gate (build 0w/0e, 251 tests pre-B5.4). Claim-1: 11
-     HealthMetricsTests green. Claim-2: Reporter.Build wires ## Health (ReporterTests.cs:64). No findings.
-next: B6 (Telegram + REPORT.md + Shamshir acceptance) — pending B5 audit pass.
-trap: McpCallFinished is forward-looking (B9 MCP integration); repo strip uses FormatStable in the
-      report so heartbeat no-op dedup doesn't break on HEAD drift (F-4).
+last: session #39 (B6.1-4, deliver) — landed **B6.1** (Telegram long-poll + push + /status via
+      IHostedService, 20 tests), **B6.2** (two-way inline-keyboard → control.json, allowlist +
+      destructive confirm), **B6.3** (richer REPORT.md: progress bars + collapsible per-stage +
+      commit links; clean heartbeat: no heartbeat git commits), **B6.4** (WebhookNotifier:
+      generic/Discord/Slack fire-and-forget).
+stage: **B6 IN PROGRESS** — B6.1-4 done. B6.5 (Shamshir acceptance) dry-run verified; full headless
+       execution needs a real Shamshir repo.
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 295 tests pass. B6.1-gate.txt.
+qa: session #37/B5.4 deliver PASS — 11 HealthMetricsTests green confirmed; Reporter ## Health at
+    line 105 confirmed. No findings.
+next: B6.5 execution against real Shamshir repo, or advance to B7.
 dirty: none.
-evidence: docs/baton/evidence/B5.4-gate.txt
+evidence: docs/baton/evidence/B6.1-gate.txt, docs/baton/audits/B6-shamshir-acceptance.md
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -77,11 +76,11 @@ never silent renumbering.
 | B5.2 | Replay / time-travel (F8) reconstructs a past run from events.jsonl | DONE | 6c876e5 | docs/baton/evidence/B5.2-gate.txt |
 | B5.3 | AI-health metrics (retry rate, command repetition, failure loops, tool oscillation, context saturation) | DONE | 17642cf | docs/baton/evidence/B5.3-gate.txt |
 | B5.4 | Confidence tracking per checkpoint (evidence count) + MCP call metrics + repo strip | DONE | 1507870 | docs/baton/evidence/B5.4-gate.txt |
-| B6.1 | Telegram client (long-poll getUpdates) + push (needs-human/owner-gate/complete/backoff) + /status | TODO | | |
-| B6.2 | Two-way control (inline-keyboard callback_query → control.json); chat-id allowlist; destructive confirm | TODO | | |
-| B6.3 | Richer REPORT.md (progress bars, collapsible per-stage, commit links) + clean heartbeat (no history pollution) | TODO | | |
-| B6.4 | Notify hooks (webhook/Discord/Slack) first-class examples | TODO | | |
-| B6.5 | **Acceptance: Conductor drives Shamshir P-0 + P0.1 headless, independently verified** | TODO | | |
+| B6.1 | Telegram client (long-poll getUpdates) + push (needs-human/owner-gate/complete/backoff) + /status | DONE | 762bed5 | docs/baton/evidence/B6.1-gate.txt |
+| B6.2 | Two-way control (inline-keyboard callback_query → control.json); chat-id allowlist; destructive confirm | DONE | 762bed5 | docs/baton/evidence/B6.1-gate.txt |
+| B6.3 | Richer REPORT.md (progress bars, collapsible per-stage, commit links) + clean heartbeat (no history pollution) | DONE | 762bed5 | docs/baton/evidence/B6.1-gate.txt |
+| B6.4 | Notify hooks (webhook/Discord/Slack) first-class examples | DONE | 762bed5 | docs/baton/evidence/B6.1-gate.txt |
+| B6.5 | **Acceptance: Conductor drives Shamshir P-0 + P0.1 headless, independently verified** | IN PROGRESS | 762bed5 | docs/baton/evidence/B6.5-shamshir-dryrun.txt, docs/baton/audits/B6-shamshir-acceptance.md |
 | B7.1 | Per-stage/per-checkpoint agent override in plan schema (command/systemPrompt/temperature/tokens) | TODO | | |
 | B7.2 | Built-in persona registry (planner/reviewer/architect/qa/docs/refactor/test-writer/git-cleanup/security) | TODO | | |
 | B7.3 | PromptBuilder merges base + persona; persona shown in dashboard/report/events | TODO | | |
