@@ -1,32 +1,12 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 20:41 UTC · branch `feat/baton` · HEAD `16fa4cf`_
+_Updated 2026-07-08 20:47 UTC · branch `feat/baton` · HEAD `3d2d328`_
 
-**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B7 — Specialist sub-agent personas · attempts used 1
-**Checkpoints:** 43/65 done · **Sessions run:** 46 · **Cost:** $1.8045 · **Tokens:** 998,604 in / 643,051 out / 281,141 think
+**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B7 — Specialist sub-agent personas · attempts used 2
+**Checkpoints:** 43/65 done · **Sessions run:** 46 · **Cost:** $1.8456 · **Tokens:** 1,038,372 in / 651,712 out / 288,745 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6
-
-## Latest activity (live)
-
-_Session #46 (Resume) · running 10m · last output 55s ago · $0.0231_
-
-**Thinking:**
-> 5 consecutive runs, all 306 pass. The test is stable now. The single failure was likely a stale build or system load issue.  But I'm still not 100% confident. On extreme CI conditions (very slow, single CPU, antivirus), the drain task could still take >5 seconds to start. Let me think about whether …
-> Let me look at the constructor where `_drain = Task.Run(DrainAsync)` is called.
-> Now let me build and run the tests.
-
-**Recent actions:**
-- `21:36:24` » bash git add -A; if ($?) { git commit -m "fix(bB7): harden EventLog file-creation race + flaky test fix  Gate output: - dotnet build Conductor.slnx — Build succ…
-- `21:36:32` » bash git push
-- `21:37:33` » bash dotnet build Conductor.slnx 2>&1; Write-Host "---"; dotnet test Conductor.slnx 2>&1 | Select-Object -Last 5
-- `21:37:42` » read tests\Conductor.Tests\EventLogTests.cs
-- `21:37:51` » bash dotnet test Conductor.slnx --filter "ReadAllSucceedsWhileLiveWriterHoldsTheFile" --verbosity detailed 2>&1 | Select-Object -Last 40
-- `21:38:56` » bash dotnet test Conductor.slnx 2>&1 | Select-Object -Last 10
-- `21:40:13` » bash for ($i=1; $i -le 5; $i++) { Write-Host "Run $i"; dotnet test Conductor.slnx --no-build 2>&1 | Select-Object -Last 3 }
-- `21:40:39` » read src\Conductor\Core\Events\EventLog.cs
-- `21:40:39` · The test still has a fragility window: `Task.Run` uses the thread pool, which can delay task startup on loaded machines. Let me use `TaskCreationOptions.LongRun…
-- `21:40:44` » edit src\Conductor\Core\Events\EventLog.cs
+**Pending:** full-battery phase gate for B7
 
 ## Stage progress
 
@@ -79,15 +59,10 @@ _Session #46 (Resume) · running 10m · last output 55s ago · $0.0231_
 | 43 | B7 | Deliver | 1 | 07-08 20:00 | 0:19 | Advanced | B7.1 B7.2 B7.3 | 2 | build:OK | $0.0911 | 77,080/28,917 |
 | 44 | B7 | Audit | 1 | 07-08 20:20 | 0:05 | Progress |  | 1 |  | $0.0380 | 52,381/7,163 |
 | 45 | B7 | Fix | 2 | 07-08 20:27 | 0:04 | Interrupted |  | 0 |  |  |  |
-| 46 | B7 | Resume | 2r1 | 07-08 20:31 | … | running |  | 0 |  |  |  |
+| 46 | B7 | Resume | 2r1 | 07-08 20:31 | 0:15 | Progress |  | 3 | build:OK | $0.0411 | 39,768/8,661 |
 
 ### Commits by session
 
-- **s36 (B5 Deliver)** — 4 commit(s):
-  - c7afad7 chore(bB5.3): fill B5.3 commit hash in tracker (17642cf)
-  - 17642cf feat(bB5.3): AI-health metrics folded from the event log (health panel + report section)
-  - 6512c6b chore(conductor): s36 B5 working ▸B5.3 @ 18:50
-  - a2052c8 chore(conductor): s36 B5 working ▸B5.3 @ 18:40
 - **s37 (B5 Deliver)** — 2 commit(s):
   - 3bf449c feat(bB5.4): confidence per checkpoint + MCP call metrics + repo-awareness strip
   - 9076ec0 chore(conductor): s37 B5 working ▸B5.4 @ 19:04
@@ -107,6 +82,10 @@ _Session #46 (Resume) · running 10m · last output 55s ago · $0.0231_
   - 9c3f7fd chore(conductor): s43 B7 working ▸B7.1 @ 21:10
 - **s44 (B7 Audit)** — 1 commit(s):
   - 99209bf fix(b7): audit fixes — path traversal guard, IO error resilience, dead field, hyphen regex (session #44)
+- **s46 (B7 Resume)** — 3 commit(s):
+  - 3d2d328 fix(bB7): eliminate EventLog drain-task scheduling race with ManualResetEventSlim
+  - 0c3998b chore(conductor): s46 B7 working ▸B7 @ 21:41
+  - 16fa4cf fix(bB7): harden EventLog file-creation race + flaky test fix
 
 ## Phase handovers (audit)
 
@@ -119,24 +98,26 @@ _Session #46 (Resume) · running 10m · last output 55s ago · $0.0231_
 - `.conductor/handovers/B6.md`
 - `.conductor/handovers/B7.md`
 
+## Last gate run
+
+build:OK
+
 ## Last session result
 
-> SESSION-RESULT: B7 audit green — 4 bugs found and fixed (path traversal guard in PersonaRegistry, unhandled IOException with fallback, dead `_personas` field removed from Orchestrator, `\w+`→`[\w-]+` regex fix for hyphenated persona names). Gate battery: build 0w/0e, 306 tests pass. Three non-blocking weaknesses tracked in `.conductor/handovers/B7.md`: built-in/disk persona prompt divergence (D-01), persona leakage into audit/advisor prompts (D-02), and PersonaRegistry lacking a logger in the production DI path (D-03) — all deferred to B8.
+> SESSION-RESULT:** Fixed the pre-existing flaky test `ReadAllSucceedsWhileLiveWriterHoldsTheFile` that failed ~50% on CI (Actual: 0). Root cause was a scheduling race: `Task.Run(DrainAsync)` deferred file creation to the thread pool, so `ReadAll` could find no file within the polling window. The definitive fix adds a `ManualResetEventSlim` in `EventLog` — the constructor blocks until the drain task has opened the file and entered its read loop, eliminating the race entirely. The build gate (which showed exit -1 in the orchestrator report) was a false positive caused by the flaky test failure cascading; build itself has 0 warnings/0 errors on net10 with warnings-as-errors. No leftovers remain …
 
 ## Tracker handoff
 
 ```
-last: session #43 (B7, deliver) — landed **B7.1–B7.3** (specialist sub-agent personas):
-       per-stage AgentConfig override (Merge over plan default); 9 built-in persona templates +
-       disk files at plans/personas/*.md; PromptBuilder prepends persona system prompt ahead of
-       contract rules; persona shown in SessionStarted event, dashboard header, reporter stage
-       line, and timeline entries. Self-plan persona hints converted to real "persona" fields.
+last: session #45 (B7, fix) — fixed flaky test ReadAllSucceedsWhileLiveWriterHoldsTheFile:
+       root cause was race between async drain task file creation and ReadAll polling.
+       EventLog constructor now creates the file upfront (FileMode.CreateNew) so file
+       always exists when readers probe it; test poll widened to 100x50ms + 100ms initial
+       delay for slow CI. Previous session #44 audit fixes (path traversal guard, IO error
+       resilience, dead field removal, hyphen regex) retained and verified.
 stage: **B7 DONE** — B7.1 (schema), B7.2 (registry), B7.3 (prompt merge + surface) all DONE.
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 306 tests pass (11 new).
-qa: session #41/B6.5 deliver PASS — Shamshir tests verified (3/3); evidence artifact reviewed
-     and content-asserted. Pre-existing flaky test ReadAllSucceedsWhileLiveWriterHoldsTheFile
-     fails ~50% (timing-dependent event log flush); not introduced by B7. No findings.
-next: B8 (brain layer) or B7 audit fix-session.
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 306 tests pass.
 dirty: none.
-evidence: docs/baton/evidence/B7-gate.txt
+next: B8 (brain layer).
+evidence: docs/baton/evidence/B7-gate.txt; `.conductor/handovers/B7.md` (audit details)
 ```
