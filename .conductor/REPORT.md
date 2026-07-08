@@ -1,6 +1,6 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 18:31 UTC · branch `feat/baton` · HEAD `3838115`_
+_Updated 2026-07-08 18:41 UTC · branch `feat/baton` · HEAD `9f4a0ee`_
 
 **Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B6 — AFK + two-way Telegram · attempts used 0 · working ▸ B6.1
@@ -9,24 +9,24 @@ _Updated 2026-07-08 18:31 UTC · branch `feat/baton` · HEAD `3838115`_
 
 ## Latest activity (live)
 
-_Session #39 (Deliver) · running 10m · last output 5s ago · $0.0600_
+_Session #39 (Deliver) · running 20m · last output 3s ago · $0.0991_
 
 **Thinking:**
-> Now fix the TelegramService errors.
-> Fix the errors: 1. Line 87: Change `_cts.Cancel()` to `_cts.CancelAsync()` 2. Line 94: Same 3. Null checks for `_cfg` 4. StringContent disposal  Let me also check lines 232 and 246 for the nullable reference dereference errors.
-> Lines 232 and 246: `cb.From` could be null. The `TgCallbackQuery.From` is a `TgUser?`. I need to add null checks.  Let me now fix all the errors in one go. I'll fix: 1. `_cts.Cancel()` → async (but StopAsync is synchronous, and Dispose is synchronous — I need to use fire-and-forget or make StopAsync…
+> Now register WebhookNotifier in ConductorHost and wire it in the Orchestrator's Notify method. Let me update ConductorHost first.
+> Now update the Orchestrator constructor to accept WebhookNotifier and wire it in the Notify method.
+> Now update the Notify method to also fire webhooks.
 
 **Recent actions:**
-- `19:30:31` » edit src\Conductor\Core\Orchestrator.cs
-- `19:30:31` · Now update the `Notify` method to push to Telegram alongside the existing hook:
-- `19:30:44` · Let me try building to see if it compiles:
-- `19:30:51` » bash dotnet build Conductor.slnx 2>&1
-- `19:31:09` » edit src\Conductor\Core\Hosting\ConductorHost.cs
-- `19:31:09` · Multiple errors to fix. Let me fix them all:
-- `19:31:14` » read src\Conductor\Core\Integrations\TelegramService.cs
-- `19:31:14` · Now fix the TelegramService errors:
-- `19:31:20` » read src\Conductor\Core\Integrations\TelegramService.cs
-- `19:31:26` » read src\Conductor\Core\Integrations\TelegramService.cs
+- `19:39:36` · Fix the commit link extraction — commits are formatted as `SHA message`:
+- `19:40:36` » bash dotnet build Conductor.slnx 2>&1; if ($?) { dotnet test Conductor.slnx --no-build 2>&1 }
+- `19:40:43` » todowrite 2 todos
+- `19:40:43` · B6.3 done. Now B6.4 — notify hooks. Let me wire the webhook/Discord/Slack configs:
+- `19:41:05` » write src\Conductor\Core\Integrations\WebhookNotifier.cs
+- `19:41:05` · Create a webhook notifier service:
+- `19:41:18` » edit src\Conductor\Core\Hosting\ConductorHost.cs
+- `19:41:18` · Register WebhookNotifier in ConductorHost:
+- `19:41:25` » edit src\Conductor\Core\Orchestrator.cs
+- `19:41:25` · Update Orchestrator constructor and Notify:
 
 ## Stage progress
 
