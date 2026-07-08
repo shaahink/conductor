@@ -1,10 +1,10 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 21:15 UTC · branch `feat/baton` · HEAD `e948ef0`_
+_Updated 2026-07-08 21:22 UTC · branch `feat/baton` · HEAD `99960e1`_
 
 **Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B8 — Brain layer · attempts used 0
-**Checkpoints:** 48/65 done · **Sessions run:** 48 · **Cost:** $2.0140 · **Tokens:** 1,214,563 in / 692,814 out / 310,619 think
+**Stage:** B9 — Task graph + smart session management · attempts used 1 · working ▸ B9.1
+**Checkpoints:** 48/65 done · **Sessions run:** 49 · **Cost:** $2.0431 · **Tokens:** 1,260,119 in / 699,158 out / 312,185 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8
 
 ## Stage progress
@@ -20,7 +20,7 @@ _Updated 2026-07-08 21:15 UTC · branch `feat/baton` · HEAD `e948ef0`_
 | B6 | AFK + two-way Telegram | 5/5 | confirmed ✓ |
 | B7 | Specialist sub-agent personas | 3/3 | confirmed ✓ |
 | B8 | Brain layer | 5/5 | confirmed ✓ |
-| B9 | Task graph + smart session management | 0/5 | todo |
+| B9 | Task graph + smart session management | 0/5 | **← active** |
 | B10 | Advanced orchestration | 0/4 | todo |
 | B11 | Close-out + Shamshir owner-gated proof | 0/4 | todo |
 | B12 | Controlled parallelism | 0/4 | todo |
@@ -29,7 +29,6 @@ _Updated 2026-07-08 21:15 UTC · branch `feat/baton` · HEAD `e948ef0`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 19 | B3 | Audit | 1 | 07-08 09:19 | 0:19 | Progress |  | 3 |  | $0.0385 | 2,178/19,271 |
 | 20 | B4 | Deliver | 1 | 07-08 09:39 | 0:12 | Stalled |  | 0 |  |  |  |
 | 21 | B4 | Resume | 2r1 | 07-08 09:51 | 0:12 | Stalled |  | 0 |  |  |  |
 | 22 | B4 | Resume | 3r2 | 07-08 10:03 | 0:12 | Stalled |  | 0 |  |  |  |
@@ -59,6 +58,7 @@ _Updated 2026-07-08 21:15 UTC · branch `feat/baton` · HEAD `e948ef0`_
 | 46 | B7 | Resume | 2r1 | 07-08 20:31 | 0:15 | Progress |  | 3 | build:OK | $0.0411 | 39,768/8,661 |
 | 47 | B8 | Deliver | 1 | 07-08 20:48 | 0:19 | Advanced | B8.1 B8.2 B8.3 B8.4 B8.5 | 3 | build:OK | $0.1079 | 84,480/32,767 |
 | 48 | B8 | Audit | 1 | 07-08 21:08 | 0:05 | Progress |  | 2 |  | $0.0606 | 91,711/8,335 |
+| 49 | B9 | Deliver | 1 | 07-08 21:15 | 0:06 | AgentError |  | 0 | build:OK | $0.0291 | 45,556/6,344 |
 
 ### Commits by session
 
@@ -101,11 +101,16 @@ _Updated 2026-07-08 21:15 UTC · branch `feat/baton` · HEAD `e948ef0`_
 
 ## Last gate run
 
-build:OK · tests:OK
+build:OK
 
 ## Last session result
 
-> SESSION-RESULT: Audit of B8 Brain layer — gate GREEN (build 0w/0e, 326 tests). Fixed 5 issues in Orchestrator.cs: removed dead `StartReviewSession` method and unused `ReflectionStep` stage parameter (A1), added battery-section + review-kind parity to `BuildPrompt` dry-run path, fixed missing explicit UTF-8 encoding in `ParseAuditFollowups`, and clarified operator precedence in the bullet-matching condition. 4 items deferred as tracked followups in `.conductor/followups.md`: LessonsManager thread-safety (B12), ReadRecent double-disk-read, StageConfig.Kind validation, and RecentFailureBattery multi-session pattern detection.
+> Now let me run the gate battery and check for the previous stage's handover:
+> Build green (0e/4w — file-lock warnings from testhost, benign), 326 tests pass. No B8 handover exists yet. Let me read the B8 evidence and check recent git history:
+> Gate battery green (build 0e, 326 tests pass). Now QA the B8 session — verifying two claims independently:
+> Test verification passed: 9 LessonsManager + 7 PromptBattery tests green (matching B8 evidence claims). Now verify an artifact claim:
+> The files don't exist yet (runtime-only artifacts). Let me verify the code claim — the `ParseAuditFollowups` method is real:
+> QA verdict: B8 claims verified — 9 LessonsManager + 7 PromptBattery tests pass; `ParseA…
 
 ## Tracker handoff
 
