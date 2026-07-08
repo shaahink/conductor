@@ -1,8 +1,8 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 13:52 UTC · branch `feat/baton` · HEAD `dcc4bbb`_
+_Updated 2026-07-08 13:52 UTC · branch `feat/baton` · HEAD `8d7b1dd`_
 
-**Status:** NeedsHuman — stage B4 used all 6 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: Attempt budget fully exhausted (6/6) on B4 with a stalled session, no commits, and an unresolved push-failure trap (github unreachable) blocking progress — automated retries won't fix infrastructure/network issues.
+**Status:** NeedsHuman — stage B4 used all 6 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: Attempt budget is fully exhausted (6/6) with a stalled session, zero new commits, and an unresolved environmental blocker (push failing, github unreachable), so no automated retry/resume can make progress.
 **Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 6 · working ▸ B4.1
 **Checkpoints:** 24/65 done · **Sessions run:** 25 · **Cost:** $0.9168 · **Tokens:** 431,294 in / 336,507 out / 158,939 think
 **Confirmed phases:** B0, B1, B2, B3
