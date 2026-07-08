@@ -151,4 +151,50 @@ public class DashboardRendererTests
         var outp = Render(st, width: 120, height: 13);
         Assert.Contains("Conductor", outp);
     }
+
+    [Fact]
+    public void HeaderGridShowsIdentityAndLiveMetricsInSeparateColumns()
+    {
+        // B4.2: the header is a two-column Grid — identity on the left, live metrics right-aligned.
+        // Both columns must survive the split; a regression would drop one (all-metrics or all-identity).
+        var s = SampleState();
+        var st = s with
+        {
+            Snap = s.Snap with
+            {
+                DoneCount = 3,
+                TotalCount = 35,
+                SessionCostUsd = 0.0239m,
+                TokensInput = 5000,
+                TokensOutput = 2000,
+            },
+        };
+        var outp = Render(st, width: 160, height: 40);
+        Assert.Contains("Conductor", outp);          // identity column
+        Assert.Contains("Identity spine", outp);      // identity column (stage title)
+        Assert.Contains("checkpoints 3/35", outp);    // metrics column: progress
+        Assert.Contains("$0.0239", outp);             // metrics column: cost
+        Assert.Contains("7.0k total", outp);          // metrics column: tokens
+    }
+
+    [Theory]
+    [InlineData(13)]  // compact
+    [InlineData(23)]  // compact boundary
+    [InlineData(24)]  // full boundary
+    [InlineData(40)]  // full
+    public void HeaderTitleRendersExactlyOnce_NoStacking(int height)
+    {
+        // B4.2 regression guard (F-5): the header must occupy its region once, never stack. A single
+        // BuildRoot frame therefore contains the "Conductor" title exactly once across every mode.
+        var outp = Render(SampleState(), width: 160, height: height);
+        Assert.Equal(1, CountOccurrences(outp, "Conductor"));
+    }
+
+    private static int CountOccurrences(string haystack, string needle)
+    {
+        var count = 0;
+        var i = 0;
+        while ((i = haystack.IndexOf(needle, i, StringComparison.Ordinal)) >= 0) { count++; i += needle.Length; }
+        return count;
+    }
 }

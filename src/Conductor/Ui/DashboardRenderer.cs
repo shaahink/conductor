@@ -27,7 +27,7 @@ public static class DashboardRenderer
                 new Layout("header").Size(5),
                 new Layout("body"),
                 new Layout("footer").Size(cfooter));
-            croot["header"].Update(CompactHeaderPanel(st));
+            croot["header"].Update(HeaderPanel(st, compact: true));
             croot["body"].Update(AgentPanel(st));
             croot["footer"].Update(FooterPanel(st));
             return croot;
@@ -37,34 +37,39 @@ public static class DashboardRenderer
         var footer = Math.Clamp(h - header - 6, 3, FooterHeight(st));
         var wide = st.Width >= 150;
 
-        var root = new Layout("root").SplitRows(
-            new Layout("header").Size(header),
-            new Layout("body"),
-            new Layout("footer").Size(footer));
-
+        // The whole layout is one declarative Layout tree (Split + Update leaves) — no scattered
+        // Rows/Panel stacking. Every region is sized by the engine, so nothing overflows the viewport.
+        Layout root;
         if (wide)
         {
-            root["body"].SplitColumns(
-                new Layout("left").Ratio(24),
-                new Layout("center").Ratio(42),
-                new Layout("right").Ratio(34));
-            root["body"]["left"].Update(LeftColumn(st));
-            root["body"]["center"].Update(AgentPanel(st));
-            root["body"]["right"].Update(RightColumn(st));
+            root = new Layout("root").SplitRows(
+                new Layout("header").Size(header),
+                new Layout("body").SplitColumns(
+                    new Layout("left").Ratio(24).SplitRows(new Layout("plan"), new Layout("stage")),
+                    new Layout("center").Ratio(42),
+                    new Layout("right").Ratio(34).SplitRows(new Layout("thinking"), new Layout("gates"))),
+                new Layout("footer").Size(footer));
+            root["center"].Update(AgentPanel(st));
+            root["thinking"].Update(ThinkingPanel(st));
+            root["gates"].Update(GatePanel(st));
         }
         else
         {
-            root["body"].SplitColumns(
-                new Layout("left").Ratio(1),
-                new Layout("right").Ratio(2).SplitRows(
-                    new Layout("agent").Ratio(3),
-                    new Layout("thinking").Ratio(2)));
-            root["body"]["left"].Update(LeftColumn(st));
-            root["body"]["right"]["agent"].Update(AgentPanel(st));
-            root["body"]["right"]["thinking"].Update(ThinkingPanel(st));
+            root = new Layout("root").SplitRows(
+                new Layout("header").Size(header),
+                new Layout("body").SplitColumns(
+                    new Layout("left").Ratio(1).SplitRows(new Layout("plan"), new Layout("stage")),
+                    new Layout("right").Ratio(2).SplitRows(
+                        new Layout("agent").Ratio(3),
+                        new Layout("thinking").Ratio(2))),
+                new Layout("footer").Size(footer));
+            root["agent"].Update(AgentPanel(st));
+            root["thinking"].Update(ThinkingPanel(st));
         }
 
-        root["header"].Update(HeaderPanel(st));
+        root["plan"].Update(PlanPanel(st));
+        root["stage"].Update(StagePanel(st));
+        root["header"].Update(HeaderPanel(st, compact: false));
         root["footer"].Update(FooterPanel(st));
         return root;
     }
@@ -73,36 +78,51 @@ public static class DashboardRenderer
 
     // ---------------------------------------------------------------- header
 
-    private static IRenderable CompactHeaderPanel(DashboardState st)
-    {
-        var s = st.Snap;
-        var line1 = $"[bold aqua]Conductor[/] — [bold]{Esc(s.PlanName)}[/]   [{StatusColor(s.Status)}]● {Esc(s.Status)}[/]" +
-                    $"  stage [bold]{Esc(s.StageId)}[/] · #{s.SessionNumber} {Esc(s.SessionKind)}";
-        var rows = new Rows(new Markup(line1), new Markup(ActivityLine(st)), new Markup(ProgressLine(s)));
-        return new Panel(rows).Expand().Border(BoxBorder.Rounded);
-    }
-
-    private static IRenderable HeaderPanel(DashboardState st)
+    /// <summary>
+    /// Header as a two-column <see cref="Grid"/>: identity/activity on the left, the live metrics
+    /// (checkpoints · cost · tokens) right-aligned in their own column so they line up frame to
+    /// frame. A fixed row count that fits the header region — this is what keeps the header-stacking
+    /// bug (F-5) retired: the right column is <c>NoWrap</c>, so metrics never wrap onto new lines
+    /// that would push the identity block down and out of the region.
+    /// </summary>
+    private static IRenderable HeaderPanel(DashboardState st, bool compact)
     {
         var s = st.Snap;
         var statusColor = StatusColor(s.Status);
-        var line1 = $"[bold aqua]Conductor[/] — [bold]{Esc(s.PlanName)}[/]   [{statusColor}]● {Esc(s.Status)}[/]" +
+        var title = $"[bold aqua]Conductor[/] — [bold]{Esc(s.PlanName)}[/]   [{statusColor}]● {Esc(s.Status)}[/]" +
                     (s.AttentionReason != null ? $"  [red]{Esc(s.AttentionReason)}[/]" : "");
+
+        // Both columns NoWrap: every grid row is then exactly one line tall, so a long identity
+        // string is clipped (acceptable) rather than wrapping and pushing the metrics rows down and
+        // out of the fixed header region — the header can never stack or lose its metrics (R4.2/F-5).
+        var grid = new Grid();
+        grid.AddColumn(new GridColumn().PadRight(2).NoWrap());
+        grid.AddColumn(new GridColumn().RightAligned().NoWrap());
+
+        if (compact)
+        {
+            var stageLine = $"stage [bold]{Esc(s.StageId)}[/] {Esc(Clip(s.StageTitle, 40))}" +
+                            (s.SessionNumber > 0 ? $" · #{s.SessionNumber} {Esc(s.SessionKind)}" : "");
+            grid.AddRow(new Markup(title), new Markup(CheckpointsLine(s)));
+            grid.AddRow(new Markup(ActivityLine(st)), new Markup(CostLine(s)));
+            grid.AddRow(new Markup(stageLine), new Markup(TokenLine(s)));
+            return new Panel(grid).Expand().Border(BoxBorder.Rounded);
+        }
+
         var line2 = $"stage [bold]{Esc(s.StageId)}[/] {Esc(s.StageTitle)}" +
                     (s.SessionNumber > 0 ? $" · session #{s.SessionNumber} {Esc(s.SessionKind)}" : "") +
                     (s.Attempt > 0 ? $" · attempt {s.Attempt}/{s.MaxAttempts}" : "") +
                     (s.ResumeCount > 0 ? $" · resume {s.ResumeCount}" : "");
         var line3 = !string.IsNullOrEmpty(s.CurrentCheckpoint)
             ? $"[aqua]▸ {Esc(s.CurrentCheckpoint)}[/]" +
-              (!string.IsNullOrEmpty(s.CurrentCheckpointTitle) ? $" [silver]{Esc(Clip(s.CurrentCheckpointTitle, 90))}[/]" : "")
+              (!string.IsNullOrEmpty(s.CurrentCheckpointTitle) ? $" [silver]{Esc(Clip(s.CurrentCheckpointTitle, 80))}[/]" : "")
             : ProgressLine(s);
-        var rows = new Rows(
-            new Markup(line1),
-            new Markup(ActivityLine(st)),
-            new Markup(line2),
-            new Markup(line3),
-            new Markup(ProgressLine(s)));
-        return new Panel(rows).Expand().Border(BoxBorder.Rounded);
+
+        grid.AddRow(new Markup(title), new Markup(CheckpointsLine(s)));
+        grid.AddRow(new Markup(line2), new Markup(CostLine(s)));
+        grid.AddRow(new Markup(line3), new Markup(TokenLine(s)));
+        grid.AddRow(new Markup(ActivityLine(st)), new Markup(""));
+        return new Panel(grid).Expand().Border(BoxBorder.Rounded);
     }
 
     /// <summary>The "who is working?" line — agent vs conductor gates vs paused/backoff — with a live spinner.</summary>
@@ -135,9 +155,14 @@ public static class DashboardRenderer
     }
 
     private static string ProgressLine(DashboardSnapshot s)
+        => $"{CheckpointsLine(s)} · {CostLine(s)} · {TokenLine(s)}";
+
+    /// <summary>Just the checkpoint progress fragment, shared by the header metrics column and the
+    /// single-line <see cref="ProgressLine"/> fallback.</summary>
+    public static string CheckpointsLine(DashboardSnapshot s)
     {
         var pct = s.TotalCount > 0 ? (int)Math.Round(100.0 * s.DoneCount / s.TotalCount) : 0;
-        return $"checkpoints [bold]{s.DoneCount}/{s.TotalCount}[/] ({pct}%) · {CostLine(s)} · {TokenLine(s)}";
+        return $"checkpoints [bold]{s.DoneCount}/{s.TotalCount}[/] ({pct}%)";
     }
 
     /// <summary>Cost broken out so a missing/older cost never reads as a misleading $0.0000.</summary>
@@ -183,9 +208,11 @@ public static class DashboardRenderer
 
     // ---------------------------------------------------------------- left column (plan + stage)
 
-    private static IRenderable LeftColumn(DashboardState st)
-        => new Rows(new Panel(PlanTable(st)).Header("[aqua]plan[/]").Expand().Border(BoxBorder.Rounded),
-                    new Panel(StageTable(st)).Header($"[aqua]stage {Esc(st.Snap.StageId)}[/]").Expand().Border(BoxBorder.Rounded));
+    private static IRenderable PlanPanel(DashboardState st)
+        => new Panel(PlanTable(st)).Header("[aqua]plan[/]").Expand().Border(BoxBorder.Rounded);
+
+    private static IRenderable StagePanel(DashboardState st)
+        => new Panel(StageTable(st)).Header($"[aqua]stage {Esc(st.Snap.StageId)}[/]").Expand().Border(BoxBorder.Rounded);
 
     private static IRenderable PlanTable(DashboardState st)
     {
@@ -229,9 +256,8 @@ public static class DashboardRenderer
 
     // ---------------------------------------------------------------- right column (thinking + gates)
 
-    private static IRenderable RightColumn(DashboardState st)
-        => new Rows(new Panel(ThinkingBody(st)).Header("[aqua]thinking[/] [grey](T)[/]").Expand().Border(BoxBorder.Rounded),
-                    new Panel(GateBody(st)).Header("[aqua]gates[/]").Expand().Border(BoxBorder.Rounded));
+    private static IRenderable GatePanel(DashboardState st)
+        => new Panel(GateBody(st)).Header("[aqua]gates[/]").Expand().Border(BoxBorder.Rounded);
 
     private static IRenderable ThinkingPanel(DashboardState st)
         => new Panel(ThinkingBody(st)).Header("[aqua]thinking[/] [grey](T)[/]").Expand().Border(BoxBorder.Rounded);
@@ -301,13 +327,19 @@ public static class DashboardRenderer
 
     private static IRenderable FooterPanel(DashboardState st)
     {
-        var rows = new List<IRenderable>();
-        if (!string.IsNullOrEmpty(st.Snap.GateSummary))
-            rows.Add(new Markup("[bold]gates:[/] " + Esc(st.Snap.GateSummary)));
+        // Action bar first so it survives when a short viewport crops the region from the bottom;
+        // the confirm prompt and gate summary sit next (both are attention-worthy), and the scrolling
+        // log lives below a Rule so the boundary between "controls" and "history" is unambiguous.
+        var rows = new List<IRenderable> { new Markup(ActionBar(st.Snap.Status)) };
         if (st.ConfirmPrompt != null)
             rows.Add(new Markup($"[bold yellow]⚠ {Esc(st.ConfirmPrompt)}[/]"));
-        rows.AddRange(st.Log.Select(l => (IRenderable)new Markup("[grey]" + Esc(l) + "[/]")));
-        rows.Add(new Markup(ActionBar(st.Snap.Status)));
+        if (!string.IsNullOrEmpty(st.Snap.GateSummary))
+            rows.Add(new Markup("[bold]gates:[/] " + Esc(st.Snap.GateSummary)));
+        if (st.Log.Count > 0)
+        {
+            rows.Add(new Rule("[grey37]log[/]").LeftJustified().RuleStyle("grey37"));
+            rows.AddRange(st.Log.Select(l => (IRenderable)new Markup("[grey]" + Esc(l) + "[/]")));
+        }
         return new Panel(new Rows(rows)).Header("[aqua]conductor[/]").Expand().Border(BoxBorder.Rounded);
     }
 
