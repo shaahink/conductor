@@ -52,8 +52,8 @@ public sealed class ScriptProvider(ScriptProviderConfig config) : IProgressProvi
             throw new InvalidOperationException(
                 $"script progress provider: command produced no JSON (null). Command: {_config.Command}");
 
-        var rows = parsed.ConvertAll(c => new CheckpointRow(
-            c.Id.Trim(), c.Title.Trim(), c.Status.Trim(), c.Commit.Trim(), c.Evidence.Trim()));
+        var rows = parsed.ConvertAll(c =>
+            CheckpointRow.Create(plan.Conventions, c.Id, c.Title, c.Status, c.Commit, c.Evidence));
         return new TrackerSnapshot { Checkpoints = rows, HandoffBlock = "", RawText = result.Output };
     }
 

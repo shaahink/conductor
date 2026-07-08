@@ -47,7 +47,7 @@ dotnet_diagnostic.MA0134.severity = warning    # observe result of Task-returnin
 # Ratchet-later (relaxed in B0.2 — fix class exceeds the diff budget; recorded in ADR-0001):
 dotnet_diagnostic.MA0045.severity = suggestion # sync-over-async I/O: B2 async/Host rework (28 sites, signature-changing)
 dotnet_diagnostic.MA0002.severity = suggestion # explicit StringComparer: cross-cutting (38 sites); ratchet post-B2
-dotnet_diagnostic.MA0009.severity = suggestion # regex timeout: B1.4 reworks TrackerParser regex; add timeouts there
+dotnet_diagnostic.MA0009.severity = error      # regex ReDoS timeout: ratcheted in B1.4 (FU-B0-3); all tracker regexes carry ProgressConventions.RegexTimeout
 dotnet_diagnostic.MA0006.severity = suggestion # use string.Equals instead of ==
 dotnet_diagnostic.MA0011.severity = suggestion # IFormatProvider is missing (ADR-0001: InvariantGlobalization on)
 dotnet_diagnostic.MA0016.severity = suggestion # prefer returning collection abstraction

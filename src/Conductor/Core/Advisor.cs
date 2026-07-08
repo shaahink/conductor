@@ -34,7 +34,7 @@ public static class Advisor
                 }
                 catch (JsonException) { /* fall through to regex */ }
             }
-            var m = Regex.Match(text, "\\{[^{}]*\"action\"[^{}]*\\}", RegexOptions.Singleline);
+            var m = Regex.Match(text, "\\{[^{}]*\"action\"[^{}]*\\}", RegexOptions.Singleline, ProgressConventions.RegexTimeout);
             if (!m.Success) { log?.Invoke("advisor gave no parseable verdict"); return null; }
             using var vdoc = JsonDocument.Parse(m.Value);
             var action = (vdoc.RootElement.TryGetProperty("action", out var act) ? act.GetString() : null)?.ToLowerInvariant() ?? "";

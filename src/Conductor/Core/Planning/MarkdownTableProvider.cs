@@ -1,49 +1,44 @@
-using System.Text.RegularExpressions;
 using Conductor.Models;
 
 namespace Conductor.Core.Planning;
 
 /// <summary>
 /// The default <see cref="IProgressProvider"/>: Conductor's original strict Markdown-table tracker
-/// (a checkpoint table + a <c>## Handoff</c> block). This holds the canonical parsing logic that used
-/// to live in <see cref="TrackerParser"/>; <see cref="TrackerParser"/> now delegates here so the parse
-/// is byte-identical for every existing call site (F-1 decoupling, D-2 default format).
+/// (a checkpoint table + a handoff block). This holds the canonical parsing logic that used to live in
+/// <see cref="TrackerParser"/>; <see cref="TrackerParser"/> now delegates here. The row/handoff shapes
+/// and the stage/status vocabulary come from <see cref="ProgressConventions"/> (B1.4), so with the
+/// defaults the parse is byte-identical for every existing call site, and a plan can retarget the
+/// tracker shape (Shamshir's P-0/P3.4b/F5 ids) purely by config (F-1 decoupling, D-2 default format).
 /// </summary>
-public sealed partial class MarkdownTableProvider : IProgressProvider
+public sealed class MarkdownTableProvider : IProgressProvider
 {
     public string Name => "markdown-table";
 
-    // Matches rows like: | L0.1 | Truth expectations (...) | TODO | | |
-    // Status cell may carry decoration after the keyword (e.g. "DONE ✅").
-    [GeneratedRegex(
-        @"^\|\s*(?<id>[A-Za-z]+\d+(?:\.\d+)?[a-z]?)\s*\|(?<title>[^|]*)\|\s*(?<status>TODO|IN\s+PROGRESS|DONE|BLOCKED)(?<rest>[^|]*)\|(?<commit>[^|]*)\|(?<evidence>[^|]*)\|",
-        RegexOptions.IgnoreCase)]
-    private static partial Regex RowRx();
+    public TrackerSnapshot Read(PlanConfig plan) => Parse(File.ReadAllText(plan.TrackerPath), plan.Conventions);
 
-    [GeneratedRegex(
-        @"^##\s*Handoff[^\r\n]*\r?\n(?<body>.*?)(?=^##\s|\z)",
-        RegexOptions.Multiline | RegexOptions.Singleline)]
-    private static partial Regex HandoffRx();
+    public static TrackerSnapshot ParseFile(string path) => Parse(File.ReadAllText(path), ProgressConventions.Default);
 
-    public TrackerSnapshot Read(PlanConfig plan) => ParseFile(plan.TrackerPath);
+    public static TrackerSnapshot Parse(string trackerText) => Parse(trackerText, ProgressConventions.Default);
 
-    public static TrackerSnapshot ParseFile(string path) => Parse(File.ReadAllText(path));
-
-    public static TrackerSnapshot Parse(string trackerText)
+    public static TrackerSnapshot Parse(string trackerText, ProgressConventions conventions)
     {
+        var rowRx = conventions.BuildRowRegex();
         var rows = new List<CheckpointRow>();
         foreach (var line in trackerText.Split('\n'))
         {
-            var m = RowRx().Match(line.TrimEnd());
+            var m = rowRx.Match(line.TrimEnd());
             if (!m.Success) continue;
-            rows.Add(new CheckpointRow(
-                m.Groups["id"].Value.Trim(),
-                m.Groups["title"].Value.Trim(),
-                (m.Groups["status"].Value + m.Groups["rest"].Value).Trim(),
-                m.Groups["commit"].Value.Trim(),
-                m.Groups["evidence"].Value.Trim()));
+            rows.Add(CheckpointRow.Create(
+                conventions,
+                m.Groups["id"].Value,
+                m.Groups["title"].Value,
+                m.Groups["status"].Value + m.Groups["rest"].Value,
+                m.Groups["commit"].Value,
+                m.Groups["evidence"].Value));
         }
-        var handoff = HandoffRx().Match(trackerText) is { Success: true } h ? h.Groups["body"].Value.Trim() : "";
+        var handoff = conventions.BuildHandoffRegex().Match(trackerText) is { Success: true } h
+            ? h.Groups["body"].Value.Trim()
+            : "";
         return new TrackerSnapshot { Checkpoints = rows, HandoffBlock = handoff, RawText = trackerText };
     }
 }

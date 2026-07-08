@@ -1,13 +1,32 @@
 using Conductor.Core.Planning;
+using Conductor.Models;
 
 namespace Conductor.Core;
 
 public sealed record CheckpointRow(string Id, string Title, string Status, string Commit, string Evidence)
 {
-    public string StageId => Id.Split('.')[0];
-    public bool IsDone => Status.StartsWith("DONE", StringComparison.OrdinalIgnoreCase);
-    public bool IsBlocked => Status.StartsWith("BLOCKED", StringComparison.OrdinalIgnoreCase);
-    public bool IsInProgress => Status.StartsWith("IN", StringComparison.OrdinalIgnoreCase);
+    /// <summary>Owning stage id. The parameterless default is Loom's split-on-first-dot; providers with
+    /// configured conventions set it via <see cref="Create"/> (B1.4).</summary>
+    public string StageId { get; init; } = Id.Split('.')[0];
+    public bool IsDone { get; init; } = Status.StartsWith("DONE", StringComparison.OrdinalIgnoreCase);
+    public bool IsBlocked { get; init; } = Status.StartsWith("BLOCKED", StringComparison.OrdinalIgnoreCase);
+    public bool IsInProgress { get; init; } = Status.StartsWith("IN", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Build a row whose stage id and status flags honour the given conventions (B1.4). All
+    /// fields are trimmed, matching the original parser.</summary>
+    public static CheckpointRow Create(
+        ProgressConventions conventions, string id, string title, string status, string commit, string evidence)
+    {
+        id = id.Trim();
+        status = status.Trim();
+        return new CheckpointRow(id, title.Trim(), status, commit.Trim(), evidence.Trim())
+        {
+            StageId = conventions.DeriveStageId(id),
+            IsDone = conventions.IsDone(status),
+            IsBlocked = conventions.IsBlocked(status),
+            IsInProgress = conventions.IsInProgress(status),
+        };
+    }
 }
 
 public sealed class TrackerSnapshot

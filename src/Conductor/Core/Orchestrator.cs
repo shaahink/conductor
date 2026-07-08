@@ -17,7 +17,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 {
     private static readonly Regex LimitRx = new(
         @"usage limit|rate.?limit|overloaded|quota|out of credit|insufficient credit|credit balance|429|too many requests|5-hour|weekly limit",
-        RegexOptions.IgnoreCase);
+        RegexOptions.IgnoreCase, ProgressConventions.RegexTimeout);
 
     private readonly PromptBuilder _prompts = new(plan);
     private readonly IProgressProvider _progress = ProgressProviderFactory.Create(plan);
@@ -579,7 +579,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     private int MaxAttempts(StageConfig stage) => Math.Max(1, stage.Sessions * plan.Limits.StageSlackFactor);
 
     private bool HandoffWantsHuman(TrackerSnapshot track)
-        => track.HandoffBlock.Contains("HUMAN:", StringComparison.OrdinalIgnoreCase);
+        => plan.Conventions.MentionsHuman(track.HandoffBlock);
 
     /// <returns>true if the caller should fall through to running a session (advisor said retry)</returns>
     private bool EscalateExhaustedStage(StageConfig stage, TrackerSnapshot track, int maxAttempts)
@@ -793,7 +793,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     {
         if (string.IsNullOrWhiteSpace(plan.BranchPattern)) return;
         var branch = Git.Branch(plan.Repo);
-        if (!Regex.IsMatch(branch, plan.BranchPattern))
+        if (!Regex.IsMatch(branch, plan.BranchPattern, RegexOptions.None, ProgressConventions.RegexTimeout))
             Log($"⚠ branch '{branch}' does not match plan branchPattern '{plan.BranchPattern}' — check before letting sessions commit");
     }
 

@@ -19,8 +19,7 @@ public sealed class PlanCheckpointProvider(IReadOnlyList<PlanCheckpoint> checkpo
         var rows = new List<CheckpointRow>(_checkpoints.Count);
         foreach (var c in _checkpoints)
         {
-            rows.Add(new CheckpointRow(
-                c.Id.Trim(), c.Title.Trim(), c.Status.Trim(), c.Commit.Trim(), c.Evidence.Trim()));
+            rows.Add(CheckpointRow.Create(plan.Conventions, c.Id, c.Title, c.Status, c.Commit, c.Evidence));
         }
 
         return new TrackerSnapshot { Checkpoints = rows, HandoffBlock = "", RawText = "" };
