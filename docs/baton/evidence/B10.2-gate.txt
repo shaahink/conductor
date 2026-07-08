@@ -1,0 +1,39 @@
+=== B10.2 gate battery ===
+Date: 2026-07-08
+
+Build: dotnet build Conductor.slnx
+Result: 0 warnings, 0 errors (net10.0, warnings-as-errors)
+
+Tests: dotnet test Conductor.slnx
+Result: 391 passed, 0 failed, 0 skipped (+12 B10.2 hierarchy tests)
+
+--- B10.2 test details ---
+B10_2HierarchyTests (12 tests):
+  UnknownParentFailsValidation        — parentId "Z" that doesn't exist fails plan validation
+  SelfParentFailsValidation           — stage with parentId == its own id fails
+  ParentCycleFailsValidation          — A→B→A parent cycle detected and fails
+  ValidParentChainLoads               — A→B→C three-level chain loads successfully
+  DepthIsZeroForRootStages            — root stages have depth 0
+  DepthIsOneForDirectChild            — direct child of root has depth 1
+  DepthChainsThreeLevels              — grandchild has depth 2
+  DepthPreservedInStageProgress       — StageProgress carries ParentId + Depth
+  VisibleRowsIncludesAllStageHeaders  — hierarchical stages all appear in tree
+  ExpandAllRevealsNestedCheckpoints   — expand-all shows checkpoints of child stages
+  ChildStageDepthReflectedInStageProgressRow — child row carries correct ParentId
+  DeserializesParentIdFromCamelCase   — parentId field round-trips from JSON (camelCase)
+
+--- Changes (6 files, within ~15 budget) ---
+src/Conductor/Models/PlanConfig.cs        +40  ParentId field + validation + HasParentCycle()
+src/Conductor/Core/Progress.cs            + 4  StageProgress.ParentId + Depth
+src/Conductor/Core/SnapshotBuilder.cs     +20  ComputeDepth() + wire into StageProgress
+src/Conductor/Core/Reporter.cs            + 4  indented reporting with depth
+src/Conductor/Ui/PlanTree.cs              + 7  indented rendering in TUI tree
+tests/Conductor.Tests/B10_2Tests.cs       +205 12 new tests (new file)
+
+--- What landed ---
+- StageConfig.ParentId: string? — optional parent stage ref for hierarchical display
+- Plan validation: unknown parent, self-parent, and parent cycle detection at load time
+- StageProgress gains ParentId + Depth computed by SnapshotBuilder.ComputeDepth()
+- PlanTree visible rows + rendering: indentation based on Depth (2 spaces per level)
+- Reporter stage progress table: indented stage names per depth
+- Back-compat: stages with no ParentId behave exactly as before (depth=0, no indent)

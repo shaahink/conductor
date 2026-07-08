@@ -67,7 +67,9 @@ public static class Reporter
                 : s.Id == state.CurrentStage ? "**← active**"
                 : rows.Any(r => r.IsDone || r.IsInProgress) ? "partial"
                 : "todo";
-            sb.AppendLine($"| {s.Id} | {s.Title} | {bar} {d}/{rows.Count} | {st} |");
+            var depth = SnapshotBuilder.ComputeDepth(s.Id, plan.Stages);
+            var indent = new string(' ', depth * 2);
+            sb.AppendLine($"| {indent}{s.Id} | {indent}{s.Title} | {bar} {d}/{rows.Count} | {st} |");
         }
         sb.AppendLine();
 

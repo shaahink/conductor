@@ -153,15 +153,18 @@ public static class PlanTree
                 var s = r.Stage;
                 var glyph = IsExpanded(s, view) ? "▾" : "▸";
                 var (color, badge) = StageMark(s.State);
-                var id = $"{cursor}[{color}]{glyph} {Esc(s.Id)}[/]";
+                var indent = new string(' ', s.Depth * 2);
+                var id = $"{cursor}[{color}]{indent}{glyph} {Esc(s.Id)}[/]";
                 var title = $"[{color}]{Esc(Clip(s.Title, 30))}[/]{badge}";
                 t.AddRow(new Markup(id), new Markup(title), new Markup(StageMeta(s, color)));
             }
             else
             {
+                var s = r.Stage;
                 var color = StatusColor(r.Status);
+                var indent = new string(' ', (s.Depth + 1) * 2);
                 t.AddRow(
-                    new Markup($"{cursor}[grey] ↳[/] [{color}]{Esc(r.Id)}[/]"),
+                    new Markup($"{cursor}[grey]{indent}↳[/] [{color}]{Esc(r.Id)}[/]"),
                     new Markup($"[silver]{Esc(Clip(r.Title, 40))}[/]"),
                     new Markup($"[{color}]{Esc(ShortStatus(r.Status))}[/]"));
             }

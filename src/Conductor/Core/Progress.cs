@@ -54,6 +54,10 @@ public sealed record StageProgress
     /// <summary>Outcome of the most recent finished session on the stage (empty if none yet).</summary>
     public string LastOutcome { get; init; } = "";
     public decimal CostUsd { get; init; }
+    /// <summary>Parent stage id for hierarchical display (B10.2). null = root stage.</summary>
+    public string? ParentId { get; init; }
+    /// <summary>Depth in the parent chain (B10.2). 0 = root, 1 = child of root, etc.</summary>
+    public int Depth { get; init; }
     public IReadOnlyList<(string Id, string Title, string Status)> Checkpoints { get; init; }
         = Array.Empty<(string, string, string)>();
 }

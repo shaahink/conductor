@@ -154,6 +154,19 @@ public sealed class PlanConfig
 
             if (HasDependencyCycle())
                 errors.Add("plan.stages has a dependency cycle — fix the dependsOn graph so every stage can eventually become ready");
+
+            // B10.2: parent hierarchy validation
+            foreach (var s in Stages)
+            {
+                if (string.IsNullOrEmpty(s.ParentId)) continue;
+                if (s.ParentId.Equals(s.Id, StringComparison.OrdinalIgnoreCase))
+                    errors.Add($"stage '{s.Id}' has parentId '{s.ParentId}' which references itself");
+                else if (!stageIds.Contains(s.ParentId))
+                    errors.Add($"stage '{s.Id}' has parentId '{s.ParentId}' which is not a known stage id");
+            }
+
+            if (HasParentCycle())
+                errors.Add("plan.stages has a parent hierarchy cycle — fix the parentId chain so no stage is its own ancestor");
         }
 
         if (string.IsNullOrWhiteSpace(Agent.Command)) errors.Add("plan.agent.command is required — set the CLI command used to spawn agent sessions");
@@ -191,6 +204,30 @@ public sealed class PlanConfig
         }
 
         return ids.Any(id => Dfs(id));
+    }
+
+    /// <summary>B10.2: DFS cycle detection on the parentId graph. A cycle exists when walking parent
+    /// chains leads back to a previously visited node.</summary>
+    private bool HasParentCycle()
+    {
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var onStack = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        bool Dfs(string id)
+        {
+            if (onStack.Contains(id)) return true;
+            if (!visited.Add(id)) return false;
+            onStack.Add(id);
+            var stage = Stages.FirstOrDefault(s => s.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+            if (stage?.ParentId is { Length: > 0 } parent)
+            {
+                if (Dfs(parent)) return true;
+            }
+            onStack.Remove(id);
+            return false;
+        }
+
+        return Stages.Any(s => Dfs(s.Id));
     }
 }
 
@@ -457,6 +494,9 @@ public sealed class StageConfig
     /// <summary>Stage IDs that must be completed (confirmed or skipped) before this stage becomes
     /// ready. Execution stays sequential; this only affects readiness ordering (B10.1).</summary>
     public List<string>? DependsOn { get; set; }
+    /// <summary>Parent stage id for hierarchical display in tree + report (B10.2). null = root stage.
+    /// Parent stages appear above their children in the plan tree with indentation.</summary>
+    public string? ParentId { get; set; }
 }
 
 public sealed class GateConfig

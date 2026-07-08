@@ -60,6 +60,8 @@ public static class SnapshotBuilder
                     Attempts = sessions.Count,
                     LastOutcome = lastDone?.Outcome?.ToString() ?? "",
                     CostUsd = sessions.Sum(h => h.CostUsd ?? 0m),
+                    ParentId = s.ParentId,
+                    Depth = ComputeDepth(s.Id, plan.Stages),
                     Checkpoints = rows.Select(c => (c.Id, c.Title, c.Status)).ToList(),
                 };
             }).ToList(),
@@ -71,4 +73,22 @@ public static class SnapshotBuilder
             : state.ConfirmedStages.Contains(stageId) ? "confirmed"
             : rows.Count > 0 && rows.All(r => r.IsDone) ? (plan.PerPhaseGates ? "gating" : "done")
             : stageId == state.CurrentStage ? "active" : "todo";
+
+    /// <summary>B10.2: compute nesting depth by walking parentId chain. Guarded against cycles (already
+    /// validated at load) with a visited set; returns 0 for root or untracked parents.</summary>
+    internal static int ComputeDepth(string stageId, IReadOnlyList<StageConfig> stages, int maxDepth = 20)
+    {
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var depth = 0;
+        var current = stageId;
+        while (depth < maxDepth)
+        {
+            var stage = stages.FirstOrDefault(s => s.Id.Equals(current, StringComparison.OrdinalIgnoreCase));
+            if (stage?.ParentId is not { Length: > 0 } parent) break;
+            if (!visited.Add(parent)) break; // cycle guard
+            current = parent;
+            depth++;
+        }
+        return depth;
+    }
 }
