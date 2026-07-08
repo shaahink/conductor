@@ -1,10 +1,10 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 21:23 UTC · branch `feat/baton` · HEAD `f63f918`_
+_Updated 2026-07-08 21:24 UTC · branch `feat/baton` · HEAD `dbcaec8`_
 
 **Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B9 — Task graph + smart session management · attempts used 2 · working ▸ B9.1
-**Checkpoints:** 48/65 done · **Sessions run:** 50 · **Cost:** $2.0431 · **Tokens:** 1,260,119 in / 699,158 out / 312,185 think
+**Stage:** B9 — Task graph + smart session management · attempts used 3 · working ▸ B9.1
+**Checkpoints:** 48/65 done · **Sessions run:** 51 · **Cost:** $2.0431 · **Tokens:** 1,260,119 in / 699,158 out / 312,185 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8
 
 ## Stage progress
@@ -29,7 +29,6 @@ _Updated 2026-07-08 21:23 UTC · branch `feat/baton` · HEAD `f63f918`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 21 | B4 | Resume | 2r1 | 07-08 09:51 | 0:12 | Stalled |  | 0 |  |  |  |
 | 22 | B4 | Resume | 3r2 | 07-08 10:03 | 0:12 | Stalled |  | 0 |  |  |  |
 | 23 | B4 | Deliver | 4 | 07-08 10:21 | 0:12 | Stalled |  | 0 |  |  |  |
 | 24 | B4 | Resume | 5r1 | 07-08 10:33 | 0:12 | Stalled |  | 0 |  |  |  |
@@ -59,6 +58,7 @@ _Updated 2026-07-08 21:23 UTC · branch `feat/baton` · HEAD `f63f918`_
 | 48 | B8 | Audit | 1 | 07-08 21:08 | 0:05 | Progress |  | 2 |  | $0.0606 | 91,711/8,335 |
 | 49 | B9 | Deliver | 1 | 07-08 21:15 | 0:06 | AgentError |  | 0 | build:OK | $0.0291 | 45,556/6,344 |
 | 50 | B9 | Fix | 2 | 07-08 21:22 | 0:00 | AgentError |  | 0 | build:OK |  |  |
+| 51 | B9 | Fix | 3 | 07-08 21:23 | 0:00 | AgentError |  | 0 | build:OK |  |  |
 
 ### Commits by session
 
