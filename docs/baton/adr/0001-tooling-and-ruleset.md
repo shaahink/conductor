@@ -1,7 +1,7 @@
 # ADR-0001 — Tooling & analyzer ruleset
 
-- **Status:** Accepted (B0.2)
-- **Date:** 2026-07-08
+- **Status:** Accepted (B0.2), maintained through B11
+- **Date:** 2026-07-08 · **Last updated:** 2026-07-09 (B11.3)
 - **Deciders:** Baton self-plan, session #1 (stage B0)
 - **Context source:** `docs/baton/BATON-BRIEF.md` §5 (.NET standards) + §7 (anti-patterns, A17);
   `docs/baton/stages/B0.md` R0.2/R0.3; draft `docs/baton/tooling/meziantou-ruleset.md`.
@@ -58,11 +58,18 @@ into `.conductor/followups.md`.
 |------|-------|--------------|----------------|
 | MA0045 | 28 | Sync→async I/O rewrite is signature-changing across the Orchestrator; it *is* the B2 async/Host/DI rework. The deadlock-class twin (MA0042) stays **error**. | **B2** |
 | MA0002 | 38 | Explicit `StringComparer` on dictionaries/sets/`Contains` is cross-cutting and mechanical; low correctness risk under `InvariantGlobalization`. | post-B2 |
-| MA0009 | 7 | Regex ReDoS timeouts; `TrackerParser` regex (the untrusted-input path) is reworked in **B1.4**, where timeouts land naturally. | **B1.4** |
+| MA0009 | 7 | Regex ReDoS timeouts; the `TrackerParser` regex timeout was added in B1.4 (`ProgressConventions.RegexTimeout`). | **B1.4** → ✅ DONE (ratcheted to `error` in B1.4 per FU-B0-3) |
+| MA0002 | 38 | Explicit `StringComparer` on dictionaries/sets/`Contains` — cross-cutting and mechanical; low correctness risk under `InvariantGlobalization`. | post-B2 (tracked followup) |
+| MA0045 | 28 | Sync→async I/O rewrite — signature-changing across the Orchestrator; the B2 async/Host/DI rework landed preconditions but not the full surface rewrite. | post-B2 (tracked followup) |
 
 Advisory suggestions (non-blocking, IDE-only): MA0006, MA0011, MA0016, MA0048, MA0051, CA1031,
 CA1051, CA1861. `CA1848` (LoggerMessage) and `CA1303` (localize literals) set to `none` — the former
-is revisited when structured logging lands (B2), the latter is N/A for an invariant-culture CLI.
+is applicable since structured logging landed (B2.5) but not yet mass-adopted; the latter is N/A for an
+invariant-culture CLI.
+
+## Ratchet status (B11.3)
+
+- **MA0009**: `error` — regex timeouts enforced on all tracker regexes (B1.4).
 
 ## Consequences
 

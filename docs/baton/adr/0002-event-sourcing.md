@@ -1,7 +1,7 @@
 # ADR-0002 — Event-sourced backbone (RunState becomes a projection)
 
-- **Status:** Accepted (decision) — implementation lands in B2. Authored in B0.6.
-- **Date:** 2026-07-08
+- **Status:** Accepted & implemented — B2 event log is live (B2.1); projections (RunState/TaskGraph/Timeline/Health/Confidence/McpMetrics) fold the log (B2.2–B5.4); crash recovery replays events (B2.3); parity tests green (StateCompatTests, RunStateProjectionTests). Additive discipline: events.jsonl is emitted ALONGSIDE state.json; no cutover is attempted until parity is proven.
+- **Date:** 2026-07-08 · **Last updated:** 2026-07-09 (B11.3 — implementation complete through B10, B11 clean-clone battery green)
 - **Deciders:** Baton self-plan, session #1 (stage B0)
 - **Context source:** `docs/baton/BATON-BRIEF.md` §3.2 (the event log) + §0.1 (trust model) + D-5;
   findings F-3 (live token lag), F-9 (no history/replay/health).
