@@ -65,3 +65,26 @@ FU-B1-1 (ScriptProvider stdout/stderr split), FU-B1-2 (CT through `IProgressProv
 OPEN. B2 added Host/DI/logging groundwork but kept the Orchestrator run loop synchronous; the async
 engine pass was NOT done. `MA0045` stays at `suggestion` (not lowered — no ratchet violation, but not
 raised either). Schedule a dedicated async/harden lane rather than assuming these landed in B2.
+
+## Opened by B3 (audit session, 2026-07-08, session #19)
+
+| id | item | detail | owning stage | status |
+|----|------|--------|--------------|--------|
+| FU-B3-1 | No Orchestrator integration harness for the process-control loop | The B3 "gate" tests simulate `RunState` by hand; none drive `HandleControl`/`Run`. Build a harness (fake agent + temp git repo) and cover budget park->approve->run->re-park, approval mode, `goto`, `rollback` (clean/dirty/`--force`), `retry-stage`, graceful-cancel. The B3 audit fixed the real branch logic and locked the PURE slices (`OwnerApproval`, `ControlFile`) but the loop itself is proven only by reasoning. | B4/B5 (whoever adds the run harness) | OPEN |
+| FU-B3-2 | B3.5 graceful Ctrl+C is unproven | No cancellation test and no `B3.5-gate.txt` (evidence exists only for B3.1-B3.4). Add a test asserting state saved + resume queued + log flushed + exit code 130, and capture the evidence. | B3 fix-lane / B4 | OPEN |
+| FU-B3-3 | Budget accumulators are per-process, not persisted | `_runCostUsd`/`_runTokens` reset at each `Run()` start. The park survives restart, but a run killed mid-accrual BEFORE parking restarts its count from 0 -> a run split across restarts can exceed `maxRunCostUsd`/`maxRunTokens` without parking. Decide per-process vs per-logical-run; if the latter, persist a cumulative baseline. | B3 fix-lane | OPEN |
+| FU-B3-4 | Rollback is not recorded as an event | `git reset --hard` is written to conductor.log + Serilog but has no `ConductorEvent`, so the timeline/report/(B6) Telegram do not show a rollback. Trap B3.3 says "log the reset". Emit a destructive-action event. | B6 (or B3 fix-lane) | OPEN |
+| FU-B3-5 | `!inSession` control verbs issued mid-session are silently dropped | `retry-stage`/`rollback`/`pause-after-stage`/`goto` consume (delete) `control.json` but the `when !inSession` guard fails with no operator feedback. Queue for after-session or reject with a message. | B3 fix-lane / B4 | OPEN |
+
+**Fixed in-phase by the B3 audit** (no followup, recorded for the trail): (1) approving an
+approval-mode/budget park wrongly confirmed & advanced the stage past unfinished work (approval mode
+also re-parked forever) - fixed with a persisted `AwaitingOwnerReason` + pure `OwnerApproval.Decide`
++ `ApproveAwaitingOwner`, locked by `OwnerApprovalTests`; (2) non-destructive CLI control verbs wrote
+`confirmed:null` and `ReadControlFile.GetBoolean()` threw an uncaught `InvalidOperationException` that
+crashed the control loop - fixed with a pure `ValueKind`-guarded `ControlFile.Parse` + hardened catch,
+locked by `ControlFileTests`; plus `rollback --force` wired (was referenced but unimplemented), `goto`
+to a confirmed stage made effective, and dead `ControlAction.ApproveOwner` removed. See
+`.conductor/handovers/B3.md`. Commit `2a0fa9f`.
+
+**Note on FU-B2-3 (B3-owned):** NOT cleared by B3 delivery or this audit (it is event-log recovery,
+not process control). Remains OPEN; re-home to a recovery/harden lane.
