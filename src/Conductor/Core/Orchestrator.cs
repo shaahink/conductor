@@ -4,6 +4,7 @@ using Conductor.Core.Events;
 using Conductor.Core.Planning;
 using Conductor.Core.Providers;
 using Conductor.Models;
+using Microsoft.Extensions.Logging;
 
 namespace Conductor.Core;
 
@@ -15,7 +16,7 @@ public sealed record RunOptions(bool DryRun, bool Once, int MaxSessions);
 ///   independently verify (gates + git + tracker diff) → record, report, decide next.
 /// Every transition is persisted, so killing conductor at any point is recoverable.
 /// </summary>
-public sealed class Orchestrator(PlanConfig plan, RunState state, string statePath, IProgressSink sink, IEventSink events, RunOptions opts)
+public sealed class Orchestrator(PlanConfig plan, RunState state, string statePath, IProgressSink sink, IEventSink events, RunOptions opts, ILogger<Orchestrator> logger)
 {
     private readonly PromptBuilder _prompts = new(plan);
     private readonly IProgressProvider _progress = ProgressProviderFactory.Create(plan);
@@ -30,6 +31,10 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     private readonly string _logPath = Path.Combine(plan.StateDir, "conductor.log");
     private DateTime? _backoffUntil;
     private readonly List<(string Kind, string Text, DateTime Utc)> _activity = new();
+
+    // Correlation state attached to every structured log line (B2.5): runId + stage + session number
+    // come from RunState; the gate marker is set while a battery runs.
+    private string? _curGate;
 
     // ---------------------------------------------------------------- main loop
 
@@ -583,10 +588,15 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
     private IReadOnlyList<GateResult> RunGateBattery(CancellationToken ct, bool fastOnly = false)
     {
-        GateRunner.RunHook(plan, plan.Setup, "setup", Log, ct);
-        var gates = GateRunner.RunAll(plan, Log, ct, fastOnly, state.CurrentStage, sink.GateProgress);
-        GateRunner.RunHook(plan, plan.Teardown, "teardown", Log, ct);
-        return gates;
+        _curGate = fastOnly ? "battery:fast" : "battery:full";
+        try
+        {
+            GateRunner.RunHook(plan, plan.Setup, "setup", Log, ct);
+            var gates = GateRunner.RunAll(plan, Log, ct, fastOnly, state.CurrentStage, sink.GateProgress);
+            GateRunner.RunHook(plan, plan.Teardown, "teardown", Log, ct);
+            return gates;
+        }
+        finally { _curGate = null; }
     }
 
     private StageConfig? SelectStage(TrackerSnapshot track)
@@ -1032,8 +1042,26 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     private void Log(string line)
     {
         var stamped = $"[{DateTime.Now:HH:mm:ss}] {line}";
-        try { File.AppendAllText(_logPath, stamped + Environment.NewLine); } catch { }
+        // Legacy plain log (.conductor/conductor.log) kept additively for humans/back-compat; the
+        // structured Serilog sink under .conductor/logs/ is the authoritative record.
+        try { File.AppendAllText(_logPath, stamped + Environment.NewLine); }
+        catch (IOException) { /* plain log is best-effort; the structured log below still records it */ }
+        catch (UnauthorizedAccessException) { /* ditto — never let narration I/O break the run */ }
+        using (BeginCorrelationScope())
+            logger.LogInformation("{ConductorMessage}", line);
         sink.Log(stamped);
+    }
+
+    /// <summary>Pushes the current runId/sessionId/stage/gate as a logging scope so every structured
+    /// line is correlated; absent values are omitted (they render empty in the sink template).</summary>
+    private IDisposable? BeginCorrelationScope()
+    {
+        var scope = new Dictionary<string, object>(StringComparer.Ordinal);
+        if (!string.IsNullOrEmpty(state.RunId)) scope["runId"] = state.RunId;
+        if (state.SessionCounter > 0) scope["sessionId"] = state.SessionCounter.ToString();
+        if (!string.IsNullOrEmpty(state.CurrentStage)) scope["stage"] = state.CurrentStage;
+        if (_curGate != null) scope["gate"] = _curGate;
+        return scope.Count > 0 ? logger.BeginScope(scope) : null;
     }
 
     private void Notify(string message)

@@ -80,6 +80,16 @@ public sealed class PlanConfig
 
     private void Validate()
     {
+        var errors = CollectErrors();
+        if (errors.Count > 0)
+            throw new InvalidOperationException("Invalid plan config:\n  - " + string.Join("\n  - ", errors));
+    }
+
+    /// <summary>Gathers configuration problems without throwing, so both <see cref="Load"/> (fail-fast)
+    /// and the Options validator (<c>IValidateOptions&lt;PlanConfig&gt;</c>, validated on host start, B2.5)
+    /// share one source of truth.</summary>
+    internal List<string> CollectErrors()
+    {
         var errors = new List<string>();
 
         // Schema version check (B1.6). A plan with no `version` deserialises to the "1.0" default
@@ -110,8 +120,7 @@ public sealed class PlanConfig
         if (Gates.Any(g => string.IsNullOrWhiteSpace(g.Command)))
             errors.Add("a gate is missing its command — every gate needs a shell command to run");
 
-        if (errors.Count > 0)
-            throw new InvalidOperationException("Invalid plan config:\n  - " + string.Join("\n  - ", errors));
+        return errors;
     }
 }
 

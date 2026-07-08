@@ -2,8 +2,10 @@ using System.ComponentModel;
 using System.Text.Json;
 using Conductor.Core;
 using Conductor.Core.Events;
+using Conductor.Core.Hosting;
 using Conductor.Models;
 using Conductor.Ui;
+using Microsoft.Extensions.DependencyInjection;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -68,12 +70,16 @@ public sealed class RunCommand : Command<RunCommand.Settings>
             var usePlain = settings.NoDashboard || settings.DryRun || Console.IsOutputRedirected;
             if (usePlain)
             {
-                var orch = new Orchestrator(plan, state, statePath, new PlainSink(), events, opts);
-                return orch.Run(cts.Token);
+                // Host = composition + structured-logging root (B2.5). The console sink is on for plain
+                // runs (no TUI to corrupt); options are validated on start inside Build.
+                using var host = ConductorHost.Build(plan, state, statePath, new PlainSink(), events, opts, consoleSink: true);
+                return host.Services.GetRequiredService<Orchestrator>().Run(cts.Token);
             }
 
             var dash = new LiveDashboard(plan);
-            var orchestrator = new Orchestrator(plan, state, statePath, dash, events, opts);
+            // Dashboard owns stdout, so the Serilog console sink is disabled here (file sink only).
+            using var dashHost = ConductorHost.Build(plan, state, statePath, dash, events, opts, consoleSink: false);
+            var orchestrator = dashHost.Services.GetRequiredService<Orchestrator>();
             var task = Task.Run(() => orchestrator.Run(cts.Token));
             dash.RunUiLoop(task);
             return task.GetAwaiter().GetResult();
