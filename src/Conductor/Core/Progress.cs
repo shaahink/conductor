@@ -25,6 +25,26 @@ public sealed record GateProgress(string Name, string State, TimeSpan Elapsed, D
         => State == "running" && StartUtc is { } s ? nowUtc - s : Elapsed;
 }
 
+/// <summary>One stage's roll-up for the hierarchical plan tree (B4.3): progress plus the columns
+/// derived from run history — attempts, last outcome, cost — and its full checkpoint list so the
+/// tree can expand/collapse sub-checkpoints without a second lookup.</summary>
+public sealed record StageProgress
+{
+    public string Id { get; init; } = "";
+    public string Title { get; init; } = "";
+    public int Done { get; init; }
+    public int Total { get; init; }
+    /// <summary>confirmed | done | gating | active | skipped | todo (same vocabulary as StageOverview).</summary>
+    public string State { get; init; } = "todo";
+    /// <summary>Sessions this run has spent on the stage (history count).</summary>
+    public int Attempts { get; init; }
+    /// <summary>Outcome of the most recent finished session on the stage (empty if none yet).</summary>
+    public string LastOutcome { get; init; } = "";
+    public decimal CostUsd { get; init; }
+    public IReadOnlyList<(string Id, string Title, string Status)> Checkpoints { get; init; }
+        = Array.Empty<(string, string, string)>();
+}
+
 /// <summary>Immutable view of the run for rendering (dashboard / plain log).</summary>
 public sealed record DashboardSnapshot
 {
@@ -70,6 +90,9 @@ public sealed record DashboardSnapshot
     public DateTime? BackoffUntilUtc { get; init; }
     public IReadOnlyList<(string Id, string Title, string Status)> StageCheckpoints { get; init; } = Array.Empty<(string, string, string)>();
     public IReadOnlyList<(string StageId, int Done, int Total, string State)> StageOverview { get; init; } = Array.Empty<(string, int, int, string)>();
+    /// <summary>Full per-stage roll-up (progress + attempts/last-outcome/cost + sub-checkpoints) that
+    /// drives the hierarchical plan tree (B4.3). Superset of <see cref="StageOverview"/>.</summary>
+    public IReadOnlyList<StageProgress> Stages { get; init; } = Array.Empty<StageProgress>();
 }
 
 public interface IProgressSink

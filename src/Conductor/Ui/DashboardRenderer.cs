@@ -45,8 +45,8 @@ public static class DashboardRenderer
             root = new Layout("root").SplitRows(
                 new Layout("header").Size(header),
                 new Layout("body").SplitColumns(
-                    new Layout("left").Ratio(24).SplitRows(new Layout("plan"), new Layout("stage")),
-                    new Layout("center").Ratio(42),
+                    new Layout("left").Ratio(26),
+                    new Layout("center").Ratio(40),
                     new Layout("right").Ratio(34).SplitRows(new Layout("thinking"), new Layout("gates"))),
                 new Layout("footer").Size(footer));
             root["center"].Update(AgentPanel(st));
@@ -58,7 +58,7 @@ public static class DashboardRenderer
             root = new Layout("root").SplitRows(
                 new Layout("header").Size(header),
                 new Layout("body").SplitColumns(
-                    new Layout("left").Ratio(1).SplitRows(new Layout("plan"), new Layout("stage")),
+                    new Layout("left").Ratio(1),
                     new Layout("right").Ratio(2).SplitRows(
                         new Layout("agent").Ratio(3),
                         new Layout("thinking").Ratio(2))),
@@ -67,8 +67,7 @@ public static class DashboardRenderer
             root["thinking"].Update(ThinkingPanel(st));
         }
 
-        root["plan"].Update(PlanPanel(st));
-        root["stage"].Update(StagePanel(st));
+        root["left"].Update(PlanPanel(st));
         root["header"].Update(HeaderPanel(st, compact: false));
         root["footer"].Update(FooterPanel(st));
         return root;
@@ -206,52 +205,36 @@ public static class DashboardRenderer
         }));
     }
 
-    // ---------------------------------------------------------------- left column (plan + stage)
+    // ---------------------------------------------------------------- left column (hierarchical plan tree)
 
     private static IRenderable PlanPanel(DashboardState st)
-        => new Panel(PlanTable(st)).Header("[aqua]plan[/]").Expand().Border(BoxBorder.Rounded);
-
-    private static IRenderable StagePanel(DashboardState st)
-        => new Panel(StageTable(st)).Header($"[aqua]stage {Esc(st.Snap.StageId)}[/]").Expand().Border(BoxBorder.Rounded);
-
-    private static IRenderable PlanTable(DashboardState st)
     {
-        var t = new Table().Border(TableBorder.Rounded).Expand();
-        t.AddColumn("Stage");
-        t.AddColumn("Done");
-        t.AddColumn("State");
-        foreach (var (id, doneN, total, state) in st.Snap.StageOverview)
-        {
-            var mark = state switch
-            {
-                "confirmed" => "[green]✓ done[/]",
-                "done" => "[green]done[/]",
-                "gating" => "[yellow]gating…[/]",
-                "active" => "[bold yellow]← active[/]",
-                "skipped" => "[red]skipped[/]",
-                _ => "[grey]todo[/]",
-            };
-            t.AddRow(Esc(id), $"{doneN}/{total}", mark);
-        }
-        return t;
+        var stages = StagesFor(st.Snap);
+        var v = st.Tree;
+        var chips = new[] { PlanFilter.All, PlanFilter.Todo, PlanFilter.Active, PlanFilter.Failed }
+            .Select(f => f == v.Filter ? $"[bold aqua]{PlanTree.FilterLabel(f)}[/]" : $"[grey]{PlanTree.FilterLabel(f)}[/]");
+        var header = $"[aqua]plan[/] [grey](F)[/] " + string.Join("[grey]/[/]", chips) +
+                     (string.IsNullOrWhiteSpace(v.Search) ? "" : $" [grey]search:[/][silver]{Esc(v.Search)}[/]");
+        return new Panel(PlanTree.Build(stages, v)).Header(header).Expand().Border(BoxBorder.Rounded);
     }
 
-    private static IRenderable StageTable(DashboardState st)
+    /// <summary>Prefer the full per-stage roll-up (<see cref="DashboardSnapshot.Stages"/>); fall back to
+    /// deriving it from the legacy <c>StageOverview</c>/<c>StageCheckpoints</c> pair so older snapshots
+    /// (and focused tests) still render a tree.</summary>
+    private static IReadOnlyList<StageProgress> StagesFor(DashboardSnapshot s)
     {
-        var t = new Table().Border(TableBorder.Rounded).Expand();
-        t.AddColumn(new TableColumn("#").NoWrap());
-        t.AddColumn(new TableColumn("Checkpoint"));
-        t.AddColumn(new TableColumn("Status").NoWrap());
-        foreach (var (id, title, status) in st.Snap.StageCheckpoints)
+        if (s.Stages.Count > 0) return s.Stages;
+        return s.StageOverview.Select(o => new StageProgress
         {
-            var color = status.StartsWith("DONE", StringComparison.OrdinalIgnoreCase) ? "green"
-                : status.StartsWith("BLOCKED", StringComparison.OrdinalIgnoreCase) ? "red"
-                : status.StartsWith("IN", StringComparison.OrdinalIgnoreCase) ? "yellow" : "grey";
-            var titleColor = color == "grey" ? "grey" : "silver";
-            t.AddRow(new Markup(Esc(id)), new Markup($"[{titleColor}]{Esc(Clip(title, 60))}[/]"), new Markup($"[{color}]{Esc(status)}[/]"));
-        }
-        if (st.Snap.StageCheckpoints.Count == 0) t.AddRow("[grey]—[/]", "[grey](no checkpoints parsed)[/]", "[grey]—[/]");
-        return t;
+            Id = o.StageId,
+            Title = "",
+            Done = o.Done,
+            Total = o.Total,
+            State = o.State,
+            Checkpoints = o.StageId.Equals(s.StageId, StringComparison.OrdinalIgnoreCase)
+                ? s.StageCheckpoints
+                : Array.Empty<(string, string, string)>(),
+        }).ToList();
     }
 
     // ---------------------------------------------------------------- right column (thinking + gates)
@@ -378,7 +361,7 @@ public static class DashboardRenderer
                 break;
         }
         // Pop-out viewers + inject are available whenever a session/buffer exists.
-        actions.Add("[grey][[T]] think · [[O]] output · [[D]] docs · [[V]] git · [[X]] prompt · [[I]] inject[/]");
+        actions.Add("[grey][[T]] think · [[O]] output · [[D]] docs · [[V]] git · [[X]] prompt · [[F]] filter · [[E]] expand · [[I]] inject[/]");
         return "[grey]" + string.Join("  ", actions) + "[/]";
     }
 

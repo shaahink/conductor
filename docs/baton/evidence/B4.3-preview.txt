@@ -1,0 +1,25 @@
+rendering preview — press any key to exit…
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Conductor — Baton   ● Running  PREVIEW —             checkpoints 26/65 (40%) │
+│ synthetic session data (not a live run)                                      │
+│ stage B4 TUI overhaul (alt-screen + tree) ·           cost $0.9836 (session  │
+│ session #28 Deliver · attempt 1/4                     $0.0239) · 6 untracked │
+│ ▸ B4.3 Hierarchical plan tree                  tokens 434.3k in · 359.8k out │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭─plan (F) All/Todo/…────╮╭─agent (O)──────────────────────────────────────────╮
+│ #             meta     ││ 16:00:08 » bash git -C C:/code/DevContext2-ui      │
+│ ▸ B0     6/6 · 4×      ││ status --porcelain                                 │
+│            prog ·      ││ 16:00:08 · Reading the L1 stage section and        │
+│              $0.19     ││ loom-graph-design.md before touching identity      │
+│ ▸ B1     7/7 · 6×      │╰────────────────────────────────────────────────────╯
+│            prog ·      │╭─thinking (T)───────────────────────────────────────╮
+│              $0.21     ││ 16:00:08 ~ L1.1 needs SymbolId/SymbolRef with      │
+│ ▸ B2     6/6 · 7×      ││ resolution tiers. Start from the SymbolTable seam  │
+╰────────────────────────╯╰────────────────────────────────────────────────────╯
+╭─conductor────────────────────────────────────────────────────────────────────╮
+│ [P] pause  [K] kill  [S] skip  [I] inject  [G] status  [Q] quit  [A] abort   │
+│ [T] think · [O] output · [D] docs · [V] git · [X] prompt · [F] filter · [E]  │
+│ expand · [I] inject                                                          │
+│ gates: build:OK · tests:FAIL · pnpm-check:OK · mcp-qa:FAIL · loom-guards:-   │
+│ ── log ───────────────────────────────────────────────────────────────────── │
+╰──────────────────────────────────────────────────────────────────────────────╯

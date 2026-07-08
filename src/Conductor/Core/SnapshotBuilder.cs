@@ -42,12 +42,32 @@ public static class SnapshotBuilder
             StageOverview = plan.Stages.Select(s =>
             {
                 var rows = track.ForStage(s.Id).ToList();
-                var st = state.SkippedStages.Contains(s.Id) ? "skipped"
-                    : state.ConfirmedStages.Contains(s.Id) ? "confirmed"
-                    : rows.Count > 0 && rows.All(r => r.IsDone) ? (plan.PerPhaseGates ? "gating" : "done")
-                    : s.Id == state.CurrentStage ? "active" : "todo";
-                return (s.Id, rows.Count(r => r.IsDone), rows.Count, st);
+                return (s.Id, rows.Count(r => r.IsDone), rows.Count, StageState(plan, state, s.Id, rows));
+            }).ToList(),
+            Stages = plan.Stages.Select(s =>
+            {
+                var rows = track.ForStage(s.Id).ToList();
+                var sessions = state.History.Where(h => h.Stage == s.Id).ToList();
+                var lastDone = sessions.Where(h => h.EndedUtc != null).OrderBy(h => h.EndedUtc).LastOrDefault();
+                return new StageProgress
+                {
+                    Id = s.Id,
+                    Title = s.Title,
+                    Done = rows.Count(r => r.IsDone),
+                    Total = rows.Count,
+                    State = StageState(plan, state, s.Id, rows),
+                    Attempts = sessions.Count,
+                    LastOutcome = lastDone?.Outcome?.ToString() ?? "",
+                    CostUsd = sessions.Sum(h => h.CostUsd ?? 0m),
+                    Checkpoints = rows.Select(c => (c.Id, c.Title, c.Status)).ToList(),
+                };
             }).ToList(),
         };
     }
+
+    private static string StageState(PlanConfig plan, RunState state, string stageId, IReadOnlyList<CheckpointRow> rows)
+        => state.SkippedStages.Contains(stageId) ? "skipped"
+            : state.ConfirmedStages.Contains(stageId) ? "confirmed"
+            : rows.Count > 0 && rows.All(r => r.IsDone) ? (plan.PerPhaseGates ? "gating" : "done")
+            : stageId == state.CurrentStage ? "active" : "todo";
 }

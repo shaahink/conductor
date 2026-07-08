@@ -21,6 +21,9 @@ public sealed record DashboardState
     /// <summary>Non-null when a destructive action (A/K/S) is awaiting confirmation — shown in the footer.</summary>
     public string? ConfirmPrompt { get; init; }
 
+    /// <summary>Filter/search/expand state for the hierarchical plan tree (B4.3).</summary>
+    public PlanTreeView Tree { get; init; } = new();
+
     public readonly record struct AgentLine(string Kind, string Text, DateTime Utc);
     public readonly record struct ThinkingLine(DateTime Utc, string Text);
 }

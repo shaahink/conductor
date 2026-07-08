@@ -7,24 +7,25 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #27 (B4, deliver) — landed **B4.2**: rebuilt DashboardRenderer.BuildRoot as one
-      declarative Spectre Layout tree. Header→two-col Grid (identity | metrics, both NoWrap so
-      metrics never get pushed out — F-5 stays retired); body→nested Layout regions; footer→action
-      bar first + Rule-separated log. Retired CompactHeaderPanel/LeftColumn/RightColumn. +2 tests. 167→172.
-stage: **B4 IN PROGRESS** — B4.1, B4.2 DONE. Next B4.3 (hierarchical plan tree + filter/search).
-gate: GREEN — build 0w/0e; 172 tests pass; DashboardRendererTests 27/27. `conductor preview`
-      redirected exit 0, renders new Grid header (checkpoints/cost/tokens) + log Rule, no alt-screen
-      escapes leaked — verified as running artifact.
-qa: session #26/B4.1 PASS — re-ran gate (build 0w/0e, 167 tests). Verified claim-1 via tests (3
-      AltScreenTests: enter/leave emitted, idempotent, redirected no-op); claim-2 via running exe
-      (`conductor preview` redirected exit 0, 3392 chars, NO alt-screen escapes — matches B4.1-gate.txt).
-next: **B4.3** — hierarchical plan tree: stages with expandable sub-checkpoints, per-stage columns
-      (done/attempts/last-outcome/cost), collapse/expand, filter (todo/active/failed) + search.
-trap: redirected `preview` reports SafeWidth=120 while AnsiConsole surface is 80 → header metrics
-      wrap in that artifact only (pre-existing RunPreview mismatch, NOT BuildRoot; matched widths are
-      clean per renderer tests). Manual TUI still needs a real TTY to eyeball. push may fail (github).
+last: session #28 (B4, deliver) — landed **B4.3**: hierarchical plan tree. New pure `PlanTree`
+      (VisibleRows filter/search/expand + Build renderable) + `StageProgress`/`Snap.Stages`
+      (attempts/last-outcome/cost from history). Left column is now ONE tree panel (retired the
+      stacked overview+checkpoint panels); F=filter, E=expand-all. +12 tests. 172→184.
+stage: **B4 IN PROGRESS** — B4.1, B4.2, B4.3 DONE. Next B4.4 (severity model + header labels).
+gate: GREEN — build 0w/0e; 184 tests pass; PlanTreeTests 10/10; DashboardRendererTests 29/29.
+      `conductor preview` redirected exit 0, renders `plan (F) All/Todo/…` + `▸ B0 6/6 · 4×` per-stage
+      columns + `[F] filter`/`[E] expand` hints, no alt-screen escapes — B4.3-preview.txt.
+qa: session #27/B4.2 PASS — re-ran gate (build 0w/0e, 172 tests, DashboardRendererTests 27/27).
+      Claim-1 via tests (Grid header + no-stacking guards green); claim-2 via running exe
+      (`preview` redirected exit 0, 3665 chars, header metrics + log Rule, NO alt-screen escapes).
+next: **B4.4** — severity model (INFO/WARN/ERROR/SUCCESS/WAITING/HUMAN) applied to log + status;
+      clarify header labels ("N untracked" explained/dropped). Gate: renderer test asserts
+      severity colour/glyph mapping; "untracked" reworded.
+trap: redirected `preview` reports SafeWidth=120 while AnsiConsole surface is 80 → the ~20-col left
+      panel wraps the meta cell in that artifact ONLY (pre-existing RunPreview mismatch, NOT PlanTree;
+      one clean line at matched widths per tests). Manual TUI still needs a real TTY. push may fail (github).
 dirty: none tracked.
-evidence: B4.2-gate.txt
+evidence: B4.3-gate.txt, B4.3-preview.txt
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -71,7 +72,7 @@ never silent renumbering.
 | B3.5 | Graceful Ctrl+C (final heartbeat + queue-resume + flush) | DONE | 157cdc8 | docs/baton/evidence/B3.4-gate.txt |
 | B4.1 | Alternate-screen buffer with clean restore on exit/crash | DONE | c6d5efb | docs/baton/evidence/B4.1-gate.txt |
 | B4.2 | Spectre Layout rebuild of DashboardRenderer.BuildRoot | DONE | d3aa1a5 | docs/baton/evidence/B4.2-gate.txt |
-| B4.3 | Hierarchical plan tree (sub-checkpoints; expand/collapse; per-stage cost/attempts/last-outcome) | TODO | | |
+| B4.3 | Hierarchical plan tree (sub-checkpoints; expand/collapse; per-stage cost/attempts/last-outcome) | DONE | _pending_ | docs/baton/evidence/B4.3-gate.txt, docs/baton/evidence/B4.3-preview.txt |
 | B4.4 | Severity model (INFO/WARN/ERROR/SUCCESS/WAITING/HUMAN) + clearer header labels | TODO | | |
 | B4.5 | Structured thinking pane (Goal/Hypothesis/Evidence/Action) + tool-call folding | TODO | | |
 | B4.6 | Command history search + filters (/build /git /test; commands/thoughts/errors) | TODO | | |

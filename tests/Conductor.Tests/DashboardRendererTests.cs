@@ -190,6 +190,53 @@ public class DashboardRendererTests
         Assert.Equal(1, CountOccurrences(outp, "Conductor"));
     }
 
+    [Fact]
+    public void PlanTreeRendersSubCheckpointsAndPerStageColumnsThroughBuildRoot()
+    {
+        // B4.3: the left column is now the hierarchical plan tree. Through the real BuildRoot path
+        // (not just PlanTree.Build) an active stage shows its sub-checkpoints and per-stage columns.
+        var s = SampleState();
+        var st = s with
+        {
+            Snap = s.Snap with
+            {
+                Stages = new[]
+                {
+                    new StageProgress { Id = "L0", Title = "Bootstrap", Done = 3, Total = 3, State = "confirmed", Attempts = 2, LastOutcome = "Advanced", CostUsd = 0.30m,
+                        Checkpoints = new[] { ("L0.1", "seed", "DONE") } },
+                    new StageProgress { Id = "L1", Title = "Identity spine", Done = 0, Total = 2, State = "active", Attempts = 1, LastOutcome = "Progress", CostUsd = 0.12m,
+                        Checkpoints = new[] { ("L1.1", "SymbolId/SymbolRef/tiers", "IN PROGRESS"), ("L1.2", "Service node kinds", "TODO") } },
+                },
+            },
+        };
+        var outp = Render(st, width: 160, height: 40);
+        Assert.Contains("L1.1", outp);            // active stage's sub-checkpoint is visible
+        Assert.Contains("0/2", outp);             // per-stage done column
+        Assert.DoesNotContain("L0.1", outp);      // collapsed (confirmed) stage hides its checkpoints
+    }
+
+    [Fact]
+    public void PlanTreeFilterNarrowsRowsThroughBuildRoot()
+    {
+        // B4.3: applying the Active filter drops non-active stages from the rendered tree.
+        var s = SampleState();
+        var stages = new[]
+        {
+            new StageProgress { Id = "L0", Title = "Bootstrap", Done = 3, Total = 3, State = "confirmed",
+                Checkpoints = new[] { ("L0.1", "seed", "DONE") } },
+            new StageProgress { Id = "L1", Title = "Identity spine", Done = 0, Total = 2, State = "active",
+                Checkpoints = new[] { ("L1.1", "SymbolId", "IN PROGRESS") } },
+        };
+        var st = s with { Snap = s.Snap with { Stages = stages } };
+
+        var all = Render(st with { Tree = new PlanTreeView() }, width: 160, height: 40);
+        Assert.Contains("Bootstrap", all);          // L0 shown under All
+
+        var active = Render(st with { Tree = new PlanTreeView { Filter = PlanFilter.Active } }, width: 160, height: 40);
+        Assert.DoesNotContain("Bootstrap", active); // L0 dropped under Active
+        Assert.Contains("Identity spine", active);  // L1 (active) kept
+    }
+
     private static int CountOccurrences(string haystack, string needle)
     {
         var count = 0;
