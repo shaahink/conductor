@@ -1,12 +1,11 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 20:47 UTC · branch `feat/baton` · HEAD `3d2d328`_
+_Updated 2026-07-08 20:47 UTC · branch `feat/baton` · HEAD `0969747`_
 
 **Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B7 — Specialist sub-agent personas · attempts used 2
+**Stage:** B7 — Specialist sub-agent personas · attempts used 0
 **Checkpoints:** 43/65 done · **Sessions run:** 46 · **Cost:** $1.8456 · **Tokens:** 1,038,372 in / 651,712 out / 288,745 think
-**Confirmed phases:** B0, B1, B2, B3, B4, B5, B6
-**Pending:** full-battery phase gate for B7
+**Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7
 
 ## Stage progress
 
@@ -19,7 +18,7 @@ _Updated 2026-07-08 20:47 UTC · branch `feat/baton` · HEAD `3d2d328`_
 | B4 | TUI overhaul (alt-screen + tree) | 7/7 | confirmed ✓ |
 | B5 | Observability & health | 4/4 | confirmed ✓ |
 | B6 | AFK + two-way Telegram | 5/5 | confirmed ✓ |
-| B7 | Specialist sub-agent personas | 3/3 | gating… |
+| B7 | Specialist sub-agent personas | 3/3 | confirmed ✓ |
 | B8 | Brain layer | 0/5 | todo |
 | B9 | Task graph + smart session management | 0/5 | todo |
 | B10 | Advanced orchestration | 0/4 | todo |
@@ -100,7 +99,7 @@ _Updated 2026-07-08 20:47 UTC · branch `feat/baton` · HEAD `3d2d328`_
 
 ## Last gate run
 
-build:OK
+build:OK · tests:OK
 
 ## Last session result
 
