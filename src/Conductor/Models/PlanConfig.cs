@@ -513,8 +513,12 @@ public sealed class StageConfig
 public sealed class GateConfig
 {
     public string Name { get; set; } = "";
-    /// <summary>PowerShell command line, run with real exit-code capture.</summary>
+    /// <summary>Command line to execute with real exit-code capture. Shell is selected by
+    /// <see cref="Shell"/> (default: <c>powershell</c> on Windows, <c>bash</c> on non-Windows).</summary>
     public string Command { get; set; } = "";
+    /// <summary>Shell to execute the command (<c>powershell</c>, <c>bash</c>, <c>sh</c>).
+    /// Default auto-detected: <c>powershell</c> on Windows, <c>bash</c> everywhere else.</summary>
+    public string? Shell { get; set; }
     /// <summary>Working dir relative to repo root (default: repo root).</summary>
     public string? Cwd { get; set; }
     /// <summary>Optional gates report but never block.</summary>

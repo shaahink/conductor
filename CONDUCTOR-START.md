@@ -8,17 +8,15 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #61 (B10 audit) — hardened + fixed critical PreHookRunStages resume bug.
-stage: B10 AUDITED — build 0w/0e, 409 tests pass (+3 new). Handover written to .conductor/handovers/B10.md.
-       AUDIT FIX: PreHookRunStages was recorded before hook success check — failed pre-hooks silently
-       skipped on resume. Now only recorded on success; failed hooks retry. Also: hook error log now
-       includes stdout, pre-hook passes run CT, 3 new tests added.
-gate: GREEN — 409 passed / 0 failed / 0 skipped. 0 warnings, 0 errors.
+last: session #62 (B11.1) — cross-platform gate runner landed.
+stage: B11.1 DONE — gates[].shell ∈ powershell|bash|sh; ProcessRunner.RunShell dispatch;
+       15 new tests pass (+424 total). Build 0w/0e.
+gate: GREEN — 424 passed / 0 failed / 0 skipped. 0 warnings, 0 errors.
 dirty: none.
-next: B11.1 (cross-platform gate runner).
-followups: FU-B10-1 (SelectStage integration harness), FU-B10-2 (battery-collapse token measurement),
-           FU-B10-3 (TimeoutMinutes validation), FU-B10-4 (ComputeDepth pre-compute).
-evidence: docs/baton/evidence/B10.1-gate.txt through B10.4-gate.txt; .conductor/handovers/B10.md
+next: B11.2 (dotnet tool packaging + completion + conductor doctor).
+QA-B10: verified PreHookRunStages fix (code), stdout-capture test (FailingHookCapturesStdout).
+followups: FU-B10-1 (integration harness), FU-B10-2 (token measurement), FU-B10-3 (timeout validation).
+evidence: docs/baton/evidence/B11.1-gate.txt
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -96,7 +94,7 @@ never silent renumbering.
 | B10.2 | First-class hierarchical stages in state + reports | DONE | 0e1c1f7 | docs/baton/evidence/B10.2-gate.txt |
 | B10.3 | Per-stage pre/post hooks beyond gates | DONE | 6fa8938 | docs/baton/evidence/B10.3-gate.txt |
 | B10.4 | Collapse double gate battery (agent ritual + conductor) → one source of truth; measured token drop | DONE | 5cb82f2 | docs/baton/evidence/B10.4-gate.txt |
-| B11.1 | Cross-platform gate runner (bash/sh alongside PowerShell via gates[].shell) | TODO | | |
+| B11.1 | Cross-platform gate runner (bash/sh alongside PowerShell via gates[].shell) | DONE | <commit> | docs/baton/evidence/B11.1-gate.txt |
 | B11.2 | dotnet tool packaging + tab completion + conductor doctor | TODO | | |
 | B11.3 | ADRs finalised; StateCompat + clean-clone battery | TODO | | |
 | B11.4 | **Acceptance: drive a full owner-gated Shamshir phase (parity-pipeline P2.2)** | TODO | | |

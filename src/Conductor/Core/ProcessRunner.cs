@@ -7,6 +7,9 @@ public sealed record ProcResult(int ExitCode, string Output, bool TimedOut, Time
 
 public static class ProcessRunner
 {
+    /// <summary>The default shell for the current OS: <c>powershell</c> on Windows, <c>bash</c> everywhere else.</summary>
+    public static string DefaultShell => OperatingSystem.IsWindows() ? "powershell" : "bash";
+
     /// <summary>Run a process, capture stdout+stderr interleaved, kill the whole tree on timeout/cancel.</summary>
     public static ProcResult Run(string fileName, IEnumerable<string> args, string cwd, TimeSpan timeout, CancellationToken ct = default)
     {
@@ -61,9 +64,29 @@ public static class ProcessRunner
         lock (gate) return new ProcResult(exit, sb.ToString(), timedOut, sw.Elapsed);
     }
 
-    /// <summary>Run a command line through Windows PowerShell with real exit-code propagation.</summary>
+    /// <summary>Run a command line through a named shell (<c>powershell</c>, <c>bash</c>, <c>sh</c>)
+    /// with real exit-code propagation. If the shell executable is unavailable (e.g. bash on
+    /// Windows without WSL/msys), the result carries exit code -1 and the error message.</summary>
+    public static ProcResult RunShell(string shell, string command, string cwd, TimeSpan timeout, CancellationToken ct = default)
+    {
+        return shell.ToLowerInvariant() switch
+        {
+            "powershell" => OperatingSystem.IsWindows()
+                ? Run("powershell.exe",
+                      new[] { "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command + "; exit $LASTEXITCODE" },
+                      cwd, timeout, ct)
+                : Run("pwsh",
+                      new[] { "-NoProfile", "-Command", command + "; exit $LASTEXITCODE" },
+                      cwd, timeout, ct),
+            "bash" => Run("bash", new[] { "-c", command }, cwd, timeout, ct),
+            "sh" => Run("sh", new[] { "-c", command }, cwd, timeout, ct),
+            _ => new ProcResult(-1,
+                $"unknown shell '{shell}': supported shells are powershell, bash, sh", false, TimeSpan.Zero),
+        };
+    }
+
+    /// <summary>Run a command line through Windows PowerShell (legacy entry-point; delegates to
+    /// <see cref="RunShell"/> for consistency).</summary>
     public static ProcResult RunPowerShell(string command, string cwd, TimeSpan timeout, CancellationToken ct = default)
-        => Run("powershell.exe",
-               new[] { "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command + "; exit $LASTEXITCODE" },
-               cwd, timeout, ct);
+        => RunShell("powershell", command, cwd, timeout, ct);
 }

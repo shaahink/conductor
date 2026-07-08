@@ -82,7 +82,8 @@ public static class GateRunner
         }
         onProgress?.Invoke($"gate {g.Name}: {g.Command}");
         var cwd = string.IsNullOrWhiteSpace(g.Cwd) ? plan.Repo : Path.Combine(plan.Repo, g.Cwd);
-        var r = ProcessRunner.RunPowerShell(g.Command, cwd, TimeSpan.FromMinutes(g.TimeoutMinutes), ct);
+        var shell = string.IsNullOrWhiteSpace(g.Shell) ? ProcessRunner.DefaultShell : g.Shell;
+        var r = ProcessRunner.RunShell(shell, g.Command, cwd, TimeSpan.FromMinutes(g.TimeoutMinutes), ct);
         var passed = !r.TimedOut && r.ExitCode == 0;
         onProgress?.Invoke($"gate {g.Name}: {(passed ? "PASS" : $"FAIL (exit {r.ExitCode}{(r.TimedOut ? ", timeout" : "")})")} in {r.Duration.TotalSeconds:0}s");
         return new GateResult(g.Name, passed, false, g.Optional, r.ExitCode, r.Duration,
