@@ -194,6 +194,35 @@ public class DashboardRendererTests
     }
 
     [Fact]
+    public void TokenLineBreaksOutLiveSessionDeltaLikeCostLine()
+    {
+        // B4.7: the token line must present the running session's live delta the same way the cost
+        // line does — a "(session …)" fragment — so tokens and cost are visually consistent (F-3).
+        var snap = new DashboardSnapshot
+        {
+            TokensInput = 5000,
+            TokensOutput = 2000,
+            SessionTokensInput = 1500,
+            SessionTokensOutput = 500,
+            TotalCostUsd = 0m,
+            SessionCostUsd = 0.0200m,
+        };
+        var tokens = DashboardRenderer.TokenLine(snap);
+        var cost = DashboardRenderer.CostLine(snap);
+        Assert.Contains("(session 2.0k)", tokens);   // live delta broken out
+        Assert.Contains("9.0k total", tokens);        // and still folded into the grand total
+        Assert.Contains("(session $0.0200)", cost);   // matching shape on the cost line
+    }
+
+    [Fact]
+    public void TokenLineOmitsSessionDeltaWhenNoLiveSession()
+    {
+        // Consistency with CostLineOmitsSessionCostWhenZero: no live burn → no "(session …)".
+        var line = DashboardRenderer.TokenLine(new DashboardSnapshot { TokensInput = 5000, TokensOutput = 2000 });
+        Assert.DoesNotContain("(session", line);
+    }
+
+    [Fact]
     public void ConfirmPromptIsRenderedInFooter()
     {
         var st = SampleState() with { ConfirmPrompt = "Press A again to confirm ABORT (any other key cancels)" };

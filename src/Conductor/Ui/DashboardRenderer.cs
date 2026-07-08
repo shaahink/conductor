@@ -190,12 +190,17 @@ public static class DashboardRenderer
 
     public static string TokenLine(DashboardSnapshot s)
     {
-        var total = s.TokensInput + s.TokensOutput + s.TokensReasoning +
-                    s.SessionTokensInput + s.SessionTokensOutput + s.SessionTokensReasoning;
+        var sessionTotal = s.SessionTokensInput + s.SessionTokensOutput + s.SessionTokensReasoning;
+        var total = s.TokensInput + s.TokensOutput + s.TokensReasoning + sessionTotal;
         if (total == 0) return "[grey]tokens —[/]";
         var parts = $"{Human(s.TokensInput + s.SessionTokensInput)} in · {Human(s.TokensOutput + s.SessionTokensOutput)} out";
         if (s.TokensReasoning + s.SessionTokensReasoning > 0) parts += $" · {Human(s.TokensReasoning + s.SessionTokensReasoning)} think";
-        return $"tokens {parts} · [bold]{Human(total)} total[/]";
+        var txt = $"tokens {parts} · [bold]{Human(total)} total[/]";
+        // Live-consistent with the cost line (B4.7 / F-3): break out the running session's live delta
+        // explicitly — the same shape the cost line uses for its `(session $…)` — so tokens and cost
+        // always agree and an AFK operator can see current burn, not just an all-time total.
+        if (sessionTotal > 0) txt += $" [grey](session {Human(sessionTotal)})[/]";
+        return txt;
     }
 
     private static string GateChips(IReadOnlyList<GateProgress> gates)
