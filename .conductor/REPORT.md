@@ -1,32 +1,11 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 17:03 UTC · branch `feat/baton` · HEAD `79cd612`_
+_Updated 2026-07-08 17:10 UTC · branch `feat/baton` · HEAD `a8d50f3`_
 
-**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B5 — Observability & health · attempts used 0 · working ▸ B5.1
-**Checkpoints:** 31/65 done · **Sessions run:** 34 · **Cost:** $1.1746 · **Tokens:** 506,142 in / 450,999 out / 196,540 think
+**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B5 — Observability & health · attempts used 0 · working ▸ B5.2
+**Checkpoints:** 32/65 done · **Sessions run:** 34 · **Cost:** $1.2380 · **Tokens:** 508,686 in / 475,658 out / 204,862 think
 **Confirmed phases:** B0, B1, B2, B3, B4
-
-## Latest activity (live)
-
-_Session #34 (Deliver) · running 30m · last output 6s ago · $0.0453_
-
-**Thinking:**
-> I'm checking whether pwsh or powershell is available on the system.
-> The tracker file wasn't found because the `{repo}` placeholder in the agent arguments wasn't being substituted—it was passed literally as the string "{repo}" instead of the actual repository name. I need to look into how placeholder substitution works in the agent args.
-> The issue is that `{repo}` isn't being substituted in the fake-agent parameters, so it stays as a literal string. Since the agent runs with the working directory set to the repo path, I can just pass `.` as the repo argument and let the current working directory handle it, or use the cwd directly si…
-
-**Recent actions:**
-- `18:01:57` · No `pwsh` (PowerShell Core) — only Windows PowerShell. Let me update the plan to use `powershell`:
-- `18:02:07` · Now run two `--once` sessions with the in-tree build to generate a real events.jsonl:
-- `18:02:14` » bash cd C:\Code\conductor-baton; $plan = "C:\Users\shahi\AppData\Local\Temp\opencode\b5-smoke\smoke.plan.json"; dotnet run --project src\Conductor -- run --once…
-- `18:02:25` · The `{repo}` placeholder isn't substituted. Let me check what placeholders AgentSession supports:
-- `18:02:25` » bash cd C:\Code\conductor-baton; Select-String -Path src\Conductor\Core\AgentSession.cs -Pattern "\{prompt\}|\{repo\}|\{sessionId\}|Replace|cwd" | Select-Object…
-- `18:02:39` · No `{repo}` placeholder — but cwd is the repo. Let me pass the absolute path directly:
-- `18:02:39` » edit ..\..\Users\shahi\AppData\Local\Temp\opencode\b5-smoke\smoke.plan.json
-- `18:02:59` » bash $smoke = "C:\Users\shahi\AppData\Local\Temp\opencode\b5-smoke"; if (Test-Path "$smoke\.conductor") { Remove-Item -Recurse -Force "$smoke\.conductor" }; cd …
-- `18:03:10` · Session #1 Advanced (S1.1 done). Run session #2:
-- `18:03:16` » bash $smoke = "C:\Users\shahi\AppData\Local\Temp\opencode\b5-smoke"; cd C:\Code\conductor-baton; $plan = "$smoke\smoke.plan.json"; dotnet run --project src\Cond…
 
 ## Stage progress
 
@@ -37,7 +16,7 @@ _Session #34 (Deliver) · running 30m · last output 6s ago · $0.0453_
 | B2 | Event-sourced backbone + provider decoupling | 6/6 | confirmed ✓ |
 | B3 | Safety, owner-gates & process control | 5/5 | confirmed ✓ |
 | B4 | TUI overhaul (alt-screen + tree) | 7/7 | confirmed ✓ |
-| B5 | Observability & health | 0/4 | **← active** |
+| B5 | Observability & health | 1/4 | **← active** |
 | B6 | AFK + two-way Telegram | 0/5 | todo |
 | B7 | Specialist sub-agent personas | 0/3 | todo |
 | B8 | Brain layer | 0/5 | todo |
@@ -79,14 +58,10 @@ _Session #34 (Deliver) · running 30m · last output 6s ago · $0.0453_
 | 31 | B4 | Deliver | 1 | 07-08 15:38 | 0:19 | Advanced | B4.6 | 3 | build:OK | $0.0253 | 1,939/12,322 |
 | 32 | B4 | Deliver | 1 | 07-08 15:58 | 0:20 | Advanced | B4.7 | 5 | build:OK | $0.0360 | 2,120/14,866 |
 | 33 | B4 | Audit | 1 | 07-08 16:18 | 0:14 | Progress |  | 2 |  | $0.0191 | 1,034/10,114 |
-| 34 | B5 | Deliver | 1 | 07-08 16:33 | … | running |  | 0 |  |  |  |
+| 34 | B5 | Deliver | 1 | 07-08 16:33 | 0:36 | Advanced | B5.1 | 5 | build:OK | $0.0634 | 2,544/24,659 |
 
 ### Commits by session
 
-- **s26 (B4 Deliver)** — 3 commit(s):
-  - 71f32e5 chore(bB4.1): record B4.1 commit hash c6d5efb in tracker
-  - c6d5efb feat(bB4.1): alt-screen buffer with guaranteed clean restore
-  - 8320182 chore(conductor): s26 B4 working ▸B4.1 @ 15:14
 - **s27 (B4 Deliver)** — 3 commit(s):
   - f35a7d4 chore(bB4.2): record B4.2 commit hash d3aa1a5 in tracker
   - d3aa1a5 feat(bB4.2): Spectre Layout rebuild of DashboardRenderer.BuildRoot
@@ -122,6 +97,12 @@ _Session #34 (Deliver) · running 30m · last output 6s ago · $0.0453_
 - **s33 (B4 Audit)** — 2 commit(s):
   - fd4e327 fix(bB4): audit-harden TUI — fix status-agent UI-thread race, wire severity model, harden alt-screen restore
   - 3f46d73 chore(conductor): s33 B4 working ▸B4 @ 17:28
+- **s34 (B5 Deliver)** — 5 commit(s):
+  - a8d50f3 chore(bB5.1): fill B5.1 commit hash in tracker (69d70c2)
+  - 69d70c2 feat(bB5.1): timeline view (transitions with duration) from the event log
+  - a13785a chore(conductor): s34 B5 working ▸B5.1 @ 18:03
+  - 79cd612 chore(conductor): s34 B5 working ▸B5.1 @ 17:53
+  - 89370ae chore(conductor): s34 B5 working ▸B5.1 @ 17:43
 
 ## Phase handovers (audit)
 
@@ -133,31 +114,29 @@ _Session #34 (Deliver) · running 30m · last output 6s ago · $0.0453_
 
 ## Last gate run
 
-build:OK · tests:OK
+build:OK
 
 ## Last session result
 
-> SESSION-RESULT: B4 (TUI overhaul) passes audit — it is a genuine, well-tested phase (alt-screen with idempotent guaranteed restore, a non-stacking declarative Spectre Layout, a real hierarchical plan tree with filter/search/selection, structured thinking + tool-call folding, command-history search, and a live-token line wired to the same live source as cost), backed by 221 passing tests under warnings-as-errors. I FIXED three issues in-session: (1) a real concurrency crash — `StartStatusAgent` read the mutable `_agent`/`_thinking`/`_snap`/`_gates` off the UI thread without the lock, so `_agent.TakeLast` could throw "Collection was modified" mid-run (now captured inside `_gate`); (2) a shallo…
+> SESSION-RESULT: Landed **B5.1** — the `Timeline` projection (`src/Conductor/Core/Events/Timeline.cs`): a pure, deterministic fold over `.conductor/events.jsonl` into ordered state transitions, each with wall-clock time and a computed duration (session/stage/run spans from start↔finish timestamps, gate span from the engine-measured `durationMs`, point events carry none). It's surfaced two ways off the *same* fold: a REPORT.md `## Timeline` section (`Reporter.ReadTimeline`, I/O-safe) and a TUI `L`-key timeline modal reusing the tested modal pager. `TokenDelta` is deliberately excluded (LiveMetrics owns accrual) to honor the B5 trap: no parallel bookkeeping store that can drift. Gates are **GRE…
 
 ## Tracker handoff
 
 ```
-last: session #32 (B4.7, deliver) — landed **B4.7**: live-consistent token line + doc-on-select.
-      Token line now breaks out the running session delta as `(session Nk)`, matching the cost
-      line's `(session $…)` (F-3 at the display layer). Plan tree gains a ↑/↓ selection cursor;
-      `D` opens the *selected* row's owning-stage doc (checkpoint→stage resolved). +6 tests. 215→221.
-stage: **B4 COMPLETE** — B4.1–B4.7 all DONE. Next: B4 per-phase audit (self-plan audit=on) → B5.1.
-gate: GREEN — build 0w/0e; 221 tests pass. In-tree `preview` exit 0; header "(F/↑↓/D)", action bar
-      "[↑↓] select · [D] docs". B4.7-gate.txt, B4.7-tokens-preview.txt, B4.7-docselect-preview.txt.
-qa: session #31/B4.6 PASS — re-ran gate (build 0w/0e, 215 tests). Claim-1: 9 CommandHistory tests
-     green. Claim-2: in-tree preview exit 0, action bar shows "[O] history"+"[F] filter". No findings.
-     (Stable driver's preview shows master's "[O] output" — it predates B4.6, as designed.)
-next: **B4 audit** then **B5.1** (timeline view from the event log). See conductor-DEBT.md — its
-      "B4.7 async ratchet" is a *followup* section, NOT this stage's B4.7 (which is R4.7, now done).
-trap: doc-on-select is stage-granular (docs are per-stage sections; a checkpoint row resolves to its
-      owning stage via PlanTree.StageForRow). ↑/↓ now navigate the plan tree (previously unmapped →
-      cancelled a pending confirm). Stable-driver dry-run blocked by the live orchestrator's plan lock
-      (pid) — expected while it drives me; the build+test battery is the authoritative gate.
+last: session #34 (B5.1, deliver) — landed **B5.1**: `Timeline` projection (pure fold over the event
+      log → ordered transitions with durations) + REPORT.md `## Timeline` section + TUI timeline modal
+      (`L` key). Session/stage/run spans computed from start↔finish ts; gate span from durationMs;
+      TokenDelta excluded (LiveMetrics owns accrual — B5 trap: no drift store). +10 tests. 221→231.
+stage: **B5 IN PROGRESS** — B5.1 DONE. Next: B5.2 (replay/time-travel F8) → B5.3 → B5.4.
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 231 tests pass. Real events.jsonl folded via
+      3× `--once` smoke (runId 4821958…) → REPORT timeline with correct spans. B5.1-gate.txt.
+qa: session #33/B4 audit PASS — re-ran gate (build 0w/0e, 221 tests). Claim-1: 8 severity/idempotent-
+     restore tests green. Claim-2: in-tree preview exit 0, clean frame, 'sessions unreported' label. No findings.
+next: **B5.2** — replay/time-travel viewer (`conductor replay <run>` + TUI F8) reconstructs a past run
+      from events.jsonl in order; reuse Timeline.Build + the tested modal pager. See B5.md R5.2.
+trap: timeline is a PURE fold over the single event log — never a parallel store (B5 trap). Everything
+      B5 (replay/health/confidence) reads the same log. Durations are computed, not persisted. Tracker
+      B5.1 (this row) ≠ conductor-DEBT.md's "B5.1" (that's a LiveMetrics-wiring followup, FU-B2-1).
 dirty: none.
-evidence: B4.7-gate.txt, B4.7-tokens-preview.txt, B4.7-docselect-preview.txt
+evidence: docs/baton/evidence/B5.1-gate.txt
 ```
