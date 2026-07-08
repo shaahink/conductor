@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Conductor.Core.Events;
@@ -172,6 +173,9 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                         : state.PendingAudit != null ? SessionKind.Audit
                         : state.PendingFix != null ? SessionKind.Fix : SessionKind.Deliver;
                     var prompt = BuildPrompt(kind, stage, state.SessionCounter + 1, state.AttemptsThisStage + 1, maxAttempts);
+                    var batterySection = _prompts.BatterySection(state);
+                    if (batterySection.Length > 0)
+                        prompt = prompt.TrimEnd() + "\n\n" + batterySection;
                     sink.Log($"--- DRY RUN: would start session #{state.SessionCounter + 1} ({kind}, stage {stage.Id}) with prompt: ---");
                     sink.Log(prompt);
                     return 0;
@@ -410,7 +414,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 rec.Outcome = SessionOutcome.RolledOver;
                 rec.ResultSummary = ExtractSessionResult(agent.ResultText);
                 Log($"session #{rec.Number} rolled over — {rec.TokensTotal / 1000.0:0.#}k tokens ≥ {maxTok / 1000.0:0.#}k limit, handoff written");
-                ReflectionStep(rec, stage);
+                ReflectionStep(rec);
                 SaveAndReport();
                 return;
             }
@@ -419,7 +423,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 agentErrored: agent.ResultIsError || (exit != 0 && !stalled && !timedOut && !killedByUser), ct);
 
             // B8.1: after every session, distill "what was hard" into rolling lessons
-            ReflectionStep(rec, stage);
+            ReflectionStep(rec);
         }
     }
 
@@ -1111,13 +1115,20 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             Log($"⚠ branch '{branch}' does not match plan branchPattern '{plan.BranchPattern}' — check before letting sessions commit");
     }
 
-    private string BuildPrompt(SessionKind kind, StageConfig stage, int sessionNumber, int attempt, int maxAttempts) => kind switch
+    private string BuildPrompt(SessionKind kind, StageConfig stage, int sessionNumber, int attempt, int maxAttempts)
     {
-        SessionKind.Resume => _prompts.Resume(stage, sessionNumber, attempt, maxAttempts, state.PendingResume!),
-        SessionKind.Audit => _prompts.Audit(stage, sessionNumber, state.PendingAudit!, state.CurrentStageStartHead ?? "HEAD~1"),
-        SessionKind.Fix => _prompts.Fix(stage, sessionNumber, attempt, maxAttempts, state.PendingFix!),
-        _ => _prompts.Deliver(stage, sessionNumber, attempt, maxAttempts),
-    };
+        var isReview = stage.Kind.Equals("review", StringComparison.OrdinalIgnoreCase);
+        var reviewPath = isReview ? Path.Combine(plan.StateDir, "reviews", $"{stage.Id}.md") : "";
+        return kind switch
+        {
+            SessionKind.Resume => _prompts.Resume(stage, sessionNumber, attempt, maxAttempts, state.PendingResume!),
+            SessionKind.Audit => _prompts.Audit(stage, sessionNumber, state.PendingAudit!, state.CurrentStageStartHead ?? "HEAD~1"),
+            SessionKind.Fix => _prompts.Fix(stage, sessionNumber, attempt, maxAttempts, state.PendingFix!),
+            _ => isReview
+                ? _prompts.Review(stage, sessionNumber, attempt, maxAttempts, reviewPath)
+                : _prompts.Deliver(stage, sessionNumber, attempt, maxAttempts),
+        };
+    }
 
     private static PromptBuilder BuildPromptBuilder(PlanConfig plan)
     {
@@ -1373,7 +1384,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
     /// <summary>B8.1: Reflection step — after each session ends, distil "what was hard" from
     /// the SESSION-RESULT text into a bounded, rotating lessons file for future sessions.</summary>
-    private void ReflectionStep(SessionRecord rec, StageConfig stage)
+    private void ReflectionStep(SessionRecord rec)
     {
         if (string.IsNullOrWhiteSpace(rec.ResultSummary)) return;
 
@@ -1392,40 +1403,6 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         _lessons.Append(rec.Stage, rec.Number, difficulty);
     }
 
-    /// <summary>B8.3: Handle a self-review stage — runs a session that reviews the last N sessions
-    /// and writes an advisory review artifact to <c>.conductor/reviews/&lt;stage&gt;.md</c>.
-    /// The artifact is advisory only — it is never auto-applied.</summary>
-    private void StartReviewSession(StageConfig stage)
-    {
-        var reviewDir = Path.Combine(plan.StateDir, "reviews");
-        Directory.CreateDirectory(reviewDir);
-        var reviewPath = Path.Combine(reviewDir, $"{stage.Id}.md");
-
-        // Build a review prompt from the last session results
-        var recent = state.History.TakeLast(5).ToList();
-        var sb = new System.Text.StringBuilder();
-        sb.AppendLine($"# Self-review for stage {stage.Id} — {stage.Title}");
-        sb.AppendLine();
-        sb.AppendLine($"_Generated {DateTime.UtcNow:u} by Conductor self-review (B8.3)_");
-        sb.AppendLine();
-        sb.AppendLine("## Recent sessions");
-        sb.AppendLine();
-        foreach (var r in recent)
-        {
-            sb.AppendLine($"### Session #{r.Number} ({r.Kind}) — {r.Outcome}");
-            sb.AppendLine($"- Stage: {r.Stage}");
-            sb.AppendLine($"- Gates: {r.GateSummary}");
-            sb.AppendLine($"- New commits: {r.NewCommits.Count}");
-            sb.AppendLine($"- Newly done: {string.Join(", ", r.NewlyDone)}");
-            if (!string.IsNullOrWhiteSpace(r.ResultSummary))
-                sb.AppendLine($"- Result: {r.ResultSummary}");
-            sb.AppendLine();
-        }
-        // Write the review artifact immediately (before the agent session — it's the skeleton)
-        File.WriteAllText(reviewPath, sb.ToString().TrimEnd() + Environment.NewLine);
-        Log($"review artifact scaffold written to {reviewPath}");
-    }
-
     /// <summary>B8.4: Parse audit handover doc for deferred/weak/bugs-not-fixed bullets and track
     /// them in <c>.conductor/followups.md</c>. Only appends entries not already tracked (by title
     /// match), avoiding duplicates across multiple phases.</summary>
@@ -1435,12 +1412,12 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         if (!File.Exists(handoverPath)) return;
 
         var followupsPath = Path.Combine(plan.StateDir, "followups.md");
-        var existing = File.Exists(followupsPath) ? File.ReadAllText(followupsPath) : "";
+        var existing = File.Exists(followupsPath) ? File.ReadAllText(followupsPath, Encoding.UTF8) : "";
 
         var bullets = new List<string>();
         try
         {
-            var content = File.ReadAllText(handoverPath);
+            var content = File.ReadAllText(handoverPath, Encoding.UTF8);
             var lines = content.Split('\n');
             var inSection = false;
             foreach (var line in lines)
@@ -1454,7 +1431,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                                 heading.Contains("bugs not fixed") || heading.Contains("unfixed") ||
                                 heading.Contains("concrete follow");
                 }
-                else if (inSection && (t.StartsWith("- ", StringComparison.Ordinal) || t.StartsWith("* ", StringComparison.Ordinal) || t.StartsWith("### ", StringComparison.Ordinal) && t.Contains("D-")))
+                else if (inSection && (t.StartsWith("- ", StringComparison.Ordinal) || t.StartsWith("* ", StringComparison.Ordinal)
+                         || (t.StartsWith("### ", StringComparison.Ordinal) && t.Contains("D-"))))
                 {
                     var bullet = t.TrimStart('-', '*', ' ').Trim();
                     if (bullet.Length > 0) bullets.Add(bullet);
@@ -1496,7 +1474,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
         if (added > 0)
         {
-            File.WriteAllText(followupsPath, sb.ToString().TrimEnd() + Environment.NewLine);
+            File.WriteAllText(followupsPath, sb.ToString().TrimEnd() + Environment.NewLine, Encoding.UTF8);
             Log($"followups: {added} new item(s) from {stageId} audit tracked in followups.md");
         }
     }
