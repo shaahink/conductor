@@ -1,32 +1,11 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 14:25 UTC · branch `feat/baton` · HEAD `fabd00f`_
+_Updated 2026-07-08 14:33 UTC · branch `feat/baton` · HEAD `f35a7d4`_
 
-**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 0 · working ▸ B4.2
-**Checkpoints:** 25/65 done · **Sessions run:** 27 · **Cost:** $0.9343 · **Tokens:** 432,553 in / 345,588 out / 160,702 think
+**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 0 · working ▸ B4.3
+**Checkpoints:** 26/65 done · **Sessions run:** 27 · **Cost:** $0.9597 · **Tokens:** 434,253 in / 359,824 out / 164,727 think
 **Confirmed phases:** B0, B1, B2, B3
-
-## Latest activity (live)
-
-_Session #27 (Deliver) · running 10m · last output 0s ago · $0.0138_
-
-**Thinking:**
-> I should check for any lingering references to those removed helper components before building, so let me search the codebase to make sure they're completely cleaned up.
-> The build is clean, so now I'm adding a regression test specifically for the header stacking issue at small heights—this is the key validation for stage B4.2. I want to verify that "Conductor" appears exactly once across a range of small viewport heights rather than stacking, which is what this stag…
-> Looking at the test counts for DashboardRendererTests, I'm tallying up the individual test cases across different test groups to verify we've got 27 passing tests total, including the 5 new ones that were added.  Now I need to run the full test suite to make sure there are no regressions in other ar…
-
-**Recent actions:**
-- `15:23:44` · Now replace `LeftColumn`/`RightColumn` with individual panel builders:
-- `15:23:45` » edit src\Conductor\Ui\DashboardRenderer.cs
-- `15:24:00` » edit src\Conductor\Ui\DashboardRenderer.cs
-- `15:24:20` · Now rewrite `FooterPanel` — action bar first (never cropped), then confirm/gates, then a `Rule`-separated log:
-- `15:24:20` » edit src\Conductor\Ui\DashboardRenderer.cs
-- `15:24:28` · Let me build to catch any errors and check for leftover references.
-- `15:24:33` » bash dotnet build Conductor.slnx 2>&1 | Select-Object -Last 20
-- `15:25:18` · Build is green (0w/0e). Now let me add focused regression tests for the B4.2 rebuild — that the Grid header shows identity + metrics in separate columns, and th…
-- `15:25:18` » edit tests\Conductor.Tests\DashboardRendererTests.cs
-- `15:25:33` » bash dotnet test Conductor.slnx --filter "FullyQualifiedName~DashboardRendererTests" 2>&1 | Select-Object -Last 12
 
 ## Stage progress
 
@@ -36,7 +15,7 @@ _Session #27 (Deliver) · running 10m · last output 0s ago · $0.0138_
 | B1 | Decouple Loom + pluggable progress providers | 7/7 | confirmed ✓ |
 | B2 | Event-sourced backbone + provider decoupling | 6/6 | confirmed ✓ |
 | B3 | Safety, owner-gates & process control | 5/5 | confirmed ✓ |
-| B4 | TUI overhaul (alt-screen + tree) | 1/7 | **← active** |
+| B4 | TUI overhaul (alt-screen + tree) | 2/7 | **← active** |
 | B5 | Observability & health | 0/4 | todo |
 | B6 | AFK + two-way Telegram | 0/5 | todo |
 | B7 | Specialist sub-agent personas | 0/3 | todo |
@@ -76,14 +55,10 @@ _Session #27 (Deliver) · running 10m · last output 0s ago · $0.0138_
 | 24 | B4 | Resume | 5r1 | 07-08 10:33 | 0:12 | Stalled |  | 0 |  |  |  |
 | 25 | B4 | Resume | 6r2 | 07-08 10:45 | 0:12 | Stalled |  | 0 |  |  |  |
 | 26 | B4 | Deliver | 1 | 07-08 14:03 | 0:11 | Advanced | B4.1 | 3 | build:OK | $0.0175 | 1,259/9,081 |
-| 27 | B4 | Deliver | 1 | 07-08 14:15 | … | running |  | 0 |  |  |  |
+| 27 | B4 | Deliver | 1 | 07-08 14:15 | 0:17 | Advanced | B4.2 | 3 | build:OK | $0.0254 | 1,700/14,236 |
 
 ### Commits by session
 
-- **s13 (B2 Deliver)** — 3 commit(s):
-  - 6936490 chore: fill B2.3 commit hash in tracker (a5a6b85)
-  - a5a6b85 feat(bB2.3): crash recovery replays the event log
-  - bf15c10 chore(conductor): s13 B2 working ▸B2.3 @ 08:16
 - **s14 (B2 Deliver)** — 4 commit(s):
   - 43b3cba chore: fill B2.4 commit hash in tracker (8e1ceb4)
   - 8e1ceb4 feat(bB2.4): IAgentProvider adapters; remove Orchestrator provider-switch
@@ -119,6 +94,10 @@ _Session #27 (Deliver) · running 10m · last output 0s ago · $0.0138_
   - 71f32e5 chore(bB4.1): record B4.1 commit hash c6d5efb in tracker
   - c6d5efb feat(bB4.1): alt-screen buffer with guaranteed clean restore
   - 8320182 chore(conductor): s26 B4 working ▸B4.1 @ 15:14
+- **s27 (B4 Deliver)** — 3 commit(s):
+  - f35a7d4 chore(bB4.2): record B4.2 commit hash d3aa1a5 in tracker
+  - d3aa1a5 feat(bB4.2): Spectre Layout rebuild of DashboardRenderer.BuildRoot
+  - 40152e6 chore(conductor): s27 B4 working ▸B4.2 @ 15:25
 
 ## Phase handovers (audit)
 
@@ -133,25 +112,27 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: Landed **B4.1** — an `AltScreen` IDisposable guard (`src/Conductor/Ui/AltScreen.cs`) that enters the alternate-screen buffer + hides the cursor on start and restores (`\e[?1049l` + show cursor) on *every* exit path — normal `using`/finally, exception, SIGINT/SIGTERM/SIGQUIT via `PosixSignalRegistration`, and hard `AppDomain.ProcessExit` — with idempotent, thread-safe restore so the terminal can never wedge; it degrades to an inert no-op when output is redirected. Wired into `LiveDashboard.RunUiLoop` and `RunPreview`; 3 headless tests assert the enter/leave byte sequences, idempotency, and redirected no-op. Battery GREEN: build 0w/0e, 167 tests (ratchet up 164→167), and the ru…
+> SESSION-RESULT: Landed **B4.2** — rebuilt `DashboardRenderer.BuildRoot` as one declarative Spectre `Layout` tree (Split + Update leaves), retiring the scattered `Rows`/`Panel` composition (`CompactHeaderPanel`/`LeftColumn`/`RightColumn` gone). The header is now a two-column `Grid` (identity/activity | live checkpoints·cost·tokens), both columns `NoWrap` so every row is exactly one line and metrics can never be pushed out of the fixed header region (F-5 stays retired); the body is nested `Layout` regions; the footer puts the action bar first and a `Rule`-separated log — all four requested primitives (Layout/Grid/Panel/Rule) now used, pure `DashboardState→IRenderable` split preserved. Proof: b…
 
 ## Tracker handoff
 
 ```
-last: session #26 (B4, deliver) — landed **B4.1**: AltScreen guard (alt-screen buffer + hide/show
-      cursor, restore on EVERY exit path: using/finally, exception, SIGINT/TERM/QUIT, ProcessExit;
-      idempotent; redirected→inert). Wired into RunUiLoop + RunPreview. 3 headless tests. 164→167.
-stage: **B4 IN PROGRESS** — B4.1 DONE. Next B4.2 (Spectre Layout rebuild of BuildRoot).
-gate: GREEN — build 0w/0e; 167 tests pass. Redirected `conductor preview` exit 0, renders inline,
-      emits NO alt-screen escapes (guard inert when redirected) — verified as running artifact.
-qa: session #18/B3 PASS — re-ran gate (build 0w/0e, 167 tests, ratchet up from 149). Verified
-      claim-1 via tests (22 confirm-gate/owner-approval/control-file pass); claim-2 via running exe
-      (`conductor abort` refuses without --yes, exit 2; approve/retry/rollback/goto verbs live).
-      Sessions #19–25 only produced stalled heartbeat commits — no B4 work had actually landed.
-next: **B4.2** — rebuild DashboardRenderer.BuildRoot on Spectre Layout/Grid/Panel/Rule; keep the pure
-      DashboardState→IRenderable split; no header stacking at small heights (DashboardRendererTests).
-trap: push may fail (github.com unreachable per #18). Manual TUI alt-screen restore needs a real TTY
-      to eyeball — headless test asserts the byte sequences only.
+last: session #27 (B4, deliver) — landed **B4.2**: rebuilt DashboardRenderer.BuildRoot as one
+      declarative Spectre Layout tree. Header→two-col Grid (identity | metrics, both NoWrap so
+      metrics never get pushed out — F-5 stays retired); body→nested Layout regions; footer→action
+      bar first + Rule-separated log. Retired CompactHeaderPanel/LeftColumn/RightColumn. +2 tests. 167→172.
+stage: **B4 IN PROGRESS** — B4.1, B4.2 DONE. Next B4.3 (hierarchical plan tree + filter/search).
+gate: GREEN — build 0w/0e; 172 tests pass; DashboardRendererTests 27/27. `conductor preview`
+      redirected exit 0, renders new Grid header (checkpoints/cost/tokens) + log Rule, no alt-screen
+      escapes leaked — verified as running artifact.
+qa: session #26/B4.1 PASS — re-ran gate (build 0w/0e, 167 tests). Verified claim-1 via tests (3
+      AltScreenTests: enter/leave emitted, idempotent, redirected no-op); claim-2 via running exe
+      (`conductor preview` redirected exit 0, 3392 chars, NO alt-screen escapes — matches B4.1-gate.txt).
+next: **B4.3** — hierarchical plan tree: stages with expandable sub-checkpoints, per-stage columns
+      (done/attempts/last-outcome/cost), collapse/expand, filter (todo/active/failed) + search.
+trap: redirected `preview` reports SafeWidth=120 while AnsiConsole surface is 80 → header metrics
+      wrap in that artifact only (pre-existing RunPreview mismatch, NOT BuildRoot; matched widths are
+      clean per renderer tests). Manual TUI still needs a real TTY to eyeball. push may fail (github).
 dirty: none tracked.
-evidence: B4.1-gate.txt
+evidence: B4.2-gate.txt
 ```
