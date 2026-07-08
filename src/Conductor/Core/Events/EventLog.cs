@@ -113,8 +113,8 @@ public sealed class EventLog : IEventSink, IAsyncDisposable, IDisposable
     {
         if (!File.Exists(path)) return [];
         var events = new List<ConductorEvent>();
-        var lines = File.ReadAllLines(path);
-        for (var i = 0; i < lines.Length; i++)
+        var lines = ReadAllLinesShared(path);
+        for (var i = 0; i < lines.Count; i++)
         {
             var line = lines[i];
             if (string.IsNullOrWhiteSpace(line)) continue;
@@ -123,13 +123,27 @@ public sealed class EventLog : IEventSink, IAsyncDisposable, IDisposable
             {
                 evt = JsonSerializer.Deserialize(line, EventJsonContext.Default.ConductorEvent);
             }
-            catch (JsonException) when (i == lines.Length - 1)
+            catch (JsonException) when (i == lines.Count - 1)
             {
                 break; // trailing partial line from an interrupted flush — safe to ignore
             }
             if (evt != null) events.Add(evt);
         }
         return events;
+    }
+
+    // Crash recovery (RecoverFromCrash) reads events.jsonl while THIS process's drain writer still
+    // holds it open (FileAccess.Write, FileShare.Read). File.ReadAllLines opens with FileShare.Read,
+    // which excludes the existing Write handle → a sharing violation. Opening with FileShare.ReadWrite
+    // lets the recovery read coexist with the live writer (regression proven by EventLogTests).
+    private static List<string> ReadAllLinesShared(string path)
+    {
+        using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using var reader = new StreamReader(fs);
+        var lines = new List<string>();
+        string? line;
+        while ((line = reader.ReadLine()) != null) lines.Add(line);
+        return lines;
     }
 
     public async ValueTask DisposeAsync()

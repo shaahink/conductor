@@ -129,4 +129,32 @@ public class EventLogTests
         }
         finally { File.Delete(path); }
     }
+
+    [Fact]
+    public void ReadAllSucceedsWhileLiveWriterHoldsTheFile()
+    {
+        // Crash recovery (Orchestrator.RecoverFromCrash) reads events.jsonl while the process's own
+        // EventLog writer still holds it open. ReadAll must share-read that live Write handle rather
+        // than throw a sharing violation — the real-run path a B2.5 --once smoke surfaced.
+        var path = TempPath();
+        try
+        {
+            using var log = new EventLog(path, "run-live");
+            log.Emit(new RunStarted { Plan = "Baton", Repo = "r" });
+            log.Emit(new SessionStarted { Number = 1, StageId = "B2", Kind = "Deliver" });
+
+            IReadOnlyList<ConductorEvent> events = [];
+            // Poll briefly: the drain task flushes asynchronously, so wait for the writer to land the
+            // lines — the point is that reading NEVER throws while the writer is open.
+            for (var i = 0; i < 50 && events.Count < 2; i++)
+            {
+                events = EventLog.ReadAll(path); // must not throw despite the open writer
+                if (events.Count < 2) Thread.Sleep(20);
+            }
+            Assert.Equal(2, events.Count);
+            Assert.IsType<RunStarted>(events[0]);
+            Assert.IsType<SessionStarted>(events[1]);
+        }
+        finally { File.Delete(path); }
+    }
 }
