@@ -1,10 +1,10 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 21:26 UTC · branch `feat/baton` · HEAD `d7ac0fa`_
+_Updated 2026-07-08 21:33 UTC · branch `feat/baton` · HEAD `20558b1`_
 
 **Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B9 — Task graph + smart session management · attempts used 4 · working ▸ B9.1
-**Checkpoints:** 48/65 done · **Sessions run:** 52 · **Cost:** $2.0431 · **Tokens:** 1,260,119 in / 699,158 out / 312,185 think
+**Stage:** B9 — Task graph + smart session management · attempts used 0 · working ▸ B9.2
+**Checkpoints:** 49/65 done · **Sessions run:** 53 · **Cost:** $2.0643 · **Tokens:** 1,290,000 in / 703,444 out / 314,855 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8
 
 ## Stage progress
@@ -20,7 +20,7 @@ _Updated 2026-07-08 21:26 UTC · branch `feat/baton` · HEAD `d7ac0fa`_
 | B6 | AFK + two-way Telegram | 5/5 | confirmed ✓ |
 | B7 | Specialist sub-agent personas | 3/3 | confirmed ✓ |
 | B8 | Brain layer | 5/5 | confirmed ✓ |
-| B9 | Task graph + smart session management | 0/5 | **← active** |
+| B9 | Task graph + smart session management | 1/5 | **← active** |
 | B10 | Advanced orchestration | 0/4 | todo |
 | B11 | Close-out + Shamshir owner-gated proof | 0/4 | todo |
 | B12 | Controlled parallelism | 0/4 | todo |
@@ -29,7 +29,6 @@ _Updated 2026-07-08 21:26 UTC · branch `feat/baton` · HEAD `d7ac0fa`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 23 | B4 | Deliver | 4 | 07-08 10:21 | 0:12 | Stalled |  | 0 |  |  |  |
 | 24 | B4 | Resume | 5r1 | 07-08 10:33 | 0:12 | Stalled |  | 0 |  |  |  |
 | 25 | B4 | Resume | 6r2 | 07-08 10:45 | 0:12 | Stalled |  | 0 |  |  |  |
 | 26 | B4 | Deliver | 1 | 07-08 14:03 | 0:11 | Advanced | B4.1 | 3 | build:OK | $0.0175 | 1,259/9,081 |
@@ -59,13 +58,10 @@ _Updated 2026-07-08 21:26 UTC · branch `feat/baton` · HEAD `d7ac0fa`_
 | 50 | B9 | Fix | 2 | 07-08 21:22 | 0:00 | AgentError |  | 0 | build:OK |  |  |
 | 51 | B9 | Fix | 3 | 07-08 21:23 | 0:00 | AgentError |  | 0 | build:OK |  |  |
 | 52 | B9 | Fix | 4 | 07-08 21:24 | 0:00 | AgentError |  | 0 | build:OK |  |  |
+| 53 | B9 | Fix | 5 | 07-08 21:26 | 0:06 | Advanced | B9.1 | 2 | build:OK | $0.0212 | 29,881/4,286 |
 
 ### Commits by session
 
-- **s39 (B6 Deliver)** — 3 commit(s):
-  - 9c04782 feat(bB6.1-4): Telegram + richer REPORT.md + webhook notifier
-  - 6c0c5c7 chore(conductor): s39 B6 working ▸B6.1 @ 19:41
-  - 9f4a0ee chore(conductor): s39 B6 working ▸B6.1 @ 19:31
 - **s41 (B6 Deliver)** — 1 commit(s):
   - d054c9c feat(bB6.5): Shamshir P-0 + P0.1 headless acceptance — B6 COMPLETE
 - **s42 (B6 Audit)** — 1 commit(s):
@@ -86,6 +82,9 @@ _Updated 2026-07-08 21:26 UTC · branch `feat/baton` · HEAD `d7ac0fa`_
 - **s48 (B8 Audit)** — 2 commit(s):
   - 7729e12 docs(bB8): audit handover — honest review of solid/wip/deferred, 4 followups tracked
   - e3dc7ec fix(bB8): audit — remove dead StartReviewSession + unused ReflectionStep param + dry-run battery section parity + UTF-8 followups encoding
+- **s53 (B9 Fix)** — 2 commit(s):
+  - 20558b1 chore(conductor): s53 B9 fix — handoff updated, B9.1 marked DONE
+  - a0eda3c fix(bB9.1): B9.1 task graph model + event-sourced projection + tests
 
 ## Phase handovers (audit)
 
@@ -105,27 +104,21 @@ build:OK
 
 ## Last session result
 
-> Now let me run the gate battery and check for the previous stage's handover:
-> Build green (0e/4w — file-lock warnings from testhost, benign), 326 tests pass. No B8 handover exists yet. Let me read the B8 evidence and check recent git history:
-> Gate battery green (build 0e, 326 tests pass). Now QA the B8 session — verifying two claims independently:
-> Test verification passed: 9 LessonsManager + 7 PromptBattery tests green (matching B8 evidence claims). Now verify an artifact claim:
-> The files don't exist yet (runtime-only artifacts). Let me verify the code claim — the `ParseAuditFollowups` method is real:
-> QA verdict: B8 claims verified — 9 LessonsManager + 7 PromptBattery tests pass; `ParseA…
+> SESSION-RESULT: The only real bug was `ForCheckpoint` returning tasks in event-insertion order instead of sorted by `Order` (1 failing test). Fixed both `ForCheckpoint` and `CurrentTask` to sort; 336 tests green, build 0w/0e. The B9.1 model, events, projection, and tests are now committed and pushed. No leftovers — no TODOs, stubs, or half-edits in the B9 diff. B9.2–B9.5 are entirely unstarted; the `TaskAdded`/`TaskStatusChanged` events are registered in the type hierarchy but have no emitter yet (planner in B9.2, MCP server in B9.3).
 
 ## Tracker handoff
 
 ```
-last: session #47 (B8, deliver) — landed B8.1–B8.5: LessonsManager with bounded
-       rotation (lessons.md), {lessons} battery injected into prompts, self-review
-       stage kind (Kind:"review") with review.md template + artifact scaffolding,
-       followup parser tracking audit handover deferred/weak bullets → followups.md,
-       IPromptBattery (LessonsBattery, RecentFailureBattery, BatteryGroup), and
-       RolledOver session outcome for per-session token budget (maxSessionTokens).
-       Plan JSON updated with batteries config + maxSessionTokens: 2,000,000.
-stage: **B8 DONE** — B8.1 (lessons), B8.2 ({lessons}), B8.3 (review), B8.4 (followups),
-       B8.5 (batteries + RolledOver) all DONE.
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 326 tests pass (+20 from B7).
+last: session #53 (B9 fix) — fixed failing ForCheckpoint ordering test from session #52
+       (TaskGraph now sorts by Order). Committed B9.1 deliverable: TaskItem model,
+       TaskAdded/TaskStatusChanged events, TaskGraph projection, 10 unit tests.
+       Everything passes.
+stage: **B9.1 DONE** — model + events + projection + tests deployed and green.
+       B9.2–B9.5 NOT started. Events are registered in ConductorEvent but NOT yet
+       emitted by Orchestrator (that happens in B9.2/B9.3).
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 336 tests pass (+10 from B8).
 dirty: none.
-next: B9 (task graph + smart session management).
-evidence: docs/baton/evidence/B8-gate.txt
+next: B9.2 (planner decomposition emits TaskAdded events).
+evidence: a0eda3c (commit msg has gate output)
+fix-session: #52 had 1 failing test (ForCheckpoint unsorted) + uncommitted WIP; both fixed.
 ```
