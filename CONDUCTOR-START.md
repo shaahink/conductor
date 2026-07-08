@@ -7,21 +7,23 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #6 (B1, deliver) — landed **B1.2** (Core/Planning/IProgressProvider +
-      MarkdownTableProvider [GeneratedRegex]; TrackerParser now a byte-identical facade; Orchestrator
-      reads via _progress.Read at all 5 sites). Build 0w/0e, 57 tests, in-tree dry-run A6 green.
-stage: **B1 IN PROGRESS** — B1.1, B1.2 DONE; B1.3…B1.7 TODO. Battery GREEN.
-gate: GREEN — `dotnet build Conductor.slnx` 0w/0e net10; `dotnet test` 57 pass.
-qa: session #5 (B1.1) PASS. (1) PlanConfigTests green — ShippedLoomPlan resolves examples/loom/ +
-      asserts pnpm/mcp scoping; (2) STABLE driver `--dry-run -p examples/loom/loom.opencode.plan.json`
-      (fixture, repo path rewritten) loads from new path + renders session #1. No findings.
-next: **B1.3** — ScriptProvider (plan-configured command → checkpoint JSON, resilient to missing
-      file/malformed JSON) + PlanCheckpointProvider (checkpoints declared in plan JSON). New unit tests.
-trap: dry-run touches target .conductor (AcquireLock) — always use a fixture repo, never the live run.
-      Commands.cs status/report/preview still call TrackerParser.* (read-only CLI) — DI-wire in B2.5.
-      Ratchet followups owed — MA0045 (B2), MA0002 (post-B2), MA0009 (B1.4).
+last: session #7 (B1, deliver) — landed **B1.3**: ScriptProvider (plan cmd → checkpoint JSON, resilient
+      to empty-cmd/nonzero-exit/malformed-JSON via clear IOException) + PlanCheckpointProvider (inline
+      plan checkpoints) + ProgressProviderFactory (fail-fast selection). Orchestrator wires the factory
+      (load-bearing). Build 0w/0e net10, 66 tests (57+9). Diff 7 files, in budget.
+stage: **B1 IN PROGRESS** — B1.1, B1.2, B1.3 DONE; B1.4…B1.7 TODO. Battery GREEN.
+gate: GREEN — `dotnet build Conductor.slnx` 0w/0e net10; `dotnet test` 66 pass.
+qa: session #6 (B1.2) PASS. (1) 7 TrackerParserTests green incl. MarkdownTableProviderIsByteIdentical;
+      (2) grep-confirmed Orchestrator reads via _progress.Read at all 5 sites + facade preserved
+      (TrackerParser delegates to MarkdownTableProvider.Parse/ParseFile). No findings.
+next: **B1.4** — configurable conventions on PlanConfig (stageIdPattern incl. P-0/P3.4b/F5, handoffMarker,
+      humanToken, statusVocabulary); CheckpointRow.StageId derivation honours the pattern; ratchet MA0009
+      (regex timeout) here per ADR-0001. Unit test: irregular ids parse into the right stages.
+trap: STABLE driver holds the plan lock while running (session #7) — dry-run against a fixture, never the
+      live self-plan. Commands.cs status/report/preview still call TrackerParser.* (read-only CLI) — DI-wire
+      in B2.5. CheckpointRow.StageId still splits on '.' — B1.4 makes it convention-driven (P-0 → stage P).
 dirty: none tracked.
-evidence: B1.2-gate.txt (+ B1.1, B0.1…B0.5, audits/B0-baseline.md, adr/000{1,2}-*.md)
+evidence: B1.3-gate.txt (+ B1.2, B1.1, B0.1…B0.5, audits/B0-baseline.md, adr/000{1,2}-*.md)
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -50,7 +52,7 @@ never silent renumbering.
 | B0.6 | ADR-0001 (tooling/ruleset rationale) + ADR-0002 (event-sourcing decision) | DONE | cf378f0,d416ead | docs/baton/adr/0001-tooling-and-ruleset.md, docs/baton/adr/0002-event-sourcing.md |
 | B1.1 | Move plans/loom* + templates → examples/loom/; Loom loads + --dry-run green from new path | DONE | 0aa242d | docs/baton/evidence/B1.1-gate.txt |
 | B1.2 | IProgressProvider abstraction + MarkdownTableProvider (today's parser, zero behaviour change) | DONE | ac306f5 | docs/baton/evidence/B1.2-gate.txt |
-| B1.3 | ScriptProvider (command→JSON) + PlanCheckpointProvider | TODO | | |
+| B1.3 | ScriptProvider (command→JSON) + PlanCheckpointProvider | DONE | 3e0fdbd | docs/baton/evidence/B1.3-gate.txt |
 | B1.4 | Configurable conventions (stage-id regex incl. P-0/P3.4b/F5, handoff marker, HUMAN token, status vocab) | TODO | | |
 | B1.5 | Read-order context battery (mandated docs per plan) | TODO | | |
 | B1.6 | conductor new-plan --template {minimal,dotnet,node,shamshir}; schema version + fail-fast validation | TODO | | |
