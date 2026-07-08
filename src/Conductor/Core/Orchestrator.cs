@@ -784,7 +784,18 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     }
 
     private StageConfig? SelectStage(TrackerSnapshot track)
-        => plan.Stages.FirstOrDefault(s => !StageComplete(s.Id, track) && !state.SkippedStages.Contains(s.Id));
+    {
+        // B10.1: readiness = stage itself not complete/skipped AND all dependsOn satisfied.
+        // Among ready stages, plan.Stages order determines priority (preserves sequential intent).
+        bool IsReady(StageConfig s)
+        {
+            if (StageComplete(s.Id, track) || state.SkippedStages.Contains(s.Id))
+                return false;
+            return s.DependsOn is not { Count: > 0 }
+                || s.DependsOn.All(d => DepSatisfied(d, track));
+        }
+        return plan.Stages.FirstOrDefault(IsReady);
+    }
 
     private bool AllEffectivelyDone(TrackerSnapshot track)
         => plan.Stages.All(s => StageComplete(s.Id, track) || state.SkippedStages.Contains(s.Id));
@@ -793,6 +804,11 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     /// so a stage whose tracker rows read DONE but whose phase-gate is red is never advanced past.</summary>
     private bool StageComplete(string id, TrackerSnapshot track)
         => plan.PerPhaseGates ? state.ConfirmedStages.Contains(id) : track.StageDone(id);
+
+    /// <summary>A dependency satisfied if the target stage is confirmed/done OR has been skipped
+    /// (you can't run a skipped stage — treating it as effectively done unblocks dependents, B10.1).</summary>
+    private bool DepSatisfied(string id, TrackerSnapshot track)
+        => StageComplete(id, track) || state.SkippedStages.Contains(id);
 
     private int MaxAttempts(StageConfig stage) => Math.Max(1, stage.Sessions * plan.Limits.StageSlackFactor);
 

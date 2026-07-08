@@ -137,6 +137,23 @@ public sealed class PlanConfig
                 if (string.IsNullOrWhiteSpace(s.Id)) errors.Add("a stage is missing its id — every stage needs an id field");
                 else if (s.Id.Length > 20) errors.Add($"stage '{s.Id}' id is too long ({s.Id.Length} chars) — keep ids under 20 chars");
             }
+
+            // B10.1: dependency validation
+            var stageIds = Stages.Select(s => s.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (var s in Stages)
+            {
+                if (s.DependsOn is not { Count: > 0 }) continue;
+                foreach (var dep in s.DependsOn)
+                {
+                    if (!stageIds.Contains(dep))
+                        errors.Add($"stage '{s.Id}' dependsOn '{dep}' which is not a known stage id");
+                    if (dep.Equals(s.Id, StringComparison.OrdinalIgnoreCase))
+                        errors.Add($"stage '{s.Id}' dependsOn itself — circular self-dependency");
+                }
+            }
+
+            if (HasDependencyCycle())
+                errors.Add("plan.stages has a dependency cycle — fix the dependsOn graph so every stage can eventually become ready");
         }
 
         if (string.IsNullOrWhiteSpace(Agent.Command)) errors.Add("plan.agent.command is required — set the CLI command used to spawn agent sessions");
@@ -147,6 +164,33 @@ public sealed class PlanConfig
             errors.Add("a gate is missing its command — every gate needs a shell command to run");
 
         return errors;
+    }
+
+    private bool HasDependencyCycle()
+    {
+        // Standard DFS cycle detection on the dependsOn graph.
+        var ids = Stages.Select(s => s.Id).ToList();
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var onStack = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        bool Dfs(string id)
+        {
+            if (onStack.Contains(id)) return true;
+            if (!visited.Add(id)) return false;
+            onStack.Add(id);
+            var stage = Stages.FirstOrDefault(s => s.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+            if (stage?.DependsOn != null)
+            {
+                foreach (var dep in stage.DependsOn)
+                {
+                    if (Dfs(dep)) return true;
+                }
+            }
+            onStack.Remove(id);
+            return false;
+        }
+
+        return ids.Any(id => Dfs(id));
     }
 }
 
@@ -410,6 +454,9 @@ public sealed class StageConfig
     /// <summary>Stage kind: "deliver" (default), "review" (self-review stage, B8.3).
     /// A review stage produces an advisory artifact, not mutations.</summary>
     public string Kind { get; set; } = "deliver";
+    /// <summary>Stage IDs that must be completed (confirmed or skipped) before this stage becomes
+    /// ready. Execution stays sequential; this only affects readiness ordering (B10.1).</summary>
+    public List<string>? DependsOn { get; set; }
 }
 
 public sealed class GateConfig

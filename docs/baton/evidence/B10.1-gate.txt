@@ -1,0 +1,32 @@
+=== B10.1 gate battery ===
+Date: 2026-07-08
+
+Build: dotnet build Conductor.slnx
+Result: 0 warnings, 0 errors (net10.0, warnings-as-errors)
+
+Tests: dotnet test Conductor.slnx
+Result: 379 passed, 0 failed, 0 skipped (+7 B10_1DependsOnTests)
+
+--- B10.1 test details ---
+B10_1DependsOnTests (7 tests):
+  CycleDetectionFailsValidation          — A→B→A cycle fails plan validation
+  SelfDependencyFailsValidation          — A→A self-dep fails plan validation
+  UnknownDependencyFailsValidation       — dependsOn unknown stage id fails validation
+  LinearChainOfThreeValidates            — A→B→C chain loads successfully
+  DiamondDependencyValidates             — A→B, A→C, B+C→D diamond loads successfully
+  DeserializesDependsOnFromCamelCase     — dependsOn field round-trips from JSON
+  SelfLoopViaIntermediateIsDetected      — A→B→C→A 3-node cycle detected
+
+--- Changes (3 files, within ~15 budget) ---
+src/Conductor/Models/PlanConfig.cs       +47  DependsOn field + cycle detection + dep validation
+src/Conductor/Core/Orchestrator.cs       +18  SelectStage() → IsReady() with dep check + DepSatisfied()
+tests/Conductor.Tests/B10_1Tests.cs      +142 7 new tests
+
+--- What landed ---
+- StageConfig.DependsOn: List<string>? — optional list of stage IDs this stage depends on
+- Plan validation: unknown dep ids, self-dependency, and cycle detection fail at load time
+- Orchestrator.SelectStage: uses IsReady() that checks all DependsOn are satisfied before a
+  stage is eligible; among ready stages, original plan.Stages order is preserved (sequential
+  execution)
+- DepSatisfied: treats confirmed/done OR skipped stages as satisfied (skipped = effectively done)
+- Back-compat: stages with no dependsOn behave exactly as before (always ready if incomplete)
