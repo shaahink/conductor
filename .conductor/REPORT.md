@@ -1,12 +1,12 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 23:02 UTC · branch `feat/baton` · HEAD `083ff33`_
+_Updated 2026-07-08 23:09 UTC · branch `feat/baton` · HEAD `5fc6202`_
 
 **Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B10 — Advanced orchestration · attempts used 0
-**Checkpoints:** 57/65 done · **Sessions run:** 59 · **Cost:** $2.5355 · **Tokens:** 1,823,309 in / 806,711 out / 375,182 think
+**Checkpoints:** 57/65 done · **Sessions run:** 60 · **Cost:** $2.5917 · **Tokens:** 1,890,784 in / 817,759 out / 385,082 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9
-**Pending:** auto-fix audit for B10
+**Pending:** full-battery phase gate for B10
 
 ## Stage progress
 
@@ -30,7 +30,6 @@ _Updated 2026-07-08 23:02 UTC · branch `feat/baton` · HEAD `083ff33`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 30 | B4 | Deliver | 1 | 07-08 15:16 | 0:21 | Advanced | B4.5 | 7 | build:OK | $0.0351 | 2,137/17,812 |
 | 31 | B4 | Deliver | 1 | 07-08 15:38 | 0:19 | Advanced | B4.6 | 3 | build:OK | $0.0253 | 1,939/12,322 |
 | 32 | B4 | Deliver | 1 | 07-08 15:58 | 0:20 | Advanced | B4.7 | 5 | build:OK | $0.0360 | 2,120/14,866 |
 | 33 | B4 | Audit | 1 | 07-08 16:18 | 0:14 | Progress |  | 2 |  | $0.0191 | 1,034/10,114 |
@@ -60,12 +59,10 @@ _Updated 2026-07-08 23:02 UTC · branch `feat/baton` · HEAD `083ff33`_
 | 57 | B9 | Audit | 1 | 07-08 22:23 | 0:08 | Progress |  | 1 |  | $0.0725 | 97,126/11,226 |
 | 58 | B10 | Deliver | 1 | 07-08 22:33 | 0:07 | Advanced | B10.1 | 2 | build:OK | $0.0385 | 45,295/10,325 |
 | 59 | B10 | Deliver | 1 | 07-08 22:41 | 0:20 | Advanced | B10.2 B10.3 B10.4 | 6 | build:OK | $0.1538 | 195,929/26,636 |
+| 60 | B10 | Audit | 1 | 07-08 23:02 | 0:06 | Progress |  | 1 |  | $0.0562 | 67,475/11,048 |
 
 ### Commits by session
 
-- **s48 (B8 Audit)** — 2 commit(s):
-  - 7729e12 docs(bB8): audit handover — honest review of solid/wip/deferred, 4 followups tracked
-  - e3dc7ec fix(bB8): audit — remove dead StartReviewSession + unused ReflectionStep param + dry-run battery section parity + UTF-8 followups encoding
 - **s53 (B9 Fix)** — 2 commit(s):
   - 20558b1 chore(conductor): s53 B9 fix — handoff updated, B9.1 marked DONE
   - a0eda3c fix(bB9.1): B9.1 task graph model + event-sourced projection + tests
@@ -95,11 +92,14 @@ _Updated 2026-07-08 23:02 UTC · branch `feat/baton` · HEAD `083ff33`_
   - 6fa8938 feat(bB10.3): per-stage pre/post hooks
   - af5ef30 chore(conductor): s59 B10 working ▸B10.2 @ 23:51
   - 0e1c1f7 feat(bB10.2): first-class hierarchical stages in model/state/report/tree
+- **s60 (B10 Audit)** — 1 commit(s):
+  - 5fc6202 audit(B10): fix critical PreHookRunStages resume bug + harden hook execution
 
 ## Phase handovers (audit)
 
 - `.conductor/handovers/B0.md`
 - `.conductor/handovers/B1.md`
+- `.conductor/handovers/B10.md`
 - `.conductor/handovers/B2.md`
 - `.conductor/handovers/B3.md`
 - `.conductor/handovers/B4.md`
@@ -115,20 +115,20 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: B10 (Advanced orchestration) COMPLETE. Landed B10.2 (hierarchical stages — `ParentId` + `Depth` with indented rendering in TUI+report, 12 tests), B10.3 (per-stage pre/post hooks via `RunStageHook`, 10 tests), and B10.4 (battery collapse — agent instructed to skip its own build+test ritual, Conductor is sole verifier, 5 tests). Full battery GREEN: 406 tests pass (+27), build 0w/0e under warnings-as-errors. 6 files changed across B10.2-4 (within budget). All pushed to `feat/baton`. Next session: B11.1 (cross-platform gate runner). What was hard this session: B10.4's battery collapse needed to avoid over-engineering — the prompt-level approach (a boolean toggle + `{batteryCollap…
+> SESSION-RESULT: B10 audit VERDICT — the phase delivered all 4 sub-features (dependsOn, hierarchy, hooks, battery collapse) correctly at the model/test level, but I found and fixed 1 critical bug (`PreHookRunStages` recorded before hook success check, causing silent skip on resume — now only recorded on success, failed hooks retry), plus 3 quality fixes (stdout in error diagnostics, CT threading for pre-hook, +3 tests). Build 0w/0e, 409 tests green. 4 followups deferred: orchestrator integration harness for SelectStage (FU-B10-1), empirical battery-collapse token measurement (FU-B10-2), HookConfig.TimeoutMinutes validation (FU-B10-3), and ComputeDepth pre-computation for large plans (FU-B10-4…
 
 ## Tracker handoff
 
 ```
-last: session #59 (B10.2-B10.4) — all B10 checkpoints DONE.
-stage: B10 COMPLETE — B10.2 hierarchical stages, B10.3 pre/post hooks, B10.4 battery collapse.
-       B10.2 land: StageConfig.ParentId + StageProgress.Depth; indented rendering in PlanTree + Reporter.
-       B10.3 land: StageConfig.PreHook/PostHook; RunState.PreHookRunStages; pre-hook blocks (NeedsHuman).
-       B10.4 land: PlanConfig.BatteryCollapse; agent prompted to skip build+test; Conductor sole verifier.
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 406 tests pass (+27 B10.2-4 tests).
+last: session #61 (B10 audit) — hardened + fixed critical PreHookRunStages resume bug.
+stage: B10 AUDITED — build 0w/0e, 409 tests pass (+3 new). Handover written to .conductor/handovers/B10.md.
+       AUDIT FIX: PreHookRunStages was recorded before hook success check — failed pre-hooks silently
+       skipped on resume. Now only recorded on success; failed hooks retry. Also: hook error log now
+       includes stdout, pre-hook passes run CT, 3 new tests added.
+gate: GREEN — 409 passed / 0 failed / 0 skipped. 0 warnings, 0 errors.
 dirty: none.
 next: B11.1 (cross-platform gate runner).
-evidence: docs/baton/evidence/B10.2-gate.txt, B10.3-gate.txt, B10.4-gate.txt
-qa: B10.1 gate re-verified: 7/7 DependsOn tests pass, IsReady() logic confirmed in Orchestrator.cs:790-796.
-    Verdict PASS — dependOn graph correct, no regressions. Also verified: B9.5 task views (TaskViewTests 4/4).
+followups: FU-B10-1 (SelectStage integration harness), FU-B10-2 (battery-collapse token measurement),
+           FU-B10-3 (TimeoutMinutes validation), FU-B10-4 (ComputeDepth pre-compute).
+evidence: docs/baton/evidence/B10.1-gate.txt through B10.4-gate.txt; .conductor/handovers/B10.md
 ```
