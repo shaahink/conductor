@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 05:48 UTC · branch `feat/baton` · HEAD `f8f858d`_
+_Updated 2026-07-08 05:58 UTC · branch `feat/baton` · HEAD `7e14776`_
 
-**Status:** Idle
+**Status:** Running
 **Stage:** B1 — Decouple Loom + pluggable progress providers · attempts used 0 · working ▸ B1.5
-**Checkpoints:** 10/65 done · **Sessions run:** 8 · **Cost:** $0.2903 · **Tokens:** 129,050 in / 113,923 out / 57,959 think
+**Checkpoints:** 10/65 done · **Sessions run:** 9 · **Cost:** $0.2903 · **Tokens:** 129,050 in / 113,923 out / 57,959 think
 **Confirmed phases:** B0
+
+## Latest activity (live)
+
+_Session #9 (Deliver) · running 10m · last output 2s ago · $0.0522_
+
+**Thinking:**
+> Now let me build and run tests.
+> Two failing tests:  1. `UnsupportedVersionThrows` - The error message says "plan.version is '2.0' but only \"1.0\" is supported" and my test is looking for "unsupported" (case-insensitive) - but my actual message says "supported" not "unsupported". Let me fix the test assertion to match the actual m…
+> Let me run tests again.
+
+**Recent actions:**
+- `06:56:15` · Now I'll implement B1.6: schema version validation + `new-plan` command. Starting with `PlanConfig`:
+- `06:56:28` » edit src\Conductor\Models\PlanConfig.cs
+- `06:57:02` » edit src\Conductor\Commands\Commands.cs
+- `06:57:07` » edit src\Conductor\Program.cs
+- `06:57:14` » bash dotnet build Conductor.slnx 2>&1
+- `06:57:24` » bash $dir = Join-Path $env:TEMP "conductor-np-test-$(Get-Random)"; dotnet run --project src\Conductor -- new-plan --template dotnet --output $dir --name TestDot…
+- `06:57:35` » bash $dir = Join-Path $env:TEMP "conductor-np-test2-$(Get-Random)"; dotnet run --project src\Conductor -- new-plan --template shamshir --output $dir --name "Sha…
+- `06:57:57` » edit tests\Conductor.Tests\PlanConfigTests.cs
+- `06:58:10` » bash dotnet test Conductor.slnx 2>&1
+- `06:58:27` » edit tests\Conductor.Tests\PlanConfigTests.cs
 
 ## Stage progress
 
@@ -37,6 +58,7 @@ _Updated 2026-07-08 05:48 UTC · branch `feat/baton` · HEAD `f8f858d`_
 | 6 | B1 | Deliver | 1 | 07-08 04:15 | 0:33 | Advanced | B1.2 | 5 | build:OK | $0.0241 | 1,297/10,939 |
 | 7 | B1 | Deliver | 1 | 07-08 04:49 | 0:37 | Advanced | B1.3 | 5 | build:OK | $0.0268 | 1,793/12,018 |
 | 8 | B1 | Deliver | 1 | 07-08 05:26 | 0:21 | Advanced | B1.4 | 4 | build:OK | $0.0318 | 1,646/14,600 |
+| 9 | B1 | Deliver | 1 | 07-08 05:48 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
