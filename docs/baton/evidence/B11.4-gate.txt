@@ -1,0 +1,45 @@
+﻿=== B11.4 Shamshir P2.2 owner-gated acceptance ===
+Date: 2026-07-09 00:33:42
+Host: MSI
+OS: Windows
+
+--- Plan validation ---
+$ conductor status -p examples/shamshir/parity-pipeline.plan.json
+  → 8 stages, 16 checkpoints, P2 owner-gated, parsed correctly
+
+--- Dry-run ---
+$ conductor run --dry-run -p plan.json (temp acceptance scenario)
+  → Generated correct session prompt for P2.1, then P2.2
+
+--- Owner-gate block ---
+$ conductor doctor -p plan.json (AwaitingOwner state P2.2)
+  Status: AwaitingOwner
+  On resume: Awaiting owner approval for stage P2.2 (reason: OwnerGate)
+      approve: conductor approve -p <plan>
+  Remaining stages: P2.2
+
+--- Approval ---
+$ conductor approve -p plan.json
+  approve queued — approve the currently owner-gated stage so the conductor advances past it
+
+--- Reconcile verdict ---
+eval-results/fake/P2.2-gate.txt:
+  P2.2 compare-both: cTrader vs Reference — 84/84 scenarios match.
+  Venue parity: 100%. MT4: 84/84. cTrader: 84/84.
+  VERDICT: PASS — both venues produce identical trade records.
+
+--- Code paths verified ---
+  Orchestrator.cs:708  — owner-gate check (AwaitingOwner + OwnerApprovedStages)
+  Orchestrator.cs:748  — PerformApprove confirms stage for OwnerGate
+  OwnerApproval.cs:12  — Decide(OwnerGate) → ConfirmStage
+  PlanConfig.cs:489    — StageConfig.OwnerGate property
+  RunState.cs:14       — AwaitingOwnerReason.OwnerGate enum
+
+--- Test coverage ---
+  RunStateTests.OwnerGateBlocksOnGreenResumesOnApprove  (B3.2)
+  OwnerApprovalTests.OwnerGateApprovalConfirmsStage     (B3.2)
+  OwnerApprovalTests.LegacyNullReasonTreatedAsOwnerGate (B3.2)
+  B11_2Tests.Doctor_AwaitingOwner_ShowsApproval          (B11.2)
+
+--- Shamshir plan ---
+  examples/shamshir/parity-pipeline.plan.json — 8 stages, P2 owner-gated

@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "name": "Shamshir-parity-pipeline",
+  "repo": ".",
+  "tracker": "parity-pipeline.TRACKER.md",
+  "conventions": {
+    "stageIdPattern": "(?<stage>[A-Za-z]+-?\\d+)(?:\\.\\d+)?[a-z]?",
+    "status": { "inProgress": ["IN PROGRESS"] }
+  },
+  "gates": [
+    { "name": "build",  "command": "dotnet build TradingEngine.slnx", "tier": "fast", "timeoutMinutes": 10 },
+    { "name": "tests",  "command": "dotnet test tests/TradingEngine.Tests.Simulation --filter \"RequiresCTrader!=true&Category!=E2E&Category!=Slow&Category!=NetMQ\"", "timeoutMinutes": 30 }
+  ],
+  "agent": {
+    "command": "opencode",
+    "args": ["run", "-m", "deepseek/deepseek-v4-pro", "--auto", "--thinking", "--format", "json", "{prompt}"],
+    "output": "opencode-json"
+  },
+  "stages": [
+    { "id": "P-0",  "title": "Land the working tree",                             "sessions": 3, "dependsOn": [] },
+    { "id": "P0",   "title": "First detail phase",                                "sessions": 5, "dependsOn": ["P-0"] },
+    { "id": "P1",   "title": "Second detail phase",                               "sessions": 3, "dependsOn": ["P0"] },
+    { "id": "P2",   "title": "State machine + owner-gated reconcile verdict",     "sessions": 4, "dependsOn": ["P1"], "ownerGate": true },
+    { "id": "P3",   "title": "Research CLI + playbook engine",                    "sessions": 5, "dependsOn": ["P2"] },
+    { "id": "P4",   "title": "Exploration funnel",                                "sessions": 2, "dependsOn": ["P3"] },
+    { "id": "P5",   "title": "UI truth + Angular refactor",                       "sessions": 3, "dependsOn": ["P4"] },
+    { "id": "P6",   "title": "Wild list",                                         "sessions": 3, "dependsOn": ["P5"] }
+  ],
+  "audit": { "enabled": true },
+  "limits": { "stallMinutes": 15, "sessionTimeoutMinutes": 240, "stageSlackFactor": 3 },
+  "report": { "commit": true, "push": true, "heartbeatMinutes": 15 }
+}
