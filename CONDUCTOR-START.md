@@ -67,7 +67,7 @@ never silent renumbering.
 | B3.3 | Process control: retry-stage, rollback (to checkpoint), pause-after-stage, goto | DONE | 90ce43a | docs/baton/evidence/B3.3-gate.txt |
 | B3.4 | Budget/token caps (limits.maxRunCostUsd/maxRunTokens) + approval mode | DONE | 157cdc8 | docs/baton/evidence/B3.4-gate.txt |
 | B3.5 | Graceful Ctrl+C (final heartbeat + queue-resume + flush) | DONE | 157cdc8 | docs/baton/evidence/B3.4-gate.txt |
-| B4.1 | Alternate-screen buffer with clean restore on exit/crash | DONE | (this session) | docs/baton/evidence/B4.1-gate.txt |
+| B4.1 | Alternate-screen buffer with clean restore on exit/crash | DONE | c6d5efb | docs/baton/evidence/B4.1-gate.txt |
 | B4.2 | Spectre Layout rebuild of DashboardRenderer.BuildRoot | TODO | | |
 | B4.3 | Hierarchical plan tree (sub-checkpoints; expand/collapse; per-stage cost/attempts/last-outcome) | TODO | | |
 | B4.4 | Severity model (INFO/WARN/ERROR/SUCCESS/WAITING/HUMAN) + clearer header labels | TODO | | |
