@@ -211,5 +211,121 @@ A shared `~/.conductor/followups.db` (SQLite) or `~/.conductor/followups.json` t
 | N5 | Structured conductor log (JSON sink) + `conductor log --query` |
 | N6 | Git history squash-on-confirm + `conductor gate` command |
 | N7 | Cross-project followup registry + overhead accounting |
+| N8 | Dynamic plan reconfiguration at runtime |
+| N9 | On-demand status report via configurable LLM (deepseek-flash) |
+| N10 | Post-hoc audit + cost-iteration tracking + live plan via prompting |
 
-Each stage gates independently. N1-N3 are the highest-impact (they address the actual failures observed across 3 live runs). N4-N7 are quality-of-life improvements driven by audit observations.
+Each stage gates independently. N1-N3 are the highest-impact (they address the actual failures observed across 3 live runs). N4-N7 are quality-of-life improvements driven by audit observations. N8-N10 are structural capabilities.
+
+---
+
+## 11. Dynamic plan reconfiguration at runtime
+
+### Observation
+When `heartbeatMinutes` needed to change, it took a manual edit to 3 plan JSONs and a restart of the conductor. Plan config fields (limits, gates, stage order, heartbeat) are read once at startup into `PlanConfig` and never re-read. There's no way to hot-reload a plan while a run is in progress.
+
+### Proposal: `conductor plan` command + runtime re-read
+1. **`conductor plan` CLI verb:** reads, validates, and applies a plan JSON at runtime.
+   - `conductor plan set limits.maxRunCostUsd 5.00` — hot-update a single field
+   - `conductor plan reload` — re-read the full plan JSON, validate, apply
+   - `conductor plan add-stage <json>` — append a new stage (with checkpoints) to the in-memory plan
+   - `conductor plan update-stage <id> --owner-gate` — toggle an existing stage's owner-gate flag
+2. **TUI plan editor:** pressing `E` on a stage in the plan tree opens an inline editor for stage-level config (owner-gate, max attempts, heartbeat). Pressing `+` adds a new stage with prompted checkpoint rows.
+3. **prompt-builder integration:** when a plan is updated mid-run, the next session's prompt includes a `PLAN MODIFIED` section showing the delta (what changed, when, by whom).
+
+### Design constraints
+- Plan changes during a session take effect on the NEXT session (the current session is not interrupted)
+- Plan validation runs on every change — invalid config is rejected with a clear error
+- Plan version bumps on every modification for audit trail
+- `PlanConfig` events (`PlanModified`) emitted for the timeline
+
+### Gate
+- `conductor plan reload` mid-run updates in-memory plan; next session reflects the change
+- Invalid plan modification is rejected with structured error
+- Plan update events appear in the event log
+- Running session is NOT disrupted by plan change
+
+---
+
+## 12. On-demand status report via configurable LLM
+
+### Observation
+When you wanted a status check on 3 running plans, you asked me (an LLM) to read state.json and conductor.log files and synthesize a report. The conductor's own REPORT.md is a static template — it lists checkpoint rows and commit hashes but doesn't *analyze*. There's no "what's the current situation?" command.
+
+### Proposal: `conductor status` command with pluggable LLM
+1. **`conductor status`** — reads `state.json` + `conductor.log` + the event log, constructs a prompt, calls a configurable LLM API, and streams the result to the TUI.
+2. **Configurable model:** `PlanConfig.StatusReport.Model` — default `deepseek-chat` (fast/cheap), can be `claude-sonnet-4-20250514` for deeper analysis, or `local` for offline.
+3. **Prompt template:** includes the current RunState JSON, the last N log lines, gate results, cost summary, and the plan tree. The LLM returns a structured summary: what's healthy, what's stuck, what needs attention.
+4. **On-demand via TUI:** pressing `G` (already bound to "status agent probe" but currently shallow) triggers a full `conductor status` LLM call. The thinking pane shows the analysis.
+5. **Cost-controlled:** status reports are a single LLM call (~2000 tokens in, ~500 tokens out = ~$0.002 with deepseek-flash). Configurable rate limit: `statusReport.maxPerHour`.
+6. **Diff mode:** `conductor status --since 1h` — only reports what changed since the last status call (reads the previous status output, diffs it).
+
+### Gate
+- `conductor status` against a running plan returns a human-readable analysis with: health assessment, active stage, stuck checkpoints, cost burn rate, time remaining estimate
+- Status report costs < $0.01 per call
+- `--since` mode correctly identifies only recent delta
+- Works against a stopped (paused/needsHuman) plan as well as a running one
+
+---
+
+## 13. Post-hoc audit + cost-iteration tracking
+
+### Observation
+The conductor audits each phase immediately after it completes. There is no mechanism to re-audit a phase later ("audit later fully"), no way to track how much a specific iteration cost relative to previous iterations of the same stage, and no way to compare agent performance across iterations.
+
+### Proposal: full audit replay + iteration ledger
+1. **`conductor audit <stage> --replay`** — re-runs the audit prompt against a completed phase at any time. Useful when: the initial audit was shallow (time-boxed), new findings emerged in later phases, or you want a second opinion. The replay audit runs as a normal session (spawns agent, gates independently) but does NOT advance or confirm anything — it's purely diagnostic, output goes to `.conductor/audits/<stage>-replay-<timestamp>.md`.
+2. **Iteration cost ledger:** `RunState` already tracks per-session cost/tokens. Add `IterationLedger` that groups sessions by `(stage, checkpoint)` and shows:
+   - Attempt count per checkpoint
+   - Total cost per checkpoint (agent + gates)
+   - Tokens-in per effective commit (efficiency ratio)
+   - Time-to-done per checkpoint
+3. **TUI iteration view:** pressing `C` (cost) on a checkpoint row shows the cost ledger — "P0.3 cost $0.11 across 143 turns, P0.2 cost $0.11 across 143 turns" etc. Identifies expensive checkpoints for plan optimization.
+4. **Regression detection:** if re-running the gate battery on a previously-green phase shows a new failure, flag it as a regression (not a "new" failure) with the original green commit hash for bisection.
+
+### Gate
+- `conductor audit L3 --replay` produces a diagnostic audit report without affecting RunState
+- Iteration ledger groups sessions correctly by stage+checkpoint
+- Cost-efficiency ratio is visible in TUI per checkpoint
+- Regression: stale-green detection triggers a distinct log event (not a generic gate failure)
+
+---
+
+## 14. Live plan via prompting
+
+### Observation
+Conductor plans are JSON files authored by hand or via `conductor new-plan --template`. The plan is static — it doesn't adapt to discovered work, newly surfaced debt, or changing priorities. When the cross-project audit found 22 bugs across 3 repos, someone had to manually write DEBT.md files and stage them into the plan.
+
+### Proposal: `conductor plan evolve --prompt "..."` 
+1. **AI-assisted plan evolution:** you describe what changed ("Loom L0-L4 audits found 8 unresolved checkpoints, here are the files, group them into stages") and the conductor calls the configured LLM to generate stage entries (with checkpoints, gates, and read-order) that you review and approve.
+2. **Debt ingestion:** `conductor plan ingest-debt <debt-file.md>` — reads a DEBT.md file, extracts the structured checkpoint sections (using the same conventions-as-config parser from B1.4), and proposes plan stage additions. You approve/reject/edit each.
+3. **Checkpoint auto-split:** if a proposed stage has too many checkpoints (> N), the LLM suggests splitting into sub-stages.
+4. **Read-order inference:** the LLM reads the existing plan's read-order and the new stage's docs directory to suggest where in the read-order chain the new stage's docs should slot in.
+5. **Plan diff + review:** the proposed plan changes are shown as a diff. You accept, edit, or reject. Accepted changes are written to the plan JSON and the tracker.
+
+### Gate
+- `conductor plan evolve --prompt "add stages for Loom L0-L4 deferred bugs from conductor-DEBT.md"` produces valid, parseable stage entries with checkpoints
+- `conductor plan ingest-debt conductor-DEBT.md` extracts all sections with `## Stage` headers and proposes plan entries
+- The resulting plan passes `PlanConfig.Validate()` (repo, tracker, agent, prompt sections are coherent)
+- Human review step: plan diff is shown before writing
+
+---
+
+## Summary — revised stages for next plan
+
+| Stage | Features |
+|---|---|
+| N1 | QA parallelization — audit runs concurrently with next deliver |
+| N2 | Stronger advisor — structured verdicts, block-retry, auto-fix scripts |
+| N3 | DNS/network health gate + attempt-budget intelligence |
+| N4 | Heartbeat runtime toggle + amend strategy + PeriodicTimer migration |
+| N5 | Structured conductor log (JSON sink) + `conductor log --query` |
+| N6 | Git history squash-on-confirm + `conductor gate` command |
+| N7 | Cross-project followup registry + overhead accounting |
+| N8 | Dynamic plan reconfiguration at runtime (`conductor plan reload/set/add-stage`) |
+| N9 | On-demand status report via configurable LLM (`conductor status`, deepseek-flash default) |
+| N10 | Post-hoc audit replay + cost-iteration ledger + live plan via prompting (`conductor plan evolve`) |
+
+N1-N3 are the highest-impact (they address the actual failures observed across 3 live runs).
+N4-N7 are quality-of-life improvements driven by audit observations.
+N8-N10 are structural capabilities that make the conductor self-modifying and introspectable.
