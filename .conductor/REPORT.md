@@ -1,32 +1,12 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 20:10 UTC · branch `feat/baton` · HEAD `770a624`_
+_Updated 2026-07-08 20:20 UTC · branch `feat/baton` · HEAD `bd318f8`_
 
-**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B7 — Specialist sub-agent personas · attempts used 0 · working ▸ B7.1
-**Checkpoints:** 40/65 done · **Sessions run:** 43 · **Cost:** $1.6754 · **Tokens:** 869,143 in / 606,971 out / 266,930 think
+**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B7 — Specialist sub-agent personas · attempts used 0
+**Checkpoints:** 43/65 done · **Sessions run:** 43 · **Cost:** $1.7664 · **Tokens:** 946,223 in / 635,888 out / 274,894 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6
-
-## Latest activity (live)
-
-_Session #43 (Deliver) · running 10m · last output 9s ago · $0.0502_
-
-**Thinking:**
-> Actually, I should put the PersonaRegistry tests in a separate file to keep things organized. Let me revert that using change and create a new test file instead.  Wait, I'll keep the import since I might need it, and add tests directly. But it's cleaner to have a separate test file. Let me undo the …
-> Create a dedicated PersonaRegistryTests file:
-> Let me build and test to ensure everything passes.
-
-**Recent actions:**
-- `21:09:43` » write plans\personas\refactor.md
-- `21:09:46` » write plans\personas\test-writer.md
-- `21:09:49` » write plans\personas\git-cleanup.md
-- `21:09:52` » write plans\personas\security-audit.md
-- `21:10:13` » write src\Conductor\Core\PersonaRegistry.cs
-- `21:10:13` · Now create the `PersonaRegistry` class:
-- `21:10:21` · Now add the B7.2 unit test:
-- `21:10:21` » edit tests\Conductor.Tests\PlanConfigTests.cs
-- `21:10:30` » edit tests\Conductor.Tests\PlanConfigTests.cs
-- `21:10:42` » write tests\Conductor.Tests\PersonaRegistryTests.cs
+**Pending:** auto-fix audit for B7
 
 ## Stage progress
 
@@ -39,7 +19,7 @@ _Session #43 (Deliver) · running 10m · last output 9s ago · $0.0502_
 | B4 | TUI overhaul (alt-screen + tree) | 7/7 | confirmed ✓ |
 | B5 | Observability & health | 4/4 | confirmed ✓ |
 | B6 | AFK + two-way Telegram | 5/5 | confirmed ✓ |
-| B7 | Specialist sub-agent personas | 0/3 | **← active** |
+| B7 | Specialist sub-agent personas | 3/3 | gating… |
 | B8 | Brain layer | 0/5 | todo |
 | B9 | Task graph + smart session management | 0/5 | todo |
 | B10 | Advanced orchestration | 0/4 | todo |
@@ -79,16 +59,10 @@ _Session #43 (Deliver) · running 10m · last output 9s ago · $0.0502_
 | 40 | B6 | Deliver | 1 | 07-08 18:48 | … | running |  | 0 |  |  |  |
 | 41 | B6 | Deliver | 1 | 07-08 19:45 | 0:07 | Advanced | B6.5 | 1 | build:OK | $0.0311 | 29,170/7,885 |
 | 42 | B6 | Audit | 1 | 07-08 19:54 | 0:06 | Progress |  | 1 |  | $0.0606 | 87,266/8,743 |
-| 43 | B7 | Deliver | 1 | 07-08 20:00 | … | running |  | 0 |  |  |  |
+| 43 | B7 | Deliver | 1 | 07-08 20:00 | 0:19 | Advanced | B7.1 B7.2 B7.3 | 2 | build:OK | $0.0911 | 77,080/28,917 |
 
 ### Commits by session
 
-- **s34 (B5 Deliver)** — 5 commit(s):
-  - a8d50f3 chore(bB5.1): fill B5.1 commit hash in tracker (69d70c2)
-  - 69d70c2 feat(bB5.1): timeline view (transitions with duration) from the event log
-  - a13785a chore(conductor): s34 B5 working ▸B5.1 @ 18:03
-  - 79cd612 chore(conductor): s34 B5 working ▸B5.1 @ 17:53
-  - 89370ae chore(conductor): s34 B5 working ▸B5.1 @ 17:43
 - **s35 (B5 Deliver)** — 3 commit(s):
   - f638b98 chore(bB5.2): fill B5.2 commit hash in tracker (6c876e5)
   - 6c876e5 feat(bB5.2): replay / time-travel viewer reconstructs a past run from the event log
@@ -112,6 +86,9 @@ _Session #43 (Deliver) · running 10m · last output 9s ago · $0.0502_
   - d054c9c feat(bB6.5): Shamshir P-0 + P0.1 headless acceptance — B6 COMPLETE
 - **s42 (B6 Audit)** — 1 commit(s):
   - 5317709 fix(bB6): audit-harden Telegram + reporter — fix shutdown race, bare catch, thread-safety, unused import
+- **s43 (B7 Deliver)** — 2 commit(s):
+  - bd318f8 feat(bB7): Specialist sub-agent personas — B7.1-B7.3
+  - 9c3f7fd chore(conductor): s43 B7 working ▸B7.1 @ 21:10
 
 ## Phase handovers (audit)
 
@@ -125,24 +102,26 @@ _Session #43 (Deliver) · running 10m · last output 9s ago · $0.0502_
 
 ## Last gate run
 
-build:OK · tests:OK
+build:OK
 
 ## Last session result
 
-> SESSION-RESULT: Audit verdict: B6 delivery is **solid** — TelegramService, two-way control, richer REPORT.md with clean heartbeat, WebhookNotifier, and Shamshir dry-run acceptance all pass the gate battery (build 0w/0e, 295 tests). Fixed 5 issues: shutdown race where Dispose could outrun background loops (stop awaiting `Task.WhenAll`), bare catch→specific exceptions in `BuildStatusText`, thread-unsafe static cache in `Reporter.GetRemoteUrl` (added `Lock`), unused import in `WebhookNotifier`, and a stale doc comment. Deferred as tracked followups in `.conductor/handovers/B6.md`: no mock-Telegram integration test (B6.1 gate spec unimplemented), no live Telegram API test, no send-queue drain on…
+> SESSION-RESULT: B7.1–B7.3 landed (commit `bd318f8`). Per-stage AgentConfig override with C#-default-aware Merge; 9 persona templates at `plans/personas/` + built-in fallback registry; PromptBuilder prepends persona system prompt ahead of contract rules; persona surfaced in SessionStarted event, dashboard header, reporter stage line, and timeline. 306 tests green (11 new), 0w/0e. B6.5 QA reconfirmed (3 Shamshir tests pass, evidence content-asserted). Pre-existing flaky test `ReadAllSucceedsWhileLiveWriterHoldsTheFile` fails ~50% (timing-dependent event log flush) — not introduced by B7, should be hardened. Next session: B8 (brain layer — reflection, lessons, self-review) or B7 audit. What was…
 
 ## Tracker handoff
 
 ```
-last: session #41 (B6.5, deliver) — landed **B6.5** (Shamshir P-0 + P0.1 headless acceptance):
-      stable driver dry-run + --once against fresh Shamshir plan; 3 Shamshir-specific tests pass;
-      stage B6 COMPLETE.
-stage: **B6 DONE** — B6.1 (Telegram), B6.2 (two-way control), B6.3 (richer REPORT + clean
-       heartbeat), B6.4 (WebhookNotifier), B6.5 (Shamshir acceptance) all DONE.
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 295 tests pass (24 B5_4, 3 Shamshir).
-qa: session #39/B6.1-4 deliver PASS — 24 B5_4 tests green confirmed; Reporter confidence wiring
-    at Reporter.cs:138-147 verified. No findings.
-next: B7 (specialist sub-agent personas) or B6 audit fix-session.
-dirty: none (followups.md has orchestrator heartbeat diff only).
-evidence: docs/baton/evidence/B6.5-shamshir-acceptance.txt
+last: session #43 (B7, deliver) — landed **B7.1–B7.3** (specialist sub-agent personas):
+       per-stage AgentConfig override (Merge over plan default); 9 built-in persona templates +
+       disk files at plans/personas/*.md; PromptBuilder prepends persona system prompt ahead of
+       contract rules; persona shown in SessionStarted event, dashboard header, reporter stage
+       line, and timeline entries. Self-plan persona hints converted to real "persona" fields.
+stage: **B7 DONE** — B7.1 (schema), B7.2 (registry), B7.3 (prompt merge + surface) all DONE.
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 306 tests pass (11 new).
+qa: session #41/B6.5 deliver PASS — Shamshir tests verified (3/3); evidence artifact reviewed
+     and content-asserted. Pre-existing flaky test ReadAllSucceedsWhileLiveWriterHoldsTheFile
+     fails ~50% (timing-dependent event log flush); not introduced by B7. No findings.
+next: B8 (brain layer) or B7 audit fix-session.
+dirty: none.
+evidence: docs/baton/evidence/B7-gate.txt
 ```
