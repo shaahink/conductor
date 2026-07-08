@@ -44,19 +44,40 @@ public sealed class PersonaRegistry
     {
         if (string.IsNullOrWhiteSpace(personaName)) return null;
 
+        var name = personaName.Trim();
+
+        // Reject path traversal attempts — persona names are alphanumeric identifiers, never paths
+        if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ||
+            name.Contains("..", StringComparison.Ordinal) ||
+            name.Contains('/', StringComparison.Ordinal) ||
+            name.Contains('\\', StringComparison.Ordinal))
+        {
+            _logger?.LogWarning("Persona name '{PersonaName}' contains invalid characters — falling back to built-in", personaName);
+            if (BuiltIns.TryGetValue(name, out var fallback)) return fallback;
+            return null;
+        }
+
         // Try file on disk first
         if (_personasDir != null && Directory.Exists(_personasDir))
         {
-            var path = Path.Combine(_personasDir, $"{personaName.Trim()}.md");
+            var path = Path.Combine(_personasDir, $"{name}.md");
             if (File.Exists(path))
             {
-                var text = File.ReadAllText(path).Trim();
-                if (text.Length > 0) return text;
+                try
+                {
+                    var text = File.ReadAllText(path).Trim();
+                    if (text.Length > 0) return text;
+                    _logger?.LogWarning("Persona file '{Path}' is empty — falling back to built-in", path);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    _logger?.LogWarning(ex, "Cannot read persona file '{Path}' — falling back to built-in", path);
+                }
             }
         }
 
         // Fall back to built-in
-        if (BuiltIns.TryGetValue(personaName.Trim(), out var builtIn))
+        if (BuiltIns.TryGetValue(name, out var builtIn))
             return builtIn;
 
         _logger?.LogWarning("Persona '{PersonaName}' not found — no file on disk and no built-in fallback", personaName);

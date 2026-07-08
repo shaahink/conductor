@@ -24,7 +24,6 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     // The agent provider owns backend-specific concerns (stream parsing lives in AgentSession, the
     // usage-limit phrasing lives here) so the Orchestrator no longer switches on `output` (B2.4, D-11).
     private readonly IAgentProvider _agentProvider = AgentProviderFactory.Create(plan.Agent);
-    private readonly PersonaRegistry _personas = new(plan);
     private IReadOnlyList<GateResult>? _lastGates;
     private bool _pendingSkip;
     private bool _pausePending;

@@ -71,7 +71,7 @@ public sealed class PlanConfig
         if (!string.IsNullOrWhiteSpace(stage.Notes))
         {
             var match = System.Text.RegularExpressions.Regex.Match(stage.Notes,
-                @"Persona:\s*(?<persona>\w+)",
+                @"Persona:\s*(?<persona>[\w-]+)",
                 System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.ExplicitCapture,
                 ProgressConventions.RegexTimeout);
             if (match.Success) return match.Groups["persona"].Value;
