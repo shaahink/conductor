@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 21:55 UTC · branch `feat/baton` · HEAD `a0b689e`_
+_Updated 2026-07-08 22:05 UTC · branch `feat/baton` · HEAD `9a0b44e`_
 
-**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B9 — Task graph + smart session management · attempts used 0 · working ▸ B9.4
-**Checkpoints:** 51/65 done · **Sessions run:** 54 · **Cost:** $2.1461 · **Tokens:** 1,349,955 in / 729,507 out / 333,656 think
+**Checkpoints:** 51/65 done · **Sessions run:** 55 · **Cost:** $2.1461 · **Tokens:** 1,349,955 in / 729,507 out / 333,656 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8
+
+## Latest activity (live)
+
+_Session #55 (Deliver) · running 10m · last output 0s ago · $0.0452_
+
+**Thinking:**
+> Now I need to add the helper methods at the bottom of Orchestrator.cs (before the closing brace). Let me add: 1. `CheckSoftBreak` - soft-break detection 2. `FoldMcpJournal` - MCP journal merge 3. `BuildRolloverResumeHint` - task-graph-aware resume context 4. `ComputeSoftThreshold` - utility  Let me …
+> Now I need to also reset `_softBreakSignalled` at the start of each session. Let me add that in the `RunSession` method, near the beginning where other session fields are initialized. Let me find the right place.  Looking at lines 320-340 in the updated file, the SessionRecord is created. I should r…
+> Now add the `CleanSoftBreakSignal` helper. I'll add it in the helper section.
+
+**Recent actions:**
+- `23:04:04` · Now add MCP journal fold after agent exit and before the RolledOver check:
+- `23:04:04` » edit src\Conductor\Core\Orchestrator.cs
+- `23:04:14` » edit src\Conductor\Core\Orchestrator.cs
+- `23:04:14` · Now update the `RolledOver` path with task-graph-aware resume context:
+- `23:04:43` » edit src\Conductor\Core\Orchestrator.cs
+- `23:04:43` · Now add the helper methods. Let me add them at the end of the class, before the closing brace:
+- `23:04:55` » edit src\Conductor\Core\Orchestrator.cs
+- `23:04:55` · Reset `_softBreakSignalled` at the start of each session:
+- `23:05:14` · Add the signal cleanup helper:
+- `23:05:14` » edit src\Conductor\Core\Orchestrator.cs
 
 ## Stage progress
 
@@ -29,7 +50,6 @@ _Updated 2026-07-08 21:55 UTC · branch `feat/baton` · HEAD `a0b689e`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 25 | B4 | Resume | 6r2 | 07-08 10:45 | 0:12 | Stalled |  | 0 |  |  |  |
 | 26 | B4 | Deliver | 1 | 07-08 14:03 | 0:11 | Advanced | B4.1 | 3 | build:OK | $0.0175 | 1,259/9,081 |
 | 27 | B4 | Deliver | 1 | 07-08 14:15 | 0:17 | Advanced | B4.2 | 3 | build:OK | $0.0254 | 1,700/14,236 |
 | 28 | B4 | Deliver | 1 | 07-08 14:33 | 0:30 | Advanced | B4.3 | 5 | build:OK | $0.0429 | 2,087/23,142 |
@@ -59,6 +79,7 @@ _Updated 2026-07-08 21:55 UTC · branch `feat/baton` · HEAD `a0b689e`_
 | 52 | B9 | Fix | 4 | 07-08 21:24 | 0:00 | AgentError |  | 0 | build:OK |  |  |
 | 53 | B9 | Fix | 5 | 07-08 21:26 | 0:06 | Advanced | B9.1 | 2 | build:OK | $0.0212 | 29,881/4,286 |
 | 54 | B9 | Deliver | 1 | 07-08 21:33 | 0:21 | Advanced | B9.2 B9.3 | 5 | build:OK | $0.0818 | 59,955/26,063 |
+| 55 | B9 | Deliver | 1 | 07-08 21:55 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
