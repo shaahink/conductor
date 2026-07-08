@@ -77,6 +77,10 @@ public sealed class PendingAudit
 public sealed class RunState
 {
     public string PlanName { get; set; } = "";
+    /// <summary>Stable id for the logical run, shared by every event in <c>.conductor/events.jsonl</c>
+    /// (B2). Generated once, persisted, and reused across restarts so a resumed run keeps one event
+    /// stream. Empty on a state.json written before B2 → the orchestrator mints one on first use.</summary>
+    public string RunId { get; set; } = "";
     public RunStatus Status { get; set; } = RunStatus.Idle;
     public string? CurrentStage { get; set; }
     /// <summary>Git HEAD when the current stage was first entered — the audit diffs from here.</summary>

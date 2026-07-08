@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Conductor.Core.Events;
 using Conductor.Core.Planning;
 using Conductor.Models;
 
@@ -13,7 +14,7 @@ public sealed record RunOptions(bool DryRun, bool Once, int MaxSessions);
 ///   independently verify (gates + git + tracker diff) → record, report, decide next.
 /// Every transition is persisted, so killing conductor at any point is recoverable.
 /// </summary>
-public sealed class Orchestrator(PlanConfig plan, RunState state, string statePath, IProgressSink sink, RunOptions opts)
+public sealed class Orchestrator(PlanConfig plan, RunState state, string statePath, IProgressSink sink, IEventSink events, RunOptions opts)
 {
     private static readonly Regex LimitRx = new(
         @"usage limit|rate.?limit|overloaded|quota|out of credit|insufficient credit|credit balance|429|too many requests|5-hour|weekly limit",
@@ -41,6 +42,14 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         {
             RecoverFromCrash();
             Log($"conductor start — plan '{plan.Name}', repo {plan.Repo}, branch {Git.Branch(plan.Repo)}");
+            events.Emit(new RunStarted
+            {
+                Plan = plan.Name,
+                Repo = plan.Repo,
+                Branch = Git.Branch(plan.Repo),
+                DriverVersion = typeof(Orchestrator).Assembly.GetName().Version?.ToString(),
+                Resumed = state.SessionCounter > 0,
+            });
             WarnOnBranchPattern();
 
             var sessionsThisRun = 0;
@@ -106,6 +115,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     state.AttemptsThisStage = 0;
                     state.PendingFix = null;
                     Log($"stage → {stage.Id} {stage.Title}");
+                    events.Emit(new StageEntered { StageId = stage.Id, Title = stage.Title, StartHead = state.CurrentStageStartHead });
                     Save();
                 }
 
@@ -155,6 +165,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
                 RunSession(stage, track, ct);
                 sessionsThisRun++;
+                EmitSessionFinished(state.History[^1]);
 
                 if (_pendingSkip)
                 {
@@ -236,6 +247,16 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         Save();
         Log($"session #{rec.Number} start — {kind} {stage.Id} attempt {attempt}/{maxAttempts}" +
             (kind == SessionKind.Resume ? $" (resume #{rec.ResumeCount} of {rec.ClaudeSessionId[..8]})" : ""));
+        events.Emit(new SessionStarted
+        {
+            SessionId = rec.Number.ToString(),
+            Number = rec.Number,
+            StageId = stage.Id,
+            Kind = kind.ToString(),
+            Attempt = attempt,
+            MaxAttempts = maxAttempts,
+            AgentSessionId = rec.ClaudeSessionId,
+        });
 
         bool stalled = false, timedOut = false, killedByUser = false;
         GateRunner.RunHook(plan, plan.Setup, "setup", Log, ct);
@@ -386,6 +407,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         var gates = RunGateBattery(ct, fastOnly: plan.PerPhaseGates);
         _lastGates = gates;
         rec.GateSummary = GateRunner.Summary(gates);
+        EmitGates(gates, "session", rec.Number.ToString());
 
         // A gate cut short by Ctrl+C / abort is not a real failure — don't burn a fix on it.
         if (ct.IsCancellationRequested)
@@ -486,6 +508,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 return;
             }
             green = GateRunner.AllRequiredPassed(gates);
+            EmitGates(gates, "phase");
             Log($"phase gate {pg.StageId} finished in {sw.Elapsed.TotalSeconds:0}s — {(green ? "GREEN" : "RED")}: {GateRunner.Summary(gates)}");
             if (green) state.LastGreenGateSig = sig;
         }
@@ -548,6 +571,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         state.PendingFix = null;
         state.AttemptsThisStage = 0;
         state.Status = RunStatus.Idle;
+        events.Emit(new StageConfirmed { StageId = id, Audited = state.AuditedStages.Contains(id) });
         Log($"✓ phase {id} CONFIRMED (full battery green{(state.AuditedStages.Contains(id) ? " + audit" : "")}) — advancing");
         SaveAndReport();
     }
@@ -676,6 +700,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         var gates = RunGateBattery(ct);
         _lastGates = gates;
         state.Status = RunStatus.Idle;
+        EmitGates(gates, "completion");
         if (GateRunner.AllRequiredPassed(gates)) return true;
 
         state.AttemptsThisStage++;
@@ -697,6 +722,13 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             ? $"plan complete EXCEPT skipped stages: {string.Join(", ", state.SkippedStages)}"
             : null;
         Log($"🎉 plan '{plan.Name}' complete — {track.Checkpoints.Count(c => c.IsDone)}/{track.Checkpoints.Count} checkpoints done");
+        events.Emit(new RunFinished
+        {
+            Status = state.Status.ToString(),
+            Sessions = state.SessionCounter,
+            CheckpointsDone = track.Checkpoints.Count(c => c.IsDone),
+            CheckpointsTotal = track.Checkpoints.Count,
+        });
         SaveAndReport();
         Notify($"Conductor: plan {plan.Name} COMPLETE ({state.SessionCounter} sessions)");
     }
@@ -705,6 +737,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     {
         state.Status = RunStatus.NeedsHuman;
         state.AttentionReason = reason;
+        events.Emit(new AttentionRequested { Reason = reason });
         Log($"🛑 NEEDS HUMAN: {reason}");
         SaveAndReport();
         Notify($"Conductor {plan.Name}: needs attention — {reason}");
@@ -849,6 +882,48 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             _lastGates != null ? GateRunner.Summary(_lastGates) : "", _backoffUntil);
 
     private void Save() => state.Save(statePath);
+
+    /// <summary>Emit the terminal event for a session from its finalized record (single choke point:
+    /// the record's Outcome is set on every RunSession exit path). Also emits CheckpointConfirmed for
+    /// each row that flipped DONE in a gate-green, committed session (an Advanced outcome).</summary>
+    private void EmitSessionFinished(SessionRecord rec)
+    {
+        var sid = rec.Number.ToString();
+        events.Emit(new SessionFinished
+        {
+            SessionId = sid,
+            Number = rec.Number,
+            StageId = rec.Stage,
+            Outcome = rec.Outcome?.ToString() ?? "Unknown",
+            NewCommits = rec.NewCommits,
+            NewlyDone = rec.NewlyDone,
+            CostUsd = rec.CostUsd,
+            TokensInput = rec.TokensInput,
+            TokensOutput = rec.TokensOutput,
+            TokensReasoning = rec.TokensReasoning,
+            TokensCacheRead = rec.TokensCacheRead,
+        });
+        if (rec.Outcome == SessionOutcome.Advanced)
+            foreach (var id in rec.NewlyDone)
+                events.Emit(new CheckpointConfirmed { SessionId = sid, CheckpointId = id, StageId = rec.Stage });
+    }
+
+    /// <summary>Emit one GateFinished per result — the trust-model verification surface, from one source.</summary>
+    private void EmitGates(IReadOnlyList<GateResult> gates, string scope, string? sessionId = null)
+    {
+        foreach (var g in gates)
+            events.Emit(new GateFinished
+            {
+                SessionId = sessionId,
+                Name = g.Name,
+                Passed = g.Passed,
+                Skipped = g.Skipped,
+                Optional = g.Optional,
+                ExitCode = g.ExitCode,
+                DurationMs = (long)g.Duration.TotalMilliseconds,
+                Scope = scope,
+            });
+    }
 
     /// <summary>Keep a small ring buffer of recent agent activity for the AFK live-activity report.</summary>
     private void TrackActivity(AgentEvent ev)

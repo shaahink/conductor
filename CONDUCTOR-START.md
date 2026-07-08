@@ -7,23 +7,22 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #9 (B1, deliver) — landed **B1.5, B1.6, B1.7**. Stage B1 COMPLETE (7/7). B1.5:
-      PlanConfig.ReadOrder + PromptBuilder {readOrder} section. B1.6: schema version ("1.0") with
-      fail-fast Validate() + `conductor new-plan --template {minimal,dotnet,node,shamshir}` (4
-      templates, each generates loadable plan+TRACKER, A6-proven via dry-run against STABLE driver).
-      B1.7: Shamshir parity-pipeline TRACKER.md parse test (17 rows, P-0→P-0 etc.). Build 0w/0e
-      net10, 81 tests (73→81: +2 PromptBuilder, +5 PlanConfig version, +1 B1.7). Diff 11 files.
-stage: **B1 DONE** — B1.1…B1.7 ALL DONE. Battery GREEN. STABLE driver dry-runs new-plan output.
-gate: GREEN — `dotnet build Conductor.slnx` 0w/0e net10; `dotnet test` 81 pass.
-      `conductor new-plan --template dotnet` → STABLE driver dry-runs successfully.
-qa: session #8 (B1.4) PASS. (1) 7 ProgressConventionsTests green (irregular ids); (2) in-tree
-      `conductor status -p self-plan` parses live CONDUCTOR-START.md with default conventions
-      byte-identical. No findings.
-next: **B2.1** — ConductorEvent schema + append-only events.jsonl writer (additive alongside state.json).
-trap: same — STABLE driver from master parses with its own TrackerParser; self-plan dry-run must
-       use STABLE binary. diff budget held (11 files across B1.5..B1.7).
+last: session #11 (B2, deliver) — landed **B2.1**. Typed `ConductorEvent` schema (9 polymorphic
+      records, STJ source-gen NDJSON) + `Channel`-backed single-writer append-only `EventLog`
+      (`.conductor/events.jsonl`), emitted **additively** alongside `state.json` at 8 Orchestrator
+      transitions. `RunId` persisted in `RunState` (additive). Build 0w/0e net10, 92 tests (87→+5).
+stage: **B2 IN PROGRESS** — B2.1 DONE; B2.2…B2.6 TODO. Battery GREEN.
+gate: GREEN — build 0w/0e; test 92 pass. In-tree `--once` self-run → well-formed 11-event log,
+      seq continuity + one `runId` across restart, `state.json` intact → docs/baton/evidence/B2.1-gate.txt.
+qa: session #10 (B1 audit) PASS — (1) 6 tests green (NewPlanScaffold + whitespace classify);
+      (2) `new-plan --template shamshir` → stage-coherent rows; STABLE driver dry-runs to `stage → P-0`. No findings.
+next: **B2.2** — `RunStateProjection.Fold(events)` rebuilds `RunState`; StateCompat parity test vs
+      legacy `state.json` (Loom-shaped fixture). Additive; cutover to projection only after parity.
+trap: events are IN-TREE only (STABLE driver from master can't emit) → B2.1 evidence uses the in-tree
+      build; the driver still judges via gates+commit+tracker. FU-B1-1/2 (stream split, CT through
+      providers) still open → land with the B2.4/B2.5 async/Host/DI pass.
 dirty: none tracked.
-evidence: B1.5-gate.txt, B1.6-gate.txt, B1.7-gate.txt (+ earlier)
+evidence: B2.1-gate.txt (+ earlier)
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -57,7 +56,7 @@ never silent renumbering.
 | B1.5 | Read-order context battery (mandated docs per plan) | DONE | 01c1732 | docs/baton/evidence/B1.5-gate.txt |
 | B1.6 | conductor new-plan --template {minimal,dotnet,node,shamshir}; schema version + fail-fast validation | DONE | c3fa637 | docs/baton/evidence/B1.6-gate.txt |
 | B1.7 | Shamshir iter-parity-pipeline TRACKER.md authored + parsed via default provider (unit test) | DONE | 8701aff | docs/baton/evidence/B1.7-gate.txt |
-| B2.1 | ConductorEvent schema + append-only events.jsonl writer (additive, alongside state.json) | TODO | | |
+| B2.1 | ConductorEvent schema + append-only events.jsonl writer (additive, alongside state.json) | DONE | (pending) | docs/baton/evidence/B2.1-gate.txt |
 | B2.2 | Projections: RunState rebuilt by folding the log; StateCompat parity tests | TODO | | |
 | B2.3 | Crash recovery replays the event log (not just state.json) | TODO | | |
 | B2.4 | IAgentProvider + Opencode/Claude/GenericText adapters; Orchestrator provider-switch removed | TODO | | |

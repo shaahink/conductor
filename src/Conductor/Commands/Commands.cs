@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using Conductor.Core;
+using Conductor.Core.Events;
 using Conductor.Models;
 using Conductor.Ui;
 using Spectre.Console;
@@ -52,23 +53,35 @@ public sealed class RunCommand : Command<RunCommand.Settings>
         Directory.CreateDirectory(plan.StateDir);
         var statePath = Path.Combine(plan.StateDir, "state.json");
         var state = RunState.LoadOrNew(statePath, plan.Name);
+        if (string.IsNullOrEmpty(state.RunId)) state.RunId = Guid.NewGuid().ToString("N");
 
         var opts = new RunOptions(settings.DryRun, settings.Once, settings.MaxSessions);
         using var cts = new CancellationTokenSource();
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
-        var usePlain = settings.NoDashboard || settings.DryRun || Console.IsOutputRedirected;
-        if (usePlain)
+        // Event log is additive alongside state.json (B2.1). A dry-run previews without writing.
+        IEventSink events = settings.DryRun
+            ? NullEventSink.Instance
+            : new EventLog(Path.Combine(plan.StateDir, "events.jsonl"), state.RunId);
+        try
         {
-            var orch = new Orchestrator(plan, state, statePath, new PlainSink(), opts);
-            return orch.Run(cts.Token);
-        }
+            var usePlain = settings.NoDashboard || settings.DryRun || Console.IsOutputRedirected;
+            if (usePlain)
+            {
+                var orch = new Orchestrator(plan, state, statePath, new PlainSink(), events, opts);
+                return orch.Run(cts.Token);
+            }
 
-        var dash = new LiveDashboard(plan);
-        var orchestrator = new Orchestrator(plan, state, statePath, dash, opts);
-        var task = Task.Run(() => orchestrator.Run(cts.Token));
-        dash.RunUiLoop(task);
-        return task.GetAwaiter().GetResult();
+            var dash = new LiveDashboard(plan);
+            var orchestrator = new Orchestrator(plan, state, statePath, dash, events, opts);
+            var task = Task.Run(() => orchestrator.Run(cts.Token));
+            dash.RunUiLoop(task);
+            return task.GetAwaiter().GetResult();
+        }
+        finally
+        {
+            (events as IDisposable)?.Dispose();
+        }
     }
 }
 
