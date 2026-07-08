@@ -29,6 +29,8 @@ app.Configure(c =>
         .WithDescription("Queue an instruction for the agent's next session (also available via the I key in the dashboard).");
     c.AddCommand<AbortCommand>("abort")
         .WithDescription("Kill the session and stop the conductor.");
+    c.AddCommand<NewPlanCommand>("new-plan")
+        .WithDescription("Scaffold a new plan + TRACKER.md from a built-in template (minimal/dotnet/node/shamshir).");
     c.SetExceptionHandler((ex, _) =>
     {
         AnsiConsole.MarkupLine($"[red]error:[/] {Markup.Escape(ex is InvalidOperationException or FileNotFoundException ? ex.Message : ex.ToString())}");

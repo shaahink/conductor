@@ -7,6 +7,9 @@ namespace Conductor.Models;
 /// <summary>The per-mega-plan configuration file (e.g. plans/loom.plan.json).</summary>
 public sealed class PlanConfig
 {
+    /// <summary>Schema version. Currently only "1.0" is supported; a plan without a version or
+    /// with an unsupported version is rejected with a clear diagnostic (B1.6).</summary>
+    public string Version { get; set; } = "1.0";
     public string Name { get; set; } = "plan";
     public string Repo { get; set; } = "";
     public string Tracker { get; set; } = "";
@@ -77,11 +80,34 @@ public sealed class PlanConfig
     private void Validate()
     {
         var errors = new List<string>();
-        if (string.IsNullOrWhiteSpace(Repo) || !Directory.Exists(Repo)) errors.Add($"repo not found: '{Repo}'");
-        else if (!File.Exists(TrackerPath)) errors.Add($"tracker not found: {TrackerPath}");
-        if (Stages.Count == 0) errors.Add("no stages defined");
-        if (string.IsNullOrWhiteSpace(Agent.Command)) errors.Add("agent.command missing");
-        if (!Agent.Args.Any(a => a.Contains("{prompt}"))) errors.Add("agent.args must contain a {prompt} placeholder");
+
+        // Schema version check (B1.6). Missing version = assume 1.0 for back-compat but note it.
+        if (Version != "1.0")
+            errors.Add($"plan.version is '{Version}' but only \"1.0\" is supported — upgrade the plan or set version to \"1.0\"");
+
+        if (string.IsNullOrWhiteSpace(Repo)) errors.Add("plan.repo is empty — set it to the absolute path of the repository dir");
+        else if (!Directory.Exists(Repo)) errors.Add($"plan.repo '{Repo}' does not exist — create the dir or correct the path");
+        else if (!File.Exists(TrackerPath)) errors.Add($"plan.tracker '{Tracker}' not found at {TrackerPath} — create the file or correct path/repo");
+
+        if (Stages.Count == 0) errors.Add("plan.stages is empty — define at least one stage with id, title, and sessions");
+        else
+        {
+            var dupes = Stages.GroupBy(s => s.Id).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+            if (dupes.Count > 0) errors.Add($"duplicate stage ids: {string.Join(", ", dupes)} — each stage must have a unique id");
+            foreach (var s in Stages)
+            {
+                if (string.IsNullOrWhiteSpace(s.Id)) errors.Add("a stage is missing its id — every stage needs an id field");
+                else if (s.Id.Length > 20) errors.Add($"stage '{s.Id}' id is too long ({s.Id.Length} chars) — keep ids under 20 chars");
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(Agent.Command)) errors.Add("plan.agent.command is required — set the CLI command used to spawn agent sessions");
+        if (Agent.Args.Count == 0) errors.Add("plan.agent.args is empty — add at least a {prompt} placeholder");
+        else if (!Agent.Args.Any(a => a.Contains("{prompt}"))) errors.Add("plan.agent.args must contain a {prompt} placeholder — agent won't receive instructions without it");
+
+        if (Gates.Any(g => string.IsNullOrWhiteSpace(g.Command)))
+            errors.Add("a gate is missing its command — every gate needs a shell command to run");
+
         if (errors.Count > 0)
             throw new InvalidOperationException("Invalid plan config:\n  - " + string.Join("\n  - ", errors));
     }
