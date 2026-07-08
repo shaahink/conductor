@@ -84,11 +84,11 @@ never silent renumbering.
 | B7.1 | Per-stage/per-checkpoint agent override in plan schema (command/systemPrompt/temperature/tokens) | DONE | 38e14fc | docs/baton/evidence/B7-gate.txt |
 | B7.2 | Built-in persona registry (planner/reviewer/architect/qa/docs/refactor/test-writer/git-cleanup/security) | DONE | 38e14fc | docs/baton/evidence/B7-gate.txt |
 | B7.3 | PromptBuilder merges base + persona; persona shown in dashboard/report/events | DONE | 38e14fc | docs/baton/evidence/B7-gate.txt |
-| B8.1 | Reflection step → rolling .conductor/lessons.md (bounded) | DONE | TBD | docs/baton/evidence/B8-gate.txt |
-| B8.2 | Lessons injected into next prompt ({lessons} battery) — closes F-7 | DONE | TBD | docs/baton/evidence/B8-gate.txt |
-| B8.3 | Self-review stage kind (stronger model reviews last N sessions, proposes adjustments) | DONE | TBD | docs/baton/evidence/B8-gate.txt |
-| B8.4 | Handover weak/deferred bullets → tracked .conductor/followups.md (opt. block phase-confirm) | DONE | TBD | docs/baton/evidence/B8-gate.txt |
-| B8.5 | Pluggable IPromptBattery (lessons/DoD-recap/repo-map/recent-failure); token rollover (RolledOver, no attempt burned) | DONE | TBD | docs/baton/evidence/B8-gate.txt |
+| B8.1 | Reflection step → rolling .conductor/lessons.md (bounded) | DONE | a50c15f | docs/baton/evidence/B8-gate.txt |
+| B8.2 | Lessons injected into next prompt ({lessons} battery) — closes F-7 | DONE | a50c15f | docs/baton/evidence/B8-gate.txt |
+| B8.3 | Self-review stage kind (stronger model reviews last N sessions, proposes adjustments) | DONE | a50c15f | docs/baton/evidence/B8-gate.txt |
+| B8.4 | Handover weak/deferred bullets → tracked .conductor/followups.md (opt. block phase-confirm) | DONE | a50c15f | docs/baton/evidence/B8-gate.txt |
+| B8.5 | Pluggable IPromptBattery (lessons/DoD-recap/repo-map/recent-failure); token rollover (RolledOver, no attempt burned) | DONE | a50c15f | docs/baton/evidence/B8-gate.txt |
 | B9.1 | Task graph model + event-sourced store (TaskAdded/TaskStatusChanged) beneath the checkpoint table | TODO | | |
 | B9.2 | Planner persona decomposes active checkpoint → ordered sub-tasks | TODO | | |
 | B9.3 | MCP task server (task_list/task_update/task_add) — persists agent todo list across sessions | TODO | | |
