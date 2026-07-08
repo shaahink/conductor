@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 15:16 UTC · branch `feat/baton` · HEAD `ab3bd6c`_
+_Updated 2026-07-08 15:26 UTC · branch `feat/baton` · HEAD `6be6746`_
 
-**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 0 · working ▸ B4.5
-**Checkpoints:** 28/65 done · **Sessions run:** 29 · **Cost:** $1.0592 · **Tokens:** 498,912 in / 395,885 out / 180,289 think
+**Checkpoints:** 28/65 done · **Sessions run:** 30 · **Cost:** $1.0592 · **Tokens:** 498,912 in / 395,885 out / 180,289 think
 **Confirmed phases:** B0, B1, B2, B3
+
+## Latest activity (live)
+
+_Session #30 (Deliver) · running 10m · last output 7s ago · $0.0142_
+
+**Thinking:**
+> I need to add the C parameter to two separate handler blocks—one in the preview section around line 153-155 and another in the pollkeys section around line 252-253.
+> I need to switch the marker regex to use a named capturing group instead of an unnamed one so it works with ExplicitCapture, and then add a timeout parameter to the GeneratedRegex attribute to handle MA0009.
+> I need to switch from `GeneratedRegex` to the `ProgressConventions.RegexTimeout` pattern with `RegexOptions.ExplicitCapture` to avoid the MA0009 warning, which means I'll need to use a named group instead of numbered groups since explicit capture disables those.
+
+**Recent actions:**
+- `16:25:24` · Now update the preview seed to include structured thinking and folded tool output so the artifact demonstrates B4.5:
+- `16:25:24` » edit src\Conductor\Ui\DashboardPreview.cs
+- `16:25:33` · Now build to catch errors:
+- `16:25:38` » bash cd C:\Code\conductor-baton; dotnet build Conductor.slnx 2>&1 | Select-Object -Last 12
+- `16:25:48` · Let me check how existing regexes in the codebase satisfy these analyzers:
+- `16:25:48` » bash cd C:\Code\conductor-baton; findstr /S /N /C:"GeneratedRegex" src\Conductor\*.cs
+- `16:25:58` » grep GeneratedRegex|new Regex|Regex\.
+- `16:26:25` · The codebase uses `new Regex(..., ProgressConventions.RegexTimeout)` with `ExplicitCapture`. Let me match that pattern using named groups.
+- `16:26:25` » edit src\Conductor\Ui\StructuredThinking.cs
+- `16:26:42` » bash cd C:\Code\conductor-baton; dotnet build Conductor.slnx 2>&1 | Select-Object -Last 10
 
 ## Stage progress
 
@@ -58,6 +79,7 @@ _Updated 2026-07-08 15:16 UTC · branch `feat/baton` · HEAD `ab3bd6c`_
 | 27 | B4 | Deliver | 1 | 07-08 14:15 | 0:17 | Advanced | B4.2 | 3 | build:OK | $0.0254 | 1,700/14,236 |
 | 28 | B4 | Deliver | 1 | 07-08 14:33 | 0:30 | Advanced | B4.3 | 5 | build:OK | $0.0429 | 2,087/23,142 |
 | 29 | B4 | Deliver | 1 | 07-08 15:04 | 0:12 | Advanced | B4.4 | 3 | build:OK | $0.0567 | 62,572/12,919 |
+| 30 | B4 | Deliver | 1 | 07-08 15:16 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
