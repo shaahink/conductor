@@ -1,32 +1,12 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 18:04 UTC · branch `feat/baton` · HEAD `9f15431`_
+_Updated 2026-07-08 18:13 UTC · branch `feat/baton` · HEAD `3bf449c`_
 
-**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B5 — Observability & health · attempts used 0 · working ▸ B5.4
-**Checkpoints:** 34/65 done · **Sessions run:** 37 · **Cost:** $1.3177 · **Tokens:** 512,724 in / 520,789 out / 212,470 think
+**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B5 — Observability & health · attempts used 0
+**Checkpoints:** 35/65 done · **Sessions run:** 37 · **Cost:** $1.3926 · **Tokens:** 574,320 in / 542,661 out / 226,490 think
 **Confirmed phases:** B0, B1, B2, B3, B4
-
-## Latest activity (live)
-
-_Session #37 (Deliver) · running 10m · last output 3s ago · $0.0485_
-
-**Thinking:**
-> Now build and test to make sure the current changes compile:
-> Build is green. Now let me write the tests. I need tests for: 1. `Confidence.Compute` and `Confidence.CountEvidence` — evidence parsing 2. `McpMetrics.Compute` — fold over McpCallFinished events 3. `RepoStrip.Compute` — git query 4. `Git.AheadBehind` — ahead/behind count 5. Reporter sections — `## C…
-> Now let me build and test:
-
-**Recent actions:**
-- `19:02:51` » edit src\Conductor\Ui\LiveDashboard.cs
-- `19:02:56` » edit src\Conductor\Ui\LiveDashboard.cs
-- `19:03:01` » edit src\Conductor\Ui\LiveDashboard.cs
-- `19:03:07` » edit src\Conductor\Ui\LiveDashboard.cs
-- `19:03:17` » edit src\Conductor\Ui\LiveDashboard.cs
-- `19:03:23` » edit src\Conductor\Ui\DashboardRenderer.cs
-- `19:03:33` » bash dotnet build Conductor.slnx 2>&1
-- `19:04:06` » write tests\Conductor.Tests\B5_4Tests.cs
-- `19:04:06` · Build passes 0w/0e. Now write tests — I'll create a single B5.4 test file:
-- `19:04:29` » bash dotnet test Conductor.slnx --no-build -v q 2>&1
+**Pending:** auto-fix audit for B5
 
 ## Stage progress
 
@@ -37,7 +17,7 @@ _Session #37 (Deliver) · running 10m · last output 3s ago · $0.0485_
 | B2 | Event-sourced backbone + provider decoupling | 6/6 | confirmed ✓ |
 | B3 | Safety, owner-gates & process control | 5/5 | confirmed ✓ |
 | B4 | TUI overhaul (alt-screen + tree) | 7/7 | confirmed ✓ |
-| B5 | Observability & health | 3/4 | **← active** |
+| B5 | Observability & health | 4/4 | gating… |
 | B6 | AFK + two-way Telegram | 0/5 | todo |
 | B7 | Specialist sub-agent personas | 0/3 | todo |
 | B8 | Brain layer | 0/5 | todo |
@@ -79,14 +59,10 @@ _Session #37 (Deliver) · running 10m · last output 3s ago · $0.0485_
 | 34 | B5 | Deliver | 1 | 07-08 16:33 | 0:36 | Advanced | B5.1 | 5 | build:OK | $0.0634 | 2,544/24,659 |
 | 35 | B5 | Deliver | 1 | 07-08 17:10 | 0:19 | Advanced | B5.2 | 3 | build:OK | $0.0370 | 1,719/19,977 |
 | 36 | B5 | Deliver | 1 | 07-08 17:30 | 0:24 | Advanced | B5.3 | 4 | build:OK | $0.0427 | 2,319/25,154 |
-| 37 | B5 | Deliver | 1 | 07-08 17:54 | … | running |  | 0 |  |  |  |
+| 37 | B5 | Deliver | 1 | 07-08 17:54 | 0:18 | Advanced | B5.4 | 2 | build:OK | $0.0750 | 61,596/21,872 |
 
 ### Commits by session
 
-- **s29 (B4 Deliver)** — 3 commit(s):
-  - ab3bd6c chore: track B4.4 commit hash 9b25fe2
-  - 9b25fe2 ﻿feat(B4.4): severity model + clearer header labels
-  - 82a46f4 chore(conductor): s29 B4 working ▸B4.4 @ 16:14
 - **s30 (B4 Deliver)** — 7 commit(s):
   - 18099a0 docs(bB4.5): mark B4.5 DONE + update handoff (QA #29 PASS)
   - e7801eb docs: add conductor-CLEANUP.md (86 heartbeats pending) + CONDUCTOR-NEXT.md §11-14 (dynamic plan, deepseek status, post-hoc audit, live prompting)
@@ -123,6 +99,9 @@ _Session #37 (Deliver) · running 10m · last output 3s ago · $0.0485_
   - 17642cf feat(bB5.3): AI-health metrics folded from the event log (health panel + report section)
   - 6512c6b chore(conductor): s36 B5 working ▸B5.3 @ 18:50
   - a2052c8 chore(conductor): s36 B5 working ▸B5.3 @ 18:40
+- **s37 (B5 Deliver)** — 2 commit(s):
+  - 3bf449c feat(bB5.4): confidence per checkpoint + MCP call metrics + repo-awareness strip
+  - 9076ec0 chore(conductor): s37 B5 working ▸B5.4 @ 19:04
 
 ## Phase handovers (audit)
 
@@ -138,28 +117,23 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: Landed **B5.3 (AI-health metrics)** — a new `HealthMetrics` pure fold over `.conductor/events.jsonl` that surfaces retry rate, same-failure loops, gate repetition, gate oscillation, and context saturation (F-8), wired into a `## Health` REPORT.md section and a TUI `H` panel via the tolerant `Reporter.ReadHealth` read (one source, no parallel store — B5 trap honoured). Thresholds are conservative and injectable, with a load-bearing test proving a normal fail→fix cycle raises zero flags (the trust invariant) and that backoff/kill/interrupt outcomes never masquerade as a loop. Gate battery is GREEN: build 0w/0e on net10 warnings-as-errors, tests 238→251 (+11 HealthMetricsTests, …
+> SESSION-RESULT: B5.4 landed — confidence per checkpoint (evidence count parsed from tracker rows), `McpCallFinished` event + `McpMetrics` pure-fold projection, repo-awareness strip (branch/dirty/ahead/behind, live git query with non-git-repo resilience), all three wired into `## Confidence`/`## MCP`/`## Repo` REPORT.md sections + TUI N/B panels. +24 tests (251→275), build 0w/0e, commit 3bf449c pushed. Stage B5 is DONE — next session audits B5 then starts B6. Hard: the repo strip's volatile HEAD SHA silently broke the heartbeat no-op dedup (`TimestampOnlyRewriteDoesNotCreateDuplicateCommit` started failing after 45+ prior green runs) — fixed with `FormatStable` that omits the HEAD from the au…
 
 ## Tracker handoff
 
 ```
-last: session #36 (B5.3, deliver) — landed **B5.3**: `HealthMetrics` projection (pure fold →
-      retry rate + same-failure loop + gate repetition + gate oscillation + context saturation, all
-      from logged transitions: session outcomes + the gate battery) + `## Health` REPORT.md section +
-      TUI **H** panel. Conservative, injectable thresholds; a normal fail→fix cycle raises ZERO flags.
-      Reuses the tolerant event-log read (one source). +13 tests. 238→251.
-stage: **B5 IN PROGRESS** — B5.1, B5.2, B5.3 DONE. Next: B5.4 (confidence + MCP metrics + repo strip).
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 251 tests pass. Real recorded unhealthy run
-      (runId h1) folded via the in-tree `report` verb → ## Health: 2 Alerts (loop, gate-repetition) +
-      1 Warn (context-saturation), retry rate 67%. B5.3-gate.txt.
-qa: session #35/B5.2 deliver PASS — re-ran gate (build 0w/0e, 238 tests). Claim-1: 7 ReplayTests green.
-     Claim-2: in-tree `replay` reconstructed the 8-transition run (qa1) with correct time-travel state. No findings.
-next: **B5.4** — confidence per checkpoint (evidence count: tests/files/docs) + MCP call metrics +
-      repo-awareness strip (branch/dirty/ahead/behind). All PURE folds / read-only queries. See B5.md R5.4.
-trap: every B5 projection is a PURE fold over the single event log — never a parallel store that can
-      drift (B5 trap). Health thresholds stay conservative (false "looping" alarms erode trust) + unit-tested.
-      NB: no Thought/ToolCalled/Command events yet — B5.3 derives from sessions/gates; sharpens to tool
-      level when those events land (B9). B5.4 repo strip is a live git query, not an event fold.
+last: session #37 (B5.4, deliver) — landed **B5.4**: confidence per checkpoint (evidence count folded
+      from tracker rows) + `McpCallFinished` event + `McpMetrics` pure-fold projection + repo-awareness
+      strip (branch/dirty/ahead/behind, live git query) + `## Confidence`/`## MCP`/`## Repo` REPORT.md
+      sections + TUI **N** (confidence) and **B** (repo) panels. +24 tests. 251→275.
+stage: **B5 DONE** — all four checkpoints (B5.1 timeline, B5.2 replay, B5.3 health, B5.4 confidence/repo)
+      landed. Stage needs audit (audit=on in self-plan) before advancing to B6.
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 275 tests pass. B5.4-gate.txt.
+qa: session #36/B5.3 deliver PASS — re-ran gate (build 0w/0e, 251 tests pre-B5.4). Claim-1: 11
+     HealthMetricsTests green. Claim-2: Reporter.Build wires ## Health (ReporterTests.cs:64). No findings.
+next: B6 (Telegram + REPORT.md + Shamshir acceptance) — pending B5 audit pass.
+trap: McpCallFinished is forward-looking (B9 MCP integration); repo strip uses FormatStable in the
+      report so heartbeat no-op dedup doesn't break on HEAD drift (F-4).
 dirty: none.
-evidence: docs/baton/evidence/B5.3-gate.txt
+evidence: docs/baton/evidence/B5.4-gate.txt
 ```
