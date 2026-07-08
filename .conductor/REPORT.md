@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 18:21 UTC · branch `feat/baton` · HEAD `710500f`_
+_Updated 2026-07-08 18:31 UTC · branch `feat/baton` · HEAD `3838115`_
 
-**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B5 — Observability & health · attempts used 0
-**Checkpoints:** 35/65 done · **Sessions run:** 38 · **Cost:** $1.4561 · **Tokens:** 660,836 in / 550,470 out / 237,896 think
+**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B6 — AFK + two-way Telegram · attempts used 0 · working ▸ B6.1
+**Checkpoints:** 35/65 done · **Sessions run:** 39 · **Cost:** $1.4561 · **Tokens:** 660,836 in / 550,470 out / 237,896 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5
+
+## Latest activity (live)
+
+_Session #39 (Deliver) · running 10m · last output 5s ago · $0.0600_
+
+**Thinking:**
+> Now fix the TelegramService errors.
+> Fix the errors: 1. Line 87: Change `_cts.Cancel()` to `_cts.CancelAsync()` 2. Line 94: Same 3. Null checks for `_cfg` 4. StringContent disposal  Let me also check lines 232 and 246 for the nullable reference dereference errors.
+> Lines 232 and 246: `cb.From` could be null. The `TgCallbackQuery.From` is a `TgUser?`. I need to add null checks.  Let me now fix all the errors in one go. I'll fix: 1. `_cts.Cancel()` → async (but StopAsync is synchronous, and Dispose is synchronous — I need to use fire-and-forget or make StopAsync…
+
+**Recent actions:**
+- `19:30:31` » edit src\Conductor\Core\Orchestrator.cs
+- `19:30:31` · Now update the `Notify` method to push to Telegram alongside the existing hook:
+- `19:30:44` · Let me try building to see if it compiles:
+- `19:30:51` » bash dotnet build Conductor.slnx 2>&1
+- `19:31:09` » edit src\Conductor\Core\Hosting\ConductorHost.cs
+- `19:31:09` · Multiple errors to fix. Let me fix them all:
+- `19:31:14` » read src\Conductor\Core\Integrations\TelegramService.cs
+- `19:31:14` · Now fix the TelegramService errors:
+- `19:31:20` » read src\Conductor\Core\Integrations\TelegramService.cs
+- `19:31:26` » read src\Conductor\Core\Integrations\TelegramService.cs
 
 ## Stage progress
 
@@ -17,7 +38,7 @@ _Updated 2026-07-08 18:21 UTC · branch `feat/baton` · HEAD `710500f`_
 | B3 | Safety, owner-gates & process control | 5/5 | confirmed ✓ |
 | B4 | TUI overhaul (alt-screen + tree) | 7/7 | confirmed ✓ |
 | B5 | Observability & health | 4/4 | confirmed ✓ |
-| B6 | AFK + two-way Telegram | 0/5 | todo |
+| B6 | AFK + two-way Telegram | 0/5 | **← active** |
 | B7 | Specialist sub-agent personas | 0/3 | todo |
 | B8 | Brain layer | 0/5 | todo |
 | B9 | Task graph + smart session management | 0/5 | todo |
@@ -29,7 +50,6 @@ _Updated 2026-07-08 18:21 UTC · branch `feat/baton` · HEAD `710500f`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 9 | B1 | Deliver | 1 | 07-08 05:48 | 0:15 | Advanced | B1.5 B1.6 B1.7 | 7 | build:OK | $0.0744 | 63,136/21,354 |
 | 10 | B1 | Audit | 1 | 07-08 06:04 | 0:17 | Progress |  | 3 |  | $0.0289 | 1,492/13,453 |
 | 11 | B2 | Deliver | 1 | 07-08 06:22 | 0:24 | Advanced | B2.1 | 4 | build:OK | $0.0441 | 2,334/21,533 |
 | 12 | B2 | Deliver | 1 | 07-08 06:47 | 0:18 | Advanced | B2.2 | 3 | build:OK | $0.0334 | 1,778/18,546 |
@@ -59,6 +79,7 @@ _Updated 2026-07-08 18:21 UTC · branch `feat/baton` · HEAD `710500f`_
 | 36 | B5 | Deliver | 1 | 07-08 17:30 | 0:24 | Advanced | B5.3 | 4 | build:OK | $0.0427 | 2,319/25,154 |
 | 37 | B5 | Deliver | 1 | 07-08 17:54 | 0:18 | Advanced | B5.4 | 2 | build:OK | $0.0750 | 61,596/21,872 |
 | 38 | B5 | Audit | 1 | 07-08 18:13 | 0:07 | Progress |  | 2 |  | $0.0635 | 86,516/7,809 |
+| 39 | B6 | Deliver | 1 | 07-08 18:21 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
