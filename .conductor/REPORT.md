@@ -1,10 +1,10 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 23:09 UTC · branch `feat/baton` · HEAD `e61f00e`_
+_Updated 2026-07-08 23:18 UTC · branch `feat/baton` · HEAD `d3e41ab`_
 
 **Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B10 — Advanced orchestration · attempts used 0
-**Checkpoints:** 57/65 done · **Sessions run:** 60 · **Cost:** $2.5917 · **Tokens:** 1,890,784 in / 817,759 out / 385,082 think
+**Stage:** B11 — Close-out + Shamshir owner-gated proof · attempts used 0 · working ▸ B11.2
+**Checkpoints:** 58/65 done · **Sessions run:** 61 · **Cost:** $2.6354 · **Tokens:** 1,938,701 in / 830,546 out / 389,997 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10
 
 ## Stage progress
@@ -22,14 +22,13 @@ _Updated 2026-07-08 23:09 UTC · branch `feat/baton` · HEAD `e61f00e`_
 | B8 | Brain layer | 5/5 | confirmed ✓ |
 | B9 | Task graph + smart session management | 5/5 | confirmed ✓ |
 | B10 | Advanced orchestration | 4/4 | confirmed ✓ |
-| B11 | Close-out + Shamshir owner-gated proof | 0/4 | todo |
+| B11 | Close-out + Shamshir owner-gated proof | 1/4 | **← active** |
 | B12 | Controlled parallelism | 0/4 | todo |
 
 ## Sessions
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 31 | B4 | Deliver | 1 | 07-08 15:38 | 0:19 | Advanced | B4.6 | 3 | build:OK | $0.0253 | 1,939/12,322 |
 | 32 | B4 | Deliver | 1 | 07-08 15:58 | 0:20 | Advanced | B4.7 | 5 | build:OK | $0.0360 | 2,120/14,866 |
 | 33 | B4 | Audit | 1 | 07-08 16:18 | 0:14 | Progress |  | 2 |  | $0.0191 | 1,034/10,114 |
 | 34 | B5 | Deliver | 1 | 07-08 16:33 | 0:36 | Advanced | B5.1 | 5 | build:OK | $0.0634 | 2,544/24,659 |
@@ -59,12 +58,10 @@ _Updated 2026-07-08 23:09 UTC · branch `feat/baton` · HEAD `e61f00e`_
 | 58 | B10 | Deliver | 1 | 07-08 22:33 | 0:07 | Advanced | B10.1 | 2 | build:OK | $0.0385 | 45,295/10,325 |
 | 59 | B10 | Deliver | 1 | 07-08 22:41 | 0:20 | Advanced | B10.2 B10.3 B10.4 | 6 | build:OK | $0.1538 | 195,929/26,636 |
 | 60 | B10 | Audit | 1 | 07-08 23:02 | 0:06 | Progress |  | 1 |  | $0.0562 | 67,475/11,048 |
+| 61 | B11 | Deliver | 1 | 07-08 23:09 | 0:09 | Advanced | B11.1 | 2 | build:OK | $0.0436 | 47,917/12,787 |
 
 ### Commits by session
 
-- **s53 (B9 Fix)** — 2 commit(s):
-  - 20558b1 chore(conductor): s53 B9 fix — handoff updated, B9.1 marked DONE
-  - a0eda3c fix(bB9.1): B9.1 task graph model + event-sourced projection + tests
 - **s54 (B9 Deliver)** — 5 commit(s):
   - a0b689e chore(bB9.3): update tracker — B9.2 + B9.3 marked DONE, handoff refreshed
   - 92371d7 feat(bB9.3): MCP task server — task_list/task_update/task_add over JSON-RPC 2.0 stdio
@@ -93,6 +90,9 @@ _Updated 2026-07-08 23:09 UTC · branch `feat/baton` · HEAD `e61f00e`_
   - 0e1c1f7 feat(bB10.2): first-class hierarchical stages in model/state/report/tree
 - **s60 (B10 Audit)** — 1 commit(s):
   - 5fc6202 audit(B10): fix critical PreHookRunStages resume bug + harden hook execution
+- **s61 (B11 Deliver)** — 2 commit(s):
+  - d3e41ab chore(bB11.1): fill commit hash in CONDUCTOR-START.md
+  - 3ba9d2b feat(bB11.1): cross-platform gate runner — gates[].shell + RunShell dispatch
 
 ## Phase handovers (audit)
 
@@ -110,24 +110,22 @@ _Updated 2026-07-08 23:09 UTC · branch `feat/baton` · HEAD `e61f00e`_
 
 ## Last gate run
 
-build:OK · tests:OK
+build:OK
 
 ## Last session result
 
-> SESSION-RESULT: B10 audit VERDICT — the phase delivered all 4 sub-features (dependsOn, hierarchy, hooks, battery collapse) correctly at the model/test level, but I found and fixed 1 critical bug (`PreHookRunStages` recorded before hook success check, causing silent skip on resume — now only recorded on success, failed hooks retry), plus 3 quality fixes (stdout in error diagnostics, CT threading for pre-hook, +3 tests). Build 0w/0e, 409 tests green. 4 followups deferred: orchestrator integration harness for SelectStage (FU-B10-1), empirical battery-collapse token measurement (FU-B10-2), HookConfig.TimeoutMinutes validation (FU-B10-3), and ComputeDepth pre-computation for large plans (FU-B10-4…
+> SESSION-RESULT: B11.1 landed — `gates[].shell` property (powershell/bash/sh) with `ProcessRunner.RunShell` dispatch + `DefaultShell` auto-detect (powershell on Windows, bash elsewhere). 4 files touched (3 modified + 1 new test file), 424 tests pass (+15 new B11.1 tests covering PowerShell exit codes, bash exit codes/output/stderr, sh execution, unknown-shell error, GateConfig deserialization, RunPowerShell regression, and GateRunner integration). Build 0w/0e under warnings-as-errors. B10 QA verified both key fix claims (PreHookRunStages in success-only branch, stdout-capture test). Next session should tackle B11.2 (dotnet tool packaging + tab completion + conductor doctor). What was hard: th…
 
 ## Tracker handoff
 
 ```
-last: session #61 (B10 audit) — hardened + fixed critical PreHookRunStages resume bug.
-stage: B10 AUDITED — build 0w/0e, 409 tests pass (+3 new). Handover written to .conductor/handovers/B10.md.
-       AUDIT FIX: PreHookRunStages was recorded before hook success check — failed pre-hooks silently
-       skipped on resume. Now only recorded on success; failed hooks retry. Also: hook error log now
-       includes stdout, pre-hook passes run CT, 3 new tests added.
-gate: GREEN — 409 passed / 0 failed / 0 skipped. 0 warnings, 0 errors.
+last: session #62 (B11.1) — cross-platform gate runner landed.
+stage: B11.1 DONE — gates[].shell ∈ powershell|bash|sh; ProcessRunner.RunShell dispatch;
+       15 new tests pass (+424 total). Build 0w/0e.
+gate: GREEN — 424 passed / 0 failed / 0 skipped. 0 warnings, 0 errors.
 dirty: none.
-next: B11.1 (cross-platform gate runner).
-followups: FU-B10-1 (SelectStage integration harness), FU-B10-2 (battery-collapse token measurement),
-           FU-B10-3 (TimeoutMinutes validation), FU-B10-4 (ComputeDepth pre-compute).
-evidence: docs/baton/evidence/B10.1-gate.txt through B10.4-gate.txt; .conductor/handovers/B10.md
+next: B11.2 (dotnet tool packaging + completion + conductor doctor).
+QA-B10: verified PreHookRunStages fix (code), stdout-capture test (FailingHookCapturesStdout).
+followups: FU-B10-1 (integration harness), FU-B10-2 (token measurement), FU-B10-3 (timeout validation).
+evidence: docs/baton/evidence/B11.1-gate.txt
 ```
