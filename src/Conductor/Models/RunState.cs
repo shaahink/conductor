@@ -117,6 +117,9 @@ public sealed class RunState
     /// <summary>Stages whose owner has explicitly approved via CLI/TUI (B3.2). An owner-gated stage
     /// cannot advance past <see cref="RunStatus.AwaitingOwner"/> until its id appears here.</summary>
     public List<string> OwnerApprovedStages { get; set; } = new();
+    /// <summary>Stages whose preHook has already executed (B10.3). Prevents re-running the hook on
+    /// resume/crash-recovery; a stage id in this list means the preHook succeeded at least once.</summary>
+    public List<string> PreHookRunStages { get; set; } = new();
     /// <summary>Why the run is parked at <see cref="RunStatus.AwaitingOwner"/> (B3.2/B3.4). Persisted so
     /// an approval after restart does the right thing — confirm the stage vs. resume a session vs. reset
     /// the budget window. Null when not parked (or a legacy state.json, treated as an owner-gate).</summary>

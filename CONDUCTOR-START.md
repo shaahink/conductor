@@ -93,7 +93,7 @@ never silent renumbering.
 | B9.4 | Cooperative soft-break (finish sub-task→handoff→fresh session) + hard token-ceiling fresh-start fallback | DONE | e078820 | docs/baton/evidence/B9.4-gate.txt |
 | B9.5 | Task views in CLI/TUI/Telegram | DONE | 1fa665c | docs/baton/evidence/B9.5-gate.txt |
 | B10.1 | stages[].dependsOn graph + smarter ready-stage ordering (sequential exec preserved) | DONE | 9750665 | docs/baton/evidence/B10.1-gate.txt |
-| B10.2 | First-class hierarchical stages in state + reports | TODO | | |
+| B10.2 | First-class hierarchical stages in state + reports | DONE | 0e1c1f7 | docs/baton/evidence/B10.2-gate.txt |
 | B10.3 | Per-stage pre/post hooks beyond gates | TODO | | |
 | B10.4 | Collapse double gate battery (agent ritual + conductor) → one source of truth; measured token drop | TODO | | |
 | B11.1 | Cross-platform gate runner (bash/sh alongside PowerShell via gates[].shell) | TODO | | |

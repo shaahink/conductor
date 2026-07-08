@@ -137,6 +137,17 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     Save();
                 }
 
+                // B10.3: pre-hook runs once per stage, before any session. A non-zero exit blocks the
+                // stage (NeedsHuman) so a broken environment never wastes session attempts.
+                if (stage.PreHook is { } preHook
+                    && !state.PreHookRunStages.Contains(stage.Id))
+                {
+                    RunStageHook(stage.Id, "pre-hook", preHook);
+                    state.PreHookRunStages.Add(stage.Id);
+                    Save();
+                    if (state.Status == RunStatus.NeedsHuman) continue;
+                }
+
                 if (HandoffWantsHuman(track))
                 {
                     NeedsHuman("agent asked for a human in the tracker handoff (HUMAN: line) — resolve, then run `conductor resume`");
@@ -711,6 +722,9 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         state.PendingAudit = null;
         state.PendingFix = null;
         state.AttemptsThisStage = 0;
+        // B10.3: post-hook runs after confirmation (best-effort, logged but never blocks).
+        if (stage?.PostHook is { } postHook)
+            RunStageHook(id, "post-hook", postHook);
         if (state.PauseAfterStage)
         {
             state.PauseAfterStage = false;
@@ -769,6 +783,24 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     }
 
     // ---------------------------------------------------------------- decisions
+
+    /// <summary>B10.3: runs a per-stage lifecycle hook. For pre-hooks a non-zero exit triggers
+    /// <see cref="NeedsHuman"/> (blocking); for post-hooks failures are logged only.</summary>
+    private void RunStageHook(string stageId, string label, HookConfig hook)
+    {
+        Log($"{label}: {stageId} — {hook.Command}");
+        var cwd = string.IsNullOrWhiteSpace(hook.Cwd) ? plan.Repo : Path.Combine(plan.Repo, hook.Cwd);
+        var r = ProcessRunner.RunPowerShell(hook.Command, cwd, TimeSpan.FromMinutes(hook.TimeoutMinutes), CancellationToken.None);
+        var timedOut = r.TimedOut ? " (timed out)" : "";
+        Log($"{label}: exit {r.ExitCode}{timedOut} in {r.Duration.TotalSeconds:0}s");
+        if (r.ExitCode != 0)
+        {
+            var detail = $"stage {stageId} {label} failed (exit {r.ExitCode}): {hook.Command}";
+            Log($"ERROR: {detail}");
+            if (label == "pre-hook")
+                NeedsHuman(detail);
+        }
+    }
 
     private IReadOnlyList<GateResult> RunGateBattery(CancellationToken ct, bool fastOnly = false)
     {

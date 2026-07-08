@@ -497,6 +497,12 @@ public sealed class StageConfig
     /// <summary>Parent stage id for hierarchical display in tree + report (B10.2). null = root stage.
     /// Parent stages appear above their children in the plan tree with indentation.</summary>
     public string? ParentId { get; set; }
+    /// <summary>Optional hook that runs before the stage's first session (B10.3). A non-zero exit
+    /// blocks the stage and requests human attention.</summary>
+    public HookConfig? PreHook { get; set; }
+    /// <summary>Optional hook that runs after the stage is confirmed (B10.3). Best-effort: a non-zero
+    /// exit is logged but never blocks completion.</summary>
+    public HookConfig? PostHook { get; set; }
 }
 
 public sealed class GateConfig
