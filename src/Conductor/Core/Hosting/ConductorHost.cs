@@ -92,6 +92,9 @@ public static class ConductorHost
         // B6.4: Webhook notifier (generic/Discord/Slack) — fire-and-forget HTTP POST.
         builder.Services.AddSingleton<WebhookNotifier>();
 
+        // B9.2: planner decomposition — produces ordered sub-tasks from a checkpoint.
+        builder.Services.AddSingleton<IPlanner>(new CheckpointPlanner());
+
         builder.Services.AddSingleton(sp => new Orchestrator(
             sp.GetRequiredService<PlanConfig>(),
             sp.GetRequiredService<RunState>(),

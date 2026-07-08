@@ -18,8 +18,9 @@ public sealed record RunOptions(bool DryRun, bool Once, int MaxSessions);
 ///   independently verify (gates + git + tracker diff) → record, report, decide next.
 /// Every transition is persisted, so killing conductor at any point is recoverable.
 /// </summary>
-public sealed class Orchestrator(PlanConfig plan, RunState state, string statePath, IProgressSink sink, IEventSink events, RunOptions opts, ILogger<Orchestrator> logger, ITelegramService telegram, WebhookNotifier webhooks)
+public sealed class Orchestrator(PlanConfig plan, RunState state, string statePath, IProgressSink sink, IEventSink events, RunOptions opts, ILogger<Orchestrator> logger, ITelegramService telegram, WebhookNotifier webhooks, IPlanner? planner = null)
 {
+    private readonly IPlanner _planner = planner ?? new CheckpointPlanner();
     private readonly PromptBuilder _prompts = BuildPromptBuilder(plan);
     private readonly IProgressProvider _progress = ProgressProviderFactory.Create(plan);
     // The agent provider owns backend-specific concerns (stream parsing lives in AgentSession, the
@@ -34,6 +35,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     private readonly string _logPath = Path.Combine(plan.StateDir, "conductor.log");
     private DateTime? _backoffUntil;
     private readonly List<(string Kind, string Text, DateTime Utc)> _activity = new();
+    private readonly HashSet<string> _decomposedCheckpoints = new(StringComparer.Ordinal);
 
     // Correlation state attached to every structured log line (B2.5): runId + stage + session number
     // come from RunState; the gate marker is set while a battery runs.
@@ -273,6 +275,34 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             File.WriteAllText(reviewPath, skeleton);
             Log($"review stage {stage.Id}: scaffolded review artifact at {reviewPath}");
         }
+
+        // B9.2: if this is a Deliver session with planner persona, and the active checkpoint
+        // hasn't been decomposed yet, seed the task graph with ordered sub-tasks.
+        var personaName = plan.ResolvePersona(stage);
+        var activeCp = preTrack.ForStage(stage.Id).FirstOrDefault(c => !c.IsDone);
+        if (kind == SessionKind.Deliver &&
+            "planner".Equals(personaName, StringComparison.OrdinalIgnoreCase) &&
+            activeCp != null &&
+            _decomposedCheckpoints.Add(activeCp.Id))
+        {
+            var tasks = _planner.Decompose(activeCp.Id, activeCp.Title, stage.Notes ?? "");
+            var runId = state.RunId;
+            foreach (var task in tasks)
+            {
+                events.Emit(new TaskAdded
+                {
+                    RunId = runId,
+                    TaskId = $"{activeCp.Id}-t{task.Order}",
+                    CheckpointId = activeCp.Id,
+                    Title = task.Title,
+                    Source = "planner",
+                    Order = task.Order,
+                });
+            }
+            if (tasks.Count > 0)
+                Log($"B9.2: decomposed checkpoint {activeCp.Id} into {tasks.Count} sub-task(s)");
+        }
+
         var prompt = kind switch
         {
             SessionKind.Resume => _prompts.Resume(stage, state.SessionCounter, attempt, maxAttempts, pendingResume!),
@@ -1102,6 +1132,14 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     Log($"recovered from event log: session #{interrupted.Number} was interrupted — will resume");
                     state.Status = RunStatus.Idle;
                     Save();
+                }
+
+                // B9.2: rebuild decomposed-checkpoints set from TaskAdded events so we don't
+                // re-decompose after a crash.
+                foreach (var evt in evts)
+                {
+                    if (evt is TaskAdded ta)
+                        _decomposedCheckpoints.Add(ta.CheckpointId);
                 }
             }
         }
