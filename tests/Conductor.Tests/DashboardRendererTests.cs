@@ -294,6 +294,51 @@ public class DashboardRendererTests
         Assert.Contains("Identity spine", active);  // L1 (active) kept
     }
 
+    [Fact]
+    public void ThinkingPaneShowsStructuredFacetsThroughBuildRoot()
+    {
+        // B4.5: structured reasoning is parsed into a Goal/Action digest in the thinking pane.
+        var s = SampleState();
+        var st = s with
+        {
+            Thinking = new[]
+            {
+                new DashboardState.ThinkingLine(DateTime.UtcNow,
+                    "Goal: wire SymbolRef tiers. Action: add ambiguity fixtures then gate."),
+            },
+        };
+        var outp = Render(st, width: 160, height: 40);
+        Assert.Contains("goal", outp);                        // facet label rendered
+        Assert.Contains("wire SymbolRef tiers", outp);        // facet value
+        Assert.Contains("action", outp);
+        Assert.Contains("add ambiguity fixtures", outp);
+    }
+
+    [Fact]
+    public void AgentPaneFoldsToolOutputThroughBuildRoot()
+    {
+        // B4.5: folded (default) shows the tool header with a "(N lines)" badge, not the raw output;
+        // expanded reveals the output lines.
+        var s = SampleState();
+        var now = DateTime.UtcNow;
+        var st = s with
+        {
+            Agent = new[]
+            {
+                new DashboardState.AgentLine("tool", "bash git status", now),
+                new DashboardState.AgentLine("result", "modified SymbolTable.cs", now),
+                new DashboardState.AgentLine("result", "untracked SymbolRefTests.cs", now),
+            },
+        };
+        var folded = Render(st with { AgentExpanded = false }, width: 160, height: 40);
+        Assert.Contains("bash git status", folded);           // tool header visible
+        Assert.Contains("2 lines", folded);                   // fold badge
+        Assert.DoesNotContain("modified SymbolTable.cs", folded); // output hidden when folded
+
+        var expanded = Render(st with { AgentExpanded = true }, width: 160, height: 40);
+        Assert.Contains("modified SymbolTable.cs", expanded); // output shown when expanded
+    }
+
     private static int CountOccurrences(string haystack, string needle)
     {
         var count = 0;

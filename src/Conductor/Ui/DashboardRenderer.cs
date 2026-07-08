@@ -263,8 +263,29 @@ public static class DashboardRenderer
     {
         if (st.Thinking.Count == 0)
             return new Markup("[grey](no thinking captured yet)[/]");
-        return new Rows(st.Thinking.Select(t =>
-            (IRenderable)new Markup($"[grey37]{Local(t.Utc):HH:mm:ss} ~ {Esc(Clip(t.Text, 180))}[/]")).ToArray());
+        return new Rows(st.Thinking.Select(t => ThinkingRow(t)).ToArray());
+    }
+
+    /// <summary>Renders one reasoning block as a Goal/Hypothesis/Evidence/Action digest when the
+    /// parser finds structure, else the raw single line — so no reasoning is ever dropped (B4.5).</summary>
+    private static IRenderable ThinkingRow(DashboardState.ThinkingLine t)
+    {
+        var ts = $"[grey37]{Local(t.Utc):HH:mm:ss}[/]";
+        var parsed = StructuredThinking.Parse(t.Text);
+        if (!parsed.HasStructure)
+            return new Markup($"{ts} [grey37]~ {Esc(Clip(parsed.Raw, 180))}[/]");
+
+        var facets = new List<IRenderable>();
+        void Facet(string glyph, string color, string label, string? value)
+        {
+            if (string.IsNullOrEmpty(value)) return;
+            facets.Add(new Markup($"  [{color}]{glyph} {label}[/] [grey]{Esc(Clip(value!, 150))}[/]"));
+        }
+        Facet("◎", "aqua", "goal", parsed.Goal);
+        Facet("?", "yellow", "hyp", parsed.Hypothesis);
+        Facet("✎", "green", "evidence", parsed.Evidence);
+        Facet("→", "deepskyblue1", "action", parsed.Action);
+        return new Rows(new IRenderable[] { new Markup($"{ts}") }.Concat(facets).ToArray());
     }
 
     private static IRenderable GateBody(DashboardState st)
@@ -300,15 +321,19 @@ public static class DashboardRenderer
 
     private static IRenderable AgentPanel(DashboardState st)
     {
-        IRenderable body = st.Agent.Count > 0
-            ? new Rows(st.Agent.Select(a => (IRenderable)new Markup(AgentLine(a))).ToArray())
+        var rows = AgentFold.Build(st.Agent, st.AgentExpanded);
+        IRenderable body = rows.Count > 0
+            ? new Rows(rows.Select(r => (IRenderable)new Markup(AgentLine(r))).ToArray())
             : new Markup("[grey](no agent output yet)[/]");
-        return new Panel(body).Header("[aqua]agent[/] [grey](O)[/]").Expand().Border(BoxBorder.Rounded);
+        var hint = st.AgentExpanded ? "[grey](C fold)[/]" : "[grey](C expand)[/]";
+        return new Panel(body).Header($"[aqua]agent[/] [grey](O)[/] {hint}").Expand().Border(BoxBorder.Rounded);
     }
 
-    private static string AgentLine(DashboardState.AgentLine a)
+    /// <summary>Renders a folded agent row: tool headers show a "(N lines)" badge for hidden output,
+    /// expanded output lines are indented under their tool call (B4.5).</summary>
+    private static string AgentLine(AgentFold.Row r)
     {
-        var (glyph, color) = a.Kind switch
+        var (glyph, color) = r.Kind switch
         {
             "tool" => ("»", "deepskyblue1"),
             "text" => ("·", "silver"),
@@ -317,7 +342,9 @@ public static class DashboardRenderer
             "system" => ("○", "grey"),
             _ => (" ", "grey"),
         };
-        return $"[{color}]{Local(a.Utc):HH:mm:ss} {glyph} {Esc(a.Text)}[/]";
+        var indent = r.Indent ? "  " : "";
+        var badge = r.IsToolHeader && r.FoldedCount > 0 ? $" [grey37]▸ ({r.FoldedCount} lines)[/]" : "";
+        return $"{indent}[{color}]{Local(r.Utc):HH:mm:ss} {glyph} {Esc(r.Text)}[/]{badge}";
     }
 
     // ---------------------------------------------------------------- footer (log + actions)
@@ -379,7 +406,7 @@ public static class DashboardRenderer
                 break;
         }
         // Pop-out viewers + inject are available whenever a session/buffer exists.
-        actions.Add("[grey][[T]] think · [[O]] output · [[D]] docs · [[V]] git · [[X]] prompt · [[F]] filter · [[E]] expand · [[I]] inject[/]");
+        actions.Add("[grey][[T]] think · [[O]] output · [[C]] fold · [[D]] docs · [[V]] git · [[X]] prompt · [[F]] filter · [[E]] expand · [[I]] inject[/]");
         return "[grey]" + string.Join("  ", actions) + "[/]";
     }
 

@@ -40,6 +40,7 @@ public sealed class LiveDashboard : IProgressSink
     private ControlAction? _pendingConfirm;
 
     private PlanTreeView _tree = new();
+    private bool _agentExpanded;
 
     private volatile bool _statusRunning;
     private List<string> _statusLines = new();
@@ -152,6 +153,7 @@ public sealed class LiveDashboard : IProgressSink
             case ConsoleKey.G when _plan?.StatusAgent is { Enabled: true }: StartStatusAgent(); break;
             case ConsoleKey.F: _tree = _tree with { Filter = PlanTree.NextFilter(_tree.Filter) }; break;
             case ConsoleKey.E: _tree = _tree with { ExpandAll = !_tree.ExpandAll }; break;
+            case ConsoleKey.C: _agentExpanded = !_agentExpanded; break;
             default: _quitPreview = true; break;
         }
     }
@@ -226,6 +228,7 @@ public sealed class LiveDashboard : IProgressSink
                 Tick = _tick++,
                 ConfirmPrompt = ConfirmGate.Message(_pendingConfirm),
                 Tree = _tree,
+                AgentExpanded = _agentExpanded,
             };
         }
     }
@@ -251,6 +254,7 @@ public sealed class LiveDashboard : IProgressSink
                     case ConsoleKey.G when _plan?.StatusAgent is { Enabled: true }: StartStatusAgent(); break;
                     case ConsoleKey.F: _tree = _tree with { Filter = PlanTree.NextFilter(_tree.Filter) }; break;
                     case ConsoleKey.E: _tree = _tree with { ExpandAll = !_tree.ExpandAll }; break;
+                    case ConsoleKey.C: _agentExpanded = !_agentExpanded; break;
                     case ConsoleKey.P: _pendingConfirm = null; _keys.Enqueue(ControlAction.PauseAfterSession); break;
                     case ConsoleKey.R: _pendingConfirm = null; _keys.Enqueue(ControlAction.ResumeRun); break;
                     case ConsoleKey.A:

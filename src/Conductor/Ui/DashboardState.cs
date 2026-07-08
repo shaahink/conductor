@@ -24,6 +24,9 @@ public sealed record DashboardState
     /// <summary>Filter/search/expand state for the hierarchical plan tree (B4.3).</summary>
     public PlanTreeView Tree { get; init; } = new();
 
+    /// <summary>When true, folded tool-call output is expanded inline in the agent pane (B4.5, `C` key).</summary>
+    public bool AgentExpanded { get; init; }
+
     public readonly record struct AgentLine(string Kind, string Text, DateTime Utc);
     public readonly record struct ThinkingLine(DateTime Utc, string Text);
 }

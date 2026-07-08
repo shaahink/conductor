@@ -53,6 +53,8 @@ public static class DashboardPreview
     private static readonly (string Kind, string Text, int AgoSec)[] SampleAgent =
     {
         ("tool", "bash git -C C:/code/DevContext2-ui status --porcelain", 240),
+        ("result", " M src/DevContext.Core/Graph/SymbolTable.cs", 238),
+        ("result", "?? tests/DevContext.Tests/SymbolRefTests.cs", 237),
         ("text", "Reading the L1 stage section and loom-graph-design.md before touching identity code.", 210),
         ("tool", "read src/DevContext.Core/Graph/SymbolTable.cs", 180),
         ("tool", "edit src/DevContext.Core/Graph/SymbolId.cs", 120),
@@ -63,8 +65,8 @@ public static class DashboardPreview
 
     private static readonly string[] SampleThinking =
     {
-        "L1.1 needs SymbolId/SymbolRef with resolution tiers. Start from the SymbolTable seam so ambiguity fixtures have a home.",
+        "Goal: implement L1.1 SymbolId/SymbolRef with resolution tiers. Hypothesis: exact-then-fuzzy tiering is safe because the dogfood repo has duplicate short names. Evidence: SymbolTable already exposes a seam. Action: start from the SymbolTable seam and add ambiguity fixtures.",
         "The dogfood repo has duplicate short names across services, so exact-then-fuzzy tiering is the safe order.",
-        "I should add negative fixtures for the service-libs case the audit flagged, then run the truth gate.",
+        "Goal: close the audit gap. Action: add negative fixtures for the service-libs case, then run the truth gate.",
     };
 }
