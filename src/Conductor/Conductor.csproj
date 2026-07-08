@@ -11,4 +11,8 @@
     <PackageReference Include="Spectre.Console.Cli" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Conductor.Tests" />
+  </ItemGroup>
+
 </Project>

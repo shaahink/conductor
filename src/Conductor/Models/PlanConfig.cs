@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -81,7 +82,8 @@ public sealed class PlanConfig
     {
         var errors = new List<string>();
 
-        // Schema version check (B1.6). Missing version = assume 1.0 for back-compat but note it.
+        // Schema version check (B1.6). A plan with no `version` deserialises to the "1.0" default
+        // (back-compat), so only an explicit unsupported value is rejected.
         if (Version != "1.0")
             errors.Add($"plan.version is '{Version}' but only \"1.0\" is supported — upgrade the plan or set version to \"1.0\"");
 
@@ -202,7 +204,37 @@ public sealed class ProgressConventions
     }
 
     private static bool StartsWithAny(string status, List<string> words)
-        => words.Exists(w => status.StartsWith(w, StringComparison.OrdinalIgnoreCase));
+    {
+        // The row regex captures the status keyword with its original inner whitespace (it matches
+        // `IN\s+PROGRESS`), so a cell like "IN  PROGRESS" (double space / tab) reaches here verbatim.
+        // Collapse whitespace runs on both sides before the prefix test so multi-word keywords still
+        // classify — matching the old hard-coded `StartsWith("IN")` intent without its looseness.
+        var normalized = CollapseWhitespace(status);
+        return words.Exists(w => normalized.StartsWith(CollapseWhitespace(w), StringComparison.OrdinalIgnoreCase));
+    }
+
+    // Collapse every run of whitespace to a single space; returns the input unchanged when it holds no
+    // consecutive/irregular whitespace, so the common single-space path allocates nothing new.
+    private static string CollapseWhitespace(string s)
+    {
+        var needsWork = s.Contains("  ", StringComparison.Ordinal);
+        for (var i = 0; !needsWork && i < s.Length; i++)
+            needsWork = char.IsWhiteSpace(s[i]) && s[i] != ' ';   // tab/newline/etc → normalise to space
+        if (!needsWork) return s;
+
+        var sb = new StringBuilder(s.Length);
+        var prevWs = false;
+        foreach (var ch in s)
+        {
+            if (char.IsWhiteSpace(ch))
+            {
+                if (!prevWs) sb.Append(' ');
+                prevWs = true;
+            }
+            else { sb.Append(ch); prevWs = false; }
+        }
+        return sb.ToString();
+    }
 
     // Words may contain spaces ("IN PROGRESS"); match any run of whitespace between tokens so a
     // double-space or tab in the cell still classifies (matches the original `IN\s+PROGRESS`).

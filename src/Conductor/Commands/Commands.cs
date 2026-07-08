@@ -243,8 +243,19 @@ public sealed class NewPlanCommand : Command<NewPlanCommand.Settings>
         File.WriteAllText(planPath, BuildPlanJson(template, name, repo), System.Text.Encoding.UTF8);
         File.WriteAllText(trackerPath, BuildTrackerMd(template, name), System.Text.Encoding.UTF8);
 
-        // Verify the output loads (A6 ship-without-launch).
-        PlanConfig.Load(planPath);
+        // Verify the output loads (A6 ship-without-launch). Don't leave a half-written scaffold on
+        // disk if the self-check fails — clean up and surface the reason.
+        try
+        {
+            PlanConfig.Load(planPath);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or FileNotFoundException)
+        {
+            File.Delete(planPath);
+            File.Delete(trackerPath);
+            AnsiConsole.MarkupLine($"[red]Scaffold failed self-check and was removed:[/] {Markup.Escape(ex.Message)}");
+            return 1;
+        }
 
         AnsiConsole.MarkupLine($"[green]Created[/] {Markup.Escape(planPath)}");
         AnsiConsole.MarkupLine($"[green]Created[/] {Markup.Escape(trackerPath)}");
@@ -252,7 +263,7 @@ public sealed class NewPlanCommand : Command<NewPlanCommand.Settings>
         return 0;
     }
 
-    private static string BuildPlanJson(string template, string name, string repo)
+    internal static string BuildPlanJson(string template, string name, string repo)
     {
         var repoNormalised = repo.Replace("\\", "/");
         return template switch
@@ -352,20 +363,31 @@ public sealed class NewPlanCommand : Command<NewPlanCommand.Settings>
         };
     }
 
-    private static string BuildTrackerMd(string template, string name)
+    internal static string BuildTrackerMd(string template, string name)
     {
-        var conventionsNote = template == "shamshir"
-            ? "\n\n> Conventions configured in the plan: irregular stage ids (`P-0`, `P0.1`, `P3.4b`, `F5`) supported.\n"
-            : "";
+        // Checkpoints + handoff MUST match the stages declared in BuildPlanJson for this template,
+        // otherwise the scaffold produces a plan whose stages own no rows and can never complete.
+        // shamshir declares irregular stage ids (P-0/P0/P1); the others declare a single S1 stage.
+        var (firstStage, conventionsNote, rows) = template == "shamshir"
+            ? ("P-0",
+               "\n\n> Conventions configured in the plan: irregular stage ids (`P-0`, `P0.1`, `P3.4b`, `F5`) supported.\n",
+               "| P-0  | Land the tree           | TODO | | |\n" +
+               "| P0.1 | First detail-phase task | TODO | | |\n" +
+               "| P1.1 | Second-phase task       | TODO | | |")
+            : ("S1",
+               "",
+               "| S1.1 | First task  | TODO | | |\n" +
+               "| S1.2 | Second task | TODO | | |");
+
         return $$"""
         # {{name}} — Tracker (resume here)
 
         **Read order for a fresh session:** this file.{{conventionsNote}}
         ## Handoff  (overwrite this block, ≤12 lines, no history)
         last: (none) — scaffolded by conductor new-plan --template {{template}}.
-        stage: **S1 NOT STARTED**.
+        stage: **{{firstStage}} NOT STARTED**.
         gate: not yet run.
-        next: **S1** — first checkpoint.
+        next: **{{firstStage}}** — first checkpoint.
 
         ## Checkpoints
 
@@ -373,8 +395,7 @@ public sealed class NewPlanCommand : Command<NewPlanCommand.Settings>
 
         | # | Checkpoint | Status | Commit | Evidence |
         |---|-----------|--------|--------|----------|
-        | S1.1 | First task | TODO | | |
-        | S1.2 | Second task | TODO | | |
+        {{rows}}
         """;
     }
 }

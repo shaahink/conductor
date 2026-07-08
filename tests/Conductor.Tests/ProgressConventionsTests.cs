@@ -143,6 +143,27 @@ public sealed class ProgressConventionsTests
         Assert.True(conv.MentionsHuman("stuck — HUMAN: decide the schema"));
     }
 
+    // Audit regression guard: the row regex captures the status keyword with its ORIGINAL inner
+    // whitespace (`IN\s+PROGRESS`), so a hand-edited cell with a double space / tab still reaches
+    // classification verbatim. The old hard-coded parser used StartsWith("IN") and caught it; the new
+    // vocabulary keyword is the literal "IN PROGRESS", so matching must be whitespace-tolerant or the
+    // active checkpoint silently reads as not-in-progress (the exact silent-corruption class the stage
+    // trap warns about).
+    [Fact]
+    public void InProgress_WithIrregularInnerWhitespace_StillClassifies()
+    {
+        var conv = ProgressConventions.Default;
+        Assert.True(conv.IsInProgress("IN  PROGRESS"));      // double space
+        Assert.True(conv.IsInProgress("IN\tPROGRESS"));      // tab
+        Assert.True(conv.IsInProgress("IN  PROGRESS 🚧"));   // + trailing decoration
+
+        // And through a full parse of a row whose status cell has a double space.
+        const string tracker = """
+            | L2.4 | Checkout truth test | IN  PROGRESS | | |
+            """;
+        Assert.True(MarkdownTableProvider.Parse(tracker).ById("L2.4")!.IsInProgress);
+    }
+
     /// <summary>B1.7 — prove the Shamshir parity-pipeline TRACKER.md template parses with the
     /// shamshir conventions (irregular ids P-0, P0.1, P3.4b). Stage-id derivation yields the
     /// owning phase prefix for each checkpoint.</summary>
