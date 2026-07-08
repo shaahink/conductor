@@ -17,7 +17,7 @@ namespace Conductor.Ui;
 /// </summary>
 public sealed class LiveDashboard : IProgressSink
 {
-    private enum Modal { None, Thinking, Output, Docs, Git, Prompt, Status, Timeline, Replay, Health }
+    private enum Modal { None, Thinking, Output, Docs, Git, Prompt, Status, Timeline, Replay, Health, Confidence, Repo }
 
     private readonly Lock _gate = new();
     private readonly List<DashboardState.AgentLine> _agent = new();
@@ -166,6 +166,8 @@ public sealed class LiveDashboard : IProgressSink
             case ConsoleKey.L: OpenModal(Modal.Timeline); break;
             case ConsoleKey.F8: OpenModal(Modal.Replay); break;
             case ConsoleKey.H: OpenModal(Modal.Health); break;
+            case ConsoleKey.N: OpenModal(Modal.Confidence); break;
+            case ConsoleKey.B: OpenModal(Modal.Repo); break;
             case ConsoleKey.G when _plan?.StatusAgent is { Enabled: true }: StartStatusAgent(); break;
             case ConsoleKey.F: _tree = _tree with { Filter = PlanTree.NextFilter(_tree.Filter) }; break;
             case ConsoleKey.E: _tree = _tree with { ExpandAll = !_tree.ExpandAll }; break;
@@ -299,6 +301,8 @@ public sealed class LiveDashboard : IProgressSink
                     case ConsoleKey.L: OpenModal(Modal.Timeline); break;
                     case ConsoleKey.F8: OpenModal(Modal.Replay); break;
                     case ConsoleKey.H: OpenModal(Modal.Health); break;
+                    case ConsoleKey.N: OpenModal(Modal.Confidence); break;
+                    case ConsoleKey.B: OpenModal(Modal.Repo); break;
                     case ConsoleKey.I when _plan != null: _inputActive = true; _inputBuffer.Clear(); break;
                     case ConsoleKey.G when _plan?.StatusAgent is { Enabled: true }: StartStatusAgent(); break;
                     case ConsoleKey.F: _tree = _tree with { Filter = PlanTree.NextFilter(_tree.Filter) }; break;
@@ -324,7 +328,7 @@ public sealed class LiveDashboard : IProgressSink
                           else Log("Press K again to confirm KILL (any other key cancels)", LogSeverity.Waiting); }
                         break;
                     case ConsoleKey.Q: _pendingConfirm = null; _keys.Enqueue(ControlAction.StopAfterSession); break;
-                    case ConsoleKey.T or ConsoleKey.O or ConsoleKey.D or ConsoleKey.V or ConsoleKey.X or ConsoleKey.L or ConsoleKey.F8 or ConsoleKey.H or ConsoleKey.I or ConsoleKey.G:
+                    case ConsoleKey.T or ConsoleKey.O or ConsoleKey.D or ConsoleKey.V or ConsoleKey.X or ConsoleKey.L or ConsoleKey.F8 or ConsoleKey.H or ConsoleKey.N or ConsoleKey.B or ConsoleKey.I or ConsoleKey.G:
                         break; // handled above — non-destructive keys don't cancel pending confirm
                     default: _pendingConfirm = null; break; // any unmapped key cancels
                 }
@@ -424,6 +428,8 @@ public sealed class LiveDashboard : IProgressSink
             Modal.Timeline => ("timeline · transitions from the event log", TimelineLines()),
             Modal.Replay => ("replay · time-travel through the recorded run (F8)", ReplayLines()),
             Modal.Health => ("health · execution-health signals from the event log", HealthLines()),
+            Modal.Confidence => ("confidence · evidence count per checkpoint", ConfidenceLines()),
+            Modal.Repo => ("repo · branch, working tree, ahead/behind", RepoLines()),
             _ => ("", new List<string>()),
         };
         lock (_gate) { _modal = kind; _modalTitle = title; _modalLines = lines; _modalOffset = Math.Max(0, lines.Count - 1); }
@@ -525,6 +531,33 @@ public sealed class LiveDashboard : IProgressSink
         var report = Reporter.ReadHealth(_plan);
         if (report.Sessions == 0) return new() { "(no sessions recorded yet — health populates as the run emits events)" };
         return Conductor.Core.Events.HealthMetrics.Format(report).ToList();
+    }
+
+    /// <summary>Evidence-based confidence per checkpoint (B5.4, N) — shows how many evidence items back
+    /// each confirmed checkpoint. Derived from the tracker, not the event log.</summary>
+    private List<string> ConfidenceLines()
+    {
+        if (_plan == null) return new() { "(confidence unavailable in preview)" };
+        try
+        {
+            var track = Conductor.Core.Planning.ProgressProviderFactory.Create(_plan).Read(_plan);
+            var confidence = Reporter.ReadConfidence(track);
+            if (confidence.Count == 0) return new() { "(no checkpoints done yet — confidence populates as stages are confirmed)" };
+            return Conductor.Core.Events.Confidence.Format(confidence).ToList();
+        }
+        catch (Exception ex) { return new() { $"(confidence read failed: {ex.Message})" }; }
+    }
+
+    /// <summary>Live git snapshot (B5.4, B) — branch, HEAD, working-tree status, ahead/behind vs the
+    /// upstream tracking branch. A live query, not an event fold (B5 trap exemption).</summary>
+    private List<string> RepoLines()
+    {
+        if (_plan == null) return new() { "(repo info unavailable in preview)" };
+        try
+        {
+            return Conductor.Core.Events.RepoStrip.Format(Reporter.ReadRepoStrip(_plan)).ToList();
+        }
+        catch (Exception ex) { return new() { $"(repo read failed: {ex.Message})" }; }
     }
 
     private List<string> PromptLines()

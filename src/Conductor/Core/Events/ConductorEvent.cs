@@ -28,6 +28,7 @@ namespace Conductor.Core.Events;
 [JsonDerivedType(typeof(TokenDelta), "tokenDelta")]
 [JsonDerivedType(typeof(OwnerApprovalRequested), "ownerApprovalRequested")]
 [JsonDerivedType(typeof(OwnerApprovalGranted),   "ownerApprovalGranted")]
+[JsonDerivedType(typeof(McpCallFinished),       "mcpCallFinished")]
 public abstract record ConductorEvent
 {
     /// <summary>Monotonic 1-based ordinal within the log (continues across restarts). Stamped by
@@ -162,6 +163,18 @@ public sealed record OwnerApprovalRequested : ConductorEvent
 public sealed record OwnerApprovalGranted : ConductorEvent
 {
     public required string StageId { get; init; }
+}
+
+/// <summary>
+/// An MCP-compatible tool call completed (B5.4). Emitted by the agent provider when it parses a
+/// tool result from the stream. Forward-looking: the B9 MCP task server will emit these once MCP
+/// integration lands; until then the projection folds synthetic test streams only.
+/// </summary>
+public sealed record McpCallFinished : ConductorEvent
+{
+    public required string ToolName { get; init; }
+    public long DurationMs { get; init; }
+    public bool Success { get; init; }
 }
 
 /// <summary>Source-generated (de)serialisation for the event log — NDJSON, compact, camelCase, string

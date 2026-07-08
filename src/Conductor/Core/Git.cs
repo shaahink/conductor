@@ -28,4 +28,16 @@ public static class Git
         var shown = lines.Take(8).Select(l => l.Trim());
         return string.Join(", ", shown) + (lines.Length > 8 ? $" (+{lines.Length - 8} more)" : "");
     }
+
+    /// <summary>Returns (ahead, behind) counts vs the upstream tracking branch, or null if the branch has
+    /// no upstream configured (e.g. a detached HEAD, a local-only branch, or no remote).</summary>
+    public static (int Ahead, int Behind)? AheadBehind(string repo)
+    {
+        var r = Exec(repo, "rev-list", "--left-right", "--count", "@{upstream}...HEAD");
+        if (r.ExitCode != 0) return null;
+        var parts = r.Output.Trim().Split('\t');
+        if (parts.Length == 2 && int.TryParse(parts[0], out var behind) && int.TryParse(parts[1], out var ahead))
+            return (ahead, behind);
+        return null;
+    }
 }

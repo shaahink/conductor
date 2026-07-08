@@ -8,25 +8,20 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #36 (B5.3, deliver) — landed **B5.3**: `HealthMetrics` projection (pure fold →
-      retry rate + same-failure loop + gate repetition + gate oscillation + context saturation, all
-      from logged transitions: session outcomes + the gate battery) + `## Health` REPORT.md section +
-      TUI **H** panel. Conservative, injectable thresholds; a normal fail→fix cycle raises ZERO flags.
-      Reuses the tolerant event-log read (one source). +13 tests. 238→251.
-stage: **B5 IN PROGRESS** — B5.1, B5.2, B5.3 DONE. Next: B5.4 (confidence + MCP metrics + repo strip).
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 251 tests pass. Real recorded unhealthy run
-      (runId h1) folded via the in-tree `report` verb → ## Health: 2 Alerts (loop, gate-repetition) +
-      1 Warn (context-saturation), retry rate 67%. B5.3-gate.txt.
-qa: session #35/B5.2 deliver PASS — re-ran gate (build 0w/0e, 238 tests). Claim-1: 7 ReplayTests green.
-     Claim-2: in-tree `replay` reconstructed the 8-transition run (qa1) with correct time-travel state. No findings.
-next: **B5.4** — confidence per checkpoint (evidence count: tests/files/docs) + MCP call metrics +
-      repo-awareness strip (branch/dirty/ahead/behind). All PURE folds / read-only queries. See B5.md R5.4.
-trap: every B5 projection is a PURE fold over the single event log — never a parallel store that can
-      drift (B5 trap). Health thresholds stay conservative (false "looping" alarms erode trust) + unit-tested.
-      NB: no Thought/ToolCalled/Command events yet — B5.3 derives from sessions/gates; sharpens to tool
-      level when those events land (B9). B5.4 repo strip is a live git query, not an event fold.
+last: session #37 (B5.4, deliver) — landed **B5.4**: confidence per checkpoint (evidence count folded
+      from tracker rows) + `McpCallFinished` event + `McpMetrics` pure-fold projection + repo-awareness
+      strip (branch/dirty/ahead/behind, live git query) + `## Confidence`/`## MCP`/`## Repo` REPORT.md
+      sections + TUI **N** (confidence) and **B** (repo) panels. +24 tests. 251→275.
+stage: **B5 DONE** — all four checkpoints (B5.1 timeline, B5.2 replay, B5.3 health, B5.4 confidence/repo)
+      landed. Stage needs audit (audit=on in self-plan) before advancing to B6.
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 275 tests pass. B5.4-gate.txt.
+qa: session #36/B5.3 deliver PASS — re-ran gate (build 0w/0e, 251 tests pre-B5.4). Claim-1: 11
+     HealthMetricsTests green. Claim-2: Reporter.Build wires ## Health (ReporterTests.cs:64). No findings.
+next: B6 (Telegram + REPORT.md + Shamshir acceptance) — pending B5 audit pass.
+trap: McpCallFinished is forward-looking (B9 MCP integration); repo strip uses FormatStable in the
+      report so heartbeat no-op dedup doesn't break on HEAD drift (F-4).
 dirty: none.
-evidence: docs/baton/evidence/B5.3-gate.txt
+evidence: docs/baton/evidence/B5.4-gate.txt
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -81,7 +76,7 @@ never silent renumbering.
 | B5.1 | Timeline view (transitions with duration) from the event log | DONE | 69d70c2 | docs/baton/evidence/B5.1-gate.txt |
 | B5.2 | Replay / time-travel (F8) reconstructs a past run from events.jsonl | DONE | 6c876e5 | docs/baton/evidence/B5.2-gate.txt |
 | B5.3 | AI-health metrics (retry rate, command repetition, failure loops, tool oscillation, context saturation) | DONE | 17642cf | docs/baton/evidence/B5.3-gate.txt |
-| B5.4 | Confidence tracking per checkpoint (evidence count) + MCP call metrics + repo strip | TODO | | |
+| B5.4 | Confidence tracking per checkpoint (evidence count) + MCP call metrics + repo strip | DONE | 1507870 | docs/baton/evidence/B5.4-gate.txt |
 | B6.1 | Telegram client (long-poll getUpdates) + push (needs-human/owner-gate/complete/backoff) + /status | TODO | | |
 | B6.2 | Two-way control (inline-keyboard callback_query → control.json); chat-id allowlist; destructive confirm | TODO | | |
 | B6.3 | Richer REPORT.md (progress bars, collapsible per-stage, commit links) + clean heartbeat (no history pollution) | TODO | | |
