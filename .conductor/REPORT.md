@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 05:26 UTC · branch `feat/baton` · HEAD `7069c6c`_
+_Updated 2026-07-08 05:36 UTC · branch `feat/baton` · HEAD `4b003cb`_
 
-**Status:** Idle
+**Status:** Running
 **Stage:** B1 — Decouple Loom + pluggable progress providers · attempts used 0 · working ▸ B1.4
-**Checkpoints:** 9/65 done · **Sessions run:** 7 · **Cost:** $0.2585 · **Tokens:** 127,404 in / 99,323 out / 50,004 think
+**Checkpoints:** 9/65 done · **Sessions run:** 8 · **Cost:** $0.2585 · **Tokens:** 127,404 in / 99,323 out / 50,004 think
 **Confirmed phases:** B0
+
+## Latest activity (live)
+
+_Session #8 (Deliver) · running 10m · last output 88s ago · $0.0072_
+
+**Thinking:**
+> ADR-0001 deferred MA0009 (regex timeouts) to this checkpoint, affecting 7 sites, so I need to escalate MA0009 to error severity and add timeout constraints to all regex patterns. I'm checking the .editorconfig for MA0009's current severity level and locating all regex usages across the codebase, sta…
+> I'm identifying the regex sites that need timeout handling — there are several instances across different files where regex operations are being called without proper timeout protection.  The key design question is whether to keep using `[GeneratedRegex]` for the default case to maintain byte-identi…
+> I need to verify that the `plan` variable is accessible within the Orchestrator's HandoffWantsHuman method by checking the relevant sections of the code.
+
+**Recent actions:**
+- `06:31:05` » read tests\Conductor.Tests\TrackerParserTests.cs
+- `06:31:05` » grep MA0009
+- `06:31:05` » grep GeneratedRegex|new Regex|Regex\.Match|Regex\.Replace|Regex\.IsMatch
+- `06:34:40` » read src\Conductor\Core\DocsExtractor.cs
+- `06:34:41` » read src\Conductor\Core\Advisor.cs
+- `06:34:41` » read .editorconfig
+- `06:34:42` » read src\Conductor\Core\Orchestrator.cs
+- `06:34:42` · Now let me read the regex sites I must fix for the MA0009 ratchet, plus the editorconfig line and Orchestrator's human-token check.
+- `06:34:53` » read src\Conductor\Core\Orchestrator.cs
+- `06:34:53` » read src\Conductor\Core\Orchestrator.cs
 
 ## Stage progress
 
@@ -36,6 +57,7 @@ _Updated 2026-07-08 05:26 UTC · branch `feat/baton` · HEAD `7069c6c`_
 | 5 | B1 | Deliver | 1 | 07-08 04:02 | 0:12 | Advanced | B1.1 | 3 | build:OK | $0.0221 | 1,245/10,975 |
 | 6 | B1 | Deliver | 1 | 07-08 04:15 | 0:33 | Advanced | B1.2 | 5 | build:OK | $0.0241 | 1,297/10,939 |
 | 7 | B1 | Deliver | 1 | 07-08 04:49 | 0:37 | Advanced | B1.3 | 5 | build:OK | $0.0268 | 1,793/12,018 |
+| 8 | B1 | Deliver | 1 | 07-08 05:26 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
