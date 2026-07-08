@@ -1,32 +1,11 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 07:16 UTC · branch `feat/baton` · HEAD `ce7623d`_
+_Updated 2026-07-08 07:17 UTC · branch `feat/baton` · HEAD `6936490`_
 
-**Status:** Running
-**Stage:** B2 — Event-sourced backbone + provider decoupling · attempts used 0 · working ▸ B2.3
-**Checkpoints:** 15/65 done · **Sessions run:** 13 · **Cost:** $0.4712 · **Tokens:** 197,790 in / 188,809 out / 88,152 think
+**Status:** Idle
+**Stage:** B2 — Event-sourced backbone + provider decoupling · attempts used 0 · working ▸ B2.4
+**Checkpoints:** 16/65 done · **Sessions run:** 13 · **Cost:** $0.5263 · **Tokens:** 264,655 in / 202,152 out / 95,411 think
 **Confirmed phases:** B0, B1
-
-## Latest activity (live)
-
-_Session #13 (Deliver) · running 10m · last output 4s ago · $0.0492_
-
-**Thinking:**
-> 3 files changed — well within the ~15 file diff budget.  Now let me create the evidence file and update CONDUCTOR-START.md.  The test count went from 96 to 98 (+2: InterruptedSessionIsDetectedFromTruncatedEventStream, NoInterruptedSessionWhenAllSessionsHaveFinishedEvents).  Let me now produce the ev…
-> The evidence file only has the targeted test output. Let me add the full battery output too.
-> Now update CONDUCTOR-START.md: - Overwrite the `## Handoff` block - Update the B2.3 checkpoint row
-
-**Recent actions:**
-- `08:15:11` » edit tests\Conductor.Tests\RunStateProjectionTests.cs
-- `08:15:11` · The parity test for mixed complete+interrupted streams is fundamentally flawed — the projection correctly KNOWS about the interrupted session (that's the point …
-- `08:15:36` » bash dotnet build Conductor.slnx 2>&1; if ($?) { dotnet test Conductor.slnx --logger "console;verbosity=detailed" 2>&1 }
-- `08:15:42` » bash git diff --stat
-- `08:15:43` · All 98 tests pass, build 0w/0e. B2.3 complete. Let me verify the diff and check test count then create evidence:
-- `08:15:52` » bash dotnet test Conductor.slnx --filter "FullyQualifiedName~RunStateProjectionTests" --logger "console;verbosity=detailed" 2>&1
-- `08:15:59` · Diff: 3 files (+154/-11) — clean. Let me produce the evidence artifact and update the tracker:
-- `08:16:07` » bash dotnet test Conductor.slnx --filter "FullyQualifiedName~RunStateProjectionTests" 2>&1 | Out-File -LiteralPath "docs/baton/evidence/B2.3-gate.txt" -Encoding…
-- `08:16:22` » write docs\baton\evidence\B2.3-gate.txt
-- `08:16:22` · Let me produce a proper evidence file with full battery:
 
 ## Stage progress
 
@@ -34,7 +13,7 @@ _Session #13 (Deliver) · running 10m · last output 4s ago · $0.0492_
 |---|---|---|---|
 | B0 | Repo modernisation + self-hosting harness | 6/6 | confirmed ✓ |
 | B1 | Decouple Loom + pluggable progress providers | 7/7 | confirmed ✓ |
-| B2 | Event-sourced backbone + provider decoupling | 2/6 | **← active** |
+| B2 | Event-sourced backbone + provider decoupling | 3/6 | **← active** |
 | B3 | Safety, owner-gates & process control | 0/5 | todo |
 | B4 | TUI overhaul (alt-screen + tree) | 0/7 | todo |
 | B5 | Observability & health | 0/4 | todo |
@@ -62,14 +41,10 @@ _Session #13 (Deliver) · running 10m · last output 4s ago · $0.0492_
 | 10 | B1 | Audit | 1 | 07-08 06:04 | 0:17 | Progress |  | 3 |  | $0.0289 | 1,492/13,453 |
 | 11 | B2 | Deliver | 1 | 07-08 06:22 | 0:24 | Advanced | B2.1 | 4 | build:OK | $0.0441 | 2,334/21,533 |
 | 12 | B2 | Deliver | 1 | 07-08 06:47 | 0:18 | Advanced | B2.2 | 3 | build:OK | $0.0334 | 1,778/18,546 |
-| 13 | B2 | Deliver | 1 | 07-08 07:06 | … | running |  | 0 |  |  |  |
+| 13 | B2 | Deliver | 1 | 07-08 07:06 | 0:10 | Advanced | B2.3 | 3 | build:OK | $0.0551 | 66,865/13,343 |
 
 ### Commits by session
 
-- **s5 (B1 Deliver)** — 3 commit(s):
-  - 06c9c55 docs(bB1.1): tracker — record B1.1 commit hash 0aa242d
-  - 0aa242d feat(bB1.1): relocate Loom plan + templates to examples/loom/
-  - 648c727 chore(conductor): s5 B1 working ▸B1.1 @ 05:12
 - **s6 (B1 Deliver)** — 5 commit(s):
   - d0f5fbe docs(bB1.2): tracker — B1.2 DONE (ac306f5), handoff + QA verdict for session #6
   - 8406002 chore(conductor): s6 B1 working ▸B1.2 @ 05:45
@@ -108,6 +83,10 @@ _Session #13 (Deliver) · running 10m · last output 4s ago · $0.0492_
   - 6841c35 chore: fill B2.2 commit hash in tracker (e2b6a03)
   - e2b6a03 feat(bB2.2): RunState projection (fold the event log) + StateCompat parity
   - 571eb60 chore(conductor): s12 B2 working ▸B2.2 @ 07:57
+- **s13 (B2 Deliver)** — 3 commit(s):
+  - 6936490 chore: fill B2.3 commit hash in tracker (a5a6b85)
+  - a5a6b85 feat(bB2.3): crash recovery replays the event log
+  - bf15c10 chore(conductor): s13 B2 working ▸B2.3 @ 08:16
 
 ## Phase handovers (audit)
 
@@ -120,25 +99,26 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: Landed **B2.2** on `feat/baton` (commit `e2b6a03`, tracker hash filled by `6841c35`, pushed). `RunStateProjection.Fold(events)` rebuilds the durable `RunState` spine (plan/runId/currentStage/sessionCounter/confirmed+audited stages/History+cost+tokens) purely from the append-only log, and `StateProjectionParity.Diff` is an **explicit event-owned parity contract** that lists exactly which fields the log is authoritative for vs. which stay in `state.json` as cache. Proven by 4 new tests (92→96, build 0w/0e under warnings-as-errors): parity holds on a **verbatim real recorded orchestrator run** (2 sessions, one runId) *and* a Loom-shaped stream (audited+confirmed L0 + running L1 …
+> SESSION-RESULT: B2.3 landed — `RunStateProjection.FindInterruptedSession` detects unmatched SessionStarted events from the log, and `RecoverFromCrash` now has an event-log-based recovery leg as a safety net (additive — state.json recovery still primary). 98 tests (96→+2), build 0w/0e, clean working tree, pushed. Next: B2.4 (`IAgentProvider` + adapters). The hard part: designing the recovery complement so it doesn't destabilise the existing state.json path — the event log knows about crashes state.json doesn't (double-hard kill mid-session), but state.json still owns the transient control fields the log can't yet carry, so the two must coexist without conflicting (e.g., must not double-queue …
 
 ## Tracker handoff
 
 ```
-last: session #12 (B2, deliver) — landed **B2.2**. `RunStateProjection.Fold(events)` rebuilds the
-      RunState spine from the log; `StateProjectionParity.Diff` is the explicit event-owned surface.
-      Parity test folds a **real recorded run** + a Loom-shaped stream → each equals its legacy
-      state.json (diff empty). Additive: no cutover — state.json still written+authoritative. 96 tests (92→+4).
-stage: **B2 IN PROGRESS** — B2.1, B2.2 DONE; B2.3…B2.6 TODO. Battery GREEN.
-gate: GREEN — build 0w/0e; test 96 pass. Parity proven on a verbatim in-tree orchestrator run
-      (b22-qa, 11 events / 2 sessions / one runId) → docs/baton/evidence/B2.2-gate.txt.
-qa: session #11 (B2.1 deliver) PASS — (1) 5 EventLogTests green (round-trip/NDJSON/seq/torn-tail);
-      (2) reproduced the self-run independently → well-formed 11-event log, one runId, state.json parity. No findings.
-next: **B2.3** — crash recovery replays the event log (truncate a stream mid-session → queued resume).
-      Will likely need to event-source the pending/attempt surface the parity contract currently leaves as cache.
-trap: events + fold are IN-TREE only (STABLE driver from master can't emit) → evidence uses the in-tree
-      build; the driver still judges via gates+commit+tracker. Parity surface = spine only; transient
-      control fields (Status/attempts/Pending*/Skipped) stay in state.json until B2.3/B3 event-source them.
+last: session #13 (B2, deliver) — landed **B2.3**. `RunStateProjection.FindInterruptedSession` detects
+      SessionStarted without matching SessionFinished from the event log; `RecoverFromCrash` enhanced
+      with event-log-based recovery as a safety net (state.json still authoritative for transient fields).
+      98 tests (96→+2). Additive — no cutover, state.json recovery still works.
+stage: **B2 IN PROGRESS** — B2.1, B2.2, B2.3 DONE; B2.4…B2.6 TODO. Battery GREEN.
+gate: GREEN — build 0w/0e; test 98 pass. Recovery tests: truncated-stream detection + all-complete
+      negative case both green.
+qa: session #12 (B2.2 deliver) PASS — (1) 5 EventLogTests + 4 RunStateProjectionTests green;
+      (2) parity fixture (real 11-event recorded run) independently verified — diff empty,
+      guard-the-guard catches divergence. No findings.
+next: **B2.4** — IAgentProvider abstraction + Opencode/Claude/GenericText adapters; Orchestrator
+      provider-switch removed; plan selects by `agent.provider` (default inferred from output for
+      back-compat).
+trap: event-log recovery is a safety net; the state.json path stays the primary crash detector
+      because transient control fields (AttemptsThisStage, Pending*, etc.) still live there.
 dirty: none tracked.
-evidence: B2.2-gate.txt (+ earlier)
+evidence: B2.3-gate.txt (+ earlier)
 ```
