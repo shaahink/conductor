@@ -1,12 +1,12 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 18:13 UTC · branch `feat/baton` · HEAD `3bf449c`_
+_Updated 2026-07-08 18:20 UTC · branch `feat/baton` · HEAD `b659e70`_
 
 **Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B5 — Observability & health · attempts used 0
-**Checkpoints:** 35/65 done · **Sessions run:** 37 · **Cost:** $1.3926 · **Tokens:** 574,320 in / 542,661 out / 226,490 think
+**Checkpoints:** 35/65 done · **Sessions run:** 38 · **Cost:** $1.4561 · **Tokens:** 660,836 in / 550,470 out / 237,896 think
 **Confirmed phases:** B0, B1, B2, B3, B4
-**Pending:** auto-fix audit for B5
+**Pending:** full-battery phase gate for B5
 
 ## Stage progress
 
@@ -30,7 +30,6 @@ _Updated 2026-07-08 18:13 UTC · branch `feat/baton` · HEAD `3bf449c`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 8 | B1 | Deliver | 1 | 07-08 05:26 | 0:21 | Advanced | B1.4 | 4 | build:OK | $0.0318 | 1,646/14,600 |
 | 9 | B1 | Deliver | 1 | 07-08 05:48 | 0:15 | Advanced | B1.5 B1.6 B1.7 | 7 | build:OK | $0.0744 | 63,136/21,354 |
 | 10 | B1 | Audit | 1 | 07-08 06:04 | 0:17 | Progress |  | 3 |  | $0.0289 | 1,492/13,453 |
 | 11 | B2 | Deliver | 1 | 07-08 06:22 | 0:24 | Advanced | B2.1 | 4 | build:OK | $0.0441 | 2,334/21,533 |
@@ -60,17 +59,10 @@ _Updated 2026-07-08 18:13 UTC · branch `feat/baton` · HEAD `3bf449c`_
 | 35 | B5 | Deliver | 1 | 07-08 17:10 | 0:19 | Advanced | B5.2 | 3 | build:OK | $0.0370 | 1,719/19,977 |
 | 36 | B5 | Deliver | 1 | 07-08 17:30 | 0:24 | Advanced | B5.3 | 4 | build:OK | $0.0427 | 2,319/25,154 |
 | 37 | B5 | Deliver | 1 | 07-08 17:54 | 0:18 | Advanced | B5.4 | 2 | build:OK | $0.0750 | 61,596/21,872 |
+| 38 | B5 | Audit | 1 | 07-08 18:13 | 0:07 | Progress |  | 2 |  | $0.0635 | 86,516/7,809 |
 
 ### Commits by session
 
-- **s30 (B4 Deliver)** — 7 commit(s):
-  - 18099a0 docs(bB4.5): mark B4.5 DONE + update handoff (QA #29 PASS)
-  - e7801eb docs: add conductor-CLEANUP.md (86 heartbeats pending) + CONDUCTOR-NEXT.md §11-14 (dynamic plan, deepseek status, post-hoc audit, live prompting)
-  - c20cef4 chore(conductor): s30 B4 working ▸B4.5 @ 16:36
-  - 5b9db37 feat(bB4.5): structured thinking pane + tool-call folding
-  - 19a9c06 fix(bB4.5): de-couple RealLoomTracker smoke from foreign run's row count
-  - be63500 docs: add conductor-DEBT.md (B0-B3 audit followups) + CONDUCTOR-NEXT.md (post-baton feature proposals) + update read-order
-  - 4131c94 chore(conductor): s30 B4 working ▸B4.5 @ 16:26
 - **s31 (B4 Deliver)** — 3 commit(s):
   - e2e7ccc docs(bB4.6): mark B4.6 DONE + handoff (QA #30 PASS)
   - f4f2997 feat(bB4.6): command history search + filters
@@ -102,6 +94,9 @@ _Updated 2026-07-08 18:13 UTC · branch `feat/baton` · HEAD `3bf449c`_
 - **s37 (B5 Deliver)** — 2 commit(s):
   - 3bf449c feat(bB5.4): confidence per checkpoint + MCP call metrics + repo-awareness strip
   - 9076ec0 chore(conductor): s37 B5 working ▸B5.4 @ 19:04
+- **s38 (B5 Audit)** — 2 commit(s):
+  - b659e70 docs(bB5): audit handover — B5 observability & health phase close
+  - 31bebbd fix(bB5): audit — ReportCommand missing confidence/MCP/repo sections + cleanup
 
 ## Phase handovers (audit)
 
@@ -110,6 +105,7 @@ _Updated 2026-07-08 18:13 UTC · branch `feat/baton` · HEAD `3bf449c`_
 - `.conductor/handovers/B2.md`
 - `.conductor/handovers/B3.md`
 - `.conductor/handovers/B4.md`
+- `.conductor/handovers/B5.md`
 
 ## Last gate run
 
@@ -117,7 +113,7 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: B5.4 landed — confidence per checkpoint (evidence count parsed from tracker rows), `McpCallFinished` event + `McpMetrics` pure-fold projection, repo-awareness strip (branch/dirty/ahead/behind, live git query with non-git-repo resilience), all three wired into `## Confidence`/`## MCP`/`## Repo` REPORT.md sections + TUI N/B panels. +24 tests (251→275), build 0w/0e, commit 3bf449c pushed. Stage B5 is DONE — next session audits B5 then starts B6. Hard: the repo strip's volatile HEAD SHA silently broke the heartbeat no-op dedup (`TimestampOnlyRewriteDoesNotCreateDuplicateCommit` started failing after 45+ prior green runs) — fixed with `FormatStable` that omits the HEAD from the au…
+> SESSION-RESULT: Audit of B5 (Observability & health) complete — the phase is genuinely solid with all 5 projections (Timeline, Replay, HealthMetrics, Confidence, McpMetrics, RepoStrip) deriving from the single event log per the B5 trap, no parallel stores, no TODOs, no concurrency bugs. I fixed 3 issues: `conductor report` CLI command was missing confidence/MCP/repo sections (the runtime `WriteAndPublish` path was correct but the CLI verb lagged), an unused import in McpMetrics.cs, and a duplicate comment in Reporter.cs. Gate battery re-confirmed green: 0w/0e build, 275 tests pass. The 4 weak/deferred items (McpCallFinished events not emitted until B9, health heuristics proxy through session…
 
 ## Tracker handoff
 
