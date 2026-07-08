@@ -1,12 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 08:29 UTC · branch `feat/baton` · HEAD `3707016`_
+_Updated 2026-07-08 08:39 UTC · branch `feat/baton` · HEAD `270374e`_
 
-**Status:** Idle
+**Status:** Running
 **Stage:** B2 — Event-sourced backbone + provider decoupling · attempts used 0
-**Checkpoints:** 19/65 done · **Sessions run:** 16 · **Cost:** $0.7007 · **Tokens:** 337,017 in / 267,818 out / 120,969 think
+**Checkpoints:** 19/65 done · **Sessions run:** 17 · **Cost:** $0.7007 · **Tokens:** 337,017 in / 267,818 out / 120,969 think
 **Confirmed phases:** B0, B1
-**Pending:** auto-fix audit for B2
+
+## Latest activity (live)
+
+_Session #17 (Audit) · running 10m · last output 0s ago · $0.0121_
+
+**Thinking:**
+> The cleanest approach is to pass the conductor session number directly to `AgentSession.Start` so the TokenDelta receives the correct SessionId. Since `EventLog.Emit` doesn't stamp SessionId itself—that's per-event—the emitting site needs to set it explicitly. I'll add a `conductorSessionId` paramet…
+> I'm thinking through how to test that TokenDelta events properly carry the session ID when flowing through AgentSession's EventLog, and that LiveMetrics correctly folds them. The challenge is that AgentSession spawns a real process, making it hard to isolate. A cleaner approach would be to verify at…
+> I'm realizing I made a mistake with my string replacement — I inserted the new method before `ReadAllSucceedsWhileLiveWriterHoldsTheFile` but then added a closing brace that shut the class prematurely, which means the original method got cut off or lost in the process.
+
+**Recent actions:**
+- `09:37:52` » bash git diff db750a2ff8863a84a3cf0a3dff01b8165496bb94..HEAD -- src/Conductor/Conductor.csproj Directory.Packages.props; echo "===NoWarn/pragma scan==="; git di…
+- `09:38:01` · No analyzer suppressions - good. Now let me fix the primary bug. The fix: stamp `SessionId` on `TokenDelta`. The cleanest approach is to pass the current sessio…
+- `09:38:01` » read src\Conductor\Core\Orchestrator.cs
+- `09:38:21` · I've confirmed the primary bug: `TokenDelta` events are persisted without `SessionId`, so `LiveMetrics.ForSession` (the B2.6 deliverable) always returns zero ag…
+- `09:38:21` » edit src\Conductor\Core\AgentSession.cs
+- `09:38:31` » edit src\Conductor\Core\AgentSession.cs
+- `09:38:40` » edit src\Conductor\Core\Orchestrator.cs
+- `09:38:40` · Now update the Orchestrator call site to pass the conductor session number:
+- `09:39:02` · Now let me add a value-only test locking the fixed invariant: a `TokenDelta` with a `SessionId` survives the `EventLog` on-disk round-trip (Emit must not clobbe…
+- `09:39:02` » edit tests\Conductor.Tests\EventLogTests.cs
 
 ## Stage progress
 
@@ -46,6 +66,7 @@ _Updated 2026-07-08 08:29 UTC · branch `feat/baton` · HEAD `3707016`_
 | 14 | B2 | Deliver | 1 | 07-08 07:17 | 0:22 | Advanced | B2.4 | 4 | build:OK | $0.0395 | 1,813/20,904 |
 | 15 | B2 | Deliver | 1 | 07-08 07:40 | 0:36 | Advanced | B2.5 | 7 | build:OK | $0.0666 | 3,900/25,958 |
 | 16 | B2 | Deliver | 1 | 07-08 08:16 | 0:12 | Advanced | B2.6 | 2 | build:OK | $0.0683 | 66,649/18,804 |
+| 17 | B2 | Audit | 1 | 07-08 08:29 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
