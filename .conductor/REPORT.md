@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 17:10 UTC · branch `feat/baton` · HEAD `a8d50f3`_
+_Updated 2026-07-08 17:20 UTC · branch `feat/baton` · HEAD `aa0b2c5`_
 
-**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B5 — Observability & health · attempts used 0 · working ▸ B5.2
-**Checkpoints:** 32/65 done · **Sessions run:** 34 · **Cost:** $1.2380 · **Tokens:** 508,686 in / 475,658 out / 204,862 think
+**Checkpoints:** 32/65 done · **Sessions run:** 35 · **Cost:** $1.2380 · **Tokens:** 508,686 in / 475,658 out / 204,862 think
 **Confirmed phases:** B0, B1, B2, B3, B4
+
+## Latest activity (live)
+
+_Session #35 (Deliver) · running 10m · last output 2s ago · $0.0155_
+
+**Thinking:**
+> I'm mapping out the changes needed: adding a Replay modal type, wiring up F8 key handling in both preview and live modes, creating the replay modal case, implementing the ReplayLines method, updating the action bar to show the F8 shortcut, and integrating the Reporter's replay reading functionality.
+> I need to refine the switch statements to be more specific, particularly by adding the preview-specific default case that sets `_quitPreview = true`, and I should also include the F8 key handling in the HandlePreviewKey function.
+> I'm noticing that `ReadTimeline` doesn't have the null argument validation I added to `ReadReplay`, but since the code builds without issues, the analyzer rule CA1062 must be disabled or not applying here—I'll keep the validation consistent in `ReadReplay` anyway.  Now I'm moving on to the CLI `Repl…
+
+**Recent actions:**
+- `18:18:52` · Now the live `PollKeys` switch (line ~297) and its pending-confirm passthrough list (line ~323):
+- `18:18:52` » edit src\Conductor\Ui\LiveDashboard.cs
+- `18:19:01` » edit src\Conductor\Ui\LiveDashboard.cs
+- `18:19:09` · Now the `OpenModal` case + `ReplayLines()` provider (next to `TimelineLines`):
+- `18:19:09` » edit src\Conductor\Ui\LiveDashboard.cs
+- `18:19:26` » edit src\Conductor\Ui\LiveDashboard.cs
+- `18:19:40` · Now add `Reporter.ReadReplay` next to `ReadTimeline`:
+- `18:19:40` » edit src\Conductor\Core\Reporter.cs
+- `18:20:20` · Now add the `ReplayCommand` to Commands.cs (after ReportCommand):
+- `18:20:21` » edit {"filePath":"C:\\Code\\conductor-baton\\src\\Conductor\\Commands\\Commands.cs","newString":"/// <summary>Offline dashboard preview: renders the curren…
 
 ## Stage progress
 
@@ -29,7 +50,6 @@ _Updated 2026-07-08 17:10 UTC · branch `feat/baton` · HEAD `a8d50f3`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 5 | B1 | Deliver | 1 | 07-08 04:02 | 0:12 | Advanced | B1.1 | 3 | build:OK | $0.0221 | 1,245/10,975 |
 | 6 | B1 | Deliver | 1 | 07-08 04:15 | 0:33 | Advanced | B1.2 | 5 | build:OK | $0.0241 | 1,297/10,939 |
 | 7 | B1 | Deliver | 1 | 07-08 04:49 | 0:37 | Advanced | B1.3 | 5 | build:OK | $0.0268 | 1,793/12,018 |
 | 8 | B1 | Deliver | 1 | 07-08 05:26 | 0:21 | Advanced | B1.4 | 4 | build:OK | $0.0318 | 1,646/14,600 |
@@ -59,6 +79,7 @@ _Updated 2026-07-08 17:10 UTC · branch `feat/baton` · HEAD `a8d50f3`_
 | 32 | B4 | Deliver | 1 | 07-08 15:58 | 0:20 | Advanced | B4.7 | 5 | build:OK | $0.0360 | 2,120/14,866 |
 | 33 | B4 | Audit | 1 | 07-08 16:18 | 0:14 | Progress |  | 2 |  | $0.0191 | 1,034/10,114 |
 | 34 | B5 | Deliver | 1 | 07-08 16:33 | 0:36 | Advanced | B5.1 | 5 | build:OK | $0.0634 | 2,544/24,659 |
+| 35 | B5 | Deliver | 1 | 07-08 17:10 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
