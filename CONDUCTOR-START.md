@@ -93,7 +93,7 @@ never silent renumbering.
 | B9.2 | Planner persona decomposes active checkpoint → ordered sub-tasks | DONE | 87a7c72 | tests/Conductor.Tests/PlannerTests.cs (6 tests) |
 | B9.3 | MCP task server (task_list/task_update/task_add) — persists agent todo list across sessions | DONE | 92371d7 | tests/Conductor.Tests/McpTaskServerTests.cs (7 tests) |
 | B9.4 | Cooperative soft-break (finish sub-task→handoff→fresh session) + hard token-ceiling fresh-start fallback | DONE | e078820 | docs/baton/evidence/B9.4-gate.txt |
-| B9.5 | Task views in CLI/TUI/Telegram | DONE | | docs/baton/evidence/B9.5-gate.txt |
+| B9.5 | Task views in CLI/TUI/Telegram | DONE | 1fa665c | docs/baton/evidence/B9.5-gate.txt |
 | B10.1 | stages[].dependsOn graph + smarter ready-stage ordering (sequential exec preserved) | TODO | | |
 | B10.2 | First-class hierarchical stages in state + reports | TODO | | |
 | B10.3 | Per-stage pre/post hooks beyond gates | TODO | | |
