@@ -58,7 +58,7 @@ never silent renumbering.
 | B2.1 | ConductorEvent schema + append-only events.jsonl writer (additive, alongside state.json) | DONE | d5ebd12 | docs/baton/evidence/B2.1-gate.txt |
 | B2.2 | Projections: RunState rebuilt by folding the log; StateCompat parity tests | DONE | e2b6a03 | docs/baton/evidence/B2.2-gate.txt |
 | B2.3 | Crash recovery replays the event log (not just state.json) | DONE | a5a6b85 | docs/baton/evidence/B2.3-gate.txt |
-| B2.4 | IAgentProvider + Opencode/Claude/GenericText adapters; Orchestrator provider-switch removed | DONE | | docs/baton/evidence/B2.4-gate.txt |
+| B2.4 | IAgentProvider + Opencode/Claude/GenericText adapters; Orchestrator provider-switch removed | DONE | 8e1ceb4 | docs/baton/evidence/B2.4-gate.txt |
 | B2.5 | Host/DI/Options + Microsoft.Extensions.Logging + Serilog sinks; no silent catch {} | TODO | | |
 | B2.6 | TokenDelta events per step_finish (fixes live-token lag F-3) | TODO | | |
 | B3.1 | Destructive-action confirm in TUI (A/K/S) + CLI (--yes/interactive) | TODO | | |
