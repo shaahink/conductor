@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 20:27 UTC · branch `feat/baton` · HEAD `dc68331`_
+_Updated 2026-07-08 20:41 UTC · branch `feat/baton` · HEAD `16fa4cf`_
 
-**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B7 — Specialist sub-agent personas · attempts used 1
-**Checkpoints:** 43/65 done · **Sessions run:** 44 · **Cost:** $1.8045 · **Tokens:** 998,604 in / 643,051 out / 281,141 think
+**Checkpoints:** 43/65 done · **Sessions run:** 46 · **Cost:** $1.8045 · **Tokens:** 998,604 in / 643,051 out / 281,141 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6
+
+## Latest activity (live)
+
+_Session #46 (Resume) · running 10m · last output 55s ago · $0.0231_
+
+**Thinking:**
+> 5 consecutive runs, all 306 pass. The test is stable now. The single failure was likely a stale build or system load issue.  But I'm still not 100% confident. On extreme CI conditions (very slow, single CPU, antivirus), the drain task could still take >5 seconds to start. Let me think about whether …
+> Let me look at the constructor where `_drain = Task.Run(DrainAsync)` is called.
+> Now let me build and run the tests.
+
+**Recent actions:**
+- `21:36:24` » bash git add -A; if ($?) { git commit -m "fix(bB7): harden EventLog file-creation race + flaky test fix  Gate output: - dotnet build Conductor.slnx — Build succ…
+- `21:36:32` » bash git push
+- `21:37:33` » bash dotnet build Conductor.slnx 2>&1; Write-Host "---"; dotnet test Conductor.slnx 2>&1 | Select-Object -Last 5
+- `21:37:42` » read tests\Conductor.Tests\EventLogTests.cs
+- `21:37:51` » bash dotnet test Conductor.slnx --filter "ReadAllSucceedsWhileLiveWriterHoldsTheFile" --verbosity detailed 2>&1 | Select-Object -Last 40
+- `21:38:56` » bash dotnet test Conductor.slnx 2>&1 | Select-Object -Last 10
+- `21:40:13` » bash for ($i=1; $i -le 5; $i++) { Write-Host "Run $i"; dotnet test Conductor.slnx --no-build 2>&1 | Select-Object -Last 3 }
+- `21:40:39` » read src\Conductor\Core\Events\EventLog.cs
+- `21:40:39` · The test still has a fragility window: `Task.Run` uses the thread pool, which can delay task startup on loaded machines. Let me use `TaskCreationOptions.LongRun…
+- `21:40:44` » edit src\Conductor\Core\Events\EventLog.cs
 
 ## Stage progress
 
@@ -29,8 +50,6 @@ _Updated 2026-07-08 20:27 UTC · branch `feat/baton` · HEAD `dc68331`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 15 | B2 | Deliver | 1 | 07-08 07:40 | 0:36 | Advanced | B2.5 | 7 | build:OK | $0.0666 | 3,900/25,958 |
-| 16 | B2 | Deliver | 1 | 07-08 08:16 | 0:12 | Advanced | B2.6 | 2 | build:OK | $0.0683 | 66,649/18,804 |
 | 17 | B2 | Audit | 1 | 07-08 08:29 | 0:19 | Progress |  | 2 |  | $0.0312 | 1,801/11,248 |
 | 18 | B3 | Deliver | 1 | 07-08 08:49 | 0:29 | Advanced | B3.1 B3.2 B3.3 B3.4 B3.5 | 7 | build:OK | $0.1464 | 90,298/38,170 |
 | 19 | B3 | Audit | 1 | 07-08 09:19 | 0:19 | Progress |  | 3 |  | $0.0385 | 2,178/19,271 |
@@ -59,6 +78,8 @@ _Updated 2026-07-08 20:27 UTC · branch `feat/baton` · HEAD `dc68331`_
 | 42 | B6 | Audit | 1 | 07-08 19:54 | 0:06 | Progress |  | 1 |  | $0.0606 | 87,266/8,743 |
 | 43 | B7 | Deliver | 1 | 07-08 20:00 | 0:19 | Advanced | B7.1 B7.2 B7.3 | 2 | build:OK | $0.0911 | 77,080/28,917 |
 | 44 | B7 | Audit | 1 | 07-08 20:20 | 0:05 | Progress |  | 1 |  | $0.0380 | 52,381/7,163 |
+| 45 | B7 | Fix | 2 | 07-08 20:27 | 0:04 | Interrupted |  | 0 |  |  |  |
+| 46 | B7 | Resume | 2r1 | 07-08 20:31 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
@@ -97,38 +118,6 @@ _Updated 2026-07-08 20:27 UTC · branch `feat/baton` · HEAD `dc68331`_
 - `.conductor/handovers/B5.md`
 - `.conductor/handovers/B6.md`
 - `.conductor/handovers/B7.md`
-
-## Last gate run
-
-build:FAIL · tests:FAIL
-
-<details><summary>build — exit -1</summary>
-
-```
-Determining projects to restore...
-  All projects are up-to-date for restore.
-```
-</details>
-
-<details><summary>tests — exit 1</summary>
-
-```
-Test run for C:\Code\conductor-baton\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0)
-A total of 1 test files matched the specified pattern.
-[xUnit.net 00:00:02.86]     Conductor.Tests.EventLogTests.ReadAllSucceedsWhileLiveWriterHoldsTheFile [FAIL]
-  Failed Conductor.Tests.EventLogTests.ReadAllSucceedsWhileLiveWriterHoldsTheFile [2 s]
-  Error Message:
-   Assert.Equal() Failure: Values differ
-Expected: 2
-Actual:   0
-  Stack Trace:
-     at Conductor.Tests.EventLogTests.ReadAllSucceedsWhileLiveWriterHoldsTheFile() in C:\Code\conductor-baton\tests\Conductor.Tests\EventLogTests.cs:line 185
-   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
-   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
-
-Failed!  - Failed:     1, Passed:   305, Skipped:     0, Total:   306, Duration: 8 s - Conductor.Tests.dll (net10.0)
-```
-</details>
 
 ## Last session result
 
