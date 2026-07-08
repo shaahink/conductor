@@ -20,7 +20,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         RegexOptions.IgnoreCase);
 
     private readonly PromptBuilder _prompts = new(plan);
-    private readonly IProgressProvider _progress = new MarkdownTableProvider();
+    private readonly IProgressProvider _progress = ProgressProviderFactory.Create(plan);
     private IReadOnlyList<GateResult>? _lastGates;
     private bool _pendingSkip;
     private bool _pausePending;

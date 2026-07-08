@@ -18,6 +18,10 @@ public sealed class PlanConfig
     public HookConfig? Setup { get; set; }
     /// <summary>Optional command run after each gate battery to stop anything the session/gates left running.</summary>
     public HookConfig? Teardown { get; set; }
+    /// <summary>Selects and configures the progress provider (B1.3). Default = markdown-table (Loom's
+    /// strict TRACKER.md), so existing plans are unchanged. `script` and `plan-checkpoints` are the
+    /// escape hatches for projects whose progress isn't a strict markdown table (F-1, D-2).</summary>
+    public ProgressConfig Progress { get; set; } = new();
     public List<StageConfig> Stages { get; set; } = new();
     public List<GateConfig> Gates { get; set; } = new();
     /// <summary>"perSession" (full battery after every session) or "perPhase" (fast-tier gates per
@@ -72,6 +76,44 @@ public sealed class PlanConfig
         if (errors.Count > 0)
             throw new InvalidOperationException("Invalid plan config:\n  - " + string.Join("\n  - ", errors));
     }
+}
+
+/// <summary>Progress-provider selection + config (B1.3, D-2). `Kind` picks the implementation; the
+/// nested blocks configure the non-default providers. The default `markdown-table` needs no config —
+/// it reads <see cref="PlanConfig.TrackerPath"/> exactly as Conductor always has.</summary>
+public sealed class ProgressConfig
+{
+    /// <summary>"markdown-table" (default), "script", or "plan-checkpoints".</summary>
+    public string Kind { get; set; } = "markdown-table";
+
+    /// <summary>Config for the `script` provider (runs a command that prints checkpoint JSON).</summary>
+    public ScriptProviderConfig? Script { get; set; }
+
+    /// <summary>Checkpoints declared inline in the plan (the `plan-checkpoints` provider).</summary>
+    public List<PlanCheckpoint>? Checkpoints { get; set; }
+}
+
+/// <summary>Config for the script progress provider: a plan-owned command whose stdout is a JSON array
+/// of checkpoint objects (<c>{ id, title, status, commit, evidence }</c>). Resilient by contract —
+/// a missing script or malformed JSON surfaces as a clear error, never a crash (B1.3 trap).</summary>
+public sealed class ScriptProviderConfig
+{
+    /// <summary>PowerShell command line, run in the repo root with real exit-code capture.</summary>
+    public string Command { get; set; } = "";
+    /// <summary>Working dir relative to repo root (default: repo root).</summary>
+    public string? Cwd { get; set; }
+    public int TimeoutMinutes { get; set; } = 2;
+}
+
+/// <summary>A checkpoint declared inline in the plan JSON (the `plan-checkpoints` provider). Mirrors a
+/// tracker row so it folds into the same <c>CheckpointRow</c> contract the engine already consumes.</summary>
+public sealed class PlanCheckpoint
+{
+    public string Id { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string Status { get; set; } = "TODO";
+    public string Commit { get; set; } = "";
+    public string Evidence { get; set; } = "";
 }
 
 public sealed class AgentConfig
