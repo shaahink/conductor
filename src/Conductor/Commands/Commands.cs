@@ -149,6 +149,77 @@ public sealed class ReportCommand : Command<PlanSettings>
     }
 }
 
+/// <summary>
+/// B5.2 — replay / time-travel viewer. Reconstructs a past run from its append-only
+/// <c>events.jsonl</c>, printing every transition in order with the run state reconstructed as of
+/// that moment (the same fold the TUI <c>F8</c> modal renders). The source is an explicit path to an
+/// <c>events.jsonl</c> (or a repo/dir containing <c>.conductor/events.jsonl</c>); omit it to replay
+/// the current plan's log.
+/// </summary>
+public sealed class ReplayCommand : Command<ReplayCommand.Settings>
+{
+    public sealed class Settings : PlanSettings
+    {
+        [CommandArgument(0, "[SOURCE]")]
+        [Description("Path to an events.jsonl, or a repo/dir containing .conductor/events.jsonl. Omit to use the plan's log (--plan / CONDUCTOR_PLAN).")]
+        public string? Source { get; init; }
+    }
+
+    public override int Execute(CommandContext context, Settings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        var logPath = ResolveLogPath(settings);
+        if (logPath == null || !File.Exists(logPath))
+        {
+            AnsiConsole.MarkupLine($"[red]no event log found[/]{(logPath != null ? $" at {Markup.Escape(logPath)}" : "")} — pass a path to events.jsonl, or use --plan.");
+            return 1;
+        }
+
+        var events = EventLog.ReadAll(logPath);
+        var steps = Replay.Build(events);
+        if (steps.Count == 0)
+        {
+            AnsiConsole.MarkupLine($"[yellow]event log has no transitions to replay[/] ({Markup.Escape(logPath)}).");
+            return 0;
+        }
+
+        var runId = events.Select(e => e.RunId).FirstOrDefault(r => !string.IsNullOrEmpty(r)) ?? "?";
+        AnsiConsole.WriteLine($"replay · {logPath}");
+        AnsiConsole.WriteLine($"run {runId} · {events.Count} events · {steps.Count} transitions");
+        AnsiConsole.WriteLine(new string('-', 72));
+        foreach (var line in steps.SelectMany(Replay.FormatStep))
+            AnsiConsole.WriteLine(line);
+        AnsiConsole.WriteLine(new string('-', 72));
+        AnsiConsole.WriteLine("final: " + Replay.FormatState(steps[^1].StateAsOf));
+        return 0;
+    }
+
+    // A given source may be a direct events.jsonl, a repo/dir (→ .conductor/events.jsonl), or absent
+    // (→ the resolved plan's log). A given-but-missing path is returned as-is so the caller's
+    // File.Exists check surfaces the exact path in the error.
+    private static string? ResolveLogPath(Settings settings)
+    {
+        if (!string.IsNullOrWhiteSpace(settings.Source))
+        {
+            if (File.Exists(settings.Source)) return settings.Source;
+            if (Directory.Exists(settings.Source))
+            {
+                var nested = Path.Combine(settings.Source, ".conductor", "events.jsonl");
+                if (File.Exists(nested)) return nested;
+                var direct = Path.Combine(settings.Source, "events.jsonl");
+                return File.Exists(direct) ? direct : nested;
+            }
+            return settings.Source;
+        }
+        try
+        {
+            var plan = PlanConfig.Load(settings.ResolvePlanPath());
+            return Path.Combine(plan.StateDir, "events.jsonl");
+        }
+        catch (InvalidOperationException) { return null; }
+    }
+}
+
 /// <summary>Offline dashboard preview: renders the current plan/tracker state (read-only) with
 /// representative synthetic session data, so the UI can be verified without running the plan.</summary>
 public sealed class PreviewCommand : Command<PlanSettings>

@@ -1,0 +1,82 @@
+# B5.2 evidence — replay / time-travel viewer (conductor replay + TUI F8) from the event log
+# Produced: 2026-07-08  (session #35, stage B5, attempt 1)
+# In-tree build: C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.dll
+#
+# WHY the in-tree build (not the STABLE driver) produced the replay artifact:
+#   B5.2 adds NEW behaviour (the Replay projection + `conductor replay` verb + TUI F8 modal) that
+#   exists ONLY in this worktree's build. The STABLE bin\conductor.exe from master has no replay verb,
+#   so the artifact can only come from the in-tree binary. The STABLE driver still JUDGES this
+#   checkpoint the usual way (build gate + tests + new commit + tracker row flip).
+# =============================================================================
+
+### GATE BATTERY (green) ###
+$ dotnet build Conductor.slnx
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+$ dotnet test Conductor.slnx
+Passed!  - Failed:     0, Passed:   238, Skipped:     0, Total:   238 - Conductor.Tests.dll (net10.0)
+# 231 → 238 : +7 tests
+#   ReplayTests (7):
+#     ReconstructsEveryTransitionInSeqOrder                 (gate: past run's key events in order — asserts the seq sequence)
+#     TimeTravel_StateAsOfReflectsOnlyEventsUpToThatStep    (rewind invariant: a later confirmation never leaks into an earlier frame)
+#     FinalStateEqualsTheFoldedRunState_NoDrift             (B5 trap: terminal cost/tokens == RunStateProjection.Fold — no parallel store)
+#     FoldIsDeterministicRegardlessOfInputOrder             (pure fold, ordered by Seq)
+#     FormatStepRendersTheTransitionThenTheAsOfStrip        (2 lines/step: shared Timeline line + indented as-of state)
+#     EmptyLogYieldsNoSteps
+#     TokenDeltaIsNotATransition_NoPhantomStep_NoDoubleCount (deltas are LiveMetrics accrual, not a transition)
+
+### REAL RUN — replay reconstructs a recorded run from events.jsonl (A6: ran the verb for real) ###
+# Source: a recorded 8-event run (runId qa1) at
+#   C:\Users\shahi\AppData\Local\Temp\opencode\b5-qa\.conductor\events.jsonl
+# Command that produced the artifact:
+#   dotnet run --project src\Conductor -- replay <events.jsonl>
+#
+# Each transition is paired with the run state reconstructed AS OF that moment (time-travel): the
+# "↳ as-of" strip shows only what the run knew up to that event — e.g. checkpoints climb 0→1 at the
+# S1.1-confirmed step, session #1's cost ($0.0003 / 230/140 tok) does not appear until it finishes,
+# and the durations are the same computed spans the REPORT.md Timeline renders (one shared source).
+#
+replay · C:\Users\shahi\AppData\Local\Temp\opencode\b5-qa\.conductor\events.jsonl
+run qa1 · 8 events · 8 transitions
+------------------------------------------------------------------------
+07-08 11:00:00  ◆ run started · B5QA
+     ↳ stage - · sessions 0/0 · gates 0✓ 0✗ · 0 cp · $0.0000
+07-08 11:00:05  ▸ stage S1 entered — Smoke
+     ↳ stage S1 · sessions 0/0 · gates 0✓ 0✗ · 0 cp · $0.0000
+07-08 11:00:10  • session #1 S1 Deliver started (attempt 1/4)
+     ↳ stage S1 · sessions 0/1 · gates 0✓ 0✗ · 0 cp · $0.0000
+07-08 11:00:40  ▪ gate build pass [session]  (1.5s)
+     ↳ stage S1 · sessions 0/1 · gates 1✓ 0✗ · 0 cp · $0.0000
+07-08 11:01:20  • session #1 S1 → Advanced · done S1.1 · 1 commit(s)  (1m10s)
+     ↳ stage S1 · sessions 1/1 · gates 1✓ 0✗ · 0 cp · $0.0003 · 230/140 tok
+07-08 11:01:21  ✓ checkpoint S1.1 confirmed
+     ↳ stage S1 · sessions 1/1 · gates 1✓ 0✗ · 1 cp · $0.0003 · 230/140 tok
+07-08 11:01:30  ▸ stage S1 confirmed  (1m25s)
+     ↳ stage S1 · sessions 1/1 · gates 1✓ 0✗ · 1 cp · $0.0003 · 230/140 tok
+07-08 11:01:35  ◆ run finished — Completed · 1/1 checkpoints  (1m35s)
+     ↳ stage S1 · sessions 1/1 · gates 1✓ 0✗ · 1 cp · $0.0003 · 230/140 tok
+------------------------------------------------------------------------
+final: stage S1 · sessions 1/1 · gates 1✓ 0✗ · 1 cp · $0.0003 · 230/140 tok
+
+### SOURCE RESOLUTION (three ways in, one error path) ###
+$ conductor replay <dir>            → resolves <dir>\.conductor\events.jsonl   (exit 0, replays qa1)
+$ conductor replay -p <plan.json>   → resolves plan.StateDir\events.jsonl      (exit 0, replays qa1)
+$ conductor replay <missing.jsonl>  → "no event log found at …" (exit 1)
+
+### TUI — replay/time-travel modal wired (F8) ###
+# The action bar now advertises the pop-out; F8 opens the replay modal, which renders the SAME fold
+# via Reporter.ReadReplay + Replay.FormatStep (the data path the CLI artifact above exercises) through
+# the already-tested modal pager (DashboardRenderer.BuildModal, DocsAndModalTests
+# .ModalRendersWithScrollPositionAndDoesNotThrow; scroll/close via HandleModalKey):
+#   [T] think · [O] history · [L] timeline · [F8] replay · [C] fold · [↑↓] select · [D] docs · [V] git · …
+
+### QA of previous session (#34, B5.1 deliver) — VERDICT: PASS ###
+# Re-ran its stated gate: build 0w/0e, 231 tests green (the pre-B5.2 baseline).
+# Claim 1 (tests): 12 targeted green — TimelineTests (8) + ReporterTests timeline (2) + 2 more Reporter.
+# Claim 2 (running artifact): the in-tree `report` verb folded a recorded events.jsonl into a
+#   `## Timeline` section with correct COMPUTED spans (session 1m10s = 10:01:20−10:00:10, stage
+#   1m25s = 10:01:30−10:00:05, run 1m35s, gate 1.5s from durationMs). Durations computed, not stored.
+# No findings; B5.1's Timeline fold + REPORT section + L modal hold. B5.2 reuses Timeline.Build so
+# both projections render identical transition lines from the single event log (no drift).

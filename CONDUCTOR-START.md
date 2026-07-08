@@ -8,22 +8,24 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #34 (B5.1, deliver) — landed **B5.1**: `Timeline` projection (pure fold over the event
-      log → ordered transitions with durations) + REPORT.md `## Timeline` section + TUI timeline modal
-      (`L` key). Session/stage/run spans computed from start↔finish ts; gate span from durationMs;
-      TokenDelta excluded (LiveMetrics owns accrual — B5 trap: no drift store). +10 tests. 221→231.
-stage: **B5 IN PROGRESS** — B5.1 DONE. Next: B5.2 (replay/time-travel F8) → B5.3 → B5.4.
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 231 tests pass. Real events.jsonl folded via
-      3× `--once` smoke (runId 4821958…) → REPORT timeline with correct spans. B5.1-gate.txt.
-qa: session #33/B4 audit PASS — re-ran gate (build 0w/0e, 221 tests). Claim-1: 8 severity/idempotent-
-     restore tests green. Claim-2: in-tree preview exit 0, clean frame, 'sessions unreported' label. No findings.
-next: **B5.2** — replay/time-travel viewer (`conductor replay <run>` + TUI F8) reconstructs a past run
-      from events.jsonl in order; reuse Timeline.Build + the tested modal pager. See B5.md R5.2.
-trap: timeline is a PURE fold over the single event log — never a parallel store (B5 trap). Everything
-      B5 (replay/health/confidence) reads the same log. Durations are computed, not persisted. Tracker
-      B5.1 (this row) ≠ conductor-DEBT.md's "B5.1" (that's a LiveMetrics-wiring followup, FU-B2-1).
+last: session #35 (B5.2, deliver) — landed **B5.2**: `Replay` projection (pure fold → ordered steps,
+      each transition paired with the run state reconstructed AS OF that point: stage/sessions/gates/
+      checkpoints/cost/tokens) + `conductor replay <path|dir|plan>` CLI + TUI **F8** modal. Reuses
+      Timeline.Build (one renderer) + the tested modal pager. +7 tests. 231→238.
+stage: **B5 IN PROGRESS** — B5.1, B5.2 DONE. Next: B5.3 (AI-health metrics) → B5.4.
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 238 tests pass. Real recorded run (runId qa1)
+      replayed via the in-tree `replay` verb → 8 transitions with correct time-travel state. B5.2-gate.txt.
+qa: session #34/B5.1 deliver PASS — re-ran gate (build 0w/0e, 231 tests). Claim-1: 12 Timeline/Reporter
+     tests green. Claim-2: in-tree `report` folded events.jsonl → `## Timeline` w/ correct computed spans. No findings.
+next: **B5.3** — AI-health metrics (retry rate, same-command repetition, same-failure loops, tool
+      oscillation, context saturation) as PURE folds over events.jsonl; health panel + report section.
+      Conservative thresholds (false "looping" alarms erode trust — unit-test them). See B5.md R5.3.
+trap: every B5 projection is a PURE fold over the single event log — never a parallel store that can
+      drift (B5 trap). Replay's terminal cost/tokens == RunStateProjection.Fold (proven, no drift).
+      NB: current schema has no Thought/ToolCalled/Command events — B5.3 metrics must derive from the
+      transitions that ARE logged (sessions/gates/outcomes/attention), or emit new events first.
 dirty: none.
-evidence: docs/baton/evidence/B5.1-gate.txt
+evidence: docs/baton/evidence/B5.2-gate.txt
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -76,7 +78,7 @@ never silent renumbering.
 | B4.6 | Command history search + filters (/build /git /test; commands/thoughts/errors) | DONE | f4f2997 | docs/baton/evidence/B4.6-gate.txt, docs/baton/evidence/B4.6-preview.txt |
 | B4.7 | Live-consistent token line + plan-tree filter/search for large plans; doc-on-select | DONE | 1f61578, c1edb3b | docs/baton/evidence/B4.7-gate.txt, docs/baton/evidence/B4.7-tokens-preview.txt, docs/baton/evidence/B4.7-docselect-preview.txt |
 | B5.1 | Timeline view (transitions with duration) from the event log | DONE | 69d70c2 | docs/baton/evidence/B5.1-gate.txt |
-| B5.2 | Replay / time-travel (F8) reconstructs a past run from events.jsonl | TODO | | |
+| B5.2 | Replay / time-travel (F8) reconstructs a past run from events.jsonl | DONE | <commit> | docs/baton/evidence/B5.2-gate.txt |
 | B5.3 | AI-health metrics (retry rate, command repetition, failure loops, tool oscillation, context saturation) | TODO | | |
 | B5.4 | Confidence tracking per checkpoint (evidence count) + MCP call metrics + repo strip | TODO | | |
 | B6.1 | Telegram client (long-poll getUpdates) + push (needs-human/owner-gate/complete/backoff) + /status | TODO | | |
