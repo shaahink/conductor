@@ -1,32 +1,11 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 22:05 UTC · branch `feat/baton` · HEAD `9a0b44e`_
+_Updated 2026-07-08 22:11 UTC · branch `feat/baton` · HEAD `3a68af5`_
 
-**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B9 — Task graph + smart session management · attempts used 0 · working ▸ B9.4
-**Checkpoints:** 51/65 done · **Sessions run:** 55 · **Cost:** $2.1461 · **Tokens:** 1,349,955 in / 729,507 out / 333,656 think
+**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B9 — Task graph + smart session management · attempts used 0 · working ▸ B9.5
+**Checkpoints:** 52/65 done · **Sessions run:** 55 · **Cost:** $2.2180 · **Tokens:** 1,423,187 in / 746,636 out / 343,043 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8
-
-## Latest activity (live)
-
-_Session #55 (Deliver) · running 10m · last output 0s ago · $0.0452_
-
-**Thinking:**
-> Now I need to add the helper methods at the bottom of Orchestrator.cs (before the closing brace). Let me add: 1. `CheckSoftBreak` - soft-break detection 2. `FoldMcpJournal` - MCP journal merge 3. `BuildRolloverResumeHint` - task-graph-aware resume context 4. `ComputeSoftThreshold` - utility  Let me …
-> Now I need to also reset `_softBreakSignalled` at the start of each session. Let me add that in the `RunSession` method, near the beginning where other session fields are initialized. Let me find the right place.  Looking at lines 320-340 in the updated file, the SessionRecord is created. I should r…
-> Now add the `CleanSoftBreakSignal` helper. I'll add it in the helper section.
-
-**Recent actions:**
-- `23:04:04` · Now add MCP journal fold after agent exit and before the RolledOver check:
-- `23:04:04` » edit src\Conductor\Core\Orchestrator.cs
-- `23:04:14` » edit src\Conductor\Core\Orchestrator.cs
-- `23:04:14` · Now update the `RolledOver` path with task-graph-aware resume context:
-- `23:04:43` » edit src\Conductor\Core\Orchestrator.cs
-- `23:04:43` · Now add the helper methods. Let me add them at the end of the class, before the closing brace:
-- `23:04:55` » edit src\Conductor\Core\Orchestrator.cs
-- `23:04:55` · Reset `_softBreakSignalled` at the start of each session:
-- `23:05:14` · Add the signal cleanup helper:
-- `23:05:14` » edit src\Conductor\Core\Orchestrator.cs
 
 ## Stage progress
 
@@ -41,7 +20,7 @@ _Session #55 (Deliver) · running 10m · last output 0s ago · $0.0452_
 | B6 | AFK + two-way Telegram | 5/5 | confirmed ✓ |
 | B7 | Specialist sub-agent personas | 3/3 | confirmed ✓ |
 | B8 | Brain layer | 5/5 | confirmed ✓ |
-| B9 | Task graph + smart session management | 3/5 | **← active** |
+| B9 | Task graph + smart session management | 4/5 | **← active** |
 | B10 | Advanced orchestration | 0/4 | todo |
 | B11 | Close-out + Shamshir owner-gated proof | 0/4 | todo |
 | B12 | Controlled parallelism | 0/4 | todo |
@@ -79,12 +58,10 @@ _Session #55 (Deliver) · running 10m · last output 0s ago · $0.0452_
 | 52 | B9 | Fix | 4 | 07-08 21:24 | 0:00 | AgentError |  | 0 | build:OK |  |  |
 | 53 | B9 | Fix | 5 | 07-08 21:26 | 0:06 | Advanced | B9.1 | 2 | build:OK | $0.0212 | 29,881/4,286 |
 | 54 | B9 | Deliver | 1 | 07-08 21:33 | 0:21 | Advanced | B9.2 B9.3 | 5 | build:OK | $0.0818 | 59,955/26,063 |
-| 55 | B9 | Deliver | 1 | 07-08 21:55 | … | running |  | 0 |  |  |  |
+| 55 | B9 | Deliver | 1 | 07-08 21:55 | 0:16 | Advanced | B9.4 | 3 | build:OK | $0.0719 | 73,232/17,129 |
 
 ### Commits by session
 
-- **s42 (B6 Audit)** — 1 commit(s):
-  - 5317709 fix(bB6): audit-harden Telegram + reporter — fix shutdown race, bare catch, thread-safety, unused import
 - **s43 (B7 Deliver)** — 2 commit(s):
   - bd318f8 feat(bB7): Specialist sub-agent personas — B7.1-B7.3
   - 9c3f7fd chore(conductor): s43 B7 working ▸B7.1 @ 21:10
@@ -110,6 +87,10 @@ _Session #55 (Deliver) · running 10m · last output 0s ago · $0.0452_
   - da88cf5 chore(conductor): s54 B9 working ▸B9.2 @ 22:53
   - 87a7c72 feat(bB9.2): planner decomposition — IPlanner + CheckpointPlanner + orchestrator integration + tests
   - 469209b chore(conductor): s54 B9 working ▸B9.2 @ 22:43
+- **s55 (B9 Deliver)** — 3 commit(s):
+  - 3a68af5 chore(bB9.4): fix commit hash in tracker row
+  - e078820 feat(bB9.4): cooperative soft-break + hard fallback + MCP journal fold
+  - 4bca6b1 chore(conductor): s55 B9 working ▸B9.4 @ 23:05
 
 ## Phase handovers (audit)
 
@@ -129,19 +110,22 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: B9.2 and B9.3 landed — IPlanner/CheckpointPlanner + orchestrator integration (planner decomposition emits TaskAdded events on first planner-persona Deliver session per checkpoint) and McpTaskServer (MCP JSON-RPC 2.0 stdio server with task_list/task_update/task_add, journal-persisted across sessions). 349 tests pass (+13), build 0w/0e. B9.4-B9.5 NOT started. Next session should tackle B9.4 (soft-break prompt injection + register MCP server with agent config + token-watchdog during session loop) and B9.5 (CLI/TUI/Telegram task views). What was hard: Unicode character encoding in `CheckpointPlanner` splitters (the `→` arrow got corrupted on file write, fixed via Unicode escape `…
+> SESSION-RESULT:** B9.4 landed — cooperative soft-break (SoftBreakRatio default 0.8, polls live agent tokens in the session loop, emits SoftBreakRequested event + writes .conductor/soft-break signal file), hard ceiling RolledOver now includes task-graph resume hint ("next sub-task:"), and McpTaskServer side journal is folded into events.jsonl after session exit. Build 0w/0e, 363 tests pass (+14 SoftBreakTests). What is red: nothing. Next session should deliver B9.5 (task views in CLI/TUI/Telegram). What was hard: designing a mid-session soft-break mechanism when the conductor cannot inject into the agent's stdin mid-flight — the nudge is a signal file the agent can optionally check; the hard …
 
 ## Tracker handoff
 
 ```
-last: session #55 (B9.2+9.3) — delivered B9.2 (IPlanner/CheckpointPlanner + orchestrator
-       integration) and B9.3 (McpTaskServer: MCP JSON-RPC 2.0 stdio server exposing
-       task_list/task_update/task_add with journal-persist across sessions).
-stage: B9.1 DONE. B9.2 DONE. **B9.3 DONE** — MCP task server + 7 tests landed.
-       B9.4–B9.5 NOT started. McpTaskServer is not yet registered with the agent-config;
-       that integration (plus the actual orchestrator journal-fold on resume) is B9.4's job.
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 349 tests pass (+7 from B9.3).
+last: session #57 (B9.4) — delivered cooperative soft-break + hard fallback + MCP journal fold.
+stage: B9.1–B9.3 DONE. **B9.4 DONE** — SoftBreakRequested event, signal file, task-graph-aware
+       RolledOver resume hint, MCP journal merged into events.jsonl after session exit.
+       B9.4 land: Orchestrator polls live tokens in the session loop against SoftBreakRatio
+       (default 0.8 of MaxSessionTokens), emits softBreakRequested, writes .conductor/soft-break
+       file; hard ceiling still RollsOver with next sub-task in the log line. McpTaskServer
+       journal is folded into the event log post-session. 14 new tests.
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 363 tests pass (+14 SoftBreakTests).
 dirty: none.
-next: B9.4 (cooperative soft-break + hard fallback + register MCP server with agent).
-evidence: 92371d7 (B9.3 commit), 87a7c72 (B9.2 commit)
+next: B9.5 (task views in CLI/TUI/Telegram).
+evidence: docs/baton/evidence/B9.4-gate.txt
+qa: B9.2 PlannerTests 6/6 pass, B9.3 McpTaskServerTests 7/7 pass, 349→363 total. Verdict PASS.
+     McpTaskServer has no production wiring (known — B9.4 adds journal fold; full wire-in deferred).
 ```
