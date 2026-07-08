@@ -1,32 +1,11 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 18:41 UTC · branch `feat/baton` · HEAD `9f4a0ee`_
+_Updated 2026-07-08 18:48 UTC · branch `feat/baton` · HEAD `9c04782`_
 
-**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B6 — AFK + two-way Telegram · attempts used 0 · working ▸ B6.1
-**Checkpoints:** 35/65 done · **Sessions run:** 39 · **Cost:** $1.4561 · **Tokens:** 660,836 in / 550,470 out / 237,896 think
+**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B6 — AFK + two-way Telegram · attempts used 0 · working ▸ B6.5
+**Checkpoints:** 39/65 done · **Sessions run:** 39 · **Cost:** $1.5837 · **Tokens:** 752,707 in / 590,343 out / 253,299 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5
-
-## Latest activity (live)
-
-_Session #39 (Deliver) · running 20m · last output 3s ago · $0.0991_
-
-**Thinking:**
-> Now register WebhookNotifier in ConductorHost and wire it in the Orchestrator's Notify method. Let me update ConductorHost first.
-> Now update the Orchestrator constructor to accept WebhookNotifier and wire it in the Notify method.
-> Now update the Notify method to also fire webhooks.
-
-**Recent actions:**
-- `19:39:36` · Fix the commit link extraction — commits are formatted as `SHA message`:
-- `19:40:36` » bash dotnet build Conductor.slnx 2>&1; if ($?) { dotnet test Conductor.slnx --no-build 2>&1 }
-- `19:40:43` » todowrite 2 todos
-- `19:40:43` · B6.3 done. Now B6.4 — notify hooks. Let me wire the webhook/Discord/Slack configs:
-- `19:41:05` » write src\Conductor\Core\Integrations\WebhookNotifier.cs
-- `19:41:05` · Create a webhook notifier service:
-- `19:41:18` » edit src\Conductor\Core\Hosting\ConductorHost.cs
-- `19:41:18` · Register WebhookNotifier in ConductorHost:
-- `19:41:25` » edit src\Conductor\Core\Orchestrator.cs
-- `19:41:25` · Update Orchestrator constructor and Notify:
 
 ## Stage progress
 
@@ -38,7 +17,7 @@ _Session #39 (Deliver) · running 20m · last output 3s ago · $0.0991_
 | B3 | Safety, owner-gates & process control | 5/5 | confirmed ✓ |
 | B4 | TUI overhaul (alt-screen + tree) | 7/7 | confirmed ✓ |
 | B5 | Observability & health | 4/4 | confirmed ✓ |
-| B6 | AFK + two-way Telegram | 0/5 | **← active** |
+| B6 | AFK + two-way Telegram | 4/5 | **← active** |
 | B7 | Specialist sub-agent personas | 0/3 | todo |
 | B8 | Brain layer | 0/5 | todo |
 | B9 | Task graph + smart session management | 0/5 | todo |
@@ -79,14 +58,10 @@ _Session #39 (Deliver) · running 20m · last output 3s ago · $0.0991_
 | 36 | B5 | Deliver | 1 | 07-08 17:30 | 0:24 | Advanced | B5.3 | 4 | build:OK | $0.0427 | 2,319/25,154 |
 | 37 | B5 | Deliver | 1 | 07-08 17:54 | 0:18 | Advanced | B5.4 | 2 | build:OK | $0.0750 | 61,596/21,872 |
 | 38 | B5 | Audit | 1 | 07-08 18:13 | 0:07 | Progress |  | 2 |  | $0.0635 | 86,516/7,809 |
-| 39 | B6 | Deliver | 1 | 07-08 18:21 | … | running |  | 0 |  |  |  |
+| 39 | B6 | Deliver | 1 | 07-08 18:21 | 0:26 | Advanced | B6.1 B6.2 B6.3 B6.4 | 3 | build:OK | $0.1276 | 91,871/39,873 |
 
 ### Commits by session
 
-- **s31 (B4 Deliver)** — 3 commit(s):
-  - e2e7ccc docs(bB4.6): mark B4.6 DONE + handoff (QA #30 PASS)
-  - f4f2997 feat(bB4.6): command history search + filters
-  - 43cfa0d chore(conductor): s31 B4 working ▸B4.6 @ 16:48
 - **s32 (B4 Deliver)** — 5 commit(s):
   - 6714efe chore(conductor): s32 B4 working ▸B4.7 @ 17:18
   - c6eadb0 docs(bB4.7): mark B4.7 DONE + handoff (B4 complete; QA #31 PASS)
@@ -117,6 +92,10 @@ _Session #39 (Deliver) · running 20m · last output 3s ago · $0.0991_
 - **s38 (B5 Audit)** — 2 commit(s):
   - b659e70 docs(bB5): audit handover — B5 observability & health phase close
   - 31bebbd fix(bB5): audit — ReportCommand missing confidence/MCP/repo sections + cleanup
+- **s39 (B6 Deliver)** — 3 commit(s):
+  - 9c04782 feat(bB6.1-4): Telegram + richer REPORT.md + webhook notifier
+  - 6c0c5c7 chore(conductor): s39 B6 working ▸B6.1 @ 19:41
+  - 9f4a0ee chore(conductor): s39 B6 working ▸B6.1 @ 19:31
 
 ## Phase handovers (audit)
 
@@ -129,27 +108,26 @@ _Session #39 (Deliver) · running 20m · last output 3s ago · $0.0991_
 
 ## Last gate run
 
-build:OK · tests:OK
+build:OK
 
 ## Last session result
 
-> SESSION-RESULT: Audit of B5 (Observability & health) complete — the phase is genuinely solid with all 5 projections (Timeline, Replay, HealthMetrics, Confidence, McpMetrics, RepoStrip) deriving from the single event log per the B5 trap, no parallel stores, no TODOs, no concurrency bugs. I fixed 3 issues: `conductor report` CLI command was missing confidence/MCP/repo sections (the runtime `WriteAndPublish` path was correct but the CLI verb lagged), an unused import in McpMetrics.cs, and a duplicate comment in Reporter.cs. Gate battery re-confirmed green: 0w/0e build, 275 tests pass. The 4 weak/deferred items (McpCallFinished events not emitted until B9, health heuristics proxy through session…
+> SESSION-RESULT: Landed B6.1-4 in one commit (`9c04782`): Telegram long-poll `IHostedService` with push + `/status` + two-way inline-keyboard control→`control.json` (chat-id allowlist, destructive confirm); richer REPORT.md (progress bars, collapsible `<details>`, commit links) + clean heartbeat (zero git commits on feature branch for heartbeat writes, F-4 resolved); `WebhookNotifier` (generic/Discord/Slack fire-and-forget); +20 tests, 295 total green. B6.5 Shamshir acceptance dry-run verified (stable driver parses P-0/P0.1 conventions) but full headless execution requires a real Shamshir repo. Next session should either execute B6.5 against a real Shamshir codebase or advance to B7 (personas…
 
 ## Tracker handoff
 
 ```
-last: session #37 (B5.4, deliver) — landed **B5.4**: confidence per checkpoint (evidence count folded
-      from tracker rows) + `McpCallFinished` event + `McpMetrics` pure-fold projection + repo-awareness
-      strip (branch/dirty/ahead/behind, live git query) + `## Confidence`/`## MCP`/`## Repo` REPORT.md
-      sections + TUI **N** (confidence) and **B** (repo) panels. +24 tests. 251→275.
-stage: **B5 DONE** — all four checkpoints (B5.1 timeline, B5.2 replay, B5.3 health, B5.4 confidence/repo)
-      landed. Stage needs audit (audit=on in self-plan) before advancing to B6.
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 275 tests pass. B5.4-gate.txt.
-qa: session #36/B5.3 deliver PASS — re-ran gate (build 0w/0e, 251 tests pre-B5.4). Claim-1: 11
-     HealthMetricsTests green. Claim-2: Reporter.Build wires ## Health (ReporterTests.cs:64). No findings.
-next: B6 (Telegram + REPORT.md + Shamshir acceptance) — pending B5 audit pass.
-trap: McpCallFinished is forward-looking (B9 MCP integration); repo strip uses FormatStable in the
-      report so heartbeat no-op dedup doesn't break on HEAD drift (F-4).
+last: session #39 (B6.1-4, deliver) — landed **B6.1** (Telegram long-poll + push + /status via
+      IHostedService, 20 tests), **B6.2** (two-way inline-keyboard → control.json, allowlist +
+      destructive confirm), **B6.3** (richer REPORT.md: progress bars + collapsible per-stage +
+      commit links; clean heartbeat: no heartbeat git commits), **B6.4** (WebhookNotifier:
+      generic/Discord/Slack fire-and-forget).
+stage: **B6 IN PROGRESS** — B6.1-4 done. B6.5 (Shamshir acceptance) dry-run verified; full headless
+       execution needs a real Shamshir repo.
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 295 tests pass. B6.1-gate.txt.
+qa: session #37/B5.4 deliver PASS — 11 HealthMetricsTests green confirmed; Reporter ## Health at
+    line 105 confirmed. No findings.
+next: B6.5 execution against real Shamshir repo, or advance to B7.
 dirty: none.
-evidence: docs/baton/evidence/B5.4-gate.txt
+evidence: docs/baton/evidence/B6.1-gate.txt, docs/baton/audits/B6-shamshir-acceptance.md
 ```
