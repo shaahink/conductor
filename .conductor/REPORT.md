@@ -1,12 +1,11 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 09:38 UTC · branch `feat/baton` · HEAD `d427650`_
+_Updated 2026-07-08 09:39 UTC · branch `feat/baton` · HEAD `3cbd5e7`_
 
 **Status:** Idle
 **Stage:** B3 — Safety, owner-gates & process control · attempts used 0
 **Checkpoints:** 24/65 done · **Sessions run:** 19 · **Cost:** $0.9168 · **Tokens:** 431,294 in / 336,507 out / 158,939 think
-**Confirmed phases:** B0, B1, B2
-**Pending:** full-battery phase gate for B3
+**Confirmed phases:** B0, B1, B2, B3
 
 ## Stage progress
 
@@ -15,7 +14,7 @@ _Updated 2026-07-08 09:38 UTC · branch `feat/baton` · HEAD `d427650`_
 | B0 | Repo modernisation + self-hosting harness | 6/6 | confirmed ✓ |
 | B1 | Decouple Loom + pluggable progress providers | 7/7 | confirmed ✓ |
 | B2 | Event-sourced backbone + provider decoupling | 6/6 | confirmed ✓ |
-| B3 | Safety, owner-gates & process control | 5/5 | gating… |
+| B3 | Safety, owner-gates & process control | 5/5 | confirmed ✓ |
 | B4 | TUI overhaul (alt-screen + tree) | 0/7 | todo |
 | B5 | Observability & health | 0/4 | todo |
 | B6 | AFK + two-way Telegram | 0/5 | todo |
@@ -101,7 +100,7 @@ _Updated 2026-07-08 09:38 UTC · branch `feat/baton` · HEAD `d427650`_
 
 ## Last gate run
 
-build:OK
+build:OK · tests:OK
 
 ## Last session result
 
