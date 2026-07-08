@@ -175,12 +175,15 @@ public class EventLogTests
             log.Emit(new SessionStarted { Number = 1, StageId = "B2", Kind = "Deliver" });
 
             IReadOnlyList<ConductorEvent> events = [];
-            // Poll briefly: the drain task flushes asynchronously, so wait for the writer to land the
-            // lines — the point is that reading NEVER throws while the writer is open.
-            for (var i = 0; i < 50 && events.Count < 2; i++)
+            // Poll: the drain task flushes asynchronously. Give it a generous window — slow CI
+            // machines may take several seconds to schedule the background task and flush. The
+            // point is that reading NEVER throws while the writer is open (sharing violation).
+            // Small initial sleep gives the drain task time to start before the first poll.
+            Thread.Sleep(100);
+            for (var i = 0; i < 100 && events.Count < 2; i++)
             {
                 events = EventLog.ReadAll(path); // must not throw despite the open writer
-                if (events.Count < 2) Thread.Sleep(20);
+                if (events.Count < 2) Thread.Sleep(50);
             }
             Assert.Equal(2, events.Count);
             Assert.IsType<RunStarted>(events[0]);

@@ -45,6 +45,14 @@ public sealed class EventLog : IEventSink, IAsyncDisposable, IDisposable
         var dir = Path.GetDirectoryName(path);
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
+        // Touch the file so crash recovery (ReadAll) and live-read tests never race with
+        // the drain task for file creation. FileMode.Append inside DrainAsync will open it
+        // eagerly anyway — this just removes a timing window where the file doesn't exist yet.
+        if (!File.Exists(path))
+        {
+            using var fs = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
+        }
+
         // Continue the sequence across restarts so a resumed run's events stay monotonically ordered.
         _seq = File.Exists(path) ? CountLines(path) : 0;
 

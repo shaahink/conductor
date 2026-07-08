@@ -8,19 +8,17 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #43 (B7, deliver) — landed **B7.1–B7.3** (specialist sub-agent personas):
-       per-stage AgentConfig override (Merge over plan default); 9 built-in persona templates +
-       disk files at plans/personas/*.md; PromptBuilder prepends persona system prompt ahead of
-       contract rules; persona shown in SessionStarted event, dashboard header, reporter stage
-       line, and timeline entries. Self-plan persona hints converted to real "persona" fields.
+last: session #45 (B7, fix) — fixed flaky test ReadAllSucceedsWhileLiveWriterHoldsTheFile:
+       root cause was race between async drain task file creation and ReadAll polling.
+       EventLog constructor now creates the file upfront (FileMode.CreateNew) so file
+       always exists when readers probe it; test poll widened to 100x50ms + 100ms initial
+       delay for slow CI. Previous session #44 audit fixes (path traversal guard, IO error
+       resilience, dead field removal, hyphen regex) retained and verified.
 stage: **B7 DONE** — B7.1 (schema), B7.2 (registry), B7.3 (prompt merge + surface) all DONE.
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 306 tests pass (11 new).
-qa: session #41/B6.5 deliver PASS — Shamshir tests verified (3/3); evidence artifact reviewed
-     and content-asserted. Pre-existing flaky test ReadAllSucceedsWhileLiveWriterHoldsTheFile
-     fails ~50% (timing-dependent event log flush); not introduced by B7. No findings.
-next: B8 (brain layer) or B7 audit fix-session.
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 306 tests pass.
 dirty: none.
-evidence: docs/baton/evidence/B7-gate.txt
+next: B8 (brain layer).
+evidence: docs/baton/evidence/B7-gate.txt; `.conductor/handovers/B7.md` (audit details)
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
