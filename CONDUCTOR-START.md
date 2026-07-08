@@ -8,17 +8,17 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #59 (B10.1) — delivered dependsOn graph + ready-stage ordering.
-stage: B10 in progress — B10.1 DONE.
-       B10.1 land: StageConfig.DependsOn: List<string>?; cycle/self/unknown-dep validation at load;
-       SelectStage() replaced with IsReady() that checks all deps satisfied before a stage is eligible.
-       Original plan.Stages order preserved among ready stages. 7 new tests (B10_1DependsOnTests).
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 379 tests pass (+7 B10.1 tests).
+last: session #59 (B10.2-B10.4) — all B10 checkpoints DONE.
+stage: B10 COMPLETE — B10.2 hierarchical stages, B10.3 pre/post hooks, B10.4 battery collapse.
+       B10.2 land: StageConfig.ParentId + StageProgress.Depth; indented rendering in PlanTree + Reporter.
+       B10.3 land: StageConfig.PreHook/PostHook; RunState.PreHookRunStages; pre-hook blocks (NeedsHuman).
+       B10.4 land: PlanConfig.BatteryCollapse; agent prompted to skip build+test; Conductor sole verifier.
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 406 tests pass (+27 B10.2-4 tests).
 dirty: none.
-next: B10.2 (hierarchical stages in model/state/report/tree).
-evidence: docs/baton/evidence/B10.1-gate.txt
-qa: B9.5 gate re-verified: TaskViewTests 4/4 pass, CLI `conductor tasks --help` renders, TUI U key
-      wired, Telegram BuildTasksText() wired. Verdict PASS — no regressions.
+next: B11.1 (cross-platform gate runner).
+evidence: docs/baton/evidence/B10.2-gate.txt, B10.3-gate.txt, B10.4-gate.txt
+qa: B10.1 gate re-verified: 7/7 DependsOn tests pass, IsReady() logic confirmed in Orchestrator.cs:790-796.
+    Verdict PASS — dependOn graph correct, no regressions. Also verified: B9.5 task views (TaskViewTests 4/4).
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -95,7 +95,7 @@ never silent renumbering.
 | B10.1 | stages[].dependsOn graph + smarter ready-stage ordering (sequential exec preserved) | DONE | 9750665 | docs/baton/evidence/B10.1-gate.txt |
 | B10.2 | First-class hierarchical stages in state + reports | DONE | 0e1c1f7 | docs/baton/evidence/B10.2-gate.txt |
 | B10.3 | Per-stage pre/post hooks beyond gates | DONE | 6fa8938 | docs/baton/evidence/B10.3-gate.txt |
-| B10.4 | Collapse double gate battery (agent ritual + conductor) → one source of truth; measured token drop | TODO | | |
+| B10.4 | Collapse double gate battery (agent ritual + conductor) → one source of truth; measured token drop | DONE | 5cb82f2 | docs/baton/evidence/B10.4-gate.txt |
 | B11.1 | Cross-platform gate runner (bash/sh alongside PowerShell via gates[].shell) | TODO | | |
 | B11.2 | dotnet tool packaging + tab completion + conductor doctor | TODO | | |
 | B11.3 | ADRs finalised; StateCompat + clean-clone battery | TODO | | |
