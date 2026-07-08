@@ -8,15 +8,14 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #62 (B11.1) — cross-platform gate runner landed.
-stage: B11.1 DONE — gates[].shell ∈ powershell|bash|sh; ProcessRunner.RunShell dispatch;
-       15 new tests pass (+424 total). Build 0w/0e.
-gate: GREEN — 424 passed / 0 failed / 0 skipped. 0 warnings, 0 errors.
+last: session #63 (B11.2-B11.4) — dotnet tool packaging + tab completion + doctor + ADRs + clean-clone + Shamshir P2.2 owner-gated acceptance.
+stage: B11 DONE — all 4 checkpoints landed.
+gate: GREEN — 432 passed / 0 failed / 0 skipped. Build 0w/0e. Clean-clone battery passes.
 dirty: none.
-next: B11.2 (dotnet tool packaging + completion + conductor doctor).
-QA-B10: verified PreHookRunStages fix (code), stdout-capture test (FailingHookCapturesStdout).
-followups: FU-B10-1 (integration harness), FU-B10-2 (token measurement), FU-B10-3 (timeout validation).
-evidence: docs/baton/evidence/B11.1-gate.txt
+next: B12.1 (Tier A read-only analysis lanes) or B12 fix-lanes from followups.
+QA-B11.1: verified RunShell dispatch (ProcessRunner.cs:70-86), 15 B11.1 tests (B11_1Tests.cs).
+followups: MA0002 (38 sites), MA0045 (28 sites) — deferred from B0.2, tracked per ADR-0001.
+evidence: docs/baton/evidence/B11.2-gate.txt (packing+doctor+completion), B11.3-gate.txt (ADRs+clean-clone), B11.4-gate.txt + audits/B11-shamshir-p2.2.md (owner-gate acceptance).
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -95,9 +94,9 @@ never silent renumbering.
 | B10.3 | Per-stage pre/post hooks beyond gates | DONE | 6fa8938 | docs/baton/evidence/B10.3-gate.txt |
 | B10.4 | Collapse double gate battery (agent ritual + conductor) → one source of truth; measured token drop | DONE | 5cb82f2 | docs/baton/evidence/B10.4-gate.txt |
 | B11.1 | Cross-platform gate runner (bash/sh alongside PowerShell via gates[].shell) | DONE | 3ba9d2b | docs/baton/evidence/B11.1-gate.txt |
-| B11.2 | dotnet tool packaging + tab completion + conductor doctor | TODO | | |
-| B11.3 | ADRs finalised; StateCompat + clean-clone battery | TODO | | |
-| B11.4 | **Acceptance: drive a full owner-gated Shamshir phase (parity-pipeline P2.2)** | TODO | | |
+| B11.2 | dotnet tool packaging + tab completion + conductor doctor | DONE | 16e8532 | docs/baton/evidence/B11.2-gate.txt |
+| B11.3 | ADRs finalised; StateCompat + clean-clone battery | DONE | 746b164 | docs/baton/evidence/B11.3-gate.txt |
+| B11.4 | **Acceptance: drive a full owner-gated Shamshir phase (parity-pipeline P2.2)** | DONE | b04a264 | docs/baton/evidence/B11.4-gate.txt, docs/baton/audits/B11-shamshir-p2.2.md |
 | B12.1 | Tier A read-only analysis lanes (arch/design/qa/research, scratch cwd, artifacts feed prompts+handover) | TODO | | |
 | B12.2 | Worker pool + concurrency cap + brain scheduling (opt-in per task-type) | TODO | | |
 | B12.3 | Tier B isolated-worktree mutating lanes → full-battery MERGE GATE before acceptance | TODO | | |
