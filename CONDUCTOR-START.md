@@ -7,16 +7,19 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: (none yet) — plan authored on `feat/baton`, deliverables committed, nothing executed.
-stage: **B0 NOT STARTED** (B0.1–B0.6 all TODO).
-gate: not run. Baseline: `dotnet build` + `dotnet test` (56 tests) on `net9.0` before B0 migrates to net10.
-next: **B0.1** — migrate to net10.0, add Directory.Build.props + Directory.Packages.props +
-      .editorconfig + Meziantou.Analyzer + Conductor.slnx; keep 56 tests green under warnings-as-errors.
-dirty: none.
-trap: the DRIVER binary is `master`'s bin\conductor.exe — never point the self-plan's agent at the
-      binary it is editing; run gates via the stable driver. Do NOT touch C:\Code\conductor (master)
-      or the live DevContext2-ui Loom run.
-evidence: (none yet)
+last: session #1 (B0, deliver) — landed **B0.1** (net10 + central build/packages), **B0.2**
+      (analyzers + warnings-as-errors, curated ruleset, real fixes), **B0.6** (ADR-0001 + ADR-0002).
+stage: **B0 IN PROGRESS** — B0.1/B0.2/B0.6 DONE; B0.3/B0.4/B0.5 TODO.
+gate: GREEN on net10 — `dotnet build Conductor.slnx` 0w/0e (warnings-as-errors); `dotnet test` 56 pass.
+      Evidence: docs/baton/evidence/B0.1-gate.txt, B0.2-gate.txt.
+qa: previous (plan-authoring) session PASS — 56 tests verified; stable driver compiled the real B0
+    prompt (.conductor/logs/session-001.prompt.md, 3930B) + tracker parses 65 rows. No findings.
+next: **B0.5** (baseline audit doc, file:line citations — doc-only, safe now) then **B0.3/B0.4**.
+trap: B0.3/B0.4 need `conductor.exe run --dry-run/--once` but the LIVE driver holds .conductor lock
+      while a session runs — do NOT spawn a nested driver mid-session (state.json corruption risk);
+      run them when the driver is idle. Ratchet followups owed: MA0045 (B2), MA0002 (post-B2), MA0009 (B1.4).
+dirty: none tracked (.conductor/ is driver runtime, internally gitignored).
+evidence: docs/baton/evidence/B0.1-gate.txt, docs/baton/evidence/B0.2-gate.txt, docs/baton/adr/000{1,2}-*.md
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -37,12 +40,12 @@ never silent renumbering.
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| B0.1 | net10 migration + Directory.Build.props + Directory.Packages.props (verify existing Conductor.slnx) | TODO | | |
-| B0.2 | .editorconfig + Meziantou.Analyzer + NetAnalyzers, curated ruleset, warnings-as-errors, 56 tests green | TODO | | |
+| B0.1 | net10 migration + Directory.Build.props + Directory.Packages.props (verify existing Conductor.slnx) | DONE | b3f1499 | docs/baton/evidence/B0.1-gate.txt |
+| B0.2 | .editorconfig + Meziantou.Analyzer + NetAnalyzers, curated ruleset, warnings-as-errors, 56 tests green | DONE | cf378f0 | docs/baton/evidence/B0.2-gate.txt |
 | B0.3 | CONDUCTOR-START.md + plans/conductor.self.plan.json + self-plan gates | TODO | | |
 | B0.4 | fake-agent.ps1 scenarios extended; self-loop token-free smoke via --dry-run/--once | TODO | | |
 | B0.5 | Baseline audit doc (current coupling/debt) written as B0 evidence | TODO | | |
-| B0.6 | ADR-0001 (tooling/ruleset rationale) + ADR-0002 (event-sourcing decision) | TODO | | |
+| B0.6 | ADR-0001 (tooling/ruleset rationale) + ADR-0002 (event-sourcing decision) | DONE | cf378f0,d416ead | docs/baton/adr/0001-tooling-and-ruleset.md, docs/baton/adr/0002-event-sourcing.md |
 | B1.1 | Move plans/loom* + templates → examples/loom/; Loom loads + --dry-run green from new path | TODO | | |
 | B1.2 | IProgressProvider abstraction + MarkdownTableProvider (today's parser, zero behaviour change) | TODO | | |
 | B1.3 | ScriptProvider (command→JSON) + PlanCheckpointProvider | TODO | | |
