@@ -1,32 +1,12 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 08:26 UTC · branch `feat/baton` · HEAD `15d09a0`_
+_Updated 2026-07-08 08:29 UTC · branch `feat/baton` · HEAD `3707016`_
 
-**Status:** Running
-**Stage:** B2 — Event-sourced backbone + provider decoupling · attempts used 0 · working ▸ B2.6
-**Checkpoints:** 18/65 done · **Sessions run:** 16 · **Cost:** $0.6324 · **Tokens:** 270,368 in / 249,014 out / 113,557 think
+**Status:** Idle
+**Stage:** B2 — Event-sourced backbone + provider decoupling · attempts used 0
+**Checkpoints:** 19/65 done · **Sessions run:** 16 · **Cost:** $0.7007 · **Tokens:** 337,017 in / 267,818 out / 120,969 think
 **Confirmed phases:** B0, B1
-
-## Latest activity (live)
-
-_Session #16 (Deliver) · running 10m · last output 2s ago · $0.0576_
-
-**Thinking:**
-> Now let me build and run all tests.
-> 125 tests pass (118 → +7 new tests: 2 AgentProvider, 4 LiveMetrics, 1 DashboardRenderer). Build 0w/0e.  Now let me do the full evidence: 1. Run the full gate battery (build + test) 2. Do a real --once smoke test to verify that TokenDelta events actually appear in the events.jsonl 3. Update CONDUCTOR…
-> Wait, I need to use `--dry-run` because opencode won't actually be available or produce real step_finish events. A dry-run won't spawn an agent session at all so there won't be any TokenDelta events.  Actually, the point of B2.6 is the infrastructure. The real TokenDelta events will only appear in a…
-
-**Recent actions:**
-- `09:25:45` » grep class DashboardRendererTests
-- `09:25:49` » read tests\Conductor.Tests\DashboardRendererTests.cs
-- `09:25:52` » read tests\Conductor.Tests\DashboardRendererTests.cs
-- `09:26:00` » edit tests\Conductor.Tests\DashboardRendererTests.cs
-- `09:26:04` · Now build and run all tests:
-- `09:26:06` » bash dotnet build Conductor.slnx 2>&1
-- `09:26:18` » bash dotnet test Conductor.slnx --no-build 2>&1 | Select-String -Pattern "Passed|Failed|Total"
-- `09:26:27` · 125 tests pass, 0w/0e (118→+7). Let me now do a real --once smoke to verify TokenDelta events appear in `events.jsonl`:
-- `09:26:27` » bash $base = Join-Path $env:TEMP "b26-smoke-$([System.Guid]::NewGuid().ToString('N').Substring(0,8))"; New-Item -ItemType Directory -Path $base -Force | Out-Nul…
-- `09:26:44` » bash & (Resolve-Path "src\Conductor\bin\Debug\net10.0\conductor.exe") run --dry-run --no-dashboard -p "C:\Users\shahi\AppData\Local\Temp\b26-smoke-cdd758b5\plan…
+**Pending:** auto-fix audit for B2
 
 ## Stage progress
 
@@ -34,7 +14,7 @@ _Session #16 (Deliver) · running 10m · last output 2s ago · $0.0576_
 |---|---|---|---|
 | B0 | Repo modernisation + self-hosting harness | 6/6 | confirmed ✓ |
 | B1 | Decouple Loom + pluggable progress providers | 7/7 | confirmed ✓ |
-| B2 | Event-sourced backbone + provider decoupling | 5/6 | **← active** |
+| B2 | Event-sourced backbone + provider decoupling | 6/6 | gating… |
 | B3 | Safety, owner-gates & process control | 0/5 | todo |
 | B4 | TUI overhaul (alt-screen + tree) | 0/7 | todo |
 | B5 | Observability & health | 0/4 | todo |
@@ -65,15 +45,10 @@ _Session #16 (Deliver) · running 10m · last output 2s ago · $0.0576_
 | 13 | B2 | Deliver | 1 | 07-08 07:06 | 0:10 | Advanced | B2.3 | 3 | build:OK | $0.0551 | 66,865/13,343 |
 | 14 | B2 | Deliver | 1 | 07-08 07:17 | 0:22 | Advanced | B2.4 | 4 | build:OK | $0.0395 | 1,813/20,904 |
 | 15 | B2 | Deliver | 1 | 07-08 07:40 | 0:36 | Advanced | B2.5 | 7 | build:OK | $0.0666 | 3,900/25,958 |
-| 16 | B2 | Deliver | 1 | 07-08 08:16 | … | running |  | 0 |  |  |  |
+| 16 | B2 | Deliver | 1 | 07-08 08:16 | 0:12 | Advanced | B2.6 | 2 | build:OK | $0.0683 | 66,649/18,804 |
 
 ### Commits by session
 
-- **s8 (B1 Deliver)** — 4 commit(s):
-  - f8f858d docs(bB1.4): tracker — B1.4 DONE (2330361), handoff + QA verdict for session #8
-  - f34fb8b chore(conductor): s8 B1 working ▸B1.4 @ 06:46
-  - 2330361 feat(bB1.4): configurable progress conventions + ratchet MA0009
-  - 4fc84da chore(conductor): s8 B1 working ▸B1.4 @ 06:36
 - **s9 (B1 Deliver)** — 7 commit(s):
   - de42b0b chore: fill B1.6/B1.7 commit hashes in tracker
   - 89e1a11 chore: B1 complete (7/7) — update handoff + checkpoint rows
@@ -112,6 +87,9 @@ _Session #16 (Deliver) · running 10m · last output 2s ago · $0.0576_
   - 88db09c fix(bB2.3): EventLog.ReadAll must share-read the live drain writer
   - 0530c85 chore(conductor): s15 B2 working ▸B2.5 @ 09:00
   - 3836bf7 chore(conductor): s15 B2 working ▸B2.5 @ 08:50
+- **s16 (B2 Deliver)** — 2 commit(s):
+  - 3707016 feat(bB2.6): TokenDelta events per step_finish + LiveMetrics projection + live dashboard tokens
+  - 188d3fe chore(conductor): s16 B2 working ▸B2.6 @ 09:26
 
 ## Phase handovers (audit)
 
@@ -124,24 +102,23 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: Landed **B2.5** (the Host/DI/logging checkpoint of stage B2) with proof across three commits on `feat/baton` (pushed): `02da5a0` Host/DI/Options — `ConductorHost` composes the app via `Microsoft.Extensions.Hosting`, resolves the Orchestrator from DI, validates the plan on start through the Options pattern (`PlanConfigValidator : IValidateOptions`, sharing `PlanConfig.CollectErrors` with `Load`), and routes narration through `Microsoft.Extensions.Logging` + Serilog (rolling file sink to `.conductor/logs/`, console sink only when the TUI isn't owning stdout) with a `runId/sessionId/stage/gate` correlation scope on every line; `7512371` catch-site audit (every bare untyped `catc…
+> SESSION-RESULT: B2.6 landed — TokenDelta event type (source-gen round-trip), AgentStreamState.EmitTokenDelta delegate wired through AgentSession → IEventSink, OpencodeProvider emits per step_finish, LiveMetrics projection folds deltas per-session + run-wide, dashboard TokenLine now includes live session tokens (F-3 fixed following the cost-line pattern). Stage B2 is COMPLETE. 125 tests green, build 0w/0e, commit 3707016 pushed. Next session picks up B3.1 (destructive-action confirm in TUI + CLI). What was hard: the design decision of WHERE to wire the token-delta emit — the provider layer (OpencodeProvider) has the delta values but no event sink; the solution was a secondary optional delegat…
 
 ## Tracker handoff
 
 ```
-last: session #15 (B2, deliver) — landed **B2.5**. `ConductorHost` = Microsoft.Extensions.Hosting +
-      DI; plan validated on start (Options/IValidateOptions); Serilog file sink `.conductor/logs/`
-      (+console only when no TUI) with runId/sessionId/stage/gate scope per line; catch-site audit
-      (no silent swallow). 118 tests (113→+5).
-stage: **B2 IN PROGRESS** — B2.1…B2.5 DONE; **B2.6 TODO** (last of stage). Battery GREEN.
-gate: GREEN — build 0w/0e; test 118 pass. Real --once smoke wrote a log with run=/s=1/stage=S1/
-      gate=battery:full (exit 0); invalid plan → OptionsValidationException (error surfaces, A15).
-qa: session #14 (B2.4) PASS, no findings (15 provider tests green; factory dry-run exit 0). Also fixed
-      a latent **B2.3** bug (88db09c): EventLog.ReadAll used FileShare.Read → crash-recovery threw on
-      any real run with a live writer (B2.3 only unit-tested the fold, never launched — A6). Now ReadWrite.
-next: **B2.6** — TokenDelta events per provider step_finish + LiveMetrics projection (live tokens/cost, F-3).
-trap: Serilog console sink OFF under the TUI (dashboard owns stdout), ON for plain runs. Host is a
-      composition/logging root (no IHostedService); options validated eagerly inside Build.
+last: session #16 (B2, deliver) — landed **B2.6**, stage B2 COMPLETE. TokenDelta events emitted per
+      step_finish via AgentStreamState delegate; IEventSink plumbed through AgentSession.Start();
+      LiveMetrics projection folds deltas per-session + run-wide; dashboard token line now includes
+      live session tokens (F-3 fixed end-to-end). 125 tests (118→+7). Battery GREEN.
+stage: **B2 DONE** — B2.1…B2.6 all landed. Stage B3 next (Safety — owner gates, destructive confirm).
+gate: GREEN — build 0w/0e; test 125 pass. Round-trip test covers TokenDelta schema. Dry-run smoke
+      exit 0 (NullEventSink — real TokenDelta events written only during agent runs).
+qa: session #15 (B2.5) PASS — re-ran gate (build 0w/0e, 118 tests), re-ran --dry-run smoke (log with
+      run=/stage= correlation confirmed), invalid-plan validation test confirmed. No findings.
+next: **B3.1** — Destructive-action confirm in TUI (A/K/S) + CLI (--yes/interactive). Persona: engineer.
+trap: TokenDelta emission is wired but only observable during real agent runs (NullEventSink in dry-run).
+      SessionTokens* fields on snapshot mirror SessionCostUsd pattern — dash now shows live burn.
 dirty: none tracked.
-evidence: B2.5-gate.txt (+ earlier)
+evidence: B2.6-gate.txt (+ earlier)
 ```
