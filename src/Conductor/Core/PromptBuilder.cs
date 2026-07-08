@@ -47,20 +47,34 @@ public sealed class PromptBuilder(PlanConfig plan)
         return Render("advisor.md", vars);
     }
 
-    private Dictionary<string, string> Vars(StageConfig stage, int sessionNumber, int attempt, int maxAttempts) => new()
+    private Dictionary<string, string> Vars(StageConfig stage, int sessionNumber, int attempt, int maxAttempts)
     {
-        ["planName"] = plan.Name,
-        ["repo"] = plan.Repo,
-        ["tracker"] = plan.Tracker,
-        ["planDoc"] = plan.PlanDoc,
-        ["stage"] = stage.Id,
-        ["stageTitle"] = stage.Title,
-        ["stageNotes"] = string.IsNullOrWhiteSpace(stage.Notes) ? "" : $"\nStage-specific notes from the orchestrator config:\n{stage.Notes}\n",
-        ["sessionNumber"] = sessionNumber.ToString(),
-        ["attempt"] = attempt.ToString(),
-        ["maxAttempts"] = maxAttempts.ToString(),
-        ["extra"] = plan.PromptExtra,
-    };
+        var readOrder = "";
+        if (plan.ReadOrder is { Count: > 0 } docs)
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("Required reading (in order):");
+            for (var i = 0; i < docs.Count; i++)
+                sb.AppendLine($"{i + 1}. {docs[i]}");
+            readOrder = sb.ToString();
+        }
+
+        return new()
+        {
+            ["planName"] = plan.Name,
+            ["repo"] = plan.Repo,
+            ["tracker"] = plan.Tracker,
+            ["planDoc"] = plan.PlanDoc,
+            ["stage"] = stage.Id,
+            ["stageTitle"] = stage.Title,
+            ["stageNotes"] = string.IsNullOrWhiteSpace(stage.Notes) ? "" : $"\nStage-specific notes from the orchestrator config:\n{stage.Notes}\n",
+            ["sessionNumber"] = sessionNumber.ToString(),
+            ["attempt"] = attempt.ToString(),
+            ["maxAttempts"] = maxAttempts.ToString(),
+            ["extra"] = plan.PromptExtra,
+            ["readOrder"] = readOrder,
+        };
+    }
 
     private string Render(string templateFile, Dictionary<string, string> vars)
     {
@@ -82,7 +96,7 @@ public sealed class PromptBuilder(PlanConfig plan)
             You are one autonomous engineering session inside the "{planName}" mega plan, launched by the Conductor orchestrator (session #{sessionNumber}, target stage {stage} — {stageTitle}, attempt {attempt}/{maxAttempts}).
 
             Work in: {repo}
-
+            {readOrder}
             Do, in order:
             1. PRE-SESSION RITUAL — exactly as `{planDoc}` prescribes: read `{tracker}` (handoff block + stated read order), your stage section, and the design docs it cites. Run the gate battery. Never build on red — fix or record first.
             2. QA THE PREVIOUS SESSION — audit its tracker claims against fresh artifacts (re-run things; do not trust claims). Fix real findings before new work; note the QA verdict in your final tracker handoff.
@@ -101,7 +115,7 @@ public sealed class PromptBuilder(PlanConfig plan)
             You are a FIX session inside the "{planName}" mega plan, launched by the Conductor orchestrator (session #{sessionNumber}, stage {stage} — {stageTitle}, attempt {attempt}/{maxAttempts}).
 
             Work in: {repo}
-
+            {readOrder}
             The previous session (#{prevSession}) did not verify. Conductor independently re-ran the gates and observed:
 
             {gateFailures}
@@ -123,6 +137,7 @@ public sealed class PromptBuilder(PlanConfig plan)
         "resume.md" => """
             Conductor detected that your previous run in "{planName}" stage {stage} was interrupted ({reason}).
 
+            {readOrder}
             Re-orient before acting: run `git status` and `git log --oneline -5` in {repo}, re-read the `{tracker}` handoff block, and inspect what you had in flight. Then finish the in-flight work and complete the full post-session ritual: gate battery green, fresh evidence artifacts, `{tracker}` updated (handoff + checkpoint rows), committed per checkpoint, pushed.
 
             If the interruption left half-done changes you cannot finish safely, revert to the last good state, record what happened in the tracker handoff, commit and push that.
@@ -149,7 +164,7 @@ public sealed class PromptBuilder(PlanConfig plan)
             You are an AUDIT session inside the "{planName}" mega plan, launched by the Conductor orchestrator after stage {stage} — {stageTitle} passed its full gate battery (session #{sessionNumber}).
 
             Work in: {repo}
-
+            {readOrder}
             The stage's checkpoints are DONE and gates are green — now harden the work before the plan advances. Review everything this phase produced: `git diff {diffBase}..HEAD` (and the files it touched).
 
             Do a rigorous STATIC AUDIT of the phase's changes and ACT on what you find:

@@ -41,6 +41,9 @@ public sealed class PlanConfig
     public NotifyConfig? Notify { get; set; }
     public string TemplatesDir { get; set; } = "templates";
     public string PromptExtra { get; set; } = "";
+    /// <summary>Mandated docs to read in order at session start (paths relative to repo root).
+    /// Rendered as an ordered list in the session prompt. Empty/null = no list rendered (B1.5).</summary>
+    public List<string>? ReadOrder { get; set; }
 
     [JsonIgnore] public string PlanFilePath { get; private set; } = "";
     [JsonIgnore] public string PlanDir => Path.GetDirectoryName(PlanFilePath) ?? ".";

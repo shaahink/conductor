@@ -50,6 +50,25 @@ public class PromptBuilderTests
     }
 
     [Fact]
+    public void DeliverRendersReadOrder()
+    {
+        var plan = Plan();
+        plan.ReadOrder = ["docs/ARCH.md", "docs/API.md", "docs/STYLE.md"];
+        var p = new PromptBuilder(plan).Deliver(Stage, 1, 1, 1);
+        Assert.Contains("Required reading (in order):", p);
+        Assert.Contains("1. docs/ARCH.md", p);
+        Assert.Contains("2. docs/API.md", p);
+        Assert.Contains("3. docs/STYLE.md", p);
+    }
+
+    [Fact]
+    public void ReadOrderEmptyWhenUnset()
+    {
+        var p = new PromptBuilder(Plan()).Deliver(Stage, 1, 1, 1);
+        Assert.DoesNotContain("Required reading", p);
+    }
+
+    [Fact]
     public void TemplateFileOverridesBuiltIn()
     {
         var dir = Path.Combine(Path.GetTempPath(), $"conductor-tpl-{Guid.NewGuid():N}");

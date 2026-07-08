@@ -7,25 +7,21 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #8 (B1, deliver) — landed **B1.4**: per-plan `ProgressConventions` (stageIdPattern,
-      handoffMarker, humanToken, statusVocabulary) on PlanConfig; `CheckpointRow.Create` derives stage +
-      status via the conventions (P-0→P-0, P0.1→P0, P3.4b→P3, F5→F5); Orchestrator consumes humanToken.
-      Ratcheted **MA0009→error** (FU-B0-3 CLOSED), all regexes carry `ProgressConventions.RegexTimeout`.
-      Defaults byte-identical to Loom. Build 0w/0e net10, 73 tests (66+7). Diff 12 files, in budget.
-stage: **B1 IN PROGRESS** — B1.1…B1.4 DONE; B1.5…B1.7 TODO. Battery GREEN.
-gate: GREEN — `dotnet build Conductor.slnx` 0w/0e net10 (MA0009=error); `dotnet test` 73 pass.
-qa: session #7 (B1.3) PASS. (1) 9 ProgressProviderTests green; (2) `_progress =
-      ProgressProviderFactory.Create(plan)` (Orchestrator.cs:23) load-bearing, read at 5 sites
-      (66/352/401/842/904). No findings.
-next: **B1.5** — read-order battery: `plan.readOrder: [docs…]` rendered into the session prompt as an
-      ordered, bounded list; `PromptBuilder` gains a `{readOrder}` section. Gate: `PromptBuilderTests`
-      assert the list appears; empty when unset.
-trap: the STABLE driver is master's binary — it parses via master's `TrackerParser`, NOT this build, so
-      new conventions only bite once this build ships; defaults are byte-identical (proven) so
-      CONDUCTOR-START.md parses under both. Don't dry-run the live self-plan (lock). `DashboardRenderer`
-      :219 still hard-codes DONE/BLOCKED for row colour (display-only; convention-wire later if needed).
+last: session #9 (B1, deliver) — landed **B1.5**: PlanConfig.ReadOrder (List<string>?), PromptBuilder
+      builds {readOrder} section as "Required reading (in order):\n1. doc\n2. …", inserted into
+      session/fix/resume/audit templates after the repo line (empty when unset). Self-plan readOrder
+      set to CONDUCTOR-START.md + BATON-BRIEF.md. Build 0w/0e net10, 75 tests (73+2). Diff 4 files.
+stage: **B1 IN PROGRESS** — B1.1…B1.5 DONE; B1.6…B1.7 TODO. Battery GREEN.
+gate: GREEN — `dotnet build Conductor.slnx` 0w/0e net10; `dotnet test` 75 pass (6 PromptBuilderTests).
+qa: session #8 (B1.4) PASS. (1) 7 ProgressConventionsTests green (P-0→P-0, P0.1→P0, etc);
+      (2) dotnet run status -p self-plan loads + parses the live CONDUCTOR-START.md with default
+      conventions (byte-identical). No findings.
+next: **B1.6** — new-plan scaffold (`conductor new-plan --template {minimal,dotnet,node,shamshir}`) +
+      schema `version` + fail-fast Validate() upgrades.
+trap: same as previous — STABLE driver parses via master's TrackerParser; new conventions bite only
+      once this build ships. Don't dry-run the live self-plan (lock).
 dirty: none tracked.
-evidence: B1.4-gate.txt (+ B1.3, B1.2, B1.1, B0.1…B0.5, audits/B0-baseline.md, adr/000{1,2}-*.md)
+evidence: B1.5-gate.txt (+ B1.4…B0.1, audits/B0-baseline.md, adr/000{1,2}-*.md)
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -56,7 +52,7 @@ never silent renumbering.
 | B1.2 | IProgressProvider abstraction + MarkdownTableProvider (today's parser, zero behaviour change) | DONE | ac306f5 | docs/baton/evidence/B1.2-gate.txt |
 | B1.3 | ScriptProvider (command→JSON) + PlanCheckpointProvider | DONE | 3e0fdbd | docs/baton/evidence/B1.3-gate.txt |
 | B1.4 | Configurable conventions (stage-id regex incl. P-0/P3.4b/F5, handoff marker, HUMAN token, status vocab) | DONE | 2330361 | docs/baton/evidence/B1.4-gate.txt |
-| B1.5 | Read-order context battery (mandated docs per plan) | TODO | | |
+| B1.5 | Read-order context battery (mandated docs per plan) | DONE | TBD | docs/baton/evidence/B1.5-gate.txt |
 | B1.6 | conductor new-plan --template {minimal,dotnet,node,shamshir}; schema version + fail-fast validation | TODO | | |
 | B1.7 | Shamshir iter-parity-pipeline TRACKER.md authored + parsed via default provider (unit test) | TODO | | |
 | B2.1 | ConductorEvent schema + append-only events.jsonl writer (additive, alongside state.json) | TODO | | |

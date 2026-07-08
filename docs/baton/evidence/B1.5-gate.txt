@@ -1,0 +1,24 @@
+=== B1.5 gate battery - read-order context battery ===
+date: 2026-07-08
+branch: feat/baton
+
+--- dotnet build Conductor.slnx ---
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+--- dotnet test Conductor.slnx (full battery) ---
+Passed!  - Failed:     0, Passed:    75, Skipped:     0, Total:    75, Duration: 6 s
+
+--- focused: PromptBuilderTests (B1.5) ---
+Passed!  - Failed:     0, Passed:     6, Skipped:     0, Total:     6 - DeliverFillsEveryPlaceholder, FixEmbedsGateFailures, ResumeStatesTheReason, DeliverRendersReadOrder, ReadOrderEmptyWhenUnset, TemplateFileOverridesBuiltIn
+
+--- changes ---
+PlanConfig: ReadOrder (List<string>?, default null) — mandated docs to read at session start
+PromptBuilder: Vars() builds {readOrder} section; templates (session/fix/resume/audit) emit it
+Self-plan: readOrder: ["CONDUCTOR-START.md", "docs/baton/BATON-BRIEF.md"]
+
+--- A6: live artifact proof ---
+dotnet run --project src\Conductor -- status -p plans\conductor.self.plan.json
+→ loads + parses the self-plan including readOrder, 10/65 checkpoints rendered, 0w/0e
