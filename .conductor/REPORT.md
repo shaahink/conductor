@@ -1,6 +1,6 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 14:43 UTC · branch `feat/baton` · HEAD `b13cafb`_
+_Updated 2026-07-08 14:53 UTC · branch `feat/baton` · HEAD `5369ef4`_
 
 **Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 0 · working ▸ B4.3
@@ -9,24 +9,24 @@ _Updated 2026-07-08 14:43 UTC · branch `feat/baton` · HEAD `b13cafb`_
 
 ## Latest activity (live)
 
-_Session #28 (Deliver) · running 10m · last output 48s ago · $0.0060_
+_Session #28 (Deliver) · running 20m · last output 0s ago · $0.0224_
 
 **Thinking:**
-> I'm mapping out the structure for B4.3—a hierarchical plan tree where each stage can expand to show sub-checkpoints, with columns tracking completion status, attempt counts, outcomes, and costs. The interface needs collapse/expand functionality plus filtering options for todo/active/failed states an…
-> I'm sketching out the hierarchical plan tree structure with expandable stages, each showing done/attempts/last outcome/cost columns, plus filtering and search capabilities. The main architectural choice is keeping the `DashboardRenderer` pure and testable, with separate panels for the stage overview…
-> I'm moving on to design B4.3, which needs a hierarchical plan tree with expandable stages and sub-checkpoints, along with per-stage tracking for completion status, attempts, outcomes, and costs. The component should support filtering by todo, active, and failed states.  The current architecture spli…
+> Now I'm wiring up the interactive controls in LiveDashboard—adding the F key to cycle through filters and an E key for the expand-all toggle. I need to introduce a `_tree` field and set up the key handlers, then pass that tree state to BuildState. I should also update the action bar to display hints…
+> I'm realizing there's a duplicate case label issue here — the F and E cases are already handled earlier with actual logic, so having them again in the switch statement would cause a compile error in C#. I'm realizing the pattern matching behavior here — when you have both a constant case label like …
+> I see the issue now—the search term "Timeline" is matching both the stage name and the checkpoint title "Timeline view", so the matching list only contains B5.1. The logic is returning just the matching checkpoints rather than all checkpoints when a stage name matches.  To fix the test, I need a sea…
 
 **Recent actions:**
-- `15:35:27` · QA verdict: **PASS** — B4.2 gate re-runs green (build 0w/0e, 172 tests, DashboardRendererTests 27/27); claim-1 verified via tests, claim-2 via running exe (prev…
-- `15:35:27` » read src\Conductor\Core\TrackerParser.cs
-- `15:35:27` » read src\Conductor\Models\RunState.cs
-- `15:36:12` » read src\Conductor\Ui\LiveDashboard.cs
-- `15:36:12` · QA verified. Now reading the interactive dashboard and plan model to design B4.3.
-- `15:38:25` » bash Select-String -Path "src\Conductor\Models\PlanConfig.cs" -Pattern "class StageConfig|public string Id|public string\? Title|public string Title|class PlanC…
-- `15:38:25` » read src\Conductor\Core\StatusAgent.cs
-- `15:38:25` · Let me check the plan model (stage Id/Title) and StatusAgent before designing B4.3.
-- `15:42:26` » todowrite 6 todos
-- `15:42:26` · QA verdict: **PASS**. Now I'll build B4.3 (hierarchical plan tree). Let me set up my task list and start implementing.
+- `15:51:35` » edit src\Conductor\Ui\LiveDashboard.cs
+- `15:51:43` · Now build, then check the StatusAgent test and update SampleState for tests.
+- `15:51:49` » bash dotnet build Conductor.slnx 2>&1 | Select-Object -Last 12
+- `15:51:58` · Now run the full suite to confirm the renderer change didn't break existing tests (SampleState uses StageOverview/StageCheckpoints, which the fallback handles).
+- `15:52:10` » bash dotnet test Conductor.slnx 2>&1 | Select-Object -Last 8
+- `15:52:46` · All 172 still green. Now write the load-bearing tests for the tree logic. Let me check the existing renderer test's `SampleState` uses `SymbolId` which still ne…
+- `15:52:46` » write tests\Conductor.Tests\PlanTreeTests.cs
+- `15:53:01` » bash dotnet test Conductor.slnx --filter "FullyQualifiedName~PlanTreeTests" 2>&1 | Select-Object -Last 25
+- `15:53:21` · Search "Timeline" also matches checkpoint "Timeline view", so it correctly narrows to that row. My test premise was wrong. Let me use a stage-name-only search t…
+- `15:53:21` » edit tests\Conductor.Tests\PlanTreeTests.cs
 
 ## Stage progress
 
