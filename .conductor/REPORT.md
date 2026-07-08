@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 13:53 UTC · branch `feat/baton` · HEAD `080a8d1`_
+_Updated 2026-07-08 14:14 UTC · branch `feat/baton` · HEAD `9786962`_
 
-**Status:** NeedsHuman — stage B4 used all 6 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: 6/6 attempts all stalled with zero commits — likely a structural blocker (TUI alt-screen too complex for single session, or Conductor bug) that needs human diagnosis before wasting more budget.
-**Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 6 · working ▸ B4.1
-**Checkpoints:** 24/65 done · **Sessions run:** 25 · **Cost:** $0.9168 · **Tokens:** 431,294 in / 336,507 out / 158,939 think
+**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 0 · working ▸ B4.1
+**Checkpoints:** 24/65 done · **Sessions run:** 26 · **Cost:** $0.9168 · **Tokens:** 431,294 in / 336,507 out / 158,939 think
 **Confirmed phases:** B0, B1, B2, B3
+
+## Latest activity (live)
+
+_Session #26 (Deliver) · running 10m · last output 5s ago · $0.0133_
+
+**Thinking:**
+> I need to verify that the abort command returns exit code 2 when run without the --yes flag, so I'm testing it against the self-plan to confirm the CtlCommand refusal happens before plan loading and doesn't write to control.json.
+> The QA tests are passing—the CLI gating works correctly and all 22 focused tests pass with a clean build. Now I'm moving on to B4.1, which requires implementing an alternate-screen buffer using escape sequences to switch between the main and alternate display buffers.  I need to design an `AltScreen…
+> I need to integrate the AltScreen into the LiveDashboard's RunUiLoop and RunPreview methods, wrapping the AnsiConsole.Live call so the alt buffer is entered before rendering and restored afterward.
+
+**Recent actions:**
+- `15:12:34` » bash dotnet test Conductor.slnx 2>&1 | Select-Object -Last 4
+- `15:12:45` · 167 tests pass (164 + 3). Now verify the running artifact: redirected preview must render inline without any alt-screen escape bytes leaking (guard is inert whe…
+- `15:12:46` » bash $out = & "src\Conductor\bin\Debug\net10.0\conductor.exe" preview -p plans\conductor.self.plan.json 2>&1 | Out-String; Write-Output "EXIT=$LASTEXITCODE"; Wr…
+- `15:13:06` · Redirected preview: exit 0, renders inline (contains "Conductor"), and emits NO alt-screen escapes — the guard degrades to a no-op exactly as designed. Now let …
+- `15:13:26` » bash $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss" $build = (dotnet build Conductor.slnx 2>&1 | Select-String "Warning|Error|Build succeeded") -join "`n" $test =…
+- `15:13:33` » read docs\baton\evidence\B4.1-gate.txt
+- `15:13:40` · Evidence artifact complete. Now check the diff budget and update the tracker + handoff before committing.
+- `15:13:41` » bash git status --short; Write-Output "---STAT---"; git diff --stat
+- `15:13:49` » edit CONDUCTOR-START.md
+- `15:13:49` · Clean, focused diff: 4 files (1 modified, 3 new), all named by B4.1. Now update the tracker row and Handoff block.
 
 ## Stage progress
 
@@ -54,6 +75,7 @@ _Updated 2026-07-08 13:53 UTC · branch `feat/baton` · HEAD `080a8d1`_
 | 23 | B4 | Deliver | 4 | 07-08 10:21 | 0:12 | Stalled |  | 0 |  |  |  |
 | 24 | B4 | Resume | 5r1 | 07-08 10:33 | 0:12 | Stalled |  | 0 |  |  |  |
 | 25 | B4 | Resume | 6r2 | 07-08 10:45 | 0:12 | Stalled |  | 0 |  |  |  |
+| 26 | B4 | Deliver | 1 | 07-08 14:03 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
