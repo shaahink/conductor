@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 23:49 UTC · branch `feat/baton` · HEAD `b30a1d8`_
+_Updated 2026-07-08 23:59 UTC · branch `feat/baton` · HEAD `2be98a9`_
 
-**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B11 — Close-out + Shamshir owner-gated proof · attempts used 0
-**Checkpoints:** 61/65 done · **Sessions run:** 63 · **Cost:** $2.7965 · **Tokens:** 2,073,995 in / 876,020 out / 415,562 think
+**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B12 — Controlled parallelism · attempts used 0 · working ▸ B12.1
+**Checkpoints:** 61/65 done · **Sessions run:** 64 · **Cost:** $2.7965 · **Tokens:** 2,073,995 in / 876,020 out / 415,562 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11
+
+## Latest activity (live)
+
+_Session #64 (Deliver) · running 10m · last output 6s ago · $0.0574_
+
+**Thinking:**
+> Build succeeded with 0 warnings and 0 errors. Now I need to write the tests for B12.1. Let me also run the existing tests first to make sure nothing regressed.
+> All 432 tests pass. Now I need to write the B12.1 tests. Let me create the test file. The test file needs to prove:  1. A read-only analysis lane runs in a scratch directory (never touches the working tree) 2. It produces an artifact at `.conductor/lanes/{laneId}.md` 3. The artifact is injected into…
+> Now let me build and run the B12.1 tests to see if they pass.
+
+**Recent actions:**
+- `00:57:19` » read src\Conductor\Core\TrackerParser.cs
+- `00:57:25` · Fix all the errors:
+- `00:57:25` » edit src\Conductor\Core\Orchestrator.cs
+- `00:57:35` » edit src\Conductor\Core\Orchestrator.cs
+- `00:57:52` » write src\Conductor\Core\LaneRunner.cs
+- `00:58:16` » bash dotnet build Conductor.slnx 2>&1
+- `00:58:21` · Build green (0w/0e). Now let me run the existing tests to ensure no regressions, then write the B12.1 tests:
+- `00:58:41` » bash dotnet test Conductor.slnx 2>&1
+- `00:59:04` » write tests\Conductor.Tests\B12_1Tests.cs
+- `00:59:04` · All 432 tests pass. Now write the B12.1 tests:
 
 ## Stage progress
 
@@ -23,13 +44,12 @@ _Updated 2026-07-08 23:49 UTC · branch `feat/baton` · HEAD `b30a1d8`_
 | B9 | Task graph + smart session management | 5/5 | confirmed ✓ |
 | B10 | Advanced orchestration | 4/4 | confirmed ✓ |
 | B11 | Close-out + Shamshir owner-gated proof | 4/4 | confirmed ✓ |
-| B12 | Controlled parallelism | 0/4 | todo |
+| B12 | Controlled parallelism | 0/4 | **← active** |
 
 ## Sessions
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 34 | B5 | Deliver | 1 | 07-08 16:33 | 0:36 | Advanced | B5.1 | 5 | build:OK | $0.0634 | 2,544/24,659 |
 | 35 | B5 | Deliver | 1 | 07-08 17:10 | 0:19 | Advanced | B5.2 | 3 | build:OK | $0.0370 | 1,719/19,977 |
 | 36 | B5 | Deliver | 1 | 07-08 17:30 | 0:24 | Advanced | B5.3 | 4 | build:OK | $0.0427 | 2,319/25,154 |
 | 37 | B5 | Deliver | 1 | 07-08 17:54 | 0:18 | Advanced | B5.4 | 2 | build:OK | $0.0750 | 61,596/21,872 |
@@ -59,6 +79,7 @@ _Updated 2026-07-08 23:49 UTC · branch `feat/baton` · HEAD `b30a1d8`_
 | 61 | B11 | Deliver | 1 | 07-08 23:09 | 0:09 | Advanced | B11.1 | 2 | build:OK | $0.0436 | 47,917/12,787 |
 | 62 | B11 | Deliver | 1 | 07-08 23:19 | 0:21 | Advanced | B11.2 B11.3 B11.4 | 6 | build:OK | $0.1053 | 75,494/33,712 |
 | 63 | B11 | Audit | 1 | 07-08 23:41 | 0:07 | Progress |  | 2 |  | $0.0558 | 59,800/11,762 |
+| 64 | B12 | Deliver | 1 | 07-08 23:49 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
