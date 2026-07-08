@@ -1,8 +1,8 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 11:03 UTC · branch `feat/baton` · HEAD `9375714`_
+_Updated 2026-07-08 11:09 UTC · branch `feat/baton` · HEAD `c385bdb`_
 
-**Status:** Idle
+**Status:** NeedsHuman — stage B4 used all 6 attempts without completing — inspect and `conductor resume` (or `conductor skip`)
 **Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 6 · working ▸ B4.1
 **Checkpoints:** 24/65 done · **Sessions run:** 25 · **Cost:** $0.9168 · **Tokens:** 431,294 in / 336,507 out / 158,939 think
 **Confirmed phases:** B0, B1, B2, B3
