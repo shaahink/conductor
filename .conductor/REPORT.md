@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 04:15 UTC · branch `feat/baton` · HEAD `06c9c55`_
+_Updated 2026-07-08 04:25 UTC · branch `feat/baton` · HEAD `8aa94e4`_
 
-**Status:** Idle
+**Status:** Running
 **Stage:** B1 — Decouple Loom + pluggable progress providers · attempts used 0 · working ▸ B1.2
-**Checkpoints:** 7/65 done · **Sessions run:** 5 · **Cost:** $0.2076 · **Tokens:** 124,314 in / 76,366 out / 36,148 think
+**Checkpoints:** 7/65 done · **Sessions run:** 6 · **Cost:** $0.2076 · **Tokens:** 124,314 in / 76,366 out / 36,148 think
 **Confirmed phases:** B0
+
+## Latest activity (live)
+
+_Session #6 (Deliver) · running 10m · last output 181s ago · $0.0055_
+
+**Thinking:**
+> I'm checking the existing Progress.cs file in Core to understand the namespace conventions, then looking at how PlanConfig.cs is structured to determine where IProgressProvider.cs should go.
+> I'm laying out the refactoring plan for B1.2: I'll create an interface for progress providers, extract the current markdown parsing logic into a dedicated provider implementation, use `TrackerSnapshot` as the output contract, and verify the existing parser tests still pass without modification. The …
+> I'm structuring B1.2 to extract the existing `TrackerParser` logic behind a new `IProgressProvider` interface, with `MarkdownTableProvider` as the concrete implementation and `TrackerSnapshot` serving as the output contract—the existing tests should pass without modification, now exercising the prov…
+
+**Recent actions:**
+- `05:18:22` » grep TrackerPath|class PlanConfig|public string Repo
+- `05:18:32` » read src\Conductor\Core\Progress.cs
+- `05:18:33` » read src\Conductor\Models\PlanConfig.cs
+- `05:18:33` · Let me read the existing Progress.cs and PlanConfig.cs to understand conventions before designing B1.2.
+- `05:19:30` » read src\Conductor\Core\Orchestrator.cs
+- `05:19:31` · QA verdict: **PASS**. Both claims independently verified (PlanConfigTests green; stable driver dry-runs Loom from `examples/loom/`). Now let me look at the Orch…
+- `05:19:31` » read src\Conductor\Commands\Commands.cs
+- `05:21:12` · QA verdict: **PASS** — both claims independently verified (PlanConfigTests green; stable driver dry-runs Loom from `examples/loom/`). No findings.  Now deliveri…
+- `05:21:12` » read src\Conductor\Core\Orchestrator.cs
+- `05:21:13` » bash Select-String -Path "C:\Code\conductor-baton\src\Conductor\Core\Orchestrator.cs" -Pattern "TrackerParser" | ForEach-Object { "$($_.LineNumber): $($_.Line.T…
 
 ## Stage progress
 
@@ -34,6 +55,7 @@ _Updated 2026-07-08 04:15 UTC · branch `feat/baton` · HEAD `06c9c55`_
 | 3 | B0 | Deliver | 1 | 07-08 03:03 | 0:50 | Advanced | B0.3 B0.4 | 8 | build:OK | $0.0231 | 1,644/13,133 |
 | 4 | B0 | Audit | 1 | 07-08 03:54 | 0:08 | Progress |  | 1 |  | $0.0116 | 1,138/6,511 |
 | 5 | B1 | Deliver | 1 | 07-08 04:02 | 0:12 | Advanced | B1.1 | 3 | build:OK | $0.0221 | 1,245/10,975 |
+| 6 | B1 | Deliver | 1 | 07-08 04:15 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
