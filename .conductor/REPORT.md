@@ -1,32 +1,12 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 22:21 UTC · branch `feat/baton` · HEAD `e9b086c`_
+_Updated 2026-07-08 22:23 UTC · branch `feat/baton` · HEAD `8c4aa1e`_
 
-**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B9 — Task graph + smart session management · attempts used 0 · working ▸ B9.5
-**Checkpoints:** 52/65 done · **Sessions run:** 56 · **Cost:** $2.2180 · **Tokens:** 1,423,187 in / 746,636 out / 343,043 think
+**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B9 — Task graph + smart session management · attempts used 0
+**Checkpoints:** 53/65 done · **Sessions run:** 56 · **Cost:** $2.2707 · **Tokens:** 1,484,959 in / 758,524 out / 347,241 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8
-
-## Latest activity (live)
-
-_Session #56 (Deliver) · running 10m · last output 0s ago · $0.0456_
-
-**Thinking:**
-> 367 tests pass (363 + 4 new). Build 0w/0e. Full gate battery green.  Now let me: 1. Check git diff to see what files I changed 2. Verify the diff budget is within 15 files 3. Update CONDUCTOR-START.md 4. Commit and push
-> 4 files changed + 1 new test file. That's 5 total. Well within the ~15 file budget. Let me check for untracked files too:
-> 5 files, well within budget. Now I need to: 1. Create the evidence directory if it doesn't exist 2. Write the gate output to evidence 3. Update CONDUCTOR-START.md 4. Add tests to git 5. Commit 6. Push  Let me create the evidence file first.
-
-**Recent actions:**
-- `23:19:58` » glob tests\Conductor.Tests
-- `23:20:09` » read tests\Conductor.Tests\TaskGraphTests.cs
-- `23:20:34` » write tests\Conductor.Tests\TaskViewTests.cs
-- `23:20:57` » bash dotnet test Conductor.slnx --filter "TaskViewTests" 2>&1
-- `23:21:07` · All 4 new TaskViewTests pass. Run the full test suite:
-- `23:21:23` » bash dotnet test Conductor.slnx 2>&1
-- `23:21:28` · 367 tests pass (363 + 4 new TaskViewTests). Let me check the diff:
-- `23:21:29` » bash git diff --stat HEAD
-- `23:21:33` » bash git status --short
-- `23:21:39` » todowrite 1 todos
+**Pending:** auto-fix audit for B9
 
 ## Stage progress
 
@@ -41,7 +21,7 @@ _Session #56 (Deliver) · running 10m · last output 0s ago · $0.0456_
 | B6 | AFK + two-way Telegram | 5/5 | confirmed ✓ |
 | B7 | Specialist sub-agent personas | 3/3 | confirmed ✓ |
 | B8 | Brain layer | 5/5 | confirmed ✓ |
-| B9 | Task graph + smart session management | 4/5 | **← active** |
+| B9 | Task graph + smart session management | 5/5 | gating… |
 | B10 | Advanced orchestration | 0/4 | todo |
 | B11 | Close-out + Shamshir owner-gated proof | 0/4 | todo |
 | B12 | Controlled parallelism | 0/4 | todo |
@@ -79,13 +59,10 @@ _Session #56 (Deliver) · running 10m · last output 0s ago · $0.0456_
 | 53 | B9 | Fix | 5 | 07-08 21:26 | 0:06 | Advanced | B9.1 | 2 | build:OK | $0.0212 | 29,881/4,286 |
 | 54 | B9 | Deliver | 1 | 07-08 21:33 | 0:21 | Advanced | B9.2 B9.3 | 5 | build:OK | $0.0818 | 59,955/26,063 |
 | 55 | B9 | Deliver | 1 | 07-08 21:55 | 0:16 | Advanced | B9.4 | 3 | build:OK | $0.0719 | 73,232/17,129 |
-| 56 | B9 | Deliver | 1 | 07-08 22:11 | … | running |  | 0 |  |  |  |
+| 56 | B9 | Deliver | 1 | 07-08 22:11 | 0:11 | Advanced | B9.5 | 3 | build:OK | $0.0527 | 61,772/11,888 |
 
 ### Commits by session
 
-- **s43 (B7 Deliver)** — 2 commit(s):
-  - bd318f8 feat(bB7): Specialist sub-agent personas — B7.1-B7.3
-  - 9c3f7fd chore(conductor): s43 B7 working ▸B7.1 @ 21:10
 - **s44 (B7 Audit)** — 1 commit(s):
   - 99209bf fix(b7): audit fixes — path traversal guard, IO error resilience, dead field, hyphen regex (session #44)
 - **s46 (B7 Resume)** — 3 commit(s):
@@ -112,6 +89,10 @@ _Session #56 (Deliver) · running 10m · last output 0s ago · $0.0456_
   - 3a68af5 chore(bB9.4): fix commit hash in tracker row
   - e078820 feat(bB9.4): cooperative soft-break + hard fallback + MCP journal fold
   - 4bca6b1 chore(conductor): s55 B9 working ▸B9.4 @ 23:05
+- **s56 (B9 Deliver)** — 3 commit(s):
+  - 8c4aa1e chore(bB9.5): fill commit hash in tracker row
+  - 1fa665c feat(bB9.5): task views in CLI/TUI/Telegram
+  - bb0e899 chore(conductor): s56 B9 working ▸B9.5 @ 23:21
 
 ## Phase handovers (audit)
 
@@ -131,22 +112,22 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT:** B9.4 landed — cooperative soft-break (SoftBreakRatio default 0.8, polls live agent tokens in the session loop, emits SoftBreakRequested event + writes .conductor/soft-break signal file), hard ceiling RolledOver now includes task-graph resume hint ("next sub-task:"), and McpTaskServer side journal is folded into events.jsonl after session exit. Build 0w/0e, 363 tests pass (+14 SoftBreakTests). What is red: nothing. Next session should deliver B9.5 (task views in CLI/TUI/Telegram). What was hard: designing a mid-session soft-break mechanism when the conductor cannot inject into the agent's stdin mid-flight — the nudge is a signal file the agent can optionally check; the hard …
+> SESSION-RESULT: Stage B9 complete — all 5 checkpoints (B9.1–B9.5) landed. B9.5 delivered `conductor tasks` CLI command (Spectre table grouped by checkpoint), TUI tasks pane (Modal.Tasks on U key, live event-log fold into scrollable modal), and Telegram `/tasks` handler (HTML-formatted per-checkpoint task list). Build 0w/0e, 367 tests pass (+4 TaskViewTests). Branch pushed clean. 5 files changed (well within ~15 budget). Next: B10.1 (dependsOn graph + smarter ready-stage ordering). What was hard: the three views (CLI/TUI/TG) share the same pipeline (event log → TaskGraph fold → per-checkpoint display) but each has a different rendering target — Spectre table, plain lines for BuildModal, Telec…
 
 ## Tracker handoff
 
 ```
-last: session #57 (B9.4) — delivered cooperative soft-break + hard fallback + MCP journal fold.
-stage: B9.1–B9.3 DONE. **B9.4 DONE** — SoftBreakRequested event, signal file, task-graph-aware
-       RolledOver resume hint, MCP journal merged into events.jsonl after session exit.
-       B9.4 land: Orchestrator polls live tokens in the session loop against SoftBreakRatio
-       (default 0.8 of MaxSessionTokens), emits softBreakRequested, writes .conductor/soft-break
-       file; hard ceiling still RollsOver with next sub-task in the log line. McpTaskServer
-       journal is folded into the event log post-session. 14 new tests.
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 363 tests pass (+14 SoftBreakTests).
+last: session #58 (B9.5) — delivered task views in CLI, TUI, and Telegram.
+stage: B9 COMPLETE — all 5 checkpoints (B9.1–B9.5) DONE.
+       B9.5 land: `conductor tasks` CLI command renders per-checkpoint task table from events.jsonl;
+       TUI tasks pane (U key) folds event log live into scrollable modal; Telegram /tasks handler
+       returns HTML-formatted task graph. 4 new tests (TaskViewTests). Full pipeline: event log →
+       TaskGraph fold → per-checkpoint display — same code path shared across all three views.
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 367 tests pass (+4 TaskViewTests).
 dirty: none.
-next: B9.5 (task views in CLI/TUI/Telegram).
-evidence: docs/baton/evidence/B9.4-gate.txt
-qa: B9.2 PlannerTests 6/6 pass, B9.3 McpTaskServerTests 7/7 pass, 349→363 total. Verdict PASS.
-     McpTaskServer has no production wiring (known — B9.4 adds journal fold; full wire-in deferred).
+next: B10.1 (dependsOn graph + smarter ready-stage ordering).
+evidence: docs/baton/evidence/B9.5-gate.txt
+qa: B9.4 gate re-verified: PlannerTests 6/6 pass, McpTaskServerTests 7/7 pass, SoftBreakTests 14/14.
+      B9.4 claim "McpTaskServer has no production wiring" verified against Orchestrator.cs (journal
+      fold wired; full wire-in still deferred). Verdict PASS — no regressions.
 ```
