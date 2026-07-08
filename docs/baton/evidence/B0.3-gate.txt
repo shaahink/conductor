@@ -1,0 +1,39 @@
+# B0.3 evidence — self-plan loadable by the STABLE driver (dry-run)
+# Produced: 2026-07-08 04:19 
+# Driver: C:\Code\conductor\bin\conductor.exe (built 07/07/2026 22:13:32 from master)
+# Workaround: driver holds .conductor lock on the real worktree, so the plan was
+#   copied to a self-contained temp repo (plan+templates+tracker+docs, repo rewritten
+#   to the temp path, git init on feat/baton) and --dry-run run there.
+# Command:
+#   conductor.exe run --dry-run -p $env:TEMP\baton-self-test\plans\conductor.self.plan.json
+# Result: exit 0 — tracker parsed, stage B0 selected, session.md template resolved,
+#   full Deliver prompt compiled. Proves the self-hosting harness loads.
+# ----------------------------------------------------------------------------
+[04:18:45] conductor start GÇö plan 'Baton', repo C:/Users/shahi/AppData/Local/Temp/baton-self-test, branch feat/baton
+[04:18:46] stage GåÆ B0 Repo modernisation + self-hosting harness
+--- DRY RUN: would start session #1 (Deliver, stage B0) with prompt: ---
+You are one autonomous engineering session inside the "Baton" mega plan GÇö you are improving **Conductor itself** GÇö launched by the Conductor orchestrator (session #1, target stage B0 GÇö Repo modernisation + self-hosting harness, attempt 1/4).
+
+Work in: C:/Users/shahi/AppData/Local/Temp/baton-self-test  (this is the `feat/baton` worktree GÇö NOT C:\Code\conductor / master, and NOT the live DevContext2-ui Loom run).
+
+Do, in order:
+1. PRE-SESSION RITUAL GÇö read `CONDUCTOR-START.md` (the `## Handoff` block + this stage's checkpoint rows), the design authority `docs/baton/BATON-BRIEF.md`, and your stage file `docs/baton/stages/B0.md`. Run the gate battery (`dotnet build Conductor.slnx`; `dotnet test Conductor.slnx`). Never build on red GÇö fix or record first.
+2. QA THE PREVIOUS SESSION GÇö re-run its stated gate; independently verify two of its claims (one against tests, one against a running artifact). Fix real findings before new work; note the QA verdict in your final handoff.
+3. DELIVER the next incomplete checkpoint(s) of stage B0 only. One checkpoint landed with proof beats three claimed. Do not start other stages' work.
+4. POST-SESSION RITUAL GÇö re-run the full gate battery; produce fresh evidence artifacts; update `CONDUCTOR-START.md` (overwrite the `## Handoff` block, fill checkpoint rows: Status, Commit, Evidence); commit per checkpoint (`feat(bB0.N): GÇª` / `fix(bB0.N): GÇª`) with gate output pasted in the body; push the branch.
+
+Conductor rules (in addition to the plan's):
+- The DRIVER verifying you is the STABLE `bin\conductor.exe` from master GÇö never assume your in-tree build is what judges you.
+- Evidence or it didn't happen: a checkpoint without a fresh artifact path is not DONE.
+- Ratchet-only: never weaken analyzers, `TreatWarningsAsErrors`, tests, or truth files to go green. Fix the code. (-º7 anti-pattern A17.)
+- Add gates and tests only where they protect real value GÇö a meaningful behaviour, an invariant, a regression that has actually bitten. Do NOT add tests for the sake of coverage; a smaller suite of load-bearing tests beats a large brittle one. If a checkpoint's value is proven by a build gate + one focused test + a real artifact, that is enough.
+- Modern C# + .NET 10, SOLID, proper async (`ConfigureAwait(false)` in library code, `CancellationToken` threaded, no `async void`, no blocking `.Result`/`.Wait()` in hot paths). Prefer BCL batteries (Hosting/DI/Options/Logging/Channels/TimeProvider) over hand-rolled equivalents.
+- Diff budget: if `git diff --stat` exceeds ~15 files or touches files this checkpoint didn't name, split the commit or revert the extras.
+- Additive-first for anything touching state/resumability GÇö the event log (B2) is emitted ALONGSIDE state.json until parity is proven; resumability must never regress.
+- If genuinely blocked on a human decision, set the row BLOCKED, add a `HUMAN:` line to the handoff, commit, push, and end the session.
+- Leave the working tree clean (commit or revert leftovers) and the branch pushed.
+- End by printing one paragraph starting with `SESSION-RESULT:` GÇö what landed, what is red, what the next session should do, AND what was hard this session (the struggle note the brain harvests into the lessons brief).
+
+Stage-specific notes from the orchestrator config:
+Read docs/baton/stages/B0.md. Migrate to net10.0, add Directory.Build.props/Directory.Packages.props/.editorconfig/Meziantou.Analyzer/Conductor.slnx, keep 56 tests green under warnings-as-errors. This stage sets the guardrails every later stage is held to.
+This plan is self-referential: you are improving Conductor itself. The DRIVER that verifies you is the STABLE bin\conductor.exe from master GÇö never assume your in-tree build is what's judging you. Respect the diff budget (~15 files); keep the 56+ test suite green under warnings-as-errors; never lower an analyzer severity to pass. Honour the anti-pattern catalog in docs/baton/BATON-BRIEF.md -º7.

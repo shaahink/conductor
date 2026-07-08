@@ -16,7 +16,7 @@
   "tracker": "CONDUCTOR-START.md",
   "planDoc": "docs/baton/BATON-BRIEF.md",
   "branchPattern": "^feat/baton",
-  "pauseOnBlocked": true,
+  "pauseOnBlocked": false,
 
   // Acting agent: opencode/deepseek-v4-pro (same as the Loom run). output "opencode-json"
   // makes conductor parse opencode's --format json stream (text/reasoning/tool/cost/tokens).
