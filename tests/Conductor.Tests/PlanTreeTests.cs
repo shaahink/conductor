@@ -137,6 +137,38 @@ public class PlanTreeTests
         Assert.Contains("▾", text);          // expanded glyph for active B4
     }
 
+    [Fact]
+    public void MoveSelectionWalksVisibleRowsAndClamps()
+    {
+        var stages = Sample();
+        // Nothing selected yet: a downward move lands on the first visible row (the B0 header).
+        Assert.Equal("B0", PlanTree.MoveSelection(stages, new PlanTreeView(), +1));
+        // Nothing selected: an upward move lands on the last visible row.
+        Assert.Equal("B5", PlanTree.MoveSelection(stages, new PlanTreeView(), -1));
+        // Down from the active stage header enters its (auto-expanded) checkpoints.
+        Assert.Equal("B4.1", PlanTree.MoveSelection(stages, new PlanTreeView { Selected = "B4" }, +1));
+        // Up from the very top clamps in place.
+        Assert.Equal("B0", PlanTree.MoveSelection(stages, new PlanTreeView { Selected = "B0" }, -1));
+    }
+
+    [Fact]
+    public void StageForRowResolvesCheckpointToItsOwningStage()
+    {
+        var stages = Sample();
+        Assert.Equal("B4", PlanTree.StageForRow(stages, "B4.3")); // checkpoint → owning stage
+        Assert.Equal("B4", PlanTree.StageForRow(stages, "B4"));   // stage header → itself
+        Assert.Equal("", PlanTree.StageForRow(stages, ""));       // nothing selected
+    }
+
+    [Fact]
+    public void BuildMarksSelectedRowWithCursor()
+    {
+        var noSel = Render(PlanTree.Build(Sample(), new PlanTreeView()));
+        Assert.DoesNotContain("►", noSel);
+        var sel = Render(PlanTree.Build(Sample(), new PlanTreeView { Selected = "B4" }));
+        Assert.Contains("►", sel);            // the selection cursor renders on the selected row
+    }
+
     private static string Render(Spectre.Console.Rendering.IRenderable r)
     {
         var writer = new StringWriter();

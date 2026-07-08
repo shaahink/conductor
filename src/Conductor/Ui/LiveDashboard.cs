@@ -160,6 +160,8 @@ public sealed class LiveDashboard : IProgressSink
             case ConsoleKey.G when _plan?.StatusAgent is { Enabled: true }: StartStatusAgent(); break;
             case ConsoleKey.F: _tree = _tree with { Filter = PlanTree.NextFilter(_tree.Filter) }; break;
             case ConsoleKey.E: _tree = _tree with { ExpandAll = !_tree.ExpandAll }; break;
+            case ConsoleKey.UpArrow: MoveTreeSelection(-1); break;
+            case ConsoleKey.DownArrow: MoveTreeSelection(+1); break;
             case ConsoleKey.C: _agentExpanded = !_agentExpanded; break;
             default: _quitPreview = true; break;
         }
@@ -240,6 +242,26 @@ public sealed class LiveDashboard : IProgressSink
         }
     }
 
+    /// <summary>Move the plan-tree selection cursor (↑/↓) over the currently visible rows, off the same
+    /// per-stage roll-up the tree renders. Selection drives doc-on-select (the <c>D</c> key), B4.7.</summary>
+    private void MoveTreeSelection(int delta)
+    {
+        lock (_gate)
+        {
+            var stages = DashboardRenderer.StagesFor(_snap);
+            _tree = _tree with { Selected = PlanTree.MoveSelection(stages, _tree, delta) };
+        }
+    }
+
+    /// <summary>The stage whose doc section the <c>D</c> pop-out should show: the owning stage of the
+    /// selected plan-tree row, falling back to the running stage when nothing is selected (B4.7).</summary>
+    private string SelectedDocStage()
+    {
+        var stages = DashboardRenderer.StagesFor(_snap);
+        var stage = PlanTree.StageForRow(stages, _tree.Selected);
+        return string.IsNullOrEmpty(stage) ? _snap.StageId : stage;
+    }
+
     private void PollKeys()
     {
         try
@@ -261,6 +283,8 @@ public sealed class LiveDashboard : IProgressSink
                     case ConsoleKey.G when _plan?.StatusAgent is { Enabled: true }: StartStatusAgent(); break;
                     case ConsoleKey.F: _tree = _tree with { Filter = PlanTree.NextFilter(_tree.Filter) }; break;
                     case ConsoleKey.E: _tree = _tree with { ExpandAll = !_tree.ExpandAll }; break;
+                    case ConsoleKey.UpArrow: MoveTreeSelection(-1); break;
+                    case ConsoleKey.DownArrow: MoveTreeSelection(+1); break;
                     case ConsoleKey.C: _agentExpanded = !_agentExpanded; break;
                     case ConsoleKey.P: _pendingConfirm = null; _keys.Enqueue(ControlAction.PauseAfterSession); break;
                     case ConsoleKey.R: _pendingConfirm = null; _keys.Enqueue(ControlAction.ResumeRun); break;
@@ -374,7 +398,7 @@ public sealed class LiveDashboard : IProgressSink
         var (title, lines) = kind switch
         {
             Modal.Thinking => ("thinking (full reasoning)", ThinkingLines()),
-            Modal.Docs => ($"docs · stage {_snap.StageId}", DocsLines()),
+            Modal.Docs => ($"docs · stage {SelectedDocStage()}", DocsLines()),
             Modal.Git => ("git", GitLines()),
             Modal.Prompt => ("compiled prompt (current session)", PromptLines()),
             _ => ("", new List<string>()),
@@ -434,10 +458,11 @@ public sealed class LiveDashboard : IProgressSink
     private List<string> DocsLines()
     {
         if (_plan == null) return new() { "(docs unavailable in preview)" };
+        var stageId = SelectedDocStage();
         var path = Path.Combine(_plan.Repo, _plan.PlanDoc);
-        var section = DocsExtractor.ForStageFromFile(path, _snap.StageId);
+        var section = DocsExtractor.ForStageFromFile(path, stageId);
         if (string.IsNullOrWhiteSpace(section))
-            return new() { $"(no section for {_snap.StageId} found in {_plan.PlanDoc})", "", $"doc: {path}" };
+            return new() { $"(no section for {stageId} found in {_plan.PlanDoc})", "", $"doc: {path}" };
         return Split(section);
     }
 

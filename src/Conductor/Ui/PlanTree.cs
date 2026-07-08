@@ -20,6 +20,11 @@ public sealed record PlanTreeView
     public IReadOnlySet<string> Expanded { get; init; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
     public bool ExpandAll { get; init; }
 
+    /// <summary>Id of the row the selection cursor is on (empty = none). Drives doc-on-select (B4.7):
+    /// pressing <c>D</c> opens the doc section of the selected row's owning stage, not just the running
+    /// stage. Navigated with ↑/↓ over the visible rows.</summary>
+    public string Selected { get; init; } = "";
+
     public bool Narrowing => Filter != PlanFilter.All || !string.IsNullOrWhiteSpace(Search);
 }
 
@@ -58,6 +63,40 @@ public static class PlanTree
                 rows.Add(new PlanTreeRow(false, id, title, status, s));
         }
         return rows;
+    }
+
+    /// <summary>Ids the selection cursor can land on — every visible row (stage or checkpoint) in render
+    /// order. Selection therefore always tracks what the tree is actually showing under the current
+    /// filter/search/expand state (B4.7 doc-on-select).</summary>
+    public static IReadOnlyList<string> SelectableIds(IReadOnlyList<StageProgress> stages, PlanTreeView view)
+        => VisibleRows(stages, view).Select(r => r.Id).ToList();
+
+    /// <summary>Move the selection cursor by <paramref name="delta"/> rows over the visible tree, clamped
+    /// to the ends; returns the id to select ("" when the tree is empty). With nothing selected yet, a
+    /// downward move lands on the first row and an upward move on the last.</summary>
+    public static string MoveSelection(IReadOnlyList<StageProgress> stages, PlanTreeView view, int delta)
+    {
+        var ids = SelectableIds(stages, view);
+        if (ids.Count == 0) return "";
+        var cur = -1;
+        for (var i = 0; i < ids.Count; i++)
+            if (ids[i].Equals(view.Selected, StringComparison.OrdinalIgnoreCase)) { cur = i; break; }
+        if (cur < 0) cur = delta >= 0 ? -1 : ids.Count;   // first Down → row 0, first Up → last row
+        return ids[Math.Clamp(cur + delta, 0, ids.Count - 1)];
+    }
+
+    /// <summary>The stage id owning a selected row — the row itself when it is a stage header, otherwise
+    /// the stage whose checkpoint list contains the id. Lets doc-on-select open the right stage section
+    /// even when a sub-checkpoint row is selected.</summary>
+    public static string StageForRow(IReadOnlyList<StageProgress> stages, string rowId)
+    {
+        if (string.IsNullOrEmpty(rowId)) return "";
+        foreach (var s in stages)
+        {
+            if (s.Id.Equals(rowId, StringComparison.OrdinalIgnoreCase)) return s.Id;
+            if (s.Checkpoints.Any(c => c.Id.Equals(rowId, StringComparison.OrdinalIgnoreCase))) return s.Id;
+        }
+        return rowId;
     }
 
     private static bool IsExpanded(StageProgress s, PlanTreeView view)
@@ -107,12 +146,14 @@ public static class PlanTree
 
         foreach (var r in rows)
         {
+            var sel = !string.IsNullOrEmpty(view.Selected) && r.Id.Equals(view.Selected, StringComparison.OrdinalIgnoreCase);
+            var cursor = sel ? "[bold aqua]►[/]" : " ";
             if (r.IsStage)
             {
                 var s = r.Stage;
                 var glyph = IsExpanded(s, view) ? "▾" : "▸";
                 var (color, badge) = StageMark(s.State);
-                var id = $"[{color}]{glyph} {Esc(s.Id)}[/]";
+                var id = $"{cursor}[{color}]{glyph} {Esc(s.Id)}[/]";
                 var title = $"[{color}]{Esc(Clip(s.Title, 30))}[/]{badge}";
                 t.AddRow(new Markup(id), new Markup(title), new Markup(StageMeta(s, color)));
             }
@@ -120,7 +161,7 @@ public static class PlanTree
             {
                 var color = StatusColor(r.Status);
                 t.AddRow(
-                    new Markup($"[grey]  ↳[/] [{color}]{Esc(r.Id)}[/]"),
+                    new Markup($"{cursor}[grey] ↳[/] [{color}]{Esc(r.Id)}[/]"),
                     new Markup($"[silver]{Esc(Clip(r.Title, 40))}[/]"),
                     new Markup($"[{color}]{Esc(ShortStatus(r.Status))}[/]"));
             }

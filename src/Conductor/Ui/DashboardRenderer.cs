@@ -232,15 +232,16 @@ public static class DashboardRenderer
         var v = st.Tree;
         var chips = new[] { PlanFilter.All, PlanFilter.Todo, PlanFilter.Active, PlanFilter.Failed }
             .Select(f => f == v.Filter ? $"[bold aqua]{PlanTree.FilterLabel(f)}[/]" : $"[grey]{PlanTree.FilterLabel(f)}[/]");
-        var header = $"[aqua]plan[/] [grey](F)[/] " + string.Join("[grey]/[/]", chips) +
+        var header = $"[aqua]plan[/] [grey](F/↑↓/D)[/] " + string.Join("[grey]/[/]", chips) +
                      (string.IsNullOrWhiteSpace(v.Search) ? "" : $" [grey]search:[/][silver]{Esc(v.Search)}[/]");
         return new Panel(PlanTree.Build(stages, v)).Header(header).Expand().Border(BoxBorder.Rounded);
     }
 
     /// <summary>Prefer the full per-stage roll-up (<see cref="DashboardSnapshot.Stages"/>); fall back to
     /// deriving it from the legacy <c>StageOverview</c>/<c>StageCheckpoints</c> pair so older snapshots
-    /// (and focused tests) still render a tree.</summary>
-    private static IReadOnlyList<StageProgress> StagesFor(DashboardSnapshot s)
+    /// (and focused tests) still render a tree. Public so the dashboard can drive plan-tree selection
+    /// (B4.7) off exactly the stages it renders.</summary>
+    public static IReadOnlyList<StageProgress> StagesFor(DashboardSnapshot s)
     {
         if (s.Stages.Count > 0) return s.Stages;
         return s.StageOverview.Select(o => new StageProgress
@@ -411,7 +412,7 @@ public static class DashboardRenderer
                 break;
         }
         // Pop-out viewers + inject are available whenever a session/buffer exists.
-        actions.Add("[grey][[T]] think · [[O]] history · [[C]] fold · [[D]] docs · [[V]] git · [[X]] prompt · [[F]] filter · [[E]] expand · [[I]] inject[/]");
+        actions.Add("[grey][[T]] think · [[O]] history · [[C]] fold · [[↑↓]] select · [[D]] docs · [[V]] git · [[X]] prompt · [[F]] filter · [[E]] expand · [[I]] inject[/]");
         return "[grey]" + string.Join("  ", actions) + "[/]";
     }
 
