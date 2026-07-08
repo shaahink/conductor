@@ -151,4 +151,18 @@ public class TaskGraphTests
             Assert.Equal(evt.GetType(), back!.GetType());
         }
     }
+
+    [Fact]
+    public void Fold_DuplicateTaskAdded_FirstWriteWins()
+    {
+        var graph = new TaskGraph();
+        graph.Fold([
+            new TaskAdded { RunId = "r1", TaskId = "t1", CheckpointId = "B9.1", Title = "Original", Source = "planner", Order = 1, Seq = 1 },
+            new TaskAdded { RunId = "r1", TaskId = "t1", CheckpointId = "B9.1", Title = "Duplicate", Source = "agent", Order = 99, Seq = 2 },
+        ]);
+
+        Assert.Equal(1, graph.Count);
+        Assert.Equal("Original", graph.Find("t1")!.Title);
+        Assert.Equal(1, graph.Find("t1")!.Order);
+    }
 }

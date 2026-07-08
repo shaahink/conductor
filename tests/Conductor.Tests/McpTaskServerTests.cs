@@ -206,6 +206,89 @@ public class McpTaskServerTests
         finally { Cleanup(journal); }
     }
 
+    [Fact]
+    public async Task TaskUpdate_NonExistentTask_ReturnsError()
+    {
+        var journal = TempPath();
+        try
+        {
+            var server = new McpTaskServer("nonexistent.jsonl", journal, "r-ghost");
+            var req = Rpc(new { jsonrpc = "2.0", id = 1, method = "tools/call", @params = new { name = "task_update", arguments = new { taskId = "does-not-exist", status = "done" } } });
+            var responses = await RunMcpExchange(server, req);
+
+            Assert.Single(responses);
+            var result = responses[0].GetProperty("result");
+            Assert.False(result.GetProperty("ok").GetBoolean());
+            Assert.Contains("not found", result.GetProperty("error").GetString());
+        }
+        finally { Cleanup(journal); }
+    }
+
+    [Fact]
+    public async Task TaskUpdate_InvalidStatus_ReturnsError()
+    {
+        var eventsPath = TempPath();
+        var journal = TempPath();
+        try
+        {
+            var added = new TaskAdded { RunId = "r1", TaskId = "B9.3-t1", CheckpointId = "B9.3", Title = "Test", Source = "planner", Order = 1 };
+            await File.WriteAllTextAsync(eventsPath, JsonSerializer.Serialize(added, EventJsonContext.Default.ConductorEvent) + Environment.NewLine);
+
+            var server = new McpTaskServer(eventsPath, journal, "r1");
+            server.Init();
+            var req = Rpc(new { jsonrpc = "2.0", id = 1, method = "tools/call", @params = new { name = "task_update", arguments = new { taskId = "B9.3-t1", status = "bogus" } } });
+            var responses = await RunMcpExchange(server, req);
+
+            Assert.Single(responses);
+            var result = responses[0].GetProperty("result");
+            Assert.False(result.GetProperty("ok").GetBoolean());
+            Assert.Contains("invalid status", result.GetProperty("error").GetString());
+        }
+        finally
+        {
+            Cleanup(eventsPath);
+            Cleanup(journal);
+        }
+    }
+
+    [Fact]
+    public async Task TaskAdd_DuplicateOrder_GeneratesUniqueId()
+    {
+        var journal = TempPath();
+        try
+        {
+            var server = new McpTaskServer("nonexistent.jsonl", journal, "r-dup");
+            server.Init();
+
+            var add1 = Rpc(new { jsonrpc = "2.0", id = 1, method = "tools/call", @params = new { name = "task_add", arguments = new { checkpointId = "B9.3", title = "First", order = 1 } } });
+            var add2 = Rpc(new { jsonrpc = "2.0", id = 2, method = "tools/call", @params = new { name = "task_add", arguments = new { checkpointId = "B9.3", title = "Second", order = 1 } } });
+            var responses = await RunMcpExchange(server, add1, add2);
+
+            Assert.Equal(2, responses.Count);
+            var id1 = responses[0].GetProperty("result").GetProperty("taskId").GetString();
+            var id2 = responses[1].GetProperty("result").GetProperty("taskId").GetString();
+            Assert.NotEqual(id1, id2);
+        }
+        finally { Cleanup(journal); }
+    }
+
+    [Fact]
+    public async Task TaskAdd_MissingCheckpoint_ReturnsError()
+    {
+        var journal = TempPath();
+        try
+        {
+            var server = new McpTaskServer("nonexistent.jsonl", journal, "r-add");
+            var req = Rpc(new { jsonrpc = "2.0", id = 1, method = "tools/call", @params = new { name = "task_add", arguments = new { checkpointId = "", title = "Test" } } });
+            var responses = await RunMcpExchange(server, req);
+
+            Assert.Single(responses);
+            var result = responses[0].GetProperty("result");
+            Assert.False(result.GetProperty("ok").GetBoolean());
+        }
+        finally { Cleanup(journal); }
+    }
+
     private static void Cleanup(string path)
     {
         try { if (File.Exists(path)) File.Delete(path); } catch { }

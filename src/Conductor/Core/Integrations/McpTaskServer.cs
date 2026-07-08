@@ -168,6 +168,9 @@ public sealed class McpTaskServer
         return JsonSerializer.SerializeToElement(new { tasks = list, count = list.Length });
     }
 
+    private static readonly HashSet<string> ValidStatuses =
+        ["todo", "in_progress", "done", "skipped"];
+
     private JsonElement HandleTaskUpdate(JsonElement? args)
     {
         var taskId = "";
@@ -178,6 +181,15 @@ public sealed class McpTaskServer
             if (a.TryGetProperty("status", out var s)) status = s.GetString() ?? "";
         }
 
+        if (string.IsNullOrEmpty(taskId))
+            return JsonSerializer.SerializeToElement(new { ok = false, error = "taskId is required" });
+        if (!ValidStatuses.Contains(status))
+            return JsonSerializer.SerializeToElement(new { ok = false, error = $"invalid status: '{status}' (must be one of: {string.Join(", ", ValidStatuses)})" });
+
+        var existing = _graph.Find(taskId);
+        if (existing == null)
+            return JsonSerializer.SerializeToElement(new { ok = false, error = $"task not found: {taskId}" });
+
         var evt = new TaskStatusChanged
         {
             RunId = _runId,
@@ -187,7 +199,8 @@ public sealed class McpTaskServer
         WriteJournal(evt);
         _graph.Fold([evt]);
 
-        return JsonSerializer.SerializeToElement(new { ok = true, taskId, status });
+        var actualStatus = _graph.Find(taskId)?.Status ?? existing.Status;
+        return JsonSerializer.SerializeToElement(new { ok = true, taskId, status = actualStatus });
     }
 
     private JsonElement HandleTaskAdd(JsonElement? args)
@@ -202,9 +215,21 @@ public sealed class McpTaskServer
             if (a.TryGetProperty("order", out var o) && o.TryGetInt32(out var ov)) order = ov;
         }
 
+        if (string.IsNullOrEmpty(cpId))
+            return JsonSerializer.SerializeToElement(new { ok = false, error = "checkpointId is required" });
+        if (string.IsNullOrWhiteSpace(title))
+            return JsonSerializer.SerializeToElement(new { ok = false, error = "title is required" });
+
         var existing = _graph.ForCheckpoint(cpId);
         var nextOrder = order > 0 ? order : (existing.Count > 0 ? existing.Max(t => t.Order) + 1 : 1);
+
         var taskId = $"{cpId}-a{nextOrder}";
+        var attempt = 0;
+        while (_graph.Find(taskId) != null)
+        {
+            attempt++;
+            taskId = $"{cpId}-a{nextOrder}.{attempt}";
+        }
 
         var evt = new TaskAdded
         {

@@ -20,7 +20,12 @@ public sealed class CheckpointPlanner : IPlanner
             .ToList();
 
         if (segments.Count == 0)
-            segments.Add(new PlannedTask(checkpointTitle, 1));
+        {
+            var cleanTitle = checkpointTitle.Trim();
+            if (cleanTitle.Length == 0)
+                cleanTitle = checkpointId;
+            segments.Add(new PlannedTask(cleanTitle, 1));
+        }
 
         return segments;
     }

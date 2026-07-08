@@ -1539,26 +1539,26 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     {
         if (_softBreakSignalled) return;
         var threshold = ComputeSoftThreshold();
-        if (threshold == null) return;
+        if (threshold is not { } thresh) return;
 
         var liveTokens = (agent.TokensInput ?? 0) + (agent.TokensOutput ?? 0)
             + (agent.TokensReasoning ?? 0) + (agent.TokensCacheRead ?? 0);
-        if (liveTokens < threshold.Value) return;
+        if (liveTokens < thresh) return;
 
         _softBreakSignalled = true;
         var activeCp = preTrack.Checkpoints.FirstOrDefault(c => !c.IsDone)?.Id;
+        var maxTokens = plan.Limits.MaxSessionTokens!.Value; // guarded: ComputeSoftThreshold returns null unless MaxSessionTokens is set
         var signalFile = Path.Combine(plan.StateDir, "soft-break");
         File.WriteAllText(signalFile, $"finish-subtask-and-handoff:{DateTime.UtcNow:o}");
 
         events.Emit(new SoftBreakRequested
         {
             LiveTokens = liveTokens,
-            TokenBudget = plan.Limits.MaxSessionTokens!.Value,
+            TokenBudget = maxTokens,
             CurrentCheckpointId = activeCp,
         });
-        Log($"soft-break: {liveTokens / 1000.0:0.#}k tokens ≥ {threshold.Value / 1000.0:0.#}k threshold — nudge written, session should hand off cleanly");
-        // Push an attention status so the TUI reflects the soft-break
-        sink.Log($"[soft-break] {liveTokens / 1000.0:0.#}k/{plan.Limits.MaxSessionTokens!.Value / 1000.0:0.#}k tokens — agent has been nudged to hand off");
+        Log($"soft-break: {liveTokens / 1000.0:0.#}k tokens ≥ {thresh / 1000.0:0.#}k threshold — nudge written, session should hand off cleanly");
+        sink.Log($"[soft-break] {liveTokens / 1000.0:0.#}k/{maxTokens / 1000.0:0.#}k tokens — agent has been nudged to hand off");
     }
 
     /// <summary>Compute the absolute token threshold for the soft-break, or null if soft-break is

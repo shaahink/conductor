@@ -25,6 +25,8 @@ public sealed class TaskGraph
             switch (evt)
             {
                 case TaskAdded ta:
+                    if (_byId.ContainsKey(ta.TaskId))
+                        break; // duplicate — skip (first write wins, event-sourced)
                     var item = new TaskItem
                     {
                         TaskId = ta.TaskId,
