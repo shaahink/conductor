@@ -29,6 +29,8 @@ namespace Conductor.Core.Events;
 [JsonDerivedType(typeof(OwnerApprovalRequested), "ownerApprovalRequested")]
 [JsonDerivedType(typeof(OwnerApprovalGranted),   "ownerApprovalGranted")]
 [JsonDerivedType(typeof(McpCallFinished),       "mcpCallFinished")]
+[JsonDerivedType(typeof(TaskAdded),             "taskAdded")]
+[JsonDerivedType(typeof(TaskStatusChanged),     "taskStatusChanged")]
 public abstract record ConductorEvent
 {
     /// <summary>Monotonic 1-based ordinal within the log (continues across restarts). Stamped by
@@ -177,6 +179,30 @@ public sealed record McpCallFinished : ConductorEvent
     public required string ToolName { get; init; }
     public long DurationMs { get; init; }
     public bool Success { get; init; }
+}
+
+/// <summary>
+/// A sub-task was added beneath a checkpoint (B9.1). Tasks are advisory break-points — the checkpoint
+/// table stays the verified contract (D-8). Emitted by the planner persona decomposition.
+/// </summary>
+public sealed record TaskAdded : ConductorEvent
+{
+    public required string TaskId { get; init; }
+    public required string CheckpointId { get; init; }
+    public required string Title { get; init; }
+    /// <summary>Who/what created this task: <c>planner</c>, <c>agent</c> (via MCP), or <c>human</c>.</summary>
+    public required string Source { get; init; }
+    public int Order { get; init; }
+}
+
+/// <summary>
+/// A sub-task's status changed (B9.1). Tracked by the <see cref="TaskGraph"/> projection.
+/// Allowed transitions: todo → in_progress → done (or todo → skipped).
+/// </summary>
+public sealed record TaskStatusChanged : ConductorEvent
+{
+    public required string TaskId { get; init; }
+    public required string Status { get; init; }
 }
 
 /// <summary>Source-generated (de)serialisation for the event log — NDJSON, compact, camelCase, string
