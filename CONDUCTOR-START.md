@@ -7,21 +7,23 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #9 (B1, deliver) — landed **B1.5**: PlanConfig.ReadOrder (List<string>?), PromptBuilder
-      builds {readOrder} section as "Required reading (in order):\n1. doc\n2. …", inserted into
-      session/fix/resume/audit templates after the repo line (empty when unset). Self-plan readOrder
-      set to CONDUCTOR-START.md + BATON-BRIEF.md. Build 0w/0e net10, 75 tests (73+2). Diff 4 files.
-stage: **B1 IN PROGRESS** — B1.1…B1.5 DONE; B1.6…B1.7 TODO. Battery GREEN.
-gate: GREEN — `dotnet build Conductor.slnx` 0w/0e net10; `dotnet test` 75 pass (6 PromptBuilderTests).
-qa: session #8 (B1.4) PASS. (1) 7 ProgressConventionsTests green (P-0→P-0, P0.1→P0, etc);
-      (2) dotnet run status -p self-plan loads + parses the live CONDUCTOR-START.md with default
-      conventions (byte-identical). No findings.
-next: **B1.6** — new-plan scaffold (`conductor new-plan --template {minimal,dotnet,node,shamshir}`) +
-      schema `version` + fail-fast Validate() upgrades.
-trap: same as previous — STABLE driver parses via master's TrackerParser; new conventions bite only
-      once this build ships. Don't dry-run the live self-plan (lock).
+last: session #9 (B1, deliver) — landed **B1.5, B1.6, B1.7**. Stage B1 COMPLETE (7/7). B1.5:
+      PlanConfig.ReadOrder + PromptBuilder {readOrder} section. B1.6: schema version ("1.0") with
+      fail-fast Validate() + `conductor new-plan --template {minimal,dotnet,node,shamshir}` (4
+      templates, each generates loadable plan+TRACKER, A6-proven via dry-run against STABLE driver).
+      B1.7: Shamshir parity-pipeline TRACKER.md parse test (17 rows, P-0→P-0 etc.). Build 0w/0e
+      net10, 81 tests (73→81: +2 PromptBuilder, +5 PlanConfig version, +1 B1.7). Diff 11 files.
+stage: **B1 DONE** — B1.1…B1.7 ALL DONE. Battery GREEN. STABLE driver dry-runs new-plan output.
+gate: GREEN — `dotnet build Conductor.slnx` 0w/0e net10; `dotnet test` 81 pass.
+      `conductor new-plan --template dotnet` → STABLE driver dry-runs successfully.
+qa: session #8 (B1.4) PASS. (1) 7 ProgressConventionsTests green (irregular ids); (2) in-tree
+      `conductor status -p self-plan` parses live CONDUCTOR-START.md with default conventions
+      byte-identical. No findings.
+next: **B2.1** — ConductorEvent schema + append-only events.jsonl writer (additive alongside state.json).
+trap: same — STABLE driver from master parses with its own TrackerParser; self-plan dry-run must
+       use STABLE binary. diff budget held (11 files across B1.5..B1.7).
 dirty: none tracked.
-evidence: B1.5-gate.txt (+ B1.4…B0.1, audits/B0-baseline.md, adr/000{1,2}-*.md)
+evidence: B1.5-gate.txt, B1.6-gate.txt, B1.7-gate.txt (+ earlier)
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -53,8 +55,8 @@ never silent renumbering.
 | B1.3 | ScriptProvider (command→JSON) + PlanCheckpointProvider | DONE | 3e0fdbd | docs/baton/evidence/B1.3-gate.txt |
 | B1.4 | Configurable conventions (stage-id regex incl. P-0/P3.4b/F5, handoff marker, HUMAN token, status vocab) | DONE | 2330361 | docs/baton/evidence/B1.4-gate.txt |
 | B1.5 | Read-order context battery (mandated docs per plan) | DONE | 01c1732 | docs/baton/evidence/B1.5-gate.txt |
-| B1.6 | conductor new-plan --template {minimal,dotnet,node,shamshir}; schema version + fail-fast validation | TODO | | |
-| B1.7 | Shamshir iter-parity-pipeline TRACKER.md authored + parsed via default provider (unit test) | TODO | | |
+| B1.6 | conductor new-plan --template {minimal,dotnet,node,shamshir}; schema version + fail-fast validation | DONE | TBD | docs/baton/evidence/B1.6-gate.txt |
+| B1.7 | Shamshir iter-parity-pipeline TRACKER.md authored + parsed via default provider (unit test) | DONE | TBD | docs/baton/evidence/B1.7-gate.txt |
 | B2.1 | ConductorEvent schema + append-only events.jsonl writer (additive, alongside state.json) | TODO | | |
 | B2.2 | Projections: RunState rebuilt by folding the log; StateCompat parity tests | TODO | | |
 | B2.3 | Crash recovery replays the event log (not just state.json) | TODO | | |
