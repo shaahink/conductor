@@ -1,6 +1,6 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 21:43 UTC · branch `feat/baton` · HEAD `33d8c26`_
+_Updated 2026-07-08 21:53 UTC · branch `feat/baton` · HEAD `87a7c72`_
 
 **Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B9 — Task graph + smart session management · attempts used 0 · working ▸ B9.2
@@ -9,24 +9,24 @@ _Updated 2026-07-08 21:43 UTC · branch `feat/baton` · HEAD `33d8c26`_
 
 ## Latest activity (live)
 
-_Session #54 (Deliver) · running 10m · last output 4s ago · $0.0389_
+_Session #54 (Deliver) · running 20m · last output 8s ago · $0.0748_
 
 **Thinking:**
-> Build succeeded 0w/0e. Now I need to write the tests for B9.2. The gate says: "given a checkpoint, the planner produces ≥1 ordered sub-task recorded in the graph (test with fake/deterministic planner output)."  I need tests for: 1. CheckpointPlanner.Decompose() produces ≥1 sub-task 2. The produced t…
-> Let me run the tests now to make sure everything passes.
-> Wait, 336 tests? But I added 6 new tests. That should be 342. Let me check if the tests are actually being detected.  The test run shows 336 passed — that's the same count as before. This means the new tests weren't compiled. I need to build first since I added new files. Let me re-build and re-test…
+> Build passes 0w/0e. Now let me run the tests.
+> All 7 MCP tests pass. Now let me run the full test suite to make sure nothing broke.
+> 349 tests pass (was 342 after B9.2, now +7 for B9.3). Build 0w/0e.   Now I need to: 1. Update CONDUCTOR-START.md for B9.3 2. Commit 3. Evaluate B9.4  B9.4 is "Cooperative soft-break + hard fallback". The gate: "fake-agent test — approaching the soft threshold injects the finish-and-handoff nudge and…
 
 **Recent actions:**
-- `22:41:49` · Now add task graph recovery from the event log during crash recovery:
-- `22:41:54` » edit src\Conductor\Core\Hosting\ConductorHost.cs
-- `22:41:54` · Register IPlanner in ConductorHost DI:
-- `22:41:59` · Let me build to verify compilation:
-- `22:42:05` » bash dotnet build Conductor.slnx 2>&1
-- `22:42:21` » write tests\Conductor.Tests\PlannerTests.cs
-- `22:42:21` · Build passes 0w/0e. Now write tests for B9.2:
-- `22:42:37` » bash dotnet test Conductor.slnx --no-build 2>&1
-- `22:42:44` · Tests still show 336 — need to rebuild with new files:
-- `22:43:12` » bash dotnet build Conductor.slnx 2>&1; if ($?) { dotnet test Conductor.slnx --no-build 2>&1 }
+- `22:51:20` · Now rewrite the tests correctly:
+- `22:51:42` » bash dotnet build Conductor.slnx 2>&1; if ($?) { dotnet test Conductor.slnx --no-build --filter "FullyQualifiedName~McpTaskServerTests" 2>&1 }
+- `22:52:08` » write tests\Conductor.Tests\McpTaskServerTests.cs
+- `22:52:08` · Fix analyzer errors:
+- `22:52:24` » bash dotnet build Conductor.slnx 2>&1
+- `22:52:37` » bash dotnet test Conductor.slnx --no-build --filter "FullyQualifiedName~McpTaskServerTests" 2>&1
+- `22:52:43` · All 7 B9.3 tests pass. Now run full suite:
+- `22:52:54` » bash dotnet test Conductor.slnx --no-build 2>&1
+- `22:53:08` · 349 tests pass, build 0w/0e. Let me check the diff and commit B9.3:
+- `22:53:08` » bash git diff --stat; git status -s
 
 ## Stage progress
 
