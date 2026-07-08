@@ -1,32 +1,12 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 06:14 UTC · branch `feat/baton` · HEAD `83e64cb`_
+_Updated 2026-07-08 06:21 UTC · branch `feat/baton` · HEAD `d8d8b89`_
 
-**Status:** Running
+**Status:** Idle
 **Stage:** B1 — Decouple Loom + pluggable progress providers · attempts used 0
-**Checkpoints:** 13/65 done · **Sessions run:** 10 · **Cost:** $0.3647 · **Tokens:** 192,186 in / 135,277 out / 70,438 think
+**Checkpoints:** 13/65 done · **Sessions run:** 10 · **Cost:** $0.3936 · **Tokens:** 193,678 in / 148,730 out / 76,377 think
 **Confirmed phases:** B0
-
-## Latest activity (live)
-
-_Session #10 (Audit) · running 10m · last output 12s ago · $0.0113_
-
-**Thinking:**
-> The shamshir example tracker has 17 rows which matches the B1.7 test, so that's working correctly. For testing my fix, I'm considering whether to make `BuildPlanJson` and `BuildTrackerMd` internal with `InternalsVisibleTo`, or instead test through the command's public `Execute` method—though constru…
-> I'm weighing whether to expose internals through InternalsVisibleTo or instead test the CLI by invoking it directly through CommandApp, and I'm realizing there might be an even cleaner approach here.  The real invariant I want to verify is that the scaffolded plan and tracker stay coherent — every s…
-> I've identified the core issues now. The main problem is that the shamshir `new-plan` scaffold has misaligned checkpoint and stage declarations—the tracker references S1.1/S1.2 checkpoints while the plan uses P-0/P0/P1 stages, making the plan impossible to drive since no checkpoint maps to any stage…
-
-**Recent actions:**
-- `07:12:09` » read src\Conductor\Conductor.csproj
-- `07:12:09` · Let me look at the Conductor csproj to decide how tests reach the scaffold builders.
-- `07:12:46` » read tests\Conductor.Tests\Conductor.Tests.csproj
-- `07:12:46` · Let me check the test project name/reference before wiring internals.
-- `07:12:46` » bash Select-String -Path "src/Conductor/Commands/Commands.cs" -Pattern "^namespace|^using" | Select-Object -First 8
-- `07:13:29` » todowrite 5 todos
-- `07:13:30` · I have a complete picture. Two real issues to fix plus tests. Let me set up tracking and start fixing.
-- `07:13:41` · Now let me fix the shamshir scaffold. First make the builders internal and rewrite `BuildTrackerMd` to be stage-aware, plus clean up partial files if the load-v…
-- `07:13:41` » edit src\Conductor\Commands\Commands.cs
-- `07:13:47` » edit src\Conductor\Commands\Commands.cs
+**Pending:** full-battery phase gate for B1
 
 ## Stage progress
 
@@ -59,16 +39,10 @@ _Session #10 (Audit) · running 10m · last output 12s ago · $0.0113_
 | 7 | B1 | Deliver | 1 | 07-08 04:49 | 0:37 | Advanced | B1.3 | 5 | build:OK | $0.0268 | 1,793/12,018 |
 | 8 | B1 | Deliver | 1 | 07-08 05:26 | 0:21 | Advanced | B1.4 | 4 | build:OK | $0.0318 | 1,646/14,600 |
 | 9 | B1 | Deliver | 1 | 07-08 05:48 | 0:15 | Advanced | B1.5 B1.6 B1.7 | 7 | build:OK | $0.0744 | 63,136/21,354 |
-| 10 | B1 | Audit | 1 | 07-08 06:04 | … | running |  | 0 |  |  |  |
+| 10 | B1 | Audit | 1 | 07-08 06:04 | 0:17 | Progress |  | 3 |  | $0.0289 | 1,492/13,453 |
 
 ### Commits by session
 
-- **s2 (B0 Deliver)** — 5 commit(s):
-  - 8ca4439 docs(bB0): tracker — B0.4/B0.5 commit hashes; B0.3 BLOCKED, B0.4 IN PROGRESS
-  - bdc5041 feat(bB0.4): extend fake-agent.ps1 — opencode-json format, Baton tracker regex, 4 modes
-  - 62a819e feat(bB0.5): baseline audit doc — 40+ file:line citations across 25 source files
-  - 439a27b chore(conductor): s2 B0 working ▸B0.3 @ 03:31
-  - 1d29980 chore(conductor): s2 B0 working ▸B0.3 @ 03:21
 - **s3 (B0 Deliver)** — 8 commit(s):
   - 12862fd chore(conductor): s3 B0 working ▸B0.3 @ 04:53
   - a407da4 chore(conductor): s3 B0 working ▸B0.3 @ 04:43
@@ -109,10 +83,15 @@ _Session #10 (Audit) · running 10m · last output 12s ago · $0.0113_
   - 98a17c2 chore(conductor): s9 B1 working ▸B1.5 @ 06:58
   - 7e14776 chore: fill B1.5 commit hash in tracker
   - 01c1732 feat(bB1.5): read-order context battery
+- **s10 (B1 Audit)** — 3 commit(s):
+  - d8d8b89 docs(bB1-audit): honest B1 phase handover + tracked followups
+  - a952084 fix(bB1-audit): stage-coherent new-plan scaffold + whitespace-tolerant status
+  - fb0a7df chore(conductor): s10 B1 working ▸B1 @ 07:14
 
 ## Phase handovers (audit)
 
 - `.conductor/handovers/B0.md`
+- `.conductor/handovers/B1.md`
 
 ## Last gate run
 
@@ -120,7 +99,7 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: B1 complete (7/7). Landed B1.5 (read-order battery: PlanConfig.ReadOrder + {readOrder} in PromptBuilder), B1.6 (schema version "1.0" with fail-fast Validate, `conductor new-plan --template` for 4 templates, STABLE driver back-compat proven via dry-run), and B1.7 (unit test parsing the real `examples/shamshir/parity-pipeline.TRACKER.md` with shamshir conventions, 17 rows, stage-id derivation correct). Battery: build 0w/0e net10, 81 tests (73→81). Diff: 11 files, in budget. Next session: B2.1 (ConductorEvent schema + append-only events.jsonl). What was hard: weaving the `new-plan` command's embedded JSON templates carefully to avoid introducing new analyzer warnings while keepi…
+> SESSION-RESULT: B1 (decouple Loom · `IProgressProvider` · conventions · read-order · new-plan) is genuinely solid — the engine reads all progress through `IProgressProvider` (no `TrackerParser` calls left in `Orchestrator`), the default is byte-identical to the old parser, conventions are per-plan config with Loom defaults, the Shamshir 17-row template parses, the MA0009 ReDoS ratchet is closed at `error`, and gates are green (`dotnet build Conductor.slnx` 0w/0e net10 warnings-as-errors; `dotnet test` 87 pass, up from 81). This audit found and FIXED two real defects: (1) `new-plan --template shamshir` scaffolded an **undrivable** plan — it hard-coded `S1`/`S1.1`/`S1.2` rows for every templat…
 
 ## Tracker handoff
 
