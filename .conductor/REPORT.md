@@ -1,11 +1,11 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 03:54 UTC · branch `feat/baton` · HEAD `12862fd`_
+_Updated 2026-07-08 04:02 UTC · branch `feat/baton` · HEAD `595ed2b`_
 
 **Status:** Idle
 **Stage:** B0 — Repo modernisation + self-hosting harness · attempts used 0
-**Checkpoints:** 6/65 done · **Sessions run:** 3 · **Cost:** $0.1739 · **Tokens:** 121,931 in / 58,880 out / 29,975 think
-**Pending:** auto-fix audit for B0
+**Checkpoints:** 6/65 done · **Sessions run:** 4 · **Cost:** $0.1855 · **Tokens:** 123,069 in / 65,391 out / 32,444 think
+**Pending:** full-battery phase gate for B0
 
 ## Stage progress
 
@@ -32,6 +32,7 @@ _Updated 2026-07-08 03:54 UTC · branch `feat/baton` · HEAD `12862fd`_
 | 1 | B0 | Deliver | 1 | 07-08 01:46 | 0:24 | Advanced | B0.1 B0.2 B0.6 | 6 | build:OK | $0.0617 | 55,932/18,595 |
 | 2 | B0 | Deliver | 1 | 07-08 02:11 | 0:23 | running | B0.5 | 5 | build:OK | $0.0890 | 64,355/27,152 |
 | 3 | B0 | Deliver | 1 | 07-08 03:03 | 0:50 | Advanced | B0.3 B0.4 | 8 | build:OK | $0.0231 | 1,644/13,133 |
+| 4 | B0 | Audit | 1 | 07-08 03:54 | 0:08 | Progress |  | 1 |  | $0.0116 | 1,138/6,511 |
 
 ### Commits by session
 
@@ -57,6 +58,12 @@ _Updated 2026-07-08 03:54 UTC · branch `feat/baton` · HEAD `12862fd`_
   - 72225dd chore(conductor): s3 B0 working ▸B0.3 @ 04:33
   - f3646a2 chore(conductor): s3 B0 working ▸B0.3 @ 04:23
   - a431da0 chore(conductor): s3 B0 working ▸B0.3 @ 04:13
+- **s4 (B0 Audit)** — 1 commit(s):
+  - 595ed2b audit(bB0): honest B0 handover + tracked followups; un-ignore .conductor deliverables
+
+## Phase handovers (audit)
+
+- `.conductor/handovers/B0.md`
 
 ## Last gate run
 
@@ -64,7 +71,7 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: Landed **B0.3** (`90d2567` — self-plan proven loadable by the STABLE `bin\conductor.exe`: dry-run parses the tracker, selects stage B0, resolves `session.md`, and compiles the full Deliver prompt; evidence `docs/baton/evidence/B0.3-gate.txt`) and **B0.4** (`3032eb9` — token-free `--once` smoke run end-to-end through the real driver for both success→"Advanced" and gatesred→"NoProgress" paths; evidence `B0.4-gate.txt`). This completes stage **B0 (B0.1…B0.6 all DONE)**; full battery is GREEN — `dotnet build Conductor.slnx` 0w/0e on net10, 56 tests pass. **QA of session #2: PASS with a real fix** — its two claims checked out (audit doc has 53 file:line citations; fake-agent.ps1 h…
+> SESSION-RESULT: B0 passes a rigorous static audit — the phase is genuinely solid, not oversold. The delivery diff (b8fbfec..HEAD, 26 files) is small, correct and analyzer-clean: the net10 migration is centralised in `Directory.Build.props`/`Directory.Packages.props`, warnings-as-errors is real and enforced (proven by the analyzer-forced fixes in the diff — `RunAsync().ConfigureAwait(false)`, `StringComparison.Ordinal`, `using` CTS, `nameof` param, `System.Threading.Lock`×4, fire-and-forget error-surfacing), the curated ruleset's relaxations are all documented in ADR-0001, `Conductor.slnx` references both projects, the baseline audit's file:line citations spot-check accurate, and the fake-age…
 
 ## Tracker handoff
 
