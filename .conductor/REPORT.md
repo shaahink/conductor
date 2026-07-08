@@ -1,6 +1,6 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 14:53 UTC · branch `feat/baton` · HEAD `5369ef4`_
+_Updated 2026-07-08 15:03 UTC · branch `feat/baton` · HEAD `db3c8bd`_
 
 **Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 0 · working ▸ B4.3
@@ -9,24 +9,24 @@ _Updated 2026-07-08 14:53 UTC · branch `feat/baton` · HEAD `5369ef4`_
 
 ## Latest activity (live)
 
-_Session #28 (Deliver) · running 20m · last output 0s ago · $0.0224_
+_Session #28 (Deliver) · running 30m · last output 1s ago · $0.0411_
 
 **Thinking:**
-> Now I'm wiring up the interactive controls in LiveDashboard—adding the F key to cycle through filters and an E key for the expand-all toggle. I need to introduce a `_tree` field and set up the key handlers, then pass that tree state to BuildState. I should also update the action bar to display hints…
-> I'm realizing there's a duplicate case label issue here — the F and E cases are already handled earlier with actual logic, so having them again in the switch statement would cause a compile error in C#. I'm realizing the pattern matching behavior here — when you have both a constant case label like …
-> I see the issue now—the search term "Timeline" is matching both the stage name and the checkpoint title "Timeline view", so the matching list only contains B5.1. The logic is returning just the matching checkpoints rather than all checkpoints when a stage name matches.  To fix the test, I need a sea…
+> The character code checks aren't working because PowerShell's Out-String might be re-encoding the output, and the footer text is wrapping across lines which breaks the substring matching. I need to write the output directly to a file with UTF-8 encoding and then grep that file to properly capture th…
+> The redirect output shows the tree structure is rendering correctly despite the encoding issue—the filter header, stage columns, collapse indicators, and key hints are all visible and working. Now I'm creating the evidence artifact to demonstrate this.
+> The tree artifact is rendering with per-stage columns and collapse controls, but the meta cell is wrapping across multiple lines in the narrow panel because the NoWrap setting isn't preventing the content from breaking at spaces, even though I applied it to that column. The real issue is that 24 col…
 
 **Recent actions:**
-- `15:51:35` » edit src\Conductor\Ui\LiveDashboard.cs
-- `15:51:43` · Now build, then check the StatusAgent test and update SampleState for tests.
-- `15:51:49` » bash dotnet build Conductor.slnx 2>&1 | Select-Object -Last 12
-- `15:51:58` · Now run the full suite to confirm the renderer change didn't break existing tests (SampleState uses StageOverview/StageCheckpoints, which the fallback handles).
-- `15:52:10` » bash dotnet test Conductor.slnx 2>&1 | Select-Object -Last 8
-- `15:52:46` · All 172 still green. Now write the load-bearing tests for the tree logic. Let me check the existing renderer test's `SampleState` uses `SymbolId` which still ne…
-- `15:52:46` » write tests\Conductor.Tests\PlanTreeTests.cs
-- `15:53:01` » bash dotnet test Conductor.slnx --filter "FullyQualifiedName~PlanTreeTests" 2>&1 | Select-Object -Last 25
-- `15:53:21` · Search "Timeline" also matches checkpoint "Timeline view", so it correctly narrows to that row. My test premise was wrong. Let me use a stage-name-only search t…
-- `15:53:21` » edit tests\Conductor.Tests\PlanTreeTests.cs
+- `16:02:04` » edit CONDUCTOR-START.md
+- `16:02:14` · Now commit. Let me stage the B4.3 files and commit with gate output in the body.
+- `16:02:15` » bash git -C C:\Code\conductor-baton add src/Conductor/Ui/PlanTree.cs src/Conductor/Ui/DashboardRenderer.cs src/Conductor/Ui/DashboardState.cs src/Conductor/Ui/L…
+- `16:02:31` » bash $msg = @" feat(bB4.3): hierarchical plan tree (sub-checkpoints, expand/collapse, per-stage columns)  New pure PlanTree (VisibleRows: filter All/Todo/Active…
+- `16:02:39` · Now update the tracker row with the real commit sha and push.
+- `16:02:39` » bash git -C C:\Code\conductor-baton rev-parse --short HEAD
+- `16:02:48` » edit CONDUCTOR-START.md
+- `16:02:57` » bash git -C C:\Code\conductor-baton add CONDUCTOR-START.md; git -C C:\Code\conductor-baton commit -m "docs(bB4.3): record B4.3 commit sha in tracker row" 2>&1 |…
+- `16:03:11` · Working tree clean. Now push the branch.
+- `16:03:14` » bash git -C C:\Code\conductor-baton push origin feat/baton 2>&1 | Select-Object -Last 8
 
 ## Stage progress
 
