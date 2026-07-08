@@ -1,32 +1,12 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 09:09 UTC · branch `feat/baton` · HEAD `a48b3bd`_
+_Updated 2026-07-08 09:19 UTC · branch `feat/baton` · HEAD `30717ee`_
 
-**Status:** Running
-**Stage:** B3 — Safety, owner-gates & process control · attempts used 0 · working ▸ B3.1
-**Checkpoints:** 19/65 done · **Sessions run:** 18 · **Cost:** $0.7319 · **Tokens:** 338,818 in / 279,066 out / 128,947 think
+**Status:** Idle
+**Stage:** B3 — Safety, owner-gates & process control · attempts used 0
+**Checkpoints:** 24/65 done · **Sessions run:** 18 · **Cost:** $0.8783 · **Tokens:** 429,116 in / 317,236 out / 152,594 think
 **Confirmed phases:** B0, B1, B2
-
-## Latest activity (live)
-
-_Session #18 (Deliver) · running 20m · last output 6s ago · $0.0913_
-
-**Thinking:**
-> Let me see the rest of HandleControl, especially the AbortNow case:
-> Now let me implement the new control verbs. I'll add them to `HandleControl`:
-> Now I need to add these commands to `ReadControlFile`. But `Goto` needs a `stageId` parameter. Let me handle that in the ReadControlFile parsing — if the command is "goto", also read the "stageId" field.  Also need to handle PauseAfterStage in ConfirmStage.
-
-**Recent actions:**
-- `10:08:16` » edit src\Conductor\Models\RunState.cs
-- `10:08:16` · First, add new control actions and the `PauseAfterStage` flag:
-- `10:08:21` » grep class Git
-- `10:08:26` » read src\Conductor\Core\Git.cs
-- `10:08:36` » read src\Conductor\Core\Orchestrator.cs
-- `10:08:36` · Now implement the process control verbs in Orchestrator:
-- `10:08:41` » read src\Conductor\Core\Orchestrator.cs
-- `10:08:51` » edit src\Conductor\Core\Orchestrator.cs
-- `10:09:00` » edit src\Conductor\Core\Orchestrator.cs
-- `10:09:00` · Now update `ReadControlFile` for new commands, and handle `PauseAfterStage` in `ConfirmStage`:
+**Pending:** auto-fix audit for B3
 
 ## Stage progress
 
@@ -35,7 +15,7 @@ _Session #18 (Deliver) · running 20m · last output 6s ago · $0.0913_
 | B0 | Repo modernisation + self-hosting harness | 6/6 | confirmed ✓ |
 | B1 | Decouple Loom + pluggable progress providers | 7/7 | confirmed ✓ |
 | B2 | Event-sourced backbone + provider decoupling | 6/6 | confirmed ✓ |
-| B3 | Safety, owner-gates & process control | 0/5 | **← active** |
+| B3 | Safety, owner-gates & process control | 5/5 | gating… |
 | B4 | TUI overhaul (alt-screen + tree) | 0/7 | todo |
 | B5 | Observability & health | 0/4 | todo |
 | B6 | AFK + two-way Telegram | 0/5 | todo |
@@ -67,14 +47,10 @@ _Session #18 (Deliver) · running 20m · last output 6s ago · $0.0913_
 | 15 | B2 | Deliver | 1 | 07-08 07:40 | 0:36 | Advanced | B2.5 | 7 | build:OK | $0.0666 | 3,900/25,958 |
 | 16 | B2 | Deliver | 1 | 07-08 08:16 | 0:12 | Advanced | B2.6 | 2 | build:OK | $0.0683 | 66,649/18,804 |
 | 17 | B2 | Audit | 1 | 07-08 08:29 | 0:19 | Progress |  | 2 |  | $0.0312 | 1,801/11,248 |
-| 18 | B3 | Deliver | 1 | 07-08 08:49 | … | running |  | 0 |  |  |  |
+| 18 | B3 | Deliver | 1 | 07-08 08:49 | 0:29 | Advanced | B3.1 B3.2 B3.3 B3.4 B3.5 | 7 | build:OK | $0.1464 | 90,298/38,170 |
 
 ### Commits by session
 
-- **s10 (B1 Audit)** — 3 commit(s):
-  - d8d8b89 docs(bB1-audit): honest B1 phase handover + tracked followups
-  - a952084 fix(bB1-audit): stage-coherent new-plan scaffold + whitespace-tolerant status
-  - fb0a7df chore(conductor): s10 B1 working ▸B1 @ 07:14
 - **s11 (B2 Deliver)** — 4 commit(s):
   - c3303e0 chore: fill B2.1 commit hash in tracker (d5ebd12)
   - d5ebd12 feat(bB2.1): event-sourced backbone — ConductorEvent schema + append-only EventLog (additive)
@@ -107,6 +83,14 @@ _Session #18 (Deliver) · running 20m · last output 6s ago · $0.0913_
 - **s17 (B2 Audit)** — 2 commit(s):
   - 4bfae61 fix(bB2.6): stamp sessionId on persisted TokenDelta so LiveMetrics.ForSession folds real logs
   - a20eef0 chore(conductor): s17 B2 working ▸B2 @ 09:39
+- **s18 (B3 Deliver)** — 7 commit(s):
+  - 30717ee chore(bB3): mark B3.1-B3.5 DONE, refresh handoff (session #18)
+  - 157cdc8 feat(bB3.4,bB3.5): budget/token caps + approval mode + graceful Ctrl+C
+  - 90ce43a feat(bB3.3): process control verbs — retry-stage, rollback, pause-after-stage, goto
+  - a08197f chore(conductor): s18 B3 working ▸B3.1 @ 10:09
+  - a48b3bd feat(bB3.2): owner-gate step type + AwaitingOwner status + approve via CLI/TUI
+  - db01755 feat(bB3.1): confirm-gating for destructive actions in TUI + CLI
+  - 1b3c6e6 chore(conductor): s18 B3 working ▸B3.1 @ 09:59
 
 ## Phase handovers (audit)
 
@@ -116,27 +100,28 @@ _Session #18 (Deliver) · running 20m · last output 6s ago · $0.0913_
 
 ## Last gate run
 
-build:OK · tests:OK
+build:OK
 
 ## Last session result
 
-> SESSION-RESULT: B2 (event-sourced backbone + provider decoupling + Host/DI/logging) is genuinely load-bearing and passed audit — the event log is emitted additively at every transition, fold parity is proven against two fixtures (with the guard itself guarded), crash recovery replays the log, the provider `switch` is really gone behind `IAgentProvider`, the host composes via DI with fail-fast Options validation + Serilog correlation, and every `catch {}` in the diff is now typed/handled (FU-B0-6 closed). I found and **fixed one real, silent B2.6 defect**: persisted `TokenDelta` events never carried a `sessionId` (`EventLog.Emit` stamps only Seq/Ts/RunId), so `LiveMetrics.ForSession` — the B2…
+> SESSION-RESULT: Stage B3 **COMPLETE** — all 5 checkpoints (B3.1…B3.5) landed across 4 commits. Build 0w/0e, test 149 pass (126→+23). Key deliverables: (1) A/K/S now require double-press confirmation in TUI + `--yes` in CLI, fixing F-6 finger-slip risk; (2) owner-gate step type (`StageConfig.OwnerGate`) parks at new `AwaitingOwner` status, resumable via `conductor approve` or TUI `R` key, with `OwnerApprovalRequested/Granted` events on the spine; (3) process-control verbs — `retry-stage`, `rollback` (safe: refuses if dirty), `pause-after-stage`, `goto <stage>` — all wired through `control.json` + CLI; (4) per-run budget/token caps park at `AwaitingOwner` when exceeded, plus `ApprovalMode` for…
 
 ## Tracker handoff
 
 ```
-last: session #16 (B2, deliver) — landed **B2.6**, stage B2 COMPLETE. TokenDelta events emitted per
-      step_finish via AgentStreamState delegate; IEventSink plumbed through AgentSession.Start();
-      LiveMetrics projection folds deltas per-session + run-wide; dashboard token line now includes
-      live session tokens (F-3 fixed end-to-end). 125 tests (118→+7). Battery GREEN.
-stage: **B2 DONE** — B2.1…B2.6 all landed. Stage B3 next (Safety — owner gates, destructive confirm).
-gate: GREEN — build 0w/0e; test 125 pass. Round-trip test covers TokenDelta schema. Dry-run smoke
-      exit 0 (NullEventSink — real TokenDelta events written only during agent runs).
-qa: session #15 (B2.5) PASS — re-ran gate (build 0w/0e, 118 tests), re-ran --dry-run smoke (log with
-      run=/stage= correlation confirmed), invalid-plan validation test confirmed. No findings.
-next: **B3.1** — Destructive-action confirm in TUI (A/K/S) + CLI (--yes/interactive). Persona: engineer.
-trap: TokenDelta emission is wired but only observable during real agent runs (NullEventSink in dry-run).
-      SessionTokens* fields on snapshot mirror SessionCostUsd pattern — dash now shows live burn.
+last: session #18 (B3, deliver) — landed **B3.1…B3.5**, stage B3 COMPLETE. Confirm-gating for A/K/S
+      (TUI double-press + CLI --yes); owner-gate step type + AwaitingOwner + approve; process-control
+      verbs (retry-stage/rollback/pause-after-stage/goto); budget/token caps + approval mode;
+      graceful Ctrl+C with heartbeat + queue-resume. 149 tests (126→+23). Battery GREEN.
+stage: **B3 DONE** — B3.1…B3.5 all landed. Stage B4 next (TUI overhaul).
+gate: GREEN — build 0w/0e; test 149 pass. Dry-run smoke exit 0. Event log round-trip covers 12 event
+      types (incl. OwnerApprovalRequested/Granted). Manual TUI confirm-prompt verified.
+qa: session #16 (B2.6) PASS — re-ran gate (build 0w/0e, 126 tests), verified TokenDelta delegate path
+      end-to-end (OpencodeProvider→AgentStreamState→IEventSink), verified round-trip test exists.
+      Audit session #17 already fixed B2.6 TokenDelta.sessionId null-on-disk bug. No new findings.
+next: **B4.1** — Alternate-screen buffer with clean restore on exit/crash. Persona: engineer.
+trap: push failed (github.com unreachable). 4 commits local (db01755, a48b3bd, 90ce43a, 157cdc8).
+      Budget caps + approval mode not yet smoke-tested against a real agent run.
 dirty: none tracked.
-evidence: B2.6-gate.txt (+ earlier)
+evidence: B3.1-gate.txt, B3.2-gate.txt, B3.3-gate.txt, B3.4-gate.txt
 ```
