@@ -35,6 +35,7 @@ public sealed class EventLog : IEventSink, IAsyncDisposable, IDisposable
     private readonly TimeProvider _clock;
     private readonly Channel<ConductorEvent> _channel;
     private readonly Task _drain;
+    private readonly ManualResetEventSlim _drainReady = new(false);
     private long _seq;
 
     public EventLog(string path, string runId, TimeProvider? clock = null)
@@ -45,14 +46,6 @@ public sealed class EventLog : IEventSink, IAsyncDisposable, IDisposable
         var dir = Path.GetDirectoryName(path);
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
 
-        // Touch the file so crash recovery (ReadAll) and live-read tests never race with
-        // the drain task for file creation. FileMode.Append inside DrainAsync will open it
-        // eagerly anyway — this just removes a timing window where the file doesn't exist yet.
-        if (!File.Exists(path))
-        {
-            using var fs = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
-        }
-
         // Continue the sequence across restarts so a resumed run's events stay monotonically ordered.
         _seq = File.Exists(path) ? CountLines(path) : 0;
 
@@ -62,6 +55,10 @@ public sealed class EventLog : IEventSink, IAsyncDisposable, IDisposable
             SingleWriter = false,
         });
         _drain = Task.Run(DrainAsync);
+
+        // Block briefly until the drain has opened the file and entered its read loop.
+        // This eliminates the scheduling race that made live-read tests flaky (~50% on CI).
+        _drainReady.Wait(TimeSpan.FromSeconds(5));
     }
 
     public string FilePath => _path;
@@ -89,6 +86,7 @@ public sealed class EventLog : IEventSink, IAsyncDisposable, IDisposable
         await using (writer.ConfigureAwait(false))
         {
             var reader = _channel.Reader;
+            _drainReady.Set(); // signal constructor: file open, reader ready
             while (await reader.WaitToReadAsync().ConfigureAwait(false))
             {
                 while (reader.TryRead(out var evt))
