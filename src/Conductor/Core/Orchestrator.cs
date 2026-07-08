@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Conductor.Core.Planning;
 using Conductor.Models;
 
 namespace Conductor.Core;
@@ -19,6 +20,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         RegexOptions.IgnoreCase);
 
     private readonly PromptBuilder _prompts = new(plan);
+    private readonly IProgressProvider _progress = new MarkdownTableProvider();
     private IReadOnlyList<GateResult>? _lastGates;
     private bool _pendingSkip;
     private bool _pausePending;
@@ -61,7 +63,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     Log("backoff over — resuming");
                 }
 
-                var track = TrackerParser.ParseFile(plan.TrackerPath);
+                var track = _progress.Read(plan);
                 if (track.Checkpoints.Count == 0)
                 {
                     NeedsHuman($"tracker {plan.Tracker} has no parseable checkpoint rows — check the table format");
@@ -347,7 +349,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             }
             else
             {
-                var verdict = ConsultAdvisor(rec, stage, TrackerParser.ParseFile(plan.TrackerPath), "resume budget exhausted after stall/timeout");
+                var verdict = ConsultAdvisor(rec, stage, _progress.Read(plan), "resume budget exhausted after stall/timeout");
                 ApplyVerdict(verdict, rec, stage, defaultAction: "retry");
             }
             state.Status = RunStatus.Idle;
@@ -396,7 +398,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             return;
         }
 
-        var postTrack = TrackerParser.ParseFile(plan.TrackerPath);
+        var postTrack = _progress.Read(plan);
         rec.NewCommits = Git.CommitsSince(plan.Repo, startHead);
         rec.NewlyDone = postTrack.Checkpoints
             .Where(c => c.IsDone && !(preTrack.ById(c.Id)?.IsDone ?? false))
@@ -837,7 +839,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     private void PushIdleSnapshot()
     {
         TrackerSnapshot track;
-        try { track = TrackerParser.ParseFile(plan.TrackerPath); }
+        try { track = _progress.Read(plan); }
         catch { track = new TrackerSnapshot(); }
         sink.Snapshot(BaseSnapshot(track));
     }
@@ -899,7 +901,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     {
         Save();
         TrackerSnapshot track;
-        try { track = TrackerParser.ParseFile(plan.TrackerPath); }
+        try { track = _progress.Read(plan); }
         catch { track = new TrackerSnapshot(); }
         Reporter.WriteAndPublish(plan, state, track, _lastGates, Log);
         PushIdleSnapshot();

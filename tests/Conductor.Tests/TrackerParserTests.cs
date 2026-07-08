@@ -1,4 +1,6 @@
 using Conductor.Core;
+using Conductor.Core.Planning;
+using Conductor.Models;
 
 namespace Conductor.Tests;
 
@@ -80,5 +82,33 @@ public class TrackerParserTests
         Assert.Equal(35, t.Checkpoints.Count); // L0.1–L8.1 (3+5+4+3+4+5+6+4+1)
         Assert.Contains("L0", t.Checkpoints.Select(c => c.StageId)); // stage grouping works
         Assert.All(t.Checkpoints, c => Assert.False(string.IsNullOrWhiteSpace(c.Id)));
+    }
+
+    // B1.2 — the parse moved behind IProgressProvider. Prove the default provider is byte-identical
+    // to the facade every existing call site still uses, so decoupling changed no behaviour (D-2).
+    [Fact]
+    public void MarkdownTableProviderIsByteIdenticalToFacade()
+    {
+        var viaFacade = TrackerParser.Parse(Sample);
+        var viaProvider = new MarkdownTableProvider().Read(WritePlanFor(Sample, out var cleanup));
+        try
+        {
+            Assert.Equal("markdown-table", new MarkdownTableProvider().Name);
+            Assert.Equal(
+                viaFacade.Checkpoints.Select(c => (c.Id, c.Title, c.Status, c.Commit, c.Evidence)),
+                viaProvider.Checkpoints.Select(c => (c.Id, c.Title, c.Status, c.Commit, c.Evidence)));
+            Assert.Equal(viaFacade.HandoffBlock, viaProvider.HandoffBlock);
+            Assert.Equal(viaFacade.RawText, viaProvider.RawText);
+        }
+        finally { cleanup(); }
+    }
+
+    private static PlanConfig WritePlanFor(string trackerText, out Action cleanup)
+    {
+        var repo = Path.Combine(Path.GetTempPath(), "cbaton-b12-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(repo);
+        File.WriteAllText(Path.Combine(repo, "TRACKER.md"), trackerText);
+        cleanup = () => { try { Directory.Delete(repo, recursive: true); } catch (IOException) { } };
+        return new PlanConfig { Repo = repo, Tracker = "TRACKER.md" };
     }
 }

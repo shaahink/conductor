@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+using Conductor.Core.Planning;
 
 namespace Conductor.Core;
 
@@ -31,35 +31,14 @@ public sealed class TrackerSnapshot
         => Checkpoints.FirstOrDefault(c => c.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
 }
 
+/// <summary>
+/// Back-compat facade over the default <see cref="MarkdownTableProvider"/>. Existing call sites and
+/// tests keep using <c>TrackerParser.Parse/ParseFile</c>; the engine's new seam is
+/// <see cref="IProgressProvider"/>. Both share the exact same parsing code, so behaviour is identical.
+/// </summary>
 public static class TrackerParser
 {
-    // Matches rows like: | L0.1 | Truth expectations (...) | TODO | | |
-    // Status cell may carry decoration after the keyword (e.g. "DONE ✅").
-    private static readonly Regex RowRx = new(
-        @"^\|\s*(?<id>[A-Za-z]+\d+(?:\.\d+)?[a-z]?)\s*\|(?<title>[^|]*)\|\s*(?<status>TODO|IN\s+PROGRESS|DONE|BLOCKED)(?<rest>[^|]*)\|(?<commit>[^|]*)\|(?<evidence>[^|]*)\|",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    public static TrackerSnapshot Parse(string trackerText) => MarkdownTableProvider.Parse(trackerText);
 
-    private static readonly Regex HandoffRx = new(
-        @"^##\s*Handoff[^\r\n]*\r?\n(?<body>.*?)(?=^##\s|\z)",
-        RegexOptions.Multiline | RegexOptions.Singleline | RegexOptions.Compiled);
-
-    public static TrackerSnapshot Parse(string trackerText)
-    {
-        var rows = new List<CheckpointRow>();
-        foreach (var line in trackerText.Split('\n'))
-        {
-            var m = RowRx.Match(line.TrimEnd());
-            if (!m.Success) continue;
-            rows.Add(new CheckpointRow(
-                m.Groups["id"].Value.Trim(),
-                m.Groups["title"].Value.Trim(),
-                (m.Groups["status"].Value + m.Groups["rest"].Value).Trim(),
-                m.Groups["commit"].Value.Trim(),
-                m.Groups["evidence"].Value.Trim()));
-        }
-        var handoff = HandoffRx.Match(trackerText) is { Success: true } h ? h.Groups["body"].Value.Trim() : "";
-        return new TrackerSnapshot { Checkpoints = rows, HandoffBlock = handoff, RawText = trackerText };
-    }
-
-    public static TrackerSnapshot ParseFile(string path) => Parse(File.ReadAllText(path));
+    public static TrackerSnapshot ParseFile(string path) => MarkdownTableProvider.ParseFile(path);
 }
