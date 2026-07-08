@@ -1,12 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 16:18 UTC · branch `feat/baton` · HEAD `6714efe`_
+_Updated 2026-07-08 16:28 UTC · branch `feat/baton` · HEAD `0f492be`_
 
-**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 0
-**Checkpoints:** 31/65 done · **Sessions run:** 32 · **Cost:** $1.1556 · **Tokens:** 505,108 in / 440,885 out / 192,819 think
+**Checkpoints:** 31/65 done · **Sessions run:** 33 · **Cost:** $1.1556 · **Tokens:** 505,108 in / 440,885 out / 192,819 think
 **Confirmed phases:** B0, B1, B2, B3
-**Pending:** auto-fix audit for B4
+
+## Latest activity (live)
+
+_Session #33 (Audit) · running 10m · last output 44s ago · $0.0105_
+
+**Thinking:**
+> The test coverage looks solid for the main AltScreen scenarios, though the signal handler and ProcessExit paths are tricky to test directly. I'm thinking through the robustness of the `Leave()` method — if a Write fails because the terminal is gone during shutdown, that exception would bubble up fro…
+> The AltScreenTests are checking that LeaveAlt and ShowCursor are properly emitted, and the idempotency test still validates that LeaveAlt occurs exactly once. Now I'm running the full test suite to verify everything works.
+> All 221 tests are passing, so now I need to run the full gate battery the way the driver would—that's build, test, and preview. Let me verify the preview command works with my changes by running it redirected as a B4 gate.  Running the built conductor.dll with preview redirected...
+
+**Recent actions:**
+- `17:25:24` · Let me check the AltScreen and Docs/Modal tests, and confirm `TrackerParser.cs` itself was untouched (test-only relaxation).
+- `17:25:24` » read tests\Conductor.Tests\AltScreenTests.cs
+- `17:25:24` » read tests\Conductor.Tests\DocsAndModalTests.cs
+- `17:25:49` · The tests are solid. One more hardening on the critical restore path: `AltScreen.Leave()` is invoked from `ProcessExit` and POSIX signal handlers, but its `_out…
+- `17:25:49` » edit src\Conductor\Ui\AltScreen.cs
+- `17:26:28` » bash dotnet build Conductor.slnx -c Debug 2>&1 | Select-Object -Last 6
+- `17:27:16` » bash dotnet test Conductor.slnx -c Debug --nologo 2>&1 | Select-Object -Last 6
+- `17:27:27` · All 221 pass. Let me verify the `preview` still works redirected (a B4 gate) with my changes, and run a release build to mirror the gate battery.
+- `17:27:35` » bash dotnet run --project src/Conductor -c Debug -- preview 2>&1 | Select-Object -First 20
+- `17:27:48` » bash Get-Content src/Conductor/bin/Debug/net10.0/conductor.dll > $null; dotnet run --project src/Conductor -c Debug -- preview --plan plans/conductor.self.plan.…
 
 ## Stage progress
 
@@ -30,7 +50,6 @@ _Updated 2026-07-08 16:18 UTC · branch `feat/baton` · HEAD `6714efe`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 3 | B0 | Deliver | 1 | 07-08 03:03 | 0:50 | Advanced | B0.3 B0.4 | 8 | build:OK | $0.0231 | 1,644/13,133 |
 | 4 | B0 | Audit | 1 | 07-08 03:54 | 0:08 | Progress |  | 1 |  | $0.0116 | 1,138/6,511 |
 | 5 | B1 | Deliver | 1 | 07-08 04:02 | 0:12 | Advanced | B1.1 | 3 | build:OK | $0.0221 | 1,245/10,975 |
 | 6 | B1 | Deliver | 1 | 07-08 04:15 | 0:33 | Advanced | B1.2 | 5 | build:OK | $0.0241 | 1,297/10,939 |
@@ -60,6 +79,7 @@ _Updated 2026-07-08 16:18 UTC · branch `feat/baton` · HEAD `6714efe`_
 | 30 | B4 | Deliver | 1 | 07-08 15:16 | 0:21 | Advanced | B4.5 | 7 | build:OK | $0.0351 | 2,137/17,812 |
 | 31 | B4 | Deliver | 1 | 07-08 15:38 | 0:19 | Advanced | B4.6 | 3 | build:OK | $0.0253 | 1,939/12,322 |
 | 32 | B4 | Deliver | 1 | 07-08 15:58 | 0:20 | Advanced | B4.7 | 5 | build:OK | $0.0360 | 2,120/14,866 |
+| 33 | B4 | Audit | 1 | 07-08 16:18 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
