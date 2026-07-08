@@ -1,39 +1,18 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 04:12 UTC · branch `feat/baton` · HEAD `495f8a7`_
+_Updated 2026-07-08 04:15 UTC · branch `feat/baton` · HEAD `06c9c55`_
 
-**Status:** Running
-**Stage:** B1 — Decouple Loom + pluggable progress providers · attempts used 0 · working ▸ B1.1
-**Checkpoints:** 6/65 done · **Sessions run:** 5 · **Cost:** $0.1855 · **Tokens:** 123,069 in / 65,391 out / 32,444 think
+**Status:** Idle
+**Stage:** B1 — Decouple Loom + pluggable progress providers · attempts used 0 · working ▸ B1.2
+**Checkpoints:** 7/65 done · **Sessions run:** 5 · **Cost:** $0.2076 · **Tokens:** 124,314 in / 76,366 out / 36,148 think
 **Confirmed phases:** B0
-
-## Latest activity (live)
-
-_Session #5 (Deliver) · running 10m · last output 18s ago · $0.0145_
-
-**Thinking:**
-> I'm moving the loom plans and templates into the examples directory—shifting `loom.plan.json` and `loom.opencode.plan.json` from `plans/` to `examples/loom/`, along with the templates folder, since the plans reference templates with a relative path.  Now I need to update references across the codeba…
-> I need to verify the build and tests are working, then run the dry-run gate. The key constraint is that the live repo at `C:/code/DevContext2-ui` must remain untouched—the dry-run needs to execute against a scratch checkout or fixture instead.  The challenge is that the plan file references a repo p…
-> The em-dash in the dry-run output confirms the template file from the relocated examples directory was actually used rather than the built-in fallback, which proves the templatesDir path resolved correctly. Now I'll document this evidence.
-
-**Recent actions:**
-- `05:10:50` · Now rebuild + test to confirm the reference updates are clean, then set up the dry-run gate.
-- `05:11:18` » bash dotnet build Conductor.slnx 2>&1 | Select-Object -Last 5; Write-Output "===TEST==="; dotnet test Conductor.slnx --no-build 2>&1 | Select-Object -Last 4
-- `05:11:36` · Green. Now the B1.1 gate: `--dry-run` on `examples/loom/loom.opencode.plan.json` from the new path. The plan points `repo` at `C:/code/DevContext2-ui` (live). P…
-- `05:11:36` » bash $fx = "C:\Users\shahi\AppData\Local\Temp\opencode\loom-fixture" if (Test-Path $fx) { Remove-Item $fx -Recurse -Force } New-Item -ItemType Directory -Path $…
-- `05:11:48` · Now create a fixture copy of the plan (from the new `examples/loom/` path) with only the repo path rewritten, keeping `templatesDir: templates` so it resolves r…
-- `05:11:48` » bash $fx = "C:\Users\shahi\AppData\Local\Temp\opencode\loom-fixture" # Copy the relocated examples/loom dir (plan + templates) next to the fixture repo, # provi…
-- `05:12:00` · Now run the STABLE driver `--dry-run` against the relocated plan and capture evidence.
-- `05:12:00` » bash $fx = "C:\Users\shahi\AppData\Local\Temp\opencode\loom-fixture" $plan = "$fx\examples-loom\loom.opencode.plan.json" & "C:\Code\conductor\bin\conductor.exe"…
-- `05:12:10` · The relocated Loom plan loads from `examples/loom/` and dry-runs green through the STABLE driver: it parses the LOOM-START tracker, selects stage L0, renders th…
-- `05:12:11` » bash Write-Output "--- confirm loom session.md is the source (distinctive first line) ---" Get-Content examples\loom\templates\session.md | Select-Object -First…
 
 ## Stage progress
 
 | Stage | Title | Done | State |
 |---|---|---|---|
 | B0 | Repo modernisation + self-hosting harness | 6/6 | confirmed ✓ |
-| B1 | Decouple Loom + pluggable progress providers | 0/7 | **← active** |
+| B1 | Decouple Loom + pluggable progress providers | 1/7 | **← active** |
 | B2 | Event-sourced backbone + provider decoupling | 0/6 | todo |
 | B3 | Safety, owner-gates & process control | 0/5 | todo |
 | B4 | TUI overhaul (alt-screen + tree) | 0/7 | todo |
@@ -54,7 +33,7 @@ _Session #5 (Deliver) · running 10m · last output 18s ago · $0.0145_
 | 2 | B0 | Deliver | 1 | 07-08 02:11 | 0:23 | running | B0.5 | 5 | build:OK | $0.0890 | 64,355/27,152 |
 | 3 | B0 | Deliver | 1 | 07-08 03:03 | 0:50 | Advanced | B0.3 B0.4 | 8 | build:OK | $0.0231 | 1,644/13,133 |
 | 4 | B0 | Audit | 1 | 07-08 03:54 | 0:08 | Progress |  | 1 |  | $0.0116 | 1,138/6,511 |
-| 5 | B1 | Deliver | 1 | 07-08 04:02 | … | running |  | 0 |  |  |  |
+| 5 | B1 | Deliver | 1 | 07-08 04:02 | 0:12 | Advanced | B1.1 | 3 | build:OK | $0.0221 | 1,245/10,975 |
 
 ### Commits by session
 
@@ -82,6 +61,10 @@ _Session #5 (Deliver) · running 10m · last output 18s ago · $0.0145_
   - a431da0 chore(conductor): s3 B0 working ▸B0.3 @ 04:13
 - **s4 (B0 Audit)** — 1 commit(s):
   - 595ed2b audit(bB0): honest B0 handover + tracked followups; un-ignore .conductor deliverables
+- **s5 (B1 Deliver)** — 3 commit(s):
+  - 06c9c55 docs(bB1.1): tracker — record B1.1 commit hash 0aa242d
+  - 0aa242d feat(bB1.1): relocate Loom plan + templates to examples/loom/
+  - 648c727 chore(conductor): s5 B1 working ▸B1.1 @ 05:12
 
 ## Phase handovers (audit)
 
@@ -89,26 +72,26 @@ _Session #5 (Deliver) · running 10m · last output 18s ago · $0.0145_
 
 ## Last gate run
 
-build:OK · tests:OK
+build:OK
 
 ## Last session result
 
-> SESSION-RESULT: B0 passes a rigorous static audit — the phase is genuinely solid, not oversold. The delivery diff (b8fbfec..HEAD, 26 files) is small, correct and analyzer-clean: the net10 migration is centralised in `Directory.Build.props`/`Directory.Packages.props`, warnings-as-errors is real and enforced (proven by the analyzer-forced fixes in the diff — `RunAsync().ConfigureAwait(false)`, `StringComparison.Ordinal`, `using` CTS, `nameof` param, `System.Threading.Lock`×4, fire-and-forget error-surfacing), the curated ruleset's relaxations are all documented in ADR-0001, `Conductor.slnx` references both projects, the baseline audit's file:line citations spot-check accurate, and the fake-age…
+> SESSION-RESULT: Landed **B1.1** — relocated `plans/loom.plan.json`, `plans/loom.opencode.plan.json`, and `plans/templates/` to `examples/loom/` via `git mv` (history preserved; `plans/` now holds only the self-plan + baton-templates as designed), updated all references (README quick-start/control-verbs/config pointer, examples/README caveat, `PlanConfigTests` locator), and proved the relocated `loom.opencode.plan.json` loads + `--dry-run`s green through the **STABLE driver** against a fixture repo — with the em-dash in the rendered prompt confirming `templatesDir` resolved from the new path (evidence: `docs/baton/evidence/B1.1-gate.txt`). Committed `0aa242d` + tracker `06c9c55`, pushed; batt…
 
 ## Tracker handoff
 
 ```
-last: session #3 (B0, deliver) — landed **B0.3** (self-plan dry-run via temp-repo workaround) and
-      **B0.4** (--once smoke through the STABLE driver; fixed a real A6 crash — see qa).
-stage: **B0 COMPLETE** — B0.1…B0.6 all DONE. Battery GREEN: build 0w/0e net10, 56 tests pass.
+last: session #5 (B1, deliver) — landed **B1.1** (moved plans/loom* + plans/templates →
+      examples/loom/ via git mv; updated README/examples-README/PlanConfigTests; --dry-run green).
+stage: **B1 IN PROGRESS** — B1.1 DONE; B1.2…B1.7 TODO. Battery GREEN: build 0w/0e net10, 56 tests.
 gate: GREEN — `dotnet build Conductor.slnx` 0w/0e; `dotnet test` 56 pass.
-qa: session #2 PASS with a FIX — audit doc (53 file:line) + fake-agent 4-modes verified. But B0.4's
-      fake-agent.ps1 had NEVER been run through the real driver (A6): it emitted opencode-json flat
-      at root; driver reads it nested under `part` (AgentSession.cs:123) → InvalidOperationException
-      CRASH. Fixed the wire format; both success + gatesred scenarios now green via the stable driver.
-next: **B1.1** — move plans/loom* + templates → examples/loom/; prove Loom loads + --dry-run green
-      from the new path (docs/baton/stages/B1.md). B0 guardrails are the bar B1 is held to.
-trap: ratchet followups owed — MA0045 (B2), MA0002 (post-B2), MA0009 (B1.4).
+qa: session #3 (B0) PASS. Re-verified via the STABLE driver: (1) `--once` fake-agent smoke on a
+      fresh temp repo → Advanced/DONE flip, no A6 crash (trust model intact); (2) net10 + WAE +
+      Meziantou real (0-warning build proves analyzers not weakened, A17 clean). No findings.
+next: **B1.2** — `Core/Planning/IProgressProvider.cs` + `MarkdownTableProvider` (extract today's
+      TrackerParser behind the interface, byte-identical parse; existing TrackerParserTests exercise it).
+trap: dry-run touches target .conductor (AcquireLock) — always use a fixture repo, never the live run.
+      Ratchet followups owed — MA0045 (B2), MA0002 (post-B2), MA0009 (B1.4).
 dirty: none tracked.
-evidence: B0.1-gate.txt, B0.2-gate.txt, B0.3-gate.txt, B0.4-gate.txt, B0.5-gate.txt, audits/B0-baseline.md, adr/000{1,2}-*.md
+evidence: B1.1-gate.txt (+ B0.1…B0.5, audits/B0-baseline.md, adr/000{1,2}-*.md)
 ```
