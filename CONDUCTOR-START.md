@@ -7,19 +7,19 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #1 (B0, deliver) — landed **B0.1** (net10 + central build/packages), **B0.2**
-      (analyzers + warnings-as-errors, curated ruleset, real fixes), **B0.6** (ADR-0001 + ADR-0002).
-stage: **B0 IN PROGRESS** — B0.1/B0.2/B0.6 DONE; B0.3/B0.4/B0.5 TODO.
-gate: GREEN on net10 — `dotnet build Conductor.slnx` 0w/0e (warnings-as-errors); `dotnet test` 56 pass.
-      Evidence: docs/baton/evidence/B0.1-gate.txt, B0.2-gate.txt.
-qa: previous (plan-authoring) session PASS — 56 tests verified; stable driver compiled the real B0
-    prompt (.conductor/logs/session-001.prompt.md, 3930B) + tracker parses 65 rows. No findings.
-next: **B0.5** (baseline audit doc, file:line citations — doc-only, safe now) then **B0.3/B0.4**.
-trap: B0.3/B0.4 need `conductor.exe run --dry-run/--once` but the LIVE driver holds .conductor lock
-      while a session runs — do NOT spawn a nested driver mid-session (state.json corruption risk);
-      run them when the driver is idle. Ratchet followups owed: MA0045 (B2), MA0002 (post-B2), MA0009 (B1.4).
-dirty: none tracked (.conductor/ is driver runtime, internally gitignored).
-evidence: docs/baton/evidence/B0.1-gate.txt, docs/baton/evidence/B0.2-gate.txt, docs/baton/adr/000{1,2}-*.md
+last: session #2 (B0, deliver) — landed **B0.5** (baseline audit, 40+ file:line citations) and
+      **B0.4** (fake-agent.ps1 rewritten: opencode-json, Baton tracker regex, 4 modes verified standalone).
+stage: **B0 IN PROGRESS** — B0.1/B0.2/B0.5/B0.6 DONE; B0.3/B0.4 IN PROGRESS (BLOCKED by driver lock).
+gate: GREEN — `dotnet build Conductor.slnx` 0w/0e; `dotnet test` 56 pass.
+      Evidence: B0.1-gate.txt, B0.2-gate.txt, B0.5-gate.txt, B0.4-gate.txt (standalone).
+qa: session #1 PASS — MA0004 enforced, ADR-0001 substantive, build+56 tests green. No findings.
+next: unblock **B0.3** (dry-run verify) when driver idle — run `conductor.exe run --dry-run -p
+      plans/conductor.self.plan.json`, capture output as evidence. Then **B0.4** full `--once` smoke.
+HUMAN: B0.3/B0.4 require `conductor.exe run --dry-run/--once` but the driver (pid 27760) holds
+      the .conductor lock. Awaiting session end / idle window to complete.
+trap: ratchet followups owed — MA0045 (B2), MA0002 (post-B2), MA0009 (B1.4).
+dirty: none tracked.
+evidence: B0.1-gate.txt, B0.2-gate.txt, B0.5-gate.txt, B0.4-gate.txt, audits/B0-baseline.md, adr/000{1,2}-*.md
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -42,9 +42,9 @@ never silent renumbering.
 |---|-----------|--------|--------|----------|
 | B0.1 | net10 migration + Directory.Build.props + Directory.Packages.props (verify existing Conductor.slnx) | DONE | b3f1499 | docs/baton/evidence/B0.1-gate.txt |
 | B0.2 | .editorconfig + Meziantou.Analyzer + NetAnalyzers, curated ruleset, warnings-as-errors, 56 tests green | DONE | cf378f0 | docs/baton/evidence/B0.2-gate.txt |
-| B0.3 | CONDUCTOR-START.md + plans/conductor.self.plan.json + self-plan gates | TODO | | |
-| B0.4 | fake-agent.ps1 scenarios extended; self-loop token-free smoke via --dry-run/--once | TODO | | |
-| B0.5 | Baseline audit doc (current coupling/debt) written as B0 evidence | TODO | | |
+| B0.3 | CONDUCTOR-START.md + plans/conductor.self.plan.json + self-plan gates | BLOCKED | | (driver-locked: pid 27760 holds .conductor lock) |
+| B0.4 | fake-agent.ps1 scenarios extended; self-loop token-free smoke via --dry-run/--once | IN PROGRESS | (pending) | docs/baton/evidence/B0.4-gate.txt (script verified standalone; --once smoke blocked) |
+| B0.5 | Baseline audit doc (current coupling/debt) written as B0 evidence | DONE | (pending) | docs/baton/evidence/B0.5-gate.txt, docs/baton/audits/B0-baseline.md |
 | B0.6 | ADR-0001 (tooling/ruleset rationale) + ADR-0002 (event-sourcing decision) | DONE | cf378f0,d416ead | docs/baton/adr/0001-tooling-and-ruleset.md, docs/baton/adr/0002-event-sourcing.md |
 | B1.1 | Move plans/loom* + templates → examples/loom/; Loom loads + --dry-run green from new path | TODO | | |
 | B1.2 | IProgressProvider abstraction + MarkdownTableProvider (today's parser, zero behaviour change) | TODO | | |
