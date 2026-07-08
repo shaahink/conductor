@@ -1,37 +1,16 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 02:06 UTC · branch `feat/baton` · HEAD `cf378f0`_
+_Updated 2026-07-08 02:11 UTC · branch `feat/baton` · HEAD `76a2b33`_
 
-**Status:** Running
-**Stage:** B0 — Repo modernisation + self-hosting harness · attempts used 0 · working ▸ B0.1
-**Checkpoints:** 0/65 done · **Sessions run:** 1 · **Cost:** $0.0000
-
-## Latest activity (live)
-
-_Session #1 (Deliver) · running 20m · last output 25s ago · $0.0519_
-
-**Thinking:**
-> The git status is showing `.conductor/.gitignore` as untracked, which is the driver's runtime gitignore file. Since `.conductor` is driver-managed and this gitignore is meant to exclude everything except itself and REPORT.md, I need to decide whether committing it makes sense or if it should stay as…
-> I'm noticing a discrepancy in the commit hashes — the parent HEAD shows 956fb32 for B0.1, but I recall seeing b3f1499 earlier when checking the commit log. Let me verify which one is actually correct, since the hash display might have been truncated or I may have misread it initially.  The driver ha…
-> The driver's heartbeat commit added `.conductor/REPORT.md` to tracking, which is expected behavior—this interleaving of heartbeat and feature commits is part of the normal workflow, not something I introduced. The `.conductor/.gitignore` already permits this file, so my working state is clean with B…
-
-**Recent actions:**
-- `03:04:06` » bash git status --short; echo "=== diff stat ==="; git diff --stat
-- `03:04:50` · Diffs are minimal and contained. `.conductor/.gitignore` is driver runtime — I'll leave it untracked (as the previous session did). Now writing ADR-0001 (R0.3 r…
-- `03:04:50` » write docs\baton\adr\0001-tooling-and-ruleset.md
-- `03:05:05` · Now capture B0.2 evidence and commit. Let me write the evidence file with the real gate output:
-- `03:05:20` » bash $ts = (Get-Date -Format "yyyy-MM-dd HH:mm:ss"); $sha = (git rev-parse --short HEAD); "# B0.2 evidence - analyzers + warnings-as-errors (curated ruleset)`n`…
-- `03:05:38` · The gate is green (0w/0e, 56 tests). But I notice HEAD moved to `956fb32` — the driver may have committed a heartbeat. Let me check the log:
-- `03:05:38` » bash git log --oneline -6; echo "=== show 956fb32 stat ==="; git show --stat --oneline 956fb32 2>&1 | Select-Object -First 15
-- `03:06:03` · Confirmed: the driver committed a heartbeat (`956fb32`, F-4 in the wild) — expected driver behaviour, not mine. Committing B0.2 on top with only my named files:
-- `03:06:03` » write ..\..\Users\shahi\AppData\Local\Temp\opencode\b02msg.txt
-- `03:06:14` » bash git add .editorconfig Directory.Build.props Directory.Packages.props src/Conductor/Program.cs src/Conductor/Core/AgentSession.cs src/Conductor/Core/GateRun…
+**Status:** Idle
+**Stage:** B0 — Repo modernisation + self-hosting harness · attempts used 0 · working ▸ B0.3
+**Checkpoints:** 3/65 done · **Sessions run:** 1 · **Cost:** $0.0617 · **Tokens:** 55,932 in / 18,595 out / 6,232 think
 
 ## Stage progress
 
 | Stage | Title | Done | State |
 |---|---|---|---|
-| B0 | Repo modernisation + self-hosting harness | 0/6 | **← active** |
+| B0 | Repo modernisation + self-hosting harness | 3/6 | **← active** |
 | B1 | Decouple Loom + pluggable progress providers | 0/7 | todo |
 | B2 | Event-sourced backbone + provider decoupling | 0/6 | todo |
 | B3 | Safety, owner-gates & process control | 0/5 | todo |
@@ -49,19 +28,40 @@ _Session #1 (Deliver) · running 20m · last output 25s ago · $0.0519_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | B0 | Deliver | 1 | 07-08 01:46 | … | running |  | 0 |  |  |  |
+| 1 | B0 | Deliver | 1 | 07-08 01:46 | 0:24 | Advanced | B0.1 B0.2 B0.6 | 6 | build:OK | $0.0617 | 55,932/18,595 |
+
+### Commits by session
+
+- **s1 (B0 Deliver)** — 6 commit(s):
+  - 76a2b33 docs(bB0): tracker — B0.1/B0.2/B0.6 DONE, refreshed handoff + QA verdict
+  - d416ead feat(bB0.6): ADR-0002 (event-sourcing decision + additive-migration strategy)
+  - ed648db chore(conductor): s1 B0 working ▸B0.1 @ 03:06
+  - cf378f0 feat(bB0.2): analyzers + warnings-as-errors under a curated ruleset
+  - 956fb32 chore(conductor): s1 B0 working ▸B0.1 @ 02:56
+  - b3f1499 feat(bB0.1): migrate to net10.0 + central build/package management
+
+## Last gate run
+
+build:OK
+
+## Last session result
+
+> SESSION-RESULT: Landed three B0 checkpoints on `feat/baton` with real proof, all under a green battery (net10, `dotnet build Conductor.slnx` 0w/0e under warnings-as-errors, `dotnet test` 56 pass). **B0.1** (`b3f1499`) migrated both projects to `net10.0` via a root `Directory.Build.props` + central `Directory.Packages.props`, verified `Conductor.slnx`. **B0.2** (`cf378f0`) turned on Meziantou + NetAnalyzers with a curated `.editorconfig` and `TreatWarningsAsErrors`, and fixed the code rather than the ruleset (A17): `Program`→`RunAsync`, four `System.Threading.Lock` migrations, `StringComparison.Ordinal`, an error-surfacing fire-and-forget, `ArgumentException` param name, and a `using` CTS. **…
 
 ## Tracker handoff
 
 ```
-last: (none yet) — plan authored on `feat/baton`, deliverables committed, nothing executed.
-stage: **B0 NOT STARTED** (B0.1–B0.6 all TODO).
-gate: not run. Baseline: `dotnet build` + `dotnet test` (56 tests) on `net9.0` before B0 migrates to net10.
-next: **B0.1** — migrate to net10.0, add Directory.Build.props + Directory.Packages.props +
-      .editorconfig + Meziantou.Analyzer + Conductor.slnx; keep 56 tests green under warnings-as-errors.
-dirty: none.
-trap: the DRIVER binary is `master`'s bin\conductor.exe — never point the self-plan's agent at the
-      binary it is editing; run gates via the stable driver. Do NOT touch C:\Code\conductor (master)
-      or the live DevContext2-ui Loom run.
-evidence: (none yet)
+last: session #1 (B0, deliver) — landed **B0.1** (net10 + central build/packages), **B0.2**
+      (analyzers + warnings-as-errors, curated ruleset, real fixes), **B0.6** (ADR-0001 + ADR-0002).
+stage: **B0 IN PROGRESS** — B0.1/B0.2/B0.6 DONE; B0.3/B0.4/B0.5 TODO.
+gate: GREEN on net10 — `dotnet build Conductor.slnx` 0w/0e (warnings-as-errors); `dotnet test` 56 pass.
+      Evidence: docs/baton/evidence/B0.1-gate.txt, B0.2-gate.txt.
+qa: previous (plan-authoring) session PASS — 56 tests verified; stable driver compiled the real B0
+    prompt (.conductor/logs/session-001.prompt.md, 3930B) + tracker parses 65 rows. No findings.
+next: **B0.5** (baseline audit doc, file:line citations — doc-only, safe now) then **B0.3/B0.4**.
+trap: B0.3/B0.4 need `conductor.exe run --dry-run/--once` but the LIVE driver holds .conductor lock
+      while a session runs — do NOT spawn a nested driver mid-session (state.json corruption risk);
+      run them when the driver is idle. Ratchet followups owed: MA0045 (B2), MA0002 (post-B2), MA0009 (B1.4).
+dirty: none tracked (.conductor/ is driver runtime, internally gitignored).
+evidence: docs/baton/evidence/B0.1-gate.txt, docs/baton/evidence/B0.2-gate.txt, docs/baton/adr/000{1,2}-*.md
 ```
