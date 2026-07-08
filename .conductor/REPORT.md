@@ -1,32 +1,12 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 09:29 UTC · branch `feat/baton` · HEAD `d8f0914`_
+_Updated 2026-07-08 09:38 UTC · branch `feat/baton` · HEAD `d427650`_
 
-**Status:** Running
+**Status:** Idle
 **Stage:** B3 — Safety, owner-gates & process control · attempts used 0
-**Checkpoints:** 24/65 done · **Sessions run:** 19 · **Cost:** $0.8783 · **Tokens:** 429,116 in / 317,236 out / 152,594 think
+**Checkpoints:** 24/65 done · **Sessions run:** 19 · **Cost:** $0.9168 · **Tokens:** 431,294 in / 336,507 out / 158,939 think
 **Confirmed phases:** B0, B1, B2
-
-## Latest activity (live)
-
-_Session #19 (Audit) · running 10m · last output 1s ago · $0.0176_
-
-**Thinking:**
-> I'm deciding whether to add a `--force` flag to the CtlCommand base class or create separate settings for RollbackCommand, since `--force` really only applies to rollback operations. The challenge is that RollbackCommand inherits from CtlCommand, so I need to figure out the cleanest way to handle th…
-> Time to build and test the implementation.
-> The build is clean, so now I'm adding value tests to lock down the invariants—specifically that `OwnerApproval.Decide` doesn't confirm based on budget or approval mode alone. I'll also add a round-trip test for `AwaitingOwnerReason` in the RunState tests, then create a new `OwnerApprovalTests.cs` fi…
-
-**Recent actions:**
-- `10:27:44` » read src\Conductor\Commands\Commands.cs
-- `10:27:44` · Now update `CtlCommand` to carry `--force`:
-- `10:27:59` » edit src\Conductor\Commands\Commands.cs
-- `10:28:06` · Let me build to catch errors:
-- `10:28:15` » bash dotnet build Conductor.slnx -v q --nologo 2>&1 | Select-Object -Last 20
-- `10:28:31` » write tests\Conductor.Tests\OwnerApprovalTests.cs
-- `10:28:31` · Fixes compile clean. Now add value-only tests locking the fixed invariants:
-- `10:28:41` » edit {"filePath":"C:/Code/conductor-baton/tests/Conductor.Tests/RunStateTests.cs","newString":"    [Fact]\n    public void PauseAfterStageFlagRoundTrips()"…
-- `10:28:53` » edit tests\Conductor.Tests\RunStateTests.cs
-- `10:29:11` » bash dotnet test Conductor.slnx --nologo -v q 2>&1 | Select-Object -Last 10
+**Pending:** full-battery phase gate for B3
 
 ## Stage progress
 
@@ -68,15 +48,10 @@ _Session #19 (Audit) · running 10m · last output 1s ago · $0.0176_
 | 16 | B2 | Deliver | 1 | 07-08 08:16 | 0:12 | Advanced | B2.6 | 2 | build:OK | $0.0683 | 66,649/18,804 |
 | 17 | B2 | Audit | 1 | 07-08 08:29 | 0:19 | Progress |  | 2 |  | $0.0312 | 1,801/11,248 |
 | 18 | B3 | Deliver | 1 | 07-08 08:49 | 0:29 | Advanced | B3.1 B3.2 B3.3 B3.4 B3.5 | 7 | build:OK | $0.1464 | 90,298/38,170 |
-| 19 | B3 | Audit | 1 | 07-08 09:19 | … | running |  | 0 |  |  |  |
+| 19 | B3 | Audit | 1 | 07-08 09:19 | 0:19 | Progress |  | 3 |  | $0.0385 | 2,178/19,271 |
 
 ### Commits by session
 
-- **s11 (B2 Deliver)** — 4 commit(s):
-  - c3303e0 chore: fill B2.1 commit hash in tracker (d5ebd12)
-  - d5ebd12 feat(bB2.1): event-sourced backbone — ConductorEvent schema + append-only EventLog (additive)
-  - 032b4cc chore(conductor): s11 B2 working ▸B2.1 @ 07:42
-  - 14b6fd8 chore(conductor): s11 B2 working ▸B2.1 @ 07:32
 - **s12 (B2 Deliver)** — 3 commit(s):
   - 6841c35 chore: fill B2.2 commit hash in tracker (e2b6a03)
   - e2b6a03 feat(bB2.2): RunState projection (fold the event log) + StateCompat parity
@@ -112,12 +87,17 @@ _Session #19 (Audit) · running 10m · last output 1s ago · $0.0176_
   - a48b3bd feat(bB3.2): owner-gate step type + AwaitingOwner status + approve via CLI/TUI
   - db01755 feat(bB3.1): confirm-gating for destructive actions in TUI + CLI
   - 1b3c6e6 chore(conductor): s18 B3 working ▸B3.1 @ 09:59
+- **s19 (B3 Audit)** — 3 commit(s):
+  - d427650 docs(bB3-audit): honest B3 phase handover + tracked followups
+  - 2a0fa9f fix(bB3-audit): harden owner-gates, budget/approval parks, control-file parsing
+  - 194dd8b chore(conductor): s19 B3 working ▸B3 @ 10:29
 
 ## Phase handovers (audit)
 
 - `.conductor/handovers/B0.md`
 - `.conductor/handovers/B1.md`
 - `.conductor/handovers/B2.md`
+- `.conductor/handovers/B3.md`
 
 ## Last gate run
 
@@ -125,7 +105,7 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: Stage B3 **COMPLETE** — all 5 checkpoints (B3.1…B3.5) landed across 4 commits. Build 0w/0e, test 149 pass (126→+23). Key deliverables: (1) A/K/S now require double-press confirmation in TUI + `--yes` in CLI, fixing F-6 finger-slip risk; (2) owner-gate step type (`StageConfig.OwnerGate`) parks at new `AwaitingOwner` status, resumable via `conductor approve` or TUI `R` key, with `OwnerApprovalRequested/Granted` events on the spine; (3) process-control verbs — `retry-stage`, `rollback` (safe: refuses if dirty), `pause-after-stage`, `goto <stage>` — all wired through `control.json` + CLI; (4) per-run budget/token caps park at `AwaitingOwner` when exceeded, plus `ApprovalMode` for…
+> SESSION-RESULT: B3 (Safety, owner-gates & process control) is structurally complete but the audit found it green-by-luck in two places, and I fixed both in-session. **(1)** Approving a run parked for **approval-mode or a budget cap** wrongly called `ConfirmStage`, advancing past unfinished work (approval mode also re-parked forever and could never run a session) — fixed by persisting *why* we parked (`RunState.AwaitingOwnerReason`), a pure `OwnerApproval.Decide`, and a new `ApproveAwaitingOwner` dispatcher (confirm / run-one-then-park / reset-budget-and-continue). **(2)** Every non-destructive CLI verb (`pause`/`resume`/`approve`/`retry-stage`/`pause-after-stage`) wrote a JSON `null` flag th…
 
 ## Tracker handoff
 
