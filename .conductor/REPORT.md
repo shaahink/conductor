@@ -1,10 +1,10 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 22:33 UTC · branch `feat/baton` · HEAD `061ce74`_
+_Updated 2026-07-08 22:41 UTC · branch `feat/baton` · HEAD `0f9d2a0`_
 
 **Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B9 — Task graph + smart session management · attempts used 0
-**Checkpoints:** 53/65 done · **Sessions run:** 57 · **Cost:** $2.3432 · **Tokens:** 1,582,085 in / 769,750 out / 355,633 think
+**Stage:** B10 — Advanced orchestration · attempts used 0 · working ▸ B10.2
+**Checkpoints:** 54/65 done · **Sessions run:** 58 · **Cost:** $2.3817 · **Tokens:** 1,627,380 in / 780,075 out / 360,044 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9
 
 ## Stage progress
@@ -21,7 +21,7 @@ _Updated 2026-07-08 22:33 UTC · branch `feat/baton` · HEAD `061ce74`_
 | B7 | Specialist sub-agent personas | 3/3 | confirmed ✓ |
 | B8 | Brain layer | 5/5 | confirmed ✓ |
 | B9 | Task graph + smart session management | 5/5 | confirmed ✓ |
-| B10 | Advanced orchestration | 0/4 | todo |
+| B10 | Advanced orchestration | 1/4 | **← active** |
 | B11 | Close-out + Shamshir owner-gated proof | 0/4 | todo |
 | B12 | Controlled parallelism | 0/4 | todo |
 
@@ -29,7 +29,6 @@ _Updated 2026-07-08 22:33 UTC · branch `feat/baton` · HEAD `061ce74`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 28 | B4 | Deliver | 1 | 07-08 14:33 | 0:30 | Advanced | B4.3 | 5 | build:OK | $0.0429 | 2,087/23,142 |
 | 29 | B4 | Deliver | 1 | 07-08 15:04 | 0:12 | Advanced | B4.4 | 3 | build:OK | $0.0567 | 62,572/12,919 |
 | 30 | B4 | Deliver | 1 | 07-08 15:16 | 0:21 | Advanced | B4.5 | 7 | build:OK | $0.0351 | 2,137/17,812 |
 | 31 | B4 | Deliver | 1 | 07-08 15:38 | 0:19 | Advanced | B4.6 | 3 | build:OK | $0.0253 | 1,939/12,322 |
@@ -59,13 +58,10 @@ _Updated 2026-07-08 22:33 UTC · branch `feat/baton` · HEAD `061ce74`_
 | 55 | B9 | Deliver | 1 | 07-08 21:55 | 0:16 | Advanced | B9.4 | 3 | build:OK | $0.0719 | 73,232/17,129 |
 | 56 | B9 | Deliver | 1 | 07-08 22:11 | 0:11 | Advanced | B9.5 | 3 | build:OK | $0.0527 | 61,772/11,888 |
 | 57 | B9 | Audit | 1 | 07-08 22:23 | 0:08 | Progress |  | 1 |  | $0.0725 | 97,126/11,226 |
+| 58 | B10 | Deliver | 1 | 07-08 22:33 | 0:07 | Advanced | B10.1 | 2 | build:OK | $0.0385 | 45,295/10,325 |
 
 ### Commits by session
 
-- **s46 (B7 Resume)** — 3 commit(s):
-  - 3d2d328 fix(bB7): eliminate EventLog drain-task scheduling race with ManualResetEventSlim
-  - 0c3998b chore(conductor): s46 B7 working ▸B7 @ 21:41
-  - 16fa4cf fix(bB7): harden EventLog file-creation race + flaky test fix
 - **s47 (B8 Deliver)** — 3 commit(s):
   - 4038578 chore(bB8): update tracker — all 5 B8 checkpoints DONE, commit a50c15f
   - a50c15f feat(bB8): brain layer — reflection, lessons battery, self-review, followups, IPromptBattery, token rollover
@@ -92,6 +88,9 @@ _Updated 2026-07-08 22:33 UTC · branch `feat/baton` · HEAD `061ce74`_
   - bb0e899 chore(conductor): s56 B9 working ▸B9.5 @ 23:21
 - **s57 (B9 Audit)** — 1 commit(s):
   - c603a3e fix(bB9): audit — validate MCP task args + reject invalid status/non-existent task, unique task IDs, skip duplicate TaskAdded, clean whitespace titles, harden soft-break nulls
+- **s58 (B10 Deliver)** — 2 commit(s):
+  - 0f9d2a0 chore(bB10.1): fill commit hash in tracker row
+  - 9750665 feat(bB10.1): dependsOn graph + ready-stage ordering with cycle detection
 
 ## Phase handovers (audit)
 
@@ -108,26 +107,24 @@ _Updated 2026-07-08 22:33 UTC · branch `feat/baton` · HEAD `061ce74`_
 
 ## Last gate run
 
-build:OK · tests:OK
+build:OK
 
 ## Last session result
 
-> SESSION-RESULT: B9 audit GREEN — 6 bugs fixed: MCP `task_update` now rejects non-existent tasks and invalid status strings, `task_add` generates unique IDs to prevent collision, `TaskGraph.Fold` skips duplicate `TaskAdded` to prevent orphaned entries, `CheckpointPlanner` handles whitespace-only titles, and `CheckSoftBreak` nulls hardened. 372 tests pass (0w/0e). Handover written with 4 tracked followups — the largest remaining gap is `McpTaskServer` production wiring (FU-B9-01): journal fold works but the server isn't yet spawned as a child process for the agent's MCP client. 3 other deferred items: `BuildRolloverResumeHint` full-log re-read perf, `TaskGraph` thread-safety for B12, and `task…
+> SESSION-RESULT: B10.1 landed — `StageConfig.DependsOn: List<string>?`, cycle/self/unknown-dep validation at load, and `SelectStage()` rewritten with `IsReady()` that gates stage eligibility on all dependencies being satisfied. 7 new tests (379 total, all green), build 0w/0e. Branch pushed clean. B10.2 (hierarchical stages) is next. What was hard: keeping the ready-stage logic minimal while ensuring skipped stages unblock dependents — the `DepSatisfied()` helper treats confirmed/done AND skipped as equivalently "done", matching existing `AllEffectivelyDone` semantics without duplicating the stage-done check in two places.
 
 ## Tracker handoff
 
 ```
-last: session #58 (B9.5) — delivered task views in CLI, TUI, and Telegram.
-stage: B9 COMPLETE — all 5 checkpoints (B9.1–B9.5) DONE.
-       B9.5 land: `conductor tasks` CLI command renders per-checkpoint task table from events.jsonl;
-       TUI tasks pane (U key) folds event log live into scrollable modal; Telegram /tasks handler
-       returns HTML-formatted task graph. 4 new tests (TaskViewTests). Full pipeline: event log →
-       TaskGraph fold → per-checkpoint display — same code path shared across all three views.
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 367 tests pass (+4 TaskViewTests).
+last: session #59 (B10.1) — delivered dependsOn graph + ready-stage ordering.
+stage: B10 in progress — B10.1 DONE.
+       B10.1 land: StageConfig.DependsOn: List<string>?; cycle/self/unknown-dep validation at load;
+       SelectStage() replaced with IsReady() that checks all deps satisfied before a stage is eligible.
+       Original plan.Stages order preserved among ready stages. 7 new tests (B10_1DependsOnTests).
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 379 tests pass (+7 B10.1 tests).
 dirty: none.
-next: B10.1 (dependsOn graph + smarter ready-stage ordering).
-evidence: docs/baton/evidence/B9.5-gate.txt
-qa: B9.4 gate re-verified: PlannerTests 6/6 pass, McpTaskServerTests 7/7 pass, SoftBreakTests 14/14.
-      B9.4 claim "McpTaskServer has no production wiring" verified against Orchestrator.cs (journal
-      fold wired; full wire-in still deferred). Verdict PASS — no regressions.
+next: B10.2 (hierarchical stages in model/state/report/tree).
+evidence: docs/baton/evidence/B10.1-gate.txt
+qa: B9.5 gate re-verified: TaskViewTests 4/4 pass, CLI `conductor tasks --help` renders, TUI U key
+      wired, Telegram BuildTasksText() wired. Verdict PASS — no regressions.
 ```
