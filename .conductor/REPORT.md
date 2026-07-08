@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 17:54 UTC · branch `feat/baton` · HEAD `c7afad7`_
+_Updated 2026-07-08 18:04 UTC · branch `feat/baton` · HEAD `9f15431`_
 
-**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B5 — Observability & health · attempts used 0 · working ▸ B5.4
-**Checkpoints:** 34/65 done · **Sessions run:** 36 · **Cost:** $1.3177 · **Tokens:** 512,724 in / 520,789 out / 212,470 think
+**Checkpoints:** 34/65 done · **Sessions run:** 37 · **Cost:** $1.3177 · **Tokens:** 512,724 in / 520,789 out / 212,470 think
 **Confirmed phases:** B0, B1, B2, B3, B4
+
+## Latest activity (live)
+
+_Session #37 (Deliver) · running 10m · last output 3s ago · $0.0485_
+
+**Thinking:**
+> Now build and test to make sure the current changes compile:
+> Build is green. Now let me write the tests. I need tests for: 1. `Confidence.Compute` and `Confidence.CountEvidence` — evidence parsing 2. `McpMetrics.Compute` — fold over McpCallFinished events 3. `RepoStrip.Compute` — git query 4. `Git.AheadBehind` — ahead/behind count 5. Reporter sections — `## C…
+> Now let me build and test:
+
+**Recent actions:**
+- `19:02:51` » edit src\Conductor\Ui\LiveDashboard.cs
+- `19:02:56` » edit src\Conductor\Ui\LiveDashboard.cs
+- `19:03:01` » edit src\Conductor\Ui\LiveDashboard.cs
+- `19:03:07` » edit src\Conductor\Ui\LiveDashboard.cs
+- `19:03:17` » edit src\Conductor\Ui\LiveDashboard.cs
+- `19:03:23` » edit src\Conductor\Ui\DashboardRenderer.cs
+- `19:03:33` » bash dotnet build Conductor.slnx 2>&1
+- `19:04:06` » write tests\Conductor.Tests\B5_4Tests.cs
+- `19:04:06` · Build passes 0w/0e. Now write tests — I'll create a single B5.4 test file:
+- `19:04:29` » bash dotnet test Conductor.slnx --no-build -v q 2>&1
 
 ## Stage progress
 
@@ -29,7 +50,6 @@ _Updated 2026-07-08 17:54 UTC · branch `feat/baton` · HEAD `c7afad7`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 7 | B1 | Deliver | 1 | 07-08 04:49 | 0:37 | Advanced | B1.3 | 5 | build:OK | $0.0268 | 1,793/12,018 |
 | 8 | B1 | Deliver | 1 | 07-08 05:26 | 0:21 | Advanced | B1.4 | 4 | build:OK | $0.0318 | 1,646/14,600 |
 | 9 | B1 | Deliver | 1 | 07-08 05:48 | 0:15 | Advanced | B1.5 B1.6 B1.7 | 7 | build:OK | $0.0744 | 63,136/21,354 |
 | 10 | B1 | Audit | 1 | 07-08 06:04 | 0:17 | Progress |  | 3 |  | $0.0289 | 1,492/13,453 |
@@ -59,6 +79,7 @@ _Updated 2026-07-08 17:54 UTC · branch `feat/baton` · HEAD `c7afad7`_
 | 34 | B5 | Deliver | 1 | 07-08 16:33 | 0:36 | Advanced | B5.1 | 5 | build:OK | $0.0634 | 2,544/24,659 |
 | 35 | B5 | Deliver | 1 | 07-08 17:10 | 0:19 | Advanced | B5.2 | 3 | build:OK | $0.0370 | 1,719/19,977 |
 | 36 | B5 | Deliver | 1 | 07-08 17:30 | 0:24 | Advanced | B5.3 | 4 | build:OK | $0.0427 | 2,319/25,154 |
+| 37 | B5 | Deliver | 1 | 07-08 17:54 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
