@@ -1,32 +1,11 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 15:48 UTC · branch `feat/baton` · HEAD `4aac121`_
+_Updated 2026-07-08 15:58 UTC · branch `feat/baton` · HEAD `e2e7ccc`_
 
-**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 0 · working ▸ B4.6
-**Checkpoints:** 29/65 done · **Sessions run:** 31 · **Cost:** $1.0943 · **Tokens:** 501,049 in / 413,697 out / 184,565 think
+**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 0 · working ▸ B4.7
+**Checkpoints:** 30/65 done · **Sessions run:** 31 · **Cost:** $1.1196 · **Tokens:** 502,988 in / 426,019 out / 188,512 think
 **Confirmed phases:** B0, B1, B2, B3
-
-## Latest activity (live)
-
-_Session #31 (Deliver) · running 10m · last output 5s ago · $0.0118_
-
-**Thinking:**
-> Now I'm integrating these changes into LiveDashboard: adding the new fields, updating the key handler signatures to use ConsoleKeyInfo instead of ConsoleKey, wiring up the history branch in the modal handler, and adjusting the call sites accordingly. I also need to special-case the Output modal to r…
-> I need to update the PollKeys call site around line 245 to pass the key info parameter to HandleModalKey instead of just the key.
-> The `OutputLines()` method isn't being used anymore since it was only called in OpenModal for Modal.Output, so I should remove it to avoid triggering the IDE0051 analyzer warning about unused private members, especially with EnforceCodeStyleInBuild enabled.
-
-**Recent actions:**
-- `16:46:54` » edit src\Conductor\Ui\LiveDashboard.cs
-- `16:47:03` » edit src\Conductor\Ui\LiveDashboard.cs
-- `16:47:11` » edit src\Conductor\Ui\LiveDashboard.cs
-- `16:47:26` » edit src\Conductor\Ui\LiveDashboard.cs
-- `16:48:00` · Now update `HandleModalKey` to accept `ConsoleKeyInfo` and add the history branch:
-- `16:48:00` » edit src\Conductor\Ui\LiveDashboard.cs
-- `16:48:24` · Now update `OpenModal` to route Output through the history builder, and add `OpenHistory` + `RebuildHistoryLocked`:
-- `16:48:24` » edit src\Conductor\Ui\LiveDashboard.cs
-- `16:48:40` · `OutputLines()` is now unused. Let me verify and remove it (dead code would trip the analyzers/warnings-as-errors).
-- `16:48:40` » grep OutputLines
 
 ## Stage progress
 
@@ -36,7 +15,7 @@ _Session #31 (Deliver) · running 10m · last output 5s ago · $0.0118_
 | B1 | Decouple Loom + pluggable progress providers | 7/7 | confirmed ✓ |
 | B2 | Event-sourced backbone + provider decoupling | 6/6 | confirmed ✓ |
 | B3 | Safety, owner-gates & process control | 5/5 | confirmed ✓ |
-| B4 | TUI overhaul (alt-screen + tree) | 5/7 | **← active** |
+| B4 | TUI overhaul (alt-screen + tree) | 6/7 | **← active** |
 | B5 | Observability & health | 0/4 | todo |
 | B6 | AFK + two-way Telegram | 0/5 | todo |
 | B7 | Specialist sub-agent personas | 0/3 | todo |
@@ -79,13 +58,10 @@ _Session #31 (Deliver) · running 10m · last output 5s ago · $0.0118_
 | 28 | B4 | Deliver | 1 | 07-08 14:33 | 0:30 | Advanced | B4.3 | 5 | build:OK | $0.0429 | 2,087/23,142 |
 | 29 | B4 | Deliver | 1 | 07-08 15:04 | 0:12 | Advanced | B4.4 | 3 | build:OK | $0.0567 | 62,572/12,919 |
 | 30 | B4 | Deliver | 1 | 07-08 15:16 | 0:21 | Advanced | B4.5 | 7 | build:OK | $0.0351 | 2,137/17,812 |
-| 31 | B4 | Deliver | 1 | 07-08 15:38 | … | running |  | 0 |  |  |  |
+| 31 | B4 | Deliver | 1 | 07-08 15:38 | 0:19 | Advanced | B4.6 | 3 | build:OK | $0.0253 | 1,939/12,322 |
 
 ### Commits by session
 
-- **s17 (B2 Audit)** — 2 commit(s):
-  - 4bfae61 fix(bB2.6): stamp sessionId on persisted TokenDelta so LiveMetrics.ForSession folds real logs
-  - a20eef0 chore(conductor): s17 B2 working ▸B2 @ 09:39
 - **s18 (B3 Deliver)** — 7 commit(s):
   - 30717ee chore(bB3): mark B3.1-B3.5 DONE, refresh handoff (session #18)
   - 157cdc8 feat(bB3.4,bB3.5): budget/token caps + approval mode + graceful Ctrl+C
@@ -124,6 +100,10 @@ _Session #31 (Deliver) · running 10m · last output 5s ago · $0.0118_
   - 19a9c06 fix(bB4.5): de-couple RealLoomTracker smoke from foreign run's row count
   - be63500 docs: add conductor-DEBT.md (B0-B3 audit followups) + CONDUCTOR-NEXT.md (post-baton feature proposals) + update read-order
   - 4131c94 chore(conductor): s30 B4 working ▸B4.5 @ 16:26
+- **s31 (B4 Deliver)** — 3 commit(s):
+  - e2e7ccc docs(bB4.6): mark B4.6 DONE + handoff (QA #30 PASS)
+  - f4f2997 feat(bB4.6): command history search + filters
+  - 43cfa0d chore(conductor): s31 B4 working ▸B4.6 @ 16:48
 
 ## Phase handovers (audit)
 
@@ -138,30 +118,26 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: Landed **B4.5** (structured thinking pane + tool-call folding) with proof — two pure, unit-tested helpers (`StructuredThinking.Parse` folds reasoning into a Goal/Hypothesis/Evidence/Action digest while keeping raw text when unstructured; `AgentFold.Build` collapses tool output behind a "(N lines)" badge with a `C` expand/fold key), wired into `DashboardRenderer`/`LiveDashboard`/preview, +15 tests (206 total), commit `5b9db37`, evidence `B4.5-gate.txt` (build 0w/0e, 206 pass) and `B4.5-preview.txt` (artifact shows `▸ (2 lines)` fold badge, `◎ goal …` facet, `[C] fold` in the action bar). QA of session #29/B4.4: **PASS** — re-ran gate (193 green), verified severity theory tests…
+> SESSION-RESULT: Landed **B4.6 — command history search + filters** on `feat/baton` (feature `f4f2997`, tracker/handoff `e2e7ccc`, pushed). New pure `CommandHistory` (slash-syntax `Parse` + category/substring `Filter` + `NextCategory`) turns the agent pop-out (`O`) into a searchable command-history view: `Tab` cycles commands/thoughts/errors, `/` opens an incremental search (`/build` `/git` `/test`), a typed `/category` token overrides Tab, and the modal header echoes the live query; `HandleModalKey` now takes `ConsoleKeyInfo` so typed search never leaks into scroll/close, and the dead `OutputLines()` was retired. Proven by build 0w/0e, **215 tests** (206→215, +9 `CommandHistoryTests` includi…
 
 ## Tracker handoff
 
 ```
-last: session #30 (B4.5, deliver) — landed **B4.5**: structured thinking pane +
-      tool-call folding. Two pure helpers: `StructuredThinking.Parse` (Goal/Hypothesis/
-      Evidence/Action digest; raw kept when unstructured) + `AgentFold.Build` (tool output
-      folded behind "(N lines)" badge, `C` key expand/fold). Wired into DashboardRenderer
-      (ThinkingRow + AgentPanel), LiveDashboard (`C`), preview seed. +15 tests. 193→206.
-stage: **B4 IN PROGRESS** — B4.1–B4.5 DONE. Next B4.6 (command history search + filters).
-gate: GREEN — build 0w/0e; 206 tests pass. `conductor preview` exit 0 shows agent fold
-      badge "▸ (2 lines)", thinking "◎ goal …", "[C] fold" in action bar.
-      B4.5-gate.txt, B4.5-preview.txt.
-qa: session #29/B4.4 PASS — re-ran gate (build 0w/0e, 193 tests). Claim-1: DashboardRenderer
-      severity theory tests 38/38 (glyph+colour mapping green). Claim-2: B4.4 preview artifact
-      shows "6 sessions unreported" label + severity-prefixed log pane. No findings.
-      SIDE-FIND (fixed, own commit): RealLoomTracker smoke asserted magic count 35 vs the LIVE
-      foreign LOOM-START.md; flipped red mid-session on a malformed L5.4 row (parser correctly
-      rejected it). De-coupled to invariants — not a Conductor regression.
-next: **B4.6** — command history search + filters (/build /git /test; commands/thoughts/errors).
-trap: `RealLoomTrackerParsesIfPresent` reads a LIVE foreign file — never re-couple it to an
-       exact count. `EventLogTests.ReadAll…` is flaky (passes on retry). StateCompat serialises
-       `UntrackedSessions` (old JSON name; only display label reworded in B4.4).
-dirty: two untracked prior-session docs (conductor-DEBT.md, docs/baton/CONDUCTOR-NEXT.md) — not mine.
-evidence: B4.5-gate.txt, B4.5-preview.txt
+last: session #31 (B4.6, deliver) — landed **B4.6**: command history search + filters.
+      New pure `CommandHistory` (Parse slash-syntax + Filter by category/substring). The agent
+      pop-out (O) is now a searchable history: Tab cycles commands/thoughts/errors, `/` searches
+      (`/build /git /test`). Retired dead OutputLines; +9 tests. 206→215.
+stage: **B4 IN PROGRESS** — B4.1–B4.6 DONE. Next B4.7 (live-consistent tokens + doc-on-select).
+gate: GREEN — build 0w/0e; 215 tests pass. `conductor preview` exit 0; action bar shows "[O]
+      history". B4.6-gate.txt, B4.6-preview.txt.
+qa: session #30/B4.5 PASS — re-ran gate (build 0w/0e, 206 tests). Claim-1: 11 StructuredThinking+
+      AgentFold tests green. Claim-2: preview shows "▸ (2 lines)" fold badge, "◎ goal …" thinking,
+      "[C] fold" action. No findings.
+next: **B4.7** — fold TokenDelta into a live-consistent token line; selecting a stage/checkpoint
+      row opens its doc section (DocsExtractor exists).
+trap: the history modal is interactive → a redirected `preview` renders one static frame; the
+      filtered-modal DISPLAY is proven headlessly by CommandHistoryTests.FilteredHistoryRenders…
+      HandleModalKey now takes ConsoleKeyInfo (was ConsoleKey) — both call sites updated.
+dirty: none. (Restored a stray unrelated deletion of conductor-CLEANUP.md that appeared mid-session.)
+evidence: B4.6-gate.txt, B4.6-preview.txt
 ```
