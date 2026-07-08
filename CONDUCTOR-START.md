@@ -7,20 +7,21 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #16 (B2, deliver) — landed **B2.6**, stage B2 COMPLETE. TokenDelta events emitted per
-      step_finish via AgentStreamState delegate; IEventSink plumbed through AgentSession.Start();
-      LiveMetrics projection folds deltas per-session + run-wide; dashboard token line now includes
-      live session tokens (F-3 fixed end-to-end). 125 tests (118→+7). Battery GREEN.
-stage: **B2 DONE** — B2.1…B2.6 all landed. Stage B3 next (Safety — owner gates, destructive confirm).
-gate: GREEN — build 0w/0e; test 125 pass. Round-trip test covers TokenDelta schema. Dry-run smoke
-      exit 0 (NullEventSink — real TokenDelta events written only during agent runs).
-qa: session #15 (B2.5) PASS — re-ran gate (build 0w/0e, 118 tests), re-ran --dry-run smoke (log with
-      run=/stage= correlation confirmed), invalid-plan validation test confirmed. No findings.
-next: **B3.1** — Destructive-action confirm in TUI (A/K/S) + CLI (--yes/interactive). Persona: engineer.
-trap: TokenDelta emission is wired but only observable during real agent runs (NullEventSink in dry-run).
-      SessionTokens* fields on snapshot mirror SessionCostUsd pattern — dash now shows live burn.
+last: session #18 (B3, deliver) — landed **B3.1…B3.5**, stage B3 COMPLETE. Confirm-gating for A/K/S
+      (TUI double-press + CLI --yes); owner-gate step type + AwaitingOwner + approve; process-control
+      verbs (retry-stage/rollback/pause-after-stage/goto); budget/token caps + approval mode;
+      graceful Ctrl+C with heartbeat + queue-resume. 149 tests (126→+23). Battery GREEN.
+stage: **B3 DONE** — B3.1…B3.5 all landed. Stage B4 next (TUI overhaul).
+gate: GREEN — build 0w/0e; test 149 pass. Dry-run smoke exit 0. Event log round-trip covers 12 event
+      types (incl. OwnerApprovalRequested/Granted). Manual TUI confirm-prompt verified.
+qa: session #16 (B2.6) PASS — re-ran gate (build 0w/0e, 126 tests), verified TokenDelta delegate path
+      end-to-end (OpencodeProvider→AgentStreamState→IEventSink), verified round-trip test exists.
+      Audit session #17 already fixed B2.6 TokenDelta.sessionId null-on-disk bug. No new findings.
+next: **B4.1** — Alternate-screen buffer with clean restore on exit/crash. Persona: engineer.
+trap: push failed (github.com unreachable). 4 commits local (db01755, a48b3bd, 90ce43a, 157cdc8).
+      Budget caps + approval mode not yet smoke-tested against a real agent run.
 dirty: none tracked.
-evidence: B2.6-gate.txt (+ earlier)
+evidence: B3.1-gate.txt, B3.2-gate.txt, B3.3-gate.txt, B3.4-gate.txt
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -60,11 +61,11 @@ never silent renumbering.
 | B2.4 | IAgentProvider + Opencode/Claude/GenericText adapters; Orchestrator provider-switch removed | DONE | 8e1ceb4 | docs/baton/evidence/B2.4-gate.txt |
 | B2.5 | Host/DI/Options + Microsoft.Extensions.Logging + Serilog sinks; no silent catch {} | DONE | 02da5a0, 7512371 | docs/baton/evidence/B2.5-gate.txt |
 | B2.6 | TokenDelta events per step_finish (fixes live-token lag F-3) | DONE | <commit> | docs/baton/evidence/B2.6-gate.txt |
-| B3.1 | Destructive-action confirm in TUI (A/K/S) + CLI (--yes/interactive) | TODO | | |
-| B3.2 | Owner-gate step type + AwaitingOwner status; approve via CLI/TUI | TODO | | |
-| B3.3 | Process control: retry-stage, rollback (to checkpoint), pause-after-stage, goto | TODO | | |
-| B3.4 | Budget/token caps (limits.maxRunCostUsd/maxRunTokens) + approval mode | TODO | | |
-| B3.5 | Graceful Ctrl+C (final heartbeat + queue-resume + flush) | TODO | | |
+| B3.1 | Destructive-action confirm in TUI (A/K/S) + CLI (--yes/interactive) | DONE | db01755 | docs/baton/evidence/B3.1-gate.txt |
+| B3.2 | Owner-gate step type + AwaitingOwner status; approve via CLI/TUI | DONE | a48b3bd | docs/baton/evidence/B3.2-gate.txt |
+| B3.3 | Process control: retry-stage, rollback (to checkpoint), pause-after-stage, goto | DONE | 90ce43a | docs/baton/evidence/B3.3-gate.txt |
+| B3.4 | Budget/token caps (limits.maxRunCostUsd/maxRunTokens) + approval mode | DONE | 157cdc8 | docs/baton/evidence/B3.4-gate.txt |
+| B3.5 | Graceful Ctrl+C (final heartbeat + queue-resume + flush) | DONE | 157cdc8 | docs/baton/evidence/B3.4-gate.txt |
 | B4.1 | Alternate-screen buffer with clean restore on exit/crash | TODO | | |
 | B4.2 | Spectre Layout rebuild of DashboardRenderer.BuildRoot | TODO | | |
 | B4.3 | Hierarchical plan tree (sub-checkpoints; expand/collapse; per-stage cost/attempts/last-outcome) | TODO | | |
