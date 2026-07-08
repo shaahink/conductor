@@ -1,17 +1,17 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 04:02 UTC · branch `feat/baton` · HEAD `595ed2b`_
+_Updated 2026-07-08 04:02 UTC · branch `feat/baton` · HEAD `42dcd9b`_
 
 **Status:** Idle
 **Stage:** B0 — Repo modernisation + self-hosting harness · attempts used 0
 **Checkpoints:** 6/65 done · **Sessions run:** 4 · **Cost:** $0.1855 · **Tokens:** 123,069 in / 65,391 out / 32,444 think
-**Pending:** full-battery phase gate for B0
+**Confirmed phases:** B0
 
 ## Stage progress
 
 | Stage | Title | Done | State |
 |---|---|---|---|
-| B0 | Repo modernisation + self-hosting harness | 6/6 | gating… |
+| B0 | Repo modernisation + self-hosting harness | 6/6 | confirmed ✓ |
 | B1 | Decouple Loom + pluggable progress providers | 0/7 | todo |
 | B2 | Event-sourced backbone + provider decoupling | 0/6 | todo |
 | B3 | Safety, owner-gates & process control | 0/5 | todo |
@@ -67,7 +67,7 @@ _Updated 2026-07-08 04:02 UTC · branch `feat/baton` · HEAD `595ed2b`_
 
 ## Last gate run
 
-build:OK
+build:OK · tests:OK
 
 ## Last session result
 
