@@ -1,6 +1,6 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 16:08 UTC · branch `feat/baton` · HEAD `5cfbb4d`_
+_Updated 2026-07-08 16:18 UTC · branch `feat/baton` · HEAD `c6eadb0`_
 
 **Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 0 · working ▸ B4.7
@@ -9,24 +9,24 @@ _Updated 2026-07-08 16:08 UTC · branch `feat/baton` · HEAD `5cfbb4d`_
 
 ## Latest activity (live)
 
-_Session #32 (Deliver) · running 10m · last output 4s ago · $0.0149_
+_Session #32 (Deliver) · running 20m · last output 9s ago · $0.0351_
 
 **Thinking:**
-> I'm trying to locate the token information in the header structure. The header has four rows, and I need to figure out which row contains the token data—it should be row 3 based on the layout, but I'm seeing cost information at line 6 instead, which suggests the rows might be offset from what I expe…
-> I'm noticing the header display is getting compressed because the AttentionReason text wraps across multiple lines, which is eating up the available rows and hiding the token line. The width constraint seems to be set to 80 characters as a safe default, but when the console is redirected it might be…
-> Since PowerShell doesn't support heredocs, I'll write the commit message to a temporary file and pass it using the -F flag instead.
+> Now I'm committing the documentation and QA evidence files to git.
+> The push went through successfully—git's stderr output is normal, and the branch is now updated on the remote. Now I need to check the final state and review the diff stats to make sure everything stays within budget.
+> The diff looks clean with just 13 files touched—5 evidence artifacts, 1 tracker, and 6 source/test files—well under the budget. Now I'm wrapping up the remaining todos and preparing the final session result.
 
 **Recent actions:**
-- `17:06:13` · Let me seed live session tokens in the preview so the artifact demonstrates the new delta, then capture the evidence.
-- `17:06:30` » bash cd C:\Code\conductor-baton; dotnet build Conductor.slnx 2>&1 | Select-Object -Last 3; & "src\Conductor\bin\Debug\net10.0\conductor.exe" preview -p plans\co…
-- `17:06:40` » read {"filePath":"C:\\Code\\conductor-baton\\docs\\baton\\evidence\\B4.7-tokens-preview.txt","limit":10}
-- `17:06:49` » bash cd C:\Code\conductor-baton; (Get-Content docs\baton\evidence\B4.7-tokens-preview.txt)[5..9]
-- `17:07:00` » bash cd C:\Code\conductor-baton; (Get-Content docs\baton\evidence\B4.7-tokens-preview.txt)[0..8] | ForEach-Object { $_ }
-- `17:07:34` · Token line renders (cost shows the matching `(session $0.0239)` shape; the token delta is proven by the unit test — the header region crops at this narrow redir…
-- `17:07:35` » bash cd C:\Code\conductor-baton; git add src/Conductor/Ui/DashboardRenderer.cs src/Conductor/Ui/DashboardPreview.cs tests/Conductor.Tests/DashboardRendererTests…
-- `17:07:48` » bash cd C:\Code\conductor-baton; git commit -q -F - <<'EOF' feat(bB4.7): live-consistent token line folds session delta like cost  R4.7 (part 1). The token line…
-- `17:08:01` · PowerShell doesn't support heredocs. Let me write the message to a temp file.
-- `17:08:01` » write ..\..\Users\shahi\AppData\Local\Temp\opencode\commitmsg.txt
+- `17:16:31` » edit CONDUCTOR-START.md
+- `17:16:42` » edit CONDUCTOR-START.md
+- `17:16:50` » bash cd C:\Code\conductor-baton; git status --short
+- `17:17:05` » write ..\..\Users\shahi\AppData\Local\Temp\opencode\commitmsg3.txt
+- `17:17:17` » bash cd C:\Code\conductor-baton; git add CONDUCTOR-START.md docs/baton/evidence/B4.7-gate.txt docs/baton/evidence/B4.7-qa-preview.txt docs/baton/evidence/B4.7-q…
+- `17:17:26` · Working tree clean. Now push the branch.
+- `17:17:31` » bash cd C:\Code\conductor-baton; git push origin feat/baton 2>&1 | Select-Object -Last 5
+- `17:17:41` · Pushed (`82e1087..c6eadb0 feat/baton`). Let me verify the diff budget for the whole checkpoint.
+- `17:17:41` » bash cd C:\Code\conductor-baton; git diff --stat 82e1087 HEAD
+- `17:17:51` » todowrite 0 todos
 
 ## Stage progress
 
