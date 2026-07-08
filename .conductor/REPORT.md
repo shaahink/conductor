@@ -1,39 +1,18 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 05:19 UTC · branch `feat/baton` · HEAD `b77002a`_
+_Updated 2026-07-08 05:26 UTC · branch `feat/baton` · HEAD `7069c6c`_
 
-**Status:** Running
-**Stage:** B1 — Decouple Loom + pluggable progress providers · attempts used 0 · working ▸ B1.3
-**Checkpoints:** 8/65 done · **Sessions run:** 7 · **Cost:** $0.2317 · **Tokens:** 125,611 in / 87,305 out / 43,065 think
+**Status:** Idle
+**Stage:** B1 — Decouple Loom + pluggable progress providers · attempts used 0 · working ▸ B1.4
+**Checkpoints:** 9/65 done · **Sessions run:** 7 · **Cost:** $0.2585 · **Tokens:** 127,404 in / 99,323 out / 50,004 think
 **Confirmed phases:** B0
-
-## Latest activity (live)
-
-_Session #7 (Deliver) · running 30m · last output 15s ago · $0.0194_
-
-**Thinking:**
-> I'm setting up test fixtures with irregular IDs and configuring a PowerShell script that outputs JSON for the ScriptProvider to process, then I'll need to verify how the test project handles copying fixture files. Writing the normalizer script... I'm realizing that for the real feature, users' scrip…
-> The test count jumped from 57 to 66, and now I need to run an A6 check—actually executing the ScriptProvider through a real dry-run with the STABLE driver against a fixture plan that uses `progress.kind: script`. The B1.3 gate requires unit tests, which I've completed, but A6 demands a first real ex…
-> I need to demonstrate the B1.3 checkpoint's behavior through a real-run proof, which involves provider selection and script normalization. Since the stable driver doesn't have the new ProgressProvider code, I'll need to actually execute the code path rather than rely on a dry-run. The cleanest appro…
-
-**Recent actions:**
-- `06:16:45` » bash cd C:\Code\conductor-baton; dotnet test Conductor.slnx --filter "FullyQualifiedName~ProgressProviderTests" --no-build 2>&1 | Select-Object -Last 15
-- `06:16:54` · All 9 new tests pass. Now the full battery for the post-session ritual.
-- `06:17:03` » bash cd C:\Code\conductor-baton; dotnet test Conductor.slnx 2>&1 | Select-Object -Last 8
-- `06:17:49` · All 66 tests pass (57 + 9 new). Let me produce the evidence artifact. First capture fresh gate outputs and an A6 real-run proof of the ScriptProvider path.
-- `06:17:51` » bash cd C:\Code\conductor-baton; New-Item -ItemType Directory -Force -Path docs\baton\evidence | Out-Null; $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"; "B1.3 e…
-- `06:18:11` » bash cd C:\Code\conductor-baton; "" | Out-File -Append docs\baton\evidence\B1.3-gate.txt; "=== dotnet test Conductor.slnx (full battery) ===" | Out-File -Append…
-- `06:18:20` · Now let me add an A6 real-run proof — exercise the ScriptProvider and PlanCheckpointProvider through the actual factory via a tiny script, proving the path runs…
-- `06:18:20` » bash cd C:\Code\conductor-baton; Get-Content docs\baton\evidence\B1.3-gate.txt
-- `06:18:50` · The ScriptProvider test already spawns a real `powershell.exe` subprocess (not mocked), satisfying A6. Let me document that explicitly in the evidence and confi…
-- `06:18:51` » bash cd C:\Code\conductor-baton; "" | Out-File -Append docs\baton\evidence\B1.3-gate.txt; "=== A6 (ship-without-launch): the ScriptProvider executable path runs…
 
 ## Stage progress
 
 | Stage | Title | Done | State |
 |---|---|---|---|
 | B0 | Repo modernisation + self-hosting harness | 6/6 | confirmed ✓ |
-| B1 | Decouple Loom + pluggable progress providers | 2/7 | **← active** |
+| B1 | Decouple Loom + pluggable progress providers | 3/7 | **← active** |
 | B2 | Event-sourced backbone + provider decoupling | 0/6 | todo |
 | B3 | Safety, owner-gates & process control | 0/5 | todo |
 | B4 | TUI overhaul (alt-screen + tree) | 0/7 | todo |
@@ -56,7 +35,7 @@ _Session #7 (Deliver) · running 30m · last output 15s ago · $0.0194_
 | 4 | B0 | Audit | 1 | 07-08 03:54 | 0:08 | Progress |  | 1 |  | $0.0116 | 1,138/6,511 |
 | 5 | B1 | Deliver | 1 | 07-08 04:02 | 0:12 | Advanced | B1.1 | 3 | build:OK | $0.0221 | 1,245/10,975 |
 | 6 | B1 | Deliver | 1 | 07-08 04:15 | 0:33 | Advanced | B1.2 | 5 | build:OK | $0.0241 | 1,297/10,939 |
-| 7 | B1 | Deliver | 1 | 07-08 04:49 | … | running |  | 0 |  |  |  |
+| 7 | B1 | Deliver | 1 | 07-08 04:49 | 0:37 | Advanced | B1.3 | 5 | build:OK | $0.0268 | 1,793/12,018 |
 
 ### Commits by session
 
@@ -94,6 +73,12 @@ _Session #7 (Deliver) · running 30m · last output 15s ago · $0.0194_
   - ac306f5 feat(bB1.2): IProgressProvider seam + MarkdownTableProvider (byte-identical default)
   - c2d32f6 chore(conductor): s6 B1 working ▸B1.2 @ 05:35
   - 8fb628c chore(conductor): s6 B1 working ▸B1.2 @ 05:25
+- **s7 (B1 Deliver)** — 5 commit(s):
+  - 7069c6c docs(bB1.3): tracker — B1.3 DONE (3e0fdbd), handoff + QA verdict for session #7
+  - 3e0fdbd feat(bB1.3): ScriptProvider + PlanCheckpointProvider + fail-fast factory
+  - d925e81 chore(conductor): s7 B1 working ▸B1.3 @ 06:19
+  - b77002a chore(conductor): s7 B1 working ▸B1.3 @ 06:09
+  - ce2f6e3 chore(conductor): s7 B1 working ▸B1.3 @ 05:59
 
 ## Phase handovers (audit)
 
@@ -105,24 +90,26 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: Landed **B1.2** — extracted the tracker parse behind `Core/Planning/IProgressProvider` with `MarkdownTableProvider` as the byte-identical default (`[GeneratedRegex]` source-gen), reduced `TrackerParser` to a thin back-compat facade so all existing call sites/tests are unchanged, and wired the Orchestrator engine to consume the seam via `_progress.Read(plan)` at all 5 tracker-read sites (making the abstraction load-bearing, not dead — A1). Proof: build 0w/0e net10, 57 tests (added one focused facade-vs-provider parity test on rows/HandoffBlock/RawText/Name), and an A6 in-tree `dotnet run --dry-run` on a fixture repo showing `_progress.Read` parse the tracker → select L0 → star…
+> SESSION-RESULT: Landed **B1.3** (commit `3e0fdbd`, tracker `7069c6c`, pushed) — two escape-hatch `IProgressProvider`s behind the B1.2 seam: `ScriptProvider` (plan-owned command → JSON checkpoint array, resilient to empty-command/nonzero-exit/timeout/malformed-JSON via one clear `InvalidOperationException`, never a crash) and `PlanCheckpointProvider` (inline `progress.checkpoints`), selected by a fail-fast `ProgressProviderFactory` (default = byte-identical `markdown-table`). The Orchestrator now builds `_progress` via the factory (load-bearing, A1), and `PlanConfig` gained an additive `Progress` block so existing plans are unchanged. Proof: build 0w/0e net10, 66 tests (57+9 new `ProgressProv…
 
 ## Tracker handoff
 
 ```
-last: session #6 (B1, deliver) — landed **B1.2** (Core/Planning/IProgressProvider +
-      MarkdownTableProvider [GeneratedRegex]; TrackerParser now a byte-identical facade; Orchestrator
-      reads via _progress.Read at all 5 sites). Build 0w/0e, 57 tests, in-tree dry-run A6 green.
-stage: **B1 IN PROGRESS** — B1.1, B1.2 DONE; B1.3…B1.7 TODO. Battery GREEN.
-gate: GREEN — `dotnet build Conductor.slnx` 0w/0e net10; `dotnet test` 57 pass.
-qa: session #5 (B1.1) PASS. (1) PlanConfigTests green — ShippedLoomPlan resolves examples/loom/ +
-      asserts pnpm/mcp scoping; (2) STABLE driver `--dry-run -p examples/loom/loom.opencode.plan.json`
-      (fixture, repo path rewritten) loads from new path + renders session #1. No findings.
-next: **B1.3** — ScriptProvider (plan-configured command → checkpoint JSON, resilient to missing
-      file/malformed JSON) + PlanCheckpointProvider (checkpoints declared in plan JSON). New unit tests.
-trap: dry-run touches target .conductor (AcquireLock) — always use a fixture repo, never the live run.
-      Commands.cs status/report/preview still call TrackerParser.* (read-only CLI) — DI-wire in B2.5.
-      Ratchet followups owed — MA0045 (B2), MA0002 (post-B2), MA0009 (B1.4).
+last: session #7 (B1, deliver) — landed **B1.3**: ScriptProvider (plan cmd → checkpoint JSON, resilient
+      to empty-cmd/nonzero-exit/malformed-JSON via clear IOException) + PlanCheckpointProvider (inline
+      plan checkpoints) + ProgressProviderFactory (fail-fast selection). Orchestrator wires the factory
+      (load-bearing). Build 0w/0e net10, 66 tests (57+9). Diff 7 files, in budget.
+stage: **B1 IN PROGRESS** — B1.1, B1.2, B1.3 DONE; B1.4…B1.7 TODO. Battery GREEN.
+gate: GREEN — `dotnet build Conductor.slnx` 0w/0e net10; `dotnet test` 66 pass.
+qa: session #6 (B1.2) PASS. (1) 7 TrackerParserTests green incl. MarkdownTableProviderIsByteIdentical;
+      (2) grep-confirmed Orchestrator reads via _progress.Read at all 5 sites + facade preserved
+      (TrackerParser delegates to MarkdownTableProvider.Parse/ParseFile). No findings.
+next: **B1.4** — configurable conventions on PlanConfig (stageIdPattern incl. P-0/P3.4b/F5, handoffMarker,
+      humanToken, statusVocabulary); CheckpointRow.StageId derivation honours the pattern; ratchet MA0009
+      (regex timeout) here per ADR-0001. Unit test: irregular ids parse into the right stages.
+trap: STABLE driver holds the plan lock while running (session #7) — dry-run against a fixture, never the
+      live self-plan. Commands.cs status/report/preview still call TrackerParser.* (read-only CLI) — DI-wire
+      in B2.5. CheckpointRow.StageId still splits on '.' — B1.4 makes it convention-driven (P-0 → stage P).
 dirty: none tracked.
-evidence: B1.2-gate.txt (+ B1.1, B0.1…B0.5, audits/B0-baseline.md, adr/000{1,2}-*.md)
+evidence: B1.3-gate.txt (+ B1.2, B1.1, B0.1…B0.5, audits/B0-baseline.md, adr/000{1,2}-*.md)
 ```
