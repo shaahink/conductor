@@ -1,12 +1,11 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 23:48 UTC · branch `feat/baton` · HEAD `75f78bd`_
+_Updated 2026-07-08 23:49 UTC · branch `feat/baton` · HEAD `b30a1d8`_
 
 **Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B11 — Close-out + Shamshir owner-gated proof · attempts used 0
 **Checkpoints:** 61/65 done · **Sessions run:** 63 · **Cost:** $2.7965 · **Tokens:** 2,073,995 in / 876,020 out / 415,562 think
-**Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10
-**Pending:** full-battery phase gate for B11
+**Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11
 
 ## Stage progress
 
@@ -23,7 +22,7 @@ _Updated 2026-07-08 23:48 UTC · branch `feat/baton` · HEAD `75f78bd`_
 | B8 | Brain layer | 5/5 | confirmed ✓ |
 | B9 | Task graph + smart session management | 5/5 | confirmed ✓ |
 | B10 | Advanced orchestration | 4/4 | confirmed ✓ |
-| B11 | Close-out + Shamshir owner-gated proof | 4/4 | gating… |
+| B11 | Close-out + Shamshir owner-gated proof | 4/4 | confirmed ✓ |
 | B12 | Controlled parallelism | 0/4 | todo |
 
 ## Sessions
@@ -112,7 +111,7 @@ _Updated 2026-07-08 23:48 UTC · branch `feat/baton` · HEAD `75f78bd`_
 
 ## Last gate run
 
-build:OK
+build:OK · tests:OK
 
 ## Last session result
 
