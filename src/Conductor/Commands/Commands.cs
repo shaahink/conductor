@@ -173,14 +173,33 @@ public sealed class PreviewCommand : Command<PlanSettings>
 }
 
 /// <summary>Writes the control file consumed by a running conductor (works from any terminal).</summary>
-public abstract class CtlCommand(string command, string explanation) : Command<PlanSettings>
+public abstract class CtlCommand(string command, string explanation, bool dangerous = false) : Command<CtlCommand.Settings>
 {
-    public override int Execute(CommandContext context, PlanSettings settings)
+    public sealed class Settings : PlanSettings
     {
+        [CommandOption("--yes")]
+        [Description("Skip confirmation prompt for destructive actions (abort/kill/skip).")]
+        public bool Yes { get; init; }
+    }
+
+    public override int Execute(CommandContext context, Settings settings)
+    {
+        if (dangerous && !settings.Yes)
+        {
+            AnsiConsole.MarkupLine($"[red]DESTRUCTIVE: {Markup.Escape(command)} — {Markup.Escape(explanation)}[/]");
+            AnsiConsole.MarkupLine("[yellow]Use --yes to confirm, or interact via the dashboard TUI (double-tap the key).[/]");
+            return 2;
+        }
         var plan = PlanConfig.Load(settings.ResolvePlanPath());
         Directory.CreateDirectory(plan.StateDir);
         File.WriteAllText(Path.Combine(plan.StateDir, "control.json"),
-            JsonSerializer.Serialize(new { command, issuedUtc = DateTime.UtcNow }));
+            JsonSerializer.Serialize(new
+            {
+                command,
+                issuedUtc = DateTime.UtcNow,
+                confirmed = dangerous ? true : (bool?)null,
+                intentId = dangerous ? Guid.NewGuid().ToString("N") : null,
+            }));
         AnsiConsole.MarkupLine($"[green]{Markup.Escape(command)}[/] queued — {Markup.Escape(explanation)}");
         return 0;
     }
@@ -188,9 +207,9 @@ public abstract class CtlCommand(string command, string explanation) : Command<P
 
 public sealed class PauseCommand() : CtlCommand("pause", "the running conductor will pause after the current session");
 public sealed class ResumeCtlCommand() : CtlCommand("resume", "a paused/needs-human conductor will continue");
-public sealed class AbortCommand() : CtlCommand("abort", "the running conductor will kill the session and stop");
-public sealed class SkipCommand() : CtlCommand("skip", "the current stage will be skipped and flagged for review");
-public sealed class KillCommand() : CtlCommand("kill", "the current agent session will be killed (conductor keeps running)");
+public sealed class AbortCommand() : CtlCommand("abort", "the running conductor will kill the session and stop", dangerous: true);
+public sealed class SkipCommand() : CtlCommand("skip", "the current stage will be skipped and flagged for review", dangerous: true);
+public sealed class KillCommand() : CtlCommand("kill", "the current agent session will be killed (conductor keeps running)", dangerous: true);
 
 /// <summary>Queues a human instruction for the agent (from any terminal) — injected into the next session.</summary>
 public sealed class InjectCommand : Command<InjectCommand.Settings>

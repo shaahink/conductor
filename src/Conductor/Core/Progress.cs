@@ -56,6 +56,8 @@ public sealed record DashboardSnapshot
     public string CurrentCheckpoint { get; init; } = "";
     /// <summary>Title of the current checkpoint, shown full-width in the header so its intent is clear.</summary>
     public string CurrentCheckpointTitle { get; init; } = "";
+    /// <summary>Non-null when a destructive action (A/K/S) is awaiting confirmation. Shown in the footer.</summary>
+    public string? ConfirmPrompt { get; init; }
     public int ResumeCount { get; init; }
     public string GateSummary { get; init; } = "";
     /// <summary>Per-gate live status during a battery (empty when no battery is running).</summary>

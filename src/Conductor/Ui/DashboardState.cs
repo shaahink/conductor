@@ -18,6 +18,9 @@ public sealed record DashboardState
     /// <summary>Animation frame counter for the activity spinner.</summary>
     public int Tick { get; init; }
 
+    /// <summary>Non-null when a destructive action (A/K/S) is awaiting confirmation — shown in the footer.</summary>
+    public string? ConfirmPrompt { get; init; }
+
     public readonly record struct AgentLine(string Kind, string Text, DateTime Utc);
     public readonly record struct ThinkingLine(DateTime Utc, string Text);
 }

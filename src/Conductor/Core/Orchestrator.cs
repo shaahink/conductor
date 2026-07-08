@@ -803,7 +803,9 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             File.Delete(_controlPath);
             using var doc = JsonDocument.Parse(text);
             var cmd = doc.RootElement.TryGetProperty("command", out var c) ? c.GetString() : null;
-            return cmd?.ToLowerInvariant() switch
+            var confirmed = doc.RootElement.TryGetProperty("confirmed", out var cf) && cf.GetBoolean();
+            var intentId = doc.RootElement.TryGetProperty("intentId", out var ii) ? ii.GetString() : null;
+            var action = cmd?.ToLowerInvariant() switch
             {
                 "pause" => ControlAction.PauseAfterSession,
                 "resume" => ControlAction.ResumeRun,
@@ -811,8 +813,11 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 "skip" => ControlAction.SkipStage,
                 "kill" => ControlAction.KillSession,
                 "stop-after" => ControlAction.StopAfterSession,
-                _ => null,
+                _ => (ControlAction?)null,
             };
+            if (action != null && confirmed && intentId != null)
+                Log($"control confirmed [intent={intentId}]");
+            return action;
         }
         // A malformed/racing control.json is operator input, not an engine fault — ignore this poll
         // and let the next one pick up a well-formed file rather than crash the loop.

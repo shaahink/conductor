@@ -132,4 +132,20 @@ public class DashboardRendererTests
         Assert.Contains("2.5k out", line); // 2000 + 500
         Assert.Contains("9.0k total", line);
     }
+
+    [Fact]
+    public void ConfirmPromptIsRenderedInFooter()
+    {
+        var st = SampleState() with { ConfirmPrompt = "Press A again to confirm ABORT (any other key cancels)" };
+        var outp = Render(st);
+        Assert.Contains("ABORT", outp);
+    }
+
+    [Fact]
+    public void ConfirmPromptDoesNotCrashOnShortTerminal()
+    {
+        var st = SampleState() with { ConfirmPrompt = "Press K again to confirm KILL (any other key cancels)" };
+        var outp = Render(st, width: 120, height: 13);
+        Assert.Contains("Conductor", outp);
+    }
 }

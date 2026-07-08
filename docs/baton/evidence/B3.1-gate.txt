@@ -1,0 +1,20 @@
+﻿=== B3.1 GATE BATTERY ===
+
+=== dotnet build Conductor.slnx ===
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Conductor -> C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.dll
+  Conductor.Tests -> C:\Code\conductor-baton\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.25
+
+=== dotnet test Conductor.slnx ===
+Test run for C:\Code\conductor-baton\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   136, Skipped:     0, Total:   136, Duration: 4 s - Conductor.Tests.dll (net10.0)
+

@@ -304,6 +304,8 @@ public static class DashboardRenderer
         var rows = new List<IRenderable>();
         if (!string.IsNullOrEmpty(st.Snap.GateSummary))
             rows.Add(new Markup("[bold]gates:[/] " + Esc(st.Snap.GateSummary)));
+        if (st.ConfirmPrompt != null)
+            rows.Add(new Markup($"[bold yellow]⚠ {Esc(st.ConfirmPrompt)}[/]"));
         rows.AddRange(st.Log.Select(l => (IRenderable)new Markup("[grey]" + Esc(l) + "[/]")));
         rows.Add(new Markup(ActionBar(st.Snap.Status)));
         return new Panel(new Rows(rows)).Header("[aqua]conductor[/]").Expand().Border(BoxBorder.Rounded);

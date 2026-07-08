@@ -37,6 +37,8 @@ public sealed class LiveDashboard : IProgressSink
     private bool _inputActive;
     private readonly StringBuilder _inputBuffer = new();
 
+    private ControlAction? _pendingConfirm;
+
     private volatile bool _statusRunning;
     private List<string> _statusLines = new();
 
@@ -204,6 +206,7 @@ public sealed class LiveDashboard : IProgressSink
                 Width = SafeWidth(),
                 Height = SafeHeight(),
                 Tick = _tick++,
+                ConfirmPrompt = ConfirmGate.Message(_pendingConfirm),
             };
         }
     }
@@ -227,12 +230,27 @@ public sealed class LiveDashboard : IProgressSink
                     case ConsoleKey.X: OpenModal(Modal.Prompt); break;
                     case ConsoleKey.I when _plan != null: _inputActive = true; _inputBuffer.Clear(); break;
                     case ConsoleKey.G when _plan?.StatusAgent is { Enabled: true }: StartStatusAgent(); break;
-                    case ConsoleKey.P: _keys.Enqueue(ControlAction.PauseAfterSession); break;
-                    case ConsoleKey.R: _keys.Enqueue(ControlAction.ResumeRun); break;
-                    case ConsoleKey.A: _keys.Enqueue(ControlAction.AbortNow); break;
-                    case ConsoleKey.S: _keys.Enqueue(ControlAction.SkipStage); break;
-                    case ConsoleKey.K: _keys.Enqueue(ControlAction.KillSession); break;
-                    case ConsoleKey.Q: _keys.Enqueue(ControlAction.StopAfterSession); break;
+                    case ConsoleKey.P: _pendingConfirm = null; _keys.Enqueue(ControlAction.PauseAfterSession); break;
+                    case ConsoleKey.R: _pendingConfirm = null; _keys.Enqueue(ControlAction.ResumeRun); break;
+                    case ConsoleKey.A:
+                        { var act = ConfirmGate.ProcessDestructive(ControlAction.AbortNow, ref _pendingConfirm);
+                          if (act != null) { _keys.Enqueue(act.Value); Log("ABORT CONFIRMED"); }
+                          else Log("Press A again to confirm ABORT (any other key cancels)"); }
+                        break;
+                    case ConsoleKey.S:
+                        { var act = ConfirmGate.ProcessDestructive(ControlAction.SkipStage, ref _pendingConfirm);
+                          if (act != null) { _keys.Enqueue(act.Value); Log("SKIP CONFIRMED"); }
+                          else Log("Press S again to confirm SKIP (any other key cancels)"); }
+                        break;
+                    case ConsoleKey.K:
+                        { var act = ConfirmGate.ProcessDestructive(ControlAction.KillSession, ref _pendingConfirm);
+                          if (act != null) { _keys.Enqueue(act.Value); Log("KILL CONFIRMED"); }
+                          else Log("Press K again to confirm KILL (any other key cancels)"); }
+                        break;
+                    case ConsoleKey.Q: _pendingConfirm = null; _keys.Enqueue(ControlAction.StopAfterSession); break;
+                    case ConsoleKey.T or ConsoleKey.O or ConsoleKey.D or ConsoleKey.V or ConsoleKey.X or ConsoleKey.I or ConsoleKey.G:
+                        break; // handled above — non-destructive keys don't cancel pending confirm
+                    default: _pendingConfirm = null; break; // any unmapped key cancels
                 }
             }
         }
