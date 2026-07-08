@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 22:41 UTC · branch `feat/baton` · HEAD `0f9d2a0`_
+_Updated 2026-07-08 22:51 UTC · branch `feat/baton` · HEAD `0e1c1f7`_
 
-**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B10 — Advanced orchestration · attempts used 0 · working ▸ B10.2
-**Checkpoints:** 54/65 done · **Sessions run:** 58 · **Cost:** $2.3817 · **Tokens:** 1,627,380 in / 780,075 out / 360,044 think
+**Checkpoints:** 54/65 done · **Sessions run:** 59 · **Cost:** $2.3817 · **Tokens:** 1,627,380 in / 780,075 out / 360,044 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9
+
+## Latest activity (live)
+
+_Session #59 (Deliver) · running 10m · last output 0s ago · $0.0481_
+
+**Thinking:**
+> B10.2 committed. Now update the tracker and move to B10.3.  Let me get the commit hash first.
+> Commit is `0e1c1f7`. Now let me update the CONDUCTOR-START.md tracker row for B10.2.  But wait, I should also move on to B10.3 and B10.4 if I have remaining capacity. Let me update the tracker first, then proceed to B10.3.
+> Now let me move on to B10.3: Per-stage pre/post hooks.  B10.3 spec: "Per-stage pre/post hooks beyond gates." Gate: "a stage hook runs before/after its sessions (test)."  Let me think about what this means: - A stage can have a `preHook` that runs before the stage's first session - A stage can have a…
+
+**Recent actions:**
+- `23:50:24` » bash git diff
+- `23:50:38` · Evidence and commit. Let me write the evidence file and commit:
+- `23:50:38` » write docs\baton\evidence\B10.2-gate.txt
+- `23:50:48` » bash git add src/Conductor/Models/PlanConfig.cs src/Conductor/Core/Progress.cs src/Conductor/Core/SnapshotBuilder.cs src/Conductor/Core/Reporter.cs src/Conducto…
+- `23:51:07` » bash dotnet test Conductor.slnx 2>&1
+- `23:51:13` » bash git commit -m "feat(bB10.2): first-class hierarchical stages in model/state/report/tree  Build: dotnet build Conductor.slnx — 0 warnings, 0 errors (net10.0…
+- `23:51:17` » bash git log --oneline -1
+- `23:51:22` » edit CONDUCTOR-START.md
+- `23:51:22` · Now update the tracker for B10.2:
+- `23:51:31` » todowrite 3 todos
 
 ## Stage progress
 
@@ -29,7 +50,6 @@ _Updated 2026-07-08 22:41 UTC · branch `feat/baton` · HEAD `0f9d2a0`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 29 | B4 | Deliver | 1 | 07-08 15:04 | 0:12 | Advanced | B4.4 | 3 | build:OK | $0.0567 | 62,572/12,919 |
 | 30 | B4 | Deliver | 1 | 07-08 15:16 | 0:21 | Advanced | B4.5 | 7 | build:OK | $0.0351 | 2,137/17,812 |
 | 31 | B4 | Deliver | 1 | 07-08 15:38 | 0:19 | Advanced | B4.6 | 3 | build:OK | $0.0253 | 1,939/12,322 |
 | 32 | B4 | Deliver | 1 | 07-08 15:58 | 0:20 | Advanced | B4.7 | 5 | build:OK | $0.0360 | 2,120/14,866 |
@@ -59,6 +79,7 @@ _Updated 2026-07-08 22:41 UTC · branch `feat/baton` · HEAD `0f9d2a0`_
 | 56 | B9 | Deliver | 1 | 07-08 22:11 | 0:11 | Advanced | B9.5 | 3 | build:OK | $0.0527 | 61,772/11,888 |
 | 57 | B9 | Audit | 1 | 07-08 22:23 | 0:08 | Progress |  | 1 |  | $0.0725 | 97,126/11,226 |
 | 58 | B10 | Deliver | 1 | 07-08 22:33 | 0:07 | Advanced | B10.1 | 2 | build:OK | $0.0385 | 45,295/10,325 |
+| 59 | B10 | Deliver | 1 | 07-08 22:41 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
