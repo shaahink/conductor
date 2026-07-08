@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 20:00 UTC · branch `feat/baton` · HEAD `1a97339`_
+_Updated 2026-07-08 20:10 UTC · branch `feat/baton` · HEAD `770a624`_
 
-**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B6 — AFK + two-way Telegram · attempts used 0
-**Checkpoints:** 40/65 done · **Sessions run:** 42 · **Cost:** $1.6754 · **Tokens:** 869,143 in / 606,971 out / 266,930 think
+**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B7 — Specialist sub-agent personas · attempts used 0 · working ▸ B7.1
+**Checkpoints:** 40/65 done · **Sessions run:** 43 · **Cost:** $1.6754 · **Tokens:** 869,143 in / 606,971 out / 266,930 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6
+
+## Latest activity (live)
+
+_Session #43 (Deliver) · running 10m · last output 9s ago · $0.0502_
+
+**Thinking:**
+> Actually, I should put the PersonaRegistry tests in a separate file to keep things organized. Let me revert that using change and create a new test file instead.  Wait, I'll keep the import since I might need it, and add tests directly. But it's cleaner to have a separate test file. Let me undo the …
+> Create a dedicated PersonaRegistryTests file:
+> Let me build and test to ensure everything passes.
+
+**Recent actions:**
+- `21:09:43` » write plans\personas\refactor.md
+- `21:09:46` » write plans\personas\test-writer.md
+- `21:09:49` » write plans\personas\git-cleanup.md
+- `21:09:52` » write plans\personas\security-audit.md
+- `21:10:13` » write src\Conductor\Core\PersonaRegistry.cs
+- `21:10:13` · Now create the `PersonaRegistry` class:
+- `21:10:21` · Now add the B7.2 unit test:
+- `21:10:21` » edit tests\Conductor.Tests\PlanConfigTests.cs
+- `21:10:30` » edit tests\Conductor.Tests\PlanConfigTests.cs
+- `21:10:42` » write tests\Conductor.Tests\PersonaRegistryTests.cs
 
 ## Stage progress
 
@@ -18,7 +39,7 @@ _Updated 2026-07-08 20:00 UTC · branch `feat/baton` · HEAD `1a97339`_
 | B4 | TUI overhaul (alt-screen + tree) | 7/7 | confirmed ✓ |
 | B5 | Observability & health | 4/4 | confirmed ✓ |
 | B6 | AFK + two-way Telegram | 5/5 | confirmed ✓ |
-| B7 | Specialist sub-agent personas | 0/3 | todo |
+| B7 | Specialist sub-agent personas | 0/3 | **← active** |
 | B8 | Brain layer | 0/5 | todo |
 | B9 | Task graph + smart session management | 0/5 | todo |
 | B10 | Advanced orchestration | 0/4 | todo |
@@ -29,7 +50,6 @@ _Updated 2026-07-08 20:00 UTC · branch `feat/baton` · HEAD `1a97339`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 13 | B2 | Deliver | 1 | 07-08 07:06 | 0:10 | Advanced | B2.3 | 3 | build:OK | $0.0551 | 66,865/13,343 |
 | 14 | B2 | Deliver | 1 | 07-08 07:17 | 0:22 | Advanced | B2.4 | 4 | build:OK | $0.0395 | 1,813/20,904 |
 | 15 | B2 | Deliver | 1 | 07-08 07:40 | 0:36 | Advanced | B2.5 | 7 | build:OK | $0.0666 | 3,900/25,958 |
 | 16 | B2 | Deliver | 1 | 07-08 08:16 | 0:12 | Advanced | B2.6 | 2 | build:OK | $0.0683 | 66,649/18,804 |
@@ -59,6 +79,7 @@ _Updated 2026-07-08 20:00 UTC · branch `feat/baton` · HEAD `1a97339`_
 | 40 | B6 | Deliver | 1 | 07-08 18:48 | … | running |  | 0 |  |  |  |
 | 41 | B6 | Deliver | 1 | 07-08 19:45 | 0:07 | Advanced | B6.5 | 1 | build:OK | $0.0311 | 29,170/7,885 |
 | 42 | B6 | Audit | 1 | 07-08 19:54 | 0:06 | Progress |  | 1 |  | $0.0606 | 87,266/8,743 |
+| 43 | B7 | Deliver | 1 | 07-08 20:00 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
