@@ -74,7 +74,7 @@ never silent renumbering.
 | B4.1 | Alternate-screen buffer with clean restore on exit/crash | DONE | c6d5efb | docs/baton/evidence/B4.1-gate.txt |
 | B4.2 | Spectre Layout rebuild of DashboardRenderer.BuildRoot | DONE | d3aa1a5 | docs/baton/evidence/B4.2-gate.txt |
 | B4.3 | Hierarchical plan tree (sub-checkpoints; expand/collapse; per-stage cost/attempts/last-outcome) | DONE | 8197bd4 | docs/baton/evidence/B4.3-gate.txt, docs/baton/evidence/B4.3-preview.txt |
-| B4.4 | Severity model (INFO/WARN/ERROR/SUCCESS/WAITING/HUMAN) + clearer header labels | DONE | <commit> | docs/baton/evidence/B4.4-gate.txt, docs/baton/evidence/B4.4-preview.txt |
+| B4.4 | Severity model (INFO/WARN/ERROR/SUCCESS/WAITING/HUMAN) + clearer header labels | DONE | 9b25fe2 | docs/baton/evidence/B4.4-gate.txt, docs/baton/evidence/B4.4-preview.txt |
 | B4.5 | Structured thinking pane (Goal/Hypothesis/Evidence/Action) + tool-call folding | TODO | | |
 | B4.6 | Command history search + filters (/build /git /test; commands/thoughts/errors) | TODO | | |
 | B4.7 | Live-consistent token line + plan-tree filter/search for large plans; doc-on-select | TODO | | |
