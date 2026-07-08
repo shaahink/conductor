@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 07:17 UTC · branch `feat/baton` · HEAD `6936490`_
+_Updated 2026-07-08 07:27 UTC · branch `feat/baton` · HEAD `0f744a3`_
 
-**Status:** Idle
+**Status:** Running
 **Stage:** B2 — Event-sourced backbone + provider decoupling · attempts used 0 · working ▸ B2.4
-**Checkpoints:** 16/65 done · **Sessions run:** 13 · **Cost:** $0.5263 · **Tokens:** 264,655 in / 202,152 out / 95,411 think
+**Checkpoints:** 16/65 done · **Sessions run:** 14 · **Cost:** $0.5263 · **Tokens:** 264,655 in / 202,152 out / 95,411 think
 **Confirmed phases:** B0, B1
+
+## Latest activity (live)
+
+_Session #14 (Deliver) · running 10m · last output 19s ago · $0.0092_
+
+**Thinking:**
+> I'm reviewing the QA results from session 13 — the build passed with zero warnings and errors, all 98 tests succeeded, and the six RunStateProjection tests including the two new ones from B2.3 are confirmed working. However, I'm noticing the events.jsonl artifact isn't currently present, which I nee…
+> I'm gathering real event samples for the provider adapter tests, starting with the opencode-json format using the session-013.jsonl file I have on hand. I need to verify whether there's an actual captured sample for the claude stream-json format, since the spec requires unit tests with real session …
+> I'm documenting the QA results for session #13, confirming that the gate re-run passed with all 98 tests and the recovery tests are working as expected, then moving on to plan the next phase.  For B2.4, I need to design the IAgentProvider interface that will abstract away the different agent output …
+
+**Recent actions:**
+- `08:22:54` » read tools\fake-agent.ps1
+- `08:22:56` · QA verdict forming. Let me look at the fake-agent and a captured sample to design B2.4 provider tests, plus check all `AgentSession.Start` / `cfg.Output` consum…
+- `08:22:56` » bash Select-String -Path src\Conductor\**\*.cs,tests\Conductor.Tests\*.cs -Pattern "AgentSession\.Start|AgentSession\(|\.Output\b|new AgentEvent|AgentEvent" | S…
+- `08:24:13` » bash Get-Content .conductor\logs\session-013.jsonl -TotalCount 20 | ForEach-Object { if ($_.Length -gt 200) { $_.Substring(0,200) } else { $_ } }
+- `08:24:14` · QA verdict is forming. Let me look at a real captured opencode stream sample and the remaining Orchestrator provider touchpoint (LimitRx), then write the plan.
+- `08:24:14` » bash Select-String -Path .conductor\logs\session-013.jsonl -Pattern '"type":"step_finish"' | Select-Object -First 1 | ForEach-Object { $_.Line.Substring(0, [Mat…
+- `08:25:18` · I have enough to design B2.4. Let me check analyzer settings and the self-plan's agent config before writing.
+- `08:25:19` » bash Get-Content Directory.Build.props -ErrorAction SilentlyContinue; Write-Output "===SELF PLAN AGENT==="; Select-String -Path plans\conductor.self.plan.json -…
+- `08:27:15` » todowrite 3 todos
+- `08:27:15` · Now I understand the architecture. Let me record the QA verdict and design B2.4.  **QA of session #13 (B2.3):** gate re-runs GREEN (build 0w/0e, 98 tests); clai…
 
 ## Stage progress
 
@@ -42,6 +63,7 @@ _Updated 2026-07-08 07:17 UTC · branch `feat/baton` · HEAD `6936490`_
 | 11 | B2 | Deliver | 1 | 07-08 06:22 | 0:24 | Advanced | B2.1 | 4 | build:OK | $0.0441 | 2,334/21,533 |
 | 12 | B2 | Deliver | 1 | 07-08 06:47 | 0:18 | Advanced | B2.2 | 3 | build:OK | $0.0334 | 1,778/18,546 |
 | 13 | B2 | Deliver | 1 | 07-08 07:06 | 0:10 | Advanced | B2.3 | 3 | build:OK | $0.0551 | 66,865/13,343 |
+| 14 | B2 | Deliver | 1 | 07-08 07:17 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
