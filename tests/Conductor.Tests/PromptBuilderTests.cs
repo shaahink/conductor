@@ -131,4 +131,84 @@ public class PromptBuilderTests
         var architectPrompt = reg.ResolveSystemPrompt("architect")!;
         Assert.StartsWith(architectPrompt, prompt);
     }
+
+    [Fact]
+    public void LessonsVariableEmptyWhenNoFile()
+    {
+        var plan = Plan();
+        plan.Batteries = new BatteriesConfig { Lessons = true };
+        var builder = new PromptBuilder(plan);
+        var section = builder.BatterySection(new RunState());
+        // No lessons file → battery section is empty
+        Assert.Equal("", section);
+    }
+
+    [Fact]
+    public void LessonsInjectedViaBatterySection()
+    {
+        var tmpDir = Path.Combine(Path.GetTempPath(), $"conductor-prompt-test-{Guid.NewGuid():N}");
+        try
+        {
+            var conductorDir = Path.Combine(tmpDir, ".conductor");
+            var lessons = new LessonsManager(conductorDir);
+            lessons.Append("B7", 45, "Blindly patching concurrency without root cause understanding.");
+
+            var plan = Plan();
+            typeof(PlanConfig).GetProperty("PlanFilePath")!.SetValue(plan, Path.Combine(tmpDir, "dummy.json"));
+            plan.Repo = tmpDir;
+            plan.Batteries = new BatteriesConfig { Lessons = true };
+            var stage = new StageConfig { Id = "B8", Title = "Brain" };
+            var builder = new PromptBuilder(plan, lessons: lessons);
+            var section = builder.BatterySection(new RunState());
+
+            Assert.Contains("### lessons", section);
+            Assert.Contains("B7-45", section);
+            Assert.Contains("Blindly patching concurrency", section);
+        }
+        finally
+        {
+            try { if (Directory.Exists(tmpDir)) Directory.Delete(tmpDir, recursive: true); }
+            catch (IOException) { /* best-effort */ }
+        }
+    }
+
+    [Fact]
+    public void BatterySectionRendersWhenConfigured()
+    {
+        var tmpDir = Path.Combine(Path.GetTempPath(), $"conductor-battery-prompt-{Guid.NewGuid():N}");
+        try
+        {
+            var conductorDir = Path.Combine(tmpDir, ".conductor");
+            var lessons = new Conductor.Core.LessonsManager(conductorDir);
+            lessons.Append("B7", 45, "Race condition in event log file creation.");
+
+            var plan = Plan();
+            typeof(PlanConfig).GetProperty("PlanFilePath")!.SetValue(plan, Path.Combine(tmpDir, "dummy.json"));
+            plan.Repo = tmpDir;
+            plan.Batteries = new BatteriesConfig { Lessons = true, RecentFailure = true };
+
+            var builder = new PromptBuilder(plan, lessons: lessons);
+            var state = new RunState();
+            var section = builder.BatterySection(state);
+
+            Assert.Contains("### lessons", section);
+            Assert.Contains("Race condition", section);
+            Assert.DoesNotContain("### recent-failure", section);
+        }
+        finally
+        {
+            try { if (Directory.Exists(tmpDir)) Directory.Delete(tmpDir, recursive: true); }
+            catch (IOException) { /* best-effort */ }
+        }
+    }
+
+    [Fact]
+    public void BatterySectionEmptyWhenNotConfigured()
+    {
+        var plan = Plan();
+        plan.Batteries = null;
+        var builder = new PromptBuilder(plan);
+        var section = builder.BatterySection(new RunState());
+        Assert.Equal("", section);
+    }
 }

@@ -11,11 +11,13 @@ public sealed class PromptBuilder
 {
     private readonly PlanConfig _plan;
     private readonly PersonaRegistry _personas;
+    private readonly LessonsManager _lessons;
 
-    public PromptBuilder(PlanConfig plan, PersonaRegistry? personaRegistry = null)
+    public PromptBuilder(PlanConfig plan, PersonaRegistry? personaRegistry = null, LessonsManager? lessons = null)
     {
         _plan = plan;
         _personas = personaRegistry ?? new PersonaRegistry(plan);
+        _lessons = lessons ?? new LessonsManager(plan.StateDir);
     }
     public string Deliver(StageConfig stage, int sessionNumber, int attempt, int maxAttempts)
         => Render("session.md", Vars(stage, sessionNumber, attempt, maxAttempts));
@@ -55,6 +57,13 @@ public sealed class PromptBuilder
         return Render("advisor.md", vars);
     }
 
+    public string Review(StageConfig stage, int sessionNumber, int attempt, int maxAttempts, string reviewPath)
+    {
+        var vars = Vars(stage, sessionNumber, attempt, maxAttempts);
+        vars["reviewPath"] = reviewPath;
+        return Render("review.md", vars);
+    }
+
     private Dictionary<string, string> Vars(StageConfig stage, int sessionNumber, int attempt, int maxAttempts)
     {
         var readOrder = "";
@@ -69,6 +78,8 @@ public sealed class PromptBuilder
 
         var personaName = _plan.ResolvePersona(stage);
         var personaSystemPrompt = _personas.ResolveSystemPrompt(personaName) ?? "";
+
+        var lessonsContent = _lessons.ReadRecent(5);
 
         return new()
         {
@@ -86,6 +97,7 @@ public sealed class PromptBuilder
             ["readOrder"] = readOrder,
             ["persona"] = personaName ?? "",
             ["personaSystemPrompt"] = personaSystemPrompt,
+            ["lessons"] = lessonsContent,
         };
     }
 
@@ -107,7 +119,22 @@ public sealed class PromptBuilder
         // every session prompt so they're delivered even if a custom template omits the placeholder.
         var queued = InstructionQueue.PromptSection(_plan);
         if (queued.Length > 0) text += "\n\n" + queued;
+
         return text;
+    }
+
+    /// <summary>Builds and renders the battery group section from the plan's
+    /// <see cref="BatteriesConfig"/>, using current run state for the recent-failure digest (B8.5).</summary>
+    public string BatterySection(RunState? state)
+    {
+        var cfg = _plan.Batteries;
+        if (cfg == null) return "";
+
+        var list = new List<IPromptBattery>();
+        if (cfg.Lessons) list.Add(new LessonsBattery(_lessons, cfg.LessonsMaxEntries));
+        if (cfg.RecentFailure && state != null) list.Add(new RecentFailureBattery(state));
+
+        return list.Count > 0 ? new BatteryGroup(list, cfg.MaxBytes).Render() : "";
     }
 
     internal static string BuiltIn(string name) => name switch
@@ -206,6 +233,25 @@ public sealed class PromptBuilder
 
             If you find an issue that needs a human decision, add a line starting `HUMAN:` to the tracker handoff, commit, push, and stop.
             End by printing one paragraph starting with `SESSION-RESULT:` summarising the audit verdict and what you changed.
+            {stageNotes}{extra}
+            """,
+        "review.md" => """
+            You are a SELF-REVIEW session inside the "{planName}" mega plan, launched by the Conductor orchestrator (session #{sessionNumber}, stage {stage} — {stageTitle}, attempt {attempt}/{maxAttempts}).
+
+            Work in: {repo}
+            {readOrder}
+            Your role: review the last few sessions' work, gate results, and the plan itself. Propose concrete adjustments — gates to add, checkpoints to split, risks to watch. Be honestly critical; overselling defeats the point.
+
+            Write your findings to `{reviewPath}`. This artifact is ADVISORY ONLY — Conductor reads it but does NOT auto-apply your recommendations. The human owner decides what to adopt.
+
+            Structure your review artifact:
+            1. **What went well** — evidence-backed wins from recent sessions.
+            2. **What was hard** — patterns from the lessons file, repeated failures, toil.
+            3. **Risks ahead** — traps the next stages should watch based on the code and the plan doc.
+            4. **Proposed adjustments** — specific, actionable changes (gates, checkpoints, templates, conventions). Be concrete: cite stage ids, file paths, line numbers where possible.
+
+            After writing the review: commit it, push, and update `{tracker}` normally.
+            End by printing one paragraph starting with `SESSION-RESULT:` summarising the review verdict.
             {stageNotes}{extra}
             """,
         _ => throw new ArgumentException($"No built-in template named {name}", nameof(name)),

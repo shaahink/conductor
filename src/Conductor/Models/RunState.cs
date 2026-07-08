@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Conductor.Models;
 
@@ -24,6 +25,7 @@ public enum SessionOutcome
     LimitBackoff,  // usage/rate limit detected — waiting it out
     KilledByUser,
     Interrupted,   // conductor itself was killed mid-session (recovered on restart)
+    RolledOver,    // session ended cleanly at token budget — handoff written, no attempt burned (B8.5)
 }
 
 public sealed class SessionRecord
@@ -47,6 +49,9 @@ public sealed class SessionRecord
     public long? TokensCacheRead { get; set; }
     public int Attempt { get; set; }
     public string ResultSummary { get; set; } = "";
+
+    [JsonIgnore] public long TokensTotal =>
+        (TokensInput ?? 0) + (TokensOutput ?? 0) + (TokensReasoning ?? 0) + (TokensCacheRead ?? 0);
 }
 
 public sealed class PendingFix

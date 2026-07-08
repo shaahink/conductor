@@ -107,7 +107,8 @@
     "maxResumesPerSession": 2,
     "stageSlackFactor": 2,
     "backoffMinutes": 30,
-    "maxBackoffs": 10
+    "maxBackoffs": 10,
+    "maxSessionTokens": 2000000
   },
 
   "report": { "commit": true, "push": true, "heartbeatMinutes": 10 },
@@ -129,6 +130,12 @@
     "CONDUCTOR-START.md",
     "docs/baton/BATON-BRIEF.md"
   ],
+  "batteries": {
+    "lessons": true,
+    "recentFailure": true,
+    "lessonsMaxEntries": 3,
+    "maxBytes": 2048
+  },
   "templatesDir": "baton-templates",
   "promptExtra": "This plan is self-referential: you are improving Conductor itself. The DRIVER that verifies you is the STABLE bin\\conductor.exe from master — never assume your in-tree build is what's judging you. Respect the diff budget (~15 files); keep the 56+ test suite green under warnings-as-errors; never lower an analyzer severity to pass. Honour the anti-pattern catalog in docs/baton/BATON-BRIEF.md §7."
 }

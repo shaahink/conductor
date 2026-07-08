@@ -8,17 +8,19 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #45 (B7, fix) — fixed flaky test ReadAllSucceedsWhileLiveWriterHoldsTheFile:
-       root cause was race between async drain task file creation and ReadAll polling.
-       EventLog constructor now creates the file upfront (FileMode.CreateNew) so file
-       always exists when readers probe it; test poll widened to 100x50ms + 100ms initial
-       delay for slow CI. Previous session #44 audit fixes (path traversal guard, IO error
-       resilience, dead field removal, hyphen regex) retained and verified.
-stage: **B7 DONE** — B7.1 (schema), B7.2 (registry), B7.3 (prompt merge + surface) all DONE.
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 306 tests pass.
+last: session #47 (B8, deliver) — landed B8.1–B8.5: LessonsManager with bounded
+       rotation (lessons.md), {lessons} battery injected into prompts, self-review
+       stage kind (Kind:"review") with review.md template + artifact scaffolding,
+       followup parser tracking audit handover deferred/weak bullets → followups.md,
+       IPromptBattery (LessonsBattery, RecentFailureBattery, BatteryGroup), and
+       RolledOver session outcome for per-session token budget (maxSessionTokens).
+       Plan JSON updated with batteries config + maxSessionTokens: 2,000,000.
+stage: **B8 DONE** — B8.1 (lessons), B8.2 ({lessons}), B8.3 (review), B8.4 (followups),
+       B8.5 (batteries + RolledOver) all DONE.
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 326 tests pass (+20 from B7).
 dirty: none.
-next: B8 (brain layer).
-evidence: docs/baton/evidence/B7-gate.txt; `.conductor/handovers/B7.md` (audit details)
+next: B9 (task graph + smart session management).
+evidence: docs/baton/evidence/B8-gate.txt
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -82,11 +84,11 @@ never silent renumbering.
 | B7.1 | Per-stage/per-checkpoint agent override in plan schema (command/systemPrompt/temperature/tokens) | DONE | 38e14fc | docs/baton/evidence/B7-gate.txt |
 | B7.2 | Built-in persona registry (planner/reviewer/architect/qa/docs/refactor/test-writer/git-cleanup/security) | DONE | 38e14fc | docs/baton/evidence/B7-gate.txt |
 | B7.3 | PromptBuilder merges base + persona; persona shown in dashboard/report/events | DONE | 38e14fc | docs/baton/evidence/B7-gate.txt |
-| B8.1 | Reflection step → rolling .conductor/lessons.md (bounded) | TODO | | |
-| B8.2 | Lessons injected into next prompt ({lessons} battery) — closes F-7 | TODO | | |
-| B8.3 | Self-review stage kind (stronger model reviews last N sessions, proposes adjustments) | TODO | | |
-| B8.4 | Handover weak/deferred bullets → tracked .conductor/followups.md (opt. block phase-confirm) | TODO | | |
-| B8.5 | Pluggable IPromptBattery (lessons/DoD-recap/repo-map/recent-failure); token rollover (RolledOver, no attempt burned) | TODO | | |
+| B8.1 | Reflection step → rolling .conductor/lessons.md (bounded) | DONE | TBD | docs/baton/evidence/B8-gate.txt |
+| B8.2 | Lessons injected into next prompt ({lessons} battery) — closes F-7 | DONE | TBD | docs/baton/evidence/B8-gate.txt |
+| B8.3 | Self-review stage kind (stronger model reviews last N sessions, proposes adjustments) | DONE | TBD | docs/baton/evidence/B8-gate.txt |
+| B8.4 | Handover weak/deferred bullets → tracked .conductor/followups.md (opt. block phase-confirm) | DONE | TBD | docs/baton/evidence/B8-gate.txt |
+| B8.5 | Pluggable IPromptBattery (lessons/DoD-recap/repo-map/recent-failure); token rollover (RolledOver, no attempt burned) | DONE | TBD | docs/baton/evidence/B8-gate.txt |
 | B9.1 | Task graph model + event-sourced store (TaskAdded/TaskStatusChanged) beneath the checkpoint table | TODO | | |
 | B9.2 | Planner persona decomposes active checkpoint → ordered sub-tasks | TODO | | |
 | B9.3 | MCP task server (task_list/task_update/task_add) — persists agent todo list across sessions | TODO | | |

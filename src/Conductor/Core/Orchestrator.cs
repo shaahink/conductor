@@ -19,11 +19,12 @@ public sealed record RunOptions(bool DryRun, bool Once, int MaxSessions);
 /// </summary>
 public sealed class Orchestrator(PlanConfig plan, RunState state, string statePath, IProgressSink sink, IEventSink events, RunOptions opts, ILogger<Orchestrator> logger, ITelegramService telegram, WebhookNotifier webhooks)
 {
-    private readonly PromptBuilder _prompts = new(plan, new PersonaRegistry(plan));
+    private readonly PromptBuilder _prompts = BuildPromptBuilder(plan);
     private readonly IProgressProvider _progress = ProgressProviderFactory.Create(plan);
     // The agent provider owns backend-specific concerns (stream parsing lives in AgentSession, the
     // usage-limit phrasing lives here) so the Orchestrator no longer switches on `output` (B2.4, D-11).
     private readonly IAgentProvider _agentProvider = AgentProviderFactory.Create(plan.Agent);
+    private readonly LessonsManager _lessons = new(plan.StateDir);
     private IReadOnlyList<GateResult>? _lastGates;
     private bool _pendingSkip;
     private bool _pausePending;
@@ -255,13 +256,32 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         state.SessionCounter++;
         var attempt = state.AttemptsThisStage + 1;
         var maxAttempts = MaxAttempts(stage);
+        var isReview = stage.Kind.Equals("review", StringComparison.OrdinalIgnoreCase);
+        var reviewDir = Path.Combine(plan.StateDir, "reviews");
+        var reviewPath = isReview ? Path.Combine(reviewDir, $"{stage.Id}.md") : "";
+        if (isReview)
+        {
+            // B8.3: scaffold the review artifact before the session starts so the agent
+            // is told where to write it; the content is advisory-only, never auto-applied.
+            Directory.CreateDirectory(reviewDir);
+            var skeleton = $"# Self-review: {stage.Id} — {stage.Title}\n\n" +
+                           $"_Generated {DateTime.UtcNow:u} by Conductor (B8.3) — pending agent review_\n";
+            File.WriteAllText(reviewPath, skeleton);
+            Log($"review stage {stage.Id}: scaffolded review artifact at {reviewPath}");
+        }
         var prompt = kind switch
         {
             SessionKind.Resume => _prompts.Resume(stage, state.SessionCounter, attempt, maxAttempts, pendingResume!),
             SessionKind.Audit => _prompts.Audit(stage, state.SessionCounter, pendingAudit!, state.CurrentStageStartHead ?? "HEAD~1"),
             SessionKind.Fix => _prompts.Fix(stage, state.SessionCounter, attempt, maxAttempts, pendingFix!),
-            _ => _prompts.Deliver(stage, state.SessionCounter, attempt, maxAttempts),
+            _ => isReview
+                ? _prompts.Review(stage, state.SessionCounter, attempt, maxAttempts, reviewPath)
+                : _prompts.Deliver(stage, state.SessionCounter, attempt, maxAttempts),
         };
+        // Append bounded battery sections (B8.5): lessons, recent failures, etc.
+        var batterySection = _prompts.BatterySection(state);
+        if (batterySection.Length > 0)
+            prompt = prompt.TrimEnd() + "\n\n" + batterySection;
 
         var rec = new SessionRecord
         {
@@ -383,8 +403,23 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             }
             state.ConsecutiveBackoffs = 0;
 
+            // B8.5: per-session token budget — if the session exceeded maxSessionTokens, end it
+            // as RolledOver so the next session starts fresh with no attempt burned.
+            if (plan.Limits.MaxSessionTokens is { } maxTok && rec.TokensTotal >= maxTok)
+            {
+                rec.Outcome = SessionOutcome.RolledOver;
+                rec.ResultSummary = ExtractSessionResult(agent.ResultText);
+                Log($"session #{rec.Number} rolled over — {rec.TokensTotal / 1000.0:0.#}k tokens ≥ {maxTok / 1000.0:0.#}k limit, handoff written");
+                ReflectionStep(rec, stage);
+                SaveAndReport();
+                return;
+            }
+
             EvaluateSession(rec, stage, preTrack, startHead, stalled, timedOut, killedByUser,
                 agentErrored: agent.ResultIsError || (exit != 0 && !stalled && !timedOut && !killedByUser), ct);
+
+            // B8.1: after every session, distill "what was hard" into rolling lessons
+            ReflectionStep(rec, stage);
         }
     }
 
@@ -434,6 +469,10 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             };
             state.Status = RunStatus.Idle;
             Log($"audit session #{rec.Number} complete ({rec.NewCommits.Count} commits) — re-verifying phase {stage.Id} with full battery");
+
+            // B8.4: parse the audit handover for deferred/weak bullets and track as followups
+            ParseAuditFollowups(stage.Id);
+
             SaveAndReport();
             return;
         }
@@ -1080,6 +1119,13 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         _ => _prompts.Deliver(stage, sessionNumber, attempt, maxAttempts),
     };
 
+    private static PromptBuilder BuildPromptBuilder(PlanConfig plan)
+    {
+        var registry = new PersonaRegistry(plan);
+        var lessons = new LessonsManager(plan.StateDir);
+        return new PromptBuilder(plan, registry, lessons);
+    }
+
     private static string ExtractSessionResult(string? resultText)
     {
         if (string.IsNullOrWhiteSpace(resultText)) return "";
@@ -1321,5 +1367,137 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         var gi = Path.Combine(plan.StateDir, ".gitignore");
         if (!File.Exists(gi))
             File.WriteAllText(gi, "*\n!.gitignore\n!REPORT.md\n");
+    }
+
+    // ---------------------------------------------------------------- B8 brain layer
+
+    /// <summary>B8.1: Reflection step — after each session ends, distil "what was hard" from
+    /// the SESSION-RESULT text into a bounded, rotating lessons file for future sessions.</summary>
+    private void ReflectionStep(SessionRecord rec, StageConfig stage)
+    {
+        if (string.IsNullOrWhiteSpace(rec.ResultSummary)) return;
+
+        // Extract the struggle note after "SESSION-RESULT:" — this is the "what was hard" signal
+        // the next session's prompt should receive.
+        var text = rec.ResultSummary;
+        var idx = text.IndexOf("SESSION-RESULT:", StringComparison.OrdinalIgnoreCase);
+        if (idx < 0) return;
+
+        // Take the post-SESSION-RESULT text, strip the marker
+        var difficulty = text[(idx + "SESSION-RESULT:".Length)..].Trim();
+        if (difficulty.Length == 0) return;
+        if (difficulty.Length > 500)
+            difficulty = difficulty[..497] + "…";
+
+        _lessons.Append(rec.Stage, rec.Number, difficulty);
+    }
+
+    /// <summary>B8.3: Handle a self-review stage — runs a session that reviews the last N sessions
+    /// and writes an advisory review artifact to <c>.conductor/reviews/&lt;stage&gt;.md</c>.
+    /// The artifact is advisory only — it is never auto-applied.</summary>
+    private void StartReviewSession(StageConfig stage)
+    {
+        var reviewDir = Path.Combine(plan.StateDir, "reviews");
+        Directory.CreateDirectory(reviewDir);
+        var reviewPath = Path.Combine(reviewDir, $"{stage.Id}.md");
+
+        // Build a review prompt from the last session results
+        var recent = state.History.TakeLast(5).ToList();
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"# Self-review for stage {stage.Id} — {stage.Title}");
+        sb.AppendLine();
+        sb.AppendLine($"_Generated {DateTime.UtcNow:u} by Conductor self-review (B8.3)_");
+        sb.AppendLine();
+        sb.AppendLine("## Recent sessions");
+        sb.AppendLine();
+        foreach (var r in recent)
+        {
+            sb.AppendLine($"### Session #{r.Number} ({r.Kind}) — {r.Outcome}");
+            sb.AppendLine($"- Stage: {r.Stage}");
+            sb.AppendLine($"- Gates: {r.GateSummary}");
+            sb.AppendLine($"- New commits: {r.NewCommits.Count}");
+            sb.AppendLine($"- Newly done: {string.Join(", ", r.NewlyDone)}");
+            if (!string.IsNullOrWhiteSpace(r.ResultSummary))
+                sb.AppendLine($"- Result: {r.ResultSummary}");
+            sb.AppendLine();
+        }
+        // Write the review artifact immediately (before the agent session — it's the skeleton)
+        File.WriteAllText(reviewPath, sb.ToString().TrimEnd() + Environment.NewLine);
+        Log($"review artifact scaffold written to {reviewPath}");
+    }
+
+    /// <summary>B8.4: Parse audit handover doc for deferred/weak/bugs-not-fixed bullets and track
+    /// them in <c>.conductor/followups.md</c>. Only appends entries not already tracked (by title
+    /// match), avoiding duplicates across multiple phases.</summary>
+    private void ParseAuditFollowups(string stageId)
+    {
+        var handoverPath = Path.Combine(plan.StateDir, "handovers", $"{stageId}.md");
+        if (!File.Exists(handoverPath)) return;
+
+        var followupsPath = Path.Combine(plan.StateDir, "followups.md");
+        var existing = File.Exists(followupsPath) ? File.ReadAllText(followupsPath) : "";
+
+        var bullets = new List<string>();
+        try
+        {
+            var content = File.ReadAllText(handoverPath);
+            var lines = content.Split('\n');
+            var inSection = false;
+            foreach (var line in lines)
+            {
+                var t = line.Trim();
+                // Match sections: "Weak / deferred", "Bugs not fixed", "Deferred / unfixed"
+                if (t.StartsWith("## ", StringComparison.Ordinal) || t.StartsWith("### ", StringComparison.Ordinal))
+                {
+                    var heading = t.ToLowerInvariant();
+                    inSection = heading.Contains("weak") || heading.Contains("deferred") ||
+                                heading.Contains("bugs not fixed") || heading.Contains("unfixed") ||
+                                heading.Contains("concrete follow");
+                }
+                else if (inSection && (t.StartsWith("- ", StringComparison.Ordinal) || t.StartsWith("* ", StringComparison.Ordinal) || t.StartsWith("### ", StringComparison.Ordinal) && t.Contains("D-")))
+                {
+                    var bullet = t.TrimStart('-', '*', ' ').Trim();
+                    if (bullet.Length > 0) bullets.Add(bullet);
+                }
+            }
+        }
+        catch (IOException) { return; }
+        catch (UnauthorizedAccessException) { return; }
+
+        if (bullets.Count == 0) return;
+
+        var sb = new System.Text.StringBuilder();
+        var prevExists = existing.Length > 0;
+        if (!prevExists)
+        {
+            sb.AppendLine("# Conductor followups (auto-tracked from audit handovers)");
+            sb.AppendLine();
+            sb.AppendLine("| Id | Item | Stage | Status |");
+            sb.AppendLine("|---|---|---|---|");
+        }
+        else
+        {
+            sb.Append(existing.TrimEnd());
+        }
+
+        var added = 0;
+        var sid = stageId;
+        foreach (var bullet in bullets)
+        {
+            var title = bullet.Length > 80 ? bullet[..77] + "…" : bullet;
+            if (existing.Contains(title, StringComparison.OrdinalIgnoreCase))
+                continue; // already tracked
+
+            if (!prevExists && added == 0)
+                sb.AppendLine();
+            sb.AppendLine($"| FU-{sid}-{added + 1:00} | {title} | {sid} | OPEN |");
+            added++;
+        }
+
+        if (added > 0)
+        {
+            File.WriteAllText(followupsPath, sb.ToString().TrimEnd() + Environment.NewLine);
+            Log($"followups: {added} new item(s) from {stageId} audit tracked in followups.md");
+        }
     }
 }

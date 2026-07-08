@@ -46,6 +46,8 @@ public sealed class PlanConfig
     public TelegramConfig? Telegram { get; set; }
     public string TemplatesDir { get; set; } = "templates";
     public string PromptExtra { get; set; } = "";
+    /// <summary>Opt-in prompt batteries for bounded context injection (B8.5). null = none.</summary>
+    public BatteriesConfig? Batteries { get; set; }
     /// <summary>Mandated docs to read in order at session start (paths relative to repo root).
     /// Rendered as an ordered list in the session prompt. Empty/null = no list rendered (B1.5).</summary>
     public List<string>? ReadOrder { get; set; }
@@ -405,6 +407,9 @@ public sealed class StageConfig
     /// <summary>Persona name to adopt for this stage (e.g. "architect", "planner", "qa"). Resolved
     /// by <c>PersonaRegistry</c> into a system prompt. null = no persona (B7.2).</summary>
     public string? Persona { get; set; }
+    /// <summary>Stage kind: "deliver" (default), "review" (self-review stage, B8.3).
+    /// A review stage produces an advisory artifact, not mutations.</summary>
+    public string Kind { get; set; } = "deliver";
 }
 
 public sealed class GateConfig
@@ -461,6 +466,24 @@ public sealed class LimitsConfig
     /// <summary>If true, the orchestrator parks at <c>AwaitingOwner</c> before each session/commit,
     /// waiting for explicit approval (B3.4).</summary>
     public bool ApprovalMode { get; set; }
+    /// <summary>Per-session token budget — a session exceeding this ends <c>RolledOver</c>
+    /// with a compact handoff and the next session starts fresh (no attempt burned, B8.5).
+    /// null = no per-session limit.</summary>
+    public long? MaxSessionTokens { get; set; }
+}
+
+/// <summary>Opt-in prompt batteries that inject bounded context into every session prompt (B8.5).
+/// Each battery is a named, deterministic, byte-capped section. Batteries compose in order.</summary>
+public sealed class BatteriesConfig
+{
+    /// <summary>Include the rolling lessons brief from .conductor/lessons.md.</summary>
+    public bool Lessons { get; set; } = true;
+    /// <summary>Include a recent-failure digest when the last session didn't verify.</summary>
+    public bool RecentFailure { get; set; } = true;
+    /// <summary>Max entries to include from lessons (default 3).</summary>
+    public int LessonsMaxEntries { get; set; } = 3;
+    /// <summary>Total byte cap for the combined battery section in the prompt.</summary>
+    public int MaxBytes { get; set; } = 2048;
 }
 
 public sealed class ReportConfig
