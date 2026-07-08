@@ -1,6 +1,6 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 07:27 UTC · branch `feat/baton` · HEAD `0f744a3`_
+_Updated 2026-07-08 07:37 UTC · branch `feat/baton` · HEAD `c961587`_
 
 **Status:** Running
 **Stage:** B2 — Event-sourced backbone + provider decoupling · attempts used 0 · working ▸ B2.4
@@ -9,24 +9,24 @@ _Updated 2026-07-08 07:27 UTC · branch `feat/baton` · HEAD `0f744a3`_
 
 ## Latest activity (live)
 
-_Session #14 (Deliver) · running 10m · last output 19s ago · $0.0092_
+_Session #14 (Deliver) · running 20m · last output 8s ago · $0.0325_
 
 **Thinking:**
-> I'm reviewing the QA results from session 13 — the build passed with zero warnings and errors, all 98 tests succeeded, and the six RunStateProjection tests including the two new ones from B2.3 are confirmed working. However, I'm noticing the events.jsonl artifact isn't currently present, which I nee…
-> I'm gathering real event samples for the provider adapter tests, starting with the opencode-json format using the session-013.jsonl file I have on hand. I need to verify whether there's an actual captured sample for the claude stream-json format, since the spec requires unit tests with real session …
-> I'm documenting the QA results for session #13, confirming that the gate re-run passed with all 98 tests and the recovery tests are working as expected, then moving on to plan the next phase.  For B2.4, I need to design the IAgentProvider interface that will abstract away the different agent output …
+> I need to maintain backward compatibility with the stable driver by keeping the `output` field while adding `provider` additively, since the stable driver won't recognize the new field but will safely ignore it during deserialization.
+> The self-plan validation goes through PlanConfig.Load, and since the STABLE driver's PlanConfig lacks a Provider field, JSON deserialization safely ignores it thanks to PropertyNameCaseInsensitive and non-strict handling. System.Text.Json's default behavior of ignoring unknown properties keeps backw…
+> I need to check git status to see the untracked files since the diff stat won't show them.
 
 **Recent actions:**
-- `08:22:54` » read tools\fake-agent.ps1
-- `08:22:56` · QA verdict forming. Let me look at the fake-agent and a captured sample to design B2.4 provider tests, plus check all `AgentSession.Start` / `cfg.Output` consum…
-- `08:22:56` » bash Select-String -Path src\Conductor\**\*.cs,tests\Conductor.Tests\*.cs -Pattern "AgentSession\.Start|AgentSession\(|\.Output\b|new AgentEvent|AgentEvent" | S…
-- `08:24:13` » bash Get-Content .conductor\logs\session-013.jsonl -TotalCount 20 | ForEach-Object { if ($_.Length -gt 200) { $_.Substring(0,200) } else { $_ } }
-- `08:24:14` · QA verdict is forming. Let me look at a real captured opencode stream sample and the remaining Orchestrator provider touchpoint (LimitRx), then write the plan.
-- `08:24:14` » bash Select-String -Path .conductor\logs\session-013.jsonl -Pattern '"type":"step_finish"' | Select-Object -First 1 | ForEach-Object { $_.Line.Substring(0, [Mat…
-- `08:25:18` · I have enough to design B2.4. Let me check analyzer settings and the self-plan's agent config before writing.
-- `08:25:19` » bash Get-Content Directory.Build.props -ErrorAction SilentlyContinue; Write-Output "===SELF PLAN AGENT==="; Select-String -Path plans\conductor.self.plan.json -…
-- `08:27:15` » todowrite 3 todos
-- `08:27:15` · Now I understand the architecture. Let me record the QA verdict and design B2.4.  **QA of session #13 (B2.3):** gate re-runs GREEN (build 0w/0e, 98 tests); clai…
+- `08:36:30` » bash & "src\Conductor\bin\Debug\net10.0\conductor.exe" run --dry-run -p "C:\Users\shahi\AppData\Local\Temp\opencode\b24-loom\loom-parity.plan.json" 2>&1 | Selec…
+- `08:36:39` » read plans\conductor.self.plan.json
+- `08:36:39` · The opencode-json Loom-shaped plan loads and dry-runs green — the provider is constructed via the factory on the new code path. Now let me clean up the temp art…
+- `08:36:57` · I'll keep `output` (the STABLE driver needs it) and additively add the explicit `provider` field — the STABLE driver ignores unknown JSON fields, so this is bac…
+- `08:36:57` » edit plans\conductor.self.plan.json
+- `08:37:09` · Now run the full gate battery for the post-session ritual and clean up temp:
+- `08:37:10` » bash Remove-Item -Recurse -Force "C:\Users\shahi\AppData\Local\Temp\opencode\b24-loom" -ErrorAction SilentlyContinue; git diff --stat
+- `08:37:17` » bash dotnet build Conductor.slnx 2>&1 | Select-Object -Last 5; Write-Output "=====TEST====="; dotnet test Conductor.slnx --no-build 2>&1 | Select-Object -Last 4
+- `08:37:25` · Battery green (build 0w/0e, 113 tests). Diff is well within budget. Let me check untracked new files:
+- `08:37:26` » bash git status --short
 
 ## Stage progress
 
