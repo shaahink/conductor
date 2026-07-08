@@ -8,26 +8,27 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #29 (B4.4, deliver) — landed **B4.4**: severity model + header label fix.
-      New `LogSeverity` enum (Info/Warn/Error/Success/Waiting/Human) + `LogEntry` in Core;
-      `SeverityGlyph`/`SeverityColor` on DashboardRenderer; log entries rendered with
-      coloured severity glyph prefix in the footer; "N untracked" reworded → "N sessions
-      unreported". Added `IProgressSink.Log(LogEntry)` default overload (non-breaking).
-      +5 tests (SeverityGlyphMapping × 6, SeverityColorMatchesGlyph, LogRendersWithSeverity,
-      CostLineOmitsWhenZero). 184→193 tests.
-stage: **B4 IN PROGRESS** — B4.1, B4.2, B4.3, B4.4 DONE. Next B4.5 (structured thinking pane +
-      tool-call folding).
-gate: GREEN — build 0w/0e; 193 tests pass; DashboardRendererTests 32/32; PlanTreeTests 10/10.
-      `conductor preview` redirected exit 0, shows "6 sessions unreported" in header, log pane
-      with severity prefix. B4.4-gate.txt, B4.4-preview.txt.
-qa: session #28/B4.3 PASS — re-ran gate (build 0w/0e, 193 tests). Claim-1: PlanTreeTests 10/10
-      + DashboardRendererTests (header grid guards + no-stacking guards green). Claim-2: preview
-      artifact shows hierarchical tree with B0…B2 stages, per-stage columns, filter hints.
-next: **B4.5** — structured thinking pane (Goal/Hypothesis/Evidence/Action) + tool-call folding.
-trap: `StateCompatTests` serialises `UntrackedSessions` (old name in JSON) — property name unchanged,
-       only the display label was reworded. `EventLogTests.ReadAll…` is flaky (passes on retry).
-dirty: none tracked.
-evidence: B4.4-gate.txt, B4.4-preview.txt
+last: session #30 (B4.5, deliver) — landed **B4.5**: structured thinking pane +
+      tool-call folding. Two pure helpers: `StructuredThinking.Parse` (Goal/Hypothesis/
+      Evidence/Action digest; raw kept when unstructured) + `AgentFold.Build` (tool output
+      folded behind "(N lines)" badge, `C` key expand/fold). Wired into DashboardRenderer
+      (ThinkingRow + AgentPanel), LiveDashboard (`C`), preview seed. +15 tests. 193→206.
+stage: **B4 IN PROGRESS** — B4.1–B4.5 DONE. Next B4.6 (command history search + filters).
+gate: GREEN — build 0w/0e; 206 tests pass. `conductor preview` exit 0 shows agent fold
+      badge "▸ (2 lines)", thinking "◎ goal …", "[C] fold" in action bar.
+      B4.5-gate.txt, B4.5-preview.txt.
+qa: session #29/B4.4 PASS — re-ran gate (build 0w/0e, 193 tests). Claim-1: DashboardRenderer
+      severity theory tests 38/38 (glyph+colour mapping green). Claim-2: B4.4 preview artifact
+      shows "6 sessions unreported" label + severity-prefixed log pane. No findings.
+      SIDE-FIND (fixed, own commit): RealLoomTracker smoke asserted magic count 35 vs the LIVE
+      foreign LOOM-START.md; flipped red mid-session on a malformed L5.4 row (parser correctly
+      rejected it). De-coupled to invariants — not a Conductor regression.
+next: **B4.6** — command history search + filters (/build /git /test; commands/thoughts/errors).
+trap: `RealLoomTrackerParsesIfPresent` reads a LIVE foreign file — never re-couple it to an
+       exact count. `EventLogTests.ReadAll…` is flaky (passes on retry). StateCompat serialises
+       `UntrackedSessions` (old JSON name; only display label reworded in B4.4).
+dirty: two untracked prior-session docs (conductor-DEBT.md, docs/baton/CONDUCTOR-NEXT.md) — not mine.
+evidence: B4.5-gate.txt, B4.5-preview.txt
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -76,7 +77,7 @@ never silent renumbering.
 | B4.2 | Spectre Layout rebuild of DashboardRenderer.BuildRoot | DONE | d3aa1a5 | docs/baton/evidence/B4.2-gate.txt |
 | B4.3 | Hierarchical plan tree (sub-checkpoints; expand/collapse; per-stage cost/attempts/last-outcome) | DONE | 8197bd4 | docs/baton/evidence/B4.3-gate.txt, docs/baton/evidence/B4.3-preview.txt |
 | B4.4 | Severity model (INFO/WARN/ERROR/SUCCESS/WAITING/HUMAN) + clearer header labels | DONE | 9b25fe2 | docs/baton/evidence/B4.4-gate.txt, docs/baton/evidence/B4.4-preview.txt |
-| B4.5 | Structured thinking pane (Goal/Hypothesis/Evidence/Action) + tool-call folding | TODO | | |
+| B4.5 | Structured thinking pane (Goal/Hypothesis/Evidence/Action) + tool-call folding | DONE | 5b9db37 | docs/baton/evidence/B4.5-gate.txt, docs/baton/evidence/B4.5-preview.txt |
 | B4.6 | Command history search + filters (/build /git /test; commands/thoughts/errors) | TODO | | |
 | B4.7 | Live-consistent token line + plan-tree filter/search for large plans; doc-on-select | TODO | | |
 | B5.1 | Timeline view (transitions with duration) from the event log | TODO | | |
