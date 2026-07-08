@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Channels;
 using Conductor.Core.Planning;
+using Conductor.Core.Events;
 using Conductor.Models;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -184,6 +185,11 @@ public sealed class TelegramService : IHostedService, ITelegramService, IDisposa
             var status = BuildStatusText();
             await SendAsync(chatId, status, ct).ConfigureAwait(false);
         }
+        else if (text.Equals("/tasks", StringComparison.OrdinalIgnoreCase))
+        {
+            var tasks = BuildTasksText();
+            await SendAsync(chatId, tasks, ct).ConfigureAwait(false);
+        }
         else if (text.Equals("/start", StringComparison.OrdinalIgnoreCase))
         {
             await SendAsync(chatId, "Conductor bot is running. Use /status to see the current state.", ct)
@@ -341,6 +347,56 @@ public sealed class TelegramService : IHostedService, ITelegramService, IDisposa
                     sb.AppendLine($"  [{icon}] {r.Id}: {r.Title}");
                 }
             }
+        }
+
+        return sb.ToString().TrimEnd();
+    }
+
+    /// <summary>B9.5 — builds an HTML-formatted task graph view for Telegram (/tasks),
+    /// reading <c>events.jsonl</c> and folding through <see cref="TaskGraph"/>.</summary>
+    private string BuildTasksText()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"<b>Conductor — {_plan.Name}</b>");
+        sb.AppendLine($"<b>Task Graph</b>");
+        sb.AppendLine();
+
+        var eventsPath = Path.Combine(_plan.StateDir, "events.jsonl");
+        if (!File.Exists(eventsPath))
+        {
+            sb.AppendLine("(no events recorded yet — the task graph populates as the run emits events)");
+            return sb.ToString().TrimEnd();
+        }
+
+        var graph = new TaskGraph();
+        graph.Fold(EventLog.ReadAll(eventsPath));
+
+        if (graph.Count == 0)
+        {
+            sb.AppendLine("(no tasks recorded yet)");
+            return sb.ToString().TrimEnd();
+        }
+
+        var checkpoints = graph.Tasks
+            .GroupBy(t => t.CheckpointId)
+            .OrderBy(g => g.Key);
+
+        foreach (var ck in checkpoints)
+        {
+            sb.AppendLine($"<b>{ck.Key}:</b>");
+            foreach (var task in ck.OrderBy(t => t.Order))
+            {
+                var icon = task.Status switch
+                {
+                    "done" => " DONE ",
+                    "in_progress" => "▶ACTV ",
+                    "skipped" => " SKIP ",
+                    _ => "      ",
+                };
+                var src = task.Source.Length > 0 ? $" ({task.Source})" : "";
+                sb.AppendLine($"  [{icon}] {task.Title}{src}");
+            }
+            sb.AppendLine();
         }
 
         return sb.ToString().TrimEnd();

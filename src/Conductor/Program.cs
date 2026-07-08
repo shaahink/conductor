@@ -41,6 +41,8 @@ app.Configure(c =>
         .WithDescription("Park at Paused after the current stage completes.");
     c.AddCommand<GotoCommand>("goto")
         .WithDescription("Jump to a different stage (clears pending state for the old stage).");
+    c.AddCommand<TasksCommand>("tasks")
+        .WithDescription("Show task graph: sub-tasks per checkpoint from the event log.");
     c.AddCommand<NewPlanCommand>("new-plan")
         .WithDescription("Scaffold a new plan + TRACKER.md from a built-in template (minimal/dotnet/node/shamshir).");
     c.SetExceptionHandler((ex, _) =>

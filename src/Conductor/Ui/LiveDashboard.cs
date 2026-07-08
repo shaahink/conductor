@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text;
 using Conductor.Core;
+using Conductor.Core.Events;
 using Conductor.Models;
 using Spectre.Console;
 using Spectre.Console.Rendering;
@@ -17,7 +18,7 @@ namespace Conductor.Ui;
 /// </summary>
 public sealed class LiveDashboard : IProgressSink
 {
-    private enum Modal { None, Thinking, Output, Docs, Git, Prompt, Status, Timeline, Replay, Health, Confidence, Repo }
+    private enum Modal { None, Thinking, Output, Docs, Git, Prompt, Status, Timeline, Replay, Health, Confidence, Repo, Tasks }
 
     private readonly Lock _gate = new();
     private readonly List<DashboardState.AgentLine> _agent = new();
@@ -168,6 +169,7 @@ public sealed class LiveDashboard : IProgressSink
             case ConsoleKey.H: OpenModal(Modal.Health); break;
             case ConsoleKey.N: OpenModal(Modal.Confidence); break;
             case ConsoleKey.B: OpenModal(Modal.Repo); break;
+            case ConsoleKey.U: OpenModal(Modal.Tasks); break;
             case ConsoleKey.G when _plan?.StatusAgent is { Enabled: true }: StartStatusAgent(); break;
             case ConsoleKey.F: _tree = _tree with { Filter = PlanTree.NextFilter(_tree.Filter) }; break;
             case ConsoleKey.E: _tree = _tree with { ExpandAll = !_tree.ExpandAll }; break;
@@ -303,6 +305,7 @@ public sealed class LiveDashboard : IProgressSink
                     case ConsoleKey.H: OpenModal(Modal.Health); break;
                     case ConsoleKey.N: OpenModal(Modal.Confidence); break;
                     case ConsoleKey.B: OpenModal(Modal.Repo); break;
+                    case ConsoleKey.U: OpenModal(Modal.Tasks); break;
                     case ConsoleKey.I when _plan != null: _inputActive = true; _inputBuffer.Clear(); break;
                     case ConsoleKey.G when _plan?.StatusAgent is { Enabled: true }: StartStatusAgent(); break;
                     case ConsoleKey.F: _tree = _tree with { Filter = PlanTree.NextFilter(_tree.Filter) }; break;
@@ -430,6 +433,7 @@ public sealed class LiveDashboard : IProgressSink
             Modal.Health => ("health · execution-health signals from the event log", HealthLines()),
             Modal.Confidence => ("confidence · evidence count per checkpoint", ConfidenceLines()),
             Modal.Repo => ("repo · branch, working tree, ahead/behind", RepoLines()),
+            Modal.Tasks => ("tasks · sub-tasks from the event log", TaskLines()),
             _ => ("", new List<string>()),
         };
         lock (_gate) { _modal = kind; _modalTitle = title; _modalLines = lines; _modalOffset = Math.Max(0, lines.Count - 1); }
@@ -558,6 +562,48 @@ public sealed class LiveDashboard : IProgressSink
             return Conductor.Core.Events.RepoStrip.Format(Reporter.ReadRepoStrip(_plan)).ToList();
         }
         catch (Exception ex) { return new() { $"(repo read failed: {ex.Message})" }; }
+    }
+
+    /// <summary>Folds the event log into the tasks pane (B9.5, U) — shows sub-tasks per checkpoint
+    /// with status indicators, from the same <c>events.jsonl</c> the CLI <c>conductor tasks</c> reads.
+    /// Captured once on open; tolerant of a missing/locked log.</summary>
+    private List<string> TaskLines()
+    {
+        if (_plan == null) return new() { "(tasks unavailable in preview)" };
+        try
+        {
+            var eventsPath = Path.Combine(_plan.StateDir, "events.jsonl");
+            if (!File.Exists(eventsPath)) return new() { "(no events recorded yet — the task graph populates as the run emits events)" };
+
+            var graph = new TaskGraph();
+            graph.Fold(EventLog.ReadAll(eventsPath));
+
+            if (graph.Count == 0) return new() { "(no tasks recorded yet — the planner or agent will populate the task graph)" };
+
+            var lines = new List<string>();
+            var checkpoints = graph.Tasks
+                .GroupBy(t => t.CheckpointId)
+                .OrderBy(g => g.Key);
+
+            foreach (var ck in checkpoints)
+            {
+                lines.Add($"── {ck.Key} ──");
+                foreach (var task in ck.OrderBy(t => t.Order))
+                {
+                    var icon = task.Status switch
+                    {
+                        "done" => "[DONE]",
+                        "in_progress" => "[ ▶  ]",
+                        "skipped" => "[SKIP]",
+                        _ => "[    ]",
+                    };
+                    lines.Add($"  {icon} {task.Title}  ({task.Source})");
+                }
+                lines.Add("");
+            }
+            return lines;
+        }
+        catch (Exception ex) { return new() { $"(task graph read failed: {ex.Message})" }; }
     }
 
     private List<string> PromptLines()

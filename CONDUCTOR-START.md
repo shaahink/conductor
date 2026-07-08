@@ -8,19 +8,19 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #57 (B9.4) — delivered cooperative soft-break + hard fallback + MCP journal fold.
-stage: B9.1–B9.3 DONE. **B9.4 DONE** — SoftBreakRequested event, signal file, task-graph-aware
-       RolledOver resume hint, MCP journal merged into events.jsonl after session exit.
-       B9.4 land: Orchestrator polls live tokens in the session loop against SoftBreakRatio
-       (default 0.8 of MaxSessionTokens), emits softBreakRequested, writes .conductor/soft-break
-       file; hard ceiling still RollsOver with next sub-task in the log line. McpTaskServer
-       journal is folded into the event log post-session. 14 new tests.
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 363 tests pass (+14 SoftBreakTests).
+last: session #58 (B9.5) — delivered task views in CLI, TUI, and Telegram.
+stage: B9 COMPLETE — all 5 checkpoints (B9.1–B9.5) DONE.
+       B9.5 land: `conductor tasks` CLI command renders per-checkpoint task table from events.jsonl;
+       TUI tasks pane (U key) folds event log live into scrollable modal; Telegram /tasks handler
+       returns HTML-formatted task graph. 4 new tests (TaskViewTests). Full pipeline: event log →
+       TaskGraph fold → per-checkpoint display — same code path shared across all three views.
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 367 tests pass (+4 TaskViewTests).
 dirty: none.
-next: B9.5 (task views in CLI/TUI/Telegram).
-evidence: docs/baton/evidence/B9.4-gate.txt
-qa: B9.2 PlannerTests 6/6 pass, B9.3 McpTaskServerTests 7/7 pass, 349→363 total. Verdict PASS.
-     McpTaskServer has no production wiring (known — B9.4 adds journal fold; full wire-in deferred).
+next: B10.1 (dependsOn graph + smarter ready-stage ordering).
+evidence: docs/baton/evidence/B9.5-gate.txt
+qa: B9.4 gate re-verified: PlannerTests 6/6 pass, McpTaskServerTests 7/7 pass, SoftBreakTests 14/14.
+      B9.4 claim "McpTaskServer has no production wiring" verified against Orchestrator.cs (journal
+      fold wired; full wire-in still deferred). Verdict PASS — no regressions.
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -93,7 +93,7 @@ never silent renumbering.
 | B9.2 | Planner persona decomposes active checkpoint → ordered sub-tasks | DONE | 87a7c72 | tests/Conductor.Tests/PlannerTests.cs (6 tests) |
 | B9.3 | MCP task server (task_list/task_update/task_add) — persists agent todo list across sessions | DONE | 92371d7 | tests/Conductor.Tests/McpTaskServerTests.cs (7 tests) |
 | B9.4 | Cooperative soft-break (finish sub-task→handoff→fresh session) + hard token-ceiling fresh-start fallback | DONE | e078820 | docs/baton/evidence/B9.4-gate.txt |
-| B9.5 | Task views in CLI/TUI/Telegram | TODO | | |
+| B9.5 | Task views in CLI/TUI/Telegram | DONE | | docs/baton/evidence/B9.5-gate.txt |
 | B10.1 | stages[].dependsOn graph + smarter ready-stage ordering (sequential exec preserved) | TODO | | |
 | B10.2 | First-class hierarchical stages in state + reports | TODO | | |
 | B10.3 | Per-stage pre/post hooks beyond gates | TODO | | |
