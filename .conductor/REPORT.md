@@ -1,6 +1,6 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 23:29 UTC · branch `feat/baton` · HEAD `746b164`_
+_Updated 2026-07-08 23:39 UTC · branch `feat/baton` · HEAD `b04a264`_
 
 **Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B11 — Close-out + Shamshir owner-gated proof · attempts used 0 · working ▸ B11.2
@@ -9,24 +9,24 @@ _Updated 2026-07-08 23:29 UTC · branch `feat/baton` · HEAD `746b164`_
 
 ## Latest activity (live)
 
-_Session #62 (Deliver) · running 10m · last output 1s ago · $0.0629_
+_Session #62 (Deliver) · running 20m · last output 1s ago · $0.0994_
 
 **Thinking:**
-> Now let me commit B11.3 changes (ADRs updated, evidence file):
-> Now B11.4 — Shamshir P2.2 owner-gated acceptance. This is the hard one.  The requirement says: "drive a full owner-gated Shamshir phase (parity-pipeline P2.2 — the credentialed compare-both headline gate) through Conductor: owner-gate blocks, approval resumes, reconcile verdict committed."  The trap…
-> Let me look at the Shamshir example and understand the plan structure for P2.2.
+> 5 files total (1 modified + 3 new). Well within budget.  Now let me commit. The TrackerParserTests.cs change is the Loom tracker live-state fix, which is part of B11.3/B11.4 QA (tests must pass).  Let me commit everything for B11.4:
+> Now I need to do the post-session ritual: 1. Re-run the full gate battery 2. Update CONDUCTOR-START.md (handoff block + checkpoint rows) 3. Push the branch  Let me update the tracker and then push.
+> The build took 36s (due to file locking again from testhost still running?) and tests took 42s - 432 passed. The build shows 0 errors.  Wait, the build time is 36s - that's unusual. Let me check if there were warnings. The output says "0 Error(s)" but I need to check for warnings too. Let me run a c…
 
 **Recent actions:**
-- `00:27:43` » bash Remove-Item -Recurse -Force -LiteralPath "C:\Users\shahi\AppData\Local\Temp\opencode\conductor-clean-clone" -ErrorAction SilentlyContinue
-- `00:27:49` » edit docs\baton\adr\0001-tooling-and-ruleset.md
-- `00:27:58` » edit docs\baton\adr\0001-tooling-and-ruleset.md
-- `00:28:05` » edit docs\baton\adr\0002-event-sourcing.md
-- `00:28:26` » write docs\baton\adr\0003-cross-platform-packaging-closeout.md
-- `00:28:36` · Now write B11.3 evidence and commit:
-- `00:28:36` » bash $evidence = @" === B11.3 ADRs finalised + clean-clone battery === Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') Host: $env:COMPUTERNAME OS: Windows  --- …
-- `00:28:43` » bash git add docs/baton/adr/0001-tooling-and-ruleset.md docs/baton/adr/0002-event-sourcing.md docs/baton/adr/0003-cross-platform-packaging-closeout.md docs/bato…
-- `00:28:52` » todowrite 2 todos
-- `00:28:58` » glob
+- `00:35:53` » edit tests\Conductor.Tests\TrackerParserTests.cs
+- `00:36:31` » bash dotnet test Conductor.slnx 2>&1 | Select-Object -Last 5
+- `00:36:36` · 432/0/0. All green. Let me check diff and commit B11.4:
+- `00:36:37` » bash git diff --stat HEAD
+- `00:36:44` » bash git status --short
+- `00:36:53` » bash git add tests/Conductor.Tests/TrackerParserTests.cs examples/shamshir/parity-pipeline.plan.json docs/baton/audits/B11-shamshir-p2.2.md docs/baton/evidence/…
+- `00:37:00` » todowrite 1 todos
+- `00:37:00` · Now post-session ritual. Re-run full gate battery, update tracker, push:
+- `00:38:44` » bash dotnet build Conductor.slnx 2>&1 | Select-Object -Last 3; dotnet test Conductor.slnx 2>&1 | Select-Object -Last 3
+- `00:38:57` » bash dotnet build Conductor.slnx 2>&1 | Select-String -Pattern "Warning|Error|succeeded|failed"
 
 ## Stage progress
 
