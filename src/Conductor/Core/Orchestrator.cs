@@ -814,7 +814,12 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 _ => null,
             };
         }
-        catch { return null; }
+        // A malformed/racing control.json is operator input, not an engine fault — ignore this poll
+        // and let the next one pick up a well-formed file rather than crash the loop.
+        catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
+        {
+            return null;
+        }
     }
 
     private void RecoverFromCrash()
@@ -905,7 +910,9 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
     private string LastRawTail(string rawLogPath)
     {
-        try { return GateRunner.TailOf(File.ReadAllText(rawLogPath), 10); } catch { return ""; }
+        // Best-effort diagnostics tail: a missing/locked raw log just yields no tail, never a crash.
+        try { return GateRunner.TailOf(File.ReadAllText(rawLogPath), 10); }
+        catch (IOException) { return ""; }
     }
 
     private static string Trunc(string s, int max) => s.Length <= max ? s : s[..max] + "…";
@@ -929,8 +936,11 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     private void PushIdleSnapshot()
     {
         TrackerSnapshot track;
+        // Display-only read on the idle hot path: a transient tracker read failure falls back to an
+        // empty snapshot without log spam — the authoritative read in the main loop (Run) is what
+        // surfaces a genuinely broken tracker via NeedsHuman.
         try { track = _progress.Read(plan); }
-        catch { track = new TrackerSnapshot(); }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException) { track = new TrackerSnapshot(); }
         sink.Snapshot(BaseSnapshot(track));
     }
 
@@ -1033,8 +1043,10 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     {
         Save();
         TrackerSnapshot track;
+        // Report render tolerates a transient tracker read failure (→ empty snapshot); the main loop's
+        // authoritative read is what escalates a broken tracker to the human.
         try { track = _progress.Read(plan); }
-        catch { track = new TrackerSnapshot(); }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException) { track = new TrackerSnapshot(); }
         Reporter.WriteAndPublish(plan, state, track, _lastGates, Log);
         PushIdleSnapshot();
     }
@@ -1109,7 +1121,11 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
     private void ReleaseLock()
     {
-        try { if (File.Exists(_lockPath)) File.Delete(_lockPath); } catch { }
+        // Best-effort unlock on shutdown: if the lock file is already gone or transiently locked, a
+        // stale entry is reclaimed on the next start by the pid-liveness check in AcquireLock.
+        try { if (File.Exists(_lockPath)) File.Delete(_lockPath); }
+        catch (IOException) { /* reclaimed next start via pid-liveness */ }
+        catch (UnauthorizedAccessException) { /* ditto */ }
     }
 
     private void EnsureStateDirGitignore()

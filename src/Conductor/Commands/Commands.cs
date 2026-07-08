@@ -159,8 +159,10 @@ public sealed class PreviewCommand : Command<PlanSettings>
         var statePath = Path.Combine(plan.StateDir, "state.json");
         var state = RunState.LoadOrNew(statePath, plan.Name);
         TrackerSnapshot track;
+        // Preview is a read-only UI convenience: a missing/unreadable tracker just renders an empty
+        // plan rather than aborting the preview. A malformed table is not fatal here.
         try { track = TrackerParser.ParseFile(plan.TrackerPath); }
-        catch { track = new TrackerSnapshot(); }
+        catch (IOException) { track = new TrackerSnapshot(); }
 
         var dash = new LiveDashboard(plan);
         DashboardPreview.Seed(dash, plan, state, track);

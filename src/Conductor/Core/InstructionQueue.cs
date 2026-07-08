@@ -71,7 +71,9 @@ public static class InstructionQueue
                         r.TryGetProperty("prev", out var p) && p.ValueKind == JsonValueKind.String ? p.GetString() : null,
                         r.TryGetProperty("next", out var n) && n.ValueKind == JsonValueKind.String ? n.GetString() : null);
                 }
-                catch { return null; }
+                // A malformed/locked queue entry is skipped (→ null, filtered below) rather than
+                // breaking the whole queue read; genuine programmer errors still propagate.
+                catch (Exception ex) when (ex is IOException or JsonException) { return null; }
             })
             .Where(e => e != null)
             .OrderBy(e => e!.File)
@@ -88,7 +90,9 @@ public static class InstructionQueue
         {
             if (f.EndsWith(".done.json", StringComparison.OrdinalIgnoreCase)) continue;
             var done = f.Replace(".json", ".done.json");
-            try { File.Move(f, done); } catch { }
+            // Best-effort consume: if the rename races another mark (already .done) it is a no-op, so
+            // an instruction is never re-injected — the chain stays intact either way.
+            try { File.Move(f, done); } catch (IOException) { /* already renamed/locked — safe to skip */ }
         }
     }
 

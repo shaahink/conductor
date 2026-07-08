@@ -47,7 +47,9 @@ public static class DocsExtractor
 
     public static string ForStageFromFile(string? path, string stageId)
     {
+        // Doc extraction for a prompt is best-effort: an unreadable doc contributes no section rather
+        // than failing the session. Only I/O faults are swallowed; anything else is a real bug.
         try { return path != null && File.Exists(path) ? ForStage(File.ReadAllText(path), stageId) : ""; }
-        catch { return ""; }
+        catch (IOException) { return ""; }
     }
 }

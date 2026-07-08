@@ -90,7 +90,7 @@ public sealed class AgentSession : IDisposable
     {
         if (line == null) return;
         Interlocked.Exchange(ref _lastActivityTicks, DateTime.UtcNow.Ticks);
-        lock (_gate) { try { _raw.WriteLine((stderr ? "[stderr] " : "") + line); } catch { } }
+        lock (_gate) { try { _raw.WriteLine((stderr ? "[stderr] " : "") + line); } catch (IOException) { /* raw tee is best-effort; a full/locked disk must not drop the live event below */ } catch (ObjectDisposedException) { /* session tearing down */ } }
 
         if (stderr) { _events.Enqueue(new AgentEvent { Kind = "stderr", Text = Trunc(line, 220) }); return; }
         _provider.ParseLine(line, _stream);
@@ -105,7 +105,8 @@ public sealed class AgentSession : IDisposable
 
     public bool HasExited
     {
-        get { try { return _proc.HasExited; } catch { return true; } }
+        // A disposed/never-started process reports as exited so the watchdog stops waiting on it.
+        get { try { return _proc.HasExited; } catch (InvalidOperationException) { return true; } }
     }
 
     public bool TryDequeue(out AgentEvent ev) => _events.TryDequeue(out ev!);
@@ -123,13 +124,19 @@ public sealed class AgentSession : IDisposable
 
     public int WaitForExitCode()
     {
-        try { _proc.WaitForExit(); return _proc.ExitCode; } catch { return -1; }
+        // A process that never started / was already reaped has no exit code — report -1 (treated as
+        // a failed session by the verdict logic) rather than throwing.
+        try { _proc.WaitForExit(); return _proc.ExitCode; }
+        catch (InvalidOperationException) { return -1; }
     }
 
     public void Dispose()
     {
-        lock (_gate) { try { _raw.Dispose(); } catch { } }
-        try { _job.Dispose(); } catch { }
-        try { _proc.Dispose(); } catch { }
+        // Teardown is best-effort across three unmanaged-ish handles; each is guarded independently so
+        // one already-gone handle can't leak the others. ObjectDisposed/InvalidOperation mean "already
+        // released"; nothing here hides a real fault.
+        lock (_gate) { try { _raw.Dispose(); } catch (ObjectDisposedException) { } }
+        try { _job.Dispose(); } catch (ObjectDisposedException) { }
+        try { _proc.Dispose(); } catch (InvalidOperationException) { }
     }
 }

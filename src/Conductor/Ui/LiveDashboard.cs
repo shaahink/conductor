@@ -350,6 +350,6 @@ public sealed class LiveDashboard : IProgressSink
     private static List<string> Split(string s) => s.Replace("\r\n", "\n").Split('\n').ToList();
     private static string Glyph(string kind) => kind switch { "tool" => "»", "text" => "·", "result" => "◆", "stderr" => "!", "system" => "○", _ => " " };
 
-    private static int SafeWidth() { try { return Math.Max(80, Console.WindowWidth); } catch { return 120; } }
-    private static int SafeHeight() { try { return Math.Max(24, Console.WindowHeight); } catch { return 40; } }
+    private static int SafeWidth() { try { return Math.Max(80, Console.WindowWidth); } catch (IOException) { return 120; } }
+    private static int SafeHeight() { try { return Math.Max(24, Console.WindowHeight); } catch (IOException) { return 40; } }
 }

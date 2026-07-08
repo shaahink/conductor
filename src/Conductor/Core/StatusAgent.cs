@@ -80,6 +80,8 @@ public static class StatusAgent
                 : text;
         }
         catch (Exception ex) { return $"(status agent failed: {ex.Message})"; }
-        finally { try { Directory.Delete(scratch, recursive: true); } catch { } }
+        // Scratch cleanup is best-effort: a leftover temp dir (locked file) is harmless and reclaimed
+        // by the OS; never let cleanup mask the agent result being returned.
+        finally { try { Directory.Delete(scratch, recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { } }
     }
 }
