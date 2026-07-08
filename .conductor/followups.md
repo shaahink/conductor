@@ -31,3 +31,16 @@ diff. Do NOT delete these rows until the severity is `error` and the build is gr
 See `docs/baton/audits/B0-baseline.md` for the full architectural debt inventory (items §1–§12,
 each with a file:line and an owning B-stage). Those are the design-level followups the later stages
 own directly and are not duplicated here.
+
+## Opened by B1 (audit session, 2026-07-08)
+
+| id | item | detail | owning stage | status |
+|----|------|--------|--------------|--------|
+| FU-B1-1 | `ScriptProvider` can't split stdout from stderr | `ProcessRunner.Run` interleaves both streams, so a normaliser that writes any progress/warning to stderr corrupts the JSON parse (surfaces as "not a JSON checkpoint array"). Provider stays resilient (clear error, no crash) and the "print ONLY JSON to stdout" contract is documented, but it's brittle. Splitting streams is a `ProcessRunner` signature change → land with structured logging. | B2 | OPEN |
+| FU-B1-2 | No `CancellationToken` through `IProgressProvider.Read` | Progress read is synchronous; `ScriptProvider` spawns a process with only a timeout, not the run's CT, so Ctrl+C won't interrupt a long normaliser mid-read. Consistent with FU-B0-1 (sync-over-async deferred); thread the CT with the B2 async/Host/DI pass. | B2 | OPEN |
+| FU-B1-3 | `ScriptProvider` trusts checkpoint content shape | Accepts a JSON array with empty ids / unknown status without validation (garbage-in → empty-id rows). Fine for a plan-owned script, but a stricter contract would fail louder. Low priority. | post-B2 | OPEN |
+
+Fixed in-phase by the B1 audit (no followup needed, recorded for the trail): shamshir `new-plan`
+scaffold was undrivable (declared `P-0/P0/P1` stages but scaffolded `S1` rows) → now stage-coherent
++ `NewPlanScaffoldTests`; double-space/tab `IN PROGRESS` silently misclassified by the new status
+vocabulary → whitespace-tolerant `StartsWithAny` + regression test. See `.conductor/handovers/B1.md`.
