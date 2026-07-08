@@ -143,6 +143,9 @@ public class B11_2DoctorAndCompletionTests
         Assert.Contains("new-plan", output);
         Assert.Contains("tasks", output);
         Assert.Contains("replay", output);
+        Assert.Contains("@('powershell','bash')", output);
+        Assert.Contains("$newPlanOpts =", output);
+        Assert.Contains("'new-plan'", output);
     }
 
     [Fact]

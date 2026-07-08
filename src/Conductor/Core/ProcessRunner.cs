@@ -76,7 +76,7 @@ public static class ProcessRunner
                       new[] { "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command + "; exit $LASTEXITCODE" },
                       cwd, timeout, ct)
                 : Run("pwsh",
-                      new[] { "-NoProfile", "-Command", command + "; exit $LASTEXITCODE" },
+                      new[] { "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command + "; exit $LASTEXITCODE" },
                       cwd, timeout, ct),
             "bash" => Run("bash", new[] { "-c", command }, cwd, timeout, ct),
             "sh" => Run("sh", new[] { "-c", command }, cwd, timeout, ct),
