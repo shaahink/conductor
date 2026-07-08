@@ -80,7 +80,7 @@ never silent renumbering.
 | B4.7 | Live-consistent token line + plan-tree filter/search for large plans; doc-on-select | DONE | 1f61578, c1edb3b | docs/baton/evidence/B4.7-gate.txt, docs/baton/evidence/B4.7-tokens-preview.txt, docs/baton/evidence/B4.7-docselect-preview.txt |
 | B5.1 | Timeline view (transitions with duration) from the event log | DONE | 69d70c2 | docs/baton/evidence/B5.1-gate.txt |
 | B5.2 | Replay / time-travel (F8) reconstructs a past run from events.jsonl | DONE | 6c876e5 | docs/baton/evidence/B5.2-gate.txt |
-| B5.3 | AI-health metrics (retry rate, command repetition, failure loops, tool oscillation, context saturation) | DONE | | docs/baton/evidence/B5.3-gate.txt |
+| B5.3 | AI-health metrics (retry rate, command repetition, failure loops, tool oscillation, context saturation) | DONE | 17642cf | docs/baton/evidence/B5.3-gate.txt |
 | B5.4 | Confidence tracking per checkpoint (evidence count) + MCP call metrics + repo strip | TODO | | |
 | B6.1 | Telegram client (long-poll getUpdates) + push (needs-human/owner-gate/complete/backoff) + /status | TODO | | |
 | B6.2 | Two-way control (inline-keyboard callback_query → control.json); chat-id allowlist; destructive confirm | TODO | | |
