@@ -64,8 +64,8 @@ public static class RunStateProjection
                 case SessionFinished e when byNumber.TryGetValue(e.Number, out var fin):
                     fin.EndedUtc = evt.Ts.UtcDateTime;
                     fin.Outcome = ParseOutcome(e.Outcome);
-                    fin.NewCommits = [.. e.NewCommits];
-                    fin.NewlyDone = [.. e.NewlyDone];
+                    fin.NewCommits = [.. e.NewCommits ?? []];
+                    fin.NewlyDone = [.. e.NewlyDone ?? []];
                     fin.CostUsd = e.CostUsd;
                     fin.TokensInput = e.TokensInput;
                     fin.TokensOutput = e.TokensOutput;
@@ -84,6 +84,49 @@ public static class RunStateProjection
         }
 
         return state;
+    }
+
+    /// <summary>The information needed to resume a session whose <see cref="SessionStarted"/> was
+    /// emitted but whose <see cref="SessionFinished"/> never arrived — evidence of a crash mid-session.</summary>
+    public sealed record InterruptedSessionInfo(int Number, string StageId, string AgentSessionId);
+
+    /// <summary>Finds the first unmatched <see cref="SessionStarted"/> (no corresponding
+    /// <see cref="SessionFinished"/>) in the event stream, if any. Used by crash recovery (B2.3)
+    /// to detect interrupted sessions the event log knows about even when <c>state.json</c> is
+    /// stale or missing. Considers only the highest-numbered unmatched start — a session can be
+    /// interrupted at most once per run-instance.</summary>
+    public static InterruptedSessionInfo? FindInterruptedSession(IEnumerable<ConductorEvent> events)
+    {
+        var started = new HashSet<int>();
+        var finished = new HashSet<int>();
+        string? stageIdForSession = null;
+        string? agentSessionId = null;
+        int? interruptedNumber = null;
+
+        foreach (var evt in events.OrderBy(e => e.Seq))
+        {
+            switch (evt)
+            {
+                case SessionStarted e:
+                    started.Add(e.Number);
+                    // Track the most recent unmatched SessionStarted
+                    if (!finished.Contains(e.Number))
+                    {
+                        interruptedNumber = e.Number;
+                        stageIdForSession = e.StageId;
+                        agentSessionId = e.AgentSessionId;
+                    }
+                    break;
+                case SessionFinished e:
+                    finished.Add(e.Number);
+                    if (e.Number == interruptedNumber) interruptedNumber = null; // matched — no longer interrupted
+                    break;
+            }
+        }
+
+        return interruptedNumber.HasValue
+            ? new InterruptedSessionInfo(interruptedNumber.Value, stageIdForSession ?? "", agentSessionId ?? "")
+            : null;
     }
 
     private static SessionKind ParseKind(string kind) =>

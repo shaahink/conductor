@@ -809,17 +809,64 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
     private void RecoverFromCrash()
     {
-        if (state.Status is not (RunStatus.Running or RunStatus.VerifyingGates or RunStatus.Backoff)) return;
-        var last = state.History.LastOrDefault();
-        if (last != null && last.EndedUtc == null)
+        var recovered = false;
+
+        // Existing state.json-based path (authoritative for transient control fields the log
+        // doesn't yet carry — additive discipline).
+        if (state.Status is RunStatus.Running or RunStatus.VerifyingGates or RunStatus.Backoff)
         {
-            last.EndedUtc = DateTime.UtcNow;
-            last.Outcome = SessionOutcome.Interrupted;
-            QueueResume(last, "conductor crashed or was killed mid-session");
-            Log($"recovered: session #{last.Number} was interrupted — will resume its agent session");
+            var last = state.History.LastOrDefault();
+            if (last != null && last.EndedUtc == null)
+            {
+                last.EndedUtc = DateTime.UtcNow;
+                last.Outcome = SessionOutcome.Interrupted;
+                QueueResume(last, "conductor crashed or was killed mid-session");
+                Log($"recovered: session #{last.Number} was interrupted — will resume its agent session");
+                recovered = true;
+            }
+            state.Status = RunStatus.Idle;
+            Save();
         }
-        state.Status = RunStatus.Idle;
-        Save();
+
+        // B2.3: event-log-based recovery — the event log may know about a crash that state.json
+        // missed (double-hard crash between save and session finish, or a torn state.json write).
+        if (!recovered && state.PendingResume == null)
+        {
+            var eventsPath = Path.Combine(plan.StateDir, "events.jsonl");
+            if (File.Exists(eventsPath))
+            {
+                var evts = EventLog.ReadAll(eventsPath);
+                var interrupted = RunStateProjection.FindInterruptedSession(evts);
+                if (interrupted != null)
+                {
+                    var rec = state.History.FirstOrDefault(h => h.Number == interrupted.Number);
+                    if (rec != null)
+                    {
+                        if (rec.EndedUtc == null) rec.EndedUtc = DateTime.UtcNow;
+                        rec.Outcome = SessionOutcome.Interrupted;
+                        QueueResume(rec, "event log shows interrupted session — recovering");
+                    }
+                    else
+                    {
+                        rec = new SessionRecord
+                        {
+                            Number = interrupted.Number,
+                            Stage = interrupted.StageId,
+                            Kind = SessionKind.Deliver,
+                            Attempt = 1,
+                            StartedUtc = DateTime.UtcNow,
+                            ClaudeSessionId = interrupted.AgentSessionId,
+                            Outcome = SessionOutcome.Interrupted,
+                        };
+                        state.History.Add(rec);
+                        QueueResume(rec, "event log shows interrupted session — recovering from orphaned SessionStarted");
+                    }
+                    Log($"recovered from event log: session #{interrupted.Number} was interrupted — will resume");
+                    state.Status = RunStatus.Idle;
+                    Save();
+                }
+            }
+        }
     }
 
     private void WarnOnBranchPattern()

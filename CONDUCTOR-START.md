@@ -7,22 +7,23 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #12 (B2, deliver) — landed **B2.2**. `RunStateProjection.Fold(events)` rebuilds the
-      RunState spine from the log; `StateProjectionParity.Diff` is the explicit event-owned surface.
-      Parity test folds a **real recorded run** + a Loom-shaped stream → each equals its legacy
-      state.json (diff empty). Additive: no cutover — state.json still written+authoritative. 96 tests (92→+4).
-stage: **B2 IN PROGRESS** — B2.1, B2.2 DONE; B2.3…B2.6 TODO. Battery GREEN.
-gate: GREEN — build 0w/0e; test 96 pass. Parity proven on a verbatim in-tree orchestrator run
-      (b22-qa, 11 events / 2 sessions / one runId) → docs/baton/evidence/B2.2-gate.txt.
-qa: session #11 (B2.1 deliver) PASS — (1) 5 EventLogTests green (round-trip/NDJSON/seq/torn-tail);
-      (2) reproduced the self-run independently → well-formed 11-event log, one runId, state.json parity. No findings.
-next: **B2.3** — crash recovery replays the event log (truncate a stream mid-session → queued resume).
-      Will likely need to event-source the pending/attempt surface the parity contract currently leaves as cache.
-trap: events + fold are IN-TREE only (STABLE driver from master can't emit) → evidence uses the in-tree
-      build; the driver still judges via gates+commit+tracker. Parity surface = spine only; transient
-      control fields (Status/attempts/Pending*/Skipped) stay in state.json until B2.3/B3 event-source them.
+last: session #13 (B2, deliver) — landed **B2.3**. `RunStateProjection.FindInterruptedSession` detects
+      SessionStarted without matching SessionFinished from the event log; `RecoverFromCrash` enhanced
+      with event-log-based recovery as a safety net (state.json still authoritative for transient fields).
+      98 tests (96→+2). Additive — no cutover, state.json recovery still works.
+stage: **B2 IN PROGRESS** — B2.1, B2.2, B2.3 DONE; B2.4…B2.6 TODO. Battery GREEN.
+gate: GREEN — build 0w/0e; test 98 pass. Recovery tests: truncated-stream detection + all-complete
+      negative case both green.
+qa: session #12 (B2.2 deliver) PASS — (1) 5 EventLogTests + 4 RunStateProjectionTests green;
+      (2) parity fixture (real 11-event recorded run) independently verified — diff empty,
+      guard-the-guard catches divergence. No findings.
+next: **B2.4** — IAgentProvider abstraction + Opencode/Claude/GenericText adapters; Orchestrator
+      provider-switch removed; plan selects by `agent.provider` (default inferred from output for
+      back-compat).
+trap: event-log recovery is a safety net; the state.json path stays the primary crash detector
+      because transient control fields (AttemptsThisStage, Pending*, etc.) still live there.
 dirty: none tracked.
-evidence: B2.2-gate.txt (+ earlier)
+evidence: B2.3-gate.txt (+ earlier)
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -58,7 +59,7 @@ never silent renumbering.
 | B1.7 | Shamshir iter-parity-pipeline TRACKER.md authored + parsed via default provider (unit test) | DONE | 8701aff | docs/baton/evidence/B1.7-gate.txt |
 | B2.1 | ConductorEvent schema + append-only events.jsonl writer (additive, alongside state.json) | DONE | d5ebd12 | docs/baton/evidence/B2.1-gate.txt |
 | B2.2 | Projections: RunState rebuilt by folding the log; StateCompat parity tests | DONE | e2b6a03 | docs/baton/evidence/B2.2-gate.txt |
-| B2.3 | Crash recovery replays the event log (not just state.json) | TODO | | |
+| B2.3 | Crash recovery replays the event log (not just state.json) | DONE |  | docs/baton/evidence/B2.3-gate.txt |
 | B2.4 | IAgentProvider + Opencode/Claude/GenericText adapters; Orchestrator provider-switch removed | TODO | | |
 | B2.5 | Host/DI/Options + Microsoft.Extensions.Logging + Serilog sinks; no silent catch {} | TODO | | |
 | B2.6 | TokenDelta events per step_finish (fixes live-token lag F-3) | TODO | | |

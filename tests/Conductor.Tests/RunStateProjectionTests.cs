@@ -169,6 +169,59 @@ public class RunStateProjectionTests
         Assert.Empty(StateProjectionParity.Diff(forward, shuffled));
     }
 
+    // ---------------------------------------------------------------- B2.3: recovery tests
+
+    [Fact]
+    public void InterruptedSessionIsDetectedFromTruncatedEventStream()
+    {
+        // Sessions #1 and #2 complete; session #3 has a SessionStarted but NO SessionFinished —
+        // a crash happened mid-session (the SessionStarted line was flushed before shutdown).
+        const string truncated = """
+        {"type":"runStarted","plan":"BatonSmoke","repo":"C:/tmp","branch":"master","resumed":false,"seq":1,"ts":"2026-07-08T12:00:00Z","runId":"r1"}
+        {"type":"sessionStarted","number":1,"stageId":"S1","kind":"Deliver","attempt":1,"maxAttempts":6,"agentSessionId":"sess-1","seq":2,"ts":"2026-07-08T12:00:01Z","runId":"r1","sessionId":"1"}
+        {"type":"sessionFinished","number":1,"stageId":"S1","outcome":"Advanced","newCommits":["a1"],"newlyDone":["S1.1"],"costUsd":0.1,"tokensInput":100,"tokensOutput":50,"seq":3,"ts":"2026-07-08T12:05:00Z","runId":"r1","sessionId":"1"}
+        {"type":"sessionStarted","number":2,"stageId":"S2","kind":"Deliver","attempt":1,"maxAttempts":6,"agentSessionId":"sess-2","seq":4,"ts":"2026-07-08T12:06:00Z","runId":"r1","sessionId":"2"}
+        {"type":"sessionFinished","number":2,"stageId":"S2","outcome":"Advanced","newCommits":["a2"],"newlyDone":["S2.1"],"costUsd":0.15,"tokensInput":150,"tokensOutput":70,"seq":5,"ts":"2026-07-08T12:12:00Z","runId":"r1","sessionId":"2"}
+        {"type":"sessionStarted","number":3,"stageId":"S3","kind":"Deliver","attempt":1,"maxAttempts":6,"agentSessionId":"sess-3","seq":6,"ts":"2026-07-08T12:13:00Z","runId":"r1","sessionId":"3"}
+        """;
+        // ↑ No SessionFinished for #3 — the stream was truncated mid-session.
+
+        var path = WriteText(truncated, ".jsonl");
+        try
+        {
+            var events = EventLog.ReadAll(path);
+            var interrupted = RunStateProjection.FindInterruptedSession(events);
+
+            Assert.NotNull(interrupted);
+            Assert.Equal(3, interrupted.Number);
+            Assert.Equal("S3", interrupted.StageId);
+            Assert.Equal("sess-3", interrupted.AgentSessionId);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public void NoInterruptedSessionWhenAllSessionsHaveFinishedEvents()
+    {
+        // A complete stream: all SessionStarted have matching SessionFinished.
+        const string complete = """
+        {"type":"runStarted","plan":"BatonSmoke","repo":"C:/tmp","branch":"master","resumed":false,"seq":1,"ts":"2026-07-08T12:00:00Z","runId":"r1"}
+        {"type":"sessionStarted","number":1,"stageId":"S1","kind":"Deliver","attempt":1,"maxAttempts":6,"agentSessionId":"sess-1","seq":2,"ts":"2026-07-08T12:00:01Z","runId":"r1","sessionId":"1"}
+        {"type":"sessionFinished","number":1,"stageId":"S1","outcome":"Advanced","costUsd":0.1,"seq":3,"ts":"2026-07-08T12:05:00Z","runId":"r1","sessionId":"1"}
+        {"type":"sessionStarted","number":2,"stageId":"S2","kind":"Audit","attempt":1,"maxAttempts":4,"agentSessionId":"sess-2","seq":4,"ts":"2026-07-08T12:06:00Z","runId":"r1","sessionId":"2"}
+        {"type":"sessionFinished","number":2,"stageId":"S2","outcome":"Progress","costUsd":0.13,"seq":5,"ts":"2026-07-08T12:15:00Z","runId":"r1","sessionId":"2"}
+        """;
+
+        var path = WriteText(complete, ".jsonl");
+        try
+        {
+            var events = EventLog.ReadAll(path);
+            var interrupted = RunStateProjection.FindInterruptedSession(events);
+            Assert.Null(interrupted);
+        }
+        finally { File.Delete(path); }
+    }
+
     private static (string eventsPath, string statePath) WriteFixture(string ndjson, string stateJson)
         => (WriteText(ndjson, ".jsonl"), WriteText(stateJson));
 
