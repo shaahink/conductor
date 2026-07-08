@@ -42,6 +42,13 @@ public sealed class LiveDashboard : IProgressSink
     private PlanTreeView _tree = new();
     private bool _agentExpanded;
 
+    // Command-history search/filter for the Output modal (B4.6). The raw feed is captured once on
+    // open; category + typed search re-filter it live on the UI thread.
+    private HistoryCategory _historyCategory = HistoryCategory.All;
+    private readonly StringBuilder _historySearch = new();
+    private bool _historyTyping;
+    private IReadOnlyList<HistoryEntry> _historyRaw = Array.Empty<HistoryEntry>();
+
     private volatile bool _statusRunning;
     private List<string> _statusLines = new();
 
@@ -130,7 +137,7 @@ public sealed class LiveDashboard : IProgressSink
             {
                 while (true)
                 {
-                    try { if (Console.KeyAvailable) { HandlePreviewKey(Console.ReadKey(intercept: true).Key); if (_quitPreview) break; } }
+                    try { if (Console.KeyAvailable) { HandlePreviewKey(Console.ReadKey(intercept: true)); if (_quitPreview) break; } }
                     catch (InvalidOperationException) { break; }
                     ctx.UpdateTarget(BuildTarget());
                     ctx.Refresh();
@@ -140,10 +147,10 @@ public sealed class LiveDashboard : IProgressSink
     }
 
     private bool _quitPreview;
-    private void HandlePreviewKey(ConsoleKey key)
+    private void HandlePreviewKey(ConsoleKeyInfo ki)
     {
-        if (_modal != Modal.None) { HandleModalKey(key); return; }
-        switch (key)
+        if (_modal != Modal.None) { HandleModalKey(ki); return; }
+        switch (ki.Key)
         {
             case ConsoleKey.T: OpenModal(Modal.Thinking); break;
             case ConsoleKey.O: OpenModal(Modal.Output); break;
@@ -242,7 +249,7 @@ public sealed class LiveDashboard : IProgressSink
                 var ki = Console.ReadKey(intercept: true);
                 if (_inputActive) { HandleInputKey(ki); continue; }
                 var key = ki.Key;
-                if (_modal != Modal.None) { HandleModalKey(key); continue; }
+                if (_modal != Modal.None) { HandleModalKey(ki); continue; }
                 switch (key)
                 {
                     case ConsoleKey.T: OpenModal(Modal.Thinking); break;
@@ -313,8 +320,10 @@ public sealed class LiveDashboard : IProgressSink
         }
     }
 
-    private void HandleModalKey(ConsoleKey key)
+    private void HandleModalKey(ConsoleKeyInfo ki)
     {
+        if (_modal == Modal.Output && HandleHistoryKey(ki)) return;
+        var key = ki.Key;
         const int page = 12;
         var count = _modal == Modal.Status ? _statusLines.Count : _modalLines.Count;
         var max = Math.Max(0, count - 1);
@@ -330,18 +339,86 @@ public sealed class LiveDashboard : IProgressSink
         }
     }
 
+    /// <summary>Search/filter keys for the command-history (Output) modal (B4.6). Returns true when the
+    /// key was consumed; false lets it fall through to the shared scroll/close handling. While typing a
+    /// search, printable keys append (so Esc/q/arrows don't leak into scroll/close).</summary>
+    private bool HandleHistoryKey(ConsoleKeyInfo ki)
+    {
+        if (_historyTyping)
+        {
+            switch (ki.Key)
+            {
+                case ConsoleKey.Enter or ConsoleKey.Escape:
+                    _historyTyping = false; lock (_gate) RebuildHistoryLocked(); return true;
+                case ConsoleKey.Backspace:
+                    if (_historySearch.Length > 0) _historySearch.Remove(_historySearch.Length - 1, 1);
+                    lock (_gate) RebuildHistoryLocked(); return true;
+                default:
+                    if (!char.IsControl(ki.KeyChar)) { _historySearch.Append(ki.KeyChar); lock (_gate) RebuildHistoryLocked(); }
+                    return true;
+            }
+        }
+        if (ki.KeyChar == '/') { _historyTyping = true; lock (_gate) RebuildHistoryLocked(); return true; }
+        if (ki.Key == ConsoleKey.Tab)
+        {
+            _historyCategory = CommandHistory.NextCategory(_historyCategory);
+            lock (_gate) RebuildHistoryLocked();
+            return true;
+        }
+        return false;
+    }
+
     private void OpenModal(Modal kind)
     {
+        if (kind == Modal.Output) { OpenHistory(); return; }
         var (title, lines) = kind switch
         {
             Modal.Thinking => ("thinking (full reasoning)", ThinkingLines()),
-            Modal.Output => ("agent output (full)", OutputLines()),
             Modal.Docs => ($"docs · stage {_snap.StageId}", DocsLines()),
             Modal.Git => ("git", GitLines()),
             Modal.Prompt => ("compiled prompt (current session)", PromptLines()),
             _ => ("", new List<string>()),
         };
         lock (_gate) { _modal = kind; _modalTitle = title; _modalLines = lines; _modalOffset = Math.Max(0, lines.Count - 1); }
+    }
+
+    /// <summary>Opens the command-history modal (B4.6): captures the merged agent+thinking feed once,
+    /// resets the query, and renders the unfiltered feed. Tab filters by category, `/` searches.</summary>
+    private void OpenHistory()
+    {
+        lock (_gate)
+        {
+            _historyCategory = HistoryCategory.All;
+            _historySearch.Clear();
+            _historyTyping = false;
+            _historyRaw = _agent.Select(a => new HistoryEntry(a.Kind, a.Text, a.Utc))
+                .Concat(_thinking.All().Select(e => new HistoryEntry("thinking", e.Text, e.Utc)))
+                .OrderBy(e => e.Utc)
+                .ToList();
+            _modal = Modal.Output;
+            RebuildHistoryLocked();
+        }
+    }
+
+    /// <summary>Re-filters the captured feed against the current category + typed search and rebuilds
+    /// the modal lines/title. Caller holds <c>_gate</c>. A typed <c>/category</c> token wins over the
+    /// Tab-cycled category; the search box jumps to the top when the query narrows.</summary>
+    private void RebuildHistoryLocked()
+    {
+        var parsed = CommandHistory.Parse(_historySearch.ToString());
+        var category = parsed.Category != HistoryCategory.All ? parsed.Category : _historyCategory;
+        var query = new HistoryQuery(category, parsed.Search);
+
+        _modalLines = CommandHistory.Filter(_historyRaw, query)
+            .SelectMany(e => Split($"{e.Utc.ToLocalTime():HH:mm:ss} {Glyph(e.Kind)} {e.Text}"))
+            .DefaultIfEmpty(query.IsActive ? "(no history matches this filter)" : "(no agent output yet)")
+            .ToList();
+
+        var search = _historyTyping ? _historySearch + "▌" : query.Search;
+        _modalTitle = $"command history · filter {CommandHistory.CategoryLabel(category)}" +
+                      (search.Length > 0 ? $" · /{search}" : "") +
+                      (_historyTyping ? "  (Enter/Esc done)" : "  (/ search · Tab filter · Esc close)");
+        _modalOffset = query.IsActive ? 0 : Math.Max(0, _modalLines.Count - 1);
     }
 
     // ---- modal content providers (captured once on open) ----
@@ -352,14 +429,6 @@ public sealed class LiveDashboard : IProgressSink
             return _thinking.All()
                 .SelectMany(e => Split($"{e.Utc.ToLocalTime():HH:mm:ss} ~ {e.Text}"))
                 .DefaultIfEmpty("(no thinking captured yet)").ToList();
-    }
-
-    private List<string> OutputLines()
-    {
-        lock (_gate)
-            return _agent
-                .SelectMany(a => Split($"{a.Utc.ToLocalTime():HH:mm:ss} {Glyph(a.Kind)} {a.Text}"))
-                .DefaultIfEmpty("(no agent output yet)").ToList();
     }
 
     private List<string> DocsLines()

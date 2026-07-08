@@ -60,6 +60,7 @@ public static class DashboardPreview
         ("tool", "edit src/DevContext.Core/Graph/SymbolId.cs", 120),
         ("tool", "bash dotnet build DevContext.slnx", 70),
         ("result", "build succeeded — 0 warnings", 40),
+        ("stderr", "warning: analyzer MA0051 method too long (suppressed)", 38),
         ("text", "Now adding ambiguity fixtures and wiring SymbolRef resolution tiers.", 6),
     };
 
