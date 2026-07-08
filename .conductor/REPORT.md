@@ -1,32 +1,11 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 15:03 UTC · branch `feat/baton` · HEAD `db3c8bd`_
+_Updated 2026-07-08 15:04 UTC · branch `feat/baton` · HEAD `2569377`_
 
-**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 0 · working ▸ B4.3
-**Checkpoints:** 26/65 done · **Sessions run:** 28 · **Cost:** $0.9597 · **Tokens:** 434,253 in / 359,824 out / 164,727 think
+**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 0 · working ▸ B4.4
+**Checkpoints:** 27/65 done · **Sessions run:** 28 · **Cost:** $1.0025 · **Tokens:** 436,340 in / 382,966 out / 172,922 think
 **Confirmed phases:** B0, B1, B2, B3
-
-## Latest activity (live)
-
-_Session #28 (Deliver) · running 30m · last output 1s ago · $0.0411_
-
-**Thinking:**
-> The character code checks aren't working because PowerShell's Out-String might be re-encoding the output, and the footer text is wrapping across lines which breaks the substring matching. I need to write the output directly to a file with UTF-8 encoding and then grep that file to properly capture th…
-> The redirect output shows the tree structure is rendering correctly despite the encoding issue—the filter header, stage columns, collapse indicators, and key hints are all visible and working. Now I'm creating the evidence artifact to demonstrate this.
-> The tree artifact is rendering with per-stage columns and collapse controls, but the meta cell is wrapping across multiple lines in the narrow panel because the NoWrap setting isn't preventing the content from breaking at spaces, even though I applied it to that column. The real issue is that 24 col…
-
-**Recent actions:**
-- `16:02:04` » edit CONDUCTOR-START.md
-- `16:02:14` · Now commit. Let me stage the B4.3 files and commit with gate output in the body.
-- `16:02:15` » bash git -C C:\Code\conductor-baton add src/Conductor/Ui/PlanTree.cs src/Conductor/Ui/DashboardRenderer.cs src/Conductor/Ui/DashboardState.cs src/Conductor/Ui/L…
-- `16:02:31` » bash $msg = @" feat(bB4.3): hierarchical plan tree (sub-checkpoints, expand/collapse, per-stage columns)  New pure PlanTree (VisibleRows: filter All/Todo/Active…
-- `16:02:39` · Now update the tracker row with the real commit sha and push.
-- `16:02:39` » bash git -C C:\Code\conductor-baton rev-parse --short HEAD
-- `16:02:48` » edit CONDUCTOR-START.md
-- `16:02:57` » bash git -C C:\Code\conductor-baton add CONDUCTOR-START.md; git -C C:\Code\conductor-baton commit -m "docs(bB4.3): record B4.3 commit sha in tracker row" 2>&1 |…
-- `16:03:11` · Working tree clean. Now push the branch.
-- `16:03:14` » bash git -C C:\Code\conductor-baton push origin feat/baton 2>&1 | Select-Object -Last 8
 
 ## Stage progress
 
@@ -36,7 +15,7 @@ _Session #28 (Deliver) · running 30m · last output 1s ago · $0.0411_
 | B1 | Decouple Loom + pluggable progress providers | 7/7 | confirmed ✓ |
 | B2 | Event-sourced backbone + provider decoupling | 6/6 | confirmed ✓ |
 | B3 | Safety, owner-gates & process control | 5/5 | confirmed ✓ |
-| B4 | TUI overhaul (alt-screen + tree) | 2/7 | **← active** |
+| B4 | TUI overhaul (alt-screen + tree) | 3/7 | **← active** |
 | B5 | Observability & health | 0/4 | todo |
 | B6 | AFK + two-way Telegram | 0/5 | todo |
 | B7 | Specialist sub-agent personas | 0/3 | todo |
@@ -77,15 +56,10 @@ _Session #28 (Deliver) · running 30m · last output 1s ago · $0.0411_
 | 25 | B4 | Resume | 6r2 | 07-08 10:45 | 0:12 | Stalled |  | 0 |  |  |  |
 | 26 | B4 | Deliver | 1 | 07-08 14:03 | 0:11 | Advanced | B4.1 | 3 | build:OK | $0.0175 | 1,259/9,081 |
 | 27 | B4 | Deliver | 1 | 07-08 14:15 | 0:17 | Advanced | B4.2 | 3 | build:OK | $0.0254 | 1,700/14,236 |
-| 28 | B4 | Deliver | 1 | 07-08 14:33 | … | running |  | 0 |  |  |  |
+| 28 | B4 | Deliver | 1 | 07-08 14:33 | 0:30 | Advanced | B4.3 | 5 | build:OK | $0.0429 | 2,087/23,142 |
 
 ### Commits by session
 
-- **s14 (B2 Deliver)** — 4 commit(s):
-  - 43b3cba chore: fill B2.4 commit hash in tracker (8e1ceb4)
-  - 8e1ceb4 feat(bB2.4): IAgentProvider adapters; remove Orchestrator provider-switch
-  - f4bff00 chore(conductor): s14 B2 working ▸B2.4 @ 08:37
-  - c961587 chore(conductor): s14 B2 working ▸B2.4 @ 08:27
 - **s15 (B2 Deliver)** — 7 commit(s):
   - 77c72ad chore(conductor): mark B2.5 DONE + refresh handoff (session #15)
   - 7512371 feat(bB2.5): audit catch sites — no silent swallow (A15/R2.5)
@@ -120,6 +94,12 @@ _Session #28 (Deliver) · running 30m · last output 1s ago · $0.0411_
   - f35a7d4 chore(bB4.2): record B4.2 commit hash d3aa1a5 in tracker
   - d3aa1a5 feat(bB4.2): Spectre Layout rebuild of DashboardRenderer.BuildRoot
   - 40152e6 chore(conductor): s27 B4 working ▸B4.2 @ 15:25
+- **s28 (B4 Deliver)** — 5 commit(s):
+  - 2569377 chore(conductor): s28 B4 working ▸B4.3 @ 16:03
+  - db3c8bd docs(bB4.3): record B4.3 commit sha in tracker row
+  - 8197bd4 feat(bB4.3): hierarchical plan tree (sub-checkpoints, expand/collapse, per-stage columns)
+  - d683ee7 chore(conductor): s28 B4 working ▸B4.3 @ 15:53
+  - 5369ef4 chore(conductor): s28 B4 working ▸B4.3 @ 15:43
 
 ## Phase handovers (audit)
 
@@ -134,27 +114,28 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: Landed **B4.2** — rebuilt `DashboardRenderer.BuildRoot` as one declarative Spectre `Layout` tree (Split + Update leaves), retiring the scattered `Rows`/`Panel` composition (`CompactHeaderPanel`/`LeftColumn`/`RightColumn` gone). The header is now a two-column `Grid` (identity/activity | live checkpoints·cost·tokens), both columns `NoWrap` so every row is exactly one line and metrics can never be pushed out of the fixed header region (F-5 stays retired); the body is nested `Layout` regions; the footer puts the action bar first and a `Rule`-separated log — all four requested primitives (Layout/Grid/Panel/Rule) now used, pure `DashboardState→IRenderable` split preserved. Proof: b…
+> SESSION-RESULT: Landed **B4.3** (hierarchical plan tree) on `feat/baton` — commit `8197bd4` (+ tracker sha commit `db3c8bd`), pushed. New pure `PlanTree` module (`VisibleRows` = filter All/Todo/Active/Failed + free-text search + expand/collapse with active-stage auto-expand; `Build` = Spectre table with `▸`/`▾` collapse glyphs, per-stage done·runs+outcome·cost columns, indented `↳` sub-checkpoints); added `StageProgress`/`Snap.Stages` folded from run history in `SnapshotBuilder`; collapsed the two stacked left panels into one unified tree panel (with legacy-field fallback so old snapshots/tests still render); wired `F`=cycle-filter and `E`=expand-all in live + preview. Gate battery GREEN: bu…
 
 ## Tracker handoff
 
 ```
-last: session #27 (B4, deliver) — landed **B4.2**: rebuilt DashboardRenderer.BuildRoot as one
-      declarative Spectre Layout tree. Header→two-col Grid (identity | metrics, both NoWrap so
-      metrics never get pushed out — F-5 stays retired); body→nested Layout regions; footer→action
-      bar first + Rule-separated log. Retired CompactHeaderPanel/LeftColumn/RightColumn. +2 tests. 167→172.
-stage: **B4 IN PROGRESS** — B4.1, B4.2 DONE. Next B4.3 (hierarchical plan tree + filter/search).
-gate: GREEN — build 0w/0e; 172 tests pass; DashboardRendererTests 27/27. `conductor preview`
-      redirected exit 0, renders new Grid header (checkpoints/cost/tokens) + log Rule, no alt-screen
-      escapes leaked — verified as running artifact.
-qa: session #26/B4.1 PASS — re-ran gate (build 0w/0e, 167 tests). Verified claim-1 via tests (3
-      AltScreenTests: enter/leave emitted, idempotent, redirected no-op); claim-2 via running exe
-      (`conductor preview` redirected exit 0, 3392 chars, NO alt-screen escapes — matches B4.1-gate.txt).
-next: **B4.3** — hierarchical plan tree: stages with expandable sub-checkpoints, per-stage columns
-      (done/attempts/last-outcome/cost), collapse/expand, filter (todo/active/failed) + search.
-trap: redirected `preview` reports SafeWidth=120 while AnsiConsole surface is 80 → header metrics
-      wrap in that artifact only (pre-existing RunPreview mismatch, NOT BuildRoot; matched widths are
-      clean per renderer tests). Manual TUI still needs a real TTY to eyeball. push may fail (github).
+last: session #28 (B4, deliver) — landed **B4.3**: hierarchical plan tree. New pure `PlanTree`
+      (VisibleRows filter/search/expand + Build renderable) + `StageProgress`/`Snap.Stages`
+      (attempts/last-outcome/cost from history). Left column is now ONE tree panel (retired the
+      stacked overview+checkpoint panels); F=filter, E=expand-all. +12 tests. 172→184.
+stage: **B4 IN PROGRESS** — B4.1, B4.2, B4.3 DONE. Next B4.4 (severity model + header labels).
+gate: GREEN — build 0w/0e; 184 tests pass; PlanTreeTests 10/10; DashboardRendererTests 29/29.
+      `conductor preview` redirected exit 0, renders `plan (F) All/Todo/…` + `▸ B0 6/6 · 4×` per-stage
+      columns + `[F] filter`/`[E] expand` hints, no alt-screen escapes — B4.3-preview.txt.
+qa: session #27/B4.2 PASS — re-ran gate (build 0w/0e, 172 tests, DashboardRendererTests 27/27).
+      Claim-1 via tests (Grid header + no-stacking guards green); claim-2 via running exe
+      (`preview` redirected exit 0, 3665 chars, header metrics + log Rule, NO alt-screen escapes).
+next: **B4.4** — severity model (INFO/WARN/ERROR/SUCCESS/WAITING/HUMAN) applied to log + status;
+      clarify header labels ("N untracked" explained/dropped). Gate: renderer test asserts
+      severity colour/glyph mapping; "untracked" reworded.
+trap: redirected `preview` reports SafeWidth=120 while AnsiConsole surface is 80 → the ~20-col left
+      panel wraps the meta cell in that artifact ONLY (pre-existing RunPreview mismatch, NOT PlanTree;
+      one clean line at matched widths per tests). Manual TUI still needs a real TTY. push may fail (github).
 dirty: none tracked.
-evidence: B4.2-gate.txt
+evidence: B4.3-gate.txt, B4.3-preview.txt
 ```
