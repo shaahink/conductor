@@ -178,8 +178,12 @@ public abstract class CtlCommand(string command, string explanation, bool danger
     public sealed class Settings : PlanSettings
     {
         [CommandOption("--yes")]
-        [Description("Skip confirmation prompt for destructive actions (abort/kill/skip).")]
+        [Description("Skip confirmation prompt for destructive actions (abort/kill/skip/rollback).")]
         public bool Yes { get; init; }
+
+        [CommandOption("--force")]
+        [Description("rollback only: discard an uncommitted (dirty) working tree during the reset.")]
+        public bool Force { get; init; }
     }
 
     public override int Execute(CommandContext context, Settings settings)
@@ -199,6 +203,7 @@ public abstract class CtlCommand(string command, string explanation, bool danger
                 issuedUtc = DateTime.UtcNow,
                 confirmed = dangerous ? true : (bool?)null,
                 intentId = dangerous ? Guid.NewGuid().ToString("N") : null,
+                force = settings.Force ? true : (bool?)null,
             }));
         AnsiConsole.MarkupLine($"[green]{Markup.Escape(command)}[/] queued — {Markup.Escape(explanation)}");
         return 0;

@@ -172,6 +172,25 @@ public class RunStateTests
     }
 
     [Fact]
+    public void AwaitingOwnerReasonRoundTripsThroughDisk()
+    {
+        // Locks the B3-audit fix: WHY we parked must survive restart so an approval after a restart
+        // resumes work (approval mode / budget) vs. confirms the stage (owner-gate) correctly.
+        var path = Path.Combine(Path.GetTempPath(), $"conductor-test-{Guid.NewGuid():N}.json");
+        try
+        {
+            foreach (var reason in new[] { AwaitingOwnerReason.OwnerGate, AwaitingOwnerReason.ApprovalMode, AwaitingOwnerReason.Budget })
+            {
+                var s = new RunState { PlanName = "T", Status = RunStatus.AwaitingOwner, AwaitingOwnerReason = reason };
+                s.Save(path);
+                var loaded = RunState.LoadOrNew(path, "x");
+                Assert.Equal(reason, loaded.AwaitingOwnerReason);
+            }
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
     public void PauseAfterStageFlagRoundTrips()
     {
         var path = Path.Combine(Path.GetTempPath(), $"conductor-test-{Guid.NewGuid():N}.json");

@@ -36,6 +36,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     // come from RunState; the gate marker is set while a battery runs.
     private string? _curGate;
     private string? _gotoStageId;
+    private bool _rollbackForce;
+    private bool _sessionApproved;
     private decimal _runCostUsd;
     private long _runTokens;
 
@@ -173,15 +175,18 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     return 0;
                 }
 
-                // Approval mode: park at AwaitingOwner before each session (B3.4)
-                if (plan.Limits.ApprovalMode)
+                // Approval mode: park at AwaitingOwner before each session (B3.4). One approval runs
+                // exactly one session (then we park again) — approving must NOT confirm the stage.
+                if (plan.Limits.ApprovalMode && !_sessionApproved)
                 {
                     events.Emit(new OwnerApprovalRequested { StageId = stage.Id });
                     state.Status = RunStatus.AwaitingOwner;
+                    state.AwaitingOwnerReason = AwaitingOwnerReason.ApprovalMode;
                     Log($"approval mode: park before session #{state.SessionCounter + 1} on stage {stage.Id} — approve with R or `conductor approve`");
                     SaveAndReport();
                     continue;
                 }
+                _sessionApproved = false;
 
                 RunSession(stage, track, ct);
                 sessionsThisRun++;
@@ -603,12 +608,14 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         {
             events.Emit(new OwnerApprovalRequested { StageId = id });
             state.Status = RunStatus.AwaitingOwner;
+            state.AwaitingOwnerReason = AwaitingOwnerReason.OwnerGate;
             Log($"owner-gate: stage {id} green — awaiting owner approval (run `conductor approve` or press R in the TUI)");
             SaveAndReport();
             Notify($"Conductor {plan.Name}: stage {id} is green and awaiting owner approval");
             return;
         }
         if (!state.ConfirmedStages.Contains(id)) state.ConfirmedStages.Add(id);
+        state.AwaitingOwnerReason = null;
         state.PendingPhaseGate = null;
         state.PendingAudit = null;
         state.PendingFix = null;
@@ -630,6 +637,45 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
     private StageConfig CurrentStageConfig()
         => plan.Stages.FirstOrDefault(s => s.Id == state.CurrentStage) ?? plan.Stages[^1];
+
+    /// <summary>Handle an owner approval while parked at <c>AwaitingOwner</c>. What it means depends on
+    /// WHY we parked (B3.2/B3.4): an owner-gate confirms the stage; an approval-mode/budget park merely
+    /// resumes work — confirming there would advance past unfinished checkpoints.</summary>
+    private void ApproveAwaitingOwner()
+    {
+        var stageId = state.CurrentStage
+            ?? plan.Stages.FirstOrDefault(s => !state.ConfirmedStages.Contains(s.Id) && !state.SkippedStages.Contains(s.Id))?.Id;
+        switch (OwnerApproval.Decide(state.AwaitingOwnerReason))
+        {
+            case ApprovalOutcome.ResumeSession:
+                _sessionApproved = true;
+                state.AwaitingOwnerReason = null;
+                state.Status = RunStatus.Idle;
+                if (stageId != null) events.Emit(new OwnerApprovalGranted { StageId = stageId });
+                Save();
+                Log("owner approved (approval mode) — running the next session");
+                break;
+            case ApprovalOutcome.ResetBudgetAndResume:
+                _runCostUsd = 0;
+                _runTokens = 0;
+                state.AwaitingOwnerReason = null;
+                state.Status = RunStatus.Idle;
+                if (stageId != null) events.Emit(new OwnerApprovalGranted { StageId = stageId });
+                Save();
+                Log("owner approved (budget) — budget window reset, continuing");
+                break;
+            default: // ConfirmStage — owner-gate on a green stage (or a legacy/unknown reason)
+                if (stageId == null) { state.Status = RunStatus.Idle; Save(); break; }
+                if (!state.OwnerApprovedStages.Contains(stageId))
+                {
+                    events.Emit(new OwnerApprovalGranted { StageId = stageId });
+                    state.OwnerApprovedStages.Add(stageId);
+                    Log($"owner approved stage {stageId} — continuing");
+                }
+                ConfirmStage(stageId);
+                break;
+        }
+    }
 
     // ---------------------------------------------------------------- decisions
 
@@ -807,6 +853,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         {
             events.Emit(new OwnerApprovalRequested { StageId = state.CurrentStage ?? "?" });
             state.Status = RunStatus.AwaitingOwner;
+            state.AwaitingOwnerReason = AwaitingOwnerReason.Budget;
             Log($"budget cap: ${_runCostUsd:0.00} >= ${costCap:0.00} (limit) — awaiting owner approval to continue");
             SaveAndReport();
             return true;
@@ -815,6 +862,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         {
             events.Emit(new OwnerApprovalRequested { StageId = state.CurrentStage ?? "?" });
             state.Status = RunStatus.AwaitingOwner;
+            state.AwaitingOwnerReason = AwaitingOwnerReason.Budget;
             Log($"token cap: {_runTokens / 1000.0:0.#}k >= {tokenCap / 1000.0:0.#}k (limit) — awaiting owner approval to continue");
             SaveAndReport();
             return true;
@@ -843,16 +891,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 {
                     if (state.Status == RunStatus.AwaitingOwner)
                     {
-                        // On AwaitingOwner, R/Resume acts as approve rather than generic resume.
-                        var pending = state.CurrentStage
-                            ?? plan.Stages.FirstOrDefault(s => !state.ConfirmedStages.Contains(s.Id) && !state.SkippedStages.Contains(s.Id))?.Id;
-                        if (pending != null && !state.OwnerApprovedStages.Contains(pending))
-                        {
-                            events.Emit(new OwnerApprovalGranted { StageId = pending });
-                            state.OwnerApprovedStages.Add(pending);
-                            Log($"owner approved stage {pending} — continuing");
-                        }
-                        ConfirmStage(pending!);
+                        ApproveAwaitingOwner();
                         break;
                     }
                     state.Status = RunStatus.Idle;
@@ -882,17 +921,18 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 Log($"retry: stage {state.CurrentStage} — attempt counter reset, re-queuing");
                 break;
             case ControlAction.Rollback when !inSession:
+                var force = _rollbackForce; _rollbackForce = false;
                 if (state.CurrentStageStartHead is not { Length: > 0 } sha)
                 {
                     Log("rollback refused: no checkpoint commit recorded for current stage");
                     break;
                 }
-                if (Git.IsDirty(plan.Repo))
+                if (!force && Git.IsDirty(plan.Repo))
                 {
-                    Log($"rollback refused: working tree is dirty — {Git.DirtySummary(plan.Repo)}. Use --force to override.");
+                    Log($"rollback refused: working tree is dirty — {Git.DirtySummary(plan.Repo)}. Re-run with --force to discard and reset.");
                     break;
                 }
-                Log($"rollback: resetting to {Short(sha)} (stage {state.CurrentStage} start)");
+                Log($"rollback: resetting to {Short(sha)} (stage {state.CurrentStage} start){(force && Git.IsDirty(plan.Repo) ? " — discarding dirty working tree (--force)" : "")}");
                 Git.Exec(plan.Repo, "reset", "--hard", sha);
                 state.Status = RunStatus.Idle;
                 Save();
@@ -910,6 +950,11 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     var target = plan.Stages.FirstOrDefault(s => s.Id == tg);
                     if (target == null) { Log($"goto refused: stage '{tg}' not found in plan"); break; }
                     if (state.SkippedStages.Contains(tg)) { Log($"goto refused: stage '{tg}' is skipped"); break; }
+                    // A goto to an already-confirmed stage must actually take effect: un-confirm it (and
+                    // drop any owner approval) so SelectStage re-runs it instead of silently skipping.
+                    state.ConfirmedStages.Remove(tg);
+                    state.OwnerApprovedStages.Remove(tg);
+                    state.AwaitingOwnerReason = null;
                     state.CurrentStage = tg;
                     state.CurrentStageStartHead = Git.Head(plan.Repo);
                     state.AttemptsThisStage = 0;
@@ -933,35 +978,19 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             if (!File.Exists(_controlPath)) return null;
             var text = File.ReadAllText(_controlPath);
             File.Delete(_controlPath);
-            using var doc = JsonDocument.Parse(text);
-            var cmd = doc.RootElement.TryGetProperty("command", out var c) ? c.GetString() : null;
-            var confirmed = doc.RootElement.TryGetProperty("confirmed", out var cf) && cf.GetBoolean();
-            var intentId = doc.RootElement.TryGetProperty("intentId", out var ii) ? ii.GetString() : null;
-            var stageId = doc.RootElement.TryGetProperty("stageId", out var si) ? si.GetString() : null;
-            var action = cmd?.ToLowerInvariant() switch
-            {
-                "pause" => ControlAction.PauseAfterSession,
-                "resume" => ControlAction.ResumeRun,
-                "approve" => ControlAction.ResumeRun,
-                "abort" => ControlAction.AbortNow,
-                "skip" => ControlAction.SkipStage,
-                "kill" => ControlAction.KillSession,
-                "stop-after" => ControlAction.StopAfterSession,
-                "retry-stage" => ControlAction.RetryStage,
-                "rollback" => ControlAction.Rollback,
-                "pause-after-stage" => ControlAction.PauseAfterStage,
-                "goto" => ControlAction.Goto,
-                _ => (ControlAction?)null,
-            };
-            if (action != null && confirmed && intentId != null)
-                Log($"control confirmed [intent={intentId}]");
-            if (action == ControlAction.Goto && stageId != null)
-                _gotoStageId = stageId;
+            var parsed = ControlFile.Parse(text);
+            var action = parsed.Action;
+            if (action != null && parsed.Confirmed && parsed.IntentId != null)
+                Log($"control confirmed [intent={parsed.IntentId}]");
+            if (action == ControlAction.Goto && parsed.StageId != null)
+                _gotoStageId = parsed.StageId;
+            if (action == ControlAction.Rollback && parsed.Force)
+                _rollbackForce = true;
             return action;
         }
         // A malformed/racing control.json is operator input, not an engine fault — ignore this poll
         // and let the next one pick up a well-formed file rather than crash the loop.
-        catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException or InvalidOperationException)
         {
             return null;
         }

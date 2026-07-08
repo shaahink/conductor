@@ -8,7 +8,6 @@ public enum ControlAction
     SkipStage,
     KillSession,
     StopAfterSession,
-    ApproveOwner,
     RetryStage,
     Rollback,
     PauseAfterStage,

@@ -6,6 +6,12 @@ public enum RunStatus { Idle, Running, VerifyingGates, Backoff, Paused, NeedsHum
 
 public enum SessionKind { Deliver, Fix, Resume, Audit }
 
+/// <summary>Why the run parked at <see cref="RunStatus.AwaitingOwner"/> — decides what an owner
+/// approval means (B3.2/B3.4). <c>OwnerGate</c>: the stage is green and confirms on approve.
+/// <c>ApprovalMode</c>: parked before a session; approve runs exactly the next session then parks
+/// again. <c>Budget</c>: a cost/token cap tripped; approve resets the budget window and continues.</summary>
+public enum AwaitingOwnerReason { OwnerGate, ApprovalMode, Budget }
+
 public enum SessionOutcome
 {
     Advanced,      // gates green, new commits, >=1 checkpoint newly DONE
@@ -106,6 +112,10 @@ public sealed class RunState
     /// <summary>Stages whose owner has explicitly approved via CLI/TUI (B3.2). An owner-gated stage
     /// cannot advance past <see cref="RunStatus.AwaitingOwner"/> until its id appears here.</summary>
     public List<string> OwnerApprovedStages { get; set; } = new();
+    /// <summary>Why the run is parked at <see cref="RunStatus.AwaitingOwner"/> (B3.2/B3.4). Persisted so
+    /// an approval after restart does the right thing — confirm the stage vs. resume a session vs. reset
+    /// the budget window. Null when not parked (or a legacy state.json, treated as an owner-gate).</summary>
+    public AwaitingOwnerReason? AwaitingOwnerReason { get; set; }
     public List<SessionRecord> History { get; set; } = new();
     /// <summary>Signature (HEAD sha + gate-set) of the last full battery that passed green — lets the
     /// orchestrator skip re-running an identical battery on an unchanged tree (e.g. across restarts).</summary>
