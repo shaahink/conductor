@@ -1,39 +1,18 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 05:46 UTC · branch `feat/baton` · HEAD `2330361`_
+_Updated 2026-07-08 05:48 UTC · branch `feat/baton` · HEAD `f8f858d`_
 
-**Status:** Running
-**Stage:** B1 — Decouple Loom + pluggable progress providers · attempts used 0 · working ▸ B1.4
-**Checkpoints:** 9/65 done · **Sessions run:** 8 · **Cost:** $0.2585 · **Tokens:** 127,404 in / 99,323 out / 50,004 think
+**Status:** Idle
+**Stage:** B1 — Decouple Loom + pluggable progress providers · attempts used 0 · working ▸ B1.5
+**Checkpoints:** 10/65 done · **Sessions run:** 8 · **Cost:** $0.2903 · **Tokens:** 129,050 in / 113,923 out / 57,959 think
 **Confirmed phases:** B0
-
-## Latest activity (live)
-
-_Session #8 (Deliver) · running 20m · last output 4s ago · $0.0275_
-
-**Thinking:**
-> I'm going to run the filtered test for the irregular-id case and add that specific result to the evidence file so it clearly shows the B1.4 value.
-> I need to update the CONDUCTOR-START.md file with the Handoff block and B1.4 checkpoint row, then commit the changes. Based on the git history pattern, I should follow the convention of separate commits—one for the code changes with a `feat(bB1.N)` message and another for the tracker documentation w…
-> I need to update the CONDUCTOR-START.md file with the B1.4 completion details—marking it as DONE with commit hash 2330361 and the evidence file path. I'm restructuring the Handoff block to stay within the 12-line limit while capturing the key information about landing the configurable ProgressConven…
-
-**Recent actions:**
-- `06:44:41` · Let me append the focused irregular-id test result to the evidence, so it explicitly demonstrates B1.4's value.
-- `06:44:43` » bash $out = "docs/baton/evidence/B1.4-gate.txt" "" | Out-File -FilePath $out -Append -Encoding utf8 "--- focused proof: ProgressConventionsTests (irregular ids …
-- `06:45:01` · Build green, 73 tests, MA0009 now error. Let me commit the code (to get a hash for the tracker row), then update the tracker. First, review what's staged.
-- `06:45:01` » bash git -C C:\Code\conductor-baton status --short
-- `06:45:09` » bash cd C:\Code\conductor-baton git add .conductor/followups.md .editorconfig src/Conductor/Core/Advisor.cs src/Conductor/Core/DocsExtractor.cs src/Conductor/Co…
-- `06:45:27` » bash cd C:\Code\conductor-baton $msg = @' feat(bB1.4): configurable progress conventions + ratchet MA0009  Per-plan conventions on PlanConfig.Conventions (B1.4,…
-- `06:45:33` » bash git -C C:\Code\conductor-baton rev-parse --short HEAD
-- `06:46:07` · Commit `2330361`. Now update the tracker: the Handoff block and the B1.4 row.
-- `06:46:07` » edit CONDUCTOR-START.md
-- `06:46:14` » edit CONDUCTOR-START.md
 
 ## Stage progress
 
 | Stage | Title | Done | State |
 |---|---|---|---|
 | B0 | Repo modernisation + self-hosting harness | 6/6 | confirmed ✓ |
-| B1 | Decouple Loom + pluggable progress providers | 3/7 | **← active** |
+| B1 | Decouple Loom + pluggable progress providers | 4/7 | **← active** |
 | B2 | Event-sourced backbone + provider decoupling | 0/6 | todo |
 | B3 | Safety, owner-gates & process control | 0/5 | todo |
 | B4 | TUI overhaul (alt-screen + tree) | 0/7 | todo |
@@ -57,7 +36,7 @@ _Session #8 (Deliver) · running 20m · last output 4s ago · $0.0275_
 | 5 | B1 | Deliver | 1 | 07-08 04:02 | 0:12 | Advanced | B1.1 | 3 | build:OK | $0.0221 | 1,245/10,975 |
 | 6 | B1 | Deliver | 1 | 07-08 04:15 | 0:33 | Advanced | B1.2 | 5 | build:OK | $0.0241 | 1,297/10,939 |
 | 7 | B1 | Deliver | 1 | 07-08 04:49 | 0:37 | Advanced | B1.3 | 5 | build:OK | $0.0268 | 1,793/12,018 |
-| 8 | B1 | Deliver | 1 | 07-08 05:26 | … | running |  | 0 |  |  |  |
+| 8 | B1 | Deliver | 1 | 07-08 05:26 | 0:21 | Advanced | B1.4 | 4 | build:OK | $0.0318 | 1,646/14,600 |
 
 ### Commits by session
 
@@ -101,6 +80,11 @@ _Session #8 (Deliver) · running 20m · last output 4s ago · $0.0275_
   - d925e81 chore(conductor): s7 B1 working ▸B1.3 @ 06:19
   - b77002a chore(conductor): s7 B1 working ▸B1.3 @ 06:09
   - ce2f6e3 chore(conductor): s7 B1 working ▸B1.3 @ 05:59
+- **s8 (B1 Deliver)** — 4 commit(s):
+  - f8f858d docs(bB1.4): tracker — B1.4 DONE (2330361), handoff + QA verdict for session #8
+  - f34fb8b chore(conductor): s8 B1 working ▸B1.4 @ 06:46
+  - 2330361 feat(bB1.4): configurable progress conventions + ratchet MA0009
+  - 4fc84da chore(conductor): s8 B1 working ▸B1.4 @ 06:36
 
 ## Phase handovers (audit)
 
@@ -112,26 +96,28 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: Landed **B1.3** (commit `3e0fdbd`, tracker `7069c6c`, pushed) — two escape-hatch `IProgressProvider`s behind the B1.2 seam: `ScriptProvider` (plan-owned command → JSON checkpoint array, resilient to empty-command/nonzero-exit/timeout/malformed-JSON via one clear `InvalidOperationException`, never a crash) and `PlanCheckpointProvider` (inline `progress.checkpoints`), selected by a fail-fast `ProgressProviderFactory` (default = byte-identical `markdown-table`). The Orchestrator now builds `_progress` via the factory (load-bearing, A1), and `PlanConfig` gained an additive `Progress` block so existing plans are unchanged. Proof: build 0w/0e net10, 66 tests (57+9 new `ProgressProv…
+> SESSION-RESULT: Landed **B1.4** (Decouple Loom → configurable progress conventions) with proof. Added `ProgressConventions` (+ `StatusVocabulary`) on `PlanConfig.Conventions` — `stageIdPattern`, `handoffMarker`, `humanToken`, `statusVocabulary` — all Loom-default and byte-identical to the old hard-coding, all *consumed* (no dead params, A1): `CheckpointRow.Create` derives `StageId`/status-flags via the conventions (P-0→P-0, P0.1→P0, P3.4b→P3, F5→F5), all three providers build rows through it, `MarkdownTableProvider` assembles its row/handoff regexes from them, and the Orchestrator's human-gate now reads `humanToken`. Ratcheted **MA0009 → error** (ADR-0001 FU-B0-3, now CLOSED): every tracker/…
 
 ## Tracker handoff
 
 ```
-last: session #7 (B1, deliver) — landed **B1.3**: ScriptProvider (plan cmd → checkpoint JSON, resilient
-      to empty-cmd/nonzero-exit/malformed-JSON via clear IOException) + PlanCheckpointProvider (inline
-      plan checkpoints) + ProgressProviderFactory (fail-fast selection). Orchestrator wires the factory
-      (load-bearing). Build 0w/0e net10, 66 tests (57+9). Diff 7 files, in budget.
-stage: **B1 IN PROGRESS** — B1.1, B1.2, B1.3 DONE; B1.4…B1.7 TODO. Battery GREEN.
-gate: GREEN — `dotnet build Conductor.slnx` 0w/0e net10; `dotnet test` 66 pass.
-qa: session #6 (B1.2) PASS. (1) 7 TrackerParserTests green incl. MarkdownTableProviderIsByteIdentical;
-      (2) grep-confirmed Orchestrator reads via _progress.Read at all 5 sites + facade preserved
-      (TrackerParser delegates to MarkdownTableProvider.Parse/ParseFile). No findings.
-next: **B1.4** — configurable conventions on PlanConfig (stageIdPattern incl. P-0/P3.4b/F5, handoffMarker,
-      humanToken, statusVocabulary); CheckpointRow.StageId derivation honours the pattern; ratchet MA0009
-      (regex timeout) here per ADR-0001. Unit test: irregular ids parse into the right stages.
-trap: STABLE driver holds the plan lock while running (session #7) — dry-run against a fixture, never the
-      live self-plan. Commands.cs status/report/preview still call TrackerParser.* (read-only CLI) — DI-wire
-      in B2.5. CheckpointRow.StageId still splits on '.' — B1.4 makes it convention-driven (P-0 → stage P).
+last: session #8 (B1, deliver) — landed **B1.4**: per-plan `ProgressConventions` (stageIdPattern,
+      handoffMarker, humanToken, statusVocabulary) on PlanConfig; `CheckpointRow.Create` derives stage +
+      status via the conventions (P-0→P-0, P0.1→P0, P3.4b→P3, F5→F5); Orchestrator consumes humanToken.
+      Ratcheted **MA0009→error** (FU-B0-3 CLOSED), all regexes carry `ProgressConventions.RegexTimeout`.
+      Defaults byte-identical to Loom. Build 0w/0e net10, 73 tests (66+7). Diff 12 files, in budget.
+stage: **B1 IN PROGRESS** — B1.1…B1.4 DONE; B1.5…B1.7 TODO. Battery GREEN.
+gate: GREEN — `dotnet build Conductor.slnx` 0w/0e net10 (MA0009=error); `dotnet test` 73 pass.
+qa: session #7 (B1.3) PASS. (1) 9 ProgressProviderTests green; (2) `_progress =
+      ProgressProviderFactory.Create(plan)` (Orchestrator.cs:23) load-bearing, read at 5 sites
+      (66/352/401/842/904). No findings.
+next: **B1.5** — read-order battery: `plan.readOrder: [docs…]` rendered into the session prompt as an
+      ordered, bounded list; `PromptBuilder` gains a `{readOrder}` section. Gate: `PromptBuilderTests`
+      assert the list appears; empty when unset.
+trap: the STABLE driver is master's binary — it parses via master's `TrackerParser`, NOT this build, so
+      new conventions only bite once this build ships; defaults are byte-identical (proven) so
+      CONDUCTOR-START.md parses under both. Don't dry-run the live self-plan (lock). `DashboardRenderer`
+      :219 still hard-codes DONE/BLOCKED for row colour (display-only; convention-wire later if needed).
 dirty: none tracked.
-evidence: B1.3-gate.txt (+ B1.2, B1.1, B0.1…B0.5, audits/B0-baseline.md, adr/000{1,2}-*.md)
+evidence: B1.4-gate.txt (+ B1.3, B1.2, B1.1, B0.1…B0.5, audits/B0-baseline.md, adr/000{1,2}-*.md)
 ```
