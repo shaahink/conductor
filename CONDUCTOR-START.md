@@ -8,23 +8,24 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #31 (B4.6, deliver) — landed **B4.6**: command history search + filters.
-      New pure `CommandHistory` (Parse slash-syntax + Filter by category/substring). The agent
-      pop-out (O) is now a searchable history: Tab cycles commands/thoughts/errors, `/` searches
-      (`/build /git /test`). Retired dead OutputLines; +9 tests. 206→215.
-stage: **B4 IN PROGRESS** — B4.1–B4.6 DONE. Next B4.7 (live-consistent tokens + doc-on-select).
-gate: GREEN — build 0w/0e; 215 tests pass. `conductor preview` exit 0; action bar shows "[O]
-      history". B4.6-gate.txt, B4.6-preview.txt.
-qa: session #30/B4.5 PASS — re-ran gate (build 0w/0e, 206 tests). Claim-1: 11 StructuredThinking+
-      AgentFold tests green. Claim-2: preview shows "▸ (2 lines)" fold badge, "◎ goal …" thinking,
-      "[C] fold" action. No findings.
-next: **B4.7** — fold TokenDelta into a live-consistent token line; selecting a stage/checkpoint
-      row opens its doc section (DocsExtractor exists).
-trap: the history modal is interactive → a redirected `preview` renders one static frame; the
-      filtered-modal DISPLAY is proven headlessly by CommandHistoryTests.FilteredHistoryRenders…
-      HandleModalKey now takes ConsoleKeyInfo (was ConsoleKey) — both call sites updated.
-dirty: none. (Restored a stray unrelated deletion of conductor-CLEANUP.md that appeared mid-session.)
-evidence: B4.6-gate.txt, B4.6-preview.txt
+last: session #32 (B4.7, deliver) — landed **B4.7**: live-consistent token line + doc-on-select.
+      Token line now breaks out the running session delta as `(session Nk)`, matching the cost
+      line's `(session $…)` (F-3 at the display layer). Plan tree gains a ↑/↓ selection cursor;
+      `D` opens the *selected* row's owning-stage doc (checkpoint→stage resolved). +6 tests. 215→221.
+stage: **B4 COMPLETE** — B4.1–B4.7 all DONE. Next: B4 per-phase audit (self-plan audit=on) → B5.1.
+gate: GREEN — build 0w/0e; 221 tests pass. In-tree `preview` exit 0; header "(F/↑↓/D)", action bar
+      "[↑↓] select · [D] docs". B4.7-gate.txt, B4.7-tokens-preview.txt, B4.7-docselect-preview.txt.
+qa: session #31/B4.6 PASS — re-ran gate (build 0w/0e, 215 tests). Claim-1: 9 CommandHistory tests
+     green. Claim-2: in-tree preview exit 0, action bar shows "[O] history"+"[F] filter". No findings.
+     (Stable driver's preview shows master's "[O] output" — it predates B4.6, as designed.)
+next: **B4 audit** then **B5.1** (timeline view from the event log). See conductor-DEBT.md — its
+      "B4.7 async ratchet" is a *followup* section, NOT this stage's B4.7 (which is R4.7, now done).
+trap: doc-on-select is stage-granular (docs are per-stage sections; a checkpoint row resolves to its
+      owning stage via PlanTree.StageForRow). ↑/↓ now navigate the plan tree (previously unmapped →
+      cancelled a pending confirm). Stable-driver dry-run blocked by the live orchestrator's plan lock
+      (pid) — expected while it drives me; the build+test battery is the authoritative gate.
+dirty: none.
+evidence: B4.7-gate.txt, B4.7-tokens-preview.txt, B4.7-docselect-preview.txt
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -75,7 +76,7 @@ never silent renumbering.
 | B4.4 | Severity model (INFO/WARN/ERROR/SUCCESS/WAITING/HUMAN) + clearer header labels | DONE | 9b25fe2 | docs/baton/evidence/B4.4-gate.txt, docs/baton/evidence/B4.4-preview.txt |
 | B4.5 | Structured thinking pane (Goal/Hypothesis/Evidence/Action) + tool-call folding | DONE | 5b9db37 | docs/baton/evidence/B4.5-gate.txt, docs/baton/evidence/B4.5-preview.txt |
 | B4.6 | Command history search + filters (/build /git /test; commands/thoughts/errors) | DONE | f4f2997 | docs/baton/evidence/B4.6-gate.txt, docs/baton/evidence/B4.6-preview.txt |
-| B4.7 | Live-consistent token line + plan-tree filter/search for large plans; doc-on-select | TODO | | |
+| B4.7 | Live-consistent token line + plan-tree filter/search for large plans; doc-on-select | DONE | 1f61578, c1edb3b | docs/baton/evidence/B4.7-gate.txt, docs/baton/evidence/B4.7-tokens-preview.txt, docs/baton/evidence/B4.7-docselect-preview.txt |
 | B5.1 | Timeline view (transitions with duration) from the event log | TODO | | |
 | B5.2 | Replay / time-travel (F8) reconstructs a past run from events.jsonl | TODO | | |
 | B5.3 | AI-health metrics (retry rate, command repetition, failure loops, tool oscillation, context saturation) | TODO | | |
