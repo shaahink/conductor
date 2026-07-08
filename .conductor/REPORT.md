@@ -1,12 +1,12 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 23:41 UTC · branch `feat/baton` · HEAD `867b1a7`_
+_Updated 2026-07-08 23:48 UTC · branch `feat/baton` · HEAD `75f78bd`_
 
 **Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B11 — Close-out + Shamshir owner-gated proof · attempts used 0
-**Checkpoints:** 61/65 done · **Sessions run:** 62 · **Cost:** $2.7407 · **Tokens:** 2,014,195 in / 864,258 out / 402,181 think
+**Checkpoints:** 61/65 done · **Sessions run:** 63 · **Cost:** $2.7965 · **Tokens:** 2,073,995 in / 876,020 out / 415,562 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10
-**Pending:** auto-fix audit for B11
+**Pending:** full-battery phase gate for B11
 
 ## Stage progress
 
@@ -30,7 +30,6 @@ _Updated 2026-07-08 23:41 UTC · branch `feat/baton` · HEAD `867b1a7`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 33 | B4 | Audit | 1 | 07-08 16:18 | 0:14 | Progress |  | 2 |  | $0.0191 | 1,034/10,114 |
 | 34 | B5 | Deliver | 1 | 07-08 16:33 | 0:36 | Advanced | B5.1 | 5 | build:OK | $0.0634 | 2,544/24,659 |
 | 35 | B5 | Deliver | 1 | 07-08 17:10 | 0:19 | Advanced | B5.2 | 3 | build:OK | $0.0370 | 1,719/19,977 |
 | 36 | B5 | Deliver | 1 | 07-08 17:30 | 0:24 | Advanced | B5.3 | 4 | build:OK | $0.0427 | 2,319/25,154 |
@@ -60,13 +59,10 @@ _Updated 2026-07-08 23:41 UTC · branch `feat/baton` · HEAD `867b1a7`_
 | 60 | B10 | Audit | 1 | 07-08 23:02 | 0:06 | Progress |  | 1 |  | $0.0562 | 67,475/11,048 |
 | 61 | B11 | Deliver | 1 | 07-08 23:09 | 0:09 | Advanced | B11.1 | 2 | build:OK | $0.0436 | 47,917/12,787 |
 | 62 | B11 | Deliver | 1 | 07-08 23:19 | 0:21 | Advanced | B11.2 B11.3 B11.4 | 6 | build:OK | $0.1053 | 75,494/33,712 |
+| 63 | B11 | Audit | 1 | 07-08 23:41 | 0:07 | Progress |  | 2 |  | $0.0558 | 59,800/11,762 |
 
 ### Commits by session
 
-- **s55 (B9 Deliver)** — 3 commit(s):
-  - 3a68af5 chore(bB9.4): fix commit hash in tracker row
-  - e078820 feat(bB9.4): cooperative soft-break + hard fallback + MCP journal fold
-  - 4bca6b1 chore(conductor): s55 B9 working ▸B9.4 @ 23:05
 - **s56 (B9 Deliver)** — 3 commit(s):
   - 8c4aa1e chore(bB9.5): fill commit hash in tracker row
   - 1fa665c feat(bB9.5): task views in CLI/TUI/Telegram
@@ -95,12 +91,16 @@ _Updated 2026-07-08 23:41 UTC · branch `feat/baton` · HEAD `867b1a7`_
   - 931733e chore(conductor): s62 B11 working ▸B11.2 @ 00:29
   - 746b164 feat(bB11.3): ADRs finalised + clean-clone battery
   - 16e8532 feat(bB11.2): dotnet tool packaging + tab completion + conductor doctor
+- **s63 (B11 Audit)** — 2 commit(s):
+  - 75f78bd docs(bB11): audit handover — 5 bugs fixed, 3 followups created, honest weak/deferred inventory
+  - ad3abde fix(bB11): audit — PS completion new-plan/completion cases, pwsh ExecutionPolicy, SafeParseTracker warning
 
 ## Phase handovers (audit)
 
 - `.conductor/handovers/B0.md`
 - `.conductor/handovers/B1.md`
 - `.conductor/handovers/B10.md`
+- `.conductor/handovers/B11.md`
 - `.conductor/handovers/B2.md`
 - `.conductor/handovers/B3.md`
 - `.conductor/handovers/B4.md`
@@ -116,17 +116,16 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: B11 all 4 checkpoints DONE — B11.2 (PackAsTool + `conductor doctor` + `conductor completion powershell|bash`, 8 new tests, dotnet pack produces nupkg), B11.3 (ADR-0001/0002 updated, ADR-0003 created, clean-clone battery green: fresh git clone → build 0w/0e → 432 tests pass), B11.4 (Shamshir parity-pipeline.plan.json with P2 owner-gated, acceptance doc proving AwaitingOwner → doctor diagnosis → approve flow → reconcile verdict). Gate: build 0w/0e, 432/0/0 tests, clean-clone green, no analyzer weakenings. Next session should pick up B12 (parallelism — read-only analysis lanes first). What was hard: fixing the `RealLoomTrackerParsesIfPresent` test — it asserted against a live fo…
+> SESSION-RESULT: B11 audit complete — 5 bugs fixed (PS completion had broken new-plan/completion tab-complete + hidden-options guard, missing -ExecutionPolicy Bypass on non-Windows pwsh, and silent SafeParseTracker catch violating A15), 432 tests pass 0w/0e, 3 files changed within budget; 3 followups created (FU-B11-1 completion exhaustiveness test, FU-B11-2 Linux clean-clone, FU-B11-3 real-credential cTrader path) and written to `.conductor/handovers/B11.md` with an honest weak/deferred inventory — pushed to `feat/baton`.
 
 ## Tracker handoff
 
 ```
-last: session #63 (B11.2-B11.4) — dotnet tool packaging + tab completion + doctor + ADRs + clean-clone + Shamshir P2.2 owner-gated acceptance.
-stage: B11 DONE — all 4 checkpoints landed.
-gate: GREEN — 432 passed / 0 failed / 0 skipped. Build 0w/0e. Clean-clone battery passes.
+last: session #64 (B11 audit) — static audit completed: 5 bugs fixed (PS completion new-plan/completion/options, pwsh ExecutionPolicy, SafeParseTracker warning). Gate: 432 pass, 0w/0e.
+stage: B11 DONE + AUDITED. Handover written (.conductor/handovers/B11.md). 3 followups created (FU-B11-1..3).
 dirty: none.
-next: B12.1 (Tier A read-only analysis lanes) or B12 fix-lanes from followups.
-QA-B11.1: verified RunShell dispatch (ProcessRunner.cs:70-86), 15 B11.1 tests (B11_1Tests.cs).
-followups: MA0002 (38 sites), MA0045 (28 sites) — deferred from B0.2, tracked per ADR-0001.
-evidence: docs/baton/evidence/B11.2-gate.txt (packing+doctor+completion), B11.3-gate.txt (ADRs+clean-clone), B11.4-gate.txt + audits/B11-shamshir-p2.2.md (owner-gate acceptance).
+next: B12.1 (Tier A read-only analysis lanes) or B12 fix-lanes (tracked followups in .conductor/followups.md).
+QA-B11: verified all 4 checkpoints + diff audit; cross-platform shell dispatch, dotnet tool packaging, completion scripts, doctor, clean-clone battery, Shamshir owner-gate acceptance.
+followups: FU-B10-1/2 reassigned to B12; new FU-B11-1 (completion exhaustiveness test), FU-B11-2 (Linux clean-clone), FU-B11-3 (real-credential cTrader path).
+evidence: docs/baton/evidence/B11.{1,2,3,4}-gate.txt, docs/baton/audits/B11-shamshir-p2.2.md, .conductor/handovers/B11.md.
 ```
