@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Conductor.Core.Events;
 using Conductor.Core.Planning;
+using Conductor.Core.Providers;
 using Conductor.Models;
 
 namespace Conductor.Core;
@@ -16,12 +17,11 @@ public sealed record RunOptions(bool DryRun, bool Once, int MaxSessions);
 /// </summary>
 public sealed class Orchestrator(PlanConfig plan, RunState state, string statePath, IProgressSink sink, IEventSink events, RunOptions opts)
 {
-    private static readonly Regex LimitRx = new(
-        @"usage limit|rate.?limit|overloaded|quota|out of credit|insufficient credit|credit balance|429|too many requests|5-hour|weekly limit",
-        RegexOptions.IgnoreCase, ProgressConventions.RegexTimeout);
-
     private readonly PromptBuilder _prompts = new(plan);
     private readonly IProgressProvider _progress = ProgressProviderFactory.Create(plan);
+    // The agent provider owns backend-specific concerns (stream parsing lives in AgentSession, the
+    // usage-limit phrasing lives here) so the Orchestrator no longer switches on `output` (B2.4, D-11).
+    private readonly IAgentProvider _agentProvider = AgentProviderFactory.Create(plan.Agent);
     private IReadOnlyList<GateResult>? _lastGates;
     private bool _pendingSkip;
     private bool _pausePending;
@@ -324,7 +324,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
             // usage/rate limit → wait it out, then resume the same agent session (no attempt burned)
             var limitEvidence = (agent.ResultText ?? "") + " " + (exit != 0 && agent.ResultText == null ? LastRawTail(rawLog) : "");
-            if ((agent.ResultIsError || exit != 0) && LimitRx.IsMatch(limitEvidence))
+            if ((agent.ResultIsError || exit != 0) && _agentProvider.DetectsUsageLimit(limitEvidence))
             {
                 rec.Outcome = SessionOutcome.LimitBackoff;
                 state.ConsecutiveBackoffs++;

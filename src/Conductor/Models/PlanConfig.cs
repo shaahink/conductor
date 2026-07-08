@@ -287,8 +287,12 @@ public sealed class AgentConfig
     public List<string> Args { get; set; } = new();
     /// <summary>Used to resume a stalled/interrupted agent session. Placeholders: {prompt} {claudeSessionId}</summary>
     public List<string>? ResumeArgs { get; set; }
-    /// <summary>"stream-json" (claude) or "text" (opencode etc.)</summary>
+    /// <summary>"stream-json" (claude) or "text" (opencode etc.). Legacy selector — kept for back-compat;
+    /// when <see cref="Provider"/> is unset the provider is inferred from this (B2.4).</summary>
     public string Output { get; set; } = "stream-json";
+    /// <summary>Selects the <c>IAgentProvider</c> adapter by name ("opencode", "claude", "text"). When
+    /// empty the adapter is inferred from <see cref="Output"/> so existing plans are unchanged (B2.4, D-11).</summary>
+    public string? Provider { get; set; }
 }
 
 public sealed class HookConfig

@@ -7,23 +7,21 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #13 (B2, deliver) — landed **B2.3**. `RunStateProjection.FindInterruptedSession` detects
-      SessionStarted without matching SessionFinished from the event log; `RecoverFromCrash` enhanced
-      with event-log-based recovery as a safety net (state.json still authoritative for transient fields).
-      98 tests (96→+2). Additive — no cutover, state.json recovery still works.
-stage: **B2 IN PROGRESS** — B2.1, B2.2, B2.3 DONE; B2.4…B2.6 TODO. Battery GREEN.
-gate: GREEN — build 0w/0e; test 98 pass. Recovery tests: truncated-stream detection + all-complete
-      negative case both green.
-qa: session #12 (B2.2 deliver) PASS — (1) 5 EventLogTests + 4 RunStateProjectionTests green;
-      (2) parity fixture (real 11-event recorded run) independently verified — diff empty,
-      guard-the-guard catches divergence. No findings.
-next: **B2.4** — IAgentProvider abstraction + Opencode/Claude/GenericText adapters; Orchestrator
-      provider-switch removed; plan selects by `agent.provider` (default inferred from output for
-      back-compat).
-trap: event-log recovery is a safety net; the state.json path stays the primary crash detector
-      because transient control fields (AttemptsThisStage, Pending*, etc.) still live there.
+last: session #14 (B2, deliver) — landed **B2.4**. `IAgentProvider` + Opencode/Claude/GenericText
+      adapters; `AgentSession` delegates all wire parsing to the provider; Orchestrator dropped its
+      `LimitRx` and uses `provider.DetectsUsageLimit`. `AgentConfig.Provider` selects the adapter
+      (infers from legacy `output` when unset). 113 tests (98→+15). Additive — parsing byte-identical.
+stage: **B2 IN PROGRESS** — B2.1…B2.4 DONE; B2.5, B2.6 TODO. Battery GREEN.
+gate: GREEN — build 0w/0e; test 113 pass. Truth gate: opencode/claude/text captured-sample parse
+      tests + factory selection all green; Loom-shaped opencode-json plan dry-runs via new path.
+qa: session #13 (B2.3 deliver) PASS — (1) recovery + 6 projection tests green; (2) RecoverFromCrash
+      reads events.jsonl via FindInterruptedSession (in-tree build emits it per B2.1 artifact). No findings.
+next: **B2.5** — Host/DI/Options (validated) + Microsoft.Extensions.Logging + Serilog file+console
+      sinks with correlation scope (runId/sessionId/stage/gate); audit every `catch {}` (no silent swallow).
+trap: `output` is kept everywhere for STABLE-driver back-compat (it ignores the new `provider` field);
+      `provider` is preferred only when set. Parsing was relocated, not changed — no stall/limit regression.
 dirty: none tracked.
-evidence: B2.3-gate.txt (+ earlier)
+evidence: B2.4-gate.txt (+ earlier)
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -60,7 +58,7 @@ never silent renumbering.
 | B2.1 | ConductorEvent schema + append-only events.jsonl writer (additive, alongside state.json) | DONE | d5ebd12 | docs/baton/evidence/B2.1-gate.txt |
 | B2.2 | Projections: RunState rebuilt by folding the log; StateCompat parity tests | DONE | e2b6a03 | docs/baton/evidence/B2.2-gate.txt |
 | B2.3 | Crash recovery replays the event log (not just state.json) | DONE | a5a6b85 | docs/baton/evidence/B2.3-gate.txt |
-| B2.4 | IAgentProvider + Opencode/Claude/GenericText adapters; Orchestrator provider-switch removed | TODO | | |
+| B2.4 | IAgentProvider + Opencode/Claude/GenericText adapters; Orchestrator provider-switch removed | DONE | | docs/baton/evidence/B2.4-gate.txt |
 | B2.5 | Host/DI/Options + Microsoft.Extensions.Logging + Serilog sinks; no silent catch {} | TODO | | |
 | B2.6 | TokenDelta events per step_finish (fixes live-token lag F-3) | TODO | | |
 | B3.1 | Destructive-action confirm in TUI (A/K/S) + CLI (--yes/interactive) | TODO | | |
