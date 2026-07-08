@@ -35,12 +35,12 @@ public class PlanConfigTests
     [Fact]
     public void ShippedLoomPlanParsesWhenPresent()
     {
-        // Locate plans/loom.opencode.plan.json relative to the repo; skip if not found (env-independent).
+        // Locate examples/loom/loom.opencode.plan.json relative to the repo; skip if not found (env-independent).
         var dir = AppContext.BaseDirectory;
         string? path = null;
         for (var d = new DirectoryInfo(dir); d != null; d = d.Parent)
         {
-            var candidate = Path.Combine(d.FullName, "plans", "loom.opencode.plan.json");
+            var candidate = Path.Combine(d.FullName, "examples", "loom", "loom.opencode.plan.json");
             if (File.Exists(candidate)) { path = candidate; break; }
         }
         if (path == null) return; // not in a full checkout — soft skip

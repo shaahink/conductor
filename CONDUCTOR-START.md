@@ -7,19 +7,19 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #3 (B0, deliver) — landed **B0.3** (self-plan dry-run via temp-repo workaround) and
-      **B0.4** (--once smoke through the STABLE driver; fixed a real A6 crash — see qa).
-stage: **B0 COMPLETE** — B0.1…B0.6 all DONE. Battery GREEN: build 0w/0e net10, 56 tests pass.
+last: session #5 (B1, deliver) — landed **B1.1** (moved plans/loom* + plans/templates →
+      examples/loom/ via git mv; updated README/examples-README/PlanConfigTests; --dry-run green).
+stage: **B1 IN PROGRESS** — B1.1 DONE; B1.2…B1.7 TODO. Battery GREEN: build 0w/0e net10, 56 tests.
 gate: GREEN — `dotnet build Conductor.slnx` 0w/0e; `dotnet test` 56 pass.
-qa: session #2 PASS with a FIX — audit doc (53 file:line) + fake-agent 4-modes verified. But B0.4's
-      fake-agent.ps1 had NEVER been run through the real driver (A6): it emitted opencode-json flat
-      at root; driver reads it nested under `part` (AgentSession.cs:123) → InvalidOperationException
-      CRASH. Fixed the wire format; both success + gatesred scenarios now green via the stable driver.
-next: **B1.1** — move plans/loom* + templates → examples/loom/; prove Loom loads + --dry-run green
-      from the new path (docs/baton/stages/B1.md). B0 guardrails are the bar B1 is held to.
-trap: ratchet followups owed — MA0045 (B2), MA0002 (post-B2), MA0009 (B1.4).
+qa: session #3 (B0) PASS. Re-verified via the STABLE driver: (1) `--once` fake-agent smoke on a
+      fresh temp repo → Advanced/DONE flip, no A6 crash (trust model intact); (2) net10 + WAE +
+      Meziantou real (0-warning build proves analyzers not weakened, A17 clean). No findings.
+next: **B1.2** — `Core/Planning/IProgressProvider.cs` + `MarkdownTableProvider` (extract today's
+      TrackerParser behind the interface, byte-identical parse; existing TrackerParserTests exercise it).
+trap: dry-run touches target .conductor (AcquireLock) — always use a fixture repo, never the live run.
+      Ratchet followups owed — MA0045 (B2), MA0002 (post-B2), MA0009 (B1.4).
 dirty: none tracked.
-evidence: B0.1-gate.txt, B0.2-gate.txt, B0.3-gate.txt, B0.4-gate.txt, B0.5-gate.txt, audits/B0-baseline.md, adr/000{1,2}-*.md
+evidence: B1.1-gate.txt (+ B0.1…B0.5, audits/B0-baseline.md, adr/000{1,2}-*.md)
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -46,7 +46,7 @@ never silent renumbering.
 | B0.4 | fake-agent.ps1 scenarios extended; self-loop token-free smoke via --once (fixed A6 crash: opencode-json must nest under `part`) | DONE | 3032eb9 | docs/baton/evidence/B0.4-gate.txt |
 | B0.5 | Baseline audit doc (current coupling/debt) written as B0 evidence | DONE | 62a819e | docs/baton/evidence/B0.5-gate.txt, docs/baton/audits/B0-baseline.md |
 | B0.6 | ADR-0001 (tooling/ruleset rationale) + ADR-0002 (event-sourcing decision) | DONE | cf378f0,d416ead | docs/baton/adr/0001-tooling-and-ruleset.md, docs/baton/adr/0002-event-sourcing.md |
-| B1.1 | Move plans/loom* + templates → examples/loom/; Loom loads + --dry-run green from new path | TODO | | |
+| B1.1 | Move plans/loom* + templates → examples/loom/; Loom loads + --dry-run green from new path | DONE | (this commit) | docs/baton/evidence/B1.1-gate.txt |
 | B1.2 | IProgressProvider abstraction + MarkdownTableProvider (today's parser, zero behaviour change) | TODO | | |
 | B1.3 | ScriptProvider (command→JSON) + PlanCheckpointProvider | TODO | | |
 | B1.4 | Configurable conventions (stage-id regex incl. P-0/P3.4b/F5, handoff marker, HUMAN token, status vocab) | TODO | | |

@@ -41,13 +41,13 @@ cd C:\code\conductor
 dotnet build
 
 # see what the first session prompt would be — spawns nothing
-dotnet run --project src\Conductor -- run --dry-run -p plans\loom.plan.json
+dotnet run --project src\Conductor -- run --dry-run -p examples\loom\loom.plan.json
 
 # run ONE session and stop (recommended for the first supervised run)
-dotnet run --project src\Conductor -- run --once -p plans\loom.plan.json
+dotnet run --project src\Conductor -- run --once -p examples\loom\loom.plan.json
 
 # run the whole plan; Ctrl+C is always safe
-dotnet run --project src\Conductor -- run -p plans\loom.plan.json
+dotnet run --project src\Conductor -- run -p examples\loom\loom.plan.json
 ```
 
 Tip: `dotnet publish src\Conductor -c Release -o bin` gives you a standalone
@@ -76,13 +76,13 @@ themselves, so `git log` is the second AFK view.
 **From another terminal** — the same verbs work out-of-process via a control file:
 
 ```powershell
-conductor status  -p plans\loom.plan.json   # tables: stages, recent sessions
-conductor pause   -p plans\loom.plan.json
-conductor resume  -p plans\loom.plan.json
-conductor kill    -p plans\loom.plan.json
-conductor skip    -p plans\loom.plan.json
-conductor abort   -p plans\loom.plan.json
-conductor report  -p plans\loom.plan.json   # regenerate REPORT.md on demand
+conductor status  -p examples\loom\loom.plan.json   # tables: stages, recent sessions
+conductor pause   -p examples\loom\loom.plan.json
+conductor resume  -p examples\loom\loom.plan.json
+conductor kill    -p examples\loom\loom.plan.json
+conductor skip    -p examples\loom\loom.plan.json
+conductor abort   -p examples\loom\loom.plan.json
+conductor report  -p examples\loom\loom.plan.json   # regenerate REPORT.md on demand
 ```
 
 ## How a session is judged
@@ -105,7 +105,7 @@ parks as NeedsHuman. The advisor is deliberately marginal: deterministic rules f
 
 ## Plan config
 
-Everything lives in one JSON per mega plan — see `plans/loom.plan.json` (commented).
+Everything lives in one JSON per mega plan — see `examples/loom/loom.plan.json` (commented).
 The important parts:
 
 - `agent` — command + args for headless sessions. `{prompt}`, `{sessionId}`,
