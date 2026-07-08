@@ -132,6 +132,34 @@ public class EventLogTests
     }
 
     [Fact]
+    public void EmitPreservesSessionIdSoLiveMetricsCanFoldPersistedDeltas()
+    {
+        // Regression: TokenDelta must reach disk with its SessionId intact. EventLog.Emit stamps
+        // Seq/Ts/RunId but MUST NOT clobber the per-event SessionId the emitter set, or
+        // LiveMetrics.ForSession (B2.6) folds nothing from a real run's log. Locks the end-to-end
+        // path AgentSession → EventLog → LiveMetrics that a null sessionId silently broke.
+        var path = TempPath();
+        try
+        {
+            using (var log = new EventLog(path, "run-1"))
+            {
+                log.Emit(new TokenDelta { SessionId = "7", Input = 100, Output = 40, CostUsd = 0.01m });
+                log.Emit(new TokenDelta { SessionId = "7", Input = 60, Output = 20, CostUsd = 0.02m });
+                log.Emit(new TokenDelta { SessionId = "8", Input = 999, Output = 999 });
+            }
+
+            var events = EventLog.ReadAll(path);
+            Assert.All(events.OfType<TokenDelta>(), td => Assert.False(string.IsNullOrEmpty(td.SessionId)));
+
+            var totals = LiveMetrics.ForSession(events, sessionNumber: 7);
+            Assert.Equal(160, totals.Input);   // 100 + 60, session 8's delta excluded
+            Assert.Equal(60, totals.Output);
+            Assert.Equal(0.03m, totals.CostUsd);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
     public void ReadAllSucceedsWhileLiveWriterHoldsTheFile()
     {
         // Crash recovery (Orchestrator.RecoverFromCrash) reads events.jsonl while the process's own

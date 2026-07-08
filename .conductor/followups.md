@@ -44,3 +44,24 @@ Fixed in-phase by the B1 audit (no followup needed, recorded for the trail): sha
 scaffold was undrivable (declared `P-0/P0/P1` stages but scaffolded `S1` rows) â†’ now stage-coherent
 + `NewPlanScaffoldTests`; double-space/tab `IN PROGRESS` silently misclassified by the new status
 vocabulary â†’ whitespace-tolerant `StartsWithAny` + regression test. See `.conductor/handovers/B1.md`.
+
+## Opened by B2 (audit session, 2026-07-08, session #17)
+
+| id | item | detail | owning stage | status |
+|----|------|--------|--------------|--------|
+| FU-B2-1 | `LiveMetrics` has no production consumer | `ForSession`/`RunWide` are called only from tests; the dashboard reads `agent.Tokens*` directly. The B2 audit FIXED the persisted-data bug (TokenDelta now carries `sessionId`), so the log is now correct — but the end-to-end "consumer folds live tokens from the log" loop is unproven by a real run. Wire it and prove against a recorded log. | B5 | OPEN |
+| FU-B2-2 | `RunStateProjection.FindInterruptedSession` assumes single-session | Tracks one "most recent unmatched start"; cannot represent two concurrently-interrupted sessions. Matches today's one-session-at-a-time model but is an undocumented invariant parallel-lane stages must revisit. | parallel-lane stage | OPEN |
+| FU-B2-3 | Orphaned-`SessionStarted` recovery may queue a non-resume | Event-log recovery of a `SessionStarted` with no matching `state.json` record synthesises a `SessionRecord` and queues a resume with the event's `AgentSessionId` — possibly empty ? starts a FRESH agent, not a true resume (safe-ish re-deliver, but silent). Double-hard-crash-only path; untested against an empty-id orphaned stream. Add a test + decide skip vs re-deliver vs needs-human. | B3 (process control) | OPEN |
+
+**Fixed in-phase by the B2 audit** (no followup, recorded for the trail): persisted `TokenDelta`
+events never carried a `sessionId`, so `LiveMetrics.ForSession` folded zero against a real log — the
+B2.6 deliverable was correct only in unit tests that hand-set `SessionId`. Now stamped in
+`AgentSession` from the conductor session number + regression test
+`EventLogTests.EmitPreservesSessionIdSoLiveMetricsCanFoldPersistedDeltas` (real on-disk path). See
+`.conductor/handovers/B2.md`.
+
+**Re-homed from B0/B1 (B2 owned but did not clear):** FU-B0-1 (MA0045 sync-over-async engine),
+FU-B1-1 (ScriptProvider stdout/stderr split), FU-B1-2 (CT through `IProgressProvider.Read`) remain
+OPEN. B2 added Host/DI/logging groundwork but kept the Orchestrator run loop synchronous; the async
+engine pass was NOT done. `MA0045` stays at `suggestion` (not lowered — no ratchet violation, but not
+raised either). Schedule a dedicated async/harden lane rather than assuming these landed in B2.

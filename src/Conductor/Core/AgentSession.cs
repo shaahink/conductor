@@ -43,18 +43,21 @@ public sealed class AgentSession : IDisposable
     public long? TokensCacheRead => _stream.TokensCacheRead;
     public bool WasKilled { get; private set; }
 
-    private AgentSession(Process proc, StreamWriter raw, IAgentProvider provider, IEventSink? eventSink)
+    private AgentSession(Process proc, StreamWriter raw, IAgentProvider provider, IEventSink? eventSink, string? conductorSessionId)
     {
         _proc = proc;
         _raw = raw;
         _provider = provider;
+        // Stamp the conductor session number on every TokenDelta so the LiveMetrics.ForSession fold
+        // (B2.6) can attribute live burn to a session — EventLog only stamps Seq/Ts/RunId, not the
+        // per-event SessionId, so it MUST be set here or ForSession folds nothing (B2.6 regression).
         Action<long, long, long, long, decimal>? tokenDelta = eventSink != null
-            ? (i, o, r, c, cost) => eventSink.Emit(new TokenDelta { Input = i, Output = o, Reasoning = r, CacheRead = c, CostUsd = cost })
+            ? (i, o, r, c, cost) => eventSink.Emit(new TokenDelta { SessionId = conductorSessionId, Input = i, Output = o, Reasoning = r, CacheRead = c, CostUsd = cost })
             : null;
         _stream = new AgentStreamState((kind, text) => _events.Enqueue(new AgentEvent { Kind = kind, Text = text }), tokenDelta);
     }
 
-    public static AgentSession Start(AgentConfig cfg, string cwd, string prompt, string sessionId, string? resumeClaudeId, string rawLogPath, IEventSink? eventSink = null)
+    public static AgentSession Start(AgentConfig cfg, string cwd, string prompt, string sessionId, string? resumeClaudeId, string rawLogPath, IEventSink? eventSink = null, string? conductorSessionId = null)
     {
         var template = (resumeClaudeId != null && cfg.ResumeArgs is { Count: > 0 }) ? cfg.ResumeArgs : cfg.Args;
         var args = template.Select(a => a
@@ -79,7 +82,7 @@ public sealed class AgentSession : IDisposable
         var raw = new StreamWriter(rawLogPath, append: false, Encoding.UTF8) { AutoFlush = true };
 
         var proc = new Process { StartInfo = psi };
-        var session = new AgentSession(proc, raw, AgentProviderFactory.Create(cfg), eventSink);
+        var session = new AgentSession(proc, raw, AgentProviderFactory.Create(cfg), eventSink, conductorSessionId);
         proc.OutputDataReceived += (_, e) => session.OnLine(e.Data, stderr: false);
         proc.ErrorDataReceived += (_, e) => session.OnLine(e.Data, stderr: true);
         proc.Start();

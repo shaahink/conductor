@@ -266,7 +266,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         bool stalled = false, timedOut = false, killedByUser = false;
         GateRunner.RunHook(plan, plan.Setup, "setup", Log, ct);
         using (var agent = AgentSession.Start(plan.Agent, plan.Repo, prompt, rec.ClaudeSessionId,
-                   kind == SessionKind.Resume ? rec.ClaudeSessionId : null, rawLog, events))
+                   kind == SessionKind.Resume ? rec.ClaudeSessionId : null, rawLog, events, rec.Number.ToString()))
         {
             _activity.Clear();
             var lastHeartbeat = DateTime.UtcNow;
