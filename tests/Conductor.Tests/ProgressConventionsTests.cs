@@ -142,4 +142,52 @@ public sealed class ProgressConventionsTests
         Assert.True(conv.IsBlocked("BLOCKED"));
         Assert.True(conv.MentionsHuman("stuck — HUMAN: decide the schema"));
     }
+
+    /// <summary>B1.7 — prove the Shamshir parity-pipeline TRACKER.md template parses with the
+    /// shamshir conventions (irregular ids P-0, P0.1, P3.4b). Stage-id derivation yields the
+    /// owning phase prefix for each checkpoint.</summary>
+    [Fact]
+    public void ShamshirParityPipelineTrackerTemplate_ParsesCorrectly()
+    {
+        // Locate the template copy relative to the repo.
+        var dir = AppContext.BaseDirectory;
+        string? path = null;
+        for (var d = new DirectoryInfo(dir); d != null; d = d.Parent)
+        {
+            var candidate = Path.Combine(d.FullName, "examples", "shamshir", "parity-pipeline.TRACKER.md");
+            if (File.Exists(candidate)) { path = candidate; break; }
+        }
+        if (path == null) return; // not in a full checkout — soft skip
+
+        var text = File.ReadAllText(path);
+        var conv = new ProgressConventions
+        {
+            StageIdPattern = @"(?<stage>[A-Za-z]+-?\d+)(?:\.\d+)?[a-z]?",
+        };
+        var snap = MarkdownTableProvider.Parse(text, conv);
+
+        // All checkpoint ids from the template
+        var ids = snap.Checkpoints.Select(c => c.Id).ToList();
+        Assert.Contains("P-0", ids);
+        Assert.Contains("P0.1", ids);
+        Assert.Contains("P0.5", ids);
+        Assert.Contains("P3.4", ids);
+        Assert.Contains("P6.1", ids);
+        Assert.Equal(17, ids.Count); // the template has 17 checkpoint rows
+
+        // Stage-id derivation: P-0 stays P-0; dotted ids strip the sub-index
+        Assert.Equal("P-0", snap.ById("P-0")!.StageId);
+        Assert.Equal("P0", snap.ById("P0.1")!.StageId);
+        Assert.Equal("P3", snap.ById("P3.4")!.StageId);
+        Assert.Equal("P6", snap.ById("P6.1")!.StageId);
+
+        // Per-stage grouping reflects the irregular ids
+        Assert.Single(snap.ForStage("P-0"));  // only P-0
+        Assert.Equal(5, snap.ForStage("P0").Count());   // P0.1..P0.5
+        Assert.Equal(2, snap.ForStage("P1").Count());   // P1.1, P1.2
+
+        // Handoff block extracted
+        Assert.Contains("(none)", snap.HandoffBlock, StringComparison.Ordinal);
+        Assert.Contains("P-0 NOT STARTED", snap.HandoffBlock, StringComparison.Ordinal);
+    }
 }

@@ -1,0 +1,22 @@
+=== B1.7 gate battery - Shamshir parity-pipeline TRACKER.md parses ===
+date: 2026-07-08
+branch: feat/baton
+
+--- dotnet build Conductor.slnx ---
+Build succeeded. 0 Warning(s), 0 Error(s). net10.0.
+
+--- dotnet test Conductor.slnx (full battery) ---
+Passed!  - Failed: 0, Passed: 81, Skipped: 0, Total: 81
+
+--- focused: ShamshirParityPipelineTrackerTemplate_ParsesCorrectly ---
+Reads examples/shamshir/parity-pipeline.TRACKER.md, parses with shamshir conventions
+(stageIdPattern for P-0/P3.4b), and verifies:
+  - 17 checkpoint rows parsed (P-0..P6.1)
+  - Stage-id derivation: P-0→P-0, P0.1→P0, P3.4→P3, P6.1→P6
+  - Per-stage grouping: P-0(1), P0(5), P1(2)
+  - Handoff block: "(none)", "P-0 NOT STARTED"
+  - Template already committed at examples/shamshir/parity-pipeline.TRACKER.md
+
+--- B0..B1 stage DONE check ---
+B0: 6/6 DONE. B1: 7/7 DONE (B1.1..B1.7 all landed).
+Full battery: build 0w/0e net10, 81 tests pass.
