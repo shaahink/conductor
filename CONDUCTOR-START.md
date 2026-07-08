@@ -7,21 +7,21 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #14 (B2, deliver) — landed **B2.4**. `IAgentProvider` + Opencode/Claude/GenericText
-      adapters; `AgentSession` delegates all wire parsing to the provider; Orchestrator dropped its
-      `LimitRx` and uses `provider.DetectsUsageLimit`. `AgentConfig.Provider` selects the adapter
-      (infers from legacy `output` when unset). 113 tests (98→+15). Additive — parsing byte-identical.
-stage: **B2 IN PROGRESS** — B2.1…B2.4 DONE; B2.5, B2.6 TODO. Battery GREEN.
-gate: GREEN — build 0w/0e; test 113 pass. Truth gate: opencode/claude/text captured-sample parse
-      tests + factory selection all green; Loom-shaped opencode-json plan dry-runs via new path.
-qa: session #13 (B2.3 deliver) PASS — (1) recovery + 6 projection tests green; (2) RecoverFromCrash
-      reads events.jsonl via FindInterruptedSession (in-tree build emits it per B2.1 artifact). No findings.
-next: **B2.5** — Host/DI/Options (validated) + Microsoft.Extensions.Logging + Serilog file+console
-      sinks with correlation scope (runId/sessionId/stage/gate); audit every `catch {}` (no silent swallow).
-trap: `output` is kept everywhere for STABLE-driver back-compat (it ignores the new `provider` field);
-      `provider` is preferred only when set. Parsing was relocated, not changed — no stall/limit regression.
+last: session #15 (B2, deliver) — landed **B2.5**. `ConductorHost` = Microsoft.Extensions.Hosting +
+      DI; plan validated on start (Options/IValidateOptions); Serilog file sink `.conductor/logs/`
+      (+console only when no TUI) with runId/sessionId/stage/gate scope per line; catch-site audit
+      (no silent swallow). 118 tests (113→+5).
+stage: **B2 IN PROGRESS** — B2.1…B2.5 DONE; **B2.6 TODO** (last of stage). Battery GREEN.
+gate: GREEN — build 0w/0e; test 118 pass. Real --once smoke wrote a log with run=/s=1/stage=S1/
+      gate=battery:full (exit 0); invalid plan → OptionsValidationException (error surfaces, A15).
+qa: session #14 (B2.4) PASS, no findings (15 provider tests green; factory dry-run exit 0). Also fixed
+      a latent **B2.3** bug (88db09c): EventLog.ReadAll used FileShare.Read → crash-recovery threw on
+      any real run with a live writer (B2.3 only unit-tested the fold, never launched — A6). Now ReadWrite.
+next: **B2.6** — TokenDelta events per provider step_finish + LiveMetrics projection (live tokens/cost, F-3).
+trap: Serilog console sink OFF under the TUI (dashboard owns stdout), ON for plain runs. Host is a
+      composition/logging root (no IHostedService); options validated eagerly inside Build.
 dirty: none tracked.
-evidence: B2.4-gate.txt (+ earlier)
+evidence: B2.5-gate.txt (+ earlier)
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -59,7 +59,7 @@ never silent renumbering.
 | B2.2 | Projections: RunState rebuilt by folding the log; StateCompat parity tests | DONE | e2b6a03 | docs/baton/evidence/B2.2-gate.txt |
 | B2.3 | Crash recovery replays the event log (not just state.json) | DONE | a5a6b85 | docs/baton/evidence/B2.3-gate.txt |
 | B2.4 | IAgentProvider + Opencode/Claude/GenericText adapters; Orchestrator provider-switch removed | DONE | 8e1ceb4 | docs/baton/evidence/B2.4-gate.txt |
-| B2.5 | Host/DI/Options + Microsoft.Extensions.Logging + Serilog sinks; no silent catch {} | TODO | | |
+| B2.5 | Host/DI/Options + Microsoft.Extensions.Logging + Serilog sinks; no silent catch {} | DONE | 02da5a0, 7512371 | docs/baton/evidence/B2.5-gate.txt |
 | B2.6 | TokenDelta events per step_finish (fixes live-token lag F-3) | TODO | | |
 | B3.1 | Destructive-action confirm in TUI (A/K/S) + CLI (--yes/interactive) | TODO | | |
 | B3.2 | Owner-gate step type + AwaitingOwner status; approve via CLI/TUI | TODO | | |
