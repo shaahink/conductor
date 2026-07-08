@@ -1,0 +1,18 @@
+<!-- Central build properties for all projects (B0.1).
+     Common TFM + modern-C# knobs live here so every project inherits one source of truth.
+     Analyzers + warnings-as-errors + curated ruleset land in B0.2 (see .editorconfig / ADR-0001). -->
+<Project>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+
+    <!-- Deterministic, reproducible builds. -->
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+</Project>
