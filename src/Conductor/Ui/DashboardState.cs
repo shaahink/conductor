@@ -12,7 +12,7 @@ public sealed record DashboardState
     public DashboardSnapshot Snap { get; init; } = new();
     public IReadOnlyList<AgentLine> Agent { get; init; } = Array.Empty<AgentLine>();
     public IReadOnlyList<ThinkingLine> Thinking { get; init; } = Array.Empty<ThinkingLine>();
-    public IReadOnlyList<string> Log { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<LogEntry> Log { get; init; } = Array.Empty<LogEntry>();
     public int Width { get; init; } = 120;
     public int Height { get; init; } = 40;
     /// <summary>Animation frame counter for the activity spinner.</summary>

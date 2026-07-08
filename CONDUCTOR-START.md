@@ -7,25 +7,26 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #28 (B4, deliver) — landed **B4.3**: hierarchical plan tree. New pure `PlanTree`
-      (VisibleRows filter/search/expand + Build renderable) + `StageProgress`/`Snap.Stages`
-      (attempts/last-outcome/cost from history). Left column is now ONE tree panel (retired the
-      stacked overview+checkpoint panels); F=filter, E=expand-all. +12 tests. 172→184.
-stage: **B4 IN PROGRESS** — B4.1, B4.2, B4.3 DONE. Next B4.4 (severity model + header labels).
-gate: GREEN — build 0w/0e; 184 tests pass; PlanTreeTests 10/10; DashboardRendererTests 29/29.
-      `conductor preview` redirected exit 0, renders `plan (F) All/Todo/…` + `▸ B0 6/6 · 4×` per-stage
-      columns + `[F] filter`/`[E] expand` hints, no alt-screen escapes — B4.3-preview.txt.
-qa: session #27/B4.2 PASS — re-ran gate (build 0w/0e, 172 tests, DashboardRendererTests 27/27).
-      Claim-1 via tests (Grid header + no-stacking guards green); claim-2 via running exe
-      (`preview` redirected exit 0, 3665 chars, header metrics + log Rule, NO alt-screen escapes).
-next: **B4.4** — severity model (INFO/WARN/ERROR/SUCCESS/WAITING/HUMAN) applied to log + status;
-      clarify header labels ("N untracked" explained/dropped). Gate: renderer test asserts
-      severity colour/glyph mapping; "untracked" reworded.
-trap: redirected `preview` reports SafeWidth=120 while AnsiConsole surface is 80 → the ~20-col left
-      panel wraps the meta cell in that artifact ONLY (pre-existing RunPreview mismatch, NOT PlanTree;
-      one clean line at matched widths per tests). Manual TUI still needs a real TTY. push may fail (github).
+last: session #29 (B4.4, deliver) — landed **B4.4**: severity model + header label fix.
+      New `LogSeverity` enum (Info/Warn/Error/Success/Waiting/Human) + `LogEntry` in Core;
+      `SeverityGlyph`/`SeverityColor` on DashboardRenderer; log entries rendered with
+      coloured severity glyph prefix in the footer; "N untracked" reworded → "N sessions
+      unreported". Added `IProgressSink.Log(LogEntry)` default overload (non-breaking).
+      +5 tests (SeverityGlyphMapping × 6, SeverityColorMatchesGlyph, LogRendersWithSeverity,
+      CostLineOmitsWhenZero). 184→193 tests.
+stage: **B4 IN PROGRESS** — B4.1, B4.2, B4.3, B4.4 DONE. Next B4.5 (structured thinking pane +
+      tool-call folding).
+gate: GREEN — build 0w/0e; 193 tests pass; DashboardRendererTests 32/32; PlanTreeTests 10/10.
+      `conductor preview` redirected exit 0, shows "6 sessions unreported" in header, log pane
+      with severity prefix. B4.4-gate.txt, B4.4-preview.txt.
+qa: session #28/B4.3 PASS — re-ran gate (build 0w/0e, 193 tests). Claim-1: PlanTreeTests 10/10
+      + DashboardRendererTests (header grid guards + no-stacking guards green). Claim-2: preview
+      artifact shows hierarchical tree with B0…B2 stages, per-stage columns, filter hints.
+next: **B4.5** — structured thinking pane (Goal/Hypothesis/Evidence/Action) + tool-call folding.
+trap: `StateCompatTests` serialises `UntrackedSessions` (old name in JSON) — property name unchanged,
+       only the display label was reworded. `EventLogTests.ReadAll…` is flaky (passes on retry).
 dirty: none tracked.
-evidence: B4.3-gate.txt, B4.3-preview.txt
+evidence: B4.4-gate.txt, B4.4-preview.txt
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -73,7 +74,7 @@ never silent renumbering.
 | B4.1 | Alternate-screen buffer with clean restore on exit/crash | DONE | c6d5efb | docs/baton/evidence/B4.1-gate.txt |
 | B4.2 | Spectre Layout rebuild of DashboardRenderer.BuildRoot | DONE | d3aa1a5 | docs/baton/evidence/B4.2-gate.txt |
 | B4.3 | Hierarchical plan tree (sub-checkpoints; expand/collapse; per-stage cost/attempts/last-outcome) | DONE | 8197bd4 | docs/baton/evidence/B4.3-gate.txt, docs/baton/evidence/B4.3-preview.txt |
-| B4.4 | Severity model (INFO/WARN/ERROR/SUCCESS/WAITING/HUMAN) + clearer header labels | TODO | | |
+| B4.4 | Severity model (INFO/WARN/ERROR/SUCCESS/WAITING/HUMAN) + clearer header labels | DONE | <commit> | docs/baton/evidence/B4.4-gate.txt, docs/baton/evidence/B4.4-preview.txt |
 | B4.5 | Structured thinking pane (Goal/Hypothesis/Evidence/Action) + tool-call folding | TODO | | |
 | B4.6 | Command history search + filters (/build /git /test; commands/thoughts/errors) | TODO | | |
 | B4.7 | Live-consistent token line + plan-tree filter/search for large plans; doc-on-select | TODO | | |

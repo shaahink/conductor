@@ -44,7 +44,7 @@ public class DashboardRendererTests
         },
         Agent = new[] { new DashboardState.AgentLine("tool", "bash git status", DateTime.UtcNow) },
         Thinking = new[] { new DashboardState.ThinkingLine(DateTime.UtcNow, "thinking about L1.1") },
-        Log = new[] { "session #5 start" },
+        Log = new LogEntry[] { new("session #5 start", DateTime.UtcNow, LogSeverity.Info) },
     };
 
     [Fact]
@@ -103,9 +103,66 @@ public class DashboardRendererTests
             SessionCostUsd = 0.0239m,
             UntrackedSessions = 3,
         });
-        Assert.Contains("$0.0239", line);      // combined shows the live session cost, not $0.0000
+        Assert.Contains("$0.0239", line);              // combined shows the live session cost, not $0.0000
         Assert.Contains("session $0.0239", line);
-        Assert.Contains("3 untracked", line);
+        Assert.Contains("3 sessions unreported", line); // B4.4: reworded from cryptic "untracked"
+    }
+
+    [Theory]
+    [InlineData(LogSeverity.Info, "grey", "·")]
+    [InlineData(LogSeverity.Warn, "orange1", "!")]
+    [InlineData(LogSeverity.Error, "red", "✗")]
+    [InlineData(LogSeverity.Success, "green", "✓")]
+    [InlineData(LogSeverity.Waiting, "yellow", "…")]
+    [InlineData(LogSeverity.Human, "bold aqua", "§")]
+    public void SeverityGlyphMapsEveryLevelToDistinctColorAndGlyph(LogSeverity s, string color, string glyph)
+    {
+        // B4.4: the severity model must map each level to a consistent (colour · glyph) pair
+        // so the footer log, activity line, and status header all speak the same visual language.
+        var (c, g) = DashboardRenderer.SeverityGlyph(s);
+        Assert.Equal(color, c);
+        Assert.Equal(glyph, g);
+    }
+
+    [Fact]
+    public void LogRendersWithSeverityPrefix()
+    {
+        // B4.4: log entries with non-Info severity render a coloured glyph before the text.
+        var st = SampleState() with
+        {
+            Log = new LogEntry[]
+            {
+                new("build started", DateTime.UtcNow, LogSeverity.Info),
+                new("gate failed: tests red", DateTime.UtcNow, LogSeverity.Error),
+                new("waiting for owner approval", DateTime.UtcNow, LogSeverity.Waiting),
+            },
+        };
+        var outp = Render(st, width: 160, height: 24);
+        Assert.Contains("gate failed", outp);
+        Assert.Contains("waiting for owner approval", outp);
+    }
+
+    [Fact]
+    public void CostLineOmitsSessionCostWhenZero()
+    {
+        var line = DashboardRenderer.CostLine(new DashboardSnapshot
+        {
+            TotalCostUsd = 0m,
+            SessionCostUsd = 0m,
+            UntrackedSessions = 0,
+        });
+        Assert.DoesNotContain("session", line);
+        Assert.DoesNotContain("unreported", line);
+    }
+
+    [Fact]
+    public void SeverityColorMatchesGlyph()
+    {
+        foreach (LogSeverity s in Enum.GetValues<LogSeverity>())
+        {
+            var (color, _) = DashboardRenderer.SeverityGlyph(s);
+            Assert.Equal(color, DashboardRenderer.SeverityColor(s));
+        }
     }
 
     [Fact]

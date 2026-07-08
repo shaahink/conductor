@@ -1,5 +1,18 @@
 namespace Conductor.Core;
 
+public enum LogSeverity
+{
+    Info,
+    Warn,
+    Error,
+    Success,
+    Waiting,
+    Human,
+}
+
+/// <summary>A single log entry with severity for colour-coded display in the footer log pane (B4.4).</summary>
+public readonly record struct LogEntry(string Text, DateTime Utc, LogSeverity Severity = LogSeverity.Info);
+
 public enum ControlAction
 {
     PauseAfterSession,
@@ -98,6 +111,8 @@ public sealed record DashboardSnapshot
 public interface IProgressSink
 {
     void Log(string line);
+    /// <summary>Log with severity — default renders as plain text; the dashboard override captures the severity for colour-coded display.</summary>
+    void Log(LogEntry entry) { Log(entry.Text); }
     void AgentEvent(AgentEvent ev);
     void Snapshot(DashboardSnapshot snap);
     ControlAction? PollControl();

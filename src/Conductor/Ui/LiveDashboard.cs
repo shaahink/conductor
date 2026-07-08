@@ -22,7 +22,7 @@ public sealed class LiveDashboard : IProgressSink
     private readonly Lock _gate = new();
     private readonly List<DashboardState.AgentLine> _agent = new();
     private readonly ReasoningBuffer _thinking = new();
-    private readonly List<string> _log = new();
+    private readonly List<LogEntry> _log = new();
     private readonly ConcurrentQueue<ControlAction> _keys = new();
     private readonly PlanConfig? _plan;
     private DashboardSnapshot _snap = new();
@@ -50,7 +50,17 @@ public sealed class LiveDashboard : IProgressSink
     {
         lock (_gate)
         {
-            _log.Add(line);
+            _log.Add(new LogEntry(line, DateTime.UtcNow, LogSeverity.Info));
+            if (_log.Count > 300) _log.RemoveRange(0, 100);
+        }
+    }
+
+    /// <summary>Log with explicit severity (B4.4). The UI thread captures the structured entry for colour-coded display.</summary>
+    void IProgressSink.Log(LogEntry entry)
+    {
+        lock (_gate)
+        {
+            _log.Add(new LogEntry(entry.Text, entry.Utc, entry.Severity));
             if (_log.Count > 300) _log.RemoveRange(0, 100);
         }
     }

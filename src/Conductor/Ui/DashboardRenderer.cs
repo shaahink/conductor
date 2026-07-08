@@ -164,13 +164,27 @@ public static class DashboardRenderer
         return $"checkpoints [bold]{s.DoneCount}/{s.TotalCount}[/] ({pct}%)";
     }
 
-    /// <summary>Cost broken out so a missing/older cost never reads as a misleading $0.0000.</summary>
+    /// <summary>Log entries with severity colour + glyph prefix so the footer log distinguishes
+    /// warnings, errors, successes, and human-in-the-loop messages from noise (B4.4).</summary>
+    public static (string Color, string Glyph) SeverityGlyph(LogSeverity s) => s switch
+    {
+        LogSeverity.Info => ("grey", "·"),
+        LogSeverity.Warn => ("orange1", "!"),
+        LogSeverity.Error => ("red", "✗"),
+        LogSeverity.Success => ("green", "✓"),
+        LogSeverity.Waiting => ("yellow", "…"),
+        LogSeverity.Human => ("bold aqua", "§"),
+        _ => ("grey", "·"),
+    };
+
+    /// <summary>Converts a <see cref="LogSeverity"/> to a Spectre colour for use in markup.</summary>
+    public static string SeverityColor(LogSeverity s) => SeverityGlyph(s).Color;
     public static string CostLine(DashboardSnapshot s)
     {
         var combined = s.TotalCostUsd + s.SessionCostUsd;
         var txt = $"cost [bold]${combined:0.0000}[/]";
         if (s.SessionCostUsd > 0) txt += $" [grey](session ${s.SessionCostUsd:0.0000})[/]";
-        if (s.UntrackedSessions > 0) txt += $" [grey]· {s.UntrackedSessions} untracked[/]";
+        if (s.UntrackedSessions > 0) txt += $" [grey]· {s.UntrackedSessions} sessions unreported[/]";
         return txt;
     }
 
@@ -321,7 +335,11 @@ public static class DashboardRenderer
         if (st.Log.Count > 0)
         {
             rows.Add(new Rule("[grey37]log[/]").LeftJustified().RuleStyle("grey37"));
-            rows.AddRange(st.Log.Select(l => (IRenderable)new Markup("[grey]" + Esc(l) + "[/]")));
+            rows.AddRange(st.Log.Select(l =>
+            {
+                var (color, glyph) = SeverityGlyph(l.Severity);
+                return (IRenderable)new Markup($"[{color}]{glyph}[/] [grey]{Esc(l.Text)}[/]");
+            }));
         }
         return new Panel(new Rows(rows)).Header("[aqua]conductor[/]").Expand().Border(BoxBorder.Rounded);
     }
