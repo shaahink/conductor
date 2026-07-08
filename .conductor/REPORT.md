@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 15:58 UTC · branch `feat/baton` · HEAD `e2e7ccc`_
+_Updated 2026-07-08 16:08 UTC · branch `feat/baton` · HEAD `5cfbb4d`_
 
-**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 0 · working ▸ B4.7
-**Checkpoints:** 30/65 done · **Sessions run:** 31 · **Cost:** $1.1196 · **Tokens:** 502,988 in / 426,019 out / 188,512 think
+**Checkpoints:** 30/65 done · **Sessions run:** 32 · **Cost:** $1.1196 · **Tokens:** 502,988 in / 426,019 out / 188,512 think
 **Confirmed phases:** B0, B1, B2, B3
+
+## Latest activity (live)
+
+_Session #32 (Deliver) · running 10m · last output 4s ago · $0.0149_
+
+**Thinking:**
+> I'm trying to locate the token information in the header structure. The header has four rows, and I need to figure out which row contains the token data—it should be row 3 based on the layout, but I'm seeing cost information at line 6 instead, which suggests the rows might be offset from what I expe…
+> I'm noticing the header display is getting compressed because the AttentionReason text wraps across multiple lines, which is eating up the available rows and hiding the token line. The width constraint seems to be set to 80 characters as a safe default, but when the console is redirected it might be…
+> Since PowerShell doesn't support heredocs, I'll write the commit message to a temporary file and pass it using the -F flag instead.
+
+**Recent actions:**
+- `17:06:13` · Let me seed live session tokens in the preview so the artifact demonstrates the new delta, then capture the evidence.
+- `17:06:30` » bash cd C:\Code\conductor-baton; dotnet build Conductor.slnx 2>&1 | Select-Object -Last 3; & "src\Conductor\bin\Debug\net10.0\conductor.exe" preview -p plans\co…
+- `17:06:40` » read {"filePath":"C:\\Code\\conductor-baton\\docs\\baton\\evidence\\B4.7-tokens-preview.txt","limit":10}
+- `17:06:49` » bash cd C:\Code\conductor-baton; (Get-Content docs\baton\evidence\B4.7-tokens-preview.txt)[5..9]
+- `17:07:00` » bash cd C:\Code\conductor-baton; (Get-Content docs\baton\evidence\B4.7-tokens-preview.txt)[0..8] | ForEach-Object { $_ }
+- `17:07:34` · Token line renders (cost shows the matching `(session $0.0239)` shape; the token delta is proven by the unit test — the header region crops at this narrow redir…
+- `17:07:35` » bash cd C:\Code\conductor-baton; git add src/Conductor/Ui/DashboardRenderer.cs src/Conductor/Ui/DashboardPreview.cs tests/Conductor.Tests/DashboardRendererTests…
+- `17:07:48` » bash cd C:\Code\conductor-baton; git commit -q -F - <<'EOF' feat(bB4.7): live-consistent token line folds session delta like cost  R4.7 (part 1). The token line…
+- `17:08:01` · PowerShell doesn't support heredocs. Let me write the message to a temp file.
+- `17:08:01` » write ..\..\Users\shahi\AppData\Local\Temp\opencode\commitmsg.txt
 
 ## Stage progress
 
@@ -29,7 +50,6 @@ _Updated 2026-07-08 15:58 UTC · branch `feat/baton` · HEAD `e2e7ccc`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 2 | B0 | Deliver | 1 | 07-08 02:11 | 0:23 | running | B0.5 | 5 | build:OK | $0.0890 | 64,355/27,152 |
 | 3 | B0 | Deliver | 1 | 07-08 03:03 | 0:50 | Advanced | B0.3 B0.4 | 8 | build:OK | $0.0231 | 1,644/13,133 |
 | 4 | B0 | Audit | 1 | 07-08 03:54 | 0:08 | Progress |  | 1 |  | $0.0116 | 1,138/6,511 |
 | 5 | B1 | Deliver | 1 | 07-08 04:02 | 0:12 | Advanced | B1.1 | 3 | build:OK | $0.0221 | 1,245/10,975 |
@@ -59,6 +79,7 @@ _Updated 2026-07-08 15:58 UTC · branch `feat/baton` · HEAD `e2e7ccc`_
 | 29 | B4 | Deliver | 1 | 07-08 15:04 | 0:12 | Advanced | B4.4 | 3 | build:OK | $0.0567 | 62,572/12,919 |
 | 30 | B4 | Deliver | 1 | 07-08 15:16 | 0:21 | Advanced | B4.5 | 7 | build:OK | $0.0351 | 2,137/17,812 |
 | 31 | B4 | Deliver | 1 | 07-08 15:38 | 0:19 | Advanced | B4.6 | 3 | build:OK | $0.0253 | 1,939/12,322 |
+| 32 | B4 | Deliver | 1 | 07-08 15:58 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
