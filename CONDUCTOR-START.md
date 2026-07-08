@@ -8,14 +8,13 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #63 (B11.2-B11.4) — dotnet tool packaging + tab completion + doctor + ADRs + clean-clone + Shamshir P2.2 owner-gated acceptance.
-stage: B11 DONE — all 4 checkpoints landed.
-gate: GREEN — 432 passed / 0 failed / 0 skipped. Build 0w/0e. Clean-clone battery passes.
+last: session #64 (B11 audit) — static audit completed: 5 bugs fixed (PS completion new-plan/completion/options, pwsh ExecutionPolicy, SafeParseTracker warning). Gate: 432 pass, 0w/0e.
+stage: B11 DONE + AUDITED. Handover written (.conductor/handovers/B11.md). 3 followups created (FU-B11-1..3).
 dirty: none.
-next: B12.1 (Tier A read-only analysis lanes) or B12 fix-lanes from followups.
-QA-B11.1: verified RunShell dispatch (ProcessRunner.cs:70-86), 15 B11.1 tests (B11_1Tests.cs).
-followups: MA0002 (38 sites), MA0045 (28 sites) — deferred from B0.2, tracked per ADR-0001.
-evidence: docs/baton/evidence/B11.2-gate.txt (packing+doctor+completion), B11.3-gate.txt (ADRs+clean-clone), B11.4-gate.txt + audits/B11-shamshir-p2.2.md (owner-gate acceptance).
+next: B12.1 (Tier A read-only analysis lanes) or B12 fix-lanes (tracked followups in .conductor/followups.md).
+QA-B11: verified all 4 checkpoints + diff audit; cross-platform shell dispatch, dotnet tool packaging, completion scripts, doctor, clean-clone battery, Shamshir owner-gate acceptance.
+followups: FU-B10-1/2 reassigned to B12; new FU-B11-1 (completion exhaustiveness test), FU-B11-2 (Linux clean-clone), FU-B11-3 (real-credential cTrader path).
+evidence: docs/baton/evidence/B11.{1,2,3,4}-gate.txt, docs/baton/audits/B11-shamshir-p2.2.md, .conductor/handovers/B11.md.
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
