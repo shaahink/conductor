@@ -45,6 +45,10 @@ app.Configure(c =>
         .WithDescription("Show task graph: sub-tasks per checkpoint from the event log.");
     c.AddCommand<NewPlanCommand>("new-plan")
         .WithDescription("Scaffold a new plan + TRACKER.md from a built-in template (minimal/dotnet/node/shamshir).");
+    c.AddCommand<DoctorCommand>("doctor")
+        .WithDescription("Print exactly what will happen on resume: pending sessions, gates, owner-approval, remaining stages.");
+    c.AddCommand<CompletionCommand>("completion")
+        .WithDescription("Generate shell completion scripts (powershell or bash).");
     c.SetExceptionHandler((ex, _) =>
     {
         AnsiConsole.MarkupLine($"[red]error:[/] {Markup.Escape(ex is InvalidOperationException or FileNotFoundException ? ex.Message : ex.ToString())}");

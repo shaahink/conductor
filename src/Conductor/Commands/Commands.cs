@@ -608,3 +608,211 @@ public sealed class NewPlanCommand : Command<NewPlanCommand.Settings>
         """;
     }
 }
+
+/// <summary>
+/// B11.2 — doctor: prints exactly what will happen on resume (pending fix/resume/phase-gate/audit/owner-gate).
+/// Read-only; never writes state.
+/// </summary>
+public sealed class DoctorCommand : Command<PlanSettings>
+{
+    public override int Execute(CommandContext context, PlanSettings settings)
+    {
+        var plan = PlanConfig.Load(settings.ResolvePlanPath());
+        var statePath = Path.Combine(plan.StateDir, "state.json");
+        var state = RunState.LoadOrNew(statePath, plan.Name);
+
+        AnsiConsole.MarkupLine($"[bold aqua]conductor doctor[/] — {Markup.Escape(plan.Name)}");
+        AnsiConsole.MarkupLine($"repo: {Markup.Escape(plan.Repo)}");
+        AnsiConsole.MarkupLine($"branch: {Markup.Escape(Git.Branch(plan.Repo))}");
+        AnsiConsole.MarkupLine($"state dir: {Markup.Escape(plan.StateDir)}");
+        AnsiConsole.WriteLine();
+
+        var statusColor = state.Status switch
+        {
+            RunStatus.Idle or RunStatus.Completed => "green",
+            RunStatus.Running or RunStatus.VerifyingGates => "yellow",
+            RunStatus.Backoff => "orange1",
+            RunStatus.Paused or RunStatus.NeedsHuman or RunStatus.AwaitingOwner => "red",
+            RunStatus.Aborted => "red",
+            _ => "grey",
+        };
+        AnsiConsole.MarkupLine($"[bold]Status:[/] [{statusColor}]{Markup.Escape(state.Status.ToString())}[/]");
+        AnsiConsole.MarkupLine($"[bold]Current stage:[/] {Markup.Escape(state.CurrentStage ?? "(none)")}");
+        AnsiConsole.MarkupLine($"[bold]Session counter:[/] {state.SessionCounter}");
+        AnsiConsole.MarkupLine($"[bold]Total cost:[/] ${state.TotalCostUsd:0.00}");
+
+        if (state.AttentionReason is { } reason)
+            AnsiConsole.MarkupLine($"[bold]Attention:[/] [red]{Markup.Escape(reason)}[/]");
+
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine("[bold aqua]On resume, this will happen:[/]");
+
+        var step = 1;
+        if (state.PendingFix is { } fix)
+        {
+            AnsiConsole.MarkupLine($"  {step++}. [yellow]Fix session[/] for stage {Markup.Escape(state.CurrentStage ?? "?")} (from session #{fix.FromSession})");
+            AnsiConsole.MarkupLine($"      gates failed: {Markup.Escape(fix.GateFailures)}");
+        }
+        if (state.PendingResume is { } resume)
+        {
+            AnsiConsole.MarkupLine($"  {step++}. [yellow]Resume session[/] from session #{resume.FromSession} — {Markup.Escape(resume.Reason)}");
+        }
+        if (state.Status == RunStatus.AwaitingOwner)
+        {
+            var awaitReason = state.AwaitingOwnerReason?.ToString() ?? "OwnerGate";
+            AnsiConsole.MarkupLine($"  {step++}. [green]Awaiting owner approval[/] for stage {Markup.Escape(state.CurrentStage ?? "?")} (reason: {Markup.Escape(awaitReason)})");
+            AnsiConsole.MarkupLine($"      approve: conductor approve -p <plan>");
+        }
+        if (state.PendingPhaseGate is { } pg)
+        {
+            AnsiConsole.MarkupLine($"  {step++}. [yellow]Phase gate pending[/] for stage {Markup.Escape(pg.StageId)} — full battery will run");
+        }
+        if (state.PendingAudit is { } audit)
+        {
+            AnsiConsole.MarkupLine($"  {step++}. [yellow]Audit pending[/] for stage {Markup.Escape(audit.StageId)}");
+        }
+
+        if (step == 1)
+        {
+            AnsiConsole.MarkupLine($"  {step++}. Next session: deliver for stage {Markup.Escape(state.CurrentStage ?? "?")}");
+        }
+
+        // Remaining stages
+        var track = SafeParseTracker(plan);
+        var remaining = plan.Stages
+            .Where(s =>
+            {
+                if (state.SkippedStages.Contains(s.Id)) return false;
+                if (state.ConfirmedStages.Contains(s.Id)) return false;
+                if (track != null)
+                {
+                    var rows = track.ForStage(s.Id).ToList();
+                    if (rows.Count == 0) return true;
+                    return !rows.All(r => r.IsDone);
+                }
+                return true;
+            })
+            .Select(s => s.Id)
+            .ToList();
+
+        if (remaining.Count > 0)
+            AnsiConsole.MarkupLine($"  {step}. [grey]Remaining stages:[/] {string.Join(" → ", remaining)}");
+        else
+            AnsiConsole.MarkupLine($"  {step}. [green]All stages complete[/]");
+
+        return 0;
+    }
+
+    private static TrackerSnapshot? SafeParseTracker(PlanConfig plan)
+    {
+        try { return TrackerParser.ParseFile(plan.TrackerPath); }
+        catch { return null; }
+    }
+}
+
+/// <summary>
+/// B11.2 — tab completion: generates shell completion scripts for PowerShell and bash.
+/// </summary>
+public sealed class CompletionCommand : Command<CompletionCommand.Settings>
+{
+    public sealed class Settings : CommandSettings
+    {
+        [CommandArgument(0, "<SHELL>")]
+        [Description("Target shell: powershell or bash")]
+        public string Shell { get; init; } = "";
+    }
+
+    public override int Execute(CommandContext context, Settings settings)
+    {
+        var shell = settings.Shell.ToLowerInvariant();
+        return shell switch
+        {
+            "powershell" => WritePowerShellCompletion(),
+            "bash" => WriteBashCompletion(),
+            _ => WriteUsageError(),
+        };
+    }
+
+    private static int WritePowerShellCompletion()
+    {
+        Console.WriteLine(GeneratePowerShell());
+        return 0;
+    }
+
+    internal static string GeneratePowerShell()
+    {
+        var verbs = "run status report replay preview pause resume approve kill skip inject abort retry-stage rollback pause-after-stage goto tasks new-plan doctor completion";
+        var opts = "-p --plan --yes --force --dry-run --once --max-sessions --no-dashboard -o --output --name --repo";
+        return $$"""
+            # conductor tab completion for PowerShell — generated by 'conductor completion powershell'
+            # Source: conductor completion powershell | Invoke-Expression
+            # Or save to a file and dot-source in $PROFILE: conductor completion powershell > conductor-completion.ps1
+
+            Register-ArgumentCompleter -Native -CommandName conductor -ScriptBlock {
+                param($wordToComplete, $commandAst, $cursorPosition)
+                $verbs = @('{{verbs}}' -split ' ')
+                $opts = @('{{opts}}' -split ' ')
+                $tokens = $commandAst.ToString() -split '\s+' | Where-Object { $_ }
+                if ($tokens.Count -eq 1) {
+                    $verbs | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
+                        [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
+                    }
+                }
+                elseif ($tokens.Count -ge 2 -and $tokens[1] -in @('run','status','report','replay','preview','pause','resume',
+                        'approve','kill','skip','inject','abort','retry-stage','rollback','pause-after-stage',
+                        'goto','tasks','doctor')) {
+                    if ($tokens.Count -gt 2) {
+                        $opts | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
+                            [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterName', $_)
+                        }
+                    }
+                }
+            }
+            """;
+    }
+
+    private static int WriteBashCompletion()
+    {
+        Console.WriteLine(GenerateBash());
+        return 0;
+    }
+
+    internal static string GenerateBash()
+    {
+        return """
+            # conductor tab completion for bash — generated by 'conductor completion bash'
+            # Source: source <(conductor completion bash)
+
+            _conductor_completion() {
+                local cur prev words cword
+                _init_completion || return
+                COMPREPLY=()
+                cur="${COMP_WORDS[COMP_CWORD]}"
+
+                if [[ $COMP_CWORD -eq 1 ]]; then
+                    COMPREPLY=($(compgen -W "run status report replay preview pause resume approve kill skip inject abort retry-stage rollback pause-after-stage goto tasks new-plan doctor completion" -- "$cur"))
+                    return
+                fi
+                case "${COMP_WORDS[1]}" in
+                    run|status|report|replay|preview|pause|resume|approve|kill|skip|inject|abort|retry-stage|rollback|pause-after-stage|goto|tasks|doctor)
+                        COMPREPLY=($(compgen -W "-p --plan --yes --force --dry-run --once --max-sessions --no-dashboard -o --output --name --repo" -- "$cur"))
+                        ;;
+                    completion)
+                        COMPREPLY=($(compgen -W "powershell bash" -- "$cur"))
+                        ;;
+                    new-plan)
+                        COMPREPLY=($(compgen -W "--template -o --output --name --repo" -- "$cur"))
+                        ;;
+                esac
+            }
+            complete -F _conductor_completion conductor
+            """;
+    }
+
+    private static int WriteUsageError()
+    {
+        AnsiConsole.MarkupLine("[red]Unknown shell.[/] Valid: powershell, bash.");
+        AnsiConsole.MarkupLine("Usage: conductor completion <powershell|bash>");
+        return 1;
+    }
+}

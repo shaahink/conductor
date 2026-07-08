@@ -4,6 +4,13 @@
     <OutputType>Exe</OutputType>
     <AssemblyName>conductor</AssemblyName>
     <RootNamespace>Conductor</RootNamespace>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>conductor</ToolCommandName>
+    <PackageId>conductor</PackageId>
+    <Version>2.0.0</Version>
+    <PackageDescription>A stateful execution environment for days-long AI software engineering — one verifiable session at a time.</PackageDescription>
+    <PackageTags>dotnet-tool;ai-agent;orchestration;code-generation</PackageTags>
+    <RepositoryUrl>https://github.com/shahabaz/conductor</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
