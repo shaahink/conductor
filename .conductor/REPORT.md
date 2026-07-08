@@ -1,8 +1,8 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 13:52 UTC · branch `feat/baton` · HEAD `8d7b1dd`_
+_Updated 2026-07-08 13:53 UTC · branch `feat/baton` · HEAD `080a8d1`_
 
-**Status:** NeedsHuman — stage B4 used all 6 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: Attempt budget is fully exhausted (6/6) with a stalled session, zero new commits, and an unresolved environmental blocker (push failing, github unreachable), so no automated retry/resume can make progress.
+**Status:** NeedsHuman — stage B4 used all 6 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: 6/6 attempts all stalled with zero commits — likely a structural blocker (TUI alt-screen too complex for single session, or Conductor bug) that needs human diagnosis before wasting more budget.
 **Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 6 · working ▸ B4.1
 **Checkpoints:** 24/65 done · **Sessions run:** 25 · **Cost:** $0.9168 · **Tokens:** 431,294 in / 336,507 out / 158,939 think
 **Confirmed phases:** B0, B1, B2, B3
