@@ -210,6 +210,7 @@ public sealed class ResumeCtlCommand() : CtlCommand("resume", "a paused/needs-hu
 public sealed class AbortCommand() : CtlCommand("abort", "the running conductor will kill the session and stop", dangerous: true);
 public sealed class SkipCommand() : CtlCommand("skip", "the current stage will be skipped and flagged for review", dangerous: true);
 public sealed class KillCommand() : CtlCommand("kill", "the current agent session will be killed (conductor keeps running)", dangerous: true);
+public sealed class ApproveCommand() : CtlCommand("approve", "approve the currently owner-gated stage so the conductor advances past it");
 
 /// <summary>Queues a human instruction for the agent (from any terminal) — injected into the next session.</summary>
 public sealed class InjectCommand : Command<InjectCommand.Settings>

@@ -62,7 +62,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             {
                 HandleControl();
                 if (state.Status == RunStatus.Aborted) { SaveAndReport(); return 2; }
-                if (!opts.DryRun && state.Status is RunStatus.Paused or RunStatus.NeedsHuman)
+                if (!opts.DryRun && state.Status is RunStatus.Paused or RunStatus.NeedsHuman or RunStatus.AwaitingOwner)
                 {
                     PushIdleSnapshot();
                     Thread.Sleep(800);
@@ -570,6 +570,16 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
     private void ConfirmStage(string id)
     {
+        var stage = plan.Stages.FirstOrDefault(s => s.Id == id);
+        if (stage is { OwnerGate: true } && !state.OwnerApprovedStages.Contains(id))
+        {
+            events.Emit(new OwnerApprovalRequested { StageId = id });
+            state.Status = RunStatus.AwaitingOwner;
+            Log($"owner-gate: stage {id} green — awaiting owner approval (run `conductor approve` or press R in the TUI)");
+            SaveAndReport();
+            Notify($"Conductor {plan.Name}: stage {id} is green and awaiting owner approval");
+            return;
+        }
         if (!state.ConfirmedStages.Contains(id)) state.ConfirmedStages.Add(id);
         state.PendingPhaseGate = null;
         state.PendingAudit = null;
@@ -770,8 +780,22 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 state.StopAfterSession = true;
                 break;
             case ControlAction.ResumeRun:
-                if (state.Status is RunStatus.Paused or RunStatus.NeedsHuman)
+                if (state.Status is RunStatus.Paused or RunStatus.NeedsHuman or RunStatus.AwaitingOwner)
                 {
+                    if (state.Status == RunStatus.AwaitingOwner)
+                    {
+                        // On AwaitingOwner, R/Resume acts as approve rather than generic resume.
+                        var pending = state.CurrentStage
+                            ?? plan.Stages.FirstOrDefault(s => !state.ConfirmedStages.Contains(s.Id) && !state.SkippedStages.Contains(s.Id))?.Id;
+                        if (pending != null && !state.OwnerApprovedStages.Contains(pending))
+                        {
+                            events.Emit(new OwnerApprovalGranted { StageId = pending });
+                            state.OwnerApprovedStages.Add(pending);
+                            Log($"owner approved stage {pending} — continuing");
+                        }
+                        ConfirmStage(pending!);
+                        break;
+                    }
                     state.Status = RunStatus.Idle;
                     state.AttentionReason = null;
                     Save();
@@ -809,6 +833,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             {
                 "pause" => ControlAction.PauseAfterSession,
                 "resume" => ControlAction.ResumeRun,
+                "approve" => ControlAction.ResumeRun,
                 "abort" => ControlAction.AbortNow,
                 "skip" => ControlAction.SkipStage,
                 "kill" => ControlAction.KillSession,

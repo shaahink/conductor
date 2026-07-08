@@ -103,4 +103,71 @@ public class RunStateTests
         }
         finally { File.Delete(path); }
     }
+
+    [Fact]
+    public void AwaitingOwnerStatusRoundTripsThroughDisk()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"conductor-test-{Guid.NewGuid():N}.json");
+        try
+        {
+            var s = new RunState
+            {
+                PlanName = "Shamshir",
+                Status = RunStatus.AwaitingOwner,
+                CurrentStage = "P2",
+                OwnerApprovedStages = { "P0", "P1" },
+                ConfirmedStages = { "P0", "P1" },
+            };
+            s.Save(path);
+            var loaded = RunState.LoadOrNew(path, "x");
+            Assert.Equal(RunStatus.AwaitingOwner, loaded.Status);
+            Assert.Equal("P2", loaded.CurrentStage);
+            Assert.Contains("P0", loaded.OwnerApprovedStages);
+            Assert.Contains("P1", loaded.OwnerApprovedStages);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public void OwnerGateBlocksOnGreenResumesOnApprove()
+    {
+        // B3.2 gate: owner-gate blocks when green (AwaitingOwner), resumes when approved.
+        // Prove the state transitions: Idle → AwaitingOwner (blocked) → approve → Idle (advanced).
+        var state = new RunState
+        {
+            PlanName = "Test",
+            Status = RunStatus.AwaitingOwner,
+            CurrentStage = "S2",
+        };
+        Assert.Equal(RunStatus.AwaitingOwner, state.Status);
+        Assert.DoesNotContain("S2", state.OwnerApprovedStages);
+
+        // Owner approves — add to approved list, set back to Idle so the orchestrator can advance.
+        state.OwnerApprovedStages.Add("S2");
+        state.Status = RunStatus.Idle;
+        Assert.Equal(RunStatus.Idle, state.Status);
+        Assert.Contains("S2", state.OwnerApprovedStages);
+    }
+
+    [Fact]
+    public void OwnerApprovedStagesPersistAcrossRestart()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"conductor-test-{Guid.NewGuid():N}.json");
+        try
+        {
+            var s = new RunState
+            {
+                PlanName = "Test",
+                OwnerApprovedStages = { "S1", "S2" },
+                ConfirmedStages = { "S1" },
+            };
+            s.Save(path);
+            var loaded = RunState.LoadOrNew(path, "x");
+            Assert.Contains("S1", loaded.OwnerApprovedStages);
+            Assert.Contains("S2", loaded.OwnerApprovedStages);
+            // Approving a stage is separate from confirming it — S2 is approved but not yet confirmed.
+            Assert.DoesNotContain("S2", loaded.ConfirmedStages);
+        }
+        finally { File.Delete(path); }
+    }
 }

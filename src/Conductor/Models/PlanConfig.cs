@@ -342,6 +342,9 @@ public sealed class StageConfig
     public int Sessions { get; set; } = 2;
     /// <summary>Optional stage-specific text appended to the session prompt.</summary>
     public string? Notes { get; set; }
+    /// <summary>If true, the stage parks at <c>AwaitingOwner</c> even when green — the owner must
+    /// approve before the orchestrator advances past it (B3.2).</summary>
+    public bool OwnerGate { get; set; }
 }
 
 public sealed class GateConfig

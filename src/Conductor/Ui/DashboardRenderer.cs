@@ -334,6 +334,9 @@ public static class DashboardRenderer
             case "NeedsHuman":
                 Add("R", "resume"); Add("S", "skip"); Add("I", "inject"); Add("G", "status"); Add("A", "abort");
                 break;
+            case "AwaitingOwner":
+                Add("R", "approve"); Add("S", "skip"); Add("G", "status"); Add("A", "abort");
+                break;
             case "Completed":
             case "Aborted":
                 Add("Q", "quit");

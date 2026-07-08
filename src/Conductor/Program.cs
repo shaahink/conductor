@@ -21,6 +21,8 @@ app.Configure(c =>
         .WithDescription("Ask the running conductor to pause after the current session.");
     c.AddCommand<ResumeCtlCommand>("resume")
         .WithDescription("Resume a paused / needs-attention conductor.");
+    c.AddCommand<ApproveCommand>("approve")
+        .WithDescription("Approve the owner-gated stage so the conductor advances past it (also R in the TUI).");
     c.AddCommand<KillCommand>("kill")
         .WithDescription("Kill the current agent session (the loop then re-evaluates).");
     c.AddCommand<SkipCommand>("skip")

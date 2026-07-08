@@ -26,6 +26,8 @@ namespace Conductor.Core.Events;
 [JsonDerivedType(typeof(AttentionRequested), "attentionRequested")]
 [JsonDerivedType(typeof(RunFinished), "runFinished")]
 [JsonDerivedType(typeof(TokenDelta), "tokenDelta")]
+[JsonDerivedType(typeof(OwnerApprovalRequested), "ownerApprovalRequested")]
+[JsonDerivedType(typeof(OwnerApprovalGranted),   "ownerApprovalGranted")]
 public abstract record ConductorEvent
 {
     /// <summary>Monotonic 1-based ordinal within the log (continues across restarts). Stamped by
@@ -142,6 +144,24 @@ public sealed record TokenDelta : ConductorEvent
     public long Reasoning { get; init; }
     public long CacheRead { get; init; }
     public decimal CostUsd { get; init; }
+}
+
+/// <summary>
+/// An owner-gated stage reached green (all checkpoints DONE, full battery passed): the orchestrator
+/// parks at <c>AwaitingOwner</c> until the human approves (B3.2).
+/// </summary>
+public sealed record OwnerApprovalRequested : ConductorEvent
+{
+    public required string StageId { get; init; }
+}
+
+/// <summary>
+/// The owner approved an <c>OwnerApprovalRequested</c> stage, via CLI (<c>conductor approve</c>),
+/// TUI key, or (B6) Telegram callback — the orchestrator now advances past it.
+/// </summary>
+public sealed record OwnerApprovalGranted : ConductorEvent
+{
+    public required string StageId { get; init; }
 }
 
 /// <summary>Source-generated (de)serialisation for the event log — NDJSON, compact, camelCase, string

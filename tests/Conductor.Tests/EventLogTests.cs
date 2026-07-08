@@ -28,6 +28,8 @@ public class EventLogTests
             new AttentionRequested { RunId = "r1", Reason = "needs a human" },
             new RunFinished { RunId = "r1", Status = "Completed", Sessions = 12, CheckpointsDone = 65, CheckpointsTotal = 65 },
             new TokenDelta { RunId = "r1", SessionId = "3", Input = 1500, Output = 200, Reasoning = 50, CacheRead = 8000, CostUsd = 0.02m },
+            new OwnerApprovalRequested { RunId = "r1", StageId = "B3" },
+            new OwnerApprovalGranted { RunId = "r1", StageId = "B3" },
         ];
 
         foreach (var evt in samples)

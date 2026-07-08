@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace Conductor.Models;
 
-public enum RunStatus { Idle, Running, VerifyingGates, Backoff, Paused, NeedsHuman, Completed, Aborted }
+public enum RunStatus { Idle, Running, VerifyingGates, Backoff, Paused, NeedsHuman, AwaitingOwner, Completed, Aborted }
 
 public enum SessionKind { Deliver, Fix, Resume, Audit }
 
@@ -100,6 +100,9 @@ public sealed class RunState
     public List<string> ConfirmedStages { get; set; } = new();
     /// <summary>Stages whose auto-fix audit has completed, to avoid re-auditing on resume.</summary>
     public List<string> AuditedStages { get; set; } = new();
+    /// <summary>Stages whose owner has explicitly approved via CLI/TUI (B3.2). An owner-gated stage
+    /// cannot advance past <see cref="RunStatus.AwaitingOwner"/> until its id appears here.</summary>
+    public List<string> OwnerApprovedStages { get; set; } = new();
     public List<SessionRecord> History { get; set; } = new();
     /// <summary>Signature (HEAD sha + gate-set) of the last full battery that passed green — lets the
     /// orchestrator skip re-running an identical battery on an unchanged tree (e.g. across restarts).</summary>
