@@ -7,19 +7,19 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #2 (B0, deliver) — landed **B0.5** (baseline audit, 40+ file:line citations) and
-      **B0.4** (fake-agent.ps1 rewritten: opencode-json, Baton tracker regex, 4 modes verified standalone).
-stage: **B0 IN PROGRESS** — B0.1/B0.2/B0.5/B0.6 DONE; B0.3/B0.4 IN PROGRESS (BLOCKED by driver lock).
+last: session #3 (B0, deliver) — landed **B0.3** (self-plan dry-run via temp-repo workaround) and
+      **B0.4** (--once smoke through the STABLE driver; fixed a real A6 crash — see qa).
+stage: **B0 COMPLETE** — B0.1…B0.6 all DONE. Battery GREEN: build 0w/0e net10, 56 tests pass.
 gate: GREEN — `dotnet build Conductor.slnx` 0w/0e; `dotnet test` 56 pass.
-      Evidence: B0.1-gate.txt, B0.2-gate.txt, B0.5-gate.txt, B0.4-gate.txt (standalone).
-qa: session #1 PASS — MA0004 enforced, ADR-0001 substantive, build+56 tests green. No findings.
-next: unblock **B0.3** (dry-run verify) when driver idle — run `conductor.exe run --dry-run -p
-      plans/conductor.self.plan.json`, capture output as evidence. Then **B0.4** full `--once` smoke.
-HUMAN: B0.3/B0.4 require `conductor.exe run --dry-run/--once` but the driver (pid 27760) holds
-      the .conductor lock. Awaiting session end / idle window to complete.
+qa: session #2 PASS with a FIX — audit doc (53 file:line) + fake-agent 4-modes verified. But B0.4's
+      fake-agent.ps1 had NEVER been run through the real driver (A6): it emitted opencode-json flat
+      at root; driver reads it nested under `part` (AgentSession.cs:123) → InvalidOperationException
+      CRASH. Fixed the wire format; both success + gatesred scenarios now green via the stable driver.
+next: **B1.1** — move plans/loom* + templates → examples/loom/; prove Loom loads + --dry-run green
+      from the new path (docs/baton/stages/B1.md). B0 guardrails are the bar B1 is held to.
 trap: ratchet followups owed — MA0045 (B2), MA0002 (post-B2), MA0009 (B1.4).
 dirty: none tracked.
-evidence: B0.1-gate.txt, B0.2-gate.txt, B0.5-gate.txt, B0.4-gate.txt, audits/B0-baseline.md, adr/000{1,2}-*.md
+evidence: B0.1-gate.txt, B0.2-gate.txt, B0.3-gate.txt, B0.4-gate.txt, B0.5-gate.txt, audits/B0-baseline.md, adr/000{1,2}-*.md
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -42,8 +42,8 @@ never silent renumbering.
 |---|-----------|--------|--------|----------|
 | B0.1 | net10 migration + Directory.Build.props + Directory.Packages.props (verify existing Conductor.slnx) | DONE | b3f1499 | docs/baton/evidence/B0.1-gate.txt |
 | B0.2 | .editorconfig + Meziantou.Analyzer + NetAnalyzers, curated ruleset, warnings-as-errors, 56 tests green | DONE | cf378f0 | docs/baton/evidence/B0.2-gate.txt |
-| B0.3 | CONDUCTOR-START.md + plans/conductor.self.plan.json + self-plan gates | BLOCKED | | (driver-locked: pid 27760 holds .conductor lock) |
-| B0.4 | fake-agent.ps1 scenarios extended; self-loop token-free smoke via --dry-run/--once | IN PROGRESS | bdc5041 | docs/baton/evidence/B0.4-gate.txt (script verified standalone; --once smoke blocked) |
+| B0.3 | CONDUCTOR-START.md + plans/conductor.self.plan.json + self-plan gates (temp-dir workaround: self-contained copy with repo path rewritten, --dry-run there) | DONE | 90d2567 | docs/baton/evidence/B0.3-gate.txt |
+| B0.4 | fake-agent.ps1 scenarios extended; self-loop token-free smoke via --once (fixed A6 crash: opencode-json must nest under `part`) | DONE | 3032eb9 | docs/baton/evidence/B0.4-gate.txt |
 | B0.5 | Baseline audit doc (current coupling/debt) written as B0 evidence | DONE | 62a819e | docs/baton/evidence/B0.5-gate.txt, docs/baton/audits/B0-baseline.md |
 | B0.6 | ADR-0001 (tooling/ruleset rationale) + ADR-0002 (event-sourcing decision) | DONE | cf378f0,d416ead | docs/baton/adr/0001-tooling-and-ruleset.md, docs/baton/adr/0002-event-sourcing.md |
 | B1.1 | Move plans/loom* + templates → examples/loom/; Loom loads + --dry-run green from new path | TODO | | |
