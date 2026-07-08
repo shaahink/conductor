@@ -17,7 +17,7 @@ namespace Conductor.Ui;
 /// </summary>
 public sealed class LiveDashboard : IProgressSink
 {
-    private enum Modal { None, Thinking, Output, Docs, Git, Prompt, Status, Timeline, Replay }
+    private enum Modal { None, Thinking, Output, Docs, Git, Prompt, Status, Timeline, Replay, Health }
 
     private readonly Lock _gate = new();
     private readonly List<DashboardState.AgentLine> _agent = new();
@@ -165,6 +165,7 @@ public sealed class LiveDashboard : IProgressSink
             case ConsoleKey.X: OpenModal(Modal.Prompt); break;
             case ConsoleKey.L: OpenModal(Modal.Timeline); break;
             case ConsoleKey.F8: OpenModal(Modal.Replay); break;
+            case ConsoleKey.H: OpenModal(Modal.Health); break;
             case ConsoleKey.G when _plan?.StatusAgent is { Enabled: true }: StartStatusAgent(); break;
             case ConsoleKey.F: _tree = _tree with { Filter = PlanTree.NextFilter(_tree.Filter) }; break;
             case ConsoleKey.E: _tree = _tree with { ExpandAll = !_tree.ExpandAll }; break;
@@ -297,6 +298,7 @@ public sealed class LiveDashboard : IProgressSink
                     case ConsoleKey.X: OpenModal(Modal.Prompt); break;
                     case ConsoleKey.L: OpenModal(Modal.Timeline); break;
                     case ConsoleKey.F8: OpenModal(Modal.Replay); break;
+                    case ConsoleKey.H: OpenModal(Modal.Health); break;
                     case ConsoleKey.I when _plan != null: _inputActive = true; _inputBuffer.Clear(); break;
                     case ConsoleKey.G when _plan?.StatusAgent is { Enabled: true }: StartStatusAgent(); break;
                     case ConsoleKey.F: _tree = _tree with { Filter = PlanTree.NextFilter(_tree.Filter) }; break;
@@ -322,7 +324,7 @@ public sealed class LiveDashboard : IProgressSink
                           else Log("Press K again to confirm KILL (any other key cancels)", LogSeverity.Waiting); }
                         break;
                     case ConsoleKey.Q: _pendingConfirm = null; _keys.Enqueue(ControlAction.StopAfterSession); break;
-                    case ConsoleKey.T or ConsoleKey.O or ConsoleKey.D or ConsoleKey.V or ConsoleKey.X or ConsoleKey.L or ConsoleKey.F8 or ConsoleKey.I or ConsoleKey.G:
+                    case ConsoleKey.T or ConsoleKey.O or ConsoleKey.D or ConsoleKey.V or ConsoleKey.X or ConsoleKey.L or ConsoleKey.F8 or ConsoleKey.H or ConsoleKey.I or ConsoleKey.G:
                         break; // handled above — non-destructive keys don't cancel pending confirm
                     default: _pendingConfirm = null; break; // any unmapped key cancels
                 }
@@ -421,6 +423,7 @@ public sealed class LiveDashboard : IProgressSink
             Modal.Prompt => ("compiled prompt (current session)", PromptLines()),
             Modal.Timeline => ("timeline · transitions from the event log", TimelineLines()),
             Modal.Replay => ("replay · time-travel through the recorded run (F8)", ReplayLines()),
+            Modal.Health => ("health · execution-health signals from the event log", HealthLines()),
             _ => ("", new List<string>()),
         };
         lock (_gate) { _modal = kind; _modalTitle = title; _modalLines = lines; _modalOffset = Math.Max(0, lines.Count - 1); }
@@ -510,6 +513,18 @@ public sealed class LiveDashboard : IProgressSink
         var steps = Reporter.ReadReplay(_plan);
         if (steps.Count == 0) return new() { "(no events recorded yet — replay populates as the run emits events)" };
         return steps.SelectMany(Conductor.Core.Events.Replay.FormatStep).ToList();
+    }
+
+    /// <summary>Folds the event log into the health panel (B5.3, H) — retry rate plus any same-failure
+    /// loop / gate-repetition / oscillation / context-saturation flags, from the same <c>events.jsonl</c>
+    /// the REPORT.md Health section reads (one fold, one source). Captured once on open; tolerant of a
+    /// missing/locked log (renders a hint rather than throwing).</summary>
+    private List<string> HealthLines()
+    {
+        if (_plan == null) return new() { "(health unavailable in preview)" };
+        var report = Reporter.ReadHealth(_plan);
+        if (report.Sessions == 0) return new() { "(no sessions recorded yet — health populates as the run emits events)" };
+        return Conductor.Core.Events.HealthMetrics.Format(report).ToList();
     }
 
     private List<string> PromptLines()

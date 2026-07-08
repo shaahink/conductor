@@ -412,7 +412,7 @@ public static class DashboardRenderer
                 break;
         }
         // Pop-out viewers + inject are available whenever a session/buffer exists.
-        actions.Add("[grey][[T]] think · [[O]] history · [[L]] timeline · [[F8]] replay · [[C]] fold · [[↑↓]] select · [[D]] docs · [[V]] git · [[X]] prompt · [[F]] filter · [[E]] expand · [[I]] inject[/]");
+        actions.Add("[grey][[T]] think · [[O]] history · [[L]] timeline · [[F8]] replay · [[H]] health · [[C]] fold · [[↑↓]] select · [[D]] docs · [[V]] git · [[X]] prompt · [[F]] filter · [[E]] expand · [[I]] inject[/]");
         return "[grey]" + string.Join("  ", actions) + "[/]";
     }
 

@@ -13,7 +13,7 @@ public static class Reporter
     public static string ReportPath(PlanConfig plan) => Path.Combine(plan.StateDir, "REPORT.md");
 
     public static string Build(PlanConfig plan, RunState state, TrackerSnapshot track, IReadOnlyList<GateResult>? lastGates, string? liveActivity = null,
-        IReadOnlyList<Timeline.TimelineEntry>? timeline = null)
+        IReadOnlyList<Timeline.TimelineEntry>? timeline = null, HealthMetrics.HealthReport? health = null)
     {
         var sb = new StringBuilder();
         var done = track.Checkpoints.Count(c => c.IsDone);
@@ -96,7 +96,21 @@ public static class Reporter
             sb.AppendLine();
         }
 
-        // per-session commit detail (recent sessions that committed) — so you can review without digging into git
+        // Health (B5.3): execution-health signals folded from the same event log — retry rate plus any
+        // same-failure loop / gate repetition / oscillation / context-saturation flags (B5 trap: a pure
+        // fold, no parallel store). Conservative thresholds so a normal fix cycle never false-alarms.
+        if (health is { Sessions: > 0 })
+        {
+            sb.AppendLine("## Health");
+            sb.AppendLine();
+            sb.AppendLine("_Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._");
+            sb.AppendLine();
+            sb.AppendLine("```");
+            foreach (var line in HealthMetrics.Format(health))
+                sb.AppendLine(line);
+            sb.AppendLine("```");
+            sb.AppendLine();
+        }
         var withCommits = state.History.Where(h => h.NewCommits.Count > 0).TakeLast(8).ToList();
         if (withCommits.Count > 0)
         {
@@ -173,7 +187,7 @@ public static class Reporter
         try
         {
             Directory.CreateDirectory(plan.StateDir);
-            newContent = Build(plan, state, track, lastGates, liveActivity, ReadTimeline(plan));
+            newContent = Build(plan, state, track, lastGates, liveActivity, ReadTimeline(plan), ReadHealth(plan));
             old = File.Exists(path) ? File.ReadAllText(path) : null;
             File.WriteAllText(path, newContent, Utf8Bom);
         }
@@ -238,6 +252,24 @@ public static class Reporter
         catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException or UnauthorizedAccessException)
         {
             return [];
+        }
+    }
+
+    /// <summary>Fold the event log into execution-health signals (B5.3) — retry rate plus any
+    /// same-failure loop / gate repetition / oscillation / context-saturation flags. Same tolerant
+    /// read as <see cref="ReadTimeline"/> (a run may not have emitted events yet, or the log may be
+    /// locked mid-write) — the report/panel render nothing rather than failing (A15: no crash on I/O).</summary>
+    public static HealthMetrics.HealthReport ReadHealth(PlanConfig plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        try
+        {
+            var path = Path.Combine(plan.StateDir, "events.jsonl");
+            return HealthMetrics.Compute(EventLog.ReadAll(path));
+        }
+        catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException or UnauthorizedAccessException)
+        {
+            return new HealthMetrics.HealthReport(0, 0, 0, []);
         }
     }
 

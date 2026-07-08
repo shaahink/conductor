@@ -61,6 +61,43 @@ public class ReporterTests
     }
 
     [Fact]
+    public void BuildRendersHealthSectionFromTheEventLog()
+    {
+        // B5.3: the report's Health section derives from the same folded event log — a stuck stage
+        // (three consecutive red sessions) surfaces as a same-failure-loop flag.
+        const string ndjson = """
+        {"type":"stageEntered","stageId":"S1","seq":1,"ts":"2026-07-08T10:00:00Z","runId":"r"}
+        {"type":"sessionStarted","number":1,"stageId":"S1","kind":"Deliver","attempt":1,"maxAttempts":4,"seq":2,"ts":"2026-07-08T10:00:10Z","runId":"r","sessionId":"1"}
+        {"type":"sessionFinished","number":1,"stageId":"S1","outcome":"GatesRed","seq":3,"ts":"2026-07-08T10:00:20Z","runId":"r","sessionId":"1"}
+        {"type":"sessionStarted","number":2,"stageId":"S1","kind":"Fix","attempt":2,"maxAttempts":4,"seq":4,"ts":"2026-07-08T10:00:30Z","runId":"r","sessionId":"2"}
+        {"type":"sessionFinished","number":2,"stageId":"S1","outcome":"GatesRed","seq":5,"ts":"2026-07-08T10:00:40Z","runId":"r","sessionId":"2"}
+        {"type":"sessionStarted","number":3,"stageId":"S1","kind":"Fix","attempt":3,"maxAttempts":4,"seq":6,"ts":"2026-07-08T10:00:50Z","runId":"r","sessionId":"3"}
+        {"type":"sessionFinished","number":3,"stageId":"S1","outcome":"GatesRed","seq":7,"ts":"2026-07-08T10:01:00Z","runId":"r","sessionId":"3"}
+        """;
+        var path = Path.Combine(Path.GetTempPath(), $"conductor-hrep-{Guid.NewGuid():N}.jsonl");
+        File.WriteAllText(path, ndjson);
+        try
+        {
+            var health = HealthMetrics.Compute(EventLog.ReadAll(path));
+            var report = Reporter.Build(PlanIn(Path.GetTempPath()), new RunState { PlanName = "T" },
+                new TrackerSnapshot(), null, null, null, health);
+
+            Assert.Contains("## Health", report);
+            Assert.Contains("same-failure-loop", report);
+            Assert.Contains("overall Alert", report);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public void BuildOmitsHealthSectionWhenNoSessions()
+    {
+        var report = Reporter.Build(PlanIn(Path.GetTempPath()), new RunState { PlanName = "T" },
+            new TrackerSnapshot(), null, null, null, health: null);
+        Assert.DoesNotContain("## Health", report);
+    }
+
+    [Fact]
     public void TimestampOnlyRewriteDoesNotCreateDuplicateCommit()
     {
         var repo = Directory.CreateTempSubdirectory().FullName;

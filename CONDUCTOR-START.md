@@ -8,24 +8,25 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #35 (B5.2, deliver) — landed **B5.2**: `Replay` projection (pure fold → ordered steps,
-      each transition paired with the run state reconstructed AS OF that point: stage/sessions/gates/
-      checkpoints/cost/tokens) + `conductor replay <path|dir|plan>` CLI + TUI **F8** modal. Reuses
-      Timeline.Build (one renderer) + the tested modal pager. +7 tests. 231→238.
-stage: **B5 IN PROGRESS** — B5.1, B5.2 DONE. Next: B5.3 (AI-health metrics) → B5.4.
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 238 tests pass. Real recorded run (runId qa1)
-      replayed via the in-tree `replay` verb → 8 transitions with correct time-travel state. B5.2-gate.txt.
-qa: session #34/B5.1 deliver PASS — re-ran gate (build 0w/0e, 231 tests). Claim-1: 12 Timeline/Reporter
-     tests green. Claim-2: in-tree `report` folded events.jsonl → `## Timeline` w/ correct computed spans. No findings.
-next: **B5.3** — AI-health metrics (retry rate, same-command repetition, same-failure loops, tool
-      oscillation, context saturation) as PURE folds over events.jsonl; health panel + report section.
-      Conservative thresholds (false "looping" alarms erode trust — unit-test them). See B5.md R5.3.
+last: session #36 (B5.3, deliver) — landed **B5.3**: `HealthMetrics` projection (pure fold →
+      retry rate + same-failure loop + gate repetition + gate oscillation + context saturation, all
+      from logged transitions: session outcomes + the gate battery) + `## Health` REPORT.md section +
+      TUI **H** panel. Conservative, injectable thresholds; a normal fail→fix cycle raises ZERO flags.
+      Reuses the tolerant event-log read (one source). +13 tests. 238→251.
+stage: **B5 IN PROGRESS** — B5.1, B5.2, B5.3 DONE. Next: B5.4 (confidence + MCP metrics + repo strip).
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 251 tests pass. Real recorded unhealthy run
+      (runId h1) folded via the in-tree `report` verb → ## Health: 2 Alerts (loop, gate-repetition) +
+      1 Warn (context-saturation), retry rate 67%. B5.3-gate.txt.
+qa: session #35/B5.2 deliver PASS — re-ran gate (build 0w/0e, 238 tests). Claim-1: 7 ReplayTests green.
+     Claim-2: in-tree `replay` reconstructed the 8-transition run (qa1) with correct time-travel state. No findings.
+next: **B5.4** — confidence per checkpoint (evidence count: tests/files/docs) + MCP call metrics +
+      repo-awareness strip (branch/dirty/ahead/behind). All PURE folds / read-only queries. See B5.md R5.4.
 trap: every B5 projection is a PURE fold over the single event log — never a parallel store that can
-      drift (B5 trap). Replay's terminal cost/tokens == RunStateProjection.Fold (proven, no drift).
-      NB: current schema has no Thought/ToolCalled/Command events — B5.3 metrics must derive from the
-      transitions that ARE logged (sessions/gates/outcomes/attention), or emit new events first.
+      drift (B5 trap). Health thresholds stay conservative (false "looping" alarms erode trust) + unit-tested.
+      NB: no Thought/ToolCalled/Command events yet — B5.3 derives from sessions/gates; sharpens to tool
+      level when those events land (B9). B5.4 repo strip is a live git query, not an event fold.
 dirty: none.
-evidence: docs/baton/evidence/B5.2-gate.txt
+evidence: docs/baton/evidence/B5.3-gate.txt
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -79,7 +80,7 @@ never silent renumbering.
 | B4.7 | Live-consistent token line + plan-tree filter/search for large plans; doc-on-select | DONE | 1f61578, c1edb3b | docs/baton/evidence/B4.7-gate.txt, docs/baton/evidence/B4.7-tokens-preview.txt, docs/baton/evidence/B4.7-docselect-preview.txt |
 | B5.1 | Timeline view (transitions with duration) from the event log | DONE | 69d70c2 | docs/baton/evidence/B5.1-gate.txt |
 | B5.2 | Replay / time-travel (F8) reconstructs a past run from events.jsonl | DONE | 6c876e5 | docs/baton/evidence/B5.2-gate.txt |
-| B5.3 | AI-health metrics (retry rate, command repetition, failure loops, tool oscillation, context saturation) | TODO | | |
+| B5.3 | AI-health metrics (retry rate, command repetition, failure loops, tool oscillation, context saturation) | DONE | | docs/baton/evidence/B5.3-gate.txt |
 | B5.4 | Confidence tracking per checkpoint (evidence count) + MCP call metrics + repo strip | TODO | | |
 | B6.1 | Telegram client (long-poll getUpdates) + push (needs-human/owner-gate/complete/backoff) + /status | TODO | | |
 | B6.2 | Two-way control (inline-keyboard callback_query → control.json); chat-id allowlist; destructive confirm | TODO | | |
