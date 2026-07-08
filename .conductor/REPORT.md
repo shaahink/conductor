@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 07:40 UTC · branch `feat/baton` · HEAD `43b3cba`_
+_Updated 2026-07-08 07:50 UTC · branch `feat/baton` · HEAD `69003d2`_
 
-**Status:** Idle
+**Status:** Running
 **Stage:** B2 — Event-sourced backbone + provider decoupling · attempts used 0 · working ▸ B2.5
-**Checkpoints:** 17/65 done · **Sessions run:** 14 · **Cost:** $0.5658 · **Tokens:** 266,468 in / 223,056 out / 102,300 think
+**Checkpoints:** 17/65 done · **Sessions run:** 15 · **Cost:** $0.5658 · **Tokens:** 266,468 in / 223,056 out / 102,300 think
 **Confirmed phases:** B0, B1
+
+## Latest activity (live)
+
+_Session #15 (Deliver) · running 10m · last output 1s ago · $0.0116_
+
+**Thinking:**
+> I'm adding correlation fields to track session and gate context—setting `_curSessionId` at the start of a session and clearing it when done, and using `_curGate` to identify which gate is running, either as "battery" during RunGateBattery or with more granular gate names depending on where the loggi…
+> I'm refactoring PlanConfig to make validation reusable by extracting an internal method that collects errors into a list, then having the main validation method call it.
+> I need to clean up the CollectErrors function by removing the throw block that I've already moved over to Validate.
+
+**Recent actions:**
+- `08:48:20` » read src\Conductor\Core\Events\EventLog.cs
+- `08:48:47` » grep rec\.Number|new SessionRecord|RunGateBattery|GateRunner\.Run|private.*Gate|RunPhaseGate|SessionStarted
+- `08:48:47` · Let me find where sessions and gates are run in the Orchestrator to place correlation.
+- `08:49:47` · Now I'll implement. First the packages:
+- `08:49:47` » edit Directory.Packages.props
+- `08:49:55` » edit src\Conductor\Conductor.csproj
+- `08:50:04` · Now refactor `PlanConfig` to expose validation for the Options validator:
+- `08:50:04` » edit src\Conductor\Models\PlanConfig.cs
+- `08:50:13` » edit {"filePath":"C:\\Code\\conductor-baton\\src\\Conductor\\Models\\PlanConfig.cs","newString":"        if (Gates.Any(g => string.IsNullOrWhiteSpace(g.Com…
+- `08:50:20` » read src\Conductor\Models\PlanConfig.cs
 
 ## Stage progress
 
@@ -43,6 +64,7 @@ _Updated 2026-07-08 07:40 UTC · branch `feat/baton` · HEAD `43b3cba`_
 | 12 | B2 | Deliver | 1 | 07-08 06:47 | 0:18 | Advanced | B2.2 | 3 | build:OK | $0.0334 | 1,778/18,546 |
 | 13 | B2 | Deliver | 1 | 07-08 07:06 | 0:10 | Advanced | B2.3 | 3 | build:OK | $0.0551 | 66,865/13,343 |
 | 14 | B2 | Deliver | 1 | 07-08 07:17 | 0:22 | Advanced | B2.4 | 4 | build:OK | $0.0395 | 1,813/20,904 |
+| 15 | B2 | Deliver | 1 | 07-08 07:40 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
