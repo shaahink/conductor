@@ -1,6 +1,6 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 05:09 UTC · branch `feat/baton` · HEAD `ce2f6e3`_
+_Updated 2026-07-08 05:19 UTC · branch `feat/baton` · HEAD `b77002a`_
 
 **Status:** Running
 **Stage:** B1 — Decouple Loom + pluggable progress providers · attempts used 0 · working ▸ B1.3
@@ -9,24 +9,24 @@ _Updated 2026-07-08 05:09 UTC · branch `feat/baton` · HEAD `ce2f6e3`_
 
 ## Latest activity (live)
 
-_Session #7 (Deliver) · running 20m · last output 135s ago · $0.0054_
+_Session #7 (Deliver) · running 30m · last output 15s ago · $0.0194_
 
 **Thinking:**
-> I'm working through the design for ScriptProvider, which will execute plan-configured commands and return checkpoint states as JSON, alongside PlanCheckpointProvider for managing checkpoints declared in the plan. I need to examine how the provider gets instantiated in Orchestrator and understand the…
-> I see that `IProgressProvider` is currently tied directly to `MarkdownTableProvider`, so for the B1.3 checkpoint I need to introduce `ScriptProvider` and `PlanCheckpointProvider` as additional implementations. The gate for B1.3 involves creating unit tests with a Shamshir-shaped `PROGRESS.md` fixtur…
-> I'm looking at the B1.3 checkpoint which involves building a `ScriptProvider` that executes plan-configured commands and returns checkpoint states as JSON, paired with a `PlanCheckpointProvider` for managing those checkpoints.  The design needs to handle resilience—if a script fails or returns malfo…
+> I'm setting up test fixtures with irregular IDs and configuring a PowerShell script that outputs JSON for the ScriptProvider to process, then I'll need to verify how the test project handles copying fixture files. Writing the normalizer script... I'm realizing that for the real feature, users' scrip…
+> The test count jumped from 57 to 66, and now I need to run an A6 check—actually executing the ScriptProvider through a real dry-run with the STABLE driver against a fixture plan that uses `progress.kind: script`. The B1.3 gate requires unit tests, which I've completed, but A6 demands a first real ex…
+> I need to demonstrate the B1.3 checkpoint's behavior through a real-run proof, which involves provider selection and script normalization. Since the stable driver doesn't have the new ProgressProvider code, I'll need to actually execute the code path rather than rely on a dry-run. The cleanest appro…
 
 **Recent actions:**
-- `05:58:32` » read src\Conductor\Core\ProcessRunner.cs
-- `05:59:02` » read src\Conductor\Core\Orchestrator.cs
-- `05:59:02` · Now let me look at the Orchestrator constructor to understand how to wire provider selection.
-- `06:05:03` · QA is passing. Let me examine the Orchestrator's `_progress.Read` call sites and the existing Shamshir TRACKER to design B1.3 precisely.
-- `06:05:03` » read src\Conductor\Core\Orchestrator.cs
-- `06:05:03` » read src\Conductor\Core\Orchestrator.cs
-- `06:06:35` · QA verdict: session #6 (B1.2) **PASS**. Let me check the analyzer config before writing B1.3 code so I don't trip warnings-as-errors.
-- `06:06:36` » bash cd C:\Code\conductor-baton; Get-ChildItem -File .editorconfig,Directory.Build.props,Directory.Packages.props,*.ruleset -ErrorAction SilentlyContinue | Sele…
-- `06:06:42` » read Directory.Build.props
-- `06:06:43` » read .editorconfig
+- `06:16:45` » bash cd C:\Code\conductor-baton; dotnet test Conductor.slnx --filter "FullyQualifiedName~ProgressProviderTests" --no-build 2>&1 | Select-Object -Last 15
+- `06:16:54` · All 9 new tests pass. Now the full battery for the post-session ritual.
+- `06:17:03` » bash cd C:\Code\conductor-baton; dotnet test Conductor.slnx 2>&1 | Select-Object -Last 8
+- `06:17:49` · All 66 tests pass (57 + 9 new). Let me produce the evidence artifact. First capture fresh gate outputs and an A6 real-run proof of the ScriptProvider path.
+- `06:17:51` » bash cd C:\Code\conductor-baton; New-Item -ItemType Directory -Force -Path docs\baton\evidence | Out-Null; $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss"; "B1.3 e…
+- `06:18:11` » bash cd C:\Code\conductor-baton; "" | Out-File -Append docs\baton\evidence\B1.3-gate.txt; "=== dotnet test Conductor.slnx (full battery) ===" | Out-File -Append…
+- `06:18:20` · Now let me add an A6 real-run proof — exercise the ScriptProvider and PlanCheckpointProvider through the actual factory via a tiny script, proving the path runs…
+- `06:18:20` » bash cd C:\Code\conductor-baton; Get-Content docs\baton\evidence\B1.3-gate.txt
+- `06:18:50` · The ScriptProvider test already spawns a real `powershell.exe` subprocess (not mocked), satisfying A6. Let me document that explicitly in the evidence and confi…
+- `06:18:51` » bash cd C:\Code\conductor-baton; "" | Out-File -Append docs\baton\evidence\B1.3-gate.txt; "=== A6 (ship-without-launch): the ScriptProvider executable path runs…
 
 ## Stage progress
 
