@@ -1,32 +1,11 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 17:50 UTC · branch `feat/baton` · HEAD `a2052c8`_
+_Updated 2026-07-08 17:54 UTC · branch `feat/baton` · HEAD `c7afad7`_
 
-**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B5 — Observability & health · attempts used 0 · working ▸ B5.3
-**Checkpoints:** 33/65 done · **Sessions run:** 36 · **Cost:** $1.2750 · **Tokens:** 510,405 in / 495,635 out / 208,186 think
+**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B5 — Observability & health · attempts used 0 · working ▸ B5.4
+**Checkpoints:** 34/65 done · **Sessions run:** 36 · **Cost:** $1.3177 · **Tokens:** 512,724 in / 520,789 out / 212,470 think
 **Confirmed phases:** B0, B1, B2, B3, B4
-
-## Latest activity (live)
-
-_Session #36 (Deliver) · running 20m · last output 5s ago · $0.0366_
-
-**Thinking:**
-> The artifact is rendering correctly with the proper Unicode characters and formatting. The display shows 2 alerts and 1 warning with the retry rate metric, though the terminal encoding makes some glyphs appear as question marks—the actual UTF-8 file is fine. The "67 %" spacing comes from how the per…
-> The file bytes are correct with the proper glyphs. Now I need to verify the TUI health panel is accessible—since the TUI requires a terminal environment, I'll check that the modal wiring is correct and the build passes, but I should at least confirm the action bar displays the `[H] health` option. T…
-> I need to update the tracker with the handoff section and fill in the B5.3 row, then review the diff budget across the files I've modified so far—the new health metrics file, the reporter, commands, dashboard UI components, and the corresponding tests.  I'll set the B5.3 row to Status DONE with the …
-
-**Recent actions:**
-- `18:46:36` » write ..\..\Users\shahi\AppData\Local\Temp\opencode\b53-qa\conductor.plan.json
-- `18:46:56` » write ..\..\Users\shahi\AppData\Local\Temp\opencode\b53-qa\TRACKER.md
-- `18:47:21` » bash cd C:\Code\conductor-baton; dotnet run --project src\Conductor --no-build -- report -p C:\Users\shahi\AppData\Local\Temp\opencode\b53-qa\conductor.plan.jso…
-- `18:48:02` » bash Get-Content "C:\Users\shahi\AppData\Local\Temp\opencode\b53-qa\.conductor\REPORT.md" -Raw | Select-String -Pattern '(?s)## Health.*?```.*?```' | ForEach-Ob…
-- `18:48:45` · Artifact renders correctly (console mangles the UTF-8 glyphs/·/≥; the file is UTF-8 BOM). Let me verify the real bytes and also confirm the TUI action bar + mod…
-- `18:48:47` » bash cd C:\Code\conductor-baton; $c = Get-Content "C:\Users\shahi\AppData\Local\Temp\opencode\b53-qa\.conductor\REPORT.md" -Raw -Encoding UTF8; @("has ## Health…
-- `18:49:41` · Real bytes confirmed — proper glyphs, all flags present. Now write the evidence artifact:
-- `18:49:41` » write docs\baton\evidence\B5.3-gate.txt
-- `18:50:14` · Now update the tracker — the `## Handoff` block and the B5.3 row:
-- `18:50:14` » edit CONDUCTOR-START.md
 
 ## Stage progress
 
@@ -37,7 +16,7 @@ _Session #36 (Deliver) · running 20m · last output 5s ago · $0.0366_
 | B2 | Event-sourced backbone + provider decoupling | 6/6 | confirmed ✓ |
 | B3 | Safety, owner-gates & process control | 5/5 | confirmed ✓ |
 | B4 | TUI overhaul (alt-screen + tree) | 7/7 | confirmed ✓ |
-| B5 | Observability & health | 2/4 | **← active** |
+| B5 | Observability & health | 3/4 | **← active** |
 | B6 | AFK + two-way Telegram | 0/5 | todo |
 | B7 | Specialist sub-agent personas | 0/3 | todo |
 | B8 | Brain layer | 0/5 | todo |
@@ -79,16 +58,10 @@ _Session #36 (Deliver) · running 20m · last output 5s ago · $0.0366_
 | 33 | B4 | Audit | 1 | 07-08 16:18 | 0:14 | Progress |  | 2 |  | $0.0191 | 1,034/10,114 |
 | 34 | B5 | Deliver | 1 | 07-08 16:33 | 0:36 | Advanced | B5.1 | 5 | build:OK | $0.0634 | 2,544/24,659 |
 | 35 | B5 | Deliver | 1 | 07-08 17:10 | 0:19 | Advanced | B5.2 | 3 | build:OK | $0.0370 | 1,719/19,977 |
-| 36 | B5 | Deliver | 1 | 07-08 17:30 | … | running |  | 0 |  |  |  |
+| 36 | B5 | Deliver | 1 | 07-08 17:30 | 0:24 | Advanced | B5.3 | 4 | build:OK | $0.0427 | 2,319/25,154 |
 
 ### Commits by session
 
-- **s28 (B4 Deliver)** — 5 commit(s):
-  - 2569377 chore(conductor): s28 B4 working ▸B4.3 @ 16:03
-  - db3c8bd docs(bB4.3): record B4.3 commit sha in tracker row
-  - 8197bd4 feat(bB4.3): hierarchical plan tree (sub-checkpoints, expand/collapse, per-stage columns)
-  - d683ee7 chore(conductor): s28 B4 working ▸B4.3 @ 15:53
-  - 5369ef4 chore(conductor): s28 B4 working ▸B4.3 @ 15:43
 - **s29 (B4 Deliver)** — 3 commit(s):
   - ab3bd6c chore: track B4.4 commit hash 9b25fe2
   - 9b25fe2 ﻿feat(B4.4): severity model + clearer header labels
@@ -124,6 +97,11 @@ _Session #36 (Deliver) · running 20m · last output 5s ago · $0.0366_
   - f638b98 chore(bB5.2): fill B5.2 commit hash in tracker (6c876e5)
   - 6c876e5 feat(bB5.2): replay / time-travel viewer reconstructs a past run from the event log
   - f2d8566 chore(conductor): s35 B5 working ▸B5.2 @ 18:20
+- **s36 (B5 Deliver)** — 4 commit(s):
+  - c7afad7 chore(bB5.3): fill B5.3 commit hash in tracker (17642cf)
+  - 17642cf feat(bB5.3): AI-health metrics folded from the event log (health panel + report section)
+  - 6512c6b chore(conductor): s36 B5 working ▸B5.3 @ 18:50
+  - a2052c8 chore(conductor): s36 B5 working ▸B5.3 @ 18:40
 
 ## Phase handovers (audit)
 
@@ -139,27 +117,28 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: Landed **B5.2** (replay / time-travel) on `feat/baton` — a pure `Replay` projection folding `.conductor/events.jsonl` into ordered steps, each transition paired with the run state reconstructed *as of* that moment (stage/sessions/gates/checkpoints/cost/tokens), surfaced via a new `conductor replay <path|dir|plan>` CLI verb and a TUI **F8** modal. It reuses the already-tested `Timeline.Build` (one renderer for replay + the REPORT.md timeline) and accrues cost/tokens from `SessionFinished` so the terminal state provably equals `RunStateProjection.Fold` (no drift — the B5 trap). Gate is GREEN: `dotnet build` 0w/0e (net10, warnings-as-errors), `dotnet test` 238 pass (231→238, +7 …
+> SESSION-RESULT: Landed **B5.3 (AI-health metrics)** — a new `HealthMetrics` pure fold over `.conductor/events.jsonl` that surfaces retry rate, same-failure loops, gate repetition, gate oscillation, and context saturation (F-8), wired into a `## Health` REPORT.md section and a TUI `H` panel via the tolerant `Reporter.ReadHealth` read (one source, no parallel store — B5 trap honoured). Thresholds are conservative and injectable, with a load-bearing test proving a normal fail→fix cycle raises zero flags (the trust invariant) and that backoff/kill/interrupt outcomes never masquerade as a loop. Gate battery is GREEN: build 0w/0e on net10 warnings-as-errors, tests 238→251 (+11 HealthMetricsTests, …
 
 ## Tracker handoff
 
 ```
-last: session #35 (B5.2, deliver) — landed **B5.2**: `Replay` projection (pure fold → ordered steps,
-      each transition paired with the run state reconstructed AS OF that point: stage/sessions/gates/
-      checkpoints/cost/tokens) + `conductor replay <path|dir|plan>` CLI + TUI **F8** modal. Reuses
-      Timeline.Build (one renderer) + the tested modal pager. +7 tests. 231→238.
-stage: **B5 IN PROGRESS** — B5.1, B5.2 DONE. Next: B5.3 (AI-health metrics) → B5.4.
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 238 tests pass. Real recorded run (runId qa1)
-      replayed via the in-tree `replay` verb → 8 transitions with correct time-travel state. B5.2-gate.txt.
-qa: session #34/B5.1 deliver PASS — re-ran gate (build 0w/0e, 231 tests). Claim-1: 12 Timeline/Reporter
-     tests green. Claim-2: in-tree `report` folded events.jsonl → `## Timeline` w/ correct computed spans. No findings.
-next: **B5.3** — AI-health metrics (retry rate, same-command repetition, same-failure loops, tool
-      oscillation, context saturation) as PURE folds over events.jsonl; health panel + report section.
-      Conservative thresholds (false "looping" alarms erode trust — unit-test them). See B5.md R5.3.
+last: session #36 (B5.3, deliver) — landed **B5.3**: `HealthMetrics` projection (pure fold →
+      retry rate + same-failure loop + gate repetition + gate oscillation + context saturation, all
+      from logged transitions: session outcomes + the gate battery) + `## Health` REPORT.md section +
+      TUI **H** panel. Conservative, injectable thresholds; a normal fail→fix cycle raises ZERO flags.
+      Reuses the tolerant event-log read (one source). +13 tests. 238→251.
+stage: **B5 IN PROGRESS** — B5.1, B5.2, B5.3 DONE. Next: B5.4 (confidence + MCP metrics + repo strip).
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 251 tests pass. Real recorded unhealthy run
+      (runId h1) folded via the in-tree `report` verb → ## Health: 2 Alerts (loop, gate-repetition) +
+      1 Warn (context-saturation), retry rate 67%. B5.3-gate.txt.
+qa: session #35/B5.2 deliver PASS — re-ran gate (build 0w/0e, 238 tests). Claim-1: 7 ReplayTests green.
+     Claim-2: in-tree `replay` reconstructed the 8-transition run (qa1) with correct time-travel state. No findings.
+next: **B5.4** — confidence per checkpoint (evidence count: tests/files/docs) + MCP call metrics +
+      repo-awareness strip (branch/dirty/ahead/behind). All PURE folds / read-only queries. See B5.md R5.4.
 trap: every B5 projection is a PURE fold over the single event log — never a parallel store that can
-      drift (B5 trap). Replay's terminal cost/tokens == RunStateProjection.Fold (proven, no drift).
-      NB: current schema has no Thought/ToolCalled/Command events — B5.3 metrics must derive from the
-      transitions that ARE logged (sessions/gates/outcomes/attention), or emit new events first.
+      drift (B5 trap). Health thresholds stay conservative (false "looping" alarms erode trust) + unit-tested.
+      NB: no Thought/ToolCalled/Command events yet — B5.3 derives from sessions/gates; sharpens to tool
+      level when those events land (B9). B5.4 repo strip is a live git query, not an event fold.
 dirty: none.
-evidence: docs/baton/evidence/B5.2-gate.txt
+evidence: docs/baton/evidence/B5.3-gate.txt
 ```
