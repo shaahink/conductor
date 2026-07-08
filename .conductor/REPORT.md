@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 08:49 UTC · branch `feat/baton` · HEAD `381f1e0`_
+_Updated 2026-07-08 08:59 UTC · branch `feat/baton` · HEAD `c05b4ff`_
 
-**Status:** Idle
-**Stage:** B2 — Event-sourced backbone + provider decoupling · attempts used 0
-**Checkpoints:** 19/65 done · **Sessions run:** 17 · **Cost:** $0.7319 · **Tokens:** 338,818 in / 279,066 out / 128,947 think
+**Status:** Running
+**Stage:** B3 — Safety, owner-gates & process control · attempts used 0 · working ▸ B3.1
+**Checkpoints:** 19/65 done · **Sessions run:** 18 · **Cost:** $0.7319 · **Tokens:** 338,818 in / 279,066 out / 128,947 think
 **Confirmed phases:** B0, B1, B2
+
+## Latest activity (live)
+
+_Session #18 (Deliver) · running 10m · last output 0s ago · $0.0441_
+
+**Thinking:**
+> Build succeeded with 0 warnings and 0 errors. Now let me run the tests to make sure everything passes.
+> All 126 tests pass. Now I need to add tests for the confirm-gating behavior. The B3.1 gate says: "unit/headless test — finger-slip without confirm does not skip; confirmed path does."  Let me add tests for: 1. The `ConfirmMessage` helper (returns correct messages for each destructive action) 2. The …
+> Let me add tests at the end of the DashboardRendererTests file. I'll add: 1. Test that confirm prompt is rendered in the footer when set 2. Test that confirm prompt only appears for destructive actions (A/K/S) 3. Test that narrow/short terminals with confirm prompt still render  Actually, let me als…
+
+**Recent actions:**
+- `09:57:50` » read src\Conductor\Commands\Commands.cs
+- `09:57:50` · Let me check how commands are registered to verify the Settings type change doesn't break anything:
+- `09:57:56` · Now let me build to verify everything compiles:
+- `09:58:04` » bash dotnet build Conductor.slnx 2>&1
+- `09:58:14` · Build passes clean. Now let me run the tests:
+- `09:58:23` » bash dotnet test Conductor.slnx 2>&1
+- `09:58:54` » read tests\Conductor.Tests\DashboardRendererTests.cs
+- `09:58:54` · All 126 tests pass. Now I need to add focused tests for B3.1. The gate requires: "finger-slip without confirm does not skip; confirmed path does." Let me add te…
+- `09:59:07` » write src\Conductor\Core\ConfirmGate.cs
+- `09:59:07` · Let me create a simple, testable `ConfirmGate` helper to encapsulate the confirm logic, then wire it into LiveDashboard and PlainSink:
 
 ## Stage progress
 
@@ -14,7 +35,7 @@ _Updated 2026-07-08 08:49 UTC · branch `feat/baton` · HEAD `381f1e0`_
 | B0 | Repo modernisation + self-hosting harness | 6/6 | confirmed ✓ |
 | B1 | Decouple Loom + pluggable progress providers | 7/7 | confirmed ✓ |
 | B2 | Event-sourced backbone + provider decoupling | 6/6 | confirmed ✓ |
-| B3 | Safety, owner-gates & process control | 0/5 | todo |
+| B3 | Safety, owner-gates & process control | 0/5 | **← active** |
 | B4 | TUI overhaul (alt-screen + tree) | 0/7 | todo |
 | B5 | Observability & health | 0/4 | todo |
 | B6 | AFK + two-way Telegram | 0/5 | todo |
@@ -46,6 +67,7 @@ _Updated 2026-07-08 08:49 UTC · branch `feat/baton` · HEAD `381f1e0`_
 | 15 | B2 | Deliver | 1 | 07-08 07:40 | 0:36 | Advanced | B2.5 | 7 | build:OK | $0.0666 | 3,900/25,958 |
 | 16 | B2 | Deliver | 1 | 07-08 08:16 | 0:12 | Advanced | B2.6 | 2 | build:OK | $0.0683 | 66,649/18,804 |
 | 17 | B2 | Audit | 1 | 07-08 08:29 | 0:19 | Progress |  | 2 |  | $0.0312 | 1,801/11,248 |
+| 18 | B3 | Deliver | 1 | 07-08 08:49 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
