@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 21:33 UTC · branch `feat/baton` · HEAD `20558b1`_
+_Updated 2026-07-08 21:43 UTC · branch `feat/baton` · HEAD `33d8c26`_
 
-**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B9 — Task graph + smart session management · attempts used 0 · working ▸ B9.2
-**Checkpoints:** 49/65 done · **Sessions run:** 53 · **Cost:** $2.0643 · **Tokens:** 1,290,000 in / 703,444 out / 314,855 think
+**Checkpoints:** 49/65 done · **Sessions run:** 54 · **Cost:** $2.0643 · **Tokens:** 1,290,000 in / 703,444 out / 314,855 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8
+
+## Latest activity (live)
+
+_Session #54 (Deliver) · running 10m · last output 4s ago · $0.0389_
+
+**Thinking:**
+> Build succeeded 0w/0e. Now I need to write the tests for B9.2. The gate says: "given a checkpoint, the planner produces ≥1 ordered sub-task recorded in the graph (test with fake/deterministic planner output)."  I need tests for: 1. CheckpointPlanner.Decompose() produces ≥1 sub-task 2. The produced t…
+> Let me run the tests now to make sure everything passes.
+> Wait, 336 tests? But I added 6 new tests. That should be 342. Let me check if the tests are actually being detected.  The test run shows 336 passed — that's the same count as before. This means the new tests weren't compiled. I need to build first since I added new files. Let me re-build and re-test…
+
+**Recent actions:**
+- `22:41:49` · Now add task graph recovery from the event log during crash recovery:
+- `22:41:54` » edit src\Conductor\Core\Hosting\ConductorHost.cs
+- `22:41:54` · Register IPlanner in ConductorHost DI:
+- `22:41:59` · Let me build to verify compilation:
+- `22:42:05` » bash dotnet build Conductor.slnx 2>&1
+- `22:42:21` » write tests\Conductor.Tests\PlannerTests.cs
+- `22:42:21` · Build passes 0w/0e. Now write tests for B9.2:
+- `22:42:37` » bash dotnet test Conductor.slnx --no-build 2>&1
+- `22:42:44` · Tests still show 336 — need to rebuild with new files:
+- `22:43:12` » bash dotnet build Conductor.slnx 2>&1; if ($?) { dotnet test Conductor.slnx --no-build 2>&1 }
 
 ## Stage progress
 
@@ -29,7 +50,6 @@ _Updated 2026-07-08 21:33 UTC · branch `feat/baton` · HEAD `20558b1`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 24 | B4 | Resume | 5r1 | 07-08 10:33 | 0:12 | Stalled |  | 0 |  |  |  |
 | 25 | B4 | Resume | 6r2 | 07-08 10:45 | 0:12 | Stalled |  | 0 |  |  |  |
 | 26 | B4 | Deliver | 1 | 07-08 14:03 | 0:11 | Advanced | B4.1 | 3 | build:OK | $0.0175 | 1,259/9,081 |
 | 27 | B4 | Deliver | 1 | 07-08 14:15 | 0:17 | Advanced | B4.2 | 3 | build:OK | $0.0254 | 1,700/14,236 |
@@ -59,6 +79,7 @@ _Updated 2026-07-08 21:33 UTC · branch `feat/baton` · HEAD `20558b1`_
 | 51 | B9 | Fix | 3 | 07-08 21:23 | 0:00 | AgentError |  | 0 | build:OK |  |  |
 | 52 | B9 | Fix | 4 | 07-08 21:24 | 0:00 | AgentError |  | 0 | build:OK |  |  |
 | 53 | B9 | Fix | 5 | 07-08 21:26 | 0:06 | Advanced | B9.1 | 2 | build:OK | $0.0212 | 29,881/4,286 |
+| 54 | B9 | Deliver | 1 | 07-08 21:33 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
