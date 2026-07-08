@@ -1,12 +1,11 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 20:26 UTC · branch `feat/baton` · HEAD `99209bf`_
+_Updated 2026-07-08 20:27 UTC · branch `feat/baton` · HEAD `dc68331`_
 
 **Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B7 — Specialist sub-agent personas · attempts used 0
+**Stage:** B7 — Specialist sub-agent personas · attempts used 1
 **Checkpoints:** 43/65 done · **Sessions run:** 44 · **Cost:** $1.8045 · **Tokens:** 998,604 in / 643,051 out / 281,141 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6
-**Pending:** full-battery phase gate for B7
 
 ## Stage progress
 
@@ -101,7 +100,35 @@ _Updated 2026-07-08 20:26 UTC · branch `feat/baton` · HEAD `99209bf`_
 
 ## Last gate run
 
-build:OK
+build:FAIL · tests:FAIL
+
+<details><summary>build — exit -1</summary>
+
+```
+Determining projects to restore...
+  All projects are up-to-date for restore.
+```
+</details>
+
+<details><summary>tests — exit 1</summary>
+
+```
+Test run for C:\Code\conductor-baton\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:02.86]     Conductor.Tests.EventLogTests.ReadAllSucceedsWhileLiveWriterHoldsTheFile [FAIL]
+  Failed Conductor.Tests.EventLogTests.ReadAllSucceedsWhileLiveWriterHoldsTheFile [2 s]
+  Error Message:
+   Assert.Equal() Failure: Values differ
+Expected: 2
+Actual:   0
+  Stack Trace:
+     at Conductor.Tests.EventLogTests.ReadAllSucceedsWhileLiveWriterHoldsTheFile() in C:\Code\conductor-baton\tests\Conductor.Tests\EventLogTests.cs:line 185
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+Failed!  - Failed:     1, Passed:   305, Skipped:     0, Total:   306, Duration: 8 s - Conductor.Tests.dll (net10.0)
+```
+</details>
 
 ## Last session result
 
