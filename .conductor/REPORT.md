@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 16:33 UTC · branch `feat/baton` · HEAD `5ff505b`_
+_Updated 2026-07-08 16:43 UTC · branch `feat/baton` · HEAD `ab49790`_
 
-**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 0
-**Checkpoints:** 31/65 done · **Sessions run:** 33 · **Cost:** $1.1746 · **Tokens:** 506,142 in / 450,999 out / 196,540 think
+**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B5 — Observability & health · attempts used 0 · working ▸ B5.1
+**Checkpoints:** 31/65 done · **Sessions run:** 34 · **Cost:** $1.1746 · **Tokens:** 506,142 in / 450,999 out / 196,540 think
 **Confirmed phases:** B0, B1, B2, B3, B4
+
+## Latest activity (live)
+
+_Session #34 (Deliver) · running 10m · last output 39s ago · $0.0105_
+
+**Thinking:**
+> I need to examine the smoke script and the fake-agent PowerShell file to figure out how to properly generate the events.jsonl artifact that the smoke tests expect.
+> I need to figure out how the B2.1 smoke test was set up, and the most straightforward way to generate a real `events.jsonl` artifact for B5.1 is to create a small smoke plan, run it through the in-tree binary with fake-agent across a couple of --once sessions, then execute `conductor timeline` to pr…
+> I'm moving on to B5.1, which involves building a timeline view that displays state transitions with their wall times and durations pulled from the event log. The requirements call for a Timeline projection and a TUI timeline view, with a gate condition that the timeline renders correctly from a reco…
+
+**Recent actions:**
+- `17:40:07` » read tools\fake-agent.ps1
+- `17:40:08` · Now let me look at the fake-agent smoke harness and check for a smoke plan to produce a real `events.jsonl` artifact.
+- `17:40:08` » bash cd C:\Code\conductor-baton; git ls-files | Select-String -Pattern "smoke|Baton.*plan|self-test" ; echo "---plans dir---"; Get-ChildItem plans -Recurse -Fil…
+- `17:41:21` » read src\Conductor\Program.cs
+- `17:41:22` » read src\Conductor\Commands\Commands.cs
+- `17:41:22` · All green, QA of session #33 (B4 audit) is PASS. Now let me read Program.cs, the rest of Commands.cs, and existing ReporterTests to plan the B5.1 integration po…
+- `17:41:22` » read tests\Conductor.Tests\ReporterTests.cs
+- `17:42:31` » read src\Conductor\Ui\DashboardPreview.cs
+- `17:42:32` » grep StateDir|public string.*Repo|PlanDoc|TrackerPath
+- `17:42:32` · All green and QA of session #33 (B4 audit) is PASS. Let me set up my task plan and look at a couple more integration points.
 
 ## Stage progress
 
@@ -16,7 +37,7 @@ _Updated 2026-07-08 16:33 UTC · branch `feat/baton` · HEAD `5ff505b`_
 | B2 | Event-sourced backbone + provider decoupling | 6/6 | confirmed ✓ |
 | B3 | Safety, owner-gates & process control | 5/5 | confirmed ✓ |
 | B4 | TUI overhaul (alt-screen + tree) | 7/7 | confirmed ✓ |
-| B5 | Observability & health | 0/4 | todo |
+| B5 | Observability & health | 0/4 | **← active** |
 | B6 | AFK + two-way Telegram | 0/5 | todo |
 | B7 | Specialist sub-agent personas | 0/3 | todo |
 | B8 | Brain layer | 0/5 | todo |
@@ -29,7 +50,6 @@ _Updated 2026-07-08 16:33 UTC · branch `feat/baton` · HEAD `5ff505b`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 4 | B0 | Audit | 1 | 07-08 03:54 | 0:08 | Progress |  | 1 |  | $0.0116 | 1,138/6,511 |
 | 5 | B1 | Deliver | 1 | 07-08 04:02 | 0:12 | Advanced | B1.1 | 3 | build:OK | $0.0221 | 1,245/10,975 |
 | 6 | B1 | Deliver | 1 | 07-08 04:15 | 0:33 | Advanced | B1.2 | 5 | build:OK | $0.0241 | 1,297/10,939 |
 | 7 | B1 | Deliver | 1 | 07-08 04:49 | 0:37 | Advanced | B1.3 | 5 | build:OK | $0.0268 | 1,793/12,018 |
@@ -59,6 +79,7 @@ _Updated 2026-07-08 16:33 UTC · branch `feat/baton` · HEAD `5ff505b`_
 | 31 | B4 | Deliver | 1 | 07-08 15:38 | 0:19 | Advanced | B4.6 | 3 | build:OK | $0.0253 | 1,939/12,322 |
 | 32 | B4 | Deliver | 1 | 07-08 15:58 | 0:20 | Advanced | B4.7 | 5 | build:OK | $0.0360 | 2,120/14,866 |
 | 33 | B4 | Audit | 1 | 07-08 16:18 | 0:14 | Progress |  | 2 |  | $0.0191 | 1,034/10,114 |
+| 34 | B5 | Deliver | 1 | 07-08 16:33 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
