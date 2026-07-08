@@ -1,6 +1,6 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 04:35 UTC · branch `feat/baton` · HEAD `8fb628c`_
+_Updated 2026-07-08 04:45 UTC · branch `feat/baton` · HEAD `ac306f5`_
 
 **Status:** Running
 **Stage:** B1 — Decouple Loom + pluggable progress providers · attempts used 0 · working ▸ B1.2
@@ -9,24 +9,24 @@ _Updated 2026-07-08 04:35 UTC · branch `feat/baton` · HEAD `8fb628c`_
 
 ## Latest activity (live)
 
-_Session #6 (Deliver) · running 20m · last output 28s ago · $0.0117_
+_Session #6 (Deliver) · running 30m · last output 8s ago · $0.0220_
 
 **Thinking:**
-> I'm working through the B1.2 stage design, which involves extracting the current `TrackerParser` logic behind an `IProgressProvider` interface and creating a `MarkdownTableProvider` implementation. The `TrackerSnapshot` will become the output contract for this provider, and the existing tests should…
-> I'm working through the namespace organization for TrackerSnapshot and CheckpointRow—they're currently in `Conductor.Core` but the interface I'm creating needs to go in `Conductor.Core.Planning`, which means I need to sort out the using statements to avoid circular dependencies or missing references…
-> I'm settling on the design: create an `IProgressProvider` interface as the abstraction, then implement `MarkdownTableProvider` as the default that handles the parsing logic by moving the existing `TrackerParser` code into it to maintain byte-identical behavior.  To keep `TrackerParserTests` passing …
+> I'm wiring up the Orchestrator to use IProgressProvider as the abstraction point, which makes this interface actually load-bearing rather than just theoretical. The existing TrackerParserTests need to pass unchanged while now exercising the MarkdownTableProvider underneath, and I'm updating the Orch…
+> The file grew by 2 lines as expected with the new usings and field added, and the content validation confirms the file ends with a newline as it should. Time to build.
+> The tests are passing, but I need to verify the engine still works end-to-end with the stable driver after my seam change. The issue is that the stable driver is built from master and doesn't include my modifications, so running it won't actually prove my build works. I'm reconsidering what the arti…
 
 **Recent actions:**
-- `05:27:13` » grep IDE0130|dotnet_style_namespace|MA0048|namespace
-- `05:30:09` » todowrite 2 todos
-- `05:30:09` · QA verdict: **PASS** (both claims verified). Now delivering **B1.2** — `IProgressProvider` + `MarkdownTableProvider`, extracting today's parser behind the inter…
-- `05:31:48` · QA verdict: **PASS**. Now implementing B1.2. Creating the `Core/Planning/` interface + default provider.
-- `05:31:48` » write src\Conductor\Core\Planning\IProgressProvider.cs
-- `05:34:07` · Now the `MarkdownTableProvider` (byte-identical — delegates to the proven parser) and a small resolver. Let me check how the Orchestrator is constructed first.
-- `05:34:07` » grep new Orchestrator
-- `05:34:07` » read src\Conductor\Commands\Commands.cs
-- `05:35:09` » write src\Conductor\Core\Planning\MarkdownTableProvider.cs
-- `05:35:09` · Now the `MarkdownTableProvider` — moving the parse logic here (the real implementation), and keeping `TrackerParser` as a thin facade so existing call sites/tes…
+- `05:42:47` » bash git add src/Conductor/Core/Planning/IProgressProvider.cs src/Conductor/Core/Planning/MarkdownTableProvider.cs src/Conductor/Core/TrackerParser.cs src/Condu…
+- `05:43:07` » bash cd C:\Code\conductor-baton; git commit -F - <<'MSG' feat(bB1.2): IProgressProvider seam + MarkdownTableProvider (byte-identical default)  Extract the track…
+- `05:43:21` » write ..\..\Users\shahi\AppData\Local\Temp\opencode\b12-commit.txt
+- `05:43:21` · PowerShell doesn't support heredocs. Let me write the commit message to a temp file.
+- `05:43:33` » bash git commit -F "C:\Users\shahi\AppData\Local\Temp\opencode\b12-commit.txt"; git log --oneline -1
+- `05:43:42` » edit CONDUCTOR-START.md
+- `05:43:42` · Committed as `ac306f5`. Now update the tracker: B1.2 row and the Handoff block.
+- `05:45:02` » edit CONDUCTOR-START.md
+- `05:45:15` · Now re-run the full gate battery post-tracker-update (to confirm nothing regressed), then commit the tracker and push.
+- `05:45:29` » bash dotnet build Conductor.slnx 2>&1 | Select-String "Warning|Error|Build succeeded" | Select-Object -Last 4; echo "===TEST==="; dotnet test Conductor.slnx 2>&…
 
 ## Stage progress
 
