@@ -1,11 +1,12 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 18:48 UTC · branch `feat/baton` · HEAD `9c04782`_
+_Updated 2026-07-08 19:53 UTC · branch `feat/baton` · HEAD `d054c9c`_
 
 **Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B6 — AFK + two-way Telegram · attempts used 0 · working ▸ B6.5
-**Checkpoints:** 39/65 done · **Sessions run:** 39 · **Cost:** $1.5837 · **Tokens:** 752,707 in / 590,343 out / 253,299 think
+**Stage:** B6 — AFK + two-way Telegram · attempts used 0
+**Checkpoints:** 40/65 done · **Sessions run:** 41 · **Cost:** $1.6148 · **Tokens:** 781,877 in / 598,228 out / 260,653 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5
+**Pending:** auto-fix audit for B6
 
 ## Stage progress
 
@@ -17,7 +18,7 @@ _Updated 2026-07-08 18:48 UTC · branch `feat/baton` · HEAD `9c04782`_
 | B3 | Safety, owner-gates & process control | 5/5 | confirmed ✓ |
 | B4 | TUI overhaul (alt-screen + tree) | 7/7 | confirmed ✓ |
 | B5 | Observability & health | 4/4 | confirmed ✓ |
-| B6 | AFK + two-way Telegram | 4/5 | **← active** |
+| B6 | AFK + two-way Telegram | 5/5 | gating… |
 | B7 | Specialist sub-agent personas | 0/3 | todo |
 | B8 | Brain layer | 0/5 | todo |
 | B9 | Task graph + smart session management | 0/5 | todo |
@@ -29,8 +30,6 @@ _Updated 2026-07-08 18:48 UTC · branch `feat/baton` · HEAD `9c04782`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 10 | B1 | Audit | 1 | 07-08 06:04 | 0:17 | Progress |  | 3 |  | $0.0289 | 1,492/13,453 |
-| 11 | B2 | Deliver | 1 | 07-08 06:22 | 0:24 | Advanced | B2.1 | 4 | build:OK | $0.0441 | 2,334/21,533 |
 | 12 | B2 | Deliver | 1 | 07-08 06:47 | 0:18 | Advanced | B2.2 | 3 | build:OK | $0.0334 | 1,778/18,546 |
 | 13 | B2 | Deliver | 1 | 07-08 07:06 | 0:10 | Advanced | B2.3 | 3 | build:OK | $0.0551 | 66,865/13,343 |
 | 14 | B2 | Deliver | 1 | 07-08 07:17 | 0:22 | Advanced | B2.4 | 4 | build:OK | $0.0395 | 1,813/20,904 |
@@ -59,15 +58,11 @@ _Updated 2026-07-08 18:48 UTC · branch `feat/baton` · HEAD `9c04782`_
 | 37 | B5 | Deliver | 1 | 07-08 17:54 | 0:18 | Advanced | B5.4 | 2 | build:OK | $0.0750 | 61,596/21,872 |
 | 38 | B5 | Audit | 1 | 07-08 18:13 | 0:07 | Progress |  | 2 |  | $0.0635 | 86,516/7,809 |
 | 39 | B6 | Deliver | 1 | 07-08 18:21 | 0:26 | Advanced | B6.1 B6.2 B6.3 B6.4 | 3 | build:OK | $0.1276 | 91,871/39,873 |
+| 40 | B6 | Deliver | 1 | 07-08 18:48 | … | running |  | 0 |  |  |  |
+| 41 | B6 | Deliver | 1 | 07-08 19:45 | 0:07 | Advanced | B6.5 | 1 | build:OK | $0.0311 | 29,170/7,885 |
 
 ### Commits by session
 
-- **s32 (B4 Deliver)** — 5 commit(s):
-  - 6714efe chore(conductor): s32 B4 working ▸B4.7 @ 17:18
-  - c6eadb0 docs(bB4.7): mark B4.7 DONE + handoff (B4 complete; QA #31 PASS)
-  - c1edb3b feat(bB4.7): doc-on-select - plan-tree cursor opens the selected stage doc
-  - 1f61578 feat(bB4.7): live-consistent token line folds session delta like cost
-  - 82e1087 chore(conductor): s32 B4 working ▸B4.7 @ 17:08
 - **s33 (B4 Audit)** — 2 commit(s):
   - fd4e327 fix(bB4): audit-harden TUI — fix status-agent UI-thread race, wire severity model, harden alt-screen restore
   - 3f46d73 chore(conductor): s33 B4 working ▸B4 @ 17:28
@@ -96,6 +91,8 @@ _Updated 2026-07-08 18:48 UTC · branch `feat/baton` · HEAD `9c04782`_
   - 9c04782 feat(bB6.1-4): Telegram + richer REPORT.md + webhook notifier
   - 6c0c5c7 chore(conductor): s39 B6 working ▸B6.1 @ 19:41
   - 9f4a0ee chore(conductor): s39 B6 working ▸B6.1 @ 19:31
+- **s41 (B6 Deliver)** — 1 commit(s):
+  - d054c9c feat(bB6.5): Shamshir P-0 + P0.1 headless acceptance — B6 COMPLETE
 
 ## Phase handovers (audit)
 
@@ -112,22 +109,20 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: Landed B6.1-4 in one commit (`9c04782`): Telegram long-poll `IHostedService` with push + `/status` + two-way inline-keyboard control→`control.json` (chat-id allowlist, destructive confirm); richer REPORT.md (progress bars, collapsible `<details>`, commit links) + clean heartbeat (zero git commits on feature branch for heartbeat writes, F-4 resolved); `WebhookNotifier` (generic/Discord/Slack fire-and-forget); +20 tests, 295 total green. B6.5 Shamshir acceptance dry-run verified (stable driver parses P-0/P0.1 conventions) but full headless execution requires a real Shamshir repo. Next session should either execute B6.5 against a real Shamshir codebase or advance to B7 (personas…
+> SESSION-RESULT: Stage B6 is DONE. All 5 checkpoints landed (Telegram IHostedService + push + /status, two-way inline-keyboard control.json with allowlist+confirm, richer REPORT.md with clean heartbeat, WebhookNotifier for Discord/Slack/generic, Shamshir P-0+P0.1 headless acceptance). Gate battery green: build 0w/0e (net10, warnings-as-errors), 295 tests pass. QA of previous session (B5.4) verified: 24 B5_4 tests green, Reporter confidence wiring confirmed at Reporter.cs:138-147. B6.5 acceptance proven by stable driver dry-run + --once against fresh Shamshir plan with irregular stage-ids (P-0, P0.1). What was hard: the `--once` headless session couldn't complete because the temp dir had no re…
 
 ## Tracker handoff
 
 ```
-last: session #39 (B6.1-4, deliver) — landed **B6.1** (Telegram long-poll + push + /status via
-      IHostedService, 20 tests), **B6.2** (two-way inline-keyboard → control.json, allowlist +
-      destructive confirm), **B6.3** (richer REPORT.md: progress bars + collapsible per-stage +
-      commit links; clean heartbeat: no heartbeat git commits), **B6.4** (WebhookNotifier:
-      generic/Discord/Slack fire-and-forget).
-stage: **B6 IN PROGRESS** — B6.1-4 done. B6.5 (Shamshir acceptance) dry-run verified; full headless
-       execution needs a real Shamshir repo.
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 295 tests pass. B6.1-gate.txt.
-qa: session #37/B5.4 deliver PASS — 11 HealthMetricsTests green confirmed; Reporter ## Health at
-    line 105 confirmed. No findings.
-next: B6.5 execution against real Shamshir repo, or advance to B7.
-dirty: none.
-evidence: docs/baton/evidence/B6.1-gate.txt, docs/baton/audits/B6-shamshir-acceptance.md
+last: session #41 (B6.5, deliver) — landed **B6.5** (Shamshir P-0 + P0.1 headless acceptance):
+      stable driver dry-run + --once against fresh Shamshir plan; 3 Shamshir-specific tests pass;
+      stage B6 COMPLETE.
+stage: **B6 DONE** — B6.1 (Telegram), B6.2 (two-way control), B6.3 (richer REPORT + clean
+       heartbeat), B6.4 (WebhookNotifier), B6.5 (Shamshir acceptance) all DONE.
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 295 tests pass (24 B5_4, 3 Shamshir).
+qa: session #39/B6.1-4 deliver PASS — 24 B5_4 tests green confirmed; Reporter confidence wiring
+    at Reporter.cs:138-147 verified. No findings.
+next: B7 (specialist sub-agent personas) or B6 audit fix-session.
+dirty: none (followups.md has orchestrator heartbeat diff only).
+evidence: docs/baton/evidence/B6.5-shamshir-acceptance.txt
 ```
