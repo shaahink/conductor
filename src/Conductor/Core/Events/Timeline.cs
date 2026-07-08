@@ -66,7 +66,8 @@ public static class Timeline
                 case SessionStarted s:
                     sessionStart[s.Number] = s.Ts;
                     entries.Add(new TimelineEntry(s.Seq, s.Ts, EntryKind.Session,
-                        $"session #{s.Number} {s.StageId} {s.Kind} started (attempt {s.Attempt}/{s.MaxAttempts})", null));
+                        $"session #{s.Number} {s.StageId} {s.Kind} started (attempt {s.Attempt}/{s.MaxAttempts})" +
+                        (s.Persona != null ? $" · persona {s.Persona}" : ""), null));
                     break;
 
                 case SessionFinished s:

@@ -19,11 +19,12 @@ public sealed record RunOptions(bool DryRun, bool Once, int MaxSessions);
 /// </summary>
 public sealed class Orchestrator(PlanConfig plan, RunState state, string statePath, IProgressSink sink, IEventSink events, RunOptions opts, ILogger<Orchestrator> logger, ITelegramService telegram, WebhookNotifier webhooks)
 {
-    private readonly PromptBuilder _prompts = new(plan);
+    private readonly PromptBuilder _prompts = new(plan, new PersonaRegistry(plan));
     private readonly IProgressProvider _progress = ProgressProviderFactory.Create(plan);
     // The agent provider owns backend-specific concerns (stream parsing lives in AgentSession, the
     // usage-limit phrasing lives here) so the Orchestrator no longer switches on `output` (B2.4, D-11).
     private readonly IAgentProvider _agentProvider = AgentProviderFactory.Create(plan.Agent);
+    private readonly PersonaRegistry _personas = new(plan);
     private IReadOnlyList<GateResult>? _lastGates;
     private bool _pendingSkip;
     private bool _pausePending;
@@ -295,11 +296,13 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             Attempt = attempt,
             MaxAttempts = maxAttempts,
             AgentSessionId = rec.ClaudeSessionId,
+            Persona = plan.ResolvePersona(stage),
         });
 
         bool stalled = false, timedOut = false, killedByUser = false;
         GateRunner.RunHook(plan, plan.Setup, "setup", Log, ct);
-        using (var agent = AgentSession.Start(plan.Agent, plan.Repo, prompt, rec.ClaudeSessionId,
+        var resolvedAgent = plan.ResolveAgent(stage);
+        using (var agent = AgentSession.Start(resolvedAgent, plan.Repo, prompt, rec.ClaudeSessionId,
                    kind == SessionKind.Resume ? rec.ClaudeSessionId : null, rawLog, events, rec.Number.ToString()))
         {
             _activity.Clear();

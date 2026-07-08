@@ -56,6 +56,29 @@ public sealed class PlanConfig
     [JsonIgnore] public string TrackerPath => Path.Combine(Repo, Tracker);
     [JsonIgnore] public bool PerPhaseGates => GatePolicy.Equals("perPhase", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>Resolve the effective agent config for a stage: stage.Agent overrides plan.Agent
+    /// field-by-field via <see cref="AgentConfig.Merge"/>. When both are null/empty a fresh default
+    /// is returned so callers never dereference null (B7.1).</summary>
+    public AgentConfig ResolveAgent(StageConfig stage)
+        => Agent?.Merge(stage.Agent) ?? stage.Agent ?? new AgentConfig();
+
+    /// <summary>Resolve the persona name for a stage — stage.Persona falls back to plan-wide
+    /// scrape from stage.Notes (the "Persona: X" hint convention that existed before B7 landed).</summary>
+    public string? ResolvePersona(StageConfig stage)
+    {
+        if (!string.IsNullOrWhiteSpace(stage.Persona)) return stage.Persona;
+        // Fall back: parse legacy "Persona: architect" hints from notes (pre-B7 convention)
+        if (!string.IsNullOrWhiteSpace(stage.Notes))
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(stage.Notes,
+                @"Persona:\s*(?<persona>\w+)",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.ExplicitCapture,
+                ProgressConventions.RegexTimeout);
+            if (match.Success) return match.Groups["persona"].Value;
+        }
+        return null;
+    }
+
     public static readonly JsonSerializerOptions JsonOpts = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -303,6 +326,36 @@ public sealed class AgentConfig
     /// <summary>Selects the <c>IAgentProvider</c> adapter by name ("opencode", "claude", "text"). When
     /// empty the adapter is inferred from <see cref="Output"/> so existing plans are unchanged (B2.4, D-11).</summary>
     public string? Provider { get; set; }
+    /// <summary>Optional system prompt injected before the base prompt (B7 persona templates).</summary>
+    public string? SystemPrompt { get; set; }
+    /// <summary>Optional model override for this agent (e.g. "claude-sonnet-4-20250514").</summary>
+    public string? Model { get; set; }
+    /// <summary>Optional sampling temperature (0.0–2.0). null = default.</summary>
+    public double? Temperature { get; set; }
+    /// <summary>Optional per-session token ceiling (output tokens).</summary>
+    public int? TokenCeiling { get; set; }
+    /// <summary>Merges an optional override into this config, returning a new instance.
+    /// A field whose value equals the C# default (e.g. "claude" for Command) is treated as unset
+    /// and falls back to the base value — so a JSON override like {"systemPrompt":"x"} won't
+    /// regress a base Command of "opencode" to "claude" (B7.1).</summary>
+    public AgentConfig Merge(AgentConfig? o)
+    {
+        if (o == null) return this;
+        var def = new AgentConfig();
+        var m = new AgentConfig
+        {
+            Command = !string.IsNullOrWhiteSpace(o.Command) && o.Command != def.Command ? o.Command : Command,
+            Args = o.Args.Count > 0 ? o.Args : Args,
+            ResumeArgs = o.ResumeArgs is { Count: > 0 } ? o.ResumeArgs : ResumeArgs,
+            Output = !string.IsNullOrWhiteSpace(o.Output) && o.Output != def.Output ? o.Output : Output,
+            Provider = !string.IsNullOrWhiteSpace(o.Provider) ? o.Provider : Provider,
+            SystemPrompt = o.SystemPrompt ?? SystemPrompt,
+            Model = o.Model ?? Model,
+            Temperature = o.Temperature ?? Temperature,
+            TokenCeiling = o.TokenCeiling ?? TokenCeiling,
+        };
+        return m;
+    }
 }
 
 public sealed class HookConfig
@@ -346,6 +399,12 @@ public sealed class StageConfig
     /// <summary>If true, the stage parks at <c>AwaitingOwner</c> even when green — the owner must
     /// approve before the orchestrator advances past it (B3.2).</summary>
     public bool OwnerGate { get; set; }
+    /// <summary>Per-stage agent override (B7.1) — merged over the plan default. null = use plan default.
+    /// The orchestrator resolves checkpoint ?? stage ?? plan default at session-start time.</summary>
+    public AgentConfig? Agent { get; set; }
+    /// <summary>Persona name to adopt for this stage (e.g. "architect", "planner", "qa"). Resolved
+    /// by <c>PersonaRegistry</c> into a system prompt. null = no persona (B7.2).</summary>
+    public string? Persona { get; set; }
 }
 
 public sealed class GateConfig

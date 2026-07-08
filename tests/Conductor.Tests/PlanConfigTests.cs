@@ -173,20 +173,58 @@ public class PlanConfigTests
     }
 
     [Fact]
-    public void OwnerGateStageFlagDeserializes()
+    public void StageAgentOverrideMergesOverPlanDefault()
     {
         const string json = """
         {
           "name": "T", "repo": ".", "tracker": "t.md",
-          "agent": { "command": "opencode", "args": ["run", "{prompt}"] },
+          "agent": { "command": "opencode", "args": ["run", "{prompt}"], "provider": "opencode", "output": "opencode-json", "systemPrompt": "base sys" },
           "stages": [
-            { "id": "S1", "title": "First", "ownerGate": true },
-            { "id": "S2", "title": "Second" }
+            { "id": "S1", "title": "First" },
+            { "id": "S2", "title": "Second", "agent": { "systemPrompt": "stage sys", "temperature": 0.3, "model": "gpt-5" }, "persona": "qa" }
           ]
         }
         """;
         var cfg = JsonSerializer.Deserialize<PlanConfig>(json, PlanConfig.JsonOpts)!;
-        Assert.True(cfg.Stages[0].OwnerGate);
-        Assert.False(cfg.Stages[1].OwnerGate);
+
+        // S1: no override → plan default
+        var s1 = cfg.ResolveAgent(cfg.Stages[0]);
+        Assert.Equal("opencode", s1.Command);
+        Assert.Equal("base sys", s1.SystemPrompt);
+        Assert.Null(s1.Temperature);
+
+        // S2: override merged over plan default
+        var s2 = cfg.ResolveAgent(cfg.Stages[1]);
+        Assert.Equal("opencode", s2.Command);           // not overridden → falls back
+        Assert.Equal("stage sys", s2.SystemPrompt);     // overridden
+        Assert.Equal(0.3, s2.Temperature);              // overridden
+        Assert.Equal("gpt-5", s2.Model);                // overridden
+        Assert.Equal("opencode", s2.Provider);          // not overridden → falls back
+
+        // Persona resolution: stage.Persona wins
+        Assert.Equal("qa", cfg.ResolvePersona(cfg.Stages[1]));
+        Assert.Null(cfg.ResolvePersona(cfg.Stages[0]));
+    }
+
+    [Fact]
+    public void PersonaScrapedFromNotesFallback()
+    {
+        var cfg = new PlanConfig { Repo = ".", Tracker = "t.md" };
+        cfg.Stages.Add(new StageConfig { Id = "S1", Notes = "Read docs/baton/stages/B2.md. Persona: architect. Do the thing." });
+        cfg.Stages.Add(new StageConfig { Id = "S2", Notes = "No persona here." });
+
+        Assert.Equal("architect", cfg.ResolvePersona(cfg.Stages[0]));
+        Assert.Null(cfg.ResolvePersona(cfg.Stages[1]));
+    }
+
+    [Fact]
+    public void EmptyArgsDoesNotOverride()
+    {
+        var cfg = new PlanConfig { Repo = ".", Tracker = "t.md" };
+        cfg.Agent.Args.Add("run");
+        cfg.Agent.Args.Add("{prompt}");
+        cfg.Stages.Add(new StageConfig { Id = "S1", Agent = new AgentConfig { Args = new() } });
+        // Empty args list → falls back to plan default
+        Assert.Equal(2, cfg.ResolveAgent(cfg.Stages[0]).Args.Count);
     }
 }

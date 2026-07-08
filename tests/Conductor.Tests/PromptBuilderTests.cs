@@ -86,4 +86,49 @@ public class PromptBuilderTests
         }
         finally { Directory.Delete(dir, recursive: true); }
     }
+
+    [Fact]
+    public void PersonaSystemPromptPrependedToBasePrompt()
+    {
+        var plan = Plan();
+        var stage = new StageConfig { Id = "B2", Title = "Spine", Sessions = 3, Persona = "architect" };
+        var reg = new PersonaRegistry((string?)null);
+        var builder = new PromptBuilder(plan, reg);
+        var prompt = builder.Deliver(stage, 1, 1, 6);
+
+        // Persona system prompt appears first
+        var architectPrompt = reg.ResolveSystemPrompt("architect")!;
+        Assert.StartsWith(architectPrompt, prompt);
+
+        // Conductor contract rules appear AFTER the persona prompt (merge order: contract wins)
+        var contractIdx = prompt.IndexOf("Evidence or it didn't happen", StringComparison.Ordinal);
+        var personaIdx = prompt.IndexOf(architectPrompt, StringComparison.Ordinal);
+        Assert.True(contractIdx > personaIdx, "Contract rules must come after persona system prompt");
+    }
+
+    [Fact]
+    public void NoPersonaMeansNoSystemPromptPrepended()
+    {
+        var plan = Plan();
+        var stage = new StageConfig { Id = "S1", Title = "Test" };
+        var builder = new PromptBuilder(plan);
+        var prompt = builder.Deliver(stage, 1, 1, 6);
+
+        // No persona → prompt starts with the standard "You are one autonomous engineering session..."
+        Assert.StartsWith("You are one autonomous engineering session", prompt);
+    }
+
+    [Fact]
+    public void PersonaScrapedFromNotesWhenPersonaFieldNull()
+    {
+        var plan = Plan();
+        var stage = new StageConfig { Id = "B2", Title = "Spine", Notes = "Persona: architect. Do the thing." };
+        var reg = new PersonaRegistry((string?)null);
+        var builder = new PromptBuilder(plan, reg);
+        var prompt = builder.Deliver(stage, 1, 1, 6);
+
+        // Persona resolved from legacy "Persona: architect" notes hint
+        var architectPrompt = reg.ResolveSystemPrompt("architect")!;
+        Assert.StartsWith(architectPrompt, prompt);
+    }
 }

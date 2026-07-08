@@ -101,7 +101,8 @@ public static class DashboardRenderer
         if (compact)
         {
             var stageLine = $"stage [bold]{Esc(s.StageId)}[/] {Esc(Clip(s.StageTitle, 40))}" +
-                            (s.SessionNumber > 0 ? $" · #{s.SessionNumber} {Esc(s.SessionKind)}" : "");
+                            (s.SessionNumber > 0 ? $" · #{s.SessionNumber} {Esc(s.SessionKind)}" : "") +
+                            (!string.IsNullOrEmpty(s.Persona) ? $" · [bold]{Esc(s.Persona)}[/]" : "");
             grid.AddRow(new Markup(title), new Markup(CheckpointsLine(s)));
             grid.AddRow(new Markup(ActivityLine(st)), new Markup(CostLine(s)));
             grid.AddRow(new Markup(stageLine), new Markup(TokenLine(s)));
@@ -111,7 +112,8 @@ public static class DashboardRenderer
         var line2 = $"stage [bold]{Esc(s.StageId)}[/] {Esc(s.StageTitle)}" +
                     (s.SessionNumber > 0 ? $" · session #{s.SessionNumber} {Esc(s.SessionKind)}" : "") +
                     (s.Attempt > 0 ? $" · attempt {s.Attempt}/{s.MaxAttempts}" : "") +
-                    (s.ResumeCount > 0 ? $" · resume {s.ResumeCount}" : "");
+                    (s.ResumeCount > 0 ? $" · resume {s.ResumeCount}" : "") +
+                    (!string.IsNullOrEmpty(s.Persona) ? $" · persona [bold]{Esc(s.Persona)}[/]" : "");
         var line3 = !string.IsNullOrEmpty(s.CurrentCheckpoint)
             ? $"[aqua]▸ {Esc(s.CurrentCheckpoint)}[/]" +
               (!string.IsNullOrEmpty(s.CurrentCheckpointTitle) ? $" [silver]{Esc(Clip(s.CurrentCheckpointTitle, 80))}[/]" : "")

@@ -7,8 +7,16 @@ namespace Conductor.Core;
 /// falling back to built-in defaults when a template file is absent.
 /// Placeholders: {name} replaced verbatim.
 /// </summary>
-public sealed class PromptBuilder(PlanConfig plan)
+public sealed class PromptBuilder
 {
+    private readonly PlanConfig _plan;
+    private readonly PersonaRegistry _personas;
+
+    public PromptBuilder(PlanConfig plan, PersonaRegistry? personaRegistry = null)
+    {
+        _plan = plan;
+        _personas = personaRegistry ?? new PersonaRegistry(plan);
+    }
     public string Deliver(StageConfig stage, int sessionNumber, int attempt, int maxAttempts)
         => Render("session.md", Vars(stage, sessionNumber, attempt, maxAttempts));
 
@@ -50,7 +58,7 @@ public sealed class PromptBuilder(PlanConfig plan)
     private Dictionary<string, string> Vars(StageConfig stage, int sessionNumber, int attempt, int maxAttempts)
     {
         var readOrder = "";
-        if (plan.ReadOrder is { Count: > 0 } docs)
+        if (_plan.ReadOrder is { Count: > 0 } docs)
         {
             var sb = new System.Text.StringBuilder();
             sb.AppendLine("Required reading (in order):");
@@ -59,33 +67,45 @@ public sealed class PromptBuilder(PlanConfig plan)
             readOrder = sb.ToString();
         }
 
+        var personaName = _plan.ResolvePersona(stage);
+        var personaSystemPrompt = _personas.ResolveSystemPrompt(personaName) ?? "";
+
         return new()
         {
-            ["planName"] = plan.Name,
-            ["repo"] = plan.Repo,
-            ["tracker"] = plan.Tracker,
-            ["planDoc"] = plan.PlanDoc,
+            ["planName"] = _plan.Name,
+            ["repo"] = _plan.Repo,
+            ["tracker"] = _plan.Tracker,
+            ["planDoc"] = _plan.PlanDoc,
             ["stage"] = stage.Id,
             ["stageTitle"] = stage.Title,
             ["stageNotes"] = string.IsNullOrWhiteSpace(stage.Notes) ? "" : $"\nStage-specific notes from the orchestrator config:\n{stage.Notes}\n",
             ["sessionNumber"] = sessionNumber.ToString(),
             ["attempt"] = attempt.ToString(),
             ["maxAttempts"] = maxAttempts.ToString(),
-            ["extra"] = plan.PromptExtra,
+            ["extra"] = _plan.PromptExtra,
             ["readOrder"] = readOrder,
+            ["persona"] = personaName ?? "",
+            ["personaSystemPrompt"] = personaSystemPrompt,
         };
     }
 
     private string Render(string templateFile, Dictionary<string, string> vars)
     {
-        var path = Path.Combine(plan.PlanDir, plan.TemplatesDir, templateFile);
+        var path = Path.Combine(_plan.PlanDir, _plan.TemplatesDir, templateFile);
         var text = File.Exists(path) ? File.ReadAllText(path) : BuiltIn(templateFile);
         foreach (var (k, v) in vars) text = text.Replace("{" + k + "}", v);
         text = text.Trim();
 
+        // Merge in persona system prompt — appended after base prompt rendering so the
+        // persona doesn't need to be referenced in every template (B7.3). Conductor contract
+        // rules (the built-in template's rules block) remain last and win over persona content.
+        var personaSystemPrompt = vars.GetValueOrDefault("personaSystemPrompt", "");
+        if (personaSystemPrompt.Length > 0)
+            text = personaSystemPrompt + "\n\n" + text;
+
         // Human-injected instructions (from the TUI `I` key / `.conductor/queue/`) are appended to
         // every session prompt so they're delivered even if a custom template omits the placeholder.
-        var queued = InstructionQueue.PromptSection(plan);
+        var queued = InstructionQueue.PromptSection(_plan);
         if (queued.Length > 0) text += "\n\n" + queued;
         return text;
     }

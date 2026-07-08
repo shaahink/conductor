@@ -27,7 +27,8 @@ public static class Reporter
         sb.AppendLine($"_Updated {DateTime.UtcNow:yyyy-MM-dd HH:mm} UTC · branch `{branch}` · HEAD `{Short(head)}`_");
         sb.AppendLine();
         sb.AppendLine($"**Status:** {state.Status}{(state.AttentionReason != null ? $" — {state.AttentionReason}" : "")}");
-        sb.AppendLine($"**Stage:** {state.CurrentStage ?? "-"}{(stage != null ? $" — {stage.Title}" : "")} · attempts used {state.AttemptsThisStage}" +
+        var stagePersona = stage != null ? plan.ResolvePersona(stage) : null;
+        sb.AppendLine($"**Stage:** {state.CurrentStage ?? "-"}{(stage != null ? $" — {stage.Title}" : "")}{(stagePersona != null ? $" · persona: {stagePersona}" : "")} · attempts used {state.AttemptsThisStage}" +
                       (NextCheckpoint(track, state.CurrentStage) is { } nc ? $" · working ▸ {nc}" : ""));
         sb.AppendLine($"**Checkpoints:** {done}/{track.Checkpoints.Count} done · **Sessions run:** {state.SessionCounter} · **Cost:** ${state.TotalCostUsd:0.0000}" +
                       (state.TotalTokensInput + state.TotalTokensOutput > 0

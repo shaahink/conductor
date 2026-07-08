@@ -66,6 +66,8 @@ public sealed record DashboardSnapshot
     public string? AttentionReason { get; init; }
     public string StageId { get; init; } = "";
     public string StageTitle { get; init; } = "";
+    /// <summary>Active persona for the current stage/session (B7.3). null = default.</summary>
+    public string? Persona { get; init; }
     public int SessionNumber { get; init; }
     public string SessionKind { get; init; } = "";
     public int Attempt { get; init; }

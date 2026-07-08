@@ -8,17 +8,19 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #41 (B6.5, deliver) — landed **B6.5** (Shamshir P-0 + P0.1 headless acceptance):
-      stable driver dry-run + --once against fresh Shamshir plan; 3 Shamshir-specific tests pass;
-      stage B6 COMPLETE.
-stage: **B6 DONE** — B6.1 (Telegram), B6.2 (two-way control), B6.3 (richer REPORT + clean
-       heartbeat), B6.4 (WebhookNotifier), B6.5 (Shamshir acceptance) all DONE.
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 295 tests pass (24 B5_4, 3 Shamshir).
-qa: session #39/B6.1-4 deliver PASS — 24 B5_4 tests green confirmed; Reporter confidence wiring
-    at Reporter.cs:138-147 verified. No findings.
-next: B7 (specialist sub-agent personas) or B6 audit fix-session.
-dirty: none (followups.md has orchestrator heartbeat diff only).
-evidence: docs/baton/evidence/B6.5-shamshir-acceptance.txt
+last: session #43 (B7, deliver) — landed **B7.1–B7.3** (specialist sub-agent personas):
+       per-stage AgentConfig override (Merge over plan default); 9 built-in persona templates +
+       disk files at plans/personas/*.md; PromptBuilder prepends persona system prompt ahead of
+       contract rules; persona shown in SessionStarted event, dashboard header, reporter stage
+       line, and timeline entries. Self-plan persona hints converted to real "persona" fields.
+stage: **B7 DONE** — B7.1 (schema), B7.2 (registry), B7.3 (prompt merge + surface) all DONE.
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 306 tests pass (11 new).
+qa: session #41/B6.5 deliver PASS — Shamshir tests verified (3/3); evidence artifact reviewed
+     and content-asserted. Pre-existing flaky test ReadAllSucceedsWhileLiveWriterHoldsTheFile
+     fails ~50% (timing-dependent event log flush); not introduced by B7. No findings.
+next: B8 (brain layer) or B7 audit fix-session.
+dirty: none.
+evidence: docs/baton/evidence/B7-gate.txt
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -79,9 +81,9 @@ never silent renumbering.
 | B6.3 | Richer REPORT.md (progress bars, collapsible per-stage, commit links) + clean heartbeat (no history pollution) | DONE | 762bed5 | docs/baton/evidence/B6.1-gate.txt |
 | B6.4 | Notify hooks (webhook/Discord/Slack) first-class examples | DONE | 762bed5 | docs/baton/evidence/B6.1-gate.txt |
 | B6.5 | **Acceptance: Conductor drives Shamshir P-0 + P0.1 headless, independently verified** | DONE | 762bed5 | docs/baton/evidence/B6.5-shamshir-acceptance.txt, docs/baton/audits/B6-shamshir-acceptance.md |
-| B7.1 | Per-stage/per-checkpoint agent override in plan schema (command/systemPrompt/temperature/tokens) | TODO | | |
-| B7.2 | Built-in persona registry (planner/reviewer/architect/qa/docs/refactor/test-writer/git-cleanup/security) | TODO | | |
-| B7.3 | PromptBuilder merges base + persona; persona shown in dashboard/report/events | TODO | | |
+| B7.1 | Per-stage/per-checkpoint agent override in plan schema (command/systemPrompt/temperature/tokens) | DONE | 38e14fc | docs/baton/evidence/B7-gate.txt |
+| B7.2 | Built-in persona registry (planner/reviewer/architect/qa/docs/refactor/test-writer/git-cleanup/security) | DONE | 38e14fc | docs/baton/evidence/B7-gate.txt |
+| B7.3 | PromptBuilder merges base + persona; persona shown in dashboard/report/events | DONE | 38e14fc | docs/baton/evidence/B7-gate.txt |
 | B8.1 | Reflection step → rolling .conductor/lessons.md (bounded) | TODO | | |
 | B8.2 | Lessons injected into next prompt ({lessons} battery) — closes F-7 | TODO | | |
 | B8.3 | Self-review stage kind (stronger model reviews last N sessions, proposes adjustments) | TODO | | |

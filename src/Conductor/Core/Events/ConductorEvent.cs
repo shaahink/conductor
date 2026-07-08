@@ -74,6 +74,8 @@ public sealed record SessionStarted : ConductorEvent
     public int MaxAttempts { get; init; }
     /// <summary>The provider/agent session id (today's <c>ClaudeSessionId</c>) used for resume.</summary>
     public string? AgentSessionId { get; init; }
+    /// <summary>Active persona for this session (B7.3). null = default.</summary>
+    public string? Persona { get; init; }
 }
 
 /// <summary>An agent session ended with an independently-verified outcome.</summary>
