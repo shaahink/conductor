@@ -1,6 +1,6 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 04:25 UTC · branch `feat/baton` · HEAD `8aa94e4`_
+_Updated 2026-07-08 04:35 UTC · branch `feat/baton` · HEAD `8fb628c`_
 
 **Status:** Running
 **Stage:** B1 — Decouple Loom + pluggable progress providers · attempts used 0 · working ▸ B1.2
@@ -9,24 +9,24 @@ _Updated 2026-07-08 04:25 UTC · branch `feat/baton` · HEAD `8aa94e4`_
 
 ## Latest activity (live)
 
-_Session #6 (Deliver) · running 10m · last output 181s ago · $0.0055_
+_Session #6 (Deliver) · running 20m · last output 28s ago · $0.0117_
 
 **Thinking:**
-> I'm checking the existing Progress.cs file in Core to understand the namespace conventions, then looking at how PlanConfig.cs is structured to determine where IProgressProvider.cs should go.
-> I'm laying out the refactoring plan for B1.2: I'll create an interface for progress providers, extract the current markdown parsing logic into a dedicated provider implementation, use `TrackerSnapshot` as the output contract, and verify the existing parser tests still pass without modification. The …
-> I'm structuring B1.2 to extract the existing `TrackerParser` logic behind a new `IProgressProvider` interface, with `MarkdownTableProvider` as the concrete implementation and `TrackerSnapshot` serving as the output contract—the existing tests should pass without modification, now exercising the prov…
+> I'm working through the B1.2 stage design, which involves extracting the current `TrackerParser` logic behind an `IProgressProvider` interface and creating a `MarkdownTableProvider` implementation. The `TrackerSnapshot` will become the output contract for this provider, and the existing tests should…
+> I'm working through the namespace organization for TrackerSnapshot and CheckpointRow—they're currently in `Conductor.Core` but the interface I'm creating needs to go in `Conductor.Core.Planning`, which means I need to sort out the using statements to avoid circular dependencies or missing references…
+> I'm settling on the design: create an `IProgressProvider` interface as the abstraction, then implement `MarkdownTableProvider` as the default that handles the parsing logic by moving the existing `TrackerParser` code into it to maintain byte-identical behavior.  To keep `TrackerParserTests` passing …
 
 **Recent actions:**
-- `05:18:22` » grep TrackerPath|class PlanConfig|public string Repo
-- `05:18:32` » read src\Conductor\Core\Progress.cs
-- `05:18:33` » read src\Conductor\Models\PlanConfig.cs
-- `05:18:33` · Let me read the existing Progress.cs and PlanConfig.cs to understand conventions before designing B1.2.
-- `05:19:30` » read src\Conductor\Core\Orchestrator.cs
-- `05:19:31` · QA verdict: **PASS**. Both claims independently verified (PlanConfigTests green; stable driver dry-runs Loom from `examples/loom/`). Now let me look at the Orch…
-- `05:19:31` » read src\Conductor\Commands\Commands.cs
-- `05:21:12` · QA verdict: **PASS** — both claims independently verified (PlanConfigTests green; stable driver dry-runs Loom from `examples/loom/`). No findings.  Now deliveri…
-- `05:21:12` » read src\Conductor\Core\Orchestrator.cs
-- `05:21:13` » bash Select-String -Path "C:\Code\conductor-baton\src\Conductor\Core\Orchestrator.cs" -Pattern "TrackerParser" | ForEach-Object { "$($_.LineNumber): $($_.Line.T…
+- `05:27:13` » grep IDE0130|dotnet_style_namespace|MA0048|namespace
+- `05:30:09` » todowrite 2 todos
+- `05:30:09` · QA verdict: **PASS** (both claims verified). Now delivering **B1.2** — `IProgressProvider` + `MarkdownTableProvider`, extracting today's parser behind the inter…
+- `05:31:48` · QA verdict: **PASS**. Now implementing B1.2. Creating the `Core/Planning/` interface + default provider.
+- `05:31:48` » write src\Conductor\Core\Planning\IProgressProvider.cs
+- `05:34:07` · Now the `MarkdownTableProvider` (byte-identical — delegates to the proven parser) and a small resolver. Let me check how the Orchestrator is constructed first.
+- `05:34:07` » grep new Orchestrator
+- `05:34:07` » read src\Conductor\Commands\Commands.cs
+- `05:35:09` » write src\Conductor\Core\Planning\MarkdownTableProvider.cs
+- `05:35:09` · Now the `MarkdownTableProvider` — moving the parse logic here (the real implementation), and keeping `TrackerParser` as a thin facade so existing call sites/tes…
 
 ## Stage progress
 
