@@ -89,6 +89,9 @@ public sealed class RunState
     public int AttemptsThisStage { get; set; }
     public int ConsecutiveBackoffs { get; set; }
     public bool StopAfterSession { get; set; }
+    /// <summary>If true, the orchestrator parks at <c>Paused</c> after the current stage's checkpoints
+    /// are all confirmed, rather than advancing automatically (B3.3).</summary>
+    public bool PauseAfterStage { get; set; }
     public string? AttentionReason { get; set; }
     public List<string> SkippedStages { get; set; } = new();
     public PendingFix? PendingFix { get; set; }

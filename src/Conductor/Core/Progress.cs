@@ -9,6 +9,10 @@ public enum ControlAction
     KillSession,
     StopAfterSession,
     ApproveOwner,
+    RetryStage,
+    Rollback,
+    PauseAfterStage,
+    Goto,
 }
 
 /// <summary>Live status of one gate in the current battery (for the dashboard's gate timers).</summary>

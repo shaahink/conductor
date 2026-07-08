@@ -31,6 +31,14 @@ app.Configure(c =>
         .WithDescription("Queue an instruction for the agent's next session (also available via the I key in the dashboard).");
     c.AddCommand<AbortCommand>("abort")
         .WithDescription("Kill the session and stop the conductor.");
+    c.AddCommand<RetryStageCommand>("retry-stage")
+        .WithDescription("Reset attempt counter and re-queue a deliver session for the current stage.");
+    c.AddCommand<RollbackCommand>("rollback")
+        .WithDescription("Reset the working tree to the stage start commit (refuses if dirty, use --yes).");
+    c.AddCommand<PauseAfterStageCommand>("pause-after-stage")
+        .WithDescription("Park at Paused after the current stage completes.");
+    c.AddCommand<GotoCommand>("goto")
+        .WithDescription("Jump to a different stage (clears pending state for the old stage).");
     c.AddCommand<NewPlanCommand>("new-plan")
         .WithDescription("Scaffold a new plan + TRACKER.md from a built-in template (minimal/dotnet/node/shamshir).");
     c.SetExceptionHandler((ex, _) =>

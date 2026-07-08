@@ -211,6 +211,30 @@ public sealed class AbortCommand() : CtlCommand("abort", "the running conductor 
 public sealed class SkipCommand() : CtlCommand("skip", "the current stage will be skipped and flagged for review", dangerous: true);
 public sealed class KillCommand() : CtlCommand("kill", "the current agent session will be killed (conductor keeps running)", dangerous: true);
 public sealed class ApproveCommand() : CtlCommand("approve", "approve the currently owner-gated stage so the conductor advances past it");
+public sealed class RetryStageCommand() : CtlCommand("retry-stage", "reset the attempt counter and re-queue a deliver session for the current stage");
+public sealed class RollbackCommand() : CtlCommand("rollback", "reset the working tree to the stage's checkpoint commit (refuses if dirty)", dangerous: true);
+public sealed class PauseAfterStageCommand() : CtlCommand("pause-after-stage", "park at Paused after the current stage completes rather than advancing");
+
+/// <summary>Jump to a specific stage (clears pending fix/resume/gates for the old stage).</summary>
+public sealed class GotoCommand : Command<GotoCommand.Settings>
+{
+    public sealed class Settings : PlanSettings
+    {
+        [CommandArgument(0, "<STAGE>")]
+        [Description("The stage ID to jump to (e.g. B3).")]
+        public string StageId { get; init; } = "";
+    }
+
+    public override int Execute(CommandContext context, Settings settings)
+    {
+        var plan = PlanConfig.Load(settings.ResolvePlanPath());
+        Directory.CreateDirectory(plan.StateDir);
+        File.WriteAllText(Path.Combine(plan.StateDir, "control.json"),
+            JsonSerializer.Serialize(new { command = "goto", stageId = settings.StageId, issuedUtc = DateTime.UtcNow }));
+        AnsiConsole.MarkupLine($"[green]goto[/] queued → stage {Markup.Escape(settings.StageId)}");
+        return 0;
+    }
+}
 
 /// <summary>Queues a human instruction for the agent (from any terminal) — injected into the next session.</summary>
 public sealed class InjectCommand : Command<InjectCommand.Settings>

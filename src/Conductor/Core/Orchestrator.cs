@@ -35,6 +35,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     // Correlation state attached to every structured log line (B2.5): runId + stage + session number
     // come from RunState; the gate marker is set while a battery runs.
     private string? _curGate;
+    private string? _gotoStageId;
 
     // ---------------------------------------------------------------- main loop
 
@@ -585,9 +586,18 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         state.PendingAudit = null;
         state.PendingFix = null;
         state.AttemptsThisStage = 0;
-        state.Status = RunStatus.Idle;
+        if (state.PauseAfterStage)
+        {
+            state.PauseAfterStage = false;
+            state.Status = RunStatus.Paused;
+            Log($"✓ phase {id} CONFIRMED — parked (pause-after-stage was set)");
+        }
+        else
+        {
+            state.Status = RunStatus.Idle;
+            Log($"✓ phase {id} CONFIRMED (full battery green{(state.AuditedStages.Contains(id) ? " + audit" : "")}) — advancing");
+        }
         events.Emit(new StageConfirmed { StageId = id, Audited = state.AuditedStages.Contains(id) });
-        Log($"✓ phase {id} CONFIRMED (full battery green{(state.AuditedStages.Contains(id) ? " + audit" : "")}) — advancing");
         SaveAndReport();
     }
 
@@ -814,6 +824,55 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 state.Status = RunStatus.Aborted;
                 Save();
                 break;
+            case ControlAction.RetryStage when !inSession:
+                state.PendingFix = null;
+                state.PendingResume = null;
+                state.AttemptsThisStage = 0;
+                state.Status = RunStatus.Idle;
+                Save();
+                Log($"retry: stage {state.CurrentStage} — attempt counter reset, re-queuing");
+                break;
+            case ControlAction.Rollback when !inSession:
+                if (state.CurrentStageStartHead is not { Length: > 0 } sha)
+                {
+                    Log("rollback refused: no checkpoint commit recorded for current stage");
+                    break;
+                }
+                if (Git.IsDirty(plan.Repo))
+                {
+                    Log($"rollback refused: working tree is dirty — {Git.DirtySummary(plan.Repo)}. Use --force to override.");
+                    break;
+                }
+                Log($"rollback: resetting to {Short(sha)} (stage {state.CurrentStage} start)");
+                Git.Exec(plan.Repo, "reset", "--hard", sha);
+                state.Status = RunStatus.Idle;
+                Save();
+                break;
+            case ControlAction.PauseAfterStage when !inSession:
+                state.PauseAfterStage = true;
+                state.Status = RunStatus.Idle;
+                Save();
+                Log($"pause-after-stage: will park when {state.CurrentStage} completes");
+                break;
+            case ControlAction.Goto when !inSession:
+                if (_gotoStageId == null) { Log("goto: no target stage — use `conductor goto <stage>`"); break; }
+                {
+                    var tg = _gotoStageId; _gotoStageId = null;
+                    var target = plan.Stages.FirstOrDefault(s => s.Id == tg);
+                    if (target == null) { Log($"goto refused: stage '{tg}' not found in plan"); break; }
+                    if (state.SkippedStages.Contains(tg)) { Log($"goto refused: stage '{tg}' is skipped"); break; }
+                    state.CurrentStage = tg;
+                    state.CurrentStageStartHead = Git.Head(plan.Repo);
+                    state.AttemptsThisStage = 0;
+                    state.PendingFix = null;
+                    state.PendingResume = null;
+                    state.PendingPhaseGate = null;
+                    state.PendingAudit = null;
+                    state.Status = RunStatus.Idle;
+                    Save();
+                    Log($"goto: jumped to stage {tg} {target.Title}");
+                }
+                break;
         }
         return action;
     }
@@ -829,6 +888,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             var cmd = doc.RootElement.TryGetProperty("command", out var c) ? c.GetString() : null;
             var confirmed = doc.RootElement.TryGetProperty("confirmed", out var cf) && cf.GetBoolean();
             var intentId = doc.RootElement.TryGetProperty("intentId", out var ii) ? ii.GetString() : null;
+            var stageId = doc.RootElement.TryGetProperty("stageId", out var si) ? si.GetString() : null;
             var action = cmd?.ToLowerInvariant() switch
             {
                 "pause" => ControlAction.PauseAfterSession,
@@ -838,10 +898,16 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 "skip" => ControlAction.SkipStage,
                 "kill" => ControlAction.KillSession,
                 "stop-after" => ControlAction.StopAfterSession,
+                "retry-stage" => ControlAction.RetryStage,
+                "rollback" => ControlAction.Rollback,
+                "pause-after-stage" => ControlAction.PauseAfterStage,
+                "goto" => ControlAction.Goto,
                 _ => (ControlAction?)null,
             };
             if (action != null && confirmed && intentId != null)
                 Log($"control confirmed [intent={intentId}]");
+            if (action == ControlAction.Goto && stageId != null)
+                _gotoStageId = stageId;
             return action;
         }
         // A malformed/racing control.json is operator input, not an engine fault — ignore this poll
