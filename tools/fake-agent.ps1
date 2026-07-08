@@ -10,12 +10,24 @@ param(
 $ErrorActionPreference = "Stop"
 
 # ---- emit opencode-json event ----
-function O($type, $rest) {
-    $o = @{ type = $type; session_id = $SessionId } + $rest
+# The stable driver's AgentSession.ParseOpencode reads payloads nested under `part`
+# (part.text / part.state.title / part.cost [a NUMBER] / part.tokens.{input,output,
+# reasoning,cache.read}). Emitting them flat at root crashes the driver (it calls
+# TryGetProperty on an absent `part`). Every emitter below wraps its payload in `part`.
+function O($type, $part) {
+    $o = @{ type = $type; session_id = $SessionId }
+    if ($null -ne $part) { $o.part = $part }
     Write-Output ($o | ConvertTo-Json -Compress -Depth 6)
 }
+function Step($title, $inTok, $outTok, $cost) {
+    O "step_finish" @{
+        cost   = $cost
+        tokens = @{ input = $inTok; output = $outTok; reasoning = 0; cache = @{ read = 0 } }
+        state  = @{ title = $title }
+    }
+}
 
-O "step_start" @{ model = "fake/v1" }
+O "step_start" $null
 O "text" @{ text = "Reading tracker and plan docs..." }
 Start-Sleep -Milliseconds 300
 
@@ -28,12 +40,8 @@ if ($Mode -eq "stall") {
 if ($Mode -eq "limit") {
     O "text" @{ text = "Attempting work..." }
     Start-Sleep -Milliseconds 200
-    O "step_finish" @{
-        state = @{ title = "working"; input = 100; output = 50; reasoning = 0; cache = @{ read = 0 } }
-        cost = @{ total_cost = 0.0001 }
-        tokens = @{ input = 100; output = 50; reasoning = 0; cache = @{ read = 0 } }
-    }
-    O "result" @{ subtype = "error_during_execution"; is_error = $true; result = "usage limit reached"; num_turns = 2; total_cost_usd = 0.0001 }
+    Step "working" 100 50 0.0001
+    O "error" @{ text = "usage limit reached" }
     exit 1
 }
 
@@ -53,12 +61,8 @@ if ($trackerItem) {
     }
     if ($flipped) {
         Set-Content $trackerItem.FullName ($lines -join "`n") -Encoding utf8 -NoNewline
-        O "tool_use" @{ tool = "Edit"; input = @{ file_path = $trackerItem.Name } }
-        O "step_finish" @{
-            state = @{ title = "working"; input = 150; output = 80; reasoning = 0; cache = @{ read = 0 } }
-            cost = @{ total_cost = 0.0002 }
-            tokens = @{ input = 150; output = 80; reasoning = 0; cache = @{ read = 0 } }
-        }
+        O "tool_use" @{ tool = "Edit"; state = @{ title = $trackerItem.Name } }
+        Step "flipping tracker row" 150 80 0.0002
     } else {
         # no TODO row found — scenario may already be advanced
     }
@@ -67,21 +71,19 @@ if ($trackerItem) {
 }
 
 # ---- commit (or skip for gatesred) ----
+# opencode-json has no `result` event (that is the Claude format); the driver builds
+# ResultText from `text` events, so SESSION-RESULT is emitted as text.
 if ($Mode -ne "gatesred") {
     $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
     $null = git -C $Repo add -A 2>&1
     $null = git -C $Repo commit -m "feat(fake): checkpoint delivered by fake agent" --quiet 2>&1
     $ErrorActionPreference = $prev
-    O "tool_use" @{ tool = "Bash"; input = @{ command = "git add -A; git commit" } }
-    O "step_finish" @{
-        state = @{ title = "working"; input = 80; output = 60; reasoning = 0; cache = @{ read = 0 } }
-        cost = @{ total_cost = 0.0001 }
-        tokens = @{ input = 80; output = 60; reasoning = 0; cache = @{ read = 0 } }
-    }
-    O "result" @{ subtype = "success"; is_error = $false; result = "SESSION-RESULT: delivered, gates green."; num_turns = 4; total_cost_usd = 0.05 }
+    O "tool_use" @{ tool = "Bash"; state = @{ title = "git add -A; git commit" } }
+    Step "committing" 80 60 0.0001
+    O "text" @{ text = "SESSION-RESULT: delivered, gates green." }
 } else {
     O "text" @{ text = "Skipping commit for gates-red scenario." }
-    O "result" @{ subtype = "success"; is_error = $false; result = "SESSION-RESULT: tracker updated but no commit."; num_turns = 4; total_cost_usd = 0.05 }
+    O "text" @{ text = "SESSION-RESULT: tracker updated but no commit." }
 }
 
 exit 0
