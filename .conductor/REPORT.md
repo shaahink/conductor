@@ -1,32 +1,11 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 14:14 UTC · branch `feat/baton` · HEAD `9786962`_
+_Updated 2026-07-08 14:15 UTC · branch `feat/baton` · HEAD `71f32e5`_
 
-**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 0 · working ▸ B4.1
-**Checkpoints:** 24/65 done · **Sessions run:** 26 · **Cost:** $0.9168 · **Tokens:** 431,294 in / 336,507 out / 158,939 think
+**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 0 · working ▸ B4.2
+**Checkpoints:** 25/65 done · **Sessions run:** 26 · **Cost:** $0.9343 · **Tokens:** 432,553 in / 345,588 out / 160,702 think
 **Confirmed phases:** B0, B1, B2, B3
-
-## Latest activity (live)
-
-_Session #26 (Deliver) · running 10m · last output 5s ago · $0.0133_
-
-**Thinking:**
-> I need to verify that the abort command returns exit code 2 when run without the --yes flag, so I'm testing it against the self-plan to confirm the CtlCommand refusal happens before plan loading and doesn't write to control.json.
-> The QA tests are passing—the CLI gating works correctly and all 22 focused tests pass with a clean build. Now I'm moving on to B4.1, which requires implementing an alternate-screen buffer using escape sequences to switch between the main and alternate display buffers.  I need to design an `AltScreen…
-> I need to integrate the AltScreen into the LiveDashboard's RunUiLoop and RunPreview methods, wrapping the AnsiConsole.Live call so the alt buffer is entered before rendering and restored afterward.
-
-**Recent actions:**
-- `15:12:34` » bash dotnet test Conductor.slnx 2>&1 | Select-Object -Last 4
-- `15:12:45` · 167 tests pass (164 + 3). Now verify the running artifact: redirected preview must render inline without any alt-screen escape bytes leaking (guard is inert whe…
-- `15:12:46` » bash $out = & "src\Conductor\bin\Debug\net10.0\conductor.exe" preview -p plans\conductor.self.plan.json 2>&1 | Out-String; Write-Output "EXIT=$LASTEXITCODE"; Wr…
-- `15:13:06` · Redirected preview: exit 0, renders inline (contains "Conductor"), and emits NO alt-screen escapes — the guard degrades to a no-op exactly as designed. Now let …
-- `15:13:26` » bash $ts = Get-Date -Format "yyyy-MM-dd HH:mm:ss" $build = (dotnet build Conductor.slnx 2>&1 | Select-String "Warning|Error|Build succeeded") -join "`n" $test =…
-- `15:13:33` » read docs\baton\evidence\B4.1-gate.txt
-- `15:13:40` · Evidence artifact complete. Now check the diff budget and update the tracker + handoff before committing.
-- `15:13:41` » bash git status --short; Write-Output "---STAT---"; git diff --stat
-- `15:13:49` » edit CONDUCTOR-START.md
-- `15:13:49` · Clean, focused diff: 4 files (1 modified, 3 new), all named by B4.1. Now update the tracker row and Handoff block.
 
 ## Stage progress
 
@@ -36,7 +15,7 @@ _Session #26 (Deliver) · running 10m · last output 5s ago · $0.0133_
 | B1 | Decouple Loom + pluggable progress providers | 7/7 | confirmed ✓ |
 | B2 | Event-sourced backbone + provider decoupling | 6/6 | confirmed ✓ |
 | B3 | Safety, owner-gates & process control | 5/5 | confirmed ✓ |
-| B4 | TUI overhaul (alt-screen + tree) | 0/7 | **← active** |
+| B4 | TUI overhaul (alt-screen + tree) | 1/7 | **← active** |
 | B5 | Observability & health | 0/4 | todo |
 | B6 | AFK + two-way Telegram | 0/5 | todo |
 | B7 | Specialist sub-agent personas | 0/3 | todo |
@@ -75,14 +54,10 @@ _Session #26 (Deliver) · running 10m · last output 5s ago · $0.0133_
 | 23 | B4 | Deliver | 4 | 07-08 10:21 | 0:12 | Stalled |  | 0 |  |  |  |
 | 24 | B4 | Resume | 5r1 | 07-08 10:33 | 0:12 | Stalled |  | 0 |  |  |  |
 | 25 | B4 | Resume | 6r2 | 07-08 10:45 | 0:12 | Stalled |  | 0 |  |  |  |
-| 26 | B4 | Deliver | 1 | 07-08 14:03 | … | running |  | 0 |  |  |  |
+| 26 | B4 | Deliver | 1 | 07-08 14:03 | 0:11 | Advanced | B4.1 | 3 | build:OK | $0.0175 | 1,259/9,081 |
 
 ### Commits by session
 
-- **s12 (B2 Deliver)** — 3 commit(s):
-  - 6841c35 chore: fill B2.2 commit hash in tracker (e2b6a03)
-  - e2b6a03 feat(bB2.2): RunState projection (fold the event log) + StateCompat parity
-  - 571eb60 chore(conductor): s12 B2 working ▸B2.2 @ 07:57
 - **s13 (B2 Deliver)** — 3 commit(s):
   - 6936490 chore: fill B2.3 commit hash in tracker (a5a6b85)
   - a5a6b85 feat(bB2.3): crash recovery replays the event log
@@ -118,6 +93,10 @@ _Session #26 (Deliver) · running 10m · last output 5s ago · $0.0133_
   - d427650 docs(bB3-audit): honest B3 phase handover + tracked followups
   - 2a0fa9f fix(bB3-audit): harden owner-gates, budget/approval parks, control-file parsing
   - 194dd8b chore(conductor): s19 B3 working ▸B3 @ 10:29
+- **s26 (B4 Deliver)** — 3 commit(s):
+  - 71f32e5 chore(bB4.1): record B4.1 commit hash c6d5efb in tracker
+  - c6d5efb feat(bB4.1): alt-screen buffer with guaranteed clean restore
+  - 8320182 chore(conductor): s26 B4 working ▸B4.1 @ 15:14
 
 ## Phase handovers (audit)
 
@@ -126,26 +105,31 @@ _Session #26 (Deliver) · running 10m · last output 5s ago · $0.0133_
 - `.conductor/handovers/B2.md`
 - `.conductor/handovers/B3.md`
 
+## Last gate run
+
+build:OK
+
 ## Last session result
 
-> SESSION-RESULT: B3 (Safety, owner-gates & process control) is structurally complete but the audit found it green-by-luck in two places, and I fixed both in-session. **(1)** Approving a run parked for **approval-mode or a budget cap** wrongly called `ConfirmStage`, advancing past unfinished work (approval mode also re-parked forever and could never run a session) — fixed by persisting *why* we parked (`RunState.AwaitingOwnerReason`), a pure `OwnerApproval.Decide`, and a new `ApproveAwaitingOwner` dispatcher (confirm / run-one-then-park / reset-budget-and-continue). **(2)** Every non-destructive CLI verb (`pause`/`resume`/`approve`/`retry-stage`/`pause-after-stage`) wrote a JSON `null` flag th…
+> SESSION-RESULT: Landed **B4.1** — an `AltScreen` IDisposable guard (`src/Conductor/Ui/AltScreen.cs`) that enters the alternate-screen buffer + hides the cursor on start and restores (`\e[?1049l` + show cursor) on *every* exit path — normal `using`/finally, exception, SIGINT/SIGTERM/SIGQUIT via `PosixSignalRegistration`, and hard `AppDomain.ProcessExit` — with idempotent, thread-safe restore so the terminal can never wedge; it degrades to an inert no-op when output is redirected. Wired into `LiveDashboard.RunUiLoop` and `RunPreview`; 3 headless tests assert the enter/leave byte sequences, idempotency, and redirected no-op. Battery GREEN: build 0w/0e, 167 tests (ratchet up 164→167), and the ru…
 
 ## Tracker handoff
 
 ```
-last: session #18 (B3, deliver) — landed **B3.1…B3.5**, stage B3 COMPLETE. Confirm-gating for A/K/S
-      (TUI double-press + CLI --yes); owner-gate step type + AwaitingOwner + approve; process-control
-      verbs (retry-stage/rollback/pause-after-stage/goto); budget/token caps + approval mode;
-      graceful Ctrl+C with heartbeat + queue-resume. 149 tests (126→+23). Battery GREEN.
-stage: **B3 DONE** — B3.1…B3.5 all landed. Stage B4 next (TUI overhaul).
-gate: GREEN — build 0w/0e; test 149 pass. Dry-run smoke exit 0. Event log round-trip covers 12 event
-      types (incl. OwnerApprovalRequested/Granted). Manual TUI confirm-prompt verified.
-qa: session #16 (B2.6) PASS — re-ran gate (build 0w/0e, 126 tests), verified TokenDelta delegate path
-      end-to-end (OpencodeProvider→AgentStreamState→IEventSink), verified round-trip test exists.
-      Audit session #17 already fixed B2.6 TokenDelta.sessionId null-on-disk bug. No new findings.
-next: **B4.1** — Alternate-screen buffer with clean restore on exit/crash. Persona: engineer.
-trap: push failed (github.com unreachable). 4 commits local (db01755, a48b3bd, 90ce43a, 157cdc8).
-      Budget caps + approval mode not yet smoke-tested against a real agent run.
+last: session #26 (B4, deliver) — landed **B4.1**: AltScreen guard (alt-screen buffer + hide/show
+      cursor, restore on EVERY exit path: using/finally, exception, SIGINT/TERM/QUIT, ProcessExit;
+      idempotent; redirected→inert). Wired into RunUiLoop + RunPreview. 3 headless tests. 164→167.
+stage: **B4 IN PROGRESS** — B4.1 DONE. Next B4.2 (Spectre Layout rebuild of BuildRoot).
+gate: GREEN — build 0w/0e; 167 tests pass. Redirected `conductor preview` exit 0, renders inline,
+      emits NO alt-screen escapes (guard inert when redirected) — verified as running artifact.
+qa: session #18/B3 PASS — re-ran gate (build 0w/0e, 167 tests, ratchet up from 149). Verified
+      claim-1 via tests (22 confirm-gate/owner-approval/control-file pass); claim-2 via running exe
+      (`conductor abort` refuses without --yes, exit 2; approve/retry/rollback/goto verbs live).
+      Sessions #19–25 only produced stalled heartbeat commits — no B4 work had actually landed.
+next: **B4.2** — rebuild DashboardRenderer.BuildRoot on Spectre Layout/Grid/Panel/Rule; keep the pure
+      DashboardState→IRenderable split; no header stacking at small heights (DashboardRendererTests).
+trap: push may fail (github.com unreachable per #18). Manual TUI alt-screen restore needs a real TTY
+      to eyeball — headless test asserts the byte sequences only.
 dirty: none tracked.
-evidence: B3.1-gate.txt, B3.2-gate.txt, B3.3-gate.txt, B3.4-gate.txt
+evidence: B4.1-gate.txt
 ```
