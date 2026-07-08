@@ -1,32 +1,11 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 15:36 UTC · branch `feat/baton` · HEAD `5b9db37`_
+_Updated 2026-07-08 15:38 UTC · branch `feat/baton` · HEAD `18099a0`_
 
-**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 0 · working ▸ B4.5
-**Checkpoints:** 28/65 done · **Sessions run:** 30 · **Cost:** $1.0592 · **Tokens:** 498,912 in / 395,885 out / 180,289 think
+**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 0 · working ▸ B4.6
+**Checkpoints:** 29/65 done · **Sessions run:** 30 · **Cost:** $1.0943 · **Tokens:** 501,049 in / 413,697 out / 184,565 think
 **Confirmed phases:** B0, B1, B2, B3
-
-## Latest activity (live)
-
-_Session #30 (Deliver) · running 20m · last output 4s ago · $0.0314_
-
-**Thinking:**
-> I see the issue now — row L5.4 in the external file is malformed with only 6 columns instead of the required 7, which causes the parser to reject it. This isn't a regression in the Conductor code itself, but rather the test being tightly coupled to an external file's state, making it inherently frag…
-> I'm seeing the B4.5 interface with the agent pane showing a git status fold badge, the thinking pane displaying the goal for implementing SymbolId/SymbolRef, and the fold action in the action bar—solid confirmation of the feature set. Now I need to generate the gate evidence file and update the trac…
-> I'm checking the file count against my budget—12 files total including untracked ones, which fits within the ~15 limit. The untracked docs from the previous session (conductor-DEBT.md and the baton conductor file) aren't mine to handle, so I'll leave them as they were marked in the handoff.  Before …
-
-**Recent actions:**
-- `16:35:35` · The stable driver detects the live orchestrator (this session's parent) holding the lock — expected. The in-tree build + preview already exercised the real rend…
-- `16:35:36` » bash cd C:\Code\conductor-baton; git add tests/Conductor.Tests/TrackerParserTests.cs; git commit -F - <<'EOF' fix(bB4.5): de-couple RealLoomTracker smoke from f…
-- `16:35:46` » write ..\..\Users\shahi\AppData\Local\Temp\opencode\msg1.txt
-- `16:35:46` · PowerShell doesn't support heredocs. Let me use a commit message file.
-- `16:35:57` » bash cd C:\Code\conductor-baton; git add tests/Conductor.Tests/TrackerParserTests.cs; git commit -F C:\Users\shahi\AppData\Local\Temp\opencode\msg1.txt 2>&1 | S…
-- `16:36:14` · Now the B4.5 feature commit:
-- `16:36:14` » write ..\..\Users\shahi\AppData\Local\Temp\opencode\msg2.txt
-- `16:36:24` » bash cd C:\Code\conductor-baton; git add src/Conductor/Ui/StructuredThinking.cs src/Conductor/Ui/AgentFold.cs src/Conductor/Ui/DashboardState.cs src/Conductor/U…
-- `16:36:51` · Now update the tracker's Handoff block and B4.5 checkpoint row. There are two untracked leftover files (`conductor-DEBT.md`, `docs/baton/CONDUCTOR-NEXT.md`) tha…
-- `16:36:51` » edit CONDUCTOR-START.md
 
 ## Stage progress
 
@@ -36,7 +15,7 @@ _Session #30 (Deliver) · running 20m · last output 4s ago · $0.0314_
 | B1 | Decouple Loom + pluggable progress providers | 7/7 | confirmed ✓ |
 | B2 | Event-sourced backbone + provider decoupling | 6/6 | confirmed ✓ |
 | B3 | Safety, owner-gates & process control | 5/5 | confirmed ✓ |
-| B4 | TUI overhaul (alt-screen + tree) | 4/7 | **← active** |
+| B4 | TUI overhaul (alt-screen + tree) | 5/7 | **← active** |
 | B5 | Observability & health | 0/4 | todo |
 | B6 | AFK + two-way Telegram | 0/5 | todo |
 | B7 | Specialist sub-agent personas | 0/3 | todo |
@@ -79,13 +58,10 @@ _Session #30 (Deliver) · running 20m · last output 4s ago · $0.0314_
 | 27 | B4 | Deliver | 1 | 07-08 14:15 | 0:17 | Advanced | B4.2 | 3 | build:OK | $0.0254 | 1,700/14,236 |
 | 28 | B4 | Deliver | 1 | 07-08 14:33 | 0:30 | Advanced | B4.3 | 5 | build:OK | $0.0429 | 2,087/23,142 |
 | 29 | B4 | Deliver | 1 | 07-08 15:04 | 0:12 | Advanced | B4.4 | 3 | build:OK | $0.0567 | 62,572/12,919 |
-| 30 | B4 | Deliver | 1 | 07-08 15:16 | … | running |  | 0 |  |  |  |
+| 30 | B4 | Deliver | 1 | 07-08 15:16 | 0:21 | Advanced | B4.5 | 7 | build:OK | $0.0351 | 2,137/17,812 |
 
 ### Commits by session
 
-- **s16 (B2 Deliver)** — 2 commit(s):
-  - 3707016 feat(bB2.6): TokenDelta events per step_finish + LiveMetrics projection + live dashboard tokens
-  - 188d3fe chore(conductor): s16 B2 working ▸B2.6 @ 09:26
 - **s17 (B2 Audit)** — 2 commit(s):
   - 4bfae61 fix(bB2.6): stamp sessionId on persisted TokenDelta so LiveMetrics.ForSession folds real logs
   - a20eef0 chore(conductor): s17 B2 working ▸B2 @ 09:39
@@ -119,6 +95,14 @@ _Session #30 (Deliver) · running 20m · last output 4s ago · $0.0314_
   - ab3bd6c chore: track B4.4 commit hash 9b25fe2
   - 9b25fe2 ﻿feat(B4.4): severity model + clearer header labels
   - 82a46f4 chore(conductor): s29 B4 working ▸B4.4 @ 16:14
+- **s30 (B4 Deliver)** — 7 commit(s):
+  - 18099a0 docs(bB4.5): mark B4.5 DONE + update handoff (QA #29 PASS)
+  - e7801eb docs: add conductor-CLEANUP.md (86 heartbeats pending) + CONDUCTOR-NEXT.md §11-14 (dynamic plan, deepseek status, post-hoc audit, live prompting)
+  - c20cef4 chore(conductor): s30 B4 working ▸B4.5 @ 16:36
+  - 5b9db37 feat(bB4.5): structured thinking pane + tool-call folding
+  - 19a9c06 fix(bB4.5): de-couple RealLoomTracker smoke from foreign run's row count
+  - be63500 docs: add conductor-DEBT.md (B0-B3 audit followups) + CONDUCTOR-NEXT.md (post-baton feature proposals) + update read-order
+  - 4131c94 chore(conductor): s30 B4 working ▸B4.5 @ 16:26
 
 ## Phase handovers (audit)
 
@@ -133,29 +117,30 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: B4.4 landed — `LogSeverity` enum (6 levels) + `LogEntry` record in Core, `IProgressSink.Log(LogEntry)` non-breaking default overload, `SeverityGlyph`/`SeverityColor` on the renderer with colour-coded glyph prefixes in the footer log, and "N untracked" reworded to "N sessions unreported" in the cost header. +5 tests (193 total, all green). 5 source files touched within budget. Built, tested, evidence saved, pushed (9b25fe2 + ab3bd6c). The `EventLogTests.ReadAllSucceedsWhileLiveWriterHoldsTheFile` test is intermittently flaky (passes on retry) — a pre-existing race, not B4.4's doing. Next session: B4.5 (structured thinking pane + tool-call folding). Hard part: getting the right…
+> SESSION-RESULT: Landed **B4.5** (structured thinking pane + tool-call folding) with proof — two pure, unit-tested helpers (`StructuredThinking.Parse` folds reasoning into a Goal/Hypothesis/Evidence/Action digest while keeping raw text when unstructured; `AgentFold.Build` collapses tool output behind a "(N lines)" badge with a `C` expand/fold key), wired into `DashboardRenderer`/`LiveDashboard`/preview, +15 tests (206 total), commit `5b9db37`, evidence `B4.5-gate.txt` (build 0w/0e, 206 pass) and `B4.5-preview.txt` (artifact shows `▸ (2 lines)` fold badge, `◎ goal …` facet, `[C] fold` in the action bar). QA of session #29/B4.4: **PASS** — re-ran gate (193 green), verified severity theory tests…
 
 ## Tracker handoff
 
 ```
-last: session #29 (B4.4, deliver) — landed **B4.4**: severity model + header label fix.
-      New `LogSeverity` enum (Info/Warn/Error/Success/Waiting/Human) + `LogEntry` in Core;
-      `SeverityGlyph`/`SeverityColor` on DashboardRenderer; log entries rendered with
-      coloured severity glyph prefix in the footer; "N untracked" reworded → "N sessions
-      unreported". Added `IProgressSink.Log(LogEntry)` default overload (non-breaking).
-      +5 tests (SeverityGlyphMapping × 6, SeverityColorMatchesGlyph, LogRendersWithSeverity,
-      CostLineOmitsWhenZero). 184→193 tests.
-stage: **B4 IN PROGRESS** — B4.1, B4.2, B4.3, B4.4 DONE. Next B4.5 (structured thinking pane +
-      tool-call folding).
-gate: GREEN — build 0w/0e; 193 tests pass; DashboardRendererTests 32/32; PlanTreeTests 10/10.
-      `conductor preview` redirected exit 0, shows "6 sessions unreported" in header, log pane
-      with severity prefix. B4.4-gate.txt, B4.4-preview.txt.
-qa: session #28/B4.3 PASS — re-ran gate (build 0w/0e, 193 tests). Claim-1: PlanTreeTests 10/10
-      + DashboardRendererTests (header grid guards + no-stacking guards green). Claim-2: preview
-      artifact shows hierarchical tree with B0…B2 stages, per-stage columns, filter hints.
-next: **B4.5** — structured thinking pane (Goal/Hypothesis/Evidence/Action) + tool-call folding.
-trap: `StateCompatTests` serialises `UntrackedSessions` (old name in JSON) — property name unchanged,
-       only the display label was reworded. `EventLogTests.ReadAll…` is flaky (passes on retry).
-dirty: none tracked.
-evidence: B4.4-gate.txt, B4.4-preview.txt
+last: session #30 (B4.5, deliver) — landed **B4.5**: structured thinking pane +
+      tool-call folding. Two pure helpers: `StructuredThinking.Parse` (Goal/Hypothesis/
+      Evidence/Action digest; raw kept when unstructured) + `AgentFold.Build` (tool output
+      folded behind "(N lines)" badge, `C` key expand/fold). Wired into DashboardRenderer
+      (ThinkingRow + AgentPanel), LiveDashboard (`C`), preview seed. +15 tests. 193→206.
+stage: **B4 IN PROGRESS** — B4.1–B4.5 DONE. Next B4.6 (command history search + filters).
+gate: GREEN — build 0w/0e; 206 tests pass. `conductor preview` exit 0 shows agent fold
+      badge "▸ (2 lines)", thinking "◎ goal …", "[C] fold" in action bar.
+      B4.5-gate.txt, B4.5-preview.txt.
+qa: session #29/B4.4 PASS — re-ran gate (build 0w/0e, 193 tests). Claim-1: DashboardRenderer
+      severity theory tests 38/38 (glyph+colour mapping green). Claim-2: B4.4 preview artifact
+      shows "6 sessions unreported" label + severity-prefixed log pane. No findings.
+      SIDE-FIND (fixed, own commit): RealLoomTracker smoke asserted magic count 35 vs the LIVE
+      foreign LOOM-START.md; flipped red mid-session on a malformed L5.4 row (parser correctly
+      rejected it). De-coupled to invariants — not a Conductor regression.
+next: **B4.6** — command history search + filters (/build /git /test; commands/thoughts/errors).
+trap: `RealLoomTrackerParsesIfPresent` reads a LIVE foreign file — never re-couple it to an
+       exact count. `EventLogTests.ReadAll…` is flaky (passes on retry). StateCompat serialises
+       `UntrackedSessions` (old JSON name; only display label reworded in B4.4).
+dirty: two untracked prior-session docs (conductor-DEBT.md, docs/baton/CONDUCTOR-NEXT.md) — not mine.
+evidence: B4.5-gate.txt, B4.5-preview.txt
 ```
