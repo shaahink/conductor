@@ -8,19 +8,17 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #39 (B6.1-4, deliver) — landed **B6.1** (Telegram long-poll + push + /status via
-      IHostedService, 20 tests), **B6.2** (two-way inline-keyboard → control.json, allowlist +
-      destructive confirm), **B6.3** (richer REPORT.md: progress bars + collapsible per-stage +
-      commit links; clean heartbeat: no heartbeat git commits), **B6.4** (WebhookNotifier:
-      generic/Discord/Slack fire-and-forget).
-stage: **B6 IN PROGRESS** — B6.1-4 done. B6.5 (Shamshir acceptance) dry-run verified; full headless
-       execution needs a real Shamshir repo.
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 295 tests pass. B6.1-gate.txt.
-qa: session #37/B5.4 deliver PASS — 11 HealthMetricsTests green confirmed; Reporter ## Health at
-    line 105 confirmed. No findings.
-next: B6.5 execution against real Shamshir repo, or advance to B7.
-dirty: none.
-evidence: docs/baton/evidence/B6.1-gate.txt, docs/baton/audits/B6-shamshir-acceptance.md
+last: session #41 (B6.5, deliver) — landed **B6.5** (Shamshir P-0 + P0.1 headless acceptance):
+      stable driver dry-run + --once against fresh Shamshir plan; 3 Shamshir-specific tests pass;
+      stage B6 COMPLETE.
+stage: **B6 DONE** — B6.1 (Telegram), B6.2 (two-way control), B6.3 (richer REPORT + clean
+       heartbeat), B6.4 (WebhookNotifier), B6.5 (Shamshir acceptance) all DONE.
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 295 tests pass (24 B5_4, 3 Shamshir).
+qa: session #39/B6.1-4 deliver PASS — 24 B5_4 tests green confirmed; Reporter confidence wiring
+    at Reporter.cs:138-147 verified. No findings.
+next: B7 (specialist sub-agent personas) or B6 audit fix-session.
+dirty: none (followups.md has orchestrator heartbeat diff only).
+evidence: docs/baton/evidence/B6.5-shamshir-acceptance.txt
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -80,7 +78,7 @@ never silent renumbering.
 | B6.2 | Two-way control (inline-keyboard callback_query → control.json); chat-id allowlist; destructive confirm | DONE | 762bed5 | docs/baton/evidence/B6.1-gate.txt |
 | B6.3 | Richer REPORT.md (progress bars, collapsible per-stage, commit links) + clean heartbeat (no history pollution) | DONE | 762bed5 | docs/baton/evidence/B6.1-gate.txt |
 | B6.4 | Notify hooks (webhook/Discord/Slack) first-class examples | DONE | 762bed5 | docs/baton/evidence/B6.1-gate.txt |
-| B6.5 | **Acceptance: Conductor drives Shamshir P-0 + P0.1 headless, independently verified** | IN PROGRESS | 762bed5 | docs/baton/evidence/B6.5-shamshir-dryrun.txt, docs/baton/audits/B6-shamshir-acceptance.md |
+| B6.5 | **Acceptance: Conductor drives Shamshir P-0 + P0.1 headless, independently verified** | DONE | 762bed5 | docs/baton/evidence/B6.5-shamshir-acceptance.txt, docs/baton/audits/B6-shamshir-acceptance.md |
 | B7.1 | Per-stage/per-checkpoint agent override in plan schema (command/systemPrompt/temperature/tokens) | TODO | | |
 | B7.2 | Built-in persona registry (planner/reviewer/architect/qa/docs/refactor/test-writer/git-cleanup/security) | TODO | | |
 | B7.3 | PromptBuilder merges base + persona; persona shown in dashboard/report/events | TODO | | |

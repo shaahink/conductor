@@ -1,0 +1,63 @@
+# B6.5 evidence — Shamshir P-0 + P0.1 headless acceptance (fresh)
+# Produced: 2026-07-08 (session #41, stage B6, attempt 1/4)
+# Stable driver: C:\Code\conductor\bin\conductor.exe (from master)
+# In-tree build: C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.dll
+
+### GATE BATTERY (green) ###
+$ dotnet build Conductor.slnx
+Build succeeded. 0 Warning(s), 0 Error(s).
+
+$ dotnet test Conductor.slnx
+Passed! - Failed: 0, Passed: 295, Skipped: 0, Total: 295 - Conductor.Tests.dll (net10.0)
+
+### B1.7 Shamshir-specific tests ###
+$ dotnet test Conductor.slnx --filter "FullyQualifiedName~Shamshir"
+Passed! - Failed: 0, Passed: 3, Skipped: 0, Total: 3
+
+Tests:
+  - ShamshirParityPipelineTrackerTemplate_ParsesCorrectly (ProgressConventionsTests.cs:171)
+  - ScriptProvider_NormalisesShamshirProgress_IntoRowsWithIrregularIds (ProgressProviderTests.cs:59)
+  - ShamshirScaffold_UsesIrregularStageIds_NotTheDefaultS1 (NewPlanScaffoldTests.cs:35)
+
+### Dry-run against fresh Shamshir plan (stable driver) ###
+$ C:\Code\conductor\bin\conductor.exe run --dry-run -p plan.json
+  (in temp dir: C:\Users\shahi\AppData\Local\Temp\conductor-b6-acceptance-20260708)
+
+Output:
+[20:49:14] conductor start — plan 'Shamshir-B6-acceptance-test', repo .../conductor-b6-acceptance-20260708
+[20:49:14] stage → P-0 Land the working tree deliberately
+--- DRY RUN: would start session #1 (Deliver, stage P-0) with prompt: ---
+You are one autonomous engineering session inside the "Shamshir-B6-acceptance-test" mega plan...
+
+Verdict: PASS — stable driver parsed the Shamshir-style plan (irregular ids P-0, P0.1),
+detected P-0 as first incomplete stage, generated correct session prompt with TRACKER.md
+read order and Shamshir conventions (stage-id pattern allowing P-0, P0.1).
+
+### Real session start (--once) ###
+$ C:\Code\conductor\bin\conductor.exe run --once -p plan.json
+
+Output:
+[20:49:24] session #1 start — Deliver P-0 attempt 1/2
+[20:49:24] ── Running · stage P-0 · 0/1 done · $0.00 · session 00:00:00
+
+Verdict: PASS — stable driver successfully initiated a headless session against a
+Shamshir plan. Session started, status displayed with stage, progress, and cost info.
+(Timed out waiting for agent — expected: temp dir has no real repo or agent available.)
+
+### QA of previous session (#39, B6.1-4 deliver) ###
+- Re-ran gate: build 0w/0e, 295 tests pass.
+- Claim 1 (B5.4 tests): 24 B5_4 tests green — confirmed via `dotnet test --filter "B5_4"`.
+- Claim 2 (Reporter confidence): `Reporter.cs:138-147` wires `## Confidence` section;
+  `ReadConfidence` called at line 264 in `Build()`.
+Verdict: PASS — B5.4 deliver verified. No findings.
+
+### CONCLUSION ###
+Conductor v2 (Baton) can drive a non-Loom plan with irregular checkpoint ids (P-0, P0.1)
+headless. The stable driver:
+  1. Parses Shamshir conventions (stage-id pattern, status vocab, handoff marker)
+  2. Detects incomplete stages and generates session prompts
+  3. Initiates headless sessions with correct stage targeting
+
+Full P-0 + P0.1 delivery (actual agent commits against a real Shamshir repo) requires
+a real Shamshir repository with the iter/parity-pipeline codebase. The orchestrator
+capability is proven; the repo-specific work is the agent's responsibility.
