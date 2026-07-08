@@ -36,6 +36,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     // come from RunState; the gate marker is set while a battery runs.
     private string? _curGate;
     private string? _gotoStageId;
+    private decimal _runCostUsd;
+    private long _runTokens;
 
     // ---------------------------------------------------------------- main loop
 
@@ -59,6 +61,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             WarnOnBranchPattern();
 
             var sessionsThisRun = 0;
+            _runCostUsd = 0;
+            _runTokens = 0;
             while (!ct.IsCancellationRequested)
             {
                 HandleControl();
@@ -169,9 +173,24 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     return 0;
                 }
 
+                // Approval mode: park at AwaitingOwner before each session (B3.4)
+                if (plan.Limits.ApprovalMode)
+                {
+                    events.Emit(new OwnerApprovalRequested { StageId = stage.Id });
+                    state.Status = RunStatus.AwaitingOwner;
+                    Log($"approval mode: park before session #{state.SessionCounter + 1} on stage {stage.Id} — approve with R or `conductor approve`");
+                    SaveAndReport();
+                    continue;
+                }
+
                 RunSession(stage, track, ct);
                 sessionsThisRun++;
-                EmitSessionFinished(state.History[^1]);
+                var rec = state.History[^1];
+                _runCostUsd += rec.CostUsd ?? 0;
+                _runTokens += (rec.TokensInput ?? 0) + (rec.TokensOutput ?? 0) + (rec.TokensReasoning ?? 0);
+                EmitSessionFinished(rec);
+
+                if (CheckBudgetCap()) continue; // parked at AwaitingOwner
 
                 if (_pendingSkip)
                 {
@@ -199,8 +218,16 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     return 0;
                 }
             }
-            // Ctrl+C / external cancel
-            Log("cancelled — state saved; run `conductor run` again to resume");
+            // Ctrl+C / external cancel — graceful shutdown (B3.5)
+            Log("cancelled — writing final heartbeat, queueing resume, saving state");
+            try { SaveAndReport(); } catch { /* best-effort */ }
+            if (state.Status == RunStatus.Running && state.History.LastOrDefault() is { EndedUtc: null } last)
+            {
+                last.EndedUtc = DateTime.UtcNow;
+                last.Outcome = SessionOutcome.Interrupted;
+                QueueResume(last, "conductor cancelled mid-session");
+            }
+            Log("state saved; run `conductor run` again to resume");
             Save();
             return 130;
         }
@@ -771,6 +798,28 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         Log($"🛑 NEEDS HUMAN: {reason}");
         SaveAndReport();
         Notify($"Conductor {plan.Name}: needs attention — {reason}");
+    }
+
+    /// <summary>Returns true if the run is now parked at <c>AwaitingOwner</c> due to a budget cap.</summary>
+    private bool CheckBudgetCap()
+    {
+        if (plan.Limits.MaxRunCostUsd is { } costCap && _runCostUsd >= costCap)
+        {
+            events.Emit(new OwnerApprovalRequested { StageId = state.CurrentStage ?? "?" });
+            state.Status = RunStatus.AwaitingOwner;
+            Log($"budget cap: ${_runCostUsd:0.00} >= ${costCap:0.00} (limit) — awaiting owner approval to continue");
+            SaveAndReport();
+            return true;
+        }
+        if (plan.Limits.MaxRunTokens is { } tokenCap && _runTokens >= tokenCap)
+        {
+            events.Emit(new OwnerApprovalRequested { StageId = state.CurrentStage ?? "?" });
+            state.Status = RunStatus.AwaitingOwner;
+            Log($"token cap: {_runTokens / 1000.0:0.#}k >= {tokenCap / 1000.0:0.#}k (limit) — awaiting owner approval to continue");
+            SaveAndReport();
+            return true;
+        }
+        return false;
     }
 
     // ---------------------------------------------------------------- control & plumbing

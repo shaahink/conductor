@@ -140,4 +140,53 @@ public class PlanConfigTests
         File.WriteAllText(planPath, json);
         return planPath;
     }
+
+    [Fact]
+    public void BudgetCapsDeserialize()
+    {
+        const string json = """
+        {
+          "name": "T", "repo": ".", "tracker": "t.md",
+          "agent": { "command": "opencode", "args": ["run", "{prompt}"] },
+          "limits": { "maxRunCostUsd": 5.00, "maxRunTokens": 500000, "approvalMode": true }
+        }
+        """;
+        var cfg = JsonSerializer.Deserialize<PlanConfig>(json, PlanConfig.JsonOpts)!;
+        Assert.Equal(5.00m, cfg.Limits.MaxRunCostUsd);
+        Assert.Equal(500000, cfg.Limits.MaxRunTokens);
+        Assert.True(cfg.Limits.ApprovalMode);
+    }
+
+    [Fact]
+    public void BudgetCapsDefaultToNull()
+    {
+        const string json = """
+        {
+          "name": "T", "repo": ".", "tracker": "t.md",
+          "agent": { "command": "opencode", "args": ["run", "{prompt}"] }
+        }
+        """;
+        var cfg = JsonSerializer.Deserialize<PlanConfig>(json, PlanConfig.JsonOpts)!;
+        Assert.Null(cfg.Limits.MaxRunCostUsd);
+        Assert.Null(cfg.Limits.MaxRunTokens);
+        Assert.False(cfg.Limits.ApprovalMode);
+    }
+
+    [Fact]
+    public void OwnerGateStageFlagDeserializes()
+    {
+        const string json = """
+        {
+          "name": "T", "repo": ".", "tracker": "t.md",
+          "agent": { "command": "opencode", "args": ["run", "{prompt}"] },
+          "stages": [
+            { "id": "S1", "title": "First", "ownerGate": true },
+            { "id": "S2", "title": "Second" }
+          ]
+        }
+        """;
+        var cfg = JsonSerializer.Deserialize<PlanConfig>(json, PlanConfig.JsonOpts)!;
+        Assert.True(cfg.Stages[0].OwnerGate);
+        Assert.False(cfg.Stages[1].OwnerGate);
+    }
 }

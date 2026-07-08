@@ -392,6 +392,15 @@ public sealed class LimitsConfig
     /// <summary>Wait time when the agent backend reports a usage/rate limit.</summary>
     public int BackoffMinutes { get; set; } = 30;
     public int MaxBackoffs { get; set; } = 10;
+    /// <summary>Maximum total cost (USD) allowed this run before the orchestrator parks at
+    /// AwaitingOwner. null = no cap (B3.4).</summary>
+    public decimal? MaxRunCostUsd { get; set; }
+    /// <summary>Maximum total tokens allowed this run before the orchestrator parks at
+    /// AwaitingOwner. null = no cap (B3.4).</summary>
+    public long? MaxRunTokens { get; set; }
+    /// <summary>If true, the orchestrator parks at <c>AwaitingOwner</c> before each session/commit,
+    /// waiting for explicit approval (B3.4).</summary>
+    public bool ApprovalMode { get; set; }
 }
 
 public sealed class ReportConfig
