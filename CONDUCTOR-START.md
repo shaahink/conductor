@@ -46,7 +46,7 @@ never silent renumbering.
 | B0.4 | fake-agent.ps1 scenarios extended; self-loop token-free smoke via --once (fixed A6 crash: opencode-json must nest under `part`) | DONE | 3032eb9 | docs/baton/evidence/B0.4-gate.txt |
 | B0.5 | Baseline audit doc (current coupling/debt) written as B0 evidence | DONE | 62a819e | docs/baton/evidence/B0.5-gate.txt, docs/baton/audits/B0-baseline.md |
 | B0.6 | ADR-0001 (tooling/ruleset rationale) + ADR-0002 (event-sourcing decision) | DONE | cf378f0,d416ead | docs/baton/adr/0001-tooling-and-ruleset.md, docs/baton/adr/0002-event-sourcing.md |
-| B1.1 | Move plans/loom* + templates → examples/loom/; Loom loads + --dry-run green from new path | DONE | (this commit) | docs/baton/evidence/B1.1-gate.txt |
+| B1.1 | Move plans/loom* + templates → examples/loom/; Loom loads + --dry-run green from new path | DONE | 0aa242d | docs/baton/evidence/B1.1-gate.txt |
 | B1.2 | IProgressProvider abstraction + MarkdownTableProvider (today's parser, zero behaviour change) | TODO | | |
 | B1.3 | ScriptProvider (command→JSON) + PlanCheckpointProvider | TODO | | |
 | B1.4 | Configurable conventions (stage-id regex incl. P-0/P3.4b/F5, handoff marker, HUMAN token, status vocab) | TODO | | |
