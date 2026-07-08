@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 23:18 UTC · branch `feat/baton` · HEAD `d3e41ab`_
+_Updated 2026-07-08 23:29 UTC · branch `feat/baton` · HEAD `746b164`_
 
-**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B11 — Close-out + Shamshir owner-gated proof · attempts used 0 · working ▸ B11.2
-**Checkpoints:** 58/65 done · **Sessions run:** 61 · **Cost:** $2.6354 · **Tokens:** 1,938,701 in / 830,546 out / 389,997 think
+**Checkpoints:** 58/65 done · **Sessions run:** 62 · **Cost:** $2.6354 · **Tokens:** 1,938,701 in / 830,546 out / 389,997 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10
+
+## Latest activity (live)
+
+_Session #62 (Deliver) · running 10m · last output 1s ago · $0.0629_
+
+**Thinking:**
+> Now let me commit B11.3 changes (ADRs updated, evidence file):
+> Now B11.4 — Shamshir P2.2 owner-gated acceptance. This is the hard one.  The requirement says: "drive a full owner-gated Shamshir phase (parity-pipeline P2.2 — the credentialed compare-both headline gate) through Conductor: owner-gate blocks, approval resumes, reconcile verdict committed."  The trap…
+> Let me look at the Shamshir example and understand the plan structure for P2.2.
+
+**Recent actions:**
+- `00:27:43` » bash Remove-Item -Recurse -Force -LiteralPath "C:\Users\shahi\AppData\Local\Temp\opencode\conductor-clean-clone" -ErrorAction SilentlyContinue
+- `00:27:49` » edit docs\baton\adr\0001-tooling-and-ruleset.md
+- `00:27:58` » edit docs\baton\adr\0001-tooling-and-ruleset.md
+- `00:28:05` » edit docs\baton\adr\0002-event-sourcing.md
+- `00:28:26` » write docs\baton\adr\0003-cross-platform-packaging-closeout.md
+- `00:28:36` · Now write B11.3 evidence and commit:
+- `00:28:36` » bash $evidence = @" === B11.3 ADRs finalised + clean-clone battery === Date: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') Host: $env:COMPUTERNAME OS: Windows  --- …
+- `00:28:43` » bash git add docs/baton/adr/0001-tooling-and-ruleset.md docs/baton/adr/0002-event-sourcing.md docs/baton/adr/0003-cross-platform-packaging-closeout.md docs/bato…
+- `00:28:52` » todowrite 2 todos
+- `00:28:58` » glob
 
 ## Stage progress
 
@@ -29,7 +50,6 @@ _Updated 2026-07-08 23:18 UTC · branch `feat/baton` · HEAD `d3e41ab`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 32 | B4 | Deliver | 1 | 07-08 15:58 | 0:20 | Advanced | B4.7 | 5 | build:OK | $0.0360 | 2,120/14,866 |
 | 33 | B4 | Audit | 1 | 07-08 16:18 | 0:14 | Progress |  | 2 |  | $0.0191 | 1,034/10,114 |
 | 34 | B5 | Deliver | 1 | 07-08 16:33 | 0:36 | Advanced | B5.1 | 5 | build:OK | $0.0634 | 2,544/24,659 |
 | 35 | B5 | Deliver | 1 | 07-08 17:10 | 0:19 | Advanced | B5.2 | 3 | build:OK | $0.0370 | 1,719/19,977 |
@@ -59,6 +79,7 @@ _Updated 2026-07-08 23:18 UTC · branch `feat/baton` · HEAD `d3e41ab`_
 | 59 | B10 | Deliver | 1 | 07-08 22:41 | 0:20 | Advanced | B10.2 B10.3 B10.4 | 6 | build:OK | $0.1538 | 195,929/26,636 |
 | 60 | B10 | Audit | 1 | 07-08 23:02 | 0:06 | Progress |  | 1 |  | $0.0562 | 67,475/11,048 |
 | 61 | B11 | Deliver | 1 | 07-08 23:09 | 0:09 | Advanced | B11.1 | 2 | build:OK | $0.0436 | 47,917/12,787 |
+| 62 | B11 | Deliver | 1 | 07-08 23:19 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
