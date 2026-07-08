@@ -1,32 +1,11 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 08:10 UTC · branch `feat/baton` · HEAD `02da5a0`_
+_Updated 2026-07-08 08:16 UTC · branch `feat/baton` · HEAD `77c72ad`_
 
-**Status:** Running
-**Stage:** B2 — Event-sourced backbone + provider decoupling · attempts used 0 · working ▸ B2.5
-**Checkpoints:** 17/65 done · **Sessions run:** 15 · **Cost:** $0.5658 · **Tokens:** 266,468 in / 223,056 out / 102,300 think
+**Status:** Idle
+**Stage:** B2 — Event-sourced backbone + provider decoupling · attempts used 0 · working ▸ B2.6
+**Checkpoints:** 18/65 done · **Sessions run:** 15 · **Cost:** $0.6324 · **Tokens:** 270,368 in / 249,014 out / 113,557 think
 **Confirmed phases:** B0, B1
-
-## Latest activity (live)
-
-_Session #15 (Deliver) · running 30m · last output 7s ago · $0.0505_
-
-**Thinking:**
-> I'm refining the exception handling for the control.json parsing logic—narrowing the catch block to specifically handle IOException, JsonException, and UnauthorizedAccessException, with a comment explaining why malformed files return null. Now I'm going to apply these catch-audit edits systematicall…
-> I'm looking at the exception handling in those two catch blocks—when `_progress.Read(plan)` throws, it could be an InvalidOperationException or IOException from missing scripts or malformed JSON. For snapshot and report rendering, falling back to an empty tracker is reasonable, but I should make sur…
-> Looking at line 51 in DocsExtractor.cs to understand the context around that location.
-
-**Recent actions:**
-- `09:08:55` » edit src\Conductor\Core\Orchestrator.cs
-- `09:09:03` » edit src\Conductor\Core\Orchestrator.cs
-- `09:09:21` » edit src\Conductor\Core\Orchestrator.cs
-- `09:09:34` » edit src\Conductor\Core\Orchestrator.cs
-- `09:09:45` » edit src\Conductor\Core\Orchestrator.cs
-- `09:09:53` » read src\Conductor\Core\DocsExtractor.cs
-- `09:09:53` · Now DocsExtractor, AgentSession, InstructionQueue, StatusAgent, Commands, LiveDashboard. Let me view the needed contexts:
-- `09:10:05` » edit src\Conductor\Core\DocsExtractor.cs
-- `09:10:15` » edit src\Conductor\Core\AgentSession.cs
-- `09:10:15` · Now AgentSession.cs — the bare swallows at 93, 108, 126, 131-133:
 
 ## Stage progress
 
@@ -34,7 +13,7 @@ _Session #15 (Deliver) · running 30m · last output 7s ago · $0.0505_
 |---|---|---|---|
 | B0 | Repo modernisation + self-hosting harness | 6/6 | confirmed ✓ |
 | B1 | Decouple Loom + pluggable progress providers | 7/7 | confirmed ✓ |
-| B2 | Event-sourced backbone + provider decoupling | 4/6 | **← active** |
+| B2 | Event-sourced backbone + provider decoupling | 5/6 | **← active** |
 | B3 | Safety, owner-gates & process control | 0/5 | todo |
 | B4 | TUI overhaul (alt-screen + tree) | 0/7 | todo |
 | B5 | Observability & health | 0/4 | todo |
@@ -64,16 +43,10 @@ _Session #15 (Deliver) · running 30m · last output 7s ago · $0.0505_
 | 12 | B2 | Deliver | 1 | 07-08 06:47 | 0:18 | Advanced | B2.2 | 3 | build:OK | $0.0334 | 1,778/18,546 |
 | 13 | B2 | Deliver | 1 | 07-08 07:06 | 0:10 | Advanced | B2.3 | 3 | build:OK | $0.0551 | 66,865/13,343 |
 | 14 | B2 | Deliver | 1 | 07-08 07:17 | 0:22 | Advanced | B2.4 | 4 | build:OK | $0.0395 | 1,813/20,904 |
-| 15 | B2 | Deliver | 1 | 07-08 07:40 | … | running |  | 0 |  |  |  |
+| 15 | B2 | Deliver | 1 | 07-08 07:40 | 0:36 | Advanced | B2.5 | 7 | build:OK | $0.0666 | 3,900/25,958 |
 
 ### Commits by session
 
-- **s7 (B1 Deliver)** — 5 commit(s):
-  - 7069c6c docs(bB1.3): tracker — B1.3 DONE (3e0fdbd), handoff + QA verdict for session #7
-  - 3e0fdbd feat(bB1.3): ScriptProvider + PlanCheckpointProvider + fail-fast factory
-  - d925e81 chore(conductor): s7 B1 working ▸B1.3 @ 06:19
-  - b77002a chore(conductor): s7 B1 working ▸B1.3 @ 06:09
-  - ce2f6e3 chore(conductor): s7 B1 working ▸B1.3 @ 05:59
 - **s8 (B1 Deliver)** — 4 commit(s):
   - f8f858d docs(bB1.4): tracker — B1.4 DONE (2330361), handoff + QA verdict for session #8
   - f34fb8b chore(conductor): s8 B1 working ▸B1.4 @ 06:46
@@ -109,6 +82,14 @@ _Session #15 (Deliver) · running 30m · last output 7s ago · $0.0505_
   - 8e1ceb4 feat(bB2.4): IAgentProvider adapters; remove Orchestrator provider-switch
   - f4bff00 chore(conductor): s14 B2 working ▸B2.4 @ 08:37
   - c961587 chore(conductor): s14 B2 working ▸B2.4 @ 08:27
+- **s15 (B2 Deliver)** — 7 commit(s):
+  - 77c72ad chore(conductor): mark B2.5 DONE + refresh handoff (session #15)
+  - 7512371 feat(bB2.5): audit catch sites — no silent swallow (A15/R2.5)
+  - 529befb chore(conductor): s15 B2 working ▸B2.5 @ 09:10
+  - 02da5a0 feat(bB2.5): Host/DI/Options + Serilog structured logging with correlation
+  - 88db09c fix(bB2.3): EventLog.ReadAll must share-read the live drain writer
+  - 0530c85 chore(conductor): s15 B2 working ▸B2.5 @ 09:00
+  - 3836bf7 chore(conductor): s15 B2 working ▸B2.5 @ 08:50
 
 ## Phase handovers (audit)
 
@@ -121,24 +102,24 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: Landed **B2.4** — introduced `IAgentProvider` with `Opencode`/`Claude`/`GenericText` adapters; `AgentSession` now delegates every stdout line to its provider (all wire-format parsing extracted verbatim), and the Orchestrator dropped its `LimitRx` field, deferring usage-limit detection to `provider.DetectsUsageLimit` — the `output` switch is gone (F-2/D-11). Added `AgentConfig.Provider` (selects the adapter, falls back to legacy `output` inference so every existing plan is unchanged; the self-plan sets `provider=opencode` additively while keeping `output` for the STABLE master driver, which ignores the unknown field). Gate battery GREEN: build 0w/0e, 113 tests (98→+15 `AgentPr…
+> SESSION-RESULT: Landed **B2.5** (the Host/DI/logging checkpoint of stage B2) with proof across three commits on `feat/baton` (pushed): `02da5a0` Host/DI/Options — `ConductorHost` composes the app via `Microsoft.Extensions.Hosting`, resolves the Orchestrator from DI, validates the plan on start through the Options pattern (`PlanConfigValidator : IValidateOptions`, sharing `PlanConfig.CollectErrors` with `Load`), and routes narration through `Microsoft.Extensions.Logging` + Serilog (rolling file sink to `.conductor/logs/`, console sink only when the TUI isn't owning stdout) with a `runId/sessionId/stage/gate` correlation scope on every line; `7512371` catch-site audit (every bare untyped `catc…
 
 ## Tracker handoff
 
 ```
-last: session #14 (B2, deliver) — landed **B2.4**. `IAgentProvider` + Opencode/Claude/GenericText
-      adapters; `AgentSession` delegates all wire parsing to the provider; Orchestrator dropped its
-      `LimitRx` and uses `provider.DetectsUsageLimit`. `AgentConfig.Provider` selects the adapter
-      (infers from legacy `output` when unset). 113 tests (98→+15). Additive — parsing byte-identical.
-stage: **B2 IN PROGRESS** — B2.1…B2.4 DONE; B2.5, B2.6 TODO. Battery GREEN.
-gate: GREEN — build 0w/0e; test 113 pass. Truth gate: opencode/claude/text captured-sample parse
-      tests + factory selection all green; Loom-shaped opencode-json plan dry-runs via new path.
-qa: session #13 (B2.3 deliver) PASS — (1) recovery + 6 projection tests green; (2) RecoverFromCrash
-      reads events.jsonl via FindInterruptedSession (in-tree build emits it per B2.1 artifact). No findings.
-next: **B2.5** — Host/DI/Options (validated) + Microsoft.Extensions.Logging + Serilog file+console
-      sinks with correlation scope (runId/sessionId/stage/gate); audit every `catch {}` (no silent swallow).
-trap: `output` is kept everywhere for STABLE-driver back-compat (it ignores the new `provider` field);
-      `provider` is preferred only when set. Parsing was relocated, not changed — no stall/limit regression.
+last: session #15 (B2, deliver) — landed **B2.5**. `ConductorHost` = Microsoft.Extensions.Hosting +
+      DI; plan validated on start (Options/IValidateOptions); Serilog file sink `.conductor/logs/`
+      (+console only when no TUI) with runId/sessionId/stage/gate scope per line; catch-site audit
+      (no silent swallow). 118 tests (113→+5).
+stage: **B2 IN PROGRESS** — B2.1…B2.5 DONE; **B2.6 TODO** (last of stage). Battery GREEN.
+gate: GREEN — build 0w/0e; test 118 pass. Real --once smoke wrote a log with run=/s=1/stage=S1/
+      gate=battery:full (exit 0); invalid plan → OptionsValidationException (error surfaces, A15).
+qa: session #14 (B2.4) PASS, no findings (15 provider tests green; factory dry-run exit 0). Also fixed
+      a latent **B2.3** bug (88db09c): EventLog.ReadAll used FileShare.Read → crash-recovery threw on
+      any real run with a live writer (B2.3 only unit-tested the fold, never launched — A6). Now ReadWrite.
+next: **B2.6** — TokenDelta events per provider step_finish + LiveMetrics projection (live tokens/cost, F-3).
+trap: Serilog console sink OFF under the TUI (dashboard owns stdout), ON for plain runs. Host is a
+      composition/logging root (no IHostedService); options validated eagerly inside Build.
 dirty: none tracked.
-evidence: B2.4-gate.txt (+ earlier)
+evidence: B2.5-gate.txt (+ earlier)
 ```
