@@ -1,6 +1,6 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 16:43 UTC · branch `feat/baton` · HEAD `ab49790`_
+_Updated 2026-07-08 16:53 UTC · branch `feat/baton` · HEAD `89370ae`_
 
 **Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B5 — Observability & health · attempts used 0 · working ▸ B5.1
@@ -9,24 +9,24 @@ _Updated 2026-07-08 16:43 UTC · branch `feat/baton` · HEAD `ab49790`_
 
 ## Latest activity (live)
 
-_Session #34 (Deliver) · running 10m · last output 39s ago · $0.0105_
+_Session #34 (Deliver) · running 20m · last output 0s ago · $0.0238_
 
 **Thinking:**
-> I need to examine the smoke script and the fake-agent PowerShell file to figure out how to properly generate the events.jsonl artifact that the smoke tests expect.
-> I need to figure out how the B2.1 smoke test was set up, and the most straightforward way to generate a real `events.jsonl` artifact for B5.1 is to create a small smoke plan, run it through the in-tree binary with fake-agent across a couple of --once sessions, then execute `conductor timeline` to pr…
-> I'm moving on to B5.1, which involves building a timeline view that displays state transitions with their wall times and durations pulled from the event log. The requirements call for a Timeline projection and a TUI timeline view, with a gate condition that the timeline renders correctly from a reco…
+> I'm designing the B5.1 checkpoint, which requires a Timeline projection that renders from an event log with correct durations, backed by a unit test on a fixture.  The core files I need are the Timeline projection itself, updates to the Reporter for the REPORT.md section, a TUI timeline modal reusin…
+> I'm considering how to integrate the Timeline into the Reporter—specifically whether to pass the event log as a parameter to Reporter.Build or read it from disk. Passing it as a parameter keeps things pure but requires changing the signature across three call sites, whereas reading from a static pat…
+> I'm adding a Timeline modal to the LiveDashboard by extending the Modal enum, setting up a key binding (L seems available since T, O, D, V, X, I, G, and F are already taken), and creating the corresponding modal content provider.
 
 **Recent actions:**
-- `17:40:07` » read tools\fake-agent.ps1
-- `17:40:08` · Now let me look at the fake-agent smoke harness and check for a smoke plan to produce a real `events.jsonl` artifact.
-- `17:40:08` » bash cd C:\Code\conductor-baton; git ls-files | Select-String -Pattern "smoke|Baton.*plan|self-test" ; echo "---plans dir---"; Get-ChildItem plans -Recurse -Fil…
-- `17:41:21` » read src\Conductor\Program.cs
-- `17:41:22` » read src\Conductor\Commands\Commands.cs
-- `17:41:22` · All green, QA of session #33 (B4 audit) is PASS. Now let me read Program.cs, the rest of Commands.cs, and existing ReporterTests to plan the B5.1 integration po…
-- `17:41:22` » read tests\Conductor.Tests\ReporterTests.cs
-- `17:42:31` » read src\Conductor\Ui\DashboardPreview.cs
-- `17:42:32` » grep StateDir|public string.*Repo|PlanDoc|TrackerPath
-- `17:42:32` · All green and QA of session #33 (B4 audit) is PASS. Let me set up my task plan and look at a couple more integration points.
+- `17:52:04` · Now update `WriteAndPublish` to read the event log and pass the timeline to `Build`:
+- `17:52:17` » edit src\Conductor\Core\Reporter.cs
+- `17:52:29` · Now update the ReportCommand to include the timeline too:
+- `17:52:29` » edit src\Conductor\Commands\Commands.cs
+- `17:52:45` » bash dotnet build Conductor.slnx 2>&1 | Select-Object -Last 8
+- `17:53:01` » edit src\Conductor\Ui\LiveDashboard.cs
+- `17:53:01` · Now let me add the TUI timeline modal to LiveDashboard. First the enum and content provider:
+- `17:53:12` » edit src\Conductor\Ui\LiveDashboard.cs
+- `17:53:22` · Now add the TimelineLines content provider next to the other providers:
+- `17:53:22` » edit src\Conductor\Ui\LiveDashboard.cs
 
 ## Stage progress
 
