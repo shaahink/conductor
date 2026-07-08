@@ -57,7 +57,7 @@ never silent renumbering.
 | B1.6 | conductor new-plan --template {minimal,dotnet,node,shamshir}; schema version + fail-fast validation | DONE | c3fa637 | docs/baton/evidence/B1.6-gate.txt |
 | B1.7 | Shamshir iter-parity-pipeline TRACKER.md authored + parsed via default provider (unit test) | DONE | 8701aff | docs/baton/evidence/B1.7-gate.txt |
 | B2.1 | ConductorEvent schema + append-only events.jsonl writer (additive, alongside state.json) | DONE | d5ebd12 | docs/baton/evidence/B2.1-gate.txt |
-| B2.2 | Projections: RunState rebuilt by folding the log; StateCompat parity tests | DONE | _pending_ | docs/baton/evidence/B2.2-gate.txt |
+| B2.2 | Projections: RunState rebuilt by folding the log; StateCompat parity tests | DONE | e2b6a03 | docs/baton/evidence/B2.2-gate.txt |
 | B2.3 | Crash recovery replays the event log (not just state.json) | TODO | | |
 | B2.4 | IAgentProvider + Opencode/Claude/GenericText adapters; Orchestrator provider-switch removed | TODO | | |
 | B2.5 | Host/DI/Options + Microsoft.Extensions.Logging + Serilog sinks; no silent catch {} | TODO | | |
