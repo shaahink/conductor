@@ -1,32 +1,12 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 20:58 UTC · branch `feat/baton` · HEAD `cccaf47`_
+_Updated 2026-07-08 21:08 UTC · branch `feat/baton` · HEAD `4038578`_
 
-**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B8 — Brain layer · attempts used 0 · working ▸ B8.1
-**Checkpoints:** 43/65 done · **Sessions run:** 47 · **Cost:** $1.8456 · **Tokens:** 1,038,372 in / 651,712 out / 288,745 think
+**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B8 — Brain layer · attempts used 0
+**Checkpoints:** 48/65 done · **Sessions run:** 47 · **Cost:** $1.9534 · **Tokens:** 1,122,852 in / 684,479 out / 304,869 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7
-
-## Latest activity (live)
-
-_Session #47 (Deliver) · running 10m · last output 1s ago · $0.0583_
-
-**Thinking:**
-> Now I need to add the token rollover check. I'll add it at the end of RunSession, before EvaluateSession is called (or after but before the return). The check should happen during the session loop. Let me add it after the session's token data is collected:  Actually, looking at the code flow, the to…
-> I'll add the token rollover check right before EvaluateSession:
-> Now I need to add: 1. The `ReflectionStep` method 2. The `HandleReviewStage` method   3. The `ParseFollowups` method / logic 4. A `TokensTotal` property on SessionRecord (I referenced it above but it doesn't exist yet) 5. Integration of reflection into EvaluateSession for normal session outcomes 6. …
-
-**Recent actions:**
-- `21:57:23` » edit src\Conductor\Core\Orchestrator.cs
-- `21:57:23` · Now fix the `BuildPromptBuilder` in Orchestrator:
-- `21:57:29` » read src\Conductor\Core\Orchestrator.cs
-- `21:57:29` · Now add battery section injection in RunSession. Let me re-read the prompt building section:
-- `21:57:37` » edit src\Conductor\Core\Orchestrator.cs
-- `21:57:44` » read src\Conductor\Core\Orchestrator.cs
-- `21:57:44` · Now add token rollover check. Let me find the right location in RunSession:
-- `21:57:51` » edit src\Conductor\Core\Orchestrator.cs
-- `21:57:57` » edit {"filePath":"C:\\Code\\conductor-baton\\src\\Conductor\\Models\\RunState.cs","newString":"    public long TokensCacheRead { get; set; }\n    public in…
-- `21:57:57` · Now add `TokensTotal` property to `SessionRecord`:
+**Pending:** auto-fix audit for B8
 
 ## Stage progress
 
@@ -40,7 +20,7 @@ _Session #47 (Deliver) · running 10m · last output 1s ago · $0.0583_
 | B5 | Observability & health | 4/4 | confirmed ✓ |
 | B6 | AFK + two-way Telegram | 5/5 | confirmed ✓ |
 | B7 | Specialist sub-agent personas | 3/3 | confirmed ✓ |
-| B8 | Brain layer | 0/5 | **← active** |
+| B8 | Brain layer | 5/5 | gating… |
 | B9 | Task graph + smart session management | 0/5 | todo |
 | B10 | Advanced orchestration | 0/4 | todo |
 | B11 | Close-out + Shamshir owner-gated proof | 0/4 | todo |
@@ -79,13 +59,10 @@ _Session #47 (Deliver) · running 10m · last output 1s ago · $0.0583_
 | 44 | B7 | Audit | 1 | 07-08 20:20 | 0:05 | Progress |  | 1 |  | $0.0380 | 52,381/7,163 |
 | 45 | B7 | Fix | 2 | 07-08 20:27 | 0:04 | Interrupted |  | 0 |  |  |  |
 | 46 | B7 | Resume | 2r1 | 07-08 20:31 | 0:15 | Progress |  | 3 | build:OK | $0.0411 | 39,768/8,661 |
-| 47 | B8 | Deliver | 1 | 07-08 20:48 | … | running |  | 0 |  |  |  |
+| 47 | B8 | Deliver | 1 | 07-08 20:48 | 0:19 | Advanced | B8.1 B8.2 B8.3 B8.4 B8.5 | 3 | build:OK | $0.1079 | 84,480/32,767 |
 
 ### Commits by session
 
-- **s37 (B5 Deliver)** — 2 commit(s):
-  - 3bf449c feat(bB5.4): confidence per checkpoint + MCP call metrics + repo-awareness strip
-  - 9076ec0 chore(conductor): s37 B5 working ▸B5.4 @ 19:04
 - **s38 (B5 Audit)** — 2 commit(s):
   - b659e70 docs(bB5): audit handover — B5 observability & health phase close
   - 31bebbd fix(bB5): audit — ReportCommand missing confidence/MCP/repo sections + cleanup
@@ -106,6 +83,10 @@ _Session #47 (Deliver) · running 10m · last output 1s ago · $0.0583_
   - 3d2d328 fix(bB7): eliminate EventLog drain-task scheduling race with ManualResetEventSlim
   - 0c3998b chore(conductor): s46 B7 working ▸B7 @ 21:41
   - 16fa4cf fix(bB7): harden EventLog file-creation race + flaky test fix
+- **s47 (B8 Deliver)** — 3 commit(s):
+  - 4038578 chore(bB8): update tracker — all 5 B8 checkpoints DONE, commit a50c15f
+  - a50c15f feat(bB8): brain layer — reflection, lessons battery, self-review, followups, IPromptBattery, token rollover
+  - 54fae19 chore(conductor): s47 B8 working ▸B8.1 @ 21:58
 
 ## Phase handovers (audit)
 
@@ -120,24 +101,26 @@ _Session #47 (Deliver) · running 10m · last output 1s ago · $0.0583_
 
 ## Last gate run
 
-build:OK · tests:OK
+build:OK
 
 ## Last session result
 
-> SESSION-RESULT:** Fixed the pre-existing flaky test `ReadAllSucceedsWhileLiveWriterHoldsTheFile` that failed ~50% on CI (Actual: 0). Root cause was a scheduling race: `Task.Run(DrainAsync)` deferred file creation to the thread pool, so `ReadAll` could find no file within the polling window. The definitive fix adds a `ManualResetEventSlim` in `EventLog` — the constructor blocks until the drain task has opened the file and entered its read loop, eliminating the race entirely. The build gate (which showed exit -1 in the orchestrator report) was a false positive caused by the flaky test failure cascading; build itself has 0 warnings/0 errors on net10 with warnings-as-errors. No leftovers remain …
+> SESSION-RESULT: All 5 B8 checkpoints landed (B8.1–B8.5). Gate GREEN: build 0w/0e, 326 tests pass (+20 new). 12 files changed (4 new, 8 modified) — within 15-file budget. B8.1 LessonsManager with bounded rotation; B8.2 {lessons} battery closes F-7; B8.3 self-review stage kind with review.md template; B8.4 followup parser tracking audit deferred/weak bullets; B8.5 IPromptBattery interface + RolledOver outcome + per-session token budget (maxSessionTokens). What was hard: the SessionRecord.RolledOver rollover check triggers post-hoc (after session token data is collected) rather than mid-session — a cooperative soft-break during the run needs the full B9 task-graph infrastructure. The review sta…
 
 ## Tracker handoff
 
 ```
-last: session #45 (B7, fix) — fixed flaky test ReadAllSucceedsWhileLiveWriterHoldsTheFile:
-       root cause was race between async drain task file creation and ReadAll polling.
-       EventLog constructor now creates the file upfront (FileMode.CreateNew) so file
-       always exists when readers probe it; test poll widened to 100x50ms + 100ms initial
-       delay for slow CI. Previous session #44 audit fixes (path traversal guard, IO error
-       resilience, dead field removal, hyphen regex) retained and verified.
-stage: **B7 DONE** — B7.1 (schema), B7.2 (registry), B7.3 (prompt merge + surface) all DONE.
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 306 tests pass.
+last: session #47 (B8, deliver) — landed B8.1–B8.5: LessonsManager with bounded
+       rotation (lessons.md), {lessons} battery injected into prompts, self-review
+       stage kind (Kind:"review") with review.md template + artifact scaffolding,
+       followup parser tracking audit handover deferred/weak bullets → followups.md,
+       IPromptBattery (LessonsBattery, RecentFailureBattery, BatteryGroup), and
+       RolledOver session outcome for per-session token budget (maxSessionTokens).
+       Plan JSON updated with batteries config + maxSessionTokens: 2,000,000.
+stage: **B8 DONE** — B8.1 (lessons), B8.2 ({lessons}), B8.3 (review), B8.4 (followups),
+       B8.5 (batteries + RolledOver) all DONE.
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 326 tests pass (+20 from B7).
 dirty: none.
-next: B8 (brain layer).
-evidence: docs/baton/evidence/B7-gate.txt; `.conductor/handovers/B7.md` (audit details)
+next: B9 (task graph + smart session management).
+evidence: docs/baton/evidence/B8-gate.txt
 ```
