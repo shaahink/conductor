@@ -1,32 +1,11 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 06:57 UTC · branch `feat/baton` · HEAD `1037ada`_
+_Updated 2026-07-08 07:06 UTC · branch `feat/baton` · HEAD `6841c35`_
 
-**Status:** Running
-**Stage:** B2 — Event-sourced backbone + provider decoupling · attempts used 0 · working ▸ B2.2
-**Checkpoints:** 14/65 done · **Sessions run:** 12 · **Cost:** $0.4377 · **Tokens:** 196,012 in / 170,263 out / 83,850 think
+**Status:** Idle
+**Stage:** B2 — Event-sourced backbone + provider decoupling · attempts used 0 · working ▸ B2.3
+**Checkpoints:** 15/65 done · **Sessions run:** 12 · **Cost:** $0.4712 · **Tokens:** 197,790 in / 188,809 out / 88,152 think
 **Confirmed phases:** B0, B1
-
-## Latest activity (live)
-
-_Session #12 (Deliver) · running 10m · last output 12s ago · $0.0146_
-
-**Thinking:**
-> The events contain all the necessary information for reconstruction. The fold logic should properly restore parity since the enum parsing handles the PascalCase format correctly—"Deliver" and "Advanced" both parse without issues. The SessionCounter fold is tracking the maximum number at 2.  Now I'm …
-> I should build and check for analyzer errors before moving on to writing tests.
-> Now I'm setting up the test fixtures and making sure they get properly copied to the output directory when the tests run. I need to check how the test project file is configured to include those fixture files as content.
-
-**Recent actions:**
-- `07:55:53` » todowrite 4 todos
-- `07:55:53` · QA of session #11 (B2.1) is **PASS** — gate green, both claims verified, no findings. Now let me set up my task list and deliver B2.2.
-- `07:56:17` · Now let me create the `RunStateProjection` fold. First let me check the SessionRecord list types to use correct initializers.
-- `07:56:17` » write src\Conductor\Core\Events\RunStateProjection.cs
-- `07:56:44` · Now the parity contract:
-- `07:56:44` » write src\Conductor\Core\Events\StateProjectionParity.cs
-- `07:56:51` · Let me build to catch analyzer issues before writing tests.
-- `07:56:59` » bash cd C:\Code\conductor-baton; dotnet build Conductor.slnx 2>&1 | Select-Object -Last 12
-- `07:57:06` · Build green. Let me capture the real recorded run as a fixture and check how the test project includes content files.
-- `07:57:06` » read tests\Conductor.Tests\Conductor.Tests.csproj
 
 ## Stage progress
 
@@ -34,7 +13,7 @@ _Session #12 (Deliver) · running 10m · last output 12s ago · $0.0146_
 |---|---|---|---|
 | B0 | Repo modernisation + self-hosting harness | 6/6 | confirmed ✓ |
 | B1 | Decouple Loom + pluggable progress providers | 7/7 | confirmed ✓ |
-| B2 | Event-sourced backbone + provider decoupling | 1/6 | **← active** |
+| B2 | Event-sourced backbone + provider decoupling | 2/6 | **← active** |
 | B3 | Safety, owner-gates & process control | 0/5 | todo |
 | B4 | TUI overhaul (alt-screen + tree) | 0/7 | todo |
 | B5 | Observability & health | 0/4 | todo |
@@ -61,12 +40,10 @@ _Session #12 (Deliver) · running 10m · last output 12s ago · $0.0146_
 | 9 | B1 | Deliver | 1 | 07-08 05:48 | 0:15 | Advanced | B1.5 B1.6 B1.7 | 7 | build:OK | $0.0744 | 63,136/21,354 |
 | 10 | B1 | Audit | 1 | 07-08 06:04 | 0:17 | Progress |  | 3 |  | $0.0289 | 1,492/13,453 |
 | 11 | B2 | Deliver | 1 | 07-08 06:22 | 0:24 | Advanced | B2.1 | 4 | build:OK | $0.0441 | 2,334/21,533 |
-| 12 | B2 | Deliver | 1 | 07-08 06:47 | … | running |  | 0 |  |  |  |
+| 12 | B2 | Deliver | 1 | 07-08 06:47 | 0:18 | Advanced | B2.2 | 3 | build:OK | $0.0334 | 1,778/18,546 |
 
 ### Commits by session
 
-- **s4 (B0 Audit)** — 1 commit(s):
-  - 595ed2b audit(bB0): honest B0 handover + tracked followups; un-ignore .conductor deliverables
 - **s5 (B1 Deliver)** — 3 commit(s):
   - 06c9c55 docs(bB1.1): tracker — record B1.1 commit hash 0aa242d
   - 0aa242d feat(bB1.1): relocate Loom plan + templates to examples/loom/
@@ -105,6 +82,10 @@ _Session #12 (Deliver) · running 10m · last output 12s ago · $0.0146_
   - d5ebd12 feat(bB2.1): event-sourced backbone — ConductorEvent schema + append-only EventLog (additive)
   - 032b4cc chore(conductor): s11 B2 working ▸B2.1 @ 07:42
   - 14b6fd8 chore(conductor): s11 B2 working ▸B2.1 @ 07:32
+- **s12 (B2 Deliver)** — 3 commit(s):
+  - 6841c35 chore: fill B2.2 commit hash in tracker (e2b6a03)
+  - e2b6a03 feat(bB2.2): RunState projection (fold the event log) + StateCompat parity
+  - 571eb60 chore(conductor): s12 B2 working ▸B2.2 @ 07:57
 
 ## Phase handovers (audit)
 
@@ -117,25 +98,25 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: Landed **B2.1** (the B2 event-sourced spine, first checkpoint) with full proof. Delivered `Core/Events/ConductorEvent.cs` — 9 typed polymorphic records over a `{seq,ts,runId,sessionId}` envelope with `System.Text.Json` source-gen (compact camelCase NDJSON, string enums, `type` discriminator) — and `Core/Events/EventLog.cs`, a `Channel`-backed single-writer append-only writer whose `Emit()` never blocks the synchronous orchestrator, drains on a dedicated task, flushes per batch (no torn line on process kill) and fsyncs at the run boundary; plus `IEventSink`/`NullEventSink` and a crash-tolerant `ReadAll`. Wired emission at 8 Orchestrator transitions **additively alongside** `st…
+> SESSION-RESULT: Landed **B2.2** on `feat/baton` (commit `e2b6a03`, tracker hash filled by `6841c35`, pushed). `RunStateProjection.Fold(events)` rebuilds the durable `RunState` spine (plan/runId/currentStage/sessionCounter/confirmed+audited stages/History+cost+tokens) purely from the append-only log, and `StateProjectionParity.Diff` is an **explicit event-owned parity contract** that lists exactly which fields the log is authoritative for vs. which stay in `state.json` as cache. Proven by 4 new tests (92→96, build 0w/0e under warnings-as-errors): parity holds on a **verbatim real recorded orchestrator run** (2 sessions, one runId) *and* a Loom-shaped stream (audited+confirmed L0 + running L1 …
 
 ## Tracker handoff
 
 ```
-last: session #11 (B2, deliver) — landed **B2.1**. Typed `ConductorEvent` schema (9 polymorphic
-      records, STJ source-gen NDJSON) + `Channel`-backed single-writer append-only `EventLog`
-      (`.conductor/events.jsonl`), emitted **additively** alongside `state.json` at 8 Orchestrator
-      transitions. `RunId` persisted in `RunState` (additive). Build 0w/0e net10, 92 tests (87→+5).
-stage: **B2 IN PROGRESS** — B2.1 DONE; B2.2…B2.6 TODO. Battery GREEN.
-gate: GREEN — build 0w/0e; test 92 pass. In-tree `--once` self-run → well-formed 11-event log,
-      seq continuity + one `runId` across restart, `state.json` intact → docs/baton/evidence/B2.1-gate.txt.
-qa: session #10 (B1 audit) PASS — (1) 6 tests green (NewPlanScaffold + whitespace classify);
-      (2) `new-plan --template shamshir` → stage-coherent rows; STABLE driver dry-runs to `stage → P-0`. No findings.
-next: **B2.2** — `RunStateProjection.Fold(events)` rebuilds `RunState`; StateCompat parity test vs
-      legacy `state.json` (Loom-shaped fixture). Additive; cutover to projection only after parity.
-trap: events are IN-TREE only (STABLE driver from master can't emit) → B2.1 evidence uses the in-tree
-      build; the driver still judges via gates+commit+tracker. FU-B1-1/2 (stream split, CT through
-      providers) still open → land with the B2.4/B2.5 async/Host/DI pass.
+last: session #12 (B2, deliver) — landed **B2.2**. `RunStateProjection.Fold(events)` rebuilds the
+      RunState spine from the log; `StateProjectionParity.Diff` is the explicit event-owned surface.
+      Parity test folds a **real recorded run** + a Loom-shaped stream → each equals its legacy
+      state.json (diff empty). Additive: no cutover — state.json still written+authoritative. 96 tests (92→+4).
+stage: **B2 IN PROGRESS** — B2.1, B2.2 DONE; B2.3…B2.6 TODO. Battery GREEN.
+gate: GREEN — build 0w/0e; test 96 pass. Parity proven on a verbatim in-tree orchestrator run
+      (b22-qa, 11 events / 2 sessions / one runId) → docs/baton/evidence/B2.2-gate.txt.
+qa: session #11 (B2.1 deliver) PASS — (1) 5 EventLogTests green (round-trip/NDJSON/seq/torn-tail);
+      (2) reproduced the self-run independently → well-formed 11-event log, one runId, state.json parity. No findings.
+next: **B2.3** — crash recovery replays the event log (truncate a stream mid-session → queued resume).
+      Will likely need to event-source the pending/attempt surface the parity contract currently leaves as cache.
+trap: events + fold are IN-TREE only (STABLE driver from master can't emit) → evidence uses the in-tree
+      build; the driver still judges via gates+commit+tracker. Parity surface = spine only; transient
+      control fields (Status/attempts/Pending*/Skipped) stay in state.json until B2.3/B3 event-source them.
 dirty: none tracked.
-evidence: B2.1-gate.txt (+ earlier)
+evidence: B2.2-gate.txt (+ earlier)
 ```
