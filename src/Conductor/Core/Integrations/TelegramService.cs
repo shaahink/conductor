@@ -39,6 +39,8 @@ public sealed class TelegramService : IHostedService, ITelegramService, IDisposa
     private readonly Channel<(string ChatId, string Text, string? KeyboardJson)> _sendQueue;
     private readonly HttpClient _http;
     private readonly CancellationTokenSource _cts = new();
+    private Task? _pollTask;
+    private Task? _sendTask;
     private int _offset;
     private bool _started;
 
@@ -76,8 +78,8 @@ public sealed class TelegramService : IHostedService, ITelegramService, IDisposa
     {
         if (!IsConfigured) return Task.CompletedTask;
         _started = true;
-        _ = Task.Run(() => PollLoopAsync(_cts.Token), CancellationToken.None);
-        _ = Task.Run(() => SendLoopAsync(_cts.Token), CancellationToken.None);
+        _pollTask = Task.Run(() => PollLoopAsync(_cts.Token), CancellationToken.None);
+        _sendTask = Task.Run(() => SendLoopAsync(_cts.Token), CancellationToken.None);
         _log.LogInformation("Telegram bot started (poll interval {Interval}s)", _cfg!.PollIntervalSeconds);
         return Task.CompletedTask;
     }
@@ -86,6 +88,15 @@ public sealed class TelegramService : IHostedService, ITelegramService, IDisposa
     {
         await _cts.CancelAsync().ConfigureAwait(false);
         _started = false;
+        var poll = _pollTask;
+        var send = _sendTask;
+        if (poll != null || send != null)
+        {
+            var tasks = new List<Task>(2);
+            if (poll != null) tasks.Add(poll);
+            if (send != null) tasks.Add(send);
+            await Task.WhenAll(tasks).ConfigureAwait(false);
+        }
     }
 
     public void Dispose()
@@ -303,7 +314,8 @@ public sealed class TelegramService : IHostedService, ITelegramService, IDisposa
     {
         TrackerSnapshot track;
         try { track = _progress.Read(_plan); }
-        catch { track = new TrackerSnapshot(); }
+        catch (IOException) { track = new TrackerSnapshot(); }
+        catch (InvalidOperationException) { track = new TrackerSnapshot(); }
 
         var sb = new StringBuilder();
         sb.AppendLine($"<b>Conductor — {_plan.Name}</b>");

@@ -388,7 +388,7 @@ public static class Reporter
     private static string? NextCheckpoint(TrackerSnapshot track, string? stageId)
         => stageId == null ? null : track.ForStage(stageId).FirstOrDefault(c => !c.IsDone)?.Id;
 
-    /// <summary>Unicode progress bar: █ for done, ░ for remaining, 20 chars wide.</summary>
+    /// <summary>Unicode progress bar: █ for done, ░ for remaining, 10 chars wide.</summary>
     private static string ProgressBar(int done, int total)
     {
         if (total <= 0) return "";
@@ -410,16 +410,19 @@ public static class Reporter
 
     private static string? _cachedRemoteUrl;
     private static string? _cachedRemoteRepo;
+    private static readonly Lock _remoteUrlLock = new();
 
     private static string? GetRemoteUrl(string repo)
     {
-        if (_cachedRemoteRepo == repo && _cachedRemoteUrl != null) return _cachedRemoteUrl;
+        lock (_remoteUrlLock)
+        {
+            if (_cachedRemoteRepo == repo && _cachedRemoteUrl != null) return _cachedRemoteUrl;
+        }
         try
         {
             var result = Git.Exec(repo, "remote", "get-url", "origin");
             if (result.ExitCode != 0) return null;
             var url = result.Output.Trim();
-            // Convert git@github.com:owner/repo.git → https://github.com/owner/repo
             if (url.StartsWith("git@", StringComparison.Ordinal))
             {
                 var parts = url.Split('@', ':');
@@ -432,8 +435,11 @@ public static class Reporter
             {
                 url = url.Replace(".git", "", StringComparison.Ordinal);
             }
-            _cachedRemoteUrl = url;
-            _cachedRemoteRepo = repo;
+            lock (_remoteUrlLock)
+            {
+                _cachedRemoteUrl = url;
+                _cachedRemoteRepo = repo;
+            }
             return url;
         }
         catch { return null; }
