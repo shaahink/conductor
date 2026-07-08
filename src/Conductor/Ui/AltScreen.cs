@@ -103,10 +103,22 @@ public sealed class AltScreen : IDisposable
         {
             if (_left || !_entered) return;
             _left = true;
-            _out.Write(ShowCursor);
-            _out.Write(LeaveAlt);
-            _out.Flush();
+            // This runs from ProcessExit / PosixSignal handlers too, where the stream may already be
+            // torn down. Restore is best-effort: never let a dying stream throw out of an exit/signal
+            // handler (which would crash instead of un-wedging). Emit LeaveAlt even if ShowCursor fails.
+            TryWrite(ShowCursor);
+            TryWrite(LeaveAlt);
+            try { _out.Flush(); }
+            catch (IOException) { }
+            catch (ObjectDisposedException) { }
         }
+    }
+
+    private void TryWrite(string seq)
+    {
+        try { _out.Write(seq); }
+        catch (IOException) { }
+        catch (ObjectDisposedException) { }
     }
 
     public void Dispose()

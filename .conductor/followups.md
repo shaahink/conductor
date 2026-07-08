@@ -49,12 +49,12 @@ vocabulary → whitespace-tolerant `StartsWithAny` + regression test. See `.cond
 
 | id | item | detail | owning stage | status |
 |----|------|--------|--------------|--------|
-| FU-B2-1 | `LiveMetrics` has no production consumer | `ForSession`/`RunWide` are called only from tests; the dashboard reads `agent.Tokens*` directly. The B2 audit FIXED the persisted-data bug (TokenDelta now carries `sessionId`), so the log is now correct � but the end-to-end "consumer folds live tokens from the log" loop is unproven by a real run. Wire it and prove against a recorded log. | B5 | OPEN |
+| FU-B2-1 | `LiveMetrics` has no production consumer | `ForSession`/`RunWide` are called only from tests; the dashboard reads `agent.Tokens*` directly. The B2 audit FIXED the persisted-data bug (TokenDelta now carries `sessionId`), so the log is now correct � but the end-to-end "consumer folds live tokens from the log" loop is unproven by a real run. Wire it and prove against a recorded log. | B5 | OPEN |
 | FU-B2-2 | `RunStateProjection.FindInterruptedSession` assumes single-session | Tracks one "most recent unmatched start"; cannot represent two concurrently-interrupted sessions. Matches today's one-session-at-a-time model but is an undocumented invariant parallel-lane stages must revisit. | parallel-lane stage | OPEN |
-| FU-B2-3 | Orphaned-`SessionStarted` recovery may queue a non-resume | Event-log recovery of a `SessionStarted` with no matching `state.json` record synthesises a `SessionRecord` and queues a resume with the event's `AgentSessionId` � possibly empty ? starts a FRESH agent, not a true resume (safe-ish re-deliver, but silent). Double-hard-crash-only path; untested against an empty-id orphaned stream. Add a test + decide skip vs re-deliver vs needs-human. | B3 (process control) | OPEN |
+| FU-B2-3 | Orphaned-`SessionStarted` recovery may queue a non-resume | Event-log recovery of a `SessionStarted` with no matching `state.json` record synthesises a `SessionRecord` and queues a resume with the event's `AgentSessionId` � possibly empty ? starts a FRESH agent, not a true resume (safe-ish re-deliver, but silent). Double-hard-crash-only path; untested against an empty-id orphaned stream. Add a test + decide skip vs re-deliver vs needs-human. | B3 (process control) | OPEN |
 
 **Fixed in-phase by the B2 audit** (no followup, recorded for the trail): persisted `TokenDelta`
-events never carried a `sessionId`, so `LiveMetrics.ForSession` folded zero against a real log � the
+events never carried a `sessionId`, so `LiveMetrics.ForSession` folded zero against a real log � the
 B2.6 deliverable was correct only in unit tests that hand-set `SessionId`. Now stamped in
 `AgentSession` from the conductor session number + regression test
 `EventLogTests.EmitPreservesSessionIdSoLiveMetricsCanFoldPersistedDeltas` (real on-disk path). See
@@ -63,7 +63,7 @@ B2.6 deliverable was correct only in unit tests that hand-set `SessionId`. Now s
 **Re-homed from B0/B1 (B2 owned but did not clear):** FU-B0-1 (MA0045 sync-over-async engine),
 FU-B1-1 (ScriptProvider stdout/stderr split), FU-B1-2 (CT through `IProgressProvider.Read`) remain
 OPEN. B2 added Host/DI/logging groundwork but kept the Orchestrator run loop synchronous; the async
-engine pass was NOT done. `MA0045` stays at `suggestion` (not lowered � no ratchet violation, but not
+engine pass was NOT done. `MA0045` stays at `suggestion` (not lowered � no ratchet violation, but not
 raised either). Schedule a dedicated async/harden lane rather than assuming these landed in B2.
 
 ## Opened by B3 (audit session, 2026-07-08, session #19)
@@ -88,3 +88,24 @@ to a confirmed stage made effective, and dead `ControlAction.ApproveOwner` remov
 
 **Note on FU-B2-3 (B3-owned):** NOT cleared by B3 delivery or this audit (it is event-log recovery,
 not process control). Remains OPEN; re-home to a recovery/harden lane.
+
+## Opened by B4 (audit session, 2026-07-08, session #33)
+
+| id | item | detail | owning stage | status |
+|----|------|--------|--------------|--------|
+| FU-B4-1 | Orchestrator central log emits no severity | The severity model (B4.4) is rendered and now exercised by the dashboard's own control feedback (abort/skip/kill=Warn, inject=Success/Error), but `Orchestrator` still logs via `sink.Log(stamped)` (plain string → `Info`) at `Orchestrator.cs:1241`. The lines an unattended operator most needs colour-coded — gate-failed, backoff, needs-human, stage-confirmed — stay grey. Map those message→severity and emit `LogEntry`. Touches the Orchestrator broadly + needs a mapping decision, so deferred out of the UI-scoped audit budget. | B4 fix-lane / B6 | OPEN |
+| FU-B4-2 | Alt-screen restore on signal/ProcessExit is inspection-only | `AltScreenTests` cover enter/leave/idempotent/redirected via a `StringWriter`, but the `PosixSignalRegistration` + `AppDomain.ProcessExit` safety nets are driven by no test (need a real process/signal). The audit hardened `Leave()` to fail-safe on those paths, but "Ctrl+C leaves a clean prompt" is still a manual claim. Add a headless assertion that disposing via those nets emits `\e[?1049l`. | B4 fix-lane | OPEN |
+| FU-B4-3 | Status-agent probe unobserved + no CancellationToken | `LiveDashboard.StartStatusAgent`'s `Task.Run` catches broad `Exception` and surfaces into the pane (OK per A15), but is fire-and-forget (`_ =`) with no CT — a hung `StatusAgent.Run` leaks the task until process exit and can't be cancelled by closing the modal. Thread a CT (cancel on modal close / process exit) and observe the task. Low risk (operator-initiated, single). | B4 fix-lane / B6 | OPEN |
+
+**Fixed in-phase by the B4 audit** (no followup, recorded for the trail): (1) `StartStatusAgent` read
+the mutable `_agent`/`_thinking`/`_snap`/`_gates` off the UI thread without `_gate`, so `_agent.TakeLast`
+could throw "Collection was modified" mid-run — fixed by capturing the context inside the lock; (2) the
+severity model was render-only (no producer emitted a non-`Info` severity → inert in real runs) — wired
+the dashboard's operator-facing control feedback to real severities; (3) `AltScreen.Leave()` could throw
+out of a signal/`ProcessExit` handler (crash instead of restore) — made the restore writes best-effort.
+No gate weakened, no analyzer lowered; 221 tests pass. See `.conductor/handovers/B4.md`.
+
+**Reviewed & accepted (not a regression):** `TrackerParserTests.ParsesRealLoomTracker` was relaxed this
+phase from `== 35` to `>= 30` — it asserts against a foreign, live file a separate Loom run mutates, and
+`TrackerParser.cs` itself was untouched in the B4 diff, so the invariant-based assertion is the better
+test, not a cover-up. Kept as-is.

@@ -54,11 +54,17 @@ public sealed class LiveDashboard : IProgressSink
 
     public LiveDashboard(PlanConfig? plan = null) => _plan = plan;
 
-    public void Log(string line)
+    public void Log(string line) => Log(line, LogSeverity.Info);
+
+    /// <summary>Logs an operator-facing line with an explicit severity so the footer log colour-codes it
+    /// (B4.4). The dashboard's own control feedback — destructive-action confirmations, injection
+    /// success/failure — carries severity here so the severity model is actually exercised in real runs,
+    /// not only via the <see cref="IProgressSink.Log(LogEntry)"/> producer path.</summary>
+    private void Log(string line, LogSeverity severity)
     {
         lock (_gate)
         {
-            _log.Add(new LogEntry(line, DateTime.UtcNow, LogSeverity.Info));
+            _log.Add(new LogEntry(line, DateTime.UtcNow, severity));
             if (_log.Count > 300) _log.RemoveRange(0, 100);
         }
     }
@@ -191,12 +197,20 @@ public sealed class LiveDashboard : IProgressSink
     private void StartStatusAgent()
     {
         if (_plan?.StatusAgent is not { } cfg || _statusRunning) { _modal = Modal.Status; return; }
-        lock (_gate) { _modal = Modal.Status; _modalOffset = 0; _statusRunning = true; _statusLines = new(); }
 
-        // Snapshot context on the UI thread; run the agent off-thread so the dashboard stays live.
-        var snap = _snap with { Gates = _gates };
-        var recentAgent = _agent.TakeLast(12).Select(a => $"{Glyph(a.Kind)} {a.Text}").ToList();
-        var recentThinking = _thinking.Recent(8).Select(e => e.Text).ToList();
+        // Capture the run context while holding the lock: _agent/_thinking/_snap/_gates are mutated by
+        // producer threads (AgentEvent/Snapshot/GateProgress), so reading them off the UI thread without
+        // the gate races the producers — e.g. _agent.TakeLast enumerating while a producer Adds throws
+        // "Collection was modified". Materialise the immutable inputs here, then run the agent off-thread.
+        DashboardSnapshot snap;
+        List<string> recentAgent, recentThinking;
+        lock (_gate)
+        {
+            _modal = Modal.Status; _modalOffset = 0; _statusRunning = true; _statusLines = new();
+            snap = _snap with { Gates = _gates };
+            recentAgent = _agent.TakeLast(12).Select(a => $"{Glyph(a.Kind)} {a.Text}").ToList();
+            recentThinking = _thinking.Recent(8).Select(e => e.Text).ToList();
+        }
         var repo = _plan.Repo;
 
         // Fire-and-forget background probe; failures surface into the status pane, never silently.
@@ -290,18 +304,18 @@ public sealed class LiveDashboard : IProgressSink
                     case ConsoleKey.R: _pendingConfirm = null; _keys.Enqueue(ControlAction.ResumeRun); break;
                     case ConsoleKey.A:
                         { var act = ConfirmGate.ProcessDestructive(ControlAction.AbortNow, ref _pendingConfirm);
-                          if (act != null) { _keys.Enqueue(act.Value); Log("ABORT CONFIRMED"); }
-                          else Log("Press A again to confirm ABORT (any other key cancels)"); }
+                          if (act != null) { _keys.Enqueue(act.Value); Log("ABORT CONFIRMED", LogSeverity.Warn); }
+                          else Log("Press A again to confirm ABORT (any other key cancels)", LogSeverity.Waiting); }
                         break;
                     case ConsoleKey.S:
                         { var act = ConfirmGate.ProcessDestructive(ControlAction.SkipStage, ref _pendingConfirm);
-                          if (act != null) { _keys.Enqueue(act.Value); Log("SKIP CONFIRMED"); }
-                          else Log("Press S again to confirm SKIP (any other key cancels)"); }
+                          if (act != null) { _keys.Enqueue(act.Value); Log("SKIP CONFIRMED", LogSeverity.Warn); }
+                          else Log("Press S again to confirm SKIP (any other key cancels)", LogSeverity.Waiting); }
                         break;
                     case ConsoleKey.K:
                         { var act = ConfirmGate.ProcessDestructive(ControlAction.KillSession, ref _pendingConfirm);
-                          if (act != null) { _keys.Enqueue(act.Value); Log("KILL CONFIRMED"); }
-                          else Log("Press K again to confirm KILL (any other key cancels)"); }
+                          if (act != null) { _keys.Enqueue(act.Value); Log("KILL CONFIRMED", LogSeverity.Warn); }
+                          else Log("Press K again to confirm KILL (any other key cancels)", LogSeverity.Waiting); }
                         break;
                     case ConsoleKey.Q: _pendingConfirm = null; _keys.Enqueue(ControlAction.StopAfterSession); break;
                     case ConsoleKey.T or ConsoleKey.O or ConsoleKey.D or ConsoleKey.V or ConsoleKey.X or ConsoleKey.I or ConsoleKey.G:
@@ -326,9 +340,9 @@ public sealed class LiveDashboard : IProgressSink
                     {
                         var prev = InstructionQueue.List(_plan).LastOrDefault()?.File;
                         InstructionQueue.Write(_plan, text, prev);
-                        Log($"[injected] queued instruction for next session: {text}");
+                        Log($"[injected] queued instruction for next session: {text}", LogSeverity.Success);
                     }
-                    catch (Exception ex) { Log($"[injected] failed to queue: {ex.Message}"); }
+                    catch (Exception ex) { Log($"[injected] failed to queue: {ex.Message}", LogSeverity.Error); }
                 }
                 _inputBuffer.Clear();
                 break;
