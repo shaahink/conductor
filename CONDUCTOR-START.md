@@ -8,18 +8,16 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #53 (B9 fix) — fixed failing ForCheckpoint ordering test from session #52
-       (TaskGraph now sorts by Order). Committed B9.1 deliverable: TaskItem model,
-       TaskAdded/TaskStatusChanged events, TaskGraph projection, 10 unit tests.
-       Everything passes.
-stage: **B9.1 DONE** — model + events + projection + tests deployed and green.
-       B9.2–B9.5 NOT started. Events are registered in ConductorEvent but NOT yet
-       emitted by Orchestrator (that happens in B9.2/B9.3).
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 336 tests pass (+10 from B8).
+last: session #55 (B9.2) — implemented IPlanner + CheckpointPlanner + orchestrator integration.
+       Planner decomposition emits TaskAdded events on first planner-persona Deliver session
+       per checkpoint. Recovery rebuilds decomposed-checkpoints set from event log.
+stage: B9.1 DONE. **B9.2 DONE** — planner decomposition + tests landed (342 pass, +6).
+       B9.3–B9.5 NOT started. CheckpointPlanner is a seed; real decomposition comes from
+       the planner persona agent session + MCP refinement in B9.3.
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 342 tests pass (+6 from B9.2).
 dirty: none.
-next: B9.2 (planner decomposition emits TaskAdded events).
-evidence: a0eda3c (commit msg has gate output)
-fix-session: #52 had 1 failing test (ForCheckpoint unsorted) + uncommitted WIP; both fixed.
+next: B9.3 (MCP task server — task_list/task_update/task_add).
+evidence: 87a7c72 (commit msg has gate output)
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -89,7 +87,7 @@ never silent renumbering.
 | B8.4 | Handover weak/deferred bullets → tracked .conductor/followups.md (opt. block phase-confirm) | DONE | a50c15f | docs/baton/evidence/B8-gate.txt |
 | B8.5 | Pluggable IPromptBattery (lessons/DoD-recap/repo-map/recent-failure); token rollover (RolledOver, no attempt burned) | DONE | a50c15f | docs/baton/evidence/B8-gate.txt |
 | B9.1 | Task graph model + event-sourced store (TaskAdded/TaskStatusChanged) beneath the checkpoint table | DONE | a0eda3c | commit msg (build 0w/0e, 336 tests pass) |
-| B9.2 | Planner persona decomposes active checkpoint → ordered sub-tasks | TODO | | |
+| B9.2 | Planner persona decomposes active checkpoint → ordered sub-tasks | DONE | 87a7c72 | tests/Conductor.Tests/PlannerTests.cs (6 tests) |
 | B9.3 | MCP task server (task_list/task_update/task_add) — persists agent todo list across sessions | TODO | | |
 | B9.4 | Cooperative soft-break (finish sub-task→handoff→fresh session) + hard token-ceiling fresh-start fallback | TODO | | |
 | B9.5 | Task views in CLI/TUI/Telegram | TODO | | |
