@@ -1,32 +1,12 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 16:18 UTC · branch `feat/baton` · HEAD `c6eadb0`_
+_Updated 2026-07-08 16:18 UTC · branch `feat/baton` · HEAD `6714efe`_
 
-**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 0 · working ▸ B4.7
-**Checkpoints:** 30/65 done · **Sessions run:** 32 · **Cost:** $1.1196 · **Tokens:** 502,988 in / 426,019 out / 188,512 think
+**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 0
+**Checkpoints:** 31/65 done · **Sessions run:** 32 · **Cost:** $1.1556 · **Tokens:** 505,108 in / 440,885 out / 192,819 think
 **Confirmed phases:** B0, B1, B2, B3
-
-## Latest activity (live)
-
-_Session #32 (Deliver) · running 20m · last output 9s ago · $0.0351_
-
-**Thinking:**
-> Now I'm committing the documentation and QA evidence files to git.
-> The push went through successfully—git's stderr output is normal, and the branch is now updated on the remote. Now I need to check the final state and review the diff stats to make sure everything stays within budget.
-> The diff looks clean with just 13 files touched—5 evidence artifacts, 1 tracker, and 6 source/test files—well under the budget. Now I'm wrapping up the remaining todos and preparing the final session result.
-
-**Recent actions:**
-- `17:16:31` » edit CONDUCTOR-START.md
-- `17:16:42` » edit CONDUCTOR-START.md
-- `17:16:50` » bash cd C:\Code\conductor-baton; git status --short
-- `17:17:05` » write ..\..\Users\shahi\AppData\Local\Temp\opencode\commitmsg3.txt
-- `17:17:17` » bash cd C:\Code\conductor-baton; git add CONDUCTOR-START.md docs/baton/evidence/B4.7-gate.txt docs/baton/evidence/B4.7-qa-preview.txt docs/baton/evidence/B4.7-q…
-- `17:17:26` · Working tree clean. Now push the branch.
-- `17:17:31` » bash cd C:\Code\conductor-baton; git push origin feat/baton 2>&1 | Select-Object -Last 5
-- `17:17:41` · Pushed (`82e1087..c6eadb0 feat/baton`). Let me verify the diff budget for the whole checkpoint.
-- `17:17:41` » bash cd C:\Code\conductor-baton; git diff --stat 82e1087 HEAD
-- `17:17:51` » todowrite 0 todos
+**Pending:** auto-fix audit for B4
 
 ## Stage progress
 
@@ -36,7 +16,7 @@ _Session #32 (Deliver) · running 20m · last output 9s ago · $0.0351_
 | B1 | Decouple Loom + pluggable progress providers | 7/7 | confirmed ✓ |
 | B2 | Event-sourced backbone + provider decoupling | 6/6 | confirmed ✓ |
 | B3 | Safety, owner-gates & process control | 5/5 | confirmed ✓ |
-| B4 | TUI overhaul (alt-screen + tree) | 6/7 | **← active** |
+| B4 | TUI overhaul (alt-screen + tree) | 7/7 | gating… |
 | B5 | Observability & health | 0/4 | todo |
 | B6 | AFK + two-way Telegram | 0/5 | todo |
 | B7 | Specialist sub-agent personas | 0/3 | todo |
@@ -79,18 +59,10 @@ _Session #32 (Deliver) · running 20m · last output 9s ago · $0.0351_
 | 29 | B4 | Deliver | 1 | 07-08 15:04 | 0:12 | Advanced | B4.4 | 3 | build:OK | $0.0567 | 62,572/12,919 |
 | 30 | B4 | Deliver | 1 | 07-08 15:16 | 0:21 | Advanced | B4.5 | 7 | build:OK | $0.0351 | 2,137/17,812 |
 | 31 | B4 | Deliver | 1 | 07-08 15:38 | 0:19 | Advanced | B4.6 | 3 | build:OK | $0.0253 | 1,939/12,322 |
-| 32 | B4 | Deliver | 1 | 07-08 15:58 | … | running |  | 0 |  |  |  |
+| 32 | B4 | Deliver | 1 | 07-08 15:58 | 0:20 | Advanced | B4.7 | 5 | build:OK | $0.0360 | 2,120/14,866 |
 
 ### Commits by session
 
-- **s18 (B3 Deliver)** — 7 commit(s):
-  - 30717ee chore(bB3): mark B3.1-B3.5 DONE, refresh handoff (session #18)
-  - 157cdc8 feat(bB3.4,bB3.5): budget/token caps + approval mode + graceful Ctrl+C
-  - 90ce43a feat(bB3.3): process control verbs — retry-stage, rollback, pause-after-stage, goto
-  - a08197f chore(conductor): s18 B3 working ▸B3.1 @ 10:09
-  - a48b3bd feat(bB3.2): owner-gate step type + AwaitingOwner status + approve via CLI/TUI
-  - db01755 feat(bB3.1): confirm-gating for destructive actions in TUI + CLI
-  - 1b3c6e6 chore(conductor): s18 B3 working ▸B3.1 @ 09:59
 - **s19 (B3 Audit)** — 3 commit(s):
   - d427650 docs(bB3-audit): honest B3 phase handover + tracked followups
   - 2a0fa9f fix(bB3-audit): harden owner-gates, budget/approval parks, control-file parsing
@@ -125,6 +97,12 @@ _Session #32 (Deliver) · running 20m · last output 9s ago · $0.0351_
   - e2e7ccc docs(bB4.6): mark B4.6 DONE + handoff (QA #30 PASS)
   - f4f2997 feat(bB4.6): command history search + filters
   - 43cfa0d chore(conductor): s31 B4 working ▸B4.6 @ 16:48
+- **s32 (B4 Deliver)** — 5 commit(s):
+  - 6714efe chore(conductor): s32 B4 working ▸B4.7 @ 17:18
+  - c6eadb0 docs(bB4.7): mark B4.7 DONE + handoff (B4 complete; QA #31 PASS)
+  - c1edb3b feat(bB4.7): doc-on-select - plan-tree cursor opens the selected stage doc
+  - 1f61578 feat(bB4.7): live-consistent token line folds session delta like cost
+  - 82e1087 chore(conductor): s32 B4 working ▸B4.7 @ 17:08
 
 ## Phase handovers (audit)
 
@@ -139,26 +117,27 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: Landed **B4.6 — command history search + filters** on `feat/baton` (feature `f4f2997`, tracker/handoff `e2e7ccc`, pushed). New pure `CommandHistory` (slash-syntax `Parse` + category/substring `Filter` + `NextCategory`) turns the agent pop-out (`O`) into a searchable command-history view: `Tab` cycles commands/thoughts/errors, `/` opens an incremental search (`/build` `/git` `/test`), a typed `/category` token overrides Tab, and the modal header echoes the live query; `HandleModalKey` now takes `ConsoleKeyInfo` so typed search never leaks into scroll/close, and the dead `OutputLines()` was retired. Proven by build 0w/0e, **215 tests** (206→215, +9 `CommandHistoryTests` includi…
+> SESSION-RESULT: Landed **B4.7** (the final B4 checkpoint, completing the TUI overhaul stage) in two focused feat commits plus a docs commit, all pushed to `feat/baton`. (1) **Live-consistent token line** (`1f61578`) — `DashboardRenderer.TokenLine` now breaks out the running session's burn as `(session Nk)`, exactly mirroring the cost line's `(session $…)`, so tokens and cost are presented consistently and current burn is visible AFK (F-3 at the display layer); deltas already accrue per `step_finish`. (2) **Doc-on-select** (`c1edb3b`) — the plan tree gained a ↑/↓ selection cursor over its visible rows and `D` now opens the *selected* row's owning-stage doc section (`PlanTree.StageForRow` reso…
 
 ## Tracker handoff
 
 ```
-last: session #31 (B4.6, deliver) — landed **B4.6**: command history search + filters.
-      New pure `CommandHistory` (Parse slash-syntax + Filter by category/substring). The agent
-      pop-out (O) is now a searchable history: Tab cycles commands/thoughts/errors, `/` searches
-      (`/build /git /test`). Retired dead OutputLines; +9 tests. 206→215.
-stage: **B4 IN PROGRESS** — B4.1–B4.6 DONE. Next B4.7 (live-consistent tokens + doc-on-select).
-gate: GREEN — build 0w/0e; 215 tests pass. `conductor preview` exit 0; action bar shows "[O]
-      history". B4.6-gate.txt, B4.6-preview.txt.
-qa: session #30/B4.5 PASS — re-ran gate (build 0w/0e, 206 tests). Claim-1: 11 StructuredThinking+
-      AgentFold tests green. Claim-2: preview shows "▸ (2 lines)" fold badge, "◎ goal …" thinking,
-      "[C] fold" action. No findings.
-next: **B4.7** — fold TokenDelta into a live-consistent token line; selecting a stage/checkpoint
-      row opens its doc section (DocsExtractor exists).
-trap: the history modal is interactive → a redirected `preview` renders one static frame; the
-      filtered-modal DISPLAY is proven headlessly by CommandHistoryTests.FilteredHistoryRenders…
-      HandleModalKey now takes ConsoleKeyInfo (was ConsoleKey) — both call sites updated.
-dirty: none. (Restored a stray unrelated deletion of conductor-CLEANUP.md that appeared mid-session.)
-evidence: B4.6-gate.txt, B4.6-preview.txt
+last: session #32 (B4.7, deliver) — landed **B4.7**: live-consistent token line + doc-on-select.
+      Token line now breaks out the running session delta as `(session Nk)`, matching the cost
+      line's `(session $…)` (F-3 at the display layer). Plan tree gains a ↑/↓ selection cursor;
+      `D` opens the *selected* row's owning-stage doc (checkpoint→stage resolved). +6 tests. 215→221.
+stage: **B4 COMPLETE** — B4.1–B4.7 all DONE. Next: B4 per-phase audit (self-plan audit=on) → B5.1.
+gate: GREEN — build 0w/0e; 221 tests pass. In-tree `preview` exit 0; header "(F/↑↓/D)", action bar
+      "[↑↓] select · [D] docs". B4.7-gate.txt, B4.7-tokens-preview.txt, B4.7-docselect-preview.txt.
+qa: session #31/B4.6 PASS — re-ran gate (build 0w/0e, 215 tests). Claim-1: 9 CommandHistory tests
+     green. Claim-2: in-tree preview exit 0, action bar shows "[O] history"+"[F] filter". No findings.
+     (Stable driver's preview shows master's "[O] output" — it predates B4.6, as designed.)
+next: **B4 audit** then **B5.1** (timeline view from the event log). See conductor-DEBT.md — its
+      "B4.7 async ratchet" is a *followup* section, NOT this stage's B4.7 (which is R4.7, now done).
+trap: doc-on-select is stage-granular (docs are per-stage sections; a checkpoint row resolves to its
+      owning stage via PlanTree.StageForRow). ↑/↓ now navigate the plan tree (previously unmapped →
+      cancelled a pending confirm). Stable-driver dry-run blocked by the live orchestrator's plan lock
+      (pid) — expected while it drives me; the build+test battery is the authoritative gate.
+dirty: none.
+evidence: B4.7-gate.txt, B4.7-tokens-preview.txt, B4.7-docselect-preview.txt
 ```
