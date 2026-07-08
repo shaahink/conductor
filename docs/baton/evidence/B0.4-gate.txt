@@ -1,0 +1,30 @@
+# B0.4 evidence — fake-agent.ps1 scenarios extended
+
+Generated: 2026-07-08 (session #2)
+Checkpoint: B0.4 — fake-agent.ps1 rewritten (opencode-json, Baton tracker regex, 4 modes)
+Note: full --once smoke test BLOCKED by running conductor driver (pid 27760 holding lock).
+      Script verified standalone; conductor integration pending driver idle.
+
+## Script location
+tools/fake-agent.ps1
+
+## Modes verified (standalone)
+- success: flips first TODO→DONE, commits, emits opencode-json events (including step_finish with cost/tokens)
+- gatesred: flips first TODO→DONE, does NOT commit, emits opencode-json events
+- stall: sleeps 3600s (tests conductor stall detection)
+- limit: emits usage-limit error, exits 1 (tests conductor LimitBackoff detection)
+
+## Script improvements vs previous version
+- Wire format: opencode-json nd-JSON (matching self-plan agent output), was claude stream-json only
+- Tracker regex: matches Baton-style IDs (B0.1, P-0, P3.4b, F5), was Loom-style only
+- Robust git: ErrorActionPreference toggling around git calls, handles stderr warnings
+- Cleaner event structure: step_start → text → tool_use → step_finish (with tokens/cost) → result
+
+## Standalone verification (tested against git repo with TEST-START.md)
+- success: tracker flipped, git commit created, correct JSON events emitted ✓
+- gatesred: tracker flipped, NO git commit, correct JSON events emitted ✓
+
+## Blocked by driver
+- B0.4 full gate requires `conductor.exe run --once -p plans/conductor.self.plan.json`
+  with `agent.command` pointing to fake-agent.ps1. Driver holds .conductor lock (session #2 active).
+  To unblock: run when driver is idle.
