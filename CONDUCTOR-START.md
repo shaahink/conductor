@@ -8,27 +8,23 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #30 (B4.5, deliver) — landed **B4.5**: structured thinking pane +
-      tool-call folding. Two pure helpers: `StructuredThinking.Parse` (Goal/Hypothesis/
-      Evidence/Action digest; raw kept when unstructured) + `AgentFold.Build` (tool output
-      folded behind "(N lines)" badge, `C` key expand/fold). Wired into DashboardRenderer
-      (ThinkingRow + AgentPanel), LiveDashboard (`C`), preview seed. +15 tests. 193→206.
-stage: **B4 IN PROGRESS** — B4.1–B4.5 DONE. Next B4.6 (command history search + filters).
-gate: GREEN — build 0w/0e; 206 tests pass. `conductor preview` exit 0 shows agent fold
-      badge "▸ (2 lines)", thinking "◎ goal …", "[C] fold" in action bar.
-      B4.5-gate.txt, B4.5-preview.txt.
-qa: session #29/B4.4 PASS — re-ran gate (build 0w/0e, 193 tests). Claim-1: DashboardRenderer
-      severity theory tests 38/38 (glyph+colour mapping green). Claim-2: B4.4 preview artifact
-      shows "6 sessions unreported" label + severity-prefixed log pane. No findings.
-      SIDE-FIND (fixed, own commit): RealLoomTracker smoke asserted magic count 35 vs the LIVE
-      foreign LOOM-START.md; flipped red mid-session on a malformed L5.4 row (parser correctly
-      rejected it). De-coupled to invariants — not a Conductor regression.
-next: **B4.6** — command history search + filters (/build /git /test; commands/thoughts/errors).
-trap: `RealLoomTrackerParsesIfPresent` reads a LIVE foreign file — never re-couple it to an
-       exact count. `EventLogTests.ReadAll…` is flaky (passes on retry). StateCompat serialises
-       `UntrackedSessions` (old JSON name; only display label reworded in B4.4).
-dirty: two untracked prior-session docs (conductor-DEBT.md, docs/baton/CONDUCTOR-NEXT.md) — not mine.
-evidence: B4.5-gate.txt, B4.5-preview.txt
+last: session #31 (B4.6, deliver) — landed **B4.6**: command history search + filters.
+      New pure `CommandHistory` (Parse slash-syntax + Filter by category/substring). The agent
+      pop-out (O) is now a searchable history: Tab cycles commands/thoughts/errors, `/` searches
+      (`/build /git /test`). Retired dead OutputLines; +9 tests. 206→215.
+stage: **B4 IN PROGRESS** — B4.1–B4.6 DONE. Next B4.7 (live-consistent tokens + doc-on-select).
+gate: GREEN — build 0w/0e; 215 tests pass. `conductor preview` exit 0; action bar shows "[O]
+      history". B4.6-gate.txt, B4.6-preview.txt.
+qa: session #30/B4.5 PASS — re-ran gate (build 0w/0e, 206 tests). Claim-1: 11 StructuredThinking+
+      AgentFold tests green. Claim-2: preview shows "▸ (2 lines)" fold badge, "◎ goal …" thinking,
+      "[C] fold" action. No findings.
+next: **B4.7** — fold TokenDelta into a live-consistent token line; selecting a stage/checkpoint
+      row opens its doc section (DocsExtractor exists).
+trap: the history modal is interactive → a redirected `preview` renders one static frame; the
+      filtered-modal DISPLAY is proven headlessly by CommandHistoryTests.FilteredHistoryRenders…
+      HandleModalKey now takes ConsoleKeyInfo (was ConsoleKey) — both call sites updated.
+dirty: none. (Restored a stray unrelated deletion of conductor-CLEANUP.md that appeared mid-session.)
+evidence: B4.6-gate.txt, B4.6-preview.txt
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -78,7 +74,7 @@ never silent renumbering.
 | B4.3 | Hierarchical plan tree (sub-checkpoints; expand/collapse; per-stage cost/attempts/last-outcome) | DONE | 8197bd4 | docs/baton/evidence/B4.3-gate.txt, docs/baton/evidence/B4.3-preview.txt |
 | B4.4 | Severity model (INFO/WARN/ERROR/SUCCESS/WAITING/HUMAN) + clearer header labels | DONE | 9b25fe2 | docs/baton/evidence/B4.4-gate.txt, docs/baton/evidence/B4.4-preview.txt |
 | B4.5 | Structured thinking pane (Goal/Hypothesis/Evidence/Action) + tool-call folding | DONE | 5b9db37 | docs/baton/evidence/B4.5-gate.txt, docs/baton/evidence/B4.5-preview.txt |
-| B4.6 | Command history search + filters (/build /git /test; commands/thoughts/errors) | TODO | | |
+| B4.6 | Command history search + filters (/build /git /test; commands/thoughts/errors) | DONE | f4f2997 | docs/baton/evidence/B4.6-gate.txt, docs/baton/evidence/B4.6-preview.txt |
 | B4.7 | Live-consistent token line + plan-tree filter/search for large plans; doc-on-select | TODO | | |
 | B5.1 | Timeline view (transitions with duration) from the event log | TODO | | |
 | B5.2 | Replay / time-travel (F8) reconstructs a past run from events.jsonl | TODO | | |
