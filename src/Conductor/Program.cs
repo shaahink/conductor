@@ -35,4 +35,4 @@ app.Configure(c =>
         return 1;
     });
 });
-return app.Run(args);
+return await app.RunAsync(args).ConfigureAwait(false);

@@ -173,6 +173,6 @@ public sealed class PromptBuilder(PlanConfig plan)
             End by printing one paragraph starting with `SESSION-RESULT:` summarising the audit verdict and what you changed.
             {stageNotes}{extra}
             """,
-        _ => throw new ArgumentException($"No built-in template named {name}"),
+        _ => throw new ArgumentException($"No built-in template named {name}", nameof(name)),
     };
 }

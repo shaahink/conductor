@@ -23,7 +23,7 @@ public static class ProcessRunner
         foreach (var a in args) psi.ArgumentList.Add(a);
 
         var sb = new StringBuilder();
-        var gate = new object();
+        var gate = new Lock();
         var sw = Stopwatch.StartNew();
         using var job = new JobObject();
         using var p = new Process { StartInfo = psi };

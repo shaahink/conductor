@@ -54,7 +54,7 @@ public sealed class RunCommand : Command<RunCommand.Settings>
         var state = RunState.LoadOrNew(statePath, plan.Name);
 
         var opts = new RunOptions(settings.DryRun, settings.Once, settings.MaxSessions);
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 
         var usePlain = settings.NoDashboard || settings.DryRun || Console.IsOutputRedirected;

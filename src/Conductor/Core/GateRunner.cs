@@ -22,7 +22,7 @@ public static class GateRunner
 
         // Live status array shared across the (possibly parallel) gate threads.
         var live = gates.Select(g => GateProgress.Pending(g.Name)).ToArray();
-        var liveGate = new object();
+        var liveGate = new Lock();
         void Emit() { if (onGates != null) { lock (liveGate) onGates(live.ToArray()); } }
         void Mark(int i, GateProgress gp) { lock (liveGate) live[i] = gp; Emit(); }
         Emit();

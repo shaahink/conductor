@@ -19,7 +19,7 @@ public sealed class LiveDashboard : IProgressSink
 {
     private enum Modal { None, Thinking, Output, Docs, Git, Prompt, Status }
 
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private readonly List<DashboardState.AgentLine> _agent = new();
     private readonly ReasoningBuffer _thinking = new();
     private readonly List<string> _log = new();
@@ -168,11 +168,20 @@ public sealed class LiveDashboard : IProgressSink
         var recentThinking = _thinking.Recent(8).Select(e => e.Text).ToList();
         var repo = _plan.Repo;
 
-        Task.Run(() =>
+        // Fire-and-forget background probe; failures surface into the status pane, never silently.
+        _ = Task.Run(() =>
         {
-            var git = GitView.Summary(repo);
-            var prompt = StatusAgent.BuildPrompt(snap, git, recentAgent, recentThinking);
-            var report = StatusAgent.Run(cfg, prompt);
+            string report;
+            try
+            {
+                var git = GitView.Summary(repo);
+                var prompt = StatusAgent.BuildPrompt(snap, git, recentAgent, recentThinking);
+                report = StatusAgent.Run(cfg, prompt);
+            }
+            catch (Exception ex)
+            {
+                report = $"status agent failed: {ex.Message}";
+            }
             lock (_gate)
             {
                 _statusLines = report.Replace("\r\n", "\n").Split('\n').ToList();

@@ -25,7 +25,7 @@ public sealed class AgentSession : IDisposable
     private readonly JobObject _job = new();
     private readonly ConcurrentQueue<AgentEvent> _events = new();
     private readonly string _mode; // "stream-json" | "opencode-json" | "text"
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
     private readonly StringBuilder _resultText = new();
     private long _lastActivityTicks = DateTime.UtcNow.Ticks;
 
@@ -205,7 +205,7 @@ public sealed class AgentSession : IDisposable
                 break;
             case "result":
                 if (root.TryGetProperty("is_error", out var ie) && ie.ValueKind == JsonValueKind.True) ResultIsError = true;
-                if (root.TryGetProperty("subtype", out var sub) && (sub.GetString() ?? "").StartsWith("error")) ResultIsError = true;
+                if (root.TryGetProperty("subtype", out var sub) && (sub.GetString() ?? "").StartsWith("error", StringComparison.Ordinal)) ResultIsError = true;
                 if (root.TryGetProperty("result", out var res) && res.ValueKind == JsonValueKind.String) ResultText = res.GetString();
                 if (root.TryGetProperty("total_cost_usd", out var c) && c.ValueKind == JsonValueKind.Number) CostUsd = c.GetDecimal();
                 if (root.TryGetProperty("num_turns", out var nt) && nt.ValueKind == JsonValueKind.Number) NumTurns = nt.GetInt32();

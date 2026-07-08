@@ -1,0 +1,61 @@
+# Curated style + analyzer severities for Conductor (B0.2).
+# Rationale in docs/baton/adr/0001-tooling-and-ruleset.md (why each rule, what is relaxed and why).
+# Curated, not the raw firehose: the theme is correct async/threading (Conductor spawns processes,
+# drains streams on background tasks, must never deadlock or leak).
+root = true
+
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+
+[*.{json,jsonc,yml,yaml,md,ps1,csproj,props,slnx,targets}]
+indent_size = 2
+
+[*.cs]
+# --- Language / style conventions (modern C#) ---
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_prefer_braces = true:silent
+csharp_style_var_when_type_is_apparent = true:silent
+csharp_style_expression_bodied_methods = when_on_single_line:silent
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:silent
+dotnet_style_readonly_field = true:warning
+dotnet_sort_system_directives_first = true
+dotnet_style_namespace_match_folder = true:silent
+
+# --- .NET analyzers (CA): async/disposal correctness as errors; the rest advisory ---
+dotnet_diagnostic.CA2007.severity = error      # ConfigureAwait(false) in library code
+dotnet_diagnostic.CA2016.severity = error      # forward CancellationToken to methods that take one
+dotnet_diagnostic.CA1849.severity = error      # call async methods when in an async method
+dotnet_diagnostic.CA2000.severity = warning    # dispose objects before losing scope
+dotnet_diagnostic.CA1063.severity = warning    # implement IDisposable correctly
+dotnet_diagnostic.CA1031.severity = suggestion # catch general exception (many legit boundary catches; ADR-0001)
+dotnet_diagnostic.CA1051.severity = suggestion
+dotnet_diagnostic.CA1848.severity = none       # LoggerMessage delegates: revisit at B2 (Serilog/ILogger)
+dotnet_diagnostic.CA1303.severity = none       # localize literals: N/A (InvariantGlobalization CLI tool)
+dotnet_diagnostic.CA1861.severity = suggestion # constant arrays as args
+
+# --- Meziantou analyzers (MA): async-correctness theme as errors ---
+dotnet_diagnostic.MA0004.severity = error      # use ConfigureAwait(false)
+dotnet_diagnostic.MA0040.severity = error      # forward the CancellationToken
+dotnet_diagnostic.MA0042.severity = error      # no blocking calls in async / .Result / .Wait / sync Run (deadlock class)
+dotnet_diagnostic.MA0079.severity = error      # forward CancellationToken via .WithCancellation
+dotnet_diagnostic.MA0134.severity = warning    # observe result of Task-returning methods (no floating tasks)
+# Ratchet-later (relaxed in B0.2 — fix class exceeds the diff budget; recorded in ADR-0001):
+dotnet_diagnostic.MA0045.severity = suggestion # sync-over-async I/O: B2 async/Host rework (28 sites, signature-changing)
+dotnet_diagnostic.MA0002.severity = suggestion # explicit StringComparer: cross-cutting (38 sites); ratchet post-B2
+dotnet_diagnostic.MA0009.severity = suggestion # regex timeout: B1.4 reworks TrackerParser regex; add timeouts there
+dotnet_diagnostic.MA0006.severity = suggestion # use string.Equals instead of ==
+dotnet_diagnostic.MA0011.severity = suggestion # IFormatProvider is missing (ADR-0001: InvariantGlobalization on)
+dotnet_diagnostic.MA0016.severity = suggestion # prefer returning collection abstraction
+dotnet_diagnostic.MA0051.severity = suggestion # method is too long (advisory)
+dotnet_diagnostic.MA0048.severity = suggestion # file name must match type name
+
+# --- Test project: relax library-only + culture rules (xUnit asserts on ASCII literals) ---
+[tests/**/*.cs]
+dotnet_diagnostic.CA2007.severity = none       # ConfigureAwait not required in test code
+dotnet_diagnostic.MA0004.severity = none
+dotnet_diagnostic.MA0074.severity = none       # Assert.Contains on literals: culture-invariant by construction

@@ -1,0 +1,27 @@
+# B0.2 evidence - analyzers + warnings-as-errors (curated ruleset)
+
+Generated: 2026-07-08 03:05:05  (parent HEAD 956fb32 = B0.1)
+Gate re-run by the stable driver's battery. Warnings-as-errors ON.
+
+## dotnet build Conductor.slnx  (TreatWarningsAsErrors=true)
+```
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:02.41
+```
+
+## dotnet test Conductor.slnx --no-build
+```
+Test run for C:\Code\conductor-baton\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    56, Skipped:     0, Total:    56, Duration: 5 s - Conductor.Tests.dll (net10.0)
+```
+
+## curated ruleset: deferred rules verified still non-blocking (suggestion), not disabled
+```
+deferred-rule diagnostics still emitted (as suggestion/info, non-error): 0 occurrences of MA0045/MA0002/MA0009 remain visible for the ratchet
+```
