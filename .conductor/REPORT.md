@@ -1,32 +1,12 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 16:28 UTC · branch `feat/baton` · HEAD `0f492be`_
+_Updated 2026-07-08 16:32 UTC · branch `feat/baton` · HEAD `fd4e327`_
 
-**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 0
-**Checkpoints:** 31/65 done · **Sessions run:** 33 · **Cost:** $1.1556 · **Tokens:** 505,108 in / 440,885 out / 192,819 think
+**Checkpoints:** 31/65 done · **Sessions run:** 33 · **Cost:** $1.1746 · **Tokens:** 506,142 in / 450,999 out / 196,540 think
 **Confirmed phases:** B0, B1, B2, B3
-
-## Latest activity (live)
-
-_Session #33 (Audit) · running 10m · last output 44s ago · $0.0105_
-
-**Thinking:**
-> The test coverage looks solid for the main AltScreen scenarios, though the signal handler and ProcessExit paths are tricky to test directly. I'm thinking through the robustness of the `Leave()` method — if a Write fails because the terminal is gone during shutdown, that exception would bubble up fro…
-> The AltScreenTests are checking that LeaveAlt and ShowCursor are properly emitted, and the idempotency test still validates that LeaveAlt occurs exactly once. Now I'm running the full test suite to verify everything works.
-> All 221 tests are passing, so now I need to run the full gate battery the way the driver would—that's build, test, and preview. Let me verify the preview command works with my changes by running it redirected as a B4 gate.  Running the built conductor.dll with preview redirected...
-
-**Recent actions:**
-- `17:25:24` · Let me check the AltScreen and Docs/Modal tests, and confirm `TrackerParser.cs` itself was untouched (test-only relaxation).
-- `17:25:24` » read tests\Conductor.Tests\AltScreenTests.cs
-- `17:25:24` » read tests\Conductor.Tests\DocsAndModalTests.cs
-- `17:25:49` · The tests are solid. One more hardening on the critical restore path: `AltScreen.Leave()` is invoked from `ProcessExit` and POSIX signal handlers, but its `_out…
-- `17:25:49` » edit src\Conductor\Ui\AltScreen.cs
-- `17:26:28` » bash dotnet build Conductor.slnx -c Debug 2>&1 | Select-Object -Last 6
-- `17:27:16` » bash dotnet test Conductor.slnx -c Debug --nologo 2>&1 | Select-Object -Last 6
-- `17:27:27` · All 221 pass. Let me verify the `preview` still works redirected (a B4 gate) with my changes, and run a release build to mirror the gate battery.
-- `17:27:35` » bash dotnet run --project src/Conductor -c Debug -- preview 2>&1 | Select-Object -First 20
-- `17:27:48` » bash Get-Content src/Conductor/bin/Debug/net10.0/conductor.dll > $null; dotnet run --project src/Conductor -c Debug -- preview --plan plans/conductor.self.plan.…
+**Pending:** full-battery phase gate for B4
 
 ## Stage progress
 
@@ -79,14 +59,10 @@ _Session #33 (Audit) · running 10m · last output 44s ago · $0.0105_
 | 30 | B4 | Deliver | 1 | 07-08 15:16 | 0:21 | Advanced | B4.5 | 7 | build:OK | $0.0351 | 2,137/17,812 |
 | 31 | B4 | Deliver | 1 | 07-08 15:38 | 0:19 | Advanced | B4.6 | 3 | build:OK | $0.0253 | 1,939/12,322 |
 | 32 | B4 | Deliver | 1 | 07-08 15:58 | 0:20 | Advanced | B4.7 | 5 | build:OK | $0.0360 | 2,120/14,866 |
-| 33 | B4 | Audit | 1 | 07-08 16:18 | … | running |  | 0 |  |  |  |
+| 33 | B4 | Audit | 1 | 07-08 16:18 | 0:14 | Progress |  | 2 |  | $0.0191 | 1,034/10,114 |
 
 ### Commits by session
 
-- **s19 (B3 Audit)** — 3 commit(s):
-  - d427650 docs(bB3-audit): honest B3 phase handover + tracked followups
-  - 2a0fa9f fix(bB3-audit): harden owner-gates, budget/approval parks, control-file parsing
-  - 194dd8b chore(conductor): s19 B3 working ▸B3 @ 10:29
 - **s26 (B4 Deliver)** — 3 commit(s):
   - 71f32e5 chore(bB4.1): record B4.1 commit hash c6d5efb in tracker
   - c6d5efb feat(bB4.1): alt-screen buffer with guaranteed clean restore
@@ -123,6 +99,9 @@ _Session #33 (Audit) · running 10m · last output 44s ago · $0.0105_
   - c1edb3b feat(bB4.7): doc-on-select - plan-tree cursor opens the selected stage doc
   - 1f61578 feat(bB4.7): live-consistent token line folds session delta like cost
   - 82e1087 chore(conductor): s32 B4 working ▸B4.7 @ 17:08
+- **s33 (B4 Audit)** — 2 commit(s):
+  - fd4e327 fix(bB4): audit-harden TUI — fix status-agent UI-thread race, wire severity model, harden alt-screen restore
+  - 3f46d73 chore(conductor): s33 B4 working ▸B4 @ 17:28
 
 ## Phase handovers (audit)
 
@@ -130,6 +109,7 @@ _Session #33 (Audit) · running 10m · last output 44s ago · $0.0105_
 - `.conductor/handovers/B1.md`
 - `.conductor/handovers/B2.md`
 - `.conductor/handovers/B3.md`
+- `.conductor/handovers/B4.md`
 
 ## Last gate run
 
@@ -137,7 +117,7 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: Landed **B4.7** (the final B4 checkpoint, completing the TUI overhaul stage) in two focused feat commits plus a docs commit, all pushed to `feat/baton`. (1) **Live-consistent token line** (`1f61578`) — `DashboardRenderer.TokenLine` now breaks out the running session's burn as `(session Nk)`, exactly mirroring the cost line's `(session $…)`, so tokens and cost are presented consistently and current burn is visible AFK (F-3 at the display layer); deltas already accrue per `step_finish`. (2) **Doc-on-select** (`c1edb3b`) — the plan tree gained a ↑/↓ selection cursor over its visible rows and `D` now opens the *selected* row's owning-stage doc section (`PlanTree.StageForRow` reso…
+> SESSION-RESULT: B4 (TUI overhaul) passes audit — it is a genuine, well-tested phase (alt-screen with idempotent guaranteed restore, a non-stacking declarative Spectre Layout, a real hierarchical plan tree with filter/search/selection, structured thinking + tool-call folding, command-history search, and a live-token line wired to the same live source as cost), backed by 221 passing tests under warnings-as-errors. I FIXED three issues in-session: (1) a real concurrency crash — `StartStatusAgent` read the mutable `_agent`/`_thinking`/`_snap`/`_gates` off the UI thread without the lock, so `_agent.TakeLast` could throw "Collection was modified" mid-run (now captured inside `_gate`); (2) a shallo…
 
 ## Tracker handoff
 
