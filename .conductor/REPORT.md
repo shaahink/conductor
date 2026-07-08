@@ -1,11 +1,15 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 10:45 UTC · branch `feat/baton` · HEAD `a36096e`_
+_Updated 2026-07-08 10:55 UTC · branch `feat/baton` · HEAD `1834e0c`_
 
-**Status:** Idle
+**Status:** Running
 **Stage:** B4 — TUI overhaul (alt-screen + tree) · attempts used 5 · working ▸ B4.1
-**Checkpoints:** 24/65 done · **Sessions run:** 24 · **Cost:** $0.9168 · **Tokens:** 431,294 in / 336,507 out / 158,939 think
+**Checkpoints:** 24/65 done · **Sessions run:** 25 · **Cost:** $0.9168 · **Tokens:** 431,294 in / 336,507 out / 158,939 think
 **Confirmed phases:** B0, B1, B2, B3
+
+## Latest activity (live)
+
+_Session #25 (Resume) · running 10m · last output 599s ago_
 
 ## Stage progress
 
@@ -53,6 +57,7 @@ _Updated 2026-07-08 10:45 UTC · branch `feat/baton` · HEAD `a36096e`_
 | 22 | B4 | Resume | 3r2 | 07-08 10:03 | 0:12 | Stalled |  | 0 |  |  |  |
 | 23 | B4 | Deliver | 4 | 07-08 10:21 | 0:12 | Stalled |  | 0 |  |  |  |
 | 24 | B4 | Resume | 5r1 | 07-08 10:33 | 0:12 | Stalled |  | 0 |  |  |  |
+| 25 | B4 | Resume | 6r2 | 07-08 10:45 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
