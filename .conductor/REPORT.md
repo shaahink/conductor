@@ -1,12 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 06:04 UTC · branch `feat/baton` · HEAD `de42b0b`_
+_Updated 2026-07-08 06:14 UTC · branch `feat/baton` · HEAD `83e64cb`_
 
-**Status:** Idle
+**Status:** Running
 **Stage:** B1 — Decouple Loom + pluggable progress providers · attempts used 0
-**Checkpoints:** 13/65 done · **Sessions run:** 9 · **Cost:** $0.3647 · **Tokens:** 192,186 in / 135,277 out / 70,438 think
+**Checkpoints:** 13/65 done · **Sessions run:** 10 · **Cost:** $0.3647 · **Tokens:** 192,186 in / 135,277 out / 70,438 think
 **Confirmed phases:** B0
-**Pending:** auto-fix audit for B1
+
+## Latest activity (live)
+
+_Session #10 (Audit) · running 10m · last output 12s ago · $0.0113_
+
+**Thinking:**
+> The shamshir example tracker has 17 rows which matches the B1.7 test, so that's working correctly. For testing my fix, I'm considering whether to make `BuildPlanJson` and `BuildTrackerMd` internal with `InternalsVisibleTo`, or instead test through the command's public `Execute` method—though constru…
+> I'm weighing whether to expose internals through InternalsVisibleTo or instead test the CLI by invoking it directly through CommandApp, and I'm realizing there might be an even cleaner approach here.  The real invariant I want to verify is that the scaffolded plan and tracker stay coherent — every s…
+> I've identified the core issues now. The main problem is that the shamshir `new-plan` scaffold has misaligned checkpoint and stage declarations—the tracker references S1.1/S1.2 checkpoints while the plan uses P-0/P0/P1 stages, making the plan impossible to drive since no checkpoint maps to any stage…
+
+**Recent actions:**
+- `07:12:09` » read src\Conductor\Conductor.csproj
+- `07:12:09` · Let me look at the Conductor csproj to decide how tests reach the scaffold builders.
+- `07:12:46` » read tests\Conductor.Tests\Conductor.Tests.csproj
+- `07:12:46` · Let me check the test project name/reference before wiring internals.
+- `07:12:46` » bash Select-String -Path "src/Conductor/Commands/Commands.cs" -Pattern "^namespace|^using" | Select-Object -First 8
+- `07:13:29` » todowrite 5 todos
+- `07:13:30` · I have a complete picture. Two real issues to fix plus tests. Let me set up tracking and start fixing.
+- `07:13:41` · Now let me fix the shamshir scaffold. First make the builders internal and rewrite `BuildTrackerMd` to be stage-aware, plus clean up partial files if the load-v…
+- `07:13:41` » edit src\Conductor\Commands\Commands.cs
+- `07:13:47` » edit src\Conductor\Commands\Commands.cs
 
 ## Stage progress
 
@@ -39,6 +59,7 @@ _Updated 2026-07-08 06:04 UTC · branch `feat/baton` · HEAD `de42b0b`_
 | 7 | B1 | Deliver | 1 | 07-08 04:49 | 0:37 | Advanced | B1.3 | 5 | build:OK | $0.0268 | 1,793/12,018 |
 | 8 | B1 | Deliver | 1 | 07-08 05:26 | 0:21 | Advanced | B1.4 | 4 | build:OK | $0.0318 | 1,646/14,600 |
 | 9 | B1 | Deliver | 1 | 07-08 05:48 | 0:15 | Advanced | B1.5 B1.6 B1.7 | 7 | build:OK | $0.0744 | 63,136/21,354 |
+| 10 | B1 | Audit | 1 | 07-08 06:04 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
