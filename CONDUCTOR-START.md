@@ -1,8 +1,9 @@
 # Conductor — Baton v2 Phase Tracker (resume here)
 
-**Read order for a fresh session:** this file → `docs/baton/BATON-BRIEF.md` (design authority,
-MANDATORY) → your stage file `docs/baton/stages/B<n>.md` → the audit/handover for the previous
-stage in `.conductor/handovers/`.
+**Read order for a fresh session:** this file → `conductor-DEBT.md` (audit followups —
+unresolved bugs + deferred work from B0-B3 audits, sized + gated) → `docs/baton/BATON-BRIEF.md`
+(design authority, MANDATORY) → your stage file `docs/baton/stages/B<n>.md` →
+the audit/handover for the previous stage in `.conductor/handovers/`.
 Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conductor-baton`.
 Driver: the stable `bin\conductor.exe` built from `master`.
 
