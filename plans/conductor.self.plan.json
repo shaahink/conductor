@@ -35,11 +35,14 @@
     "output": "opencode-json"
   },
 
-  // Clean-slate discipline: free any build-server / stray Conductor process that could lock
-  // build outputs before an independent gate run. setup runs before every agent session AND
-  // before every gate battery; teardown after every gate battery.
+  // Clean-slate discipline: free the MSBuild/Roslyn build servers that can hold DLL locks on
+  // conductor.dll between the build gate and the test gate. setup runs before every agent session
+  // AND before every gate battery; teardown after every gate battery.
+  // IMPORTANT: do NOT kill processes named "conductor" (that is the DRIVER running this plan) or
+  // "opencode"/"dotnet" broadly (that would kill the agent / the gate run). build-server shutdown
+  // is the safe, targeted backstop.
   "setup": {
-    "command": "dotnet build-server shutdown; Get-Process conductor -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; exit 0",
+    "command": "dotnet build-server shutdown; exit 0",
     "timeoutMinutes": 2
   },
   "teardown": {
