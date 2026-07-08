@@ -1,32 +1,11 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 21:53 UTC · branch `feat/baton` · HEAD `87a7c72`_
+_Updated 2026-07-08 21:55 UTC · branch `feat/baton` · HEAD `a0b689e`_
 
-**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B9 — Task graph + smart session management · attempts used 0 · working ▸ B9.2
-**Checkpoints:** 49/65 done · **Sessions run:** 54 · **Cost:** $2.0643 · **Tokens:** 1,290,000 in / 703,444 out / 314,855 think
+**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B9 — Task graph + smart session management · attempts used 0 · working ▸ B9.4
+**Checkpoints:** 51/65 done · **Sessions run:** 54 · **Cost:** $2.1461 · **Tokens:** 1,349,955 in / 729,507 out / 333,656 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8
-
-## Latest activity (live)
-
-_Session #54 (Deliver) · running 20m · last output 8s ago · $0.0748_
-
-**Thinking:**
-> Build passes 0w/0e. Now let me run the tests.
-> All 7 MCP tests pass. Now let me run the full test suite to make sure nothing broke.
-> 349 tests pass (was 342 after B9.2, now +7 for B9.3). Build 0w/0e.   Now I need to: 1. Update CONDUCTOR-START.md for B9.3 2. Commit 3. Evaluate B9.4  B9.4 is "Cooperative soft-break + hard fallback". The gate: "fake-agent test — approaching the soft threshold injects the finish-and-handoff nudge and…
-
-**Recent actions:**
-- `22:51:20` · Now rewrite the tests correctly:
-- `22:51:42` » bash dotnet build Conductor.slnx 2>&1; if ($?) { dotnet test Conductor.slnx --no-build --filter "FullyQualifiedName~McpTaskServerTests" 2>&1 }
-- `22:52:08` » write tests\Conductor.Tests\McpTaskServerTests.cs
-- `22:52:08` · Fix analyzer errors:
-- `22:52:24` » bash dotnet build Conductor.slnx 2>&1
-- `22:52:37` » bash dotnet test Conductor.slnx --no-build --filter "FullyQualifiedName~McpTaskServerTests" 2>&1
-- `22:52:43` · All 7 B9.3 tests pass. Now run full suite:
-- `22:52:54` » bash dotnet test Conductor.slnx --no-build 2>&1
-- `22:53:08` · 349 tests pass, build 0w/0e. Let me check the diff and commit B9.3:
-- `22:53:08` » bash git diff --stat; git status -s
 
 ## Stage progress
 
@@ -41,7 +20,7 @@ _Session #54 (Deliver) · running 20m · last output 8s ago · $0.0748_
 | B6 | AFK + two-way Telegram | 5/5 | confirmed ✓ |
 | B7 | Specialist sub-agent personas | 3/3 | confirmed ✓ |
 | B8 | Brain layer | 5/5 | confirmed ✓ |
-| B9 | Task graph + smart session management | 1/5 | **← active** |
+| B9 | Task graph + smart session management | 3/5 | **← active** |
 | B10 | Advanced orchestration | 0/4 | todo |
 | B11 | Close-out + Shamshir owner-gated proof | 0/4 | todo |
 | B12 | Controlled parallelism | 0/4 | todo |
@@ -79,12 +58,10 @@ _Session #54 (Deliver) · running 20m · last output 8s ago · $0.0748_
 | 51 | B9 | Fix | 3 | 07-08 21:23 | 0:00 | AgentError |  | 0 | build:OK |  |  |
 | 52 | B9 | Fix | 4 | 07-08 21:24 | 0:00 | AgentError |  | 0 | build:OK |  |  |
 | 53 | B9 | Fix | 5 | 07-08 21:26 | 0:06 | Advanced | B9.1 | 2 | build:OK | $0.0212 | 29,881/4,286 |
-| 54 | B9 | Deliver | 1 | 07-08 21:33 | … | running |  | 0 |  |  |  |
+| 54 | B9 | Deliver | 1 | 07-08 21:33 | 0:21 | Advanced | B9.2 B9.3 | 5 | build:OK | $0.0818 | 59,955/26,063 |
 
 ### Commits by session
 
-- **s41 (B6 Deliver)** — 1 commit(s):
-  - d054c9c feat(bB6.5): Shamshir P-0 + P0.1 headless acceptance — B6 COMPLETE
 - **s42 (B6 Audit)** — 1 commit(s):
   - 5317709 fix(bB6): audit-harden Telegram + reporter — fix shutdown race, bare catch, thread-safety, unused import
 - **s43 (B7 Deliver)** — 2 commit(s):
@@ -106,6 +83,12 @@ _Session #54 (Deliver) · running 20m · last output 8s ago · $0.0748_
 - **s53 (B9 Fix)** — 2 commit(s):
   - 20558b1 chore(conductor): s53 B9 fix — handoff updated, B9.1 marked DONE
   - a0eda3c fix(bB9.1): B9.1 task graph model + event-sourced projection + tests
+- **s54 (B9 Deliver)** — 5 commit(s):
+  - a0b689e chore(bB9.3): update tracker — B9.2 + B9.3 marked DONE, handoff refreshed
+  - 92371d7 feat(bB9.3): MCP task server — task_list/task_update/task_add over JSON-RPC 2.0 stdio
+  - da88cf5 chore(conductor): s54 B9 working ▸B9.2 @ 22:53
+  - 87a7c72 feat(bB9.2): planner decomposition — IPlanner + CheckpointPlanner + orchestrator integration + tests
+  - 469209b chore(conductor): s54 B9 working ▸B9.2 @ 22:43
 
 ## Phase handovers (audit)
 
@@ -125,21 +108,19 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: The only real bug was `ForCheckpoint` returning tasks in event-insertion order instead of sorted by `Order` (1 failing test). Fixed both `ForCheckpoint` and `CurrentTask` to sort; 336 tests green, build 0w/0e. The B9.1 model, events, projection, and tests are now committed and pushed. No leftovers — no TODOs, stubs, or half-edits in the B9 diff. B9.2–B9.5 are entirely unstarted; the `TaskAdded`/`TaskStatusChanged` events are registered in the type hierarchy but have no emitter yet (planner in B9.2, MCP server in B9.3).
+> SESSION-RESULT: B9.2 and B9.3 landed — IPlanner/CheckpointPlanner + orchestrator integration (planner decomposition emits TaskAdded events on first planner-persona Deliver session per checkpoint) and McpTaskServer (MCP JSON-RPC 2.0 stdio server with task_list/task_update/task_add, journal-persisted across sessions). 349 tests pass (+13), build 0w/0e. B9.4-B9.5 NOT started. Next session should tackle B9.4 (soft-break prompt injection + register MCP server with agent config + token-watchdog during session loop) and B9.5 (CLI/TUI/Telegram task views). What was hard: Unicode character encoding in `CheckpointPlanner` splitters (the `→` arrow got corrupted on file write, fixed via Unicode escape `…
 
 ## Tracker handoff
 
 ```
-last: session #53 (B9 fix) — fixed failing ForCheckpoint ordering test from session #52
-       (TaskGraph now sorts by Order). Committed B9.1 deliverable: TaskItem model,
-       TaskAdded/TaskStatusChanged events, TaskGraph projection, 10 unit tests.
-       Everything passes.
-stage: **B9.1 DONE** — model + events + projection + tests deployed and green.
-       B9.2–B9.5 NOT started. Events are registered in ConductorEvent but NOT yet
-       emitted by Orchestrator (that happens in B9.2/B9.3).
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 336 tests pass (+10 from B8).
+last: session #55 (B9.2+9.3) — delivered B9.2 (IPlanner/CheckpointPlanner + orchestrator
+       integration) and B9.3 (McpTaskServer: MCP JSON-RPC 2.0 stdio server exposing
+       task_list/task_update/task_add with journal-persist across sessions).
+stage: B9.1 DONE. B9.2 DONE. **B9.3 DONE** — MCP task server + 7 tests landed.
+       B9.4–B9.5 NOT started. McpTaskServer is not yet registered with the agent-config;
+       that integration (plus the actual orchestrator journal-fold on resume) is B9.4's job.
+gate: GREEN — build 0w/0e (net10, warnings-as-errors); 349 tests pass (+7 from B9.3).
 dirty: none.
-next: B9.2 (planner decomposition emits TaskAdded events).
-evidence: a0eda3c (commit msg has gate output)
-fix-session: #52 had 1 failing test (ForCheckpoint unsorted) + uncommitted WIP; both fixed.
+next: B9.4 (cooperative soft-break + hard fallback + register MCP server with agent).
+evidence: 92371d7 (B9.3 commit), 87a7c72 (B9.2 commit)
 ```
