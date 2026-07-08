@@ -152,10 +152,11 @@ public static class DashboardRenderer
 
     public static string TokenLine(DashboardSnapshot s)
     {
-        var total = s.TokensInput + s.TokensOutput + s.TokensReasoning;
+        var total = s.TokensInput + s.TokensOutput + s.TokensReasoning +
+                    s.SessionTokensInput + s.SessionTokensOutput + s.SessionTokensReasoning;
         if (total == 0) return "[grey]tokens —[/]";
-        var parts = $"{Human(s.TokensInput)} in · {Human(s.TokensOutput)} out";
-        if (s.TokensReasoning > 0) parts += $" · {Human(s.TokensReasoning)} think";
+        var parts = $"{Human(s.TokensInput + s.SessionTokensInput)} in · {Human(s.TokensOutput + s.SessionTokensOutput)} out";
+        if (s.TokensReasoning + s.SessionTokensReasoning > 0) parts += $" · {Human(s.TokensReasoning + s.SessionTokensReasoning)} think";
         return $"tokens {parts} · [bold]{Human(total)} total[/]";
     }
 

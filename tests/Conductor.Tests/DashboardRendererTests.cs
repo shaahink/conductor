@@ -116,4 +116,20 @@ public class DashboardRendererTests
         });
         Assert.Contains("77.3k total", line);
     }
+
+    [Fact]
+    public void TokenLineIncludesLiveSessionTokens()
+    {
+        // B2.6 — live session tokens are added to historical totals (same pattern as cost)
+        var line = DashboardRenderer.TokenLine(new DashboardSnapshot
+        {
+            TokensInput = 5000,            // historical from finished sessions
+            TokensOutput = 2000,
+            SessionTokensInput = 1500,     // live, still burning
+            SessionTokensOutput = 500,
+        });
+        Assert.Contains("6.5k in", line);  // 5000 + 1500
+        Assert.Contains("2.5k out", line); // 2000 + 500
+        Assert.Contains("9.0k total", line);
+    }
 }

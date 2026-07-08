@@ -38,13 +38,19 @@ public interface IAgentProvider
 /// it never reads the process or the clock — so parsing is a pure function of the input lines and is
 /// unit-testable without spawning anything.
 /// </summary>
-public sealed class AgentStreamState(Action<string, string> emit)
+public sealed class AgentStreamState(Action<string, string> emit, Action<long, long, long, long, decimal>? onTokenDelta = null)
 {
     private readonly Lock _lock = new();
     private readonly StringBuilder _buffer = new();
+    private readonly Action<long, long, long, long, decimal>? _onTokenDelta = onTokenDelta;
 
     /// <summary>Enqueue a UI event (kind ∈ system|text|thinking|tool|result|stderr|raw).</summary>
     public void Emit(string kind, string text) => emit(kind, text);
+
+    /// <summary>Emit a per-step token delta (R2.6, fixes F-3). Called by the provider on <c>step_finish</c>
+    /// so the event log captures live token burn and the <c>LiveMetrics</c> projection can fold it.</summary>
+    public void EmitTokenDelta(long input, long output, long reasoning, long cacheRead, decimal costUsd)
+        => _onTokenDelta?.Invoke(input, output, reasoning, cacheRead, costUsd);
 
     /// <summary>Append a line to the streamed result buffer (opencode has no single result event).</summary>
     public void AppendResultLine(string s)

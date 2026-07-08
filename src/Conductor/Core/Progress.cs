@@ -48,6 +48,10 @@ public sealed record DashboardSnapshot
     public long TokensInput { get; init; }
     public long TokensOutput { get; init; }
     public long TokensReasoning { get; init; }
+    /// <summary>Tokens consumed by the currently running session (not yet folded into Tokens*).</summary>
+    public long SessionTokensInput { get; init; }
+    public long SessionTokensOutput { get; init; }
+    public long SessionTokensReasoning { get; init; }
     /// <summary>First not-done checkpoint in the active stage — what the session is working toward.</summary>
     public string CurrentCheckpoint { get; init; } = "";
     /// <summary>Title of the current checkpoint, shown full-width in the header so its intent is clear.</summary>

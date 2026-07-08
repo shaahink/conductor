@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
+using Conductor.Core.Events;
 using Conductor.Core.Providers;
 using Conductor.Models;
 
@@ -42,15 +43,18 @@ public sealed class AgentSession : IDisposable
     public long? TokensCacheRead => _stream.TokensCacheRead;
     public bool WasKilled { get; private set; }
 
-    private AgentSession(Process proc, StreamWriter raw, IAgentProvider provider)
+    private AgentSession(Process proc, StreamWriter raw, IAgentProvider provider, IEventSink? eventSink)
     {
         _proc = proc;
         _raw = raw;
         _provider = provider;
-        _stream = new AgentStreamState((kind, text) => _events.Enqueue(new AgentEvent { Kind = kind, Text = text }));
+        Action<long, long, long, long, decimal>? tokenDelta = eventSink != null
+            ? (i, o, r, c, cost) => eventSink.Emit(new TokenDelta { Input = i, Output = o, Reasoning = r, CacheRead = c, CostUsd = cost })
+            : null;
+        _stream = new AgentStreamState((kind, text) => _events.Enqueue(new AgentEvent { Kind = kind, Text = text }), tokenDelta);
     }
 
-    public static AgentSession Start(AgentConfig cfg, string cwd, string prompt, string sessionId, string? resumeClaudeId, string rawLogPath)
+    public static AgentSession Start(AgentConfig cfg, string cwd, string prompt, string sessionId, string? resumeClaudeId, string rawLogPath, IEventSink? eventSink = null)
     {
         var template = (resumeClaudeId != null && cfg.ResumeArgs is { Count: > 0 }) ? cfg.ResumeArgs : cfg.Args;
         var args = template.Select(a => a
@@ -75,7 +79,7 @@ public sealed class AgentSession : IDisposable
         var raw = new StreamWriter(rawLogPath, append: false, Encoding.UTF8) { AutoFlush = true };
 
         var proc = new Process { StartInfo = psi };
-        var session = new AgentSession(proc, raw, AgentProviderFactory.Create(cfg));
+        var session = new AgentSession(proc, raw, AgentProviderFactory.Create(cfg), eventSink);
         proc.OutputDataReceived += (_, e) => session.OnLine(e.Data, stderr: false);
         proc.ErrorDataReceived += (_, e) => session.OnLine(e.Data, stderr: true);
         proc.Start();

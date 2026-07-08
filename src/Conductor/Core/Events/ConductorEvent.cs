@@ -25,6 +25,7 @@ namespace Conductor.Core.Events;
 [JsonDerivedType(typeof(StageConfirmed), "stageConfirmed")]
 [JsonDerivedType(typeof(AttentionRequested), "attentionRequested")]
 [JsonDerivedType(typeof(RunFinished), "runFinished")]
+[JsonDerivedType(typeof(TokenDelta), "tokenDelta")]
 public abstract record ConductorEvent
 {
     /// <summary>Monotonic 1-based ordinal within the log (continues across restarts). Stamped by
@@ -127,6 +128,20 @@ public sealed record RunFinished : ConductorEvent
     public int Sessions { get; init; }
     public int CheckpointsDone { get; init; }
     public int CheckpointsTotal { get; init; }
+}
+
+/// <summary>
+/// A per-step token/cost delta emitted by the provider on every <c>step_finish</c> (R2.6, fixes F-3
+/// live-token lag). The <see cref="LiveMetrics"/> projection folds these into per-session live totals;
+/// the dashboard, report, and Telegram all consume them from one event-log source.
+/// </summary>
+public sealed record TokenDelta : ConductorEvent
+{
+    public long Input { get; init; }
+    public long Output { get; init; }
+    public long Reasoning { get; init; }
+    public long CacheRead { get; init; }
+    public decimal CostUsd { get; init; }
 }
 
 /// <summary>Source-generated (de)serialisation for the event log — NDJSON, compact, camelCase, string

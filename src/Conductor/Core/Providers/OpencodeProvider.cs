@@ -66,16 +66,22 @@ public sealed class OpencodeProvider : IAgentProvider
                 state.Emit("tool", $"{tool} {detail}".Trim());
                 break;
             case "step_finish":
+                long di = 0, dout = 0, dr = 0, dc = 0;
+                decimal dcost = 0;
                 if (part.TryGetProperty("cost", out var c) && c.ValueKind == JsonValueKind.Number)
-                    state.CostUsd = (state.CostUsd ?? 0m) + c.GetDecimal();
+                {
+                    dcost = c.GetDecimal();
+                    state.CostUsd = (state.CostUsd ?? 0m) + dcost;
+                }
                 if (part.TryGetProperty("tokens", out var tk))
                 {
-                    if (tk.TryGetProperty("input", out var ti) && ti.ValueKind == JsonValueKind.Number) state.TokensInput = (state.TokensInput ?? 0) + ti.GetInt64();
-                    if (tk.TryGetProperty("output", out var to) && to.ValueKind == JsonValueKind.Number) state.TokensOutput = (state.TokensOutput ?? 0) + to.GetInt64();
-                    if (tk.TryGetProperty("reasoning", out var tr) && tr.ValueKind == JsonValueKind.Number) state.TokensReasoning = (state.TokensReasoning ?? 0) + tr.GetInt64();
-                    if (tk.TryGetProperty("cache", out var ca) && ca.TryGetProperty("read", out var cr) && cr.ValueKind == JsonValueKind.Number) state.TokensCacheRead = (state.TokensCacheRead ?? 0) + cr.GetInt64();
+                    if (tk.TryGetProperty("input", out var ti) && ti.ValueKind == JsonValueKind.Number) { di = ti.GetInt64(); state.TokensInput = (state.TokensInput ?? 0) + di; }
+                    if (tk.TryGetProperty("output", out var to) && to.ValueKind == JsonValueKind.Number) { dout = to.GetInt64(); state.TokensOutput = (state.TokensOutput ?? 0) + dout; }
+                    if (tk.TryGetProperty("reasoning", out var tr) && tr.ValueKind == JsonValueKind.Number) { dr = tr.GetInt64(); state.TokensReasoning = (state.TokensReasoning ?? 0) + dr; }
+                    if (tk.TryGetProperty("cache", out var ca) && ca.TryGetProperty("read", out var cr) && cr.ValueKind == JsonValueKind.Number) { dc = cr.GetInt64(); state.TokensCacheRead = (state.TokensCacheRead ?? 0) + dc; }
                 }
                 state.NumTurns = (state.NumTurns ?? 0) + 1;
+                state.EmitTokenDelta(di, dout, dr, dc, dcost);
                 break;
             case "error":
                 state.ResultIsError = true;

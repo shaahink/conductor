@@ -163,4 +163,36 @@ public class AgentProviderTests
         Assert.True(provider.DetectsUsageLimit("HTTP 429 too many requests"));
         Assert.False(provider.DetectsUsageLimit("compilation succeeded, all green"));
     }
+
+    // ----------------------------------------------- B2.6 token-delta emission
+
+    [Fact]
+    public void TokenDeltaEmittedOnStepFinishViaDelegate()
+    {
+        var deltas = new List<(long Inp, long Out, long R, long C, decimal Cost)>();
+        var state = new AgentStreamState((k, t) => { }, (i, o, r, c, cost) => deltas.Add((i, o, r, c, cost)));
+        var provider = new OpencodeProvider();
+
+        provider.ParseLine("""{"type":"step_finish","part":{"tokens":{"input":800,"output":200,"reasoning":50,"cache":{"read":1500}},"cost":0.005}}""", state);
+
+        Assert.Single(deltas);
+        Assert.Equal((800, 200, 50, 1500, 0.005m), deltas[0]);
+    }
+
+    [Fact]
+    public void OpencodeAdapterEmitsTokenDeltaPerStepFinish()
+    {
+        var deltas = new List<(long Inp, long Out, long R, long C, decimal Cost)>();
+        var state = new AgentStreamState((k, t) => { }, (i, o, r, c, cost) => deltas.Add((i, o, r, c, cost)));
+        var provider = new OpencodeProvider();
+
+        provider.ParseLine("""{"type":"step_finish","part":{"tokens":{"input":100,"output":50},"cost":0.001}}""", state);
+        provider.ParseLine("""{"type":"step_finish","part":{"tokens":{"input":40,"output":10},"cost":0.002}}""", state);
+
+        Assert.Equal(2, deltas.Count);                                // one per step_finish
+        Assert.Equal((100, 50, 0, 0, 0.001m), deltas[0]);
+        Assert.Equal((40, 10, 0, 0, 0.002m), deltas[1]);
+        Assert.Equal(140, state.TokensInput);                         // accumulated totals still hold
+        Assert.Equal(0.003m, state.CostUsd);
+    }
 }

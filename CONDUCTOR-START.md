@@ -7,21 +7,20 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #15 (B2, deliver) — landed **B2.5**. `ConductorHost` = Microsoft.Extensions.Hosting +
-      DI; plan validated on start (Options/IValidateOptions); Serilog file sink `.conductor/logs/`
-      (+console only when no TUI) with runId/sessionId/stage/gate scope per line; catch-site audit
-      (no silent swallow). 118 tests (113→+5).
-stage: **B2 IN PROGRESS** — B2.1…B2.5 DONE; **B2.6 TODO** (last of stage). Battery GREEN.
-gate: GREEN — build 0w/0e; test 118 pass. Real --once smoke wrote a log with run=/s=1/stage=S1/
-      gate=battery:full (exit 0); invalid plan → OptionsValidationException (error surfaces, A15).
-qa: session #14 (B2.4) PASS, no findings (15 provider tests green; factory dry-run exit 0). Also fixed
-      a latent **B2.3** bug (88db09c): EventLog.ReadAll used FileShare.Read → crash-recovery threw on
-      any real run with a live writer (B2.3 only unit-tested the fold, never launched — A6). Now ReadWrite.
-next: **B2.6** — TokenDelta events per provider step_finish + LiveMetrics projection (live tokens/cost, F-3).
-trap: Serilog console sink OFF under the TUI (dashboard owns stdout), ON for plain runs. Host is a
-      composition/logging root (no IHostedService); options validated eagerly inside Build.
+last: session #16 (B2, deliver) — landed **B2.6**, stage B2 COMPLETE. TokenDelta events emitted per
+      step_finish via AgentStreamState delegate; IEventSink plumbed through AgentSession.Start();
+      LiveMetrics projection folds deltas per-session + run-wide; dashboard token line now includes
+      live session tokens (F-3 fixed end-to-end). 125 tests (118→+7). Battery GREEN.
+stage: **B2 DONE** — B2.1…B2.6 all landed. Stage B3 next (Safety — owner gates, destructive confirm).
+gate: GREEN — build 0w/0e; test 125 pass. Round-trip test covers TokenDelta schema. Dry-run smoke
+      exit 0 (NullEventSink — real TokenDelta events written only during agent runs).
+qa: session #15 (B2.5) PASS — re-ran gate (build 0w/0e, 118 tests), re-ran --dry-run smoke (log with
+      run=/stage= correlation confirmed), invalid-plan validation test confirmed. No findings.
+next: **B3.1** — Destructive-action confirm in TUI (A/K/S) + CLI (--yes/interactive). Persona: engineer.
+trap: TokenDelta emission is wired but only observable during real agent runs (NullEventSink in dry-run).
+      SessionTokens* fields on snapshot mirror SessionCostUsd pattern — dash now shows live burn.
 dirty: none tracked.
-evidence: B2.5-gate.txt (+ earlier)
+evidence: B2.6-gate.txt (+ earlier)
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -60,7 +59,7 @@ never silent renumbering.
 | B2.3 | Crash recovery replays the event log (not just state.json) | DONE | a5a6b85 | docs/baton/evidence/B2.3-gate.txt |
 | B2.4 | IAgentProvider + Opencode/Claude/GenericText adapters; Orchestrator provider-switch removed | DONE | 8e1ceb4 | docs/baton/evidence/B2.4-gate.txt |
 | B2.5 | Host/DI/Options + Microsoft.Extensions.Logging + Serilog sinks; no silent catch {} | DONE | 02da5a0, 7512371 | docs/baton/evidence/B2.5-gate.txt |
-| B2.6 | TokenDelta events per step_finish (fixes live-token lag F-3) | TODO | | |
+| B2.6 | TokenDelta events per step_finish (fixes live-token lag F-3) | DONE | <commit> | docs/baton/evidence/B2.6-gate.txt |
 | B3.1 | Destructive-action confirm in TUI (A/K/S) + CLI (--yes/interactive) | TODO | | |
 | B3.2 | Owner-gate step type + AwaitingOwner status; approve via CLI/TUI | TODO | | |
 | B3.3 | Process control: retry-stage, rollback (to checkpoint), pause-after-stage, goto | TODO | | |
