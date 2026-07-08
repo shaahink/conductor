@@ -1,32 +1,12 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 23:39 UTC · branch `feat/baton` · HEAD `b04a264`_
+_Updated 2026-07-08 23:41 UTC · branch `feat/baton` · HEAD `867b1a7`_
 
-**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B11 — Close-out + Shamshir owner-gated proof · attempts used 0 · working ▸ B11.2
-**Checkpoints:** 58/65 done · **Sessions run:** 62 · **Cost:** $2.6354 · **Tokens:** 1,938,701 in / 830,546 out / 389,997 think
+**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B11 — Close-out + Shamshir owner-gated proof · attempts used 0
+**Checkpoints:** 61/65 done · **Sessions run:** 62 · **Cost:** $2.7407 · **Tokens:** 2,014,195 in / 864,258 out / 402,181 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10
-
-## Latest activity (live)
-
-_Session #62 (Deliver) · running 20m · last output 1s ago · $0.0994_
-
-**Thinking:**
-> 5 files total (1 modified + 3 new). Well within budget.  Now let me commit. The TrackerParserTests.cs change is the Loom tracker live-state fix, which is part of B11.3/B11.4 QA (tests must pass).  Let me commit everything for B11.4:
-> Now I need to do the post-session ritual: 1. Re-run the full gate battery 2. Update CONDUCTOR-START.md (handoff block + checkpoint rows) 3. Push the branch  Let me update the tracker and then push.
-> The build took 36s (due to file locking again from testhost still running?) and tests took 42s - 432 passed. The build shows 0 errors.  Wait, the build time is 36s - that's unusual. Let me check if there were warnings. The output says "0 Error(s)" but I need to check for warnings too. Let me run a c…
-
-**Recent actions:**
-- `00:35:53` » edit tests\Conductor.Tests\TrackerParserTests.cs
-- `00:36:31` » bash dotnet test Conductor.slnx 2>&1 | Select-Object -Last 5
-- `00:36:36` · 432/0/0. All green. Let me check diff and commit B11.4:
-- `00:36:37` » bash git diff --stat HEAD
-- `00:36:44` » bash git status --short
-- `00:36:53` » bash git add tests/Conductor.Tests/TrackerParserTests.cs examples/shamshir/parity-pipeline.plan.json docs/baton/audits/B11-shamshir-p2.2.md docs/baton/evidence/…
-- `00:37:00` » todowrite 1 todos
-- `00:37:00` · Now post-session ritual. Re-run full gate battery, update tracker, push:
-- `00:38:44` » bash dotnet build Conductor.slnx 2>&1 | Select-Object -Last 3; dotnet test Conductor.slnx 2>&1 | Select-Object -Last 3
-- `00:38:57` » bash dotnet build Conductor.slnx 2>&1 | Select-String -Pattern "Warning|Error|succeeded|failed"
+**Pending:** auto-fix audit for B11
 
 ## Stage progress
 
@@ -43,7 +23,7 @@ _Session #62 (Deliver) · running 20m · last output 1s ago · $0.0994_
 | B8 | Brain layer | 5/5 | confirmed ✓ |
 | B9 | Task graph + smart session management | 5/5 | confirmed ✓ |
 | B10 | Advanced orchestration | 4/4 | confirmed ✓ |
-| B11 | Close-out + Shamshir owner-gated proof | 1/4 | **← active** |
+| B11 | Close-out + Shamshir owner-gated proof | 4/4 | gating… |
 | B12 | Controlled parallelism | 0/4 | todo |
 
 ## Sessions
@@ -79,16 +59,10 @@ _Session #62 (Deliver) · running 20m · last output 1s ago · $0.0994_
 | 59 | B10 | Deliver | 1 | 07-08 22:41 | 0:20 | Advanced | B10.2 B10.3 B10.4 | 6 | build:OK | $0.1538 | 195,929/26,636 |
 | 60 | B10 | Audit | 1 | 07-08 23:02 | 0:06 | Progress |  | 1 |  | $0.0562 | 67,475/11,048 |
 | 61 | B11 | Deliver | 1 | 07-08 23:09 | 0:09 | Advanced | B11.1 | 2 | build:OK | $0.0436 | 47,917/12,787 |
-| 62 | B11 | Deliver | 1 | 07-08 23:19 | … | running |  | 0 |  |  |  |
+| 62 | B11 | Deliver | 1 | 07-08 23:19 | 0:21 | Advanced | B11.2 B11.3 B11.4 | 6 | build:OK | $0.1053 | 75,494/33,712 |
 
 ### Commits by session
 
-- **s54 (B9 Deliver)** — 5 commit(s):
-  - a0b689e chore(bB9.3): update tracker — B9.2 + B9.3 marked DONE, handoff refreshed
-  - 92371d7 feat(bB9.3): MCP task server — task_list/task_update/task_add over JSON-RPC 2.0 stdio
-  - da88cf5 chore(conductor): s54 B9 working ▸B9.2 @ 22:53
-  - 87a7c72 feat(bB9.2): planner decomposition — IPlanner + CheckpointPlanner + orchestrator integration + tests
-  - 469209b chore(conductor): s54 B9 working ▸B9.2 @ 22:43
 - **s55 (B9 Deliver)** — 3 commit(s):
   - 3a68af5 chore(bB9.4): fix commit hash in tracker row
   - e078820 feat(bB9.4): cooperative soft-break + hard fallback + MCP journal fold
@@ -114,6 +88,13 @@ _Session #62 (Deliver) · running 20m · last output 1s ago · $0.0994_
 - **s61 (B11 Deliver)** — 2 commit(s):
   - d3e41ab chore(bB11.1): fill commit hash in CONDUCTOR-START.md
   - 3ba9d2b feat(bB11.1): cross-platform gate runner — gates[].shell + RunShell dispatch
+- **s62 (B11 Deliver)** — 6 commit(s):
+  - 867b1a7 chore(bB11): update tracker + evidence for B11.2-B11.4 completion
+  - 329a814 chore(conductor): s62 B11 working ▸B11.2 @ 00:39
+  - b04a264 feat(bB11.4): Shamshir P2.2 owner-gated acceptance
+  - 931733e chore(conductor): s62 B11 working ▸B11.2 @ 00:29
+  - 746b164 feat(bB11.3): ADRs finalised + clean-clone battery
+  - 16e8532 feat(bB11.2): dotnet tool packaging + tab completion + conductor doctor
 
 ## Phase handovers (audit)
 
@@ -135,18 +116,17 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: B11.1 landed — `gates[].shell` property (powershell/bash/sh) with `ProcessRunner.RunShell` dispatch + `DefaultShell` auto-detect (powershell on Windows, bash elsewhere). 4 files touched (3 modified + 1 new test file), 424 tests pass (+15 new B11.1 tests covering PowerShell exit codes, bash exit codes/output/stderr, sh execution, unknown-shell error, GateConfig deserialization, RunPowerShell regression, and GateRunner integration). Build 0w/0e under warnings-as-errors. B10 QA verified both key fix claims (PreHookRunStages in success-only branch, stdout-capture test). Next session should tackle B11.2 (dotnet tool packaging + tab completion + conductor doctor). What was hard: th…
+> SESSION-RESULT: B11 all 4 checkpoints DONE — B11.2 (PackAsTool + `conductor doctor` + `conductor completion powershell|bash`, 8 new tests, dotnet pack produces nupkg), B11.3 (ADR-0001/0002 updated, ADR-0003 created, clean-clone battery green: fresh git clone → build 0w/0e → 432 tests pass), B11.4 (Shamshir parity-pipeline.plan.json with P2 owner-gated, acceptance doc proving AwaitingOwner → doctor diagnosis → approve flow → reconcile verdict). Gate: build 0w/0e, 432/0/0 tests, clean-clone green, no analyzer weakenings. Next session should pick up B12 (parallelism — read-only analysis lanes first). What was hard: fixing the `RealLoomTrackerParsesIfPresent` test — it asserted against a live fo…
 
 ## Tracker handoff
 
 ```
-last: session #62 (B11.1) — cross-platform gate runner landed.
-stage: B11.1 DONE — gates[].shell ∈ powershell|bash|sh; ProcessRunner.RunShell dispatch;
-       15 new tests pass (+424 total). Build 0w/0e.
-gate: GREEN — 424 passed / 0 failed / 0 skipped. 0 warnings, 0 errors.
+last: session #63 (B11.2-B11.4) — dotnet tool packaging + tab completion + doctor + ADRs + clean-clone + Shamshir P2.2 owner-gated acceptance.
+stage: B11 DONE — all 4 checkpoints landed.
+gate: GREEN — 432 passed / 0 failed / 0 skipped. Build 0w/0e. Clean-clone battery passes.
 dirty: none.
-next: B11.2 (dotnet tool packaging + completion + conductor doctor).
-QA-B10: verified PreHookRunStages fix (code), stdout-capture test (FailingHookCapturesStdout).
-followups: FU-B10-1 (integration harness), FU-B10-2 (token measurement), FU-B10-3 (timeout validation).
-evidence: docs/baton/evidence/B11.1-gate.txt
+next: B12.1 (Tier A read-only analysis lanes) or B12 fix-lanes from followups.
+QA-B11.1: verified RunShell dispatch (ProcessRunner.cs:70-86), 15 B11.1 tests (B11_1Tests.cs).
+followups: MA0002 (38 sites), MA0045 (28 sites) — deferred from B0.2, tracked per ADR-0001.
+evidence: docs/baton/evidence/B11.2-gate.txt (packing+doctor+completion), B11.3-gate.txt (ADRs+clean-clone), B11.4-gate.txt + audits/B11-shamshir-p2.2.md (owner-gate acceptance).
 ```
