@@ -1,5 +1,3 @@
-using System.Text;
-
 namespace Conductor.Core.Events;
 
 /// <summary>

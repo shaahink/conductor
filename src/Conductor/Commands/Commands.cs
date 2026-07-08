@@ -143,7 +143,10 @@ public sealed class ReportCommand : Command<PlanSettings>
         var state = RunState.LoadOrNew(statePath, plan.Name);
         var track = TrackerParser.ParseFile(plan.TrackerPath);
         Directory.CreateDirectory(plan.StateDir);
-        File.WriteAllText(Reporter.ReportPath(plan), Reporter.Build(plan, state, track, null, null, Reporter.ReadTimeline(plan), Reporter.ReadHealth(plan)), Reporter.Utf8Bom);
+        File.WriteAllText(Reporter.ReportPath(plan), Reporter.Build(plan, state, track, null, null,
+            Reporter.ReadTimeline(plan), Reporter.ReadHealth(plan),
+            confidence: Reporter.ReadConfidence(track), mcp: Reporter.ReadMcpMetrics(plan),
+            repo: Reporter.ReadRepoStrip(plan)), Reporter.Utf8Bom);
         AnsiConsole.MarkupLine($"report written to [bold]{Markup.Escape(Reporter.ReportPath(plan))}[/]");
         return 0;
     }

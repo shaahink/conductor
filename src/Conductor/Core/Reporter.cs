@@ -144,7 +144,6 @@ public static class Reporter
         }
 
         // Repo (B5.4): live git snapshot — branch, HEAD, working-tree, ahead/behind vs upstream.
-        // Repo (B5.4): live git snapshot — branch, HEAD, working-tree, ahead/behind vs upstream.
         if (repo != null)
         {
             sb.AppendLine("## Repo");
