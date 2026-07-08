@@ -139,11 +139,12 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
                 // B10.3: pre-hook runs once per stage, before any session. A non-zero exit blocks the
                 // stage (NeedsHuman) so a broken environment never wastes session attempts.
+                // RunStageHook records the stage id in PreHookRunStages ONLY on success — a failed
+                // pre-hook will retry on the next loop iteration after the human resolves the issue.
                 if (stage.PreHook is { } preHook
                     && !state.PreHookRunStages.Contains(stage.Id))
                 {
-                    RunStageHook(stage.Id, "pre-hook", preHook);
-                    state.PreHookRunStages.Add(stage.Id);
+                    RunStageHook(stage.Id, "pre-hook", preHook, ct);
                     Save();
                     if (state.Status == RunStatus.NeedsHuman) continue;
                 }
@@ -724,7 +725,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         state.AttemptsThisStage = 0;
         // B10.3: post-hook runs after confirmation (best-effort, logged but never blocks).
         if (stage?.PostHook is { } postHook)
-            RunStageHook(id, "post-hook", postHook);
+            RunStageHook(id, "post-hook", postHook, CancellationToken.None);
         if (state.PauseAfterStage)
         {
             state.PauseAfterStage = false;
@@ -785,20 +786,29 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     // ---------------------------------------------------------------- decisions
 
     /// <summary>B10.3: runs a per-stage lifecycle hook. For pre-hooks a non-zero exit triggers
-    /// <see cref="NeedsHuman"/> (blocking); for post-hooks failures are logged only.</summary>
-    private void RunStageHook(string stageId, string label, HookConfig hook)
+    /// <see cref="NeedsHuman"/> (blocking); on success the stage id is recorded in
+    /// <see cref="RunState.PreHookRunStages"/> to prevent re-run on resume. For post-hooks
+    /// failures are logged only.</summary>
+    private void RunStageHook(string stageId, string label, HookConfig hook, CancellationToken ct)
     {
         Log($"{label}: {stageId} — {hook.Command}");
         var cwd = string.IsNullOrWhiteSpace(hook.Cwd) ? plan.Repo : Path.Combine(plan.Repo, hook.Cwd);
-        var r = ProcessRunner.RunPowerShell(hook.Command, cwd, TimeSpan.FromMinutes(hook.TimeoutMinutes), CancellationToken.None);
+        var r = ProcessRunner.RunPowerShell(hook.Command, cwd, TimeSpan.FromMinutes(hook.TimeoutMinutes), ct);
         var timedOut = r.TimedOut ? " (timed out)" : "";
         Log($"{label}: exit {r.ExitCode}{timedOut} in {r.Duration.TotalSeconds:0}s");
         if (r.ExitCode != 0)
         {
+            var outputSnippet = r.Output.Length > 500 ? r.Output[..500] + "\n…(truncated)" : r.Output;
             var detail = $"stage {stageId} {label} failed (exit {r.ExitCode}): {hook.Command}";
-            Log($"ERROR: {detail}");
+            Log($"ERROR: {detail}\n{outputSnippet.TrimEnd()}");
             if (label == "pre-hook")
                 NeedsHuman(detail);
+        }
+        else if (label == "pre-hook")
+        {
+            // Record success so the pre-hook is not re-run on resume/crash-recovery.
+            // Only added on success — a failed pre-hook must retry (it is NOT recorded).
+            state.PreHookRunStages.Add(stageId);
         }
     }
 

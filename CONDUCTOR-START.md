@@ -8,17 +8,17 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #59 (B10.2-B10.4) — all B10 checkpoints DONE.
-stage: B10 COMPLETE — B10.2 hierarchical stages, B10.3 pre/post hooks, B10.4 battery collapse.
-       B10.2 land: StageConfig.ParentId + StageProgress.Depth; indented rendering in PlanTree + Reporter.
-       B10.3 land: StageConfig.PreHook/PostHook; RunState.PreHookRunStages; pre-hook blocks (NeedsHuman).
-       B10.4 land: PlanConfig.BatteryCollapse; agent prompted to skip build+test; Conductor sole verifier.
-gate: GREEN — build 0w/0e (net10, warnings-as-errors); 406 tests pass (+27 B10.2-4 tests).
+last: session #61 (B10 audit) — hardened + fixed critical PreHookRunStages resume bug.
+stage: B10 AUDITED — build 0w/0e, 409 tests pass (+3 new). Handover written to .conductor/handovers/B10.md.
+       AUDIT FIX: PreHookRunStages was recorded before hook success check — failed pre-hooks silently
+       skipped on resume. Now only recorded on success; failed hooks retry. Also: hook error log now
+       includes stdout, pre-hook passes run CT, 3 new tests added.
+gate: GREEN — 409 passed / 0 failed / 0 skipped. 0 warnings, 0 errors.
 dirty: none.
 next: B11.1 (cross-platform gate runner).
-evidence: docs/baton/evidence/B10.2-gate.txt, B10.3-gate.txt, B10.4-gate.txt
-qa: B10.1 gate re-verified: 7/7 DependsOn tests pass, IsReady() logic confirmed in Orchestrator.cs:790-796.
-    Verdict PASS — dependOn graph correct, no regressions. Also verified: B9.5 task views (TaskViewTests 4/4).
+followups: FU-B10-1 (SelectStage integration harness), FU-B10-2 (battery-collapse token measurement),
+           FU-B10-3 (TimeoutMinutes validation), FU-B10-4 (ComputeDepth pre-compute).
+evidence: docs/baton/evidence/B10.1-gate.txt through B10.4-gate.txt; .conductor/handovers/B10.md
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 

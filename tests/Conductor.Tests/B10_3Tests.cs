@@ -152,4 +152,44 @@ public class B10_3HooksTests
         var r = ProcessRunner.RunPowerShell(hook.Command, cwd, TimeSpan.FromMilliseconds(500));
         Assert.NotEqual(0, r.ExitCode);
     }
+
+    [Fact]
+    public void FailingHookCapturesStdout()
+    {
+        // A hook that prints to stdout then fails — the output must be captured
+        // for diagnostic purposes (the orchestrator's RunStageHook includes it in the error log).
+        var hook = new HookConfig { Command = "Write-Host 'setup failed: missing dep'; exit 1", TimeoutMinutes = 5 };
+        var cwd = Path.GetTempPath();
+        var r = ProcessRunner.RunPowerShell(hook.Command, cwd, TimeSpan.FromMinutes(1));
+        Assert.NotEqual(0, r.ExitCode);
+        Assert.Contains("setup failed", r.Output, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void PreHookRunStagesEmptyAfterDeserializingFailureState()
+    {
+        // Simulates the resume scenario: a RunState was serialized while the pre-hook had NOT
+        // succeeded (PreHookRunStages is empty → on resume the hook retries). This must round-trip
+        // correctly — an empty list must not materialize as null.
+        const string json = """{"preHookRunStages":[]}""";
+        var state = JsonSerializer.Deserialize<RunState>(json, PlanConfig.JsonOpts)!;
+        Assert.NotNull(state.PreHookRunStages);
+        Assert.Empty(state.PreHookRunStages);
+    }
+
+    [Fact]
+    public void PreHookRunStagesContainsOnlySuccessStagesAfterRoundTrip()
+    {
+        // A RunState with PreHookRunStages containing stage ids — these survived a pre-hook success
+        // and must round-trip so resume doesn't re-run them.
+        var state = new RunState
+        {
+            PreHookRunStages = new List<string> { "B10", "B12" }
+        };
+        var json = JsonSerializer.Serialize(state, PlanConfig.JsonOpts);
+        var restored = JsonSerializer.Deserialize<RunState>(json, PlanConfig.JsonOpts)!;
+        Assert.Equal(2, restored.PreHookRunStages.Count);
+        Assert.Contains("B10", restored.PreHookRunStages);
+        Assert.Contains("B12", restored.PreHookRunStages);
+    }
 }

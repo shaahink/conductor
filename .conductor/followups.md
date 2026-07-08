@@ -109,3 +109,20 @@ No gate weakened, no analyzer lowered; 221 tests pass. See `.conductor/handovers
 phase from `== 35` to `>= 30` — it asserts against a foreign, live file a separate Loom run mutates, and
 `TrackerParser.cs` itself was untouched in the B4 diff, so the invariant-based assertion is the better
 test, not a cover-up. Kept as-is.
+
+## Opened by B10 (audit session, 2026-07-09, session #61)
+
+| id | item | detail | owning stage | status |
+|----|------|--------|--------------|--------|
+| FU-B10-1 | No orchestrator integration harness for SelectStage + DepSatisfied | The readiness-ordering logic is tested only via model validation (B10_1Tests); no test drives a live orchestrator with real tracker + RunState. Extends FU-B3-1 (the base harness gap). | B11 fix-lane | OPEN |
+| FU-B10-2 | Battery-collapse token savings not empirically measured | B10.4 spec requires "token-per-checkpoint measured before/after on a self-run; documented drop." The prompt note is emitted correctly, but no automated metric compares pre- and post-collapse session tokens. Conduct a real measurement run. | B11 | OPEN |
+| FU-B10-3 | HookConfig.TimeoutMinutes=0 is not validated | `TimeSpan.FromMinutes(0)` = `TimeSpan.Zero` causes immediate timeout; plan validation should reject `< 1`. Low risk (default is 3). | B10 fix-lane | OPEN |
+| FU-B10-4 | ComputeDepth allocates per call (HashSet + O(n·d) scan) | Negligible for the self-plan but could be a hot path for large plans. Pre-compute depth in SnapshotBuilder.BuildStages() once. | post-B11 | OPEN |
+
+**Fixed in-phase by the B10 audit** (no followup, recorded for the trail): (1) critical bug —
+`PreHookRunStages` recorded before checking hook success, causing a failed pre-hook to be silently
+skipped on resume; fixed by moving `Add()` into `RunStageHook`'s success branch; (2) hook failure
+error log omitted stdout — now includes output (truncated to 500 chars); (3) `RunStageHook` used
+hardcoded `CancellationToken.None` — pre-hook now passes `ct` from the orchestrator loop; (4) 3 new
+tests added validating failure-path stdout capture and RunState round-trip for PreHookRunStages. See
+`.conductor/handovers/B10.md`.
