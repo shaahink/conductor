@@ -1,39 +1,19 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 05:58 UTC · branch `feat/baton` · HEAD `7e14776`_
+_Updated 2026-07-08 06:04 UTC · branch `feat/baton` · HEAD `de42b0b`_
 
-**Status:** Running
-**Stage:** B1 — Decouple Loom + pluggable progress providers · attempts used 0 · working ▸ B1.5
-**Checkpoints:** 10/65 done · **Sessions run:** 9 · **Cost:** $0.2903 · **Tokens:** 129,050 in / 113,923 out / 57,959 think
+**Status:** Idle
+**Stage:** B1 — Decouple Loom + pluggable progress providers · attempts used 0
+**Checkpoints:** 13/65 done · **Sessions run:** 9 · **Cost:** $0.3647 · **Tokens:** 192,186 in / 135,277 out / 70,438 think
 **Confirmed phases:** B0
-
-## Latest activity (live)
-
-_Session #9 (Deliver) · running 10m · last output 2s ago · $0.0522_
-
-**Thinking:**
-> Now let me build and run tests.
-> Two failing tests:  1. `UnsupportedVersionThrows` - The error message says "plan.version is '2.0' but only \"1.0\" is supported" and my test is looking for "unsupported" (case-insensitive) - but my actual message says "supported" not "unsupported". Let me fix the test assertion to match the actual m…
-> Let me run tests again.
-
-**Recent actions:**
-- `06:56:15` · Now I'll implement B1.6: schema version validation + `new-plan` command. Starting with `PlanConfig`:
-- `06:56:28` » edit src\Conductor\Models\PlanConfig.cs
-- `06:57:02` » edit src\Conductor\Commands\Commands.cs
-- `06:57:07` » edit src\Conductor\Program.cs
-- `06:57:14` » bash dotnet build Conductor.slnx 2>&1
-- `06:57:24` » bash $dir = Join-Path $env:TEMP "conductor-np-test-$(Get-Random)"; dotnet run --project src\Conductor -- new-plan --template dotnet --output $dir --name TestDot…
-- `06:57:35` » bash $dir = Join-Path $env:TEMP "conductor-np-test2-$(Get-Random)"; dotnet run --project src\Conductor -- new-plan --template shamshir --output $dir --name "Sha…
-- `06:57:57` » edit tests\Conductor.Tests\PlanConfigTests.cs
-- `06:58:10` » bash dotnet test Conductor.slnx 2>&1
-- `06:58:27` » edit tests\Conductor.Tests\PlanConfigTests.cs
+**Pending:** auto-fix audit for B1
 
 ## Stage progress
 
 | Stage | Title | Done | State |
 |---|---|---|---|
 | B0 | Repo modernisation + self-hosting harness | 6/6 | confirmed ✓ |
-| B1 | Decouple Loom + pluggable progress providers | 4/7 | **← active** |
+| B1 | Decouple Loom + pluggable progress providers | 7/7 | gating… |
 | B2 | Event-sourced backbone + provider decoupling | 0/6 | todo |
 | B3 | Safety, owner-gates & process control | 0/5 | todo |
 | B4 | TUI overhaul (alt-screen + tree) | 0/7 | todo |
@@ -58,17 +38,10 @@ _Session #9 (Deliver) · running 10m · last output 2s ago · $0.0522_
 | 6 | B1 | Deliver | 1 | 07-08 04:15 | 0:33 | Advanced | B1.2 | 5 | build:OK | $0.0241 | 1,297/10,939 |
 | 7 | B1 | Deliver | 1 | 07-08 04:49 | 0:37 | Advanced | B1.3 | 5 | build:OK | $0.0268 | 1,793/12,018 |
 | 8 | B1 | Deliver | 1 | 07-08 05:26 | 0:21 | Advanced | B1.4 | 4 | build:OK | $0.0318 | 1,646/14,600 |
-| 9 | B1 | Deliver | 1 | 07-08 05:48 | … | running |  | 0 |  |  |  |
+| 9 | B1 | Deliver | 1 | 07-08 05:48 | 0:15 | Advanced | B1.5 B1.6 B1.7 | 7 | build:OK | $0.0744 | 63,136/21,354 |
 
 ### Commits by session
 
-- **s1 (B0 Deliver)** — 6 commit(s):
-  - 76a2b33 docs(bB0): tracker — B0.1/B0.2/B0.6 DONE, refreshed handoff + QA verdict
-  - d416ead feat(bB0.6): ADR-0002 (event-sourcing decision + additive-migration strategy)
-  - ed648db chore(conductor): s1 B0 working ▸B0.1 @ 03:06
-  - cf378f0 feat(bB0.2): analyzers + warnings-as-errors under a curated ruleset
-  - 956fb32 chore(conductor): s1 B0 working ▸B0.1 @ 02:56
-  - b3f1499 feat(bB0.1): migrate to net10.0 + central build/package management
 - **s2 (B0 Deliver)** — 5 commit(s):
   - 8ca4439 docs(bB0): tracker — B0.4/B0.5 commit hashes; B0.3 BLOCKED, B0.4 IN PROGRESS
   - bdc5041 feat(bB0.4): extend fake-agent.ps1 — opencode-json format, Baton tracker regex, 4 modes
@@ -107,6 +80,14 @@ _Session #9 (Deliver) · running 10m · last output 2s ago · $0.0522_
   - f34fb8b chore(conductor): s8 B1 working ▸B1.4 @ 06:46
   - 2330361 feat(bB1.4): configurable progress conventions + ratchet MA0009
   - 4fc84da chore(conductor): s8 B1 working ▸B1.4 @ 06:36
+- **s9 (B1 Deliver)** — 7 commit(s):
+  - de42b0b chore: fill B1.6/B1.7 commit hashes in tracker
+  - 89e1a11 chore: B1 complete (7/7) — update handoff + checkpoint rows
+  - 8701aff feat(bB1.7): Shamshir parity-pipeline TRACKER.md parse test
+  - c3fa637 feat(bB1.6): new-plan scaffold + schema version validation
+  - 98a17c2 chore(conductor): s9 B1 working ▸B1.5 @ 06:58
+  - 7e14776 chore: fill B1.5 commit hash in tracker
+  - 01c1732 feat(bB1.5): read-order context battery
 
 ## Phase handovers (audit)
 
@@ -118,28 +99,26 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: Landed **B1.4** (Decouple Loom → configurable progress conventions) with proof. Added `ProgressConventions` (+ `StatusVocabulary`) on `PlanConfig.Conventions` — `stageIdPattern`, `handoffMarker`, `humanToken`, `statusVocabulary` — all Loom-default and byte-identical to the old hard-coding, all *consumed* (no dead params, A1): `CheckpointRow.Create` derives `StageId`/status-flags via the conventions (P-0→P-0, P0.1→P0, P3.4b→P3, F5→F5), all three providers build rows through it, `MarkdownTableProvider` assembles its row/handoff regexes from them, and the Orchestrator's human-gate now reads `humanToken`. Ratcheted **MA0009 → error** (ADR-0001 FU-B0-3, now CLOSED): every tracker/…
+> SESSION-RESULT: B1 complete (7/7). Landed B1.5 (read-order battery: PlanConfig.ReadOrder + {readOrder} in PromptBuilder), B1.6 (schema version "1.0" with fail-fast Validate, `conductor new-plan --template` for 4 templates, STABLE driver back-compat proven via dry-run), and B1.7 (unit test parsing the real `examples/shamshir/parity-pipeline.TRACKER.md` with shamshir conventions, 17 rows, stage-id derivation correct). Battery: build 0w/0e net10, 81 tests (73→81). Diff: 11 files, in budget. Next session: B2.1 (ConductorEvent schema + append-only events.jsonl). What was hard: weaving the `new-plan` command's embedded JSON templates carefully to avoid introducing new analyzer warnings while keepi…
 
 ## Tracker handoff
 
 ```
-last: session #8 (B1, deliver) — landed **B1.4**: per-plan `ProgressConventions` (stageIdPattern,
-      handoffMarker, humanToken, statusVocabulary) on PlanConfig; `CheckpointRow.Create` derives stage +
-      status via the conventions (P-0→P-0, P0.1→P0, P3.4b→P3, F5→F5); Orchestrator consumes humanToken.
-      Ratcheted **MA0009→error** (FU-B0-3 CLOSED), all regexes carry `ProgressConventions.RegexTimeout`.
-      Defaults byte-identical to Loom. Build 0w/0e net10, 73 tests (66+7). Diff 12 files, in budget.
-stage: **B1 IN PROGRESS** — B1.1…B1.4 DONE; B1.5…B1.7 TODO. Battery GREEN.
-gate: GREEN — `dotnet build Conductor.slnx` 0w/0e net10 (MA0009=error); `dotnet test` 73 pass.
-qa: session #7 (B1.3) PASS. (1) 9 ProgressProviderTests green; (2) `_progress =
-      ProgressProviderFactory.Create(plan)` (Orchestrator.cs:23) load-bearing, read at 5 sites
-      (66/352/401/842/904). No findings.
-next: **B1.5** — read-order battery: `plan.readOrder: [docs…]` rendered into the session prompt as an
-      ordered, bounded list; `PromptBuilder` gains a `{readOrder}` section. Gate: `PromptBuilderTests`
-      assert the list appears; empty when unset.
-trap: the STABLE driver is master's binary — it parses via master's `TrackerParser`, NOT this build, so
-      new conventions only bite once this build ships; defaults are byte-identical (proven) so
-      CONDUCTOR-START.md parses under both. Don't dry-run the live self-plan (lock). `DashboardRenderer`
-      :219 still hard-codes DONE/BLOCKED for row colour (display-only; convention-wire later if needed).
+last: session #9 (B1, deliver) — landed **B1.5, B1.6, B1.7**. Stage B1 COMPLETE (7/7). B1.5:
+      PlanConfig.ReadOrder + PromptBuilder {readOrder} section. B1.6: schema version ("1.0") with
+      fail-fast Validate() + `conductor new-plan --template {minimal,dotnet,node,shamshir}` (4
+      templates, each generates loadable plan+TRACKER, A6-proven via dry-run against STABLE driver).
+      B1.7: Shamshir parity-pipeline TRACKER.md parse test (17 rows, P-0→P-0 etc.). Build 0w/0e
+      net10, 81 tests (73→81: +2 PromptBuilder, +5 PlanConfig version, +1 B1.7). Diff 11 files.
+stage: **B1 DONE** — B1.1…B1.7 ALL DONE. Battery GREEN. STABLE driver dry-runs new-plan output.
+gate: GREEN — `dotnet build Conductor.slnx` 0w/0e net10; `dotnet test` 81 pass.
+      `conductor new-plan --template dotnet` → STABLE driver dry-runs successfully.
+qa: session #8 (B1.4) PASS. (1) 7 ProgressConventionsTests green (irregular ids); (2) in-tree
+      `conductor status -p self-plan` parses live CONDUCTOR-START.md with default conventions
+      byte-identical. No findings.
+next: **B2.1** — ConductorEvent schema + append-only events.jsonl writer (additive alongside state.json).
+trap: same — STABLE driver from master parses with its own TrackerParser; self-plan dry-run must
+       use STABLE binary. diff budget held (11 files across B1.5..B1.7).
 dirty: none tracked.
-evidence: B1.4-gate.txt (+ B1.3, B1.2, B1.1, B0.1…B0.5, audits/B0-baseline.md, adr/000{1,2}-*.md)
+evidence: B1.5-gate.txt, B1.6-gate.txt, B1.7-gate.txt (+ earlier)
 ```
