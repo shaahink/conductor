@@ -94,7 +94,7 @@ never silent renumbering.
 | B10.2 | First-class hierarchical stages in state + reports | DONE | 0e1c1f7 | docs/baton/evidence/B10.2-gate.txt |
 | B10.3 | Per-stage pre/post hooks beyond gates | DONE | 6fa8938 | docs/baton/evidence/B10.3-gate.txt |
 | B10.4 | Collapse double gate battery (agent ritual + conductor) → one source of truth; measured token drop | DONE | 5cb82f2 | docs/baton/evidence/B10.4-gate.txt |
-| B11.1 | Cross-platform gate runner (bash/sh alongside PowerShell via gates[].shell) | DONE | <commit> | docs/baton/evidence/B11.1-gate.txt |
+| B11.1 | Cross-platform gate runner (bash/sh alongside PowerShell via gates[].shell) | DONE | 3ba9d2b | docs/baton/evidence/B11.1-gate.txt |
 | B11.2 | dotnet tool packaging + tab completion + conductor doctor | TODO | | |
 | B11.3 | ADRs finalised; StateCompat + clean-clone battery | TODO | | |
 | B11.4 | **Acceptance: drive a full owner-gated Shamshir phase (parity-pipeline P2.2)** | TODO | | |
