@@ -7,19 +7,21 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #5 (B1, deliver) — landed **B1.1** (moved plans/loom* + plans/templates →
-      examples/loom/ via git mv; updated README/examples-README/PlanConfigTests; --dry-run green).
-stage: **B1 IN PROGRESS** — B1.1 DONE; B1.2…B1.7 TODO. Battery GREEN: build 0w/0e net10, 56 tests.
-gate: GREEN — `dotnet build Conductor.slnx` 0w/0e; `dotnet test` 56 pass.
-qa: session #3 (B0) PASS. Re-verified via the STABLE driver: (1) `--once` fake-agent smoke on a
-      fresh temp repo → Advanced/DONE flip, no A6 crash (trust model intact); (2) net10 + WAE +
-      Meziantou real (0-warning build proves analyzers not weakened, A17 clean). No findings.
-next: **B1.2** — `Core/Planning/IProgressProvider.cs` + `MarkdownTableProvider` (extract today's
-      TrackerParser behind the interface, byte-identical parse; existing TrackerParserTests exercise it).
+last: session #6 (B1, deliver) — landed **B1.2** (Core/Planning/IProgressProvider +
+      MarkdownTableProvider [GeneratedRegex]; TrackerParser now a byte-identical facade; Orchestrator
+      reads via _progress.Read at all 5 sites). Build 0w/0e, 57 tests, in-tree dry-run A6 green.
+stage: **B1 IN PROGRESS** — B1.1, B1.2 DONE; B1.3…B1.7 TODO. Battery GREEN.
+gate: GREEN — `dotnet build Conductor.slnx` 0w/0e net10; `dotnet test` 57 pass.
+qa: session #5 (B1.1) PASS. (1) PlanConfigTests green — ShippedLoomPlan resolves examples/loom/ +
+      asserts pnpm/mcp scoping; (2) STABLE driver `--dry-run -p examples/loom/loom.opencode.plan.json`
+      (fixture, repo path rewritten) loads from new path + renders session #1. No findings.
+next: **B1.3** — ScriptProvider (plan-configured command → checkpoint JSON, resilient to missing
+      file/malformed JSON) + PlanCheckpointProvider (checkpoints declared in plan JSON). New unit tests.
 trap: dry-run touches target .conductor (AcquireLock) — always use a fixture repo, never the live run.
+      Commands.cs status/report/preview still call TrackerParser.* (read-only CLI) — DI-wire in B2.5.
       Ratchet followups owed — MA0045 (B2), MA0002 (post-B2), MA0009 (B1.4).
 dirty: none tracked.
-evidence: B1.1-gate.txt (+ B0.1…B0.5, audits/B0-baseline.md, adr/000{1,2}-*.md)
+evidence: B1.2-gate.txt (+ B1.1, B0.1…B0.5, audits/B0-baseline.md, adr/000{1,2}-*.md)
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -47,7 +49,7 @@ never silent renumbering.
 | B0.5 | Baseline audit doc (current coupling/debt) written as B0 evidence | DONE | 62a819e | docs/baton/evidence/B0.5-gate.txt, docs/baton/audits/B0-baseline.md |
 | B0.6 | ADR-0001 (tooling/ruleset rationale) + ADR-0002 (event-sourcing decision) | DONE | cf378f0,d416ead | docs/baton/adr/0001-tooling-and-ruleset.md, docs/baton/adr/0002-event-sourcing.md |
 | B1.1 | Move plans/loom* + templates → examples/loom/; Loom loads + --dry-run green from new path | DONE | 0aa242d | docs/baton/evidence/B1.1-gate.txt |
-| B1.2 | IProgressProvider abstraction + MarkdownTableProvider (today's parser, zero behaviour change) | TODO | | |
+| B1.2 | IProgressProvider abstraction + MarkdownTableProvider (today's parser, zero behaviour change) | DONE | ac306f5 | docs/baton/evidence/B1.2-gate.txt |
 | B1.3 | ScriptProvider (command→JSON) + PlanCheckpointProvider | TODO | | |
 | B1.4 | Configurable conventions (stage-id regex incl. P-0/P3.4b/F5, handoff marker, HUMAN token, status vocab) | TODO | | |
 | B1.5 | Read-order context battery (mandated docs per plan) | TODO | | |
