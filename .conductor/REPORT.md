@@ -1,11 +1,12 @@
 ﻿# Conductor — Conductor-Era3 run report
 
-_Updated 2026-07-09 07:51 UTC · branch `feat/era-v3` · HEAD `168a667`_
+_Updated 2026-07-09 08:10 UTC · branch `feat/era-v3` · HEAD `13dcdc7`_
 
 **Status:** Idle — plan complete EXCEPT skipped stages: C5
-**Stage:** P5 — Post-hoc audit replay · attempts used 0
-**Checkpoints:** 12/13 done · **Sessions run:** 90 · **Cost:** $4.6856 · **Tokens:** 4,124,756 in / 1,262,107 out / 697,822 think
+**Stage:** I1 — MCP task server production wiring · attempts used 0
+**Checkpoints:** 13/13 done · **Sessions run:** 91 · **Cost:** $4.7820 · **Tokens:** 4,204,338 in / 1,280,908 out / 720,650 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1, C2, C3, C4, C6, C7, C8, D1, D2, D3, D4, O1, O2, O3, P1, P2, P3, P4, P5
+**Pending:** full-battery phase gate for I1
 **⚠ Skipped stages (need human review):** C5
 
 ## Stage progress
@@ -24,13 +25,12 @@ _Updated 2026-07-09 07:51 UTC · branch `feat/era-v3` · HEAD `168a667`_
 | P3 | Stronger advisor — structured verdicts | 1/1 | confirmed ✓ |
 | P4 | Squash bookkeeping — clean git history | 1/1 | confirmed ✓ |
 | P5 | Post-hoc audit replay | 1/1 | confirmed ✓ |
-| I1 | MCP task server production wiring | 0/1 | todo |
+| I1 | MCP task server production wiring | 1/1 | gating… |
 
 ## Sessions
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 61 | B11 | Deliver | 1 | 07-08 23:09 | 0:09 | Advanced | B11.1 | 2 | build:OK | $0.0436 | 47,917/12,787 |
 | 62 | B11 | Deliver | 1 | 07-08 23:19 | 0:21 | Advanced | B11.2 B11.3 B11.4 | 6 | build:OK | $0.1053 | 75,494/33,712 |
 | 63 | B11 | Audit | 1 | 07-08 23:41 | 0:07 | Progress |  | 2 |  | $0.0558 | 59,800/11,762 |
 | 64 | B12 | Deliver | 1 | 07-08 23:49 | 0:13 | Advanced | B12.1 | 2 | build:OK | $0.0744 | 78,710/19,057 |
@@ -60,12 +60,10 @@ _Updated 2026-07-09 07:51 UTC · branch `feat/era-v3` · HEAD `168a667`_
 | 88 | P3 | Deliver | 1 | 07-09 07:14 | 0:10 | Advanced | P3 | 2 | build:OK | $0.0700 | 83,099/14,835 |
 | 89 | P4 | Deliver | 1 | 07-09 07:26 | 0:11 | Advanced | P4 | 1 | build:OK | $0.0562 | 52,130/9,995 |
 | 90 | P5 | Deliver | 1 | 07-09 07:39 | 0:11 | Advanced | P5 | 1 | build:OK | $0.0699 | 70,432/12,885 |
+| 91 | I1 | Deliver | 1 | 07-09 07:51 | 0:18 | Advanced | I1 | 2 | build:OK | $0.0965 | 79,582/18,801 |
 
 ### Commits by session
 
-- **s83 (O1 Deliver)** — 2 commit(s):
-  - ddc46e9 chore(era3): O1 tracker update — stage O1 DONE
-  - be216a4 feat(era3): O1 structured log — JSON rolling sink + conductor log --query
 - **s84 (O2 Deliver)** — 2 commit(s):
   - 9470643 chore(era3): O2 tracker update — stage O2 DONE
   - 2f4d103 feat(era3): O2 budget intelligence — identical-stall detection, exponential backoff, DNS preflight
@@ -85,6 +83,9 @@ _Updated 2026-07-09 07:51 UTC · branch `feat/era-v3` · HEAD `168a667`_
   - 5b65b0b feat(era3): P4 squash bookkeeping — collapse chore(conductor): commits on phase confirm
 - **s90 (P5 Deliver)** — 1 commit(s):
   - 444670f feat(era3): P5 - Post-hoc audit replay (session #90)
+- **s91 (I1 Deliver)** — 2 commit(s):
+  - 13dcdc7 chore(era3): tracker cleanup for I1
+  - bfa35ac feat(era3): I1 — MCP task server production wiring
 
 ## Phase handovers (audit)
 
@@ -103,17 +104,17 @@ _Updated 2026-07-09 07:51 UTC · branch `feat/era-v3` · HEAD `168a667`_
 
 ## Last gate run
 
-build:OK · tests:OK
+build:OK
 
 ## Last session result
 
-> SESSION-RESULT: P5 Post-hoc audit replay landed — `conductor audit <stage> --replay` CLI verb implemented (~85 LOC AuditCommand in Commands.cs), registered in Program.cs, completion scripts updated (PS + bash). Build 0w/0e, 555 tests pass. Command builds a structured replay prompt (checkpoints, git log, evidence tails), spawns the plan's agent in a scratch dir, writes output to `.conductor/audits/<stage>-replay-<ts>.md`. Read-only diagnostic — never touches RunState. P4 QA re-verified clean. Next session: I1 — wire McpTaskServer into AgentSession production launch.
+> SESSION-RESULT: I1 — MCP task server production wiring landed. `mcp-serve` CLI command runs McpTaskServer over stdio (JSON-RPC 2.0); Orchestrator writes per-session opencode config (`OPENCODE_CONFIG` env var) registering conductor as a local MCP subprocess; AgentSession.Start accepts extraEnv; CleanupMcpConfig cleans up after session; FoldMcpJournal persists task changes. All 13 Era v3 checkpoints now DONE. Gate: build 0w/0e, 555 tests pass. Working tree clean, branch pushed. Next session: Era v3 is complete — proceed to followup sweep or Era v4 planning per `C:\Code\conductor\NEXT-ERA.md`.
 
 ## Tracker handoff
 
 ```
-last: P5 — Post-hoc audit replay landed. AuditCommand (`conductor audit <stage> --replay`) spawns the plan's agent with a structured replay prompt against completed stages. Read-only: no RunState mutation. Output to .conductor/audits/<stage>-replay-<ts>.md. Prompt includes checkpoints, git log, evidence tails. Registered as "audit" verb. Completion scripts (PS+bash) updated. 555 tests pass (0w/0e).
-stage: P5 DONE. Next: I1 — MCP task server production wiring.
-next: Read FUSION.md §I1. Wire McpTaskServer (B9) into AgentSession production launch. Agent gets live task_list/update/add. Task persistence via events.jsonl.
-trap: None.
+last: I1 — MCP task server production wiring landed. mcp-serve CLI command runs McpTaskServer over stdio (JSON-RPC 2.0). Orchestrator writes per-session opencode config (local MCP server pointing to conductor.exe mcp-serve), passed via OPENCODE_CONFIG env var. AgentSession.Start accepts extraEnv. CleanupMcpConfig after session. FoldMcpJournal (B9.4) merges task changes. 555 tests pass (0w/0e).
+stage: I1 DONE. Next: none (Era v3 complete — all 13 checkpoints DONE).
+next: Era v4 planning OR followup sweep. See .conductor/followups.md for OPEN items.
+trap: conductor binary path resolved via ProcessPath — must be same as orchestrator binary.
 ```
