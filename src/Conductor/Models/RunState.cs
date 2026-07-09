@@ -148,6 +148,13 @@ public sealed class RunState
     /// <summary>Stages whose full battery has passed (and audit completed). SelectStage skips these,
     /// so a stage with red phase-gates is never advanced past even when its tracker rows read DONE.</summary>
     public HashSet<string> ConfirmedStages { get; set; } = new(StringComparer.Ordinal);
+    /// <summary>P4: stages whose chore(conductor): commits have already been squashed on confirm.
+    /// Prevents re-squashing on repeated confirm calls (idempotency).</summary>
+    public HashSet<string> SquashedStages { get; set; } = new(StringComparer.Ordinal);
+    /// <summary>P4: per-stage start HEAD commit (the commit before any session work for this
+    /// stage). Populated by <c>ScheduleGateOrAudit</c> and consumed by the squash-on-confirm
+    /// logic so the rebase window is correct even when the owner-approval path defers confirmation.</summary>
+    public Dictionary<string, string> StageStartHeads { get; set; } = new(StringComparer.Ordinal);
     /// <summary>Stages whose auto-fix audit has completed, to avoid re-auditing on resume.</summary>
     public HashSet<string> AuditedStages { get; set; } = new(StringComparer.Ordinal);
     /// <summary>Stages whose owner has explicitly approved via CLI/TUI (B3.2). An owner-gated stage

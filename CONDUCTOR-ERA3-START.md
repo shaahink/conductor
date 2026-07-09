@@ -4,17 +4,17 @@
 **Branch:** `feat/era-v3`. **Driver:** `C:\Code\conductor\bin\conductor.exe` (stable from master).
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
-last: P3 — Stronger advisor landed. AdvisorAction enum: BlockRetry, ResetBudget, NeedsHuman, ApplyFix, RerunGates + legacy Retry/Resume/Skip. Orchestrator.ApplyVerdict handles all. AdvisorConfig.RemediationScript for ApplyFix. 551 tests pass (0w/0e).
-stage: P3 DONE. Next: P4 — Squash bookkeeping.
-next: Read workflow §P4. Collapse chore(conductor): commits on phase confirm with git rebase -i. Feature/audit commits preserved.
-trap: EscalateExhaustedStage now uses AdvisorAction enum (not string). Legacy templates still parse — TryParseAction is case-insensitive, accepts snake_case and camelCase.
+last: P4 — Squash bookkeeping landed. Git.SquashChoreCommits collapses consecutive chore(conductor): commits on phase confirm via GIT_SEQUENCE_EDITOR rebase. Idempotent via SquashedStages hashset. StageStartHeads dictionary persists start heads for the rebase window. Best-effort: failure logged, never blocks confirm. 555 tests pass (0w/0e).
+stage: P4 DONE. Next: P5 — Post-hoc audit replay.
+next: Read workflow §P5. conductor audit <stage> --replay against completed phases. Read-only diagnostic. Output to .conductor/audits/<stage>-replay-<ts>.md.
+trap: The squash is a git rebase -i behind GIT_SEQUENCE_EDITOR — needs PowerShell on Windows. Running without PS will skip squash gracefully (logged warning).
 
 ## Baseline Numbers
 
 | Metric | Value |
 |--------|-------|
 | Target framework | net10.0 |
-| Tests | 530 pass (0 warn, 0 err) |
+| Tests | 555 pass (0 warn, 0 err) |
 | Source files | ~40 .cs under src/Conductor |
 | Branches | master (stable), feat/baton (v2), feat/era-v3 (this phase) |
 
@@ -32,7 +32,7 @@ trap: EscalateExhaustedStage now uses AdvisorAction enum (not string). Legacy te
 | P1 | Dynamic plan reconfiguration | DONE | c153a2b | docs/era3/evidence/P1/ |
 | P2 | QA parallelization | DONE | 2a0fdde | docs/era3/evidence/P2/ |
 | P3 | Stronger advisor — structured verdicts | DONE | 56ec088 | docs/era3/evidence/P3/ |
-| P4 | Squash bookkeeping — clean git history | TODO | — | — |
+| P4 | Squash bookkeeping — clean git history | DONE | f03f4a0 | docs/era3/evidence/P4/ |
 | P5 | Post-hoc audit replay | TODO | — | — |
 | I1 | MCP task server production wiring | TODO | — | — |
 

@@ -65,4 +65,73 @@ public static class Git
     /// <summary>Force-delete a local branch.</summary>
     public static ProcResult DeleteBranch(string repo, string branch)
         => Exec(repo, "branch", "-D", branch);
+
+    // ---------------------------------------------------------------- P4: squash bookkeeping
+
+    /// <summary>P4: squashes consecutive <c>chore(conductor):</c> commits between
+    /// <paramref name="sinceSha"/> and HEAD into one per group using an interactive rebase.
+    /// Non-chore commits (<c>feat:</c>, <c>fix:</c>, <c>docs:</c>, etc.) are preserved.
+    /// Idempotent — if no consecutive chore commits exist, returns true without touching history.
+    /// Returns true on success (including no-op).</summary>
+    public static bool SquashChoreCommits(string repo, string sinceSha)
+    {
+        if (string.IsNullOrWhiteSpace(sinceSha)) return false;
+
+        // 1. Probe: are there consecutive chore(conductor): commits to squash?
+        var log = Exec(repo, "log", "--format=%H %s", "--reverse", $"{sinceSha}..HEAD");
+        if (log.ExitCode != 0) return false;
+
+        var lines = log.Output.Trim().Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        if (lines.Length == 0) return true;
+
+        var squasheableCount = 0;
+        var prevWasChore = false;
+        foreach (var line in lines)
+        {
+            var spaceIdx = line.IndexOf(' ');
+            if (spaceIdx < 0) continue;
+            var subject = line[(spaceIdx + 1)..];
+            var isChore = subject.StartsWith("chore(conductor):", StringComparison.OrdinalIgnoreCase);
+            if (isChore && prevWasChore) squasheableCount++;
+            prevWasChore = isChore;
+        }
+        if (squasheableCount == 0) return true;
+
+        // 2. Write a sequence-editor PowerShell script to a temp file.
+        var editorPath = Path.Combine(Path.GetTempPath(), $"conductor-sqedit-{Guid.NewGuid():N}.ps1");
+        File.WriteAllText(editorPath, string.Join("\r\n",
+            "param($TodoFile)",
+            "$lines = Get-Content -LiteralPath $TodoFile",
+            "$prevWasChore = $false",
+            "for ($i = 0; $i -lt $lines.Count; $i++) {",
+            "    $line = $lines[$i]",
+            "    if ($line -match '^pick \\S+ chore\\(conductor\\):') {",
+            "        if ($prevWasChore) {",
+            "            $lines[$i] = $line -replace '^pick ', 'fixup '",
+            "        }",
+            "        $prevWasChore = $true",
+            "    } else {",
+            "        $prevWasChore = $false",
+            "    }",
+            "}",
+            "Set-Content -LiteralPath $TodoFile -Value $lines"));
+
+        try
+        {
+            // 3. Set GIT_SEQUENCE_EDITOR to our script, run the interactive rebase.
+            var psCmd = string.Join("; ",
+                $"$env:GIT_SEQUENCE_EDITOR = 'powershell -NoProfile -File ''{editorPath}'''",
+                $"git -C '{repo}' rebase -i '{sinceSha}^' --committer-date-is-author-date 2>&1",
+                $"$exitCode = $LASTEXITCODE",
+                $"Remove-Item -LiteralPath '{editorPath}' -ErrorAction SilentlyContinue",
+                $"exit $exitCode");
+            var result = ProcessRunner.RunPowerShell(psCmd, repo, TimeSpan.FromMinutes(5));
+            return result.ExitCode == 0;
+        }
+        catch
+        {
+            try { File.Delete(editorPath); } catch { /* best-effort */ }
+            return false;
+        }
+    }
 }

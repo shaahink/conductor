@@ -851,6 +851,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     /// audit launches concurrently with the next stage's deliver.</summary>
     private void ScheduleGateOrAudit(string stageId, string startHead)
     {
+        state.StageStartHeads[stageId] = startHead;
         // P2: parallel audit — always run the battery first, audit runs concurrently later
         if (plan.Audit is { Enabled: true, EnableParallel: true } && !state.AuditedStages.Contains(stageId)
             && HasNextUnconfirmedStage(stageId))
@@ -873,6 +874,40 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     }
 
     private static string Short(string sha) => string.IsNullOrEmpty(sha) ? "?" : sha.Length >= 7 ? sha[..7] : sha;
+
+    // ---------------------------------------------------------------- P4: squash bookkeeping
+
+    /// <summary>P4: on phase confirm, squashes consecutive <c>chore(conductor):</c> commits
+    /// into one per group via an interactive rebase. Feature/audit commits preserved.
+    /// Idempotent — tracks <see cref="RunState.SquashedStages"/> to avoid re-squashing.
+    /// Best-effort: failure is logged but never blocks confirmation.</summary>
+    private void SquashBookkeeping(string stageId)
+    {
+        if (state.SquashedStages.Contains(stageId)) return;
+        if (!state.StageStartHeads.TryGetValue(stageId, out var startHead) || string.IsNullOrWhiteSpace(startHead))
+        {
+            Log($"P4 squash: no start-head recorded for stage {stageId} — skipping");
+            return;
+        }
+
+        state.SquashedStages.Add(stageId);
+        Save(); // persist before rewriting history
+        Log($"P4 squash: collapsing chore(conductor): commits for stage {stageId} since {Short(startHead)}");
+
+        try
+        {
+            var ok = Git.SquashChoreCommits(plan.Repo, startHead);
+            if (ok)
+                Log($"P4 squash: stage {stageId} complete — chore(conductor): commits squashed");
+            else
+                Log($"P4 squash: git rebase returned non-zero for stage {stageId} — history unchanged", "warn");
+        }
+        catch (Exception ex)
+        {
+            Log($"P4 squash: failed for stage {stageId}: {ex.Message} — history unchanged", "warn");
+            state.SquashedStages.Remove(stageId); // retry on next confirm
+        }
+    }
 
     private void ConfirmStage(string id)
     {
@@ -913,6 +948,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             Log($"✓ phase {id} CONFIRMED (full battery green{(state.AuditedStages.Contains(id) ? " + audit" : "")}) — advancing");
         }
         events.Emit(new StageConfirmed { StageId = id, Audited = state.AuditedStages.Contains(id) });
+        // P4: squash chore(conductor): bookkeeping commits on confirm (best-effort, idempotent)
+        SquashBookkeeping(id);
         SaveAndReport();
     }
 
