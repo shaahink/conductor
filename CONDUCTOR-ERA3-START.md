@@ -29,7 +29,7 @@ trap: P1 CLI args: plan set/reload/add-stage all use -p for plan path. Comments 
 | O1 | Structured log + conductor log --query | DONE | be216a4 | docs/era3/evidence/O1/ |
 | O2 | Budget intelligence + network health gate | DONE | 2f4d103 | docs/era3/evidence/O2/ |
 | O3 | Cost overhead split | DONE | 419fb9a | docs/era3/evidence/O3/ |
-| P1 | Dynamic plan reconfiguration | DONE | (pending) | docs/era3/evidence/P1/ |
+| P1 | Dynamic plan reconfiguration | DONE | c153a2b | docs/era3/evidence/P1/ |
 | P2 | QA parallelization | TODO | — | — |
 | P3 | Stronger advisor — structured verdicts | TODO | — | — |
 | P4 | Squash bookkeeping — clean git history | TODO | — | — |
