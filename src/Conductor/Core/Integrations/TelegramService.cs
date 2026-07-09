@@ -319,7 +319,7 @@ public sealed class TelegramService : IHostedService, ITelegramService, IDisposa
     private string BuildStatusText()
     {
         TrackerSnapshot track;
-        try { track = _progress.Read(_plan); }
+        try { track = _progress.Read(_plan, CancellationToken.None); }
         catch (IOException) { track = new TrackerSnapshot(); }
         catch (InvalidOperationException) { track = new TrackerSnapshot(); }
 
@@ -378,8 +378,8 @@ public sealed class TelegramService : IHostedService, ITelegramService, IDisposa
         }
 
         var checkpoints = graph.Tasks
-            .GroupBy(t => t.CheckpointId)
-            .OrderBy(g => g.Key);
+            .GroupBy(t => t.CheckpointId, StringComparer.Ordinal)
+            .OrderBy(g => g.Key, StringComparer.Ordinal);
 
         foreach (var ck in checkpoints)
         {
@@ -406,6 +406,7 @@ public sealed class TelegramService : IHostedService, ITelegramService, IDisposa
 
     private void WriteControlFile(string action, bool confirmed = false, string? intentId = null)
     {
+#pragma warning disable MA0045 // sync control file write — called from Telegram polling loop
         try
         {
             var path = Path.Combine(_plan.StateDir, "control.json");
@@ -417,6 +418,7 @@ public sealed class TelegramService : IHostedService, ITelegramService, IDisposa
             };
             if (intentId != null) payload["intentId"] = intentId;
             File.WriteAllText(path, JsonSerializer.Serialize(payload, JsonOpts));
+#pragma warning restore MA0045
             _log.LogInformation("Telegram wrote control.json: {Action} (confirmed={Confirmed})", action, confirmed);
         }
         catch (Exception ex) { _log.LogWarning(ex, "Failed to write control.json"); }

@@ -15,5 +15,5 @@ public interface IProgressProvider
     string Name { get; }
 
     /// <summary>Read the current progress snapshot for the given plan.</summary>
-    TrackerSnapshot Read(PlanConfig plan);
+    TrackerSnapshot Read(PlanConfig plan, CancellationToken ct = default);
 }

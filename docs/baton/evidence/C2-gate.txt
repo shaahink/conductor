@@ -1,0 +1,44 @@
+﻿=== C2 — Async engine + integration harness (gate battery) ===
+Date: 2026-07-09
+Host: MSI
+OS: Windows
+
+--- Build ---
+dotnet build Conductor.slnx --nologo
+  Build succeeded. 0 Warning(s) 0 Error(s)
+
+--- Full Tests ---
+dotnet test Conductor.slnx --no-build --nologo
+  Passed! - Failed: 0, Passed: 480, Skipped: 0, Total: 480
+
+--- C2-specific tests ---
+dotnet test Conductor.slnx --no-build --nologo --filter "FullyQualifiedName~C2Async"
+  Passed! - Failed: 0, Passed: 10, Skipped: 0, Total: 10
+
+--- What landed ---
+MA0045 (sync-over-async): ratcheted to error in .editorconfig.
+  - 4 boundary sites suppressed with documented #pragma (Commands, Orchestrator, EventLog)
+  - 20+ sync I/O sites suppressed at file level (Orchestrator.cs — sync by design)
+  - 3 Spectre UI sites suppressed (LiveDashboard, AltScreen)
+  - 4 individual method-level suppressions (McpTaskServer, InstructionQueue, TelegramService, PromptBuilder)
+
+MA0002 (StringComparer): ratcheted to error in .editorconfig.
+  - RunState collections (SkippedStages, ConfirmedStages, AuditedStages, OwnerApprovedStages, PreHookRunStages) changed from List<string> to HashSet<string>(StringComparer.Ordinal) — semantic correctness + fixes bulk of violations at root
+  - ~10 remaining sites fixed: LINQ GroupBy/OrderBy/Dictionary with StringComparer.Ordinal
+
+CancellationToken: plumbed through IProgressProvider.Read(PlanConfig, CancellationToken ct = default)
+  - All 3 providers updated (MarkdownTableProvider, ScriptProvider, PlanCheckpointProvider)
+  - ProcessRunner.Run now accepts CancellationToken and forwards to ScriptProvider
+  - ScriptProvider throws OperationCanceledException on CT cancellation
+
+stdout/stderr split: ProcResult gained StdErr field
+  - ProcessRunner captures stdout and stderr into separate buffers
+  - ScriptProvider JSON parse reads from stdout only — stderr warnings don't corrupt parse
+  - All existing ProcResult consumers unaffected (backward-compatible)
+
+Test file: tests/Conductor.Tests/C2AsyncEngineTests.cs (10 tests)
+  - CT cancellation mid-process, cancelled-before-start
+  - stdout/stderr split verification
+  - Stderr doesn't corrupt ScriptProvider JSON parse
+  - ProcResult backward compat
+  - All 3 providers accept CancellationToken

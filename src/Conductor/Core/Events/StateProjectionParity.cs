@@ -84,7 +84,7 @@ public static class StateProjectionParity
             diffs.Add($"{field}: projected={Fmt(projected)} legacy={Fmt(legacy)}");
     }
 
-    private static void Sequence(List<string> diffs, string field, IReadOnlyList<string> projected, IReadOnlyList<string> legacy)
+    private static void Sequence(List<string> diffs, string field, IEnumerable<string> projected, IEnumerable<string> legacy)
     {
         if (!projected.SequenceEqual(legacy, StringComparer.Ordinal))
             diffs.Add($"{field}: projected=[{string.Join(",", projected)}] legacy=[{string.Join(",", legacy)}]");

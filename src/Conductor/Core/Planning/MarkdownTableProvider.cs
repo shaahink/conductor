@@ -14,7 +14,7 @@ public sealed class MarkdownTableProvider : IProgressProvider
 {
     public string Name => "markdown-table";
 
-    public TrackerSnapshot Read(PlanConfig plan) => Parse(File.ReadAllText(plan.TrackerPath), plan.Conventions);
+    public TrackerSnapshot Read(PlanConfig plan, CancellationToken ct = default) => Parse(File.ReadAllText(plan.TrackerPath), plan.Conventions);
 
     public static TrackerSnapshot ParseFile(string path) => Parse(File.ReadAllText(path), ProgressConventions.Default);
 

@@ -29,7 +29,7 @@ public static class Confidence
             .Where(c => c.IsDone)
             .Select(c => new Entry(c.Id, c.StageId, CountEvidence(c.Evidence),
                 string.IsNullOrWhiteSpace(c.Evidence) ? "(none)" : c.Evidence))
-            .OrderBy(c => c.CheckpointId)
+            .OrderBy(c => c.CheckpointId, StringComparer.Ordinal)
             .ToList();
     }
 

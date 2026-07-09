@@ -119,7 +119,9 @@ public sealed class LiveDashboard : IProgressSink
                     PollKeys();
                     ctx.UpdateTarget(BuildTarget());
                     ctx.Refresh();
+#pragma warning disable MA0045 // Spectre UI event loop — Thread.Sleep is the Spectre-recommended approach
                     Thread.Sleep(250);
+#pragma warning restore MA0045
                 }
                 ctx.UpdateTarget(BuildTarget());
                 ctx.Refresh();
@@ -148,7 +150,9 @@ public sealed class LiveDashboard : IProgressSink
                     catch (InvalidOperationException) { break; }
                     ctx.UpdateTarget(BuildTarget());
                     ctx.Refresh();
+#pragma warning disable MA0045 // Spectre UI event loop — Thread.Sleep is the Spectre-recommended approach
                     Thread.Sleep(120);
+#pragma warning restore MA0045
                 }
             });
     }
@@ -544,7 +548,7 @@ public sealed class LiveDashboard : IProgressSink
         if (_plan == null) return new() { "(confidence unavailable in preview)" };
         try
         {
-            var track = Conductor.Core.Planning.ProgressProviderFactory.Create(_plan).Read(_plan);
+            var track = Conductor.Core.Planning.ProgressProviderFactory.Create(_plan).Read(_plan, CancellationToken.None);
             var confidence = Reporter.ReadConfidence(track);
             if (confidence.Count == 0) return new() { "(no checkpoints done yet — confidence populates as stages are confirmed)" };
             return Conductor.Core.Events.Confidence.Format(confidence).ToList();
@@ -582,8 +586,8 @@ public sealed class LiveDashboard : IProgressSink
 
             var lines = new List<string>();
             var checkpoints = graph.Tasks
-                .GroupBy(t => t.CheckpointId)
-                .OrderBy(g => g.Key);
+                .GroupBy(t => t.CheckpointId, StringComparer.Ordinal)
+                .OrderBy(g => g.Key, StringComparer.Ordinal);
 
             foreach (var ck in checkpoints)
             {
@@ -616,7 +620,9 @@ public sealed class LiveDashboard : IProgressSink
                 ? new DirectoryInfo(dir).GetFiles("session-*.prompt.md").OrderByDescending(f => f.LastWriteTimeUtc).FirstOrDefault()
                 : null;
             if (newest == null) return new() { "(no compiled prompt yet)" };
+#pragma warning disable MA0045 // Spectre UI context — file read for prompt preview
             return Split($"# {newest.Name}\n\n" + File.ReadAllText(newest.FullName));
+#pragma warning restore MA0045
         }
         catch (Exception ex) { return new() { $"(prompt read failed: {ex.Message})" }; }
     }

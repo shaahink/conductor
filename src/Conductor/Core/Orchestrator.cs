@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Conductor.Core.Events;
 using Conductor.Core.Integrations;
+#pragma warning disable MA0045 // Orchestrator.Run() is sync by design — file I/O at sync boundaries is deliberate
 using Conductor.Core.Planning;
 using Conductor.Core.Providers;
 using Conductor.Models;
@@ -92,7 +93,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     Log("backoff over — resuming");
                 }
 
-                var track = _progress.Read(plan);
+                var track = _progress.Read(plan, CancellationToken.None);
                 if (track.Checkpoints.Count == 0)
                 {
                     NeedsHuman($"tracker {plan.Tracker} has no parseable checkpoint rows — check the table format");
@@ -516,7 +517,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             }
             else
             {
-                var verdict = ConsultAdvisor(rec, stage, _progress.Read(plan), "resume budget exhausted after stall/timeout");
+                var verdict = ConsultAdvisor(rec, stage, _progress.Read(plan, CancellationToken.None), "resume budget exhausted after stall/timeout");
                 ApplyVerdict(verdict, rec, stage, defaultAction: "retry");
             }
             state.Status = RunStatus.Idle;
@@ -570,7 +571,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             return;
         }
 
-        var postTrack = _progress.Read(plan);
+        var postTrack = _progress.Read(plan, CancellationToken.None);
         rec.NewCommits = Git.CommitsSince(plan.Repo, startHead);
         rec.NewlyDone = postTrack.Checkpoints
             .Where(c => c.IsDone && !(preTrack.ById(c.Id)?.IsDone ?? false))
@@ -1302,7 +1303,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         // Display-only read on the idle hot path: a transient tracker read failure falls back to an
         // empty snapshot without log spam — the authoritative read in the main loop (Run) is what
         // surfaces a genuinely broken tracker via NeedsHuman.
-        try { track = _progress.Read(plan); }
+        try { track = _progress.Read(plan, CancellationToken.None); }
         catch (Exception ex) when (ex is IOException or InvalidOperationException) { track = new TrackerSnapshot(); }
         sink.Snapshot(BaseSnapshot(track));
     }
@@ -1408,7 +1409,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         TrackerSnapshot track;
         // Report render tolerates a transient tracker read failure (→ empty snapshot); the main loop's
         // authoritative read is what escalates a broken tracker to the human.
-        try { track = _progress.Read(plan); }
+        try { track = _progress.Read(plan, CancellationToken.None); }
         catch (Exception ex) when (ex is IOException or InvalidOperationException) { track = new TrackerSnapshot(); }
         Reporter.WriteAndPublish(plan, state, track, _lastGates, Log);
         PushIdleSnapshot();
@@ -1550,9 +1551,9 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 if (t.StartsWith("## ", StringComparison.Ordinal) || t.StartsWith("### ", StringComparison.Ordinal))
                 {
                     var heading = t.ToLowerInvariant();
-                    inSection = heading.Contains("weak") || heading.Contains("deferred") ||
-                                heading.Contains("bugs not fixed") || heading.Contains("unfixed") ||
-                                heading.Contains("concrete follow");
+                    inSection = heading.Contains("weak", StringComparison.Ordinal) || heading.Contains("deferred", StringComparison.Ordinal) ||
+                                heading.Contains("bugs not fixed", StringComparison.Ordinal) || heading.Contains("unfixed", StringComparison.Ordinal) ||
+                                heading.Contains("concrete follow", StringComparison.Ordinal);
                 }
                 else if (inSection && (t.StartsWith("- ", StringComparison.Ordinal) || t.StartsWith("* ", StringComparison.Ordinal)
                          || (t.StartsWith("### ", StringComparison.Ordinal) && t.Contains("D-"))))
@@ -1725,6 +1726,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             var lane = FollowupEntryToMutatingLane(entry);
             Log($"fix-lane '{entry.Id}' starting — {entry.Item}");
 
+#pragma warning disable MA0045 // sync boundary: orchestrator loop is sync, lane runner uses ConfigureAwait(false)
             // Run the mutating lane synchronously (the orchestrator loop is sync). The lane
             // runner uses ConfigureAwait(false) internally so GetAwaiter().GetResult() is safe.
             MutatingLaneResult result;
@@ -1745,6 +1747,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 var commitRef = Git.Head(plan.Repo)[..Math.Min(7, Git.Head(plan.Repo).Length)];
                 if (FollowupParser.UpdateStatus(followupsPath, entry.Id, "CLOSED", $"b{entry.Id}"))
                     Log($"fix-lane '{entry.Id}' CLOSED — {entry.Item} ({commitRef})");
+#pragma warning restore MA0045
                 else
                     Log($"fix-lane '{entry.Id}' done but status update failed in followups.md");
             }
@@ -1829,10 +1832,12 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     {
         if (_lanePool == null || (_lanePool.ActiveCount == 0 && _lanePool.CompletedCount == 0)) return;
 
+#pragma warning disable MA0045 // sync boundary: CollectLaneArtifacts is called from sync stage-confirm flow
         // Wait for remaining lanes with a short timeout so we don't block the orchestrator.
         // Use GetAwaiter().GetResult() (same pattern as the pre-pool .Wait() call).
         var remaining = _lanePool.WaitAllAsync(TimeSpan.FromSeconds(10), CancellationToken.None)
             .GetAwaiter().GetResult();
+#pragma warning restore MA0045
 
         var successCount = remaining.Count(r => r.IsSuccess);
         var failCount = remaining.Count - successCount;

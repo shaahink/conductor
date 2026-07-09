@@ -3,7 +3,7 @@ using System.Text;
 
 namespace Conductor.Core;
 
-public sealed record ProcResult(int ExitCode, string Output, bool TimedOut, TimeSpan Duration);
+public sealed record ProcResult(int ExitCode, string Output, string StdErr, bool TimedOut, TimeSpan Duration);
 
 public static class ProcessRunner
 {
@@ -25,13 +25,14 @@ public static class ProcessRunner
         };
         foreach (var a in args) psi.ArgumentList.Add(a);
 
-        var sb = new StringBuilder();
+        var stdout = new StringBuilder();
+        var stderr = new StringBuilder();
         var gate = new Lock();
         var sw = Stopwatch.StartNew();
         using var job = new JobObject();
         using var p = new Process { StartInfo = psi };
-        p.OutputDataReceived += (_, e) => { if (e.Data != null) lock (gate) sb.AppendLine(e.Data); };
-        p.ErrorDataReceived += (_, e) => { if (e.Data != null) lock (gate) sb.AppendLine(e.Data); };
+        p.OutputDataReceived += (_, e) => { if (e.Data != null) lock (gate) stdout.AppendLine(e.Data); };
+        p.ErrorDataReceived += (_, e) => { if (e.Data != null) lock (gate) stderr.AppendLine(e.Data); };
 
         try
         {
@@ -39,7 +40,7 @@ public static class ProcessRunner
         }
         catch (Exception ex)
         {
-            return new ProcResult(-1, $"failed to start '{fileName}': {ex.Message}", false, sw.Elapsed);
+            return new ProcResult(-1, $"failed to start '{fileName}': {ex.Message}", "", false, sw.Elapsed);
         }
         job.Assign(p);
         p.BeginOutputReadLine();
@@ -61,7 +62,7 @@ public static class ProcessRunner
 
         int exit;
         try { exit = p.ExitCode; } catch { exit = -1; }
-        lock (gate) return new ProcResult(exit, sb.ToString(), timedOut, sw.Elapsed);
+        lock (gate) return new ProcResult(exit, stdout.ToString(), stderr.ToString(), timedOut, sw.Elapsed);
     }
 
     /// <summary>Run a command line through a named shell (<c>powershell</c>, <c>bash</c>, <c>sh</c>)
@@ -81,7 +82,7 @@ public static class ProcessRunner
             "bash" => Run("bash", new[] { "-c", command }, cwd, timeout, ct),
             "sh" => Run("sh", new[] { "-c", command }, cwd, timeout, ct),
             _ => new ProcResult(-1,
-                $"unknown shell '{shell}': supported shells are powershell, bash, sh", false, TimeSpan.Zero),
+                $"unknown shell '{shell}': supported shells are powershell, bash, sh", "", false, TimeSpan.Zero),
         };
     }
 

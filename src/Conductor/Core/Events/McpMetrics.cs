@@ -30,7 +30,7 @@ public static class McpMetrics
         if (calls.Count == 0)
             return new McpReport(0, 0, 0, 0, 0, "", 0, []);
 
-        var byTool = calls.GroupBy(c => c.ToolName)
+        var byTool = calls.GroupBy(c => c.ToolName, StringComparer.Ordinal)
             .Select(g => (Tool: g.Key, Count: g.Count()))
             .OrderByDescending(t => t.Count)
             .ToList();

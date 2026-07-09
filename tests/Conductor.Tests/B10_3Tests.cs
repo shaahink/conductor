@@ -91,7 +91,7 @@ public class B10_3HooksTests
     {
         var state = new RunState
         {
-            PreHookRunStages = new List<string> { "B10", "B11" }
+            PreHookRunStages = new HashSet<string>(StringComparer.Ordinal) { "B10", "B11" }
         };
         var json = JsonSerializer.Serialize(state, PlanConfig.JsonOpts);
         Assert.Contains("preHookRunStages", json);
@@ -184,7 +184,7 @@ public class B10_3HooksTests
         // and must round-trip so resume doesn't re-run them.
         var state = new RunState
         {
-            PreHookRunStages = new List<string> { "B10", "B12" }
+            PreHookRunStages = new HashSet<string>(StringComparer.Ordinal) { "B10", "B12" }
         };
         var json = JsonSerializer.Serialize(state, PlanConfig.JsonOpts);
         var restored = JsonSerializer.Deserialize<RunState>(json, PlanConfig.JsonOpts)!;

@@ -248,6 +248,7 @@ public sealed class McpTaskServer
 
     private void WriteJournal(ConductorEvent evt)
     {
+#pragma warning disable MA0045 // sync journal write is deliberate — called from sync MCP handlers
         var stamped = evt with
         {
             Ts = DateTime.UtcNow,
@@ -257,6 +258,7 @@ public sealed class McpTaskServer
         var dir = Path.GetDirectoryName(_journalPath);
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
         File.AppendAllText(_journalPath, json + Environment.NewLine);
+#pragma warning restore MA0045
     }
 }
 

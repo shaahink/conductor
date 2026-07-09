@@ -65,7 +65,7 @@ public static class GateRunner
     /// <summary>Signature of the full gate battery for a given tree state — used to skip identical reruns.</summary>
     public static string BatterySignature(PlanConfig plan, string headSha, string? currentStage)
     {
-        var names = plan.Gates.Where(g => g.AppliesToStage(currentStage)).Select(g => g.Name).OrderBy(n => n);
+        var names = plan.Gates.Where(g => g.AppliesToStage(currentStage)).Select(g => g.Name).OrderBy(n => n, StringComparer.Ordinal);
         return headSha + "|" + string.Join(",", names);
     }
 

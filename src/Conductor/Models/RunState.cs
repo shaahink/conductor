@@ -104,22 +104,22 @@ public sealed class RunState
     /// are all confirmed, rather than advancing automatically (B3.3).</summary>
     public bool PauseAfterStage { get; set; }
     public string? AttentionReason { get; set; }
-    public List<string> SkippedStages { get; set; } = new();
+    public HashSet<string> SkippedStages { get; set; } = new(StringComparer.Ordinal);
     public PendingFix? PendingFix { get; set; }
     public PendingResume? PendingResume { get; set; }
     public PendingPhaseGate? PendingPhaseGate { get; set; }
     public PendingAudit? PendingAudit { get; set; }
     /// <summary>Stages whose full battery has passed (and audit completed). SelectStage skips these,
     /// so a stage with red phase-gates is never advanced past even when its tracker rows read DONE.</summary>
-    public List<string> ConfirmedStages { get; set; } = new();
+    public HashSet<string> ConfirmedStages { get; set; } = new(StringComparer.Ordinal);
     /// <summary>Stages whose auto-fix audit has completed, to avoid re-auditing on resume.</summary>
-    public List<string> AuditedStages { get; set; } = new();
+    public HashSet<string> AuditedStages { get; set; } = new(StringComparer.Ordinal);
     /// <summary>Stages whose owner has explicitly approved via CLI/TUI (B3.2). An owner-gated stage
     /// cannot advance past <see cref="RunStatus.AwaitingOwner"/> until its id appears here.</summary>
-    public List<string> OwnerApprovedStages { get; set; } = new();
+    public HashSet<string> OwnerApprovedStages { get; set; } = new(StringComparer.Ordinal);
     /// <summary>Stages whose preHook has already executed (B10.3). Prevents re-running the hook on
     /// resume/crash-recovery; a stage id in this list means the preHook succeeded at least once.</summary>
-    public List<string> PreHookRunStages { get; set; } = new();
+    public HashSet<string> PreHookRunStages { get; set; } = new(StringComparer.Ordinal);
     /// <summary>Why the run is parked at <see cref="RunStatus.AwaitingOwner"/> (B3.2/B3.4). Persisted so
     /// an approval after restart does the right thing — confirm the stage vs. resume a session vs. reset
     /// the budget window. Null when not parked (or a legacy state.json, treated as an owner-gate).</summary>

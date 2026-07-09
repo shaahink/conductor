@@ -18,7 +18,7 @@ public sealed class ScriptProvider(ScriptProviderConfig config) : IProgressProvi
 
     public string Name => "script";
 
-    public TrackerSnapshot Read(PlanConfig plan)
+    public TrackerSnapshot Read(PlanConfig plan, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(_config.Command))
             throw new InvalidOperationException(
@@ -26,11 +26,14 @@ public sealed class ScriptProvider(ScriptProviderConfig config) : IProgressProvi
 
         var cwd = _config.Cwd is { Length: > 0 } rel ? Path.Combine(plan.Repo, rel) : plan.Repo;
         var result = ProcessRunner.RunPowerShell(
-            _config.Command, cwd, TimeSpan.FromMinutes(_config.TimeoutMinutes));
+            _config.Command, cwd, TimeSpan.FromMinutes(_config.TimeoutMinutes), ct);
 
         if (result.TimedOut)
             throw new InvalidOperationException(
                 $"script progress provider: command timed out after {_config.TimeoutMinutes}m: {_config.Command}");
+        if (ct.IsCancellationRequested)
+            throw new OperationCanceledException(
+                $"script progress provider: cancelled while running: {_config.Command}", ct);
         if (result.ExitCode != 0)
             throw new InvalidOperationException(
                 $"script progress provider: command exited {result.ExitCode}: {_config.Command}\n{Trim(result.Output)}");

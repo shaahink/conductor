@@ -142,7 +142,7 @@ public sealed class PlanConfig
         if (Stages.Count == 0) errors.Add("plan.stages is empty — define at least one stage with id, title, and sessions");
         else
         {
-            var dupes = Stages.GroupBy(s => s.Id).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+            var dupes = Stages.GroupBy(s => s.Id, StringComparer.Ordinal).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
             if (dupes.Count > 0) errors.Add($"duplicate stage ids: {string.Join(", ", dupes)} — each stage must have a unique id");
             foreach (var s in Stages)
             {
@@ -183,7 +183,7 @@ public sealed class PlanConfig
 
         if (string.IsNullOrWhiteSpace(Agent.Command)) errors.Add("plan.agent.command is required — set the CLI command used to spawn agent sessions");
         if (Agent.Args.Count == 0) errors.Add("plan.agent.args is empty — add at least a {prompt} placeholder");
-        else if (!Agent.Args.Any(a => a.Contains("{prompt}"))) errors.Add("plan.agent.args must contain a {prompt} placeholder — agent won't receive instructions without it");
+        else if (!Agent.Args.Any(a => a.Contains("{prompt}", StringComparison.Ordinal))) errors.Add("plan.agent.args must contain a {prompt} placeholder — agent won't receive instructions without it");
 
         if (Gates.Any(g => string.IsNullOrWhiteSpace(g.Command)))
             errors.Add("a gate is missing its command — every gate needs a shell command to run");

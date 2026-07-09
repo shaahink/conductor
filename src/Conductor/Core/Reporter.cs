@@ -204,7 +204,7 @@ public static class Reporter
         var handoverDir = Path.Combine(plan.StateDir, "handovers");
         if (Directory.Exists(handoverDir))
         {
-            var files = Directory.GetFiles(handoverDir, "*.md").OrderBy(f => f).ToList();
+            var files = Directory.GetFiles(handoverDir, "*.md").OrderBy(f => f, StringComparer.Ordinal).ToList();
             if (files.Count > 0)
             {
                 sb.AppendLine("## Phase handovers (audit)");

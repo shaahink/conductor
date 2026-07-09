@@ -59,7 +59,9 @@ public sealed class RunCommand : Command<RunCommand.Settings>
 
         var opts = new RunOptions(settings.DryRun, settings.Once, settings.MaxSessions);
         using var cts = new CancellationTokenSource();
+#pragma warning disable MA0045 // CancelAsync doesn't exist on CancellationTokenSource
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
+#pragma warning restore MA0045
 
         // Event log is additive alongside state.json (B2.1). A dry-run previews without writing.
         IEventSink events = settings.DryRun
@@ -82,7 +84,9 @@ public sealed class RunCommand : Command<RunCommand.Settings>
             var orchestrator = dashHost.Services.GetRequiredService<Orchestrator>();
             var task = Task.Run(() => orchestrator.Run(cts.Token));
             dash.RunUiLoop(task);
+#pragma warning disable MA0045 // sync-over-async boundary: Spectre.Cli Execute must return int
             return task.GetAwaiter().GetResult();
+#pragma warning restore MA0045
         }
         finally
         {
@@ -161,8 +165,8 @@ public sealed class TasksCommand : Command<PlanSettings>
         AnsiConsole.WriteLine();
 
         var checkpoints = graph.Tasks
-            .GroupBy(t => t.CheckpointId)
-            .OrderBy(g => g.Key);
+            .GroupBy(t => t.CheckpointId, StringComparer.Ordinal)
+            .OrderBy(g => g.Key, StringComparer.Ordinal);
 
         foreach (var ck in checkpoints)
         {

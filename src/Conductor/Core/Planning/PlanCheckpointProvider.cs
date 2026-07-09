@@ -14,7 +14,7 @@ public sealed class PlanCheckpointProvider(IReadOnlyList<PlanCheckpoint> checkpo
 
     public string Name => "plan-checkpoints";
 
-    public TrackerSnapshot Read(PlanConfig plan)
+    public TrackerSnapshot Read(PlanConfig plan, CancellationToken ct = default)
     {
         var rows = new List<CheckpointRow>(_checkpoints.Count);
         foreach (var c in _checkpoints)

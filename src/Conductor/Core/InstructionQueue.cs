@@ -39,7 +39,7 @@ public static class InstructionQueue
                 {
                     var prevDoc = JsonDocument.Parse(File.ReadAllText(prevPath));
                     var prevRoot = prevDoc.RootElement;
-                    var mutable = JsonSerializer.Deserialize<Dictionary<string, object>>(prevRoot.GetRawText(), Opts) ?? new();
+                    var mutable = JsonSerializer.Deserialize<Dictionary<string, object>>(prevRoot.GetRawText(), Opts) ?? new(StringComparer.Ordinal);
                     mutable["next"] = name;
                     File.WriteAllText(prevPath, JsonSerializer.Serialize(mutable, Opts));
                 }
@@ -53,6 +53,7 @@ public static class InstructionQueue
     /// <summary>All active (not-yet-consumed) instructions, in creation order.</summary>
     public static List<Entry> List(PlanConfig plan)
     {
+#pragma warning disable MA0045 // sync method — instruction queue is read synchronously from the control loop
         var dir = Dir(plan);
         if (!Directory.Exists(dir)) return new();
         return Directory.GetFiles(dir, "*.json")
@@ -76,9 +77,10 @@ public static class InstructionQueue
                 catch (Exception ex) when (ex is IOException or JsonException) { return null; }
             })
             .Where(e => e != null)
-            .OrderBy(e => e!.File)
+            .OrderBy(e => e!.File, StringComparer.Ordinal)
             .Select(e => e!)
             .ToList();
+#pragma warning restore MA0045
     }
 
     /// <summary>Mark all currently-active instructions as consumed (rename to .done). Call after a session prompt consumes them.</summary>

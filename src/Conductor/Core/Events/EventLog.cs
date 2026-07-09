@@ -144,11 +144,13 @@ public sealed class EventLog : IEventSink, IAsyncDisposable, IDisposable
     // lets the recovery read coexist with the live writer (regression proven by EventLogTests).
     private static List<string> ReadAllLinesShared(string path)
     {
+#pragma warning disable MA0045 // sync event-log init — crashes MUST be recoverable synchronously before the run loop starts
         using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         using var reader = new StreamReader(fs);
         var lines = new List<string>();
         string? line;
         while ((line = reader.ReadLine()) != null) lines.Add(line);
+#pragma warning restore MA0045
         return lines;
     }
 
@@ -161,6 +163,8 @@ public sealed class EventLog : IEventSink, IAsyncDisposable, IDisposable
     public void Dispose()
     {
         _channel.Writer.TryComplete();
-        _drain.GetAwaiter().GetResult(); // blocks only at the run boundary, never in a hot path
+#pragma warning disable MA0045 // IDisposable.Dispose is sync by contract; drain blocks only at the run boundary
+        _drain.GetAwaiter().GetResult();
+#pragma warning restore MA0045
     }
 }

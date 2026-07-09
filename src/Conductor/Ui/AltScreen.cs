@@ -116,7 +116,9 @@ public sealed class AltScreen : IDisposable
 
     private void TryWrite(string seq)
     {
+#pragma warning disable MA0045 // sync TextWriter.Write in alt-screen buffer is by design
         try { _out.Write(seq); }
+#pragma warning restore MA0045
         catch (IOException) { }
         catch (ObjectDisposedException) { }
     }
