@@ -1,10 +1,10 @@
 ﻿# Conductor — Conductor-Debt run report
 
-_Updated 2026-07-09 02:10 UTC · branch `feat/baton` · HEAD `956277a`_
+_Updated 2026-07-09 02:18 UTC · branch `feat/baton` · HEAD `c65b69e`_
 
 **Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** C5 — Small debt sweep (12 items) · attempts used 1 · working ▸ C5
-**Checkpoints:** 69/72 done · **Sessions run:** 72 · **Cost:** $3.5916 · **Tokens:** 2,972,013 in / 1,029,654 out / 526,867 think
+**Stage:** C5 — Small debt sweep (12 items) · attempts used 2 · working ▸ C5
+**Checkpoints:** 69/72 done · **Sessions run:** 73 · **Cost:** $3.6206 · **Tokens:** 3,012,866 in / 1,033,066 out / 534,334 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1, C2, C3, C4
 
 ## Stage progress
@@ -24,7 +24,6 @@ _Updated 2026-07-09 02:10 UTC · branch `feat/baton` · HEAD `956277a`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 43 | B7 | Deliver | 1 | 07-08 20:00 | 0:19 | Advanced | B7.1 B7.2 B7.3 | 2 | build:OK | $0.0911 | 77,080/28,917 |
 | 44 | B7 | Audit | 1 | 07-08 20:20 | 0:05 | Progress |  | 1 |  | $0.0380 | 52,381/7,163 |
 | 45 | B7 | Fix | 2 | 07-08 20:27 | 0:04 | Interrupted |  | 0 |  |  |  |
 | 46 | B7 | Resume | 2r1 | 07-08 20:31 | 0:15 | Progress |  | 3 | build:OK | $0.0411 | 39,768/8,661 |
@@ -54,12 +53,10 @@ _Updated 2026-07-09 02:10 UTC · branch `feat/baton` · HEAD `956277a`_
 | 70 | C3 | Deliver | 1 | 07-09 01:28 | 0:15 | Advanced | C3 | 2 | build:OK | $0.0771 | 78,611/16,048 |
 | 71 | C4 | Deliver | 1 | 07-09 01:45 | 0:16 | Advanced | C4 | 2 | build:OK | $0.1273 | 125,562/26,254 |
 | 72 | C5 | Deliver | 1 | 07-09 02:04 | 0:06 | Progress |  | 1 | build:OK | $0.0346 | 55,105/4,008 |
+| 73 | C5 | Deliver | 2 | 07-09 02:10 | 0:07 | Progress |  | 1 | build:OK | $0.0290 | 40,853/3,412 |
 
 ### Commits by session
 
-- **s64 (B12 Deliver)** — 2 commit(s):
-  - 2362697 feat(bB12.1): Tier A read-only analysis lanes + artifact wiring
-  - e808338 chore(conductor): s64 B12 working ▸B12.1 @ 00:59
 - **s65 (B12 Deliver)** — 2 commit(s):
   - e7d3eeb feat(bB12.2): LaneWorkerPool + concurrency cap + lane lifecycle events
   - f53771e chore(conductor): s65 B12 working ▸B12.2 @ 01:12
@@ -81,6 +78,8 @@ _Updated 2026-07-09 02:10 UTC · branch `feat/baton` · HEAD `956277a`_
   - 8d651d8 fix(debt): C4 — small debt sweep, 12 followups closed
 - **s72 (C5 Deliver)** — 1 commit(s):
   - 956277a audit: C5 — verified small debt sweep (12 items confirmed resolved), build 0w/0e, 497 tests
+- **s73 (C5 Deliver)** — 1 commit(s):
+  - c65b69e audit: C5-S73 — re-verified small debt sweep (12 items), build 0w/0e, 497 tests
 
 ## Phase handovers (audit)
 
@@ -103,16 +102,16 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: C5 (small debt sweep, 12 items) verified complete — all fixes confirmed in source at `tools/fake-agent.ps1:74-86`, `ScriptProvider.cs:58-69`, `SnapshotBuilder.cs:19-20`, `LiveDashboard.cs:228-236`, `PlanConfig.cs:192-202`, `.editorconfig:35`, `AltScreenTests.cs:61-84`, `B11_2Tests.cs:160-205`, `PromptBuilderTests.cs:135-161`, `B6_1TelegramTests.cs:286-302`, and `LessonsManager.cs:20,37`. FU-B0-5 closed as cosmetic. C4 (session #71) originally delivered this work at `8d651d8`. Build 0w/0e, 497 tests pass, clean working tree, branch pushed at `956277a`. No red. Next: C6 (= tracker row C5) — R1 TUI + CLI audit per workflow §Session 6. Three items deferred to C8 Needs Human Verif…
+> SESSION-RESULT: Session #73 independently re-verified the C4 small debt sweep (12 items) — all confirmed genuinely resolved in source with every code-level fix present and correct at cited file:lines. Build 0w/0e, 497 tests green. No gaps found requiring fix. Three items deferred to C8 human verification (real-signal alt-screen test, Telegram real-token integration, battery-collapse real-measurement). Next session (C6 in plan / C5 in tracker) should execute R1 — TUI + CLI audit per workflow §Session 6. What was hard: the plan↔tracker stage-id offset (plan C5=small debt sweep, tracker C5=R1 audit) has now confused three consecutive sessions — this ambiguity should be resolved before the next …
 
 ## Tracker handoff
 
 ```
-last: session #72 (C5) — verified small debt sweep completed. All 12 items confirmed resolved in source (C4 did the work).
-stage: C5 DONE (verified). C4 delivered the 12-item sweep; this session audited + confirmed against code. Build 0w/0e. 497 tests pass.
+last: session #73 (plan C5/Small debt sweep, attempt 2/2) — independently re-verified all 12 items against fresh source. All confirmed resolved.
+stage: tracker C4 (Small debt sweep) DONE + independently verified. Build 0w/0e. 497 tests pass.
 dirty: none.
-next: C6 (= tracker C5) — R1 TUI + CLI audit (--dry-run preview, inspect every TUI element, rate ✅/⚠️/❌ per workflow §Session 6).
-C4 QA: skip (C4 ended advanced, all gates green; AGENTS.md protocol).
-followups→C8: FU-B4-2 real-signal, Telegram real-token, battery-collapse real-measurement.
-evidence: docs/baton/evidence/C5-gate.txt (12-item audit, build+test green).
+next: plan C6 / tracker C5 — R1 TUI + CLI audit (--dry-run preview, inspect every TUI element, rate per workflow §Session 6).
+QA (session #72): PASS — all 12 claims verified. No stale claims. No gaps requiring fix.
+followups→C8 (human verification): FU-B4-2 real-signal, Telegram real-token, battery-collapse real-measurement.
+evidence: docs/baton/evidence/C5-s73-gate.txt (fresh gate battery + independent 12-item verification).
 ```
