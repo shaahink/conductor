@@ -1,0 +1,13 @@
+﻿DESCRIPTION:
+Re-run the gate battery at HEAD (no agent spawned). --full for full battery, 
+default fast-tier only. Clears pendingFix if all green.
+
+USAGE:
+    conductor gate [OPTIONS]
+
+OPTIONS:
+    -h, --help           Prints help information                                
+    -p, --plan <PLAN>    Path to the plan JSON. Falls back to CONDUCTOR_PLAN env
+                         var, then ./conductor.plan.json                        
+        --full           Run the full battery (not just fast-tier gates).       
+                         Default: fast-tier only                                

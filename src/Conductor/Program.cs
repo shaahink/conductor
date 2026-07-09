@@ -13,6 +13,8 @@ app.Configure(c =>
         .WithDescription("Run the plan loop (resumes from saved state). Ctrl+C is safe — state persists.");
     c.AddCommand<StatusCommand>("status")
         .WithDescription("Show plan, tracker, and session status.");
+    c.AddCommand<GateCommand>("gate")
+        .WithDescription("Re-run the gate battery at HEAD (no agent spawned). --full for full battery, default fast-tier only. Clears pendingFix if all green.");
     c.AddCommand<ReportCommand>("report")
         .WithDescription("Regenerate .conductor/REPORT.md from current state.");
     c.AddCommand<ReplayCommand>("replay")

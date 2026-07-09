@@ -1,0 +1,27 @@
+D2 Gate Evidence — 2026-07-09
+
+Build: PASS (0 warnings, 0 errors)
+  Command: dotnet build Conductor.slnx --nologo
+
+Tests: PASS (510 passed, 0 failed, 0 skipped)
+  Command: dotnet test Conductor.slnx --nologo
+
+CLI smoke tests:
+  - conductor gate --help: shows --full option
+  - conductor gate -p <plan>: runs fast-tier battery, reports PASS
+  - conductor gate -p <plan> --full: runs full battery (build + tests), reports PASS
+
+Gate battery (full): PASS — build:OK · tests:OK
+  OK build (4.0s)
+  OK tests (27.6s)
+
+pendingFix clearing logic:
+  - When all required gates pass and PendingFix != null: clears PendingFix, sets Status=Idle
+  - When all green but no PendingFix: reports "All gates passed."
+  - When gates red: reports FAIL, writes failure details to conductor.log
+
+Files changed:
+  - src/Conductor/Commands/Commands.cs: +GateCommand class (~75 lines)
+  - src/Conductor/Program.cs: +1 command registration line
+
+No agent spawned. No state mutation unless PendingFix was present and gates green.

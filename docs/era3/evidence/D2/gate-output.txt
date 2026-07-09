@@ -1,0 +1,4 @@
+﻿conductor gate (full): PASS ΓÇö build:OK ┬╖ tests:OK
+  OK build (2.4s)
+  OK tests (24.6s)
+All gates passed.
