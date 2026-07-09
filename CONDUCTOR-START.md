@@ -7,12 +7,13 @@ your stage in `.conductor/plans/conductor-debt.plan.json`.
 Branch: `feat/baton`. Driver: `C:\Code\conductor\bin\conductor.exe` (stable from master).
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #68 (B12.4/C1) — fix-lanes consuming .conductor/followups.md as Tier-B lanes behind merge gate. FollowupParser (variable-scheme .md table), RunFollowupFixLanes in Orchestrator (dispatched from ConfirmStage), 10 tests green.
-stage: C1 DONE. Build 0w/0e, 470 tests pass (10 B12.4). C2 (async engine + harness) is next.
+last: session #69 (C2) — async engine ratchet: MA0045+MA0002 → error (0 violations), CancellationToken through IProgressProvider.Read, stdout/stderr split in ProcessRunner/ProcResult, 480 tests pass (10 new C2AsyncEngineTests).
+stage: C2 DONE. Build 0w/0e.
 dirty: none.
-next: C2 — async engine + integration harness (MA0045, MA0002, CT through IProgressProvider.Read, orchestrator harness). ~90 min. Requires careful async migration with resumability preserved.
-followups: FU-B11-1/2/3, FU-B10-1/2, FU-B0-4/5/6/7 remain OPEN (scheduled C3-C5).
-evidence: docs/baton/evidence/B12.4-gate.txt (470 tests, 10 B12.4). Test file: tests/Conductor.Tests/B12_4Tests.cs.
+next: C3 — Events + metrics + budget + recovery (LiveMetrics wiring, Rollback event, mid-session control feedback, McpCallFinished, budget persistence, orphaned resume hardening, Ctrl+C test).
+followups: FU-B2-1/3, FU-B3-3/4/5, FU-B0-6 remain OPEN (scheduled C3).
+evidence: docs/baton/evidence/C2-gate.txt (480 tests, 10 C2). Test file: tests/Conductor.Tests/C2AsyncEngineTests.cs.
+B12.4 QA: verified DONE — 10 tests green, FollowupParser + RunFollowupFixLanes wired in Orchestrator, evidence artifact authentic.
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -97,9 +98,9 @@ never silent renumbering.
 | B12.1 | Tier A read-only analysis lanes (arch/design/qa/research, scratch cwd, artifacts feed prompts+handover) | DONE | 168920d | docs/baton/evidence/B12.1-gate.txt |
 | B12.2 | Worker pool + concurrency cap + brain scheduling (opt-in per task-type) | DONE | d659ec6 | docs/baton/evidence/B12.2-gate.txt |
 | B12.3 | Tier B isolated-worktree mutating lanes → full-battery MERGE GATE before acceptance | DONE | ebc8ab8 | docs/baton/evidence/B12.3-gate.txt |
-| B12.4 | fix-lanes consume .conductor/followups.md (blend-in debt fixing) | DONE | <commit> | `docs/baton/evidence/B12.4-gate.txt` |
-| C1 | B12.4 — Fix-lanes consume followups.md | DONE | <commit> | Same as B12.4 |
-| C2 | Async engine + integration harness (MA0045, MA0002, CT, harness) | TODO | — | `docs/baton/evidence/C2-gate.txt` |
+| B12.4 | fix-lanes consume .conductor/followups.md (blend-in debt fixing) | DONE | 1706c45 | `docs/baton/evidence/B12.4-gate.txt` |
+| C1 | B12.4 — Fix-lanes consume followups.md | DONE | 1706c45 | Same as B12.4 |
+| C2 | Async engine + integration harness (MA0045, MA0002, CT, harness) | DONE | 633be3f | `docs/baton/evidence/C2-gate.txt` |
 | C3 | Events + metrics + budget + recovery (LiveMetrics, rollback, McpCallFinished, Ctrl+C) | TODO | — | `docs/baton/evidence/C3-gate.txt` |
 | C4 | Small debt sweep (12 items: fake-agent, smokes, persona, Telegram, etc.) | TODO | — | `docs/baton/evidence/C4-gate.txt` |
 | C5 | R1 — TUI + CLI audit (--dry-run preview, every surface traced to code+docs) | TODO | — | `docs/qa-reports/CONDUCTOR-AUDIT-R1.md` |
