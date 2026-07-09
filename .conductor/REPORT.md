@@ -1,12 +1,11 @@
 ﻿# Conductor — Conductor-Era3 run report
 
-_Updated 2026-07-09 04:44 UTC · branch `feat/era-v3` · HEAD `bd28ac5`_
+_Updated 2026-07-09 04:45 UTC · branch `feat/era-v3` · HEAD `62ec262`_
 
 **Status:** Idle — plan complete EXCEPT skipped stages: C5
-**Stage:** D1 — conductor status — LLM-powered status report · attempts used 0
+**Stage:** D1 — conductor status — LLM-powered status report · attempts used 1
 **Checkpoints:** 1/13 done · **Sessions run:** 78 · **Cost:** $3.8809 · **Tokens:** 3,317,135 in / 1,089,604 out / 575,724 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1, C2, C3, C4, C6, C7, C8
-**Pending:** full-battery phase gate for D1
 **⚠ Skipped stages (need human review):** C5
 
 ## Stage progress
@@ -101,7 +100,27 @@ _Updated 2026-07-09 04:44 UTC · branch `feat/era-v3` · HEAD `bd28ac5`_
 
 ## Last gate run
 
-build:OK
+build:OK · tests:FAIL
+
+<details><summary>tests — exit 1</summary>
+
+```
+Test run for C:\Code\conductor-baton\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+[xUnit.net 00:00:08.39]     Conductor.Tests.B11_1CrossPlatformShellTests.RunShell_Bash_StderrCaptured [FAIL]
+  Failed Conductor.Tests.B11_1CrossPlatformShellTests.RunShell_Bash_StderrCaptured [5 s]
+  Error Message:
+   Assert.Contains() Failure: Sub-string not found
+String:    ""
+Not found: "stderr-message"
+  Stack Trace:
+     at Conductor.Tests.B11_1CrossPlatformShellTests.RunShell_Bash_StderrCaptured() in C:\Code\conductor-baton\tests\Conductor.Tests\B11_1Tests.cs:line 58
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+Failed!  - Failed:     1, Passed:   509, Skipped:     0, Total:   510, Duration: 29 s - Conductor.Tests.dll (net10.0)
+```
+</details>
 
 ## Last session result
 
