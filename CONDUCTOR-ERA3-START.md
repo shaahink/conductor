@@ -28,7 +28,7 @@ trap: O2 QA passed — evidence present, claims verified against fresh artifacts
 | D4 | Mid-session control feedback | DONE | f40a974 | docs/era3/evidence/D4/ |
 | O1 | Structured log + conductor log --query | DONE | be216a4 | docs/era3/evidence/O1/ |
 | O2 | Budget intelligence + network health gate | DONE | 2f4d103 | docs/era3/evidence/O2/ |
-| O3 | Cost overhead split | DONE | <commit> | docs/era3/evidence/O3/ |
+| O3 | Cost overhead split | DONE | 419fb9a | docs/era3/evidence/O3/ |
 | P1 | Dynamic plan reconfiguration | TODO | — | — |
 | P2 | QA parallelization | TODO | — | — |
 | P3 | Stronger advisor — structured verdicts | TODO | — | — |
