@@ -116,6 +116,12 @@ public sealed class PlanConfig
         return cfg;
     }
 
+    public void Save()
+    {
+        var json = JsonSerializer.Serialize(this, JsonOpts);
+        File.WriteAllText(PlanFilePath, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+    }
+
     private void Validate()
     {
         var errors = CollectErrors();

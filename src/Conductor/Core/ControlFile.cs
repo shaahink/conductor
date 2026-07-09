@@ -5,7 +5,7 @@ namespace Conductor.Core;
 /// <summary>Parsed form of a <c>control.json</c> drop-file (written by the CLI verbs, consumed by the
 /// running orchestrator). Kept pure/side-effect-free so the flag handling — including nullable
 /// <c>confirmed</c>/<c>force</c> serialised as JSON null by non-destructive commands — is unit-tested.</summary>
-public readonly record struct ControlCommand(ControlAction? Action, bool Confirmed, string? IntentId, string? StageId, bool Force);
+public readonly record struct ControlCommand(ControlAction? Action, bool Confirmed, string? IntentId, string? StageId, bool Force, string? Value);
 
 public static class ControlFile
 {
@@ -31,12 +31,14 @@ public static class ControlFile
             "rollback" => ControlAction.Rollback,
             "pause-after-stage" => ControlAction.PauseAfterStage,
             "goto" => ControlAction.Goto,
+            "toggle-heartbeat" => ControlAction.ToggleHeartbeat,
             _ => (ControlAction?)null,
         };
         var confirmed = root.TryGetProperty("confirmed", out var cf) && cf.ValueKind == JsonValueKind.True;
         var force = root.TryGetProperty("force", out var ff) && ff.ValueKind == JsonValueKind.True;
         var intentId = root.TryGetProperty("intentId", out var ii) && ii.ValueKind == JsonValueKind.String ? ii.GetString() : null;
         var stageId = root.TryGetProperty("stageId", out var si) && si.ValueKind == JsonValueKind.String ? si.GetString() : null;
-        return new ControlCommand(action, confirmed, intentId, stageId, force);
+        var value = root.TryGetProperty("value", out var val) && val.ValueKind == JsonValueKind.String ? val.GetString() : null;
+        return new ControlCommand(action, confirmed, intentId, stageId, force, value);
     }
 }

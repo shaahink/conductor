@@ -362,7 +362,7 @@ public static class DashboardRenderer
         // Action bar first so it survives when a short viewport crops the region from the bottom;
         // the confirm prompt and gate summary sit next (both are attention-worthy), and the scrolling
         // log lives below a Rule so the boundary between "controls" and "history" is unambiguous.
-        var rows = new List<IRenderable> { new Markup(ActionBar(st.Snap.Status)) };
+        var rows = new List<IRenderable> { new Markup(ActionBar(st.Snap.Status, st.Snap.HeartbeatOn)) };
         if (st.ConfirmPrompt != null)
             rows.Add(new Markup($"[bold yellow]⚠ {Esc(st.ConfirmPrompt)}[/]"));
         if (!string.IsNullOrEmpty(st.Snap.GateSummary))
@@ -380,7 +380,7 @@ public static class DashboardRenderer
     }
 
     /// <summary>State-machine action bar: only the actions valid in the current status are shown.</summary>
-    public static string ActionBar(string status)
+    public static string ActionBar(string status, bool heartbeatOn)
     {
         var actions = new List<string>();
         void Add(string key, string label) => actions.Add($"[[{key}]] {label}");
@@ -413,8 +413,11 @@ public static class DashboardRenderer
                 Add("Q", "quit"); Add("A", "abort");
                 break;
         }
+        // Heartbeat toggle in the primary action bar when running
+        if (status is "Running" or "VerifyingGates" or "Idle")
+            Add("H", heartbeatOn ? "heartbeat off" : "heartbeat on");
         // Pop-out viewers + inject are available whenever a session/buffer exists.
-        actions.Add("[grey][[T]] think · [[O]] history · [[L]] timeline · [[F8]] replay · [[H]] health · [[N]] confidence · [[B]] repo · [[C]] fold · [[↑↓]] select · [[D]] docs · [[V]] git · [[X]] prompt · [[F]] filter · [[E]] expand · [[I]] inject[/]");
+        actions.Add("[grey][[T]] think · [[O]] history · [[L]] timeline · [[F8]] replay · [[F1]] health · [[N]] confidence · [[B]] repo · [[C]] fold · [[↑↓]] select · [[D]] docs · [[V]] git · [[X]] prompt · [[F]] filter · [[E]] expand · [[I]] inject[/]");
         return "[grey]" + string.Join("  ", actions) + "[/]";
     }
 

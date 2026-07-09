@@ -46,6 +46,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     private string? _curGate;
     private string? _gotoStageId;
     private bool _rollbackForce;
+    private string? _heartbeatToggleValue;
+    private readonly int _originalHeartbeatMinutes = plan.Report.HeartbeatMinutes;
     private bool _sessionApproved;
     private decimal _runCostUsd;
     private long _runTokens;
@@ -1140,6 +1142,26 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     Log($"goto: jumped to stage {tg} {target.Title}");
                 }
                 break;
+            case ControlAction.ToggleHeartbeat:
+            {
+                var toggleVal = _heartbeatToggleValue;
+                _heartbeatToggleValue = null;
+                // TUI key press (no value) auto-flips the current state
+                if (toggleVal == null)
+                    toggleVal = plan.Report.HeartbeatMinutes > 0 ? "off" : "on";
+                if (toggleVal == "off")
+                {
+                    plan.Report.HeartbeatMinutes = 0;
+                    Log("heartbeat: turned OFF");
+                }
+                else if (toggleVal == "on")
+                {
+                    plan.Report.HeartbeatMinutes = _originalHeartbeatMinutes > 0 ? _originalHeartbeatMinutes : 10;
+                    Log($"heartbeat: turned ON (every {plan.Report.HeartbeatMinutes}m)");
+                }
+                try { plan.Save(); } catch (Exception ex) { Log($"heartbeat: failed to persist plan JSON: {ex.Message}"); }
+                break;
+            }
         }
         if (inSession && action is ControlAction.RetryStage or ControlAction.Rollback or ControlAction.PauseAfterStage or ControlAction.Goto or ControlAction.AbortNow)
             Log($"control: {action} received mid-session — re-run after session ends for it to take effect");
@@ -1161,6 +1183,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 _gotoStageId = parsed.StageId;
             if (action == ControlAction.Rollback && parsed.Force)
                 _rollbackForce = true;
+            if (action == ControlAction.ToggleHeartbeat && parsed.Value != null)
+                _heartbeatToggleValue = parsed.Value;
             return action;
         }
         // A malformed/racing control.json is operator input, not an engine fault — ignore this poll

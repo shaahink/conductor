@@ -279,13 +279,24 @@ public static class Reporter
         // (this removes the duplicate "chore(conductor): … — Idle" commits).
         if (old != null && Normalize(old) == Normalize(newContent)) return;
 
-        // B6.3: clean heartbeat — heartbeat writes update REPORT.md on disk but never produce a git
-        // commit. The file is visible locally (and can be served by the TUI/Telegram), but the
-        // feature branch history stays clean (F-4).
-        var isHeartbeat = commitMessage != null && commitMessage.StartsWith("chore(conductor):", StringComparison.Ordinal);
-        if (isHeartbeat) return;
-
+        // D3: amend strategy — heartbeats create/amend a commit instead of being suppressed.
+        // First heartbeat creates a new commit; subsequent heartbeats amend it (git commit --amend --no-edit).
+        // This keeps the feature branch to at most 2 commits per session (1 session-boundary + 1 heartbeat).
         var rel = ".conductor/REPORT.md";
+        var isHeartbeat = commitMessage != null && commitMessage.StartsWith("chore(conductor):", StringComparison.Ordinal);
+        if (isHeartbeat)
+        {
+            var addHb = Git.Exec(plan.Repo, "add", "--force", rel);
+            if (addHb.ExitCode != 0) { log($"heartbeat git add failed: {GateRunner.TailOf(addHb.Output, 3)}"); return; }
+            var prevMsg = Git.Exec(plan.Repo, "log", "--oneline", "-1", "--format=%s");
+            var amendPrev = prevMsg.Output.TrimStart().StartsWith("chore(conductor):", StringComparison.Ordinal);
+            if (amendPrev)
+                Git.Exec(plan.Repo, "commit", "--amend", "--no-edit");
+            else
+                Git.Exec(plan.Repo, "commit", "-m", commitMessage!, "--", rel);
+            return;
+        }
+
         var add = Git.Exec(plan.Repo, "add", "--force", rel);
         if (add.ExitCode != 0) { log($"report git add failed: {GateRunner.TailOf(add.Output, 3)}"); return; }
         var last = state.History.LastOrDefault();

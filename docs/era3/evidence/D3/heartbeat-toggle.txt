@@ -1,0 +1,44 @@
+D3 Heartbeat Runtime Toggle + Amend Strategy — 2026-07-09
+
+Gate Battery:
+  Build: PASS (0 warnings, 0 errors)
+    Command: dotnet build Conductor.slnx --nologo
+  Tests: PASS (510 passed, 0 failed, 0 skipped)
+    Command: dotnet test Conductor.slnx --no-build --nologo
+
+Verification:
+  1. CLI: conductor heartbeat on|off
+     - heartbeat --help: shows description, usage, on|off argument, --plan option
+     - heartbeat on: writes control.json {command:"toggle-heartbeat", value:"on"}
+     - heartbeat off: writes control.json {command:"toggle-heartbeat", value:"off"}
+     - Invalid argument rejected with clear error
+  2. TUI: H key bound to heartbeat toggle
+     - H enqueues ToggleHeartbeat in PollKeys (non-destructive, single-tap)
+     - ActionBar shows "[[H]] heartbeat on" or "[[H]] heartbeat off" in Running/Idle states
+     - Health modal moved to F1 key (both PollKeys and HandlePreviewKey)
+  3. Amend strategy in Reporter.WriteAndPublish
+     - Heartbeat commit messages start with "chore(conductor):"
+     - First heartbeat: git commit -m + git add (new commit)
+     - Subsequent heartbeats: git commit --amend --no-edit (amends previous heartbeat)
+     - No push on heartbeat commits (session-boundary commit pushed as before)
+  4. Plan JSON persistence
+     - PlanConfig.Save() method serializes entire config with WriteIndented
+     - HandleControl ToggleHeartbeat writes plan.Report.HeartbeatMinutes to disk
+     - CLI sets explicit on/off; TUI H key auto-flips current state
+  5. PeriodicTimer: deferred — requires async RunSession (non-gated, cascade risk)
+
+Files changed:
+  - src/Conductor/Core/Progress.cs: +ToggleHeartbeat enum value, +HeartbeatOn snapshot field
+  - src/Conductor/Core/ControlFile.cs: +toggle-heartbeat mapping, +Value field, +value parsing
+  - src/Conductor/Commands/Commands.cs: +HeartbeatCommand class (~30 lines), updated completions
+  - src/Conductor/Program.cs: +HeartbeatCommand registration
+  - src/Conductor/Core/Orchestrator.cs: +HandleControl ToggleHeartbeat, +ReadControlFile value, +_originalHeartbeatMinutes
+  - src/Conductor/Core/Reporter.cs: amend strategy replaces no-commit suppress
+  - src/Conductor/Core/SnapshotBuilder.cs: +HeartbeatOn in Build
+  - src/Conductor/Ui/DashboardRenderer.cs: ActionBar accepts heartbeatOn, H key, F1 health
+  - src/Conductor/Ui/LiveDashboard.cs: H→heartbeat toggle, F1→health modal
+  - src/Conductor/Models/PlanConfig.cs: +Save() method
+  - tests/Conductor.Tests/DashboardRendererTests.cs: updated ActionBar call
+  - tests/Conductor.Tests/B11_2Tests.cs: +heartbeat in expectedVerbs
+
+All 510 tests pass. No regressions.

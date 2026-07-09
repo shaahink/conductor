@@ -1,0 +1,13 @@
+﻿DESCRIPTION:
+Toggle heartbeat on|off at runtime without restarting conductor.
+
+USAGE:
+    conductor heartbeat <on|off> [OPTIONS]
+
+ARGUMENTS:
+    <on|off>    on = enable heartbeat, off = pause heartbeats
+
+OPTIONS:
+    -h, --help           Prints help information                                
+    -p, --plan <PLAN>    Path to the plan JSON. Falls back to CONDUCTOR_PLAN env
+                         var, then ./conductor.plan.json                        

@@ -171,7 +171,7 @@ public sealed class LiveDashboard : IProgressSink
             case ConsoleKey.X: OpenModal(Modal.Prompt); break;
             case ConsoleKey.L: OpenModal(Modal.Timeline); break;
             case ConsoleKey.F8: OpenModal(Modal.Replay); break;
-            case ConsoleKey.H: OpenModal(Modal.Health); break;
+            case ConsoleKey.F1: OpenModal(Modal.Health); break;
             case ConsoleKey.N: OpenModal(Modal.Confidence); break;
             case ConsoleKey.B: OpenModal(Modal.Repo); break;
             case ConsoleKey.U: OpenModal(Modal.Tasks); break;
@@ -316,7 +316,7 @@ public sealed class LiveDashboard : IProgressSink
                     case ConsoleKey.X: OpenModal(Modal.Prompt); break;
                     case ConsoleKey.L: OpenModal(Modal.Timeline); break;
                     case ConsoleKey.F8: OpenModal(Modal.Replay); break;
-                    case ConsoleKey.H: OpenModal(Modal.Health); break;
+                    case ConsoleKey.F1: OpenModal(Modal.Health); break;
                     case ConsoleKey.N: OpenModal(Modal.Confidence); break;
                     case ConsoleKey.B: OpenModal(Modal.Repo); break;
                     case ConsoleKey.U: OpenModal(Modal.Tasks); break;
@@ -345,7 +345,8 @@ public sealed class LiveDashboard : IProgressSink
                           else Log("Press K again to confirm KILL (any other key cancels)", LogSeverity.Waiting); }
                         break;
                     case ConsoleKey.Q: _pendingConfirm = null; _keys.Enqueue(ControlAction.StopAfterSession); break;
-                    case ConsoleKey.T or ConsoleKey.O or ConsoleKey.D or ConsoleKey.V or ConsoleKey.X or ConsoleKey.L or ConsoleKey.F8 or ConsoleKey.H or ConsoleKey.N or ConsoleKey.B or ConsoleKey.I or ConsoleKey.G:
+                    case ConsoleKey.H: _pendingConfirm = null; _keys.Enqueue(ControlAction.ToggleHeartbeat); break;
+                    case ConsoleKey.T or ConsoleKey.O or ConsoleKey.D or ConsoleKey.V or ConsoleKey.X or ConsoleKey.L or ConsoleKey.F8 or ConsoleKey.F1 or ConsoleKey.N or ConsoleKey.B or ConsoleKey.I or ConsoleKey.G:
                         break; // handled above — non-destructive keys don't cancel pending confirm
                     default: _pendingConfirm = null; break; // any unmapped key cancels
                 }

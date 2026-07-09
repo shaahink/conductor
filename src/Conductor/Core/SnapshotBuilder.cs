@@ -26,6 +26,7 @@ public static class SnapshotBuilder
             StageId = state.CurrentStage ?? "-",
             StageTitle = stage?.Title ?? "",
             Persona = stage != null ? plan.ResolvePersona(stage) : null,
+            HeartbeatOn = plan.Report.HeartbeatMinutes > 0,
             DoneCount = track.Checkpoints.Count(c => c.IsDone),
             TotalCount = track.Checkpoints.Count,
             TotalCostUsd = state.TotalCostUsd,

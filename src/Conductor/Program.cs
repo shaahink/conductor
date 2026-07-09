@@ -43,6 +43,8 @@ app.Configure(c =>
         .WithDescription("Park at Paused after the current stage completes.");
     c.AddCommand<GotoCommand>("goto")
         .WithDescription("Jump to a different stage (clears pending state for the old stage).");
+    c.AddCommand<HeartbeatCommand>("heartbeat")
+        .WithDescription("Toggle heartbeat on|off at runtime without restarting conductor.");
     c.AddCommand<TasksCommand>("tasks")
         .WithDescription("Show task graph: sub-tasks per checkpoint from the event log.");
     c.AddCommand<NewPlanCommand>("new-plan")
