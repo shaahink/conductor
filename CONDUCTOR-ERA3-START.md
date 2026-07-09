@@ -4,10 +4,10 @@
 **Branch:** `feat/era-v3`. **Driver:** `C:\Code\conductor\bin\conductor.exe` (stable from master).
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
-last: Plan created. All 14 stages TODO.
-stage: D1 — conductor status (LLM-powered report).
-next: Read FUSION.md Phase 3, then workflow §D1. Add StatusCommand.
-trap: New branch `feat/era-v3` — need to create it from feat/baton HEAD.
+last: D1 complete — LLM-powered conductor status (v 510 tests pass, 0w/0e).
+stage: D1 DONE. Next: D2 — conductor gate (ad-hoc gate re-run).
+next: Read workflow §D2. Add GateCommand.
+trap: None — build green.
 
 ## Baseline Numbers
 
@@ -22,7 +22,7 @@ trap: New branch `feat/era-v3` — need to create it from feat/baton HEAD.
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| D1 | conductor status — LLM-powered status report | TODO | — | — |
+| D1 | conductor status — LLM-powered status report | DONE | 0b747f0 | docs/era3/evidence/D1/ |
 | D2 | conductor gate — ad-hoc gate re-run | TODO | — | — |
 | D3 | Heartbeat runtime toggle + amend strategy | TODO | — | — |
 | D4 | Mid-session control feedback | TODO | — | — |

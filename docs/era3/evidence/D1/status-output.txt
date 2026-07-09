@@ -1,0 +1,37 @@
+﻿Conductor ΓÇö Conductor-Era3 ┬╖ Running ΓÇö plan complete EXCEPT skipped stages: C5
+repo C:/Code/conductor-baton ┬╖ branch feat/era-v3 ┬╖ checkpoints 0/13 ┬╖ sessions 
+78 ┬╖ cost $3.82
+
+Γò¡ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓò«
+Γöé Stage Γöé Title                                        Γöé Done Γöé State  Γöé
+Γö£ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö╝ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö╝ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö╝ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöñ
+Γöé D1    Γöé conductor status ΓÇö LLM-powered status report Γöé 0/1  Γöé active Γöé
+Γöé D2    Γöé conductor gate ΓÇö ad-hoc gate re-run          Γöé 0/1  Γöé todo   Γöé
+Γöé D3    Γöé Heartbeat runtime toggle + amend strategy    Γöé 0/1  Γöé todo   Γöé
+Γöé D4    Γöé Mid-session control feedback                 Γöé 0/1  Γöé todo   Γöé
+Γöé O1    Γöé Structured log + conductor log --query       Γöé 0/1  Γöé todo   Γöé
+Γöé O2    Γöé Budget intelligence + network health gate    Γöé 0/1  Γöé todo   Γöé
+Γöé O3    Γöé Cost overhead split                          Γöé 0/1  Γöé todo   Γöé
+Γöé P1    Γöé Dynamic plan reconfiguration                 Γöé 0/1  Γöé todo   Γöé
+Γöé P2    Γöé QA parallelization                           Γöé 0/1  Γöé todo   Γöé
+Γöé P3    Γöé Stronger advisor ΓÇö structured verdicts       Γöé 0/1  Γöé todo   Γöé
+Γöé P4    Γöé Squash bookkeeping ΓÇö clean git history       Γöé 0/1  Γöé todo   Γöé
+Γöé P5    Γöé Post-hoc audit replay                        Γöé 0/1  Γöé todo   Γöé
+Γöé I1    Γöé MCP task server production wiring            Γöé 0/1  Γöé todo   Γöé
+Γò░ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö┤ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö┤ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö┤ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓò»
+                        recent sessions                        
+Γò¡ΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö¼ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓò«
+Γöé #  Γöé Stage Γöé Kind    Γöé Outcome  Γöé DONE Γöé Commits Γöé Gates    Γöé
+Γö£ΓöÇΓöÇΓöÇΓöÇΓö╝ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö╝ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö╝ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö╝ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö╝ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö╝ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöñ
+Γöé 69 Γöé C2    Γöé Deliver Γöé Advanced Γöé C2   Γöé 2       Γöé build:OK Γöé
+Γöé 70 Γöé C3    Γöé Deliver Γöé Advanced Γöé C3   Γöé 2       Γöé build:OK Γöé
+Γöé 71 Γöé C4    Γöé Deliver Γöé Advanced Γöé C4   Γöé 2       Γöé build:OK Γöé
+Γöé 72 Γöé C5    Γöé Deliver Γöé Progress Γöé      Γöé 1       Γöé build:OK Γöé
+Γöé 73 Γöé C5    Γöé Deliver Γöé Progress Γöé      Γöé 1       Γöé build:OK Γöé
+Γöé 74 Γöé C6    Γöé Deliver Γöé Advanced Γöé C5   Γöé 2       Γöé build:OK Γöé
+Γöé 75 Γöé C6    Γöé Deliver Γöé Advanced Γöé C6   Γöé 2       Γöé build:OK Γöé
+Γöé 76 Γöé C7    Γöé Deliver Γöé Advanced Γöé C7   Γöé 1       Γöé build:OK Γöé
+Γöé 77 Γöé C8    Γöé Deliver Γöé Advanced Γöé C8   Γöé 1       Γöé build:OK Γöé
+Γöé 78 Γöé D1    Γöé Deliver Γöé running  Γöé      Γöé 0       Γöé          Γöé
+Γò░ΓöÇΓöÇΓöÇΓöÇΓö┤ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö┤ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö┤ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö┤ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö┤ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓö┤ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓò»
+LLM analysis skipped (--no-llm).
