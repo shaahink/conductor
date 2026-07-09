@@ -1,10 +1,10 @@
 ﻿# Conductor — Conductor-Debt run report
 
-_Updated 2026-07-09 02:04 UTC · branch `feat/baton` · HEAD `8d66972`_
+_Updated 2026-07-09 02:10 UTC · branch `feat/baton` · HEAD `956277a`_
 
 **Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** C4 — Events + metrics + budget + recovery · attempts used 0
-**Checkpoints:** 69/72 done · **Sessions run:** 71 · **Cost:** $3.5571 · **Tokens:** 2,916,908 in / 1,025,646 out / 521,268 think
+**Stage:** C5 — Small debt sweep (12 items) · attempts used 1 · working ▸ C5
+**Checkpoints:** 69/72 done · **Sessions run:** 72 · **Cost:** $3.5916 · **Tokens:** 2,972,013 in / 1,029,654 out / 526,867 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1, C2, C3, C4
 
 ## Stage progress
@@ -15,7 +15,7 @@ _Updated 2026-07-09 02:04 UTC · branch `feat/baton` · HEAD `8d66972`_
 | C2 | B12.4 — Fix-lanes from followups.md | 1/1 | confirmed ✓ |
 | C3 | Async engine + integration harness | 1/1 | confirmed ✓ |
 | C4 | Events + metrics + budget + recovery | 1/1 | confirmed ✓ |
-| C5 | Small debt sweep (12 items) | 0/1 | todo |
+| C5 | Small debt sweep (12 items) | 0/1 | **← active** |
 | C6 | R1 — TUI + CLI audit | 0/1 | todo |
 | C7 | R2 — Report + Prompts + Agent Context audit | 0/1 | todo |
 | C8 | Final handover + Needs Human Verification checklist | 0/0 | todo |
@@ -24,7 +24,6 @@ _Updated 2026-07-09 02:04 UTC · branch `feat/baton` · HEAD `8d66972`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 42 | B6 | Audit | 1 | 07-08 19:54 | 0:06 | Progress |  | 1 |  | $0.0606 | 87,266/8,743 |
 | 43 | B7 | Deliver | 1 | 07-08 20:00 | 0:19 | Advanced | B7.1 B7.2 B7.3 | 2 | build:OK | $0.0911 | 77,080/28,917 |
 | 44 | B7 | Audit | 1 | 07-08 20:20 | 0:05 | Progress |  | 1 |  | $0.0380 | 52,381/7,163 |
 | 45 | B7 | Fix | 2 | 07-08 20:27 | 0:04 | Interrupted |  | 0 |  |  |  |
@@ -54,12 +53,10 @@ _Updated 2026-07-09 02:04 UTC · branch `feat/baton` · HEAD `8d66972`_
 | 69 | C2 | Deliver | 1 | 07-09 01:08 | 0:19 | Advanced | C2 | 2 | build:OK | $0.1164 | 96,040/26,369 |
 | 70 | C3 | Deliver | 1 | 07-09 01:28 | 0:15 | Advanced | C3 | 2 | build:OK | $0.0771 | 78,611/16,048 |
 | 71 | C4 | Deliver | 1 | 07-09 01:45 | 0:16 | Advanced | C4 | 2 | build:OK | $0.1273 | 125,562/26,254 |
+| 72 | C5 | Deliver | 1 | 07-09 02:04 | 0:06 | Progress |  | 1 | build:OK | $0.0346 | 55,105/4,008 |
 
 ### Commits by session
 
-- **s63 (B11 Audit)** — 2 commit(s):
-  - 75f78bd docs(bB11): audit handover — 5 bugs fixed, 3 followups created, honest weak/deferred inventory
-  - ad3abde fix(bB11): audit — PS completion new-plan/completion cases, pwsh ExecutionPolicy, SafeParseTracker warning
 - **s64 (B12 Deliver)** — 2 commit(s):
   - 2362697 feat(bB12.1): Tier A read-only analysis lanes + artifact wiring
   - e808338 chore(conductor): s64 B12 working ▸B12.1 @ 00:59
@@ -82,6 +79,8 @@ _Updated 2026-07-09 02:04 UTC · branch `feat/baton` · HEAD `8d66972`_
 - **s71 (C4 Deliver)** — 2 commit(s):
   - a2ce6fe chore(conductor): fix C4 commit hash in tracker
   - 8d651d8 fix(debt): C4 — small debt sweep, 12 followups closed
+- **s72 (C5 Deliver)** — 1 commit(s):
+  - 956277a audit: C5 — verified small debt sweep (12 items confirmed resolved), build 0w/0e, 497 tests
 
 ## Phase handovers (audit)
 
@@ -100,20 +99,20 @@ _Updated 2026-07-09 02:04 UTC · branch `feat/baton` · HEAD `8d66972`_
 
 ## Last gate run
 
-build:OK · tests:OK
+build:OK
 
 ## Last session result
 
-> SESSION-RESULT: C4 small debt sweep landed — 12 followups closed: fake-agent renamed (`gatesred` → `no-commits`) with new `true-red` mode, AltScreen headless test, StatusAgent CT threaded, HookConfig timeout validation, ComputeDepth memoized, completion exhaustiveness test, ScriptProvider shape validation, CA1031 resolved, LessonsManager thread-safe, persona divergence test, Telegram callback round-trip. Build 0w/0e, 497 tests pass (4 new). Branch pushed. Next session (C5): R1 TUI+CLI audit per workflow §Session 6 — run `--dry-run` preview, inspect every TUI element, rate ✅/⚠️/❌ and fix any ❌ findings. Items deferred to Human Verification checklist (C8): real-signal AltScreen test, Telegram …
+> SESSION-RESULT: C5 (small debt sweep, 12 items) verified complete — all fixes confirmed in source at `tools/fake-agent.ps1:74-86`, `ScriptProvider.cs:58-69`, `SnapshotBuilder.cs:19-20`, `LiveDashboard.cs:228-236`, `PlanConfig.cs:192-202`, `.editorconfig:35`, `AltScreenTests.cs:61-84`, `B11_2Tests.cs:160-205`, `PromptBuilderTests.cs:135-161`, `B6_1TelegramTests.cs:286-302`, and `LessonsManager.cs:20,37`. FU-B0-5 closed as cosmetic. C4 (session #71) originally delivered this work at `8d651d8`. Build 0w/0e, 497 tests pass, clean working tree, branch pushed at `956277a`. No red. Next: C6 (= tracker row C5) — R1 TUI + CLI audit per workflow §Session 6. Three items deferred to C8 Needs Human Verif…
 
 ## Tracker handoff
 
 ```
-last: session #71 (C4) — small debt sweep (12 items): fake-agent `no-commits` + `true-red` mode, AltScreen headless test, StatusAgent CT, HookConfig validation, ComputeDepth memoize, completion exhaustive test, ScriptProvider shape validation, CA1031 closed, LessonsManager thread-safety, persona divergence test, Telegram callback round-trip.
-stage: C4 DONE. Build 0w/0e. 497 tests pass (4 new: SafetyNet, CompletionExhaustive, PersonaDivergence, CallbackFormat).
+last: session #72 (C5) — verified small debt sweep completed. All 12 items confirmed resolved in source (C4 did the work).
+stage: C5 DONE (verified). C4 delivered the 12-item sweep; this session audited + confirmed against code. Build 0w/0e. 497 tests pass.
 dirty: none.
-next: C5 — R1 TUI + CLI audit (6a-6e: --dry-run preview, inspect every TUI element, rate ✅/⚠️/❌ per workflow §Session 6).
-C3 QA: VERIFIED DONE — all 4 handoff claims confirmed against code + tests.
-followups: FU-B4-2 real-signal test, Telegram real-token integration, battery-collapse real-measurement → Needs Human Verification checklist (C8). FU-B0-5 cosmetic smoke cleanup noted.
-evidence: docs/baton/evidence/C4-gate.txt (497 tests, 4 new).
+next: C6 (= tracker C5) — R1 TUI + CLI audit (--dry-run preview, inspect every TUI element, rate ✅/⚠️/❌ per workflow §Session 6).
+C4 QA: skip (C4 ended advanced, all gates green; AGENTS.md protocol).
+followups→C8: FU-B4-2 real-signal, Telegram real-token, battery-collapse real-measurement.
+evidence: docs/baton/evidence/C5-gate.txt (12-item audit, build+test green).
 ```
