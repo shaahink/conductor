@@ -27,7 +27,7 @@ trap: O1 QA passed — evidence present, log command works.
 | D3 | Heartbeat runtime toggle + amend strategy | DONE | 79a96a8 | docs/era3/evidence/D3/ |
 | D4 | Mid-session control feedback | DONE | f40a974 | docs/era3/evidence/D4/ |
 | O1 | Structured log + conductor log --query | DONE | be216a4 | docs/era3/evidence/O1/ |
-| O2 | Budget intelligence + network health gate | DONE | <commit> | docs/era3/evidence/O2/ |
+| O2 | Budget intelligence + network health gate | DONE | 2f4d103 | docs/era3/evidence/O2/ |
 | O3 | Cost overhead split | TODO | — | — |
 | P1 | Dynamic plan reconfiguration | TODO | — | — |
 | P2 | QA parallelization | TODO | — | — |
