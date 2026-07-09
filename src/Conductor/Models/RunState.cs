@@ -130,6 +130,13 @@ public sealed class RunState
     public string? LastGreenGateSig { get; set; }
     public DateTime? UpdatedUtc { get; set; }
 
+    /// <summary>Cumulative run cost accrued since the last budget reset (C3). Survives crashes so a run
+    /// killed mid-accrual before it parks still counts toward <c>maxRunCostUsd</c> on restart.</summary>
+    public decimal PerRunCostUsd { get; set; }
+    /// <summary>Cumulative run tokens accrued since the last budget reset (C3). Same crash-survival
+    /// semantics as <see cref="PerRunCostUsd"/>.</summary>
+    public long PerRunTokens { get; set; }
+
     public decimal TotalCostUsd => History.Sum(h => h.CostUsd ?? 0m);
     public long TotalTokensInput => History.Sum(h => h.TokensInput ?? 0);
     public long TotalTokensOutput => History.Sum(h => h.TokensOutput ?? 0);

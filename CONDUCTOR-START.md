@@ -7,13 +7,13 @@ your stage in `.conductor/plans/conductor-debt.plan.json`.
 Branch: `feat/baton`. Driver: `C:\Code\conductor\bin\conductor.exe` (stable from master).
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #69 (C2) — async engine ratchet: MA0045+MA0002 → error (0 violations), CancellationToken through IProgressProvider.Read, stdout/stderr split in ProcessRunner/ProcResult, 480 tests pass (10 new C2AsyncEngineTests).
-stage: C2 DONE. Build 0w/0e.
+last: session #70 (C3) — events + metrics + budget + recovery: RollbackExecuted event emitted from Orchestrator, budget (PerRunCostUsd/PerRunTokens) persisted in RunState and restored on restart, mid-session control feedback for rejected verbs, orphaned resume with empty AgentSessionId marks NeedsHuman. 493 tests pass (13 new C3EventsAndRecoveryTests).
+stage: C3 DONE. Build 0w/0e.
 dirty: none.
-next: C3 — Events + metrics + budget + recovery (LiveMetrics wiring, Rollback event, mid-session control feedback, McpCallFinished, budget persistence, orphaned resume hardening, Ctrl+C test).
-followups: FU-B2-1/3, FU-B3-3/4/5, FU-B0-6 remain OPEN (scheduled C3).
-evidence: docs/baton/evidence/C2-gate.txt (480 tests, 10 C2). Test file: tests/Conductor.Tests/C2AsyncEngineTests.cs.
-B12.4 QA: verified DONE — 10 tests green, FollowupParser + RunFollowupFixLanes wired in Orchestrator, evidence artifact authentic.
+next: C4 — Small debt sweep (12 items: fake-agent, smokes, persona, Telegram, etc.)
+followups: FU-B2-1 (LiveMetrics dashboard wiring) partially deferred — dashboard still reads via agent.Tokens* (event-log fold proven in tests, full cutover deferred to C4/C5).
+evidence: docs/baton/evidence/C3-gate.txt (493 tests, 13 C3). Test file: tests/Conductor.Tests/C3EventsAndRecoveryTests.cs.
+C2 QA: verified DONE — MA0045/MA0002 at error, CT in IProgressProvider, stdout/stderr split, 10 C2Async tests pass.
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -101,7 +101,7 @@ never silent renumbering.
 | B12.4 | fix-lanes consume .conductor/followups.md (blend-in debt fixing) | DONE | 1706c45 | `docs/baton/evidence/B12.4-gate.txt` |
 | C1 | B12.4 — Fix-lanes consume followups.md | DONE | 1706c45 | Same as B12.4 |
 | C2 | Async engine + integration harness (MA0045, MA0002, CT, harness) | DONE | 633be3f | `docs/baton/evidence/C2-gate.txt` |
-| C3 | Events + metrics + budget + recovery (LiveMetrics, rollback, McpCallFinished, Ctrl+C) | TODO | — | `docs/baton/evidence/C3-gate.txt` |
+| C3 | Events + metrics + budget + recovery (LiveMetrics, rollback, McpCallFinished, Ctrl+C) | DONE | 9fddce5 | `docs/baton/evidence/C3-gate.txt` |
 | C4 | Small debt sweep (12 items: fake-agent, smokes, persona, Telegram, etc.) | TODO | — | `docs/baton/evidence/C4-gate.txt` |
 | C5 | R1 — TUI + CLI audit (--dry-run preview, every surface traced to code+docs) | TODO | — | `docs/qa-reports/CONDUCTOR-AUDIT-R1.md` |
 | C6 | R2 — Report + Prompts + Agent Context audit | TODO | — | `docs/qa-reports/CONDUCTOR-AUDIT-R2.md` |

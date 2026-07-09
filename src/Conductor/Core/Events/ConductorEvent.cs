@@ -37,6 +37,7 @@ namespace Conductor.Core.Events;
         [JsonDerivedType(typeof(MutatingLaneStarted),   "mutatingLaneStarted")]
         [JsonDerivedType(typeof(MutatingLaneFinished),  "mutatingLaneFinished")]
         [JsonDerivedType(typeof(MergeGateVerdict),      "mergeGateVerdict")]
+        [JsonDerivedType(typeof(RollbackExecuted),     "rollbackExecuted")]
 public abstract record ConductorEvent
 {
     /// <summary>Monotonic 1-based ordinal within the log (continues across restarts). Stamped by
@@ -290,6 +291,19 @@ public sealed record MergeGateVerdict : ConductorEvent
     public int FailedCount { get; init; }
     public string? FailureSummary { get; init; }
     public long DurationMs { get; init; }
+}
+
+/// <summary>
+/// A rollback was executed: the orchestrator reset the working tree to a prior HEAD (B5.1 / C3).
+/// Emitted after `git reset --hard` succeeds so the event-log timeline/replay can reconstruct the
+/// rollback — the report and Telegram will surface it alongside every other destructive action.
+/// </summary>
+public sealed record RollbackExecuted : ConductorEvent
+{
+    public required string StageId { get; init; }
+    public required string FromSha { get; init; }
+    public required string ToSha { get; init; }
+    public bool Forced { get; init; }
 }
 
 /// <summary>Source-generated (de)serialisation for the event log — NDJSON, compact, camelCase, string

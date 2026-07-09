@@ -72,8 +72,10 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             WarnOnBranchPattern();
 
             var sessionsThisRun = 0;
-            _runCostUsd = 0;
-            _runTokens = 0;
+            _runCostUsd = state.PerRunCostUsd;
+            _runTokens = state.PerRunTokens;
+            if (_runCostUsd > 0 || _runTokens > 0)
+                Log($"restored budget: ${_runCostUsd:0.00} / {_runTokens / 1000.0:0.#}k tokens (from prior process)");
             while (!ct.IsCancellationRequested)
             {
                 HandleControl();
@@ -224,6 +226,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
                 _runCostUsd += rec.CostUsd ?? 0;
                 _runTokens += (rec.TokensInput ?? 0) + (rec.TokensOutput ?? 0) + (rec.TokensReasoning ?? 0);
+                state.PerRunCostUsd = _runCostUsd;
+                state.PerRunTokens = _runTokens;
                 EmitSessionFinished(rec);
 
                 if (CheckBudgetCap()) continue; // parked at AwaitingOwner
@@ -779,6 +783,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             case ApprovalOutcome.ResetBudgetAndResume:
                 _runCostUsd = 0;
                 _runTokens = 0;
+                state.PerRunCostUsd = 0;
+                state.PerRunTokens = 0;
                 state.AwaitingOwnerReason = null;
                 state.Status = RunStatus.Idle;
                 if (stageId != null) events.Emit(new OwnerApprovalGranted { StageId = stageId });
@@ -1097,8 +1103,10 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     Log($"rollback refused: working tree is dirty — {Git.DirtySummary(plan.Repo)}. Re-run with --force to discard and reset.");
                     break;
                 }
+                var fromSha = Git.Head(plan.Repo);
                 Log($"rollback: resetting to {Short(sha)} (stage {state.CurrentStage} start){(force && Git.IsDirty(plan.Repo) ? " — discarding dirty working tree (--force)" : "")}");
                 Git.Exec(plan.Repo, "reset", "--hard", sha);
+                events.Emit(new RollbackExecuted { StageId = state.CurrentStage ?? "?", FromSha = fromSha, ToSha = sha, Forced = force });
                 state.Status = RunStatus.Idle;
                 Save();
                 break;
@@ -1133,6 +1141,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 }
                 break;
         }
+        if (inSession && action is ControlAction.RetryStage or ControlAction.Rollback or ControlAction.PauseAfterStage or ControlAction.Goto or ControlAction.AbortNow)
+            Log($"control: {action} received mid-session — re-run after session ends for it to take effect");
         return action;
     }
 
@@ -1202,22 +1212,35 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     }
                     else
                     {
-                        rec = new SessionRecord
+                        if (string.IsNullOrEmpty(interrupted.AgentSessionId))
                         {
-                            Number = interrupted.Number,
-                            Stage = interrupted.StageId,
-                            Kind = SessionKind.Deliver,
-                            Attempt = 1,
-                            StartedUtc = DateTime.UtcNow,
-                            ClaudeSessionId = interrupted.AgentSessionId,
-                            Outcome = SessionOutcome.Interrupted,
-                        };
-                        state.History.Add(rec);
-                        QueueResume(rec, "event log shows interrupted session — recovering from orphaned SessionStarted");
+                            Log($"recovered from event log: session #{interrupted.Number} has no AgentSessionId — marking needs-attention (cannot resume without a session id)");
+                            state.Status = RunStatus.NeedsHuman;
+                            state.AttentionReason = $"Orphaned session #{interrupted.Number} in events.jsonl has no AgentSessionId — manual review needed.";
+                            Save();
+                        }
+                        else
+                        {
+                            rec = new SessionRecord
+                            {
+                                Number = interrupted.Number,
+                                Stage = interrupted.StageId,
+                                Kind = SessionKind.Deliver,
+                                Attempt = 1,
+                                StartedUtc = DateTime.UtcNow,
+                                ClaudeSessionId = interrupted.AgentSessionId,
+                                Outcome = SessionOutcome.Interrupted,
+                            };
+                            state.History.Add(rec);
+                            QueueResume(rec, "event log shows interrupted session — recovering from orphaned SessionStarted");
+                        }
                     }
-                    Log($"recovered from event log: session #{interrupted.Number} was interrupted — will resume");
-                    state.Status = RunStatus.Idle;
-                    Save();
+                    if (state.Status != RunStatus.NeedsHuman)
+                    {
+                        Log($"recovered from event log: session #{interrupted.Number} was interrupted — will resume");
+                        state.Status = RunStatus.Idle;
+                        Save();
+                    }
                 }
 
                 // B9.2: rebuild decomposed-checkpoints set from TaskAdded events so we don't
