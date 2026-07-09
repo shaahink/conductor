@@ -22,7 +22,7 @@ trap: None — build + 510 tests green.
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| D1 | conductor status — LLM-powered status report | DONE (verified) | 79b51b0 | docs/era3/evidence/D1/ |
+| D1 | conductor status — LLM-powered status report | DONE (verified) | 8b9ec2b | docs/era3/evidence/D1/ |
 | D2 | conductor gate — ad-hoc gate re-run | TODO | — | — |
 | D3 | Heartbeat runtime toggle + amend strategy | TODO | — | — |
 | D4 | Mid-session control feedback | TODO | — | — |
