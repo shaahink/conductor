@@ -1,32 +1,11 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-09 00:34 UTC · branch `feat/baton` · HEAD `8913e57`_
+_Updated 2026-07-09 00:39 UTC · branch `feat/baton` · HEAD `60f9670`_
 
-**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B12 — Controlled parallelism · attempts used 0 · working ▸ B12.3
-**Checkpoints:** 63/65 done · **Sessions run:** 66 · **Cost:** $2.9292 · **Tokens:** 2,215,544 in / 910,670 out / 433,106 think
+**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B12 — Controlled parallelism · attempts used 0 · working ▸ B12.4
+**Checkpoints:** 64/65 done · **Sessions run:** 66 · **Cost:** $3.0393 · **Tokens:** 2,307,220 in / 936,086 out / 459,107 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11
-
-## Latest activity (live)
-
-_Session #66 (Deliver) · running 20m · last output 76s ago · $0.0812_
-
-**Thinking:**
-> One more to fix. Also need to check if `echo DONE > marker.txt` needs its space preserved.
-> Good. Now let me run the good diff test again.
-> The good diff test passes now! The quoting was the issue. Now let me run all B12_3 tests except the problematic ones (merge conflict, timeout, cancellation):
-
-**Recent actions:**
-- `01:32:01` · Now update all other tests with similar quote issues:
-- `01:32:11` » bash rg -n "git commit -m" C:\Code\conductor-baton\tests\Conductor.Tests\B12_3Tests.cs
-- `01:32:19` » grep git commit -m
-- `01:32:27` » edit tests\Conductor.Tests\B12_3Tests.cs
-- `01:32:35` » edit tests\Conductor.Tests\B12_3Tests.cs
-- `01:32:50` » edit tests\Conductor.Tests\B12_3Tests.cs
-- `01:32:57` » grep \\\"feat
-- `01:33:07` » edit tests\Conductor.Tests\B12_3Tests.cs
-- `01:33:22` » bash dotnet test Conductor.slnx --nologo --filter "FullyQualifiedName~MutatingLane_GoodDiff_MergeAccepted" -v normal 2>&1
-- `01:33:29` · Good diff test passes! The quoting fix worked. Now let me run all B12_3 tests.
 
 ## Stage progress
 
@@ -44,7 +23,7 @@ _Session #66 (Deliver) · running 20m · last output 76s ago · $0.0812_
 | B9 | Task graph + smart session management | 5/5 | confirmed ✓ |
 | B10 | Advanced orchestration | 4/4 | confirmed ✓ |
 | B11 | Close-out + Shamshir owner-gated proof | 4/4 | confirmed ✓ |
-| B12 | Controlled parallelism | 2/4 | **← active** |
+| B12 | Controlled parallelism | 3/4 | **← active** |
 
 ## Sessions
 
@@ -79,13 +58,10 @@ _Session #66 (Deliver) · running 20m · last output 76s ago · $0.0812_
 | 63 | B11 | Audit | 1 | 07-08 23:41 | 0:07 | Progress |  | 2 |  | $0.0558 | 59,800/11,762 |
 | 64 | B12 | Deliver | 1 | 07-08 23:49 | 0:13 | Advanced | B12.1 | 2 | build:OK | $0.0744 | 78,710/19,057 |
 | 65 | B12 | Deliver | 1 | 07-09 00:02 | 0:11 | Advanced | B12.2 | 2 | build:OK | $0.0583 | 62,839/15,593 |
-| 66 | B12 | Deliver | 1 | 07-09 00:14 | … | running |  | 0 |  |  |  |
+| 66 | B12 | Deliver | 1 | 07-09 00:14 | 0:24 | Advanced | B12.3 | 4 | build:OK | $0.1101 | 91,676/25,416 |
 
 ### Commits by session
 
-- **s58 (B10 Deliver)** — 2 commit(s):
-  - 0f9d2a0 chore(bB10.1): fill commit hash in tracker row
-  - 9750665 feat(bB10.1): dependsOn graph + ready-stage ordering with cycle detection
 - **s59 (B10 Deliver)** — 6 commit(s):
   - 083ff33 chore(bB10): mark B10.2-B10.4 DONE — B10 stage complete
   - ec07197 chore(conductor): s59 B10 working ▸B10.2 @ 00:01
@@ -114,6 +90,11 @@ _Session #66 (Deliver) · running 20m · last output 76s ago · $0.0812_
 - **s65 (B12 Deliver)** — 2 commit(s):
   - e7d3eeb feat(bB12.2): LaneWorkerPool + concurrency cap + lane lifecycle events
   - f53771e chore(conductor): s65 B12 working ▸B12.2 @ 01:12
+- **s66 (B12 Deliver)** — 4 commit(s):
+  - 60f9670 chore: fix B12.3 commit hash in tracker
+  - ebc8ab8 feat(bB12.3): Tier B isolated-worktree mutating lanes + merge gate
+  - 60a6648 chore(conductor): s66 B12 working ▸B12.3 @ 01:34
+  - 8913e57 chore(conductor): s66 B12 working ▸B12.3 @ 01:24
 
 ## Phase handovers (audit)
 
@@ -136,16 +117,16 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: B12.2 landed — LaneWorkerPool (SemaphoreSlim-bounded pool with configurable concurrency cap from LimitsConfig.MaxConcurrentLanes, FIFO scheduling), LaneStarted/LaneFinished lifecycle events on the event-sourced spine, and Orchestrator integration replacing B12.1's ad-hoc Task.Run with the pool. 448 tests pass 0w/0e, 7 new tests proving cap enforcement (2 concurrent max, cap-of-1 sequential), lifecycle event emission, incremental drain, and error/timeout safety. B12.3 (Tier B isolated-worktree mutating lanes + merge gate) is next. Hard parts: the Orchestrator's synchronous `Run()` method prevented clean async in `CollectLaneArtifacts` (used GetAwaiter().GetResult() matching th…
+> SESSION-RESULT: B12.3 landed — Tier B isolated-worktree mutating lanes with full merge gate. Delivered `MutatingLaneConfig` model, `Git` worktree/branch helpers, `MutatingLaneRunner` (worktree → agent → staging merge gate → ff-merge on pass / reject on fail), 3 new event types, and 12 tests. Build 0w/0e, 460 tests pass. Commit `60f9670` pushed. The merge gate creates a staging worktree from the base branch, merges the lane's scratch branch, runs the lane-selected or plan-level gates, and only fast-forward merges into primary if green. Next session should tackle B12.4 (fix-lanes consuming `.conductor/followups.md`). Hard part this session: debugging the `cmd /c` quoting issue (escaped quotes …
 
 ## Tracker handoff
 
 ```
-last: session #66 (B12.2) — LaneWorkerPool (bounded pool, SemaphoreSlim concurrency cap, FIFO scheduling), LaneStarted/LaneFinished events, MaxConcurrentLanes config (default 2), Orchestrator integration replaces ad-hoc Task.Run.
-stage: B12.2 DONE. B12.3 (Tier B isolated-worktree mutating lanes + merge gate) is next.
+last: session #67 (B12.3) — Tier B isolated-worktree mutating lanes: MutatingLaneConfig model, Git.WorktreeAdd/Remove/MergeBranch/DeleteBranch, MutatingLaneRunner (worktree → agent → staging merge gate → ff-merge on pass / reject on fail), 3 new ConductorEvent types (MutatingLaneStarted/Finished, MergeGateVerdict), 12 tests green.
+stage: B12.3 DONE. B12.4 (fix-lanes consume followups.md) is next.
 dirty: none.
-next: B12.3 or B12 fix-lanes (FU-B11-1 completion exhaustiveness test, FU-B10-1 integration harness, FU-B10-2 battery-collapse measurement).
-QA-B12.1: verified — 9/9 B12.1 tests pass, build 0w/0e, end-to-end integration verified. QA-PASS.
+next: B12.4 — fix-lanes that consume .conductor/followups.md as Tier-B lanes.
+QA-B12.3: self-verified — build 0w/0e, 460 tests pass, 12 B12.3 tests (good merge accepted, bad diff rejected, worktree isolation, lane-specific gates, cancellation, cleanup).
 followups: FU-B11-1/2/3, FU-B10-1/2, FU-B0-4/5/6/7 remain OPEN.
-evidence: docs/baton/evidence/B12.2-gate.txt (7 tests, 448 total pass), test file tests/Conductor.Tests/B12_2Tests.cs.
+evidence: docs/baton/evidence/B12.3-gate.txt (12 tests, 460 total pass), test file tests/Conductor.Tests/B12_3Tests.cs.
 ```
