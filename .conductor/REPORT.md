@@ -1,12 +1,11 @@
 ﻿# Conductor — Conductor-Era3 run report
 
-_Updated 2026-07-09 06:36 UTC · branch `feat/era-v3` · HEAD `e877bb0`_
+_Updated 2026-07-09 06:37 UTC · branch `feat/era-v3` · HEAD `6cd3cf0`_
 
 **Status:** Idle — plan complete EXCEPT skipped stages: C5
 **Stage:** O3 — Cost overhead split · attempts used 0
 **Checkpoints:** 7/13 done · **Sessions run:** 85 · **Cost:** $4.3070 · **Tokens:** 3,742,897 in / 1,187,247 out / 632,296 think
-**Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1, C2, C3, C4, C6, C7, C8, D1, D2, D3, D4, O1, O2
-**Pending:** full-battery phase gate for O3
+**Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1, C2, C3, C4, C6, C7, C8, D1, D2, D3, D4, O1, O2, O3
 **⚠ Skipped stages (need human review):** C5
 
 ## Stage progress
@@ -19,7 +18,7 @@ _Updated 2026-07-09 06:36 UTC · branch `feat/era-v3` · HEAD `e877bb0`_
 | D4 | Mid-session control feedback | 1/1 | confirmed ✓ |
 | O1 | Structured log + conductor log --query | 1/1 | confirmed ✓ |
 | O2 | Budget intelligence + network health gate | 1/1 | confirmed ✓ |
-| O3 | Cost overhead split | 1/1 | gating… |
+| O3 | Cost overhead split | 1/1 | confirmed ✓ |
 | P1 | Dynamic plan reconfiguration | 0/1 | todo |
 | P2 | QA parallelization | 0/1 | todo |
 | P3 | Stronger advisor — structured verdicts | 0/1 | todo |
@@ -103,7 +102,7 @@ _Updated 2026-07-09 06:36 UTC · branch `feat/era-v3` · HEAD `e877bb0`_
 
 ## Last gate run
 
-build:OK
+build:OK · tests:OK
 
 ## Last session result
 
