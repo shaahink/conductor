@@ -37,9 +37,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     private readonly List<(string Kind, string Text, DateTime Utc)> _activity = new();
     private readonly HashSet<string> _decomposedCheckpoints = new(StringComparer.Ordinal);
     private bool _softBreakSignalled;
-    // B12.1: active analysis lane tasks (concurrently running in scratch temp dirs)
-    private readonly List<Task<LaneResult>> _activeLanes = new();
-    private readonly List<LaneResult> _completedLaneResults = new();
+    // B12.2: bounded worker pool for Tier A analysis lanes (replaces ad-hoc Task.Run of B12.1)
+    private LaneWorkerPool? _lanePool;
 
     // Correlation state attached to every structured log line (B2.5): runId + stage + session number
     // come from RunState; the gate marker is set while a battery runs.
@@ -1701,9 +1700,10 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
     // ---------------------------------------------------------------- B12.1: analysis lanes
 
-    /// <summary>B12.1: Start read-only analysis lanes that are configured for the current stage.
-    /// Each lane runs in a scratch temp directory so it can never write the working tree.
-    /// Lanes run concurrently with the main session.</summary>
+    /// <summary>B12.2: Enqueue read-only analysis lanes for the current stage into the bounded
+    /// worker pool. The pool respects <see cref="LimitsConfig.MaxConcurrentLanes"/> and emits
+    /// <see cref="LaneStarted"/> / <see cref="LaneFinished"/> lifecycle events.
+    /// Each lane runs in a scratch temp directory so it can never write the working tree.</summary>
     private void StartAnalysisLanes(StageConfig stage, string? handoff, CancellationToken ct)
     {
         if (plan.AnalysisLanes.Count == 0) return;
@@ -1715,45 +1715,31 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
         if (triggered.Count == 0) return;
 
+        _lanePool ??= new LaneWorkerPool(plan.Limits.MaxConcurrentLanes, events, Log);
+
         var gitSummary = GitView.Summary(plan.Repo);
         var resolvedAgent = plan.ResolveAgent(stage);
 
         foreach (var lane in triggered)
         {
             var capturedLane = lane;
-            var task = Task.Run(async () =>
-            {
-                var result = await LaneRunner.RunAsync(capturedLane, resolvedAgent,
+            _lanePool.Enqueue(new LaneWorkItem(
+                lane.Id, lane.Kind, stage.Id,
+                ct2 => LaneRunner.RunAsync(capturedLane, resolvedAgent,
                     plan.Name, stage.Id, stage.Title, plan.StateDir,
-                    handoff, gitSummary, ct).ConfigureAwait(false);
-                return result;
-            }, ct);
-            _activeLanes.Add(task);
-            Log($"analysis lane '{lane.Id}' ({lane.Kind}) started for stage {stage.Id}");
+                    handoff, gitSummary, ct2)), ct);
         }
     }
 
-    /// <summary>B12.1: Poll for completed analysis lanes in the session polling loop.</summary>
+    /// <summary>B12.2: Drain any lanes that completed since the last poll so the session prompt
+    /// can optionally be updated with fresh analysis results.</summary>
     private void PollLaneCompletion()
     {
-        if (_activeLanes.Count == 0) return;
+        if (_lanePool == null || _lanePool.CompletedCount == 0) return;
 
-        for (var i = _activeLanes.Count - 1; i >= 0; i--)
+        var results = _lanePool.DrainCompleted();
+        foreach (var result in results)
         {
-            if (!_activeLanes[i].IsCompleted) continue;
-
-            LaneResult result;
-            try
-            {
-                result = _activeLanes[i].Result;
-            }
-            catch (Exception ex)
-            {
-                result = new LaneResult { LaneId = "unknown", Error = $"lane exception: {ex.Message}" };
-            }
-            _activeLanes.RemoveAt(i);
-            _completedLaneResults.Add(result);
-
             if (result.IsSuccess)
                 Log($"analysis lane '{result.LaneId}' completed ({result.ElapsedMs}ms)" +
                     (result.ArtifactPath != null ? $" → {Path.GetFileName(result.ArtifactPath)}" : ""));
@@ -1762,48 +1748,20 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         }
     }
 
-    /// <summary>B12.1: After the session ends, wait briefly for any remaining lanes, then
-    /// collect their artifacts. Already-completed lanes (from <see cref="PollLaneCompletion"/>)
-    /// are left as-is.</summary>
+    /// <summary>B12.2: After the session ends, wait briefly for any remaining lanes, then
+    /// collect their artifacts. The pool already emitted lifecycle events; we just log a summary.</summary>
     private void CollectLaneArtifacts(string stageId)
     {
-        if (_activeLanes.Count == 0 && _completedLaneResults.Count == 0) return;
+        if (_lanePool == null || (_lanePool.ActiveCount == 0 && _lanePool.CompletedCount == 0)) return;
 
-        // Wait for remaining lanes with a short timeout so we don't block the orchestrator
-        if (_activeLanes.Count > 0)
-        {
-            try
-            {
-                var remaining = Task.WhenAll(_activeLanes.ToArray());
-                remaining.Wait(TimeSpan.FromSeconds(10));
-            }
-            catch (AggregateException ex)
-            {
-                Log($"lane collection: {ex.InnerExceptions.Count} lane(s) threw exceptions");
-            }
-            catch (OperationCanceledException) { }
+        // Wait for remaining lanes with a short timeout so we don't block the orchestrator.
+        // Use GetAwaiter().GetResult() (same pattern as the pre-pool .Wait() call).
+        var remaining = _lanePool.WaitAllAsync(TimeSpan.FromSeconds(10), CancellationToken.None)
+            .GetAwaiter().GetResult();
 
-            // Collect any newly completed results
-            foreach (var task in _activeLanes)
-            {
-                if (!task.IsCompleted) continue;
-                try
-                {
-                    _completedLaneResults.Add(task.Result);
-                }
-                catch (Exception ex)
-                {
-                    _completedLaneResults.Add(new LaneResult { LaneId = "unknown", Error = ex.Message });
-                }
-            }
-            _activeLanes.Clear();
-        }
-
-        var successCount = _completedLaneResults.Count(r => r.IsSuccess);
-        var failCount = _completedLaneResults.Count - successCount;
-        if (_completedLaneResults.Count > 0)
+        var successCount = remaining.Count(r => r.IsSuccess);
+        var failCount = remaining.Count - successCount;
+        if (remaining.Count > 0)
             Log($"analysis lanes collected: {successCount} succeeded, {failCount} failed for stage {stageId}");
-
-        _completedLaneResults.Clear();
     }
 }

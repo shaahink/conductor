@@ -32,6 +32,8 @@ namespace Conductor.Core.Events;
 [JsonDerivedType(typeof(TaskAdded),             "taskAdded")]
 [JsonDerivedType(typeof(TaskStatusChanged),     "taskStatusChanged")]
 [JsonDerivedType(typeof(SoftBreakRequested),    "softBreakRequested")]
+[JsonDerivedType(typeof(LaneStarted),           "laneStarted")]
+[JsonDerivedType(typeof(LaneFinished),          "laneFinished")]
 public abstract record ConductorEvent
 {
     /// <summary>Monotonic 1-based ordinal within the log (continues across restarts). Stamped by
@@ -217,6 +219,29 @@ public sealed record SoftBreakRequested : ConductorEvent
     public long LiveTokens { get; init; }
     public long TokenBudget { get; init; }
     public string? CurrentCheckpointId { get; init; }
+}
+
+/// <summary>
+/// A Tier A read-only analysis lane was dispatched to the worker pool (B12.2). Emitted when the lane
+/// begins execution inside the pool (not when it is enqueued).
+/// </summary>
+public sealed record LaneStarted : ConductorEvent
+{
+    public required string LaneId { get; init; }
+    public required string Kind { get; init; }
+    public string? StageId { get; init; }
+}
+
+/// <summary>
+/// A Tier A read-only analysis lane completed (success, failure, or cancellation) (B12.2).
+/// </summary>
+public sealed record LaneFinished : ConductorEvent
+{
+    public required string LaneId { get; init; }
+    public required string Kind { get; init; }
+    public required string Outcome { get; init; }
+    public string? Error { get; init; }
+    public long DurationMs { get; init; }
 }
 
 /// <summary>Source-generated (de)serialisation for the event log — NDJSON, compact, camelCase, string

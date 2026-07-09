@@ -581,6 +581,10 @@ public sealed class LimitsConfig
     /// nudge is cooperative — the hard <c>MaxSessionTokens</c> ceiling is the safety net.
     /// Only active when <c>MaxSessionTokens</c> is set. null = 0.8 (default).</summary>
     public double? SoftBreakRatio { get; set; }
+    /// <summary>Maximum number of Tier A analysis lanes that may run concurrently (B12.2).
+    /// Default 2 — conservative to avoid git/index and build-server contention. Set to 1 to
+    /// disable parallelism (lanes still run, just one at a time).</summary>
+    public int MaxConcurrentLanes { get; set; } = 2;
 }
 
 /// <summary>Opt-in prompt batteries that inject bounded context into every session prompt (B8.5).

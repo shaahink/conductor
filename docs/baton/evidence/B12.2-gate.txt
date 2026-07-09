@@ -1,0 +1,16 @@
+=== B12.2 Worker pool + concurrency cap + lane events ===
+Date: 2026-07-09 01:12:16
+Host: MSI
+OS: Windows
+
+--- Build ---
+dotnet build Conductor.slnx
+  Determining projects to restore...   All projects are up-to-date for restore.   Conductor -> C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.dll   Conductor.Tests -> C:\Code\conductor-baton\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll  Build succeeded.     0 Warning(s)     0 Error(s)  Time Elapsed 00:00:07.15
+
+--- Tests ---
+dotnet test Conductor.slnx
+  Determining projects to restore...   All projects are up-to-date for restore.   Conductor -> C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.dll   Conductor.Tests -> C:\Code\conductor-baton\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll Test run for C:\Code\conductor-baton\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0) A total of 1 test files matched the specified pattern.  Passed!  - Failed:     0, Passed:   448, Skipped:     0, Total:   448, Duration: 17 s - Conductor.Tests.dll (net10.0)
+
+--- B12.2-specific tests ---
+dotnet test Conductor.slnx --filter "FullyQualifiedName~B12_2"
+  Determining projects to restore...   All projects are up-to-date for restore.   Conductor -> C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.dll   Conductor.Tests -> C:\Code\conductor-baton\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll Test run for C:\Code\conductor-baton\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0) A total of 1 test files matched the specified pattern.  Passed!  - Failed:     0, Passed:     7, Skipped:     0, Total:     7, Duration: 604 ms - Conductor.Tests.dll (net10.0)
