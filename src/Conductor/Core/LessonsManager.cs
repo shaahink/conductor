@@ -17,6 +17,7 @@ public sealed class LessonsManager
     private readonly string _dirPath;
     private readonly int _maxBytes;
     private readonly TimeProvider _time;
+    private readonly Lock _gate = new();
 
     public LessonsManager(string conductorDir, int maxBytes = 8192, TimeProvider? time = null)
     {
@@ -27,29 +28,32 @@ public sealed class LessonsManager
 
     private string FilePath => Path.Combine(_dirPath, FileName);
 
-    /// <summary>Appends a lesson entry and evicts oldest if the file exceeds the byte cap.</summary>
+    /// <summary>Appends a lesson entry and evicts oldest if the file exceeds the byte cap. Thread-safe.</summary>
     public void Append(string stage, int session, string difficultyText)
     {
         var entryDate = _time.GetUtcNow();
         var entry = FormatEntry(stage, session, difficultyText, entryDate);
 
-        Directory.CreateDirectory(_dirPath);
-        var existing = File.Exists(FilePath) ? File.ReadAllText(FilePath, Encoding.UTF8) : "";
+        lock (_gate)
+        {
+            Directory.CreateDirectory(_dirPath);
+            var existing = File.Exists(FilePath) ? File.ReadAllText(FilePath, Encoding.UTF8) : "";
 
-        // New entry always goes first (newest-first ordering)
-        var body = StripHeader(existing);
-        var content = $"{HeaderLine}\n\n{UpdatedPrefix}{entryDate:o}\n\n{entry}";
+            // New entry always goes first (newest-first ordering)
+            var body = StripHeader(existing);
+            var content = $"{HeaderLine}\n\n{UpdatedPrefix}{entryDate:o}\n\n{entry}";
 
-        if (body.Length > 0)
-            content += "\n" + body.TrimEnd();
+            if (body.Length > 0)
+                content += "\n" + body.TrimEnd();
 
-        // Evict oldest entries if over the byte cap
-        if (Encoding.UTF8.GetByteCount(content) > _maxBytes)
-            content = TrimToCap(content, entry, entryDate);
+            // Evict oldest entries if over the byte cap
+            if (Encoding.UTF8.GetByteCount(content) > _maxBytes)
+                content = TrimToCap(content, entry, entryDate);
 
-        var tmp = FilePath + ".tmp";
-        File.WriteAllText(tmp, content, Encoding.UTF8);
-        File.Move(tmp, FilePath, overwrite: true);
+            var tmp = FilePath + ".tmp";
+            File.WriteAllText(tmp, content, Encoding.UTF8);
+            File.Move(tmp, FilePath, overwrite: true);
+        }
     }
 
     /// <summary>Returns the full content of lessons.md, or empty string if none exists.</summary>

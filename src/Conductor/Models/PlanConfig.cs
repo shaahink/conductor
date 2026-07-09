@@ -188,6 +188,19 @@ public sealed class PlanConfig
         if (Gates.Any(g => string.IsNullOrWhiteSpace(g.Command)))
             errors.Add("a gate is missing its command — every gate needs a shell command to run");
 
+        // B10 trace: reject zero/negative timeouts on hooks (FU-B10-3).
+        if (Setup != null && !string.IsNullOrWhiteSpace(Setup.Command) && Setup.TimeoutMinutes < 1)
+            errors.Add("plan.setup.timeoutMinutes must be >= 1 (was " + Setup.TimeoutMinutes + ")");
+        if (Teardown != null && !string.IsNullOrWhiteSpace(Teardown.Command) && Teardown.TimeoutMinutes < 1)
+            errors.Add("plan.teardown.timeoutMinutes must be >= 1 (was " + Teardown.TimeoutMinutes + ")");
+        foreach (var s in Stages)
+        {
+            if (s.PreHook != null && !string.IsNullOrWhiteSpace(s.PreHook.Command) && s.PreHook.TimeoutMinutes < 1)
+                errors.Add($"stage '{s.Id}' pre-hook timeoutMinutes must be >= 1 (was {s.PreHook.TimeoutMinutes})");
+            if (s.PostHook != null && !string.IsNullOrWhiteSpace(s.PostHook.Command) && s.PostHook.TimeoutMinutes < 1)
+                errors.Add($"stage '{s.Id}' post-hook timeoutMinutes must be >= 1 (was {s.PostHook.TimeoutMinutes})");
+        }
+
         return errors;
     }
 

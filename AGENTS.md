@@ -36,10 +36,15 @@ C:\Code\conductor\bin\conductor.exe run --dry-run -p .conductor\plans\conductor-
 C:\Code\conductor\bin\conductor.exe run         -p .conductor\plans\conductor-debt.plan.json
 ```
 
+## QA protocol (added 2026-07-09)
+- Skip previous-session QA when last session ended `advanced` or `progress` with all gates green.
+- Run QA only when last session was `gatesRed`, `stalled`, `noProgress`, or `interrupted`.
+- **Tracker rule:** always update BOTH handoff block AND checkpoint row (DONE + commit + evidence). If row stays TODO, conductor re-launches the same stage.
+
 ## Current state (2026-07-09)
-- **B0-B12** all DONE (66 checkpoints). Session #68 delivered B12.4 (fix-lanes from followups).
-- 470 tests pass. Plan `.conductor/plans/conductor-debt.plan.json` in progress.
-- **Phase C — Cleanup + Audit (8 sessions).** C1 DONE. Next: C2 (async engine + harness).
+- **B0-B12** all DONE (66 checkpoints). **C1-C3** all DONE (sessions #68-#70).
+- **Phase C — Cleanup + Audit (8 sessions).** C4 (small debt sweep, 12 items) is next.
+- 493 tests pass. Plan `.conductor/plans/conductor-debt.plan.json` in progress.
 
 ## Gotchas
 - **`claudeSessionId`** is a legacy field name storing ANY agent's session id (B2 renames/abstracts).

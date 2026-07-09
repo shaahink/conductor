@@ -5,7 +5,7 @@ param(
     [Parameter(Mandatory)][string]$Repo,
     [string]$Prompt = "",
     [string]$SessionId = "fake",
-    [string]$Mode = "success"   # success | gatesred | stall | limit
+    [string]$Mode = "success"   # success | no-commits | stall | limit | true-red
 )
 $ErrorActionPreference = "Stop"
 
@@ -70,10 +70,25 @@ if ($trackerItem) {
     O "text" @{ text = "No *-START.md tracker found in $Repo" }
 }
 
-# ---- commit (or skip for gatesred) ----
+# ---- true-red mode: write a compile-breaking file to make dotnet build fail ----
+if ($Mode -eq "true-red") {
+    O "text" @{ text = "Deliberately introducing a compile error for true-red gate scenario." }
+    $csFile = Join-Path $Repo "tools\fake-red.cs"
+    $fakeCs = "// FAKE-RED: intentionally broken source to trip dotnet build{0}class FakeRed {{ syntax error here{0}" -f [Environment]::NewLine
+    Set-Content $csFile $fakeCs -Encoding utf8
+    git -C $Repo add -A 2>&1 | Out-Null
+    git -C $Repo commit -m "feat(fake): deliberately broken source to test gate-red detection" --quiet 2>&1 | Out-Null
+    O "tool_use" @{ tool = "Write"; state = @{ title = "tools\fake-red.cs" } }
+    O "tool_use" @{ tool = "Bash"; state = @{ title = "git add -A; git commit" } }
+    Step "committing fake-red" 100 50 0.0001
+    O "text" @{ text = "SESSION-RESULT: introduced compile error — gates SHOULD be red." }
+    exit 0
+}
+
+# ---- commit (or skip for no-commits) ----
 # opencode-json has no `result` event (that is the Claude format); the driver builds
 # ResultText from `text` events, so SESSION-RESULT is emitted as text.
-if ($Mode -ne "gatesred") {
+if ($Mode -ne "no-commits") {
     $prev = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
     $null = git -C $Repo add -A 2>&1
     $null = git -C $Repo commit -m "feat(fake): checkpoint delivered by fake agent" --quiet 2>&1
@@ -82,7 +97,7 @@ if ($Mode -ne "gatesred") {
     Step "committing" 80 60 0.0001
     O "text" @{ text = "SESSION-RESULT: delivered, gates green." }
 } else {
-    O "text" @{ text = "Skipping commit for gates-red scenario." }
+    O "text" @{ text = "Skipping commit for no-commits scenario." }
     O "text" @{ text = "SESSION-RESULT: tracker updated but no commit." }
 }
 

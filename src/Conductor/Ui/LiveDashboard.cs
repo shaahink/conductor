@@ -52,6 +52,7 @@ public sealed class LiveDashboard : IProgressSink
 
     private volatile bool _statusRunning;
     private List<string> _statusLines = new();
+    private CancellationTokenSource? _statusCts;
 
     public LiveDashboard(PlanConfig? plan = null) => _plan = plan;
 
@@ -224,20 +225,29 @@ public sealed class LiveDashboard : IProgressSink
         }
         var repo = _plan.Repo;
 
-        // Fire-and-forget background probe; failures surface into the status pane, never silently.
+        // FU-B4-3: thread a CancellationToken through the status-agent probe so closing the
+        // modal cancels any in-flight agent call. Previously fire-and-forget with no CT — a
+        // hung status-agent leaked the task until process exit.
+#pragma warning disable MA0045 // UI thread — CancelAsync would require async+await cascade
+        _statusCts?.Cancel();
+        _statusCts?.Dispose();
+#pragma warning restore MA0045
+        _statusCts = new CancellationTokenSource();
+        var ct = _statusCts.Token;
+
+#pragma warning disable MA0040 // Task.Run has no CT overload — the token is passed inside the lambda
         _ = Task.Run(() =>
+#pragma warning restore MA0040
         {
             string report;
             try
             {
                 var git = GitView.Summary(repo);
                 var prompt = StatusAgent.BuildPrompt(snap, git, recentAgent, recentThinking);
-                report = StatusAgent.Run(cfg, prompt);
+                report = StatusAgent.Run(cfg, prompt, ct);
             }
-            catch (Exception ex)
-            {
-                report = $"status agent failed: {ex.Message}";
-            }
+            catch (OperationCanceledException) { report = "status agent cancelled."; }
+            catch (Exception ex) { report = $"status agent failed: {ex.Message}"; }
             lock (_gate)
             {
                 _statusLines = report.Replace("\r\n", "\n").Split('\n').ToList();
@@ -384,7 +394,10 @@ public sealed class LiveDashboard : IProgressSink
         var max = Math.Max(0, count - 1);
         switch (key)
         {
-            case ConsoleKey.Escape or ConsoleKey.Q: _modal = Modal.None; break;
+            case ConsoleKey.Escape or ConsoleKey.Q:
+                _modal = Modal.None;
+                if (_statusRunning) CancelStatusAgent();
+                break;
             case ConsoleKey.UpArrow: _modalOffset = Math.Max(0, _modalOffset - 1); break;
             case ConsoleKey.DownArrow: _modalOffset = Math.Min(max, _modalOffset + 1); break;
             case ConsoleKey.PageUp: _modalOffset = Math.Max(0, _modalOffset - page); break;
@@ -628,7 +641,15 @@ public sealed class LiveDashboard : IProgressSink
     }
 
     private static List<string> Split(string s) => s.Replace("\r\n", "\n").Split('\n').ToList();
-    private static string Glyph(string kind) => kind switch { "tool" => "»", "text" => "·", "result" => "◆", "stderr" => "!", "system" => "○", _ => " " };
+    private static string Glyph(string kind) => kind switch { "tool" => "\xbb", "text" => "\xb7", "result" => "\u25c6", "stderr" => "!", "system" => "\u25cb", _ => " " };
+
+    private void CancelStatusAgent()
+    {
+#pragma warning disable MA0045 // UI thread — CancelAsync would require async+await cascade
+        try { _statusCts?.Cancel(); }
+#pragma warning restore MA0045
+        catch (ObjectDisposedException) { }
+    }
 
     private static int SafeWidth() { try { return Math.Max(80, Console.WindowWidth); } catch (IOException) { return 120; } }
     private static int SafeHeight() { try { return Math.Max(24, Console.WindowHeight); } catch (IOException) { return 40; } }

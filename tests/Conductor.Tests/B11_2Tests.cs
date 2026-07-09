@@ -157,6 +157,53 @@ public class B11_2DoctorAndCompletionTests
         Assert.Contains("compgen -W", output);
     }
 
+    // FU-B11-1: Completion verb list must be exhaustive — every command registered in Program.cs
+    // must appear in the completion output so tab-complete doesn't silently break when a new command
+    // is added. Also verifies the count stays in parity.
+    [Fact]
+    public void Completion_ContainsAllRegisteredVerbs_Exhaustive()
+    {
+        var expectedVerbs = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "run", "status", "report", "replay", "preview", "pause", "resume", "approve",
+            "kill", "skip", "inject", "abort", "retry-stage", "rollback",
+            "pause-after-stage", "goto", "tasks", "new-plan", "doctor", "completion"
+        };
+
+        var ps = Conductor.Commands.CompletionCommand.GeneratePowerShell();
+        var bash = Conductor.Commands.CompletionCommand.GenerateBash();
+
+        // Extract the PowerShell verb string: "$verbs = @('run status ...')"
+        // and verify every expected verb is present.
+        var regexTimeout = TimeSpan.FromSeconds(2);
+        var regexOpts = System.Text.RegularExpressions.RegexOptions.ExplicitCapture;
+        var psMatch = System.Text.RegularExpressions.Regex.Match(ps,
+            @"\$verbs\s*=\s*@\('(?<verbs>[^']+)'", regexOpts, regexTimeout);
+        Assert.True(psMatch.Success, "PowerShell completion missing $verbs definition");
+        var psVerbs = psMatch.Groups["verbs"].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var verb in expectedVerbs)
+            Assert.Contains(verb, psVerbs);
+
+        // Verify no stale verbs in completion that aren't registered
+        var stale = psVerbs.Where(v => !expectedVerbs.Contains(v)).ToList();
+        Assert.Empty(stale);
+
+        // Verify PowerShell count matches expected
+        Assert.Equal(expectedVerbs.Count, psVerbs.Length);
+
+        // Bash completion: verify all verbs in the compgen -W list
+        foreach (var verb in expectedVerbs)
+            Assert.Contains(verb, bash);
+
+        // Extract bash verb count from compgen -W
+        var bashMatch = System.Text.RegularExpressions.Regex.Match(bash,
+            @"compgen\s+-W\s+""(?<verbs>[^""]+)""", regexOpts, regexTimeout);
+        Assert.True(bashMatch.Success, "Bash completion missing compgen -W definition");
+        var bashVerbs = bashMatch.Groups["verbs"].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal(expectedVerbs.Count, bashVerbs.Length);
+    }
+
     // --- Helpers replicating DoctorCommand's remaining-stages logic ---
 
     private static List<string> DoctorRemainingStages(PlanConfig plan, RunState state)

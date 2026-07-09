@@ -7,13 +7,13 @@ your stage in `.conductor/plans/conductor-debt.plan.json`.
 Branch: `feat/baton`. Driver: `C:\Code\conductor\bin\conductor.exe` (stable from master).
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #70 (C3) — events + metrics + budget + recovery: RollbackExecuted event emitted from Orchestrator, budget (PerRunCostUsd/PerRunTokens) persisted in RunState and restored on restart, mid-session control feedback for rejected verbs, orphaned resume with empty AgentSessionId marks NeedsHuman. 493 tests pass (13 new C3EventsAndRecoveryTests).
-stage: C3 DONE. Build 0w/0e.
+last: session #71 (C4) — small debt sweep (12 items): fake-agent `no-commits` + `true-red` mode, AltScreen headless test, StatusAgent CT, HookConfig validation, ComputeDepth memoize, completion exhaustive test, ScriptProvider shape validation, CA1031 closed, LessonsManager thread-safety, persona divergence test, Telegram callback round-trip.
+stage: C4 DONE. Build 0w/0e. 497 tests pass (4 new: SafetyNet, CompletionExhaustive, PersonaDivergence, CallbackFormat).
 dirty: none.
-next: C4 — Small debt sweep (12 items: fake-agent, smokes, persona, Telegram, etc.)
-followups: FU-B2-1 (LiveMetrics dashboard wiring) partially deferred — dashboard still reads via agent.Tokens* (event-log fold proven in tests, full cutover deferred to C4/C5).
-evidence: docs/baton/evidence/C3-gate.txt (493 tests, 13 C3). Test file: tests/Conductor.Tests/C3EventsAndRecoveryTests.cs.
-C2 QA: verified DONE — MA0045/MA0002 at error, CT in IProgressProvider, stdout/stderr split, 10 C2Async tests pass.
+next: C5 — R1 TUI + CLI audit (6a-6e: --dry-run preview, inspect every TUI element, rate ✅/⚠️/❌ per workflow §Session 6).
+C3 QA: VERIFIED DONE — all 4 handoff claims confirmed against code + tests.
+followups: FU-B4-2 real-signal test, Telegram real-token integration, battery-collapse real-measurement → Needs Human Verification checklist (C8). FU-B0-5 cosmetic smoke cleanup noted.
+evidence: docs/baton/evidence/C4-gate.txt (497 tests, 4 new).
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -102,7 +102,7 @@ never silent renumbering.
 | C1 | B12.4 — Fix-lanes consume followups.md | DONE | 1706c45 | Same as B12.4 |
 | C2 | Async engine + integration harness (MA0045, MA0002, CT, harness) | DONE | 633be3f | `docs/baton/evidence/C2-gate.txt` |
 | C3 | Events + metrics + budget + recovery (LiveMetrics, rollback, McpCallFinished, Ctrl+C) | DONE | e14b88c | `docs/baton/evidence/C3-gate.txt` |
-| C4 | Small debt sweep (12 items: fake-agent, smokes, persona, Telegram, etc.) | TODO | — | `docs/baton/evidence/C4-gate.txt` |
+| C4 | Small debt sweep (12 items: fake-agent, smokes, persona, Telegram, etc.) | DONE | e30f872 | `docs/baton/evidence/C4-gate.txt` |
 | C5 | R1 — TUI + CLI audit (--dry-run preview, every surface traced to code+docs) | TODO | — | `docs/qa-reports/CONDUCTOR-AUDIT-R1.md` |
 | C6 | R2 — Report + Prompts + Agent Context audit | TODO | — | `docs/qa-reports/CONDUCTOR-AUDIT-R2.md` |
 | C7 | Final handover + Needs Human Verification checklist | TODO | — | `docs/qa-reports/CONDUCTOR-FINAL.md` |

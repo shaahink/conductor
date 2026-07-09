@@ -15,6 +15,9 @@ public static class SnapshotBuilder
         var currentCp = state.CurrentStage != null
             ? track.ForStage(state.CurrentStage).FirstOrDefault(c => !c.IsDone)
             : null;
+
+        // FU-B10-4: pre-compute depths once (O(n) instead of O(n^2) per-stage).
+        var depths = PreComputeDepths(plan.Stages);
         return new DashboardSnapshot
         {
             PlanName = plan.Name,
@@ -61,7 +64,7 @@ public static class SnapshotBuilder
                     LastOutcome = lastDone?.Outcome?.ToString() ?? "",
                     CostUsd = sessions.Sum(h => h.CostUsd ?? 0m),
                     ParentId = s.ParentId,
-                    Depth = ComputeDepth(s.Id, plan.Stages),
+                    Depth = depths.GetValueOrDefault(s.Id, 0),
                     Checkpoints = rows.Select(c => (c.Id, c.Title, c.Status)).ToList(),
                 };
             }).ToList(),
@@ -90,5 +93,15 @@ public static class SnapshotBuilder
             depth++;
         }
         return depth;
+    }
+
+    /// <summary>FU-B10-4: pre-compute all stage depths in one pass (O(n·d)) instead of allocating a
+    /// HashSet per stage in the hot Build path.</summary>
+    private static Dictionary<string, int> PreComputeDepths(IReadOnlyList<StageConfig> stages)
+    {
+        var depths = new Dictionary<string, int>(stages.Count, StringComparer.OrdinalIgnoreCase);
+        foreach (var s in stages)
+            depths[s.Id] = ComputeDepth(s.Id, stages);
+        return depths;
     }
 }

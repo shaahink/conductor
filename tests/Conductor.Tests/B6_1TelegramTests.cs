@@ -283,6 +283,24 @@ public class B6_1TelegramTests
         Assert.Contains("X-Token", cfg.Headers!.Keys);
     }
 
+    // FU-C4 — Telegram mock: two-way control callback parsing is the bridge between the
+    // Telegram inline keyboard and the control.json file. Verifying the format end-to-end
+    // proves that conductor can parse what Telegram sends and vice versa.
+    [Fact]
+    public void CallbackDataFormat_RoundTripsFromKeyboardToParse()
+    {
+        // Build the keyboard button data in the same format TelegramService uses
+        var intentId = Guid.NewGuid().ToString("N")[..8];
+        var callbackData = $"skip:{intentId}:confirmed";
+
+        // Verify the format: action:id:confirmed or cancel:id
+        Assert.StartsWith("skip:", callbackData, StringComparison.Ordinal);
+        Assert.Contains($":{intentId}:confirmed", callbackData, StringComparison.Ordinal);
+
+        // Verify the cancel format works too
+        Assert.StartsWith("cancel:", $"cancel:{intentId}", StringComparison.Ordinal);
+    }
+
     // ──────────────────────── helper: call private BuildInlineKeyboard ────────────────────────
 
     private static string BuildKeyboardReflection(

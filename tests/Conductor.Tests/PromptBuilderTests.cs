@@ -132,6 +132,34 @@ public class PromptBuilderTests
         Assert.StartsWith(architectPrompt, prompt);
     }
 
+    /// <summary>FU-B4.x — Persona divergence: different personas must produce meaningfully different
+    /// prompts. If two personas generate identical output the registry is broken or the prompt builder
+    /// is ignoring the persona field.</summary>
+    [Fact]
+    public void PersonaDivergence_DifferentPersonasProduceDifferentPrompts()
+    {
+        var plan = Plan();
+        var reg = new PersonaRegistry((string?)null);
+        var builder = new PromptBuilder(plan, reg);
+
+        var architect = builder.Deliver(
+            new StageConfig { Id = "B1", Title = "Test", Persona = "architect" }, 1, 1, 6);
+        var qa = builder.Deliver(
+            new StageConfig { Id = "B1", Title = "Test", Persona = "qa" }, 1, 1, 6);
+        var planner = builder.Deliver(
+            new StageConfig { Id = "B1", Title = "Test", Persona = "planner" }, 1, 1, 6);
+
+        // Each persona must produce distinct prompts — if any two are equal the builder is broken.
+        Assert.NotEqual(architect, qa);
+        Assert.NotEqual(architect, planner);
+        Assert.NotEqual(qa, planner);
+
+        // Also verify that the persona-specific system prompts are actually in the output
+        Assert.Contains("ARCHITECTURE specialist", architect, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("QA specialist", qa, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("PLANNING specialist", planner, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public void LessonsVariableEmptyWhenNoFile()
     {

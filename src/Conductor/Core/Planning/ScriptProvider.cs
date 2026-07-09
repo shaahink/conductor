@@ -55,6 +55,19 @@ public sealed class ScriptProvider(ScriptProviderConfig config) : IProgressProvi
             throw new InvalidOperationException(
                 $"script progress provider: command produced no JSON (null). Command: {_config.Command}");
 
+        // FU-B1-3: validate required fields before converting. Missing id/title are hard fails;
+        // unknown statuses are tolerated (the conventions parser handles them with a fallback).
+        for (var i = 0; i < parsed.Count; i++)
+        {
+            var c = parsed[i];
+            if (string.IsNullOrWhiteSpace(c.Id))
+                throw new InvalidOperationException(
+                    $"script progress provider: checkpoint at index {i} has no 'id'. Command: {_config.Command}");
+            if (string.IsNullOrWhiteSpace(c.Title))
+                throw new InvalidOperationException(
+                    $"script progress provider: checkpoint '{c.Id}' has no 'title'. Command: {_config.Command}");
+        }
+
         var rows = parsed.ConvertAll(c =>
             CheckpointRow.Create(plan.Conventions, c.Id, c.Title, c.Status, c.Commit, c.Evidence));
         return new TrackerSnapshot { Checkpoints = rows, HandoffBlock = "", RawText = result.Output };
