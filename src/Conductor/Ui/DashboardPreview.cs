@@ -17,9 +17,9 @@ public static class DashboardPreview
         {
             new("build", "pass", TimeSpan.FromSeconds(28)),
             new("tests", "running", TimeSpan.FromMinutes(2) + TimeSpan.FromSeconds(14)),
-            new("pnpm-check", "pass", TimeSpan.FromSeconds(44)),
-            new("mcp-qa", "pending", TimeSpan.Zero),
-            new("loom-guards", "skip", TimeSpan.Zero),
+            new("lint", "pass", TimeSpan.FromSeconds(44)),
+            new("security-scan", "pending", TimeSpan.Zero),
+            new("integration", "skip", TimeSpan.Zero),
         };
 
         var snap = SnapshotBuilder.Build(plan, state, track, GateRunner.Summary(
@@ -28,7 +28,7 @@ public static class DashboardPreview
             {
                 Status = "Running",
                 AttentionReason = "PREVIEW — synthetic session data (not a live run)",
-                SessionNumber = state.SessionCounter > 0 ? state.SessionCounter : 5,
+                SessionNumber = state.SessionCounter > 0 ? state.SessionCounter : 1,
                 SessionKind = "Deliver",
                 Attempt = 1,
                 MaxAttempts = 4,
@@ -55,22 +55,21 @@ public static class DashboardPreview
 
     private static readonly (string Kind, string Text, int AgoSec)[] SampleAgent =
     {
-        ("tool", "bash git -C C:/code/DevContext2-ui status --porcelain", 240),
-        ("result", " M src/DevContext.Core/Graph/SymbolTable.cs", 238),
-        ("result", "?? tests/DevContext.Tests/SymbolRefTests.cs", 237),
-        ("text", "Reading the L1 stage section and loom-graph-design.md before touching identity code.", 210),
-        ("tool", "read src/DevContext.Core/Graph/SymbolTable.cs", 180),
-        ("tool", "edit src/DevContext.Core/Graph/SymbolId.cs", 120),
-        ("tool", "bash dotnet build DevContext.slnx", 70),
-        ("result", "build succeeded — 0 warnings", 40),
+        ("tool", "bash dotnet build MyProject.slnx", 240),
+        ("result", "Build succeeded — 0 Warning(s) 0 Error(s)", 238),
+        ("text", "Reading the plan config and stage design before making changes.", 210),
+        ("tool", "read src/Core/Engine.cs", 180),
+        ("tool", "edit src/Core/Engine.cs", 120),
+        ("tool", "bash dotnet test MyProject.slnx --no-build", 70),
+        ("result", "Passed! - Failed: 0, Passed: 42, Skipped: 0, Total: 42", 40),
         ("stderr", "warning: analyzer MA0051 method too long (suppressed)", 38),
-        ("text", "Now adding ambiguity fixtures and wiring SymbolRef resolution tiers.", 6),
+        ("text", "Now wiring up the controller and adding integration fixtures.", 6),
     };
 
     private static readonly string[] SampleThinking =
     {
-        "Goal: implement L1.1 SymbolId/SymbolRef with resolution tiers. Hypothesis: exact-then-fuzzy tiering is safe because the dogfood repo has duplicate short names. Evidence: SymbolTable already exposes a seam. Action: start from the SymbolTable seam and add ambiguity fixtures.",
-        "The dogfood repo has duplicate short names across services, so exact-then-fuzzy tiering is the safe order.",
-        "Goal: close the audit gap. Action: add negative fixtures for the service-libs case, then run the truth gate.",
+        "Goal: implement the new service layer with proper error handling. Hypothesis: using the existing middleware pipeline will handle edge cases without extra code. Evidence: the pipeline already validates all inputs. Action: start from the existing middleware seam and add the service implementation.",
+        "Edge case: concurrent requests could race on the shared cache. Add a distributed lock guard.",
+        "Goal: close the implementation gap. Action: add negative test fixtures for the edge cases, then run the full battery.",
     };
 }

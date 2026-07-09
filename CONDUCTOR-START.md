@@ -7,13 +7,13 @@ your stage in `.conductor/plans/conductor-debt.plan.json`.
 Branch: `feat/baton`. Driver: `C:\Code\conductor\bin\conductor.exe` (stable from master).
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #73 (plan C5/Small debt sweep, attempt 2/2) — independently re-verified all 12 items against fresh source. All confirmed resolved.
-stage: tracker C4 (Small debt sweep) DONE + independently verified. Build 0w/0e. 497 tests pass.
+last: session #74 (plan C6, tracker C5 — R1 TUI + CLI audit, attempt 1/2) — 20/20 CLI ✅, 10/10 TUI ✅, 0 ❌. 4 ⚠️ (3 fixed: state.json reconciliation + preview data genericized). 497 tests pass.
+stage: tracker C5 (R1 audit) DONE.
 dirty: none.
-next: plan C6 / tracker C5 — R1 TUI + CLI audit (--dry-run preview, inspect every TUI element, rate per workflow §Session 6).
-QA (session #72): PASS — all 12 claims verified. No stale claims. No gaps requiring fix.
-followups→C8 (human verification): FU-B4-2 real-signal, Telegram real-token, battery-collapse real-measurement.
-evidence: docs/baton/evidence/C5-s73-gate.txt (fresh gate battery + independent 12-item verification).
+next: tracker C6 (plan C7) — R2 Report + Prompts + Agent Context audit (workflow §Session 7).
+QA (session #73): skipped (all gates green, per protocol).
+followups→C8: T-1 (plan tree single-stage expand key not wired), C-4 (doctor step-counter off-by-one).
+evidence: docs/qa-reports/CONDUCTOR-AUDIT-R1.md, docs/baton/evidence/C6-s74-gate.txt.
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -103,7 +103,7 @@ never silent renumbering.
 | C2 | Async engine + integration harness (MA0045, MA0002, CT, harness) | DONE | 633be3f | `docs/baton/evidence/C2-gate.txt` |
 | C3 | Events + metrics + budget + recovery (LiveMetrics, rollback, McpCallFinished, Ctrl+C) | DONE | e14b88c | `docs/baton/evidence/C3-gate.txt` |
 | C4 | Small debt sweep (12 items: fake-agent, smokes, persona, Telegram, etc.) | DONE | 8d651d8 | `docs/baton/evidence/C4-gate.txt` |
-| C5 | R1 — TUI + CLI audit (--dry-run preview, every surface traced to code+docs) | TODO | — | `docs/qa-reports/CONDUCTOR-AUDIT-R1.md` |
+| C5 | R1 — TUI + CLI audit (--dry-run preview, every surface traced to code+docs) | DONE | 686e8ea | `docs/qa-reports/CONDUCTOR-AUDIT-R1.md` |
 | C6 | R2 — Report + Prompts + Agent Context audit | TODO | — | `docs/qa-reports/CONDUCTOR-AUDIT-R2.md` |
 | C7 | Final handover + Needs Human Verification checklist | TODO | — | `docs/qa-reports/CONDUCTOR-FINAL.md` |
 

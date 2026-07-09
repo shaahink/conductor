@@ -1,0 +1,36 @@
+=== C6-S74 — R1 TUI + CLI audit gate battery ===
+Date: 2026-07-09
+Session: #74
+Stage: C6 (plan) / C5 (tracker) — R1 TUI + CLI audit
+
+--- Build ---
+dotnet build Conductor.slnx --nologo
+  Build succeeded. 0 Warning(s) 0 Error(s)
+
+--- Tests ---
+dotnet test Conductor.slnx --no-build --nologo
+  Passed! - Failed: 0, Passed: 497, Skipped: 0, Total: 497
+
+--- CLI Commands Verified (all 20) ---
+All 20 commands tested with --help, traced to BATON-BRIEF.md + source:
+  run, status, report, replay, preview, pause, resume, abort, skip, kill,
+  approve, retry-stage, rollback, pause-after-stage, goto, inject,
+  new-plan, doctor, tasks, completion
+  Verdict: 20/20 ✅
+
+--- TUI Elements Verified (10/10 ✅) ---
+  Alt-screen, Spectre Layout, Plan tree, Action bar + modals,
+  Token/cost line, Thinking pane, Command history + filters,
+  REPORT.md generation, Prompt generation, Persona registry
+  Live preview rendered via: dotnet run -- preview -p .conductor\plans\conductor-debt.plan.json
+
+--- Fixes Applied This Session ---
+  1. state.json: planName "Baton" → "Conductor-Debt"
+  2. state.json: C5 removed from skippedStages, added to confirmedStages
+  3. DashboardPreview.cs: project-specific names → generic (MyProject, lint, security-scan, integration)
+  4. DashboardPreview.cs: session default 5 → live state.SessionCounter
+
+--- QA Verdict (session #73, C5) ---
+  Session #73 independently re-verified 12 items. Evidence at docs/baton/evidence/C5-s73-gate.txt.
+  Gates green (build 0w/0e, 497 tests). QA SKIPPED per protocol (last session ended with all gates green).
+  Evidence file exists and is content-verified.
