@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-09 00:02 UTC · branch `feat/baton` · HEAD `2362697`_
+_Updated 2026-07-09 00:12 UTC · branch `feat/baton` · HEAD `63776d8`_
 
-**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B12 — Controlled parallelism · attempts used 0 · working ▸ B12.2
-**Checkpoints:** 62/65 done · **Sessions run:** 64 · **Cost:** $2.8709 · **Tokens:** 2,152,705 in / 895,077 out / 424,903 think
+**Checkpoints:** 62/65 done · **Sessions run:** 65 · **Cost:** $2.8709 · **Tokens:** 2,152,705 in / 895,077 out / 424,903 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11
+
+## Latest activity (live)
+
+_Session #65 (Deliver) · running 10m · last output 0s ago · $0.0524_
+
+**Thinking:**
+> All B12.1 tests still pass. Now let me check the diff budget before committing.
+> 3 modified files + 2 new files (not tracked yet). Let me check for untracked:
+> 5 files total (3 modified, 2 new). This is within the ~15 file diff budget.  Now I need to: 1. Generate the gate evidence file 2. Update CONDUCTOR-START.md 3. Commit and push  Let me create the evidence file and update the tracker.
+
+**Recent actions:**
+- `01:11:20` » bash dotnet test Conductor.slnx 2>&1
+- `01:11:26` · All 448 tests pass (441 → 448, +7 new tests). Let me verify the B12.2-specific tests too:
+- `01:11:33` » bash dotnet test Conductor.slnx --filter "FullyQualifiedName~B12_2" 2>&1
+- `01:11:38` · All 7 B12.2 tests pass. Quick check that B12.1 tests still pass too:
+- `01:11:43` » bash dotnet test Conductor.slnx --filter "FullyQualifiedName~B12_1" 2>&1
+- `01:11:48` · Let me check the diff and finish up:
+- `01:11:48` » bash git diff --stat
+- `01:11:55` » bash git status --short
+- `01:12:14` · Within diff budget (5 files). Now produce the evidence artifact and update the tracker:
+- `01:12:58` » bash $output = "=== B12.2 Worker pool + concurrency cap + lane events ===`r`nDate: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`r`nHost: $env:COMPUTERNAME`r`nOS: W…
 
 ## Stage progress
 
@@ -29,7 +50,6 @@ _Updated 2026-07-09 00:02 UTC · branch `feat/baton` · HEAD `2362697`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 35 | B5 | Deliver | 1 | 07-08 17:10 | 0:19 | Advanced | B5.2 | 3 | build:OK | $0.0370 | 1,719/19,977 |
 | 36 | B5 | Deliver | 1 | 07-08 17:30 | 0:24 | Advanced | B5.3 | 4 | build:OK | $0.0427 | 2,319/25,154 |
 | 37 | B5 | Deliver | 1 | 07-08 17:54 | 0:18 | Advanced | B5.4 | 2 | build:OK | $0.0750 | 61,596/21,872 |
 | 38 | B5 | Audit | 1 | 07-08 18:13 | 0:07 | Progress |  | 2 |  | $0.0635 | 86,516/7,809 |
@@ -59,6 +79,7 @@ _Updated 2026-07-09 00:02 UTC · branch `feat/baton` · HEAD `2362697`_
 | 62 | B11 | Deliver | 1 | 07-08 23:19 | 0:21 | Advanced | B11.2 B11.3 B11.4 | 6 | build:OK | $0.1053 | 75,494/33,712 |
 | 63 | B11 | Audit | 1 | 07-08 23:41 | 0:07 | Progress |  | 2 |  | $0.0558 | 59,800/11,762 |
 | 64 | B12 | Deliver | 1 | 07-08 23:49 | 0:13 | Advanced | B12.1 | 2 | build:OK | $0.0744 | 78,710/19,057 |
+| 65 | B12 | Deliver | 1 | 07-09 00:02 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
