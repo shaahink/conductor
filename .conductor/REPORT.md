@@ -1,31 +1,36 @@
-﻿# Conductor — Conductor-Debt run report
+﻿# Conductor — Conductor-Era3 run report
 
-_Updated 2026-07-09 03:01 UTC · branch `feat/baton` · HEAD `f6930c9`_
+_Updated 2026-07-09 04:44 UTC · branch `feat/era-v3` · HEAD `bd28ac5`_
 
-**Status:** Completed — plan complete EXCEPT skipped stages: C5
-**Stage:** C8 — Final handover + Needs Human Verification checklist · attempts used 0
-**Checkpoints:** 73/73 done · **Sessions run:** 77 · **Cost:** $3.8163 · **Tokens:** 3,247,665 in / 1,072,011 out / 568,210 think
+**Status:** Idle — plan complete EXCEPT skipped stages: C5
+**Stage:** D1 — conductor status — LLM-powered status report · attempts used 0
+**Checkpoints:** 1/13 done · **Sessions run:** 78 · **Cost:** $3.8809 · **Tokens:** 3,317,135 in / 1,089,604 out / 575,724 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1, C2, C3, C4, C6, C7, C8
+**Pending:** full-battery phase gate for D1
 **⚠ Skipped stages (need human review):** C5
 
 ## Stage progress
 
 | Stage | Title | Done | State |
 |---|---|---|---|
-| C1 | B12.3 — Tier B worktree lanes + merge gate | 1/1 | confirmed ✓ |
-| C2 | B12.4 — Fix-lanes from followups.md | 1/1 | confirmed ✓ |
-| C3 | Async engine + integration harness | 1/1 | confirmed ✓ |
-| C4 | Events + metrics + budget + recovery | 1/1 | confirmed ✓ |
-| C5 | Small debt sweep (12 items) | 1/1 | SKIPPED ⚠ |
-| C6 | R1 — TUI + CLI audit | 1/1 | confirmed ✓ |
-| C7 | R2 — Report + Prompts + Agent Context audit | 1/1 | confirmed ✓ |
-| C8 | Final handover + Needs Human Verification checklist | 1/1 | confirmed ✓ |
+| D1 | conductor status — LLM-powered status report | 1/1 | gating… |
+| D2 | conductor gate — ad-hoc gate re-run | 0/1 | todo |
+| D3 | Heartbeat runtime toggle + amend strategy | 0/1 | todo |
+| D4 | Mid-session control feedback | 0/1 | todo |
+| O1 | Structured log + conductor log --query | 0/1 | todo |
+| O2 | Budget intelligence + network health gate | 0/1 | todo |
+| O3 | Cost overhead split | 0/1 | todo |
+| P1 | Dynamic plan reconfiguration | 0/1 | todo |
+| P2 | QA parallelization | 0/1 | todo |
+| P3 | Stronger advisor — structured verdicts | 0/1 | todo |
+| P4 | Squash bookkeeping — clean git history | 0/1 | todo |
+| P5 | Post-hoc audit replay | 0/1 | todo |
+| I1 | MCP task server production wiring | 0/1 | todo |
 
 ## Sessions
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 48 | B8 | Audit | 1 | 07-08 21:08 | 0:05 | Progress |  | 2 |  | $0.0606 | 91,711/8,335 |
 | 49 | B9 | Deliver | 1 | 07-08 21:15 | 0:06 | AgentError |  | 0 | build:OK | $0.0291 | 45,556/6,344 |
 | 50 | B9 | Fix | 2 | 07-08 21:22 | 0:00 | AgentError |  | 0 | build:OK |  |  |
 | 51 | B9 | Fix | 3 | 07-08 21:23 | 0:00 | AgentError |  | 0 | build:OK |  |  |
@@ -55,12 +60,10 @@ _Updated 2026-07-09 03:01 UTC · branch `feat/baton` · HEAD `f6930c9`_
 | 75 | C6 | Deliver | 1 | 07-09 02:37 | 0:08 | Advanced | C6 | 2 | build:OK | $0.0657 | 84,328/11,356 |
 | 76 | C7 | Deliver | 1 | 07-09 02:46 | 0:07 | Advanced | C7 | 1 | build:OK | $0.0413 | 48,675/8,656 |
 | 77 | C8 | Deliver | 1 | 07-09 02:54 | 0:05 | Advanced | C8 | 1 | build:OK | $0.0343 | 43,321/5,355 |
+| 78 | D1 | Deliver | 1 | 07-09 04:26 | 0:18 | Advanced | D1 | 1 | build:OK | $0.0646 | 69,470/17,593 |
 
 ### Commits by session
 
-- **s70 (C3 Deliver)** — 2 commit(s):
-  - 47fd403 chore(conductor): fix C3 commit hash in tracker
-  - e14b88c fix(debt): C3 — events + metrics + budget + recovery
 - **s71 (C4 Deliver)** — 2 commit(s):
   - a2ce6fe chore(conductor): fix C4 commit hash in tracker
   - 8d651d8 fix(debt): C4 — small debt sweep, 12 followups closed
@@ -78,6 +81,8 @@ _Updated 2026-07-09 03:01 UTC · branch `feat/baton` · HEAD `f6930c9`_
   - ac4023f audit: C7-final — Final handover + Needs Human Verification checklist (66/66 checkpoints, 67 features audited, 0 broken)
 - **s77 (C8 Deliver)** — 1 commit(s):
   - bb2c0e8 audit: C8 — plan-alignment, C8 tracker row added (session #77, 67/67 checkpoints DONE)
+- **s78 (D1 Deliver)** — 1 commit(s):
+  - bd28ac5 feat(era3): D1 — LLM-powered conductor status command
 
 ## Phase handovers (audit)
 
@@ -96,20 +101,17 @@ _Updated 2026-07-09 03:01 UTC · branch `feat/baton` · HEAD `f6930c9`_
 
 ## Last gate run
 
-build:OK · tests:OK
+build:OK
 
 ## Last session result
 
-> SESSION-RESULT: C8 plan-alignment row added to tracker (commit bb2c0e8). The actual C8 work (CONDUCTOR-FINAL.md with 67-feature audit table, 17 OPEN followups, 11-item Needs Human Verification checklist) was completed by session #76 under tracker row C7. This session (#77) verified all evidence artifacts (R1/R2 reports genuine, gate.txt present, build 0w/0e, 497 tests pass), added the missing C8 tracker row so the conductor sees plan stage C8 as satisfied, and confirmed working tree clean. 67/67 checkpoints DONE. No red items. Next: HUMAN must work through the 11-item Needs Human Verification checklist in docs/qa-reports/CONDUCTOR-FINAL.md — the agent cannot test Telegram (needs real token),…
+> SESSION-RESULT: D1 landed — `conductor status` now supports `--since <datetime>` and `--no-llm` flags, reads conductor.log tail, calls the configured LLM (via StatusAgent), and enforces rate-limiting (`maxPerHour`). 510 tests pass (497 + 13 new), build 0w/0e. PlanConfig gains `StatusAgentConfig.Model` + `MaxPerHour`. The Handoff block on CONDUCTOR-ERA3-START.md updated; D1 checkpoint row set DONE with commit `bd28ac5` and evidence at `docs/era3/evidence/D1/`. Pushed to `feat/era-v3`. Next session (D2): add `conductor gate` command per workflow §D2 — re-runs battery at HEAD, no agent spawned.
 
 ## Tracker handoff
 
 ```
-last: session #77 (plan C8 — Final handover + Needs Human Verification checklist, attempt 1/2). QA of #76: skipped per protocol (last session advanced, all green). Verified CONDUCTOR-FINAL.md (177 lines), R1+R2 audit reports genuine, gate evidence present, build 0w/0e, 497 tests pass.
-stage: plan C8 DONE (C8 row added; work previously completed under C7 by session #76, commit ac4023f).
-dirty: none.
-next: HUMAN — work through Needs Human Verification checklist in docs/qa-reports/CONDUCTOR-FINAL.md (11 items: Telegram, visual TUI, Linux, cTrader, signal tests, CLI edges).
-findings: R2-2 (state.json stale — orchestrator PID 31880 still running, dry-run blocked by lock), C-4 (doctor off-by-one), T-1 (plan tree expand key). 17 OPEN followups remain in followups.md and conductor-DEBT.md.
-evidence: docs/baton/evidence/C7-final/gate.txt (re-verified 0w/0e, 497 pass), docs/qa-reports/CONDUCTOR-FINAL.md.
-plan-alignment: tracker C1-C7 rows = plan C1-C7 stages; tracker C7 was doing plan C8 work. C8 row added for plan satisfaction.
+last: D1 complete — LLM-powered conductor status (v 510 tests pass, 0w/0e).
+stage: D1 DONE. Next: D2 — conductor gate (ad-hoc gate re-run).
+next: Read workflow §D2. Add GateCommand.
+trap: None — build green.
 ```
