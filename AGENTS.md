@@ -13,13 +13,11 @@ diff), is fully resumable, and reports to `.conductor/REPORT.md`. This worktree 
 - **Driver:** the STABLE `C:\Code\conductor\bin\conductor.exe` (built from master). The tool improving
   Conductor is never the tool under edit.
 
-## Read order for this phase
-1. `CONDUCTOR-START.md` (tracker — `## Handoff` block + C1-C8 checkpoints)
-2. `docs/workflows/conductor-post-b12-workflow.md` (the workflow for this phase)
-3. `conductor-DEBT.md` (debt catalog, grouped by C-session)
-4. `docs/baton/BATON-BRIEF.md` (design authority — MANDATORY)
-5. `.conductor/handovers/B<n>.md` (previous stage handover)
-6. `.conductor/plans/conductor-debt.plan.json` (your stage in the plan)
+## Read order
+1. `C:\Code\conductor\NEXT-ERA.md` — strategic roadmap for Era v3 (post-Baton)
+2. `CONDUCTOR-START.md` — tracker, all 67/67 checkpoints DONE
+3. `docs/qa-reports/CONDUCTOR-FINAL.md` — final audit + Needs Human checklist
+4. `docs/baton/BATON-BRIEF.md` — v2 design authority (reference)
 
 ## Deliverables authored on this branch (plan, not yet executed)
 - `docs/baton/BATON-BRIEF.md` + `docs/baton/stages/B0.md`…`B12.md`
@@ -42,9 +40,10 @@ C:\Code\conductor\bin\conductor.exe run         -p .conductor\plans\conductor-de
 - **Tracker rule:** always update BOTH handoff block AND checkpoint row (DONE + commit + evidence). If row stays TODO, conductor re-launches the same stage.
 
 ## Current state (2026-07-09)
-- **B0-B12** all DONE (66 checkpoints). **C1-C3** all DONE (sessions #68-#70).
-- **Phase C — Cleanup + Audit (8 sessions).** C4 (small debt sweep, 12 items) is next.
-- 493 tests pass. Plan `.conductor/plans/conductor-debt.plan.json` in progress.
+- **Baton v2 COMPLETE** — 77 sessions, 67/67 checkpoints DONE, status=completed.
+- 497 tests pass, build 0w/0e, $3.74 total cost.
+- Next work: **Era v3** — see `C:\Code\conductor\NEXT-ERA.md` for the strategic roadmap.
+- D1 (conductor status) is the recommended first session: LLM-powered `conductor status` command.
 
 ## Gotchas
 - **`claudeSessionId`** is a legacy field name storing ANY agent's session id (B2 renames/abstracts).
