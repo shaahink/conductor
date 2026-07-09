@@ -4,10 +4,10 @@
 **Branch:** `feat/era-v3`. **Driver:** `C:\Code\conductor\bin\conductor.exe` (stable from master).
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
-last: D3 — heartbeat runtime toggle + amend strategy landed. CLI heartbeat on|off, TUI H key, amend beats create-per-interval. 510 tests, 0w/0e.
-stage: D3 DONE. Next: D4 — Mid-session control feedback.
-next: Read workflow §D4. Rejected/applied controls produce log + TUI toast. No silent failures.
-trap: H was already bound to health modal. Health moved to F1. PeriodicTimer deferred (sync/async boundary).
+last: D4 — mid-session control feedback landed. Toast on accept/reject, control file persists on guard failure. 510 tests, 0w/0e.
+stage: D4 DONE. Next: O1 — structured log + conductor log --query.
+next: Read workflow §01. Serilog JSON rolling sink + log --query filter. Text sink preserved.
+trap: D3 commit tracker fix (0d199f1→79a96a8). PeriodicTimer still deferred. Health modal on F1.
 
 ## Baseline Numbers
 
@@ -24,8 +24,8 @@ trap: H was already bound to health modal. Health moved to F1. PeriodicTimer def
 |---|-----------|--------|--------|----------|
 | D1 | conductor status — LLM-powered status report | DONE (verified) | 8b9ec2b | docs/era3/evidence/D1/ |
 | D2 | conductor gate — ad-hoc gate re-run | DONE | 9b85d7e | docs/era3/evidence/D2/ |
-| D3 | Heartbeat runtime toggle + amend strategy | DONE | 0d199f1 | docs/era3/evidence/D3/ |
-| D4 | Mid-session control feedback | TODO | — | — |
+| D3 | Heartbeat runtime toggle + amend strategy | DONE | 79a96a8 | docs/era3/evidence/D3/ |
+| D4 | Mid-session control feedback | DONE | 4bc5760 | docs/era3/evidence/D4/ |
 | O1 | Structured log + conductor log --query | TODO | — | — |
 | O2 | Budget intelligence + network health gate | TODO | — | — |
 | O3 | Cost overhead split | TODO | — | — |

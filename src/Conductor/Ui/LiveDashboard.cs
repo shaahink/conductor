@@ -30,6 +30,10 @@ public sealed class LiveDashboard : IProgressSink
     private IReadOnlyList<GateProgress> _gates = Array.Empty<GateProgress>();
     private int _tick;
 
+    private ToastMessage? _toast;
+    private int _toastTicks;
+    private const int ToastDurationTicks = 12; // ~3 s at 250 ms/tick
+
     private Modal _modal = Modal.None;
     private string _modalTitle = "";
     private List<string> _modalLines = new();
@@ -100,6 +104,11 @@ public sealed class LiveDashboard : IProgressSink
     public void Snapshot(DashboardSnapshot snap) { lock (_gate) _snap = snap; }
 
     public void GateProgress(IReadOnlyList<GateProgress> gates) { lock (_gate) _gates = gates; }
+
+    void IProgressSink.Toast(ToastMessage toast)
+    {
+        lock (_gate) { _toast = toast; _toastTicks = ToastDurationTicks; }
+    }
 
     public ControlAction? PollControl() => _keys.TryDequeue(out var a) ? a : null;
 
@@ -261,7 +270,7 @@ public sealed class LiveDashboard : IProgressSink
         lock (_gate)
         {
             var snap = _gates.Count > 0 ? _snap with { Gates = _gates } : _snap;
-            return new DashboardState
+            var state = new DashboardState
             {
                 Snap = snap,
                 Agent = _agent.Skip(Math.Max(0, _agent.Count - 15)).ToArray(),
@@ -273,7 +282,10 @@ public sealed class LiveDashboard : IProgressSink
                 ConfirmPrompt = ConfirmGate.Message(_pendingConfirm),
                 Tree = _tree,
                 AgentExpanded = _agentExpanded,
+                Toast = _toastTicks > 0 ? _toast : null,
             };
+            if (_toastTicks > 0) _toastTicks--;
+            return state;
         }
     }
 

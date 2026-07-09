@@ -33,6 +33,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     private bool _pausePending;
     private readonly string _lockPath = Path.Combine(plan.StateDir, "conductor.lock");
     private readonly string _controlPath = Path.Combine(plan.StateDir, "control.json");
+    private DateTime? _lastControlWrite;
     private readonly string _logPath = Path.Combine(plan.StateDir, "conductor.log");
     private DateTime? _backoffUntil;
     private readonly List<(string Kind, string Text, DateTime Utc)> _activity = new();
@@ -1055,9 +1056,13 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             case ControlAction.PauseAfterSession:
                 if (inSession) _pausePending = true;
                 else { state.Status = RunStatus.Paused; Save(); }
+                sink.Toast(new ToastMessage($"pause-after-session {(inSession ? "queued" : "applied")}", LogSeverity.Success));
+                DeleteControlFile();
                 break;
             case ControlAction.StopAfterSession:
                 state.StopAfterSession = true;
+                sink.Toast(new ToastMessage("stop-after-session: will stop when current session ends", LogSeverity.Success));
+                DeleteControlFile();
                 break;
             case ControlAction.ResumeRun:
                 if (state.Status is RunStatus.Paused or RunStatus.NeedsHuman or RunStatus.AwaitingOwner)
@@ -1065,12 +1070,15 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     if (state.Status == RunStatus.AwaitingOwner)
                     {
                         ApproveAwaitingOwner();
+                        DeleteControlFile();
                         break;
                     }
                     state.Status = RunStatus.Idle;
                     state.AttentionReason = null;
                     Save();
                     Log("resumed by user");
+                    sink.Toast(new ToastMessage("run resumed", LogSeverity.Success));
+                    DeleteControlFile();
                 }
                 break;
             case ControlAction.SkipStage:
@@ -1078,12 +1086,15 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 else if (state.CurrentStage != null)
                 {
                     var s = plan.Stages.FirstOrDefault(x => x.Id == state.CurrentStage);
-                    if (s != null) SkipStage(s, "skipped by user control");
+                    if (s != null) { SkipStage(s, "skipped by user control"); sink.Toast(new ToastMessage($"stage {state.CurrentStage} skipped", LogSeverity.Success)); }
                 }
+                DeleteControlFile();
                 break;
             case ControlAction.AbortNow when !inSession:
                 state.Status = RunStatus.Aborted;
                 Save();
+                sink.Toast(new ToastMessage("run aborted by user", LogSeverity.Warn));
+                DeleteControlFile();
                 break;
             case ControlAction.RetryStage when !inSession:
                 state.PendingFix = null;
@@ -1092,17 +1103,21 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 state.Status = RunStatus.Idle;
                 Save();
                 Log($"retry: stage {state.CurrentStage} — attempt counter reset, re-queuing");
+                sink.Toast(new ToastMessage($"retry: stage {state.CurrentStage} re-queued", LogSeverity.Success));
+                DeleteControlFile();
                 break;
             case ControlAction.Rollback when !inSession:
                 var force = _rollbackForce; _rollbackForce = false;
                 if (state.CurrentStageStartHead is not { Length: > 0 } sha)
                 {
                     Log("rollback refused: no checkpoint commit recorded for current stage");
+                    sink.Toast(new ToastMessage("rollback refused: no commit for current stage", LogSeverity.Error));
                     break;
                 }
                 if (!force && Git.IsDirty(plan.Repo))
                 {
                     Log($"rollback refused: working tree is dirty — {Git.DirtySummary(plan.Repo)}. Re-run with --force to discard and reset.");
+                    sink.Toast(new ToastMessage("rollback refused: dirty working tree", LogSeverity.Error));
                     break;
                 }
                 var fromSha = Git.Head(plan.Repo);
@@ -1111,20 +1126,24 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 events.Emit(new RollbackExecuted { StageId = state.CurrentStage ?? "?", FromSha = fromSha, ToSha = sha, Forced = force });
                 state.Status = RunStatus.Idle;
                 Save();
+                sink.Toast(new ToastMessage($"rollback: reset to {Short(sha)}", LogSeverity.Success));
+                DeleteControlFile();
                 break;
             case ControlAction.PauseAfterStage when !inSession:
                 state.PauseAfterStage = true;
                 state.Status = RunStatus.Idle;
                 Save();
                 Log($"pause-after-stage: will park when {state.CurrentStage} completes");
+                sink.Toast(new ToastMessage($"pause-after-stage: will park after {state.CurrentStage}", LogSeverity.Success));
+                DeleteControlFile();
                 break;
             case ControlAction.Goto when !inSession:
-                if (_gotoStageId == null) { Log("goto: no target stage — use `conductor goto <stage>`"); break; }
+                if (_gotoStageId == null) { Log("goto: no target stage — use `conductor goto <stage>`"); sink.Toast(new ToastMessage("goto: no target stage", LogSeverity.Error)); break; }
                 {
                     var tg = _gotoStageId; _gotoStageId = null;
                     var target = plan.Stages.FirstOrDefault(s => s.Id == tg);
-                    if (target == null) { Log($"goto refused: stage '{tg}' not found in plan"); break; }
-                    if (state.SkippedStages.Contains(tg)) { Log($"goto refused: stage '{tg}' is skipped"); break; }
+                    if (target == null) { Log($"goto refused: stage '{tg}' not found in plan"); sink.Toast(new ToastMessage($"goto refused: stage '{tg}' not found", LogSeverity.Error)); break; }
+                    if (state.SkippedStages.Contains(tg)) { Log($"goto refused: stage '{tg}' is skipped"); sink.Toast(new ToastMessage($"goto refused: stage '{tg}' is skipped", LogSeverity.Error)); break; }
                     // A goto to an already-confirmed stage must actually take effect: un-confirm it (and
                     // drop any owner approval) so SelectStage re-runs it instead of silently skipping.
                     state.ConfirmedStages.Remove(tg);
@@ -1140,6 +1159,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     state.Status = RunStatus.Idle;
                     Save();
                     Log($"goto: jumped to stage {tg} {target.Title}");
+                    sink.Toast(new ToastMessage($"goto: jumped to {tg} {target.Title}", LogSeverity.Success));
+                    DeleteControlFile();
                 }
                 break;
             case ControlAction.ToggleHeartbeat:
@@ -1153,13 +1174,16 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 {
                     plan.Report.HeartbeatMinutes = 0;
                     Log("heartbeat: turned OFF");
+                    sink.Toast(new ToastMessage("heartbeat OFF", LogSeverity.Info));
                 }
                 else if (toggleVal == "on")
                 {
                     plan.Report.HeartbeatMinutes = _originalHeartbeatMinutes > 0 ? _originalHeartbeatMinutes : 10;
                     Log($"heartbeat: turned ON (every {plan.Report.HeartbeatMinutes}m)");
+                    sink.Toast(new ToastMessage($"heartbeat ON (every {plan.Report.HeartbeatMinutes}m)", LogSeverity.Info));
                 }
                 try { plan.Save(); } catch (Exception ex) { Log($"heartbeat: failed to persist plan JSON: {ex.Message}"); }
+                DeleteControlFile();
                 break;
             }
         }
@@ -1173,8 +1197,10 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         try
         {
             if (!File.Exists(_controlPath)) return null;
+            var writeTime = File.GetLastWriteTimeUtc(_controlPath);
+            if (_lastControlWrite == writeTime) return null; // already processed this version
+            _lastControlWrite = writeTime;
             var text = File.ReadAllText(_controlPath);
-            File.Delete(_controlPath);
             var parsed = ControlFile.Parse(text);
             var action = parsed.Action;
             if (action != null && parsed.Confirmed && parsed.IntentId != null)
@@ -1193,6 +1219,14 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         {
             return null;
         }
+    }
+
+    private void DeleteControlFile()
+    {
+        try { if (File.Exists(_controlPath)) File.Delete(_controlPath); }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+        _lastControlWrite = null;
     }
 
     private void RecoverFromCrash()

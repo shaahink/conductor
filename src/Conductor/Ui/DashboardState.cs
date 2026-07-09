@@ -15,17 +15,11 @@ public sealed record DashboardState
     public IReadOnlyList<LogEntry> Log { get; init; } = Array.Empty<LogEntry>();
     public int Width { get; init; } = 120;
     public int Height { get; init; } = 40;
-    /// <summary>Animation frame counter for the activity spinner.</summary>
     public int Tick { get; init; }
-
-    /// <summary>Non-null when a destructive action (A/K/S) is awaiting confirmation — shown in the footer.</summary>
     public string? ConfirmPrompt { get; init; }
-
-    /// <summary>Filter/search/expand state for the hierarchical plan tree (B4.3).</summary>
     public PlanTreeView Tree { get; init; } = new();
-
-    /// <summary>When true, folded tool-call output is expanded inline in the agent pane (B4.5, `C` key).</summary>
     public bool AgentExpanded { get; init; }
+    public ToastMessage? Toast { get; init; }
 
     public readonly record struct AgentLine(string Kind, string Text, DateTime Utc);
     public readonly record struct ThinkingLine(DateTime Utc, string Text);

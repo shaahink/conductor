@@ -365,6 +365,11 @@ public static class DashboardRenderer
         var rows = new List<IRenderable> { new Markup(ActionBar(st.Snap.Status, st.Snap.HeartbeatOn)) };
         if (st.ConfirmPrompt != null)
             rows.Add(new Markup($"[bold yellow]⚠ {Esc(st.ConfirmPrompt)}[/]"));
+        if (st.Toast != null)
+        {
+            var (tc, tg) = SeverityGlyph(st.Toast.Value.Severity);
+            rows.Add(new Markup($"[bold {tc}]{tg} CTL: {Esc(st.Toast.Value.Text)}[/]"));
+        }
         if (!string.IsNullOrEmpty(st.Snap.GateSummary))
             rows.Add(new Markup("[bold]gates:[/] " + Esc(st.Snap.GateSummary)));
         if (st.Log.Count > 0)

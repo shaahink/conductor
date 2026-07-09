@@ -13,6 +13,10 @@ public enum LogSeverity
 /// <summary>A single log entry with severity for colour-coded display in the footer log pane (B4.4).</summary>
 public readonly record struct LogEntry(string Text, DateTime Utc, LogSeverity Severity = LogSeverity.Info);
 
+/// <summary>A transient notification emitted by the orchestrator for control-action feedback — displayed
+/// as an attention-grabbing toast in the dashboard footer for ~3 s, then auto-dismissed.</summary>
+public readonly record struct ToastMessage(string Text, LogSeverity Severity);
+
 public enum ControlAction
 {
     PauseAfterSession,
@@ -103,6 +107,7 @@ public sealed record DashboardSnapshot
     /// <summary>Non-null when a destructive action (A/K/S) is awaiting confirmation. Shown in the footer.</summary>
     public string? ConfirmPrompt { get; init; }
     public int ResumeCount { get; init; }
+    public ToastMessage? ActiveToast { get; init; }
     public bool HeartbeatOn { get; init; }
     public string GateSummary { get; init; } = "";
     /// <summary>Per-gate live status during a battery (empty when no battery is running).</summary>
@@ -126,4 +131,6 @@ public interface IProgressSink
     ControlAction? PollControl();
     /// <summary>Live per-gate status pushed by the gate runner (no-op for plain sinks).</summary>
     void GateProgress(IReadOnlyList<GateProgress> gates) { }
+    /// <summary>Transient control-action feedback — rendered as a toast in the dashboard.</summary>
+    void Toast(ToastMessage toast) { }
 }
