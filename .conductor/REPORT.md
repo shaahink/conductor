@@ -1,56 +1,30 @@
-﻿# Conductor — Baton run report
+﻿# Conductor — Conductor-Debt run report
 
-_Updated 2026-07-09 00:49 UTC · branch `feat/baton` · HEAD `15aaddb`_
+_Updated 2026-07-09 01:07 UTC · branch `feat/baton` · HEAD `1706c45`_
 
-**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B12 — Controlled parallelism · attempts used 0 · working ▸ B12.4
-**Checkpoints:** 64/65 done · **Sessions run:** 67 · **Cost:** $3.0393 · **Tokens:** 2,307,220 in / 936,086 out / 459,107 think
+**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** C1 — B12.3 — Tier B worktree lanes + merge gate · attempts used 0
+**Checkpoints:** 66/72 done · **Sessions run:** 68 · **Cost:** $3.2362 · **Tokens:** 2,616,695 in / 956,975 out / 482,192 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11
-
-## Latest activity (live)
-
-_Session #67 (Deliver) · running 10m · last output 12s ago · $0.0363_
-
-**Thinking:**
-> Now I have a good understanding. Let me also look at where the perPhase gate confirmation flow works (where stage completion is detected):  From lines 160-173: ``` // perPhase: this stage's rows are all DONE but it isn't confirmed yet, and no fix/resume/audit // is queued → owe a full-battery phase …
-> Let me look at the existing code patterns more closely for how other `Core/` files are structured, and check the imports and namespace conventions.
-> Good, no existing FollowupParser or FollowupEntry. Let me create them now.  First, let me create the FollowupParser.cs file with the model and parser.
-
-**Recent actions:**
-- `01:48:08` » read src\Conductor\Core\Events\ConductorEvent.cs
-- `01:48:12` » read src\Conductor\Core\Orchestrator.cs
-- `01:48:13` » read src\Conductor\Core\Orchestrator.cs
-- `01:48:14` » read src\Conductor\Core\Orchestrator.cs
-- `01:48:52` » todowrite 5 todos
-- `01:48:52` · Now I have a clear picture of the architecture. Let me implement B12.4.
-- `01:48:57` » read src\Conductor\Core\LaneWorkerPool.cs
-- `01:48:58` » grep FollowupEntry|FollowupParser
-- `01:49:28` » write src\Conductor\Core\FollowupParser.cs
-- `01:49:28` · Now creating the core implementation. First, the `FollowupParser` and `FollowupEntry`:
+**Pending:** full-battery phase gate for C1
 
 ## Stage progress
 
 | Stage | Title | Done | State |
 |---|---|---|---|
-| B0 | Repo modernisation + self-hosting harness | 6/6 | confirmed ✓ |
-| B1 | Decouple Loom + pluggable progress providers | 7/7 | confirmed ✓ |
-| B2 | Event-sourced backbone + provider decoupling | 6/6 | confirmed ✓ |
-| B3 | Safety, owner-gates & process control | 5/5 | confirmed ✓ |
-| B4 | TUI overhaul (alt-screen + tree) | 7/7 | confirmed ✓ |
-| B5 | Observability & health | 4/4 | confirmed ✓ |
-| B6 | AFK + two-way Telegram | 5/5 | confirmed ✓ |
-| B7 | Specialist sub-agent personas | 3/3 | confirmed ✓ |
-| B8 | Brain layer | 5/5 | confirmed ✓ |
-| B9 | Task graph + smart session management | 5/5 | confirmed ✓ |
-| B10 | Advanced orchestration | 4/4 | confirmed ✓ |
-| B11 | Close-out + Shamshir owner-gated proof | 4/4 | confirmed ✓ |
-| B12 | Controlled parallelism | 3/4 | **← active** |
+| C1 | B12.3 — Tier B worktree lanes + merge gate | 1/1 | gating… |
+| C2 | B12.4 — Fix-lanes from followups.md | 0/1 | todo |
+| C3 | Async engine + integration harness | 0/1 | todo |
+| C4 | Events + metrics + budget + recovery | 0/1 | todo |
+| C5 | Small debt sweep (12 items) | 0/1 | todo |
+| C6 | R1 — TUI + CLI audit | 0/1 | todo |
+| C7 | R2 — Report + Prompts + Agent Context audit | 0/1 | todo |
+| C8 | Final handover + Needs Human Verification checklist | 0/0 | todo |
 
 ## Sessions
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 38 | B5 | Audit | 1 | 07-08 18:13 | 0:07 | Progress |  | 2 |  | $0.0635 | 86,516/7,809 |
 | 39 | B6 | Deliver | 1 | 07-08 18:21 | 0:26 | Advanced | B6.1 B6.2 B6.3 B6.4 | 3 | build:OK | $0.1276 | 91,871/39,873 |
 | 40 | B6 | Deliver | 1 | 07-08 18:48 | … | running |  | 0 |  |  |  |
 | 41 | B6 | Deliver | 1 | 07-08 19:45 | 0:07 | Advanced | B6.5 | 1 | build:OK | $0.0311 | 29,170/7,885 |
@@ -79,17 +53,11 @@ _Session #67 (Deliver) · running 10m · last output 12s ago · $0.0363_
 | 64 | B12 | Deliver | 1 | 07-08 23:49 | 0:13 | Advanced | B12.1 | 2 | build:OK | $0.0744 | 78,710/19,057 |
 | 65 | B12 | Deliver | 1 | 07-09 00:02 | 0:11 | Advanced | B12.2 | 2 | build:OK | $0.0583 | 62,839/15,593 |
 | 66 | B12 | Deliver | 1 | 07-09 00:14 | 0:24 | Advanced | B12.3 | 4 | build:OK | $0.1101 | 91,676/25,416 |
-| 67 | B12 | Deliver | 1 | 07-09 00:39 | … | running |  | 0 |  |  |  |
+| 67 | B12 | Deliver | 1 | 07-09 00:39 | 0:18 | Interrupted |  | 0 |  | $0.0739 | 72,539/15,348 |
+| 68 | C1 | Resume | 1r1 | 07-09 01:01 | 0:05 | Advanced | B12.4 C1 | 1 | build:OK | $0.1230 | 236,936/5,541 |
 
 ### Commits by session
 
-- **s59 (B10 Deliver)** — 6 commit(s):
-  - 083ff33 chore(bB10): mark B10.2-B10.4 DONE — B10 stage complete
-  - ec07197 chore(conductor): s59 B10 working ▸B10.2 @ 00:01
-  - 5cb82f2 feat(bB10.4): collapse double gate battery — single source of truth
-  - 6fa8938 feat(bB10.3): per-stage pre/post hooks
-  - af5ef30 chore(conductor): s59 B10 working ▸B10.2 @ 23:51
-  - 0e1c1f7 feat(bB10.2): first-class hierarchical stages in model/state/report/tree
 - **s60 (B10 Audit)** — 1 commit(s):
   - 5fc6202 audit(B10): fix critical PreHookRunStages resume bug + harden hook execution
 - **s61 (B11 Deliver)** — 2 commit(s):
@@ -116,6 +84,8 @@ _Session #67 (Deliver) · running 10m · last output 12s ago · $0.0363_
   - ebc8ab8 feat(bB12.3): Tier B isolated-worktree mutating lanes + merge gate
   - 60a6648 chore(conductor): s66 B12 working ▸B12.3 @ 01:34
   - 8913e57 chore(conductor): s66 B12 working ▸B12.3 @ 01:24
+- **s68 (C1 Resume)** — 1 commit(s):
+  - 1706c45 feat(bB12.4): fix-lanes consume .conductor/followups.md as Tier-B merge-gated lanes
 
 ## Phase handovers (audit)
 
@@ -138,16 +108,15 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: B12.3 landed — Tier B isolated-worktree mutating lanes with full merge gate. Delivered `MutatingLaneConfig` model, `Git` worktree/branch helpers, `MutatingLaneRunner` (worktree → agent → staging merge gate → ff-merge on pass / reject on fail), 3 new event types, and 12 tests. Build 0w/0e, 460 tests pass. Commit `60f9670` pushed. The merge gate creates a staging worktree from the base branch, merges the lane's scratch branch, runs the lane-selected or plan-level gates, and only fast-forward merges into primary if green. Next session should tackle B12.4 (fix-lanes consuming `.conductor/followups.md`). Hard part this session: debugging the `cmd /c` quoting issue (escaped quotes …
+> SESSION-RESULT: B12.4 (C1) landed — `FollowupParser` reads variable-scheme markdown tables from `.conductor/followups.md`, `Orchestrator.RunFollowupFixLanes` dispatches OPEN followups as Tier-B fix-lanes through `MutatingLaneRunner` behind merge gates, and updates status in-place on success. Hooked into `ConfirmStage()` after post-hook. 10 tests green (parser: standard + variable-scheme + update + filter; e2e: fix-lane merge-accept + rejection), 470 total tests pass, build 0w/0e. Nothing red. Next: C2 (async engine + integration harness). Hard part: the `UpdateStatus` line reconstruction silently dropped outer pipe chars after `SplitPipeRow`, making re-parsed entries disappear — subtle becau…
 
 ## Tracker handoff
 
 ```
-last: session #67 (B12.3) — Tier B isolated-worktree mutating lanes: MutatingLaneConfig model, Git.WorktreeAdd/Remove/MergeBranch/DeleteBranch, MutatingLaneRunner (worktree → agent → staging merge gate → ff-merge on pass / reject on fail), 3 new ConductorEvent types (MutatingLaneStarted/Finished, MergeGateVerdict), 12 tests green.
-stage: B12.3 DONE. B12.4 (fix-lanes consume followups.md) is next.
+last: session #68 (B12.4/C1) — fix-lanes consuming .conductor/followups.md as Tier-B lanes behind merge gate. FollowupParser (variable-scheme .md table), RunFollowupFixLanes in Orchestrator (dispatched from ConfirmStage), 10 tests green.
+stage: C1 DONE. Build 0w/0e, 470 tests pass (10 B12.4). C2 (async engine + harness) is next.
 dirty: none.
-next: B12.4 — fix-lanes that consume .conductor/followups.md as Tier-B lanes.
-QA-B12.3: self-verified — build 0w/0e, 460 tests pass, 12 B12.3 tests (good merge accepted, bad diff rejected, worktree isolation, lane-specific gates, cancellation, cleanup).
-followups: FU-B11-1/2/3, FU-B10-1/2, FU-B0-4/5/6/7 remain OPEN.
-evidence: docs/baton/evidence/B12.3-gate.txt (12 tests, 460 total pass), test file tests/Conductor.Tests/B12_3Tests.cs.
+next: C2 — async engine + integration harness (MA0045, MA0002, CT through IProgressProvider.Read, orchestrator harness). ~90 min. Requires careful async migration with resumability preserved.
+followups: FU-B11-1/2/3, FU-B10-1/2, FU-B0-4/5/6/7 remain OPEN (scheduled C3-C5).
+evidence: docs/baton/evidence/B12.4-gate.txt (470 tests, 10 B12.4). Test file: tests/Conductor.Tests/B12_4Tests.cs.
 ```
