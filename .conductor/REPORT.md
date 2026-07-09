@@ -1,11 +1,12 @@
 ﻿# Conductor — Conductor-Era3 run report
 
-_Updated 2026-07-09 06:05 UTC · branch `feat/era-v3` · HEAD `53f7c08`_
+_Updated 2026-07-09 06:19 UTC · branch `feat/era-v3` · HEAD `9470643`_
 
 **Status:** Idle — plan complete EXCEPT skipped stages: C5
-**Stage:** O1 — Structured log + conductor log --query · attempts used 0
-**Checkpoints:** 5/13 done · **Sessions run:** 83 · **Cost:** $4.1975 · **Tokens:** 3,616,636 in / 1,160,692 out / 621,782 think
+**Stage:** O2 — Budget intelligence + network health gate · attempts used 0
+**Checkpoints:** 6/13 done · **Sessions run:** 84 · **Cost:** $4.2495 · **Tokens:** 3,682,017 in / 1,173,305 out / 625,159 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1, C2, C3, C4, C6, C7, C8, D1, D2, D3, D4, O1
+**Pending:** full-battery phase gate for O2
 **⚠ Skipped stages (need human review):** C5
 
 ## Stage progress
@@ -17,7 +18,7 @@ _Updated 2026-07-09 06:05 UTC · branch `feat/era-v3` · HEAD `53f7c08`_
 | D3 | Heartbeat runtime toggle + amend strategy | 1/1 | confirmed ✓ |
 | D4 | Mid-session control feedback | 1/1 | confirmed ✓ |
 | O1 | Structured log + conductor log --query | 1/1 | confirmed ✓ |
-| O2 | Budget intelligence + network health gate | 0/1 | todo |
+| O2 | Budget intelligence + network health gate | 1/1 | gating… |
 | O3 | Cost overhead split | 0/1 | todo |
 | P1 | Dynamic plan reconfiguration | 0/1 | todo |
 | P2 | QA parallelization | 0/1 | todo |
@@ -30,7 +31,6 @@ _Updated 2026-07-09 06:05 UTC · branch `feat/era-v3` · HEAD `53f7c08`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 54 | B9 | Deliver | 1 | 07-08 21:33 | 0:21 | Advanced | B9.2 B9.3 | 5 | build:OK | $0.0818 | 59,955/26,063 |
 | 55 | B9 | Deliver | 1 | 07-08 21:55 | 0:16 | Advanced | B9.4 | 3 | build:OK | $0.0719 | 73,232/17,129 |
 | 56 | B9 | Deliver | 1 | 07-08 22:11 | 0:11 | Advanced | B9.5 | 3 | build:OK | $0.0527 | 61,772/11,888 |
 | 57 | B9 | Audit | 1 | 07-08 22:23 | 0:08 | Progress |  | 1 |  | $0.0725 | 97,126/11,226 |
@@ -60,11 +60,10 @@ _Updated 2026-07-09 06:05 UTC · branch `feat/era-v3` · HEAD `53f7c08`_
 | 81 | D3 | Deliver | 1 | 07-09 05:04 | 0:22 | Advanced | D3 | 1 | build:OK | $0.0896 | 73,790/20,614 |
 | 82 | D4 | Deliver | 1 | 07-09 05:28 | 0:13 | Advanced | D4 | 1 | build:OK | $0.0648 | 57,829/17,763 |
 | 83 | O1 | Deliver | 1 | 07-09 05:43 | 0:21 | Advanced | O1 | 2 | build:OK | $0.0861 | 69,607/20,828 |
+| 84 | O2 | Deliver | 1 | 07-09 06:06 | 0:13 | Advanced | O2 | 2 | build:OK | $0.0520 | 65,381/12,613 |
 
 ### Commits by session
 
-- **s76 (C7 Deliver)** — 1 commit(s):
-  - ac4023f audit: C7-final — Final handover + Needs Human Verification checklist (66/66 checkpoints, 67 features audited, 0 broken)
 - **s77 (C8 Deliver)** — 1 commit(s):
   - bb2c0e8 audit: C8 — plan-alignment, C8 tracker row added (session #77, 67/67 checkpoints DONE)
 - **s78 (D1 Deliver)** — 1 commit(s):
@@ -82,6 +81,9 @@ _Updated 2026-07-09 06:05 UTC · branch `feat/era-v3` · HEAD `53f7c08`_
 - **s83 (O1 Deliver)** — 2 commit(s):
   - ddc46e9 chore(era3): O1 tracker update — stage O1 DONE
   - be216a4 feat(era3): O1 structured log — JSON rolling sink + conductor log --query
+- **s84 (O2 Deliver)** — 2 commit(s):
+  - 9470643 chore(era3): O2 tracker update — stage O2 DONE
+  - 2f4d103 feat(era3): O2 budget intelligence — identical-stall detection, exponential backoff, DNS preflight
 
 ## Phase handovers (audit)
 
@@ -100,24 +102,17 @@ _Updated 2026-07-09 06:05 UTC · branch `feat/era-v3` · HEAD `53f7c08`_
 
 ## Last gate run
 
-build:OK · tests:OK
+build:OK
 
 ## Last session result
 
-> Now let me read the key files I'll need to modify for O1:
-> Now let me look at the Orchestrator's gate-logging patterns and the PlanConfig model to understand what properties to query:
-> Let me look at the gate runner interface and how gates are logged:
-> Let me check the existing log-related tests and see what the live dashboard capabilities are for the `log` command integration:
-> Now I have a thorough understanding of the codebase. Let me create my implementation plan and execute it:
-> Let me start. First, fix the D4 tracker hash and verify the current branch:
-> Good. D4's actual commit is `f40a974`, not `4bc5760`. Let me fix the tracker and start O1 implementation:
-> Now add the JSON file sink …
+> SESSION-RESULT: O2 budget intelligence landed — identical-stall detection (2 consecutive stalls with zero commits → NeedsHuman instead of burning 4 more attempts), exponential backoff (12→24→48→... min per stall, reset on non-stall), and DNS preflight (resolves github.com + api.nuget.org before spawning, parks + rechecks every N seconds on failure). All configurable via `limits.stallPatternTermination`, `limits.stallBackoffMinutes`, `limits.dnsHealthCheck`. 516 tests pass, 0w/0e, clean tree, pushed. Next session should deliver O3 (cost overhead split — agent vs gates in TUI + report).
 
 ## Tracker handoff
 
 ```
-last: O1 — structured log + conductor log --query landed. Serilog JSON rolling sink + LogCommand with --query/--since/--tail. 511 tests, 0w/0e.
-stage: O1 DONE. Next: O2 — budget intelligence + network health gate.
-next: Read workflow §O2. Identical-stall detection, exponential backoff, DNS preflight.
-trap: QA: D4 tracker hash fixed (4bc5760→f40a974).
+last: O2 — budget intelligence + network health gate landed. Identical-stall detection (2 stale→NeedsHuman), exponential stall backoff (12→24→48), DNS preflight (github+nuget) before spawn, all configurable in limits. 516 tests pass, 0w/0e.
+stage: O2 DONE. Next: O3 — cost overhead split (agent vs gates in TUI + report).
+next: Read workflow §O3. Split TuiMetrics agentCost/overheadCost, GateRunner per-gate cost, REPORTER.md breakdown.
+trap: O1 QA passed — evidence present, log command works.
 ```
