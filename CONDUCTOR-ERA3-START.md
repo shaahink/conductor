@@ -4,10 +4,10 @@
 **Branch:** `feat/era-v3`. **Driver:** `C:\Code\conductor\bin\conductor.exe` (stable from master).
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
-last: D1 complete — LLM-powered conductor status (v 510 tests pass, 0w/0e).
-stage: D1 DONE. Next: D2 — conductor gate (ad-hoc gate re-run).
+last: D1 fix-session — stderr test assertion corrected (r.StdErr vs r.Output). All 510 tests pass, 0w/0e.
+stage: D1 DONE (verified). Next: D2 — conductor gate (ad-hoc gate re-run).
 next: Read workflow §D2. Add GateCommand.
-trap: None — build green.
+trap: None — build + 510 tests green.
 
 ## Baseline Numbers
 
@@ -22,7 +22,7 @@ trap: None — build green.
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| D1 | conductor status — LLM-powered status report | DONE | 0b747f0 | docs/era3/evidence/D1/ |
+| D1 | conductor status — LLM-powered status report | DONE (verified) | 79b51b0 | docs/era3/evidence/D1/ |
 | D2 | conductor gate — ad-hoc gate re-run | TODO | — | — |
 | D3 | Heartbeat runtime toggle + amend strategy | TODO | — | — |
 | D4 | Mid-session control feedback | TODO | — | — |

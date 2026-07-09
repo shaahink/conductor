@@ -55,7 +55,7 @@ public class B11_1CrossPlatformShellTests
         var r = ProcessRunner.RunShell("bash", "echo stderr-message >&2 && exit 1",
             Path.GetTempPath(), TimeSpan.FromMinutes(1));
         Assert.Equal(1, r.ExitCode);
-        Assert.Contains("stderr-message", r.Output);
+        Assert.Contains("stderr-message", r.StdErr);
     }
 
     [Fact]
