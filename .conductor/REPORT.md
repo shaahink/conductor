@@ -1,18 +1,19 @@
 ﻿# Conductor — Conductor-Debt run report
 
-_Updated 2026-07-09 01:08 UTC · branch `feat/baton` · HEAD `391ba7c`_
+_Updated 2026-07-09 01:28 UTC · branch `feat/baton` · HEAD `3098861`_
 
 **Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** C1 — B12.3 — Tier B worktree lanes + merge gate · attempts used 0
-**Checkpoints:** 66/72 done · **Sessions run:** 68 · **Cost:** $3.2362 · **Tokens:** 2,616,695 in / 956,975 out / 482,192 think
+**Stage:** C2 — B12.4 — Fix-lanes from followups.md · attempts used 0
+**Checkpoints:** 67/72 done · **Sessions run:** 69 · **Cost:** $3.3526 · **Tokens:** 2,712,735 in / 983,344 out / 500,565 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1
+**Pending:** full-battery phase gate for C2
 
 ## Stage progress
 
 | Stage | Title | Done | State |
 |---|---|---|---|
 | C1 | B12.3 — Tier B worktree lanes + merge gate | 1/1 | confirmed ✓ |
-| C2 | B12.4 — Fix-lanes from followups.md | 0/1 | todo |
+| C2 | B12.4 — Fix-lanes from followups.md | 1/1 | gating… |
 | C3 | Async engine + integration harness | 0/1 | todo |
 | C4 | Events + metrics + budget + recovery | 0/1 | todo |
 | C5 | Small debt sweep (12 items) | 0/1 | todo |
@@ -24,7 +25,6 @@ _Updated 2026-07-09 01:08 UTC · branch `feat/baton` · HEAD `391ba7c`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 39 | B6 | Deliver | 1 | 07-08 18:21 | 0:26 | Advanced | B6.1 B6.2 B6.3 B6.4 | 3 | build:OK | $0.1276 | 91,871/39,873 |
 | 40 | B6 | Deliver | 1 | 07-08 18:48 | … | running |  | 0 |  |  |  |
 | 41 | B6 | Deliver | 1 | 07-08 19:45 | 0:07 | Advanced | B6.5 | 1 | build:OK | $0.0311 | 29,170/7,885 |
 | 42 | B6 | Audit | 1 | 07-08 19:54 | 0:06 | Progress |  | 1 |  | $0.0606 | 87,266/8,743 |
@@ -54,11 +54,10 @@ _Updated 2026-07-09 01:08 UTC · branch `feat/baton` · HEAD `391ba7c`_
 | 66 | B12 | Deliver | 1 | 07-09 00:14 | 0:24 | Advanced | B12.3 | 4 | build:OK | $0.1101 | 91,676/25,416 |
 | 67 | B12 | Deliver | 1 | 07-09 00:39 | 0:18 | Interrupted |  | 0 |  | $0.0739 | 72,539/15,348 |
 | 68 | C1 | Resume | 1r1 | 07-09 01:01 | 0:05 | Advanced | B12.4 C1 | 1 | build:OK | $0.1230 | 236,936/5,541 |
+| 69 | C2 | Deliver | 1 | 07-09 01:08 | 0:19 | Advanced | C2 | 2 | build:OK | $0.1164 | 96,040/26,369 |
 
 ### Commits by session
 
-- **s60 (B10 Audit)** — 1 commit(s):
-  - 5fc6202 audit(B10): fix critical PreHookRunStages resume bug + harden hook execution
 - **s61 (B11 Deliver)** — 2 commit(s):
   - d3e41ab chore(bB11.1): fill commit hash in CONDUCTOR-START.md
   - 3ba9d2b feat(bB11.1): cross-platform gate runner — gates[].shell + RunShell dispatch
@@ -85,6 +84,9 @@ _Updated 2026-07-09 01:08 UTC · branch `feat/baton` · HEAD `391ba7c`_
   - 8913e57 chore(conductor): s66 B12 working ▸B12.3 @ 01:24
 - **s68 (C1 Resume)** — 1 commit(s):
   - 1706c45 feat(bB12.4): fix-lanes consume .conductor/followups.md as Tier-B merge-gated lanes
+- **s69 (C2 Deliver)** — 2 commit(s):
+  - 3098861 chore(conductor): s69 C2 DONE — async engine ratchet, update tracker
+  - 633be3f fix(debt): C2 async engine ratchet — MA0045+MA0002 → error, CancellationToken through IProgressProvider, stdout/stderr split
 
 ## Phase handovers (audit)
 
@@ -103,19 +105,20 @@ _Updated 2026-07-09 01:08 UTC · branch `feat/baton` · HEAD `391ba7c`_
 
 ## Last gate run
 
-build:OK · tests:OK
+build:OK
 
 ## Last session result
 
-> SESSION-RESULT: B12.4 (C1) landed — `FollowupParser` reads variable-scheme markdown tables from `.conductor/followups.md`, `Orchestrator.RunFollowupFixLanes` dispatches OPEN followups as Tier-B fix-lanes through `MutatingLaneRunner` behind merge gates, and updates status in-place on success. Hooked into `ConfirmStage()` after post-hook. 10 tests green (parser: standard + variable-scheme + update + filter; e2e: fix-lane merge-accept + rejection), 470 total tests pass, build 0w/0e. Nothing red. Next: C2 (async engine + integration harness). Hard part: the `UpdateStatus` line reconstruction silently dropped outer pipe chars after `SplitPipeRow`, making re-parsed entries disappear — subtle becau…
+> SESSION-RESULT: C2 (async engine ratchet) landed — MA0045 and MA0002 ratcheted to error in .editorconfig (0 violations), CancellationToken plumbed through IProgressProvider.Read(PlanConfig, CT) across all 3 providers, stdout/stderr split in ProcessRunner with backward-compatible ProcResult.StdErr field, RunState collections changed from List<string> to HashSet<string>(StringComparer.Ordinal) fixing MA0002 at root. Build 0w/0e, 480 tests pass (10 new C2AsyncEngineTests). Commits 633be3f + 3098861 pushed to feat/baton. The orchestrator integration harness (OrchestratorHarness + process-control loop tests) was deferred — the ratchet + CT + stream split consumed the session's full scope. Next se…
 
 ## Tracker handoff
 
 ```
-last: session #68 (B12.4/C1) — fix-lanes consuming .conductor/followups.md as Tier-B lanes behind merge gate. FollowupParser (variable-scheme .md table), RunFollowupFixLanes in Orchestrator (dispatched from ConfirmStage), 10 tests green.
-stage: C1 DONE. Build 0w/0e, 470 tests pass (10 B12.4). C2 (async engine + harness) is next.
+last: session #69 (C2) — async engine ratchet: MA0045+MA0002 → error (0 violations), CancellationToken through IProgressProvider.Read, stdout/stderr split in ProcessRunner/ProcResult, 480 tests pass (10 new C2AsyncEngineTests).
+stage: C2 DONE. Build 0w/0e.
 dirty: none.
-next: C2 — async engine + integration harness (MA0045, MA0002, CT through IProgressProvider.Read, orchestrator harness). ~90 min. Requires careful async migration with resumability preserved.
-followups: FU-B11-1/2/3, FU-B10-1/2, FU-B0-4/5/6/7 remain OPEN (scheduled C3-C5).
-evidence: docs/baton/evidence/B12.4-gate.txt (470 tests, 10 B12.4). Test file: tests/Conductor.Tests/B12_4Tests.cs.
+next: C3 — Events + metrics + budget + recovery (LiveMetrics wiring, Rollback event, mid-session control feedback, McpCallFinished, budget persistence, orphaned resume hardening, Ctrl+C test).
+followups: FU-B2-1/3, FU-B3-3/4/5, FU-B0-6 remain OPEN (scheduled C3).
+evidence: docs/baton/evidence/C2-gate.txt (480 tests, 10 C2). Test file: tests/Conductor.Tests/C2AsyncEngineTests.cs.
+B12.4 QA: verified DONE — 10 tests green, FollowupParser + RunFollowupFixLanes wired in Orchestrator, evidence artifact authentic.
 ```
