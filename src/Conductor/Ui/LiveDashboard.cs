@@ -42,6 +42,12 @@ public sealed class LiveDashboard : IProgressSink
     private bool _inputActive;
     private readonly StringBuilder _inputBuffer = new();
 
+    // P1: stage-editor mode — E on a selected stage row enters inline editing of that stage's config
+    private bool _stageEditActive;
+    private string _stageEditTitle = "";
+    private string _stageEditStageId = "";
+    private readonly StringBuilder _stageEditBuffer = new();
+
     private ControlAction? _pendingConfirm;
 
     private PlanTreeView _tree = new();
@@ -171,6 +177,7 @@ public sealed class LiveDashboard : IProgressSink
     private void HandlePreviewKey(ConsoleKeyInfo ki)
     {
         if (_modal != Modal.None) { HandleModalKey(ki); return; }
+        if (_stageEditActive) { HandleStageEditKey(ki); return; }
         switch (ki.Key)
         {
             case ConsoleKey.T: OpenModal(Modal.Thinking); break;
@@ -186,7 +193,21 @@ public sealed class LiveDashboard : IProgressSink
             case ConsoleKey.U: OpenModal(Modal.Tasks); break;
             case ConsoleKey.G when _plan?.StatusAgent is { Enabled: true }: StartStatusAgent(); break;
             case ConsoleKey.F: _tree = _tree with { Filter = PlanTree.NextFilter(_tree.Filter) }; break;
-            case ConsoleKey.E: _tree = _tree with { ExpandAll = !_tree.ExpandAll }; break;
+            case ConsoleKey.E:
+                {
+                    // P1: inline stage editor when a stage is selected
+                    var stages = DashboardRenderer.StagesFor(_snap);
+                    var selStage = PlanTree.StageForRow(stages, _tree.Selected);
+                    if (!string.IsNullOrEmpty(selStage) && _plan != null)
+                    {
+                        OpenStageEditor(selStage);
+                    }
+                    else
+                    {
+                        _tree = _tree with { ExpandAll = !_tree.ExpandAll };
+                    }
+                }
+                break;
             case ConsoleKey.UpArrow: MoveTreeSelection(-1); break;
             case ConsoleKey.DownArrow: MoveTreeSelection(+1); break;
             case ConsoleKey.C: _agentExpanded = !_agentExpanded; break;
@@ -197,6 +218,7 @@ public sealed class LiveDashboard : IProgressSink
     private IRenderable BuildTarget()
     {
         if (_inputActive) return DashboardRenderer.BuildInput(_inputBuffer.ToString(), SafeWidth(), SafeHeight());
+        if (_stageEditActive) return DashboardRenderer.BuildInput($"  {_stageEditTitle}\n\n{_stageEditBuffer}", SafeWidth(), SafeHeight());
         if (_modal == Modal.Status)
         {
             List<string> lines;
@@ -317,6 +339,7 @@ public sealed class LiveDashboard : IProgressSink
             {
                 var ki = Console.ReadKey(intercept: true);
                 if (_inputActive) { HandleInputKey(ki); continue; }
+                if (_stageEditActive) { HandleStageEditKey(ki); continue; }
                 var key = ki.Key;
                 if (_modal != Modal.None) { HandleModalKey(ki); continue; }
                 switch (key)
@@ -335,7 +358,21 @@ public sealed class LiveDashboard : IProgressSink
                     case ConsoleKey.I when _plan != null: _inputActive = true; _inputBuffer.Clear(); break;
                     case ConsoleKey.G when _plan?.StatusAgent is { Enabled: true }: StartStatusAgent(); break;
                     case ConsoleKey.F: _tree = _tree with { Filter = PlanTree.NextFilter(_tree.Filter) }; break;
-                    case ConsoleKey.E: _tree = _tree with { ExpandAll = !_tree.ExpandAll }; break;
+                    case ConsoleKey.E:
+                        {
+                            // P1: when a stage is selected, open inline stage config editor
+                            var stages = DashboardRenderer.StagesFor(_snap);
+                            var selStage = PlanTree.StageForRow(stages, _tree.Selected);
+                            if (!string.IsNullOrEmpty(selStage) && _plan != null)
+                            {
+                                OpenStageEditor(selStage);
+                            }
+                            else
+                            {
+                                _tree = _tree with { ExpandAll = !_tree.ExpandAll };
+                            }
+                        }
+                        break;
                     case ConsoleKey.UpArrow: MoveTreeSelection(-1); break;
                     case ConsoleKey.DownArrow: MoveTreeSelection(+1); break;
                     case ConsoleKey.C: _agentExpanded = !_agentExpanded; break;
@@ -358,7 +395,7 @@ public sealed class LiveDashboard : IProgressSink
                         break;
                     case ConsoleKey.Q: _pendingConfirm = null; _keys.Enqueue(ControlAction.StopAfterSession); break;
                     case ConsoleKey.H: _pendingConfirm = null; _keys.Enqueue(ControlAction.ToggleHeartbeat); break;
-                    case ConsoleKey.T or ConsoleKey.O or ConsoleKey.D or ConsoleKey.V or ConsoleKey.X or ConsoleKey.L or ConsoleKey.F8 or ConsoleKey.F1 or ConsoleKey.N or ConsoleKey.B or ConsoleKey.I or ConsoleKey.G:
+                    case ConsoleKey.T or ConsoleKey.O or ConsoleKey.D or ConsoleKey.V or ConsoleKey.X or ConsoleKey.L or ConsoleKey.F8 or ConsoleKey.F1 or ConsoleKey.N or ConsoleKey.B or ConsoleKey.I or ConsoleKey.G or ConsoleKey.E:
                         break; // handled above — non-destructive keys don't cancel pending confirm
                     default: _pendingConfirm = null; break; // any unmapped key cancels
                 }
@@ -655,6 +692,79 @@ public sealed class LiveDashboard : IProgressSink
 
     private static List<string> Split(string s) => s.Replace("\r\n", "\n").Split('\n').ToList();
     private static string Glyph(string kind) => kind switch { "tool" => "\xbb", "text" => "\xb7", "result" => "\u25c6", "stderr" => "!", "system" => "\u25cb", _ => " " };
+
+    /// <summary>
+    /// P1 — Open an inline editor for the selected stage's config. Pre-fills the buffer with the
+    /// current stage JSON so the user can edit and save. Enter saves (with validation), Esc cancels.
+    /// </summary>
+    private void OpenStageEditor(string stageId)
+    {
+        if (_plan == null) return;
+        var stage = _plan.Stages.FirstOrDefault(s => s.Id.Equals(stageId, StringComparison.OrdinalIgnoreCase));
+        if (stage == null) { Log($"stage '{stageId}' not found in plan.", LogSeverity.Error); return; }
+        _stageEditActive = true;
+        _stageEditTitle = $"editing stage {stageId}";
+        _stageEditStageId = stageId;
+        _stageEditBuffer.Clear();
+        try
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(stage, PlanConfig.JsonOpts);
+            _stageEditBuffer.Append(json);
+        }
+        catch { _stageEditActive = false; }
+    }
+
+    private void HandleStageEditKey(ConsoleKeyInfo ki)
+    {
+        switch (ki.Key)
+        {
+            case ConsoleKey.Enter:
+                var text = _stageEditBuffer.ToString().Trim();
+                if (text.Length > 0 && _plan != null)
+                {
+                    try
+                    {
+                        var updated = System.Text.Json.JsonSerializer.Deserialize<StageConfig>(text, PlanConfig.JsonOpts)
+                            ?? throw new InvalidOperationException("Stage JSON deserialised to null.");
+                        if (string.IsNullOrWhiteSpace(updated.Id) || string.IsNullOrWhiteSpace(updated.Title))
+                            throw new InvalidOperationException("stage id and title are required.");
+
+                        updated.Id = _stageEditStageId; // preserve the stage id
+
+                        var planPath = _plan.PlanFilePath;
+                        var plan = PlanConfig.Load(planPath);
+                        var existing = plan.Stages.FirstOrDefault(s => s.Id.Equals(_stageEditStageId, StringComparison.OrdinalIgnoreCase));
+                        if (existing == null) throw new InvalidOperationException($"stage '{_stageEditStageId}' not found in loaded plan.");
+
+                        // Replace the stage in-place
+                        var idx = plan.Stages.IndexOf(existing);
+                        plan.Stages[idx] = updated;
+                        plan.Save();
+
+                        Log($"[stage-edit] updated stage '{_stageEditStageId}' (plan v{plan.PlanVersion})", LogSeverity.Success);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log($"[stage-edit] validation failed: {ex.Message}", LogSeverity.Error);
+                    }
+                }
+                _stageEditActive = false;
+                _stageEditBuffer.Clear();
+                break;
+            case ConsoleKey.Escape:
+                _stageEditActive = false;
+                _stageEditBuffer.Clear();
+                break;
+            case ConsoleKey.Backspace:
+                if (_stageEditBuffer.Length > 0)
+                    _stageEditBuffer.Remove(_stageEditBuffer.Length - 1, 1);
+                break;
+            default:
+                if (!char.IsControl(ki.KeyChar))
+                    _stageEditBuffer.Append(ki.KeyChar);
+                break;
+        }
+    }
 
     private void CancelStatusAgent()
     {

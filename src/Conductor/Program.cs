@@ -45,6 +45,8 @@ app.Configure(c =>
         .WithDescription("Jump to a different stage (clears pending state for the old stage).");
     c.AddCommand<HeartbeatCommand>("heartbeat")
         .WithDescription("Toggle heartbeat on|off at runtime without restarting conductor.");
+    c.AddCommand<PlanCommand>("plan")
+        .WithDescription("Plan management: set a field, reload+validate, or add a stage. Sub-commands: set <key> <value>, reload, add-stage <json>.");
     c.AddCommand<TasksCommand>("tasks")
         .WithDescription("Show task graph: sub-tasks per checkpoint from the event log.");
     c.AddCommand<LogCommand>("log")

@@ -167,7 +167,7 @@ public class B11_2DoctorAndCompletionTests
         {
             "run", "status", "gate", "log", "report", "replay", "preview", "pause", "resume", "approve",
             "kill", "skip", "inject", "abort", "retry-stage", "rollback",
-            "pause-after-stage", "goto", "heartbeat", "tasks", "new-plan", "doctor", "completion"
+            "pause-after-stage", "goto", "heartbeat", "plan", "tasks", "new-plan", "doctor", "completion"
         };
 
         var ps = Conductor.Commands.CompletionCommand.GeneratePowerShell();

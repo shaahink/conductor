@@ -4,10 +4,10 @@
 **Branch:** `feat/era-v3`. **Driver:** `C:\Code\conductor\bin\conductor.exe` (stable from master).
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
-last: O3 — cost overhead split landed. agentCost vs overheadCost in TUI + REPORT.md. SessionRecord + RunState track overhead separately; GateResult.EstimatedCostUsd(duration × rate); DashboardRenderer.CostLine shows "agent $X gates $Y"; Reporter header + sessions table have split. 530 tests pass (14 O3), 0w/0e.
-stage: O3 DONE. Next: P1 — dynamic plan reconfiguration.
-next: Read workflow §P1. Plan set/reload/add-stage, TUI E editor, next-session boundary, version bumps.
-trap: O2 QA passed — evidence present, claims verified against fresh artifacts.
+last: P1 — dynamic plan reconfiguration landed. conductor plan set/reload/add-stage + TUI E stage editor. PlanVersion bumps on every change. Validation on every save; failed edits reject cleanly. Next-session boundary: changes apply on next conductor run. 530 tests pass (0w/0e).
+stage: P1 DONE. Next: P2 — QA parallelization.
+next: Read workflow §P2. Audit + deliver concurrently. Audit against pinned commit SHA. HIGH defects interrupt deliver gracefully.
+trap: P1 CLI args: plan set/reload/add-stage all use -p for plan path. Comments stripped on set (roundtrip through PlanConfig). E key = stage editor when selected, expand all otherwise.
 
 ## Baseline Numbers
 
@@ -29,7 +29,7 @@ trap: O2 QA passed — evidence present, claims verified against fresh artifacts
 | O1 | Structured log + conductor log --query | DONE | be216a4 | docs/era3/evidence/O1/ |
 | O2 | Budget intelligence + network health gate | DONE | 2f4d103 | docs/era3/evidence/O2/ |
 | O3 | Cost overhead split | DONE | 419fb9a | docs/era3/evidence/O3/ |
-| P1 | Dynamic plan reconfiguration | TODO | — | — |
+| P1 | Dynamic plan reconfiguration | DONE | (pending) | docs/era3/evidence/P1/ |
 | P2 | QA parallelization | TODO | — | — |
 | P3 | Stronger advisor — structured verdicts | TODO | — | — |
 | P4 | Squash bookkeeping — clean git history | TODO | — | — |

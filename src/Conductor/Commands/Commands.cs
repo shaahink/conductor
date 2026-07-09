@@ -790,6 +790,304 @@ public sealed class HeartbeatCommand : Command<HeartbeatCommand.Settings>
     }
 }
 
+/// <summary>
+/// P1 — Dynamic plan reconfiguration: plan set, reload, add-stage. Subcommands dispatch to
+/// Set / Reload / AddStage; a bare `conductor plan` prints the current plan summary.
+/// </summary>
+public sealed class PlanCommand : Command<PlanCommand.Settings>
+{
+    public sealed class Settings : PlanSettings
+    {
+        [CommandArgument(0, "[VERB]")]
+        [Description("Sub-command: set, reload, or add-stage. Omit to show plan summary.")]
+        public string Verb { get; init; } = "";
+
+        [CommandArgument(1, "[KEY]")]
+        [Description("Dot-notation key path (set only, e.g. limits.maxRunCostUsd).")]
+        public string? Key { get; init; }
+
+        [CommandArgument(2, "[VALUE]")]
+        [Description("New value (set only).")]
+        public string? Value { get; init; }
+    }
+
+    public override int Execute(CommandContext context, Settings settings)
+    {
+        var verb = settings.Verb.ToLowerInvariant();
+        return verb switch
+        {
+            "set" => PlanSetCommand.ExecuteSet(settings.ResolvePlanPath(), settings.Key, settings.Value),
+            "reload" => PlanReloadCommand.ExecuteReload(settings.ResolvePlanPath()),
+            "add-stage" => PlanAddStageCommand.ExecuteAddStage(settings.ResolvePlanPath(), settings),
+            _ => PrintPlanSummary(settings),
+        };
+    }
+
+    private static int PrintPlanSummary(Settings settings)
+    {
+        try
+        {
+            var planPath = settings.ResolvePlanPath();
+            var plan = PlanConfig.Load(planPath);
+            AnsiConsole.MarkupLine($"[bold aqua]conductor plan[/] — [bold]{Markup.Escape(plan.Name)}[/] v{plan.PlanVersion}");
+            AnsiConsole.MarkupLine($"repo: {Markup.Escape(plan.Repo)}");
+            AnsiConsole.MarkupLine($"stages: {plan.Stages.Count}   gates: {plan.Gates.Count}   gate-policy: {plan.GatePolicy}");
+            AnsiConsole.MarkupLine($"limits: stall={plan.Limits.StallMinutes}m timeout={plan.Limits.SessionTimeoutMinutes}m backoff={plan.Limits.BackoffMinutes}m");
+            if (plan.Limits.MaxRunCostUsd is { } cap) AnsiConsole.MarkupLine($"cost-cap: ${cap:0.00}");
+            if (plan.Limits.MaxRunTokens is { } tok) AnsiConsole.MarkupLine($"token-cap: {tok / 1000}K");
+            AnsiConsole.MarkupLine($"plan: [grey]{Markup.Escape(planPath)}[/]");
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine("[grey]sub-commands: plan set <key> <value> | plan reload | plan add-stage[/]");
+            return 0;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or FileNotFoundException)
+        {
+            AnsiConsole.MarkupLine($"[red]{Markup.Escape(ex.Message)}[/]");
+            return 1;
+        }
+    }
+}
+
+/// <summary>
+/// P1 — `conductor plan set <key> <value>`: hot-update a single plan field via dot-notation path.
+/// Loads the plan JSON, navigates to the key, writes the value, re-serialises, and validates.
+/// Applied immediately to the plan file on disk; the orchestrator picks it up at next session boundary.
+/// </summary>
+public static class PlanSetCommand
+{
+    public static int ExecuteSet(string planPath, string? key, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(key) || value == null)
+        {
+            AnsiConsole.MarkupLine("[red]plan set requires <key> <value>. Examples:[/]");
+            AnsiConsole.MarkupLine("  conductor plan set limits.maxRunCostUsd 0.50");
+            AnsiConsole.MarkupLine("  conductor plan set limits.stallMinutes 15");
+            AnsiConsole.MarkupLine("  conductor plan set gates.0.timeoutMinutes 30");
+            AnsiConsole.MarkupLine("  conductor plan set report.heartbeatMinutes 5");
+            return 1;
+        }
+
+        try
+        {
+            if (!File.Exists(planPath))
+            {
+                AnsiConsole.MarkupLine($"[red]Plan file not found: {Markup.Escape(planPath)}[/]");
+                return 1;
+            }
+
+            // Load+serialise roundtrip to get clean JSON (strips comments)
+            var plan = PlanConfig.Load(planPath);
+            var cleanJson = System.Text.Json.JsonSerializer.Serialize(plan, PlanConfig.JsonOpts);
+            var doc = System.Text.Json.Nodes.JsonNode.Parse(cleanJson, new System.Text.Json.Nodes.JsonNodeOptions { PropertyNameCaseInsensitive = true })
+                ?? throw new InvalidOperationException("Plan file produced empty JSON on serialisation.");
+
+            // Navigate to the parent and set the leaf value
+            var parts = key.Split('.');
+            var node = doc.Root;
+            for (var i = 0; i < parts.Length - 1; i++)
+            {
+                var part = parts[i];
+                if (int.TryParse(part, out var idx) && node is System.Text.Json.Nodes.JsonArray arr)
+                {
+                    if (idx < 0 || idx >= arr.Count)
+                    {
+                        AnsiConsole.MarkupLine($"[red]Array index {idx} out of range for '{key}' (array has {arr.Count} items).[/]");
+                        return 1;
+                    }
+                    node = arr[idx];
+                }
+                else
+                {
+                    var child = node![part];
+                    if (child == null)
+                    {
+                        AnsiConsole.MarkupLine($"[red]Key segment '{part}' not found in path '{key}'. Check the key name (case-insensitive).[/]");
+                        return 1;
+                    }
+                    node = child;
+                }
+            }
+
+            var leafKey = parts[^1];
+            var oldValue = node?[leafKey]?.ToString() ?? "(null)";
+
+            // Parse the value: try numbers, booleans, then string
+            if (decimal.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var decimalVal))
+            {
+                if (value.Contains('.', StringComparison.Ordinal))
+                    node![leafKey] = decimalVal;
+                else
+                    node![leafKey] = (int)decimalVal;
+            }
+            else if (bool.TryParse(value, out var boolVal))
+            {
+                node![leafKey] = boolVal;
+            }
+            else
+            {
+                node![leafKey] = value;
+            }
+
+            // Bump planVersion
+            var pv = doc.Root["planVersion"];
+            if (pv != null)
+                doc.Root["planVersion"] = pv.GetValue<int>() + 1;
+            else
+                doc.Root["planVersion"] = 2;
+
+            var newJson = doc.ToJsonString(new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+            });
+
+            // Validate the result by deserialising it
+            try
+            {
+                var test = System.Text.Json.JsonSerializer.Deserialize<PlanConfig>(newJson, PlanConfig.JsonOpts);
+                if (test != null)
+                {
+                    test.PlanFilePath = planPath;
+                    test.Validate();
+                }
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[red]Validation failed after set: {Markup.Escape(ex.Message)}[/]");
+                AnsiConsole.MarkupLine("[yellow]Plan file was NOT modified. Fix the value and try again.[/]");
+                return 1;
+            }
+
+            File.WriteAllText(planPath, newJson, System.Text.Encoding.UTF8);
+            AnsiConsole.MarkupLine($"[green]plan set[/] {Markup.Escape(key)} = [bold]{Markup.Escape(value)}[/] (was {Markup.Escape(oldValue)})");
+            return 0;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or FileNotFoundException or System.Text.Json.JsonException)
+        {
+            AnsiConsole.MarkupLine($"[red]{Markup.Escape(ex.Message)}[/]");
+            return 1;
+        }
+    }
+}
+
+/// <summary>
+/// P1 — `conductor plan reload`: re-read the full plan JSON from disk, validate it, and report.
+/// The running orchestrator picks up changes at its next session boundary.
+/// </summary>
+public static class PlanReloadCommand
+{
+    public static int ExecuteReload(string planPath)
+    {
+        try
+        {
+            if (!File.Exists(planPath))
+            {
+                AnsiConsole.MarkupLine($"[red]Plan file not found: {Markup.Escape(planPath)}[/]");
+                return 1;
+            }
+
+            var plan = PlanConfig.Load(planPath);
+            var stageCount = plan.Stages.Count;
+            var gateCount = plan.Gates.Count;
+            var table = new Table().Border(TableBorder.Rounded).Title("[bold aqua]plan reloaded[/]");
+            table.AddColumn("field"); table.AddColumn("value");
+            table.AddRow("name", Markup.Escape(plan.Name));
+            table.AddRow("version", plan.Version);
+            table.AddRow("planVersion", plan.PlanVersion.ToString());
+            table.AddRow("repo", Markup.Escape(plan.Repo));
+            table.AddRow("stages", stageCount.ToString());
+            table.AddRow("gates", gateCount.ToString());
+            table.AddRow("gatePolicy", plan.GatePolicy);
+            table.AddRow("gate (fast tier)", plan.Gates.Count(g => g.IsFast).ToString());
+            table.AddRow("limits.stallMinutes", plan.Limits.StallMinutes.ToString());
+            table.AddRow("limits.sessionTimeoutMinutes", plan.Limits.SessionTimeoutMinutes.ToString());
+            if (plan.Limits.MaxRunCostUsd is { } cap) table.AddRow("limits.maxRunCostUsd", $"${cap:0.00}");
+            if (plan.Limits.MaxRunTokens is { } tok) table.AddRow("limits.maxRunTokens", $"{tok / 1000}K");
+            table.AddRow("agent.command", plan.Agent.Command);
+            table.AddRow("report.heartbeatMinutes", plan.Report.HeartbeatMinutes.ToString());
+            table.AddRow("statusAgent.enabled", plan.StatusAgent?.Enabled.ToString() ?? "false");
+            if (plan.ReadOrder is { Count: > 0 }) table.AddRow("readOrder", string.Join(", ", plan.ReadOrder));
+            AnsiConsole.Write(table);
+
+            AnsiConsole.MarkupLine($"[green]Plan validated — {stageCount} stages, {gateCount} gates, v{plan.PlanVersion}.[/]");
+            AnsiConsole.MarkupLine("[grey]The running conductor will pick up changes at its next session boundary.[/]");
+            return 0;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or FileNotFoundException)
+        {
+            AnsiConsole.MarkupLine($"[red]Plan validation failed: {Markup.Escape(ex.Message)}[/]");
+            return 1;
+        }
+    }
+}
+
+/// <summary>
+/// P1 — `conductor plan add-stage <json>`: append a new stage with checkpoints to the plan.
+/// The stage JSON is provided inline or piped via stdin; it is validated against the StageConfig schema
+/// before being appended. The plan's version is bumped automatically.
+/// Examples:
+///   conductor plan add-stage "{\"id\":\"P9\",\"title\":\"New phase\",\"sessions\":2}"
+/// </summary>
+public static class PlanAddStageCommand
+{
+    public static int ExecuteAddStage(string planPath, PlanCommand.Settings settings)
+    {
+        // The Value field is the 3rd positional arg, but for add-stage we interpret the remaining args
+        // as raw JSON. The Settings model puts KEY as the 2nd arg and VALUE as the 3rd, so
+        // add-stage's JSON is in settings.Key (since verb=add-stage, the next arg is JSON).
+        var json = settings.Key;
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            // Try reading from stdin (piped input)
+            try
+            {
+                if (Console.IsInputRedirected)
+                    json = Console.In.ReadToEnd();
+            }
+            catch { }
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                AnsiConsole.MarkupLine("[red]plan add-stage requires a JSON stage definition.[/]");
+                AnsiConsole.MarkupLine("Example: conductor plan add-stage \"{\\\"id\\\":\\\"P9\\\",\\\"title\\\":\\\"New phase\\\",\\\"sessions\\\":2}\"");
+                return 1;
+            }
+        }
+
+        try
+        {
+            var plan = PlanConfig.Load(planPath);
+
+            var stage = System.Text.Json.JsonSerializer.Deserialize<StageConfig>(json, PlanConfig.JsonOpts)
+                ?? throw new InvalidOperationException("Stage JSON deserialised to null.");
+
+            // Validate the stage
+            if (string.IsNullOrWhiteSpace(stage.Id))
+                throw new InvalidOperationException("stage.id is required.");
+            if (string.IsNullOrWhiteSpace(stage.Title))
+                throw new InvalidOperationException("stage.title is required.");
+            if (plan.Stages.Any(s => s.Id.Equals(stage.Id, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException($"stage '{stage.Id}' already exists in the plan.");
+
+            plan.AddStage(stage);
+            plan.Save();
+
+            AnsiConsole.MarkupLine($"[green]stage added[/] → [bold]{Markup.Escape(stage.Id)}[/] [grey]{Markup.Escape(stage.Title)}[/] (plan v{plan.PlanVersion})");
+            AnsiConsole.MarkupLine($"[grey]Total stages now: {plan.Stages.Count}. Don't forget to add checkpoint rows to the tracker.[/]");
+            return 0;
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Invalid stage JSON: {Markup.Escape(ex.Message)}[/]");
+            return 1;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or FileNotFoundException)
+        {
+            AnsiConsole.MarkupLine($"[red]{Markup.Escape(ex.Message)}[/]");
+            return 1;
+        }
+    }
+}
+
 /// <summary>Queues a human instruction for the agent (from any terminal) — injected into the next session.</summary>
 public sealed class InjectCommand : Command<InjectCommand.Settings>
 {
@@ -1155,7 +1453,7 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
 
     internal static string GeneratePowerShell()
     {
-        var verbs = "run status gate log report replay preview pause resume approve kill skip inject abort retry-stage rollback pause-after-stage goto heartbeat tasks new-plan doctor completion";
+        var verbs = "run status gate log report replay preview pause resume approve kill skip inject abort retry-stage rollback pause-after-stage goto heartbeat plan tasks new-plan doctor completion";
         var opts = "-p --plan --yes --force --dry-run --once --max-sessions --no-dashboard -o --output --name --repo -q --query --since --tail";
         var newPlanOpts = "--template -o --output --name --repo";
         return $$"""
@@ -1181,6 +1479,11 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
                 }
                 elseif ($tokens[1] -eq 'completion') {
                     @('powershell','bash') | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
+                        [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
+                    }
+                }
+                elseif ($tokens[1] -eq 'plan') {
+                    @('set','reload','add-stage') | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
                         [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
                     }
                 }
@@ -1214,7 +1517,7 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
                 cur="${COMP_WORDS[COMP_CWORD]}"
 
                 if [[ $COMP_CWORD -eq 1 ]]; then
-                    COMPREPLY=($(compgen -W "run status gate log report replay preview pause resume approve kill skip inject abort retry-stage rollback pause-after-stage goto heartbeat tasks new-plan doctor completion" -- "$cur"))
+                    COMPREPLY=($(compgen -W "run status gate log report replay preview pause resume approve kill skip inject abort retry-stage rollback pause-after-stage goto heartbeat plan tasks new-plan doctor completion" -- "$cur"))
                     return
                 fi
                 case "${COMP_WORDS[1]}" in
@@ -1223,6 +1526,9 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
                         ;;
                     completion)
                         COMPREPLY=($(compgen -W "powershell bash" -- "$cur"))
+                        ;;
+                    plan)
+                        COMPREPLY=($(compgen -W "set reload add-stage" -- "$cur"))
                         ;;
                     new-plan)
                         COMPREPLY=($(compgen -W "--template -o --output --name --repo" -- "$cur"))

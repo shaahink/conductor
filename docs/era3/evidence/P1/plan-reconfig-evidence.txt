@@ -1,0 +1,88 @@
+===== P1: Dynamic plan reconfiguration =====
+Date: 2026-07-09
+Session: #86 (via Conductor orchestrator)
+
+--- Gate: Build ---
+0 warnings, 0 errors
+
+--- Gate: Tests ---
+530 passed, 0 failed, 0 skipped
+
+--- Feature: conductor plan set, reload, add-stage ---
+Hot-update plan fields at runtime without restart. CLI + TUI stage editor.
+Next-session boundary: changes take effect when orchestrator next loads the plan.
+
+Implementation:
+- PlanConfig.PlanVersion (int, defaults to 1) — monotonic counter, bumped on every Save()
+- PlanConfig.AddStage(StageConfig) — validated append with version bump
+- PlanConfig.Validate() made internal (was private) for cross-namespace reuse
+- PlanConfig.PlanFilePath made internal set (was private) for PlanSetCommand
+
+CLI commands:
+1. conductor plan [summary]:
+   - Shows plan name, version, repo, stages, gates, gate policy, limits
+   - Omit sub-verb to get a compact summary
+
+2. conductor plan set <key> <value>:
+   - Dot-notation path navigation (e.g. limits.stallMinutes, report.heartbeatMinutes)
+   - Supports nested objects and array indices (e.g. gates.0.timeoutMinutes)
+   - Parses numeric, boolean, and string values automatically
+   - Load → serialise clean JSON (strips comments) → JsonNode navigate → modify → save
+   - Validates the result by deserialising through PlanConfig.Load-equivalent validation
+   - On validation failure: nothing is saved, clear error reported
+   - Bumps planVersion on every successful set
+
+3. conductor plan reload:
+   - Re-reads the plan file, validates, and reports key fields in a table
+   - Shows name, version, planVersion, repo, stages/gates counts, gate policy,
+     fast gates count, limits, agent command, heartbeat, status agent, read order
+   - Useful for verifying plan integrity after external edits
+
+4. conductor plan add-stage <json>:
+   - Appends a new stage with full validation
+   - Stage must have id, title; id must be unique
+   - Supports stdin piping for bulk stage definitions
+   - Bumps planVersion on success
+
+TUI E editor:
+   - When a stage row is selected in the PlanTree, pressing E enters inline editor
+   - Shows current stage config as JSON (pre-filled editable buffer)
+   - User edits the JSON; Enter saves with validation; Esc cancels
+   - On save: reloads plan, replaces stage in-place, saves with version bump
+   - When no stage selected: E still toggles expand all (backward compatible)
+   - Stage edit mode handled in both PollKeys and HandlePreviewKey
+   - Non-destructive key list updated to include E
+
+Completions:
+   - PowerShell: plan verb + set/reload/add-stage sub-verbs
+   - Bash: plan verb + set/reload/add-stage sub-verbs
+   - Test updated: B11_2DoctorAndCompletionTests.Completion_ContainsAllRegisteredVerbs_Exhaustive
+
+Version bumping:
+   - PlanConfig.Save() auto-bumps PlanVersion
+   - PlanConfig.AddStage() bumps through Save()
+   - PlanSetCommand bumps via JsonNode + planVersion field
+   - PlanVersion is serialised as "planVersion" in JSON
+
+Validation on every change:
+   - PlanSetCommand: deserialises result → calls Validate() → only saves if clean
+   - PlanReloadCommand: loads via PlanConfig.Load() → full validation
+   - PlanAddStageCommand: loads → validates stage → saves → validates via Save()
+   - TUI E editor: loads → validates stage JSON → replaces → saves → validates
+
+Next-session boundary:
+   - All modifications write to the plan file on disk
+   - The orchestrator reads PlanConfig.Load() on startup (RunCommand.Execute)
+   - Changes take effect on the next `conductor run` invocation
+   - Running orchestrator is unaffected until restarted
+
+--- Files changed ---
+- src/Conductor/Models/PlanConfig.cs: PlanVersion property, BumpVersion(), AddStage(), internal Validate/PlanFilePath
+- src/Conductor/Commands/Commands.cs: PlanCommand (+ Settings), PlanSetCommand, PlanReloadCommand, PlanAddStageCommand, completion updates
+- src/Conductor/Program.cs: registered `plan` verb
+- src/Conductor/Ui/LiveDashboard.cs: _stageEditActive/_stageEditBuffer, OpenStageEditor(), HandleStageEditKey(), E key branching
+- tests/Conductor.Tests/B11_2Tests.cs: added "plan" to expected verbs
+
+--- Verified by ---
+530 unit tests pass (no regressions).
+Smoke-tested: plan summary, plan reload (table output), plan set (value change + version bump confirmed), plan add-stage (stage appended).

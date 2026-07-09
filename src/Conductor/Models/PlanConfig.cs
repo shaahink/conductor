@@ -11,6 +11,10 @@ public sealed class PlanConfig
     /// <summary>Schema version. Currently only "1.0" is supported; a plan without a version or
     /// with an unsupported version is rejected with a clear diagnostic (B1.6).</summary>
     public string Version { get; set; } = "1.0";
+    /// <summary>P1: Monotonic plan-edit counter, bumped on every modification (set, reload, add-stage).
+    /// Starts at 1; the orchestrator can compare this against its loaded value to detect
+    /// external edits at session boundaries.</summary>
+    public int PlanVersion { get; set; } = 1;
     public string Name { get; set; } = "plan";
     public string Repo { get; set; } = "";
     public string Tracker { get; set; } = "";
@@ -64,7 +68,7 @@ public sealed class PlanConfig
     /// changes are only merged into the primary tree if the merge-gate battery is green.</summary>
     public List<MutatingLaneConfig> MutatingLanes { get; set; } = new();
 
-    [JsonIgnore] public string PlanFilePath { get; private set; } = "";
+    [JsonIgnore] public string PlanFilePath { get; internal set; } = "";
     [JsonIgnore] public string PlanDir => Path.GetDirectoryName(PlanFilePath) ?? ".";
     [JsonIgnore] public string StateDir => Path.Combine(Repo, ".conductor");
     [JsonIgnore] public string TrackerPath => Path.Combine(Repo, Tracker);
@@ -118,11 +122,20 @@ public sealed class PlanConfig
 
     public void Save()
     {
+        BumpVersion();
         var json = JsonSerializer.Serialize(this, JsonOpts);
         File.WriteAllText(PlanFilePath, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
     }
 
-    private void Validate()
+    public void BumpVersion() => PlanVersion++;
+
+    public void AddStage(StageConfig stage)
+    {
+        Stages.Add(stage);
+        BumpVersion();
+    }
+
+    internal void Validate()
     {
         var errors = CollectErrors();
         if (errors.Count > 0)
