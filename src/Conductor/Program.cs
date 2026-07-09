@@ -55,6 +55,8 @@ app.Configure(c =>
         .WithDescription("Scaffold a new plan + TRACKER.md from a built-in template (minimal/dotnet/node/shamshir).");
     c.AddCommand<DoctorCommand>("doctor")
         .WithDescription("Print exactly what will happen on resume: pending sessions, gates, owner-approval, remaining stages.");
+    c.AddCommand<AuditCommand>("audit")
+        .WithDescription("Post-hoc audit replay: run an audit prompt against a completed stage (read-only diagnostic). Requires --replay flag. Output written to .conductor/audits/.");
     c.AddCommand<CompletionCommand>("completion")
         .WithDescription("Generate shell completion scripts (powershell or bash).");
     c.SetExceptionHandler((ex, _) =>

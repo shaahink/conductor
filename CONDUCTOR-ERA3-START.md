@@ -4,10 +4,10 @@
 **Branch:** `feat/era-v3`. **Driver:** `C:\Code\conductor\bin\conductor.exe` (stable from master).
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
-last: P4 — Squash bookkeeping landed. Git.SquashChoreCommits collapses consecutive chore(conductor): commits on phase confirm via GIT_SEQUENCE_EDITOR rebase. Idempotent via SquashedStages hashset. StageStartHeads dictionary persists start heads for the rebase window. Best-effort: failure logged, never blocks confirm. 555 tests pass (0w/0e).
-stage: P4 DONE. Next: P5 — Post-hoc audit replay.
-next: Read workflow §P5. conductor audit <stage> --replay against completed phases. Read-only diagnostic. Output to .conductor/audits/<stage>-replay-<ts>.md.
-trap: The squash is a git rebase -i behind GIT_SEQUENCE_EDITOR — needs PowerShell on Windows. Running without PS will skip squash gracefully (logged warning).
+last: P5 — Post-hoc audit replay landed. AuditCommand (`conductor audit <stage> --replay`) spawns the plan's agent with a structured replay prompt against completed stages. Read-only: no RunState mutation. Output to .conductor/audits/<stage>-replay-<ts>.md. Prompt includes checkpoints, git log, evidence tails. Registered as "audit" verb. Completion scripts (PS+bash) updated. 555 tests pass (0w/0e).
+stage: P5 DONE. Next: I1 — MCP task server production wiring.
+next: Read FUSION.md §I1. Wire McpTaskServer (B9) into AgentSession production launch. Agent gets live task_list/update/add. Task persistence via events.jsonl.
+trap: None.
 
 ## Baseline Numbers
 
@@ -33,7 +33,7 @@ trap: The squash is a git rebase -i behind GIT_SEQUENCE_EDITOR — needs PowerSh
 | P2 | QA parallelization | DONE | 2a0fdde | docs/era3/evidence/P2/ |
 | P3 | Stronger advisor — structured verdicts | DONE | 56ec088 | docs/era3/evidence/P3/ |
 | P4 | Squash bookkeeping — clean git history | DONE | f03f4a0 | docs/era3/evidence/P4/ |
-| P5 | Post-hoc audit replay | TODO | — | — |
+| P5 | Post-hoc audit replay | DONE | 587119d | docs/era3/evidence/P5/ |
 | I1 | MCP task server production wiring | TODO | — | — |
 
 ## Quick Commands
