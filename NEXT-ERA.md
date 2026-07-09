@@ -1,7 +1,8 @@
 # Conductor Era v3 — Strategic Roadmap
 
 **Written:** 2026-07-09 after Baton v2 completion (77 sessions, 67/67 checkpoints)
-**Base state:** Conductor v2 (Baton) fully delivered. `master` (stable binary), `feat/baton` (v2 worktree).
+**Base state:** Conductor v2 (Baton) fully delivered. `master` (stable binary), `feat/baton` (v2 worktree), `feat/era-v3` (live plan running).
+**Live plan:** `.conductor/plans/conductor-era3.plan.json` — 14 stages. D1 running now.
 **Scope:** Conductor-only improvements. Loom and Shamshir are delivered projects; they inform these gaps but are not in scope.
 
 ---
