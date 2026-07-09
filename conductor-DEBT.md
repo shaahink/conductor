@@ -1,10 +1,11 @@
 # Baton — Conductor-Discovered Debt & Followups
 
 **Generated:** 2026-07-08 by Conductor Baton cross-project audit.
-**Read order:** this file → `CONDUCTOR-START.md` handoff → `docs/baton/stages/B<N>.md` → relevant handover in `.conductor/handovers/B<N>.md` → `.conductor/followups.md` → source.
+**Updated:** 2026-07-09 — reordered by C-session (post-B12 cleanup plan).
+**Read order:** this file → `CONDUCTOR-START.md` handoff → `docs/workflows/conductor-post-b12-workflow.md`.
 
-This file records every open followup from the B0–B3 audits, the `.conductor/followups.md` registry,
-and patterns observed while this plan was running other projects.
+This file records every open followup from audits across B0-B11, grouped by C-session.
+All items below are resolved in the Conductor Debt plan (`.conductor/plans/conductor-debt.plan.json`).
 
 ---
 

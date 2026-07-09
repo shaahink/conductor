@@ -1,20 +1,18 @@
 # Conductor — Baton v2 Phase Tracker (resume here)
 
 **Read order for a fresh session:** this file → `conductor-DEBT.md` (audit followups —
-unresolved bugs + deferred work from B0-B3 audits, sized + gated) → `docs/baton/BATON-BRIEF.md`
-(design authority, MANDATORY) → your stage file `docs/baton/stages/B<n>.md` →
-the audit/handover for the previous stage in `.conductor/handovers/`.
-Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conductor-baton`.
-Driver: the stable `bin\conductor.exe` built from `master`.
+unresolved bugs + deferred work) → `docs/workflows/conductor-post-b12-workflow.md`
+(the workflow for this phase) → `docs/baton/BATON-BRIEF.md` (design authority, MANDATORY) →
+your stage in `.conductor/plans/conductor-debt.plan.json`.
+Branch: `feat/baton`. Driver: `C:\Code\conductor\bin\conductor.exe` (stable from master).
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #67 (B12.3) — Tier B isolated-worktree mutating lanes: MutatingLaneConfig model, Git.WorktreeAdd/Remove/MergeBranch/DeleteBranch, MutatingLaneRunner (worktree → agent → staging merge gate → ff-merge on pass / reject on fail), 3 new ConductorEvent types (MutatingLaneStarted/Finished, MergeGateVerdict), 12 tests green.
-stage: B12.3 DONE. B12.4 (fix-lanes consume followups.md) is next.
+last: session #68 (B12.4/C1) — fix-lanes consuming .conductor/followups.md as Tier-B lanes behind merge gate. FollowupParser (variable-scheme .md table), RunFollowupFixLanes in Orchestrator (dispatched from ConfirmStage), 10 tests green.
+stage: C1 DONE. Build 0w/0e, 470 tests pass (10 B12.4). C2 (async engine + harness) is next.
 dirty: none.
-next: B12.4 — fix-lanes that consume .conductor/followups.md as Tier-B lanes.
-QA-B12.3: self-verified — build 0w/0e, 460 tests pass, 12 B12.3 tests (good merge accepted, bad diff rejected, worktree isolation, lane-specific gates, cancellation, cleanup).
-followups: FU-B11-1/2/3, FU-B10-1/2, FU-B0-4/5/6/7 remain OPEN.
-evidence: docs/baton/evidence/B12.3-gate.txt (12 tests, 460 total pass), test file tests/Conductor.Tests/B12_3Tests.cs.
+next: C2 — async engine + integration harness (MA0045, MA0002, CT through IProgressProvider.Read, orchestrator harness). ~90 min. Requires careful async migration with resumability preserved.
+followups: FU-B11-1/2/3, FU-B10-1/2, FU-B0-4/5/6/7 remain OPEN (scheduled C3-C5).
+evidence: docs/baton/evidence/B12.4-gate.txt (470 tests, 10 B12.4). Test file: tests/Conductor.Tests/B12_4Tests.cs.
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -99,7 +97,14 @@ never silent renumbering.
 | B12.1 | Tier A read-only analysis lanes (arch/design/qa/research, scratch cwd, artifacts feed prompts+handover) | DONE | 168920d | docs/baton/evidence/B12.1-gate.txt |
 | B12.2 | Worker pool + concurrency cap + brain scheduling (opt-in per task-type) | DONE | d659ec6 | docs/baton/evidence/B12.2-gate.txt |
 | B12.3 | Tier B isolated-worktree mutating lanes → full-battery MERGE GATE before acceptance | DONE | ebc8ab8 | docs/baton/evidence/B12.3-gate.txt |
-| B12.4 | fix-lanes consume .conductor/followups.md (blend-in debt fixing) | TODO | | |
+| B12.4 | fix-lanes consume .conductor/followups.md (blend-in debt fixing) | DONE | <commit> | `docs/baton/evidence/B12.4-gate.txt` |
+| C1 | B12.4 — Fix-lanes consume followups.md | DONE | <commit> | Same as B12.4 |
+| C2 | Async engine + integration harness (MA0045, MA0002, CT, harness) | TODO | — | `docs/baton/evidence/C2-gate.txt` |
+| C3 | Events + metrics + budget + recovery (LiveMetrics, rollback, McpCallFinished, Ctrl+C) | TODO | — | `docs/baton/evidence/C3-gate.txt` |
+| C4 | Small debt sweep (12 items: fake-agent, smokes, persona, Telegram, etc.) | TODO | — | `docs/baton/evidence/C4-gate.txt` |
+| C5 | R1 — TUI + CLI audit (--dry-run preview, every surface traced to code+docs) | TODO | — | `docs/qa-reports/CONDUCTOR-AUDIT-R1.md` |
+| C6 | R2 — Report + Prompts + Agent Context audit | TODO | — | `docs/qa-reports/CONDUCTOR-AUDIT-R2.md` |
+| C7 | Final handover + Needs Human Verification checklist | TODO | — | `docs/qa-reports/CONDUCTOR-FINAL.md` |
 
 ## Quick commands
 

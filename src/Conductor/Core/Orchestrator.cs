@@ -737,6 +737,9 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         // B10.3: post-hook runs after confirmation (best-effort, logged but never blocks).
         if (stage?.PostHook is { } postHook)
             RunStageHook(id, "post-hook", postHook, CancellationToken.None);
+        // B12.4: fix-lanes run after the stage is confirmed — they consume .conductor/followups.md
+        // entries owned by this stage and run as Tier B mutating lanes behind merge gates.
+        RunFollowupFixLanes(id);
         if (state.PauseAfterStage)
         {
             state.PauseAfterStage = false;
@@ -1696,6 +1699,78 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             Log($"task-graph resume hint failed: {ex.Message}");
             return null;
         }
+    }
+
+    // ---------------------------------------------------------------- B12.4: fix-lanes
+
+    /// <summary>
+    /// B12.4: Read OPEN followup entries owned by the given stage from
+    /// <c>.conductor/followups.md</c> and run each as a Tier B mutating fix-lane behind a
+    /// merge gate. Closed followups are updated in-place with the resulting commit ref.
+    /// </summary>
+    private void RunFollowupFixLanes(string stageId)
+    {
+        var followupsPath = Path.Combine(plan.StateDir, "followups.md");
+        if (!File.Exists(followupsPath)) return;
+
+        var entries = FollowupParser.ReadOpenForStage(followupsPath, stageId);
+        if (entries.Count == 0) return;
+
+        // Resolve the plan's default agent (per-lane overrides aren't used for fix-lanes yet).
+        var agent = plan.Agent;
+        Log($"fix-lanes: {entries.Count} OPEN followup(s) owned by stage {stageId}");
+
+        foreach (var entry in entries)
+        {
+            var lane = FollowupEntryToMutatingLane(entry);
+            Log($"fix-lane '{entry.Id}' starting — {entry.Item}");
+
+            // Run the mutating lane synchronously (the orchestrator loop is sync). The lane
+            // runner uses ConfigureAwait(false) internally so GetAwaiter().GetResult() is safe.
+            MutatingLaneResult result;
+            try
+            {
+                result = Task.Run(() => MutatingLaneRunner.RunAsync(
+                    plan, lane, agent, stageId, events, Log, CancellationToken.None))
+                    .GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                Log($"fix-lane '{entry.Id}' threw: {ex.Message}");
+                continue;
+            }
+
+            if (result.Merged || (result.IsSuccess && !result.AgentCommitted))
+            {
+                var commitRef = Git.Head(plan.Repo)[..Math.Min(7, Git.Head(plan.Repo).Length)];
+                if (FollowupParser.UpdateStatus(followupsPath, entry.Id, "CLOSED", $"b{entry.Id}"))
+                    Log($"fix-lane '{entry.Id}' CLOSED — {entry.Item} ({commitRef})");
+                else
+                    Log($"fix-lane '{entry.Id}' done but status update failed in followups.md");
+            }
+            else
+            {
+                Log($"fix-lane '{entry.Id}' FAILED — merge gate rejected: {result.Error ?? "unknown"}");
+            }
+        }
+    }
+
+    private static MutatingLaneConfig FollowupEntryToMutatingLane(FollowupEntry entry)
+    {
+        var prompt = $"Fix the followup: {entry.Item}\n\n";
+        if (!string.IsNullOrWhiteSpace(entry.Detail))
+            prompt += $"Detail: {entry.Detail}\n\n";
+        prompt += "Read .conductor/followups.md for full context. " +
+                  "Commit your fix with a conventional commit message (e.g. 'fix: …').";
+
+        return new MutatingLaneConfig
+        {
+            Id = $"fix-{entry.Id.ToLowerInvariant()}",
+            Kind = "fix",
+            Name = $"Fix: {entry.Item}",
+            Prompt = prompt,
+            TimeoutMinutes = 30,
+        };
     }
 
     // ---------------------------------------------------------------- B12.1: analysis lanes

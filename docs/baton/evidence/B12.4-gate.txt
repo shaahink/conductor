@@ -1,0 +1,36 @@
+=== B12.4 fix-lanes consume .conductor/followups.md ===
+Date: 2026-07-09
+Host: MSI
+OS: Windows
+
+--- Build ---
+dotnet build Conductor.slnx
+  Build succeeded. 0 Warning(s) 0 Error(s)
+
+--- Full Tests ---
+dotnet test Conductor.slnx
+  Passed! - Failed: 0, Passed: 470, Skipped: 0, Total: 470
+
+--- B12.4-specific tests ---
+dotnet test Conductor.slnx --filter "FullyQualifiedName~B12_4"
+  Passed! - Failed: 0, Passed: 10, Skipped: 0, Total: 10
+
+--- Test evidence (10 tests) ---
+  X FollowupParser_Read_ParsesStandardTable — 5-column table with id/item/detail/stage/status
+  X FollowupParser_Read_IgnoresClosedAndNonFU — only FU-prefixed ids parsed
+  X FollowupParser_ReadOpenForStage_FiltersCorrectly — filters by OPEN status + stage substring match
+  X FollowupParser_UpdateStatus_WritesCorrectly — status updated in-place, re-parsed correctly
+  X FollowupParser_HandlesVariableColumnSchemes — B0-style 6-column table parsed correctly
+  X FixLane_FromFollowup_MergeGateAcceptsAndUpdatesStatus — followup → fix-lane → merge gate passes → status updated
+  X FixLane_BadDiff_MergeGateRejects — agent commits bad change, gate fails, rejected, primary tree untouched
+  X FollowupParser_EmptyFile_ReturnsEmpty
+  X FollowupParser_NoFile_ReturnsEmpty
+  X FollowupParser_UpdateStatus_NonexistentFile_ReturnsFalse
+
+--- Implementation ---
+- FollowupEntry model: Id, Item, Detail, OwningStage, Status
+- FollowupParser.cs: Read(filePath) → List<FollowupEntry>; ReadOpenForStage(filePath, stageId) → filtered; UpdateStatus(filePath, id, newStatus, commitRef) → bool
+- Parser handles variable column schemes (5-col standard, 6-col B0-style with "sites"/"why deferred")
+- Orchestrator.RunFollowupFixLanes(stageId): reads OPEN followups for stage, creates MutatingLaneConfig per entry, runs via MutatingLaneRunner, updates status on merge gate pass
+- Called from ConfirmStage() after post-hook, before advancing
+- FollowupEntryToMutatingLane(): creates fix-lane config with prompt built from followup detail

@@ -13,12 +13,13 @@ diff), is fully resumable, and reports to `.conductor/REPORT.md`. This worktree 
 - **Driver:** the STABLE `C:\Code\conductor\bin\conductor.exe` (built from master). The tool improving
   Conductor is never the tool under edit.
 
-## Read order for a Baton session
-1. `CONDUCTOR-START.md` (the tracker Conductor parses — `## Handoff` block + B0.1…B12.4 checkpoints)
-2. `docs/baton/BATON-BRIEF.md` (design authority — vision, architecture, event schema, task graph,
-   parallelism tiers, .NET standards, delivery/gating philosophy §5.1, anti-patterns §7)
-3. `docs/baton/stages/B<n>.md` (your stage's requirements, tasks, gates)
-4. `.conductor/handovers/B<n-1>.md` (previous phase audit handover, once it exists)
+## Read order for this phase
+1. `CONDUCTOR-START.md` (tracker — `## Handoff` block + C1-C8 checkpoints)
+2. `docs/workflows/conductor-post-b12-workflow.md` (the workflow for this phase)
+3. `conductor-DEBT.md` (debt catalog, grouped by C-session)
+4. `docs/baton/BATON-BRIEF.md` (design authority — MANDATORY)
+5. `.conductor/handovers/B<n>.md` (previous stage handover)
+6. `.conductor/plans/conductor-debt.plan.json` (your stage in the plan)
 
 ## Deliverables authored on this branch (plan, not yet executed)
 - `docs/baton/BATON-BRIEF.md` + `docs/baton/stages/B0.md`…`B12.md`
@@ -31,15 +32,14 @@ diff), is fully resumable, and reports to `.conductor/REPORT.md`. This worktree 
 
 ## How to run (with the STABLE driver)
 ```powershell
-C:\Code\conductor\bin\conductor.exe run --dry-run -p C:\Code\conductor-baton\plans\conductor.self.plan.json
-C:\Code\conductor\bin\conductor.exe run --once   -p C:\Code\conductor-baton\plans\conductor.self.plan.json
-C:\Code\conductor\bin\conductor.exe run          -p C:\Code\conductor-baton\plans\conductor.self.plan.json
+C:\Code\conductor\bin\conductor.exe run --dry-run -p .conductor\plans\conductor-debt.plan.json
+C:\Code\conductor\bin\conductor.exe run         -p .conductor\plans\conductor-debt.plan.json
 ```
 
-## Current state (2026-07-08)
-- Plan authored; **nothing executed**. `dotnet build Conductor.slnx` 0w/0e, 56 tests pass on net9.0
-  (B0 migrates to net10 + analyzers).
-- First real work: **B0.1** (net10 + Directory.Build.props/Packages.props + verify slnx).
+## Current state (2026-07-09)
+- **B0-B12** all DONE (66 checkpoints). Session #68 delivered B12.4 (fix-lanes from followups).
+- 470 tests pass. Plan `.conductor/plans/conductor-debt.plan.json` in progress.
+- **Phase C — Cleanup + Audit (8 sessions).** C1 DONE. Next: C2 (async engine + harness).
 
 ## Gotchas
 - **`claudeSessionId`** is a legacy field name storing ANY agent's session id (B2 renames/abstracts).
