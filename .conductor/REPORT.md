@@ -1,11 +1,12 @@
 ﻿# Conductor — Conductor-Debt run report
 
-_Updated 2026-07-09 01:45 UTC · branch `feat/baton` · HEAD `208e621`_
+_Updated 2026-07-09 02:03 UTC · branch `feat/baton` · HEAD `a2ce6fe`_
 
 **Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** C3 — Async engine + integration harness · attempts used 0
-**Checkpoints:** 68/72 done · **Sessions run:** 70 · **Cost:** $3.4297 · **Tokens:** 2,791,346 in / 999,392 out / 511,155 think
+**Stage:** C4 — Events + metrics + budget + recovery · attempts used 0
+**Checkpoints:** 69/72 done · **Sessions run:** 71 · **Cost:** $3.5571 · **Tokens:** 2,916,908 in / 1,025,646 out / 521,268 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1, C2, C3
+**Pending:** full-battery phase gate for C4
 
 ## Stage progress
 
@@ -14,7 +15,7 @@ _Updated 2026-07-09 01:45 UTC · branch `feat/baton` · HEAD `208e621`_
 | C1 | B12.3 — Tier B worktree lanes + merge gate | 1/1 | confirmed ✓ |
 | C2 | B12.4 — Fix-lanes from followups.md | 1/1 | confirmed ✓ |
 | C3 | Async engine + integration harness | 1/1 | confirmed ✓ |
-| C4 | Events + metrics + budget + recovery | 0/1 | todo |
+| C4 | Events + metrics + budget + recovery | 1/1 | gating… |
 | C5 | Small debt sweep (12 items) | 0/1 | todo |
 | C6 | R1 — TUI + CLI audit | 0/1 | todo |
 | C7 | R2 — Report + Prompts + Agent Context audit | 0/1 | todo |
@@ -24,7 +25,6 @@ _Updated 2026-07-09 01:45 UTC · branch `feat/baton` · HEAD `208e621`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 41 | B6 | Deliver | 1 | 07-08 19:45 | 0:07 | Advanced | B6.5 | 1 | build:OK | $0.0311 | 29,170/7,885 |
 | 42 | B6 | Audit | 1 | 07-08 19:54 | 0:06 | Progress |  | 1 |  | $0.0606 | 87,266/8,743 |
 | 43 | B7 | Deliver | 1 | 07-08 20:00 | 0:19 | Advanced | B7.1 B7.2 B7.3 | 2 | build:OK | $0.0911 | 77,080/28,917 |
 | 44 | B7 | Audit | 1 | 07-08 20:20 | 0:05 | Progress |  | 1 |  | $0.0380 | 52,381/7,163 |
@@ -54,16 +54,10 @@ _Updated 2026-07-09 01:45 UTC · branch `feat/baton` · HEAD `208e621`_
 | 68 | C1 | Resume | 1r1 | 07-09 01:01 | 0:05 | Advanced | B12.4 C1 | 1 | build:OK | $0.1230 | 236,936/5,541 |
 | 69 | C2 | Deliver | 1 | 07-09 01:08 | 0:19 | Advanced | C2 | 2 | build:OK | $0.1164 | 96,040/26,369 |
 | 70 | C3 | Deliver | 1 | 07-09 01:28 | 0:15 | Advanced | C3 | 2 | build:OK | $0.0771 | 78,611/16,048 |
+| 71 | C4 | Deliver | 1 | 07-09 01:45 | 0:16 | Advanced | C4 | 2 | build:OK | $0.1273 | 125,562/26,254 |
 
 ### Commits by session
 
-- **s62 (B11 Deliver)** — 6 commit(s):
-  - 867b1a7 chore(bB11): update tracker + evidence for B11.2-B11.4 completion
-  - 329a814 chore(conductor): s62 B11 working ▸B11.2 @ 00:39
-  - b04a264 feat(bB11.4): Shamshir P2.2 owner-gated acceptance
-  - 931733e chore(conductor): s62 B11 working ▸B11.2 @ 00:29
-  - 746b164 feat(bB11.3): ADRs finalised + clean-clone battery
-  - 16e8532 feat(bB11.2): dotnet tool packaging + tab completion + conductor doctor
 - **s63 (B11 Audit)** — 2 commit(s):
   - 75f78bd docs(bB11): audit handover — 5 bugs fixed, 3 followups created, honest weak/deferred inventory
   - ad3abde fix(bB11): audit — PS completion new-plan/completion cases, pwsh ExecutionPolicy, SafeParseTracker warning
@@ -86,6 +80,9 @@ _Updated 2026-07-09 01:45 UTC · branch `feat/baton` · HEAD `208e621`_
 - **s70 (C3 Deliver)** — 2 commit(s):
   - 47fd403 chore(conductor): fix C3 commit hash in tracker
   - e14b88c fix(debt): C3 — events + metrics + budget + recovery
+- **s71 (C4 Deliver)** — 2 commit(s):
+  - a2ce6fe chore(conductor): fix C4 commit hash in tracker
+  - 8d651d8 fix(debt): C4 — small debt sweep, 12 followups closed
 
 ## Phase handovers (audit)
 
@@ -104,20 +101,20 @@ _Updated 2026-07-09 01:45 UTC · branch `feat/baton` · HEAD `208e621`_
 
 ## Last gate run
 
-build:OK · tests:OK
+build:OK
 
 ## Last session result
 
-> SESSION-RESULT: C3 delivered — `RollbackExecuted` event emitted from Orchestrator on `git reset --hard`, budget (`PerRunCostUsd`/`PerRunTokens`) persisted in `RunState` and restored on restart (crash-surviving), mid-session control verbs rejected during a session now log feedback instead of silently consuming, orphaned resume with empty `AgentSessionId` marks `NeedsHuman`. 493 tests pass (13 new `C3EventsAndRecoveryTests`), build 0w/0e. Three items deferred to C4/C5: full LiveMetrics→dashboard cutover (fold proven in tests, renderer still uses `agent.Tokens*`), `McpCallFinished` production wiring (event type exists, B9-owned), and graceful Ctrl+C integration test (needs process-level harness…
+> SESSION-RESULT: C4 small debt sweep landed — 12 followups closed: fake-agent renamed (`gatesred` → `no-commits`) with new `true-red` mode, AltScreen headless test, StatusAgent CT threaded, HookConfig timeout validation, ComputeDepth memoized, completion exhaustiveness test, ScriptProvider shape validation, CA1031 resolved, LessonsManager thread-safe, persona divergence test, Telegram callback round-trip. Build 0w/0e, 497 tests pass (4 new). Branch pushed. Next session (C5): R1 TUI+CLI audit per workflow §Session 6 — run `--dry-run` preview, inspect every TUI element, rate ✅/⚠️/❌ and fix any ❌ findings. Items deferred to Human Verification checklist (C8): real-signal AltScreen test, Telegram …
 
 ## Tracker handoff
 
 ```
-last: session #70 (C3) — events + metrics + budget + recovery: RollbackExecuted event emitted from Orchestrator, budget (PerRunCostUsd/PerRunTokens) persisted in RunState and restored on restart, mid-session control feedback for rejected verbs, orphaned resume with empty AgentSessionId marks NeedsHuman. 493 tests pass (13 new C3EventsAndRecoveryTests).
-stage: C3 DONE. Build 0w/0e.
+last: session #71 (C4) — small debt sweep (12 items): fake-agent `no-commits` + `true-red` mode, AltScreen headless test, StatusAgent CT, HookConfig validation, ComputeDepth memoize, completion exhaustive test, ScriptProvider shape validation, CA1031 closed, LessonsManager thread-safety, persona divergence test, Telegram callback round-trip.
+stage: C4 DONE. Build 0w/0e. 497 tests pass (4 new: SafetyNet, CompletionExhaustive, PersonaDivergence, CallbackFormat).
 dirty: none.
-next: C4 — Small debt sweep (12 items: fake-agent, smokes, persona, Telegram, etc.)
-followups: FU-B2-1 (LiveMetrics dashboard wiring) partially deferred — dashboard still reads via agent.Tokens* (event-log fold proven in tests, full cutover deferred to C4/C5).
-evidence: docs/baton/evidence/C3-gate.txt (493 tests, 13 C3). Test file: tests/Conductor.Tests/C3EventsAndRecoveryTests.cs.
-C2 QA: verified DONE — MA0045/MA0002 at error, CT in IProgressProvider, stdout/stderr split, 10 C2Async tests pass.
+next: C5 — R1 TUI + CLI audit (6a-6e: --dry-run preview, inspect every TUI element, rate ✅/⚠️/❌ per workflow §Session 6).
+C3 QA: VERIFIED DONE — all 4 handoff claims confirmed against code + tests.
+followups: FU-B4-2 real-signal test, Telegram real-token integration, battery-collapse real-measurement → Needs Human Verification checklist (C8). FU-B0-5 cosmetic smoke cleanup noted.
+evidence: docs/baton/evidence/C4-gate.txt (497 tests, 4 new).
 ```
