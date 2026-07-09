@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-09 00:14 UTC · branch `feat/baton` · HEAD `e7d3eeb`_
+_Updated 2026-07-09 00:24 UTC · branch `feat/baton` · HEAD `cb4ffd3`_
 
-**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B12 — Controlled parallelism · attempts used 0 · working ▸ B12.3
-**Checkpoints:** 63/65 done · **Sessions run:** 65 · **Cost:** $2.9292 · **Tokens:** 2,215,544 in / 910,670 out / 433,106 think
+**Checkpoints:** 63/65 done · **Sessions run:** 66 · **Cost:** $2.9292 · **Tokens:** 2,215,544 in / 910,670 out / 433,106 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11
+
+## Latest activity (live)
+
+_Session #66 (Deliver) · running 10m · last output 5s ago · $0.0479_
+
+**Thinking:**
+> Good. Now let me create the MutatingLaneRunner.cs file.
+> Now let me write the tests. I need to create a test that: 1. Creates a real git repo in a temp dir 2. Sets up a plan with a mutating lane 3. Tests the merge gate with good/bad diffs 4. Verifies worktree isolation  Let me write comprehensive tests.
+> Good. Now let me build and run the tests to see if everything compiles and passes.  Let me also think about what other changes I need — do I need to update the EventSink or EventLog to handle the new event types? Let me check.  The EventLog.cs and EventSink probably don't need changes since the Json…
+
+**Recent actions:**
+- `01:22:39` » edit src\Conductor\Models\PlanConfig.cs
+- `01:22:50` » edit src\Conductor\Core\Git.cs
+- `01:22:50` · Now add Git worktree and branch helpers:
+- `01:22:55` » edit src\Conductor\Core\Events\ConductorEvent.cs
+- `01:22:55` · Now add new B12.3 event types:
+- `01:23:05` » edit src\Conductor\Core\Events\ConductorEvent.cs
+- `01:23:42` » write src\Conductor\Core\MutatingLaneRunner.cs
+- `01:23:42` · Now create the main MutatingLaneRunner:
+- `01:24:35` » write tests\Conductor.Tests\B12_3Tests.cs
+- `01:24:35` · Now write the B12.3 tests:
 
 ## Stage progress
 
@@ -29,7 +50,6 @@ _Updated 2026-07-09 00:14 UTC · branch `feat/baton` · HEAD `e7d3eeb`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 36 | B5 | Deliver | 1 | 07-08 17:30 | 0:24 | Advanced | B5.3 | 4 | build:OK | $0.0427 | 2,319/25,154 |
 | 37 | B5 | Deliver | 1 | 07-08 17:54 | 0:18 | Advanced | B5.4 | 2 | build:OK | $0.0750 | 61,596/21,872 |
 | 38 | B5 | Audit | 1 | 07-08 18:13 | 0:07 | Progress |  | 2 |  | $0.0635 | 86,516/7,809 |
 | 39 | B6 | Deliver | 1 | 07-08 18:21 | 0:26 | Advanced | B6.1 B6.2 B6.3 B6.4 | 3 | build:OK | $0.1276 | 91,871/39,873 |
@@ -59,6 +79,7 @@ _Updated 2026-07-09 00:14 UTC · branch `feat/baton` · HEAD `e7d3eeb`_
 | 63 | B11 | Audit | 1 | 07-08 23:41 | 0:07 | Progress |  | 2 |  | $0.0558 | 59,800/11,762 |
 | 64 | B12 | Deliver | 1 | 07-08 23:49 | 0:13 | Advanced | B12.1 | 2 | build:OK | $0.0744 | 78,710/19,057 |
 | 65 | B12 | Deliver | 1 | 07-09 00:02 | 0:11 | Advanced | B12.2 | 2 | build:OK | $0.0583 | 62,839/15,593 |
+| 66 | B12 | Deliver | 1 | 07-09 00:14 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
