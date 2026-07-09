@@ -88,6 +88,33 @@ public sealed class PendingAudit
     public string StageStartHead { get; set; } = "";
 }
 
+/// <summary>P2: a stage that will be audited in parallel with the next stage's deliver.
+/// The audit runs as a read-only lane against the pinned commit SHA.</summary>
+public sealed class PendingParallelAudit
+{
+    public string StageId { get; set; } = "";
+    /// <summary>Commit HEAD when the stage was confirmed — the audit diffs from here.</summary>
+    public string StageStartHead { get; set; } = "";
+}
+
+/// <summary>P2: severity of an audit finding from a parallel audit lane.</summary>
+public enum AuditFindingSeverity
+{
+    None,
+    Low,
+    Medium,
+    High,
+}
+
+/// <summary>P2: outcome of a parallel audit lane that ran concurrently with deliver.</summary>
+public sealed class ParallelAuditOutcome
+{
+    public string StageId { get; set; } = "";
+    public AuditFindingSeverity MaxSeverity { get; set; }
+    public string Findings { get; set; } = "";
+    public bool Completed { get; set; }
+}
+
 public sealed class RunState
 {
     public string PlanName { get; set; } = "";
@@ -112,6 +139,12 @@ public sealed class RunState
     public PendingResume? PendingResume { get; set; }
     public PendingPhaseGate? PendingPhaseGate { get; set; }
     public PendingAudit? PendingAudit { get; set; }
+    /// <summary>P2: when a stage is confirmed and the audit will run in parallel with the next
+    /// stage's deliver. Cleared when the audit completes.</summary>
+    public PendingParallelAudit? PendingParallelAudit { get; set; }
+    /// <summary>P2: outcome of the last completed parallel audit. Read by the next deliver session
+    /// to inject findings and by the orchestrator to decide whether a fix is needed.</summary>
+    public ParallelAuditOutcome? ParallelAuditOutcome { get; set; }
     /// <summary>Stages whose full battery has passed (and audit completed). SelectStage skips these,
     /// so a stage with red phase-gates is never advanced past even when its tracker rows read DONE.</summary>
     public HashSet<string> ConfirmedStages { get; set; } = new(StringComparer.Ordinal);

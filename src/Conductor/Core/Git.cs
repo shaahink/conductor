@@ -48,6 +48,11 @@ public static class Git
     public static ProcResult WorktreeAdd(string repo, string path, string branch)
         => Exec(repo, "worktree", "add", "-b", branch, path);
 
+    /// <summary>P2: create a detached git worktree at <paramref name="path"/> pinned to
+    /// <paramref name="sha"/> — read-only snapshot of the repo at that commit.</summary>
+    public static ProcResult WorktreeAddDetached(string repo, string path, string sha)
+        => Exec(repo, "worktree", "add", "--detach", path, sha);
+
     /// <summary>Remove a git worktree at <paramref name="path"/> (force cleanup even if dirty).</summary>
     public static ProcResult WorktreeRemove(string repo, string path)
         => Exec(repo, "worktree", "remove", path, "--force");

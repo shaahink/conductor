@@ -45,6 +45,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     private bool _softBreakSignalled;
     // B12.2: bounded worker pool for Tier A analysis lanes (replaces ad-hoc Task.Run of B12.1)
     private LaneWorkerPool? _lanePool;
+    // P2: parallel audit lane that runs concurrently with the next stage's deliver
+    private Task<ParallelAuditOutcome>? _parallelAuditTask;
 
     // Correlation state attached to every structured log line (B2.5): runId + stage + session number
     // come from RunState; the gate marker is set while a battery runs.
@@ -272,6 +274,33 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 // B12.1: start read-only analysis lanes for this stage (run concurrently in scratch dirs)
                 StartAnalysisLanes(stage, track.HandoffBlock, ct);
 
+                // P2: if a previous stage's parallel audit is pending and we're about to deliver a new
+                // stage, launch the audit as a read-only lane concurrently with this session.
+                if (state.PendingParallelAudit != null && state.PendingFix == null && state.PendingResume == null)
+                {
+                    StartParallelAudit(state.PendingParallelAudit, ct);
+                }
+                // P2: inject any completed parallel audit findings from a prior run
+                if (state.ParallelAuditOutcome is { Completed: true } outcome && state.PendingFix == null)
+                {
+                    if (outcome.MaxSeverity == AuditFindingSeverity.High)
+                    {
+                        // HIGH findings from a prior completed audit — queue fix before proceeding
+                        var fixNote = $"prior parallel audit found HIGH-severity issues in stage {outcome.StageId}:\n{Trunc(outcome.Findings, 2000)}";
+                        state.PendingFix = new PendingFix
+                        {
+                            FromSession = state.History.LastOrDefault()?.Number ?? 0,
+                            GateFailures = "",
+                            ProgressSummary = fixNote,
+                        };
+                        state.ParallelAuditOutcome = null;
+                        state.Status = RunStatus.Idle;
+                        Log($"parallel audit: HIGH findings from stage {outcome.StageId} — queuing fix session");
+                        Save();
+                        continue;
+                    }
+                }
+
                 RunSession(stage, track, ct);
                 sessionsThisRun++;
                 var rec = state.History[^1];
@@ -399,6 +428,19 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         if (batterySection.Length > 0)
             prompt = prompt.TrimEnd() + "\n\n" + batterySection;
 
+        // P2: inject completed parallel audit findings into deliver session prompts
+        if (kind == SessionKind.Deliver && state.ParallelAuditOutcome is { Completed: true, MaxSeverity: not AuditFindingSeverity.High } outcome)
+        {
+            var findings = Trunc(outcome.Findings, 3000);
+            if (!string.IsNullOrWhiteSpace(findings))
+            {
+                prompt = prompt.TrimEnd() + $"\n\n## Parallel audit findings for stage {outcome.StageId}\n" +
+                    $"The following audit findings were produced by a read-only audit lane running concurrently with the previous stage. " +
+                    $"Address LOW and MEDIUM findings in this session if convenient.\n\n{findings}";
+                state.ParallelAuditOutcome = null;
+            }
+        }
+
         var rec = new SessionRecord
         {
             Number = state.SessionCounter,
@@ -450,6 +492,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 while (agent.TryDequeue(out var ev)) { sink.AgentEvent(ev); TrackActivity(ev); }
                 // B12.1: check for completed analysis lanes running concurrently
                 PollLaneCompletion();
+                // P2: check if the parallel audit lane has completed; HIGH findings are noted
+                CheckParallelAuditCompletion();
                 // B9.4: soft-break — when live tokens cross the soft threshold, write a cooperative
                 // nudge for the agent to finish the current sub-task and hand off cleanly.
                 CheckSoftBreak(agent, preTrack);
@@ -759,6 +803,19 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
         if (green)
         {
+            // P2: parallel audit — confirm immediately, audit runs concurrently with next stage
+            if (plan.Audit is { Enabled: true, EnableParallel: true } && !state.AuditedStages.Contains(pg.StageId)
+                && HasNextUnconfirmedStage(pg.StageId))
+            {
+                state.PendingParallelAudit = new PendingParallelAudit { StageId = pg.StageId, StageStartHead = pg.StageStartHead };
+                state.PendingAudit = null;
+                state.PendingPhaseGate = null;
+                state.AuditedStages.Add(pg.StageId); // mark audited so we don't re-queue
+                Log($"phase {pg.StageId} full battery GREEN — confirming now, audit will run in parallel with next deliver");
+                ConfirmStage(pg.StageId);
+                return; // ConfirmStage saved
+            }
+
             if (plan.Audit is { Enabled: true } && !state.AuditedStages.Contains(pg.StageId))
             {
                 state.PendingAudit = new PendingAudit { StageId = pg.StageId, StageStartHead = pg.StageStartHead };
@@ -789,10 +846,20 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     }
 
     /// <summary>A stage's checkpoints are all DONE: schedule the audit first (single battery runs after
-    /// it) or, if audit is disabled/done, the confirming full battery.</summary>
+    /// it) or, if audit is disabled/done, the confirming full battery.
+    /// P2: when parallel audit is enabled and a next stage exists, the battery runs first and the
+    /// audit launches concurrently with the next stage's deliver.</summary>
     private void ScheduleGateOrAudit(string stageId, string startHead)
     {
-        if (plan.Audit is { Enabled: true } && !state.AuditedStages.Contains(stageId))
+        // P2: parallel audit — always run the battery first, audit runs concurrently later
+        if (plan.Audit is { Enabled: true, EnableParallel: true } && !state.AuditedStages.Contains(stageId)
+            && HasNextUnconfirmedStage(stageId))
+        {
+            state.PendingPhaseGate = new PendingPhaseGate { StageId = stageId, StageStartHead = startHead };
+            state.PendingAudit = null;
+            Log($"stage {stageId} checkpoints all DONE — scheduling full-battery phase gate (parallel audit will follow)");
+        }
+        else if (plan.Audit is { Enabled: true } && !state.AuditedStages.Contains(stageId))
         {
             state.PendingAudit = new PendingAudit { StageId = stageId, StageStartHead = startHead };
             state.PendingPhaseGate = null;
@@ -851,6 +918,171 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
     private StageConfig CurrentStageConfig()
         => plan.Stages.FirstOrDefault(s => s.Id == state.CurrentStage) ?? plan.Stages[^1];
+
+    // ---------------------------------------------------------------- P2: QA parallelization
+
+    /// <summary>P2: true when there is at least one non-skipped, non-confirmed stage after
+    /// <paramref name="stageId"/>, so a parallel audit can run concurrently with it.</summary>
+    private bool HasNextUnconfirmedStage(string stageId)
+    {
+        var idx = plan.Stages.FindIndex(s => s.Id == stageId);
+        if (idx < 0) return false;
+        for (var i = idx + 1; i < plan.Stages.Count; i++)
+        {
+            var sid = plan.Stages[i].Id;
+            if (!state.SkippedStages.Contains(sid) && !state.ConfirmedStages.Contains(sid))
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>P2: launches the parallel audit for <paramref name="audit"/> as a read-only lane in a
+    /// detached git worktree at the pinned SHA. The audit agent reads code, produces findings,
+    /// and cannot modify the real working tree.</summary>
+    private void StartParallelAudit(PendingParallelAudit audit, CancellationToken ct)
+    {
+        var stageId = audit.StageId;
+        var sha = audit.StageStartHead;
+        if (string.IsNullOrEmpty(sha)) sha = Git.Head(plan.Repo);
+
+        Log($"parallel audit: launching read-only audit for stage {stageId} at {Short(sha)}");
+        var prompt = BuildParallelAuditPrompt(stageId, sha);
+
+        var resolvedAgent = plan.ResolveAgent(plan.Stages.FirstOrDefault(s => s.Id == stageId) ?? plan.Stages[^1]);
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var lanePath = Path.Combine(Path.GetTempPath(), $"conductor-pa-{stageId}-{suffix}");
+
+        _parallelAuditTask = Task.Run(async () =>
+        {
+            try
+            {
+                Directory.CreateDirectory(lanePath);
+                var createResult = Git.WorktreeAddDetached(plan.Repo, lanePath, sha);
+                if (createResult.ExitCode != 0)
+                {
+                    Log($"parallel audit: worktree creation failed — {createResult.Output.Trim()}");
+                    CleanupLanePath(lanePath);
+                    return new ParallelAuditOutcome { StageId = stageId, MaxSeverity = AuditFindingSeverity.None, Findings = "", Completed = true };
+                }
+
+                var promptPath = Path.Combine(lanePath, ".conductor-audit-prompt.md");
+                await File.WriteAllTextAsync(promptPath, prompt, ct).ConfigureAwait(false);
+
+                var args = resolvedAgent.Args.Select(a =>
+                    a.Replace("{prompt}", prompt)
+                     .Replace("{sessionId}", $"audit-{stageId}-{suffix}"));
+                var result = ProcessRunner.Run(resolvedAgent.Command, args, lanePath,
+                    TimeSpan.FromMinutes(plan.Audit?.MaxAttempts > 0 ? plan.Audit.MaxAttempts * 30 : 30), ct);
+
+                CleanupLanePath(lanePath);
+
+                if (ct.IsCancellationRequested)
+                {
+                    Log($"parallel audit for {stageId}: cancelled");
+                    return new ParallelAuditOutcome { StageId = stageId, MaxSeverity = AuditFindingSeverity.None, Findings = "", Completed = true };
+                }
+
+                var findings = result.Output ?? "";
+                var severity = ParseAuditSeverity(findings);
+                Log($"parallel audit for {stageId}: completed (severity={severity})");
+                return new ParallelAuditOutcome { StageId = stageId, MaxSeverity = severity, Findings = findings, Completed = true };
+            }
+            catch (Exception ex)
+            {
+                CleanupLanePath(lanePath);
+                Log($"parallel audit for {stageId}: error — {ex.Message}");
+                return new ParallelAuditOutcome { StageId = stageId, MaxSeverity = AuditFindingSeverity.None, Findings = "", Completed = true };
+            }
+        }, ct);
+
+        state.PendingParallelAudit = null;
+    }
+
+    private void CleanupLanePath(string path)
+    {
+        try { if (Directory.Exists(path)) Directory.Delete(path, recursive: true); }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
+
+    /// <summary>P2: builds the read-only audit prompt for the parallel audit lane.</summary>
+    private string BuildParallelAuditPrompt(string stageId, string sha)
+    {
+        var stage = plan.Stages.FirstOrDefault(s => s.Id == stageId);
+        var title = stage?.Title ?? stageId;
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"You are a read-only code auditor for an autonomous engineering orchestrator (Conductor).");
+        sb.AppendLine("You are running in a detached git worktree pinned to a specific commit — you can");
+        sb.AppendLine("read files freely but you CANNOT modify them or create commits.");
+        sb.AppendLine();
+        sb.AppendLine("## Audit context");
+        sb.AppendLine($"Plan: {plan.Name}");
+        sb.AppendLine($"Stage: {stageId} ({title})");
+        sb.AppendLine($"Pinned commit: {sha}");
+        sb.AppendLine($"Tracker: {plan.Tracker}");
+        sb.AppendLine();
+        sb.AppendLine("## Task");
+        sb.AppendLine($"Audit the code at commit {sha}. Read the tracker for this stage's deliverables.");
+        sb.AppendLine("Look for:");
+        sb.AppendLine("1. **Regressions** — did the stage accidentally break something that was working?");
+        sb.AppendLine("2. **Missed edge cases** — did the implementation overlook error paths, nulls, timeouts?");
+        sb.AppendLine("3. **Code quality gaps** — duplicated logic, inconsistent naming, missing null checks?");
+        sb.AppendLine("4. **Tracker honesty** — do the claimed DONE checkpoints match the actual code changes?");
+        sb.AppendLine();
+        sb.AppendLine("## Output");
+        sb.AppendLine("Produce a structured markdown report. Start each finding with a severity marker:");
+        sb.AppendLine("- `HIGH:` — regression, security issue, or broken gate that must be fixed before continuing");
+        sb.AppendLine("- `MEDIUM:` — missed edge case, technical debt that should be addressed");
+        sb.AppendLine("- `LOW:` — style, minor improvement, nit");
+        sb.AppendLine();
+        sb.AppendLine("End with verdict on a single line starting with `AUDIT-VERDICT:` followed by one word:");
+        sb.AppendLine("`PASS` (no significant issues), `WARN` (issues but safe to continue), or `FAIL` (must fix first).");
+        return sb.ToString();
+    }
+
+    /// <summary>P2: parses the audit output for severity markers and returns the highest level found.</summary>
+    private static AuditFindingSeverity ParseAuditSeverity(string output)
+    {
+        if (string.IsNullOrWhiteSpace(output)) return AuditFindingSeverity.None;
+        var up = output.ToUpperInvariant();
+        if (up.Contains("AUDIT-VERDICT: FAIL") || up.Contains("AUDIT_VERDICT: FAIL"))
+            return AuditFindingSeverity.High;
+        if (up.Contains("HIGH:") || up.Contains("**HIGH**"))
+            return AuditFindingSeverity.High;
+        if (up.Contains("AUDIT-VERDICT: WARN") || up.Contains("AUDIT_VERDICT: WARN") ||
+            up.Contains("MEDIUM:") || up.Contains("**MEDIUM**"))
+            return AuditFindingSeverity.Medium;
+        if (up.Contains("LOW:") || up.Contains("**LOW**"))
+            return AuditFindingSeverity.Low;
+        return AuditFindingSeverity.None;
+    }
+
+    /// <summary>P2: polled during the deliver session to check if the parallel audit has completed.
+    /// When it finishes, the findings are stored in state for prompt injection and post-session decision.</summary>
+    private void CheckParallelAuditCompletion()
+    {
+        if (_parallelAuditTask is not { IsCompleted: true }) return;
+        try
+        {
+            var outcome = _parallelAuditTask.Result;
+            _parallelAuditTask = null;
+            state.ParallelAuditOutcome = outcome;
+            if (outcome.MaxSeverity == AuditFindingSeverity.High)
+            {
+                Log($"parallel audit: HIGH findings detected for stage {outcome.StageId} — signal delivered to running session");
+                sink.Log($"[parallel-audit] HIGH severity findings — audit recommends fixing before continuing");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log($"parallel audit: task failed — {ex.Message}");
+            _parallelAuditTask = null;
+        }
+    }
+
+    /// <summary>P2: called after a deliver session ends. If the parallel audit found HIGH findings,
+    /// queue a fix session to address them before the next session runs.</summary>
+    // P2 endregion
 
     /// <summary>Handle an owner approval while parked at <c>AwaitingOwner</c>. What it means depends on
     /// WHY we parked (B3.2/B3.4): an owner-gate confirms the stage; an approval-mode/budget park merely

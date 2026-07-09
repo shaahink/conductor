@@ -4,10 +4,10 @@
 **Branch:** `feat/era-v3`. **Driver:** `C:\Code\conductor\bin\conductor.exe` (stable from master).
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
-last: P1 — dynamic plan reconfiguration landed. conductor plan set/reload/add-stage + TUI E stage editor. PlanVersion bumps on every change. Validation on every save; failed edits reject cleanly. Next-session boundary: changes apply on next conductor run. 530 tests pass (0w/0e).
-stage: P1 DONE. Next: P2 — QA parallelization.
-next: Read workflow §P2. Audit + deliver concurrently. Audit against pinned commit SHA. HIGH defects interrupt deliver gracefully.
-trap: P1 CLI args: plan set/reload/add-stage all use -p for plan path. Comments stripped on set (roundtrip through PlanConfig). E key = stage editor when selected, expand all otherwise.
+last: P2 — QA parallelization landed. Audit runs as read-only lane in detached worktree concurrently with next stage deliver. AuditConfig.EnableParallel (default true). HIGH findings queue fix before next deliver; LOW/MEDIUM injected into prompt. 530 tests pass (0w/0e).
+stage: P2 DONE. Next: P3 — Stronger advisor.
+next: Read workflow §P3. Structured AdvisorVerdict.Action enum — orchestrator honors it: BlockRetry, ResetBudget, NeedsHuman, ApplyFix, RerunGates.
+trap: Audit lane runs in detached worktree at pinned SHA — idempotent, read-only. Single-stage plans use sequential path. Parallel audit findings stored in state.json for crash resilience.
 
 ## Baseline Numbers
 
@@ -30,7 +30,7 @@ trap: P1 CLI args: plan set/reload/add-stage all use -p for plan path. Comments 
 | O2 | Budget intelligence + network health gate | DONE | 2f4d103 | docs/era3/evidence/O2/ |
 | O3 | Cost overhead split | DONE | 419fb9a | docs/era3/evidence/O3/ |
 | P1 | Dynamic plan reconfiguration | DONE | c153a2b | docs/era3/evidence/P1/ |
-| P2 | QA parallelization | TODO | — | — |
+| P2 | QA parallelization | DONE | — | docs/era3/evidence/P2/ |
 | P3 | Stronger advisor — structured verdicts | TODO | — | — |
 | P4 | Squash bookkeeping — clean git history | TODO | — | — |
 | P5 | Post-hoc audit replay | TODO | — | — |
