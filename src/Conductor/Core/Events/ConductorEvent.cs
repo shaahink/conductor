@@ -32,8 +32,11 @@ namespace Conductor.Core.Events;
 [JsonDerivedType(typeof(TaskAdded),             "taskAdded")]
 [JsonDerivedType(typeof(TaskStatusChanged),     "taskStatusChanged")]
 [JsonDerivedType(typeof(SoftBreakRequested),    "softBreakRequested")]
-[JsonDerivedType(typeof(LaneStarted),           "laneStarted")]
-[JsonDerivedType(typeof(LaneFinished),          "laneFinished")]
+        [JsonDerivedType(typeof(LaneStarted),           "laneStarted")]
+        [JsonDerivedType(typeof(LaneFinished),          "laneFinished")]
+        [JsonDerivedType(typeof(MutatingLaneStarted),   "mutatingLaneStarted")]
+        [JsonDerivedType(typeof(MutatingLaneFinished),  "mutatingLaneFinished")]
+        [JsonDerivedType(typeof(MergeGateVerdict),      "mergeGateVerdict")]
 public abstract record ConductorEvent
 {
     /// <summary>Monotonic 1-based ordinal within the log (continues across restarts). Stamped by
@@ -241,6 +244,51 @@ public sealed record LaneFinished : ConductorEvent
     public required string Kind { get; init; }
     public required string Outcome { get; init; }
     public string? Error { get; init; }
+    public long DurationMs { get; init; }
+}
+
+/// <summary>
+/// A Tier B mutating lane was dispatched to an isolated <c>git worktree</c> (B12.3).
+/// The lane can freely mutate files in its own worktree without affecting the primary tree.
+/// </summary>
+public sealed record MutatingLaneStarted : ConductorEvent
+{
+    public required string LaneId { get; init; }
+    public required string Kind { get; init; }
+    public string? StageId { get; init; }
+    public string? ScratchBranch { get; init; }
+}
+
+/// <summary>
+/// A Tier B mutating lane finished execution (B12.3). The <see cref="Outcome"/> is the lane-level
+/// result (success/failure/error) — the merge gate verdict is a separate <see cref="MergeGateVerdict"/>
+/// event emitted after battery verification.
+/// </summary>
+public sealed record MutatingLaneFinished : ConductorEvent
+{
+    public required string LaneId { get; init; }
+    public required string Kind { get; init; }
+    public required string Outcome { get; init; }
+    public string? Error { get; init; }
+    public long DurationMs { get; init; }
+    public bool AgentCommitted { get; init; }
+}
+
+/// <summary>
+/// The merge gate verdict for a Tier B mutating lane (B12.3). Emitted after the full battery runs
+/// on the integrated tree (base branch + lane's scratch branch merged). If <see cref="Passed"/>
+/// is true the lane's changes were accepted into the primary tree; if false the lane is rejected
+/// and its branch is torn down without merging.
+/// </summary>
+public sealed record MergeGateVerdict : ConductorEvent
+{
+    public required string LaneId { get; init; }
+    public required string Kind { get; init; }
+    public bool Passed { get; init; }
+    public int TotalGates { get; init; }
+    public int PassedCount { get; init; }
+    public int FailedCount { get; init; }
+    public string? FailureSummary { get; init; }
     public long DurationMs { get; init; }
 }
 

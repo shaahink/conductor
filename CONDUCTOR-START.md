@@ -8,13 +8,13 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #66 (B12.2) — LaneWorkerPool (bounded pool, SemaphoreSlim concurrency cap, FIFO scheduling), LaneStarted/LaneFinished events, MaxConcurrentLanes config (default 2), Orchestrator integration replaces ad-hoc Task.Run.
-stage: B12.2 DONE. B12.3 (Tier B isolated-worktree mutating lanes + merge gate) is next.
+last: session #67 (B12.3) — Tier B isolated-worktree mutating lanes: MutatingLaneConfig model, Git.WorktreeAdd/Remove/MergeBranch/DeleteBranch, MutatingLaneRunner (worktree → agent → staging merge gate → ff-merge on pass / reject on fail), 3 new ConductorEvent types (MutatingLaneStarted/Finished, MergeGateVerdict), 12 tests green.
+stage: B12.3 DONE. B12.4 (fix-lanes consume followups.md) is next.
 dirty: none.
-next: B12.3 or B12 fix-lanes (FU-B11-1 completion exhaustiveness test, FU-B10-1 integration harness, FU-B10-2 battery-collapse measurement).
-QA-B12.1: verified — 9/9 B12.1 tests pass, build 0w/0e, end-to-end integration verified. QA-PASS.
+next: B12.4 — fix-lanes that consume .conductor/followups.md as Tier-B lanes.
+QA-B12.3: self-verified — build 0w/0e, 460 tests pass, 12 B12.3 tests (good merge accepted, bad diff rejected, worktree isolation, lane-specific gates, cancellation, cleanup).
 followups: FU-B11-1/2/3, FU-B10-1/2, FU-B0-4/5/6/7 remain OPEN.
-evidence: docs/baton/evidence/B12.2-gate.txt (7 tests, 448 total pass), test file tests/Conductor.Tests/B12_2Tests.cs.
+evidence: docs/baton/evidence/B12.3-gate.txt (12 tests, 460 total pass), test file tests/Conductor.Tests/B12_3Tests.cs.
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -98,7 +98,7 @@ never silent renumbering.
 | B11.4 | **Acceptance: drive a full owner-gated Shamshir phase (parity-pipeline P2.2)** | DONE | b04a264 | docs/baton/evidence/B11.4-gate.txt, docs/baton/audits/B11-shamshir-p2.2.md |
 | B12.1 | Tier A read-only analysis lanes (arch/design/qa/research, scratch cwd, artifacts feed prompts+handover) | DONE | 168920d | docs/baton/evidence/B12.1-gate.txt |
 | B12.2 | Worker pool + concurrency cap + brain scheduling (opt-in per task-type) | DONE | d659ec6 | docs/baton/evidence/B12.2-gate.txt |
-| B12.3 | Tier B isolated-worktree mutating lanes → full-battery MERGE GATE before acceptance | TODO | | |
+| B12.3 | Tier B isolated-worktree mutating lanes → full-battery MERGE GATE before acceptance | DONE | 2d2fb8a | docs/baton/evidence/B12.3-gate.txt |
 | B12.4 | fix-lanes consume .conductor/followups.md (blend-in debt fixing) | TODO | | |
 
 ## Quick commands

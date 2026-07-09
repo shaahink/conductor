@@ -1,0 +1,42 @@
+=== B12.3 Tier B isolated-worktree mutating lanes + merge gate ===
+Date: 2026-07-09
+Host: MSI
+OS: Windows
+
+--- Build ---
+dotnet build Conductor.slnx
+  Determining projects to restore... All projects are up-to-date for restore.
+  Conductor -> C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.dll
+  Conductor.Tests -> C:\Code\conductor-baton\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll
+  Build succeeded. 0 Warning(s) 0 Error(s)
+
+--- Full Tests ---
+dotnet test Conductor.slnx
+  Passed! - Failed: 0, Passed: 460, Skipped: 0, Total: 460
+
+--- B12.3-specific tests ---
+dotnet test Conductor.slnx --filter "FullyQualifiedName~B12_3"
+  Passed! - Failed: 0, Passed: 12, Skipped: 0, Total: 12
+
+--- Test evidence (12 tests) ---
+  X MutatingLaneRunner_BuildPrompt_IncludesContextAndTask
+  X MutatingLane_GoodDiff_MergeAccepted — agent commits, gate passes, merge accepted
+  X MutatingLane_BadDiff_MergeRejected — agent commits, gate fails, rejected, primary tree untouched
+  X MutatingLane_NoCommits_ReturnsSuccessWithoutMerge — agent doesn't commit, trivially successful
+  X MutatingLane_WorktreeIsolation_PrimaryTreeUntouchedUntilMerge
+  X MutatingLane_UsesLaneSpecificMergeGates_WhenConfigured
+  X MutatingLane_MergeConflict_Rejected — lane modifies file, gate fails, merge rejected
+  X MutatingLane_Cancellation_ReturnsCancelled
+  X MutatingLane_WorktreeCleanedUp_AfterCompletion — worktrees + scratch branches cleaned up
+  X MutatingLaneConfig_Defaults
+  X PlanConfig_MutatingLanes_DefaultsEmpty
+  X MutatingLaneResult_IsSuccess_ReflectsMergeGate
+
+--- Implementation ---
+- MutatingLaneConfig model (PlanConfig.cs): Id, Kind, Name, Prompt, StageTrigger, TimeoutMinutes, Enabled, Agent, MergeGates
+- PlanConfig.MutatingLanes: List<MutatingLaneConfig> (defaults empty)
+- Git.cs: WorktreeAdd, WorktreeRemove, MergeBranch, DeleteBranch helpers
+- MutatingLaneRunner.cs: creates worktree on scratch branch, runs agent, staging worktree merge gate, fast-forward merge on pass
+- Events: MutatingLaneStarted, MutatingLaneFinished, MergeGateVerdict
+- Merge gate: creates staging worktree from base, merges scratch branch, runs gates (lane-specific or plan-level), green=accept red=reject
+- Worktree cleanup: lane worktree removed, scratch branch deleted (best-effort)

@@ -40,4 +40,24 @@ public static class Git
             return (ahead, behind);
         return null;
     }
+
+    // ---------------------------------------------------------------- B12.3: isolated worktrees
+
+    /// <summary>Create a git worktree at <paramref name="path"/> on a new branch named
+    /// <paramref name="branch"/> based on the current HEAD of <paramref name="repo"/>.</summary>
+    public static ProcResult WorktreeAdd(string repo, string path, string branch)
+        => Exec(repo, "worktree", "add", "-b", branch, path);
+
+    /// <summary>Remove a git worktree at <paramref name="path"/> (force cleanup even if dirty).</summary>
+    public static ProcResult WorktreeRemove(string repo, string path)
+        => Exec(repo, "worktree", "remove", path, "--force");
+
+    /// <summary>Merge <paramref name="branch"/> into the current HEAD of <paramref name="repo"/> with
+    /// a non-interactive merge commit. Returns the process result; exit 0 = success, non-zero = conflict.</summary>
+    public static ProcResult MergeBranch(string repo, string branch)
+        => Exec(repo, "merge", "--no-edit", branch);
+
+    /// <summary>Force-delete a local branch.</summary>
+    public static ProcResult DeleteBranch(string repo, string branch)
+        => Exec(repo, "branch", "-D", branch);
 }

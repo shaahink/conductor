@@ -59,6 +59,10 @@ public sealed class PlanConfig
     /// <summary>Read-only analysis lanes that run concurrently with sessions (B12.1 Tier A).
     /// Each lane spawns an agent in a scratch temp directory — it can never write the working tree.</summary>
     public List<AnalysisLaneConfig> AnalysisLanes { get; set; } = new();
+    /// <summary>Tier B isolated-worktree mutating lanes that run behind a full-battery merge gate
+    /// (B12.3). Each lane runs in its own <c>git worktree</c> on a scratch branch; the lane's
+    /// changes are only merged into the primary tree if the merge-gate battery is green.</summary>
+    public List<MutatingLaneConfig> MutatingLanes { get; set; } = new();
 
     [JsonIgnore] public string PlanFilePath { get; private set; } = "";
     [JsonIgnore] public string PlanDir => Path.GetDirectoryName(PlanFilePath) ?? ".";
@@ -647,6 +651,31 @@ public sealed class WebhookNotifyConfig
         public bool Enabled { get; set; } = true;
         /// <summary>Maximum lines of agent output captured as the artifact. Default 200.</summary>
         public int MaxOutputLines { get; set; } = 200;
+    }
+
+    /// <summary>Tier B isolated-worktree mutating lane (B12.3). Runs in its own <c>git worktree</c>
+    /// on a scratch branch so it can freely mutate files. A merge gate runs the full battery on the
+    /// integrated tree before the lane's changes are accepted — red battery → rejected, never merged.</summary>
+    public sealed class MutatingLaneConfig
+    {
+        /// <summary>Unique lane id used for branch/worktree naming.</summary>
+        public string Id { get; set; } = "";
+        /// <summary>Lane kind: "delivery", "fix", "refactor".</summary>
+        public string Kind { get; set; } = "delivery";
+        /// <summary>Human-readable name for logs.</summary>
+        public string Name { get; set; } = "";
+        /// <summary>The work prompt — injected into the agent session.</summary>
+        public string Prompt { get; set; } = "";
+        /// <summary>Run when this stage becomes active. null = run on every stage.</summary>
+        public string? StageTrigger { get; set; }
+        /// <summary>Agent timeout in minutes. Default 30 (mutating lanes may need more time).</summary>
+        public int TimeoutMinutes { get; set; } = 30;
+        /// <summary>When false the lane is skipped. Default true.</summary>
+        public bool Enabled { get; set; } = true;
+        /// <summary>Per-lane agent override (persona, model, etc.). null = use plan default.</summary>
+        public AgentConfig? Agent { get; set; }
+        /// <summary>Gates to run on the merged tree for merge verification. null = use plan-level gates.</summary>
+        public List<GateConfig>? MergeGates { get; set; }
     }
 
     /// <summary>Telegram bot config for AFK observability + two-way control (B6).
