@@ -1,11 +1,12 @@
 ﻿# Conductor — Conductor-Debt run report
 
-_Updated 2026-07-09 02:18 UTC · branch `feat/baton` · HEAD `c65b69e`_
+_Updated 2026-07-09 02:18 UTC · branch `feat/baton` · HEAD `edc7925`_
 
 **Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** C5 — Small debt sweep (12 items) · attempts used 2 · working ▸ C5
+**Stage:** C5 — Small debt sweep (12 items) · attempts used 0 · working ▸ C5
 **Checkpoints:** 69/72 done · **Sessions run:** 73 · **Cost:** $3.6206 · **Tokens:** 3,012,866 in / 1,033,066 out / 534,334 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1, C2, C3, C4
+**⚠ Skipped stages (need human review):** C5
 
 ## Stage progress
 
@@ -15,7 +16,7 @@ _Updated 2026-07-09 02:18 UTC · branch `feat/baton` · HEAD `c65b69e`_
 | C2 | B12.4 — Fix-lanes from followups.md | 1/1 | confirmed ✓ |
 | C3 | Async engine + integration harness | 1/1 | confirmed ✓ |
 | C4 | Events + metrics + budget + recovery | 1/1 | confirmed ✓ |
-| C5 | Small debt sweep (12 items) | 0/1 | **← active** |
+| C5 | Small debt sweep (12 items) | 0/1 | SKIPPED ⚠ |
 | C6 | R1 — TUI + CLI audit | 0/1 | todo |
 | C7 | R2 — Report + Prompts + Agent Context audit | 0/1 | todo |
 | C8 | Final handover + Needs Human Verification checklist | 0/0 | todo |
