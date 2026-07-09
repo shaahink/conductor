@@ -1,11 +1,12 @@
 ﻿# Conductor — Conductor-Era3 run report
 
-_Updated 2026-07-09 06:20 UTC · branch `feat/era-v3` · HEAD `d8919bb`_
+_Updated 2026-07-09 06:36 UTC · branch `feat/era-v3` · HEAD `e877bb0`_
 
 **Status:** Idle — plan complete EXCEPT skipped stages: C5
-**Stage:** O2 — Budget intelligence + network health gate · attempts used 0
-**Checkpoints:** 6/13 done · **Sessions run:** 84 · **Cost:** $4.2495 · **Tokens:** 3,682,017 in / 1,173,305 out / 625,159 think
+**Stage:** O3 — Cost overhead split · attempts used 0
+**Checkpoints:** 7/13 done · **Sessions run:** 85 · **Cost:** $4.3070 · **Tokens:** 3,742,897 in / 1,187,247 out / 632,296 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1, C2, C3, C4, C6, C7, C8, D1, D2, D3, D4, O1, O2
+**Pending:** full-battery phase gate for O3
 **⚠ Skipped stages (need human review):** C5
 
 ## Stage progress
@@ -18,7 +19,7 @@ _Updated 2026-07-09 06:20 UTC · branch `feat/era-v3` · HEAD `d8919bb`_
 | D4 | Mid-session control feedback | 1/1 | confirmed ✓ |
 | O1 | Structured log + conductor log --query | 1/1 | confirmed ✓ |
 | O2 | Budget intelligence + network health gate | 1/1 | confirmed ✓ |
-| O3 | Cost overhead split | 0/1 | todo |
+| O3 | Cost overhead split | 1/1 | gating… |
 | P1 | Dynamic plan reconfiguration | 0/1 | todo |
 | P2 | QA parallelization | 0/1 | todo |
 | P3 | Stronger advisor — structured verdicts | 0/1 | todo |
@@ -30,7 +31,6 @@ _Updated 2026-07-09 06:20 UTC · branch `feat/era-v3` · HEAD `d8919bb`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 55 | B9 | Deliver | 1 | 07-08 21:55 | 0:16 | Advanced | B9.4 | 3 | build:OK | $0.0719 | 73,232/17,129 |
 | 56 | B9 | Deliver | 1 | 07-08 22:11 | 0:11 | Advanced | B9.5 | 3 | build:OK | $0.0527 | 61,772/11,888 |
 | 57 | B9 | Audit | 1 | 07-08 22:23 | 0:08 | Progress |  | 1 |  | $0.0725 | 97,126/11,226 |
 | 58 | B10 | Deliver | 1 | 07-08 22:33 | 0:07 | Advanced | B10.1 | 2 | build:OK | $0.0385 | 45,295/10,325 |
@@ -60,11 +60,10 @@ _Updated 2026-07-09 06:20 UTC · branch `feat/era-v3` · HEAD `d8919bb`_
 | 82 | D4 | Deliver | 1 | 07-09 05:28 | 0:13 | Advanced | D4 | 1 | build:OK | $0.0648 | 57,829/17,763 |
 | 83 | O1 | Deliver | 1 | 07-09 05:43 | 0:21 | Advanced | O1 | 2 | build:OK | $0.0861 | 69,607/20,828 |
 | 84 | O2 | Deliver | 1 | 07-09 06:06 | 0:13 | Advanced | O2 | 2 | build:OK | $0.0520 | 65,381/12,613 |
+| 85 | O3 | Deliver | 1 | 07-09 06:20 | 0:15 | Advanced | O3 | 2 | build:OK | $0.0575 | 60,880/13,942 |
 
 ### Commits by session
 
-- **s77 (C8 Deliver)** — 1 commit(s):
-  - bb2c0e8 audit: C8 — plan-alignment, C8 tracker row added (session #77, 67/67 checkpoints DONE)
 - **s78 (D1 Deliver)** — 1 commit(s):
   - bd28ac5 feat(era3): D1 — LLM-powered conductor status command
 - **s79 (D1 Fix)** — 2 commit(s):
@@ -83,6 +82,9 @@ _Updated 2026-07-09 06:20 UTC · branch `feat/era-v3` · HEAD `d8919bb`_
 - **s84 (O2 Deliver)** — 2 commit(s):
   - 9470643 chore(era3): O2 tracker update — stage O2 DONE
   - 2f4d103 feat(era3): O2 budget intelligence — identical-stall detection, exponential backoff, DNS preflight
+- **s85 (O3 Deliver)** — 2 commit(s):
+  - e877bb0 chore(era3): O3 tracker update — stage O3 DONE
+  - 419fb9a feat(era3): O3 cost overhead split — agent vs gates accounting in TUI + report
 
 ## Phase handovers (audit)
 
@@ -101,17 +103,17 @@ _Updated 2026-07-09 06:20 UTC · branch `feat/era-v3` · HEAD `d8919bb`_
 
 ## Last gate run
 
-build:OK · tests:OK
+build:OK
 
 ## Last session result
 
-> SESSION-RESULT: O2 budget intelligence landed — identical-stall detection (2 consecutive stalls with zero commits → NeedsHuman instead of burning 4 more attempts), exponential backoff (12→24→48→... min per stall, reset on non-stall), and DNS preflight (resolves github.com + api.nuget.org before spawning, parks + rechecks every N seconds on failure). All configurable via `limits.stallPatternTermination`, `limits.stallBackoffMinutes`, `limits.dnsHealthCheck`. 516 tests pass, 0w/0e, clean tree, pushed. Next session should deliver O3 (cost overhead split — agent vs gates in TUI + report).
+> SESSION-RESULT:** O3 cost overhead split landed: `SessionRecord.OverheadCostUsd`, `RunState.PerRunOverheadCostUsd`/`TotalOverheadCostUsd`, `GateResult.EstimatedCostUsd(duration × rate)`, `LimitsConfig.OverheadCostPerSecond` (default $0.0001), TUI cost line shows `"cost $X agent $Y gates $Z"`, REPORTER header and sessions table show split. 530 tests pass (14 new O3), 0w/0e, commit `419fb9a`. No red. Next session should deliver P1 — dynamic plan reconfiguration (`conductor plan set/reload/add-stage`, TUI `E` editor, version bumps on modification).
 
 ## Tracker handoff
 
 ```
-last: O2 — budget intelligence + network health gate landed. Identical-stall detection (2 stale→NeedsHuman), exponential stall backoff (12→24→48), DNS preflight (github+nuget) before spawn, all configurable in limits. 516 tests pass, 0w/0e.
-stage: O2 DONE. Next: O3 — cost overhead split (agent vs gates in TUI + report).
-next: Read workflow §O3. Split TuiMetrics agentCost/overheadCost, GateRunner per-gate cost, REPORTER.md breakdown.
-trap: O1 QA passed — evidence present, log command works.
+last: O3 — cost overhead split landed. agentCost vs overheadCost in TUI + REPORT.md. SessionRecord + RunState track overhead separately; GateResult.EstimatedCostUsd(duration × rate); DashboardRenderer.CostLine shows "agent $X gates $Y"; Reporter header + sessions table have split. 530 tests pass (14 O3), 0w/0e.
+stage: O3 DONE. Next: P1 — dynamic plan reconfiguration.
+next: Read workflow §P1. Plan set/reload/add-stage, TUI E editor, next-session boundary, version bumps.
+trap: O2 QA passed — evidence present, claims verified against fresh artifacts.
 ```
