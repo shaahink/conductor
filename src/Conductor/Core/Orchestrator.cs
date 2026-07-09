@@ -648,7 +648,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             else
             {
                 var verdict = ConsultAdvisor(rec, stage, _progress.Read(plan, CancellationToken.None), "resume budget exhausted after stall/timeout");
-                ApplyVerdict(verdict, rec, stage, defaultAction: "retry");
+                ApplyVerdict(verdict, rec, stage, defaultAction: AdvisorAction.Retry);
             }
             state.Status = RunStatus.Idle;
             SaveAndReport();
@@ -1211,18 +1211,18 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     private bool HandoffWantsHuman(TrackerSnapshot track)
         => plan.Conventions.MentionsHuman(track.HandoffBlock);
 
-    /// <returns>true if the caller should fall through to running a session (advisor said retry)</returns>
+    /// <returns>true if the caller should fall through to running a session (advisor said retry or resetBudget)</returns>
     private bool EscalateExhaustedStage(StageConfig stage, TrackerSnapshot track, int maxAttempts)
     {
         Log($"stage {stage.Id} exhausted its attempt budget ({maxAttempts}) — consulting advisor");
         var last = state.History.LastOrDefault();
         var verdict = ConsultAdvisor(last, stage, track, $"attempt budget exhausted ({maxAttempts})");
-        if (verdict?.Action == "skip")
+        if (verdict?.Action is AdvisorAction.Skip)
         {
             SkipStage(stage, $"advisor: {verdict.Reason}");
             return false;
         }
-        if (verdict?.Action is "retry" or "resume")
+        if (verdict?.Action is AdvisorAction.Retry or AdvisorAction.Resume or AdvisorAction.ResetBudget)
         {
             Log($"advisor says {verdict.Action} ({verdict.Reason}) — granting {stage.Sessions} more attempts");
             state.AttemptsThisStage = maxAttempts - Math.Max(1, stage.Sessions);
@@ -1249,22 +1249,67 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         return v;
     }
 
-    private void ApplyVerdict(AdvisorVerdict? verdict, SessionRecord rec, StageConfig stage, string defaultAction)
+    private void ApplyVerdict(AdvisorVerdict? verdict, SessionRecord rec, StageConfig stage, AdvisorAction defaultAction)
     {
         var action = verdict?.Action ?? defaultAction;
         switch (action)
         {
-            case "resume":
+            case AdvisorAction.Resume:
                 QueueResume(rec, "advisor requested resume", force: true);
                 break;
-            case "skip":
+            case AdvisorAction.Skip:
                 SkipStage(stage, $"advisor: {verdict?.Reason}");
                 break;
-            case "human":
+            case AdvisorAction.NeedsHuman:
                 NeedsHuman($"advisor: {verdict?.Reason ?? "human intervention required"}");
                 break;
-            default: // retry → a fresh deliver/fix session runs next loop iteration
+            case AdvisorAction.BlockRetry:
+                state.AttemptsThisStage = MaxAttempts(stage); // exhaust budget so retry won't auto-fire
+                NeedsHuman($"advisor blocked retry: {verdict?.Reason ?? "stall pattern or repeated failure — human must clear before next attempt"}");
                 break;
+            case AdvisorAction.ResetBudget:
+                Log($"advisor reset budget: {verdict?.Reason}");
+                state.AttemptsThisStage = 0;
+                state.PendingFix = null;
+                state.PendingResume = null;
+                Save();
+                break;
+            case AdvisorAction.ApplyFix:
+                Log($"advisor apply-fix: {verdict?.Reason}");
+                RunRemediation(verdict?.Reason ?? "advisor requested remediation");
+                state.AttemptsThisStage = Math.Max(0, state.AttemptsThisStage - 1);
+                break;
+            case AdvisorAction.RerunGates:
+                Log($"advisor rerun-gates: {verdict?.Reason} — clearing pending fix, gates will determine next step");
+                state.PendingFix = null;
+                state.Status = RunStatus.Idle;
+                Save();
+                break;
+            default: // Retry → a fresh deliver/fix session runs next loop iteration
+                break;
+        }
+    }
+
+    private void RunRemediation(string reason)
+    {
+        var script = plan.Advisor?.RemediationScript;
+        if (string.IsNullOrWhiteSpace(script))
+        {
+            Log("remediation: no remediation script configured — skipping");
+            return;
+        }
+        try
+        {
+            Log($"remediation: running script — {script[..Math.Min(script.Length, 120)]}");
+            var shell = string.IsNullOrWhiteSpace(ProcessRunner.DefaultShell) ? "powershell" : ProcessRunner.DefaultShell;
+            var r = ProcessRunner.RunShell(shell, script, plan.Repo, TimeSpan.FromMinutes(5));
+            Log($"remediation: script exited {r.ExitCode} in {r.Duration.TotalSeconds:0}s{(r.TimedOut ? " (timed out)" : "")}");
+            if (r.ExitCode != 0)
+                Log($"remediation: script non-zero exit — {r.Output[..Math.Min(r.Output.Length, 200)]}");
+        }
+        catch (Exception ex)
+        {
+            Log($"remediation: script failed — {ex.Message}");
         }
     }
 

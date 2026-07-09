@@ -4,7 +4,19 @@ using Conductor.Models;
 
 namespace Conductor.Core;
 
-public sealed record AdvisorVerdict(string Action, string Reason);
+public enum AdvisorAction
+{
+    BlockRetry,
+    ResetBudget,
+    NeedsHuman,
+    ApplyFix,
+    RerunGates,
+    Retry,
+    Resume,
+    Skip,
+}
+
+public sealed record AdvisorVerdict(AdvisorAction Action, string Reason);
 
 /// <summary>
 /// Optional second brain: asks a cheap model (opencode/deepseek or claude haiku) what to do
@@ -39,8 +51,8 @@ public static class Advisor
             using var vdoc = JsonDocument.Parse(m.Value);
             var action = (vdoc.RootElement.TryGetProperty("action", out var act) ? act.GetString() : null)?.ToLowerInvariant() ?? "";
             var reason = vdoc.RootElement.TryGetProperty("reason", out var rs) ? rs.GetString() ?? "" : "";
-            return action is "retry" or "resume" or "skip" or "human"
-                ? new AdvisorVerdict(action, reason)
+            return TryParseAction(action) is { } parsed
+                ? new AdvisorVerdict(parsed, reason)
                 : null;
         }
         catch (Exception ex)
@@ -48,5 +60,21 @@ public static class Advisor
             log?.Invoke($"advisor failed: {ex.Message}");
             return null;
         }
+    }
+
+    internal static AdvisorAction? TryParseAction(string action)
+    {
+        return action switch
+        {
+            "blockretry" or "block_retry" => AdvisorAction.BlockRetry,
+            "resetbudget" or "reset_budget" => AdvisorAction.ResetBudget,
+            "needshuman" or "needs_human" or "human" => AdvisorAction.NeedsHuman,
+            "applyfix" or "apply_fix" => AdvisorAction.ApplyFix,
+            "rerungates" or "rerun_gates" => AdvisorAction.RerunGates,
+            "retry" => AdvisorAction.Retry,
+            "resume" => AdvisorAction.Resume,
+            "skip" => AdvisorAction.Skip,
+            _ => null,
+        };
     }
 }

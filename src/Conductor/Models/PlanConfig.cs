@@ -502,6 +502,10 @@ public sealed class AdvisorConfig
     /// <summary>"text" or "json" (claude -p --output-format json envelope)</summary>
     public string Output { get; set; } = "text";
     public int TimeoutMinutes { get; set; } = 6;
+    /// <summary>P3: optional shell command run when the advisor returns ApplyFix.
+    /// Example: "taskkill /f /im opencode.exe" or "git clean -fdx". Executed via
+    /// the default shell with a 5-minute timeout; runs in the repo root.</summary>
+    public string? RemediationScript { get; set; }
 }
 
 /// <summary>On-demand "what's the status?" agent (dashboard `G` key + <c>conductor status</c> CLI).
