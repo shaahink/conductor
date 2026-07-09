@@ -1,32 +1,11 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-09 00:12 UTC · branch `feat/baton` · HEAD `63776d8`_
+_Updated 2026-07-09 00:14 UTC · branch `feat/baton` · HEAD `e7d3eeb`_
 
-**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B12 — Controlled parallelism · attempts used 0 · working ▸ B12.2
-**Checkpoints:** 62/65 done · **Sessions run:** 65 · **Cost:** $2.8709 · **Tokens:** 2,152,705 in / 895,077 out / 424,903 think
+**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B12 — Controlled parallelism · attempts used 0 · working ▸ B12.3
+**Checkpoints:** 63/65 done · **Sessions run:** 65 · **Cost:** $2.9292 · **Tokens:** 2,215,544 in / 910,670 out / 433,106 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11
-
-## Latest activity (live)
-
-_Session #65 (Deliver) · running 10m · last output 0s ago · $0.0524_
-
-**Thinking:**
-> All B12.1 tests still pass. Now let me check the diff budget before committing.
-> 3 modified files + 2 new files (not tracked yet). Let me check for untracked:
-> 5 files total (3 modified, 2 new). This is within the ~15 file diff budget.  Now I need to: 1. Generate the gate evidence file 2. Update CONDUCTOR-START.md 3. Commit and push  Let me create the evidence file and update the tracker.
-
-**Recent actions:**
-- `01:11:20` » bash dotnet test Conductor.slnx 2>&1
-- `01:11:26` · All 448 tests pass (441 → 448, +7 new tests). Let me verify the B12.2-specific tests too:
-- `01:11:33` » bash dotnet test Conductor.slnx --filter "FullyQualifiedName~B12_2" 2>&1
-- `01:11:38` · All 7 B12.2 tests pass. Quick check that B12.1 tests still pass too:
-- `01:11:43` » bash dotnet test Conductor.slnx --filter "FullyQualifiedName~B12_1" 2>&1
-- `01:11:48` · Let me check the diff and finish up:
-- `01:11:48` » bash git diff --stat
-- `01:11:55` » bash git status --short
-- `01:12:14` · Within diff budget (5 files). Now produce the evidence artifact and update the tracker:
-- `01:12:58` » bash $output = "=== B12.2 Worker pool + concurrency cap + lane events ===`r`nDate: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`r`nHost: $env:COMPUTERNAME`r`nOS: W…
 
 ## Stage progress
 
@@ -44,7 +23,7 @@ _Session #65 (Deliver) · running 10m · last output 0s ago · $0.0524_
 | B9 | Task graph + smart session management | 5/5 | confirmed ✓ |
 | B10 | Advanced orchestration | 4/4 | confirmed ✓ |
 | B11 | Close-out + Shamshir owner-gated proof | 4/4 | confirmed ✓ |
-| B12 | Controlled parallelism | 1/4 | **← active** |
+| B12 | Controlled parallelism | 2/4 | **← active** |
 
 ## Sessions
 
@@ -79,12 +58,10 @@ _Session #65 (Deliver) · running 10m · last output 0s ago · $0.0524_
 | 62 | B11 | Deliver | 1 | 07-08 23:19 | 0:21 | Advanced | B11.2 B11.3 B11.4 | 6 | build:OK | $0.1053 | 75,494/33,712 |
 | 63 | B11 | Audit | 1 | 07-08 23:41 | 0:07 | Progress |  | 2 |  | $0.0558 | 59,800/11,762 |
 | 64 | B12 | Deliver | 1 | 07-08 23:49 | 0:13 | Advanced | B12.1 | 2 | build:OK | $0.0744 | 78,710/19,057 |
-| 65 | B12 | Deliver | 1 | 07-09 00:02 | … | running |  | 0 |  |  |  |
+| 65 | B12 | Deliver | 1 | 07-09 00:02 | 0:11 | Advanced | B12.2 | 2 | build:OK | $0.0583 | 62,839/15,593 |
 
 ### Commits by session
 
-- **s57 (B9 Audit)** — 1 commit(s):
-  - c603a3e fix(bB9): audit — validate MCP task args + reject invalid status/non-existent task, unique task IDs, skip duplicate TaskAdded, clean whitespace titles, harden soft-break nulls
 - **s58 (B10 Deliver)** — 2 commit(s):
   - 0f9d2a0 chore(bB10.1): fill commit hash in tracker row
   - 9750665 feat(bB10.1): dependsOn graph + ready-stage ordering with cycle detection
@@ -113,6 +90,9 @@ _Session #65 (Deliver) · running 10m · last output 0s ago · $0.0524_
 - **s64 (B12 Deliver)** — 2 commit(s):
   - 2362697 feat(bB12.1): Tier A read-only analysis lanes + artifact wiring
   - e808338 chore(conductor): s64 B12 working ▸B12.1 @ 00:59
+- **s65 (B12 Deliver)** — 2 commit(s):
+  - e7d3eeb feat(bB12.2): LaneWorkerPool + concurrency cap + lane lifecycle events
+  - f53771e chore(conductor): s65 B12 working ▸B12.2 @ 01:12
 
 ## Phase handovers (audit)
 
@@ -135,16 +115,16 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: B12.1 landed (commit `2362697`) — Tier A read-only analysis lanes: `AnalysisLaneConfig` model, `LaneRunner` (scratch-dir isolation, never touches repo), `LaneArtifactBattery` (IPromptBattery injecting `.conductor/lanes/*.md` into next prompt), Orchestrator integration (spawns lanes before `RunSession`, polls in agent loop, collects after). Gate: build 0w/0e, 441 tests pass (9 new B12.1 tests proving isolation + artifact capture + prompt injection). 6 files changed (2 new + 4 mod), well within budget. B12.2 (worker pool + concurrency cap + scheduling + `LaneStarted`/`LaneFinished` events) is next. What was hard: designing the lane polling inside the synchronous agent loop with…
+> SESSION-RESULT: B12.2 landed — LaneWorkerPool (SemaphoreSlim-bounded pool with configurable concurrency cap from LimitsConfig.MaxConcurrentLanes, FIFO scheduling), LaneStarted/LaneFinished lifecycle events on the event-sourced spine, and Orchestrator integration replacing B12.1's ad-hoc Task.Run with the pool. 448 tests pass 0w/0e, 7 new tests proving cap enforcement (2 concurrent max, cap-of-1 sequential), lifecycle event emission, incremental drain, and error/timeout safety. B12.3 (Tier B isolated-worktree mutating lanes + merge gate) is next. Hard parts: the Orchestrator's synchronous `Run()` method prevented clean async in `CollectLaneArtifacts` (used GetAwaiter().GetResult() matching th…
 
 ## Tracker handoff
 
 ```
-last: session #65 (B12.1) — Tier A read-only analysis lanes: LaneRunner + LaneArtifactBattery + Orchestrator integration. Gate: 441 pass, 0w/0e.
-stage: B12.1 DONE. B12.2 (worker pool + concurrency cap + scheduling + lane events) is next.
+last: session #66 (B12.2) — LaneWorkerPool (bounded pool, SemaphoreSlim concurrency cap, FIFO scheduling), LaneStarted/LaneFinished events, MaxConcurrentLanes config (default 2), Orchestrator integration replaces ad-hoc Task.Run.
+stage: B12.2 DONE. B12.3 (Tier B isolated-worktree mutating lanes + merge gate) is next.
 dirty: none.
-next: B12.2 or B12 fix-lanes (FU-B11-1 completion exhaustiveness test, FU-B10-1 integration harness, FU-B10-2 battery-collapse measurement).
-QA-B11: verified — 432 pass, dotnet pack 1.6MB nupkg, 23 B11 tests green, build 0w/0e. QA-PASS.
-followups: FU-B11-1/2/3, FU-B10-1/2, FU-B0-4/5/6/7 remain OPEN (many are post-B12 or integration-harness items).
-evidence: docs/baton/evidence/B12.1-gate.txt (9 tests + build), test file tests/Conductor.Tests/B12_1Tests.cs.
+next: B12.3 or B12 fix-lanes (FU-B11-1 completion exhaustiveness test, FU-B10-1 integration harness, FU-B10-2 battery-collapse measurement).
+QA-B12.1: verified — 9/9 B12.1 tests pass, build 0w/0e, end-to-end integration verified. QA-PASS.
+followups: FU-B11-1/2/3, FU-B10-1/2, FU-B0-4/5/6/7 remain OPEN.
+evidence: docs/baton/evidence/B12.2-gate.txt (7 tests, 448 total pass), test file tests/Conductor.Tests/B12_2Tests.cs.
 ```
