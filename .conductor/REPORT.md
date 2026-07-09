@@ -1,11 +1,12 @@
 ﻿# Conductor — Conductor-Era3 run report
 
-_Updated 2026-07-09 05:04 UTC · branch `feat/era-v3` · HEAD `ae2f80f`_
+_Updated 2026-07-09 05:26 UTC · branch `feat/era-v3` · HEAD `79a96a8`_
 
 **Status:** Idle — plan complete EXCEPT skipped stages: C5
-**Stage:** D2 — conductor gate — ad-hoc gate re-run · attempts used 0
-**Checkpoints:** 2/13 done · **Sessions run:** 80 · **Cost:** $3.9570 · **Tokens:** 3,415,410 in / 1,101,487 out / 584,389 think
+**Stage:** D3 — Heartbeat runtime toggle + amend strategy · attempts used 0
+**Checkpoints:** 3/13 done · **Sessions run:** 81 · **Cost:** $4.0466 · **Tokens:** 3,489,200 in / 1,122,101 out / 598,204 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1, C2, C3, C4, C6, C7, C8, D1, D2
+**Pending:** full-battery phase gate for D3
 **⚠ Skipped stages (need human review):** C5
 
 ## Stage progress
@@ -14,7 +15,7 @@ _Updated 2026-07-09 05:04 UTC · branch `feat/era-v3` · HEAD `ae2f80f`_
 |---|---|---|---|
 | D1 | conductor status — LLM-powered status report | 1/1 | confirmed ✓ |
 | D2 | conductor gate — ad-hoc gate re-run | 1/1 | confirmed ✓ |
-| D3 | Heartbeat runtime toggle + amend strategy | 0/1 | todo |
+| D3 | Heartbeat runtime toggle + amend strategy | 1/1 | gating… |
 | D4 | Mid-session control feedback | 0/1 | todo |
 | O1 | Structured log + conductor log --query | 0/1 | todo |
 | O2 | Budget intelligence + network health gate | 0/1 | todo |
@@ -30,7 +31,6 @@ _Updated 2026-07-09 05:04 UTC · branch `feat/era-v3` · HEAD `ae2f80f`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 51 | B9 | Fix | 3 | 07-08 21:23 | 0:00 | AgentError |  | 0 | build:OK |  |  |
 | 52 | B9 | Fix | 4 | 07-08 21:24 | 0:00 | AgentError |  | 0 | build:OK |  |  |
 | 53 | B9 | Fix | 5 | 07-08 21:26 | 0:06 | Advanced | B9.1 | 2 | build:OK | $0.0212 | 29,881/4,286 |
 | 54 | B9 | Deliver | 1 | 07-08 21:33 | 0:21 | Advanced | B9.2 B9.3 | 5 | build:OK | $0.0818 | 59,955/26,063 |
@@ -60,11 +60,10 @@ _Updated 2026-07-09 05:04 UTC · branch `feat/era-v3` · HEAD `ae2f80f`_
 | 78 | D1 | Deliver | 1 | 07-09 04:26 | 0:18 | Advanced | D1 | 1 | build:OK | $0.0646 | 69,470/17,593 |
 | 79 | D1 | Fix | 2 | 07-09 04:45 | 0:05 | Progress |  | 2 | build:OK | $0.0191 | 24,463/3,510 |
 | 80 | D2 | Deliver | 1 | 07-09 04:52 | 0:10 | Advanced | D2 | 2 | build:OK | $0.0570 | 73,812/8,373 |
+| 81 | D3 | Deliver | 1 | 07-09 05:04 | 0:22 | Advanced | D3 | 1 | build:OK | $0.0896 | 73,790/20,614 |
 
 ### Commits by session
 
-- **s73 (C5 Deliver)** — 1 commit(s):
-  - c65b69e audit: C5-S73 — re-verified small debt sweep (12 items), build 0w/0e, 497 tests
 - **s74 (C6 Deliver)** — 2 commit(s):
   - 59c4723 chore: update C5 commit hash to amended 479df5e
   - 479df5e audit: R1 — TUI + CLI surface audit (20/20 CLI cmd, 10/10 TUI elements, 0 broken)
@@ -83,6 +82,8 @@ _Updated 2026-07-09 05:04 UTC · branch `feat/era-v3` · HEAD `ae2f80f`_
 - **s80 (D2 Deliver)** — 2 commit(s):
   - bf8c5a8 chore(conductor): tracker hash sync D2
   - 9b85d7e feat(era3): D2 conductor gate — ad-hoc gate battery at HEAD, no agent spawned
+- **s81 (D3 Deliver)** — 1 commit(s):
+  - 79a96a8 feat(era3): D3 heartbeat runtime toggle + amend strategy
 
 ## Phase handovers (audit)
 
@@ -101,17 +102,17 @@ _Updated 2026-07-09 05:04 UTC · branch `feat/era-v3` · HEAD `ae2f80f`_
 
 ## Last gate run
 
-build:OK · tests:OK
+build:OK
 
 ## Last session result
 
-> SESSION-RESULT: D2 `conductor gate` landed — both fast and full modes (`--full`) re-run the gate battery at HEAD without spawning an agent session. If all required gates pass and a PendingFix existed, it is cleared and state set to Idle. Build 0w/0e, 510 tests pass. Evidence at `docs/era3/evidence/D2/`. Next session (D3) should implement the heartbeat runtime toggle, H key in TUI, and amend strategy.
+> SESSION-RESULT: D3 landed — CLI `conductor heartbeat on|off`, TUI `H` key toggle with footer indicator, amend strategy in Reporter (first heartbeat → commit, subsequent → `git commit --amend --no-edit`), PlanConfig.Save() persists toggle to disk for next run. 510 tests pass, 0w/0e, commit `79a96a8` pushed. Health modal moved to F1 (was H). PeriodicTimer deferred — converting `RunSession` to async cascades through `Run()` and callers, not gate-tested. Next session D4: control feedback (rejected/applied controls produce log + TUI toast, no silent failures).
 
 ## Tracker handoff
 
 ```
-last: D2 — conductor gate command landed. gate (fast) + gate --full (full battery) both working. 510 tests, 0w/0e.
-stage: D2 DONE. Next: D3 — Heartbeat runtime toggle + amend strategy.
-next: Read workflow §D3. Add HeartbeatCommand, H key in TUI, PeriodicTimer.
-trap: None — build + 510 tests green.
+last: D3 — heartbeat runtime toggle + amend strategy landed. CLI heartbeat on|off, TUI H key, amend beats create-per-interval. 510 tests, 0w/0e.
+stage: D3 DONE. Next: D4 — Mid-session control feedback.
+next: Read workflow §D4. Rejected/applied controls produce log + TUI toast. No silent failures.
+trap: H was already bound to health modal. Health moved to F1. PeriodicTimer deferred (sync/async boundary).
 ```
