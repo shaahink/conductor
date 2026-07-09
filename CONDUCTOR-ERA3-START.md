@@ -4,10 +4,10 @@
 **Branch:** `feat/era-v3`. **Driver:** `C:\Code\conductor\bin\conductor.exe` (stable from master).
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
-last: P2 — QA parallelization landed. Audit runs as read-only lane in detached worktree concurrently with next stage deliver. AuditConfig.EnableParallel (default true). HIGH findings queue fix before next deliver; LOW/MEDIUM injected into prompt. 530 tests pass (0w/0e).
-stage: P2 DONE. Next: P3 — Stronger advisor.
-next: Read workflow §P3. Structured AdvisorVerdict.Action enum — orchestrator honors it: BlockRetry, ResetBudget, NeedsHuman, ApplyFix, RerunGates.
-trap: Audit lane runs in detached worktree at pinned SHA — idempotent, read-only. Single-stage plans use sequential path. Parallel audit findings stored in state.json for crash resilience.
+last: P3 — Stronger advisor landed. AdvisorAction enum: BlockRetry, ResetBudget, NeedsHuman, ApplyFix, RerunGates + legacy Retry/Resume/Skip. Orchestrator.ApplyVerdict handles all. AdvisorConfig.RemediationScript for ApplyFix. 551 tests pass (0w/0e).
+stage: P3 DONE. Next: P4 — Squash bookkeeping.
+next: Read workflow §P4. Collapse chore(conductor): commits on phase confirm with git rebase -i. Feature/audit commits preserved.
+trap: EscalateExhaustedStage now uses AdvisorAction enum (not string). Legacy templates still parse — TryParseAction is case-insensitive, accepts snake_case and camelCase.
 
 ## Baseline Numbers
 
@@ -31,7 +31,7 @@ trap: Audit lane runs in detached worktree at pinned SHA — idempotent, read-on
 | O3 | Cost overhead split | DONE | 419fb9a | docs/era3/evidence/O3/ |
 | P1 | Dynamic plan reconfiguration | DONE | c153a2b | docs/era3/evidence/P1/ |
 | P2 | QA parallelization | DONE | 2a0fdde | docs/era3/evidence/P2/ |
-| P3 | Stronger advisor — structured verdicts | TODO | — | — |
+| P3 | Stronger advisor — structured verdicts | DONE | 56ec088 | docs/era3/evidence/P3/ |
 | P4 | Squash bookkeeping — clean git history | TODO | — | — |
 | P5 | Post-hoc audit replay | TODO | — | — |
 | I1 | MCP task server production wiring | TODO | — | — |
