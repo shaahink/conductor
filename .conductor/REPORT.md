@@ -1,19 +1,18 @@
 ﻿# Conductor — Conductor-Era3 run report
 
-_Updated 2026-07-09 04:51 UTC · branch `feat/era-v3` · HEAD `b62abde`_
+_Updated 2026-07-09 04:52 UTC · branch `feat/era-v3` · HEAD `9cc4262`_
 
 **Status:** Idle — plan complete EXCEPT skipped stages: C5
-**Stage:** D1 — conductor status — LLM-powered status report · attempts used 2
+**Stage:** D1 — conductor status — LLM-powered status report · attempts used 0
 **Checkpoints:** 1/13 done · **Sessions run:** 79 · **Cost:** $3.9000 · **Tokens:** 3,341,598 in / 1,093,114 out / 578,904 think
-**Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1, C2, C3, C4, C6, C7, C8
-**Pending:** full-battery phase gate for D1
+**Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1, C2, C3, C4, C6, C7, C8, D1
 **⚠ Skipped stages (need human review):** C5
 
 ## Stage progress
 
 | Stage | Title | Done | State |
 |---|---|---|---|
-| D1 | conductor status — LLM-powered status report | 1/1 | gating… |
+| D1 | conductor status — LLM-powered status report | 1/1 | confirmed ✓ |
 | D2 | conductor gate — ad-hoc gate re-run | 0/1 | todo |
 | D3 | Heartbeat runtime toggle + amend strategy | 0/1 | todo |
 | D4 | Mid-session control feedback | 0/1 | todo |
@@ -101,7 +100,7 @@ _Updated 2026-07-09 04:51 UTC · branch `feat/era-v3` · HEAD `b62abde`_
 
 ## Last gate run
 
-build:OK
+build:OK · tests:OK
 
 ## Last session result
 
