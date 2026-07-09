@@ -1,12 +1,11 @@
 ﻿# Conductor — Conductor-Debt run report
 
-_Updated 2026-07-09 02:03 UTC · branch `feat/baton` · HEAD `a2ce6fe`_
+_Updated 2026-07-09 02:04 UTC · branch `feat/baton` · HEAD `8d66972`_
 
 **Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** C4 — Events + metrics + budget + recovery · attempts used 0
 **Checkpoints:** 69/72 done · **Sessions run:** 71 · **Cost:** $3.5571 · **Tokens:** 2,916,908 in / 1,025,646 out / 521,268 think
-**Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1, C2, C3
-**Pending:** full-battery phase gate for C4
+**Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1, C2, C3, C4
 
 ## Stage progress
 
@@ -15,7 +14,7 @@ _Updated 2026-07-09 02:03 UTC · branch `feat/baton` · HEAD `a2ce6fe`_
 | C1 | B12.3 — Tier B worktree lanes + merge gate | 1/1 | confirmed ✓ |
 | C2 | B12.4 — Fix-lanes from followups.md | 1/1 | confirmed ✓ |
 | C3 | Async engine + integration harness | 1/1 | confirmed ✓ |
-| C4 | Events + metrics + budget + recovery | 1/1 | gating… |
+| C4 | Events + metrics + budget + recovery | 1/1 | confirmed ✓ |
 | C5 | Small debt sweep (12 items) | 0/1 | todo |
 | C6 | R1 — TUI + CLI audit | 0/1 | todo |
 | C7 | R2 — Report + Prompts + Agent Context audit | 0/1 | todo |
@@ -101,7 +100,7 @@ _Updated 2026-07-09 02:03 UTC · branch `feat/baton` · HEAD `a2ce6fe`_
 
 ## Last gate run
 
-build:OK
+build:OK · tests:OK
 
 ## Last session result
 
