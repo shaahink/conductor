@@ -1,12 +1,11 @@
 ﻿# Conductor — Conductor-Debt run report
 
-_Updated 2026-07-09 03:00 UTC · branch `feat/baton` · HEAD `bb2c0e8`_
+_Updated 2026-07-09 03:01 UTC · branch `feat/baton` · HEAD `d0fe22b`_
 
 **Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** C8 — Final handover + Needs Human Verification checklist · attempts used 0
 **Checkpoints:** 73/73 done · **Sessions run:** 77 · **Cost:** $3.8163 · **Tokens:** 3,247,665 in / 1,072,011 out / 568,210 think
-**Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1, C2, C3, C4, C6, C7
-**Pending:** full-battery phase gate for C8
+**Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1, C2, C3, C4, C6, C7, C8
 **⚠ Skipped stages (need human review):** C5
 
 ## Stage progress
@@ -20,7 +19,7 @@ _Updated 2026-07-09 03:00 UTC · branch `feat/baton` · HEAD `bb2c0e8`_
 | C5 | Small debt sweep (12 items) | 1/1 | SKIPPED ⚠ |
 | C6 | R1 — TUI + CLI audit | 1/1 | confirmed ✓ |
 | C7 | R2 — Report + Prompts + Agent Context audit | 1/1 | confirmed ✓ |
-| C8 | Final handover + Needs Human Verification checklist | 1/1 | gating… |
+| C8 | Final handover + Needs Human Verification checklist | 1/1 | confirmed ✓ |
 
 ## Sessions
 
@@ -97,7 +96,7 @@ _Updated 2026-07-09 03:00 UTC · branch `feat/baton` · HEAD `bb2c0e8`_
 
 ## Last gate run
 
-build:OK
+build:OK · tests:OK
 
 ## Last session result
 
