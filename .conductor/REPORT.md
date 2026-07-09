@@ -1,6 +1,6 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-09 00:24 UTC · branch `feat/baton` · HEAD `cb4ffd3`_
+_Updated 2026-07-09 00:34 UTC · branch `feat/baton` · HEAD `8913e57`_
 
 **Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B12 — Controlled parallelism · attempts used 0 · working ▸ B12.3
@@ -9,24 +9,24 @@ _Updated 2026-07-09 00:24 UTC · branch `feat/baton` · HEAD `cb4ffd3`_
 
 ## Latest activity (live)
 
-_Session #66 (Deliver) · running 10m · last output 5s ago · $0.0479_
+_Session #66 (Deliver) · running 20m · last output 76s ago · $0.0812_
 
 **Thinking:**
-> Good. Now let me create the MutatingLaneRunner.cs file.
-> Now let me write the tests. I need to create a test that: 1. Creates a real git repo in a temp dir 2. Sets up a plan with a mutating lane 3. Tests the merge gate with good/bad diffs 4. Verifies worktree isolation  Let me write comprehensive tests.
-> Good. Now let me build and run the tests to see if everything compiles and passes.  Let me also think about what other changes I need — do I need to update the EventSink or EventLog to handle the new event types? Let me check.  The EventLog.cs and EventSink probably don't need changes since the Json…
+> One more to fix. Also need to check if `echo DONE > marker.txt` needs its space preserved.
+> Good. Now let me run the good diff test again.
+> The good diff test passes now! The quoting was the issue. Now let me run all B12_3 tests except the problematic ones (merge conflict, timeout, cancellation):
 
 **Recent actions:**
-- `01:22:39` » edit src\Conductor\Models\PlanConfig.cs
-- `01:22:50` » edit src\Conductor\Core\Git.cs
-- `01:22:50` · Now add Git worktree and branch helpers:
-- `01:22:55` » edit src\Conductor\Core\Events\ConductorEvent.cs
-- `01:22:55` · Now add new B12.3 event types:
-- `01:23:05` » edit src\Conductor\Core\Events\ConductorEvent.cs
-- `01:23:42` » write src\Conductor\Core\MutatingLaneRunner.cs
-- `01:23:42` · Now create the main MutatingLaneRunner:
-- `01:24:35` » write tests\Conductor.Tests\B12_3Tests.cs
-- `01:24:35` · Now write the B12.3 tests:
+- `01:32:01` · Now update all other tests with similar quote issues:
+- `01:32:11` » bash rg -n "git commit -m" C:\Code\conductor-baton\tests\Conductor.Tests\B12_3Tests.cs
+- `01:32:19` » grep git commit -m
+- `01:32:27` » edit tests\Conductor.Tests\B12_3Tests.cs
+- `01:32:35` » edit tests\Conductor.Tests\B12_3Tests.cs
+- `01:32:50` » edit tests\Conductor.Tests\B12_3Tests.cs
+- `01:32:57` » grep \\\"feat
+- `01:33:07` » edit tests\Conductor.Tests\B12_3Tests.cs
+- `01:33:22` » bash dotnet test Conductor.slnx --nologo --filter "FullyQualifiedName~MutatingLane_GoodDiff_MergeAccepted" -v normal 2>&1
+- `01:33:29` · Good diff test passes! The quoting fix worked. Now let me run all B12_3 tests.
 
 ## Stage progress
 
