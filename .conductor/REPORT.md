@@ -1,12 +1,11 @@
 ﻿# Conductor — Conductor-Era3 run report
 
-_Updated 2026-07-09 06:19 UTC · branch `feat/era-v3` · HEAD `9470643`_
+_Updated 2026-07-09 06:20 UTC · branch `feat/era-v3` · HEAD `d8919bb`_
 
 **Status:** Idle — plan complete EXCEPT skipped stages: C5
 **Stage:** O2 — Budget intelligence + network health gate · attempts used 0
 **Checkpoints:** 6/13 done · **Sessions run:** 84 · **Cost:** $4.2495 · **Tokens:** 3,682,017 in / 1,173,305 out / 625,159 think
-**Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1, C2, C3, C4, C6, C7, C8, D1, D2, D3, D4, O1
-**Pending:** full-battery phase gate for O2
+**Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1, C2, C3, C4, C6, C7, C8, D1, D2, D3, D4, O1, O2
 **⚠ Skipped stages (need human review):** C5
 
 ## Stage progress
@@ -18,7 +17,7 @@ _Updated 2026-07-09 06:19 UTC · branch `feat/era-v3` · HEAD `9470643`_
 | D3 | Heartbeat runtime toggle + amend strategy | 1/1 | confirmed ✓ |
 | D4 | Mid-session control feedback | 1/1 | confirmed ✓ |
 | O1 | Structured log + conductor log --query | 1/1 | confirmed ✓ |
-| O2 | Budget intelligence + network health gate | 1/1 | gating… |
+| O2 | Budget intelligence + network health gate | 1/1 | confirmed ✓ |
 | O3 | Cost overhead split | 0/1 | todo |
 | P1 | Dynamic plan reconfiguration | 0/1 | todo |
 | P2 | QA parallelization | 0/1 | todo |
@@ -102,7 +101,7 @@ _Updated 2026-07-09 06:19 UTC · branch `feat/era-v3` · HEAD `9470643`_
 
 ## Last gate run
 
-build:OK
+build:OK · tests:OK
 
 ## Last session result
 
