@@ -1,11 +1,12 @@
 ﻿# Conductor — Conductor-Era3 run report
 
-_Updated 2026-07-09 06:56 UTC · branch `feat/era-v3` · HEAD `0316f52`_
+_Updated 2026-07-09 07:13 UTC · branch `feat/era-v3` · HEAD `51bf84b`_
 
 **Status:** Idle — plan complete EXCEPT skipped stages: C5
-**Stage:** P1 — Dynamic plan reconfiguration · attempts used 0
-**Checkpoints:** 8/13 done · **Sessions run:** 86 · **Cost:** $4.4021 · **Tokens:** 3,832,806 in / 1,208,558 out / 641,189 think
+**Stage:** P2 — QA parallelization · attempts used 0
+**Checkpoints:** 9/13 done · **Sessions run:** 87 · **Cost:** $4.4895 · **Tokens:** 3,919,095 in / 1,224,392 out / 661,844 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1, C2, C3, C4, C6, C7, C8, D1, D2, D3, D4, O1, O2, O3, P1
+**Pending:** full-battery phase gate for P2
 **⚠ Skipped stages (need human review):** C5
 
 ## Stage progress
@@ -20,7 +21,7 @@ _Updated 2026-07-09 06:56 UTC · branch `feat/era-v3` · HEAD `0316f52`_
 | O2 | Budget intelligence + network health gate | 1/1 | confirmed ✓ |
 | O3 | Cost overhead split | 1/1 | confirmed ✓ |
 | P1 | Dynamic plan reconfiguration | 1/1 | confirmed ✓ |
-| P2 | QA parallelization | 0/1 | todo |
+| P2 | QA parallelization | 1/1 | gating… |
 | P3 | Stronger advisor — structured verdicts | 0/1 | todo |
 | P4 | Squash bookkeeping — clean git history | 0/1 | todo |
 | P5 | Post-hoc audit replay | 0/1 | todo |
@@ -30,7 +31,6 @@ _Updated 2026-07-09 06:56 UTC · branch `feat/era-v3` · HEAD `0316f52`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 57 | B9 | Audit | 1 | 07-08 22:23 | 0:08 | Progress |  | 1 |  | $0.0725 | 97,126/11,226 |
 | 58 | B10 | Deliver | 1 | 07-08 22:33 | 0:07 | Advanced | B10.1 | 2 | build:OK | $0.0385 | 45,295/10,325 |
 | 59 | B10 | Deliver | 1 | 07-08 22:41 | 0:20 | Advanced | B10.2 B10.3 B10.4 | 6 | build:OK | $0.1538 | 195,929/26,636 |
 | 60 | B10 | Audit | 1 | 07-08 23:02 | 0:06 | Progress |  | 1 |  | $0.0562 | 67,475/11,048 |
@@ -60,12 +60,10 @@ _Updated 2026-07-09 06:56 UTC · branch `feat/era-v3` · HEAD `0316f52`_
 | 84 | O2 | Deliver | 1 | 07-09 06:06 | 0:13 | Advanced | O2 | 2 | build:OK | $0.0520 | 65,381/12,613 |
 | 85 | O3 | Deliver | 1 | 07-09 06:20 | 0:15 | Advanced | O3 | 2 | build:OK | $0.0575 | 60,880/13,942 |
 | 86 | P1 | Deliver | 1 | 07-09 06:37 | 0:18 | Advanced | P1 | 2 | build:OK | $0.0951 | 89,909/21,311 |
+| 87 | P2 | Deliver | 1 | 07-09 06:56 | 0:16 | Advanced | P2 | 2 | build:OK | $0.0874 | 86,289/15,834 |
 
 ### Commits by session
 
-- **s79 (D1 Fix)** — 2 commit(s):
-  - b62abde chore(conductor): tracker hash sync
-  - 8b9ec2b feat(era3): D1 fix — correct stderr assertion in RunShell_Bash_StderrCaptured test
 - **s80 (D2 Deliver)** — 2 commit(s):
   - bf8c5a8 chore(conductor): tracker hash sync D2
   - 9b85d7e feat(era3): D2 conductor gate — ad-hoc gate battery at HEAD, no agent spawned
@@ -85,6 +83,9 @@ _Updated 2026-07-09 06:56 UTC · branch `feat/era-v3` · HEAD `0316f52`_
 - **s86 (P1 Deliver)** — 2 commit(s):
   - 813ac9e chore(era3): P1 tracker update — stage P1 DONE (c153a2b)
   - c153a2b feat(era3): P1 dynamic plan reconfiguration — plan set/reload/add-stage + TUI E stage editor + planVersion bumps
+- **s87 (P2 Deliver)** — 2 commit(s):
+  - 51bf84b chore(era3): P2 tracker update — stage P2 DONE (2a0fdde)
+  - 2a0fdde feat(era3): P2 QA parallelization — audit runs as read-only lane concurrently with next deliver
 
 ## Phase handovers (audit)
 
@@ -103,17 +104,17 @@ _Updated 2026-07-09 06:56 UTC · branch `feat/era-v3` · HEAD `0316f52`_
 
 ## Last gate run
 
-build:OK · tests:OK
+build:OK
 
 ## Last session result
 
-> SESSION-RESULT: P1 dynamic plan reconfiguration landed (c153a2b). `conductor plan set/reload/add-stage` all work via CLI with dot-notation paths, validation on every change, and planVersion auto-bumps. TUI `E` key opens inline stage editor when a stage row is selected (expand-all when nothing selected). 530 tests pass, 0w/0e, clean working tree, branch pushed. Next session (P2 — QA parallelization): audit + deliver concurrently via lane infra, audit against pinned commit SHA, HIGH defects interrupt deliver gracefully.
+> SESSION-RESULT: P2 QA parallelization landed in 2 commits (2a0fdde feat + 51bf84b chore). 530 tests pass, build 0w/0e, working tree clean, branch pushed. Stage P2 DONE — audit now runs as a read-only lane in a detached worktree concurrently with the next stage's deliver; HIGH findings queue a fix before advancing, LOW/MEDIUM findings injected into the deliver prompt. Next session should tackle P3 (stronger advisor with structured AdvisorVerdict.Action enum).
 
 ## Tracker handoff
 
 ```
-last: P1 — dynamic plan reconfiguration landed. conductor plan set/reload/add-stage + TUI E stage editor. PlanVersion bumps on every change. Validation on every save; failed edits reject cleanly. Next-session boundary: changes apply on next conductor run. 530 tests pass (0w/0e).
-stage: P1 DONE. Next: P2 — QA parallelization.
-next: Read workflow §P2. Audit + deliver concurrently. Audit against pinned commit SHA. HIGH defects interrupt deliver gracefully.
-trap: P1 CLI args: plan set/reload/add-stage all use -p for plan path. Comments stripped on set (roundtrip through PlanConfig). E key = stage editor when selected, expand all otherwise.
+last: P2 — QA parallelization landed. Audit runs as read-only lane in detached worktree concurrently with next stage deliver. AuditConfig.EnableParallel (default true). HIGH findings queue fix before next deliver; LOW/MEDIUM injected into prompt. 530 tests pass (0w/0e).
+stage: P2 DONE. Next: P3 — Stronger advisor.
+next: Read workflow §P3. Structured AdvisorVerdict.Action enum — orchestrator honors it: BlockRetry, ResetBudget, NeedsHuman, ApplyFix, RerunGates.
+trap: Audit lane runs in detached worktree at pinned SHA — idempotent, read-only. Single-stage plans use sequential path. Parallel audit findings stored in state.json for crash resilience.
 ```
