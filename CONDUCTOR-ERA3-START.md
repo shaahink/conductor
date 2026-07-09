@@ -30,7 +30,7 @@ trap: Audit lane runs in detached worktree at pinned SHA — idempotent, read-on
 | O2 | Budget intelligence + network health gate | DONE | 2f4d103 | docs/era3/evidence/O2/ |
 | O3 | Cost overhead split | DONE | 419fb9a | docs/era3/evidence/O3/ |
 | P1 | Dynamic plan reconfiguration | DONE | c153a2b | docs/era3/evidence/P1/ |
-| P2 | QA parallelization | DONE | — | docs/era3/evidence/P2/ |
+| P2 | QA parallelization | DONE | 2a0fdde | docs/era3/evidence/P2/ |
 | P3 | Stronger advisor — structured verdicts | TODO | — | — |
 | P4 | Squash bookkeeping — clean git history | TODO | — | — |
 | P5 | Post-hoc audit replay | TODO | — | — |
