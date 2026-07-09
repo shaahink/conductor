@@ -98,7 +98,7 @@ never silent renumbering.
 | B11.4 | **Acceptance: drive a full owner-gated Shamshir phase (parity-pipeline P2.2)** | DONE | b04a264 | docs/baton/evidence/B11.4-gate.txt, docs/baton/audits/B11-shamshir-p2.2.md |
 | B12.1 | Tier A read-only analysis lanes (arch/design/qa/research, scratch cwd, artifacts feed prompts+handover) | DONE | 168920d | docs/baton/evidence/B12.1-gate.txt |
 | B12.2 | Worker pool + concurrency cap + brain scheduling (opt-in per task-type) | DONE | d659ec6 | docs/baton/evidence/B12.2-gate.txt |
-| B12.3 | Tier B isolated-worktree mutating lanes → full-battery MERGE GATE before acceptance | DONE | 2d2fb8a | docs/baton/evidence/B12.3-gate.txt |
+| B12.3 | Tier B isolated-worktree mutating lanes → full-battery MERGE GATE before acceptance | DONE | ebc8ab8 | docs/baton/evidence/B12.3-gate.txt |
 | B12.4 | fix-lanes consume .conductor/followups.md (blend-in debt fixing) | TODO | | |
 
 ## Quick commands
