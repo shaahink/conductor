@@ -461,6 +461,8 @@ public sealed class AgentConfig
     public double? Temperature { get; set; }
     /// <summary>Optional per-session token ceiling (output tokens).</summary>
     public int? TokenCeiling { get; set; }
+    /// <summary>Optional extra environment variables set on the agent process (e.g. OPENCODE_CONFIG).</summary>
+    public Dictionary<string, string>? Env { get; set; }
     /// <summary>Merges an optional override into this config, returning a new instance.
     /// A field whose value equals the C# default (e.g. "claude" for Command) is treated as unset
     /// and falls back to the base value — so a JSON override like {"systemPrompt":"x"} won't

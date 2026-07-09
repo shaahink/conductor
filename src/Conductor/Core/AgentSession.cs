@@ -57,7 +57,7 @@ public sealed class AgentSession : IDisposable
         _stream = new AgentStreamState((kind, text) => _events.Enqueue(new AgentEvent { Kind = kind, Text = text }), tokenDelta);
     }
 
-    public static AgentSession Start(AgentConfig cfg, string cwd, string prompt, string sessionId, string? resumeClaudeId, string rawLogPath, IEventSink? eventSink = null, string? conductorSessionId = null)
+    public static AgentSession Start(AgentConfig cfg, string cwd, string prompt, string sessionId, string? resumeClaudeId, string rawLogPath, IEventSink? eventSink = null, string? conductorSessionId = null, Dictionary<string, string>? extraEnv = null)
     {
         var template = (resumeClaudeId != null && cfg.ResumeArgs is { Count: > 0 }) ? cfg.ResumeArgs : cfg.Args;
         var args = template.Select(a => a
@@ -77,6 +77,12 @@ public sealed class AgentSession : IDisposable
             StandardErrorEncoding = Encoding.UTF8,
         };
         foreach (var a in args) psi.ArgumentList.Add(a);
+
+        // Apply plan-level env vars first, then any session-level extra env vars (extra wins).
+        if (cfg.Env != null)
+            foreach (var kv in cfg.Env) psi.Environment[kv.Key] = kv.Value;
+        if (extraEnv != null)
+            foreach (var kv in extraEnv) psi.Environment[kv.Key] = kv.Value;
 
         Directory.CreateDirectory(Path.GetDirectoryName(rawLogPath)!);
         var raw = new StreamWriter(rawLogPath, append: false, Encoding.UTF8) { AutoFlush = true };

@@ -57,6 +57,8 @@ app.Configure(c =>
         .WithDescription("Print exactly what will happen on resume: pending sessions, gates, owner-approval, remaining stages.");
     c.AddCommand<AuditCommand>("audit")
         .WithDescription("Post-hoc audit replay: run an audit prompt against a completed stage (read-only diagnostic). Requires --replay flag. Output written to .conductor/audits/.");
+    c.AddCommand<McpServeCommand>("mcp-serve")
+        .WithDescription("Run the MCP task server (JSON-RPC 2.0 over stdio) for agent task management.");
     c.AddCommand<CompletionCommand>("completion")
         .WithDescription("Generate shell completion scripts (powershell or bash).");
     c.SetExceptionHandler((ex, _) =>

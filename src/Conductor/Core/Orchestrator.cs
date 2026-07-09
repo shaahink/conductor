@@ -482,8 +482,20 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         bool stalled = false, timedOut = false, killedByUser = false;
         GateRunner.RunHook(plan, plan.Setup, "setup", Log, ct);
         var resolvedAgent = plan.ResolveAgent(stage);
+
+        // I1: wire the MCP task server into the agent session. Write a temp opencode config
+        // that registers conductor as a local MCP server (stdio subprocess). The agent can
+        // then call task_list / task_update / task_add tools during its session.
+        var mcpConfigPath = WireMcpServer(rec, stage);
+        Dictionary<string, string>? extraEnv = null;
+        if (mcpConfigPath != null)
+        {
+            extraEnv = new Dictionary<string, string>(StringComparer.Ordinal) { ["OPENCODE_CONFIG"] = mcpConfigPath };
+            Log("I1: MCP task server wired (opencode config at " + mcpConfigPath + ")");
+        }
+
         using (var agent = AgentSession.Start(resolvedAgent, plan.Repo, prompt, rec.ClaudeSessionId,
-                   kind == SessionKind.Resume ? rec.ClaudeSessionId : null, rawLog, events, rec.Number.ToString()))
+                   kind == SessionKind.Resume ? rec.ClaudeSessionId : null, rawLog, events, rec.Number.ToString(), extraEnv))
         {
             _activity.Clear();
             var lastHeartbeat = DateTime.UtcNow;
@@ -540,6 +552,9 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             // B9.4: fold any MCP journal entries into the main event log so agent-initiated
             // task status changes survive the session.
             FoldMcpJournal();
+
+            // I1: clean up the per-session MCP config file (best-effort).
+            CleanupMcpConfig(mcpConfigPath);
 
             if (ct.IsCancellationRequested)
             {
@@ -2205,6 +2220,56 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     {
         var signalFile = Path.Combine(plan.StateDir, "soft-break");
         try { if (File.Exists(signalFile)) File.Delete(signalFile); }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
+
+    /// <summary>I1: write a per-session opencode config file that registers conductor as a local
+    /// MCP server (stdio subprocess). OpenCode spawns it as a child process and the agent gets
+    /// live task_list / task_update / task_add tools. Returns the config file path, or null if
+    /// the conductor binary cannot be resolved.</summary>
+    private string? WireMcpServer(SessionRecord rec, StageConfig stage)
+    {
+        try
+        {
+            var conductorExe = Environment.ProcessPath;
+            if (string.IsNullOrEmpty(conductorExe) || !File.Exists(conductorExe))
+                return null;
+
+            var eventsPath = Path.Combine(plan.StateDir, "events.jsonl");
+            var journalPath = Path.Combine(plan.StateDir, "mcp-journal.jsonl");
+            var runId = state.RunId;
+
+            var mcpConfig = new
+            {
+                mcp = new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    ["conductor-tasks"] = new Dictionary<string, object>(StringComparer.Ordinal)
+                    {
+                        ["type"] = "local",
+                        ["command"] = new[] { conductorExe, "mcp-serve", "--events", eventsPath, "--journal", journalPath, "--run-id", runId },
+                        ["enabled"] = true,
+                    }
+                }
+            };
+
+            var configPath = Path.Combine(plan.StateDir, "mcp-config.json");
+            var json = JsonSerializer.Serialize(mcpConfig, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(configPath, json);
+            return configPath;
+        }
+        catch (Exception ex)
+        {
+            Log($"I1: failed to write MCP config: {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>I1: remove the per-session MCP config file (best-effort).</summary>
+    private void CleanupMcpConfig(string? configPath)
+    {
+        if (configPath == null) return;
+        try { if (File.Exists(configPath)) File.Delete(configPath); }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
     }

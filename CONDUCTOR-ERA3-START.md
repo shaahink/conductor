@@ -4,10 +4,10 @@
 **Branch:** `feat/era-v3`. **Driver:** `C:\Code\conductor\bin\conductor.exe` (stable from master).
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
-last: P5 — Post-hoc audit replay landed. AuditCommand (`conductor audit <stage> --replay`) spawns the plan's agent with a structured replay prompt against completed stages. Read-only: no RunState mutation. Output to .conductor/audits/<stage>-replay-<ts>.md. Prompt includes checkpoints, git log, evidence tails. Registered as "audit" verb. Completion scripts (PS+bash) updated. 555 tests pass (0w/0e).
-stage: P5 DONE. Next: I1 — MCP task server production wiring.
-next: Read FUSION.md §I1. Wire McpTaskServer (B9) into AgentSession production launch. Agent gets live task_list/update/add. Task persistence via events.jsonl.
-trap: None.
+last: I1 — MCP task server production wiring landed. mcp-serve CLI command runs McpTaskServer over stdio (JSON-RPC 2.0). Orchestrator writes per-session opencode config (local MCP server pointing to conductor.exe mcp-serve), passed via OPENCODE_CONFIG env var. AgentSession.Start accepts extraEnv. CleanupMcpConfig after session. FoldMcpJournal (B9.4) merges task changes. 555 tests pass (0w/0e).
+stage: I1 DONE. Next: none (Era v3 complete — all 13 checkpoints DONE).
+next: Era v4 planning OR followup sweep. See .conductor/followups.md for OPEN items.
+trap: conductor binary path resolved via ProcessPath — must be same as orchestrator binary.
 
 ## Baseline Numbers
 
@@ -34,7 +34,7 @@ trap: None.
 | P3 | Stronger advisor — structured verdicts | DONE | 56ec088 | docs/era3/evidence/P3/ |
 | P4 | Squash bookkeeping — clean git history | DONE | f03f4a0 | docs/era3/evidence/P4/ |
 | P5 | Post-hoc audit replay | DONE | 587119d | docs/era3/evidence/P5/ |
-| I1 | MCP task server production wiring | TODO | — | — |
+| I1 | MCP task server production wiring | DONE | 78e085b | docs/era3/evidence/I1/ |
 
 ## Quick Commands
 

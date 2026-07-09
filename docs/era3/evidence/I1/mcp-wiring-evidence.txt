@@ -1,0 +1,72 @@
+===== I1: MCP Task Server Production Wiring =====
+Date: 2026-07-09
+Session: #91 (via Conductor orchestrator)
+Checkpoint: I1 — MCP task server production wiring
+
+--- Gate: Build ---
+0 warnings, 0 errors
+
+--- Gate: Tests ---
+555 passed, 0 failed, 0 skipped
+
+--- Feature: MCP task server wired into agent sessions ---
+Goal: McpTaskServer (B9) spawned for real agent sessions. Agent gets live
+task_list/update/add tools. Task persistence via events.jsonl.
+
+Implementation:
+1. mcp-serve CLI command (Commands.cs):
+   - Runs McpTaskServer over stdio (JSON-RPC 2.0 line-delimited)
+   - Accepts --events, --journal, --run-id options
+   - Registered in Program.cs as "mcp-serve" verb
+   - Completion scripts (PS + bash) updated
+
+2. AgentConfig.Env field (PlanConfig.cs):
+   - Optional Dictionary<string,string> for extra process environment vars
+   - Allows passing OPENCODE_CONFIG to the agent process
+
+3. AgentSession.Start() (AgentSession.cs):
+   - New extraEnv parameter: optional env vars applied to the agent process
+   - Plan-level Env applied first, session-level extraEnv wins (overlay)
+
+4. Orchestrator wiring (Orchestrator.cs):
+   - WireMcpServer(): writes a per-session opencode config to
+     .conductor/mcp-config.json. Configures conductor as a local MCP server
+     (type: "local", command: conductor.exe mcp-serve ...) that opencode
+     spawns as a subprocess. Returns config path or null.
+   - The config path is passed to AgentSession via OPENCODE_CONFIG env var.
+   - CleanupMcpConfig(): removes the temp config after the session.
+   - FoldMcpJournal() (existing B9.4): merges mcp-journal.jsonl into
+     events.jsonl after agent exits — already proven and unchanged.
+
+Wire flow per session:
+  1. Orchestrator writes mcp-config.json with MCP server definition
+  2. OPENCODE_CONFIG env var set on agent process
+  3. OpenCode spawns conductor.exe mcp-serve ... as MCP subprocess
+  4. Agent calls task_list/task_update/task_add via MCP tools
+  5. Task changes written to mcp-journal.jsonl (side journal)
+  6. After agent exits: FoldMcpJournal merges into events.jsonl
+  7. CleanupMcpConfig removes temp config
+
+--- Smoke test: mcp-serve over stdio ---
+Input: initialize + tools/list requests
+Output: valid JSON-RPC responses with protocol version, capabilities,
+        and 3 tools (task_list, task_update, task_add)
+
+--- QA of P5 (Previous Session) ---
+P5 gate re-run: build 0w/0e, tests 555 pass. Evidence claims match reality.
+AuditCommand found at Commands.cs:1431. "audit" verb registered in Program.cs.
+Verdict: CLEAN — no regressions, P5 work verified.
+
+--- Files changed ---
+  src/Conductor/Commands/Commands.cs:  +45 lines (McpServeCommand, usings, completions)
+  src/Conductor/Program.cs:             +2 lines (mcp-serve verb registration)
+  src/Conductor/Core/AgentSession.cs:   +8 lines (extraEnv parameter)
+  src/Conductor/Core/Orchestrator.cs:  +67 lines (WireMcpServer, CleanupMcpConfig, wiring)
+  src/Conductor/Models/PlanConfig.cs:   +2 lines (Env field)
+  tests/Conductor.Tests/B11_2Tests.cs:  +2 lines (mcp-serve in expected verbs)
+
+--- Verification ---
+  Build: 0 warnings, 0 errors
+  Tests: 555 pass, 0 fail, 0 skip
+  mcp-serve --help: correct usage, no plan requirement
+  mcp-serve stdio: initialize + tools/list return valid JSON-RPC

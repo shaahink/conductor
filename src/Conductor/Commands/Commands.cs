@@ -3,6 +3,7 @@ using System.Text.Json;
 using Conductor.Core;
 using Conductor.Core.Events;
 using Conductor.Core.Hosting;
+using Conductor.Core.Integrations;
 using Conductor.Models;
 using Conductor.Ui;
 using Microsoft.Extensions.DependencyInjection;
@@ -1601,6 +1602,44 @@ public sealed class AuditCommand : Command<AuditCommand.Settings>
 /// <summary>
 /// B11.2 — tab completion: generates shell completion scripts for PowerShell and bash.
 /// </summary>
+public sealed class McpServeCommand : Command<McpServeCommand.Settings>
+{
+    public sealed class Settings : CommandSettings
+    {
+        [CommandOption("--events <path>")]
+        [Description("Path to the events.jsonl file.")]
+        [DefaultValue(".conductor/events.jsonl")]
+        public string Events { get; init; } = ".conductor/events.jsonl";
+
+        [CommandOption("--journal <path>")]
+        [Description("Path to the MCP side-journal file.")]
+        [DefaultValue(".conductor/mcp-journal.jsonl")]
+        public string Journal { get; init; } = ".conductor/mcp-journal.jsonl";
+
+        [CommandOption("--run-id <id>")]
+        [Description("Run identifier for event authorship.")]
+        [DefaultValue("mcp-standalone")]
+        public string RunId { get; init; } = "mcp-standalone";
+    }
+
+    public override int Execute(CommandContext context, Settings settings)
+    {
+        var eventsPath = Path.GetFullPath(settings.Events);
+        var journalPath = Path.GetFullPath(settings.Journal);
+
+        var server = new McpTaskServer(eventsPath, journalPath, settings.RunId);
+        server.Init();
+        server.FoldJournal();
+
+        using var cts = new CancellationTokenSource();
+#pragma warning disable MA0045
+        Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
+#pragma warning restore MA0045
+        server.RunAsync(Console.In, Console.Out, cts.Token).GetAwaiter().GetResult();
+        return 0;
+    }
+}
+
 public sealed class CompletionCommand : Command<CompletionCommand.Settings>
 {
     public sealed class Settings : CommandSettings
@@ -1629,7 +1668,7 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
 
     internal static string GeneratePowerShell()
     {
-        var verbs = "run status gate log report replay preview pause resume approve kill skip inject abort retry-stage rollback pause-after-stage goto heartbeat plan tasks new-plan doctor audit completion";
+        var verbs = "run status gate log report replay preview pause resume approve kill skip inject abort retry-stage rollback pause-after-stage goto heartbeat plan tasks new-plan doctor audit mcp-serve completion";
         var opts = "-p --plan --yes --force --dry-run --once --max-sessions --no-dashboard -o --output --name --repo -q --query --since --tail";
         var auditOpts = "-p --plan --replay";
         var newPlanOpts = "--template -o --output --name --repo";
@@ -1700,11 +1739,11 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
                 cur="${COMP_WORDS[COMP_CWORD]}"
 
                 if [[ $COMP_CWORD -eq 1 ]]; then
-                    COMPREPLY=($(compgen -W "run status gate log report replay preview audit pause resume approve kill skip inject abort retry-stage rollback pause-after-stage goto heartbeat plan tasks new-plan doctor completion" -- "$cur"))
+                    COMPREPLY=($(compgen -W "run status gate log report replay preview audit mcp-serve pause resume approve kill skip inject abort retry-stage rollback pause-after-stage goto heartbeat plan tasks new-plan doctor completion" -- "$cur"))
                     return
                 fi
                 case "${COMP_WORDS[1]}" in
-                    run|status|gate|log|report|replay|preview|pause|resume|approve|kill|skip|inject|abort|retry-stage|rollback|pause-after-stage|goto|heartbeat|tasks|doctor)
+                    run|status|gate|log|report|replay|preview|pause|resume|approve|kill|skip|inject|abort|retry-stage|rollback|pause-after-stage|goto|heartbeat|tasks|doctor|mcp-serve)
                         COMPREPLY=($(compgen -W "-p --plan --yes --force --dry-run --once --max-sessions --no-dashboard -o --output --name --repo" -- "$cur"))
                         ;;
                     audit)
