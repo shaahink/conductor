@@ -101,7 +101,7 @@ never silent renumbering.
 | B12.4 | fix-lanes consume .conductor/followups.md (blend-in debt fixing) | DONE | 1706c45 | `docs/baton/evidence/B12.4-gate.txt` |
 | C1 | B12.4 — Fix-lanes consume followups.md | DONE | 1706c45 | Same as B12.4 |
 | C2 | Async engine + integration harness (MA0045, MA0002, CT, harness) | DONE | 633be3f | `docs/baton/evidence/C2-gate.txt` |
-| C3 | Events + metrics + budget + recovery (LiveMetrics, rollback, McpCallFinished, Ctrl+C) | DONE | 9fddce5 | `docs/baton/evidence/C3-gate.txt` |
+| C3 | Events + metrics + budget + recovery (LiveMetrics, rollback, McpCallFinished, Ctrl+C) | DONE | e14b88c | `docs/baton/evidence/C3-gate.txt` |
 | C4 | Small debt sweep (12 items: fake-agent, smokes, persona, Telegram, etc.) | TODO | — | `docs/baton/evidence/C4-gate.txt` |
 | C5 | R1 — TUI + CLI audit (--dry-run preview, every surface traced to code+docs) | TODO | — | `docs/qa-reports/CONDUCTOR-AUDIT-R1.md` |
 | C6 | R2 — Report + Prompts + Agent Context audit | TODO | — | `docs/qa-reports/CONDUCTOR-AUDIT-R2.md` |
