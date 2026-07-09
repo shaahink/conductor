@@ -4,17 +4,17 @@
 **Branch:** `feat/era-v3`. **Driver:** `C:\Code\conductor\bin\conductor.exe` (stable from master).
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
-last: D4 — mid-session control feedback landed. Toast on accept/reject, control file persists on guard failure. 510 tests, 0w/0e.
-stage: D4 DONE. Next: O1 — structured log + conductor log --query.
-next: Read workflow §01. Serilog JSON rolling sink + log --query filter. Text sink preserved.
-trap: D3 commit tracker fix (0d199f1→79a96a8). PeriodicTimer still deferred. Health modal on F1.
+last: O1 — structured log + conductor log --query landed. Serilog JSON rolling sink + LogCommand with --query/--since/--tail. 511 tests, 0w/0e.
+stage: O1 DONE. Next: O2 — budget intelligence + network health gate.
+next: Read workflow §O2. Identical-stall detection, exponential backoff, DNS preflight.
+trap: QA: D4 tracker hash fixed (4bc5760→f40a974).
 
 ## Baseline Numbers
 
 | Metric | Value |
 |--------|-------|
 | Target framework | net10.0 |
-| Tests | 497 pass (0 warn, 0 err) |
+| Tests | 511 pass (0 warn, 0 err) |
 | Source files | ~40 .cs under src/Conductor |
 | Branches | master (stable), feat/baton (v2), feat/era-v3 (this phase) |
 
@@ -26,7 +26,7 @@ trap: D3 commit tracker fix (0d199f1→79a96a8). PeriodicTimer still deferred. H
 | D2 | conductor gate — ad-hoc gate re-run | DONE | 9b85d7e | docs/era3/evidence/D2/ |
 | D3 | Heartbeat runtime toggle + amend strategy | DONE | 79a96a8 | docs/era3/evidence/D3/ |
 | D4 | Mid-session control feedback | DONE | f40a974 | docs/era3/evidence/D4/ |
-| O1 | Structured log + conductor log --query | TODO | — | — |
+| O1 | Structured log + conductor log --query | DONE | be216a4 | docs/era3/evidence/O1/ |
 | O2 | Budget intelligence + network health gate | TODO | — | — |
 | O3 | Cost overhead split | TODO | — | — |
 | P1 | Dynamic plan reconfiguration | TODO | — | — |
