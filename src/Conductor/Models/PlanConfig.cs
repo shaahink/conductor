@@ -56,6 +56,9 @@ public sealed class PlanConfig
     /// <summary>Mandated docs to read in order at session start (paths relative to repo root).
     /// Rendered as an ordered list in the session prompt. Empty/null = no list rendered (B1.5).</summary>
     public List<string>? ReadOrder { get; set; }
+    /// <summary>Read-only analysis lanes that run concurrently with sessions (B12.1 Tier A).
+    /// Each lane spawns an agent in a scratch temp directory — it can never write the working tree.</summary>
+    public List<AnalysisLaneConfig> AnalysisLanes { get; set; } = new();
 
     [JsonIgnore] public string PlanFilePath { get; private set; } = "";
     [JsonIgnore] public string PlanDir => Path.GetDirectoryName(PlanFilePath) ?? ".";
@@ -619,9 +622,32 @@ public sealed class WebhookNotifyConfig
     public Dictionary<string, string>? Headers { get; set; }
 }
 
-/// <summary>Telegram bot config for AFK observability + two-way control (B6).
-/// Bot token is read from the <c>CONDUCTOR_TELEGRAM_TOKEN</c> environment variable (never committed).</summary>
-public sealed class TelegramConfig
+    /// <summary>Read-only analysis lane that runs concurrently with sessions (B12.1 Tier A).
+    /// Spawns an agent in a scratch temp directory — it can never write the working tree.
+    /// Output is captured as an artifact and injected into the next session's prompt.</summary>
+    public sealed class AnalysisLaneConfig
+    {
+        /// <summary>Unique lane id used for artifact naming.</summary>
+        public string Id { get; set; } = "";
+        /// <summary>Analysis kind: "architecture", "design", "qa", "research", "analysis".</summary>
+        public string Kind { get; set; } = "analysis";
+        /// <summary>Human-readable name for logs and prompts.</summary>
+        public string Name { get; set; } = "";
+        /// <summary>The question or topic to analyze — embedded in the lane prompt.</summary>
+        public string Prompt { get; set; } = "";
+        /// <summary>Run when this stage becomes active. null = run on every stage.</summary>
+        public string? StageTrigger { get; set; }
+        /// <summary>Agent timeout in minutes.</summary>
+        public int TimeoutMinutes { get; set; } = 15;
+        /// <summary>When false the lane is skipped. Default true.</summary>
+        public bool Enabled { get; set; } = true;
+        /// <summary>Maximum lines of agent output captured as the artifact. Default 200.</summary>
+        public int MaxOutputLines { get; set; } = 200;
+    }
+
+    /// <summary>Telegram bot config for AFK observability + two-way control (B6).
+    /// Bot token is read from the <c>CONDUCTOR_TELEGRAM_TOKEN</c> environment variable (never committed).</summary>
+    public sealed class TelegramConfig
 {
     /// <summary>Allowed chat IDs; an empty list means no commands are accepted (push-only).
     /// Use numeric IDs (int64 strings) — get them from @userinfobot on Telegram.</summary>

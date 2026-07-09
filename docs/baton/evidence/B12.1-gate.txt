@@ -1,0 +1,42 @@
+﻿=== B12.1 Tier A read-only analysis lanes + artifact wiring ===
+Date: 2026-07-09 01:00:59
+Host: MSI
+OS: Windows
+
+--- Build ---
+dotnet build Conductor.slnx
+Build succeeded. 0 Warning(s), 0 Error(s)
+
+--- Tests ---
+dotnet test Conductor.slnx
+Passed! - Failed: 0, Passed: 441, Skipped: 0, Total: 441
+
+--- B12.1-specific tests ---
+dotnet test Conductor.slnx --filter "FullyQualifiedName~B12_1"
+Passed! - Failed: 0, Passed: 9, Skipped: 0, Total: 9
+
+=== B12.1 test summary ===
+1. LaneRunner_BuildPrompt_IncludesContextAndTask — prompt includes plan context + analysis task
+2. LaneRunner_RunAsync_WritesToScratchDir_NotRepo — lane runs in scratch dir, zero repo writes, artifact at .conductor/lanes/
+3. LaneArtifactBattery_InjectsArtifactIntoPrompt — reads lane artifacts and injects into prompt section
+4. LaneArtifactBattery_Empty_WhenNoLanesDir — returns empty when no artifacts exist
+5. LaneArtifactBattery_RespectsMaxBytes — bounded output respects byte cap
+6. PlanConfig_AnalysisLanes_DefaultsEmpty — plan config includes empty lanes list by default
+7. AnalysisLaneConfig_Defaults — sane defaults for Id/Kind/Timeout/Enabled/MaxOutputLines/StageTrigger
+8. LaneResult_IsSuccess_WhenNoError — LaneResult.IsSuccess = Error==null
+9. LaneRunner_RunAsync_ReturnsError_WhenProcessFails — exit code captured, lane still produces result
+
+=== Architecture ===
+- AnalysisLaneConfig: plan-level config for read-only analysis lanes (StageTrigger, Kind, Prompt, etc.)
+- LaneRunner: spawns each lane in a scratch temp dir (like StatusAgent), never writes working tree
+- LaneArtifactBattery: IPromptBattery that reads .conductor/lanes/*.md and injects into next prompt
+- Orchestrator: starts lanes before RunSession, polls in agent loop, collects artifacts after
+- PromptBuilder.BatterySection: includes LaneArtifactBattery when analysis lanes are configured
+
+=== Files changed (within budget) ===
+NEW:  src/Conductor/Core/LaneRunner.cs
+NEW:  tests/Conductor.Tests/B12_1Tests.cs
+MOD:  src/Conductor/Core/Orchestrator.cs (+120 lines, lane spawning + polling + collection)
+MOD:  src/Conductor/Core/PromptBattery.cs (+63 lines, LaneArtifactBattery)
+MOD:  src/Conductor/Core/PromptBuilder.cs (wires lane battery)
+MOD:  src/Conductor/Models/PlanConfig.cs (+30 lines, AnalysisLaneConfig + list)

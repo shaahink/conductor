@@ -37,6 +37,9 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     private readonly List<(string Kind, string Text, DateTime Utc)> _activity = new();
     private readonly HashSet<string> _decomposedCheckpoints = new(StringComparer.Ordinal);
     private bool _softBreakSignalled;
+    // B12.1: active analysis lane tasks (concurrently running in scratch temp dirs)
+    private readonly List<Task<LaneResult>> _activeLanes = new();
+    private readonly List<LaneResult> _completedLaneResults = new();
 
     // Correlation state attached to every structured log line (B2.5): runId + stage + session number
     // come from RunState; the gate marker is set while a battery runs.
@@ -209,9 +212,16 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 }
                 _sessionApproved = false;
 
+                // B12.1: start read-only analysis lanes for this stage (run concurrently in scratch dirs)
+                StartAnalysisLanes(stage, track.HandoffBlock, ct);
+
                 RunSession(stage, track, ct);
                 sessionsThisRun++;
                 var rec = state.History[^1];
+
+                // B12.1: collect any lane artifacts that weren't captured during the session
+                CollectLaneArtifacts(stage.Id);
+
                 _runCostUsd += rec.CostUsd ?? 0;
                 _runTokens += (rec.TokensInput ?? 0) + (rec.TokensOutput ?? 0) + (rec.TokensReasoning ?? 0);
                 EmitSessionFinished(rec);
@@ -379,6 +389,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             while (!agent.HasExited)
             {
                 while (agent.TryDequeue(out var ev)) { sink.AgentEvent(ev); TrackActivity(ev); }
+                // B12.1: check for completed analysis lanes running concurrently
+                PollLaneCompletion();
                 // B9.4: soft-break — when live tokens cross the soft threshold, write a cooperative
                 // nudge for the agent to finish the current sub-task and hand off cleanly.
                 CheckSoftBreak(agent, preTrack);
@@ -1685,5 +1697,113 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             Log($"task-graph resume hint failed: {ex.Message}");
             return null;
         }
+    }
+
+    // ---------------------------------------------------------------- B12.1: analysis lanes
+
+    /// <summary>B12.1: Start read-only analysis lanes that are configured for the current stage.
+    /// Each lane runs in a scratch temp directory so it can never write the working tree.
+    /// Lanes run concurrently with the main session.</summary>
+    private void StartAnalysisLanes(StageConfig stage, string? handoff, CancellationToken ct)
+    {
+        if (plan.AnalysisLanes.Count == 0) return;
+
+        var triggered = plan.AnalysisLanes
+            .Where(l => l.Enabled && (l.StageTrigger == null ||
+                l.StageTrigger.Equals(stage.Id, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+
+        if (triggered.Count == 0) return;
+
+        var gitSummary = GitView.Summary(plan.Repo);
+        var resolvedAgent = plan.ResolveAgent(stage);
+
+        foreach (var lane in triggered)
+        {
+            var capturedLane = lane;
+            var task = Task.Run(async () =>
+            {
+                var result = await LaneRunner.RunAsync(capturedLane, resolvedAgent,
+                    plan.Name, stage.Id, stage.Title, plan.StateDir,
+                    handoff, gitSummary, ct).ConfigureAwait(false);
+                return result;
+            }, ct);
+            _activeLanes.Add(task);
+            Log($"analysis lane '{lane.Id}' ({lane.Kind}) started for stage {stage.Id}");
+        }
+    }
+
+    /// <summary>B12.1: Poll for completed analysis lanes in the session polling loop.</summary>
+    private void PollLaneCompletion()
+    {
+        if (_activeLanes.Count == 0) return;
+
+        for (var i = _activeLanes.Count - 1; i >= 0; i--)
+        {
+            if (!_activeLanes[i].IsCompleted) continue;
+
+            LaneResult result;
+            try
+            {
+                result = _activeLanes[i].Result;
+            }
+            catch (Exception ex)
+            {
+                result = new LaneResult { LaneId = "unknown", Error = $"lane exception: {ex.Message}" };
+            }
+            _activeLanes.RemoveAt(i);
+            _completedLaneResults.Add(result);
+
+            if (result.IsSuccess)
+                Log($"analysis lane '{result.LaneId}' completed ({result.ElapsedMs}ms)" +
+                    (result.ArtifactPath != null ? $" → {Path.GetFileName(result.ArtifactPath)}" : ""));
+            else
+                Log($"analysis lane '{result.LaneId}' failed: {result.Error ?? "unknown error"}");
+        }
+    }
+
+    /// <summary>B12.1: After the session ends, wait briefly for any remaining lanes, then
+    /// collect their artifacts. Already-completed lanes (from <see cref="PollLaneCompletion"/>)
+    /// are left as-is.</summary>
+    private void CollectLaneArtifacts(string stageId)
+    {
+        if (_activeLanes.Count == 0 && _completedLaneResults.Count == 0) return;
+
+        // Wait for remaining lanes with a short timeout so we don't block the orchestrator
+        if (_activeLanes.Count > 0)
+        {
+            try
+            {
+                var remaining = Task.WhenAll(_activeLanes.ToArray());
+                remaining.Wait(TimeSpan.FromSeconds(10));
+            }
+            catch (AggregateException ex)
+            {
+                Log($"lane collection: {ex.InnerExceptions.Count} lane(s) threw exceptions");
+            }
+            catch (OperationCanceledException) { }
+
+            // Collect any newly completed results
+            foreach (var task in _activeLanes)
+            {
+                if (!task.IsCompleted) continue;
+                try
+                {
+                    _completedLaneResults.Add(task.Result);
+                }
+                catch (Exception ex)
+                {
+                    _completedLaneResults.Add(new LaneResult { LaneId = "unknown", Error = ex.Message });
+                }
+            }
+            _activeLanes.Clear();
+        }
+
+        var successCount = _completedLaneResults.Count(r => r.IsSuccess);
+        var failCount = _completedLaneResults.Count - successCount;
+        if (_completedLaneResults.Count > 0)
+            Log($"analysis lanes collected: {successCount} succeeded, {failCount} failed for stage {stageId}");
+
+        _completedLaneResults.Clear();
     }
 }

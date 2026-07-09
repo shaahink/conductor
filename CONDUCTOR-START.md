@@ -8,13 +8,13 @@ Branch scheme: `feat/baton-b<stage>` off `feat/baton`. Worktree: `C:\Code\conduc
 Driver: the stable `bin\conductor.exe` built from `master`.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #64 (B11 audit) — static audit completed: 5 bugs fixed (PS completion new-plan/completion/options, pwsh ExecutionPolicy, SafeParseTracker warning). Gate: 432 pass, 0w/0e.
-stage: B11 DONE + AUDITED. Handover written (.conductor/handovers/B11.md). 3 followups created (FU-B11-1..3).
+last: session #65 (B12.1) — Tier A read-only analysis lanes: LaneRunner + LaneArtifactBattery + Orchestrator integration. Gate: 441 pass, 0w/0e.
+stage: B12.1 DONE. B12.2 (worker pool + concurrency cap + scheduling + lane events) is next.
 dirty: none.
-next: B12.1 (Tier A read-only analysis lanes) or B12 fix-lanes (tracked followups in .conductor/followups.md).
-QA-B11: verified all 4 checkpoints + diff audit; cross-platform shell dispatch, dotnet tool packaging, completion scripts, doctor, clean-clone battery, Shamshir owner-gate acceptance.
-followups: FU-B10-1/2 reassigned to B12; new FU-B11-1 (completion exhaustiveness test), FU-B11-2 (Linux clean-clone), FU-B11-3 (real-credential cTrader path).
-evidence: docs/baton/evidence/B11.{1,2,3,4}-gate.txt, docs/baton/audits/B11-shamshir-p2.2.md, .conductor/handovers/B11.md.
+next: B12.2 or B12 fix-lanes (FU-B11-1 completion exhaustiveness test, FU-B10-1 integration harness, FU-B10-2 battery-collapse measurement).
+QA-B11: verified — 432 pass, dotnet pack 1.6MB nupkg, 23 B11 tests green, build 0w/0e. QA-PASS.
+followups: FU-B11-1/2/3, FU-B10-1/2, FU-B0-4/5/6/7 remain OPEN (many are post-B12 or integration-harness items).
+evidence: docs/baton/evidence/B12.1-gate.txt (9 tests + build), test file tests/Conductor.Tests/B12_1Tests.cs.
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -96,7 +96,7 @@ never silent renumbering.
 | B11.2 | dotnet tool packaging + tab completion + conductor doctor | DONE | 16e8532 | docs/baton/evidence/B11.2-gate.txt |
 | B11.3 | ADRs finalised; StateCompat + clean-clone battery | DONE | 746b164 | docs/baton/evidence/B11.3-gate.txt |
 | B11.4 | **Acceptance: drive a full owner-gated Shamshir phase (parity-pipeline P2.2)** | DONE | b04a264 | docs/baton/evidence/B11.4-gate.txt, docs/baton/audits/B11-shamshir-p2.2.md |
-| B12.1 | Tier A read-only analysis lanes (arch/design/qa/research, scratch cwd, artifacts feed prompts+handover) | TODO | | |
+| B12.1 | Tier A read-only analysis lanes (arch/design/qa/research, scratch cwd, artifacts feed prompts+handover) | DONE | 168920d | docs/baton/evidence/B12.1-gate.txt |
 | B12.2 | Worker pool + concurrency cap + brain scheduling (opt-in per task-type) | TODO | | |
 | B12.3 | Tier B isolated-worktree mutating lanes → full-battery MERGE GATE before acceptance | TODO | | |
 | B12.4 | fix-lanes consume .conductor/followups.md (blend-in debt fixing) | TODO | | |

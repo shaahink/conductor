@@ -76,6 +76,69 @@ public sealed class RecentFailureBattery : IPromptBattery
 }
 
 /// <summary>
+/// Injects the most recent analysis-lane artifacts into the next session's prompt (B12.1).
+/// Reads from <c>.conductor/lanes/</c> and includes artifacts from the current stage that
+/// were written within a recent window, bounded to <see cref="_maxBytes"/>.
+/// </summary>
+public sealed class LaneArtifactBattery : IPromptBattery
+{
+    private readonly string _lanesDir;
+    private readonly string _currentStage;
+    private readonly int _maxBytes;
+    private readonly string? _section;
+
+    public LaneArtifactBattery(string stateDir, string currentStage, int maxBytes = 1024)
+    {
+        _lanesDir = Path.Combine(stateDir, "lanes");
+        _currentStage = currentStage;
+        _maxBytes = maxBytes;
+
+        if (!Directory.Exists(_lanesDir))
+        {
+            _section = null;
+            return;
+        }
+
+        var files = new DirectoryInfo(_lanesDir).GetFiles("*.md")
+            .OrderByDescending(f => f.LastWriteTimeUtc)
+            .Take(3) // at most 3 recent artifacts
+            .ToList();
+
+        if (files.Count == 0)
+        {
+            _section = null;
+            return;
+        }
+
+        var sb = new System.Text.StringBuilder();
+        foreach (var file in files)
+        {
+            try
+            {
+                var content = File.ReadAllText(file.FullName);
+                if (string.IsNullOrWhiteSpace(content)) continue;
+                if (content.Length > 800)
+                    content = content[..797] + "…";
+                sb.AppendLine($"--- {Path.GetFileNameWithoutExtension(file.Name)} ---");
+                sb.AppendLine(content);
+                sb.AppendLine();
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+
+        var s = sb.ToString().TrimEnd();
+        if (s.Length > _maxBytes)
+            s = s[.._maxBytes] + "…";
+        _section = s.Length > 0 ? s : null;
+    }
+
+    public string Name => "analysis-lanes";
+    public string Section => _section ?? "";
+    public bool IsEmpty => string.IsNullOrEmpty(_section);
+}
+
+/// <summary>
 /// Composes multiple batteries in order, rendering each non-empty section with its
 /// name as a header. The total output is bounded to <see cref="_maxBytes"/> so no
 /// single battery can dominate the prompt (B8.5 trap).

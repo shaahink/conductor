@@ -131,13 +131,24 @@ public sealed class PromptBuilder
     public string BatterySection(RunState? state)
     {
         var cfg = _plan.Batteries;
-        if (cfg == null) return "";
+        if (cfg == null && _plan.AnalysisLanes.Count == 0) return "";
 
         var list = new List<IPromptBattery>();
-        if (cfg.Lessons) list.Add(new LessonsBattery(_lessons, cfg.LessonsMaxEntries));
-        if (cfg.RecentFailure && state != null) list.Add(new RecentFailureBattery(state));
+        if (cfg != null)
+        {
+            if (cfg.Lessons) list.Add(new LessonsBattery(_lessons, cfg.LessonsMaxEntries));
+            if (cfg.RecentFailure && state != null) list.Add(new RecentFailureBattery(state));
+        }
 
-        return list.Count > 0 ? new BatteryGroup(list, cfg.MaxBytes).Render() : "";
+        // B12.1: inject recent analysis-lane artifacts into the next session's prompt
+        if (_plan.AnalysisLanes.Count > 0 && state != null)
+        {
+            var laneBattery = new LaneArtifactBattery(_plan.StateDir, state.CurrentStage ?? "");
+            if (!laneBattery.IsEmpty) list.Add(laneBattery);
+        }
+
+        var maxBytes = cfg?.MaxBytes ?? 2048;
+        return list.Count > 0 ? new BatteryGroup(list, maxBytes).Render() : "";
     }
 
     internal static string BuiltIn(string name) => name switch
