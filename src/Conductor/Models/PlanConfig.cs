@@ -614,6 +614,25 @@ public sealed class LimitsConfig
     /// Default 2 — conservative to avoid git/index and build-server contention. Set to 1 to
     /// disable parallelism (lanes still run, just one at a time).</summary>
     public int MaxConcurrentLanes { get; set; } = 2;
+    /// <summary>O2: if 2 consecutive sessions stall with zero commits and empty output, skip
+    /// directly to NeedsHuman instead of burning the remaining attempts. Default true.</summary>
+    public bool StallPatternTermination { get; set; } = true;
+    /// <summary>O2: initial backoff delay in minutes after a stalled session. Doubles each
+    /// consecutive stall, reset on non-stall outcome. Default 12.</summary>
+    public int StallBackoffMinutes { get; set; } = 12;
+    /// <summary>O2: DNS health-check config for pre-session network validation.</summary>
+    public DnsHealthCheckConfig? DnsHealthCheck { get; set; }
+}
+
+/// <summary>O2: DNS preflight configuration for network health validation before spawning.</summary>
+public sealed class DnsHealthCheckConfig
+{
+    /// <summary>Enable DNS preflight check before each session. Default true.</summary>
+    public bool Enabled { get; set; } = true;
+    /// <summary>Hosts to resolve. Default: github.com, api.nuget.org.</summary>
+    public List<string> Hosts { get; set; } = new() { "github.com", "api.nuget.org" };
+    /// <summary>Seconds between DNS re-checks while parked. Default 60.</summary>
+    public int IntervalSeconds { get; set; } = 60;
 }
 
 /// <summary>Opt-in prompt batteries that inject bounded context into every session prompt (B8.5).

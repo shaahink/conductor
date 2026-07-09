@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -36,6 +37,9 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     private DateTime? _lastControlWrite;
     private readonly string _logPath = Path.Combine(plan.StateDir, "conductor.log");
     private DateTime? _backoffUntil;
+    private DateTime? _stallBackoffUntil;
+    private int _stallBackoffMultiplier = 1;
+    private DateTime? _dnsParkedUntil;
     private readonly List<(string Kind, string Text, DateTime Utc)> _activity = new();
     private readonly HashSet<string> _decomposedCheckpoints = new(StringComparer.Ordinal);
     private bool _softBreakSignalled;
@@ -97,6 +101,42 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     _backoffUntil = null;
                     state.Status = RunStatus.Idle;
                     Log("backoff over — resuming");
+                }
+
+                if (!opts.DryRun && _stallBackoffUntil is { } sbUntil)
+                {
+                    if (DateTime.UtcNow < sbUntil)
+                    {
+                        PushIdleSnapshot();
+                        Thread.Sleep(1000);
+                        continue;
+                    }
+                    _stallBackoffUntil = null;
+                    state.Status = RunStatus.Idle;
+                    Log("stall backoff over — resuming");
+                }
+
+                if (!opts.DryRun && _dnsParkedUntil is { } dpUntil)
+                {
+                    if (DateTime.UtcNow < dpUntil)
+                    {
+                        PushIdleSnapshot();
+                        Thread.Sleep(1000);
+                        continue;
+                    }
+                    _dnsParkedUntil = null;
+                    if (CheckDnsPreflight())
+                    {
+                        Log("DNS recovered — resuming session");
+                    }
+                    else
+                    {
+                        Log("DNS still unhealthy — parking again");
+                        _dnsParkedUntil = DateTime.UtcNow.AddSeconds(plan.Limits.DnsHealthCheck?.IntervalSeconds ?? 60);
+                        PushIdleSnapshot();
+                        Thread.Sleep(1000);
+                        continue;
+                    }
                 }
 
                 var track = _progress.Read(plan, CancellationToken.None);
@@ -217,6 +257,15 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     continue;
                 }
                 _sessionApproved = false;
+
+                // O2: DNS preflight — verify network health before spawning an agent session.
+                if (plan.Limits.DnsHealthCheck is { Enabled: true } && !CheckDnsPreflight())
+                {
+                    _dnsParkedUntil = DateTime.UtcNow.AddSeconds(plan.Limits.DnsHealthCheck.IntervalSeconds);
+                    Log("DNS preflight failed — parking until DNS resolves");
+                    Save();
+                    continue;
+                }
 
                 // B12.1: start read-only analysis lanes for this stage (run concurrently in scratch dirs)
                 StartAnalysisLanes(stage, track.HandoffBlock, ct);
@@ -518,6 +567,33 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         {
             rec.Outcome = stalled ? SessionOutcome.Stalled : SessionOutcome.TimedOut;
             state.AttemptsThisStage++;
+            // O2: identical-stall detection — if 2+ consecutive sessions stalled with zero
+            // commits and empty result summary, skip to NeedsHuman.
+            if (stalled && plan.Limits.StallPatternTermination)
+            {
+                rec.NewCommits = Git.CommitsSince(plan.Repo, startHead);
+                if (IdenticalStallPattern(rec))
+                {
+                    NeedsHuman($"identical-stall: {rec.Number - 1} sessions stalled with no commits, no output — environment or agent is broken");
+                    return;
+                }
+                _stallBackoffMultiplier++;
+            }
+            else
+            {
+                _stallBackoffMultiplier = 1;
+            }
+            // O2: exponential backoff between stalled attempts.
+            if (stalled)
+            {
+                var delayMinutes = plan.Limits.StallBackoffMinutes * _stallBackoffMultiplier;
+                _stallBackoffUntil = DateTime.UtcNow.AddMinutes(delayMinutes);
+                Log($"stall backoff: {delayMinutes}m (multiplier ×{_stallBackoffMultiplier}) until {_stallBackoffUntil:HH:mm} UTC");
+            }
+            else
+            {
+                _stallBackoffUntil = null;
+            }
             if (rec.ResumeCount < plan.Limits.MaxResumesPerSession)
             {
                 QueueResume(rec, stalled ? "session stalled (no output)" : "session hit the hard timeout");
@@ -532,6 +608,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             SaveAndReport();
             return;
         }
+        _stallBackoffMultiplier = 1;
 
         // Audit session: its fixes are confirmed by the full-battery phase gate that runs next,
         // so we don't run gates inline — just record it and schedule re-verification.
@@ -1029,6 +1106,55 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         SaveAndReport();
         Notify($"Conductor {plan.Name}: needs attention — {reason}");
         _ = telegram.PushWithKeyboardAsync(reason, [("Resume", "resume"), ("Skip Stage", "skip")]);
+    }
+
+    // ---------------------------------------------------------------- O2: budget intelligence
+
+    /// <summary>Resolves the configured DNS hosts to verify network health before spawning.
+    /// Returns true if all hosts resolve or the check is disabled.</summary>
+    private bool CheckDnsPreflight()
+    {
+        var cfg = plan.Limits.DnsHealthCheck;
+        if (cfg is not { Enabled: true } || cfg.Hosts is not { Count: > 0 }) return true;
+        foreach (var host in cfg.Hosts)
+        {
+            try
+            {
+                Dns.GetHostEntry(host);
+                Log($"DNS preflight: {host} OK");
+            }
+            catch (Exception ex)
+            {
+                Log($"DNS preflight FAIL: {host} — {ex.Message}");
+                return false;
+            }
+        }
+        Log("DNS preflight: all hosts healthy");
+        return true;
+    }
+
+    /// <summary>O2: checks whether the last 2+ sessions (including this record) match the
+    /// identical-stall pattern: Stalled outcome, zero commits from startHead, and empty
+    /// or null result summary.</summary>
+    private bool IdenticalStallPattern(SessionRecord rec)
+    {
+        if (rec.NewCommits is { Count: > 0 }) return false;
+        var summary = rec.ResultSummary?.Trim();
+        if (!string.IsNullOrEmpty(summary)) return false;
+
+        var stalledCount = 1;
+        for (var i = state.History.Count - 2; i >= 0; i--)
+        {
+            var prev = state.History[i];
+            if (prev.Outcome != SessionOutcome.Stalled) break;
+            if (prev.NewCommits is { Count: 0 } && string.IsNullOrEmpty(prev.ResultSummary?.Trim()))
+            {
+                stalledCount++;
+                if (stalledCount >= 2) return true;
+            }
+            else break;
+        }
+        return false;
     }
 
     /// <summary>Returns true if the run is now parked at <c>AwaitingOwner</c> due to a budget cap.</summary>

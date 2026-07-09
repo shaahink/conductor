@@ -4,10 +4,10 @@
 **Branch:** `feat/era-v3`. **Driver:** `C:\Code\conductor\bin\conductor.exe` (stable from master).
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
-last: O1 — structured log + conductor log --query landed. Serilog JSON rolling sink + LogCommand with --query/--since/--tail. 511 tests, 0w/0e.
-stage: O1 DONE. Next: O2 — budget intelligence + network health gate.
-next: Read workflow §O2. Identical-stall detection, exponential backoff, DNS preflight.
-trap: QA: D4 tracker hash fixed (4bc5760→f40a974).
+last: O2 — budget intelligence + network health gate landed. Identical-stall detection (2 stale→NeedsHuman), exponential stall backoff (12→24→48), DNS preflight (github+nuget) before spawn, all configurable in limits. 516 tests pass, 0w/0e.
+stage: O2 DONE. Next: O3 — cost overhead split (agent vs gates in TUI + report).
+next: Read workflow §O3. Split TuiMetrics agentCost/overheadCost, GateRunner per-gate cost, REPORTER.md breakdown.
+trap: O1 QA passed — evidence present, log command works.
 
 ## Baseline Numbers
 
@@ -27,7 +27,7 @@ trap: QA: D4 tracker hash fixed (4bc5760→f40a974).
 | D3 | Heartbeat runtime toggle + amend strategy | DONE | 79a96a8 | docs/era3/evidence/D3/ |
 | D4 | Mid-session control feedback | DONE | f40a974 | docs/era3/evidence/D4/ |
 | O1 | Structured log + conductor log --query | DONE | be216a4 | docs/era3/evidence/O1/ |
-| O2 | Budget intelligence + network health gate | TODO | — | — |
+| O2 | Budget intelligence + network health gate | DONE | <commit> | docs/era3/evidence/O2/ |
 | O3 | Cost overhead split | TODO | — | — |
 | P1 | Dynamic plan reconfiguration | TODO | — | — |
 | P2 | QA parallelization | TODO | — | — |
