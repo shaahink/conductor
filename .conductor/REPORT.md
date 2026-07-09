@@ -1,11 +1,32 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-09 00:39 UTC · branch `feat/baton` · HEAD `60f9670`_
+_Updated 2026-07-09 00:49 UTC · branch `feat/baton` · HEAD `15aaddb`_
 
-**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
 **Stage:** B12 — Controlled parallelism · attempts used 0 · working ▸ B12.4
-**Checkpoints:** 64/65 done · **Sessions run:** 66 · **Cost:** $3.0393 · **Tokens:** 2,307,220 in / 936,086 out / 459,107 think
+**Checkpoints:** 64/65 done · **Sessions run:** 67 · **Cost:** $3.0393 · **Tokens:** 2,307,220 in / 936,086 out / 459,107 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11
+
+## Latest activity (live)
+
+_Session #67 (Deliver) · running 10m · last output 12s ago · $0.0363_
+
+**Thinking:**
+> Now I have a good understanding. Let me also look at where the perPhase gate confirmation flow works (where stage completion is detected):  From lines 160-173: ``` // perPhase: this stage's rows are all DONE but it isn't confirmed yet, and no fix/resume/audit // is queued → owe a full-battery phase …
+> Let me look at the existing code patterns more closely for how other `Core/` files are structured, and check the imports and namespace conventions.
+> Good, no existing FollowupParser or FollowupEntry. Let me create them now.  First, let me create the FollowupParser.cs file with the model and parser.
+
+**Recent actions:**
+- `01:48:08` » read src\Conductor\Core\Events\ConductorEvent.cs
+- `01:48:12` » read src\Conductor\Core\Orchestrator.cs
+- `01:48:13` » read src\Conductor\Core\Orchestrator.cs
+- `01:48:14` » read src\Conductor\Core\Orchestrator.cs
+- `01:48:52` » todowrite 5 todos
+- `01:48:52` · Now I have a clear picture of the architecture. Let me implement B12.4.
+- `01:48:57` » read src\Conductor\Core\LaneWorkerPool.cs
+- `01:48:58` » grep FollowupEntry|FollowupParser
+- `01:49:28` » write src\Conductor\Core\FollowupParser.cs
+- `01:49:28` · Now creating the core implementation. First, the `FollowupParser` and `FollowupEntry`:
 
 ## Stage progress
 
@@ -29,7 +50,6 @@ _Updated 2026-07-09 00:39 UTC · branch `feat/baton` · HEAD `60f9670`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 37 | B5 | Deliver | 1 | 07-08 17:54 | 0:18 | Advanced | B5.4 | 2 | build:OK | $0.0750 | 61,596/21,872 |
 | 38 | B5 | Audit | 1 | 07-08 18:13 | 0:07 | Progress |  | 2 |  | $0.0635 | 86,516/7,809 |
 | 39 | B6 | Deliver | 1 | 07-08 18:21 | 0:26 | Advanced | B6.1 B6.2 B6.3 B6.4 | 3 | build:OK | $0.1276 | 91,871/39,873 |
 | 40 | B6 | Deliver | 1 | 07-08 18:48 | … | running |  | 0 |  |  |  |
@@ -59,6 +79,7 @@ _Updated 2026-07-09 00:39 UTC · branch `feat/baton` · HEAD `60f9670`_
 | 64 | B12 | Deliver | 1 | 07-08 23:49 | 0:13 | Advanced | B12.1 | 2 | build:OK | $0.0744 | 78,710/19,057 |
 | 65 | B12 | Deliver | 1 | 07-09 00:02 | 0:11 | Advanced | B12.2 | 2 | build:OK | $0.0583 | 62,839/15,593 |
 | 66 | B12 | Deliver | 1 | 07-09 00:14 | 0:24 | Advanced | B12.3 | 4 | build:OK | $0.1101 | 91,676/25,416 |
+| 67 | B12 | Deliver | 1 | 07-09 00:39 | … | running |  | 0 |  |  |  |
 
 ### Commits by session
 
