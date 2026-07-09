@@ -1,11 +1,12 @@
 ﻿# Conductor — Conductor-Debt run report
 
-_Updated 2026-07-09 01:28 UTC · branch `feat/baton` · HEAD `a1e74d4`_
+_Updated 2026-07-09 01:44 UTC · branch `feat/baton` · HEAD `47fd403`_
 
 **Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** C2 — B12.4 — Fix-lanes from followups.md · attempts used 0
-**Checkpoints:** 67/72 done · **Sessions run:** 69 · **Cost:** $3.3526 · **Tokens:** 2,712,735 in / 983,344 out / 500,565 think
+**Stage:** C3 — Async engine + integration harness · attempts used 0
+**Checkpoints:** 68/72 done · **Sessions run:** 70 · **Cost:** $3.4297 · **Tokens:** 2,791,346 in / 999,392 out / 511,155 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1, C2
+**Pending:** full-battery phase gate for C3
 
 ## Stage progress
 
@@ -13,7 +14,7 @@ _Updated 2026-07-09 01:28 UTC · branch `feat/baton` · HEAD `a1e74d4`_
 |---|---|---|---|
 | C1 | B12.3 — Tier B worktree lanes + merge gate | 1/1 | confirmed ✓ |
 | C2 | B12.4 — Fix-lanes from followups.md | 1/1 | confirmed ✓ |
-| C3 | Async engine + integration harness | 0/1 | todo |
+| C3 | Async engine + integration harness | 1/1 | gating… |
 | C4 | Events + metrics + budget + recovery | 0/1 | todo |
 | C5 | Small debt sweep (12 items) | 0/1 | todo |
 | C6 | R1 — TUI + CLI audit | 0/1 | todo |
@@ -24,7 +25,6 @@ _Updated 2026-07-09 01:28 UTC · branch `feat/baton` · HEAD `a1e74d4`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 40 | B6 | Deliver | 1 | 07-08 18:48 | … | running |  | 0 |  |  |  |
 | 41 | B6 | Deliver | 1 | 07-08 19:45 | 0:07 | Advanced | B6.5 | 1 | build:OK | $0.0311 | 29,170/7,885 |
 | 42 | B6 | Audit | 1 | 07-08 19:54 | 0:06 | Progress |  | 1 |  | $0.0606 | 87,266/8,743 |
 | 43 | B7 | Deliver | 1 | 07-08 20:00 | 0:19 | Advanced | B7.1 B7.2 B7.3 | 2 | build:OK | $0.0911 | 77,080/28,917 |
@@ -54,12 +54,10 @@ _Updated 2026-07-09 01:28 UTC · branch `feat/baton` · HEAD `a1e74d4`_
 | 67 | B12 | Deliver | 1 | 07-09 00:39 | 0:18 | Interrupted |  | 0 |  | $0.0739 | 72,539/15,348 |
 | 68 | C1 | Resume | 1r1 | 07-09 01:01 | 0:05 | Advanced | B12.4 C1 | 1 | build:OK | $0.1230 | 236,936/5,541 |
 | 69 | C2 | Deliver | 1 | 07-09 01:08 | 0:19 | Advanced | C2 | 2 | build:OK | $0.1164 | 96,040/26,369 |
+| 70 | C3 | Deliver | 1 | 07-09 01:28 | 0:15 | Advanced | C3 | 2 | build:OK | $0.0771 | 78,611/16,048 |
 
 ### Commits by session
 
-- **s61 (B11 Deliver)** — 2 commit(s):
-  - d3e41ab chore(bB11.1): fill commit hash in CONDUCTOR-START.md
-  - 3ba9d2b feat(bB11.1): cross-platform gate runner — gates[].shell + RunShell dispatch
 - **s62 (B11 Deliver)** — 6 commit(s):
   - 867b1a7 chore(bB11): update tracker + evidence for B11.2-B11.4 completion
   - 329a814 chore(conductor): s62 B11 working ▸B11.2 @ 00:39
@@ -86,6 +84,9 @@ _Updated 2026-07-09 01:28 UTC · branch `feat/baton` · HEAD `a1e74d4`_
 - **s69 (C2 Deliver)** — 2 commit(s):
   - 3098861 chore(conductor): s69 C2 DONE — async engine ratchet, update tracker
   - 633be3f fix(debt): C2 async engine ratchet — MA0045+MA0002 → error, CancellationToken through IProgressProvider, stdout/stderr split
+- **s70 (C3 Deliver)** — 2 commit(s):
+  - 47fd403 chore(conductor): fix C3 commit hash in tracker
+  - e14b88c fix(debt): C3 — events + metrics + budget + recovery
 
 ## Phase handovers (audit)
 
@@ -104,20 +105,20 @@ _Updated 2026-07-09 01:28 UTC · branch `feat/baton` · HEAD `a1e74d4`_
 
 ## Last gate run
 
-build:OK · tests:OK
+build:OK
 
 ## Last session result
 
-> SESSION-RESULT: C2 (async engine ratchet) landed — MA0045 and MA0002 ratcheted to error in .editorconfig (0 violations), CancellationToken plumbed through IProgressProvider.Read(PlanConfig, CT) across all 3 providers, stdout/stderr split in ProcessRunner with backward-compatible ProcResult.StdErr field, RunState collections changed from List<string> to HashSet<string>(StringComparer.Ordinal) fixing MA0002 at root. Build 0w/0e, 480 tests pass (10 new C2AsyncEngineTests). Commits 633be3f + 3098861 pushed to feat/baton. The orchestrator integration harness (OrchestratorHarness + process-control loop tests) was deferred — the ratchet + CT + stream split consumed the session's full scope. Next se…
+> SESSION-RESULT: C3 delivered — `RollbackExecuted` event emitted from Orchestrator on `git reset --hard`, budget (`PerRunCostUsd`/`PerRunTokens`) persisted in `RunState` and restored on restart (crash-surviving), mid-session control verbs rejected during a session now log feedback instead of silently consuming, orphaned resume with empty `AgentSessionId` marks `NeedsHuman`. 493 tests pass (13 new `C3EventsAndRecoveryTests`), build 0w/0e. Three items deferred to C4/C5: full LiveMetrics→dashboard cutover (fold proven in tests, renderer still uses `agent.Tokens*`), `McpCallFinished` production wiring (event type exists, B9-owned), and graceful Ctrl+C integration test (needs process-level harness…
 
 ## Tracker handoff
 
 ```
-last: session #69 (C2) — async engine ratchet: MA0045+MA0002 → error (0 violations), CancellationToken through IProgressProvider.Read, stdout/stderr split in ProcessRunner/ProcResult, 480 tests pass (10 new C2AsyncEngineTests).
-stage: C2 DONE. Build 0w/0e.
+last: session #70 (C3) — events + metrics + budget + recovery: RollbackExecuted event emitted from Orchestrator, budget (PerRunCostUsd/PerRunTokens) persisted in RunState and restored on restart, mid-session control feedback for rejected verbs, orphaned resume with empty AgentSessionId marks NeedsHuman. 493 tests pass (13 new C3EventsAndRecoveryTests).
+stage: C3 DONE. Build 0w/0e.
 dirty: none.
-next: C3 — Events + metrics + budget + recovery (LiveMetrics wiring, Rollback event, mid-session control feedback, McpCallFinished, budget persistence, orphaned resume hardening, Ctrl+C test).
-followups: FU-B2-1/3, FU-B3-3/4/5, FU-B0-6 remain OPEN (scheduled C3).
-evidence: docs/baton/evidence/C2-gate.txt (480 tests, 10 C2). Test file: tests/Conductor.Tests/C2AsyncEngineTests.cs.
-B12.4 QA: verified DONE — 10 tests green, FollowupParser + RunFollowupFixLanes wired in Orchestrator, evidence artifact authentic.
+next: C4 — Small debt sweep (12 items: fake-agent, smokes, persona, Telegram, etc.)
+followups: FU-B2-1 (LiveMetrics dashboard wiring) partially deferred — dashboard still reads via agent.Tokens* (event-log fold proven in tests, full cutover deferred to C4/C5).
+evidence: docs/baton/evidence/C3-gate.txt (493 tests, 13 C3). Test file: tests/Conductor.Tests/C3EventsAndRecoveryTests.cs.
+C2 QA: verified DONE — MA0045/MA0002 at error, CT in IProgressProvider, stdout/stderr split, 10 C2Async tests pass.
 ```
