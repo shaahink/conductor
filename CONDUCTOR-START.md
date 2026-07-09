@@ -7,13 +7,13 @@ your stage in `.conductor/plans/conductor-debt.plan.json`.
 Branch: `feat/baton`. Driver: `C:\Code\conductor\bin\conductor.exe` (stable from master).
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #74 (plan C6, tracker C5 — R1 TUI + CLI audit, attempt 1/2) — 20/20 CLI ✅, 10/10 TUI ✅, 0 ❌. 4 ⚠️ (3 fixed: state.json reconciliation + preview data genericized). 497 tests pass.
-stage: tracker C5 (R1 audit) DONE.
+last: session #75 (plan C7, tracker C6 — R2 Report + Prompts + Agent Context audit, attempt 1/1) — 37/37 features ✅, 0 ❌. 2 ⚠️ (report lacks --dry-run flag, state.json stale C5-skipped).
+stage: tracker C6 (R2 audit) DONE.
 dirty: none.
-next: tracker C6 (plan C7) — R2 Report + Prompts + Agent Context audit (workflow §Session 7).
-QA (session #73): skipped (all gates green, per protocol).
-followups→C8: T-1 (plan tree single-stage expand key not wired), C-4 (doctor step-counter off-by-one).
-evidence: docs/qa-reports/CONDUCTOR-AUDIT-R1.md, docs/baton/evidence/C6-s74-gate.txt.
+next: tracker C7 (plan C8) — Final handover + Needs Human Verification checklist (workflow §Session 8).
+QA (session #74): skipped (all gates green, per protocol).
+followups→C8: R2-1 (report --dry-run absent from CLI), R2-2 (state.json C5 skipped stale — needs orchestrator restart), T-1 (plan tree single-stage expand key), C-4 (doctor off-by-one).
+evidence: docs/qa-reports/CONDUCTOR-AUDIT-R2.md, docs/baton/evidence/C6-R2/gate.txt.
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
@@ -104,7 +104,7 @@ never silent renumbering.
 | C3 | Events + metrics + budget + recovery (LiveMetrics, rollback, McpCallFinished, Ctrl+C) | DONE | e14b88c | `docs/baton/evidence/C3-gate.txt` |
 | C4 | Small debt sweep (12 items: fake-agent, smokes, persona, Telegram, etc.) | DONE | 8d651d8 | `docs/baton/evidence/C4-gate.txt` |
 | C5 | R1 — TUI + CLI audit (--dry-run preview, every surface traced to code+docs) | DONE | 479df5e | `docs/qa-reports/CONDUCTOR-AUDIT-R1.md` |
-| C6 | R2 — Report + Prompts + Agent Context audit | TODO | — | `docs/qa-reports/CONDUCTOR-AUDIT-R2.md` |
+| C6 | R2 — Report + Prompts + Agent Context audit | DONE | — | `docs/qa-reports/CONDUCTOR-AUDIT-R2.md`, `docs/baton/evidence/C6-R2/gate.txt` |
 | C7 | Final handover + Needs Human Verification checklist | TODO | — | `docs/qa-reports/CONDUCTOR-FINAL.md` |
 
 ## Quick commands

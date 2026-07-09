@@ -1,31 +1,86 @@
 ﻿# Conductor — Conductor-Debt run report
 
-_Updated 2026-07-09 02:37 UTC · branch `feat/baton` · HEAD `59c4723`_
+_Updated 2026-07-09 02:39 UTC · branch `feat/baton` · HEAD `6ff2c7d`_
 
-**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** C6 — R1 — TUI + CLI audit · attempts used 0 · working ▸ C6
-**Checkpoints:** 70/72 done · **Sessions run:** 74 · **Cost:** $3.6750 · **Tokens:** 3,071,341 in / 1,046,644 out / 542,455 think
+**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** C6 — R1 — TUI + CLI audit · persona: reviewer · attempts used 0 · working ▸ C6
+**Checkpoints:** 70/72 done · **Sessions run:** 75 · **Cost:** $3.6750 · **Tokens:** 3,071,341 in / 1,046,644 out / 542,455 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1, C2, C3, C4
 **⚠ Skipped stages (need human review):** C5
 
 ## Stage progress
 
-| Stage | Title | Done | State |
+| Stage | Title | Progress | State |
 |---|---|---|---|
-| C1 | B12.3 — Tier B worktree lanes + merge gate | 1/1 | confirmed ✓ |
-| C2 | B12.4 — Fix-lanes from followups.md | 1/1 | confirmed ✓ |
-| C3 | Async engine + integration harness | 1/1 | confirmed ✓ |
-| C4 | Events + metrics + budget + recovery | 1/1 | confirmed ✓ |
-| C5 | Small debt sweep (12 items) | 1/1 | SKIPPED ⚠ |
-| C6 | R1 — TUI + CLI audit | 0/1 | **← active** |
-| C7 | R2 — Report + Prompts + Agent Context audit | 0/1 | todo |
-| C8 | Final handover + Needs Human Verification checklist | 0/0 | todo |
+| C1 | B12.3 — Tier B worktree lanes + merge gate | ██████████ 1/1 | confirmed ✓ |
+| C2 | B12.4 — Fix-lanes from followups.md | ██████████ 1/1 | confirmed ✓ |
+| C3 | Async engine + integration harness | ██████████ 1/1 | confirmed ✓ |
+| C4 | Events + metrics + budget + recovery | ██████████ 1/1 | confirmed ✓ |
+| C5 | Small debt sweep (12 items) | ██████████ 1/1 | SKIPPED ⚠ |
+| C6 | R1 — TUI + CLI audit | ░░░░░░░░░░ 0/1 | **← active** |
+| C7 | R2 — Report + Prompts + Agent Context audit | ░░░░░░░░░░ 0/1 | todo |
+| C8 | Final handover + Needs Human Verification checklist |  0/0 | todo |
+
+<details> ✅<summary>C1 — B12.3 — Tier B worktree lanes + merge gate (1/1)</summary>
+
+| # | Title | Status | Commit |
+|---|---|---|---|
+| C1 | B12.4 — Fix-lanes consume followups.md | ✅ DONE | [`1706c45`](https://github.com/shaahink/conductor/commit/1706c45) |
+
+</details>
+
+<details> ✅<summary>C2 — B12.4 — Fix-lanes from followups.md (1/1)</summary>
+
+| # | Title | Status | Commit |
+|---|---|---|---|
+| C2 | Async engine + integration harness (MA0045, MA0002, CT, harness) | ✅ DONE | [`633be3f`](https://github.com/shaahink/conductor/commit/633be3f) |
+
+</details>
+
+<details> ✅<summary>C3 — Async engine + integration harness (1/1)</summary>
+
+| # | Title | Status | Commit |
+|---|---|---|---|
+| C3 | Events + metrics + budget + recovery (LiveMetrics, rollback, McpCallFinished, Ctrl+C) | ✅ DONE | [`e14b88c`](https://github.com/shaahink/conductor/commit/e14b88c) |
+
+</details>
+
+<details> ✅<summary>C4 — Events + metrics + budget + recovery (1/1)</summary>
+
+| # | Title | Status | Commit |
+|---|---|---|---|
+| C4 | Small debt sweep (12 items: fake-agent, smokes, persona, Telegram, etc.) | ✅ DONE | [`8d651d8`](https://github.com/shaahink/conductor/commit/8d651d8) |
+
+</details>
+
+<details> ✅<summary>C5 — Small debt sweep (12 items) (1/1)</summary>
+
+| # | Title | Status | Commit |
+|---|---|---|---|
+| C5 | R1 — TUI + CLI audit (--dry-run preview, every surface traced to code+docs) | ✅ DONE | [`479df5e`](https://github.com/shaahink/conductor/commit/479df5e) |
+
+</details>
+
+<details><summary>C6 — R1 — TUI + CLI audit (0/1)</summary>
+
+| # | Title | Status | Commit |
+|---|---|---|---|
+| C6 | R2 — Report + Prompts + Agent Context audit | ⬜ TODO | [`—`](https://github.com/shaahink/conductor/commit/—) |
+
+</details>
+
+<details><summary>C7 — R2 — Report + Prompts + Agent Context audit (0/1)</summary>
+
+| # | Title | Status | Commit |
+|---|---|---|---|
+| C7 | Final handover + Needs Human Verification checklist | ⬜ TODO | [`—`](https://github.com/shaahink/conductor/commit/—) |
+
+</details>
 
 ## Sessions
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 45 | B7 | Fix | 2 | 07-08 20:27 | 0:04 | Interrupted |  | 0 |  |  |  |
 | 46 | B7 | Resume | 2r1 | 07-08 20:31 | 0:15 | Progress |  | 3 | build:OK | $0.0411 | 39,768/8,661 |
 | 47 | B8 | Deliver | 1 | 07-08 20:48 | 0:19 | Advanced | B8.1 B8.2 B8.3 B8.4 B8.5 | 3 | build:OK | $0.1079 | 84,480/32,767 |
 | 48 | B8 | Audit | 1 | 07-08 21:08 | 0:05 | Progress |  | 2 |  | $0.0606 | 91,711/8,335 |
@@ -55,32 +110,122 @@ _Updated 2026-07-09 02:37 UTC · branch `feat/baton` · HEAD `59c4723`_
 | 72 | C5 | Deliver | 1 | 07-09 02:04 | 0:06 | Progress |  | 1 | build:OK | $0.0346 | 55,105/4,008 |
 | 73 | C5 | Deliver | 2 | 07-09 02:10 | 0:07 | Progress |  | 1 | build:OK | $0.0290 | 40,853/3,412 |
 | 74 | C6 | Deliver | 1 | 07-09 02:18 | 0:18 | Advanced | C5 | 2 | build:OK | $0.0544 | 58,475/13,578 |
+| 75 | C6 | Deliver | 1 | 07-09 02:37 | … | running |  | 0 |  |  |  |
+
+## Confidence
+
+_Evidence-based confidence per checkpoint. A checkpoint without evidence is marked (none)._
+
+```
+checkpoints confirmed: 70   with evidence: 70
+
+  B0.1   1 evidence item(s) ·  docs/baton/evidence/B0.1-gate.txt
+  B0.2   1 evidence item(s) ·  docs/baton/evidence/B0.2-gate.txt
+  B0.3   1 evidence item(s) ·  docs/baton/evidence/B0.3-gate.txt
+  B0.4   1 evidence item(s) ·  docs/baton/evidence/B0.4-gate.txt
+  B0.5   2 evidence item(s) ·  docs/baton/evidence/B0.5-gate.txt, docs/baton/audits/B0-baseline.md
+  B0.6   2 evidence item(s) ·  docs/baton/adr/0001-tooling-and-ruleset.md, docs/baton/adr/0002-event-sourcing.md
+  B1.1   1 evidence item(s) ·  docs/baton/evidence/B1.1-gate.txt
+  B1.2   1 evidence item(s) ·  docs/baton/evidence/B1.2-gate.txt
+  B1.3   1 evidence item(s) ·  docs/baton/evidence/B1.3-gate.txt
+  B1.4   1 evidence item(s) ·  docs/baton/evidence/B1.4-gate.txt
+  B1.5   1 evidence item(s) ·  docs/baton/evidence/B1.5-gate.txt
+  B1.6   1 evidence item(s) ·  docs/baton/evidence/B1.6-gate.txt
+  B1.7   1 evidence item(s) ·  docs/baton/evidence/B1.7-gate.txt
+  B10.1  1 evidence item(s) ·  docs/baton/evidence/B10.1-gate.txt
+  B10.2  1 evidence item(s) ·  docs/baton/evidence/B10.2-gate.txt
+  B10.3  1 evidence item(s) ·  docs/baton/evidence/B10.3-gate.txt
+  B10.4  1 evidence item(s) ·  docs/baton/evidence/B10.4-gate.txt
+  B11.1  1 evidence item(s) ·  docs/baton/evidence/B11.1-gate.txt
+  B11.2  1 evidence item(s) ·  docs/baton/evidence/B11.2-gate.txt
+  B11.3  1 evidence item(s) ·  docs/baton/evidence/B11.3-gate.txt
+  B11.4  2 evidence item(s) ·  docs/baton/evidence/B11.4-gate.txt, docs/baton/audits/B11-shamshir-p2.2.md
+  B12.1  1 evidence item(s) ·  docs/baton/evidence/B12.1-gate.txt
+  B12.2  1 evidence item(s) ·  docs/baton/evidence/B12.2-gate.txt
+  B12.3  1 evidence item(s) ·  docs/baton/evidence/B12.3-gate.txt
+  B12.4  1 evidence item(s) ·  `docs/baton/evidence/B12.4-gate.txt`
+  B2.1   1 evidence item(s) ·  docs/baton/evidence/B2.1-gate.txt
+  B2.2   1 evidence item(s) ·  docs/baton/evidence/B2.2-gate.txt
+  B2.3   1 evidence item(s) ·  docs/baton/evidence/B2.3-gate.txt
+  B2.4   1 evidence item(s) ·  docs/baton/evidence/B2.4-gate.txt
+  B2.5   1 evidence item(s) ·  docs/baton/evidence/B2.5-gate.txt
+  B2.6   1 evidence item(s) ·  docs/baton/evidence/B2.6-gate.txt
+  B3.1   1 evidence item(s) ·  docs/baton/evidence/B3.1-gate.txt
+  B3.2   1 evidence item(s) ·  docs/baton/evidence/B3.2-gate.txt
+  B3.3   1 evidence item(s) ·  docs/baton/evidence/B3.3-gate.txt
+  B3.4   1 evidence item(s) ·  docs/baton/evidence/B3.4-gate.txt
+  B3.5   1 evidence item(s) ·  docs/baton/evidence/B3.4-gate.txt
+  B4.1   1 evidence item(s) ·  docs/baton/evidence/B4.1-gate.txt
+  B4.2   1 evidence item(s) ·  docs/baton/evidence/B4.2-gate.txt
+  B4.3   2 evidence item(s) ·  docs/baton/evidence/B4.3-gate.txt, docs/baton/evidence/B4.3-preview.txt
+  B4.4   2 evidence item(s) ·  docs/baton/evidence/B4.4-gate.txt, docs/baton/evidence/B4.4-preview.txt
+  B4.5   2 evidence item(s) ·  docs/baton/evidence/B4.5-gate.txt, docs/baton/evidence/B4.5-preview.txt
+  B4.6   2 evidence item(s) ·  docs/baton/evidence/B4.6-gate.txt, docs/baton/evidence/B4.6-preview.txt
+  B4.7   3 evidence item(s) ··  docs/baton/evidence/B4.7-gate.txt, docs/baton/evidence/B4.7-tokens-preview.txt, docs/baton/evidence/B4.7-docselect-preview.txt
+  B5.1   1 evidence item(s) ·  docs/baton/evidence/B5.1-gate.txt
+  B5.2   1 evidence item(s) ·  docs/baton/evidence/B5.2-gate.txt
+  B5.3   1 evidence item(s) ·  docs/baton/evidence/B5.3-gate.txt
+  B5.4   1 evidence item(s) ·  docs/baton/evidence/B5.4-gate.txt
+  B6.1   1 evidence item(s) ·  docs/baton/evidence/B6.1-gate.txt
+  B6.2   1 evidence item(s) ·  docs/baton/evidence/B6.1-gate.txt
+  B6.3   1 evidence item(s) ·  docs/baton/evidence/B6.1-gate.txt
+  B6.4   1 evidence item(s) ·  docs/baton/evidence/B6.1-gate.txt
+  B6.5   2 evidence item(s) ·  docs/baton/evidence/B6.5-shamshir-acceptance.txt, docs/baton/audits/B6-shamshir-acceptance.md
+  B7.1   1 evidence item(s) ·  docs/baton/evidence/B7-gate.txt
+  B7.2   1 evidence item(s) ·  docs/baton/evidence/B7-gate.txt
+  B7.3   1 evidence item(s) ·  docs/baton/evidence/B7-gate.txt
+  B8.1   1 evidence item(s) ·  docs/baton/evidence/B8-gate.txt
+  B8.2   1 evidence item(s) ·  docs/baton/evidence/B8-gate.txt
+  B8.3   1 evidence item(s) ·  docs/baton/evidence/B8-gate.txt
+  B8.4   1 evidence item(s) ·  docs/baton/evidence/B8-gate.txt
+  B8.5   1 evidence item(s) ·  docs/baton/evidence/B8-gate.txt
+  B9.1   2 evidence item(s) ·  commit msg (build 0w/0e, 336 tests pass)
+  B9.2   1 evidence item(s) ·  tests/Conductor.Tests/PlannerTests.cs (6 tests)
+  B9.3   1 evidence item(s) ·  tests/Conductor.Tests/McpTaskServerTests.cs (7 tests)
+  B9.4   1 evidence item(s) ·  docs/baton/evidence/B9.4-gate.txt
+  B9.5   1 evidence item(s) ·  docs/baton/evidence/B9.5-gate.txt
+  C1     1 evidence item(s) ·  Same as B12.4
+  C2     1 evidence item(s) ·  `docs/baton/evidence/C2-gate.txt`
+  C3     1 evidence item(s) ·  `docs/baton/evidence/C3-gate.txt`
+  C4     1 evidence item(s) ·  `docs/baton/evidence/C4-gate.txt`
+  C5     1 evidence item(s) ·  `docs/qa-reports/CONDUCTOR-AUDIT-R1.md`
+```
+
+## Repo
+
+_Live git snapshot (branch, working tree, sync vs upstream)._
+
+```
+branch: feat/baton
+working tree: clean
+vs upstream: up to date
+```
 
 ### Commits by session
 
 - **s66 (B12 Deliver)** — 4 commit(s):
-  - 60f9670 chore: fix B12.3 commit hash in tracker
-  - ebc8ab8 feat(bB12.3): Tier B isolated-worktree mutating lanes + merge gate
-  - 60a6648 chore(conductor): s66 B12 working ▸B12.3 @ 01:34
-  - 8913e57 chore(conductor): s66 B12 working ▸B12.3 @ 01:24
+  - [`60f9670`](https://github.com/shaahink/conductor/commit/60f9670) chore: fix B12.3 commit hash in tracker
+  - [`ebc8ab8`](https://github.com/shaahink/conductor/commit/ebc8ab8) feat(bB12.3): Tier B isolated-worktree mutating lanes + merge gate
+  - [`60a6648`](https://github.com/shaahink/conductor/commit/60a6648) chore(conductor): s66 B12 working ▸B12.3 @ 01:34
+  - [`8913e57`](https://github.com/shaahink/conductor/commit/8913e57) chore(conductor): s66 B12 working ▸B12.3 @ 01:24
 - **s68 (C1 Resume)** — 1 commit(s):
-  - 1706c45 feat(bB12.4): fix-lanes consume .conductor/followups.md as Tier-B merge-gated lanes
+  - [`1706c45`](https://github.com/shaahink/conductor/commit/1706c45) feat(bB12.4): fix-lanes consume .conductor/followups.md as Tier-B merge-gated lanes
 - **s69 (C2 Deliver)** — 2 commit(s):
-  - 3098861 chore(conductor): s69 C2 DONE — async engine ratchet, update tracker
-  - 633be3f fix(debt): C2 async engine ratchet — MA0045+MA0002 → error, CancellationToken through IProgressProvider, stdout/stderr split
+  - [`3098861`](https://github.com/shaahink/conductor/commit/3098861) chore(conductor): s69 C2 DONE — async engine ratchet, update tracker
+  - [`633be3f`](https://github.com/shaahink/conductor/commit/633be3f) fix(debt): C2 async engine ratchet — MA0045+MA0002 → error, CancellationToken through IProgressProvider, stdout/stderr split
 - **s70 (C3 Deliver)** — 2 commit(s):
-  - 47fd403 chore(conductor): fix C3 commit hash in tracker
-  - e14b88c fix(debt): C3 — events + metrics + budget + recovery
+  - [`47fd403`](https://github.com/shaahink/conductor/commit/47fd403) chore(conductor): fix C3 commit hash in tracker
+  - [`e14b88c`](https://github.com/shaahink/conductor/commit/e14b88c) fix(debt): C3 — events + metrics + budget + recovery
 - **s71 (C4 Deliver)** — 2 commit(s):
-  - a2ce6fe chore(conductor): fix C4 commit hash in tracker
-  - 8d651d8 fix(debt): C4 — small debt sweep, 12 followups closed
+  - [`a2ce6fe`](https://github.com/shaahink/conductor/commit/a2ce6fe) chore(conductor): fix C4 commit hash in tracker
+  - [`8d651d8`](https://github.com/shaahink/conductor/commit/8d651d8) fix(debt): C4 — small debt sweep, 12 followups closed
 - **s72 (C5 Deliver)** — 1 commit(s):
-  - 956277a audit: C5 — verified small debt sweep (12 items confirmed resolved), build 0w/0e, 497 tests
+  - [`956277a`](https://github.com/shaahink/conductor/commit/956277a) audit: C5 — verified small debt sweep (12 items confirmed resolved), build 0w/0e, 497 tests
 - **s73 (C5 Deliver)** — 1 commit(s):
-  - c65b69e audit: C5-S73 — re-verified small debt sweep (12 items), build 0w/0e, 497 tests
+  - [`c65b69e`](https://github.com/shaahink/conductor/commit/c65b69e) audit: C5-S73 — re-verified small debt sweep (12 items), build 0w/0e, 497 tests
 - **s74 (C6 Deliver)** — 2 commit(s):
-  - 59c4723 chore: update C5 commit hash to amended 479df5e
-  - 479df5e audit: R1 — TUI + CLI surface audit (20/20 CLI cmd, 10/10 TUI elements, 0 broken)
+  - [`59c4723`](https://github.com/shaahink/conductor/commit/59c4723) chore: update C5 commit hash to amended 479df5e
+  - [`479df5e`](https://github.com/shaahink/conductor/commit/479df5e) audit: R1 — TUI + CLI surface audit (20/20 CLI cmd, 10/10 TUI elements, 0 broken)
 
 ## Phase handovers (audit)
 
@@ -96,10 +241,6 @@ _Updated 2026-07-09 02:37 UTC · branch `feat/baton` · HEAD `59c4723`_
 - `.conductor/handovers/B7.md`
 - `.conductor/handovers/B8.md`
 - `.conductor/handovers/B9.md`
-
-## Last gate run
-
-build:OK
 
 ## Last session result
 
