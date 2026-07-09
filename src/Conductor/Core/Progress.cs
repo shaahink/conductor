@@ -91,6 +91,10 @@ public sealed record DashboardSnapshot
     public decimal TotalCostUsd { get; init; }
     /// <summary>Cost of the currently running session (not yet folded into TotalCostUsd).</summary>
     public decimal SessionCostUsd { get; init; }
+    /// <summary>O3: all-time overhead (gate runtime estimate) from finished sessions.</summary>
+    public decimal OverheadCostUsd { get; init; }
+    /// <summary>O3: overhead cost of the currently running session (not yet folded into OverheadCostUsd).</summary>
+    public decimal SessionOverheadCostUsd { get; init; }
     /// <summary>Sessions that ran without a recorded cost (e.g. before opencode-json mode) — unrecoverable.</summary>
     public int UntrackedSessions { get; init; }
     public long TokensInput { get; init; }

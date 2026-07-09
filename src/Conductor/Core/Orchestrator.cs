@@ -57,6 +57,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     private bool _sessionApproved;
     private decimal _runCostUsd;
     private long _runTokens;
+    private decimal _runOverheadUsd; // O3: gate runtime estimate accumulator
 
     // ---------------------------------------------------------------- main loop
 
@@ -82,8 +83,9 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             var sessionsThisRun = 0;
             _runCostUsd = state.PerRunCostUsd;
             _runTokens = state.PerRunTokens;
-            if (_runCostUsd > 0 || _runTokens > 0)
-                Log($"restored budget: ${_runCostUsd:0.00} / {_runTokens / 1000.0:0.#}k tokens (from prior process)");
+            _runOverheadUsd = state.PerRunOverheadCostUsd;
+            if (_runCostUsd > 0 || _runTokens > 0 || _runOverheadUsd > 0)
+                Log($"restored budget: ${_runCostUsd:0.00} agent / ${_runOverheadUsd:0.00} overhead / {_runTokens / 1000.0:0.#}k tokens (from prior process)");
             while (!ct.IsCancellationRequested)
             {
                 HandleControl();
@@ -644,6 +646,10 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         _lastGates = gates;
         rec.GateSummary = GateRunner.Summary(gates);
         EmitGates(gates, "session", rec.Number.ToString());
+        var sessionOverhead = gates.Sum(g => g.EstimatedCostUsd(plan.Limits.OverheadCostPerSecond));
+        rec.OverheadCostUsd = sessionOverhead;
+        _runOverheadUsd += sessionOverhead;
+        state.PerRunOverheadCostUsd = _runOverheadUsd;
 
         // A gate cut short by Ctrl+C / abort is not a real failure — don't burn a fix on it.
         if (ct.IsCancellationRequested)
@@ -745,6 +751,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             }
             green = GateRunner.AllRequiredPassed(gates);
             EmitGates(gates, "phase");
+            _runOverheadUsd += gates.Sum(g => g.EstimatedCostUsd(plan.Limits.OverheadCostPerSecond));
+            state.PerRunOverheadCostUsd = _runOverheadUsd;
             Log($"phase gate {pg.StageId} finished in {sw.Elapsed.TotalSeconds:0}s — {(green ? "GREEN" : "RED")}: {GateRunner.Summary(gates)}", green ? "pass" : "fail");
             if (green) state.LastGreenGateSig = sig;
         }
@@ -864,8 +872,10 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             case ApprovalOutcome.ResetBudgetAndResume:
                 _runCostUsd = 0;
                 _runTokens = 0;
+                _runOverheadUsd = 0;
                 state.PerRunCostUsd = 0;
                 state.PerRunTokens = 0;
+                state.PerRunOverheadCostUsd = 0;
                 state.AwaitingOwnerReason = null;
                 state.Status = RunStatus.Idle;
                 if (stageId != null) events.Emit(new OwnerApprovalGranted { StageId = stageId });
@@ -1065,6 +1075,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         _lastGates = gates;
         state.Status = RunStatus.Idle;
         EmitGates(gates, "completion");
+        _runOverheadUsd += gates.Sum(g => g.EstimatedCostUsd(plan.Limits.OverheadCostPerSecond));
+        state.PerRunOverheadCostUsd = _runOverheadUsd;
         if (GateRunner.AllRequiredPassed(gates)) return true;
 
         state.AttemptsThisStage++;

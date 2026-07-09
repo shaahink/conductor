@@ -183,8 +183,11 @@ public static class DashboardRenderer
     public static string SeverityColor(LogSeverity s) => SeverityGlyph(s).Color;
     public static string CostLine(DashboardSnapshot s)
     {
-        var combined = s.TotalCostUsd + s.SessionCostUsd;
-        var txt = $"cost [bold]${combined:0.0000}[/]";
+        var allAgent = s.TotalCostUsd + s.SessionCostUsd;
+        var allOverhead = s.OverheadCostUsd + s.SessionOverheadCostUsd;
+        var combined = allAgent + allOverhead;
+        var txt = $"cost [bold]${combined:0.0000}[/] [grey]agent ${allAgent:0.0000}[/]";
+        if (allOverhead > 0) txt += $" [grey]gates ${allOverhead:0.0000}[/]";
         if (s.SessionCostUsd > 0) txt += $" [grey](session ${s.SessionCostUsd:0.0000})[/]";
         if (s.UntrackedSessions > 0) txt += $" [grey]· {s.UntrackedSessions} sessions unreported[/]";
         return txt;

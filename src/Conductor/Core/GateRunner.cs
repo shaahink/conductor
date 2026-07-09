@@ -5,6 +5,8 @@ namespace Conductor.Core;
 public sealed record GateResult(string Name, bool Passed, bool Skipped, bool Optional, int ExitCode, TimeSpan Duration, string Tail)
 {
     public string Glyph => Skipped ? "-" : Passed ? "OK" : Optional ? "warn" : "FAIL";
+    /// <summary>Estimated overhead cost = Duration × rate (O3). Skipped gates contribute zero.</summary>
+    public decimal EstimatedCostUsd(decimal ratePerSecond) => Skipped ? 0m : (decimal)Duration.TotalSeconds * ratePerSecond;
 }
 
 public static class GateRunner

@@ -1,0 +1,45 @@
+===== O3: Cost overhead split =====
+Date: 2026-07-09 07:35:00
+
+--- Gate: Build ---
+0 warnings, 0 errors
+
+--- Gate: Tests ---
+530 passed, 0 failed, 0 skipped (+14 new O3 tests)
+
+--- Feature: agentCost vs overheadCost split ---
+Distinguishes agent API cost from gate runtime (overhead) cost in TUI + REPORT.md.
+
+Implementation:
+- SessionRecord.OverheadCostUsd (nullable decimal) — per-session gate runtime cost estimate
+- RunState.PerRunOverheadCostUsd — crash-surviving accumulator (like PerRunCostUsd)
+- RunState.TotalOverheadCostUsd — computed sum from History.OverheadCostUsd
+- LimitsConfig.OverheadCostPerSecond (default $0.0001/s = $0.36/hr) — configurable overhead rate
+- GateResult.EstimatedCostUsd(decimal ratePerSecond) — duration × rate, skipped = $0
+- DashboardSnapshot.OverheadCostUsd + SessionOverheadCostUsd — all-time + live overhead
+- DashboardRenderer.CostLine: "cost $X agent $Y gates $Z (session $W)"
+- Reporter header: "Cost: $total (agent $X + gates $Y)"
+- Reporter sessions table: new "Overhead" column alongside "Cost"
+- Orchestrator: _runOverheadUsd accumulator, restored from state, added after each gate battery run
+- Budget reset (ApprovalOutcome.ResetBudgetAndResume) also zeroes _runOverheadUsd
+
+Gate: TUI shows agent vs overhead split. Report shows the same.
+
+Verified by: 14 unit tests in O3CostSplitTests.cs covering:
+- GateResult.EstimatedCostUsd: duration × rate, skipped = 0, zero duration = 0
+- CostLine agent/overhead split, live session, hidden-when-zero, untracked sessions
+- RunState total overhead sums history
+- LimitsConfig default rate
+- SessionRecord + RunState serialisation round-trip
+- SnapshotBuilder populates OverheadCostUsd from state
+
+--- Files changed ---
+- src/Conductor/Models/RunState.cs: SessionRecord.OverheadCostUsd, RunState.PerRunOverheadCostUsd + TotalOverheadCostUsd
+- src/Conductor/Models/PlanConfig.cs: LimitsConfig.OverheadCostPerSecond (default 0.0001)
+- src/Conductor/Core/GateRunner.cs: GateResult.EstimatedCostUsd(decimal ratePerSecond)
+- src/Conductor/Core/Progress.cs: DashboardSnapshot.OverheadCostUsd + SessionOverheadCostUsd
+- src/Conductor/Core/SnapshotBuilder.cs: populates OverheadCostUsd from state
+- src/Conductor/Ui/DashboardRenderer.cs: CostLine shows agent + gates split
+- src/Conductor/Core/Reporter.cs: header cost line + sessions table overhead column
+- src/Conductor/Core/Orchestrator.cs: _runOverheadUsd accumulator, gate overhead tracking, budget reset
+- tests/Conductor.Tests/O3CostSplitTests.cs: 14 new tests

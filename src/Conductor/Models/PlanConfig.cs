@@ -622,6 +622,9 @@ public sealed class LimitsConfig
     public int StallBackoffMinutes { get; set; } = 12;
     /// <summary>O2: DNS health-check config for pre-session network validation.</summary>
     public DnsHealthCheckConfig? DnsHealthCheck { get; set; }
+    /// <summary>O3: per-second overhead rate for gate runtime cost estimates.
+    /// Default $0.0001/s = $0.36/hr — light compute, different from agent API cost.</summary>
+    public decimal OverheadCostPerSecond { get; set; } = 0.0001m;
 }
 
 /// <summary>O2: DNS preflight configuration for network health validation before spawning.</summary>

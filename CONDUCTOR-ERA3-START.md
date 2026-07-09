@@ -4,17 +4,17 @@
 **Branch:** `feat/era-v3`. **Driver:** `C:\Code\conductor\bin\conductor.exe` (stable from master).
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
-last: O2 — budget intelligence + network health gate landed. Identical-stall detection (2 stale→NeedsHuman), exponential stall backoff (12→24→48), DNS preflight (github+nuget) before spawn, all configurable in limits. 516 tests pass, 0w/0e.
-stage: O2 DONE. Next: O3 — cost overhead split (agent vs gates in TUI + report).
-next: Read workflow §O3. Split TuiMetrics agentCost/overheadCost, GateRunner per-gate cost, REPORTER.md breakdown.
-trap: O1 QA passed — evidence present, log command works.
+last: O3 — cost overhead split landed. agentCost vs overheadCost in TUI + REPORT.md. SessionRecord + RunState track overhead separately; GateResult.EstimatedCostUsd(duration × rate); DashboardRenderer.CostLine shows "agent $X gates $Y"; Reporter header + sessions table have split. 530 tests pass (14 O3), 0w/0e.
+stage: O3 DONE. Next: P1 — dynamic plan reconfiguration.
+next: Read workflow §P1. Plan set/reload/add-stage, TUI E editor, next-session boundary, version bumps.
+trap: O2 QA passed — evidence present, claims verified against fresh artifacts.
 
 ## Baseline Numbers
 
 | Metric | Value |
 |--------|-------|
 | Target framework | net10.0 |
-| Tests | 511 pass (0 warn, 0 err) |
+| Tests | 530 pass (0 warn, 0 err) |
 | Source files | ~40 .cs under src/Conductor |
 | Branches | master (stable), feat/baton (v2), feat/era-v3 (this phase) |
 
@@ -28,7 +28,7 @@ trap: O1 QA passed — evidence present, log command works.
 | D4 | Mid-session control feedback | DONE | f40a974 | docs/era3/evidence/D4/ |
 | O1 | Structured log + conductor log --query | DONE | be216a4 | docs/era3/evidence/O1/ |
 | O2 | Budget intelligence + network health gate | DONE | 2f4d103 | docs/era3/evidence/O2/ |
-| O3 | Cost overhead split | TODO | — | — |
+| O3 | Cost overhead split | DONE | <commit> | docs/era3/evidence/O3/ |
 | P1 | Dynamic plan reconfiguration | TODO | — | — |
 | P2 | QA parallelization | TODO | — | — |
 | P3 | Stronger advisor — structured verdicts | TODO | — | — |

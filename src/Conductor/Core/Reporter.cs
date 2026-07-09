@@ -30,7 +30,7 @@ public static class Reporter
         var stagePersona = stage != null ? plan.ResolvePersona(stage) : null;
         sb.AppendLine($"**Stage:** {state.CurrentStage ?? "-"}{(stage != null ? $" — {stage.Title}" : "")}{(stagePersona != null ? $" · persona: {stagePersona}" : "")} · attempts used {state.AttemptsThisStage}" +
                       (NextCheckpoint(track, state.CurrentStage) is { } nc ? $" · working ▸ {nc}" : ""));
-        sb.AppendLine($"**Checkpoints:** {done}/{track.Checkpoints.Count} done · **Sessions run:** {state.SessionCounter} · **Cost:** ${state.TotalCostUsd:0.0000}" +
+        sb.AppendLine($"**Checkpoints:** {done}/{track.Checkpoints.Count} done · **Sessions run:** {state.SessionCounter} · **Cost:** ${state.TotalCostUsd + state.TotalOverheadCostUsd:0.0000} (agent ${state.TotalCostUsd:0.0000} + gates ${state.TotalOverheadCostUsd:0.0000})" +
                       (state.TotalTokensInput + state.TotalTokensOutput > 0
                           ? $" · **Tokens:** {state.TotalTokensInput:n0} in / {state.TotalTokensOutput:n0} out" + (state.TotalTokensReasoning > 0 ? $" / {state.TotalTokensReasoning:n0} think" : "")
                           : ""));
@@ -96,14 +96,15 @@ public static class Reporter
 
         sb.AppendLine("## Sessions");
         sb.AppendLine();
-        sb.AppendLine("| # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |");
-        sb.AppendLine("|---|---|---|---|---|---|---|---|---|---|---|---|");
+        sb.AppendLine("| # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Overhead | Tokens |");
+        sb.AppendLine("|---|---|---|---|---|---|---|---|---|---|---|---|---|");
         foreach (var h in state.History.TakeLast(30))
         {
             var dur = h.EndedUtc.HasValue ? (h.EndedUtc.Value - h.StartedUtc).ToString(@"h\:mm") : "…";
             var att = h.Attempt > 0 ? h.Attempt.ToString() + (h.ResumeCount > 0 ? $"r{h.ResumeCount}" : "") : "";
             var toks = (h.TokensInput ?? 0) + (h.TokensOutput ?? 0) > 0 ? $"{h.TokensInput ?? 0:n0}/{h.TokensOutput ?? 0:n0}" : "";
-            sb.AppendLine($"| {h.Number} | {h.Stage} | {h.Kind} | {att} | {h.StartedUtc:MM-dd HH:mm} | {dur} | {h.Outcome?.ToString() ?? "running"} | {string.Join(" ", h.NewlyDone)} | {h.NewCommits.Count} | {h.GateSummary} | {(h.CostUsd.HasValue ? "$" + h.CostUsd.Value.ToString("0.0000") : "")} | {toks} |");
+            var overhead = h.OverheadCostUsd.HasValue && h.OverheadCostUsd.Value > 0 ? "$" + h.OverheadCostUsd.Value.ToString("0.0000") : "";
+            sb.AppendLine($"| {h.Number} | {h.Stage} | {h.Kind} | {att} | {h.StartedUtc:MM-dd HH:mm} | {dur} | {h.Outcome?.ToString() ?? "running"} | {string.Join(" ", h.NewlyDone)} | {h.NewCommits.Count} | {h.GateSummary} | {(h.CostUsd.HasValue ? "$" + h.CostUsd.Value.ToString("0.0000") : "")} | {overhead} | {toks} |");
         }
         sb.AppendLine();
 

@@ -42,6 +42,9 @@ public sealed class SessionRecord
     public List<string> NewlyDone { get; set; } = new();
     public string GateSummary { get; set; } = "";
     public decimal? CostUsd { get; set; }
+    /// <summary>O3: estimated overhead (gate runtime) cost for this session, stored as a separate
+    /// category from agent API cost so reports and TUI can show "Agent: $X | Gates: $Y".</summary>
+    public decimal? OverheadCostUsd { get; set; }
     public int? NumTurns { get; set; }
     public long? TokensInput { get; set; }
     public long? TokensOutput { get; set; }
@@ -136,8 +139,12 @@ public sealed class RunState
     /// <summary>Cumulative run tokens accrued since the last budget reset (C3). Same crash-survival
     /// semantics as <see cref="PerRunCostUsd"/>.</summary>
     public long PerRunTokens { get; set; }
+    /// <summary>O3: cumulative overhead cost (gate runtime estimate) since the last budget reset.
+    /// Same crash-survival semantics as <see cref="PerRunCostUsd"/>.</summary>
+    public decimal PerRunOverheadCostUsd { get; set; }
 
     public decimal TotalCostUsd => History.Sum(h => h.CostUsd ?? 0m);
+    public decimal TotalOverheadCostUsd => History.Sum(h => h.OverheadCostUsd ?? 0m);
     public long TotalTokensInput => History.Sum(h => h.TokensInput ?? 0);
     public long TotalTokensOutput => History.Sum(h => h.TokensOutput ?? 0);
     public long TotalTokensReasoning => History.Sum(h => h.TokensReasoning ?? 0);

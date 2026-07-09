@@ -30,6 +30,7 @@ public static class SnapshotBuilder
             DoneCount = track.Checkpoints.Count(c => c.IsDone),
             TotalCount = track.Checkpoints.Count,
             TotalCostUsd = state.TotalCostUsd,
+            OverheadCostUsd = state.TotalOverheadCostUsd,
             UntrackedSessions = state.History.Count(h => h.EndedUtc != null && h.CostUsd == null),
             TokensInput = state.TotalTokensInput,
             TokensOutput = state.TotalTokensOutput,
