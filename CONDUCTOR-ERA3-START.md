@@ -34,7 +34,7 @@ trap: conductor binary path resolved via ProcessPath — must be same as orchest
 | P3 | Stronger advisor — structured verdicts | DONE | 56ec088 | docs/era3/evidence/P3/ |
 | P4 | Squash bookkeeping — clean git history | DONE | f03f4a0 | docs/era3/evidence/P4/ |
 | P5 | Post-hoc audit replay | DONE | 587119d | docs/era3/evidence/P5/ |
-| I1 | MCP task server production wiring | DONE | 78e085b | docs/era3/evidence/I1/ |
+| I1 | MCP task server production wiring | DONE | (see git log) | docs/era3/evidence/I1/ |
 
 ## Quick Commands
 
