@@ -7,13 +7,13 @@ your stage in `.conductor/plans/conductor-debt.plan.json`.
 Branch: `feat/baton`. Driver: `C:\Code\conductor\bin\conductor.exe` (stable from master).
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #71 (C4) — small debt sweep (12 items): fake-agent `no-commits` + `true-red` mode, AltScreen headless test, StatusAgent CT, HookConfig validation, ComputeDepth memoize, completion exhaustive test, ScriptProvider shape validation, CA1031 closed, LessonsManager thread-safety, persona divergence test, Telegram callback round-trip.
-stage: C4 DONE. Build 0w/0e. 497 tests pass (4 new: SafetyNet, CompletionExhaustive, PersonaDivergence, CallbackFormat).
+last: session #72 (C5) — verified small debt sweep completed. All 12 items confirmed resolved in source (C4 did the work).
+stage: C5 DONE (verified). C4 delivered the 12-item sweep; this session audited + confirmed against code. Build 0w/0e. 497 tests pass.
 dirty: none.
-next: C5 — R1 TUI + CLI audit (6a-6e: --dry-run preview, inspect every TUI element, rate ✅/⚠️/❌ per workflow §Session 6).
-C3 QA: VERIFIED DONE — all 4 handoff claims confirmed against code + tests.
-followups: FU-B4-2 real-signal test, Telegram real-token integration, battery-collapse real-measurement → Needs Human Verification checklist (C8). FU-B0-5 cosmetic smoke cleanup noted.
-evidence: docs/baton/evidence/C4-gate.txt (497 tests, 4 new).
+next: C6 (= tracker C5) — R1 TUI + CLI audit (--dry-run preview, inspect every TUI element, rate ✅/⚠️/❌ per workflow §Session 6).
+C4 QA: skip (C4 ended advanced, all gates green; AGENTS.md protocol).
+followups→C8: FU-B4-2 real-signal, Telegram real-token, battery-collapse real-measurement.
+evidence: docs/baton/evidence/C5-gate.txt (12-item audit, build+test green).
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
