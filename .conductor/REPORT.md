@@ -1,11 +1,12 @@
 ﻿# Conductor — Conductor-Era3 run report
 
-_Updated 2026-07-09 07:14 UTC · branch `feat/era-v3` · HEAD `1ec8a8d`_
+_Updated 2026-07-09 07:25 UTC · branch `feat/era-v3` · HEAD `74c0808`_
 
 **Status:** Idle — plan complete EXCEPT skipped stages: C5
-**Stage:** P2 — QA parallelization · attempts used 0
-**Checkpoints:** 9/13 done · **Sessions run:** 87 · **Cost:** $4.4895 · **Tokens:** 3,919,095 in / 1,224,392 out / 661,844 think
+**Stage:** P3 — Stronger advisor — structured verdicts · attempts used 0
+**Checkpoints:** 10/13 done · **Sessions run:** 88 · **Cost:** $4.5595 · **Tokens:** 4,002,194 in / 1,239,227 out / 667,589 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1, C2, C3, C4, C6, C7, C8, D1, D2, D3, D4, O1, O2, O3, P1, P2
+**Pending:** full-battery phase gate for P3
 **⚠ Skipped stages (need human review):** C5
 
 ## Stage progress
@@ -21,7 +22,7 @@ _Updated 2026-07-09 07:14 UTC · branch `feat/era-v3` · HEAD `1ec8a8d`_
 | O3 | Cost overhead split | 1/1 | confirmed ✓ |
 | P1 | Dynamic plan reconfiguration | 1/1 | confirmed ✓ |
 | P2 | QA parallelization | 1/1 | confirmed ✓ |
-| P3 | Stronger advisor — structured verdicts | 0/1 | todo |
+| P3 | Stronger advisor — structured verdicts | 1/1 | gating… |
 | P4 | Squash bookkeeping — clean git history | 0/1 | todo |
 | P5 | Post-hoc audit replay | 0/1 | todo |
 | I1 | MCP task server production wiring | 0/1 | todo |
@@ -30,7 +31,6 @@ _Updated 2026-07-09 07:14 UTC · branch `feat/era-v3` · HEAD `1ec8a8d`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 58 | B10 | Deliver | 1 | 07-08 22:33 | 0:07 | Advanced | B10.1 | 2 | build:OK | $0.0385 | 45,295/10,325 |
 | 59 | B10 | Deliver | 1 | 07-08 22:41 | 0:20 | Advanced | B10.2 B10.3 B10.4 | 6 | build:OK | $0.1538 | 195,929/26,636 |
 | 60 | B10 | Audit | 1 | 07-08 23:02 | 0:06 | Progress |  | 1 |  | $0.0562 | 67,475/11,048 |
 | 61 | B11 | Deliver | 1 | 07-08 23:09 | 0:09 | Advanced | B11.1 | 2 | build:OK | $0.0436 | 47,917/12,787 |
@@ -60,12 +60,10 @@ _Updated 2026-07-09 07:14 UTC · branch `feat/era-v3` · HEAD `1ec8a8d`_
 | 85 | O3 | Deliver | 1 | 07-09 06:20 | 0:15 | Advanced | O3 | 2 | build:OK | $0.0575 | 60,880/13,942 |
 | 86 | P1 | Deliver | 1 | 07-09 06:37 | 0:18 | Advanced | P1 | 2 | build:OK | $0.0951 | 89,909/21,311 |
 | 87 | P2 | Deliver | 1 | 07-09 06:56 | 0:16 | Advanced | P2 | 2 | build:OK | $0.0874 | 86,289/15,834 |
+| 88 | P3 | Deliver | 1 | 07-09 07:14 | 0:10 | Advanced | P3 | 2 | build:OK | $0.0700 | 83,099/14,835 |
 
 ### Commits by session
 
-- **s80 (D2 Deliver)** — 2 commit(s):
-  - bf8c5a8 chore(conductor): tracker hash sync D2
-  - 9b85d7e feat(era3): D2 conductor gate — ad-hoc gate battery at HEAD, no agent spawned
 - **s81 (D3 Deliver)** — 1 commit(s):
   - 79a96a8 feat(era3): D3 heartbeat runtime toggle + amend strategy
 - **s82 (D4 Deliver)** — 1 commit(s):
@@ -85,6 +83,9 @@ _Updated 2026-07-09 07:14 UTC · branch `feat/era-v3` · HEAD `1ec8a8d`_
 - **s87 (P2 Deliver)** — 2 commit(s):
   - 51bf84b chore(era3): P2 tracker update — stage P2 DONE (2a0fdde)
   - 2a0fdde feat(era3): P2 QA parallelization — audit runs as read-only lane concurrently with next deliver
+- **s88 (P3 Deliver)** — 2 commit(s):
+  - 74c0808 chore(era3): P3 tracker update — stage P3 DONE (56ec088)
+  - 56ec088 feat(era3): P3 stronger advisor — structured AdvisorVerdict.Action enum
 
 ## Phase handovers (audit)
 
@@ -103,17 +104,17 @@ _Updated 2026-07-09 07:14 UTC · branch `feat/era-v3` · HEAD `1ec8a8d`_
 
 ## Last gate run
 
-build:OK · tests:OK
+build:OK
 
 ## Last session result
 
-> SESSION-RESULT: P2 QA parallelization landed in 2 commits (2a0fdde feat + 51bf84b chore). 530 tests pass, build 0w/0e, working tree clean, branch pushed. Stage P2 DONE — audit now runs as a read-only lane in a detached worktree concurrently with the next stage's deliver; HIGH findings queue a fix before advancing, LOW/MEDIUM findings injected into the deliver prompt. Next session should tackle P3 (stronger advisor with structured AdvisorVerdict.Action enum).
+> SESSION-RESULT: P3 Stronger advisor landed — `AdvisorAction` enum with 8 values (BlockRetry, ResetBudget, NeedsHuman, ApplyFix, RerunGates + legacy Retry/Resume/Skip). `AdvisorVerdict` now uses the enum (was string). `Orchestrator.ApplyVerdict` handles all 8 actions: BlockRetry exhausts budget + NeedsHuman, ResetBudget clears counters, ApplyFix runs `AdvisorConfig.RemediationScript`, RerunGates clears PendingFix. `AdvisorConfig.RemediationScript` is a new optional shell command field. `EscalateExhaustedStage` updated for enum comparisons. Both file templates + built-in PromptBuilder template updated with full action vocabulary. `TryParseAction` is case-insensitive, accepts snake_case and cam…
 
 ## Tracker handoff
 
 ```
-last: P2 — QA parallelization landed. Audit runs as read-only lane in detached worktree concurrently with next stage deliver. AuditConfig.EnableParallel (default true). HIGH findings queue fix before next deliver; LOW/MEDIUM injected into prompt. 530 tests pass (0w/0e).
-stage: P2 DONE. Next: P3 — Stronger advisor.
-next: Read workflow §P3. Structured AdvisorVerdict.Action enum — orchestrator honors it: BlockRetry, ResetBudget, NeedsHuman, ApplyFix, RerunGates.
-trap: Audit lane runs in detached worktree at pinned SHA — idempotent, read-only. Single-stage plans use sequential path. Parallel audit findings stored in state.json for crash resilience.
+last: P3 — Stronger advisor landed. AdvisorAction enum: BlockRetry, ResetBudget, NeedsHuman, ApplyFix, RerunGates + legacy Retry/Resume/Skip. Orchestrator.ApplyVerdict handles all. AdvisorConfig.RemediationScript for ApplyFix. 551 tests pass (0w/0e).
+stage: P3 DONE. Next: P4 — Squash bookkeeping.
+next: Read workflow §P4. Collapse chore(conductor): commits on phase confirm with git rebase -i. Feature/audit commits preserved.
+trap: EscalateExhaustedStage now uses AdvisorAction enum (not string). Legacy templates still parse — TryParseAction is case-insensitive, accepts snake_case and camelCase.
 ```
