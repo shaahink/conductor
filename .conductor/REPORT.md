@@ -1,11 +1,12 @@
 ﻿# Conductor — Conductor-Era3 run report
 
-_Updated 2026-07-09 07:26 UTC · branch `feat/era-v3` · HEAD `a01bc5b`_
+_Updated 2026-07-09 07:38 UTC · branch `feat/era-v3` · HEAD `5b65b0b`_
 
 **Status:** Idle — plan complete EXCEPT skipped stages: C5
-**Stage:** P3 — Stronger advisor — structured verdicts · attempts used 0
-**Checkpoints:** 10/13 done · **Sessions run:** 88 · **Cost:** $4.5595 · **Tokens:** 4,002,194 in / 1,239,227 out / 667,589 think
+**Stage:** P4 — Squash bookkeeping — clean git history · attempts used 0
+**Checkpoints:** 11/13 done · **Sessions run:** 89 · **Cost:** $4.6157 · **Tokens:** 4,054,324 in / 1,249,222 out / 686,093 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1, C2, C3, C4, C6, C7, C8, D1, D2, D3, D4, O1, O2, O3, P1, P2, P3
+**Pending:** full-battery phase gate for P4
 **⚠ Skipped stages (need human review):** C5
 
 ## Stage progress
@@ -22,7 +23,7 @@ _Updated 2026-07-09 07:26 UTC · branch `feat/era-v3` · HEAD `a01bc5b`_
 | P1 | Dynamic plan reconfiguration | 1/1 | confirmed ✓ |
 | P2 | QA parallelization | 1/1 | confirmed ✓ |
 | P3 | Stronger advisor — structured verdicts | 1/1 | confirmed ✓ |
-| P4 | Squash bookkeeping — clean git history | 0/1 | todo |
+| P4 | Squash bookkeeping — clean git history | 1/1 | gating… |
 | P5 | Post-hoc audit replay | 0/1 | todo |
 | I1 | MCP task server production wiring | 0/1 | todo |
 
@@ -30,7 +31,6 @@ _Updated 2026-07-09 07:26 UTC · branch `feat/era-v3` · HEAD `a01bc5b`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 59 | B10 | Deliver | 1 | 07-08 22:41 | 0:20 | Advanced | B10.2 B10.3 B10.4 | 6 | build:OK | $0.1538 | 195,929/26,636 |
 | 60 | B10 | Audit | 1 | 07-08 23:02 | 0:06 | Progress |  | 1 |  | $0.0562 | 67,475/11,048 |
 | 61 | B11 | Deliver | 1 | 07-08 23:09 | 0:09 | Advanced | B11.1 | 2 | build:OK | $0.0436 | 47,917/12,787 |
 | 62 | B11 | Deliver | 1 | 07-08 23:19 | 0:21 | Advanced | B11.2 B11.3 B11.4 | 6 | build:OK | $0.1053 | 75,494/33,712 |
@@ -60,11 +60,10 @@ _Updated 2026-07-09 07:26 UTC · branch `feat/era-v3` · HEAD `a01bc5b`_
 | 86 | P1 | Deliver | 1 | 07-09 06:37 | 0:18 | Advanced | P1 | 2 | build:OK | $0.0951 | 89,909/21,311 |
 | 87 | P2 | Deliver | 1 | 07-09 06:56 | 0:16 | Advanced | P2 | 2 | build:OK | $0.0874 | 86,289/15,834 |
 | 88 | P3 | Deliver | 1 | 07-09 07:14 | 0:10 | Advanced | P3 | 2 | build:OK | $0.0700 | 83,099/14,835 |
+| 89 | P4 | Deliver | 1 | 07-09 07:26 | 0:11 | Advanced | P4 | 1 | build:OK | $0.0562 | 52,130/9,995 |
 
 ### Commits by session
 
-- **s81 (D3 Deliver)** — 1 commit(s):
-  - 79a96a8 feat(era3): D3 heartbeat runtime toggle + amend strategy
 - **s82 (D4 Deliver)** — 1 commit(s):
   - f40a974 feat(era3): D4 mid-session control feedback
 - **s83 (O1 Deliver)** — 2 commit(s):
@@ -85,6 +84,8 @@ _Updated 2026-07-09 07:26 UTC · branch `feat/era-v3` · HEAD `a01bc5b`_
 - **s88 (P3 Deliver)** — 2 commit(s):
   - 74c0808 chore(era3): P3 tracker update — stage P3 DONE (56ec088)
   - 56ec088 feat(era3): P3 stronger advisor — structured AdvisorVerdict.Action enum
+- **s89 (P4 Deliver)** — 1 commit(s):
+  - 5b65b0b feat(era3): P4 squash bookkeeping — collapse chore(conductor): commits on phase confirm
 
 ## Phase handovers (audit)
 
@@ -103,17 +104,17 @@ _Updated 2026-07-09 07:26 UTC · branch `feat/era-v3` · HEAD `a01bc5b`_
 
 ## Last gate run
 
-build:OK · tests:OK
+build:OK
 
 ## Last session result
 
-> SESSION-RESULT: P3 Stronger advisor landed — `AdvisorAction` enum with 8 values (BlockRetry, ResetBudget, NeedsHuman, ApplyFix, RerunGates + legacy Retry/Resume/Skip). `AdvisorVerdict` now uses the enum (was string). `Orchestrator.ApplyVerdict` handles all 8 actions: BlockRetry exhausts budget + NeedsHuman, ResetBudget clears counters, ApplyFix runs `AdvisorConfig.RemediationScript`, RerunGates clears PendingFix. `AdvisorConfig.RemediationScript` is a new optional shell command field. `EscalateExhaustedStage` updated for enum comparisons. Both file templates + built-in PromptBuilder template updated with full action vocabulary. `TryParseAction` is case-insensitive, accepts snake_case and cam…
+> SESSION-RESULT: P4 — Squash bookkeeping landed clean (commit `5b65b0b`). `Git.SquashChoreCommits` collapses consecutive `chore(conductor):` commits on phase confirm via a PowerShell-based `GIT_SEQUENCE_EDITOR` rebase script. Idempotency is enforced by `RunState.SquashedStages`; stage start heads are persisted in `StageStartHeads`. The squash is best-effort — failure is logged but never blocks confirmation. All 555 tests pass, 0w/0e. QA of P3 confirmed all claims verified. Next session should deliver P5 (post-hoc audit replay): `conductor audit <stage> --replay` as a read-only diagnostic outputting to `.conductor/audits/`.
 
 ## Tracker handoff
 
 ```
-last: P3 — Stronger advisor landed. AdvisorAction enum: BlockRetry, ResetBudget, NeedsHuman, ApplyFix, RerunGates + legacy Retry/Resume/Skip. Orchestrator.ApplyVerdict handles all. AdvisorConfig.RemediationScript for ApplyFix. 551 tests pass (0w/0e).
-stage: P3 DONE. Next: P4 — Squash bookkeeping.
-next: Read workflow §P4. Collapse chore(conductor): commits on phase confirm with git rebase -i. Feature/audit commits preserved.
-trap: EscalateExhaustedStage now uses AdvisorAction enum (not string). Legacy templates still parse — TryParseAction is case-insensitive, accepts snake_case and camelCase.
+last: P4 — Squash bookkeeping landed. Git.SquashChoreCommits collapses consecutive chore(conductor): commits on phase confirm via GIT_SEQUENCE_EDITOR rebase. Idempotent via SquashedStages hashset. StageStartHeads dictionary persists start heads for the rebase window. Best-effort: failure logged, never blocks confirm. 555 tests pass (0w/0e).
+stage: P4 DONE. Next: P5 — Post-hoc audit replay.
+next: Read workflow §P5. conductor audit <stage> --replay against completed phases. Read-only diagnostic. Output to .conductor/audits/<stage>-replay-<ts>.md.
+trap: The squash is a git rebase -i behind GIT_SEQUENCE_EDITOR — needs PowerShell on Windows. Running without PS will skip squash gracefully (logged warning).
 ```
