@@ -1,32 +1,11 @@
 ﻿# Conductor — Baton run report
 
-_Updated 2026-07-08 23:59 UTC · branch `feat/baton` · HEAD `2be98a9`_
+_Updated 2026-07-09 00:02 UTC · branch `feat/baton` · HEAD `2362697`_
 
-**Status:** Running — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
-**Stage:** B12 — Controlled parallelism · attempts used 0 · working ▸ B12.1
-**Checkpoints:** 61/65 done · **Sessions run:** 64 · **Cost:** $2.7965 · **Tokens:** 2,073,995 in / 876,020 out / 415,562 think
+**Status:** Idle — B4 stalled 6x due to DNS outage (agent API unreachable) — network restored, budget reset
+**Stage:** B12 — Controlled parallelism · attempts used 0 · working ▸ B12.2
+**Checkpoints:** 62/65 done · **Sessions run:** 64 · **Cost:** $2.8709 · **Tokens:** 2,152,705 in / 895,077 out / 424,903 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11
-
-## Latest activity (live)
-
-_Session #64 (Deliver) · running 10m · last output 6s ago · $0.0574_
-
-**Thinking:**
-> Build succeeded with 0 warnings and 0 errors. Now I need to write the tests for B12.1. Let me also run the existing tests first to make sure nothing regressed.
-> All 432 tests pass. Now I need to write the B12.1 tests. Let me create the test file. The test file needs to prove:  1. A read-only analysis lane runs in a scratch directory (never touches the working tree) 2. It produces an artifact at `.conductor/lanes/{laneId}.md` 3. The artifact is injected into…
-> Now let me build and run the B12.1 tests to see if they pass.
-
-**Recent actions:**
-- `00:57:19` » read src\Conductor\Core\TrackerParser.cs
-- `00:57:25` · Fix all the errors:
-- `00:57:25` » edit src\Conductor\Core\Orchestrator.cs
-- `00:57:35` » edit src\Conductor\Core\Orchestrator.cs
-- `00:57:52` » write src\Conductor\Core\LaneRunner.cs
-- `00:58:16` » bash dotnet build Conductor.slnx 2>&1
-- `00:58:21` · Build green (0w/0e). Now let me run the existing tests to ensure no regressions, then write the B12.1 tests:
-- `00:58:41` » bash dotnet test Conductor.slnx 2>&1
-- `00:59:04` » write tests\Conductor.Tests\B12_1Tests.cs
-- `00:59:04` · All 432 tests pass. Now write the B12.1 tests:
 
 ## Stage progress
 
@@ -44,7 +23,7 @@ _Session #64 (Deliver) · running 10m · last output 6s ago · $0.0574_
 | B9 | Task graph + smart session management | 5/5 | confirmed ✓ |
 | B10 | Advanced orchestration | 4/4 | confirmed ✓ |
 | B11 | Close-out + Shamshir owner-gated proof | 4/4 | confirmed ✓ |
-| B12 | Controlled parallelism | 0/4 | **← active** |
+| B12 | Controlled parallelism | 1/4 | **← active** |
 
 ## Sessions
 
@@ -79,14 +58,10 @@ _Session #64 (Deliver) · running 10m · last output 6s ago · $0.0574_
 | 61 | B11 | Deliver | 1 | 07-08 23:09 | 0:09 | Advanced | B11.1 | 2 | build:OK | $0.0436 | 47,917/12,787 |
 | 62 | B11 | Deliver | 1 | 07-08 23:19 | 0:21 | Advanced | B11.2 B11.3 B11.4 | 6 | build:OK | $0.1053 | 75,494/33,712 |
 | 63 | B11 | Audit | 1 | 07-08 23:41 | 0:07 | Progress |  | 2 |  | $0.0558 | 59,800/11,762 |
-| 64 | B12 | Deliver | 1 | 07-08 23:49 | … | running |  | 0 |  |  |  |
+| 64 | B12 | Deliver | 1 | 07-08 23:49 | 0:13 | Advanced | B12.1 | 2 | build:OK | $0.0744 | 78,710/19,057 |
 
 ### Commits by session
 
-- **s56 (B9 Deliver)** — 3 commit(s):
-  - 8c4aa1e chore(bB9.5): fill commit hash in tracker row
-  - 1fa665c feat(bB9.5): task views in CLI/TUI/Telegram
-  - bb0e899 chore(conductor): s56 B9 working ▸B9.5 @ 23:21
 - **s57 (B9 Audit)** — 1 commit(s):
   - c603a3e fix(bB9): audit — validate MCP task args + reject invalid status/non-existent task, unique task IDs, skip duplicate TaskAdded, clean whitespace titles, harden soft-break nulls
 - **s58 (B10 Deliver)** — 2 commit(s):
@@ -114,6 +89,9 @@ _Session #64 (Deliver) · running 10m · last output 6s ago · $0.0574_
 - **s63 (B11 Audit)** — 2 commit(s):
   - 75f78bd docs(bB11): audit handover — 5 bugs fixed, 3 followups created, honest weak/deferred inventory
   - ad3abde fix(bB11): audit — PS completion new-plan/completion cases, pwsh ExecutionPolicy, SafeParseTracker warning
+- **s64 (B12 Deliver)** — 2 commit(s):
+  - 2362697 feat(bB12.1): Tier A read-only analysis lanes + artifact wiring
+  - e808338 chore(conductor): s64 B12 working ▸B12.1 @ 00:59
 
 ## Phase handovers (audit)
 
@@ -132,20 +110,20 @@ _Session #64 (Deliver) · running 10m · last output 6s ago · $0.0574_
 
 ## Last gate run
 
-build:OK · tests:OK
+build:OK
 
 ## Last session result
 
-> SESSION-RESULT: B11 audit complete — 5 bugs fixed (PS completion had broken new-plan/completion tab-complete + hidden-options guard, missing -ExecutionPolicy Bypass on non-Windows pwsh, and silent SafeParseTracker catch violating A15), 432 tests pass 0w/0e, 3 files changed within budget; 3 followups created (FU-B11-1 completion exhaustiveness test, FU-B11-2 Linux clean-clone, FU-B11-3 real-credential cTrader path) and written to `.conductor/handovers/B11.md` with an honest weak/deferred inventory — pushed to `feat/baton`.
+> SESSION-RESULT: B12.1 landed (commit `2362697`) — Tier A read-only analysis lanes: `AnalysisLaneConfig` model, `LaneRunner` (scratch-dir isolation, never touches repo), `LaneArtifactBattery` (IPromptBattery injecting `.conductor/lanes/*.md` into next prompt), Orchestrator integration (spawns lanes before `RunSession`, polls in agent loop, collects after). Gate: build 0w/0e, 441 tests pass (9 new B12.1 tests proving isolation + artifact capture + prompt injection). 6 files changed (2 new + 4 mod), well within budget. B12.2 (worker pool + concurrency cap + scheduling + `LaneStarted`/`LaneFinished` events) is next. What was hard: designing the lane polling inside the synchronous agent loop with…
 
 ## Tracker handoff
 
 ```
-last: session #64 (B11 audit) — static audit completed: 5 bugs fixed (PS completion new-plan/completion/options, pwsh ExecutionPolicy, SafeParseTracker warning). Gate: 432 pass, 0w/0e.
-stage: B11 DONE + AUDITED. Handover written (.conductor/handovers/B11.md). 3 followups created (FU-B11-1..3).
+last: session #65 (B12.1) — Tier A read-only analysis lanes: LaneRunner + LaneArtifactBattery + Orchestrator integration. Gate: 441 pass, 0w/0e.
+stage: B12.1 DONE. B12.2 (worker pool + concurrency cap + scheduling + lane events) is next.
 dirty: none.
-next: B12.1 (Tier A read-only analysis lanes) or B12 fix-lanes (tracked followups in .conductor/followups.md).
-QA-B11: verified all 4 checkpoints + diff audit; cross-platform shell dispatch, dotnet tool packaging, completion scripts, doctor, clean-clone battery, Shamshir owner-gate acceptance.
-followups: FU-B10-1/2 reassigned to B12; new FU-B11-1 (completion exhaustiveness test), FU-B11-2 (Linux clean-clone), FU-B11-3 (real-credential cTrader path).
-evidence: docs/baton/evidence/B11.{1,2,3,4}-gate.txt, docs/baton/audits/B11-shamshir-p2.2.md, .conductor/handovers/B11.md.
+next: B12.2 or B12 fix-lanes (FU-B11-1 completion exhaustiveness test, FU-B10-1 integration harness, FU-B10-2 battery-collapse measurement).
+QA-B11: verified — 432 pass, dotnet pack 1.6MB nupkg, 23 B11 tests green, build 0w/0e. QA-PASS.
+followups: FU-B11-1/2/3, FU-B10-1/2, FU-B0-4/5/6/7 remain OPEN (many are post-B12 or integration-harness items).
+evidence: docs/baton/evidence/B12.1-gate.txt (9 tests + build), test file tests/Conductor.Tests/B12_1Tests.cs.
 ```
