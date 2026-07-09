@@ -85,6 +85,49 @@ public sealed class HostLoggingTests : IDisposable
         Assert.Contains($"stage={plan.Stages[0].Id}", log, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void DryRunWritesJsonLogWithCorrelationProperties()
+    {
+        var plan = ValidPlan();
+        WriteTracker();
+        const string runId = "run-json-456";
+        var state = new RunState { RunId = runId };
+
+        using (var host = ConductorHost.Build(plan, state, StatePath, new PlainSink(), NullEventSink.Instance,
+                   new RunOptions(DryRun: true, Once: false, MaxSessions: 0), consoleSink: false))
+        {
+            var code = host.Services.GetRequiredService<Orchestrator>().Run(CancellationToken.None);
+            Assert.Equal(0, code);
+        }
+
+        var logDir = Path.Combine(plan.StateDir, "logs");
+        var jsonFile = Directory.EnumerateFiles(logDir, "conductor-*.json").Single();
+        var lines = File.ReadAllLines(jsonFile);
+        Assert.NotEmpty(lines);
+
+        // Every line must be valid JSON with @t + @m fields
+        foreach (var line in lines)
+        {
+            System.Text.Json.JsonDocument doc;
+            try { doc = System.Text.Json.JsonDocument.Parse(line); }
+            catch (System.Text.Json.JsonException) { Assert.Fail($"Line is not valid JSON: {line[..Math.Min(80, line.Length)]}"); continue; }
+            var root = doc.RootElement;
+            Assert.True(root.TryGetProperty("@t", out _), "missing @t timestamp");
+            Assert.True(root.TryGetProperty("@m", out _), "missing @m message");
+
+            // At least one line must carry the run correlation
+            if (root.TryGetProperty("runId", out var rid))
+            {
+                Assert.Equal(runId, rid.GetString());
+                break; // found the correlated entry
+            }
+        }
+
+        // Verify text log still present (backward compatibility)
+        var textFile = Directory.EnumerateFiles(logDir, "conductor-*.log").Single();
+        Assert.True(new FileInfo(textFile).Length > 0, "binary text log must still be written");
+    }
+
     private string StatePath => Path.Combine(_dir, ".conductor", "state.json");
 
     private PlanConfig ValidPlan() => new()

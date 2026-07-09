@@ -45,6 +45,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     // Correlation state attached to every structured log line (B2.5): runId + stage + session number
     // come from RunState; the gate marker is set while a battery runs.
     private string? _curGate;
+    private string? _outcome;
     private string? _gotoStageId;
     private bool _rollbackForce;
     private string? _heartbeatToggleValue;
@@ -589,7 +590,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         var gatesGreen = GateRunner.AllRequiredPassed(gates);
         var dirty = Git.IsDirty(plan.Repo);
 
-        Log($"verdict inputs: gates {(gatesGreen ? "green" : "RED")} · commits {rec.NewCommits.Count} · newly DONE [{string.Join(",", rec.NewlyDone)}] · dirty {(dirty ? "YES" : "no")}");
+        Log($"verdict inputs: gates {(gatesGreen ? "green" : "RED")} · commits {rec.NewCommits.Count} · newly DONE [{string.Join(",", rec.NewlyDone)}] · dirty {(dirty ? "YES" : "no")}", gatesGreen ? "pass" : "fail");
 
         if (newlyBlocked.Count > 0 && plan.PauseOnBlocked)
         {
@@ -604,7 +605,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             state.AttemptsThisStage = rec.NewlyDone.Count > 0 ? 0 : state.AttemptsThisStage + 1;
             state.PendingFix = null;
             if (dirty) Log($"note: working tree left dirty after green session: {Git.DirtySummary(plan.Repo)}");
-            Log($"session #{rec.Number} {rec.Outcome} — {(rec.NewlyDone.Count > 0 ? string.Join(", ", rec.NewlyDone) + " done" : "no checkpoint flipped yet")}");
+            Log($"session #{rec.Number} {rec.Outcome} — {(rec.NewlyDone.Count > 0 ? string.Join(", ", rec.NewlyDone) + " done" : "no checkpoint flipped yet")}", rec.Outcome?.ToString().ToLowerInvariant() ?? "unknown");
 
             // perPhase: if this session completed the stage, schedule the audit / confirming battery.
             if (plan.PerPhaseGates && postTrack.StageDone(stage.Id))
@@ -626,7 +627,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                                   $" · working tree: {(dirty ? "DIRTY — " + Git.DirtySummary(plan.Repo) : "clean")}" +
                                   (agentErrored ? " · agent process reported an error result" : ""),
             };
-            Log($"session #{rec.Number} {rec.Outcome} — queuing fix session (attempt {state.AttemptsThisStage}/{MaxAttempts(stage)})");
+            Log($"session #{rec.Number} {rec.Outcome} — queuing fix session (attempt {state.AttemptsThisStage}/{MaxAttempts(stage)})", rec.Outcome?.ToString().ToLowerInvariant() ?? "unknown");
         }
         state.Status = RunStatus.Idle;
         SaveAndReport();
@@ -667,7 +668,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             }
             green = GateRunner.AllRequiredPassed(gates);
             EmitGates(gates, "phase");
-            Log($"phase gate {pg.StageId} finished in {sw.Elapsed.TotalSeconds:0}s — {(green ? "GREEN" : "RED")}: {GateRunner.Summary(gates)}");
+            Log($"phase gate {pg.StageId} finished in {sw.Elapsed.TotalSeconds:0}s — {(green ? "GREEN" : "RED")}: {GateRunner.Summary(gates)}", green ? "pass" : "fail");
             if (green) state.LastGreenGateSig = sig;
         }
 
@@ -844,6 +845,16 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             GateRunner.RunHook(plan, plan.Setup, "setup", Log, ct);
             var gates = GateRunner.RunAll(plan, Log, ct, fastOnly, state.CurrentStage, sink.GateProgress);
             GateRunner.RunHook(plan, plan.Teardown, "teardown", Log, ct);
+            // Emit per-gate summary lines with outcome scope so JSON queries can filter on
+            // e.g. gate=build and outcome=fail.
+            foreach (var g in gates)
+            {
+                var outcome = g.Skipped ? "skip" : g.Passed ? "pass" : g.Optional ? "warn" : "fail";
+                var prevGate = _curGate;
+                _curGate = g.Name;
+                Log($"gate {g.Name}: {(g.Skipped ? "SKIP" : g.Passed ? "PASS" : g.Optional ? "WARN" : "FAIL")} ({g.Duration.TotalSeconds:0}s)", outcome);
+                _curGate = prevGate;
+            }
             return gates;
         }
         finally { _curGate = null; }
@@ -1498,14 +1509,25 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
     private void Log(string line)
     {
+        Log(line, null);
+    }
+
+    private void Log(string line, string? outcome)
+    {
         var stamped = $"[{DateTime.Now:HH:mm:ss}] {line}";
         // Legacy plain log (.conductor/conductor.log) kept additively for humans/back-compat; the
         // structured Serilog sink under .conductor/logs/ is the authoritative record.
         try { File.AppendAllText(_logPath, stamped + Environment.NewLine); }
         catch (IOException) { /* plain log is best-effort; the structured log below still records it */ }
         catch (UnauthorizedAccessException) { /* ditto — never let narration I/O break the run */ }
-        using (BeginCorrelationScope())
-            logger.LogInformation("{ConductorMessage}", line);
+        var prev = _outcome;
+        _outcome = outcome;
+        try
+        {
+            using (BeginCorrelationScope())
+                logger.LogInformation("{ConductorMessage}", line);
+        }
+        finally { _outcome = prev; }
         sink.Log(stamped);
     }
 
@@ -1518,6 +1540,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         if (state.SessionCounter > 0) scope["sessionId"] = state.SessionCounter.ToString();
         if (!string.IsNullOrEmpty(state.CurrentStage)) scope["stage"] = state.CurrentStage;
         if (_curGate != null) scope["gate"] = _curGate;
+        if (_outcome != null) scope["outcome"] = _outcome;
         return scope.Count > 0 ? logger.BeginScope(scope) : null;
     }
 

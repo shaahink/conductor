@@ -47,6 +47,8 @@ app.Configure(c =>
         .WithDescription("Toggle heartbeat on|off at runtime without restarting conductor.");
     c.AddCommand<TasksCommand>("tasks")
         .WithDescription("Show task graph: sub-tasks per checkpoint from the event log.");
+    c.AddCommand<LogCommand>("log")
+        .WithDescription("Query the structured JSON log. Filter by stage, gate, outcome, etc. Example: conductor log --query \"stage=P7 and gate=build and outcome=fail\"");
     c.AddCommand<NewPlanCommand>("new-plan")
         .WithDescription("Scaffold a new plan + TRACKER.md from a built-in template (minimal/dotnet/node/shamshir).");
     c.AddCommand<DoctorCommand>("doctor")

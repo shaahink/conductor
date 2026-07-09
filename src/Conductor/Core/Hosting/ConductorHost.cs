@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Events;
+using Serilog.Formatting.Compact;
 
 namespace Conductor.Core.Hosting;
 
@@ -57,6 +58,11 @@ public static class ConductorHost
                   path: Path.Combine(logDir, "conductor-.log"),
                   rollingInterval: RollingInterval.Day,
                   outputTemplate: FileTemplate,
+                  shared: true)
+              .WriteTo.File(
+                  new RenderedCompactJsonFormatter(),
+                  path: Path.Combine(logDir, "conductor-.json"),
+                  rollingInterval: RollingInterval.Day,
                   shared: true);
             // The live dashboard owns stdout; a console sink would corrupt the TUI, so it is only
             // attached for plain/dry-run/redirected runs where narration is already going to stdout.

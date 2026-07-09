@@ -25,7 +25,7 @@ trap: D3 commit tracker fix (0d199f1→79a96a8). PeriodicTimer still deferred. H
 | D1 | conductor status — LLM-powered status report | DONE (verified) | 8b9ec2b | docs/era3/evidence/D1/ |
 | D2 | conductor gate — ad-hoc gate re-run | DONE | 9b85d7e | docs/era3/evidence/D2/ |
 | D3 | Heartbeat runtime toggle + amend strategy | DONE | 79a96a8 | docs/era3/evidence/D3/ |
-| D4 | Mid-session control feedback | DONE | 4bc5760 | docs/era3/evidence/D4/ |
+| D4 | Mid-session control feedback | DONE | f40a974 | docs/era3/evidence/D4/ |
 | O1 | Structured log + conductor log --query | TODO | — | — |
 | O2 | Budget intelligence + network health gate | TODO | — | — |
 | O3 | Cost overhead split | TODO | — | — |
