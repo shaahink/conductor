@@ -7,13 +7,13 @@ your stage in `.conductor/plans/conductor-debt.plan.json`.
 Branch: `feat/baton`. Driver: `C:\Code\conductor\bin\conductor.exe` (stable from master).
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: session #72 (C5) — verified small debt sweep completed. All 12 items confirmed resolved in source (C4 did the work).
-stage: C5 DONE (verified). C4 delivered the 12-item sweep; this session audited + confirmed against code. Build 0w/0e. 497 tests pass.
+last: session #73 (plan C5/Small debt sweep, attempt 2/2) — independently re-verified all 12 items against fresh source. All confirmed resolved.
+stage: tracker C4 (Small debt sweep) DONE + independently verified. Build 0w/0e. 497 tests pass.
 dirty: none.
-next: C6 (= tracker C5) — R1 TUI + CLI audit (--dry-run preview, inspect every TUI element, rate ✅/⚠️/❌ per workflow §Session 6).
-C4 QA: skip (C4 ended advanced, all gates green; AGENTS.md protocol).
-followups→C8: FU-B4-2 real-signal, Telegram real-token, battery-collapse real-measurement.
-evidence: docs/baton/evidence/C5-gate.txt (12-item audit, build+test green).
+next: plan C6 / tracker C5 — R1 TUI + CLI audit (--dry-run preview, inspect every TUI element, rate per workflow §Session 6).
+QA (session #72): PASS — all 12 claims verified. No stale claims. No gaps requiring fix.
+followups→C8 (human verification): FU-B4-2 real-signal, Telegram real-token, battery-collapse real-measurement.
+evidence: docs/baton/evidence/C5-s73-gate.txt (fresh gate battery + independent 12-item verification).
 
 ## Baseline numbers (2026-07-08, before B0 — re-measure, drift >5% without explanation blocks)
 
