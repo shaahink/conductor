@@ -1,11 +1,12 @@
 ﻿# Conductor — Conductor-Era3 run report
 
-_Updated 2026-07-09 04:52 UTC · branch `feat/era-v3` · HEAD `9cc4262`_
+_Updated 2026-07-09 05:03 UTC · branch `feat/era-v3` · HEAD `bf8c5a8`_
 
 **Status:** Idle — plan complete EXCEPT skipped stages: C5
-**Stage:** D1 — conductor status — LLM-powered status report · attempts used 0
-**Checkpoints:** 1/13 done · **Sessions run:** 79 · **Cost:** $3.9000 · **Tokens:** 3,341,598 in / 1,093,114 out / 578,904 think
+**Stage:** D2 — conductor gate — ad-hoc gate re-run · attempts used 0
+**Checkpoints:** 2/13 done · **Sessions run:** 80 · **Cost:** $3.9570 · **Tokens:** 3,415,410 in / 1,101,487 out / 584,389 think
 **Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1, C2, C3, C4, C6, C7, C8, D1
+**Pending:** full-battery phase gate for D2
 **⚠ Skipped stages (need human review):** C5
 
 ## Stage progress
@@ -13,7 +14,7 @@ _Updated 2026-07-09 04:52 UTC · branch `feat/era-v3` · HEAD `9cc4262`_
 | Stage | Title | Done | State |
 |---|---|---|---|
 | D1 | conductor status — LLM-powered status report | 1/1 | confirmed ✓ |
-| D2 | conductor gate — ad-hoc gate re-run | 0/1 | todo |
+| D2 | conductor gate — ad-hoc gate re-run | 1/1 | gating… |
 | D3 | Heartbeat runtime toggle + amend strategy | 0/1 | todo |
 | D4 | Mid-session control feedback | 0/1 | todo |
 | O1 | Structured log + conductor log --query | 0/1 | todo |
@@ -30,7 +31,6 @@ _Updated 2026-07-09 04:52 UTC · branch `feat/era-v3` · HEAD `9cc4262`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 50 | B9 | Fix | 2 | 07-08 21:22 | 0:00 | AgentError |  | 0 | build:OK |  |  |
 | 51 | B9 | Fix | 3 | 07-08 21:23 | 0:00 | AgentError |  | 0 | build:OK |  |  |
 | 52 | B9 | Fix | 4 | 07-08 21:24 | 0:00 | AgentError |  | 0 | build:OK |  |  |
 | 53 | B9 | Fix | 5 | 07-08 21:26 | 0:06 | Advanced | B9.1 | 2 | build:OK | $0.0212 | 29,881/4,286 |
@@ -60,11 +60,10 @@ _Updated 2026-07-09 04:52 UTC · branch `feat/era-v3` · HEAD `9cc4262`_
 | 77 | C8 | Deliver | 1 | 07-09 02:54 | 0:05 | Advanced | C8 | 1 | build:OK | $0.0343 | 43,321/5,355 |
 | 78 | D1 | Deliver | 1 | 07-09 04:26 | 0:18 | Advanced | D1 | 1 | build:OK | $0.0646 | 69,470/17,593 |
 | 79 | D1 | Fix | 2 | 07-09 04:45 | 0:05 | Progress |  | 2 | build:OK | $0.0191 | 24,463/3,510 |
+| 80 | D2 | Deliver | 1 | 07-09 04:52 | 0:10 | Advanced | D2 | 2 | build:OK | $0.0570 | 73,812/8,373 |
 
 ### Commits by session
 
-- **s72 (C5 Deliver)** — 1 commit(s):
-  - 956277a audit: C5 — verified small debt sweep (12 items confirmed resolved), build 0w/0e, 497 tests
 - **s73 (C5 Deliver)** — 1 commit(s):
   - c65b69e audit: C5-S73 — re-verified small debt sweep (12 items), build 0w/0e, 497 tests
 - **s74 (C6 Deliver)** — 2 commit(s):
@@ -82,6 +81,9 @@ _Updated 2026-07-09 04:52 UTC · branch `feat/era-v3` · HEAD `9cc4262`_
 - **s79 (D1 Fix)** — 2 commit(s):
   - b62abde chore(conductor): tracker hash sync
   - 8b9ec2b feat(era3): D1 fix — correct stderr assertion in RunShell_Bash_StderrCaptured test
+- **s80 (D2 Deliver)** — 2 commit(s):
+  - bf8c5a8 chore(conductor): tracker hash sync D2
+  - 9b85d7e feat(era3): D2 conductor gate — ad-hoc gate battery at HEAD, no agent spawned
 
 ## Phase handovers (audit)
 
@@ -100,17 +102,17 @@ _Updated 2026-07-09 04:52 UTC · branch `feat/era-v3` · HEAD `9cc4262`_
 
 ## Last gate run
 
-build:OK · tests:OK
+build:OK
 
 ## Last session result
 
-> SESSION-RESULT: Root cause was a test bug, not a production bug — `RunShell_Bash_StderrCaptured` asserted `r.Output` (stdout) for stderr content, but `ProcResult` correctly separates stdout (`Output`) and stderr (`StdErr`) into distinct fields since the B11 cross-platform shell refactor. Changed the assertion to `r.StdErr`. All 510 tests pass, build 0w/0e. Tracker updated with verified D1 status and commit `b62abde`. Pushed to `feat/era-v3`. D1 is genuinely green; D2 (`conductor gate`) is next.
+> SESSION-RESULT: D2 `conductor gate` landed — both fast and full modes (`--full`) re-run the gate battery at HEAD without spawning an agent session. If all required gates pass and a PendingFix existed, it is cleared and state set to Idle. Build 0w/0e, 510 tests pass. Evidence at `docs/era3/evidence/D2/`. Next session (D3) should implement the heartbeat runtime toggle, H key in TUI, and amend strategy.
 
 ## Tracker handoff
 
 ```
-last: D1 fix-session — stderr test assertion corrected (r.StdErr vs r.Output). All 510 tests pass, 0w/0e.
-stage: D1 DONE (verified). Next: D2 — conductor gate (ad-hoc gate re-run).
-next: Read workflow §D2. Add GateCommand.
+last: D2 — conductor gate command landed. gate (fast) + gate --full (full battery) both working. 510 tests, 0w/0e.
+stage: D2 DONE. Next: D3 — Heartbeat runtime toggle + amend strategy.
+next: Read workflow §D3. Add HeartbeatCommand, H key in TUI, PeriodicTimer.
 trap: None — build + 510 tests green.
 ```
