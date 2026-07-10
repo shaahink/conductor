@@ -24,7 +24,7 @@ public sealed class RunDb : IDisposable
     private readonly TimeProvider _clock;
     private bool _initialized;
 
-    public static readonly int CurrentSchemaVersion = 1;
+    public static readonly int CurrentSchemaVersion = 2;
 
     public RunDb(string path, ILogger<RunDb> logger, TimeProvider? clock = null)
     {
@@ -74,10 +74,16 @@ public sealed class RunDb : IDisposable
         {
             cmd.CommandText = "SELECT version FROM schema_version LIMIT 1;";
             var ver = (long)cmd.ExecuteScalar()!;
-            if (ver != CurrentSchemaVersion)
+            if (ver > CurrentSchemaVersion)
                 throw new InvalidOperationException(
-                    $"run.db schema version mismatch: expected {CurrentSchemaVersion}, got {ver}. " +
-                    "Delete .conductor/run.db and re-run, or migrate manually.");
+                    $"run.db schema version is newer ({ver}) than supported ({CurrentSchemaVersion}). " +
+                    "Use a newer Conductor build.");
+            if (ver == CurrentSchemaVersion)
+                return;
+            // Migrate from older version inside this transaction
+            MigrateFrom(conn, (int)ver);
+            cmd.CommandText = $"UPDATE schema_version SET version = {CurrentSchemaVersion};";
+            cmd.ExecuteNonQuery();
             return;
         }
 
@@ -247,6 +253,46 @@ public sealed class RunDb : IDisposable
             );
             """;
         cmd.ExecuteNonQuery();
+
+        // --- checkpoints (F1.2: tracker-as-view — checkpoint definitions + status from run.db) ---
+        cmd.CommandText = """
+            CREATE TABLE IF NOT EXISTS checkpoints (
+                id              TEXT NOT NULL,
+                run_id          TEXT NOT NULL,
+                stage_id        TEXT NOT NULL,
+                title           TEXT NOT NULL,
+                status          TEXT NOT NULL DEFAULT 'TODO',
+                "commit"        TEXT NOT NULL DEFAULT '-',
+                evidence        TEXT NOT NULL DEFAULT '-',
+                PRIMARY KEY (id, run_id),
+                FOREIGN KEY (run_id) REFERENCES runs(run_id)
+            );
+            """;
+        cmd.ExecuteNonQuery();
+    }
+
+    /// <summary>Migrate from an older schema version. Called inside the EnsureSchema transaction.</summary>
+    private static void MigrateFrom(SqliteConnection conn, int fromVersion)
+    {
+        if (fromVersion < 2)
+        {
+            // v1 → v2: add checkpoints table
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = """
+                CREATE TABLE IF NOT EXISTS checkpoints (
+                    id              TEXT NOT NULL,
+                    run_id          TEXT NOT NULL,
+                    stage_id        TEXT NOT NULL,
+                    title           TEXT NOT NULL,
+                    status          TEXT NOT NULL DEFAULT 'TODO',
+                    "commit"        TEXT NOT NULL DEFAULT '-',
+                    evidence        TEXT NOT NULL DEFAULT '-',
+                    PRIMARY KEY (id, run_id),
+                    FOREIGN KEY (run_id) REFERENCES runs(run_id)
+                );
+                """;
+            cmd.ExecuteNonQuery();
+        }
     }
 
     // ---------------------------------------------------------------- write methods
@@ -384,6 +430,67 @@ public sealed class RunDb : IDisposable
             ("@sourceSession", (object?)sourceSession ?? DBNull.Value),
             ("@targetStageId", (object?)targetStageId ?? DBNull.Value),
             ("@content", content));
+    }
+
+    // ---------------------------------------------------------------- checkpoints (F1.2)
+
+    /// <summary>Seed checkpoints from the plan. Each call is an UPSERT — re-seeding on
+    /// resume does not lose status previously written by <see cref="UpdateCheckpoint"/>.</summary>
+    public void SeedCheckpoints(string runId,
+        IEnumerable<(string Id, string StageId, string Title, string Status, string Commit, string Evidence)> checkpoints)
+    {
+        foreach (var (id, stageId, title, status, commit, evidence) in checkpoints)
+        {
+            TryExecute(
+                "INSERT INTO checkpoints (id, run_id, stage_id, title, status, \"commit\", evidence) " +
+                "VALUES (@id, @runId, @stageId, @title, @status, @commit, @evidence) " +
+                "ON CONFLICT(id, run_id) DO UPDATE SET title = excluded.title, stage_id = excluded.stage_id;",
+                ("@id", id), ("@runId", runId), ("@stageId", stageId),
+                ("@title", title), ("@status", status), ("@commit", commit), ("@evidence", evidence));
+        }
+    }
+
+    /// <summary>Mark a checkpoint as DONE with the attributed commit and evidence string.</summary>
+    public void UpdateCheckpoint(string runId, string checkpointId, string status, string commit, string evidence)
+    {
+        TryExecute(
+            "UPDATE checkpoints SET status = @status, \"commit\" = @commit, evidence = @evidence " +
+            "WHERE id = @id AND run_id = @runId",
+            ("@runId", runId), ("@id", checkpointId),
+            ("@status", status), ("@commit", commit), ("@evidence", evidence));
+    }
+
+    /// <summary>Set a checkpoint to IN PROGRESS.</summary>
+    public void MarkCheckpointInProgress(string runId, string checkpointId)
+    {
+        TryExecute(
+            "UPDATE checkpoints SET status = 'IN PROGRESS' WHERE id = @id AND run_id = @runId AND status = 'TODO'",
+            ("@runId", runId), ("@id", checkpointId));
+    }
+
+    /// <summary>Return all checkpoint rows for a run, ordered by stage then id.</summary>
+    public IReadOnlyList<(string Id, string StageId, string Title, string Status, string Commit, string Evidence)>
+        GetCheckpoints(string runId)
+    {
+        var rows = Query(
+            "SELECT id, stage_id, title, status, \"commit\", evidence FROM checkpoints " +
+            "WHERE run_id = @runId ORDER BY stage_id, id",
+            ("@runId", runId));
+        return rows.Select(r => (Id: (string)r["id"]!, StageId: (string)r["stage_id"]!,
+            Title: (string)r["title"]!, Status: (string)r["status"]!,
+            Commit: (string)(r["commit"] ?? "-")!, Evidence: (string)(r["evidence"] ?? "-")!)).ToList();
+    }
+
+    /// <summary>Return the most recent handover content for a stage (or the latest overall).</summary>
+    public string? GetLatestHandover(string runId, string? stageId = null)
+    {
+        var sql = stageId != null
+            ? "SELECT content FROM handovers WHERE run_id = @runId AND stage_id = @stageId ORDER BY id DESC LIMIT 1"
+            : "SELECT content FROM handovers WHERE run_id = @runId ORDER BY id DESC LIMIT 1";
+        var rows = stageId != null
+            ? Query(sql, ("@runId", runId), ("@stageId", stageId))
+            : Query(sql, ("@runId", runId));
+        return rows.Count > 0 ? (string)rows[0]["content"]! : null;
     }
 
     // ---------------------------------------------------------------- query (F1.4 surface)

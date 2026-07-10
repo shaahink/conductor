@@ -7,9 +7,11 @@ namespace Conductor.Core.Integrations;
 
 /// <summary>
 /// B9.3: minimal MCP (Model Context Protocol) JSON-RPC 2.0 server over stdio.
-/// Exposes three tools — task_list, task_update, task_add — that persist the agent's todo list
-/// across sessions. Reads existing tasks from the event log; writes new events to a side journal
-/// file to avoid concurrent-write races with the conductor's main event log.
+/// Exposes tools — task_list, task_update, task_add, conductor_note (F1.3) — that persist
+/// the agent's progress across sessions. Reads existing tasks from the event log; writes new
+/// events to a side journal file to avoid concurrent-write races with the conductor's main
+/// event log. The optional <see cref="RunDb"/> parameter enables direct ledger writes for
+/// the <c>conductor_note</c> tool (F1.3).
 /// </summary>
 public sealed class McpTaskServer
 {
@@ -17,12 +19,14 @@ public sealed class McpTaskServer
     private readonly string _journalPath;
     private readonly string _runId;
     private readonly TaskGraph _graph = new();
+    private readonly RunDb? _runDb;
 
-    public McpTaskServer(string eventsPath, string journalPath, string runId)
+    public McpTaskServer(string eventsPath, string journalPath, string runId, RunDb? runDb = null)
     {
         _eventsPath = eventsPath;
         _journalPath = journalPath;
         _runId = runId;
+        _runDb = runDb;
     }
 
     /// <summary>Boot the graph from the existing event log.</summary>
@@ -113,6 +117,7 @@ public sealed class McpTaskServer
                         new { name = "task_list", description = "List all sub-tasks for the active checkpoint", inputSchema = new { type = "object", properties = new { checkpointId = new { type = "string", description = "The checkpoint id (e.g. B9.3)" } }, required = new[] { "checkpointId" } } },
                         new { name = "task_update", description = "Update a sub-task's status (todo / in_progress / done / skipped)", inputSchema = new { type = "object", properties = new { taskId = new { type = "string" }, status = new { type = "string" } }, required = new[] { "taskId", "status" } } },
                         new { name = "task_add", description = "Add a new sub-task under the active checkpoint", inputSchema = new { type = "object", properties = new { checkpointId = new { type = "string" }, title = new { type = "string" }, order = new { type = "integer" } }, required = new[] { "checkpointId", "title", "order" } } },
+                        new { name = "conductor_note", description = "F1.3: Write a finding/observation to the knowledge ledger. Use this immediately when you discover something important, not at session end.", inputSchema = new { type = "object", properties = new { kind = new { type = "string", description = "Entry kind: finding, observation, trap, decision. Default: note." }, content = new { type = "string", description = "The note text." }, stage_id = new { type = "string", description = "Stage id (e.g. F1). Optional." } }, required = new[] { "content" } } },
                     }
                 }),
             },
@@ -138,6 +143,7 @@ public sealed class McpTaskServer
                 "task_list" => HandleTaskList(args),
                 "task_update" => HandleTaskUpdate(args),
                 "task_add" => HandleTaskAdd(args),
+                "conductor_note" => HandleNote(args),
                 _ => JsonSerializer.SerializeToElement(new { error = $"Unknown tool: {name}" }),
             };
             return new JsonRpcResponse { Id = id, Result = result };
@@ -244,6 +250,51 @@ public sealed class McpTaskServer
         _graph.Fold([evt]);
 
         return JsonSerializer.SerializeToElement(new { ok = true, taskId, checkpointId = cpId, title, order = nextOrder });
+    }
+
+    /// <summary>F1.3: Write a finding/observation to the knowledge ledger.
+    /// If run.db is available, writes directly to the ledger table (immediate persistence).
+    /// Always emits a journal event as a fallback so the note survives regardless.</summary>
+    private JsonElement HandleNote(JsonElement? args)
+    {
+        var kind = "note";
+        var content = "";
+        var stageId = "";
+        if (args is { } a)
+        {
+            if (a.TryGetProperty("kind", out var k)) kind = k.GetString() ?? "note";
+            if (a.TryGetProperty("content", out var c)) content = c.GetString() ?? "";
+            if (a.TryGetProperty("stage_id", out var s)) stageId = s.GetString() ?? "";
+        }
+
+        if (string.IsNullOrWhiteSpace(content))
+            return JsonSerializer.SerializeToElement(new { ok = false, error = "content is required" });
+
+        // Best-effort direct write to run.db ledger table (F1.3)
+        if (_runDb != null)
+        {
+            try
+            {
+                _runDb.WriteLedger(_runId, null, string.IsNullOrWhiteSpace(stageId) ? null : stageId, kind, content);
+            }
+#pragma warning disable CA1031 // catch is best-effort here — journal write is the fallback
+            catch { }
+#pragma warning restore CA1031
+        }
+
+        // Also emit as a journal event so the note appears in events.jsonl projections
+        var evt = new TaskAdded
+        {
+            RunId = _runId,
+            TaskId = $"note-{DateTime.UtcNow:yyyyMMddHHmmss}",
+            CheckpointId = "ledger",
+            Title = $"[{kind}] {content}",
+            Source = "note",
+            Order = 0,
+        };
+        WriteJournal(evt);
+
+        return JsonSerializer.SerializeToElement(new { ok = true, kind, stageId = string.IsNullOrWhiteSpace(stageId) ? null : stageId });
     }
 
     private void WriteJournal(ConductorEvent evt)

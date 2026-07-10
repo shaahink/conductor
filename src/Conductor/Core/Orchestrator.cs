@@ -81,6 +81,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             });
             _runDb?.InitializeRun(state.RunId, plan.Name, plan.Repo, Git.Branch(plan.Repo),
                 typeof(Orchestrator).Assembly.GetName().Version?.ToString());
+            // F1.2: seed checkpoints from the existing tracker into run.db (additive — doesn't replace parse)
+            SeedCheckpointsFromTracker();
             WarnOnBranchPattern();
 
             var sessionsThisRun = 0;
@@ -1893,6 +1895,23 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             if (rec.OverheadCostUsd is { } ovCostUsd)
                 db.RecordCost(state.RunId, rec.Number, "gate",
                     0, 0, 0, 0, ovCostUsd, 0);
+
+            // F1.2: update checkpoints marked as done in this session
+            if (rec.NewlyDone.Count > 0)
+            {
+                var commit = rec.NewCommits.Count > 0 ? rec.NewCommits[^1].Split(' ')[0] : "-";
+                var evidence = rec.GateSummary ?? "completed";
+                foreach (var cpId in rec.NewlyDone)
+                    db.UpdateCheckpoint(state.RunId, cpId, "DONE", commit, evidence);
+            }
+
+            // F1.3: persist the handoff block if present in the tracker (read after session)
+            var track = ReadTrackerSafe();
+            if (!string.IsNullOrWhiteSpace(track.HandoffBlock))
+                db.WriteHandover(state.RunId, rec.Number, rec.Stage, track.HandoffBlock);
+
+            // F1.2: regenerate the tracker FROM run.db after every session
+            RegenerateTracker(track);
         }
     }
 
@@ -2463,5 +2482,45 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         var failCount = remaining.Count - successCount;
         if (remaining.Count > 0)
             Log($"analysis lanes collected: {successCount} succeeded, {failCount} failed for stage {stageId}");
+    }
+
+    // ---------------------------------------------------------------- F1.2 tracker-as-view helpers
+
+    /// <summary>Seed checkpoints from the existing tracker markdown into run.db.
+    /// Idempotent — re-seeding preserves status already set by <see cref="RunDb.UpdateCheckpoint"/>.</summary>
+    private void SeedCheckpointsFromTracker()
+    {
+        if (_runDb is not { } db) return;
+        var track = ReadTrackerSafe();
+        if (track.Checkpoints.Count == 0) return;
+
+        var cps = track.Checkpoints.Select(c => (c.Id, c.StageId, c.Title,
+            c.IsDone ? "DONE" : c.IsInProgress ? "IN PROGRESS" : c.IsBlocked ? "BLOCKED" : "TODO",
+            c.Commit, c.Evidence));
+        db.SeedCheckpoints(state.RunId, cps);
+        Log($"seeded {track.Checkpoints.Count} checkpoints from tracker into run.db");
+    }
+
+    /// <summary>Read the tracker file without throwing. Returns an empty snapshot on I/O errors
+    /// (file not yet created, locked, etc.).</summary>
+    private TrackerSnapshot ReadTrackerSafe()
+    {
+        try { return _progress.Read(plan, CancellationToken.None); }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException) { return new TrackerSnapshot(); }
+    }
+
+    /// <summary>Regenerate TRACKER.md from run.db. Uses the current tracker's handoff as the fallback
+    /// (preserves the handoff block the agent last wrote if no DB handover exists yet).</summary>
+    private void RegenerateTracker(TrackerSnapshot currentTrack)
+    {
+        if (_runDb is not { } db) return;
+        try
+        {
+            TrackerGenerator.Write(plan, db, state.RunId, currentTrack.HandoffBlock);
+        }
+        catch (Exception ex)
+        {
+            Log($"tracker regeneration failed: {ex.Message}");
+        }
     }
 }

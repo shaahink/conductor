@@ -6,11 +6,11 @@ your stage deliverable from the plan JSON.
 **Design doc:** `docs/CONDUCTOR-VNEXT-PLAN.md` — 10 cataloged failures, architecture, locked decisions, addenda D7-D12.
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
-last: s6 — F1.1 run.db schema landed. 11 tables (runs, stages, sessions, attempts, gates, scores, ledger, handovers, injections, costs, schema_version). Additive-first — writes alongside state.json + events.jsonl. Null in dry-run mode.
-stage: F1 — run.db task store. F1.1 DONE. F1.2 (tracker-as-view) next.
-commits: 6330c60 (F1.1). Total F0: 9, F1: 1.
-gate: 0w/0e, 544/545 tests pass (1 pre-existing flaky Serilog lock test).
-trap: HarnessTests creates temp git repos — ensure git is on PATH.
+last: s7 — F1.2 tracker-as-view + F1.3 task/note verbs + F1.4 report --query landed. 12→15 checkpoints table (schema v2 with migration). TrackerGenerator produces TRACKER.md FROM run.db (byte-stable). task/note CLI verbs + MCP conductor_note tool. report --query against run.db.
+stage: F1 — run.db task store. F1.1 DONE. F1.2 DONE. F1.3 DONE. F1.4 DONE. Stage F1 COMPLETE.
+commits: 6330c60 (F1.1). Total F0: 9, F1: 2 (pending F1.2-4 commit).
+gate: 0w/0e, 548/548 tests pass.
+trap: HarnessTests creates temp git repos — ensure git is on PATH. 1 pre-existing flaky Serilog file-lock test (HostLoggingTests) — passes in isolation.
 branch: feat/foreman.
 
 ## Baseline numbers (pre-Foreman, re-measure at each phase)
@@ -18,7 +18,7 @@ branch: feat/foreman.
 | Metric | Value |
 |---|---|
 | Target framework | net10.0 |
-| Tests | 545 pass (0 warn, 0 err; 1 pre-existing flaky Serilog lock test) |
+| Tests | 548 pass (0 warn, 0 err) |
 | Source files | ~45 .cs under src/Conductor |
 | Branches | master (stable), feat/foreman |
 | Versions | Conductor v2 (Baton) + Era v3 enhancements; 91 sessions, ~$4.78 total |
@@ -42,9 +42,9 @@ never silent renumbering.
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | F1.1 | run.db schema — tables: runs, stages, sessions, attempts, gates, scores, ledger, handovers, injections, costs; telemetry per D8 | DONE | 6330c60 | RunDbTests.cs — 12 tests pass, schema auto-creates (idempotent), session/gate/cost round-trip, parameterised query, 11 tables |
-| F1.2 | Tracker-as-view — conductor writes TRACKER.md FROM run.db (generated view for humans/agents); regenerates byte-stable | TODO | - | - |
-| F1.3 | conductor task/note verbs — task CRUD + note (writes ledger); MCP surface; agents report progress via verbs instead of hand-editing markdown | TODO | - | - |
-| F1.4 | conductor report --query — ad-hoc SQL/DSL against run.db ("cost of stage R3?", "which gates fail most?") | TODO | - | - |
+| F1.2 | Tracker-as-view — conductor writes TRACKER.md FROM run.db (generated view for humans/agents); regenerates byte-stable | DONE | (pending) | TrackerGenerator.cs — generates TRACKER.md from run.db checkpoints table; idempotent seed; wired in Orchestrator at InitializeRun + EmitSessionFinished + handover write; 15 RunDbTests pass including 3 new checkpoint tests |
+| F1.3 | conductor task/note verbs — task CRUD + note (writes ledger); MCP surface; agents report progress via verbs instead of hand-editing markdown | DONE | (pending) | NoteCommand + TaskCommand CLI verbs; McpTaskServer conductor_note tool; McpServeCommand wires RunDb; 548/548 tests pass |
+| F1.4 | conductor report --query — ad-hoc SQL/DSL against run.db ("cost of stage R3?", "which gates fail most?") | DONE | (pending) | ReportCommand --query <SQL> option; runs parameterised SQL against run.db; renders results as Spectre table |
 
 ### F2 — Process ownership (supervisor, orphans, bg primitives)
 

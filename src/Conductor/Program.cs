@@ -46,6 +46,10 @@ app.Configure(c =>
         .WithDescription("Plan management: set a field, reload+validate, or add a stage. Sub-commands: set <key> <value>, reload, add-stage <json>.");
     c.AddCommand<TasksCommand>("tasks")
         .WithDescription("Show task graph: sub-tasks per checkpoint from the event log.");
+    c.AddCommand<TaskCommand>("task")
+        .WithDescription("Checkpoint CRUD from run.db: --list, --done, --in-progress.");
+    c.AddCommand<NoteCommand>("note")
+        .WithDescription("Write a note/finding to the knowledge ledger (run.db ledger table).");
     c.AddCommand<LogCommand>("log")
         .WithDescription("Query the structured JSON log. Filter by stage, gate, outcome, etc. Example: conductor log --query \"stage=P7 and gate=build and outcome=fail\"");
     c.AddCommand<NewPlanCommand>("new-plan")

@@ -46,14 +46,15 @@ public sealed class RunDbTests : IDisposable
         Assert.Contains("handovers", names);
         Assert.Contains("injections", names);
         Assert.Contains("costs", names);
+        Assert.Contains("checkpoints", names);
     }
 
     [Fact]
-    public void Schema_version_is_one()
+    public void Schema_version_is_two()
     {
         var rows = _db.Query("SELECT version FROM schema_version");
         Assert.Single(rows);
-        Assert.Equal(1L, (long)rows[0]["version"]!);
+        Assert.Equal(2L, (long)rows[0]["version"]!);
     }
 
     [Fact]
@@ -205,5 +206,62 @@ public sealed class RunDbTests : IDisposable
             "SELECT name FROM gates WHERE name = @name",
             ("@name", "build"));
         Assert.Single(rows);
+    }
+
+    [Fact]
+    public void SeedCheckpoints_persists_and_re_seeds_idempotently()
+    {
+        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        var cps = new (string, string, string, string, string, string)[]
+        {
+            ("F1.1", "F1", "run.db schema", "TODO", "-", "-"),
+            ("F1.2", "F1", "tracker-as-view", "TODO", "-", "-"),
+        };
+        _db.SeedCheckpoints("r1", cps);
+
+        var rows = _db.GetCheckpoints("r1");
+        Assert.Equal(2, rows.Count);
+        Assert.Equal("F1.1", rows[0].Id);
+        Assert.Equal("F1", rows[0].StageId);
+        Assert.Equal("run.db schema", rows[0].Title);
+        Assert.Equal("TODO", rows[0].Status);
+
+        // Re-seeding does not clobber status set by UpdateCheckpoint
+        _db.UpdateCheckpoint("r1", "F1.1", "DONE", "abc123", "tests pass");
+        _db.SeedCheckpoints("r1", cps); // re-seed
+        var rows2 = _db.GetCheckpoints("r1");
+        Assert.Equal("DONE", rows2[0].Status);
+        Assert.Equal("abc123", rows2[0].Commit);
+    }
+
+    [Fact]
+    public void UpdateCheckpoint_sets_status_commit_evidence()
+    {
+        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        _db.SeedCheckpoints("r1", [("F2.1", "F2", "process sup", "TODO", "-", "-")]);
+
+        _db.UpdateCheckpoint("r1", "F2.1", "DONE", "def456", "12 tests, 0w/0e");
+        var rows = _db.GetCheckpoints("r1");
+        Assert.Single(rows);
+        Assert.Equal("DONE", rows[0].Status);
+        Assert.Equal("def456", rows[0].Commit);
+        Assert.Equal("12 tests, 0w/0e", rows[0].Evidence);
+    }
+
+    [Fact]
+    public void MarkCheckpointInProgress_transitions_from_todo_only()
+    {
+        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        _db.SeedCheckpoints("r1", [("F3.1", "F3", "stall v2", "TODO", "-", "-")]);
+
+        _db.MarkCheckpointInProgress("r1", "F3.1");
+        var rows = _db.GetCheckpoints("r1");
+        Assert.Equal("IN PROGRESS", rows[0].Status);
+
+        // Does not downgrade DONE
+        _db.UpdateCheckpoint("r1", "F3.1", "DONE", "ghi", "ok");
+        _db.MarkCheckpointInProgress("r1", "F3.1");
+        var rows2 = _db.GetCheckpoints("r1");
+        Assert.Equal("DONE", rows2[0].Status);
     }
 }

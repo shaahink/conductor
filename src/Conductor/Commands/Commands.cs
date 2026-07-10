@@ -586,11 +586,25 @@ public sealed class LogCommand : Command<LogCommand.Settings>
     }
 }
 
-public sealed class ReportCommand : Command<PlanSettings>
+public sealed class ReportCommand : Command<ReportCommand.Settings>
 {
-    public override int Execute(CommandContext context, PlanSettings settings)
+    public sealed class Settings : PlanSettings
+    {
+        [CommandOption("--query <SQL>")]
+        [Description("F1.4: Run an ad-hoc SQL query against run.db instead of generating REPORT.md. " +
+                     "Example: --query \"SELECT stage_id, SUM(cost_usd) FROM costs GROUP BY stage_id\"")]
+        public string? Query { get; init; }
+    }
+
+    public override int Execute(CommandContext context, Settings settings)
     {
         var plan = PlanConfig.Load(settings.ResolvePlanPath());
+
+        if (settings.Query != null)
+        {
+            return RunQuery(plan, settings.Query);
+        }
+
         var statePath = Path.Combine(plan.StateDir, "state.json");
         var state = RunState.LoadOrNew(statePath, plan.Name);
         var track = TrackerParser.ParseFile(plan.TrackerPath);
@@ -600,6 +614,63 @@ public sealed class ReportCommand : Command<PlanSettings>
             mcp: Reporter.ReadMcpMetrics(plan),
             repo: Reporter.ReadRepoStrip(plan)), Reporter.Utf8Bom);
         AnsiConsole.MarkupLine($"report written to [bold]{Markup.Escape(Reporter.ReportPath(plan))}[/]");
+        return 0;
+    }
+
+    private static int RunQuery(PlanConfig plan, string sql)
+    {
+        var runDbPath = Path.Combine(plan.StateDir, "run.db");
+        if (!File.Exists(runDbPath))
+        {
+            AnsiConsole.MarkupLine("[red]No run.db found.[/] Run the conductor at least once to initialize the database.");
+            return 1;
+        }
+
+        using var db = new RunDb(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<RunDb>.Instance);
+        List<Dictionary<string, object?>> rows;
+        try
+        {
+            rows = db.Query(sql);
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Query failed:[/] {Markup.Escape(ex.Message)}");
+            return 1;
+        }
+
+        if (rows.Count == 0)
+        {
+            AnsiConsole.MarkupLine("[grey]no rows returned[/]");
+            return 0;
+        }
+
+        var table = new Table()
+            .Border(TableBorder.Rounded)
+            .Title($"[bold aqua]Query result[/] ({rows.Count} row{(rows.Count == 1 ? "" : "s")})");
+
+        var columns = rows[0].Keys;
+        foreach (var col in columns)
+            table.AddColumn(Markup.Escape(col));
+
+        foreach (var row in rows)
+        {
+            var values = columns.Select(c =>
+            {
+                var v = row.GetValueOrDefault(c);
+                return v switch
+                {
+                    null => "[grey]-[/]",
+                    double d => d.ToString("F4"),
+                    float f => f.ToString("F4"),
+                    long l => l.ToString(),
+                    int i => i.ToString(),
+                    _ => Markup.Escape(v.ToString()!)
+                };
+            }).ToArray();
+            table.AddRow(values);
+        }
+
+        AnsiConsole.Write(table);
         return 0;
     }
 }
@@ -1413,7 +1484,16 @@ public sealed class McpServeCommand : Command<McpServeCommand.Settings>
         var eventsPath = Path.GetFullPath(settings.Events);
         var journalPath = Path.GetFullPath(settings.Journal);
 
-        var server = new McpTaskServer(eventsPath, journalPath, settings.RunId);
+        // F1.3: wire run.db if it exists so conductor_note MCP tool works
+        var runDbPath = Path.Combine(Path.GetDirectoryName(eventsPath) ?? ".conductor", "run.db");
+        RunDb? runDb = null;
+        if (File.Exists(runDbPath))
+        {
+            try { runDb = new RunDb(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<RunDb>.Instance); }
+            catch { /* best-effort — MCP works without run.db */ }
+        }
+
+        var server = new McpTaskServer(eventsPath, journalPath, settings.RunId, runDb);
         server.Init();
         server.FoldJournal();
 
@@ -1421,7 +1501,14 @@ public sealed class McpServeCommand : Command<McpServeCommand.Settings>
 #pragma warning disable MA0045
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 #pragma warning restore MA0045
-        server.RunAsync(Console.In, Console.Out, cts.Token).GetAwaiter().GetResult();
+        try
+        {
+            server.RunAsync(Console.In, Console.Out, cts.Token).GetAwaiter().GetResult();
+        }
+        finally
+        {
+            runDb?.Dispose();
+        }
         return 0;
     }
 }
@@ -1555,5 +1642,150 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
         AnsiConsole.MarkupLine("[red]Unknown shell.[/] Valid: powershell, bash.");
         AnsiConsole.MarkupLine("Usage: conductor completion <powershell|bash>");
         return 1;
+    }
+}
+
+/// <summary>
+/// F1.3: Write a finding/observation to the knowledge ledger (run.db ledger table).
+/// Agents call this via CLI or MCP to persist discoveries immediately instead of
+/// only at session end — kills the "stall destroys knowledge" failure (design doc §3.3).
+/// </summary>
+public sealed class NoteCommand : Command<NoteCommand.Settings>
+{
+    public sealed class Settings : PlanSettings
+    {
+        [CommandOption("-k|--kind <KIND>")]
+        [Description("Ledger entry kind: finding, observation, trap, decision. Default: note.")]
+        public string? Kind { get; init; }
+
+        [CommandOption("-s|--stage <STAGE>")]
+        [Description("Stage id to associate the note with (e.g. F1). Optional.")]
+        public string? Stage { get; init; }
+
+        [CommandArgument(0, "<TEXT>")]
+        [Description("The note content.")]
+        public string Text { get; init; } = "";
+    }
+
+    public override int Execute(CommandContext context, Settings settings)
+    {
+        var plan = PlanConfig.Load(settings.ResolvePlanPath());
+        var runDbPath = Path.Combine(plan.StateDir, "run.db");
+        if (!File.Exists(runDbPath))
+        {
+            AnsiConsole.MarkupLine("[red]No run.db found.[/] Run the conductor at least once to initialize the database.");
+            return 1;
+        }
+
+        var statePath = Path.Combine(plan.StateDir, "state.json");
+        var state = RunState.LoadOrNew(statePath, plan.Name);
+        var kind = string.IsNullOrWhiteSpace(settings.Kind) ? "note" : settings.Kind;
+
+        using var db = OpenRunDb(runDbPath);
+        db.WriteLedger(state.RunId, state.SessionCounter > 0 ? state.SessionCounter : null,
+            settings.Stage ?? state.CurrentStage, kind, settings.Text);
+        AnsiConsole.MarkupLine($"[green]note written:[/] [{Markup.Escape(kind)}] {Markup.Escape(settings.Text)}");
+        return 0;
+    }
+
+    private static RunDb OpenRunDb(string path)
+    {
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RunDb>.Instance;
+        return new RunDb(path, logger);
+    }
+}
+
+/// <summary>
+/// F1.3: Task/checkpoint CRUD — agents report progress via CLI verbs instead of hand-editing
+/// the tracker markdown. Writes go to the run.db checkpoints table; the tracker regenerates from
+/// that source of truth (F1.2 tracker-as-view).
+/// </summary>
+public sealed class TaskCommand : Command<TaskCommand.Settings>
+{
+    public sealed class Settings : PlanSettings
+    {
+        [CommandOption("--done <CHECKPOINT>")]
+        [Description("Mark a checkpoint as DONE.")]
+        public string? Done { get; init; }
+
+        [CommandOption("--in-progress <CHECKPOINT>")]
+        [Description("Mark a checkpoint as IN PROGRESS (from TODO only).")]
+        public string? InProgress { get; init; }
+
+        [CommandOption("--list")]
+        [Description("List all checkpoints from run.db.")]
+        public bool List { get; init; }
+
+        [CommandOption("-c|--commit <SHA>")]
+        [Description("Commit SHA to attribute (for --done).")]
+        public string? Commit { get; init; }
+
+        [CommandOption("-e|--evidence <TEXT>")]
+        [Description("Evidence string (for --done).")]
+        public string? Evidence { get; init; }
+    }
+
+    public override int Execute(CommandContext context, Settings settings)
+    {
+        var plan = PlanConfig.Load(settings.ResolvePlanPath());
+        var runDbPath = Path.Combine(plan.StateDir, "run.db");
+        if (!File.Exists(runDbPath))
+        {
+            AnsiConsole.MarkupLine("[red]No run.db found.[/] Run the conductor at least once to initialize the database.");
+            return 1;
+        }
+
+        var statePath = Path.Combine(plan.StateDir, "state.json");
+        var state = RunState.LoadOrNew(statePath, plan.Name);
+
+        using var db = new RunDb(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<RunDb>.Instance);
+
+        if (settings.Done != null)
+        {
+            db.UpdateCheckpoint(state.RunId, settings.Done, "DONE",
+                settings.Commit ?? "-", settings.Evidence ?? "marked done via CLI");
+            AnsiConsole.MarkupLine($"[green]checkpoint {Markup.Escape(settings.Done)} → DONE[/]");
+        }
+        else if (settings.InProgress != null)
+        {
+            db.MarkCheckpointInProgress(state.RunId, settings.InProgress);
+            AnsiConsole.MarkupLine($"[yellow]checkpoint {Markup.Escape(settings.InProgress)} → IN PROGRESS[/]");
+        }
+        else if (settings.List)
+        {
+            var cps = db.GetCheckpoints(state.RunId);
+            if (cps.Count == 0)
+            {
+                AnsiConsole.MarkupLine("[grey]no checkpoints in run.db[/]");
+                return 0;
+            }
+
+            var table = new Table()
+                .Border(TableBorder.Rounded)
+                .Title("[bold aqua]Checkpoints from run.db[/]")
+                .AddColumn("Stage")
+                .AddColumn("ID")
+                .AddColumn("Title")
+                .AddColumn("Status");
+
+            foreach (var cp in cps)
+            {
+                var icon = cp.Status switch
+                {
+                    var s when s.StartsWith("DONE", StringComparison.OrdinalIgnoreCase) => "[green]DONE[/]",
+                    var s when s.StartsWith("IN", StringComparison.OrdinalIgnoreCase) => "[yellow]IN PROG[/]",
+                    var s when s.StartsWith("BLOCKED", StringComparison.OrdinalIgnoreCase) => "[red]BLOCKED[/]",
+                    _ => "[grey]TODO[/]",
+                };
+                table.AddRow(Markup.Escape(cp.StageId), Markup.Escape(cp.Id), Markup.Escape(cp.Title), icon);
+            }
+            AnsiConsole.Write(table);
+        }
+        else
+        {
+            AnsiConsole.MarkupLine("[grey]Usage: conductor task --list | --done <id> | --in-progress <id>[/]");
+        }
+
+        return 0;
     }
 }
