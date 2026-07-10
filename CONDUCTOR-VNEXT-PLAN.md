@@ -6,20 +6,21 @@ your stage deliverable from the plan JSON.
 **Design doc:** `docs/CONDUCTOR-VNEXT-PLAN.md` — 10 cataloged failures, architecture, locked decisions, addenda D7-D12.
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
-last: none (plan created 2026-07-10).
-stage: all TODO — 34 checkpoints across 10 stages (F0–F9).
-next: F0 — Foundations (kill list executed, async control loop, integration harness).
-dirty: none. Status: idle.
-trap: stable driver is C:\Code\conductor\bin\conductor.exe (master binary, built 2026-07-07). Branch feat/foreman must exist before run. Design doc supersedes NEXT-ERA.md — D/O/P items absorbed or killed.
+last: s1 — F0.1 kill list executed (replay, confidence, personas, heartbeat, templates deleted). All 5 sub-items DONE.
+stage: F0 — Foundations. F0.1 DONE, F0.2 (async loop) next, F0.3 (harness) pending.
+commits: 8a57d1e | 9daa9c7 | c305bcf | 7590d71 | 47798ee (5 commits, 23 files, -687 net LOC).
+gate: 0w/0e, 531/531 tests pass. dirty: REPORT.md auto-refresh only.
+trap: F0.2 requires making Orchestrator.Run() async (~2400 LOC god-class). Start by eliminating Thread.Sleep → Task.Delay and .GetAwaiter().GetResult() in the run loop, then propagate up. F0.1 is locked — do not revisit.
+branch: feat/foreman.
 
 ## Baseline numbers (pre-Foreman, re-measure at each phase)
 
 | Metric | Value |
 |---|---|
 | Target framework | net10.0 |
-| Tests | 555 pass (0 warn, 0 err) |
-| Source files | ~50 .cs under src/Conductor |
-| Branches | master (stable), feat/era-v3 (current), feat/foreman (to create) |
+| Tests | 531 pass (0 warn, 0 err) |
+| Source files | ~45 .cs under src/Conductor |
+| Branches | master (stable), feat/foreman |
 | Versions | Conductor v2 (Baton) + Era v3 enhancements; 91 sessions, ~$4.78 total |
 
 ## Checkpoints
@@ -32,7 +33,7 @@ never silent renumbering.
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| F0.1 | Kill list executed — delete replay/time-travel, persona bloat (keep 3 roles), confidence pane, heartbeat commits to feature branch, hierarchical template system | TODO | - | - |
+| F0.1 | Kill list executed — delete replay/time-travel, persona bloat (keep 3 roles), confidence pane, heartbeat commits to feature branch, hierarchical template system | DONE | 47798ee | 531 tests pass, 0w/0e, 23 files changed, -687 net LOC across 5 commits |
 | F0.2 | Async control loop — Orchestrator run loop async (B4.7 debt); no blocking .Result/.Wait() | TODO | - | - |
 | F0.3 | Integration harness — fake agent + temp repo, full cycle asserted (B4.8); gate: 0w/0e, harness cycle green | TODO | - | - |
 
