@@ -1846,7 +1846,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         // empty snapshot without log spam — the authoritative read in the main loop (Run) is what
         // surfaces a genuinely broken tracker via NeedsHuman.
         try { track = _progress.Read(plan, CancellationToken.None); }
-        catch (Exception ex) when (ex is IOException or InvalidOperationException) { track = new TrackerSnapshot(); }
+        catch (Exception) { track = new TrackerSnapshot(); }
         sink.Snapshot(BaseSnapshot(track));
     }
 
@@ -1997,7 +1997,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         // Report render tolerates a transient tracker read failure (→ empty snapshot); the main loop's
         // authoritative read is what escalates a broken tracker to the human.
         try { track = _progress.Read(plan, CancellationToken.None); }
-        catch (Exception ex) when (ex is IOException or InvalidOperationException) { track = new TrackerSnapshot(); }
+        catch (Exception) { track = new TrackerSnapshot(); }
         Reporter.WriteAndPublish(plan, state, track, _lastGates, Log);
         PushIdleSnapshot();
     }
@@ -2501,12 +2501,13 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         Log($"seeded {track.Checkpoints.Count} checkpoints from tracker into run.db");
     }
 
-    /// <summary>Read the tracker file without throwing. Returns an empty snapshot on I/O errors
-    /// (file not yet created, locked, etc.).</summary>
+    /// <summary>Read the tracker file without throwing. Returns an empty snapshot on any error
+    /// (file not found, locked, permission denied, parse failure, etc.). The authoritative
+    /// read in the main loop escalates a genuinely broken tracker; this helper is defensive.</summary>
     private TrackerSnapshot ReadTrackerSafe()
     {
         try { return _progress.Read(plan, CancellationToken.None); }
-        catch (Exception ex) when (ex is IOException or InvalidOperationException) { return new TrackerSnapshot(); }
+        catch (Exception) { return new TrackerSnapshot(); }
     }
 
     /// <summary>Regenerate TRACKER.md from run.db. Uses the current tracker's handoff as the fallback
