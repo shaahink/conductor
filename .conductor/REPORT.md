@@ -1,12 +1,11 @@
 ﻿# Conductor — Foreman run report
 
-_Updated 2026-07-10 19:59 UTC · branch `feat/foreman` · HEAD `13002cb`_
+_Updated 2026-07-10 20:00 UTC · branch `feat/foreman` · HEAD `03fdbc5`_
 
 **Status:** Idle
 **Stage:** F2 — ProcessSupervisor + Job Objects + bg primitives · persona: architect · attempts used 0
 **Checkpoints:** 11/40 done · **Sessions run:** 23 · **Cost:** $1.9451 · **Tokens:** 2,147,592 in / 341,032 out / 307,977 think
-**Confirmed phases:** F0, F1
-**Pending:** full-battery phase gate for F2
+**Confirmed phases:** F0, F1, F2
 
 ## Stage progress
 
@@ -14,7 +13,7 @@ _Updated 2026-07-10 19:59 UTC · branch `feat/foreman` · HEAD `13002cb`_
 |---|---|---|---|
 | F0 | Foundations — kill list, async engine, integration harness | ██████████ 3/3 | confirmed ✓ |
 | F1 | run.db task store + tracker-as-view + task/note verbs | ██████████ 4/4 | confirmed ✓ |
-| F2 | ProcessSupervisor + Job Objects + bg primitives | ██████████ 4/4 | gating… |
+| F2 | ProcessSupervisor + Job Objects + bg primitives | ██████████ 4/4 | confirmed ✓ |
 | F3 | Stall v2 + same-failure breaker + pre-flight | ░░░░░░░░░░ 0/4 | todo |
 | F4 | Verifier role + scoring loop + findings-as-retry | ░░░░░░░░░░ 0/5 | todo |
 | F5 | Control plane — HTTP+SSE on localhost | ░░░░░░░░░░ 0/3 | todo |
@@ -166,10 +165,6 @@ _Updated 2026-07-10 19:59 UTC · branch `feat/foreman` · HEAD `13002cb`_
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-10 18:12:00  • session #10 F1 → RolledOver  (8m11s)
-07-10 18:12:00  • session #11 F1 Audit started (attempt 1/4) · persona architect
-07-10 18:24:14  • session #11 F1 → RolledOver  (12m13s)
-07-10 18:24:14  • session #12 F1 Audit started (attempt 1/4) · persona architect
 07-10 18:34:10  • session #12 F1 → RolledOver  (9m56s)
 07-10 18:34:10  • session #13 F1 Audit started (attempt 1/4) · persona architect
 07-10 18:43:19  • session #13 F1 → RolledOver  (9m08s)
@@ -206,6 +201,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-10 20:50:59  • session #22 F2 → Advanced · done F2.4 · 2 commit(s)  (16m58s)
 07-10 20:50:59  ✓ checkpoint F2.4 confirmed
 07-10 20:50:59  • session #23 F2 Audit started (attempt 1/2) · persona architect
+07-10 20:59:27  • session #23 F2 → Progress · 2 commit(s)  (8m27s)
+07-10 21:00:34  ▪ gate build pass [phase]  (21.3s)
+07-10 21:00:34  ▪ gate tests pass [phase]  (43.8s)
+07-10 21:00:34  ▸ stage F2 confirmed (audited)  (1h06m02s)
 ```
 
 ## Health
@@ -287,7 +286,7 @@ vs upstream: up to date
 
 ## Last gate run
 
-build:OK
+build:OK · tests:OK
 
 ## Last session result
 
