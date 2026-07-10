@@ -165,7 +165,7 @@ public class B11_2DoctorAndCompletionTests
     {
         var expectedVerbs = new HashSet<string>(StringComparer.Ordinal)
         {
-            "run", "status", "gate", "log", "report", "replay", "preview", "audit", "mcp-serve", "pause", "resume", "approve",
+            "run", "status", "gate", "log", "report", "preview", "audit", "mcp-serve", "pause", "resume", "approve",
             "kill", "skip", "inject", "abort", "retry-stage", "rollback",
             "pause-after-stage", "goto", "heartbeat", "plan", "tasks", "new-plan", "doctor", "completion"
         };

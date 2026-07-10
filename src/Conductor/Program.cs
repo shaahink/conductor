@@ -17,8 +17,7 @@ app.Configure(c =>
         .WithDescription("Re-run the gate battery at HEAD (no agent spawned). --full for full battery, default fast-tier only. Clears pendingFix if all green.");
     c.AddCommand<ReportCommand>("report")
         .WithDescription("Regenerate .conductor/REPORT.md from current state.");
-    c.AddCommand<ReplayCommand>("replay")
-        .WithDescription("Replay / time-travel through a past run's events.jsonl (also F8 in the TUI). Reconstructs each transition with the run state as of that moment.");
+
     c.AddCommand<PreviewCommand>("preview")
         .WithDescription("Render the dashboard offline from current state (+ synthetic session data) to verify the UI. Press any key to exit.");
     c.AddCommand<PauseCommand>("pause")

@@ -18,7 +18,7 @@ namespace Conductor.Ui;
 /// </summary>
 public sealed class LiveDashboard : IProgressSink
 {
-    private enum Modal { None, Thinking, Output, Docs, Git, Prompt, Status, Timeline, Replay, Health, Confidence, Repo, Tasks }
+    private enum Modal { None, Thinking, Output, Docs, Git, Prompt, Status, Timeline, Health, Confidence, Repo, Tasks }
 
     private readonly Lock _gate = new();
     private readonly List<DashboardState.AgentLine> _agent = new();
@@ -186,7 +186,6 @@ public sealed class LiveDashboard : IProgressSink
             case ConsoleKey.V: OpenModal(Modal.Git); break;
             case ConsoleKey.X: OpenModal(Modal.Prompt); break;
             case ConsoleKey.L: OpenModal(Modal.Timeline); break;
-            case ConsoleKey.F8: OpenModal(Modal.Replay); break;
             case ConsoleKey.F1: OpenModal(Modal.Health); break;
             case ConsoleKey.N: OpenModal(Modal.Confidence); break;
             case ConsoleKey.B: OpenModal(Modal.Repo); break;
@@ -350,7 +349,6 @@ public sealed class LiveDashboard : IProgressSink
                     case ConsoleKey.V: OpenModal(Modal.Git); break;
                     case ConsoleKey.X: OpenModal(Modal.Prompt); break;
                     case ConsoleKey.L: OpenModal(Modal.Timeline); break;
-                    case ConsoleKey.F8: OpenModal(Modal.Replay); break;
                     case ConsoleKey.F1: OpenModal(Modal.Health); break;
                     case ConsoleKey.N: OpenModal(Modal.Confidence); break;
                     case ConsoleKey.B: OpenModal(Modal.Repo); break;
@@ -395,7 +393,7 @@ public sealed class LiveDashboard : IProgressSink
                         break;
                     case ConsoleKey.Q: _pendingConfirm = null; _keys.Enqueue(ControlAction.StopAfterSession); break;
                     case ConsoleKey.H: _pendingConfirm = null; _keys.Enqueue(ControlAction.ToggleHeartbeat); break;
-                    case ConsoleKey.T or ConsoleKey.O or ConsoleKey.D or ConsoleKey.V or ConsoleKey.X or ConsoleKey.L or ConsoleKey.F8 or ConsoleKey.F1 or ConsoleKey.N or ConsoleKey.B or ConsoleKey.I or ConsoleKey.G or ConsoleKey.E:
+                    case ConsoleKey.T or ConsoleKey.O or ConsoleKey.D or ConsoleKey.V or ConsoleKey.X or ConsoleKey.L or ConsoleKey.F1 or ConsoleKey.N or ConsoleKey.B or ConsoleKey.I or ConsoleKey.G or ConsoleKey.E:
                         break; // handled above — non-destructive keys don't cancel pending confirm
                     default: _pendingConfirm = null; break; // any unmapped key cancels
                 }
@@ -496,7 +494,6 @@ public sealed class LiveDashboard : IProgressSink
             Modal.Git => ("git", GitLines()),
             Modal.Prompt => ("compiled prompt (current session)", PromptLines()),
             Modal.Timeline => ("timeline · transitions from the event log", TimelineLines()),
-            Modal.Replay => ("replay · time-travel through the recorded run (F8)", ReplayLines()),
             Modal.Health => ("health · execution-health signals from the event log", HealthLines()),
             Modal.Confidence => ("confidence · evidence count per checkpoint", ConfidenceLines()),
             Modal.Repo => ("repo · branch, working tree, ahead/behind", RepoLines()),
@@ -578,18 +575,6 @@ public sealed class LiveDashboard : IProgressSink
         var entries = Reporter.ReadTimeline(_plan);
         if (entries.Count == 0) return new() { "(no events recorded yet — the timeline populates as the run emits events)" };
         return entries.Select(Conductor.Core.Events.Timeline.Format).ToList();
-    }
-
-    /// <summary>Folds the event log into the replay/time-travel modal (B5.2, F8) — each transition is
-    /// shown with the run state reconstructed as of that moment (stage, sessions, gates, checkpoints,
-    /// cost/tokens), from the same <c>events.jsonl</c> the report reads. Captured once on open; scrolling
-    /// back is a rewind. Tolerant of a missing/locked log (renders a hint rather than throwing).</summary>
-    private List<string> ReplayLines()
-    {
-        if (_plan == null) return new() { "(replay unavailable in preview)" };
-        var steps = Reporter.ReadReplay(_plan);
-        if (steps.Count == 0) return new() { "(no events recorded yet — replay populates as the run emits events)" };
-        return steps.SelectMany(Conductor.Core.Events.Replay.FormatStep).ToList();
     }
 
     /// <summary>Folds the event log into the health panel (B5.3, H) — retry rate plus any same-failure

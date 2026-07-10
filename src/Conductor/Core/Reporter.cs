@@ -333,22 +333,7 @@ public static class Reporter
         }
     }
 
-    /// <summary>Fold the event log into replay/time-travel steps (B5.2) — every transition paired with
-    /// the run state reconstructed as of that point. Same tolerant read as <see cref="ReadTimeline"/>
-    /// (a run may not have emitted events yet, or the log may be locked mid-write).</summary>
-    public static IReadOnlyList<Replay.ReplayStep> ReadReplay(PlanConfig plan)
-    {
-        ArgumentNullException.ThrowIfNull(plan);
-        try
-        {
-            var path = Path.Combine(plan.StateDir, "events.jsonl");
-            return Replay.Build(EventLog.ReadAll(path));
-        }
-        catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException or UnauthorizedAccessException)
-        {
-            return [];
-        }
-    }
+
 
     /// <summary>Fold the event log into execution-health signals (B5.3) — retry rate plus any
     /// same-failure loop / gate repetition / oscillation / context-saturation flags. Same tolerant
