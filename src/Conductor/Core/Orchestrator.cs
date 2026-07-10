@@ -86,61 +86,63 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             _runOverheadUsd = state.PerRunOverheadCostUsd;
             if (_runCostUsd > 0 || _runTokens > 0 || _runOverheadUsd > 0)
                 Log($"restored budget: ${_runCostUsd:0.00} agent / ${_runOverheadUsd:0.00} overhead / {_runTokens / 1000.0:0.#}k tokens (from prior process)");
-            while (!ct.IsCancellationRequested)
+            try
             {
-                await HandleControlAsync(ct: ct).ConfigureAwait(false);
-                if (state.Status == RunStatus.Aborted) { SaveAndReport(); return 2; }
-                if (!opts.DryRun && state.Status is RunStatus.Paused or RunStatus.NeedsHuman or RunStatus.AwaitingOwner)
+                while (!ct.IsCancellationRequested)
                 {
-                    PushIdleSnapshot();
-                    await Task.Delay(800, CancellationToken.None).ConfigureAwait(false);
-                    continue;
-                }
-
-                if (!opts.DryRun && _backoffUntil is { } until)
-                {
-                    if (DateTime.UtcNow < until) { PushIdleSnapshot(); await Task.Delay(1000, CancellationToken.None).ConfigureAwait(false); continue; }
-                    _backoffUntil = null;
-                    state.Status = RunStatus.Idle;
-                    Log("backoff over — resuming");
-                }
-
-                if (!opts.DryRun && _stallBackoffUntil is { } sbUntil)
-                {
-                    if (DateTime.UtcNow < sbUntil)
+                    await HandleControlAsync(ct: ct).ConfigureAwait(false);
+                    if (state.Status == RunStatus.Aborted) { SaveAndReport(); return 2; }
+                    if (!opts.DryRun && state.Status is RunStatus.Paused or RunStatus.NeedsHuman or RunStatus.AwaitingOwner)
                     {
                         PushIdleSnapshot();
-                        await Task.Delay(1000, CancellationToken.None).ConfigureAwait(false);
+                        await Task.Delay(800, ct).ConfigureAwait(false);
                         continue;
                     }
-                    _stallBackoffUntil = null;
-                    Log("stall backoff over — resuming");
-                }
 
-                if (!opts.DryRun && _dnsParkedUntil is { } dpUntil)
-                {
-                    if (DateTime.UtcNow < dpUntil)
+                    if (!opts.DryRun && _backoffUntil is { } until)
                     {
-                        PushIdleSnapshot();
-                        await Task.Delay(1000, CancellationToken.None).ConfigureAwait(false);
-                        continue;
+                        if (DateTime.UtcNow < until) { PushIdleSnapshot(); await Task.Delay(1000, ct).ConfigureAwait(false); continue; }
+                        _backoffUntil = null;
+                        state.Status = RunStatus.Idle;
+                        Log("backoff over — resuming");
                     }
-                    _dnsParkedUntil = null;
-                    if (await CheckDnsPreflightAsync().ConfigureAwait(false))
-                    {
-                        Log("DNS recovered — resuming session");
-                    }
-                    else
-                    {
-                        Log("DNS still unhealthy — parking again");
-                        _dnsParkedUntil = DateTime.UtcNow.AddSeconds(plan.Limits.DnsHealthCheck?.IntervalSeconds ?? 60);
-                        PushIdleSnapshot();
-                        await Task.Delay(1000, CancellationToken.None).ConfigureAwait(false);
-                        continue;
-                    }
-                }
 
-                var track = _progress.Read(plan, CancellationToken.None);
+                    if (!opts.DryRun && _stallBackoffUntil is { } sbUntil)
+                    {
+                        if (DateTime.UtcNow < sbUntil)
+                        {
+                            PushIdleSnapshot();
+                            await Task.Delay(1000, ct).ConfigureAwait(false);
+                            continue;
+                        }
+                        _stallBackoffUntil = null;
+                        Log("stall backoff over — resuming");
+                    }
+
+                    if (!opts.DryRun && _dnsParkedUntil is { } dpUntil)
+                    {
+                        if (DateTime.UtcNow < dpUntil)
+                        {
+                            PushIdleSnapshot();
+                            await Task.Delay(1000, ct).ConfigureAwait(false);
+                            continue;
+                        }
+                        _dnsParkedUntil = null;
+                        if (await CheckDnsPreflightAsync().ConfigureAwait(false))
+                        {
+                            Log("DNS recovered — resuming session");
+                        }
+                        else
+                        {
+                            Log("DNS still unhealthy — parking again");
+                            _dnsParkedUntil = DateTime.UtcNow.AddSeconds(plan.Limits.DnsHealthCheck?.IntervalSeconds ?? 60);
+                            PushIdleSnapshot();
+                            await Task.Delay(1000, ct).ConfigureAwait(false);
+                            continue;
+                        }
+                    }
+
+                var track = _progress.Read(plan, ct);
                 if (track.Checkpoints.Count == 0)
                 {
                     NeedsHuman($"tracker {plan.Tracker} has no parseable checkpoint rows — check the table format");
@@ -303,7 +305,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 var rec = state.History[^1];
 
                 // B12.1: collect any lane artifacts that weren't captured during the session
-                await CollectLaneArtifactsAsync(stage.Id).ConfigureAwait(false);
+                await CollectLaneArtifactsAsync(stage.Id, ct).ConfigureAwait(false);
 
                 _runCostUsd += rec.CostUsd ?? 0;
                 _runTokens += (rec.TokensInput ?? 0) + (rec.TokensOutput ?? 0) + (rec.TokensReasoning ?? 0);
@@ -339,6 +341,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     return 0;
                 }
             }
+            }
+            catch (OperationCanceledException) { /* cancellation requested — fall through to cleanup */ }
             // Ctrl+C / external cancel — graceful shutdown (B3.5)
             Log("cancelled — saving state");
             try { SaveAndReport(); } catch { /* best-effort */ }
@@ -529,7 +533,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     lastHeartbeat = DateTime.UtcNow;
                     RefreshReport(rec, stage, agent, preTrack);
                 }
-                await Task.Delay(400, CancellationToken.None).ConfigureAwait(false);
+                try { await Task.Delay(400, ct).ConfigureAwait(false); }
+                catch (OperationCanceledException) { killedByUser = true; agent.Kill(); }
             }
             var exit = agent.WaitForExitCode();
             while (agent.TryDequeue(out var ev)) { sink.AgentEvent(ev); TrackActivity(ev); }
@@ -659,7 +664,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             }
             else
             {
-                var verdict = ConsultAdvisor(rec, stage, _progress.Read(plan, CancellationToken.None), "resume budget exhausted after stall/timeout");
+                var verdict = ConsultAdvisor(rec, stage, _progress.Read(plan, ct), "resume budget exhausted after stall/timeout");
                 ApplyVerdict(verdict, rec, stage, defaultAction: AdvisorAction.Retry);
             }
             state.Status = RunStatus.Idle;
@@ -718,7 +723,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             return;
         }
 
-        var postTrack = _progress.Read(plan, CancellationToken.None);
+        var postTrack = _progress.Read(plan, ct);
         rec.NewCommits = Git.CommitsSince(plan.Repo, startHead);
         rec.NewlyDone = postTrack.Checkpoints
             .Where(c => c.IsDone && !(preTrack.ById(c.Id)?.IsDone ?? false))
@@ -824,7 +829,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 state.PendingPhaseGate = null;
                 state.AuditedStages.Add(pg.StageId); // mark audited so we don't re-queue
                 Log($"phase {pg.StageId} full battery GREEN — confirming now, audit will run in parallel with next deliver");
-                await ConfirmStageAsync(pg.StageId).ConfigureAwait(false);
+                await ConfirmStageAsync(pg.StageId, ct).ConfigureAwait(false);
                 return; // ConfirmStage saved
             }
 
@@ -838,7 +843,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             }
             else
             {
-                await ConfirmStageAsync(pg.StageId).ConfigureAwait(false);
+                await ConfirmStageAsync(pg.StageId, ct).ConfigureAwait(false);
             }
         }
         else
@@ -921,7 +926,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         }
     }
 
-    private async Task ConfirmStageAsync(string id)
+    private async Task ConfirmStageAsync(string id, CancellationToken ct)
     {
         var stage = plan.Stages.FirstOrDefault(s => s.Id == id);
         if (stage is { OwnerGate: true } && !state.OwnerApprovedStages.Contains(id))
@@ -933,7 +938,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             SaveAndReport();
             Notify($"Conductor {plan.Name}: stage {id} is green and awaiting owner approval");
             _ = telegram.PushWithKeyboardAsync($"Stage {id} green — owner approval needed",
-                [("Approve", "approve")]);
+                [("Approve", "approve")], CancellationToken.None);
             return;
         }
         if (!state.ConfirmedStages.Contains(id)) state.ConfirmedStages.Add(id);
@@ -947,7 +952,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             RunStageHook(id, "post-hook", postHook, CancellationToken.None);
         // B12.4: fix-lanes run after the stage is confirmed — they consume .conductor/followups.md
         // entries owned by this stage and run as Tier B mutating lanes behind merge gates.
-        await RunFollowupFixLanesAsync(id).ConfigureAwait(false);
+        await RunFollowupFixLanesAsync(id, ct).ConfigureAwait(false);
         if (state.PauseAfterStage)
         {
             state.PauseAfterStage = false;
@@ -1171,7 +1176,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     state.OwnerApprovedStages.Add(stageId);
                     Log($"owner approved stage {stageId} — continuing");
                 }
-                await ConfirmStageAsync(stageId).ConfigureAwait(false);
+                await ConfirmStageAsync(stageId, CancellationToken.None).ConfigureAwait(false);
                 break;
         }
     }
@@ -2300,7 +2305,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     /// <c>.conductor/followups.md</c> and run each as a Tier B mutating fix-lane behind a
     /// merge gate. Closed followups are updated in-place with the resulting commit ref.
     /// </summary>
-    private async Task RunFollowupFixLanesAsync(string stageId)
+    private async Task RunFollowupFixLanesAsync(string stageId, CancellationToken ct)
     {
         var followupsPath = Path.Combine(plan.StateDir, "followups.md");
         if (!File.Exists(followupsPath)) return;
@@ -2321,7 +2326,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             try
             {
                 result = await Task.Run(() => MutatingLaneRunner.RunAsync(
-                    plan, lane, agent, stageId, events, Log, CancellationToken.None), CancellationToken.None).ConfigureAwait(false);
+                    plan, lane, agent, stageId, events, Log, ct), ct).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -2414,11 +2419,11 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
     /// <summary>B12.2: After the session ends, wait briefly for any remaining lanes, then
     /// collect their artifacts. The pool already emitted lifecycle events; we just log a summary.</summary>
-    private async Task CollectLaneArtifactsAsync(string stageId)
+    private async Task CollectLaneArtifactsAsync(string stageId, CancellationToken ct)
     {
         if (_lanePool == null || (_lanePool.ActiveCount == 0 && _lanePool.CompletedCount == 0)) return;
 
-        var remaining = await _lanePool.WaitAllAsync(TimeSpan.FromSeconds(10), CancellationToken.None).ConfigureAwait(false);
+        var remaining = await _lanePool.WaitAllAsync(TimeSpan.FromSeconds(10), ct).ConfigureAwait(false);
 
         var successCount = remaining.Count(r => r.IsSuccess);
         var failCount = remaining.Count - successCount;
