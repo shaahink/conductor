@@ -96,7 +96,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 while (!ct.IsCancellationRequested)
                 {
                     await HandleControlAsync(ct: ct).ConfigureAwait(false);
-                    if (state.Status == RunStatus.Aborted) { SaveAndReport(); return 2; }
+                    if (state.Status == RunStatus.Aborted) { _runDb?.RecordRunEnd(state.RunId, state.Status.ToString()); SaveAndReport(); return 2; }
                     if (!opts.DryRun && state.Status is RunStatus.Paused or RunStatus.NeedsHuman or RunStatus.AwaitingOwner)
                     {
                         PushIdleSnapshot();
