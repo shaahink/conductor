@@ -6,11 +6,11 @@ your stage deliverable from the plan JSON.
 **Design doc:** `docs/CONDUCTOR-VNEXT-PLAN.md` — 10 cataloged failures, architecture, locked decisions, addenda D7-D12.
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
-last: s1 — F0.1 kill list executed (replay, confidence, personas, heartbeat, templates deleted). All 5 sub-items DONE.
-stage: F0 — Foundations. F0.1 DONE, F0.2 (async loop) next, F0.3 (harness) pending.
-commits: 8a57d1e | 9daa9c7 | c305bcf | 7590d71 | 47798ee (5 commits, 23 files, -687 net LOC).
-gate: 0w/0e, 531/531 tests pass. dirty: REPORT.md auto-refresh only.
-trap: F0.2 requires making Orchestrator.Run() async (~2400 LOC god-class). Start by eliminating Thread.Sleep → Task.Delay and .GetAwaiter().GetResult() in the run loop, then propagate up. F0.1 is locked — do not revisit.
+last: s2 — F0.2 async control loop + F0.3 integration harness delivered.
+stage: F0 — Foundations. ALL 3 checkpoints DONE. F1 (run.db) next.
+commits: 09dc2ec (F0.2 async) | b6e5d8b (F0.3 harness). Total F0: 7 commits, 6 files.
+gate: 0w/0e, 533/533 tests pass (531 original + 2 harness). dirty: none.
+trap: HarnessTests creates temp git repos — ensure git is on PATH for test runs.
 branch: feat/foreman.
 
 ## Baseline numbers (pre-Foreman, re-measure at each phase)
@@ -18,7 +18,7 @@ branch: feat/foreman.
 | Metric | Value |
 |---|---|
 | Target framework | net10.0 |
-| Tests | 531 pass (0 warn, 0 err) |
+| Tests | 533 pass (0 warn, 0 err) |
 | Source files | ~45 .cs under src/Conductor |
 | Branches | master (stable), feat/foreman |
 | Versions | Conductor v2 (Baton) + Era v3 enhancements; 91 sessions, ~$4.78 total |
@@ -34,8 +34,8 @@ never silent renumbering.
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | F0.1 | Kill list executed — delete replay/time-travel, persona bloat (keep 3 roles), confidence pane, heartbeat commits to feature branch, hierarchical template system | DONE | 47798ee | 531 tests pass, 0w/0e, 23 files changed, -687 net LOC across 5 commits |
-| F0.2 | Async control loop — Orchestrator run loop async (B4.7 debt); no blocking .Result/.Wait() | TODO | - | - |
-| F0.3 | Integration harness — fake agent + temp repo, full cycle asserted (B4.8); gate: 0w/0e, harness cycle green | TODO | - | - |
+| F0.2 | Async control loop — Orchestrator run loop async (B4.7 debt); no blocking .Result/.Wait() | DONE | 09dc2ec | 533 tests pass, 0w/0e, 9 private methods converted to async, 6 Thread.Sleep→Task.Delay, 3 .GetAwaiter()/.Result→await |
+| F0.3 | Integration harness — fake agent + temp repo, full cycle asserted (B4.8); gate: 0w/0e, harness cycle green | DONE | b6e5d8b | HarnessTests.cs — 2 tests (full cycle + dry-run), fake cmd agent writes opencode JSON, 533/533 pass |
 
 ### F1 — SQLite run.db task store + tracker-as-view
 
