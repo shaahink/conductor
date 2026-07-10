@@ -4,6 +4,7 @@ using System.Text.Json;
 using Conductor.Core;
 using Conductor.Core.Events;
 using Conductor.Core.Hosting;
+using Conductor.Core.Http;
 using Conductor.Core.Integrations;
 using Conductor.Models;
 using Conductor.Ui;
@@ -50,6 +51,14 @@ public sealed class RunCommand : Command<RunCommand.Settings>
         [CommandOption("--no-dashboard")]
         [Description("Plain line output instead of the live dashboard.")]
         public bool NoDashboard { get; init; }
+
+        [CommandOption("--control-plane")]
+        [Description("F5: expose a localhost HTTP+SSE control plane (state/tasks/events/control). Off by default.")]
+        public bool ControlPlane { get; init; }
+
+        [CommandOption("--control-plane-port <PORT>")]
+        [Description("Port for --control-plane (default 4317).")]
+        public int ControlPlanePort { get; init; } = 4317;
     }
 
     public override int Execute(CommandContext context, Settings settings)
@@ -60,7 +69,7 @@ public sealed class RunCommand : Command<RunCommand.Settings>
         var state = RunState.LoadOrNew(statePath, plan.Name);
         if (string.IsNullOrEmpty(state.RunId)) state.RunId = Guid.NewGuid().ToString("N");
 
-        var opts = new RunOptions(settings.DryRun, settings.Once, settings.MaxSessions);
+        var opts = new RunOptions(settings.DryRun, settings.Once, settings.MaxSessions, settings.ControlPlane, settings.ControlPlanePort);
         using var cts = new CancellationTokenSource();
 #pragma warning disable MA0045 // CancelAsync doesn't exist on CancellationTokenSource
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
@@ -78,6 +87,7 @@ public sealed class RunCommand : Command<RunCommand.Settings>
                 // Host = composition + structured-logging root (B2.5). The console sink is on for plain
                 // runs (no TUI to corrupt); options are validated on start inside Build.
                 using var host = ConductorHost.Build(plan, state, statePath, new PlainSink(), events, opts, consoleSink: true);
+                host.Services.GetService<ControlPlaneServer>()?.Start(); // F5: opt-in, never fatal if it fails to bind
 #pragma warning disable MA0045 // sync-over-async boundary: Spectre.Cli Execute must return int
                 return host.Services.GetRequiredService<Orchestrator>().RunAsync(cts.Token).GetAwaiter().GetResult();
 #pragma warning restore MA0045
@@ -86,6 +96,7 @@ public sealed class RunCommand : Command<RunCommand.Settings>
             var dash = new LiveDashboard(plan);
             // Dashboard owns stdout, so the Serilog console sink is disabled here (file sink only).
             using var dashHost = ConductorHost.Build(plan, state, statePath, dash, events, opts, consoleSink: false);
+            dashHost.Services.GetService<ControlPlaneServer>()?.Start(); // F5: opt-in, never fatal if it fails to bind
             var orchestrator = dashHost.Services.GetRequiredService<Orchestrator>();
             var task = orchestrator.RunAsync(cts.Token);
             dash.RunUiLoop(task);

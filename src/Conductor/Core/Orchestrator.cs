@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -12,7 +13,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Conductor.Core;
 
-public sealed record RunOptions(bool DryRun, bool Once, int MaxSessions);
+public sealed record RunOptions(bool DryRun, bool Once, int MaxSessions, bool ControlPlane = false, int ControlPlanePort = 4317);
 
 /// <summary>
 /// The session cycle, mechanized:
@@ -21,7 +22,7 @@ public sealed record RunOptions(bool DryRun, bool Once, int MaxSessions);
 /// Every transition is persisted, so killing conductor at any point is recoverable.
 /// </summary>
 #pragma warning disable MA0045 // Orchestrator helper methods (Save/Log/AcquireLock/etc.) use sync file I/O by design — fast local writes, not hot-path
-public sealed class Orchestrator(PlanConfig plan, RunState state, string statePath, IProgressSink sink, IEventSink events, RunOptions opts, ILogger<Orchestrator> logger, ITelegramService telegram, WebhookNotifier webhooks, IPlanner? planner = null, RunDb? runDb = null, ProcessSupervisor? processSupervisor = null, ControlDispatcher? dispatcher = null)
+public sealed class Orchestrator(PlanConfig plan, RunState state, string statePath, IProgressSink sink, IEventSink events, RunOptions opts, ILogger<Orchestrator> logger, ITelegramService telegram, WebhookNotifier webhooks, IPlanner? planner = null, RunDb? runDb = null, ProcessSupervisor? processSupervisor = null, ControlDispatcher? dispatcher = null, ConcurrentQueue<ControlCommand>? controlInbox = null)
 {
     private readonly IPlanner _planner = planner ?? new CheckpointPlanner();
     private readonly PromptBuilder _prompts = BuildPromptBuilder(plan);
@@ -37,6 +38,9 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     private ControlDispatcher? _dispatcherInstance;
     private ControlDispatcher Dispatcher => _dispatcherInstance ??=
         dispatcher ?? new ControlDispatcher(plan, state, sink, events, Log, Save, DeleteControlFile, SkipStage, ApproveAwaitingOwnerAsync);
+    // F5: commands posted to the HTTP control plane land here — a third ingress alongside the TUI
+    // queue (sink.PollControl) and control.json (ReadControlFileAsync), same dispatcher for all three.
+    private readonly ConcurrentQueue<ControlCommand>? _controlInbox = controlInbox;
     private IReadOnlyList<GateResult>? _lastGates;
     private readonly string _lockPath = Path.Combine(plan.StateDir, "conductor.lock");
     private readonly string _controlPath = Path.Combine(plan.StateDir, "control.json");
@@ -1759,10 +1763,13 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
     private async Task<ControlAction?> HandleControlAsync(bool inSession = false, CancellationToken ct = default)
     {
-        var cmd = sink.PollControl() ?? await ReadControlFileAsync(ct).ConfigureAwait(false);
+        var cmd = sink.PollControl() ?? PollInbox() ?? await ReadControlFileAsync(ct).ConfigureAwait(false);
         if (cmd is not { } c) return null;
         return await Dispatcher.DispatchAsync(c, inSession, ct).ConfigureAwait(false);
     }
+
+    private ControlCommand? PollInbox() =>
+        _controlInbox != null && _controlInbox.TryDequeue(out var c) ? c : null;
 
     private async Task<ControlCommand?> ReadControlFileAsync(CancellationToken ct)
     {

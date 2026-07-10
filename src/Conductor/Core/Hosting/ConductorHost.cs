@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using Conductor.Core.Events;
+using Conductor.Core.Http;
 using Conductor.Core.Integrations;
 using Conductor.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -119,6 +121,25 @@ public static class ConductorHost
             return new ProcessSupervisor(supLogger, state.RunId, runDb);
         });
 
+        // F5: control-plane inbox — a third command ingress (alongside the TUI queue and
+        // control.json) that POST /control enqueues onto and the run loop polls. Always registered
+        // (cheap, empty queue) so Orchestrator's wiring doesn't branch on whether the HTTP server
+        // itself is enabled.
+        builder.Services.AddSingleton(new ConcurrentQueue<ControlCommand>());
+
+        // F5: HTTP+SSE control plane — opt-in (RunOptions.ControlPlane), off by default. A bind
+        // failure never throws (see ControlPlaneServer.Start) — headless/no-flag runs are byte-
+        // identical whether or not this is registered.
+        if (opts.ControlPlane)
+        {
+            builder.Services.AddSingleton(sp => new ControlPlaneServer(
+                plan,
+                Path.Combine(plan.StateDir, "events.jsonl"),
+                sp.GetRequiredService<ConcurrentQueue<ControlCommand>>(),
+                sp.GetRequiredService<ILogger<ControlPlaneServer>>(),
+                opts.ControlPlanePort));
+        }
+
         builder.Services.AddSingleton(sp => new Orchestrator(
             sp.GetRequiredService<PlanConfig>(),
             sp.GetRequiredService<RunState>(),
@@ -131,7 +152,8 @@ public static class ConductorHost
             sp.GetRequiredService<WebhookNotifier>(),
             planner: null,
             runDb: sp.GetService<RunDb>(),
-            processSupervisor: sp.GetService<ProcessSupervisor>()));
+            processSupervisor: sp.GetService<ProcessSupervisor>(),
+            controlInbox: sp.GetRequiredService<ConcurrentQueue<ControlCommand>>()));
 
         var host = builder.Build();
         ValidateOptionsOnStart(host.Services, plan);
