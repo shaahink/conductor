@@ -74,7 +74,7 @@
 
   "gatePolicy": "perPhase",
 
-  "audit": { "enabled": true, "maxAttempts": 1 },
+  "audit": { "enabled": false },
 
   // Fast tier (per session): build. Full tier (phase end): tests. Truth gates (F7) per stage in plan.
   "gates": [

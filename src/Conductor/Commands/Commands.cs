@@ -1751,6 +1751,11 @@ public sealed class TaskCommand : Command<TaskCommand.Settings>
 
         var statePath = Path.Combine(plan.StateDir, "state.json");
         var state = RunState.LoadOrNew(statePath, plan.Name);
+        if (string.IsNullOrEmpty(state.RunId))
+        {
+            AnsiConsole.MarkupLine("[red]state.json has no RunId.[/] Initialize the run first (conductor run --dry-run or run at least one session).");
+            return 1;
+        }
 
         try
         {
@@ -1758,12 +1763,24 @@ public sealed class TaskCommand : Command<TaskCommand.Settings>
 
             if (settings.Done != null)
             {
+                var allCps = db.GetCheckpoints(state.RunId);
+                if (!allCps.Any(c => c.Id.Equals(settings.Done, StringComparison.OrdinalIgnoreCase)))
+                {
+                    AnsiConsole.MarkupLine($"[red]Checkpoint '{Markup.Escape(settings.Done)}' not found in run.db[/]");
+                    return 1;
+                }
                 db.UpdateCheckpoint(state.RunId, settings.Done, "DONE",
                     settings.Commit ?? "-", settings.Evidence ?? "marked done via CLI");
                 AnsiConsole.MarkupLine($"[green]checkpoint {Markup.Escape(settings.Done)} → DONE[/]");
             }
             else if (settings.InProgress != null)
             {
+                var allCps = db.GetCheckpoints(state.RunId);
+                if (!allCps.Any(c => c.Id.Equals(settings.InProgress, StringComparison.OrdinalIgnoreCase)))
+                {
+                    AnsiConsole.MarkupLine($"[red]Checkpoint '{Markup.Escape(settings.InProgress)}' not found in run.db[/]");
+                    return 1;
+                }
                 db.MarkCheckpointInProgress(state.RunId, settings.InProgress);
                 AnsiConsole.MarkupLine($"[yellow]checkpoint {Markup.Escape(settings.InProgress)} → IN PROGRESS[/]");
             }

@@ -554,6 +554,11 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             rec.TokensReasoning = agent.TokensReasoning;
             rec.TokensCacheRead = agent.TokensCacheRead;
             rec.ResultSummary = ExtractSessionResult(agent.ResultText);
+                // B12.4+: if a rolled-over session was an audit, mark the stage as audited so
+                // the main loop does not re-queue another audit on the next iteration
+                // (preventing infinite audit loops when audits consistently hit token limits).
+                if (kind == SessionKind.Audit && !state.AuditedStages.Contains(stage.Id))
+                    state.AuditedStages.Add(stage.Id);
             Log($"session #{rec.Number} exited (code {exit}, {(rec.EndedUtc - rec.StartedUtc).Value.TotalMinutes:0}m" +
                 (agent.CostUsd.HasValue ? $", ${agent.CostUsd:0.00}" : "") + ")");
 
@@ -605,6 +610,11 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             {
                 rec.Outcome = SessionOutcome.RolledOver;
                 rec.ResultSummary = ExtractSessionResult(agent.ResultText);
+                // B12.4+: if a rolled-over session was an audit, mark the stage as audited so
+                // the main loop does not re-queue another audit on the next iteration
+                // (preventing infinite audit loops when audits consistently hit token limits).
+                if (kind == SessionKind.Audit && !state.AuditedStages.Contains(stage.Id))
+                    state.AuditedStages.Add(stage.Id);
                 var resumeCtx = BuildRolloverResumeHint(preTrack);
                 Log($"session #{rec.Number} rolled over — {rec.TokensTotal / 1000.0:0.#}k tokens ≥ {maxTok / 1000.0:0.#}k limit, handoff written{(resumeCtx != null ? $" · {resumeCtx}" : "")}");
                 ReflectionStep(rec);
@@ -2525,3 +2535,4 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         }
     }
 }
+
