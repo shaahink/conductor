@@ -57,6 +57,14 @@ public sealed class PromptBuilder
         return Render("advisor.md", vars);
     }
 
+    public string Verify(StageConfig stage, int sessionNumber, PendingVerify verify)
+    {
+        var vars = Vars(stage, sessionNumber, 1, 1);
+        vars["prevSession"] = verify.FromSession.ToString();
+        vars["diffBase"] = verify.StageStartHead;
+        return Render("verify.md", vars);
+    }
+
     public string Review(StageConfig stage, int sessionNumber, int attempt, int maxAttempts, string reviewPath)
     {
         var vars = Vars(stage, sessionNumber, attempt, maxAttempts);
@@ -274,6 +282,34 @@ public sealed class PromptBuilder
 
             After writing the review: commit it, push, and update `{tracker}` normally.
             End by printing one paragraph starting with `SESSION-RESULT:` summarising the review verdict.
+            {stageNotes}{extra}
+            """,
+        "verify.md" => """
+            You are a VERIFICATION session inside the "{planName}" mega plan, launched by the Conductor orchestrator after session #{prevSession} in stage {stage} — {stageTitle} completed its deliver phase.
+
+            Work in: {repo}
+            {readOrder}
+            Session #{prevSession} has just delivered work. Your job is to INDEPENDENTLY verify that the work matches its claims.
+
+            Do, in order:
+            1. Read `{tracker}` (handoff block + checkpoint rows) and the stage's design doc in `{planDoc}`.
+            2. Inspect the actual changes: `git diff {diffBase}..HEAD` and the files touched.
+            3. Re-run the gate battery yourself — do not trust the previous session's gate results. Run `dotnet build` and `dotnet test` independently.
+            4. Check every claim in the handoff against reality: do the commits exist? do the files mentioned actually exist? do the tests actually pass? are code changes genuinely correct?
+            5. Look for bugs, race conditions, resource leaks, async anti-patterns, analyzer violations.
+
+            Then produce your verdict as a SINGLE JSON object (no prose before or after):
+
+            {"score":0-100,"findings":["finding 1","finding 2"],"verdict":"PASS|WARN|FAIL"}
+
+            Scoring guide:
+            - 90-100: Excellent — all claims verified, gates green, code is correct and well-structured, no issues found.
+            - 80-89: Good — claims mostly verified, gates green, minor or cosmetic issues only.
+            - 60-79: Needs work — gates green but claims don't fully match reality, or found real bugs.
+            - 0-59: Failed — gates red, or claims are false, or serious bugs present.
+
+            Your score determines the next step: ≥{plan.VerifierThreshold} (default 80) means the checkpoint is DONE and findings become follow-ups. Below that means the findings feed a retry.
+            End by printing exactly the JSON object on its own line.
             {stageNotes}{extra}
             """,
         _ => throw new ArgumentException($"No built-in template named {name}", nameof(name)),

@@ -654,6 +654,10 @@ public sealed class LimitsConfig
     /// <summary>O3: per-second overhead rate for gate runtime cost estimates.
     /// Default $0.0001/s = $0.36/hr — light compute, different from agent API cost.</summary>
     public decimal OverheadCostPerSecond { get; set; } = 0.0001m;
+    /// <summary>F4: verifier score threshold (0-100). A session scoring ≥ this passes verification
+    /// and its checkpoints are marked DONE. Below this threshold the findings feed a retry.
+    /// Default 80, per-stage overridable in the plan.</summary>
+    public int VerifierThreshold { get; set; } = 80;
 }
 
 /// <summary>O2: DNS preflight configuration for network health validation before spawning.</summary>

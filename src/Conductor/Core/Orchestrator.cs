@@ -400,12 +400,14 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
     private async Task RunSessionAsync(StageConfig stage, TrackerSnapshot preTrack, CancellationToken ct)
     {
-        // consume pending fix/resume/audit — they describe THIS session
+        // consume pending fix/resume/audit/verify — they describe THIS session
         var pendingResume = state.PendingResume; state.PendingResume = null;
         var pendingAudit = state.PendingAudit; state.PendingAudit = null;
         var pendingFix = state.PendingFix; state.PendingFix = null;
+        var pendingVerify = state.PendingVerify; state.PendingVerify = null;
         var kind = pendingResume != null ? SessionKind.Resume
             : pendingAudit != null ? SessionKind.Audit
+            : pendingVerify != null ? SessionKind.Verify
             : pendingFix != null ? SessionKind.Fix : SessionKind.Deliver;
 
         state.SessionCounter++;
@@ -456,6 +458,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         {
             SessionKind.Resume => _prompts.Resume(stage, state.SessionCounter, attempt, maxAttempts, pendingResume!),
             SessionKind.Audit => _prompts.Audit(stage, state.SessionCounter, pendingAudit!, state.CurrentStageStartHead ?? "HEAD~1"),
+            SessionKind.Verify => _prompts.Verify(stage, state.SessionCounter, pendingVerify!),
             SessionKind.Fix => _prompts.Fix(stage, state.SessionCounter, attempt, maxAttempts, pendingFix!),
             _ => isReview
                 ? _prompts.Review(stage, state.SessionCounter, attempt, maxAttempts, reviewPath)
@@ -790,6 +793,63 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             return;
         }
 
+        // Verify session: parse the verifier's score and decide next step.
+        // A score >= threshold means the work is accepted; findings become follow-ups.
+        // A score < threshold queues a Fix session with the verifier's findings.
+        if (rec.Kind == SessionKind.Verify)
+        {
+            rec.NewCommits = Git.CommitsSince(plan.Repo, startHead);
+            var verdict = Verifier.Parse(ExtractSessionResult(rec.ResultSummary) ?? "");
+            if (verdict != null)
+            {
+                var findingsText = string.Join("\n", verdict.Findings);
+                _runDb?.WriteScore(state.RunId, rec.Number, stage.Id, verdict.Score,
+                    verdict.Verdict, findingsText);
+                Log($"verifier score: {verdict.Score}/100 — verdict: {verdict.Verdict} ({verdict.Findings.Count} finding(s))");
+
+                if (verdict.Passes(plan.Limits.VerifierThreshold))
+                {
+                    rec.Outcome = SessionOutcome.Progress;
+                    state.AttemptsThisStage = 0;
+                    if (verdict.Findings.Count > 0)
+                        WriteVerifierFollowups(stage.Id, verdict);
+                    Log($"verifier passed ({verdict.Score}/{plan.Limits.VerifierThreshold}) — {(verdict.Findings.Count > 0 ? $"{verdict.Findings.Count} finding(s) tracked as follow-ups" : "no findings")}");
+                }
+                else
+                {
+                    state.PendingFix = new PendingFix
+                    {
+                        FromSession = rec.Number,
+                        VerifierFindings = findingsText,
+                        VerifierScore = verdict.Score,
+                        GateFailures = $"verifier score {verdict.Score}/100 < threshold {plan.Limits.VerifierThreshold}",
+                        ProgressSummary = $"Verifier verdict: {verdict.Verdict}. " +
+                            (verdict.Findings.Count > 0
+                                ? $"Findings: {string.Join("; ", verdict.Findings.Take(5))}"
+                                : "No specific findings recorded."),
+                    };
+                    rec.Outcome = SessionOutcome.NoProgress;
+                    state.AttemptsThisStage++;
+                    Log($"verifier failed ({verdict.Score}/{plan.Limits.VerifierThreshold}) — queuing fix session with {verdict.Findings.Count} finding(s)");
+                }
+            }
+            else
+            {
+                rec.Outcome = SessionOutcome.AgentError;
+                Log("verifier produced no parseable score — treating as agent error, queuing fix");
+                state.PendingFix = new PendingFix
+                {
+                    FromSession = rec.Number,
+                    GateFailures = "verifier session produced no valid score JSON",
+                    ProgressSummary = $"The verifier agent session ended but its output could not be parsed. Check session-{rec.Number:000}.jsonl for raw output.",
+                };
+                state.AttemptsThisStage++;
+            }
+            state.Status = RunStatus.Idle;
+            SaveAndReport();
+            return;
+        }
+
         state.Status = RunStatus.VerifyingGates;
         Save();
         PushIdleSnapshot();
@@ -839,11 +899,27 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
         if (gatesGreen && (rec.NewCommits.Count > 0 || postTrack.StageDone(stage.Id)) && !agentErrored)
         {
-            rec.Outcome = rec.NewlyDone.Count > 0 ? SessionOutcome.Advanced : SessionOutcome.Progress;
-            state.AttemptsThisStage = rec.NewlyDone.Count > 0 ? 0 : state.AttemptsThisStage + 1;
-            state.PendingFix = null;
-            if (dirty) Log($"note: working tree left dirty after green session: {Git.DirtySummary(plan.Repo)}");
-            Log($"session #{rec.Number} {rec.Outcome} — {(rec.NewlyDone.Count > 0 ? string.Join(", ", rec.NewlyDone) + " done" : "no checkpoint flipped yet")}", rec.Outcome?.ToString().ToLowerInvariant() ?? "unknown");
+            if (ShouldVerify(rec))
+            {
+                state.PendingVerify = new PendingVerify
+                {
+                    FromSession = rec.Number,
+                    StageId = stage.Id,
+                    StageStartHead = state.CurrentStageStartHead ?? startHead,
+                };
+                rec.Outcome = SessionOutcome.Progress;
+                state.PendingFix = null;
+                if (dirty) Log($"note: working tree left dirty after green session: {Git.DirtySummary(plan.Repo)}");
+                Log($"session #{rec.Number} Progress — verifier queued to independently check the work");
+            }
+            else
+            {
+                rec.Outcome = rec.NewlyDone.Count > 0 ? SessionOutcome.Advanced : SessionOutcome.Progress;
+                state.AttemptsThisStage = rec.NewlyDone.Count > 0 ? 0 : state.AttemptsThisStage + 1;
+                state.PendingFix = null;
+                if (dirty) Log($"note: working tree left dirty after green session: {Git.DirtySummary(plan.Repo)}");
+                Log($"session #{rec.Number} {rec.Outcome} — {(rec.NewlyDone.Count > 0 ? string.Join(", ", rec.NewlyDone) + " done" : "no checkpoint flipped yet")}", rec.Outcome?.ToString().ToLowerInvariant() ?? "unknown");
+            }
 
             // perPhase: if this session completed the stage, schedule the audit / confirming battery.
             if (plan.PerPhaseGates && postTrack.StageDone(stage.Id))
@@ -1494,6 +1570,51 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         state.AttemptsThisStage = 0;
         Log($"⚠ stage {stage.Id} SKIPPED ({why}) — flagged for human review in the report");
         SaveAndReport();
+    }
+
+    private static bool ShouldVerify(SessionRecord rec)
+    {
+        return rec.Kind == SessionKind.Deliver;
+    }
+
+    private void WriteVerifierFollowups(string stageId, VerifierVerdict verdict)
+    {
+        var followupsPath = Path.Combine(plan.StateDir, "followups.md");
+        var existing = FollowupParser.Read(followupsPath);
+        var maxId = existing
+            .Select(e => e.Id)
+            .Where(id => id.StartsWith("FU-", StringComparison.Ordinal))
+            .Select(id =>
+            {
+                var parts = id.Split('-');
+                return parts.Length >= 3 && int.TryParse(parts[^1], out var n) ? n : 0;
+            })
+            .DefaultIfEmpty(0)
+            .Max();
+
+        var lines = new StringBuilder();
+        lines.AppendLine("| id | item | detail | owning stage | status |");
+        lines.AppendLine("|---|---|---|---|---|");
+        foreach (var finding in verdict.Findings)
+        {
+            maxId++;
+            var id = $"FU-F4-{maxId:00}";
+            var item = finding.Length > 80 ? finding[..77] + "..." : finding;
+            lines.AppendLine($"| {id} | {item} | {finding} | {stageId} | OPEN |");
+        }
+
+        if (File.Exists(followupsPath))
+        {
+            var content = "\n" + lines.ToString();
+            File.AppendAllText(followupsPath, content, Encoding.UTF8);
+        }
+        else
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(followupsPath)!);
+            File.WriteAllText(followupsPath, "# Follow-ups\n\n" + lines.ToString(), Encoding.UTF8);
+        }
+
+        Log($"wrote {verdict.Findings.Count} verifier finding(s) to {followupsPath}");
     }
 
     /// <summary>Tracker says everything is DONE — confirm with real gates before declaring victory.

@@ -5,7 +5,7 @@ namespace Conductor.Models;
 
 public enum RunStatus { Idle, Running, VerifyingGates, Backoff, Paused, NeedsHuman, AwaitingOwner, Completed, Aborted }
 
-public enum SessionKind { Deliver, Fix, Resume, Audit }
+public enum SessionKind { Deliver, Fix, Resume, Audit, Verify }
 
 /// <summary>Why the run parked at <see cref="RunStatus.AwaitingOwner"/> — decides what an owner
 /// approval means (B3.2/B3.4). <c>OwnerGate</c>: the stage is green and confirms on approve.
@@ -62,6 +62,15 @@ public sealed class PendingFix
     public int FromSession { get; set; }
     public string GateFailures { get; set; } = "";
     public string ProgressSummary { get; set; } = "";
+    public string VerifierFindings { get; set; } = "";
+    public int? VerifierScore { get; set; }
+}
+
+public sealed class PendingVerify
+{
+    public int FromSession { get; set; }
+    public string StageId { get; set; } = "";
+    public string StageStartHead { get; set; } = "";
 }
 
 public sealed class PendingResume
@@ -136,6 +145,7 @@ public sealed class RunState
     public string? AttentionReason { get; set; }
     public HashSet<string> SkippedStages { get; set; } = new(StringComparer.Ordinal);
     public PendingFix? PendingFix { get; set; }
+    public PendingVerify? PendingVerify { get; set; }
     public PendingResume? PendingResume { get; set; }
     public PendingPhaseGate? PendingPhaseGate { get; set; }
     public PendingAudit? PendingAudit { get; set; }

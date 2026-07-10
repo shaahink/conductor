@@ -475,6 +475,16 @@ public sealed class RunDb : IDisposable
             ("@content", content));
     }
 
+    public void WriteScore(string runId, int sessionNumber, string? stageId, int score, string verdict, string findings)
+    {
+        TryExecute(
+            "INSERT INTO scores (run_id, session_number, stage_id, score, verdict, findings) " +
+            "VALUES (@runId, @sessionNumber, @stageId, @score, @verdict, @findings)",
+            ("@runId", runId), ("@sessionNumber", sessionNumber),
+            ("@stageId", (object?)stageId ?? DBNull.Value),
+            ("@score", score), ("@verdict", verdict), ("@findings", findings));
+    }
+
     // ---------------------------------------------------------------- checkpoints (F1.2)
 
     /// <summary>Seed checkpoints from the plan. Each call is an UPSERT — re-seeding on
