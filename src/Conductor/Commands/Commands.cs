@@ -1478,6 +1478,14 @@ public sealed class McpServeCommand : Command<McpServeCommand.Settings>
         [Description("Run identifier for event authorship.")]
         [DefaultValue("mcp-standalone")]
         public string RunId { get; init; } = "mcp-standalone";
+
+        [CommandOption("--state-dir <path>")]
+        [Description("Plan state directory for bg tools (e.g. .conductor/). Optional.")]
+        public string? StateDir { get; init; }
+
+        [CommandOption("--repo <path>")]
+        [Description("Repo root for bg_start working directory. Optional.")]
+        public string? Repo { get; init; }
     }
 
     public override int Execute(CommandContext context, Settings settings)
@@ -1494,7 +1502,10 @@ public sealed class McpServeCommand : Command<McpServeCommand.Settings>
             catch { /* best-effort — MCP works without run.db */ }
         }
 
-        var server = new McpTaskServer(eventsPath, journalPath, settings.RunId, runDb);
+        var stateDir = settings.StateDir ?? Path.GetDirectoryName(eventsPath);
+        var repoPath = settings.Repo ?? (stateDir != null ? Path.GetDirectoryName(stateDir) : null);
+
+        var server = new McpTaskServer(eventsPath, journalPath, settings.RunId, runDb, stateDir, repoPath);
         server.Init();
         server.FoldJournal();
 

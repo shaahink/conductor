@@ -2278,6 +2278,18 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             var eventsPath = Path.Combine(plan.StateDir, "events.jsonl");
             var journalPath = Path.Combine(plan.StateDir, "mcp-journal.jsonl");
             var runId = state.RunId;
+            var stateDir = plan.StateDir;
+            var repoPath = plan.Repo;
+
+            var commandArgs = new List<string>
+            {
+                "mcp-serve",
+                "--events", eventsPath,
+                "--journal", journalPath,
+                "--run-id", runId,
+                "--state-dir", stateDir,
+                "--repo", repoPath,
+            };
 
             var mcpConfig = new
             {
@@ -2286,7 +2298,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     ["conductor-tasks"] = new Dictionary<string, object>(StringComparer.Ordinal)
                     {
                         ["type"] = "local",
-                        ["command"] = new[] { conductorExe, "mcp-serve", "--events", eventsPath, "--journal", journalPath, "--run-id", runId },
+                        ["command"] = new[] { conductorExe }.Concat(commandArgs).ToArray(),
                         ["enabled"] = true,
                     }
                 }

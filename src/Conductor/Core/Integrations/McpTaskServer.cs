@@ -1,17 +1,21 @@
+using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Conductor.Core.Events;
 using Conductor.Models;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Conductor.Core.Integrations;
 
 /// <summary>
 /// B9.3: minimal MCP (Model Context Protocol) JSON-RPC 2.0 server over stdio.
-/// Exposes tools — task_list, task_update, task_add, conductor_note (F1.3) — that persist
-/// the agent's progress across sessions. Reads existing tasks from the event log; writes new
-/// events to a side journal file to avoid concurrent-write races with the conductor's main
-/// event log. The optional <see cref="RunDb"/> parameter enables direct ledger writes for
-/// the <c>conductor_note</c> tool (F1.3).
+/// Exposes tools — task_list, task_update, task_add, conductor_note (F1.3), plus
+/// bg_start/bg_status/bg_logs/bg_stop (F2.4) — that persist the agent's progress across
+/// sessions. Reads existing tasks from the event log; writes new events to a side journal
+/// file to avoid concurrent-write races with the conductor's main event log. The optional
+/// <see cref="RunDb"/> parameter enables direct ledger writes for the
+/// <c>conductor_note</c> tool (F1.3) and PID tracking for bg tools.
 /// </summary>
 public sealed class McpTaskServer
 {
@@ -20,13 +24,18 @@ public sealed class McpTaskServer
     private readonly string _runId;
     private readonly TaskGraph _graph = new();
     private readonly RunDb? _runDb;
+    private readonly string? _stateDir;
+    private readonly string? _repoPath;
 
-    public McpTaskServer(string eventsPath, string journalPath, string runId, RunDb? runDb = null)
+    public McpTaskServer(string eventsPath, string journalPath, string runId, RunDb? runDb = null,
+        string? stateDir = null, string? repoPath = null)
     {
         _eventsPath = eventsPath;
         _journalPath = journalPath;
         _runId = runId;
         _runDb = runDb;
+        _stateDir = stateDir;
+        _repoPath = repoPath;
     }
 
     /// <summary>Boot the graph from the existing event log.</summary>
@@ -34,7 +43,7 @@ public sealed class McpTaskServer
     {
         if (File.Exists(_eventsPath))
         {
-            var events = EventLog.ReadAll(_eventsPath);
+            var events = Events.EventLog.ReadAll(_eventsPath);
             _graph.Fold(events);
         }
         // Also fold any MCP journal entries that accumulated between sessions.
@@ -47,7 +56,7 @@ public sealed class McpTaskServer
     {
         if (File.Exists(_journalPath))
         {
-            var events = EventLog.ReadAll(_journalPath);
+            var events = Events.EventLog.ReadAll(_journalPath);
             _graph.Fold(events);
         }
     }
@@ -118,6 +127,10 @@ public sealed class McpTaskServer
                         new { name = "task_update", description = "Update a sub-task's status (todo / in_progress / done / skipped)", inputSchema = new { type = "object", properties = new { taskId = new { type = "string" }, status = new { type = "string" } }, required = new[] { "taskId", "status" } } },
                         new { name = "task_add", description = "Add a new sub-task under the active checkpoint", inputSchema = new { type = "object", properties = new { checkpointId = new { type = "string" }, title = new { type = "string" }, order = new { type = "integer" } }, required = new[] { "checkpointId", "title", "order" } } },
                         new { name = "conductor_note", description = "F1.3: Write a finding/observation to the knowledge ledger. Use this immediately when you discover something important, not at session end.", inputSchema = new { type = "object", properties = new { kind = new { type = "string", description = "Entry kind: finding, observation, trap, decision. Default: note." }, content = new { type = "string", description = "The note text." }, stage_id = new { type = "string", description = "Stage id (e.g. F1). Optional." } }, required = new[] { "content" } } },
+                        new { name = "bg_start", description = "F2.4: Start a long-running background process (>3 min). Captures stdout/stderr to .conductor/bg-logs/ and tracks the PID in run.db. Returns the PID and log file path.", inputSchema = new { type = "object", properties = new { command = new { type = "array", items = new { type = "string" }, description = "Command and arguments as a string array (e.g. ['dotnet', 'run'])." }, purpose = new { type = "string", description = "Human-readable purpose label. Defaults to the command name." }, cwd = new { type = "string", description = "Working directory. Defaults to the plan repo root." } }, required = new[] { "command" } } },
+                        new { name = "bg_status", description = "F2.4: List all tracked background processes with their liveness status (running/exited/dead). Reads from the run.db pids table.", inputSchema = new { type = "object", properties = new { } } },
+                        new { name = "bg_logs", description = "F2.4: Tail the stdout/stderr log of a background process. Returns the last N lines (default 30).", inputSchema = new { type = "object", properties = new { pid = new { type = "integer", description = "PID of the background process." }, tail = new { type = "integer", description = "Number of lines to return (default 30)." } }, required = new[] { "pid" } } },
+                        new { name = "bg_stop", description = "F2.4: Kill a background process by PID (kills entire process tree). Marks the PID as exited in run.db.", inputSchema = new { type = "object", properties = new { pid = new { type = "integer", description = "PID of the background process to kill." } }, required = new[] { "pid" } } },
                     }
                 }),
             },
@@ -144,6 +157,10 @@ public sealed class McpTaskServer
                 "task_update" => HandleTaskUpdate(args),
                 "task_add" => HandleTaskAdd(args),
                 "conductor_note" => HandleNote(args),
+                "bg_start" => HandleBgStart(args),
+                "bg_status" => HandleBgStatus(args),
+                "bg_logs" => HandleBgLogs(args),
+                "bg_stop" => HandleBgStop(args),
                 _ => JsonSerializer.SerializeToElement(new { error = $"Unknown tool: {name}" }),
             };
             return new JsonRpcResponse { Id = id, Result = result };
@@ -294,6 +311,199 @@ public sealed class McpTaskServer
         WriteJournal(evt);
 
         return JsonSerializer.SerializeToElement(new { ok = true, kind, stageId = string.IsNullOrWhiteSpace(stageId) ? null : stageId });
+    }
+
+    // ---------------------------------------------------------------- bg tools (F2.4)
+
+    private JsonElement HandleBgStart(JsonElement? args)
+    {
+        if (_stateDir == null)
+            return JsonSerializer.SerializeToElement(new { ok = false, error = "bg_start requires plan state directory (run via conductor, not standalone MCP)." });
+
+        var command = new List<string>();
+        var purpose = "";
+        var cwd = _repoPath ?? "";
+
+        if (args is { } a)
+        {
+            if (a.TryGetProperty("command", out var cmd) && cmd.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in cmd.EnumerateArray())
+                    command.Add(item.GetString() ?? "");
+            }
+            if (a.TryGetProperty("purpose", out var p)) purpose = p.GetString() ?? "";
+            if (a.TryGetProperty("cwd", out var c)) cwd = c.GetString() ?? cwd;
+        }
+
+        if (command.Count == 0)
+            return JsonSerializer.SerializeToElement(new { ok = false, error = "command array is required and must not be empty." });
+
+        var exe = command[0];
+        var exeArgs = command.Skip(1).ToList();
+        if (string.IsNullOrWhiteSpace(purpose))
+            purpose = Path.GetFileNameWithoutExtension(exe);
+
+        var psi = new ProcessStartInfo(exe)
+        {
+            WorkingDirectory = string.IsNullOrWhiteSpace(cwd) ? Directory.GetCurrentDirectory() : cwd,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+            StandardOutputEncoding = Encoding.UTF8,
+            StandardErrorEncoding = Encoding.UTF8,
+        };
+        foreach (var a2 in exeArgs) psi.ArgumentList.Add(a2);
+
+        Process? proc;
+        try { proc = Process.Start(psi); }
+        catch (Exception ex)
+        {
+            return JsonSerializer.SerializeToElement(new { ok = false, error = $"Failed to start '{exe}': {ex.Message}" });
+        }
+
+        if (proc == null)
+            return JsonSerializer.SerializeToElement(new { ok = false, error = "Process.Start returned null." });
+
+        var logDir = Path.Combine(_stateDir, "bg-logs");
+        Directory.CreateDirectory(logDir);
+        var safePurpose = string.Join("_", purpose.Split(Path.GetInvalidFileNameChars()));
+        if (string.IsNullOrWhiteSpace(safePurpose)) safePurpose = "bg-process";
+        var logPath = Path.Combine(logDir, $"{safePurpose}-{proc.Id}.log");
+
+#pragma warning disable CA2000
+        var logWriter = new StreamWriter(logPath, append: false, Encoding.UTF8) { AutoFlush = true };
+#pragma warning restore CA2000
+        var gate = new Lock();
+        proc.OutputDataReceived += (_, e) => { if (e.Data != null) lock (gate) logWriter.WriteLine(e.Data); };
+        proc.ErrorDataReceived += (_, e) => { if (e.Data != null) lock (gate) logWriter.WriteLine($"[stderr] {e.Data}"); };
+        proc.BeginOutputReadLine();
+        proc.BeginErrorReadLine();
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await proc.WaitForExitAsync().ConfigureAwait(false);
+                await logWriter.DisposeAsync().ConfigureAwait(false);
+            }
+            catch { }
+        });
+
+        if (_runDb != null)
+        {
+            try
+            {
+                _runDb.TrackPid(proc.Id, _runId, $"bg:{purpose}", null, null, DateTime.UtcNow);
+            }
+            catch { }
+        }
+
+        return JsonSerializer.SerializeToElement(new { ok = true, pid = proc.Id, purpose, log = logPath });
+    }
+
+    private JsonElement HandleBgStatus(JsonElement? args)
+    {
+        if (_runDb == null)
+            return JsonSerializer.SerializeToElement(new { ok = false, error = "bg_status requires run.db (no plan state available)." });
+
+        var rows = _runDb.GetAllPids(_runId);
+        var list = rows.Select(r =>
+        {
+            var alive = IsProcessAliveMcp(r.Pid);
+            var status = r.ExitedUtc != null ? "exited"
+                : alive ? "running" : "dead";
+            var runtime = r.ExitedUtc != null
+                ? (r.ExitedUtc.Value - r.StartedUtc).ToString()
+                : alive
+                    ? (DateTime.UtcNow - r.StartedUtc).ToString()
+                    : "";
+            return new
+            {
+                pid = r.Pid,
+                purpose = r.Purpose,
+                status,
+                started = r.StartedUtc.ToString("O"),
+                runtime,
+            };
+        }).ToArray();
+
+        return JsonSerializer.SerializeToElement(new { processes = list, count = list.Length });
+    }
+
+    private JsonElement HandleBgLogs(JsonElement? args)
+    {
+        if (_stateDir == null)
+            return JsonSerializer.SerializeToElement(new { ok = false, error = "bg_logs requires plan state directory." });
+
+        var pid = 0;
+        var tail = 30;
+        if (args is { } a)
+        {
+            if (a.TryGetProperty("pid", out var p) && p.TryGetInt32(out var pv)) pid = pv;
+            if (a.TryGetProperty("tail", out var t) && t.TryGetInt32(out var tv) && tv > 0) tail = tv;
+        }
+        if (pid <= 0)
+            return JsonSerializer.SerializeToElement(new { ok = false, error = "pid is required." });
+
+        var logDir = Path.Combine(_stateDir, "bg-logs");
+        if (!Directory.Exists(logDir))
+            return JsonSerializer.SerializeToElement(new { ok = false, error = "No bg-logs directory found." });
+
+        var pidSuffix = $"-{pid}.log";
+        var logFile = Directory.GetFiles(logDir, "*.log")
+            .FirstOrDefault(f => f.EndsWith(pidSuffix, StringComparison.OrdinalIgnoreCase));
+        if (logFile == null)
+            return JsonSerializer.SerializeToElement(new { ok = false, error = $"No log file found for PID {pid}." });
+
+        try
+        {
+#pragma warning disable MA0045 // sync read is deliberate — called from sync MCP handlers
+            var allLines = File.ReadAllLines(logFile);
+#pragma warning restore MA0045
+            var lines = allLines.Length <= tail ? allLines : allLines[^tail..];
+            return JsonSerializer.SerializeToElement(new { ok = true, pid, tail, totalLines = allLines.Length, lines });
+        }
+        catch (IOException ex)
+        {
+            return JsonSerializer.SerializeToElement(new { ok = false, error = $"Cannot read log: {ex.Message}" });
+        }
+    }
+
+    private JsonElement HandleBgStop(JsonElement? args)
+    {
+        var pid = 0;
+        if (args is { } a && a.TryGetProperty("pid", out var p) && p.TryGetInt32(out var pv))
+            pid = pv;
+        if (pid <= 0)
+            return JsonSerializer.SerializeToElement(new { ok = false, error = "pid is required." });
+
+        try
+        {
+            using var proc = Process.GetProcessById(pid);
+            proc.Kill(entireProcessTree: true);
+            proc.WaitForExit(5000);
+            _runDb?.MarkPidExited(pid, -1);
+            return JsonSerializer.SerializeToElement(new { ok = true, pid, killed = true });
+        }
+        catch (ArgumentException)
+        {
+            _runDb?.MarkPidExited(pid, null);
+            return JsonSerializer.SerializeToElement(new { ok = true, pid, killed = false, reason = "Process not found (already exited)." });
+        }
+        catch (Exception ex)
+        {
+            return JsonSerializer.SerializeToElement(new { ok = false, error = $"Failed to kill PID {pid}: {ex.Message}" });
+        }
+    }
+
+    private static bool IsProcessAliveMcp(int pid)
+    {
+        try
+        {
+            using var proc = Process.GetProcessById(pid);
+            return !proc.HasExited;
+        }
+        catch { return false; }
     }
 
     private void WriteJournal(ConductorEvent evt)

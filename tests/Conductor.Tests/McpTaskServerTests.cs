@@ -54,7 +54,7 @@ public class McpTaskServerTests
     }
 
     [Fact]
-    public async Task ToolsList_ReturnsFourTools()
+    public async Task ToolsList_ReturnsEightTools()
     {
         var journal = TempPath();
         try
@@ -65,12 +65,16 @@ public class McpTaskServerTests
 
             Assert.Single(responses);
             var tools = responses[0].GetProperty("result").GetProperty("tools");
-            Assert.Equal(4, tools.GetArrayLength());
+            Assert.Equal(8, tools.GetArrayLength());
             var names = tools.EnumerateArray().Select(t => t.GetProperty("name").GetString()).ToHashSet();
             Assert.Contains("task_list", names);
             Assert.Contains("task_update", names);
             Assert.Contains("task_add", names);
             Assert.Contains("conductor_note", names);
+            Assert.Contains("bg_start", names);
+            Assert.Contains("bg_status", names);
+            Assert.Contains("bg_logs", names);
+            Assert.Contains("bg_stop", names);
         }
         finally { Cleanup(journal); }
     }

@@ -169,7 +169,7 @@ public sealed class ProcessSupervisorTests : IDisposable
 
     private static Process StartSleepyProcess()
     {
-        var psi = new ProcessStartInfo("cmd.exe", "/c timeout /t 30 /nobreak > NUL")
+        var psi = new ProcessStartInfo("cmd.exe", "/c ping -n 30 127.0.0.1 > NUL")
         {
             UseShellExecute = false,
             CreateNoWindow = true,
@@ -177,7 +177,7 @@ public sealed class ProcessSupervisorTests : IDisposable
             RedirectStandardError = true,
         };
         var proc = Process.Start(psi)!;
-        Thread.Sleep(100); // let it start
+        Thread.Sleep(200);
         return proc;
     }
 }
