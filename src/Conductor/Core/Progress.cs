@@ -29,7 +29,6 @@ public enum ControlAction
     Rollback,
     PauseAfterStage,
     Goto,
-    ToggleHeartbeat,
 }
 
 /// <summary>Live status of one gate in the current battery (for the dashboard's gate timers).</summary>
@@ -112,7 +111,6 @@ public sealed record DashboardSnapshot
     public string? ConfirmPrompt { get; init; }
     public int ResumeCount { get; init; }
     public ToastMessage? ActiveToast { get; init; }
-    public bool HeartbeatOn { get; init; }
     public string GateSummary { get; init; } = "";
     /// <summary>Per-gate live status during a battery (empty when no battery is running).</summary>
     public IReadOnlyList<GateProgress> Gates { get; init; } = Array.Empty<GateProgress>();

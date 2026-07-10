@@ -54,8 +54,6 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     private string? _outcome;
     private string? _gotoStageId;
     private bool _rollbackForce;
-    private string? _heartbeatToggleValue;
-    private readonly int _originalHeartbeatMinutes = plan.Report.HeartbeatMinutes;
     private bool _sessionApproved;
     private decimal _runCostUsd;
     private long _runTokens;
@@ -343,7 +341,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 }
             }
             // Ctrl+C / external cancel — graceful shutdown (B3.5)
-            Log("cancelled — writing final heartbeat, queueing resume, saving state");
+            Log("cancelled — saving state");
             try { SaveAndReport(); } catch { /* best-effort */ }
             if (state.Status == RunStatus.Running && state.History.LastOrDefault() is { EndedUtc: null } last)
             {
@@ -526,11 +524,11 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     agent.Kill();
                 }
                 PushSessionSnapshot(agent, rec, stage, attempt, maxAttempts, preTrack);
-                // AFK heartbeat: refresh+commit REPORT.md mid-session so the GitHub view reflects live progress.
+                // AFK report refresh: update REPORT.md mid-session (no commits to feature branch)
                 if (plan.Report.HeartbeatMinutes > 0 && (DateTime.UtcNow - lastHeartbeat).TotalMinutes >= plan.Report.HeartbeatMinutes)
                 {
                     lastHeartbeat = DateTime.UtcNow;
-                    HeartbeatReport(rec, stage, agent, preTrack);
+                    RefreshReport(rec, stage, agent, preTrack);
                 }
                 Thread.Sleep(400);
             }
@@ -1641,29 +1639,6 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     DeleteControlFile();
                 }
                 break;
-            case ControlAction.ToggleHeartbeat:
-            {
-                var toggleVal = _heartbeatToggleValue;
-                _heartbeatToggleValue = null;
-                // TUI key press (no value) auto-flips the current state
-                if (toggleVal == null)
-                    toggleVal = plan.Report.HeartbeatMinutes > 0 ? "off" : "on";
-                if (toggleVal == "off")
-                {
-                    plan.Report.HeartbeatMinutes = 0;
-                    Log("heartbeat: turned OFF");
-                    sink.Toast(new ToastMessage("heartbeat OFF", LogSeverity.Info));
-                }
-                else if (toggleVal == "on")
-                {
-                    plan.Report.HeartbeatMinutes = _originalHeartbeatMinutes > 0 ? _originalHeartbeatMinutes : 10;
-                    Log($"heartbeat: turned ON (every {plan.Report.HeartbeatMinutes}m)");
-                    sink.Toast(new ToastMessage($"heartbeat ON (every {plan.Report.HeartbeatMinutes}m)", LogSeverity.Info));
-                }
-                try { plan.Save(); } catch (Exception ex) { Log($"heartbeat: failed to persist plan JSON: {ex.Message}"); }
-                DeleteControlFile();
-                break;
-            }
         }
         if (inSession && action is ControlAction.RetryStage or ControlAction.Rollback or ControlAction.PauseAfterStage or ControlAction.Goto or ControlAction.AbortNow)
             Log($"control: {action} received mid-session — re-run after session ends for it to take effect");
@@ -1687,8 +1662,6 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 _gotoStageId = parsed.StageId;
             if (action == ControlAction.Rollback && parsed.Force)
                 _rollbackForce = true;
-            if (action == ControlAction.ToggleHeartbeat && parsed.Value != null)
-                _heartbeatToggleValue = parsed.Value;
             return action;
         }
         // A malformed/racing control.json is operator input, not an engine fault — ignore this poll
@@ -1951,15 +1924,15 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         return sb.ToString().TrimEnd();
     }
 
-    private void HeartbeatReport(SessionRecord rec, StageConfig stage, AgentSession agent, TrackerSnapshot track)
+    private void RefreshReport(SessionRecord rec, StageConfig stage, AgentSession agent, TrackerSnapshot track)
     {
         try
         {
             var cp = track.ForStage(stage.Id).FirstOrDefault(c => !c.IsDone)?.Id ?? stage.Id;
-            var msg = $"chore(conductor): s{rec.Number} {stage.Id} working ▸{cp} @ {DateTime.Now:HH:mm}";
-            Reporter.WriteAndPublish(plan, state, track, _lastGates, Log, BuildActivitySection(rec, agent), msg);
+            Log($"report refresh @ {cp} (cost ${agent.CostUsd:0.00})");
+            Reporter.WriteReport(plan, state, track, _lastGates, Log, BuildActivitySection(rec, agent));
         }
-        catch (Exception ex) { Log($"heartbeat report failed: {ex.Message}"); }
+        catch (Exception ex) { Log($"report refresh failed: {ex.Message}"); }
     }
 
     private void SaveAndReport()

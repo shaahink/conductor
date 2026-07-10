@@ -390,7 +390,6 @@ public sealed class LiveDashboard : IProgressSink
                           else Log("Press K again to confirm KILL (any other key cancels)", LogSeverity.Waiting); }
                         break;
                     case ConsoleKey.Q: _pendingConfirm = null; _keys.Enqueue(ControlAction.StopAfterSession); break;
-                    case ConsoleKey.H: _pendingConfirm = null; _keys.Enqueue(ControlAction.ToggleHeartbeat); break;
                     case ConsoleKey.T or ConsoleKey.O or ConsoleKey.D or ConsoleKey.V or ConsoleKey.X or ConsoleKey.L or ConsoleKey.F1 or ConsoleKey.B or ConsoleKey.I or ConsoleKey.G or ConsoleKey.E:
                         break; // handled above — non-destructive keys don't cancel pending confirm
                     default: _pendingConfirm = null; break; // any unmapped key cancels

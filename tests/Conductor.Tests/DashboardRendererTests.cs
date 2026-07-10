@@ -90,7 +90,7 @@ public class DashboardRendererTests
     [InlineData("Backoff", "resume now", true)]
     public void ActionBarIsStateMachineAware(string status, string label, bool present)
     {
-        var bar = DashboardRenderer.ActionBar(status, false);
+        var bar = DashboardRenderer.ActionBar(status);
         Assert.Equal(present, bar.Contains(label, StringComparison.OrdinalIgnoreCase));
     }
 

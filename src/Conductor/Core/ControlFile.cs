@@ -31,7 +31,6 @@ public static class ControlFile
             "rollback" => ControlAction.Rollback,
             "pause-after-stage" => ControlAction.PauseAfterStage,
             "goto" => ControlAction.Goto,
-            "toggle-heartbeat" => ControlAction.ToggleHeartbeat,
             _ => (ControlAction?)null,
         };
         var confirmed = root.TryGetProperty("confirmed", out var cf) && cf.ValueKind == JsonValueKind.True;

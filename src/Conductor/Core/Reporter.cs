@@ -262,27 +262,9 @@ public static class Reporter
 
         if (!plan.Report.Commit) return;
         // Skip no-op commits: if nothing but the timestamp changed, don't add to the git history
-        // (this removes the duplicate "chore(conductor): … — Idle" commits).
         if (old != null && Normalize(old) == Normalize(newContent)) return;
 
-        // D3: amend strategy — heartbeats create/amend a commit instead of being suppressed.
-        // First heartbeat creates a new commit; subsequent heartbeats amend it (git commit --amend --no-edit).
-        // This keeps the feature branch to at most 2 commits per session (1 session-boundary + 1 heartbeat).
         var rel = ".conductor/REPORT.md";
-        var isHeartbeat = commitMessage != null && commitMessage.StartsWith("chore(conductor):", StringComparison.Ordinal);
-        if (isHeartbeat)
-        {
-            var addHb = Git.Exec(plan.Repo, "add", "--force", rel);
-            if (addHb.ExitCode != 0) { log($"heartbeat git add failed: {GateRunner.TailOf(addHb.Output, 3)}"); return; }
-            var prevMsg = Git.Exec(plan.Repo, "log", "--oneline", "-1", "--format=%s");
-            var amendPrev = prevMsg.Output.TrimStart().StartsWith("chore(conductor):", StringComparison.Ordinal);
-            if (amendPrev)
-                Git.Exec(plan.Repo, "commit", "--amend", "--no-edit");
-            else
-                Git.Exec(plan.Repo, "commit", "-m", commitMessage!, "--", rel);
-            return;
-        }
-
         var add = Git.Exec(plan.Repo, "add", "--force", rel);
         if (add.ExitCode != 0) { log($"report git add failed: {GateRunner.TailOf(add.Output, 3)}"); return; }
         var last = state.History.LastOrDefault();
@@ -295,6 +277,23 @@ public static class Reporter
         {
             var push = Git.Exec(plan.Repo, "push");
             if (push.ExitCode != 0) log($"report push failed: {GateRunner.TailOf(push.Output, 3)}");
+        }
+    }
+
+    /// <summary>Write REPORT.md to disk only — no git commit, no push. Used for mid-session
+    /// report refreshes (the report lives in .conductor/, not on the feature branch).</summary>
+    public static void WriteReport(PlanConfig plan, RunState state, TrackerSnapshot track, IReadOnlyList<GateResult>? lastGates, Action<string> log, string? liveActivity = null)
+    {
+        try
+        {
+            Directory.CreateDirectory(plan.StateDir);
+            var content = Build(plan, state, track, lastGates, liveActivity,
+                ReadTimeline(plan), ReadHealth(plan), ReadMcpMetrics(plan), ReadRepoStrip(plan));
+            File.WriteAllText(ReportPath(plan), content, Utf8Bom);
+        }
+        catch (Exception ex)
+        {
+            log($"report write failed: {ex.Message}");
         }
     }
 

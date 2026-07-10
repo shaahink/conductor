@@ -695,33 +695,6 @@ public sealed class GotoCommand : Command<GotoCommand.Settings>
     }
 }
 
-/// <summary>Toggle heartbeat on|off at runtime without restarting conductor.</summary>
-public sealed class HeartbeatCommand : Command<HeartbeatCommand.Settings>
-{
-    public sealed class Settings : PlanSettings
-    {
-        [CommandArgument(0, "<on|off>")]
-        [Description("on = enable heartbeat, off = pause heartbeats.")]
-        public string Value { get; init; } = "";
-    }
-
-    public override int Execute(CommandContext context, Settings settings)
-    {
-        var v = settings.Value.ToLowerInvariant();
-        if (v is not "on" and not "off")
-        {
-            AnsiConsole.MarkupLine("[red]heartbeat expects 'on' or 'off'[/]");
-            return 1;
-        }
-        var plan = PlanConfig.Load(settings.ResolvePlanPath());
-        Directory.CreateDirectory(plan.StateDir);
-        File.WriteAllText(Path.Combine(plan.StateDir, "control.json"),
-            JsonSerializer.Serialize(new { command = "toggle-heartbeat", value = v, issuedUtc = DateTime.UtcNow }));
-        AnsiConsole.MarkupLine($"[green]heartbeat {v}[/] queued — the running conductor will toggle heartbeats {(v == "on" ? "on" : "off")}");
-        return 0;
-    }
-}
-
 /// <summary>
 /// P1 — Dynamic plan reconfiguration: plan set, reload, add-stage. Subcommands dispatch to
 /// Set / Reload / AddStage; a bare `conductor plan` prints the current plan summary.
@@ -1599,7 +1572,7 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
 
     internal static string GeneratePowerShell()
     {
-        var verbs = "run status gate log report preview pause resume approve kill skip inject abort retry-stage rollback pause-after-stage goto heartbeat plan tasks new-plan doctor audit mcp-serve completion";
+        var verbs = "run status gate log report preview pause resume approve kill skip inject abort retry-stage rollback pause-after-stage goto plan tasks new-plan doctor audit mcp-serve completion";
         var opts = "-p --plan --yes --force --dry-run --once --max-sessions --no-dashboard -o --output --name --repo -q --query --since --tail";
         var auditOpts = "-p --plan --replay";
         var newPlanOpts = "--template -o --output --name --repo";
@@ -1640,9 +1613,9 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
                         [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterName', $_)
                     }
                 }
-                elseif ($tokens[1] -in @('run','status','gate','log','report','replay','preview','pause','resume',
+                elseif ($tokens[1] -in @('run','status','gate','log','report','preview','pause','resume',
                         'approve','kill','skip','inject','abort','retry-stage','rollback','pause-after-stage',
-                        'goto','heartbeat','tasks','doctor')) {
+                        'goto','tasks','doctor')) {
                     $opts | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
                         [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterName', $_)
                     }
@@ -1670,11 +1643,11 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
                 cur="${COMP_WORDS[COMP_CWORD]}"
 
                 if [[ $COMP_CWORD -eq 1 ]]; then
-                    COMPREPLY=($(compgen -W "run status gate log report preview audit mcp-serve pause resume approve kill skip inject abort retry-stage rollback pause-after-stage goto heartbeat plan tasks new-plan doctor completion" -- "$cur"))
+                    COMPREPLY=($(compgen -W "run status gate log report preview audit mcp-serve pause resume approve kill skip inject abort retry-stage rollback pause-after-stage goto plan tasks new-plan doctor completion" -- "$cur"))
                     return
                 fi
                 case "${COMP_WORDS[1]}" in
-                    run|status|gate|log|report|preview|pause|resume|approve|kill|skip|inject|abort|retry-stage|rollback|pause-after-stage|goto|heartbeat|tasks|doctor|mcp-serve)
+                    run|status|gate|log|report|preview|pause|resume|approve|kill|skip|inject|abort|retry-stage|rollback|pause-after-stage|goto|tasks|doctor|mcp-serve)
                         COMPREPLY=($(compgen -W "-p --plan --yes --force --dry-run --once --max-sessions --no-dashboard -o --output --name --repo" -- "$cur"))
                         ;;
                     audit)
