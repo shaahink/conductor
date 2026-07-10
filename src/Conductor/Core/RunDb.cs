@@ -558,10 +558,13 @@ public sealed class RunDb : IDisposable
         }
     }
 
+    private int _disposed;
+
     public void Dispose()
     {
-        _conn.Close();
-        _conn.Dispose();
+        if (Interlocked.CompareExchange(ref _disposed, 1, 0) != 0) return;
+        try { _conn.Close(); } catch { }
+        try { _conn.Dispose(); } catch { }
     }
 #pragma warning restore MA0045
 }

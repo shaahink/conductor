@@ -626,52 +626,51 @@ public sealed class ReportCommand : Command<ReportCommand.Settings>
             return 1;
         }
 
-        using var db = new RunDb(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<RunDb>.Instance);
-        List<Dictionary<string, object?>> rows;
         try
         {
-            rows = db.Query(sql);
+            using var db = new RunDb(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<RunDb>.Instance);
+            var rows = db.Query(sql);
+
+            if (rows.Count == 0)
+            {
+                AnsiConsole.MarkupLine("[grey]no rows returned[/]");
+                return 0;
+            }
+
+            var table = new Table()
+                .Border(TableBorder.Rounded)
+                .Title($"[bold aqua]Query result[/] ({rows.Count} row{(rows.Count == 1 ? "" : "s")})");
+
+            var columns = rows[0].Keys;
+            foreach (var col in columns)
+                table.AddColumn(Markup.Escape(col));
+
+            foreach (var row in rows)
+            {
+                var values = columns.Select(c =>
+                {
+                    var v = row.GetValueOrDefault(c);
+                    return v switch
+                    {
+                        null => "[grey]-[/]",
+                        double d => d.ToString("F4"),
+                        float f => f.ToString("F4"),
+                        long l => l.ToString(),
+                        int i => i.ToString(),
+                        _ => Markup.Escape(v.ToString()!)
+                    };
+                }).ToArray();
+                table.AddRow(values);
+            }
+
+            AnsiConsole.Write(table);
+            return 0;
         }
         catch (Exception ex)
         {
             AnsiConsole.MarkupLine($"[red]Query failed:[/] {Markup.Escape(ex.Message)}");
             return 1;
         }
-
-        if (rows.Count == 0)
-        {
-            AnsiConsole.MarkupLine("[grey]no rows returned[/]");
-            return 0;
-        }
-
-        var table = new Table()
-            .Border(TableBorder.Rounded)
-            .Title($"[bold aqua]Query result[/] ({rows.Count} row{(rows.Count == 1 ? "" : "s")})");
-
-        var columns = rows[0].Keys;
-        foreach (var col in columns)
-            table.AddColumn(Markup.Escape(col));
-
-        foreach (var row in rows)
-        {
-            var values = columns.Select(c =>
-            {
-                var v = row.GetValueOrDefault(c);
-                return v switch
-                {
-                    null => "[grey]-[/]",
-                    double d => d.ToString("F4"),
-                    float f => f.ToString("F4"),
-                    long l => l.ToString(),
-                    int i => i.ToString(),
-                    _ => Markup.Escape(v.ToString()!)
-                };
-            }).ToArray();
-            table.AddRow(values);
-        }
-
-        AnsiConsole.Write(table);
-        return 0;
     }
 }
 
@@ -1681,9 +1680,17 @@ public sealed class NoteCommand : Command<NoteCommand.Settings>
         var state = RunState.LoadOrNew(statePath, plan.Name);
         var kind = string.IsNullOrWhiteSpace(settings.Kind) ? "note" : settings.Kind;
 
-        using var db = OpenRunDb(runDbPath);
-        db.WriteLedger(state.RunId, state.SessionCounter > 0 ? state.SessionCounter : null,
-            settings.Stage ?? state.CurrentStage, kind, settings.Text);
+        try
+        {
+            using var db = OpenRunDb(runDbPath);
+            db.WriteLedger(state.RunId, state.SessionCounter > 0 ? state.SessionCounter : null,
+                settings.Stage ?? state.CurrentStage, kind, settings.Text);
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Note write failed:[/] {Markup.Escape(ex.Message)}");
+            return 1;
+        }
         AnsiConsole.MarkupLine($"[green]note written:[/] [{Markup.Escape(kind)}] {Markup.Escape(settings.Text)}");
         return 0;
     }
@@ -1691,7 +1698,14 @@ public sealed class NoteCommand : Command<NoteCommand.Settings>
     private static RunDb OpenRunDb(string path)
     {
         var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RunDb>.Instance;
-        return new RunDb(path, logger);
+        try
+        {
+            return new RunDb(path, logger);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Failed to open run.db at {path}: {ex.Message}", ex);
+        }
     }
 }
 
@@ -1738,62 +1752,61 @@ public sealed class TaskCommand : Command<TaskCommand.Settings>
         var statePath = Path.Combine(plan.StateDir, "state.json");
         var state = RunState.LoadOrNew(statePath, plan.Name);
 
-        using var db = new RunDb(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<RunDb>.Instance);
-
-        if (settings.Done != null)
+        try
         {
-            db.UpdateCheckpoint(state.RunId, settings.Done, "DONE",
-                settings.Commit ?? "-", settings.Evidence ?? "marked done via CLI");
-            AnsiConsole.MarkupLine($"[green]checkpoint {Markup.Escape(settings.Done)} → DONE[/]");
-        }
-        else if (settings.InProgress != null)
-        {
-            db.MarkCheckpointInProgress(state.RunId, settings.InProgress);
-            AnsiConsole.MarkupLine($"[yellow]checkpoint {Markup.Escape(settings.InProgress)} → IN PROGRESS[/]");
-        }
-        else if (settings.List)
-        {
-            IReadOnlyList<(string Id, string StageId, string Title, string Status, string Commit, string Evidence)> cps;
-            try
-            {
-                cps = db.GetCheckpoints(state.RunId);
-            }
-            catch (Exception ex)
-            {
-                AnsiConsole.MarkupLine($"[red]Failed to read checkpoints from run.db: {Markup.Escape(ex.Message)}[/]");
-                return 1;
-            }
+            using var db = new RunDb(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<RunDb>.Instance);
 
-            if (cps.Count == 0)
+            if (settings.Done != null)
             {
-                AnsiConsole.MarkupLine("[grey]no checkpoints in run.db[/]");
-                return 0;
+                db.UpdateCheckpoint(state.RunId, settings.Done, "DONE",
+                    settings.Commit ?? "-", settings.Evidence ?? "marked done via CLI");
+                AnsiConsole.MarkupLine($"[green]checkpoint {Markup.Escape(settings.Done)} → DONE[/]");
             }
-
-            var table = new Table()
-                .Border(TableBorder.Rounded)
-                .Title("[bold aqua]Checkpoints from run.db[/]")
-                .AddColumn("Stage")
-                .AddColumn("ID")
-                .AddColumn("Title")
-                .AddColumn("Status");
-
-            foreach (var cp in cps)
+            else if (settings.InProgress != null)
             {
-                var icon = cp.Status switch
+                db.MarkCheckpointInProgress(state.RunId, settings.InProgress);
+                AnsiConsole.MarkupLine($"[yellow]checkpoint {Markup.Escape(settings.InProgress)} → IN PROGRESS[/]");
+            }
+            else if (settings.List)
+            {
+                var cps = db.GetCheckpoints(state.RunId);
+
+                if (cps.Count == 0)
                 {
-                    var s when s.StartsWith("DONE", StringComparison.OrdinalIgnoreCase) => "[green]DONE[/]",
-                    var s when s.StartsWith("IN", StringComparison.OrdinalIgnoreCase) => "[yellow]IN PROG[/]",
-                    var s when s.StartsWith("BLOCKED", StringComparison.OrdinalIgnoreCase) => "[red]BLOCKED[/]",
-                    _ => "[grey]TODO[/]",
-                };
-                table.AddRow(Markup.Escape(cp.StageId), Markup.Escape(cp.Id), Markup.Escape(cp.Title), icon);
+                    AnsiConsole.MarkupLine("[grey]no checkpoints in run.db[/]");
+                    return 0;
+                }
+
+                var table = new Table()
+                    .Border(TableBorder.Rounded)
+                    .Title("[bold aqua]Checkpoints from run.db[/]")
+                    .AddColumn("Stage")
+                    .AddColumn("ID")
+                    .AddColumn("Title")
+                    .AddColumn("Status");
+
+                foreach (var cp in cps)
+                {
+                    var icon = cp.Status switch
+                    {
+                        var s when s.StartsWith("DONE", StringComparison.OrdinalIgnoreCase) => "[green]DONE[/]",
+                        var s when s.StartsWith("IN", StringComparison.OrdinalIgnoreCase) => "[yellow]IN PROG[/]",
+                        var s when s.StartsWith("BLOCKED", StringComparison.OrdinalIgnoreCase) => "[red]BLOCKED[/]",
+                        _ => "[grey]TODO[/]",
+                    };
+                    table.AddRow(Markup.Escape(cp.StageId), Markup.Escape(cp.Id), Markup.Escape(cp.Title), icon);
+                }
+                AnsiConsole.Write(table);
             }
-            AnsiConsole.Write(table);
+            else
+            {
+                AnsiConsole.MarkupLine("[grey]Usage: conductor task --list | --done <id> | --in-progress <id>[/]");
+            }
         }
-        else
+        catch (Exception ex)
         {
-            AnsiConsole.MarkupLine("[grey]Usage: conductor task --list | --done <id> | --in-progress <id>[/]");
+            AnsiConsole.MarkupLine($"[red]Failed:[/] {Markup.Escape(ex.Message)}");
+            return 1;
         }
 
         return 0;

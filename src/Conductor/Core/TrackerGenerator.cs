@@ -46,16 +46,14 @@ public static class TrackerGenerator
         }
         sb.AppendLine();
 
-        // Baseline numbers — from plan + db
+        // Baseline numbers — from DB (source of truth)
         var done = checkpoints.Count(c => c.Status.StartsWith("DONE", StringComparison.OrdinalIgnoreCase));
-        sb.AppendLine("## Baseline numbers (pre-Foreman, re-measure at each phase)");
+        sb.AppendLine("## Baseline numbers (from run.db)");
         sb.AppendLine();
         sb.AppendLine("| Metric | Value |");
         sb.AppendLine("|---|---|");
         sb.AppendLine($"| Total checkpoints | {checkpoints.Count} |");
         sb.AppendLine($"| Done | {done} |");
-        sb.AppendLine($"| Target framework | net10.0 |");
-        sb.AppendLine($"| Tests | 548 pass (0w/0e) |");
         sb.AppendLine();
 
         sb.AppendLine("## Checkpoints");
@@ -121,16 +119,26 @@ public static class TrackerGenerator
             }
         }
 
-        // Dependencies
+        // Dependencies — derived from plan stage DependsOn fields
         sb.AppendLine("## Dependencies");
         sb.AppendLine();
-        sb.AppendLine("```");
-        sb.AppendLine("F0 → F1 → (F2, F3) → F4");
-        sb.AppendLine("F1 → F7");
-        sb.AppendLine("F5 → F6");
-        sb.AppendLine("F5 → F8");
-        sb.AppendLine("F9 last (requires F0–F8 complete)");
-        sb.AppendLine("```");
+        var deps = plan.Stages
+            .SelectMany(s => (s.DependsOn ?? []).Select(d => (From: d, To: s.Id)))
+            .Distinct()
+            .ToArray();
+        if (deps.Length > 0)
+        {
+            sb.AppendLine("```");
+            foreach (var (from, to) in deps)
+                sb.AppendLine($"{from} → {to}");
+            sb.AppendLine("```");
+        }
+        else
+        {
+            sb.AppendLine("```");
+            sb.AppendLine("(none — stages run sequentially by plan order)");
+            sb.AppendLine("```");
+        }
 
         return sb.ToString();
     }
