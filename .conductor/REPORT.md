@@ -1,19 +1,18 @@
 ﻿# Conductor — Foreman run report
 
-_Updated 2026-07-10 18:53 UTC · branch `feat/foreman` · HEAD `5c549f2`_
+_Updated 2026-07-10 18:54 UTC · branch `feat/foreman` · HEAD `cb40efc`_
 
 **Status:** Idle
 **Stage:** F1 — run.db task store + tracker-as-view + task/note verbs · persona: architect · attempts used 0
 **Checkpoints:** 7/40 done · **Sessions run:** 19 · **Cost:** $1.6011 · **Tokens:** 1,821,021 in / 256,047 out / 253,741 think
-**Confirmed phases:** F0
-**Pending:** full-battery phase gate for F1
+**Confirmed phases:** F0, F1
 
 ## Stage progress
 
 | Stage | Title | Progress | State |
 |---|---|---|---|
 | F0 | Foundations — kill list, async engine, integration harness | ██████████ 3/3 | confirmed ✓ |
-| F1 | run.db task store + tracker-as-view + task/note verbs | ██████████ 4/4 | gating… |
+| F1 | run.db task store + tracker-as-view + task/note verbs | ██████████ 4/4 | confirmed ✓ |
 | F2 | ProcessSupervisor + Job Objects + bg primitives | ░░░░░░░░░░ 0/4 | todo |
 | F3 | Stall v2 + same-failure breaker + pre-flight | ░░░░░░░░░░ 0/4 | todo |
 | F4 | Verifier role + scoring loop + findings-as-retry | ░░░░░░░░░░ 0/5 | todo |
@@ -162,10 +161,6 @@ _Updated 2026-07-10 18:53 UTC · branch `feat/foreman` · HEAD `5c549f2`_
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-10 16:40:07  • session #3 F0 Audit started (attempt 1/4) · persona refactor
-07-10 16:55:56  • session #3 F0 → RolledOver  (15m48s)
-07-10 16:55:56  • session #4 F0 Audit started (attempt 1/4) · persona refactor
-07-10 17:02:28  • session #4 F0 → Progress · 2 commit(s)  (6m32s)
 07-10 17:03:19  ▪ gate build pass [phase]  (22.4s)
 07-10 17:03:19  ▪ gate tests pass [phase]  (27.3s)
 07-10 17:03:19  ▸ stage F0 confirmed (audited)
@@ -202,6 +197,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-10 19:29:38  • session #18 F1 → Interrupted  (5m29s)
 07-10 19:45:44  ◆ run resumed · Foreman
 07-10 19:45:44  • session #19 F1 Audit started (attempt 1/2) · persona architect
+07-10 19:53:34  • session #19 F1 → Progress · 1 commit(s)  (7m50s)
+07-10 19:54:29  ▪ gate build pass [phase]  (23.6s)
+07-10 19:54:29  ▪ gate tests pass [phase]  (29.7s)
+07-10 19:54:29  ▸ stage F1 confirmed (audited)  (2h51m06s)
 ```
 
 ## Health
@@ -263,6 +262,10 @@ vs upstream: up to date
 - `.conductor/handovers/B9.md`
 - `.conductor/handovers/F0.md`
 - `.conductor/handovers/F1.md`
+
+## Last gate run
+
+build:OK · tests:OK
 
 ## Last session result
 
