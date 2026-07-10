@@ -552,7 +552,7 @@ public sealed class RunDb : IDisposable
             }
             cmd.ExecuteNonQuery();
         }
-        catch (SqliteException ex)
+        catch (Exception ex) when (ex is SqliteException or ObjectDisposedException or InvalidOperationException)
         {
             _logger.LogWarning(ex, "run.db write failed (additive, non-blocking): {Sql}", sql);
         }

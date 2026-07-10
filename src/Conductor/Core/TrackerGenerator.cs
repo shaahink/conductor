@@ -65,7 +65,7 @@ public static class TrackerGenerator
         if (checkpoints.Count == 0)
         {
             // No checkpoints in db yet — render from plan stages only
-            foreach (var stage in plan.Stages)
+            foreach (var stage in (plan.Stages ?? []))
             {
                 sb.AppendLine($"### {stage.Id} — {stage.Title}");
                 sb.AppendLine();
@@ -83,7 +83,7 @@ public static class TrackerGenerator
 
             // Iterate stages in plan order, then any stages in db not in plan
             var renderedStages = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var stage in plan.Stages)
+            foreach (var stage in (plan.Stages ?? []))
             {
                 renderedStages.Add(stage.Id);
                 sb.AppendLine($"### {stage.Id} — {stage.Title}");
@@ -122,7 +122,7 @@ public static class TrackerGenerator
         // Dependencies — derived from plan stage DependsOn fields
         sb.AppendLine("## Dependencies");
         sb.AppendLine();
-        var deps = plan.Stages
+        var deps = (plan.Stages ?? [])
             .SelectMany(s => (s.DependsOn ?? []).Select(d => (From: d, To: s.Id)))
             .Distinct()
             .ToArray();
