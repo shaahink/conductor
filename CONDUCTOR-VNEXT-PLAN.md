@@ -6,11 +6,11 @@ your stage deliverable from the plan JSON.
 **Design doc:** `docs/CONDUCTOR-VNEXT-PLAN.md` — 10 cataloged failures, architecture, locked decisions, addenda D7-D12.
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
-last: s5 — F0 RE-AUDIT hardened. Threaded CT through ApproveAwaitingOwner→ConfirmStage chain; post-hook now respects parent ct; removed redundant Task.Run in fix-lanes.
-stage: F0 — Foundations. ALL 3 checkpoints DONE + RE-AUDITED. F1 (run.db) next.
-commits: be10727 (re-audit). Total F0: 9 commits.
-gate: 0w/0e, 533/533 tests pass. dirty: none.
-trap: HarnessTests creates temp git repos — ensure git is on PATH for test runs.
+last: s6 — F1.1 run.db schema landed. 11 tables (runs, stages, sessions, attempts, gates, scores, ledger, handovers, injections, costs, schema_version). Additive-first — writes alongside state.json + events.jsonl. Null in dry-run mode.
+stage: F1 — run.db task store. F1.1 DONE. F1.2 (tracker-as-view) next.
+commits: 6330c60 (F1.1). Total F0: 9, F1: 1.
+gate: 0w/0e, 544/545 tests pass (1 pre-existing flaky Serilog lock test).
+trap: HarnessTests creates temp git repos — ensure git is on PATH.
 branch: feat/foreman.
 
 ## Baseline numbers (pre-Foreman, re-measure at each phase)
@@ -18,7 +18,7 @@ branch: feat/foreman.
 | Metric | Value |
 |---|---|
 | Target framework | net10.0 |
-| Tests | 533 pass (0 warn, 0 err) |
+| Tests | 545 pass (0 warn, 0 err; 1 pre-existing flaky Serilog lock test) |
 | Source files | ~45 .cs under src/Conductor |
 | Branches | master (stable), feat/foreman |
 | Versions | Conductor v2 (Baton) + Era v3 enhancements; 91 sessions, ~$4.78 total |
@@ -41,7 +41,7 @@ never silent renumbering.
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| F1.1 | run.db schema — tables: runs, stages, sessions, attempts, gates, scores, ledger, handovers, injections, costs; telemetry per D8 | TODO | - | - |
+| F1.1 | run.db schema — tables: runs, stages, sessions, attempts, gates, scores, ledger, handovers, injections, costs; telemetry per D8 | DONE | 6330c60 | RunDbTests.cs — 12 tests pass, schema auto-creates (idempotent), session/gate/cost round-trip, parameterised query, 11 tables |
 | F1.2 | Tracker-as-view — conductor writes TRACKER.md FROM run.db (generated view for humans/agents); regenerates byte-stable | TODO | - | - |
 | F1.3 | conductor task/note verbs — task CRUD + note (writes ledger); MCP surface; agents report progress via verbs instead of hand-editing markdown | TODO | - | - |
 | F1.4 | conductor report --query — ad-hoc SQL/DSL against run.db ("cost of stage R3?", "which gates fail most?") | TODO | - | - |
