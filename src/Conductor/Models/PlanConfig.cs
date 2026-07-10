@@ -541,7 +541,7 @@ public sealed class StageConfig
     /// <summary>Per-stage agent override (B7.1) — merged over the plan default. null = use plan default.
     /// The orchestrator resolves checkpoint ?? stage ?? plan default at session-start time.</summary>
     public AgentConfig? Agent { get; set; }
-    /// <summary>Persona name to adopt for this stage (e.g. "architect", "planner", "qa"). Resolved
+    /// <summary>Persona name to adopt for this stage (e.g. "deliver", "verify", "advise"). Resolved
     /// by <c>PersonaRegistry</c> into a system prompt. null = no persona (B7.2).</summary>
     public string? Persona { get; set; }
     /// <summary>Stage kind: "deliver" (default), "review" (self-review stage, B8.3).

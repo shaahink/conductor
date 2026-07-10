@@ -91,18 +91,18 @@ public class PromptBuilderTests
     public void PersonaSystemPromptPrependedToBasePrompt()
     {
         var plan = Plan();
-        var stage = new StageConfig { Id = "B2", Title = "Spine", Sessions = 3, Persona = "architect" };
+        var stage = new StageConfig { Id = "B2", Title = "Spine", Sessions = 3, Persona = "deliver" };
         var reg = new PersonaRegistry((string?)null);
         var builder = new PromptBuilder(plan, reg);
         var prompt = builder.Deliver(stage, 1, 1, 6);
 
         // Persona system prompt appears first
-        var architectPrompt = reg.ResolveSystemPrompt("architect")!;
-        Assert.StartsWith(architectPrompt, prompt);
+        var personaPrompt = reg.ResolveSystemPrompt("deliver")!;
+        Assert.StartsWith(personaPrompt, prompt);
 
         // Conductor contract rules appear AFTER the persona prompt (merge order: contract wins)
         var contractIdx = prompt.IndexOf("Evidence or it didn't happen", StringComparison.Ordinal);
-        var personaIdx = prompt.IndexOf(architectPrompt, StringComparison.Ordinal);
+        var personaIdx = prompt.IndexOf(personaPrompt, StringComparison.Ordinal);
         Assert.True(contractIdx > personaIdx, "Contract rules must come after persona system prompt");
     }
 
@@ -122,14 +122,14 @@ public class PromptBuilderTests
     public void PersonaScrapedFromNotesWhenPersonaFieldNull()
     {
         var plan = Plan();
-        var stage = new StageConfig { Id = "B2", Title = "Spine", Notes = "Persona: architect. Do the thing." };
+        var stage = new StageConfig { Id = "B2", Title = "Spine", Notes = "Persona: deliver. Do the thing." };
         var reg = new PersonaRegistry((string?)null);
         var builder = new PromptBuilder(plan, reg);
         var prompt = builder.Deliver(stage, 1, 1, 6);
 
-        // Persona resolved from legacy "Persona: architect" notes hint
-        var architectPrompt = reg.ResolveSystemPrompt("architect")!;
-        Assert.StartsWith(architectPrompt, prompt);
+        // Persona resolved from legacy "Persona: deliver" notes hint
+        var personaPrompt = reg.ResolveSystemPrompt("deliver")!;
+        Assert.StartsWith(personaPrompt, prompt);
     }
 
     /// <summary>FU-B4.x — Persona divergence: different personas must produce meaningfully different
@@ -142,22 +142,22 @@ public class PromptBuilderTests
         var reg = new PersonaRegistry((string?)null);
         var builder = new PromptBuilder(plan, reg);
 
-        var architect = builder.Deliver(
-            new StageConfig { Id = "B1", Title = "Test", Persona = "architect" }, 1, 1, 6);
-        var qa = builder.Deliver(
-            new StageConfig { Id = "B1", Title = "Test", Persona = "qa" }, 1, 1, 6);
-        var planner = builder.Deliver(
-            new StageConfig { Id = "B1", Title = "Test", Persona = "planner" }, 1, 1, 6);
+        var deliver = builder.Deliver(
+            new StageConfig { Id = "B1", Title = "Test", Persona = "deliver" }, 1, 1, 6);
+        var verify = builder.Deliver(
+            new StageConfig { Id = "B1", Title = "Test", Persona = "verify" }, 1, 1, 6);
+        var advise = builder.Deliver(
+            new StageConfig { Id = "B1", Title = "Test", Persona = "advise" }, 1, 1, 6);
 
         // Each persona must produce distinct prompts — if any two are equal the builder is broken.
-        Assert.NotEqual(architect, qa);
-        Assert.NotEqual(architect, planner);
-        Assert.NotEqual(qa, planner);
+        Assert.NotEqual(deliver, verify);
+        Assert.NotEqual(deliver, advise);
+        Assert.NotEqual(verify, advise);
 
         // Also verify that the persona-specific system prompts are actually in the output
-        Assert.Contains("ARCHITECTURE specialist", architect, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("QA specialist", qa, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("PLANNING specialist", planner, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("DELIVERY specialist", deliver, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("VERIFICATION specialist", verify, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ADVISORY specialist", advise, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

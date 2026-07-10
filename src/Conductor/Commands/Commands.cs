@@ -405,7 +405,8 @@ public sealed class TasksCommand : Command<PlanSettings>
                 };
                 var source = task.Source switch
                 {
-                    "planner" => "[grey]planner[/]",
+                    "deliver" => "[grey]deliver[/]",
+                    "planner" => "[grey]deliver[/]",
                     "agent" => "[grey]agent[/]",
                     "human" => "[grey]human[/]",
                     _ => $"[grey]{Markup.Escape(task.Source)}[/]",

@@ -387,12 +387,12 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             Log($"review stage {stage.Id}: scaffolded review artifact at {reviewPath}");
         }
 
-        // B9.2: if this is a Deliver session with planner persona, and the active checkpoint
+        // B9.2: if this is a Deliver session with deliver persona, and the active checkpoint
         // hasn't been decomposed yet, seed the task graph with ordered sub-tasks.
         var personaName = plan.ResolvePersona(stage);
         var activeCp = preTrack.ForStage(stage.Id).FirstOrDefault(c => !c.IsDone);
         if (kind == SessionKind.Deliver &&
-            "planner".Equals(personaName, StringComparison.OrdinalIgnoreCase) &&
+            "deliver".Equals(personaName, StringComparison.OrdinalIgnoreCase) &&
             activeCp != null &&
             _decomposedCheckpoints.Add(activeCp.Id))
         {
@@ -406,7 +406,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     TaskId = $"{activeCp.Id}-t{task.Order}",
                     CheckpointId = activeCp.Id,
                     Title = task.Title,
-                    Source = "planner",
+                    Source = "deliver",
                     Order = task.Order,
                 });
             }

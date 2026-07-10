@@ -181,7 +181,7 @@ public class PlanConfigTests
           "agent": { "command": "opencode", "args": ["run", "{prompt}"], "provider": "opencode", "output": "opencode-json", "systemPrompt": "base sys" },
           "stages": [
             { "id": "S1", "title": "First" },
-            { "id": "S2", "title": "Second", "agent": { "systemPrompt": "stage sys", "temperature": 0.3, "model": "gpt-5" }, "persona": "qa" }
+            { "id": "S2", "title": "Second", "agent": { "systemPrompt": "stage sys", "temperature": 0.3, "model": "gpt-5" }, "persona": "verify" }
           ]
         }
         """;
@@ -202,7 +202,7 @@ public class PlanConfigTests
         Assert.Equal("opencode", s2.Provider);          // not overridden → falls back
 
         // Persona resolution: stage.Persona wins
-        Assert.Equal("qa", cfg.ResolvePersona(cfg.Stages[1]));
+        Assert.Equal("verify", cfg.ResolvePersona(cfg.Stages[1]));
         Assert.Null(cfg.ResolvePersona(cfg.Stages[0]));
     }
 
@@ -210,10 +210,10 @@ public class PlanConfigTests
     public void PersonaScrapedFromNotesFallback()
     {
         var cfg = new PlanConfig { Repo = ".", Tracker = "t.md" };
-        cfg.Stages.Add(new StageConfig { Id = "S1", Notes = "Read docs/baton/stages/B2.md. Persona: architect. Do the thing." });
+        cfg.Stages.Add(new StageConfig { Id = "S1", Notes = "Read docs/baton/stages/B2.md. Persona: deliver. Do the thing." });
         cfg.Stages.Add(new StageConfig { Id = "S2", Notes = "No persona here." });
 
-        Assert.Equal("architect", cfg.ResolvePersona(cfg.Stages[0]));
+        Assert.Equal("deliver", cfg.ResolvePersona(cfg.Stages[0]));
         Assert.Null(cfg.ResolvePersona(cfg.Stages[1]));
     }
 

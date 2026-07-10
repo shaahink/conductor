@@ -41,10 +41,10 @@ public class PersonaRegistryTests
         Directory.CreateDirectory(dir);
         try
         {
-            File.WriteAllText(Path.Combine(dir, "planner.md"), "DISK PLANNER PROMPT");
+            File.WriteAllText(Path.Combine(dir, "deliver.md"), "DISK DELIVER PROMPT");
             var reg = new PersonaRegistry(dir);
-            var prompt = reg.ResolveSystemPrompt("planner");
-            Assert.Equal("DISK PLANNER PROMPT", prompt);
+            var prompt = reg.ResolveSystemPrompt("deliver");
+            Assert.Equal("DISK DELIVER PROMPT", prompt);
         }
         finally { Directory.Delete(dir, recursive: true); }
     }
@@ -56,9 +56,9 @@ public class PersonaRegistryTests
         Directory.CreateDirectory(dir);
         try
         {
-            // dir exists but has no planner.md → built-in fallback
+            // dir exists but has no deliver.md → built-in fallback
             var reg = new PersonaRegistry(dir);
-            var prompt = reg.ResolveSystemPrompt("planner");
+            var prompt = reg.ResolveSystemPrompt("deliver");
             Assert.NotNull(prompt);
             Assert.True(prompt!.Length > 20);
         }
@@ -73,11 +73,11 @@ public class PersonaRegistryTests
         Directory.CreateDirectory(personasDir);
         try
         {
-            File.WriteAllText(Path.Combine(personasDir, "planner.md"), "FROM DISK VIA PLAN");
+            File.WriteAllText(Path.Combine(personasDir, "deliver.md"), "FROM DISK VIA PLAN");
             var plan = new PlanConfig { Repo = ".", Tracker = "t.md" };
             typeof(PlanConfig).GetProperty(nameof(PlanConfig.PlanFilePath))!.SetValue(plan, Path.Combine(dir, "plan.json"));
             var reg = new PersonaRegistry(plan);
-            var prompt = reg.ResolveSystemPrompt("planner");
+            var prompt = reg.ResolveSystemPrompt("deliver");
             Assert.Equal("FROM DISK VIA PLAN", prompt);
         }
         finally { Directory.Delete(dir, recursive: true); }
