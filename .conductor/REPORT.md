@@ -1,37 +1,16 @@
 ﻿# Conductor — Foreman run report
 
-_Updated 2026-07-10 14:44 UTC · branch `feat/foreman` · HEAD `47798ee`_
+_Updated 2026-07-10 14:46 UTC · branch `feat/foreman` · HEAD `ba91b9c`_
 
 **Status:** Running
-**Stage:** F0 — Foundations — kill list, async engine, integration harness · persona: refactor · attempts used 0 · working ▸ F0.1
-**Checkpoints:** 0/40 done · **Sessions run:** 1 · **Cost:** $0.0000
-
-## Latest activity (live)
-
-_Session #1 (Deliver) · running 30m · last output 7s ago · $0.1511_
-
-**Thinking:**
-> Let me enumerate all the blocking async patterns more carefully to assess what's feasible for F0.2.
-> The blocking patterns are:  1. **Commands.cs:89** - `task.GetAwaiter().GetResult()` — this is the RunCommand calling `Orchestrator.Run()`. To fix this, the Run command handler needs to be async (make it `async Task<int>` with `await task`)  2. **Commands.cs:1422** - `server.RunAsync(...).GetAwaiter(…
-> Good — 23 files changed, with a net deletion of 687 lines. The diff budget is met (actual deletions, the 23 files are all related to kill list).   Now let me run the full gate battery.
-
-**Recent actions:**
-- `15:43:41` · 531 pass, 0w/0e. F0.1 kill list COMPLETE. Commit:
-- `15:43:42` » bash git add -A; git commit -m "feat(bF0.1): kill list part 5 — delete hierarchical template system  - Remove --template option from NewPlanCommand - Remove Bui…
-- `15:44:01` » todowrite 3 todos
-- `15:44:01` · F0.1 is fully DONE. Now let me evaluate F0.2 scope:
-- `15:44:08` · Let me assess the full scope of F0.2 before starting:
-- `15:44:09` » grep \.GetAwaiter\(\)\.GetResult\(\)|Thread\.Sleep\(|\.Result\b.*//.*not.*property|\.Wait\(\)
-- `15:44:31` » bash git log --oneline -5
-- `15:44:31` · F0.2 (async control loop) is a major architectural change that deserves its own session. Let me finalize F0.1, update the tracker, and do the post-session ritua…
-- `15:44:31` » bash git diff --stat HEAD~5..HEAD
-- `15:44:48` » bash dotnet build Conductor.slnx 2>&1
+**Stage:** F0 — Foundations — kill list, async engine, integration harness · persona: refactor · attempts used 0 · working ▸ F0.2
+**Checkpoints:** 1/40 done · **Sessions run:** 1 · **Cost:** $0.1600 · **Tokens:** 110,047 in / 42,032 out / 15,730 think
 
 ## Stage progress
 
 | Stage | Title | Progress | State |
 |---|---|---|---|
-| F0 | Foundations — kill list, async engine, integration harness | ░░░░░░░░░░ 0/3 | **← active** |
+| F0 | Foundations — kill list, async engine, integration harness | ███░░░░░░░ 1/3 | **← active** |
 | F1 | run.db task store + tracker-as-view + task/note verbs | ░░░░░░░░░░ 0/4 | todo |
 | F2 | ProcessSupervisor + Job Objects + bg primitives | ░░░░░░░░░░ 0/4 | todo |
 | F3 | Stall v2 + same-failure breaker + pre-flight | ░░░░░░░░░░ 0/4 | todo |
@@ -42,11 +21,11 @@ _Session #1 (Deliver) · running 30m · last output 7s ago · $0.1511_
 | F8 | conductor chat + Telegram v2 | ░░░░░░░░░░ 0/4 | todo |
 | F9 | Dogfood close — real Shamshir A2 under v-next | ░░░░░░░░░░ 0/3 | todo |
 
-<details><summary>F0 — Foundations — kill list, async engine, integration harness (0/3)</summary>
+<details><summary>F0 — Foundations — kill list, async engine, integration harness (1/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| F0.1 | Kill list executed — delete replay/time-travel, persona bloat (keep 3 roles), confidence pane, heartbeat commits to feature branch, hierarchical template system | ⬜ TODO | - |
+| F0.1 | Kill list executed — delete replay/time-travel, persona bloat (keep 3 roles), confidence pane, heartbeat commits to feature branch, hierarchical template system | ✅ DONE | [`47798ee`](https://github.com/shaahink/conductor/commit/47798ee) |
 | F0.2 | Async control loop — Orchestrator run loop async (B4.7 debt); no blocking .Result/.Wait() | ⬜ TODO | - |
 | F0.3 | Integration harness — fake agent + temp repo, full cycle asserted (B4.8); gate: 0w/0e, harness cycle green | ⬜ TODO | - |
 
@@ -156,7 +135,7 @@ _Session #1 (Deliver) · running 30m · last output 7s ago · $0.1511_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | F0 | Deliver | 1 | 07-10 14:14 | … | running |  | 0 |  |  |  |
+| 1 | F0 | Deliver | 1 | 07-10 14:14 | 0:31 | RolledOver |  | 0 |  | $0.1600 | 110,047/42,032 |
 
 ## Timeline
 
@@ -174,6 +153,16 @@ _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)
 ```
 sessions 1 · retries 0 (0 %) · overall Ok
 ✓ no health concerns detected
+```
+
+## Confidence
+
+_Evidence-based confidence per checkpoint. A checkpoint without evidence is marked (none)._
+
+```
+checkpoints confirmed: 1   with evidence: 1
+
+  F0.1  4 evidence item(s) ··  531 tests pass, 0w/0e, 23 files changed, -687 net LOC across 5 commits
 ```
 
 ## Repo
@@ -200,12 +189,17 @@ working tree: clean
 - `.conductor/handovers/B8.md`
 - `.conductor/handovers/B9.md`
 
+## Last session result
+
+> SESSION-RESULT: Delivered F0.1 kill list in full — 5 commits across 23 files, deleting 687 net LOC. Replay/Confidence classes deleted entirely, personas trimmed from 9 to 3 (deliver/verify/advise), heartbeat git-commit machinery stripped (report still refreshes to disk), hierarchical template system collapsed to single minimal scaffold. 531 tests pass at 0w/0e. F0.2 (async control loop) and F0.3 (integration harness) remain TODO for next session. Hardest part: tracing deeply-woven kill-list items through 48 source files — the heartbeat removal touched the orchestrator, control-file parser, action-bar renderer, report publisher, progress model, and snapshot builder simultaneously, requiring c…
+
 ## Tracker handoff
 
 ```
-last: none (plan created 2026-07-10).
-stage: all TODO — 34 checkpoints across 10 stages (F0–F9).
-next: F0 — Foundations (kill list executed, async control loop, integration harness).
-dirty: none. Status: idle.
-trap: stable driver is C:\Code\conductor\bin\conductor.exe (master binary, built 2026-07-07). Branch feat/foreman must exist before run. Design doc supersedes NEXT-ERA.md — D/O/P items absorbed or killed.
+last: s1 — F0.1 kill list executed (replay, confidence, personas, heartbeat, templates deleted). All 5 sub-items DONE.
+stage: F0 — Foundations. F0.1 DONE, F0.2 (async loop) next, F0.3 (harness) pending.
+commits: 8a57d1e | 9daa9c7 | c305bcf | 7590d71 | 47798ee (5 commits, 23 files, -687 net LOC).
+gate: 0w/0e, 531/531 tests pass. dirty: REPORT.md auto-refresh only.
+trap: F0.2 requires making Orchestrator.Run() async (~2400 LOC god-class). Start by eliminating Thread.Sleep → Task.Delay and .GetAwaiter().GetResult() in the run loop, then propagate up. F0.1 is locked — do not revisit.
+branch: feat/foreman.
 ```
