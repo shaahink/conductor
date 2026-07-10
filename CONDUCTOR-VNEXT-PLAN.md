@@ -6,11 +6,11 @@ your stage deliverable from the plan JSON.
 **Design doc:** `docs/CONDUCTOR-VNEXT-PLAN.md` — 10 cataloged failures, architecture, locked decisions, addenda D7-D12.
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
-last: s20 — F2 first attempt. Landed F2.1+F2.2.
-stage: F2 — ProcessSupervisor + Job Objects + run.db PID registry + orphan reaper. 2/4 checkpoints done.
-commits: 65c63c9 (F2.1+F2.2). Prior: 60ab247, b93865a, etc.
-gate: 0w/0e build, 556/557 pass (1 pre-existing flaky HostLoggingTests file-lock). 9 new ProcessSupervisorTests all green.
-trap: F2.3 (bg start/status/logs/stop) + F2.4 (MCP bg surface) remain. ProcessSupervisor wired but bg CLI not yet implemented.
+last: s21 — F2.3 landed. conductor bg start|status|logs|stop CLI verbs implemented.
+stage: F2 — ProcessSupervisor + Job Objects + run.db PID registry + bg primitives. 3/4 checkpoints done.
+commits: 286738c (F2.3). Prior: 65c63c9 (F2.1+F2.2).
+gate: 0w/0e build, 558/560 pass (2 pre-existing flaky HostLoggingTests). 3 new RunDb GetAllPids tests green.
+trap: F2.4 (MCP bg surface + harness proof) remains. bg CLI done — start spawns detached with log capture, status queries run.db+live pids, logs tails bg-logs/*.log, stop kills by PID.
 branch: feat/foreman.
 
 ## Baseline numbers (pre-Foreman, re-measure at each phase)
@@ -52,7 +52,7 @@ never silent renumbering.
 |---|-----------|--------|--------|----------|
 | F2.1 | ProcessSupervisor + Job Objects — every child spawned into Windows Job Object; kill-by-tree, no orphans | DONE | 65c63c9 | ProcessSupervisor.cs — run-level JobObject with KILL_ON_JOB_CLOSE, ProcessRunner + AgentSession integrate via DI singleton, 9 tests prove track/untrack/JobObject assignment |
 | F2.2 | PID registry in run.db + orphan reaper at startup | DONE | 65c63c9 | RunDb v3 schema (pids table, 8 columns), GetOrphanPids/TrackPid/MarkPidExited, ReapOrphans() at startup kills leftover PIDs + marks exited |
-| F2.3 | conductor bg start / status / logs / stop — sanctioned background-run primitive; prompts mandate it for anything >3 min | TODO | - | - |
+| F2.3 | conductor bg start / status / logs / stop — sanctioned background-run primitive; prompts mandate it for anything >3 min | DONE | 286738c | BgCommand.cs — 4 sub-commands (start/status/logs/stop), spawns detached with log capture to .conductor/bg-logs/, queries run.db pids table for status, tails log files, kill-by-PID. 3 new RunDb.GetAllPids tests pass. Smoke-tested all 4 verbs. |
 | F2.4 | MCP bg surface + harness proof — kill-by-tree, orphan reap, bg liveness feeds stall detector | TODO | - | - |
 
 ### F3 — Stall v2 + resilience

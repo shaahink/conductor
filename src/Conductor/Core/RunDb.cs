@@ -602,6 +602,26 @@ public sealed class RunDb : IDisposable
         return rows.Select(r => (Pid: Convert.ToInt32(r["pid"]), Purpose: (string)r["purpose"]!)).ToList();
     }
 
+    /// <summary>Return all tracked PIDs for a run, ordered by started_utc descending.
+    /// Used by <c>conductor bg status</c> (F2.3).</summary>
+    public IReadOnlyList<PidRow> GetAllPids(string runId)
+    {
+        var rows = Query(
+            "SELECT pid, purpose, stage_id, session_number, started_utc, exited_utc, exit_code, run_id FROM pids " +
+            "WHERE run_id = @runId ORDER BY started_utc DESC",
+            ("@runId", runId));
+        return rows.Select(r => new PidRow(
+            Pid: Convert.ToInt32(r["pid"]),
+            Purpose: (string)r["purpose"]!,
+            StageId: r["stage_id"] as string,
+            SessionNumber: r["session_number"] is long sn ? (int?)sn : null,
+            StartedUtc: DateTime.Parse((string)r["started_utc"]!),
+            ExitedUtc: r["exited_utc"] is string eu ? DateTime.Parse(eu) : null,
+            ExitCode: r["exit_code"] is long ec ? (int?)ec : null,
+            RunId: (string)r["run_id"]!
+        )).ToList();
+    }
+
     // ---------------------------------------------------------------- helpers
 
     private void TryExecute(string sql, params (string Name, object? Value)[] parameters)
@@ -635,3 +655,14 @@ public sealed class RunDb : IDisposable
     }
 #pragma warning restore MA0045
 }
+
+/// <summary>F2.3: A row from the pids table returned by <see cref="RunDb.GetAllPids"/>.</summary>
+public sealed record PidRow(
+    int Pid,
+    string Purpose,
+    string? StageId,
+    int? SessionNumber,
+    DateTime StartedUtc,
+    DateTime? ExitedUtc,
+    int? ExitCode,
+    string RunId);

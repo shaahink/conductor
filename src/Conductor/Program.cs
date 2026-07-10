@@ -62,6 +62,8 @@ app.Configure(c =>
         .WithDescription("Run the MCP task server (JSON-RPC 2.0 over stdio) for agent task management.");
     c.AddCommand<CompletionCommand>("completion")
         .WithDescription("Generate shell completion scripts (powershell or bash).");
+    c.AddCommand<BgCommand>("bg")
+        .WithDescription("Background process management: start|status|logs|stop.");
     c.SetExceptionHandler((ex, _) =>
     {
         AnsiConsole.MarkupLine($"[red]error:[/] {Markup.Escape(ex is InvalidOperationException or FileNotFoundException ? ex.Message : ex.ToString())}");

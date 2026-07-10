@@ -47,6 +47,7 @@ public sealed class RunDbTests : IDisposable
         Assert.Contains("injections", names);
         Assert.Contains("costs", names);
         Assert.Contains("checkpoints", names);
+        Assert.Contains("pids", names);
     }
 
     [Fact]
@@ -263,5 +264,44 @@ public sealed class RunDbTests : IDisposable
         _db.MarkCheckpointInProgress("r1", "F3.1");
         var rows2 = _db.GetCheckpoints("r1");
         Assert.Equal("DONE", rows2[0].Status);
+    }
+
+    // ---------------------------------------------------------------- F2.3: GetAllPids query
+
+    [Fact]
+    public void GetAllPids_returns_all_tracked_pids_for_run()
+    {
+        _db.InitializeRun("r-bg", "bg-plan", "/r", "b", "v");
+
+        _db.TrackPid(10001, "r-bg", "bg:backtest", "F2", 1, DateTime.UtcNow);
+        _db.TrackPid(10002, "r-bg", "bg:build", "F2", 1, DateTime.UtcNow);
+
+        var pids = _db.GetAllPids("r-bg");
+        Assert.Equal(2, pids.Count);
+        Assert.Contains(pids, p => p.Pid == 10001 && p.Purpose == "bg:backtest");
+        Assert.Contains(pids, p => p.Pid == 10002 && p.Purpose == "bg:build");
+    }
+
+    [Fact]
+    public void GetAllPids_returns_empty_for_unknown_run()
+    {
+        _db.InitializeRun("r-bg2", "bg-plan", "/r", "b", "v");
+        var pids = _db.GetAllPids("r-nonexistent");
+        Assert.Empty(pids);
+    }
+
+    [Fact]
+    public void GetAllPids_includes_exited_pids()
+    {
+        _db.InitializeRun("r-bg3", "bg-plan", "/r", "b", "v");
+
+        _db.TrackPid(20001, "r-bg3", "bg:test", "F2", 2, DateTime.UtcNow);
+        _db.MarkPidExited(20001, 0);
+
+        var pids = _db.GetAllPids("r-bg3");
+        Assert.Single(pids);
+        Assert.Equal(20001, pids[0].Pid);
+        Assert.NotNull(pids[0].ExitedUtc);
+        Assert.Equal(0, pids[0].ExitCode);
     }
 }

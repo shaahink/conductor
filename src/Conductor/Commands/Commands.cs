@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Text.Json;
 using Conductor.Core;
 using Conductor.Core.Events;
@@ -6,6 +7,7 @@ using Conductor.Core.Hosting;
 using Conductor.Core.Integrations;
 using Conductor.Models;
 using Conductor.Ui;
+using EventLog = Conductor.Core.Events.EventLog;
 using Microsoft.Extensions.DependencyInjection;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -1827,5 +1829,420 @@ public sealed class TaskCommand : Command<TaskCommand.Settings>
         }
 
         return 0;
+    }
+}
+
+/// <summary>
+/// F2.3: Background process management — sanctioned primitive for agents to run commands
+/// that take >3 min. Agents call <c>conductor bg start|status|logs|stop</c> via CLI or MCP
+/// to spawn, monitor, and kill long-running child processes without blocking the session.
+/// Every bg process is tracked in the run.db pids table and its stdout/stderr are captured
+/// to a log file under <c>.conductor/bg-logs/</c>.
+/// </summary>
+public sealed class BgCommand : Command<BgCommand.Settings>
+{
+    public sealed class Settings : PlanSettings
+    {
+        [CommandArgument(0, "[VERB]")]
+        [Description("Sub-command: start, status, logs, stop. Omit to show help.")]
+        public string Verb { get; init; } = "";
+
+        [CommandArgument(1, "[PID_OR_PURPOSE]")]
+        [Description("PID (number) or purpose label (for logs/stop sub-commands).")]
+        public string? PidOrPurpose { get; init; }
+
+        [CommandOption("--purpose <LABEL>")]
+        [Description("Purpose label for the background process (start only). Defaults to the executable name.")]
+        public string? Purpose { get; init; }
+
+        [CommandOption("--cwd <DIR>")]
+        [Description("Working directory for the background process (start only). Defaults to the plan's repo root.")]
+        public string? Cwd { get; init; }
+
+        [CommandOption("-t|--tail <N>")]
+        [Description("Number of lines to tail from the log (logs only, default 30).")]
+        public int Tail { get; init; } = 30;
+    }
+
+    public override int Execute(CommandContext context, Settings settings)
+    {
+        var verb = settings.Verb.ToLowerInvariant();
+        var remaining = context.Remaining;
+
+        try
+        {
+            return verb switch
+            {
+                "start" => ExecuteStart(settings, remaining),
+                "status" => ExecuteStatus(settings),
+                "logs" => ExecuteLogs(settings),
+                "stop" => ExecuteStop(settings),
+                _ => PrintBgHelp(),
+            };
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or FileNotFoundException)
+        {
+            AnsiConsole.MarkupLine($"[red]{Markup.Escape(ex.Message)}[/]");
+            return 1;
+        }
+    }
+
+    // ---------------------------------------------------------------- bg start
+
+    private static int ExecuteStart(Settings settings, IRemainingArguments remaining)
+    {
+        var cmdArgs = remaining.Raw;
+        if (cmdArgs.Count == 0)
+        {
+            AnsiConsole.MarkupLine("[red]bg start requires a command after --.[/]");
+            AnsiConsole.MarkupLine("[grey]Example: conductor bg start --purpose backtest -- dotnet run[/]");
+            return 1;
+        }
+
+        var plan = PlanConfig.Load(settings.ResolvePlanPath());
+        var statePath = Path.Combine(plan.StateDir, "state.json");
+        var state = RunState.LoadOrNew(statePath, plan.Name);
+        var runId = state.RunId ?? "bg-standalone";
+
+        var exe = cmdArgs[0];
+        var exeArgs = cmdArgs.Skip(1).ToList();
+        var purpose = settings.Purpose ?? Path.GetFileNameWithoutExtension(exe);
+
+        var psi = new ProcessStartInfo(exe)
+        {
+            WorkingDirectory = settings.Cwd ?? plan.Repo,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+            StandardOutputEncoding = System.Text.Encoding.UTF8,
+            StandardErrorEncoding = System.Text.Encoding.UTF8,
+        };
+        foreach (var a in exeArgs) psi.ArgumentList.Add(a);
+
+        Process? proc;
+        try
+        {
+            proc = Process.Start(psi);
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Failed to start '{Markup.Escape(exe)}': {Markup.Escape(ex.Message)}[/]");
+            return 1;
+        }
+
+        if (proc == null)
+        {
+            AnsiConsole.MarkupLine("[red]Process.Start returned null.[/]");
+            return 1;
+        }
+
+        var logDir = Path.Combine(plan.StateDir, "bg-logs");
+        Directory.CreateDirectory(logDir);
+        var safePurpose = SanitizeFileName(purpose);
+        var logPath = Path.Combine(logDir, $"{safePurpose}-{proc.Id}.log");
+
+        // Fire-and-forget log capture: the Process object stays alive inside the closure.
+        // The StreamWriter is disposed in the fire-and-forget task below — ownership transfers.
+#pragma warning disable CA2000
+        var logWriter = new StreamWriter(logPath, append: false, System.Text.Encoding.UTF8) { AutoFlush = true };
+#pragma warning restore CA2000
+        var gate = new Lock();
+        proc.OutputDataReceived += (_, e) => { if (e.Data != null) lock (gate) logWriter.WriteLine(e.Data); };
+        proc.ErrorDataReceived += (_, e) => { if (e.Data != null) lock (gate) logWriter.WriteLine($"[stderr] {e.Data}"); };
+        proc.BeginOutputReadLine();
+        proc.BeginErrorReadLine();
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await proc.WaitForExitAsync().ConfigureAwait(false);
+                await logWriter.DisposeAsync().ConfigureAwait(false);
+            }
+            catch { /* process already gone */ }
+        });
+
+        // Track in run.db
+        var runDbPath = Path.Combine(plan.StateDir, "run.db");
+        if (File.Exists(runDbPath))
+        {
+            try
+            {
+                using var db = new RunDb(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<RunDb>.Instance);
+                db.TrackPid(proc.Id, runId, $"bg:{purpose}", state.CurrentStage,
+                    state.SessionCounter > 0 ? state.SessionCounter : null, DateTime.UtcNow);
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[yellow]Started but run.db tracking failed: {Markup.Escape(ex.Message)}[/]");
+            }
+        }
+
+        AnsiConsole.MarkupLine($"[green]bg started[/] PID={proc.Id} purpose=[bold]{Markup.Escape(purpose)}[/]");
+        AnsiConsole.MarkupLine($"  log: [grey]{Markup.Escape(logPath)}[/]");
+        return 0;
+    }
+
+    // ---------------------------------------------------------------- bg status
+
+    private static int ExecuteStatus(Settings settings)
+    {
+        var plan = PlanConfig.Load(settings.ResolvePlanPath());
+        var runDbPath = Path.Combine(plan.StateDir, "run.db");
+        if (!File.Exists(runDbPath))
+        {
+            AnsiConsole.MarkupLine("[grey]No run.db found — no background processes tracked.[/]");
+            return 0;
+        }
+
+        using var db = new RunDb(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<RunDb>.Instance);
+        var statePath = Path.Combine(plan.StateDir, "state.json");
+        var state = RunState.LoadOrNew(statePath, plan.Name);
+        var runId = state.RunId;
+        if (string.IsNullOrEmpty(runId))
+        {
+            AnsiConsole.MarkupLine("[grey]state.json has no RunId — no background processes tracked.[/]");
+            return 0;
+        }
+
+        var pids = db.GetAllPids(runId);
+        if (pids.Count == 0)
+        {
+            AnsiConsole.MarkupLine("[grey]No background processes tracked for this run.[/]");
+            return 0;
+        }
+
+        var table = new Table()
+            .Border(TableBorder.Rounded)
+            .Title("[bold aqua]Background Processes[/]")
+            .AddColumn("PID")
+            .AddColumn("Purpose")
+            .AddColumn("Status")
+            .AddColumn("Started")
+            .AddColumn("Runtime");
+
+        foreach (var p in pids)
+        {
+            var alive = IsProcessAlive(p.Pid);
+            var status = p.ExitedUtc != null
+                ? $"[grey]exited ({p.ExitedUtc:HH:mm:ss})[/]"
+                : alive
+                    ? "[green]running[/]"
+                    : "[red]dead[/]";
+            var startStr = p.StartedUtc.ToString("HH:mm:ss");
+            var runtime = p.ExitedUtc != null
+                ? FormatDuration(p.ExitedUtc.Value - p.StartedUtc)
+                : alive
+                    ? FormatDuration(DateTime.UtcNow - p.StartedUtc)
+                    : "—";
+
+            table.AddRow(
+                Markup.Escape(p.Pid.ToString()),
+                Markup.Escape(p.Purpose),
+                status,
+                Markup.Escape(startStr),
+                Markup.Escape(runtime));
+        }
+        AnsiConsole.Write(table);
+
+        // Hint about log paths
+        AnsiConsole.MarkupLine("[grey]Logs: .conductor/bg-logs/  (use 'conductor bg logs <pid>' to tail)[/]");
+        return 0;
+    }
+
+    // ---------------------------------------------------------------- bg logs
+
+    private static int ExecuteLogs(Settings settings)
+    {
+        var target = settings.PidOrPurpose;
+        if (string.IsNullOrWhiteSpace(target))
+        {
+            AnsiConsole.MarkupLine("[red]Usage: conductor bg logs <pid>[/]");
+            AnsiConsole.MarkupLine("[grey]Example: conductor bg logs 12345[/]");
+            return 1;
+        }
+
+        var plan = PlanConfig.Load(settings.ResolvePlanPath());
+        var logDir = Path.Combine(plan.StateDir, "bg-logs");
+        if (!Directory.Exists(logDir))
+        {
+            AnsiConsole.MarkupLine("[grey]No bg-logs directory found.[/]");
+            return 0;
+        }
+
+        // Find log file: if target is numeric, match by PID in filename; otherwise try partial match
+        string? logFile = null;
+        var files = Directory.GetFiles(logDir, "*.log").OrderByDescending(File.GetLastWriteTime).ToList();
+
+        if (int.TryParse(target, out var pid))
+        {
+            var pidSuffix = $"-{pid}.log";
+            logFile = files.FirstOrDefault(f => f.EndsWith(pidSuffix, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (logFile == null)
+        {
+            // Fuzzy match by purpose substring
+            logFile = files.FirstOrDefault(f =>
+                Path.GetFileNameWithoutExtension(f).Contains(target, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (logFile == null)
+        {
+            // Check run.db for the PID's purpose and reconstruct the filename
+            var runDbPath = Path.Combine(plan.StateDir, "run.db");
+            if (File.Exists(runDbPath) && int.TryParse(target, out var dbPid))
+            {
+                try
+                {
+                    using var db = new RunDb(runDbPath,
+                        Microsoft.Extensions.Logging.Abstractions.NullLogger<RunDb>.Instance);
+                    var statePath = Path.Combine(plan.StateDir, "state.json");
+                    var state = RunState.LoadOrNew(statePath, plan.Name);
+                    if (!string.IsNullOrEmpty(state.RunId))
+                    {
+                        var allPids = db.GetAllPids(state.RunId);
+                        var match = allPids.FirstOrDefault(p => p.Pid == dbPid);
+                        if (match != null)
+                        {
+                            var safePurpose = SanitizeFileName(match.Purpose.Replace("bg:", ""));
+                            var recons = Path.Combine(logDir, $"{safePurpose}-{match.Pid}.log");
+                            if (File.Exists(recons)) logFile = recons;
+                        }
+                    }
+                }
+                catch { /* best-effort */ }
+            }
+
+            if (logFile == null)
+            {
+                AnsiConsole.MarkupLine($"[red]No log file found for '{Markup.Escape(target)}'.[/]");
+                var availFiles = files.Select(Path.GetFileName);
+                AnsiConsole.MarkupLine($"[grey]Available: {Markup.Escape(string.Join(", ", availFiles))}[/]");
+                return 1;
+            }
+        }
+
+        // Read and print the last N lines — synchronous by design (CLI command).
+#pragma warning disable MA0045
+        try
+        {
+            var tail = settings.Tail > 0 ? settings.Tail : 30;
+            var allLines = File.ReadAllLines(logFile);
+            var lines = allLines.Length <= tail ? allLines : allLines[^tail..];
+
+            AnsiConsole.MarkupLine($"[bold aqua]Log: {Markup.Escape(Path.GetFileName(logFile))}[/] ({lines.Length}/{allLines.Length} lines)");
+            AnsiConsole.WriteLine();
+            foreach (var line in lines)
+            {
+                if (line.StartsWith("[stderr]", StringComparison.Ordinal))
+                    AnsiConsole.MarkupLine($"[yellow]{Markup.Escape(line)}[/]");
+                else
+                    Console.WriteLine(line);
+            }
+        }
+        catch (IOException ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Cannot read log: {Markup.Escape(ex.Message)}[/]");
+            return 1;
+        }
+#pragma warning restore MA0045
+
+        return 0;
+    }
+
+    // ---------------------------------------------------------------- bg stop
+
+    private static int ExecuteStop(Settings settings)
+    {
+        var target = settings.PidOrPurpose;
+        if (string.IsNullOrWhiteSpace(target))
+        {
+            AnsiConsole.MarkupLine("[red]Usage: conductor bg stop <pid>[/]");
+            AnsiConsole.MarkupLine("[grey]Example: conductor bg stop 12345[/]");
+            return 1;
+        }
+
+        if (!int.TryParse(target, out var pid))
+        {
+            AnsiConsole.MarkupLine($"[red]'{Markup.Escape(target)}' is not a valid PID.[/] Use the numeric PID from 'conductor bg status'.");
+            return 1;
+        }
+
+        // Kill the process
+        try
+        {
+            using var proc = Process.GetProcessById(pid);
+            AnsiConsole.MarkupLine($"[yellow]Stopping PID={pid} ({Markup.Escape(proc.ProcessName)})...[/]");
+            proc.Kill(entireProcessTree: true);
+            proc.WaitForExit(5000);
+            AnsiConsole.MarkupLine($"[green]Killed PID={pid}.[/]");
+        }
+        catch (ArgumentException)
+        {
+            AnsiConsole.MarkupLine($"[grey]PID {pid} not found (already exited).[/]");
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Failed to kill PID {pid}: {Markup.Escape(ex.Message)}[/]");
+            return 1;
+        }
+
+        // Mark as exited in run.db
+        var plan = PlanConfig.Load(settings.ResolvePlanPath());
+        var runDbPath = Path.Combine(plan.StateDir, "run.db");
+        if (File.Exists(runDbPath))
+        {
+            try
+            {
+                using var db = new RunDb(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<RunDb>.Instance);
+                db.MarkPidExited(pid, -1);
+            }
+            catch { /* best-effort */ }
+        }
+
+        return 0;
+    }
+
+    // ---------------------------------------------------------------- helpers
+
+    private static int PrintBgHelp()
+    {
+        AnsiConsole.MarkupLine("[bold aqua]conductor bg[/] — background process management");
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine("  [bold]start[/]  [grey]Spawn a long-running background process[/]");
+        AnsiConsole.MarkupLine("         [grey]Usage: conductor bg start [[--purpose <label>]] [[--cwd <dir>]] -- <command> [[args...]][/]");
+        AnsiConsole.MarkupLine("  [bold]status[/] [grey]List all tracked background processes and their liveness[/]");
+        AnsiConsole.MarkupLine("  [bold]logs[/]   [grey]Tail the stdout/stderr log of a background process[/]");
+        AnsiConsole.MarkupLine("         [grey]Usage: conductor bg logs <pid> [[-t|--tail <N>]][/]");
+        AnsiConsole.MarkupLine("  [bold]stop[/]   [grey]Kill a background process by PID[/]");
+        AnsiConsole.MarkupLine("         [grey]Usage: conductor bg stop <pid>[/]");
+        return 0;
+    }
+
+    private static bool IsProcessAlive(int pid)
+    {
+        try
+        {
+            using var proc = Process.GetProcessById(pid);
+            return !proc.HasExited;
+        }
+        catch (ArgumentException) { return false; }
+        catch (InvalidOperationException) { return false; }
+    }
+
+    private static string FormatDuration(TimeSpan ts)
+    {
+        if (ts.TotalSeconds < 60) return $"{(int)ts.TotalSeconds}s";
+        if (ts.TotalMinutes < 60) return $"{(int)ts.TotalMinutes}m {ts.Seconds}s";
+        return $"{(int)ts.TotalHours}h {ts.Minutes}m {ts.Seconds}s";
+    }
+
+    private static string SanitizeFileName(string name)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        var chars = name.Select(c => invalid.Contains(c) ? '_' : c).ToArray();
+        var result = new string(chars);
+        return string.IsNullOrWhiteSpace(result) ? "bg-process" : result;
     }
 }
