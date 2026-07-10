@@ -1,11 +1,12 @@
 ﻿# Conductor — Foreman run report
 
-_Updated 2026-07-10 18:29 UTC · branch `feat/foreman` · HEAD `bfe60ed`_
+_Updated 2026-07-10 18:53 UTC · branch `feat/foreman` · HEAD `5c549f2`_
 
-**Status:** Running
-**Stage:** F1 — run.db task store + tracker-as-view + task/note verbs · persona: architect · attempts used 1
-**Checkpoints:** 7/40 done · **Sessions run:** 18 · **Cost:** $1.5257 · **Tokens:** 1,714,828 in / 246,985 out / 244,012 think
+**Status:** Idle
+**Stage:** F1 — run.db task store + tracker-as-view + task/note verbs · persona: architect · attempts used 0
+**Checkpoints:** 7/40 done · **Sessions run:** 19 · **Cost:** $1.6011 · **Tokens:** 1,821,021 in / 256,047 out / 253,741 think
 **Confirmed phases:** F0
+**Pending:** full-battery phase gate for F1
 
 ## Stage progress
 
@@ -154,14 +155,13 @@ _Updated 2026-07-10 18:29 UTC · branch `feat/foreman` · HEAD `bfe60ed`_
 | 16 | F1 | Audit | 1 | 07-10 18:06 | 0:04 | Interrupted |  | 0 |  | $0.0480 | 81,453/2,722 |
 | 17 | F1 | Resume | 1r1 | 07-10 18:23 | 0:00 | NoProgress |  | 0 | build:OK | $0.0369 | 83,715/71 |
 | 18 | F1 | Fix | 2 | 07-10 18:24 | 0:05 | Interrupted |  | 0 |  | $0.0270 | 49,215/1,741 |
+| 19 | F1 | Audit | 1 | 07-10 18:45 | 0:07 | Progress |  | 1 |  | $0.0754 | 106,193/9,062 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-10 15:46:43  • session #2 F0 Deliver started (attempt 1/4) · persona refactor
-07-10 16:40:07  • session #2 F0 → RolledOver  (53m24s)
 07-10 16:40:07  • session #3 F0 Audit started (attempt 1/4) · persona refactor
 07-10 16:55:56  • session #3 F0 → RolledOver  (15m48s)
 07-10 16:55:56  • session #4 F0 Audit started (attempt 1/4) · persona refactor
@@ -200,6 +200,8 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-10 19:24:08  • session #17 F1 → NoProgress  (1m02s)
 07-10 19:24:08  • session #18 F1 Fix started (attempt 2/4) · persona architect
 07-10 19:29:38  • session #18 F1 → Interrupted  (5m29s)
+07-10 19:45:44  ◆ run resumed · Foreman
+07-10 19:45:44  • session #19 F1 Audit started (attempt 1/2) · persona architect
 ```
 
 ## Health
@@ -207,7 +209,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 18 · retries 1 (6 %) · overall Warn
+sessions 19 · retries 1 (5 %) · overall Warn
 ⚠ [context-saturation] session #2: 32,055,552 context tokens (≥ 20,000,000)
 ```
 
@@ -233,15 +235,17 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/foreman
-working tree: clean
+working tree: M .conductor/handovers/F1.md, M plans/conductor-foreman.plan.json, M src/Conductor/Core/Orchestrator.cs
 vs upstream: up to date
 ```
 
 ### Commits by session
 
 - **s4 (F0 Audit)** — 2 commit(s):
-  - [`559a831`](https://github.com/shaahink/conductor/commit/559a831) chore(conductor): s5 F0 re-audit — update handover, followups, and tracker
+  - [`559a831`](https://github.com/shaahink/conductor/commit/559a831) chore(conductor): s5 F0 re-audit � update handover, followups, and tracker
   - [`be10727`](https://github.com/shaahink/conductor/commit/be10727) fix(F0): thread CancellationToken through ApproveAwaitingOwner; remove redundant Task.Run in fix-lanes; post-hook uses ct
+- **s19 (F1 Audit)** — 1 commit(s):
+  - [`5c549f2`](https://github.com/shaahink/conductor/commit/5c549f2) fix(F1): tenth audit — add dedicated NoteAdded event type, close FU-F1-02
 
 ## Phase handovers (audit)
 
@@ -260,20 +264,9 @@ vs upstream: up to date
 - `.conductor/handovers/F0.md`
 - `.conductor/handovers/F1.md`
 
-## Last gate run
-
-build:OK
-
 ## Last session result
 
-> Let me check the current git state and run the gate battery.
-> Working tree is clean. Let me run the gate battery.
-> Build: 0w/0e. Now tests.
-> 2 failures — 1 known flaky file-lock, 1 new: `stage=S1` not found in structured log. Let me investigate.
-> The `stage=S1` test passes in isolation — the failure is a race condition when both log tests run in the same class. Let me run the full suite to capture exact failures.
-> All 548/548 pass now — the earlier failures were the known flaky Serilog file-lock. Let me verify the F1 deliverables are genuinely functional and sweep for leftovers.
-> No TODO comments in source. Let me check the followups and verify the F1 features actually work.
-> Let me read the…
+> SESSION-RESULT: Audit verdict PASS — 1 hardening fix applied. Found and fixed FU-F1-02 (MEDIUM), a cross-cutting integrity gap where `McpTaskServer.HandleNote` used `TaskAdded` as journal container for notes, polluting the task graph under a synthetic "ledger" checkpoint. Added a dedicated `NoteAdded : ConductorEvent` record (with JSON discriminator registration) that `TaskGraph.Fold` silently ignores by design — notes now persist correctly in `events.jsonl` without polluting `conductor tasks` output. Full independent static audit of all 16 F1 files confirmed zero new correctness bugs, race conditions, resource leaks, async/threading issues, TODOs, or lowered analyzer severities; all 9 prior…
 
 ## Tracker handoff
 
