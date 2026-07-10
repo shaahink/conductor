@@ -59,6 +59,9 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     private long _runTokens;
     private decimal _runOverheadUsd; // O3: gate runtime estimate accumulator
     private readonly RunDb? _runDb = runDb; // F1: SQLite task store (null in dry-runs)
+    // F3.1: cached bg liveness to avoid querying the OS process table on every 400ms tick
+    private DateTime? _lastBgLivenessCheck;
+    private bool _cachedBgAlive;
 
     // ---------------------------------------------------------------- main loop
 
@@ -507,6 +510,11 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         {
             _activity.Clear();
             var lastHeartbeat = DateTime.UtcNow;
+            // F3.1/F3.2: multi-signal stall detector with soft-kill grace window
+            var stallDetector = new StallDetector(
+                TimeSpan.FromMinutes(plan.Limits.StallMinutes),
+                TimeSpan.FromMinutes(plan.Limits.StallGraceMinutes));
+            var stallGraceLogged = false;
             while (!agent.HasExited)
             {
                 while (agent.TryDequeue(out var ev)) { sink.AgentEvent(ev); TrackActivity(ev); }
@@ -521,17 +529,47 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 if (ctl == ControlAction.KillSession) { killedByUser = true; Log("kill requested"); agent.Kill(); }
                 if (ctl == ControlAction.AbortNow) { killedByUser = true; state.Status = RunStatus.Aborted; Log("abort requested"); agent.Kill(); }
                 if (ct.IsCancellationRequested) { agent.Kill(); }
-                else if ((DateTime.UtcNow - agent.LastActivityUtc).TotalMinutes > plan.Limits.StallMinutes)
+                else
                 {
-                    stalled = true;
-                    Log($"stall: no agent output for {plan.Limits.StallMinutes}m — killing session");
-                    agent.Kill();
-                }
-                else if ((DateTime.UtcNow - agent.StartedUtc).TotalMinutes > plan.Limits.SessionTimeoutMinutes)
-                {
-                    timedOut = true;
-                    Log($"timeout: session exceeded {plan.Limits.SessionTimeoutMinutes}m — killing");
-                    agent.Kill();
+                    // F3.1: cache bg liveness check — querying the OS process table every 400ms is wasteful
+                    if (_lastBgLivenessCheck == null || (DateTime.UtcNow - _lastBgLivenessCheck.Value).TotalSeconds > 5)
+                    {
+                        _cachedBgAlive = StallDetector.AnyBgProcessAlive(_runDb, state.RunId);
+                        _lastBgLivenessCheck = DateTime.UtcNow;
+                    }
+
+                    // F3.1/F3.2: multi-signal stall detector (stdout + tool-call events + bg liveness)
+                    var verdict = stallDetector.Evaluate(
+                        agent.LastActivityUtc,
+                        agent.LastToolCallUtc,
+                        _cachedBgAlive);
+
+                    switch (verdict)
+                    {
+                        case StallVerdict.Active:
+                            stallGraceLogged = false;
+                            break;
+                        case StallVerdict.SoftKillStarted:
+                            Log($"stall: all signals quiet for {plan.Limits.StallMinutes}m — {plan.Limits.StallGraceMinutes}m soft-kill grace window started");
+                            stallGraceLogged = true;
+                            break;
+                        case StallVerdict.GraceRunning:
+                            if (!stallGraceLogged) { stallGraceLogged = true; Log("stall: in soft-kill grace window — waiting for agent to recover"); }
+                            break;
+                        case StallVerdict.HardKill:
+                            stalled = true;
+                            Log($"stall: grace window expired — killing session");
+                            agent.Kill();
+                            break;
+                    }
+
+                    // Session timeout check (unchanged from v1)
+                    if ((DateTime.UtcNow - agent.StartedUtc).TotalMinutes > plan.Limits.SessionTimeoutMinutes)
+                    {
+                        timedOut = true;
+                        Log($"timeout: session exceeded {plan.Limits.SessionTimeoutMinutes}m — killing");
+                        agent.Kill();
+                    }
                 }
                 PushSessionSnapshot(agent, rec, stage, attempt, maxAttempts, preTrack);
                 // AFK report refresh: update REPORT.md mid-session (no commits to feature branch)

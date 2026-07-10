@@ -603,8 +603,12 @@ public sealed class AuditConfig
 
 public sealed class LimitsConfig
 {
-    /// <summary>No agent output for this long → session considered stalled and killed (then resumed).</summary>
+    /// <summary>No agent stdout + tool-call output + bg liveness for this long → session considered
+    /// stalled and the soft-kill grace window starts (F3.1). If all three signals are quiet.</summary>
     public int StallMinutes { get; set; } = 12;
+    /// <summary>After a stall is first detected, the agent gets this many minutes of grace to recover
+    /// before being hard-killed (F3.2). Default 3.</summary>
+    public int StallGraceMinutes { get; set; } = 3;
     public int SessionTimeoutMinutes { get; set; } = 240;
     public int MaxResumesPerSession { get; set; } = 2;
     /// <summary>Attempt budget per stage = stage.sessions * this.</summary>

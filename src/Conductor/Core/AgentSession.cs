@@ -30,10 +30,12 @@ public sealed class AgentSession : IDisposable
     private readonly AgentStreamState _stream;
     private readonly Lock _gate = new();
     private long _lastActivityTicks = DateTime.UtcNow.Ticks;
+    private long _lastToolCallTicks = DateTime.UtcNow.Ticks;
     private IDisposable? _supervisorTrack; // F2.1: tracked handle if supervisor assigned, set after construction
 
     public DateTime StartedUtc { get; } = DateTime.UtcNow;
     public DateTime LastActivityUtc => new(Interlocked.Read(ref _lastActivityTicks), DateTimeKind.Utc);
+    public DateTime LastToolCallUtc => new(Interlocked.Read(ref _lastToolCallTicks), DateTimeKind.Utc);
     public string? ResultText => _stream.ResultText;
     public bool ResultIsError => _stream.ResultIsError;
     public decimal? CostUsd => _stream.CostUsd;
@@ -56,7 +58,11 @@ public sealed class AgentSession : IDisposable
         Action<long, long, long, long, decimal>? tokenDelta = eventSink != null
             ? (i, o, r, c, cost) => eventSink.Emit(new TokenDelta { SessionId = conductorSessionId, Input = i, Output = o, Reasoning = r, CacheRead = c, CostUsd = cost })
             : null;
-        _stream = new AgentStreamState((kind, text) => _events.Enqueue(new AgentEvent { Kind = kind, Text = text }), tokenDelta);
+        _stream = new AgentStreamState((kind, text) =>
+        {
+            _events.Enqueue(new AgentEvent { Kind = kind, Text = text });
+            if (kind == "tool") Interlocked.Exchange(ref _lastToolCallTicks, DateTime.UtcNow.Ticks);
+        }, tokenDelta);
     }
 
     public static AgentSession Start(AgentConfig cfg, string cwd, string prompt, string sessionId, string? resumeClaudeId, string rawLogPath, IEventSink? eventSink = null, string? conductorSessionId = null, Dictionary<string, string>? extraEnv = null, ProcessSupervisor? supervisor = null)
