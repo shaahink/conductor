@@ -1,10 +1,10 @@
 ﻿# Conductor — Foreman run report
 
-_Updated 2026-07-10 16:15 UTC · branch `feat/foreman` · HEAD `33ab4cf`_
+_Updated 2026-07-10 16:40 UTC · branch `feat/foreman` · HEAD `1d2c414`_
 
 **Status:** Running
-**Stage:** F1 — run.db task store + tracker-as-view + task/note verbs · persona: architect · attempts used 0 · working ▸ F1.2
-**Checkpoints:** 4/40 done · **Sessions run:** 5 · **Cost:** $0.6389 · **Tokens:** 477,260 in / 139,760 out / 97,821 think
+**Stage:** F1 — run.db task store + tracker-as-view + task/note verbs · persona: architect · attempts used 0
+**Checkpoints:** 7/40 done · **Sessions run:** 6 · **Cost:** $0.7398 · **Tokens:** 561,507 in / 165,892 out / 110,001 think
 **Confirmed phases:** F0
 
 ## Stage progress
@@ -12,7 +12,7 @@ _Updated 2026-07-10 16:15 UTC · branch `feat/foreman` · HEAD `33ab4cf`_
 | Stage | Title | Progress | State |
 |---|---|---|---|
 | F0 | Foundations — kill list, async engine, integration harness | ██████████ 3/3 | confirmed ✓ |
-| F1 | run.db task store + tracker-as-view + task/note verbs | ██░░░░░░░░ 1/4 | **← active** |
+| F1 | run.db task store + tracker-as-view + task/note verbs | ██████████ 4/4 | gating… |
 | F2 | ProcessSupervisor + Job Objects + bg primitives | ░░░░░░░░░░ 0/4 | todo |
 | F3 | Stall v2 + same-failure breaker + pre-flight | ░░░░░░░░░░ 0/4 | todo |
 | F4 | Verifier role + scoring loop + findings-as-retry | ░░░░░░░░░░ 0/5 | todo |
@@ -32,14 +32,14 @@ _Updated 2026-07-10 16:15 UTC · branch `feat/foreman` · HEAD `33ab4cf`_
 
 </details>
 
-<details><summary>F1 — run.db task store + tracker-as-view + task/note verbs (1/4)</summary>
+<details> ✅<summary>F1 — run.db task store + tracker-as-view + task/note verbs (4/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
 | F1.1 | run.db schema — tables: runs, stages, sessions, attempts, gates, scores, ledger, handovers, injections, costs; telemetry per D8 | ✅ DONE | [`6330c60`](https://github.com/shaahink/conductor/commit/6330c60) |
-| F1.2 | Tracker-as-view — conductor writes TRACKER.md FROM run.db (generated view for humans/agents); regenerates byte-stable | ⬜ TODO | - |
-| F1.3 | conductor task/note verbs — task CRUD + note (writes ledger); MCP surface; agents report progress via verbs instead of hand-editing markdown | ⬜ TODO | - |
-| F1.4 | conductor report --query — ad-hoc SQL/DSL against run.db ("cost of stage R3?", "which gates fail most?") | ⬜ TODO | - |
+| F1.2 | Tracker-as-view — conductor writes TRACKER.md FROM run.db (generated view for humans/agents); regenerates byte-stable | ✅ DONE | [`1c8c888`](https://github.com/shaahink/conductor/commit/1c8c888) |
+| F1.3 | conductor task/note verbs — task CRUD + note (writes ledger); MCP surface; agents report progress via verbs instead of hand-editing markdown | ✅ DONE | [`1c8c888`](https://github.com/shaahink/conductor/commit/1c8c888) |
+| F1.4 | conductor report --query — ad-hoc SQL/DSL against run.db ("cost of stage R3?", "which gates fail most?") | ✅ DONE | [`1c8c888`](https://github.com/shaahink/conductor/commit/1c8c888) |
 
 </details>
 
@@ -141,6 +141,7 @@ _Updated 2026-07-10 16:15 UTC · branch `feat/foreman` · HEAD `33ab4cf`_
 | 3 | F0 | Audit | 1 | 07-10 15:40 | 0:15 | RolledOver |  | 0 |  | $0.0846 | 89,322/15,267 |
 | 4 | F0 | Audit | 1 | 07-10 15:55 | 0:06 | Progress |  | 2 |  | $0.0505 | 73,066/8,516 |
 | 5 | F1 | Deliver | 1 | 07-10 16:03 | 0:12 | RolledOver |  | 0 |  | $0.0787 | 75,302/20,732 |
+| 6 | F1 | Deliver | 1 | 07-10 16:15 | 0:24 | RolledOver |  | 0 |  | $0.1009 | 84,247/26,132 |
 
 ## Timeline
 
@@ -161,6 +162,8 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-10 17:03:19  ▸ stage F0 confirmed (audited)
 07-10 17:03:22  ▸ stage F1 entered — run.db task store + tracker-as-view + task/note verbs
 07-10 17:03:22  • session #5 F1 Deliver started (attempt 1/4) · persona architect
+07-10 17:15:53  • session #5 F1 → RolledOver  (12m30s)
+07-10 17:15:53  • session #6 F1 Deliver started (attempt 1/4) · persona architect
 ```
 
 ## Health
@@ -168,7 +171,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 5 · retries 0 (0 %) · overall Warn
+sessions 6 · retries 0 (0 %) · overall Warn
 ⚠ [context-saturation] session #2: 32,055,552 context tokens (≥ 20,000,000)
 ```
 
@@ -177,12 +180,15 @@ sessions 5 · retries 0 (0 %) · overall Warn
 _Evidence-based confidence per checkpoint. A checkpoint without evidence is marked (none)._
 
 ```
-checkpoints confirmed: 4   with evidence: 4
+checkpoints confirmed: 7   with evidence: 7
 
   F0.1  4 evidence item(s) ··  531 tests pass, 0w/0e, 23 files changed, -687 net LOC across 5 commits
   F0.2  5 evidence item(s) ···  533 tests pass, 0w/0e, 9 private methods converted to async, 6 Thread.Sleep→Task.Delay, 3 .GetAwaiter()/.Result→await
   F0.3  3 evidence item(s) ··  HarnessTests.cs — 2 tests (full cycle + dry-run), fake cmd agent writes opencode JSON, 533/533 pass
   F1.1  5 evidence item(s) ···  RunDbTests.cs — 12 tests pass, schema auto-creates (idempotent), session/gate/cost round-trip, parameterised query, 11 tables
+  F1.2  4 evidence item(s) ··  TrackerGenerator.cs — generates TRACKER.md from run.db checkpoints table; idempotent seed; wired in Orchestrator at InitializeRun + EmitSessionFinished + handover write; 15 RunDbTests pass including 3 new checkpoint tests
+  F1.3  4 evidence item(s) ··  NoteCommand + TaskCommand CLI verbs; McpTaskServer conductor_note tool; McpServeCommand wires RunDb; 548/548 tests pass
+  F1.4  3 evidence item(s) ··  ReportCommand --query <SQL> option; runs parameterised SQL against run.db; renders results as Spectre table
 ```
 
 ## Repo
@@ -191,7 +197,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/foreman
-working tree: clean
+working tree: M .conductor/REPORT.md
 vs upstream: up to date
 ```
 
@@ -223,15 +229,15 @@ build:OK · tests:OK
 
 ## Last session result
 
-> SESSION-RESULT:** F1.1 (run.db schema) landed. 11 SQLite tables auto-created idempotently (runs, stages, sessions, attempts, gates, scores, ledger, handovers, injections, costs, schema_version). Integrated additively at all 6 key event points in Orchestrator (RunStarted→RunFinished) with null-safe dry-run mode. Gate: 0w/0e, 544/545 tests pass (1 pre-existing flaky Serilog file-lock test). Evidence: `tests/Conductor.Tests/RunDbTests.cs` (12 tests). 7 files changed, 2 commits pushed to feat/foreman. Hardest part: Microsoft.Data.Sqlite 10.0.9 pulls in a vulnerable SQLitePCLRaw 2.1.11 transitive — had to swap to Microsoft.Data.Sqlite.Core + SQLitePCLRaw.bundle_e_sqlite3 3.0.3 to satisfy TreatWar…
+> SESSION-RESULT: F1.2 (tracker-as-view), F1.3 (task/note verbs + MCP), and F1.4 (report --query) all landed in a single commit (`1d2c414`). 9 files changed, 0w/0e, 548/548 tests pass. Key architectural decisions: (1) checkpoints table in run.db (schema v2) with v1→v2 migration path, preserving idempotent open — additive-first, zero regression to existing MarkdownTableProvider parse path; (2) TrackerGenerator produces byte-stable markdown from run.db; (3) NoteCommand/TaskCommand open run.db directly for CLI use while McpTaskServer gets optional RunDb injection for the conductor_note tool; (4) ReportCommand --query uses the existing parameterised Query() surface. Hardest part: `commit` as a SQL…
 
 ## Tracker handoff
 
 ```
-last: s6 — F1.1 run.db schema landed. 11 tables (runs, stages, sessions, attempts, gates, scores, ledger, handovers, injections, costs, schema_version). Additive-first — writes alongside state.json + events.jsonl. Null in dry-run mode.
-stage: F1 — run.db task store. F1.1 DONE. F1.2 (tracker-as-view) next.
-commits: 6330c60 (F1.1). Total F0: 9, F1: 1.
-gate: 0w/0e, 544/545 tests pass (1 pre-existing flaky Serilog lock test).
-trap: HarnessTests creates temp git repos — ensure git is on PATH.
+last: s7 — F1.2 tracker-as-view + F1.3 task/note verbs + F1.4 report --query landed. 12→15 checkpoints table (schema v2 with migration). TrackerGenerator produces TRACKER.md FROM run.db (byte-stable). task/note CLI verbs + MCP conductor_note tool. report --query against run.db.
+stage: F1 — run.db task store. F1.1 DONE. F1.2 DONE. F1.3 DONE. F1.4 DONE. Stage F1 COMPLETE.
+commits: 1c8c888 (F1.2-4). Total F0: 9, F1: 2.
+gate: 0w/0e, 548/548 tests pass.
+trap: HarnessTests creates temp git repos — ensure git is on PATH. 1 pre-existing flaky Serilog file-lock test (HostLoggingTests) — passes in isolation.
 branch: feat/foreman.
 ```
