@@ -31,6 +31,7 @@ namespace Conductor.Core.Events;
 [JsonDerivedType(typeof(McpCallFinished),       "mcpCallFinished")]
 [JsonDerivedType(typeof(TaskAdded),             "taskAdded")]
 [JsonDerivedType(typeof(TaskStatusChanged),     "taskStatusChanged")]
+[JsonDerivedType(typeof(NoteAdded),             "noteAdded")]
 [JsonDerivedType(typeof(SoftBreakRequested),    "softBreakRequested")]
         [JsonDerivedType(typeof(LaneStarted),           "laneStarted")]
         [JsonDerivedType(typeof(LaneFinished),          "laneFinished")]
@@ -210,6 +211,19 @@ public sealed record TaskStatusChanged : ConductorEvent
 {
     public required string TaskId { get; init; }
     public required string Status { get; init; }
+}
+
+/// <summary>
+/// F1.3: A finding/observation written to the knowledge ledger via <c>conductor note</c>
+/// or the <c>conductor_note</c> MCP tool. These are NOT sub-tasks — the <see cref="TaskGraph"/>
+/// projection ignores them, so they never pollute the task graph.
+/// </summary>
+public sealed record NoteAdded : ConductorEvent
+{
+    public required string Kind { get; init; }
+    public required string Content { get; init; }
+    /// <summary>Stage id the note is associated with, or null for a run-level note.</summary>
+    public string? StageId { get; init; }
 }
 
 /// <summary>

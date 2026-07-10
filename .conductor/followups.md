@@ -154,7 +154,7 @@ tests added validating failure-path stdout capture and RunState round-trip for P
 | id | item | detail | owning stage | status |
 |----|------|--------|--------------|--------|
 | FU-F1-01 | TrackerGenerator no test/framework baseline | Removed misleading hardcoded placeholders (framework version, test count). If needed, derive from gate battery results (scores table, F4). | F2 / F4 | OPEN |
-| FU-F1-02 | McpTaskServer.HandleNote uses TaskAdded as journal container | Notes persist as `TaskAdded` with checkpointId="ledger", polluting the task graph. A dedicated `NoteAdded` event would be cleaner. Primary path writes to run.db ledger table directly. | F2 | OPEN |
+| FU-F1-02 | McpTaskServer.HandleNote uses NoteAdded as journal container | Notes persist as `NoteAdded` events — these are NOT tasks and the `TaskGraph` projection ignores them. Fixed in 10th F1 audit: added dedicated `NoteAdded` event type. | F2 | CLOSED (10th F1 audit) |
 | FU-F1-03 | EmitSessionFinished commit SHA extraction | `rec.NewCommits[^1].Split(' ')[0]` assumes git log --oneline format. Advisory-only evidence field. | F2 | OPEN |
 | FU-F1-04 | RunDb.Query lacked disposed-connection guard | Safe today but would fail loudly with confusing errors if F2.1 adds concurrent access. **CLOSED this session** — guard added at RunDb.cs:517. | F2 | CLOSED (sixth F1 audit) |
 | FU-F1-05 | SeedCheckpoints not transactionally atomic | Each UPSERT is a separate implicit transaction. Power failure mid-loop could leave partial state. Next SeedCheckpointsFromTracker reads intact tracker file and re-seeds, so no permanent data loss. Wrap in a single transaction for atomicity if needed. | F2 fix-lane | OPEN |

@@ -254,7 +254,8 @@ public sealed class McpTaskServer
 
     /// <summary>F1.3: Write a finding/observation to the knowledge ledger.
     /// If run.db is available, writes directly to the ledger table (immediate persistence).
-    /// Always emits a journal event as a fallback so the note survives regardless.</summary>
+    /// Always emits a <see cref="NoteAdded"/> journal event as a fallback so the note survives
+    /// regardless; <see cref="TaskGraph"/> ignores these events by design (notes are not tasks).</summary>
     private JsonElement HandleNote(JsonElement? args)
     {
         var kind = "note";
@@ -283,14 +284,12 @@ public sealed class McpTaskServer
         }
 
         // Also emit as a journal event so the note appears in events.jsonl projections
-        var evt = new TaskAdded
+        var evt = new NoteAdded
         {
             RunId = _runId,
-            TaskId = $"note-{DateTime.UtcNow:yyyyMMddHHmmss}",
-            CheckpointId = "ledger",
-            Title = $"[{kind}] {content}",
-            Source = "note",
-            Order = 0,
+            Kind = kind,
+            Content = content,
+            StageId = string.IsNullOrWhiteSpace(stageId) ? null : stageId,
         };
         WriteJournal(evt);
 
