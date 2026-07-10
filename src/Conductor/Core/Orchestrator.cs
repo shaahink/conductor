@@ -949,7 +949,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         state.AttemptsThisStage = 0;
         // B10.3: post-hook runs after confirmation (best-effort, logged but never blocks).
         if (stage?.PostHook is { } postHook)
-            RunStageHook(id, "post-hook", postHook, CancellationToken.None);
+            RunStageHook(id, "post-hook", postHook, ct);
         // B12.4: fix-lanes run after the stage is confirmed — they consume .conductor/followups.md
         // entries owned by this stage and run as Tier B mutating lanes behind merge gates.
         await RunFollowupFixLanesAsync(id, ct).ConfigureAwait(false);
@@ -1141,7 +1141,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     /// <summary>Handle an owner approval while parked at <c>AwaitingOwner</c>. What it means depends on
     /// WHY we parked (B3.2/B3.4): an owner-gate confirms the stage; an approval-mode/budget park merely
     /// resumes work — confirming there would advance past unfinished checkpoints.</summary>
-    private async Task ApproveAwaitingOwnerAsync()
+    private async Task ApproveAwaitingOwnerAsync(CancellationToken ct)
     {
         var stageId = state.CurrentStage
             ?? plan.Stages.FirstOrDefault(s => !state.ConfirmedStages.Contains(s.Id) && !state.SkippedStages.Contains(s.Id))?.Id;
@@ -1176,7 +1176,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     state.OwnerApprovedStages.Add(stageId);
                     Log($"owner approved stage {stageId} — continuing");
                 }
-                await ConfirmStageAsync(stageId, CancellationToken.None).ConfigureAwait(false);
+                await ConfirmStageAsync(stageId, ct).ConfigureAwait(false);
                 break;
         }
     }
@@ -1547,7 +1547,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 {
                     if (state.Status == RunStatus.AwaitingOwner)
                     {
-                        await ApproveAwaitingOwnerAsync().ConfigureAwait(false);
+                        await ApproveAwaitingOwnerAsync(ct).ConfigureAwait(false);
                         DeleteControlFile();
                         break;
                     }
@@ -2325,8 +2325,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             MutatingLaneResult result;
             try
             {
-                result = await Task.Run(() => MutatingLaneRunner.RunAsync(
-                    plan, lane, agent, stageId, events, Log, ct), ct).ConfigureAwait(false);
+                result = await MutatingLaneRunner.RunAsync(
+                    plan, lane, agent, stageId, events, Log, ct).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
