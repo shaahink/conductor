@@ -8,7 +8,7 @@ your stage deliverable from the plan JSON.
 ## Handoff (overwrite this block, ≤12 lines, no history)
 last: s21 — F2.3 landed. conductor bg start|status|logs|stop CLI verbs implemented.
 stage: F2 — ProcessSupervisor + Job Objects + run.db PID registry + bg primitives. 3/4 checkpoints done.
-commits: 286738c (F2.3). Prior: 65c63c9 (F2.1+F2.2).
+commits: 1db847a (F2.3). Prior: 65c63c9 (F2.1+F2.2).
 gate: 0w/0e build, 558/560 pass (2 pre-existing flaky HostLoggingTests). 3 new RunDb GetAllPids tests green.
 trap: F2.4 (MCP bg surface + harness proof) remains. bg CLI done — start spawns detached with log capture, status queries run.db+live pids, logs tails bg-logs/*.log, stop kills by PID.
 branch: feat/foreman.
@@ -52,7 +52,7 @@ never silent renumbering.
 |---|-----------|--------|--------|----------|
 | F2.1 | ProcessSupervisor + Job Objects — every child spawned into Windows Job Object; kill-by-tree, no orphans | DONE | 65c63c9 | ProcessSupervisor.cs — run-level JobObject with KILL_ON_JOB_CLOSE, ProcessRunner + AgentSession integrate via DI singleton, 9 tests prove track/untrack/JobObject assignment |
 | F2.2 | PID registry in run.db + orphan reaper at startup | DONE | 65c63c9 | RunDb v3 schema (pids table, 8 columns), GetOrphanPids/TrackPid/MarkPidExited, ReapOrphans() at startup kills leftover PIDs + marks exited |
-| F2.3 | conductor bg start / status / logs / stop — sanctioned background-run primitive; prompts mandate it for anything >3 min | DONE | 286738c | BgCommand.cs — 4 sub-commands (start/status/logs/stop), spawns detached with log capture to .conductor/bg-logs/, queries run.db pids table for status, tails log files, kill-by-PID. 3 new RunDb.GetAllPids tests pass. Smoke-tested all 4 verbs. |
+| F2.3 | conductor bg start / status / logs / stop — sanctioned background-run primitive; prompts mandate it for anything >3 min | DONE | 1db847a | BgCommand.cs — 4 sub-commands (start/status/logs/stop), spawns detached with log capture to .conductor/bg-logs/, queries run.db pids table for status, tails log files, kill-by-PID. 3 new RunDb.GetAllPids tests pass. Smoke-tested all 4 verbs. |
 | F2.4 | MCP bg surface + harness proof — kill-by-tree, orphan reap, bg liveness feeds stall detector | TODO | - | - |
 
 ### F3 — Stall v2 + resilience
