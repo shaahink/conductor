@@ -6,10 +6,10 @@ your stage deliverable from the plan JSON.
 **Design doc:** `docs/CONDUCTOR-VNEXT-PLAN.md` — 10 cataloged failures, architecture, locked decisions, addenda D7-D12.
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
-last: s2 — F0.2 async control loop + F0.3 integration harness delivered.
-stage: F0 — Foundations. ALL 3 checkpoints DONE. F1 (run.db) next.
-commits: 09dc2ec (F0.2 async) | b6e5d8b (F0.3 harness). Total F0: 7 commits, 6 files.
-gate: 0w/0e, 533/533 tests pass (531 original + 2 harness). dirty: none.
+last: s3 — F0 AUDIT hardened. 7 CancellationToken.None→ct fixes, CT threaded through fix-lanes+lane-artifacts+tracker-reads.
+stage: F0 — Foundations. ALL 3 checkpoints DONE + AUDITED. F1 (run.db) next.
+commits: 1af1ffb (audit hardening — CT threading). Total F0: 8 commits.
+gate: 0w/0e, 533/533 tests pass. dirty: none.
 trap: HarnessTests creates temp git repos — ensure git is on PATH for test runs.
 branch: feat/foreman.
 
