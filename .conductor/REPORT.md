@@ -1,10 +1,10 @@
 ﻿# Conductor — Foreman run report
 
-_Updated 2026-07-10 17:03 UTC · branch `feat/foreman` · HEAD `de35964`_
+_Updated 2026-07-10 17:11 UTC · branch `feat/foreman` · HEAD `47a151e`_
 
 **Status:** Running
 **Stage:** F1 — run.db task store + tracker-as-view + task/note verbs · persona: architect · attempts used 0
-**Checkpoints:** 7/40 done · **Sessions run:** 9 · **Cost:** $0.9868 · **Tokens:** 940,031 in / 193,144 out / 137,345 think
+**Checkpoints:** 7/40 done · **Sessions run:** 10 · **Cost:** $1.0463 · **Tokens:** 1,019,501 in / 201,128 out / 147,005 think
 **Confirmed phases:** F0
 
 ## Stage progress
@@ -145,6 +145,7 @@ _Updated 2026-07-10 17:03 UTC · branch `feat/foreman` · HEAD `de35964`_
 | 7 | F1 | Audit | 1 | 07-10 16:40 | 0:08 | RolledOver |  | 0 |  | $0.0832 | 137,715/6,477 |
 | 8 | F1 | Audit | 1 | 07-10 16:48 | 0:08 | RolledOver |  | 0 |  | $0.0831 | 108,622/15,598 |
 | 9 | F1 | Audit | 1 | 07-10 16:57 | 0:06 | RolledOver |  | 0 |  | $0.0807 | 132,187/5,177 |
+| 10 | F1 | Audit | 1 | 07-10 17:03 | 0:08 | RolledOver |  | 0 |  | $0.0595 | 79,470/7,984 |
 
 ## Timeline
 
@@ -173,6 +174,8 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-10 17:48:35  • session #8 F1 Audit started (attempt 1/4) · persona architect
 07-10 17:57:10  • session #8 F1 → RolledOver  (8m34s)
 07-10 17:57:10  • session #9 F1 Audit started (attempt 1/4) · persona architect
+07-10 18:03:49  • session #9 F1 → RolledOver  (6m39s)
+07-10 18:03:49  • session #10 F1 Audit started (attempt 1/4) · persona architect
 ```
 
 ## Health
@@ -180,7 +183,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 9 · retries 0 (0 %) · overall Warn
+sessions 10 · retries 0 (0 %) · overall Warn
 ⚠ [context-saturation] session #2: 32,055,552 context tokens (≥ 20,000,000)
 ```
 
@@ -239,7 +242,7 @@ build:OK · tests:OK
 
 ## Last session result
 
-> SESSION-RESULT: F1 third-architecture-audit verdict: **PASS — GENUINELY CORRECT.** Gate battery green (548/548 tests, 0w/0e). No new bugs found after rigorous static review of all 14 files in the F1 diff — prior audit sessions (58f3ba4, 542422c) already resolved the substantive issues (RunDb resource leak, WAL mode, Dispose idempotency, CLI error handling, TrackerGenerator hardcoded values). Async flow verified correct (all ConfigureAwait, no async void, no blocking .Result/.Wait except at Spectre.Cli boundary). Zero TODOs in diff. Six deferred items remain tracked in `.conductor/followups.md` (FU-F1-01 through -03, D4-D6) — all are LOW severity, none block F2 advancement. Handover updated a…
+> SESSION-RESULT: **PASS — HARDENED.** 2 fixes applied in this audit (RunDb.cs:555 TryExecute exception filter widened to catch ObjectDisposedException/InvalidOperationException alongside SqliteException, enforcing the "best-effort, never throw" contract; TrackerGenerator.cs:68,86,125 null-guarded `plan.Stages` with `?? []` at all 3 enumeration sites). Gate battery confirmed green: build 0w/0e, 548/548 tests pass. All 6 prior deferred items (D1–D6, FU-F1-01 through FU-F1-03, FU-F0-4 through FU-F0-6) remain tracked and unchanged. Commits b93865a (fix), 47a151e (handover), pushed to `feat/foreman`. No new followups created.
 
 ## Tracker handoff
 
