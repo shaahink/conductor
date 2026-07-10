@@ -1,10 +1,10 @@
 ﻿# Conductor — Foreman run report
 
-_Updated 2026-07-10 20:16 UTC · branch `feat/foreman` · HEAD `bad1156`_
+_Updated 2026-07-10 21:12 UTC · branch `feat/foreman` · HEAD `63eb7b1`_
 
-**Status:** Idle
+**Status:** Running
 **Stage:** F3 — Stall v2 + same-failure breaker + pre-flight · persona: qa · attempts used 0 · working ▸ F3.3
-**Checkpoints:** 13/40 done · **Sessions run:** 24 · **Cost:** $2.0132 · **Tokens:** 2,216,963 in / 353,695 out / 322,982 think
+**Checkpoints:** 13/40 done · **Sessions run:** 26 · **Cost:** $2.0527 (agent $2.0527 + gates $0.0000) · **Tokens:** 2,303,582 in / 354,167 out / 323,411 think
 **Confirmed phases:** F0, F1, F2
 
 ## Stage progress
@@ -134,45 +134,40 @@ _Updated 2026-07-10 20:16 UTC · branch `feat/foreman` · HEAD `bad1156`_
 
 ## Sessions
 
-| # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | F0 | Deliver | 1 | 07-10 14:14 | 0:31 | RolledOver |  | 0 |  | $0.1600 | 110,047/42,032 |
-| 2 | F0 | Deliver | 1 | 07-10 14:46 | 0:53 | RolledOver |  | 0 |  | $0.2652 | 129,523/53,213 |
-| 3 | F0 | Audit | 1 | 07-10 15:40 | 0:15 | RolledOver |  | 0 |  | $0.0846 | 89,322/15,267 |
-| 4 | F0 | Audit | 1 | 07-10 15:55 | 0:06 | Progress |  | 2 |  | $0.0505 | 73,066/8,516 |
-| 5 | F1 | Deliver | 1 | 07-10 16:03 | 0:12 | RolledOver |  | 0 |  | $0.0787 | 75,302/20,732 |
-| 6 | F1 | Deliver | 1 | 07-10 16:15 | 0:24 | RolledOver |  | 0 |  | $0.1009 | 84,247/26,132 |
-| 7 | F1 | Audit | 1 | 07-10 16:40 | 0:08 | RolledOver |  | 0 |  | $0.0832 | 137,715/6,477 |
-| 8 | F1 | Audit | 1 | 07-10 16:48 | 0:08 | RolledOver |  | 0 |  | $0.0831 | 108,622/15,598 |
-| 9 | F1 | Audit | 1 | 07-10 16:57 | 0:06 | RolledOver |  | 0 |  | $0.0807 | 132,187/5,177 |
-| 10 | F1 | Audit | 1 | 07-10 17:03 | 0:08 | RolledOver |  | 0 |  | $0.0595 | 79,470/7,984 |
-| 11 | F1 | Audit | 1 | 07-10 17:12 | 0:12 | RolledOver |  | 0 |  | $0.0722 | 74,288/9,786 |
-| 12 | F1 | Audit | 1 | 07-10 17:24 | 0:09 | RolledOver |  | 0 |  | $0.0762 | 109,206/8,320 |
-| 13 | F1 | Audit | 1 | 07-10 17:34 | 0:09 | RolledOver |  | 0 |  | $0.0702 | 97,219/7,411 |
-| 14 | F1 | Audit | 1 | 07-10 17:43 | 0:12 | RolledOver |  | 0 |  | $0.0701 | 91,427/8,140 |
-| 15 | F1 | Audit | 1 | 07-10 17:56 | 0:10 | RolledOver |  | 0 |  | $0.0789 | 108,804/7,666 |
-| 16 | F1 | Audit | 1 | 07-10 18:06 | 0:04 | Interrupted |  | 0 |  | $0.0480 | 81,453/2,722 |
-| 17 | F1 | Resume | 1r1 | 07-10 18:23 | 0:00 | NoProgress |  | 0 | build:OK | $0.0369 | 83,715/71 |
-| 18 | F1 | Fix | 2 | 07-10 18:24 | 0:05 | Interrupted |  | 0 |  | $0.0270 | 49,215/1,741 |
-| 19 | F1 | Audit | 1 | 07-10 18:45 | 0:07 | Progress |  | 1 |  | $0.0754 | 106,193/9,062 |
-| 20 | F2 | Deliver | 1 | 07-10 18:54 | 0:20 | Advanced | F2.1 F2.2 | 2 | build:OK | $0.1051 | 77,106/29,655 |
-| 21 | F2 | Deliver | 1 | 07-10 19:15 | 0:18 | Advanced | F2.3 | 2 | build:OK | $0.0862 | 75,562/21,448 |
-| 22 | F2 | Deliver | 1 | 07-10 19:34 | 0:16 | Advanced | F2.4 | 2 | build:OK | $0.0789 | 68,721/24,936 |
-| 23 | F2 | Audit | 1 | 07-10 19:50 | 0:08 | Progress |  | 2 |  | $0.0737 | 105,182/8,946 |
-| 24 | F3 | Deliver | 1 | 07-10 20:00 | 0:15 | Advanced | F3.1 F3.2 | 2 | build:OK | $0.0681 | 69,371/12,663 |
+| # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Overhead | Tokens |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | F0 | Deliver | 1 | 07-10 14:14 | 0:31 | RolledOver |  | 0 |  | $0.1600 |  | 110,047/42,032 |
+| 2 | F0 | Deliver | 1 | 07-10 14:46 | 0:53 | RolledOver |  | 0 |  | $0.2652 |  | 129,523/53,213 |
+| 3 | F0 | Audit | 1 | 07-10 15:40 | 0:15 | RolledOver |  | 0 |  | $0.0846 |  | 89,322/15,267 |
+| 4 | F0 | Audit | 1 | 07-10 15:55 | 0:06 | Progress |  | 2 |  | $0.0505 |  | 73,066/8,516 |
+| 5 | F1 | Deliver | 1 | 07-10 16:03 | 0:12 | RolledOver |  | 0 |  | $0.0787 |  | 75,302/20,732 |
+| 6 | F1 | Deliver | 1 | 07-10 16:15 | 0:24 | RolledOver |  | 0 |  | $0.1009 |  | 84,247/26,132 |
+| 7 | F1 | Audit | 1 | 07-10 16:40 | 0:08 | RolledOver |  | 0 |  | $0.0832 |  | 137,715/6,477 |
+| 8 | F1 | Audit | 1 | 07-10 16:48 | 0:08 | RolledOver |  | 0 |  | $0.0831 |  | 108,622/15,598 |
+| 9 | F1 | Audit | 1 | 07-10 16:57 | 0:06 | RolledOver |  | 0 |  | $0.0807 |  | 132,187/5,177 |
+| 10 | F1 | Audit | 1 | 07-10 17:03 | 0:08 | RolledOver |  | 0 |  | $0.0595 |  | 79,470/7,984 |
+| 11 | F1 | Audit | 1 | 07-10 17:12 | 0:12 | RolledOver |  | 0 |  | $0.0722 |  | 74,288/9,786 |
+| 12 | F1 | Audit | 1 | 07-10 17:24 | 0:09 | RolledOver |  | 0 |  | $0.0762 |  | 109,206/8,320 |
+| 13 | F1 | Audit | 1 | 07-10 17:34 | 0:09 | RolledOver |  | 0 |  | $0.0702 |  | 97,219/7,411 |
+| 14 | F1 | Audit | 1 | 07-10 17:43 | 0:12 | RolledOver |  | 0 |  | $0.0701 |  | 91,427/8,140 |
+| 15 | F1 | Audit | 1 | 07-10 17:56 | 0:10 | RolledOver |  | 0 |  | $0.0789 |  | 108,804/7,666 |
+| 16 | F1 | Audit | 1 | 07-10 18:06 | 0:04 | Interrupted |  | 0 |  | $0.0480 |  | 81,453/2,722 |
+| 17 | F1 | Resume | 1r1 | 07-10 18:23 | 0:00 | NoProgress |  | 0 | build:OK | $0.0369 |  | 83,715/71 |
+| 18 | F1 | Fix | 2 | 07-10 18:24 | 0:05 | Interrupted |  | 0 |  | $0.0270 |  | 49,215/1,741 |
+| 19 | F1 | Audit | 1 | 07-10 18:45 | 0:07 | Progress |  | 1 |  | $0.0754 |  | 106,193/9,062 |
+| 20 | F2 | Deliver | 1 | 07-10 18:54 | 0:20 | Advanced | F2.1 F2.2 | 2 | build:OK | $0.1051 |  | 77,106/29,655 |
+| 21 | F2 | Deliver | 1 | 07-10 19:15 | 0:18 | Advanced | F2.3 | 2 | build:OK | $0.0862 |  | 75,562/21,448 |
+| 22 | F2 | Deliver | 1 | 07-10 19:34 | 0:16 | Advanced | F2.4 | 2 | build:OK | $0.0789 |  | 68,721/24,936 |
+| 23 | F2 | Audit | 1 | 07-10 19:50 | 0:08 | Progress |  | 2 |  | $0.0737 |  | 105,182/8,946 |
+| 24 | F3 | Deliver | 1 | 07-10 20:00 | 0:15 | Advanced | F3.1 F3.2 | 2 | build:OK | $0.0681 |  | 69,371/12,663 |
+| 25 | F3 | Deliver | 1 | 07-10 20:16 | 0:43 | Interrupted |  | 0 |  |  |  |  |
+| 26 | F3 | Resume | 1r1 | 07-10 20:59 | 0:13 | Interrupted |  | 0 |  | $0.0395 |  | 86,619/472 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-10 18:43:19  • session #14 F1 Audit started (attempt 1/4) · persona architect
-07-10 18:56:18  • session #14 F1 → RolledOver  (12m59s)
-07-10 18:56:18  • session #15 F1 Audit started (attempt 1/4) · persona architect
-07-10 19:06:45  • session #15 F1 → RolledOver  (10m27s)
-07-10 19:06:45  • session #16 F1 Audit started (attempt 1/4) · persona architect
-07-10 19:11:16  • session #16 F1 → Interrupted  (4m30s)
-07-10 19:23:05  ◆ run resumed · Foreman
 07-10 19:23:06  • session #17 F1 Resume started (attempt 1/4) · persona architect
 07-10 19:24:05  ▪ gate build pass [session]  (26.6s)
 07-10 19:24:08  • session #17 F1 → NoProgress  (1m02s)
@@ -206,6 +201,13 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-10 21:00:36  ▸ stage F3 entered — Stall v2 + same-failure breaker + pre-flight
 07-10 21:00:36  • session #24 F3 Deliver started (attempt 1/2) · persona qa
 07-10 21:16:25  ▪ gate build pass [session]  (19.3s)
+07-10 21:16:28  • session #24 F3 → Advanced · done F3.1,F3.2 · 2 commit(s)  (15m51s)
+07-10 21:16:28  ✓ checkpoint F3.1 confirmed
+07-10 21:16:28  ✓ checkpoint F3.2 confirmed
+07-10 21:16:28  • session #25 F3 Deliver started (attempt 1/2) · persona qa
+07-10 21:59:39  ◆ run resumed · Foreman
+07-10 21:59:39  • session #26 F3 Resume started (attempt 1/4) · persona qa
+07-10 22:12:40  • session #26 F3 → Interrupted  (13m01s)
 ```
 
 ## Health
@@ -213,30 +215,8 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 24 · retries 1 (4 %) · overall Warn
+sessions 26 · retries 1 (4 %) · overall Warn
 ⚠ [context-saturation] session #2: 32,055,552 context tokens (≥ 20,000,000)
-```
-
-## Confidence
-
-_Evidence-based confidence per checkpoint. A checkpoint without evidence is marked (none)._
-
-```
-checkpoints confirmed: 13   with evidence: 13
-
-  F0.1  4 evidence item(s) ··  531 tests pass, 0w/0e, 23 files changed, -687 net LOC across 5 commits
-  F0.2  5 evidence item(s) ···  533 tests pass, 0w/0e, 9 private methods converted to async, 6 Thread.Sleep→Task.Delay, 3 .GetAwaiter()/.Result→await
-  F0.3  3 evidence item(s) ··  HarnessTests.cs — 2 tests (full cycle + dry-run), fake cmd agent writes opencode JSON, 533/533 pass
-  F1.1  5 evidence item(s) ···  RunDbTests.cs — 12 tests pass, schema auto-creates (idempotent), session/gate/cost round-trip, parameterised query, 11 tables
-  F1.2  4 evidence item(s) ··  TrackerGenerator.cs — generates TRACKER.md from run.db checkpoints table; idempotent seed; wired in Orchestrator at InitializeRun + EmitSessionFinished + handover write; 15 RunDbTests pass including 3 new checkpoint tests
-  F1.3  4 evidence item(s) ··  NoteCommand + TaskCommand CLI verbs; McpTaskServer conductor_note tool; McpServeCommand wires RunDb; 548/548 tests pass
-  F1.4  3 evidence item(s) ··  ReportCommand --query <SQL> option; runs parameterised SQL against run.db; renders results as Spectre table
-  F2.1  3 evidence item(s) ··  ProcessSupervisor.cs — run-level JobObject with KILL_ON_JOB_CLOSE, ProcessRunner + AgentSession integrate via DI singleton, 9 tests prove track/untrack/JobObject assignment
-  F2.2  4 evidence item(s) ··  RunDb v3 schema (pids table, 8 columns), GetOrphanPids/TrackPid/MarkPidExited, ReapOrphans() at startup kills leftover PIDs + marks exited
-  F2.3  5 evidence item(s) ···  BgCommand.cs — 4 sub-commands (start/status/logs/stop), spawns detached with log capture to .conductor/bg-logs/, queries run.db pids table for status, tails log files, kill-by-PID. 3 new RunDb.GetAllPids tests pass. Smoke-tested all 4 verbs.
-  F2.4  6 evidence item(s) ···  McpTaskServer — 4 bg tools (bg_start/status/logs/stop); Orchestrator wires stateDir+repo; ProcessSupervisorHarnessTests — 5 tests prove JobObject kill-on-close, orphan reap e2e, liveness feed pipeline; 565/565 pass
-  F3.1  1 evidence item(s) ·  docs/baton/evidence/F3.1-gate/gate.txt
-  F3.2  2 evidence item(s) ·  docs/baton/evidence/F3.1-gate/test.txt (575/575, +10 StallDetectorTests)
 ```
 
 ## Repo
@@ -245,7 +225,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/foreman
-working tree: clean
+working tree: M .conductor/REPORT.md, M CONDUCTOR-VNEXT-PLAN.md, M src/Conductor/Core/Orchestrator.cs, M src/Conductor/Models/PlanConfig.cs, ?? src/Conductor/Core/FailureCircuitBreaker.cs, ?? src/Conductor/Core/PreflightHealth.cs, ?? tests/Conductor.Tests/FailureCircuitBreakerTests.cs, ?? tests/Conductor.Tests/PreflightHealthTests.cs
 vs upstream: up to date
 ```
 
@@ -290,13 +270,9 @@ vs upstream: up to date
 - `.conductor/handovers/F1.md`
 - `.conductor/handovers/F2.md`
 
-## Last gate run
-
-build:OK
-
 ## Last session result
 
-> SESSION-RESULT: **F3.1+F3.2 landed on `feat/foreman` (commit `0f0d67c`)**. F3.3 (same-failure circuit breaker) and F3.4 (pre-flight health check) remain TODO. Gate battery green: 0w/0e build, 575/575 tests pass (+10 new StallDetectorTests). S23 QA verified: all 4 audit fixes (MarkPidExited, indent drift, exception catches) confirmed genuine. **4 files changed + 2 new files** — well under diff budget. Next session should generalize `IdenticalStallPattern` (O2, Orchestrator.cs:1499) to cover all failure signatures (GatesRed/NoProgress/AgentError), not just Stalled, and expand the existing `CheckDnsPreflightAsync` into a full pre-flight health check (disk+git+budget). Hardest part: injecting a …
+> Good — all work is staged but uncommitted. 3 modified + 4 new = 7 files (under budget). Let me re-run gates:
 
 ## Tracker handoff
 
