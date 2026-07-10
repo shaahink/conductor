@@ -6,10 +6,10 @@ your stage deliverable from the plan JSON.
 **Design doc:** `docs/CONDUCTOR-VNEXT-PLAN.md` — 10 cataloged failures, architecture, locked decisions, addenda D7-D12.
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
-last: s7 — F1.2 tracker-as-view + F1.3 task/note verbs + F1.4 report --query landed. 12→15 checkpoints table (schema v2 with migration). TrackerGenerator produces TRACKER.md FROM run.db (byte-stable). task/note CLI verbs + MCP conductor_note tool. report --query against run.db.
-stage: F1 — run.db task store. F1.1 DONE. F1.2 DONE. F1.3 DONE. F1.4 DONE. Stage F1 COMPLETE.
-commits: 1c8c888 (F1.2-4). Total F0: 9, F1: 2.
-gate: 0w/0e, 548/548 tests pass.
+last: s9 — F1 third audit complete. Stage HARDENED and FINISHED. No new bugs found; prior fixes verified.
+stage: F1 — run.db task store + tracker-as-view + task/note verbs + report --query. GENUINELY CORRECT.
+commits: 542422c (audit r2 fixes), 58f3ba4 (audit r1 fixes), 1c8c888 (F1.2-4), 6330c60 (F1.1). Total F0: 9, F1: 4 (2 delivery + 2 audit).
+gate: 0w/0e, 548/548 tests pass. Full static audit clean — no correctness bugs, no race conditions, no resource leaks, no TODOs. 6 deferred items tracked in followups.md (FU-F1-01 through -03, D4-D6).
 trap: HarnessTests creates temp git repos — ensure git is on PATH. 1 pre-existing flaky Serilog file-lock test (HostLoggingTests) — passes in isolation.
 branch: feat/foreman.
 
