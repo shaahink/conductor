@@ -594,7 +594,7 @@ public sealed class ReportCommand : Command<PlanSettings>
         Directory.CreateDirectory(plan.StateDir);
         File.WriteAllText(Reporter.ReportPath(plan), Reporter.Build(plan, state, track, null, null,
             Reporter.ReadTimeline(plan), Reporter.ReadHealth(plan),
-            confidence: Reporter.ReadConfidence(track), mcp: Reporter.ReadMcpMetrics(plan),
+            mcp: Reporter.ReadMcpMetrics(plan),
             repo: Reporter.ReadRepoStrip(plan)), Reporter.Utf8Bom);
         AnsiConsole.MarkupLine($"report written to [bold]{Markup.Escape(Reporter.ReportPath(plan))}[/]");
         return 0;

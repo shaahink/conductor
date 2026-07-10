@@ -5,69 +5,6 @@ using Conductor.Models;
 
 namespace Conductor.Tests;
 
-public class B5_4ConfidenceTests
-{
-    [Theory]
-    [InlineData("", 0)]
-    [InlineData("   ", 0)]
-    [InlineData("docs/evidence/B5.3-gate.txt", 1)]
-    [InlineData("docs/evidence/B5.3-gate.txt, docs/evidence/B5.3-preview.txt", 2)]
-    [InlineData("a.txt;b.txt;c.txt", 3)]
-    [InlineData("a.txt,,b.txt", 2)]
-    [InlineData("  a.txt , b.txt  ", 2)]
-    public void CountEvidence_parses_comma_and_semicolon_separated_paths(string field, int expected)
-    {
-        Assert.Equal(expected, Confidence.CountEvidence(field));
-    }
-
-    [Fact]
-    public void Compute_returns_only_done_checkpoints()
-    {
-        var track = new TrackerSnapshot
-        {
-            Checkpoints =
-            {
-                new CheckpointRow("B5.1", "timeline", "DONE", "abc123", "docs/evidence/a.txt, docs/evidence/b.txt"),
-                new CheckpointRow("B5.2", "replay", "TODO", "", ""),
-                new CheckpointRow("B5.3", "health", "DONE", "def456", ""),
-                new CheckpointRow("B5.4", "confidence", "IN PROGRESS", "", "docs/evidence/c.txt"),
-            }
-        };
-
-        var entries = Confidence.Compute(track);
-
-        Assert.Equal(2, entries.Count);
-        Assert.Contains(entries, e => e.CheckpointId == "B5.1" && e.EvidenceCount == 2);
-        Assert.Contains(entries, e => e.CheckpointId == "B5.3" && e.EvidenceCount == 0);
-        Assert.DoesNotContain(entries, e => e.CheckpointId == "B5.2");
-        Assert.DoesNotContain(entries, e => e.CheckpointId == "B5.4");
-    }
-
-    [Fact]
-    public void Format_renders_summary_and_per_checkpoint_lines()
-    {
-        var entries = new List<Confidence.Entry>
-        {
-            new("B5.1", "B5", 2, "a.txt, b.txt"),
-            new("B5.3", "B5", 0, "(none)"),
-        };
-
-        var lines = Confidence.Format(entries).ToList();
-
-        Assert.Contains(lines, l => l.Contains("checkpoints confirmed: 2"));
-        Assert.Contains(lines, l => l.Contains("2 evidence item(s)") && l.Contains("B5.1"));
-        Assert.Contains(lines, l => l.Contains("0 evidence item(s)") && l.Contains("B5.3"));
-    }
-
-    [Fact]
-    public void Format_empty_produces_placeholder()
-    {
-        var lines = Confidence.Format([]).ToList();
-        Assert.Single(lines);
-        Assert.Contains("no checkpoints confirmed", lines[0]);
-    }
-}
-
 public class B5_4McpMetricsTests
 {
     private static IReadOnlyList<ConductorEvent> ParseEvents(string ndjson)
@@ -221,47 +158,12 @@ public class B5_4ReporterTests
     };
 
     [Fact]
-    public void BuildRendersConfidenceSectionFromTracker()
-    {
-        var track = new TrackerSnapshot
-        {
-            Checkpoints =
-            {
-                new CheckpointRow("B5.1", "timeline", "DONE", "abc", "docs/evidence/a.txt, docs/evidence/b.txt"),
-                new CheckpointRow("B5.2", "replay", "DONE", "def", ""),
-            }
-        };
-        var confidence = Confidence.Compute(track);
-
-        var report = Reporter.Build(PlanIn(Path.GetTempPath()), new RunState { PlanName = "T" },
-            track, null, null, null, null, confidence);
-
-        Assert.Contains("## Confidence", report);
-        Assert.Contains("checkpoints confirmed: 2", report);
-        Assert.Contains("with evidence: 1", report);
-        Assert.Contains("B5.1", report);
-        Assert.Contains("B5.2", report);
-    }
-
-    [Fact]
-    public void BuildOmitsConfidenceWhenNoDoneCheckpoints()
-    {
-        var track = new TrackerSnapshot();
-        var confidence = Confidence.Compute(track);
-
-        var report = Reporter.Build(PlanIn(Path.GetTempPath()), new RunState { PlanName = "T" },
-            track, null, null, null, null, confidence);
-
-        Assert.DoesNotContain("## Confidence", report);
-    }
-
-    [Fact]
     public void BuildRendersMcpSectionWhenCallsExist()
     {
         var mcp = new McpMetrics.McpReport(5, 4, 1, 500, 100, "search", 3, ["search", "list_files"]);
 
         var report = Reporter.Build(PlanIn(Path.GetTempPath()), new RunState { PlanName = "T" },
-            new TrackerSnapshot(), null, null, null, null, null, mcp);
+            new TrackerSnapshot(), null, null, null, null, mcp);
 
         Assert.Contains("## MCP", report);
         Assert.Contains("calls 5", report);
@@ -275,7 +177,7 @@ public class B5_4ReporterTests
         var mcp = new McpMetrics.McpReport(0, 0, 0, 0, 0, "", 0, []);
 
         var report = Reporter.Build(PlanIn(Path.GetTempPath()), new RunState { PlanName = "T" },
-            new TrackerSnapshot(), null, null, null, null, null, mcp);
+            new TrackerSnapshot(), null, null, null, null, mcp);
 
         Assert.DoesNotContain("## MCP", report);
     }
@@ -286,7 +188,7 @@ public class B5_4ReporterTests
         var repo = new RepoStrip.RepoInfo("feat/baton-b5", "abc1234", false, "clean", 0, 0, false, null);
 
         var report = Reporter.Build(PlanIn(Path.GetTempPath()), new RunState { PlanName = "T" },
-            new TrackerSnapshot(), null, null, null, null, null, null, repo);
+            new TrackerSnapshot(), null, null, null, null, null, repo);
 
         Assert.Contains("## Repo", report);
         Assert.Contains("branch: feat/baton-b5", report);

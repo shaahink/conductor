@@ -18,7 +18,7 @@ namespace Conductor.Ui;
 /// </summary>
 public sealed class LiveDashboard : IProgressSink
 {
-    private enum Modal { None, Thinking, Output, Docs, Git, Prompt, Status, Timeline, Health, Confidence, Repo, Tasks }
+    private enum Modal { None, Thinking, Output, Docs, Git, Prompt, Status, Timeline, Health, Repo, Tasks }
 
     private readonly Lock _gate = new();
     private readonly List<DashboardState.AgentLine> _agent = new();
@@ -187,7 +187,6 @@ public sealed class LiveDashboard : IProgressSink
             case ConsoleKey.X: OpenModal(Modal.Prompt); break;
             case ConsoleKey.L: OpenModal(Modal.Timeline); break;
             case ConsoleKey.F1: OpenModal(Modal.Health); break;
-            case ConsoleKey.N: OpenModal(Modal.Confidence); break;
             case ConsoleKey.B: OpenModal(Modal.Repo); break;
             case ConsoleKey.U: OpenModal(Modal.Tasks); break;
             case ConsoleKey.G when _plan?.StatusAgent is { Enabled: true }: StartStatusAgent(); break;
@@ -350,7 +349,6 @@ public sealed class LiveDashboard : IProgressSink
                     case ConsoleKey.X: OpenModal(Modal.Prompt); break;
                     case ConsoleKey.L: OpenModal(Modal.Timeline); break;
                     case ConsoleKey.F1: OpenModal(Modal.Health); break;
-                    case ConsoleKey.N: OpenModal(Modal.Confidence); break;
                     case ConsoleKey.B: OpenModal(Modal.Repo); break;
                     case ConsoleKey.U: OpenModal(Modal.Tasks); break;
                     case ConsoleKey.I when _plan != null: _inputActive = true; _inputBuffer.Clear(); break;
@@ -393,7 +391,7 @@ public sealed class LiveDashboard : IProgressSink
                         break;
                     case ConsoleKey.Q: _pendingConfirm = null; _keys.Enqueue(ControlAction.StopAfterSession); break;
                     case ConsoleKey.H: _pendingConfirm = null; _keys.Enqueue(ControlAction.ToggleHeartbeat); break;
-                    case ConsoleKey.T or ConsoleKey.O or ConsoleKey.D or ConsoleKey.V or ConsoleKey.X or ConsoleKey.L or ConsoleKey.F1 or ConsoleKey.N or ConsoleKey.B or ConsoleKey.I or ConsoleKey.G or ConsoleKey.E:
+                    case ConsoleKey.T or ConsoleKey.O or ConsoleKey.D or ConsoleKey.V or ConsoleKey.X or ConsoleKey.L or ConsoleKey.F1 or ConsoleKey.B or ConsoleKey.I or ConsoleKey.G or ConsoleKey.E:
                         break; // handled above — non-destructive keys don't cancel pending confirm
                     default: _pendingConfirm = null; break; // any unmapped key cancels
                 }
@@ -495,7 +493,6 @@ public sealed class LiveDashboard : IProgressSink
             Modal.Prompt => ("compiled prompt (current session)", PromptLines()),
             Modal.Timeline => ("timeline · transitions from the event log", TimelineLines()),
             Modal.Health => ("health · execution-health signals from the event log", HealthLines()),
-            Modal.Confidence => ("confidence · evidence count per checkpoint", ConfidenceLines()),
             Modal.Repo => ("repo · branch, working tree, ahead/behind", RepoLines()),
             Modal.Tasks => ("tasks · sub-tasks from the event log", TaskLines()),
             _ => ("", new List<string>()),
@@ -587,21 +584,6 @@ public sealed class LiveDashboard : IProgressSink
         var report = Reporter.ReadHealth(_plan);
         if (report.Sessions == 0) return new() { "(no sessions recorded yet — health populates as the run emits events)" };
         return Conductor.Core.Events.HealthMetrics.Format(report).ToList();
-    }
-
-    /// <summary>Evidence-based confidence per checkpoint (B5.4, N) — shows how many evidence items back
-    /// each confirmed checkpoint. Derived from the tracker, not the event log.</summary>
-    private List<string> ConfidenceLines()
-    {
-        if (_plan == null) return new() { "(confidence unavailable in preview)" };
-        try
-        {
-            var track = Conductor.Core.Planning.ProgressProviderFactory.Create(_plan).Read(_plan, CancellationToken.None);
-            var confidence = Reporter.ReadConfidence(track);
-            if (confidence.Count == 0) return new() { "(no checkpoints done yet — confidence populates as stages are confirmed)" };
-            return Conductor.Core.Events.Confidence.Format(confidence).ToList();
-        }
-        catch (Exception ex) { return new() { $"(confidence read failed: {ex.Message})" }; }
     }
 
     /// <summary>Live git snapshot (B5.4, B) — branch, HEAD, working-tree status, ahead/behind vs the

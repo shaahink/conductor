@@ -1,90 +1,189 @@
-﻿# Conductor — Conductor-Era3 run report
+﻿# Conductor — Foreman run report
 
-_Updated 2026-07-09 08:11 UTC · branch `feat/era-v3` · HEAD `1883d15`_
+_Updated 2026-07-10 14:24 UTC · branch `feat/foreman` · HEAD `94523a9`_
 
-**Status:** Completed — plan complete EXCEPT skipped stages: C5
-**Stage:** I1 — MCP task server production wiring · attempts used 0
-**Checkpoints:** 13/13 done · **Sessions run:** 91 · **Cost:** $4.7820 · **Tokens:** 4,204,338 in / 1,280,908 out / 720,650 think
-**Confirmed phases:** B0, B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11, C1, C2, C3, C4, C6, C7, C8, D1, D2, D3, D4, O1, O2, O3, P1, P2, P3, P4, P5, I1
-**⚠ Skipped stages (need human review):** C5
+**Status:** Running
+**Stage:** F0 — Foundations — kill list, async engine, integration harness · persona: refactor · attempts used 0 · working ▸ F0.1
+**Checkpoints:** 0/40 done · **Sessions run:** 1 · **Cost:** $0.0000
+
+## Latest activity (live)
+
+_Session #1 (Deliver) · running 10m · last output 20s ago · $0.0501_
+
+**Thinking:**
+> I need to remove "replay" from the expectedVerbs set in the test.
+> Now let me run the tests again to verify.
+> Good. Now let me run the full test suite to confirm everything passes.
+
+**Recent actions:**
+- `15:22:46` » edit src\Conductor\Commands\Commands.cs
+- `15:22:48` » edit src\Conductor\Commands\Commands.cs
+- `15:22:53` · Now let me build and run the tests to verify the Replay deletion:
+- `15:23:06` » bash dotnet build Conductor.slnx 2>&1
+- `15:24:01` » bash dotnet test Conductor.slnx 2>&1
+- `15:24:07` · One test failure - the completion exhaustive test still expects "replay". Let me fix it:
+- `15:24:07` » read tests\Conductor.Tests\B11_2Tests.cs
+- `15:24:11` » read tests\Conductor.Tests\B11_2Tests.cs
+- `15:24:18` » edit tests\Conductor.Tests\B11_2Tests.cs
+- `15:24:31` » bash dotnet test Conductor.slnx --filter "FullyQualifiedName~Completion_ContainsAllRegisteredVerbs_Exhaustive" 2>&1
 
 ## Stage progress
 
-| Stage | Title | Done | State |
+| Stage | Title | Progress | State |
 |---|---|---|---|
-| D1 | conductor status — LLM-powered status report | 1/1 | confirmed ✓ |
-| D2 | conductor gate — ad-hoc gate re-run | 1/1 | confirmed ✓ |
-| D3 | Heartbeat runtime toggle + amend strategy | 1/1 | confirmed ✓ |
-| D4 | Mid-session control feedback | 1/1 | confirmed ✓ |
-| O1 | Structured log + conductor log --query | 1/1 | confirmed ✓ |
-| O2 | Budget intelligence + network health gate | 1/1 | confirmed ✓ |
-| O3 | Cost overhead split | 1/1 | confirmed ✓ |
-| P1 | Dynamic plan reconfiguration | 1/1 | confirmed ✓ |
-| P2 | QA parallelization | 1/1 | confirmed ✓ |
-| P3 | Stronger advisor — structured verdicts | 1/1 | confirmed ✓ |
-| P4 | Squash bookkeeping — clean git history | 1/1 | confirmed ✓ |
-| P5 | Post-hoc audit replay | 1/1 | confirmed ✓ |
-| I1 | MCP task server production wiring | 1/1 | confirmed ✓ |
+| F0 | Foundations — kill list, async engine, integration harness | ░░░░░░░░░░ 0/3 | **← active** |
+| F1 | run.db task store + tracker-as-view + task/note verbs | ░░░░░░░░░░ 0/4 | todo |
+| F2 | ProcessSupervisor + Job Objects + bg primitives | ░░░░░░░░░░ 0/4 | todo |
+| F3 | Stall v2 + same-failure breaker + pre-flight | ░░░░░░░░░░ 0/4 | todo |
+| F4 | Verifier role + scoring loop + findings-as-retry | ░░░░░░░░░░ 0/5 | todo |
+| F5 | Control plane — HTTP+SSE on localhost | ░░░░░░░░░░ 0/3 | todo |
+| F6 | Ink TUI v1 — TypeScript rebuild | ░░░░░░░░░░ 0/5 | todo |
+| F7 | Plan import + truth gates + speed program | ░░░░░░░░░░ 0/5 | todo |
+| F8 | conductor chat + Telegram v2 | ░░░░░░░░░░ 0/4 | todo |
+| F9 | Dogfood close — real Shamshir A2 under v-next | ░░░░░░░░░░ 0/3 | todo |
+
+<details><summary>F0 — Foundations — kill list, async engine, integration harness (0/3)</summary>
+
+| # | Title | Status | Commit |
+|---|---|---|---|
+| F0.1 | Kill list executed — delete replay/time-travel, persona bloat (keep 3 roles), confidence pane, heartbeat commits to feature branch, hierarchical template system | ⬜ TODO | - |
+| F0.2 | Async control loop — Orchestrator run loop async (B4.7 debt); no blocking .Result/.Wait() | ⬜ TODO | - |
+| F0.3 | Integration harness — fake agent + temp repo, full cycle asserted (B4.8); gate: 0w/0e, harness cycle green | ⬜ TODO | - |
+
+</details>
+
+<details><summary>F1 — run.db task store + tracker-as-view + task/note verbs (0/4)</summary>
+
+| # | Title | Status | Commit |
+|---|---|---|---|
+| F1.1 | run.db schema — tables: runs, stages, sessions, attempts, gates, scores, ledger, handovers, injections, costs; telemetry per D8 | ⬜ TODO | - |
+| F1.2 | Tracker-as-view — conductor writes TRACKER.md FROM run.db (generated view for humans/agents); regenerates byte-stable | ⬜ TODO | - |
+| F1.3 | conductor task/note verbs — task CRUD + note (writes ledger); MCP surface; agents report progress via verbs instead of hand-editing markdown | ⬜ TODO | - |
+| F1.4 | conductor report --query — ad-hoc SQL/DSL against run.db ("cost of stage R3?", "which gates fail most?") | ⬜ TODO | - |
+
+</details>
+
+<details><summary>F2 — ProcessSupervisor + Job Objects + bg primitives (0/4)</summary>
+
+| # | Title | Status | Commit |
+|---|---|---|---|
+| F2.1 | ProcessSupervisor + Job Objects — every child spawned into Windows Job Object; kill-by-tree, no orphans | ⬜ TODO | - |
+| F2.2 | PID registry in run.db + orphan reaper at startup | ⬜ TODO | - |
+| F2.3 | conductor bg start / status / logs / stop — sanctioned background-run primitive; prompts mandate it for anything >3 min | ⬜ TODO | - |
+| F2.4 | MCP bg surface + harness proof — kill-by-tree, orphan reap, bg liveness feeds stall detector | ⬜ TODO | - |
+
+</details>
+
+<details><summary>F3 — Stall v2 + same-failure breaker + pre-flight (0/4)</summary>
+
+| # | Title | Status | Commit |
+|---|---|---|---|
+| F3.1 | Stall detection v2 — watches (a) agent stdout, (b) tool-call events from JSON stream, (c) liveness of supervised bg children | ⬜ TODO | - |
+| F3.2 | Soft-kill debrief — on stall: inject "wrap up, write ledger + handoff, 3 min grace", kill only after grace window | ⬜ TODO | - |
+| F3.3 | Same-failure circuit breaker — 2 consecutive attempts with identical failure signature → Advisor session (not another Deliver) | ⬜ TODO | - |
+| F3.4 | Pre-flight health check — DNS/API reachability, disk, git clean, budget remaining; fail → park + Telegram + auto-recheck with exponential backoff | ⬜ TODO | - |
+
+</details>
+
+<details><summary>F4 — Verifier role + scoring loop + findings-as-retry (0/5)</summary>
+
+| # | Title | Status | Commit |
+|---|---|---|---|
+| F4.1 | Verifier role — Deliver role + Verify role (fresh context, cheap model); Verify re-runs the checkpoint's truth gate independently | ⬜ TODO | - |
+| F4.2 | Score output — JSON {score 0-100, findings[], verdict}; ≥ threshold (default 80) → DONE, findings become follow-up tasks | ⬜ TODO | - |
+| F4.3 | Retry-with-findings — score < threshold → findings injected into Retry of Deliver (same model); QA-fix merged into retry (no separate fix session) | ⬜ TODO | - |
+| F4.4 | Advisor verdicts honored — structured AdvisorVerdict.Action (BlockRetry/NeedsHuman/SkipStage/RerunGates) honored by orchestrator | ⬜ TODO | - |
+| F4.5 | Handoff fact-check — Advisor fact-checks handoffs and human injections against git/log/artifacts; contradictions flagged in prompt | ⬜ TODO | - |
+
+</details>
+
+<details><summary>F5 — Control plane — HTTP+SSE on localhost (0/3)</summary>
+
+| # | Title | Status | Commit |
+|---|---|---|---|
+| F5.1 | HTTP+SSE localhost control plane — endpoints: state, task graph, session transcript stream, thinking stream, control verbs | ⬜ TODO | - |
+| F5.2 | control.json verbs exposed over HTTP; event stream same as events.jsonl, served live | ⬜ TODO | - |
+| F5.3 | Headless mode unchanged; curl-level contract tests for all endpoints | ⬜ TODO | - |
+
+</details>
+
+<details><summary>F6 — Ink TUI v1 — TypeScript rebuild (0/5)</summary>
+
+| # | Title | Status | Commit |
+|---|---|---|---|
+| F6.1 | TS+Ink project scaffold + build split — TUI outside dotnet build; engine incremental <10s (D12) | ⬜ TODO | - |
+| F6.2 | Plan pane — tree with per-stage state/score/cost, current highlighted, no truncation at 100+ cols | ⬜ TODO | - |
+| F6.3 | Agent pane — live transcript WITH thinking stream, scrollback+search, tool-call folding | ⬜ TODO | - |
+| F6.4 | Process pane + command palette (: or Ctrl+K) + ticker (session/run cost, tokens, wall time, gate cache hits) | ⬜ TODO | - |
+| F6.5 | Golden-layout snapshot tests at 80×24 / 120×30 / 200×50; TUI crash leaves run alive | ⬜ TODO | - |
+
+</details>
+
+<details><summary>F7 — Plan import + truth gates + speed program (0/5)</summary>
+
+| # | Title | Status | Commit |
+|---|---|---|---|
+| F7.1 | Plan import — LLM pass (advisor model) converts mega plan → task graph: stages, sessions, checkpoints, dependencies, truth gates | ⬜ TODO | - |
+| F7.2 | Re-import diff — mid-plan changes are a first-class operation (diff, not clobber); interactive confirm/edit table | ⬜ TODO | - |
+| F7.3 | Truth-gate tier — per-stage product-level assertions; per-stage gate selection (docs-only stage runs 0 dotnet gates) | ⬜ TODO | - |
+| F7.4 | Gate caching by SHA — result = fn(gate, HEAD sha, tier); re-running unchanged battery forbidden by engine, not convention; agents told which gates are already green | ⬜ TODO | - |
+| F7.5 | Speed program — solution-filter builds, skipIfFresh attribute, parallel test lanes; target: fast tier ≤60s wall | ⬜ TODO | - |
+
+</details>
+
+<details><summary>F8 — conductor chat + Telegram v2 (0/4)</summary>
+
+| # | Title | Status | Commit |
+|---|---|---|---|
+| F8.1 | conductor chat — spawns agent wired (MCP) to run.db+ledger+logs+control verbs: "how did s9 die?", "update task A2", "inject X into retry" | ⬜ TODO | - |
+| F8.2 | Telegram v2 — session-end one-liner with score; NeedsHuman ping with inline buttons [Retry] [Skip] [Inject…] [Chat] | ⬜ TODO | - |
+| F8.3 | Reply-to-inject + /status from run.db + daily digest; host-free (long-poll getUpdates, works behind NAT) | ⬜ TODO | - |
+| F8.4 | Acceptance — full phone-only drive of a toy run; laptop lid closed | ⬜ TODO | - |
+
+</details>
+
+<details><summary>F9 — Dogfood close — real Shamshir A2 under v-next (0/3)</summary>
+
+| # | Title | Status | Commit |
+|---|---|---|---|
+| F9.1 | Run real Shamshir stage A2 end-to-end under v-next Foreman | ⬜ TODO | - |
+| F9.2 | Fix what bleeds from dogfood run | ⬜ TODO | - |
+| F9.3 | Final audit + checklist rated CONFORMS/DEVIATES against design doc | ⬜ TODO | - |
+
+</details>
 
 ## Sessions
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 62 | B11 | Deliver | 1 | 07-08 23:19 | 0:21 | Advanced | B11.2 B11.3 B11.4 | 6 | build:OK | $0.1053 | 75,494/33,712 |
-| 63 | B11 | Audit | 1 | 07-08 23:41 | 0:07 | Progress |  | 2 |  | $0.0558 | 59,800/11,762 |
-| 64 | B12 | Deliver | 1 | 07-08 23:49 | 0:13 | Advanced | B12.1 | 2 | build:OK | $0.0744 | 78,710/19,057 |
-| 65 | B12 | Deliver | 1 | 07-09 00:02 | 0:11 | Advanced | B12.2 | 2 | build:OK | $0.0583 | 62,839/15,593 |
-| 66 | B12 | Deliver | 1 | 07-09 00:14 | 0:24 | Advanced | B12.3 | 4 | build:OK | $0.1101 | 91,676/25,416 |
-| 67 | B12 | Deliver | 1 | 07-09 00:39 | 0:18 | Interrupted |  | 0 |  | $0.0739 | 72,539/15,348 |
-| 68 | C1 | Resume | 1r1 | 07-09 01:01 | 0:05 | Advanced | B12.4 C1 | 1 | build:OK | $0.1230 | 236,936/5,541 |
-| 69 | C2 | Deliver | 1 | 07-09 01:08 | 0:19 | Advanced | C2 | 2 | build:OK | $0.1164 | 96,040/26,369 |
-| 70 | C3 | Deliver | 1 | 07-09 01:28 | 0:15 | Advanced | C3 | 2 | build:OK | $0.0771 | 78,611/16,048 |
-| 71 | C4 | Deliver | 1 | 07-09 01:45 | 0:16 | Advanced | C4 | 2 | build:OK | $0.1273 | 125,562/26,254 |
-| 72 | C5 | Deliver | 1 | 07-09 02:04 | 0:06 | Progress |  | 1 | build:OK | $0.0346 | 55,105/4,008 |
-| 73 | C5 | Deliver | 2 | 07-09 02:10 | 0:07 | Progress |  | 1 | build:OK | $0.0290 | 40,853/3,412 |
-| 74 | C6 | Deliver | 1 | 07-09 02:18 | 0:18 | Advanced | C5 | 2 | build:OK | $0.0544 | 58,475/13,578 |
-| 75 | C6 | Deliver | 1 | 07-09 02:37 | 0:08 | Advanced | C6 | 2 | build:OK | $0.0657 | 84,328/11,356 |
-| 76 | C7 | Deliver | 1 | 07-09 02:46 | 0:07 | Advanced | C7 | 1 | build:OK | $0.0413 | 48,675/8,656 |
-| 77 | C8 | Deliver | 1 | 07-09 02:54 | 0:05 | Advanced | C8 | 1 | build:OK | $0.0343 | 43,321/5,355 |
-| 78 | D1 | Deliver | 1 | 07-09 04:26 | 0:18 | Advanced | D1 | 1 | build:OK | $0.0646 | 69,470/17,593 |
-| 79 | D1 | Fix | 2 | 07-09 04:45 | 0:05 | Progress |  | 2 | build:OK | $0.0191 | 24,463/3,510 |
-| 80 | D2 | Deliver | 1 | 07-09 04:52 | 0:10 | Advanced | D2 | 2 | build:OK | $0.0570 | 73,812/8,373 |
-| 81 | D3 | Deliver | 1 | 07-09 05:04 | 0:22 | Advanced | D3 | 1 | build:OK | $0.0896 | 73,790/20,614 |
-| 82 | D4 | Deliver | 1 | 07-09 05:28 | 0:13 | Advanced | D4 | 1 | build:OK | $0.0648 | 57,829/17,763 |
-| 83 | O1 | Deliver | 1 | 07-09 05:43 | 0:21 | Advanced | O1 | 2 | build:OK | $0.0861 | 69,607/20,828 |
-| 84 | O2 | Deliver | 1 | 07-09 06:06 | 0:13 | Advanced | O2 | 2 | build:OK | $0.0520 | 65,381/12,613 |
-| 85 | O3 | Deliver | 1 | 07-09 06:20 | 0:15 | Advanced | O3 | 2 | build:OK | $0.0575 | 60,880/13,942 |
-| 86 | P1 | Deliver | 1 | 07-09 06:37 | 0:18 | Advanced | P1 | 2 | build:OK | $0.0951 | 89,909/21,311 |
-| 87 | P2 | Deliver | 1 | 07-09 06:56 | 0:16 | Advanced | P2 | 2 | build:OK | $0.0874 | 86,289/15,834 |
-| 88 | P3 | Deliver | 1 | 07-09 07:14 | 0:10 | Advanced | P3 | 2 | build:OK | $0.0700 | 83,099/14,835 |
-| 89 | P4 | Deliver | 1 | 07-09 07:26 | 0:11 | Advanced | P4 | 1 | build:OK | $0.0562 | 52,130/9,995 |
-| 90 | P5 | Deliver | 1 | 07-09 07:39 | 0:11 | Advanced | P5 | 1 | build:OK | $0.0699 | 70,432/12,885 |
-| 91 | I1 | Deliver | 1 | 07-09 07:51 | 0:18 | Advanced | I1 | 2 | build:OK | $0.0965 | 79,582/18,801 |
+| 1 | F0 | Deliver | 1 | 07-10 14:14 | … | running |  | 0 |  |  |  |
 
-### Commits by session
+## Timeline
 
-- **s84 (O2 Deliver)** — 2 commit(s):
-  - 9470643 chore(era3): O2 tracker update — stage O2 DONE
-  - 2f4d103 feat(era3): O2 budget intelligence — identical-stall detection, exponential backoff, DNS preflight
-- **s85 (O3 Deliver)** — 2 commit(s):
-  - e877bb0 chore(era3): O3 tracker update — stage O3 DONE
-  - 419fb9a feat(era3): O3 cost overhead split — agent vs gates accounting in TUI + report
-- **s86 (P1 Deliver)** — 2 commit(s):
-  - 813ac9e chore(era3): P1 tracker update — stage P1 DONE (c153a2b)
-  - c153a2b feat(era3): P1 dynamic plan reconfiguration — plan set/reload/add-stage + TUI E stage editor + planVersion bumps
-- **s87 (P2 Deliver)** — 2 commit(s):
-  - 51bf84b chore(era3): P2 tracker update — stage P2 DONE (2a0fdde)
-  - 2a0fdde feat(era3): P2 QA parallelization — audit runs as read-only lane concurrently with next deliver
-- **s88 (P3 Deliver)** — 2 commit(s):
-  - 74c0808 chore(era3): P3 tracker update — stage P3 DONE (56ec088)
-  - 56ec088 feat(era3): P3 stronger advisor — structured AdvisorVerdict.Action enum
-- **s89 (P4 Deliver)** — 1 commit(s):
-  - 5b65b0b feat(era3): P4 squash bookkeeping — collapse chore(conductor): commits on phase confirm
-- **s90 (P5 Deliver)** — 1 commit(s):
-  - 444670f feat(era3): P5 - Post-hoc audit replay (session #90)
-- **s91 (I1 Deliver)** — 2 commit(s):
-  - 13dcdc7 chore(era3): tracker cleanup for I1
-  - bfa35ac feat(era3): I1 — MCP task server production wiring
+_Transitions with duration, from the event log (`.conductor/events.jsonl`)._
+
+```
+07-10 15:14:54  ◆ run started · Foreman
+07-10 15:14:54  • session #1 F0 Deliver started (attempt 1/4) · persona refactor
+```
+
+## Health
+
+_Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
+
+```
+sessions 1 · retries 0 (0 %) · overall Ok
+✓ no health concerns detected
+```
+
+## Repo
+
+_Live git snapshot (branch, working tree, sync vs upstream)._
+
+```
+branch: feat/foreman
+working tree: D .conductor/REPORT.md, M src/Conductor/Commands/Commands.cs, D src/Conductor/Core/Events/Replay.cs, M src/Conductor/Core/Reporter.cs, M src/Conductor/Program.cs, M src/Conductor/Ui/DashboardRenderer.cs, M src/Conductor/Ui/LiveDashboard.cs, M tests/Conductor.Tests/B11_2Tests.cs (+1 more)
+```
 
 ## Phase handovers (audit)
 
@@ -101,19 +200,12 @@ _Updated 2026-07-09 08:11 UTC · branch `feat/era-v3` · HEAD `1883d15`_
 - `.conductor/handovers/B8.md`
 - `.conductor/handovers/B9.md`
 
-## Last gate run
-
-build:OK · tests:OK
-
-## Last session result
-
-> SESSION-RESULT: I1 — MCP task server production wiring landed. `mcp-serve` CLI command runs McpTaskServer over stdio (JSON-RPC 2.0); Orchestrator writes per-session opencode config (`OPENCODE_CONFIG` env var) registering conductor as a local MCP subprocess; AgentSession.Start accepts extraEnv; CleanupMcpConfig cleans up after session; FoldMcpJournal persists task changes. All 13 Era v3 checkpoints now DONE. Gate: build 0w/0e, 555 tests pass. Working tree clean, branch pushed. Next session: Era v3 is complete — proceed to followup sweep or Era v4 planning per `C:\Code\conductor\NEXT-ERA.md`.
-
 ## Tracker handoff
 
 ```
-last: I1 — MCP task server production wiring landed. mcp-serve CLI command runs McpTaskServer over stdio (JSON-RPC 2.0). Orchestrator writes per-session opencode config (local MCP server pointing to conductor.exe mcp-serve), passed via OPENCODE_CONFIG env var. AgentSession.Start accepts extraEnv. CleanupMcpConfig after session. FoldMcpJournal (B9.4) merges task changes. 555 tests pass (0w/0e).
-stage: I1 DONE. Next: none (Era v3 complete — all 13 checkpoints DONE).
-next: Era v4 planning OR followup sweep. See .conductor/followups.md for OPEN items.
-trap: conductor binary path resolved via ProcessPath — must be same as orchestrator binary.
+last: none (plan created 2026-07-10).
+stage: all TODO — 34 checkpoints across 10 stages (F0–F9).
+next: F0 — Foundations (kill list executed, async control loop, integration harness).
+dirty: none. Status: idle.
+trap: stable driver is C:\Code\conductor\bin\conductor.exe (master binary, built 2026-07-07). Branch feat/foreman must exist before run. Design doc supersedes NEXT-ERA.md — D/O/P items absorbed or killed.
 ```

@@ -14,7 +14,7 @@ public static class Reporter
 
     public static string Build(PlanConfig plan, RunState state, TrackerSnapshot track, IReadOnlyList<GateResult>? lastGates, string? liveActivity = null,
         IReadOnlyList<Timeline.TimelineEntry>? timeline = null, HealthMetrics.HealthReport? health = null,
-        IReadOnlyList<Confidence.Entry>? confidence = null, McpMetrics.McpReport? mcp = null, RepoStrip.RepoInfo? repo = null)
+        McpMetrics.McpReport? mcp = null, RepoStrip.RepoInfo? repo = null)
     {
         var sb = new StringBuilder();
         var done = track.Checkpoints.Count(c => c.IsDone);
@@ -139,21 +139,6 @@ public static class Reporter
             sb.AppendLine();
         }
 
-        // Confidence (B5.4): evidence count per confirmed checkpoint — replaces bare "DONE" with a
-        // metric the human/ingestor can audit (how many artifacts back each claim?).
-        if (confidence is { Count: > 0 })
-        {
-            sb.AppendLine("## Confidence");
-            sb.AppendLine();
-            sb.AppendLine("_Evidence-based confidence per checkpoint. A checkpoint without evidence is marked (none)._");
-            sb.AppendLine();
-            sb.AppendLine("```");
-            foreach (var line in Confidence.Format(confidence))
-                sb.AppendLine(line);
-            sb.AppendLine("```");
-            sb.AppendLine();
-        }
-
         // MCP (B5.4): tool-call metrics folded from McpCallFinished events — total calls, success
         // rate, per-tool breakdown, average latency. Forward-looking: populates once B9 MCP events land.
         if (mcp is { TotalCalls: > 0 })
@@ -265,7 +250,7 @@ public static class Reporter
         {
             Directory.CreateDirectory(plan.StateDir);
             newContent = Build(plan, state, track, lastGates, liveActivity,
-                ReadTimeline(plan), ReadHealth(plan), ReadConfidence(track), ReadMcpMetrics(plan), ReadRepoStrip(plan));
+                ReadTimeline(plan), ReadHealth(plan), ReadMcpMetrics(plan), ReadRepoStrip(plan));
             old = File.Exists(path) ? File.ReadAllText(path) : null;
             File.WriteAllText(path, newContent, Utf8Bom);
         }
@@ -352,11 +337,6 @@ public static class Reporter
             return new HealthMetrics.HealthReport(0, 0, 0, []);
         }
     }
-
-    /// <summary>Evidence-based confidence per checkpoint (B5.4) — derived from the tracker snapshot,
-    /// not the event log (evidence paths are recorded in the tracker row's Evidence column).</summary>
-    public static IReadOnlyList<Confidence.Entry> ReadConfidence(TrackerSnapshot track)
-        => Confidence.Compute(track);
 
     /// <summary>Fold MCP tool-call events from the event log into call-count + latency metrics (B5.4).
     /// Tolerant read: returns an empty report when the log is missing/locked/empty (A15).</summary>
