@@ -1,37 +1,16 @@
 ﻿# Conductor — Foreman run report
 
-_Updated 2026-07-10 15:06 UTC · branch `feat/foreman` · HEAD `167bb01`_
+_Updated 2026-07-10 15:40 UTC · branch `feat/foreman` · HEAD `d07d8c3`_
 
 **Status:** Running
-**Stage:** F0 — Foundations — kill list, async engine, integration harness · persona: refactor · attempts used 0 · working ▸ F0.2
-**Checkpoints:** 1/40 done · **Sessions run:** 2 · **Cost:** $0.1600 · **Tokens:** 110,047 in / 42,032 out / 15,730 think
-
-## Latest activity (live)
-
-_Session #2 (Deliver) · running 20m · last output 8s ago · $0.1091_
-
-**Thinking:**
-> Now the second test method:
-> Now let me rebuild:
-> There are more errors. Let me see the full output:
-
-**Recent actions:**
-- `16:05:25` · Down to 2 errors — only the test file. Let me fix it:
-- `16:05:31` » edit tests\Conductor.Tests\HostLoggingTests.cs
-- `16:05:37` » grep \.Run\(
-- `16:05:48` » bash dotnet build Conductor.slnx 2>&1 | Select-Object -First 10
-- `16:05:55` » read tests\Conductor.Tests\HostLoggingTests.cs
-- `16:05:55` · xUnit1031 — need to make the test methods async:
-- `16:06:04` » edit tests\Conductor.Tests\HostLoggingTests.cs
-- `16:06:12` » edit tests\Conductor.Tests\HostLoggingTests.cs
-- `16:06:22` » bash dotnet build Conductor.slnx 2>&1 | Select-Object -Last 5
-- `16:06:33` » bash dotnet build Conductor.slnx 2>&1 | Select-String "error"
+**Stage:** F0 — Foundations — kill list, async engine, integration harness · persona: refactor · attempts used 0
+**Checkpoints:** 3/40 done · **Sessions run:** 2 · **Cost:** $0.4251 · **Tokens:** 239,570 in / 95,245 out / 68,977 think
 
 ## Stage progress
 
 | Stage | Title | Progress | State |
 |---|---|---|---|
-| F0 | Foundations — kill list, async engine, integration harness | ███░░░░░░░ 1/3 | **← active** |
+| F0 | Foundations — kill list, async engine, integration harness | ██████████ 3/3 | gating… |
 | F1 | run.db task store + tracker-as-view + task/note verbs | ░░░░░░░░░░ 0/4 | todo |
 | F2 | ProcessSupervisor + Job Objects + bg primitives | ░░░░░░░░░░ 0/4 | todo |
 | F3 | Stall v2 + same-failure breaker + pre-flight | ░░░░░░░░░░ 0/4 | todo |
@@ -42,13 +21,13 @@ _Session #2 (Deliver) · running 20m · last output 8s ago · $0.1091_
 | F8 | conductor chat + Telegram v2 | ░░░░░░░░░░ 0/4 | todo |
 | F9 | Dogfood close — real Shamshir A2 under v-next | ░░░░░░░░░░ 0/3 | todo |
 
-<details><summary>F0 — Foundations — kill list, async engine, integration harness (1/3)</summary>
+<details> ✅<summary>F0 — Foundations — kill list, async engine, integration harness (3/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
 | F0.1 | Kill list executed — delete replay/time-travel, persona bloat (keep 3 roles), confidence pane, heartbeat commits to feature branch, hierarchical template system | ✅ DONE | [`47798ee`](https://github.com/shaahink/conductor/commit/47798ee) |
-| F0.2 | Async control loop — Orchestrator run loop async (B4.7 debt); no blocking .Result/.Wait() | ⬜ TODO | - |
-| F0.3 | Integration harness — fake agent + temp repo, full cycle asserted (B4.8); gate: 0w/0e, harness cycle green | ⬜ TODO | - |
+| F0.2 | Async control loop — Orchestrator run loop async (B4.7 debt); no blocking .Result/.Wait() | ✅ DONE | [`09dc2ec`](https://github.com/shaahink/conductor/commit/09dc2ec) |
+| F0.3 | Integration harness — fake agent + temp repo, full cycle asserted (B4.8); gate: 0w/0e, harness cycle green | ✅ DONE | [`b6e5d8b`](https://github.com/shaahink/conductor/commit/b6e5d8b) |
 
 </details>
 
@@ -157,7 +136,7 @@ _Session #2 (Deliver) · running 20m · last output 8s ago · $0.1091_
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | F0 | Deliver | 1 | 07-10 14:14 | 0:31 | RolledOver |  | 0 |  | $0.1600 | 110,047/42,032 |
-| 2 | F0 | Deliver | 1 | 07-10 14:46 | … | running |  | 0 |  |  |  |
+| 2 | F0 | Deliver | 1 | 07-10 14:46 | 0:53 | RolledOver |  | 0 |  | $0.2652 | 129,523/53,213 |
 
 ## Timeline
 
@@ -184,9 +163,11 @@ sessions 2 · retries 0 (0 %) · overall Ok
 _Evidence-based confidence per checkpoint. A checkpoint without evidence is marked (none)._
 
 ```
-checkpoints confirmed: 1   with evidence: 1
+checkpoints confirmed: 3   with evidence: 3
 
   F0.1  4 evidence item(s) ··  531 tests pass, 0w/0e, 23 files changed, -687 net LOC across 5 commits
+  F0.2  5 evidence item(s) ···  533 tests pass, 0w/0e, 9 private methods converted to async, 6 Thread.Sleep→Task.Delay, 3 .GetAwaiter()/.Result→await
+  F0.3  3 evidence item(s) ··  HarnessTests.cs — 2 tests (full cycle + dry-run), fake cmd agent writes opencode JSON, 533/533 pass
 ```
 
 ## Repo
@@ -195,7 +176,8 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/foreman
-working tree: M .conductor/REPORT.md, M src/Conductor/Commands/Commands.cs, M src/Conductor/Core/Orchestrator.cs, M tests/Conductor.Tests/HostLoggingTests.cs
+working tree: M .conductor/REPORT.md
+vs upstream: up to date
 ```
 
 ## Phase handovers (audit)
@@ -215,15 +197,15 @@ working tree: M .conductor/REPORT.md, M src/Conductor/Commands/Commands.cs, M sr
 
 ## Last session result
 
-> SESSION-RESULT: Delivered F0.1 kill list in full — 5 commits across 23 files, deleting 687 net LOC. Replay/Confidence classes deleted entirely, personas trimmed from 9 to 3 (deliver/verify/advise), heartbeat git-commit machinery stripped (report still refreshes to disk), hierarchical template system collapsed to single minimal scaffold. 531 tests pass at 0w/0e. F0.2 (async control loop) and F0.3 (integration harness) remain TODO for next session. Hardest part: tracing deeply-woven kill-list items through 48 source files — the heartbeat removal touched the orchestrator, control-file parser, action-bar renderer, report publisher, progress model, and snapshot builder simultaneously, requiring c…
+> SESSION-RESULT:** F0 complete. All 3 checkpoints delivered: F0.1 kill list (prior session, verified), F0.2 async control loop (9 private methods converted, 6 Thread.Sleep→Task.Delay, 3 blocking patterns→await, Commands.cs and test callers updated), F0.3 integration harness (HarnessTests with fake batch agent writing opencode JSON, full cycle asserted — stage pick, spawn, parse, gates, outcome, record, file creation, git commit). Gate: 0w/0e, 533/533 tests pass. 3 commits pushed to feat/foreman. Hardest part: F0.2 required tracing the async propagation through 9 methods in a 2400-line god-class while keeping 531 tests green under TreatWarningsAsErrors — each method rippled into ConfigureAwait…
 
 ## Tracker handoff
 
 ```
-last: s1 — F0.1 kill list executed (replay, confidence, personas, heartbeat, templates deleted). All 5 sub-items DONE.
-stage: F0 — Foundations. F0.1 DONE, F0.2 (async loop) next, F0.3 (harness) pending.
-commits: 8a57d1e | 9daa9c7 | c305bcf | 7590d71 | 47798ee (5 commits, 23 files, -687 net LOC).
-gate: 0w/0e, 531/531 tests pass. dirty: REPORT.md auto-refresh only.
-trap: F0.2 requires making Orchestrator.Run() async (~2400 LOC god-class). Start by eliminating Thread.Sleep → Task.Delay and .GetAwaiter().GetResult() in the run loop, then propagate up. F0.1 is locked — do not revisit.
+last: s2 — F0.2 async control loop + F0.3 integration harness delivered.
+stage: F0 — Foundations. ALL 3 checkpoints DONE. F1 (run.db) next.
+commits: 09dc2ec (F0.2 async) | b6e5d8b (F0.3 harness). Total F0: 7 commits, 6 files.
+gate: 0w/0e, 533/533 tests pass (531 original + 2 harness). dirty: none.
+trap: HarnessTests creates temp git repos — ensure git is on PATH for test runs.
 branch: feat/foreman.
 ```
