@@ -1963,16 +1963,6 @@ public sealed class BgCommand : Command<BgCommand.Settings>
         proc.ErrorDataReceived += (_, e) => { if (e.Data != null) lock (gate) logWriter.WriteLine($"[stderr] {e.Data}"); };
         proc.BeginOutputReadLine();
         proc.BeginErrorReadLine();
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await proc.WaitForExitAsync().ConfigureAwait(false);
-                await logWriter.DisposeAsync().ConfigureAwait(false);
-            }
-            catch { /* process already gone */ }
-        });
-
         // Track in run.db
         var runDbPath = Path.Combine(plan.StateDir, "run.db");
         if (File.Exists(runDbPath))
@@ -1988,6 +1978,27 @@ public sealed class BgCommand : Command<BgCommand.Settings>
                 AnsiConsole.MarkupLine($"[yellow]Started but run.db tracking failed: {Markup.Escape(ex.Message)}[/]");
             }
         }
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await proc.WaitForExitAsync().ConfigureAwait(false);
+                var exitCode = 0;
+                try { exitCode = proc.ExitCode; } catch { }
+                if (File.Exists(runDbPath))
+                {
+                    try
+                    {
+                        using var db = new RunDb(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<RunDb>.Instance);
+                        db.MarkPidExited(proc.Id, exitCode);
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+            finally { try { await logWriter.DisposeAsync().ConfigureAwait(false); } catch { } }
+        });
 
         AnsiConsole.MarkupLine($"[green]bg started[/] PID={proc.Id} purpose=[bold]{Markup.Escape(purpose)}[/]");
         AnsiConsole.MarkupLine($"  log: [grey]{Markup.Escape(logPath)}[/]");
@@ -2192,6 +2203,10 @@ public sealed class BgCommand : Command<BgCommand.Settings>
         catch (ArgumentException)
         {
             AnsiConsole.MarkupLine($"[grey]PID {pid} not found (already exited).[/]");
+        }
+        catch (InvalidOperationException)
+        {
+            AnsiConsole.MarkupLine($"[grey]PID {pid} already exited.[/]");
         }
         catch (Exception ex)
         {

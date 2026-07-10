@@ -384,9 +384,12 @@ public sealed class McpTaskServer
             try
             {
                 await proc.WaitForExitAsync().ConfigureAwait(false);
-                await logWriter.DisposeAsync().ConfigureAwait(false);
+                var exitCode = 0;
+                try { exitCode = proc.ExitCode; } catch { }
+                _runDb?.MarkPidExited(proc.Id, exitCode);
             }
             catch { }
+            finally { try { await logWriter.DisposeAsync().ConfigureAwait(false); } catch { } }
         });
 
         if (_runDb != null)
@@ -489,6 +492,11 @@ public sealed class McpTaskServer
         {
             _runDb?.MarkPidExited(pid, null);
             return JsonSerializer.SerializeToElement(new { ok = true, pid, killed = false, reason = "Process not found (already exited)." });
+        }
+        catch (InvalidOperationException)
+        {
+            _runDb?.MarkPidExited(pid, null);
+            return JsonSerializer.SerializeToElement(new { ok = true, pid, killed = false, reason = "Process already exited." });
         }
         catch (Exception ex)
         {

@@ -89,6 +89,10 @@ public sealed class ProcessSupervisor : IDisposable
             {
                 // Process already exited
             }
+            catch (NotSupportedException)
+            {
+                // Platform does not support this API
+            }
 
             _runDb.MarkPidExited(pid, null);
         }
