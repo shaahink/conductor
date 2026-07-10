@@ -101,6 +101,15 @@ public static class ConductorHost
         // B9.2: planner decomposition — produces ordered sub-tasks from a checkpoint.
         builder.Services.AddSingleton<IPlanner>(new CheckpointPlanner());
 
+        // F1: SQLite run.db task store (additive — written alongside state.json + events.jsonl).
+        // Dry runs skip the database (no write side-effects).
+        builder.Services.AddSingleton(sp =>
+        {
+            if (opts.DryRun) return null!;
+            var runDbPath = Path.Combine(plan.StateDir, "run.db");
+            return new RunDb(runDbPath, sp.GetRequiredService<ILogger<RunDb>>());
+        });
+
         builder.Services.AddSingleton(sp => new Orchestrator(
             sp.GetRequiredService<PlanConfig>(),
             sp.GetRequiredService<RunState>(),
@@ -110,7 +119,9 @@ public static class ConductorHost
             sp.GetRequiredService<RunOptions>(),
             sp.GetRequiredService<ILogger<Orchestrator>>(),
             sp.GetRequiredService<ITelegramService>(),
-            sp.GetRequiredService<WebhookNotifier>()));
+            sp.GetRequiredService<WebhookNotifier>(),
+            planner: null,  // default planner
+            runDb: sp.GetService<RunDb>()));
 
         var host = builder.Build();
         ValidateOptionsOnStart(host.Services, plan);

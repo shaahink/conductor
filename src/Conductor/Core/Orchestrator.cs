@@ -20,7 +20,7 @@ public sealed record RunOptions(bool DryRun, bool Once, int MaxSessions);
 /// Every transition is persisted, so killing conductor at any point is recoverable.
 /// </summary>
 #pragma warning disable MA0045 // Orchestrator helper methods (Save/Log/AcquireLock/etc.) use sync file I/O by design — fast local writes, not hot-path
-public sealed class Orchestrator(PlanConfig plan, RunState state, string statePath, IProgressSink sink, IEventSink events, RunOptions opts, ILogger<Orchestrator> logger, ITelegramService telegram, WebhookNotifier webhooks, IPlanner? planner = null)
+public sealed class Orchestrator(PlanConfig plan, RunState state, string statePath, IProgressSink sink, IEventSink events, RunOptions opts, ILogger<Orchestrator> logger, ITelegramService telegram, WebhookNotifier webhooks, IPlanner? planner = null, RunDb? runDb = null)
 {
     private readonly IPlanner _planner = planner ?? new CheckpointPlanner();
     private readonly PromptBuilder _prompts = BuildPromptBuilder(plan);
@@ -58,6 +58,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     private decimal _runCostUsd;
     private long _runTokens;
     private decimal _runOverheadUsd; // O3: gate runtime estimate accumulator
+    private readonly RunDb? _runDb = runDb; // F1: SQLite task store (null in dry-runs)
 
     // ---------------------------------------------------------------- main loop
 
@@ -78,6 +79,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 DriverVersion = typeof(Orchestrator).Assembly.GetName().Version?.ToString(),
                 Resumed = state.SessionCounter > 0,
             });
+            _runDb?.InitializeRun(state.RunId, plan.Name, plan.Repo, Git.Branch(plan.Repo),
+                typeof(Orchestrator).Assembly.GetName().Version?.ToString());
             WarnOnBranchPattern();
 
             var sessionsThisRun = 0;
@@ -186,6 +189,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     state.PendingFix = null;
                     Log($"stage → {stage.Id} {stage.Title}");
                     events.Emit(new StageEntered { StageId = stage.Id, Title = stage.Title, StartHead = state.CurrentStageStartHead });
+                    _runDb?.InitializeStage(state.RunId, stage.Id, stage.Title);
                     Save();
                 }
 
@@ -965,6 +969,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             Log($"✓ phase {id} CONFIRMED (full battery green{(state.AuditedStages.Contains(id) ? " + audit" : "")}) — advancing");
         }
         events.Emit(new StageConfirmed { StageId = id, Audited = state.AuditedStages.Contains(id) });
+        _runDb?.ConfirmStage(state.RunId, id);
         // P4: squash chore(conductor): bookkeeping commits on confirm (best-effort, idempotent)
         SquashBookkeeping(id);
         SaveAndReport();
@@ -1434,6 +1439,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             CheckpointsDone = track.Checkpoints.Count(c => c.IsDone),
             CheckpointsTotal = track.Checkpoints.Count,
         });
+        _runDb?.RecordRunEnd(state.RunId, state.Status.ToString());
         SaveAndReport();
         Notify($"Conductor: plan {plan.Name} COMPLETE ({state.SessionCounter} sessions)");
     }
@@ -1871,12 +1877,31 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         if (rec.Outcome == SessionOutcome.Advanced)
             foreach (var id in rec.NewlyDone)
                 events.Emit(new CheckpointConfirmed { SessionId = sid, CheckpointId = id, StageId = rec.Stage });
+
+        // F1: additive run.db write alongside events.jsonl
+        if (_runDb is { } db)
+        {
+            db.RecordSession(state.RunId, rec.Stage, rec.Number, rec.Kind.ToString(),
+                rec.StartedUtc, rec.EndedUtc, rec.Outcome?.ToString(), rec.ClaudeSessionId,
+                rec.ResumeCount, rec.Attempt, rec.GateSummary, rec.ResultSummary,
+                rec.NewCommits.Count, rec.NewlyDone.Count > 0 ? string.Join(",", rec.NewlyDone) : null);
+            if (rec.CostUsd is { } costUsd)
+                db.RecordCost(state.RunId, rec.Number, "agent",
+                    rec.TokensInput ?? 0, rec.TokensOutput ?? 0, rec.TokensReasoning ?? 0,
+                    rec.TokensCacheRead ?? 0, costUsd,
+                    (long)((rec.EndedUtc - rec.StartedUtc)?.TotalMilliseconds ?? 0));
+            if (rec.OverheadCostUsd is { } ovCostUsd)
+                db.RecordCost(state.RunId, rec.Number, "gate",
+                    0, 0, 0, 0, ovCostUsd, 0);
+        }
     }
 
     /// <summary>Emit one GateFinished per result — the trust-model verification surface, from one source.</summary>
     private void EmitGates(IReadOnlyList<GateResult> gates, string scope, string? sessionId = null)
     {
+        var sha = Git.Head(plan.Repo);
         foreach (var g in gates)
+        {
             events.Emit(new GateFinished
             {
                 SessionId = sessionId,
@@ -1888,6 +1913,15 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 DurationMs = (long)g.Duration.TotalMilliseconds,
                 Scope = scope,
             });
+            // F1: additive run.db write alongside events.jsonl
+            var tier = plan.Gates.FirstOrDefault(gc => gc.Name == g.Name)?.Tier ?? "full";
+            _runDb?.RecordGate(state.RunId,
+                int.TryParse(sessionId, out var sn) ? sn : null,
+                state.CurrentStage, g.Name, tier, scope, sha,
+                g.Passed, g.Skipped, g.Optional, g.ExitCode,
+                (long)g.Duration.TotalMilliseconds,
+                g.Tail.Length > 2000 ? g.Tail[^2000..] : g.Tail);
+        }
     }
 
     /// <summary>Keep a small ring buffer of recent agent activity for the AFK live-activity report.</summary>
