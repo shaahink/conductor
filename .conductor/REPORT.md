@@ -1,12 +1,12 @@
 ﻿# Conductor — Foreman run report
 
-_Updated 2026-07-10 19:50 UTC · branch `feat/foreman` · HEAD `ebd011b`_
+_Updated 2026-07-10 19:59 UTC · branch `feat/foreman` · HEAD `13002cb`_
 
 **Status:** Idle
 **Stage:** F2 — ProcessSupervisor + Job Objects + bg primitives · persona: architect · attempts used 0
-**Checkpoints:** 11/40 done · **Sessions run:** 22 · **Cost:** $1.8714 · **Tokens:** 2,042,410 in / 332,086 out / 298,058 think
+**Checkpoints:** 11/40 done · **Sessions run:** 23 · **Cost:** $1.9451 · **Tokens:** 2,147,592 in / 341,032 out / 307,977 think
 **Confirmed phases:** F0, F1
-**Pending:** auto-fix audit for F2
+**Pending:** full-battery phase gate for F2
 
 ## Stage progress
 
@@ -159,15 +159,13 @@ _Updated 2026-07-10 19:50 UTC · branch `feat/foreman` · HEAD `ebd011b`_
 | 20 | F2 | Deliver | 1 | 07-10 18:54 | 0:20 | Advanced | F2.1 F2.2 | 2 | build:OK | $0.1051 | 77,106/29,655 |
 | 21 | F2 | Deliver | 1 | 07-10 19:15 | 0:18 | Advanced | F2.3 | 2 | build:OK | $0.0862 | 75,562/21,448 |
 | 22 | F2 | Deliver | 1 | 07-10 19:34 | 0:16 | Advanced | F2.4 | 2 | build:OK | $0.0789 | 68,721/24,936 |
+| 23 | F2 | Audit | 1 | 07-10 19:50 | 0:08 | Progress |  | 2 |  | $0.0737 | 105,182/8,946 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-10 17:57:10  • session #9 F1 Audit started (attempt 1/4) · persona architect
-07-10 18:03:49  • session #9 F1 → RolledOver  (6m39s)
-07-10 18:03:49  • session #10 F1 Audit started (attempt 1/4) · persona architect
 07-10 18:12:00  • session #10 F1 → RolledOver  (8m11s)
 07-10 18:12:00  • session #11 F1 Audit started (attempt 1/4) · persona architect
 07-10 18:24:14  • session #11 F1 → RolledOver  (12m13s)
@@ -205,6 +203,9 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-10 20:34:01  ✓ checkpoint F2.3 confirmed
 07-10 20:34:01  • session #22 F2 Deliver started (attempt 1/2) · persona architect
 07-10 20:50:57  ▪ gate build pass [session]  (2.9s)
+07-10 20:50:59  • session #22 F2 → Advanced · done F2.4 · 2 commit(s)  (16m58s)
+07-10 20:50:59  ✓ checkpoint F2.4 confirmed
+07-10 20:50:59  • session #23 F2 Audit started (attempt 1/2) · persona architect
 ```
 
 ## Health
@@ -212,7 +213,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 22 · retries 1 (5 %) · overall Warn
+sessions 23 · retries 1 (4 %) · overall Warn
 ⚠ [context-saturation] session #2: 32,055,552 context tokens (≥ 20,000,000)
 ```
 
@@ -262,6 +263,9 @@ vs upstream: up to date
 - **s22 (F2 Deliver)** — 2 commit(s):
   - [`ebd011b`](https://github.com/shaahink/conductor/commit/ebd011b) chore(F2.4): update tracker — F2 stage complete, 4/4 DONE
   - [`eb1fa35`](https://github.com/shaahink/conductor/commit/eb1fa35) feat(bF2.4): MCP bg surface + harness proof — kill-by-tree, orphan reap, bg liveness feeds stall detector
+- **s23 (F2 Audit)** — 2 commit(s):
+  - [`13002cb`](https://github.com/shaahink/conductor/commit/13002cb) docs(F2): audit handover — phase summary, fixes, weak spots, F3 risks
+  - [`2d8da64`](https://github.com/shaahink/conductor/commit/2d8da64) fix(F2): audit fixes — mark bg PID exited on natural exit, indent drift, exception catches
 
 ## Phase handovers (audit)
 
@@ -279,6 +283,7 @@ vs upstream: up to date
 - `.conductor/handovers/B9.md`
 - `.conductor/handovers/F0.md`
 - `.conductor/handovers/F1.md`
+- `.conductor/handovers/F2.md`
 
 ## Last gate run
 
@@ -286,7 +291,7 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: F2.4 landed — MCP bg surface (4 tools: bg_start/status/logs/stop wired through McpTaskServer → McpServeCommand → Orchestrator.WireMcpServer) + 5 harness proof tests (JobObject kill-on-close, supervisor-dispose tree-kill, orphan reap e2e, liveness feed pipeline, empty-run feed). Build 0w/0e, 565/565 pass (2 pre-existing flaky HostLoggingTests excluded from count), 7 files changed (+478/-22), commit eb1fa35. F2 stage complete (4/4 DONE). Branch pushed. Next session: F3 (Stall v2). Hardest part this session: designing the liveness feed proof — the data pipeline from ProcessSupervisor → run.db pids → IsProcessAlive queries is what F3's stall detector consumes, but proving it requ…
+> SESSION-RESULT:** Audit verified 4/4 F2 checkpoints genuinely DONE — build 0w/0e, 564/565 pass (1 pre-existing flaky). Fixed 4 bugs: bg processes now correctly call `MarkPidExited` on natural exit (critical — they previously leaked as "running" forever in run.db), indentation drift in Orchestrator.cs:763, missing `InvalidOperationException` catch in bg_stop (both MCP and CLI), and missing `NotSupportedException` catch in `ReapOrphans`. Committed as `2d8da64` + `13002cb`, pushed to `feat/foreman`. Handover written to `.conductor/handovers/F2.md` with 6 weak spots tracked (double JobObject harmless, bg bypasses ProcessSupervisor by design, 3 followups deferred to F3). Stage is solid — F3 can p…
 
 ## Tracker handoff
 
