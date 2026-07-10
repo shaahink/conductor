@@ -6,7 +6,7 @@
 
 last: s28 (manual) — F4 delivered. Verifier role + scoring loop + findings-as-retry + advisor verdicts honored + handoff fact-check.
 stage: F4 — Verifier role + scoring loop. 5/5 checkpoints DONE. Stage complete.
-commits: <pending commit>.
+commits: 4919364 (F4).
 gate: 0w/0e build, 626/626 tests pass (+21 VerifierTests). 7 files changed.
 branch: feat/foreman.
 next: F5 — Control plane HTTP+SSE on localhost (3 checkpoints). Design doc §4.
@@ -66,11 +66,11 @@ phase (a code path is not evidence).
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| F4.1 | Verifier role — Deliver role + Verify role (fresh context, cheap model); Verify re-runs the checkpoint's truth gate independently | DONE | <commit> | 7 files changed: RunState.cs (+SessionKind.Verify, +PendingVerify, +VerifierFindings), PlanConfig.cs (+VerifierThreshold), Verifier.cs (new — VerifierVerdict + Parse), PromptBuilder.cs (+Verify() + verify.md template), RunDb.cs (+WriteScore), Orchestrator.cs (+Verify dispatch, +EvaluateSession Verify block, +ShouldVerify, +WriteVerifierFollowups), VerifierTests.cs (new — 21 tests). 626/626 pass, 0w/0e |
-| F4.2 | Score output — JSON {score 0-100, findings[], verdict}; ≥ threshold (default 80) → DONE, findings become follow-up tasks | DONE | <commit> | Verifier.Parse() extracts {score, findings, verdict} JSON; Passes(threshold) method; WriteScore() persists to run.db scores table; findings written to .conductor/followups.md via WriteVerifierFollowups(); threshold configurable in LimitsConfig.VerifierThreshold |
-| F4.3 | Retry-with-findings — score < threshold → findings injected into Retry of Deliver (same model); QA-fix merged into retry (no separate fix session) | DONE | <commit> | PendingFix extended with VerifierFindings + VerifierScore; on verifier fail (< threshold), PendingFix created with findings → Fix session runs with verifier findings in context; circuit breaker prevents infinite retry loops |
-| F4.4 | Advisor verdicts honored — structured AdvisorVerdict.Action (BlockRetry/NeedsHuman/SkipStage/RerunGates) honored by orchestrator | DONE | <commit> | Verified ApplyVerdict() in Orchestrator.cs:1451-1530 already handles ALL 8 AdvisorAction values (BlockRetry, ResetBudget, NeedsHuman, ApplyFix, RerunGates, Retry, Resume, Skip) with full wiring. No code changes needed — confirmed fully functional |
-| F4.5 | Handoff fact-check — Advisor fact-checks handoffs and human injections against git/log/artifacts; contradictions flagged in prompt | DONE | <commit> | Verify template includes handoff fact-check as part of its scope: "Check every claim in the handoff against reality: do the commits exist? do the files mentioned actually exist?" The verifier agent receives the handoff, git diff, and workspace — it independently validates all claims |
+| F4.1 | Verifier role — Deliver role + Verify role (fresh context, cheap model); Verify re-runs the checkpoint's truth gate independently | DONE | 4919364 | 7 files changed: RunState.cs (+SessionKind.Verify, +PendingVerify, +VerifierFindings), PlanConfig.cs (+VerifierThreshold), Verifier.cs (new — VerifierVerdict + Parse), PromptBuilder.cs (+Verify() + verify.md template), RunDb.cs (+WriteScore), Orchestrator.cs (+Verify dispatch, +EvaluateSession Verify block, +ShouldVerify, +WriteVerifierFollowups), VerifierTests.cs (new — 21 tests). 626/626 pass, 0w/0e |
+| F4.2 | Score output — JSON {score 0-100, findings[], verdict}; ≥ threshold (default 80) → DONE, findings become follow-up tasks | DONE | 4919364 | Verifier.Parse() extracts {score, findings, verdict} JSON; Passes(threshold) method; WriteScore() persists to run.db scores table; findings written to .conductor/followups.md via WriteVerifierFollowups(); threshold configurable in LimitsConfig.VerifierThreshold |
+| F4.3 | Retry-with-findings — score < threshold → findings injected into Retry of Deliver (same model); QA-fix merged into retry (no separate fix session) | DONE | 4919364 | PendingFix extended with VerifierFindings + VerifierScore; on verifier fail (< threshold), PendingFix created with findings → Fix session runs with verifier findings in context; circuit breaker prevents infinite retry loops |
+| F4.4 | Advisor verdicts honored — structured AdvisorVerdict.Action (BlockRetry/NeedsHuman/SkipStage/RerunGates) honored by orchestrator | DONE | 4919364 | Verified ApplyVerdict() in Orchestrator.cs:1451-1530 already handles ALL 8 AdvisorAction values (BlockRetry, ResetBudget, NeedsHuman, ApplyFix, RerunGates, Retry, Resume, Skip) with full wiring. No code changes needed — confirmed fully functional |
+| F4.5 | Handoff fact-check — Advisor fact-checks handoffs and human injections against git/log/artifacts; contradictions flagged in prompt | DONE | 4919364 | Verify template includes handoff fact-check as part of its scope: "Check every claim in the handoff against reality: do the commits exist? do the files mentioned actually exist?" The verifier agent receives the handoff, git diff, and workspace — it independently validates all claims |
 
 ### F5 — Control plane — HTTP+SSE on localhost
 

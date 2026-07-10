@@ -41,10 +41,58 @@ C:\Code\conductor\bin\conductor.exe run         -p .conductor\plans\conductor-de
 
 ## Current state (2026-07-10)
 - **Baton v2 COMPLETE** — 77 sessions, 67/67 checkpoints DONE, status=completed.
-- **Foreman v3 ACTIVE** — 15/40 checkpoints DONE, F0/F1/F2/F3 confirmed, next: F4 (Verifier).
+- **Foreman v3 ACTIVE** — 20/40 checkpoints DONE, F0/F1/F2/F3/F4 confirmed, next: F5 (Control Plane).
 - **Branch:** `feat/foreman` is the active branch; `feat/baton` is the worktree.
 - **Driver:** `C:\Code\conductor\bin\conductor.exe run -p plans\conductor-foreman.plan.json`
 - **Read order:** `CONDUCTOR-VNEXT-PLAN.md` (tracker) → `docs/CONDUCTOR-VNEXT-PLAN.md` (design doc)
+- **Last session:** s28 (manual) — F4 delivered (Verifier role + scoring loop). Commit 4919364. 7 files changed + 2 new. 626/626 tests pass, 0w/0e.
+
+## C# coding standards (this codebase)
+
+### Language level: C# 13 / .NET 10
+- **Primary constructors** for classes that take dependencies and immediately assign them
+- **`record`** for data-only types (VerifierVerdict, AdvisorVerdict, PendingFix) — value semantics, with-expressions
+- **`sealed`** by default on all classes that aren't designed for inheritance
+- **Collection expressions** `[1, 2, 3]` instead of `new[] { 1, 2, 3 }`
+- **Raw string literals** `"""..."""` for SQL and multi-line templates
+- **`using var`** for IDisposable resources (SqliteCommand, SqliteDataReader, Process handles)
+- **File-scoped namespaces** — `namespace Foo.Bar;` (no braces)
+
+### Async patterns
+- **`ConfigureAwait(false)`** on EVERY await in library/engine code (not in test projects)
+- **`CancellationToken` threaded everywhere** — no `CancellationToken.None` in async methods
+- **`await Task.Delay()`** not `Thread.Sleep()` in async paths
+- **No `.Result` / `.Wait()` / `.GetAwaiter().GetResult()`** — sync-over-async is forbidden
+- **`async Task` not `async void`** except for event handlers (but there are none)
+
+### Null safety
+- **Nullable reference types ON** — `string?`, `int?`, etc. explicit
+- **`??` and `?.`** operators for safe navigation
+- **Pattern matching** `is { } x` for non-null checks, `is not null` for guard clauses
+- **`ArgumentNullException.ThrowIfNull()`** in public API entry points
+
+### Collections and strings
+- **`StringComparer.Ordinal`** / `OrdinalIgnoreCase` for all dictionary lookups and comparisons
+- **`StringBuilder`** for multi-append string construction
+- **`IReadOnlyList<T>`** for read-only return types; `List<T>` for mutable state
+- **`HashSet<string>`** with explicit comparer for lookup sets
+
+### Security and correctness
+- **Regex: always use timeout** — `RegexOptions` with `RegexTimeout` from `ProgressConventions`
+- **SQL: always parameterised** — no string concatenation in SQL (RunDb uses `@param` syntax)
+- **JSON: `System.Text.Json`** not Newtonsoft
+- **No secrets in code** — tokens read from env vars
+
+### Analyzer strictness
+- **TreatWarningsAsErrors** on the whole solution
+- **Meziantou.Analyzer** full ruleset — never lower severity to pass
+- **#pragma warning disable** only with inline justification comments, scoped to the minimum block
+
+## Delivery flow (F4+)
+- **Deliver session** delivers checkpoints → gates green → **Verifier session** independently checks claims
+- Verifier outputs `{score, findings[], verdict}` JSON — score ≥ 80 → DONE; < 80 → findings feed retry
+- VerifierThreshold configurable in plan's `LimitsConfig`; per-stage override pending F7
+- ShouldVerify gates only `SessionKind.Deliver` — Fix/Audit/Resume sessions skip verification
 
 ## Foreground-blocking anti-patterns (codebase-specific)
 
