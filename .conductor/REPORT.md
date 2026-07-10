@@ -1,10 +1,10 @@
 ﻿# Conductor — Foreman run report
 
-_Updated 2026-07-10 18:11 UTC · branch `feat/foreman` · HEAD `4aae82e`_
+_Updated 2026-07-10 18:24 UTC · branch `feat/foreman` · HEAD `3c0b1bc`_
 
-**Status:** Running
-**Stage:** F1 — run.db task store + tracker-as-view + task/note verbs · persona: architect · attempts used 0
-**Checkpoints:** 7/40 done · **Sessions run:** 16 · **Cost:** $1.4619 · **Tokens:** 1,581,898 in / 245,173 out / 240,128 think
+**Status:** Idle
+**Stage:** F1 — run.db task store + tracker-as-view + task/note verbs · persona: architect · attempts used 1
+**Checkpoints:** 7/40 done · **Sessions run:** 17 · **Cost:** $1.4988 · **Tokens:** 1,665,613 in / 245,244 out / 240,603 think
 **Confirmed phases:** F0
 
 ## Stage progress
@@ -152,6 +152,7 @@ _Updated 2026-07-10 18:11 UTC · branch `feat/foreman` · HEAD `4aae82e`_
 | 14 | F1 | Audit | 1 | 07-10 17:43 | 0:12 | RolledOver |  | 0 |  | $0.0701 | 91,427/8,140 |
 | 15 | F1 | Audit | 1 | 07-10 17:56 | 0:10 | RolledOver |  | 0 |  | $0.0789 | 108,804/7,666 |
 | 16 | F1 | Audit | 1 | 07-10 18:06 | 0:04 | Interrupted |  | 0 |  | $0.0480 | 81,453/2,722 |
+| 17 | F1 | Resume | 1r1 | 07-10 18:23 | 0:00 | NoProgress |  | 0 | build:OK | $0.0369 | 83,715/71 |
 
 ## Timeline
 
@@ -195,6 +196,9 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-10 19:06:45  • session #15 F1 → RolledOver  (10m27s)
 07-10 19:06:45  • session #16 F1 Audit started (attempt 1/4) · persona architect
 07-10 19:11:16  • session #16 F1 → Interrupted  (4m30s)
+07-10 19:23:05  ◆ run resumed · Foreman
+07-10 19:23:06  • session #17 F1 Resume started (attempt 1/4) · persona architect
+07-10 19:24:05  ▪ gate build pass [session]  (26.6s)
 ```
 
 ## Health
@@ -202,7 +206,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 16 · retries 0 (0 %) · overall Warn
+sessions 17 · retries 0 (0 %) · overall Warn
 ⚠ [context-saturation] session #2: 32,055,552 context tokens (≥ 20,000,000)
 ```
 
@@ -228,8 +232,8 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/foreman
-working tree: M src/Conductor/Commands/Commands.cs
-vs upstream: up to date
+working tree: clean
+vs upstream: 1 ahead
 ```
 
 ### Commits by session
@@ -257,12 +261,13 @@ vs upstream: up to date
 
 ## Last gate run
 
-build:OK · tests:OK
+build:OK
 
 ## Last session result
 
-> Now let me read all the key changed source files in parallel:
-> Applying the fixes to TaskCommand and NoteCommand:
+> That's the correct resume prompt. The agent will see the clean state (all changes committed as `3c0b1bc`), run the gate battery, and wrap up. After it finishes, the conductor will skip audit (disabled) and go straight to the phase gate battery → confirm F1 → advance to F2.
+> 
+> Run it.
 
 ## Tracker handoff
 
