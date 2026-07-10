@@ -64,8 +64,6 @@ public static class TrackerGenerator
                        "\nphase (a code path is not evidence).");
         sb.AppendLine();
 
-        var stageOrder = plan.Stages.Select(s => s.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
-
         if (checkpoints.Count == 0)
         {
             // No checkpoints in db yet — render from plan stages only
@@ -144,7 +142,7 @@ public static class TrackerGenerator
         File.WriteAllText(plan.TrackerPath, content, Utf8Bom);
     }
 
-    private static string StatusLabel(string status) => status.ToUpperInvariant() switch
+    private static string StatusLabel(string status) => (status ?? "").ToUpperInvariant() switch
     {
         "DONE" => "DONE",
         "IN PROGRESS" => "IN PROGRESS",

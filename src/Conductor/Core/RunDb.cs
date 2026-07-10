@@ -33,8 +33,20 @@ public sealed class RunDb : IDisposable
         var dir = Path.GetDirectoryName(path);
         if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
         _conn = new SqliteConnection($"Data Source={path}");
-        _conn.Open();
-        EnsureSchema();
+        try
+        {
+            _conn.Open();
+            using var pragma = _conn.CreateCommand();
+            pragma.CommandText = "PRAGMA journal_mode=WAL;";
+            pragma.ExecuteNonQuery();
+            EnsureSchema();
+        }
+        catch
+        {
+            _conn.Close();
+            _conn.Dispose();
+            throw;
+        }
     }
 
     public string ConnectionString => _conn.DataSource;

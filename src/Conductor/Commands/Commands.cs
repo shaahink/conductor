@@ -1753,7 +1753,17 @@ public sealed class TaskCommand : Command<TaskCommand.Settings>
         }
         else if (settings.List)
         {
-            var cps = db.GetCheckpoints(state.RunId);
+            IReadOnlyList<(string Id, string StageId, string Title, string Status, string Commit, string Evidence)> cps;
+            try
+            {
+                cps = db.GetCheckpoints(state.RunId);
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[red]Failed to read checkpoints from run.db: {Markup.Escape(ex.Message)}[/]");
+                return 1;
+            }
+
             if (cps.Count == 0)
             {
                 AnsiConsole.MarkupLine("[grey]no checkpoints in run.db[/]");
