@@ -3,6 +3,7 @@ using Conductor.Models;
 
 namespace Conductor.Tests;
 
+[Trait("Category", "Integration")]
 public class GateRunnerTests
 {
     private static PlanConfig Plan(params GateConfig[] gates) => new()

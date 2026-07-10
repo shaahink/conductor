@@ -7,6 +7,7 @@ namespace Conductor.Tests;
 /// <summary>
 /// F2.1–F2.2: proves kill-by-tree via the JobObject, PID registry in run.db, and orphan reaper.
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed class ProcessSupervisorTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), $"conductor-psv-{Guid.NewGuid():N}");

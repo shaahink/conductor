@@ -29,6 +29,7 @@ public sealed class B12_3Tests
     // ---------------------------------------------------------------- happy path: lane commits, gate passes, merge accepted
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task MutatingLane_GoodDiff_MergeAccepted()
     {
         var (repo, cleanup) = CreateTestRepo();
@@ -82,6 +83,7 @@ public sealed class B12_3Tests
     // ---------------------------------------------------------------- bad diff: gate fails, merge rejected
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task MutatingLane_BadDiff_MergeRejected()
     {
         var (repo, cleanup) = CreateTestRepo();
@@ -132,6 +134,7 @@ public sealed class B12_3Tests
     // ---------------------------------------------------------------- agent doesn't commit — trivially successful, no merge
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task MutatingLane_NoCommits_ReturnsSuccessWithoutMerge()
     {
         var (repo, cleanup) = CreateTestRepo();
@@ -158,6 +161,7 @@ public sealed class B12_3Tests
     // ---------------------------------------------------------------- worktree isolation: primary tree untouched during lane
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task MutatingLane_WorktreeIsolation_PrimaryTreeUntouchedUntilMerge()
     {
         var (repo, cleanup) = CreateTestRepo();
@@ -197,6 +201,7 @@ public sealed class B12_3Tests
     // ---------------------------------------------------------------- merge gate with lane-specific gates falls back to plan gates
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task MutatingLane_UsesLaneSpecificMergeGates_WhenConfigured()
     {
         var (repo, cleanup) = CreateTestRepo();
@@ -228,6 +233,7 @@ public sealed class B12_3Tests
     // ---------------------------------------------------------------- merge conflict → rejected
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task MutatingLane_MergeConflict_Rejected()
     {
         var (repo, cleanup) = CreateTestRepo();
@@ -263,6 +269,7 @@ public sealed class B12_3Tests
     // ---------------------------------------------------------------- lane cancelled via token
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task MutatingLane_Cancellation_ReturnsCancelled()
     {
         var (repo, cleanup) = CreateTestRepo();
@@ -286,6 +293,7 @@ public sealed class B12_3Tests
     // ---------------------------------------------------------------- worktree is cleaned up after completion
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task MutatingLane_WorktreeCleanedUp_AfterCompletion()
     {
         var (repo, cleanup) = CreateTestRepo();

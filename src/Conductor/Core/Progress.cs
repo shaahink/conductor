@@ -130,7 +130,10 @@ public interface IProgressSink
     void Log(LogEntry entry) { Log(entry.Text); }
     void AgentEvent(AgentEvent ev);
     void Snapshot(DashboardSnapshot snap);
-    ControlAction? PollControl();
+    /// <summary>Returns the next queued control command, or null. Widened from a bare
+    /// <see cref="ControlAction"/> (F5 prep) so every ingress — TUI queue, control.json file, and
+    /// the HTTP control plane — carries the same payload (stageId/force/etc.) into one dispatcher.</summary>
+    ControlCommand? PollControl();
     /// <summary>Live per-gate status pushed by the gate runner (no-op for plain sinks).</summary>
     void GateProgress(IReadOnlyList<GateProgress> gates) { }
     /// <summary>Transient control-action feedback — rendered as a toast in the dashboard.</summary>

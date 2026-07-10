@@ -25,7 +25,7 @@ public sealed class PlainSink : IProgressSink
                           (snap.SessionElapsed > TimeSpan.Zero ? $" · session {snap.SessionElapsed:hh\\:mm\\:ss}, last output {snap.LastActivityAgoSec:0}s ago" : ""));
     }
 
-    public ControlAction? PollControl()
+    public ControlCommand? PollControl()
     {
         if (!_interactive) return null;
         try
@@ -35,24 +35,24 @@ public sealed class PlainSink : IProgressSink
                 var key = Console.ReadKey(intercept: true).Key;
                 switch (key)
                 {
-                    case ConsoleKey.P: _pendingConfirm = null; return ControlAction.PauseAfterSession;
-                    case ConsoleKey.R: _pendingConfirm = null; return ControlAction.ResumeRun;
+                    case ConsoleKey.P: _pendingConfirm = null; return ControlCommand.Of(ControlAction.PauseAfterSession);
+                    case ConsoleKey.R: _pendingConfirm = null; return ControlCommand.Of(ControlAction.ResumeRun);
                     case ConsoleKey.A:
                         { var act = ConfirmGate.ProcessDestructive(ControlAction.AbortNow, ref _pendingConfirm);
-                          if (act != null) return act;
+                          if (act != null) return ControlCommand.Of(act.Value);
                           Console.WriteLine("[CONFIRM] Press A again to confirm ABORT (any other key cancels)");
                           break; }
                     case ConsoleKey.S:
                         { var act = ConfirmGate.ProcessDestructive(ControlAction.SkipStage, ref _pendingConfirm);
-                          if (act != null) return act;
+                          if (act != null) return ControlCommand.Of(act.Value);
                           Console.WriteLine("[CONFIRM] Press S again to confirm SKIP (any other key cancels)");
                           break; }
                     case ConsoleKey.K:
                         { var act = ConfirmGate.ProcessDestructive(ControlAction.KillSession, ref _pendingConfirm);
-                          if (act != null) return act;
+                          if (act != null) return ControlCommand.Of(act.Value);
                           Console.WriteLine("[CONFIRM] Press K again to confirm KILL (any other key cancels)");
                           break; }
-                    case ConsoleKey.Q: _pendingConfirm = null; return ControlAction.StopAfterSession;
+                    case ConsoleKey.Q: _pendingConfirm = null; return ControlCommand.Of(ControlAction.StopAfterSession);
                     default: _pendingConfirm = null; break;
                 }
             }

@@ -9,6 +9,7 @@ namespace Conductor.Tests;
 /// These are integration-level tests that prove the process supervision primitives work as
 /// intended before they feed the F3 stall detector.
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed class ProcessSupervisorHarnessTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), $"conductor-f24-{Guid.NewGuid():N}");

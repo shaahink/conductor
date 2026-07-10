@@ -16,6 +16,7 @@ namespace Conductor.Tests;
 /// The fake agent is a batch file that writes opencode-format JSON to stdout and
 /// creates a deliverable file. Git commits are verified via direct inspection after the run.
 /// </summary>
+[Trait("Category", "Integration")]
 public sealed class HarnessTests : IDisposable
 {
     private readonly string _repo;

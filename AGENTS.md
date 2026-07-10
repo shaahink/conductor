@@ -96,14 +96,19 @@ C:\Code\conductor\bin\conductor.exe run         -p .conductor\plans\conductor-de
 
 ## Foreground-blocking anti-patterns (codebase-specific)
 
-### Do NOT run full test suite as foreground — it takes 5+ min
-- `dotnet test Conductor.slnx` includes integration tests (ProcessSupervisor, MutatingLane,
-  HarnessTests, CrossPlatformShell) that spawn real processes — 300s+ total.
-- **Instead:** filter tests for the area you changed:
-  ```
-  dotnet test Conductor.slnx --filter "FullyQualifiedName~FailureCircuitBreaker|FullyQualifiedName~StallDetector"
-  ```
-- The flaky test is `EventLogTests.ReadAllSucceedsWhileLiveWriterHoldsTheFile` — it can be ignored.
+### Test filtering — use Category traits, not substring guessing
+- Every test that spawns a real process/git repo (ProcessSupervisor*, MutatingLane* in
+  `B12_3Tests.cs`/`B12_4Tests.cs`, `HarnessTests`, `GateRunnerTests`, `B11_1CrossPlatformShellTests`)
+  carries `[Trait("Category", "Integration")]`, at class or method level. The one known-flaky test
+  (`EventLogTests.ReadAllSucceedsWhileLiveWriterHoldsTheFile`, a live-file-handle race) carries
+  `[Trait("Category", "Flaky")]`. Do not hand-maintain a substring filter list again — a prior
+  version of this doc did (`FullyQualifiedName~FailureCircuitBreaker|...`) and it silently missed
+  real integration tests whose names didn't match the listed substrings.
+- **Fast dev loop** (measured ~8s for 573 tests): `dotnet test Conductor.slnx --filter "Category!=Integration&Category!=Flaky"`
+- **Full suite** (measured ~21s for 626 tests as of F5 prep — much faster than the "5+ min" this
+  doc used to claim; re-measure if it regresses): `dotnet test Conductor.slnx`
+- New tests that spawn a real process, real git repo, or sleep >500ms for a real OS event: add the
+  `Integration` trait when you write them, not after the fact.
 - Kill orphan dotnet processes from failed runs: `Get-Process dotnet -ea 0 | Stop-Process -Force`
 
 ### ProcessRunner.Run() is synchronous — blocks the async orchestrator

@@ -136,6 +136,7 @@ public sealed class B12_4Tests
     // ---------------------------------------------------------------- fix-lane end-to-end
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task FixLane_FromFollowup_MergeGateAcceptsAndUpdatesStatus()
     {
         var (repo, cleanup) = CreateTestRepo();
@@ -216,6 +217,7 @@ public sealed class B12_4Tests
     }
 
     [Fact]
+    [Trait("Category", "Integration")]
     public async Task FixLane_BadDiff_MergeGateRejects()
     {
         var (repo, cleanup) = CreateTestRepo();

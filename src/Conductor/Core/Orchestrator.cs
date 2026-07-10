@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Conductor.Core.Commands;
 using Conductor.Core.Events;
 using Conductor.Core.Integrations;
 using Conductor.Core.Planning;
@@ -20,7 +21,7 @@ public sealed record RunOptions(bool DryRun, bool Once, int MaxSessions);
 /// Every transition is persisted, so killing conductor at any point is recoverable.
 /// </summary>
 #pragma warning disable MA0045 // Orchestrator helper methods (Save/Log/AcquireLock/etc.) use sync file I/O by design — fast local writes, not hot-path
-public sealed class Orchestrator(PlanConfig plan, RunState state, string statePath, IProgressSink sink, IEventSink events, RunOptions opts, ILogger<Orchestrator> logger, ITelegramService telegram, WebhookNotifier webhooks, IPlanner? planner = null, RunDb? runDb = null, ProcessSupervisor? processSupervisor = null)
+public sealed class Orchestrator(PlanConfig plan, RunState state, string statePath, IProgressSink sink, IEventSink events, RunOptions opts, ILogger<Orchestrator> logger, ITelegramService telegram, WebhookNotifier webhooks, IPlanner? planner = null, RunDb? runDb = null, ProcessSupervisor? processSupervisor = null, ControlDispatcher? dispatcher = null)
 {
     private readonly IPlanner _planner = planner ?? new CheckpointPlanner();
     private readonly PromptBuilder _prompts = BuildPromptBuilder(plan);
@@ -29,9 +30,14 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     // usage-limit phrasing lives here) so the Orchestrator no longer switches on `output` (B2.4, D-11).
     private readonly IAgentProvider _agentProvider = AgentProviderFactory.Create(plan.Agent);
     private readonly LessonsManager _lessons = new(plan.StateDir);
+    // Control-verb execution (what pause/skip/rollback/goto/etc. DO) lives in ControlDispatcher —
+    // Orchestrator only owns when a command is polled. See Core/Commands/ControlDispatcher.cs.
+    // Lazy (not a field initializer): binding Log/Save/etc. as delegates needs `this`, which a
+    // primary-constructor field initializer can't reference (CS0236).
+    private ControlDispatcher? _dispatcherInstance;
+    private ControlDispatcher Dispatcher => _dispatcherInstance ??=
+        dispatcher ?? new ControlDispatcher(plan, state, sink, events, Log, Save, DeleteControlFile, SkipStage, ApproveAwaitingOwnerAsync);
     private IReadOnlyList<GateResult>? _lastGates;
-    private bool _pendingSkip;
-    private bool _pausePending;
     private readonly string _lockPath = Path.Combine(plan.StateDir, "conductor.lock");
     private readonly string _controlPath = Path.Combine(plan.StateDir, "control.json");
     private DateTime? _lastControlWrite;
@@ -53,8 +59,6 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     // come from RunState; the gate marker is set while a battery runs.
     private string? _curGate;
     private string? _outcome;
-    private string? _gotoStageId;
-    private bool _rollbackForce;
     private bool _sessionApproved;
     private decimal _runCostUsd;
     private long _runTokens;
@@ -352,14 +356,12 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
                 if (CheckBudgetCap()) continue; // parked at AwaitingOwner
 
-                if (_pendingSkip)
+                if (Dispatcher.ConsumePendingSkip())
                 {
-                    _pendingSkip = false;
                     SkipStage(stage, "skipped by user control");
                 }
-                if (_pausePending)
+                if (Dispatcher.ConsumePausePending())
                 {
-                    _pausePending = false;
                     if (state.Status is not (RunStatus.NeedsHuman or RunStatus.Aborted)) state.Status = RunStatus.Paused;
                     Log("paused after session as requested — press R or run `conductor resume` to continue");
                     SaveAndReport();
@@ -1757,128 +1759,12 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
     private async Task<ControlAction?> HandleControlAsync(bool inSession = false, CancellationToken ct = default)
     {
-        var action = sink.PollControl() ?? await ReadControlFileAsync(ct).ConfigureAwait(false);
-        if (action == null) return null;
-        Log($"control: {action}{(inSession ? " (during session)" : "")}");
-        switch (action)
-        {
-            case ControlAction.PauseAfterSession:
-                if (inSession) _pausePending = true;
-                else { state.Status = RunStatus.Paused; Save(); }
-                sink.Toast(new ToastMessage($"pause-after-session {(inSession ? "queued" : "applied")}", LogSeverity.Success));
-                DeleteControlFile();
-                break;
-            case ControlAction.StopAfterSession:
-                state.StopAfterSession = true;
-                sink.Toast(new ToastMessage("stop-after-session: will stop when current session ends", LogSeverity.Success));
-                DeleteControlFile();
-                break;
-            case ControlAction.ResumeRun:
-                if (state.Status is RunStatus.Paused or RunStatus.NeedsHuman or RunStatus.AwaitingOwner)
-                {
-                    if (state.Status == RunStatus.AwaitingOwner)
-                    {
-                        await ApproveAwaitingOwnerAsync(ct).ConfigureAwait(false);
-                        DeleteControlFile();
-                        break;
-                    }
-                    state.Status = RunStatus.Idle;
-                    state.AttentionReason = null;
-                    Save();
-                    Log("resumed by user");
-                    sink.Toast(new ToastMessage("run resumed", LogSeverity.Success));
-                    DeleteControlFile();
-                }
-                break;
-            case ControlAction.SkipStage:
-                if (inSession) _pendingSkip = true;
-                else if (state.CurrentStage != null)
-                {
-                    var s = plan.Stages.FirstOrDefault(x => x.Id == state.CurrentStage);
-                    if (s != null) { SkipStage(s, "skipped by user control"); sink.Toast(new ToastMessage($"stage {state.CurrentStage} skipped", LogSeverity.Success)); }
-                }
-                DeleteControlFile();
-                break;
-            case ControlAction.AbortNow when !inSession:
-                state.Status = RunStatus.Aborted;
-                Save();
-                sink.Toast(new ToastMessage("run aborted by user", LogSeverity.Warn));
-                DeleteControlFile();
-                break;
-            case ControlAction.RetryStage when !inSession:
-                state.PendingFix = null;
-                state.PendingResume = null;
-                state.AttemptsThisStage = 0;
-                state.Status = RunStatus.Idle;
-                Save();
-                Log($"retry: stage {state.CurrentStage} — attempt counter reset, re-queuing");
-                sink.Toast(new ToastMessage($"retry: stage {state.CurrentStage} re-queued", LogSeverity.Success));
-                DeleteControlFile();
-                break;
-            case ControlAction.Rollback when !inSession:
-                var force = _rollbackForce; _rollbackForce = false;
-                if (state.CurrentStageStartHead is not { Length: > 0 } sha)
-                {
-                    Log("rollback refused: no checkpoint commit recorded for current stage");
-                    sink.Toast(new ToastMessage("rollback refused: no commit for current stage", LogSeverity.Error));
-                    break;
-                }
-                if (!force && Git.IsDirty(plan.Repo))
-                {
-                    Log($"rollback refused: working tree is dirty — {Git.DirtySummary(plan.Repo)}. Re-run with --force to discard and reset.");
-                    sink.Toast(new ToastMessage("rollback refused: dirty working tree", LogSeverity.Error));
-                    break;
-                }
-                var fromSha = Git.Head(plan.Repo);
-                Log($"rollback: resetting to {Short(sha)} (stage {state.CurrentStage} start){(force && Git.IsDirty(plan.Repo) ? " — discarding dirty working tree (--force)" : "")}");
-                Git.Exec(plan.Repo, "reset", "--hard", sha);
-                events.Emit(new RollbackExecuted { StageId = state.CurrentStage ?? "?", FromSha = fromSha, ToSha = sha, Forced = force });
-                state.Status = RunStatus.Idle;
-                Save();
-                sink.Toast(new ToastMessage($"rollback: reset to {Short(sha)}", LogSeverity.Success));
-                DeleteControlFile();
-                break;
-            case ControlAction.PauseAfterStage when !inSession:
-                state.PauseAfterStage = true;
-                state.Status = RunStatus.Idle;
-                Save();
-                Log($"pause-after-stage: will park when {state.CurrentStage} completes");
-                sink.Toast(new ToastMessage($"pause-after-stage: will park after {state.CurrentStage}", LogSeverity.Success));
-                DeleteControlFile();
-                break;
-            case ControlAction.Goto when !inSession:
-                if (_gotoStageId == null) { Log("goto: no target stage — use `conductor goto <stage>`"); sink.Toast(new ToastMessage("goto: no target stage", LogSeverity.Error)); break; }
-                {
-                    var tg = _gotoStageId; _gotoStageId = null;
-                    var target = plan.Stages.FirstOrDefault(s => s.Id == tg);
-                    if (target == null) { Log($"goto refused: stage '{tg}' not found in plan"); sink.Toast(new ToastMessage($"goto refused: stage '{tg}' not found", LogSeverity.Error)); break; }
-                    if (state.SkippedStages.Contains(tg)) { Log($"goto refused: stage '{tg}' is skipped"); sink.Toast(new ToastMessage($"goto refused: stage '{tg}' is skipped", LogSeverity.Error)); break; }
-                    // A goto to an already-confirmed stage must actually take effect: un-confirm it (and
-                    // drop any owner approval) so SelectStage re-runs it instead of silently skipping.
-                    state.ConfirmedStages.Remove(tg);
-                    state.OwnerApprovedStages.Remove(tg);
-                    state.AwaitingOwnerReason = null;
-                    state.CurrentStage = tg;
-                    state.CurrentStageStartHead = Git.Head(plan.Repo);
-                    state.AttemptsThisStage = 0;
-                    state.PendingFix = null;
-                    state.PendingResume = null;
-                    state.PendingPhaseGate = null;
-                    state.PendingAudit = null;
-                    state.Status = RunStatus.Idle;
-                    Save();
-                    Log($"goto: jumped to stage {tg} {target.Title}");
-                    sink.Toast(new ToastMessage($"goto: jumped to {tg} {target.Title}", LogSeverity.Success));
-                    DeleteControlFile();
-                }
-                break;
-        }
-        if (inSession && action is ControlAction.RetryStage or ControlAction.Rollback or ControlAction.PauseAfterStage or ControlAction.Goto or ControlAction.AbortNow)
-            Log($"control: {action} received mid-session — re-run after session ends for it to take effect");
-        return action;
+        var cmd = sink.PollControl() ?? await ReadControlFileAsync(ct).ConfigureAwait(false);
+        if (cmd is not { } c) return null;
+        return await Dispatcher.DispatchAsync(c, inSession, ct).ConfigureAwait(false);
     }
 
-    private async Task<ControlAction?> ReadControlFileAsync(CancellationToken ct)
+    private async Task<ControlCommand?> ReadControlFileAsync(CancellationToken ct)
     {
         try
         {
@@ -1888,14 +1774,10 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             _lastControlWrite = writeTime;
             var text = await File.ReadAllTextAsync(_controlPath, ct).ConfigureAwait(false);
             var parsed = ControlFile.Parse(text);
-            var action = parsed.Action;
-            if (action != null && parsed.Confirmed && parsed.IntentId != null)
+            if (parsed.Action == null) return null;
+            if (parsed.Confirmed && parsed.IntentId != null)
                 Log($"control confirmed [intent={parsed.IntentId}]");
-            if (action == ControlAction.Goto && parsed.StageId != null)
-                _gotoStageId = parsed.StageId;
-            if (action == ControlAction.Rollback && parsed.Force)
-                _rollbackForce = true;
-            return action;
+            return parsed;
         }
         // A malformed/racing control.json is operator input, not an engine fault — ignore this poll
         // and let the next one pick up a well-formed file rather than crash the loop.

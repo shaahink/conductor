@@ -3,6 +3,7 @@ using Conductor.Models;
 
 namespace Conductor.Tests;
 
+[Trait("Category", "Integration")]
 public class B11_1CrossPlatformShellTests
 {
     // --- ProcessRunner.RunShell dispatch ---

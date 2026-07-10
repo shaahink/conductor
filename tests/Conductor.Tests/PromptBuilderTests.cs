@@ -71,7 +71,7 @@ public class PromptBuilderTests
     public void TemplateFileOverridesBuiltIn()
     {
         var dir = Path.Combine(Path.GetTempPath(), $"conductor-tpl-{Guid.NewGuid():N}");
-        Directory.CreateDirectory(Path.Combine(dir, "templates"));
+        Directory.CreateDirectory(dir);
         var planPath = Path.Combine(dir, "plan.json");
         try
         {

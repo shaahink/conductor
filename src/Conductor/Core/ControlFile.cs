@@ -5,7 +5,12 @@ namespace Conductor.Core;
 /// <summary>Parsed form of a <c>control.json</c> drop-file (written by the CLI verbs, consumed by the
 /// running orchestrator). Kept pure/side-effect-free so the flag handling — including nullable
 /// <c>confirmed</c>/<c>force</c> serialised as JSON null by non-destructive commands — is unit-tested.</summary>
-public readonly record struct ControlCommand(ControlAction? Action, bool Confirmed, string? IntentId, string? StageId, bool Force, string? Value);
+public readonly record struct ControlCommand(ControlAction? Action, bool Confirmed, string? IntentId, string? StageId, bool Force, string? Value)
+{
+    /// <summary>Wraps a bare verb (no payload) — what the TUI's keypress queue and headless
+    /// <see cref="PlainSink"/> both send; the file/HTTP ingresses populate the other fields directly.</summary>
+    public static ControlCommand Of(ControlAction action) => new(action, false, null, null, false, null);
+}
 
 public static class ControlFile
 {

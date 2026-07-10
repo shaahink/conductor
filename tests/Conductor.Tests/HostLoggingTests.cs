@@ -62,6 +62,7 @@ public sealed class HostLoggingTests : IDisposable
     }
 
     [Fact]
+    [Trait("Category", "Flaky")] // Serilog file-sink flush-on-dispose isn't synchronous; races under parallel test load
     public async Task DryRunWritesStructuredLogWithRunIdCorrelation()
     {
         var plan = ValidPlan();
@@ -86,6 +87,7 @@ public sealed class HostLoggingTests : IDisposable
     }
 
     [Fact]
+    [Trait("Category", "Flaky")] // Serilog file-sink flush-on-dispose isn't synchronous; races under parallel test load
     public async Task DryRunWritesJsonLogWithCorrelationProperties()
     {
         var plan = ValidPlan();

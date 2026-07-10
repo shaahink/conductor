@@ -162,6 +162,7 @@ public class EventLogTests
     }
 
     [Fact]
+    [Trait("Category", "Flaky")]
     public void ReadAllSucceedsWhileLiveWriterHoldsTheFile()
     {
         // Crash recovery (Orchestrator.RecoverFromCrash) reads events.jsonl while the process's own

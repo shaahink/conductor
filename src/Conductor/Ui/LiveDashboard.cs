@@ -24,7 +24,7 @@ public sealed class LiveDashboard : IProgressSink
     private readonly List<DashboardState.AgentLine> _agent = new();
     private readonly ReasoningBuffer _thinking = new();
     private readonly List<LogEntry> _log = new();
-    private readonly ConcurrentQueue<ControlAction> _keys = new();
+    private readonly ConcurrentQueue<ControlCommand> _keys = new();
     private readonly PlanConfig? _plan;
     private DashboardSnapshot _snap = new();
     private IReadOnlyList<GateProgress> _gates = Array.Empty<GateProgress>();
@@ -116,7 +116,7 @@ public sealed class LiveDashboard : IProgressSink
         lock (_gate) { _toast = toast; _toastTicks = ToastDurationTicks; }
     }
 
-    public ControlAction? PollControl() => _keys.TryDequeue(out var a) ? a : null;
+    public ControlCommand? PollControl() => _keys.TryDequeue(out var a) ? a : null;
 
     /// <summary>Runs on the main thread until the orchestrator task completes.</summary>
     public void RunUiLoop(Task orchestrator)
@@ -372,24 +372,24 @@ public sealed class LiveDashboard : IProgressSink
                     case ConsoleKey.UpArrow: MoveTreeSelection(-1); break;
                     case ConsoleKey.DownArrow: MoveTreeSelection(+1); break;
                     case ConsoleKey.C: _agentExpanded = !_agentExpanded; break;
-                    case ConsoleKey.P: _pendingConfirm = null; _keys.Enqueue(ControlAction.PauseAfterSession); break;
-                    case ConsoleKey.R: _pendingConfirm = null; _keys.Enqueue(ControlAction.ResumeRun); break;
+                    case ConsoleKey.P: _pendingConfirm = null; _keys.Enqueue(ControlCommand.Of(ControlAction.PauseAfterSession)); break;
+                    case ConsoleKey.R: _pendingConfirm = null; _keys.Enqueue(ControlCommand.Of(ControlAction.ResumeRun)); break;
                     case ConsoleKey.A:
                         { var act = ConfirmGate.ProcessDestructive(ControlAction.AbortNow, ref _pendingConfirm);
-                          if (act != null) { _keys.Enqueue(act.Value); Log("ABORT CONFIRMED", LogSeverity.Warn); }
+                          if (act != null) { _keys.Enqueue(ControlCommand.Of(act.Value)); Log("ABORT CONFIRMED", LogSeverity.Warn); }
                           else Log("Press A again to confirm ABORT (any other key cancels)", LogSeverity.Waiting); }
                         break;
                     case ConsoleKey.S:
                         { var act = ConfirmGate.ProcessDestructive(ControlAction.SkipStage, ref _pendingConfirm);
-                          if (act != null) { _keys.Enqueue(act.Value); Log("SKIP CONFIRMED", LogSeverity.Warn); }
+                          if (act != null) { _keys.Enqueue(ControlCommand.Of(act.Value)); Log("SKIP CONFIRMED", LogSeverity.Warn); }
                           else Log("Press S again to confirm SKIP (any other key cancels)", LogSeverity.Waiting); }
                         break;
                     case ConsoleKey.K:
                         { var act = ConfirmGate.ProcessDestructive(ControlAction.KillSession, ref _pendingConfirm);
-                          if (act != null) { _keys.Enqueue(act.Value); Log("KILL CONFIRMED", LogSeverity.Warn); }
+                          if (act != null) { _keys.Enqueue(ControlCommand.Of(act.Value)); Log("KILL CONFIRMED", LogSeverity.Warn); }
                           else Log("Press K again to confirm KILL (any other key cancels)", LogSeverity.Waiting); }
                         break;
-                    case ConsoleKey.Q: _pendingConfirm = null; _keys.Enqueue(ControlAction.StopAfterSession); break;
+                    case ConsoleKey.Q: _pendingConfirm = null; _keys.Enqueue(ControlCommand.Of(ControlAction.StopAfterSession)); break;
                     case ConsoleKey.T or ConsoleKey.O or ConsoleKey.D or ConsoleKey.V or ConsoleKey.X or ConsoleKey.L or ConsoleKey.F1 or ConsoleKey.B or ConsoleKey.I or ConsoleKey.G or ConsoleKey.E:
                         break; // handled above — non-destructive keys don't cancel pending confirm
                     default: _pendingConfirm = null; break; // any unmapped key cancels
