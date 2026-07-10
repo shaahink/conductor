@@ -62,7 +62,7 @@ public sealed class HostLoggingTests : IDisposable
     }
 
     [Fact]
-    public void DryRunWritesStructuredLogWithRunIdCorrelation()
+    public async Task DryRunWritesStructuredLogWithRunIdCorrelation()
     {
         var plan = ValidPlan();
         WriteTracker();
@@ -72,13 +72,13 @@ public sealed class HostLoggingTests : IDisposable
         using (var host = ConductorHost.Build(plan, state, StatePath, new PlainSink(), NullEventSink.Instance,
                    new RunOptions(DryRun: true, Once: false, MaxSessions: 0), consoleSink: false))
         {
-            var code = host.Services.GetRequiredService<Orchestrator>().Run(CancellationToken.None);
+            var code = await host.Services.GetRequiredService<Orchestrator>().RunAsync(CancellationToken.None);
             Assert.Equal(0, code);
         } // dispose flushes + closes the Serilog file sink
 
         var logDir = Path.Combine(plan.StateDir, "logs");
         var logFile = Directory.EnumerateFiles(logDir, "conductor-*.log").Single();
-        var log = File.ReadAllText(logFile);
+        var log = await File.ReadAllTextAsync(logFile);
 
         Assert.Contains($"run={runId}", log, StringComparison.Ordinal);      // correlation scope reached the sink
         Assert.Contains("conductor start", log, StringComparison.Ordinal);   // the run actually narrated through ILogger
@@ -86,7 +86,7 @@ public sealed class HostLoggingTests : IDisposable
     }
 
     [Fact]
-    public void DryRunWritesJsonLogWithCorrelationProperties()
+    public async Task DryRunWritesJsonLogWithCorrelationProperties()
     {
         var plan = ValidPlan();
         WriteTracker();
@@ -96,13 +96,13 @@ public sealed class HostLoggingTests : IDisposable
         using (var host = ConductorHost.Build(plan, state, StatePath, new PlainSink(), NullEventSink.Instance,
                    new RunOptions(DryRun: true, Once: false, MaxSessions: 0), consoleSink: false))
         {
-            var code = host.Services.GetRequiredService<Orchestrator>().Run(CancellationToken.None);
+            var code = await host.Services.GetRequiredService<Orchestrator>().RunAsync(CancellationToken.None);
             Assert.Equal(0, code);
         }
 
         var logDir = Path.Combine(plan.StateDir, "logs");
         var jsonFile = Directory.EnumerateFiles(logDir, "conductor-*.json").Single();
-        var lines = File.ReadAllLines(jsonFile);
+        var lines = await File.ReadAllLinesAsync(jsonFile);
         Assert.NotEmpty(lines);
 
         // Every line must be valid JSON with @t + @m fields

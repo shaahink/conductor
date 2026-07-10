@@ -4,7 +4,6 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Conductor.Core.Events;
 using Conductor.Core.Integrations;
-#pragma warning disable MA0045 // Orchestrator.Run() is sync by design — file I/O at sync boundaries is deliberate
 using Conductor.Core.Planning;
 using Conductor.Core.Providers;
 using Conductor.Models;
@@ -20,6 +19,7 @@ public sealed record RunOptions(bool DryRun, bool Once, int MaxSessions);
 ///   independently verify (gates + git + tracker diff) → record, report, decide next.
 /// Every transition is persisted, so killing conductor at any point is recoverable.
 /// </summary>
+#pragma warning disable MA0045 // Orchestrator helper methods (Save/Log/AcquireLock/etc.) use sync file I/O by design — fast local writes, not hot-path
 public sealed class Orchestrator(PlanConfig plan, RunState state, string statePath, IProgressSink sink, IEventSink events, RunOptions opts, ILogger<Orchestrator> logger, ITelegramService telegram, WebhookNotifier webhooks, IPlanner? planner = null)
 {
     private readonly IPlanner _planner = planner ?? new CheckpointPlanner();
@@ -61,7 +61,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
     // ---------------------------------------------------------------- main loop
 
-    public int Run(CancellationToken ct)
+    public async Task<int> RunAsync(CancellationToken ct)
     {
         Directory.CreateDirectory(Path.Combine(plan.StateDir, "logs"));
         EnsureStateDirGitignore();
@@ -88,18 +88,18 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 Log($"restored budget: ${_runCostUsd:0.00} agent / ${_runOverheadUsd:0.00} overhead / {_runTokens / 1000.0:0.#}k tokens (from prior process)");
             while (!ct.IsCancellationRequested)
             {
-                HandleControl();
+                await HandleControlAsync(ct: ct).ConfigureAwait(false);
                 if (state.Status == RunStatus.Aborted) { SaveAndReport(); return 2; }
                 if (!opts.DryRun && state.Status is RunStatus.Paused or RunStatus.NeedsHuman or RunStatus.AwaitingOwner)
                 {
                     PushIdleSnapshot();
-                    Thread.Sleep(800);
+                    await Task.Delay(800, CancellationToken.None).ConfigureAwait(false);
                     continue;
                 }
 
                 if (!opts.DryRun && _backoffUntil is { } until)
                 {
-                    if (DateTime.UtcNow < until) { PushIdleSnapshot(); Thread.Sleep(1000); continue; }
+                    if (DateTime.UtcNow < until) { PushIdleSnapshot(); await Task.Delay(1000, CancellationToken.None).ConfigureAwait(false); continue; }
                     _backoffUntil = null;
                     state.Status = RunStatus.Idle;
                     Log("backoff over — resuming");
@@ -110,11 +110,10 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     if (DateTime.UtcNow < sbUntil)
                     {
                         PushIdleSnapshot();
-                        Thread.Sleep(1000);
+                        await Task.Delay(1000, CancellationToken.None).ConfigureAwait(false);
                         continue;
                     }
                     _stallBackoffUntil = null;
-                    state.Status = RunStatus.Idle;
                     Log("stall backoff over — resuming");
                 }
 
@@ -123,11 +122,11 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     if (DateTime.UtcNow < dpUntil)
                     {
                         PushIdleSnapshot();
-                        Thread.Sleep(1000);
+                        await Task.Delay(1000, CancellationToken.None).ConfigureAwait(false);
                         continue;
                     }
                     _dnsParkedUntil = null;
-                    if (CheckDnsPreflight())
+                    if (await CheckDnsPreflightAsync().ConfigureAwait(false))
                     {
                         Log("DNS recovered — resuming session");
                     }
@@ -136,7 +135,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                         Log("DNS still unhealthy — parking again");
                         _dnsParkedUntil = DateTime.UtcNow.AddSeconds(plan.Limits.DnsHealthCheck?.IntervalSeconds ?? 60);
                         PushIdleSnapshot();
-                        Thread.Sleep(1000);
+                        await Task.Delay(1000, CancellationToken.None).ConfigureAwait(false);
                         continue;
                     }
                 }
@@ -156,7 +155,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                         sink.Log($"--- DRY RUN: would run the FULL-battery phase gate for stage {state.PendingPhaseGate.StageId} (nothing executed) ---");
                         return 0;
                     }
-                    RunPhaseGate(state.PendingPhaseGate, ct);
+                    await RunPhaseGateAsync(state.PendingPhaseGate, ct).ConfigureAwait(false);
                     if (opts.Once && state.PendingAudit == null && state.PendingFix == null) return 0;
                     continue;
                 }
@@ -261,7 +260,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 _sessionApproved = false;
 
                 // O2: DNS preflight — verify network health before spawning an agent session.
-                if (plan.Limits.DnsHealthCheck is { Enabled: true } && !CheckDnsPreflight())
+                if (plan.Limits.DnsHealthCheck is { Enabled: true } && !await CheckDnsPreflightAsync().ConfigureAwait(false))
                 {
                     _dnsParkedUntil = DateTime.UtcNow.AddSeconds(plan.Limits.DnsHealthCheck.IntervalSeconds);
                     Log("DNS preflight failed — parking until DNS resolves");
@@ -299,12 +298,12 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     }
                 }
 
-                RunSession(stage, track, ct);
+                await RunSessionAsync(stage, track, ct).ConfigureAwait(false);
                 sessionsThisRun++;
                 var rec = state.History[^1];
 
                 // B12.1: collect any lane artifacts that weren't captured during the session
-                CollectLaneArtifacts(stage.Id);
+                await CollectLaneArtifactsAsync(stage.Id).ConfigureAwait(false);
 
                 _runCostUsd += rec.CostUsd ?? 0;
                 _runTokens += (rec.TokensInput ?? 0) + (rec.TokensOutput ?? 0) + (rec.TokensReasoning ?? 0);
@@ -358,7 +357,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
     // ---------------------------------------------------------------- one session
 
-    private void RunSession(StageConfig stage, TrackerSnapshot preTrack, CancellationToken ct)
+    private async Task RunSessionAsync(StageConfig stage, TrackerSnapshot preTrack, CancellationToken ct)
     {
         // consume pending fix/resume/audit — they describe THIS session
         var pendingResume = state.PendingResume; state.PendingResume = null;
@@ -381,7 +380,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             Directory.CreateDirectory(reviewDir);
             var skeleton = $"# Self-review: {stage.Id} — {stage.Title}\n\n" +
                            $"_Generated {DateTime.UtcNow:u} by Conductor (B8.3) — pending agent review_\n";
-            File.WriteAllText(reviewPath, skeleton);
+            await File.WriteAllTextAsync(reviewPath, skeleton, ct).ConfigureAwait(false);
             Log($"review stage {stage.Id}: scaffolded review artifact at {reviewPath}");
         }
 
@@ -450,7 +449,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             ResumeCount = pendingResume?.ResumeCount ?? 0,
         };
         var logsDir = Path.Combine(plan.StateDir, "logs");
-        File.WriteAllText(Path.Combine(logsDir, $"session-{rec.Number:000}.prompt.md"), prompt);
+        await File.WriteAllTextAsync(Path.Combine(logsDir, $"session-{rec.Number:000}.prompt.md"), prompt, ct).ConfigureAwait(false);
         // Queued human instructions are now baked into this prompt — mark them consumed so the next
         // session doesn't re-inject them (files are renamed .done, not deleted — chain stays intact).
         InstructionQueue.ConsumeAll(plan);
@@ -503,11 +502,11 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 // B12.1: check for completed analysis lanes running concurrently
                 PollLaneCompletion();
                 // P2: check if the parallel audit lane has completed; HIGH findings are noted
-                CheckParallelAuditCompletion();
+                await CheckParallelAuditCompletionAsync().ConfigureAwait(false);
                 // B9.4: soft-break — when live tokens cross the soft threshold, write a cooperative
                 // nudge for the agent to finish the current sub-task and hand off cleanly.
                 CheckSoftBreak(agent, preTrack);
-                var ctl = HandleControl(inSession: true);
+                var ctl = await HandleControlAsync(inSession: true, ct: ct).ConfigureAwait(false);
                 if (ctl == ControlAction.KillSession) { killedByUser = true; Log("kill requested"); agent.Kill(); }
                 if (ctl == ControlAction.AbortNow) { killedByUser = true; state.Status = RunStatus.Aborted; Log("abort requested"); agent.Kill(); }
                 if (ct.IsCancellationRequested) { agent.Kill(); }
@@ -530,7 +529,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     lastHeartbeat = DateTime.UtcNow;
                     RefreshReport(rec, stage, agent, preTrack);
                 }
-                Thread.Sleep(400);
+                await Task.Delay(400, CancellationToken.None).ConfigureAwait(false);
             }
             var exit = agent.WaitForExitCode();
             while (agent.TryDequeue(out var ev)) { sink.AgentEvent(ev); TrackActivity(ev); }
@@ -776,7 +775,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     /// <summary>Full-battery verification of a stage whose checkpoints are all DONE (perPhase policy).
     /// Under the reworked flow the audit runs first, so this is the single confirming battery. Skips
     /// the run entirely when the tree is unchanged since the last green battery (HEAD-sha cache).</summary>
-    private void RunPhaseGate(PendingPhaseGate pg, CancellationToken ct)
+    private async Task RunPhaseGateAsync(PendingPhaseGate pg, CancellationToken ct)
     {
         var head = Git.Head(plan.Repo);
         var sig = GateRunner.BatterySignature(plan, head, pg.StageId);
@@ -825,7 +824,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 state.PendingPhaseGate = null;
                 state.AuditedStages.Add(pg.StageId); // mark audited so we don't re-queue
                 Log($"phase {pg.StageId} full battery GREEN — confirming now, audit will run in parallel with next deliver");
-                ConfirmStage(pg.StageId);
+                await ConfirmStageAsync(pg.StageId).ConfigureAwait(false);
                 return; // ConfirmStage saved
             }
 
@@ -839,7 +838,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             }
             else
             {
-                ConfirmStage(pg.StageId);
+                await ConfirmStageAsync(pg.StageId).ConfigureAwait(false);
             }
         }
         else
@@ -922,7 +921,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         }
     }
 
-    private void ConfirmStage(string id)
+    private async Task ConfirmStageAsync(string id)
     {
         var stage = plan.Stages.FirstOrDefault(s => s.Id == id);
         if (stage is { OwnerGate: true } && !state.OwnerApprovedStages.Contains(id))
@@ -948,7 +947,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             RunStageHook(id, "post-hook", postHook, CancellationToken.None);
         // B12.4: fix-lanes run after the stage is confirmed — they consume .conductor/followups.md
         // entries owned by this stage and run as Tier B mutating lanes behind merge gates.
-        RunFollowupFixLanes(id);
+        await RunFollowupFixLanesAsync(id).ConfigureAwait(false);
         if (state.PauseAfterStage)
         {
             state.PauseAfterStage = false;
@@ -1109,12 +1108,12 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
     /// <summary>P2: polled during the deliver session to check if the parallel audit has completed.
     /// When it finishes, the findings are stored in state for prompt injection and post-session decision.</summary>
-    private void CheckParallelAuditCompletion()
+    private async Task CheckParallelAuditCompletionAsync()
     {
         if (_parallelAuditTask is not { IsCompleted: true }) return;
         try
         {
-            var outcome = _parallelAuditTask.Result;
+            var outcome = await _parallelAuditTask.ConfigureAwait(false);
             _parallelAuditTask = null;
             state.ParallelAuditOutcome = outcome;
             if (outcome.MaxSeverity == AuditFindingSeverity.High)
@@ -1137,7 +1136,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     /// <summary>Handle an owner approval while parked at <c>AwaitingOwner</c>. What it means depends on
     /// WHY we parked (B3.2/B3.4): an owner-gate confirms the stage; an approval-mode/budget park merely
     /// resumes work — confirming there would advance past unfinished checkpoints.</summary>
-    private void ApproveAwaitingOwner()
+    private async Task ApproveAwaitingOwnerAsync()
     {
         var stageId = state.CurrentStage
             ?? plan.Stages.FirstOrDefault(s => !state.ConfirmedStages.Contains(s.Id) && !state.SkippedStages.Contains(s.Id))?.Id;
@@ -1172,12 +1171,10 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     state.OwnerApprovedStages.Add(stageId);
                     Log($"owner approved stage {stageId} — continuing");
                 }
-                ConfirmStage(stageId);
+                await ConfirmStageAsync(stageId).ConfigureAwait(false);
                 break;
         }
     }
-
-    // ---------------------------------------------------------------- decisions
 
     /// <summary>B10.3: runs a per-stage lifecycle hook. For pre-hooks a non-zero exit triggers
     /// <see cref="NeedsHuman"/> (blocking); on success the stage id is recorded in
@@ -1451,7 +1448,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
     /// <summary>Resolves the configured DNS hosts to verify network health before spawning.
     /// Returns true if all hosts resolve or the check is disabled.</summary>
-    private bool CheckDnsPreflight()
+    private async Task<bool> CheckDnsPreflightAsync()
     {
         var cfg = plan.Limits.DnsHealthCheck;
         if (cfg is not { Enabled: true } || cfg.Hosts is not { Count: > 0 }) return true;
@@ -1459,7 +1456,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         {
             try
             {
-                Dns.GetHostEntry(host);
+                await Dns.GetHostEntryAsync(host).ConfigureAwait(false);
                 Log($"DNS preflight: {host} OK");
             }
             catch (Exception ex)
@@ -1522,9 +1519,9 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
     // ---------------------------------------------------------------- control & plumbing
 
-    private ControlAction? HandleControl(bool inSession = false)
+    private async Task<ControlAction?> HandleControlAsync(bool inSession = false, CancellationToken ct = default)
     {
-        var action = sink.PollControl() ?? ReadControlFile();
+        var action = sink.PollControl() ?? await ReadControlFileAsync(ct).ConfigureAwait(false);
         if (action == null) return null;
         Log($"control: {action}{(inSession ? " (during session)" : "")}");
         switch (action)
@@ -1545,7 +1542,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 {
                     if (state.Status == RunStatus.AwaitingOwner)
                     {
-                        ApproveAwaitingOwner();
+                        await ApproveAwaitingOwnerAsync().ConfigureAwait(false);
                         DeleteControlFile();
                         break;
                     }
@@ -1645,7 +1642,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         return action;
     }
 
-    private ControlAction? ReadControlFile()
+    private async Task<ControlAction?> ReadControlFileAsync(CancellationToken ct)
     {
         try
         {
@@ -1653,7 +1650,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             var writeTime = File.GetLastWriteTimeUtc(_controlPath);
             if (_lastControlWrite == writeTime) return null; // already processed this version
             _lastControlWrite = writeTime;
-            var text = File.ReadAllText(_controlPath);
+            var text = await File.ReadAllTextAsync(_controlPath, ct).ConfigureAwait(false);
             var parsed = ControlFile.Parse(text);
             var action = parsed.Action;
             if (action != null && parsed.Confirmed && parsed.IntentId != null)
@@ -2303,7 +2300,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     /// <c>.conductor/followups.md</c> and run each as a Tier B mutating fix-lane behind a
     /// merge gate. Closed followups are updated in-place with the resulting commit ref.
     /// </summary>
-    private void RunFollowupFixLanes(string stageId)
+    private async Task RunFollowupFixLanesAsync(string stageId)
     {
         var followupsPath = Path.Combine(plan.StateDir, "followups.md");
         if (!File.Exists(followupsPath)) return;
@@ -2320,15 +2317,11 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             var lane = FollowupEntryToMutatingLane(entry);
             Log($"fix-lane '{entry.Id}' starting — {entry.Item}");
 
-#pragma warning disable MA0045 // sync boundary: orchestrator loop is sync, lane runner uses ConfigureAwait(false)
-            // Run the mutating lane synchronously (the orchestrator loop is sync). The lane
-            // runner uses ConfigureAwait(false) internally so GetAwaiter().GetResult() is safe.
             MutatingLaneResult result;
             try
             {
-                result = Task.Run(() => MutatingLaneRunner.RunAsync(
-                    plan, lane, agent, stageId, events, Log, CancellationToken.None))
-                    .GetAwaiter().GetResult();
+                result = await Task.Run(() => MutatingLaneRunner.RunAsync(
+                    plan, lane, agent, stageId, events, Log, CancellationToken.None), CancellationToken.None).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -2341,7 +2334,6 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 var commitRef = Git.Head(plan.Repo)[..Math.Min(7, Git.Head(plan.Repo).Length)];
                 if (FollowupParser.UpdateStatus(followupsPath, entry.Id, "CLOSED", $"b{entry.Id}"))
                     Log($"fix-lane '{entry.Id}' CLOSED — {entry.Item} ({commitRef})");
-#pragma warning restore MA0045
                 else
                     Log($"fix-lane '{entry.Id}' done but status update failed in followups.md");
             }
@@ -2422,16 +2414,11 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
     /// <summary>B12.2: After the session ends, wait briefly for any remaining lanes, then
     /// collect their artifacts. The pool already emitted lifecycle events; we just log a summary.</summary>
-    private void CollectLaneArtifacts(string stageId)
+    private async Task CollectLaneArtifactsAsync(string stageId)
     {
         if (_lanePool == null || (_lanePool.ActiveCount == 0 && _lanePool.CompletedCount == 0)) return;
 
-#pragma warning disable MA0045 // sync boundary: CollectLaneArtifacts is called from sync stage-confirm flow
-        // Wait for remaining lanes with a short timeout so we don't block the orchestrator.
-        // Use GetAwaiter().GetResult() (same pattern as the pre-pool .Wait() call).
-        var remaining = _lanePool.WaitAllAsync(TimeSpan.FromSeconds(10), CancellationToken.None)
-            .GetAwaiter().GetResult();
-#pragma warning restore MA0045
+        var remaining = await _lanePool.WaitAllAsync(TimeSpan.FromSeconds(10), CancellationToken.None).ConfigureAwait(false);
 
         var successCount = remaining.Count(r => r.IsSuccess);
         var failCount = remaining.Count - successCount;

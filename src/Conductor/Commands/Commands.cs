@@ -76,14 +76,16 @@ public sealed class RunCommand : Command<RunCommand.Settings>
                 // Host = composition + structured-logging root (B2.5). The console sink is on for plain
                 // runs (no TUI to corrupt); options are validated on start inside Build.
                 using var host = ConductorHost.Build(plan, state, statePath, new PlainSink(), events, opts, consoleSink: true);
-                return host.Services.GetRequiredService<Orchestrator>().Run(cts.Token);
+#pragma warning disable MA0045 // sync-over-async boundary: Spectre.Cli Execute must return int
+                return host.Services.GetRequiredService<Orchestrator>().RunAsync(cts.Token).GetAwaiter().GetResult();
+#pragma warning restore MA0045
             }
 
             var dash = new LiveDashboard(plan);
             // Dashboard owns stdout, so the Serilog console sink is disabled here (file sink only).
             using var dashHost = ConductorHost.Build(plan, state, statePath, dash, events, opts, consoleSink: false);
             var orchestrator = dashHost.Services.GetRequiredService<Orchestrator>();
-            var task = Task.Run(() => orchestrator.Run(cts.Token));
+            var task = orchestrator.RunAsync(cts.Token);
             dash.RunUiLoop(task);
 #pragma warning disable MA0045 // sync-over-async boundary: Spectre.Cli Execute must return int
             return task.GetAwaiter().GetResult();
