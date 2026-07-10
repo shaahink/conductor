@@ -1,17 +1,17 @@
 ﻿# Conductor — Foreman run report
 
-_Updated 2026-07-10 16:02 UTC · branch `feat/foreman` · HEAD `559a831`_
+_Updated 2026-07-10 16:03 UTC · branch `feat/foreman` · HEAD `0802af7`_
 
 **Status:** Idle
 **Stage:** F0 — Foundations — kill list, async engine, integration harness · persona: refactor · attempts used 0
 **Checkpoints:** 3/40 done · **Sessions run:** 4 · **Cost:** $0.5602 · **Tokens:** 401,958 in / 119,028 out / 88,403 think
-**Pending:** full-battery phase gate for F0
+**Confirmed phases:** F0
 
 ## Stage progress
 
 | Stage | Title | Progress | State |
 |---|---|---|---|
-| F0 | Foundations — kill list, async engine, integration harness | ██████████ 3/3 | gating… |
+| F0 | Foundations — kill list, async engine, integration harness | ██████████ 3/3 | confirmed ✓ |
 | F1 | run.db task store + tracker-as-view + task/note verbs | ░░░░░░░░░░ 0/4 | todo |
 | F2 | ProcessSupervisor + Job Objects + bg primitives | ░░░░░░░░░░ 0/4 | todo |
 | F3 | Stall v2 + same-failure breaker + pre-flight | ░░░░░░░░░░ 0/4 | todo |
@@ -154,6 +154,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-10 16:40:07  • session #3 F0 Audit started (attempt 1/4) · persona refactor
 07-10 16:55:56  • session #3 F0 → RolledOver  (15m48s)
 07-10 16:55:56  • session #4 F0 Audit started (attempt 1/4) · persona refactor
+07-10 17:02:28  • session #4 F0 → Progress · 2 commit(s)  (6m32s)
+07-10 17:03:19  ▪ gate build pass [phase]  (22.4s)
+07-10 17:03:19  ▪ gate tests pass [phase]  (27.3s)
+07-10 17:03:19  ▸ stage F0 confirmed (audited)
 ```
 
 ## Health
@@ -208,6 +212,10 @@ vs upstream: up to date
 - `.conductor/handovers/B8.md`
 - `.conductor/handovers/B9.md`
 - `.conductor/handovers/F0.md`
+
+## Last gate run
+
+build:OK · tests:OK
 
 ## Last session result
 
