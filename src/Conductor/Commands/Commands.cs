@@ -1540,7 +1540,7 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
 
     internal static string GeneratePowerShell()
     {
-        var verbs = "run status gate log report preview pause resume approve kill skip inject abort retry-stage rollback pause-after-stage goto plan tasks new-plan doctor audit mcp-serve completion";
+        var verbs = "run status gate log report preview pause resume approve kill skip inject abort retry-stage rollback pause-after-stage goto plan tasks task new-plan note doctor audit mcp-serve completion";
         var opts = "-p --plan --yes --force --dry-run --once --max-sessions --no-dashboard -o --output --name --repo -q --query --since --tail";
         var auditOpts = "-p --plan --replay";
         var newPlanOpts = "-o --output --name --repo";
@@ -1583,7 +1583,7 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
                 }
                 elseif ($tokens[1] -in @('run','status','gate','log','report','preview','pause','resume',
                         'approve','kill','skip','inject','abort','retry-stage','rollback','pause-after-stage',
-                        'goto','tasks','doctor')) {
+                        'goto','tasks','task','note','doctor')) {
                     $opts | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
                         [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterName', $_)
                     }
@@ -1611,11 +1611,11 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
                 cur="${COMP_WORDS[COMP_CWORD]}"
 
                 if [[ $COMP_CWORD -eq 1 ]]; then
-                    COMPREPLY=($(compgen -W "run status gate log report preview audit mcp-serve pause resume approve kill skip inject abort retry-stage rollback pause-after-stage goto plan tasks new-plan doctor completion" -- "$cur"))
+                    COMPREPLY=($(compgen -W "run status gate log report preview audit mcp-serve pause resume approve kill skip inject abort retry-stage rollback pause-after-stage goto plan tasks task new-plan note doctor completion" -- "$cur"))
                     return
                 fi
                 case "${COMP_WORDS[1]}" in
-                    run|status|gate|log|report|preview|pause|resume|approve|kill|skip|inject|abort|retry-stage|rollback|pause-after-stage|goto|tasks|doctor|mcp-serve)
+                    run|status|gate|log|report|preview|pause|resume|approve|kill|skip|inject|abort|retry-stage|rollback|pause-after-stage|goto|tasks|task|note|doctor|mcp-serve)
                         COMPREPLY=($(compgen -W "-p --plan --yes --force --dry-run --once --max-sessions --no-dashboard -o --output --name --repo" -- "$cur"))
                         ;;
                     audit)
