@@ -6,10 +6,10 @@ your stage deliverable from the plan JSON.
 **Design doc:** `docs/CONDUCTOR-VNEXT-PLAN.md` — 10 cataloged failures, architecture, locked decisions, addenda D7-D12.
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
-last: s9 — F1 third audit complete. Stage HARDENED and FINISHED. No new bugs found; prior fixes verified.
-stage: F1 — run.db task store + tracker-as-view + task/note verbs + report --query. GENUINELY CORRECT.
-commits: 542422c (audit r2 fixes), 58f3ba4 (audit r1 fixes), 1c8c888 (F1.2-4), 6330c60 (F1.1). Total F0: 9, F1: 4 (2 delivery + 2 audit).
-gate: 0w/0e, 548/548 tests pass. Full static audit clean — no correctness bugs, no race conditions, no resource leaks, no TODOs. 6 deferred items tracked in followups.md (FU-F1-01 through -03, D4-D6).
+last: s10 — F1 fifth audit HARDENED. Fixed ReadTrackerSafe narrow exception filter (missed UnauthorizedAccessException). +2 pre-existing sites (PushIdleSnapshot, SaveAndReport) fixed.
+stage: F1 — run.db task store + tracker-as-view + task/note verbs + report --query. FINISHED — 4 delivery commits + 4 audit commits.
+commits: 60ab247 (audit r4), b93865a (audit r3), 542422c (audit r2), 58f3ba4 (audit r1), 1c8c888 (F1.2-4), 6330c60 (F1.1). Total F0: 9, F1: 8 (2 delivery + 6 audit).
+gate: 0w/0e, 548/548 tests pass. 3 additional defensive catch sites hardened against unexpected exceptions. 9 deferred items (D1-D9) tracked in followups.md. All prior audits confirmed.
 trap: HarnessTests creates temp git repos — ensure git is on PATH. 1 pre-existing flaky Serilog file-lock test (HostLoggingTests) — passes in isolation.
 branch: feat/foreman.
 
