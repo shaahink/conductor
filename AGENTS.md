@@ -39,13 +39,15 @@ C:\Code\conductor\bin\conductor.exe run         -p .conductor\plans\conductor-de
 - Run QA only when last session was `gatesRed`, `stalled`, `noProgress`, or `interrupted`.
 - **Tracker rule:** always update BOTH handoff block AND checkpoint row (DONE + commit + evidence). If row stays TODO, conductor re-launches the same stage.
 
-## Current state (2026-07-10)
+## Current state (2026-07-11)
 - **Baton v2 COMPLETE** — 77 sessions, 67/67 checkpoints DONE, status=completed.
-- **Foreman v3 ACTIVE** — 20/40 checkpoints DONE, F0/F1/F2/F3/F4 confirmed, next: F5 (Control Plane).
+- **Foreman v3 ACTIVE** — 23/40 checkpoints DONE, F0/F1/F2/F3/F4/F5 confirmed, next: F6 (Ink TUI, TypeScript).
 - **Branch:** `feat/foreman` is the active branch; `feat/baton` is the worktree.
 - **Driver:** `C:\Code\conductor\bin\conductor.exe run -p plans\conductor-foreman.plan.json`
 - **Read order:** `CONDUCTOR-VNEXT-PLAN.md` (tracker) → `docs/CONDUCTOR-VNEXT-PLAN.md` (design doc)
-- **Last session:** s28 (manual) — F4 delivered (Verifier role + scoring loop). Commit 4919364. 7 files changed + 2 new. 626/626 tests pass, 0w/0e.
+- **Last session:** s29 (manual, Claude Code direct) — F5 delivered: ControlDispatcher command/query
+  extraction (the seam the god-class Orchestrator lacked) + HTTP+SSE control plane on top of it.
+  Commits 5370cec, 4c3aa00. 634/635 tests pass (1 pre-existing unrelated flake), 0w/0e.
 
 ## C# coding standards (this codebase)
 
@@ -94,6 +96,29 @@ C:\Code\conductor\bin\conductor.exe run         -p .conductor\plans\conductor-de
 - VerifierThreshold configurable in plan's `LimitsConfig`; per-stage override pending F7
 - ShouldVerify gates only `SessionKind.Deliver` — Fix/Audit/Resume sessions skip verification
 
+## Command/Query/Event layering (F5+)
+Orchestrator was a 2763-line god-class (design doc C10) mixing the run-loop state machine with
+control-verb execution, snapshot building, and lane glue. F5 cut the first seam; keep cutting along
+it rather than adding new responsibilities back into Orchestrator:
+- **New control verb?** Goes in `Core/Commands/ControlDispatcher.cs` (one `case` in `DispatchAsync`),
+  not inline in `Orchestrator.HandleControlAsync`. All three ingresses (TUI queue, control.json,
+  `POST /control`) already converge on `ControlCommand` → `ControlDispatcher.DispatchAsync` — a new
+  verb written there is automatically available from all three, no per-ingress wiring.
+- **New read/query surface?** Build it from the event log (`RunStateProjection.Fold`,
+  `Core/Events/TaskGraph.cs`, `Core/SnapshotBuilder.cs`) or extend those, never by reaching into
+  `Orchestrator`'s private fields. This is what keeps `Core/Http/ControlPlaneServer.cs`'s GET
+  endpoints decoupled from Orchestrator internals — they only ever read `events.jsonl`.
+- **HTTP wire types are separate DTOs** (`Core/Http/ControlPlaneDto.cs`), not `DashboardSnapshot`
+  directly — the TUI-rendering types carry `ValueTuple` fields System.Text.Json's source generator
+  can't serialise. Mapping is a thin field copy; don't duplicate the actual computation.
+- **Control plane is opt-in** (`RunOptions.ControlPlane` / `--control-plane` CLI flag, off by
+  default) and a bind failure is caught + logged, never fatal — headless/no-flag runs must stay
+  byte-identical whether or not it's enabled. Don't add a code path that assumes it's running.
+- Still explicitly deferred (documented, not forgotten): `GET /transcript/current` (thinking-stream
+  SSE — build with F6's agent pane, the first real consumer) and extracting the ~350-line lane
+  coordination glue (`StartParallelAudit`/`RunFollowupFixLanesAsync`/etc.) out of Orchestrator — no
+  gate has needed it yet; revisit if a `/lanes` endpoint or further god-class shrinkage is wanted.
+
 ## Foreground-blocking anti-patterns (codebase-specific)
 
 ### Test filtering — use Category traits, not substring guessing
@@ -116,7 +141,10 @@ C:\Code\conductor\bin\conductor.exe run         -p .conductor\plans\conductor-de
 - Every gate run (`dotnet build`, `dotnet test`) and advisor spawn blocks the calling thread
 - The F0.2 async refactor removed `.Result`/`.Wait()` in the orchestrator but the process layer
   is still sync — gate battery and advisor consultation both are foreground-blocking
-- **F5 (Control Plane)** is expected to address this with async HTTP+SSE
+- **Correction:** an earlier version of this doc predicted F5 would fix this. It didn't — F5 added
+  an orthogonal HTTP+SSE *read/control* surface (`Core/Http/ControlPlaneServer.cs`) on its own
+  background thread; it never touches `ProcessRunner`. This debt is still open and unowned by any
+  current stage — flag it if you pick it up.
 
 ### Agent sessions: use `conductor bg start|status|logs|stop` for long ops
 - F2.3 delivered sanctioned background-run primitives for agent prompts

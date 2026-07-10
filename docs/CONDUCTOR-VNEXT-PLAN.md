@@ -172,8 +172,18 @@ F3  Stall v2 (stdout+tool-events+bg-liveness) + soft-kill debrief + same-failure
 F4  Verifier role + scoring loop + findings-as-retry-prompt + advisor verdicts honored +
     handoff fact-check. Gate: rigged bad delivery scores <80, retry with findings passes;
     rigged good delivery isn't blocked (false-positive check).
-F5  Control plane (HTTP+SSE on localhost) serving state/tasks/transcript/thinking/control.
-    Gate: curl-level contract tests; headless mode unchanged.
+F5  Control plane (HTTP+SSE on localhost) serving state/tasks/events/control — AND the command/
+    query decomposition of the Orchestrator god-class (C10) that F5 is the natural seam for: a
+    ControlDispatcher (Core/Commands/) owns what each control verb DOES, extracted out of
+    Orchestrator's inline switch; the TUI queue, control.json, and the new HTTP POST /control all
+    converge on it as three ingresses to one command executor. The read side (GET /state, /tasks,
+    /events) is built entirely from RunStateProjection/SnapshotBuilder/TaskGraph over events.jsonl
+    — it never touches Orchestrator internals, so it survives future engine refactors. HttpListener,
+    not ASP.NET Core (ratchets against D12's build-speed goal; ~600 LOC added, Orchestrator net
+    -150 LOC). Transcript/thinking-stream SSE deliberately deferred to land alongside F6's agent
+    pane (the only consumer) rather than serving data nothing reads yet.
+    Gate: curl-level contract tests; headless mode unchanged; control plane off by default, a bind
+    failure is caught and logged, never fatal.
 F6  Ink TUI v1 (TS): panes + palette per addendum D11 (that checklist IS the acceptance
     list — plan tree w/ scores, transcript WITH thinking, process pane, cost ticker).
     Gate: golden-layout snapshot tests at 80×24/120×30/200×50; crash of TUI leaves run
@@ -228,11 +238,28 @@ human touches. Weekly digest replaces "watch the TUI to feel safe."
 - Agent pane: live transcript WITH thinking stream (deepseek reasoning is in the JSON — Baton
   drops it today), scrollback + search, tool-call folding.
 - Process pane: supervised children (PID, purpose, runtime, last output line) — "what is it
-  actually doing right now" answered at a glance.
+  actually doing right now" answered at a glance. Data source (`ProcessSupervisor`, PID registry +
+  Job Object tracking) already exists from F2 — zero UI currently consumes it (`Ui/*.cs` has no
+  reference to `ProcessSupervisor`). This is new-UI-wiring work, not new capture; don't underestimate it.
+- Live prompt/persona editor: `PromptBuilder.Render()` already re-reads `<plan-dir>/*.md` template
+  files from disk on every call (not cached at startup), and `LiveDashboard`'s existing raw-JSON
+  stage editor (`OpenStageEditor`/`HandleStageEditKey`) already proves live edits reach the running
+  orchestrator at the next session boundary. F6 should build a proper *templated* editor (session.md
+  / fix.md / verify.md / persona system prompts) with a rendered-prompt preview, writing to the same
+  files the engine already hot-reloads — no new engine primitive needed, just a better editor surface.
+- Agent/session history browser: a pane or command-palette action to page back through
+  `state.History` / the `run.db` `sessions` table — "what did session N actually do." The data is
+  already queryable (`conductor report --query` proves it); F6 just needs a UI over it.
 - Control: command palette (`:` or Ctrl+K) replacing the 20-key chord bar; inject editor with
   preview; pause/skip/retry; every action acknowledged with a toast + log line (no silent drops).
+  As of F5, `POST /control` on the HTTP control plane accepts the same command shape `control.json`
+  does and routes through the same `ControlDispatcher` — the palette can drive either the file or
+  the HTTP endpoint with identical semantics.
 - Ticker: session + run cost, tokens, wall time, gate cache hits — always visible, one line.
 - Renders correctly at 3 sizes (80×24, 120×30, 200×50) — golden snapshot tests in CI.
+- Transcript/thinking-stream SSE (`GET /transcript/current`) was deliberately deferred out of F5
+  (see F5 stage-map entry below) — build it alongside the F6 agent pane that will actually consume
+  it, rather than serving an endpoint nothing reads yet.
 
 **Conductor build/dev speed (D12).** Engine and TUI build independently (TS TUI is outside
 `dotnet build` entirely); engine target: incremental build < 10s, full < 30s (today's mixed

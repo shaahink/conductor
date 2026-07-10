@@ -4,14 +4,14 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: s28 (manual) — F4 delivered. Verifier role + scoring loop + findings-as-retry + advisor verdicts honored + handoff fact-check.
-stage: F4 — Verifier role + scoring loop. 5/5 checkpoints DONE. Stage complete.
-commits: 4919364 (F4).
-gate: 0w/0e build, 626/626 tests pass (+21 VerifierTests). 7 files changed.
+last: s29 (manual, Claude Code direct — not conductor-driven) — F5 delivered. Pre-F5 surgery: trait-based test filtering + ControlDispatcher extraction (command/query seam) + HTTP+SSE control plane.
+stage: F5 — Control plane. 3/3 checkpoints DONE. Stage complete.
+commits: 5370cec (ControlDispatcher extraction + test hygiene), 4c3aa00 (HTTP control plane).
+gate: 0w/0e build, 634/635 tests pass (1 pre-existing unrelated flake, trait-tagged). 6 files + 2 new (Http/), +9 contract tests.
 branch: feat/foreman.
-next: F5 — Control plane HTTP+SSE on localhost (3 checkpoints). Design doc §4.
-qa: full 626 tests pass; VerifierTests covers parse, threshold, edge cases; ShouldVerify gates non-Deliver sessions.
-struggle: none — straight implementation following existing patterns (Advisor, FailureCircuitBreaker, Audit).
+next: F6 — Ink TUI v1, TypeScript rebuild (5 checkpoints). Design doc §4 + D11 (now includes prompt-editor + session-history browser additions).
+qa: full suite green modulo the known Serilog-flush flake; 9 curl-level HTTP contract tests; also smoke-tested against a REAL running conductor process (POST /control resume → visible in log + next GET /state).
+struggle: none blocking — extracted the ~150-line control-verb switch out of Orchestrator into Core/Commands/ControlDispatcher.cs first (highest-risk step, landed+tested separately), then built the HTTP layer on top. Deferred: /transcript/current SSE (needs F6's LiveDashboard buffer consumer — see design doc F5 entry) and the lane-coordinator extraction (no F5 gate needs it).
 
 
 
@@ -20,7 +20,7 @@ struggle: none — straight implementation following existing patterns (Advisor,
 | Metric | Value |
 |---|---|
 | Total checkpoints | 40 |
-| Done | 20 |
+| Done | 23 |
 
 ## Checkpoints
 
@@ -76,9 +76,9 @@ phase (a code path is not evidence).
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| F5.1 | HTTP+SSE localhost control plane — endpoints: state, task graph, session transcript stream, thinking stream, control verbs | TODO | - | - |
-| F5.2 | control.json verbs exposed over HTTP; event stream same as events.jsonl, served live | TODO | - | - |
-| F5.3 | Headless mode unchanged; curl-level contract tests for all endpoints | TODO | - | - |
+| F5.1 | HTTP+SSE localhost control plane — endpoints: state, task graph, session transcript stream, thinking stream, control verbs | DONE | 4c3aa00 | Core/Http/ControlPlaneServer.cs — GET /state (RunStateProjection.Fold+SnapshotBuilder.Build), GET /tasks (TaskGraph.Fold), POST /control; state/tasks/control read/write entirely from events.jsonl, never touches Orchestrator internals. Session-transcript + thinking-stream SSE deliberately deferred to land with F6's agent pane (the only consumer) — documented in design doc F5 stage-map entry, not an oversight |
+| F5.2 | control.json verbs exposed over HTTP; event stream same as events.jsonl, served live | DONE | 4c3aa00 | POST /control parses via the existing ControlFile.Parse (same shape control.json uses) and enqueues onto a ConcurrentQueue\<ControlCommand\> Orchestrator polls as a third ingress; GET /events SSEs ConductorEvent JSON via the same EventJsonContext already used for events.jsonl — one wire shape, no divergence |
+| F5.3 | Headless mode unchanged; curl-level contract tests for all endpoints | DONE | 4c3aa00, 5370cec | ControlPlaneServerTests.cs — 9 tests, real HttpListener on ephemeral loopback ports, real HTTP calls (state/tasks/events-SSE/control POST/404/bind-failure). Off by default (RunOptions.ControlPlane / --control-plane flag); bind failure caught+logged, never fatal. Also manually verified against a real running conductor process: POST /control {"command":"resume"} on a parked NeedsHuman run fired ControlDispatcher (log: "control: ResumeRun") and the next GET /state reflected it. Full suite 634/635 (1 pre-existing unrelated Serilog-flush flake, trait-tagged, not new) |
 
 ### F6 — Ink TUI v1 — TypeScript rebuild
 
