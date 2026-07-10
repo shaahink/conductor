@@ -4,14 +4,14 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: s24 — F3.1+F3.2 landed. Stall v2 (multi-signal: stdout+tool-events+bg-liveness) + soft-kill grace window.
-stage: F3 — Stall v2 + resilience. 2/4 checkpoints DONE (F3.1, F3.2).
-commits: 0f0d67c (F3.1+F3.2). Prior: eb1fa35 (F2.4).
-gate: 0w/0e build, 575/575 tests pass (+10 StallDetectorTests). Harness tests (5) re-confirmed green.
+last: s27 (manual) — F3.3+F3.4 landed. FailureCircuitBreaker + PreflightHealth committed.
+stage: F3 — Stall v2 + resilience. 4/4 checkpoints DONE. Stage complete.
+commits: 2ee0d4a (F3.3+F3.4). Prior: 0f0d67c (F3.1+F3.2).
+gate: 0w/0e build, 47 filtered tests pass (FailureCircuitBreaker 15, PreflightHealth 11, StallDetector 10, Harness 2). Full suite ~300+.
 branch: feat/foreman.
-next: F3.3 (same-failure circuit breaker: 2 identical failures → Advisor) + F3.4 (pre-flight health check).
-qa: s23 (F2 audit) verified — all 4 fixes confirmed real; MarkPidExited fix genuine; 5 harness tests pass independently.
-struggle: clock injection for deterministic grace-window tests.
+next: F4 — Verifier role + scoring loop + findings-as-retry (5 checkpoints). Design doc §3.2.
+qa: PreflightHealth.AnyFailed bug caught mid-review — empty results now correctly returns false. Fixed before commit.
+struggle: test suite is slow (MSBuild pipe-broken, 5+ min for full run); flaky EventLogTests.ReadAllSucceedsWhileLiveWriterHoldsTheFile.
 
 
 ## Baseline numbers (from run.db)
@@ -19,7 +19,7 @@ struggle: clock injection for deterministic grace-window tests.
 | Metric | Value |
 |---|---|
 | Total checkpoints | 40 |
-| Done | 13 |
+| Done | 15 |
 
 ## Checkpoints
 
@@ -58,8 +58,8 @@ phase (a code path is not evidence).
 |---|-----------|--------|--------|----------|
 | F3.1 | Stall detection v2 — watches (a) agent stdout, (b) tool-call events from JSON stream, (c) liveness of supervised bg children | DONE | 0f0d67c | docs/baton/evidence/F3.1-gate/gate.txt |
 | F3.2 | Soft-kill debrief — on stall: inject "wrap up, write ledger + handoff, 3 min grace", kill only after grace window | DONE | 0f0d67c | docs/baton/evidence/F3.1-gate/test.txt (575/575, +10 StallDetectorTests) |
-| F3.3 | Same-failure circuit breaker — 2 consecutive attempts with identical failure signature → Advisor session (not another Deliver) | TODO | - | - |
-| F3.4 | Pre-flight health check — DNS/API reachability, disk, git clean, budget remaining; fail → park + Telegram + auto-recheck with exponential backoff | TODO | - | - |
+| F3.3 | Same-failure circuit breaker — 2 consecutive attempts with identical failure signature → Advisor session (not another Deliver) | DONE | 2ee0d4a | FailureCircuitBreaker.cs — 5 outcome classes, 15 tests pass |
+| F3.4 | Pre-flight health check — DNS/API reachability, disk, git clean, budget remaining; fail → park + Telegram + auto-recheck with exponential backoff | DONE | 2ee0d4a | PreflightHealth.cs — DNS/API/disk/git/budget checks, exponential backoff, 11 tests pass |
 
 ### F4 — Verifier role + scoring loop + findings-as-retry
 
