@@ -514,6 +514,7 @@ public sealed class RunDb : IDisposable
     /// </summary>
     public List<Dictionary<string, object?>> Query(string sql, params (string Name, object? Value)[] parameters)
     {
+        if (_disposed != 0) throw new ObjectDisposedException(nameof(RunDb));
         var rows = new List<Dictionary<string, object?>>();
         using var cmd = _conn.CreateCommand();
         cmd.CommandText = sql;

@@ -148,3 +148,13 @@ tests added validating failure-path stdout capture and RunState round-trip for P
 
 **Fixed in-phase by the F0 audit (session #4, prior)**: (1) 7 `CancellationToken.None` delay sites in async flow → `ct` with OCE handling for immediate Ctrl+C responsiveness; (2) CT threaded through `RunFollowupFixLanesAsync`, `CollectLaneArtifactsAsync`, and 3 `_progress.Read` calls; (3) `PushWithKeyboardAsync` at new CT scope given explicit `CancellationToken.None`. See `.conductor/handovers/F0.md`.  
 **Fixed in-phase by the F0 re-audit (session #5, this session)**: (4) `ApproveAwaitingOwnerAsync` → `ConfirmStageAsync` passed `CancellationToken.None` — now accepts and threads `ct` through the chain (`HandleControlAsync` → `ApproveAwaitingOwnerAsync` → `ConfirmStageAsync`); (5) `RunStageHook` post-hook now passes `ct` instead of `CancellationToken.None`; (6) removed redundant `Task.Run()` wrapping in `RunFollowupFixLanesAsync` (pre-F0 leftover — `MutatingLaneRunner.RunAsync` is already async).
+
+## Opened by F1 (audit session, 2026-07-10)
+
+| id | item | detail | owning stage | status |
+|----|------|--------|--------------|--------|
+| FU-F1-01 | TrackerGenerator no test/framework baseline | Removed misleading hardcoded placeholders (framework version, test count). If needed, derive from gate battery results (scores table, F4). | F2 / F4 | OPEN |
+| FU-F1-02 | McpTaskServer.HandleNote uses TaskAdded as journal container | Notes persist as `TaskAdded` with checkpointId="ledger", polluting the task graph. A dedicated `NoteAdded` event would be cleaner. Primary path writes to run.db ledger table directly. | F2 | OPEN |
+| FU-F1-03 | EmitSessionFinished commit SHA extraction | `rec.NewCommits[^1].Split(' ')[0]` assumes git log --oneline format. Advisory-only evidence field. | F2 | OPEN |
+| FU-F1-04 | RunDb.Query lacked disposed-connection guard | Safe today but would fail loudly with confusing errors if F2.1 adds concurrent access. **CLOSED this session** — guard added at RunDb.cs:517. | F2 | CLOSED (sixth F1 audit) |
+| FU-F1-05 | SeedCheckpoints not transactionally atomic | Each UPSERT is a separate implicit transaction. Power failure mid-loop could leave partial state. Next SeedCheckpointsFromTracker reads intact tracker file and re-seeds, so no permanent data loss. Wrap in a single transaction for atomicity if needed. | F2 fix-lane | OPEN |
