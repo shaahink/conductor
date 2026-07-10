@@ -1,32 +1,11 @@
 ﻿# Conductor — Foreman run report
 
-_Updated 2026-07-10 17:53 UTC · branch `feat/foreman` · HEAD `fa45e1d`_
+_Updated 2026-07-10 17:56 UTC · branch `feat/foreman` · HEAD `8fb4ef9`_
 
 **Status:** Running
 **Stage:** F1 — run.db task store + tracker-as-view + task/note verbs · persona: architect · attempts used 0
-**Checkpoints:** 7/40 done · **Sessions run:** 14 · **Cost:** $1.2649 · **Tokens:** 1,300,214 in / 226,645 out / 197,629 think
+**Checkpoints:** 7/40 done · **Sessions run:** 14 · **Cost:** $1.3350 · **Tokens:** 1,391,641 in / 234,785 out / 213,930 think
 **Confirmed phases:** F0
-
-## Latest activity (live)
-
-_Session #14 (Audit) · running 10m · last output 40s ago · $0.0509_
-
-**Thinking:**
-> 1 test failed. Let me see which one and if it's related to my change.
-> The test output got truncated. Let me find which test failed specifically.
-> Let me search for the failure differently.
-
-**Recent actions:**
-- `18:50:12` » read src\Conductor\Core\Orchestrator.cs
-- `18:50:32` » todowrite 4 todos
-- `18:50:33` · Now I have a full picture. Let me compile the audit findings and apply the one concrete fix I identified:  **Key finding**: `RecordRunEnd` is only called in `Co…
-- `18:50:38` » edit src\Conductor\Core\Orchestrator.cs
-- `18:50:43` · Now let me re-run the gate battery to verify:
-- `18:50:54` » bash dotnet build --no-restore 2>&1 | Select-Object -Last 5
-- `18:51:33` » bash dotnet test --no-restore --no-build 2>&1 | Select-Object -Last 3
-- `18:51:41` » bash dotnet test --no-restore --no-build -l "console;verbosity=detailed" --filter "FullyQualifiedName~RunDbTests" 2>&1 | Select-Object -Last 5
-- `18:52:07` » bash dotnet test --no-restore --no-build -l "console;verbosity=detailed" 2>&1 | Select-String -Pattern "Failed|Error" | Select-Object -First 10
-- `18:52:36` » bash dotnet test --no-restore --no-build -l "console;verbosity=detailed" 2>&1 | Select-String -Pattern "Failed\s+\w" | Select-Object -First 5
 
 ## Stage progress
 
@@ -170,7 +149,7 @@ _Session #14 (Audit) · running 10m · last output 40s ago · $0.0509_
 | 11 | F1 | Audit | 1 | 07-10 17:12 | 0:12 | RolledOver |  | 0 |  | $0.0722 | 74,288/9,786 |
 | 12 | F1 | Audit | 1 | 07-10 17:24 | 0:09 | RolledOver |  | 0 |  | $0.0762 | 109,206/8,320 |
 | 13 | F1 | Audit | 1 | 07-10 17:34 | 0:09 | RolledOver |  | 0 |  | $0.0702 | 97,219/7,411 |
-| 14 | F1 | Audit | 1 | 07-10 17:43 | … | running |  | 0 |  |  |  |
+| 14 | F1 | Audit | 1 | 07-10 17:43 | 0:12 | RolledOver |  | 0 |  | $0.0701 | 91,427/8,140 |
 
 ## Timeline
 
@@ -242,7 +221,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/foreman
-working tree: M src/Conductor/Core/Orchestrator.cs
+working tree: clean
 vs upstream: up to date
 ```
 
@@ -275,7 +254,7 @@ build:OK · tests:OK
 
 ## Last session result
 
-> SESSION-RESULT: Clean audit — no new correctness bugs, race conditions, resource leaks, or async/threading issues found across all 14 files in `db9e988..HEAD`. Build 0w/0e, 546/548 tests pass (2 pre-existing flaky HostLoggingTests, FU-F0-6). All 6 prior audit fixes verified intact. Zero fixes applied this session; handover updated committing the honest assessment: the F1 code is genuinely solid, with 9 tracked deferred items (D1-D10 excluding D7-closed) and 5 followups (FU-F1-01 through FU-F1-05) carried forward for F2.
+> SESSION-RESULT: **Audit verdict PASS — 1 hardening fix applied.** Found and fixed `RecordRunEnd` missing from the Aborted exit path in Orchestrator.RunAsync (line 99), which left run.db with stale status after abort. All 7 prior audit fixes verified intact. Full static audit of all 14 F1 files confirmed zero new correctness bugs, race conditions, resource leaks, async/threading issues, TODOs, or lowered analyzer severities. 548/548 tests pass, build 0w/0e. One new deferred item tracked: D11/FU-F1-06 (run.db status not updated on non-terminal states like NeedsHuman/Paused — needs a future `UpdateRunStatus` method). Commit 8fb4ef9 pushed.
 
 ## Tracker handoff
 
