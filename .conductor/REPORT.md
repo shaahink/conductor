@@ -1,10 +1,10 @@
 ﻿# Conductor — Foreman run report
 
-_Updated 2026-07-10 17:24 UTC · branch `feat/foreman` · HEAD `f0f46a8`_
+_Updated 2026-07-10 17:34 UTC · branch `feat/foreman` · HEAD `d6dd94d`_
 
 **Status:** Running
 **Stage:** F1 — run.db task store + tracker-as-view + task/note verbs · persona: architect · attempts used 0
-**Checkpoints:** 7/40 done · **Sessions run:** 11 · **Cost:** $1.1185 · **Tokens:** 1,093,789 in / 210,914 out / 169,798 think
+**Checkpoints:** 7/40 done · **Sessions run:** 12 · **Cost:** $1.1946 · **Tokens:** 1,202,995 in / 219,234 out / 183,971 think
 **Confirmed phases:** F0
 
 ## Stage progress
@@ -147,6 +147,7 @@ _Updated 2026-07-10 17:24 UTC · branch `feat/foreman` · HEAD `f0f46a8`_
 | 9 | F1 | Audit | 1 | 07-10 16:57 | 0:06 | RolledOver |  | 0 |  | $0.0807 | 132,187/5,177 |
 | 10 | F1 | Audit | 1 | 07-10 17:03 | 0:08 | RolledOver |  | 0 |  | $0.0595 | 79,470/7,984 |
 | 11 | F1 | Audit | 1 | 07-10 17:12 | 0:12 | RolledOver |  | 0 |  | $0.0722 | 74,288/9,786 |
+| 12 | F1 | Audit | 1 | 07-10 17:24 | 0:09 | RolledOver |  | 0 |  | $0.0762 | 109,206/8,320 |
 
 ## Timeline
 
@@ -179,6 +180,8 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-10 18:03:49  • session #10 F1 Audit started (attempt 1/4) · persona architect
 07-10 18:12:00  • session #10 F1 → RolledOver  (8m11s)
 07-10 18:12:00  • session #11 F1 Audit started (attempt 1/4) · persona architect
+07-10 18:24:14  • session #11 F1 → RolledOver  (12m13s)
+07-10 18:24:14  • session #12 F1 Audit started (attempt 1/4) · persona architect
 ```
 
 ## Health
@@ -186,7 +189,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 11 · retries 0 (0 %) · overall Warn
+sessions 12 · retries 0 (0 %) · overall Warn
 ⚠ [context-saturation] session #2: 32,055,552 context tokens (≥ 20,000,000)
 ```
 
@@ -212,7 +215,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/foreman
-working tree: M .conductor/REPORT.md
+working tree: clean
 vs upstream: up to date
 ```
 
@@ -245,7 +248,7 @@ build:OK · tests:OK
 
 ## Last session result
 
-> SESSION-RESULT: Audit verdict PASS — 1 bug fixed. `ReadTrackerSafe` (and 2 pre-existing sites `PushIdleSnapshot`, `SaveAndReport`) had a narrow exception filter catching only `IOException`/`InvalidOperationException`, missing `UnauthorizedAccessException` (NOT a subclass of `IOException`) and parser failures — inconsistent with the rest of the codebase which consistently catches both types separately. Fixed all 3 sites to `catch (Exception)`. Gate battery green: build 0w/0e, 548/548 tests pass (1 pre-existing flaky FU-F0-6 passes in isolation). 9 deferred items (D1-D9) remain tracked in `.conductor/handovers/F1.md` and `.conductor/followups.md` — all are LOW severity, no blockers for F2.
+> SESSION-RESULT: **Audit verdict PASS — 1 hardening fix applied.** Sixth audit of F1 phase (14 files, `db9e988..HEAD`) confirmed all prior audit fixes verified clean. Remediated deferred item D7 by adding a disposed-connection guard (`ObjectDisposedException`) to `RunDb.Query` at entry, closing a documented risk for F2.1 concurrent access. No new correctness bugs, resource leaks, or async/threading issues found across rigorous contract-level re-audit of `EnsureSchema` transaction rollback, `SeedCheckpoints` partial-failure semantics, `TrackerGenerator` byte-stability, and `McpTaskServer` exception propagation. Gate battery: build 0w/0e, 547/547 tests pass (1 pre-existing flaky FU-F0-6 exclude…
 
 ## Tracker handoff
 
