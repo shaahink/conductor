@@ -40,6 +40,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     private DateTime? _stallBackoffUntil;
     private int _stallBackoffMultiplier = 1;
     private DateTime? _dnsParkedUntil;
+    private int _preflightConsecutiveFailures;
     private readonly List<(string Kind, string Text, DateTime Utc)> _activity = new();
     private readonly HashSet<string> _decomposedCheckpoints = new(StringComparer.Ordinal);
     private bool _softBreakSignalled;
@@ -128,6 +129,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                         Log("stall backoff over — resuming");
                     }
 
+                    // F3.4: preflight health park — wait for backoff timer, then recheck
                     if (!opts.DryRun && _dnsParkedUntil is { } dpUntil)
                     {
                         if (DateTime.UtcNow < dpUntil)
@@ -137,14 +139,24 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                             continue;
                         }
                         _dnsParkedUntil = null;
-                        if (await CheckDnsPreflightAsync().ConfigureAwait(false))
+                        var recheckResults = await PreflightHealth.RunAllAsync(
+                            plan.Limits.DnsHealthCheck, plan.Repo, _runCostUsd,
+                            plan.Limits.MaxRunCostUsd).ConfigureAwait(false);
+                        if (PreflightHealth.AllPassed(recheckResults))
                         {
-                            Log("DNS recovered — resuming session");
+                            _preflightConsecutiveFailures = 0;
+                            Log("preflight recovered — resuming session");
                         }
                         else
                         {
-                            Log("DNS still unhealthy — parking again");
-                            _dnsParkedUntil = DateTime.UtcNow.AddSeconds(plan.Limits.DnsHealthCheck?.IntervalSeconds ?? 60);
+                            _preflightConsecutiveFailures++;
+                            var backoff = PreflightHealth.ComputeBackoff(
+                                _preflightConsecutiveFailures,
+                                plan.Limits.DnsHealthCheck?.IntervalSeconds ?? 60,
+                                plan.Limits.DnsHealthCheck?.BackoffMultiplier ?? 2.0,
+                                plan.Limits.DnsHealthCheck?.MaxBackoffSeconds ?? 3600);
+                            _dnsParkedUntil = DateTime.UtcNow.AddSeconds(backoff);
+                            Log($"preflight still failing (×{_preflightConsecutiveFailures}) — parking {backoff}s");
                             PushIdleSnapshot();
                             await Task.Delay(1000, ct).ConfigureAwait(false);
                             continue;
@@ -271,14 +283,29 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 }
                 _sessionApproved = false;
 
-                // O2: DNS preflight — verify network health before spawning an agent session.
-                if (plan.Limits.DnsHealthCheck is { Enabled: true } && !await CheckDnsPreflightAsync().ConfigureAwait(false))
+                // F3.4: pre-flight health check — DNS, API reachability, disk, git, budget.
+                // Fail → park with exponential backoff + Telegram notify.
+                var preflightResults = await PreflightHealth.RunAllAsync(
+                    plan.Limits.DnsHealthCheck, plan.Repo, _runCostUsd,
+                    plan.Limits.MaxRunCostUsd).ConfigureAwait(false);
+                if (PreflightHealth.AnyFailed(preflightResults))
                 {
-                    _dnsParkedUntil = DateTime.UtcNow.AddSeconds(plan.Limits.DnsHealthCheck.IntervalSeconds);
-                    Log("DNS preflight failed — parking until DNS resolves");
+                    _preflightConsecutiveFailures++;
+                    var backoff = PreflightHealth.ComputeBackoff(
+                        _preflightConsecutiveFailures,
+                        plan.Limits.DnsHealthCheck?.IntervalSeconds ?? 60,
+                        plan.Limits.DnsHealthCheck?.BackoffMultiplier ?? 2.0,
+                        plan.Limits.DnsHealthCheck?.MaxBackoffSeconds ?? 3600);
+                    _dnsParkedUntil = DateTime.UtcNow.AddSeconds(backoff);
+                    var failures = string.Join("; ", preflightResults.Where(r => !r.Passed).Select(r => $"{r.Name}:{r.Message}"));
+                    Log($"preflight FAILED (×{_preflightConsecutiveFailures}): {failures} — parking {backoff}s");
+                    _ = telegram.PushWithKeyboardAsync(
+                        $"Conductor {plan.Name}: preflight failed — {failures}",
+                        [("Resume", "resume"), ("Skip", "skip")], CancellationToken.None);
                     Save();
                     continue;
                 }
+                _preflightConsecutiveFailures = 0;
 
                 // B12.1: start read-only analysis lanes for this stage (run concurrently in scratch dirs)
                 StartAnalysisLanes(stage, track.HandoffBlock, ct);
@@ -685,11 +712,23 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         {
             rec.Outcome = stalled ? SessionOutcome.Stalled : SessionOutcome.TimedOut;
             state.AttemptsThisStage++;
-            // O2: identical-stall detection — if 2+ consecutive sessions stalled with zero
-            // commits and empty result summary, skip to NeedsHuman.
-            if (stalled && plan.Limits.StallPatternTermination)
+            // F3.3: same-failure circuit breaker — if 2 consecutive sessions end with the same
+            // non-success outcome and matching symptoms, consult Advisor instead of burning attempts.
+            rec.NewCommits = Git.CommitsSince(plan.Repo, startHead);
+            var prevSession = state.History.Count >= 2 ? state.History[^2] : null;
+            if (plan.Limits.SameFailureCircuitBreaker
+                && FailureCircuitBreaker.ShouldBreak(prevSession, rec, null))
             {
-                rec.NewCommits = Git.CommitsSince(plan.Repo, startHead);
+                Log($"circuit breaker: identical failure pattern detected ({rec.Outcome} ×2) — consulting advisor");
+                var breakerVerdict = ConsultAdvisor(rec, stage, _progress.Read(plan, ct),
+                    $"identical failure pattern: 2 consecutive {rec.Outcome} sessions with matching symptoms");
+                ApplyVerdict(breakerVerdict, rec, stage, defaultAction: AdvisorAction.NeedsHuman);
+                SaveAndReport();
+                return;
+            }
+            // O2: identical-stall detection — retained for backward compat when circuit breaker is off.
+            if (stalled && plan.Limits.StallPatternTermination && !plan.Limits.SameFailureCircuitBreaker)
+            {
                 if (IdenticalStallPattern(rec))
                 {
                     NeedsHuman($"identical-stall: {rec.Number - 1} sessions stalled with no commits, no output — environment or agent is broken");
@@ -699,7 +738,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             }
             else
             {
-                _stallBackoffMultiplier = 1;
+                _stallBackoffMultiplier = stalled ? _stallBackoffMultiplier + 1 : 1;
             }
             // O2: exponential backoff between stalled attempts.
             if (stalled)
@@ -816,6 +855,20 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         {
             rec.Outcome = agentErrored ? SessionOutcome.AgentError : gatesGreen ? SessionOutcome.NoProgress : SessionOutcome.GatesRed;
             state.AttemptsThisStage++;
+            // F3.3: same-failure circuit breaker — if 2 consecutive sessions fail with the
+            // same outcome and matching symptoms, consult Advisor instead of queueing a fix.
+            var prevSession = state.History.Count >= 2 ? state.History[^2] : null;
+            if (plan.Limits.SameFailureCircuitBreaker
+                && FailureCircuitBreaker.ShouldBreak(prevSession, rec, gates))
+            {
+                Log($"circuit breaker: identical failure pattern detected ({rec.Outcome} ×2) — consulting advisor");
+                var breakerVerdict = ConsultAdvisor(rec, stage, _progress.Read(plan, ct),
+                    $"identical failure pattern: 2 consecutive {rec.Outcome} sessions with matching symptoms");
+                ApplyVerdict(breakerVerdict, rec, stage, defaultAction: AdvisorAction.NeedsHuman);
+                state.Status = RunStatus.Idle;
+                SaveAndReport();
+                return;
+            }
             state.PendingFix = new PendingFix
             {
                 FromSession = rec.Number,

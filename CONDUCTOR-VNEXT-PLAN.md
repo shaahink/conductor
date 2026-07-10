@@ -1,11 +1,9 @@
-# Conductor v-Next — "The Foreman" Phase Tracker
+﻿# Foreman Phase Tracker
 
-**Read order:** this file → `docs/CONDUCTOR-VNEXT-PLAN.md` (design authority, MANDATORY) →
-your stage deliverable from the plan JSON.
-**Branch:** `feat/foreman` (to be created from current). **Driver:** `C:\Code\conductor\bin\conductor.exe` (stable from master).
-**Design doc:** `docs/CONDUCTOR-VNEXT-PLAN.md` — 10 cataloged failures, architecture, locked decisions, addenda D7-D12.
+**Plan:** Foreman | **Branch:** `feat/foreman` | **Design doc:** docs/CONDUCTOR-VNEXT-PLAN.md
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
+
 last: s24 — F3.1+F3.2 landed. Stall v2 (multi-signal: stdout+tool-events+bg-liveness) + soft-kill grace window.
 stage: F3 — Stall v2 + resilience. 2/4 checkpoints DONE (F3.1, F3.2).
 commits: 0f0d67c (F3.1+F3.2). Prior: eb1fa35 (F2.4).
@@ -15,23 +13,20 @@ next: F3.3 (same-failure circuit breaker: 2 identical failures → Advisor) + F3
 qa: s23 (F2 audit) verified — all 4 fixes confirmed real; MarkPidExited fix genuine; 5 harness tests pass independently.
 struggle: clock injection for deterministic grace-window tests.
 
-## Baseline numbers (pre-Foreman, re-measure at each phase)
+
+## Baseline numbers (from run.db)
 
 | Metric | Value |
 |---|---|
-| Target framework | net10.0 |
-| Tests | 548 pass (0 warn, 0 err) |
-| Source files | ~45 .cs under src/Conductor |
-| Branches | master (stable), feat/foreman |
-| Versions | Conductor v2 (Baton) + Era v3 enhancements; 91 sessions, ~$4.78 total |
+| Total checkpoints | 40 |
+| Done | 13 |
 
 ## Checkpoints
 
 Status ∈ TODO · IN PROGRESS · DONE · BLOCKED. Evidence = artifact path produced by a run this
-phase (a code path is not evidence). Scope changes get a `> scope change:` line under the row —
-never silent renumbering.
+phase (a code path is not evidence).
 
-### F0 — Foundations (kill list, async engine, integration harness)
+### F0 — Foundations — kill list, async engine, integration harness
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
@@ -39,7 +34,7 @@ never silent renumbering.
 | F0.2 | Async control loop — Orchestrator run loop async (B4.7 debt); no blocking .Result/.Wait() | DONE | 09dc2ec | 533 tests pass, 0w/0e, 9 private methods converted to async, 6 Thread.Sleep→Task.Delay, 3 .GetAwaiter()/.Result→await |
 | F0.3 | Integration harness — fake agent + temp repo, full cycle asserted (B4.8); gate: 0w/0e, harness cycle green | DONE | b6e5d8b | HarnessTests.cs — 2 tests (full cycle + dry-run), fake cmd agent writes opencode JSON, 533/533 pass |
 
-### F1 — SQLite run.db task store + tracker-as-view
+### F1 — run.db task store + tracker-as-view + task/note verbs
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
@@ -48,7 +43,7 @@ never silent renumbering.
 | F1.3 | conductor task/note verbs — task CRUD + note (writes ledger); MCP surface; agents report progress via verbs instead of hand-editing markdown | DONE | 1c8c888 | NoteCommand + TaskCommand CLI verbs; McpTaskServer conductor_note tool; McpServeCommand wires RunDb; 548/548 tests pass |
 | F1.4 | conductor report --query — ad-hoc SQL/DSL against run.db ("cost of stage R3?", "which gates fail most?") | DONE | 1c8c888 | ReportCommand --query <SQL> option; runs parameterised SQL against run.db; renders results as Spectre table |
 
-### F2 — Process ownership (supervisor, orphans, bg primitives)
+### F2 — ProcessSupervisor + Job Objects + bg primitives
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
@@ -57,7 +52,7 @@ never silent renumbering.
 | F2.3 | conductor bg start / status / logs / stop — sanctioned background-run primitive; prompts mandate it for anything >3 min | DONE | 1db847a | BgCommand.cs — 4 sub-commands (start/status/logs/stop), spawns detached with log capture to .conductor/bg-logs/, queries run.db pids table for status, tails log files, kill-by-PID. 3 new RunDb.GetAllPids tests pass. Smoke-tested all 4 verbs. |
 | F2.4 | MCP bg surface + harness proof — kill-by-tree, orphan reap, bg liveness feeds stall detector | DONE | eb1fa35 | McpTaskServer — 4 bg tools (bg_start/status/logs/stop); Orchestrator wires stateDir+repo; ProcessSupervisorHarnessTests — 5 tests prove JobObject kill-on-close, orphan reap e2e, liveness feed pipeline; 565/565 pass |
 
-### F3 — Stall v2 + resilience
+### F3 — Stall v2 + same-failure breaker + pre-flight
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
@@ -66,7 +61,7 @@ never silent renumbering.
 | F3.3 | Same-failure circuit breaker — 2 consecutive attempts with identical failure signature → Advisor session (not another Deliver) | TODO | - | - |
 | F3.4 | Pre-flight health check — DNS/API reachability, disk, git clean, budget remaining; fail → park + Telegram + auto-recheck with exponential backoff | TODO | - | - |
 
-### F4 — Verifier + scoring loop
+### F4 — Verifier role + scoring loop + findings-as-retry
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
@@ -76,7 +71,7 @@ never silent renumbering.
 | F4.4 | Advisor verdicts honored — structured AdvisorVerdict.Action (BlockRetry/NeedsHuman/SkipStage/RerunGates) honored by orchestrator | TODO | - | - |
 | F4.5 | Handoff fact-check — Advisor fact-checks handoffs and human injections against git/log/artifacts; contradictions flagged in prompt | TODO | - | - |
 
-### F5 — Control plane (HTTP+SSE)
+### F5 — Control plane — HTTP+SSE on localhost
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
@@ -84,7 +79,7 @@ never silent renumbering.
 | F5.2 | control.json verbs exposed over HTTP; event stream same as events.jsonl, served live | TODO | - | - |
 | F5.3 | Headless mode unchanged; curl-level contract tests for all endpoints | TODO | - | - |
 
-### F6 — Ink TUI v1 (TypeScript)
+### F6 — Ink TUI v1 — TypeScript rebuild
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
@@ -94,7 +89,7 @@ never silent renumbering.
 | F6.4 | Process pane + command palette (: or Ctrl+K) + ticker (session/run cost, tokens, wall time, gate cache hits) | TODO | - | - |
 | F6.5 | Golden-layout snapshot tests at 80×24 / 120×30 / 200×50; TUI crash leaves run alive | TODO | - | - |
 
-### F7 — Plan import + truth gates + speed
+### F7 — Plan import + truth gates + speed program
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
@@ -113,7 +108,7 @@ never silent renumbering.
 | F8.3 | Reply-to-inject + /status from run.db + daily digest; host-free (long-poll getUpdates, works behind NAT) | TODO | - | - |
 | F8.4 | Acceptance — full phone-only drive of a toy run; laptop lid closed | TODO | - | - |
 
-### F9 — Dogfood close
+### F9 — Dogfood close — real Shamshir A2 under v-next
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
@@ -124,26 +119,5 @@ never silent renumbering.
 ## Dependencies
 
 ```
-F0 → F1 → (F2, F3) → F4
-F1 → F7
-F5 → F6
-F5 → F8
-F9 last (requires F0–F8 complete)
-```
-
-F2/F3 and F5 can run as parallel lanes if run is healthy.
-
-## Quick commands
-
-```powershell
-# build + test (from the worktree)
-dotnet build Conductor.slnx
-dotnet test  Conductor.slnx
-
-# dry-run the foreman plan with the STABLE driver
-C:\Code\conductor\bin\conductor.exe run --dry-run -p plans\conductor-foreman.plan.json
-# one supervised session
-C:\Code\conductor\bin\conductor.exe run --once   -p plans\conductor-foreman.plan.json
-# full run
-C:\Code\conductor\bin\conductor.exe run          -p plans\conductor-foreman.plan.json
+(none — stages run sequentially by plan order)
 ```
