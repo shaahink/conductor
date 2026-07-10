@@ -1,10 +1,10 @@
 ﻿# Conductor — Foreman run report
 
-_Updated 2026-07-10 17:11 UTC · branch `feat/foreman` · HEAD `47a151e`_
+_Updated 2026-07-10 17:24 UTC · branch `feat/foreman` · HEAD `f0f46a8`_
 
 **Status:** Running
 **Stage:** F1 — run.db task store + tracker-as-view + task/note verbs · persona: architect · attempts used 0
-**Checkpoints:** 7/40 done · **Sessions run:** 10 · **Cost:** $1.0463 · **Tokens:** 1,019,501 in / 201,128 out / 147,005 think
+**Checkpoints:** 7/40 done · **Sessions run:** 11 · **Cost:** $1.1185 · **Tokens:** 1,093,789 in / 210,914 out / 169,798 think
 **Confirmed phases:** F0
 
 ## Stage progress
@@ -146,6 +146,7 @@ _Updated 2026-07-10 17:11 UTC · branch `feat/foreman` · HEAD `47a151e`_
 | 8 | F1 | Audit | 1 | 07-10 16:48 | 0:08 | RolledOver |  | 0 |  | $0.0831 | 108,622/15,598 |
 | 9 | F1 | Audit | 1 | 07-10 16:57 | 0:06 | RolledOver |  | 0 |  | $0.0807 | 132,187/5,177 |
 | 10 | F1 | Audit | 1 | 07-10 17:03 | 0:08 | RolledOver |  | 0 |  | $0.0595 | 79,470/7,984 |
+| 11 | F1 | Audit | 1 | 07-10 17:12 | 0:12 | RolledOver |  | 0 |  | $0.0722 | 74,288/9,786 |
 
 ## Timeline
 
@@ -176,6 +177,8 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-10 17:57:10  • session #9 F1 Audit started (attempt 1/4) · persona architect
 07-10 18:03:49  • session #9 F1 → RolledOver  (6m39s)
 07-10 18:03:49  • session #10 F1 Audit started (attempt 1/4) · persona architect
+07-10 18:12:00  • session #10 F1 → RolledOver  (8m11s)
+07-10 18:12:00  • session #11 F1 Audit started (attempt 1/4) · persona architect
 ```
 
 ## Health
@@ -183,7 +186,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 10 · retries 0 (0 %) · overall Warn
+sessions 11 · retries 0 (0 %) · overall Warn
 ⚠ [context-saturation] session #2: 32,055,552 context tokens (≥ 20,000,000)
 ```
 
@@ -209,7 +212,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/foreman
-working tree: clean
+working tree: M .conductor/REPORT.md
 vs upstream: up to date
 ```
 
@@ -242,15 +245,15 @@ build:OK · tests:OK
 
 ## Last session result
 
-> SESSION-RESULT: **PASS — HARDENED.** 2 fixes applied in this audit (RunDb.cs:555 TryExecute exception filter widened to catch ObjectDisposedException/InvalidOperationException alongside SqliteException, enforcing the "best-effort, never throw" contract; TrackerGenerator.cs:68,86,125 null-guarded `plan.Stages` with `?? []` at all 3 enumeration sites). Gate battery confirmed green: build 0w/0e, 548/548 tests pass. All 6 prior deferred items (D1–D6, FU-F1-01 through FU-F1-03, FU-F0-4 through FU-F0-6) remain tracked and unchanged. Commits b93865a (fix), 47a151e (handover), pushed to `feat/foreman`. No new followups created.
+> SESSION-RESULT: Audit verdict PASS — 1 bug fixed. `ReadTrackerSafe` (and 2 pre-existing sites `PushIdleSnapshot`, `SaveAndReport`) had a narrow exception filter catching only `IOException`/`InvalidOperationException`, missing `UnauthorizedAccessException` (NOT a subclass of `IOException`) and parser failures — inconsistent with the rest of the codebase which consistently catches both types separately. Fixed all 3 sites to `catch (Exception)`. Gate battery green: build 0w/0e, 548/548 tests pass (1 pre-existing flaky FU-F0-6 passes in isolation). 9 deferred items (D1-D9) remain tracked in `.conductor/handovers/F1.md` and `.conductor/followups.md` — all are LOW severity, no blockers for F2.
 
 ## Tracker handoff
 
 ```
-last: s9 — F1 third audit complete. Stage HARDENED and FINISHED. No new bugs found; prior fixes verified.
-stage: F1 — run.db task store + tracker-as-view + task/note verbs + report --query. GENUINELY CORRECT.
-commits: 542422c (audit r2 fixes), 58f3ba4 (audit r1 fixes), 1c8c888 (F1.2-4), 6330c60 (F1.1). Total F0: 9, F1: 4 (2 delivery + 2 audit).
-gate: 0w/0e, 548/548 tests pass. Full static audit clean — no correctness bugs, no race conditions, no resource leaks, no TODOs. 6 deferred items tracked in followups.md (FU-F1-01 through -03, D4-D6).
+last: s10 — F1 fifth audit HARDENED. Fixed ReadTrackerSafe narrow exception filter (missed UnauthorizedAccessException). +2 pre-existing sites (PushIdleSnapshot, SaveAndReport) fixed.
+stage: F1 — run.db task store + tracker-as-view + task/note verbs + report --query. FINISHED — 4 delivery commits + 4 audit commits.
+commits: 60ab247 (audit r4), b93865a (audit r3), 542422c (audit r2), 58f3ba4 (audit r1), 1c8c888 (F1.2-4), 6330c60 (F1.1). Total F0: 9, F1: 8 (2 delivery + 6 audit).
+gate: 0w/0e, 548/548 tests pass. 3 additional defensive catch sites hardened against unexpected exceptions. 9 deferred items (D1-D9) tracked in followups.md. All prior audits confirmed.
 trap: HarnessTests creates temp git repos — ensure git is on PATH. 1 pre-existing flaky Serilog file-lock test (HostLoggingTests) — passes in isolation.
 branch: feat/foreman.
 ```
