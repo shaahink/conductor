@@ -39,11 +39,47 @@ C:\Code\conductor\bin\conductor.exe run         -p .conductor\plans\conductor-de
 - Run QA only when last session was `gatesRed`, `stalled`, `noProgress`, or `interrupted`.
 - **Tracker rule:** always update BOTH handoff block AND checkpoint row (DONE + commit + evidence). If row stays TODO, conductor re-launches the same stage.
 
-## Current state (2026-07-09)
+## Current state (2026-07-10)
 - **Baton v2 COMPLETE** — 77 sessions, 67/67 checkpoints DONE, status=completed.
-- 497 tests pass, build 0w/0e, $3.74 total cost.
-- Next work: **Era v3** — see `C:\Code\conductor\NEXT-ERA.md` for the strategic roadmap.
-- D1 (conductor status) is the recommended first session: LLM-powered `conductor status` command.
+- **Foreman v3 ACTIVE** — 15/40 checkpoints DONE, F0/F1/F2/F3 confirmed, next: F4 (Verifier).
+- **Branch:** `feat/foreman` is the active branch; `feat/baton` is the worktree.
+- **Driver:** `C:\Code\conductor\bin\conductor.exe run -p plans\conductor-foreman.plan.json`
+- **Read order:** `CONDUCTOR-VNEXT-PLAN.md` (tracker) → `docs/CONDUCTOR-VNEXT-PLAN.md` (design doc)
+
+## Foreground-blocking anti-patterns (codebase-specific)
+
+### Do NOT run full test suite as foreground — it takes 5+ min
+- `dotnet test Conductor.slnx` includes integration tests (ProcessSupervisor, MutatingLane,
+  HarnessTests, CrossPlatformShell) that spawn real processes — 300s+ total.
+- **Instead:** filter tests for the area you changed:
+  ```
+  dotnet test Conductor.slnx --filter "FullyQualifiedName~FailureCircuitBreaker|FullyQualifiedName~StallDetector"
+  ```
+- The flaky test is `EventLogTests.ReadAllSucceedsWhileLiveWriterHoldsTheFile` — it can be ignored.
+- Kill orphan dotnet processes from failed runs: `Get-Process dotnet -ea 0 | Stop-Process -Force`
+
+### ProcessRunner.Run() is synchronous — blocks the async orchestrator
+- `src/Conductor/Core/ProcessRunner.cs:68` — sync `WaitForExit(500)` polling loop
+- Every gate run (`dotnet build`, `dotnet test`) and advisor spawn blocks the calling thread
+- The F0.2 async refactor removed `.Result`/`.Wait()` in the orchestrator but the process layer
+  is still sync — gate battery and advisor consultation both are foreground-blocking
+- **F5 (Control Plane)** is expected to address this with async HTTP+SSE
+
+### Agent sessions: use `conductor bg start|status|logs|stop` for long ops
+- F2.3 delivered sanctioned background-run primitives for agent prompts
+- Prompts must mandate `conductor bg start` for anything >3 min
+- StallDetector v2 (F3.1) uses bg liveness as a keepalive signal — "quiet but its backtest
+  is running" is NOT a stall
+
+### MCP task server is in-process, not a background process
+- `McpTaskServer` runs in the same process as the agent session
+- It reads/writes files synchronously — keep operations fast
+
+### PreflightHealth checks can block (DNS timeout, HTTP timeout)
+- DNS and HTTP checks have 10s timeouts via CancellationTokenSource
+- When preflight is disabled or unconfigured (DnsHealthCheckConfig absent), `RunAllAsync`
+  returns empty list and `AnyFailed` returns false — orchestrator proceeds
+- Git check spawns `git status --porcelain` synchronously — <1s normally
 
 ## Gotchas
 - **`claudeSessionId`** is a legacy field name storing ANY agent's session id (B2 renames/abstracts).
