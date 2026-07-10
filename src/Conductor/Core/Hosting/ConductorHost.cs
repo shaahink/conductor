@@ -110,6 +110,15 @@ public static class ConductorHost
             return new RunDb(runDbPath, sp.GetRequiredService<ILogger<RunDb>>());
         });
 
+        // F2.1: Process supervisor — run-level Job Object + PID tracking.
+        // Created before the Orchestrator so its JobObject covers the full run lifecycle.
+        builder.Services.AddSingleton<ProcessSupervisor>(sp =>
+        {
+            var runDb = sp.GetService<RunDb>();
+            var supLogger = sp.GetRequiredService<ILogger<ProcessSupervisor>>();
+            return new ProcessSupervisor(supLogger, state.RunId, runDb);
+        });
+
         builder.Services.AddSingleton(sp => new Orchestrator(
             sp.GetRequiredService<PlanConfig>(),
             sp.GetRequiredService<RunState>(),
@@ -120,8 +129,9 @@ public static class ConductorHost
             sp.GetRequiredService<ILogger<Orchestrator>>(),
             sp.GetRequiredService<ITelegramService>(),
             sp.GetRequiredService<WebhookNotifier>(),
-            planner: null,  // default planner
-            runDb: sp.GetService<RunDb>()));
+            planner: null,
+            runDb: sp.GetService<RunDb>(),
+            processSupervisor: sp.GetService<ProcessSupervisor>()));
 
         var host = builder.Build();
         ValidateOptionsOnStart(host.Services, plan);

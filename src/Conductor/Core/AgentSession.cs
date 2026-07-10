@@ -30,6 +30,7 @@ public sealed class AgentSession : IDisposable
     private readonly AgentStreamState _stream;
     private readonly Lock _gate = new();
     private long _lastActivityTicks = DateTime.UtcNow.Ticks;
+    private IDisposable? _supervisorTrack; // F2.1: tracked handle if supervisor assigned, set after construction
 
     public DateTime StartedUtc { get; } = DateTime.UtcNow;
     public DateTime LastActivityUtc => new(Interlocked.Read(ref _lastActivityTicks), DateTimeKind.Utc);
@@ -43,11 +44,12 @@ public sealed class AgentSession : IDisposable
     public long? TokensCacheRead => _stream.TokensCacheRead;
     public bool WasKilled { get; private set; }
 
-    private AgentSession(Process proc, StreamWriter raw, IAgentProvider provider, IEventSink? eventSink, string? conductorSessionId)
+    private AgentSession(Process proc, StreamWriter raw, IAgentProvider provider, IEventSink? eventSink, string? conductorSessionId, IDisposable? supervisorTrack)
     {
         _proc = proc;
         _raw = raw;
         _provider = provider;
+        _supervisorTrack = supervisorTrack;
         // Stamp the conductor session number on every TokenDelta so the LiveMetrics.ForSession fold
         // (B2.6) can attribute live burn to a session — EventLog only stamps Seq/Ts/RunId, not the
         // per-event SessionId, so it MUST be set here or ForSession folds nothing (B2.6 regression).
@@ -57,7 +59,7 @@ public sealed class AgentSession : IDisposable
         _stream = new AgentStreamState((kind, text) => _events.Enqueue(new AgentEvent { Kind = kind, Text = text }), tokenDelta);
     }
 
-    public static AgentSession Start(AgentConfig cfg, string cwd, string prompt, string sessionId, string? resumeClaudeId, string rawLogPath, IEventSink? eventSink = null, string? conductorSessionId = null, Dictionary<string, string>? extraEnv = null)
+    public static AgentSession Start(AgentConfig cfg, string cwd, string prompt, string sessionId, string? resumeClaudeId, string rawLogPath, IEventSink? eventSink = null, string? conductorSessionId = null, Dictionary<string, string>? extraEnv = null, ProcessSupervisor? supervisor = null)
     {
         var template = (resumeClaudeId != null && cfg.ResumeArgs is { Count: > 0 }) ? cfg.ResumeArgs : cfg.Args;
         var args = template.Select(a => a
@@ -88,11 +90,12 @@ public sealed class AgentSession : IDisposable
         var raw = new StreamWriter(rawLogPath, append: false, Encoding.UTF8) { AutoFlush = true };
 
         var proc = new Process { StartInfo = psi };
-        var session = new AgentSession(proc, raw, AgentProviderFactory.Create(cfg), eventSink, conductorSessionId);
+        var session = new AgentSession(proc, raw, AgentProviderFactory.Create(cfg), eventSink, conductorSessionId, supervisorTrack: null);
         proc.OutputDataReceived += (_, e) => session.OnLine(e.Data, stderr: false);
         proc.ErrorDataReceived += (_, e) => session.OnLine(e.Data, stderr: true);
         proc.Start();
         session._job.Assign(proc);
+        session._supervisorTrack = supervisor?.Track(proc, $"agent:stage:{conductorSessionId ?? sessionId}:session#{conductorSessionId ?? sessionId}");
         try { proc.StandardInput.Close(); } catch { /* agent may not read stdin */ }
         proc.BeginOutputReadLine();
         proc.BeginErrorReadLine();
@@ -149,6 +152,7 @@ public sealed class AgentSession : IDisposable
         // one already-gone handle can't leak the others. ObjectDisposed/InvalidOperation mean "already
         // released"; nothing here hides a real fault.
         lock (_gate) { try { _raw.Dispose(); } catch (ObjectDisposedException) { } }
+        try { _supervisorTrack?.Dispose(); } catch (ObjectDisposedException) { }
         try { _job.Dispose(); } catch (ObjectDisposedException) { }
         try { _proc.Dispose(); } catch (InvalidOperationException) { }
     }

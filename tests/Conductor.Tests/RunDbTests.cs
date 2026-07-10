@@ -50,11 +50,11 @@ public sealed class RunDbTests : IDisposable
     }
 
     [Fact]
-    public void Schema_version_is_two()
+    public void Schema_version_is_three()
     {
         var rows = _db.Query("SELECT version FROM schema_version");
         Assert.Single(rows);
-        Assert.Equal(2L, (long)rows[0]["version"]!);
+        Assert.Equal(3L, (long)rows[0]["version"]!);
     }
 
     [Fact]

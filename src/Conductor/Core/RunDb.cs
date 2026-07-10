@@ -24,7 +24,7 @@ public sealed class RunDb : IDisposable
     private readonly TimeProvider _clock;
     private bool _initialized;
 
-    public static readonly int CurrentSchemaVersion = 2;
+    public static readonly int CurrentSchemaVersion = 3;
 
     public RunDb(string path, ILogger<RunDb> logger, TimeProvider? clock = null)
     {
@@ -281,6 +281,21 @@ public sealed class RunDb : IDisposable
             );
             """;
         cmd.ExecuteNonQuery();
+
+        // --- pids (F2.2: process tracking for orphan reaper + liveness) ---
+        cmd.CommandText = """
+            CREATE TABLE IF NOT EXISTS pids (
+                pid             INTEGER NOT NULL,
+                purpose         TEXT NOT NULL,
+                stage_id        TEXT,
+                session_number  INTEGER,
+                started_utc     TEXT NOT NULL,
+                exited_utc      TEXT,
+                exit_code       INTEGER,
+                run_id          TEXT NOT NULL
+            );
+            """;
+        cmd.ExecuteNonQuery();
     }
 
     /// <summary>Migrate from an older schema version. Called inside the EnsureSchema transaction.</summary>
@@ -288,7 +303,6 @@ public sealed class RunDb : IDisposable
     {
         if (fromVersion < 2)
         {
-            // v1 → v2: add checkpoints table
             using var cmd = conn.CreateCommand();
             cmd.CommandText = """
                 CREATE TABLE IF NOT EXISTS checkpoints (
@@ -301,6 +315,23 @@ public sealed class RunDb : IDisposable
                     evidence        TEXT NOT NULL DEFAULT '-',
                     PRIMARY KEY (id, run_id),
                     FOREIGN KEY (run_id) REFERENCES runs(run_id)
+                );
+                """;
+            cmd.ExecuteNonQuery();
+        }
+        if (fromVersion < 3)
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = """
+                CREATE TABLE IF NOT EXISTS pids (
+                    pid             INTEGER NOT NULL,
+                    purpose         TEXT NOT NULL,
+                    stage_id        TEXT,
+                    session_number  INTEGER,
+                    started_utc     TEXT NOT NULL,
+                    exited_utc      TEXT,
+                    exit_code       INTEGER,
+                    run_id          TEXT NOT NULL
                 );
                 """;
             cmd.ExecuteNonQuery();
@@ -534,6 +565,41 @@ public sealed class RunDb : IDisposable
             rows.Add(row);
         }
         return rows;
+    }
+
+    // ---------------------------------------------------------------- pids (F2.2: process tracking)
+
+    /// <summary>Record a spawned PID for liveness tracking and orphan reaping.</summary>
+    public void TrackPid(int pid, string runId, string purpose, string? stageId, int? sessionNumber, DateTime startedUtc)
+    {
+        TryExecute(
+            "INSERT INTO pids (pid, purpose, stage_id, session_number, started_utc, run_id) " +
+            "VALUES (@pid, @purpose, @stageId, @sessionNumber, @startedUtc, @runId)",
+            ("@pid", pid), ("@purpose", purpose),
+            ("@stageId", (object?)stageId ?? DBNull.Value),
+            ("@sessionNumber", (object?)sessionNumber ?? DBNull.Value),
+            ("@startedUtc", startedUtc.ToString("O")),
+            ("@runId", runId));
+    }
+
+    /// <summary>Mark a tracked PID as exited with an optional exit code.</summary>
+    public void MarkPidExited(int pid, int? exitCode)
+    {
+        TryExecute(
+            "UPDATE pids SET exited_utc = @exitedUtc, exit_code = @exitCode WHERE pid = @pid AND exited_utc IS NULL",
+            ("@exitedUtc", _clock.GetUtcNow().ToString("O")),
+            ("@exitCode", (object?)exitCode ?? DBNull.Value),
+            ("@pid", pid));
+    }
+
+    /// <summary>Return PIDs that were tracked but never marked as exited, scoped to a run.
+    /// Used by the orphan reaper at startup (F2.2).</summary>
+    public IReadOnlyList<(int Pid, string Purpose)> GetOrphanPids(string runId)
+    {
+        var rows = Query(
+            "SELECT pid, purpose FROM pids WHERE run_id = @runId AND exited_utc IS NULL",
+            ("@runId", runId));
+        return rows.Select(r => (Pid: Convert.ToInt32(r["pid"]), Purpose: (string)r["purpose"]!)).ToList();
     }
 
     // ---------------------------------------------------------------- helpers

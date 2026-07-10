@@ -20,7 +20,7 @@ public sealed record RunOptions(bool DryRun, bool Once, int MaxSessions);
 /// Every transition is persisted, so killing conductor at any point is recoverable.
 /// </summary>
 #pragma warning disable MA0045 // Orchestrator helper methods (Save/Log/AcquireLock/etc.) use sync file I/O by design — fast local writes, not hot-path
-public sealed class Orchestrator(PlanConfig plan, RunState state, string statePath, IProgressSink sink, IEventSink events, RunOptions opts, ILogger<Orchestrator> logger, ITelegramService telegram, WebhookNotifier webhooks, IPlanner? planner = null, RunDb? runDb = null)
+public sealed class Orchestrator(PlanConfig plan, RunState state, string statePath, IProgressSink sink, IEventSink events, RunOptions opts, ILogger<Orchestrator> logger, ITelegramService telegram, WebhookNotifier webhooks, IPlanner? planner = null, RunDb? runDb = null, ProcessSupervisor? processSupervisor = null)
 {
     private readonly IPlanner _planner = planner ?? new CheckpointPlanner();
     private readonly PromptBuilder _prompts = BuildPromptBuilder(plan);
@@ -81,6 +81,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             });
             _runDb?.InitializeRun(state.RunId, plan.Name, plan.Repo, Git.Branch(plan.Repo),
                 typeof(Orchestrator).Assembly.GetName().Version?.ToString());
+            processSupervisor?.ReapOrphans();
             // F1.2: seed checkpoints from the existing tracker into run.db (additive — doesn't replace parse)
             SeedCheckpointsFromTracker();
             WarnOnBranchPattern();
@@ -502,7 +503,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         }
 
         using (var agent = AgentSession.Start(resolvedAgent, plan.Repo, prompt, rec.ClaudeSessionId,
-                   kind == SessionKind.Resume ? rec.ClaudeSessionId : null, rawLog, events, rec.Number.ToString(), extraEnv))
+                   kind == SessionKind.Resume ? rec.ClaudeSessionId : null, rawLog, events, rec.Number.ToString(), extraEnv, supervisor: processSupervisor))
         {
             _activity.Clear();
             var lastHeartbeat = DateTime.UtcNow;
@@ -759,7 +760,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             return;
         }
 
-        if (gatesGreen && rec.NewCommits.Count > 0 && !agentErrored)
+            if (gatesGreen && (rec.NewCommits.Count > 0 || postTrack.StageDone(stage.Id)) && !agentErrored)
         {
             rec.Outcome = rec.NewlyDone.Count > 0 ? SessionOutcome.Advanced : SessionOutcome.Progress;
             state.AttemptsThisStage = rec.NewlyDone.Count > 0 ? 0 : state.AttemptsThisStage + 1;
