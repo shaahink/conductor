@@ -1,10 +1,10 @@
 ﻿# Conductor — Foreman run report
 
-_Updated 2026-07-10 16:03 UTC · branch `feat/foreman` · HEAD `0802af7`_
+_Updated 2026-07-10 16:15 UTC · branch `feat/foreman` · HEAD `33ab4cf`_
 
-**Status:** Idle
-**Stage:** F0 — Foundations — kill list, async engine, integration harness · persona: refactor · attempts used 0
-**Checkpoints:** 3/40 done · **Sessions run:** 4 · **Cost:** $0.5602 · **Tokens:** 401,958 in / 119,028 out / 88,403 think
+**Status:** Running
+**Stage:** F1 — run.db task store + tracker-as-view + task/note verbs · persona: architect · attempts used 0 · working ▸ F1.2
+**Checkpoints:** 4/40 done · **Sessions run:** 5 · **Cost:** $0.6389 · **Tokens:** 477,260 in / 139,760 out / 97,821 think
 **Confirmed phases:** F0
 
 ## Stage progress
@@ -12,7 +12,7 @@ _Updated 2026-07-10 16:03 UTC · branch `feat/foreman` · HEAD `0802af7`_
 | Stage | Title | Progress | State |
 |---|---|---|---|
 | F0 | Foundations — kill list, async engine, integration harness | ██████████ 3/3 | confirmed ✓ |
-| F1 | run.db task store + tracker-as-view + task/note verbs | ░░░░░░░░░░ 0/4 | todo |
+| F1 | run.db task store + tracker-as-view + task/note verbs | ██░░░░░░░░ 1/4 | **← active** |
 | F2 | ProcessSupervisor + Job Objects + bg primitives | ░░░░░░░░░░ 0/4 | todo |
 | F3 | Stall v2 + same-failure breaker + pre-flight | ░░░░░░░░░░ 0/4 | todo |
 | F4 | Verifier role + scoring loop + findings-as-retry | ░░░░░░░░░░ 0/5 | todo |
@@ -32,11 +32,11 @@ _Updated 2026-07-10 16:03 UTC · branch `feat/foreman` · HEAD `0802af7`_
 
 </details>
 
-<details><summary>F1 — run.db task store + tracker-as-view + task/note verbs (0/4)</summary>
+<details><summary>F1 — run.db task store + tracker-as-view + task/note verbs (1/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| F1.1 | run.db schema — tables: runs, stages, sessions, attempts, gates, scores, ledger, handovers, injections, costs; telemetry per D8 | ⬜ TODO | - |
+| F1.1 | run.db schema — tables: runs, stages, sessions, attempts, gates, scores, ledger, handovers, injections, costs; telemetry per D8 | ✅ DONE | [`6330c60`](https://github.com/shaahink/conductor/commit/6330c60) |
 | F1.2 | Tracker-as-view — conductor writes TRACKER.md FROM run.db (generated view for humans/agents); regenerates byte-stable | ⬜ TODO | - |
 | F1.3 | conductor task/note verbs — task CRUD + note (writes ledger); MCP surface; agents report progress via verbs instead of hand-editing markdown | ⬜ TODO | - |
 | F1.4 | conductor report --query — ad-hoc SQL/DSL against run.db ("cost of stage R3?", "which gates fail most?") | ⬜ TODO | - |
@@ -140,6 +140,7 @@ _Updated 2026-07-10 16:03 UTC · branch `feat/foreman` · HEAD `0802af7`_
 | 2 | F0 | Deliver | 1 | 07-10 14:46 | 0:53 | RolledOver |  | 0 |  | $0.2652 | 129,523/53,213 |
 | 3 | F0 | Audit | 1 | 07-10 15:40 | 0:15 | RolledOver |  | 0 |  | $0.0846 | 89,322/15,267 |
 | 4 | F0 | Audit | 1 | 07-10 15:55 | 0:06 | Progress |  | 2 |  | $0.0505 | 73,066/8,516 |
+| 5 | F1 | Deliver | 1 | 07-10 16:03 | 0:12 | RolledOver |  | 0 |  | $0.0787 | 75,302/20,732 |
 
 ## Timeline
 
@@ -158,6 +159,8 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-10 17:03:19  ▪ gate build pass [phase]  (22.4s)
 07-10 17:03:19  ▪ gate tests pass [phase]  (27.3s)
 07-10 17:03:19  ▸ stage F0 confirmed (audited)
+07-10 17:03:22  ▸ stage F1 entered — run.db task store + tracker-as-view + task/note verbs
+07-10 17:03:22  • session #5 F1 Deliver started (attempt 1/4) · persona architect
 ```
 
 ## Health
@@ -165,7 +168,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 4 · retries 0 (0 %) · overall Warn
+sessions 5 · retries 0 (0 %) · overall Warn
 ⚠ [context-saturation] session #2: 32,055,552 context tokens (≥ 20,000,000)
 ```
 
@@ -174,11 +177,12 @@ sessions 4 · retries 0 (0 %) · overall Warn
 _Evidence-based confidence per checkpoint. A checkpoint without evidence is marked (none)._
 
 ```
-checkpoints confirmed: 3   with evidence: 3
+checkpoints confirmed: 4   with evidence: 4
 
   F0.1  4 evidence item(s) ··  531 tests pass, 0w/0e, 23 files changed, -687 net LOC across 5 commits
   F0.2  5 evidence item(s) ···  533 tests pass, 0w/0e, 9 private methods converted to async, 6 Thread.Sleep→Task.Delay, 3 .GetAwaiter()/.Result→await
   F0.3  3 evidence item(s) ··  HarnessTests.cs — 2 tests (full cycle + dry-run), fake cmd agent writes opencode JSON, 533/533 pass
+  F1.1  5 evidence item(s) ···  RunDbTests.cs — 12 tests pass, schema auto-creates (idempotent), session/gate/cost round-trip, parameterised query, 11 tables
 ```
 
 ## Repo
@@ -219,15 +223,15 @@ build:OK · tests:OK
 
 ## Last session result
 
-> SESSION-RESULT: Audit verdict PASS with fixes. Fixed 3 additional CT-gap sites in this re-audit: threaded `CancellationToken` through the `ApproveAwaitingOwner`→`ConfirmStage` chain (was passing `None`), post-hook in `ConfirmStageAsync` now respects parent `ct` instead of `CancellationToken.None`, and removed redundant `Task.Run()` wrapping in `RunFollowupFixLanesAsync` (pre-F0 leftover — `MutatingLaneRunner.RunAsync` is already async). All 533 tests green, 0w/0e. FU-F0-1 closed. 5 followups remain (all pre-existing: uncancellable parallel audit, Telegram fire-and-forget, Spectre.Cli sync boundaries, EventLog.Dispose blocking, HostLogging test flakiness). F0 phase is production-ready for F1 …
+> SESSION-RESULT:** F1.1 (run.db schema) landed. 11 SQLite tables auto-created idempotently (runs, stages, sessions, attempts, gates, scores, ledger, handovers, injections, costs, schema_version). Integrated additively at all 6 key event points in Orchestrator (RunStarted→RunFinished) with null-safe dry-run mode. Gate: 0w/0e, 544/545 tests pass (1 pre-existing flaky Serilog file-lock test). Evidence: `tests/Conductor.Tests/RunDbTests.cs` (12 tests). 7 files changed, 2 commits pushed to feat/foreman. Hardest part: Microsoft.Data.Sqlite 10.0.9 pulls in a vulnerable SQLitePCLRaw 2.1.11 transitive — had to swap to Microsoft.Data.Sqlite.Core + SQLitePCLRaw.bundle_e_sqlite3 3.0.3 to satisfy TreatWar…
 
 ## Tracker handoff
 
 ```
-last: s5 — F0 RE-AUDIT hardened. Threaded CT through ApproveAwaitingOwner→ConfirmStage chain; post-hook now respects parent ct; removed redundant Task.Run in fix-lanes.
-stage: F0 — Foundations. ALL 3 checkpoints DONE + RE-AUDITED. F1 (run.db) next.
-commits: be10727 (re-audit). Total F0: 9 commits.
-gate: 0w/0e, 533/533 tests pass. dirty: none.
-trap: HarnessTests creates temp git repos — ensure git is on PATH for test runs.
+last: s6 — F1.1 run.db schema landed. 11 tables (runs, stages, sessions, attempts, gates, scores, ledger, handovers, injections, costs, schema_version). Additive-first — writes alongside state.json + events.jsonl. Null in dry-run mode.
+stage: F1 — run.db task store. F1.1 DONE. F1.2 (tracker-as-view) next.
+commits: 6330c60 (F1.1). Total F0: 9, F1: 1.
+gate: 0w/0e, 544/545 tests pass (1 pre-existing flaky Serilog lock test).
+trap: HarnessTests creates temp git repos — ensure git is on PATH.
 branch: feat/foreman.
 ```
