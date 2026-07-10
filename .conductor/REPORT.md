@@ -1,10 +1,10 @@
 ﻿# Conductor — Foreman run report
 
-_Updated 2026-07-10 19:15 UTC · branch `feat/foreman` · HEAD `1db2220`_
+_Updated 2026-07-10 19:33 UTC · branch `feat/foreman` · HEAD `666843c`_
 
 **Status:** Idle
-**Stage:** F2 — ProcessSupervisor + Job Objects + bg primitives · persona: architect · attempts used 0 · working ▸ F2.3
-**Checkpoints:** 9/40 done · **Sessions run:** 20 · **Cost:** $1.7063 · **Tokens:** 1,898,127 in / 285,702 out / 270,370 think
+**Stage:** F2 — ProcessSupervisor + Job Objects + bg primitives · persona: architect · attempts used 0 · working ▸ F2.4
+**Checkpoints:** 10/40 done · **Sessions run:** 21 · **Cost:** $1.7925 · **Tokens:** 1,973,689 in / 307,150 out / 284,593 think
 **Confirmed phases:** F0, F1
 
 ## Stage progress
@@ -13,7 +13,7 @@ _Updated 2026-07-10 19:15 UTC · branch `feat/foreman` · HEAD `1db2220`_
 |---|---|---|---|
 | F0 | Foundations — kill list, async engine, integration harness | ██████████ 3/3 | confirmed ✓ |
 | F1 | run.db task store + tracker-as-view + task/note verbs | ██████████ 4/4 | confirmed ✓ |
-| F2 | ProcessSupervisor + Job Objects + bg primitives | █████░░░░░ 2/4 | **← active** |
+| F2 | ProcessSupervisor + Job Objects + bg primitives | ████████░░ 3/4 | **← active** |
 | F3 | Stall v2 + same-failure breaker + pre-flight | ░░░░░░░░░░ 0/4 | todo |
 | F4 | Verifier role + scoring loop + findings-as-retry | ░░░░░░░░░░ 0/5 | todo |
 | F5 | Control plane — HTTP+SSE on localhost | ░░░░░░░░░░ 0/3 | todo |
@@ -43,13 +43,13 @@ _Updated 2026-07-10 19:15 UTC · branch `feat/foreman` · HEAD `1db2220`_
 
 </details>
 
-<details><summary>F2 — ProcessSupervisor + Job Objects + bg primitives (2/4)</summary>
+<details><summary>F2 — ProcessSupervisor + Job Objects + bg primitives (3/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
 | F2.1 | ProcessSupervisor + Job Objects — every child spawned into Windows Job Object; kill-by-tree, no orphans | ✅ DONE | [`65c63c9`](https://github.com/shaahink/conductor/commit/65c63c9) |
 | F2.2 | PID registry in run.db + orphan reaper at startup | ✅ DONE | [`65c63c9`](https://github.com/shaahink/conductor/commit/65c63c9) |
-| F2.3 | conductor bg start / status / logs / stop — sanctioned background-run primitive; prompts mandate it for anything >3 min | ⬜ TODO | - |
+| F2.3 | conductor bg start / status / logs / stop — sanctioned background-run primitive; prompts mandate it for anything >3 min | ✅ DONE | [`1db847a`](https://github.com/shaahink/conductor/commit/1db847a) |
 | F2.4 | MCP bg surface + harness proof — kill-by-tree, orphan reap, bg liveness feeds stall detector | ⬜ TODO | - |
 
 </details>
@@ -156,17 +156,13 @@ _Updated 2026-07-10 19:15 UTC · branch `feat/foreman` · HEAD `1db2220`_
 | 18 | F1 | Fix | 2 | 07-10 18:24 | 0:05 | Interrupted |  | 0 |  | $0.0270 | 49,215/1,741 |
 | 19 | F1 | Audit | 1 | 07-10 18:45 | 0:07 | Progress |  | 1 |  | $0.0754 | 106,193/9,062 |
 | 20 | F2 | Deliver | 1 | 07-10 18:54 | 0:20 | Advanced | F2.1 F2.2 | 2 | build:OK | $0.1051 | 77,106/29,655 |
+| 21 | F2 | Deliver | 1 | 07-10 19:15 | 0:18 | Advanced | F2.3 | 2 | build:OK | $0.0862 | 75,562/21,448 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-10 17:03:22  ▸ stage F1 entered — run.db task store + tracker-as-view + task/note verbs
-07-10 17:03:22  • session #5 F1 Deliver started (attempt 1/4) · persona architect
-07-10 17:15:53  • session #5 F1 → RolledOver  (12m30s)
-07-10 17:15:53  • session #6 F1 Deliver started (attempt 1/4) · persona architect
-07-10 17:40:09  • session #6 F1 → RolledOver  (24m16s)
 07-10 17:40:09  • session #7 F1 Audit started (attempt 1/4) · persona architect
 07-10 17:48:34  • session #7 F1 → RolledOver  (8m25s)
 07-10 17:48:35  • session #8 F1 Audit started (attempt 1/4) · persona architect
@@ -202,6 +198,11 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-10 19:54:32  ▸ stage F2 entered — ProcessSupervisor + Job Objects + bg primitives
 07-10 19:54:32  • session #20 F2 Deliver started (attempt 1/2) · persona architect
 07-10 20:15:05  ▪ gate build pass [session]  (28.9s)
+07-10 20:15:08  • session #20 F2 → Advanced · done F2.1,F2.2 · 2 commit(s)  (20m36s)
+07-10 20:15:08  ✓ checkpoint F2.1 confirmed
+07-10 20:15:08  ✓ checkpoint F2.2 confirmed
+07-10 20:15:09  • session #21 F2 Deliver started (attempt 1/2) · persona architect
+07-10 20:33:58  ▪ gate build pass [session]  (26.2s)
 ```
 
 ## Health
@@ -209,7 +210,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 20 · retries 1 (5 %) · overall Warn
+sessions 21 · retries 1 (5 %) · overall Warn
 ⚠ [context-saturation] session #2: 32,055,552 context tokens (≥ 20,000,000)
 ```
 
@@ -218,7 +219,7 @@ sessions 20 · retries 1 (5 %) · overall Warn
 _Evidence-based confidence per checkpoint. A checkpoint without evidence is marked (none)._
 
 ```
-checkpoints confirmed: 9   with evidence: 9
+checkpoints confirmed: 10   with evidence: 10
 
   F0.1  4 evidence item(s) ··  531 tests pass, 0w/0e, 23 files changed, -687 net LOC across 5 commits
   F0.2  5 evidence item(s) ···  533 tests pass, 0w/0e, 9 private methods converted to async, 6 Thread.Sleep→Task.Delay, 3 .GetAwaiter()/.Result→await
@@ -229,6 +230,7 @@ checkpoints confirmed: 9   with evidence: 9
   F1.4  3 evidence item(s) ··  ReportCommand --query <SQL> option; runs parameterised SQL against run.db; renders results as Spectre table
   F2.1  3 evidence item(s) ··  ProcessSupervisor.cs — run-level JobObject with KILL_ON_JOB_CLOSE, ProcessRunner + AgentSession integrate via DI singleton, 9 tests prove track/untrack/JobObject assignment
   F2.2  4 evidence item(s) ··  RunDb v3 schema (pids table, 8 columns), GetOrphanPids/TrackPid/MarkPidExited, ReapOrphans() at startup kills leftover PIDs + marks exited
+  F2.3  5 evidence item(s) ···  BgCommand.cs — 4 sub-commands (start/status/logs/stop), spawns detached with log capture to .conductor/bg-logs/, queries run.db pids table for status, tails log files, kill-by-PID. 3 new RunDb.GetAllPids tests pass. Smoke-tested all 4 verbs.
 ```
 
 ## Repo
@@ -237,7 +239,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/foreman
-working tree: M .conductor/REPORT.md
+working tree: clean
 vs upstream: up to date
 ```
 
@@ -251,6 +253,9 @@ vs upstream: up to date
 - **s20 (F2 Deliver)** — 2 commit(s):
   - [`1db2220`](https://github.com/shaahink/conductor/commit/1db2220) chore(F2): tracker update — F2.1+F2.2 DONE, handoff refreshed
   - [`65c63c9`](https://github.com/shaahink/conductor/commit/65c63c9) feat(F2.1-F2.2): ProcessSupervisor + Job Objects + run.db PID registry + orphan reaper
+- **s21 (F2 Deliver)** — 2 commit(s):
+  - [`666843c`](https://github.com/shaahink/conductor/commit/666843c) chore(F2): tracker update — F2.3 DONE, commit 1db847a
+  - [`1db847a`](https://github.com/shaahink/conductor/commit/1db847a) feat(bF2.3): conductor bg start|status|logs|stop CLI verbs
 
 ## Phase handovers (audit)
 
@@ -275,15 +280,15 @@ build:OK
 
 ## Last session result
 
-> SESSION-RESULT: F2.1+F2.2 landed — ProcessSupervisor singleton with run-level Windows JobObject (KILL_ON_JOB_CLOSE), integrated into ProcessRunner and AgentSession, RunDb v3 with pids table (8 columns, schema migration), orphan reaper that queries run.db at startup and kills unreaped PIDs (skipping self). 556/557 tests pass (1 pre-existing flaky), 0w/0e build, 8 files changed + 2 new files (+450/-36 LOC), 9 new load-bearing ProcessSupervisorTests. F2.3 (conductor bg start/status/logs/stop CLI verbs + MCP surface) and F2.4 (MCP harness proof) remain for the next session. The hard part was threading the supervisor through ProcessRunner's existing static API while keeping CA2000 happy — the `ne…
+> SESSION-RESULT: F2.3 landed — `conductor bg start|status|logs|stop` CLI verbs on commit `1db847a`. Build 0w/0e, 560/560 tests pass (no flaky this run). 5 files changed (+496/-6): BgCommand with 4 sub-commands + RunDb.GetAllPids query + PidRow record + 3 new tests. F2.4 (MCP bg surface + harness proof) is next — McpTaskServer needs 4 bg tools wired, plus a harness test proving kill-by-tree/orphan-reap/bg-liveness feeds stall detector. Working tree clean, branch pushed. Hardest part this session: the strict Roslyn/Meziantou analyzer stack (CA2000 disposables in fire-and-forget closures, MA0045 sync I/O, CA2007 ConfigureAwait) — required surgical pragma placement without weakening analyzer seve…
 
 ## Tracker handoff
 
 ```
-last: s20 — F2 first attempt. Landed F2.1+F2.2.
-stage: F2 — ProcessSupervisor + Job Objects + run.db PID registry + orphan reaper. 2/4 checkpoints done.
-commits: 65c63c9 (F2.1+F2.2). Prior: 60ab247, b93865a, etc.
-gate: 0w/0e build, 556/557 pass (1 pre-existing flaky HostLoggingTests file-lock). 9 new ProcessSupervisorTests all green.
-trap: F2.3 (bg start/status/logs/stop) + F2.4 (MCP bg surface) remain. ProcessSupervisor wired but bg CLI not yet implemented.
+last: s21 — F2.3 landed. conductor bg start|status|logs|stop CLI verbs implemented.
+stage: F2 — ProcessSupervisor + Job Objects + run.db PID registry + bg primitives. 3/4 checkpoints done.
+commits: 1db847a (F2.3). Prior: 65c63c9 (F2.1+F2.2).
+gate: 0w/0e build, 558/560 pass (2 pre-existing flaky HostLoggingTests). 3 new RunDb GetAllPids tests green.
+trap: F2.4 (MCP bg surface + harness proof) remains. bg CLI done — start spawns detached with log capture, status queries run.db+live pids, logs tails bg-logs/*.log, stop kills by PID.
 branch: feat/foreman.
 ```
