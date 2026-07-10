@@ -6,11 +6,11 @@ your stage deliverable from the plan JSON.
 **Design doc:** `docs/CONDUCTOR-VNEXT-PLAN.md` — 10 cataloged failures, architecture, locked decisions, addenda D7-D12.
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
-last: s10 — F1 fifth audit HARDENED. Fixed ReadTrackerSafe narrow exception filter (missed UnauthorizedAccessException). +2 pre-existing sites (PushIdleSnapshot, SaveAndReport) fixed.
-stage: F1 — run.db task store + tracker-as-view + task/note verbs + report --query. FINISHED — 4 delivery commits + 4 audit commits.
-commits: 60ab247 (audit r4), b93865a (audit r3), 542422c (audit r2), 58f3ba4 (audit r1), 1c8c888 (F1.2-4), 6330c60 (F1.1). Total F0: 9, F1: 8 (2 delivery + 6 audit).
-gate: 0w/0e, 548/548 tests pass. 3 additional defensive catch sites hardened against unexpected exceptions. 9 deferred items (D1-D9) tracked in followups.md. All prior audits confirmed.
-trap: HarnessTests creates temp git repos — ensure git is on PATH. 1 pre-existing flaky Serilog file-lock test (HostLoggingTests) — passes in isolation.
+last: s20 — F2 first attempt. Landed F2.1+F2.2.
+stage: F2 — ProcessSupervisor + Job Objects + run.db PID registry + orphan reaper. 2/4 checkpoints done.
+commits: 65c63c9 (F2.1+F2.2). Prior: 60ab247, b93865a, etc.
+gate: 0w/0e build, 556/557 pass (1 pre-existing flaky HostLoggingTests file-lock). 9 new ProcessSupervisorTests all green.
+trap: F2.3 (bg start/status/logs/stop) + F2.4 (MCP bg surface) remain. ProcessSupervisor wired but bg CLI not yet implemented.
 branch: feat/foreman.
 
 ## Baseline numbers (pre-Foreman, re-measure at each phase)
@@ -50,8 +50,8 @@ never silent renumbering.
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| F2.1 | ProcessSupervisor + Job Objects — every child spawned into Windows Job Object; kill-by-tree, no orphans | TODO | - | - |
-| F2.2 | PID registry in run.db + orphan reaper at startup | TODO | - | - |
+| F2.1 | ProcessSupervisor + Job Objects — every child spawned into Windows Job Object; kill-by-tree, no orphans | DONE | 65c63c9 | ProcessSupervisor.cs — run-level JobObject with KILL_ON_JOB_CLOSE, ProcessRunner + AgentSession integrate via DI singleton, 9 tests prove track/untrack/JobObject assignment |
+| F2.2 | PID registry in run.db + orphan reaper at startup | DONE | 65c63c9 | RunDb v3 schema (pids table, 8 columns), GetOrphanPids/TrackPid/MarkPidExited, ReapOrphans() at startup kills leftover PIDs + marks exited |
 | F2.3 | conductor bg start / status / logs / stop — sanctioned background-run primitive; prompts mandate it for anything >3 min | TODO | - | - |
 | F2.4 | MCP bg surface + harness proof — kill-by-tree, orphan reap, bg liveness feeds stall detector | TODO | - | - |
 
