@@ -1013,15 +1013,11 @@ public sealed class InjectCommand : Command<InjectCommand.Settings>
     }
 }
 
-/// <summary>Scaffolds a new plan + TRACKER.md from a built-in template (B1.6).</summary>
+/// <summary>Scaffolds a new plan + TRACKER.md (B1.6).</summary>
 public sealed class NewPlanCommand : Command<NewPlanCommand.Settings>
 {
     public sealed class Settings : CommandSettings
     {
-        [CommandOption("--template <TEMPLATE>")]
-        [Description("Template name: minimal, dotnet, node, or shamshir. Default: dotnet.")]
-        public string Template { get; init; } = "dotnet";
-
         [CommandOption("-o|--output <DIR>")]
         [Description("Directory to create the files in. Created if missing. Default: cwd.")]
         public string? Output { get; init; }
@@ -1033,19 +1029,10 @@ public sealed class NewPlanCommand : Command<NewPlanCommand.Settings>
         [CommandOption("--repo <PATH>")]
         [Description("Absolute path to the repo. Default: output directory.")]
         public string? Repo { get; init; }
-
-        public static readonly string[] ValidTemplates = ["minimal", "dotnet", "node", "shamshir"];
     }
 
     public override int Execute(CommandContext context, Settings settings)
     {
-        var template = settings.Template.ToLowerInvariant();
-        if (!Settings.ValidTemplates.Contains(template))
-        {
-            AnsiConsole.MarkupLine($"[red]Unknown template '{Markup.Escape(settings.Template)}'.[/] Valid: {string.Join(", ", Settings.ValidTemplates)}");
-            return 1;
-        }
-
         var outputDir = Path.GetFullPath(settings.Output ?? ".");
         var name = settings.Name ?? Path.GetFileName(outputDir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
         if (string.IsNullOrWhiteSpace(name)) name = "plan";
@@ -1062,8 +1049,8 @@ public sealed class NewPlanCommand : Command<NewPlanCommand.Settings>
             return 1;
         }
 
-        File.WriteAllText(planPath, BuildPlanJson(template, name, repo), System.Text.Encoding.UTF8);
-        File.WriteAllText(trackerPath, BuildTrackerMd(template, name), System.Text.Encoding.UTF8);
+        File.WriteAllText(planPath, BuildMinimalPlanJson(name, repo), System.Text.Encoding.UTF8);
+        File.WriteAllText(trackerPath, BuildMinimalTrackerMd(name), System.Text.Encoding.UTF8);
 
         // Verify the output loads (A6 ship-without-launch). Don't leave a half-written scaffold on
         // disk if the self-check fails — clean up and surface the reason.
@@ -1081,143 +1068,36 @@ public sealed class NewPlanCommand : Command<NewPlanCommand.Settings>
 
         AnsiConsole.MarkupLine($"[green]Created[/] {Markup.Escape(planPath)}");
         AnsiConsole.MarkupLine($"[green]Created[/] {Markup.Escape(trackerPath)}");
-        AnsiConsole.MarkupLine($"[grey]Template: {template}. Edit the plan + tracker, then run: conductor run -p {Markup.Escape(planPath)}[/]");
         return 0;
     }
 
-    internal static string BuildPlanJson(string template, string name, string repo)
+    internal static string BuildMinimalPlanJson(string name, string repo)
     {
         var repoNormalised = repo.Replace("\\", "/");
-        return template switch
+        return $$"""
         {
-            "minimal" => $$"""
-            {
-              "version": "1.0",
-              "name": "{{name}}",
-              "repo": "{{repoNormalised}}",
-              "tracker": "TRACKER.md",
-              "stages": [
-                { "id": "S1", "title": "First phase", "sessions": 2 }
-              ],
-              "agent": {
-                "command": "opencode",
-                "args": ["run", "-m", "deepseek/deepseek-v4-pro", "--auto", "--format", "json", "{prompt}"],
-                "output": "opencode-json"
-              },
-              "gates": [],
-              "report": { "commit": true, "push": true }
-            }
-            """,
-            "dotnet" => $$"""
-            {
-              "version": "1.0",
-              "name": "{{name}}",
-              "repo": "{{repoNormalised}}",
-              "tracker": "TRACKER.md",
-              "stages": [
-                { "id": "S1", "title": "First phase", "sessions": 2 }
-              ],
-              "agent": {
-                "command": "opencode",
-                "args": ["run", "-m", "deepseek/deepseek-v4-pro", "--auto", "--thinking", "--format", "json", "{prompt}"],
-                "output": "opencode-json"
-              },
-              "gates": [
-                { "name": "build", "command": "dotnet build", "tier": "fast", "timeoutMinutes": 10 },
-                { "name": "tests", "command": "dotnet test", "timeoutMinutes": 20 }
-              ],
-              "limits": { "stallMinutes": 12, "sessionTimeoutMinutes": 180, "stageSlackFactor": 2 },
-              "report": { "commit": true, "push": true }
-            }
-            """,
-            "node" => $$"""
-            {
-              "version": "1.0",
-              "name": "{{name}}",
-              "repo": "{{repoNormalised}}",
-              "tracker": "TRACKER.md",
-              "stages": [
-                { "id": "S1", "title": "First phase", "sessions": 2 }
-              ],
-              "agent": {
-                "command": "opencode",
-                "args": ["run", "-m", "deepseek/deepseek-v4-pro", "--auto", "--thinking", "--format", "json", "{prompt}"],
-                "output": "opencode-json"
-              },
-              "gates": [
-                { "name": "lint",  "command": "npm run lint",  "tier": "fast", "timeoutMinutes": 5 },
-                { "name": "test",  "command": "npm test",       "timeoutMinutes": 15 },
-                { "name": "build", "command": "npm run build",  "timeoutMinutes": 10 }
-              ],
-              "limits": { "stallMinutes": 12, "sessionTimeoutMinutes": 180, "stageSlackFactor": 2 },
-              "report": { "commit": true, "push": true }
-            }
-            """,
-            "shamshir" => $$"""
-            {
-              "version": "1.0",
-              "name": "{{name}}",
-              "repo": "{{repoNormalised}}",
-              "tracker": "TRACKER.md",
-              "conventions": {
-                "stageIdPattern": "(?<stage>[A-Za-z]+-?\\d+)(?:\\.\\d+)?[a-z]?",
-                "status": { "inProgress": ["IN PROGRESS"] }
-              },
-              "stages": [
-                { "id": "P-0", "title": "Land the tree", "sessions": 2 },
-                { "id": "P0",  "title": "First detail phase", "sessions": 2 },
-                { "id": "P1",  "title": "Second phase", "sessions": 2 }
-              ],
-              "agent": {
-                "command": "opencode",
-                "args": ["run", "-m", "deepseek/deepseek-v4-pro", "--auto", "--thinking", "--format", "json", "{prompt}"],
-                "output": "opencode-json"
-              },
-              "gates": [
-                { "name": "build", "command": "dotnet build", "tier": "fast", "timeoutMinutes": 10 },
-                { "name": "tests", "command": "dotnet test", "timeoutMinutes": 20 }
-              ],
-              "limits": { "stallMinutes": 12, "sessionTimeoutMinutes": 180, "stageSlackFactor": 2 },
-              "report": { "commit": true, "push": true }
-            }
-            """,
-            _ => throw new ArgumentException($"Unknown template: {template}", nameof(template)),
-        };
+          "version": "1.0",
+          "name": "{{name}}",
+          "repo": "{{repoNormalised}}",
+          "tracker": "TRACKER.md",
+          "agent": {
+            "command": "opencode",
+            "args": ["run", "{prompt}"],
+            "provider": "opencode"
+          },
+          "stages": []
+        }
+        """;
     }
 
-    internal static string BuildTrackerMd(string template, string name)
+    internal static string BuildMinimalTrackerMd(string name)
     {
-        // Checkpoints + handoff MUST match the stages declared in BuildPlanJson for this template,
-        // otherwise the scaffold produces a plan whose stages own no rows and can never complete.
-        // shamshir declares irregular stage ids (P-0/P0/P1); the others declare a single S1 stage.
-        var (firstStage, conventionsNote, rows) = template == "shamshir"
-            ? ("P-0",
-               "\n\n> Conventions configured in the plan: irregular stage ids (`P-0`, `P0.1`, `P3.4b`, `F5`) supported.\n",
-               "| P-0  | Land the tree           | TODO | | |\n" +
-               "| P0.1 | First detail-phase task | TODO | | |\n" +
-               "| P1.1 | Second-phase task       | TODO | | |")
-            : ("S1",
-               "",
-               "| S1.1 | First task  | TODO | | |\n" +
-               "| S1.2 | Second task | TODO | | |");
-
         return $$"""
-        # {{name}} — Tracker (resume here)
+        # {{name}} — TRACKER
 
-        **Read order for a fresh session:** this file.{{conventionsNote}}
-        ## Handoff  (overwrite this block, ≤12 lines, no history)
-        last: (none) — scaffolded by conductor new-plan --template {{template}}.
-        stage: **{{firstStage}} NOT STARTED**.
-        gate: not yet run.
-        next: **{{firstStage}}** — first checkpoint.
+        ## Handoff
+        last: none. Status: idle.
 
-        ## Checkpoints
-
-        Status ∈ TODO · IN PROGRESS · DONE · BLOCKED. Evidence = artifact path from a run this phase.
-
-        | # | Checkpoint | Status | Commit | Evidence |
-        |---|-----------|--------|--------|----------|
-        {{rows}}
         """;
     }
 }
@@ -1575,7 +1455,7 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
         var verbs = "run status gate log report preview pause resume approve kill skip inject abort retry-stage rollback pause-after-stage goto plan tasks new-plan doctor audit mcp-serve completion";
         var opts = "-p --plan --yes --force --dry-run --once --max-sessions --no-dashboard -o --output --name --repo -q --query --since --tail";
         var auditOpts = "-p --plan --replay";
-        var newPlanOpts = "--template -o --output --name --repo";
+        var newPlanOpts = "-o --output --name --repo";
         return $$"""
             # conductor tab completion for PowerShell — generated by 'conductor completion powershell'
             # Source: conductor completion powershell | Invoke-Expression
@@ -1660,7 +1540,7 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
                         COMPREPLY=($(compgen -W "set reload add-stage" -- "$cur"))
                         ;;
                     new-plan)
-                        COMPREPLY=($(compgen -W "--template -o --output --name --repo" -- "$cur"))
+                        COMPREPLY=($(compgen -W "-o --output --name --repo" -- "$cur"))
                         ;;
                 esac
             }

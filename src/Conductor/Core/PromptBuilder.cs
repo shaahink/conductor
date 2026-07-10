@@ -107,7 +107,7 @@ public sealed class PromptBuilder
     private string Render(string templateFile, Dictionary<string, string> vars)
     {
 #pragma warning disable MA0045 // sync Render — called from BuildPrompt which is sync in the control loop
-        var path = Path.Combine(_plan.PlanDir, _plan.TemplatesDir, templateFile);
+        var path = Path.Combine(_plan.PlanDir, templateFile);
         var text = File.Exists(path) ? File.ReadAllText(path) : BuiltIn(templateFile);
 #pragma warning restore MA0045
         foreach (var (k, v) in vars) text = text.Replace("{" + k + "}", v);

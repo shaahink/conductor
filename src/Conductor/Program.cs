@@ -49,7 +49,7 @@ app.Configure(c =>
     c.AddCommand<LogCommand>("log")
         .WithDescription("Query the structured JSON log. Filter by stage, gate, outcome, etc. Example: conductor log --query \"stage=P7 and gate=build and outcome=fail\"");
     c.AddCommand<NewPlanCommand>("new-plan")
-        .WithDescription("Scaffold a new plan + TRACKER.md from a built-in template (minimal/dotnet/node/shamshir).");
+        .WithDescription("Scaffold a new plan + TRACKER.md.");
     c.AddCommand<DoctorCommand>("doctor")
         .WithDescription("Print exactly what will happen on resume: pending sessions, gates, owner-approval, remaining stages.");
     c.AddCommand<AuditCommand>("audit")

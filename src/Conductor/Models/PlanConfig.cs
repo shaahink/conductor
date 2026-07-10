@@ -48,7 +48,6 @@ public sealed class PlanConfig
     public ReportConfig Report { get; set; } = new();
     public NotifyConfig? Notify { get; set; }
     public TelegramConfig? Telegram { get; set; }
-    public string TemplatesDir { get; set; } = "templates";
     public string PromptExtra { get; set; } = "";
     /// <summary>Opt-in prompt batteries for bounded context injection (B8.5). null = none.</summary>
     public BatteriesConfig? Batteries { get; set; }

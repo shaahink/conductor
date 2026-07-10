@@ -11,7 +11,6 @@ public class PromptBuilderTests
         Repo = @"C:\repo",
         Tracker = "LOOM-START.md",
         PlanDoc = "docs/proposal.md",
-        TemplatesDir = $"no-such-dir-{Guid.NewGuid():N}", // force built-in templates
         PromptExtra = "EXTRA-MARKER",
     };
 
@@ -76,10 +75,9 @@ public class PromptBuilderTests
         var planPath = Path.Combine(dir, "plan.json");
         try
         {
-            File.WriteAllText(Path.Combine(dir, "templates", "session.md"), "CUSTOM {stage} TEMPLATE");
+            File.WriteAllText(Path.Combine(dir, "session.md"), "CUSTOM {stage} TEMPLATE");
             File.WriteAllText(planPath, "{}");
             var plan = Plan();
-            plan.TemplatesDir = "templates";
             typeof(PlanConfig).GetProperty(nameof(PlanConfig.PlanFilePath))!.SetValue(plan, planPath);
             var p = new PromptBuilder(plan).Deliver(Stage, 1, 1, 6);
             Assert.Equal("CUSTOM L2 TEMPLATE", p);
