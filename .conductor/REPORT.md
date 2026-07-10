@@ -1,10 +1,10 @@
 ﻿# Conductor — Foreman run report
 
-_Updated 2026-07-10 20:00 UTC · branch `feat/foreman` · HEAD `03fdbc5`_
+_Updated 2026-07-10 20:16 UTC · branch `feat/foreman` · HEAD `bad1156`_
 
 **Status:** Idle
-**Stage:** F2 — ProcessSupervisor + Job Objects + bg primitives · persona: architect · attempts used 0
-**Checkpoints:** 11/40 done · **Sessions run:** 23 · **Cost:** $1.9451 · **Tokens:** 2,147,592 in / 341,032 out / 307,977 think
+**Stage:** F3 — Stall v2 + same-failure breaker + pre-flight · persona: qa · attempts used 0 · working ▸ F3.3
+**Checkpoints:** 13/40 done · **Sessions run:** 24 · **Cost:** $2.0132 · **Tokens:** 2,216,963 in / 353,695 out / 322,982 think
 **Confirmed phases:** F0, F1, F2
 
 ## Stage progress
@@ -14,7 +14,7 @@ _Updated 2026-07-10 20:00 UTC · branch `feat/foreman` · HEAD `03fdbc5`_
 | F0 | Foundations — kill list, async engine, integration harness | ██████████ 3/3 | confirmed ✓ |
 | F1 | run.db task store + tracker-as-view + task/note verbs | ██████████ 4/4 | confirmed ✓ |
 | F2 | ProcessSupervisor + Job Objects + bg primitives | ██████████ 4/4 | confirmed ✓ |
-| F3 | Stall v2 + same-failure breaker + pre-flight | ░░░░░░░░░░ 0/4 | todo |
+| F3 | Stall v2 + same-failure breaker + pre-flight | █████░░░░░ 2/4 | **← active** |
 | F4 | Verifier role + scoring loop + findings-as-retry | ░░░░░░░░░░ 0/5 | todo |
 | F5 | Control plane — HTTP+SSE on localhost | ░░░░░░░░░░ 0/3 | todo |
 | F6 | Ink TUI v1 — TypeScript rebuild | ░░░░░░░░░░ 0/5 | todo |
@@ -54,12 +54,12 @@ _Updated 2026-07-10 20:00 UTC · branch `feat/foreman` · HEAD `03fdbc5`_
 
 </details>
 
-<details><summary>F3 — Stall v2 + same-failure breaker + pre-flight (0/4)</summary>
+<details><summary>F3 — Stall v2 + same-failure breaker + pre-flight (2/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| F3.1 | Stall detection v2 — watches (a) agent stdout, (b) tool-call events from JSON stream, (c) liveness of supervised bg children | ⬜ TODO | - |
-| F3.2 | Soft-kill debrief — on stall: inject "wrap up, write ledger + handoff, 3 min grace", kill only after grace window | ⬜ TODO | - |
+| F3.1 | Stall detection v2 — watches (a) agent stdout, (b) tool-call events from JSON stream, (c) liveness of supervised bg children | ✅ DONE | [`0f0d67c`](https://github.com/shaahink/conductor/commit/0f0d67c) |
+| F3.2 | Soft-kill debrief — on stall: inject "wrap up, write ledger + handoff, 3 min grace", kill only after grace window | ✅ DONE | [`0f0d67c`](https://github.com/shaahink/conductor/commit/0f0d67c) |
 | F3.3 | Same-failure circuit breaker — 2 consecutive attempts with identical failure signature → Advisor session (not another Deliver) | ⬜ TODO | - |
 | F3.4 | Pre-flight health check — DNS/API reachability, disk, git clean, budget remaining; fail → park + Telegram + auto-recheck with exponential backoff | ⬜ TODO | - |
 
@@ -159,15 +159,13 @@ _Updated 2026-07-10 20:00 UTC · branch `feat/foreman` · HEAD `03fdbc5`_
 | 21 | F2 | Deliver | 1 | 07-10 19:15 | 0:18 | Advanced | F2.3 | 2 | build:OK | $0.0862 | 75,562/21,448 |
 | 22 | F2 | Deliver | 1 | 07-10 19:34 | 0:16 | Advanced | F2.4 | 2 | build:OK | $0.0789 | 68,721/24,936 |
 | 23 | F2 | Audit | 1 | 07-10 19:50 | 0:08 | Progress |  | 2 |  | $0.0737 | 105,182/8,946 |
+| 24 | F3 | Deliver | 1 | 07-10 20:00 | 0:15 | Advanced | F3.1 F3.2 | 2 | build:OK | $0.0681 | 69,371/12,663 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-10 18:34:10  • session #12 F1 → RolledOver  (9m56s)
-07-10 18:34:10  • session #13 F1 Audit started (attempt 1/4) · persona architect
-07-10 18:43:19  • session #13 F1 → RolledOver  (9m08s)
 07-10 18:43:19  • session #14 F1 Audit started (attempt 1/4) · persona architect
 07-10 18:56:18  • session #14 F1 → RolledOver  (12m59s)
 07-10 18:56:18  • session #15 F1 Audit started (attempt 1/4) · persona architect
@@ -205,6 +203,9 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-10 21:00:34  ▪ gate build pass [phase]  (21.3s)
 07-10 21:00:34  ▪ gate tests pass [phase]  (43.8s)
 07-10 21:00:34  ▸ stage F2 confirmed (audited)  (1h06m02s)
+07-10 21:00:36  ▸ stage F3 entered — Stall v2 + same-failure breaker + pre-flight
+07-10 21:00:36  • session #24 F3 Deliver started (attempt 1/2) · persona qa
+07-10 21:16:25  ▪ gate build pass [session]  (19.3s)
 ```
 
 ## Health
@@ -212,7 +213,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 23 · retries 1 (4 %) · overall Warn
+sessions 24 · retries 1 (4 %) · overall Warn
 ⚠ [context-saturation] session #2: 32,055,552 context tokens (≥ 20,000,000)
 ```
 
@@ -221,7 +222,7 @@ sessions 23 · retries 1 (4 %) · overall Warn
 _Evidence-based confidence per checkpoint. A checkpoint without evidence is marked (none)._
 
 ```
-checkpoints confirmed: 11   with evidence: 11
+checkpoints confirmed: 13   with evidence: 13
 
   F0.1  4 evidence item(s) ··  531 tests pass, 0w/0e, 23 files changed, -687 net LOC across 5 commits
   F0.2  5 evidence item(s) ···  533 tests pass, 0w/0e, 9 private methods converted to async, 6 Thread.Sleep→Task.Delay, 3 .GetAwaiter()/.Result→await
@@ -234,6 +235,8 @@ checkpoints confirmed: 11   with evidence: 11
   F2.2  4 evidence item(s) ··  RunDb v3 schema (pids table, 8 columns), GetOrphanPids/TrackPid/MarkPidExited, ReapOrphans() at startup kills leftover PIDs + marks exited
   F2.3  5 evidence item(s) ···  BgCommand.cs — 4 sub-commands (start/status/logs/stop), spawns detached with log capture to .conductor/bg-logs/, queries run.db pids table for status, tails log files, kill-by-PID. 3 new RunDb.GetAllPids tests pass. Smoke-tested all 4 verbs.
   F2.4  6 evidence item(s) ···  McpTaskServer — 4 bg tools (bg_start/status/logs/stop); Orchestrator wires stateDir+repo; ProcessSupervisorHarnessTests — 5 tests prove JobObject kill-on-close, orphan reap e2e, liveness feed pipeline; 565/565 pass
+  F3.1  1 evidence item(s) ·  docs/baton/evidence/F3.1-gate/gate.txt
+  F3.2  2 evidence item(s) ·  docs/baton/evidence/F3.1-gate/test.txt (575/575, +10 StallDetectorTests)
 ```
 
 ## Repo
@@ -265,6 +268,9 @@ vs upstream: up to date
 - **s23 (F2 Audit)** — 2 commit(s):
   - [`13002cb`](https://github.com/shaahink/conductor/commit/13002cb) docs(F2): audit handover — phase summary, fixes, weak spots, F3 risks
   - [`2d8da64`](https://github.com/shaahink/conductor/commit/2d8da64) fix(F2): audit fixes — mark bg PID exited on natural exit, indent drift, exception catches
+- **s24 (F3 Deliver)** — 2 commit(s):
+  - [`bad1156`](https://github.com/shaahink/conductor/commit/bad1156) chore(F3): tracker update — F3.1+F3.2 DONE, handoff refreshed for F3.3
+  - [`0f0d67c`](https://github.com/shaahink/conductor/commit/0f0d67c) feat(bF3.1-F3.2): Stall v2 — multi-signal detection + soft-kill grace window
 
 ## Phase handovers (audit)
 
@@ -286,19 +292,21 @@ vs upstream: up to date
 
 ## Last gate run
 
-build:OK · tests:OK
+build:OK
 
 ## Last session result
 
-> SESSION-RESULT:** Audit verified 4/4 F2 checkpoints genuinely DONE — build 0w/0e, 564/565 pass (1 pre-existing flaky). Fixed 4 bugs: bg processes now correctly call `MarkPidExited` on natural exit (critical — they previously leaked as "running" forever in run.db), indentation drift in Orchestrator.cs:763, missing `InvalidOperationException` catch in bg_stop (both MCP and CLI), and missing `NotSupportedException` catch in `ReapOrphans`. Committed as `2d8da64` + `13002cb`, pushed to `feat/foreman`. Handover written to `.conductor/handovers/F2.md` with 6 weak spots tracked (double JobObject harmless, bg bypasses ProcessSupervisor by design, 3 followups deferred to F3). Stage is solid — F3 can p…
+> SESSION-RESULT: **F3.1+F3.2 landed on `feat/foreman` (commit `0f0d67c`)**. F3.3 (same-failure circuit breaker) and F3.4 (pre-flight health check) remain TODO. Gate battery green: 0w/0e build, 575/575 tests pass (+10 new StallDetectorTests). S23 QA verified: all 4 audit fixes (MarkPidExited, indent drift, exception catches) confirmed genuine. **4 files changed + 2 new files** — well under diff budget. Next session should generalize `IdenticalStallPattern` (O2, Orchestrator.cs:1499) to cover all failure signatures (GatesRed/NoProgress/AgentError), not just Stalled, and expand the existing `CheckDnsPreflightAsync` into a full pre-flight health check (disk+git+budget). Hardest part: injecting a …
 
 ## Tracker handoff
 
 ```
-last: s22 — F2.4 landed. MCP bg surface + harness proof complete.
-stage: F2 — ProcessSupervisor + Job Objects + run.db PID registry + bg primitives. 4/4 checkpoints DONE.
-commits: eb1fa35 (F2.4). Prior: 1db847a (F2.3), 65c63c9 (F2.1+F2.2).
-gate: 0w/0e build, 565/565 tests pass. 5 new harness tests green (kill-by-tree, orphan reap, liveness feed).
+last: s24 — F3.1+F3.2 landed. Stall v2 (multi-signal: stdout+tool-events+bg-liveness) + soft-kill grace window.
+stage: F3 — Stall v2 + resilience. 2/4 checkpoints DONE (F3.1, F3.2).
+commits: 0f0d67c (F3.1+F3.2). Prior: eb1fa35 (F2.4).
+gate: 0w/0e build, 575/575 tests pass (+10 StallDetectorTests). Harness tests (5) re-confirmed green.
 branch: feat/foreman.
-trap: Stage F2 COMPLETE. Next: F3 (Stall v2) — stdout+tool-events+bg-liveness watcher + soft-kill debrief + same-failure circuit breaker.
+next: F3.3 (same-failure circuit breaker: 2 identical failures → Advisor) + F3.4 (pre-flight health check).
+qa: s23 (F2 audit) verified — all 4 fixes confirmed real; MarkPidExited fix genuine; 5 harness tests pass independently.
+struggle: clock injection for deterministic grace-window tests.
 ```
