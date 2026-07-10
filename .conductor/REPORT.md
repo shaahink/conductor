@@ -1,10 +1,10 @@
 ﻿# Conductor — Foreman run report
 
-_Updated 2026-07-10 17:56 UTC · branch `feat/foreman` · HEAD `8fb4ef9`_
+_Updated 2026-07-10 18:06 UTC · branch `feat/foreman` · HEAD `6db0af9`_
 
 **Status:** Running
 **Stage:** F1 — run.db task store + tracker-as-view + task/note verbs · persona: architect · attempts used 0
-**Checkpoints:** 7/40 done · **Sessions run:** 14 · **Cost:** $1.3350 · **Tokens:** 1,391,641 in / 234,785 out / 213,930 think
+**Checkpoints:** 7/40 done · **Sessions run:** 15 · **Cost:** $1.4139 · **Tokens:** 1,500,445 in / 242,451 out / 230,242 think
 **Confirmed phases:** F0
 
 ## Stage progress
@@ -150,6 +150,7 @@ _Updated 2026-07-10 17:56 UTC · branch `feat/foreman` · HEAD `8fb4ef9`_
 | 12 | F1 | Audit | 1 | 07-10 17:24 | 0:09 | RolledOver |  | 0 |  | $0.0762 | 109,206/8,320 |
 | 13 | F1 | Audit | 1 | 07-10 17:34 | 0:09 | RolledOver |  | 0 |  | $0.0702 | 97,219/7,411 |
 | 14 | F1 | Audit | 1 | 07-10 17:43 | 0:12 | RolledOver |  | 0 |  | $0.0701 | 91,427/8,140 |
+| 15 | F1 | Audit | 1 | 07-10 17:56 | 0:10 | RolledOver |  | 0 |  | $0.0789 | 108,804/7,666 |
 
 ## Timeline
 
@@ -188,6 +189,8 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-10 18:34:10  • session #13 F1 Audit started (attempt 1/4) · persona architect
 07-10 18:43:19  • session #13 F1 → RolledOver  (9m08s)
 07-10 18:43:19  • session #14 F1 Audit started (attempt 1/4) · persona architect
+07-10 18:56:18  • session #14 F1 → RolledOver  (12m59s)
+07-10 18:56:18  • session #15 F1 Audit started (attempt 1/4) · persona architect
 ```
 
 ## Health
@@ -195,7 +198,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 14 · retries 0 (0 %) · overall Warn
+sessions 15 · retries 0 (0 %) · overall Warn
 ⚠ [context-saturation] session #2: 32,055,552 context tokens (≥ 20,000,000)
 ```
 
@@ -221,7 +224,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/foreman
-working tree: clean
+working tree: M .conductor/REPORT.md
 vs upstream: up to date
 ```
 
@@ -254,7 +257,7 @@ build:OK · tests:OK
 
 ## Last session result
 
-> SESSION-RESULT: **Audit verdict PASS — 1 hardening fix applied.** Found and fixed `RecordRunEnd` missing from the Aborted exit path in Orchestrator.RunAsync (line 99), which left run.db with stale status after abort. All 7 prior audit fixes verified intact. Full static audit of all 14 F1 files confirmed zero new correctness bugs, race conditions, resource leaks, async/threading issues, TODOs, or lowered analyzer severities. 548/548 tests pass, build 0w/0e. One new deferred item tracked: D11/FU-F1-06 (run.db status not updated on non-terminal states like NeedsHuman/Paused — needs a future `UpdateRunStatus` method). Commit 8fb4ef9 pushed.
+> SESSION-RESULT: 9th audit PASS — 1 hardening fix applied. Found and fixed a cross-cutting completeness gap: `task` and `note` verbs were registered in Program.cs but missing from both PowerShell and Bash completion scripts (and the exhaustive completion test's hardcoded verb list), meaning tab-complete silently excluded the F1.3 verbs. Fixed in Commands.cs (4 sites) and B11_2Tests.cs (expected set). Full independent static audit of all 15 F1 files confirmed zero new correctness bugs, race conditions, resource leaks, or async/threading issues; all 8 prior audit fixes verified intact. 548/548 tests pass, build 0w/0e. 11 prior deferred items (D1–D11) remain valid; 1 new followup (FU-F1-07: comp…
 
 ## Tracker handoff
 
