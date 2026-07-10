@@ -6,12 +6,14 @@ your stage deliverable from the plan JSON.
 **Design doc:** `docs/CONDUCTOR-VNEXT-PLAN.md` — 10 cataloged failures, architecture, locked decisions, addenda D7-D12.
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
-last: s22 — F2.4 landed. MCP bg surface + harness proof complete.
-stage: F2 — ProcessSupervisor + Job Objects + run.db PID registry + bg primitives. 4/4 checkpoints DONE.
-commits: eb1fa35 (F2.4). Prior: 1db847a (F2.3), 65c63c9 (F2.1+F2.2).
-gate: 0w/0e build, 565/565 tests pass. 5 new harness tests green (kill-by-tree, orphan reap, liveness feed).
+last: s24 — F3.1+F3.2 landed. Stall v2 (multi-signal: stdout+tool-events+bg-liveness) + soft-kill grace window.
+stage: F3 — Stall v2 + resilience. 2/4 checkpoints DONE (F3.1, F3.2).
+commits: 0f0d67c (F3.1+F3.2). Prior: eb1fa35 (F2.4).
+gate: 0w/0e build, 575/575 tests pass (+10 StallDetectorTests). Harness tests (5) re-confirmed green.
 branch: feat/foreman.
-trap: Stage F2 COMPLETE. Next: F3 (Stall v2) — stdout+tool-events+bg-liveness watcher + soft-kill debrief + same-failure circuit breaker.
+next: F3.3 (same-failure circuit breaker: 2 identical failures → Advisor) + F3.4 (pre-flight health check).
+qa: s23 (F2 audit) verified — all 4 fixes confirmed real; MarkPidExited fix genuine; 5 harness tests pass independently.
+struggle: clock injection for deterministic grace-window tests.
 
 ## Baseline numbers (pre-Foreman, re-measure at each phase)
 
@@ -59,8 +61,8 @@ never silent renumbering.
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| F3.1 | Stall detection v2 — watches (a) agent stdout, (b) tool-call events from JSON stream, (c) liveness of supervised bg children | TODO | - | - |
-| F3.2 | Soft-kill debrief — on stall: inject "wrap up, write ledger + handoff, 3 min grace", kill only after grace window | TODO | - | - |
+| F3.1 | Stall detection v2 — watches (a) agent stdout, (b) tool-call events from JSON stream, (c) liveness of supervised bg children | DONE | 0f0d67c | docs/baton/evidence/F3.1-gate/gate.txt |
+| F3.2 | Soft-kill debrief — on stall: inject "wrap up, write ledger + handoff, 3 min grace", kill only after grace window | DONE | 0f0d67c | docs/baton/evidence/F3.1-gate/test.txt (575/575, +10 StallDetectorTests) |
 | F3.3 | Same-failure circuit breaker — 2 consecutive attempts with identical failure signature → Advisor session (not another Deliver) | TODO | - | - |
 | F3.4 | Pre-flight health check — DNS/API reachability, disk, git clean, budget remaining; fail → park + Telegram + auto-recheck with exponential backoff | TODO | - | - |
 
