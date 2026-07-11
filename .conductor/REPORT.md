@@ -1,10 +1,10 @@
 ﻿# Conductor — Foreman run report
 
-_Updated 2026-07-11 01:43 UTC · branch `feat/foreman` · HEAD `f3dde7c`_
+_Updated 2026-07-11 01:47 UTC · branch `feat/foreman` · HEAD `c9cf890`_
 
 **Status:** Running
 **Stage:** F5 — Control plane — HTTP+SSE on localhost · persona: architect · attempts used 0 · working ▸ F5.1
-**Checkpoints:** 13/40 done · **Sessions run:** 30 · **Cost:** $2.0527 (agent $2.0527 + gates $0.0000) · **Tokens:** 2,303,582 in / 354,167 out / 323,411 think
+**Checkpoints:** 13/40 done · **Sessions run:** 31 · **Cost:** $2.0527 (agent $2.0527 + gates $0.0000) · **Tokens:** 2,303,582 in / 354,167 out / 323,411 think
 **Confirmed phases:** F0, F1, F2, F3, F4
 
 ## Stage progress
@@ -165,15 +165,13 @@ _Updated 2026-07-11 01:43 UTC · branch `feat/foreman` · HEAD `f3dde7c`_
 | 28 | F4 | Deliver | 1 | 07-10 22:01 | 0:00 | Advanced | F4.1 F4.2 F4.3 F4.4 F4.5 | 1 | build:OK, tests:OK | $0.0000 |  |  |
 | 29 | S1 | Deliver | 1 | 07-11 01:33 | 0:00 | Interrupted |  | 0 |  |  |  |  |
 | 30 | F5 | Resume | 1r1 | 07-11 01:43 | 0:00 | Interrupted |  | 0 |  |  |  |  |
+| 31 | F5 | Resume | 1r2 | 07-11 01:46 | 0:00 | Interrupted |  | 0 |  |  |  |  |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-10 19:53:34  • session #19 F1 → Progress · 1 commit(s)  (7m50s)
-07-10 19:54:29  ▪ gate build pass [phase]  (23.6s)
-07-10 19:54:29  ▪ gate tests pass [phase]  (29.7s)
 07-10 19:54:29  ▸ stage F1 confirmed (audited)  (2h51m06s)
 07-10 19:54:32  ▸ stage F2 entered — ProcessSupervisor + Job Objects + bg primitives
 07-10 19:54:32  • session #20 F2 Deliver started (attempt 1/2) · persona architect
@@ -211,6 +209,9 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-11 02:43:38  ▸ stage F5 entered — Control plane — HTTP+SSE on localhost
 07-11 02:43:38  • session #30 F5 Resume started (attempt 1/2) · persona architect
 07-11 02:43:48  • session #30 F5 → Interrupted  (9.4s)
+07-11 02:46:31  ◆ run resumed · Foreman
+07-11 02:46:31  • session #31 F5 Resume started (attempt 1/2) · persona architect
+07-11 02:47:03  • session #31 F5 → Interrupted  (32.0s)
 ```
 
 ## Health
@@ -218,7 +219,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 28 · retries 1 (4 %) · overall Warn
+sessions 29 · retries 1 (3 %) · overall Warn
 ⚠ [context-saturation] session #2: 32,055,552 context tokens (≥ 20,000,000)
 ```
 
