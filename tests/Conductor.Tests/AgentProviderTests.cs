@@ -195,4 +195,44 @@ public class AgentProviderTests
         Assert.Equal(140, state.TokensInput);                         // accumulated totals still hold
         Assert.Equal(0.003m, state.CostUsd);
     }
+
+    /// <summary>A JSON object whose payload is NOT nested under <c>part</c> used to leave <c>part</c> as the
+    /// default (Undefined) JsonElement, and <c>TryGetProperty</c> on a non-object element throws
+    /// <see cref="InvalidOperationException"/> — which the parser's <c>catch (JsonException)</c> did not
+    /// catch. Because ParseLine runs on the agent's stdout callback thread, that escaped as an unhandled
+    /// exception and killed the whole conductor process. Any agent line shape must parse or degrade, never throw.</summary>
+    [Theory]
+    [InlineData("""{"type":"text","text":"flat, no part wrapper"}""")]
+    [InlineData("""{"type":"reasoning","text":"flat reasoning"}""")]
+    [InlineData("""{"type":"tool_use","tool":"read"}""")]
+    [InlineData("""{"type":"step_finish"}""")]
+    [InlineData("""{"type":"text","part":"a string, not an object"}""")]
+    [InlineData("""{"type":"step_finish","part":{"tokens":42}}""")]
+    [InlineData("""{"type":"tool_use","part":{"state":"running"}}""")]
+    [InlineData("""{"type":"error"}""")]
+    [InlineData("""{"no_type":true}""")]
+    [InlineData("""{}""")]
+    public void OpencodeAdapterNeverThrowsOnUnexpectedLineShape(string line)
+    {
+        var provider = new OpencodeProvider();
+        var (state, _) = NewState();
+
+        var ex = Record.Exception(() => provider.ParseLine(line, state));
+
+        Assert.Null(ex);
+    }
+
+    /// <summary>The flat (un-nested) shape must still yield its text rather than being silently dropped —
+    /// the crash guard falls back to the root element when there is no <c>part</c> wrapper.</summary>
+    [Fact]
+    public void OpencodeAdapterReadsTextFromRootWhenPartWrapperIsAbsent()
+    {
+        var provider = new OpencodeProvider();
+        var (state, events) = NewState();
+
+        provider.ParseLine("""{"type":"text","text":"SESSION-RESULT: landed T1.1"}""", state);
+
+        Assert.Contains(events, e => e.Kind == "text" && e.Text.Contains("landed T1.1", StringComparison.Ordinal));
+        Assert.Contains("landed T1.1", state.ResultText ?? "", StringComparison.Ordinal);
+    }
 }

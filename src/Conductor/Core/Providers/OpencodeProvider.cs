@@ -31,21 +31,34 @@ public sealed class OpencodeProvider : IAgentProvider
         }
     }
 
+    /// <summary>Property lookup that tolerates a non-object element. <see cref="JsonElement.TryGetProperty(string, out JsonElement)"/>
+    /// throws <see cref="InvalidOperationException"/> on any element that isn't an object — including the
+    /// <c>default</c> (<see cref="JsonValueKind.Undefined"/>) element produced when an expected property is
+    /// absent. An agent line is untrusted input, so a shape we don't expect must degrade to "no value here",
+    /// never throw: this parser runs on the process's stdout callback thread, where an exception is fatal.</summary>
+    private static bool TryProp(JsonElement el, string name, out JsonElement value)
+    {
+        if (el.ValueKind != JsonValueKind.Object) { value = default; return false; }
+        return el.TryGetProperty(name, out value);
+    }
+
     private static void Parse(JsonElement root, string line, AgentStreamState state)
     {
-        var type = root.TryGetProperty("type", out var ty) ? ty.GetString() : null;
-        var part = root.TryGetProperty("part", out var p) ? p : default;
+        var type = TryProp(root, "type", out var ty) ? ty.GetString() : null;
+        // opencode nests payload under "part". Flat variants (and hand-rolled/fake agents) put the
+        // fields on the root instead — fall back to root so those parse rather than silently drop.
+        var part = TryProp(root, "part", out var p) ? p : root;
         switch (type)
         {
             case "text":
-                if (part.TryGetProperty("text", out var txt))
+                if (TryProp(part, "text", out var txt))
                 {
                     var s = (txt.GetString() ?? "").Trim();
                     if (s.Length > 0) { state.AppendResultLine(s); state.Emit("text", ProviderText.Trunc(s, 220)); }
                 }
                 break;
             case "reasoning":
-                if (part.TryGetProperty("text", out var rtxt))
+                if (TryProp(part, "text", out var rtxt))
                 {
                     // Push full reasoning text (no truncation) — the buffer dedups growing snapshots
                     // and the pop-out pager shows it in full; the live panel clips for display.
@@ -54,13 +67,13 @@ public sealed class OpencodeProvider : IAgentProvider
                 }
                 break;
             case "tool_use":
-                var tool = part.TryGetProperty("tool", out var tn) ? tn.GetString() ?? "tool" : "tool";
+                var tool = TryProp(part, "tool", out var tn) ? tn.GetString() ?? "tool" : "tool";
                 var detail = "";
-                if (part.TryGetProperty("state", out var stt))
+                if (TryProp(part, "state", out var stt))
                 {
-                    if (stt.TryGetProperty("title", out var title) && title.ValueKind == JsonValueKind.String)
+                    if (TryProp(stt, "title", out var title) && title.ValueKind == JsonValueKind.String)
                         detail = title.GetString() ?? "";
-                    else if (stt.TryGetProperty("input", out var inp))
+                    else if (TryProp(stt, "input", out var inp))
                         detail = ProviderText.Trunc(inp.GetRawText(), 150);
                 }
                 state.Emit("tool", $"{tool} {detail}".Trim());
@@ -68,17 +81,17 @@ public sealed class OpencodeProvider : IAgentProvider
             case "step_finish":
                 long di = 0, dout = 0, dr = 0, dc = 0;
                 decimal dcost = 0;
-                if (part.TryGetProperty("cost", out var c) && c.ValueKind == JsonValueKind.Number)
+                if (TryProp(part, "cost", out var c) && c.ValueKind == JsonValueKind.Number)
                 {
                     dcost = c.GetDecimal();
                     state.CostUsd = (state.CostUsd ?? 0m) + dcost;
                 }
-                if (part.TryGetProperty("tokens", out var tk))
+                if (TryProp(part, "tokens", out var tk))
                 {
-                    if (tk.TryGetProperty("input", out var ti) && ti.ValueKind == JsonValueKind.Number) { di = ti.GetInt64(); state.TokensInput = (state.TokensInput ?? 0) + di; }
-                    if (tk.TryGetProperty("output", out var to) && to.ValueKind == JsonValueKind.Number) { dout = to.GetInt64(); state.TokensOutput = (state.TokensOutput ?? 0) + dout; }
-                    if (tk.TryGetProperty("reasoning", out var tr) && tr.ValueKind == JsonValueKind.Number) { dr = tr.GetInt64(); state.TokensReasoning = (state.TokensReasoning ?? 0) + dr; }
-                    if (tk.TryGetProperty("cache", out var ca) && ca.TryGetProperty("read", out var cr) && cr.ValueKind == JsonValueKind.Number) { dc = cr.GetInt64(); state.TokensCacheRead = (state.TokensCacheRead ?? 0) + dc; }
+                    if (TryProp(tk, "input", out var ti) && ti.ValueKind == JsonValueKind.Number) { di = ti.GetInt64(); state.TokensInput = (state.TokensInput ?? 0) + di; }
+                    if (TryProp(tk, "output", out var to) && to.ValueKind == JsonValueKind.Number) { dout = to.GetInt64(); state.TokensOutput = (state.TokensOutput ?? 0) + dout; }
+                    if (TryProp(tk, "reasoning", out var tr) && tr.ValueKind == JsonValueKind.Number) { dr = tr.GetInt64(); state.TokensReasoning = (state.TokensReasoning ?? 0) + dr; }
+                    if (TryProp(tk, "cache", out var ca) && TryProp(ca, "read", out var cr) && cr.ValueKind == JsonValueKind.Number) { dc = cr.GetInt64(); state.TokensCacheRead = (state.TokensCacheRead ?? 0) + dc; }
                 }
                 state.NumTurns = (state.NumTurns ?? 0) + 1;
                 state.EmitTokenDelta(di, dout, dr, dc, dcost);

@@ -115,7 +115,20 @@ public sealed class AgentSession : IDisposable
         lock (_gate) { try { _raw.WriteLine((stderr ? "[stderr] " : "") + line); } catch (IOException) { /* raw tee is best-effort; a full/locked disk must not drop the live event below */ } catch (ObjectDisposedException) { /* session tearing down */ } }
 
         if (stderr) { _events.Enqueue(new AgentEvent { Kind = "stderr", Text = Trunc(line, 220) }); return; }
-        _provider.ParseLine(line, _stream);
+
+        // This runs on the Process stdout callback thread: an exception escaping here is unhandled and
+        // takes the whole conductor process down mid-run (killing every other stage with it). Agent
+        // output is untrusted — a provider that chokes on one malformed line must cost us that line,
+        // not the run. The raw tee above already persisted it, so nothing is lost for forensics.
+        try
+        {
+            _provider.ParseLine(line, _stream);
+        }
+        catch (Exception ex)
+        {
+            _events.Enqueue(new AgentEvent { Kind = "raw", Text = Trunc(line, 220) });
+            _events.Enqueue(new AgentEvent { Kind = "stderr", Text = $"[parse error: {ex.GetType().Name}] {Trunc(line, 160)}" });
+        }
     }
 
 
