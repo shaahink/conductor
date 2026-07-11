@@ -72,7 +72,10 @@ public sealed class ProcessSupervisor : IDisposable
         var currentPid = Environment.ProcessId;
         foreach (var (pid, purpose) in orphans)
         {
-            if (pid == currentPid) continue;
+            // Already tracked live in this process (e.g. the Face, spawned moments ago by this same
+            // startup sequence, before this reap ran) — not an orphan from a dead prior process. Without
+            // this check, ReapOrphans kills its own just-spawned Face every single run (see FaceLauncher).
+            if (pid == currentPid || _processes.ContainsKey(pid)) continue;
 
             try
             {

@@ -107,7 +107,10 @@
   ],
 
   "gatePolicy": "perPhase",
-  "audit": { "enabled": false },
+  // One audit/fix sweep at the END of each phase (after the full battery goes green), not per checkpoint.
+  // Sequential, not parallel: EnableParallel:true would let it overlap with the NEXT stage's deliver,
+  // which is the wrong shape while M1-M2 are still being built session-to-session.
+  "audit": { "enabled": true, "enableParallel": false },
 
   // ------------------------------------------------------------------------------------------------
   // GATES. Three tiers, and an anti-cheat gate that guards the other two.
