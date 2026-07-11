@@ -1,10 +1,10 @@
 ﻿# Conductor — Foreman run report
 
-_Updated 2026-07-11 01:47 UTC · branch `feat/foreman` · HEAD `c9cf890`_
+_Updated 2026-07-11 01:49 UTC · branch `feat/foreman` · HEAD `cc0f6e6`_
 
 **Status:** Running
 **Stage:** F5 — Control plane — HTTP+SSE on localhost · persona: architect · attempts used 0 · working ▸ F5.1
-**Checkpoints:** 13/40 done · **Sessions run:** 31 · **Cost:** $2.0527 (agent $2.0527 + gates $0.0000) · **Tokens:** 2,303,582 in / 354,167 out / 323,411 think
+**Checkpoints:** 13/40 done · **Sessions run:** 32 · **Cost:** $2.0527 (agent $2.0527 + gates $0.0000) · **Tokens:** 2,303,582 in / 354,167 out / 323,411 think
 **Confirmed phases:** F0, F1, F2, F3, F4
 
 ## Stage progress
@@ -136,7 +136,6 @@ _Updated 2026-07-11 01:47 UTC · branch `feat/foreman` · HEAD `c9cf890`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Overhead | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | F0 | Deliver | 1 | 07-10 14:14 | 0:31 | RolledOver |  | 0 |  | $0.1600 |  | 110,047/42,032 |
 | 2 | F0 | Deliver | 1 | 07-10 14:46 | 0:53 | RolledOver |  | 0 |  | $0.2652 |  | 129,523/53,213 |
 | 3 | F0 | Audit | 1 | 07-10 15:40 | 0:15 | RolledOver |  | 0 |  | $0.0846 |  | 89,322/15,267 |
 | 4 | F0 | Audit | 1 | 07-10 15:55 | 0:06 | Progress |  | 2 |  | $0.0505 |  | 73,066/8,516 |
@@ -166,15 +165,13 @@ _Updated 2026-07-11 01:47 UTC · branch `feat/foreman` · HEAD `c9cf890`_
 | 29 | S1 | Deliver | 1 | 07-11 01:33 | 0:00 | Interrupted |  | 0 |  |  |  |  |
 | 30 | F5 | Resume | 1r1 | 07-11 01:43 | 0:00 | Interrupted |  | 0 |  |  |  |  |
 | 31 | F5 | Resume | 1r2 | 07-11 01:46 | 0:00 | Interrupted |  | 0 |  |  |  |  |
+| 32 | F5 | Resume | 1r3 | 07-11 01:48 | 0:00 | Interrupted |  | 0 |  |  |  |  |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-10 19:54:29  ▸ stage F1 confirmed (audited)  (2h51m06s)
-07-10 19:54:32  ▸ stage F2 entered — ProcessSupervisor + Job Objects + bg primitives
-07-10 19:54:32  • session #20 F2 Deliver started (attempt 1/2) · persona architect
 07-10 20:15:05  ▪ gate build pass [session]  (28.9s)
 07-10 20:15:08  • session #20 F2 → Advanced · done F2.1,F2.2 · 2 commit(s)  (20m36s)
 07-10 20:15:08  ✓ checkpoint F2.1 confirmed
@@ -212,6 +209,9 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-11 02:46:31  ◆ run resumed · Foreman
 07-11 02:46:31  • session #31 F5 Resume started (attempt 1/2) · persona architect
 07-11 02:47:03  • session #31 F5 → Interrupted  (32.0s)
+07-11 02:48:32  ◆ run resumed · Foreman
+07-11 02:48:32  • session #32 F5 Resume started (attempt 1/2) · persona architect
+07-11 02:49:13  • session #32 F5 → Interrupted  (40.4s)
 ```
 
 ## Health
@@ -219,7 +219,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 29 · retries 1 (3 %) · overall Warn
+sessions 30 · retries 1 (3 %) · overall Warn
 ⚠ [context-saturation] session #2: 32,055,552 context tokens (≥ 20,000,000)
 ```
 
