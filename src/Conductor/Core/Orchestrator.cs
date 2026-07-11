@@ -23,7 +23,7 @@ public sealed record RunOptions(bool DryRun, bool Once, int MaxSessions, bool Co
 /// Every transition is persisted, so killing conductor at any point is recoverable.
 /// </summary>
 #pragma warning disable MA0045 // Orchestrator helper methods (Save/Log/AcquireLock/etc.) use sync file I/O by design — fast local writes, not hot-path
-public sealed class Orchestrator(PlanConfig plan, RunState state, string statePath, IProgressSink sink, IEventSink events, RunOptions opts, ILogger<Orchestrator> logger, ITelegramService telegram, WebhookNotifier webhooks, IPlanner? planner = null, RunDb? runDb = null, ProcessSupervisor? processSupervisor = null, ControlDispatcher? dispatcher = null, ConcurrentQueue<ControlCommand>? controlInbox = null)
+public sealed class Orchestrator(PlanConfig plan, RunState state, string statePath, IProgressSink sink, IEventSink events, RunOptions opts, ILogger<Orchestrator> logger, ITelegramService telegram, WebhookNotifier webhooks, IPlanner? planner = null, RunDb? runDb = null, ProcessSupervisor? processSupervisor = null, ControlDispatcher? dispatcher = null, ConcurrentQueue<ControlCommand>? controlInbox = null, TranscriptLog? transcript = null)
 {
     private readonly IPlanner _planner = planner ?? new CheckpointPlanner();
     private readonly PromptBuilder _prompts = BuildPromptBuilder(plan);
@@ -554,7 +554,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             var stallGraceLogged = false;
             while (!agent.HasExited)
             {
-                while (agent.TryDequeue(out var ev)) { sink.AgentEvent(ev); TrackActivity(ev); }
+                while (agent.TryDequeue(out var ev)) { sink.AgentEvent(ev); TrackActivity(ev, rec.Number); }
                 // B12.1: check for completed analysis lanes running concurrently
                 Lanes.PollLaneCompletion();
                 // P2: check if the parallel audit lane has completed; HIGH findings are noted
@@ -619,7 +619,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 catch (OperationCanceledException) { killedByUser = true; agent.Kill(); }
             }
             var exit = agent.WaitForExitCode();
-            while (agent.TryDequeue(out var ev)) { sink.AgentEvent(ev); TrackActivity(ev); }
+            while (agent.TryDequeue(out var ev)) { sink.AgentEvent(ev); TrackActivity(ev, rec.Number); }
             agent.ReapStrays();
 
             rec.EndedUtc = DateTime.UtcNow;
@@ -1908,9 +1908,12 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         }
     }
 
-    /// <summary>Keep a small ring buffer of recent agent activity for the AFK live-activity report.</summary>
-    private void TrackActivity(AgentEvent ev)
+    /// <summary>Keep a small ring buffer of recent agent activity for the AFK live-activity report,
+    /// and (F6) append every line to the transcript log the control plane's <c>/transcript/current</c>
+    /// SSE stream tails — the agent pane's only data source for live text + thinking.</summary>
+    private void TrackActivity(AgentEvent ev, int sessionNumber)
     {
+        transcript?.Append(sessionNumber.ToString(), ev.Kind, ev.Text);
         if (ev.Kind is not ("tool" or "text" or "result" or "thinking")) return;
         _activity.Add((ev.Kind, ev.Text, ev.Utc));
         if (_activity.Count > 60) _activity.RemoveRange(0, 20);

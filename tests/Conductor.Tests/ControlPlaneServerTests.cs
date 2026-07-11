@@ -22,6 +22,8 @@ public sealed class ControlPlaneServerTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), $"conductor-cps-{Guid.NewGuid():N}");
     private readonly string _eventsPath;
+    private readonly string _transcriptPath;
+    private readonly string _runDbPath;
     private readonly PlanConfig _plan;
     private readonly ConcurrentQueue<ControlCommand> _inbox = new();
     private readonly HttpClient _http = new();
@@ -30,6 +32,8 @@ public sealed class ControlPlaneServerTests : IDisposable
     {
         Directory.CreateDirectory(_dir);
         _eventsPath = Path.Combine(_dir, "events.jsonl");
+        _transcriptPath = Path.Combine(_dir, "transcript.jsonl");
+        _runDbPath = Path.Combine(_dir, "run.db");
         _plan = new PlanConfig
         {
             Name = "cps-test",
@@ -67,7 +71,7 @@ public sealed class ControlPlaneServerTests : IDisposable
     private (ControlPlaneServer server, int port) StartServer()
     {
         var port = FreeLoopbackPort();
-        var server = new ControlPlaneServer(_plan, _eventsPath, _inbox, NullLogger.Instance, port);
+        var server = new ControlPlaneServer(_plan, _eventsPath, _transcriptPath, _runDbPath, _inbox, NullLogger.Instance, port);
         Assert.True(server.Start(), "control plane failed to bind — cannot run contract tests");
         return (server, port);
     }
@@ -231,11 +235,169 @@ public sealed class ControlPlaneServerTests : IDisposable
         blocker.Start();
         try
         {
-            var server = new ControlPlaneServer(_plan, _eventsPath, _inbox, NullLogger.Instance, port);
+            var server = new ControlPlaneServer(_plan, _eventsPath, _transcriptPath, _runDbPath, _inbox, NullLogger.Instance, port);
             var started = server.Start();
             Assert.False(started);
             server.Dispose();
         }
         finally { blocker.Stop(); blocker.Close(); }
+    }
+
+    // ---------------------------------------------------------------- F6 endpoints
+
+    [Fact]
+    [Trait("Category", "Integration")] // waits on the SSE poll cycle, not just a request/response
+    public async Task GetTranscriptCurrent_StreamsExistingAndNewLinesAsSse()
+    {
+        using (var log = new TranscriptLog(_transcriptPath))
+        {
+            log.Append("1", "thinking", "considering the approach");
+        }
+        var (server, port) = StartServer();
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var resp = await _http.GetAsync($"http://127.0.0.1:{port}/transcript/current",
+                HttpCompletionOption.ResponseHeadersRead, cts.Token);
+            Assert.Equal("text/event-stream", resp.Content.Headers.ContentType?.MediaType);
+
+            await using var stream = await resp.Content.ReadAsStreamAsync(cts.Token);
+            using var reader = new StreamReader(stream);
+            string? line;
+            var saw = false;
+            while (!saw && (line = await reader.ReadLineAsync(cts.Token)) != null)
+            {
+                if (line.StartsWith("data: ", StringComparison.Ordinal) && line.Contains("considering the approach", StringComparison.Ordinal))
+                    saw = true;
+            }
+            Assert.True(saw, "expected the transcript line as an SSE frame within the timeout");
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task GetProcesses_NoRunDb_ReturnsEmptyList()
+    {
+        var (server, port) = StartServer();
+        try
+        {
+            var resp = await _http.GetAsync($"http://127.0.0.1:{port}/processes");
+            Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            Assert.Equal(0, doc.RootElement.GetProperty("processes").GetArrayLength());
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task GetProcesses_ReturnsTrackedPidsWithLiveness()
+    {
+        WriteEvents(new RunStarted { Plan = "cps-test", Repo = _dir });
+        using (var db = new RunDb(_runDbPath, NullLogger<RunDb>.Instance))
+        {
+            db.TrackPid(Environment.ProcessId, "run-cps", "gate:build", "S1", 1, DateTime.UtcNow);
+        }
+        var (server, port) = StartServer();
+        try
+        {
+            var resp = await _http.GetAsync($"http://127.0.0.1:{port}/processes");
+            Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            var procs = doc.RootElement.GetProperty("processes");
+            Assert.Equal(1, procs.GetArrayLength());
+            Assert.Equal(Environment.ProcessId, procs[0].GetProperty("pid").GetInt32());
+            Assert.True(procs[0].GetProperty("alive").GetBoolean());
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task GetSessions_NoRunDb_ReturnsEmptyList()
+    {
+        var (server, port) = StartServer();
+        try
+        {
+            var resp = await _http.GetAsync($"http://127.0.0.1:{port}/sessions");
+            Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            Assert.Equal(0, doc.RootElement.GetProperty("sessions").GetArrayLength());
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task GetReportQuery_RejectsNonSelectStatements()
+    {
+        var (server, port) = StartServer();
+        try
+        {
+            var resp = await _http.GetAsync($"http://127.0.0.1:{port}/report/query?sql=DELETE FROM runs");
+            Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            Assert.Contains("SELECT", doc.RootElement.GetProperty("error").GetString());
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task GetReportQuery_ExecutesSelectAgainstRunDb()
+    {
+        WriteEvents(new RunStarted { Plan = "cps-test", Repo = _dir });
+        using (var db = new RunDb(_runDbPath, NullLogger<RunDb>.Instance))
+        {
+            db.InitializeRun("run-cps", "cps-test", _dir, null, null);
+        }
+        var (server, port) = StartServer();
+        try
+        {
+            var resp = await _http.GetAsync($"http://127.0.0.1:{port}/report/query?sql=SELECT run_id, plan_name FROM runs");
+            Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            var rows = doc.RootElement.GetProperty("rows");
+            Assert.Equal(1, rows.GetArrayLength());
+            var values = rows[0].GetProperty("values");
+            Assert.Equal("run-cps", values[0].GetString());
+            Assert.Equal("cps-test", values[1].GetString());
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task PostInject_MissingContent_Returns400()
+    {
+        var (server, port) = StartServer();
+        try
+        {
+            using var content = new StringContent("""{"stageId":"S1"}""", Encoding.UTF8, "application/json");
+            var resp = await _http.PostAsync($"http://127.0.0.1:{port}/inject", content);
+            Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task PostInject_Valid_WritesToRunDbAndReturns202()
+    {
+        WriteEvents(new RunStarted { Plan = "cps-test", Repo = _dir });
+        using (var db = new RunDb(_runDbPath, NullLogger<RunDb>.Instance))
+        {
+            db.InitializeRun("run-cps", "cps-test", _dir, null, null);
+        }
+        var (server, port) = StartServer();
+        try
+        {
+            using var content = new StringContent("""{"content":"prefer the async path here","stageId":"S1"}""", Encoding.UTF8, "application/json");
+            var resp = await _http.PostAsync($"http://127.0.0.1:{port}/inject", content);
+            Assert.Equal(HttpStatusCode.Accepted, resp.StatusCode);
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            Assert.True(doc.RootElement.GetProperty("accepted").GetBoolean());
+
+            using var db = new RunDb(_runDbPath, NullLogger<RunDb>.Instance);
+            var rows = db.Query("SELECT content, target_stage_id FROM injections");
+            Assert.Single(rows);
+            Assert.Equal("prefer the async path here", rows[0]["content"]);
+            Assert.Equal("S1", rows[0]["target_stage_id"]);
+        }
+        finally { server.Dispose(); }
     }
 }

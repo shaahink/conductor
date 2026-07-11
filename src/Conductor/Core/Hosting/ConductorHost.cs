@@ -121,13 +121,22 @@ public static class ConductorHost
             return new ProcessSupervisor(supLogger, state.RunId, runDb);
         });
 
+        // F6: agent transcript log (text + thinking, F5 stage-map deferral) — additive alongside
+        // events.jsonl, same dry-run skip as run.db (no write side-effects on a dry run).
+        builder.Services.AddSingleton(sp =>
+        {
+            if (opts.DryRun) return null!;
+            var transcriptPath = Path.Combine(plan.StateDir, "transcript.jsonl");
+            return new TranscriptLog(transcriptPath);
+        });
+
         // F5: control-plane inbox — a third command ingress (alongside the TUI queue and
         // control.json) that POST /control enqueues onto and the run loop polls. Always registered
         // (cheap, empty queue) so Orchestrator's wiring doesn't branch on whether the HTTP server
         // itself is enabled.
         builder.Services.AddSingleton(new ConcurrentQueue<ControlCommand>());
 
-        // F5: HTTP+SSE control plane — opt-in (RunOptions.ControlPlane), off by default. A bind
+        // F5/F6: HTTP+SSE control plane — opt-in (RunOptions.ControlPlane), off by default. A bind
         // failure never throws (see ControlPlaneServer.Start) — headless/no-flag runs are byte-
         // identical whether or not this is registered.
         if (opts.ControlPlane)
@@ -135,6 +144,8 @@ public static class ConductorHost
             builder.Services.AddSingleton(sp => new ControlPlaneServer(
                 plan,
                 Path.Combine(plan.StateDir, "events.jsonl"),
+                Path.Combine(plan.StateDir, "transcript.jsonl"),
+                Path.Combine(plan.StateDir, "run.db"),
                 sp.GetRequiredService<ConcurrentQueue<ControlCommand>>(),
                 sp.GetRequiredService<ILogger<ControlPlaneServer>>(),
                 opts.ControlPlanePort));
@@ -153,7 +164,8 @@ public static class ConductorHost
             planner: null,
             runDb: sp.GetService<RunDb>(),
             processSupervisor: sp.GetService<ProcessSupervisor>(),
-            controlInbox: sp.GetRequiredService<ConcurrentQueue<ControlCommand>>()));
+            controlInbox: sp.GetRequiredService<ConcurrentQueue<ControlCommand>>(),
+            transcript: sp.GetService<TranscriptLog>()));
 
         var host = builder.Build();
         ValidateOptionsOnStart(host.Services, plan);
