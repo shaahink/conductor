@@ -110,24 +110,27 @@ export const FIXTURE_TASKS: TasksDto = {
   ],
 };
 
+// Fixed timestamp so golden snapshots are deterministic across runs.
+const FIXED_TS = "2026-07-11T02:04:43.000Z";
+
 export const FIXTURE_PROCESSES: ProcessesDto = {
   processes: [
-    { pid: 40120, purpose: "gate:build", stageId: "F6", sessionNumber: 47, startedUtc: new Date().toISOString(), exitedUtc: null, exitCode: null, alive: true, lastOutputLine: null },
-    { pid: 40133, purpose: "bg:tui-watch", stageId: "F6", sessionNumber: 47, startedUtc: new Date().toISOString(), exitedUtc: null, exitCode: null, alive: true, lastOutputLine: "watching for changes..." },
+    { pid: 40120, purpose: "gate:build", stageId: "F6", sessionNumber: 47, startedUtc: FIXED_TS, exitedUtc: null, exitCode: null, alive: true, lastOutputLine: null },
+    { pid: 40133, purpose: "bg:tui-watch", stageId: "F6", sessionNumber: 47, startedUtc: FIXED_TS, exitedUtc: null, exitCode: null, alive: true, lastOutputLine: "watching for changes..." },
   ],
 };
 
 export const FIXTURE_SESSIONS: SessionsDto = {
   sessions: [
-    { number: 46, stageId: "F5", kind: "Deliver", startedUtc: new Date().toISOString(), endedUtc: new Date().toISOString(), outcome: "advanced", attempt: 1, resumeCount: 0, gateSummary: "build pass, tests pass", resultSummary: "F5.3 delivered", commitCount: 1 },
+    { number: 46, stageId: "F5", kind: "Deliver", startedUtc: FIXED_TS, endedUtc: FIXED_TS, outcome: "advanced", attempt: 1, resumeCount: 0, gateSummary: "build pass, tests pass", resultSummary: "F5.3 delivered", commitCount: 1 },
   ],
 };
 
 export const FIXTURE_TRANSCRIPT: TranscriptLineDto[] = [
-  { seq: 1, ts: new Date().toISOString(), sessionId: "47", kind: "thinking", text: "Checking how the plan tree paginates a wide terminal." },
-  { seq: 2, ts: new Date().toISOString(), sessionId: "47", kind: "text", text: "Reading src/components/PlanTree.tsx." },
-  { seq: 3, ts: new Date().toISOString(), sessionId: "47", kind: "tool", text: "npm run build" },
-  { seq: 4, ts: new Date().toISOString(), sessionId: "47", kind: "result", text: "0 warnings, 0 errors" },
+  { seq: 1, ts: FIXED_TS, sessionId: "47", kind: "thinking", text: "Checking how the plan tree paginates a wide terminal." },
+  { seq: 2, ts: FIXED_TS, sessionId: "47", kind: "text", text: "Reading src/components/PlanTree.tsx." },
+  { seq: 3, ts: FIXED_TS, sessionId: "47", kind: "tool", text: "npm run build" },
+  { seq: 4, ts: FIXED_TS, sessionId: "47", kind: "result", text: "0 warnings, 0 errors" },
 ];
 
 /** A deterministic DataSource test double — no ticking, no randomness, fixed data every call. */

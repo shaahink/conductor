@@ -575,20 +575,36 @@ public sealed class GateConfig
     public bool Optional { get; set; }
     /// <summary>Skip the gate while this repo-relative path does not exist yet.</summary>
     public string? SkipIfMissing { get; set; }
-    /// <summary>"fast" gates also run per-session under perPhase policy; "full" gates run only at
-    /// phase end (and every session under perSession policy). Default "full".</summary>
+    /// <summary>"fast" gates run per-session under perPhase policy; "full" gates run at phase end
+    /// (and every session under perSession policy); "truth" gates are per-stage product-level
+    /// assertions that run at phase confirmation only. Default "full".</summary>
     public string Tier { get; set; } = "full";
     /// <summary>Gates sharing a truthy parallel flag run concurrently within their battery.</summary>
     public bool Parallel { get; set; }
     /// <summary>If set, this gate only runs while the current stage id is in this list (doc-scoped
     /// gates, e.g. mcp-qa on MCP phases only). Empty/null = runs on every stage.</summary>
     public List<string>? Stages { get; set; }
+    /// <summary>If set, this gate only runs when the current stage's Kind field matches one of
+    /// these values (e.g. ["deliver"] to skip on docs-only stages). Empty/null = runs on every
+    /// stage kind. Applies in addition to the Stages filter.</summary>
+    public List<string>? StageKinds { get; set; }
+    /// <summary>Repo-relative path to a file or directory. If it exists and its last-write time is
+    /// newer than the most recent commit touching source files, the gate is skipped (cached
+    /// freshness). E.g. "src/Conductor/bin/" — skips dotnet build if the output dir is fresh.</summary>
+    public string? SkipIfFresh { get; set; }
     public int TimeoutMinutes { get; set; } = 20;
 
     [JsonIgnore] public bool IsFast => Tier.Equals("fast", StringComparison.OrdinalIgnoreCase);
+    [JsonIgnore] public bool IsTruth => Tier.Equals("truth", StringComparison.OrdinalIgnoreCase);
+    /// <summary>Truth gates are excluded from per-session fast-only batteries; they run at phase
+    /// confirmation alongside full-tier gates.</summary>
+    [JsonIgnore] public bool IsFullOrTruth => IsTruth || Tier.Equals("full", StringComparison.OrdinalIgnoreCase);
 
     public bool AppliesToStage(string? stageId)
         => Stages is not { Count: > 0 } || (stageId != null && Stages.Contains(stageId, StringComparer.OrdinalIgnoreCase));
+
+    public bool AppliesToStageKind(string? stageKind)
+        => StageKinds is not { Count: > 0 } || (stageKind != null && StageKinds.Contains(stageKind, StringComparer.OrdinalIgnoreCase));
 }
 
 public sealed class AuditConfig

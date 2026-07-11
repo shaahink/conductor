@@ -577,6 +577,21 @@ public sealed class RunDb : IDisposable
         return rows;
     }
 
+    // ---------------------------------------------------------------- F7.4: per-gate SHA cache
+
+    /// <summary>Returns true if the gate with the given name, tier and SHA has a passing result
+    /// recorded in run.db. Returns null if no matching record exists (e.g. first run, changed SHA).
+    /// The cache is per-run to avoid cross-contamination.</summary>
+    public bool? GetLastPassingGateResult(string runId, string gateName, string tier, string sha)
+    {
+        if (_disposed != 0) return null;
+        var rows = Query(
+            """SELECT passed FROM gates WHERE run_id = @runId AND name = @name AND tier = @tier AND sha = @sha ORDER BY id DESC LIMIT 1""",
+            ("@runId", runId), ("@name", gateName), ("@tier", tier), ("@sha", sha));
+        if (rows.Count == 0) return null;
+        return Convert.ToInt64(rows[0]["passed"]) != 0;
+    }
+
     // ---------------------------------------------------------------- pids (F2.2: process tracking)
 
     /// <summary>Record a spawned PID for liveness tracking and orphan reaping.</summary>

@@ -68,6 +68,17 @@ public static class Git
 
     // ---------------------------------------------------------------- P4: squash bookkeeping
 
+    /// <summary>Returns the UTC timestamp of the most recent git commit touching any tracked file
+    /// in the repo. Returns null if git fails (e.g. no commits yet). Used by skipIfFresh gate caching.</summary>
+    public static DateTime? MostRecentCommitTime(string repo)
+    {
+        var r = Exec(repo, "log", "-1", "--format=%at", ".");
+        if (r.ExitCode != 0 || string.IsNullOrWhiteSpace(r.Output)) return null;
+        if (long.TryParse(r.Output.Trim(), out var unixSeconds))
+            return DateTimeOffset.FromUnixTimeSeconds(unixSeconds).UtcDateTime;
+        return null;
+    }
+
     /// <summary>P4: squashes consecutive <c>chore(conductor):</c> commits between
     /// <paramref name="sinceSha"/> and HEAD into one per group using an interactive rebase.
     /// Non-chore commits (<c>feat:</c>, <c>fix:</c>, <c>docs:</c>, etc.) are preserved.

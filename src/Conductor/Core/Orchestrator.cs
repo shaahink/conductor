@@ -7,6 +7,7 @@ using Conductor.Core.Commands;
 using Conductor.Core.Events;
 using Conductor.Core.Integrations;
 using Conductor.Core.Lanes;
+using Conductor.Core.Orchestration;
 using Conductor.Core.Planning;
 using Conductor.Core.Providers;
 using Conductor.Models;
@@ -43,6 +44,9 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     // Orchestrator only owns when to call in, same seam ControlDispatcher was cut along in F5.
     private LaneCoordinator? _lanesInstance;
     private LaneCoordinator Lanes => _lanesInstance ??= new LaneCoordinator(plan, state, sink, events, Log);
+    // F7: gate execution and persistence extracted from the Orchestrator god-class.
+    private GateOrchestrator? _gateInstance;
+    private GateOrchestrator Gates => _gateInstance ??= new GateOrchestrator(plan, state, events, _runDb);
     // F5: commands posted to the HTTP control plane land here — a third ingress alongside the TUI
     // queue (sink.PollControl) and control.json (ReadControlFileAsync), same dispatcher for all three.
     private readonly ConcurrentQueue<ControlCommand>? _controlInbox = controlInbox;
@@ -1053,32 +1057,9 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         }
     }
 
-    /// <summary>A stage's checkpoints are all DONE: schedule the audit first (single battery runs after
-    /// it) or, if audit is disabled/done, the confirming full battery.
-    /// P2: when parallel audit is enabled and a next stage exists, the battery runs first and the
-    /// audit launches concurrently with the next stage's deliver.</summary>
     private void ScheduleGateOrAudit(string stageId, string startHead)
     {
-        state.StageStartHeads[stageId] = startHead;
-        // P2: parallel audit — always run the battery first, audit runs concurrently later
-        if (plan.Audit is { Enabled: true, EnableParallel: true } && !state.AuditedStages.Contains(stageId)
-            && HasNextUnconfirmedStage(stageId))
-        {
-            state.PendingPhaseGate = new PendingPhaseGate { StageId = stageId, StageStartHead = startHead };
-            state.PendingAudit = null;
-            Log($"stage {stageId} checkpoints all DONE — scheduling full-battery phase gate (parallel audit will follow)");
-        }
-        else if (plan.Audit is { Enabled: true } && !state.AuditedStages.Contains(stageId))
-        {
-            state.PendingAudit = new PendingAudit { StageId = stageId, StageStartHead = startHead };
-            state.PendingPhaseGate = null;
-            Log($"stage {stageId} checkpoints all DONE — scheduling auto-fix audit (single confirming battery runs after it)");
-        }
-        else
-        {
-            state.PendingPhaseGate = new PendingPhaseGate { StageId = stageId, StageStartHead = startHead };
-            Log($"stage {stageId} checkpoints all DONE — scheduling full-battery phase gate");
-        }
+        Gates.ScheduleGateOrAudit(stageId, startHead, Log, HasNextUnconfirmedStage);
     }
 
     private static string Short(string sha) => string.IsNullOrEmpty(sha) ? "?" : sha.Length >= 7 ? sha[..7] : sha;
@@ -1257,19 +1238,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         _curGate = fastOnly ? "battery:fast" : "battery:full";
         try
         {
-            await GateRunner.RunHookAsync(plan, plan.Setup, "setup", Log, ct).ConfigureAwait(false);
-            var gates = await GateRunner.RunAllAsync(plan, Log, ct, fastOnly, state.CurrentStage, sink.GateProgress).ConfigureAwait(false);
-            await GateRunner.RunHookAsync(plan, plan.Teardown, "teardown", Log, ct).ConfigureAwait(false);
-            // Emit per-gate summary lines with outcome scope so JSON queries can filter on
-            // e.g. gate=build and outcome=fail.
-            foreach (var g in gates)
-            {
-                var outcome = g.Skipped ? "skip" : g.Passed ? "pass" : g.Optional ? "warn" : "fail";
-                var prevGate = _curGate;
-                _curGate = g.Name;
-                Log($"gate {g.Name}: {(g.Skipped ? "SKIP" : g.Passed ? "PASS" : g.Optional ? "WARN" : "FAIL")} ({g.Duration.TotalSeconds:0}s)", outcome);
-                _curGate = prevGate;
-            }
+            var gates = await Gates.RunBatteryAsync(Log, LogWithOutcome, sink.GateProgress, ct, fastOnly).ConfigureAwait(false);
             return gates;
         }
         finally { _curGate = null; }
@@ -1880,32 +1849,9 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         }
     }
 
-    /// <summary>Emit one GateFinished per result — the trust-model verification surface, from one source.</summary>
     private void EmitGates(IReadOnlyList<GateResult> gates, string scope, string? sessionId = null)
     {
-        var sha = Git.Head(plan.Repo);
-        foreach (var g in gates)
-        {
-            events.Emit(new GateFinished
-            {
-                SessionId = sessionId,
-                Name = g.Name,
-                Passed = g.Passed,
-                Skipped = g.Skipped,
-                Optional = g.Optional,
-                ExitCode = g.ExitCode,
-                DurationMs = (long)g.Duration.TotalMilliseconds,
-                Scope = scope,
-            });
-            // F1: additive run.db write alongside events.jsonl
-            var tier = plan.Gates.FirstOrDefault(gc => gc.Name == g.Name)?.Tier ?? "full";
-            _runDb?.RecordGate(state.RunId,
-                int.TryParse(sessionId, out var sn) ? sn : null,
-                state.CurrentStage, g.Name, tier, scope, sha,
-                g.Passed, g.Skipped, g.Optional, g.ExitCode,
-                (long)g.Duration.TotalMilliseconds,
-                g.Tail.Length > 2000 ? g.Tail[^2000..] : g.Tail);
-        }
+        Gates.PersistGates(gates, scope, sessionId);
     }
 
     /// <summary>Keep a small ring buffer of recent agent activity for the AFK live-activity report,
@@ -1993,6 +1939,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         finally { _outcome = prev; }
         sink.Log(stamped);
     }
+
+    private void LogWithOutcome(string line, string? outcome) => Log(line, outcome);
 
     /// <summary>Pushes the current runId/sessionId/stage/gate as a logging scope so every structured
     /// line is correlated; absent values are omitted (they render empty in the sink template).</summary>
