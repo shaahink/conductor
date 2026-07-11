@@ -88,7 +88,9 @@ public static class ConductorHost
         // When no Telegram config is present, a no-op stub satisfies the interface.
         if (plan.Telegram != null)
         {
-            builder.Services.AddSingleton<TelegramService>();
+            builder.Services.AddSingleton<TelegramService>(sp =>
+                new TelegramService(plan, state, sp.GetRequiredService<ILogger<TelegramService>>(),
+                    runDb: opts.DryRun ? null : sp.GetRequiredService<RunDb>()));
             builder.Services.AddSingleton<ITelegramService>(sp => sp.GetRequiredService<TelegramService>());
             builder.Services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<TelegramService>());
         }

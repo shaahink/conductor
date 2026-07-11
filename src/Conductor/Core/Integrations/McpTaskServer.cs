@@ -131,6 +131,10 @@ public sealed class McpTaskServer
                         new { name = "bg_status", description = "F2.4: List all tracked background processes with their liveness status (running/exited/dead). Reads from the run.db pids table.", inputSchema = new { type = "object", properties = new { } } },
                         new { name = "bg_logs", description = "F2.4: Tail the stdout/stderr log of a background process. Returns the last N lines (default 30).", inputSchema = new { type = "object", properties = new { pid = new { type = "integer", description = "PID of the background process." }, tail = new { type = "integer", description = "Number of lines to return (default 30)." } }, required = new[] { "pid" } } },
                         new { name = "bg_stop", description = "F2.4: Kill a background process by PID (kills entire process tree). Marks the PID as exited in run.db.", inputSchema = new { type = "object", properties = new { pid = new { type = "integer", description = "PID of the background process to kill." } }, required = new[] { "pid" } } },
+                        new { name = "run_query", description = "F8.1: Execute an ad-hoc SQL query against the conductor's run.db. Supports SELECT only. Use to answer questions like 'how did s9 die?', 'what are the costs per stage?', 'show me recent gate failures'.", inputSchema = new { type = "object", properties = new { sql = new { type = "string", description = "A SELECT SQL statement to run against run.db." } }, required = new[] { "sql" } } },
+                        new { name = "ledger_list", description = "F8.1: List recent knowledge ledger entries (findings, observations, decisions). Returns the last N entries (default 20). Use to recall what was discovered in previous sessions.", inputSchema = new { type = "object", properties = new { stageId = new { type = "string", description = "Filter by stage id (e.g. F7). Optional." }, tail = new { type = "integer", description = "Number of recent entries to return (default 20)." }, kind = new { type = "string", description = "Filter by entry kind (finding, observation, trap, decision). Optional." } } } },
+                        new { name = "session_detail", description = "F8.1: Get detailed info about a specific session — outcome, gates run, cost, tokens, commits, result summary.", inputSchema = new { type = "object", properties = new { sessionNumber = new { type = "integer", description = "Session number to look up." }, stageId = new { type = "string", description = "Stage id to scope to. Optional." } }, required = new[] { "sessionNumber" } } },
+                        new { name = "inject_instruction", description = "F8.1: Write an instruction into the conductor's injection queue. The next session will receive this as an injected instruction in its prompt. Use to update tasks, inject context, or redirect work.", inputSchema = new { type = "object", properties = new { content = new { type = "string", description = "The instruction text to inject into the next session prompt." }, stageId = new { type = "string", description = "Target stage id (e.g. F7). Optional — injects into current stage by default." } }, required = new[] { "content" } } },
                     }
                 }),
             },
@@ -161,6 +165,10 @@ public sealed class McpTaskServer
                 "bg_status" => HandleBgStatus(args),
                 "bg_logs" => HandleBgLogs(args),
                 "bg_stop" => HandleBgStop(args),
+                "run_query" => HandleRunQuery(args),
+                "ledger_list" => HandleLedgerList(args),
+                "session_detail" => HandleSessionDetail(args),
+                "inject_instruction" => HandleInjectInstruction(args),
                 _ => JsonSerializer.SerializeToElement(new { error = $"Unknown tool: {name}" }),
             };
             return new JsonRpcResponse { Id = id, Result = result };
@@ -512,6 +520,198 @@ public sealed class McpTaskServer
             return !proc.HasExited;
         }
         catch { return false; }
+    }
+
+    // ---------------------------------------------------------------- F8.1: chat MCP tools
+
+    /// <summary>F8.1: Execute an ad-hoc read-only SQL query against run.db. Only SELECT is allowed.
+    /// Row data is returned as an array of string-keyed dictionaries for broad MCP client compatibility.</summary>
+    private JsonElement HandleRunQuery(JsonElement? args)
+    {
+        if (_runDb == null)
+            return JsonSerializer.SerializeToElement(new { ok = false, error = "run_query requires run.db (no plan state available)." });
+
+        var sql = "";
+        if (args is { } a && a.TryGetProperty("sql", out var s))
+            sql = (s.GetString() ?? "").Trim();
+
+        if (string.IsNullOrEmpty(sql))
+            return JsonSerializer.SerializeToElement(new { ok = false, error = "sql is required." });
+
+        if (!sql.StartsWith("SELECT", StringComparison.OrdinalIgnoreCase)
+            && !sql.StartsWith("select", StringComparison.Ordinal)
+            && !sql.StartsWith("--", StringComparison.Ordinal))  // allow commented SQL
+            return JsonSerializer.SerializeToElement(new { ok = false, error = "Only SELECT queries are allowed." });
+
+        try
+        {
+            var rows = _runDb.Query(sql);
+            // Map each row to a string-keyed dict (System.Text.Json can't serialize object values in raw dicts)
+            var result = rows.Select(r =>
+            {
+                var d = new Dictionary<string, string?>(StringComparer.Ordinal);
+                foreach (var kv in r) d[kv.Key] = kv.Value?.ToString();
+                return d;
+            }).ToArray();
+            return JsonSerializer.SerializeToElement(new { ok = true, rows = result, count = result.Length });
+        }
+        catch (Exception ex)
+        {
+            return JsonSerializer.SerializeToElement(new { ok = false, error = $"Query failed: {ex.Message}" });
+        }
+    }
+
+    /// <summary>F8.1: List recent knowledge ledger entries from run.db.</summary>
+    private JsonElement HandleLedgerList(JsonElement? args)
+    {
+        if (_runDb == null)
+            return JsonSerializer.SerializeToElement(new { ok = false, error = "ledger_list requires run.db (no plan state available)." });
+
+        var stageId = "";
+        var tail = 20;
+        var kind = "";
+        if (args is { } a)
+        {
+            if (a.TryGetProperty("stageId", out var s)) stageId = s.GetString() ?? "";
+            if (a.TryGetProperty("tail", out var t) && t.TryGetInt32(out var tv) && tv > 0) tail = tv;
+            if (a.TryGetProperty("kind", out var k)) kind = k.GetString() ?? "";
+        }
+
+        try
+        {
+            var sb = new StringBuilder();
+            sb.Append("SELECT id, run_id, session_number, stage_id, kind, content, created_at FROM ledger WHERE 1=1");
+            var parameters = new List<(string Name, object? Value)>();
+            if (!string.IsNullOrWhiteSpace(stageId))
+            {
+                sb.Append(" AND stage_id = @stageId");
+                parameters.Add(("@stageId", stageId));
+            }
+            if (!string.IsNullOrWhiteSpace(kind))
+            {
+                sb.Append(" AND kind = @kind");
+                parameters.Add(("@kind", kind));
+            }
+            sb.Append(" ORDER BY id DESC LIMIT @tail");
+            parameters.Add(("@tail", tail));
+
+            var rows = _runDb.Query(sb.ToString(), [.. parameters]);
+            var result = rows.Select(r => new
+            {
+                id = r.GetValueOrDefault("id")?.ToString(),
+                stageId = r.GetValueOrDefault("stage_id")?.ToString(),
+                kind = r.GetValueOrDefault("kind")?.ToString(),
+                content = r.GetValueOrDefault("content")?.ToString(),
+                createdAt = r.GetValueOrDefault("created_at")?.ToString(),
+            }).ToArray();
+            return JsonSerializer.SerializeToElement(new { ok = true, entries = result, count = result.Length });
+        }
+        catch (Exception ex)
+        {
+            return JsonSerializer.SerializeToElement(new { ok = false, error = $"Failed to query ledger: {ex.Message}" });
+        }
+    }
+
+    /// <summary>F8.1: Get detailed info about a specific session.</summary>
+    private JsonElement HandleSessionDetail(JsonElement? args)
+    {
+        if (_runDb == null)
+            return JsonSerializer.SerializeToElement(new { ok = false, error = "session_detail requires run.db (no plan state available)." });
+
+        var sessionNumber = 0;
+        var stageId = "";
+        if (args is { } a)
+        {
+            if (a.TryGetProperty("sessionNumber", out var sn) && sn.TryGetInt32(out var snv)) sessionNumber = snv;
+            if (a.TryGetProperty("stageId", out var s)) stageId = s.GetString() ?? "";
+        }
+        if (sessionNumber <= 0)
+            return JsonSerializer.SerializeToElement(new { ok = false, error = "sessionNumber is required." });
+
+        try
+        {
+            var sql = "SELECT * FROM sessions WHERE number = @num";
+            var parameters = new List<(string Name, object? Value)> { (("@num", sessionNumber)) };
+            if (!string.IsNullOrWhiteSpace(stageId))
+            {
+                sql += " AND stage_id = @stageId";
+                parameters.Add(("@stageId", stageId));
+            }
+            sql += " LIMIT 1";
+
+            var rows = _runDb.Query(sql, [.. parameters]);
+            if (rows.Count == 0)
+                return JsonSerializer.SerializeToElement(new { ok = false, error = $"Session #{sessionNumber} not found in run.db." });
+
+            var r = rows[0];
+
+            // Also grab gates for this session
+            var gateRows = _runDb.Query(
+                "SELECT name, tier, passed, skipped, optional, exit_code, duration_ms, scope FROM gates WHERE session_number = @num ORDER BY id",
+                ("@num", sessionNumber));
+
+            var gates = gateRows.Select(g => new
+            {
+                name = g.GetValueOrDefault("name")?.ToString(),
+                tier = g.GetValueOrDefault("tier")?.ToString(),
+                passed = g.GetValueOrDefault("passed")?.ToString() == "1",
+                skipped = g.GetValueOrDefault("skipped")?.ToString() == "1",
+                scope = g.GetValueOrDefault("scope")?.ToString(),
+            }).ToArray();
+
+            return JsonSerializer.SerializeToElement(new
+            {
+                ok = true,
+                session = new
+                {
+                    number = sessionNumber,
+                    stageId = r.GetValueOrDefault("stage_id")?.ToString(),
+                    kind = r.GetValueOrDefault("kind")?.ToString(),
+                    outcome = r.GetValueOrDefault("outcome")?.ToString(),
+                    startedUtc = r.GetValueOrDefault("started_utc")?.ToString(),
+                    endedUtc = r.GetValueOrDefault("ended_utc")?.ToString(),
+                    attempt = r.GetValueOrDefault("attempt")?.ToString(),
+                    resumeCount = r.GetValueOrDefault("resume_count")?.ToString(),
+                    gateSummary = r.GetValueOrDefault("gate_summary")?.ToString(),
+                    resultSummary = r.GetValueOrDefault("result_summary")?.ToString(),
+                    newlyDone = r.GetValueOrDefault("newly_done")?.ToString(),
+                },
+                gates,
+            });
+        }
+        catch (Exception ex)
+        {
+            return JsonSerializer.SerializeToElement(new { ok = false, error = $"Failed to query session: {ex.Message}" });
+        }
+    }
+
+    /// <summary>F8.1: Write an instruction into the conductor's injection queue.</summary>
+    private JsonElement HandleInjectInstruction(JsonElement? args)
+    {
+        var content = "";
+        var stageId = "";
+        if (args is { } a)
+        {
+            if (a.TryGetProperty("content", out var c)) content = c.GetString() ?? "";
+            if (a.TryGetProperty("stageId", out var s)) stageId = s.GetString() ?? "";
+        }
+
+        if (string.IsNullOrWhiteSpace(content))
+            return JsonSerializer.SerializeToElement(new { ok = false, error = "content is required." });
+
+        // Write to run.db injections table
+        if (_runDb != null)
+        {
+            try
+            {
+                _runDb.WriteInjection(_runId, "mcp", null, string.IsNullOrWhiteSpace(stageId) ? null : stageId, content);
+            }
+#pragma warning disable CA1031
+            catch { /* best-effort */ }
+#pragma warning restore CA1031
+        }
+
+        return JsonSerializer.SerializeToElement(new { ok = true, stageId = string.IsNullOrWhiteSpace(stageId) ? null : stageId });
     }
 
     private void WriteJournal(ConductorEvent evt)

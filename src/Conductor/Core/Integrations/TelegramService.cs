@@ -21,6 +21,9 @@ public interface ITelegramService
     Task PushAsync(string message, CancellationToken ct = default);
     Task PushWithKeyboardAsync(string message, IReadOnlyList<(string Text, string CallbackData)> buttons,
         CancellationToken ct = default);
+    /// <summary>F8.2: Push a session-end summary with score, gates, and cost.</summary>
+    Task PushSessionEndAsync(int sessionNumber, string stage, string outcome, string? gateSummary,
+        string? resultSummary, decimal? costUsd, decimal? score, CancellationToken ct = default);
 }
 
 public sealed class TelegramService : IHostedService, ITelegramService, IDisposable
@@ -44,13 +47,17 @@ public sealed class TelegramService : IHostedService, ITelegramService, IDisposa
     private Task? _sendTask;
     private int _offset;
     private bool _started;
+    private readonly RunDb? _runDb; // F8.2: optional run.db for richer /status and daily digest
+    private DateTime _lastDigestUtc = DateTime.UtcNow; // F8.3: daily digest timer
+    private readonly Dictionary<string, bool> _pendingInjections = new(StringComparer.Ordinal); // F8.3: reply-to-inject
 
     private const string ApiBase = "https://api.telegram.org/bot";
 
     public TelegramService(
         PlanConfig plan,
         RunState state,
-        ILogger<TelegramService> logger)
+        ILogger<TelegramService> logger,
+        RunDb? runDb = null)
     {
         _plan = plan;
         _state = state;
@@ -58,6 +65,7 @@ public sealed class TelegramService : IHostedService, ITelegramService, IDisposa
         _log = logger;
         _cfg = plan.Telegram;
         _token = ResolveToken();
+        _runDb = runDb;
 
         _sendQueue = Channel.CreateUnbounded<(string, string, string?)>(
             new UnboundedChannelOptions { SingleReader = true });
@@ -134,6 +142,8 @@ public sealed class TelegramService : IHostedService, ITelegramService, IDisposa
             try
             {
                 await PollOnceAsync(ct).ConfigureAwait(false);
+                // F8.3: daily digest — push a summary once per day (± polling jitter)
+                await MaybeSendDailyDigestAsync(ct).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
             catch (Exception ex) { _log.LogWarning(ex, "Telegram poll error"); }
@@ -180,6 +190,15 @@ public sealed class TelegramService : IHostedService, ITelegramService, IDisposa
         var text = (msg.Text ?? "").Trim();
         if (string.IsNullOrEmpty(text)) return;
 
+        // F8.3: reply-to-inject — if the user just tapped [Inject...] and is now replying
+        if (_pendingInjections.TryGetValue(chatId, out var pending) && pending
+            && !text.StartsWith('/'))
+        {
+            _pendingInjections.Remove(chatId);
+            await HandleInjectAsync(chatId, text, ct).ConfigureAwait(false);
+            return;
+        }
+
         if (text.Equals("/status", StringComparison.OrdinalIgnoreCase))
         {
             var status = BuildStatusText();
@@ -194,6 +213,22 @@ public sealed class TelegramService : IHostedService, ITelegramService, IDisposa
         {
             await SendAsync(chatId, "Conductor bot is running. Use /status to see the current state.", ct)
                 .ConfigureAwait(false);
+        }
+        else if (text.Equals("/daily", StringComparison.OrdinalIgnoreCase))
+        {
+            await SendDailyDigestAsync(chatId, ct).ConfigureAwait(false);
+        }
+        else if (text.StartsWith("/inject ", StringComparison.OrdinalIgnoreCase))
+        {
+            var instruction = text[8..].Trim();
+            await HandleInjectAsync(chatId, instruction, ct).ConfigureAwait(false);
+        }
+        else if (text.Equals("/chat", StringComparison.OrdinalIgnoreCase))
+        {
+            var planName = _plan.PlanFilePath != null ? Path.GetFileName(_plan.PlanFilePath) : "conductor.plan.json";
+            await SendAsync(chatId,
+                $"Use `conductor chat \"your question\"` from the terminal to ask questions about this run.\n\nExample: `conductor chat -p {planName} \"how did session 9 die?\"`",
+                ct).ConfigureAwait(false);
         }
         else if (_cfg?.EnableTwoWay == true && text.StartsWith('/'))
         {
@@ -247,6 +282,32 @@ public sealed class TelegramService : IHostedService, ITelegramService, IDisposa
             if (cb.From != null)
                 await SendAsync(cb.From.Id.ToString(CultureInfo.InvariantCulture), "Cancelled.", ct)
                     .ConfigureAwait(false);
+            return;
+        }
+
+        if (data.StartsWith("inject:", StringComparison.Ordinal))
+        {
+            // Prompt the user to respond with the injection text
+            if (cb.From != null)
+            {
+                var userId = cb.From.Id.ToString(CultureInfo.InvariantCulture);
+                // Store the pending injection intent
+                _pendingInjections[userId] = true;
+                await SendAsync(userId, "Reply to this message with the text you want to inject into the next session.", ct)
+                    .ConfigureAwait(false);
+            }
+            return;
+        }
+
+        if (data.StartsWith("chat:", StringComparison.Ordinal))
+        {
+            if (cb.From != null)
+            {
+                var planName = _plan.PlanFilePath != null ? Path.GetFileName(_plan.PlanFilePath) : "conductor.plan.json";
+                await SendAsync(cb.From.Id.ToString(CultureInfo.InvariantCulture),
+                    $"Use `conductor chat -p {planName} \"your question\"` from the terminal.", ct)
+                    .ConfigureAwait(false);
+            }
             return;
         }
 
@@ -316,6 +377,113 @@ public sealed class TelegramService : IHostedService, ITelegramService, IDisposa
 
     // ──────────────────────────────── status ────────────────────────────────
 
+    // F8.2: session-end one-liner with score, gates, and cost.
+    public async Task PushSessionEndAsync(int sessionNumber, string stage, string outcome, string? gateSummary,
+        string? resultSummary, decimal? costUsd, decimal? score, CancellationToken ct = default)
+    {
+        if (!_started) return;
+
+        var runCost = _state.TotalCostUsd > 0 ? $" | run: ${_state.TotalCostUsd:0.0000}" : "";
+        var scoreStr = score.HasValue ? $" | score: {score:0}/100" : "";
+        var sb = new StringBuilder();
+        sb.AppendLine($"<b>s{sessionNumber} {outcome}</b> — {stage}");
+        sb.AppendLine($"gates: {(string.IsNullOrWhiteSpace(gateSummary) ? "(not recorded)" : gateSummary)}");
+        if (!string.IsNullOrWhiteSpace(resultSummary))
+            sb.AppendLine($"result: {resultSummary}");
+        sb.Append($"cost: ${costUsd ?? 0:0.0000}{runCost}{scoreStr}");
+
+        await PushAsync(sb.ToString(), ct).ConfigureAwait(false);
+    }
+
+    // F8.3: handle /inject <text> from Telegram
+    private async Task HandleInjectAsync(string chatId, string instruction, CancellationToken ct)
+    {
+        if (_runDb == null)
+        {
+            await SendAsync(chatId, "Cannot inject: run.db is not available.", ct).ConfigureAwait(false);
+            return;
+        }
+
+        try
+        {
+            var runId = _state.RunId ?? Guid.NewGuid().ToString("N");
+            _runDb.WriteInjection(runId, "telegram", null, _state.CurrentStage, instruction);
+            await SendAsync(chatId, $"Instruction injected for the next session: <i>{EscapeHtml(instruction)}</i>", ct)
+                .ConfigureAwait(false);
+            _log.LogInformation("Telegram /inject: {Instruction} (stage={Stage})", instruction, _state.CurrentStage);
+        }
+        catch (Exception ex)
+        {
+            await SendAsync(chatId, $"Failed to inject: {EscapeHtml(ex.Message)}", ct).ConfigureAwait(false);
+        }
+    }
+
+    // F8.3: daily digest — check if 24h have passed and push a summary
+    private async Task MaybeSendDailyDigestAsync(CancellationToken ct)
+    {
+        if (DateTime.UtcNow - _lastDigestUtc < TimeSpan.FromHours(24) || _cfg?.AllowedChatIds is not { Count: > 0 } ids)
+            return;
+
+        _lastDigestUtc = DateTime.UtcNow;
+        foreach (var cid in ids)
+            await SendDailyDigestAsync(cid, ct).ConfigureAwait(false);
+    }
+
+    private async Task SendDailyDigestAsync(string chatId, CancellationToken ct)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"<b>Conductor Daily Digest — {_plan.Name}</b>");
+        sb.AppendLine($"Status: <b>{_state.Status}</b> | Stage: {_state.CurrentStage ?? "-"}");
+        sb.AppendLine($"Sessions: {_state.SessionCounter} | Cost: ${_state.TotalCostUsd:0.0000}");
+
+        if (_runDb != null)
+        {
+            try
+            {
+                var rows = _runDb.Query(
+                    "SELECT stage_id, outcome, count(*) as cnt FROM sessions GROUP BY stage_id, outcome ORDER BY stage_id");
+                if (rows.Count > 0)
+                {
+                    sb.AppendLine();
+                    sb.AppendLine("<b>Session outcomes by stage:</b>");
+                    foreach (var r in rows)
+                    {
+                        var s = r.GetValueOrDefault("stage_id")?.ToString() ?? "?";
+                        var o = r.GetValueOrDefault("outcome")?.ToString() ?? "?";
+                        var c = r.GetValueOrDefault("cnt")?.ToString() ?? "0";
+                        sb.AppendLine($"  {s}: {o} ×{c}");
+                    }
+                }
+
+                // Recent gate failures
+                var gates = _runDb.Query(
+                    "SELECT name, stage_id, tier FROM gates WHERE passed = 0 AND skipped = 0 ORDER BY id DESC LIMIT 5");
+                if (gates.Count > 0)
+                {
+                    sb.AppendLine();
+                    sb.AppendLine("<b>Recent gate failures:</b>");
+                    foreach (var g in gates)
+                    {
+                        var n = g.GetValueOrDefault("name")?.ToString() ?? "?";
+                        var s = g.GetValueOrDefault("stage_id")?.ToString() ?? "?";
+                        sb.AppendLine($"  FAIL: {n} ({s})");
+                    }
+                }
+                else
+                {
+                    sb.AppendLine();
+                    sb.AppendLine("All recent gates passed.");
+                }
+            }
+#pragma warning disable CA1031
+            catch { /* best-effort: digest is advisory */ }
+#pragma warning restore CA1031
+        }
+
+        await SendAsync(chatId, sb.ToString().TrimEnd(), ct).ConfigureAwait(false);
+    }
+
+    // F8.3: enhanced /status with run.db data when available
     private string BuildStatusText()
     {
         TrackerSnapshot track;
@@ -449,6 +617,13 @@ public sealed class TelegramService : IHostedService, ITelegramService, IDisposa
 
         return JsonSerializer.Serialize(kb, JsonOpts);
     }
+
+    private static string EscapeHtml(string s)
+    {
+        return s.Replace("&", "&amp;", StringComparison.Ordinal)
+                .Replace("<", "&lt;", StringComparison.Ordinal)
+                .Replace(">", "&gt;", StringComparison.Ordinal);
+    }
 }
 
 // ──────────────────────────────── Telegram API DTOs ────────────────────────────────
@@ -499,4 +674,6 @@ public sealed class NoOpTelegramService : ITelegramService
     public Task PushAsync(string message, CancellationToken ct = default) => Task.CompletedTask;
     public Task PushWithKeyboardAsync(string message,
         IReadOnlyList<(string Text, string CallbackData)> buttons, CancellationToken ct = default) => Task.CompletedTask;
+    public Task PushSessionEndAsync(int sessionNumber, string stage, string outcome, string? gateSummary,
+        string? resultSummary, decimal? costUsd, decimal? score, CancellationToken ct = default) => Task.CompletedTask;
 }

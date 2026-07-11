@@ -1505,7 +1505,14 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         Log($"🛑 NEEDS HUMAN: {reason}");
         SaveAndReport();
         Notify($"Conductor {plan.Name}: needs attention — {reason}");
-        _ = telegram.PushWithKeyboardAsync(reason, [("Resume", "resume"), ("Skip Stage", "skip")]);
+        // F8.2: richer button set — [Retry] [Skip] [Inject...] [Chat]
+        _ = telegram.PushWithKeyboardAsync(reason,
+        [
+            ("Resume", "resume"),
+            ("Skip Stage", "skip"),
+            ("Inject…", "inject:needsHuman"),
+            ("Chat", "chat:needsHuman"),
+        ]);
     }
 
     // ---------------------------------------------------------------- O2: budget intelligence
@@ -1847,6 +1854,10 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             // F1.2: regenerate the tracker FROM run.db after every session
             RegenerateTracker(track);
         }
+
+        // F8.2: session-end one-liner with score pushed to Telegram
+        _ = telegram.PushSessionEndAsync(rec.Number, rec.Stage, rec.Outcome?.ToString() ?? "Unknown",
+            rec.GateSummary, rec.ResultSummary, rec.CostUsd, state.PendingFix?.VerifierScore);
     }
 
     private void EmitGates(IReadOnlyList<GateResult> gates, string scope, string? sessionId = null)

@@ -65,7 +65,7 @@ public class McpTaskServerTests
 
             Assert.Single(responses);
             var tools = responses[0].GetProperty("result").GetProperty("tools");
-            Assert.Equal(8, tools.GetArrayLength());
+            Assert.Equal(12, tools.GetArrayLength());
             var names = tools.EnumerateArray().Select(t => t.GetProperty("name").GetString()).ToHashSet();
             Assert.Contains("task_list", names);
             Assert.Contains("task_update", names);

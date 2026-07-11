@@ -64,6 +64,8 @@ app.Configure(c =>
         .WithDescription("Generate shell completion scripts (powershell or bash).");
     c.AddCommand<BgCommand>("bg")
         .WithDescription("Background process management: start|status|logs|stop.");
+    c.AddCommand<ChatCommand>("chat")
+        .WithDescription("F8.1: Ask questions about a running conductor plan. The agent has MCP access to run.db, the ledger, and control verbs. Example: conductor chat \"how did session 9 die?\"");
     c.SetExceptionHandler((ex, _) =>
     {
         AnsiConsole.MarkupLine($"[red]error:[/] {Markup.Escape(ex is InvalidOperationException or FileNotFoundException ? ex.Message : ex.ToString())}");
