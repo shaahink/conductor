@@ -38,10 +38,10 @@ public sealed class PlanConfig
     public ProgressConventions Conventions { get; set; } = new();
     public List<StageConfig> Stages { get; set; } = new();
     public List<GateConfig> Gates { get; set; } = new();
-    /// <summary>"perSession" (full battery after every session) or "perPhase" (fast-tier gates per
-    /// session, full battery only when a stage's checkpoints are all DONE). Default perSession.</summary>
+    /// <summary>"perSession" (full battery every session) or "perPhase" (fast gates/session, full battery at stage-done). Default perSession.</summary>
     public string GatePolicy { get; set; } = "perSession";
     public AuditConfig? Audit { get; set; }
+    public bool VerifyEachDelivery { get; set; } = true; // false: skip per-Deliver Verify, rely on Audit/full battery (M3 stopgap)
     /// <summary>On-demand read-only "what's the status?" agent (dashboard `G` key). Default null → disabled.</summary>
     public StatusAgentConfig? StatusAgent { get; set; }
     public LimitsConfig Limits { get; set; } = new();

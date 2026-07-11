@@ -1400,9 +1400,9 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         SaveAndReport();
     }
 
-    private static bool ShouldVerify(SessionRecord rec)
+    private bool ShouldVerify(SessionRecord rec)
     {
-        return rec.Kind == SessionKind.Deliver;
+        return rec.Kind == SessionKind.Deliver && plan.VerifyEachDelivery;
     }
 
     private void WriteVerifierFollowups(string stageId, VerifierVerdict verdict)

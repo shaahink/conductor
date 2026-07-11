@@ -111,6 +111,10 @@
   // Sequential, not parallel: EnableParallel:true would let it overlap with the NEXT stage's deliver,
   // which is the wrong shape while M1-M2 are still being built session-to-session.
   "audit": { "enabled": true, "enableParallel": false },
+  // Deliver sessions chain back-to-back within a stage instead of a Verify session after every one of
+  // them; the perPhase full battery + the audit session above are the only QA passes. Stopgap ahead of
+  // M3's declarative per-stage workflow overrides (see PlanConfig.VerifyEachDelivery).
+  "verifyEachDelivery": false,
 
   // ------------------------------------------------------------------------------------------------
   // GATES. Three tiers, and an anti-cheat gate that guards the other two.
