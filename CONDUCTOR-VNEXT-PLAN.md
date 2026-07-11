@@ -4,14 +4,14 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: s32 (opencode direct) — F7 COMPLETE. Gate caching by SHA (F7.4), truth-gate tier (F7.3), speed program (F7.5), GateOrchestrator extraction. F7.1 CANCELLED (plan import deferred to F8), F7.2 TODO (re-import diff, post-F7.1).
-stage: F8 NOT STARTED — conductor chat + Telegram v2. F7.1 (plan import) rides along as F8 companion.
-commits: 294f69a (F7 gate changes + GateOrchestrator).
-gate: dotnet 646/647 pass 0w/0e (1 pre-existing flaky Serilog-flush race). face/ 20/23 pass (3 pre-existing golden snapshot failures — ProcessPane elapsed-time live-dependency).
+last: s32 (opencode direct) — F8 DELIVERED (first pass). Plan import (F7.1), conductor chat (F8.1), Telegram v2 (F8.2-F8.3). F8.4 (acceptance: phone-only toy run) still TODO.
+stage: F8 IN PROGRESS — 3 of 4 checkpoints DONE, 1 TODO (F8.4 acceptance test). F7.2 (re-import diff) TODO.
+commits: c51b7eb (F8: chat + Telegram v2 + plan import).
+gate: dotnet 647/647 pass 0w/0e. face/ 20/23 pass (3 pre-existing golden snapshots — ProcessPane elapsed-time).
 branch: feat/foreman.
-next: F8 — conductor chat (agent wired to run.db+ledger+logs+control, ad-hoc Q&A + task editing + injections). Telegram v2 (scores, NeedsHuman inline buttons, reply-to-inject, /status, daily digest). Plan import (F7.1) as companion feature.
-qa: static audit clean. All F7 changes additive + backward-compatible. GateRunner new params nullable. 646/647 tests pass.
-struggle: ProcessPane golden snapshots — 3/23 face tests fail on elapsed-time calculation (ProcessPane uses live Date.now() regardless of fixture timestamps). Needs component-level `now` prop override.
+next: F8.4 acceptance test (phone-only drive of a toy run, laptop lid closed). F7.2 re-import diff (mid-plan changes). F9 dogfood close.
+qa: static audit clean. All F8 changes additive + backward-compatible. New MCP tools (run_query, ledger_list, session_detail, inject_instruction) extend existing surface. TelegramService.RunDb is optional (null-safe). ChatCommand uses existing Advisor/AgentSession infrastructure.
+struggle: ProcessPane golden snapshots — 3/23 face tests fail on elapsed-time. Needs component-level `now` prop override.
 
 
 ## Baseline numbers (from run.db)
@@ -19,7 +19,7 @@ struggle: ProcessPane golden snapshots — 3/23 face tests fail on elapsed-time 
 | Metric | Value |
 |---|---|
 | Total checkpoints | 40 |
-| Done | 27 |
+| Done | 31 |
 
 ## Checkpoints
 
@@ -93,7 +93,7 @@ phase (a code path is not evidence).
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| F7.1 | Plan import — LLM pass (advisor model) converts mega plan → task graph: stages, sessions, checkpoints, dependencies, truth gates | CANCELLED | - | Deferred to F8 — needs full CLI command + LLM integration; Advisor infrastructure exists, plan.json schema ready. |
+| F7.1 | Plan import — LLM pass (advisor model) converts mega plan → task graph: stages, sessions, checkpoints, dependencies, truth gates | DONE | c51b7eb | PlanImportService.cs + PlanImportCommand — builds LLM prompt, parses JSON output (stages + gates), adds/merges into plan with interactive confirm table. |
 | F7.2 | Re-import diff — mid-plan changes are a first-class operation (diff, not clobber); interactive confirm/edit table | TODO | - | Post-F7.1 — depends on plan import infrastructure. |
 | F7.3 | Truth-gate tier — per-stage product-level assertions; per-stage gate selection (docs-only stage runs 0 dotnet gates) | DONE | 294f69a | GateConfig.Tier="truth" + IsTruth + IsFullOrTruth; StageKinds filter on GateConfig; GateRunner filter excludes truth from fast-only batteries; AppliesToStageKind method. 646/647 tests pass. |
 | F7.4 | Gate caching by SHA — result = fn(gate, HEAD sha, tier); re-running unchanged battery forbidden by engine, not convention; agents told which gates are already green | DONE | 294f69a | RunDb.GetLastPassingGateResult query; GateRunner.RunTrackedAsync caches green results per (name, tier, sha); Cached property on GateResult; AllRequiredPassed uses IsGreen. 646/647 tests pass. |
@@ -103,9 +103,9 @@ phase (a code path is not evidence).
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| F8.1 | conductor chat — spawns agent wired (MCP) to run.db+ledger+logs+control verbs: "how did s9 die?", "update task A2", "inject X into retry" | TODO | - | - |
-| F8.2 | Telegram v2 — session-end one-liner with score; NeedsHuman ping with inline buttons [Retry] [Skip] [Inject…] [Chat] | TODO | - | - |
-| F8.3 | Reply-to-inject + /status from run.db + daily digest; host-free (long-poll getUpdates, works behind NAT) | TODO | - | - |
+| F8.1 | conductor chat — spawns agent wired (MCP) to run.db+ledger+logs+control verbs: "how did s9 die?", "update task A2", "inject X into retry" | DONE | c51b7eb | ChatCommand.cs — spawns advisor-model agent; McpTaskServer extended with run_query, ledger_list, session_detail, inject_instruction MCP tools; chat.md template in PromptBuilder; wired in Program.cs. |
+| F8.2 | Telegram v2 — session-end one-liner with score; NeedsHuman ping with inline buttons [Retry] [Skip] [Inject…] [Chat] | DONE | c51b7eb | PushSessionEndAsync in ITelegramService/TelegramService; NeedsHuman buttons enhanced; RunDb wired into TelegramService via ConductorHost; callback handler for inject:/chat: button actions. |
+| F8.3 | Reply-to-inject + /status from run.db + daily digest; host-free (long-poll getUpdates, works behind NAT) | DONE | c51b7eb | /inject command + reply-to-inject flow (pending-injection state); /daily command + 24h automatic digest timer; /chat command; enhanced /status with run.db data (costs, gate failures); EscapeHtml helper. |
 | F8.4 | Acceptance — full phone-only drive of a toy run; laptop lid closed | TODO | - | - |
 
 ### F9 — Dogfood close — real Shamshir A2 under v-next
