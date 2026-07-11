@@ -39,17 +39,65 @@ C:\Code\conductor\bin\conductor.exe run         -p .conductor\plans\conductor-de
 - Run QA only when last session was `gatesRed`, `stalled`, `noProgress`, or `interrupted`.
 - **Tracker rule:** always update BOTH handoff block AND checkpoint row (DONE + commit + evidence). If row stays TODO, conductor re-launches the same stage.
 
-## Current state (2026-07-11)
+## Current state (2026-07-11, updated mid-F6)
 - **Baton v2 COMPLETE** — 77 sessions, 67/67 checkpoints DONE, status=completed.
-- **Foreman v3 ACTIVE** — 23/40 checkpoints DONE, F0/F1/F2/F3/F4/F5 confirmed, next: F6 (Ink TUI, TypeScript).
+- **Foreman v3 ACTIVE** — 23/40 checkpoints DONE, F0-F5 confirmed, F6 (Ink TUI) IN PROGRESS (first pass shipped, not yet integration-tested or committed — see below).
 - **Branch:** `feat/foreman` is the active branch; `feat/baton` is the worktree.
 - **Driver:** `C:\Code\conductor\bin\conductor.exe run -p plans\conductor-foreman.plan.json`
-- **Read order:** `CONDUCTOR-VNEXT-PLAN.md` (tracker) → `docs/CONDUCTOR-VNEXT-PLAN.md` (design doc)
-- **Last session:** s30 (manual, Claude Code direct) — pre-F6 debt sweep, not a tracked checkpoint:
-  closed both open items this doc flagged (async ProcessRunner/GateRunner/Advisor hot path;
-  lane-coordinator extraction into `Core/Lanes/LaneCoordinator.cs`). Commits 7305a93, 5df1b85.
-  639/639 tests pass, 0w/0e. F6 (Ink TUI) is next and still needs fresh scoping before starting —
-  it's a from-scratch TypeScript+Ink project, a different tech stack from the rest of this repo.
+- **Read order:** `CONDUCTOR-VNEXT-PLAN.md` (tracker) → `docs/CONDUCTOR-VNEXT-PLAN.md` (design doc) → this section for F6 handoff detail.
+
+### F6 handoff (s31, manual Claude Code direct — token budget ran out mid-session)
+
+**Committed and pushed (47c7ecb):** engine-side control-plane additions the TUI needs —
+`Core/Events/TranscriptLog.cs` (new, mirrors EventLog for agent transcript+thinking), `GET
+/transcript/current` SSE, `GET /processes`, `GET /sessions`, `GET /report/query` (SELECT-only),
+`POST /inject` (records to run.db's `injections` table — NOT yet consumed into a prompt, that's F8),
+and `StateDto` extended with session-level ticker fields + runId/repo/planDir. 644/645 dotnet tests
+pass (1 pre-existing Serilog-flush flake, trait-tagged, unrelated).
+
+**NOT committed — sitting on disk at `face/`, first thing the next session must do:**
+a full TypeScript + Ink TUI ("the Face" — name taken from the plan file's own architecture comment).
+`npm run typecheck` clean, `npm run build` (tsup) ~30ms, `npm test` (vitest) 23/23 passing including
+golden-layout snapshot tests at 80×24/120×30/200×50 with a hard "no rendered line exceeds N columns"
+assertion. Run `cd face && git add -A && git commit` first, then read the tracker's F6 handoff
+paragraph (CONDUCTOR-VNEXT-PLAN.md top) for the two real Yoga/Ink layout bugs the golden tests
+caught and how they were fixed — anyone touching `PlanTree.tsx`/`ProcessPane.tsx`/`Layout.tsx` needs
+that context before changing row-rendering JSX again.
+
+**What's built:** plan tree (F6.2), agent pane with thinking-stream + tool-fold + search (F6.3),
+process pane + 11-verb command palette + tiered ticker (F6.4), PLUS the rest of D11's checklist:
+inject editor, prompt/persona template editor (direct filesystem read/write — no engine round-trip),
+session-history browser, report/query console. Mouse support via raw SGR (1000+1006) escape parsing
+(`src/input/mouse.ts`, unit-tested at the parser level). `--demo` flag runs the whole thing fully
+offline against synthetic data generated from this repo's own real tracker — no conductor process
+needed (see `face/src/api/demo.ts`).
+
+**What's NOT done / not verified — this is the honest gap, not scope creep to chase blindly:**
+1. **Never run against a real `conductor run --control-plane` process.** Only tested against
+   `--demo` and component tests with a fake stdout/stdin (real TTY interaction isn't drivable from
+   this environment's tools). First thing to do: build the stable driver, run it with
+   `--control-plane`, point `conductor-face` (no `--demo`) at it, and watch a real session end to end.
+2. **Mouse support never confirmed against a real terminal emulator** — only the SGR escape-sequence
+   parser is unit-tested (pure function, `tests/mouse.test.ts`). Needs an actual click in Windows
+   Terminal/whatever terminal the owner uses.
+3. **No `--no-dashboard`-equivalent audit of whether Face changes anything about headless engine
+   runs** — it shouldn't (it's a separate process, opt-in via `--control-plane`), but nobody has
+   proven that this session.
+4. Per-checkpoint DONE/TODO calls in the tracker table are deliberately left at IN PROGRESS rather
+   than DONE until #1 above happens — marking DONE without ever touching a live engine would be
+   exactly the "claim vs reality" gap this whole system's Verifier role exists to catch.
+5. `npm audit` shows 5 dev-only transitive vulnerabilities (esbuild/vite, via vitest) — not shipped
+   in the built CLI, not investigated further, low priority.
+
+**How to see the TUI right now, no engine needed:**
+```powershell
+cd face
+npm install   # first time only
+npm run build
+node dist/cli.js --demo
+```
+Or for live mode against a real run: add `--control-plane` to the `conductor run` invocation above
+(see "How to run" below), then `node dist/cli.js` (defaults to `http://127.0.0.1:4317`).
 
 ## C# coding standards (this codebase)
 

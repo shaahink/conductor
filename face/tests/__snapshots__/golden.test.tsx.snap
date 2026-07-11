@@ -1,0 +1,114 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`golden layout > renders at 80x24 without throwing and matches the golden snapshot 1`] = `
+" ● live Running F6 · s47                                               $18.42
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ PLAN                                                                         │
+│▸ ✓ F5 Control plane — HTTP+SSE on localhost                        3/3  $4.10│
+│▾ ● F6 Ink TUI v1 — TypeScript rebuild                              3/5  $2.40│
+│    ✓ F6.1 TS+Ink project scaffold + build split                              │
+│    ✓ F6.2 Plan pane                                                          │
+│    ✓ F6.3 Agent pane                                                         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ AGENT — s47 Deliver                                                          │
+│02:04:43 ⁙ Checking how the plan tree paginates a wide terminal.              │
+│02:04:43 · Reading src/components/PlanTree.tsx.                               │
+│02:04:43 ⚙ npm run build                                                      │
+│02:04:43 ↳ 0 warnings, 0 errors                                               │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ PROCESSES                                                                    │
+│● 40120 gate:build 0s  —                                                      │
+╰──────────────────────────────────────────────────────────────────────────────╯
+ Tab  1 2 3  : or Ctrl+K  i  e  h  r  ?  q or Ctrl+C"
+`;
+
+exports[`golden layout > renders at 120x30 without throwing and matches the golden snapshot 1`] = `
+" ● live  Running  F6 · s47 Deliver (1/3)                                         session  $0.42  4m05s  · run  $18.42
+╭──────────────────────────────────╮╭──────────────────────────────────────────────────────────────────────────────────╮
+│ PLAN                             ││ AGENT — s47 Deliver                                                              │
+│▸ ✓ F5 Control plane — HTTP+S… 3/3││02:04:43 ⁙ Checking how the plan tree paginates a wide terminal.                  │
+│▾ ● F6 Ink TUI v1 — TypeScrip… 3/5││02:04:43 · Reading src/components/PlanTree.tsx.                                   │
+│    ✓ F6.1 TS+Ink project scaffol…││02:04:43 ⚙ npm run build                                                          │
+│    ✓ F6.2 Plan pane              ││02:04:43 ↳ 0 warnings, 0 errors                                                   │
+│    ✓ F6.3 Agent pane             ││                                                                                  │
+│    ○ F6.4 Process pane… ← current││                                                                                  │
+│    ○ F6.5 Golden-layout snapshot…││                                                                                  │
+│▸ ○ F7 Plan import + truth ga… 0/4││                                                                                  │
+│                                  ││                                                                                  │
+│                                  ││                                                                                  │
+│                                  ││                                                                                  │
+│                                  ││                                                                                  │
+│                                  ││                                                                                  │
+│                                  ││                                                                                  │
+│                                  ││                                                                                  │
+│                                  ││                                                                                  │
+│                                  ││                                                                                  │
+│                                  ││                                                                                  │
+│                                  │╰──────────────────────────────────────────────────────────────────────────────────╯
+│                                  │╭──────────────────────────────────────────────────────────────────────────────────╮
+│                                  ││ PROCESSES                                                                        │
+│                                  ││● 40120 gate:build 0s  —                                                          │
+│                                  ││● 40133 bg:tui-watch 0s  watching for changes...                                  │
+│                                  ││                                                                                  │
+│                                  ││                                                                                  │
+╰──────────────────────────────────╯╰──────────────────────────────────────────────────────────────────────────────────╯
+ Tab  1 2 3  : or Ctrl+K  i  e  h  r  ?  q or Ctrl+C"
+`;
+
+exports[`golden layout > renders at 200x50 without throwing and matches the golden snapshot 1`] = `
+" ● live  Running  F6 · s47 Deliver (1/3)  build:pass tests:running                                                                          session  $0.42  4m05s  · run  $18.42  812.0k/240.0k/96.0k
+╭────────────────────────────────────────────────╮╭────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ PLAN                                           ││ AGENT — s47 Deliver                                                                                                                                │
+│▸ ✓ F5 Control plane — HTTP+SSE on localhost 3/3││02:04:43 ⁙ Checking how the plan tree paginates a wide terminal.                                                                                    │
+│▾ ● F6 Ink TUI v1 — TypeScript rebuild       3/5││02:04:43 · Reading src/components/PlanTree.tsx.                                                                                                     │
+│    ✓ F6.1 TS+Ink project scaffold + build split││02:04:43 ⚙ npm run build                                                                                                                            │
+│    ✓ F6.2 Plan pane                            ││02:04:43 ↳ 0 warnings, 0 errors                                                                                                                     │
+│    ✓ F6.3 Agent pane                           ││                                                                                                                                                    │
+│    ○ F6.4 Process pane + command pal… ← current││                                                                                                                                                    │
+│    ○ F6.5 Golden-layout snapshot tests         ││                                                                                                                                                    │
+│▸ ○ F7 Plan import + truth gates + speed pr… 0/4││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                │╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+│                                                │╭────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│                                                ││ PROCESSES                                                                                                                                          │
+│                                                ││● 40120 gate:build 0s  —                                                                                                                            │
+│                                                ││● 40133 bg:tui-watch 0s  watching for changes...                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+│                                                ││                                                                                                                                                    │
+╰────────────────────────────────────────────────╯╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ Tab  1 2 3  : or Ctrl+K  i  e  h  r  ?  q or Ctrl+C"
+`;
