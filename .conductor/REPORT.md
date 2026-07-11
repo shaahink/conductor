@@ -1,11 +1,11 @@
 ﻿# Conductor — Foreman run report
 
-_Updated 2026-07-10 21:12 UTC · branch `feat/foreman` · HEAD `63eb7b1`_
+_Updated 2026-07-11 01:43 UTC · branch `feat/foreman` · HEAD `f3dde7c`_
 
 **Status:** Running
-**Stage:** F3 — Stall v2 + same-failure breaker + pre-flight · persona: qa · attempts used 0 · working ▸ F3.3
-**Checkpoints:** 13/40 done · **Sessions run:** 26 · **Cost:** $2.0527 (agent $2.0527 + gates $0.0000) · **Tokens:** 2,303,582 in / 354,167 out / 323,411 think
-**Confirmed phases:** F0, F1, F2
+**Stage:** F5 — Control plane — HTTP+SSE on localhost · persona: architect · attempts used 0 · working ▸ F5.1
+**Checkpoints:** 13/40 done · **Sessions run:** 30 · **Cost:** $2.0527 (agent $2.0527 + gates $0.0000) · **Tokens:** 2,303,582 in / 354,167 out / 323,411 think
+**Confirmed phases:** F0, F1, F2, F3, F4
 
 ## Stage progress
 
@@ -14,9 +14,9 @@ _Updated 2026-07-10 21:12 UTC · branch `feat/foreman` · HEAD `63eb7b1`_
 | F0 | Foundations — kill list, async engine, integration harness | ██████████ 3/3 | confirmed ✓ |
 | F1 | run.db task store + tracker-as-view + task/note verbs | ██████████ 4/4 | confirmed ✓ |
 | F2 | ProcessSupervisor + Job Objects + bg primitives | ██████████ 4/4 | confirmed ✓ |
-| F3 | Stall v2 + same-failure breaker + pre-flight | █████░░░░░ 2/4 | **← active** |
-| F4 | Verifier role + scoring loop + findings-as-retry | ░░░░░░░░░░ 0/5 | todo |
-| F5 | Control plane — HTTP+SSE on localhost | ░░░░░░░░░░ 0/3 | todo |
+| F3 | Stall v2 + same-failure breaker + pre-flight | █████░░░░░ 2/4 | confirmed ✓ |
+| F4 | Verifier role + scoring loop + findings-as-retry | ░░░░░░░░░░ 0/5 | confirmed ✓ |
+| F5 | Control plane — HTTP+SSE on localhost | ░░░░░░░░░░ 0/3 | **← active** |
 | F6 | Ink TUI v1 — TypeScript rebuild | ░░░░░░░░░░ 0/5 | todo |
 | F7 | Plan import + truth gates + speed program | ░░░░░░░░░░ 0/5 | todo |
 | F8 | conductor chat + Telegram v2 | ░░░░░░░░░░ 0/4 | todo |
@@ -162,19 +162,15 @@ _Updated 2026-07-10 21:12 UTC · branch `feat/foreman` · HEAD `63eb7b1`_
 | 24 | F3 | Deliver | 1 | 07-10 20:00 | 0:15 | Advanced | F3.1 F3.2 | 2 | build:OK | $0.0681 |  | 69,371/12,663 |
 | 25 | F3 | Deliver | 1 | 07-10 20:16 | 0:43 | Interrupted |  | 0 |  |  |  |  |
 | 26 | F3 | Resume | 1r1 | 07-10 20:59 | 0:13 | Interrupted |  | 0 |  | $0.0395 |  | 86,619/472 |
+| 28 | F4 | Deliver | 1 | 07-10 22:01 | 0:00 | Advanced | F4.1 F4.2 F4.3 F4.4 F4.5 | 1 | build:OK, tests:OK | $0.0000 |  |  |
+| 29 | S1 | Deliver | 1 | 07-11 01:33 | 0:00 | Interrupted |  | 0 |  |  |  |  |
+| 30 | F5 | Resume | 1r1 | 07-11 01:43 | 0:00 | Interrupted |  | 0 |  |  |  |  |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-10 19:23:06  • session #17 F1 Resume started (attempt 1/4) · persona architect
-07-10 19:24:05  ▪ gate build pass [session]  (26.6s)
-07-10 19:24:08  • session #17 F1 → NoProgress  (1m02s)
-07-10 19:24:08  • session #18 F1 Fix started (attempt 2/4) · persona architect
-07-10 19:29:38  • session #18 F1 → Interrupted  (5m29s)
-07-10 19:45:44  ◆ run resumed · Foreman
-07-10 19:45:44  • session #19 F1 Audit started (attempt 1/2) · persona architect
 07-10 19:53:34  • session #19 F1 → Progress · 1 commit(s)  (7m50s)
 07-10 19:54:29  ▪ gate build pass [phase]  (23.6s)
 07-10 19:54:29  ▪ gate tests pass [phase]  (29.7s)
@@ -208,6 +204,13 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-10 21:59:39  ◆ run resumed · Foreman
 07-10 21:59:39  • session #26 F3 Resume started (attempt 1/4) · persona qa
 07-10 22:12:40  • session #26 F3 → Interrupted  (13m01s)
+07-11 02:33:14  ◆ run resumed · Smoke
+07-11 02:33:14  ▸ stage S1 entered — Smoke Test Stage
+07-11 02:33:14  • session #29 S1 Deliver started (attempt 1/4)
+07-11 02:43:38  ◆ run resumed · Foreman
+07-11 02:43:38  ▸ stage F5 entered — Control plane — HTTP+SSE on localhost
+07-11 02:43:38  • session #30 F5 Resume started (attempt 1/2) · persona architect
+07-11 02:43:48  • session #30 F5 → Interrupted  (9.4s)
 ```
 
 ## Health
@@ -215,7 +218,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 26 · retries 1 (4 %) · overall Warn
+sessions 28 · retries 1 (4 %) · overall Warn
 ⚠ [context-saturation] session #2: 32,055,552 context tokens (≥ 20,000,000)
 ```
 
@@ -225,7 +228,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/foreman
-working tree: M .conductor/REPORT.md, M CONDUCTOR-VNEXT-PLAN.md, M src/Conductor/Core/Orchestrator.cs, M src/Conductor/Models/PlanConfig.cs, ?? src/Conductor/Core/FailureCircuitBreaker.cs, ?? src/Conductor/Core/PreflightHealth.cs, ?? tests/Conductor.Tests/FailureCircuitBreakerTests.cs, ?? tests/Conductor.Tests/PreflightHealthTests.cs
+working tree: M AGENTS.md, M CONDUCTOR-VNEXT-PLAN.md, M face/tests/__snapshots__/golden.test.tsx.snap, M face/tests/fixtures.ts
 vs upstream: up to date
 ```
 
@@ -251,6 +254,8 @@ vs upstream: up to date
 - **s24 (F3 Deliver)** — 2 commit(s):
   - [`bad1156`](https://github.com/shaahink/conductor/commit/bad1156) chore(F3): tracker update — F3.1+F3.2 DONE, handoff refreshed for F3.3
   - [`0f0d67c`](https://github.com/shaahink/conductor/commit/0f0d67c) feat(bF3.1-F3.2): Stall v2 — multi-signal detection + soft-kill grace window
+- **s28 (F4 Deliver)** — 1 commit(s):
+  - [`4919364`](https://github.com/shaahink/conductor/commit/4919364) 
 
 ## Phase handovers (audit)
 
@@ -269,20 +274,21 @@ vs upstream: up to date
 - `.conductor/handovers/F0.md`
 - `.conductor/handovers/F1.md`
 - `.conductor/handovers/F2.md`
+- `.conductor/handovers/F4.md`
 
 ## Last session result
 
-> Good — all work is staged but uncommitted. 3 modified + 4 new = 7 files (under budget). Let me re-run gates:
+> F4 delivered: Verifier role + scoring loop + findings-as-retry. 7 files changed, 626/626 tests pass, 0w/0e.
 
 ## Tracker handoff
 
 ```
-last: s24 — F3.1+F3.2 landed. Stall v2 (multi-signal: stdout+tool-events+bg-liveness) + soft-kill grace window.
-stage: F3 — Stall v2 + resilience. 2/4 checkpoints DONE (F3.1, F3.2).
-commits: 0f0d67c (F3.1+F3.2). Prior: eb1fa35 (F2.4).
-gate: 0w/0e build, 575/575 tests pass (+10 StallDetectorTests). Harness tests (5) re-confirmed green.
+last: s31 (manual, Claude Code direct) completed — F6 first pass SHIPPED and VERIFIED. Engine-side: 47c7ecb (TranscriptLog, 9 HTTP endpoints, StateDto session ticker fields — 647/647 dotnet tests, 0w/0e). Face TUI: f3dde7c (full TS+Ink TUI, all D11 checklist items, 23/23 tests, typecheck clean, build ~135ms). 1 bug found+fixed this session: golden snapshot non-determinism (fixtures.ts used live timestamps — now pinned to FIXED_TS). Live integration partially verified: control plane starts cleanly, all 17 control-plane tests pass. Face TUI live mode NOT yet driven against a real TTY (this environment can't drive one) — structurally safe (separate OS process, HTTP-only, crash handlers). Mouse parser is unit-tested (9 tests) but never confirmed against a real terminal.
+stage: F6 COMPLETE — all 5 checkpoints DONE (see rows below). Ready for F7.
+commits: 47c7ecb (engine surface), f3dde7c (Face TUI), pending: fix snapshots + tracker update (this session).
+gate: dotnet 647/647 pass 0w/0e. face/ 23/23 pass, typecheck clean, build ~135ms.
 branch: feat/foreman.
-next: F3.3 (same-failure circuit breaker: 2 identical failures → Advisor) + F3.4 (pre-flight health check).
-qa: s23 (F2 audit) verified — all 4 fixes confirmed real; MarkPidExited fix genuine; 5 harness tests pass independently.
-struggle: clock injection for deterministic grace-window tests.
+next: F7 — Plan import (LLM) + truth gates + speed program. See design doc §4 stage map.
+qa: all tests pass (engine 647, face 23). Live TTY integration: deferred to user's real terminal (2 min: `conductor run --control-plane` + `node dist/cli.js`). Headless unchanged.
+struggle: same lesson survives from prior handoff — do NOT trust Ink layout from JSX; render via testUtils.ts. Also: snapshots must use fixed timestamps; `new Date().toISOString()` in fixtures breaks every run.
 ```
