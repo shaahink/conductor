@@ -5,6 +5,19 @@ using Spectre.Console.Cli;
 
 Console.OutputEncoding = Encoding.UTF8;
 
+// Last-resort forensic trail: SetExceptionHandler below only reaches the console, which is
+// invisible once the Face's Ink alt-screen owns the terminal, and neither path touches the
+// Serilog file log. A background-thread throw (fire-and-forget Task.Run, timer callback) has no
+// handler anywhere else in the process. Without this, a crash looks identical to a window close —
+// silence in conductor.log, no state.json update — and is undiagnosable after the fact.
+AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+    WriteCrashLog("AppDomain.UnhandledException", e.ExceptionObject as Exception, e.ExceptionObject?.ToString());
+TaskScheduler.UnobservedTaskException += (_, e) =>
+{
+    WriteCrashLog("TaskScheduler.UnobservedTaskException", e.Exception, null);
+    e.SetObserved();
+};
+
 var app = new CommandApp();
 app.Configure(c =>
 {
@@ -69,8 +82,26 @@ app.Configure(c =>
         .WithDescription("F8.1: Ask questions about a running conductor plan. The agent has MCP access to run.db, the ledger, and control verbs. Example: conductor chat \"how did session 9 die?\"");
     c.SetExceptionHandler((ex, _) =>
     {
+        WriteCrashLog("Spectre.SetExceptionHandler", ex, null);
         AnsiConsole.MarkupLine($"[red]error:[/] {Markup.Escape(ex is InvalidOperationException or FileNotFoundException ? ex.Message : ex.ToString())}");
         return 1;
     });
 });
 return await app.RunAsync(args).ConfigureAwait(false);
+
+// Deliberately independent of the DI-built Serilog logger (not constructed yet at this point, and
+// this must survive even if that construction is what's failing). Best-effort: a crash-logging
+// path that can itself throw would defeat the purpose.
+#pragma warning disable MA0045 // sync I/O by design — an exception-handler callback must not hand off async work that could race process teardown
+static void WriteCrashLog(string source, Exception? ex, string? raw)
+{
+    try
+    {
+        var dir = Path.Combine(Directory.GetCurrentDirectory(), ".conductor", "logs");
+        Directory.CreateDirectory(dir);
+        var path = Path.Combine(dir, $"crash-{DateTime.UtcNow:yyyyMMdd-HHmmssfff}.log");
+        File.WriteAllText(path, $"{DateTime.UtcNow:O} UTC — {source}{Environment.NewLine}{ex?.ToString() ?? raw ?? "(no exception object)"}{Environment.NewLine}");
+    }
+    catch { /* forensic dump is best-effort only */ }
+}
+#pragma warning restore MA0045
