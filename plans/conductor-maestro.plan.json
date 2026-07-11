@@ -76,7 +76,7 @@
       "id": "M5",
       "title": "Observability — timeline, live plan, the native console, compiled prompts",
       "sessions": 4,
-      "notes": "Read docs/MAESTRO-PLAN.md M5. This is the 'enjoy looking at it' stage — budget real design time, the owner will judge it by feel. Nearly all the data already exists and is simply not on screen. Deliver: (1) a visual scrollable TIMELINE pane (Core/Events/Timeline.cs exists and only the deleted TUI ever read it); (2) a live plan pane with per-stage state/score/cost/attempts and no truncation at any width; (3) the NATIVE CONSOLE — stream the agent's raw stdout (already captured in rawLog) over GET /console/current and show exactly what the CLI is printing, with a toggle to the clean folded view; (4) a ticker with LIVE cost/tokens by folding tokenDelta events (it reads zero until session end today); (5) compiled-prompt preview — GET /prompt/preview returns the exact prompt that would be sent, shown beside the template editor so editing the markdown updates the compiled result; (6) conductor status answering 'where are we, how did it go, what hurt' from the database in under a second. Golden snapshots at 80x24/120x30/200x50. Killing the Face must leave the run alive.",
+      "notes": "Read docs/MAESTRO-PLAN.md M5 AND .conductor/followups.md's 'Opened by owner (manual dogfooding observation, 2026-07-12)' section FIRST — 7 concrete bugs (FU-OWNER-1..7: flicker, notes vanishing unreadably fast, the command palette rendering merged/illegible over the panel behind it, no visibility into agent reasoning beyond terse tool-call lines, sparse/empty-looking panes, a cramped top bar, an unlabeled footer hotkey strip) from a real owner run, screenshots on file. These are this stage's acceptance criteria, not a later cleanup pass — fix them as part of the deliverables below, and close each FU-OWNER row with the commit that fixed it. This is the 'enjoy looking at it' stage — budget real design time, the owner will judge it by feel. Nearly all the data already exists and is simply not on screen. Deliver: (1) a visual scrollable TIMELINE pane (Core/Events/Timeline.cs exists and only the deleted TUI ever read it); (2) a live plan pane with per-stage state/score/cost/attempts and no truncation at any width; (3) the NATIVE CONSOLE — stream the agent's raw stdout (already captured in rawLog) over GET /console/current and show exactly what the CLI is printing, with a toggle to the clean folded view; (4) a ticker with LIVE cost/tokens by folding tokenDelta events (it reads zero until session end today); (5) compiled-prompt preview — GET /prompt/preview returns the exact prompt that would be sent, shown beside the template editor so editing the markdown updates the compiled result; (6) conductor status answering 'where are we, how did it go, what hurt' from the database in under a second. Golden snapshots at 80x24/120x30/200x50. Killing the Face must leave the run alive.",
       "kind": "deliver"
     },
     {
@@ -147,6 +147,11 @@
     "maxSessionTokens": 2000000,
     "verifierThreshold": 80
   },
+
+  // Cheap on-demand "what's going on?" reporter — `conductor status` or the Face's G key. Read-only,
+  // sandboxed, separate from the delivery/advisor models. deepseek-chat instead of deepseek-v4-pro:
+  // this only summarizes run.db + conductor.log, it doesn't need the heavier reasoning model.
+  "statusAgent": { "model": "deepseek/deepseek-chat", "maxPerHour": 12 },
 
   "report": { "commit": true, "push": true, "heartbeatMinutes": 0 },
   "notify": { "command": "", "args": [] },

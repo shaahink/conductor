@@ -160,3 +160,19 @@ tests added validating failure-path stdout capture and RunState round-trip for P
 | FU-F1-05 | SeedCheckpoints not transactionally atomic | Each UPSERT is a separate implicit transaction. Power failure mid-loop could leave partial state. Next SeedCheckpointsFromTracker reads intact tracker file and re-seeds, so no permanent data loss. Wrap in a single transaction for atomicity if needed. | F2 fix-lane | OPEN |
 | FU-F1-06 | run.db runs.status not updated on non-completion non-terminal states | NeedsHuman, Paused, AwaitingOwner, VerifyingGates, Backoff leave runs.status='running' in run.db. RecordRunEnd sets ended_utc which isn't warranted for resumable states. Add an UpdateRunStatus method (status-only, no ended_utc) and call from NeedsHuman + other state transitions. Low severity: state.json is authoritative; run.db is additive/best-effort; InitializeRun (INSERT OR REPLACE) fixes on resume. | F2 | OPEN |
 | FU-F1-07 | Completion test uses hardcoded verb list | The `Completion_ContainsAllRegisteredVerbs_Exhaustive` test hardcodes `expectedVerbs`, which allowed `task` and `note` to be missing from both the completion scripts AND the test for 9 audit sessions. Replace with a runtime reflection test that enumerates Program.cs registrations dynamically. | F2 fix-lane | OPEN |
+
+## Opened by owner (manual dogfooding observation, 2026-07-12)
+
+Screenshots of a live `conductor run` session (Ink TUI, `face/`), not a synthetic run. All 7 are
+about the Face specifically — M5's remit. Read this section at M5's opening, not only as a
+post-confirmation fix-lane: these are acceptance items for that stage, not cleanup after it.
+
+| id | item | detail | owning stage | status |
+|----|------|--------|--------------|--------|
+| FU-OWNER-1 | Screen flickers during a live run | Visible full/partial redraw flicker while a session is active. Likely a full-frame repaint on every tick instead of a diffed render. | M5 | OPEN |
+| FU-OWNER-2 | Notes/toasts disappear before they can be read | A transient notification (e.g. a `conductor note` add) flashes and vanishes too fast to read. Needs a longer minimum display time or a way to review recently-dismissed notices. | M5 | OPEN |
+| FU-OWNER-3 | Command palette modal is unreadable — renders merged with the panel behind it | Screenshot: opening the command palette overlays it on the AGENT log pane with no opaque backdrop; both texts render interleaved/overlapping, illegible. Needs a solid background fill (or a real overlay layer) behind any modal. | M5 | OPEN |
+| FU-OWNER-4 | Agent's actual thinking/reasoning is not visible, only tool-call one-liners | The AGENT pane shows terse lines like "3 tool calls (last: read X)" — there is no way to see what the agent is actually reasoning about or deciding. This is the M5.3 "native console" gap (stream raw stdout via `/console/current`) — confirms it's needed, not optional polish. | M5 | OPEN |
+| FU-OWNER-5 | Panels read as empty/sparse with little info density | PLAN and PROCESSES panes show large blank areas relative to the information in them; screenshots look unfinished even mid-run. | M5 | OPEN |
+| FU-OWNER-6 | Top status bar is cramped | session cost / run cost / timer / stage are crammed into one thin strip, hard to scan at a glance. | M5 | OPEN |
+| FU-OWNER-7 | Footer hotkey bar doesn't read as interactive | `Tab 1 2 3 : or Ctrl+K i e h r ? q or Ctrl+C` renders as a dense unlabeled string, not obviously a set of buttons/actions. | M5 | OPEN |
