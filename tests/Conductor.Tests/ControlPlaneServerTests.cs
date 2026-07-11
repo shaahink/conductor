@@ -227,7 +227,11 @@ public sealed class ControlPlaneServerTests : IDisposable
     }
 
     [Fact]
-    public void Start_PortAlreadyBound_ReturnsFalseAndDoesNotThrow()
+    /// <summary>A taken port is the normal case when a second plan is running in another terminal, so the
+    /// server scans forward to the next free one instead of giving up. The run that got there first keeps
+    /// its port; the newcomer takes another and publishes it — which is why clients read the port from
+    /// control-plane.json rather than assuming 4317.</summary>
+    public void Start_PortAlreadyBound_ScansForwardToAFreePort()
     {
         var port = FreeLoopbackPort();
         var blocker = new HttpListener();
@@ -237,10 +241,34 @@ public sealed class ControlPlaneServerTests : IDisposable
         {
             var server = new ControlPlaneServer(_plan, _eventsPath, _transcriptPath, _runDbPath, _inbox, NullLogger.Instance, port);
             var started = server.Start();
-            Assert.False(started);
+
+            Assert.True(started);                 // a busy port must not cost us the control plane
+            Assert.NotEqual(port, server.Port);   // ...but it must not steal the other run's port either
+            Assert.InRange(server.Port, port + 1, port + 19);
+
             server.Dispose();
         }
         finally { blocker.Stop(); blocker.Close(); }
+    }
+
+    [Fact]
+    /// <summary>The bound port is published so a Face (or a second terminal) can attach without being told
+    /// a number, and is removed on shutdown so nobody is ever pointed at a dead port.</summary>
+    public void Start_PublishesDiscoveryFile_AndRemovesItOnDispose()
+    {
+        var server = new ControlPlaneServer(_plan, _eventsPath, _transcriptPath, _runDbPath, _inbox, NullLogger.Instance, FreeLoopbackPort());
+        Assert.True(server.Start());
+
+        var discovery = ControlPlaneServer.DiscoveryPath(_plan.StateDir);
+        Assert.True(File.Exists(discovery));
+
+        var info = JsonSerializer.Deserialize(File.ReadAllText(discovery), ControlPlaneJsonContext.Default.ControlPlaneInfo);
+        Assert.NotNull(info);
+        Assert.Equal(server.Port, info!.Port);
+        Assert.Equal($"http://127.0.0.1:{server.Port}", info.BaseUrl);
+
+        server.Dispose();
+        Assert.False(File.Exists(discovery));
     }
 
     // ---------------------------------------------------------------- F6 endpoints

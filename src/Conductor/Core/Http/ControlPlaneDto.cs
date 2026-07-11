@@ -143,4 +143,9 @@ public static class ControlPlaneDto
 [JsonSerializable(typeof(QueryResultDto))]
 [JsonSerializable(typeof(InjectRequestDto))]
 [JsonSerializable(typeof(InjectAcceptedDto))]
+[JsonSerializable(typeof(ControlPlaneInfo))]
 public sealed partial class ControlPlaneJsonContext : JsonSerializerContext;
+
+/// <summary>Contents of <c>.conductor/control-plane.json</c> — how a client finds a live run's control
+/// plane without being told its (auto-scanned) port. Written on bind, deleted on shutdown.</summary>
+public sealed record ControlPlaneInfo(int Port, string BaseUrl, int Pid, string PlanName, DateTime StartedUtc);

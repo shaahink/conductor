@@ -61,8 +61,32 @@ public sealed class HostLoggingTests : IDisposable
         Assert.NotNull(host.Services.GetRequiredService<Orchestrator>());
     }
 
+    /// <summary>Reads a log file once it contains <paramref name="expected"/>, or fails after the deadline.
+    /// Serilog's shared file sink flushes on an interval, so "the host was disposed" does not imply "the
+    /// bytes are on disk" — asserting on a single immediate read is a race, and it is the race that made
+    /// these two tests flaky under parallel load. Waiting for the flush tests the same thing without lying.</summary>
+    private static async Task<string> ReadLogWhenFlushedAsync(string logDir, string pattern, string expected)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        var text = "";
+        while (DateTime.UtcNow < deadline)
+        {
+            var file = Directory.EnumerateFiles(logDir, pattern).SingleOrDefault();
+            if (file is not null)
+            {
+                // shared: true means the writer still holds the handle — open shared or we get IOException.
+                await using var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                using var reader = new StreamReader(stream);
+                text = await reader.ReadToEndAsync();
+                if (text.Contains(expected, StringComparison.Ordinal)) return text;
+            }
+            await Task.Delay(100);
+        }
+        Assert.Fail($"'{expected}' never reached {pattern} within 10s. Last content:\n{text}");
+        return text;
+    }
+
     [Fact]
-    [Trait("Category", "Flaky")] // Serilog file-sink flush-on-dispose isn't synchronous; races under parallel test load
     public async Task DryRunWritesStructuredLogWithRunIdCorrelation()
     {
         var plan = ValidPlan();
@@ -75,11 +99,10 @@ public sealed class HostLoggingTests : IDisposable
         {
             var code = await host.Services.GetRequiredService<Orchestrator>().RunAsync(CancellationToken.None);
             Assert.Equal(0, code);
-        } // dispose flushes + closes the Serilog file sink
+        }
 
         var logDir = Path.Combine(plan.StateDir, "logs");
-        var logFile = Directory.EnumerateFiles(logDir, "conductor-*.log").Single();
-        var log = await File.ReadAllTextAsync(logFile);
+        var log = await ReadLogWhenFlushedAsync(logDir, "conductor-*.log", $"run={runId}");
 
         Assert.Contains($"run={runId}", log, StringComparison.Ordinal);      // correlation scope reached the sink
         Assert.Contains("conductor start", log, StringComparison.Ordinal);   // the run actually narrated through ILogger
@@ -87,7 +110,6 @@ public sealed class HostLoggingTests : IDisposable
     }
 
     [Fact]
-    [Trait("Category", "Flaky")] // Serilog file-sink flush-on-dispose isn't synchronous; races under parallel test load
     public async Task DryRunWritesJsonLogWithCorrelationProperties()
     {
         var plan = ValidPlan();
@@ -103,8 +125,8 @@ public sealed class HostLoggingTests : IDisposable
         }
 
         var logDir = Path.Combine(plan.StateDir, "logs");
-        var jsonFile = Directory.EnumerateFiles(logDir, "conductor-*.json").Single();
-        var lines = await File.ReadAllLinesAsync(jsonFile);
+        var text = await ReadLogWhenFlushedAsync(logDir, "conductor-*.json", runId);
+        var lines = text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         Assert.NotEmpty(lines);
 
         // Every line must be valid JSON with @t + @m fields

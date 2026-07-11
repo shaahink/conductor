@@ -24,7 +24,7 @@ public sealed class RunDb : IDisposable
     private readonly TimeProvider _clock;
     private bool _initialized;
 
-    public static readonly int CurrentSchemaVersion = 3;
+    public static readonly int CurrentSchemaVersion = 4;
 
     public RunDb(string path, ILogger<RunDb> logger, TimeProvider? clock = null)
     {
@@ -216,6 +216,7 @@ public sealed class RunDb : IDisposable
                 stage_id        TEXT,
                 kind            TEXT NOT NULL,
                 content         TEXT NOT NULL,
+                created_at      TEXT NOT NULL DEFAULT (datetime('now')),
                 FOREIGN KEY (run_id) REFERENCES runs(run_id)
             );
             """;
@@ -333,6 +334,14 @@ public sealed class RunDb : IDisposable
                     exit_code       INTEGER,
                     run_id          TEXT NOT NULL
                 );
+                """;
+            cmd.ExecuteNonQuery();
+        }
+        if (fromVersion < 4)
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = """
+                ALTER TABLE ledger ADD COLUMN created_at TEXT NOT NULL DEFAULT (datetime('now'));
                 """;
             cmd.ExecuteNonQuery();
         }

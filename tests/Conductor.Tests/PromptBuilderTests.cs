@@ -99,7 +99,7 @@ public class PromptBuilderTests
         Assert.StartsWith(personaPrompt, prompt);
 
         // Conductor contract rules appear AFTER the persona prompt (merge order: contract wins)
-        var contractIdx = prompt.IndexOf("Evidence or it didn't happen", StringComparison.Ordinal);
+        var contractIdx = prompt.IndexOf("Evidence or it did not happen", StringComparison.Ordinal);
         var personaIdx = prompt.IndexOf(personaPrompt, StringComparison.Ordinal);
         Assert.True(contractIdx > personaIdx, "Contract rules must come after persona system prompt");
     }
@@ -236,5 +236,94 @@ public class PromptBuilderTests
         var builder = new PromptBuilder(plan);
         var section = builder.BatterySection(new RunState());
         Assert.Equal("", section);
+    }
+
+    // ---------------------------------------------------------------- prompt contract (M0)
+
+    /// <summary>Every session kind must carry the tool contract. The mechanisms it advertises (ledger, bg,
+    /// task) were built, wired and never used for the whole of F1-F8 precisely because no prompt mentioned
+    /// them — the ledger table sat at zero rows. A capability the agent is not told about does not exist,
+    /// so this is a behavioural guarantee, not a docs nicety.</summary>
+    [Fact]
+    public void EverySessionKindCarriesTheToolContract()
+    {
+        var b = new PromptBuilder(Plan());
+        var prompts = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["deliver"] = b.Deliver(Stage, 1, 1, 3),
+            ["fix"] = b.Fix(Stage, 2, 1, 3, new PendingFix { FromSession = 1, GateFailures = "build: red", ProgressSummary = "none" }),
+            ["resume"] = b.Resume(Stage, 3, 1, 3, new PendingResume { FromSession = 2, Reason = "cancelled" }),
+            ["verify"] = b.Verify(Stage, 4, new PendingVerify { FromSession = 3, StageStartHead = "abc123" }),
+        };
+
+        foreach (var (kind, prompt) in prompts)
+        {
+            Assert.Contains("conductor note", prompt, StringComparison.Ordinal);
+            Assert.Contains("conductor bg", prompt, StringComparison.Ordinal);
+            Assert.Contains("conductor task", prompt, StringComparison.Ordinal);
+            Assert.True(prompt.Contains("MCP", StringComparison.Ordinal), $"{kind} prompt must name the MCP surface");
+        }
+    }
+
+    /// <summary>The verifier's own pass mark must be rendered as a number. It used to say the literal text
+    /// "≥{plan.VerifierThreshold}" — an unbound name that shipped to the model for every verification.</summary>
+    [Fact]
+    public void VerifyPromptRendersTheThresholdAsANumber()
+    {
+        var plan = Plan();
+        plan.Limits.VerifierThreshold = 85;
+
+        var prompt = new PromptBuilder(plan).Verify(Stage, 4, new PendingVerify { FromSession = 3, StageStartHead = "abc123" });
+
+        Assert.Contains("≥85", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("VerifierThreshold", prompt, StringComparison.Ordinal);
+    }
+
+    /// <summary>An unresolved placeholder is a bug in the prompt, and prompts are code: fail loudly at
+    /// render rather than sending "{someTypo}" to the agent and having nobody notice.</summary>
+    [Fact]
+    public void UnresolvedPlaceholderIsAHardError()
+    {
+        var ex = Record.Exception(() =>
+            PromptValidator.ThrowIfUnresolved("Deliver stage {stage} within {someTypo} attempts.", "session.md"));
+
+        Assert.IsType<InvalidOperationException>(ex);
+        Assert.Contains("{stage}", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("{someTypo}", ex.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>The verifier prompt legitimately contains a JSON object literal. The validator must not
+    /// mistake `{"score":0-100,...}` for an unresolved placeholder.</summary>
+    [Fact]
+    public void JsonLiteralsInAPromptAreNotMistakenForPlaceholders()
+    {
+        var ex = Record.Exception(() =>
+            PromptValidator.ThrowIfUnresolved("""Emit {"score":90,"findings":[],"verdict":"PASS"} and nothing else. {}""", "verify.md"));
+
+        Assert.Null(ex);
+    }
+
+    /// <summary>templatesDir was accepted in plan JSON and then ignored: PromptBuilder looked only in the
+    /// plan directory, so plans/baton-templates/*.md were dead files and every prompt silently came from a
+    /// hardcoded C# string. Editing a template must change what the agent receives.</summary>
+    [Fact]
+    public void TemplateOnDiskUnderTemplatesDirBeatsTheBuiltIn()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "conductor-tmpl-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Path.Combine(dir, "mytemplates"));
+        File.WriteAllText(Path.Combine(dir, "conductor.plan.json"), "{}");
+        File.WriteAllText(Path.Combine(dir, "mytemplates", "session.md"), "CUSTOM TEMPLATE for {stage} in {planName}.");
+
+        try
+        {
+            var plan = Plan();
+            plan.PlanFilePath = Path.Combine(dir, "conductor.plan.json");
+            plan.TemplatesDir = "mytemplates";
+
+            var prompt = new PromptBuilder(plan).Deliver(Stage, 1, 1, 3);
+
+            Assert.StartsWith("CUSTOM TEMPLATE for L2 in Loom.", prompt, StringComparison.Ordinal);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
     }
 }

@@ -49,6 +49,19 @@ public sealed class PlanConfig
     public NotifyConfig? Notify { get; set; }
     public TelegramConfig? Telegram { get; set; }
     public string PromptExtra { get; set; } = "";
+
+    /// <summary>Directory (relative to the plan file) holding the session templates — <c>session.md</c>,
+    /// <c>fix.md</c>, <c>verify.md</c>, … — and a <c>packs/</c> subdirectory. Falls back to the plan
+    /// directory itself, then to the built-in defaults. Prompts are editable content, not code: this is
+    /// what makes the .md files on disk the thing that actually ships to the agent.</summary>
+    public string? TemplatesDir { get; set; }
+
+    /// <summary>"Batteries included" domain packs merged into every prompt as <c>{packs}</c>, by name;
+    /// each resolves to <c>&lt;templatesDir&gt;/packs/&lt;name&gt;.md</c>. Use them to carry house style and
+    /// the mistakes agents habitually make in this codebase's domain (e.g. <c>dotnet-engineer</c>,
+    /// <c>modern-csharp</c>, <c>agent-pitfalls</c>) rather than restating them in every stage's notes.</summary>
+    public List<string> Packs { get; set; } = [];
+
     /// <summary>Opt-in prompt batteries for bounded context injection (B8.5). null = none.</summary>
     public BatteriesConfig? Batteries { get; set; }
     /// <summary>When true, the agent is instructed to skip its own pre-session build+test ritual

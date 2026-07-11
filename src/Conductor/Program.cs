@@ -10,7 +10,9 @@ app.Configure(c =>
 {
     c.SetApplicationName("conductor");
     c.AddCommand<RunCommand>("run")
-        .WithDescription("Run the plan loop (resumes from saved state). Ctrl+C is safe — state persists.");
+        .WithDescription("Run the plan: engine + control plane + Face TUI, one command. Resumes from saved state; Ctrl+C is safe.");
+    c.AddCommand<FaceCommand>("face")
+        .WithDescription("Attach a Face TUI to a run that is already going (or --demo for offline synthetic data).");
     c.AddCommand<StatusCommand>("status")
         .WithDescription("Show plan, tracker, and session status.");
     c.AddCommand<GateCommand>("gate")

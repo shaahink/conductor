@@ -630,8 +630,8 @@ public sealed class McpTaskServer
 
         try
         {
-            var sql = "SELECT * FROM sessions WHERE number = @num";
-            var parameters = new List<(string Name, object? Value)> { (("@num", sessionNumber)) };
+            var sql = "SELECT * FROM sessions WHERE run_id = @runId AND number = @num";
+            var parameters = new List<(string Name, object? Value)> { (("@runId", _runId)), (("@num", sessionNumber)) };
             if (!string.IsNullOrWhiteSpace(stageId))
             {
                 sql += " AND stage_id = @stageId";
@@ -707,7 +707,10 @@ public sealed class McpTaskServer
                 _runDb.WriteInjection(_runId, "mcp", null, string.IsNullOrWhiteSpace(stageId) ? null : stageId, content);
             }
 #pragma warning disable CA1031
-            catch { /* best-effort */ }
+            catch (Exception ex)
+            {
+                return JsonSerializer.SerializeToElement(new { ok = false, error = $"Failed to write injection: {ex.Message}" });
+            }
 #pragma warning restore CA1031
         }
 

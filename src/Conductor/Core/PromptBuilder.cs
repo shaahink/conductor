@@ -106,19 +106,53 @@ public sealed class PromptBuilder
             ["persona"] = personaName ?? "",
             ["personaSystemPrompt"] = personaSystemPrompt,
             ["lessons"] = lessonsContent,
+            ["verifierThreshold"] = _plan.Limits.VerifierThreshold.ToString(),
+            ["tools"] = ToolContract.Render(_plan),
+            ["packs"] = LoadPacks(),
             ["batteryCollapseNote"] = _plan.BatteryCollapse
                 ? "\n**IMPORTANT — battery collapse (B10.4):** Do NOT run build or test commands yourself. Conductor's independent battery is the single source of truth. Instead, describe what you changed in a `## Changes` section of your handoff so Conductor knows what to verify. This saves tokens and avoids duplicating work."
                 : "",
         };
     }
 
+    /// <summary>Resolves a template by name. Search order: the plan's <c>templatesDir</c>, then the plan
+    /// directory itself, then the built-in default. Until this honoured <c>templatesDir</c>, every plan that
+    /// set it silently ran on the built-ins and its .md files were dead — so a template edit did nothing.</summary>
+    internal string ResolveTemplatePath(string templateFile)
+    {
+        if (!string.IsNullOrWhiteSpace(_plan.TemplatesDir))
+        {
+            var inTemplatesDir = Path.Combine(_plan.PlanDir, _plan.TemplatesDir, templateFile);
+            if (File.Exists(inTemplatesDir)) return inTemplatesDir;
+        }
+        return Path.Combine(_plan.PlanDir, templateFile);
+    }
+
+    /// <summary>Concatenates the plan's domain packs (<c>templatesDir/packs/&lt;name&gt;.md</c>) — the
+    /// "batteries included" context: house C# style, the mistakes agents make in this domain, etc.</summary>
+    private string LoadPacks()
+    {
+        if (_plan.Packs is not { Count: > 0 }) return "";
+        var sb = new System.Text.StringBuilder();
+        foreach (var name in _plan.Packs)
+        {
+            var path = Path.Combine(_plan.PlanDir, _plan.TemplatesDir ?? "", "packs", name + ".md");
+#pragma warning disable MA0045 // sync read — Render is sync on the control loop's session-start path
+            if (!File.Exists(path)) continue;
+            sb.AppendLine(File.ReadAllText(path).Trim()).AppendLine();
+#pragma warning restore MA0045
+        }
+        return sb.ToString().TrimEnd();
+    }
+
     private string Render(string templateFile, Dictionary<string, string> vars)
     {
 #pragma warning disable MA0045 // sync Render — called from BuildPrompt which is sync in the control loop
-        var path = Path.Combine(_plan.PlanDir, templateFile);
+        var path = ResolveTemplatePath(templateFile);
         var text = File.Exists(path) ? File.ReadAllText(path) : BuiltIn(templateFile);
 #pragma warning restore MA0045
         foreach (var (k, v) in vars) text = text.Replace("{" + k + "}", v);
+        PromptValidator.ThrowIfUnresolved(text, templateFile);
         text = text.Trim();
 
         // Merge in persona system prompt — appended after base prompt rendering so the
@@ -174,12 +208,14 @@ public sealed class PromptBuilder
             3. DELIVER the next incomplete checkpoint(s) of stage {stage} only. One checkpoint landed with proof beats three claimed. Do not start other stages' work.
             4. POST-SESSION RITUAL — re-run the gate battery plus your stage's truth gates; produce fresh evidence artifacts; update `{tracker}` (overwrite the handoff block, fill checkpoint rows: Status, Commit, Evidence); commit per checkpoint using the plan's commit convention; push the branch.
 
+            {tools}
+
             Conductor rules (in addition to the plan's):
-            - Evidence or it didn't happen: a checkpoint without a fresh artifact path is not DONE.
-            - Never weaken gates, goldens, or truth files to get green — ratchet-only policy.
-            - If genuinely blocked on a human decision, set the row BLOCKED, add a line starting `HUMAN:` to the tracker handoff block, commit, push, and end the session.
+            - If genuinely blocked on a human decision, add a line starting `HUMAN:` to the tracker handoff block, `conductor note` the reason, commit, push, and end the session.
             - Leave the working tree clean (commit or revert leftovers) and the branch pushed.
             - End by printing one paragraph starting with `SESSION-RESULT:` — what landed, what is red, what the next session should do.
+
+            {packs}
             {stageNotes}{extra}
             """,
         "fix.md" => """
@@ -194,15 +230,19 @@ public sealed class PromptBuilder
             Progress observed by the orchestrator: {progressSummary}
 
             Your job: make the previous session's claims true.
-            1. Read `{tracker}` handoff + your stage section in `{planDoc}` first.
+            1. Read `{tracker}` handoff + your stage section in `{planDoc}` first. Check `ledger_list` — the failing session may already have recorded why.
             2. Reproduce each failure above and fix root causes. Never weaken gates, goldens, or truth files to pass — ratchet-only policy.
             3. Re-run the full gate battery until green.
-            4. Correct `{tracker}` to reflect reality — downgrade over-claimed rows with a note if needed.
+            4. Correct the record via `conductor task` — downgrade over-claimed checkpoints rather than leaving a false DONE.
             5. Commit (plan's commit convention), push, overwrite the tracker handoff block.
             Only if gates are green and time allows, continue stage {stage}'s next checkpoint per the normal ritual.
 
+            {tools}
+
             If genuinely blocked on a human decision, add a line starting `HUMAN:` to the tracker handoff, commit, push, and stop.
             End by printing one paragraph starting with `SESSION-RESULT:`.
+
+            {packs}
             {stageNotes}{extra}
             """,
         "resume.md" => """
@@ -211,7 +251,11 @@ public sealed class PromptBuilder
             {readOrder}
             Re-orient before acting: run `git status` and `git log --oneline -5` in {repo}, re-read the `{tracker}` handoff block, and inspect what you had in flight. Then finish the in-flight work and complete the full post-session ritual: gate battery green, fresh evidence artifacts, `{tracker}` updated (handoff + checkpoint rows), committed per checkpoint, pushed.
 
+            Before anything else, run `ledger_list` — your previous self may have recorded what it was doing and why. Do not re-derive what it already knew.
+
             If the interruption left half-done changes you cannot finish safely, revert to the last good state, record what happened in the tracker handoff, commit and push that.
+
+            {tools}
             End by printing one paragraph starting with `SESSION-RESULT:`.
             """,
         "advisor.md" => """
@@ -261,8 +305,12 @@ public sealed class PromptBuilder
               * risks the next phase should watch, and concrete follow-ups.
               Do not oversell. If something is thin, say so plainly. Commit and push this file.
 
+            {tools}
+
             If you find an issue that needs a human decision, add a line starting `HUMAN:` to the tracker handoff, commit, push, and stop.
             End by printing one paragraph starting with `SESSION-RESULT:` summarising the audit verdict and what you changed.
+
+            {packs}
             {stageNotes}{extra}
             """,
         "review.md" => """
@@ -308,7 +356,9 @@ public sealed class PromptBuilder
             - 60-79: Needs work — gates green but claims don't fully match reality, or found real bugs.
             - 0-59: Failed — gates red, or claims are false, or serious bugs present.
 
-            Your score determines the next step: ≥{plan.VerifierThreshold} (default 80) means the checkpoint is DONE and findings become follow-ups. Below that means the findings feed a retry.
+            Your score determines the next step: ≥{verifierThreshold} means the checkpoint is DONE and findings become follow-ups. Below that, your findings become the retry prompt — so write them as instructions, not complaints.
+
+            {tools}
             End by printing exactly the JSON object on its own line.
             {stageNotes}{extra}
             """,

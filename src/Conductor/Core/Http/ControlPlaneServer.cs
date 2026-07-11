@@ -35,12 +35,18 @@ public sealed class ControlPlaneServer : IDisposable
     private readonly string _runDbPath;
     private readonly ConcurrentQueue<ControlCommand> _inbox;
     private readonly ILogger _logger;
-    private readonly HttpListener _listener;
+    private readonly int _preferredPort;
+    private HttpListener _listener = new();
     private readonly CancellationTokenSource _cts = new();
     private Thread? _acceptThread;
     private volatile bool _running;
 
-    public int Port { get; }
+    /// <summary>How many consecutive ports to try after the preferred one before giving up. Concurrent
+    /// runs (two plans, two terminals) each take the next free port rather than fighting over 4317.</summary>
+    private const int PortScanRange = 20;
+
+    /// <summary>The port actually bound — only meaningful once <see cref="Start"/> has returned true.</summary>
+    public int Port { get; private set; }
     public bool IsRunning => _running;
 
     public ControlPlaneServer(PlanConfig plan, string eventsLogPath, string transcriptLogPath, string runDbPath, ConcurrentQueue<ControlCommand> inbox, ILogger logger, int port)
@@ -51,29 +57,71 @@ public sealed class ControlPlaneServer : IDisposable
         _runDbPath = runDbPath;
         _inbox = inbox;
         _logger = logger;
+        _preferredPort = port;
         Port = port;
-        _listener = new HttpListener();
-        _listener.Prefixes.Add($"http://127.0.0.1:{port}/");
     }
 
-    /// <summary>Binds and starts the accept loop. Returns false (never throws) if the bind fails.</summary>
+    /// <summary>Binds and starts the accept loop, scanning forward from the preferred port so a second
+    /// concurrent run lands on a free one instead of failing. Returns false (never throws) if no port in
+    /// the range binds — the run continues headless, exactly as when the control plane is off.</summary>
     public bool Start()
     {
-        try
+        for (var port = _preferredPort; port < _preferredPort + PortScanRange; port++)
         {
-            _listener.Start();
-        }
-        catch (Exception ex) when (ex is HttpListenerException or ObjectDisposedException)
-        {
-            _logger.LogWarning(ex, "control plane: failed to bind 127.0.0.1:{Port} — continuing without it", Port);
-            return false;
+            var listener = new HttpListener();
+            listener.Prefixes.Add($"http://127.0.0.1:{port}/");
+            try
+            {
+                listener.Start();
+            }
+            catch (Exception ex) when (ex is HttpListenerException or ObjectDisposedException)
+            {
+                listener.Close();
+                if (port == _preferredPort + PortScanRange - 1)
+                {
+                    _logger.LogWarning(ex, "control plane: no free port in {Start}-{End} — continuing without it",
+                        _preferredPort, _preferredPort + PortScanRange - 1);
+                    return false;
+                }
+                continue; // port taken (most likely by another conductor run) — try the next
+            }
+
+            _listener = listener;
+            Port = port;
+            break;
         }
         _running = true;
         _acceptThread = new Thread(AcceptLoop) { IsBackground = true, Name = "conductor-control-plane" };
         _acceptThread.Start();
+        WriteDiscoveryFile();
         _logger.LogInformation("control plane: listening on http://127.0.0.1:{Port}/", Port);
         return true;
     }
+
+    /// <summary>Publishes the bound port to <c>.conductor/control-plane.json</c> so clients (the Face TUI,
+    /// a second terminal, <c>conductor chat</c>) can attach to a run by its state dir rather than being told
+    /// a port number — which they cannot know once the port is auto-scanned. Best-effort: a failure here
+    /// costs discovery, not the run.</summary>
+#pragma warning disable MA0045 // Start() is a sync boundary (called from the CLI before the run loop); one small file write needs no async plumbing.
+    private void WriteDiscoveryFile()
+    {
+        try
+        {
+            var payload = JsonSerializer.Serialize(new ControlPlaneInfo(
+                Port, $"http://127.0.0.1:{Port}", Environment.ProcessId, _plan.Name, DateTime.UtcNow),
+                ControlPlaneJsonContext.Default.ControlPlaneInfo);
+            Directory.CreateDirectory(_plan.StateDir); // the server can start before anything else has touched .conductor/
+            File.WriteAllText(DiscoveryPath(_plan.StateDir), payload);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogWarning(ex, "control plane: could not write the discovery file");
+        }
+    }
+#pragma warning restore MA0045
+
+    /// <summary>Path of the discovery file for a given state dir. Public so clients resolve it the same way.</summary>
+    public static string DiscoveryPath(string stateDir) => Path.Combine(stateDir, "control-plane.json");
 
 #pragma warning disable MA0045 // dedicated background Thread (not the async run loop) — blocking accept here is correct, not sync-over-async
     private void AcceptLoop()
@@ -457,6 +505,8 @@ public sealed class ControlPlaneServer : IDisposable
         if (!_running) { _cts.Dispose(); return; }
         _running = false;
         _cts.Cancel();
+        // Remove the discovery file first: a client that reads it must never be pointed at a dead port.
+        try { File.Delete(DiscoveryPath(_plan.StateDir)); } catch (Exception) { /* best effort */ }
         try { _listener.Stop(); } catch (Exception) { /* best effort */ }
         try { _listener.Close(); } catch (Exception) { /* best effort */ }
         _acceptThread?.Join(TimeSpan.FromSeconds(2));
