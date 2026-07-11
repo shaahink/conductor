@@ -4,14 +4,14 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: s29 (manual, Claude Code direct — not conductor-driven) — F5 delivered. Pre-F5 surgery: trait-based test filtering + ControlDispatcher extraction (command/query seam) + HTTP+SSE control plane.
-stage: F5 — Control plane. 3/3 checkpoints DONE. Stage complete.
-commits: 5370cec (ControlDispatcher extraction + test hygiene), 4c3aa00 (HTTP control plane).
-gate: 0w/0e build, 634/635 tests pass (1 pre-existing unrelated flake, trait-tagged). 6 files + 2 new (Http/), +9 contract tests.
+last: s30 (manual, Claude Code direct — not conductor-driven) — pre-F6 debt sweep, not a tracked checkpoint. Closed both open AGENTS.md debt items before starting F6: async ProcessRunner/GateRunner/Advisor hot path, and lane-coordinator extraction.
+stage: between F5 and F6 — no stage row changed by this session (debt cleanup only).
+commits: 7305a93 (async ProcessRunner/GateRunner/Advisor hot path), 5df1b85 (Core/Lanes/LaneCoordinator extraction).
+gate: 0w/0e build, 639/639 tests pass (635 + 4 new async-parity tests). Orchestrator.cs 2662 → 2372 lines.
 branch: feat/foreman.
-next: F6 — Ink TUI v1, TypeScript rebuild (5 checkpoints). Design doc §4 + D11 (now includes prompt-editor + session-history browser additions).
-qa: full suite green modulo the known Serilog-flush flake; 9 curl-level HTTP contract tests; also smoke-tested against a REAL running conductor process (POST /control resume → visible in log + next GET /state).
-struggle: none blocking — extracted the ~150-line control-verb switch out of Orchestrator into Core/Commands/ControlDispatcher.cs first (highest-risk step, landed+tested separately), then built the HTTP layer on top. Deferred: /transcript/current SSE (needs F6's LiveDashboard buffer consumer — see design doc F5 entry) and the lane-coordinator extraction (no F5 gate needs it).
+next: F6 — Ink TUI v1, TypeScript rebuild (5 checkpoints). Design doc §4 + D11 (now includes prompt-editor + session-history browser additions). Needs fresh scoping with the owner before starting — from-scratch TS+Ink stack, different from the rest of this repo.
+qa: full suite green (no known flakes hit this run); also smoke-tested `conductor gate --full` end-to-end against a real spawned conductor.exe (sequential + parallel gate batches, pass and fail paths) to prove the async CLI boundary works outside the unit-test harness.
+struggle: none blocking — the async conversion cascaded one level deeper than AGENTS.md's debt note implied (EvaluateSession/ApplyVerdict/EscalateExhaustedStage/ConfirmCompletion/RunRemediation all needed to go async too, not just RunGateBattery/ConsultAdvisor/RunStageHook), traced by following every ProcessRunner/GateRunner/Advisor call site up to an already-async caller. The Meziantou analyzer (MA0045/CA1849/MA0042) then flagged every remaining sync call to Run/RunAll repo-wide the moment the async twins existed — fixed by converting genuine async-context callers (LaneRunner, MutatingLaneRunner) and pragma-suppressing the 3 genuine CLI sync boundaries (GateCommand, RecentCommits, RunAgent), matching the existing RunCommand.Execute precedent.
 
 
 

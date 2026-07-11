@@ -45,9 +45,11 @@ C:\Code\conductor\bin\conductor.exe run         -p .conductor\plans\conductor-de
 - **Branch:** `feat/foreman` is the active branch; `feat/baton` is the worktree.
 - **Driver:** `C:\Code\conductor\bin\conductor.exe run -p plans\conductor-foreman.plan.json`
 - **Read order:** `CONDUCTOR-VNEXT-PLAN.md` (tracker) → `docs/CONDUCTOR-VNEXT-PLAN.md` (design doc)
-- **Last session:** s29 (manual, Claude Code direct) — F5 delivered: ControlDispatcher command/query
-  extraction (the seam the god-class Orchestrator lacked) + HTTP+SSE control plane on top of it.
-  Commits 5370cec, 4c3aa00. 634/635 tests pass (1 pre-existing unrelated flake), 0w/0e.
+- **Last session:** s30 (manual, Claude Code direct) — pre-F6 debt sweep, not a tracked checkpoint:
+  closed both open items this doc flagged (async ProcessRunner/GateRunner/Advisor hot path;
+  lane-coordinator extraction into `Core/Lanes/LaneCoordinator.cs`). Commits 7305a93, 5df1b85.
+  639/639 tests pass, 0w/0e. F6 (Ink TUI) is next and still needs fresh scoping before starting —
+  it's a from-scratch TypeScript+Ink project, a different tech stack from the rest of this repo.
 
 ## C# coding standards (this codebase)
 
@@ -115,9 +117,12 @@ it rather than adding new responsibilities back into Orchestrator:
   default) and a bind failure is caught + logged, never fatal — headless/no-flag runs must stay
   byte-identical whether or not it's enabled. Don't add a code path that assumes it's running.
 - Still explicitly deferred (documented, not forgotten): `GET /transcript/current` (thinking-stream
-  SSE — build with F6's agent pane, the first real consumer) and extracting the ~350-line lane
-  coordination glue (`StartParallelAudit`/`RunFollowupFixLanesAsync`/etc.) out of Orchestrator — no
-  gate has needed it yet; revisit if a `/lanes` endpoint or further god-class shrinkage is wanted.
+  SSE — build with F6's agent pane, the first real consumer).
+- **Lane coordination is cut out too** (chore/debt, pre-F6): `StartParallelAudit`/
+  `RunFollowupFixLanesAsync`/`StartAnalysisLanes`/etc. now live in `Core/Lanes/LaneCoordinator.cs`,
+  not Orchestrator. Same shape as ControlDispatcher — Orchestrator holds a lazily-constructed
+  `Lanes` property and only decides *when* to call in; `LaneCoordinator` owns the parallel-audit
+  worktree lane, fix-lanes, and the analysis-lane pool. New lane-shaped work goes there.
 
 ## Foreground-blocking anti-patterns (codebase-specific)
 
@@ -129,22 +134,30 @@ it rather than adding new responsibilities back into Orchestrator:
   `[Trait("Category", "Flaky")]`. Do not hand-maintain a substring filter list again — a prior
   version of this doc did (`FullyQualifiedName~FailureCircuitBreaker|...`) and it silently missed
   real integration tests whose names didn't match the listed substrings.
-- **Fast dev loop** (measured ~8s for 573 tests): `dotnet test Conductor.slnx --filter "Category!=Integration&Category!=Flaky"`
-- **Full suite** (measured ~21s for 626 tests as of F5 prep — much faster than the "5+ min" this
-  doc used to claim; re-measure if it regresses): `dotnet test Conductor.slnx`
+- **Fast dev loop** (measured ~8s for 583 tests): `dotnet test Conductor.slnx --filter "Category!=Integration&Category!=Flaky"`
+- **Full suite** (measured ~21s for 639 tests as of the pre-F6 debt sweep — much faster than the
+  "5+ min" this doc used to claim; re-measure if it regresses): `dotnet test Conductor.slnx`
 - New tests that spawn a real process, real git repo, or sleep >500ms for a real OS event: add the
   `Integration` trait when you write them, not after the fact.
 - Kill orphan dotnet processes from failed runs: `Get-Process dotnet -ea 0 | Stop-Process -Force`
 
-### ProcessRunner.Run() is synchronous — blocks the async orchestrator
-- `src/Conductor/Core/ProcessRunner.cs:68` — sync `WaitForExit(500)` polling loop
-- Every gate run (`dotnet build`, `dotnet test`) and advisor spawn blocks the calling thread
-- The F0.2 async refactor removed `.Result`/`.Wait()` in the orchestrator but the process layer
-  is still sync — gate battery and advisor consultation both are foreground-blocking
-- **Correction:** an earlier version of this doc predicted F5 would fix this. It didn't — F5 added
-  an orthogonal HTTP+SSE *read/control* surface (`Core/Http/ControlPlaneServer.cs`) on its own
-  background thread; it never touches `ProcessRunner`. This debt is still open and unowned by any
-  current stage — flag it if you pick it up.
+### ProcessRunner has both sync and async entry points — use the right one
+- **Closed (chore/debt, pre-F6):** `ProcessRunner.RunAsync`/`RunShellAsync`/`RunPowerShellAsync`
+  now exist (`Process.WaitForExitAsync` instead of the old `WaitForExit(500)` polling loop).
+  `GateRunner`/`Advisor` are fully async (`RunAllAsync`/`RunOneAsync`/`RunHookAsync`/
+  `ConsultAsync`), and the whole Orchestrator call chain that reaches them (`RunGateBatteryAsync`,
+  `ConsultAdvisorAsync`, `RunStageHookAsync`, `RunRemediationAsync`, `EvaluateSessionAsync`,
+  `ApplyVerdictAsync`, `EscalateExhaustedStageAsync`, `ConfirmCompletionAsync`) awaits them —
+  a multi-minute gate battery or advisor spawn no longer ties up the async run loop's thread-pool
+  thread for its whole duration.
+- **Use `RunAsync`/`RunAllAsync`/`ConsultAsync`** from any `async Task` engine method (the
+  orchestrator loop, lanes, mutating-lane merge gates). **Use the sync `Run`/`RunAll`** only at a
+  genuine CLI sync boundary with no concurrent async work to protect (`GateCommand.Execute`,
+  `RecentCommits`, `RunAgent` in `Commands.cs`) — same category as the existing
+  `#pragma warning disable MA0045 // sync-over-async boundary: Spectre.Cli Execute must return int`
+  pattern already used by `RunCommand.Execute`. The analyzer (MA0045/CA1849/MA0042) flags every
+  sync call once an async twin exists — pragma-suppress at the boundary rather than threading
+  async into a Spectre.Cli `Execute` that must return `int`.
 
 ### Agent sessions: use `conductor bg start|status|logs|stop` for long ops
 - F2.3 delivered sanctioned background-run primitives for agent prompts
