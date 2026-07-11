@@ -165,6 +165,51 @@ public sealed class C2AsyncEngineTests
         Assert.Single(snap.Checkpoints);
     }
 
+    // ---------------------------------------------------------------- RunAsync (F-debt: async ProcessRunner)
+
+    [Fact]
+    public async Task ProcessRunnerAsync_SplitsStdoutAndStderr()
+    {
+        var script = "Write-Output 'hello stdout'; Write-Error 'hello stderr'; exit 0";
+        var result = await ProcessRunner.RunPowerShellAsync(script, Path.GetTempPath(), TimeSpan.FromSeconds(10));
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains("hello stdout", result.Output, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("hello stderr", result.StdErr, StringComparison.OrdinalIgnoreCase);
+        Assert.False(result.TimedOut);
+    }
+
+    [Fact]
+    public async Task ProcessRunnerAsync_TimesOutAndKillsTree()
+    {
+        var script = "Start-Sleep -Seconds 30; Write-Output 'should never print'";
+        var result = await ProcessRunner.RunPowerShellAsync(script, Path.GetTempPath(), TimeSpan.FromMilliseconds(300));
+
+        Assert.True(result.TimedOut);
+        Assert.DoesNotContain("should never print", result.Output);
+    }
+
+    [Fact]
+    public async Task ProcessRunnerAsync_RealCancellation_IsNotReportedAsTimeout()
+    {
+        // Mirrors the sync Run() contract: a genuine CancellationToken cancel is distinct from a
+        // timeout — TimedOut must stay false so callers don't misreport why the process died.
+        var script = "Start-Sleep -Seconds 30";
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(300));
+
+        var result = await ProcessRunner.RunPowerShellAsync(script, Path.GetTempPath(), TimeSpan.FromMinutes(5), cts.Token);
+
+        Assert.False(result.TimedOut);
+    }
+
+    [Fact]
+    public async Task ProcessRunnerAsync_ExitCodePropagates()
+    {
+        var result = await ProcessRunner.RunPowerShellAsync("exit 7", Path.GetTempPath(), TimeSpan.FromSeconds(10));
+        Assert.Equal(7, result.ExitCode);
+        Assert.False(result.TimedOut);
+    }
+
     // ---------------------------------------------------------------- IProgressProvider contract
 
     [Fact]

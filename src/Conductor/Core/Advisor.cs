@@ -25,14 +25,14 @@ public sealed record AdvisorVerdict(AdvisorAction Action, string Reason);
 /// </summary>
 public static class Advisor
 {
-    public static AdvisorVerdict? Consult(PlanConfig plan, string prompt, Action<string>? log = null)
+    public static async Task<AdvisorVerdict?> ConsultAsync(PlanConfig plan, string prompt, Action<string>? log = null)
     {
         var a = plan.Advisor;
         if (a is not { Enabled: true } || string.IsNullOrWhiteSpace(a.Command)) return null;
         try
         {
             var args = a.Args.Select(x => x.Replace("{prompt}", prompt)).ToList();
-            var r = ProcessRunner.Run(a.Command, args, plan.Repo, TimeSpan.FromMinutes(a.TimeoutMinutes));
+            var r = await ProcessRunner.RunAsync(a.Command, args, plan.Repo, TimeSpan.FromMinutes(a.TimeoutMinutes)).ConfigureAwait(false);
             if (r.TimedOut) { log?.Invoke("advisor timed out"); return null; }
             var text = r.Output;
             if (a.Output.Equals("json", StringComparison.OrdinalIgnoreCase))

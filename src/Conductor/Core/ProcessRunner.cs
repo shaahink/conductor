@@ -10,10 +10,7 @@ public static class ProcessRunner
     /// <summary>The default shell for the current OS: <c>powershell</c> on Windows, <c>bash</c> everywhere else.</summary>
     public static string DefaultShell => OperatingSystem.IsWindows() ? "powershell" : "bash";
 
-    /// <summary>Run a process, capture stdout+stderr interleaved, kill the whole tree on timeout/cancel.
-    /// When <paramref name="supervisor"/> is provided, the process is assigned to the run-level
-    /// JobObject for crash safety and tracked in the PID registry (F2.1).</summary>
-    public static ProcResult Run(string fileName, IEnumerable<string> args, string cwd, TimeSpan timeout, CancellationToken ct = default, ProcessSupervisor? supervisor = null)
+    private static Process CreateProcess(string fileName, IEnumerable<string> args, string cwd, StringBuilder stdout, StringBuilder stderr, Lock gate)
     {
         var psi = new ProcessStartInfo(fileName)
         {
@@ -27,14 +24,33 @@ public static class ProcessRunner
         };
         foreach (var a in args) psi.ArgumentList.Add(a);
 
+        var p = new Process { StartInfo = psi };
+        p.OutputDataReceived += (_, e) => { if (e.Data != null) lock (gate) stdout.AppendLine(e.Data); };
+        p.ErrorDataReceived += (_, e) => { if (e.Data != null) lock (gate) stderr.AppendLine(e.Data); };
+        return p;
+    }
+
+    /// <summary>F2.1: assign the started process to the supervisor's run-level JobObject if available,
+    /// else a local JobObject scoped to this call — either way, killed processes never orphan.</summary>
+    private static IDisposable Track(Process p, string fileName, ProcessSupervisor? supervisor)
+    {
+        if (supervisor != null) return supervisor.Track(p, fileName);
+        var localJob = new JobObject();
+        localJob.Assign(p);
+        return localJob;
+    }
+
+    /// <summary>Run a process, capture stdout+stderr interleaved, kill the whole tree on timeout/cancel.
+    /// When <paramref name="supervisor"/> is provided, the process is assigned to the run-level
+    /// JobObject for crash safety and tracked in the PID registry (F2.1).</summary>
+    public static ProcResult Run(string fileName, IEnumerable<string> args, string cwd, TimeSpan timeout, CancellationToken ct = default, ProcessSupervisor? supervisor = null)
+    {
         var stdout = new StringBuilder();
         var stderr = new StringBuilder();
         var gate = new Lock();
         var sw = Stopwatch.StartNew();
 
-        using var p = new Process { StartInfo = psi };
-        p.OutputDataReceived += (_, e) => { if (e.Data != null) lock (gate) stdout.AppendLine(e.Data); };
-        p.ErrorDataReceived += (_, e) => { if (e.Data != null) lock (gate) stderr.AppendLine(e.Data); };
+        using var p = CreateProcess(fileName, args, cwd, stdout, stderr, gate);
 
         try
         {
@@ -45,18 +61,7 @@ public static class ProcessRunner
             return new ProcResult(-1, $"failed to start '{fileName}': {ex.Message}", "", false, sw.Elapsed);
         }
 
-        // F2.1: assign to supervisor's run-level JobObject if available, else use local JobObject.
-        IDisposable? tracked = null;
-        JobObject? localJob = null;
-        if (supervisor != null)
-        {
-            tracked = supervisor.Track(p, fileName);
-        }
-        else
-        {
-            localJob = new JobObject();
-            localJob.Assign(p);
-        }
+        using var tracked = Track(p, fileName, supervisor);
 
         try
         {
@@ -83,8 +88,64 @@ public static class ProcessRunner
         }
         finally
         {
-            tracked?.Dispose();
-            localJob?.Dispose();
+            tracked.Dispose();
+        }
+    }
+
+    /// <summary>True-async twin of <see cref="Run"/> — same tracking/timeout/cancel semantics, but
+    /// awaits <see cref="Process.WaitForExitAsync(CancellationToken)"/> instead of polling
+    /// <c>WaitForExit(500)</c>, so the calling async method's thread-pool thread is freed for the
+    /// duration of the run instead of blocked (F-debt: gate battery / advisor spawns previously
+    /// blocked the async orchestrator loop for their full multi-minute duration).</summary>
+    public static async Task<ProcResult> RunAsync(string fileName, IEnumerable<string> args, string cwd, TimeSpan timeout, CancellationToken ct = default, ProcessSupervisor? supervisor = null)
+    {
+        var stdout = new StringBuilder();
+        var stderr = new StringBuilder();
+        var gate = new Lock();
+        var sw = Stopwatch.StartNew();
+
+        using var p = CreateProcess(fileName, args, cwd, stdout, stderr, gate);
+
+        try
+        {
+            p.Start();
+        }
+        catch (Exception ex)
+        {
+            return new ProcResult(-1, $"failed to start '{fileName}': {ex.Message}", "", false, sw.Elapsed);
+        }
+
+        using var tracked = Track(p, fileName, supervisor);
+
+        try
+        {
+            p.BeginOutputReadLine();
+            p.BeginErrorReadLine();
+
+            using var timeoutCts = new CancellationTokenSource(timeout);
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
+
+            var timedOut = false;
+            try
+            {
+                await p.WaitForExitAsync(linked.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Distinguish a real cancel from a timeout the same way the sync Run() does.
+                timedOut = !ct.IsCancellationRequested;
+                try { p.Kill(entireProcessTree: true); } catch { /* already gone */ }
+            }
+            // Mirrors sync Run()'s trailing WaitForExit() — flush redirected-stream async readers.
+            try { await p.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false); } catch { /* best effort */ }
+
+            int exit;
+            try { exit = p.ExitCode; } catch { exit = -1; }
+            lock (gate) return new ProcResult(exit, stdout.ToString(), stderr.ToString(), timedOut, sw.Elapsed);
+        }
+        finally
+        {
+            tracked.Dispose();
         }
     }
 
@@ -113,4 +174,27 @@ public static class ProcessRunner
     /// <see cref="RunShell"/> for consistency).</summary>
     public static ProcResult RunPowerShell(string command, string cwd, TimeSpan timeout, CancellationToken ct = default)
         => RunShell("powershell", command, cwd, timeout, ct);
+
+    /// <summary>True-async twin of <see cref="RunShell"/> — see <see cref="RunAsync"/>.</summary>
+    public static Task<ProcResult> RunShellAsync(string shell, string command, string cwd, TimeSpan timeout, CancellationToken ct = default, ProcessSupervisor? supervisor = null)
+    {
+        return shell.ToLowerInvariant() switch
+        {
+            "powershell" => OperatingSystem.IsWindows()
+                ? RunAsync("powershell.exe",
+                      new[] { "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command + "; exit $LASTEXITCODE" },
+                      cwd, timeout, ct, supervisor)
+                : RunAsync("pwsh",
+                      new[] { "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command + "; exit $LASTEXITCODE" },
+                      cwd, timeout, ct, supervisor),
+            "bash" => RunAsync("bash", new[] { "-c", command }, cwd, timeout, ct, supervisor),
+            "sh" => RunAsync("sh", new[] { "-c", command }, cwd, timeout, ct, supervisor),
+            _ => Task.FromResult(new ProcResult(-1,
+                $"unknown shell '{shell}': supported shells are powershell, bash, sh", "", false, TimeSpan.Zero)),
+        };
+    }
+
+    /// <summary>True-async twin of <see cref="RunPowerShell"/> — see <see cref="RunAsync"/>.</summary>
+    public static Task<ProcResult> RunPowerShellAsync(string command, string cwd, TimeSpan timeout, CancellationToken ct = default)
+        => RunShellAsync("powershell", command, cwd, timeout, ct);
 }

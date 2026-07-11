@@ -57,9 +57,8 @@ public static class LaneRunner
             var args = agent.Args.Select(a =>
                 a.Replace("{prompt}", prompt)
                  .Replace("{sessionId}", lane.Id));
-            var result = await Task.Run(() =>
-                ProcessRunner.Run(agent.Command, args, scratch,
-                    TimeSpan.FromMinutes(lane.TimeoutMinutes), ct), ct).ConfigureAwait(false);
+            var result = await ProcessRunner.RunAsync(agent.Command, args, scratch,
+                TimeSpan.FromMinutes(lane.TimeoutMinutes), ct).ConfigureAwait(false);
 
             var elapsed = (DateTime.UtcNow - start).TotalSeconds;
             var output = result.Output;

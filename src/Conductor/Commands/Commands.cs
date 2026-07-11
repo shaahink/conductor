@@ -247,6 +247,7 @@ public sealed class StatusCommand : Command<StatusCommand.Settings>
         return 0;
     }
 
+#pragma warning disable MA0045, CA1849 // short CLI-boundary helper, no concurrent async work to protect (same category as Spectre.Cli sync boundary)
     private static string RecentCommits(string repo, int count)
     {
         try
@@ -257,6 +258,7 @@ public sealed class StatusCommand : Command<StatusCommand.Settings>
         }
         catch { return "(git failed)"; }
     }
+#pragma warning restore MA0045, CA1849
 
 #pragma warning disable MA0045 // sync file I/O at Spectre.Cli sync boundary (same pattern as RunCommand)
     private static void RecordInvocation(string stateDir)
@@ -316,7 +318,8 @@ public sealed class GateCommand : Command<GateCommand.Settings>
 
         var fastOnly = !settings.Full;
         var ct = CancellationToken.None;
-        var gates = GateRunner.RunAll(plan, msg => LogGateEvent(logPath, msg), ct, fastOnly, state.CurrentStage, null);
+        var gates = GateRunner.RunAllAsync(plan, msg => LogGateEvent(logPath, msg), ct, fastOnly, state.CurrentStage, null)
+            .GetAwaiter().GetResult();
 
         var allGreen = GateRunner.AllRequiredPassed(gates);
         var summary = GateRunner.Summary(gates);
@@ -1444,6 +1447,7 @@ public sealed class AuditCommand : Command<AuditCommand.Settings>
         return sb.ToString();
     }
 
+#pragma warning disable MA0045, CA1849 // CLI --replay sync boundary, no concurrent async work to protect (same category as Spectre.Cli sync boundary)
     private static string RunAgent(AgentConfig cfg, string prompt, TimeSpan timeout)
     {
         var scratch = Path.Combine(Path.GetTempPath(), "conductor-audit-" + Guid.NewGuid().ToString("N")[..8]);
@@ -1466,6 +1470,7 @@ public sealed class AuditCommand : Command<AuditCommand.Settings>
             try { Directory.Delete(scratch, recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
         }
     }
+#pragma warning restore MA0045, CA1849
 }
 
 /// <summary>

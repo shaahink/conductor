@@ -75,9 +75,8 @@ public static class MutatingLaneRunner
             var args = agent.Args.Select(a =>
                 a.Replace("{prompt}", prompt)
                  .Replace("{sessionId}", lane.Id));
-            var agentResult = await Task.Run(() =>
-                ProcessRunner.Run(agent.Command, args, lanePath,
-                    TimeSpan.FromMinutes(lane.TimeoutMinutes), ct), ct).ConfigureAwait(false);
+            var agentResult = await ProcessRunner.RunAsync(agent.Command, args, lanePath,
+                TimeSpan.FromMinutes(lane.TimeoutMinutes), ct).ConfigureAwait(false);
 
             if (agentResult.TimedOut)
             {
@@ -272,8 +271,7 @@ public static class MutatingLaneRunner
         List<GateResult> gateResults;
         try
         {
-            gateResults = await Task.Run(() =>
-                GateRunner.RunAll(stagingPlan, log, ct, currentStage: null), ct).ConfigureAwait(false);
+            gateResults = await GateRunner.RunAllAsync(stagingPlan, log, ct, currentStage: null).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

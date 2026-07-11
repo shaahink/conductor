@@ -14,7 +14,7 @@ public static class GateRunner
     /// <param name="fastOnly">When true, only run gates tagged tier "fast" (per-session under perPhase policy).</param>
     /// <param name="currentStage">Gates with a Stages filter only run when the current stage matches.</param>
     /// <param name="onGates">Live per-gate status callback (dashboard timers).</param>
-    public static List<GateResult> RunAll(PlanConfig plan, Action<string>? onProgress = null, CancellationToken ct = default,
+    public static async Task<List<GateResult>> RunAllAsync(PlanConfig plan, Action<string>? onProgress = null, CancellationToken ct = default,
         bool fastOnly = false, string? currentStage = null, Action<IReadOnlyList<GateProgress>>? onGates = null)
     {
         var gates = plan.Gates
@@ -22,17 +22,17 @@ public static class GateRunner
             .ToList();
         var results = new GateResult?[gates.Count];
 
-        // Live status array shared across the (possibly parallel) gate threads.
+        // Live status array shared across the (possibly parallel) gate tasks.
         var live = gates.Select(g => GateProgress.Pending(g.Name)).ToArray();
         var liveGate = new Lock();
         void Emit() { if (onGates != null) { lock (liveGate) onGates(live.ToArray()); } }
         void Mark(int i, GateProgress gp) { lock (liveGate) live[i] = gp; Emit(); }
         Emit();
 
-        GateResult RunTracked(int i)
+        async Task<GateResult> RunTrackedAsync(int i)
         {
             Mark(i, new GateProgress(gates[i].Name, "running", TimeSpan.Zero, DateTime.UtcNow));
-            var r = RunOne(plan, gates[i], onProgress, ct);
+            var r = await RunOneAsync(plan, gates[i], onProgress, ct).ConfigureAwait(false);
             var state = r.Skipped ? "skip" : r.Passed ? "pass" : r.Optional ? "warn" : "fail";
             Mark(i, new GateProgress(gates[i].Name, state, r.Duration));
             return r;
@@ -42,23 +42,23 @@ public static class GateRunner
         // parallel gates run concurrently as one batch. Lets `build` gate everyone before the
         // slow independent gates (tests/pnpm/mcp-qa) fan out together.
         var batch = new List<int>();
-        void Flush()
+        async Task FlushAsync()
         {
             if (batch.Count == 0) return;
             var idx = batch.ToList();
-            Parallel.ForEach(idx, new ParallelOptions { MaxDegreeOfParallelism = idx.Count },
-                i => results[i] = RunTracked(i));
+            var batchResults = await Task.WhenAll(idx.Select(RunTrackedAsync)).ConfigureAwait(false);
+            for (var j = 0; j < idx.Count; j++) results[idx[j]] = batchResults[j];
             batch.Clear();
         }
 
         for (var i = 0; i < gates.Count; i++)
         {
-            if (ct.IsCancellationRequested) { Flush(); break; }
+            if (ct.IsCancellationRequested) { await FlushAsync().ConfigureAwait(false); break; }
             if (gates[i].Parallel) { batch.Add(i); continue; }
-            Flush();
-            results[i] = RunTracked(i);
+            await FlushAsync().ConfigureAwait(false);
+            results[i] = await RunTrackedAsync(i).ConfigureAwait(false);
         }
-        Flush();
+        await FlushAsync().ConfigureAwait(false);
 
         // any not-yet-populated slots (e.g. cancelled before reached) get a skipped placeholder
         return results.Select((r, i) => r ?? new GateResult(gates[i].Name, false, true, gates[i].Optional, 0, TimeSpan.Zero, "not run (cancelled)")).ToList();
@@ -71,7 +71,7 @@ public static class GateRunner
         return headSha + "|" + string.Join(",", names);
     }
 
-    private static GateResult RunOne(PlanConfig plan, GateConfig g, Action<string>? onProgress, CancellationToken ct)
+    private static async Task<GateResult> RunOneAsync(PlanConfig plan, GateConfig g, Action<string>? onProgress, CancellationToken ct)
     {
         if (g.SkipIfMissing != null)
         {
@@ -85,7 +85,7 @@ public static class GateRunner
         onProgress?.Invoke($"gate {g.Name}: {g.Command}");
         var cwd = string.IsNullOrWhiteSpace(g.Cwd) ? plan.Repo : Path.Combine(plan.Repo, g.Cwd);
         var shell = string.IsNullOrWhiteSpace(g.Shell) ? ProcessRunner.DefaultShell : g.Shell;
-        var r = ProcessRunner.RunShell(shell, g.Command, cwd, TimeSpan.FromMinutes(g.TimeoutMinutes), ct);
+        var r = await ProcessRunner.RunShellAsync(shell, g.Command, cwd, TimeSpan.FromMinutes(g.TimeoutMinutes), ct).ConfigureAwait(false);
         var passed = !r.TimedOut && r.ExitCode == 0;
         onProgress?.Invoke($"gate {g.Name}: {(passed ? "PASS" : $"FAIL (exit {r.ExitCode}{(r.TimedOut ? ", timeout" : "")})")} in {r.Duration.TotalSeconds:0}s");
         return new GateResult(g.Name, passed, false, g.Optional, r.ExitCode, r.Duration,
@@ -96,12 +96,12 @@ public static class GateRunner
         => results.All(r => r.Skipped || r.Passed || r.Optional);
 
     /// <summary>Best-effort lifecycle hook (setup/teardown). Logs its exit code but never blocks the run.</summary>
-    public static void RunHook(PlanConfig plan, HookConfig? hook, string label, Action<string>? onProgress = null, CancellationToken ct = default)
+    public static async Task RunHookAsync(PlanConfig plan, HookConfig? hook, string label, Action<string>? onProgress = null, CancellationToken ct = default)
     {
         if (hook == null || string.IsNullOrWhiteSpace(hook.Command)) return;
         var cwd = string.IsNullOrWhiteSpace(hook.Cwd) ? plan.Repo : Path.Combine(plan.Repo, hook.Cwd);
         onProgress?.Invoke($"{label}: {hook.Command}");
-        var r = ProcessRunner.RunPowerShell(hook.Command, cwd, TimeSpan.FromMinutes(hook.TimeoutMinutes), ct);
+        var r = await ProcessRunner.RunPowerShellAsync(hook.Command, cwd, TimeSpan.FromMinutes(hook.TimeoutMinutes), ct).ConfigureAwait(false);
         onProgress?.Invoke($"{label}: exit {r.ExitCode}{(r.TimedOut ? " (timed out)" : "")} in {r.Duration.TotalSeconds:0}s");
     }
 

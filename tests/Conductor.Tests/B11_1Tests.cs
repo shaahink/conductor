@@ -132,7 +132,7 @@ public class B11_1CrossPlatformShellTests
     // --- GateRunner.RunOne uses Shell ---
 
     [Fact]
-    public void GateRunner_RunOne_DefaultShell_GatePasses()
+    public async Task GateRunner_RunOne_DefaultShell_GatePasses()
     {
         var plan = new PlanConfig
         {
@@ -142,13 +142,13 @@ public class B11_1CrossPlatformShellTests
                 new() { Name = "nop", Command = "exit 0", TimeoutMinutes = 1 }
             }
         };
-        var results = GateRunner.RunAll(plan);
+        var results = await GateRunner.RunAllAsync(plan);
         Assert.True(results[0].Passed);
         Assert.Equal(0, results[0].ExitCode);
     }
 
     [Fact]
-    public void GateRunner_RunOne_BashShell_GateCapturesExitCode()
+    public async Task GateRunner_RunOne_BashShell_GateCapturesExitCode()
     {
         if (!BashAvailable()) return;
 
@@ -166,14 +166,14 @@ public class B11_1CrossPlatformShellTests
                 }
             }
         };
-        var results = GateRunner.RunAll(plan);
+        var results = await GateRunner.RunAllAsync(plan);
         Assert.False(results[0].Passed);
         Assert.Equal(3, results[0].ExitCode);
         Assert.Contains("gate-output", results[0].Tail);
     }
 
     [Fact]
-    public void GateRunner_RunOne_SkipsMissingShellGracefully()
+    public async Task GateRunner_RunOne_SkipsMissingShellGracefully()
     {
         // bash may not be on Windows CI; RunShell returns an error result with exit -1
         // if the shell executable isn't found. SkipIfMissing doesn't apply here,
@@ -193,7 +193,7 @@ public class B11_1CrossPlatformShellTests
                 }
             }
         };
-        var results = GateRunner.RunAll(plan);
+        var results = await GateRunner.RunAllAsync(plan);
         Assert.Single(results);
         // It won't crash — either passes (bash available) or returns a result.
         Assert.NotNull(results[0]);

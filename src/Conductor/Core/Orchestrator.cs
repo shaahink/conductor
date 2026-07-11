@@ -194,7 +194,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 var allDone = AllEffectivelyDone(track);
                 if (allDone && state.PendingFix == null && state.PendingResume == null)
                 {
-                    if (ConfirmCompletion(ct)) { CompletePlan(track); return 0; }
+                    if (await ConfirmCompletionAsync(ct).ConfigureAwait(false)) { CompletePlan(track); return 0; }
                     continue; // gates red on a "done" tracker — a fix session is now queued
                 }
 
@@ -226,7 +226,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 if (stage.PreHook is { } preHook
                     && !state.PreHookRunStages.Contains(stage.Id))
                 {
-                    RunStageHook(stage.Id, "pre-hook", preHook, ct);
+                    await RunStageHookAsync(stage.Id, "pre-hook", preHook, ct).ConfigureAwait(false);
                     Save();
                     if (state.Status == RunStatus.NeedsHuman) continue;
                 }
@@ -255,7 +255,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 var maxAttempts = MaxAttempts(stage);
                 if (state.AttemptsThisStage >= maxAttempts && state.PendingAudit == null)
                 {
-                    if (!EscalateExhaustedStage(stage, track, maxAttempts)) continue; // paused/skip handled inside
+                    if (!await EscalateExhaustedStageAsync(stage, track, maxAttempts).ConfigureAwait(false)) continue; // paused/skip handled inside
                 }
 
                 if (opts.MaxSessions > 0 && sessionsThisRun >= opts.MaxSessions)
@@ -527,7 +527,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         });
 
         bool stalled = false, timedOut = false, killedByUser = false;
-        GateRunner.RunHook(plan, plan.Setup, "setup", Log, ct);
+        await GateRunner.RunHookAsync(plan, plan.Setup, "setup", Log, ct).ConfigureAwait(false);
         var resolvedAgent = plan.ResolveAgent(stage);
 
         // I1: wire the MCP task server into the agent session. Write a temp opencode config
@@ -697,15 +697,15 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 return;
             }
 
-            EvaluateSession(rec, stage, preTrack, startHead, stalled, timedOut, killedByUser,
-                agentErrored: agent.ResultIsError || (exit != 0 && !stalled && !timedOut && !killedByUser), ct);
+            await EvaluateSessionAsync(rec, stage, preTrack, startHead, stalled, timedOut, killedByUser,
+                agentErrored: agent.ResultIsError || (exit != 0 && !stalled && !timedOut && !killedByUser), ct).ConfigureAwait(false);
 
             // B8.1: after every session, distill "what was hard" into rolling lessons
             ReflectionStep(rec);
         }
     }
 
-    private void EvaluateSession(SessionRecord rec, StageConfig stage, TrackerSnapshot preTrack, string startHead,
+    private async Task EvaluateSessionAsync(SessionRecord rec, StageConfig stage, TrackerSnapshot preTrack, string startHead,
         bool stalled, bool timedOut, bool killedByUser, bool agentErrored, CancellationToken ct)
     {
         // Handle non-finishing sessions before spending ~minutes on the gate battery.
@@ -729,9 +729,9 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 && FailureCircuitBreaker.ShouldBreak(prevSession, rec, null))
             {
                 Log($"circuit breaker: identical failure pattern detected ({rec.Outcome} ×2) — consulting advisor");
-                var breakerVerdict = ConsultAdvisor(rec, stage, _progress.Read(plan, ct),
-                    $"identical failure pattern: 2 consecutive {rec.Outcome} sessions with matching symptoms");
-                ApplyVerdict(breakerVerdict, rec, stage, defaultAction: AdvisorAction.NeedsHuman);
+                var breakerVerdict = await ConsultAdvisorAsync(rec, stage, _progress.Read(plan, ct),
+                    $"identical failure pattern: 2 consecutive {rec.Outcome} sessions with matching symptoms").ConfigureAwait(false);
+                await ApplyVerdictAsync(breakerVerdict, rec, stage, defaultAction: AdvisorAction.NeedsHuman).ConfigureAwait(false);
                 SaveAndReport();
                 return;
             }
@@ -767,8 +767,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             }
             else
             {
-                var verdict = ConsultAdvisor(rec, stage, _progress.Read(plan, ct), "resume budget exhausted after stall/timeout");
-                ApplyVerdict(verdict, rec, stage, defaultAction: AdvisorAction.Retry);
+                var verdict = await ConsultAdvisorAsync(rec, stage, _progress.Read(plan, ct), "resume budget exhausted after stall/timeout").ConfigureAwait(false);
+                await ApplyVerdictAsync(verdict, rec, stage, defaultAction: AdvisorAction.Retry).ConfigureAwait(false);
             }
             state.Status = RunStatus.Idle;
             SaveAndReport();
@@ -863,7 +863,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         Log(plan.PerPhaseGates
             ? "verifying independently: fast gates + git + tracker diff (full battery at phase end)"
             : "verifying independently: gate battery + git + tracker diff");
-        var gates = RunGateBattery(ct, fastOnly: plan.PerPhaseGates);
+        var gates = await RunGateBatteryAsync(ct, fastOnly: plan.PerPhaseGates).ConfigureAwait(false);
         _lastGates = gates;
         rec.GateSummary = GateRunner.Summary(gates);
         EmitGates(gates, "session", rec.Number.ToString());
@@ -944,9 +944,9 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 && FailureCircuitBreaker.ShouldBreak(prevSession, rec, gates))
             {
                 Log($"circuit breaker: identical failure pattern detected ({rec.Outcome} ×2) — consulting advisor");
-                var breakerVerdict = ConsultAdvisor(rec, stage, _progress.Read(plan, ct),
-                    $"identical failure pattern: 2 consecutive {rec.Outcome} sessions with matching symptoms");
-                ApplyVerdict(breakerVerdict, rec, stage, defaultAction: AdvisorAction.NeedsHuman);
+                var breakerVerdict = await ConsultAdvisorAsync(rec, stage, _progress.Read(plan, ct),
+                    $"identical failure pattern: 2 consecutive {rec.Outcome} sessions with matching symptoms").ConfigureAwait(false);
+                await ApplyVerdictAsync(breakerVerdict, rec, stage, defaultAction: AdvisorAction.NeedsHuman).ConfigureAwait(false);
                 state.Status = RunStatus.Idle;
                 SaveAndReport();
                 return;
@@ -990,7 +990,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             PushIdleSnapshot();
             Log($"phase gate {pg.StageId}: running FULL battery at {Short(head)} to confirm the phase");
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            gates = RunGateBattery(ct, fastOnly: false);
+            gates = await RunGateBatteryAsync(ct, fastOnly: false).ConfigureAwait(false);
             _lastGates = gates;
 
             if (ct.IsCancellationRequested)
@@ -1139,7 +1139,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         state.AttemptsThisStage = 0;
         // B10.3: post-hook runs after confirmation (best-effort, logged but never blocks).
         if (stage?.PostHook is { } postHook)
-            RunStageHook(id, "post-hook", postHook, ct);
+            await RunStageHookAsync(id, "post-hook", postHook, ct).ConfigureAwait(false);
         // B12.4: fix-lanes run after the stage is confirmed — they consume .conductor/followups.md
         // entries owned by this stage and run as Tier B mutating lanes behind merge gates.
         await RunFollowupFixLanesAsync(id, ct).ConfigureAwait(false);
@@ -1216,8 +1216,8 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 var args = resolvedAgent.Args.Select(a =>
                     a.Replace("{prompt}", prompt)
                      .Replace("{sessionId}", $"audit-{stageId}-{suffix}"));
-                var result = ProcessRunner.Run(resolvedAgent.Command, args, lanePath,
-                    TimeSpan.FromMinutes(plan.Audit?.MaxAttempts > 0 ? plan.Audit.MaxAttempts * 30 : 30), ct);
+                var result = await ProcessRunner.RunAsync(resolvedAgent.Command, args, lanePath,
+                    TimeSpan.FromMinutes(plan.Audit?.MaxAttempts > 0 ? plan.Audit.MaxAttempts * 30 : 30), ct).ConfigureAwait(false);
 
                 CleanupLanePath(lanePath);
 
@@ -1376,11 +1376,11 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     /// <see cref="NeedsHuman"/> (blocking); on success the stage id is recorded in
     /// <see cref="RunState.PreHookRunStages"/> to prevent re-run on resume. For post-hooks
     /// failures are logged only.</summary>
-    private void RunStageHook(string stageId, string label, HookConfig hook, CancellationToken ct)
+    private async Task RunStageHookAsync(string stageId, string label, HookConfig hook, CancellationToken ct)
     {
         Log($"{label}: {stageId} — {hook.Command}");
         var cwd = string.IsNullOrWhiteSpace(hook.Cwd) ? plan.Repo : Path.Combine(plan.Repo, hook.Cwd);
-        var r = ProcessRunner.RunPowerShell(hook.Command, cwd, TimeSpan.FromMinutes(hook.TimeoutMinutes), ct);
+        var r = await ProcessRunner.RunPowerShellAsync(hook.Command, cwd, TimeSpan.FromMinutes(hook.TimeoutMinutes), ct).ConfigureAwait(false);
         var timedOut = r.TimedOut ? " (timed out)" : "";
         Log($"{label}: exit {r.ExitCode}{timedOut} in {r.Duration.TotalSeconds:0}s");
         if (r.ExitCode != 0)
@@ -1399,14 +1399,14 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         }
     }
 
-    private IReadOnlyList<GateResult> RunGateBattery(CancellationToken ct, bool fastOnly = false)
+    private async Task<IReadOnlyList<GateResult>> RunGateBatteryAsync(CancellationToken ct, bool fastOnly = false)
     {
         _curGate = fastOnly ? "battery:fast" : "battery:full";
         try
         {
-            GateRunner.RunHook(plan, plan.Setup, "setup", Log, ct);
-            var gates = GateRunner.RunAll(plan, Log, ct, fastOnly, state.CurrentStage, sink.GateProgress);
-            GateRunner.RunHook(plan, plan.Teardown, "teardown", Log, ct);
+            await GateRunner.RunHookAsync(plan, plan.Setup, "setup", Log, ct).ConfigureAwait(false);
+            var gates = await GateRunner.RunAllAsync(plan, Log, ct, fastOnly, state.CurrentStage, sink.GateProgress).ConfigureAwait(false);
+            await GateRunner.RunHookAsync(plan, plan.Teardown, "teardown", Log, ct).ConfigureAwait(false);
             // Emit per-gate summary lines with outcome scope so JSON queries can filter on
             // e.g. gate=build and outcome=fail.
             foreach (var g in gates)
@@ -1455,11 +1455,11 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         => plan.Conventions.MentionsHuman(track.HandoffBlock);
 
     /// <returns>true if the caller should fall through to running a session (advisor said retry or resetBudget)</returns>
-    private bool EscalateExhaustedStage(StageConfig stage, TrackerSnapshot track, int maxAttempts)
+    private async Task<bool> EscalateExhaustedStageAsync(StageConfig stage, TrackerSnapshot track, int maxAttempts)
     {
         Log($"stage {stage.Id} exhausted its attempt budget ({maxAttempts}) — consulting advisor");
         var last = state.History.LastOrDefault();
-        var verdict = ConsultAdvisor(last, stage, track, $"attempt budget exhausted ({maxAttempts})");
+        var verdict = await ConsultAdvisorAsync(last, stage, track, $"attempt budget exhausted ({maxAttempts})").ConfigureAwait(false);
         if (verdict?.Action is AdvisorAction.Skip)
         {
             SkipStage(stage, $"advisor: {verdict.Reason}");
@@ -1477,7 +1477,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         return false;
     }
 
-    private AdvisorVerdict? ConsultAdvisor(SessionRecord? rec, StageConfig stage, TrackerSnapshot track, string outcome)
+    private async Task<AdvisorVerdict?> ConsultAdvisorAsync(SessionRecord? rec, StageConfig stage, TrackerSnapshot track, string outcome)
     {
         var prompt = _prompts.Advisor(stage,
             outcome + (rec?.Outcome != null ? $" (last session: {rec.Outcome})" : ""),
@@ -1487,12 +1487,12 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             Trunc(rec?.ResultSummary ?? "", 1200),
             state.AttemptsThisStage, MaxAttempts(stage));
         Log("consulting advisor…");
-        var v = Advisor.Consult(plan, prompt, Log);
+        var v = await Advisor.ConsultAsync(plan, prompt, Log).ConfigureAwait(false);
         Log(v != null ? $"advisor verdict: {v.Action} — {v.Reason}" : "advisor unavailable — using deterministic default");
         return v;
     }
 
-    private void ApplyVerdict(AdvisorVerdict? verdict, SessionRecord rec, StageConfig stage, AdvisorAction defaultAction)
+    private async Task ApplyVerdictAsync(AdvisorVerdict? verdict, SessionRecord rec, StageConfig stage, AdvisorAction defaultAction)
     {
         var action = verdict?.Action ?? defaultAction;
         switch (action)
@@ -1519,7 +1519,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 break;
             case AdvisorAction.ApplyFix:
                 Log($"advisor apply-fix: {verdict?.Reason}");
-                RunRemediation(verdict?.Reason ?? "advisor requested remediation");
+                await RunRemediationAsync(verdict?.Reason ?? "advisor requested remediation").ConfigureAwait(false);
                 state.AttemptsThisStage = Math.Max(0, state.AttemptsThisStage - 1);
                 break;
             case AdvisorAction.RerunGates:
@@ -1533,7 +1533,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         }
     }
 
-    private void RunRemediation(string reason)
+    private async Task RunRemediationAsync(string reason)
     {
         var script = plan.Advisor?.RemediationScript;
         if (string.IsNullOrWhiteSpace(script))
@@ -1545,7 +1545,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         {
             Log($"remediation: running script — {script[..Math.Min(script.Length, 120)]}");
             var shell = string.IsNullOrWhiteSpace(ProcessRunner.DefaultShell) ? "powershell" : ProcessRunner.DefaultShell;
-            var r = ProcessRunner.RunShell(shell, script, plan.Repo, TimeSpan.FromMinutes(5));
+            var r = await ProcessRunner.RunShellAsync(shell, script, plan.Repo, TimeSpan.FromMinutes(5)).ConfigureAwait(false);
             Log($"remediation: script exited {r.ExitCode} in {r.Duration.TotalSeconds:0}s{(r.TimedOut ? " (timed out)" : "")}");
             if (r.ExitCode != 0)
                 Log($"remediation: script non-zero exit — {r.Output[..Math.Min(r.Output.Length, 200)]}");
@@ -1625,7 +1625,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
     /// <summary>Tracker says everything is DONE — confirm with real gates before declaring victory.
     /// An agent can flip rows to DONE; it cannot flip a red build green.</summary>
-    private bool ConfirmCompletion(CancellationToken ct)
+    private async Task<bool> ConfirmCompletionAsync(CancellationToken ct)
     {
         var lastOutcome = state.History.LastOrDefault()?.Outcome;
         if (_lastGates != null && GateRunner.AllRequiredPassed(_lastGates) &&
@@ -1636,7 +1636,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         state.Status = RunStatus.VerifyingGates;
         Save();
         PushIdleSnapshot();
-        var gates = RunGateBattery(ct);
+        var gates = await RunGateBatteryAsync(ct).ConfigureAwait(false);
         _lastGates = gates;
         state.Status = RunStatus.Idle;
         EmitGates(gates, "completion");
