@@ -1,10 +1,10 @@
 ﻿# Conductor — Maestro run report
 
-_Updated 2026-07-11 22:14 UTC · branch `feat/foreman` · HEAD `d7ff9b6`_
+_Updated 2026-07-11 22:15 UTC · branch `feat/foreman` · HEAD `3214364`_
 
 **Status:** Running
 **Stage:** M1 — Deconstruction — delete the old face, break the god classes · attempts used 0 · working ▸ M1.1
-**Checkpoints:** 0/30 done · **Sessions run:** 1 · **Cost:** $0.0000 (agent $0.0000 + gates $0.0000)
+**Checkpoints:** 0/30 done · **Sessions run:** 2 · **Cost:** $0.0000 (agent $0.0000 + gates $0.0000)
 
 ## Stage progress
 
@@ -118,15 +118,13 @@ _Updated 2026-07-11 22:14 UTC · branch `feat/foreman` · HEAD `d7ff9b6`_
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Overhead | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | M1 | Deliver | 1 | 07-11 22:13 | 0:00 | Interrupted |  | 0 |  |  |  |  |
+| 2 | M1 | Resume | 1r1 | 07-11 22:15 | 0:00 | Interrupted |  | 0 |  |  |  |  |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-10 20:15:08  ✓ checkpoint F2.2 confirmed
-07-10 20:15:09  • session #21 F2 Deliver started (attempt 1/2) · persona architect
-07-10 20:33:58  ▪ gate build pass [session]  (26.2s)
 07-10 20:34:01  • session #21 F2 → Advanced · done F2.3 · 2 commit(s)  (18m52s)
 07-10 20:34:01  ✓ checkpoint F2.3 confirmed
 07-10 20:34:01  • session #22 F2 Deliver started (attempt 1/2) · persona architect
@@ -164,6 +162,9 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-11 23:13:30  ◆ run started · Maestro
 07-11 23:13:31  • session #1 M1 Deliver started (attempt 1/8)
 07-11 23:14:12  • session #1 M1 → Interrupted  (41.0s)
+07-11 23:15:43  ◆ run resumed · Maestro
+07-11 23:15:43  • session #2 M1 Resume started (attempt 1/8)
+07-11 23:15:55  • session #2 M1 → Interrupted  (11.8s)
 ```
 
 ## Health
@@ -171,7 +172,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 31 · retries 1 (3 %) · overall Warn
+sessions 32 · retries 1 (3 %) · overall Warn
 ⚠ [context-saturation] session #2: 32,055,552 context tokens (≥ 20,000,000)
 ```
 
