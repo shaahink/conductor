@@ -9,11 +9,12 @@ export interface ProcessPaneProps {
   height: number;
   selected: number;
   focused: boolean;
+  now?: number;
 }
 
-function fmtRuntime(p: ProcessDto): string {
+function fmtRuntime(p: ProcessDto, nowMs: number): string {
   const start = new Date(p.startedUtc).getTime();
-  const end = p.exitedUtc ? new Date(p.exitedUtc).getTime() : Date.now();
+  const end = p.exitedUtc ? new Date(p.exitedUtc).getTime() : nowMs;
   const sec = Math.max(0, Math.floor((end - start) / 1000));
   const m = Math.floor(sec / 60);
   const s = sec % 60;
@@ -22,7 +23,7 @@ function fmtRuntime(p: ProcessDto): string {
 
 /** F6.4 Process pane (D11): "what is it actually doing right now" at a glance — PID, purpose,
  * runtime, last output line for every supervised child (ProcessSupervisor + PID registry, F2). */
-export function ProcessPane({ processes, width, height, selected, focused }: ProcessPaneProps) {
+export function ProcessPane({ processes, width, height, selected, focused, now = Date.now() }: ProcessPaneProps) {
   if (processes.length === 0) {
     return (
       <Box width={width} height={height} paddingX={1}>
@@ -64,7 +65,7 @@ export function ProcessPane({ processes, width, height, selected, focused }: Pro
             <Box flexShrink={0}>
               <Text backgroundColor={bg} color={colors.dim}>
                 {" "}
-                {fmtRuntime(p)}
+                {fmtRuntime(p, now)}
               </Text>
             </Box>
             {showLastLine && (

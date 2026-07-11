@@ -120,6 +120,12 @@ public class RunStateProjectionTests
     }
     """;
 
+    /// <summary>The plan name a state.json fixture belongs to. <see cref="RunState.LoadOrNew"/> refuses to
+    /// hand a run's state to a DIFFERENT plan (that is how a new plan used to silently resume an old one),
+    /// so these fixtures must be loaded under their own plan's name rather than a sentinel.</summary>
+    private static string PlanNameOf(string stateJson) =>
+        System.Text.Json.JsonDocument.Parse(stateJson).RootElement.GetProperty("planName").GetString()!;
+
     [Theory]
     [InlineData(CapturedRunEvents, CapturedRunState)]
     [InlineData(LoomEvents, LoomState)]
@@ -129,7 +135,7 @@ public class RunStateProjectionTests
         try
         {
             var events = EventLog.ReadAll(eventsPath);       // real on-disk read (crash-safe fold path)
-            var legacy = RunState.LoadOrNew(statePath, "?");  // real deserialization
+            var legacy = RunState.LoadOrNew(statePath, PlanNameOf(stateJson));  // real deserialization
 
             var projected = RunStateProjection.Fold(events);
 
@@ -148,7 +154,7 @@ public class RunStateProjectionTests
     {
         // Guard the guard: a real difference on the event-owned surface must be reported (a green
         // parity test is only meaningful if Diff can go red).
-        var legacy = RunState.LoadOrNew(WriteText(LoomState), "?");
+        var legacy = RunState.LoadOrNew(WriteText(LoomState), PlanNameOf(LoomState));
         var projected = RunStateProjection.Fold(EventLog.ReadAll(WriteText(LoomEvents, ".jsonl")));
         Assert.Empty(StateProjectionParity.Diff(projected, legacy));
 

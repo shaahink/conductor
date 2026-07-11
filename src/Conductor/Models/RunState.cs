@@ -206,7 +206,23 @@ public sealed class RunState
             try
             {
                 var s = JsonSerializer.Deserialize<RunState>(File.ReadAllText(path), PlanConfig.JsonOpts);
-                if (s != null) return s;
+                if (s != null)
+                {
+                    // The state must belong to the plan we were asked to run. Without this check, starting a
+                    // NEW plan in a repo that has run an old one silently adopts the old plan's state — the
+                    // new plan opens mid-run at session 33 with a pending resume it knows nothing about,
+                    // against stages that merely happen to share an id. The old run is archived, not deleted:
+                    // it is the only record of what happened.
+                    if (!string.IsNullOrEmpty(s.PlanName) && !string.Equals(s.PlanName, planName, StringComparison.Ordinal))
+                    {
+                        var archived = Path.Combine(
+                            Path.GetDirectoryName(path) ?? ".",
+                            $"state.{s.PlanName}.{DateTime.UtcNow:yyyyMMdd-HHmmss}.json");
+                        File.Move(path, archived, overwrite: true);
+                        return new RunState { PlanName = planName };
+                    }
+                    return s;
+                }
             }
             catch (JsonException)
             {

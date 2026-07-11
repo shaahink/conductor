@@ -33,7 +33,7 @@ public class RunStateTests
                 },
             };
             s.Save(path);
-            var loaded = RunState.LoadOrNew(path, "x");
+            var loaded = RunState.LoadOrNew(path, s.PlanName);
             Assert.Equal(RunStatus.NeedsHuman, loaded.Status);
             Assert.Equal("L2", loaded.CurrentStage);
             Assert.Equal(7, loaded.SessionCounter);
@@ -91,7 +91,7 @@ public class RunStateTests
                 },
             };
             s.Save(path);
-            var loaded = RunState.LoadOrNew(path, "x");
+            var loaded = RunState.LoadOrNew(path, s.PlanName);
             Assert.Contains("L0", loaded.ConfirmedStages);
             Assert.Contains("L0", loaded.AuditedStages);
             Assert.Equal("L1", loaded.PendingPhaseGate!.StageId);
@@ -120,7 +120,7 @@ public class RunStateTests
                 ConfirmedStages = { "P0", "P1" },
             };
             s.Save(path);
-            var loaded = RunState.LoadOrNew(path, "x");
+            var loaded = RunState.LoadOrNew(path, s.PlanName);
             Assert.Equal(RunStatus.AwaitingOwner, loaded.Status);
             Assert.Equal("P2", loaded.CurrentStage);
             Assert.Contains("P0", loaded.OwnerApprovedStages);
@@ -163,7 +163,7 @@ public class RunStateTests
                 ConfirmedStages = { "S1" },
             };
             s.Save(path);
-            var loaded = RunState.LoadOrNew(path, "x");
+            var loaded = RunState.LoadOrNew(path, s.PlanName);
             Assert.Contains("S1", loaded.OwnerApprovedStages);
             Assert.Contains("S2", loaded.OwnerApprovedStages);
             Assert.DoesNotContain("S2", loaded.ConfirmedStages);
@@ -183,7 +183,7 @@ public class RunStateTests
             {
                 var s = new RunState { PlanName = "T", Status = RunStatus.AwaitingOwner, AwaitingOwnerReason = reason };
                 s.Save(path);
-                var loaded = RunState.LoadOrNew(path, "x");
+                var loaded = RunState.LoadOrNew(path, s.PlanName);
                 Assert.Equal(reason, loaded.AwaitingOwnerReason);
             }
         }
@@ -198,7 +198,7 @@ public class RunStateTests
         {
             var s = new RunState { PlanName = "Test", PauseAfterStage = true };
             s.Save(path);
-            var loaded = RunState.LoadOrNew(path, "x");
+            var loaded = RunState.LoadOrNew(path, s.PlanName);
             Assert.True(loaded.PauseAfterStage);
         }
         finally { File.Delete(path); }
@@ -262,5 +262,57 @@ public class RunStateTests
         Assert.Equal(0, state.AttemptsThisStage);
         Assert.Null(state.PendingFix);
         Assert.Null(state.PendingResume);
+    }
+
+    /// <summary>State belongs to a plan. Loading it for a DIFFERENT plan used to silently adopt it — so
+    /// starting a new plan in a repo that had run an old one opened mid-run at the old run's session number
+    /// with a pending resume it knew nothing about, against stages that merely happened to share an id.
+    /// The old run is archived rather than deleted: it is the only record of what happened.</summary>
+    [Fact]
+    public void LoadOrNew_StateFromADifferentPlan_IsArchivedAndNotAdopted()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "conductor-state-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        var path = Path.Combine(dir, "state.json");
+
+        try
+        {
+            var old = new RunState
+            {
+                PlanName = "Foreman",
+                CurrentStage = "M1",              // an id the new plan also uses — the trap
+                SessionCounter = 32,
+                PendingResume = new PendingResume { FromSession = 32, Reason = "cancelled mid-session" },
+            };
+            old.Save(path);
+
+            var loaded = RunState.LoadOrNew(path, "Maestro");
+
+            Assert.Equal("Maestro", loaded.PlanName);
+            Assert.Equal(0, loaded.SessionCounter);        // a new plan starts at session 1, not 33
+            Assert.Null(loaded.PendingResume);           // and inherits no pending work
+            Assert.Single(Directory.GetFiles(dir, "state.Foreman.*.json"));  // the old run is kept
+        }
+        finally { Directory.Delete(dir, recursive: true); }
+    }
+
+    /// <summary>The same plan resumes exactly as before — this must not become a "start over" button.</summary>
+    [Fact]
+    public void LoadOrNew_StateFromTheSamePlan_ResumesIt()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "conductor-state-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        var path = Path.Combine(dir, "state.json");
+
+        try
+        {
+            new RunState { PlanName = "Maestro", CurrentStage = "M2", SessionCounter = 7 }.Save(path);
+
+            var loaded = RunState.LoadOrNew(path, "Maestro");
+
+            Assert.Equal("M2", loaded.CurrentStage);
+            Assert.Equal(7, loaded.SessionCounter);
+        }
+        finally { Directory.Delete(dir, recursive: true); }
     }
 }

@@ -76,7 +76,7 @@ public sealed class C3EventsAndRecoveryTests
             };
             s.Save(path);
 
-            var loaded = RunState.LoadOrNew(path, "x");
+            var loaded = RunState.LoadOrNew(path, s.PlanName);
             Assert.Equal(3.50m, loaded.PerRunCostUsd);
             Assert.Equal(1_200_000, loaded.PerRunTokens);
         }

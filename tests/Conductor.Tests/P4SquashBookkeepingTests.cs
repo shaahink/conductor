@@ -16,7 +16,7 @@ public class P4SquashBookkeepingTests
         try
         {
             s.Save(path);
-            var loaded = RunState.LoadOrNew(path, "x");
+            var loaded = RunState.LoadOrNew(path, s.PlanName);
             Assert.Contains("P1", loaded.SquashedStages);
             Assert.Contains("P2", loaded.SquashedStages);
         }
@@ -35,7 +35,7 @@ public class P4SquashBookkeepingTests
         try
         {
             s.Save(path);
-            var loaded = RunState.LoadOrNew(path, "x");
+            var loaded = RunState.LoadOrNew(path, s.PlanName);
             Assert.Equal("abc1234", loaded.StageStartHeads["P1"]);
             Assert.Equal("def5678", loaded.StageStartHeads["P2"]);
         }
@@ -56,7 +56,7 @@ public class P4SquashBookkeepingTests
         try
         {
             s.Save(path);
-            var loaded = RunState.LoadOrNew(path, "x");
+            var loaded = RunState.LoadOrNew(path, s.PlanName);
             Assert.Contains("P1", loaded.ConfirmedStages);
             Assert.Contains("P1", loaded.SquashedStages);
             Assert.Equal("abc1234", loaded.StageStartHeads["P1"]);

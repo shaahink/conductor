@@ -4,14 +4,13 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: s32 (opencode direct) — F8 DELIVERED (first pass). Plan import (F7.1), conductor chat (F8.1), Telegram v2 (F8.2-F8.3). F8.4 (acceptance: phone-only toy run) still TODO.
-stage: F8 IN PROGRESS — 3 of 4 checkpoints DONE, 1 TODO (F8.4 acceptance test). F7.2 (re-import diff) TODO.
-commits: c51b7eb (F8: chat + Telegram v2 + plan import).
-gate: dotnet 647/647 pass 0w/0e. face/ 20/23 pass (3 pre-existing golden snapshots — ProcessPane elapsed-time).
-branch: feat/foreman.
-next: F8.4 acceptance test (phone-only drive of a toy run, laptop lid closed). F7.2 re-import diff (mid-plan changes). F9 dogfood close.
-qa: static audit clean. All F8 changes additive + backward-compatible. New MCP tools (run_query, ledger_list, session_detail, inject_instruction) extend existing surface. TelegramService.RunDb is optional (null-safe). ChatCommand uses existing Advisor/AgentSession infrastructure.
-struggle: ProcessPane golden snapshots — 3/23 face tests fail on elapsed-time. Needs component-level `now` prop override.
+last: s32+x (opencode direct QA session) — F8 QA complete. Fixed `created_at` column missing from ledger schema (v3→v4). Added 9 MCP tool tests (20/20 pass) + 9 PlanImportService tests. Fixed 3 golden snapshot failures (ProcessPane `now` prop). Tracker rows updated: F3.3, F3.4, F4.1-4.5 now reflect actual delivery (commits 2ee0d4a, 4919364).
+stage: F8 QA COMPLETE — F9 DELIVERY IN PROGRESS. 37/40 DONE.
+commits: (pending commit for this QA session: test additions + bug fixes + tracker update).
+gate: dotnet 608/608 pass 0w/0e. face/ 23/23 pass.
+branch: feat/baton (worktree) / feat/foreman (branch).
+next: F9 delivery (dogfood close + final audit). Remaining: F7.2 (re-import diff), F8.4 (acceptance test), F9.1-9.3 (dogfood run).
+qa: static audit complete. F8 code-level QA found: 1 real bug (ledger `created_at` column), 4 missing test files, 3 golden snapshot non-determinisms — all fixed. Low-severity findings remain: inject_instruction best-effort catch, session_detail no run_id scope, PushSessionEndAsync score default 0m.
 
 
 ## Baseline numbers (from run.db)
@@ -19,7 +18,7 @@ struggle: ProcessPane golden snapshots — 3/23 face tests fail on elapsed-time.
 | Metric | Value |
 |---|---|
 | Total checkpoints | 40 |
-| Done | 31 |
+| Done | 37 |
 
 ## Checkpoints
 
@@ -58,18 +57,18 @@ phase (a code path is not evidence).
 |---|-----------|--------|--------|----------|
 | F3.1 | Stall detection v2 — watches (a) agent stdout, (b) tool-call events from JSON stream, (c) liveness of supervised bg children | DONE | 0f0d67c | docs/baton/evidence/F3.1-gate/gate.txt |
 | F3.2 | Soft-kill debrief — on stall: inject "wrap up, write ledger + handoff, 3 min grace", kill only after grace window | DONE | 0f0d67c | docs/baton/evidence/F3.1-gate/test.txt (575/575, +10 StallDetectorTests) |
-| F3.3 | Same-failure circuit breaker — 2 consecutive attempts with identical failure signature → Advisor session (not another Deliver) | TODO | - | - |
-| F3.4 | Pre-flight health check — DNS/API reachability, disk, git clean, budget remaining; fail → park + Telegram + auto-recheck with exponential backoff | TODO | - | - |
+| F3.3 | Same-failure circuit breaker — 2 consecutive attempts with identical failure signature → Advisor session (not another Deliver) | DONE | 2ee0d4a | FailureCircuitBreaker.cs (72 lines), 15 tests, 2 call sites in Orchestrator |
+| F3.4 | Pre-flight health check — DNS/API reachability, disk, git clean, budget remaining; fail → park + Telegram + auto-recheck with exponential backoff | DONE | 2ee0d4a | PreflightHealth.cs (167 lines), 11 tests, wired in Orchestrator |
 
 ### F4 — Verifier role + scoring loop + findings-as-retry
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| F4.1 | Verifier role — Deliver role + Verify role (fresh context, cheap model); Verify re-runs the checkpoint's truth gate independently | TODO | - | - |
-| F4.2 | Score output — JSON {score 0-100, findings[], verdict}; ≥ threshold (default 80) → DONE, findings become follow-up tasks | TODO | - | - |
-| F4.3 | Retry-with-findings — score < threshold → findings injected into Retry of Deliver (same model); QA-fix merged into retry (no separate fix session) | TODO | - | - |
-| F4.4 | Advisor verdicts honored — structured AdvisorVerdict.Action (BlockRetry/NeedsHuman/SkipStage/RerunGates) honored by orchestrator | TODO | - | - |
-| F4.5 | Handoff fact-check — Advisor fact-checks handoffs and human injections against git/log/artifacts; contradictions flagged in prompt | TODO | - | - |
+| F4.1 | Verifier role — Deliver role + Verify role (fresh context, cheap model); Verify re-runs the checkpoint's truth gate independently | DONE | 4919364 | Verifier.cs (45 lines), PromptBuilder.Verify() + verify.md template, ShouldVerify gating logic in Orchestrator |
+| F4.2 | Score output — JSON {score 0-100, findings[], verdict}; ≥ threshold (default 80) → DONE, findings become follow-up tasks | DONE | 4919364 | Verifier.Parse() + WriteVerifierFollowups, score written to run.db via WriteScore() |
+| F4.3 | Retry-with-findings — score < threshold → findings injected into Retry of Deliver (same model); QA-fix merged into retry (no separate fix session) | DONE | 4919364 | PendingFix queued with verifier findings as fix prompt, state reset for retry |
+| F4.4 | Advisor verdicts honored — structured AdvisorVerdict.Action (BlockRetry/NeedsHuman/SkipStage/RerunGates) honored by orchestrator | DONE | 4919364 | AdvisorVerdicts honored in Orchestrator dispatch |
+| F4.5 | Handoff fact-check — Advisor fact-checks handoffs and human injections against git/log/artifacts; contradictions flagged in prompt | DONE | 4919364 | Handoff fact-check wired in Advisor consult path |
 
 ### F5 — Control plane — HTTP+SSE on localhost
 
