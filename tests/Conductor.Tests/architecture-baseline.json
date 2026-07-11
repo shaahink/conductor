@@ -7,7 +7,6 @@
     "Orchestrator.cs": 2334,
     "PlanConfig.cs": 818,
     "McpTaskServer.cs": 764,
-    "LiveDashboard.cs": 745,
     "RunDb.cs": 702,
     "TelegramService.cs": 679,
     "ControlPlaneServer.cs": 515

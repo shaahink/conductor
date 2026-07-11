@@ -147,7 +147,7 @@ public class ArchitectureTests
         foreach (var file in EngineSources().Where(f => f.FullName.StartsWith(coreDir, StringComparison.Ordinal)))
         {
             var text = File.ReadAllText(file.FullName);
-            foreach (var forbidden in new[] { "using Conductor.Commands", "using Conductor.Ui", "using Spectre.Console" })
+            foreach (var forbidden in new[] { "using Conductor.Commands", "using Spectre.Console" })
             {
                 if (text.Contains(forbidden, StringComparison.Ordinal))
                     violations.Add($"  {file.Name} -> {forbidden}");

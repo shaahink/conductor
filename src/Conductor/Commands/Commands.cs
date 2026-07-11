@@ -8,7 +8,7 @@ using Conductor.Core.Hosting;
 using Conductor.Core.Http;
 using Conductor.Core.Integrations;
 using Conductor.Models;
-using Conductor.Ui;
+
 using EventLog = Conductor.Core.Events.EventLog;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -758,28 +758,6 @@ public sealed class ReportCommand : Command<ReportCommand.Settings>
 }
 
 
-/// <summary>Offline dashboard preview: renders the current plan/tracker state (read-only) with
-/// representative synthetic session data, so the UI can be verified without running the plan.</summary>
-public sealed class PreviewCommand : Command<PlanSettings>
-{
-    public override int Execute(CommandContext context, PlanSettings settings)
-    {
-        var plan = PlanConfig.Load(settings.ResolvePlanPath());
-        var statePath = Path.Combine(plan.StateDir, "state.json");
-        var state = RunState.LoadOrNew(statePath, plan.Name);
-        TrackerSnapshot track;
-        // Preview is a read-only UI convenience: a missing/unreadable tracker just renders an empty
-        // plan rather than aborting the preview. A malformed table is not fatal here.
-        try { track = TrackerParser.ParseFile(plan.TrackerPath); }
-        catch (IOException) { track = new TrackerSnapshot(); }
-
-        var dash = new LiveDashboard(plan);
-        DashboardPreview.Seed(dash, plan, state, track);
-        AnsiConsole.MarkupLine("[grey]rendering preview — press any key to exit…[/]");
-        dash.RunPreview();
-        return 0;
-    }
-}
 
 /// <summary>Writes the control file consumed by a running conductor (works from any terminal).</summary>
 public abstract class CtlCommand(string command, string explanation, bool dangerous = false) : Command<CtlCommand.Settings>

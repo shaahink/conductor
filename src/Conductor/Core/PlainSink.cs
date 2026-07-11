@@ -1,6 +1,4 @@
-using Conductor.Core;
-
-namespace Conductor.Ui;
+namespace Conductor.Core;
 
 /// <summary>Line-based output for --no-dashboard, redirected output, or CI.</summary>
 public sealed class PlainSink : IProgressSink

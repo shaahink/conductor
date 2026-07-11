@@ -20,8 +20,7 @@ app.Configure(c =>
     c.AddCommand<ReportCommand>("report")
         .WithDescription("Regenerate .conductor/REPORT.md from current state.");
 
-    c.AddCommand<PreviewCommand>("preview")
-        .WithDescription("Render the dashboard offline from current state (+ synthetic session data) to verify the UI. Press any key to exit.");
+
     c.AddCommand<PauseCommand>("pause")
         .WithDescription("Ask the running conductor to pause after the current session.");
     c.AddCommand<ResumeCtlCommand>("resume")

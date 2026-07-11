@@ -1,6 +1,5 @@
 using Conductor.Core;
 using Conductor.Models;
-using Conductor.Ui;
 
 namespace Conductor.Tests;
 
@@ -120,65 +119,6 @@ public class B10_2HierarchyTests
         Assert.Equal(0, SnapshotBuilder.ComputeDepth("A", stages));
         Assert.Equal(1, SnapshotBuilder.ComputeDepth("B", stages));
         Assert.Equal(2, SnapshotBuilder.ComputeDepth("C", stages));
-    }
-
-    // ── PlanTree rendering with hierarchy ──────────────────────────────
-
-    private static IReadOnlyList<StageProgress> HierarchicalSample() => new[]
-    {
-        new StageProgress
-        {
-            Id = "B10", Title = "Advanced", Done = 1, Total = 4, State = "active",
-            Depth = 0, ParentId = null,
-            Checkpoints = new[] { ("B10.1", "dependsOn", "DONE") },
-        },
-        new StageProgress
-        {
-            Id = "B10.2", Title = "Hierarchical", Done = 0, Total = 2, State = "todo",
-            Depth = 1, ParentId = "B10",
-            Checkpoints = new[] { ("B10.2a", "model", "TODO"), ("B10.2b", "tree", "TODO") },
-        },
-        new StageProgress
-        {
-            Id = "B11", Title = "Close-out", Done = 0, Total = 3, State = "todo",
-            Depth = 0, ParentId = null,
-            Checkpoints = new[] { ("B11.1", "cross-platform", "TODO") },
-        },
-    };
-
-    [Fact]
-    public void DepthPreservedInStageProgress()
-    {
-        var stages = HierarchicalSample();
-        Assert.Equal(0, stages[0].Depth);
-        Assert.Equal("B10", stages[1].ParentId);
-        Assert.Equal(1, stages[1].Depth);
-        Assert.Equal(0, stages[2].Depth);
-    }
-
-    [Fact]
-    public void VisibleRowsIncludesAllStageHeaders()
-    {
-        var rows = PlanTree.VisibleRows(HierarchicalSample(), new PlanTreeView());
-        var stageIds = rows.Where(r => r.IsStage).Select(r => r.Id).ToList();
-        Assert.Equal(new[] { "B10", "B10.2", "B11" }, stageIds);
-    }
-
-    [Fact]
-    public void ExpandAllRevealsNestedCheckpoints()
-    {
-        var rows = PlanTree.VisibleRows(HierarchicalSample(), new PlanTreeView { ExpandAll = true });
-        Assert.Contains(rows, r => !r.IsStage && r.Id == "B10.2a");
-        Assert.Contains(rows, r => !r.IsStage && r.Id == "B11.1");
-    }
-
-    [Fact]
-    public void ChildStageDepthReflectedInStageProgressRow()
-    {
-        var rows = PlanTree.VisibleRows(HierarchicalSample(), new PlanTreeView());
-        var childRow = rows.First(r => r.IsStage && r.Id == "B10.2");
-        Assert.Equal(1, childRow.Stage.Depth);
-        Assert.Equal("B10", childRow.Stage.ParentId);
     }
 
     // ── JSON deserialization ───────────────────────────────────────────

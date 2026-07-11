@@ -1,6 +1,5 @@
 using Conductor.Core;
 using Conductor.Models;
-using Conductor.Ui;
 
 namespace Conductor.Tests;
 
@@ -30,75 +29,6 @@ public class O3CostSplitTests
         var g = new GateResult("fast", true, false, false, 0, TimeSpan.Zero, "");
         var cost = g.EstimatedCostUsd(0.0001m);
         Assert.Equal(0m, cost);
-    }
-
-    // ---- DashboardRenderer.CostLine ----
-
-    [Fact]
-    public void CostLine_ShowsAgentOverheadSplit()
-    {
-        var line = DashboardRenderer.CostLine(new DashboardSnapshot
-        {
-            TotalCostUsd = 0.10m,
-            OverheadCostUsd = 0.02m,
-        });
-        Assert.Contains("$0.1200", line);
-        Assert.Contains("agent $0.1000", line);
-        Assert.Contains("gates $0.0200", line);
-    }
-
-    [Fact]
-    public void CostLine_HidesOverheadWhenZero()
-    {
-        var line = DashboardRenderer.CostLine(new DashboardSnapshot
-        {
-            TotalCostUsd = 0.05m,
-            OverheadCostUsd = 0m,
-        });
-        Assert.Contains("agent $0.0500", line);
-        Assert.DoesNotContain("gates", line);
-    }
-
-    [Fact]
-    public void CostLine_IncludesLiveSessionCost()
-    {
-        var line = DashboardRenderer.CostLine(new DashboardSnapshot
-        {
-            TotalCostUsd = 0.10m,
-            SessionCostUsd = 0.03m,
-            OverheadCostUsd = 0.01m,
-            SessionOverheadCostUsd = 0.001m,
-        });
-        Assert.Contains("$0.1410", line);         // 0.10 + 0.03 + 0.01 + 0.001
-        Assert.Contains("agent $0.1300", line);    // 0.10 + 0.03
-        Assert.Contains("gates $0.0110", line);    // 0.01 + 0.001
-        Assert.Contains("session $0.0300", line);
-    }
-
-    [Fact]
-    public void CostLine_OmitsSessionWhenZero()
-    {
-        var line = DashboardRenderer.CostLine(new DashboardSnapshot
-        {
-            TotalCostUsd = 0.10m,
-            SessionCostUsd = 0m,
-            OverheadCostUsd = 0.02m,
-        });
-        Assert.Contains("agent $0.1000", line);
-        Assert.Contains("gates $0.0200", line);
-        Assert.DoesNotContain("(session", line);
-    }
-
-    [Fact]
-    public void CostLine_UntrackedSessionsFlagged()
-    {
-        var line = DashboardRenderer.CostLine(new DashboardSnapshot
-        {
-            TotalCostUsd = 0.05m,
-            OverheadCostUsd = 0.01m,
-            UntrackedSessions = 2,
-        });
-        Assert.Contains("2 sessions unreported", line);
     }
 
     // ---- RunState overhead totals ----

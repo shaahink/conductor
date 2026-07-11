@@ -2,7 +2,6 @@ using Conductor.Core;
 using Conductor.Core.Events;
 using Conductor.Core.Hosting;
 using Conductor.Models;
-using Conductor.Ui;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
