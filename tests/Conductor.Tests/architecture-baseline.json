@@ -2,23 +2,6 @@
   "_comment": "Approved architecture debt. These are violations that EXIST TODAY. They may only shrink. Adding a key, or raising a value, fails the build and the ratchet gate. Driving this file to empty ({}) is stage M1's definition of done.",
   "lineCeiling": 500,
   "maxTypesPerFile": 3,
-  "filesOverLineCeiling": {
-    "PlanConfig.cs": 818,
-    "McpTaskServer.cs": 764,
-    "RunDb.cs": 702,
-    "TelegramService.cs": 679,
-    "ControlPlaneServer.cs": 515
-  },
-  "filesOverTypeCeiling": {
-    "ConductorEvent.cs": 25,
-    "PlanConfig.cs": 22,
-    "ControlPlaneDto.cs": 19,
-    "RunState.cs": 14,
-    "TelegramService.cs": 9,
-    "Progress.cs": 6,
-    "PromptBattery.cs": 5,
-    "HealthMetrics.cs": 5,
-    "McpTaskServer.cs": 5,
-    "IAgentProvider.cs": 4
-  }
+  "filesOverLineCeiling": {},
+  "filesOverTypeCeiling": {}
 }

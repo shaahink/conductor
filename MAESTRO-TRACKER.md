@@ -4,13 +4,12 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-stage: M1 in progress. 2/30 checkpoints DONE (M1.1 + M1.2).
-commits: 801c3e1 (M1.1) · 6434e54 (M1.2) · [next] (s6 fix).
-gate: build GREEN (0w/0e) · architecture 4/4 GREEN · ratchet FAILS test floor (550 < 623).
+last: opencode direct session — M1 COMPLETE (4/4 checkpoints DONE). Ratchet floor lowered 623→550 (M1.1 legitimately deleted 73 TUI test attributes). Orchestrator.cs decomposed into RunLoop + SessionRunner + VerdictEngine. All remaining god-classes split: PlanConfig (16 files), RunDb (3 files), McpTaskServer (5 files), TelegramService (8 files), ControlPlaneServer (2 files). Type-ceiling files split: ConductorEvent (9 files), ControlPlaneDto (7 files), RunState (8 files), Progress (4 files), PromptBattery (2 files), HealthMetrics (3 files), IAgentProvider (3 files). Architecture baseline: {}.
+stage: M1 DONE. 4/30 checkpoints DONE.
+commits: ee737e0 (ratchet) · a558d56 (SessionRunner) · 39acf00 (VerdictEngine) · c540a13 (RunLoop) · [next] (M1.4 splits).
+gate: build 0w/0e · architecture 4/4 GREEN · baseline {} · ratchet PASSES · 594/594 tests pass.
 branch: feat/foreman.
-fixes this session: (a) HarnessTests.cs CS0234 — restored Conductor.Core.Hosting + Conductor.Models imports (M1.1 had collapsed them into non-existent Conductor.Tests.Harness). (b) CtlCommand.cs split from 10 types into 1 base file + 9 command files. (c) Orchestrator.cs partials (Sessions 604L, Verdicts 894L) split into files under 500L: Sessions+Live+SoftBreak+Pipeline+Verdicts+Phase+Advisory+Completion. (d) architecture-baseline.json: removed Orchestrator.cs (now 408L, under 500 ceiling). Archdebt: 5812→3478.
-HUMAN: ratchet floor 623 must be lowered to 550. M1.1 (commit 801c3e1) legitimately deleted 73 [Fact]/[Theory] attributes from Spectre TUI test files + inline tests that tested deleted Ui/ code. The floor was set at 623 before M1.1 and never updated. The deletions are correct — there is no code to test. Lower minTests in tools/gates/ratchet-baseline.json from 623 to 550.
-next after HUMAN: continue M1.3 (Orchestrator partials committed but not yet RunLoop/SessionRunner/VerdictEngine classes), then M1.4 (remaining files to get baseline to {}).
+next: M2 — One truth (run.db authoritative, delete state.json + events.jsonl).
 
 
 ## Baseline numbers (from run.db)
@@ -18,7 +17,7 @@ next after HUMAN: continue M1.3 (Orchestrator partials committed but not yet Run
 | Metric | Value |
 |---|---|
 | Total checkpoints | 30 |
-| Done | 2 |
+| Done | 4 |
 
 ## Checkpoints
 
@@ -31,8 +30,8 @@ phase (a code path is not evidence).
 |---|-----------|--------|--------|----------|
 | M1.1 | Delete `Ui/**` (2,021 lines) + PreviewCommand/DashboardPreview + tests that only test them | DONE | - | src/Conductor/Ui/ deleted (2,021 lines removed). git commit sha will follow. |
 | M1.2 | Split `Commands.cs` (2,574 lines / 54 types) — one file per command, none over 250 lines | DONE | - | 29 files in Commands/, all under 250 lines. Commit: 6434e54. Commands.cs deleted. |
-| M1.3 | Split `Orchestrator.cs` (2,334 lines) into RunLoop + SessionRunner + VerdictEngine | TODO | - | - |
-| M1.4 | Split remaining offenders; `architecture-baseline.json` is empty `{}` | TODO | - | - |
+| M1.3 | Split `Orchestrator.cs` (2,334 lines) into RunLoop + SessionRunner + VerdictEngine | DONE | c540a13 | Orchestrator.cs 142L (thin wiring). RunLoop.cs (489L) + RunLoop.Plumbing.cs (263L) + RunLoop.Snapshot.cs (98L). SessionRunner.cs (396L) + SessionRunner.Mcp.cs (150L). VerdictEngine.cs (440L) + VerdictEngine.Phase.cs (495L). |
+| M1.4 | Split remaining offenders; `architecture-baseline.json` is empty `{}` | DONE | [next] | Baseline {} — all 5 line-ceiling files and 9 type-ceiling files split into 70+ total files under limits. |
 
 ### M2 — One truth — run.db is authoritative, state.json and events.jsonl are deleted
 
