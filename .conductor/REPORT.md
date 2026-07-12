@@ -1,10 +1,10 @@
 ﻿# Conductor — Maestro run report
 
-_Updated 2026-07-12 00:44 UTC · branch `feat/foreman` · HEAD `4f989f0`_
+_Updated 2026-07-12 01:02 UTC · branch `feat/foreman` · HEAD `15771e4`_
 
-**Status:** Idle
+**Status:** Running
 **Stage:** M1 — Deconstruction — delete the old face, break the god classes · attempts used 2 · working ▸ M1.3
-**Checkpoints:** 2/30 done · **Sessions run:** 5 · **Cost:** $0.0649 (agent $0.0535 + gates $0.0114) · **Tokens:** 118,817 in / 369 out / 775 think
+**Checkpoints:** 2/30 done · **Sessions run:** 6 · **Cost:** $0.1716 (agent $0.1602 + gates $0.0114) · **Tokens:** 211,716 in / 28,200 out / 20,500 think
 
 ## Stage progress
 
@@ -122,14 +122,13 @@ _Updated 2026-07-12 00:44 UTC · branch `feat/foreman` · HEAD `4f989f0`_
 | 3 | M1 | Resume | 1r2 | 07-12 00:23 | 0:00 | GatesRed |  | 0 | build:FAIL · ratchet:FAIL | $0.0359 | $0.0087 | 81,506/118 |
 | 4 | M1 | Fix | 2 | 07-12 00:26 | 0:16 | Interrupted |  | 0 |  |  |  |  |
 | 5 | M1 | Resume | 2r1 | 07-12 00:42 | 0:01 | GatesRed |  | 0 | build:FAIL · ratchet:FAIL | $0.0175 | $0.0027 | 37,311/251 |
+| 6 | M1 | Fix | 3 | 07-12 00:44 | 0:18 | RolledOver |  | 0 |  | $0.1067 |  | 92,899/27,831 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-11 02:33:14  • session #29 S1 Deliver started (attempt 1/4)
-07-11 02:43:38  ◆ run resumed · Foreman
 07-11 02:43:38  ▸ stage F5 entered — Control plane — HTTP+SSE on localhost
 07-11 02:43:38  • session #30 F5 Resume started (attempt 1/2) · persona architect
 07-11 02:43:48  • session #30 F5 → Interrupted  (9.4s)
@@ -168,6 +167,8 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-12 01:42:29  • session #5 M1 Resume started (attempt 2/8)
 07-12 01:43:59  ▪ gate build FAIL [session]  (25.3s)
 07-12 01:43:59  ▪ gate ratchet FAIL [session]  (1.8s)
+07-12 01:44:03  • session #5 M1 → GatesRed  (1m33s)
+07-12 01:44:03  • session #6 M1 Fix started (attempt 3/8)
 ```
 
 ## Health
@@ -175,7 +176,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 39 · retries 3 (8 %) · overall Warn
+sessions 40 · retries 4 (10 %) · overall Warn
 ⚠ [context-saturation] session #2: 32,055,552 context tokens (≥ 20,000,000)
 ```
 
@@ -185,7 +186,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/foreman
-working tree: M .conductor/followups.md, M MAESTRO-TRACKER.md, M src/Conductor/Core/Orchestrator.cs, ?? publish/, ?? src/Conductor/Core/Orchestrator.Plumbing.cs, ?? src/Conductor/Core/Orchestrator.Sessions.cs, ?? src/Conductor/Core/Orchestrator.Verdicts.cs
+working tree: M .conductor/followups.md, ?? publish/
 vs upstream: up to date
 ```
 
@@ -247,19 +248,16 @@ Retrying will not help. Fix the work, not the measurement.
 
 ## Last session result
 
-> The agent got the resume prompt and is running against the published binary. Let me check that this time it's staying alive.
-> Alive — `conductor.exe` (PID 2828, from `publish/`) + Face TUI (PID 15072). Session #5 is the resume of the interrupted session #4. Agent PID 32464 just started at 01:42:31 UTC.
-> 
-> No self-lock this time since the published binary runs from `publish/conductor.exe` while `dotnet build` writes to `bin/Release/net10.0/`. Should be smooth unless the Orchestrator partial split breaks compilation. Watching.
+> SESSION-RESULT: Fixed build (CS0234 HarnessTests.cs — restored Conductor.Core.Hosting + Conductor.Models imports that M1.1 collapsed into non-existent Conductor.Tests.Harness). Split CtlCommand.cs 10→1+9 files. Split Orchestrator partials: Sessions (604L)→Sessions+Live+SoftBreak, Verdicts (894L)→Verdicts+Phase+Advisory+Completion — all under 500L. Removed Orchestrator.cs from architecture-baseline.json (408L, under 500 ceiling). Archdebt: 5812→3478. Build 0w/0e, architecture 4/4 green, 594 test cases pass. HUMAN: ratchet floor 623 needs lowering to 550 — M1.1 legitimately deleted 73 [Fact]/[Theory] attributes from deleted Spectre TUI code; floor was set before M1.1 and never updated. Commit …
 
 ## Tracker handoff
 
 ```
 stage: M1 in progress. 2/30 checkpoints DONE (M1.1 + M1.2).
-commits: 801c3e1 (M1.1 delete Ui/**) · 6434e54 (M1.2 split Commands.cs → 29 files).
-gate: build ~550 pass (mid-split state), ratchet below floor (550 < 623).
+commits: 801c3e1 (M1.1) · 6434e54 (M1.2) · [next] (s6 fix).
+gate: build GREEN (0w/0e) · architecture 4/4 GREEN · ratchet FAILS test floor (550 < 623).
 branch: feat/foreman.
-next: M1.3 — split Orchestrator.cs (2,334 lines). `partial` keyword added, 3 stub files exist (Plumbing, Sessions, Verdicts), no extraction committed yet.
-crash history: session 3 gatesRed (self-locked build, test floor breach). Session 4 fix killed by agent — it ran Stop-Process on the conductor's own PID (15300) confusing it for a stale orphan. See FU-OWNER-9. In-flight partial stubs survived.
-resume: revert OR finish the Orchestrator partial split. Build will self-lock if conductor runs — skip Conductor.csproj, build only test project.
+fixes this session: (a) HarnessTests.cs CS0234 — restored Conductor.Core.Hosting + Conductor.Models imports (M1.1 had collapsed them into non-existent Conductor.Tests.Harness). (b) CtlCommand.cs split from 10 types into 1 base file + 9 command files. (c) Orchestrator.cs partials (Sessions 604L, Verdicts 894L) split into files under 500L: Sessions+Live+SoftBreak+Pipeline+Verdicts+Phase+Advisory+Completion. (d) architecture-baseline.json: removed Orchestrator.cs (now 408L, under 500 ceiling). Archdebt: 5812→3478.
+HUMAN: ratchet floor 623 must be lowered to 550. M1.1 (commit 801c3e1) legitimately deleted 73 [Fact]/[Theory] attributes from Spectre TUI test files + inline tests that tested deleted Ui/ code. The floor was set at 623 before M1.1 and never updated. The deletions are correct — there is no code to test. Lower minTests in tools/gates/ratchet-baseline.json from 623 to 550.
+next after HUMAN: continue M1.3 (Orchestrator partials committed but not yet RunLoop/SessionRunner/VerdictEngine classes), then M1.4 (remaining files to get baseline to {}).
 ```
