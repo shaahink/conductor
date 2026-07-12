@@ -1,8 +1,6 @@
-using System.Collections.Concurrent;
-using System.Net;
+﻿using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using Conductor.Core.Commands;
 using Conductor.Core.Events;
 using Conductor.Core.Integrations;
@@ -19,12 +17,12 @@ public sealed record RunOptions(bool DryRun, bool Once, int MaxSessions, bool Co
 
 /// <summary>
 /// The session cycle, mechanized:
-///   pick stage from tracker → spawn agent session (deliver / fix / resume) → watchdog it →
-///   independently verify (gates + git + tracker diff) → record, report, decide next.
+///   pick stage from tracker â†’ spawn agent session (deliver / fix / resume) â†’ watchdog it â†’
+///   independently verify (gates + git + tracker diff) â†’ record, report, decide next.
 /// Every transition is persisted, so killing conductor at any point is recoverable.
 /// </summary>
-#pragma warning disable MA0045 // Orchestrator helper methods (Save/Log/AcquireLock/etc.) use sync file I/O by design — fast local writes, not hot-path
-public sealed class Orchestrator(PlanConfig plan, RunState state, string statePath, IProgressSink sink, IEventSink events, RunOptions opts, ILogger<Orchestrator> logger, ITelegramService telegram, WebhookNotifier webhooks, IPlanner? planner = null, RunDb? runDb = null, ProcessSupervisor? processSupervisor = null, ControlDispatcher? dispatcher = null, ConcurrentQueue<ControlCommand>? controlInbox = null, TranscriptLog? transcript = null)
+#pragma warning disable MA0045 // Orchestrator helper methods (Save/Log/AcquireLock/etc.) use sync file I/O by design â€” fast local writes, not hot-path
+public sealed partial class Orchestrator(PlanConfig plan, RunState state, string statePath, IProgressSink sink, IEventSink events, RunOptions opts, ILogger<Orchestrator> logger, ITelegramService telegram, WebhookNotifier webhooks, IPlanner? planner = null, RunDb? runDb = null, ProcessSupervisor? processSupervisor = null, ControlDispatcher? dispatcher = null, ConcurrentQueue<ControlCommand>? controlInbox = null, TranscriptLog? transcript = null)
 {
     private readonly IPlanner _planner = planner ?? new CheckpointPlanner();
     private readonly PromptBuilder _prompts = BuildPromptBuilder(plan);
@@ -33,21 +31,21 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
     // usage-limit phrasing lives here) so the Orchestrator no longer switches on `output` (B2.4, D-11).
     private readonly IAgentProvider _agentProvider = AgentProviderFactory.Create(plan.Agent);
     private readonly LessonsManager _lessons = new(plan.StateDir);
-    // Control-verb execution (what pause/skip/rollback/goto/etc. DO) lives in ControlDispatcher —
+    // Control-verb execution (what pause/skip/rollback/goto/etc. DO) lives in ControlDispatcher â€”
     // Orchestrator only owns when a command is polled. See Core/Commands/ControlDispatcher.cs.
     // Lazy (not a field initializer): binding Log/Save/etc. as delegates needs `this`, which a
     // primary-constructor field initializer can't reference (CS0236).
     private ControlDispatcher? _dispatcherInstance;
     private ControlDispatcher Dispatcher => _dispatcherInstance ??=
         dispatcher ?? new ControlDispatcher(plan, state, sink, events, Log, Save, DeleteControlFile, SkipStage, ApproveAwaitingOwnerAsync);
-    // Lane coordination (parallel audit / fix-lanes / analysis lanes) lives in LaneCoordinator —
+    // Lane coordination (parallel audit / fix-lanes / analysis lanes) lives in LaneCoordinator â€”
     // Orchestrator only owns when to call in, same seam ControlDispatcher was cut along in F5.
     private LaneCoordinator? _lanesInstance;
     private LaneCoordinator Lanes => _lanesInstance ??= new LaneCoordinator(plan, state, sink, events, Log);
     // F7: gate execution and persistence extracted from the Orchestrator god-class.
     private GateOrchestrator? _gateInstance;
     private GateOrchestrator Gates => _gateInstance ??= new GateOrchestrator(plan, state, events, _runDb);
-    // F5: commands posted to the HTTP control plane land here — a third ingress alongside the TUI
+    // F5: commands posted to the HTTP control plane land here â€” a third ingress alongside the TUI
     // queue (sink.PollControl) and control.json (ReadControlFileAsync), same dispatcher for all three.
     private readonly ConcurrentQueue<ControlCommand>? _controlInbox = controlInbox;
     private IReadOnlyList<GateResult>? _lastGates;
@@ -87,7 +85,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         try
         {
             RecoverFromCrash();
-            Log($"conductor start — plan '{plan.Name}', repo {plan.Repo}, branch {Git.Branch(plan.Repo)}");
+            Log($"conductor start â€” plan '{plan.Name}', repo {plan.Repo}, branch {Git.Branch(plan.Repo)}");
             events.Emit(new RunStarted
             {
                 Plan = plan.Name,
@@ -99,7 +97,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
             _runDb?.InitializeRun(state.RunId, plan.Name, plan.Repo, Git.Branch(plan.Repo),
                 typeof(Orchestrator).Assembly.GetName().Version?.ToString());
             processSupervisor?.ReapOrphans();
-            // F1.2: seed checkpoints from the existing tracker into run.db (additive — doesn't replace parse)
+            // F1.2: seed checkpoints from the existing tracker into run.db (additive â€” doesn't replace parse)
             SeedCheckpointsFromTracker();
             WarnOnBranchPattern();
 
@@ -127,7 +125,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                         if (DateTime.UtcNow < until) { PushIdleSnapshot(); await Task.Delay(1000, ct).ConfigureAwait(false); continue; }
                         _backoffUntil = null;
                         state.Status = RunStatus.Idle;
-                        Log("backoff over — resuming");
+                        Log("backoff over â€” resuming");
                     }
 
                     if (!opts.DryRun && _stallBackoffUntil is { } sbUntil)
@@ -139,10 +137,10 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                             continue;
                         }
                         _stallBackoffUntil = null;
-                        Log("stall backoff over — resuming");
+                        Log("stall backoff over â€” resuming");
                     }
 
-                    // F3.4: preflight health park — wait for backoff timer, then recheck
+                    // F3.4: preflight health park â€” wait for backoff timer, then recheck
                     if (!opts.DryRun && _dnsParkedUntil is { } dpUntil)
                     {
                         if (DateTime.UtcNow < dpUntil)
@@ -158,7 +156,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                         if (PreflightHealth.AllPassed(recheckResults))
                         {
                             _preflightConsecutiveFailures = 0;
-                            Log("preflight recovered — resuming session");
+                            Log("preflight recovered â€” resuming session");
                         }
                         else
                         {
@@ -169,7 +167,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                                 plan.Limits.DnsHealthCheck?.BackoffMultiplier ?? 2.0,
                                 plan.Limits.DnsHealthCheck?.MaxBackoffSeconds ?? 3600);
                             _dnsParkedUntil = DateTime.UtcNow.AddSeconds(backoff);
-                            Log($"preflight still failing (×{_preflightConsecutiveFailures}) — parking {backoff}s");
+                            Log($"preflight still failing (Ã—{_preflightConsecutiveFailures}) â€” parking {backoff}s");
                             PushIdleSnapshot();
                             await Task.Delay(1000, ct).ConfigureAwait(false);
                             continue;
@@ -179,7 +177,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 var track = _progress.Read(plan, ct);
                 if (track.Checkpoints.Count == 0)
                 {
-                    NeedsHuman($"tracker {plan.Tracker} has no parseable checkpoint rows — check the table format");
+                    NeedsHuman($"tracker {plan.Tracker} has no parseable checkpoint rows â€” check the table format");
                     continue;
                 }
 
@@ -200,16 +198,16 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 if (allDone && state.PendingFix == null && state.PendingResume == null)
                 {
                     if (await ConfirmCompletionAsync(ct).ConfigureAwait(false)) { CompletePlan(track); return 0; }
-                    continue; // gates red on a "done" tracker — a fix session is now queued
+                    continue; // gates red on a "done" tracker â€” a fix session is now queued
                 }
 
-                // tracker may say done while a fix/resume is pending — keep working the last active stage
+                // tracker may say done while a fix/resume is pending â€” keep working the last active stage
                 var stage = allDone
                     ? plan.Stages.FirstOrDefault(s => s.Id == state.CurrentStage) ?? plan.Stages[^1]
                     : SelectStage(track);
                 if (stage == null)
                 {
-                    NeedsHuman("no runnable stage left (remaining stages are skipped) — review skipped stages");
+                    NeedsHuman("no runnable stage left (remaining stages are skipped) â€” review skipped stages");
                     continue;
                 }
                 if (stage.Id != state.CurrentStage)
@@ -218,7 +216,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                     state.CurrentStageStartHead = Git.Head(plan.Repo);
                     state.AttemptsThisStage = 0;
                     state.PendingFix = null;
-                    Log($"stage → {stage.Id} {stage.Title}");
+                    Log($"stage â†’ {stage.Id} {stage.Title}");
                     events.Emit(new StageEntered { StageId = stage.Id, Title = stage.Title, StartHead = state.CurrentStageStartHead });
                     _runDb?.InitializeStage(state.RunId, stage.Id, stage.Title);
                     Save();
@@ -226,7 +224,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
                 // B10.3: pre-hook runs once per stage, before any session. A non-zero exit blocks the
                 // stage (NeedsHuman) so a broken environment never wastes session attempts.
-                // RunStageHook records the stage id in PreHookRunStages ONLY on success — a failed
+                // RunStageHook records the stage id in PreHookRunStages ONLY on success â€” a failed
                 // pre-hook will retry on the next loop iteration after the human resolves the issue.
                 if (stage.PreHook is { } preHook
                     && !state.PreHookRunStages.Contains(stage.Id))
@@ -238,18 +236,18 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
                 if (HandoffWantsHuman(track))
                 {
-                    NeedsHuman("agent asked for a human in the tracker handoff (HUMAN: line) — resolve, then run `conductor resume`");
+                    NeedsHuman("agent asked for a human in the tracker handoff (HUMAN: line) â€” resolve, then run `conductor resume`");
                     continue;
                 }
 
                 // perPhase: this stage's rows are all DONE but it isn't confirmed yet, and no fix/resume/audit
-                // is queued → owe a full-battery phase gate rather than another deliver session.
+                // is queued â†’ owe a full-battery phase gate rather than another deliver session.
                 if (plan.PerPhaseGates && track.StageDone(stage.Id)
                     && state.PendingFix == null && state.PendingResume == null && state.PendingAudit == null)
                 {
                     if (opts.DryRun)
                     {
-                        sink.Log($"--- DRY RUN: stage {stage.Id} checkpoints all DONE — would schedule the audit / full-battery phase gate next (nothing executed) ---");
+                        sink.Log($"--- DRY RUN: stage {stage.Id} checkpoints all DONE â€” would schedule the audit / full-battery phase gate next (nothing executed) ---");
                         return 0;
                     }
                     ScheduleGateOrAudit(stage.Id, state.CurrentStageStartHead ?? Git.Head(plan.Repo));
@@ -265,7 +263,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
 
                 if (opts.MaxSessions > 0 && sessionsThisRun >= opts.MaxSessions)
                 {
-                    Log($"--max-sessions {opts.MaxSessions} reached — stopping");
+                    Log($"--max-sessions {opts.MaxSessions} reached â€” stopping");
                     return 0;
                 }
 
@@ -284,20 +282,20 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 }
 
                 // Approval mode: park at AwaitingOwner before each session (B3.4). One approval runs
-                // exactly one session (then we park again) — approving must NOT confirm the stage.
+                // exactly one session (then we park again) â€” approving must NOT confirm the stage.
                 if (plan.Limits.ApprovalMode && !_sessionApproved)
                 {
                     events.Emit(new OwnerApprovalRequested { StageId = stage.Id });
                     state.Status = RunStatus.AwaitingOwner;
                     state.AwaitingOwnerReason = AwaitingOwnerReason.ApprovalMode;
-                    Log($"approval mode: park before session #{state.SessionCounter + 1} on stage {stage.Id} — approve with R or `conductor approve`");
+                    Log($"approval mode: park before session #{state.SessionCounter + 1} on stage {stage.Id} â€” approve with R or `conductor approve`");
                     SaveAndReport();
                     continue;
                 }
                 _sessionApproved = false;
 
-                // F3.4: pre-flight health check — DNS, API reachability, disk, git, budget.
-                // Fail → park with exponential backoff + Telegram notify.
+                // F3.4: pre-flight health check â€” DNS, API reachability, disk, git, budget.
+                // Fail â†’ park with exponential backoff + Telegram notify.
                 var preflightResults = await PreflightHealth.RunAllAsync(
                     plan.Limits.DnsHealthCheck, plan.Repo, _runCostUsd,
                     plan.Limits.MaxRunCostUsd).ConfigureAwait(false);
@@ -311,9 +309,9 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                         plan.Limits.DnsHealthCheck?.MaxBackoffSeconds ?? 3600);
                     _dnsParkedUntil = DateTime.UtcNow.AddSeconds(backoff);
                     var failures = string.Join("; ", preflightResults.Where(r => !r.Passed).Select(r => $"{r.Name}:{r.Message}"));
-                    Log($"preflight FAILED (×{_preflightConsecutiveFailures}): {failures} — parking {backoff}s");
+                    Log($"preflight FAILED (Ã—{_preflightConsecutiveFailures}): {failures} â€” parking {backoff}s");
                     _ = telegram.PushWithKeyboardAsync(
-                        $"Conductor {plan.Name}: preflight failed — {failures}",
+                        $"Conductor {plan.Name}: preflight failed â€” {failures}",
                         [("Resume", "resume"), ("Skip", "skip")], CancellationToken.None);
                     Save();
                     continue;
@@ -334,7 +332,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 {
                     if (outcome.MaxSeverity == AuditFindingSeverity.High)
                     {
-                        // HIGH findings from a prior completed audit — queue fix before proceeding
+                        // HIGH findings from a prior completed audit â€” queue fix before proceeding
                         var fixNote = $"prior parallel audit found HIGH-severity issues in stage {outcome.StageId}:\n{Trunc(outcome.Findings, 2000)}";
                         state.PendingFix = new PendingFix
                         {
@@ -344,7 +342,7 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                         };
                         state.ParallelAuditOutcome = null;
                         state.Status = RunStatus.Idle;
-                        Log($"parallel audit: HIGH findings from stage {outcome.StageId} — queuing fix session");
+                        Log($"parallel audit: HIGH findings from stage {outcome.StageId} â€” queuing fix session");
                         Save();
                         continue;
                     }
@@ -372,14 +370,14 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 if (Dispatcher.ConsumePausePending())
                 {
                     if (state.Status is not (RunStatus.NeedsHuman or RunStatus.Aborted)) state.Status = RunStatus.Paused;
-                    Log("paused after session as requested — press R or run `conductor resume` to continue");
+                    Log("paused after session as requested â€” press R or run `conductor resume` to continue");
                     SaveAndReport();
                 }
                 if (state.StopAfterSession)
                 {
                     state.StopAfterSession = false;
                     if (state.Status is not (RunStatus.NeedsHuman or RunStatus.Aborted)) state.Status = RunStatus.Paused;
-                    Log("quitting after session as requested — run `conductor run` to continue later");
+                    Log("quitting after session as requested â€” run `conductor run` to continue later");
                     SaveAndReport();
                     return 0;
                 }
@@ -390,9 +388,9 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
                 }
             }
             }
-            catch (OperationCanceledException) { /* cancellation requested — fall through to cleanup */ }
-            // Ctrl+C / external cancel — graceful shutdown (B3.5)
-            Log("cancelled — saving state");
+            catch (OperationCanceledException) { /* cancellation requested â€” fall through to cleanup */ }
+            // Ctrl+C / external cancel â€” graceful shutdown (B3.5)
+            Log("cancelled â€” saving state");
             try { SaveAndReport(); } catch { /* best-effort */ }
             if (state.Status == RunStatus.Running && state.History.LastOrDefault() is { EndedUtc: null } last)
             {
@@ -407,1928 +405,4 @@ public sealed class Orchestrator(PlanConfig plan, RunState state, string statePa
         finally { ReleaseLock(); }
     }
 
-    // ---------------------------------------------------------------- one session
-
-    private async Task RunSessionAsync(StageConfig stage, TrackerSnapshot preTrack, CancellationToken ct)
-    {
-        // consume pending fix/resume/audit/verify — they describe THIS session
-        var pendingResume = state.PendingResume; state.PendingResume = null;
-        var pendingAudit = state.PendingAudit; state.PendingAudit = null;
-        var pendingFix = state.PendingFix; state.PendingFix = null;
-        var pendingVerify = state.PendingVerify; state.PendingVerify = null;
-        var kind = pendingResume != null ? SessionKind.Resume
-            : pendingAudit != null ? SessionKind.Audit
-            : pendingVerify != null ? SessionKind.Verify
-            : pendingFix != null ? SessionKind.Fix : SessionKind.Deliver;
-
-        state.SessionCounter++;
-        var attempt = state.AttemptsThisStage + 1;
-        var maxAttempts = MaxAttempts(stage);
-        var isReview = stage.Kind.Equals("review", StringComparison.OrdinalIgnoreCase);
-        var reviewDir = Path.Combine(plan.StateDir, "reviews");
-        var reviewPath = isReview ? Path.Combine(reviewDir, $"{stage.Id}.md") : "";
-        if (isReview)
-        {
-            // B8.3: scaffold the review artifact before the session starts so the agent
-            // is told where to write it; the content is advisory-only, never auto-applied.
-            Directory.CreateDirectory(reviewDir);
-            var skeleton = $"# Self-review: {stage.Id} — {stage.Title}\n\n" +
-                           $"_Generated {DateTime.UtcNow:u} by Conductor (B8.3) — pending agent review_\n";
-            await File.WriteAllTextAsync(reviewPath, skeleton, ct).ConfigureAwait(false);
-            Log($"review stage {stage.Id}: scaffolded review artifact at {reviewPath}");
-        }
-
-        // B9.2: if this is a Deliver session with deliver persona, and the active checkpoint
-        // hasn't been decomposed yet, seed the task graph with ordered sub-tasks.
-        var personaName = plan.ResolvePersona(stage);
-        var activeCp = preTrack.ForStage(stage.Id).FirstOrDefault(c => !c.IsDone);
-        if (kind == SessionKind.Deliver &&
-            "deliver".Equals(personaName, StringComparison.OrdinalIgnoreCase) &&
-            activeCp != null &&
-            _decomposedCheckpoints.Add(activeCp.Id))
-        {
-            var tasks = _planner.Decompose(activeCp.Id, activeCp.Title, stage.Notes ?? "");
-            var runId = state.RunId;
-            foreach (var task in tasks)
-            {
-                events.Emit(new TaskAdded
-                {
-                    RunId = runId,
-                    TaskId = $"{activeCp.Id}-t{task.Order}",
-                    CheckpointId = activeCp.Id,
-                    Title = task.Title,
-                    Source = "deliver",
-                    Order = task.Order,
-                });
-            }
-            if (tasks.Count > 0)
-                Log($"B9.2: decomposed checkpoint {activeCp.Id} into {tasks.Count} sub-task(s)");
-        }
-
-        var prompt = kind switch
-        {
-            SessionKind.Resume => _prompts.Resume(stage, state.SessionCounter, attempt, maxAttempts, pendingResume!),
-            SessionKind.Audit => _prompts.Audit(stage, state.SessionCounter, pendingAudit!, state.CurrentStageStartHead ?? "HEAD~1"),
-            SessionKind.Verify => _prompts.Verify(stage, state.SessionCounter, pendingVerify!),
-            SessionKind.Fix => _prompts.Fix(stage, state.SessionCounter, attempt, maxAttempts, pendingFix!),
-            _ => isReview
-                ? _prompts.Review(stage, state.SessionCounter, attempt, maxAttempts, reviewPath)
-                : _prompts.Deliver(stage, state.SessionCounter, attempt, maxAttempts),
-        };
-        // Append bounded battery sections (B8.5): lessons, recent failures, etc.
-        var batterySection = _prompts.BatterySection(state);
-        if (batterySection.Length > 0)
-            prompt = prompt.TrimEnd() + "\n\n" + batterySection;
-
-        // P2: inject completed parallel audit findings into deliver session prompts
-        if (kind == SessionKind.Deliver && state.ParallelAuditOutcome is { Completed: true, MaxSeverity: not AuditFindingSeverity.High } outcome)
-        {
-            var findings = Trunc(outcome.Findings, 3000);
-            if (!string.IsNullOrWhiteSpace(findings))
-            {
-                prompt = prompt.TrimEnd() + $"\n\n## Parallel audit findings for stage {outcome.StageId}\n" +
-                    $"The following audit findings were produced by a read-only audit lane running concurrently with the previous stage. " +
-                    $"Address LOW and MEDIUM findings in this session if convenient.\n\n{findings}";
-                state.ParallelAuditOutcome = null;
-            }
-        }
-
-        var rec = new SessionRecord
-        {
-            Number = state.SessionCounter,
-            Stage = stage.Id,
-            Kind = kind,
-            Attempt = attempt,
-            StartedUtc = DateTime.UtcNow,
-            ClaudeSessionId = pendingResume?.ClaudeSessionId ?? Guid.NewGuid().ToString(),
-            ResumeCount = pendingResume?.ResumeCount ?? 0,
-        };
-        var logsDir = Path.Combine(plan.StateDir, "logs");
-        await File.WriteAllTextAsync(Path.Combine(logsDir, $"session-{rec.Number:000}.prompt.md"), prompt, ct).ConfigureAwait(false);
-        // Queued human instructions are now baked into this prompt — mark them consumed so the next
-        // session doesn't re-inject them (files are renamed .done, not deleted — chain stays intact).
-        InstructionQueue.ConsumeAll(plan);
-        var rawLog = Path.Combine(logsDir, $"session-{rec.Number:000}.jsonl");
-
-        var startHead = Git.Head(plan.Repo);
-        state.History.Add(rec);
-        state.Status = RunStatus.Running;
-        Save();
-        _softBreakSignalled = false;
-        // B9.4: clean up any stale soft-break signal from a previous session
-        CleanSoftBreakSignal();
-        Log($"session #{rec.Number} start — {kind} {stage.Id} attempt {attempt}/{maxAttempts}" +
-            (kind == SessionKind.Resume ? $" (resume #{rec.ResumeCount} of {rec.ClaudeSessionId[..8]})" : ""));
-        events.Emit(new SessionStarted
-        {
-            SessionId = rec.Number.ToString(),
-            Number = rec.Number,
-            StageId = stage.Id,
-            Kind = kind.ToString(),
-            Attempt = attempt,
-            MaxAttempts = maxAttempts,
-            AgentSessionId = rec.ClaudeSessionId,
-            Persona = plan.ResolvePersona(stage),
-        });
-
-        bool stalled = false, timedOut = false, killedByUser = false;
-        await GateRunner.RunHookAsync(plan, plan.Setup, "setup", Log, ct).ConfigureAwait(false);
-        var resolvedAgent = plan.ResolveAgent(stage);
-
-        // I1: wire the MCP task server into the agent session. Write a temp opencode config
-        // that registers conductor as a local MCP server (stdio subprocess). The agent can
-        // then call task_list / task_update / task_add tools during its session.
-        var mcpConfigPath = WireMcpServer(rec, stage);
-        Dictionary<string, string>? extraEnv = null;
-        if (mcpConfigPath != null)
-        {
-            extraEnv = new Dictionary<string, string>(StringComparer.Ordinal) { ["OPENCODE_CONFIG"] = mcpConfigPath };
-            Log("I1: MCP task server wired (opencode config at " + mcpConfigPath + ")");
-        }
-
-        using (var agent = AgentSession.Start(resolvedAgent, plan.Repo, prompt, rec.ClaudeSessionId,
-                   kind == SessionKind.Resume ? rec.ClaudeSessionId : null, rawLog, events, rec.Number.ToString(), extraEnv, supervisor: processSupervisor))
-        {
-            _activity.Clear();
-            var lastHeartbeat = DateTime.UtcNow;
-            // F3.1/F3.2: multi-signal stall detector with soft-kill grace window
-            var stallDetector = new StallDetector(
-                TimeSpan.FromMinutes(plan.Limits.StallMinutes),
-                TimeSpan.FromMinutes(plan.Limits.StallGraceMinutes));
-            var stallGraceLogged = false;
-            while (!agent.HasExited)
-            {
-                while (agent.TryDequeue(out var ev)) { sink.AgentEvent(ev); TrackActivity(ev, rec.Number); }
-                // B12.1: check for completed analysis lanes running concurrently
-                Lanes.PollLaneCompletion();
-                // P2: check if the parallel audit lane has completed; HIGH findings are noted
-                await Lanes.CheckParallelAuditCompletionAsync().ConfigureAwait(false);
-                // B9.4: soft-break — when live tokens cross the soft threshold, write a cooperative
-                // nudge for the agent to finish the current sub-task and hand off cleanly.
-                CheckSoftBreak(agent, preTrack);
-                var ctl = await HandleControlAsync(inSession: true, ct: ct).ConfigureAwait(false);
-                if (ctl == ControlAction.KillSession) { killedByUser = true; Log("kill requested"); agent.Kill(); }
-                if (ctl == ControlAction.AbortNow) { killedByUser = true; state.Status = RunStatus.Aborted; Log("abort requested"); agent.Kill(); }
-                if (ct.IsCancellationRequested) { agent.Kill(); }
-                else
-                {
-                    // F3.1: cache bg liveness check — querying the OS process table every 400ms is wasteful
-                    if (_lastBgLivenessCheck == null || (DateTime.UtcNow - _lastBgLivenessCheck.Value).TotalSeconds > 5)
-                    {
-                        _cachedBgAlive = StallDetector.AnyBgProcessAlive(_runDb, state.RunId);
-                        _lastBgLivenessCheck = DateTime.UtcNow;
-                    }
-
-                    // F3.1/F3.2: multi-signal stall detector (stdout + tool-call events + bg liveness)
-                    var verdict = stallDetector.Evaluate(
-                        agent.LastActivityUtc,
-                        agent.LastToolCallUtc,
-                        _cachedBgAlive);
-
-                    switch (verdict)
-                    {
-                        case StallVerdict.Active:
-                            stallGraceLogged = false;
-                            break;
-                        case StallVerdict.SoftKillStarted:
-                            Log($"stall: all signals quiet for {plan.Limits.StallMinutes}m — {plan.Limits.StallGraceMinutes}m soft-kill grace window started");
-                            stallGraceLogged = true;
-                            break;
-                        case StallVerdict.GraceRunning:
-                            if (!stallGraceLogged) { stallGraceLogged = true; Log("stall: in soft-kill grace window — waiting for agent to recover"); }
-                            break;
-                        case StallVerdict.HardKill:
-                            stalled = true;
-                            Log($"stall: grace window expired — killing session");
-                            agent.Kill();
-                            break;
-                    }
-
-                    // Session timeout check (unchanged from v1)
-                    if ((DateTime.UtcNow - agent.StartedUtc).TotalMinutes > plan.Limits.SessionTimeoutMinutes)
-                    {
-                        timedOut = true;
-                        Log($"timeout: session exceeded {plan.Limits.SessionTimeoutMinutes}m — killing");
-                        agent.Kill();
-                    }
-                }
-                PushSessionSnapshot(agent, rec, stage, attempt, maxAttempts, preTrack);
-                // AFK report refresh: update REPORT.md mid-session (no commits to feature branch)
-                if (plan.Report.HeartbeatMinutes > 0 && (DateTime.UtcNow - lastHeartbeat).TotalMinutes >= plan.Report.HeartbeatMinutes)
-                {
-                    lastHeartbeat = DateTime.UtcNow;
-                    RefreshReport(rec, stage, agent, preTrack);
-                }
-                try { await Task.Delay(400, ct).ConfigureAwait(false); }
-                catch (OperationCanceledException) { killedByUser = true; agent.Kill(); }
-            }
-            var exit = agent.WaitForExitCode();
-            while (agent.TryDequeue(out var ev)) { sink.AgentEvent(ev); TrackActivity(ev, rec.Number); }
-            agent.ReapStrays();
-
-            rec.EndedUtc = DateTime.UtcNow;
-            rec.CostUsd = agent.CostUsd;
-            rec.NumTurns = agent.NumTurns;
-            rec.TokensInput = agent.TokensInput;
-            rec.TokensOutput = agent.TokensOutput;
-            rec.TokensReasoning = agent.TokensReasoning;
-            rec.TokensCacheRead = agent.TokensCacheRead;
-            rec.ResultSummary = ExtractSessionResult(agent.ResultText);
-                // B12.4+: if a rolled-over session was an audit, mark the stage as audited so
-                // the main loop does not re-queue another audit on the next iteration
-                // (preventing infinite audit loops when audits consistently hit token limits).
-                if (kind == SessionKind.Audit && !state.AuditedStages.Contains(stage.Id))
-                    state.AuditedStages.Add(stage.Id);
-            Log($"session #{rec.Number} exited (code {exit}, {(rec.EndedUtc - rec.StartedUtc).Value.TotalMinutes:0}m" +
-                (agent.CostUsd.HasValue ? $", ${agent.CostUsd:0.00}" : "") + ")");
-
-            // B9.4: fold any MCP journal entries into the main event log so agent-initiated
-            // task status changes survive the session.
-            FoldMcpJournal();
-
-            // I1: clean up the per-session MCP config file (best-effort).
-            CleanupMcpConfig(mcpConfigPath);
-
-            if (ct.IsCancellationRequested)
-            {
-                rec.Outcome = SessionOutcome.Interrupted;
-                QueueResume(rec, "conductor was cancelled mid-session");
-                Save();
-                return;
-            }
-            if (state.Status == RunStatus.Aborted)
-            {
-                rec.Outcome = SessionOutcome.KilledByUser;
-                Save();
-                return;
-            }
-
-            // usage/rate limit → wait it out, then resume the same agent session (no attempt burned)
-            var limitEvidence = (agent.ResultText ?? "") + " " + (exit != 0 && agent.ResultText == null ? LastRawTail(rawLog) : "");
-            if ((agent.ResultIsError || exit != 0) && _agentProvider.DetectsUsageLimit(limitEvidence))
-            {
-                rec.Outcome = SessionOutcome.LimitBackoff;
-                state.ConsecutiveBackoffs++;
-                if (state.ConsecutiveBackoffs > plan.Limits.MaxBackoffs)
-                {
-                    NeedsHuman($"agent backend refused {state.ConsecutiveBackoffs} times in a row (usage limit?) — check quota");
-                    return;
-                }
-                QueueResume(rec, "usage/rate limit backoff", countResume: false);
-                _backoffUntil = DateTime.UtcNow.AddMinutes(plan.Limits.BackoffMinutes);
-                state.Status = RunStatus.Backoff;
-                Log($"usage limit detected — backing off {plan.Limits.BackoffMinutes}m (until {_backoffUntil:HH:mm} UTC)");
-                SaveAndReport();
-                return;
-            }
-            state.ConsecutiveBackoffs = 0;
-
-            // B8.5/B9.4: per-session token budget — if the session exceeded maxSessionTokens, end it
-            // as RolledOver so the next session starts fresh with no attempt burned. B9.4 adds
-            // task-graph-aware resume: the next session knows which sub-task to continue from.
-            if (plan.Limits.MaxSessionTokens is { } maxTok && rec.TokensTotal >= maxTok)
-            {
-                rec.Outcome = SessionOutcome.RolledOver;
-                rec.ResultSummary = ExtractSessionResult(agent.ResultText);
-                // B12.4+: if a rolled-over session was an audit, mark the stage as audited so
-                // the main loop does not re-queue another audit on the next iteration
-                // (preventing infinite audit loops when audits consistently hit token limits).
-                if (kind == SessionKind.Audit && !state.AuditedStages.Contains(stage.Id))
-                    state.AuditedStages.Add(stage.Id);
-                var resumeCtx = BuildRolloverResumeHint(preTrack);
-                Log($"session #{rec.Number} rolled over — {rec.TokensTotal / 1000.0:0.#}k tokens ≥ {maxTok / 1000.0:0.#}k limit, handoff written{(resumeCtx != null ? $" · {resumeCtx}" : "")}");
-                ReflectionStep(rec);
-                SaveAndReport();
-                return;
-            }
-
-            await EvaluateSessionAsync(rec, stage, preTrack, startHead, stalled, timedOut, killedByUser,
-                agentErrored: agent.ResultIsError || (exit != 0 && !stalled && !timedOut && !killedByUser), ct).ConfigureAwait(false);
-
-            // B8.1: after every session, distill "what was hard" into rolling lessons
-            ReflectionStep(rec);
-        }
-    }
-
-    private async Task EvaluateSessionAsync(SessionRecord rec, StageConfig stage, TrackerSnapshot preTrack, string startHead,
-        bool stalled, bool timedOut, bool killedByUser, bool agentErrored, CancellationToken ct)
-    {
-        // Handle non-finishing sessions before spending ~minutes on the gate battery.
-        if (killedByUser)
-        {
-            rec.Outcome = SessionOutcome.KilledByUser;
-            state.Status = RunStatus.Paused;
-            Log("session killed by user — pausing (conductor resume to continue)");
-            SaveAndReport();
-            return;
-        }
-        if (stalled || timedOut)
-        {
-            rec.Outcome = stalled ? SessionOutcome.Stalled : SessionOutcome.TimedOut;
-            state.AttemptsThisStage++;
-            // F3.3: same-failure circuit breaker — if 2 consecutive sessions end with the same
-            // non-success outcome and matching symptoms, consult Advisor instead of burning attempts.
-            rec.NewCommits = Git.CommitsSince(plan.Repo, startHead);
-            var prevSession = state.History.Count >= 2 ? state.History[^2] : null;
-            if (plan.Limits.SameFailureCircuitBreaker
-                && FailureCircuitBreaker.ShouldBreak(prevSession, rec, null))
-            {
-                Log($"circuit breaker: identical failure pattern detected ({rec.Outcome} ×2) — consulting advisor");
-                var breakerVerdict = await ConsultAdvisorAsync(rec, stage, _progress.Read(plan, ct),
-                    $"identical failure pattern: 2 consecutive {rec.Outcome} sessions with matching symptoms").ConfigureAwait(false);
-                await ApplyVerdictAsync(breakerVerdict, rec, stage, defaultAction: AdvisorAction.NeedsHuman).ConfigureAwait(false);
-                SaveAndReport();
-                return;
-            }
-            // O2: identical-stall detection — retained for backward compat when circuit breaker is off.
-            if (stalled && plan.Limits.StallPatternTermination && !plan.Limits.SameFailureCircuitBreaker)
-            {
-                if (IdenticalStallPattern(rec))
-                {
-                    NeedsHuman($"identical-stall: {rec.Number - 1} sessions stalled with no commits, no output — environment or agent is broken");
-                    return;
-                }
-                _stallBackoffMultiplier++;
-            }
-            else
-            {
-                _stallBackoffMultiplier = stalled ? _stallBackoffMultiplier + 1 : 1;
-            }
-            // O2: exponential backoff between stalled attempts.
-            if (stalled)
-            {
-                var delayMinutes = plan.Limits.StallBackoffMinutes * _stallBackoffMultiplier;
-                _stallBackoffUntil = DateTime.UtcNow.AddMinutes(delayMinutes);
-                Log($"stall backoff: {delayMinutes}m (multiplier ×{_stallBackoffMultiplier}) until {_stallBackoffUntil:HH:mm} UTC");
-            }
-            else
-            {
-                _stallBackoffUntil = null;
-            }
-            if (rec.ResumeCount < plan.Limits.MaxResumesPerSession)
-            {
-                QueueResume(rec, stalled ? "session stalled (no output)" : "session hit the hard timeout");
-                Log($"will resume agent session (resume {rec.ResumeCount + 1}/{plan.Limits.MaxResumesPerSession})");
-            }
-            else
-            {
-                var verdict = await ConsultAdvisorAsync(rec, stage, _progress.Read(plan, ct), "resume budget exhausted after stall/timeout").ConfigureAwait(false);
-                await ApplyVerdictAsync(verdict, rec, stage, defaultAction: AdvisorAction.Retry).ConfigureAwait(false);
-            }
-            state.Status = RunStatus.Idle;
-            SaveAndReport();
-            return;
-        }
-        _stallBackoffMultiplier = 1;
-
-        // Audit session: its fixes are confirmed by the full-battery phase gate that runs next,
-        // so we don't run gates inline — just record it and schedule re-verification.
-        if (rec.Kind == SessionKind.Audit)
-        {
-            rec.NewCommits = Git.CommitsSince(plan.Repo, startHead);
-            rec.Outcome = SessionOutcome.Progress;
-            if (!state.AuditedStages.Contains(stage.Id)) state.AuditedStages.Add(stage.Id);
-            state.PendingAudit = null;
-            state.PendingPhaseGate = new PendingPhaseGate
-            {
-                StageId = stage.Id,
-                StageStartHead = state.CurrentStageStartHead ?? startHead,
-            };
-            state.Status = RunStatus.Idle;
-            Log($"audit session #{rec.Number} complete ({rec.NewCommits.Count} commits) — re-verifying phase {stage.Id} with full battery");
-
-            // B8.4: parse the audit handover for deferred/weak bullets and track as followups
-            ParseAuditFollowups(stage.Id);
-
-            SaveAndReport();
-            return;
-        }
-
-        // Verify session: parse the verifier's score and decide next step.
-        // A score >= threshold means the work is accepted; findings become follow-ups.
-        // A score < threshold queues a Fix session with the verifier's findings.
-        if (rec.Kind == SessionKind.Verify)
-        {
-            rec.NewCommits = Git.CommitsSince(plan.Repo, startHead);
-            var verdict = Verifier.Parse(ExtractSessionResult(rec.ResultSummary) ?? "");
-            if (verdict != null)
-            {
-                var findingsText = string.Join("\n", verdict.Findings);
-                _runDb?.WriteScore(state.RunId, rec.Number, stage.Id, verdict.Score,
-                    verdict.Verdict, findingsText);
-                Log($"verifier score: {verdict.Score}/100 — verdict: {verdict.Verdict} ({verdict.Findings.Count} finding(s))");
-
-                if (verdict.Passes(plan.Limits.VerifierThreshold))
-                {
-                    rec.Outcome = SessionOutcome.Progress;
-                    state.AttemptsThisStage = 0;
-                    if (verdict.Findings.Count > 0)
-                        WriteVerifierFollowups(stage.Id, verdict);
-                    Log($"verifier passed ({verdict.Score}/{plan.Limits.VerifierThreshold}) — {(verdict.Findings.Count > 0 ? $"{verdict.Findings.Count} finding(s) tracked as follow-ups" : "no findings")}");
-                }
-                else
-                {
-                    state.PendingFix = new PendingFix
-                    {
-                        FromSession = rec.Number,
-                        VerifierFindings = findingsText,
-                        VerifierScore = verdict.Score,
-                        GateFailures = $"verifier score {verdict.Score}/100 < threshold {plan.Limits.VerifierThreshold}",
-                        ProgressSummary = $"Verifier verdict: {verdict.Verdict}. " +
-                            (verdict.Findings.Count > 0
-                                ? $"Findings: {string.Join("; ", verdict.Findings.Take(5))}"
-                                : "No specific findings recorded."),
-                    };
-                    rec.Outcome = SessionOutcome.NoProgress;
-                    state.AttemptsThisStage++;
-                    Log($"verifier failed ({verdict.Score}/{plan.Limits.VerifierThreshold}) — queuing fix session with {verdict.Findings.Count} finding(s)");
-                }
-            }
-            else
-            {
-                rec.Outcome = SessionOutcome.AgentError;
-                Log("verifier produced no parseable score — treating as agent error, queuing fix");
-                state.PendingFix = new PendingFix
-                {
-                    FromSession = rec.Number,
-                    GateFailures = "verifier session produced no valid score JSON",
-                    ProgressSummary = $"The verifier agent session ended but its output could not be parsed. Check session-{rec.Number:000}.jsonl for raw output.",
-                };
-                state.AttemptsThisStage++;
-            }
-            state.Status = RunStatus.Idle;
-            SaveAndReport();
-            return;
-        }
-
-        state.Status = RunStatus.VerifyingGates;
-        Save();
-        PushIdleSnapshot();
-        // perPhase: cheap per-session check (fast-tier gates only); the full battery runs at phase end.
-        Log(plan.PerPhaseGates
-            ? "verifying independently: fast gates + git + tracker diff (full battery at phase end)"
-            : "verifying independently: gate battery + git + tracker diff");
-        var gates = await RunGateBatteryAsync(ct, fastOnly: plan.PerPhaseGates).ConfigureAwait(false);
-        _lastGates = gates;
-        rec.GateSummary = GateRunner.Summary(gates);
-        EmitGates(gates, "session", rec.Number.ToString());
-        var sessionOverhead = gates.Sum(g => g.EstimatedCostUsd(plan.Limits.OverheadCostPerSecond));
-        rec.OverheadCostUsd = sessionOverhead;
-        _runOverheadUsd += sessionOverhead;
-        state.PerRunOverheadCostUsd = _runOverheadUsd;
-
-        // A gate cut short by Ctrl+C / abort is not a real failure — don't burn a fix on it.
-        if (ct.IsCancellationRequested)
-        {
-            rec.Outcome = SessionOutcome.Interrupted;
-            QueueResume(rec, "conductor was cancelled during gate verification");
-            state.Status = RunStatus.Idle;
-            Log("verification interrupted — will re-verify on resume (no fix queued)");
-            SaveAndReport();
-            return;
-        }
-
-        var postTrack = _progress.Read(plan, ct);
-        rec.NewCommits = Git.CommitsSince(plan.Repo, startHead);
-        rec.NewlyDone = postTrack.Checkpoints
-            .Where(c => c.IsDone && !(preTrack.ById(c.Id)?.IsDone ?? false))
-            .Select(c => c.Id).ToList();
-        var newlyBlocked = postTrack.Checkpoints
-            .Where(c => c.IsBlocked && !(preTrack.ById(c.Id)?.IsBlocked ?? false))
-            .Select(c => c.Id).ToList();
-        var gatesGreen = GateRunner.AllRequiredPassed(gates);
-        var dirty = Git.IsDirty(plan.Repo);
-
-        Log($"verdict inputs: gates {(gatesGreen ? "green" : "RED")} · commits {rec.NewCommits.Count} · newly DONE [{string.Join(",", rec.NewlyDone)}] · dirty {(dirty ? "YES" : "no")}", gatesGreen ? "pass" : "fail");
-
-        if (newlyBlocked.Count > 0 && plan.PauseOnBlocked)
-        {
-            NeedsHuman($"checkpoint(s) newly BLOCKED: {string.Join(", ", newlyBlocked)} — see tracker handoff");
-            SaveAndReport();
-            return;
-        }
-
-        if (gatesGreen && (rec.NewCommits.Count > 0 || postTrack.StageDone(stage.Id)) && !agentErrored)
-        {
-            if (ShouldVerify(rec))
-            {
-                state.PendingVerify = new PendingVerify
-                {
-                    FromSession = rec.Number,
-                    StageId = stage.Id,
-                    StageStartHead = state.CurrentStageStartHead ?? startHead,
-                };
-                rec.Outcome = SessionOutcome.Progress;
-                state.PendingFix = null;
-                if (dirty) Log($"note: working tree left dirty after green session: {Git.DirtySummary(plan.Repo)}");
-                Log($"session #{rec.Number} Progress — verifier queued to independently check the work");
-            }
-            else
-            {
-                rec.Outcome = rec.NewlyDone.Count > 0 ? SessionOutcome.Advanced : SessionOutcome.Progress;
-                state.AttemptsThisStage = rec.NewlyDone.Count > 0 ? 0 : state.AttemptsThisStage + 1;
-                state.PendingFix = null;
-                if (dirty) Log($"note: working tree left dirty after green session: {Git.DirtySummary(plan.Repo)}");
-                Log($"session #{rec.Number} {rec.Outcome} — {(rec.NewlyDone.Count > 0 ? string.Join(", ", rec.NewlyDone) + " done" : "no checkpoint flipped yet")}", rec.Outcome?.ToString().ToLowerInvariant() ?? "unknown");
-            }
-
-            // perPhase: if this session completed the stage, schedule the audit / confirming battery.
-            if (plan.PerPhaseGates && postTrack.StageDone(stage.Id))
-            {
-                ScheduleGateOrAudit(stage.Id, state.CurrentStageStartHead ?? startHead);
-            }
-        }
-        else
-        {
-            rec.Outcome = agentErrored ? SessionOutcome.AgentError : gatesGreen ? SessionOutcome.NoProgress : SessionOutcome.GatesRed;
-            state.AttemptsThisStage++;
-            // F3.3: same-failure circuit breaker — if 2 consecutive sessions fail with the
-            // same outcome and matching symptoms, consult Advisor instead of queueing a fix.
-            var prevSession = state.History.Count >= 2 ? state.History[^2] : null;
-            if (plan.Limits.SameFailureCircuitBreaker
-                && FailureCircuitBreaker.ShouldBreak(prevSession, rec, gates))
-            {
-                Log($"circuit breaker: identical failure pattern detected ({rec.Outcome} ×2) — consulting advisor");
-                var breakerVerdict = await ConsultAdvisorAsync(rec, stage, _progress.Read(plan, ct),
-                    $"identical failure pattern: 2 consecutive {rec.Outcome} sessions with matching symptoms").ConfigureAwait(false);
-                await ApplyVerdictAsync(breakerVerdict, rec, stage, defaultAction: AdvisorAction.NeedsHuman).ConfigureAwait(false);
-                state.Status = RunStatus.Idle;
-                SaveAndReport();
-                return;
-            }
-            state.PendingFix = new PendingFix
-            {
-                FromSession = rec.Number,
-                GateFailures = GateRunner.FailureDetails(gates),
-                ProgressSummary = $"new commits: {rec.NewCommits.Count}" +
-                                  (rec.NewCommits.Count > 0 ? $" ({string.Join("; ", rec.NewCommits.Take(5))})" : "") +
-                                  $" · newly DONE: {(rec.NewlyDone.Count > 0 ? string.Join(", ", rec.NewlyDone) : "none")}" +
-                                  $" · working tree: {(dirty ? "DIRTY — " + Git.DirtySummary(plan.Repo) : "clean")}" +
-                                  (agentErrored ? " · agent process reported an error result" : ""),
-            };
-            Log($"session #{rec.Number} {rec.Outcome} — queuing fix session (attempt {state.AttemptsThisStage}/{MaxAttempts(stage)})", rec.Outcome?.ToString().ToLowerInvariant() ?? "unknown");
-        }
-        state.Status = RunStatus.Idle;
-        SaveAndReport();
-    }
-
-    /// <summary>Full-battery verification of a stage whose checkpoints are all DONE (perPhase policy).
-    /// Under the reworked flow the audit runs first, so this is the single confirming battery. Skips
-    /// the run entirely when the tree is unchanged since the last green battery (HEAD-sha cache).</summary>
-    private async Task RunPhaseGateAsync(PendingPhaseGate pg, CancellationToken ct)
-    {
-        var head = Git.Head(plan.Repo);
-        var sig = GateRunner.BatterySignature(plan, head, pg.StageId);
-        IReadOnlyList<GateResult> gates;
-        bool green;
-
-        if (sig == state.LastGreenGateSig)
-        {
-            Log($"phase gate {pg.StageId}: tree unchanged since last green battery ({Short(head)}) — reusing result, skipping rerun");
-            green = true;
-            gates = _lastGates ?? Array.Empty<GateResult>();
-        }
-        else
-        {
-            state.Status = RunStatus.VerifyingGates;
-            Save();
-            PushIdleSnapshot();
-            Log($"phase gate {pg.StageId}: running FULL battery at {Short(head)} to confirm the phase");
-            var sw = System.Diagnostics.Stopwatch.StartNew();
-            gates = await RunGateBatteryAsync(ct, fastOnly: false).ConfigureAwait(false);
-            _lastGates = gates;
-
-            if (ct.IsCancellationRequested)
-            {
-                state.Status = RunStatus.Idle;
-                Log("phase gate interrupted — will re-run on resume");
-                Save();
-                return;
-            }
-            green = GateRunner.AllRequiredPassed(gates);
-            EmitGates(gates, "phase");
-            _runOverheadUsd += gates.Sum(g => g.EstimatedCostUsd(plan.Limits.OverheadCostPerSecond));
-            state.PerRunOverheadCostUsd = _runOverheadUsd;
-            Log($"phase gate {pg.StageId} finished in {sw.Elapsed.TotalSeconds:0}s — {(green ? "GREEN" : "RED")}: {GateRunner.Summary(gates)}", green ? "pass" : "fail");
-            if (green) state.LastGreenGateSig = sig;
-        }
-
-        if (green)
-        {
-            // P2: parallel audit — confirm immediately, audit runs concurrently with next stage
-            if (plan.Audit is { Enabled: true, EnableParallel: true } && !state.AuditedStages.Contains(pg.StageId)
-                && HasNextUnconfirmedStage(pg.StageId))
-            {
-                state.PendingParallelAudit = new PendingParallelAudit { StageId = pg.StageId, StageStartHead = pg.StageStartHead };
-                state.PendingAudit = null;
-                state.PendingPhaseGate = null;
-                state.AuditedStages.Add(pg.StageId); // mark audited so we don't re-queue
-                Log($"phase {pg.StageId} full battery GREEN — confirming now, audit will run in parallel with next deliver");
-                await ConfirmStageAsync(pg.StageId, ct).ConfigureAwait(false);
-                return; // ConfirmStage saved
-            }
-
-            if (plan.Audit is { Enabled: true } && !state.AuditedStages.Contains(pg.StageId))
-            {
-                state.PendingAudit = new PendingAudit { StageId = pg.StageId, StageStartHead = pg.StageStartHead };
-                state.PendingPhaseGate = null;
-                state.Status = RunStatus.Idle;
-                Log($"phase {pg.StageId} full battery GREEN — queuing auto-fix audit session");
-                SaveAndReport();
-            }
-            else
-            {
-                await ConfirmStageAsync(pg.StageId, ct).ConfigureAwait(false);
-            }
-        }
-        else
-        {
-            state.AttemptsThisStage++;
-            state.PendingFix = new PendingFix
-            {
-                FromSession = state.History.LastOrDefault()?.Number ?? 0,
-                GateFailures = GateRunner.FailureDetails(gates),
-                ProgressSummary = $"phase {pg.StageId} full battery is RED although its checkpoints read DONE — make the claims true",
-            };
-            state.PendingPhaseGate = null;
-            state.Status = RunStatus.Idle;
-            Log($"phase {pg.StageId} full battery RED — queuing fix session (attempt {state.AttemptsThisStage}/{MaxAttempts(CurrentStageConfig())})");
-            SaveAndReport();
-        }
-    }
-
-    private void ScheduleGateOrAudit(string stageId, string startHead)
-    {
-        Gates.ScheduleGateOrAudit(stageId, startHead, Log, HasNextUnconfirmedStage);
-    }
-
-    private static string Short(string sha) => string.IsNullOrEmpty(sha) ? "?" : sha.Length >= 7 ? sha[..7] : sha;
-
-    // ---------------------------------------------------------------- P4: squash bookkeeping
-
-    /// <summary>P4: on phase confirm, squashes consecutive <c>chore(conductor):</c> commits
-    /// into one per group via an interactive rebase. Feature/audit commits preserved.
-    /// Idempotent — tracks <see cref="RunState.SquashedStages"/> to avoid re-squashing.
-    /// Best-effort: failure is logged but never blocks confirmation.</summary>
-    private void SquashBookkeeping(string stageId)
-    {
-        if (state.SquashedStages.Contains(stageId)) return;
-        if (!state.StageStartHeads.TryGetValue(stageId, out var startHead) || string.IsNullOrWhiteSpace(startHead))
-        {
-            Log($"P4 squash: no start-head recorded for stage {stageId} — skipping");
-            return;
-        }
-
-        state.SquashedStages.Add(stageId);
-        Save(); // persist before rewriting history
-        Log($"P4 squash: collapsing chore(conductor): commits for stage {stageId} since {Short(startHead)}");
-
-        try
-        {
-            var ok = Git.SquashChoreCommits(plan.Repo, startHead);
-            if (ok)
-                Log($"P4 squash: stage {stageId} complete — chore(conductor): commits squashed");
-            else
-                Log($"P4 squash: git rebase returned non-zero for stage {stageId} — history unchanged", "warn");
-        }
-        catch (Exception ex)
-        {
-            Log($"P4 squash: failed for stage {stageId}: {ex.Message} — history unchanged", "warn");
-            state.SquashedStages.Remove(stageId); // retry on next confirm
-        }
-    }
-
-    private async Task ConfirmStageAsync(string id, CancellationToken ct)
-    {
-        var stage = plan.Stages.FirstOrDefault(s => s.Id == id);
-        if (stage is { OwnerGate: true } && !state.OwnerApprovedStages.Contains(id))
-        {
-            events.Emit(new OwnerApprovalRequested { StageId = id });
-            state.Status = RunStatus.AwaitingOwner;
-            state.AwaitingOwnerReason = AwaitingOwnerReason.OwnerGate;
-            Log($"owner-gate: stage {id} green — awaiting owner approval (run `conductor approve` or press R in the TUI)");
-            SaveAndReport();
-            Notify($"Conductor {plan.Name}: stage {id} is green and awaiting owner approval");
-            _ = telegram.PushWithKeyboardAsync($"Stage {id} green — owner approval needed",
-                [("Approve", "approve")], CancellationToken.None);
-            return;
-        }
-        if (!state.ConfirmedStages.Contains(id)) state.ConfirmedStages.Add(id);
-        state.AwaitingOwnerReason = null;
-        state.PendingPhaseGate = null;
-        state.PendingAudit = null;
-        state.PendingFix = null;
-        state.AttemptsThisStage = 0;
-        // B10.3: post-hook runs after confirmation (best-effort, logged but never blocks).
-        if (stage?.PostHook is { } postHook)
-            await RunStageHookAsync(id, "post-hook", postHook, ct).ConfigureAwait(false);
-        // B12.4: fix-lanes run after the stage is confirmed — they consume .conductor/followups.md
-        // entries owned by this stage and run as Tier B mutating lanes behind merge gates.
-        await Lanes.RunFollowupFixLanesAsync(id, ct).ConfigureAwait(false);
-        if (state.PauseAfterStage)
-        {
-            state.PauseAfterStage = false;
-            state.Status = RunStatus.Paused;
-            Log($"✓ phase {id} CONFIRMED — parked (pause-after-stage was set)");
-        }
-        else
-        {
-            state.Status = RunStatus.Idle;
-            Log($"✓ phase {id} CONFIRMED (full battery green{(state.AuditedStages.Contains(id) ? " + audit" : "")}) — advancing");
-        }
-        events.Emit(new StageConfirmed { StageId = id, Audited = state.AuditedStages.Contains(id) });
-        _runDb?.ConfirmStage(state.RunId, id);
-        // P4: squash chore(conductor): bookkeeping commits on confirm (best-effort, idempotent)
-        SquashBookkeeping(id);
-        SaveAndReport();
-    }
-
-    private StageConfig CurrentStageConfig()
-        => plan.Stages.FirstOrDefault(s => s.Id == state.CurrentStage) ?? plan.Stages[^1];
-
-    // ---------------------------------------------------------------- P2: QA parallelization
-
-    /// <summary>P2: true when there is at least one non-skipped, non-confirmed stage after
-    /// <paramref name="stageId"/>, so a parallel audit can run concurrently with it.</summary>
-    private bool HasNextUnconfirmedStage(string stageId)
-    {
-        var idx = plan.Stages.FindIndex(s => s.Id == stageId);
-        if (idx < 0) return false;
-        for (var i = idx + 1; i < plan.Stages.Count; i++)
-        {
-            var sid = plan.Stages[i].Id;
-            if (!state.SkippedStages.Contains(sid) && !state.ConfirmedStages.Contains(sid))
-                return true;
-        }
-        return false;
-    }
-
-    /// <summary>Handle an owner approval while parked at <c>AwaitingOwner</c>. What it means depends on
-    /// WHY we parked (B3.2/B3.4): an owner-gate confirms the stage; an approval-mode/budget park merely
-    /// resumes work — confirming there would advance past unfinished checkpoints.</summary>
-    private async Task ApproveAwaitingOwnerAsync(CancellationToken ct)
-    {
-        var stageId = state.CurrentStage
-            ?? plan.Stages.FirstOrDefault(s => !state.ConfirmedStages.Contains(s.Id) && !state.SkippedStages.Contains(s.Id))?.Id;
-        switch (OwnerApproval.Decide(state.AwaitingOwnerReason))
-        {
-            case ApprovalOutcome.ResumeSession:
-                _sessionApproved = true;
-                state.AwaitingOwnerReason = null;
-                state.Status = RunStatus.Idle;
-                if (stageId != null) events.Emit(new OwnerApprovalGranted { StageId = stageId });
-                Save();
-                Log("owner approved (approval mode) — running the next session");
-                break;
-            case ApprovalOutcome.ResetBudgetAndResume:
-                _runCostUsd = 0;
-                _runTokens = 0;
-                _runOverheadUsd = 0;
-                state.PerRunCostUsd = 0;
-                state.PerRunTokens = 0;
-                state.PerRunOverheadCostUsd = 0;
-                state.AwaitingOwnerReason = null;
-                state.Status = RunStatus.Idle;
-                if (stageId != null) events.Emit(new OwnerApprovalGranted { StageId = stageId });
-                Save();
-                Log("owner approved (budget) — budget window reset, continuing");
-                break;
-            default: // ConfirmStage — owner-gate on a green stage (or a legacy/unknown reason)
-                if (stageId == null) { state.Status = RunStatus.Idle; Save(); break; }
-                if (!state.OwnerApprovedStages.Contains(stageId))
-                {
-                    events.Emit(new OwnerApprovalGranted { StageId = stageId });
-                    state.OwnerApprovedStages.Add(stageId);
-                    Log($"owner approved stage {stageId} — continuing");
-                }
-                await ConfirmStageAsync(stageId, ct).ConfigureAwait(false);
-                break;
-        }
-    }
-
-    /// <summary>B10.3: runs a per-stage lifecycle hook. For pre-hooks a non-zero exit triggers
-    /// <see cref="NeedsHuman"/> (blocking); on success the stage id is recorded in
-    /// <see cref="RunState.PreHookRunStages"/> to prevent re-run on resume. For post-hooks
-    /// failures are logged only.</summary>
-    private async Task RunStageHookAsync(string stageId, string label, HookConfig hook, CancellationToken ct)
-    {
-        Log($"{label}: {stageId} — {hook.Command}");
-        var cwd = string.IsNullOrWhiteSpace(hook.Cwd) ? plan.Repo : Path.Combine(plan.Repo, hook.Cwd);
-        var r = await ProcessRunner.RunPowerShellAsync(hook.Command, cwd, TimeSpan.FromMinutes(hook.TimeoutMinutes), ct).ConfigureAwait(false);
-        var timedOut = r.TimedOut ? " (timed out)" : "";
-        Log($"{label}: exit {r.ExitCode}{timedOut} in {r.Duration.TotalSeconds:0}s");
-        if (r.ExitCode != 0)
-        {
-            var outputSnippet = r.Output.Length > 500 ? r.Output[..500] + "\n…(truncated)" : r.Output;
-            var detail = $"stage {stageId} {label} failed (exit {r.ExitCode}): {hook.Command}";
-            Log($"ERROR: {detail}\n{outputSnippet.TrimEnd()}");
-            if (label == "pre-hook")
-                NeedsHuman(detail);
-        }
-        else if (label == "pre-hook")
-        {
-            // Record success so the pre-hook is not re-run on resume/crash-recovery.
-            // Only added on success — a failed pre-hook must retry (it is NOT recorded).
-            state.PreHookRunStages.Add(stageId);
-        }
-    }
-
-    private async Task<IReadOnlyList<GateResult>> RunGateBatteryAsync(CancellationToken ct, bool fastOnly = false)
-    {
-        _curGate = fastOnly ? "battery:fast" : "battery:full";
-        try
-        {
-            var gates = await Gates.RunBatteryAsync(Log, LogWithOutcome, sink.GateProgress, ct, fastOnly).ConfigureAwait(false);
-            return gates;
-        }
-        finally { _curGate = null; }
-    }
-
-    private StageConfig? SelectStage(TrackerSnapshot track)
-    {
-        // B10.1: readiness = stage itself not complete/skipped AND all dependsOn satisfied.
-        // Among ready stages, plan.Stages order determines priority (preserves sequential intent).
-        bool IsReady(StageConfig s)
-        {
-            if (StageComplete(s.Id, track) || state.SkippedStages.Contains(s.Id))
-                return false;
-            return s.DependsOn is not { Count: > 0 }
-                || s.DependsOn.All(d => DepSatisfied(d, track));
-        }
-        return plan.Stages.FirstOrDefault(IsReady);
-    }
-
-    private bool AllEffectivelyDone(TrackerSnapshot track)
-        => plan.Stages.All(s => StageComplete(s.Id, track) || state.SkippedStages.Contains(s.Id));
-
-    /// <summary>Under perPhase, a stage is "complete" only once its full battery (and audit) confirmed it —
-    /// so a stage whose tracker rows read DONE but whose phase-gate is red is never advanced past.</summary>
-    private bool StageComplete(string id, TrackerSnapshot track)
-        => plan.PerPhaseGates ? state.ConfirmedStages.Contains(id) : track.StageDone(id);
-
-    /// <summary>A dependency satisfied if the target stage is confirmed/done OR has been skipped
-    /// (you can't run a skipped stage — treating it as effectively done unblocks dependents, B10.1).</summary>
-    private bool DepSatisfied(string id, TrackerSnapshot track)
-        => StageComplete(id, track) || state.SkippedStages.Contains(id);
-
-    private int MaxAttempts(StageConfig stage) => Math.Max(1, stage.Sessions * plan.Limits.StageSlackFactor);
-
-    private bool HandoffWantsHuman(TrackerSnapshot track)
-        => plan.Conventions.MentionsHuman(track.HandoffBlock);
-
-    /// <returns>true if the caller should fall through to running a session (advisor said retry or resetBudget)</returns>
-    private async Task<bool> EscalateExhaustedStageAsync(StageConfig stage, TrackerSnapshot track, int maxAttempts)
-    {
-        Log($"stage {stage.Id} exhausted its attempt budget ({maxAttempts}) — consulting advisor");
-        var last = state.History.LastOrDefault();
-        var verdict = await ConsultAdvisorAsync(last, stage, track, $"attempt budget exhausted ({maxAttempts})").ConfigureAwait(false);
-        if (verdict?.Action is AdvisorAction.Skip)
-        {
-            SkipStage(stage, $"advisor: {verdict.Reason}");
-            return false;
-        }
-        if (verdict?.Action is AdvisorAction.Retry or AdvisorAction.Resume or AdvisorAction.ResetBudget)
-        {
-            Log($"advisor says {verdict.Action} ({verdict.Reason}) — granting {stage.Sessions} more attempts");
-            state.AttemptsThisStage = maxAttempts - Math.Max(1, stage.Sessions);
-            Save();
-            return true;
-        }
-        NeedsHuman($"stage {stage.Id} used all {maxAttempts} attempts without completing — inspect and `conductor resume` (or `conductor skip`)" +
-                   (verdict != null ? $" · advisor: {verdict.Reason}" : ""));
-        return false;
-    }
-
-    private async Task<AdvisorVerdict?> ConsultAdvisorAsync(SessionRecord? rec, StageConfig stage, TrackerSnapshot track, string outcome)
-    {
-        var prompt = _prompts.Advisor(stage,
-            outcome + (rec?.Outcome != null ? $" (last session: {rec.Outcome})" : ""),
-            rec?.GateSummary ?? "-",
-            rec != null ? string.Join("; ", rec.NewCommits.Take(6)) : "-",
-            Trunc(track.HandoffBlock, 1200),
-            Trunc(rec?.ResultSummary ?? "", 1200),
-            state.AttemptsThisStage, MaxAttempts(stage));
-        Log("consulting advisor…");
-        var v = await Advisor.ConsultAsync(plan, prompt, Log).ConfigureAwait(false);
-        Log(v != null ? $"advisor verdict: {v.Action} — {v.Reason}" : "advisor unavailable — using deterministic default");
-        return v;
-    }
-
-    private async Task ApplyVerdictAsync(AdvisorVerdict? verdict, SessionRecord rec, StageConfig stage, AdvisorAction defaultAction)
-    {
-        var action = verdict?.Action ?? defaultAction;
-        switch (action)
-        {
-            case AdvisorAction.Resume:
-                QueueResume(rec, "advisor requested resume", force: true);
-                break;
-            case AdvisorAction.Skip:
-                SkipStage(stage, $"advisor: {verdict?.Reason}");
-                break;
-            case AdvisorAction.NeedsHuman:
-                NeedsHuman($"advisor: {verdict?.Reason ?? "human intervention required"}");
-                break;
-            case AdvisorAction.BlockRetry:
-                state.AttemptsThisStage = MaxAttempts(stage); // exhaust budget so retry won't auto-fire
-                NeedsHuman($"advisor blocked retry: {verdict?.Reason ?? "stall pattern or repeated failure — human must clear before next attempt"}");
-                break;
-            case AdvisorAction.ResetBudget:
-                Log($"advisor reset budget: {verdict?.Reason}");
-                state.AttemptsThisStage = 0;
-                state.PendingFix = null;
-                state.PendingResume = null;
-                Save();
-                break;
-            case AdvisorAction.ApplyFix:
-                Log($"advisor apply-fix: {verdict?.Reason}");
-                await RunRemediationAsync(verdict?.Reason ?? "advisor requested remediation").ConfigureAwait(false);
-                state.AttemptsThisStage = Math.Max(0, state.AttemptsThisStage - 1);
-                break;
-            case AdvisorAction.RerunGates:
-                Log($"advisor rerun-gates: {verdict?.Reason} — clearing pending fix, gates will determine next step");
-                state.PendingFix = null;
-                state.Status = RunStatus.Idle;
-                Save();
-                break;
-            default: // Retry → a fresh deliver/fix session runs next loop iteration
-                break;
-        }
-    }
-
-    private async Task RunRemediationAsync(string reason)
-    {
-        var script = plan.Advisor?.RemediationScript;
-        if (string.IsNullOrWhiteSpace(script))
-        {
-            Log("remediation: no remediation script configured — skipping");
-            return;
-        }
-        try
-        {
-            Log($"remediation: running script — {script[..Math.Min(script.Length, 120)]}");
-            var shell = string.IsNullOrWhiteSpace(ProcessRunner.DefaultShell) ? "powershell" : ProcessRunner.DefaultShell;
-            var r = await ProcessRunner.RunShellAsync(shell, script, plan.Repo, TimeSpan.FromMinutes(5)).ConfigureAwait(false);
-            Log($"remediation: script exited {r.ExitCode} in {r.Duration.TotalSeconds:0}s{(r.TimedOut ? " (timed out)" : "")}");
-            if (r.ExitCode != 0)
-                Log($"remediation: script non-zero exit — {r.Output[..Math.Min(r.Output.Length, 200)]}");
-        }
-        catch (Exception ex)
-        {
-            Log($"remediation: script failed — {ex.Message}");
-        }
-    }
-
-    private void QueueResume(SessionRecord rec, string reason, bool countResume = true, bool force = false)
-    {
-        state.PendingResume = new PendingResume
-        {
-            FromSession = rec.Number,
-            ClaudeSessionId = rec.ClaudeSessionId,
-            Reason = reason,
-            ResumeCount = rec.ResumeCount + (countResume ? 1 : 0),
-        };
-        if (force) state.PendingResume.ResumeCount = Math.Min(state.PendingResume.ResumeCount, plan.Limits.MaxResumesPerSession - 1);
-    }
-
-    private void SkipStage(StageConfig stage, string why)
-    {
-        if (!state.SkippedStages.Contains(stage.Id)) state.SkippedStages.Add(stage.Id);
-        state.PendingFix = null;
-        state.PendingResume = null;
-        state.AttemptsThisStage = 0;
-        Log($"⚠ stage {stage.Id} SKIPPED ({why}) — flagged for human review in the report");
-        SaveAndReport();
-    }
-
-    private bool ShouldVerify(SessionRecord rec)
-    {
-        return rec.Kind == SessionKind.Deliver && plan.VerifyEachDelivery;
-    }
-
-    private void WriteVerifierFollowups(string stageId, VerifierVerdict verdict)
-    {
-        var followupsPath = Path.Combine(plan.StateDir, "followups.md");
-        var existing = FollowupParser.Read(followupsPath);
-        var maxId = existing
-            .Select(e => e.Id)
-            .Where(id => id.StartsWith("FU-", StringComparison.Ordinal))
-            .Select(id =>
-            {
-                var parts = id.Split('-');
-                return parts.Length >= 3 && int.TryParse(parts[^1], out var n) ? n : 0;
-            })
-            .DefaultIfEmpty(0)
-            .Max();
-
-        var lines = new StringBuilder();
-        lines.AppendLine("| id | item | detail | owning stage | status |");
-        lines.AppendLine("|---|---|---|---|---|");
-        foreach (var finding in verdict.Findings)
-        {
-            maxId++;
-            var id = $"FU-F4-{maxId:00}";
-            var item = finding.Length > 80 ? finding[..77] + "..." : finding;
-            lines.AppendLine($"| {id} | {item} | {finding} | {stageId} | OPEN |");
-        }
-
-        if (File.Exists(followupsPath))
-        {
-            var content = "\n" + lines.ToString();
-            File.AppendAllText(followupsPath, content, Encoding.UTF8);
-        }
-        else
-        {
-            Directory.CreateDirectory(Path.GetDirectoryName(followupsPath)!);
-            File.WriteAllText(followupsPath, "# Follow-ups\n\n" + lines.ToString(), Encoding.UTF8);
-        }
-
-        Log($"wrote {verdict.Findings.Count} verifier finding(s) to {followupsPath}");
-    }
-
-    /// <summary>Tracker says everything is DONE — confirm with real gates before declaring victory.
-    /// An agent can flip rows to DONE; it cannot flip a red build green.</summary>
-    private async Task<bool> ConfirmCompletionAsync(CancellationToken ct)
-    {
-        var lastOutcome = state.History.LastOrDefault()?.Outcome;
-        if (_lastGates != null && GateRunner.AllRequiredPassed(_lastGates) &&
-            lastOutcome is SessionOutcome.Advanced or SessionOutcome.Progress)
-            return true; // just verified green at the end of the last session in this run
-
-        Log("tracker reports all checkpoints DONE — running the gate battery to confirm before closing the plan");
-        state.Status = RunStatus.VerifyingGates;
-        Save();
-        PushIdleSnapshot();
-        var gates = await RunGateBatteryAsync(ct).ConfigureAwait(false);
-        _lastGates = gates;
-        state.Status = RunStatus.Idle;
-        EmitGates(gates, "completion");
-        _runOverheadUsd += gates.Sum(g => g.EstimatedCostUsd(plan.Limits.OverheadCostPerSecond));
-        state.PerRunOverheadCostUsd = _runOverheadUsd;
-        if (GateRunner.AllRequiredPassed(gates)) return true;
-
-        state.AttemptsThisStage++;
-        state.PendingFix = new PendingFix
-        {
-            FromSession = state.History.LastOrDefault()?.Number ?? 0,
-            GateFailures = GateRunner.FailureDetails(gates),
-            ProgressSummary = "tracker claims all checkpoints DONE, but the gate battery is red — the claims are not yet true",
-        };
-        Log("completion NOT confirmed — gates red; queuing a fix session");
-        Save();
-        return false;
-    }
-
-    private void CompletePlan(TrackerSnapshot track)
-    {
-        state.Status = RunStatus.Completed;
-        state.AttentionReason = state.SkippedStages.Count > 0
-            ? $"plan complete EXCEPT skipped stages: {string.Join(", ", state.SkippedStages)}"
-            : null;
-        Log($"🎉 plan '{plan.Name}' complete — {track.Checkpoints.Count(c => c.IsDone)}/{track.Checkpoints.Count} checkpoints done");
-        events.Emit(new RunFinished
-        {
-            Status = state.Status.ToString(),
-            Sessions = state.SessionCounter,
-            CheckpointsDone = track.Checkpoints.Count(c => c.IsDone),
-            CheckpointsTotal = track.Checkpoints.Count,
-        });
-        _runDb?.RecordRunEnd(state.RunId, state.Status.ToString());
-        SaveAndReport();
-        Notify($"Conductor: plan {plan.Name} COMPLETE ({state.SessionCounter} sessions)");
-    }
-
-    private void NeedsHuman(string reason)
-    {
-        state.Status = RunStatus.NeedsHuman;
-        state.AttentionReason = reason;
-        events.Emit(new AttentionRequested { Reason = reason });
-        Log($"🛑 NEEDS HUMAN: {reason}");
-        SaveAndReport();
-        Notify($"Conductor {plan.Name}: needs attention — {reason}");
-        // F8.2: richer button set — [Retry] [Skip] [Inject...] [Chat]
-        _ = telegram.PushWithKeyboardAsync(reason,
-        [
-            ("Resume", "resume"),
-            ("Skip Stage", "skip"),
-            ("Inject…", "inject:needsHuman"),
-            ("Chat", "chat:needsHuman"),
-        ]);
-    }
-
-    // ---------------------------------------------------------------- O2: budget intelligence
-
-    /// <summary>Resolves the configured DNS hosts to verify network health before spawning.
-    /// Returns true if all hosts resolve or the check is disabled.</summary>
-    private async Task<bool> CheckDnsPreflightAsync()
-    {
-        var cfg = plan.Limits.DnsHealthCheck;
-        if (cfg is not { Enabled: true } || cfg.Hosts is not { Count: > 0 }) return true;
-        foreach (var host in cfg.Hosts)
-        {
-            try
-            {
-                await Dns.GetHostEntryAsync(host).ConfigureAwait(false);
-                Log($"DNS preflight: {host} OK");
-            }
-            catch (Exception ex)
-            {
-                Log($"DNS preflight FAIL: {host} — {ex.Message}");
-                return false;
-            }
-        }
-        Log("DNS preflight: all hosts healthy");
-        return true;
-    }
-
-    /// <summary>O2: checks whether the last 2+ sessions (including this record) match the
-    /// identical-stall pattern: Stalled outcome, zero commits from startHead, and empty
-    /// or null result summary.</summary>
-    private bool IdenticalStallPattern(SessionRecord rec)
-    {
-        if (rec.NewCommits is { Count: > 0 }) return false;
-        var summary = rec.ResultSummary?.Trim();
-        if (!string.IsNullOrEmpty(summary)) return false;
-
-        var stalledCount = 1;
-        for (var i = state.History.Count - 2; i >= 0; i--)
-        {
-            var prev = state.History[i];
-            if (prev.Outcome != SessionOutcome.Stalled) break;
-            if (prev.NewCommits is { Count: 0 } && string.IsNullOrEmpty(prev.ResultSummary?.Trim()))
-            {
-                stalledCount++;
-                if (stalledCount >= 2) return true;
-            }
-            else break;
-        }
-        return false;
-    }
-
-    /// <summary>Returns true if the run is now parked at <c>AwaitingOwner</c> due to a budget cap.</summary>
-    private bool CheckBudgetCap()
-    {
-        if (plan.Limits.MaxRunCostUsd is { } costCap && _runCostUsd >= costCap)
-        {
-            events.Emit(new OwnerApprovalRequested { StageId = state.CurrentStage ?? "?" });
-            state.Status = RunStatus.AwaitingOwner;
-            state.AwaitingOwnerReason = AwaitingOwnerReason.Budget;
-            Log($"budget cap: ${_runCostUsd:0.00} >= ${costCap:0.00} (limit) — awaiting owner approval to continue");
-            SaveAndReport();
-            return true;
-        }
-        if (plan.Limits.MaxRunTokens is { } tokenCap && _runTokens >= tokenCap)
-        {
-            events.Emit(new OwnerApprovalRequested { StageId = state.CurrentStage ?? "?" });
-            state.Status = RunStatus.AwaitingOwner;
-            state.AwaitingOwnerReason = AwaitingOwnerReason.Budget;
-            Log($"token cap: {_runTokens / 1000.0:0.#}k >= {tokenCap / 1000.0:0.#}k (limit) — awaiting owner approval to continue");
-            SaveAndReport();
-            return true;
-        }
-        return false;
-    }
-
-    // ---------------------------------------------------------------- control & plumbing
-
-    private async Task<ControlAction?> HandleControlAsync(bool inSession = false, CancellationToken ct = default)
-    {
-        var cmd = sink.PollControl() ?? PollInbox() ?? await ReadControlFileAsync(ct).ConfigureAwait(false);
-        if (cmd is not { } c) return null;
-        return await Dispatcher.DispatchAsync(c, inSession, ct).ConfigureAwait(false);
-    }
-
-    private ControlCommand? PollInbox() =>
-        _controlInbox != null && _controlInbox.TryDequeue(out var c) ? c : null;
-
-    private async Task<ControlCommand?> ReadControlFileAsync(CancellationToken ct)
-    {
-        try
-        {
-            if (!File.Exists(_controlPath)) return null;
-            var writeTime = File.GetLastWriteTimeUtc(_controlPath);
-            if (_lastControlWrite == writeTime) return null; // already processed this version
-            _lastControlWrite = writeTime;
-            var text = await File.ReadAllTextAsync(_controlPath, ct).ConfigureAwait(false);
-            var parsed = ControlFile.Parse(text);
-            if (parsed.Action == null) return null;
-            if (parsed.Confirmed && parsed.IntentId != null)
-                Log($"control confirmed [intent={parsed.IntentId}]");
-            return parsed;
-        }
-        // A malformed/racing control.json is operator input, not an engine fault — ignore this poll
-        // and let the next one pick up a well-formed file rather than crash the loop.
-        catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException or InvalidOperationException)
-        {
-            return null;
-        }
-    }
-
-    private void DeleteControlFile()
-    {
-        try { if (File.Exists(_controlPath)) File.Delete(_controlPath); }
-        catch (IOException) { }
-        catch (UnauthorizedAccessException) { }
-        _lastControlWrite = null;
-    }
-
-    private void RecoverFromCrash()
-    {
-        var recovered = false;
-
-        // Existing state.json-based path (authoritative for transient control fields the log
-        // doesn't yet carry — additive discipline).
-        if (state.Status is RunStatus.Running or RunStatus.VerifyingGates or RunStatus.Backoff)
-        {
-            var last = state.History.LastOrDefault();
-            if (last != null && last.EndedUtc == null)
-            {
-                last.EndedUtc = DateTime.UtcNow;
-                last.Outcome = SessionOutcome.Interrupted;
-                QueueResume(last, "conductor crashed or was killed mid-session");
-                Log($"recovered: session #{last.Number} was interrupted — will resume its agent session");
-                recovered = true;
-            }
-            state.Status = RunStatus.Idle;
-            Save();
-        }
-
-        // B2.3: event-log-based recovery — the event log may know about a crash that state.json
-        // missed (double-hard crash between save and session finish, or a torn state.json write).
-        if (!recovered && state.PendingResume == null)
-        {
-            var eventsPath = Path.Combine(plan.StateDir, "events.jsonl");
-            if (File.Exists(eventsPath))
-            {
-                var evts = EventLog.ReadAll(eventsPath);
-                var interrupted = RunStateProjection.FindInterruptedSession(evts);
-                if (interrupted != null)
-                {
-                    var rec = state.History.FirstOrDefault(h => h.Number == interrupted.Number);
-                    if (rec != null)
-                    {
-                        if (rec.EndedUtc == null) rec.EndedUtc = DateTime.UtcNow;
-                        rec.Outcome = SessionOutcome.Interrupted;
-                        QueueResume(rec, "event log shows interrupted session — recovering");
-                    }
-                    else
-                    {
-                        if (string.IsNullOrEmpty(interrupted.AgentSessionId))
-                        {
-                            Log($"recovered from event log: session #{interrupted.Number} has no AgentSessionId — marking needs-attention (cannot resume without a session id)");
-                            state.Status = RunStatus.NeedsHuman;
-                            state.AttentionReason = $"Orphaned session #{interrupted.Number} in events.jsonl has no AgentSessionId — manual review needed.";
-                            Save();
-                        }
-                        else
-                        {
-                            rec = new SessionRecord
-                            {
-                                Number = interrupted.Number,
-                                Stage = interrupted.StageId,
-                                Kind = SessionKind.Deliver,
-                                Attempt = 1,
-                                StartedUtc = DateTime.UtcNow,
-                                ClaudeSessionId = interrupted.AgentSessionId,
-                                Outcome = SessionOutcome.Interrupted,
-                            };
-                            state.History.Add(rec);
-                            QueueResume(rec, "event log shows interrupted session — recovering from orphaned SessionStarted");
-                        }
-                    }
-                    if (state.Status != RunStatus.NeedsHuman)
-                    {
-                        Log($"recovered from event log: session #{interrupted.Number} was interrupted — will resume");
-                        state.Status = RunStatus.Idle;
-                        Save();
-                    }
-                }
-
-                // B9.2: rebuild decomposed-checkpoints set from TaskAdded events so we don't
-                // re-decompose after a crash.
-                foreach (var evt in evts)
-                {
-                    if (evt is TaskAdded ta)
-                        _decomposedCheckpoints.Add(ta.CheckpointId);
-                }
-            }
-        }
-    }
-
-    private void WarnOnBranchPattern()
-    {
-        if (string.IsNullOrWhiteSpace(plan.BranchPattern)) return;
-        var branch = Git.Branch(plan.Repo);
-        if (!Regex.IsMatch(branch, plan.BranchPattern, RegexOptions.None, ProgressConventions.RegexTimeout))
-            Log($"⚠ branch '{branch}' does not match plan branchPattern '{plan.BranchPattern}' — check before letting sessions commit");
-    }
-
-    private string BuildPrompt(SessionKind kind, StageConfig stage, int sessionNumber, int attempt, int maxAttempts)
-    {
-        var isReview = stage.Kind.Equals("review", StringComparison.OrdinalIgnoreCase);
-        var reviewPath = isReview ? Path.Combine(plan.StateDir, "reviews", $"{stage.Id}.md") : "";
-        return kind switch
-        {
-            SessionKind.Resume => _prompts.Resume(stage, sessionNumber, attempt, maxAttempts, state.PendingResume!),
-            SessionKind.Audit => _prompts.Audit(stage, sessionNumber, state.PendingAudit!, state.CurrentStageStartHead ?? "HEAD~1"),
-            SessionKind.Fix => _prompts.Fix(stage, sessionNumber, attempt, maxAttempts, state.PendingFix!),
-            _ => isReview
-                ? _prompts.Review(stage, sessionNumber, attempt, maxAttempts, reviewPath)
-                : _prompts.Deliver(stage, sessionNumber, attempt, maxAttempts),
-        };
-    }
-
-    private static PromptBuilder BuildPromptBuilder(PlanConfig plan)
-    {
-        var registry = new PersonaRegistry(plan);
-        var lessons = new LessonsManager(plan.StateDir);
-        return new PromptBuilder(plan, registry, lessons);
-    }
-
-    private static string ExtractSessionResult(string? resultText)
-    {
-        if (string.IsNullOrWhiteSpace(resultText)) return "";
-        var idx = resultText.IndexOf("SESSION-RESULT:", StringComparison.OrdinalIgnoreCase);
-        var s = idx >= 0 ? resultText[idx..] : resultText;
-        return Trunc(s.Trim(), 700);
-    }
-
-    private string LastRawTail(string rawLogPath)
-    {
-        // Best-effort diagnostics tail: a missing/locked raw log just yields no tail, never a crash.
-        try { return GateRunner.TailOf(File.ReadAllText(rawLogPath), 10); }
-        catch (IOException) { return ""; }
-    }
-
-    private static string Trunc(string s, int max) => s.Length <= max ? s : s[..max] + "…";
-
-    // ---------------------------------------------------------------- snapshots, log, lock
-
-    private void PushSessionSnapshot(AgentSession agent, SessionRecord rec, StageConfig stage, int attempt, int maxAttempts, TrackerSnapshot track)
-        => sink.Snapshot(BaseSnapshot(track) with
-        {
-            SessionNumber = rec.Number,
-            SessionKind = rec.Kind.ToString(),
-            Attempt = attempt,
-            MaxAttempts = maxAttempts,
-            ResumeCount = rec.ResumeCount,
-            SessionCostUsd = agent.CostUsd ?? 0m,
-            SessionTokensInput = agent.TokensInput ?? 0,
-            SessionTokensOutput = agent.TokensOutput ?? 0,
-            SessionTokensReasoning = agent.TokensReasoning ?? 0,
-            SessionElapsed = DateTime.UtcNow - agent.StartedUtc,
-            LastActivityAgoSec = (DateTime.UtcNow - agent.LastActivityUtc).TotalSeconds,
-            AgentActive = true,
-        });
-
-    private void PushIdleSnapshot()
-    {
-        TrackerSnapshot track;
-        // Display-only read on the idle hot path: a transient tracker read failure falls back to an
-        // empty snapshot without log spam — the authoritative read in the main loop (Run) is what
-        // surfaces a genuinely broken tracker via NeedsHuman.
-        try { track = _progress.Read(plan, CancellationToken.None); }
-        catch (Exception) { track = new TrackerSnapshot(); }
-        sink.Snapshot(BaseSnapshot(track));
-    }
-
-    private DashboardSnapshot BaseSnapshot(TrackerSnapshot track)
-        => SnapshotBuilder.Build(plan, state, track,
-            _lastGates != null ? GateRunner.Summary(_lastGates) : "", _backoffUntil);
-
-    private void Save() => state.Save(statePath);
-
-    /// <summary>Emit the terminal event for a session from its finalized record (single choke point:
-    /// the record's Outcome is set on every RunSession exit path). Also emits CheckpointConfirmed for
-    /// each row that flipped DONE in a gate-green, committed session (an Advanced outcome).</summary>
-    private void EmitSessionFinished(SessionRecord rec)
-    {
-        var sid = rec.Number.ToString();
-        events.Emit(new SessionFinished
-        {
-            SessionId = sid,
-            Number = rec.Number,
-            StageId = rec.Stage,
-            Outcome = rec.Outcome?.ToString() ?? "Unknown",
-            NewCommits = rec.NewCommits,
-            NewlyDone = rec.NewlyDone,
-            CostUsd = rec.CostUsd,
-            TokensInput = rec.TokensInput,
-            TokensOutput = rec.TokensOutput,
-            TokensReasoning = rec.TokensReasoning,
-            TokensCacheRead = rec.TokensCacheRead,
-        });
-        if (rec.Outcome == SessionOutcome.Advanced)
-            foreach (var id in rec.NewlyDone)
-                events.Emit(new CheckpointConfirmed { SessionId = sid, CheckpointId = id, StageId = rec.Stage });
-
-        // F1: additive run.db write alongside events.jsonl
-        if (_runDb is { } db)
-        {
-            db.RecordSession(state.RunId, rec.Stage, rec.Number, rec.Kind.ToString(),
-                rec.StartedUtc, rec.EndedUtc, rec.Outcome?.ToString(), rec.ClaudeSessionId,
-                rec.ResumeCount, rec.Attempt, rec.GateSummary, rec.ResultSummary,
-                rec.NewCommits.Count, rec.NewlyDone.Count > 0 ? string.Join(",", rec.NewlyDone) : null);
-            if (rec.CostUsd is { } costUsd)
-                db.RecordCost(state.RunId, rec.Number, "agent",
-                    rec.TokensInput ?? 0, rec.TokensOutput ?? 0, rec.TokensReasoning ?? 0,
-                    rec.TokensCacheRead ?? 0, costUsd,
-                    (long)((rec.EndedUtc - rec.StartedUtc)?.TotalMilliseconds ?? 0));
-            if (rec.OverheadCostUsd is { } ovCostUsd)
-                db.RecordCost(state.RunId, rec.Number, "gate",
-                    0, 0, 0, 0, ovCostUsd, 0);
-
-            // F1.2: update checkpoints marked as done in this session
-            if (rec.NewlyDone.Count > 0)
-            {
-                var commit = rec.NewCommits.Count > 0 ? rec.NewCommits[^1].Split(' ')[0] : "-";
-                var evidence = rec.GateSummary ?? "completed";
-                foreach (var cpId in rec.NewlyDone)
-                    db.UpdateCheckpoint(state.RunId, cpId, "DONE", commit, evidence);
-            }
-
-            // F1.3: persist the handoff block if present in the tracker (read after session)
-            var track = ReadTrackerSafe();
-            if (!string.IsNullOrWhiteSpace(track.HandoffBlock))
-                db.WriteHandover(state.RunId, rec.Number, rec.Stage, track.HandoffBlock);
-
-            // F1.2: regenerate the tracker FROM run.db after every session
-            RegenerateTracker(track);
-        }
-
-        // F8.2: session-end one-liner with score pushed to Telegram
-        _ = telegram.PushSessionEndAsync(rec.Number, rec.Stage, rec.Outcome?.ToString() ?? "Unknown",
-            rec.GateSummary, rec.ResultSummary, rec.CostUsd, state.PendingFix?.VerifierScore);
-    }
-
-    private void EmitGates(IReadOnlyList<GateResult> gates, string scope, string? sessionId = null)
-    {
-        Gates.PersistGates(gates, scope, sessionId);
-    }
-
-    /// <summary>Keep a small ring buffer of recent agent activity for the AFK live-activity report,
-    /// and (F6) append every line to the transcript log the control plane's <c>/transcript/current</c>
-    /// SSE stream tails — the agent pane's only data source for live text + thinking.</summary>
-    private void TrackActivity(AgentEvent ev, int sessionNumber)
-    {
-        transcript?.Append(sessionNumber.ToString(), ev.Kind, ev.Text);
-        if (ev.Kind is not ("tool" or "text" or "result" or "thinking")) return;
-        _activity.Add((ev.Kind, ev.Text, ev.Utc));
-        if (_activity.Count > 60) _activity.RemoveRange(0, 20);
-    }
-
-    /// <summary>Markdown of the latest agent activity (tool calls + thinking) for REPORT.md.</summary>
-    private string BuildActivitySection(SessionRecord rec, AgentSession agent)
-    {
-        var sb = new System.Text.StringBuilder();
-        sb.AppendLine($"_Session #{rec.Number} ({rec.Kind}) · running {(DateTime.UtcNow - agent.StartedUtc).TotalMinutes:0}m · " +
-                      $"last output {(DateTime.UtcNow - agent.LastActivityUtc).TotalSeconds:0}s ago" +
-                      (agent.CostUsd is { } c ? $" · ${c:0.0000}" : "") + "_");
-        sb.AppendLine();
-        var think = _activity.Where(a => a.Kind == "thinking").TakeLast(3).ToList();
-        if (think.Count > 0)
-        {
-            sb.AppendLine("**Thinking:**");
-            foreach (var t in think) sb.AppendLine($"> {Trunc(t.Text.Replace("\n", " "), 300)}");
-            sb.AppendLine();
-        }
-        var acts = _activity.Where(a => a.Kind != "thinking").TakeLast(10).ToList();
-        if (acts.Count > 0)
-        {
-            sb.AppendLine("**Recent actions:**");
-            foreach (var a in acts)
-            {
-                var glyph = a.Kind switch { "tool" => "»", "result" => "◆", _ => "·" };
-                sb.AppendLine($"- `{a.Utc.ToLocalTime():HH:mm:ss}` {glyph} {Trunc(a.Text.Replace("\n", " "), 160)}");
-            }
-        }
-        return sb.ToString().TrimEnd();
-    }
-
-    private void RefreshReport(SessionRecord rec, StageConfig stage, AgentSession agent, TrackerSnapshot track)
-    {
-        try
-        {
-            var cp = track.ForStage(stage.Id).FirstOrDefault(c => !c.IsDone)?.Id ?? stage.Id;
-            Log($"report refresh @ {cp} (cost ${agent.CostUsd:0.00})");
-            Reporter.WriteReport(plan, state, track, _lastGates, Log, BuildActivitySection(rec, agent));
-        }
-        catch (Exception ex) { Log($"report refresh failed: {ex.Message}"); }
-    }
-
-    private void SaveAndReport()
-    {
-        Save();
-        TrackerSnapshot track;
-        // Report render tolerates a transient tracker read failure (→ empty snapshot); the main loop's
-        // authoritative read is what escalates a broken tracker to the human.
-        try { track = _progress.Read(plan, CancellationToken.None); }
-        catch (Exception) { track = new TrackerSnapshot(); }
-        Reporter.WriteAndPublish(plan, state, track, _lastGates, Log);
-        PushIdleSnapshot();
-    }
-
-    private void Log(string line)
-    {
-        Log(line, null);
-    }
-
-    private void Log(string line, string? outcome)
-    {
-        var stamped = $"[{DateTime.Now:HH:mm:ss}] {line}";
-        // Legacy plain log (.conductor/conductor.log) kept additively for humans/back-compat; the
-        // structured Serilog sink under .conductor/logs/ is the authoritative record.
-        try { File.AppendAllText(_logPath, stamped + Environment.NewLine); }
-        catch (IOException) { /* plain log is best-effort; the structured log below still records it */ }
-        catch (UnauthorizedAccessException) { /* ditto — never let narration I/O break the run */ }
-        var prev = _outcome;
-        _outcome = outcome;
-        try
-        {
-            using (BeginCorrelationScope())
-                logger.LogInformation("{ConductorMessage}", line);
-        }
-        finally { _outcome = prev; }
-        sink.Log(stamped);
-    }
-
-    private void LogWithOutcome(string line, string? outcome) => Log(line, outcome);
-
-    /// <summary>Pushes the current runId/sessionId/stage/gate as a logging scope so every structured
-    /// line is correlated; absent values are omitted (they render empty in the sink template).</summary>
-    private IDisposable? BeginCorrelationScope()
-    {
-        var scope = new Dictionary<string, object>(StringComparer.Ordinal);
-        if (!string.IsNullOrEmpty(state.RunId)) scope["runId"] = state.RunId;
-        if (state.SessionCounter > 0) scope["sessionId"] = state.SessionCounter.ToString();
-        if (!string.IsNullOrEmpty(state.CurrentStage)) scope["stage"] = state.CurrentStage;
-        if (_curGate != null) scope["gate"] = _curGate;
-        if (_outcome != null) scope["outcome"] = _outcome;
-        return scope.Count > 0 ? logger.BeginScope(scope) : null;
-    }
-
-    private void Notify(string message)
-    {
-        // B6: push to Telegram (fire-and-forget — the hosted service owns its own queue).
-        _ = telegram.PushAsync(message);
-        // B6.4: fire webhook notifications (generic/Discord/Slack).
-        webhooks.FireAsync(message);
-
-        var n = plan.Notify;
-        if (n == null || string.IsNullOrWhiteSpace(n.Command)) return;
-        try
-        {
-            var args = n.Args.Select(a => a.Replace("{message}", message));
-            ProcessRunner.Run(n.Command, args, plan.Repo, TimeSpan.FromMinutes(1));
-        }
-        catch (Exception ex) { Log($"notify failed: {ex.Message}"); }
-    }
-
-    private bool AcquireLock()
-    {
-        try
-        {
-            if (File.Exists(_lockPath))
-            {
-                var pidText = File.ReadAllText(_lockPath).Trim();
-                if (int.TryParse(pidText, out var pid))
-                {
-                    try
-                    {
-                        var p = System.Diagnostics.Process.GetProcessById(pid);
-                        if (!p.HasExited)
-                        {
-                            sink.Log($"another conductor (pid {pid}) is already running this plan — exiting");
-                            return false;
-                        }
-                    }
-                    catch (ArgumentException) { /* stale lock — process gone */ }
-                }
-            }
-            File.WriteAllText(_lockPath, Environment.ProcessId.ToString());
-            return true;
-        }
-        catch (Exception ex)
-        {
-            sink.Log($"could not acquire lock: {ex.Message}");
-            return false;
-        }
-    }
-
-    private void ReleaseLock()
-    {
-        // Best-effort unlock on shutdown: if the lock file is already gone or transiently locked, a
-        // stale entry is reclaimed on the next start by the pid-liveness check in AcquireLock.
-        try { if (File.Exists(_lockPath)) File.Delete(_lockPath); }
-        catch (IOException) { /* reclaimed next start via pid-liveness */ }
-        catch (UnauthorizedAccessException) { /* ditto */ }
-    }
-
-    private void EnsureStateDirGitignore()
-    {
-        var gi = Path.Combine(plan.StateDir, ".gitignore");
-        if (!File.Exists(gi))
-            File.WriteAllText(gi, "*\n!.gitignore\n!REPORT.md\n");
-    }
-
-    // ---------------------------------------------------------------- B8 brain layer
-
-    /// <summary>B8.1: Reflection step — after each session ends, distil "what was hard" from
-    /// the SESSION-RESULT text into a bounded, rotating lessons file for future sessions.</summary>
-    private void ReflectionStep(SessionRecord rec)
-    {
-        if (string.IsNullOrWhiteSpace(rec.ResultSummary)) return;
-
-        // Extract the struggle note after "SESSION-RESULT:" — this is the "what was hard" signal
-        // the next session's prompt should receive.
-        var text = rec.ResultSummary;
-        var idx = text.IndexOf("SESSION-RESULT:", StringComparison.OrdinalIgnoreCase);
-        if (idx < 0) return;
-
-        // Take the post-SESSION-RESULT text, strip the marker
-        var difficulty = text[(idx + "SESSION-RESULT:".Length)..].Trim();
-        if (difficulty.Length == 0) return;
-        if (difficulty.Length > 500)
-            difficulty = difficulty[..497] + "…";
-
-        _lessons.Append(rec.Stage, rec.Number, difficulty);
-    }
-
-    /// <summary>B8.4: Parse audit handover doc for deferred/weak/bugs-not-fixed bullets and track
-    /// them in <c>.conductor/followups.md</c>. Only appends entries not already tracked (by title
-    /// match), avoiding duplicates across multiple phases.</summary>
-    private void ParseAuditFollowups(string stageId)
-    {
-        var handoverPath = Path.Combine(plan.StateDir, "handovers", $"{stageId}.md");
-        if (!File.Exists(handoverPath)) return;
-
-        var followupsPath = Path.Combine(plan.StateDir, "followups.md");
-        var existing = File.Exists(followupsPath) ? File.ReadAllText(followupsPath, Encoding.UTF8) : "";
-
-        var bullets = new List<string>();
-        try
-        {
-            var content = File.ReadAllText(handoverPath, Encoding.UTF8);
-            var lines = content.Split('\n');
-            var inSection = false;
-            foreach (var line in lines)
-            {
-                var t = line.Trim();
-                // Match sections: "Weak / deferred", "Bugs not fixed", "Deferred / unfixed"
-                if (t.StartsWith("## ", StringComparison.Ordinal) || t.StartsWith("### ", StringComparison.Ordinal))
-                {
-                    var heading = t.ToLowerInvariant();
-                    inSection = heading.Contains("weak", StringComparison.Ordinal) || heading.Contains("deferred", StringComparison.Ordinal) ||
-                                heading.Contains("bugs not fixed", StringComparison.Ordinal) || heading.Contains("unfixed", StringComparison.Ordinal) ||
-                                heading.Contains("concrete follow", StringComparison.Ordinal);
-                }
-                else if (inSection && (t.StartsWith("- ", StringComparison.Ordinal) || t.StartsWith("* ", StringComparison.Ordinal)
-                         || (t.StartsWith("### ", StringComparison.Ordinal) && t.Contains("D-"))))
-                {
-                    var bullet = t.TrimStart('-', '*', ' ').Trim();
-                    if (bullet.Length > 0) bullets.Add(bullet);
-                }
-            }
-        }
-        catch (IOException) { return; }
-        catch (UnauthorizedAccessException) { return; }
-
-        if (bullets.Count == 0) return;
-
-        var sb = new System.Text.StringBuilder();
-        var prevExists = existing.Length > 0;
-        if (!prevExists)
-        {
-            sb.AppendLine("# Conductor followups (auto-tracked from audit handovers)");
-            sb.AppendLine();
-            sb.AppendLine("| Id | Item | Stage | Status |");
-            sb.AppendLine("|---|---|---|---|");
-        }
-        else
-        {
-            sb.Append(existing.TrimEnd());
-        }
-
-        var added = 0;
-        var sid = stageId;
-        foreach (var bullet in bullets)
-        {
-            var title = bullet.Length > 80 ? bullet[..77] + "…" : bullet;
-            if (existing.Contains(title, StringComparison.OrdinalIgnoreCase))
-                continue; // already tracked
-
-            if (!prevExists && added == 0)
-                sb.AppendLine();
-            sb.AppendLine($"| FU-{sid}-{added + 1:00} | {title} | {sid} | OPEN |");
-            added++;
-        }
-
-        if (added > 0)
-        {
-            File.WriteAllText(followupsPath, sb.ToString().TrimEnd() + Environment.NewLine, Encoding.UTF8);
-            Log($"followups: {added} new item(s) from {stageId} audit tracked in followups.md");
-        }
-    }
-
-    // ---------------------------------------------------------------- B9.4: soft-break + MCP journal
-
-    /// <summary>B9.4: Check whether the live agent token count has crossed the soft-break threshold
-    /// and if so, emit a <c>SoftBreakRequested</c> event and write a nudge signal file. Only fires
-    /// once per session — one nudge is enough.</summary>
-    private void CheckSoftBreak(AgentSession agent, TrackerSnapshot preTrack)
-    {
-        if (_softBreakSignalled) return;
-        var threshold = ComputeSoftThreshold();
-        if (threshold is not { } thresh) return;
-
-        var liveTokens = (agent.TokensInput ?? 0) + (agent.TokensOutput ?? 0)
-            + (agent.TokensReasoning ?? 0) + (agent.TokensCacheRead ?? 0);
-        if (liveTokens < thresh) return;
-
-        _softBreakSignalled = true;
-        var activeCp = preTrack.Checkpoints.FirstOrDefault(c => !c.IsDone)?.Id;
-        var maxTokens = plan.Limits.MaxSessionTokens!.Value; // guarded: ComputeSoftThreshold returns null unless MaxSessionTokens is set
-        var signalFile = Path.Combine(plan.StateDir, "soft-break");
-        File.WriteAllText(signalFile, $"finish-subtask-and-handoff:{DateTime.UtcNow:o}");
-
-        events.Emit(new SoftBreakRequested
-        {
-            LiveTokens = liveTokens,
-            TokenBudget = maxTokens,
-            CurrentCheckpointId = activeCp,
-        });
-        Log($"soft-break: {liveTokens / 1000.0:0.#}k tokens ≥ {thresh / 1000.0:0.#}k threshold — nudge written, session should hand off cleanly");
-        sink.Log($"[soft-break] {liveTokens / 1000.0:0.#}k/{maxTokens / 1000.0:0.#}k tokens — agent has been nudged to hand off");
-    }
-
-    /// <summary>Compute the absolute token threshold for the soft-break, or null if soft-break is
-    /// disabled (no <c>MaxSessionTokens</c> configured).</summary>
-    private long? ComputeSoftThreshold()
-    {
-        if (plan.Limits.MaxSessionTokens is not { } max) return null;
-        var ratio = plan.Limits.SoftBreakRatio is { } r and > 0 and <= 1.0
-            ? r : 0.8;
-        return (long)(max * ratio);
-    }
-
-    /// <summary>B9.4: remove the soft-break signal file if it exists from a prior session.</summary>
-    private void CleanSoftBreakSignal()
-    {
-        var signalFile = Path.Combine(plan.StateDir, "soft-break");
-        try { if (File.Exists(signalFile)) File.Delete(signalFile); }
-        catch (IOException) { }
-        catch (UnauthorizedAccessException) { }
-    }
-
-    /// <summary>I1: write a per-session opencode config file that registers conductor as a local
-    /// MCP server (stdio subprocess). OpenCode spawns it as a child process and the agent gets
-    /// live task_list / task_update / task_add tools. Returns the config file path, or null if
-    /// the conductor binary cannot be resolved.</summary>
-    private string? WireMcpServer(SessionRecord rec, StageConfig stage)
-    {
-        try
-        {
-            var conductorExe = Environment.ProcessPath;
-            if (string.IsNullOrEmpty(conductorExe) || !File.Exists(conductorExe))
-                return null;
-
-            var eventsPath = Path.Combine(plan.StateDir, "events.jsonl");
-            var journalPath = Path.Combine(plan.StateDir, "mcp-journal.jsonl");
-            var runId = state.RunId;
-            var stateDir = plan.StateDir;
-            var repoPath = plan.Repo;
-
-            var commandArgs = new List<string>
-            {
-                "mcp-serve",
-                "--events", eventsPath,
-                "--journal", journalPath,
-                "--run-id", runId,
-                "--state-dir", stateDir,
-                "--repo", repoPath,
-            };
-
-            var mcpConfig = new
-            {
-                mcp = new Dictionary<string, object>(StringComparer.Ordinal)
-                {
-                    ["conductor-tasks"] = new Dictionary<string, object>(StringComparer.Ordinal)
-                    {
-                        ["type"] = "local",
-                        ["command"] = new[] { conductorExe }.Concat(commandArgs).ToArray(),
-                        ["enabled"] = true,
-                    }
-                }
-            };
-
-            var configPath = Path.Combine(plan.StateDir, "mcp-config.json");
-            var json = JsonSerializer.Serialize(mcpConfig, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(configPath, json);
-            return configPath;
-        }
-        catch (Exception ex)
-        {
-            Log($"I1: failed to write MCP config: {ex.Message}");
-            return null;
-        }
-    }
-
-    /// <summary>I1: remove the per-session MCP config file (best-effort).</summary>
-    private void CleanupMcpConfig(string? configPath)
-    {
-        if (configPath == null) return;
-        try { if (File.Exists(configPath)) File.Delete(configPath); }
-        catch (IOException) { }
-        catch (UnauthorizedAccessException) { }
-    }
-
-    /// <summary>B9.4: fold any MCP journal entries into the main event log. The McpTaskServer writes
-    /// task updates to a side journal to avoid concurrent-write races; after the agent exits the
-    /// journal is safe to merge. Merged entries are deleted so they aren't duplicated next time.</summary>
-    private void FoldMcpJournal()
-    {
-        var journalPath = Path.Combine(plan.StateDir, "mcp-journal.jsonl");
-        if (!File.Exists(journalPath)) return;
-        try
-        {
-            var journalEvents = EventLog.ReadAll(journalPath);
-            if (journalEvents.Count == 0) return;
-            foreach (var evt in journalEvents)
-                events.Emit(evt);
-            File.Delete(journalPath);
-            Log($"MCP journal folded: {journalEvents.Count} event(s) merged into event log");
-        }
-        catch (Exception ex)
-        {
-            Log($"MCP journal fold failed: {ex.Message}");
-        }
-    }
-
-    /// <summary>B9.4: Build a human-readable hint about which sub-task the next session should
-    /// resume from. Reads the task graph from the event log, finds the active checkpoint, and
-    /// returns the first pending sub-task's title.</summary>
-    private string? BuildRolloverResumeHint(TrackerSnapshot preTrack)
-    {
-        var eventsPath = Path.Combine(plan.StateDir, "events.jsonl");
-        if (!File.Exists(eventsPath)) return null;
-        try
-        {
-            var allEvents = EventLog.ReadAll(eventsPath);
-            var taskGraph = new TaskGraph();
-            taskGraph.Fold(allEvents);
-            var activeCp = preTrack.ForStage(state.CurrentStage ?? "")
-                .FirstOrDefault(c => !c.IsDone);
-            if (activeCp == null) return null;
-            var next = taskGraph.CurrentTask(activeCp.Id);
-            return next != null
-                ? $"next sub-task: {next.Title} [{next.Status}]"
-                : null;
-        }
-        catch (Exception ex)
-        {
-            Log($"task-graph resume hint failed: {ex.Message}");
-            return null;
-        }
-    }
-
-    // ---------------------------------------------------------------- F1.2 tracker-as-view helpers
-
-    /// <summary>Seed checkpoints from the existing tracker markdown into run.db.
-    /// Idempotent — re-seeding preserves status already set by <see cref="RunDb.UpdateCheckpoint"/>.</summary>
-    private void SeedCheckpointsFromTracker()
-    {
-        if (_runDb is not { } db) return;
-        var track = ReadTrackerSafe();
-        if (track.Checkpoints.Count == 0) return;
-
-        var cps = track.Checkpoints.Select(c => (c.Id, c.StageId, c.Title,
-            c.IsDone ? "DONE" : c.IsInProgress ? "IN PROGRESS" : c.IsBlocked ? "BLOCKED" : "TODO",
-            c.Commit, c.Evidence));
-        db.SeedCheckpoints(state.RunId, cps);
-        Log($"seeded {track.Checkpoints.Count} checkpoints from tracker into run.db");
-    }
-
-    /// <summary>Read the tracker file without throwing. Returns an empty snapshot on any error
-    /// (file not found, locked, permission denied, parse failure, etc.). The authoritative
-    /// read in the main loop escalates a genuinely broken tracker; this helper is defensive.</summary>
-    private TrackerSnapshot ReadTrackerSafe()
-    {
-        try { return _progress.Read(plan, CancellationToken.None); }
-        catch (Exception) { return new TrackerSnapshot(); }
-    }
-
-    /// <summary>Regenerate TRACKER.md from run.db. Uses the current tracker's handoff as the fallback
-    /// (preserves the handoff block the agent last wrote if no DB handover exists yet).</summary>
-    private void RegenerateTracker(TrackerSnapshot currentTrack)
-    {
-        if (_runDb is not { } db) return;
-        try
-        {
-            TrackerGenerator.Write(plan, db, state.RunId, currentTrack.HandoffBlock);
-        }
-        catch (Exception ex)
-        {
-            Log($"tracker regeneration failed: {ex.Message}");
-        }
-    }
 }
-

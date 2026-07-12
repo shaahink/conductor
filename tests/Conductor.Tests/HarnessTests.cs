@@ -1,6 +1,7 @@
 using Conductor.Core;
 using Conductor.Core.Events;
-using Conductor.Tests.Harness;
+using Conductor.Core.Hosting;
+using Conductor.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 

@@ -3,7 +3,6 @@
   "lineCeiling": 500,
   "maxTypesPerFile": 3,
   "filesOverLineCeiling": {
-    "Orchestrator.cs": 2334,
     "PlanConfig.cs": 818,
     "McpTaskServer.cs": 764,
     "RunDb.cs": 702,
