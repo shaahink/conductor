@@ -1,10 +1,10 @@
 ﻿# Conductor — Maestro run report
 
-_Updated 2026-07-12 00:26 UTC · branch `feat/foreman` · HEAD `6434e54`_
+_Updated 2026-07-12 00:44 UTC · branch `feat/foreman` · HEAD `4f989f0`_
 
 **Status:** Idle
-**Stage:** M1 — Deconstruction — delete the old face, break the god classes · attempts used 1 · working ▸ M1.3
-**Checkpoints:** 2/30 done · **Sessions run:** 3 · **Cost:** $0.0446 (agent $0.0359 + gates $0.0087) · **Tokens:** 81,506 in / 118 out / 413 think
+**Stage:** M1 — Deconstruction — delete the old face, break the god classes · attempts used 2 · working ▸ M1.3
+**Checkpoints:** 2/30 done · **Sessions run:** 5 · **Cost:** $0.0649 (agent $0.0535 + gates $0.0114) · **Tokens:** 118,817 in / 369 out / 775 think
 
 ## Stage progress
 
@@ -24,8 +24,8 @@ _Updated 2026-07-12 00:26 UTC · branch `feat/foreman` · HEAD `6434e54`_
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| M1.1 | Delete `Ui/**` (2,021 lines) + PreviewCommand/DashboardPreview + tests that only test them | ✅ DONE | [``801c3e`](https://github.com/shaahink/conductor/commit/`801c3e1`) |
-| M1.2 | Split `Commands.cs` (2,574 lines / 54 types) — one file per command, none over 250 lines | ✅ DONE | [``6434e5`](https://github.com/shaahink/conductor/commit/`6434e54`) |
+| M1.1 | Delete `Ui/**` (2,021 lines) + PreviewCommand/DashboardPreview + tests that only test them | ✅ DONE | - |
+| M1.2 | Split `Commands.cs` (2,574 lines / 54 types) — one file per command, none over 250 lines | ✅ DONE | - |
 | M1.3 | Split `Orchestrator.cs` (2,334 lines) into RunLoop + SessionRunner + VerdictEngine | ⬜ TODO | - |
 | M1.4 | Split remaining offenders; `architecture-baseline.json` is empty `{}` | ⬜ TODO | - |
 
@@ -120,18 +120,14 @@ _Updated 2026-07-12 00:26 UTC · branch `feat/foreman` · HEAD `6434e54`_
 | 1 | M1 | Deliver | 1 | 07-11 23:22 | 0:37 | Interrupted |  | 0 |  |  |  |  |
 | 2 | M1 | Resume | 1r1 | 07-12 00:00 | 0:23 | Interrupted |  | 0 |  |  |  |  |
 | 3 | M1 | Resume | 1r2 | 07-12 00:23 | 0:00 | GatesRed |  | 0 | build:FAIL · ratchet:FAIL | $0.0359 | $0.0087 | 81,506/118 |
+| 4 | M1 | Fix | 2 | 07-12 00:26 | 0:16 | Interrupted |  | 0 |  |  |  |  |
+| 5 | M1 | Resume | 2r1 | 07-12 00:42 | 0:01 | GatesRed |  | 0 | build:FAIL · ratchet:FAIL | $0.0175 | $0.0027 | 37,311/251 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-10 21:16:28  • session #25 F3 Deliver started (attempt 1/2) · persona qa
-07-10 21:59:39  ◆ run resumed · Foreman
-07-10 21:59:39  • session #26 F3 Resume started (attempt 1/4) · persona qa
-07-10 22:12:40  • session #26 F3 → Interrupted  (13m01s)
-07-11 02:33:14  ◆ run resumed · Smoke
-07-11 02:33:14  ▸ stage S1 entered — Smoke Test Stage
 07-11 02:33:14  • session #29 S1 Deliver started (attempt 1/4)
 07-11 02:43:38  ◆ run resumed · Foreman
 07-11 02:43:38  ▸ stage F5 entered — Control plane — HTTP+SSE on localhost
@@ -166,6 +162,12 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-12 01:23:56  • session #3 M1 Resume started (attempt 1/8)
 07-12 01:26:18  ▪ gate build FAIL [session]  (1m24s)
 07-12 01:26:18  ▪ gate ratchet FAIL [session]  (3.1s)
+07-12 01:26:22  • session #3 M1 → GatesRed  (2m26s)
+07-12 01:26:23  • session #4 M1 Fix started (attempt 2/8)
+07-12 01:42:29  ◆ run resumed · Maestro
+07-12 01:42:29  • session #5 M1 Resume started (attempt 2/8)
+07-12 01:43:59  ▪ gate build FAIL [session]  (25.3s)
+07-12 01:43:59  ▪ gate ratchet FAIL [session]  (1.8s)
 ```
 
 ## Health
@@ -173,7 +175,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 37 · retries 1 (3 %) · overall Warn
+sessions 39 · retries 3 (8 %) · overall Warn
 ⚠ [context-saturation] session #2: 32,055,552 context tokens (≥ 20,000,000)
 ```
 
@@ -183,8 +185,8 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/foreman
-working tree: M .conductor/followups.md, M MAESTRO-TRACKER.md, M src/Conductor/Core/Orchestrator.cs, ?? src/Conductor/Core/Orchestrator.Plumbing.cs, ?? src/Conductor/Core/Orchestrator.Sessions.cs, ?? src/Conductor/Core/Orchestrator.Verdicts.cs
-vs upstream: 1 ahead
+working tree: M .conductor/followups.md, M MAESTRO-TRACKER.md, M src/Conductor/Core/Orchestrator.cs, ?? publish/, ?? src/Conductor/Core/Orchestrator.Plumbing.cs, ?? src/Conductor/Core/Orchestrator.Sessions.cs, ?? src/Conductor/Core/Orchestrator.Verdicts.cs
+vs upstream: up to date
 ```
 
 ## Phase handovers (audit)
@@ -214,39 +216,17 @@ build:FAIL · ratchet:FAIL
 
 ```
 Determining projects to restore...
-  Restored C:\Code\conductor-baton\src\Conductor\Conductor.csproj (in 576 ms).
-  Restored C:\Code\conductor-baton\tests\Conductor.Tests\Conductor.Tests.csproj (in 576 ms).
-C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5397,5): warning MSB3026: Could not copy "C:\Code\conductor-baton\src\Conductor\obj\Debug\net10.0\apphost.exe" to "bin\Debug\net10.0\conductor.exe". Beginning retry 1 in 1000ms. The process cannot access the file 'C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.exe' because it is being used by another process. The file is locked by: "conductor (15300)" [C:\Code\conductor-baton\src\Conductor\Conductor.csproj]
-C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5397,5): warning MSB3026: Could not copy "C:\Code\conductor-baton\src\Conductor\obj\Debug\net10.0\apphost.exe" to "bin\Debug\net10.0\conductor.exe". Beginning retry 2 in 1000ms. The process cannot access the file 'C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.exe' because it is being used by another process. The file is locked by: "conductor (15300)" [C:\Code\conductor-baton\src\Conductor\Conductor.csproj]
-C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5397,5): warning MSB3026: Could not copy "C:\Code\conductor-baton\src\Conductor\obj\Debug\net10.0\apphost.exe" to "bin\Debug\net10.0\conductor.exe". Beginning retry 3 in 1000ms. The process cannot access the file 'C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.exe' because it is being used by another process. The file is locked by: "conductor (15300)" [C:\Code\conductor-baton\src\Conductor\Conductor.csproj]
-C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5397,5): warning MSB3026: Could not copy "C:\Code\conductor-baton\src\Conductor\obj\Debug\net10.0\apphost.exe" to "bin\Debug\net10.0\conductor.exe". Beginning retry 4 in 1000ms. The process cannot access the file 'C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.exe' because it is being used by another process. The file is locked by: "conductor (15300)" [C:\Code\conductor-baton\src\Conductor\Conductor.csproj]
-C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5397,5): warning MSB3026: Could not copy "C:\Code\conductor-baton\src\Conductor\obj\Debug\net10.0\apphost.exe" to "bin\Debug\net10.0\conductor.exe". Beginning retry 5 in 1000ms. The process cannot access the file 'C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.exe' because it is being used by another process. The file is locked by: "conductor (15300)" [C:\Code\conductor-baton\src\Conductor\Conductor.csproj]
-C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5397,5): warning MSB3026: Could not copy "C:\Code\conductor-baton\src\Conductor\obj\Debug\net10.0\apphost.exe" to "bin\Debug\net10.0\conductor.exe". Beginning retry 6 in 1000ms. The process cannot access the file 'C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.exe' because it is being used by another process. The file is locked by: "conductor (15300)" [C:\Code\conductor-baton\src\Conductor\Conductor.csproj]
-C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5397,5): warning MSB3026: Could not copy "C:\Code\conductor-baton\src\Conductor\obj\Debug\net10.0\apphost.exe" to "bin\Debug\net10.0\conductor.exe". Beginning retry 7 in 1000ms. The process cannot access the file 'C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.exe' because it is being used by another process. The file is locked by: "conductor (15300)" [C:\Code\conductor-baton\src\Conductor\Conductor.csproj]
-C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5397,5): warning MSB3026: Could not copy "C:\Code\conductor-baton\src\Conductor\obj\Debug\net10.0\apphost.exe" to "bin\Debug\net10.0\conductor.exe". Beginning retry 8 in 1000ms. The process cannot access the file 'C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.exe' because it is being used by another process. The file is locked by: "conductor (15300)" [C:\Code\conductor-baton\src\Conductor\Conductor.csproj]
-C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5397,5): warning MSB3026: Could not copy "C:\Code\conductor-baton\src\Conductor\obj\Debug\net10.0\apphost.exe" to "bin\Debug\net10.0\conductor.exe". Beginning retry 9 in 1000ms. The process cannot access the file 'C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.exe' because it is being used by another process. The file is locked by: "conductor (15300)" [C:\Code\conductor-baton\src\Conductor\Conductor.csproj]
-C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5397,5): warning MSB3026: Could not copy "C:\Code\conductor-baton\src\Conductor\obj\Debug\net10.0\apphost.exe" to "bin\Debug\net10.0\conductor.exe". Beginning retry 10 in 1000ms. The process cannot access the file 'C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.exe' because it is being used by another process. The file is locked by: "conductor (15300)" [C:\Code\conductor-baton\src\Conductor\Conductor.csproj]
-C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5397,5): error MSB3027: Could not copy "C:\Code\conductor-baton\src\Conductor\obj\Debug\net10.0\apphost.exe" to "bin\Debug\net10.0\conductor.exe". Exceeded retry count of 10. Failed. The file is locked by: "conductor (15300)" [C:\Code\conductor-baton\src\Conductor\Conductor.csproj]
-C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5397,5): error MSB3021: Unable to copy file "C:\Code\conductor-baton\src\Conductor\obj\Debug\net10.0\apphost.exe" to "bin\Debug\net10.0\conductor.exe". The process cannot access the file 'C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.exe' because it is being used by another process. [C:\Code\conductor-baton\src\Conductor\Conductor.csproj]
+  All projects are up-to-date for restore.
+  Conductor -> C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.dll
+C:\Code\conductor-baton\tests\Conductor.Tests\HarnessTests.cs(3,23): error CS0234: The type or namespace name 'Harness' does not exist in the namespace 'Conductor.Tests' (are you missing an assembly reference?) [C:\Code\conductor-baton\tests\Conductor.Tests\Conductor.Tests.csproj]
 
 Build FAILED.
 
-C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5397,5): warning MSB3026: Could not copy "C:\Code\conductor-baton\src\Conductor\obj\Debug\net10.0\apphost.exe" to "bin\Debug\net10.0\conductor.exe". Beginning retry 1 in 1000ms. The process cannot access the file 'C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.exe' because it is being used by another process. The file is locked by: "conductor (15300)" [C:\Code\conductor-baton\src\Conductor\Conductor.csproj]
-C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5397,5): warning MSB3026: Could not copy "C:\Code\conductor-baton\src\Conductor\obj\Debug\net10.0\apphost.exe" to "bin\Debug\net10.0\conductor.exe". Beginning retry 2 in 1000ms. The process cannot access the file 'C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.exe' because it is being used by another process. The file is locked by: "conductor (15300)" [C:\Code\conductor-baton\src\Conductor\Conductor.csproj]
-C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5397,5): warning MSB3026: Could not copy "C:\Code\conductor-baton\src\Conductor\obj\Debug\net10.0\apphost.exe" to "bin\Debug\net10.0\conductor.exe". Beginning retry 3 in 1000ms. The process cannot access the file 'C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.exe' because it is being used by another process. The file is locked by: "conductor (15300)" [C:\Code\conductor-baton\src\Conductor\Conductor.csproj]
-C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5397,5): warning MSB3026: Could not copy "C:\Code\conductor-baton\src\Conductor\obj\Debug\net10.0\apphost.exe" to "bin\Debug\net10.0\conductor.exe". Beginning retry 4 in 1000ms. The process cannot access the file 'C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.exe' because it is being used by another process. The file is locked by: "conductor (15300)" [C:\Code\conductor-baton\src\Conductor\Conductor.csproj]
-C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5397,5): warning MSB3026: Could not copy "C:\Code\conductor-baton\src\Conductor\obj\Debug\net10.0\apphost.exe" to "bin\Debug\net10.0\conductor.exe". Beginning retry 5 in 1000ms. The process cannot access the file 'C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.exe' because it is being used by another process. The file is locked by: "conductor (15300)" [C:\Code\conductor-baton\src\Conductor\Conductor.csproj]
-C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5397,5): warning MSB3026: Could not copy "C:\Code\conductor-baton\src\Conductor\obj\Debug\net10.0\apphost.exe" to "bin\Debug\net10.0\conductor.exe". Beginning retry 6 in 1000ms. The process cannot access the file 'C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.exe' because it is being used by another process. The file is locked by: "conductor (15300)" [C:\Code\conductor-baton\src\Conductor\Conductor.csproj]
-C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5397,5): warning MSB3026: Could not copy "C:\Code\conductor-baton\src\Conductor\obj\Debug\net10.0\apphost.exe" to "bin\Debug\net10.0\conductor.exe". Beginning retry 7 in 1000ms. The process cannot access the file 'C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.exe' because it is being used by another process. The file is locked by: "conductor (15300)" [C:\Code\conductor-baton\src\Conductor\Conductor.csproj]
-C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5397,5): warning MSB3026: Could not copy "C:\Code\conductor-baton\src\Conductor\obj\Debug\net10.0\apphost.exe" to "bin\Debug\net10.0\conductor.exe". Beginning retry 8 in 1000ms. The process cannot access the file 'C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.exe' because it is being used by another process. The file is locked by: "conductor (15300)" [C:\Code\conductor-baton\src\Conductor\Conductor.csproj]
-C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5397,5): warning MSB3026: Could not copy "C:\Code\conductor-baton\src\Conductor\obj\Debug\net10.0\apphost.exe" to "bin\Debug\net10.0\conductor.exe". Beginning retry 9 in 1000ms. The process cannot access the file 'C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.exe' because it is being used by another process. The file is locked by: "conductor (15300)" [C:\Code\conductor-baton\src\Conductor\Conductor.csproj]
-C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5397,5): warning MSB3026: Could not copy "C:\Code\conductor-baton\src\Conductor\obj\Debug\net10.0\apphost.exe" to "bin\Debug\net10.0\conductor.exe". Beginning retry 10 in 1000ms. The process cannot access the file 'C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.exe' because it is being used by another process. The file is locked by: "conductor (15300)" [C:\Code\conductor-baton\src\Conductor\Conductor.csproj]
-C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5397,5): error MSB3027: Could not copy "C:\Code\conductor-baton\src\Conductor\obj\Debug\net10.0\apphost.exe" to "bin\Debug\net10.0\conductor.exe". Exceeded retry count of 10. Failed. The file is locked by: "conductor (15300)" [C:\Code\conductor-baton\src\Conductor\Conductor.csproj]
-C:\Program Files\dotnet\sdk\10.0.301\Microsoft.Common.CurrentVersion.targets(5397,5): error MSB3021: Unable to copy file "C:\Code\conductor-baton\src\Conductor\obj\Debug\net10.0\apphost.exe" to "bin\Debug\net10.0\conductor.exe". The process cannot access the file 'C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.exe' because it is being used by another process. [C:\Code\conductor-baton\src\Conductor\Conductor.csproj]
-    10 Warning(s)
-    2 Error(s)
+C:\Code\conductor-baton\tests\Conductor.Tests\HarnessTests.cs(3,23): error CS0234: The type or namespace name 'Harness' does not exist in the namespace 'Conductor.Tests' (are you missing an assembly reference?) [C:\Code\conductor-baton\tests\Conductor.Tests\Conductor.Tests.csproj]
+    0 Warning(s)
+    1 Error(s)
 
-Time Elapsed 00:01:23.02
+Time Elapsed 00:00:24.41
 ```
 </details>
 
@@ -256,7 +236,7 @@ Time Elapsed 00:01:23.02
 ratchet: tests    floor=623  now=550
 ratchet: pragmas  ceil=33   now=31
 ratchet: comparing against origin/feat/foreman
-ratchet: archdebt base=8386  now=5812
+ratchet: archdebt base=5812  now=5812
 
 RATCHET GATE FAILED - the bar was lowered:
   * TEST COUNT BELOW FLOOR (550 < 623). Tests are a ratchet. If a test is genuinely wrong, fix its assertion and say why via 'conductor note' - do not delete it.
@@ -267,20 +247,19 @@ Retrying will not help. Fix the work, not the measurement.
 
 ## Last session result
 
-> That's the resume prompt the agent just received. Current state from what we know:
+> The agent got the resume prompt and is running against the published binary. Let me check that this time it's staying alive.
+> Alive — `conductor.exe` (PID 2828, from `publish/`) + Face TUI (PID 15072). Session #5 is the resume of the interrupted session #4. Agent PID 32464 just started at 01:42:31 UTC.
 > 
-> - **M1.3 in-flight**: Orchestrator.cs partial class + 3 stub files, uncommitted
-> - **Tracker**: updated by us — now shows M1.1+M1.2 DONE, points at M1.3
-> - **Crash**: logged as FU-OWNER-8 in followups.md
-> 
-> Want me to check if the agent has already started making moves, or are you asking me to step in and finish M1.3 myself?
+> No self-lock this time since the published binary runs from `publish/conductor.exe` while `dotnet build` writes to `bin/Release/net10.0/`. Should be smooth unless the Orchestrator partial split breaks compilation. Watching.
 
 ## Tracker handoff
 
 ```
-stage: M1 in progress. 2/24 checkpoints DONE (M1.1 + M1.2).
-commits: 801c3e1 (M1.1 delete Ui/**) · 6434e54 (M1.2 split Commands.cs → 29 files) · 3673880 (dogfood runbook) · 05e18ff (crash-log safety net).
-gate: dotnet 682/682 pass, 0w/0e. face 23/23. ratchet green.
+stage: M1 in progress. 2/30 checkpoints DONE (M1.1 + M1.2).
+commits: 801c3e1 (M1.1 delete Ui/**) · 6434e54 (M1.2 split Commands.cs → 29 files).
+gate: build ~550 pass (mid-split state), ratchet below floor (550 < 623).
 branch: feat/foreman.
-next: M1.3 — split Orchestrator.cs (2,334 lines) into RunLoop + SessionRunner + VerdictEngine. Agent mid-split, partial class files created but not yet committed.
+next: M1.3 — split Orchestrator.cs (2,334 lines). `partial` keyword added, 3 stub files exist (Plumbing, Sessions, Verdicts), no extraction committed yet.
+crash history: session 3 gatesRed (self-locked build, test floor breach). Session 4 fix killed by agent — it ran Stop-Process on the conductor's own PID (15300) confusing it for a stale orphan. See FU-OWNER-9. In-flight partial stubs survived.
+resume: revert OR finish the Orchestrator partial split. Build will self-lock if conductor runs — skip Conductor.csproj, build only test project.
 ```
