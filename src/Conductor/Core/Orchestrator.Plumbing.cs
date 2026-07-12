@@ -181,7 +181,7 @@ public sealed partial class Orchestrator
             {
                 last.EndedUtc = DateTime.UtcNow;
                 last.Outcome = SessionOutcome.Interrupted;
-                QueueResume(last, "conductor crashed or was killed mid-session");
+                Verdicts.QueueResume(last, "conductor crashed or was killed mid-session");
                 Log($"recovered: session #{last.Number} was interrupted — will resume its agent session");
                 recovered = true;
             }
@@ -205,7 +205,7 @@ public sealed partial class Orchestrator
                     {
                         if (rec.EndedUtc == null) rec.EndedUtc = DateTime.UtcNow;
                         rec.Outcome = SessionOutcome.Interrupted;
-                        QueueResume(rec, "event log shows interrupted session — recovering");
+                        Verdicts.QueueResume(rec, "event log shows interrupted session — recovering");
                     }
                     else
                     {
@@ -229,7 +229,7 @@ public sealed partial class Orchestrator
                                 Outcome = SessionOutcome.Interrupted,
                             };
                             state.History.Add(rec);
-                            QueueResume(rec, "event log shows interrupted session — recovering from orphaned SessionStarted");
+                            Verdicts.QueueResume(rec, "event log shows interrupted session — recovering from orphaned SessionStarted");
                         }
                     }
                     if (state.Status != RunStatus.NeedsHuman)
@@ -334,7 +334,7 @@ public sealed partial class Orchestrator
         // authoritative read is what escalates a broken tracker to the human.
         try { track = _progress.Read(plan, CancellationToken.None); }
         catch (Exception) { track = new TrackerSnapshot(); }
-        Reporter.WriteAndPublish(plan, state, track, _lastGates, Log);
+        Reporter.WriteAndPublish(plan, state, track, Ctx.LastGates, Log);
         PushIdleSnapshot();
     }
 

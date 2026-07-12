@@ -80,7 +80,7 @@ public sealed partial class Orchestrator
 
     private DashboardSnapshot BaseSnapshot(TrackerSnapshot track)
         => SnapshotBuilder.Build(plan, state, track,
-            _lastGates != null ? GateRunner.Summary(_lastGates) : "", _backoffUntil);
+            Ctx.LastGates != null ? GateRunner.Summary(Ctx.LastGates) : "", _backoffUntil);
 
     private void TrackActivity(AgentEvent ev, int sessionNumber)
     {
@@ -123,7 +123,7 @@ public sealed partial class Orchestrator
         {
             var cp = track.ForStage(stage.Id).FirstOrDefault(c => !c.IsDone)?.Id ?? stage.Id;
             Log($"report refresh @ {cp} (cost ${agent.CostUsd:0.00})");
-            Reporter.WriteReport(plan, state, track, _lastGates, Log, BuildActivitySection(rec, agent));
+            Reporter.WriteReport(plan, state, track, Ctx.LastGates, Log, BuildActivitySection(rec, agent));
         }
         catch (Exception ex) { Log($"report refresh failed: {ex.Message}"); }
     }

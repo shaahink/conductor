@@ -37,7 +37,7 @@ public sealed partial class Orchestrator(PlanConfig plan, RunState state, string
     // primary-constructor field initializer can't reference (CS0236).
     private ControlDispatcher? _dispatcherInstance;
     private ControlDispatcher Dispatcher => _dispatcherInstance ??=
-        dispatcher ?? new ControlDispatcher(plan, state, sink, events, Log, Save, DeleteControlFile, SkipStage, ApproveAwaitingOwnerAsync);
+        dispatcher ?? new ControlDispatcher(plan, state, sink, events, Log, Save, DeleteControlFile, Verdicts.SkipStage, Verdicts.ApproveAwaitingOwnerAsync);
     // Lane coordination (parallel audit / fix-lanes / analysis lanes) lives in LaneCoordinator â€”
     // Orchestrator only owns when to call in, same seam ControlDispatcher was cut along in F5.
     private LaneCoordinator? _lanesInstance;
@@ -52,26 +52,33 @@ public sealed partial class Orchestrator(PlanConfig plan, RunState state, string
         _agentProvider, _runDb, processSupervisor, transcript, _controlInbox, telegram, webhooks, logger);
     // M1.3: session lifecycle extracted from Orchestrator partials — spawn/stream/stall/MCP
     private SessionRunner? _sessions;
-    private SessionRunner Sessions => _sessions ??= new SessionRunner(
-        Ctx, Lanes,
-        handleControl: ct => HandleControlAsync(inSession: true, ct: ct),
-        pushSessionSnapshot: (a, r, s, at, m, t) => PushSessionSnapshot(a, r, s, at, m, t),
-        saveAndReport: SaveAndReport,
-        evaluateSession: EvaluateSessionAsync,
-        queueResume: QueueResume,
-        needsHuman: NeedsHuman,
-        reflectionStep: ReflectionStep);
+    private SessionRunner Sessions => _sessions ??= CreateSessions();
+    // M1.3: session outcome decision engine — VerdictEngine + Phase + Advisory + Completion
+    private VerdictEngine? _verdictEngine;
+    private VerdictEngine Verdicts => _verdictEngine ??= new VerdictEngine(
+        Ctx, Gates, Lanes, telegram, webhooks, SaveAndReport, PushIdleSnapshot);
+
+    private SessionRunner CreateSessions()
+    {
+        var v = Verdicts; // force lazy init of VerdictEngine so delegates are stable
+        return new SessionRunner(Ctx, Lanes,
+            handleControl: ct => HandleControlAsync(inSession: true, ct: ct),
+            pushSessionSnapshot: (a, r, s, at, m, t) => PushSessionSnapshot(a, r, s, at, m, t),
+            saveAndReport: SaveAndReport,
+            evaluateSession: v.EvaluateSessionAsync,
+            queueResume: v.QueueResume,
+            needsHuman: v.NeedsHuman,
+            reflectionStep: v.ReflectionStep);
+    }
     // F5: commands posted to the HTTP control plane land here â€” a third ingress alongside the TUI
     // queue (sink.PollControl) and control.json (ReadControlFileAsync), same dispatcher for all three.
     private readonly ConcurrentQueue<ControlCommand>? _controlInbox = controlInbox;
-    private IReadOnlyList<GateResult>? _lastGates;
     private readonly string _lockPath = Path.Combine(plan.StateDir, "conductor.lock");
     private readonly string _controlPath = Path.Combine(plan.StateDir, "control.json");
     private DateTime? _lastControlWrite;
     private readonly string _logPath = Path.Combine(plan.StateDir, "conductor.log");
     private DateTime? _backoffUntil;
     private DateTime? _stallBackoffUntil;
-    private int _stallBackoffMultiplier = 1;
     private DateTime? _dnsParkedUntil;
     private int _preflightConsecutiveFailures;
     private readonly List<(string Kind, string Text, DateTime Utc)> _activity = new();
@@ -189,7 +196,7 @@ public sealed partial class Orchestrator(PlanConfig plan, RunState state, string
                 var track = _progress.Read(plan, ct);
                 if (track.Checkpoints.Count == 0)
                 {
-                    NeedsHuman($"tracker {plan.Tracker} has no parseable checkpoint rows â€” check the table format");
+                    Verdicts.NeedsHuman($"tracker {plan.Tracker} has no parseable checkpoint rows â€” check the table format");
                     continue;
                 }
 
@@ -201,7 +208,7 @@ public sealed partial class Orchestrator(PlanConfig plan, RunState state, string
                         sink.Log($"--- DRY RUN: would run the FULL-battery phase gate for stage {state.PendingPhaseGate.StageId} (nothing executed) ---");
                         return 0;
                     }
-                    await RunPhaseGateAsync(state.PendingPhaseGate, ct).ConfigureAwait(false);
+                    await Verdicts.RunPhaseGateAsync(state.PendingPhaseGate, ct).ConfigureAwait(false);
                     if (opts.Once && state.PendingAudit == null && state.PendingFix == null) return 0;
                     continue;
                 }
@@ -209,7 +216,7 @@ public sealed partial class Orchestrator(PlanConfig plan, RunState state, string
                 var allDone = AllEffectivelyDone(track);
                 if (allDone && state.PendingFix == null && state.PendingResume == null)
                 {
-                    if (await ConfirmCompletionAsync(ct).ConfigureAwait(false)) { CompletePlan(track); return 0; }
+                    if (await Verdicts.ConfirmCompletionAsync(ct).ConfigureAwait(false)) { Verdicts.CompletePlan(track); return 0; }
                     continue; // gates red on a "done" tracker â€” a fix session is now queued
                 }
 
@@ -219,7 +226,7 @@ public sealed partial class Orchestrator(PlanConfig plan, RunState state, string
                     : SelectStage(track);
                 if (stage == null)
                 {
-                    NeedsHuman("no runnable stage left (remaining stages are skipped) â€” review skipped stages");
+                    Verdicts.NeedsHuman("no runnable stage left (remaining stages are skipped) â€” review skipped stages");
                     continue;
                 }
                 if (stage.Id != state.CurrentStage)
@@ -241,14 +248,14 @@ public sealed partial class Orchestrator(PlanConfig plan, RunState state, string
                 if (stage.PreHook is { } preHook
                     && !state.PreHookRunStages.Contains(stage.Id))
                 {
-                    await RunStageHookAsync(stage.Id, "pre-hook", preHook, ct).ConfigureAwait(false);
+                    await Verdicts.RunStageHookAsync(stage.Id, "pre-hook", preHook, ct).ConfigureAwait(false);
                     Save();
                     if (state.Status == RunStatus.NeedsHuman) continue;
                 }
 
                 if (HandoffWantsHuman(track))
                 {
-                    NeedsHuman("agent asked for a human in the tracker handoff (HUMAN: line) â€” resolve, then run `conductor resume`");
+                    Verdicts.NeedsHuman("agent asked for a human in the tracker handoff (HUMAN: line) â€” resolve, then run `conductor resume`");
                     continue;
                 }
 
@@ -262,7 +269,7 @@ public sealed partial class Orchestrator(PlanConfig plan, RunState state, string
                         sink.Log($"--- DRY RUN: stage {stage.Id} checkpoints all DONE â€” would schedule the audit / full-battery phase gate next (nothing executed) ---");
                         return 0;
                     }
-                    ScheduleGateOrAudit(stage.Id, state.CurrentStageStartHead ?? Git.Head(plan.Repo));
+                    Verdicts.ScheduleGateOrAudit(stage.Id, state.CurrentStageStartHead ?? Git.Head(plan.Repo));
                     Save();
                     continue;
                 }
@@ -270,7 +277,7 @@ public sealed partial class Orchestrator(PlanConfig plan, RunState state, string
                 var maxAttempts = MaxAttempts(stage);
                 if (state.AttemptsThisStage >= maxAttempts && state.PendingAudit == null)
                 {
-                    if (!await EscalateExhaustedStageAsync(stage, track, maxAttempts).ConfigureAwait(false)) continue; // paused/skip handled inside
+                    if (!await Verdicts.EscalateExhaustedStageAsync(stage, track, maxAttempts).ConfigureAwait(false)) continue; // paused/skip handled inside
                 }
 
                 if (opts.MaxSessions > 0 && sessionsThisRun >= opts.MaxSessions)
@@ -377,7 +384,7 @@ public sealed partial class Orchestrator(PlanConfig plan, RunState state, string
 
                 if (Dispatcher.ConsumePendingSkip())
                 {
-                    SkipStage(stage, "skipped by user control");
+                    Verdicts.SkipStage(stage, "skipped by user control");
                 }
                 if (Dispatcher.ConsumePausePending())
                 {
@@ -408,7 +415,7 @@ public sealed partial class Orchestrator(PlanConfig plan, RunState state, string
             {
                 last.EndedUtc = DateTime.UtcNow;
                 last.Outcome = SessionOutcome.Interrupted;
-                QueueResume(last, "conductor cancelled mid-session");
+                Verdicts.QueueResume(last, "conductor cancelled mid-session");
             }
             Log("state saved; run `conductor run` again to resume");
             Save();
