@@ -1,8 +1,8 @@
 ﻿# Conductor — Maestro run report
 
-_Updated 2026-07-12 01:02 UTC · branch `feat/foreman` · HEAD `15771e4`_
+_Updated 2026-07-12 01:02 UTC · branch `feat/foreman` · HEAD `c5a75d0`_
 
-**Status:** Running
+**Status:** NeedsHuman — agent asked for a human in the tracker handoff (HUMAN: line) â€” resolve, then run `conductor resume`
 **Stage:** M1 — Deconstruction — delete the old face, break the god classes · attempts used 2 · working ▸ M1.3
 **Checkpoints:** 2/30 done · **Sessions run:** 6 · **Cost:** $0.1716 (agent $0.1602 + gates $0.0114) · **Tokens:** 211,716 in / 28,200 out / 20,500 think
 
@@ -129,8 +129,6 @@ _Updated 2026-07-12 01:02 UTC · branch `feat/foreman` · HEAD `15771e4`_
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-11 02:43:38  ▸ stage F5 entered — Control plane — HTTP+SSE on localhost
-07-11 02:43:38  • session #30 F5 Resume started (attempt 1/2) · persona architect
 07-11 02:43:48  • session #30 F5 → Interrupted  (9.4s)
 07-11 02:46:31  ◆ run resumed · Foreman
 07-11 02:46:31  • session #31 F5 Resume started (attempt 1/2) · persona architect
@@ -169,6 +167,8 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-12 01:43:59  ▪ gate ratchet FAIL [session]  (1.8s)
 07-12 01:44:03  • session #5 M1 → GatesRed  (1m33s)
 07-12 01:44:03  • session #6 M1 Fix started (attempt 3/8)
+07-12 02:02:24  • session #6 M1 → RolledOver  (18m21s)
+07-12 02:02:24  ■ needs human — agent asked for a human in the tracker handoff (HUMAN: line) â€” resolve, then run `conductor resume`
 ```
 
 ## Health
