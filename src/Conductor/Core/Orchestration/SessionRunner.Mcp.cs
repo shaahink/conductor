@@ -1,17 +1,18 @@
 using System.Text.Json;
 using Conductor.Core.Events;
+using Conductor.Core.Lanes;
 using Conductor.Models;
 
-namespace Conductor.Core;
+namespace Conductor.Core.Orchestration;
 
-#pragma warning disable MA0045 // Session helper methods use sync file I/O by design — fast local writes, not hot-path
-public sealed partial class Orchestrator
+#pragma warning disable MA0045 // sync file I/O by design — fast local writes, not hot-path
+public sealed partial class SessionRunner
 {
-    // ---------------------------------------------------------------- B9.4: soft-break + MCP journal
+    // ── soft-break + MCP wiring ──
 
     private void CheckSoftBreak(AgentSession agent, TrackerSnapshot preTrack)
     {
-        if (_softBreakSignalled) return;
+        if (_ctx.SoftBreakSignalled) return;
         var threshold = ComputeSoftThreshold();
         if (threshold is not { } thresh) return;
 
@@ -19,33 +20,33 @@ public sealed partial class Orchestrator
             + (agent.TokensReasoning ?? 0) + (agent.TokensCacheRead ?? 0);
         if (liveTokens < thresh) return;
 
-        _softBreakSignalled = true;
+        _ctx.SoftBreakSignalled = true;
         var activeCp = preTrack.Checkpoints.FirstOrDefault(c => !c.IsDone)?.Id;
-        var maxTokens = plan.Limits.MaxSessionTokens!.Value;
-        var signalFile = Path.Combine(plan.StateDir, "soft-break");
+        var maxTokens = _ctx.Plan.Limits.MaxSessionTokens!.Value;
+        var signalFile = Path.Combine(_ctx.Plan.StateDir, "soft-break");
         File.WriteAllText(signalFile, $"finish-subtask-and-handoff:{DateTime.UtcNow:o}");
 
-        events.Emit(new SoftBreakRequested
+        _ctx.Events.Emit(new SoftBreakRequested
         {
             LiveTokens = liveTokens,
             TokenBudget = maxTokens,
             CurrentCheckpointId = activeCp,
         });
-        Log($"soft-break: {liveTokens / 1000.0:0.#}k tokens ≥ {thresh / 1000.0:0.#}k threshold — nudge written, session should hand off cleanly");
-        sink.Log($"[soft-break] {liveTokens / 1000.0:0.#}k/{maxTokens / 1000.0:0.#}k tokens — agent has been nudged to hand off");
+        _ctx.Log($"soft-break: {liveTokens / 1000.0:0.#}k tokens >= {thresh / 1000.0:0.#}k threshold — nudge written, session should hand off cleanly");
+        _ctx.Sink.Log($"[soft-break] {liveTokens / 1000.0:0.#}k/{maxTokens / 1000.0:0.#}k tokens — agent has been nudged to hand off");
     }
 
     private long? ComputeSoftThreshold()
     {
-        if (plan.Limits.MaxSessionTokens is not { } max) return null;
-        var ratio = plan.Limits.SoftBreakRatio is { } r and > 0 and <= 1.0
+        if (_ctx.Plan.Limits.MaxSessionTokens is not { } max) return null;
+        var ratio = _ctx.Plan.Limits.SoftBreakRatio is { } r and > 0 and <= 1.0
             ? r : 0.8;
         return (long)(max * ratio);
     }
 
     private void CleanSoftBreakSignal()
     {
-        var signalFile = Path.Combine(plan.StateDir, "soft-break");
+        var signalFile = Path.Combine(_ctx.Plan.StateDir, "soft-break");
         try { if (File.Exists(signalFile)) File.Delete(signalFile); }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
@@ -59,11 +60,11 @@ public sealed partial class Orchestrator
             if (string.IsNullOrEmpty(conductorExe) || !File.Exists(conductorExe))
                 return null;
 
-            var eventsPath = Path.Combine(plan.StateDir, "events.jsonl");
-            var journalPath = Path.Combine(plan.StateDir, "mcp-journal.jsonl");
-            var runId = state.RunId;
-            var stateDir = plan.StateDir;
-            var repoPath = plan.Repo;
+            var eventsPath = Path.Combine(_ctx.Plan.StateDir, "events.jsonl");
+            var journalPath = Path.Combine(_ctx.Plan.StateDir, "mcp-journal.jsonl");
+            var runId = _ctx.State.RunId;
+            var stateDir = _ctx.Plan.StateDir;
+            var repoPath = _ctx.Plan.Repo;
 
             var commandArgs = new List<string>
             {
@@ -88,14 +89,14 @@ public sealed partial class Orchestrator
                 }
             };
 
-            var configPath = Path.Combine(plan.StateDir, "mcp-config.json");
+            var configPath = Path.Combine(_ctx.Plan.StateDir, "mcp-config.json");
             var json = JsonSerializer.Serialize(mcpConfig, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(configPath, json);
             return configPath;
         }
         catch (Exception ex)
         {
-            Log($"I1: failed to write MCP config: {ex.Message}");
+            _ctx.Log($"I1: failed to write MCP config: {ex.Message}");
             return null;
         }
     }
@@ -110,33 +111,33 @@ public sealed partial class Orchestrator
 
     private void FoldMcpJournal()
     {
-        var journalPath = Path.Combine(plan.StateDir, "mcp-journal.jsonl");
+        var journalPath = Path.Combine(_ctx.Plan.StateDir, "mcp-journal.jsonl");
         if (!File.Exists(journalPath)) return;
         try
         {
             var journalEvents = EventLog.ReadAll(journalPath);
             if (journalEvents.Count == 0) return;
             foreach (var evt in journalEvents)
-                events.Emit(evt);
+                _ctx.Events.Emit(evt);
             File.Delete(journalPath);
-            Log($"MCP journal folded: {journalEvents.Count} event(s) merged into event log");
+            _ctx.Log($"MCP journal folded: {journalEvents.Count} event(s) merged into event log");
         }
         catch (Exception ex)
         {
-            Log($"MCP journal fold failed: {ex.Message}");
+            _ctx.Log($"MCP journal fold failed: {ex.Message}");
         }
     }
 
     private string? BuildRolloverResumeHint(TrackerSnapshot preTrack)
     {
-        var eventsPath = Path.Combine(plan.StateDir, "events.jsonl");
+        var eventsPath = Path.Combine(_ctx.Plan.StateDir, "events.jsonl");
         if (!File.Exists(eventsPath)) return null;
         try
         {
             var allEvents = EventLog.ReadAll(eventsPath);
             var taskGraph = new TaskGraph();
             taskGraph.Fold(allEvents);
-            var activeCp = preTrack.ForStage(state.CurrentStage ?? "")
+            var activeCp = preTrack.ForStage(_ctx.State.CurrentStage ?? "")
                 .FirstOrDefault(c => !c.IsDone);
             if (activeCp == null) return null;
             var next = taskGraph.CurrentTask(activeCp.Id);
@@ -146,7 +147,7 @@ public sealed partial class Orchestrator
         }
         catch (Exception ex)
         {
-            Log($"task-graph resume hint failed: {ex.Message}");
+            _ctx.Log($"task-graph resume hint failed: {ex.Message}");
             return null;
         }
     }

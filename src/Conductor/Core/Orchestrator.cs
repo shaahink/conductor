@@ -45,6 +45,22 @@ public sealed partial class Orchestrator(PlanConfig plan, RunState state, string
     // F7: gate execution and persistence extracted from the Orchestrator god-class.
     private GateOrchestrator? _gateInstance;
     private GateOrchestrator Gates => _gateInstance ??= new GateOrchestrator(plan, state, events, _runDb);
+    // M1.3: shared mutable state context — eliminates 25 individual fields, satellites share one reference
+    private RunContext? _ctx;
+    private RunContext Ctx => _ctx ??= new RunContext(
+        plan, state, opts, sink, events, _prompts, _lessons, _planner, _progress,
+        _agentProvider, _runDb, processSupervisor, transcript, _controlInbox, telegram, webhooks, logger);
+    // M1.3: session lifecycle extracted from Orchestrator partials — spawn/stream/stall/MCP
+    private SessionRunner? _sessions;
+    private SessionRunner Sessions => _sessions ??= new SessionRunner(
+        Ctx, Lanes,
+        handleControl: ct => HandleControlAsync(inSession: true, ct: ct),
+        pushSessionSnapshot: (a, r, s, at, m, t) => PushSessionSnapshot(a, r, s, at, m, t),
+        saveAndReport: SaveAndReport,
+        evaluateSession: EvaluateSessionAsync,
+        queueResume: QueueResume,
+        needsHuman: NeedsHuman,
+        reflectionStep: ReflectionStep);
     // F5: commands posted to the HTTP control plane land here â€” a third ingress alongside the TUI
     // queue (sink.PollControl) and control.json (ReadControlFileAsync), same dispatcher for all three.
     private readonly ConcurrentQueue<ControlCommand>? _controlInbox = controlInbox;
@@ -60,7 +76,6 @@ public sealed partial class Orchestrator(PlanConfig plan, RunState state, string
     private int _preflightConsecutiveFailures;
     private readonly List<(string Kind, string Text, DateTime Utc)> _activity = new();
     private readonly HashSet<string> _decomposedCheckpoints = new(StringComparer.Ordinal);
-    private bool _softBreakSignalled;
 
     // Correlation state attached to every structured log line (B2.5): runId + stage + session number
     // come from RunState; the gate marker is set while a battery runs.
@@ -71,9 +86,6 @@ public sealed partial class Orchestrator(PlanConfig plan, RunState state, string
     private long _runTokens;
     private decimal _runOverheadUsd; // O3: gate runtime estimate accumulator
     private readonly RunDb? _runDb = runDb; // F1: SQLite task store (null in dry-runs)
-    // F3.1: cached bg liveness to avoid querying the OS process table on every 400ms tick
-    private DateTime? _lastBgLivenessCheck;
-    private bool _cachedBgAlive;
 
     // ---------------------------------------------------------------- main loop
 
@@ -348,7 +360,7 @@ public sealed partial class Orchestrator(PlanConfig plan, RunState state, string
                     }
                 }
 
-                await RunSessionAsync(stage, track, ct).ConfigureAwait(false);
+                await Sessions.RunAsync(stage, track, ct).ConfigureAwait(false);
                 sessionsThisRun++;
                 var rec = state.History[^1];
 

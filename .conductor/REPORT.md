@@ -1,6 +1,6 @@
 ﻿# Conductor — Maestro run report
 
-_Updated 2026-07-12 01:02 UTC · branch `feat/foreman` · HEAD `c5a75d0`_
+_Updated 2026-07-12 01:11 UTC · branch `feat/foreman` · HEAD `3af18c7`_
 
 **Status:** NeedsHuman — agent asked for a human in the tracker handoff (HUMAN: line) â€” resolve, then run `conductor resume`
 **Stage:** M1 — Deconstruction — delete the old face, break the god classes · attempts used 2 · working ▸ M1.3
