@@ -63,6 +63,7 @@ public interface IRunStore : IDisposable
     // ---------------------------------------------------------------- checkpoints
 
     void MarkCheckpointInProgress(string runId, string checkpointId);
+    void ConfirmCheckpoints(string runId, IEnumerable<string> checkpointIds);
     IReadOnlyList<CheckpointRow> GetCheckpoints(string runId);
     void SeedCheckpoints(string runId,
         IEnumerable<(string Id, string StageId, string Title, string Status, string Commit, string Evidence)> checkpoints);

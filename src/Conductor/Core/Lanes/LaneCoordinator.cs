@@ -44,16 +44,14 @@ public sealed class LaneCoordinator
         var sha = audit.StageStartHead;
         if (string.IsNullOrEmpty(sha)) sha = Git.Head(_plan.Repo);
 
-        // M3.3: check path-claim collisions before spawning the audit lane
+        // M3.3: atomic path-claim check+register for collision avoidance
         var stage = _plan.Stages.FirstOrDefault(s => s.Id == stageId);
         var pathClaims = stage?.PathClaims ?? [];
-        if (pathClaims.Count > 0 && _pathClaims.HasConflict(pathClaims))
+        if (pathClaims.Count > 0 && !_pathClaims.TryClaim(stageId, pathClaims))
         {
             _log($"parallel audit for {stageId}: deferred — path claims conflict with a running lane");
             return; // audit will be retried next loop iteration
         }
-        if (pathClaims.Count > 0)
-            _pathClaims.TryClaim(stageId, pathClaims);
 
         _log($"parallel audit: launching read-only audit for stage {stageId} at {Short(sha)}");
         var prompt = BuildParallelAuditPrompt(stageId, sha);

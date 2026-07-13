@@ -11,7 +11,8 @@ public sealed record CheckpointRow(
     string Title,
     string Status,
     string Commit,
-    string Evidence
+    string Evidence,
+    bool Confirmed = false
 );
 
 /// <summary>BLOB stored in run_state table — serialised RunState JSON.</summary>

@@ -36,8 +36,10 @@ public sealed partial class VerdictEngine
 
         if (next.Kind == SessionKind.Verify && (stage.Overrides?.SkipVerification == true || _ctx.State.SkipVerificationThisStage))
         {
-            _ctx.Log($"workflow override: skipping verification step for stage {stage.Id}");
-            AdvanceWorkflowStep(stage, rec, gatesGreen, verifierScore, verifierPassed, circuitBroken, stageComplete);
+            _ctx.Log($"workflow override: skipping verification step for stage {stage.Id} — treating as passed");
+            // M4.1: confirm checkpoints immediately when verification is skipped
+            ConfirmPendingCheckpoints(stage.Id);
+            AdvanceWorkflowStep(stage, rec, gatesGreen, verifierScore, verifierPassed: true, circuitBroken, stageComplete);
             return;
         }
 

@@ -28,6 +28,9 @@ public sealed class RunState
     public PendingResume? PendingResume { get; set; }
     public PendingPhaseGate? PendingPhaseGate { get; set; }
     public PendingAudit? PendingAudit { get; set; }
+    /// <summary>M4.1: checkpoint ids claimed by the last deliver session, awaiting engine confirmation
+    /// after green gates + verifier pass. Cleared once confirmed or on retry.</summary>
+    public List<string> PendingConfirmation { get; set; } = new();
     /// <summary>P2: when a stage is confirmed and the audit will run in parallel with the next
     /// stage's deliver. Cleared when the audit completes.</summary>
     public PendingParallelAudit? PendingParallelAudit { get; set; }

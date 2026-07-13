@@ -4,12 +4,12 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: M3 DELIVERED (3/3 checkpoints DONE). WorkflowEngine replaces hardcoded Deliver→Verify→Fix with declarative steps. 4 built-in workflows: deliver-verify, big-dev-then-big-audit, docs-only, spike. Per-stage overrides (skipGates, skipVerification, skipCommit, model). PathClaimTracker with collision avoidance for parallel lanes. 16 new tests pass.
-stage: M3 COMPLETE. 12/30 checkpoints DONE.
-commits: (pending — this session deliverable).
-gate: build 0w/0e · 614/614 tests pass (0w/0e).
+last: M4 DELIVERED (3/3 checkpoints DONE). Claims vs confirmations: agent marks via conductor task --done (status=DONE, confirmed=0), engine confirms after green gates + verifier pass (confirmed=1). TrackerGenerator shows DONE ✓ for confirmed. Hand-edits detected, warned to ledger, discarded. Gate cache by (name, tier, sha) proven with tests. Verifier findings → retry prompt proven with tests. 17 new tests. Fixed 2 M3 bugs (skip-verify recursion, PathClaimTracker TOCTOU).
+stage: M4 COMPLETE. 15/30 checkpoints DONE.
+commits: (pending commit for this session: M4 delivery + M3 bug fixes + schema v6).
+gate: build 0w/0e · 631/631 tests pass (0w/0e).
 branch: feat/foreman.
-next: M4 — Gates that cannot be escaped (claims vs confirmations).
+next: M5 — Observability: timeline, live plan, native console, ticker, prompt preview, conductor status.
 
 
 ## Baseline numbers (from run.db)
@@ -17,7 +17,7 @@ next: M4 — Gates that cannot be escaped (claims vs confirmations).
 | Metric | Value |
 |---|---|
 | Total checkpoints | 30 |
-| Done | 12 |
+| Done | 15 |
 
 ## Checkpoints
 
@@ -55,9 +55,9 @@ phase (a code path is not evidence).
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| M4.1 | Claims vs confirmations: agent claims, engine confirms; tracker hand-edits discarded | TODO | - | - |
-| M4.2 | Truth-gate tier per stage + gate caching by (gate, sha, tier) that demonstrably hits | TODO | - | - |
-| M4.3 | Verifier findings become the retry prompt; rigged-bad fails, rigged-good is not blocked | TODO | - | - |
+| M4.1 | Claims vs confirmations: agent claims, engine confirms; tracker hand-edits discarded | DONE | [next] | ConfirmationEngine via PendingConfirmation → ConfirmCheckpoints. TrackerGenerator shows DONE ✓ for confirmed. Hand-edits detected (tracker vs DB cross-ref), warned to ledger, discarded from NewlyDone. 5 tests pass. |
+| M4.2 | Truth-gate tier per stage + gate caching by (gate, sha, tier) that demonstrably hits | DONE | [next] | GetLastPassingGateResult tests: null (no cache), true (passing record), false (failed record), different SHA/tier miss. GateConfig truth tier exclusion from fast-only proven. 6 tests pass. |
+| M4.3 | Verifier findings become the retry prompt; rigged-bad fails, rigged-good is not blocked | DONE | [next] | Verifier.Parse tests: bad delivery scores <80 (findings in output), good delivery passes ≥80, malformed output → null. PendingFix carries VerifierFindings. WorkflowEngine skip-verify treats as passed (no fix queued). 6 tests pass. |
 
 ### M5 — Observability — timeline, live plan, the native console, compiled prompts
 

@@ -36,6 +36,17 @@ public sealed partial class VerdictEngine
         _pushIdleSnapshot = pushIdleSnapshot;
     }
 
+    // ── M4.1: claims vs confirmations ──
+
+    private void ConfirmPendingCheckpoints(string stageId)
+    {
+        if (_ctx.State.PendingConfirmation.Count == 0) return;
+        var ids = _ctx.State.PendingConfirmation.ToArray();
+        _ctx.Store?.ConfirmCheckpoints(_ctx.State.RunId, ids);
+        _ctx.Log($"confirmed {ids.Length} checkpoint(s) for stage {stageId}: [{string.Join(", ", ids)}]");
+        _ctx.State.PendingConfirmation.Clear();
+    }
+
     // ── static helpers ──
 
     private static string Trunc(string s, int max) => s.Length <= max ? s : s[..max] + "\u2026";
@@ -191,6 +202,9 @@ public sealed partial class VerdictEngine
                         WriteVerifierFollowups(stage.Id, verdict);
                     _ctx.Log($"verifier passed ({verdict.Score}/{_ctx.Plan.Limits.VerifierThreshold}) — {(verdict.Findings.Count > 0 ? $"{verdict.Findings.Count} finding(s) tracked as follow-ups" : "no findings")}");
 
+                    // M4.1: confirm checkpoints claimed by the preceding deliver session
+                    ConfirmPendingCheckpoints(stage.Id);
+
                     // M3.1: workflow-driven next step
                     AdvanceWorkflowStep(stage, rec, gatesGreen: true, verifierScore: verdict.Score,
                         verifierPassed: true, circuitBroken: false);
@@ -275,6 +289,25 @@ public sealed partial class VerdictEngine
         rec.NewlyDone = postTrack.Checkpoints
             .Where(c => c.IsDone && !(preTrack.ById(c.Id)?.IsDone ?? false))
             .Select(c => c.Id).ToList();
+
+        // M4.1: detect hand-edits — checkpoints marked DONE in tracker but not in DB
+        var dbCheckpoints = _ctx.Store?.GetCheckpoints(_ctx.State.RunId);
+        if (dbCheckpoints is { Count: > 0 } && rec.NewlyDone.Count > 0)
+        {
+            var dbDoneIds = new HashSet<string>(dbCheckpoints
+                .Where(c => c.Status.StartsWith("DONE", StringComparison.OrdinalIgnoreCase))
+                .Select(c => c.Id), StringComparer.OrdinalIgnoreCase);
+            var handEdits = rec.NewlyDone.Where(id => !dbDoneIds.Contains(id)).ToList();
+            if (handEdits.Count > 0)
+            {
+                _ctx.Log($"WARNING: {handEdits.Count} checkpoint(s) marked DONE via direct tracker edit (not via conductor task --done): [{string.Join(", ", handEdits)}] — discarded", "warn");
+                _ctx.Store?.WriteLedger(_ctx.State.RunId, rec.Number, stage.Id, "hand-edit",
+                    $"Agent directly edited TRACKER.md to mark checkpoints DONE: [{string.Join(", ", handEdits)}]. Use 'conductor task --done' instead. These claims are discarded.");
+                // M4.1: discard hand-edits — only DB-backed claims count
+                rec.NewlyDone = rec.NewlyDone.Except(handEdits, StringComparer.OrdinalIgnoreCase).ToList();
+            }
+        }
+
         var newlyBlocked = postTrack.Checkpoints
             .Where(c => c.IsBlocked && !(preTrack.ById(c.Id)?.IsBlocked ?? false))
             .Select(c => c.Id).ToList();
@@ -297,6 +330,10 @@ public sealed partial class VerdictEngine
             _ctx.State.PendingFix = null;
             rec.Outcome = rec.NewlyDone.Count > 0 ? SessionOutcome.Advanced : SessionOutcome.Progress;
             if (dirty) _ctx.Log($"note: working tree left dirty after green session: {Git.DirtySummary(_ctx.Plan.Repo)}");
+
+            // M4.1: queue checkpoints for confirmation after verifier passes (or skip)
+            if (rec.NewlyDone.Count > 0)
+                _ctx.State.PendingConfirmation = [..rec.NewlyDone];
 
             var stageComplete = postTrack.StageDone(stage.Id);
             AdvanceWorkflowStep(stage, rec, gatesGreen: true, verifierScore: null,

@@ -190,7 +190,7 @@ public sealed partial class SqliteRunStore
     public IReadOnlyList<CheckpointRow> GetCheckpoints(string runId)
     {
         var rows = Query(
-            "SELECT id, stage_id, title, status, \"commit\", evidence FROM checkpoints " +
+            "SELECT id, stage_id, title, status, \"commit\", evidence, confirmed FROM checkpoints " +
             "WHERE run_id = @runId ORDER BY stage_id, id",
             ("@runId", runId));
         return rows.Select(r => new CheckpointRow(
@@ -199,7 +199,8 @@ public sealed partial class SqliteRunStore
             Title: (string)r["title"]!,
             Status: (string)r["status"]!,
             Commit: (string)(r["commit"] ?? "-")!,
-            Evidence: (string)(r["evidence"] ?? "-")!
+            Evidence: (string)(r["evidence"] ?? "-")!,
+            Confirmed: r["confirmed"] is long l && l == 1
         )).ToList();
     }
 
@@ -224,5 +225,15 @@ public sealed partial class SqliteRunStore
             "WHERE id = @id AND run_id = @runId",
             ("@runId", runId), ("@id", checkpointId),
             ("@status", status), ("@commit", commit), ("@evidence", evidence));
+    }
+
+    public void ConfirmCheckpoints(string runId, IEnumerable<string> checkpointIds)
+    {
+        foreach (var id in checkpointIds)
+        {
+            TryExecute(
+                "UPDATE checkpoints SET confirmed = 1 WHERE id = @id AND run_id = @runId",
+                ("@runId", runId), ("@id", id));
+        }
     }
 }

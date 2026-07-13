@@ -48,19 +48,22 @@ public static class TrackerGenerator
         sb.AppendLine();
 
         // Baseline numbers — from DB (source of truth)
-        var done = checkpoints.Count(c => c.Status.StartsWith("DONE", StringComparison.OrdinalIgnoreCase));
+        var done = checkpoints.Count(c => c.Confirmed);
+        var claimed = checkpoints.Count(c => c.Status.StartsWith("DONE", StringComparison.OrdinalIgnoreCase) && !c.Confirmed);
         sb.AppendLine("## Baseline numbers (from run.db)");
         sb.AppendLine();
         sb.AppendLine("| Metric | Value |");
         sb.AppendLine("|---|---|");
         sb.AppendLine($"| Total checkpoints | {checkpoints.Count} |");
         sb.AppendLine($"| Done | {done} |");
+        if (claimed > 0)
+            sb.AppendLine($"| Claimed (unconfirmed) | {claimed} |");
         sb.AppendLine();
 
         sb.AppendLine("## Checkpoints");
         sb.AppendLine();
-        sb.AppendLine("Status ∈ TODO · IN PROGRESS · DONE · BLOCKED. Evidence = artifact path produced by a run this" +
-                       "\nphase (a code path is not evidence).");
+        sb.AppendLine("Status ∈ TODO · IN PROGRESS · DONE · DONE ✓ (confirmed) · BLOCKED. Evidence = artifact path produced by a run this" +
+                       "\nphase (a code path is not evidence). Agent claims are marked DONE; engine confirms as DONE ✓.");
         sb.AppendLine();
 
         if (checkpoints.Count == 0)
@@ -96,7 +99,7 @@ public static class TrackerGenerator
                 {
                     foreach (var cp in stageCheckpoints)
                     {
-                        var statusLabel = StatusLabel(cp.Status);
+                        var statusLabel = StatusLabel(cp.Status, cp.Confirmed);
                         sb.AppendLine($"| {cp.Id} | {cp.Title} | {statusLabel} | {cp.Commit} | {cp.Evidence} |");
                     }
                 }
@@ -113,7 +116,7 @@ public static class TrackerGenerator
                 sb.AppendLine("|---|-----------|--------|--------|----------|");
                 foreach (var cp in stageCheckpoints)
                 {
-                    var statusLabel = StatusLabel(cp.Status);
+                    var statusLabel = StatusLabel(cp.Status, cp.Confirmed);
                     sb.AppendLine($"| {cp.Id} | {cp.Title} | {statusLabel} | {cp.Commit} | {cp.Evidence} |");
                 }
                 sb.AppendLine();
@@ -151,8 +154,9 @@ public static class TrackerGenerator
         File.WriteAllText(plan.TrackerPath, content, Utf8Bom);
     }
 
-    private static string StatusLabel(string status) => (status ?? "").ToUpperInvariant() switch
+    private static string StatusLabel(string status, bool confirmed = false) => (status ?? "").ToUpperInvariant() switch
     {
+        "DONE" when confirmed => "DONE ✓",
         "DONE" => "DONE",
         "IN PROGRESS" => "IN PROGRESS",
         "BLOCKED" => "BLOCKED",
