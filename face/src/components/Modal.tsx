@@ -11,21 +11,27 @@ export interface ModalProps {
 }
 
 /** Shared overlay chrome for every modal (palette/inject/prompt editor/session history/report/
- * help) — consistent framing so the app reads as one system rather than five bolted-on popups. */
+ * help) — consistent framing so the app reads as one system rather than five bolted-on popups.
+ * FU-OWNER-3: added opaque backdrop so modals don't render merged with the panel behind them. */
 export function Modal({ title, width, height, children, footer }: ModalProps) {
   return (
-    <Box position="absolute" flexDirection="column" width={width} height={height} borderStyle="double" borderColor={colors.accent} padding={1}>
-      <Text bold color={colors.accent}>
-        {title}
-      </Text>
-      <Box flexDirection="column" flexGrow={1} marginTop={1}>
-        {children}
+    <Box position="absolute" flexDirection="column" width={width} height={height}>
+      <Box position="absolute" width={width} height={height}>
+        <Text>{" ".repeat((width - 2) * (height - 2))}</Text>
       </Box>
-      {footer && (
-        <Box marginTop={1}>
-          <Text color={colors.dim}>{footer}</Text>
+      <Box flexDirection="column" borderStyle="double" borderColor={colors.accent} padding={1}>
+        <Text bold color={colors.accent}>
+          {title}
+        </Text>
+        <Box flexDirection="column" flexGrow={1} marginTop={1}>
+          {children}
         </Box>
-      )}
+        {footer && (
+          <Box marginTop={1}>
+            <Text color={colors.dim}>{footer}</Text>
+          </Box>
+        )}
+      </Box>
     </Box>
   );
 }

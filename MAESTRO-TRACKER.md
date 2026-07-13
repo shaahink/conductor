@@ -4,12 +4,12 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: M4 DELIVERED (3/3 checkpoints DONE). Claims vs confirmations: agent marks via conductor task --done (status=DONE, confirmed=0), engine confirms after green gates + verifier pass (confirmed=1). TrackerGenerator shows DONE ✓ for confirmed. Hand-edits detected, warned to ledger, discarded. Gate cache by (name, tier, sha) proven with tests. Verifier findings → retry prompt proven with tests. 17 new tests. Fixed 2 M3 bugs (skip-verify recursion, PathClaimTracker TOCTOU).
-stage: M4 COMPLETE. 15/30 checkpoints DONE.
-commits: (pending commit for this session: M4 delivery + M3 bug fixes + schema v6).
-gate: build 0w/0e · 631/631 tests pass (0w/0e).
+last: M5 delivery session — FU-OWNER bugs 1-3,6,7 fixed (Face: modal backdrop, toast timeout, footer readability, ticker layout, flicker via effect deps). M5.5 prompt preview endpoint (GET /prompt/preview) + M5.1 timeline endpoint (GET /timeline) landed with DTOs. 3 files split (ControlPlaneDto.Prompt/Timeline) to keep architecture ceiling.
+stage: M5 IN PROGRESS — 2/6 checkpoints started, 5/9 FU-OWNER bugs fixed. 15/30 DONE.
+commits: (pending)
+gate: build 0w/0e · 631/631 dotnet tests pass · face/ 23/23 pass.
 branch: feat/foreman.
-next: M5 — Observability: timeline, live plan, native console, ticker, prompt preview, conductor status.
+next: continue M5 — M5.2 (live plan enhancements), M5.3 (native console SSE), M5.4 (live ticker streaming), M5.6 (conductor status DB path). Remaining FU-OWNER: 4 (agent reasoning visibility → M5.3), 5 (panel density), 8 (click crash), 9 (self-PID guard in prompt).
 
 
 ## Baseline numbers (from run.db)
@@ -47,27 +47,27 @@ phase (a code path is not evidence).
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| M3.1 | Declarative workflow steps + 4 built-ins (deliver-verify, big-dev-then-big-audit, docs-only, spike) | DONE | [next] | WorkflowEngine.cs (232L) — 4 built-in workflows, condition evaluation, step resolution. SessionRunner.ResolveSessionKind + VerdictEngine.AdvanceWorkflowStep replace hardcoded state machine. 10 workflow tests pass. |
-| M3.2 | Per-stage/per-session overrides from plan AND TUI (drop QA, change model, skip gates/commit) | DONE | [next] | WorkflowOverrides model, StageConfig.Overrides + PathClaims fields, RunState.SkipGatesThisStage/SkipCommitThisStage/SkipVerificationThisStage. ApplyStageOverrides in RunLoop.Plumbing.cs. WorkflowEngine skips verification step when override is active. |
-| M3.3 | Safe parallelism with path-claim collision avoidance | DONE | [next] | PathClaimTracker.cs (65L) — concurrent path-claim registration/release with normalization. LaneCoordinator.StartParallelAudit checks for conflicts before spawning audit lane. Claims released on lane completion. 5 path-claim tests pass. |
+| M3.1 | Declarative workflow steps + 4 built-ins (deliver-verify, big-dev-then-big-audit, docs-only, spike) | DONE | 18e0711 | WorkflowEngine.cs (232L) — 4 built-in workflows, condition evaluation, step resolution. SessionRunner.ResolveSessionKind + VerdictEngine.AdvanceWorkflowStep replace hardcoded state machine. 10 workflow tests pass. |
+| M3.2 | Per-stage/per-session overrides from plan AND TUI (drop QA, change model, skip gates/commit) | DONE | 18e0711 | WorkflowOverrides model, StageConfig.Overrides + PathClaims fields, RunState.SkipGatesThisStage/SkipCommitThisStage/SkipVerificationThisStage. ApplyStageOverrides in RunLoop.Plumbing.cs. WorkflowEngine skips verification step when override is active. |
+| M3.3 | Safe parallelism with path-claim collision avoidance | DONE | 18e0711 | PathClaimTracker.cs (65L) — concurrent path-claim registration/release with normalization. LaneCoordinator.StartParallelAudit checks for conflicts before spawning audit lane. Claims released on lane completion. 5 path-claim tests pass. |
 
 ### M4 — Gates that cannot be escaped — claims vs confirmations
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| M4.1 | Claims vs confirmations: agent claims, engine confirms; tracker hand-edits discarded | DONE | [next] | ConfirmationEngine via PendingConfirmation → ConfirmCheckpoints. TrackerGenerator shows DONE ✓ for confirmed. Hand-edits detected (tracker vs DB cross-ref), warned to ledger, discarded from NewlyDone. 5 tests pass. |
-| M4.2 | Truth-gate tier per stage + gate caching by (gate, sha, tier) that demonstrably hits | DONE | [next] | GetLastPassingGateResult tests: null (no cache), true (passing record), false (failed record), different SHA/tier miss. GateConfig truth tier exclusion from fast-only proven. 6 tests pass. |
-| M4.3 | Verifier findings become the retry prompt; rigged-bad fails, rigged-good is not blocked | DONE | [next] | Verifier.Parse tests: bad delivery scores <80 (findings in output), good delivery passes ≥80, malformed output → null. PendingFix carries VerifierFindings. WorkflowEngine skip-verify treats as passed (no fix queued). 6 tests pass. |
+| M4.1 | Claims vs confirmations: agent claims, engine confirms; tracker hand-edits discarded | DONE | 7d289e1 | ConfirmationEngine via PendingConfirmation → ConfirmCheckpoints. TrackerGenerator shows DONE ✓ for confirmed. Hand-edits detected (tracker vs DB cross-ref), warned to ledger, discarded from NewlyDone. 5 tests pass. |
+| M4.2 | Truth-gate tier per stage + gate caching by (gate, sha, tier) that demonstrably hits | DONE | 7d289e1 | GetLastPassingGateResult tests: null (no cache), true (passing record), false (failed record), different SHA/tier miss. GateConfig truth tier exclusion from fast-only proven. 6 tests pass. |
+| M4.3 | Verifier findings become the retry prompt; rigged-bad fails, rigged-good is not blocked | DONE | 7d289e1 | Verifier.Parse tests: bad delivery scores <80 (findings in output), good delivery passes ≥80, malformed output → null. PendingFix carries VerifierFindings. WorkflowEngine skip-verify treats as passed (no fix queued). 6 tests pass. |
 
 ### M5 — Observability — timeline, live plan, the native console, compiled prompts
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| M5.1 | Timeline pane — sessions, gates, stalls, verdicts, cost over time | TODO | - | - |
+| M5.1 | Timeline pane — sessions, gates, stalls, verdicts, cost over time | IN PROGRESS | [next] | GET /timeline backend endpoint returns TimelineEntryDto[] from event log. Face TimelinePane component not yet built. |
 | M5.2 | Live plan pane — per-stage state/score/cost/attempts, no truncation at any width | TODO | - | - |
 | M5.3 | Native console pane — raw agent stdout over SSE, toggle to clean folded view | TODO | - | - |
 | M5.4 | Live ticker — cost/tokens fold from tokenDelta during the session, not at the end | TODO | - | - |
-| M5.5 | Compiled-prompt preview beside the template editor (live + future sessions) | TODO | - | - |
+| M5.5 | Compiled-prompt preview beside the template editor (live + future sessions) | IN PROGRESS | [next] | GET /prompt/preview?stage=&kind= endpoint returns compiled prompt from PromptBuilder. Face PromptPreview component not yet built. |
 | M5.6 | `conductor status` — one verdict, from the database, under a second | TODO | - | - |
 
 ### M6 — Plan authoring — import, re-import diff, edit from the TUI

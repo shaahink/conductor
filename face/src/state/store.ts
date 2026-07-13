@@ -175,7 +175,7 @@ export class Store {
     const item: ToastItem = { id: ++toastSeq, text, kind, createdAt: Date.now() };
     const toasts = [...this.state.toasts, item];
     this.set({ toasts });
-    setTimeout(() => this.dismissToast(item.id), 3200);
+    setTimeout(() => this.dismissToast(item.id), 6000);
   }
 
   dismissToast(id: number) {

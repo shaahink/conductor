@@ -8,7 +8,6 @@ import { ProcessPane } from "./ProcessPane.js";
 import { Ticker } from "./Ticker.js";
 import { ToastStack } from "./Toast.js";
 import { colors } from "../theme.js";
-import { GLOBAL_KEYS } from "../input/keymap.js";
 import type { PaneId, Rect } from "../state/store.js";
 
 export interface LayoutRects {
@@ -87,7 +86,9 @@ export function Layout() {
     store.setRegion("plan", layout.plan);
     store.setRegion("agent", layout.agent);
     store.setRegion("process", layout.process);
-  });
+  }, [layout.plan.x, layout.plan.y, layout.plan.width, layout.plan.height,
+      layout.agent.x, layout.agent.y, layout.agent.width, layout.agent.height,
+      layout.process.x, layout.process.y, layout.process.width, layout.process.height, store]);
 
   const { ui } = app;
 
@@ -127,8 +128,15 @@ export function Layout() {
           </PaneFrame>
         </Box>
       </Box>
-      <Box paddingX={1}>
-        <Text color={colors.dim}>{GLOBAL_KEYS.map((k) => k.key).join("  ")}</Text>
+      <Box paddingX={1} flexDirection="row" gap={1}>
+        <Text color={colors.dim}>[</Text><Text color={colors.accent}>Tab</Text><Text color={colors.dim}>]pane</Text>
+        <Text color={colors.dim}>[</Text><Text color={colors.accent}>:</Text><Text color={colors.dim}>]cmd</Text>
+        <Text color={colors.dim}>[</Text><Text color={colors.accent}>i</Text><Text color={colors.dim}>]inject</Text>
+        <Text color={colors.dim}>[</Text><Text color={colors.accent}>e</Text><Text color={colors.dim}>]templates</Text>
+        <Text color={colors.dim}>[</Text><Text color={colors.accent}>h</Text><Text color={colors.dim}>]history</Text>
+        <Text color={colors.dim}>[</Text><Text color={colors.accent}>r</Text><Text color={colors.dim}>]query</Text>
+        <Text color={colors.dim}>[</Text><Text color={colors.accent}>?</Text><Text color={colors.dim}>]help</Text>
+        <Text color={colors.dim}>[</Text><Text color={colors.accent}>q</Text><Text color={colors.dim}>]quit</Text>
       </Box>
       <ToastStack toasts={app.toasts} />
     </Box>

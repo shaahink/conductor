@@ -266,6 +266,105 @@ public sealed partial class ControlPlaneServer
             ControlPlaneJsonContext.Default.InjectAcceptedDto, HttpStatusCode.Accepted).ConfigureAwait(false);
     }
 
+    // ── M5.5: prompt preview ──
+
+    private async Task WritePromptPreviewAsync(HttpListenerContext ctx)
+    {
+        var stageId = ctx.Request.QueryString["stage"];
+        var kind = ctx.Request.QueryString["kind"] ?? "Deliver";
+        if (string.IsNullOrWhiteSpace(stageId))
+        {
+            await WriteJsonAsync(ctx, new PromptPreviewDto("", "", ""),
+                ControlPlaneJsonContext.Default.PromptPreviewDto, HttpStatusCode.BadRequest).ConfigureAwait(false);
+            return;
+        }
+        var stage = _plan.Stages.FirstOrDefault(s => string.Equals(s.Id, stageId, StringComparison.OrdinalIgnoreCase));
+        if (stage == null)
+        {
+            await WriteJsonAsync(ctx, new PromptPreviewDto("", "", ""),
+                ControlPlaneJsonContext.Default.PromptPreviewDto, HttpStatusCode.NotFound).ConfigureAwait(false);
+            return;
+        }
+        var prompts = new PromptBuilder(_plan);
+        var model = _plan.ResolveAgent(stage).Model ?? _plan.Agent.Model ?? "default";
+        var prompt = kind.Equals("Fix", StringComparison.OrdinalIgnoreCase)
+            ? prompts.Fix(stage, 0, 1, 2, new PendingFix { FromSession = 0, GateFailures = "(preview mode)", ProgressSummary = "(preview)" })
+            : kind.Equals("Verify", StringComparison.OrdinalIgnoreCase)
+            ? prompts.Verify(stage, 0, new PendingVerify { FromSession = 0, StageStartHead = "HEAD" })
+            : kind.Equals("Audit", StringComparison.OrdinalIgnoreCase)
+            ? prompts.Audit(stage, 0, new PendingAudit { StageId = stage.Id, StageStartHead = "HEAD" }, "HEAD")
+            : prompts.Deliver(stage, 0, 1, 1);
+        await WriteJsonAsync(ctx, new PromptPreviewDto(prompt, model, kind),
+            ControlPlaneJsonContext.Default.PromptPreviewDto).ConfigureAwait(false);
+    }
+
+    // ── M5.1: timeline ──
+
+    private async Task WriteTimelineAsync(HttpListenerContext ctx)
+    {
+        var events = ReadEvents();
+        var entries = new List<TimelineEntryDto>();
+        foreach (var evt in events)
+        {
+            string kind = "unknown", desc = "";
+            string? stageId = null, outcome = null;
+            int? sessionNum = null;
+            decimal? cost = null;
+
+            switch (evt)
+            {
+                case SessionStarted s:
+                    kind = "session";
+                    desc = $"session #{s.Number} {s.Kind} started";
+                    stageId = s.StageId;
+                    sessionNum = s.Number;
+                    break;
+                case SessionFinished f:
+                    kind = "session";
+                    desc = $"session #{f.Number} finished: {f.Outcome}";
+                    stageId = f.StageId;
+                    sessionNum = f.Number;
+                    cost = f.CostUsd;
+                    outcome = f.Outcome;
+                    break;
+                case GateFinished g:
+                    kind = "gate";
+                    desc = $"gate {g.Name}: {(g.Passed ? "pass" : "FAIL")} ({g.DurationMs}ms)";
+                    stageId = g.Scope;
+                    outcome = g.Passed ? "pass" : "fail";
+                    break;
+                case TokenDelta:
+                    break; // skip — too noisy for timeline
+                case AttentionRequested a:
+                    kind = "attention";
+                    desc = $"needs human: {a.Reason}";
+                    break;
+                case StageEntered se:
+                    kind = "stage";
+                    desc = $"stage {se.StageId} entered";
+                    stageId = se.StageId;
+                    break;
+                case StageConfirmed sConfirmed:
+                    kind = "stage";
+                    desc = $"stage {sConfirmed.StageId} confirmed";
+                    stageId = sConfirmed.StageId;
+                    break;
+                default:
+                    continue;
+            }
+            entries.Add(new TimelineEntryDto(
+                Utc: evt.Ts.ToString("O"),
+                Kind: kind,
+                Description: desc ?? "",
+                StageId: stageId,
+                SessionNumber: sessionNum,
+                CostUsd: cost,
+                Outcome: outcome));
+        }
+        await WriteJsonAsync(ctx, new TimelineDto(entries),
+            ControlPlaneJsonContext.Default.TimelineDto).ConfigureAwait(false);
+    }
+
     private static async Task WriteJsonAsync<T>(HttpListenerContext ctx, T value, System.Text.Json.Serialization.Metadata.JsonTypeInfo<T> typeInfo,
         HttpStatusCode status = HttpStatusCode.OK)
     {

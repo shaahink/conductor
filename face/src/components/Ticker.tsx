@@ -48,35 +48,37 @@ export function Ticker({ state, connection, columns }: { state: StateDto | null;
   const gatesText = state.gates.length > 0 ? state.gates.map((g) => `${g.name}:${g.state}`).join(" ") : state.gateSummary || "no gates running";
 
   return (
-    <Box paddingX={1} width={columns - 2}>
-      <Box flexShrink={0} gap={medium ? 2 : 1}>
-        <Text color={connColor}>
-          {connGlyph} {connection.mode === "demo" ? "demo" : connection.eventsConnected ? "live" : "reconnecting"}
+    <Box paddingX={1} width={columns - 2} flexDirection="row">
+      <Box flexShrink={0} gap={1}>
+        <Text color={connColor} bold>
+          {connGlyph}
         </Text>
-        <Text color={stateColor(state.status)}>{state.status}</Text>
+        <Text color={stateColor(state.status)} bold>{state.status.toUpperCase()}</Text>
+        <Text color={colors.dim}>│</Text>
         <Text wrap="truncate-end">
-          {state.stageId} · s{state.sessionNumber}
-          {medium ? ` ${state.sessionKind} (${state.attempt}/${state.maxAttempts})` : ""}
+          {state.stageId}
         </Text>
+        <Text color={colors.dim}>s{state.sessionNumber}</Text>
+        {medium ? <Text color={colors.dim}>{state.sessionKind} {state.attempt}/{state.maxAttempts}</Text> : null}
         {wide ? (
           <Text color={colors.dim} wrap="truncate-end">
-            {gatesText}
+            │ {gatesText}
+          </Text>
+        ) : medium ? (
+          <Text color={state.gates.some(g => g.state === "red") ? colors.error : colors.ok}>
+            {state.gates.filter(g => g.state === "red").length > 0 ? "◉" : "●"}
           </Text>
         ) : null}
       </Box>
       <Box flexGrow={1} />
-      <Box flexShrink={0} gap={medium ? 2 : 1}>
-        {medium && (
-          <>
-            <Text color={colors.dim}>session</Text>
-            <Text>{fmtUsd(state.sessionCostUsd)}</Text>
-            <Text>{fmtWall(state.sessionElapsedSec)}</Text>
-            <Text color={colors.dim}>· run</Text>
-          </>
-        )}
-        <Text color={colors.accent}>{fmtUsd(state.totalCostUsd)}</Text>
+      <Box flexShrink={0} gap={medium ? 1 : 0}>
+        {medium && <Text color={colors.dim}>sess</Text>}
+        <Text>{fmtUsd(state.sessionCostUsd)}</Text>
+        {medium && <Text>{fmtWall(state.sessionElapsedSec)}</Text>}
+        {medium && <Text color={colors.dim}>│ run</Text>}
+        <Text color={colors.accent} bold>{fmtUsd(state.totalCostUsd)}</Text>
         {wide && (
-          <Text>
+          <Text color={colors.dim}>
             {fmtTokens(state.tokensInput)}/{fmtTokens(state.tokensOutput)}/{fmtTokens(state.tokensReasoning)}
           </Text>
         )}
