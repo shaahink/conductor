@@ -6,7 +6,7 @@
 
 last: M5 delivery session — FU-OWNER bugs 1-3,6,7 fixed (Face: modal backdrop, toast timeout, footer readability, ticker layout, flicker via effect deps). M5.5 prompt preview endpoint (GET /prompt/preview) + M5.1 timeline endpoint (GET /timeline) landed with DTOs. 3 files split (ControlPlaneDto.Prompt/Timeline) to keep architecture ceiling.
 stage: M5 IN PROGRESS — 2/6 checkpoints started, 5/9 FU-OWNER bugs fixed. 15/30 DONE.
-commits: (pending)
+commit: 6ca4337
 gate: build 0w/0e · 631/631 dotnet tests pass · face/ 23/23 pass.
 branch: feat/foreman.
 next: continue M5 — M5.2 (live plan enhancements), M5.3 (native console SSE), M5.4 (live ticker streaming), M5.6 (conductor status DB path). Remaining FU-OWNER: 4 (agent reasoning visibility → M5.3), 5 (panel density), 8 (click crash), 9 (self-PID guard in prompt).
@@ -63,11 +63,11 @@ phase (a code path is not evidence).
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| M5.1 | Timeline pane — sessions, gates, stalls, verdicts, cost over time | IN PROGRESS | [next] | GET /timeline backend endpoint returns TimelineEntryDto[] from event log. Face TimelinePane component not yet built. |
+| M5.1 | Timeline pane — sessions, gates, stalls, verdicts, cost over time | IN PROGRESS | 6ca4337 | GET /timeline backend endpoint returns TimelineEntryDto[] from event log. Face TimelinePane component not yet built. |
 | M5.2 | Live plan pane — per-stage state/score/cost/attempts, no truncation at any width | TODO | - | - |
 | M5.3 | Native console pane — raw agent stdout over SSE, toggle to clean folded view | TODO | - | - |
 | M5.4 | Live ticker — cost/tokens fold from tokenDelta during the session, not at the end | TODO | - | - |
-| M5.5 | Compiled-prompt preview beside the template editor (live + future sessions) | IN PROGRESS | [next] | GET /prompt/preview?stage=&kind= endpoint returns compiled prompt from PromptBuilder. Face PromptPreview component not yet built. |
+| M5.5 | Compiled-prompt preview beside the template editor (live + future sessions) | IN PROGRESS | 6ca4337 | GET /prompt/preview?stage=&kind= endpoint returns compiled prompt from PromptBuilder. Face PromptPreview component not yet built. |
 | M5.6 | `conductor status` — one verdict, from the database, under a second | TODO | - | - |
 
 ### M6 — Plan authoring — import, re-import diff, edit from the TUI
