@@ -6,6 +6,7 @@ using System.Text.Json;
 using Conductor.Core;
 using Conductor.Core.Events;
 using Conductor.Core.Http;
+using Conductor.Core.Store;
 using Conductor.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -14,26 +15,31 @@ namespace Conductor.Tests;
 /// <summary>
 /// F5 curl-level contract tests (design doc's own stated gate for the control plane): a real
 /// HttpListener bound to an ephemeral loopback port, exercised with real HTTP requests — no mocking
-/// of the transport. Covers the read side (state/tasks built from a fixture events.jsonl, matching
+/// of the transport. Covers the read side (state/tasks built from run.db events, matching
 /// what RunStateProjection/TaskGraph/SnapshotBuilder already produce elsewhere) and the write side
 /// (POST /control enqueues onto the same inbox Orchestrator.PollInbox drains).
 /// </summary>
 public sealed class ControlPlaneServerTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), $"conductor-cps-{Guid.NewGuid():N}");
-    private readonly string _eventsPath;
     private readonly string _transcriptPath;
     private readonly string _runDbPath;
     private readonly PlanConfig _plan;
+    private readonly SqliteRunStore _store;
     private readonly ConcurrentQueue<ControlCommand> _inbox = new();
     private readonly HttpClient _http = new();
+
+    private const string RunId = "run-cps";
 
     public ControlPlaneServerTests()
     {
         Directory.CreateDirectory(_dir);
-        _eventsPath = Path.Combine(_dir, "events.jsonl");
-        _transcriptPath = Path.Combine(_dir, "transcript.jsonl");
-        _runDbPath = Path.Combine(_dir, "run.db");
+        var stateDir = Path.Combine(_dir, ".conductor");
+        Directory.CreateDirectory(stateDir);
+        _transcriptPath = Path.Combine(stateDir, "transcript.jsonl");
+        _runDbPath = Path.Combine(stateDir, "run.db");
+        _store = new SqliteRunStore(_runDbPath, NullLogger<SqliteRunStore>.Instance);
+        _store.SetRunId(RunId);
         _plan = new PlanConfig
         {
             Name = "cps-test",
@@ -50,6 +56,7 @@ public sealed class ControlPlaneServerTests : IDisposable
     public void Dispose()
     {
         _http.Dispose();
+        _store.Dispose();
         try { Directory.Delete(_dir, recursive: true); } catch (IOException) { /* best effort */ }
     }
 
@@ -64,14 +71,15 @@ public sealed class ControlPlaneServerTests : IDisposable
 
     private void WriteEvents(params ConductorEvent[] events)
     {
-        using var log = new EventLog(_eventsPath, "run-cps");
-        foreach (var e in events) log.Emit(e);
+        foreach (var e in events)
+            _store.Emit(e);
     }
 
     private (ControlPlaneServer server, int port) StartServer()
     {
         var port = FreeLoopbackPort();
-        var server = new ControlPlaneServer(_plan, _eventsPath, _transcriptPath, _runDbPath, _inbox, NullLogger.Instance, port);
+        var state = new RunState { RunId = RunId };
+        var server = new ControlPlaneServer(_plan, state, _store, _inbox, NullLogger.Instance, port);
         Assert.True(server.Start(), "control plane failed to bind — cannot run contract tests");
         return (server, port);
     }
@@ -239,7 +247,8 @@ public sealed class ControlPlaneServerTests : IDisposable
         blocker.Start();
         try
         {
-            var server = new ControlPlaneServer(_plan, _eventsPath, _transcriptPath, _runDbPath, _inbox, NullLogger.Instance, port);
+            var state = new RunState { RunId = Guid.NewGuid().ToString("N") };
+            var server = new ControlPlaneServer(_plan, state, _store, _inbox, NullLogger.Instance, port);
             var started = server.Start();
 
             Assert.True(started);                 // a busy port must not cost us the control plane
@@ -256,7 +265,8 @@ public sealed class ControlPlaneServerTests : IDisposable
     /// a number, and is removed on shutdown so nobody is ever pointed at a dead port.</summary>
     public void Start_PublishesDiscoveryFile_AndRemovesItOnDispose()
     {
-        var server = new ControlPlaneServer(_plan, _eventsPath, _transcriptPath, _runDbPath, _inbox, NullLogger.Instance, FreeLoopbackPort());
+        var state = new RunState { RunId = Guid.NewGuid().ToString("N") };
+        var server = new ControlPlaneServer(_plan, state, _store, _inbox, NullLogger.Instance, FreeLoopbackPort());
         Assert.True(server.Start());
 
         var discovery = ControlPlaneServer.DiscoveryPath(_plan.StateDir);
@@ -320,11 +330,7 @@ public sealed class ControlPlaneServerTests : IDisposable
     [Fact]
     public async Task GetProcesses_ReturnsTrackedPidsWithLiveness()
     {
-        WriteEvents(new RunStarted { Plan = "cps-test", Repo = _dir });
-        using (var db = new RunDb(_runDbPath, NullLogger<RunDb>.Instance))
-        {
-            db.TrackPid(Environment.ProcessId, "run-cps", "gate:build", "S1", 1, DateTime.UtcNow);
-        }
+        _store.TrackPid(Environment.ProcessId, RunId, "gate:build", "S1", 1, DateTime.UtcNow);
         var (server, port) = StartServer();
         try
         {
@@ -370,11 +376,7 @@ public sealed class ControlPlaneServerTests : IDisposable
     [Fact]
     public async Task GetReportQuery_ExecutesSelectAgainstRunDb()
     {
-        WriteEvents(new RunStarted { Plan = "cps-test", Repo = _dir });
-        using (var db = new RunDb(_runDbPath, NullLogger<RunDb>.Instance))
-        {
-            db.InitializeRun("run-cps", "cps-test", _dir, null, null);
-        }
+        _store.InitializeRun(RunId, "cps-test", _dir, null, null);
         var (server, port) = StartServer();
         try
         {
@@ -384,7 +386,7 @@ public sealed class ControlPlaneServerTests : IDisposable
             var rows = doc.RootElement.GetProperty("rows");
             Assert.Equal(1, rows.GetArrayLength());
             var values = rows[0].GetProperty("values");
-            Assert.Equal("run-cps", values[0].GetString());
+            Assert.Equal(RunId, values[0].GetString());
             Assert.Equal("cps-test", values[1].GetString());
         }
         finally { server.Dispose(); }
@@ -406,11 +408,7 @@ public sealed class ControlPlaneServerTests : IDisposable
     [Fact]
     public async Task PostInject_Valid_WritesToRunDbAndReturns202()
     {
-        WriteEvents(new RunStarted { Plan = "cps-test", Repo = _dir });
-        using (var db = new RunDb(_runDbPath, NullLogger<RunDb>.Instance))
-        {
-            db.InitializeRun("run-cps", "cps-test", _dir, null, null);
-        }
+        _store.InitializeRun(RunId, "cps-test", _dir, null, null);
         var (server, port) = StartServer();
         try
         {
@@ -420,8 +418,7 @@ public sealed class ControlPlaneServerTests : IDisposable
             using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
             Assert.True(doc.RootElement.GetProperty("accepted").GetBoolean());
 
-            using var db = new RunDb(_runDbPath, NullLogger<RunDb>.Instance);
-            var rows = db.Query("SELECT content, target_stage_id FROM injections");
+            var rows = _store.Query("SELECT content, target_stage_id FROM injections");
             Assert.Single(rows);
             Assert.Equal("prefer the async path here", rows[0]["content"]);
             Assert.Equal("S1", rows[0]["target_stage_id"]);

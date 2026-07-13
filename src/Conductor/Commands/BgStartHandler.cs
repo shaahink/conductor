@@ -1,6 +1,7 @@
 using System.Diagnostics;
 
 using Conductor.Core;
+using Conductor.Core.Store;
 using Conductor.Models;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -20,9 +21,19 @@ internal static class BgStartHandler
         }
 
         var plan = PlanConfig.Load(settings.ResolvePlanPath());
-        var statePath = Path.Combine(plan.StateDir, "state.json");
-        var state = RunState.LoadOrNew(statePath, plan.Name);
-        var runId = state.RunId ?? "bg-standalone";
+        var runDbPath = Path.Combine(plan.StateDir, "run.db");
+        using var store = File.Exists(runDbPath)
+            ? new SqliteRunStore(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteRunStore>.Instance)
+            : null;
+        var runId = store?.GetLatestRunId(plan.Name);
+        if (string.IsNullOrEmpty(runId))
+        {
+            var statePath = Path.Combine(plan.StateDir, "state.json");
+            var state = RunState.LoadOrNew(statePath, plan.Name);
+            runId = state.RunId ?? "bg-standalone";
+        }
+        var currentStage = GetCurrentStage(store, runId, plan);
+        var sessionCounter = GetSessionCounter(store, runId);
 
         var exe = cmdArgs[0];
         var exeArgs = cmdArgs.Skip(1).ToList();
@@ -73,14 +84,12 @@ internal static class BgStartHandler
         proc.BeginOutputReadLine();
         proc.BeginErrorReadLine();
         // Track in run.db
-        var runDbPath = Path.Combine(plan.StateDir, "run.db");
-        if (File.Exists(runDbPath))
+        if (store != null)
         {
             try
             {
-                using var db = new RunDb(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<RunDb>.Instance);
-                db.TrackPid(proc.Id, runId, $"bg:{purpose}", state.CurrentStage,
-                    state.SessionCounter > 0 ? state.SessionCounter : null, DateTime.UtcNow);
+                store.TrackPid(proc.Id, runId!, $"bg:{purpose}", currentStage,
+                    sessionCounter > 0 ? sessionCounter : null, DateTime.UtcNow);
             }
             catch (Exception ex)
             {
@@ -99,8 +108,8 @@ internal static class BgStartHandler
                 {
                     try
                     {
-                        using var db = new RunDb(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<RunDb>.Instance);
-                        db.MarkPidExited(proc.Id, exitCode);
+                        using var exitStore = new SqliteRunStore(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteRunStore>.Instance);
+                        exitStore.MarkPidExited(proc.Id, exitCode);
                     }
                     catch { }
                 }
@@ -120,5 +129,31 @@ internal static class BgStartHandler
         var chars = name.Select(c => invalid.Contains(c) ? '_' : c).ToArray();
         var result = new string(chars);
         return string.IsNullOrWhiteSpace(result) ? "bg-process" : result;
+    }
+
+    private static string? GetCurrentStage(IRunStore? store, string? runId, PlanConfig plan)
+    {
+        if (store == null || string.IsNullOrEmpty(runId)) return null;
+        try
+        {
+            var json = store.LoadRunStateJson(runId);
+            if (string.IsNullOrEmpty(json)) return null;
+            var state = System.Text.Json.JsonSerializer.Deserialize<RunState>(json, PlanConfig.JsonOpts);
+            return state?.CurrentStage;
+        }
+        catch { return null; }
+    }
+
+    private static int GetSessionCounter(IRunStore? store, string? runId)
+    {
+        if (store == null || string.IsNullOrEmpty(runId)) return 0;
+        try
+        {
+            var json = store.LoadRunStateJson(runId);
+            if (string.IsNullOrEmpty(json)) return 0;
+            var state = System.Text.Json.JsonSerializer.Deserialize<RunState>(json, PlanConfig.JsonOpts);
+            return state?.SessionCounter ?? 0;
+        }
+        catch { return 0; }
     }
 }

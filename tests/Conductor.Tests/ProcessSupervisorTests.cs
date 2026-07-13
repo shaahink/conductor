@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Conductor.Core;
+using Conductor.Core.Store;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Conductor.Tests;
@@ -12,7 +13,7 @@ public sealed class ProcessSupervisorTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), $"conductor-psv-{Guid.NewGuid():N}");
     private readonly string _runId = "psv-test-run";
-    private readonly RunDb _runDb;
+    private readonly SqliteRunStore _runDb;
     private readonly ProcessSupervisor _supervisor;
 
     public ProcessSupervisorTests()
@@ -21,7 +22,7 @@ public sealed class ProcessSupervisorTests : IDisposable
         var stateDir = Path.Combine(_dir, ".conductor");
         Directory.CreateDirectory(stateDir);
         var dbPath = Path.Combine(stateDir, "run.db");
-        _runDb = new RunDb(dbPath, NullLogger<RunDb>.Instance);
+        _runDb = new SqliteRunStore(dbPath, NullLogger<SqliteRunStore>.Instance);
         _supervisor = new ProcessSupervisor(NullLogger<ProcessSupervisor>.Instance, _runId, _runDb);
     }
 

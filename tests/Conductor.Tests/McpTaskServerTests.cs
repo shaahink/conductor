@@ -2,6 +2,7 @@ using System.Text.Json;
 using Conductor.Core;
 using Conductor.Core.Events;
 using Conductor.Core.Integrations;
+using Conductor.Core.Store;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Conductor.Tests;
@@ -317,7 +318,7 @@ public class McpTaskServerTests
         var journal = TempPath();
         try
         {
-            var server = new McpTaskServer("nonexistent.jsonl", journal, runId, runDb: db);
+            var server = new McpTaskServer("nonexistent.jsonl", journal, runId, store: db);
             var req = Rpc(new { jsonrpc = "2.0", id = 1, method = "tools/call", @params = new { name = "run_query", arguments = new { sql = "SELECT COUNT(*) AS cnt FROM sessions" } } });
             var responses = await RunMcpExchange(server, req);
 
@@ -340,7 +341,7 @@ public class McpTaskServerTests
         var journal = TempPath();
         try
         {
-            var server = new McpTaskServer("nonexistent.jsonl", journal, "r-mcp", runDb: db);
+            var server = new McpTaskServer("nonexistent.jsonl", journal, "r-mcp", store: db);
             var req = Rpc(new { jsonrpc = "2.0", id = 1, method = "tools/call", @params = new { name = "run_query", arguments = new { sql = "DROP TABLE sessions" } } });
             var responses = await RunMcpExchange(server, req);
 
@@ -359,7 +360,7 @@ public class McpTaskServerTests
         var journal = TempPath();
         try
         {
-            var server = new McpTaskServer("nonexistent.jsonl", journal, "r-mcp", runDb: db);
+            var server = new McpTaskServer("nonexistent.jsonl", journal, "r-mcp", store: db);
             var req = Rpc(new { jsonrpc = "2.0", id = 1, method = "tools/call", @params = new { name = "run_query", arguments = new { } } });
             var responses = await RunMcpExchange(server, req);
 
@@ -382,7 +383,7 @@ public class McpTaskServerTests
         var journal = TempPath();
         try
         {
-            var server = new McpTaskServer("nonexistent.jsonl", journal, "r-mcp", runDb: db);
+            var server = new McpTaskServer("nonexistent.jsonl", journal, "r-mcp", store: db);
             var req = Rpc(new { jsonrpc = "2.0", id = 1, method = "tools/call", @params = new { name = "ledger_list", arguments = new { stageId = "F8", kind = "finding" } } });
             var responses = await RunMcpExchange(server, req);
 
@@ -411,7 +412,7 @@ public class McpTaskServerTests
         var journal = TempPath();
         try
         {
-            var server = new McpTaskServer("nonexistent.jsonl", journal, "r-mcp", runDb: db);
+            var server = new McpTaskServer("nonexistent.jsonl", journal, "r-mcp", store: db);
             var req = Rpc(new { jsonrpc = "2.0", id = 1, method = "tools/call", @params = new { name = "ledger_list", arguments = new { tail = 3 } } });
             var responses = await RunMcpExchange(server, req);
 
@@ -436,7 +437,7 @@ public class McpTaskServerTests
         var journal = TempPath();
         try
         {
-            var server = new McpTaskServer("nonexistent.jsonl", journal, "r-mcp", runDb: db);
+            var server = new McpTaskServer("nonexistent.jsonl", journal, "r-mcp", store: db);
             var req = Rpc(new { jsonrpc = "2.0", id = 1, method = "tools/call", @params = new { name = "session_detail", arguments = new { sessionNumber = 42 } } });
             var responses = await RunMcpExchange(server, req);
 
@@ -462,7 +463,7 @@ public class McpTaskServerTests
         var journal = TempPath();
         try
         {
-            var server = new McpTaskServer("nonexistent.jsonl", journal, "r-mcp", runDb: db);
+            var server = new McpTaskServer("nonexistent.jsonl", journal, "r-mcp", store: db);
             var req = Rpc(new { jsonrpc = "2.0", id = 1, method = "tools/call", @params = new { name = "session_detail", arguments = new { sessionNumber = 999 } } });
             var responses = await RunMcpExchange(server, req);
 
@@ -482,7 +483,7 @@ public class McpTaskServerTests
         var journal = TempPath();
         try
         {
-            var server = new McpTaskServer("nonexistent.jsonl", journal, runId, runDb: db);
+            var server = new McpTaskServer("nonexistent.jsonl", journal, runId, store: db);
             var req = Rpc(new { jsonrpc = "2.0", id = 1, method = "tools/call", @params = new { name = "inject_instruction", arguments = new { content = "Please add more tests", stageId = "F8" } } });
             var responses = await RunMcpExchange(server, req);
 
@@ -520,10 +521,10 @@ public class McpTaskServerTests
         finally { Cleanup(journal); }
     }
 
-    private static RunDb CreateTempDb(string? runId = null)
+    private static SqliteRunStore CreateTempDb(string? runId = null)
     {
         var dbPath = Path.Combine(Path.GetTempPath(), $"mcp-rundb-{Guid.NewGuid():N}.db");
-        var db = new RunDb(dbPath, NullLogger<RunDb>.Instance);
+        var db = new SqliteRunStore(dbPath, NullLogger<SqliteRunStore>.Instance);
         db.InitializeRun(runId ?? "r-mcp", "MCP Test", "test", null, "1.0.0");
         return db;
     }

@@ -125,11 +125,11 @@ public partial class McpTaskServer
             return JsonSerializer.SerializeToElement(new { ok = false, error = "content is required" });
 
         // Best-effort direct write to run.db ledger table (F1.3)
-        if (_runDb != null)
+        if (_store != null)
         {
             try
             {
-                _runDb.WriteLedger(_runId, null, string.IsNullOrWhiteSpace(stageId) ? null : stageId, kind, content);
+                _store.WriteLedger(_runId, null, string.IsNullOrWhiteSpace(stageId) ? null : stageId, kind, content);
             }
 #pragma warning disable CA1031 // catch is best-effort here — journal write is the fallback
             catch { }
@@ -222,17 +222,17 @@ public partial class McpTaskServer
                 await proc.WaitForExitAsync().ConfigureAwait(false);
                 var exitCode = 0;
                 try { exitCode = proc.ExitCode; } catch { }
-                _runDb?.MarkPidExited(proc.Id, exitCode);
+                _store?.MarkPidExited(proc.Id, exitCode);
             }
             catch { }
             finally { try { await logWriter.DisposeAsync().ConfigureAwait(false); } catch { } }
         });
 
-        if (_runDb != null)
+        if (_store != null)
         {
             try
             {
-                _runDb.TrackPid(proc.Id, _runId, $"bg:{purpose}", null, null, DateTime.UtcNow);
+                _store.TrackPid(proc.Id, _runId, $"bg:{purpose}", null, null, DateTime.UtcNow);
             }
             catch { }
         }
@@ -242,10 +242,10 @@ public partial class McpTaskServer
 
     private JsonElement HandleBgStatus(JsonElement? args)
     {
-        if (_runDb == null)
-            return JsonSerializer.SerializeToElement(new { ok = false, error = "bg_status requires run.db (no plan state available)." });
+        if (_store == null)
+            return JsonSerializer.SerializeToElement(new { ok = false, error = "bg_status requires store (no plan state available)." });
 
-        var rows = _runDb.GetAllPids(_runId);
+        var rows = _store.GetAllPids(_runId);
         var list = rows.Select(r =>
         {
             var alive = IsProcessAliveMcp(r.Pid);
@@ -321,17 +321,17 @@ public partial class McpTaskServer
             using var proc = Process.GetProcessById(pid);
             proc.Kill(entireProcessTree: true);
             proc.WaitForExit(5000);
-            _runDb?.MarkPidExited(pid, -1);
+            _store?.MarkPidExited(pid, -1);
             return JsonSerializer.SerializeToElement(new { ok = true, pid, killed = true });
         }
         catch (ArgumentException)
         {
-            _runDb?.MarkPidExited(pid, null);
+            _store?.MarkPidExited(pid, null);
             return JsonSerializer.SerializeToElement(new { ok = true, pid, killed = false, reason = "Process not found (already exited)." });
         }
         catch (InvalidOperationException)
         {
-            _runDb?.MarkPidExited(pid, null);
+            _store?.MarkPidExited(pid, null);
             return JsonSerializer.SerializeToElement(new { ok = true, pid, killed = false, reason = "Process already exited." });
         }
         catch (Exception ex)

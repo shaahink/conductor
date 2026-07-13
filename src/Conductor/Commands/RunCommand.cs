@@ -8,7 +8,6 @@ using Conductor.Core.Hosting;
 using Conductor.Core.Http;
 using Conductor.Models;
 
-using EventLog = Conductor.Core.Events.EventLog;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Spectre.Console;
@@ -67,22 +66,20 @@ public sealed class RunCommand : Command<RunCommand.Settings>
                        && !settings.DryRun
                        && !Console.IsOutputRedirected;
 
+        // M2: the store (SqliteRunStore) is created inside ConductorHost.Build — it owns
+        // the IEventSink (events table) and IRunStore (all writes).
         var opts = new RunOptions(settings.DryRun, settings.Once, settings.MaxSessions, controlPlane, settings.ControlPlanePort);
         using var cts = new CancellationTokenSource();
 #pragma warning disable MA0045 // CancelAsync doesn't exist on CancellationTokenSource
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 #pragma warning restore MA0045
 
-        // Event log is additive alongside state.json (B2.1). A dry-run previews without writing.
-        IEventSink events = settings.DryRun
-            ? NullEventSink.Instance
-            : new EventLog(Path.Combine(plan.StateDir, "events.jsonl"), state.RunId);
         FaceLauncher.FaceHandle? face = null;
         try
         {
             // When the Face owns the terminal, the engine's console sink must stay off or the two
             // interleave and corrupt the render. Everything still goes to .conductor/logs/.
-            using var host = ConductorHost.Build(plan, state, statePath, new PlainSink(), events, opts, consoleSink: !wantFace);
+            using var host = ConductorHost.Build(plan, state, new PlainSink(), opts, consoleSink: !wantFace);
 
             var server = host.Services.GetService<ControlPlaneServer>();
             var bound = server?.Start() == true; // never fatal: a bind failure just means no clients
@@ -101,9 +98,7 @@ public sealed class RunCommand : Command<RunCommand.Settings>
         }
         finally
         {
-            // The Face is disposable: tearing it down can never affect the run's outcome, already decided above.
             face?.Dispose();
-            (events as IDisposable)?.Dispose();
         }
     }
 }

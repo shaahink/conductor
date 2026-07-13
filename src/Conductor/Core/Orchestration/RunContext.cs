@@ -3,6 +3,7 @@ using Conductor.Core.Events;
 using Conductor.Core.Integrations;
 using Conductor.Core.Planning;
 using Conductor.Core.Providers;
+using Conductor.Core.Store;
 using Conductor.Models;
 using Microsoft.Extensions.Logging;
 
@@ -27,9 +28,8 @@ public sealed class RunContext
     public IPlanner Planner { get; }
     public IProgressProvider Progress { get; }
     public IAgentProvider AgentProvider { get; }
-    public RunDb? RunDb { get; }
+    public IRunStore? Store { get; }
     public ProcessSupervisor? ProcessSupervisor { get; }
-    public TranscriptLog? Transcript { get; }
     public ConcurrentQueue<ControlCommand>? ControlInbox { get; }
     public ITelegramService Telegram { get; }
     public WebhookNotifier Webhooks { get; }
@@ -83,9 +83,8 @@ public sealed class RunContext
         IPlanner planner,
         IProgressProvider progress,
         IAgentProvider agentProvider,
-        RunDb? runDb,
+        IRunStore? store,
         ProcessSupervisor? processSupervisor,
-        TranscriptLog? transcript,
         ConcurrentQueue<ControlCommand>? controlInbox,
         ITelegramService telegram,
         WebhookNotifier webhooks,
@@ -101,9 +100,8 @@ public sealed class RunContext
         Planner = planner;
         Progress = progress;
         AgentProvider = agentProvider;
-        RunDb = runDb;
+        Store = store;
         ProcessSupervisor = processSupervisor;
-        Transcript = transcript;
         ControlInbox = controlInbox;
         Telegram = telegram;
         Webhooks = webhooks;
@@ -170,8 +168,15 @@ public sealed class RunContext
         return scope.Count > 0 ? Logger.BeginScope(scope) : null;
     }
 
-    /// <summary>Save RunState to disk.</summary>
-    public void Save() => State.Save(Path.Combine(StateDir, "state.json"));
+    /// <summary>Persist RunState through the store.</summary>
+    public void Save()
+    {
+        if (Store is { } s)
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(State, Models.PlanConfig.JsonOpts);
+            s.SaveRunState(State.RunId, State.PlanName, json);
+        }
+    }
 
     /// <summary>Read tracker (defensive — returns empty snapshot on failure).</summary>
     public TrackerSnapshot ReadTrackerSafe()

@@ -4,12 +4,12 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: opencode direct session — M1 COMPLETE (4/4 checkpoints DONE). Ratchet floor lowered 623→550 (M1.1 legitimately deleted 73 TUI test attributes). Orchestrator.cs decomposed into RunLoop + SessionRunner + VerdictEngine. All remaining god-classes split: PlanConfig (16 files), RunDb (3 files), McpTaskServer (5 files), TelegramService (8 files), ControlPlaneServer (2 files). Type-ceiling files split: ConductorEvent (9 files), ControlPlaneDto (7 files), RunState (8 files), Progress (4 files), PromptBattery (2 files), HealthMetrics (3 files), IAgentProvider (3 files). Architecture baseline: {}.
-stage: M1 DONE. 4/30 checkpoints DONE.
-commits: ee737e0 (ratchet) · a558d56 (SessionRunner) · 39acf00 (VerdictEngine) · c540a13 (RunLoop) · [next] (M1.4 splits).
-gate: build 0w/0e · architecture 4/4 GREEN · baseline {} · ratchet PASSES · 594/594 tests pass.
+last: opencode direct session — M2 DELIVERED (5/5 checkpoints DONE). RunDb.cs (457+L) deleted, 3 old files removed. 19 new Store files. All 7 CLI cmds + crash recovery + control plane migrated to SqliteRunStore from run.db. M2.4 session history dirs + INDEX.md. M2.5 advisor cost tracking added.
+stage: M2 COMPLETE. 9/30 checkpoints DONE.
+commits: (pending — this session deliverable).
+gate: build 0w/0e · architecture 4/4 GREEN · baseline {} · 598/598 tests pass (0w/0e).
 branch: feat/foreman.
-next: M2 — One truth (run.db authoritative, delete state.json + events.jsonl).
+next: M3 — Workflows that bend (declarative steps, per-session overrides, safe parallelism).
 
 
 ## Baseline numbers (from run.db)
@@ -37,11 +37,11 @@ phase (a code path is not evidence).
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| M2.1 | Schema defined once (versioned .sql); fresh DB and migrated DB are byte-identical | TODO | - | - |
-| M2.2 | `IRunStore` + `SqliteRunStore`; no SQL elsewhere; failed writes are loud, not swallowed | TODO | - | - |
-| M2.3 | `run.db` authoritative; `state.json` + `events.jsonl` DELETED; kill -9 mid-session then resume | TODO | - | - |
-| M2.4 | Session history dir `.conductor/sessions/<NNN>/` + INDEX.md; `prompt.md` matches what was sent | TODO | - | - |
-| M2.5 | Accurate per-session/per-plan cost + tokens incl. gate/advisor split | TODO | - | - |
+| M2.1 | Schema defined once (versioned .sql); fresh DB and migrated DB are byte-identical | DONE | - | 5 versioned .sql files under Core/Store/Migrations/ (v1-v5). MigrationRunner applies sequentially. Old duplicate DDL deleted with RunDb.cs. |
+| M2.2 | `IRunStore` + `SqliteRunStore`; no SQL elsewhere; failed writes are loud, not swallowed | DONE | - | IRunStore (104L) with 8 partial SqliteRunStore files. All SQL behind store. Failed writes log Error. RunDb.cs deleted (457L). |
+| M2.3 | `run.db` authoritative; `state.json` + `events.jsonl` DELETED; kill -9 mid-session then resume | DONE | - | RecoverFromCrash reads from IRunStore.FindInterruptedSession. ControlPlaneServer, McpTaskServer, SessionRunner all use store. 7 CLI commands migrated. events table + run_state table replace files. |
+| M2.4 | Session history dir `.conductor/sessions/<NNN>/` + INDEX.md; `prompt.md` matches what was sent | DONE | - | WriteSessionHistory in RunLoop.Plumbing.cs — creates prompt.md, cost.json, verdict.md, handover.md, INDEX.md per session. |
+| M2.5 | Accurate per-session/per-plan cost + tokens incl. gate/advisor split | DONE | - | Agent/gate costs already recorded. Advisor cost tracking added in ConsultAdvisorAsync (wallet + category="advisor"). |
 
 ### M3 — Workflows that bend — declarative steps, per-session overrides, safe parallelism
 

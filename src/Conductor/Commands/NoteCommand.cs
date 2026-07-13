@@ -1,6 +1,7 @@
 using System.ComponentModel;
 
 using Conductor.Core;
+using Conductor.Core.Store;
 using Conductor.Models;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -39,14 +40,23 @@ public sealed class NoteCommand : Command<NoteCommand.Settings>
             return 1;
         }
 
-        var statePath = Path.Combine(plan.StateDir, "state.json");
-        var state = RunState.LoadOrNew(statePath, plan.Name);
         var kind = string.IsNullOrWhiteSpace(settings.Kind) ? "note" : settings.Kind;
 
         try
         {
-            using var db = OpenRunDb(runDbPath);
-            db.WriteLedger(state.RunId, state.SessionCounter > 0 ? state.SessionCounter : null,
+            using var store = new SqliteRunStore(runDbPath,
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteRunStore>.Instance);
+            var runId = store.GetLatestRunId(plan.Name);
+            if (string.IsNullOrEmpty(runId))
+            {
+                AnsiConsole.MarkupLine("[red]No run found in run.db.[/] Initialize the run first.");
+                return 1;
+            }
+            var stateJson = store.LoadRunStateJson(runId);
+            var state = string.IsNullOrEmpty(stateJson)
+                ? new RunState { PlanName = plan.Name, RunId = runId }
+                : System.Text.Json.JsonSerializer.Deserialize<RunState>(stateJson, PlanConfig.JsonOpts) ?? new RunState { PlanName = plan.Name, RunId = runId };
+            store.WriteLedger(state.RunId, state.SessionCounter > 0 ? state.SessionCounter : null,
                 settings.Stage ?? state.CurrentStage, kind, settings.Text);
         }
         catch (Exception ex)
@@ -56,18 +66,5 @@ public sealed class NoteCommand : Command<NoteCommand.Settings>
         }
         AnsiConsole.MarkupLine($"[green]note written:[/] [{Markup.Escape(kind)}] {Markup.Escape(settings.Text)}");
         return 0;
-    }
-
-    private static RunDb OpenRunDb(string path)
-    {
-        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RunDb>.Instance;
-        try
-        {
-            return new RunDb(path, logger);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Failed to open run.db at {path}: {ex.Message}", ex);
-        }
     }
 }

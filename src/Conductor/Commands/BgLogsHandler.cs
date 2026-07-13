@@ -1,4 +1,5 @@
 using Conductor.Core;
+using Conductor.Core.Store;
 using Conductor.Models;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -50,13 +51,12 @@ internal static class BgLogsHandler
             {
                 try
                 {
-                    using var db = new RunDb(runDbPath,
-                        Microsoft.Extensions.Logging.Abstractions.NullLogger<RunDb>.Instance);
-                    var statePath = Path.Combine(plan.StateDir, "state.json");
-                    var state = RunState.LoadOrNew(statePath, plan.Name);
-                    if (!string.IsNullOrEmpty(state.RunId))
+                    using var store = new SqliteRunStore(runDbPath,
+                        Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteRunStore>.Instance);
+                    var runId = store.GetLatestRunId(plan.Name);
+                    if (!string.IsNullOrEmpty(runId))
                     {
-                        var allPids = db.GetAllPids(state.RunId);
+                        var allPids = store.GetAllPids(runId);
                         var match = allPids.FirstOrDefault(p => p.Pid == dbPid);
                         if (match != null)
                         {

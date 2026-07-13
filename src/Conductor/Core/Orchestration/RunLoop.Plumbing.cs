@@ -8,6 +8,7 @@ using Conductor.Core.Integrations;
 using Conductor.Core.Orchestration;
 using Conductor.Core.Planning;
 using Conductor.Core.Providers;
+using Conductor.Core.Store;
 using Conductor.Models;
 using Microsoft.Extensions.Logging;
 
@@ -120,7 +121,7 @@ public sealed partial class RunLoop
         TrackerSnapshot track;
         try { track = _ctx.Progress.Read(_ctx.Plan, CancellationToken.None); }
         catch (Exception) { track = new TrackerSnapshot(); }
-        Reporter.WriteAndPublish(_ctx.Plan, _ctx.State, track, _ctx.LastGates, _ctx.Log);
+        Reporter.WriteAndPublish(_ctx.Plan, _ctx.State, track, _ctx.LastGates, _ctx.Log, store: _ctx.Store);
         PushIdleSnapshot();
     }
 
@@ -176,7 +177,7 @@ public sealed partial class RunLoop
             foreach (var id in rec.NewlyDone)
                 _ctx.Events.Emit(new CheckpointConfirmed { SessionId = sid, CheckpointId = id, StageId = rec.Stage });
 
-        if (_ctx.RunDb is { } db)
+        if (_ctx.Store is { } db)
         {
             db.RecordSession(_ctx.State.RunId, rec.Stage, rec.Number, rec.Kind.ToString(),
                 rec.StartedUtc, rec.EndedUtc, rec.Outcome?.ToString(), rec.ClaudeSessionId,
@@ -206,6 +207,8 @@ public sealed partial class RunLoop
             RegenerateTracker(track);
         }
 
+        WriteSessionHistory(rec);
+
         _ = _ctx.Telegram.PushSessionEndAsync(rec.Number, rec.Stage, rec.Outcome?.ToString() ?? "Unknown",
             rec.GateSummary, rec.ResultSummary, rec.CostUsd, _ctx.State.PendingFix?.VerifierScore);
     }
@@ -231,7 +234,7 @@ public sealed partial class RunLoop
 
     private void SeedCheckpointsFromTracker()
     {
-        if (_ctx.RunDb is not { } db) return;
+        if (_ctx.Store is not { } db) return;
         var track = ReadTrackerSafe();
         if (track.Checkpoints.Count == 0) return;
 
@@ -250,7 +253,7 @@ public sealed partial class RunLoop
 
     private void RegenerateTracker(TrackerSnapshot currentTrack)
     {
-        if (_ctx.RunDb is not { } db) return;
+        if (_ctx.Store is not { } db) return;
         try
         {
             TrackerGenerator.Write(_ctx.Plan, db, _ctx.State.RunId, currentTrack.HandoffBlock);
@@ -258,6 +261,92 @@ public sealed partial class RunLoop
         catch (Exception ex)
         {
             _ctx.Log($"tracker regeneration failed: {ex.Message}");
+        }
+    }
+
+    // ---------------------------------------------------------------- M2.4 session history
+
+    private void WriteSessionHistory(SessionRecord rec)
+    {
+        try
+        {
+            var sessionsDir = Path.Combine(_ctx.Plan.StateDir, "sessions");
+            var sessionDir = Path.Combine(sessionsDir, rec.Number.ToString("000"));
+            Directory.CreateDirectory(sessionDir);
+
+            var promptPath = Path.Combine(_ctx.Plan.StateDir, "logs", $"session-{rec.Number:000}.prompt.md");
+            if (File.Exists(promptPath))
+                File.Copy(promptPath, Path.Combine(sessionDir, "prompt.md"), overwrite: true);
+
+            // cost.json
+            var cost = new
+            {
+                session = rec.Number,
+                stage = rec.Stage,
+                kind = rec.Kind.ToString(),
+                outcome = rec.Outcome?.ToString(),
+                costUsd = rec.CostUsd,
+                overheadCostUsd = rec.OverheadCostUsd,
+                tokensInput = rec.TokensInput,
+                tokensOutput = rec.TokensOutput,
+                tokensReasoning = rec.TokensReasoning,
+                tokensCacheRead = rec.TokensCacheRead,
+                startedUtc = rec.StartedUtc,
+                endedUtc = rec.EndedUtc,
+                wallMs = (long?)(rec.EndedUtc - rec.StartedUtc)?.TotalMilliseconds,
+                commits = rec.NewCommits.Count,
+            };
+            File.WriteAllText(Path.Combine(sessionDir, "cost.json"),
+                JsonSerializer.Serialize(cost, new JsonSerializerOptions { WriteIndented = true }));
+
+            // verdict.md
+            if (!string.IsNullOrEmpty(rec.ResultSummary))
+                File.WriteAllText(Path.Combine(sessionDir, "verdict.md"), rec.ResultSummary);
+
+            // handover.md
+            if (_ctx.Store is { } store)
+            {
+                var handover = store.GetLatestHandover(_ctx.State.RunId, rec.Stage);
+                if (!string.IsNullOrEmpty(handover))
+                    File.WriteAllText(Path.Combine(sessionDir, "handover.md"), handover);
+            }
+
+            // INDEX.md
+            var index = new System.Text.StringBuilder();
+            index.AppendLine("# Session History");
+            index.AppendLine();
+            var entries = Directory.GetDirectories(sessionsDir)
+                .Select(Path.GetFileName)
+                .OfType<string>()
+                .OrderBy(n => n, StringComparer.Ordinal);
+            foreach (var entry in entries)
+            {
+                var entryDir = Path.Combine(sessionsDir, entry);
+                var costPath = Path.Combine(entryDir, "cost.json");
+                var stageId = "";
+                var outcome = "";
+                if (File.Exists(costPath))
+                {
+                    try
+                    {
+                        using var doc = JsonDocument.Parse(File.ReadAllText(costPath));
+                        stageId = doc.RootElement.TryGetProperty("stage", out var s) ? s.GetString() ?? "" : "";
+                        outcome = doc.RootElement.TryGetProperty("outcome", out var o) ? o.GetString() ?? "" : "";
+                    }
+                    catch { }
+                }
+                var files = Directory.GetFiles(entryDir)
+                    .Select(f => Path.GetFileName(f))
+                    .OrderBy(f => f, StringComparer.Ordinal);
+                index.AppendLine($"- [{entry}]({entry}/) — {stageId} — {outcome}");
+                foreach (var f in files)
+                    index.AppendLine($"  - [{f}]({entry}/{f})");
+            }
+            File.WriteAllText(Path.Combine(sessionsDir, "INDEX.md"), index.ToString());
+        }
+        catch (Exception ex)
+        {
+            _ctx.Log($"session history write failed: {ex.Message}");
         }
     }
 }

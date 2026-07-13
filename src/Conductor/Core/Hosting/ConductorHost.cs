@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Conductor.Core.Events;
 using Conductor.Core.Http;
 using Conductor.Core.Integrations;
+using Conductor.Core.Store;
 using Conductor.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -30,21 +31,18 @@ public static class ConductorHost
         "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] " +
         "run={runId} s={sessionId} stage={stage} gate={gate} {Message:lj}{NewLine}{Exception}";
 
-    /// <summary>Builds the composition root. The caller owns <paramref name="sink"/>/<paramref name="events"/>
+    /// <summary>Builds the composition root. The caller provides <paramref name="sink"/>
     /// (chosen by run mode) and resolves the <see cref="Orchestrator"/> from <see cref="IHost.Services"/>.
     /// Throws <see cref="OptionsValidationException"/> if the plan is invalid (fail-fast on start).</summary>
     public static IHost Build(
         PlanConfig plan,
         RunState state,
-        string statePath,
         IProgressSink sink,
-        IEventSink events,
         RunOptions opts,
         bool consoleSink)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(sink);
-        ArgumentNullException.ThrowIfNull(events);
 
         var builder = Host.CreateApplicationBuilder();
 
@@ -82,15 +80,13 @@ public static class ConductorHost
         builder.Services.AddSingleton(state);
         builder.Services.AddSingleton(opts);
         builder.Services.AddSingleton(sink);
-        builder.Services.AddSingleton(events);
 
-        // B6: Telegram bot — registered as both IHostedService and ITelegramService.
-        // When no Telegram config is present, a no-op stub satisfies the interface.
+        // B6: Telegram bot
         if (plan.Telegram != null)
         {
             builder.Services.AddSingleton<TelegramService>(sp =>
                 new TelegramService(plan, state, sp.GetRequiredService<ILogger<TelegramService>>(),
-                    runDb: opts.DryRun ? null : sp.GetRequiredService<RunDb>()));
+                    store: opts.DryRun ? null : sp.GetRequiredService<IRunStore>()));
             builder.Services.AddSingleton<ITelegramService>(sp => sp.GetRequiredService<TelegramService>());
             builder.Services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<TelegramService>());
         }
@@ -105,58 +101,58 @@ public static class ConductorHost
         // B9.2: planner decomposition — produces ordered sub-tasks from a checkpoint.
         builder.Services.AddSingleton<IPlanner>(new CheckpointPlanner());
 
-        // F1: SQLite run.db task store (additive — written alongside state.json + events.jsonl).
+        // M2: SQLite run.db — the single authoritative store.
+        // Registered as both IRunStore (write + query surface) and IEventSink (event spine).
         // Dry runs skip the database (no write side-effects).
         builder.Services.AddSingleton(sp =>
         {
             if (opts.DryRun) return null!;
             var runDbPath = Path.Combine(plan.StateDir, "run.db");
-            return new RunDb(runDbPath, sp.GetRequiredService<ILogger<RunDb>>());
+            var store = new SqliteRunStore(runDbPath, sp.GetRequiredService<ILogger<SqliteRunStore>>());
+            store.SetRunId(state.RunId);
+            return store;
+        });
+        builder.Services.AddSingleton<IRunStore>(sp =>
+        {
+            var store = sp.GetService<SqliteRunStore>();
+            return store!;
+        });
+        builder.Services.AddSingleton<IEventSink>(sp =>
+        {
+            var store = sp.GetService<SqliteRunStore>();
+            if (store != null) return store;
+            // Dry run: no store → use null sink (the IEventSink DI contract requires non-null)
+            return NullEventSink.Instance;
         });
 
         // F2.1: Process supervisor — run-level Job Object + PID tracking.
         // Created before the Orchestrator so its JobObject covers the full run lifecycle.
         builder.Services.AddSingleton<ProcessSupervisor>(sp =>
         {
-            var runDb = sp.GetService<RunDb>();
+            var store = sp.GetService<IRunStore>();
             var supLogger = sp.GetRequiredService<ILogger<ProcessSupervisor>>();
-            return new ProcessSupervisor(supLogger, state.RunId, runDb);
+            return new ProcessSupervisor(supLogger, state.RunId, store);
         });
 
-        // F6: agent transcript log (text + thinking, F5 stage-map deferral) — additive alongside
-        // events.jsonl, same dry-run skip as run.db (no write side-effects on a dry run).
-        builder.Services.AddSingleton(sp =>
-        {
-            if (opts.DryRun) return null!;
-            var transcriptPath = Path.Combine(plan.StateDir, "transcript.jsonl");
-            return new TranscriptLog(transcriptPath);
-        });
-
-        // F5: control-plane inbox — a third command ingress (alongside the TUI queue and
-        // control.json) that POST /control enqueues onto and the run loop polls. Always registered
-        // (cheap, empty queue) so Orchestrator's wiring doesn't branch on whether the HTTP server
-        // itself is enabled.
+        // F5: control-plane inbox
         builder.Services.AddSingleton(new ConcurrentQueue<ControlCommand>());
 
-        // F5/F6: HTTP+SSE control plane — opt-in (RunOptions.ControlPlane), off by default. A bind
-        // failure never throws (see ControlPlaneServer.Start) — headless/no-flag runs are byte-
-        // identical whether or not this is registered.
+        // F5/F6: HTTP+SSE control plane — opt-in (RunOptions.ControlPlane), off by default.
         if (opts.ControlPlane)
         {
             builder.Services.AddSingleton(sp => new ControlPlaneServer(
                 plan,
-                Path.Combine(plan.StateDir, "events.jsonl"),
-                Path.Combine(plan.StateDir, "transcript.jsonl"),
-                Path.Combine(plan.StateDir, "run.db"),
+                state,
+                sp.GetRequiredService<IRunStore>(),
                 sp.GetRequiredService<ConcurrentQueue<ControlCommand>>(),
                 sp.GetRequiredService<ILogger<ControlPlaneServer>>(),
                 opts.ControlPlanePort));
         }
 
+        // M2: Orchestrator — the run-loop entry point.
         builder.Services.AddSingleton(sp => new Orchestrator(
             sp.GetRequiredService<PlanConfig>(),
             sp.GetRequiredService<RunState>(),
-            statePath,
             sp.GetRequiredService<IProgressSink>(),
             sp.GetRequiredService<IEventSink>(),
             sp.GetRequiredService<RunOptions>(),
@@ -164,10 +160,9 @@ public static class ConductorHost
             sp.GetRequiredService<ITelegramService>(),
             sp.GetRequiredService<WebhookNotifier>(),
             planner: null,
-            runDb: sp.GetService<RunDb>(),
+            store: sp.GetService<IRunStore>(),
             processSupervisor: sp.GetService<ProcessSupervisor>(),
-            controlInbox: sp.GetRequiredService<ConcurrentQueue<ControlCommand>>(),
-            transcript: sp.GetService<TranscriptLog>()));
+            controlInbox: sp.GetRequiredService<ConcurrentQueue<ControlCommand>>()));
 
         var host = builder.Build();
         ValidateOptionsOnStart(host.Services, plan);

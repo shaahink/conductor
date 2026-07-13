@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using Conductor.Core.Store;
 using Microsoft.Extensions.Logging;
 
 namespace Conductor.Core;
@@ -17,13 +18,13 @@ public sealed class ProcessSupervisor : IDisposable
     private readonly JobObject _job = new();
     private readonly ConcurrentDictionary<int, TrackedProcess> _processes = new();
     private readonly ILogger<ProcessSupervisor> _logger;
-    private readonly RunDb? _runDb;
+    private readonly IRunStore? _store;
     private readonly string? _runId;
 
-    public ProcessSupervisor(ILogger<ProcessSupervisor> logger, string? runId = null, RunDb? runDb = null)
+    public ProcessSupervisor(ILogger<ProcessSupervisor> logger, string? runId = null, IRunStore? store = null)
     {
         _logger = logger;
-        _runDb = runDb;
+        _store = store;
         _runId = runId;
     }
 
@@ -40,8 +41,8 @@ public sealed class ProcessSupervisor : IDisposable
 
         _job.Assign(process);
 
-        if (_runDb != null && _runId != null)
-            _runDb.TrackPid(pid, _runId, purpose, stageId, sessionNumber, tp.StartedUtc);
+        if (_store != null && _runId != null)
+            _store.TrackPid(pid, _runId, purpose, stageId, sessionNumber, tp.StartedUtc);
         _logger.LogDebug("tracked pid={Pid} purpose={Purpose}", pid, purpose);
 
         return new TrackedProcessHandle(this, pid);
@@ -52,7 +53,7 @@ public sealed class ProcessSupervisor : IDisposable
     {
         if (_processes.TryRemove(pid, out _))
         {
-            _runDb?.MarkPidExited(pid, exitCode);
+            _store?.MarkPidExited(pid, exitCode);
             _logger.LogDebug("untracked pid={Pid} exitCode={ExitCode}", pid, exitCode);
         }
     }
@@ -66,9 +67,9 @@ public sealed class ProcessSupervisor : IDisposable
     /// as exited. Also marks as exited any PIDs whose processes no longer exist (already terminated).</summary>
     public void ReapOrphans()
     {
-        if (_runDb == null || _runId == null) return;
+        if (_store == null || _runId == null) return;
 
-        var orphans = _runDb.GetOrphanPids(_runId);
+        var orphans = _store.GetOrphanPids(_runId);
         var currentPid = Environment.ProcessId;
         foreach (var (pid, purpose) in orphans)
         {
@@ -97,7 +98,7 @@ public sealed class ProcessSupervisor : IDisposable
                 // Platform does not support this API
             }
 
-            _runDb.MarkPidExited(pid, null);
+            _store.MarkPidExited(pid, null);
         }
     }
 

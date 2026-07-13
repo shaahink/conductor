@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Conductor.Core.Events;
 using Conductor.Core.Planning;
+using Conductor.Core.Store;
 using Conductor.Models;
 using Microsoft.Extensions.Logging;
 
@@ -30,9 +31,8 @@ namespace Conductor.Core.Http;
 public sealed partial class ControlPlaneServer : IDisposable
 {
     private readonly PlanConfig _plan;
-    private readonly string _eventsLogPath;
-    private readonly string _transcriptLogPath;
-    private readonly string _runDbPath;
+    private readonly RunState _state;
+    private readonly IRunStore _store;
     private readonly ConcurrentQueue<ControlCommand> _inbox;
     private readonly ILogger _logger;
     private readonly int _preferredPort;
@@ -49,12 +49,11 @@ public sealed partial class ControlPlaneServer : IDisposable
     public int Port { get; private set; }
     public bool IsRunning => _running;
 
-    public ControlPlaneServer(PlanConfig plan, string eventsLogPath, string transcriptLogPath, string runDbPath, ConcurrentQueue<ControlCommand> inbox, ILogger logger, int port)
+    public ControlPlaneServer(PlanConfig plan, RunState state, IRunStore store, ConcurrentQueue<ControlCommand> inbox, ILogger logger, int port)
     {
         _plan = plan;
-        _eventsLogPath = eventsLogPath;
-        _transcriptLogPath = transcriptLogPath;
-        _runDbPath = runDbPath;
+        _state = state;
+        _store = store;
         _inbox = inbox;
         _logger = logger;
         _preferredPort = port;

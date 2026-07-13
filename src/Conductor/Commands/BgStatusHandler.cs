@@ -1,6 +1,7 @@
 using System.Diagnostics;
 
 using Conductor.Core;
+using Conductor.Core.Store;
 using Conductor.Models;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -19,17 +20,15 @@ internal static class BgStatusHandler
             return 0;
         }
 
-        using var db = new RunDb(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<RunDb>.Instance);
-        var statePath = Path.Combine(plan.StateDir, "state.json");
-        var state = RunState.LoadOrNew(statePath, plan.Name);
-        var runId = state.RunId;
+        using var store = new SqliteRunStore(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteRunStore>.Instance);
+        var runId = store.GetLatestRunId(plan.Name);
         if (string.IsNullOrEmpty(runId))
         {
-            AnsiConsole.MarkupLine("[grey]state.json has no RunId — no background processes tracked.[/]");
+            AnsiConsole.MarkupLine("[grey]No run found in run.db — no background processes tracked.[/]");
             return 0;
         }
 
-        var pids = db.GetAllPids(runId);
+        var pids = store.GetAllPids(runId);
         if (pids.Count == 0)
         {
             AnsiConsole.MarkupLine("[grey]No background processes tracked for this run.[/]");

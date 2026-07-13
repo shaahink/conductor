@@ -1,6 +1,7 @@
 using System.ComponentModel;
 
 using Conductor.Core;
+using Conductor.Core.Store;
 using Conductor.Models;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -47,44 +48,43 @@ public sealed class TaskCommand : Command<TaskCommand.Settings>
             return 1;
         }
 
-        var statePath = Path.Combine(plan.StateDir, "state.json");
-        var state = RunState.LoadOrNew(statePath, plan.Name);
-        if (string.IsNullOrEmpty(state.RunId))
-        {
-            AnsiConsole.MarkupLine("[red]state.json has no RunId.[/] Initialize the run first (conductor run --dry-run or run at least one session).");
-            return 1;
-        }
-
         try
         {
-            using var db = new RunDb(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<RunDb>.Instance);
+            using var store = new SqliteRunStore(runDbPath,
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteRunStore>.Instance);
+            var runId = store.GetLatestRunId(plan.Name);
+            if (string.IsNullOrEmpty(runId))
+            {
+                AnsiConsole.MarkupLine("[red]No run found in run.db.[/] Initialize the run first.");
+                return 1;
+            }
 
             if (settings.Done != null)
             {
-                var allCps = db.GetCheckpoints(state.RunId);
+                var allCps = store.GetCheckpoints(runId);
                 if (!allCps.Any(c => c.Id.Equals(settings.Done, StringComparison.OrdinalIgnoreCase)))
                 {
                     AnsiConsole.MarkupLine($"[red]Checkpoint '{Markup.Escape(settings.Done)}' not found in run.db[/]");
                     return 1;
                 }
-                db.UpdateCheckpoint(state.RunId, settings.Done, "DONE",
+                store.UpdateCheckpoint(runId, settings.Done, "DONE",
                     settings.Commit ?? "-", settings.Evidence ?? "marked done via CLI");
                 AnsiConsole.MarkupLine($"[green]checkpoint {Markup.Escape(settings.Done)} → DONE[/]");
             }
             else if (settings.InProgress != null)
             {
-                var allCps = db.GetCheckpoints(state.RunId);
+                var allCps = store.GetCheckpoints(runId);
                 if (!allCps.Any(c => c.Id.Equals(settings.InProgress, StringComparison.OrdinalIgnoreCase)))
                 {
                     AnsiConsole.MarkupLine($"[red]Checkpoint '{Markup.Escape(settings.InProgress)}' not found in run.db[/]");
                     return 1;
                 }
-                db.MarkCheckpointInProgress(state.RunId, settings.InProgress);
+                store.MarkCheckpointInProgress(runId, settings.InProgress);
                 AnsiConsole.MarkupLine($"[yellow]checkpoint {Markup.Escape(settings.InProgress)} → IN PROGRESS[/]");
             }
             else if (settings.List)
             {
-                var cps = db.GetCheckpoints(state.RunId);
+                var cps = store.GetCheckpoints(runId);
 
                 if (cps.Count == 0)
                 {

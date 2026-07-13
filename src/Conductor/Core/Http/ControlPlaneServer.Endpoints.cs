@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Conductor.Core.Events;
 using Conductor.Core.Planning;
+using Conductor.Core.Store;
 using Conductor.Models;
 using Microsoft.Extensions.Logging;
 
@@ -11,9 +12,14 @@ namespace Conductor.Core.Http;
 
 public sealed partial class ControlPlaneServer
 {
+    private IReadOnlyList<ConductorEvent> ReadEvents()
+    {
+        return _store.ReadAllEvents(_state.RunId);
+    }
+
     private async Task WriteStateAsync(HttpListenerContext ctx)
     {
-        var events = EventLog.ReadAll(_eventsLogPath);
+        var events = ReadEvents();
         var runState = RunStateProjection.Fold(events);
         var track = ReadTrackerSafe();
         var snap = SnapshotBuilder.Build(_plan, runState, track);
@@ -29,7 +35,7 @@ public sealed partial class ControlPlaneServer
 
     private async Task WriteTasksAsync(HttpListenerContext ctx)
     {
-        var events = EventLog.ReadAll(_eventsLogPath);
+        var events = ReadEvents();
         var graph = new TaskGraph();
         graph.Fold(events);
         await WriteJsonAsync(ctx, ControlPlaneDto.FromTasks(graph.Tasks), ControlPlaneJsonContext.Default.TasksDto).ConfigureAwait(false);
@@ -46,7 +52,7 @@ public sealed partial class ControlPlaneServer
         {
             while (!ct.IsCancellationRequested)
             {
-                var events = EventLog.ReadAll(_eventsLogPath);
+                var events = ReadEvents();
                 foreach (var evt in events.Where(e => e.Seq > lastSeq).OrderBy(e => e.Seq))
                 {
                     var json = JsonSerializer.Serialize<ConductorEvent>(evt, EventJsonContext.Default.ConductorEvent);
@@ -73,21 +79,25 @@ public sealed partial class ControlPlaneServer
         ctx.Response.Headers.Add("Cache-Control", "no-cache");
         ctx.Response.SendChunked = true;
         var output = ctx.Response.OutputStream;
+        var transcriptPath = Path.Combine(_plan.StateDir, "transcript.jsonl");
         var lastSeq = ParseSince(ctx);
         try
         {
             while (!ct.IsCancellationRequested)
             {
-                var lines = TranscriptLog.ReadAll(_transcriptLogPath);
-                foreach (var line in lines.Where(l => l.Seq > lastSeq).OrderBy(l => l.Seq))
+                if (File.Exists(transcriptPath))
                 {
-                    var json = JsonSerializer.Serialize(line, TranscriptJsonContext.Default.TranscriptLine);
-                    var frame = Encoding.UTF8.GetBytes($"data: {json}\n\n");
-                    await output.WriteAsync(frame, ct).ConfigureAwait(false);
-                    lastSeq = line.Seq;
+                    var lines = TranscriptLog.ReadAll(transcriptPath);
+                    foreach (var line in lines.Where(l => l.Seq > lastSeq).OrderBy(l => l.Seq))
+                    {
+                        var json = JsonSerializer.Serialize(line, TranscriptJsonContext.Default.TranscriptLine);
+                        var frame = Encoding.UTF8.GetBytes($"data: {json}\n\n");
+                        await output.WriteAsync(frame, ct).ConfigureAwait(false);
+                        lastSeq = line.Seq;
+                    }
                 }
                 await output.FlushAsync(ct).ConfigureAwait(false);
-                await Task.Delay(500, ct).ConfigureAwait(false);
+                await Task.Delay(1000, ct).ConfigureAwait(false);
             }
         }
         catch (Exception ex) when (ex is IOException or HttpListenerException or OperationCanceledException)
@@ -104,18 +114,7 @@ public sealed partial class ControlPlaneServer
 
     private async Task WriteProcessesAsync(HttpListenerContext ctx)
     {
-        if (!File.Exists(_runDbPath))
-        {
-            await WriteJsonAsync(ctx, new ProcessesDto([]), ControlPlaneJsonContext.Default.ProcessesDto).ConfigureAwait(false);
-            return;
-        }
-        var events = EventLog.ReadAll(_eventsLogPath);
-        var runId = RunStateProjection.Fold(events).RunId;
-        List<PidRow> pids;
-        using (var db = new RunDb(_runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<RunDb>.Instance))
-        {
-            pids = [.. db.GetAllPids(runId)];
-        }
+        var pids = _store.GetAllPids(_state.RunId);
         var bgLogDir = Path.Combine(_plan.StateDir, "bg-logs");
         var dtos = new List<ProcessDto>(pids.Count);
         foreach (var p in pids)
@@ -163,32 +162,19 @@ public sealed partial class ControlPlaneServer
 
     private async Task WriteSessionsAsync(HttpListenerContext ctx)
     {
-        if (!File.Exists(_runDbPath))
-        {
-            await WriteJsonAsync(ctx, new SessionsDto([]), ControlPlaneJsonContext.Default.SessionsDto).ConfigureAwait(false);
-            return;
-        }
-        var events = EventLog.ReadAll(_eventsLogPath);
-        var runId = RunStateProjection.Fold(events).RunId;
-        List<Dictionary<string, object?>> rows;
-        using (var db = new RunDb(_runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<RunDb>.Instance))
-        {
-            rows = db.Query(
-                "SELECT number, stage_id, kind, started_utc, ended_utc, outcome, attempt, resume_count, gate_summary, result_summary, commit_count " +
-                "FROM sessions WHERE run_id = @runId ORDER BY number DESC", ("@runId", runId));
-        }
+        var rows = _store.QuerySessions(_state.RunId);
         var dtos = rows.Select(r => new SessionRowDto(
-            Number: Convert.ToInt32(r["number"]),
-            StageId: (string)r["stage_id"]!,
-            Kind: (string)r["kind"]!,
-            StartedUtc: (string)r["started_utc"]!,
-            EndedUtc: r["ended_utc"] as string,
-            Outcome: r["outcome"] as string,
-            Attempt: Convert.ToInt32(r["attempt"]),
-            ResumeCount: Convert.ToInt32(r["resume_count"]),
-            GateSummary: r["gate_summary"] as string,
-            ResultSummary: r["result_summary"] as string,
-            CommitCount: Convert.ToInt32(r["commit_count"]))).ToList();
+            Number: r.Number,
+            StageId: r.StageId,
+            Kind: r.Kind,
+            StartedUtc: r.StartedUtc ?? "",
+            EndedUtc: r.EndedUtc,
+            Outcome: r.Outcome,
+            Attempt: r.Attempt,
+            ResumeCount: r.ResumeCount,
+            GateSummary: r.GateSummary,
+            ResultSummary: r.ResultSummary,
+            CommitCount: r.CommitCount)).ToList();
         await WriteJsonAsync(ctx, new SessionsDto(dtos), ControlPlaneJsonContext.Default.SessionsDto).ConfigureAwait(false);
     }
 
@@ -207,20 +193,10 @@ public sealed partial class ControlPlaneServer
                 ControlPlaneJsonContext.Default.QueryResultDto, HttpStatusCode.BadRequest).ConfigureAwait(false);
             return;
         }
-        if (!File.Exists(_runDbPath))
-        {
-            await WriteJsonAsync(ctx, new QueryResultDto([], [], false, "no run.db found"),
-                ControlPlaneJsonContext.Default.QueryResultDto).ConfigureAwait(false);
-            return;
-        }
         const int maxRows = 500;
         try
         {
-            List<Dictionary<string, object?>> rows;
-            using (var db = new RunDb(_runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<RunDb>.Instance))
-            {
-                rows = db.Query(sql);
-            }
+            var rows = _store.Query(sql);
             var columns = rows.Count > 0 ? rows[0].Keys.ToList() : [];
             var truncated = rows.Count > maxRows;
             var dtoRows = rows.Take(maxRows)
@@ -283,19 +259,9 @@ public sealed partial class ControlPlaneServer
                 ControlPlaneJsonContext.Default.InjectAcceptedDto, HttpStatusCode.BadRequest).ConfigureAwait(false);
             return;
         }
-        if (!File.Exists(_runDbPath))
-        {
-            await WriteJsonAsync(ctx, new InjectAcceptedDto(false, "no run.db found — run the conductor at least once", null, null, null),
-                ControlPlaneJsonContext.Default.InjectAcceptedDto).ConfigureAwait(false);
-            return;
-        }
-        var events = EventLog.ReadAll(_eventsLogPath);
-        var runId = RunStateProjection.Fold(events).RunId;
+        var runId = _state.RunId;
         var recordedUtc = DateTime.UtcNow;
-        using (var db = new RunDb(_runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<RunDb>.Instance))
-        {
-            db.WriteInjection(runId, "human", null, req.StageId, req.Content);
-        }
+        _store.WriteInjection(runId, "human", null, req.StageId, req.Content);
         await WriteJsonAsync(ctx, new InjectAcceptedDto(true, null, runId, req.StageId, recordedUtc.ToString("O")),
             ControlPlaneJsonContext.Default.InjectAcceptedDto, HttpStatusCode.Accepted).ConfigureAwait(false);
     }

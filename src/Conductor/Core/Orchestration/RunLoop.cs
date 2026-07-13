@@ -9,6 +9,7 @@ using Conductor.Core.Lanes;
 using Conductor.Core.Orchestration;
 using Conductor.Core.Planning;
 using Conductor.Core.Providers;
+using Conductor.Core.Store;
 using Conductor.Models;
 using Microsoft.Extensions.Logging;
 
@@ -67,7 +68,7 @@ public sealed partial class RunLoop
                 DriverVersion = typeof(RunLoop).Assembly.GetName().Version?.ToString(),
                 Resumed = _ctx.State.SessionCounter > 0,
             });
-            _ctx.RunDb?.InitializeRun(_ctx.State.RunId, _ctx.Plan.Name, _ctx.Plan.Repo, Git.Branch(_ctx.Plan.Repo),
+            _ctx.Store?.InitializeRun(_ctx.State.RunId, _ctx.Plan.Name, _ctx.Plan.Repo, Git.Branch(_ctx.Plan.Repo),
                 typeof(RunLoop).Assembly.GetName().Version?.ToString());
             _ctx.ProcessSupervisor?.ReapOrphans();
             SeedCheckpointsFromTracker();
@@ -82,7 +83,7 @@ public sealed partial class RunLoop
                 while (!ct.IsCancellationRequested)
                 {
                     await HandleControlAsync(ct: ct).ConfigureAwait(false);
-                    if (_ctx.State.Status == RunStatus.Aborted) { _ctx.RunDb?.RecordRunEnd(_ctx.State.RunId, _ctx.State.Status.ToString()); _saveAndReport(); return 2; }
+                    if (_ctx.State.Status == RunStatus.Aborted) { _ctx.Store?.RecordRunEnd(_ctx.State.RunId, _ctx.State.Status.ToString()); _saveAndReport(); return 2; }
                     if (!_ctx.Options.DryRun && _ctx.State.Status is RunStatus.Paused or RunStatus.NeedsHuman or RunStatus.AwaitingOwner)
                     {
                         PushIdleSnapshot();
@@ -185,7 +186,7 @@ public sealed partial class RunLoop
                     _ctx.State.PendingFix = null;
                     _ctx.Log($"stage → {stage.Id} {stage.Title}");
                     _ctx.Events.Emit(new StageEntered { StageId = stage.Id, Title = stage.Title, StartHead = _ctx.State.CurrentStageStartHead });
-                    _ctx.RunDb?.InitializeStage(_ctx.State.RunId, stage.Id, stage.Title);
+                    _ctx.Store?.InitializeStage(_ctx.State.RunId, stage.Id, stage.Title);
                     _ctx.Save();
                 }
 
@@ -416,11 +417,9 @@ public sealed partial class RunLoop
 
         if (!recovered && _ctx.State.PendingResume == null)
         {
-            var eventsPath = Path.Combine(_ctx.Plan.StateDir, "events.jsonl");
-            if (File.Exists(eventsPath))
+            if (_ctx.Store is { } store)
             {
-                var evts = EventLog.ReadAll(eventsPath);
-                var interrupted = RunStateProjection.FindInterruptedSession(evts);
+                var interrupted = store.FindInterruptedSession(_ctx.State.RunId);
                 if (interrupted != null)
                 {
                     var rec = _ctx.State.History.FirstOrDefault(h => h.Number == interrupted.Number);
@@ -436,7 +435,7 @@ public sealed partial class RunLoop
                         {
                             _ctx.Log($"recovered from event log: session #{interrupted.Number} has no AgentSessionId — marking needs-attention (cannot resume without a session id)");
                             _ctx.State.Status = RunStatus.NeedsHuman;
-                            _ctx.State.AttentionReason = $"Orphaned session #{interrupted.Number} in events.jsonl has no AgentSessionId — manual review needed.";
+                            _ctx.State.AttentionReason = $"Orphaned session #{interrupted.Number} in run.db has no AgentSessionId — manual review needed.";
                             _ctx.Save();
                         }
                         else
@@ -463,7 +462,8 @@ public sealed partial class RunLoop
                     }
                 }
 
-                foreach (var evt in evts)
+                var events = store.ReadAllEvents(_ctx.State.RunId);
+                foreach (var evt in events)
                 {
                     if (evt is TaskAdded ta)
                         _ctx.DecomposedCheckpoints.Add(ta.CheckpointId);

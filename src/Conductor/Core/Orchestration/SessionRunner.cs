@@ -4,6 +4,7 @@ using Conductor.Core.Events;
 using Conductor.Core.Lanes;
 using Conductor.Core.Planning;
 using Conductor.Core.Providers;
+using Conductor.Core.Store;
 using Conductor.Models;
 
 namespace Conductor.Core.Orchestration;
@@ -187,7 +188,7 @@ public sealed partial class SessionRunner
                 {
                     if (_ctx.LastBgLivenessCheck == null || (DateTime.UtcNow - _ctx.LastBgLivenessCheck.Value).TotalSeconds > 5)
                     {
-                        _ctx.CachedBgAlive = StallDetector.AnyBgProcessAlive(_ctx.RunDb, _ctx.State.RunId);
+                        _ctx.CachedBgAlive = StallDetector.AnyBgProcessAlive(_ctx.Store, _ctx.State.RunId);
                         _ctx.LastBgLivenessCheck = DateTime.UtcNow;
                     }
 
@@ -328,7 +329,6 @@ public sealed partial class SessionRunner
 
     private void TrackActivity(AgentEvent ev, int sessionNumber)
     {
-        _ctx.Transcript?.Append(sessionNumber.ToString(), ev.Kind, ev.Text);
         if (ev.Kind is not ("tool" or "text" or "result" or "thinking")) return;
         _ctx.Activity.Add((ev.Kind, ev.Text, ev.Utc));
         if (_ctx.Activity.Count > 60) _ctx.Activity.RemoveRange(0, 20);
@@ -362,7 +362,7 @@ public sealed partial class SessionRunner
         {
             var cp = track.ForStage(stage.Id).FirstOrDefault(c => !c.IsDone)?.Id ?? stage.Id;
             _ctx.Log($"report refresh @ {cp} (cost ${agent.CostUsd:0.00})");
-            Reporter.WriteReport(_ctx.Plan, _ctx.State, track, _ctx.LastGates, _ctx.Log, BuildActivitySection(rec, agent));
+            Reporter.WriteReport(_ctx.Plan, _ctx.State, track, _ctx.LastGates, _ctx.Log, BuildActivitySection(rec, agent), store: _ctx.Store);
         }
         catch (Exception ex) { _ctx.Log($"report refresh failed: {ex.Message}"); }
     }

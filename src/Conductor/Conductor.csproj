@@ -26,6 +26,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Core\Store\Migrations\*.sql" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="Conductor.Tests" />
   </ItemGroup>
 

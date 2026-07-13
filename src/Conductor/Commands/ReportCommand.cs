@@ -4,6 +4,7 @@ using System.Text.Json;
 using Conductor.Core;
 using Conductor.Core.Events;
 using Conductor.Core.Integrations;
+using Conductor.Core.Store;
 using Conductor.Models;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -34,8 +35,8 @@ public sealed class ReportCommand : Command<ReportCommand.Settings>
         var track = TrackerParser.ParseFile(plan.TrackerPath);
         Directory.CreateDirectory(plan.StateDir);
         File.WriteAllText(Reporter.ReportPath(plan), Reporter.Build(plan, state, track, null, null,
-            Reporter.ReadTimeline(plan), Reporter.ReadHealth(plan),
-            mcp: Reporter.ReadMcpMetrics(plan),
+            Reporter.ReadTimeline(null, state.RunId), Reporter.ReadHealth(null, state.RunId),
+            mcp: Reporter.ReadMcpMetrics(null, state.RunId),
             repo: Reporter.ReadRepoStrip(plan)), Reporter.Utf8Bom);
         AnsiConsole.MarkupLine($"report written to [bold]{Markup.Escape(Reporter.ReportPath(plan))}[/]");
         return 0;
@@ -52,7 +53,7 @@ public sealed class ReportCommand : Command<ReportCommand.Settings>
 
         try
         {
-            using var db = new RunDb(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<RunDb>.Instance);
+            using var db = new SqliteRunStore(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteRunStore>.Instance);
             var rows = db.Query(sql);
 
             if (rows.Count == 0)

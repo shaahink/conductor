@@ -3,6 +3,7 @@ using Conductor.Core.Events;
 using Conductor.Core.Integrations;
 using Conductor.Core.Lanes;
 using Conductor.Core.Planning;
+using Conductor.Core.Store;
 using Conductor.Models;
 
 namespace Conductor.Core.Orchestration;
@@ -65,8 +66,8 @@ public sealed partial class VerdictEngine
 
         if (green)
         {
-            if (_ctx.Plan.Audit is { Enabled: true, EnableParallel: true } && !_ctx.State.AuditedStages.Contains(pg.StageId)
-                && HasNextUnconfirmedStage(pg.StageId))
+            if (_ctx.Plan.Audit is { Enabled: true, EnableParallel: true }
+                && !_ctx.State.AuditedStages.Contains(pg.StageId) && HasNextUnconfirmedStage(pg.StageId))
             {
                 _ctx.State.PendingParallelAudit = new PendingParallelAudit { StageId = pg.StageId, StageStartHead = pg.StageStartHead };
                 _ctx.State.PendingAudit = null;
@@ -76,7 +77,6 @@ public sealed partial class VerdictEngine
                 await ConfirmStageAsync(pg.StageId, ct).ConfigureAwait(false);
                 return;
             }
-
             if (_ctx.Plan.Audit is { Enabled: true } && !_ctx.State.AuditedStages.Contains(pg.StageId))
             {
                 _ctx.State.PendingAudit = new PendingAudit { StageId = pg.StageId, StageStartHead = pg.StageStartHead };
@@ -97,7 +97,7 @@ public sealed partial class VerdictEngine
             {
                 FromSession = _ctx.State.History.LastOrDefault()?.Number ?? 0,
                 GateFailures = GateRunner.FailureDetails(gates),
-                ProgressSummary = $"phase {pg.StageId} full battery is RED although its checkpoints read DONE — make the claims true",
+                ProgressSummary = $"phase {pg.StageId} full battery RED — make the claims true",
             };
             _ctx.State.PendingPhaseGate = null;
             _ctx.State.Status = RunStatus.Idle;
@@ -147,7 +147,7 @@ public sealed partial class VerdictEngine
             _ctx.Log($"✓ phase {id} CONFIRMED (full battery green{(_ctx.State.AuditedStages.Contains(id) ? " + audit" : "")}) — advancing");
         }
         _ctx.Events.Emit(new StageConfirmed { StageId = id, Audited = _ctx.State.AuditedStages.Contains(id) });
-        _ctx.RunDb?.ConfirmStage(_ctx.State.RunId, id);
+        _ctx.Store?.ConfirmStage(_ctx.State.RunId, id);
         SquashBookkeeping(id);
         _saveAndReport();
     }
@@ -220,11 +220,9 @@ public sealed partial class VerdictEngine
             if (label == "pre-hook")
                 NeedsHuman(detail);
         }
-        else if (label == "pre-hook")
-        {
-            _ctx.State.PreHookRunStages.Add(stageId);
+            else if (label == "pre-hook")
+                _ctx.State.PreHookRunStages.Add(stageId);
         }
-    }
 
     internal async Task<bool> EscalateExhaustedStageAsync(StageConfig stage, TrackerSnapshot track, int maxAttempts)
     {
@@ -247,7 +245,6 @@ public sealed partial class VerdictEngine
                    (verdict != null ? $" · advisor: {verdict.Reason}" : ""));
         return false;
     }
-
     // ── advisor helpers (private) ──
 
     private async Task<AdvisorVerdict?> ConsultAdvisorAsync(SessionRecord? rec, StageConfig stage, TrackerSnapshot track, string outcome)
@@ -260,8 +257,16 @@ public sealed partial class VerdictEngine
             Trunc(rec?.ResultSummary ?? "", 1200),
             _ctx.State.AttemptsThisStage, MaxAttempts(stage));
         _ctx.Log("consulting advisor\u2026");
+        var started = DateTime.UtcNow;
         var v = await Advisor.ConsultAsync(_ctx.Plan, prompt, _ctx.Log).ConfigureAwait(false);
+        var elapsed = DateTime.UtcNow - started;
         _ctx.Log(v != null ? $"advisor verdict: {v.Action} — {v.Reason}" : "advisor unavailable — using deterministic default");
+        if (_ctx.Store is { } store)
+        {
+            var c = 0.0005m * (decimal)elapsed.TotalSeconds;
+            store.RecordCost(_ctx.State.RunId, _ctx.State.SessionCounter, "advisor", 0, 0, 0, 0, c, (long)elapsed.TotalMilliseconds);
+            _ctx.RunOverheadUsd += c; _ctx.PersistBudget();
+        }
         return v;
     }
 

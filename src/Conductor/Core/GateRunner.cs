@@ -1,3 +1,4 @@
+using Conductor.Core.Store;
 using Conductor.Models;
 
 namespace Conductor.Core;
@@ -25,7 +26,7 @@ public static class GateRunner
     public static async Task<List<GateResult>> RunAllAsync(PlanConfig plan, Action<string>? onProgress = null, CancellationToken ct = default,
         bool fastOnly = false, string? currentStage = null, string? stageKind = null,
         Action<IReadOnlyList<GateProgress>>? onGates = null,
-        RunDb? db = null, string? runId = null, string? headSha = null)
+        IRunStore? db = null, string? runId = null, string? headSha = null)
     {
         var gates = plan.Gates
             .Where(g => g.AppliesToStage(currentStage) && g.AppliesToStageKind(stageKind))

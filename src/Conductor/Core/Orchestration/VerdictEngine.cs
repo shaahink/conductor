@@ -3,6 +3,7 @@ using Conductor.Core.Events;
 using Conductor.Core.Integrations;
 using Conductor.Core.Lanes;
 using Conductor.Core.Planning;
+using Conductor.Core.Store;
 using Conductor.Models;
 
 namespace Conductor.Core.Orchestration;
@@ -178,7 +179,7 @@ public sealed partial class VerdictEngine
             if (verdict != null)
             {
                 var findingsText = string.Join("\n", verdict.Findings);
-                _ctx.RunDb?.WriteScore(_ctx.State.RunId, rec.Number, stage.Id, verdict.Score,
+                _ctx.Store?.WriteScore(_ctx.State.RunId, rec.Number, stage.Id, verdict.Score,
                     verdict.Verdict, findingsText);
                 _ctx.Log($"verifier score: {verdict.Score}/100 — verdict: {verdict.Verdict} ({verdict.Findings.Count} finding(s))");
 
@@ -394,7 +395,7 @@ public sealed partial class VerdictEngine
             CheckpointsDone = track.Checkpoints.Count(c => c.IsDone),
             CheckpointsTotal = track.Checkpoints.Count,
         });
-        _ctx.RunDb?.RecordRunEnd(_ctx.State.RunId, _ctx.State.Status.ToString());
+        _ctx.Store?.RecordRunEnd(_ctx.State.RunId, _ctx.State.Status.ToString());
         _saveAndReport();
         Notify($"Conductor: plan {_ctx.Plan.Name} COMPLETE ({_ctx.State.SessionCounter} sessions)");
     }

@@ -8,6 +8,7 @@ using Conductor.Core.Lanes;
 using Conductor.Core.Orchestration;
 using Conductor.Core.Planning;
 using Conductor.Core.Providers;
+using Conductor.Core.Store;
 using Conductor.Models;
 using Microsoft.Extensions.Logging;
 
@@ -32,7 +33,6 @@ public sealed class Orchestrator
     public Orchestrator(
         PlanConfig plan,
         RunState state,
-        string statePath,
         IProgressSink sink,
         IEventSink events,
         RunOptions opts,
@@ -40,11 +40,10 @@ public sealed class Orchestrator
         ITelegramService telegram,
         WebhookNotifier webhooks,
         IPlanner? planner = null,
-        RunDb? runDb = null,
+        IRunStore? store = null,
         ProcessSupervisor? processSupervisor = null,
         ControlDispatcher? dispatcher = null,
-        ConcurrentQueue<ControlCommand>? controlInbox = null,
-        TranscriptLog? transcript = null)
+        ConcurrentQueue<ControlCommand>? controlInbox = null)
     {
         var prompts = BuildPromptBuilder(plan);
         var lessons = new LessonsManager(plan.StateDir);
@@ -54,9 +53,9 @@ public sealed class Orchestrator
 
         _ctx = new RunContext(
             plan, state, opts, sink, events, prompts, lessons, iPlanner, progress,
-            agentProvider, runDb, processSupervisor, transcript, controlInbox, telegram, webhooks, logger);
+            agentProvider, store, processSupervisor, controlInbox, telegram, webhooks, logger);
 
-        _gates = new GateOrchestrator(plan, state, events, runDb);
+        _gates = new GateOrchestrator(plan, state, events, store);
         _lanes = new LaneCoordinator(plan, state, sink, events, _ctx.Log);
     }
 
@@ -70,7 +69,7 @@ public sealed class Orchestrator
         {
             _ctx.Save();
             var track = ReadTrackerSafe();
-            Reporter.WriteAndPublish(_ctx.Plan, _ctx.State, track, _ctx.LastGates, _ctx.Log);
+            Reporter.WriteAndPublish(_ctx.Plan, _ctx.State, track, _ctx.LastGates, _ctx.Log, store: _ctx.Store);
             PushIdleSnapshot();
         });
 
@@ -98,7 +97,7 @@ public sealed class Orchestrator
         try
         {
             var track = _ctx.Progress.Read(_ctx.Plan, CancellationToken.None);
-            Reporter.WriteAndPublish(_ctx.Plan, _ctx.State, track, _ctx.LastGates, _ctx.Log);
+            Reporter.WriteAndPublish(_ctx.Plan, _ctx.State, track, _ctx.LastGates, _ctx.Log, store: _ctx.Store);
         }
         catch (Exception) { }
         PushIdleSnapshot();

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 
 using Conductor.Core;
+using Conductor.Core.Store;
 using Conductor.Models;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -55,8 +56,8 @@ internal static class BgStopHandler
         {
             try
             {
-                using var db = new RunDb(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<RunDb>.Instance);
-                db.MarkPidExited(pid, -1);
+                using var store = new SqliteRunStore(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteRunStore>.Instance);
+                store.MarkPidExited(pid, -1);
             }
             catch { /* best-effort */ }
         }

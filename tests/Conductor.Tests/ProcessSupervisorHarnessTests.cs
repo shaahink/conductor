@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Conductor.Core;
+using Conductor.Core.Store;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Conductor.Tests;
@@ -14,7 +15,7 @@ public sealed class ProcessSupervisorHarnessTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), $"conductor-f24-{Guid.NewGuid():N}");
     private readonly string _runId = "f24-harness-run";
-    private readonly RunDb _runDb;
+    private readonly SqliteRunStore _runDb;
     private readonly ProcessSupervisor _supervisor;
 
     public ProcessSupervisorHarnessTests()
@@ -23,7 +24,7 @@ public sealed class ProcessSupervisorHarnessTests : IDisposable
         var stateDir = Path.Combine(_dir, ".conductor");
         Directory.CreateDirectory(stateDir);
         var dbPath = Path.Combine(stateDir, "run.db");
-        _runDb = new RunDb(dbPath, NullLogger<RunDb>.Instance);
+        _runDb = new SqliteRunStore(dbPath, NullLogger<SqliteRunStore>.Instance);
         _supervisor = new ProcessSupervisor(NullLogger<ProcessSupervisor>.Instance, _runId, _runDb);
     }
 
@@ -74,7 +75,7 @@ public sealed class ProcessSupervisorHarnessTests : IDisposable
     public void Supervisor_Dispose_KillsAllTrackedProcesses()
     {
         var dbPath = Path.Combine(_dir, ".conductor", $"sv-dispose-{Guid.NewGuid():N}.db");
-        using var localDb = new RunDb(dbPath, NullLogger<RunDb>.Instance);
+        using var localDb = new SqliteRunStore(dbPath, NullLogger<SqliteRunStore>.Instance);
         using var sv = new ProcessSupervisor(NullLogger<ProcessSupervisor>.Instance, _runId, localDb);
 
         using var proc = StartSleepyProcess();

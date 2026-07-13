@@ -5,6 +5,7 @@ using Conductor.Core;
 using Conductor.Core.Events;
 using Conductor.Core.Http;
 using Conductor.Core.Integrations;
+using Conductor.Core.Store;
 using Conductor.Models;
 using Microsoft.Extensions.Logging;
 using Spectre.Console;
@@ -50,19 +51,19 @@ public sealed class McpServeCommand : Command<McpServeCommand.Settings>
         var eventsPath = Path.GetFullPath(settings.Events);
         var journalPath = Path.GetFullPath(settings.Journal);
 
-        // F1.3: wire run.db if it exists so conductor_note MCP tool works
+        // F1.3: wire store if run.db exists so conductor_note MCP tool works
         var runDbPath = Path.Combine(Path.GetDirectoryName(eventsPath) ?? ".conductor", "run.db");
-        RunDb? runDb = null;
+        IRunStore? store = null;
         if (File.Exists(runDbPath))
         {
-            try { runDb = new RunDb(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<RunDb>.Instance); }
-            catch { /* best-effort — MCP works without run.db */ }
+            try { store = new SqliteRunStore(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteRunStore>.Instance); }
+            catch { /* best-effort — MCP works without store */ }
         }
 
         var stateDir = settings.StateDir ?? Path.GetDirectoryName(eventsPath);
         var repoPath = settings.Repo ?? (stateDir != null ? Path.GetDirectoryName(stateDir) : null);
 
-        var server = new McpTaskServer(eventsPath, journalPath, settings.RunId, runDb, stateDir, repoPath);
+        var server = new McpTaskServer(eventsPath, journalPath, settings.RunId, store, stateDir, repoPath);
         server.Init();
         server.FoldJournal();
 
@@ -76,7 +77,7 @@ public sealed class McpServeCommand : Command<McpServeCommand.Settings>
         }
         finally
         {
-            runDb?.Dispose();
+            store?.Dispose();
         }
         return 0;
     }

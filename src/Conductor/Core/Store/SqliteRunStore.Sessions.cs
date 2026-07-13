@@ -1,11 +1,10 @@
 using System.Data;
-using Microsoft.Data.Sqlite;
 
-namespace Conductor.Core;
+namespace Conductor.Core.Store;
 
-public partial class RunDb
+public sealed partial class SqliteRunStore
 {
-    // ---------------------------------------------------------------- write methods
+    // ---------------------------------------------------------------- run lifecycle
 
     public void InitializeRun(string runId, string planName, string repo, string? branch, string? driverVersion)
     {
@@ -24,6 +23,8 @@ public partial class RunDb
                    ("@now", _clock.GetUtcNow().ToString("O")));
     }
 
+    // ---------------------------------------------------------------- stage lifecycle
+
     public void InitializeStage(string runId, string stageId, string title)
     {
         TryExecute("INSERT OR REPLACE INTO stages (id, run_id, title, status, started_utc) " +
@@ -38,6 +39,8 @@ public partial class RunDb
                    ("@id", stageId), ("@runId", runId),
                    ("@now", _clock.GetUtcNow().ToString("O")));
     }
+
+    // ---------------------------------------------------------------- session lifecycle
 
     public void RecordSession(
         string runId, string stageId, int number, string kind,
@@ -62,15 +65,25 @@ public partial class RunDb
             ("@newlyDone", (object?)newlyDone ?? DBNull.Value));
     }
 
-    public void RecordAttempt(string runId, string stageId, int number, int sessionNumber, DateTime startedUtc)
+    // ---------------------------------------------------------------- costs
+
+    public void RecordCost(
+        string runId, int sessionNumber, string category,
+        long tokensIn, long tokensOut, long tokensThink, long tokensCache,
+        decimal costUsd, long wallMs)
     {
         TryExecute(
-            "INSERT INTO attempts (run_id, stage_id, number, session_number, started_utc) " +
-            "VALUES (@runId, @stageId, @number, @sessionNumber, @started)",
-            ("@runId", runId), ("@stageId", stageId), ("@number", number),
-            ("@sessionNumber", sessionNumber),
-            ("@started", startedUtc.ToString("O")));
+            "INSERT INTO costs (run_id, session_number, category, tokens_in, tokens_out, " +
+            "tokens_think, tokens_cache, cost_usd, wall_ms) " +
+            "VALUES (@runId, @sessionNumber, @category, @tokensIn, @tokensOut, " +
+            "@tokensThink, @tokensCache, @costUsd, @wallMs)",
+            ("@runId", runId), ("@sessionNumber", sessionNumber), ("@category", category),
+            ("@tokensIn", tokensIn), ("@tokensOut", tokensOut),
+            ("@tokensThink", tokensThink), ("@tokensCache", tokensCache),
+            ("@costUsd", costUsd), ("@wallMs", wallMs));
     }
+
+    // ---------------------------------------------------------------- gates
 
     public void RecordGate(
         string runId, int? sessionNumber, string? stageId,
@@ -95,21 +108,29 @@ public partial class RunDb
             ("@tail", (object?)tail ?? DBNull.Value));
     }
 
-    public void RecordCost(
-        string runId, int sessionNumber, string category,
-        long tokensIn, long tokensOut, long tokensThink, long tokensCache,
-        decimal costUsd, long wallMs)
+    public bool? GetLastPassingGateResult(string runId, string gateName, string tier, string sha)
+    {
+        if (_disposed != 0) return null;
+        var rows = Query(
+            """SELECT passed FROM gates WHERE run_id = @runId AND name = @name AND tier = @tier AND sha = @sha ORDER BY id DESC LIMIT 1""",
+            ("@runId", runId), ("@name", gateName), ("@tier", tier), ("@sha", sha));
+        if (rows.Count == 0) return null;
+        return Convert.ToInt64(rows[0]["passed"]) != 0;
+    }
+
+    // ---------------------------------------------------------------- scores
+
+    public void WriteScore(string runId, int sessionNumber, string? stageId, int score, string verdict, string findings)
     {
         TryExecute(
-            "INSERT INTO costs (run_id, session_number, category, tokens_in, tokens_out, " +
-            "tokens_think, tokens_cache, cost_usd, wall_ms) " +
-            "VALUES (@runId, @sessionNumber, @category, @tokensIn, @tokensOut, " +
-            "@tokensThink, @tokensCache, @costUsd, @wallMs)",
-            ("@runId", runId), ("@sessionNumber", sessionNumber), ("@category", category),
-            ("@tokensIn", tokensIn), ("@tokensOut", tokensOut),
-            ("@tokensThink", tokensThink), ("@tokensCache", tokensCache),
-            ("@costUsd", costUsd), ("@wallMs", wallMs));
+            "INSERT INTO scores (run_id, session_number, stage_id, score, verdict, findings) " +
+            "VALUES (@runId, @sessionNumber, @stageId, @score, @verdict, @findings)",
+            ("@runId", runId), ("@sessionNumber", sessionNumber),
+            ("@stageId", (object?)stageId ?? DBNull.Value),
+            ("@score", score), ("@verdict", verdict), ("@findings", findings));
     }
+
+    // ---------------------------------------------------------------- ledger
 
     public void WriteLedger(string runId, int? sessionNumber, string? stageId, string kind, string content)
     {
@@ -122,6 +143,8 @@ public partial class RunDb
             ("@kind", kind), ("@content", content));
     }
 
+    // ---------------------------------------------------------------- handovers
+
     public void WriteHandover(string runId, int sessionNumber, string stageId, string content)
     {
         TryExecute(
@@ -130,6 +153,19 @@ public partial class RunDb
             ("@runId", runId), ("@sessionNumber", sessionNumber),
             ("@stageId", stageId), ("@content", content));
     }
+
+    public string? GetLatestHandover(string runId, string? stageId = null)
+    {
+        var sql = stageId != null
+            ? "SELECT content FROM handovers WHERE run_id = @runId AND stage_id = @stageId ORDER BY id DESC LIMIT 1"
+            : "SELECT content FROM handovers WHERE run_id = @runId ORDER BY id DESC LIMIT 1";
+        var rows = stageId != null
+            ? Query(sql, ("@runId", runId), ("@stageId", stageId))
+            : Query(sql, ("@runId", runId));
+        return rows.Count > 0 ? (string)rows[0]["content"]! : null;
+    }
+
+    // ---------------------------------------------------------------- injections
 
     public void WriteInjection(string runId, string kind, int? sourceSession, string? targetStageId, string content)
     {
@@ -142,20 +178,31 @@ public partial class RunDb
             ("@content", content));
     }
 
-    public void WriteScore(string runId, int sessionNumber, string? stageId, int score, string verdict, string findings)
+    // ---------------------------------------------------------------- checkpoints
+
+    public void MarkCheckpointInProgress(string runId, string checkpointId)
     {
         TryExecute(
-            "INSERT INTO scores (run_id, session_number, stage_id, score, verdict, findings) " +
-            "VALUES (@runId, @sessionNumber, @stageId, @score, @verdict, @findings)",
-            ("@runId", runId), ("@sessionNumber", sessionNumber),
-            ("@stageId", (object?)stageId ?? DBNull.Value),
-            ("@score", score), ("@verdict", verdict), ("@findings", findings));
+            "UPDATE checkpoints SET status = 'IN PROGRESS' WHERE id = @id AND run_id = @runId AND status = 'TODO'",
+            ("@runId", runId), ("@id", checkpointId));
     }
 
-    // ---------------------------------------------------------------- checkpoints (F1.2)
+    public IReadOnlyList<CheckpointRow> GetCheckpoints(string runId)
+    {
+        var rows = Query(
+            "SELECT id, stage_id, title, status, \"commit\", evidence FROM checkpoints " +
+            "WHERE run_id = @runId ORDER BY stage_id, id",
+            ("@runId", runId));
+        return rows.Select(r => new CheckpointRow(
+            Id: (string)r["id"]!,
+            StageId: (string)r["stage_id"]!,
+            Title: (string)r["title"]!,
+            Status: (string)r["status"]!,
+            Commit: (string)(r["commit"] ?? "-")!,
+            Evidence: (string)(r["evidence"] ?? "-")!
+        )).ToList();
+    }
 
-    /// <summary>Seed checkpoints from the plan. Each call is an UPSERT — re-seeding on
-    /// resume does not lose status previously written by <see cref="UpdateCheckpoint"/>.</summary>
     public void SeedCheckpoints(string runId,
         IEnumerable<(string Id, string StageId, string Title, string Status, string Commit, string Evidence)> checkpoints)
     {
@@ -170,7 +217,6 @@ public partial class RunDb
         }
     }
 
-    /// <summary>Mark a checkpoint as DONE with the attributed commit and evidence string.</summary>
     public void UpdateCheckpoint(string runId, string checkpointId, string status, string commit, string evidence)
     {
         TryExecute(
@@ -178,20 +224,5 @@ public partial class RunDb
             "WHERE id = @id AND run_id = @runId",
             ("@runId", runId), ("@id", checkpointId),
             ("@status", status), ("@commit", commit), ("@evidence", evidence));
-    }
-
-    // ---------------------------------------------------------------- F7.4: per-gate SHA cache
-
-    /// <summary>Returns true if the gate with the given name, tier and SHA has a passing result
-    /// recorded in run.db. Returns null if no matching record exists (e.g. first run, changed SHA).
-    /// The cache is per-run to avoid cross-contamination.</summary>
-    public bool? GetLastPassingGateResult(string runId, string gateName, string tier, string sha)
-    {
-        if (_disposed != 0) return null;
-        var rows = Query(
-            """SELECT passed FROM gates WHERE run_id = @runId AND name = @name AND tier = @tier AND sha = @sha ORDER BY id DESC LIMIT 1""",
-            ("@runId", runId), ("@name", gateName), ("@tier", tier), ("@sha", sha));
-        if (rows.Count == 0) return null;
-        return Convert.ToInt64(rows[0]["passed"]) != 0;
     }
 }

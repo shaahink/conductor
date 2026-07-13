@@ -130,11 +130,10 @@ public sealed partial class SessionRunner
 
     private string? BuildRolloverResumeHint(TrackerSnapshot preTrack)
     {
-        var eventsPath = Path.Combine(_ctx.Plan.StateDir, "events.jsonl");
-        if (!File.Exists(eventsPath)) return null;
+        if (_ctx.Store == null) return null;
         try
         {
-            var allEvents = EventLog.ReadAll(eventsPath);
+            var allEvents = _ctx.Store.ReadAllEvents(_ctx.State.RunId);
             var taskGraph = new TaskGraph();
             taskGraph.Fold(allEvents);
             var activeCp = preTrack.ForStage(_ctx.State.CurrentStage ?? "")

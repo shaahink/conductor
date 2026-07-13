@@ -1,4 +1,5 @@
 using Conductor.Core.Events;
+using Conductor.Core.Store;
 using Conductor.Models;
 
 namespace Conductor.Core.Orchestration;
@@ -8,7 +9,7 @@ namespace Conductor.Core.Orchestration;
 /// extracted from Orchestrator (F7). All mutable state lives on the passed <see cref="RunState"/>
 /// and <see cref="PlanConfig"/>; this class is pure execution logic over shared state.
 /// </summary>
-public sealed class GateOrchestrator(PlanConfig plan, RunState state, IEventSink events, RunDb? runDb)
+public sealed class GateOrchestrator(PlanConfig plan, RunState state, IEventSink events, IRunStore? store)
 {
     public async Task<IReadOnlyList<GateResult>> RunBatteryAsync(
         Action<string> log,
@@ -22,7 +23,7 @@ public sealed class GateOrchestrator(PlanConfig plan, RunState state, IEventSink
         var headSha = Git.Head(plan.Repo);
         var gates = await GateRunner.RunAllAsync(plan, log, ct, fastOnly,
             state.CurrentStage, stage?.Kind, onGates,
-            runDb, state.RunId, headSha).ConfigureAwait(false);
+            store, state.RunId, headSha).ConfigureAwait(false);
         await GateRunner.RunHookAsync(plan, plan.Teardown, "teardown", log, ct).ConfigureAwait(false);
         foreach (var g in gates)
         {
@@ -50,7 +51,7 @@ public sealed class GateOrchestrator(PlanConfig plan, RunState state, IEventSink
                 Scope = scope,
             });
             var tier = plan.Gates.FirstOrDefault(gc => gc.Name == g.Name)?.Tier ?? "full";
-            runDb?.RecordGate(state.RunId,
+            store?.RecordGate(state.RunId,
                 int.TryParse(sessionId, out var sn) ? sn : null,
                 state.CurrentStage, g.Name, tier, scope, sha,
                 g.Passed, g.Skipped, g.Optional, g.ExitCode,

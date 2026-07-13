@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using Conductor.Core.Events;
+using Conductor.Core.Store;
 using Conductor.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -12,7 +13,7 @@ namespace Conductor.Core.Integrations;
 /// bg_start/bg_status/bg_logs/bg_stop (F2.4) — that persist the agent's progress across
 /// sessions. Reads existing tasks from the event log; writes new events to a side journal
 /// file to avoid concurrent-write races with the conductor's main event log. The optional
-/// <see cref="RunDb"/> parameter enables direct ledger writes for the
+/// <see cref="IRunStore"/> parameter enables direct ledger writes for the
 /// <c>conductor_note</c> tool (F1.3) and PID tracking for bg tools.
 /// </summary>
 public sealed partial class McpTaskServer
@@ -21,17 +22,17 @@ public sealed partial class McpTaskServer
     private readonly string _journalPath;
     private readonly string _runId;
     private readonly TaskGraph _graph = new();
-    private readonly RunDb? _runDb;
+    private readonly IRunStore? _store;
     private readonly string? _stateDir;
     private readonly string? _repoPath;
 
-    public McpTaskServer(string eventsPath, string journalPath, string runId, RunDb? runDb = null,
+    public McpTaskServer(string eventsPath, string journalPath, string runId, IRunStore? store = null,
         string? stateDir = null, string? repoPath = null)
     {
         _eventsPath = eventsPath;
         _journalPath = journalPath;
         _runId = runId;
-        _runDb = runDb;
+        _store = store;
         _stateDir = stateDir;
         _repoPath = repoPath;
     }
@@ -39,11 +40,15 @@ public sealed partial class McpTaskServer
     /// <summary>Boot the graph from the existing event log.</summary>
     public void Init()
     {
-        if (File.Exists(_eventsPath))
-        {
-            var events = Events.EventLog.ReadAll(_eventsPath);
+        IReadOnlyList<ConductorEvent> events;
+        if (_store != null)
+            events = _store.ReadAllEvents(_runId);
+        else if (File.Exists(_eventsPath))
+            events = EventLog.ReadAll(_eventsPath);
+        else
+            events = [];
+        if (events is { Count: > 0 })
             _graph.Fold(events);
-        }
         // Also fold any MCP journal entries that accumulated between sessions.
         FoldJournal();
     }
@@ -54,8 +59,9 @@ public sealed partial class McpTaskServer
     {
         if (File.Exists(_journalPath))
         {
-            var events = Events.EventLog.ReadAll(_journalPath);
-            _graph.Fold(events);
+            var events = EventLog.ReadAll(_journalPath);
+            if (events is { Count: > 0 })
+                _graph.Fold(events);
         }
     }
 

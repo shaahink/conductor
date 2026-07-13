@@ -1,4 +1,5 @@
 using Conductor.Core.Events;
+using Conductor.Core.Store;
 using Conductor.Models;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -6,7 +7,7 @@ using Spectre.Console.Cli;
 namespace Conductor.Commands;
 
 /// <summary>
-/// B9.5 — CLI task view. Reads <c>events.jsonl</c>, folds it through <see cref="TaskGraph"/>,
+/// B9.5 — CLI task view. Reads events from run.db, folds them through <see cref="TaskGraph"/>,
 /// and renders sub-tasks per checkpoint as a Spectre table with status indicators.
 /// </summary>
 public sealed class TasksCommand : Command<PlanSettings>
@@ -14,13 +15,20 @@ public sealed class TasksCommand : Command<PlanSettings>
     public override int Execute(CommandContext context, PlanSettings settings)
     {
         var plan = PlanConfig.Load(settings.ResolvePlanPath());
-        var eventsPath = Path.Combine(plan.StateDir, "events.jsonl");
-        var statePath = Path.Combine(plan.StateDir, "state.json");
-        var state = RunState.LoadOrNew(statePath, plan.Name);
+        var runDbPath = Path.Combine(plan.StateDir, "run.db");
 
         var graph = new TaskGraph();
-        if (File.Exists(eventsPath))
-            graph.Fold(EventLog.ReadAll(eventsPath));
+        if (File.Exists(runDbPath))
+        {
+            using var store = new SqliteRunStore(runDbPath,
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteRunStore>.Instance);
+            var runId = store.GetLatestRunId(plan.Name);
+            if (!string.IsNullOrEmpty(runId))
+            {
+                var events = store.ReadAllEvents(runId);
+                graph.Fold(events);
+            }
+        }
 
         if (graph.Count == 0)
         {

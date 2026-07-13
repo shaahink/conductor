@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using System.Threading.Channels;
 using Conductor.Core.Planning;
 using Conductor.Core.Events;
+using Conductor.Core.Store;
 using Conductor.Models;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -46,7 +47,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
     private Task? _sendTask;
     private int _offset;
     internal bool _started;
-    internal readonly RunDb? _runDb;
+    internal readonly IRunStore? _store;
     internal DateTime _lastDigestUtc = DateTime.UtcNow;
     internal readonly Dictionary<string, bool> _pendingInjections = new(StringComparer.Ordinal);
 
@@ -56,7 +57,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
         PlanConfig plan,
         RunState state,
         ILogger<TelegramService> logger,
-        RunDb? runDb = null)
+        IRunStore? store = null)
     {
         _plan = plan;
         _state = state;
@@ -64,7 +65,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
         _log = logger;
         _cfg = plan.Telegram;
         _token = ResolveToken();
-        _runDb = runDb;
+        _store = store;
 
         _sendQueue = Channel.CreateUnbounded<(string, string, string?)>(
             new UnboundedChannelOptions { SingleReader = true });

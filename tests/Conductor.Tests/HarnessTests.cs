@@ -1,9 +1,7 @@
 using Conductor.Core;
-using Conductor.Core.Events;
 using Conductor.Core.Hosting;
 using Conductor.Models;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 
 namespace Conductor.Tests;
 
@@ -97,9 +95,8 @@ public sealed class HarnessTests : IDisposable
         plan.Report.Commit = false;
 
         var state = new RunState { RunId = Guid.NewGuid().ToString("N") };
-        var statePath = Path.Combine(_stateDir, "state.json");
 
-        using var host = ConductorHost.Build(plan, state, statePath, new PlainSink(), NullEventSink.Instance,
+        using var host = ConductorHost.Build(plan, state, new PlainSink(),
             new RunOptions(DryRun: false, Once: true, MaxSessions: 0), consoleSink: false);
 
         var orchestrator = host.Services.GetRequiredService<Orchestrator>();
@@ -107,10 +104,10 @@ public sealed class HarnessTests : IDisposable
 
         Assert.Equal(0, code);
 
-        var loadedState = RunState.LoadOrNew(statePath, plan.Name);
-        Assert.Single(loadedState.History);
+        // M2: verify via in-memory RunState (modified by orchestrator) — no longer reads state.json
+        Assert.Single(state.History);
 
-        var session = loadedState.History[0];
+        var session = state.History[0];
         Assert.Equal(SessionKind.Deliver, session.Kind);
         Assert.Equal("H0", session.Stage);
         Assert.NotNull(session.EndedUtc);
@@ -148,9 +145,8 @@ public sealed class HarnessTests : IDisposable
         };
 
         var state = new RunState { RunId = Guid.NewGuid().ToString("N") };
-        var statePath = Path.Combine(_stateDir, "state.json");
 
-        using var host = ConductorHost.Build(plan, state, statePath, new PlainSink(), NullEventSink.Instance,
+        using var host = ConductorHost.Build(plan, state, new PlainSink(),
             new RunOptions(DryRun: true, Once: false, MaxSessions: 0), consoleSink: false);
 
         var orchestrator = host.Services.GetRequiredService<Orchestrator>();
@@ -158,8 +154,8 @@ public sealed class HarnessTests : IDisposable
 
         Assert.Equal(0, code);
 
-        var loadedState = RunState.LoadOrNew(statePath, plan.Name);
-        Assert.Empty(loadedState.History);
+        // M2: verify via in-memory RunState — dry run produces no sessions
+        Assert.Empty(state.History);
         Assert.False(File.Exists(Path.Combine(_repo, "harness-output.txt")));
     }
 }

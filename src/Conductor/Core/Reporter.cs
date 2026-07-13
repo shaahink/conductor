@@ -1,5 +1,6 @@
 using System.Text;
 using Conductor.Core.Events;
+using Conductor.Core.Store;
 using Conductor.Models;
 
 namespace Conductor.Core;
@@ -241,7 +242,7 @@ public static class Reporter
         return sb.ToString();
     }
 
-    public static void WriteAndPublish(PlanConfig plan, RunState state, TrackerSnapshot track, IReadOnlyList<GateResult>? lastGates, Action<string> log, string? liveActivity = null, string? commitMessage = null)
+    public static void WriteAndPublish(PlanConfig plan, RunState state, TrackerSnapshot track, IReadOnlyList<GateResult>? lastGates, Action<string> log, string? liveActivity = null, string? commitMessage = null, IRunStore? store = null)
     {
         string newContent;
         string path = ReportPath(plan);
@@ -250,7 +251,7 @@ public static class Reporter
         {
             Directory.CreateDirectory(plan.StateDir);
             newContent = Build(plan, state, track, lastGates, liveActivity,
-                ReadTimeline(plan), ReadHealth(plan), ReadMcpMetrics(plan), ReadRepoStrip(plan));
+                ReadTimeline(store, state.RunId), ReadHealth(store, state.RunId), ReadMcpMetrics(store, state.RunId), ReadRepoStrip(plan));
             old = File.Exists(path) ? File.ReadAllText(path) : null;
             File.WriteAllText(path, newContent, Utf8Bom);
         }
@@ -282,13 +283,13 @@ public static class Reporter
 
     /// <summary>Write REPORT.md to disk only — no git commit, no push. Used for mid-session
     /// report refreshes (the report lives in .conductor/, not on the feature branch).</summary>
-    public static void WriteReport(PlanConfig plan, RunState state, TrackerSnapshot track, IReadOnlyList<GateResult>? lastGates, Action<string> log, string? liveActivity = null)
+    public static void WriteReport(PlanConfig plan, RunState state, TrackerSnapshot track, IReadOnlyList<GateResult>? lastGates, Action<string> log, string? liveActivity = null, IRunStore? store = null)
     {
         try
         {
             Directory.CreateDirectory(plan.StateDir);
             var content = Build(plan, state, track, lastGates, liveActivity,
-                ReadTimeline(plan), ReadHealth(plan), ReadMcpMetrics(plan), ReadRepoStrip(plan));
+                ReadTimeline(store, state.RunId), ReadHealth(store, state.RunId), ReadMcpMetrics(store, state.RunId), ReadRepoStrip(plan));
             File.WriteAllText(ReportPath(plan), content, Utf8Bom);
         }
         catch (Exception ex)
@@ -301,15 +302,15 @@ public static class Reporter
     private static string Normalize(string s)
         => string.Join("\n", s.Replace("\r\n", "\n").Split('\n').Where(l => !l.StartsWith("_Updated ", StringComparison.Ordinal)));
 
-    /// <summary>Fold the append-only event log into a timeline for the report, tolerating a missing or
-    /// unreadable log (a run may not have emitted events yet, or the log may be locked mid-write) —
-    /// the report renders without the Timeline section rather than failing (A15: no crash on I/O).</summary>
-    public static IReadOnlyList<Timeline.TimelineEntry> ReadTimeline(PlanConfig plan)
+    /// <summary>Fold the append-only event log into a timeline for the report. When no store is
+    /// available (e.g. standalone report generation) returns an empty list, same tolerance as the
+    /// old file-based read.</summary>
+    public static IReadOnlyList<Timeline.TimelineEntry> ReadTimeline(IRunStore? store, string runId)
     {
         try
         {
-            var path = Path.Combine(plan.StateDir, "events.jsonl");
-            return Timeline.Build(EventLog.ReadAll(path));
+            if (store == null || string.IsNullOrEmpty(runId)) return [];
+            return Timeline.Build(store.ReadAllEvents(runId));
         }
         catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException or UnauthorizedAccessException)
         {
@@ -323,13 +324,14 @@ public static class Reporter
     /// same-failure loop / gate repetition / oscillation / context-saturation flags. Same tolerant
     /// read as <see cref="ReadTimeline"/> (a run may not have emitted events yet, or the log may be
     /// locked mid-write) — the report/panel render nothing rather than failing (A15: no crash on I/O).</summary>
-    public static HealthMetrics.HealthReport ReadHealth(PlanConfig plan)
+    public static HealthMetrics.HealthReport ReadHealth(IRunStore? store, string runId)
     {
-        ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(runId);
         try
         {
-            var path = Path.Combine(plan.StateDir, "events.jsonl");
-            return HealthMetrics.Compute(EventLog.ReadAll(path));
+            if (store == null || string.IsNullOrEmpty(runId))
+                return new HealthMetrics.HealthReport(0, 0, 0, []);
+            return HealthMetrics.Compute(store.ReadAllEvents(runId));
         }
         catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException or UnauthorizedAccessException)
         {
@@ -338,14 +340,15 @@ public static class Reporter
     }
 
     /// <summary>Fold MCP tool-call events from the event log into call-count + latency metrics (B5.4).
-    /// Tolerant read: returns an empty report when the log is missing/locked/empty (A15).</summary>
-    public static McpMetrics.McpReport ReadMcpMetrics(PlanConfig plan)
+    /// Tolerant read: returns an empty report when the store is unavailable or the log is empty (A15).</summary>
+    public static McpMetrics.McpReport ReadMcpMetrics(IRunStore? store, string runId)
     {
-        ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(runId);
         try
         {
-            var path = Path.Combine(plan.StateDir, "events.jsonl");
-            return McpMetrics.Compute(EventLog.ReadAll(path));
+            if (store == null || string.IsNullOrEmpty(runId))
+                return new McpMetrics.McpReport(0, 0, 0, 0, 0, "", 0, []);
+            return McpMetrics.Compute(store.ReadAllEvents(runId));
         }
         catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException or UnauthorizedAccessException)
         {

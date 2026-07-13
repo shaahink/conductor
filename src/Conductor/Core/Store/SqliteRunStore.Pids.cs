@@ -1,12 +1,11 @@
 using System.Data;
 
-namespace Conductor.Core;
+namespace Conductor.Core.Store;
 
-public partial class RunDb
+public sealed partial class SqliteRunStore
 {
     // ---------------------------------------------------------------- pids (F2.2: process tracking)
 
-    /// <summary>Record a spawned PID for liveness tracking and orphan reaping.</summary>
     public void TrackPid(int pid, string runId, string purpose, string? stageId, int? sessionNumber, DateTime startedUtc)
     {
         TryExecute(
@@ -19,7 +18,6 @@ public partial class RunDb
             ("@runId", runId));
     }
 
-    /// <summary>Mark a tracked PID as exited with an optional exit code.</summary>
     public void MarkPidExited(int pid, int? exitCode)
     {
         TryExecute(
@@ -29,18 +27,17 @@ public partial class RunDb
             ("@pid", pid));
     }
 
-    /// <summary>Return PIDs that were tracked but never marked as exited, scoped to a run.
-    /// Used by the orphan reaper at startup (F2.2).</summary>
-    public IReadOnlyList<(int Pid, string Purpose)> GetOrphanPids(string runId)
+    public IReadOnlyList<OrphanPidRow> GetOrphanPids(string runId)
     {
         var rows = Query(
             "SELECT pid, purpose FROM pids WHERE run_id = @runId AND exited_utc IS NULL",
             ("@runId", runId));
-        return rows.Select(r => (Pid: Convert.ToInt32(r["pid"]), Purpose: (string)r["purpose"]!)).ToList();
+        return rows.Select(r => new OrphanPidRow(
+            Pid: Convert.ToInt32(r["pid"]),
+            Purpose: (string)r["purpose"]!
+        )).ToList();
     }
 
-    /// <summary>Return all tracked PIDs for a run, ordered by started_utc descending.
-    /// Used by <c>conductor bg status</c> (F2.3).</summary>
     public IReadOnlyList<PidRow> GetAllPids(string runId)
     {
         var rows = Query(

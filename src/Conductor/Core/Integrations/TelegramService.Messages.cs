@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using Conductor.Core.Events;
+using Conductor.Core.Store;
 
 namespace Conductor.Core.Integrations;
 
@@ -68,14 +69,14 @@ public sealed partial class TelegramService
         sb.AppendLine();
 
         var eventsPath = Path.Combine(_plan.StateDir, "events.jsonl");
-        if (!File.Exists(eventsPath))
+        if (_store == null)
         {
-            sb.AppendLine("(no events recorded yet — the task graph populates as the run emits events)");
+            sb.AppendLine("(no store available)");
             return sb.ToString().TrimEnd();
         }
 
         var graph = new TaskGraph();
-        graph.Fold(EventLog.ReadAll(eventsPath));
+        graph.Fold(_store.ReadAllEvents(_state.RunId));
 
         if (graph.Count == 0)
         {
@@ -125,36 +126,29 @@ public sealed partial class TelegramService
         sb.AppendLine($"Status: <b>{_state.Status}</b> | Stage: {_state.CurrentStage ?? "-"}");
         sb.AppendLine($"Sessions: {_state.SessionCounter} | Cost: ${_state.TotalCostUsd:0.0000}");
 
-        if (_runDb != null)
+        if (_store != null)
         {
             try
             {
-                var rows = _runDb.Query(
-                    "SELECT stage_id, outcome, count(*) as cnt FROM sessions GROUP BY stage_id, outcome ORDER BY stage_id");
-                if (rows.Count > 0)
+                var outcomes = _store.QuerySessionOutcomesByStage(_state.RunId);
+                if (outcomes.Count > 0)
                 {
                     sb.AppendLine();
                     sb.AppendLine("<b>Session outcomes by stage:</b>");
-                    foreach (var r in rows)
+                    foreach (var r in outcomes)
                     {
-                        var s = r.GetValueOrDefault("stage_id")?.ToString() ?? "?";
-                        var o = r.GetValueOrDefault("outcome")?.ToString() ?? "?";
-                        var c = r.GetValueOrDefault("cnt")?.ToString() ?? "0";
-                        sb.AppendLine($"  {s}: {o} ×{c}");
+                        sb.AppendLine($"  {r.StageId}: {r.Outcome} ×{r.Count}");
                     }
                 }
 
-                var gates = _runDb.Query(
-                    "SELECT name, stage_id, tier FROM gates WHERE passed = 0 AND skipped = 0 ORDER BY id DESC LIMIT 5");
+                var gates = _store.QueryRecentGateFailures(_state.RunId, 5);
                 if (gates.Count > 0)
                 {
                     sb.AppendLine();
                     sb.AppendLine("<b>Recent gate failures:</b>");
                     foreach (var g in gates)
                     {
-                        var n = g.GetValueOrDefault("name")?.ToString() ?? "?";
-                        var s = g.GetValueOrDefault("stage_id")?.ToString() ?? "?";
-                        sb.AppendLine($"  FAIL: {n} ({s})");
+                        sb.AppendLine($"  FAIL: {g.Name} ({g.StageId})");
                     }
                 }
                 else

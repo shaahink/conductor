@@ -1,5 +1,4 @@
 using Conductor.Core;
-using Conductor.Core.Events;
 using Conductor.Core.Hosting;
 using Conductor.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -42,7 +41,7 @@ public sealed class HostLoggingTests : IDisposable
         var state = new RunState { RunId = "run-x" };
 
         var ex = Assert.Throws<OptionsValidationException>(() =>
-            ConductorHost.Build(plan, state, StatePath, new PlainSink(), NullEventSink.Instance,
+            ConductorHost.Build(plan, state, new PlainSink(),
                 new RunOptions(DryRun: true, Once: false, MaxSessions: 0), consoleSink: false));
 
         Assert.Contains("stages", ex.Message, StringComparison.OrdinalIgnoreCase);
@@ -53,8 +52,7 @@ public sealed class HostLoggingTests : IDisposable
     {
         var plan = ValidPlan();
         WriteTracker();
-        using var host = ConductorHost.Build(plan, new RunState { RunId = "run-y" }, StatePath,
-            new PlainSink(), NullEventSink.Instance,
+        using var host = ConductorHost.Build(plan, new RunState { RunId = "run-y" }, new PlainSink(),
             new RunOptions(DryRun: true, Once: false, MaxSessions: 0), consoleSink: false);
 
         Assert.NotNull(host.Services.GetRequiredService<Orchestrator>());
@@ -93,7 +91,7 @@ public sealed class HostLoggingTests : IDisposable
         const string runId = "run-corr-123";
         var state = new RunState { RunId = runId };
 
-        using (var host = ConductorHost.Build(plan, state, StatePath, new PlainSink(), NullEventSink.Instance,
+        using (var host = ConductorHost.Build(plan, state, new PlainSink(),
                    new RunOptions(DryRun: true, Once: false, MaxSessions: 0), consoleSink: false))
         {
             var code = await host.Services.GetRequiredService<Orchestrator>().RunAsync(CancellationToken.None);
@@ -116,7 +114,7 @@ public sealed class HostLoggingTests : IDisposable
         const string runId = "run-json-456";
         var state = new RunState { RunId = runId };
 
-        using (var host = ConductorHost.Build(plan, state, StatePath, new PlainSink(), NullEventSink.Instance,
+        using (var host = ConductorHost.Build(plan, state, new PlainSink(),
                    new RunOptions(DryRun: true, Once: false, MaxSessions: 0), consoleSink: false))
         {
             var code = await host.Services.GetRequiredService<Orchestrator>().RunAsync(CancellationToken.None);

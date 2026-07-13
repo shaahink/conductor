@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Conductor.Core.Store;
 
 namespace Conductor.Core;
 
@@ -87,12 +88,12 @@ public sealed class StallDetector
     /// inspecting the OS process table. Used by the liveness signal in the detector.
     /// Returns false if run.db is unavailable, the query fails, or no db is provided.
     /// </summary>
-    public static bool AnyBgProcessAlive(RunDb? runDb, string? runId)
+    public static bool AnyBgProcessAlive(IRunStore? store, string? runId)
     {
-        if (runDb == null || runId == null) return false;
+        if (store == null || runId == null) return false;
         try
         {
-            var pids = runDb.GetAllPids(runId);
+            var pids = store.GetAllPids(runId);
             foreach (var p in pids)
             {
                 if (p.ExitedUtc != null) continue;
@@ -105,7 +106,7 @@ public sealed class StallDetector
                 {
                     // Process no longer exists (crashed/exited without run.db update);
                     // best-effort: mark it as exited so the next query is faster.
-                    try { runDb.MarkPidExited(p.Pid, null); } catch { }
+                    try { store.MarkPidExited(p.Pid, null); } catch { }
                 }
             }
         }

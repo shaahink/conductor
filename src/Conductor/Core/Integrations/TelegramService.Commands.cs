@@ -95,16 +95,16 @@ public sealed partial class TelegramService
 
     private async Task HandleInjectAsync(string chatId, string instruction, CancellationToken ct)
     {
-        if (_runDb == null)
+        if (_store == null)
         {
-            await SendAsync(chatId, "Cannot inject: run.db is not available.", ct).ConfigureAwait(false);
+            await SendAsync(chatId, "Cannot inject: store is not available.", ct).ConfigureAwait(false);
             return;
         }
 
         try
         {
             var runId = _state.RunId ?? Guid.NewGuid().ToString("N");
-            _runDb.WriteInjection(runId, "telegram", null, _state.CurrentStage, instruction);
+            _store.WriteInjection(runId, "telegram", null, _state.CurrentStage, instruction);
             await SendAsync(chatId, $"Instruction injected for the next session: <i>{EscapeHtml(instruction)}</i>", ct)
                 .ConfigureAwait(false);
             _log.LogInformation("Telegram /inject: {Instruction} (stage={Stage})", instruction, _state.CurrentStage);

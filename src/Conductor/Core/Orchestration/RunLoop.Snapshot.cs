@@ -45,7 +45,6 @@ public sealed partial class RunLoop
 
     private void TrackActivity(AgentEvent ev, int sessionNumber)
     {
-        _ctx.Transcript?.Append(sessionNumber.ToString(), ev.Kind, ev.Text);
         if (ev.Kind is not ("tool" or "text" or "result" or "thinking")) return;
         _ctx.Activity.Add((ev.Kind, ev.Text, ev.Utc));
         if (_ctx.Activity.Count > 60) _ctx.Activity.RemoveRange(0, 20);
@@ -84,7 +83,7 @@ public sealed partial class RunLoop
         {
             var cp = track.ForStage(stage.Id).FirstOrDefault(c => !c.IsDone)?.Id ?? stage.Id;
             _ctx.Log($"report refresh @ {cp} (cost ${agent.CostUsd:0.00})");
-            Reporter.WriteReport(_ctx.Plan, _ctx.State, track, _ctx.LastGates, _ctx.Log, BuildActivitySection(rec, agent));
+            Reporter.WriteReport(_ctx.Plan, _ctx.State, track, _ctx.LastGates, _ctx.Log, BuildActivitySection(rec, agent), store: _ctx.Store);
         }
         catch (Exception ex) { _ctx.Log($"report refresh failed: {ex.Message}"); }
     }

@@ -1,4 +1,5 @@
 using System.Text;
+using Conductor.Core.Store;
 using Conductor.Models;
 
 namespace Conductor.Core;
@@ -18,7 +19,7 @@ public static class TrackerGenerator
     /// the most recent handover content; <paramref name="handoffFallback"/> is the template text
     /// to use when no handover exists in the database (e.g. first run before any session wrote one).
     /// </summary>
-    public static string Generate(PlanConfig plan, RunDb db, string runId, string? handoffFallback = null)
+    public static string Generate(PlanConfig plan, IRunStore db, string runId, string? handoffFallback = null)
     {
         var checkpoints = db.GetCheckpoints(runId);
         var handover = db.GetLatestHandover(runId);
@@ -144,7 +145,7 @@ public static class TrackerGenerator
     }
 
     /// <summary>Write the generated tracker to disk.</summary>
-    public static void Write(PlanConfig plan, RunDb db, string runId, string? handoffFallback = null)
+    public static void Write(PlanConfig plan, IRunStore db, string runId, string? handoffFallback = null)
     {
         var content = Generate(plan, db, runId, handoffFallback);
         File.WriteAllText(plan.TrackerPath, content, Utf8Bom);

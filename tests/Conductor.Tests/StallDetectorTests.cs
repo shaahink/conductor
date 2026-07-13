@@ -1,4 +1,5 @@
 using Conductor.Core;
+using Conductor.Core.Store;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Conductor.Tests;
@@ -123,7 +124,7 @@ public sealed class StallDetectorTests
         Directory.CreateDirectory(dir);
         var dbDir = Path.Combine(dir, ".conductor");
         Directory.CreateDirectory(dbDir);
-        var db = new RunDb(Path.Combine(dbDir, "run.db"), NullLogger<RunDb>.Instance);
+        var db = new SqliteRunStore(Path.Combine(dbDir, "run.db"), NullLogger<SqliteRunStore>.Instance);
 
         var alive = StallDetector.AnyBgProcessAlive(db, null);
         Assert.False(alive);
@@ -140,7 +141,7 @@ public sealed class StallDetectorTests
         var dbDir = Path.Combine(dir, ".conductor");
         Directory.CreateDirectory(dbDir);
         var runId = "test-run-empty";
-        var db = new RunDb(Path.Combine(dbDir, "run.db"), NullLogger<RunDb>.Instance);
+        var db = new SqliteRunStore(Path.Combine(dbDir, "run.db"), NullLogger<SqliteRunStore>.Instance);
         db.InitializeRun(runId, "test-plan", dir, "master", "1.0.0");
 
         var alive = StallDetector.AnyBgProcessAlive(db, runId);
