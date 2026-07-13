@@ -184,6 +184,11 @@ public sealed partial class RunLoop
                     _ctx.State.CurrentStageStartHead = Git.Head(_ctx.Plan.Repo);
                     _ctx.State.AttemptsThisStage = 0;
                     _ctx.State.PendingFix = null;
+                    _ctx.State.WorkflowStepIndices.Remove(stage.Id); // reset workflow step for new stage
+
+                    // M3.2: apply per-stage overrides
+                    ApplyStageOverrides(stage);
+
                     _ctx.Log($"stage → {stage.Id} {stage.Title}");
                     _ctx.Events.Emit(new StageEntered { StageId = stage.Id, Title = stage.Title, StartHead = _ctx.State.CurrentStageStartHead });
                     _ctx.Store?.InitializeStage(_ctx.State.RunId, stage.Id, stage.Title);

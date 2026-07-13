@@ -79,6 +79,13 @@ public sealed class PlanConfig
     /// (B12.3). Each lane runs in its own <c>git worktree</c> on a scratch branch; the lane's
     /// changes are only merged into the primary tree if the merge-gate battery is green.</summary>
     public List<MutatingLaneConfig> MutatingLanes { get; set; } = new();
+    /// <summary>Plan-level workflow definitions keyed by name. When a stage or the plan references
+    /// a workflow name not in this dictionary, the built-in definitions (deliver-verify, etc.) are used
+    /// as fallbacks (M3.1).</summary>
+    public Dictionary<string, WorkflowDefinition>? Workflows { get; set; }
+    /// <summary>The default workflow name used for stages that don't specify one. Falls back to
+    /// "deliver-verify" when unset (M3.1).</summary>
+    public string? DefaultWorkflow { get; set; }
 
     [JsonIgnore] public string PlanFilePath { get; internal set; } = "";
     [JsonIgnore] public string PlanDir => Path.GetDirectoryName(PlanFilePath) ?? ".";

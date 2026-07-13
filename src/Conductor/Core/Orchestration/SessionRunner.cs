@@ -55,10 +55,10 @@ public sealed partial class SessionRunner
         var pendingAudit = _ctx.State.PendingAudit; _ctx.State.PendingAudit = null;
         var pendingFix = _ctx.State.PendingFix; _ctx.State.PendingFix = null;
         var pendingVerify = _ctx.State.PendingVerify; _ctx.State.PendingVerify = null;
-        var kind = pendingResume != null ? SessionKind.Resume
-            : pendingAudit != null ? SessionKind.Audit
-            : pendingVerify != null ? SessionKind.Verify
-            : pendingFix != null ? SessionKind.Fix : SessionKind.Deliver;
+
+        // Resolve session kind: workflow-driven (M3.1) with pending-state fallback
+        // for crash recovery (Resume must carry the agent session id).
+        var kind = ResolveSessionKind(stage, pendingResume, pendingAudit, pendingVerify, pendingFix);
 
         _ctx.State.SessionCounter++;
         var attempt = _ctx.State.AttemptsThisStage + 1;
@@ -306,6 +306,51 @@ public sealed partial class SessionRunner
     }
 
     private int MaxAttempts(StageConfig stage) => Math.Max(1, stage.Sessions * _ctx.Plan.Limits.StageSlackFactor);
+
+    // ── workflow-driven kind resolution (M3.1) ──
+
+    private SessionKind ResolveSessionKind(
+        StageConfig stage,
+        PendingResume? pendingResume,
+        PendingAudit? pendingAudit,
+        PendingVerify? pendingVerify,
+        PendingFix? pendingFix)
+    {
+        // Crash recovery: Resume always wins — it carries the agent session id
+        if (pendingResume != null) return SessionKind.Resume;
+
+        // Explicit pending states from the previous workflow step take priority
+        if (pendingAudit != null) return SessionKind.Audit;
+        if (pendingVerify != null) return SessionKind.Verify;
+        if (pendingFix != null) return SessionKind.Fix;
+
+        // Workflow-driven: what does the engine say is next?
+        var workflow = _ctx.Workflows.Resolve(_ctx.Plan, stage);
+        var stepIndex = _ctx.State.WorkflowStepIndices.GetValueOrDefault(stage.Id, -1);
+        var vars = new WorkflowRuntimeVars(); // initial run — no prior session vars
+        var step = _ctx.Workflows.GetNextStep(workflow, stepIndex, vars);
+        if (step != null)
+        {
+            var wfKind = step.Kind;
+            // Apply per-stage overrides: skip verification step
+            if (wfKind == SessionKind.Verify && stage.Overrides?.SkipVerification == true)
+                return SessionKind.Deliver; // fall through to next deliver
+            return wfKind;
+        }
+
+        // Workflow exhausted or not configured — default to Deliver
+        return SessionKind.Deliver;
+    }
+
+    public static SessionKind PendingToKind(
+        PendingResume? pr, PendingAudit? pa, PendingVerify? pv, PendingFix? pf)
+    {
+        if (pr != null) return SessionKind.Resume;
+        if (pa != null) return SessionKind.Audit;
+        if (pv != null) return SessionKind.Verify;
+        if (pf != null) return SessionKind.Fix;
+        return SessionKind.Deliver;
+    }
 
     // ── prompt construction ──
 

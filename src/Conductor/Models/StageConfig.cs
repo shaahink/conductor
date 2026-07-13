@@ -32,4 +32,13 @@ public sealed class StageConfig
     /// <summary>Optional hook that runs after the stage is confirmed (B10.3). Best-effort: a non-zero
     /// exit is logged but never blocks completion.</summary>
     public HookConfig? PostHook { get; set; }
+    /// <summary>Named workflow to use for this stage (e.g. "deliver-verify", "spike", "docs-only").
+    /// Overrides the plan's DefaultWorkflow. Falls back to "deliver-verify" when both are unset (M3.1).</summary>
+    public string? Workflow { get; set; }
+    /// <summary>Per-stage overrides — drop QA, change model, skip gates/commit for one stage
+    /// without altering the shared workflow definition (M3.2).</summary>
+    public WorkflowOverrides? Overrides { get; set; }
+    /// <summary>Declared file paths this stage touches (repo-relative). Used by the parallelism
+    /// engine to detect collisions and serialize conflicting lanes (M3.3).</summary>
+    public List<string>? PathClaims { get; set; }
 }

@@ -9,10 +9,27 @@ namespace Conductor.Core.Lanes;
 /// lane-coordination glue scattered through the god-class, per AGENTS.md's Command/Query/Event
 /// layering note — same seam ControlDispatcher was cut along in F5).
 /// </summary>
-public sealed class LaneCoordinator(PlanConfig plan, RunState state, IProgressSink sink, IEventSink events, Action<string> log)
+public sealed class LaneCoordinator
 {
+    private readonly PlanConfig _plan;
+    private readonly RunState _state;
+    private readonly IProgressSink _sink;
+    private readonly IEventSink _events;
+    private readonly Action<string> _log;
+    private readonly PathClaimTracker _pathClaims;
+
     private LaneWorkerPool? _lanePool;
     private Task<ParallelAuditOutcome>? _parallelAuditTask;
+
+    public LaneCoordinator(PlanConfig plan, RunState state, IProgressSink sink, IEventSink events, Action<string> log, PathClaimTracker? pathClaims = null)
+    {
+        _plan = plan;
+        _state = state;
+        _sink = sink;
+        _events = events;
+        _log = log;
+        _pathClaims = pathClaims ?? new PathClaimTracker();
+    }
 
     private static string Short(string sha) => string.IsNullOrEmpty(sha) ? "?" : sha.Length >= 7 ? sha[..7] : sha;
 
@@ -25,12 +42,23 @@ public sealed class LaneCoordinator(PlanConfig plan, RunState state, IProgressSi
     {
         var stageId = audit.StageId;
         var sha = audit.StageStartHead;
-        if (string.IsNullOrEmpty(sha)) sha = Git.Head(plan.Repo);
+        if (string.IsNullOrEmpty(sha)) sha = Git.Head(_plan.Repo);
 
-        log($"parallel audit: launching read-only audit for stage {stageId} at {Short(sha)}");
+        // M3.3: check path-claim collisions before spawning the audit lane
+        var stage = _plan.Stages.FirstOrDefault(s => s.Id == stageId);
+        var pathClaims = stage?.PathClaims ?? [];
+        if (pathClaims.Count > 0 && _pathClaims.HasConflict(pathClaims))
+        {
+            _log($"parallel audit for {stageId}: deferred — path claims conflict with a running lane");
+            return; // audit will be retried next loop iteration
+        }
+        if (pathClaims.Count > 0)
+            _pathClaims.TryClaim(stageId, pathClaims);
+
+        _log($"parallel audit: launching read-only audit for stage {stageId} at {Short(sha)}");
         var prompt = BuildParallelAuditPrompt(stageId, sha);
 
-        var resolvedAgent = plan.ResolveAgent(plan.Stages.FirstOrDefault(s => s.Id == stageId) ?? plan.Stages[^1]);
+        var resolvedAgent = _plan.ResolveAgent(stage ?? _plan.Stages[^1]);
         var suffix = Guid.NewGuid().ToString("N")[..8];
         var lanePath = Path.Combine(Path.GetTempPath(), $"conductor-pa-{stageId}-{suffix}");
 
@@ -39,11 +67,12 @@ public sealed class LaneCoordinator(PlanConfig plan, RunState state, IProgressSi
             try
             {
                 Directory.CreateDirectory(lanePath);
-                var createResult = Git.WorktreeAddDetached(plan.Repo, lanePath, sha);
+                var createResult = Git.WorktreeAddDetached(_plan.Repo, lanePath, sha);
                 if (createResult.ExitCode != 0)
                 {
-                    log($"parallel audit: worktree creation failed — {createResult.Output.Trim()}");
+                    _log($"parallel audit: worktree creation failed — {createResult.Output.Trim()}");
                     CleanupLanePath(lanePath);
+                    _pathClaims.Release(stageId);
                     return new ParallelAuditOutcome { StageId = stageId, MaxSeverity = AuditFindingSeverity.None, Findings = "", Completed = true };
                 }
 
@@ -54,30 +83,32 @@ public sealed class LaneCoordinator(PlanConfig plan, RunState state, IProgressSi
                     a.Replace("{prompt}", prompt)
                      .Replace("{sessionId}", $"audit-{stageId}-{suffix}"));
                 var result = await ProcessRunner.RunAsync(resolvedAgent.Command, args, lanePath,
-                    TimeSpan.FromMinutes(plan.Audit?.MaxAttempts > 0 ? plan.Audit.MaxAttempts * 30 : 30), ct).ConfigureAwait(false);
+                    TimeSpan.FromMinutes(_plan.Audit?.MaxAttempts > 0 ? _plan.Audit.MaxAttempts * 30 : 30), ct).ConfigureAwait(false);
 
                 CleanupLanePath(lanePath);
+                _pathClaims.Release(stageId);
 
                 if (ct.IsCancellationRequested)
                 {
-                    log($"parallel audit for {stageId}: cancelled");
+                    _log($"parallel audit for {stageId}: cancelled");
                     return new ParallelAuditOutcome { StageId = stageId, MaxSeverity = AuditFindingSeverity.None, Findings = "", Completed = true };
                 }
 
                 var findings = result.Output ?? "";
                 var severity = ParseAuditSeverity(findings);
-                log($"parallel audit for {stageId}: completed (severity={severity})");
+                _log($"parallel audit for {stageId}: completed (severity={severity})");
                 return new ParallelAuditOutcome { StageId = stageId, MaxSeverity = severity, Findings = findings, Completed = true };
             }
             catch (Exception ex)
             {
                 CleanupLanePath(lanePath);
-                log($"parallel audit for {stageId}: error — {ex.Message}");
+                _pathClaims.Release(stageId);
+                _log($"parallel audit for {stageId}: error — {ex.Message}");
                 return new ParallelAuditOutcome { StageId = stageId, MaxSeverity = AuditFindingSeverity.None, Findings = "", Completed = true };
             }
         }, ct);
 
-        state.PendingParallelAudit = null;
+        _state.PendingParallelAudit = null;
     }
 
     private static void CleanupLanePath(string path)
@@ -90,7 +121,7 @@ public sealed class LaneCoordinator(PlanConfig plan, RunState state, IProgressSi
     /// <summary>P2: builds the read-only audit prompt for the parallel audit lane.</summary>
     private string BuildParallelAuditPrompt(string stageId, string sha)
     {
-        var stage = plan.Stages.FirstOrDefault(s => s.Id == stageId);
+        var stage = _plan.Stages.FirstOrDefault(s => s.Id == stageId);
         var title = stage?.Title ?? stageId;
         var sb = new System.Text.StringBuilder();
         sb.AppendLine($"You are a read-only code auditor for an autonomous engineering orchestrator (Conductor).");
@@ -98,10 +129,10 @@ public sealed class LaneCoordinator(PlanConfig plan, RunState state, IProgressSi
         sb.AppendLine("read files freely but you CANNOT modify them or create commits.");
         sb.AppendLine();
         sb.AppendLine("## Audit context");
-        sb.AppendLine($"Plan: {plan.Name}");
+        sb.AppendLine($"Plan: {_plan.Name}");
         sb.AppendLine($"Stage: {stageId} ({title})");
         sb.AppendLine($"Pinned commit: {sha}");
-        sb.AppendLine($"Tracker: {plan.Tracker}");
+        sb.AppendLine($"Tracker: {_plan.Tracker}");
         sb.AppendLine();
         sb.AppendLine("## Task");
         sb.AppendLine($"Audit the code at commit {sha}. Read the tracker for this stage's deliverables.");
@@ -148,16 +179,16 @@ public sealed class LaneCoordinator(PlanConfig plan, RunState state, IProgressSi
         {
             var outcome = await _parallelAuditTask.ConfigureAwait(false);
             _parallelAuditTask = null;
-            state.ParallelAuditOutcome = outcome;
+            _state.ParallelAuditOutcome = outcome;
             if (outcome.MaxSeverity == AuditFindingSeverity.High)
             {
-                log($"parallel audit: HIGH findings detected for stage {outcome.StageId} — signal delivered to running session");
-                sink.Log($"[parallel-audit] HIGH severity findings — audit recommends fixing before continuing");
+                _log($"parallel audit: HIGH findings detected for stage {outcome.StageId} — signal delivered to running session");
+                _sink.Log($"[parallel-audit] HIGH severity findings — audit recommends fixing before continuing");
             }
         }
         catch (Exception ex)
         {
-            log($"parallel audit: task failed — {ex.Message}");
+            _log($"parallel audit: task failed — {ex.Message}");
             _parallelAuditTask = null;
         }
     }
@@ -169,44 +200,44 @@ public sealed class LaneCoordinator(PlanConfig plan, RunState state, IProgressSi
     /// behind merge gates.</summary>
     public async Task RunFollowupFixLanesAsync(string stageId, CancellationToken ct)
     {
-        var followupsPath = Path.Combine(plan.StateDir, "followups.md");
+        var followupsPath = Path.Combine(_plan.StateDir, "followups.md");
         if (!File.Exists(followupsPath)) return;
 
         var entries = FollowupParser.ReadOpenForStage(followupsPath, stageId);
         if (entries.Count == 0) return;
 
         // Resolve the plan's default agent (per-lane overrides aren't used for fix-lanes yet).
-        var agent = plan.Agent;
-        log($"fix-lanes: {entries.Count} OPEN followup(s) owned by stage {stageId}");
+        var agent = _plan.Agent;
+        _log($"fix-lanes: {entries.Count} OPEN followup(s) owned by stage {stageId}");
 
         foreach (var entry in entries)
         {
             var lane = FollowupEntryToMutatingLane(entry);
-            log($"fix-lane '{entry.Id}' starting — {entry.Item}");
+            _log($"fix-lane '{entry.Id}' starting — {entry.Item}");
 
             MutatingLaneResult result;
             try
             {
                 result = await MutatingLaneRunner.RunAsync(
-                    plan, lane, agent, stageId, events, log, ct).ConfigureAwait(false);
+                    _plan, lane, agent, stageId, _events, _log, ct).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                log($"fix-lane '{entry.Id}' threw: {ex.Message}");
+                _log($"fix-lane '{entry.Id}' threw: {ex.Message}");
                 continue;
             }
 
             if (result.Merged || (result.IsSuccess && !result.AgentCommitted))
             {
-                var commitRef = Git.Head(plan.Repo)[..Math.Min(7, Git.Head(plan.Repo).Length)];
+                var commitRef = Git.Head(_plan.Repo)[..Math.Min(7, Git.Head(_plan.Repo).Length)];
                 if (FollowupParser.UpdateStatus(followupsPath, entry.Id, "CLOSED", $"b{entry.Id}"))
-                    log($"fix-lane '{entry.Id}' CLOSED — {entry.Item} ({commitRef})");
+                    _log($"fix-lane '{entry.Id}' CLOSED — {entry.Item} ({commitRef})");
                 else
-                    log($"fix-lane '{entry.Id}' done but status update failed in followups.md");
+                    _log($"fix-lane '{entry.Id}' done but status update failed in followups.md");
             }
             else
             {
-                log($"fix-lane '{entry.Id}' FAILED — merge gate rejected: {result.Error ?? "unknown"}");
+                _log($"fix-lane '{entry.Id}' FAILED — merge gate rejected: {result.Error ?? "unknown"}");
             }
         }
     }
@@ -237,19 +268,19 @@ public sealed class LaneCoordinator(PlanConfig plan, RunState state, IProgressSi
     /// Each lane runs in a scratch temp directory so it can never write the working tree.</summary>
     public void StartAnalysisLanes(StageConfig stage, string? handoff, CancellationToken ct)
     {
-        if (plan.AnalysisLanes.Count == 0) return;
+        if (_plan.AnalysisLanes.Count == 0) return;
 
-        var triggered = plan.AnalysisLanes
+        var triggered = _plan.AnalysisLanes
             .Where(l => l.Enabled && (l.StageTrigger == null ||
                 l.StageTrigger.Equals(stage.Id, StringComparison.OrdinalIgnoreCase)))
             .ToList();
 
         if (triggered.Count == 0) return;
 
-        _lanePool ??= new LaneWorkerPool(plan.Limits.MaxConcurrentLanes, events, log);
+        _lanePool ??= new LaneWorkerPool(_plan.Limits.MaxConcurrentLanes, _events, _log);
 
-        var gitSummary = GitView.Summary(plan.Repo);
-        var resolvedAgent = plan.ResolveAgent(stage);
+        var gitSummary = GitView.Summary(_plan.Repo);
+        var resolvedAgent = _plan.ResolveAgent(stage);
 
         foreach (var lane in triggered)
         {
@@ -257,7 +288,7 @@ public sealed class LaneCoordinator(PlanConfig plan, RunState state, IProgressSi
             _lanePool.Enqueue(new LaneWorkItem(
                 lane.Id, lane.Kind, stage.Id,
                 ct2 => LaneRunner.RunAsync(capturedLane, resolvedAgent,
-                    plan.Name, stage.Id, stage.Title, plan.StateDir,
+                    _plan.Name, stage.Id, stage.Title, _plan.StateDir,
                     handoff, gitSummary, ct2)), ct);
         }
     }
@@ -272,10 +303,10 @@ public sealed class LaneCoordinator(PlanConfig plan, RunState state, IProgressSi
         foreach (var result in results)
         {
             if (result.IsSuccess)
-                log($"analysis lane '{result.LaneId}' completed ({result.ElapsedMs}ms)" +
+                _log($"analysis lane '{result.LaneId}' completed ({result.ElapsedMs}ms)" +
                     (result.ArtifactPath != null ? $" → {Path.GetFileName(result.ArtifactPath)}" : ""));
             else
-                log($"analysis lane '{result.LaneId}' failed: {result.Error ?? "unknown error"}");
+                _log($"analysis lane '{result.LaneId}' failed: {result.Error ?? "unknown error"}");
         }
     }
 
@@ -290,6 +321,6 @@ public sealed class LaneCoordinator(PlanConfig plan, RunState state, IProgressSi
         var successCount = remaining.Count(r => r.IsSuccess);
         var failCount = remaining.Count - successCount;
         if (remaining.Count > 0)
-            log($"analysis lanes collected: {successCount} succeeded, {failCount} failed for stage {stageId}");
+            _log($"analysis lanes collected: {successCount} succeeded, {failCount} failed for stage {stageId}");
     }
 }

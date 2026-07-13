@@ -48,6 +48,23 @@ public sealed partial class RunLoop
     private bool HandoffWantsHuman(TrackerSnapshot track)
         => _ctx.Plan.Conventions.MentionsHuman(track.HandoffBlock);
 
+    // ── per-stage overrides (M3.2) ──
+
+    private void ApplyStageOverrides(StageConfig stage)
+    {
+        _ctx.State.SkipGatesThisStage = stage.Overrides?.SkipGates == true;
+        _ctx.State.SkipCommitThisStage = stage.Overrides?.SkipCommit == true;
+        _ctx.State.SkipVerificationThisStage = stage.Overrides?.SkipVerification == true;
+        if (stage.Overrides is { } o)
+        {
+            var flags = new List<string>();
+            if (o.SkipGates == true) flags.Add("skip-gates");
+            if (o.SkipCommit == true) flags.Add("skip-commit");
+            if (o.SkipVerification == true) flags.Add("skip-verification");
+            if (flags.Count > 0) _ctx.Log($"stage overrides: {string.Join(", ", flags)}");
+        }
+    }
+
     // ---------------------------------------------------------------- budget
 
     private bool CheckBudgetCap()

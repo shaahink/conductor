@@ -190,6 +190,10 @@ public sealed partial class VerdictEngine
                     if (verdict.Findings.Count > 0)
                         WriteVerifierFollowups(stage.Id, verdict);
                     _ctx.Log($"verifier passed ({verdict.Score}/{_ctx.Plan.Limits.VerifierThreshold}) — {(verdict.Findings.Count > 0 ? $"{verdict.Findings.Count} finding(s) tracked as follow-ups" : "no findings")}");
+
+                    // M3.1: workflow-driven next step
+                    AdvanceWorkflowStep(stage, rec, gatesGreen: true, verifierScore: verdict.Score,
+                        verifierPassed: true, circuitBroken: false);
                 }
                 else
                 {
@@ -207,6 +211,10 @@ public sealed partial class VerdictEngine
                     rec.Outcome = SessionOutcome.NoProgress;
                     _ctx.State.AttemptsThisStage++;
                     _ctx.Log($"verifier failed ({verdict.Score}/{_ctx.Plan.Limits.VerifierThreshold}) — queuing fix session with {verdict.Findings.Count} finding(s)");
+
+                    // M3.1: workflow-driven next step after failed verify
+                    AdvanceWorkflowStep(stage, rec, gatesGreen: false, verifierScore: verdict.Score,
+                        verifierPassed: false, circuitBroken: false);
                 }
             }
             else
@@ -229,10 +237,21 @@ public sealed partial class VerdictEngine
         _ctx.State.Status = RunStatus.VerifyingGates;
         _ctx.Save();
         _pushIdleSnapshot();
-        _ctx.Log(_ctx.Plan.PerPhaseGates
-            ? "verifying independently: fast gates + git + tracker diff (full battery at phase end)"
-            : "verifying independently: gate battery + git + tracker diff");
-        var gates = await RunGateBatteryAsync(ct, fastOnly: _ctx.Plan.PerPhaseGates).ConfigureAwait(false);
+
+        // M3.2: skip gates when overridden
+        IReadOnlyList<GateResult> gates;
+        if (_ctx.State.SkipGatesThisStage)
+        {
+            _ctx.Log("gate battery SKIPPED (per-stage override: skipGates)");
+            gates = Array.Empty<GateResult>();
+        }
+        else
+        {
+            _ctx.Log(_ctx.Plan.PerPhaseGates
+                ? "verifying independently: fast gates + git + tracker diff (full battery at phase end)"
+                : "verifying independently: gate battery + git + tracker diff");
+            gates = await RunGateBatteryAsync(ct, fastOnly: _ctx.Plan.PerPhaseGates).ConfigureAwait(false);
+        }
         _ctx.LastGates = gates;
         rec.GateSummary = GateRunner.Summary(gates);
         EmitGates(gates, "session", rec.Number.ToString());
@@ -273,32 +292,22 @@ public sealed partial class VerdictEngine
 
         if (gatesGreen && (rec.NewCommits.Count > 0 || postTrack.StageDone(stage.Id)) && !agentErrored)
         {
-            if (ShouldVerify(rec))
-            {
-                _ctx.State.PendingVerify = new PendingVerify
-                {
-                    FromSession = rec.Number,
-                    StageId = stage.Id,
-                    StageStartHead = _ctx.State.CurrentStageStartHead ?? startHead,
-                };
-                rec.Outcome = SessionOutcome.Progress;
-                _ctx.State.PendingFix = null;
-                if (dirty) _ctx.Log($"note: working tree left dirty after green session: {Git.DirtySummary(_ctx.Plan.Repo)}");
-                _ctx.Log($"session #{rec.Number} Progress — verifier queued to independently check the work");
-            }
-            else
-            {
-                rec.Outcome = rec.NewlyDone.Count > 0 ? SessionOutcome.Advanced : SessionOutcome.Progress;
-                _ctx.State.AttemptsThisStage = rec.NewlyDone.Count > 0 ? 0 : _ctx.State.AttemptsThisStage + 1;
-                _ctx.State.PendingFix = null;
-                if (dirty) _ctx.Log($"note: working tree left dirty after green session: {Git.DirtySummary(_ctx.Plan.Repo)}");
-                _ctx.Log($"session #{rec.Number} {rec.Outcome} — {(rec.NewlyDone.Count > 0 ? string.Join(", ", rec.NewlyDone) + " done" : "no checkpoint flipped yet")}", rec.Outcome?.ToString().ToLowerInvariant() ?? "unknown");
-            }
+            // M3.1: workflow-driven next step instead of hardcoded ShouldVerify
+            _ctx.State.AttemptsThisStage = rec.NewlyDone.Count > 0 ? 0 : _ctx.State.AttemptsThisStage;
+            _ctx.State.PendingFix = null;
+            rec.Outcome = rec.NewlyDone.Count > 0 ? SessionOutcome.Advanced : SessionOutcome.Progress;
+            if (dirty) _ctx.Log($"note: working tree left dirty after green session: {Git.DirtySummary(_ctx.Plan.Repo)}");
 
-            if (_ctx.Plan.PerPhaseGates && postTrack.StageDone(stage.Id))
+            var stageComplete = postTrack.StageDone(stage.Id);
+            AdvanceWorkflowStep(stage, rec, gatesGreen: true, verifierScore: null,
+                verifierPassed: false, circuitBroken: false, stageComplete: stageComplete);
+
+            if (_ctx.Plan.PerPhaseGates && stageComplete)
             {
                 ScheduleGateOrAudit(stage.Id, _ctx.State.CurrentStageStartHead ?? startHead);
             }
+
+            _ctx.Log($"session #{rec.Number} {rec.Outcome} — {(rec.NewlyDone.Count > 0 ? string.Join(", ", rec.NewlyDone) + " done" : "no checkpoint flipped yet")}", rec.Outcome?.ToString().ToLowerInvariant() ?? "unknown");
         }
         else
         {

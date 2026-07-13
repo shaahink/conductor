@@ -53,10 +53,11 @@ public sealed class Orchestrator
 
         _ctx = new RunContext(
             plan, state, opts, sink, events, prompts, lessons, iPlanner, progress,
-            agentProvider, store, processSupervisor, controlInbox, telegram, webhooks, logger);
+            agentProvider, store, processSupervisor, controlInbox, telegram, webhooks,
+            workflowEngine: new WorkflowEngine(), logger);
 
         _gates = new GateOrchestrator(plan, state, events, store);
-        _lanes = new LaneCoordinator(plan, state, sink, events, _ctx.Log);
+        _lanes = new LaneCoordinator(plan, state, sink, events, _ctx.Log, pathClaims: new PathClaimTracker());
     }
 
     private SessionRunner Sessions => _sessions ??= CreateSessions();

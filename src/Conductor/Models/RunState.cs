@@ -56,6 +56,18 @@ public sealed class RunState
     /// an approval after restart does the right thing — confirm the stage vs. resume a session vs. reset
     /// the budget window. Null when not parked (or a legacy state.json, treated as an owner-gate).</summary>
     public AwaitingOwnerReason? AwaitingOwnerReason { get; set; }
+    /// <summary>Per-stage current workflow step index (0-based). Used by WorkflowEngine to resume
+    /// from the correct step after a crash or restart (M3.1). Key = stage id.</summary>
+    public Dictionary<string, int> WorkflowStepIndices { get; set; } = new(StringComparer.Ordinal);
+    /// <summary>When true, gates are skipped for the current stage (per-stage override, M3.2).
+    /// Reset at stage-enter; read by SessionRunner before running the gate battery.</summary>
+    public bool SkipGatesThisStage { get; set; }
+    /// <summary>When true, commits are not required for the current stage (per-stage override, M3.2).
+    /// Reset at stage-enter; read by VerdictEngine when evaluating session outcomes.</summary>
+    public bool SkipCommitThisStage { get; set; }
+    /// <summary>When true, verification is advisory-only for the current stage (M3.2).
+    /// Reset at stage-enter; read by VerdictEngine when deciding whether to queue PendingVerify.</summary>
+    public bool SkipVerificationThisStage { get; set; }
     public List<SessionRecord> History { get; set; } = new();
     /// <summary>Signature (HEAD sha + gate-set) of the last full battery that passed green — lets the
     /// orchestrator skip re-running an identical battery on an unchanged tree (e.g. across restarts).</summary>

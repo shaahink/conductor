@@ -4,12 +4,12 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: opencode direct session — M2 DELIVERED (5/5 checkpoints DONE). RunDb.cs (457+L) deleted, 3 old files removed. 19 new Store files. All 7 CLI cmds + crash recovery + control plane migrated to SqliteRunStore from run.db. M2.4 session history dirs + INDEX.md. M2.5 advisor cost tracking added.
-stage: M2 COMPLETE. 9/30 checkpoints DONE.
+last: M3 DELIVERED (3/3 checkpoints DONE). WorkflowEngine replaces hardcoded Deliver→Verify→Fix with declarative steps. 4 built-in workflows: deliver-verify, big-dev-then-big-audit, docs-only, spike. Per-stage overrides (skipGates, skipVerification, skipCommit, model). PathClaimTracker with collision avoidance for parallel lanes. 16 new tests pass.
+stage: M3 COMPLETE. 12/30 checkpoints DONE.
 commits: (pending — this session deliverable).
-gate: build 0w/0e · architecture 4/4 GREEN · baseline {} · 598/598 tests pass (0w/0e).
+gate: build 0w/0e · 614/614 tests pass (0w/0e).
 branch: feat/foreman.
-next: M3 — Workflows that bend (declarative steps, per-session overrides, safe parallelism).
+next: M4 — Gates that cannot be escaped (claims vs confirmations).
 
 
 ## Baseline numbers (from run.db)
@@ -17,7 +17,7 @@ next: M3 — Workflows that bend (declarative steps, per-session overrides, safe
 | Metric | Value |
 |---|---|
 | Total checkpoints | 30 |
-| Done | 4 |
+| Done | 12 |
 
 ## Checkpoints
 
@@ -47,9 +47,9 @@ phase (a code path is not evidence).
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| M3.1 | Declarative workflow steps + 4 built-ins (deliver-verify, big-dev-then-big-audit, docs-only, spike) | TODO | - | - |
-| M3.2 | Per-stage/per-session overrides (drop QA, change model) from plan AND TUI | TODO | - | - |
-| M3.3 | Safe parallelism with path-claim collision avoidance | TODO | - | - |
+| M3.1 | Declarative workflow steps + 4 built-ins (deliver-verify, big-dev-then-big-audit, docs-only, spike) | DONE | [next] | WorkflowEngine.cs (232L) — 4 built-in workflows, condition evaluation, step resolution. SessionRunner.ResolveSessionKind + VerdictEngine.AdvanceWorkflowStep replace hardcoded state machine. 10 workflow tests pass. |
+| M3.2 | Per-stage/per-session overrides from plan AND TUI (drop QA, change model, skip gates/commit) | DONE | [next] | WorkflowOverrides model, StageConfig.Overrides + PathClaims fields, RunState.SkipGatesThisStage/SkipCommitThisStage/SkipVerificationThisStage. ApplyStageOverrides in RunLoop.Plumbing.cs. WorkflowEngine skips verification step when override is active. |
+| M3.3 | Safe parallelism with path-claim collision avoidance | DONE | [next] | PathClaimTracker.cs (65L) — concurrent path-claim registration/release with normalization. LaneCoordinator.StartParallelAudit checks for conflicts before spawning audit lane. Claims released on lane completion. 5 path-claim tests pass. |
 
 ### M4 — Gates that cannot be escaped — claims vs confirmations
 

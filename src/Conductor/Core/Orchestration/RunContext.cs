@@ -33,6 +33,7 @@ public sealed class RunContext
     public ConcurrentQueue<ControlCommand>? ControlInbox { get; }
     public ITelegramService Telegram { get; }
     public WebhookNotifier Webhooks { get; }
+    public WorkflowEngine Workflows { get; }
 
     // ── file paths ──
 
@@ -88,6 +89,7 @@ public sealed class RunContext
         ConcurrentQueue<ControlCommand>? controlInbox,
         ITelegramService telegram,
         WebhookNotifier webhooks,
+        WorkflowEngine? workflowEngine,
         ILogger logger)
     {
         Plan = plan;
@@ -105,6 +107,7 @@ public sealed class RunContext
         ControlInbox = controlInbox;
         Telegram = telegram;
         Webhooks = webhooks;
+        Workflows = workflowEngine ?? new WorkflowEngine();
         Logger = logger;
         StateDir = plan.StateDir;
         LockPath = Path.Combine(plan.StateDir, "conductor.lock");
