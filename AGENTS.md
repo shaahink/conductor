@@ -1,17 +1,61 @@
-# Conductor (Baton worktree) — session handoff
+# Conductor (Go Face worktree) — session handoff
 
 ## What this is
 Conductor is an autonomous multi-session engineering orchestrator (C# / .NET, Spectre.Console). It
 spawns headless agent sessions, verifies work independently (gate battery + git commits + tracker
-diff), is fully resumable, and reports to `.conductor/REPORT.md`. This worktree (`feat/baton`) hosts
-**Baton — Conductor v2**: Conductor improving itself.
+diff), is fully resumable, and reports to `.conductor/REPORT.md`. This worktree (`feat/go-face`) hosts
+**Conductor Face v2** — a Go + Bubble Tea TUI replacing the TypeScript + Ink version.
 
 ## This worktree
-- **Path:** `C:\Code\conductor-baton`  **Branch:** `feat/baton`
-- **Do NOT touch:** `C:\Code\conductor` (master, the stable DRIVER) or the live `C:\Code\DevContext2-ui`
-  Loom run (separate repo + lock).
-- **Driver:** the STABLE `C:\Code\conductor\bin\conductor.exe` (built from master). The tool improving
-  Conductor is never the tool under edit.
+- **Path:** `C:\Code\conductor-go-face`  **Branch:** `feat/go-face`
+- **What's new:** `face-go/` — Go + Bubble Tea TUI (single binary, ~11MB)
+- **Existing:** `face/` — TypeScript + Ink TUI (untouched, remains on feat/foreman)
+- **Driver:** the STABLE `C:\Code\conductor\bin\conductor.exe` (built from master).
+
+## Go Face v2 — quick start
+```powershell
+cd face-go
+go build -o bin/conductor-face.exe ./cmd/conductor-face/
+.\bin\conductor-face.exe --demo          # offline synthetic data
+.\bin\conductor-face.exe                  # live against conductor --control-plane (http://127.0.0.1:4317)
+```
+
+## Architecture
+- **Language:** Go 1.26
+- **Framework:** Bubble Tea v2 (Elm Architecture) + Lip Gloss v2 (styling)
+- **Layout:** Crush-inspired — agent transcript is the primary view; sidebar (plan tree + gates) toggles with `p`; everything else is a modal overlay
+- **Data:** Same HTTP+SSE API as the Ink TUI (9 endpoints on localhost:4317)
+- **Tests:** `go test ./...` — 9 tests pass
+
+### Key files
+| Path | Purpose |
+|------|---------|
+| `cmd/conductor-face/main.go` | CLI entry: --demo, --url, --host, --port |
+| `internal/api/` | HTTP client, SSE client, DTO types, demo data source |
+| `internal/tui/` | Root model, update loop, view, layout, messages, theme |
+| `internal/widgets/` | Transcript, sidebar, ticker, footer, toasts, styles |
+
+### Keybindings
+| Key | Action |
+|-----|--------|
+| `p` | Toggle plan sidebar |
+| `:` | Command palette (11 verbs, filterable) |
+| `i` | Inject context modal |
+| `e` | Template editor modal |
+| `h` | Session history modal |
+| `r` | Report / query console |
+| `?` | Help overlay |
+| `f` | Toggle tool-call folding |
+| `q / ^C` | Quit |
+
+### Development
+```powershell
+cd face-go
+go fmt ./...           # format
+go vet ./...           # lint
+go test ./...          # test (9 tests)
+go build -o bin/conductor-face.exe ./cmd/conductor-face/   # build
+```
 
 ## Read order
 1. `C:\Code\conductor\NEXT-ERA.md` — strategic roadmap for Era v3 (post-Baton)
