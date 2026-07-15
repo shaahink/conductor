@@ -5,7 +5,7 @@
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
 last: M5.1 (timeline) + M5.5 (prompt preview) Face panes built in face-go, each backed by their existing C# endpoint — which got their FIRST wire tests (both endpoints were shipped untested). face-go: `t` = scrollable Timeline modal; template editor `v` = compiled-prompt preview. Golden + unit tests added. Hardened ControlPlaneServerTests' WriteEvents to wait for the async drain (was latently flaky). Reverted the earlier MA0040 "fix" — it was a real regression (Task.Run(_, token) drops buffered events if dispose cancels before scheduling); restored the suppression with an accurate comment, ceiling now 38.
-stage: M5 IN PROGRESS — M5.1, M5.5, M5.6 DONE. 18/30 DONE. Remaining M5: M5.2 (live plan enrichment), M5.3 (native console, needs GET /console/current), M5.4 (live ticker fold).
+stage: M5 IN PROGRESS — M5.1, M5.2, M5.5, M5.6 DONE. 19/30 DONE. Remaining M5: M5.3 (native console, needs GET /console/current), M5.4 (live ticker fold).
 commit: [next]
 gate: build 0w/0e · 640 tests pass · face-go build/vet/test green · ratchet green (ceiling 38, pushed).
 branch: feat/foreman.
@@ -17,7 +17,7 @@ next: M5.2 live plan enrichment (StageDto already carries score/cost/attempts �
 | Metric | Value |
 |---|---|
 | Total checkpoints | 30 |
-| Done | 18 |
+| Done | 19 |
 
 ## Checkpoints
 
@@ -64,7 +64,7 @@ phase (a code path is not evidence).
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | M5.1 | Timeline pane — sessions, gates, stalls, verdicts, cost over time | DONE | [next] | GET /timeline (backend) now has its first wire test (ControlPlaneServerTests seeds events, asserts the JSON kinds/cost). Face pane built in face-go: `t` opens a scrollable Timeline modal (clock + kind glyphs + cost), consuming /timeline via api.FetchTimeline. Golden test `timeline_modal` + unit test `TestTimelineOpenFetchNavigate`. |
-| M5.2 | Live plan pane — per-stage state/score/cost/attempts, no truncation at any width | TODO | - | - |
+| M5.2 | Live plan pane — per-stage state/score/cost/attempts, no truncation at any width | DONE | [next] | face-go sidebar now renders per-stage score (done/total), attempts (N×) and cost ($X.XX) alongside state glyph/colour; id + score never truncate, title adapts to width (ANSI-safe single-Render). Golden `sidebar_open` shows `● F7 2/5 … 1× $0.30`. Data all flows from StageDto (already carried it). Note: depth-indent for nested-stage dependencies is a follow-up (maestro stages are flat, so N/A here). |
 | M5.3 | Native console pane — raw agent stdout over SSE, toggle to clean folded view | TODO | - | - |
 | M5.4 | Live ticker — cost/tokens fold from tokenDelta during the session, not at the end | TODO | - | - |
 | M5.5 | Compiled-prompt preview beside the template editor (live + future sessions) | DONE | [next] | GET /prompt/preview?stage=&kind= (backend) now has its first wire tests (compiled prompt non-empty for a real stage; 404 for unknown stage). Face pane built in face-go: in the template editor, `v` toggles a compiled-prompt preview for the current stage via api.FetchPromptPreview. Golden test `prompt_preview` + unit test `TestPromptCompiledPreviewToggle`. |

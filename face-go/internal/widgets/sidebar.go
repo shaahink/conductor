@@ -1,6 +1,7 @@
 package widgets
 
 import (
+	"fmt"
 	"strings"
 
 	"charm.land/lipgloss/v2"
@@ -83,7 +84,7 @@ func (m SidebarModel) View() string {
 	lineIdx := 0
 	for _, stage := range m.Stages {
 		glyph, style := stageGlyph(stage.State)
-		line := style.Render(glyph + " " + stage.Id + " " + truncate(stage.Title, m.Width-8))
+		line := style.Render(m.stageLine(glyph, stage))
 		if lineIdx == m.Selected {
 			line = highlightStyle.Render(line)
 		}
@@ -122,6 +123,30 @@ func (m SidebarModel) View() string {
 	return lipgloss.NewStyle().
 		Width(m.Width).Height(m.Height).
 		Render(content)
+}
+
+// stageLine composes one plan row: the id and progress score (done/total) always survive; the title
+// takes whatever width is left; a cost/attempts suffix shows for stages that have actually run. The
+// whole line is later rendered in the stage's status colour, so this returns plain text — pre-truncated
+// so the caller's single Render() never slices a styled string mid-escape (M5.2: state/score/cost/attempts).
+func (m SidebarModel) stageLine(glyph string, stage api.StageDto) string {
+	score := fmt.Sprintf("%d/%d", stage.Done, stage.Total)
+
+	meta := ""
+	if stage.Attempts > 0 {
+		meta += fmt.Sprintf(" %d×", stage.Attempts) // "3×" attempts
+	}
+	if stage.CostUsd > 0 {
+		meta += fmt.Sprintf(" $%.2f", stage.CostUsd)
+	}
+
+	// Reserve: glyph (2 cols) + id + space + score + space + meta + a little margin.
+	reserve := 2 + len(stage.Id) + 1 + len(score) + 1 + lipgloss.Width(meta) + 1
+	titleW := m.Width - reserve
+	if titleW < 4 {
+		titleW = 4
+	}
+	return glyph + stage.Id + " " + score + " " + truncate(stage.Title, titleW) + meta
 }
 
 func (m *SidebarModel) expandSelected() {

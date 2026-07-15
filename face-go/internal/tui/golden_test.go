@@ -96,7 +96,7 @@ func fixedState() *api.StateDto {
 		Stages: []api.StageDto{
 			{Id: "F0", Title: "Foundations", Done: 3, Total: 3, State: "confirmed"},
 			{Id: "F6", Title: "Ink TUI v1", Done: 5, Total: 5, State: "confirmed"},
-			{Id: "F7", Title: "Gate caching + truth gates", Done: 2, Total: 5, State: "active", Attempts: 1,
+			{Id: "F7", Title: "Gate caching + truth gates", Done: 2, Total: 5, State: "active", Attempts: 1, CostUsd: 0.30,
 				Checkpoints: []api.CheckpointDto{
 					{Id: "F7.1", Title: "Plan import", Status: "done"},
 					{Id: "F7.2", Title: "Re-import diff", Status: "done"},
