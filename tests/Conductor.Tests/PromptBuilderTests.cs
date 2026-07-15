@@ -68,6 +68,17 @@ public class PromptBuilderTests
     }
 
     [Fact]
+    public void PlanDocFallsBackToTrackerWhenUnset()
+    {
+        var plan = Plan();
+        plan.PlanDoc = ""; // a minimal plan with no separate design doc
+        var p = new PromptBuilder(plan).Deliver(Stage, 1, 1, 1);
+        // The ritual must not render the broken "exactly as `` prescribes".
+        Assert.DoesNotContain("as `` prescribes", p);
+        Assert.Contains("exactly as `LOOM-START.md` prescribes", p);
+    }
+
+    [Fact]
     public void TemplateFileOverridesBuiltIn()
     {
         var dir = Path.Combine(Path.GetTempPath(), $"conductor-tpl-{Guid.NewGuid():N}");

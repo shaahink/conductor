@@ -95,7 +95,9 @@ public sealed class PromptBuilder
             ["planName"] = _plan.Name,
             ["repo"] = _plan.Repo,
             ["tracker"] = _plan.Tracker,
-            ["planDoc"] = _plan.PlanDoc,
+            // Fall back to the tracker when a plan sets no separate design doc, so the ritual reads
+            // "exactly as `TRACKER.md` prescribes" instead of the broken "exactly as `` prescribes".
+            ["planDoc"] = string.IsNullOrWhiteSpace(_plan.PlanDoc) ? _plan.Tracker : _plan.PlanDoc,
             ["stage"] = stage.Id,
             ["stageTitle"] = stage.Title,
             ["stageNotes"] = string.IsNullOrWhiteSpace(stage.Notes) ? "" : $"\nStage-specific notes from the orchestrator config:\n{stage.Notes}\n",
