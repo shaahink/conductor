@@ -25,17 +25,31 @@ TUI at `face/`.
 - **Driver:** the STABLE `C:\Code\conductor\bin\conductor.exe` (built from master). The tool improving
   Conductor is never the tool under edit.
 
-## Resume here (latest face-go session, 2026-07-15)
-Delivered this round, on top of the control-plane wiring + golden/live-smoke verification from the
-prior session: a TTY guard + `FACE_FORCE_TTY` escape hatch + rich `-h`/`--help` text (`main.go`),
-a `README.md` section introducing Face to actual users (previously undocumented outside this file),
-spring-animated toast entrances (Harmonica, `internal/tui/anim.go`), and Glamour-rendered markdown
-for the Session History modal's result summary (`internal/tui/markdown.go`). All committed, all
-tests green, live-run smoke-checked (see the dependency gotcha below before touching `go.mod`).
-**Not yet done, and worth doing next:** nothing known-broken — the "next deliverables" list from
-the prior session (mouse routing beyond sidebar-row-select, `Tasks` UI, discovery-file
-auto-connect) is still open but optional/low-priority; ask the user before picking one up rather
-than assuming priority order.
+## Resume here (Maestro M5 complete, 2026-07-15)
+**M5 (Observability) is DONE, 6/6** — the Face work landed in `face-go`, backed by the C# control
+plane, and was dogfood-verified against a real orchestrator run. What's new in `face-go` this era:
+- **Timeline** modal (`t`) ← `GET /timeline`; **compiled-prompt preview** in the template editor
+  (`v`) ← `GET /prompt/preview`; **Native Console** modal (`c`, raw agent stdout) ← new SSE
+  `GET /console/current`; **enriched plan sidebar** (per-stage score/attempts/cost); **live ticker**
+  (`● $x.xx` session segment) ← `/state` now folds `TokenDelta` for the in-flight session.
+- **C# side**: `conductor status` rewritten to read `run.db`'s event log (not the deleted `state.json`);
+  `/timeline` + `/prompt/preview` got their first wire tests; `WithLiveSessionMetrics` on `/state`;
+  golden snapshots at 80×24 / 120×30 / 200×50.
+- **Gate note**: the ratchet was pre-existing-red (39 analyzer suppressions vs ceiling 35, from M2–M5
+  debt). Paid down to 38; with owner authorization raised the ceiling to 38 (the suppressions are
+  legitimate sync-boundary/ownership/broad-catch choices — do NOT try to async-refactor them to hit a
+  number; that was tried once and regressed the event drain). Ceiling changes stay owner-authorized.
+
+**Next: Maestro M6 (plan authoring).** M6.1 `conductor plan import <file>` (a model turns a mega-plan
+into the task graph, rendered as a confirm/edit table); M6.2 re-import diffs, never clobbers; M6.3
+edit plan/stages/models/gates from the TUI. M6 truth gate: import `docs/MAESTRO-PLAN.md` → a graph
+whose stage ids match M1…M9. See `MAESTRO-TRACKER.md` for the live handoff.
+
+Dogfood recipe (real orchestrator, no LLM): a throwaway git repo + a minimal plan whose `agent.command`
+is a local script emitting Claude stream-json (`{"type":"result","total_cost_usd":…}`) + a trivial
+`cmd /c exit 0` gate; `conductor run --control-plane --no-face --headless`, then curl the control plane
+and run `conductor status`. This exercises RunLoop → SessionRunner → AgentSession raw log → control
+plane end to end without agent spend.
 
 ## Go Face v2 — quick start
 ```powershell
