@@ -7,22 +7,22 @@
                                                                                                               
                                                                                                               
                                                                                                               
-                                                                                                              
-                 ╔══════════════════════════════════════════════════════════════════════════╗                 
-                 ║                                                                          ║                 
-                 ║  Plan Editor                                                             ║                 
-                 ║                                                                          ║                 
-                 ║     Stages · Gates · Settings · Import                                   ║                 
-                 ║    conductor-foreman · v7                                                ║                 
-                 ║                                                                          ║                 
-                 ║    build      fast  dotnet build Conductor.slnx                          ║                 
-                 ║    test       full  dotnet test Conductor.slnx                           ║                 
-                 ║    ratchet    truth dotnet test --filter Category=Archi…                 ║                 
-                 ║                                                                          ║                 
-                 ║  [tab: switch] [↑↓: select] [enter: edit fields] [esc: close]            ║                 
-                 ║                                                                          ║                 
-                 ╚══════════════════════════════════════════════════════════════════════════╝                 
-                                                                                                              
+                 ╭──────────────────────────────────────────────────────────────────────────╮                 
+                 │                                                                          │                 
+                 │  ◆ Plan Editor                                                           │                 
+                 │  ──────────────────────────────────────────────────────────────────────  │                 
+                 │                                                                          │                 
+                 │     Stages · Gates · Settings · Import                                   │                 
+                 │    conductor-foreman · v7                                                │                 
+                 │                                                                          │                 
+                 │    build      fast  dotnet build Conductor.slnx                          │                 
+                 │    test       full  dotnet test Conductor.slnx                           │                 
+                 │    ratchet    truth dotnet test --filter Category=Archi…                 │                 
+                 │                                                                          │                 
+                 │  ──────────────────────────────────────────────────────────────────────  │                 
+                 │  [tab: switch] [↑↓: select] [enter: edit fields] [esc: close]            │                 
+                 │                                                                          │                 
+                 ╰──────────────────────────────────────────────────────────────────────────╯                 
                                                                                                               
                                                                                                               
                                                                                                               

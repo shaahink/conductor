@@ -7,21 +7,21 @@
                                                                                                               
                                                                                                               
                                                                                                               
-                                                                                                              
-                 ╔══════════════════════════════════════════════════════════════════════════╗                 
-                 ║                                                                          ║                 
-                 ║  Native Console — raw agent stdout                                       ║                 
-                 ║                                                                          ║                 
-                 ║    {"type":"system","subtype":"init","session_id":"s12","model":"dee…    ║                 
-                 ║    {"type":"assistant","message":{"content":[{"type":"text","text":"…    ║                 
-                 ║    {"type":"result","subtype":"success","total_cost_usd":0.12,"num_t…    ║                 
-                 ║                                                                          ║                 
-                 ║    3 lines · live tail · the transcript pane is the folded view          ║                 
-                 ║                                                                          ║                 
-                 ║  [↑↓: scroll] [end: live tail] [esc/c: close]                            ║                 
-                 ║                                                                          ║                 
-                 ╚══════════════════════════════════════════════════════════════════════════╝                 
-                                                                                                              
+                 ╭──────────────────────────────────────────────────────────────────────────╮                 
+                 │                                                                          │                 
+                 │  ◆ Native Console — raw agent stdout                                     │                 
+                 │  ──────────────────────────────────────────────────────────────────────  │                 
+                 │                                                                          │                 
+                 │    {"type":"system","subtype":"init","session_id":"s12","model":"dee…    │                 
+                 │    {"type":"assistant","message":{"content":[{"type":"text","text":"…    │                 
+                 │    {"type":"result","subtype":"success","total_cost_usd":0.12,"num_t…    │                 
+                 │                                                                          │                 
+                 │    3 lines · live tail · the transcript pane is the folded view          │                 
+                 │                                                                          │                 
+                 │  ──────────────────────────────────────────────────────────────────────  │                 
+                 │  [↑↓: scroll] [end: live tail] [esc/c: close]                            │                 
+                 │                                                                          │                 
+                 ╰──────────────────────────────────────────────────────────────────────────╯                 
                                                                                                               
                                                                                                               
                                                                                                               

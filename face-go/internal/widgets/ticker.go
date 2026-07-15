@@ -18,6 +18,9 @@ func RenderTicker(conn api.ConnectionState, state *api.StateDto, width int) stri
 
 	parts := []string{}
 
+	// Brand mark \u2014 the one persistent bit of chrome, Crush-style.
+	parts = append(parts, brandStyle.Render("\u25C6 conductor"))
+
 	connGlyph := dimStyle.Render("\u25C6")
 	if conn.Mode == api.ModeLive {
 		if conn.Connected {
@@ -30,7 +33,7 @@ func RenderTicker(conn api.ConnectionState, state *api.StateDto, width int) stri
 	if conn.Mode == api.ModeDemo {
 		modeLabel = "DEMO"
 	}
-	parts = append(parts, connGlyph+" "+accent(modeLabel))
+	parts = append(parts, connGlyph+" "+dimStyle.Render(modeLabel))
 
 	if state != nil {
 		parts = append(parts, accent(state.PlanName))

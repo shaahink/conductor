@@ -7,22 +7,22 @@
                                                                                                               
                                                                                                               
                                                                                                               
-                                                                                                              
-                 ╔══════════════════════════════════════════════════════════════════════════╗                 
-                 ║                                                                          ║                 
-                 ║  Plan Editor                                                             ║                 
-                 ║                                                                          ║                 
-                 ║     Stages · Gates · Settings · Import                                   ║                 
-                 ║    conductor-foreman · v7                                                ║                 
-                 ║                                                                          ║                 
-                 ║    F6   Ink TUI v1               5s·deliver claude-opus-4-8              ║                 
-                 ║    F7   Gate caching + truth ga… 5s·deliver claude-opus-4-8              ║                 
-                 ║    F8   conductor chat + Telegr… 4s·deliver claude-sonnet-5              ║                 
-                 ║                                                                          ║                 
-                 ║  [tab: switch] [↑↓: select] [enter: edit fields] [esc: close]            ║                 
-                 ║                                                                          ║                 
-                 ╚══════════════════════════════════════════════════════════════════════════╝                 
-                                                                                                              
+                 ╭──────────────────────────────────────────────────────────────────────────╮                 
+                 │                                                                          │                 
+                 │  ◆ Plan Editor                                                           │                 
+                 │  ──────────────────────────────────────────────────────────────────────  │                 
+                 │                                                                          │                 
+                 │     Stages · Gates · Settings · Import                                   │                 
+                 │    conductor-foreman · v7                                                │                 
+                 │                                                                          │                 
+                 │    F6   Ink TUI v1               5s·deliver claude-opus-4-8              │                 
+                 │    F7   Gate caching + truth ga… 5s·deliver claude-opus-4-8              │                 
+                 │    F8   conductor chat + Telegr… 4s·deliver claude-sonnet-5              │                 
+                 │                                                                          │                 
+                 │  ──────────────────────────────────────────────────────────────────────  │                 
+                 │  [tab: switch] [↑↓: select] [enter: edit fields] [esc: close]            │                 
+                 │                                                                          │                 
+                 ╰──────────────────────────────────────────────────────────────────────────╯                 
                                                                                                               
                                                                                                               
                                                                                                               

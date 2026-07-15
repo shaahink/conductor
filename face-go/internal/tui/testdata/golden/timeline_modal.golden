@@ -6,23 +6,23 @@
                                                                                                               
                                                                                                               
                                                                                                               
-                                                                                                              
-                 ╔══════════════════════════════════════════════════════════════════════════╗                 
-                 ║                                                                          ║                 
-                 ║  Timeline                                                                ║                 
-                 ║                                                                          ║                 
-                 ║    10:00:00 ◆ stage F7 entered                                           ║                 
-                 ║    10:00:05 ▸ session #11 Deliver started                                ║                 
-                 ║    10:03:40 ✗ gate test: FAIL (4100ms)                                   ║                 
-                 ║    10:03:55 ▸ session #11 finished: NeedsRetry  $0.18                    ║                 
-                 ║    10:07:00 ⚠ needs human: verifier score 74 < 80                        ║                 
-                 ║                                                                          ║                 
-                 ║    5 events · folded from run.db's event spine                           ║                 
-                 ║                                                                          ║                 
-                 ║  [↑↓: navigate] [r: refresh] [esc: close]                                ║                 
-                 ║                                                                          ║                 
-                 ╚══════════════════════════════════════════════════════════════════════════╝                 
-                                                                                                              
+                 ╭──────────────────────────────────────────────────────────────────────────╮                 
+                 │                                                                          │                 
+                 │  ◆ Timeline                                                              │                 
+                 │  ──────────────────────────────────────────────────────────────────────  │                 
+                 │                                                                          │                 
+                 │    10:00:00 ◆ stage F7 entered                                           │                 
+                 │    10:00:05 ▸ session #11 Deliver started                                │                 
+                 │    10:03:40 ✗ gate test: FAIL (4100ms)                                   │                 
+                 │    10:03:55 ▸ session #11 finished: NeedsRetry  $0.18                    │                 
+                 │    10:07:00 ⚠ needs human: verifier score 74 < 80                        │                 
+                 │                                                                          │                 
+                 │    5 events · folded from run.db's event spine                           │                 
+                 │                                                                          │                 
+                 │  ──────────────────────────────────────────────────────────────────────  │                 
+                 │  [↑↓: navigate] [r: refresh] [esc: close]                                │                 
+                 │                                                                          │                 
+                 ╰──────────────────────────────────────────────────────────────────────────╯                 
                                                                                                               
                                                                                                               
                                                                                                               

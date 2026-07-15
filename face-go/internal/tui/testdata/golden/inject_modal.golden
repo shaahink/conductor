@@ -7,22 +7,22 @@
                                                                                                               
                                                                                                               
                                                                                                               
-                                                                                                              
-                 ╔══════════════════════════════════════════════════════════════════════════╗                 
-                 ║                                                                          ║                 
-                 ║  Inject Context                                                          ║                 
-                 ║                                                                          ║                 
-                 ║    Stage: F7_                                                            ║                 
-                 ║                                                                          ║                 
-                 ║    Content:                                                              ║                 
-                 ║    please retry with cache warm_                                         ║                 
-                 ║                                                                          ║                 
-                 ║    Injection recorded to run.db — consumed on next session boundary.     ║                 
-                 ║                                                                          ║                 
-                 ║  [tab: switch field] [ctrl+s: submit] [esc: close]                       ║                 
-                 ║                                                                          ║                 
-                 ╚══════════════════════════════════════════════════════════════════════════╝                 
-                                                                                                              
+                 ╭──────────────────────────────────────────────────────────────────────────╮                 
+                 │                                                                          │                 
+                 │  ◆ Inject Context                                                        │                 
+                 │  ──────────────────────────────────────────────────────────────────────  │                 
+                 │                                                                          │                 
+                 │    Stage: F7_                                                            │                 
+                 │                                                                          │                 
+                 │    Content:                                                              │                 
+                 │    please retry with cache warm_                                         │                 
+                 │                                                                          │                 
+                 │    Injection recorded to run.db — consumed on next session boundary.     │                 
+                 │                                                                          │                 
+                 │  ──────────────────────────────────────────────────────────────────────  │                 
+                 │  [tab: switch field] [ctrl+s: submit] [esc: close]                       │                 
+                 │                                                                          │                 
+                 ╰──────────────────────────────────────────────────────────────────────────╯                 
                                                                                                               
                                                                                                               
                                                                                                               

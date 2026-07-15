@@ -6,23 +6,23 @@
                                                                                                               
                                                                                                               
                                                                                                               
-                                                                                                              
-                 ╔══════════════════════════════════════════════════════════════════════════╗                 
-                 ║                                                                          ║                 
-                 ║  Plan Editor                                                             ║                 
-                 ║                                                                          ║                 
-                 ║     Stages · Gates · Settings · Import                                   ║                 
-                 ║    conductor-foreman · v7                                                ║                 
-                 ║                                                                          ║                 
-                 ║    gatePolicy       perPhase                                             ║                 
-                 ║    defaultWorkflow  deliver-verify                                       ║                 
-                 ║                                                                          ║                 
-                 ║    plan file: C:\Code\conductor\plans\conductor-foreman.plan.json        ║                 
-                 ║                                                                          ║                 
-                 ║  [tab: switch] [↑↓: select] [enter: edit] [esc: close]                   ║                 
-                 ║                                                                          ║                 
-                 ╚══════════════════════════════════════════════════════════════════════════╝                 
-                                                                                                              
+                 ╭──────────────────────────────────────────────────────────────────────────╮                 
+                 │                                                                          │                 
+                 │  ◆ Plan Editor                                                           │                 
+                 │  ──────────────────────────────────────────────────────────────────────  │                 
+                 │                                                                          │                 
+                 │     Stages · Gates · Settings · Import                                   │                 
+                 │    conductor-foreman · v7                                                │                 
+                 │                                                                          │                 
+                 │    gatePolicy       perPhase                                             │                 
+                 │    defaultWorkflow  deliver-verify                                       │                 
+                 │                                                                          │                 
+                 │    plan file: C:\Code\conductor\plans\conductor-foreman.plan.json        │                 
+                 │                                                                          │                 
+                 │  ──────────────────────────────────────────────────────────────────────  │                 
+                 │  [tab: switch] [↑↓: select] [enter: edit] [esc: close]                   │                 
+                 │                                                                          │                 
+                 ╰──────────────────────────────────────────────────────────────────────────╯                 
                                                                                                               
                                                                                                               
                                                                                                               

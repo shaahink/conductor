@@ -360,6 +360,13 @@ func TestGolden(t *testing.T) {
 	}
 }
 
+// TestGoldenSplash renders the empty state (no run attached) that live mode shows before data arrives.
+func TestGoldenSplash(t *testing.T) {
+	var m tea.Model = New(fakeSource{}, false, "http://127.0.0.1:4317")
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 110, Height: 34})
+	checkGolden(t, "splash", stripANSI(m.View().Content))
+}
+
 // checkGolden diffs got against testdata/golden/<name>.golden (or writes it under -update) and always
 // prints the frame so a human/agent with no TTY can read it.
 func checkGolden(t *testing.T, name, got string) {

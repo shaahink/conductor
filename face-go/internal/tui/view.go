@@ -71,7 +71,35 @@ func (m Model) View() tea.View {
 
 func (m Model) renderTranscript() string {
 	tStyle := lipgloss.NewStyle().Width(m.transcript.Width).Height(m.transcript.Height)
+	if m.data.Plan == nil {
+		return tStyle.Render(m.renderSplash(m.transcript.Width, m.transcript.Height))
+	}
 	return tStyle.Render(m.transcript.View())
+}
+
+// renderSplash is the Crush-style empty state shown before a run is attached: a wordmark, a one-line
+// pitch, and exactly what to type to see something — live or offline. Centered in the transcript pane.
+func (m Model) renderSplash(width, height int) string {
+	wordmark := lipgloss.NewStyle().Foreground(lipgloss.Color("#58A6FF")).Bold(true).Render("◆ C O N D U C T O R")
+	tagline := subtleStyle.Render("autonomous multi-session engineering orchestrator")
+
+	var statusLine string
+	switch {
+	case m.data.Connection.Mode == api.ModeDemo:
+		statusLine = safeStyle.Render("● demo — synthetic data, no engine needed")
+	case m.data.Connection.LastError != nil:
+		statusLine = destructStyle.Render("● can't reach the control plane at " + m.data.Connection.URL)
+	default:
+		statusLine = warnStyle.Render("● waiting for a run on " + m.data.Connection.URL + " …")
+	}
+
+	hint := subtleStyle.Render("start a run:  ") + textStyle.Render("conductor run -p <plan> --control-plane") + "\n" +
+		subtleStyle.Render("or offline:   ") + textStyle.Render("conductor-face --demo")
+
+	block := lipgloss.JoinVertical(lipgloss.Center,
+		wordmark, "", tagline, "", statusLine, "", hint)
+
+	return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, block)
 }
 
 func (m Model) renderSidebar() string {
@@ -131,14 +159,22 @@ func (m Model) renderModal(background string) string {
 
 	title, body, help := m.modalContent()
 
-	header := accentStyle.Render(title) + "\n\n"
-	content := body
-	footer := "\n\n" + subtleStyle.Render(help)
+	// Crush-style chrome: a soft rounded frame, an accent title with a thin rule beneath it, and a
+	// dim contextual help line at the foot. The rule spans the inner content width (modal minus the
+	// horizontal padding of 2 on each side).
+	// lipgloss v2 counts the border within Width, so the inner text area is modalW - 2 (border) - 4 (padding).
+	ruleW := modalW - 6
+	if ruleW < 1 {
+		ruleW = 1
+	}
+	rule := subtleStyle.Render(strings.Repeat("─", ruleW))
+	header := accentStyle.Render("◆ "+title) + "\n" + rule + "\n\n"
+	footer := "\n\n" + rule + "\n" + subtleStyle.Render(help)
 
-	inner := header + content + footer
+	inner := header + body + footer
 	modalStr := lipgloss.NewStyle().
-		Border(lipgloss.DoubleBorder()).
-		BorderForeground(lipgloss.Color("#58A6FF")).
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#30363D")).
 		Padding(1, 2).
 		Width(modalW).MaxHeight(modalH).
 		Render(inner)

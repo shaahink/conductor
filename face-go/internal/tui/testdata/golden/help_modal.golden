@@ -1,34 +1,34 @@
                                                                                                               
                                                                                                               
-                 ╔══════════════════════════════════════════════════════════════════════════╗                 
-                 ║                                                                          ║                 
-                 ║  Keybindings                                                             ║                 
-                 ║                                                                          ║                 
-                 ║                                                                          ║                 
-                 ║    NAVIGATION                                                            ║                 
-                 ║      p         Toggle plan sidebar                                       ║                 
-                 ║      ↑↓/j/k    Scroll transcript / navigate sidebar                      ║                 
-                 ║      PgUp/Dn   Scroll page                                               ║                 
-                 ║      Home/End  Jump top/bottom                                           ║                 
-                 ║      f         Toggle tool-call folding                                  ║                 
-                 ║      /         Search transcript (n/N: jump, esc: clear)                 ║                 
-                 ║                                                                          ║                 
-                 ║    ACTIONS                                                               ║                 
-                 ║      :         Command palette (destructive/goto verbs confirm first)    ║                 
-                 ║      g         Plan editor (stages, models, workflows, gates, import)    ║                 
-                 ║      i         Inject context                                            ║                 
-                 ║      e         Edit templates (v: compiled-prompt preview)               ║                 
-                 ║      h         Session history                                           ║                 
-                 ║      s         Supervised processes                                      ║                 
-                 ║      r         Report / query                                            ║                 
-                 ║      t         Timeline (sessions, gates, verdicts, cost)                ║                 
-                 ║      c         Native console (raw agent stdout)                         ║                 
-                 ║      ?         This help                                                 ║                 
-                 ║                                                                          ║                 
-                 ║    GLOBAL                                                                ║                 
-                 ║      q / ^C    Quit                                                      ║                 
-                 ║      esc       Close modal / cancel                                      ║                 
-                 ║                                                                          ║                 
-                 ║    MOUSE                                                                 ║                 
+                 ╭──────────────────────────────────────────────────────────────────────────╮                 
+                 │                                                                          │                 
+                 │  ◆ Keybindings                                                           │                 
+                 │  ──────────────────────────────────────────────────────────────────────  │                 
+                 │                                                                          │                 
+                 │                                                                          │                 
+                 │    NAVIGATION                                                            │                 
+                 │      p         Toggle plan sidebar                                       │                 
+                 │      ↑↓/j/k    Scroll transcript / navigate sidebar                      │                 
+                 │      PgUp/Dn   Scroll page                                               │                 
+                 │      Home/End  Jump top/bottom                                           │                 
+                 │      f         Toggle tool-call folding                                  │                 
+                 │      /         Search transcript (n/N: jump, esc: clear)                 │                 
+                 │                                                                          │                 
+                 │    ACTIONS                                                               │                 
+                 │      :         Command palette (destructive/goto verbs confirm first)    │                 
+                 │      g         Plan editor (stages, models, workflows, gates, import)    │                 
+                 │      i         Inject context                                            │                 
+                 │      e         Edit templates (v: compiled-prompt preview)               │                 
+                 │      h         Session history                                           │                 
+                 │      s         Supervised processes                                      │                 
+                 │      r         Report / query                                            │                 
+                 │      t         Timeline (sessions, gates, verdicts, cost)                │                 
+                 │      c         Native console (raw agent stdout)                         │                 
+                 │      ?         This help                                                 │                 
+                 │                                                                          │                 
+                 │    GLOBAL                                                                │                 
+                 │      q / ^C    Quit                                                      │                 
+                 │      esc       Close modal / cancel                                      │                 
+                 │                                                                          │                 
                                                                                                               
                                                                                                               

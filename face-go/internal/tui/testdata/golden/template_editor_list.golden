@@ -5,25 +5,25 @@
                                                                                                               
                                                                                                               
                                                                                                               
-                                                                                                              
-                 ╔══════════════════════════════════════════════════════════════════════════╗                 
-                 ║                                                                          ║                 
-                 ║  Template Editor                                                         ║                 
-                 ║                                                                          ║                 
-                 ║    session.md                   built-in default                         ║                 
-                 ║    fix.md                       built-in default                         ║                 
-                 ║    resume.md                    built-in default                         ║                 
-                 ║    advisor.md                   built-in default                         ║                 
-                 ║    audit.md                     built-in default                         ║                 
-                 ║    review.md                    built-in default                         ║                 
-                 ║    verify.md                    built-in default                         ║                 
-                 ║                                                                          ║                 
-                 ║    Saved to planDir — engine hot-reloads on next session.                ║                 
-                 ║                                                                          ║                 
-                 ║  [↑↓: select] [enter: edit] [v: compiled preview] [esc: close]           ║                 
-                 ║                                                                          ║                 
-                 ╚══════════════════════════════════════════════════════════════════════════╝                 
-                                                                                                              
+                 ╭──────────────────────────────────────────────────────────────────────────╮                 
+                 │                                                                          │                 
+                 │  ◆ Template Editor                                                       │                 
+                 │  ──────────────────────────────────────────────────────────────────────  │                 
+                 │                                                                          │                 
+                 │    session.md                   built-in default                         │                 
+                 │    fix.md                       built-in default                         │                 
+                 │    resume.md                    built-in default                         │                 
+                 │    advisor.md                   built-in default                         │                 
+                 │    audit.md                     built-in default                         │                 
+                 │    review.md                    built-in default                         │                 
+                 │    verify.md                    built-in default                         │                 
+                 │                                                                          │                 
+                 │    Saved to planDir — engine hot-reloads on next session.                │                 
+                 │                                                                          │                 
+                 │  ──────────────────────────────────────────────────────────────────────  │                 
+                 │  [↑↓: select] [enter: edit] [v: compiled preview] [esc: close]           │                 
+                 │                                                                          │                 
+                 ╰──────────────────────────────────────────────────────────────────────────╯                 
                                                                                                               
                                                                                                               
                                                                                                               

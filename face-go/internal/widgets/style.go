@@ -20,6 +20,8 @@ var (
 )
 
 var (
+	brandStyle = lipgloss.NewStyle().Foreground(colorAccent).Bold(true)
+
 	sidebarTitleStyle = lipgloss.NewStyle().Foreground(colorAccent).Bold(true)
 
 	stageDoneStyle    = lipgloss.NewStyle().Foreground(colorDone)

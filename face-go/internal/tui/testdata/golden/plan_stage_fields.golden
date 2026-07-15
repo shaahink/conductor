@@ -4,28 +4,28 @@
                                                                                                               
                                                                                                               
                                                                                                               
-                                                                                                              
-                 ╔══════════════════════════════════════════════════════════════════════════╗                 
-                 ║                                                                          ║                 
-                 ║  Plan Editor                                                             ║                 
-                 ║                                                                          ║                 
-                 ║     Stages · Gates · Settings · Import                                   ║                 
-                 ║    conductor-foreman · v7                                                ║                 
-                 ║                                                                          ║                 
-                 ║    editing F7                                                            ║                 
-                 ║                                                                          ║                 
-                 ║    title            Gate caching + truth gates                           ║                 
-                 ║    model            claude-opus-4-8                                      ║                 
-                 ║    workflow         big-dev-then-big-audit                               ║                 
-                 ║    kind             deliver                                              ║                 
-                 ║    sessions         5                                                    ║                 
-                 ║    notes            (unset)                                              ║                 
-                 ║    dependsOn        F6                                                   ║                 
-                 ║                                                                          ║                 
-                 ║  [↑↓: field] [enter: edit] [esc: back]                                   ║                 
-                 ║                                                                          ║                 
-                 ╚══════════════════════════════════════════════════════════════════════════╝                 
-                                                                                                              
+                 ╭──────────────────────────────────────────────────────────────────────────╮                 
+                 │                                                                          │                 
+                 │  ◆ Plan Editor                                                           │                 
+                 │  ──────────────────────────────────────────────────────────────────────  │                 
+                 │                                                                          │                 
+                 │     Stages · Gates · Settings · Import                                   │                 
+                 │    conductor-foreman · v7                                                │                 
+                 │                                                                          │                 
+                 │    editing F7                                                            │                 
+                 │                                                                          │                 
+                 │    title            Gate caching + truth gates                           │                 
+                 │    model            claude-opus-4-8                                      │                 
+                 │    workflow         big-dev-then-big-audit                               │                 
+                 │    kind             deliver                                              │                 
+                 │    sessions         5                                                    │                 
+                 │    notes            (unset)                                              │                 
+                 │    dependsOn        F6                                                   │                 
+                 │                                                                          │                 
+                 │  ──────────────────────────────────────────────────────────────────────  │                 
+                 │  [↑↓: field] [enter: edit] [esc: back]                                   │                 
+                 │                                                                          │                 
+                 ╰──────────────────────────────────────────────────────────────────────────╯                 
                                                                                                               
                                                                                                               
                                                                                                               
