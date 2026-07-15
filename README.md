@@ -152,30 +152,26 @@ enabled on the conductor side:
 conductor run -p <plan> --control-plane [--control-plane-port <n>]
 ```
 
-Two implementations exist, functionally equivalent (same 9 HTTP+SSE endpoints):
+The Face is **`face-go`** (Go + Bubble Tea) — a single ~22MB binary, no runtime dependency,
+~5ms startup, wired to the same 9 HTTP+SSE endpoints. `conductor run` spawns it automatically;
+`conductor face` attaches a second one to a live run.
 
-- **`face-go`** (Go + Bubble Tea) — a single ~22MB binary, no runtime dependency, ~5ms startup.
+- **`face-go`** (Go + Bubble Tea)
   ```powershell
   cd face-go
   go build -o bin/conductor-face.exe ./cmd/conductor-face/
   .\bin\conductor-face.exe --demo    # offline synthetic data, no conductor process needed
   .\bin\conductor-face.exe            # live, default http://127.0.0.1:4317
   ```
-- **`face`** (TypeScript + Ink) — the original implementation, kept alongside `face-go`
-  until the Go version has seen enough real-world use to fully replace it.
-  ```powershell
-  cd face
-  npm install && npm run build
-  node dist/cli.js --demo
-  node dist/cli.js
-  ```
 
-Both: `:` command palette (pause/resume/abort/kill/skip/goto/…, destructive verbs confirm
+> The original TypeScript + Ink face (`face/`) was retired in M7 once `face-go` reached
+> day-to-day usability. Its history is in git.
+
+`face-go`: `:` command palette (pause/resume/abort/kill/skip/goto/…, destructive verbs confirm
 first) · `p` plan sidebar · `i` inject a note for the next session · `e` edit prompt/persona
 templates (writes straight to the plan dir) · `h` session history · `r` report/query console
-(ad-hoc SQL against run.db) · `?` help. `face-go` additionally has `s` for a supervised-processes
-view and `/` for inline transcript search — press `?` in either for the authoritative,
-version-specific list.
+(ad-hoc SQL against run.db) · `k` knowledge (ledger + tracked bugs) · `s` supervised-processes
+view · `/` inline transcript search — press `?` for the authoritative, up-to-date list.
 
 ## AFK awareness
 

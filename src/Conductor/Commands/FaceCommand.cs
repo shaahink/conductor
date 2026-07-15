@@ -27,7 +27,7 @@ public sealed class FaceCommand : Command<FaceCommand.Settings>
         var entry = FaceLauncher.ResolveEntrypoint();
         if (entry is null)
         {
-            AnsiConsole.MarkupLine("[red]error:[/] no built Face found. Run [yellow]npm install && npm run build[/] in [yellow]face/[/].");
+            AnsiConsole.MarkupLine($"[red]error:[/] no built Face found. Run [yellow]go build -o bin/{FaceLauncher.BinaryName} ./cmd/conductor-face/[/] in [yellow]face-go/[/].");
             return 1;
         }
 
@@ -50,8 +50,7 @@ public sealed class FaceCommand : Command<FaceCommand.Settings>
             url = info.BaseUrl;
         }
 
-        var psi = new ProcessStartInfo("node") { UseShellExecute = false };
-        psi.ArgumentList.Add(entry);
+        var psi = new ProcessStartInfo(entry) { UseShellExecute = false };
         if (settings.Demo) psi.ArgumentList.Add("--demo");
         else { psi.ArgumentList.Add("--url"); psi.ArgumentList.Add(url); }
 

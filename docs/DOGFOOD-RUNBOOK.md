@@ -9,7 +9,7 @@ shows up; it's a living doc, not a snapshot.
 
 `conductor run -p plans/conductor-maestro.plan.json` is ONE process tree: the .NET engine, an
 HTTP+SSE control plane (`http://127.0.0.1:4317` by default, next free port if taken), and the Face
-(Ink/TypeScript TUI, spawned as a child `node` process). The engine is built FROM THIS BRANCH —
+(`face-go`, a self-contained Go binary spawned as a child process). The engine is built FROM THIS BRANCH —
 deliberately, so a regression in Conductor's own code is caught on the very next run, not months
 later (see plan.json's header comment).
 

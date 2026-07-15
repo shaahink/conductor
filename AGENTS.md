@@ -12,16 +12,15 @@ TUI at `face/`.
 - **Path:** `C:\Code\conductor-baton`  **Branch:** `feat/foreman`
 - **Do NOT touch:** `C:\Code\conductor` (master, the stable DRIVER) or the live `C:\Code\DevContext2-ui`
   Loom run (separate repo + lock).
-- **Faces:** `face/` — TypeScript + Ink TUI. `face-go/` — Go + Bubble Tea TUI, wired to the real
-  control plane (control verbs, inject, report query, template editor file I/O, live SSE
-  transcript/events, session history, a Processes modal, a TTY guard, spring-animated toasts,
-  markdown-rendered session result summaries) — no longer a visual-only prototype. Verified against
-  a real `ControlPlaneServer` (not just `--demo`), not only build/vet/test — see "How to verify a
-  face-go change" below before claiming a change works.
-  **Retirement policy (explicit, from the user):** keep both until `face-go` is usable, then
-  retire `face/`. Not a judgment call to make unilaterally — ask before deleting `face/`, but do
-  ask again once `face-go` has seen real day-to-day use, since the user's stated intent is to
-  retire it, not to keep both indefinitely.
+- **Face:** `face-go/` — Go + Bubble Tea TUI, wired to the real control plane (control verbs,
+  inject, report query, template editor file I/O, live SSE transcript/events, session history,
+  a Processes modal, a TTY guard, spring-animated toasts, markdown-rendered session result
+  summaries, M7 knowledge tab = ledger + tracked bugs). Verified against a real `ControlPlaneServer`
+  (not just `--demo`), not only build/vet/test — see "How to verify a face-go change" below before
+  claiming a change works. `conductor run` spawns it automatically (`FaceLauncher` resolves the
+  built binary next to the engine or under `face-go/bin/`); `conductor face` attaches another.
+  **The TypeScript + Ink face (`face/`) was RETIRED in M7** — `face-go` is the only face now.
+  Its history is in git; do not re-add it.
 - **Driver:** the STABLE `C:\Code\conductor\bin\conductor.exe` (built from master). The tool improving
   Conductor is never the tool under edit.
 

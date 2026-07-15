@@ -134,7 +134,7 @@
     { "name": "build",   "command": "dotnet build Conductor.slnx",              "tier": "fast", "timeoutMinutes": 10 },
     { "name": "ratchet", "command": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/gates/ratchet.ps1", "tier": "fast", "timeoutMinutes": 5 },
     { "name": "tests",   "command": "dotnet test Conductor.slnx --no-build",    "tier": "full", "parallel": true, "timeoutMinutes": 20 },
-    { "name": "face",    "command": "cmd /c cd face && npm run build && npx vitest run", "tier": "full", "timeoutMinutes": 10 }
+    { "name": "face",    "command": "cmd /c cd face-go && go build ./... && go test ./...", "tier": "full", "timeoutMinutes": 10 }
   ],
 
   "limits": {
