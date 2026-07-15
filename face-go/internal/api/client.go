@@ -199,6 +199,32 @@ func (s *liveSource) PostPlanImport(req PlanImportRequestDto) (*PlanImportResult
 	return &res, nil
 }
 
+func (s *liveSource) FetchTelegramStatus() (*TelegramStatusDto, error) {
+	var status TelegramStatusDto
+	if err := s.getJSON("/telegram/status", &status); err != nil {
+		return nil, err
+	}
+	return &status, nil
+}
+
+func (s *liveSource) PostTelegramTest() (*TelegramTestResultDto, error) {
+	// A failed test answers 400 with a body ({ok:false,error:"…"}) — decode it like the plan
+	// endpoints rather than surfacing a raw HTTP error, so the tab can show the engine's reason.
+	var res TelegramTestResultDto
+	if err := s.postJSONAllowError("/telegram/test", struct{}{}, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (s *liveSource) PostTelegramToken(req TelegramSetTokenRequestDto) (*TelegramSetTokenResultDto, error) {
+	var res TelegramSetTokenResultDto
+	if err := s.postJSONAllowError("/telegram/token", req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
 // postJSONAllowError posts and decodes the response body even on a 4xx (the plan endpoints return a
 // structured {ok,error,…} on rejection); only a transport error or a 5xx surfaces as a Go error.
 func (s *liveSource) postJSONAllowError(path string, body any, v any) error {

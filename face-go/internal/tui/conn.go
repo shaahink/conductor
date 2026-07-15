@@ -161,6 +161,53 @@ func (m Model) cmdPostPlanImport(req api.PlanImportRequestDto) tea.Cmd {
 	}
 }
 
+func (m Model) cmdFetchTelegramStatus() tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		status, err := source.FetchTelegramStatus()
+		if err != nil {
+			return MsgTelegramStatusUpdated{Err: err.Error()}
+		}
+		return MsgTelegramStatusUpdated{Status: status}
+	}
+}
+
+func (m Model) cmdPostTelegramTest() tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		res, err := source.PostTelegramTest()
+		if err != nil {
+			return MsgTelegramTested{Err: err.Error()}
+		}
+		return MsgTelegramTested{Result: res}
+	}
+}
+
+func (m Model) cmdPostTelegramToken(token string) tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		res, err := source.PostTelegramToken(api.TelegramSetTokenRequestDto{Token: token})
+		if err != nil {
+			return MsgTelegramTokenSaved{Err: err.Error()}
+		}
+		return MsgTelegramTokenSaved{Result: res}
+	}
+}
+
+// cmdPostTelegramSettingsEdit posts a single non-secret Telegram field (chat ids/poll
+// interval/two-way) through the same /plan/edit endpoint the Plan tab uses, but wraps the result
+// in MsgTelegramSettingsSaved so it updates the Telegram tab's state, not the Plan tab's.
+func (m Model) cmdPostTelegramSettingsEdit(edit api.PlanEditDto) tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		res, err := source.PostPlanEdit(api.PlanEditRequestDto{Edits: []api.PlanEditDto{edit}})
+		if err != nil {
+			return MsgTelegramSettingsSaved{Err: err.Error()}
+		}
+		return MsgTelegramSettingsSaved{Result: res}
+	}
+}
+
 func (m Model) cmdQueryReport(sql string) tea.Cmd {
 	source := m.source
 	return func() tea.Msg {

@@ -241,6 +241,71 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, m.cmdFetchPlan()
 		}
 		return m, nil
+
+	case MsgTelegramStatusUpdated:
+		if msg.Err != "" {
+			return m, nil // status is never load-bearing — same as knowledge/tasks/processes polls
+		}
+		m.telegramStatus = msg.Status
+		return m, nil
+
+	case MsgTelegramTested:
+		if msg.Err != "" {
+			m.telegramStatusLine = "✗ " + msg.Err
+			return m, nil
+		}
+		if msg.Result != nil && !msg.Result.Ok {
+			reason := "test failed"
+			if msg.Result.Error != nil {
+				reason = *msg.Result.Error
+			}
+			m.telegramStatusLine = "✗ " + reason
+			return m, m.cmdFetchTelegramStatus()
+		}
+		name := "bot"
+		if msg.Result != nil && msg.Result.BotUsername != nil {
+			name = "@" + *msg.Result.BotUsername
+		}
+		m.telegramStatusLine = "✓ sent — " + name + " is connected"
+		return m, m.cmdFetchTelegramStatus()
+
+	case MsgTelegramTokenSaved:
+		if msg.Err != "" {
+			m.telegramStatusLine = "✗ " + msg.Err
+			return m, nil
+		}
+		if msg.Result != nil && !msg.Result.Ok {
+			reason := "rejected"
+			if msg.Result.Message != nil {
+				reason = *msg.Result.Message
+			}
+			m.telegramStatusLine = "✗ " + reason
+			return m, nil
+		}
+		msgText := "saved"
+		if msg.Result != nil && msg.Result.Message != nil {
+			msgText = *msg.Result.Message
+		}
+		m.telegramStatusLine = "✓ " + msgText
+		m.telegramEditing = false
+		return m, m.cmdFetchTelegramStatus()
+
+	case MsgTelegramSettingsSaved:
+		if msg.Err != "" {
+			m.telegramStatusLine = "✗ " + msg.Err
+			return m, nil
+		}
+		if msg.Result != nil && !msg.Result.Ok {
+			reason := "rejected"
+			if msg.Result.Error != nil {
+				reason = *msg.Result.Error
+			}
+			m.telegramStatusLine = "✗ " + reason
+			return m, nil
+		}
+		m.telegramStatusLine = "✓ saved"
+		m.telegramEditing = false
+		return m, m.cmdFetchTelegramStatus()
 	}
 
 	m.toasts = widgets.PruneToasts(m.toasts, 4*time.Second)
@@ -348,6 +413,9 @@ func (m Model) openTab(t MainTab) (tea.Model, tea.Cmd) {
 	case TabKnowledge:
 		m.knowledgeScroll = 0
 		return m, m.cmdFetchKnowledge()
+	case TabTelegram:
+		m.telegramFieldIdx, m.telegramEditing, m.telegramStatusLine = 0, false, ""
+		return m, m.cmdFetchTelegramStatus()
 	}
 	return m, nil
 }
@@ -361,6 +429,8 @@ func (m Model) tabHandlesAllKeys() bool {
 		return m.promptMode == PromptEdit || m.promptPreviewOn
 	case TabPlan:
 		return m.planDrill || m.planEditing || m.planImportResult != nil || m.planTab == planTabImport
+	case TabTelegram:
+		return m.telegramEditing
 	}
 	return false
 }
@@ -386,6 +456,8 @@ func (m Model) handleTabKey(key string) (tea.Model, tea.Cmd) {
 		return m.handleReportKey(key)
 	case TabKnowledge:
 		return m.handleKnowledgeKey(key)
+	case TabTelegram:
+		return m.handleTelegramKey(key)
 	}
 	return m, nil
 }

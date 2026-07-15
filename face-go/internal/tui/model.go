@@ -22,13 +22,14 @@ const (
 	TabPlan
 	TabReport
 	TabKnowledge
+	TabTelegram
 	tabCount
 )
 
-var tabNames = [tabCount]string{"Agent", "Sessions", "Timeline", "Procs", "Console", "Templates", "Plan", "Report", "Knowledge"}
+var tabNames = [tabCount]string{"Agent", "Sessions", "Timeline", "Procs", "Console", "Templates", "Plan", "Report", "Knowledge", "Telegram"}
 
 // tabKey is the mnemonic that jumps straight to each tab (also shown in the strip).
-var tabKey = [tabCount]string{"a", "h", "t", "s", "c", "e", "g", "r", "k"}
+var tabKey = [tabCount]string{"a", "h", "t", "s", "c", "e", "g", "r", "k", "l"}
 
 // CmdMode is a transient bottom-bar input that floats over the dashboard instead of a full modal.
 type CmdMode int
@@ -152,6 +153,16 @@ type Model struct {
 	planImportInput  string
 	planImportResult *api.PlanImportResultDto
 	planImportErr    string
+
+	// Telegram tab (M8.2): guided setup — status, field editor (token/chat ids/poll
+	// interval/two-way), and a one-shot "send test message" action row, all in-pane
+	// (STYLE.md: a persistent settings form, not the transient bottom command bar).
+	telegramStatus     *api.TelegramStatusDto
+	telegramFieldIdx   int
+	telegramEditing    bool
+	telegramEditBuf    string
+	telegramEnumIdx    int
+	telegramStatusLine string
 }
 
 func New(source api.DataSource, isDemo bool, baseURL string) Model {

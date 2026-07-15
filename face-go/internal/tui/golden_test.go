@@ -61,6 +61,17 @@ func (fakeSource) PostPlanImport(req api.PlanImportRequestDto) (*api.PlanImportR
 		AddedStages: []api.PlanStageDto{{Id: "M7", Title: "Knowledge that compounds", Sessions: 3, Kind: "deliver", DependsOn: []string{"M6"}}},
 	}}, nil
 }
+func (fakeSource) FetchTelegramStatus() (*api.TelegramStatusDto, error) {
+	return fixedTelegramStatus(), nil
+}
+func (fakeSource) PostTelegramTest() (*api.TelegramTestResultDto, error) {
+	name := "conductor_test_bot"
+	return &api.TelegramTestResultDto{Ok: true, BotUsername: &name}, nil
+}
+func (fakeSource) PostTelegramToken(api.TelegramSetTokenRequestDto) (*api.TelegramSetTokenResultDto, error) {
+	msg := "saved — restart conductor to connect with the new token"
+	return &api.TelegramSetTokenResultDto{Ok: true, Message: &msg}, nil
+}
 func (fakeSource) SubscribeEvents(_ func(api.ConductorEventDto), onConnected func(bool)) func() {
 	onConnected(true)
 	return func() {}
@@ -104,6 +115,17 @@ func fixedBugs() *api.BugsDto {
 		{Id: 3, Title: "console SSE resets line counter on new session log", Detail: d("since=0 reset re-replays the whole log"), Severity: "medium", Status: "open", StageId: st("F7"), FoundSession: s(12), CreatedAt: "2026-07-15T10:06:00Z"},
 		{Id: 2, Title: "verifier double-counts session cost on resume", Severity: "high", Status: "open", StageId: st("F7"), FoundSession: s(11), CreatedAt: "2026-07-15T10:01:00Z"},
 	}}
+}
+
+func fixedTelegramStatus() *api.TelegramStatusDto {
+	return &api.TelegramStatusDto{
+		Configured:          true,
+		Started:             false,
+		HasToken:            false,
+		AllowedChatIds:      []string{},
+		PollIntervalSeconds: 4,
+		EnableTwoWay:        false,
+	}
 }
 
 func fixedState() *api.StateDto {
@@ -305,6 +327,31 @@ func TestGolden(t *testing.T) {
 		{"knowledge", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("k"))
 			m, _ = m.Update(MsgKnowledgeUpdated{Ledger: fixedLedger(), Bugs: fixedBugs()})
+			return m
+		}},
+		{"telegram_unconfigured", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("l"))
+			m, _ = m.Update(MsgTelegramStatusUpdated{Status: fixedTelegramStatus()})
+			return m
+		}},
+		{"telegram_token_edit", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("l"))
+			m, _ = m.Update(MsgTelegramStatusUpdated{Status: fixedTelegramStatus()})
+			m, _ = m.Update(specialKey(tea.KeyEnter)) // begin editing the "bot token" field (row 0)
+			m, _ = m.Update(keyMsg("1"))
+			m, _ = m.Update(keyMsg("2"))
+			m, _ = m.Update(keyMsg("3"))
+			return m
+		}},
+		{"telegram_connected", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("l"))
+			name := "conductor_bot"
+			now := "2026-07-15T10:05:00Z"
+			m, _ = m.Update(MsgTelegramStatusUpdated{Status: &api.TelegramStatusDto{
+				Configured: true, Started: true, HasToken: true,
+				AllowedChatIds: []string{"111222333"}, PollIntervalSeconds: 4,
+				BotUsername: &name, LastPollUtc: &now,
+			}})
 			return m
 		}},
 		{"console", func(m tea.Model) tea.Model {

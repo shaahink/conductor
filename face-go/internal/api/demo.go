@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -24,6 +26,7 @@ type demoSource struct {
 	state       *StateDto
 	sessions    []SessionRowDto
 	plan        *PlanDto
+	telegram    *TelegramStatusDto
 }
 
 func NewDemoSource() DataSource {
@@ -35,6 +38,7 @@ func NewDemoSource() DataSource {
 		sessions:  makeFakeSessions(),
 		state:     makeFakeState(),
 		plan:      makeFakePlan(),
+		telegram:  makeFakeTelegramStatus(),
 	}
 
 	go s.runSimulation()
@@ -124,6 +128,10 @@ func (s *demoSource) PostPlanEdit(req PlanEditRequestDto) (*PlanMutationResultDt
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, e := range req.Edits {
+		if e.Target == "telegram" {
+			applyDemoTelegramEdit(s.telegram, e)
+			continue
+		}
 		applyDemoEdit(s.plan, e)
 	}
 	s.plan.PlanVersion++
@@ -148,6 +156,62 @@ func (s *demoSource) PostPlanImport(req PlanImportRequestDto) (*PlanImportResult
 		s.plan.PlanVersion++
 	}
 	return &PlanImportResultDto{Ok: true, Diff: diff, Applied: req.Apply, PlanVersion: s.plan.PlanVersion}, nil
+}
+
+func (s *demoSource) FetchTelegramStatus() (*TelegramStatusDto, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	clone := *s.telegram
+	return &clone, nil
+}
+
+func (s *demoSource) PostTelegramTest() (*TelegramTestResultDto, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.telegram.HasToken {
+		return &TelegramTestResultDto{Ok: false, Error: strPtr("no bot token — save one below first")}, nil
+	}
+	name := "conductor_demo_bot"
+	s.telegram.Started = true
+	s.telegram.BotUsername = &name
+	now := time.Now().UTC().Format(time.RFC3339)
+	s.telegram.LastPollUtc = &now
+	s.telegram.LastError = nil
+	return &TelegramTestResultDto{Ok: true, BotUsername: &name}, nil
+}
+
+func (s *demoSource) PostTelegramToken(req TelegramSetTokenRequestDto) (*TelegramSetTokenResultDto, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if strings.TrimSpace(req.Token) == "" {
+		return &TelegramSetTokenResultDto{Ok: false, Message: strPtr("token is empty")}, nil
+	}
+	s.telegram.HasToken = true
+	msg := "saved — restart conductor to connect with the new token"
+	return &TelegramSetTokenResultDto{Ok: true, Message: &msg}, nil
+}
+
+// applyDemoTelegramEdit mirrors ControlPlaneServer.Plan.cs's ApplyTelegramEdit — same field names,
+// same comma-joined chat-id list convention as the C# side.
+func applyDemoTelegramEdit(t *TelegramStatusDto, e PlanEditDto) {
+	val := ""
+	if e.Value != nil {
+		val = *e.Value
+	}
+	switch e.Field {
+	case "allowedchatids":
+		if val == "" {
+			t.AllowedChatIds = nil
+		} else {
+			t.AllowedChatIds = strings.Split(val, ",")
+		}
+	case "pollintervalseconds":
+		if n, err := strconv.Atoi(val); err == nil {
+			t.PollIntervalSeconds = n
+		}
+	case "enabletwoway":
+		t.EnableTwoWay = val == "true"
+	}
 }
 
 func applyDemoEdit(plan *PlanDto, e PlanEditDto) {
@@ -542,6 +606,20 @@ func makeFakeBugs() []BugDto {
 	return []BugDto{
 		{Id: 3, Title: "console SSE resets line counter when a new session log appears", Detail: strPtr("StreamConsoleAsync resets `since=0` on path change — a reconnecting client re-replays the whole log."), Severity: "medium", Status: "open", StageId: strPtr("F7"), FoundSession: sess(12), CreatedAt: "2026-07-15T10:06:00Z"},
 		{Id: 2, Title: "verifier double-counts session cost on resume", Detail: strPtr("TokenDelta folded twice when a session resumes after a stall."), Severity: "high", Status: "open", StageId: strPtr("F7"), FoundSession: sess(11), CreatedAt: "2026-07-15T10:01:00Z"},
+	}
+}
+
+// makeFakeTelegramStatus starts "configured but not yet connected" — the most useful demo state,
+// since it's the one that exercises the guided onboarding flow (paste token → add chat id → test)
+// rather than a dashboard that's already fully wired up.
+func makeFakeTelegramStatus() *TelegramStatusDto {
+	return &TelegramStatusDto{
+		Configured:          true,
+		Started:             false,
+		HasToken:            false,
+		AllowedChatIds:      []string{},
+		PollIntervalSeconds: 4,
+		EnableTwoWay:        false,
 	}
 }
 

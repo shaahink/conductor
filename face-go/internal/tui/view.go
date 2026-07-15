@@ -139,6 +139,8 @@ func (m Model) paneView() (body, help string) {
 		return m.renderReportPane()
 	case TabKnowledge:
 		return m.renderKnowledgePane()
+	case TabTelegram:
+		return m.renderTelegramPane()
 	}
 	return "", ""
 }

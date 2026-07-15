@@ -22,6 +22,12 @@ type DataSource interface {
 	PostPlanEdit(req PlanEditRequestDto) (*PlanMutationResultDto, error)
 	PostPlanImport(req PlanImportRequestDto) (*PlanImportResultDto, error)
 
+	// M8.2 Telegram guided setup — chat ids/poll interval/two-way go through PostPlanEdit
+	// (target "telegram"); the bot token never does, see PostTelegramToken.
+	FetchTelegramStatus() (*TelegramStatusDto, error)
+	PostTelegramTest() (*TelegramTestResultDto, error)
+	PostTelegramToken(req TelegramSetTokenRequestDto) (*TelegramSetTokenResultDto, error)
+
 	SubscribeEvents(onEvent func(ConductorEventDto), onConnected func(bool)) (stop func())
 	SubscribeTranscript(onLine func(TranscriptLineDto), onConnected func(bool)) (stop func())
 	SubscribeConsole(onLine func(ConsoleLineDto), onConnected func(bool)) (stop func())
@@ -190,16 +196,16 @@ type LedgerDto struct {
 
 // BugDto is one tracked bug (a `conductor bug new`), surfaced by GET /bugs.
 type BugDto struct {
-	Id            int64   `json:"id"`
-	Title         string  `json:"title"`
-	Detail        *string `json:"detail"`
-	Severity      string  `json:"severity"`
-	Status        string  `json:"status"`
-	StageId       *string `json:"stageId"`
-	FoundSession  *int    `json:"foundSession"`
-	FixedSession  *int    `json:"fixedSession"`
-	CreatedAt     string  `json:"createdAt"`
-	UpdatedAt     string  `json:"updatedAt"`
+	Id           int64   `json:"id"`
+	Title        string  `json:"title"`
+	Detail       *string `json:"detail"`
+	Severity     string  `json:"severity"`
+	Status       string  `json:"status"`
+	StageId      *string `json:"stageId"`
+	FoundSession *int    `json:"foundSession"`
+	FixedSession *int    `json:"fixedSession"`
+	CreatedAt    string  `json:"createdAt"`
+	UpdatedAt    string  `json:"updatedAt"`
 }
 
 type BugsDto struct {
@@ -355,6 +361,37 @@ type PlanImportResultDto struct {
 	Diff        PlanDiffDto `json:"diff"`
 	Applied     bool        `json:"applied"`
 	PlanVersion int         `json:"planVersion"`
+}
+
+// --- M8.2: Telegram guided setup (mirror Core/Http/ControlPlaneDto.Telegram*.cs) ---
+
+// TelegramStatusDto is GET /telegram/status: everything the guided-setup tab needs to show live
+// connection health, not just "configured or not".
+type TelegramStatusDto struct {
+	Configured          bool     `json:"configured"`
+	Started             bool     `json:"started"`
+	HasToken            bool     `json:"hasToken"`
+	AllowedChatIds      []string `json:"allowedChatIds"`
+	PollIntervalSeconds int      `json:"pollIntervalSeconds"`
+	EnableTwoWay        bool     `json:"enableTwoWay"`
+	BotUsername         *string  `json:"botUsername"`
+	LastError           *string  `json:"lastError"`
+	LastPollUtc         *string  `json:"lastPollUtc"`
+}
+
+type TelegramTestResultDto struct {
+	Ok          bool    `json:"ok"`
+	BotUsername *string `json:"botUsername"`
+	Error       *string `json:"error"`
+}
+
+type TelegramSetTokenRequestDto struct {
+	Token string `json:"token"`
+}
+
+type TelegramSetTokenResultDto struct {
+	Ok      bool    `json:"ok"`
+	Message *string `json:"message"`
 }
 
 // --- Session-local state for connection management ---

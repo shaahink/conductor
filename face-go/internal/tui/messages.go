@@ -98,6 +98,30 @@ type MsgPlanImported struct {
 	Err    string
 }
 
+// M8.2 Telegram guided setup
+type MsgTelegramStatusUpdated struct {
+	Status *api.TelegramStatusDto
+	Err    string
+}
+
+type MsgTelegramTested struct {
+	Result *api.TelegramTestResultDto
+	Err    string
+}
+
+type MsgTelegramTokenSaved struct {
+	Result *api.TelegramSetTokenResultDto
+	Err    string
+}
+
+// MsgTelegramSettingsSaved wraps a /plan/edit (target "telegram") response with its own message
+// type — reusing MsgPlanEdited would route the result into the Plan tab's state (m.planStatus)
+// instead of the Telegram tab's, even though both endpoints are the same POST /plan/edit call.
+type MsgTelegramSettingsSaved struct {
+	Result *api.PlanMutationResultDto
+	Err    string
+}
+
 func CmdTick() tea.Cmd {
 	return tea.Tick(1*time.Second, func(t time.Time) tea.Msg {
 		return MsgTick(t)
