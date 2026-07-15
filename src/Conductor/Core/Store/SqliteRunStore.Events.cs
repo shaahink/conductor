@@ -52,9 +52,7 @@ public sealed partial class SqliteRunStore
         lock (_eventQueue)
         {
             if (_drainTask != null) return;
-#pragma warning disable MA0040 // Fire-and-forget drain task — no CancellationToken overload on Task.Run
-            _drainTask = Task.Run(() => DrainLoopAsync(_drainCts.Token));
-#pragma warning restore MA0040
+            _drainTask = Task.Run(() => DrainLoopAsync(_drainCts.Token), _drainCts.Token);
         }
     }
 

@@ -4,12 +4,12 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: M5 delivery session — FU-OWNER bugs 1-3,6,7 fixed (Face: modal backdrop, toast timeout, footer readability, ticker layout, flicker via effect deps). M5.5 prompt preview endpoint (GET /prompt/preview) + M5.1 timeline endpoint (GET /timeline) landed with DTOs. 3 files split (ControlPlaneDto.Prompt/Timeline) to keep architecture ceiling.
-stage: M5 IN PROGRESS — 2/6 checkpoints started, 5/9 FU-OWNER bugs fixed. 15/30 DONE.
-commit: 6ca4337
-gate: build 0w/0e · 631/631 dotnet tests pass · face/ 23/23 pass.
+last: M5.6 delivered — `conductor status` now folds run.db's event log into a one-verdict answer (StatusReport + StatusReportBuilder, reusing the /state projection path); no longer reads state.json/tracker for the verdict; DB read 223ms live against real run.db. LLM narrative → opt-in `--deep`. Also paid down pre-existing pragma debt (39→37 via M5.6 cleanup + a wrong-premise MA0040 fix) and, with owner authorization, raised the ratchet pragma ceiling 35→37 to reflect the legitimate M2–M5 sync-boundary suppressions.
+stage: M5 IN PROGRESS — M5.6 DONE. 16/30 DONE. Face panes (M5.1 timeline, M5.5 prompt preview, M5.2 live plan, M5.3 native console) still to build in face-go.
+commit: [next]
+gate: build 0w/0e · 637 tests pass (593 attrs) · ratchet green after ceiling bump (pushed).
 branch: feat/foreman.
-next: continue M5 — M5.2 (live plan enhancements), M5.3 (native console SSE), M5.4 (live ticker streaming), M5.6 (conductor status DB path). Remaining FU-OWNER: 4 (agent reasoning visibility → M5.3), 5 (panel density), 8 (click crash), 9 (self-PID guard in prompt).
+next: build the M5 Face panes in face-go against existing endpoints — M5.1 timeline (GET /timeline done), M5.5 prompt preview (GET /prompt/preview done), M5.2 live plan enrichment (StageDto carries score/cost/attempts), M5.3 native console (needs GET /console/current + pane), M5.4 live ticker (fold tokenDelta).
 
 
 ## Baseline numbers (from run.db)
@@ -17,7 +17,7 @@ next: continue M5 — M5.2 (live plan enhancements), M5.3 (native console SSE), 
 | Metric | Value |
 |---|---|
 | Total checkpoints | 30 |
-| Done | 15 |
+| Done | 16 |
 
 ## Checkpoints
 
@@ -68,7 +68,7 @@ phase (a code path is not evidence).
 | M5.3 | Native console pane — raw agent stdout over SSE, toggle to clean folded view | TODO | - | - |
 | M5.4 | Live ticker — cost/tokens fold from tokenDelta during the session, not at the end | TODO | - | - |
 | M5.5 | Compiled-prompt preview beside the template editor (live + future sessions) | IN PROGRESS | 6ca4337 | GET /prompt/preview?stage=&kind= endpoint returns compiled prompt from PromptBuilder. Face PromptPreview component not yet built. |
-| M5.6 | `conductor status` — one verdict, from the database, under a second | TODO | - | - |
+| M5.6 | `conductor status` — one verdict, from the database, under a second | DONE | [next] | StatusReportBuilder folds run.db's event log (RunStateProjection + SnapshotBuilder, the same path `/state` uses) into a verdict; StatusCommand renders it. No longer reads state.json or the tracker markdown for the verdict. Exercised live against the real `.conductor/run.db` (Maestro): DB read 223ms (well under 1s). 6 truth-gate tests seed a run.db and assert the verdict with NO state.json on disk. Fast by default; LLM narrative moved to opt-in `--deep`. |
 
 ### M6 — Plan authoring — import, re-import diff, edit from the TUI
 
