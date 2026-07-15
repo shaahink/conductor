@@ -1,5 +1,5 @@
  ◆ conductor  ● LIVE  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42                 
-  a Agent   h Sessions   t Timeline   s Procs   c Console   e Templates   g Plan   r Report   k Knowledge   l 
+  a Agent   s Sessions   t Timeline   o Procs   c Console   e Templates   p Plan   r Report   k Knowledge   g 
                            │                                                                                  
  ▶ PLAN                    │    PID    PURPOSE                STAGE  RUNTIME                                  
  ✓ F0 3/3 Foundations      │  ● 4512   session                F7     4m32s                                    
@@ -31,4 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  p sidebar  ? help  q quit   │   y confirm · n cancel                              
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   y confirm · n cancel                              

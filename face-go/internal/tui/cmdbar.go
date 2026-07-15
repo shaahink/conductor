@@ -218,7 +218,7 @@ func (m Model) renderBottomBar(width int, paneHelp string) string {
 	}
 
 	// Normal hints: global keys + the active pane's contextual help.
-	globals := subtleStyle.Render(key(":") + " cmd  " + key("i") + " inject  " + key("/") + " search  " + key("p") + " sidebar  " + key("?") + " help  " + key("q") + " quit")
+	globals := subtleStyle.Render(key(":") + " cmd  " + key("i") + " inject  " + key("/") + " search  " + key("\\") + " sidebar  " + key("?") + " help  " + key("q") + " quit")
 	if paneHelp != "" && width >= 90 {
 		return bar.Render(globals + subtleStyle.Render("   │   ") + subtleStyle.Render(paneHelp))
 	}
@@ -298,15 +298,15 @@ func (m Model) overlayPalette(screen string, layout LayoutRects) string {
 func (m Model) renderHelpOverlay() string {
 	body := "" +
 		accentStyle.Render("Tabs") + subtleStyle.Render("  (number or letter jumps straight there)") + "\n" +
-		"  " + key("a") + " Agent    " + key("h") + " Sessions   " + key("t") + " Timeline\n" +
-		"  " + key("s") + " Procs    " + key("c") + " Console    " + key("e") + " Templates\n" +
-		"  " + key("g") + " Plan     " + key("r") + " Report     " + key("k") + " Knowledge\n" +
-		"  " + key("l") + " Telegram\n" +
+		"  " + key("a") + " Agent    " + key("s") + " Sessions   " + key("t") + " Timeline\n" +
+		"  " + key("o") + " Procs    " + key("c") + " Console    " + key("e") + " Templates\n" +
+		"  " + key("p") + " Plan     " + key("r") + " Report     " + key("k") + " Knowledge\n" +
+		"  " + key("g") + " Telegram\n" +
 		"  " + key("tab") + " cycle tabs\n\n" +
 		accentStyle.Render("Actions") + "\n" +
 		"  " + key(":") + " command palette   " + key("i") + " inject context\n" +
 		"  " + key("/") + " search transcript " + key("f") + " fold tools · " + key("T") + " fold thinking\n" +
-		"  " + key("p") + " collapse sidebar  " + key("↑↓") + " scroll / navigate\n\n" +
+		"  " + key("\\") + " collapse sidebar  " + key("↑↓") + " scroll / navigate\n\n" +
 		accentStyle.Render("Global") + "\n" +
 		"  " + key("q") + " quit   " + key("esc") + " close / cancel   " + key("?") + " this help"
 

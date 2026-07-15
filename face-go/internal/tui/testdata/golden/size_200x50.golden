@@ -1,5 +1,5 @@
  ◆ conductor  ● LIVE  ▶ RUNNING  conductor-foreman  F7 Gate caching + truth gates + spee…  ⠋ s12 $0.12 41s 3.4k/1.9k +800r  cp 2/40  run $0.42 +$0.02 oh                                                
-  a Agent   h Sessions   t Timeline   s Procs   c Console   e Templates   g Plan   r Report   k Knowledge   l Telegram                                                                                  
+  a Agent   s Sessions   t Timeline   o Procs   c Console   e Templates   p Plan   r Report   k Knowledge   g Telegram                                                                                  
                                      │                                                                                                                                                                  
  ▶ PLAN                              │  s12 Deliver · attempt 1/3 · architect  ◆ F7.3 Wire caching layer                                                                                         ⠋ 41s  
  ✓ F0 3/3 Foundations                │  build ✓ · test ● 4s · lint ○                                                                                    task 1/3 ▸ Wire RunDb.GetLastPassingGateResult  
@@ -47,4 +47,4 @@
                                      │                                                                                                                                                                  
                                      │                                                                                                                                                                  
                                      │                                                                                                                                                                  
- : cmd  i inject  / search  p sidebar  ? help  q quit   │   ↑↓ scroll · f fold · T thinking · / search · end live-tail                                                                                  
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ scroll · f fold · T thinking · / search · end live-tail                                                                                  

@@ -28,8 +28,10 @@ const (
 
 var tabNames = [tabCount]string{"Agent", "Sessions", "Timeline", "Procs", "Console", "Templates", "Plan", "Report", "Knowledge", "Telegram"}
 
-// tabKey is the mnemonic that jumps straight to each tab (also shown in the strip).
-var tabKey = [tabCount]string{"a", "h", "t", "s", "c", "e", "g", "r", "k", "l"}
+// tabKey is the mnemonic that jumps straight to each tab (also shown in the strip). First-letter where
+// it's free; Procs takes o and Telegram takes g (their first letters collide), and Plan takes p — freed
+// by moving sidebar-collapse to `\`. Keep this in sync with renderHelpOverlay's Tabs legend.
+var tabKey = [tabCount]string{"a", "s", "t", "o", "c", "e", "p", "r", "k", "g"}
 
 // CmdMode is a transient bottom-bar input that floats over the dashboard instead of a full modal.
 type CmdMode int

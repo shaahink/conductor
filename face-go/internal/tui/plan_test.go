@@ -14,7 +14,7 @@ func openPlanEditor(t *testing.T) (Model, api.DataSource) {
 	m := New(src, true, "(demo)")
 	m.data.Plan = &api.StateDto{StageId: "F7", PlanDir: "."}
 
-	tm, cmd := m.handleKey("g")
+	tm, cmd := m.handleKey("p")
 	m = asModel(tm)
 	if m.tab != TabPlan {
 		t.Fatalf("expected TabPlan, got %v", m.tab)

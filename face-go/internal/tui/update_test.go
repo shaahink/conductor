@@ -227,7 +227,7 @@ func TestReportQuickQueryRuns(t *testing.T) {
 func TestProcessesNavigationClamps(t *testing.T) {
 	m := newTestModel()
 	m.data.Processes = []api.ProcessDto{{Pid: 1}, {Pid: 2}, {Pid: 3}}
-	m = asModel(mustHandle(m.handleKey("s")))
+	m = asModel(mustHandle(m.handleKey("o")))
 	if m.tab != TabProcesses {
 		t.Fatalf("expected Procs tab, got %v", m.tab)
 	}

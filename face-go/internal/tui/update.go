@@ -366,7 +366,7 @@ func (m Model) handleKey(key string) (tea.Model, tea.Cmd) {
 	case "?":
 		m.cmd = CmdHelp
 		return m, nil
-	case "p":
+	case "\\": // sidebar-collapse — moved off `p` so Plan can take its natural mnemonic
 		m.sidebarCollapsed = !m.sidebarCollapsed
 		m.recalcDimensions()
 		return m, nil

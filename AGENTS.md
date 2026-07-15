@@ -77,8 +77,15 @@ Commit: see `feat/foreman`.
    stay under the 500-line ratchet.
 
 **Gates:** Go build+vet+tests green (+3 plan, +3 process unit tests, +4 goldens); C# **720 green** (+4
-plan, +4 ProcessKiller, +3 kill-endpoint contract tests, +1 parse case). **Still deferred (last item):**
-tab-mnemonic relabel (churns keybindings + every golden — deferred as high-churn/low-value).
+plan, +4 ProcessKiller, +3 kill-endpoint contract tests, +1 parse case).
+
+4. **tab-mnemonic relabel** — the four deferred items are now all closed. Tab letters went from the
+   non-obvious `a h t s c e g r k l` to first-letter-where-free: **`a`Agent `s`Sessions `t`Timeline
+   `o`Procs `c`Console `e`Templates `p`Plan `r`Report `k`Knowledge `g`Telegram**. Plan reclaims its
+   natural `p` because sidebar-collapse moved off `p` → **`\`** (owner-approved). Procs=`o` and
+   Telegram=`g` are the two first-letter collisions (p/t already taken). `tabKey` in model.go is the
+   single source; bottom bar + help legend updated; all ~30 goldens regenerated; every test that opened
+   a tab by letter remapped (Sessions h→s, Procs s→o, Plan g→p, Telegram l→g, sidebar p→\\).
 
 ## Resume here (Maestro M9 complete — plan CLOSED, 30/30, 2026-07-15)
 **M9 (dogfood close) is DONE, 2/2 — 30/30 checkpoints. The Maestro plan is feature-complete and

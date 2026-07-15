@@ -1,5 +1,5 @@
  ◆ conductor  ● LIVE  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42                 
-  a Agent   h Sessions   t Timeline   s Procs   c Console   e Templates   g Plan   r Report   k Knowledge   l 
+  a Agent   s Sessions   t Timeline   o Procs   c Console   e Templates   p Plan   r Report   k Knowledge   g 
                            │                                                                                  
  ▶ PLAN                    │  10:00:00 ◆ stage F7 entered                                                     
  ✓ F0 3/3 Foundations      │  10:00:05 ▸ session #11 Deliver started                                          
@@ -31,4 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  p sidebar  ? help  q quit   │   ↑↓ navigate · r refresh                           
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ navigate · r refresh                           

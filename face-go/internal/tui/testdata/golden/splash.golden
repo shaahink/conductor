@@ -1,5 +1,5 @@
  ◆ conductor  ● OFFLINE  waiting for a run at http://127.0.0.1:4317                                           
-  a Agent   h Sessions   t Timeline   s Procs   c Console   e Templates   g Plan   r Report   k Knowledge   l 
+  a Agent   s Sessions   t Timeline   o Procs   c Console   e Templates   p Plan   r Report   k Knowledge   g 
                            │                                                                                  
  ▶ PLAN                    │                                                                                  
                            │                                                                                  
@@ -31,4 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  p sidebar  ? help  q quit   │   ↑↓ scroll · f fold · T thinking · / search · end l
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ scroll · f fold · T thinking · / search · end l

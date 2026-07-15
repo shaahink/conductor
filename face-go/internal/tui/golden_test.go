@@ -284,7 +284,7 @@ func TestGolden(t *testing.T) {
 	}{
 		{"default", func(m tea.Model) tea.Model { return m }},
 		{"sidebar_collapsed", func(m tea.Model) tea.Model {
-			m, _ = m.Update(keyMsg("p"))
+			m, _ = m.Update(keyMsg("\\"))
 			return m
 		}},
 		{"palette", func(m tea.Model) tea.Model {
@@ -327,7 +327,7 @@ func TestGolden(t *testing.T) {
 			return m
 		}},
 		{"sessions", func(m tea.Model) tea.Model {
-			m, _ = m.Update(keyMsg("h"))
+			m, _ = m.Update(keyMsg("s"))
 			return m
 		}},
 		{"report", func(m tea.Model) tea.Model {
@@ -342,11 +342,11 @@ func TestGolden(t *testing.T) {
 			return m
 		}},
 		{"processes", func(m tea.Model) tea.Model {
-			m, _ = m.Update(keyMsg("s"))
+			m, _ = m.Update(keyMsg("o"))
 			return m
 		}},
 		{"processes_kill", func(m tea.Model) tea.Model {
-			m, _ = m.Update(keyMsg("s")) // Procs tab
+			m, _ = m.Update(keyMsg("o")) // Procs tab
 			m, _ = m.Update(keyMsg("x")) // kill confirm for the selected (alive) process
 			return m
 		}},
@@ -370,12 +370,12 @@ func TestGolden(t *testing.T) {
 			return m
 		}},
 		{"telegram_unconfigured", func(m tea.Model) tea.Model {
-			m, _ = m.Update(keyMsg("l"))
+			m, _ = m.Update(keyMsg("g"))
 			m, _ = m.Update(MsgTelegramStatusUpdated{Status: fixedTelegramStatus()})
 			return m
 		}},
 		{"telegram_token_edit", func(m tea.Model) tea.Model {
-			m, _ = m.Update(keyMsg("l"))
+			m, _ = m.Update(keyMsg("g"))
 			m, _ = m.Update(MsgTelegramStatusUpdated{Status: fixedTelegramStatus()})
 			m, _ = m.Update(specialKey(tea.KeyEnter)) // begin editing the "bot token" field (row 0)
 			m, _ = m.Update(keyMsg("1"))
@@ -384,7 +384,7 @@ func TestGolden(t *testing.T) {
 			return m
 		}},
 		{"telegram_connected", func(m tea.Model) tea.Model {
-			m, _ = m.Update(keyMsg("l"))
+			m, _ = m.Update(keyMsg("g"))
 			name := "conductor_bot"
 			now := "2026-07-15T10:05:00Z"
 			m, _ = m.Update(MsgTelegramStatusUpdated{Status: &api.TelegramStatusDto{
@@ -417,19 +417,19 @@ func TestGolden(t *testing.T) {
 			return m
 		}},
 		{"plan_stages", func(m tea.Model) tea.Model {
-			m, _ = m.Update(keyMsg("g"))
+			m, _ = m.Update(keyMsg("p"))
 			m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
 			return m
 		}},
 		{"plan_stage_fields", func(m tea.Model) tea.Model {
-			m, _ = m.Update(keyMsg("g"))
+			m, _ = m.Update(keyMsg("p"))
 			m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
 			m, _ = m.Update(specialKey(tea.KeyDown))  // select F7
 			m, _ = m.Update(specialKey(tea.KeyEnter)) // drill into fields
 			return m
 		}},
 		{"plan_stage_model_edit", func(m tea.Model) tea.Model {
-			m, _ = m.Update(keyMsg("g"))
+			m, _ = m.Update(keyMsg("p"))
 			m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
 			m, _ = m.Update(specialKey(tea.KeyEnter)) // drill F6
 			m, _ = m.Update(specialKey(tea.KeyDown))  // → model field
@@ -437,20 +437,20 @@ func TestGolden(t *testing.T) {
 			return m
 		}},
 		{"plan_gates", func(m tea.Model) tea.Model {
-			m, _ = m.Update(keyMsg("g"))
+			m, _ = m.Update(keyMsg("p"))
 			m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
 			m, _ = m.Update(specialKey(tea.KeyRight)) // → Gates section
 			return m
 		}},
 		{"plan_settings", func(m tea.Model) tea.Model {
-			m, _ = m.Update(keyMsg("g"))
+			m, _ = m.Update(keyMsg("p"))
 			m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
 			m, _ = m.Update(specialKey(tea.KeyRight))
 			m, _ = m.Update(specialKey(tea.KeyRight))
 			return m
 		}},
 		{"plan_import_diff", func(m tea.Model) tea.Model {
-			m, _ = m.Update(keyMsg("g"))
+			m, _ = m.Update(keyMsg("p"))
 			m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
 			m, _ = m.Update(specialKey(tea.KeyRight))
 			m, _ = m.Update(specialKey(tea.KeyRight))
@@ -466,7 +466,7 @@ func TestGolden(t *testing.T) {
 			return m
 		}},
 		{"plan_stage_add", func(m tea.Model) tea.Model {
-			m, _ = m.Update(keyMsg("g"))
+			m, _ = m.Update(keyMsg("p"))
 			m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
 			m, _ = m.Update(keyMsg("n")) // open the add-stage form
 			for _, ch := range "F9" {
@@ -479,7 +479,7 @@ func TestGolden(t *testing.T) {
 			return m
 		}},
 		{"plan_gate_add", func(m tea.Model) tea.Model {
-			m, _ = m.Update(keyMsg("g"))
+			m, _ = m.Update(keyMsg("p"))
 			m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
 			m, _ = m.Update(specialKey(tea.KeyRight)) // → Gates section
 			m, _ = m.Update(keyMsg("n"))              // open the add-gate form
@@ -493,7 +493,7 @@ func TestGolden(t *testing.T) {
 			return m
 		}},
 		{"plan_stage_delete", func(m tea.Model) tea.Model {
-			m, _ = m.Update(keyMsg("g"))
+			m, _ = m.Update(keyMsg("p"))
 			m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
 			m, _ = m.Update(specialKey(tea.KeyDown)) // select F7
 			m, _ = m.Update(keyMsg("d"))             // delete confirm
