@@ -31,4 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  p sidebar  ? help  q quit   │   ←→ section · ↑↓ select · enter edit · esc back    
+ : cmd  i inject  / search  p sidebar  ? help  q quit   │   ↑↓ select · enter edit · n add · d del · esc      

@@ -7,7 +7,7 @@
  ● F7 2/5 Gate … 1× $0.30  │    F7   Gate caching + truth ga… 5s·deliver claude-opus-4-8                      
    ✓ F7.1 Plan import      │    F8   conductor chat + Telegr… 4s·deliver claude-sonnet-5                      
    ✓ F7.2 Re-import diff   │                                                                                  
-   ● F7.3 Truth-gate tier  │                                                                                  
+   ● F7.3 Truth-gate tier  │    ⚠ delete stage F7 ?  y/N                                                      
  ○ F8 0/4 conductor chat…  │                                                                                  
                            │                                                                                  
  ── GATES ──               │                                                                                  
@@ -31,4 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  p sidebar  ? help  q quit   │   ↑↓ select · enter edit · n add · d del · esc      
+ : cmd  i inject  / search  p sidebar  ? help  q quit   │   y confirm · n cancel                              

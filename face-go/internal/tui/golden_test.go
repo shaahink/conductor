@@ -457,6 +457,40 @@ func TestGolden(t *testing.T) {
 			}}})
 			return m
 		}},
+		{"plan_stage_add", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("g"))
+			m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
+			m, _ = m.Update(keyMsg("n")) // open the add-stage form
+			for _, ch := range "F9" {
+				m, _ = m.Update(keyMsg(string(ch)))
+			}
+			m, _ = m.Update(specialKey(tea.KeyTab)) // → title field
+			for _, ch := range "New phase" {
+				m, _ = m.Update(keyMsg(string(ch)))
+			}
+			return m
+		}},
+		{"plan_gate_add", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("g"))
+			m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
+			m, _ = m.Update(specialKey(tea.KeyRight)) // → Gates section
+			m, _ = m.Update(keyMsg("n"))              // open the add-gate form
+			for _, ch := range "lint" {
+				m, _ = m.Update(keyMsg(string(ch)))
+			}
+			m, _ = m.Update(specialKey(tea.KeyTab)) // → command field
+			for _, ch := range "dotnet format" {
+				m, _ = m.Update(keyMsg(string(ch)))
+			}
+			return m
+		}},
+		{"plan_stage_delete", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("g"))
+			m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
+			m, _ = m.Update(specialKey(tea.KeyDown)) // select F7
+			m, _ = m.Update(keyMsg("d"))             // delete confirm
+			return m
+		}},
 		{"search", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("/"))
 			for _, ch := range "gate" {

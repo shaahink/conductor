@@ -234,6 +234,29 @@ func applyDemoEdit(plan *PlanDto, e PlanEditDto) {
 	if e.Value != nil {
 		val = *e.Value
 	}
+	// Structural ops mirror ControlPlaneServer.Plan.cs's ApplyStructuralEdit: add/delete a whole
+	// stage or gate; new objects take the same schema defaults (stage: 1 session, deliver kind;
+	// gate: full tier).
+	switch e.Op {
+	case "add":
+		if e.Target == "stage" {
+			title := val
+			if title == "" {
+				title = e.Id
+			}
+			plan.Stages = append(plan.Stages, PlanStageDto{Id: e.Id, Title: title, Sessions: 1, Kind: "deliver"})
+		} else if e.Target == "gate" {
+			plan.Gates = append(plan.Gates, PlanGateDto{Name: e.Id, Command: val, Tier: "full", TimeoutMinutes: 20})
+		}
+		return
+	case "delete":
+		if e.Target == "stage" {
+			plan.Stages = removeStageById(plan.Stages, e.Id)
+		} else if e.Target == "gate" {
+			plan.Gates = removeGateByName(plan.Gates, e.Id)
+		}
+		return
+	}
 	switch e.Target {
 	case "stage":
 		for i := range plan.Stages {
@@ -273,6 +296,26 @@ func applyDemoEdit(plan *PlanDto, e PlanEditDto) {
 			plan.DefaultWorkflow = val
 		}
 	}
+}
+
+func removeStageById(stages []PlanStageDto, id string) []PlanStageDto {
+	out := stages[:0:0]
+	for _, s := range stages {
+		if s.Id != id {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+func removeGateByName(gates []PlanGateDto, name string) []PlanGateDto {
+	out := gates[:0:0]
+	for _, g := range gates {
+		if g.Name != name {
+			out = append(out, g)
+		}
+	}
+	return out
 }
 
 func makeFakePlan() *PlanDto {

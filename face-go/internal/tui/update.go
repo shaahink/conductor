@@ -441,7 +441,7 @@ func (m Model) tabHandlesAllKeys() bool {
 	case TabTemplates:
 		return m.promptMode == PromptEdit || m.promptPreviewOn
 	case TabPlan:
-		return m.planDrill || m.planEditing || m.planImportResult != nil || m.planTab == planTabImport
+		return m.planDrill || m.planEditing || m.planAdding || m.planDeleting || m.planImportResult != nil || m.planTab == planTabImport
 	case TabTelegram:
 		return m.telegramEditing
 	case TabKnowledge:

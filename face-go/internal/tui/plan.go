@@ -116,6 +116,12 @@ func (m *Model) handlePlanKey(key string) (tea.Model, tea.Cmd) {
 	if m.planEditing {
 		return m.handlePlanFieldEdit(key)
 	}
+	if m.planAdding {
+		return m.handlePlanAddKey(key)
+	}
+	if m.planDeleting {
+		return m.handlePlanDeleteKey(key)
+	}
 	if m.planTab == planTabImport {
 		return m.handlePlanImportKey(key)
 	}
@@ -127,6 +133,12 @@ func (m *Model) handlePlanKey(key string) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		return m.openTab(TabAgent) // leave the Plan tab
+	case "n": // new stage/gate — n avoids the 'a' Agent-tab mnemonic
+		m.planBeginAdd()
+		return m, nil
+	case "d": // delete the selected stage/gate (confirm first)
+		m.planBeginDelete()
+		return m, nil
 	case "right":
 		if !m.planDrill {
 			m.planTab = (m.planTab + 1) % 4
@@ -337,6 +349,92 @@ func (m *Model) handlePlanImportKey(key string) (tea.Model, tea.Cmd) {
 	}
 }
 
+// --- add / delete a whole stage or gate ---
+
+// planBeginAdd opens the two-field add form, but only in a Stages/Gates list (not Settings/Import,
+// not while drilled into a row's fields).
+func (m *Model) planBeginAdd() {
+	if m.planDrill || (m.planTab != planTabStages && m.planTab != planTabGates) {
+		return
+	}
+	m.planAdding = true
+	m.planAddField = 0
+	m.planAddIdBuf, m.planAddValBuf = "", ""
+	m.planStatus = ""
+}
+
+func (m *Model) handlePlanAddKey(key string) (tea.Model, tea.Cmd) {
+	switch key {
+	case "esc":
+		m.planAdding = false
+		return m, nil
+	case "tab":
+		m.planAddField = 1 - m.planAddField
+		return m, nil
+	case "enter":
+		id := strings.TrimSpace(m.planAddIdBuf)
+		if id == "" {
+			return m, nil // an id/name is required — stay in the form
+		}
+		target := "stage"
+		if m.planTab == planTabGates {
+			target = "gate"
+		}
+		v := strings.TrimSpace(m.planAddValBuf)
+		m.planAdding = false
+		m.planStatus = "adding…"
+		return m, m.cmdPostPlanEdit(api.PlanEditRequestDto{
+			Edits: []api.PlanEditDto{{Target: target, Op: "add", Id: id, Value: &v}},
+		})
+	case "backspace":
+		if m.planAddField == 0 {
+			if len(m.planAddIdBuf) > 0 {
+				m.planAddIdBuf = m.planAddIdBuf[:len(m.planAddIdBuf)-1]
+			}
+		} else if len(m.planAddValBuf) > 0 {
+			m.planAddValBuf = m.planAddValBuf[:len(m.planAddValBuf)-1]
+		}
+	default:
+		if ch, ok := typedChar(key); ok {
+			if m.planAddField == 0 {
+				m.planAddIdBuf += ch
+			} else {
+				m.planAddValBuf += ch
+			}
+		}
+	}
+	return m, nil
+}
+
+func (m *Model) planBeginDelete() {
+	if m.planDrill {
+		return
+	}
+	if m.planTab == planTabStages && m.plan != nil && len(m.plan.Stages) > 0 {
+		m.planDeleting, m.planStatus = true, ""
+	} else if m.planTab == planTabGates && m.plan != nil && len(m.plan.Gates) > 0 {
+		m.planDeleting, m.planStatus = true, ""
+	}
+}
+
+func (m *Model) handlePlanDeleteKey(key string) (tea.Model, tea.Cmd) {
+	switch strings.ToLower(key) {
+	case "y", "enter":
+		target, id := m.currentTarget()
+		m.planDeleting = false
+		if id == "" {
+			return m, nil
+		}
+		m.planStatus = "deleting…"
+		return m, m.cmdPostPlanEdit(api.PlanEditRequestDto{
+			Edits: []api.PlanEditDto{{Target: target, Op: "delete", Id: id}},
+		})
+	case "n", "esc":
+		m.planDeleting = false
+	}
+	return m, nil
+}
+
 // --- current-selection helpers ---
 
 func (m Model) currentField() planField {
@@ -502,6 +600,9 @@ func (m Model) renderPlanStages() (string, string) {
 	if m.planDrill {
 		return m.renderFieldList(m.stageFields(), m.plan.Stages[m.planStageIdx].Id)
 	}
+	if m.planAdding {
+		return m.renderPlanAddForm("stage", "id", "title")
+	}
 	var lines []string
 	for i, s := range m.plan.Stages {
 		id := fmt.Sprintf("%-4s", s.Id)
@@ -514,12 +615,18 @@ func (m Model) renderPlanStages() (string, string) {
 		}
 		lines = append(lines, "  "+accentStyle.Render(id)+" "+textStyle.Render(title)+" "+subtleStyle.Render(meta)+" "+purpleText(model))
 	}
-	return strings.Join(lines, "\n"), "←→ section · ↑↓ select · enter edit · esc back"
+	if m.planDeleting {
+		return strings.Join(append(lines, "", m.renderPlanDeleteConfirm("stage")), "\n"), "y confirm · n cancel"
+	}
+	return strings.Join(lines, "\n"), "↑↓ select · enter edit · n add · d del · esc"
 }
 
 func (m Model) renderPlanGates() (string, string) {
 	if m.planDrill {
 		return m.renderFieldList(gateFields(), m.plan.Gates[m.planGateIdx].Name)
+	}
+	if m.planAdding {
+		return m.renderPlanAddForm("gate", "name", "command")
 	}
 	var lines []string
 	for i, g := range m.plan.Gates {
@@ -532,7 +639,30 @@ func (m Model) renderPlanGates() (string, string) {
 		}
 		lines = append(lines, "  "+accentStyle.Render(name)+" "+tierBadge(g.Tier)+strings.Repeat(" ", max(1, 6-lipgloss.Width(g.Tier)))+subtleStyle.Render(cmd))
 	}
-	return strings.Join(lines, "\n"), "←→ section · ↑↓ select · enter edit · esc back"
+	if m.planDeleting {
+		return strings.Join(append(lines, "", m.renderPlanDeleteConfirm("gate")), "\n"), "y confirm · n cancel"
+	}
+	return strings.Join(lines, "\n"), "↑↓ select · enter edit · n add · d del · esc"
+}
+
+// renderPlanAddForm is the two-field add form (id/name, then title/command); the active field carries
+// the cursor. Tab switches fields, enter submits, esc cancels — handled in handlePlanAddKey.
+func (m Model) renderPlanAddForm(kind, idLabel, valLabel string) (string, string) {
+	idCur, valCur := "", ""
+	if m.planAddField == 0 {
+		idCur = "▏"
+	} else {
+		valCur = "▏"
+	}
+	body := "  " + accentStyle.Render("+ new "+kind) + "\n\n" +
+		fmt.Sprintf("  %-9s %s%s", idLabel, textStyle.Render(m.planAddIdBuf), accentStyle.Render(idCur)) + "\n" +
+		fmt.Sprintf("  %-9s %s%s", valLabel, textStyle.Render(m.planAddValBuf), accentStyle.Render(valCur))
+	return body, "type · tab field · enter add · esc cancel"
+}
+
+func (m Model) renderPlanDeleteConfirm(kind string) string {
+	_, id := m.currentTarget()
+	return "  " + destructStyle.Render("⚠ delete "+kind+" ") + accentStyle.Render(id) + destructStyle.Render(" ?") + "  " + warnStyle.Render("y/N")
 }
 
 func (m Model) renderPlanSettings() (string, string) {

@@ -342,6 +342,7 @@ type PlanEditDto struct {
 	Id     string  `json:"id"`
 	Field  string  `json:"field"`
 	Value  *string `json:"value"`
+	Op     string  `json:"op,omitempty"` // set (default) | add | delete — see ControlPlaneDto.PlanEdit.cs
 }
 
 type PlanEditRequestDto struct {

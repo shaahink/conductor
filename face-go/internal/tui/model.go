@@ -159,6 +159,11 @@ type Model struct {
 	planImportInput  string
 	planImportResult *api.PlanImportResultDto
 	planImportErr    string
+	planAdding       bool // add-stage / add-gate form open (id + title/command)
+	planAddField     int  // 0 = id/name, 1 = title/command
+	planAddIdBuf     string
+	planAddValBuf    string
+	planDeleting     bool // delete-confirm prompt open for the selected stage/gate
 
 	// Telegram tab (M8.2): guided setup — status, field editor (token/chat ids/poll
 	// interval/two-way), and a one-shot "send test message" action row, all in-pane

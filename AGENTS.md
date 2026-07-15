@@ -51,14 +51,25 @@ process-kill from the Procs tab (needs a supervisor kill API), tab-mnemonic rela
 tests, 2 new goldens); C# suite **708 green** (+4 control-plane contract tests), ratchet green.
 Commit: see `feat/foreman`.
 
-**Update (2026-07-15, later):** `heartbeat` is no longer deferred — shipped as the 11th control verb.
-New `ControlAction.Heartbeat` (`Progress.Control.cs`) mapped in `ControlFile.Parse` (which single-sources
-the `POST /control` whitelist, so the HTTP ingress accepts it for free); `ControlDispatcher` acks it and
-the `SessionRunner` run-loop calls the existing `RefreshReport` when the action bubbles back — forcing a
-fresh `.conductor/REPORT.md` on demand mid-session. Palette gains a `heartbeat` entry (`palette.golden`
-regenerated); `conductor heartbeat` CLI verb added for parity. **Gates:** Go build+vet+tests green; C#
-**709 green** (+1 parse case); CLI write-path verified live (control.json = `{"command":"heartbeat",…}`).
-Three face-go items remain deferred (above).
+**Update (2026-07-15/16):** two of the four deferred face-go items are now shipped —
+
+1. **`heartbeat`** — the 11th control verb. New `ControlAction.Heartbeat` (`Progress.Control.cs`) mapped
+   in `ControlFile.Parse` (which single-sources the `POST /control` whitelist, so the HTTP ingress accepts
+   it for free); `ControlDispatcher` acks it and the `SessionRunner` run-loop calls the existing
+   `RefreshReport` when the action bubbles back — forcing a fresh `.conductor/REPORT.md` on demand
+   mid-session. `:` palette gains a `heartbeat` entry; `conductor heartbeat` CLI verb added for parity.
+   Verified live (control.json = `{"command":"heartbeat",…}`).
+2. **add/delete stage-or-gate** — `POST /plan/edit` edits carry an `op` (set|add|delete); add/delete run
+   through the same atomic validate-then-save gate, so an unsafe delete (a depended-on stage, the last
+   stage) is rejected whole, and a runtime guard refuses deleting the *running* stage. Face plan editor:
+   in the Stages/Gates list, **`n`** opens a two-field add form (id/name + title/command), **`d`** deletes
+   the selected row after a `y/N` confirm (`n` dodges the `a`=Agent tab mnemonic; both keys become
+   pane-owned via `tabHandlesAllKeys`). Demo source + 3 new goldens; wire type `PlanEditDto.Op` on both
+   sides.
+
+**Gates:** Go build+vet+tests green (+3 plan unit tests, +3 goldens); C# **713 green** (+4 plan contract
+tests, +1 parse case). **Still deferred:** process-kill from the Procs tab (needs a supervisor kill API),
+tab-mnemonic relabel (churns keybindings + every golden).
 
 ## Resume here (Maestro M9 complete — plan CLOSED, 30/30, 2026-07-15)
 **M9 (dogfood close) is DONE, 2/2 — 30/30 checkpoints. The Maestro plan is feature-complete and

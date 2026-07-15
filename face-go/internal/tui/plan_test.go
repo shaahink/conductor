@@ -131,6 +131,99 @@ func TestPlanEscBacksOutOneLevel(t *testing.T) {
 	}
 }
 
+func TestPlanAddStageRoundTrips(t *testing.T) {
+	m, src := openPlanEditor(t)
+	before := len(m.plan.Stages)
+
+	m = drive(m, "n") // open the add-stage form (n, not a, to dodge the Agent-tab mnemonic)
+	if !m.planAdding {
+		t.Fatal("n should open the add-stage form")
+	}
+	for _, ch := range "Z9" {
+		m = drive(m, string(ch))
+	}
+	m = drive(m, "tab") // → title field
+	for _, ch := range "New stage" {
+		m = drive(m, string(ch))
+	}
+
+	tm, cmd := m.handlePlanKey("enter")
+	m = asModel(tm)
+	if cmd == nil {
+		t.Fatal("submitting the add form should post an edit")
+	}
+	if m.planAdding {
+		t.Error("the add form should close on submit")
+	}
+	tm, _ = m.Update(cmd())
+	m = asModel(tm)
+
+	plan, _ := src.FetchPlan()
+	if len(plan.Stages) != before+1 {
+		t.Fatalf("expected %d stages after add, got %d", before+1, len(plan.Stages))
+	}
+	found := false
+	for _, s := range plan.Stages {
+		if s.Id == "Z9" {
+			found = true
+			if s.Title != "New stage" {
+				t.Errorf("expected title 'New stage', got %q", s.Title)
+			}
+		}
+	}
+	if !found {
+		t.Error("the added stage Z9 was not found after the round-trip")
+	}
+}
+
+func TestPlanDeleteGateRoundTrips(t *testing.T) {
+	m, src := openPlanEditor(t)
+	m = drive(m, "right") // → Gates section
+	if m.planTab != planTabGates {
+		t.Fatalf("expected Gates section, got %v", m.planTab)
+	}
+	target := m.plan.Gates[m.planGateIdx].Name
+	before := len(m.plan.Gates)
+
+	m = drive(m, "d") // open the delete confirm
+	if !m.planDeleting {
+		t.Fatal("d should open the delete confirm")
+	}
+	tm, cmd := m.handlePlanKey("y")
+	m = asModel(tm)
+	if cmd == nil {
+		t.Fatal("confirming delete should post an edit")
+	}
+	tm, _ = m.Update(cmd())
+	m = asModel(tm)
+
+	plan, _ := src.FetchPlan()
+	if len(plan.Gates) != before-1 {
+		t.Fatalf("expected %d gates after delete, got %d", before-1, len(plan.Gates))
+	}
+	for _, g := range plan.Gates {
+		if g.Name == target {
+			t.Errorf("gate %s should have been deleted", target)
+		}
+	}
+}
+
+func TestPlanDeleteCancelDoesNotPost(t *testing.T) {
+	m, _ := openPlanEditor(t)
+	m = drive(m, "d") // confirm prompt
+	if !m.planDeleting {
+		t.Fatal("d should open the delete confirm")
+	}
+	tm, cmd := m.handlePlanKey("n") // n = no
+	m = asModel(tm)
+	if cmd != nil {
+		t.Error("cancelling the delete must not post an edit")
+	}
+	if m.planDeleting {
+		t.Error("n should close the confirm prompt")
+	}
+}
+
 // drive applies one plan-editor key and unwraps the model.
 func drive(m Model, key string) Model {
 	tm, _ := m.handlePlanKey(key)
