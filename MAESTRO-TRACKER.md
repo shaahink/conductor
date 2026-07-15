@@ -9,7 +9,7 @@ stage: M9 COMPLETE — 30/30 DONE. Maestro plan is closed.
 commit: 4b1e2e7 (ratchet + fake-agent + transcript.md), fba0fe2 (planDoc fallback), baceb4a (conductor init + doctor help fix + audit doc).
 gate: dotnet build 0w/0e · full C# suite green (704 tests, +11: 3 transcript + 7 init + 1 planDoc) · architecture ratchet GREEN (652 tests / 38 pragmas — the number that was red at M8 close) · face-go build/vet/test green · toy `conductor run` drives deliver→verify→fix and writes all five session-history files.
 branch: feat/foreman.
-next: Maestro is feature-complete and release-clean. Two credential-gated `HUMAN:` items remain (neither blocks engine release, both documented in the audit): M8.3 live Telegram phone dogfood (needs owner's real bot token) and the M9.1 full real-DeepSeek-model run (paid). Do both to fully close the two open truth gates.
+next: Maestro is feature-complete and release-clean. Delivery pass landed (commit f824ac7): one-command install `powershell -File tools/install.ps1` → global `conductor` on PATH (engine + Go face staged together), and `docs/OPERATING-CONDUCTOR.md` — an agent control guide (full command reference + live-run steering + HTTP control plane + safety rules + consolidated known-gaps list §7). Two credential-gated `HUMAN:` items remain (neither blocks release, both in the audit): M8.3 live Telegram phone dogfood (needs owner's real bot token) and the M9.1 full real-DeepSeek-model run (paid).
 
 
 ## Baseline numbers (from run.db)

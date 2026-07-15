@@ -22,8 +22,14 @@ TUI at `face/`.
   built binary next to the engine or under `face-go/bin/`); `conductor face` attaches another.
   **The TypeScript + Ink face (`face/`) was RETIRED in M7** — `face-go` is the only face now.
   Its history is in git; do not re-add it.
-- **Driver:** the STABLE `C:\Code\conductor\bin\conductor.exe` (built from master). The tool improving
-  Conductor is never the tool under edit.
+- **Driver (Maestro reversal — supersedes the old "drive with stable master" rule):** the Maestro plan
+  is driven by the binary **built FROM THIS BRANCH** (`dotnet run -- run -p plans/conductor-maestro.plan.json`),
+  on purpose — the previous era drove itself with an old master binary that contained none of its own
+  features, so everything was built, tested, marked DONE, and NEVER EXECUTED. Dogfooding IS the gate. For
+  a self-referential run, use the branch build. For everyday non-self-referential use, install the global
+  command once: `powershell -File tools/install.ps1` → `conductor` on PATH.
+- **Operating Conductor as an agent:** `docs/OPERATING-CONDUCTOR.md` is the control guide — commands,
+  live-run steering, HTTP control plane, NEEDS-HUMAN handling, safety rules, and the known-gaps list.
 
 ## Resume here (Maestro M9 complete — plan CLOSED, 30/30, 2026-07-15)
 **M9 (dogfood close) is DONE, 2/2 — 30/30 checkpoints. The Maestro plan is feature-complete and
@@ -71,6 +77,22 @@ path end-to-end.
 
 **Gate at close:** build 0w/0e · full C# suite 704 green (+11) · ratchet green (652 tests / 38 pragmas)
 · face-go green · toy `conductor run` drives a plan deliver→verify→fix end to end.
+
+**Post-close delivery pass (same day):**
+- **One-command install — `powershell -File tools/install.ps1`** (commit `f824ac7`). Publishes the C#
+  engine (Release) to `%LOCALAPPDATA%\Programs\conductor`, builds the Go face RIGHT NEXT TO it (where
+  `FaceLauncher.ResolveEntrypoint` looks first), and drops a `conductor` shim on PATH (scoop's shim dir
+  if present, else user PATH). Turns the long `src/Conductor/bin/.../conductor.exe` into a global
+  `conductor`; `conductor run` still auto-spawns the face, so there is never a separate Go binary to
+  launch. Re-run to cut a fresh local release. Installed + verified live this session. README quick-start
+  rewritten around it. (For the self-referential Maestro plan specifically, still drive with the fresh
+  BRANCH build — `dotnet run -- run -p plans/conductor-maestro.plan.json` — so a regression is caught
+  immediately; the installed command is for everything else.)
+- **New: `docs/OPERATING-CONDUCTOR.md`** — a control guide written for an AGENT driving Conductor on the
+  owner's behalf: full command reference (every verb + flags), how to monitor a live run, how to steer it
+  (`inject`/`approve`/`pause`), how to respond to NEEDS HUMAN, the HTTP control plane + `control-plane.json`
+  discovery, the MCP tools, the safety rules, and a **consolidated "known gaps & missing features" list
+  (§7)** — start there for the current gap inventory rather than re-deriving it.
 
 ---
 
