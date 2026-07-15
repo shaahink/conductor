@@ -80,6 +80,79 @@ public partial class McpTaskServer
         }
     }
 
+    // ---------------------------------------------------------------- M7.2: tracked bugs
+
+    private JsonElement HandleBugNew(JsonElement? args)
+    {
+        if (_store == null)
+            return JsonSerializer.SerializeToElement(new { ok = false, error = "bug_new requires store (no plan state available)." });
+
+        var title = "";
+        string? detail = null, stageId = null;
+        var severity = "medium";
+        if (args is { } a)
+        {
+            if (a.TryGetProperty("title", out var t)) title = t.GetString() ?? "";
+            if (a.TryGetProperty("detail", out var d)) detail = d.GetString();
+            if (a.TryGetProperty("severity", out var s)) severity = s.GetString() ?? "medium";
+            if (a.TryGetProperty("stage_id", out var st)) stageId = st.GetString();
+        }
+        if (string.IsNullOrWhiteSpace(title))
+            return JsonSerializer.SerializeToElement(new { ok = false, error = "title is required" });
+
+        var id = _store.WriteBug(_runId, title, detail,
+            severity, string.IsNullOrWhiteSpace(stageId) ? null : stageId, foundSession: null);
+        return id > 0
+            ? JsonSerializer.SerializeToElement(new { ok = true, id, title, severity, status = "open" })
+            : JsonSerializer.SerializeToElement(new { ok = false, error = "bug write failed (see run.db error log)." });
+    }
+
+    private JsonElement HandleBugList(JsonElement? args)
+    {
+        if (_store == null)
+            return JsonSerializer.SerializeToElement(new { ok = false, error = "bug_list requires store (no plan state available)." });
+
+        var status = "open";
+        if (args is { } a && a.TryGetProperty("status", out var s))
+            status = s.GetString() ?? "open";
+        var filter = status.Equals("all", StringComparison.OrdinalIgnoreCase) ? null : status;
+
+        var bugs = _store.QueryBugs(_runId, filter);
+        var list = bugs.Select(b => new
+        {
+            id = b.Id,
+            title = b.Title,
+            detail = b.Detail,
+            severity = b.Severity,
+            status = b.Status,
+            stageId = b.StageId,
+            foundSession = b.FoundSession,
+            fixedSession = b.FixedSession,
+        }).ToArray();
+        return JsonSerializer.SerializeToElement(new { ok = true, bugs = list, count = list.Length });
+    }
+
+    private JsonElement HandleBugFix(JsonElement? args)
+    {
+        if (_store == null)
+            return JsonSerializer.SerializeToElement(new { ok = false, error = "bug_fix requires store (no plan state available)." });
+
+        long id = 0;
+        var wontfix = false;
+        if (args is { } a)
+        {
+            if (a.TryGetProperty("id", out var i) && i.TryGetInt64(out var iv)) id = iv;
+            if (a.TryGetProperty("wontfix", out var w) && w.ValueKind is JsonValueKind.True or JsonValueKind.False) wontfix = w.GetBoolean();
+        }
+        if (id <= 0)
+            return JsonSerializer.SerializeToElement(new { ok = false, error = "id is required" });
+
+        var status = wontfix ? "wontfix" : "fixed";
+        return _store.UpdateBugStatus(_runId, id, status, fixedSession: null)
+            ? JsonSerializer.SerializeToElement(new { ok = true, id, status })
+            : JsonSerializer.SerializeToElement(new { ok = false, error = $"no open bug #{id} for this run" });
+    }
+
     private JsonElement HandleSessionDetail(JsonElement? args)
     {
         if (_store == null)

@@ -193,6 +193,55 @@ public sealed class ControlPlaneServerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetLedger_ReturnsRecentEntries()
+    {
+        // M7.1: /ledger serves the knowledge ledger to the Face (Go DTO LedgerEntryDto).
+        _store.InitializeRun(RunId, "cps-test", _dir, null, "test"); // FK parent for ledger rows
+        _store.WriteLedger(RunId, 1, "S1", "finding", "the retry prompt must carry verifier findings");
+        _store.WriteLedger(RunId, 2, "S1", "hand-edit", "engine bookkeeping — must NOT be surfaced");
+        var (server, port) = StartServer();
+        try
+        {
+            var resp = await _http.GetAsync($"http://127.0.0.1:{port}/ledger");
+            Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            var entries = doc.RootElement.GetProperty("entries");
+            Assert.Equal(1, entries.GetArrayLength()); // hand-edit filtered out
+            Assert.Equal("finding", entries[0].GetProperty("kind").GetString());
+            Assert.Contains("verifier findings", entries[0].GetProperty("content").GetString());
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task GetBugs_ReturnsOpenBugsByDefault()
+    {
+        // M7.2: /bugs serves tracked bugs to the Face (Go DTO BugDto).
+        _store.InitializeRun(RunId, "cps-test", _dir, null, "test"); // FK parent for bug rows
+        var openId = _store.WriteBug(RunId, "stall breaker fires during long gate", "seen on the test gate", "high", "S1", 1);
+        var closedId = _store.WriteBug(RunId, "already fixed", null, "low", "S1", 1);
+        _store.UpdateBugStatus(RunId, closedId, "fixed", 2);
+        var (server, port) = StartServer();
+        try
+        {
+            var resp = await _http.GetAsync($"http://127.0.0.1:{port}/bugs");
+            Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            var bugs = doc.RootElement.GetProperty("bugs");
+            Assert.Equal(1, bugs.GetArrayLength()); // only the open one
+            Assert.Equal(openId, bugs[0].GetProperty("id").GetInt64());
+            Assert.Equal("high", bugs[0].GetProperty("severity").GetString());
+            Assert.Equal("open", bugs[0].GetProperty("status").GetString());
+
+            // ?status=all includes the closed one
+            var allResp = await _http.GetAsync($"http://127.0.0.1:{port}/bugs?status=all");
+            using var allDoc = JsonDocument.Parse(await allResp.Content.ReadAsStringAsync());
+            Assert.Equal(2, allDoc.RootElement.GetProperty("bugs").GetArrayLength());
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
     public async Task GetPromptPreview_ReturnsCompiledPromptForStage()
     {
         // M5.5: /prompt/preview compiles the exact prompt that would be sent. Untested until now.

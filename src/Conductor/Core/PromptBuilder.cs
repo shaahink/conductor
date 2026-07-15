@@ -1,3 +1,4 @@
+using Conductor.Core.Store;
 using Conductor.Models;
 
 namespace Conductor.Core;
@@ -171,13 +172,32 @@ public sealed class PromptBuilder
     }
 
     /// <summary>Builds and renders the battery group section from the plan's
-    /// <see cref="BatteriesConfig"/>, using current run state for the recent-failure digest (B8.5).</summary>
-    public string BatterySection(RunState? state)
+    /// <see cref="BatteriesConfig"/>, using current run state for the recent-failure digest (B8.5).
+    /// When a <paramref name="store"/> is supplied (always, in a real run) the M7 knowledge batteries —
+    /// the ledger and the run's open bugs — are injected too, so knowledge compounds across sessions.</summary>
+    public string BatterySection(RunState? state, IRunStore? store = null)
     {
         var cfg = _plan.Batteries;
-        if (cfg == null && _plan.AnalysisLanes.Count == 0) return "";
 
         var list = new List<IPromptBattery>();
+
+        // M7.1/M7.2: knowledge that compounds — injected by default (no batteries block required), and
+        // added FIRST so the byte cap never truncates them away: the ledger and open bugs from prior
+        // sessions must reliably reach the next prompt (that is the whole point of M7).
+        if (store != null && state is { RunId.Length: > 0 })
+        {
+            if (cfg?.Ledger ?? true)
+            {
+                var ledgerBattery = new LedgerBattery(store, state.RunId, cfg?.LedgerMaxEntries ?? 8);
+                if (!ledgerBattery.IsEmpty) list.Add(ledgerBattery);
+            }
+            if (cfg?.Bugs ?? true)
+            {
+                var bugsBattery = new BugsBattery(store, state.RunId);
+                if (!bugsBattery.IsEmpty) list.Add(bugsBattery);
+            }
+        }
+
         if (cfg != null)
         {
             if (cfg.Lessons) list.Add(new LessonsBattery(_lessons, cfg.LessonsMaxEntries));

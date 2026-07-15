@@ -64,6 +64,8 @@ app.Configure(c =>
         .WithDescription("Checkpoint CRUD from run.db: --list, --done, --in-progress.");
     c.AddCommand<NoteCommand>("note")
         .WithDescription("Write a note/finding to the knowledge ledger (run.db ledger table).");
+    c.AddCommand<BugCommand>("bug")
+        .WithDescription("Tracked bugs that outlive the session that found them. Sub-commands: new <title>, list [--all], fix <id>.");
     c.AddCommand<LogCommand>("log")
         .WithDescription("Query the structured JSON log. Filter by stage, gate, outcome, etc. Example: conductor log --query \"stage=P7 and gate=build and outcome=fail\"");
     c.AddCommand<NewPlanCommand>("new-plan")

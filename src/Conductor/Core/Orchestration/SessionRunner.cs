@@ -102,7 +102,7 @@ public sealed partial class SessionRunner
 
         var prompt = BuildPrompt(kind, stage, _ctx.State.SessionCounter, attempt, maxAttempts,
             pendingResume, pendingAudit, pendingVerify, pendingFix, isReview, reviewPath);
-        var batterySection = _ctx.Prompts.BatterySection(_ctx.State);
+        var batterySection = _ctx.Prompts.BatterySection(_ctx.State, _ctx.Store);
         if (batterySection.Length > 0)
             prompt = prompt.TrimEnd() + "\n\n" + batterySection;
 

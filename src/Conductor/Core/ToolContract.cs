@@ -46,6 +46,13 @@ public static class ToolContract
             doing perfectly good work. Never kill processes by name (`Stop-Process dotnet`): you will take
             out unrelated work. Use `conductor bg stop`.
 
+            **Tracked bugs — `conductor bug new|list|fix`  (MCP: `bug_new`/`bug_list`/`bug_fix`)**
+            When you find a real defect you are not fixing right now, FILE it: `conductor bug new "<title>"`.
+            A filed bug is a row in run.db that outlives your session — it is injected into later prompts and
+            handed to the audit phase, so the next agent fixes it instead of re-discovering it from scratch.
+            Before hunting for bugs, run `conductor bug list` (MCP `bug_list`): the open ones are already
+            known — do not re-file them. When you genuinely resolve one, `conductor bug fix <id>` closes it.
+
             **Checkpoint progress — `conductor task`  (MCP: `task_list`/`task_update`/`task_add`)**
                 conductor task --list
                 conductor task --in-progress <id>
@@ -55,9 +62,9 @@ public static class ToolContract
             GENERATED VIEW of the database: editing its rows by hand achieves nothing, because it is
             rewritten from the database. Report through the verb.
 
-            **Ask the database — MCP `run_query`, `ledger_list`, `session_detail`**
-            Prior sessions, gate history, costs, what previous agents learned and struggled with are all
-            queryable. Query before you guess.
+            **Ask the database — MCP `run_query`, `ledger_list`, `bug_list`, `session_detail`**
+            Prior sessions, gate history, costs, filed bugs, what previous agents learned and struggled with
+            are all queryable. Query before you guess.
 
             **Evidence or it did not happen.** A checkpoint claimed DONE without a fresh artifact path (a
             file, a gate log, a commit sha) will be rejected by verification. Never weaken a gate, a golden

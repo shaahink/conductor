@@ -240,7 +240,7 @@ public sealed partial class RunLoop
                         : _ctx.State.PendingAudit != null ? SessionKind.Audit
                         : _ctx.State.PendingFix != null ? SessionKind.Fix : SessionKind.Deliver;
                     var prompt = BuildPrompt(kind, stage, _ctx.State.SessionCounter + 1, _ctx.State.AttemptsThisStage + 1, maxAttempts);
-                    var batterySection = _ctx.Prompts.BatterySection(_ctx.State);
+                    var batterySection = _ctx.Prompts.BatterySection(_ctx.State, _ctx.Store);
                     if (batterySection.Length > 0)
                         prompt = prompt.TrimEnd() + "\n\n" + batterySection;
                     _ctx.Sink.Log($"--- DRY RUN: would start session #{_ctx.State.SessionCounter + 1} ({kind}, stage {stage.Id}) with prompt: ---");

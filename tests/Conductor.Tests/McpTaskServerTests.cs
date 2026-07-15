@@ -57,7 +57,7 @@ public class McpTaskServerTests
     }
 
     [Fact]
-    public async Task ToolsList_ReturnsEightTools()
+    public async Task ToolsList_ReturnsAllTools()
     {
         var journal = TempPath();
         try
@@ -68,7 +68,7 @@ public class McpTaskServerTests
 
             Assert.Single(responses);
             var tools = responses[0].GetProperty("result").GetProperty("tools");
-            Assert.Equal(12, tools.GetArrayLength());
+            Assert.Equal(15, tools.GetArrayLength());
             var names = tools.EnumerateArray().Select(t => t.GetProperty("name").GetString()).ToHashSet();
             Assert.Contains("task_list", names);
             Assert.Contains("task_update", names);
@@ -80,6 +80,9 @@ public class McpTaskServerTests
             Assert.Contains("bg_stop", names);
             Assert.Contains("run_query", names);
             Assert.Contains("ledger_list", names);
+            Assert.Contains("bug_new", names);
+            Assert.Contains("bug_list", names);
+            Assert.Contains("bug_fix", names);
             Assert.Contains("session_detail", names);
             Assert.Contains("inject_instruction", names);
         }
@@ -394,6 +397,38 @@ public class McpTaskServerTests
             Assert.Equal(1, entries.GetArrayLength());
             Assert.Equal("F8", entries[0].GetProperty("stageId").GetString());
             Assert.Equal("finding", entries[0].GetProperty("kind").GetString());
+        }
+        finally { Cleanup(journal); }
+    }
+
+    [Fact]
+    public async Task BugTools_NewListFix_RoundTripThroughStore()
+    {
+        using var db = CreateTempDb("r-mcp");
+        var journal = TempPath();
+        try
+        {
+            // file a bug
+            var newReq = Rpc(new { jsonrpc = "2.0", id = 1, method = "tools/call", @params = new { name = "bug_new", arguments = new { title = "cache miss on truth tier", severity = "high", stage_id = "M7" } } });
+            var newResp = await RunMcpExchange(new McpTaskServer("nonexistent.jsonl", journal, "r-mcp", store: db), newReq);
+            var newResult = newResp[0].GetProperty("result");
+            Assert.True(newResult.GetProperty("ok").GetBoolean());
+            var id = newResult.GetProperty("id").GetInt64();
+            Assert.True(id > 0);
+
+            // list open bugs — the one we filed is there
+            var listReq = Rpc(new { jsonrpc = "2.0", id = 2, method = "tools/call", @params = new { name = "bug_list", arguments = new { } } });
+            var listResp = await RunMcpExchange(new McpTaskServer("nonexistent.jsonl", journal, "r-mcp", store: db), listReq);
+            var bugs = listResp[0].GetProperty("result").GetProperty("bugs");
+            Assert.Equal(1, bugs.GetArrayLength());
+            Assert.Equal("cache miss on truth tier", bugs[0].GetProperty("title").GetString());
+            Assert.Equal("open", bugs[0].GetProperty("status").GetString());
+
+            // fix it — then it's no longer open
+            var fixReq = Rpc(new { jsonrpc = "2.0", id = 3, method = "tools/call", @params = new { name = "bug_fix", arguments = new { id } } });
+            var fixResp = await RunMcpExchange(new McpTaskServer("nonexistent.jsonl", journal, "r-mcp", store: db), fixReq);
+            Assert.True(fixResp[0].GetProperty("result").GetProperty("ok").GetBoolean());
+            Assert.Empty(db.QueryBugs("r-mcp", "open"));
         }
         finally { Cleanup(journal); }
     }

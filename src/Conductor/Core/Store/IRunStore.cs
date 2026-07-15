@@ -51,6 +51,12 @@ public interface IRunStore : IDisposable
 
     void WriteLedger(string runId, int? sessionNumber, string? stageId, string kind, string content);
 
+    // ---------------------------------------------------------------- bugs (M7.2)
+
+    long WriteBug(string runId, string title, string? detail, string severity, string? stageId, int? foundSession);
+    IReadOnlyList<BugRow> QueryBugs(string runId, string? status = null);
+    bool UpdateBugStatus(string runId, long bugId, string status, int? fixedSession);
+
     // ---------------------------------------------------------------- handovers
 
     void WriteHandover(string runId, int sessionNumber, string stageId, string content);

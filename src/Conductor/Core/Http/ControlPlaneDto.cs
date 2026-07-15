@@ -88,6 +88,8 @@ public static class ControlPlaneDto
 [JsonSerializable(typeof(InjectAcceptedDto))]
 [JsonSerializable(typeof(PromptPreviewDto))]
 [JsonSerializable(typeof(TimelineDto))]
+[JsonSerializable(typeof(LedgerDto))]
+[JsonSerializable(typeof(BugsDto))]
 [JsonSerializable(typeof(ConsoleLineDto))]
 [JsonSerializable(typeof(ControlPlaneInfo))]
 [JsonSerializable(typeof(PlanDto))]

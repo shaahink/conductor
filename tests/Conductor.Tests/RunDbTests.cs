@@ -48,14 +48,15 @@ public sealed class RunDbTests : IDisposable
         Assert.Contains("pids", names);
         Assert.Contains("events", names);
         Assert.Contains("run_state", names);
+        Assert.Contains("bugs", names);
     }
 
     [Fact]
-    public void Schema_version_is_six()
+    public void Schema_version_is_seven()
     {
         var rows = _db.Query("SELECT version FROM schema_version");
         Assert.Single(rows);
-        Assert.Equal(6L, (long)rows[0]["version"]!);
+        Assert.Equal(7L, (long)rows[0]["version"]!);
     }
 
     [Fact]

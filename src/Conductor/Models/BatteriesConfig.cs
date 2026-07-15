@@ -8,8 +8,14 @@ public sealed class BatteriesConfig
     public bool Lessons { get; set; } = true;
     /// <summary>Include a recent-failure digest when the last session didn't verify.</summary>
     public bool RecentFailure { get; set; } = true;
+    /// <summary>M7.1: inject recent knowledge-ledger entries (conductor note) into the next prompt.</summary>
+    public bool Ledger { get; set; } = true;
+    /// <summary>M7.2: inject the run's open tracked bugs (conductor bug new) into the next prompt.</summary>
+    public bool Bugs { get; set; } = true;
     /// <summary>Max entries to include from lessons (default 3).</summary>
     public int LessonsMaxEntries { get; set; } = 3;
+    /// <summary>Max ledger entries to inject (default 8).</summary>
+    public int LedgerMaxEntries { get; set; } = 8;
     /// <summary>Total byte cap for the combined battery section in the prompt.</summary>
     public int MaxBytes { get; set; } = 2048;
 }
