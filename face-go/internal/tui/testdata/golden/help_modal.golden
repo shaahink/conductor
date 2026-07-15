@@ -15,6 +15,7 @@
                  ║                                                                          ║                 
                  ║    ACTIONS                                                               ║                 
                  ║      :         Command palette (destructive/goto verbs confirm first)    ║                 
+                 ║      g         Plan editor (stages, models, workflows, gates, import)    ║                 
                  ║      i         Inject context                                            ║                 
                  ║      e         Edit templates (v: compiled-prompt preview)               ║                 
                  ║      h         Session history                                           ║                 
@@ -29,6 +30,5 @@
                  ║      esc       Close modal / cancel                                      ║                 
                  ║                                                                          ║                 
                  ║    MOUSE                                                                 ║                 
-                 ║      Scroll    Navigate transcript                                       ║                 
                                                                                                               
                                                                                                               

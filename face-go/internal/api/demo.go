@@ -23,6 +23,7 @@ type demoSource struct {
 	tickCount   int
 	state       *StateDto
 	sessions    []SessionRowDto
+	plan        *PlanDto
 }
 
 func NewDemoSource() DataSource {
@@ -33,6 +34,7 @@ func NewDemoSource() DataSource {
 		processes: makeFakeProcesses(now),
 		sessions:  makeFakeSessions(),
 		state:     makeFakeState(),
+		plan:      makeFakePlan(),
 	}
 
 	go s.runSimulation()
@@ -101,6 +103,115 @@ func (s *demoSource) PostInject(req InjectRequestDto) (*InjectAcceptedDto, error
 		StageId:     strPtr("F7"),
 		RecordedUtc: &now,
 	}, nil
+}
+
+func (s *demoSource) FetchPlan() (*PlanDto, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	clone := *s.plan
+	return &clone, nil
+}
+
+func (s *demoSource) PostPlanEdit(req PlanEditRequestDto) (*PlanMutationResultDto, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, e := range req.Edits {
+		applyDemoEdit(s.plan, e)
+	}
+	s.plan.PlanVersion++
+	return &PlanMutationResultDto{Ok: true, PlanVersion: s.plan.PlanVersion}, nil
+}
+
+func (s *demoSource) PostPlanImport(req PlanImportRequestDto) (*PlanImportResultDto, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	// Synthesise a plausible diff: one new stage + a title tweak on an existing one.
+	newTitle := "Knowledge that compounds"
+	diff := PlanDiffDto{
+		AddedStages: []PlanStageDto{
+			{Id: "M7", Title: newTitle, Sessions: 3, Kind: "deliver", DependsOn: []string{"M6"}},
+		},
+		ChangedStages: []PlanStageChangeDto{
+			{Id: "F7", Fields: []PlanFieldChangeDto{{Field: "sessions", Old: strPtr("5"), New: strPtr("6")}}},
+		},
+	}
+	if req.Apply {
+		s.plan.Stages = append(s.plan.Stages, diff.AddedStages...)
+		s.plan.PlanVersion++
+	}
+	return &PlanImportResultDto{Ok: true, Diff: diff, Applied: req.Apply, PlanVersion: s.plan.PlanVersion}, nil
+}
+
+func applyDemoEdit(plan *PlanDto, e PlanEditDto) {
+	val := ""
+	if e.Value != nil {
+		val = *e.Value
+	}
+	switch e.Target {
+	case "stage":
+		for i := range plan.Stages {
+			if plan.Stages[i].Id != e.Id {
+				continue
+			}
+			switch e.Field {
+			case "title":
+				plan.Stages[i].Title = val
+			case "kind":
+				plan.Stages[i].Kind = val
+			case "model":
+				plan.Stages[i].Model = &val
+			case "workflow":
+				plan.Stages[i].Workflow = &val
+			case "notes":
+				plan.Stages[i].Notes = &val
+			}
+		}
+	case "gate":
+		for i := range plan.Gates {
+			if plan.Gates[i].Name != e.Id {
+				continue
+			}
+			switch e.Field {
+			case "command":
+				plan.Gates[i].Command = val
+			case "tier":
+				plan.Gates[i].Tier = val
+			}
+		}
+	case "plan":
+		switch e.Field {
+		case "gatepolicy":
+			plan.GatePolicy = val
+		case "defaultworkflow":
+			plan.DefaultWorkflow = val
+		}
+	}
+}
+
+func makeFakePlan() *PlanDto {
+	sp := func(s string) *string { return &s }
+	return &PlanDto{
+		Name:            "conductor-foreman",
+		PlanVersion:     7,
+		PlanFile:        `C:\Code\conductor\plans\conductor-foreman.plan.json`,
+		GatePolicy:      "perPhase",
+		DefaultWorkflow: "deliver-verify",
+		DefaultModel:    "claude-opus-4-8",
+		Workflows:       []string{"deliver-verify", "big-dev-then-big-audit", "docs-only", "spike"},
+		Stages: []PlanStageDto{
+			{Id: "F5", Title: "Control plane", Sessions: 3, Kind: "deliver", Model: sp("claude-sonnet-5"), Workflow: sp("deliver-verify"), DependsOn: []string{"F4"}},
+			{Id: "F6", Title: "Ink TUI v1", Sessions: 5, Kind: "deliver", Model: sp("claude-opus-4-8"), Workflow: sp("deliver-verify"), DependsOn: []string{"F5"}},
+			{Id: "F7", Title: "Gate caching + truth gates", Sessions: 5, Kind: "deliver", Model: sp("claude-opus-4-8"), Workflow: sp("big-dev-then-big-audit"), Notes: sp("Persona: deliver"), DependsOn: []string{"F6"}},
+			{Id: "F8", Title: "conductor chat + Telegram v2", Sessions: 4, Kind: "deliver", Model: sp("claude-sonnet-5"), Workflow: sp("deliver-verify"), DependsOn: []string{"F7"}},
+			{Id: "F9", Title: "Dogfood close", Sessions: 3, Kind: "review", Workflow: sp("big-dev-then-big-audit"), DependsOn: []string{"F8"}},
+		},
+		Gates: []PlanGateDto{
+			{Name: "build", Command: "dotnet build Conductor.slnx", Tier: "fast", TimeoutMinutes: 10},
+			{Name: "test", Command: "dotnet test Conductor.slnx", Tier: "full", TimeoutMinutes: 20},
+			{Name: "ratchet", Command: "dotnet test --filter Category=Architecture", Tier: "truth", TimeoutMinutes: 15},
+		},
+		Limits: PlanLimitsDto{StallMinutes: 12, SessionTimeoutMinutes: 240, VerifierThreshold: 80},
+	}
 }
 
 func (s *demoSource) SubscribeEvents(onEvent func(ConductorEventDto), onConnected func(bool)) func() {

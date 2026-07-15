@@ -164,6 +164,8 @@ func (m Model) modalContent() (string, string, string) {
 		return m.renderTimelineModal()
 	case ModalConsole:
 		return m.renderConsoleModal()
+	case ModalPlan:
+		return m.renderPlanModal()
 	case ModalHelp:
 		return m.renderHelpModal()
 	}
@@ -615,6 +617,7 @@ func (m Model) renderHelpModal() (string, string, string) {
 
   ACTIONS
     :         Command palette (destructive/goto verbs confirm first)
+    g         Plan editor (stages, models, workflows, gates, import)
     i         Inject context
     e         Edit templates (v: compiled-prompt preview)
     h         Session history

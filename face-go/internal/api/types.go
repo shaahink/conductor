@@ -15,6 +15,11 @@ type DataSource interface {
 	PostControl(cmd ControlRequestDto) (*ControlAcceptedDto, error)
 	PostInject(req InjectRequestDto) (*InjectAcceptedDto, error)
 
+	// M6.3 plan authoring
+	FetchPlan() (*PlanDto, error)
+	PostPlanEdit(req PlanEditRequestDto) (*PlanMutationResultDto, error)
+	PostPlanImport(req PlanImportRequestDto) (*PlanImportResultDto, error)
+
 	SubscribeEvents(onEvent func(ConductorEventDto), onConnected func(bool)) (stop func())
 	SubscribeTranscript(onLine func(TranscriptLineDto), onConnected func(bool)) (stop func())
 	SubscribeConsole(onLine func(ConsoleLineDto), onConnected func(bool)) (stop func())
@@ -214,6 +219,106 @@ type TranscriptLineDto struct {
 	SessionId string    `json:"sessionId"`
 	Kind      string    `json:"kind"`
 	Text      string    `json:"text"`
+}
+
+// --- M6.3: plan authoring DTOs (mirror Core/Http/ControlPlaneDto.Plan*.cs) ---
+
+type PlanDto struct {
+	Name            string         `json:"name"`
+	PlanVersion     int            `json:"planVersion"`
+	PlanFile        string         `json:"planFile"`
+	GatePolicy      string         `json:"gatePolicy"`
+	DefaultWorkflow string         `json:"defaultWorkflow"`
+	DefaultModel    string         `json:"defaultModel"`
+	Workflows       []string       `json:"workflows"`
+	Stages          []PlanStageDto `json:"stages"`
+	Gates           []PlanGateDto  `json:"gates"`
+	Limits          PlanLimitsDto  `json:"limits"`
+}
+
+type PlanStageDto struct {
+	Id        string   `json:"id"`
+	Title     string   `json:"title"`
+	Sessions  int      `json:"sessions"`
+	Kind      string   `json:"kind"`
+	Model     *string  `json:"model"`
+	Workflow  *string  `json:"workflow"`
+	Persona   *string  `json:"persona"`
+	Notes     *string  `json:"notes"`
+	DependsOn []string `json:"dependsOn"`
+}
+
+type PlanGateDto struct {
+	Name           string `json:"name"`
+	Command        string `json:"command"`
+	Tier           string `json:"tier"`
+	TimeoutMinutes int    `json:"timeoutMinutes"`
+	Optional       bool   `json:"optional"`
+}
+
+type PlanLimitsDto struct {
+	StallMinutes          int      `json:"stallMinutes"`
+	SessionTimeoutMinutes int      `json:"sessionTimeoutMinutes"`
+	MaxRunCostUsd         *float64 `json:"maxRunCostUsd"`
+	MaxRunTokens          *int64   `json:"maxRunTokens"`
+	VerifierThreshold     int      `json:"verifierThreshold"`
+}
+
+type PlanEditDto struct {
+	Target string  `json:"target"`
+	Id     string  `json:"id"`
+	Field  string  `json:"field"`
+	Value  *string `json:"value"`
+}
+
+type PlanEditRequestDto struct {
+	Edits []PlanEditDto `json:"edits"`
+}
+
+type PlanMutationResultDto struct {
+	Ok          bool    `json:"ok"`
+	Error       *string `json:"error"`
+	PlanVersion int     `json:"planVersion"`
+}
+
+type PlanImportRequestDto struct {
+	Source string `json:"source"`
+	Apply  bool   `json:"apply"`
+}
+
+type PlanFieldChangeDto struct {
+	Field string  `json:"field"`
+	Old   *string `json:"old"`
+	New   *string `json:"new"`
+}
+
+type PlanStageChangeDto struct {
+	Id     string               `json:"id"`
+	Fields []PlanFieldChangeDto `json:"fields"`
+}
+
+type PlanDiffDto struct {
+	AddedStages   []PlanStageDto       `json:"addedStages"`
+	ChangedStages []PlanStageChangeDto `json:"changedStages"`
+	AddedGates    []PlanGateDto        `json:"addedGates"`
+	ChangedGates  []PlanStageChangeDto `json:"changedGates"`
+}
+
+func (d PlanDiffDto) IsEmpty() bool {
+	return len(d.AddedStages) == 0 && len(d.ChangedStages) == 0 &&
+		len(d.AddedGates) == 0 && len(d.ChangedGates) == 0
+}
+
+func (d PlanDiffDto) TotalChanges() int {
+	return len(d.AddedStages) + len(d.ChangedStages) + len(d.AddedGates) + len(d.ChangedGates)
+}
+
+type PlanImportResultDto struct {
+	Ok          bool        `json:"ok"`
+	Error       *string     `json:"error"`
+	Diff        PlanDiffDto `json:"diff"`
+	Applied     bool        `json:"applied"`
+	PlanVersion int         `json:"planVersion"`
 }
 
 // --- Session-local state for connection management ---

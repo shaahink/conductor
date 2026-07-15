@@ -1,0 +1,34 @@
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                 ╔══════════════════════════════════════════════════════════════════════════╗                 
+                 ║                                                                          ║                 
+                 ║  Plan Editor                                                             ║                 
+                 ║                                                                          ║                 
+                 ║     Stages · Gates · Settings · Import                                   ║                 
+                 ║    conductor-foreman · v7                                                ║                 
+                 ║                                                                          ║                 
+                 ║    editing F6                                                            ║                 
+                 ║                                                                          ║                 
+                 ║    title            Ink TUI v1                                           ║                 
+                 ║    model            ‹ claude-opus-4-8 › (1/5)                            ║                 
+                 ║    workflow         deliver-verify                                       ║                 
+                 ║    kind             deliver                                              ║                 
+                 ║    sessions         5                                                    ║                 
+                 ║    notes            (unset)                                              ║                 
+                 ║    dependsOn        F5                                                   ║                 
+                 ║                                                                          ║                 
+                 ║  [←→/space: cycle] [enter: save] [esc: cancel]                           ║                 
+                 ║                                                                          ║                 
+                 ╚══════════════════════════════════════════════════════════════════════════╝                 
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              

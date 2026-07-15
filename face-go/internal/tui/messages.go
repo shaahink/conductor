@@ -76,6 +76,22 @@ type MsgPromptPreview struct {
 	Err     string
 }
 
+// M6.3 plan authoring
+type MsgPlanLoaded struct {
+	Plan *api.PlanDto
+	Err  string
+}
+
+type MsgPlanEdited struct {
+	Result *api.PlanMutationResultDto
+	Err    string
+}
+
+type MsgPlanImported struct {
+	Result *api.PlanImportResultDto
+	Err    string
+}
+
 func CmdTick() tea.Cmd {
 	return tea.Tick(1*time.Second, func(t time.Time) tea.Msg {
 		return MsgTick(t)

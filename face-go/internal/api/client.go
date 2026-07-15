@@ -157,6 +157,57 @@ func (s *liveSource) PostInject(req InjectRequestDto) (*InjectAcceptedDto, error
 	return &accepted, nil
 }
 
+func (s *liveSource) FetchPlan() (*PlanDto, error) {
+	var plan PlanDto
+	if err := s.getJSON("/plan", &plan); err != nil {
+		return nil, err
+	}
+	return &plan, nil
+}
+
+func (s *liveSource) PostPlanEdit(req PlanEditRequestDto) (*PlanMutationResultDto, error) {
+	// A rejected edit answers 400 with a body — decode it rather than surfacing a raw HTTP error, so
+	// the TUI can show the engine's reason ("unknown stage", "would make the plan invalid: …").
+	var res PlanMutationResultDto
+	if err := s.postJSONAllowError("/plan/edit", req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (s *liveSource) PostPlanImport(req PlanImportRequestDto) (*PlanImportResultDto, error) {
+	var res PlanImportResultDto
+	if err := s.postJSONAllowError("/plan/import", req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+// postJSONAllowError posts and decodes the response body even on a 4xx (the plan endpoints return a
+// structured {ok,error,…} on rejection); only a transport error or a 5xx surfaces as a Go error.
+func (s *liveSource) postJSONAllowError(path string, body any, v any) error {
+	b, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(s.ctx, "POST", s.baseURL+path, bytes.NewReader(b))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 500 {
+		msg, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+		return fmt.Errorf("POST %s: %d %s", path, resp.StatusCode, string(msg))
+	}
+	return json.NewDecoder(resp.Body).Decode(v)
+}
+
 func (s *liveSource) SubscribeEvents(onEvent func(ConductorEventDto), onConnected func(bool)) func() {
 	return SubscribeEvents(s.ctx, s.baseURL, func(e ConductorEventDto) {
 		if e.Seq > 0 {

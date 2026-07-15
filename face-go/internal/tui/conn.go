@@ -113,6 +113,39 @@ func (m Model) cmdFetchPromptPreview(stageId, kind string) tea.Cmd {
 	}
 }
 
+func (m Model) cmdFetchPlan() tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		plan, err := source.FetchPlan()
+		if err != nil {
+			return MsgPlanLoaded{Err: err.Error()}
+		}
+		return MsgPlanLoaded{Plan: plan}
+	}
+}
+
+func (m Model) cmdPostPlanEdit(req api.PlanEditRequestDto) tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		res, err := source.PostPlanEdit(req)
+		if err != nil {
+			return MsgPlanEdited{Err: err.Error()}
+		}
+		return MsgPlanEdited{Result: res}
+	}
+}
+
+func (m Model) cmdPostPlanImport(req api.PlanImportRequestDto) tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		res, err := source.PostPlanImport(req)
+		if err != nil {
+			return MsgPlanImported{Err: err.Error()}
+		}
+		return MsgPlanImported{Result: res}
+	}
+}
+
 func (m Model) cmdQueryReport(sql string) tea.Cmd {
 	source := m.source
 	return func() tea.Msg {

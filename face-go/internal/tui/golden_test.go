@@ -49,6 +49,15 @@ func (fakeSource) PostControl(api.ControlRequestDto) (*api.ControlAcceptedDto, e
 func (fakeSource) PostInject(api.InjectRequestDto) (*api.InjectAcceptedDto, error) {
 	return &api.InjectAcceptedDto{Accepted: true}, nil
 }
+func (fakeSource) FetchPlan() (*api.PlanDto, error) { return fixedPlan(), nil }
+func (fakeSource) PostPlanEdit(api.PlanEditRequestDto) (*api.PlanMutationResultDto, error) {
+	return &api.PlanMutationResultDto{Ok: true, PlanVersion: 8}, nil
+}
+func (fakeSource) PostPlanImport(req api.PlanImportRequestDto) (*api.PlanImportResultDto, error) {
+	return &api.PlanImportResultDto{Ok: true, Applied: req.Apply, PlanVersion: 8, Diff: api.PlanDiffDto{
+		AddedStages: []api.PlanStageDto{{Id: "M7", Title: "Knowledge that compounds", Sessions: 3, Kind: "deliver", DependsOn: []string{"M6"}}},
+	}}, nil
+}
 func (fakeSource) SubscribeEvents(_ func(api.ConductorEventDto), onConnected func(bool)) func() {
 	onConnected(true)
 	return func() {}
@@ -117,6 +126,30 @@ func fixedState() *api.StateDto {
 			{Name: "test", State: "running", ElapsedSec: 4.1},
 			{Name: "lint", State: "pending"},
 		},
+	}
+}
+
+func fixedPlan() *api.PlanDto {
+	sp := func(s string) *string { return &s }
+	return &api.PlanDto{
+		Name:            "conductor-foreman",
+		PlanVersion:     7,
+		PlanFile:        `C:\Code\conductor\plans\conductor-foreman.plan.json`,
+		GatePolicy:      "perPhase",
+		DefaultWorkflow: "deliver-verify",
+		DefaultModel:    "claude-opus-4-8",
+		Workflows:       []string{"deliver-verify", "big-dev-then-big-audit", "docs-only", "spike"},
+		Stages: []api.PlanStageDto{
+			{Id: "F6", Title: "Ink TUI v1", Sessions: 5, Kind: "deliver", Model: sp("claude-opus-4-8"), Workflow: sp("deliver-verify"), DependsOn: []string{"F5"}},
+			{Id: "F7", Title: "Gate caching + truth gates", Sessions: 5, Kind: "deliver", Model: sp("claude-opus-4-8"), Workflow: sp("big-dev-then-big-audit"), DependsOn: []string{"F6"}},
+			{Id: "F8", Title: "conductor chat + Telegram v2", Sessions: 4, Kind: "deliver", Model: sp("claude-sonnet-5"), Workflow: sp("deliver-verify"), DependsOn: []string{"F7"}},
+		},
+		Gates: []api.PlanGateDto{
+			{Name: "build", Command: "dotnet build Conductor.slnx", Tier: "fast", TimeoutMinutes: 10},
+			{Name: "test", Command: "dotnet test Conductor.slnx", Tier: "full", TimeoutMinutes: 20},
+			{Name: "ratchet", Command: "dotnet test --filter Category=Architecture", Tier: "truth", TimeoutMinutes: 15},
+		},
+		Limits: api.PlanLimitsDto{StallMinutes: 12, SessionTimeoutMinutes: 240, VerifierThreshold: 80},
 	}
 }
 
@@ -254,6 +287,55 @@ func TestGolden(t *testing.T) {
 				Prompt: "# Deliver session — stage F7\n\nYou are the conductor's delivery agent. Land the " +
 					"checkpoints for stage F7.\n\n## Tools\nconductor note / bg / task --done <id> --evidence <path>",
 			}})
+			return m
+		}},
+		{"plan_stages", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("g"))
+			m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
+			return m
+		}},
+		{"plan_stage_fields", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("g"))
+			m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
+			m, _ = m.Update(specialKey(tea.KeyDown)) // select F7
+			m, _ = m.Update(specialKey(tea.KeyEnter)) // drill into fields
+			return m
+		}},
+		{"plan_stage_model_edit", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("g"))
+			m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
+			m, _ = m.Update(specialKey(tea.KeyEnter))  // drill F6
+			m, _ = m.Update(specialKey(tea.KeyDown))   // → model field
+			m, _ = m.Update(specialKey(tea.KeyEnter))  // begin editing the enum
+			return m
+		}},
+		{"plan_gates", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("g"))
+			m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
+			m, _ = m.Update(specialKey(tea.KeyTab)) // → Gates tab
+			return m
+		}},
+		{"plan_settings", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("g"))
+			m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
+			m, _ = m.Update(specialKey(tea.KeyTab))
+			m, _ = m.Update(specialKey(tea.KeyTab))
+			return m
+		}},
+		{"plan_import_diff", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("g"))
+			m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
+			m, _ = m.Update(specialKey(tea.KeyTab))
+			m, _ = m.Update(specialKey(tea.KeyTab))
+			m, _ = m.Update(specialKey(tea.KeyTab)) // → Import tab
+			m, _ = m.Update(MsgPlanImported{Result: &api.PlanImportResultDto{Ok: true, Diff: api.PlanDiffDto{
+				AddedStages: []api.PlanStageDto{
+					{Id: "M8", Title: "AFK and smart setup", Sessions: 3, Kind: "deliver", DependsOn: []string{"M7"}},
+				},
+				ChangedStages: []api.PlanStageChangeDto{
+					{Id: "F7", Fields: []api.PlanFieldChangeDto{{Field: "sessions", Old: strPtr("5"), New: strPtr("6")}}},
+				},
+			}}})
 			return m
 		}},
 		{"search_active", func(m tea.Model) tea.Model {

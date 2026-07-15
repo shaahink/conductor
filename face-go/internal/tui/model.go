@@ -20,7 +20,18 @@ const (
 	ModalProcesses
 	ModalTimeline
 	ModalConsole
+	ModalPlan
 	ModalHelp
+)
+
+// planTab selects which authoring surface the plan editor shows.
+type planTab int
+
+const (
+	planTabStages planTab = iota
+	planTabGates
+	planTabSettings
+	planTabImport
 )
 
 type PromptMode int
@@ -108,6 +119,21 @@ type Model struct {
 
 	// Processes
 	processSelected int
+
+	// Plan editor (M6.3)
+	plan             *api.PlanDto
+	planTab          planTab
+	planStageIdx     int
+	planGateIdx      int
+	planFieldIdx     int
+	planDrill        bool   // stages/gates: whether we've drilled into a row's fields
+	planEditing      bool   // whether the selected field is being edited
+	planEditBuf      string // in-progress text value
+	planEnumIdx      int    // in-progress enum selection
+	planStatus       string // transient feedback line (last save result)
+	planImportInput  string
+	planImportResult *api.PlanImportResultDto
+	planImportErr    string
 }
 
 func New(source api.DataSource, isDemo bool, baseURL string) Model {

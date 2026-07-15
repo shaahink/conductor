@@ -79,9 +79,10 @@ func RenderFooter(width int, sidebarOpen bool) string {
 
 	segments := []string{
 		key(":") + " palette",
-		key("p") + " plan",
+		key("p") + " sidebar",
+		key("g") + " plan",
 		key("i") + " inject",
-		key("e") + " edit",
+		key("e") + " templates",
 		key("h") + " history",
 		key("s") + " procs",
 		key("r") + " query",

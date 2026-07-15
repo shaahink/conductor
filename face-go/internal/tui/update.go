@@ -213,6 +213,51 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.promptPreviewErr = ""
 		}
 		return m, nil
+
+	case MsgPlanLoaded:
+		if msg.Err != "" {
+			m.planStatus = "load failed: " + msg.Err
+		} else {
+			m.plan = msg.Plan
+		}
+		return m, nil
+
+	case MsgPlanEdited:
+		if msg.Err != "" {
+			m.planStatus = "✗ " + msg.Err
+			return m, nil
+		}
+		if msg.Result != nil && !msg.Result.Ok {
+			reason := "rejected"
+			if msg.Result.Error != nil {
+				reason = *msg.Result.Error
+			}
+			m.planStatus = "✗ " + reason
+			return m, nil
+		}
+		m.planStatus = fmt.Sprintf("✓ saved — plan v%d", planVersionOf(msg.Result))
+		m.planEditing = false
+		return m, m.cmdFetchPlan() // reflect the write
+
+	case MsgPlanImported:
+		if msg.Err != "" {
+			m.planImportErr = msg.Err
+			m.planImportResult = nil
+			return m, nil
+		}
+		m.planImportErr = ""
+		m.planImportResult = msg.Result
+		if msg.Result != nil && !msg.Result.Ok && msg.Result.Error != nil {
+			m.planImportErr = *msg.Result.Error
+			m.planImportResult = nil
+			return m, nil
+		}
+		if msg.Result != nil && msg.Result.Applied {
+			m.planStatus = fmt.Sprintf("✓ imported — plan v%d", msg.Result.PlanVersion)
+			m.planImportResult = nil
+			return m, m.cmdFetchPlan()
+		}
+		return m, nil
 	}
 
 	m.toasts = widgets.PruneToasts(m.toasts, 4*time.Second)
@@ -279,6 +324,10 @@ func (m Model) handleKey(key string) (tea.Model, tea.Cmd) {
 		m.activeModal = ModalConsole
 		m.consoleScroll = 0 // 0 = pinned to the live tail
 		return m, nil
+
+	case "g":
+		m.openPlanModal()
+		return m, m.cmdFetchPlan()
 
 	case "?":
 		m.activeModal = ModalHelp
@@ -389,6 +438,8 @@ func (m *Model) handleModalKey(key string) (tea.Model, tea.Cmd) {
 		return m.handleTimelineKey(key)
 	case ModalConsole:
 		return m.handleConsoleKey(key)
+	case ModalPlan:
+		return m.handlePlanKey(key)
 	case ModalHelp:
 		if key == "esc" || key == "?" {
 			m.activeModal = ModalNone
