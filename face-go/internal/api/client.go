@@ -114,6 +114,23 @@ func (s *liveSource) FetchSessions() (*SessionsDto, error) {
 	return &sessions, nil
 }
 
+func (s *liveSource) FetchTimeline() (*TimelineDto, error) {
+	var timeline TimelineDto
+	if err := s.getJSON("/timeline", &timeline); err != nil {
+		return nil, err
+	}
+	return &timeline, nil
+}
+
+func (s *liveSource) FetchPromptPreview(stageId, kind string) (*PromptPreviewDto, error) {
+	path := "/prompt/preview?stage=" + urlEncode(stageId) + "&kind=" + urlEncode(kind)
+	var preview PromptPreviewDto
+	if err := s.getJSON(path, &preview); err != nil {
+		return nil, err
+	}
+	return &preview, nil
+}
+
 func (s *liveSource) QueryReport(sql string) (*QueryResultDto, error) {
 	path := "/report/query?sql=" + urlEncode(sql)
 	var result QueryResultDto

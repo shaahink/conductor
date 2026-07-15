@@ -160,10 +160,89 @@ func (m Model) modalContent() (string, string, string) {
 		return m.renderReportModal()
 	case ModalProcesses:
 		return m.renderProcessesModal()
+	case ModalTimeline:
+		return m.renderTimelineModal()
 	case ModalHelp:
 		return m.renderHelpModal()
 	}
 	return "", "", ""
+}
+
+func (m Model) renderTimelineModal() (string, string, string) {
+	title := "Timeline"
+
+	if m.timelineLoading && len(m.timelineEntries) == 0 {
+		return title, "  " + subtleStyle.Render("loading…"), "[esc: close]"
+	}
+	if m.timelineErr != "" {
+		return title, "  " + destructStyle.Render("error: "+m.timelineErr), "[r: retry] [esc: close]"
+	}
+	if len(m.timelineEntries) == 0 {
+		return title, "  " + subtleStyle.Render("(no events on the run's spine yet)"), "[r: refresh] [esc: close]"
+	}
+
+	// Show a scrolling window around the selection so long runs stay navigable in a fixed modal.
+	const window = 16
+	start := 0
+	if m.timelineSelected >= window {
+		start = m.timelineSelected - window + 1
+	}
+	end := start + window
+	if end > len(m.timelineEntries) {
+		end = len(m.timelineEntries)
+	}
+
+	var lines []string
+	for i := start; i < end; i++ {
+		e := m.timelineEntries[i]
+		glyph, gs := timelineGlyph(e)
+		clock := timelineClock(e.Utc)
+		desc := truncate(e.Description, 52)
+		cost := ""
+		if e.CostUsd != nil && *e.CostUsd > 0 {
+			cost = subtleStyle.Render(fmt.Sprintf("  $%.2f", *e.CostUsd))
+		}
+		line := fmt.Sprintf("  %s %s %s%s", subtleStyle.Render(clock), gs.Render(glyph), textStyle.Render(desc), cost)
+		if i == m.timelineSelected {
+			line = highlightBg.Render(fmt.Sprintf("  %s %s %s%s", clock, glyph, desc, ""))
+		}
+		lines = append(lines, line)
+	}
+	if end < len(m.timelineEntries) {
+		lines = append(lines, subtleStyle.Render(fmt.Sprintf("  … %d more below", len(m.timelineEntries)-end)))
+	}
+	lines = append(lines, "", subtleStyle.Render(fmt.Sprintf("  %d events · folded from run.db's event spine", len(m.timelineEntries))))
+
+	body := strings.Join(lines, "\n")
+	return title, body, "[↑↓: navigate] [r: refresh] [esc: close]"
+}
+
+// timelineGlyph maps an event kind to a marker + colour, mirroring the transcript's visual grammar.
+func timelineGlyph(e api.TimelineEntryDto) (string, lipgloss.Style) {
+	switch e.Kind {
+	case "session":
+		return "▸", accentStyle
+	case "gate":
+		if e.Outcome != nil && *e.Outcome == "fail" {
+			return "✗", destructStyle
+		}
+		return "✓", safeStyle
+	case "stage":
+		return "◆", accentStyle
+	case "attention":
+		return "⚠", warnStyle
+	default:
+		return "·", subtleStyle
+	}
+}
+
+// timelineClock renders just HH:MM:SS from an ISO-8601 UTC timestamp, tolerating a bad value.
+func timelineClock(utc string) string {
+	t, err := time.Parse(time.RFC3339, utc)
+	if err != nil {
+		return "--:--:--"
+	}
+	return t.UTC().Format("15:04:05")
 }
 
 func (m Model) renderPaletteModal() (string, string, string) {
@@ -252,6 +331,25 @@ func (m Model) renderInjectModal() (string, string, string) {
 func (m Model) renderPromptModal() (string, string, string) {
 	title := "Template Editor"
 
+	// M5.5: compiled-prompt preview — the exact prompt that would be sent for the current stage.
+	if m.promptPreviewOn {
+		stage := m.currentStageId()
+		if stage == "" {
+			stage = "(none)"
+		}
+		header := fmt.Sprintf("  %s %s\n\n",
+			subtleStyle.Render("Compiled prompt · stage"), accentStyle.Render(stage))
+		if m.promptPreviewErr != "" {
+			return title, header + "  " + destructStyle.Render("error: "+m.promptPreviewErr), "[v: hide preview] [esc: back]"
+		}
+		if m.promptPreview == nil {
+			return title, header + "  " + subtleStyle.Render("compiling…"), "[esc: back]"
+		}
+		meta := subtleStyle.Render(fmt.Sprintf("  model %s · kind %s", m.promptPreview.Model, m.promptPreview.Kind))
+		body := header + meta + "\n\n" + textStyle.Render(indent(truncateLines(m.promptPreview.Prompt, 18), "  "))
+		return title, body, "[v: hide preview] [esc: back]"
+	}
+
 	if m.promptMode == PromptEdit && m.promptSelected < len(m.promptEntries) {
 		entry := m.promptEntries[m.promptSelected]
 		body := fmt.Sprintf("  %s: %s\n\n%s",
@@ -280,7 +378,7 @@ func (m Model) renderPromptModal() (string, string, string) {
 	}
 	body := strings.Join(lines, "\n")
 	body += fmt.Sprintf("\n\n  %s", subtleStyle.Render("Saved to planDir — engine hot-reloads on next session."))
-	return title, body, "[↑↓: select] [enter: edit] [esc: close]"
+	return title, body, "[↑↓: select] [enter: edit] [v: compiled preview] [esc: close]"
 }
 
 func (m Model) renderSessionsModal() (string, string, string) {
@@ -480,10 +578,11 @@ func (m Model) renderHelpModal() (string, string, string) {
   ACTIONS
     :         Command palette (destructive/goto verbs confirm first)
     i         Inject context
-    e         Edit templates (reads/writes planDir on disk)
+    e         Edit templates (v: compiled-prompt preview)
     h         Session history
     s         Supervised processes
     r         Report / query
+    t         Timeline (sessions, gates, verdicts, cost)
     ?         This help
 
   GLOBAL
@@ -514,6 +613,17 @@ func truncate(s string, max int) string {
 		return s[:max]
 	}
 	return s[:max-1] + "…"
+}
+
+// truncateLines keeps the first max lines of s, appending a count of what was hidden. Used by the
+// compiled-prompt preview so a long prompt stays inside the fixed modal without scrolling machinery.
+func truncateLines(s string, max int) string {
+	lines := strings.Split(s, "\n")
+	if len(lines) <= max {
+		return s
+	}
+	kept := lines[:max]
+	return strings.Join(kept, "\n") + fmt.Sprintf("\n… %d more lines", len(lines)-max)
 }
 
 func indent(s, prefix string) string {

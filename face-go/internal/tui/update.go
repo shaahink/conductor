@@ -185,6 +185,26 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.data.ReportResult = msg.Result
 		}
 		return m, nil
+
+	case MsgTimelineUpdated:
+		m.timelineLoading = false
+		if msg.Err != "" {
+			m.timelineErr = msg.Err
+		} else if msg.Timeline != nil {
+			m.timelineEntries = msg.Timeline.Entries
+			m.timelineErr = ""
+		}
+		return m, nil
+
+	case MsgPromptPreview:
+		if msg.Err != "" {
+			m.promptPreviewErr = msg.Err
+			m.promptPreview = nil
+		} else {
+			m.promptPreview = msg.Preview
+			m.promptPreviewErr = ""
+		}
+		return m, nil
 	}
 
 	m.toasts = widgets.PruneToasts(m.toasts, 4*time.Second)
@@ -239,6 +259,13 @@ func (m Model) handleKey(key string) (tea.Model, tea.Cmd) {
 		m.activeModal = ModalProcesses
 		m.processSelected = 0
 		return m, nil
+
+	case "t":
+		m.activeModal = ModalTimeline
+		m.timelineSelected = 0
+		m.timelineLoading = true
+		m.timelineErr = ""
+		return m, m.cmdFetchTimeline()
 
 	case "?":
 		m.activeModal = ModalHelp
@@ -345,6 +372,8 @@ func (m *Model) handleModalKey(key string) (tea.Model, tea.Cmd) {
 		return m.handleReportKey(key)
 	case ModalProcesses:
 		return m.handleProcessesKey(key)
+	case ModalTimeline:
+		return m.handleTimelineKey(key)
 	case ModalHelp:
 		if key == "esc" || key == "?" {
 			m.activeModal = ModalNone
@@ -495,6 +524,10 @@ func (m *Model) handleInjectKey(key string) (tea.Model, tea.Cmd) {
 
 func (m *Model) handlePromptKey(key string) (tea.Model, tea.Cmd) {
 	if key == "esc" {
+		if m.promptPreviewOn {
+			m.promptPreviewOn = false
+			return m, nil
+		}
 		if m.promptMode == PromptEdit {
 			m.promptMode = PromptList
 			return m, nil
@@ -505,6 +538,15 @@ func (m *Model) handlePromptKey(key string) (tea.Model, tea.Cmd) {
 
 	if m.promptMode == PromptList {
 		switch key {
+		case "v":
+			// M5.5: show the exact compiled prompt for the current stage beside the template list.
+			m.promptPreviewOn = !m.promptPreviewOn
+			if m.promptPreviewOn {
+				m.promptPreview = nil
+				m.promptPreviewErr = ""
+				return m, m.cmdFetchPromptPreview(m.currentStageId(), "Deliver")
+			}
+			return m, nil
 		case "up", "k":
 			if m.promptSelected > 0 {
 				m.promptSelected--
@@ -623,6 +665,29 @@ func (m *Model) handleProcessesKey(key string) (tea.Model, tea.Cmd) {
 	case "down", "j":
 		if m.processSelected < len(m.data.Processes)-1 {
 			m.processSelected++
+		}
+		return m, nil
+	}
+	return m, nil
+}
+
+func (m *Model) handleTimelineKey(key string) (tea.Model, tea.Cmd) {
+	switch key {
+	case "esc":
+		m.activeModal = ModalNone
+		return m, nil
+	case "r":
+		m.timelineLoading = true
+		m.timelineErr = ""
+		return m, m.cmdFetchTimeline()
+	case "up", "k":
+		if m.timelineSelected > 0 {
+			m.timelineSelected--
+		}
+		return m, nil
+	case "down", "j":
+		if m.timelineSelected < len(m.timelineEntries)-1 {
+			m.timelineSelected++
 		}
 		return m, nil
 	}

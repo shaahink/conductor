@@ -6,23 +6,23 @@
                                                                                                               
                                                                                                               
                                                                                                               
+                                                                                                              
                  ╔══════════════════════════════════════════════════════════════════════════╗                 
                  ║                                                                          ║                 
-                 ║  Template Editor                                                         ║                 
+                 ║  Timeline                                                                ║                 
                  ║                                                                          ║                 
-                 ║    session.md                   built-in default                         ║                 
-                 ║    fix.md                       built-in default                         ║                 
-                 ║    resume.md                    built-in default                         ║                 
-                 ║    advisor.md                   built-in default                         ║                 
-                 ║    audit.md                     built-in default                         ║                 
-                 ║    review.md                    built-in default                         ║                 
-                 ║    verify.md                    built-in default                         ║                 
+                 ║    10:00:00 ◆ stage F7 entered                                           ║                 
+                 ║    10:00:05 ▸ session #11 Deliver started                                ║                 
+                 ║    10:03:40 ✗ gate test: FAIL (4100ms)                                   ║                 
+                 ║    10:03:55 ▸ session #11 finished: NeedsRetry  $0.18                    ║                 
+                 ║    10:07:00 ⚠ needs human: verifier score 74 < 80                        ║                 
                  ║                                                                          ║                 
-                 ║    Saved to planDir — engine hot-reloads on next session.                ║                 
+                 ║    5 events · folded from run.db's event spine                           ║                 
                  ║                                                                          ║                 
-                 ║  [↑↓: select] [enter: edit] [v: compiled preview] [esc: close]           ║                 
+                 ║  [↑↓: navigate] [r: refresh] [esc: close]                                ║                 
                  ║                                                                          ║                 
                  ╚══════════════════════════════════════════════════════════════════════════╝                 
+                                                                                                              
                                                                                                               
                                                                                                               
                                                                                                               

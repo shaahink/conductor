@@ -5,25 +5,25 @@
                                                                                                               
                                                                                                               
                                                                                                               
-                                                                                                              
                  ╔══════════════════════════════════════════════════════════════════════════╗                 
                  ║                                                                          ║                 
                  ║  Template Editor                                                         ║                 
                  ║                                                                          ║                 
-                 ║    session.md                   built-in default                         ║                 
-                 ║    fix.md                       built-in default                         ║                 
-                 ║    resume.md                    built-in default                         ║                 
-                 ║    advisor.md                   built-in default                         ║                 
-                 ║    audit.md                     built-in default                         ║                 
-                 ║    review.md                    built-in default                         ║                 
-                 ║    verify.md                    built-in default                         ║                 
+                 ║    Compiled prompt · stage F7                                            ║                 
                  ║                                                                          ║                 
-                 ║    Saved to planDir — engine hot-reloads on next session.                ║                 
+                 ║    model deepseek/deepseek-v4-pro · kind Deliver                         ║                 
                  ║                                                                          ║                 
-                 ║  [↑↓: select] [enter: edit] [v: compiled preview] [esc: close]           ║                 
+                 ║    # Deliver session — stage F7                                          ║                 
+                 ║                                                                          ║                 
+                 ║    You are the conductor's delivery agent. Land the checkpoints for      ║                 
+                 ║  stage F7.                                                               ║                 
+                 ║                                                                          ║                 
+                 ║    ## Tools                                                              ║                 
+                 ║    conductor note / bg / task --done <id> --evidence <path>              ║                 
+                 ║                                                                          ║                 
+                 ║  [v: hide preview] [esc: back]                                           ║                 
                  ║                                                                          ║                 
                  ╚══════════════════════════════════════════════════════════════════════════╝                 
-                                                                                                              
                                                                                                               
                                                                                                               
                                                                                                               

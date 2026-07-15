@@ -18,6 +18,7 @@ const (
 	ModalSessions
 	ModalReport
 	ModalProcesses
+	ModalTimeline
 	ModalHelp
 )
 
@@ -76,11 +77,20 @@ type Model struct {
 	injectStageId string
 	injectField   int // 0=stage, 1=content
 
-	// Prompt (template editor)
-	promptEntries  []templates.Entry
-	promptSelected int
-	promptContent  string
-	promptMode     PromptMode
+	// Prompt (template editor + compiled preview, M5.5)
+	promptEntries    []templates.Entry
+	promptSelected   int
+	promptContent    string
+	promptMode       PromptMode
+	promptPreview    *api.PromptPreviewDto
+	promptPreviewOn  bool
+	promptPreviewErr string
+
+	// Timeline (M5.1)
+	timelineEntries  []api.TimelineEntryDto
+	timelineSelected int
+	timelineLoading  bool
+	timelineErr      string
 
 	// Sessions
 	sessionSelected int

@@ -9,6 +9,8 @@ type DataSource interface {
 	FetchTasks() (*TasksDto, error)
 	FetchProcesses() (*ProcessesDto, error)
 	FetchSessions() (*SessionsDto, error)
+	FetchTimeline() (*TimelineDto, error)
+	FetchPromptPreview(stageId, kind string) (*PromptPreviewDto, error)
 	QueryReport(sql string) (*QueryResultDto, error)
 	PostControl(cmd ControlRequestDto) (*ControlAcceptedDto, error)
 	PostInject(req InjectRequestDto) (*InjectAcceptedDto, error)
@@ -137,6 +139,30 @@ type QueryResultDto struct {
 
 type QueryRowDto struct {
 	Values []string `json:"values"`
+}
+
+// TimelineEntryDto mirrors the C# record (GET /timeline): one folded event on the run's spine —
+// sessions, gates, stalls, verdicts, cost over time.
+type TimelineEntryDto struct {
+	Utc           string   `json:"utc"`
+	Kind          string   `json:"kind"`
+	Description   string   `json:"description"`
+	StageId       *string  `json:"stageId"`
+	SessionNumber *int     `json:"sessionNumber"`
+	CostUsd       *float64 `json:"costUsd"`
+	Outcome       *string  `json:"outcome"`
+}
+
+type TimelineDto struct {
+	Entries []TimelineEntryDto `json:"entries"`
+}
+
+// PromptPreviewDto mirrors the C# record (GET /prompt/preview?stage=&kind=): the exact compiled
+// prompt that would be sent for a given stage + session kind.
+type PromptPreviewDto struct {
+	Prompt string `json:"prompt"`
+	Model  string `json:"model"`
+	Kind   string `json:"kind"`
 }
 
 type ControlRequestDto struct {

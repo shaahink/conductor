@@ -34,11 +34,15 @@ func stripANSI(s string) string {
 // wall-clock time, random ports, or the ticking demo simulation.
 type fakeSource struct{}
 
-func (fakeSource) FetchState() (*api.StateDto, error)                     { return nil, nil }
-func (fakeSource) FetchTasks() (*api.TasksDto, error)                     { return nil, nil }
-func (fakeSource) FetchProcesses() (*api.ProcessesDto, error)             { return nil, nil }
-func (fakeSource) FetchSessions() (*api.SessionsDto, error)               { return nil, nil }
-func (fakeSource) QueryReport(sql string) (*api.QueryResultDto, error)    { return nil, nil }
+func (fakeSource) FetchState() (*api.StateDto, error)         { return nil, nil }
+func (fakeSource) FetchTasks() (*api.TasksDto, error)         { return nil, nil }
+func (fakeSource) FetchProcesses() (*api.ProcessesDto, error) { return nil, nil }
+func (fakeSource) FetchSessions() (*api.SessionsDto, error)   { return nil, nil }
+func (fakeSource) FetchTimeline() (*api.TimelineDto, error)   { return nil, nil }
+func (fakeSource) FetchPromptPreview(_, _ string) (*api.PromptPreviewDto, error) {
+	return nil, nil
+}
+func (fakeSource) QueryReport(sql string) (*api.QueryResultDto, error) { return nil, nil }
 func (fakeSource) PostControl(api.ControlRequestDto) (*api.ControlAcceptedDto, error) {
 	return &api.ControlAcceptedDto{Accepted: true}, nil
 }
@@ -73,22 +77,22 @@ func fixedState() *api.StateDto {
 		Status:                 "Running",
 		StageId:                "F7",
 		StageTitle:             "Gate caching + truth gates + speed program",
-		DoneCount:               2,
-		TotalCount:              40,
-		TotalCostUsd:            0.42,
-		TokensInput:             2500,
-		TokensOutput:            1800,
-		CurrentCheckpoint:       "F7.3",
-		CurrentCheckpointTitle:  "Wire caching layer",
-		RunId:                   "demo-run-id",
-		Repo:                    `C:\Code\conductor`,
-		PlanDir:                 "plans",
-		SessionNumber:           12,
-		SessionKind:             "Deliver",
-		Attempt:                 1,
-		MaxAttempts:             3,
-		SessionElapsedSec:       41,
-		AgentActive:             true,
+		DoneCount:              2,
+		TotalCount:             40,
+		TotalCostUsd:           0.42,
+		TokensInput:            2500,
+		TokensOutput:           1800,
+		CurrentCheckpoint:      "F7.3",
+		CurrentCheckpointTitle: "Wire caching layer",
+		RunId:                  "demo-run-id",
+		Repo:                   `C:\Code\conductor`,
+		PlanDir:                "plans",
+		SessionNumber:          12,
+		SessionKind:            "Deliver",
+		Attempt:                1,
+		MaxAttempts:            3,
+		SessionElapsedSec:      41,
+		AgentActive:            true,
 		Stages: []api.StageDto{
 			{Id: "F0", Title: "Foundations", Done: 3, Total: 3, State: "confirmed"},
 			{Id: "F6", Title: "Ink TUI v1", Done: 5, Total: 5, State: "confirmed"},
@@ -116,6 +120,18 @@ func fixedTranscript() []api.TranscriptLineDto {
 		{Seq: 3, SessionId: "12", Kind: "tool", Text: "read src/Conductor/Core/Gating/GateCache.cs"},
 		{Seq: 4, SessionId: "12", Kind: "result", Text: "GateCache.cs:142 lines — caches by (name, tier, sha)"},
 		{Seq: 5, SessionId: "12", Kind: "agent", Text: "Found the caching layer. Adding GetLastPassingGateResult to RunDb."},
+	}
+}
+
+func fixedTimeline() []api.TimelineEntryDto {
+	cost := func(f float64) *float64 { return &f }
+	num := func(n int) *int { return &n }
+	return []api.TimelineEntryDto{
+		{Utc: "2026-07-15T10:00:00Z", Kind: "stage", Description: "stage F7 entered", StageId: strPtr("F7")},
+		{Utc: "2026-07-15T10:00:05Z", Kind: "session", Description: "session #11 Deliver started", StageId: strPtr("F7"), SessionNumber: num(11)},
+		{Utc: "2026-07-15T10:03:40Z", Kind: "gate", Description: "gate test: FAIL (4100ms)", StageId: strPtr("F7"), Outcome: strPtr("fail")},
+		{Utc: "2026-07-15T10:03:55Z", Kind: "session", Description: "session #11 finished: NeedsRetry", StageId: strPtr("F7"), SessionNumber: num(11), CostUsd: cost(0.18), Outcome: strPtr("NeedsRetry")},
+		{Utc: "2026-07-15T10:07:00Z", Kind: "attention", Description: "needs human: verifier score 74 < 80"},
 	}
 }
 
@@ -204,6 +220,22 @@ func TestGolden(t *testing.T) {
 		}},
 		{"processes_modal", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("s"))
+			return m
+		}},
+		{"timeline_modal", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("t"))
+			m, _ = m.Update(MsgTimelineUpdated{Timeline: &api.TimelineDto{Entries: fixedTimeline()}})
+			return m
+		}},
+		{"prompt_preview", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("e"))
+			m, _ = m.Update(keyMsg("v"))
+			m, _ = m.Update(MsgPromptPreview{Preview: &api.PromptPreviewDto{
+				Model: "deepseek/deepseek-v4-pro",
+				Kind:  "Deliver",
+				Prompt: "# Deliver session — stage F7\n\nYou are the conductor's delivery agent. Land the " +
+					"checkpoints for stage F7.\n\n## Tools\nconductor note / bg / task --done <id> --evidence <path>",
+			}})
 			return m
 		}},
 		{"search_active", func(m tea.Model) tea.Model {

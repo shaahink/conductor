@@ -337,3 +337,86 @@ func TestTemplateEditorReadWriteRoundTrip(t *testing.T) {
 func SessionTemplateName(m Model, idx int) string {
 	return filepath.Base(m.promptEntries[idx].Path)
 }
+
+func TestTimelineOpenFetchNavigate(t *testing.T) {
+	m := newTestModel()
+	tm, cmd := m.handleKey("t")
+	m = asModel(tm)
+	if m.activeModal != ModalTimeline {
+		t.Fatalf("expected timeline modal to open, got %v", m.activeModal)
+	}
+	if !m.timelineLoading {
+		t.Error("expected loading state while the fetch is in flight")
+	}
+	if cmd == nil {
+		t.Fatal("expected a fetch command when opening the timeline")
+	}
+
+	msg, ok := cmd().(MsgTimelineUpdated)
+	if !ok {
+		t.Fatalf("expected MsgTimelineUpdated, got %T", cmd())
+	}
+	tm, _ = m.Update(msg)
+	m = asModel(tm)
+	if m.timelineLoading {
+		t.Error("expected loading to clear once entries arrive")
+	}
+	if len(m.timelineEntries) == 0 {
+		t.Fatal("expected timeline entries from the demo source")
+	}
+
+	n := len(m.timelineEntries)
+	for i := 0; i < n+3; i++ {
+		tm, _ = m.handleTimelineKey("down")
+		m = asModel(tm)
+	}
+	if m.timelineSelected != n-1 {
+		t.Errorf("expected selection to clamp at %d (last index), got %d", n-1, m.timelineSelected)
+	}
+
+	tm, _ = m.handleTimelineKey("esc")
+	m = asModel(tm)
+	if m.activeModal != ModalNone {
+		t.Error("expected esc to close the timeline modal")
+	}
+}
+
+func TestPromptCompiledPreviewToggle(t *testing.T) {
+	m := newTestModel() // StageId F7, PlanDir "."
+	tm, _ := m.handleKey("e")
+	m = asModel(tm)
+	if m.activeModal != ModalPrompt {
+		t.Fatalf("expected template editor to open, got %v", m.activeModal)
+	}
+
+	tm, cmd := m.handlePromptKey("v")
+	m = asModel(tm)
+	if !m.promptPreviewOn {
+		t.Fatal("expected 'v' to toggle the compiled preview on")
+	}
+	if cmd == nil {
+		t.Fatal("expected a fetch command for the compiled preview")
+	}
+	msg, ok := cmd().(MsgPromptPreview)
+	if !ok {
+		t.Fatalf("expected MsgPromptPreview, got %T", cmd())
+	}
+	tm, _ = m.Update(msg)
+	m = asModel(tm)
+	if m.promptPreview == nil {
+		t.Fatal("expected the compiled preview to populate from the demo source")
+	}
+	if m.promptPreview.Kind != "Deliver" {
+		t.Errorf("expected preview kind Deliver, got %q", m.promptPreview.Kind)
+	}
+
+	// esc hides the preview first, keeping the editor open — not closing the whole modal.
+	tm, _ = m.handlePromptKey("esc")
+	m = asModel(tm)
+	if m.promptPreviewOn {
+		t.Error("expected esc to hide the preview")
+	}
+	if m.activeModal != ModalPrompt {
+		t.Error("expected esc from preview to keep the template editor open")
+	}
+}

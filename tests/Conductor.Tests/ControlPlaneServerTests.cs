@@ -71,8 +71,16 @@ public sealed class ControlPlaneServerTests : IDisposable
 
     private void WriteEvents(params ConductorEvent[] events)
     {
+        var before = _store.ReadAllEvents(RunId).Count;
         foreach (var e in events)
             _store.Emit(e);
+        // Emit persists via an async drain; the server reads the events table synchronously. Wait until
+        // every event has landed so these wire tests are deterministic under parallel load rather than
+        // racing the drain (which showed up as partially-folded state on a saturated suite run).
+        var target = before + events.Length;
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (_store.ReadAllEvents(RunId).Count < target && DateTime.UtcNow < deadline)
+            System.Threading.Thread.Sleep(10);
     }
 
     private (ControlPlaneServer server, int port) StartServer()
@@ -142,6 +150,75 @@ public sealed class ControlPlaneServerTests : IDisposable
             Assert.Equal(1, tasks.GetArrayLength());
             Assert.Equal("t1", tasks[0].GetProperty("taskId").GetString());
             Assert.Equal("in_progress", tasks[0].GetProperty("status").GetString());
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task GetTimeline_FoldsSessionGateAndAttentionEvents()
+    {
+        // M5.1: /timeline folds the event spine into a visual timeline. This is the first test that
+        // exercises the endpoint over the wire — it was shipped without one. The Go Face consumes this
+        // exact JSON shape (conductor-face-go/internal/api TimelineEntryDto).
+        WriteEvents(
+            new RunStarted { Plan = "cps-test", Repo = _dir },
+            new StageEntered { StageId = "S1", Title = "Stage One" },
+            new SessionStarted { Number = 1, StageId = "S1", Kind = "Deliver" },
+            new GateFinished { Name = "build", Passed = true, DurationMs = 1200, Scope = "S1" },
+            new SessionFinished { Number = 1, StageId = "S1", Outcome = "Advanced", CostUsd = 0.33m },
+            new AttentionRequested { Reason = "needs a human" });
+        var (server, port) = StartServer();
+        try
+        {
+            var resp = await _http.GetAsync($"http://127.0.0.1:{port}/timeline");
+            Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+            var body = await resp.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(body);
+            var entries = doc.RootElement.GetProperty("entries");
+            Assert.True(entries.GetArrayLength() >= 5, "expected session/gate/stage/attention entries");
+
+            var kinds = entries.EnumerateArray().Select(e => e.GetProperty("kind").GetString()).ToList();
+            Assert.Contains("session", kinds);
+            Assert.Contains("gate", kinds);
+            Assert.Contains("stage", kinds);
+            Assert.Contains("attention", kinds);
+
+            // The finished session carries its cost onto the wire (camelCase field the Go DTO reads).
+            var finished = entries.EnumerateArray().First(e =>
+                e.GetProperty("kind").GetString() == "session" &&
+                e.GetProperty("description").GetString()!.Contains("finished", StringComparison.Ordinal));
+            Assert.Equal(0.33m, finished.GetProperty("costUsd").GetDecimal());
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task GetPromptPreview_ReturnsCompiledPromptForStage()
+    {
+        // M5.5: /prompt/preview compiles the exact prompt that would be sent. Untested until now.
+        var (server, port) = StartServer();
+        try
+        {
+            var resp = await _http.GetAsync($"http://127.0.0.1:{port}/prompt/preview?stage=S1&kind=Deliver");
+            Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+            var body = await resp.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(body);
+            Assert.False(string.IsNullOrWhiteSpace(doc.RootElement.GetProperty("prompt").GetString()),
+                "compiled prompt must not be empty");
+            Assert.Equal("Deliver", doc.RootElement.GetProperty("kind").GetString());
+            Assert.False(string.IsNullOrWhiteSpace(doc.RootElement.GetProperty("model").GetString()));
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task GetPromptPreview_UnknownStage_Returns404()
+    {
+        var (server, port) = StartServer();
+        try
+        {
+            var resp = await _http.GetAsync($"http://127.0.0.1:{port}/prompt/preview?stage=NOPE&kind=Deliver");
+            Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
         }
         finally { server.Dispose(); }
     }

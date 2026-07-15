@@ -52,7 +52,11 @@ public sealed partial class SqliteRunStore
         lock (_eventQueue)
         {
             if (_drainTask != null) return;
-            _drainTask = Task.Run(() => DrainLoopAsync(_drainCts.Token), _drainCts.Token);
+#pragma warning disable MA0040 // Deliberately do NOT flow the token into Task.Run: the drain loop's final
+            // flush must still run after _drainCts is cancelled at dispose. Task.Run(_, token) would skip the
+            // delegate entirely when cancellation races task scheduling, silently dropping buffered events.
+            _drainTask = Task.Run(() => DrainLoopAsync(_drainCts.Token));
+#pragma warning restore MA0040
         }
     }
 

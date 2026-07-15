@@ -62,6 +62,16 @@ type MsgReportResult struct {
 	Err    string
 }
 
+type MsgTimelineUpdated struct {
+	Timeline *api.TimelineDto
+	Err      string
+}
+
+type MsgPromptPreview struct {
+	Preview *api.PromptPreviewDto
+	Err     string
+}
+
 func CmdTick() tea.Cmd {
 	return tea.Tick(1*time.Second, func(t time.Time) tea.Msg {
 		return MsgTick(t)

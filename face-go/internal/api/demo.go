@@ -63,6 +63,20 @@ func (s *demoSource) FetchSessions() (*SessionsDto, error) {
 	return &SessionsDto{Sessions: s.sessions}, nil
 }
 
+func (s *demoSource) FetchTimeline() (*TimelineDto, error) {
+	return &TimelineDto{Entries: makeFakeTimeline()}, nil
+}
+
+func (s *demoSource) FetchPromptPreview(stageId, kind string) (*PromptPreviewDto, error) {
+	return &PromptPreviewDto{
+		Model: "deepseek/deepseek-v4-pro",
+		Kind:  kind,
+		Prompt: fmt.Sprintf("# %s session — stage %s\n\nYou are the conductor's delivery agent. Land the "+
+			"checkpoints for stage %s.\n\n## Tools\nconductor note / bg / task --done <id> --evidence <path>\n\n"+
+			"## Rules\nEvidence or it did not happen. Never weaken the measurement.", kind, stageId, stageId),
+	}, nil
+}
+
 func (s *demoSource) QueryReport(sql string) (*QueryResultDto, error) {
 	return &QueryResultDto{
 		Columns: []string{"stage", "cost"},
@@ -358,6 +372,20 @@ func makeFakeProcesses(now time.Time) []ProcessDto {
 	return []ProcessDto{
 		{Pid: 4512, Purpose: "session", StageId: strPtr("F7"), Alive: true, LastOutputLine: strPtr("[agent] Working on gate caching...")},
 		{Pid: 8723, Purpose: "gate:test", StageId: strPtr("F7"), Alive: true, LastOutputLine: strPtr("Running GateCacheTests... (12/12)")},
+	}
+}
+
+func makeFakeTimeline() []TimelineEntryDto {
+	cost := func(f float64) *float64 { return &f }
+	num := func(n int) *int { return &n }
+	return []TimelineEntryDto{
+		{Utc: "2026-07-15T10:00:00Z", Kind: "stage", Description: "stage F7 entered", StageId: strPtr("F7")},
+		{Utc: "2026-07-15T10:00:05Z", Kind: "session", Description: "session #11 Deliver started", StageId: strPtr("F7"), SessionNumber: num(11)},
+		{Utc: "2026-07-15T10:03:40Z", Kind: "gate", Description: "gate test: FAIL (4100ms)", StageId: strPtr("F7"), Outcome: strPtr("fail")},
+		{Utc: "2026-07-15T10:03:55Z", Kind: "session", Description: "session #11 finished: NeedsRetry", StageId: strPtr("F7"), SessionNumber: num(11), CostUsd: cost(0.18), Outcome: strPtr("NeedsRetry")},
+		{Utc: "2026-07-15T10:04:10Z", Kind: "session", Description: "session #12 Deliver started", StageId: strPtr("F7"), SessionNumber: num(12)},
+		{Utc: "2026-07-15T10:06:30Z", Kind: "gate", Description: "gate build: pass (2300ms)", StageId: strPtr("F7"), Outcome: strPtr("pass")},
+		{Utc: "2026-07-15T10:07:00Z", Kind: "attention", Description: "needs human: verifier score 74 < 80"},
 	}
 }
 

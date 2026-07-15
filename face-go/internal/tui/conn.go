@@ -91,6 +91,28 @@ func (m Model) cmdPostInject(req api.InjectRequestDto) tea.Cmd {
 	}
 }
 
+func (m Model) cmdFetchTimeline() tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		timeline, err := source.FetchTimeline()
+		if err != nil {
+			return MsgTimelineUpdated{Err: err.Error()}
+		}
+		return MsgTimelineUpdated{Timeline: timeline}
+	}
+}
+
+func (m Model) cmdFetchPromptPreview(stageId, kind string) tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		preview, err := source.FetchPromptPreview(stageId, kind)
+		if err != nil {
+			return MsgPromptPreview{Err: err.Error()}
+		}
+		return MsgPromptPreview{Preview: preview}
+	}
+}
+
 func (m Model) cmdQueryReport(sql string) tea.Cmd {
 	source := m.source
 	return func() tea.Msg {

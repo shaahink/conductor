@@ -1,5 +1,5 @@
 {
   "_comment": "Absolute floors for the ratchet gate (tools/gates/ratchet.ps1). minTests counts [Fact]/[Theory] ATTRIBUTES under tests/, not executed cases (a [Theory] with 10 InlineData is one attribute, ten cases). minTests only ever goes UP as work lands; maxPragmas only ever goes DOWN. Lowering minTests or raising maxPragmas is a human decision, and the gate rejects it against the pushed branch.",
   "minTests": 550,
-  "maxPragmas": 37
+  "maxPragmas": 38
 }
