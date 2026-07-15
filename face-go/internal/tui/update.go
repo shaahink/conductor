@@ -34,13 +34,14 @@ var quickQueries = []struct {
 	Label string
 	SQL   string
 }{
-	{"cost per stage", "SELECT stage_id, SUM(cost_usd) as cost_usd FROM costs GROUP BY stage_id ORDER BY cost_usd DESC"},
+	// costs has no stage_id of its own (schema: costs.session_number → sessions.number)
+	{"cost per stage", "SELECT s.stage_id, SUM(c.cost_usd) as cost_usd FROM costs c JOIN sessions s ON s.number = c.session_number AND s.run_id = c.run_id GROUP BY s.stage_id ORDER BY cost_usd DESC"},
 	{"which gates fail most", "SELECT name, COUNT(*) as failures FROM gates WHERE passed = 0 GROUP BY name ORDER BY failures DESC"},
 	{"recent sessions", "SELECT number, stage_id, kind, outcome FROM sessions ORDER BY number DESC LIMIT 20"},
 	{"verifier scores", "SELECT session_number, score, verdict FROM scores ORDER BY session_number DESC LIMIT 20"},
 }
 
-const defaultReportSQL = "SELECT stage_id, SUM(cost_usd) as cost_usd FROM costs GROUP BY stage_id"
+const defaultReportSQL = "SELECT s.stage_id, SUM(c.cost_usd) as cost_usd FROM costs c JOIN sessions s ON s.number = c.session_number AND s.run_id = c.run_id GROUP BY s.stage_id"
 
 // typedChar returns the literal character a key press should insert into a text field, and
 // whether it represents one at all. Bubble Tea's Key.String() deliberately returns "space" (a

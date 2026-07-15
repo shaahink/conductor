@@ -2,7 +2,6 @@
                                                                                                               
                                                                                                               
                                                                                                               
-                                                                                                              
                  ╔══════════════════════════════════════════════════════════════════════════╗                 
                  ║                                                                          ║                 
                  ║  Report / Query                                                          ║                 
@@ -14,8 +13,9 @@
                  ║       verifier scores                                                    ║                 
                  ║                                                                          ║                 
                  ║    SQL:                                                                  ║                 
-                 ║    SELECT stage_id, SUM(cost_usd) as cost_usd FROM costs GROUP BY        ║                 
-                 ║  stage_id_                                                               ║                 
+                 ║    SELECT s.stage_id, SUM(c.cost_usd) as cost_usd FROM costs c JOIN      ║                 
+                 ║  sessions s ON s.number = c.session_number AND s.run_id = c.run_id       ║                 
+                 ║  GROUP BY s.stage_id_                                                    ║                 
                  ║                                                                          ║                 
                  ║    Results:                                                              ║                 
                  ║    stage_id | cost_usd                                                   ║                 

@@ -15,7 +15,8 @@ TUI at `face/`.
 - **Faces:** `face/` — TypeScript + Ink TUI (existing, unchanged). `face-go/` — Go + Bubble Tea TUI,
   now wired to the real control plane (control verbs, inject, report query, template editor file
   I/O, live SSE transcript/events, session history, a new Processes modal) — no longer a visual-only
-  prototype. See `face-go/internal/tui/update_test.go` for the control-flow coverage.
+  prototype. Verified against a real `ControlPlaneServer` (not just `--demo`), not only build/vet/test
+  — see "How to verify a face-go change" below before claiming a change works.
 - **Driver:** the STABLE `C:\Code\conductor\bin\conductor.exe` (built from master). The tool improving
   Conductor is never the tool under edit.
 
@@ -34,9 +35,72 @@ go build -o bin/conductor-face.exe ./cmd/conductor-face/
 - **Data:** Same HTTP+SSE API as the Ink TUI (9 endpoints on localhost:4317), including `?since=` resume-on-reconnect for both SSE streams (server-supported, `ControlPlaneServer.Endpoints.cs` `ParseSince`)
 - **Tests:** `go test ./...` — all packages pass; `internal/tui/update_test.go` covers the control-plane wiring (palette send/confirm/goto, inject guard, report query, template read/write round-trip, processes nav, transcript search); `internal/tui/golden_test.go` renders `View()` headlessly (no real TTY needed) against fixed demo state and diffs it against `testdata/golden/*.golden` — `go test ./internal/tui/ -run TestGolden -v` prints every frame as plain text, `-update` refreshes the goldens after an intentional layout change. Mirrors the Ink side's `face/tests/golden.test.tsx`.
 
-### Bugs the golden renders caught and fixed this session
-- `RenderTicker`/`RenderFooter`/`RenderGateBar`/`renderTranscriptLine` were truncating already-ANSI-styled strings with a raw `s[:width]` byte slice — cuts mid-escape-sequence and corrupts everything after the cut point. Fixed by using each style's existing `.MaxWidth(width)` (lipgloss already truncates ANSI-safely via `ansi.Truncate` internally) instead of hand-rolled slicing.
-- **Spaces were silently dropped from every text field app-wide** (inject content, template editor, custom SQL, transcript search, palette filter, goto stage id). Bubble Tea v2's `Key.String()` deliberately returns `"space"` (a keybinding name) for the spacebar, not a literal `" "` — every `len(key) == 1` guard excluded it. Fixed via a `typedChar()` helper used at all six text-accumulation sites in `update.go`.
+### How to verify a face-go change (no real TTY needed — read this before claiming something works)
+A Bubble Tea program renders via ANSI escapes to a real terminal; running the binary in a headless
+agent session and grepping its stdout tells you nothing (you'll just see raw escape codes). Two
+techniques close that gap, both added this session because build/vet/test alone missed real bugs:
+
+**1. Golden rendering (`internal/tui/golden_test.go`) — layout/rendering correctness, in-memory, ~instant.**
+Drives `Update()` directly with synthetic `tea.KeyPressMsg`/`tea.WindowSizeMsg` against a fixed,
+deterministic `fakeSource`, captures `View().Content`, strips ANSI, and diffs against
+`testdata/golden/*.golden`.
+- `go test ./internal/tui/ -run TestGolden -v` — prints every frame as plain text under `-v`,
+  regardless of pass/fail. This is how you actually *see* a frame without a TTY.
+- If you changed `view.go` / `widgets/*`, goldens **will** fail — that's expected, not a red flag.
+  Read the printed frame and confirm the new output is correct, not just different.
+- `go test ./internal/tui/ -run TestGolden -update` refreshes the goldens once you've confirmed
+  the new output is right, then re-run without `-update` to confirm it now passes.
+- Add a new scenario by appending a `{name, do}` case to `golden_test.go`'s `cases` slice, driving
+  it through real exported `Msg` types and `keyMsg`/`specialKey`/`ctrlKey` — never by poking
+  unexported `Model` fields directly, so the test exercises the real interaction path.
+- Fixtures must be fully deterministic — no bare `time.Now()`-derived values (see the `ExitedUtc`
+  comment in `golden_test.go`: process runtimes are relative-to-now for genuinely alive processes,
+  so the fixture pins exact start+exit timestamps instead).
+- This caught two real bugs this session: `RenderTicker`/`RenderFooter`/`RenderGateBar`/
+  `renderTranscriptLine` were truncating already-ANSI-styled strings with a raw `s[:width]` byte
+  slice — cuts mid-escape-sequence and corrupts everything after the cut point. Fixed by using each
+  style's existing `.MaxWidth(width)` (lipgloss already truncates ANSI-safely via `ansi.Truncate`
+  internally). And: **spaces were silently dropped from every text field app-wide** (inject content,
+  template editor, custom SQL, transcript search, palette filter, goto stage id) — Bubble Tea v2's
+  `Key.String()` deliberately returns `"space"` (a keybinding name) for the spacebar, not a literal
+  `" "`, so every `len(key) == 1` guard excluded it. Fixed via a `typedChar()` helper at all six
+  text-accumulation sites in `update.go`. Mirrors the Ink side's `face/tests/golden.test.tsx`.
+
+**2. Live smoke test — real wire round-trip against a real `ControlPlaneServer`, no LLM spend.**
+Golden tests only prove rendering is correct against data you made up; they can't catch a DTO field
+name mismatch or a report-query SQL string that's wrong against the *real* SQLite schema (this
+session's third bug: the "cost per stage" quick query referenced `costs.stage_id`, which doesn't
+exist — `costs` only has `session_number`; fixed by joining `sessions` on `run_id`+`number`). To
+verify against the real thing without spending on a real LLM session:
+
+- `ControlPlaneServer` only exists inside `conductor run` (`RunCommand.cs` constructs it) — there is
+  no standalone `--control-plane` CLI command. The fastest way to get a real one running is to copy
+  the pattern from `tests/Conductor.Tests/ControlPlaneServerTests.cs`'s `StartServer()`: construct a
+  minimal `PlanConfig` (Name/Repo/Tracker/Stages, `Repo` pointed at a scratch temp dir — never this
+  worktree, since a real session spawn would `git commit` into it), a `RunState`, a
+  `SqliteRunStore(tempDbPath, ...)`, an empty `ConcurrentQueue<ControlCommand>`, and
+  `new ControlPlaneServer(plan, state, store, inbox, NullLogger.Instance, port).Start()`. That's a
+  real `HttpListener` on a real loopback port — curl it or point `face-go --url` at it directly.
+- Seed realistic data with the store's own write methods — `InitializeRun`/`InitializeStage`/
+  `ConfirmStage`, `RecordSession`, `RecordCost`, `RecordGate`, `WriteScore`, `TrackPid`, plus
+  `store.Emit(new RunStarted{...})` / `new StageEntered{...}` / `new GateFinished{...}` for the
+  event-log-derived parts of `/state`, and a `TranscriptLog` for `/transcript/current`. Note `/state`'s
+  `Gates`/`TotalCostUsd` are folded from the **event log**, not the `gates`/`costs` SQL tables directly
+  — seeding only the SQL tables (for `/report/query`, `/sessions`, `/processes`) without matching
+  events will correctly leave `/state` showing zero cost / no gates. That's expected, not a bug.
+- Write this as a throwaway xUnit `[Fact]` in `tests/Conductor.Tests/` (reuses the project's
+  references — no new csproj needed) that starts the server, writes its port to a temp file, then
+  `await Task.Delay(...)` for long enough to drive the Go side against it. Run it with
+  `dotnet test ... --filter "FullyQualifiedName~YourTestName"` via a **background** shell command so
+  it keeps running while you build/run the Go side.
+- On the Go side, write a throwaway `_test.go` in `internal/tui/` that calls `api.NewLiveSource(url)`
+  directly (not `fakeSource`) and exercises `FetchState`/`FetchTasks`/`FetchProcesses`/
+  `FetchSessions`/`QueryReport`/`PostControl`/`PostInject` for real, then builds a real `Model`,
+  calls `Init()`, drains its returned `tea.Cmd`/`tea.BatchMsg` tree by hand for a few seconds
+  (`Init()`'s SSE subscriptions need real time to replay+deliver), and prints `stripANSI(m.View().Content)`
+  — same technique as golden rendering, just against a live source instead of `fakeSource`.
+- **Delete both scratch test files when done** — they're verification tooling, not permanent
+  coverage (unlike `golden_test.go`/`update_test.go`, which are committed).
 
 ### Key files
 | Path | Purpose |
