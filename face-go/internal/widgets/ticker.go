@@ -55,10 +55,8 @@ func RenderTicker(conn api.ConnectionState, state *api.StateDto, width int) stri
 
 	joined := strings.Join(parts, " "+dimStyle.Render("\u2502")+" ")
 
-	if len(joined) > width-2 {
-		joined = joined[:width-5] + dimStyle.Render("\u2026")
-	}
-
+	// style already carries MaxWidth(width), which truncates ANSI-safely \u2014 a manual byte-slice
+	// truncation here would cut mid-escape-sequence and corrupt the line's styling.
 	return style.Render(joined)
 }
 
@@ -92,10 +90,7 @@ func RenderFooter(width int, sidebarOpen bool) string {
 
 	joined := strings.Join(segments, dimStyle.Render("  "))
 
-	if len(joined) > width-2 {
-		joined = joined[:width-5] + dimStyle.Render("\u2026")
-	}
-
+	// style already carries MaxWidth(width), which truncates ANSI-safely.
 	return style.Render(joined)
 }
 
@@ -115,11 +110,6 @@ func RenderGateBar(gates []api.GateDto, width int) string {
 	}
 
 	joined := strings.Join(parts, dimStyle.Render(" \u00B7 "))
-	content := style.Render(joined)
-	if len(content) > width {
-		if width > 3 {
-			content = content[:width-3] + dimStyle.Render("\u2026")
-		}
-	}
-	return content
+	// style already carries MaxWidth(width), which truncates ANSI-safely.
+	return style.Render(joined)
 }

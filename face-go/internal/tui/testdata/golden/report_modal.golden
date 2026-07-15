@@ -1,0 +1,34 @@
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                 ╔══════════════════════════════════════════════════════════════════════════╗                 
+                 ║                                                                          ║                 
+                 ║  Report / Query                                                          ║                 
+                 ║                                                                          ║                 
+                 ║    Quick queries:                                                        ║                 
+                 ║       cost per stage                                                     ║                 
+                 ║       which gates fail most                                              ║                 
+                 ║       recent sessions                                                    ║                 
+                 ║       verifier scores                                                    ║                 
+                 ║                                                                          ║                 
+                 ║    SQL:                                                                  ║                 
+                 ║    SELECT stage_id, SUM(cost_usd) as cost_usd FROM costs GROUP BY        ║                 
+                 ║  stage_id_                                                               ║                 
+                 ║                                                                          ║                 
+                 ║    Results:                                                              ║                 
+                 ║    stage_id | cost_usd                                                   ║                 
+                 ║    F1 | 0.42                                                             ║                 
+                 ║    F7 | 0.08                                                             ║                 
+                 ║                                                                          ║                 
+                 ║    SELECT only. Max 500 rows.                                            ║                 
+                 ║                                                                          ║                 
+                 ║  [tab: switch focus] [↑↓: select] [enter: run] [esc: close]              ║                 
+                 ║                                                                          ║                 
+                 ╚══════════════════════════════════════════════════════════════════════════╝                 
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              
+                                                                                                              

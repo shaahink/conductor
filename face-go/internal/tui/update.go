@@ -42,6 +42,20 @@ var quickQueries = []struct {
 
 const defaultReportSQL = "SELECT stage_id, SUM(cost_usd) as cost_usd FROM costs GROUP BY stage_id"
 
+// typedChar returns the literal character a key press should insert into a text field, and
+// whether it represents one at all. Bubble Tea's Key.String() deliberately returns "space" (a
+// keybinding name, useful for chord matching like "ctrl+space") rather than a literal " " for the
+// spacebar — every plain len(key) == 1 check in this file would otherwise silently eat spaces.
+func typedChar(key string) (string, bool) {
+	if key == "space" {
+		return " ", true
+	}
+	if len(key) == 1 {
+		return key, true
+	}
+	return "", false
+}
+
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
@@ -303,8 +317,8 @@ func (m *Model) handleSearchKey(key string) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	default:
-		if len(key) == 1 {
-			m.transcript = m.transcript.Update(widgets.MsgSetSearch{Query: m.transcript.SearchQuery + key})
+		if ch, ok := typedChar(key); ok {
+			m.transcript = m.transcript.Update(widgets.MsgSetSearch{Query: m.transcript.SearchQuery + ch})
 		}
 		return m, nil
 	}
@@ -360,8 +374,8 @@ func (m *Model) handlePaletteKey(key string) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		default:
-			if len(key) == 1 {
-				m.paletteGotoInput += key
+			if ch, ok := typedChar(key); ok {
+				m.paletteGotoInput += ch
 			}
 			return m, nil
 		}
@@ -422,8 +436,8 @@ func (m *Model) handlePaletteKey(key string) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	default:
-		if len(key) == 1 {
-			m.paletteQuery += key
+		if ch, ok := typedChar(key); ok {
+			m.paletteQuery += ch
 			m.paletteSelected = 0
 		}
 		return m, nil
@@ -461,11 +475,11 @@ func (m *Model) handleInjectKey(key string) (tea.Model, tea.Cmd) {
 		m.activeModal = ModalNone
 		return m, m.cmdPostInject(req)
 	default:
-		if len(key) == 1 {
+		if ch, ok := typedChar(key); ok {
 			if m.injectField == 0 {
-				m.injectStageId += key
+				m.injectStageId += ch
 			} else {
-				m.injectContent += key
+				m.injectContent += ch
 			}
 		}
 		return m, nil
@@ -523,8 +537,8 @@ func (m *Model) handlePromptKey(key string) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	default:
-		if len(key) == 1 {
-			m.promptContent += key
+		if ch, ok := typedChar(key); ok {
+			m.promptContent += ch
 		}
 		return m, nil
 	}
@@ -583,8 +597,8 @@ func (m *Model) handleReportKey(key string) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	default:
-		if m.reportFocusQuery && len(key) == 1 {
-			m.reportSQL += key
+		if ch, ok := typedChar(key); m.reportFocusQuery && ok {
+			m.reportSQL += ch
 		}
 		return m, nil
 	}

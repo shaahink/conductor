@@ -32,7 +32,11 @@ go build -o bin/conductor-face.exe ./cmd/conductor-face/
 - **Framework:** Bubble Tea v2 (Elm Architecture) + Lip Gloss v2 (styling)
 - **Layout:** Crush-inspired — agent transcript is the primary view; sidebar (plan tree + gates) toggles with `p`; a compact inline gate bar shows when the sidebar is closed; everything else (including Processes, folded out of Ink's old always-on 3-pane tab model) is a modal overlay
 - **Data:** Same HTTP+SSE API as the Ink TUI (9 endpoints on localhost:4317), including `?since=` resume-on-reconnect for both SSE streams (server-supported, `ControlPlaneServer.Endpoints.cs` `ParseSince`)
-- **Tests:** `go test ./...` — all packages pass; `internal/tui/update_test.go` covers the control-plane wiring (palette send/confirm/goto, inject guard, report query, template read/write round-trip, processes nav, transcript search)
+- **Tests:** `go test ./...` — all packages pass; `internal/tui/update_test.go` covers the control-plane wiring (palette send/confirm/goto, inject guard, report query, template read/write round-trip, processes nav, transcript search); `internal/tui/golden_test.go` renders `View()` headlessly (no real TTY needed) against fixed demo state and diffs it against `testdata/golden/*.golden` — `go test ./internal/tui/ -run TestGolden -v` prints every frame as plain text, `-update` refreshes the goldens after an intentional layout change. Mirrors the Ink side's `face/tests/golden.test.tsx`.
+
+### Bugs the golden renders caught and fixed this session
+- `RenderTicker`/`RenderFooter`/`RenderGateBar`/`renderTranscriptLine` were truncating already-ANSI-styled strings with a raw `s[:width]` byte slice — cuts mid-escape-sequence and corrupts everything after the cut point. Fixed by using each style's existing `.MaxWidth(width)` (lipgloss already truncates ANSI-safely via `ansi.Truncate` internally) instead of hand-rolled slicing.
+- **Spaces were silently dropped from every text field app-wide** (inject content, template editor, custom SQL, transcript search, palette filter, goto stage id). Bubble Tea v2's `Key.String()` deliberately returns `"space"` (a keybinding name) for the spacebar, not a literal `" "` — every `len(key) == 1` guard excluded it. Fixed via a `typedChar()` helper used at all six text-accumulation sites in `update.go`.
 
 ### Key files
 | Path | Purpose |

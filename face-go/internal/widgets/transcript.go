@@ -233,11 +233,9 @@ func renderTranscriptLine(line api.TranscriptLineDto, width int) string {
 		style = txRawStyle
 	}
 
-	rendered := style.Render(prefix + line.Text)
-	if len(rendered) > width {
-		rendered = rendered[:width]
-	}
-	return rendered
+	// MaxWidth truncates ANSI-safely (via ansi.Truncate internally) — a manual byte-slice here
+	// would cut mid-escape-sequence and corrupt the rest of the line's styling.
+	return style.MaxWidth(width).Render(prefix + line.Text)
 }
 
 func (m TranscriptModel) findMatches(query string) []int {

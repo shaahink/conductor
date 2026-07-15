@@ -107,7 +107,7 @@ func (m Model) renderSearchBar(width int) string {
 		matchInfo = accentStyle.Render(fmt.Sprintf("%d/%d", m.transcript.SearchMatchIdx+1, len(m.transcript.SearchMatches)))
 	}
 
-	hint := "esc: clear"
+	hint := "enter: lock  ·  esc: clear"
 	if !m.searchActive {
 		hint = "n/N: next/prev  ·  esc: clear"
 	}
@@ -475,10 +475,10 @@ func (m Model) renderHelpModal() (string, string, string) {
     PgUp/Dn   Scroll page
     Home/End  Jump top/bottom
     f         Toggle tool-call folding
-    /         Search transcript (enter: lock, n/N: next/prev, esc: clear)
+    /         Search transcript (n/N: jump, esc: clear)
 
   ACTIONS
-    :         Command palette (11 verbs, destructive ones confirm, goto asks a stage id)
+    :         Command palette (destructive/goto verbs confirm first)
     i         Inject context
     e         Edit templates (reads/writes planDir on disk)
     h         Session history

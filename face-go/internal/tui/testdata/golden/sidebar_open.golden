@@ -1,0 +1,34 @@
+ ● LIVE │ conductor-foreman │ F7 Gate caching + truth gates + speed program │ CP 2/40 │ $0.42                 
+▶ PLAN                       │▸ Session #12 started · Deliver · Stage F7 · Attempt 1                          
+✓  F0 Foundations            │⁙ Let me examine the GateCache implementation...                                
+✓  F6 Ink TUI v1             │⚙ read src/Conductor/Core/Gating/GateCache.cs                                   
+●  F7 Gate caching + truth … │↳ GateCache.cs:142 lines — caches by (name, tier, sha)                          
+  ✓  F7.1 Plan import        │▸ Found the caching layer. Adding GetLastPassingGateResult to RunDb.            
+  ✓  F7.2 Re-import diff     │                                                                                
+  ●  F7.3 Truth-gate tier    │                                                                                
+○  F8 conductor chat + Tele… │                                                                                
+                             │                                                                                
+── GATES ──                  │                                                                                
+  ✓  build                   │                                                                                
+  ●  test                    │                                                                                
+  ○  lint                    │                                                                                
+                             │                                                                                
+                             │                                                                                
+                             │                                                                                
+                             │                                                                                
+                             │                                                                                
+                             │                                                                                
+                             │                                                                                
+                             │                                                                                
+                             │                                                                                
+                             │                                                                                
+                             │                                                                                
+                             │                                                                                
+                             │                                                                                
+                             │                                                                                
+                             │                                                                                
+                             │                                                                                
+                             │                                                                                
+                             │                                                                                
+                             │                                                                                
+ p close-plan  ↑↓ navigate  enter expand  : palette                                                           
