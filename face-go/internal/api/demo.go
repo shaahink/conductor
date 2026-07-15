@@ -81,6 +81,21 @@ func (s *demoSource) FetchBugs() (*BugsDto, error) {
 	return &BugsDto{Bugs: makeFakeBugs()}, nil
 }
 
+// Demo write-side knowledge: accept the write (so the tab's success toast fires) without persisting —
+// the demo's ledger/bugs are regenerated each poll, so there's nothing durable to append to.
+func (s *demoSource) PostNote(NoteRequestDto) (*KnowledgeWriteResultDto, error) {
+	return &KnowledgeWriteResultDto{Ok: true}, nil
+}
+
+func (s *demoSource) PostBug(BugNewRequestDto) (*KnowledgeWriteResultDto, error) {
+	id := int64(9)
+	return &KnowledgeWriteResultDto{Ok: true, Id: &id}, nil
+}
+
+func (s *demoSource) PostBugResolve(req BugResolveRequestDto) (*KnowledgeWriteResultDto, error) {
+	return &KnowledgeWriteResultDto{Ok: true, Id: &req.Id}, nil
+}
+
 func (s *demoSource) FetchPromptPreview(stageId, kind string) (*PromptPreviewDto, error) {
 	return &PromptPreviewDto{
 		Model: "deepseek/deepseek-v4-pro",
@@ -482,14 +497,18 @@ func (s *demoSource) runSimulation() {
 		cost := elapsed * 0.0001
 		tokIn := int64(s.tickCount * 150)
 		tokOut := int64(s.tickCount * 80)
+		tokReason := int64(s.tickCount * 40)
 		cp := (s.tickCount / 3) % 5
 		s.state.SessionElapsedSec = elapsed
 		s.state.SessionCostUsd = cost
 		s.state.SessionTokensInput = tokIn
 		s.state.SessionTokensOutput = tokOut
+		s.state.SessionTokensReasoning = tokReason
+		s.state.OverheadCostUsd = elapsed * 0.00003
 		s.state.TotalCostUsd = cost + 0.42
 		s.state.TokensInput = tokIn + 2500
 		s.state.TokensOutput = tokOut + 1800
+		s.state.TokensReasoning = tokReason + 900
 		s.state.CurrentCheckpoint = fmt.Sprintf("F7.%d", cp+1)
 		s.state.CurrentCheckpointTitle = fmt.Sprintf("F7 Checkpoint %d", cp+1)
 		s.state.DoneCount = cp

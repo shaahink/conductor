@@ -150,6 +150,53 @@ func TestInjectEmptyContentGuard(t *testing.T) {
 	}
 }
 
+func TestKnowledgeFileNote(t *testing.T) {
+	m := newTestModel()
+	m = asModel(mustHandle(m.handleKey("k")))
+	if m.tab != TabKnowledge {
+		t.Fatalf("expected Knowledge tab, got %v", m.tab)
+	}
+	m = asModel(mustHandle(m.handleKnowledgeKey("n")))
+	if m.knowledgeMode != knowledgeNote {
+		t.Fatalf("expected note-input mode, got %v", m.knowledgeMode)
+	}
+	if !m.tabHandlesAllKeys() {
+		t.Fatal("note input should capture all keys so 'k'/'b' type instead of switching tabs")
+	}
+	for _, ch := range "warm the cache first" {
+		m = asModel(mustHandle(m.handleKnowledgeKey(string(ch))))
+	}
+	tm, cmd := m.handleKnowledgeKey("enter")
+	m = asModel(tm)
+	if m.knowledgeMode != knowledgeBrowse {
+		t.Fatal("submitting should return to browse mode")
+	}
+	if cmd == nil {
+		t.Fatal("expected a post-note command")
+	}
+	if written, ok := cmd().(MsgKnowledgeWritten); !ok || written.Err != "" {
+		t.Fatalf("expected a successful note write, got %#v", cmd())
+	}
+}
+
+func TestKnowledgeResolveRejectsNonNumericId(t *testing.T) {
+	m := newTestModel()
+	m = asModel(mustHandle(m.handleKey("k")))
+	m = asModel(mustHandle(m.handleKnowledgeKey("x")))
+	for _, ch := range "nope" {
+		m = asModel(mustHandle(m.handleKnowledgeKey(string(ch))))
+	}
+	tm, cmd := m.handleKnowledgeKey("enter")
+	m = asModel(tm)
+	if cmd == nil {
+		t.Fatal("expected a toast command for the bad id")
+	}
+	// A non-numeric id must not post a resolve — it surfaces an error toast instead.
+	if _, ok := cmd().(MsgKnowledgeWritten); ok {
+		t.Fatal("a non-numeric bug id must not post a resolve")
+	}
+}
+
 func TestReportQuickQueryRuns(t *testing.T) {
 	m := newTestModel()
 	m = asModel(mustHandle(m.handleKey("r")))
@@ -165,8 +212,8 @@ func TestReportQuickQueryRuns(t *testing.T) {
 	if !m.data.ReportLoading {
 		t.Error("expected ReportLoading while the query runs")
 	}
-	if m.reportSQL != quickQueries[0].SQL {
-		t.Errorf("expected reportSQL set to the quick query, got %q", m.reportSQL)
+	if m.reportEditor.Value() != quickQueries[0].SQL {
+		t.Errorf("expected the editor set to the quick query, got %q", m.reportEditor.Value())
 	}
 	if cmd == nil {
 		t.Fatal("expected a query command")
@@ -236,8 +283,8 @@ func TestTemplateEditorReadWriteRoundTrip(t *testing.T) {
 	}
 
 	m = asModel(mustHandle(m.handleTemplatesKey("enter")))
-	if m.promptMode != PromptEdit || m.promptContent != "" {
-		t.Fatalf("expected empty edit mode, got mode=%v content=%q", m.promptMode, m.promptContent)
+	if m.promptMode != PromptEdit || m.promptEditor.Value() != "" {
+		t.Fatalf("expected empty edit mode, got mode=%v content=%q", m.promptMode, m.promptEditor.Value())
 	}
 	for _, ch := range "hello" {
 		m = asModel(mustHandle(m.handleTemplatesKey(string(ch))))

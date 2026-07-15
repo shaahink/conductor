@@ -31,4 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  p sidebar  ? help  q quit   │   ↑↓ scroll · end live-tail                         
+ : cmd  i inject  / search  p sidebar  ? help  q quit   │   ↑↓ scroll · pgup/pgdn · home/end                  

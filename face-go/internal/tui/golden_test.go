@@ -42,6 +42,16 @@ func (fakeSource) FetchSessions() (*api.SessionsDto, error)   { return nil, nil 
 func (fakeSource) FetchTimeline() (*api.TimelineDto, error)   { return nil, nil }
 func (fakeSource) FetchLedger() (*api.LedgerDto, error)       { return fixedLedger(), nil }
 func (fakeSource) FetchBugs() (*api.BugsDto, error)           { return fixedBugs(), nil }
+func (fakeSource) PostNote(api.NoteRequestDto) (*api.KnowledgeWriteResultDto, error) {
+	return &api.KnowledgeWriteResultDto{Ok: true}, nil
+}
+func (fakeSource) PostBug(api.BugNewRequestDto) (*api.KnowledgeWriteResultDto, error) {
+	id := int64(9)
+	return &api.KnowledgeWriteResultDto{Ok: true, Id: &id}, nil
+}
+func (fakeSource) PostBugResolve(api.BugResolveRequestDto) (*api.KnowledgeWriteResultDto, error) {
+	return &api.KnowledgeWriteResultDto{Ok: true}, nil
+}
 func (fakeSource) FetchPromptPreview(_, _ string) (*api.PromptPreviewDto, error) {
 	return nil, nil
 }
@@ -129,16 +139,20 @@ func fixedTelegramStatus() *api.TelegramStatusDto {
 }
 
 func fixedState() *api.StateDto {
+	persona := "architect"
 	return &api.StateDto{
 		PlanName:               "conductor-foreman",
 		Status:                 "Running",
 		StageId:                "F7",
 		StageTitle:             "Gate caching + truth gates + speed program",
+		Persona:                &persona,
 		DoneCount:              2,
 		TotalCount:             40,
 		TotalCostUsd:           0.42,
+		OverheadCostUsd:        0.02,
 		TokensInput:            2500,
 		TokensOutput:           1800,
+		TokensReasoning:        900,
 		CurrentCheckpoint:      "F7.3",
 		CurrentCheckpointTitle: "Wire caching layer",
 		RunId:                  "demo-run-id",
@@ -153,6 +167,7 @@ func fixedState() *api.StateDto {
 		SessionCostUsd:         0.12,
 		SessionTokensInput:     3400,
 		SessionTokensOutput:    1900,
+		SessionTokensReasoning: 800,
 		Stages: []api.StageDto{
 			{Id: "F0", Title: "Foundations", Done: 3, Total: 3, State: "confirmed"},
 			{Id: "F6", Title: "Ink TUI v1", Done: 5, Total: 5, State: "confirmed"},
@@ -300,6 +315,14 @@ func TestGolden(t *testing.T) {
 			m, _ = m.Update(keyMsg("e"))
 			return m
 		}},
+		{"templates_edit", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("e"))
+			m, _ = m.Update(specialKey(tea.KeyEnter)) // edit the first template (empty on disk here)
+			for _, ch := range "SESSION prompt" {
+				m, _ = m.Update(keyMsg(string(ch)))
+			}
+			return m
+		}},
 		{"sessions", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("h"))
 			return m
@@ -327,6 +350,15 @@ func TestGolden(t *testing.T) {
 		{"knowledge", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("k"))
 			m, _ = m.Update(MsgKnowledgeUpdated{Ledger: fixedLedger(), Bugs: fixedBugs()})
+			return m
+		}},
+		{"knowledge_note", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("k"))
+			m, _ = m.Update(MsgKnowledgeUpdated{Ledger: fixedLedger(), Bugs: fixedBugs()})
+			m, _ = m.Update(keyMsg("n")) // file-a-note input
+			for _, ch := range "warm the cache first" {
+				m, _ = m.Update(keyMsg(string(ch)))
+			}
 			return m
 		}},
 		{"telegram_unconfigured", func(m tea.Model) tea.Model {

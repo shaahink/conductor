@@ -7,10 +7,10 @@
  ● F7 2/5 Gate … 1× $0.30  │  10:03:55 ▸ session #11 finished: NeedsRetry  $0.18                              
    ✓ F7.1 Plan import      │  10:07:00 ⚠ needs human: verifier score 74 < 80                                  
    ✓ F7.2 Re-import diff   │  5 events · live                                                                 
-   ● F7.3 Truth-gate tier  │                                                                                  
- ○ F8 0/4 conductor chat…  │                                                                                  
-                           │                                                                                  
- ── GATES ──               │                                                                                  
+   ● F7.3 Truth-gate tier  │  ──────────────────────────────────────────────────────────────────────────────  
+ ○ F8 0/4 conductor chat…  │  ◆ stage                                                                         
+                           │  stage F7 entered                                                                
+ ── GATES ──               │  stage F7 · 10:00:00 UTC                                                         
    ✓ build                 │                                                                                  
    ● test 4s               │                                                                                  
    ○ lint                  │                                                                                  

@@ -8,15 +8,17 @@ one page; fewer clicks; transparent overlays; better colour and spacing.*
 
 ```
 ┌ Top bar ─ brand · connection · plan · stage · live cost/tokens ───────────────┐  row 0 (mantle bg)
-│ Tab strip ─ Agent Sessions Timeline Procs Console Templates Plan Report        │  row 1 (mantle bg)
+│ Tab strip ─ Agent Sessions Timeline Procs Console Templates Plan Report Knowl…  │  row 1 (mantle bg)
 │ Sidebar (always on, collapsible with p) │ Content pane (the active tab)        │  rows 2 … H-2
 │ Bottom bar ─ key hints, OR the command line (: / i / /)                         │  row H-1 (mantle bg)
 └────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 - **One page.** Everything the old build hid behind a modal is a **tab** in the content pane, one
-  keypress away (`a h t s c e g r`, or `1–8`, or `tab`/`shift+tab`). The plan **sidebar is always
-  visible** beside it (collapse with `p`). Never add a full-screen modal for a view again — add a tab.
+  keypress away. There are **ten** tabs — Agent Sessions Timeline Procs Console Templates Plan Report
+  Knowledge Telegram — reached by `a h t s c e g r k l`, or by `1`–`9`/`0`, or `tab`/`shift+tab`. The
+  plan **sidebar is always visible** beside it (collapse with `p`). Never add a full-screen modal for
+  a view again — add a tab (and extend `tabNames`/`tabKey`, both length `tabCount`).
 - **One file per tab.** Each tab's key handler + renderer live together in `tab_<name>.go` (the plan
   editor in `plan.go`); the palette/inject/search/help layer is `cmdbar.go`; `view.go` only assembles
   the frame; `update.go` is only the message loop + global routing. Add a tab by creating its
@@ -43,8 +45,13 @@ one page; fewer clicks; transparent overlays; better colour and spacing.*
 
 ## Keys — direct, few clicks
 
-- `a h t s c e g r` jump straight to a tab; `1–8` and `tab`/`shift+tab` also switch. `esc` from any
-  browse pane returns to Agent.
+- `a h t s c e g r k l` jump straight to a tab; `1`–`9`/`0` and `tab`/`shift+tab` also switch. `esc`
+  from any browse pane returns to Agent.
+- **Text entry uses one editor, not append-only strings.** `widgets.TextArea` (real caret:
+  left/right/up/down, home/end, insert/delete mid-string, pgup/pgdn) backs the template editor and the
+  report SQL box; short single-line fields (goto, inject, plan/telegram field edits, knowledge
+  note/bug) may still use the light `typedChar` append path, but anything multi-line or long-lived
+  should use `TextArea` so a typo in the middle is fixable.
 - A tab that is *editing text or in an interactive sub-state* owns every key
   (`tabHandlesAllKeys`); otherwise the dashboard globals (`:` `i` `/` `p` `?` `q`, tab switches) win.
   Plan sub-sections switch with `←/→` (so `tab` stays free for main tabs).

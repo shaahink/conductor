@@ -155,6 +155,77 @@ public sealed class ControlPlaneServerTests : IDisposable
         finally { server.Dispose(); }
     }
 
+    private async Task<HttpResponseMessage> PostJson(int port, string path, string json)
+    {
+        using var content = new StringContent(json, Encoding.UTF8, "application/json");
+        return await _http.PostAsync($"http://127.0.0.1:{port}{path}", content);
+    }
+
+    [Fact]
+    public async Task PostNote_WritesLedgerRowTheBatteriesConsume()
+    {
+        _store.InitializeRun(RunId, "cps-test", _dir, null, null); // create the run row (ledger FKs to it)
+        var (server, port) = StartServer();
+        try
+        {
+            var resp = await PostJson(port, "/note", """{"content":"warm the cache","kind":"trap","stageId":"S1"}""");
+            Assert.Equal(HttpStatusCode.Accepted, resp.StatusCode);
+            var rows = _store.QueryLedger(RunId);
+            Assert.Contains(rows, r => r.Content == "warm the cache" && r.Kind == "trap" && r.StageId == "S1");
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task PostNote_EmptyContent_Returns400NotAWrite()
+    {
+        var (server, port) = StartServer();
+        try
+        {
+            var resp = await PostJson(port, "/note", """{"content":"   "}""");
+            Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            Assert.False(doc.RootElement.GetProperty("ok").GetBoolean());
+            Assert.Empty(_store.QueryLedger(RunId));
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task PostBug_ThenResolve_MovesItOutOfOpen()
+    {
+        _store.InitializeRun(RunId, "cps-test", _dir, null, null); // create the run row (bugs FKs to it)
+        var (server, port) = StartServer();
+        try
+        {
+            var create = await PostJson(port, "/bug", """{"title":"double-count cost","severity":"high","stageId":"S1"}""");
+            Assert.Equal(HttpStatusCode.Accepted, create.StatusCode);
+            using var cdoc = JsonDocument.Parse(await create.Content.ReadAsStringAsync());
+            var id = cdoc.RootElement.GetProperty("id").GetInt64();
+            Assert.True(id > 0);
+            Assert.Contains(_store.QueryBugs(RunId, "open"), b => b.Id == id && b.Severity == "high");
+
+            var resolve = await PostJson(port, "/bug/resolve", "{\"id\":" + id + "}");
+            Assert.Equal(HttpStatusCode.Accepted, resolve.StatusCode);
+            Assert.DoesNotContain(_store.QueryBugs(RunId, "open"), b => b.Id == id);
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task PostBugResolve_UnknownId_Returns400()
+    {
+        var (server, port) = StartServer();
+        try
+        {
+            var resp = await PostJson(port, "/bug/resolve", "{\"id\":99999}");
+            Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            Assert.False(doc.RootElement.GetProperty("ok").GetBoolean());
+        }
+        finally { server.Dispose(); }
+    }
+
     [Fact]
     public async Task GetTimeline_FoldsSessionGateAndAttentionEvents()
     {

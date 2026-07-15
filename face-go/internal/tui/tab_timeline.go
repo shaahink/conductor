@@ -9,6 +9,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"conductor-face-go/internal/api"
+	"conductor-face-go/internal/widgets"
 )
 
 func (m Model) handleTimelineKey(key string) (tea.Model, tea.Cmd) {
@@ -40,7 +41,12 @@ func (m Model) renderTimelinePane() (string, string) {
 	if len(m.timelineEntries) == 0 {
 		return subtleStyle.Render("(no events on the run's spine yet)"), "r refresh"
 	}
-	window := m.paneRows()
+	// Reserve the bottom of the pane for the selected entry's detail (full description + meta).
+	detail := m.timelineDetail()
+	window := m.paneRows() - lipgloss.Height(detail) - 1
+	if window < 3 {
+		window = 3
+	}
 	start := 0
 	if m.timelineSelected >= window {
 		start = m.timelineSelected - window + 1
@@ -66,7 +72,37 @@ func (m Model) renderTimelinePane() (string, string) {
 		lines = append(lines, line)
 	}
 	live := subtleStyle.Render(fmt.Sprintf("%d events · live", len(m.timelineEntries)))
-	return strings.Join(lines, "\n") + "\n" + live, "↑↓ navigate · r refresh"
+	return strings.Join(lines, "\n") + "\n" + live + "\n" + detail, "↑↓ navigate · r refresh"
+}
+
+// timelineDetail renders the selected entry in full — the row truncates the description, so drilling
+// in shows the whole thing plus stage/session/outcome/cost/time that don't fit on one row.
+func (m Model) timelineDetail() string {
+	if m.timelineSelected >= len(m.timelineEntries) {
+		return ""
+	}
+	e := m.timelineEntries[m.timelineSelected]
+	glyph, gs := timelineGlyph(e)
+	rule := lipgloss.NewStyle().Foreground(widgets.Surface()).Render(strings.Repeat("─", max(1, m.paneCols())))
+
+	var meta []string
+	if e.StageId != nil && *e.StageId != "" {
+		meta = append(meta, "stage "+*e.StageId)
+	}
+	if e.SessionNumber != nil {
+		meta = append(meta, fmt.Sprintf("session #%d", *e.SessionNumber))
+	}
+	if e.Outcome != nil && *e.Outcome != "" {
+		meta = append(meta, "outcome "+*e.Outcome)
+	}
+	if e.CostUsd != nil && *e.CostUsd > 0 {
+		meta = append(meta, fmt.Sprintf("$%.2f", *e.CostUsd))
+	}
+	meta = append(meta, timelineClock(e.Utc)+" UTC")
+
+	title := gs.Render(glyph+" ") + accentStyle.Render(e.Kind)
+	desc := lipgloss.NewStyle().MaxWidth(m.paneCols()).Render(textStyle.Render(e.Description))
+	return rule + "\n" + title + "\n" + desc + "\n" + subtleStyle.Render(strings.Join(meta, " · "))
 }
 
 func timelineGlyph(e api.TimelineEntryDto) (string, lipgloss.Style) {

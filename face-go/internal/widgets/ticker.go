@@ -73,13 +73,21 @@ func RenderTopBar(conn api.ConnectionState, state *api.StateDto, width, spinnerF
 				lipgloss.NewStyle().Foreground(colPeach).Render(fmt.Sprintf("$%.2f", state.SessionCostUsd)) + " " +
 				dimStyle.Render(FmtWall(state.SessionElapsedSec))
 			if width >= 130 {
-				seg += " " + dimStyle.Render(FmtTokens(state.SessionTokensInput)+"/"+FmtTokens(state.SessionTokensOutput))
+				toks := FmtTokens(state.SessionTokensInput) + "/" + FmtTokens(state.SessionTokensOutput)
+				if state.SessionTokensReasoning > 0 {
+					toks += " +" + FmtTokens(state.SessionTokensReasoning) + "r" // reasoning tokens
+				}
+				seg += " " + dimStyle.Render(toks)
 			}
 			parts = append(parts, seg)
 		}
 		if width >= 96 {
 			parts = append(parts, dimStyle.Render(fmt.Sprintf("cp %d/%d", state.DoneCount, state.TotalCount)))
-			parts = append(parts, dimStyle.Render("run ")+lipgloss.NewStyle().Foreground(colPeach).Bold(true).Render(fmt.Sprintf("$%.2f", state.TotalCostUsd)))
+			run := dimStyle.Render("run ") + lipgloss.NewStyle().Foreground(colPeach).Bold(true).Render(fmt.Sprintf("$%.2f", state.TotalCostUsd))
+			if width >= 140 && state.OverheadCostUsd > 0 {
+				run += dimStyle.Render(fmt.Sprintf(" +$%.2f oh", state.OverheadCostUsd)) // gate/overhead cost
+			}
+			parts = append(parts, run)
 		}
 	} else if conn.Mode == api.ModeLive {
 		parts = append(parts, dimStyle.Render("waiting for a run at "+conn.URL))

@@ -1,15 +1,15 @@
  ◆ conductor  ● LIVE  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42                 
   a Agent   h Sessions   t Timeline   s Procs   c Console   e Templates   g Plan   r Report   k Knowledge   l 
                            │                                                                                  
- ▶ PLAN                    │   Stages · Gates · Settings · Import    conductor-foreman · v7                   
- ✓ F0 3/3 Foundations      │                                                                                  
- ✓ F6 5/5 Ink TUI v1       │    name             conductor-foreman                                            
- ● F7 2/5 Gate … 1× $0.30  │    gatePolicy       perPhase                                                     
-   ✓ F7.1 Plan import      │    defaultWorkflow  deliver-verify                                               
-   ✓ F7.2 Re-import diff   │                                                                                  
-   ● F7.3 Truth-gate tier  │    plan file: C:\Code\conductor\plans\conductor-foreman.plan.json                
- ○ F8 0/4 conductor chat…  │                                                                                  
-                           │                                                                                  
+ ▶ PLAN                    │  ◆ Open bugs (2)                                                                 
+ ✓ F0 3/3 Foundations      │    #3 (medium) [F7] console SSE resets line counter on new session log           
+ ✓ F6 5/5 Ink TUI v1       │       since=0 reset re-replays the whole log                                     
+ ● F7 2/5 Gate … 1× $0.30  │    #2 (high) [F7] verifier double-counts session cost on resume                  
+   ✓ F7.1 Plan import      │                                                                                  
+   ✓ F7.2 Re-import diff   │  ◆ Knowledge ledger (2)                                                          
+   ● F7.3 Truth-gate tier  │    [finding] GateCache keys by (name, tier, sha) — join attempts for… (s12/F7)   
+ ○ F8 0/4 conductor chat…  │    [trap] Never Stop-Process dotnet by name — use conductor bg stop … (s11/F7)   
+                           │  note› warm the cache first                                                      
  ── GATES ──               │                                                                                  
    ✓ build                 │                                                                                  
    ● test 4s               │                                                                                  
@@ -31,4 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  p sidebar  ? help  q quit   │   ←→ section · ↑↓ select · enter edit · esc back    
+ : cmd  i inject  / search  p sidebar  ? help  q quit   │   type · enter submit · esc cancel                  

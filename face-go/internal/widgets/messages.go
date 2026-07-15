@@ -9,6 +9,7 @@ const (
 	MsgScrollPageUp
 	MsgScrollPageDown
 	MsgToggleFold
+	MsgToggleThinking
 	MsgNextMatch
 	MsgPrevMatch
 )

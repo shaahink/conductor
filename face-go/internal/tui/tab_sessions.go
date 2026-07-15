@@ -5,7 +5,35 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
+
+// sessionOutcomeStyle colours a session outcome against the engine's real outcome vocabulary
+// (RunLoop verdicts). Normalised so "NeedsHuman", "needs-human", "needshuman" all match — the old
+// map missed AgentError/TimedOut/NeedsHuman/RolledOver, so an error session rendered plain grey.
+func sessionOutcomeStyle(outcome string) lipgloss.Style {
+	norm := strings.Map(func(r rune) rune {
+		if r >= 'a' && r <= 'z' {
+			return r
+		}
+		if r >= 'A' && r <= 'Z' {
+			return r + 32
+		}
+		return -1 // drop digits, spaces, dashes
+	}, outcome)
+	switch norm {
+	case "advanced", "progress", "completed", "confirmed", "done":
+		return safeStyle // green — real forward motion
+	case "needshuman":
+		return peachStyle // attention — the run parked for a human
+	case "limitbackoff", "rolledover", "backoff", "ratelimited":
+		return warnStyle // transient — no attempt burned, the loop retries itself
+	case "gatesred", "stalled", "timedout", "agenterror", "noprogress", "needsretry", "failed", "error", "interrupted":
+		return destructStyle // red — a failure the loop had to react to
+	default:
+		return subtleStyle
+	}
+}
 
 func (m Model) handleSessionsKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
@@ -32,14 +60,7 @@ func (m Model) renderSessionsPane() (string, string) {
 		outcome, oStyle := "running", warnStyle
 		if s.Outcome != nil {
 			outcome = *s.Outcome
-			switch strings.ToLower(outcome) {
-			case "completed", "advanced", "progress":
-				oStyle = safeStyle
-			case "needsretry", "gatesred", "stalled", "noprogress", "interrupted":
-				oStyle = destructStyle
-			default:
-				oStyle = subtleStyle
-			}
+			oStyle = sessionOutcomeStyle(outcome)
 		}
 		// Pad each cell as plain text first, then colour — ANSI-safe alignment (STYLE.md).
 		num := fmt.Sprintf("#%-3d", s.Number)

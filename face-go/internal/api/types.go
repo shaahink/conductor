@@ -12,6 +12,12 @@ type DataSource interface {
 	FetchTimeline() (*TimelineDto, error)
 	FetchLedger() (*LedgerDto, error)
 	FetchBugs() (*BugsDto, error)
+
+	// Write-side knowledge: file a note/bug and resolve a bug from the Face (POST /note, /bug,
+	// /bug/resolve) — the same run.db rows the CLI `note`/`bug` verbs write.
+	PostNote(req NoteRequestDto) (*KnowledgeWriteResultDto, error)
+	PostBug(req BugNewRequestDto) (*KnowledgeWriteResultDto, error)
+	PostBugResolve(req BugResolveRequestDto) (*KnowledgeWriteResultDto, error)
 	FetchPromptPreview(stageId, kind string) (*PromptPreviewDto, error)
 	QueryReport(sql string) (*QueryResultDto, error)
 	PostControl(cmd ControlRequestDto) (*ControlAcceptedDto, error)
@@ -210,6 +216,31 @@ type BugDto struct {
 
 type BugsDto struct {
 	Bugs []BugDto `json:"bugs"`
+}
+
+// Write-side knowledge DTOs (mirror Core/Http/ControlPlaneDto.KnowledgeWrite.cs).
+type NoteRequestDto struct {
+	Content string `json:"content"`
+	StageId string `json:"stageId,omitempty"`
+	Kind    string `json:"kind,omitempty"`
+}
+
+type BugNewRequestDto struct {
+	Title    string `json:"title"`
+	Detail   string `json:"detail,omitempty"`
+	Severity string `json:"severity,omitempty"`
+	StageId  string `json:"stageId,omitempty"`
+}
+
+type BugResolveRequestDto struct {
+	Id     int64  `json:"id"`
+	Status string `json:"status,omitempty"`
+}
+
+type KnowledgeWriteResultDto struct {
+	Ok    bool    `json:"ok"`
+	Id    *int64  `json:"id"`
+	Error *string `json:"error"`
 }
 
 // PromptPreviewDto mirrors the C# record (GET /prompt/preview?stage=&kind=): the exact compiled

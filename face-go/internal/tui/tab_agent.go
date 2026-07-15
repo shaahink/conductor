@@ -11,6 +11,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	"conductor-face-go/internal/api"
 	"conductor-face-go/internal/widgets"
 )
 
@@ -28,6 +29,8 @@ func (m Model) handleAgentKey(key string) (tea.Model, tea.Cmd) {
 		m.transcript = m.transcript.Update(widgets.MsgScrollEnd)
 	case "f":
 		m.transcript = m.transcript.Update(widgets.MsgToggleFold)
+	case "T":
+		m.transcript = m.transcript.Update(widgets.MsgToggleThinking)
 	case "n":
 		if m.transcript.SearchQuery != "" {
 			m.transcript = m.transcript.Update(widgets.MsgNextMatch)
@@ -41,7 +44,7 @@ func (m Model) handleAgentKey(key string) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) renderAgentPane() (string, string) {
-	help := "↑↓ scroll · f fold · / search · end live-tail"
+	help := "↑↓ scroll · f fold · T thinking · / search · end live-tail"
 	if m.data.Plan == nil {
 		return m.renderSplash(), help
 	}
@@ -63,9 +66,13 @@ func (m Model) renderAgentStrip() string {
 	// Line 1 — session · checkpoint, elapsed pinned right. (Run status lives in the top bar.)
 	var segs []string
 	if s.SessionNumber > 0 {
-		segs = append(segs, accentStyle.Render("s"+fmt.Sprint(s.SessionNumber))+" "+
-			textStyle.Render(s.SessionKind)+
-			subtleStyle.Render(fmt.Sprintf(" · attempt %d/%d", s.Attempt, s.MaxAttempts)))
+		seg := accentStyle.Render("s"+fmt.Sprint(s.SessionNumber)) + " " +
+			textStyle.Render(s.SessionKind) +
+			subtleStyle.Render(fmt.Sprintf(" · attempt %d/%d", s.Attempt, s.MaxAttempts))
+		if s.Persona != nil && *s.Persona != "" {
+			seg += subtleStyle.Render(" · ") + tealStyle.Render(*s.Persona)
+		}
+		segs = append(segs, seg)
 	}
 	if s.CurrentCheckpoint != "" {
 		segs = append(segs, accentStyle.Render("◆ "+s.CurrentCheckpoint)+" "+subtleStyle.Render(truncate(s.CurrentCheckpointTitle, 32)))
@@ -87,6 +94,12 @@ func (m Model) renderAgentStrip() string {
 	if reason := attentionReason(s.Status, s.AttentionReason); reason != "" {
 		banner := destructStyle.Bold(true).Render("⚠ needs human — ") + warnStyle.Render(truncate(reason, w-16))
 		rows = append(rows, banner)
+	}
+
+	// Live mode only: if the poll/stream has dropped, say so loudly — the strip below is last-known
+	// state, not "what's happening now". (Demo mode is always "connected".)
+	if m.data.Connection.Mode == api.ModeLive && !m.data.Connection.Connected {
+		rows = append(rows, peachStyle.Bold(true).Render("● disconnected")+subtleStyle.Render(" — showing last-known state; retrying…"))
 	}
 
 	rule := lipgloss.NewStyle().Foreground(widgets.Surface()).Render(strings.Repeat("─", max(1, w)))

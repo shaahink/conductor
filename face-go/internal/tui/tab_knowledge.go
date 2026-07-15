@@ -2,19 +2,43 @@ package tui
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+
+	"conductor-face-go/internal/api"
+	"conductor-face-go/internal/widgets"
+)
+
+type knowledgeInputMode int
+
+const (
+	knowledgeBrowse knowledgeInputMode = iota
+	knowledgeNote
+	knowledgeBug
+	knowledgeResolve
 )
 
 // The Knowledge tab (M7): the run's memory made visible — OPEN tracked bugs on top, the knowledge
 // ledger below. These are the same run.db rows the engine injects into the next session's prompt, so
-// the owner can see exactly what the next agent will be told not to re-discover or re-find.
+// the owner can see exactly what the next agent will be told not to re-discover or re-find. Write
+// side (n/b/x): file a note, file a bug, or resolve one — captured while watching, so it compounds
+// into the next prompt without dropping to a second terminal.
 func (m Model) handleKnowledgeKey(key string) (tea.Model, tea.Cmd) {
+	if m.knowledgeMode != knowledgeBrowse {
+		return m.handleKnowledgeInput(key)
+	}
 	switch key {
 	case "r":
 		return m, m.cmdFetchKnowledge()
+	case "n":
+		return m.beginKnowledgeInput(knowledgeNote), nil
+	case "b":
+		return m.beginKnowledgeInput(knowledgeBug), nil
+	case "x":
+		return m.beginKnowledgeInput(knowledgeResolve), nil
 	case "up":
 		if m.knowledgeScroll > 0 {
 			m.knowledgeScroll--
@@ -23,6 +47,43 @@ func (m Model) handleKnowledgeKey(key string) (tea.Model, tea.Cmd) {
 		m.knowledgeScroll++ // renderer clamps to the content height
 	}
 	return m, nil
+}
+
+func (m Model) beginKnowledgeInput(mode knowledgeInputMode) Model {
+	m.knowledgeMode = mode
+	m.knowledgeInput = widgets.NewTextArea("", max(10, m.paneCols()-16), 1)
+	return m
+}
+
+func (m Model) handleKnowledgeInput(key string) (tea.Model, tea.Cmd) {
+	switch key {
+	case "esc":
+		m.knowledgeMode = knowledgeBrowse
+		return m, nil
+	case "enter":
+		val := strings.TrimSpace(m.knowledgeInput.Value())
+		mode := m.knowledgeMode
+		m.knowledgeMode = knowledgeBrowse
+		if val == "" {
+			return m, nil
+		}
+		switch mode {
+		case knowledgeNote:
+			return m, m.cmdPostNote(api.NoteRequestDto{Content: val, StageId: m.currentStageId(), Kind: "note"})
+		case knowledgeBug:
+			return m, m.cmdPostBug(api.BugNewRequestDto{Title: val, StageId: m.currentStageId(), Severity: "medium"})
+		case knowledgeResolve:
+			id, err := strconv.ParseInt(val, 10, 64)
+			if err != nil {
+				return m, m.addToast("not a bug id: "+val, widgets.ToastError)
+			}
+			return m, m.cmdPostBugResolve(api.BugResolveRequestDto{Id: id})
+		}
+		return m, nil
+	default:
+		m.knowledgeInput = m.knowledgeInput.Update(key)
+		return m, nil
+	}
 }
 
 func (m Model) renderKnowledgePane() (string, string) {
@@ -46,7 +107,20 @@ func (m Model) renderKnowledgePane() (string, string) {
 	}
 
 	shown := strings.Join(lines[scroll:end], "\n")
-	help := fmt.Sprintf("%d bugs · %d ledger · ↑↓ scroll · r refresh", len(m.data.Bugs), len(m.data.Ledger))
+
+	if m.knowledgeMode != knowledgeBrowse {
+		labels := map[knowledgeInputMode]string{
+			knowledgeNote:    "note",
+			knowledgeBug:     "bug title",
+			knowledgeResolve: "resolve bug #",
+		}
+		ed := m.knowledgeInput
+		ed.SetSize(max(10, m.paneCols()-16), 1)
+		input := "\n" + accentStyle.Render(labels[m.knowledgeMode]+"› ") + ed.View()
+		return shown + input, "type · enter submit · esc cancel"
+	}
+
+	help := fmt.Sprintf("%d bugs · %d ledger · n note · b bug · x resolve · ↑↓ scroll · r refresh", len(m.data.Bugs), len(m.data.Ledger))
 	return shown, help
 }
 

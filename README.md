@@ -164,8 +164,8 @@ conductor run -p <plan> --control-plane [--control-plane-port <n>]
 ```
 
 The Face is **`face-go`** (Go + Bubble Tea) — a single ~22MB binary, no runtime dependency,
-~5ms startup, wired to the same 9 HTTP+SSE endpoints. `conductor run` spawns it automatically;
-`conductor face` attaches a second one to a live run.
+~5ms startup, wired to the control plane's HTTP+SSE endpoints. `conductor run` spawns it
+automatically; `conductor face` attaches a second one to a live run.
 
 - **`face-go`** (Go + Bubble Tea)
   ```powershell
@@ -178,11 +178,14 @@ The Face is **`face-go`** (Go + Bubble Tea) — a single ~22MB binary, no runtim
 > The original TypeScript + Ink face (`face/`) was retired in M7 once `face-go` reached
 > day-to-day usability. Its history is in git.
 
-`face-go`: `:` command palette (pause/resume/abort/kill/skip/goto/…, destructive verbs confirm
-first) · `p` plan sidebar · `i` inject a note for the next session · `e` edit prompt/persona
-templates (writes straight to the plan dir) · `h` session history · `r` report/query console
-(ad-hoc SQL against run.db) · `k` knowledge (ledger + tracked bugs) · `s` supervised-processes
-view · `/` inline transcript search — press `?` for the authoritative, up-to-date list.
+`face-go` (ten tabs, `a h t s c e g r k l` / `1`–`9`/`0`): `:` command palette
+(pause/resume/abort/kill/skip/goto/…, destructive verbs confirm first) · `p` plan sidebar (self-scrolls
+to the active stage) · `i` inject a note for the next session · `e` templates — edit prompt/persona
+files (full cursor editor) and preview the compiled prompt per session kind · `h` session history ·
+`t` timeline (drill into any event) · `r` report/query console (ad-hoc SQL against run.db, history +
+wide-table scroll) · `k` knowledge — ledger + tracked bugs, and file a note / file a bug / resolve one
+in place (`n`/`b`/`x`) · `l` Telegram guided setup · `s` supervised-processes view · `/` inline
+transcript search · `T` fold thinking — press `?` for the authoritative, up-to-date list.
 
 ## AFK awareness
 

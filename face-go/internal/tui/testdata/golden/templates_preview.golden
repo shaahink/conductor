@@ -2,18 +2,18 @@
   a Agent   h Sessions   t Timeline   s Procs   c Console   e Templates   g Plan   r Report   k Knowledge   l 
                            │                                                                                  
  ▶ PLAN                    │  • session.md              │ compiled · stage F7                                 
- ✓ F0 3/3 Foundations      │  ○ fix.md                                                                        
- ✓ F6 5/5 Ink TUI v1       │  ○ resume.md                 model deepseek/deepseek-v4-pro · kind Deliver       
- ● F7 2/5 Gate … 1× $0.30  │  ○ advisor.md                                                                    
-   ✓ F7.1 Plan import      │  ○ audit.md                  # Deliver session — stage F7                        
-   ✓ F7.2 Re-import diff   │  ○ review.md                                                                     
-   ● F7.3 Truth-gate tier  │  ○ verify.md                 You are the conductor's delivery agent. Land the    
- ○ F8 0/4 conductor chat…  │                              checkpoints for stage F7.                           
-                           │                                                                                  
- ── GATES ──               │                              ## Tools                                            
-   ✓ build                 │                              conductor note / bg / task --done <id> --           
-   ● test 4s               │                              evidence <path>                                     
-   ○ lint                  │                                                                                  
+ ✓ F0 3/3 Foundations      │  ○ fix.md                    kind ‹  Deliver  Fix Resume Audit Review ›          
+ ✓ F6 5/5 Ink TUI v1       │  ○ resume.md                                                                     
+ ● F7 2/5 Gate … 1× $0.30  │  ○ advisor.md                model deepseek/deepseek-v4-pro · kind Deliver       
+   ✓ F7.1 Plan import      │  ○ audit.md                                                                      
+   ✓ F7.2 Re-import diff   │  ○ review.md                 # Deliver session — stage F7                        
+   ● F7.3 Truth-gate tier  │  ○ verify.md                                                                     
+ ○ F8 0/4 conductor chat…  │                              You are the conductor's delivery agent. Land the    
+                           │                              checkpoints for stage F7.                           
+ ── GATES ──               │                                                                                  
+   ✓ build                 │                              ## Tools                                            
+   ● test 4s               │                              conductor note / bg / task --done <id> --           
+   ○ lint                  │                              evidence <path>                                     
                            │                                                                                  
  ── TASKS ──               │                                                                                  
    ✓ Add truth-tier con…   │                                                                                  
@@ -31,4 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  p sidebar  ? help  q quit   │   ↑↓ select · enter edit · v preview                
+ : cmd  i inject  / search  p sidebar  ? help  q quit   │   ←→ kind · v/esc close                             

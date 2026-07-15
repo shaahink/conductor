@@ -34,9 +34,10 @@ func TestPlanEditStageEnumFieldRoundTrips(t *testing.T) {
 	m, src := openPlanEditor(t)
 	firstStage := m.plan.Stages[0].Id
 
-	// Drill into the first stage's fields, move to "kind" (index 3), begin editing.
+	// Drill into the first stage's fields, move to "kind" (title,model,persona,workflow,kind → index
+	// 4), begin editing.
 	m = drive(m, "enter")
-	for range 3 {
+	for range 4 {
 		m = drive(m, "down")
 	}
 	if got := m.currentField().Field; got != "kind" {

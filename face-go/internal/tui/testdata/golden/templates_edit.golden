@@ -1,13 +1,13 @@
  ◆ conductor  ● LIVE  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42                 
   a Agent   h Sessions   t Timeline   s Procs   c Console   e Templates   g Plan   r Report   k Knowledge   l 
                            │                                                                                  
- ▶ PLAN                    │   Stages · Gates · Settings · Import    conductor-foreman · v7                   
- ✓ F0 3/3 Foundations      │                                                                                  
- ✓ F6 5/5 Ink TUI v1       │    name             conductor-foreman                                            
- ● F7 2/5 Gate … 1× $0.30  │    gatePolicy       perPhase                                                     
-   ✓ F7.1 Plan import      │    defaultWorkflow  deliver-verify                                               
-   ✓ F7.2 Re-import diff   │                                                                                  
-   ● F7.3 Truth-gate tier  │    plan file: C:\Code\conductor\plans\conductor-foreman.plan.json                
+ ▶ PLAN                    │  • session.md              │ editing session.md                                  
+ ✓ F0 3/3 Foundations      │  ○ fix.md                                                                        
+ ✓ F6 5/5 Ink TUI v1       │  ○ resume.md                 SESSION prompt                                      
+ ● F7 2/5 Gate … 1× $0.30  │  ○ advisor.md                                                                    
+   ✓ F7.1 Plan import      │  ○ audit.md                                                                      
+   ✓ F7.2 Re-import diff   │  ○ review.md                                                                     
+   ● F7.3 Truth-gate tier  │  ○ verify.md                                                                     
  ○ F8 0/4 conductor chat…  │                                                                                  
                            │                                                                                  
  ── GATES ──               │                                                                                  
@@ -31,4 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  p sidebar  ? help  q quit   │   ←→ section · ↑↓ select · enter edit · esc back    
+ : cmd  i inject  / search  p sidebar  ? help  q quit   │   ctrl+s save · esc back · ←→↑↓ move · home/end     

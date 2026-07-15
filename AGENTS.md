@@ -31,6 +31,27 @@ TUI at `face/`.
 - **Operating Conductor as an agent:** `docs/OPERATING-CONDUCTOR.md` is the control guide — commands,
   live-run steering, HTTP control plane, NEEDS-HUMAN handling, safety rules, and the known-gaps list.
 
+## Resume here (face-go UX pass — gaps review closed, 2026-07-15)
+A review of the Go face against STYLE.md + the docs found ~20 gaps/glitches; this pass attacked them.
+**Face (Go):** finished the sessions outcome→colour map (AgentError/TimedOut/NeedsHuman were grey);
+added `widgets.TextArea` — a real cursor editor (insert/delete mid-string, arrows, home/end, pgup/pgdn)
+now backing the **template editor** and **report SQL**; sidebar self-scrolls to the active stage on a
+tall plan; timeline drills into the selected event; a `● disconnected` banner shows in the Agent pane
+when a live poll drops; top bar shows reasoning tokens + overhead cost, agent strip shows the stage
+**persona**; plan editor gained a **persona** field, plan **name**, and a **✎ custom** model option
+(model is no longer limited to 5 hard-coded ids); template preview has a **kind picker**
+(Deliver/Fix/Resume/Audit/Review); `T` folds thinking; console has pgup/pgdn/home; report has query
+history + wide-table horizontal scroll; `0` reaches the 10th tab. **Backend (C#):** `POST /note`,
+`/bug`, `/bug/resolve` (ControlPlaneServer.Knowledge.cs + KnowledgeWrite/Bugs DTOs) so the Knowledge
+tab files a note / files a bug / resolves one (`n`/`b`/`x`) instead of being read-only —
+`_store.WriteLedger`/`WriteBug`/`UpdateBugStatus`, verified live against a running control plane.
+**Deferred (with reason):** add/delete stage-or-gate (needs a new plan-mutation surface), `heartbeat`
+in the palette (no control-plane verb exists — would need a new `ControlAction` + run-loop wiring),
+process-kill from the Procs tab (needs a supervisor kill API), tab-mnemonic relabel (churns keybindings
++ every golden). **Gates:** face-go build+vet green, all Go tests green (+ new editor + knowledge-write
+tests, 2 new goldens); C# suite **708 green** (+4 control-plane contract tests), ratchet green.
+Commit: see `feat/foreman`.
+
 ## Resume here (Maestro M9 complete — plan CLOSED, 30/30, 2026-07-15)
 **M9 (dogfood close) is DONE, 2/2 — 30/30 checkpoints. The Maestro plan is feature-complete and
 release-clean.** M9 was run by dogfooding the engine on itself: a real `conductor run` of a toy plan

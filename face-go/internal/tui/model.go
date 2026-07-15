@@ -113,11 +113,12 @@ type Model struct {
 	// Templates tab (list + editor + compiled preview)
 	promptEntries    []templates.Entry
 	promptSelected   int
-	promptContent    string
+	promptEditor     widgets.TextArea
 	promptMode       PromptMode
 	promptPreview    *api.PromptPreviewDto
 	promptPreviewOn  bool
 	promptPreviewErr string
+	promptPreviewKind int // index into previewKinds — which session kind's compiled prompt to show
 
 	// Timeline tab
 	timelineEntries  []api.TimelineEntryDto
@@ -129,15 +130,19 @@ type Model struct {
 	sessionSelected int
 
 	// Report tab
-	reportSQL           string
+	reportEditor        widgets.TextArea
 	reportQuickSelected int
 	reportFocusQuery    bool
+	reportHScroll       int      // horizontal scroll (steps) for wide result tables
+	reportHistory       []string // recently-run queries, most-recent-first
 
 	// Processes tab
 	processSelected int
 
-	// Knowledge tab (M7: ledger + tracked bugs)
+	// Knowledge tab (M7: ledger + tracked bugs; write-side: file note/bug, resolve bug)
 	knowledgeScroll int
+	knowledgeMode   knowledgeInputMode // browse, or entering a note / bug title / bug id to resolve
+	knowledgeInput  widgets.TextArea
 
 	// Plan tab (M6.3 editor)
 	plan             *api.PlanDto
@@ -149,6 +154,7 @@ type Model struct {
 	planEditing      bool
 	planEditBuf      string
 	planEnumIdx      int
+	planEnumCustom   bool // an enum field's "✎ custom…" option is selected → free-text sub-entry
 	planStatus       string
 	planImportInput  string
 	planImportResult *api.PlanImportResultDto

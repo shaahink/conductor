@@ -139,6 +139,29 @@ func (s *liveSource) FetchBugs() (*BugsDto, error) {
 	return &bugs, nil
 }
 
+func (s *liveSource) PostNote(req NoteRequestDto) (*KnowledgeWriteResultDto, error) {
+	return s.postKnowledge("/note", req)
+}
+
+func (s *liveSource) PostBug(req BugNewRequestDto) (*KnowledgeWriteResultDto, error) {
+	return s.postKnowledge("/bug", req)
+}
+
+func (s *liveSource) PostBugResolve(req BugResolveRequestDto) (*KnowledgeWriteResultDto, error) {
+	return s.postKnowledge("/bug/resolve", req)
+}
+
+// postKnowledge posts a write-side knowledge request. A rejected write answers 400 with a structured
+// {ok:false,error:…} body (empty content, unknown bug), so decode it like the plan endpoints rather
+// than surfacing a raw HTTP error — the tab shows the engine's reason.
+func (s *liveSource) postKnowledge(path string, body any) (*KnowledgeWriteResultDto, error) {
+	var res KnowledgeWriteResultDto
+	if err := s.postJSONAllowError(path, body, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
 func (s *liveSource) FetchPromptPreview(stageId, kind string) (*PromptPreviewDto, error) {
 	path := "/prompt/preview?stage=" + urlEncode(stageId) + "&kind=" + urlEncode(kind)
 	var preview PromptPreviewDto

@@ -77,6 +77,12 @@ type MsgKnowledgeUpdated struct {
 	Bugs   *api.BugsDto
 }
 
+// MsgKnowledgeWritten is the result of filing a note/bug or resolving a bug from the Knowledge tab.
+type MsgKnowledgeWritten struct {
+	Toast string // success message for the toast
+	Err   string
+}
+
 type MsgPromptPreview struct {
 	Preview *api.PromptPreviewDto
 	Err     string

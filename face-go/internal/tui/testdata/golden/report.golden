@@ -1,14 +1,14 @@
  ◆ conductor  ● LIVE  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42                 
   a Agent   h Sessions   t Timeline   s Procs   c Console   e Templates   g Plan   r Report   k Knowledge   l 
                            │                                                                                  
- ▶ PLAN                    │  Quick queries:                                                                  
+ ▶ PLAN                    │  Queries (↑↓ pick · enter run):                                                  
  ✓ F0 3/3 Foundations      │    cost per stage                                                                
  ✓ F6 5/5 Ink TUI v1       │    which gates fail most                                                         
  ● F7 2/5 Gate … 1× $0.30  │    recent sessions                                                               
    ✓ F7.1 Plan import      │    verifier scores                                                               
    ✓ F7.2 Re-import diff   │                                                                                  
-   ● F7.3 Truth-gate tier  │  SQL:                                                                            
- ○ F8 0/4 conductor chat…  │  SELECT s.stage_id, SUM(c.cost_usd) as cost_usd FROM costs c JOIN sessions s O…  
+   ● F7.3 Truth-gate tier  │  SQL (tab to focus/blur):                                                        
+ ○ F8 0/4 conductor chat…  │   s ON s.number = c.session_number AND s.run_id = c.run_id GROUP BY s.stage_id   
                            │                                                                                  
  ── GATES ──               │  stage_id  cost_usd                                                              
    ✓ build                 │  F1        0.42                                                                  
@@ -31,4 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  p sidebar  ? help  q quit   │   tab focus · ↑↓ pick · enter run                   
+ : cmd  i inject  / search  p sidebar  ? help  q quit   │   tab focus · ↑↓ pick · ←→ scroll cols · enter run  

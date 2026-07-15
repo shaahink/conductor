@@ -20,6 +20,7 @@ type TranscriptModel struct {
 	SearchMatchIdx int
 	SearchMatches  []int
 	FoldTools      bool
+	HideThinking   bool
 	Width          int
 	Height         int
 }
@@ -68,6 +69,16 @@ func (m TranscriptModel) Update(msg any) TranscriptModel {
 
 		case MsgToggleFold:
 			m.FoldTools = !m.FoldTools
+			m.ScrollOffset = 0
+			m.AutoScroll = true
+			if m.SearchQuery != "" {
+				m.SearchMatches = m.findMatches(m.SearchQuery)
+				m.SearchMatchIdx = 0
+			}
+			return m
+
+		case MsgToggleThinking:
+			m.HideThinking = !m.HideThinking
 			m.ScrollOffset = 0
 			m.AutoScroll = true
 			if m.SearchQuery != "" {
@@ -195,25 +206,36 @@ func (m TranscriptModel) View() string {
 }
 
 func (m TranscriptModel) visibleLines() []api.TranscriptLineDto {
-	if m.FoldTools {
-		return m.foldedLines()
+	lines := m.Lines
+	if m.HideThinking {
+		filtered := make([]api.TranscriptLineDto, 0, len(lines))
+		for _, l := range lines {
+			if l.Kind == "thinking" {
+				continue
+			}
+			filtered = append(filtered, l)
+		}
+		lines = filtered
 	}
-	return m.Lines
+	if m.FoldTools {
+		return foldTools(lines)
+	}
+	return lines
 }
 
-func (m TranscriptModel) foldedLines() []api.TranscriptLineDto {
+func foldTools(src []api.TranscriptLineDto) []api.TranscriptLineDto {
 	var result []api.TranscriptLineDto
 	i := 0
-	for i < len(m.Lines) {
-		line := m.Lines[i]
+	for i < len(src) {
+		line := src[i]
 		if line.Kind == "tool" {
 			count := 1
 			tools := []string{line.Text}
 			j := i + 1
-			for j < len(m.Lines) && (m.Lines[j].Kind == "tool" || m.Lines[j].Kind == "result") {
-				if m.Lines[j].Kind == "tool" {
+			for j < len(src) && (src[j].Kind == "tool" || src[j].Kind == "result") {
+				if src[j].Kind == "tool" {
 					count++
-					tools = append(tools, m.Lines[j].Text)
+					tools = append(tools, src[j].Text)
 				}
 				j++
 			}

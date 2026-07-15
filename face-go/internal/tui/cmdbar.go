@@ -304,7 +304,7 @@ func (m Model) renderHelpOverlay() string {
 		"  " + key("tab") + " cycle tabs\n\n" +
 		accentStyle.Render("Actions") + "\n" +
 		"  " + key(":") + " command palette   " + key("i") + " inject context\n" +
-		"  " + key("/") + " search transcript " + key("f") + " fold tool calls\n" +
+		"  " + key("/") + " search transcript " + key("f") + " fold tools · " + key("T") + " fold thinking\n" +
 		"  " + key("p") + " collapse sidebar  " + key("↑↓") + " scroll / navigate\n\n" +
 		accentStyle.Render("Global") + "\n" +
 		"  " + key("q") + " quit   " + key("esc") + " close / cancel   " + key("?") + " this help"

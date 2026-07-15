@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
@@ -177,6 +178,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.data.Bugs = msg.Bugs.Bugs
 		}
 		return m, nil
+
+	case MsgKnowledgeWritten:
+		if msg.Err != "" {
+			return m, m.addToast("Failed: "+msg.Err, widgets.ToastError)
+		}
+		// Re-poll so the new note/bug (or the resolved bug dropping off) shows immediately.
+		return m, tea.Batch(m.addToast(msg.Toast, widgets.ToastSuccess), m.cmdFetchKnowledge())
 
 	case MsgTimelineUpdated:
 		m.timelineLoading = false
@@ -365,6 +373,11 @@ func (m Model) handleKey(key string) (tea.Model, tea.Cmd) {
 		if t := int(key[0] - '1'); t < int(tabCount) {
 			return m.openTab(MainTab(t))
 		}
+	case "0":
+		// The 10th tab (index 9) has no 1–9 digit; "0" reaches it so every tab has a number too.
+		if int(tabCount) > 9 {
+			return m.openTab(MainTab(9))
+		}
 	}
 
 	// Letter mnemonics jump straight to a tab.
@@ -399,8 +412,8 @@ func (m Model) openTab(t MainTab) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case TabReport:
-		if m.reportSQL == "" {
-			m.reportSQL = defaultReportSQL
+		if strings.TrimSpace(m.reportEditor.Value()) == "" {
+			m.reportEditor = widgets.NewTextArea(defaultReportSQL, max(10, m.paneCols()), 1)
 		}
 		m.reportFocusQuery = true
 		return m, nil
@@ -411,7 +424,7 @@ func (m Model) openTab(t MainTab) (tea.Model, tea.Cmd) {
 		m.sessionSelected = 0 // /sessions is newest-first; land on the current one
 		return m, nil
 	case TabKnowledge:
-		m.knowledgeScroll = 0
+		m.knowledgeScroll, m.knowledgeMode = 0, knowledgeBrowse
 		return m, m.cmdFetchKnowledge()
 	case TabTelegram:
 		m.telegramFieldIdx, m.telegramEditing, m.telegramStatusLine = 0, false, ""
@@ -431,6 +444,8 @@ func (m Model) tabHandlesAllKeys() bool {
 		return m.planDrill || m.planEditing || m.planImportResult != nil || m.planTab == planTabImport
 	case TabTelegram:
 		return m.telegramEditing
+	case TabKnowledge:
+		return m.knowledgeMode != knowledgeBrowse
 	}
 	return false
 }

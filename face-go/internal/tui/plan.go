@@ -28,23 +28,57 @@ type planField struct {
 	Field   string
 	Kind    planFieldKind
 	Options []string // enum only
+	Custom  bool     // enum also accepts a free-text value via the "✎ custom…" option
 }
 
-// Curated model choices for the picker; "(agent default)" clears the per-stage override.
+// Curated model choices for the picker; "(agent default)" clears the per-stage override, and the
+// "✎ custom…" sentinel (appended for any Custom field) drops into free-text so an arbitrary model id
+// is reachable — the plan schema allows any string, not just these five.
 var modelChoices = []string{"claude-opus-4-8", "claude-sonnet-5", "claude-haiku-4-5", "deepseek-v4-pro", "(agent default)"}
 
-const agentDefaultModel = "(agent default)"
+// The persona vocabulary the engine ships (StageConfig.Persona); "(none)" clears it.
+var personaChoices = []string{"(none)", "architect", "planner", "qa", "docs", "reviewer", "refactor", "test-writer", "git-cleanup", "security-audit"}
+
+const (
+	agentDefaultModel = "(agent default)"
+	noneValue         = "(none)"
+	customSentinel    = "✎ custom…"
+)
 
 func (m Model) stageFields() []planField {
 	return []planField{
 		{Label: "title", Field: "title", Kind: fieldText},
-		{Label: "model", Field: "model", Kind: fieldEnum, Options: modelChoices},
+		{Label: "model", Field: "model", Kind: fieldEnum, Options: m.modelChoices(), Custom: true},
+		{Label: "persona", Field: "persona", Kind: fieldEnum, Options: personaChoices},
 		{Label: "workflow", Field: "workflow", Kind: fieldEnum, Options: m.workflowChoices()},
 		{Label: "kind", Field: "kind", Kind: fieldEnum, Options: []string{"deliver", "review"}},
 		{Label: "sessions", Field: "sessions", Kind: fieldInt},
 		{Label: "notes", Field: "notes", Kind: fieldText},
 		{Label: "dependsOn", Field: "dependson", Kind: fieldText},
 	}
+}
+
+// modelChoices is the curated list plus the plan's own defaultModel (so it's never absent from the
+// picker), de-duplicated, in a stable order.
+func (m Model) modelChoices() []string {
+	if m.plan == nil || m.plan.DefaultModel == "" {
+		return modelChoices
+	}
+	for _, c := range modelChoices {
+		if c == m.plan.DefaultModel {
+			return modelChoices
+		}
+	}
+	out := append([]string{m.plan.DefaultModel}, modelChoices...)
+	return out
+}
+
+// optionList returns a field's enum options plus the "✎ custom…" sentinel when it accepts free text.
+func optionList(f planField) []string {
+	if f.Custom {
+		return append(append([]string{}, f.Options...), customSentinel)
+	}
+	return f.Options
 }
 
 func gateFields() []planField {
@@ -58,6 +92,7 @@ func gateFields() []planField {
 
 func (m Model) settingsFields() []planField {
 	return []planField{
+		{Label: "name", Field: "name", Kind: fieldText},
 		{Label: "gatePolicy", Field: "gatepolicy", Kind: fieldEnum, Options: []string{"perSession", "perPhase"}},
 		{Label: "defaultWorkflow", Field: "defaultworkflow", Kind: fieldEnum, Options: m.workflowChoices()},
 	}
@@ -164,9 +199,10 @@ func (m *Model) planEnter() (tea.Model, tea.Cmd) {
 func (m *Model) beginFieldEdit(f planField) {
 	cur := m.currentFieldValue(f.Field)
 	m.planEditing = true
+	m.planEnumCustom = false
 	m.planStatus = ""
 	if f.Kind == fieldEnum {
-		m.planEnumIdx = indexOfDefault(f.Options, cur, 0)
+		m.planEnumIdx = indexOfDefault(optionList(f), cur, 0)
 		m.planEditBuf = ""
 	} else {
 		m.planEditBuf = cur
@@ -175,20 +211,49 @@ func (m *Model) beginFieldEdit(f planField) {
 
 func (m *Model) handlePlanFieldEdit(key string) (tea.Model, tea.Cmd) {
 	f := m.currentField()
+
+	// Free-text sub-entry, reached by picking an enum's "✎ custom…" option.
+	if m.planEnumCustom {
+		switch key {
+		case "esc":
+			m.planEnumCustom = false // back to the carousel, still editing
+		case "enter":
+			m.planEnumCustom = false
+			return m.savePlanFieldValue(f, strings.TrimSpace(m.planEditBuf))
+		case "backspace":
+			if len(m.planEditBuf) > 0 {
+				m.planEditBuf = m.planEditBuf[:len(m.planEditBuf)-1]
+			}
+		default:
+			if ch, ok := typedChar(key); ok {
+				m.planEditBuf += ch
+			}
+		}
+		return m, nil
+	}
+
 	switch key {
 	case "esc":
 		m.planEditing = false
 		return m, nil
 	case "enter":
+		if f.Kind == fieldEnum {
+			opts := optionList(f)
+			if m.planEnumIdx < len(opts) && opts[m.planEnumIdx] == customSentinel {
+				m.planEnumCustom, m.planEditBuf = true, "" // drop into free-text entry
+				return m, nil
+			}
+		}
 		return m.savePlanField(f)
 	}
 
 	if f.Kind == fieldEnum {
+		opts := optionList(f)
 		switch key {
 		case "left", "h":
-			m.planEnumIdx = (m.planEnumIdx - 1 + len(f.Options)) % len(f.Options)
+			m.planEnumIdx = (m.planEnumIdx - 1 + len(opts)) % len(opts)
 		case "right", "l", "space":
-			m.planEnumIdx = (m.planEnumIdx + 1) % len(f.Options)
+			m.planEnumIdx = (m.planEnumIdx + 1) % len(opts)
 		}
 		return m, nil
 	}
@@ -212,13 +277,18 @@ func (m *Model) handlePlanFieldEdit(key string) (tea.Model, tea.Cmd) {
 
 func (m *Model) savePlanField(f planField) (tea.Model, tea.Cmd) {
 	value := m.planEditBuf
-	if f.Kind == fieldEnum && m.planEnumIdx < len(f.Options) {
-		value = f.Options[m.planEnumIdx]
+	if f.Kind == fieldEnum {
+		if opts := optionList(f); m.planEnumIdx < len(opts) {
+			value = opts[m.planEnumIdx]
+		}
 	}
-	if value == agentDefaultModel {
-		value = "" // clears the per-stage model override
-	}
+	return m.savePlanFieldValue(f, value)
+}
 
+func (m *Model) savePlanFieldValue(f planField, value string) (tea.Model, tea.Cmd) {
+	if value == agentDefaultModel || value == noneValue {
+		value = "" // clears the per-stage model override / persona
+	}
 	target, id := m.currentTarget()
 	m.planStatus = "saving…"
 	v := value
@@ -304,6 +374,8 @@ func (m Model) currentFieldValue(field string) string {
 	switch m.planTab {
 	case planTabSettings:
 		switch field {
+		case "name":
+			return m.plan.Name
 		case "gatepolicy":
 			return m.plan.GatePolicy
 		case "defaultworkflow":
@@ -334,6 +406,8 @@ func (m Model) currentFieldValue(field string) string {
 			return s.Title
 		case "model":
 			return derefOr(s.Model, agentDefaultModel)
+		case "persona":
+			return derefOr(s.Persona, noneValue)
 		case "workflow":
 			return derefOr(s.Workflow, "")
 		case "kind":
@@ -505,13 +579,18 @@ func (m Model) renderFieldList(fields []planField, ownerLabel string) (string, s
 }
 
 func (m Model) renderFieldEditor(f planField) string {
+	if m.planEnumCustom {
+		return fmt.Sprintf("%-16s %s", f.Label,
+			accentStyle.Render(m.planEditBuf)+accentStyle.Render("▏")+subtleStyle.Render("  type · enter save · esc back"))
+	}
 	if f.Kind == fieldEnum {
+		opts := optionList(f)
 		sel := ""
-		if m.planEnumIdx < len(f.Options) {
-			sel = f.Options[m.planEnumIdx]
+		if m.planEnumIdx < len(opts) {
+			sel = opts[m.planEnumIdx]
 		}
 		carousel := accentStyle.Render("‹") + highlightBg.Render(" "+sel+" ") + accentStyle.Render("›")
-		pos := subtleStyle.Render(fmt.Sprintf(" (%d/%d)", m.planEnumIdx+1, len(f.Options)))
+		pos := subtleStyle.Render(fmt.Sprintf(" (%d/%d)", m.planEnumIdx+1, len(opts)))
 		return fmt.Sprintf("%-16s %s%s", f.Label, carousel, pos)
 	}
 	return fmt.Sprintf("%-16s %s", f.Label, accentStyle.Render(m.planEditBuf)+accentStyle.Render("▏"))

@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"fmt"
+
 	tea "charm.land/bubbletea/v2"
 
 	"conductor-face-go/internal/api"
@@ -30,6 +32,44 @@ func (m Model) cmdFetchKnowledge() tea.Cmd {
 		}
 		return MsgKnowledgeUpdated{Ledger: ledger, Bugs: bugs}
 	}
+}
+
+func (m Model) cmdPostNote(req api.NoteRequestDto) tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		res, err := source.PostNote(req)
+		return knowledgeWriteMsg("Note filed", res, err)
+	}
+}
+
+func (m Model) cmdPostBug(req api.BugNewRequestDto) tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		res, err := source.PostBug(req)
+		return knowledgeWriteMsg("Bug filed", res, err)
+	}
+}
+
+func (m Model) cmdPostBugResolve(req api.BugResolveRequestDto) tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		res, err := source.PostBugResolve(req)
+		return knowledgeWriteMsg(fmt.Sprintf("Bug #%d resolved", req.Id), res, err)
+	}
+}
+
+func knowledgeWriteMsg(okToast string, res *api.KnowledgeWriteResultDto, err error) tea.Msg {
+	if err != nil {
+		return MsgKnowledgeWritten{Err: err.Error()}
+	}
+	if res != nil && !res.Ok {
+		reason := "rejected"
+		if res.Error != nil {
+			reason = *res.Error
+		}
+		return MsgKnowledgeWritten{Err: reason}
+	}
+	return MsgKnowledgeWritten{Toast: okToast}
 }
 
 func (m Model) cmdFetchState() tea.Cmd {

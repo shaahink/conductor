@@ -6,13 +6,13 @@
  ✓ F6 5/5 Ink TUI v1       │    editing F6                                                                    
  ● F7 2/5 Gate … 1× $0.30  │                                                                                  
    ✓ F7.1 Plan import      │    title            Ink TUI v1                                                   
-   ✓ F7.2 Re-import diff   │    model            ‹ claude-opus-4-8 › (1/5)                                    
-   ● F7.3 Truth-gate tier  │    workflow         deliver-verify                                               
- ○ F8 0/4 conductor chat…  │    kind             deliver                                                      
-                           │    sessions         5                                                            
- ── GATES ──               │    notes            (unset)                                                      
-   ✓ build                 │    dependsOn        F5                                                           
-   ● test 4s               │                                                                                  
+   ✓ F7.2 Re-import diff   │    model            ‹ claude-opus-4-8 › (1/6)                                    
+   ● F7.3 Truth-gate tier  │    persona          (none)                                                       
+ ○ F8 0/4 conductor chat…  │    workflow         deliver-verify                                               
+                           │    kind             deliver                                                      
+ ── GATES ──               │    sessions         5                                                            
+   ✓ build                 │    notes            (unset)                                                      
+   ● test 4s               │    dependsOn        F5                                                           
    ○ lint                  │                                                                                  
                            │                                                                                  
  ── TASKS ──               │                                                                                  

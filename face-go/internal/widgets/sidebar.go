@@ -53,9 +53,13 @@ func (m SidebarModel) Update(msg any) SidebarModel {
 
 func (m SidebarModel) View() string {
 	rows := []string{sidebarTitleStyle.Render("▶ PLAN")}
+	activeRow := 0 // the row to keep in view when the plan is taller than the rail
 
 	for _, stage := range m.Stages {
 		glyph, style := stageGlyph(stage.State)
+		if stage.State == "active" || stage.State == "gating" {
+			activeRow = len(rows)
+		}
 		rows = append(rows, style.Render(m.stageLine(glyph, stage)))
 
 		if m.Expanded[stage.Id] && len(stage.Checkpoints) > 0 {
@@ -86,6 +90,8 @@ func (m SidebarModel) View() string {
 		}
 	}
 
+	rows = m.windowRows(rows, activeRow)
+
 	// Clip each row ANSI-safely: a row that still overflows (tight widths) must truncate, never
 	// wrap — a wrapped sidebar row pushes every row below it down a line.
 	clip := lipgloss.NewStyle().MaxWidth(m.Width)
@@ -96,6 +102,32 @@ func (m SidebarModel) View() string {
 	return lipgloss.NewStyle().
 		Width(m.Width).Height(m.Height).
 		Render(strings.Join(rows, "\n"))
+}
+
+// windowRows scrolls a too-tall rail so the active stage stays visible (the sidebar isn't focusable,
+// so it self-scrolls). On a 30-checkpoint plan the raw list overflows m.Height and lipgloss would
+// silently clip the bottom — including the active stage if it sits low. A clipped edge shows a
+// "↑/↓ N more" marker so it never looks like the plan just ends.
+func (m SidebarModel) windowRows(rows []string, anchor int) []string {
+	if m.Height < 3 || len(rows) <= m.Height {
+		return rows
+	}
+	start := anchor - m.Height/2
+	if start < 0 {
+		start = 0
+	}
+	if start+m.Height > len(rows) {
+		start = len(rows) - m.Height
+	}
+	end := start + m.Height
+	win := append([]string{}, rows[start:end]...)
+	if start > 0 {
+		win[0] = dimStyle.Render(fmt.Sprintf("  ↑ %d more", start))
+	}
+	if end < len(rows) {
+		win[len(win)-1] = dimStyle.Render(fmt.Sprintf("  ↓ %d more", len(rows)-end))
+	}
+	return win
 }
 
 // tasksWindow keeps the list short: everything in flight plus the most recent context around it.
