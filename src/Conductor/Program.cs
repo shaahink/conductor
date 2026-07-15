@@ -70,8 +70,10 @@ app.Configure(c =>
         .WithDescription("Query the structured JSON log. Filter by stage, gate, outcome, etc. Example: conductor log --query \"stage=P7 and gate=build and outcome=fail\"");
     c.AddCommand<NewPlanCommand>("new-plan")
         .WithDescription("Scaffold a new plan + TRACKER.md.");
+    c.AddCommand<InitCommand>("init")
+        .WithDescription("Scaffold a runnable plan + editable templates + TRACKER, with gates chosen from the detected repo type (dotnet/node/go/rust/python).");
     c.AddCommand<DoctorCommand>("doctor")
-        .WithDescription("Print exactly what will happen on resume: pending sessions, gates, owner-approval, remaining stages.");
+        .WithDescription("<2s health check: agent CLI, git, face-go binary, DNS/disk/API reachability, budget headroom, Telegram — says exactly what is missing.");
     c.AddCommand<AuditCommand>("audit")
         .WithDescription("Post-hoc audit replay: run an audit prompt against a completed stage (read-only diagnostic). Requires --replay flag. Output written to .conductor/audits/.");
     c.AddCommand<McpServeCommand>("mcp-serve")
