@@ -138,6 +138,7 @@ type Model struct {
 
 	// Processes tab
 	processSelected int
+	processKilling  bool // kill-confirm prompt open for the selected process
 
 	// Knowledge tab (M7: ledger + tracked bugs; write-side: file note/bug, resolve bug)
 	knowledgeScroll int

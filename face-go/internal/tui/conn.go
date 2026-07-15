@@ -131,6 +131,21 @@ func (m Model) cmdPostControl(cmd api.ControlRequestDto) tea.Cmd {
 	}
 }
 
+func (m Model) cmdPostProcessKill(pid int) tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		res, err := source.PostProcessKill(api.ProcessKillRequestDto{Pid: pid})
+		if err != nil {
+			return MsgProcessKilled{Pid: pid, Success: false, Error: err.Error()}
+		}
+		reason := ""
+		if res.Error != nil {
+			reason = *res.Error
+		}
+		return MsgProcessKilled{Pid: pid, Success: res.Ok, Error: reason}
+	}
+}
+
 func (m Model) cmdPostInject(req api.InjectRequestDto) tea.Cmd {
 	source := m.source
 	return func() tea.Msg {

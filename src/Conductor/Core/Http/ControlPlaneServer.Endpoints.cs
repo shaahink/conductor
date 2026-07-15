@@ -216,21 +216,7 @@ public sealed partial class ControlPlaneServer
         catch (UnauthorizedAccessException) { return null; }
     }
 
-    private async Task WriteProcessesAsync(HttpListenerContext ctx)
-    {
-        var pids = _store.GetAllPids(_state.RunId);
-        var bgLogDir = Path.Combine(_plan.StateDir, "bg-logs");
-        var dtos = new List<ProcessDto>(pids.Count);
-        foreach (var p in pids)
-        {
-            var alive = p.ExitedUtc == null && IsProcessAlive(p.Pid);
-            var lastLine = p.Purpose.StartsWith("bg:", StringComparison.Ordinal)
-                ? await TailBgLogAsync(bgLogDir, p.Pid).ConfigureAwait(false)
-                : null;
-            dtos.Add(ControlPlaneDto.FromPid(p, alive, lastLine));
-        }
-        await WriteJsonAsync(ctx, new ProcessesDto(dtos), ControlPlaneJsonContext.Default.ProcessesDto).ConfigureAwait(false);
-    }
+    // GET /processes and POST /processes/kill live in ControlPlaneServer.Processes.cs.
 
     private static bool IsProcessAlive(int pid)
     {

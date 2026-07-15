@@ -62,6 +62,9 @@ func (fakeSource) PostControl(api.ControlRequestDto) (*api.ControlAcceptedDto, e
 func (fakeSource) PostInject(api.InjectRequestDto) (*api.InjectAcceptedDto, error) {
 	return &api.InjectAcceptedDto{Accepted: true}, nil
 }
+func (fakeSource) PostProcessKill(api.ProcessKillRequestDto) (*api.ProcessKillResultDto, error) {
+	return &api.ProcessKillResultDto{Ok: true}, nil
+}
 func (fakeSource) FetchPlan() (*api.PlanDto, error) { return fixedPlan(), nil }
 func (fakeSource) PostPlanEdit(api.PlanEditRequestDto) (*api.PlanMutationResultDto, error) {
 	return &api.PlanMutationResultDto{Ok: true, PlanVersion: 8}, nil
@@ -340,6 +343,11 @@ func TestGolden(t *testing.T) {
 		}},
 		{"processes", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("s"))
+			return m
+		}},
+		{"processes_kill", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("s")) // Procs tab
+			m, _ = m.Update(keyMsg("x")) // kill confirm for the selected (alive) process
 			return m
 		}},
 		{"timeline", func(m tea.Model) tea.Model {

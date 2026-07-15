@@ -61,6 +61,12 @@ type MsgInjectSent struct {
 	Error   string
 }
 
+type MsgProcessKilled struct {
+	Pid     int
+	Success bool
+	Error   string
+}
+
 type MsgReportResult struct {
 	Result *api.QueryResultDto
 	Err    string

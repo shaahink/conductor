@@ -11,6 +11,19 @@ import (
 )
 
 func (m Model) handleProcessesKey(key string) (tea.Model, tea.Cmd) {
+	if m.processKilling {
+		switch strings.ToLower(key) {
+		case "y", "enter":
+			m.processKilling = false
+			if p, ok := m.selectedProcess(); ok && p.Alive {
+				return m, m.cmdPostProcessKill(p.Pid)
+			}
+			return m, nil
+		case "n", "esc":
+			m.processKilling = false
+		}
+		return m, nil
+	}
 	switch key {
 	case "up", "k":
 		if m.processSelected > 0 {
@@ -20,8 +33,19 @@ func (m Model) handleProcessesKey(key string) (tea.Model, tea.Cmd) {
 		if m.processSelected < len(m.data.Processes)-1 {
 			m.processSelected++
 		}
+	case "x": // kill the selected process (only if it's still alive) — x avoids the k=Knowledge mnemonic
+		if p, ok := m.selectedProcess(); ok && p.Alive {
+			m.processKilling = true
+		}
 	}
 	return m, nil
+}
+
+func (m Model) selectedProcess() (api.ProcessDto, bool) {
+	if m.processSelected >= 0 && m.processSelected < len(m.data.Processes) {
+		return m.data.Processes[m.processSelected], true
+	}
+	return api.ProcessDto{}, false
 }
 
 func (m Model) renderProcessesPane() (string, string) {
@@ -52,7 +76,17 @@ func (m Model) renderProcessesPane() (string, string) {
 			lines = append(lines, "", subtleStyle.Render("last: ")+tealStyle.Render(truncate(*p.LastOutputLine, m.paneCols()-8)))
 		}
 	}
-	return strings.Join(lines, "\n"), "↑↓ navigate"
+	if m.processKilling {
+		if p, ok := m.selectedProcess(); ok {
+			lines = append(lines, "", "  "+destructStyle.Render("⚠ kill ")+accentStyle.Render(fmt.Sprintf("pid %d", p.Pid))+destructStyle.Render(" ("+truncate(p.Purpose, 20)+") ?")+"  "+warnStyle.Render("y/N"))
+		}
+		return strings.Join(lines, "\n"), "y confirm · n cancel"
+	}
+	help := "↑↓ navigate"
+	if p, ok := m.selectedProcess(); ok && p.Alive {
+		help = "↑↓ navigate · x kill"
+	}
+	return strings.Join(lines, "\n"), help
 }
 
 func formatProcessRuntime(p api.ProcessDto) string {

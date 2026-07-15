@@ -196,6 +196,16 @@ func (s *liveSource) PostInject(req InjectRequestDto) (*InjectAcceptedDto, error
 	return &accepted, nil
 }
 
+func (s *liveSource) PostProcessKill(req ProcessKillRequestDto) (*ProcessKillResultDto, error) {
+	// A refused kill (untracked / already-exited / self) answers 400 with a body — decode it so the
+	// Procs tab can show the engine's reason instead of a raw HTTP error, same as PostPlanEdit.
+	var res ProcessKillResultDto
+	if err := s.postJSONAllowError("/processes/kill", req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
 func (s *liveSource) FetchPlan() (*PlanDto, error) {
 	var plan PlanDto
 	if err := s.getJSON("/plan", &plan); err != nil {

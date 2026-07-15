@@ -7,7 +7,7 @@
  ● F7 2/5 Gate … 1× $0.30  │                                                                                  
    ✓ F7.1 Plan import      │  last: [agent] Working on gate caching...                                        
    ✓ F7.2 Re-import diff   │                                                                                  
-   ● F7.3 Truth-gate tier  │                                                                                  
+   ● F7.3 Truth-gate tier  │    ⚠ kill pid 4512 (session) ?  y/N                                              
  ○ F8 0/4 conductor chat…  │                                                                                  
                            │                                                                                  
  ── GATES ──               │                                                                                  
@@ -31,4 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  p sidebar  ? help  q quit   │   ↑↓ navigate · x kill                              
+ : cmd  i inject  / search  p sidebar  ? help  q quit   │   y confirm · n cancel                              

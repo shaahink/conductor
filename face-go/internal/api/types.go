@@ -22,6 +22,7 @@ type DataSource interface {
 	QueryReport(sql string) (*QueryResultDto, error)
 	PostControl(cmd ControlRequestDto) (*ControlAcceptedDto, error)
 	PostInject(req InjectRequestDto) (*InjectAcceptedDto, error)
+	PostProcessKill(req ProcessKillRequestDto) (*ProcessKillResultDto, error)
 
 	// M6.3 plan authoring
 	FetchPlan() (*PlanDto, error)
@@ -137,6 +138,18 @@ type ProcessDto struct {
 
 type ProcessesDto struct {
 	Processes []ProcessDto `json:"processes"`
+}
+
+// ProcessKillRequestDto / ProcessKillResultDto: kill a supervised child process from the Procs tab
+// (POST /processes/kill). Only a PID this run tracked and still alive can be killed — see ProcessKiller.cs.
+type ProcessKillRequestDto struct {
+	Pid int `json:"pid"`
+}
+
+type ProcessKillResultDto struct {
+	Ok    bool    `json:"ok"`
+	Error *string `json:"error"`
+	Pid   int     `json:"pid"`
 }
 
 type SessionRowDto struct {

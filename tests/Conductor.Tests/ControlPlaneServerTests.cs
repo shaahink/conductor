@@ -624,6 +624,71 @@ public sealed class ControlPlaneServerTests : IDisposable
     }
 
     [Fact]
+    public async Task PostProcessKill_UntrackedPid_Returns400WithReason()
+    {
+        var (server, port) = StartServer();
+        try
+        {
+            var resp = await PostJson(port, "/processes/kill", """{"pid":424242}""");
+            Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            Assert.False(doc.RootElement.GetProperty("ok").GetBoolean());
+            Assert.Contains("not a tracked process", doc.RootElement.GetProperty("error").GetString(), StringComparison.Ordinal);
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task PostProcessKill_MissingPid_Returns400()
+    {
+        var (server, port) = StartServer();
+        try
+        {
+            var resp = await PostJson(port, "/processes/kill", """{"pid":0}""");
+            Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task PostProcessKill_TrackedLiveProcess_KillsItAndReturns202()
+    {
+        using var proc = StartSleepyProcess();
+        _store.TrackPid(proc.Id, RunId, "bg:test", "S1", 1, DateTime.UtcNow);
+        var (server, port) = StartServer();
+        try
+        {
+            var resp = await PostJson(port, "/processes/kill", $$"""{"pid":{{proc.Id}}}""");
+            Assert.Equal(HttpStatusCode.Accepted, resp.StatusCode);
+            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
+            {
+                try { await proc.WaitForExitAsync(cts.Token); } catch (OperationCanceledException) { }
+            }
+            Assert.True(proc.HasExited, "the process should have been killed");
+
+            // A second kill is refused — the pid is now marked exited.
+            var again = await PostJson(port, "/processes/kill", $$"""{"pid":{{proc.Id}}}""");
+            Assert.Equal(HttpStatusCode.BadRequest, again.StatusCode);
+        }
+        finally { server.Dispose(); if (!proc.HasExited) proc.Kill(entireProcessTree: true); }
+    }
+
+    private static System.Diagnostics.Process StartSleepyProcess()
+    {
+        var psi = new System.Diagnostics.ProcessStartInfo("cmd.exe", "/c ping -n 30 127.0.0.1 > NUL")
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        var proc = System.Diagnostics.Process.Start(psi)!;
+        System.Threading.Thread.Sleep(200);
+        return proc;
+    }
+
+    [Fact]
     public async Task GetSessions_NoRunDb_ReturnsEmptyList()
     {
         var (server, port) = StartServer();

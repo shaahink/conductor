@@ -122,6 +122,26 @@ func (s *demoSource) PostControl(cmd ControlRequestDto) (*ControlAcceptedDto, er
 	return &ControlAcceptedDto{Accepted: true}, nil
 }
 
+func (s *demoSource) PostProcessKill(req ProcessKillRequestDto) (*ProcessKillResultDto, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := range s.processes {
+		if s.processes[i].Pid != req.Pid {
+			continue
+		}
+		if !s.processes[i].Alive {
+			msg := fmt.Sprintf("pid %d has already exited", req.Pid)
+			return &ProcessKillResultDto{Ok: false, Error: &msg, Pid: req.Pid}, nil
+		}
+		now := time.Now().UTC().Format(time.RFC3339)
+		s.processes[i].Alive = false
+		s.processes[i].ExitedUtc = &now
+		return &ProcessKillResultDto{Ok: true, Pid: req.Pid}, nil
+	}
+	msg := fmt.Sprintf("pid %d is not a tracked process of this run", req.Pid)
+	return &ProcessKillResultDto{Ok: false, Error: &msg, Pid: req.Pid}, nil
+}
+
 func (s *demoSource) PostInject(req InjectRequestDto) (*InjectAcceptedDto, error) {
 	now := time.Now().UTC().Format(time.RFC3339)
 	return &InjectAcceptedDto{

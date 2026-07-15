@@ -160,6 +160,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, m.addToast(text, kind)
 
+	case MsgProcessKilled:
+		if msg.Success {
+			// Re-fetch so the row flips to exited immediately, and toast alongside it.
+			return m, tea.Batch(m.addToast(fmt.Sprintf("killed pid %d", msg.Pid), widgets.ToastSuccess), m.cmdFetchProcesses())
+		}
+		reason := msg.Error
+		if reason == "" {
+			reason = "unknown reason"
+		}
+		return m, m.addToast(fmt.Sprintf("kill pid %d rejected: %s", msg.Pid, reason), widgets.ToastError)
+
 	case MsgReportResult:
 		m.data.ReportLoading = false
 		if msg.Err != "" {
@@ -442,6 +453,8 @@ func (m Model) tabHandlesAllKeys() bool {
 		return m.promptMode == PromptEdit || m.promptPreviewOn
 	case TabPlan:
 		return m.planDrill || m.planEditing || m.planAdding || m.planDeleting || m.planImportResult != nil || m.planTab == planTabImport
+	case TabProcesses:
+		return m.processKilling
 	case TabTelegram:
 		return m.telegramEditing
 	case TabKnowledge:

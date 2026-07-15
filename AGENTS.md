@@ -67,9 +67,18 @@ Commit: see `feat/foreman`.
    pane-owned via `tabHandlesAllKeys`). Demo source + 3 new goldens; wire type `PlanEditDto.Op` on both
    sides.
 
-**Gates:** Go build+vet+tests green (+3 plan unit tests, +3 goldens); C# **713 green** (+4 plan contract
-tests, +1 parse case). **Still deferred:** process-kill from the Procs tab (needs a supervisor kill API),
-tab-mnemonic relabel (churns keybindings + every golden).
+3. **process-kill from the Procs tab** — `POST /processes/kill` (ControlPlaneServer.Processes.cs) →
+   `ProcessKiller.Kill` (Core/ProcessKiller.cs): kills a supervised child's whole tree and marks it
+   exited in run.db, but only a PID this run tracked and still alive — never an untracked/arbitrary
+   PID, an already-exited one, or the conductor process itself. Same effect as `conductor bg stop`;
+   the control plane validates ownership via `_store`, no supervisor reference threaded in. Face Procs
+   tab: **`x`** on a live row opens a `y/N` confirm, then posts the kill and re-fetches so the row flips
+   to exited (`x` dodges the `k`=Knowledge / vim-up binding). Endpoints split into their own partial to
+   stay under the 500-line ratchet.
+
+**Gates:** Go build+vet+tests green (+3 plan, +3 process unit tests, +4 goldens); C# **720 green** (+4
+plan, +4 ProcessKiller, +3 kill-endpoint contract tests, +1 parse case). **Still deferred (last item):**
+tab-mnemonic relabel (churns keybindings + every golden — deferred as high-churn/low-value).
 
 ## Resume here (Maestro M9 complete — plan CLOSED, 30/30, 2026-07-15)
 **M9 (dogfood close) is DONE, 2/2 — 30/30 checkpoints. The Maestro plan is feature-complete and
