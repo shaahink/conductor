@@ -24,6 +24,44 @@ TUI at `face/`.
 - **Driver:** the STABLE `C:\Code\conductor\bin\conductor.exe` (built from master). The tool improving
   Conductor is never the tool under edit.
 
+## Resume here (Maestro M7 complete + Ink face retired, 2026-07-15)
+**M7 (knowledge that compounds) is DONE, 2/2 — 26/30 checkpoints.** Knowledge now survives the session
+that learned it, and the Ink face is gone.
+- **M7.1 ledger injected + surfaced + queryable** — `LedgerBattery`
+  (`src/Conductor/Core/PromptBattery.Knowledge.cs`) reads recent `conductor note` rows and injects them
+  into `PromptBuilder.BatterySection(state, store)`, added **first** so the byte cap never truncates them.
+  Injected by default whenever a store is present (no `batteries:` block needed). `GET /ledger` +
+  face-go's `k` Knowledge tab surface it; `ledger_list` (MCP) + `/ledger` query it.
+- **M7.2 tracked bugs** — v7 `bugs` table; store `WriteBug`/`QueryBugs`/`UpdateBugStatus`
+  (`SqliteRunStore.Bugs.cs`); `conductor bug new|list|fix` (`BugCommand.cs`); MCP `bug_new`/`bug_list`/
+  `bug_fix`; `BugsBattery` injects the run's OPEN bugs into later prompts; `GET /bugs` (open-by-default,
+  `?status=all`). `ToolContract` now tells agents to file/list/fix instead of re-finding. Bugs outlive
+  the session because they are run.db rows, not session state.
+- **Truth gate MET, twice.** Unit: `M7KnowledgeTests.Session2_compiled_promptMd_on_disk_contains_the_note_and_the_bug`
+  writes a real prompt.md and asserts against the file. Live: a 3-session dogfood where session 1's fake
+  agent files a note + bug **via the CLI, concurrent with the running run.db** (WAL + the store's default
+  busy timeout handle it), and sessions 2-3's `prompt.md` on disk contain both.
+- **Face-go Knowledge tab (`k`)** — OPEN bugs (severity-coloured, with detail) on top, the ledger below:
+  literally the rows the engine will inject next. New golden `knowledge`; every golden regenerated for the
+  +1 tab. `api.FetchLedger`/`FetchBugs` + demo data.
+- **Ink face (`face/`) RETIRED** (owner-directed). Deleted from the tree (history in git). `FaceLauncher`
+  + `conductor face` spawn the **face-go binary** directly — no node runtime; `ResolveEntrypoint` finds
+  `conductor-face(.exe)` next to the engine or under `face-go/bin/`. The Maestro `face` gate now
+  `cd face-go && go build ./... && go test ./...` (a deliberate gate-command change — the ratchet flags
+  that diff once and clears after push).
+- **Real bug found + fixed by the smoke:** `conductor note`/`bug new` crashed printing `[{kind}]`/
+  `[{severity}]` as Spectre markup (`[finding]`/`[high]` → "no such style"); `note` had it latently. Fixed
+  to `(kind): text`.
+- **HEADS-UP for M8/M9 (pre-existing, NOT M7):** `PromptBuilder.Verify` throws NRE when a Verify session
+  is queued with a null `PendingVerify` (repro: a toy plan on the default `deliver-verify` workflow;
+  `docs-only` sidesteps it). File it with `conductor bug new` and fix before the M9 dogfood.
+
+**Commits:** `7f512a6` retire Ink face · `b28087a` M7 backend+tests · `cb98420` face-go Knowledge tab ·
+`470b9ae` note/bug markup fix.
+
+**Next: Maestro M8 (AFK & smart setup).** M8.1 `conductor doctor` (<2s, says exactly what's missing);
+M8.2 Telegram v2 driven end-to-end from a phone. See `MAESTRO-TRACKER.md` for the live handoff.
+
 ## Resume here (Maestro M6 complete + face-go mission-control pass, 2026-07-15)
 **Latest session (M6 close-out):** a full parity + polish + refactor pass on `face-go` before M7.
 What changed (commit `4d15c2f`):

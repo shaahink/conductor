@@ -4,12 +4,12 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: M6 close-out — full face-go parity/polish/refactor pass (commit 4d15c2f). Parity gaps closed: run status badge + attention reason, session kind/attempt, MCP `/tasks` (sidebar TASKS + strip segment), splash empty-state (was lost in v3 redesign). Agent tab = mission control (status strip: session·checkpoint·gate chips·task progress·elapsed + attention banner over the transcript). Real bugs fixed: transcript scroll-up was offset-from-top (↑ teleported to buffer top — now offset-from-bottom, unit-tested); sidebar rows word-wrapped at 80 cols (lipgloss v2 counts border inside .Width(): content = width−3); demo+goldens had /sessions oldest-first vs the real wire's ORDER BY number DESC. Alive: braille spinner + live cost/elapsed while agent active; Timeline auto-refreshes on spine events. Maintainability: update.go/view.go split — tab_*.go per tab (handler+renderer together), cmdbar.go for palette/inject/search/help; dead code deleted; STYLE.md is the design authority (updated).
-stage: M6 COMPLETE — 24/30 DONE. Next: M7 (knowledge that compounds).
-commit: abd1b5f (M6.1/M6.2), c337cca (M6.3 backend), 9d6951c (M6.3 face), 4d15c2f (close-out polish/refactor).
-gate: dotnet build 0w/0e · 601 tests pass (fast filter) · face-go build/vet/test green (25 goldens incl. new `attention`, transcript-scroll unit tests) · 6s demo smoke OK.
+last: M7 COMPLETE (knowledge that compounds) + Ink face RETIRED. M7.1 — LedgerBattery injects recent `conductor note` entries into the next prompt (added FIRST so the byte cap never drops them); GET /ledger + `ledger_list` surface/query them. M7.2 — v7 `bugs` table + store (WriteBug/QueryBugs/UpdateBugStatus); `conductor bug new|list|fix` CLI; MCP bug_new/bug_list/bug_fix; BugsBattery injects OPEN bugs; GET /bugs; ToolContract tells agents to file/list/fix instead of re-finding. face-go: new `k` Knowledge tab (open bugs + ledger, the same rows the engine injects). Ink `face/` deleted; FaceLauncher + `conductor face` now spawn the face-go binary (no node); Maestro `face` gate builds+tests face-go (a deliberate gate change — owner-directed retirement; ratchet flags the diff once, clears after push).
+stage: M7 COMPLETE — 26/30 DONE. Next: M8 (AFK — doctor, init, Telegram v2).
+commit: 7f512a6 (retire Ink face), b28087a (M7 backend+tests), cb98420 (face-go Knowledge tab), 470b9ae (note/bug markup fix).
+gate: dotnet build 0w/0e · full C# suite green (M7KnowledgeTests incl. the on-disk truth gate; /ledger+/bugs wire tests; bug MCP round-trip; RunDb v7) · architecture ratchet green · face-go build/vet/test green (new `knowledge` golden, all goldens regenerated for the +1 tab) · REAL 3-session dogfood: session 1's fake agent files a note+bug via the live CLI (concurrent w/ the running run.db), sessions 2-3's prompt.md ON DISK contain both.
 branch: feat/foreman.
-next: M7.1 ledger injected into the next prompt, surfaced in the Face, queryable; M7.2 `conductor bug new/list/fix` + MCP (bugs outlive the session). M7 truth gate: 2-session toy run — session 1 writes a note + files a bug; session 2's compiled prompt.md on disk contains both. Face surfaces exist to extend: sidebar sections + agent strip (ledger/bugs slot in beside TASKS).
+next: M8.1 `conductor doctor` <2s says exactly what's missing; M8.2 Telegram v2 phone-driven. HEADS-UP for M8/M9: found a real pre-existing NRE — `PromptBuilder.Verify` crashes when a Verify session is queued with a null `PendingVerify` (repro: toy plan on the default deliver-verify workflow; docs-only sidesteps it). File it as a bug and fix before M9 dogfood.
 
 
 ## Baseline numbers (from run.db)
@@ -17,7 +17,7 @@ next: M7.1 ledger injected into the next prompt, surfaced in the Face, queryable
 | Metric | Value |
 |---|---|
 | Total checkpoints | 30 |
-| Done | 24 |
+| Done | 26 |
 
 ## Checkpoints
 
@@ -82,8 +82,8 @@ phase (a code path is not evidence).
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| M7.1 | Ledger injected into the next prompt, surfaced in the Face, queryable | TODO | - | - |
-| M7.2 | `conductor bug new/list/fix` + MCP; bugs outlive the session that found them | TODO | - | - |
+| M7.1 | Ledger injected into the next prompt, surfaced in the Face, queryable | DONE | b28087a, cb98420 | `LedgerBattery` (src/Conductor/Core/PromptBattery.Knowledge.cs) injects recent `conductor note` entries into `BatterySection`, added first so the byte cap never drops them — proven on disk by `M7KnowledgeTests.Session2_compiled_promptMd_on_disk_contains_the_note_and_the_bug` and the live 3-session dogfood. Surfaced: `GET /ledger` (ControlPlaneServer.Knowledge.cs) + face-go `k` Knowledge tab. Queryable: MCP `ledger_list` (pre-existing) + `GET /ledger`. |
+| M7.2 | `conductor bug new/list/fix` + MCP; bugs outlive the session that found them | DONE | b28087a, cb98420, 470b9ae | v7 `bugs` table + `WriteBug`/`QueryBugs`/`UpdateBugStatus` (SqliteRunStore.Bugs.cs); `conductor bug new\|list\|fix` (BugCommand.cs); MCP `bug_new`/`bug_list`/`bug_fix`; `BugsBattery` injects OPEN bugs into later prompts; `GET /bugs`; face-go Knowledge tab. Tests: store CRUD, battery-excludes-fixed, MCP round-trip, `/bugs` wire (open-by-default + `?status=all`). Truth gate met (note + bug both on the session-2 prompt.md, unit + live). |
 
 ### M8 — AFK — doctor, init, Telegram driven for real
 
