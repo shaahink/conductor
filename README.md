@@ -21,22 +21,33 @@ keeps the loop moving without you.
 
 ## Quick start
 
+**Install once** — builds the engine *and* the Go face, then puts a global `conductor` on your PATH:
+
 ```powershell
-# build
-dotnet build Conductor.slnx
-
-# see what the first session prompt would be — spawns nothing
-dotnet run -- run --dry-run -p path\to\plan.json
-
-# run ONE session and stop (recommended for the first supervised run)
-dotnet run -- run --once -p path\to\plan.json
-
-# run the whole plan; Ctrl+C is always safe
-dotnet run -- run -p path\to\plan.json
+powershell -File tools\install.ps1
 ```
 
-Tip: `dotnet publish -c Release -o bin` gives you standalone `bin\conductor.exe`;
-put it on PATH and set `CONDUCTOR_PLAN` to skip `-p`.
+Re-run that any time to update the installed command (it's a local release snapshot, independent of
+the repo's Debug build). After it, `conductor` works from any terminal:
+
+```powershell
+conductor init                 # scaffold a new plan in the current repo (detects dotnet/go/rust/node/python)
+conductor doctor               # <2s health check — says exactly what's missing before a run
+conductor run --dry-run        # show the first session's prompt, spawn nothing
+conductor run --once           # run ONE session and stop (good for the first supervised run)
+conductor run                  # run the whole plan; Ctrl+C is always safe
+conductor status               # "where are we", from the database, in under a second
+```
+
+**You run `conductor`, not the Go app.** `conductor run` is one process tree: it starts the engine +
+control plane and **automatically spawns the Go face (TUI)** as a child. If the face dies the run
+continues; `conductor face` attaches a fresh one. You never launch the Go binary yourself.
+
+**Zero flags:** commands resolve the plan from `-p`, else `CONDUCTOR_PLAN`, else `./conductor.plan.json`.
+So `cd` into a repo that has a `conductor.plan.json` (what `conductor init` writes) and every command
+works with no `-p`. In *this* repo the plans live under `plans/`, so pass
+`-p plans\conductor-maestro.plan.json` (or `dotnet run -- run -p ...` to drive with a fresh branch build,
+which the self-referential Maestro plan wants).
 
 ## CLI commands (23 verbs)
 
