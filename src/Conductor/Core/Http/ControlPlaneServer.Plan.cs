@@ -29,6 +29,18 @@ public sealed partial class ControlPlaneServer
 
         if (req is not { Edits.Count: > 0 }) { await PlanErrorAsync(ctx, "no edits given").ConfigureAwait(false); return; }
 
+        // Runtime safety rail: the plan file edit takes effect next run, but deleting the stage the
+        // loop is currently on would leave RunState pointing at a stage that no longer exists. Refuse
+        // it here (state, unlike plan validity, isn't something CollectErrors can see).
+        var running = _state.CurrentStage;
+        if (!string.IsNullOrEmpty(running) &&
+            req.Edits.Any(e => IsDelete(e) && string.Equals(e.Target, "stage", StringComparison.OrdinalIgnoreCase)
+                               && string.Equals(e.Id, running, StringComparison.OrdinalIgnoreCase)))
+        {
+            await PlanErrorAsync(ctx, $"cannot delete the running stage '{running}' — pause or goto another stage first").ConfigureAwait(false);
+            return;
+        }
+
         var plan = LoadPlanFresh();
         if (plan is null) { await PlanErrorAsync(ctx, "plan file not available on disk").ConfigureAwait(false); return; }
 
@@ -109,8 +121,14 @@ public sealed partial class ControlPlaneServer
         }
     }
 
+    private static bool IsDelete(PlanEditDto e) => string.Equals(e.Op, "delete", StringComparison.OrdinalIgnoreCase);
+
     private static string? ApplyEdit(PlanConfig plan, PlanEditDto edit)
     {
+        var op = (edit.Op ?? "set").ToLowerInvariant();
+        if (op is "add" or "delete") return ApplyStructuralEdit(plan, edit.Target.ToLowerInvariant(), op, edit);
+        if (op != "set") return $"unknown edit op '{edit.Op}' — use set, add, or delete";
+
         var field = edit.Field.ToLowerInvariant();
         switch (edit.Target.ToLowerInvariant())
         {
@@ -128,6 +146,43 @@ public sealed partial class ControlPlaneServer
                 return ApplyTelegramEdit(plan, field, edit.Value);
             default:
                 return $"unknown edit target '{edit.Target}'";
+        }
+    }
+
+    /// <summary>add/delete a whole stage or gate. New objects take schema defaults (a stage: 1 session,
+    /// deliver kind; a gate: full tier, 20-min timeout) — everything else is editable afterward via a
+    /// plain set edit. The caller re-validates the whole plan and only saves if it's still valid, so an
+    /// empty gate command or a delete that dangles a dependsOn is rejected there, not here.</summary>
+    private static string? ApplyStructuralEdit(PlanConfig plan, string target, string op, PlanEditDto edit)
+    {
+        var id = edit.Id?.Trim() ?? "";
+        switch (target)
+        {
+            case "stage" when op == "add":
+                if (id.Length == 0) return "add stage: an id is required";
+                if (plan.Stages.Any(s => string.Equals(s.Id, id, StringComparison.OrdinalIgnoreCase))) return $"stage '{id}' already exists";
+                plan.AddStage(new StageConfig { Id = id, Title = string.IsNullOrWhiteSpace(edit.Value) ? id : edit.Value!.Trim() });
+                return null;
+            case "stage":
+                var stage = plan.Stages.FirstOrDefault(s => string.Equals(s.Id, id, StringComparison.OrdinalIgnoreCase));
+                if (stage is null) return $"unknown stage '{id}'";
+                plan.Stages.Remove(stage);
+                plan.BumpVersion();
+                return null;
+            case "gate" when op == "add":
+                if (id.Length == 0) return "add gate: a name is required";
+                if (plan.Gates.Any(g => string.Equals(g.Name, id, StringComparison.OrdinalIgnoreCase))) return $"gate '{id}' already exists";
+                plan.Gates.Add(new GateConfig { Name = id, Command = edit.Value?.Trim() ?? "" });
+                plan.BumpVersion();
+                return null;
+            case "gate":
+                var gate = plan.Gates.FirstOrDefault(g => string.Equals(g.Name, id, StringComparison.OrdinalIgnoreCase));
+                if (gate is null) return $"unknown gate '{id}'";
+                plan.Gates.Remove(gate);
+                plan.BumpVersion();
+                return null;
+            default:
+                return $"cannot {op} target '{edit.Target}' — only stage or gate can be added or deleted";
         }
     }
 

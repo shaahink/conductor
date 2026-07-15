@@ -57,13 +57,14 @@ public sealed class ControlPlaneServerPlanTests : IDisposable
         try { Directory.Delete(_dir, recursive: true); } catch (IOException) { /* best effort */ }
     }
 
-    private (ControlPlaneServer server, int port) StartServer()
+    private (ControlPlaneServer server, int port) StartServer(string? currentStage = null)
     {
         using var tcp = new TcpListener(IPAddress.Loopback, 0);
         tcp.Start();
         var port = ((IPEndPoint)tcp.LocalEndpoint).Port;
         tcp.Stop();
-        var server = new ControlPlaneServer(_plan, new RunState { RunId = "run-plan" }, _store, _inbox, new NoOpTelegramService(), NullLogger.Instance, port);
+        var state = new RunState { RunId = "run-plan", CurrentStage = currentStage };
+        var server = new ControlPlaneServer(_plan, state, _store, _inbox, new NoOpTelegramService(), NullLogger.Instance, port);
         Assert.True(server.Start(), "control plane failed to bind");
         return (server, port);
     }
@@ -121,6 +122,80 @@ public sealed class ControlPlaneServerPlanTests : IDisposable
             using var doc = JsonDocument.Parse(body);
             Assert.False(doc.RootElement.GetProperty("ok").GetBoolean());
             Assert.Equal(before, await File.ReadAllTextAsync(_planPath)); // nothing written
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task PostPlanEdit_AddsStageAndGate_WithDefaults()
+    {
+        var (server, port) = StartServer();
+        try
+        {
+            var v0 = PlanConfig.Load(_planPath).PlanVersion;
+            var resp = await PostAsync(port, "/plan/edit",
+                """{"edits":[{"target":"stage","op":"add","id":"S2","value":"Second Stage"},{"target":"gate","op":"add","id":"lint","value":"dotnet format --verify-no-changes"}]}""");
+            Assert.Equal(HttpStatusCode.Accepted, resp.StatusCode);
+
+            var reloaded = PlanConfig.Load(_planPath);
+            var s2 = Assert.Single(reloaded.Stages, s => s.Id == "S2");
+            Assert.Equal("Second Stage", s2.Title);
+            Assert.Equal("deliver", s2.Kind); // schema default
+            var lint = Assert.Single(reloaded.Gates, g => g.Name == "lint");
+            Assert.Equal("dotnet format --verify-no-changes", lint.Command);
+            Assert.Equal("full", lint.Tier); // schema default
+            Assert.True(reloaded.PlanVersion > v0);
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task PostPlanEdit_DeletesGate()
+    {
+        var (server, port) = StartServer();
+        try
+        {
+            var resp = await PostAsync(port, "/plan/edit",
+                """{"edits":[{"target":"gate","op":"delete","id":"build"}]}""");
+            Assert.Equal(HttpStatusCode.Accepted, resp.StatusCode);
+            Assert.Empty(PlanConfig.Load(_planPath).Gates);
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task PostPlanEdit_DeleteDependedOnStage_RejectedWithoutWriting()
+    {
+        var (server, port) = StartServer();
+        try
+        {
+            // Add S2 that depends on S1, then try to delete S1 — the dangling dependsOn must make the
+            // whole delete fail the atomic re-validation, leaving the file untouched.
+            var add = await PostAsync(port, "/plan/edit",
+                """{"edits":[{"target":"stage","op":"add","id":"S2","value":"Second"},{"target":"stage","id":"S2","field":"dependson","value":"S1"}]}""");
+            Assert.Equal(HttpStatusCode.Accepted, add.StatusCode);
+
+            var before = await File.ReadAllTextAsync(_planPath);
+            var del = await PostAsync(port, "/plan/edit", """{"edits":[{"target":"stage","op":"delete","id":"S1"}]}""");
+            Assert.Equal(HttpStatusCode.BadRequest, del.StatusCode);
+            Assert.Equal(before, await File.ReadAllTextAsync(_planPath)); // nothing written
+            Assert.Contains(PlanConfig.Load(_planPath).Stages, s => s.Id == "S1"); // still there
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task PostPlanEdit_DeleteRunningStage_Refused()
+    {
+        var (server, port) = StartServer(currentStage: "S1");
+        try
+        {
+            var before = await File.ReadAllTextAsync(_planPath);
+            var resp = await PostAsync(port, "/plan/edit", """{"edits":[{"target":"stage","op":"delete","id":"S1"}]}""");
+            Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            Assert.Contains("running stage", doc.RootElement.GetProperty("error").GetString(), StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(before, await File.ReadAllTextAsync(_planPath));
         }
         finally { server.Dispose(); }
     }
