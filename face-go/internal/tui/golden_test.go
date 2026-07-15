@@ -57,6 +57,10 @@ func (fakeSource) SubscribeTranscript(_ func(api.TranscriptLineDto), onConnected
 	onConnected(true)
 	return func() {}
 }
+func (fakeSource) SubscribeConsole(_ func(api.ConsoleLineDto), onConnected func(bool)) func() {
+	onConnected(true)
+	return func() {}
+}
 func (fakeSource) Close() {}
 
 func keyMsg(text string) tea.KeyPressMsg {
@@ -93,6 +97,9 @@ func fixedState() *api.StateDto {
 		MaxAttempts:            3,
 		SessionElapsedSec:      41,
 		AgentActive:            true,
+		SessionCostUsd:         0.12,
+		SessionTokensInput:     3400,
+		SessionTokensOutput:    1900,
 		Stages: []api.StageDto{
 			{Id: "F0", Title: "Foundations", Done: 3, Total: 3, State: "confirmed"},
 			{Id: "F6", Title: "Ink TUI v1", Done: 5, Total: 5, State: "confirmed"},
@@ -227,6 +234,17 @@ func TestGolden(t *testing.T) {
 			m, _ = m.Update(MsgTimelineUpdated{Timeline: &api.TimelineDto{Entries: fixedTimeline()}})
 			return m
 		}},
+		{"console_modal", func(m tea.Model) tea.Model {
+			for i, raw := range []string{
+				`{"type":"system","subtype":"init","session_id":"s12","model":"deepseek-v4-pro"}`,
+				`{"type":"assistant","message":{"content":[{"type":"text","text":"Examining GateCache..."}]}}`,
+				`{"type":"result","subtype":"success","total_cost_usd":0.12,"num_turns":4}`,
+			} {
+				m, _ = m.Update(MsgConsoleLine{Line: api.ConsoleLineDto{Seq: int64(i + 1), Text: raw}})
+			}
+			m, _ = m.Update(keyMsg("c"))
+			return m
+		}},
 		{"prompt_preview", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("e"))
 			m, _ = m.Update(keyMsg("v"))
@@ -255,31 +273,50 @@ func TestGolden(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			m := newGoldenModel(110, 34)
 			m = tc.do(m)
+			checkGolden(t, tc.name, stripANSI(m.View().Content))
+		})
+	}
+}
 
-			got := stripANSI(m.View().Content)
+// checkGolden diffs got against testdata/golden/<name>.golden (or writes it under -update) and always
+// prints the frame so a human/agent with no TTY can read it.
+func checkGolden(t *testing.T, name, got string) {
+	t.Helper()
+	goldenPath := filepath.Join("testdata", "golden", name+".golden")
+	if *updateGolden {
+		if err := os.MkdirAll(filepath.Dir(goldenPath), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(goldenPath, []byte(got), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want, err := os.ReadFile(goldenPath)
+	if err != nil {
+		t.Fatalf("reading golden file (run with -update to create it): %v", err)
+	}
+	if got != string(want) {
+		t.Errorf("golden mismatch for %s\n--- got ---\n%s\n--- want ---\n%s", name, got, string(want))
+	}
+	fmt.Printf("\n===== %s =====\n%s\n", name, got)
+}
 
-			goldenPath := filepath.Join("testdata", "golden", tc.name+".golden")
-			if *updateGolden {
-				if err := os.MkdirAll(filepath.Dir(goldenPath), 0o755); err != nil {
-					t.Fatal(err)
-				}
-				if err := os.WriteFile(goldenPath, []byte(got), 0o644); err != nil {
-					t.Fatal(err)
-				}
-			}
-
-			want, err := os.ReadFile(goldenPath)
-			if err != nil {
-				t.Fatalf("reading golden file (run with -update to create it): %v", err)
-			}
-
-			if got != string(want) {
-				t.Errorf("golden mismatch for %s\n--- got ---\n%s\n--- want ---\n%s", tc.name, got, string(want))
-			}
-
-			// Always print the frame under -v so a human (or an agent with no real TTY) can
-			// actually see it, independent of pass/fail.
-			fmt.Printf("\n===== %s =====\n%s\n", tc.name, got)
+// TestGoldenSizes is the M5 truth gate for the Face: the ticker + plan sidebar + transcript must render
+// cleanly (no truncation of ids/scores, no mid-escape corruption) across narrow/mid/wide terminals.
+func TestGoldenSizes(t *testing.T) {
+	sizes := []struct {
+		name string
+		w, h int
+	}{
+		{"size_80x24", 80, 24},
+		{"size_120x30", 120, 30},
+		{"size_200x50", 200, 50},
+	}
+	for _, sz := range sizes {
+		t.Run(sz.name, func(t *testing.T) {
+			m := newGoldenModel(sz.w, sz.h)
+			m, _ = m.Update(keyMsg("p")) // sidebar open so the plan pane is exercised at each width
+			checkGolden(t, sz.name, stripANSI(m.View().Content))
 		})
 	}
 }

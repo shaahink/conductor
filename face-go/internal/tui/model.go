@@ -19,6 +19,7 @@ const (
 	ModalReport
 	ModalProcesses
 	ModalTimeline
+	ModalConsole
 	ModalHelp
 )
 
@@ -56,11 +57,16 @@ type Model struct {
 	// program keeps listening for the life of the process.
 	eventCh      chan api.ConductorEventDto
 	txCh         chan api.TranscriptLineDto
+	consoleCh    chan api.ConsoleLineDto
 	eventsConnCh chan bool
 	txConnCh     chan bool
 
-	eventSeq int64
-	txSeq    int64
+	eventSeq   int64
+	txSeq      int64
+	consoleSeq int64
+
+	// Native console (M5.3): raw agent stdout, scrolled independently of the transcript.
+	consoleScroll int
 
 	// --- Modal state ---
 
@@ -115,6 +121,7 @@ func New(source api.DataSource, isDemo bool, baseURL string) Model {
 		sidebar:      widgets.NewSidebar(),
 		eventCh:      make(chan api.ConductorEventDto, 256),
 		txCh:         make(chan api.TranscriptLineDto, 1024),
+		consoleCh:    make(chan api.ConsoleLineDto, 1024),
 		eventsConnCh: make(chan bool, 8),
 		txConnCh:     make(chan bool, 8),
 		data: api.AppState{
@@ -140,6 +147,7 @@ func (m Model) Init() tea.Cmd {
 		m.doPoll(),
 		waitForEvent(m.eventCh),
 		waitForTranscript(m.txCh),
+		waitForConsole(m.consoleCh),
 		waitForEventsConn(m.eventsConnCh),
 		waitForTxConn(m.txConnCh),
 	)

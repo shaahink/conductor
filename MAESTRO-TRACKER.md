@@ -4,12 +4,12 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: M5.1 (timeline) + M5.5 (prompt preview) Face panes built in face-go, each backed by their existing C# endpoint — which got their FIRST wire tests (both endpoints were shipped untested). face-go: `t` = scrollable Timeline modal; template editor `v` = compiled-prompt preview. Golden + unit tests added. Hardened ControlPlaneServerTests' WriteEvents to wait for the async drain (was latently flaky). Reverted the earlier MA0040 "fix" — it was a real regression (Task.Run(_, token) drops buffered events if dispose cancels before scheduling); restored the suppression with an accurate comment, ceiling now 38.
-stage: M5 IN PROGRESS — M5.1, M5.2, M5.5, M5.6 DONE. 19/30 DONE. Remaining M5: M5.3 (native console, needs GET /console/current), M5.4 (live ticker fold).
+last: M5 COMPLETE (6/6). Added M5.3 (native console: GET /console/current SSE + face-go `c` pane) and M5.4 (live ticker: fold TokenDelta into /state live session cost/tokens/elapsed/agentActive, no double-count after finish). Both wire-tested. M5 truth gate met: golden snapshots at 80×24/120×30/200×50 (size_* goldens); killing the Face leaves the run alive (verified `--no-face`; control plane independent, AD-2). DOGFOOD: ran the REAL orchestrator against a toy plan + local fake agent → real events + raw log; curled /state (live agentActive+elapsed), /timeline (real folded events), /console/current (real raw agent stdout over SSE); `conductor status` gave the right verdict + what-hurt from real events in 118ms.
+stage: M5 COMPLETE — all M5.1–M5.6 DONE. 21/30 DONE. Next: M6 (plan authoring).
 commit: [next]
-gate: build 0w/0e · 640 tests pass · face-go build/vet/test green · ratchet green (ceiling 38, pushed).
+gate: build 0w/0e · 643 tests pass (twice, stable) · face-go build/vet/test green · ratchet green (ceiling 38).
 branch: feat/foreman.
-next: M5.2 live plan enrichment (StageDto already carries score/cost/attempts — surface in face-go sidebar), M5.3 native console (add GET /console/current SSE + face-go pane), M5.4 live ticker (fold tokenDelta during session).
+next: M6.1 `conductor plan import <file>` (a model turns a mega-plan into the task graph, rendered as a confirm/edit table); M6.2 re-import diffs not clobbers; M6.3 edit plan/stages/models/gates from the TUI. M6 truth gate: import THIS design doc → a graph whose stage ids match M1…M9.
 
 
 ## Baseline numbers (from run.db)
@@ -17,7 +17,7 @@ next: M5.2 live plan enrichment (StageDto already carries score/cost/attempts �
 | Metric | Value |
 |---|---|
 | Total checkpoints | 30 |
-| Done | 19 |
+| Done | 21 |
 
 ## Checkpoints
 
@@ -65,8 +65,8 @@ phase (a code path is not evidence).
 |---|-----------|--------|--------|----------|
 | M5.1 | Timeline pane — sessions, gates, stalls, verdicts, cost over time | DONE | [next] | GET /timeline (backend) now has its first wire test (ControlPlaneServerTests seeds events, asserts the JSON kinds/cost). Face pane built in face-go: `t` opens a scrollable Timeline modal (clock + kind glyphs + cost), consuming /timeline via api.FetchTimeline. Golden test `timeline_modal` + unit test `TestTimelineOpenFetchNavigate`. |
 | M5.2 | Live plan pane — per-stage state/score/cost/attempts, no truncation at any width | DONE | [next] | face-go sidebar now renders per-stage score (done/total), attempts (N×) and cost ($X.XX) alongside state glyph/colour; id + score never truncate, title adapts to width (ANSI-safe single-Render). Golden `sidebar_open` shows `● F7 2/5 … 1× $0.30`. Data all flows from StageDto (already carried it). Note: depth-indent for nested-stage dependencies is a follow-up (maestro stages are flat, so N/A here). |
-| M5.3 | Native console pane — raw agent stdout over SSE, toggle to clean folded view | TODO | - | - |
-| M5.4 | Live ticker — cost/tokens fold from tokenDelta during the session, not at the end | TODO | - | - |
+| M5.3 | Native console pane — raw agent stdout over SSE, toggle to clean folded view | DONE | [next] | New GET /console/current SSE endpoint tails the current session's raw agent stdout (.conductor/logs/session-NNN.jsonl, newest by mtime). face-go `c` opens a Native Console modal showing raw lines with scroll/live-tail; the transcript pane is the folded view. Wire test + golden `console_modal` + unit test. DOGFOOD: curled /console/current against a real toy run — streamed the real agent's raw stream-json line by line. |
+| M5.4 | Live ticker — cost/tokens fold from tokenDelta during the session, not at the end | DONE | [next] | ControlPlaneServer.WithLiveSessionMetrics folds TokenDelta for the in-flight session into /state's SessionCostUsd/tokens + live SessionElapsedSec + AgentActive, and adds it to the run total (no double-count once SessionFinished lands). face-go ticker shows a live `● $x.xx` session segment when active. 2 wire tests (live fold + no-double-count). DOGFOOD: real toy run's /state showed agentActive:true, sessionElapsedSec live; TokenDelta fold unit-verified (the fake agent emits none). |
 | M5.5 | Compiled-prompt preview beside the template editor (live + future sessions) | DONE | [next] | GET /prompt/preview?stage=&kind= (backend) now has its first wire tests (compiled prompt non-empty for a real stage; 404 for unknown stage). Face pane built in face-go: in the template editor, `v` toggles a compiled-prompt preview for the current stage via api.FetchPromptPreview. Golden test `prompt_preview` + unit test `TestPromptCompiledPreviewToggle`. |
 | M5.6 | `conductor status` — one verdict, from the database, under a second | DONE | [next] | StatusReportBuilder folds run.db's event log (RunStateProjection + SnapshotBuilder, the same path `/state` uses) into a verdict; StatusCommand renders it. No longer reads state.json or the tracker markdown for the verdict. Exercised live against the real `.conductor/run.db` (Maestro): DB read 223ms (well under 1s). 6 truth-gate tests seed a run.db and assert the verdict with NO state.json on disk. Fast by default; LLM narrative moved to opt-in `--deep`. |
 

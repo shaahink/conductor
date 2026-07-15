@@ -172,6 +172,22 @@ func (s *demoSource) SubscribeTranscript(onLine func(TranscriptLineDto), onConne
 	}
 }
 
+func (s *demoSource) SubscribeConsole(onLine func(ConsoleLineDto), onConnected func(bool)) func() {
+	onConnected(true)
+	// Replay a few raw agent-stdout lines (the real thing is the agent CLI's raw JSON stream).
+	raw := []string{
+		`{"type":"system","subtype":"init","session_id":"s12","model":"deepseek-v4-pro"}`,
+		`{"type":"assistant","message":{"content":[{"type":"text","text":"Examining GateCache..."}]}}`,
+		`{"type":"assistant","message":{"content":[{"type":"tool_use","name":"read","input":{"path":"GateCache.cs"}}]}}`,
+		`{"type":"user","message":{"content":[{"type":"tool_result","content":"GateCache.cs:142 lines"}]}}`,
+		`{"type":"result","subtype":"success","total_cost_usd":0.12,"num_turns":4}`,
+	}
+	for i, line := range raw {
+		onLine(ConsoleLineDto{Seq: int64(i + 1), Text: line})
+	}
+	return func() {}
+}
+
 func (s *demoSource) Close() {
 	close(s.stopCh)
 }

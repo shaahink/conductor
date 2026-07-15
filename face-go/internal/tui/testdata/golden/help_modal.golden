@@ -21,6 +21,7 @@
                  ║      s         Supervised processes                                      ║                 
                  ║      r         Report / query                                            ║                 
                  ║      t         Timeline (sessions, gates, verdicts, cost)                ║                 
+                 ║      c         Native console (raw agent stdout)                         ║                 
                  ║      ?         This help                                                 ║                 
                  ║                                                                          ║                 
                  ║    GLOBAL                                                                ║                 
@@ -29,6 +30,5 @@
                  ║                                                                          ║                 
                  ║    MOUSE                                                                 ║                 
                  ║      Scroll    Navigate transcript                                       ║                 
-                 ║      Click     Select a plan-tree row                                    ║                 
                                                                                                               
                                                                                                               

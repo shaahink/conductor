@@ -1,4 +1,4 @@
- ● LIVE │ conductor-foreman │ F7 Gate caching + truth gates + speed program │ CP 2/40 │ $0.42                 
+ ● LIVE │ conductor-foreman │ F7 Gate caching + truth gates + speed program │ ● $0.12 │ CP 2/40 │ $0.42       
 ▶ PLAN                       │▸ Session #12 started · Deliver · Stage F7 · Attempt 1                          
 ✓ F0 3/3 Foundations         │⁙ Let me examine the GateCache implementation...                                
 ✓ F6 5/5 Ink TUI v1          │⚙ read src/Conductor/Core/Gating/GateCache.cs                                   

@@ -224,6 +224,86 @@ public sealed class ControlPlaneServerTests : IDisposable
     }
 
     [Fact]
+    public async Task GetState_FoldsLiveTokenDeltaIntoSessionTicker()
+    {
+        // M5.4: cost/tokens must accrue DURING a session. Session #1 is started but not finished, so its
+        // TokenDelta events are live spend the ticker should reflect — not zero-until-SessionFinished.
+        WriteEvents(
+            new RunStarted { Plan = "cps-test", Repo = _dir },
+            new StageEntered { StageId = "S1" },
+            new SessionStarted { Number = 1, StageId = "S1", Kind = "Deliver" },
+            new TokenDelta { SessionId = "1", Input = 1000, Output = 500, Reasoning = 200, CostUsd = 0.12m },
+            new TokenDelta { SessionId = "1", Input = 500, Output = 250, CostUsd = 0.06m });
+        var (server, port) = StartServer();
+        try
+        {
+            var resp = await _http.GetAsync($"http://127.0.0.1:{port}/state");
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            var root = doc.RootElement;
+            Assert.True(root.GetProperty("agentActive").GetBoolean(), "an unfinished session must read as active");
+            Assert.Equal(0.18, root.GetProperty("sessionCostUsd").GetDouble(), 3);
+            Assert.Equal(1500, root.GetProperty("sessionTokensInput").GetInt64());
+            Assert.Equal(750, root.GetProperty("sessionTokensOutput").GetInt64());
+            // The run total includes the in-flight session's live spend (nothing is in History yet).
+            Assert.True(root.GetProperty("totalCostUsd").GetDouble() >= 0.18, "total must include live session spend");
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task GetState_SessionFinished_DoesNotDoubleCountLiveDeltas()
+    {
+        // Once the session finishes, its cost lives in History; the live fold must not be added on top.
+        WriteEvents(
+            new RunStarted { Plan = "cps-test", Repo = _dir },
+            new StageEntered { StageId = "S1" },
+            new SessionStarted { Number = 1, StageId = "S1", Kind = "Deliver" },
+            new TokenDelta { SessionId = "1", Input = 1000, Output = 500, CostUsd = 0.20m },
+            new SessionFinished { Number = 1, StageId = "S1", Outcome = "Advanced", CostUsd = 0.20m });
+        var (server, port) = StartServer();
+        try
+        {
+            var resp = await _http.GetAsync($"http://127.0.0.1:{port}/state");
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            var root = doc.RootElement;
+            Assert.False(root.GetProperty("agentActive").GetBoolean(), "a finished session must not read as active");
+            Assert.Equal(0.20, root.GetProperty("totalCostUsd").GetDouble(), 3); // History cost only, not 0.40
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")] // waits on the SSE poll cycle
+    public async Task GetConsoleCurrent_StreamsRawSessionLogAsSse()
+    {
+        // M5.3: /console/current tails the current session's RAW agent stdout log.
+        var logsDir = Path.Combine(_plan.StateDir, "logs");
+        Directory.CreateDirectory(logsDir);
+        await File.WriteAllTextAsync(Path.Combine(logsDir, "session-001.jsonl"),
+            "{\"type\":\"assistant\",\"text\":\"raw agent line alpha\"}\n");
+        var (server, port) = StartServer();
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            using var resp = await _http.GetAsync($"http://127.0.0.1:{port}/console/current",
+                HttpCompletionOption.ResponseHeadersRead, cts.Token);
+            Assert.Equal("text/event-stream", resp.Content.Headers.ContentType?.MediaType);
+
+            await using var stream = await resp.Content.ReadAsStreamAsync(cts.Token);
+            using var reader = new StreamReader(stream);
+            string? line;
+            var saw = false;
+            while (!saw && (line = await reader.ReadLineAsync(cts.Token)) != null)
+            {
+                if (line.StartsWith("data: ", StringComparison.Ordinal) && line.Contains("raw agent line alpha", StringComparison.Ordinal))
+                    saw = true;
+            }
+            Assert.True(saw, "expected the raw console line as an SSE frame within the timeout");
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
     public async Task PostControl_ValidCommand_EnqueuesAndReturns202()
     {
         var (server, port) = StartServer();

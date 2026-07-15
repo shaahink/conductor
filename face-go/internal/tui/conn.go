@@ -137,6 +137,10 @@ func (m Model) subscribeStreams() {
 		func(l api.TranscriptLineDto) { m.txCh <- l },
 		func(connected bool) { m.txConnCh <- connected },
 	)
+	m.source.SubscribeConsole(
+		func(l api.ConsoleLineDto) { m.consoleCh <- l },
+		func(bool) {},
+	)
 }
 
 func waitForEvent(ch chan api.ConductorEventDto) tea.Cmd {
@@ -156,6 +160,16 @@ func waitForTranscript(ch chan api.TranscriptLineDto) tea.Cmd {
 			return nil
 		}
 		return MsgTranscriptLine{Line: l}
+	}
+}
+
+func waitForConsole(ch chan api.ConsoleLineDto) tea.Cmd {
+	return func() tea.Msg {
+		l, ok := <-ch
+		if !ok {
+			return nil
+		}
+		return MsgConsoleLine{Line: l}
 	}
 }
 

@@ -34,6 +34,10 @@ type MsgTranscriptLine struct {
 	Line api.TranscriptLineDto
 }
 
+type MsgConsoleLine struct {
+	Line api.ConsoleLineDto
+}
+
 type MsgEventsConnChanged struct {
 	Connected bool
 }

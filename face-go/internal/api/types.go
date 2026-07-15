@@ -17,8 +17,16 @@ type DataSource interface {
 
 	SubscribeEvents(onEvent func(ConductorEventDto), onConnected func(bool)) (stop func())
 	SubscribeTranscript(onLine func(TranscriptLineDto), onConnected func(bool)) (stop func())
+	SubscribeConsole(onLine func(ConsoleLineDto), onConnected func(bool)) (stop func())
 
 	Close()
+}
+
+// ConsoleLineDto mirrors the C# record (GET /console/current): one raw agent-stdout line from the
+// current session's log — the "native console", i.e. exactly what the CLI is printing.
+type ConsoleLineDto struct {
+	Seq  int64  `json:"seq"`
+	Text string `json:"text"`
 }
 
 // --- Top-level DTOs ---
@@ -236,6 +244,7 @@ type AppState struct {
 	Sessions     []SessionRowDto
 	Events       []ConductorEventDto
 	Transcript   []TranscriptLineDto
+	RawConsole   []ConsoleLineDto
 	LastEventSeq int64
 	LastTxSeq    int64
 

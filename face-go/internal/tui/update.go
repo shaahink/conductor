@@ -138,6 +138,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.transcript = m.transcript.Update(widgets.MsgAppendLine{Line: msg.Line})
 		return m, waitForTranscript(m.txCh)
 
+	case MsgConsoleLine:
+		m.data.RawConsole = append(m.data.RawConsole, msg.Line)
+		if len(m.data.RawConsole) > 2000 {
+			m.data.RawConsole = m.data.RawConsole[len(m.data.RawConsole)-2000:]
+		}
+		m.consoleSeq = msg.Line.Seq
+		return m, waitForConsole(m.consoleCh)
+
 	case MsgFetchError:
 		m.data.Connection.LastError = &msg.Err
 		m.data.Connection.Connected = false
@@ -267,6 +275,11 @@ func (m Model) handleKey(key string) (tea.Model, tea.Cmd) {
 		m.timelineErr = ""
 		return m, m.cmdFetchTimeline()
 
+	case "c":
+		m.activeModal = ModalConsole
+		m.consoleScroll = 0 // 0 = pinned to the live tail
+		return m, nil
+
 	case "?":
 		m.activeModal = ModalHelp
 		return m, nil
@@ -374,6 +387,8 @@ func (m *Model) handleModalKey(key string) (tea.Model, tea.Cmd) {
 		return m.handleProcessesKey(key)
 	case ModalTimeline:
 		return m.handleTimelineKey(key)
+	case ModalConsole:
+		return m.handleConsoleKey(key)
 	case ModalHelp:
 		if key == "esc" || key == "?" {
 			m.activeModal = ModalNone
@@ -666,6 +681,26 @@ func (m *Model) handleProcessesKey(key string) (tea.Model, tea.Cmd) {
 		if m.processSelected < len(m.data.Processes)-1 {
 			m.processSelected++
 		}
+		return m, nil
+	}
+	return m, nil
+}
+
+func (m *Model) handleConsoleKey(key string) (tea.Model, tea.Cmd) {
+	switch key {
+	case "esc", "c":
+		m.activeModal = ModalNone
+		return m, nil
+	case "up", "k":
+		m.consoleScroll++ // scroll back into history (0 = pinned to live tail)
+		return m, nil
+	case "down", "j":
+		if m.consoleScroll > 0 {
+			m.consoleScroll--
+		}
+		return m, nil
+	case "end":
+		m.consoleScroll = 0
 		return m, nil
 	}
 	return m, nil

@@ -162,10 +162,48 @@ func (m Model) modalContent() (string, string, string) {
 		return m.renderProcessesModal()
 	case ModalTimeline:
 		return m.renderTimelineModal()
+	case ModalConsole:
+		return m.renderConsoleModal()
 	case ModalHelp:
 		return m.renderHelpModal()
 	}
 	return "", "", ""
+}
+
+func (m Model) renderConsoleModal() (string, string, string) {
+	title := "Native Console — raw agent stdout"
+
+	lines := m.data.RawConsole
+	if len(lines) == 0 {
+		return title,
+			"  " + subtleStyle.Render("(no raw output yet — the agent tees stdout to .conductor/logs/session-NNN.jsonl)"),
+			"[esc/c: close]"
+	}
+
+	const window = 18
+	end := len(lines) - m.consoleScroll // consoleScroll counts lines back from the live tail
+	if end < 1 {
+		end = 1
+	}
+	if end > len(lines) {
+		end = len(lines)
+	}
+	start := end - window
+	if start < 0 {
+		start = 0
+	}
+
+	var out []string
+	for i := start; i < end; i++ {
+		out = append(out, "  "+subtleStyle.Render(truncate(lines[i].Text, 66)))
+	}
+
+	pos := "live tail"
+	if m.consoleScroll > 0 {
+		pos = fmt.Sprintf("scrolled back %d", m.consoleScroll)
+	}
+	out = append(out, "", subtleStyle.Render(fmt.Sprintf("  %d lines · %s · the transcript pane is the folded view", len(lines), pos)))
+	return title, strings.Join(out, "\n"), "[↑↓: scroll] [end: live tail] [esc/c: close]"
 }
 
 func (m Model) renderTimelineModal() (string, string, string) {
@@ -583,6 +621,7 @@ func (m Model) renderHelpModal() (string, string, string) {
     s         Supervised processes
     r         Report / query
     t         Timeline (sessions, gates, verdicts, cost)
+    c         Native console (raw agent stdout)
     ?         This help
 
   GLOBAL

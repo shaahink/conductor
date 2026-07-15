@@ -18,8 +18,9 @@ type liveSource struct {
 	ctx        context.Context
 	cancel     context.CancelFunc
 
-	lastEventSeq atomic.Int64
-	lastTxSeq    atomic.Int64
+	lastEventSeq   atomic.Int64
+	lastTxSeq      atomic.Int64
+	lastConsoleSeq atomic.Int64
 }
 
 func NewLiveSource(baseURL string) DataSource {
@@ -172,6 +173,15 @@ func (s *liveSource) SubscribeTranscript(onLine func(TranscriptLineDto), onConne
 		}
 		onLine(l)
 	}, onConnected, func() int64 { return s.lastTxSeq.Load() })
+}
+
+func (s *liveSource) SubscribeConsole(onLine func(ConsoleLineDto), onConnected func(bool)) func() {
+	return SubscribeConsole(s.ctx, s.baseURL, func(l ConsoleLineDto) {
+		if l.Seq > 0 {
+			s.lastConsoleSeq.Store(l.Seq)
+		}
+		onLine(l)
+	}, onConnected, func() int64 { return s.lastConsoleSeq.Load() })
 }
 
 func (s *liveSource) Close() {

@@ -134,3 +134,13 @@ func SubscribeTranscript(ctx context.Context, baseURL string, onLine func(Transc
 		onLine(line)
 	}, onConnected, since)
 }
+
+func SubscribeConsole(ctx context.Context, baseURL string, onLine func(ConsoleLineDto), onConnected func(bool), since func() int64) func() {
+	return subscribeSSE(ctx, baseURL+"/console/current", func(data []byte) {
+		var line ConsoleLineDto
+		if err := json.Unmarshal(data, &line); err != nil {
+			return
+		}
+		onLine(line)
+	}, onConnected, since)
+}

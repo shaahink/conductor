@@ -24,7 +24,40 @@ public sealed partial class ControlPlaneServer
         var track = ReadTrackerSafe();
         var snap = SnapshotBuilder.Build(_plan, runState, track);
         var dto = ControlPlaneDto.FromSnapshot(snap, runState.RunId, _plan.Repo, _plan.PlanDir);
+        dto = WithLiveSessionMetrics(dto, events, runState);
         await WriteJsonAsync(ctx, dto, ControlPlaneJsonContext.Default.StateDto).ConfigureAwait(false);
+    }
+
+    /// <summary>M5.4: fold <see cref="TokenDelta"/> for the current session so the ticker's cost/tokens
+    /// accrue DURING a session, not only when <c>SessionFinished</c> lands. The 3-arg
+    /// <see cref="SnapshotBuilder"/> can't see the event log, so it always reports zero live spend; here
+    /// we add the in-flight session's folded deltas on top of the (finished-session) totals it produced.
+    /// Once the session finishes its cost is in <see cref="RunState.History"/>, so we stop adding the
+    /// live estimate to avoid double-counting.</summary>
+    internal static StateDto WithLiveSessionMetrics(StateDto dto, IReadOnlyList<ConductorEvent> events, RunState runState)
+    {
+        if (runState.SessionCounter <= 0) return dto;
+
+        var current = runState.History.LastOrDefault(h => h.Number == runState.SessionCounter);
+        var live = LiveMetrics.ForSession(events, runState.SessionCounter);
+        var sessionLive = current is { EndedUtc: null };
+        var elapsed = sessionLive && current != null
+            ? Math.Max(0, (DateTime.UtcNow - current.StartedUtc).TotalSeconds)
+            : dto.SessionElapsedSec;
+
+        return dto with
+        {
+            AgentActive = sessionLive,
+            SessionElapsedSec = elapsed,
+            SessionCostUsd = live.CostUsd,
+            SessionTokensInput = live.Input,
+            SessionTokensOutput = live.Output,
+            SessionTokensReasoning = live.Reasoning,
+            TotalCostUsd = sessionLive ? dto.TotalCostUsd + live.CostUsd : dto.TotalCostUsd,
+            TokensInput = sessionLive ? dto.TokensInput + live.Input : dto.TokensInput,
+            TokensOutput = sessionLive ? dto.TokensOutput + live.Output : dto.TokensOutput,
+            TokensReasoning = sessionLive ? dto.TokensReasoning + live.Reasoning : dto.TokensReasoning,
+        };
     }
 
     private TrackerSnapshot ReadTrackerSafe()
@@ -111,6 +144,77 @@ public sealed partial class ControlPlaneServer
 
     private static long ParseSince(HttpListenerContext ctx)
         => long.TryParse(ctx.Request.QueryString["since"], out var since) ? since : 0;
+
+    // ── M5.3: native console — stream the current session's RAW agent stdout ──
+
+    /// <summary>Streams the raw agent stdout of the current session over SSE: exactly what the CLI is
+    /// printing, straight from the per-session raw log AgentSession tees to <c>.conductor/logs/</c>. This
+    /// is the "see what the agent is actually doing" pane; the transcript stream is the parsed/folded view.
+    /// A client reconnects with <c>?since=</c> (a line index) to resume. When a new session's log appears
+    /// the line counter resets so the pane follows the live session.</summary>
+    private async Task StreamConsoleAsync(HttpListenerContext ctx, CancellationToken ct)
+    {
+        ctx.Response.ContentType = "text/event-stream";
+        ctx.Response.Headers.Add("Cache-Control", "no-cache");
+        ctx.Response.SendChunked = true;
+        var output = ctx.Response.OutputStream;
+        var since = ParseSince(ctx);
+        string? followingPath = null;
+        try
+        {
+            while (!ct.IsCancellationRequested)
+            {
+                var path = CurrentRawLogPath();
+                if (path != followingPath)
+                {
+                    followingPath = path; // a new session started — replay its log from the top
+                    since = 0;
+                }
+                if (path != null && File.Exists(path))
+                {
+                    string[] lines;
+                    try { lines = await File.ReadAllLinesAsync(path, ct).ConfigureAwait(false); }
+                    catch (IOException) { lines = []; }
+                    for (var i = 0; i < lines.Length; i++)
+                    {
+                        var seq = i + 1;
+                        if (seq <= since) continue;
+                        var json = JsonSerializer.Serialize(new ConsoleLineDto(seq, lines[i]),
+                            ControlPlaneJsonContext.Default.ConsoleLineDto);
+                        var frame = Encoding.UTF8.GetBytes($"data: {json}\n\n");
+                        await output.WriteAsync(frame, ct).ConfigureAwait(false);
+                        since = seq;
+                    }
+                }
+                await output.FlushAsync(ct).ConfigureAwait(false);
+                await Task.Delay(1000, ct).ConfigureAwait(false);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or HttpListenerException or OperationCanceledException)
+        {
+        }
+        finally
+        {
+            try { ctx.Response.Close(); } catch (Exception) { /* best effort */ }
+        }
+    }
+
+    /// <summary>The raw log of the session most recently written to — the live one while a session runs.
+    /// Chosen by last-write time rather than by parsing a session number, so it needs no fold and is
+    /// robust past 999 sessions (where the zero-padded filename stops sorting numerically).</summary>
+    private string? CurrentRawLogPath()
+    {
+        var logsDir = Path.Combine(_plan.StateDir, "logs");
+        if (!Directory.Exists(logsDir)) return null;
+        try
+        {
+            return new DirectoryInfo(logsDir).EnumerateFiles("session-*.jsonl")
+                .OrderByDescending(f => f.LastWriteTimeUtc)
+                .FirstOrDefault()?.FullName;
+        }
+        catch (IOException) { return null; }
+        catch (UnauthorizedAccessException) { return null; }
+    }
 
     private async Task WriteProcessesAsync(HttpListenerContext ctx)
     {

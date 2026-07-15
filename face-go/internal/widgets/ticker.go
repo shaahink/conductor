@@ -36,6 +36,16 @@ func RenderTicker(conn api.ConnectionState, state *api.StateDto, width int) stri
 		parts = append(parts, accent(state.PlanName))
 		parts = append(parts, accent(state.StageId)+" "+dimStyle.Render(state.StageTitle))
 
+		// M5.4: live session ticker — cost/tokens that grow DURING the session (folded from tokenDelta
+		// server-side), shown while the agent is active so you watch spend accrue, not jump at the end.
+		if state.AgentActive {
+			seg := green("●") + " " + accent(fmt.Sprintf("$%.2f", state.SessionCostUsd))
+			if width >= 120 {
+				seg += " " + dimStyle.Render(fmt.Sprintf("%dk/%dk tok", state.SessionTokensInput/1000, state.SessionTokensOutput/1000))
+			}
+			parts = append(parts, seg)
+		}
+
 		if width >= 100 {
 			parts = append(parts, fmt.Sprintf("CP %d/%d", state.DoneCount, state.TotalCount))
 		}

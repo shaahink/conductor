@@ -1,0 +1,26 @@
+ ● LIVE │ conductor-foreman │ F7 Gate caching + truth gates + speed program │ ● 
+▶ PLAN                 │▸ Session #12 started · Deliver · Stage F7 · Attempt 1  
+✓ F0 3/3 Foundations   │⁙ Let me examine the GateCache implementation...        
+✓ F6 5/5 Ink TUI v1    │⚙ read src/Conductor/Core/Gating/GateCache.cs           
+● F7 2/5 Gate… 1× $0.30│↳ GateCache.cs:142 lines — caches by (name, tier, sha)  
+  ✓  F7.1 Plan import  │▸ Found the caching layer. Adding GetLastPassingGateResu
+  ✓  F7.2 Re-import    │                                                        
+diff                   │                                                        
+  ●  F7.3 Truth-gate   │                                                        
+ti…                    │                                                        
+○ F8 0/4 conductor cha…│                                                        
+                       │                                                        
+── GATES ──            │                                                        
+  ✓  build             │                                                        
+  ●  test              │                                                        
+  ○  lint              │                                                        
+                       │                                                        
+                       │                                                        
+                       │                                                        
+                       │                                                        
+                       │                                                        
+                       │                                                        
+                       │                                                        
+                       │                                                        
+                       │                                                        
+ p close-plan  ↑↓ navigate  enter expand  : palette                             

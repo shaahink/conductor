@@ -338,6 +338,45 @@ func SessionTemplateName(m Model, idx int) string {
 	return filepath.Base(m.promptEntries[idx].Path)
 }
 
+func TestConsoleModalReceivesAndScrolls(t *testing.T) {
+	m := newTestModel()
+
+	// Raw lines stream in continuously (background subscription), even before the modal is opened.
+	for i := 0; i < 3; i++ {
+		tm, _ := m.Update(MsgConsoleLine{Line: api.ConsoleLineDto{Seq: int64(i + 1), Text: "raw line"}})
+		m = asModel(tm)
+	}
+	if len(m.data.RawConsole) != 3 {
+		t.Fatalf("expected 3 buffered console lines, got %d", len(m.data.RawConsole))
+	}
+
+	tm, _ := m.handleKey("c")
+	m = asModel(tm)
+	if m.activeModal != ModalConsole {
+		t.Fatalf("expected console modal to open, got %v", m.activeModal)
+	}
+	if m.consoleScroll != 0 {
+		t.Error("console should open pinned to the live tail (scroll 0)")
+	}
+
+	tm, _ = m.handleConsoleKey("up")
+	m = asModel(tm)
+	if m.consoleScroll != 1 {
+		t.Errorf("up should scroll back into history, got scroll %d", m.consoleScroll)
+	}
+	tm, _ = m.handleConsoleKey("end")
+	m = asModel(tm)
+	if m.consoleScroll != 0 {
+		t.Error("end should re-pin to the live tail")
+	}
+
+	tm, _ = m.handleConsoleKey("c")
+	m = asModel(tm)
+	if m.activeModal != ModalNone {
+		t.Error("c should toggle the console modal closed")
+	}
+}
+
 func TestTimelineOpenFetchNavigate(t *testing.T) {
 	m := newTestModel()
 	tm, cmd := m.handleKey("t")
