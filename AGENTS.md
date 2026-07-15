@@ -25,6 +25,55 @@ TUI at `face/`.
 - **Driver:** the STABLE `C:\Code\conductor\bin\conductor.exe` (built from master). The tool improving
   Conductor is never the tool under edit.
 
+## Resume here (Maestro M9 complete — plan CLOSED, 30/30, 2026-07-15)
+**M9 (dogfood close) is DONE, 2/2 — 30/30 checkpoints. The Maestro plan is feature-complete and
+release-clean.** M9 was run by dogfooding the engine on itself: a real `conductor run` of a toy plan
+(token-free `tools/fake-agent.ps1`) through the binary built from this branch, exercising the whole
+path end-to-end.
+
+- **Four real defects bled out of the dogfood and were fixed** (M9.1 — "fix what bleeds"):
+  1. **The ratchet gate was RED and had been reported green.** Analyzer suppressions were at 40
+     against the ceiling of 38, so the M8 close-out's "architecture ratchet green" was simply false —
+     the pushed tree failed its own anti-cheat gate. Fixed the honest way (the gate forbids raising
+     the ceiling): removed a **dead class-level `MA0045`** on `Orchestrator.cs` (leftover from before
+     the M1.3 god-class split — zero blocking calls remain) and converted **`DoctorCommand` to a
+     Spectre `AsyncCommand`** so it awaits `RunChecksAsync` instead of `GetAwaiter().GetResult()`.
+  2. **`tools/fake-agent.ps1` failed to PARSE under Windows PowerShell 5.1.** Two em-dashes made the
+     BOM-less UTF-8 script decode as ANSI and tear a string literal mid-line, so the smoke harness
+     never ran a single session — every toy session errored. Now ASCII-only, matching the discipline
+     `ratchet.ps1`'s own header documents. (Note: the engine handled the broken agent *correctly* —
+     gate battery ran, cache hit, circuit breaker fired on the identical ×2 failure, escalated to
+     NEEDS HUMAN, honoured `--max-sessions`. Good evidence in itself.)
+  3. **M2.4 deviation:** `transcript.md` is listed in the design doc but was never written to
+     `.conductor/sessions/<NNN>/`. `RunLoop.RenderTranscript` now folds the raw agent NDJSON
+     (`logs/session-NNN.jsonl`) into readable markdown there; unparseable lines are kept verbatim so a
+     new provider wire format never silently drops content.
+  4. **Prompt glitch:** the session template rendered `exactly as `` prescribes` (empty backticks) for
+     any plan without a `planDoc`. `{planDoc}` now falls back to the tracker.
+- **Built `conductor init`** — the design-doc **M8.2** scaffolder that was never implemented (M8 shipped
+  Telegram guided-setup under M8.2 instead — an owner redirect). It's a superset of `new-plan`: detects
+  the repo type from a root marker (dotnet/go/rust/node/python — dotnet wins on ties), wires the matching
+  build+test gates, drops editable copies of the built-in `session.md`/`fix.md` templates, and self-checks
+  the scaffold loads. This closes the audit's clearest DEVIATE. Also fixed the stale `doctor` `--help`
+  text (still described the pre-M8.1 resume preview).
+- **M9.2 final audit written: `docs/maestro/M9-FINAL-AUDIT.md`** — every design-doc checkpoint rated
+  CONFORMS/DEVIATES, truth gates **re-run live this session** where credential-free. Verified live:
+  M4.1 (rigged tracker edit discarded → 0 checkpoints), M4.2 (gate cache HIT), M3.1 (workflow step
+  0→1), M6.1/6.2 (`plan import` → M1…M9, diff), M8.1 (`doctor` <2s), M5.6 (`status` 514ms), M2.3 (no
+  `state.json` written), M2.4 (`prompt.md` byte-identical). **30/31 design-doc checkpoints CONFORM.**
+- **Two credential-gated `HUMAN:` items remain** (documented in the audit; neither blocks engine
+  release): **M8.3** the live Telegram phone dogfood (needs the owner's real bot token) and **M9.1** the
+  full real-DeepSeek-model run (paid). Everything reproducible without credentials was reproduced and
+  conforms.
+
+**Commits:** `4b1e2e7` ratchet + fake-agent + transcript.md · `fba0fe2` planDoc fallback ·
+`baceb4a` conductor init + doctor help + final audit.
+
+**Gate at close:** build 0w/0e · full C# suite 704 green (+11) · ratchet green (652 tests / 38 pragmas)
+· face-go green · toy `conductor run` drives a plan deliver→verify→fix end to end.
+
+---
+
 ## Resume here (Maestro M8 complete, 2026-07-15)
 **M8 (AFK & smart setup) is DONE, 2/2 — 28/30 checkpoints.** Plus the M7 heads-up NRE is fixed.
 
