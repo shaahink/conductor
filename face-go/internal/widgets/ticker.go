@@ -75,7 +75,9 @@ func RenderFooter(width int, sidebarOpen bool) string {
 		key("i") + " inject",
 		key("e") + " edit",
 		key("h") + " history",
+		key("s") + " procs",
 		key("r") + " query",
+		key("/") + " search",
 		key("?") + " help",
 	}
 
@@ -84,7 +86,6 @@ func RenderFooter(width int, sidebarOpen bool) string {
 			key("p") + " close-plan",
 			key("\u2191\u2193") + " navigate",
 			key("enter") + " expand",
-			key("/") + " filter",
 			key(":") + " palette",
 		}
 	}

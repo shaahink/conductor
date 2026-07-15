@@ -70,10 +70,6 @@ func TestComputeLayout(t *testing.T) {
 				t.Errorf("widths don't add up: transcript %d + sidebar %d != %d",
 					layout.Transcr.Width, layout.Sidebar.Width, tc.width)
 			}
-
-			if layout.GateBar.Height != 1 && layout.Main.Height > 0 {
-				t.Errorf("gate bar height: want 1, got %d", layout.GateBar.Height)
-			}
 		})
 	}
 }

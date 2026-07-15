@@ -3,10 +3,12 @@ package tui
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	"conductor-face-go/internal/api"
 	"conductor-face-go/internal/widgets"
 )
 
@@ -18,7 +20,6 @@ var (
 	destructStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#F85149"))
 	warnStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("#D29922"))
 	safeStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("#3FB950"))
-	inputStyle    = lipgloss.NewStyle().Border(lipgloss.NormalBorder()).BorderForeground(lipgloss.Color("#58A6FF")).Padding(0, 1).Width(50)
 )
 
 func (m Model) View() tea.View {
@@ -33,13 +34,21 @@ func (m Model) View() tea.View {
 	}
 
 	ticker := widgets.RenderTicker(m.data.Connection, m.data.Plan, tw)
-	footer := widgets.RenderFooter(tw, m.sidebarOpen)
 	transcript := m.renderTranscript()
 
 	mainContent := transcript
+	showGateBar := !m.sidebarOpen && m.data.Plan != nil && len(m.data.Plan.Gates) > 0
 	if m.sidebarOpen {
 		sb := m.renderSidebar()
 		mainContent = lipgloss.JoinHorizontal(lipgloss.Top, sb, transcript)
+	} else if showGateBar {
+		gateBar := lipgloss.NewStyle().Padding(0, 1).Render(widgets.RenderGateBar(m.data.Plan.Gates, tw-2))
+		mainContent = lipgloss.JoinVertical(lipgloss.Top, transcript, gateBar)
+	}
+
+	footer := widgets.RenderFooter(tw, m.sidebarOpen)
+	if m.searchActive || m.transcript.SearchQuery != "" {
+		footer = m.renderSearchBar(tw)
 	}
 
 	result := lipgloss.JoinVertical(lipgloss.Top, ticker, mainContent, footer)
@@ -79,6 +88,32 @@ func (m Model) renderSidebar() string {
 		BorderForeground(lipgloss.Color("#30363D"))
 
 	return sStyle.Render(m.sidebar.View())
+}
+
+func (m Model) renderSearchBar(width int) string {
+	style := lipgloss.NewStyle().
+		Background(lipgloss.Color("#161B22")).
+		Foreground(lipgloss.Color("#484F58")).
+		Padding(0, 1).MaxHeight(1).MaxWidth(width)
+
+	q := m.transcript.SearchQuery
+	cursor := ""
+	if m.searchActive {
+		cursor = "_"
+	}
+
+	matchInfo := subtleStyle.Render("no matches")
+	if len(m.transcript.SearchMatches) > 0 {
+		matchInfo = accentStyle.Render(fmt.Sprintf("%d/%d", m.transcript.SearchMatchIdx+1, len(m.transcript.SearchMatches)))
+	}
+
+	hint := "esc: clear"
+	if !m.searchActive {
+		hint = "n/N: next/prev  ·  esc: clear"
+	}
+
+	line := fmt.Sprintf("/%s%s  %s  %s", q, cursor, matchInfo, subtleStyle.Render(hint))
+	return style.Render(line)
 }
 
 func (m Model) renderModal(background string) string {
@@ -123,6 +158,8 @@ func (m Model) modalContent() (string, string, string) {
 		return m.renderSessionsModal()
 	case ModalReport:
 		return m.renderReportModal()
+	case ModalProcesses:
+		return m.renderProcessesModal()
 	case ModalHelp:
 		return m.renderHelpModal()
 	}
@@ -132,10 +169,19 @@ func (m Model) modalContent() (string, string, string) {
 func (m Model) renderPaletteModal() (string, string, string) {
 	title := "Command Palette"
 
+	if m.paletteGotoActive {
+		body := fmt.Sprintf("\n  %s\n\n  %s%s\n",
+			textStyle.Render("Jump to stage id:"),
+			accentStyle.Render(m.paletteGotoInput),
+			accentStyle.Render("▏"),
+		)
+		return title, body, "[enter: confirm] [esc: back]"
+	}
+
 	if m.paletteConfirming {
 		verb := allVerbs[m.paletteVerbIdx]
 		body := fmt.Sprintf("\n  %s %s\n  %s\n\n  %s\n",
-			destructStyle.Render("\u26A0 "+verb.Key),
+			destructStyle.Render("⚠ "+verb.Key),
 			subtleStyle.Render(verb.Desc),
 			destructStyle.Render("This is a destructive action."),
 			warnStyle.Render("Confirm? [y/N]"),
@@ -160,7 +206,7 @@ func (m Model) renderPaletteModal() (string, string, string) {
 		symbol := "  "
 		vs := textStyle
 		if !verb.Safe {
-			symbol = "\u26A0 "
+			symbol = "⚠ "
 			vs = destructStyle
 		}
 		line := fmt.Sprintf("%s%-14s  %s", symbol, vs.Render(verb.Key), subtleStyle.Render(verb.Desc))
@@ -171,7 +217,7 @@ func (m Model) renderPaletteModal() (string, string, string) {
 	}
 
 	body := strings.Join(lines, "\n")
-	return title, body, "[\u2191\u2193: navigate] [enter: execute] [esc: close] [type: filter]"
+	return title, body, "[↑↓: navigate] [enter: execute] [esc: close] [type: filter]"
 }
 
 func (m Model) renderInjectModal() (string, string, string) {
@@ -190,9 +236,9 @@ func (m Model) renderInjectModal() (string, string, string) {
 		subtleStyle.Render("Stage:"),
 		sf.Render(m.injectStageId+"_"))
 
-	contentLine := fmt.Sprintf("  %s %s",
+	contentLine := fmt.Sprintf("  %s\n%s",
 		subtleStyle.Render("Content:"),
-		cf.Render(m.injectContent+"_"))
+		cf.Render(indent(m.injectContent+"_", "  ")))
 
 	body := fmt.Sprintf("%s\n\n%s\n\n  %s",
 		stageLine,
@@ -206,26 +252,35 @@ func (m Model) renderInjectModal() (string, string, string) {
 func (m Model) renderPromptModal() (string, string, string) {
 	title := "Template Editor"
 
-	if m.promptMode == PromptEdit {
+	if m.promptMode == PromptEdit && m.promptSelected < len(m.promptEntries) {
+		entry := m.promptEntries[m.promptSelected]
 		body := fmt.Sprintf("  %s: %s\n\n%s",
 			subtleStyle.Render("Editing"),
-			accentStyle.Render(m.promptTemplates[m.promptSelected]),
+			accentStyle.Render(entry.Label),
 			textStyle.Render(m.promptContent),
 		)
 		return title, body, "[ctrl+s: save] [esc: back to list]"
 	}
 
+	if len(m.promptEntries) == 0 {
+		return title, "  " + subtleStyle.Render("(no plan directory known yet)"), "[esc: close]"
+	}
+
 	var lines []string
-	for i, t := range m.promptTemplates {
-		line := fmt.Sprintf("  %s", t)
+	for i, e := range m.promptEntries {
+		status := safeStyle.Render("on disk")
+		if !e.Exists {
+			status = subtleStyle.Render("built-in default")
+		}
+		line := fmt.Sprintf("  %-28s %s", e.Label, status)
 		if i == m.promptSelected {
 			line = highlightBg.Render(line)
 		}
 		lines = append(lines, line)
 	}
 	body := strings.Join(lines, "\n")
-	body += fmt.Sprintf("\n\n  %s", subtleStyle.Render("Saved to planDir/personas/ — engine hot-reloads on next session."))
-	return title, body, "[\u2191\u2193: select] [enter: edit] [esc: close]"
+	body += fmt.Sprintf("\n\n  %s", subtleStyle.Render("Saved to planDir — engine hot-reloads on next session."))
+	return title, body, "[↑↓: select] [enter: edit] [esc: close]"
 }
 
 func (m Model) renderSessionsModal() (string, string, string) {
@@ -264,22 +319,41 @@ func (m Model) renderSessionsModal() (string, string, string) {
 		if s.ResultSummary != nil {
 			detail += fmt.Sprintf("\n  Result: %s", *s.ResultSummary)
 		}
+
+		tail := transcriptTailForSession(m.data.Transcript, s.Number, 12)
+		if len(tail) > 0 {
+			detail += "\n\n  " + subtleStyle.Render("transcript tail (buffered this connection):")
+			for _, l := range tail {
+				style := textStyle
+				if l.Kind == "thinking" {
+					style = subtleStyle
+				}
+				detail += "\n    " + style.Render(truncate(l.Text, 80))
+			}
+		}
 		lines = append(lines, detail)
 	}
 
 	body := strings.Join(lines, "\n")
-	return title, body, "[\u2191\u2193: navigate] [esc: close]"
+	return title, body, "[↑↓: navigate] [esc: close]"
+}
+
+func transcriptTailForSession(lines []api.TranscriptLineDto, sessionNumber int, max int) []api.TranscriptLineDto {
+	sid := fmt.Sprintf("%d", sessionNumber)
+	var out []api.TranscriptLineDto
+	for _, l := range lines {
+		if l.SessionId == sid {
+			out = append(out, l)
+		}
+	}
+	if len(out) > max {
+		out = out[len(out)-max:]
+	}
+	return out
 }
 
 func (m Model) renderReportModal() (string, string, string) {
 	title := "Report / Query"
-
-	quickQueries := []string{
-		"Cost per stage",
-		"Which gates fail most",
-		"Recent sessions",
-		"Verifier scores",
-	}
 
 	var lines []string
 	lines = append(lines, "  Quick queries:")
@@ -288,30 +362,107 @@ func (m Model) renderReportModal() (string, string, string) {
 		if i == m.reportQuickSelected && !m.reportFocusQuery {
 			marker = highlightBg.Render(" >")
 		}
-		lines = append(lines, fmt.Sprintf("  %s %s", marker, q))
+		lines = append(lines, fmt.Sprintf("  %s %s", marker, q.Label))
 	}
 
 	lines = append(lines, "")
-	lines = append(lines, "  Custom SQL:")
+	sf := subtleStyle
+	if m.reportFocusQuery {
+		sf = accentStyle
+	}
+	lines = append(lines, "  "+sf.Render("SQL:"))
 	sqlDisplay := m.reportSQL
 	if m.reportFocusQuery {
 		sqlDisplay += "_"
 	}
-	lines = append(lines, "  "+subtleStyle.Render(sqlDisplay))
+	lines = append(lines, "  "+textStyle.Render(sqlDisplay))
 
-	if m.data.ReportResult != nil && len(m.data.ReportResult.Columns) > 0 {
-		lines = append(lines, "")
-		lines = append(lines, fmt.Sprintf("  %s", accentStyle.Render("Results:")))
-		for _, row := range m.data.ReportResult.Rows {
-			if len(row.Values) > 0 {
-				lines = append(lines, "  "+strings.Join(row.Values, " | "))
+	if m.data.ReportLoading {
+		lines = append(lines, "", "  "+subtleStyle.Render("running…"))
+	} else if m.data.ReportResult != nil {
+		if m.data.ReportResult.Error != nil {
+			lines = append(lines, "", "  "+destructStyle.Render("error: "+*m.data.ReportResult.Error))
+		} else if len(m.data.ReportResult.Columns) > 0 {
+			lines = append(lines, "", "  "+accentStyle.Render("Results:"))
+			lines = append(lines, "  "+textStyle.Bold(true).Render(strings.Join(m.data.ReportResult.Columns, " | ")))
+			for _, row := range m.data.ReportResult.Rows {
+				if len(row.Values) > 0 {
+					lines = append(lines, "  "+subtleStyle.Render(strings.Join(row.Values, " | ")))
+				}
 			}
+			if m.data.ReportResult.Truncated {
+				lines = append(lines, "  "+warnStyle.Render("… truncated"))
+			}
+		} else {
+			lines = append(lines, "", "  "+subtleStyle.Render("no rows"))
 		}
 	}
 
 	info := subtleStyle.Render("\n\n  SELECT only. Max 500 rows.")
 	body := strings.Join(lines, "\n") + info
-	return title, body, "[tab: switch focus] [\u2191\u2193: select] [enter: run] [esc: close]"
+	return title, body, "[tab: switch focus] [↑↓: select] [enter: run] [esc: close]"
+}
+
+func (m Model) renderProcessesModal() (string, string, string) {
+	title := "Supervised Processes"
+
+	if len(m.data.Processes) == 0 {
+		return title, "  " + subtleStyle.Render("(no supervised processes right now)"), "[esc: close]"
+	}
+
+	var lines []string
+	for i, p := range m.data.Processes {
+		glyph := "○"
+		st := subtleStyle
+		if p.Alive {
+			glyph = "●"
+			st = safeStyle
+		}
+		stage := "-"
+		if p.StageId != nil {
+			stage = *p.StageId
+		}
+		line := fmt.Sprintf("%s %-6d %-20s %-6s %s",
+			st.Render(glyph), p.Pid, truncate(p.Purpose, 20), stage,
+			subtleStyle.Render(formatProcessRuntime(p)))
+		if i == m.processSelected {
+			line = highlightBg.Render(line)
+		}
+		lines = append(lines, line)
+	}
+
+	if m.processSelected < len(m.data.Processes) {
+		p := m.data.Processes[m.processSelected]
+		if p.LastOutputLine != nil {
+			lines = append(lines, "", "  "+subtleStyle.Render("last: ")+truncate(*p.LastOutputLine, 90))
+		}
+	}
+
+	body := strings.Join(lines, "\n")
+	return title, body, "[↑↓: navigate] [esc: close]"
+}
+
+func formatProcessRuntime(p api.ProcessDto) string {
+	start, err := time.Parse(time.RFC3339, p.StartedUtc)
+	if err != nil {
+		return ""
+	}
+	end := time.Now()
+	if p.ExitedUtc != nil {
+		if t, err := time.Parse(time.RFC3339, *p.ExitedUtc); err == nil {
+			end = t
+		}
+	}
+	sec := int(end.Sub(start).Seconds())
+	if sec < 0 {
+		sec = 0
+	}
+	mins := sec / 60
+	secs := sec % 60
+	if mins > 0 {
+		return fmt.Sprintf("%dm%02ds", mins, secs)
+	}
+	return fmt.Sprintf("%ds", secs)
 }
 
 func (m Model) renderHelpModal() (string, string, string) {
@@ -324,23 +475,24 @@ func (m Model) renderHelpModal() (string, string, string) {
     PgUp/Dn   Scroll page
     Home/End  Jump top/bottom
     f         Toggle tool-call folding
-    /         Search transcript
+    /         Search transcript (enter: lock, n/N: next/prev, esc: clear)
 
   ACTIONS
-    :         Command palette (11 verbs)
+    :         Command palette (11 verbs, destructive ones confirm, goto asks a stage id)
     i         Inject context
-    e         Edit templates
+    e         Edit templates (reads/writes planDir on disk)
     h         Session history
+    s         Supervised processes
     r         Report / query
     ?         This help
 
   GLOBAL
     q / ^C    Quit
-    esc       Close modal
+    esc       Close modal / cancel
 
   MOUSE
     Scroll    Navigate transcript
-    Click     Select items`
+    Click     Select a plan-tree row`
 
 	help := "conductor-face v2 · Go + Bubble Tea · --demo for offline mode"
 	return title, body, help
@@ -352,4 +504,22 @@ func placeOverlay(bg, fg string, width, height int) string {
 		fg,
 		lipgloss.WithWhitespaceStyle(lipgloss.NewStyle().Background(lipgloss.Color("#0D1117"))),
 	)
+}
+
+func truncate(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	if max <= 1 {
+		return s[:max]
+	}
+	return s[:max-1] + "…"
+}
+
+func indent(s, prefix string) string {
+	lines := strings.Split(s, "\n")
+	for i, l := range lines {
+		lines[i] = prefix + l
+	}
+	return strings.Join(lines, "\n")
 }

@@ -7,6 +7,8 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"conductor-face-go/internal/api"
+	"conductor-face-go/internal/templates"
 	"conductor-face-go/internal/widgets"
 )
 
@@ -28,22 +30,34 @@ var allVerbs = []struct {
 	{"goto", "Jump to a different stage (requires stage ID)", true},
 }
 
+var quickQueries = []struct {
+	Label string
+	SQL   string
+}{
+	{"cost per stage", "SELECT stage_id, SUM(cost_usd) as cost_usd FROM costs GROUP BY stage_id ORDER BY cost_usd DESC"},
+	{"which gates fail most", "SELECT name, COUNT(*) as failures FROM gates WHERE passed = 0 GROUP BY name ORDER BY failures DESC"},
+	{"recent sessions", "SELECT number, stage_id, kind, outcome FROM sessions ORDER BY number DESC LIMIT 20"},
+	{"verifier scores", "SELECT session_number, score, verdict FROM scores ORDER BY session_number DESC LIMIT 20"},
+}
+
+const defaultReportSQL = "SELECT stage_id, SUM(cost_usd) as cost_usd FROM costs GROUP BY stage_id"
+
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		m.transcript.Width = m.computeTranscriptWidth()
-		m.transcript.Height = m.computeTranscriptHeight()
-		m.sidebar.Width = m.computeSidebarWidth()
-		m.sidebar.Height = m.computeMainHeight()
+		m.recalcDimensions()
 		return m, nil
 
 	case tea.KeyPressMsg:
 		key := msg.String()
 		if m.activeModal != ModalNone {
 			return m.handleModalKey(key)
+		}
+		if m.searchActive {
+			return m.handleSearchKey(key)
 		}
 		return m.handleKey(key)
 
@@ -66,25 +80,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				Stages: msg.State.Stages,
 				Gates:  msg.State.Gates,
 			})
+			m.recalcDimensions()
 		}
 		m.data.Connection.Connected = true
+		m.data.Connection.LastError = nil
 
-	case MsgPollResult:
-		if msg.State != nil {
-			m.data.Plan = msg.State
-			m.sidebar = m.sidebar.Update(widgets.MsgSetData{
-				Stages: msg.State.Stages,
-				Gates:  msg.State.Gates,
-			})
+	case MsgTasksUpdated:
+		if msg.Tasks != nil {
+			m.data.Tasks = msg.Tasks.Tasks
 		}
-		for _, tx := range msg.Transcripts {
-			m.data.Transcript = append(m.data.Transcript, tx)
-			if len(m.data.Transcript) > 4000 {
-				m.data.Transcript = m.data.Transcript[len(m.data.Transcript)-4000:]
-			}
-			m.transcript = m.transcript.Update(widgets.MsgAppendLine{Line: tx})
-		}
-		m.data.Connection.Connected = true
 
 	case MsgProcessesUpdated:
 		if msg.Procs != nil {
@@ -96,17 +100,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.data.Sessions = msg.Sessions.Sessions
 		}
 
-	case MsgTasksUpdated:
-		if msg.Tasks != nil {
-			m.data.Tasks = msg.Tasks.Tasks
-		}
-
 	case MsgEventReceived:
 		m.data.Events = append(m.data.Events, msg.Event)
 		if len(m.data.Events) > 400 {
 			m.data.Events = m.data.Events[len(m.data.Events)-400:]
 		}
 		m.eventSeq = msg.Event.Seq
+		return m, waitForEvent(m.eventCh)
 
 	case MsgTranscriptLine:
 		m.data.Transcript = append(m.data.Transcript, msg.Line)
@@ -115,50 +115,54 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.txSeq = msg.Line.Seq
 		m.transcript = m.transcript.Update(widgets.MsgAppendLine{Line: msg.Line})
+		return m, waitForTranscript(m.txCh)
 
 	case MsgFetchError:
 		m.data.Connection.LastError = &msg.Err
 		m.data.Connection.Connected = false
-		m.toasts = append(m.toasts, widgets.NewToast("Connection error: "+msg.Err, widgets.ToastError))
 
-	case MsgConnectionChanged:
-		m.data.Connection.EventsConnected = msg.EventsConnected
-		m.data.Connection.TranscriptConnected = msg.TranscriptConnected
-		m.data.Connection.Connected = msg.EventsConnected || msg.TranscriptConnected
+	case MsgEventsConnChanged:
+		m.data.Connection.EventsConnected = msg.Connected
+		m.data.Connection.Connected = m.data.Connection.EventsConnected || m.data.Connection.TranscriptConnected
+		return m, waitForEventsConn(m.eventsConnCh)
 
-	case MsgSidebarToggle:
-		m.sidebarOpen = !m.sidebarOpen
-		m.recalcDimensions()
-		return m, nil
-
-	case MsgSidebarOpen:
-		m.sidebarOpen = true
-		m.recalcDimensions()
-		return m, nil
-
-	case MsgSidebarClose:
-		m.sidebarOpen = false
-		m.recalcDimensions()
-		return m, nil
+	case MsgTxConnChanged:
+		m.data.Connection.TranscriptConnected = msg.Connected
+		m.data.Connection.Connected = m.data.Connection.EventsConnected || m.data.Connection.TranscriptConnected
+		return m, waitForTxConn(m.txConnCh)
 
 	case MsgControlSent:
-		var kind widgets.ToastKind = widgets.ToastSuccess
-		text := fmt.Sprintf("Control: %s — accepted", msg.Verb)
+		kind := widgets.ToastSuccess
+		text := fmt.Sprintf("%s accepted", msg.Verb)
 		if !msg.Success {
 			kind = widgets.ToastError
-			text = fmt.Sprintf("Control: %s — %s", msg.Verb, msg.Error)
+			reason := msg.Error
+			if reason == "" {
+				reason = "unknown reason"
+			}
+			text = fmt.Sprintf("%s rejected: %s", msg.Verb, reason)
 		}
 		m.toasts = append(m.toasts, widgets.NewToast(text, kind))
 		return m, nil
 
 	case MsgInjectSent:
-		var kind widgets.ToastKind = widgets.ToastSuccess
-		text := "Injection recorded"
+		kind := widgets.ToastSuccess
+		text := "Injection recorded (not yet auto-applied to a prompt)"
 		if !msg.Success {
 			kind = widgets.ToastError
 			text = "Injection failed: " + msg.Error
 		}
 		m.toasts = append(m.toasts, widgets.NewToast(text, kind))
+		return m, nil
+
+	case MsgReportResult:
+		m.data.ReportLoading = false
+		if msg.Err != "" {
+			errCopy := msg.Err
+			m.data.ReportResult = &api.QueryResultDto{Error: &errCopy}
+		} else {
+			m.data.ReportResult = msg.Result
+		}
 		return m, nil
 	}
 
@@ -176,6 +180,7 @@ func (m Model) handleKey(key string) (tea.Model, tea.Cmd) {
 		m.paletteQuery = ""
 		m.paletteSelected = 0
 		m.paletteConfirming = false
+		m.paletteGotoActive = false
 		return m, nil
 
 	case "p":
@@ -192,6 +197,7 @@ func (m Model) handleKey(key string) (tea.Model, tea.Cmd) {
 
 	case "e":
 		m.activeModal = ModalPrompt
+		m.promptEntries = templates.List(m.currentPlanDir())
 		m.promptSelected = 0
 		m.promptMode = PromptList
 		return m, nil
@@ -203,9 +209,14 @@ func (m Model) handleKey(key string) (tea.Model, tea.Cmd) {
 
 	case "r":
 		m.activeModal = ModalReport
-		m.reportSQL = ""
+		m.reportSQL = defaultReportSQL
 		m.reportQuickSelected = 0
-		m.reportFocusQuery = false
+		m.reportFocusQuery = true
+		return m, nil
+
+	case "s":
+		m.activeModal = ModalProcesses
+		m.processSelected = 0
 		return m, nil
 
 	case "?":
@@ -249,6 +260,20 @@ func (m Model) handleKey(key string) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case "/":
+		m.searchActive = true
+		m.transcript = m.transcript.Update(widgets.MsgSetSearch{Query: ""})
+		return m, nil
+
+	case "n":
+		if m.transcript.SearchQuery != "" {
+			m.transcript = m.transcript.Update(widgets.MsgNextMatch)
+		}
+		return m, nil
+
+	case "N":
+		if m.transcript.SearchQuery != "" {
+			m.transcript = m.transcript.Update(widgets.MsgPrevMatch)
+		}
 		return m, nil
 
 	case "enter":
@@ -262,13 +287,30 @@ func (m Model) handleKey(key string) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m *Model) handleModalKey(key string) (tea.Model, tea.Cmd) {
+func (m *Model) handleSearchKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
 	case "esc":
-		m.activeModal = ModalNone
+		m.searchActive = false
+		m.transcript = m.transcript.Update(widgets.MsgSetSearch{Query: ""})
+		return m, nil
+	case "enter":
+		m.searchActive = false
+		return m, nil
+	case "backspace":
+		q := m.transcript.SearchQuery
+		if len(q) > 0 {
+			m.transcript = m.transcript.Update(widgets.MsgSetSearch{Query: q[:len(q)-1]})
+		}
+		return m, nil
+	default:
+		if len(key) == 1 {
+			m.transcript = m.transcript.Update(widgets.MsgSetSearch{Query: m.transcript.SearchQuery + key})
+		}
 		return m, nil
 	}
+}
 
+func (m *Model) handleModalKey(key string) (tea.Model, tea.Cmd) {
 	switch m.activeModal {
 	case ModalPalette:
 		return m.handlePaletteKey(key)
@@ -280,20 +322,59 @@ func (m *Model) handleModalKey(key string) (tea.Model, tea.Cmd) {
 		return m.handleSessionsKey(key)
 	case ModalReport:
 		return m.handleReportKey(key)
+	case ModalProcesses:
+		return m.handleProcessesKey(key)
+	case ModalHelp:
+		if key == "esc" || key == "?" {
+			m.activeModal = ModalNone
+		}
+		return m, nil
+	}
+	if key == "esc" {
+		m.activeModal = ModalNone
 	}
 	return m, nil
 }
 
 func (m *Model) handlePaletteKey(key string) (tea.Model, tea.Cmd) {
+	if key == "esc" {
+		if m.paletteGotoActive || m.paletteConfirming {
+			m.paletteGotoActive = false
+			m.paletteConfirming = false
+			return m, nil
+		}
+		m.activeModal = ModalNone
+		return m, nil
+	}
+
+	if m.paletteGotoActive {
+		switch key {
+		case "enter":
+			stageId := strings.TrimSpace(m.paletteGotoInput)
+			m.paletteGotoActive = false
+			m.activeModal = ModalNone
+			return m, m.cmdPostControl(api.ControlRequestDto{Command: "goto", StageId: stageId})
+		case "backspace":
+			if len(m.paletteGotoInput) > 0 {
+				m.paletteGotoInput = m.paletteGotoInput[:len(m.paletteGotoInput)-1]
+			}
+			return m, nil
+		default:
+			if len(key) == 1 {
+				m.paletteGotoInput += key
+			}
+			return m, nil
+		}
+	}
+
 	if m.paletteConfirming {
 		switch strings.ToLower(key) {
-		case "y":
+		case "y", "enter":
 			verb := allVerbs[m.paletteVerbIdx].Key
 			m.activeModal = ModalNone
-			m.toasts = append(m.toasts, widgets.NewToast(
-				fmt.Sprintf("Sent: %s", verb), widgets.ToastInfo))
-			return m, nil
-		case "n", "esc":
+			m.paletteConfirming = false
+			return m, m.cmdPostControl(api.ControlRequestDto{Command: verb, Force: true, Confirmed: true})
+		case "n":
 			m.paletteConfirming = false
 			return m, nil
 		}
@@ -302,11 +383,9 @@ func (m *Model) handlePaletteKey(key string) (tea.Model, tea.Cmd) {
 
 	switch key {
 	case "up", "k":
-		verbs := m.filteredVerbs()
 		if m.paletteSelected > 0 {
 			m.paletteSelected--
 		}
-		_ = verbs
 		return m, nil
 	case "down", "j":
 		verbs := m.filteredVerbs()
@@ -318,16 +397,22 @@ func (m *Model) handlePaletteKey(key string) (tea.Model, tea.Cmd) {
 		verbs := m.filteredVerbs()
 		if m.paletteSelected < len(verbs) {
 			origIdx := m.verbOriginalIndex(m.paletteSelected)
-			if origIdx >= 0 && origIdx < len(allVerbs) && !allVerbs[origIdx].Safe {
+			if origIdx < 0 || origIdx >= len(allVerbs) {
+				return m, nil
+			}
+			verb := allVerbs[origIdx]
+			if verb.Key == "goto" {
+				m.paletteGotoActive = true
+				m.paletteGotoInput = m.currentStageId()
+				return m, nil
+			}
+			if !verb.Safe {
 				m.paletteConfirming = true
 				m.paletteVerbIdx = origIdx
 				return m, nil
 			}
-			if origIdx >= 0 && origIdx < len(allVerbs) {
-				m.activeModal = ModalNone
-				m.toasts = append(m.toasts, widgets.NewToast(
-					fmt.Sprintf("Sent: %s", allVerbs[origIdx].Key), widgets.ToastInfo))
-			}
+			m.activeModal = ModalNone
+			return m, m.cmdPostControl(api.ControlRequestDto{Command: verb.Key})
 		}
 		return m, nil
 	case "backspace":
@@ -347,6 +432,9 @@ func (m *Model) handlePaletteKey(key string) (tea.Model, tea.Cmd) {
 
 func (m *Model) handleInjectKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
+	case "esc":
+		m.activeModal = ModalNone
+		return m, nil
 	case "tab":
 		m.injectField = 1 - m.injectField
 		return m, nil
@@ -357,11 +445,21 @@ func (m *Model) handleInjectKey(key string) (tea.Model, tea.Cmd) {
 			m.injectContent = m.injectContent[:len(m.injectContent)-1]
 		}
 		return m, nil
-	case "ctrl+s":
-		m.activeModal = ModalNone
-		m.toasts = append(m.toasts, widgets.NewToast(
-			"Injection recorded to run.db (consumed next session boundary)", widgets.ToastSuccess))
+	case "enter":
+		if m.injectField == 1 {
+			m.injectContent += "\n"
+		}
 		return m, nil
+	case "ctrl+s":
+		if strings.TrimSpace(m.injectContent) == "" {
+			return m, nil
+		}
+		req := api.InjectRequestDto{
+			Content: m.injectContent,
+			StageId: strings.TrimSpace(m.injectStageId),
+		}
+		m.activeModal = ModalNone
+		return m, m.cmdPostInject(req)
 	default:
 		if len(key) == 1 {
 			if m.injectField == 0 {
@@ -375,52 +473,68 @@ func (m *Model) handleInjectKey(key string) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handlePromptKey(key string) (tea.Model, tea.Cmd) {
+	if key == "esc" {
+		if m.promptMode == PromptEdit {
+			m.promptMode = PromptList
+			return m, nil
+		}
+		m.activeModal = ModalNone
+		return m, nil
+	}
+
 	if m.promptMode == PromptList {
 		switch key {
 		case "up", "k":
 			if m.promptSelected > 0 {
 				m.promptSelected--
 			}
-			return m, nil
 		case "down", "j":
-			if m.promptSelected < len(m.promptTemplates)-1 {
+			if m.promptSelected < len(m.promptEntries)-1 {
 				m.promptSelected++
 			}
-			return m, nil
 		case "enter":
-			if m.promptSelected < len(m.promptTemplates) {
+			if m.promptSelected < len(m.promptEntries) {
+				entry := m.promptEntries[m.promptSelected]
 				m.promptMode = PromptEdit
-				m.promptContent = fmt.Sprintf("# %s\n\n[ edit this template content ]\n", m.promptTemplates[m.promptSelected])
+				m.promptContent = templates.Read(entry.Path)
 			}
-			return m, nil
 		}
-	} else {
-		switch key {
-		case "esc":
-			m.promptMode = PromptList
-			return m, nil
-		case "ctrl+s":
-			m.activeModal = ModalNone
-			m.toasts = append(m.toasts, widgets.NewToast(
-				"Template saved to planDir/personas/", widgets.ToastSuccess))
-			return m, nil
-		case "backspace":
-			if len(m.promptContent) > 0 {
-				m.promptContent = m.promptContent[:len(m.promptContent)-1]
-			}
-			return m, nil
-		default:
-			if len(key) == 1 {
-				m.promptContent += key
-			}
-			return m, nil
-		}
+		return m, nil
 	}
-	return m, nil
+
+	switch key {
+	case "ctrl+s":
+		if m.promptSelected < len(m.promptEntries) {
+			entry := m.promptEntries[m.promptSelected]
+			if err := templates.Write(entry.Path, m.promptContent); err != nil {
+				m.toasts = append(m.toasts, widgets.NewToast("Save failed: "+err.Error(), widgets.ToastError))
+			} else {
+				m.promptEntries[m.promptSelected].Exists = true
+				m.toasts = append(m.toasts, widgets.NewToast("Saved "+entry.Path, widgets.ToastSuccess))
+			}
+		}
+		return m, nil
+	case "enter":
+		m.promptContent += "\n"
+		return m, nil
+	case "backspace":
+		if len(m.promptContent) > 0 {
+			m.promptContent = m.promptContent[:len(m.promptContent)-1]
+		}
+		return m, nil
+	default:
+		if len(key) == 1 {
+			m.promptContent += key
+		}
+		return m, nil
+	}
 }
 
 func (m *Model) handleSessionsKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
+	case "esc":
+		m.activeModal = ModalNone
+		return m, nil
 	case "up", "k":
 		if m.sessionSelected > 0 {
 			m.sessionSelected--
@@ -437,6 +551,9 @@ func (m *Model) handleSessionsKey(key string) (tea.Model, tea.Cmd) {
 
 func (m *Model) handleReportKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
+	case "esc":
+		m.activeModal = ModalNone
+		return m, nil
 	case "tab":
 		m.reportFocusQuery = !m.reportFocusQuery
 		return m, nil
@@ -446,19 +563,22 @@ func (m *Model) handleReportKey(key string) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case "down", "j":
-		if !m.reportFocusQuery && m.reportQuickSelected < 3 {
+		if !m.reportFocusQuery && m.reportQuickSelected < len(quickQueries)-1 {
 			m.reportQuickSelected++
 		}
 		return m, nil
 	case "enter":
+		var sql string
 		if m.reportFocusQuery {
-			m.activeModal = ModalNone
-			m.toasts = append(m.toasts, widgets.NewToast(
-				"Query sent to run.db", widgets.ToastInfo))
+			sql = m.reportSQL
+		} else {
+			sql = quickQueries[m.reportQuickSelected].SQL
+			m.reportSQL = sql
 		}
-		return m, nil
+		m.data.ReportLoading = true
+		return m, m.cmdQueryReport(sql)
 	case "backspace":
-		if len(m.reportSQL) > 0 {
+		if m.reportFocusQuery && len(m.reportSQL) > 0 {
 			m.reportSQL = m.reportSQL[:len(m.reportSQL)-1]
 		}
 		return m, nil
@@ -468,6 +588,25 @@ func (m *Model) handleReportKey(key string) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	}
+}
+
+func (m *Model) handleProcessesKey(key string) (tea.Model, tea.Cmd) {
+	switch key {
+	case "esc":
+		m.activeModal = ModalNone
+		return m, nil
+	case "up", "k":
+		if m.processSelected > 0 {
+			m.processSelected--
+		}
+		return m, nil
+	case "down", "j":
+		if m.processSelected < len(m.data.Processes)-1 {
+			m.processSelected++
+		}
+		return m, nil
+	}
+	return m, nil
 }
 
 func (m Model) filteredVerbs() []int {
@@ -498,17 +637,19 @@ func (m Model) verbOriginalIndex(filteredIdx int) int {
 }
 
 func (m Model) handleMouseClick(msg tea.MouseClickMsg) (tea.Model, tea.Cmd) {
+	if m.activeModal != ModalNone {
+		return m, nil
+	}
+
 	x, y := msg.X, msg.Y
 	layout := ComputeLayout(m.width, m.height, m.sidebarOpen)
 
-	if y == layout.Footer.Y {
-		return m, nil
-	}
-	if y == layout.Ticker.Y {
-		return m, nil
-	}
-
-	if m.sidebarOpen && x >= 0 && x <= layout.Sidebar.Width {
+	if m.sidebarOpen && x >= layout.Sidebar.X && x < layout.Sidebar.X+layout.Sidebar.Width &&
+		y >= layout.Sidebar.Y && y < layout.Sidebar.Y+layout.Sidebar.Height {
+		row := y - layout.Sidebar.Y - 1 // -1 for the "▶ PLAN" title line
+		if row >= 0 {
+			m.sidebar.Selected = row
+		}
 		return m, nil
 	}
 
@@ -531,6 +672,13 @@ func (m Model) currentStageId() string {
 	return ""
 }
 
+func (m Model) currentPlanDir() string {
+	if m.data.Plan != nil && m.data.Plan.PlanDir != "" {
+		return m.data.Plan.PlanDir
+	}
+	return "."
+}
+
 func (m *Model) recalcDimensions() {
 	m.transcript.Width = m.computeTranscriptWidth()
 	m.transcript.Height = m.computeTranscriptHeight()
@@ -546,6 +694,9 @@ func (m Model) computeTranscriptWidth() int {
 func (m Model) computeTranscriptHeight() int {
 	layout := ComputeLayout(m.width, m.height, m.sidebarOpen)
 	h := layout.Transcr.Height
+	if !m.sidebarOpen && m.data.Plan != nil && len(m.data.Plan.Gates) > 0 {
+		h-- // reserve one row for the inline gate bar (sidebar's own GATES section covers this when open)
+	}
 	if h < 2 {
 		h = 2
 	}

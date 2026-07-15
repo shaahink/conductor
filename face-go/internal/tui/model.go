@@ -1,11 +1,10 @@
 package tui
 
 import (
-	"time"
-
 	tea "charm.land/bubbletea/v2"
 
 	"conductor-face-go/internal/api"
+	"conductor-face-go/internal/templates"
 	"conductor-face-go/internal/widgets"
 )
 
@@ -18,6 +17,7 @@ const (
 	ModalPrompt
 	ModalSessions
 	ModalReport
+	ModalProcesses
 	ModalHelp
 )
 
@@ -46,9 +46,17 @@ type Model struct {
 
 	toasts []widgets.Toast
 
-	pollCancel chan struct{}
+	// Inline transcript search (not a modal — mirrors Ink's non-blocking agent-pane search).
+	searchActive bool
 
-	lastPoll time.Time
+	// Streaming: SSE callbacks (running on background goroutines started in subscribeStreams)
+	// push onto these channels; waitForX commands re-arm themselves after each read so the
+	// program keeps listening for the life of the process.
+	eventCh      chan api.ConductorEventDto
+	txCh         chan api.TranscriptLineDto
+	eventsConnCh chan bool
+	txConnCh     chan bool
+
 	eventSeq int64
 	txSeq    int64
 
@@ -59,17 +67,19 @@ type Model struct {
 	paletteSelected   int
 	paletteConfirming bool
 	paletteVerbIdx    int
+	paletteGotoActive bool
+	paletteGotoInput  string
 
 	// Inject
 	injectContent string
 	injectStageId string
 	injectField   int // 0=stage, 1=content
 
-	// Prompt
-	promptTemplates []string
-	promptSelected  int
-	promptContent   string
-	promptMode      PromptMode
+	// Prompt (template editor)
+	promptEntries  []templates.Entry
+	promptSelected int
+	promptContent  string
+	promptMode     PromptMode
 
 	// Sessions
 	sessionSelected int
@@ -78,23 +88,24 @@ type Model struct {
 	reportSQL           string
 	reportQuickSelected int
 	reportFocusQuery    bool
+
+	// Processes
+	processSelected int
 }
 
 func New(source api.DataSource, isDemo bool, baseURL string) Model {
 	m := Model{
-		source:      source,
-		isDemo:      isDemo,
-		baseURL:     baseURL,
-		sidebarOpen: false,
-		activeModal: ModalNone,
-		transcript:  widgets.NewTranscript(),
-		sidebar:     widgets.NewSidebar(),
-		pollCancel:  make(chan struct{}),
-		promptTemplates: []string{
-			"session.md", "fix.md", "resume.md",
-			"advisor.md", "audit.md", "review.md",
-			"verify.md",
-		},
+		source:       source,
+		isDemo:       isDemo,
+		baseURL:      baseURL,
+		sidebarOpen:  false,
+		activeModal:  ModalNone,
+		transcript:   widgets.NewTranscript(),
+		sidebar:      widgets.NewSidebar(),
+		eventCh:      make(chan api.ConductorEventDto, 256),
+		txCh:         make(chan api.TranscriptLineDto, 1024),
+		eventsConnCh: make(chan bool, 8),
+		txConnCh:     make(chan bool, 8),
 		data: api.AppState{
 			Connection: api.ConnectionState{
 				Mode: api.ModeLive,
@@ -112,8 +123,13 @@ func New(source api.DataSource, isDemo bool, baseURL string) Model {
 }
 
 func (m Model) Init() tea.Cmd {
+	m.subscribeStreams()
 	return tea.Batch(
 		CmdTick(),
 		m.doPoll(),
+		waitForEvent(m.eventCh),
+		waitForTranscript(m.txCh),
+		waitForEventsConn(m.eventsConnCh),
+		waitForTxConn(m.txConnCh),
 	)
 }

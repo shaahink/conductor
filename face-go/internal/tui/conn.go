@@ -1,80 +1,158 @@
 package tui
 
 import (
-	"sync/atomic"
-
 	tea "charm.land/bubbletea/v2"
 
 	"conductor-face-go/internal/api"
-	"conductor-face-go/internal/widgets"
 )
 
+// doPoll fetches the four snapshot endpoints (state, tasks, processes, sessions) independently,
+// mirroring the Ink client's Promise.allSettled semantics: one failing must never block the others.
 func (m Model) doPoll() tea.Cmd {
+	return tea.Batch(
+		m.cmdFetchState(),
+		m.cmdFetchTasks(),
+		m.cmdFetchProcesses(),
+		m.cmdFetchSessions(),
+	)
+}
+
+func (m Model) cmdFetchState() tea.Cmd {
+	source := m.source
 	return func() tea.Msg {
-		if m.data.Connection.Mode == api.ModeDemo {
-			return m.pollDemo()
+		state, err := source.FetchState()
+		if err != nil {
+			return MsgFetchError{Err: err.Error()}
 		}
-		return m.pollLive()
+		return MsgStateUpdated{State: state}
 	}
 }
 
-var demoLineIdx atomic.Int64
-
-func (m Model) pollDemo() tea.Msg {
-	state, err := m.source.FetchState()
-	if err != nil || state == nil {
-		return nil
-	}
-
-	idx := demoLineIdx.Add(1)
-
-	demoLines := []struct {
-		kind string
-		text string
-	}{
-		{"system", "Session #12 started \u00B7 Deliver \u00B7 Stage F7 \u00B7 Attempt 2"},
-		{"thinking", "Let me examine the GateCache implementation to understand the caching pattern..."},
-		{"tool", "read src/Conductor/Core/Gating/GateCache.cs"},
-		{"result", "GateCache.cs:142 lines \u2014 caches by (name, tier, sha)"},
-		{"thinking", "I see. GateResult is stored with a composite key. I need to expose the last-passing result via RunDb."},
-		{"agent", "Found the caching layer. Adding GetLastPassingGateResult to RunDb."},
-		{"tool", "write src/Conductor/Core/Store/RunDb.Gates.cs"},
-		{"result", "Created RunDb.Gates.cs with GetLastPassingGateResult query"},
-		{"thinking", "The query needs to join gates with attempts to find the most recent pass."},
-		{"tool", "run dotnet test --filter GateCacheTests"},
-		{"result", "12/12 tests pass. 0w/0e. 2.3s elapsed"},
-		{"agent", "All tests pass. Ready for the next checkpoint."},
-		{"system", "Gate build \u2713 (2.3s)"},
-		{"tool", "run dotnet build Conductor.slnx"},
-		{"result", "Build succeeded. 0 Error(s), 0 Warning(s)"},
-		{"system", "Gate test \u2713 (4.1s)"},
-		{"agent", "Running gate battery: build \u2713, test \u2713, lint is next."},
-	}
-
-	lineIdx := int(idx) % len(demoLines)
-	dl := demoLines[lineIdx]
-
-	tx := api.TranscriptLineDto{
-		Seq:       idx,
-		SessionId: "s12",
-		Kind:      dl.kind,
-		Text:      dl.text,
-	}
-
-	return MsgPollResult{
-		State:       state,
-		Transcripts: []api.TranscriptLineDto{tx},
+func (m Model) cmdFetchTasks() tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		tasks, err := source.FetchTasks()
+		if err != nil {
+			return nil
+		}
+		return MsgTasksUpdated{Tasks: tasks}
 	}
 }
 
-func (m Model) pollLive() tea.Msg {
-	state, err := m.source.FetchState()
-	if err != nil {
-		return MsgFetchError{Err: err.Error()}
+func (m Model) cmdFetchProcesses() tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		procs, err := source.FetchProcesses()
+		if err != nil {
+			return nil
+		}
+		return MsgProcessesUpdated{Procs: procs}
 	}
-	return MsgStateUpdated{State: state}
 }
 
-func init() {
-	_ = widgets.MsgAppendLine{}
+func (m Model) cmdFetchSessions() tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		sessions, err := source.FetchSessions()
+		if err != nil {
+			return nil
+		}
+		return MsgSessionsUpdated{Sessions: sessions}
+	}
+}
+
+func (m Model) cmdPostControl(cmd api.ControlRequestDto) tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		res, err := source.PostControl(cmd)
+		if err != nil {
+			return MsgControlSent{Verb: cmd.Command, Success: false, Error: err.Error()}
+		}
+		reason := ""
+		if res.Reason != nil {
+			reason = *res.Reason
+		}
+		return MsgControlSent{Verb: cmd.Command, Success: res.Accepted, Error: reason}
+	}
+}
+
+func (m Model) cmdPostInject(req api.InjectRequestDto) tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		res, err := source.PostInject(req)
+		if err != nil {
+			return MsgInjectSent{Success: false, Error: err.Error()}
+		}
+		reason := ""
+		if res.Reason != nil {
+			reason = *res.Reason
+		}
+		return MsgInjectSent{Success: res.Accepted, Error: reason}
+	}
+}
+
+func (m Model) cmdQueryReport(sql string) tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		result, err := source.QueryReport(sql)
+		if err != nil {
+			return MsgReportResult{Err: err.Error()}
+		}
+		return MsgReportResult{Result: result}
+	}
+}
+
+// subscribeStreams starts the two persistent SSE subscriptions (events + transcript) exactly once
+// per Model (called from Init). Both the live and demo DataSource implementations satisfy the same
+// interface, so this wiring is identical in either mode — demo mode gets the same replay-then-stream
+// behavior as a real engine connection instead of the old per-tick synthetic-line hack.
+func (m Model) subscribeStreams() {
+	m.source.SubscribeEvents(
+		func(e api.ConductorEventDto) { m.eventCh <- e },
+		func(connected bool) { m.eventsConnCh <- connected },
+	)
+	m.source.SubscribeTranscript(
+		func(l api.TranscriptLineDto) { m.txCh <- l },
+		func(connected bool) { m.txConnCh <- connected },
+	)
+}
+
+func waitForEvent(ch chan api.ConductorEventDto) tea.Cmd {
+	return func() tea.Msg {
+		e, ok := <-ch
+		if !ok {
+			return nil
+		}
+		return MsgEventReceived{Event: e}
+	}
+}
+
+func waitForTranscript(ch chan api.TranscriptLineDto) tea.Cmd {
+	return func() tea.Msg {
+		l, ok := <-ch
+		if !ok {
+			return nil
+		}
+		return MsgTranscriptLine{Line: l}
+	}
+}
+
+func waitForEventsConn(ch chan bool) tea.Cmd {
+	return func() tea.Msg {
+		c, ok := <-ch
+		if !ok {
+			return nil
+		}
+		return MsgEventsConnChanged{Connected: c}
+	}
+}
+
+func waitForTxConn(ch chan bool) tea.Cmd {
+	return func() tea.Msg {
+		c, ok := <-ch
+		if !ok {
+			return nil
+		}
+		return MsgTxConnChanged{Connected: c}
+	}
 }

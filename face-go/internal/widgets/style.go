@@ -3,7 +3,6 @@ package widgets
 import "charm.land/lipgloss/v2"
 
 var (
-	colorBg       = lipgloss.Color("#0D1117")
 	colorText     = lipgloss.Color("#C9D1D9")
 	colorSubtle   = lipgloss.Color("#484F58")
 	colorAccent   = lipgloss.Color("#58A6FF")
@@ -21,8 +20,6 @@ var (
 )
 
 var (
-	baseStyle = lipgloss.NewStyle().Foreground(colorText).Background(colorBg)
-
 	sidebarTitleStyle = lipgloss.NewStyle().Foreground(colorAccent).Bold(true)
 
 	stageDoneStyle    = lipgloss.NewStyle().Foreground(colorDone)
@@ -56,10 +53,6 @@ var (
 			Background(lipgloss.Color("#1F6FEB")).
 			Foreground(lipgloss.Color("#FFFFFF"))
 )
-
-func init() {
-	_ = baseStyle
-}
 
 func dim(s string) string    { return lipgloss.NewStyle().Foreground(colorSubtle).Render(s) }
 func green(s string) string  { return lipgloss.NewStyle().Foreground(colorDone).Render(s) }

@@ -34,35 +34,17 @@ type MsgTranscriptLine struct {
 	Line api.TranscriptLineDto
 }
 
-type MsgPollResult struct {
-	State       *api.StateDto
-	Transcripts []api.TranscriptLineDto
+type MsgEventsConnChanged struct {
+	Connected bool
 }
 
-type MsgConnectionChanged struct {
-	EventsConnected     bool
-	TranscriptConnected bool
+type MsgTxConnChanged struct {
+	Connected bool
 }
 
 type MsgFetchError struct {
 	Err string
 }
-
-type MsgSidebarToggle struct{}
-type MsgSidebarOpen struct{}
-type MsgSidebarClose struct{}
-
-type MsgModalOpen struct{ Kind ModalKind }
-type MsgModalClose struct{}
-
-type MsgTranscriptScrollUp struct{}
-type MsgTranscriptScrollDown struct{}
-type MsgTranscriptScrollHome struct{}
-type MsgTranscriptScrollEnd struct{}
-
-type MsgPaletteSelect struct{ Index int }
-type MsgPaletteConfirm struct{}
-type MsgPaletteFilter struct{ Query string }
 
 type MsgControlSent struct {
 	Verb    string
@@ -75,8 +57,9 @@ type MsgInjectSent struct {
 	Error   string
 }
 
-func DoTick() tea.Msg {
-	return MsgTick(time.Now())
+type MsgReportResult struct {
+	Result *api.QueryResultDto
+	Err    string
 }
 
 func CmdTick() tea.Cmd {

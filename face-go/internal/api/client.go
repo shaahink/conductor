@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -16,6 +17,9 @@ type liveSource struct {
 	httpClient *http.Client
 	ctx        context.Context
 	cancel     context.CancelFunc
+
+	lastEventSeq atomic.Int64
+	lastTxSeq    atomic.Int64
 }
 
 func NewLiveSource(baseURL string) DataSource {
@@ -136,11 +140,21 @@ func (s *liveSource) PostInject(req InjectRequestDto) (*InjectAcceptedDto, error
 }
 
 func (s *liveSource) SubscribeEvents(onEvent func(ConductorEventDto), onConnected func(bool)) func() {
-	return SubscribeEvents(s.ctx, s.baseURL, onEvent, onConnected)
+	return SubscribeEvents(s.ctx, s.baseURL, func(e ConductorEventDto) {
+		if e.Seq > 0 {
+			s.lastEventSeq.Store(e.Seq)
+		}
+		onEvent(e)
+	}, onConnected, func() int64 { return s.lastEventSeq.Load() })
 }
 
 func (s *liveSource) SubscribeTranscript(onLine func(TranscriptLineDto), onConnected func(bool)) func() {
-	return SubscribeTranscript(s.ctx, s.baseURL, onLine, onConnected)
+	return SubscribeTranscript(s.ctx, s.baseURL, func(l TranscriptLineDto) {
+		if l.Seq > 0 {
+			s.lastTxSeq.Store(l.Seq)
+		}
+		onLine(l)
+	}, onConnected, func() int64 { return s.lastTxSeq.Load() })
 }
 
 func (s *liveSource) Close() {

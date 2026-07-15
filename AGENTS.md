@@ -1,16 +1,23 @@
-# Conductor (Go Face worktree) — session handoff
+# Conductor (Baton worktree) — session handoff
 
 ## What this is
 Conductor is an autonomous multi-session engineering orchestrator (C# / .NET, Spectre.Console). It
 spawns headless agent sessions, verifies work independently (gate battery + git commits + tracker
-diff), is fully resumable, and reports to `.conductor/REPORT.md`. This worktree (`feat/go-face`) hosts
-**Conductor Face v2** — a Go + Bubble Tea TUI replacing the TypeScript + Ink version.
+diff), is fully resumable, and reports to `.conductor/REPORT.md`. This worktree (`feat/baton`) hosts
+**Baton — Conductor v2**: Conductor improving itself. It also now hosts **Conductor Face v2** — a
+Go + Bubble Tea TUI, merged in from `feat/go-face`, living alongside the existing TypeScript + Ink
+TUI at `face/`.
 
 ## This worktree
-- **Path:** `C:\Code\conductor-go-face`  **Branch:** `feat/go-face`
-- **What's new:** `face-go/` — Go + Bubble Tea TUI (single binary, ~11MB)
-- **Existing:** `face/` — TypeScript + Ink TUI (untouched, remains on feat/foreman)
-- **Driver:** the STABLE `C:\Code\conductor\bin\conductor.exe` (built from master).
+- **Path:** `C:\Code\conductor-baton`  **Branch:** `feat/foreman`
+- **Do NOT touch:** `C:\Code\conductor` (master, the stable DRIVER) or the live `C:\Code\DevContext2-ui`
+  Loom run (separate repo + lock).
+- **Faces:** `face/` — TypeScript + Ink TUI (existing, unchanged). `face-go/` — Go + Bubble Tea TUI,
+  now wired to the real control plane (control verbs, inject, report query, template editor file
+  I/O, live SSE transcript/events, session history, a new Processes modal) — no longer a visual-only
+  prototype. See `face-go/internal/tui/update_test.go` for the control-flow coverage.
+- **Driver:** the STABLE `C:\Code\conductor\bin\conductor.exe` (built from master). The tool improving
+  Conductor is never the tool under edit.
 
 ## Go Face v2 — quick start
 ```powershell
@@ -23,27 +30,30 @@ go build -o bin/conductor-face.exe ./cmd/conductor-face/
 ## Architecture
 - **Language:** Go 1.26
 - **Framework:** Bubble Tea v2 (Elm Architecture) + Lip Gloss v2 (styling)
-- **Layout:** Crush-inspired — agent transcript is the primary view; sidebar (plan tree + gates) toggles with `p`; everything else is a modal overlay
-- **Data:** Same HTTP+SSE API as the Ink TUI (9 endpoints on localhost:4317)
-- **Tests:** `go test ./...` — 9 tests pass
+- **Layout:** Crush-inspired — agent transcript is the primary view; sidebar (plan tree + gates) toggles with `p`; a compact inline gate bar shows when the sidebar is closed; everything else (including Processes, folded out of Ink's old always-on 3-pane tab model) is a modal overlay
+- **Data:** Same HTTP+SSE API as the Ink TUI (9 endpoints on localhost:4317), including `?since=` resume-on-reconnect for both SSE streams (server-supported, `ControlPlaneServer.Endpoints.cs` `ParseSince`)
+- **Tests:** `go test ./...` — all packages pass; `internal/tui/update_test.go` covers the control-plane wiring (palette send/confirm/goto, inject guard, report query, template read/write round-trip, processes nav, transcript search)
 
 ### Key files
 | Path | Purpose |
 |------|---------|
 | `cmd/conductor-face/main.go` | CLI entry: --demo, --url, --host, --port |
-| `internal/api/` | HTTP client, SSE client, DTO types, demo data source |
-| `internal/tui/` | Root model, update loop, view, layout, messages, theme |
+| `internal/api/` | HTTP client, SSE client (with since-resume), DTO types, demo data source |
+| `internal/tui/` | Root model, update loop, view, layout, messages, streaming (conn.go) |
 | `internal/widgets/` | Transcript, sidebar, ticker, footer, toasts, styles |
+| `internal/templates/` | Direct filesystem read/write for the template editor (planDir on disk) |
 
 ### Keybindings
 | Key | Action |
 |-----|--------|
 | `p` | Toggle plan sidebar |
-| `:` | Command palette (11 verbs, filterable) |
+| `:` | Command palette (11 verbs, filterable, destructive ones confirm, `goto` asks for a stage id) |
 | `i` | Inject context modal |
-| `e` | Template editor modal |
+| `e` | Template editor (reads/writes planDir on disk) |
 | `h` | Session history modal |
+| `s` | Supervised processes modal |
 | `r` | Report / query console |
+| `/` | Inline transcript search (enter: lock, n/N: next/prev match, esc: clear) |
 | `?` | Help overlay |
 | `f` | Toggle tool-call folding |
 | `q / ^C` | Quit |
@@ -53,7 +63,7 @@ go build -o bin/conductor-face.exe ./cmd/conductor-face/
 cd face-go
 go fmt ./...           # format
 go vet ./...           # lint
-go test ./...          # test (9 tests)
+go test ./...          # test
 go build -o bin/conductor-face.exe ./cmd/conductor-face/   # build
 ```
 

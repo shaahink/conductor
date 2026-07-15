@@ -9,7 +9,6 @@ type LayoutRects struct {
 	Main    Rect // area between ticker and footer
 	Sidebar Rect // plan tree, zero width when closed
 	Transcr Rect // agent transcript
-	GateBar Rect // inline gate status bar within transcript area
 }
 
 type Rect struct {
@@ -23,7 +22,6 @@ const (
 	sidebarWidthPct = 28
 	sidebarMinW     = 24
 	sidebarMaxW     = 42
-	gateBarH        = 1
 )
 
 func ComputeLayout(width, height int, sidebarOpen bool) LayoutRects {
@@ -73,12 +71,6 @@ func ComputeLayout(width, height int, sidebarOpen bool) LayoutRects {
 	}
 
 	layout.Transcr = Rect{X: transcrX, Y: mainY, Width: transcrW, Height: mainH}
-
-	gateY := mainY + mainH - gateBarH - 1
-	if gateY < mainY {
-		gateY = mainY
-	}
-	layout.GateBar = Rect{X: transcrX, Y: gateY, Width: transcrW, Height: gateBarH}
 
 	return layout
 }
