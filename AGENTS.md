@@ -25,7 +25,24 @@ TUI at `face/`.
 - **Driver:** the STABLE `C:\Code\conductor\bin\conductor.exe` (built from master). The tool improving
   Conductor is never the tool under edit.
 
-## Resume here (Maestro M6 complete, 2026-07-15)
+## Resume here (Maestro M6 complete + face-go mission-control pass, 2026-07-15)
+**Latest session (M6 close-out):** a full parity + polish + refactor pass on `face-go` before M7.
+What changed (commit `4d15c2f`):
+- **Parity gaps closed** — run status/attention reason, session kind/attempt, `/tasks` (MCP task
+  list) and the splash empty-state were fetched-but-never-rendered (or lost in the v3 redesign);
+  all visible now. Agent tab = mission control: status strip (session · checkpoint · gate chips ·
+  task progress · elapsed + attention banner) over the transcript.
+- **Real bugs fixed** — transcript scroll-up was offset-from-top (one ↑ teleported to the top of
+  the buffer; now offset-from-bottom, unit-tested in `widgets/transcript_test.go`); sidebar rows
+  word-wrapped at 80 cols (lipgloss v2 counts the border inside `.Width()` — content is width−3);
+  demo/goldens had `/sessions` oldest-first while the real wire is `ORDER BY number DESC`.
+- **Refactor** — `update.go`/`view.go` split per concern: each tab's handler+renderer in
+  `tab_<name>.go`, palette/inject/search/help in `cmdbar.go`; dead sidebar-selection machinery and
+  ad-hoc colour helpers deleted; `STYLE.md` updated (read it before any face-go change).
+- **Alive** — braille spinner + live cost/elapsed in the top bar only while the agent is active;
+  Timeline auto-refreshes on spine events while open; search matches highlighted in place.
+
+## Previous resume point (Maestro M6 complete, 2026-07-15)
 **M6 (Plan authoring) is DONE, 3/3** — plan import/edit landed on the C# control plane AND in `face-go`,
 and the truth gate is met with **zero LLM spend**. What's new this era:
 - **M6.1 deterministic import** (`src/Conductor/Core/Planning/MarkdownPlanParser.cs`): a *structured*
@@ -169,17 +186,21 @@ verify against the real thing without spending on a real LLM session:
 |------|---------|
 | `cmd/conductor-face/main.go` | CLI entry: --demo, --url, --host, --port, TTY guard, --help |
 | `internal/api/` | HTTP client, SSE client (with since-resume), DTO types, demo data source |
-| `internal/tui/` | Root model, update loop, view, layout, messages, streaming (conn.go) |
-| `internal/tui/anim.go` | Harmonica spring animation: toast entrance reveal |
+| `internal/tui/update.go` | Message loop + global key routing only |
+| `internal/tui/view.go` | Frame assembly (top bar, tab strip, sidebar, bottom bar, overlays) |
+| `internal/tui/tab_*.go` | One file per tab: its key handler + its renderer (agent, sessions, timeline, processes, console, templates, report) |
+| `internal/tui/plan.go` | The Plan editor tab (M6.3) |
+| `internal/tui/cmdbar.go` | Palette / inject / search / help — the transient command layer |
+| `internal/tui/anim.go` | Harmonica spring animation: toast entrance reveal; spinner tick lives in messages.go |
 | `internal/tui/markdown.go` | Glamour markdown rendering for prose detail panes (session result summary) |
-| `internal/widgets/` | Transcript, sidebar, ticker, footer, toasts, styles |
+| `internal/widgets/` | Transcript (scroll/fold/search), sidebar (plan+gates+tasks), top bar, toasts, one palette (style.go) |
 | `internal/templates/` | Direct filesystem read/write for the template editor (planDir on disk) |
 
 ### Keybindings (v3 dashboard)
 **Tabs** (jump straight there — also `1`–`8`, or `tab`/`shift+tab` to cycle; `esc` returns to Agent):
 | Key | Tab |
 |-----|-----|
-| `a` | Agent (transcript — the primary view; `f` fold, `↑↓` scroll) |
+| `a` | Agent (mission control: status strip + transcript; `f` fold, `↑↓` scroll, `end`/`l` live-tail) |
 | `h` | Sessions (history + inline detail) |
 | `t` | Timeline (`r` refresh) |
 | `s` | Procs (supervised processes) |

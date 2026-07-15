@@ -4,12 +4,12 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: M6 COMPLETE (3/3). M6.1 deterministic markdown→graph parser (`MarkdownPlanParser`) — a structured plan/tracker doc becomes stages with NO model call (the zero-spend import path); freeform prose falls back to the advisor model (`--model` fills `{model}`); `--yes` skips confirm. M6.2 `PlanDiff` — re-import shows added/changed and applies only that, never clobbering hand-tuned entries. M6.3 plan authoring over the wire (`GET /plan`, `POST /plan/edit`, `POST /plan/import`) + a `g` Plan Editor modal in face-go (Stages·Gates·Settings·Import tabs, enum carousel model picker, import→diff→apply), interactive in `--demo`. TRUTH GATE MET: `conductor plan import docs/MAESTRO-PLAN.md` → exactly M1…M9 (unit test reads the real doc + CLI-verified, no spend). Also did a Crush-grade polish pass on face-go (brand mark, rounded modal chrome, empty-state splash).
-stage: M6 COMPLETE — all M6.1–M6.3 DONE. 24/30 DONE. Next: M7 (knowledge that compounds).
-commit: abd1b5f (M6.1/M6.2), c337cca (M6.3 backend), 9d6951c (M6.3 face), + polish.
-gate: build 0w/0e · 601 tests pass (fast filter, incl. 9 parser/diff + 5 plan-wire) · face-go build/vet/test green (all goldens + plan_test) · ratchet green (ceiling 38).
+last: M6 close-out — full face-go parity/polish/refactor pass (commit 4d15c2f). Parity gaps closed: run status badge + attention reason, session kind/attempt, MCP `/tasks` (sidebar TASKS + strip segment), splash empty-state (was lost in v3 redesign). Agent tab = mission control (status strip: session·checkpoint·gate chips·task progress·elapsed + attention banner over the transcript). Real bugs fixed: transcript scroll-up was offset-from-top (↑ teleported to buffer top — now offset-from-bottom, unit-tested); sidebar rows word-wrapped at 80 cols (lipgloss v2 counts border inside .Width(): content = width−3); demo+goldens had /sessions oldest-first vs the real wire's ORDER BY number DESC. Alive: braille spinner + live cost/elapsed while agent active; Timeline auto-refreshes on spine events. Maintainability: update.go/view.go split — tab_*.go per tab (handler+renderer together), cmdbar.go for palette/inject/search/help; dead code deleted; STYLE.md is the design authority (updated).
+stage: M6 COMPLETE — 24/30 DONE. Next: M7 (knowledge that compounds).
+commit: abd1b5f (M6.1/M6.2), c337cca (M6.3 backend), 9d6951c (M6.3 face), 4d15c2f (close-out polish/refactor).
+gate: dotnet build 0w/0e · 601 tests pass (fast filter) · face-go build/vet/test green (25 goldens incl. new `attention`, transcript-scroll unit tests) · 6s demo smoke OK.
 branch: feat/foreman.
-next: M7.1 ledger injected into the next prompt, surfaced in the Face, queryable; M7.2 `conductor bug new/list/fix` + MCP (bugs outlive the session). M7 truth gate: 2-session toy run — session 1 writes a note + files a bug; session 2's compiled prompt.md on disk contains both.
+next: M7.1 ledger injected into the next prompt, surfaced in the Face, queryable; M7.2 `conductor bug new/list/fix` + MCP (bugs outlive the session). M7 truth gate: 2-session toy run — session 1 writes a note + files a bug; session 2's compiled prompt.md on disk contains both. Face surfaces exist to extend: sidebar sections + agent strip (ledger/bugs slot in beside TASKS).
 
 
 ## Baseline numbers (from run.db)
