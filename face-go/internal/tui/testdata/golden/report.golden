@@ -1,18 +1,18 @@
  ◆ conductor  ● LIVE  conductor-foreman  F7 Gate caching + truth gates + spee…  ● $0.12  cp 2/40  $0.42       
   a Agent   h Sessions   t Timeline   s Procs   c Console   e Templates   g Plan   r Report                   
                            │                                                                                  
- ▶ PLAN                    │   Stages · Gates · Settings · Import    conductor-foreman · v7                   
- ✓ F0 3/3 Foundations      │                                                                                  
- ✓ F6 5/5 Ink TUI v1       │    editing F7                                                                    
- ● F7 2/5 Gate c… 1× $0.30 │                                                                                  
-   ✓  F7.1 Plan import     │    title            Gate caching + truth gates                                   
-   ✓  F7.2 Re-import diff  │    model            claude-opus-4-8                                              
-   ●  F7.3 Truth-gate tier │    workflow         big-dev-then-big-audit                                       
- ○ F8 0/4 conductor chat … │    kind             deliver                                                      
-                           │    sessions         5                                                            
- ── GATES ──               │    notes            (unset)                                                      
-   ✓  build                │    dependsOn        F6                                                           
-   ●  test                 │                                                                                  
+ ▶ PLAN                    │  Quick queries:                                                                  
+ ✓ F0 3/3 Foundations      │    cost per stage                                                                
+ ✓ F6 5/5 Ink TUI v1       │    which gates fail most                                                         
+ ● F7 2/5 Gate c… 1× $0.30 │    recent sessions                                                               
+   ✓  F7.1 Plan import     │    verifier scores                                                               
+   ✓  F7.2 Re-import diff  │                                                                                  
+   ●  F7.3 Truth-gate tier │  SQL:                                                                            
+ ○ F8 0/4 conductor chat … │  SELECT s.stage_id, SUM(c.cost_usd) as cost_usd FROM costs c JOIN sessions s O…  
+                           │                                                                                  
+ ── GATES ──               │  stage_id │ cost_usd                                                             
+   ✓  build                │  F1 │ 0.42                                                                       
+   ●  test                 │  F7 │ 0.08                                                                       
    ○  lint                 │                                                                                  
                            │                                                                                  
                            │                                                                                  
@@ -32,4 +32,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  p sidebar  ? help  q quit   │   [↑↓: field] [enter: edit] [esc: back]             
+ : cmd  i inject  / search  p sidebar  ? help  q quit   │   tab focus · ↑↓ pick · enter run                   

@@ -1,34 +1,35 @@
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                 ╭──────────────────────────────────────────────────────────────────────────╮                 
-                 │                                                                          │                 
-                 │  ◆ Plan Editor                                                           │                 
-                 │  ──────────────────────────────────────────────────────────────────────  │                 
-                 │                                                                          │                 
-                 │     Stages · Gates · Settings · Import                                   │                 
-                 │    conductor-foreman · v7                                                │                 
-                 │                                                                          │                 
-                 │    F6   Ink TUI v1               5s·deliver claude-opus-4-8              │                 
-                 │    F7   Gate caching + truth ga… 5s·deliver claude-opus-4-8              │                 
-                 │    F8   conductor chat + Telegr… 4s·deliver claude-sonnet-5              │                 
-                 │                                                                          │                 
-                 │  ──────────────────────────────────────────────────────────────────────  │                 
-                 │  [tab: switch] [↑↓: select] [enter: edit fields] [esc: close]            │                 
-                 │                                                                          │                 
-                 ╰──────────────────────────────────────────────────────────────────────────╯                 
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
+ ◆ conductor  ● LIVE  conductor-foreman  F7 Gate caching + truth gates + spee…  ● $0.12  cp 2/40  $0.42       
+  a Agent   h Sessions   t Timeline   s Procs   c Console   e Templates   g Plan   r Report                   
+                           │                                                                                  
+ ▶ PLAN                    │   Stages · Gates · Settings · Import    conductor-foreman · v7                   
+ ✓ F0 3/3 Foundations      │                                                                                  
+ ✓ F6 5/5 Ink TUI v1       │    F6   Ink TUI v1               5s·deliver claude-opus-4-8                      
+ ● F7 2/5 Gate c… 1× $0.30 │    F7   Gate caching + truth ga… 5s·deliver claude-opus-4-8                      
+   ✓  F7.1 Plan import     │    F8   conductor chat + Telegr… 4s·deliver claude-sonnet-5                      
+   ✓  F7.2 Re-import diff  │                                                                                  
+   ●  F7.3 Truth-gate tier │                                                                                  
+ ○ F8 0/4 conductor chat … │                                                                                  
+                           │                                                                                  
+ ── GATES ──               │                                                                                  
+   ✓  build                │                                                                                  
+   ●  test                 │                                                                                  
+   ○  lint                 │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+ : cmd  i inject  / search  p sidebar  ? help  q quit   │   [tab: switch] [↑↓: select] [enter: edit fields] [e

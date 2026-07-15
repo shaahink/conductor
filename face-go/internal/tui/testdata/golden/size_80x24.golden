@@ -1,26 +1,28 @@
- ◆ conductor │ ● LIVE │ conductor-foreman │ F7 Gate caching + truth gates + spee
-▶ PLAN                 │▸ Session #12 started · Deliver · Stage F7 · Attempt 1  
-✓ F0 3/3 Foundations   │⁙ Let me examine the GateCache implementation...        
-✓ F6 5/5 Ink TUI v1    │⚙ read src/Conductor/Core/Gating/GateCache.cs           
-● F7 2/5 Gate… 1× $0.30│↳ GateCache.cs:142 lines — caches by (name, tier, sha)  
-  ✓  F7.1 Plan import  │▸ Found the caching layer. Adding GetLastPassingGateResu
-  ✓  F7.2 Re-import    │                                                        
-diff                   │                                                        
-  ●  F7.3 Truth-gate   │                                                        
-ti…                    │                                                        
-○ F8 0/4 conductor cha…│                                                        
-                       │                                                        
-── GATES ──            │                                                        
-  ✓  build             │                                                        
-  ●  test              │                                                        
-  ○  lint              │                                                        
-                       │                                                        
-                       │                                                        
-                       │                                                        
-                       │                                                        
-                       │                                                        
-                       │                                                        
-                       │                                                        
-                       │                                                        
-                       │                                                        
- p close-plan  ↑↓ navigate  enter expand  : palette                             
+ ◆ conductor  ● LIVE  conductor-foreman  F7 Gate caching + truth gates + spee…  
+  a Agent  h t s c e g r                                                        
+                     │                                                          
+ ▶ PLAN              │  ▸ Session #12 started · Deliver · Stage F7 · Attempt 1  
+ ✓ F0 3/3 Foundatio… │  ⁙ Let me examine the GateCache implementation...        
+ ✓ F6 5/5 Ink TUI v1 │  ⚙ read src/Conductor/Core/Gating/GateCache.cs           
+ ● F7 2/5 Gat… 1×    │  ↳ GateCache.cs:142 lines — caches by (name, tier, sha)  
+ $0.30               │  ▸ Found the caching layer. Adding GetLastPassingGateRe  
+   ✓  F7.1 Plan      │                                                          
+ impo…               │                                                          
+   ✓  F7.2 Re-       │                                                          
+ import…             │                                                          
+   ●  F7.3 Truth-    │                                                          
+ gat…                │                                                          
+ ○ F8 0/4 conductor… │                                                          
+                     │                                                          
+ ── GATES ──         │                                                          
+   ✓  build          │                                                          
+   ●  test           │                                                          
+   ○  lint           │                                                          
+                     │                                                          
+                     │                                                          
+                     │                                                          
+                     │                                                          
+                     │                                                          
+                     │                                                          
+                     │                                                          
+ : cmd  i inject  / search  p sidebar  ? help  q quit                           

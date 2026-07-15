@@ -207,12 +207,12 @@ func TestGolden(t *testing.T) {
 		name string
 		do   func(m tea.Model) tea.Model
 	}{
-		{"default_no_sidebar", func(m tea.Model) tea.Model { return m }},
-		{"sidebar_open", func(m tea.Model) tea.Model {
+		{"default", func(m tea.Model) tea.Model { return m }},
+		{"sidebar_collapsed", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("p"))
 			return m
 		}},
-		{"palette_list", func(m tea.Model) tea.Model {
+		{"palette", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg(":"))
 			return m
 		}},
@@ -232,22 +232,22 @@ func TestGolden(t *testing.T) {
 			m, _ = m.Update(specialKey(tea.KeyEnter))
 			return m
 		}},
-		{"inject_modal", func(m tea.Model) tea.Model {
+		{"inject", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("i"))
 			for _, ch := range "please retry with cache warm" {
 				m, _ = m.Update(keyMsg(string(ch)))
 			}
 			return m
 		}},
-		{"template_editor_list", func(m tea.Model) tea.Model {
+		{"templates", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("e"))
 			return m
 		}},
-		{"sessions_modal", func(m tea.Model) tea.Model {
+		{"sessions", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("h"))
 			return m
 		}},
-		{"report_modal", func(m tea.Model) tea.Model {
+		{"report", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("r"))
 			m, _ = m.Update(MsgReportResult{Result: &api.QueryResultDto{
 				Columns: []string{"stage_id", "cost_usd"},
@@ -258,16 +258,16 @@ func TestGolden(t *testing.T) {
 			}})
 			return m
 		}},
-		{"processes_modal", func(m tea.Model) tea.Model {
+		{"processes", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("s"))
 			return m
 		}},
-		{"timeline_modal", func(m tea.Model) tea.Model {
+		{"timeline", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("t"))
 			m, _ = m.Update(MsgTimelineUpdated{Timeline: &api.TimelineDto{Entries: fixedTimeline()}})
 			return m
 		}},
-		{"console_modal", func(m tea.Model) tea.Model {
+		{"console", func(m tea.Model) tea.Model {
 			for i, raw := range []string{
 				`{"type":"system","subtype":"init","session_id":"s12","model":"deepseek-v4-pro"}`,
 				`{"type":"assistant","message":{"content":[{"type":"text","text":"Examining GateCache..."}]}}`,
@@ -278,7 +278,7 @@ func TestGolden(t *testing.T) {
 			m, _ = m.Update(keyMsg("c"))
 			return m
 		}},
-		{"prompt_preview", func(m tea.Model) tea.Model {
+		{"templates_preview", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("e"))
 			m, _ = m.Update(keyMsg("v"))
 			m, _ = m.Update(MsgPromptPreview{Preview: &api.PromptPreviewDto{
@@ -312,22 +312,22 @@ func TestGolden(t *testing.T) {
 		{"plan_gates", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("g"))
 			m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
-			m, _ = m.Update(specialKey(tea.KeyTab)) // → Gates tab
+			m, _ = m.Update(specialKey(tea.KeyRight)) // → Gates section
 			return m
 		}},
 		{"plan_settings", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("g"))
 			m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
-			m, _ = m.Update(specialKey(tea.KeyTab))
-			m, _ = m.Update(specialKey(tea.KeyTab))
+			m, _ = m.Update(specialKey(tea.KeyRight))
+			m, _ = m.Update(specialKey(tea.KeyRight))
 			return m
 		}},
 		{"plan_import_diff", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("g"))
 			m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
-			m, _ = m.Update(specialKey(tea.KeyTab))
-			m, _ = m.Update(specialKey(tea.KeyTab))
-			m, _ = m.Update(specialKey(tea.KeyTab)) // → Import tab
+			m, _ = m.Update(specialKey(tea.KeyRight))
+			m, _ = m.Update(specialKey(tea.KeyRight))
+			m, _ = m.Update(specialKey(tea.KeyRight)) // → Import section
 			m, _ = m.Update(MsgPlanImported{Result: &api.PlanImportResultDto{Ok: true, Diff: api.PlanDiffDto{
 				AddedStages: []api.PlanStageDto{
 					{Id: "M8", Title: "AFK and smart setup", Sessions: 3, Kind: "deliver", DependsOn: []string{"M7"}},
@@ -338,14 +338,14 @@ func TestGolden(t *testing.T) {
 			}}})
 			return m
 		}},
-		{"search_active", func(m tea.Model) tea.Model {
+		{"search", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("/"))
 			for _, ch := range "gate" {
 				m, _ = m.Update(keyMsg(string(ch)))
 			}
 			return m
 		}},
-		{"help_modal", func(m tea.Model) tea.Model {
+		{"help", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("?"))
 			return m
 		}},
@@ -403,8 +403,7 @@ func TestGoldenSizes(t *testing.T) {
 	}
 	for _, sz := range sizes {
 		t.Run(sz.name, func(t *testing.T) {
-			m := newGoldenModel(sz.w, sz.h)
-			m, _ = m.Update(keyMsg("p")) // sidebar open so the plan pane is exercised at each width
+			m := newGoldenModel(sz.w, sz.h) // sidebar is on by default — exercised at each width
 			checkGolden(t, sz.name, stripANSI(m.View().Content))
 		})
 	}

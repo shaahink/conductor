@@ -1,17 +1,17 @@
  ◆ conductor  ● LIVE  conductor-foreman  F7 Gate caching + truth gates + spee…  ● $0.12  cp 2/40  $0.42       
   a Agent   h Sessions   t Timeline   s Procs   c Console   e Templates   g Plan   r Report                   
                            │                                                                                  
- ▶ PLAN                    │   Stages · Gates · Settings · Import    conductor-foreman · v7                   
- ✓ F0 3/3 Foundations      │                                                                                  
- ✓ F6 5/5 Ink TUI v1       │    editing F7                                                                    
- ● F7 2/5 Gate c… 1× $0.30 │                                                                                  
-   ✓  F7.1 Plan import     │    title            Gate caching + truth gates                                   
-   ✓  F7.2 Re-import diff  │    model            claude-opus-4-8                                              
-   ●  F7.3 Truth-gate tier │    workflow         big-dev-then-big-audit                                       
- ○ F8 0/4 conductor chat … │    kind             deliver                                                      
-                           │    sessions         5                                                            
- ── GATES ──               │    notes            (unset)                                                      
-   ✓  build                │    dependsOn        F6                                                           
+ ▶ PLAN                    │  • session.md              │ Select a template on the left.                      
+ ✓ F0 3/3 Foundations      │  ○ fix.md                                                                        
+ ✓ F6 5/5 Ink TUI v1       │  ○ resume.md                                               ● on disk   ○         
+ ● F7 2/5 Gate c… 1× $0.30 │  ○ advisor.md                built-in default                                    
+   ✓  F7.1 Plan import     │  ○ audit.md                                                                      
+   ✓  F7.2 Re-import diff  │  ○ review.md                 Saved to planDir — the engine hot-reloads           
+   ●  F7.3 Truth-gate tier │  ○ verify.md                 at the next session.                                
+ ○ F8 0/4 conductor chat … │                                                                                  
+                           │                                                                       enter      
+ ── GATES ──               │                              edit · v compiled preview                           
+   ✓  build                │                                                                                  
    ●  test                 │                                                                                  
    ○  lint                 │                                                                                  
                            │                                                                                  
@@ -32,4 +32,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  p sidebar  ? help  q quit   │   [↑↓: field] [enter: edit] [esc: back]             
+ : cmd  i inject  / search  p sidebar  ? help  q quit   │   ↑↓ select · enter edit · v preview                

@@ -8,23 +8,37 @@ import (
 	"conductor-face-go/internal/widgets"
 )
 
-type ModalKind int
+// MainTab selects which view fills the content pane. Everything the old build hid behind a modal is
+// now a first-class tab, one keypress away, with the plan sidebar always beside it.
+type MainTab int
 
 const (
-	ModalNone ModalKind = iota
-	ModalPalette
-	ModalInject
-	ModalPrompt
-	ModalSessions
-	ModalReport
-	ModalProcesses
-	ModalTimeline
-	ModalConsole
-	ModalPlan
-	ModalHelp
+	TabAgent MainTab = iota
+	TabSessions
+	TabTimeline
+	TabProcesses
+	TabConsole
+	TabTemplates
+	TabPlan
+	TabReport
+	tabCount
 )
 
-// planTab selects which authoring surface the plan editor shows.
+var tabNames = [tabCount]string{"Agent", "Sessions", "Timeline", "Procs", "Console", "Templates", "Plan", "Report"}
+
+// tabKey is the mnemonic that jumps straight to each tab (also shown in the strip).
+var tabKey = [tabCount]string{"a", "h", "t", "s", "c", "e", "g", "r"}
+
+// CmdMode is a transient bottom-bar input that floats over the dashboard instead of a full modal.
+type CmdMode int
+
+const (
+	CmdNone CmdMode = iota
+	CmdPalette
+	CmdInject
+	CmdHelp
+)
+
 type planTab int
 
 const (
@@ -51,8 +65,9 @@ type Model struct {
 
 	data api.AppState
 
-	sidebarOpen bool
-	activeModal ModalKind
+	tab             MainTab
+	cmd             CmdMode
+	sidebarCollapsed bool
 
 	transcript widgets.TranscriptModel
 	sidebar    widgets.SidebarModel
@@ -60,12 +75,10 @@ type Model struct {
 	toasts     []widgets.Toast
 	toastAnims map[int]*toastAnimState
 
-	// Inline transcript search (not a modal — mirrors Ink's non-blocking agent-pane search).
+	// Inline transcript search (non-blocking, Agent tab only).
 	searchActive bool
 
-	// Streaming: SSE callbacks (running on background goroutines started in subscribeStreams)
-	// push onto these channels; waitForX commands re-arm themselves after each read so the
-	// program keeps listening for the life of the process.
+	// Streaming channels (see conn.go).
 	eventCh      chan api.ConductorEventDto
 	txCh         chan api.TranscriptLineDto
 	consoleCh    chan api.ConsoleLineDto
@@ -76,12 +89,9 @@ type Model struct {
 	txSeq      int64
 	consoleSeq int64
 
-	// Native console (M5.3): raw agent stdout, scrolled independently of the transcript.
 	consoleScroll int
 
-	// --- Modal state ---
-
-	// Palette
+	// Palette (bottom command bar)
 	paletteQuery      string
 	paletteSelected   int
 	paletteConfirming bool
@@ -89,12 +99,12 @@ type Model struct {
 	paletteGotoActive bool
 	paletteGotoInput  string
 
-	// Inject
+	// Inject (bottom command bar)
 	injectContent string
 	injectStageId string
-	injectField   int // 0=stage, 1=content
+	injectField   int
 
-	// Prompt (template editor + compiled preview, M5.5)
+	// Templates tab (list + editor + compiled preview)
 	promptEntries    []templates.Entry
 	promptSelected   int
 	promptContent    string
@@ -103,37 +113,38 @@ type Model struct {
 	promptPreviewOn  bool
 	promptPreviewErr string
 
-	// Timeline (M5.1)
+	// Timeline tab
 	timelineEntries  []api.TimelineEntryDto
 	timelineSelected int
 	timelineLoading  bool
 	timelineErr      string
 
-	// Sessions
+	// Sessions tab
 	sessionSelected int
 
-	// Report
+	// Report tab
 	reportSQL           string
 	reportQuickSelected int
 	reportFocusQuery    bool
 
-	// Processes
+	// Processes tab
 	processSelected int
 
-	// Plan editor (M6.3)
+	// Plan tab (M6.3 editor)
 	plan             *api.PlanDto
 	planTab          planTab
 	planStageIdx     int
 	planGateIdx      int
 	planFieldIdx     int
-	planDrill        bool   // stages/gates: whether we've drilled into a row's fields
-	planEditing      bool   // whether the selected field is being edited
-	planEditBuf      string // in-progress text value
-	planEnumIdx      int    // in-progress enum selection
-	planStatus       string // transient feedback line (last save result)
+	planDrill        bool
+	planEditing      bool
+	planEditBuf      string
+	planEnumIdx      int
+	planStatus       string
 	planImportInput  string
 	planImportResult *api.PlanImportResultDto
 	planImportErr    string
+	planLoadRequested bool
 }
 
 func New(source api.DataSource, isDemo bool, baseURL string) Model {
@@ -141,8 +152,8 @@ func New(source api.DataSource, isDemo bool, baseURL string) Model {
 		source:       source,
 		isDemo:       isDemo,
 		baseURL:      baseURL,
-		sidebarOpen:  false,
-		activeModal:  ModalNone,
+		tab:          TabAgent,
+		cmd:          CmdNone,
 		transcript:   widgets.NewTranscript(),
 		sidebar:      widgets.NewSidebar(),
 		eventCh:      make(chan api.ConductorEventDto, 256),
@@ -151,10 +162,7 @@ func New(source api.DataSource, isDemo bool, baseURL string) Model {
 		eventsConnCh: make(chan bool, 8),
 		txConnCh:     make(chan bool, 8),
 		data: api.AppState{
-			Connection: api.ConnectionState{
-				Mode: api.ModeLive,
-				URL:  baseURL,
-			},
+			Connection: api.ConnectionState{Mode: api.ModeLive, URL: baseURL},
 		},
 	}
 
@@ -162,7 +170,6 @@ func New(source api.DataSource, isDemo bool, baseURL string) Model {
 		m.data.Connection.Mode = api.ModeDemo
 		m.data.Connection.Connected = true
 	}
-
 	return m
 }
 
@@ -171,6 +178,7 @@ func (m Model) Init() tea.Cmd {
 	return tea.Batch(
 		CmdTick(),
 		m.doPoll(),
+		m.cmdFetchPlan(), // the sidebar-adjacent Plan tab is ready without a round-trip on first open
 		waitForEvent(m.eventCh),
 		waitForTranscript(m.txCh),
 		waitForConsole(m.consoleCh),

@@ -16,8 +16,8 @@ func openPlanEditor(t *testing.T) (Model, api.DataSource) {
 
 	tm, cmd := m.handleKey("g")
 	m = asModel(tm)
-	if m.activeModal != ModalPlan {
-		t.Fatalf("expected ModalPlan, got %v", m.activeModal)
+	if m.tab != TabPlan {
+		t.Fatalf("expected TabPlan, got %v", m.tab)
 	}
 	if cmd == nil {
 		t.Fatal("opening the plan editor should fetch the plan")
@@ -68,12 +68,12 @@ func TestPlanEditStageEnumFieldRoundTrips(t *testing.T) {
 func TestPlanTabCyclesAndImportPreviewApplies(t *testing.T) {
 	m, _ := openPlanEditor(t)
 
-	// tab three times → Import tab.
-	m = drive(m, "tab")
-	m = drive(m, "tab")
-	m = drive(m, "tab")
+	// right three times → Import section.
+	m = drive(m, "right")
+	m = drive(m, "right")
+	m = drive(m, "right")
 	if m.planTab != planTabImport {
-		t.Fatalf("expected Import tab, got %v", m.planTab)
+		t.Fatalf("expected Import section, got %v", m.planTab)
 	}
 
 	for _, ch := range "docs/PLAN.md" {
@@ -121,12 +121,12 @@ func TestPlanEscBacksOutOneLevel(t *testing.T) {
 	if m.planDrill {
 		t.Error("esc should leave the field view")
 	}
-	if m.activeModal != ModalPlan {
-		t.Error("esc from the field view should not close the whole modal")
+	if m.tab != TabPlan {
+		t.Error("esc from the field view should stay on the Plan tab")
 	}
-	m = drive(m, "esc") // now close
-	if m.activeModal != ModalNone {
-		t.Error("esc from the stage list should close the plan editor")
+	m = drive(m, "esc") // now leave the Plan tab
+	if m.tab != TabAgent {
+		t.Error("esc from the stage list should return to the Agent tab")
 	}
 }
 

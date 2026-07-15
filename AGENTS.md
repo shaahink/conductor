@@ -93,7 +93,7 @@ to its latest, don't downgrade `x/ansi`.
 ## Architecture
 - **Language:** Go 1.26
 - **Framework:** Bubble Tea v2 (Elm Architecture) + Lip Gloss v2 (styling)
-- **Layout:** Crush-inspired — agent transcript is the primary view; sidebar (plan tree + gates) toggles with `p`; a compact inline gate bar shows when the sidebar is closed; everything else (including Processes, folded out of Ink's old always-on 3-pane tab model) is a modal overlay
+- **Layout (v3 "dashboard", 2026-07-15 redesign):** top bar · tab strip · **[always-on sidebar | content pane]** · bottom bar. Everything that used to be a modal is now a **tab** in the content pane (Agent · Sessions · Timeline · Procs · Console · Templates · Plan · Report), one keypress away, with the plan sidebar always beside it (collapse with `p`). The only floating things are the command palette, the help card, and toasts — composited **transparently** over the live dashboard via lipgloss v2's `Compositor`/`Layer` (never opaque `lipgloss.Place`). Transient input (palette, inject, goto, search, confirm) is a **bottom command bar**, not a boxed modal. **The design language is authoritative in `face-go/STYLE.md` — read it before any face-go change and keep new work consistent with it (owner directive: future plans follow the new Go style).** Palette Catppuccin Mocha, defined once in `widgets/style.go`.
 - **Data:** Same HTTP+SSE API as the Ink TUI (9 endpoints on localhost:4317), including `?since=` resume-on-reconnect for both SSE streams (server-supported, `ControlPlaneServer.Endpoints.cs` `ParseSince`)
 - **Tests:** `go test ./...` — all packages pass; `internal/tui/update_test.go` covers the control-plane wiring (palette send/confirm/goto, inject guard, report query, template read/write round-trip, processes nav, transcript search); `internal/tui/anim_test.go` covers the toast spring animation (starts at 0, arms/re-arms/stops the ticker correctly, settles within a bounded tick count); `internal/tui/markdown_test.go` covers Glamour rendering (empty passthrough, markdown syntax stripped, never errors on plain text); `internal/tui/golden_test.go` renders `View()` headlessly (no real TTY needed) against fixed demo state and diffs it against `testdata/golden/*.golden` — `go test ./internal/tui/ -run TestGolden -v` prints every frame as plain text, `-update` refreshes the goldens after an intentional layout change. Mirrors the Ink side's `face/tests/golden.test.tsx`.
 
@@ -175,20 +175,27 @@ verify against the real thing without spending on a real LLM session:
 | `internal/widgets/` | Transcript, sidebar, ticker, footer, toasts, styles |
 | `internal/templates/` | Direct filesystem read/write for the template editor (planDir on disk) |
 
-### Keybindings
+### Keybindings (v3 dashboard)
+**Tabs** (jump straight there — also `1`–`8`, or `tab`/`shift+tab` to cycle; `esc` returns to Agent):
+| Key | Tab |
+|-----|-----|
+| `a` | Agent (transcript — the primary view; `f` fold, `↑↓` scroll) |
+| `h` | Sessions (history + inline detail) |
+| `t` | Timeline (`r` refresh) |
+| `s` | Procs (supervised processes) |
+| `c` | Console (raw agent stdout) |
+| `e` | Templates (list + editor + `v` compiled-prompt preview, all on one page) |
+| `g` | Plan editor (M6.3) — `←→` sections Stages·Gates·Settings·Import; edit fields inline; Import → diff → apply |
+| `r` | Report / query console |
+
+**Actions** (bottom command bar / overlays):
 | Key | Action |
 |-----|--------|
-| `p` | Toggle plan sidebar |
-| `g` | Plan editor (M6.3) — tabs Stages·Gates·Settings·Import; edit fields inline; import a plan doc → diff → apply |
 | `:` | Command palette (11 verbs, filterable, destructive ones confirm, `goto` asks for a stage id) |
-| `i` | Inject context modal |
-| `e` | Template editor (reads/writes planDir on disk) |
-| `h` | Session history modal |
-| `s` | Supervised processes modal |
-| `r` | Report / query console |
-| `/` | Inline transcript search (enter: lock, n/N: next/prev match, esc: clear) |
-| `?` | Help overlay |
-| `f` | Toggle tool-call folding |
+| `i` | Inject context (bottom bar: `tab` field, `ctrl+s` send) |
+| `/` | Inline transcript search (enter: lock, n/N: next/prev, esc: clear) |
+| `p` | Collapse / expand the plan sidebar |
+| `?` | Help card (transparent overlay) |
 | `q / ^C` | Quit |
 
 ### Development

@@ -70,19 +70,6 @@ func (m Model) workflowChoices() []string {
 	return []string{"deliver-verify", "big-dev-then-big-audit", "docs-only", "spike"}
 }
 
-func (m *Model) openPlanModal() {
-	m.activeModal = ModalPlan
-	m.planTab = planTabStages
-	m.planStageIdx = 0
-	m.planGateIdx = 0
-	m.planFieldIdx = 0
-	m.planDrill = false
-	m.planEditing = false
-	m.planStatus = ""
-	m.planImportInput = ""
-	m.planImportResult = nil
-	m.planImportErr = ""
-}
 
 func planVersionOf(r *api.PlanMutationResultDto) int {
 	if r == nil {
@@ -105,16 +92,15 @@ func (m *Model) handlePlanKey(key string) (tea.Model, tea.Cmd) {
 			m.planDrill = false
 			return m, nil
 		}
-		m.activeModal = ModalNone
-		return m, nil
-	case "tab":
+		return m.openTab(TabAgent) // leave the Plan tab
+	case "right":
 		if !m.planDrill {
 			m.planTab = (m.planTab + 1) % 4
 			m.planFieldIdx = 0
 			m.planStatus = ""
 		}
 		return m, nil
-	case "shift+tab":
+	case "left":
 		if !m.planDrill {
 			m.planTab = (m.planTab + 3) % 4
 			m.planFieldIdx = 0
@@ -260,10 +246,7 @@ func (m *Model) handlePlanImportKey(key string) (tea.Model, tea.Cmd) {
 
 	switch key {
 	case "esc":
-		m.activeModal = ModalNone
-		return m, nil
-	case "tab":
-		m.planTab = (m.planTab + 1) % 4
+		m.planTab = planTabStages // back to the Stages section, staying in the Plan tab
 		return m, nil
 	case "enter":
 		if strings.TrimSpace(m.planImportInput) == "" {
@@ -398,15 +381,15 @@ func derefOr(p *string, def string) string {
 
 // --- rendering ---
 
-func (m Model) renderPlanModal() (string, string, string) {
+func (m Model) renderPlanPane() (string, string, string) {
 	title := "Plan Editor"
 	if m.plan == nil {
-		return title, "  " + subtleStyle.Render("loading plan…"), "[esc: close]"
+		return title, subtleStyle.Render("loading plan…"), "esc back"
 	}
 
-	tabs := m.renderPlanTabs()
+	tabs := m.renderPlanSections()
 	var body string
-	help := "[tab: switch] [↑↓: select] [enter: edit] [esc: close]"
+	help := "←→ section · ↑↓ select · enter edit · esc back"
 
 	switch m.planTab {
 	case planTabStages:
@@ -425,13 +408,13 @@ func (m Model) renderPlanModal() (string, string, string) {
 		if strings.HasPrefix(m.planStatus, "✗") {
 			st = destructStyle
 		}
-		status = "\n\n  " + st.Render(m.planStatus)
+		status = "\n\n" + st.Render(m.planStatus)
 	}
-	meta := subtleStyle.Render(fmt.Sprintf("  %s · v%d", m.plan.Name, m.plan.PlanVersion))
-	return title, tabs + "\n" + meta + "\n\n" + body + status, help
+	meta := subtleStyle.Render(fmt.Sprintf("%s · v%d", m.plan.Name, m.plan.PlanVersion))
+	return title, tabs + "   " + meta + "\n\n" + body + status, help
 }
 
-func (m Model) renderPlanTabs() string {
+func (m Model) renderPlanSections() string {
 	names := []string{"Stages", "Gates", "Settings", "Import"}
 	var parts []string
 	for i, n := range names {
@@ -441,7 +424,7 @@ func (m Model) renderPlanTabs() string {
 			parts = append(parts, subtleStyle.Render(" "+n+" "))
 		}
 	}
-	return "  " + strings.Join(parts, subtleStyle.Render("·"))
+	return strings.Join(parts, subtleStyle.Render("·"))
 }
 
 func (m Model) renderPlanStages() (string, string) {

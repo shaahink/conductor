@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/term"
@@ -12,38 +14,39 @@ import (
 	"conductor-face-go/internal/tui"
 )
 
-const help = `conductor-face — Go + Bubble Tea TUI for the Conductor control plane
+const help = `conductor-face — dashboard TUI for the Conductor control plane
 
 Usage:
-  conductor-face [--url <base>] [--demo] [--host <ip>] [--port <n>]
+  conductor-face                 Attach to a running conductor (auto-discovered), or --demo
+  conductor-face --demo          Fully offline against synthetic data — no engine needed
+  conductor-face --url <base>    Attach to a specific control-plane URL
 
 Options:
-  --url <base>   Full control-plane base URL (default http://127.0.0.1:4317)
-  --host <ip>    Host only, combined with --port (default 127.0.0.1)
-  --port <n>     Port only, combined with --host (default 4317)
-  --demo         Run fully offline against synthetic data — no conductor process needed.
-                 Everything (plan tree, transcript, processes, sessions, palette, inject,
-                 report) is interactive so you can review the whole UI cold.
-  -h, --help     Show this help and exit
+  --demo         Explore the whole dashboard offline (plan editor, timeline, console, palette …).
+  --url <base>   Control-plane base URL (overrides auto-discovery).
+  --host <ip>    Host, combined with --port (default 127.0.0.1).
+  --port <n>     Port, combined with --host (default 4317).
+  -h, --help     Show this help and exit.
 
-Requires --control-plane on the conductor side for live mode:
-  conductor run -p <plan> --control-plane [--control-plane-port <n>]
+Live mode auto-discovers a run: it walks up from the current directory for
+.conductor/control-plane.json (written by 'conductor run --control-plane') and
+attaches to it — so inside a repo with a live run, just type 'conductor-face'.
 
-Set FACE_FORCE_TTY=1 to bypass the interactive-terminal check (e.g. under a PTY wrapper
-that doesn't report itself as one).
+Set FACE_FORCE_TTY=1 to bypass the interactive-terminal check under a PTY wrapper.
 `
 
 func main() {
 	flag.Usage = func() { fmt.Fprint(os.Stderr, help) }
 
 	demo := flag.Bool("demo", false, "Run with synthetic demo data (no engine required)")
-	url := flag.String("url", "", "Base URL of the conductor control plane (default: http://127.0.0.1:4317)")
+	url := flag.String("url", "", "Base URL of the conductor control plane")
 	host := flag.String("host", "127.0.0.1", "Control plane host")
 	port := flag.Int("port", 4317, "Control plane port")
 	flag.Parse()
 
 	if !term.IsTerminal(os.Stdout.Fd()) && os.Getenv("FACE_FORCE_TTY") == "" {
 		fmt.Fprintln(os.Stderr, "conductor-face needs an interactive terminal (stdout is not a TTY).")
+		fmt.Fprintln(os.Stderr, "Try:  conductor-face --demo   (or run inside a real terminal)")
 		os.Exit(1)
 	}
 
@@ -51,24 +54,52 @@ func main() {
 	var baseURL string
 
 	if *demo {
-		source = api.NewDemoSource()
-		baseURL = "(demo)"
+		source, baseURL = api.NewDemoSource(), "(demo)"
 	} else {
-		if *url != "" {
-			baseURL = *url
-		} else {
-			baseURL = fmt.Sprintf("http://%s:%d", *host, *port)
-		}
+		baseURL = resolveBaseURL(*url, *host, *port)
 		source = api.NewLiveSource(baseURL)
 	}
 	defer source.Close()
 
-	model := tui.New(source, *demo, baseURL)
-
-	p := tea.NewProgram(model)
-
-	if _, err := p.Run(); err != nil {
+	if _, err := tea.NewProgram(tui.New(source, *demo, baseURL)).Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "conductor-face: %v\n", err)
 		os.Exit(1)
+	}
+}
+
+// resolveBaseURL prefers an explicit --url, then an auto-discovered running control plane, then the
+// host/port default (which the splash screen will explain if nothing is listening there).
+func resolveBaseURL(url, host string, port int) string {
+	if url != "" {
+		return url
+	}
+	if discovered := discoverControlPlane(); discovered != "" {
+		return discovered
+	}
+	return fmt.Sprintf("http://%s:%d", host, port)
+}
+
+// discoverControlPlane walks up from the working directory looking for
+// .conductor/control-plane.json and returns its baseUrl, or "" if none is found.
+func discoverControlPlane() string {
+	dir, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+	for {
+		path := filepath.Join(dir, ".conductor", "control-plane.json")
+		if data, err := os.ReadFile(path); err == nil {
+			var info struct {
+				BaseURL string `json:"baseUrl"`
+			}
+			if json.Unmarshal(data, &info) == nil && info.BaseURL != "" {
+				return info.BaseURL
+			}
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return ""
+		}
+		dir = parent
 	}
 }

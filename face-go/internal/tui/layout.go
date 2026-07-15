@@ -1,14 +1,24 @@
 package tui
 
+// v3 dashboard geometry:
+//
+//	┌ Top bar (status) ────────────────────────────┐  row 0
+//	│ Tab strip                                     │  row 1
+//	│ Sidebar │ Content (active pane)               │  rows 2 … H-2
+//	│ Bottom bar (hints / command line)             │  row H-1
+//	└───────────────────────────────────────────────┘
+//
+// The sidebar is always present unless collapsed; the content pane fills whatever is left.
+
 type LayoutRects struct {
 	Width  int
 	Height int
 
-	Ticker  Rect
-	Footer  Rect
-	Main    Rect // area between ticker and footer
-	Sidebar Rect // plan tree, zero width when closed
-	Transcr Rect // agent transcript
+	Top     Rect
+	Tabs    Rect
+	Bottom  Rect
+	Sidebar Rect // plan tree + gates; zero width when collapsed
+	Content Rect // the active main pane
 }
 
 type Rect struct {
@@ -19,58 +29,44 @@ type Rect struct {
 }
 
 const (
-	sidebarWidthPct = 28
-	sidebarMinW     = 24
-	sidebarMaxW     = 42
+	sidebarWidthPct = 26
+	sidebarMinW     = 22
+	sidebarMaxW     = 38
 )
 
-func ComputeLayout(width, height int, sidebarOpen bool) LayoutRects {
-	layout := LayoutRects{
-		Width:  width,
-		Height: height,
-	}
-
-	if height < 8 {
+func ComputeLayout(width, height int, sidebarCollapsed bool) LayoutRects {
+	layout := LayoutRects{Width: width, Height: height}
+	if height < 8 || width < 10 {
 		return layout
 	}
 
-	layout.Ticker = Rect{X: 0, Y: 0, Width: width, Height: 1}
+	layout.Top = Rect{X: 0, Y: 0, Width: width, Height: 1}
+	layout.Tabs = Rect{X: 0, Y: 1, Width: width, Height: 1}
+	layout.Bottom = Rect{X: 0, Y: height - 1, Width: width, Height: 1}
 
-	footerY := height - 1
-	layout.Footer = Rect{X: 0, Y: footerY, Width: width, Height: 1}
-
-	mainY := 1
-	mainH := height - 2
-	if mainH < 3 {
-		mainH = 3
-	}
-	layout.Main = Rect{X: 0, Y: mainY, Width: width, Height: mainH}
-
-	transcrX := 0
-	transcrW := width
-
-	if sidebarOpen {
-		sw := width * sidebarWidthPct / 100
-		if sw < sidebarMinW {
-			sw = sidebarMinW
-		}
-		if sw > sidebarMaxW {
-			sw = sidebarMaxW
-		}
-		if sw > width-20 {
-			sw = width - 20
-		}
-		layout.Sidebar = Rect{X: 0, Y: mainY, Width: sw, Height: mainH}
-		transcrX = sw
-		transcrW = width - sw
+	contentY := 2
+	contentH := height - 3
+	if contentH < 3 {
+		contentH = 3
 	}
 
-	if transcrW < 10 {
-		transcrW = width
-		transcrX = 0
+	sidebarW := 0
+	if !sidebarCollapsed {
+		sidebarW = width * sidebarWidthPct / 100
+		if sidebarW < sidebarMinW {
+			sidebarW = sidebarMinW
+		}
+		if sidebarW > sidebarMaxW {
+			sidebarW = sidebarMaxW
+		}
+		if sidebarW > width-24 {
+			sidebarW = 0 // too narrow to show both — hide the sidebar
+		}
 	}
 
-	layout.Transcr = Rect{X: transcrX, Y: mainY, Width: transcrW, Height: mainH}
-
+	if sidebarW > 0 {
+		layout.Sidebar = Rect{X: 0, Y: contentY, Width: sidebarW, Height: contentH}
+	}
+	layout.Content = Rect{X: sidebarW, Y: contentY, Width: width - sidebarW, Height: contentH}
 	return layout
 }

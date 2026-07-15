@@ -1,17 +1,17 @@
  ◆ conductor  ● LIVE  conductor-foreman  F7 Gate caching + truth gates + spee…  ● $0.12  cp 2/40  $0.42       
   a Agent   h Sessions   t Timeline   s Procs   c Console   e Templates   g Plan   r Report                   
                            │                                                                                  
- ▶ PLAN                    │   Stages · Gates · Settings · Import    conductor-foreman · v7                   
- ✓ F0 3/3 Foundations      │                                                                                  
- ✓ F6 5/5 Ink TUI v1       │    editing F7                                                                    
- ● F7 2/5 Gate c… 1× $0.30 │                                                                                  
-   ✓  F7.1 Plan import     │    title            Gate caching + truth gates                                   
-   ✓  F7.2 Re-import diff  │    model            claude-opus-4-8                                              
-   ●  F7.3 Truth-gate tier │    workflow         big-dev-then-big-audit                                       
- ○ F8 0/4 conductor chat … │    kind             deliver                                                      
-                           │    sessions         5                                                            
- ── GATES ──               │    notes            (unset)                                                      
-   ✓  build                │    dependsOn        F6                                                           
+ ▶ PLAN                    │  ▸ Session #12 started · Deliver · Stage F7 · Attempt 1                          
+ ✓ F0 3/3 Foundations      │  ⁙ Let me examine the GateCache implementation...                                
+ ✓ F6 5/5 Ink TUI v1       │  ⚙ read src/Conductor/Core/Gating/GateCache.cs                                   
+ ● F7 2/5 Gate c… 1× $0.30 │  ↳ GateCache.cs:142 lines — caches by (name, tier, sha)                          
+   ✓  F7.1 Plan import     │  ▸ Found the caching layer. Adding GetLastPassingGateResult to RunDb.            
+   ✓  F7.2 Re-import diff  │                                                                                  
+   ●  F7.3 Truth-gate tier │                                                                                  
+ ○ F8 0/4 conductor chat … │                                                                                  
+                           │                                                                                  
+ ── GATES ──               │                                                                                  
+   ✓  build                │                                                                                  
    ●  test                 │                                                                                  
    ○  lint                 │                                                                                  
                            │                                                                                  
@@ -32,4 +32,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  p sidebar  ? help  q quit   │   [↑↓: field] [enter: edit] [esc: back]             
+ inject[F7]› please retry with cache warm▏   tab field · ctrl+s send · esc cancel                             

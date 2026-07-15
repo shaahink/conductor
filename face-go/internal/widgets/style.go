@@ -1,28 +1,52 @@
 package widgets
 
-import "charm.land/lipgloss/v2"
+import (
+	"image/color"
 
+	"charm.land/lipgloss/v2"
+)
+
+// conductor-face v3 palette — Catppuccin Mocha. A single cohesive scheme replaces the ad-hoc GitHub
+// hexes so every pane, badge, and border reads as one system in both the sidebar and the main panes.
 var (
-	colorText     = lipgloss.Color("#C9D1D9")
-	colorSubtle   = lipgloss.Color("#484F58")
-	colorAccent   = lipgloss.Color("#58A6FF")
-	colorDone     = lipgloss.Color("#3FB950")
-	colorActive   = lipgloss.Color("#58A6FF")
-	colorFail     = lipgloss.Color("#F85149")
-	colorWarn     = lipgloss.Color("#D29922")
-	colorPending  = lipgloss.Color("#484F58")
-	colorSkipped  = lipgloss.Color("#8B949E")
-	colorThinking = lipgloss.Color("#8B949E")
-	colorTool     = lipgloss.Color("#A371F7")
-	colorResult   = lipgloss.Color("#3FB950")
-	colorStderr   = lipgloss.Color("#F85149")
-	colorSystem   = lipgloss.Color("#79C0FF")
+	colBase    = lipgloss.Color("#1E1E2E") // window background
+	colMantle  = lipgloss.Color("#181825") // panels: top/bottom bars, tab strip
+	colSurface = lipgloss.Color("#313244") // borders, rules
+	colSurface1 = lipgloss.Color("#45475A") // selection background
+	colOverlay = lipgloss.Color("#6C7086") // muted text
+	colText    = lipgloss.Color("#CDD6F4") // primary text
+
+	colMauve = lipgloss.Color("#CBA6F7") // accent / brand / selection
+	colBlue  = lipgloss.Color("#89B4FA") // active / info
+	colGreen = lipgloss.Color("#A6E3A1") // success / done
+	colRed   = lipgloss.Color("#F38BA8") // fail / destructive
+	colYellow = lipgloss.Color("#F9E2AF") // warn / running
+	colPeach = lipgloss.Color("#FAB387") // attention
+	colTeal  = lipgloss.Color("#94E2D5") // tools
+	colSky   = lipgloss.Color("#89DCEB") // system
+)
+
+// Semantic aliases kept for the widgets that referenced the old names.
+var (
+	colorText     = colText
+	colorSubtle   = colOverlay
+	colorAccent   = colMauve
+	colorDone     = colGreen
+	colorActive   = colBlue
+	colorFail     = colRed
+	colorWarn     = colYellow
+	colorPending  = lipgloss.Color("#585B70")
+	colorSkipped  = lipgloss.Color("#7F849C")
+	colorThinking = lipgloss.Color("#7F849C")
+	colorTool     = colTeal
+	colorResult   = colGreen
+	colorStderr   = colRed
+	colorSystem   = colSky
 )
 
 var (
-	brandStyle = lipgloss.NewStyle().Foreground(colorAccent).Bold(true)
-
-	sidebarTitleStyle = lipgloss.NewStyle().Foreground(colorAccent).Bold(true)
+	brandStyle        = lipgloss.NewStyle().Foreground(colMauve).Bold(true)
+	sidebarTitleStyle = lipgloss.NewStyle().Foreground(colMauve).Bold(true)
 
 	stageDoneStyle    = lipgloss.NewStyle().Foreground(colorDone)
 	stageActiveStyle  = lipgloss.NewStyle().Foreground(colorActive).Bold(true)
@@ -51,10 +75,24 @@ var (
 
 	dimStyle = lipgloss.NewStyle().Foreground(colorSubtle)
 
-	highlightStyle = lipgloss.NewStyle().
-			Background(lipgloss.Color("#1F6FEB")).
-			Foreground(lipgloss.Color("#FFFFFF"))
+	highlightStyle = lipgloss.NewStyle().Background(colSurface1).Foreground(colText)
 )
+
+// Exported palette accessors so the tui package shares the one scheme instead of re-hardcoding hexes.
+func Base() color.Color      { return colBase }
+func Mantle() color.Color    { return colMantle }
+func Surface() color.Color   { return colSurface }
+func Selection() color.Color { return colSurface1 }
+func Overlay() color.Color   { return colOverlay }
+func Text() color.Color      { return colText }
+func Accent() color.Color    { return colMauve }
+func Blue() color.Color      { return colBlue }
+func Green() color.Color     { return colGreen }
+func Red() color.Color       { return colRed }
+func Yellow() color.Color    { return colYellow }
+func Peach() color.Color     { return colPeach }
+func Teal() color.Color      { return colTeal }
+func Sky() color.Color       { return colSky }
 
 func dim(s string) string    { return lipgloss.NewStyle().Foreground(colorSubtle).Render(s) }
 func green(s string) string  { return lipgloss.NewStyle().Foreground(colorDone).Render(s) }
@@ -70,7 +108,7 @@ func truncate(s string, max int) string {
 	if max <= 3 {
 		return s[:max]
 	}
-	return s[:max-1] + "\u2026"
+	return s[:max-1] + "…"
 }
 
 func accent(s string) string {

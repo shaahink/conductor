@@ -1,34 +1,35 @@
- ◆ conductor │ ● LIVE                                                                                         
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                             ◆ C O N D U C T O R                                              
-                                                                                                              
-                              autonomous multi-session engineering orchestrator                               
-                                                                                                              
-                                ● waiting for a run on http://127.0.0.1:4317 …                                
-                                                                                                              
-                            start a run:  conductor run -p <plan> --control-plane                             
-                                     or offline:   conductor-face --demo                                      
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
- : palette  p sidebar  g plan  i inject  e templates  h history  s procs  r query  / search  ? help           
+ ◆ conductor  ● LIVE                                                                                          
+  a Agent   h Sessions   t Timeline   s Procs   c Console   e Templates   g Plan   r Report                   
+                           │                                                                                  
+ ▶ PLAN                    │                                                                                  
+                           │                                                                                  
+ ── GATES ──               │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+ : cmd  i inject  / search  p sidebar  ? help  q quit   │   ↑↓ scroll · f fold · / search                     

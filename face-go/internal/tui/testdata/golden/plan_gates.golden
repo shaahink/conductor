@@ -1,34 +1,35 @@
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                 ╭──────────────────────────────────────────────────────────────────────────╮                 
-                 │                                                                          │                 
-                 │  ◆ Plan Editor                                                           │                 
-                 │  ──────────────────────────────────────────────────────────────────────  │                 
-                 │                                                                          │                 
-                 │     Stages · Gates · Settings · Import                                   │                 
-                 │    conductor-foreman · v7                                                │                 
-                 │                                                                          │                 
-                 │    build      fast  dotnet build Conductor.slnx                          │                 
-                 │    test       full  dotnet test Conductor.slnx                           │                 
-                 │    ratchet    truth dotnet test --filter Category=Archi…                 │                 
-                 │                                                                          │                 
-                 │  ──────────────────────────────────────────────────────────────────────  │                 
-                 │  [tab: switch] [↑↓: select] [enter: edit fields] [esc: close]            │                 
-                 │                                                                          │                 
-                 ╰──────────────────────────────────────────────────────────────────────────╯                 
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
-                                                                                                              
+ ◆ conductor  ● LIVE  conductor-foreman  F7 Gate caching + truth gates + spee…  ● $0.12  cp 2/40  $0.42       
+  a Agent   h Sessions   t Timeline   s Procs   c Console   e Templates   g Plan   r Report                   
+                           │                                                                                  
+ ▶ PLAN                    │   Stages · Gates · Settings · Import    conductor-foreman · v7                   
+ ✓ F0 3/3 Foundations      │                                                                                  
+ ✓ F6 5/5 Ink TUI v1       │    build      fast  dotnet build Conductor.slnx                                  
+ ● F7 2/5 Gate c… 1× $0.30 │    test       full  dotnet test Conductor.slnx                                   
+   ✓  F7.1 Plan import     │    ratchet    truth dotnet test --filter Category=Archi…                         
+   ✓  F7.2 Re-import diff  │                                                                                  
+   ●  F7.3 Truth-gate tier │                                                                                  
+ ○ F8 0/4 conductor chat … │                                                                                  
+                           │                                                                                  
+ ── GATES ──               │                                                                                  
+   ✓  build                │                                                                                  
+   ●  test                 │                                                                                  
+   ○  lint                 │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+ : cmd  i inject  / search  p sidebar  ? help  q quit   │   [tab: switch] [↑↓: select] [enter: edit fields] [e

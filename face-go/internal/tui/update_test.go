@@ -10,8 +10,7 @@ import (
 	"conductor-face-go/internal/api"
 )
 
-// asModel unwraps whatever concrete type a handler returned (Model or *Model — the codebase mixes
-// value and pointer receivers across handlers) back into a plain Model for assertions.
+// asModel unwraps whatever concrete type a handler returned (Model or *Model) into a plain Model.
 func asModel(tm tea.Model) Model {
 	switch v := tm.(type) {
 	case Model:
@@ -19,9 +18,13 @@ func asModel(tm tea.Model) Model {
 	case *Model:
 		return *v
 	default:
-		panic("unexpected tea.Model concrete type in test")
+		panic("unexpected model concrete type in test")
 	}
 }
+
+// mustHandle keeps the model from a (tea.Model, tea.Cmd) return when the cmd doesn't matter.
+func mustHandle(tm tea.Model, _ tea.Cmd) tea.Model  { return tm }
+func mustHandle2(tm tea.Model, _ tea.Cmd) tea.Model { return tm }
 
 func newTestModel() Model {
 	src := api.NewDemoSource()
@@ -32,24 +35,20 @@ func newTestModel() Model {
 
 func TestPaletteSafeVerbSendsControl(t *testing.T) {
 	m := newTestModel()
-	tm, _ := m.handleKey(":")
-	m = asModel(tm)
+	m = asModel(mustHandle(m.handleKey(":")))
+	if m.cmd != CmdPalette {
+		t.Fatalf("expected palette command bar, got %v", m.cmd)
+	}
 
-	// first verb in the unfiltered list is "pause" (safe, index 0)
-	tm, cmd := m.handlePaletteKey("enter")
+	tm, cmd := m.handlePaletteKey("enter") // first verb: pause (safe)
 	m = asModel(tm)
-
-	if m.activeModal != ModalNone {
-		t.Fatalf("expected palette to close after a safe verb, got modal %v", m.activeModal)
+	if m.cmd != CmdNone {
+		t.Fatalf("expected palette to close after a safe verb, got %v", m.cmd)
 	}
 	if cmd == nil {
-		t.Fatal("expected a command to be returned for a safe verb")
+		t.Fatal("expected a command for a safe verb")
 	}
-	msg := cmd()
-	sent, ok := msg.(MsgControlSent)
-	if !ok {
-		t.Fatalf("expected MsgControlSent, got %T", msg)
-	}
+	sent := cmd().(MsgControlSent)
 	if sent.Verb != "pause" || !sent.Success {
 		t.Errorf("expected pause/success, got %+v", sent)
 	}
@@ -57,223 +56,169 @@ func TestPaletteSafeVerbSendsControl(t *testing.T) {
 
 func TestPaletteDestructiveConfirmFlow(t *testing.T) {
 	m := newTestModel()
-	tm, _ := m.handleKey(":")
-	m = asModel(tm)
-
-	// filter down to "abort" (destructive)
+	m = asModel(mustHandle(m.handleKey(":")))
 	for _, ch := range "abort" {
-		tm, _ = m.handlePaletteKey(string(ch))
-		m = asModel(tm)
+		m = asModel(mustHandle(m.handlePaletteKey(string(ch))))
 	}
 
 	tm, cmd := m.handlePaletteKey("enter")
 	m = asModel(tm)
 	if cmd != nil {
-		t.Fatal("expected no command yet — destructive verb should require confirmation first")
+		t.Fatal("destructive verb should require confirmation first")
 	}
-	if !m.paletteConfirming || m.activeModal != ModalPalette {
-		t.Fatalf("expected confirm mode, modal still open; got confirming=%v modal=%v", m.paletteConfirming, m.activeModal)
+	if !m.paletteConfirming || m.cmd != CmdPalette {
+		t.Fatalf("expected confirm mode with palette open; confirming=%v cmd=%v", m.paletteConfirming, m.cmd)
 	}
 
-	// esc during confirm should back out to the list, not close the whole modal
-	tm, _ = m.handlePaletteKey("esc")
-	m = asModel(tm)
+	m = asModel(mustHandle(m.handlePaletteKey("esc")))
 	if m.paletteConfirming {
-		t.Error("esc should have cancelled confirm mode")
+		t.Error("esc should cancel confirm mode")
 	}
-	if m.activeModal != ModalPalette {
+	if m.cmd != CmdPalette {
 		t.Error("esc during confirm should not close the palette entirely")
 	}
 
-	// re-enter confirm (filter + selection are untouched by the esc-cancel) and accept
-	tm, _ = m.handlePaletteKey("enter")
-	m = asModel(tm)
+	m = asModel(mustHandle(m.handlePaletteKey("enter")))
 	tm, cmd = m.handlePaletteKey("y")
 	m = asModel(tm)
-
-	if m.activeModal != ModalNone {
+	if m.cmd != CmdNone {
 		t.Error("expected palette to close after confirming")
 	}
 	if cmd == nil {
-		t.Fatal("expected a command after confirming destructive verb")
+		t.Fatal("expected a command after confirming")
 	}
-	msg := cmd().(MsgControlSent)
-	if msg.Verb != "abort" || !msg.Success {
+	if msg := cmd().(MsgControlSent); msg.Verb != "abort" || !msg.Success {
 		t.Errorf("expected abort/success, got %+v", msg)
 	}
 }
 
 func TestPaletteGotoFlow(t *testing.T) {
 	m := newTestModel()
-	tm, _ := m.handleKey(":")
-	m = asModel(tm)
-
+	m = asModel(mustHandle(m.handleKey(":")))
 	for _, ch := range "goto" {
-		tm, _ = m.handlePaletteKey(string(ch))
-		m = asModel(tm)
+		m = asModel(mustHandle(m.handlePaletteKey(string(ch))))
 	}
 	tm, cmd := m.handlePaletteKey("enter")
 	m = asModel(tm)
 	if cmd != nil {
 		t.Fatal("goto should prompt for a stage id, not send immediately")
 	}
-	if !m.paletteGotoActive {
-		t.Fatal("expected goto sub-flow to be active")
+	if !m.paletteGotoActive || m.paletteGotoInput != "F7" {
+		t.Fatalf("expected goto pre-filled with F7, got active=%v input=%q", m.paletteGotoActive, m.paletteGotoInput)
 	}
-	if m.paletteGotoInput != "F7" {
-		t.Errorf("expected goto input pre-filled with current stage F7, got %q", m.paletteGotoInput)
-	}
-
-	// replace the pre-filled stage id
 	for len(m.paletteGotoInput) > 0 {
-		tm, _ = m.handlePaletteKey("backspace")
-		m = asModel(tm)
+		m = asModel(mustHandle(m.handlePaletteKey("backspace")))
 	}
 	for _, ch := range "F9" {
-		tm, _ = m.handlePaletteKey(string(ch))
-		m = asModel(tm)
+		m = asModel(mustHandle(m.handlePaletteKey(string(ch))))
 	}
 	tm, cmd = m.handlePaletteKey("enter")
 	m = asModel(tm)
-
-	if m.activeModal != ModalNone || m.paletteGotoActive {
-		t.Error("expected goto flow to close the palette")
+	if m.cmd != CmdNone || m.paletteGotoActive {
+		t.Error("expected goto to close the palette")
 	}
-	if cmd == nil {
-		t.Fatal("expected a command for goto")
-	}
-	msg := cmd().(MsgControlSent)
-	if msg.Verb != "goto" {
-		t.Errorf("expected goto verb, got %+v", msg)
+	if cmd == nil || cmd().(MsgControlSent).Verb != "goto" {
+		t.Error("expected a goto command")
 	}
 }
 
 func TestInjectEmptyContentGuard(t *testing.T) {
 	m := newTestModel()
-	tm, _ := m.handleKey("i")
-	m = asModel(tm)
+	m = asModel(mustHandle(m.handleKey("i")))
+	if m.cmd != CmdInject {
+		t.Fatalf("expected inject command bar, got %v", m.cmd)
+	}
 
 	tm, cmd := m.handleInjectKey("ctrl+s")
 	m = asModel(tm)
 	if cmd != nil {
-		t.Fatal("expected ctrl+s with empty content to be a no-op")
+		t.Fatal("ctrl+s with empty content should be a no-op")
 	}
-	if m.activeModal != ModalInject {
-		t.Error("empty inject should not close the modal")
+	if m.cmd != CmdInject {
+		t.Error("empty inject should stay open")
 	}
-
 	for _, ch := range "note" {
-		tm, _ = m.handleInjectKey(string(ch))
-		m = asModel(tm)
+		m = asModel(mustHandle(m.handleInjectKey(string(ch))))
 	}
 	tm, cmd = m.handleInjectKey("ctrl+s")
 	m = asModel(tm)
-	if m.activeModal != ModalNone {
-		t.Error("non-empty inject should close the modal")
+	if m.cmd != CmdNone {
+		t.Error("non-empty inject should close")
 	}
-	if cmd == nil {
-		t.Fatal("expected a command for non-empty inject")
-	}
-	msg := cmd().(MsgInjectSent)
-	if !msg.Success {
-		t.Errorf("expected inject to succeed against demo source, got %+v", msg)
+	if cmd == nil || !cmd().(MsgInjectSent).Success {
+		t.Error("expected inject to succeed against the demo source")
 	}
 }
 
 func TestReportQuickQueryRuns(t *testing.T) {
 	m := newTestModel()
-	tm, _ := m.handleKey("r")
-	m = asModel(tm)
-	if !m.reportFocusQuery {
-		t.Fatal("report modal should default focus to the SQL box")
+	m = asModel(mustHandle(m.handleKey("r")))
+	if m.tab != TabReport || !m.reportFocusQuery {
+		t.Fatalf("expected Report tab focused on SQL; tab=%v focus=%v", m.tab, m.reportFocusQuery)
 	}
-
-	tm, _ = m.handleReportKey("tab")
-	m = asModel(tm)
+	m = asModel(mustHandle(m.handleReportKey("tab")))
 	if m.reportFocusQuery {
 		t.Fatal("tab should move focus to the quick-query list")
 	}
-
 	tm, cmd := m.handleReportKey("enter")
 	m = asModel(tm)
 	if !m.data.ReportLoading {
-		t.Error("expected ReportLoading to be set while the query runs")
+		t.Error("expected ReportLoading while the query runs")
 	}
 	if m.reportSQL != quickQueries[0].SQL {
-		t.Errorf("expected reportSQL to be set to the quick query, got %q", m.reportSQL)
+		t.Errorf("expected reportSQL set to the quick query, got %q", m.reportSQL)
 	}
 	if cmd == nil {
-		t.Fatal("expected a command to run the query")
+		t.Fatal("expected a query command")
 	}
-
-	msg := cmd().(MsgReportResult)
-	tm, _ = m.Update(msg)
-	m = asModel(tm)
-	if m.data.ReportLoading {
-		t.Error("expected ReportLoading to clear once results arrive")
-	}
-	if m.data.ReportResult == nil || len(m.data.ReportResult.Columns) == 0 {
-		t.Error("expected report results to be populated")
+	m = asModel(mustHandle2(m.Update(cmd())))
+	if m.data.ReportLoading || m.data.ReportResult == nil || len(m.data.ReportResult.Columns) == 0 {
+		t.Error("expected results populated and loading cleared")
 	}
 }
 
 func TestProcessesNavigationClamps(t *testing.T) {
 	m := newTestModel()
 	m.data.Processes = []api.ProcessDto{{Pid: 1}, {Pid: 2}, {Pid: 3}}
-
-	tm, _ := m.handleKey("s")
-	m = asModel(tm)
-	if m.activeModal != ModalProcesses {
-		t.Fatal("expected processes modal to open")
+	m = asModel(mustHandle(m.handleKey("s")))
+	if m.tab != TabProcesses {
+		t.Fatalf("expected Procs tab, got %v", m.tab)
 	}
-
 	for i := 0; i < 5; i++ {
-		tm, _ = m.handleProcessesKey("down")
-		m = asModel(tm)
+		m = asModel(mustHandle(m.handleProcessesKey("down")))
 	}
 	if m.processSelected != 2 {
-		t.Errorf("expected selection to clamp at 2 (last index), got %d", m.processSelected)
+		t.Errorf("expected selection to clamp at 2, got %d", m.processSelected)
 	}
-
-	tm, _ = m.handleProcessesKey("esc")
-	m = asModel(tm)
-	if m.activeModal != ModalNone {
-		t.Error("expected esc to close the processes modal")
+	m = asModel(mustHandle(m.handleKey("esc")))
+	if m.tab != TabAgent {
+		t.Error("expected esc to return to the Agent tab")
 	}
 }
 
 func TestSearchActivateTypeAndLock(t *testing.T) {
 	m := newTestModel()
-	tm, _ := m.handleKey("/")
-	m = asModel(tm)
+	m = asModel(mustHandle(m.handleKey("/")))
 	if !m.searchActive {
-		t.Fatal("expected search mode to activate")
+		t.Fatal("expected search to activate")
 	}
-
 	for _, ch := range "gate" {
-		tm, _ = m.handleSearchKey(string(ch))
-		m = asModel(tm)
+		m = asModel(mustHandle(m.handleSearchKey(string(ch))))
 	}
 	if m.transcript.SearchQuery != "gate" {
-		t.Errorf("expected search query 'gate', got %q", m.transcript.SearchQuery)
+		t.Errorf("expected query 'gate', got %q", m.transcript.SearchQuery)
 	}
-
-	tm, _ = m.handleSearchKey("enter")
-	m = asModel(tm)
+	m = asModel(mustHandle(m.handleSearchKey("enter")))
 	if m.searchActive {
-		t.Error("expected enter to stop capturing further keystrokes")
+		t.Error("enter should stop capturing keystrokes")
 	}
 	if m.transcript.SearchQuery != "gate" {
-		t.Error("expected the locked-in query to persist after enter")
+		t.Error("the locked query should persist")
 	}
-
-	// esc from normal mode should clear the locked search entirely
-	tm, _ = m.handleKey("/")
-	m = asModel(tm)
-	tm, _ = m.handleSearchKey("esc")
-	m = asModel(tm)
+	m = asModel(mustHandle(m.handleKey("/")))
+	m = asModel(mustHandle(m.handleSearchKey("esc")))
 	if m.searchActive || m.transcript.SearchQuery != "" {
-		t.Error("expected esc to clear search state")
+		t.Error("esc should clear search state")
 	}
 }
 
@@ -282,98 +227,63 @@ func TestTemplateEditorReadWriteRoundTrip(t *testing.T) {
 	m := newTestModel()
 	m.data.Plan.PlanDir = dir
 
-	tm, _ := m.handleKey("e")
-	m = asModel(tm)
-	if len(m.promptEntries) == 0 {
-		t.Fatal("expected session templates to be listed even when none exist on disk yet")
+	m = asModel(mustHandle(m.handleKey("e")))
+	if m.tab != TabTemplates || len(m.promptEntries) == 0 {
+		t.Fatal("expected Templates tab with entries listed")
 	}
 	if m.promptEntries[0].Exists {
-		t.Fatal("expected fresh temp dir to have no templates on disk")
+		t.Fatal("fresh temp dir should have no templates on disk")
 	}
 
-	tm, _ = m.handlePromptKey("enter") // open first entry for editing
-	m = asModel(tm)
-	if m.promptMode != PromptEdit {
-		t.Fatal("expected to enter edit mode")
+	m = asModel(mustHandle(m.handleTemplatesKey("enter")))
+	if m.promptMode != PromptEdit || m.promptContent != "" {
+		t.Fatalf("expected empty edit mode, got mode=%v content=%q", m.promptMode, m.promptContent)
 	}
-	if m.promptContent != "" {
-		t.Errorf("expected empty content for a template not yet on disk, got %q", m.promptContent)
-	}
-
 	for _, ch := range "hello" {
-		tm, _ = m.handlePromptKey(string(ch))
-		m = asModel(tm)
+		m = asModel(mustHandle(m.handleTemplatesKey(string(ch))))
 	}
-	tm, _ = m.handlePromptKey("ctrl+s")
-	m = asModel(tm)
-
+	m = asModel(mustHandle(m.handleTemplatesKey("ctrl+s")))
 	if !m.promptEntries[0].Exists {
-		t.Error("expected entry to be marked as existing after save")
+		t.Error("entry should be marked existing after save")
+	}
+	saved := filepath.Join(dir, filepath.Base(m.promptEntries[0].Path))
+	if data, err := os.ReadFile(saved); err != nil || string(data) != "hello" {
+		t.Errorf("expected saved 'hello', got %q err=%v", string(data), err)
 	}
 
-	saved := filepath.Join(dir, SessionTemplateName(m, 0))
-	data, err := os.ReadFile(saved)
-	if err != nil {
-		t.Fatalf("expected file to be written to disk: %v", err)
+	m = asModel(mustHandle(m.handleTemplatesKey("esc"))) // edit → list
+	if m.promptMode != PromptList || m.tab != TabTemplates {
+		t.Error("esc from edit should return to the list, staying on the Templates tab")
 	}
-	if string(data) != "hello" {
-		t.Errorf("expected saved content 'hello', got %q", string(data))
-	}
-
-	// esc from edit mode goes back to the list, not out of the modal
-	tm, _ = m.handlePromptKey("esc")
-	m = asModel(tm)
-	if m.promptMode != PromptList || m.activeModal != ModalPrompt {
-		t.Error("expected esc from edit mode to return to the template list, not close the modal")
-	}
-	tm, _ = m.handlePromptKey("esc")
-	m = asModel(tm)
-	if m.activeModal != ModalNone {
-		t.Error("expected esc from the list to close the modal")
+	m = asModel(mustHandle(m.handleKey("esc"))) // list → Agent
+	if m.tab != TabAgent {
+		t.Error("esc from the list should return to the Agent tab")
 	}
 }
 
-// SessionTemplateName is a tiny test helper exposing which file the Nth entry maps to.
-func SessionTemplateName(m Model, idx int) string {
-	return filepath.Base(m.promptEntries[idx].Path)
-}
-
-func TestConsoleModalReceivesAndScrolls(t *testing.T) {
+func TestConsoleTabReceivesAndScrolls(t *testing.T) {
 	m := newTestModel()
-
-	// Raw lines stream in continuously (background subscription), even before the modal is opened.
 	for i := 0; i < 3; i++ {
-		tm, _ := m.Update(MsgConsoleLine{Line: api.ConsoleLineDto{Seq: int64(i + 1), Text: "raw line"}})
-		m = asModel(tm)
+		m = asModel(mustHandle2(m.Update(MsgConsoleLine{Line: api.ConsoleLineDto{Seq: int64(i + 1), Text: "raw line"}})))
 	}
 	if len(m.data.RawConsole) != 3 {
 		t.Fatalf("expected 3 buffered console lines, got %d", len(m.data.RawConsole))
 	}
-
-	tm, _ := m.handleKey("c")
-	m = asModel(tm)
-	if m.activeModal != ModalConsole {
-		t.Fatalf("expected console modal to open, got %v", m.activeModal)
+	m = asModel(mustHandle(m.handleKey("c")))
+	if m.tab != TabConsole || m.consoleScroll != 0 {
+		t.Fatalf("expected Console tab pinned to tail; tab=%v scroll=%d", m.tab, m.consoleScroll)
 	}
-	if m.consoleScroll != 0 {
-		t.Error("console should open pinned to the live tail (scroll 0)")
-	}
-
-	tm, _ = m.handleConsoleKey("up")
-	m = asModel(tm)
+	m = asModel(mustHandle(m.handleConsoleKey("up")))
 	if m.consoleScroll != 1 {
-		t.Errorf("up should scroll back into history, got scroll %d", m.consoleScroll)
+		t.Errorf("up should scroll back, got %d", m.consoleScroll)
 	}
-	tm, _ = m.handleConsoleKey("end")
-	m = asModel(tm)
+	m = asModel(mustHandle(m.handleConsoleKey("end")))
 	if m.consoleScroll != 0 {
-		t.Error("end should re-pin to the live tail")
+		t.Error("end should re-pin to the tail")
 	}
-
-	tm, _ = m.handleConsoleKey("c")
-	m = asModel(tm)
-	if m.activeModal != ModalNone {
-		t.Error("c should toggle the console modal closed")
+	m = asModel(mustHandle(m.handleKey("esc")))
+	if m.tab != TabAgent {
+		t.Error("esc should return to the Agent tab")
 	}
 }
 
@@ -381,81 +291,55 @@ func TestTimelineOpenFetchNavigate(t *testing.T) {
 	m := newTestModel()
 	tm, cmd := m.handleKey("t")
 	m = asModel(tm)
-	if m.activeModal != ModalTimeline {
-		t.Fatalf("expected timeline modal to open, got %v", m.activeModal)
-	}
-	if !m.timelineLoading {
-		t.Error("expected loading state while the fetch is in flight")
+	if m.tab != TabTimeline || !m.timelineLoading {
+		t.Fatalf("expected Timeline tab loading; tab=%v loading=%v", m.tab, m.timelineLoading)
 	}
 	if cmd == nil {
-		t.Fatal("expected a fetch command when opening the timeline")
+		t.Fatal("expected a fetch command")
 	}
-
 	msg, ok := cmd().(MsgTimelineUpdated)
 	if !ok {
 		t.Fatalf("expected MsgTimelineUpdated, got %T", cmd())
 	}
-	tm, _ = m.Update(msg)
-	m = asModel(tm)
-	if m.timelineLoading {
-		t.Error("expected loading to clear once entries arrive")
+	m = asModel(mustHandle2(m.Update(msg)))
+	if m.timelineLoading || len(m.timelineEntries) == 0 {
+		t.Fatal("expected entries loaded and loading cleared")
 	}
-	if len(m.timelineEntries) == 0 {
-		t.Fatal("expected timeline entries from the demo source")
-	}
-
 	n := len(m.timelineEntries)
 	for i := 0; i < n+3; i++ {
-		tm, _ = m.handleTimelineKey("down")
-		m = asModel(tm)
+		m = asModel(mustHandle(m.handleTimelineKey("down")))
 	}
 	if m.timelineSelected != n-1 {
-		t.Errorf("expected selection to clamp at %d (last index), got %d", n-1, m.timelineSelected)
+		t.Errorf("expected selection clamp at %d, got %d", n-1, m.timelineSelected)
 	}
-
-	tm, _ = m.handleTimelineKey("esc")
-	m = asModel(tm)
-	if m.activeModal != ModalNone {
-		t.Error("expected esc to close the timeline modal")
+	m = asModel(mustHandle(m.handleKey("esc")))
+	if m.tab != TabAgent {
+		t.Error("esc should return to the Agent tab")
 	}
 }
 
 func TestPromptCompiledPreviewToggle(t *testing.T) {
-	m := newTestModel() // StageId F7, PlanDir "."
-	tm, _ := m.handleKey("e")
-	m = asModel(tm)
-	if m.activeModal != ModalPrompt {
-		t.Fatalf("expected template editor to open, got %v", m.activeModal)
+	m := newTestModel()
+	m = asModel(mustHandle(m.handleKey("e")))
+	if m.tab != TabTemplates {
+		t.Fatalf("expected Templates tab, got %v", m.tab)
 	}
-
-	tm, cmd := m.handlePromptKey("v")
+	tm, cmd := m.handleTemplatesKey("v")
 	m = asModel(tm)
-	if !m.promptPreviewOn {
-		t.Fatal("expected 'v' to toggle the compiled preview on")
-	}
-	if cmd == nil {
-		t.Fatal("expected a fetch command for the compiled preview")
+	if !m.promptPreviewOn || cmd == nil {
+		t.Fatal("expected 'v' to toggle the compiled preview with a fetch")
 	}
 	msg, ok := cmd().(MsgPromptPreview)
 	if !ok {
 		t.Fatalf("expected MsgPromptPreview, got %T", cmd())
 	}
-	tm, _ = m.Update(msg)
-	m = asModel(tm)
-	if m.promptPreview == nil {
-		t.Fatal("expected the compiled preview to populate from the demo source")
+	m = asModel(mustHandle2(m.Update(msg)))
+	if m.promptPreview == nil || m.promptPreview.Kind != "Deliver" {
+		t.Fatalf("expected Deliver preview populated, got %#v", m.promptPreview)
 	}
-	if m.promptPreview.Kind != "Deliver" {
-		t.Errorf("expected preview kind Deliver, got %q", m.promptPreview.Kind)
-	}
-
-	// esc hides the preview first, keeping the editor open — not closing the whole modal.
-	tm, _ = m.handlePromptKey("esc")
-	m = asModel(tm)
-	if m.promptPreviewOn {
-		t.Error("expected esc to hide the preview")
-	}
-	if m.activeModal != ModalPrompt {
-		t.Error("expected esc from preview to keep the template editor open")
+	m = asModel(mustHandle(m.handleTemplatesKey("esc")))
+	if m.promptPreviewOn || m.tab != TabTemplates {
+		t.Error("esc should hide the preview and stay on the Templates tab")
 	}
 }
+

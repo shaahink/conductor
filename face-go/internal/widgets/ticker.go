@@ -9,121 +9,45 @@ import (
 	"conductor-face-go/internal/api"
 )
 
-func RenderTicker(conn api.ConnectionState, state *api.StateDto, width int) string {
-	style := lipgloss.NewStyle().
-		Background(lipgloss.Color("#161B22")).
-		Foreground(colorSubtle).
-		Padding(0, 1).
-		MaxHeight(1).MaxWidth(width)
+// RenderTopBar is the persistent status line: brand, connection, plan/stage, and live cost/tokens.
+func RenderTopBar(conn api.ConnectionState, state *api.StateDto, width int) string {
+	style := lipgloss.NewStyle().Background(colMantle).Foreground(colText).Padding(0, 1).MaxHeight(1).MaxWidth(width)
+	sep := lipgloss.NewStyle().Foreground(colSurface).Render("  ")
 
-	parts := []string{}
+	parts := []string{brandStyle.Render("◆ conductor")}
 
-	// Brand mark \u2014 the one persistent bit of chrome, Crush-style.
-	parts = append(parts, brandStyle.Render("\u25C6 conductor"))
-
-	connGlyph := dimStyle.Render("\u25C6")
-	if conn.Mode == api.ModeLive {
-		if conn.Connected {
-			connGlyph = green("\u25CF")
-		} else {
-			connGlyph = red("\u25CF")
-		}
-	}
-	modeLabel := "LIVE"
+	dot := lipgloss.NewStyle().Foreground(colOverlay).Render("●")
+	label := "LIVE"
 	if conn.Mode == api.ModeDemo {
-		modeLabel = "DEMO"
+		label = "DEMO"
+		dot = lipgloss.NewStyle().Foreground(colTeal).Render("●")
+	} else if conn.Connected {
+		dot = lipgloss.NewStyle().Foreground(colGreen).Render("●")
+	} else {
+		dot = lipgloss.NewStyle().Foreground(colRed).Render("●")
 	}
-	parts = append(parts, connGlyph+" "+dimStyle.Render(modeLabel))
+	parts = append(parts, dot+" "+dimStyle.Render(label))
 
 	if state != nil {
-		parts = append(parts, accent(state.PlanName))
-		parts = append(parts, accent(state.StageId)+" "+dimStyle.Render(state.StageTitle))
+		parts = append(parts, lipgloss.NewStyle().Foreground(colText).Render(state.PlanName))
+		parts = append(parts, lipgloss.NewStyle().Foreground(colMauve).Bold(true).Render(state.StageId)+" "+dimStyle.Render(truncate(state.StageTitle, 34)))
 
-		// M5.4: live session ticker — cost/tokens that grow DURING the session (folded from tokenDelta
-		// server-side), shown while the agent is active so you watch spend accrue, not jump at the end.
 		if state.AgentActive {
-			seg := green("●") + " " + accent(fmt.Sprintf("$%.2f", state.SessionCostUsd))
+			seg := lipgloss.NewStyle().Foreground(colGreen).Render("●") + " " +
+				lipgloss.NewStyle().Foreground(colPeach).Render(fmt.Sprintf("$%.2f", state.SessionCostUsd))
 			if width >= 120 {
-				seg += " " + dimStyle.Render(fmt.Sprintf("%dk/%dk tok", state.SessionTokensInput/1000, state.SessionTokensOutput/1000))
+				seg += " " + dimStyle.Render(fmt.Sprintf("%dk/%dk", state.SessionTokensInput/1000, state.SessionTokensOutput/1000))
 			}
 			parts = append(parts, seg)
 		}
-
-		if width >= 100 {
-			parts = append(parts, fmt.Sprintf("CP %d/%d", state.DoneCount, state.TotalCount))
+		if width >= 96 {
+			parts = append(parts, dimStyle.Render(fmt.Sprintf("cp %d/%d", state.DoneCount, state.TotalCount)))
+			parts = append(parts, lipgloss.NewStyle().Foreground(colPeach).Render(fmt.Sprintf("$%.2f", state.TotalCostUsd)))
 		}
-
-		if width >= 100 {
-			parts = append(parts, fmt.Sprintf("$%.2f", state.TotalCostUsd))
-		}
-
-		if width >= 140 {
-			parts = append(parts, fmt.Sprintf("in:%dk out:%dk", state.TokensInput/1000, state.TokensOutput/1000))
-		}
-
-		if width >= 120 {
-			parts = append(parts, fmt.Sprintf("%.0fs", state.SessionElapsedSec))
+		if width >= 130 {
+			parts = append(parts, dimStyle.Render(fmt.Sprintf("%.0fs", state.SessionElapsedSec)))
 		}
 	}
 
-	joined := strings.Join(parts, " "+dimStyle.Render("\u2502")+" ")
-
-	// style already carries MaxWidth(width), which truncates ANSI-safely \u2014 a manual byte-slice
-	// truncation here would cut mid-escape-sequence and corrupt the line's styling.
-	return style.Render(joined)
-}
-
-func RenderFooter(width int, sidebarOpen bool) string {
-	style := lipgloss.NewStyle().
-		Background(lipgloss.Color("#161B22")).
-		Foreground(colorSubtle).
-		Padding(0, 1).
-		MaxHeight(1).MaxWidth(width)
-
-	segments := []string{
-		key(":") + " palette",
-		key("p") + " sidebar",
-		key("g") + " plan",
-		key("i") + " inject",
-		key("e") + " templates",
-		key("h") + " history",
-		key("s") + " procs",
-		key("r") + " query",
-		key("/") + " search",
-		key("?") + " help",
-	}
-
-	if sidebarOpen {
-		segments = []string{
-			key("p") + " close-plan",
-			key("\u2191\u2193") + " navigate",
-			key("enter") + " expand",
-			key(":") + " palette",
-		}
-	}
-
-	joined := strings.Join(segments, dimStyle.Render("  "))
-
-	// style already carries MaxWidth(width), which truncates ANSI-safely.
-	return style.Render(joined)
-}
-
-func RenderGateBar(gates []api.GateDto, width int) string {
-	style := lipgloss.NewStyle().
-		Foreground(colorSubtle).
-		MaxHeight(1).MaxWidth(width)
-
-	var parts []string
-	for _, g := range gates {
-		gGlyph, gStyle := gateGlyph(g.State)
-		label := gStyle.Render(gGlyph + " " + g.Name)
-		if g.State == "running" {
-			label += " " + dimStyle.Render(fmt.Sprintf("(%.1fs)", g.ElapsedSec))
-		}
-		parts = append(parts, label)
-	}
-
-	joined := strings.Join(parts, dimStyle.Render(" \u00B7 "))
-	// style already carries MaxWidth(width), which truncates ANSI-safely.
-	return style.Render(joined)
+	return style.Render(strings.Join(parts, sep))
 }

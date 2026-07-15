@@ -1,9 +1,11 @@
- ◆ conductor │ ● LIVE │ conductor-foreman │ F7 Gate caching + truth gates + speed program │ ● $0.12 │ CP 2/40 
-▸ Session #12 started · Deliver · Stage F7 · Attempt 1                                                        
-⁙ Let me examine the GateCache implementation...                                                              
-⚙ read src/Conductor/Core/Gating/GateCache.cs                                                                 
-↳ GateCache.cs:142 lines — caches by (name, tier, sha)                                                        
-▸ Found the caching layer. Adding GetLastPassingGateResult to RunDb.                                          
+ ◆ conductor  ● LIVE  conductor-foreman  F7 Gate caching + truth gates + spee…  ● $0.12  cp 2/40  $0.42       
+  a Agent   h Sessions   t Timeline   s Procs   c Console   e Templates   g Plan   r Report                   
+                                                                                                              
+  ▸ Session #12 started · Deliver · Stage F7 · Attempt 1                                                      
+  ⁙ Let me examine the GateCache implementation...                                                            
+  ⚙ read src/Conductor/Core/Gating/GateCache.cs                                                               
+  ↳ GateCache.cs:142 lines — caches by (name, tier, sha)                                                      
+  ▸ Found the caching layer. Adding GetLastPassingGateResult to RunDb.                                        
                                                                                                               
                                                                                                               
                                                                                                               
@@ -29,6 +31,4 @@
                                                                                                               
                                                                                                               
                                                                                                               
-                                                                                                              
- ✓  build · ●  test (4.1s) · ○  lint                                                                          
- /gate_  1/4  enter: lock  ·  esc: clear                                                                      
+ : cmd  i inject  / search  p sidebar  ? help  q quit   │   ↑↓ scroll · f fold · / search                     

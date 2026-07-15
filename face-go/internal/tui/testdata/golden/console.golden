@@ -1,17 +1,17 @@
  ◆ conductor  ● LIVE  conductor-foreman  F7 Gate caching + truth gates + spee…  ● $0.12  cp 2/40  $0.42       
   a Agent   h Sessions   t Timeline   s Procs   c Console   e Templates   g Plan   r Report                   
                            │                                                                                  
- ▶ PLAN                    │   Stages · Gates · Settings · Import    conductor-foreman · v7                   
- ✓ F0 3/3 Foundations      │                                                                                  
- ✓ F6 5/5 Ink TUI v1       │    editing F7                                                                    
+ ▶ PLAN                    │  {"type":"system","subtype":"init","session_id":"s12","model":"deepseek-v4-pro…  
+ ✓ F0 3/3 Foundations      │  {"type":"assistant","message":{"content":[{"type":"text","text":"Examining Ga…  
+ ✓ F6 5/5 Ink TUI v1       │  {"type":"result","subtype":"success","total_cost_usd":0.12,"num_turns":4}       
  ● F7 2/5 Gate c… 1× $0.30 │                                                                                  
-   ✓  F7.1 Plan import     │    title            Gate caching + truth gates                                   
-   ✓  F7.2 Re-import diff  │    model            claude-opus-4-8                                              
-   ●  F7.3 Truth-gate tier │    workflow         big-dev-then-big-audit                                       
- ○ F8 0/4 conductor chat … │    kind             deliver                                                      
-                           │    sessions         5                                                            
- ── GATES ──               │    notes            (unset)                                                      
-   ✓  build                │    dependsOn        F6                                                           
+   ✓  F7.1 Plan import     │  3 lines · live tail                                                             
+   ✓  F7.2 Re-import diff  │                                                                                  
+   ●  F7.3 Truth-gate tier │                                                                                  
+ ○ F8 0/4 conductor chat … │                                                                                  
+                           │                                                                                  
+ ── GATES ──               │                                                                                  
+   ✓  build                │                                                                                  
    ●  test                 │                                                                                  
    ○  lint                 │                                                                                  
                            │                                                                                  
@@ -32,4 +32,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  p sidebar  ? help  q quit   │   [↑↓: field] [enter: edit] [esc: back]             
+ : cmd  i inject  / search  p sidebar  ? help  q quit   │   ↑↓ scroll · end live-tail                         
