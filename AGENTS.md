@@ -25,25 +25,41 @@ TUI at `face/`.
 - **Driver:** the STABLE `C:\Code\conductor\bin\conductor.exe` (built from master). The tool improving
   Conductor is never the tool under edit.
 
-## Resume here (Maestro M5 complete, 2026-07-15)
-**M5 (Observability) is DONE, 6/6** — the Face work landed in `face-go`, backed by the C# control
-plane, and was dogfood-verified against a real orchestrator run. What's new in `face-go` this era:
-- **Timeline** modal (`t`) ← `GET /timeline`; **compiled-prompt preview** in the template editor
-  (`v`) ← `GET /prompt/preview`; **Native Console** modal (`c`, raw agent stdout) ← new SSE
-  `GET /console/current`; **enriched plan sidebar** (per-stage score/attempts/cost); **live ticker**
-  (`● $x.xx` session segment) ← `/state` now folds `TokenDelta` for the in-flight session.
-- **C# side**: `conductor status` rewritten to read `run.db`'s event log (not the deleted `state.json`);
-  `/timeline` + `/prompt/preview` got their first wire tests; `WithLiveSessionMetrics` on `/state`;
-  golden snapshots at 80×24 / 120×30 / 200×50.
-- **Gate note**: the ratchet was pre-existing-red (39 analyzer suppressions vs ceiling 35, from M2–M5
-  debt). Paid down to 38; with owner authorization raised the ceiling to 38 (the suppressions are
-  legitimate sync-boundary/ownership/broad-catch choices — do NOT try to async-refactor them to hit a
-  number; that was tried once and regressed the event drain). Ceiling changes stay owner-authorized.
+## Resume here (Maestro M6 complete, 2026-07-15)
+**M6 (Plan authoring) is DONE, 3/3** — plan import/edit landed on the C# control plane AND in `face-go`,
+and the truth gate is met with **zero LLM spend**. What's new this era:
+- **M6.1 deterministic import** (`src/Conductor/Core/Planning/MarkdownPlanParser.cs`): a *structured*
+  plan/tracker doc (`### M6 — …` headers + `**M6.1**` bullets or `| M6.1 |` rows) parses into a stage
+  graph with **no model call**. Freeform prose still falls back to the advisor (`--model` fills a
+  `{model}` placeholder in advisor args); `--yes` skips the confirm. `conductor plan import <file>`.
+  **Truth gate met**: `plan import docs/MAESTRO-PLAN.md` → exactly M1…M9 (a `(DONE …)`-marked bootstrap
+  header like M0 is excluded). Unit test reads the *real* doc; also CLI-verified.
+- **M6.2 re-import diff** (`PlanDiff.cs`): `Compute` + `Apply` — a re-import shows added/changed
+  stages+gates and applies only those; hand-tuned entries are never clobbered. Idempotent (a second
+  import of the same doc = "Nothing to change").
+- **M6.3 edit from the TUI**: backend `GET /plan` / `POST /plan/edit` / `POST /plan/import`
+  (`ControlPlaneServer.Plan.cs`, `ControlPlaneDto.Plan*.cs`) — reads/writes are served from a *fresh
+  load of the plan file* and validated via `CollectErrors`; the live `_plan` instance is never mutated
+  on an HTTP thread, so edits take effect on the next run (like `plan reload`). Face: the **`g` Plan
+  Editor** modal (tabs Stages·Gates·Settings·Import; a `‹ value ›` carousel picker for enum fields —
+  model/workflow/kind/tier/gatePolicy; the Import tab drives `/plan/import` path→diff→apply). Fully
+  interactive in `--demo` (edits mutate the in-memory plan), so it's reviewable with no engine/no spend.
+- **Crush polish pass on face-go**: persistent `◆ conductor` brand mark in the ticker; unified rounded
+  modal chrome (accent `◆ Title` + full-width rule + dim contextual help — note lipgloss v2 counts the
+  border inside `.Width()`, so inner width is `modalW-6`); an empty-state **splash** in the transcript
+  pane (wordmark + how-to-start) shown whenever no run is attached.
 
-**Next: Maestro M6 (plan authoring).** M6.1 `conductor plan import <file>` (a model turns a mega-plan
-into the task graph, rendered as a confirm/edit table); M6.2 re-import diffs, never clobbers; M6.3
-edit plan/stages/models/gates from the TUI. M6 truth gate: import `docs/MAESTRO-PLAN.md` → a graph
-whose stage ids match M1…M9. See `MAESTRO-TRACKER.md` for the live handoff.
+**Next: Maestro M7 (knowledge that compounds).** M7.1 ledger injected into the next prompt, surfaced in
+the Face, queryable; M7.2 `conductor bug new|list|fix` + MCP (a found bug outlives its session). M7
+truth gate: a 2-session toy run where session 1 writes a note + files a bug and session 2's compiled
+`prompt.md` on disk contains both. See `MAESTRO-TRACKER.md` for the live handoff.
+
+**No-spend demo recipe (see the whole face, incl. the M6 plan editor):**
+```powershell
+cd face-go; go build -o bin/conductor-face.exe ./cmd/conductor-face/
+.\bin\conductor-face.exe --demo    # everything interactive: g=plan editor, t=timeline, c=console, :=palette, …
+```
+Or drive the REAL control plane with a local fake agent (no LLM) — see the "Dogfood recipe" below.
 
 Dogfood recipe (real orchestrator, no LLM): a throwaway git repo + a minimal plan whose `agent.command`
 is a local script emitting Claude stream-json (`{"type":"result","total_cost_usd":…}`) + a trivial
@@ -163,6 +179,7 @@ verify against the real thing without spending on a real LLM session:
 | Key | Action |
 |-----|--------|
 | `p` | Toggle plan sidebar |
+| `g` | Plan editor (M6.3) — tabs Stages·Gates·Settings·Import; edit fields inline; import a plan doc → diff → apply |
 | `:` | Command palette (11 verbs, filterable, destructive ones confirm, `goto` asks for a stage id) |
 | `i` | Inject context modal |
 | `e` | Template editor (reads/writes planDir on disk) |

@@ -4,12 +4,12 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: M5 COMPLETE (6/6). Added M5.3 (native console: GET /console/current SSE + face-go `c` pane) and M5.4 (live ticker: fold TokenDelta into /state live session cost/tokens/elapsed/agentActive, no double-count after finish). Both wire-tested. M5 truth gate met: golden snapshots at 80×24/120×30/200×50 (size_* goldens); killing the Face leaves the run alive (verified `--no-face`; control plane independent, AD-2). DOGFOOD: ran the REAL orchestrator against a toy plan + local fake agent → real events + raw log; curled /state (live agentActive+elapsed), /timeline (real folded events), /console/current (real raw agent stdout over SSE); `conductor status` gave the right verdict + what-hurt from real events in 118ms.
-stage: M5 COMPLETE — all M5.1–M5.6 DONE. 21/30 DONE. Next: M6 (plan authoring).
-commit: [next]
-gate: build 0w/0e · 643 tests pass (twice, stable) · face-go build/vet/test green · ratchet green (ceiling 38).
+last: M6 COMPLETE (3/3). M6.1 deterministic markdown→graph parser (`MarkdownPlanParser`) — a structured plan/tracker doc becomes stages with NO model call (the zero-spend import path); freeform prose falls back to the advisor model (`--model` fills `{model}`); `--yes` skips confirm. M6.2 `PlanDiff` — re-import shows added/changed and applies only that, never clobbering hand-tuned entries. M6.3 plan authoring over the wire (`GET /plan`, `POST /plan/edit`, `POST /plan/import`) + a `g` Plan Editor modal in face-go (Stages·Gates·Settings·Import tabs, enum carousel model picker, import→diff→apply), interactive in `--demo`. TRUTH GATE MET: `conductor plan import docs/MAESTRO-PLAN.md` → exactly M1…M9 (unit test reads the real doc + CLI-verified, no spend). Also did a Crush-grade polish pass on face-go (brand mark, rounded modal chrome, empty-state splash).
+stage: M6 COMPLETE — all M6.1–M6.3 DONE. 24/30 DONE. Next: M7 (knowledge that compounds).
+commit: abd1b5f (M6.1/M6.2), c337cca (M6.3 backend), 9d6951c (M6.3 face), + polish.
+gate: build 0w/0e · 601 tests pass (fast filter, incl. 9 parser/diff + 5 plan-wire) · face-go build/vet/test green (all goldens + plan_test) · ratchet green (ceiling 38).
 branch: feat/foreman.
-next: M6.1 `conductor plan import <file>` (a model turns a mega-plan into the task graph, rendered as a confirm/edit table); M6.2 re-import diffs not clobbers; M6.3 edit plan/stages/models/gates from the TUI. M6 truth gate: import THIS design doc → a graph whose stage ids match M1…M9.
+next: M7.1 ledger injected into the next prompt, surfaced in the Face, queryable; M7.2 `conductor bug new/list/fix` + MCP (bugs outlive the session). M7 truth gate: 2-session toy run — session 1 writes a note + files a bug; session 2's compiled prompt.md on disk contains both.
 
 
 ## Baseline numbers (from run.db)
@@ -17,7 +17,7 @@ next: M6.1 `conductor plan import <file>` (a model turns a mega-plan into the ta
 | Metric | Value |
 |---|---|
 | Total checkpoints | 30 |
-| Done | 21 |
+| Done | 24 |
 
 ## Checkpoints
 
@@ -74,9 +74,9 @@ phase (a code path is not evidence).
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| M6.1 | `conductor plan import` with model choice + confirm/edit table | TODO | - | - |
-| M6.2 | Re-import diffs instead of clobbering | TODO | - | - |
-| M6.3 | Edit plan/stages/models/workflows/gates from the TUI | TODO | - | - |
+| M6.1 | `conductor plan import` with model choice + confirm/edit table | DONE | abd1b5f | Deterministic markdown→graph parser (`MarkdownPlanParser`): structured plan/tracker doc → stages with NO model call (zero-spend); freeform prose falls back to the advisor model; `--model` fills a `{model}` placeholder; `--yes` skips confirm. Truth gate met: `plan import docs/MAESTRO-PLAN.md` → exactly M1…M9 (unit test reads the real doc; also verified via CLI). |
+| M6.2 | Re-import diffs instead of clobbering | DONE | abd1b5f | `PlanDiff.Compute/Apply`: re-import shows added/changed stages+gates and applies only those; hand-tuned entries never clobbered. CLI-verified: import→M1…M9 then re-import = "Nothing to change" (X0 stage preserved). |
+| M6.3 | Edit plan/stages/models/workflows/gates from the TUI | DONE | c337cca, 9d6951c | Backend: `GET /plan` (editable plan from disk), `POST /plan/edit` (atomic field edits, validated via `CollectErrors`, live instance never mutated on the HTTP thread), `POST /plan/import` (deterministic parse+diff over the wire, apply flag) — 5 wire tests. Face: `g` Plan Editor modal (Stages·Gates·Settings·Import tabs; enum carousel model/workflow/kind/tier picker; import path→diff→apply), interactive in `--demo`. 6 golden frames + `plan_test.go`. |
 
 ### M7 — Knowledge that compounds — ledger, tracked bugs, structured handovers
 
