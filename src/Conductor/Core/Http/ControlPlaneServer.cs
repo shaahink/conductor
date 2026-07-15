@@ -3,6 +3,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using Conductor.Core.Events;
+using Conductor.Core.Integrations;
 using Conductor.Core.Planning;
 using Conductor.Core.Store;
 using Conductor.Models;
@@ -34,6 +35,7 @@ public sealed partial class ControlPlaneServer : IDisposable
     private readonly RunState _state;
     private readonly IRunStore _store;
     private readonly ConcurrentQueue<ControlCommand> _inbox;
+    private readonly ITelegramService _telegram;
     private readonly ILogger _logger;
     private readonly int _preferredPort;
     private HttpListener _listener = new();
@@ -49,12 +51,14 @@ public sealed partial class ControlPlaneServer : IDisposable
     public int Port { get; private set; }
     public bool IsRunning => _running;
 
-    public ControlPlaneServer(PlanConfig plan, RunState state, IRunStore store, ConcurrentQueue<ControlCommand> inbox, ILogger logger, int port)
+    public ControlPlaneServer(PlanConfig plan, RunState state, IRunStore store, ConcurrentQueue<ControlCommand> inbox,
+        ITelegramService telegram, ILogger logger, int port)
     {
         _plan = plan;
         _state = state;
         _store = store;
         _inbox = inbox;
+        _telegram = telegram;
         _logger = logger;
         _preferredPort = port;
         Port = port;
@@ -162,6 +166,9 @@ public sealed partial class ControlPlaneServer : IDisposable
                 case ("GET", "/plan"): await WritePlanAsync(ctx).ConfigureAwait(false); break;
                 case ("POST", "/plan/edit"): await HandlePlanEditAsync(ctx, ct).ConfigureAwait(false); break;
                 case ("POST", "/plan/import"): await HandlePlanImportAsync(ctx, ct).ConfigureAwait(false); break;
+                case ("GET", "/telegram/status"): await WriteTelegramStatusAsync(ctx).ConfigureAwait(false); break;
+                case ("POST", "/telegram/test"): await HandleTelegramTestAsync(ctx, ct).ConfigureAwait(false); break;
+                case ("POST", "/telegram/token"): await HandleTelegramTokenAsync(ctx, ct).ConfigureAwait(false); break;
                 case ("POST", "/control"): await HandleControlPostAsync(ctx, ct).ConfigureAwait(false); break;
                 case ("POST", "/inject"): await HandleInjectPostAsync(ctx, ct).ConfigureAwait(false); break;
                 default:

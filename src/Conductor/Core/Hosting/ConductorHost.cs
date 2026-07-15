@@ -145,6 +145,7 @@ public static class ConductorHost
                 state,
                 sp.GetRequiredService<IRunStore>(),
                 sp.GetRequiredService<ConcurrentQueue<ControlCommand>>(),
+                sp.GetRequiredService<ITelegramService>(),
                 sp.GetRequiredService<ILogger<ControlPlaneServer>>(),
                 opts.ControlPlanePort));
         }

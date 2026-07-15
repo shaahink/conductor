@@ -124,6 +124,8 @@ public sealed partial class ControlPlaneServer
                 return ApplyGateEdit(gate, field, edit.Value);
             case "plan":
                 return ApplyPlanEdit(plan, field, edit.Value);
+            case "telegram":
+                return ApplyTelegramEdit(plan, field, edit.Value);
             default:
                 return $"unknown edit target '{edit.Target}'";
         }
@@ -181,6 +183,29 @@ public sealed partial class ControlPlaneServer
             case "defaultworkflow": plan.DefaultWorkflow = string.IsNullOrWhiteSpace(value) ? null : value; return null;
             case "name": if (!string.IsNullOrWhiteSpace(value)) plan.Name = value; return null;
             default: return $"plan has no editable field '{field}'";
+        }
+    }
+
+    /// <summary>M8.2: non-secret Telegram settings only (allowed chat ids, poll interval, two-way
+    /// toggle) — these belong in the versioned plan file, same as everything else /plan/edit
+    /// touches. The bot token itself never comes through here; see
+    /// ControlPlaneServer.Telegram.cs / SecretsStore.</summary>
+    private static string? ApplyTelegramEdit(PlanConfig plan, string field, string? value)
+    {
+        plan.Telegram ??= new TelegramConfig();
+        switch (field)
+        {
+            case "allowedchatids":
+                plan.Telegram.AllowedChatIds = string.IsNullOrWhiteSpace(value)
+                    ? []
+                    : [.. value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
+                return null;
+            case "pollintervalseconds":
+                if (!int.TryParse(value, out var n) || n < 1) return "pollIntervalSeconds must be a positive integer";
+                plan.Telegram.PollIntervalSeconds = n; return null;
+            case "enabletwoway":
+                plan.Telegram.EnableTwoWay = string.Equals(value, "true", StringComparison.OrdinalIgnoreCase); return null;
+            default: return $"telegram has no editable field '{field}'";
         }
     }
 

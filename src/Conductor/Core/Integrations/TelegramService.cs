@@ -51,6 +51,13 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
     internal DateTime _lastDigestUtc = DateTime.UtcNow;
     internal readonly Dictionary<string, bool> _pendingInjections = new(StringComparer.Ordinal);
 
+    /// <summary>M8.2: last time getUpdates succeeded, and the last poll/send error message (if
+    /// any) — surfaced by the /telegram/status endpoint so the Face can show live connection
+    /// health, not just "configured or not".</summary>
+    internal DateTime? _lastPollUtc;
+    internal string? _lastError;
+    internal string? _botUsername;
+
     private const string ApiBase = "https://api.telegram.org/bot";
 
     public TelegramService(
@@ -64,7 +71,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
         _progress = ProgressProviderFactory.Create(plan);
         _log = logger;
         _cfg = plan.Telegram;
-        _token = ResolveToken();
+        _token = ResolveToken(plan);
         _store = store;
 
         _sendQueue = Channel.CreateUnbounded<(string, string, string?)>(
@@ -73,13 +80,62 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
         _http = new HttpClient { Timeout = TimeSpan.FromSeconds(65) };
     }
 
-    private static string? ResolveToken()
+    /// <summary>Env var wins (unchanged, existing behavior); falls back to the M8.2 local secrets
+    /// file (SecretsStore) so the token can also be typed into the Face's guided setup instead of
+    /// set as an environment variable.</summary>
+    private static string? ResolveToken(PlanConfig plan)
     {
-        var t = Environment.GetEnvironmentVariable("CONDUCTOR_TELEGRAM_TOKEN")?.Trim();
-        return t is { Length: > 0 } ? t : null;
+        var fromEnv = Environment.GetEnvironmentVariable("CONDUCTOR_TELEGRAM_TOKEN")?.Trim();
+        if (fromEnv is { Length: > 0 }) return fromEnv;
+        return SecretsStore.TryReadTelegramToken(plan.StateDir);
     }
 
-    private bool IsConfigured => _cfg != null && _token != null;
+    internal bool IsConfigured => _cfg != null && _token != null;
+
+    /// <summary>M8.2: validates the configured token against Telegram's getMe, and — if at least
+    /// one allowed chat id is configured — also sends a real test push, so "test" proves the whole
+    /// path (token valid AND a chat can actually be reached), not just the token in isolation.</summary>
+    internal async Task<(bool Ok, string? BotUsername, string? Error)> TestConnectionAsync(CancellationToken ct)
+    {
+        if (_cfg == null) return (false, null, "Telegram is not configured on this plan");
+        if (_token == null) return (false, null, "no bot token — set CONDUCTOR_TELEGRAM_TOKEN or save one from the Face");
+
+        try
+        {
+            var resp = await _http.GetAsync($"{ApiBase}{_token}/getMe", ct).ConfigureAwait(false);
+            var body = await resp.Content.ReadFromJsonAsync<TgGetMeResponse>(JsonOpts, ct).ConfigureAwait(false);
+            if (!resp.IsSuccessStatusCode || body is not { Ok: true, Result: { } me })
+            {
+                var err = $"getMe failed: HTTP {(int)resp.StatusCode}";
+                _lastError = err;
+                return (false, null, err);
+            }
+
+            _botUsername = me.Username;
+
+            if (_cfg.AllowedChatIds.Count == 0)
+                return (true, me.Username, null);
+
+            try
+            {
+                await SendAsync(_cfg.AllowedChatIds[0], $"✅ Conductor test message — bot @{me.Username} is connected.", ct)
+                    .ConfigureAwait(false);
+                return (true, me.Username, null);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            {
+                var err = $"getMe succeeded (@{me.Username}) but the test message failed: {ex.Message}";
+                _lastError = err;
+                return (false, me.Username, err);
+            }
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            var err = $"could not reach Telegram: {ex.Message}";
+            _lastError = err;
+            return (false, null, err);
+        }
+    }
 
     public Task StartAsync(CancellationToken ct)
     {
@@ -137,9 +193,15 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
             {
                 await PollOnceAsync(ct).ConfigureAwait(false);
                 await MaybeSendDailyDigestAsync(ct).ConfigureAwait(false);
+                _lastPollUtc = DateTime.UtcNow;
+                _lastError = null;
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
-            catch (Exception ex) { _log.LogWarning(ex, "Telegram poll error"); }
+            catch (Exception ex)
+            {
+                _lastError = ex.Message;
+                _log.LogWarning(ex, "Telegram poll error");
+            }
             await Task.Delay(interval, ct).ConfigureAwait(false);
         }
     }

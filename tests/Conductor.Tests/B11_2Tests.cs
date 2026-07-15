@@ -5,63 +5,8 @@ namespace Conductor.Tests;
 
 public class B11_2DoctorAndCompletionTests
 {
-    // --- Doctor state interpretation (the pure logic, without Spectre) ---
-
-    [Fact]
-    public void Doctor_IdlePlan_RemainingStagesExcludesConfirmed()
-    {
-        var plan = new PlanConfig
-        {
-            Repo = Path.GetTempPath(),
-            Tracker = "B11-2-TRACKER-TEST.md",
-            Stages = new()
-            {
-                new() { Id = "S1", Title = "First", Sessions = 1 },
-                new() { Id = "S2", Title = "Second", Sessions = 1 },
-            },
-            Agent = new() { Command = "echo", Args = new() { "{prompt}" } },
-        };
-        var state = new RunState
-        {
-            PlanName = "test",
-            Status = RunStatus.Idle,
-            CurrentStage = "S2",
-            ConfirmedStages = new() { "S1" },
-        };
-
-        var remaining = DoctorRemainingStages(plan, state);
-
-        Assert.DoesNotContain("S1", remaining);
-        Assert.Contains("S2", remaining);
-    }
-
-    [Fact]
-    public void Doctor_SkippedStages_ExcludedFromRemaining()
-    {
-        var plan = new PlanConfig
-        {
-            Repo = Path.GetTempPath(),
-            Tracker = "B11-2-TRACKER-TEST.md",
-            Stages = new()
-            {
-                new() { Id = "S1", Title = "First", Sessions = 1 },
-                new() { Id = "S2", Title = "Second", Sessions = 1 },
-            },
-            Agent = new() { Command = "echo", Args = new() { "{prompt}" } },
-        };
-        var state = new RunState
-        {
-            PlanName = "test",
-            Status = RunStatus.Idle,
-            CurrentStage = "S1",
-            SkippedStages = new() { "S2" },
-        };
-
-        var remaining = DoctorRemainingStages(plan, state);
-
-        Assert.DoesNotContain("S2", remaining);
-        Assert.Contains("S1", remaining);
-    }
+    // --- RunState pending-field behavior (kept for coverage; not specific to DoctorCommand,
+    // which M8.1 repurposed into a health check — see DoctorCommandTests.cs) ---
 
     [Fact]
     public void Doctor_AwaitingOwner_HasCorrectReasonText()
@@ -202,20 +147,5 @@ public class B11_2DoctorAndCompletionTests
         Assert.True(bashMatch.Success, "Bash completion missing compgen -W definition");
         var bashVerbs = bashMatch.Groups["verbs"].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         Assert.Equal(expectedVerbs.Count, bashVerbs.Length);
-    }
-
-    // --- Helpers replicating DoctorCommand's remaining-stages logic ---
-
-    private static List<string> DoctorRemainingStages(PlanConfig plan, RunState state)
-    {
-        return plan.Stages
-            .Where(s =>
-            {
-                if (state.SkippedStages.Contains(s.Id)) return false;
-                if (state.ConfirmedStages.Contains(s.Id)) return false;
-                return true;
-            })
-            .Select(s => s.Id)
-            .ToList();
     }
 }

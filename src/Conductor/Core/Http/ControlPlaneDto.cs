@@ -97,4 +97,8 @@ public static class ControlPlaneDto
 [JsonSerializable(typeof(PlanMutationResultDto))]
 [JsonSerializable(typeof(PlanImportRequestDto))]
 [JsonSerializable(typeof(PlanImportResultDto))]
+[JsonSerializable(typeof(TelegramStatusDto))]
+[JsonSerializable(typeof(TelegramTestResultDto))]
+[JsonSerializable(typeof(TelegramSetTokenRequestDto))]
+[JsonSerializable(typeof(TelegramSetTokenResultDto))]
 public sealed partial class ControlPlaneJsonContext : JsonSerializerContext;

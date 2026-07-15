@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using Conductor.Core;
 using Conductor.Core.Http;
+using Conductor.Core.Integrations;
 using Conductor.Core.Store;
 using Conductor.Models;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -62,7 +63,7 @@ public sealed class ControlPlaneServerPlanTests : IDisposable
         tcp.Start();
         var port = ((IPEndPoint)tcp.LocalEndpoint).Port;
         tcp.Stop();
-        var server = new ControlPlaneServer(_plan, new RunState { RunId = "run-plan" }, _store, _inbox, NullLogger.Instance, port);
+        var server = new ControlPlaneServer(_plan, new RunState { RunId = "run-plan" }, _store, _inbox, new NoOpTelegramService(), NullLogger.Instance, port);
         Assert.True(server.Start(), "control plane failed to bind");
         return (server, port);
     }
