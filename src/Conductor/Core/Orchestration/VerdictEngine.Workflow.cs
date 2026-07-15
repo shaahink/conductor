@@ -21,17 +21,18 @@ public sealed partial class VerdictEngine
         var vars = _ctx.Workflows.BuildRuntimeVars(rec, _ctx.State.AttemptsThisStage,
             gatesGreen, verifierScore, verifierPassed, circuitBroken, stageComplete);
 
-        var next = _ctx.Workflows.GetNextStep(workflow, stepIndex, vars);
+        // ResolveAndRecordStep resolves AND records the index in one call — see its doc comment
+        // (WorkflowEngine.cs) for why that matters (a real bug: this used to be two independent
+        // read-resolve-write cycles here and in SessionRunner.ResolveSessionKind, which drifted
+        // out of sync and left PendingVerify/PendingAudit/PendingFix unpopulated in some cases).
+        var next = _ctx.Workflows.ResolveAndRecordStep(workflow, _ctx.State.WorkflowStepIndices, stage.Id, vars);
         if (next == null)
         {
             _ctx.Log($"workflow '{workflow.Name}' exhausted after step {stepIndex} — stage complete");
-            _ctx.State.WorkflowStepIndices.Remove(stage.Id);
             return;
         }
 
-        var nextIndex = workflow.Steps.FindIndex(s => s.Id == next.Id);
-        if (nextIndex < 0) nextIndex = stepIndex + 1;
-        _ctx.State.WorkflowStepIndices[stage.Id] = nextIndex;
+        var nextIndex = _ctx.State.WorkflowStepIndices[stage.Id];
         _ctx.Log($"workflow '{workflow.Name}': step {stepIndex} → {nextIndex} ({next.Id}, kind={next.Kind})");
 
         if (next.Kind == SessionKind.Verify && (stage.Overrides?.SkipVerification == true || _ctx.State.SkipVerificationThisStage))

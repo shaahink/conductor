@@ -137,6 +137,51 @@ public sealed class WorkflowEngineTests
     }
 
     [Fact]
+    public void ResolveAndRecordStep_KeepsIndexInSyncAcrossCallers()
+    {
+        // Regression test for a real bug (found M8): SessionRunner.ResolveSessionKind's
+        // workflow-fallback branch used to call GetNextStep to pick a session's kind but never
+        // wrote the resolved index back into WorkflowStepIndices — only VerdictEngine.AdvanceWorkflowStep
+        // did that, and only for the step IT resolved. Because SessionRunner's own resolution
+        // (used for a stage's first session) never recorded anything, AdvanceWorkflowStep's very
+        // next read was stale (-1, not 0), so it re-derived "deliver" as "next" instead of
+        // "verify" — the workflow step index permanently lagged one step behind, and
+        // PendingVerify/PendingAudit/PendingFix were never populated for the step SessionRunner
+        // itself later resolved by coincidence of the same lag, crashing PromptBuilder.Verify
+        // (and Audit/Fix) with a NullReferenceException. ResolveAndRecordStep is the single call
+        // both sites now share — this test drives it exactly the way SessionRunner (session 1's
+        // kind) then VerdictEngine (advancing after session 1) do, and asserts the second call
+        // sees the first call's step, not a stale index.
+        var wf = _engine.Resolve(new PlanConfig(), new StageConfig { Id = "test" });
+        var indices = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        // SessionRunner.ResolveSessionKind's fallback: stage's first session, no prior state.
+        var session1Step = _engine.ResolveAndRecordStep(wf, indices, "test", new WorkflowRuntimeVars());
+        Assert.NotNull(session1Step);
+        Assert.Equal(SessionKind.Deliver, session1Step.Kind);
+        Assert.Equal(0, indices["test"]);
+
+        // VerdictEngine.AdvanceWorkflowStep after session 1 completes green.
+        var afterDeliver = new WorkflowRuntimeVars { GatesGreen = true, HasCommits = true };
+        var next = _engine.ResolveAndRecordStep(wf, indices, "test", afterDeliver);
+        Assert.NotNull(next);
+        Assert.Equal(SessionKind.Verify, next.Kind); // NOT deliver again — the bug's symptom
+        Assert.Equal(1, indices["test"]);
+    }
+
+    [Fact]
+    public void ResolveAndRecordStep_RemovesEntry_WhenWorkflowExhausted()
+    {
+        var wf = _engine.Resolve(new PlanConfig(), new StageConfig { Id = "test", Workflow = "spike" });
+        var indices = new Dictionary<string, int>(StringComparer.Ordinal) { ["test"] = 0 };
+
+        var next = _engine.ResolveAndRecordStep(wf, indices, "test", new WorkflowRuntimeVars { HasCommits = true });
+
+        Assert.Null(next);
+        Assert.False(indices.ContainsKey("test"));
+    }
+
+    [Fact]
     public void BuildRuntimeVars_CapturesSessionState()
     {
         var rec = new SessionRecord

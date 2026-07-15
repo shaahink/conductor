@@ -324,11 +324,13 @@ public sealed partial class SessionRunner
         if (pendingVerify != null) return SessionKind.Verify;
         if (pendingFix != null) return SessionKind.Fix;
 
-        // Workflow-driven: what does the engine say is next?
+        // Workflow-driven: what does the engine say is next? ResolveAndRecordStep both resolves
+        // AND records the step index in the same call — see its doc comment for why that matters
+        // (a real bug: this call site used to resolve a step without recording it, leaving
+        // WorkflowStepIndices stale for AdvanceWorkflowStep's next read).
         var workflow = _ctx.Workflows.Resolve(_ctx.Plan, stage);
-        var stepIndex = _ctx.State.WorkflowStepIndices.GetValueOrDefault(stage.Id, -1);
         var vars = new WorkflowRuntimeVars(); // initial run — no prior session vars
-        var step = _ctx.Workflows.GetNextStep(workflow, stepIndex, vars);
+        var step = _ctx.Workflows.ResolveAndRecordStep(workflow, _ctx.State.WorkflowStepIndices, stage.Id, vars);
         if (step != null)
         {
             var wfKind = step.Kind;

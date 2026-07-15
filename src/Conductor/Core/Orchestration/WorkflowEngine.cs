@@ -140,6 +140,36 @@ public sealed class WorkflowEngine
         return next.step;
     }
 
+    /// <summary>Resolve the next step for a stage AND durably record its index in
+    /// <paramref name="stepIndices"/> in the same call. Both SessionRunner (resolving the kind of
+    /// an upcoming session) and VerdictEngine (deciding what comes after one that just finished)
+    /// need "the next step, with the index kept in sync" — having two independent call sites each
+    /// read <paramref name="stepIndices"/>, compute a step, and separately write the index back is
+    /// exactly how they drifted out of sync (a real bug: SessionRunner's own resolution never
+    /// wrote the index back, so the entry permanently lagged one step behind after a stage's first
+    /// session, and the next PendingVerify/PendingAudit/PendingFix was never populated even though
+    /// the session's kind still resolved correctly by coincidence of the same lag — an NRE in
+    /// PromptBuilder.Verify/Audit/Fix). Single source of truth instead of mirrored bookkeeping.
+    /// Removes the dictionary entry and returns null when the workflow is exhausted.</summary>
+    public WorkflowStep? ResolveAndRecordStep(
+        WorkflowDefinition workflow,
+        Dictionary<string, int> stepIndices,
+        string stageId,
+        WorkflowRuntimeVars vars)
+    {
+        var stepIndex = stepIndices.GetValueOrDefault(stageId, -1);
+        var step = GetNextStep(workflow, stepIndex, vars);
+        if (step == null)
+        {
+            stepIndices.Remove(stageId);
+            return null;
+        }
+
+        var resolvedIndex = workflow.Steps.FindIndex(s => s.Id == step.Id);
+        stepIndices[stageId] = resolvedIndex >= 0 ? resolvedIndex : stepIndex + 1;
+        return step;
+    }
+
     /// <summary>Evaluate a RunIf / SkipIf expression against runtime variables.
     /// Supported expressions are simple boolean/logic: "!verifier.passed",
     /// "verifier.score >= 80", "circuit.broken", "newlyDoneCount > 0".</summary>
