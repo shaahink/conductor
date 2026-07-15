@@ -4,12 +4,12 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: M7 COMPLETE (knowledge that compounds) + Ink face RETIRED. M7.1 — LedgerBattery injects recent `conductor note` entries into the next prompt (added FIRST so the byte cap never drops them); GET /ledger + `ledger_list` surface/query them. M7.2 — v7 `bugs` table + store (WriteBug/QueryBugs/UpdateBugStatus); `conductor bug new|list|fix` CLI; MCP bug_new/bug_list/bug_fix; BugsBattery injects OPEN bugs; GET /bugs; ToolContract tells agents to file/list/fix instead of re-finding. face-go: new `k` Knowledge tab (open bugs + ledger, the same rows the engine injects). Ink `face/` deleted; FaceLauncher + `conductor face` now spawn the face-go binary (no node); Maestro `face` gate builds+tests face-go (a deliberate gate change — owner-directed retirement; ratchet flags the diff once, clears after push).
-stage: M7 COMPLETE — 26/30 DONE. Next: M8 (AFK — doctor, init, Telegram v2).
-commit: 7f512a6 (retire Ink face), b28087a (M7 backend+tests), cb98420 (face-go Knowledge tab), 470b9ae (note/bug markup fix).
-gate: dotnet build 0w/0e · full C# suite green (M7KnowledgeTests incl. the on-disk truth gate; /ledger+/bugs wire tests; bug MCP round-trip; RunDb v7) · architecture ratchet green · face-go build/vet/test green (new `knowledge` golden, all goldens regenerated for the +1 tab) · REAL 3-session dogfood: session 1's fake agent files a note+bug via the live CLI (concurrent w/ the running run.db), sessions 2-3's prompt.md ON DISK contain both.
+last: M8 COMPLETE (AFK & smart setup) + the pre-existing workflow-index NRE from the M7 heads-up FIXED. Bug (found + fixed this session): `SessionRunner.ResolveSessionKind`'s workflow-fallback resolved a step but never recorded its index, so `WorkflowStepIndices` lagged one step behind after a stage's first session and `AdvanceWorkflowStep` never populated `PendingVerify`/`PendingAudit`/`PendingFix` for the step it actually picked — `PromptBuilder.Verify` NRE'd on a null pending record. Fixed by extracting `WorkflowEngine.ResolveAndRecordStep`, a single call both `SessionRunner` and `VerdictEngine` now share; filed+fixed via `conductor bug` (bug #1). M8.1 — `conductor doctor` repurposed in place (owner decision) from the pre-M2 resume-preview into a <2s health check: agent CLI/git/face-go binary/DNS/disk/API/budget/Telegram, reusing `PreflightHealth` + `StatusReportBuilder`; verified live against this repo's own Maestro plan (421ms). M8.2 — Telegram v2 **reframed by the owner mid-session**: instead of only "drive a toy run from a phone", the Face itself now guides Telegram setup end-to-end — new `SecretsStore` (`.conductor/secrets.local.json`, gitignored) lets the bot token be typed into the Face instead of requiring an env var; `TelegramService` gained live status tracking + `TestConnectionAsync` (real getMe + test push); new `GET /telegram/status`, `POST /telegram/test`, `POST /telegram/token`, and a `telegram` `/plan/edit` target for chat ids/poll interval/two-way. face-go's new `l` Telegram tab reads as a guided wizard: live status line, numbered guide with checkmarks, in-pane field editor, one-shot test-send.
+stage: M8 COMPLETE — 28/30 DONE. Next: M9 (dogfood close).
+commit: 50720b0 (workflow-index bug fix), 19a45e1 (M8.1 doctor + M8.2 backend), 9ed1192 (M8.2 face-go Telegram tab).
+gate: dotnet build 0w/0e · full C# suite green (669 tests: 614 fast + 55 integration, incl. 8 new Telegram wire tests + 2 new WorkflowEngine regression tests + 24 new DoctorCommand tests) · architecture ratchet green · face-go build/vet/test green (3 new `telegram_*` goldens, full suite regenerated for the 10th tab) · doctor verified live against the real Maestro plan.
 branch: feat/foreman.
-next: M8.1 `conductor doctor` <2s says exactly what's missing; M8.2 Telegram v2 phone-driven. HEADS-UP for M8/M9: found a real pre-existing NRE — `PromptBuilder.Verify` crashes when a Verify session is queued with a null `PendingVerify` (repro: toy plan on the default deliver-verify workflow; docs-only sidesteps it). File it as a bug and fix before M9 dogfood.
+next: M9.1 real plan run end to end under Maestro, fix what bleeds. M9.2 final audit. HEADS-UP for M9: the credential-gated live verification for M8.2 (paste a real bot token into the Face, add a real chat id, hit Test, confirm a real Telegram message arrives, then drive a toy run watching session-end pushes/NeedsHuman buttons/reply-to-inject/`/status`) has NOT been done — it needs the owner's real bot token (`HUMAN:` item). Do this before M9 close, or explicitly accept the gap in the M9.2 final audit.
 
 
 ## Baseline numbers (from run.db)
@@ -17,7 +17,7 @@ next: M8.1 `conductor doctor` <2s says exactly what's missing; M8.2 Telegram v2 
 | Metric | Value |
 |---|---|
 | Total checkpoints | 30 |
-| Done | 26 |
+| Done | 28 |
 
 ## Checkpoints
 
@@ -89,8 +89,8 @@ phase (a code path is not evidence).
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| M8.1 | `conductor doctor` < 2s, says exactly what is missing | TODO | - | - |
-| M8.2 | Telegram v2 driven end to end from a phone | TODO | - | - |
+| M8.1 | `conductor doctor` < 2s, says exactly what is missing | DONE | 19a45e1 | `DoctorCommand.cs` repurposed in place: agent CLI (PATH/absolute resolution), git (branch+dirty via `Git.cs`), face-go binary (`FaceLauncher.ResolveEntrypoint`), DNS/disk/API (reused `PreflightHealth.RunAllAsync` with sane defaults when unconfigured), budget headroom (`StatusReportBuilder`, run.db), Telegram configured. 24 `DoctorCommandTests.cs` unit tests (deliberately-broken-environment truth gate: missing PATH command, nonexistent repo, dirty tree, over-budget, no-token/no-chat-id Telegram states — exact fail/warn lines asserted). Live truth gate: run against this repo's own `plans/conductor-maestro.plan.json` — 421ms, correct 6 ok/2 warn/0 fail output. |
+| M8.2 | Telegram v2 — configured, tested, and status shown **from the Face** (owner-redirected mid-session from "phone-driven" to "guided in-app setup") | DONE | 19a45e1, 9ed1192 | Backend: `SecretsStore` (new `.conductor/secrets.local.json`, gitignored); `TelegramService.ResolveToken` instance-ized with a secrets-file fallback (env var still wins); `TestConnectionAsync` (real `getMe` + a real test push when a chat id is configured); `GET /telegram/status`, `POST /telegram/test`, `POST /telegram/token`, `telegram` `/plan/edit` target (`ApplyTelegramEdit`) for chat ids/poll interval/two-way. `ControlPlaneServer` now takes `ITelegramService` (4 call sites updated). 8 `ControlPlaneServerTelegramTests.cs` wire tests (status/test/token/edit round-trips against a real `HttpListener`, no live Telegram call). Face: new `l` Telegram tab (`tab_telegram.go`) — live status line, numbered guided-setup checklist, in-pane field editor (bot token masked & never prefilled, chat ids, poll interval, two-way), one-shot test-send action. 3 new goldens + full suite regenerated. **Not yet done: the credential-gated live phone dogfood** (real bot token, real message, toy run to completion) — needs the owner's real bot token; see tracker Handoff heads-up. |
 
 ### M9 — Dogfood close — run a real plan, fix what bleeds, final audit
 

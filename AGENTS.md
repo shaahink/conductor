@@ -15,7 +15,8 @@ TUI at `face/`.
 - **Face:** `face-go/` — Go + Bubble Tea TUI, wired to the real control plane (control verbs,
   inject, report query, template editor file I/O, live SSE transcript/events, session history,
   a Processes modal, a TTY guard, spring-animated toasts, markdown-rendered session result
-  summaries, M7 knowledge tab = ledger + tracked bugs). Verified against a real `ControlPlaneServer`
+  summaries, M7 knowledge tab = ledger + tracked bugs, M8.2 Telegram tab = guided setup/status/test).
+  Verified against a real `ControlPlaneServer`
   (not just `--demo`), not only build/vet/test — see "How to verify a face-go change" below before
   claiming a change works. `conductor run` spawns it automatically (`FaceLauncher` resolves the
   built binary next to the engine or under `face-go/bin/`); `conductor face` attaches another.
@@ -23,6 +24,68 @@ TUI at `face/`.
   Its history is in git; do not re-add it.
 - **Driver:** the STABLE `C:\Code\conductor\bin\conductor.exe` (built from master). The tool improving
   Conductor is never the tool under edit.
+
+## Resume here (Maestro M8 complete, 2026-07-15)
+**M8 (AFK & smart setup) is DONE, 2/2 — 28/30 checkpoints.** Plus the M7 heads-up NRE is fixed.
+
+- **Workflow-index bug (found + fixed this session, pre-existing, not M8-specific):**
+  `SessionRunner.ResolveSessionKind`'s workflow-fallback branch (used to pick a session's kind when
+  no `Pending*` is queued) resolved a step from `WorkflowEngine.GetNextStep` but never recorded
+  which one — `RunState.WorkflowStepIndices` lagged one real step behind after a stage's first
+  session, so `VerdictEngine.AdvanceWorkflowStep` re-derived the wrong "next" step and never
+  populated `PendingVerify`/`PendingAudit`/`PendingFix` for the step `ResolveSessionKind` itself
+  later picked (by coincidence of the same lag) — `PromptBuilder.Verify`/`Audit`/`Fix` NRE'd on a
+  null pending record. Root-caused and fixed by extracting `WorkflowEngine.ResolveAndRecordStep`
+  (resolves AND records the index in one call), which both `SessionRunner` and `VerdictEngine` now
+  share instead of mirroring the same bookkeeping independently. Regression coverage:
+  `WorkflowEngineTests.ResolveAndRecordStep_KeepsIndexInSyncAcrossCallers` drives it exactly the way
+  the two real call sites do. Filed and fixed for real via `conductor bug` (bug #1) — dogfoods M7's
+  own bug tracker on itself.
+- **M8.1 `conductor doctor`** repurposed in place (owner decision — the old "what happens on
+  resume" preview read the deleted `state.json` and showed stale state; `conductor status` already
+  covers that from the database). Now a <2s health-check battery: agent CLI on PATH, git
+  clean+branch, face-go binary (`FaceLauncher.ResolveEntrypoint`), DNS/disk/API reachability
+  (reused `PreflightHealth.RunAllAsync` with sane defaults when the plan hasn't configured
+  `DnsHealthCheck`), budget headroom (`StatusReportBuilder`, run.db), Telegram configured. 24 unit
+  tests (`DoctorCommandTests.cs`) drive the internal `Check*` methods directly against a
+  deliberately-broken environment. Live-verified against this repo's own Maestro plan: 421ms.
+- **M8.2 Telegram v2 — reframed mid-session by the owner.** Instead of the original "drive a toy
+  run from a phone" truth gate alone, the owner asked for Telegram to be **configurable and
+  testable from the Face itself** — a guided in-app setup, not hand-edited plan.json/env vars.
+  - **`SecretsStore`** (`src/Conductor/Core/Integrations/SecretsStore.cs`) — a new local
+    `.conductor/secrets.local.json`, already excluded by the state dir's own blanket `.gitignore`.
+    The Face's "paste your token" flow writes here; `TelegramService.ResolveToken` (now an instance
+    method) falls back to it when `CONDUCTOR_TELEGRAM_TOKEN` isn't set — the env var still wins.
+  - **`TelegramService`** gained live status tracking (`_lastPollUtc`/`_lastError`) and
+    `TestConnectionAsync` (a real `getMe` call, plus a real test push when a chat id is configured
+    — proves the whole path, not just the token).
+  - **New control-plane surface:** `GET /telegram/status`, `POST /telegram/test`,
+    `POST /telegram/token` (`ControlPlaneServer.Telegram.cs`), and a `telegram` target on the
+    existing `POST /plan/edit` (`ApplyTelegramEdit` in `ControlPlaneServer.Plan.cs`) for the
+    non-secret settings (chat ids, poll interval, two-way toggle) — the bot token itself never
+    round-trips through the versioned plan file. `ControlPlaneServer` now takes `ITelegramService`
+    (previously not wired to Telegram at all; 4 call sites updated). 8 wire tests
+    (`ControlPlaneServerTelegramTests.cs`).
+  - **Face: new `l` Telegram tab** (`face-go/internal/tui/tab_telegram.go`) — reads as a guided
+    wizard: a live status line (not configured / configured-no-token / token-saved-untested /
+    connected as @bot), a numbered setup checklist with checkmarks while incomplete, an in-pane
+    field editor (bot token — always blank on entry, masked while typing and at rest, since the
+    server never echoes it back; allowed chat ids; poll interval; two-way toggle), and a one-shot
+    "send test message" action row. `--demo` starts from a realistic "configured, no token yet"
+    state so the guided flow is what a reviewer sees by default. 3 new goldens
+    (`telegram_unconfigured`/`telegram_token_edit`/`telegram_connected`); full suite regenerated
+    for the 10th tab's strip-width change.
+  - **Not yet done:** the credential-gated live phone dogfood (paste a real bot token, add a real
+    chat id, hit Test, confirm a real message arrives, then drive a toy run watching session-end
+    pushes / NeedsHuman buttons / reply-to-inject / `/status`) needs the owner's real bot token —
+    a `HUMAN:` item. Do this before M9 close.
+
+**Commits:** `50720b0` workflow-index bug fix · `19a45e1` M8.1 doctor + M8.2 backend ·
+`9ed1192` M8.2 face-go Telegram tab.
+
+**Next: Maestro M9 (dogfood close).** M9.1 a real plan run end to end under Maestro, fix what
+bleeds; M9.2 final audit — every design-doc checkpoint rated CONFORMS/DEVIATES with evidence. See
+`MAESTRO-TRACKER.md` for the live handoff.
 
 ## Resume here (Maestro M7 complete + Ink face retired, 2026-07-15)
 **M7 (knowledge that compounds) is DONE, 2/2 — 26/30 checkpoints.** Knowledge now survives the session
