@@ -40,6 +40,8 @@ func (fakeSource) FetchTasks() (*api.TasksDto, error)         { return nil, nil 
 func (fakeSource) FetchProcesses() (*api.ProcessesDto, error) { return nil, nil }
 func (fakeSource) FetchSessions() (*api.SessionsDto, error)   { return nil, nil }
 func (fakeSource) FetchTimeline() (*api.TimelineDto, error)   { return nil, nil }
+func (fakeSource) FetchLedger() (*api.LedgerDto, error)       { return fixedLedger(), nil }
+func (fakeSource) FetchBugs() (*api.BugsDto, error)           { return fixedBugs(), nil }
 func (fakeSource) FetchPromptPreview(_, _ string) (*api.PromptPreviewDto, error) {
 	return nil, nil
 }
@@ -83,6 +85,25 @@ func specialKey(code rune) tea.KeyPressMsg {
 
 func ctrlKey(r rune) tea.KeyPressMsg {
 	return tea.KeyPressMsg(tea.Key{Code: r, Mod: tea.ModCtrl})
+}
+
+func fixedLedger() *api.LedgerDto {
+	s := func(n int) *int { return &n }
+	st := func(x string) *string { return &x }
+	return &api.LedgerDto{Entries: []api.LedgerEntryDto{
+		{Id: 5, SessionNumber: s(12), StageId: st("F7"), Kind: "finding", Content: "GateCache keys by (name, tier, sha) — join attempts for the last pass.", CreatedAt: "2026-07-15T10:05:00Z"},
+		{Id: 4, SessionNumber: s(11), StageId: st("F7"), Kind: "trap", Content: "Never Stop-Process dotnet by name — use conductor bg stop <pid>.", CreatedAt: "2026-07-15T10:03:10Z"},
+	}}
+}
+
+func fixedBugs() *api.BugsDto {
+	s := func(n int) *int { return &n }
+	st := func(x string) *string { return &x }
+	d := func(x string) *string { return &x }
+	return &api.BugsDto{Bugs: []api.BugDto{
+		{Id: 3, Title: "console SSE resets line counter on new session log", Detail: d("since=0 reset re-replays the whole log"), Severity: "medium", Status: "open", StageId: st("F7"), FoundSession: s(12), CreatedAt: "2026-07-15T10:06:00Z"},
+		{Id: 2, Title: "verifier double-counts session cost on resume", Severity: "high", Status: "open", StageId: st("F7"), FoundSession: s(11), CreatedAt: "2026-07-15T10:01:00Z"},
+	}}
 }
 
 func fixedState() *api.StateDto {
@@ -279,6 +300,11 @@ func TestGolden(t *testing.T) {
 		{"timeline", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("t"))
 			m, _ = m.Update(MsgTimelineUpdated{Timeline: &api.TimelineDto{Entries: fixedTimeline()}})
+			return m
+		}},
+		{"knowledge", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("k"))
+			m, _ = m.Update(MsgKnowledgeUpdated{Ledger: fixedLedger(), Bugs: fixedBugs()})
 			return m
 		}},
 		{"console", func(m tea.Model) tea.Model {

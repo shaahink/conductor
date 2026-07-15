@@ -123,6 +123,22 @@ func (s *liveSource) FetchTimeline() (*TimelineDto, error) {
 	return &timeline, nil
 }
 
+func (s *liveSource) FetchLedger() (*LedgerDto, error) {
+	var ledger LedgerDto
+	if err := s.getJSON("/ledger", &ledger); err != nil {
+		return nil, err
+	}
+	return &ledger, nil
+}
+
+func (s *liveSource) FetchBugs() (*BugsDto, error) {
+	var bugs BugsDto
+	if err := s.getJSON("/bugs", &bugs); err != nil {
+		return nil, err
+	}
+	return &bugs, nil
+}
+
 func (s *liveSource) FetchPromptPreview(stageId, kind string) (*PromptPreviewDto, error) {
 	path := "/prompt/preview?stage=" + urlEncode(stageId) + "&kind=" + urlEncode(kind)
 	var preview PromptPreviewDto

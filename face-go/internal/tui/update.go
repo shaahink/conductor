@@ -169,6 +169,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case MsgKnowledgeUpdated:
+		if msg.Ledger != nil {
+			m.data.Ledger = msg.Ledger.Entries
+		}
+		if msg.Bugs != nil {
+			m.data.Bugs = msg.Bugs.Bugs
+		}
+		return m, nil
+
 	case MsgTimelineUpdated:
 		m.timelineLoading = false
 		if msg.Err != "" {
@@ -287,8 +296,10 @@ func (m Model) handleKey(key string) (tea.Model, tea.Cmd) {
 		return m.switchTab(1)
 	case "shift+tab":
 		return m.switchTab(-1)
-	case "1", "2", "3", "4", "5", "6", "7", "8":
-		return m.openTab(MainTab(int(key[0] - '1')))
+	case "1", "2", "3", "4", "5", "6", "7", "8", "9":
+		if t := int(key[0] - '1'); t < int(tabCount) {
+			return m.openTab(MainTab(t))
+		}
 	}
 
 	// Letter mnemonics jump straight to a tab.
@@ -334,6 +345,9 @@ func (m Model) openTab(t MainTab) (tea.Model, tea.Cmd) {
 	case TabSessions:
 		m.sessionSelected = 0 // /sessions is newest-first; land on the current one
 		return m, nil
+	case TabKnowledge:
+		m.knowledgeScroll = 0
+		return m, m.cmdFetchKnowledge()
 	}
 	return m, nil
 }
@@ -370,6 +384,8 @@ func (m Model) handleTabKey(key string) (tea.Model, tea.Cmd) {
 		return m.handlePlanKey(key)
 	case TabReport:
 		return m.handleReportKey(key)
+	case TabKnowledge:
+		return m.handleKnowledgeKey(key)
 	}
 	return m, nil
 }
@@ -396,6 +412,8 @@ func (m Model) handleMouseWheel(msg tea.MouseWheelMsg) (tea.Model, tea.Cmd) {
 		return m.handleTimelineKey(key)
 	case TabProcesses:
 		return m.handleProcessesKey(key)
+	case TabKnowledge:
+		return m.handleKnowledgeKey(key)
 	}
 	return m, nil
 }

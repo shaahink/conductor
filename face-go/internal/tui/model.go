@@ -21,13 +21,14 @@ const (
 	TabTemplates
 	TabPlan
 	TabReport
+	TabKnowledge
 	tabCount
 )
 
-var tabNames = [tabCount]string{"Agent", "Sessions", "Timeline", "Procs", "Console", "Templates", "Plan", "Report"}
+var tabNames = [tabCount]string{"Agent", "Sessions", "Timeline", "Procs", "Console", "Templates", "Plan", "Report", "Knowledge"}
 
 // tabKey is the mnemonic that jumps straight to each tab (also shown in the strip).
-var tabKey = [tabCount]string{"a", "h", "t", "s", "c", "e", "g", "r"}
+var tabKey = [tabCount]string{"a", "h", "t", "s", "c", "e", "g", "r", "k"}
 
 // CmdMode is a transient bottom-bar input that floats over the dashboard instead of a full modal.
 type CmdMode int
@@ -133,6 +134,9 @@ type Model struct {
 
 	// Processes tab
 	processSelected int
+
+	// Knowledge tab (M7: ledger + tracked bugs)
+	knowledgeScroll int
 
 	// Plan tab (M6.3 editor)
 	plan             *api.PlanDto

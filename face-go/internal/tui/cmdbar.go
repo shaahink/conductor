@@ -299,7 +299,8 @@ func (m Model) renderHelpOverlay() string {
 		accentStyle.Render("Tabs") + subtleStyle.Render("  (number or letter jumps straight there)") + "\n" +
 		"  " + key("a") + " Agent    " + key("h") + " Sessions   " + key("t") + " Timeline\n" +
 		"  " + key("s") + " Procs    " + key("c") + " Console    " + key("e") + " Templates\n" +
-		"  " + key("g") + " Plan     " + key("r") + " Report     " + key("tab") + " cycle tabs\n\n" +
+		"  " + key("g") + " Plan     " + key("r") + " Report     " + key("k") + " Knowledge\n" +
+		"  " + key("tab") + " cycle tabs\n\n" +
 		accentStyle.Render("Actions") + "\n" +
 		"  " + key(":") + " command palette   " + key("i") + " inject context\n" +
 		"  " + key("/") + " search transcript " + key("f") + " fold tool calls\n" +

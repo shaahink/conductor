@@ -1,14 +1,14 @@
  ◆ conductor  ● LIVE  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42                 
   a Agent   h Sessions   t Timeline   s Procs   c Console   e Templates   g Plan   r Report   k Knowledge     
                            │                                                                                  
- ▶ PLAN                    │  10:00:00 ◆ stage F7 entered                                                     
- ✓ F0 3/3 Foundations      │  10:00:05 ▸ session #11 Deliver started                                          
- ✓ F6 5/5 Ink TUI v1       │  10:03:40 ✗ gate test: FAIL (4100ms)                                             
- ● F7 2/5 Gate … 1× $0.30  │  10:03:55 ▸ session #11 finished: NeedsRetry  $0.18                              
-   ✓ F7.1 Plan import      │  10:07:00 ⚠ needs human: verifier score 74 < 80                                  
-   ✓ F7.2 Re-import diff   │  5 events · live                                                                 
-   ● F7.3 Truth-gate tier  │                                                                                  
- ○ F8 0/4 conductor chat…  │                                                                                  
+ ▶ PLAN                    │  ◆ Open bugs (2)                                                                 
+ ✓ F0 3/3 Foundations      │    #3 (medium) [F7] console SSE resets line counter on new session log           
+ ✓ F6 5/5 Ink TUI v1       │       since=0 reset re-replays the whole log                                     
+ ● F7 2/5 Gate … 1× $0.30  │    #2 (high) [F7] verifier double-counts session cost on resume                  
+   ✓ F7.1 Plan import      │                                                                                  
+   ✓ F7.2 Re-import diff   │  ◆ Knowledge ledger (2)                                                          
+   ● F7.3 Truth-gate tier  │    [finding] GateCache keys by (name, tier, sha) — join attempts for… (s12/F7)   
+ ○ F8 0/4 conductor chat…  │    [trap] Never Stop-Process dotnet by name — use conductor bg stop … (s11/F7)   
                            │                                                                                  
  ── GATES ──               │                                                                                  
    ✓ build                 │                                                                                  
@@ -31,4 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  p sidebar  ? help  q quit   │   ↑↓ navigate · r refresh                           
+ : cmd  i inject  / search  p sidebar  ? help  q quit   │   2 bugs · 2 ledger · ↑↓ scroll · r refresh         

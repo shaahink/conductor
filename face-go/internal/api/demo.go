@@ -69,6 +69,14 @@ func (s *demoSource) FetchTimeline() (*TimelineDto, error) {
 	return &TimelineDto{Entries: makeFakeTimeline()}, nil
 }
 
+func (s *demoSource) FetchLedger() (*LedgerDto, error) {
+	return &LedgerDto{Entries: makeFakeLedger()}, nil
+}
+
+func (s *demoSource) FetchBugs() (*BugsDto, error) {
+	return &BugsDto{Bugs: makeFakeBugs()}, nil
+}
+
 func (s *demoSource) FetchPromptPreview(stageId, kind string) (*PromptPreviewDto, error) {
 	return &PromptPreviewDto{
 		Model: "deepseek/deepseek-v4-pro",
@@ -514,6 +522,26 @@ func makeFakeTimeline() []TimelineEntryDto {
 		{Utc: "2026-07-15T10:04:10Z", Kind: "session", Description: "session #12 Deliver started", StageId: strPtr("F7"), SessionNumber: num(12)},
 		{Utc: "2026-07-15T10:06:30Z", Kind: "gate", Description: "gate build: pass (2300ms)", StageId: strPtr("F7"), Outcome: strPtr("pass")},
 		{Utc: "2026-07-15T10:07:00Z", Kind: "attention", Description: "needs human: verifier score 74 < 80"},
+	}
+}
+
+// makeFakeLedger mirrors GET /ledger: recent `conductor note` entries injected into later prompts.
+func makeFakeLedger() []LedgerEntryDto {
+	sess := func(n int) *int { return &n }
+	return []LedgerEntryDto{
+		{Id: 5, SessionNumber: sess(12), StageId: strPtr("F7"), Kind: "finding", Content: "GateCache keys by (name, tier, sha) — the last-passing lookup must join attempts to find the most recent pass.", CreatedAt: "2026-07-15T10:05:00Z"},
+		{Id: 4, SessionNumber: sess(11), StageId: strPtr("F7"), Kind: "trap", Content: "Never Stop-Process dotnet by name — it kills unrelated builds. Use conductor bg stop <pid>.", CreatedAt: "2026-07-15T10:03:10Z"},
+		{Id: 3, SessionNumber: sess(11), StageId: strPtr("F7"), Kind: "decision", Content: "Cost of the verifier session is folded into the stage total under category='verify', not the deliver cost.", CreatedAt: "2026-07-15T10:02:40Z"},
+		{Id: 2, SessionNumber: sess(8), StageId: strPtr("F6"), Kind: "observation", Content: "lipgloss v2 counts the border inside .Width(): inner content width is width−3 for a single-side border.", CreatedAt: "2026-07-15T09:40:00Z"},
+	}
+}
+
+// makeFakeBugs mirrors GET /bugs (open-by-default): tracked bugs that outlive the session that filed them.
+func makeFakeBugs() []BugDto {
+	sess := func(n int) *int { return &n }
+	return []BugDto{
+		{Id: 3, Title: "console SSE resets line counter when a new session log appears", Detail: strPtr("StreamConsoleAsync resets `since=0` on path change — a reconnecting client re-replays the whole log."), Severity: "medium", Status: "open", StageId: strPtr("F7"), FoundSession: sess(12), CreatedAt: "2026-07-15T10:06:00Z"},
+		{Id: 2, Title: "verifier double-counts session cost on resume", Detail: strPtr("TokenDelta folded twice when a session resumes after a stall."), Severity: "high", Status: "open", StageId: strPtr("F7"), FoundSession: sess(11), CreatedAt: "2026-07-15T10:01:00Z"},
 	}
 }
 

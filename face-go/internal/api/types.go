@@ -10,6 +10,8 @@ type DataSource interface {
 	FetchProcesses() (*ProcessesDto, error)
 	FetchSessions() (*SessionsDto, error)
 	FetchTimeline() (*TimelineDto, error)
+	FetchLedger() (*LedgerDto, error)
+	FetchBugs() (*BugsDto, error)
 	FetchPromptPreview(stageId, kind string) (*PromptPreviewDto, error)
 	QueryReport(sql string) (*QueryResultDto, error)
 	PostControl(cmd ControlRequestDto) (*ControlAcceptedDto, error)
@@ -168,6 +170,40 @@ type TimelineEntryDto struct {
 
 type TimelineDto struct {
 	Entries []TimelineEntryDto `json:"entries"`
+}
+
+// --- M7: knowledge that compounds (mirror Core/Http/ControlPlaneDto.Ledger.cs / .Bugs.cs) ---
+
+// LedgerEntryDto is one knowledge-ledger row (a `conductor note`), surfaced by GET /ledger.
+type LedgerEntryDto struct {
+	Id            int64   `json:"id"`
+	SessionNumber *int    `json:"sessionNumber"`
+	StageId       *string `json:"stageId"`
+	Kind          string  `json:"kind"`
+	Content       string  `json:"content"`
+	CreatedAt     string  `json:"createdAt"`
+}
+
+type LedgerDto struct {
+	Entries []LedgerEntryDto `json:"entries"`
+}
+
+// BugDto is one tracked bug (a `conductor bug new`), surfaced by GET /bugs.
+type BugDto struct {
+	Id            int64   `json:"id"`
+	Title         string  `json:"title"`
+	Detail        *string `json:"detail"`
+	Severity      string  `json:"severity"`
+	Status        string  `json:"status"`
+	StageId       *string `json:"stageId"`
+	FoundSession  *int    `json:"foundSession"`
+	FixedSession  *int    `json:"fixedSession"`
+	CreatedAt     string  `json:"createdAt"`
+	UpdatedAt     string  `json:"updatedAt"`
+}
+
+type BugsDto struct {
+	Bugs []BugDto `json:"bugs"`
 }
 
 // PromptPreviewDto mirrors the C# record (GET /prompt/preview?stage=&kind=): the exact compiled
@@ -350,6 +386,8 @@ type AppState struct {
 	Events       []ConductorEventDto
 	Transcript   []TranscriptLineDto
 	RawConsole   []ConsoleLineDto
+	Ledger       []LedgerEntryDto
+	Bugs         []BugDto
 	LastEventSeq int64
 	LastTxSeq    int64
 

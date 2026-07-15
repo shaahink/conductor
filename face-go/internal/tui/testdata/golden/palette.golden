@@ -1,5 +1,5 @@
  ◆ conductor  ● LIVE  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42 
-  a Agent   h Sessions   t Timeline   s Procs   c Console   e Templates   g Plan   r Report  
+  a Agent   h Sessions   t Timeline   s Procs   c Console   e Templates   g Plan   r Report   k Knowledge  
                            │
  ▶ PLAN                    │  s12 Deliver · attempt 1/3  ◆ F7.3 Wire caching layer                     ⠋ 41s
  ✓ F0 3/3 Foundations      │  build ✓ · test ● 4s · lint ○    task 1/3 ▸ Wire RunDb.GetLastPassingGateResult

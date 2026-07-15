@@ -71,6 +71,12 @@ type MsgTimelineUpdated struct {
 	Err      string
 }
 
+// MsgKnowledgeUpdated carries the M7 ledger + bugs snapshot (polled together).
+type MsgKnowledgeUpdated struct {
+	Ledger *api.LedgerDto
+	Bugs   *api.BugsDto
+}
+
 type MsgPromptPreview struct {
 	Preview *api.PromptPreviewDto
 	Err     string

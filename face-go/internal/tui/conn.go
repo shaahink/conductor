@@ -14,7 +14,22 @@ func (m Model) doPoll() tea.Cmd {
 		m.cmdFetchTasks(),
 		m.cmdFetchProcesses(),
 		m.cmdFetchSessions(),
+		m.cmdFetchKnowledge(),
 	)
+}
+
+// cmdFetchKnowledge polls the M7 ledger + bugs together (both are small snapshot endpoints). A failure
+// on either is swallowed (nil msg), mirroring the other snapshot polls — knowledge is never load-bearing.
+func (m Model) cmdFetchKnowledge() tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		ledger, lerr := source.FetchLedger()
+		bugs, berr := source.FetchBugs()
+		if lerr != nil && berr != nil {
+			return nil
+		}
+		return MsgKnowledgeUpdated{Ledger: ledger, Bugs: bugs}
+	}
 }
 
 func (m Model) cmdFetchState() tea.Cmd {
