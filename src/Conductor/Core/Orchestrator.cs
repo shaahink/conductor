@@ -20,7 +20,6 @@ public sealed record RunOptions(bool DryRun, bool Once, int MaxSessions, bool Co
 /// Thin wiring hub: owns DI construction for RunContext + the five orchestration satellites.
 /// The run loop, session lifecycle, and verdict decisions live in RunLoop / SessionRunner / VerdictEngine.
 /// </summary>
-#pragma warning disable MA0045
 public sealed class Orchestrator
 {
     private readonly RunContext _ctx;

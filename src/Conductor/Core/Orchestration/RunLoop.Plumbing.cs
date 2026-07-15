@@ -295,6 +295,14 @@ public sealed partial class RunLoop
             if (File.Exists(promptPath))
                 File.Copy(promptPath, Path.Combine(sessionDir, "prompt.md"), overwrite: true);
 
+            // transcript.md — human-readable rendering of the raw agent stream (logs/session-NNN.jsonl).
+            // The design doc (M2.4) lists transcript.md alongside prompt/verdict/handover/cost; the raw
+            // stream is captured as NDJSON, so we fold it into readable markdown here rather than ship the
+            // wire format into the history dir.
+            var rawPath = Path.Combine(_ctx.Plan.StateDir, "logs", $"session-{rec.Number:000}.jsonl");
+            if (File.Exists(rawPath))
+                File.WriteAllText(Path.Combine(sessionDir, "transcript.md"), RenderTranscript(rawPath, rec));
+
             // cost.json
             var cost = new
             {
@@ -366,4 +374,67 @@ public sealed partial class RunLoop
             _ctx.Log($"session history write failed: {ex.Message}");
         }
     }
+
+    /// <summary>Fold the raw agent NDJSON stream (logs/session-NNN.jsonl) into readable markdown for
+    /// the session-history dir. Best-effort and provider-shaped like the opencode/claude wire vocab
+    /// (text / tool_use / error); any line we cannot parse is preserved verbatim in a code fence so a
+    /// new provider format never silently drops content.</summary>
+    internal static string RenderTranscript(string rawJsonlPath, SessionRecord rec)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"# Session {rec.Number:000} — {rec.Stage} — {rec.Kind}");
+        sb.AppendLine();
+
+        string[] lines;
+        try { lines = File.ReadAllLines(rawJsonlPath); }
+        catch (IOException) { return sb.ToString(); }
+
+        foreach (var raw in lines)
+        {
+            var line = raw.Trim().TrimStart('﻿'); // strip a UTF-8 BOM on the first line
+            if (line.Length == 0) continue;
+
+            JsonElement part = default;
+            string? type;
+            try
+            {
+                using var doc = JsonDocument.Parse(line);
+                var root = doc.RootElement;
+                type = root.TryGetProperty("type", out var ty) ? ty.GetString() : null;
+                if (root.TryGetProperty("part", out var p) && p.ValueKind == JsonValueKind.Object)
+                    part = p.Clone();
+            }
+            catch (JsonException)
+            {
+                sb.AppendLine("```"); sb.AppendLine(line); sb.AppendLine("```"); sb.AppendLine();
+                continue;
+            }
+
+            switch (type)
+            {
+                case "text":
+                    if (part.ValueKind == JsonValueKind.Object && part.TryGetProperty("text", out var txt)
+                        && txt.GetString() is { Length: > 0 } s)
+                    { sb.AppendLine(s); sb.AppendLine(); }
+                    break;
+                case "tool_use":
+                    var tool = part.ValueKind == JsonValueKind.Object && part.TryGetProperty("tool", out var tl)
+                        ? tl.GetString() : "tool";
+                    sb.AppendLine($"- **{tool}** — {TranscriptTitle(part)}");
+                    break;
+                case "error":
+                    if (part.ValueKind == JsonValueKind.Object && part.TryGetProperty("text", out var et))
+                        sb.AppendLine($"> **error:** {et.GetString()}");
+                    sb.AppendLine();
+                    break;
+                // step_start / step_finish are cost/token bookkeeping — recorded in cost.json, not here.
+            }
+        }
+        return sb.ToString();
+    }
+
+    private static string TranscriptTitle(JsonElement part) =>
+        part.TryGetProperty("state", out var st) && st.ValueKind == JsonValueKind.Object
+            && st.TryGetProperty("title", out var title)
+            ? title.GetString() ?? "" : "";
 }

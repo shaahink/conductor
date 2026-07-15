@@ -19,11 +19,11 @@ namespace Conductor.Commands;
 /// call; the only network is the cheap reachability probes <see cref="PreflightHealth"/> already
 /// does with a 10s timeout each. Read-only; never writes state.
 /// </summary>
-public sealed class DoctorCommand : Command<PlanSettings>
+public sealed class DoctorCommand : AsyncCommand<PlanSettings>
 {
     internal sealed record Check(string Name, string State, string Message); // State: ok | warn | fail
 
-    public override int Execute(CommandContext context, PlanSettings settings)
+    public override async Task<int> ExecuteAsync(CommandContext context, PlanSettings settings)
     {
         var sw = Stopwatch.StartNew();
         var plan = PlanConfig.Load(settings.ResolvePlanPath());
@@ -32,9 +32,7 @@ public sealed class DoctorCommand : Command<PlanSettings>
         AnsiConsole.MarkupLine($"repo: {Markup.Escape(plan.Repo)}");
         AnsiConsole.WriteLine();
 
-#pragma warning disable MA0045 // sync CLI boundary (Spectre.Cli Execute must return int) — same pattern as RunCommand.Execute
-        var checks = RunChecksAsync(plan).GetAwaiter().GetResult();
-#pragma warning restore MA0045
+        var checks = await RunChecksAsync(plan).ConfigureAwait(false);
         sw.Stop();
 
         foreach (var c in checks) AnsiConsole.MarkupLine(RenderCheck(c));

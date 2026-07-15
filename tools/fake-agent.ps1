@@ -64,7 +64,7 @@ if ($trackerItem) {
         O "tool_use" @{ tool = "Edit"; state = @{ title = $trackerItem.Name } }
         Step "flipping tracker row" 150 80 0.0002
     } else {
-        # no TODO row found — scenario may already be advanced
+        # no TODO row found - scenario may already be advanced
     }
 } else {
     O "text" @{ text = "No *-START.md tracker found in $Repo" }
@@ -81,7 +81,7 @@ if ($Mode -eq "true-red") {
     O "tool_use" @{ tool = "Write"; state = @{ title = "tools\fake-red.cs" } }
     O "tool_use" @{ tool = "Bash"; state = @{ title = "git add -A; git commit" } }
     Step "committing fake-red" 100 50 0.0001
-    O "text" @{ text = "SESSION-RESULT: introduced compile error — gates SHOULD be red." }
+    O "text" @{ text = "SESSION-RESULT: introduced compile error - gates SHOULD be red." }
     exit 0
 }
 
