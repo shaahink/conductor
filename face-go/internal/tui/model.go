@@ -65,8 +65,8 @@ type Model struct {
 
 	data api.AppState
 
-	tab             MainTab
-	cmd             CmdMode
+	tab              MainTab
+	cmd              CmdMode
 	sidebarCollapsed bool
 
 	transcript widgets.TranscriptModel
@@ -74,6 +74,10 @@ type Model struct {
 
 	toasts     []widgets.Toast
 	toastAnims map[int]*toastAnimState
+
+	// Liveness spinner (top bar): ticks only while the engine reports an active agent session.
+	spinnerFrame int
+	spinnerLive  bool
 
 	// Inline transcript search (non-blocking, Agent tab only).
 	searchActive bool
@@ -144,7 +148,6 @@ type Model struct {
 	planImportInput  string
 	planImportResult *api.PlanImportResultDto
 	planImportErr    string
-	planLoadRequested bool
 }
 
 func New(source api.DataSource, isDemo bool, baseURL string) Model {

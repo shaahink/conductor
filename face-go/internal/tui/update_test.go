@@ -342,4 +342,3 @@ func TestPromptCompiledPreviewToggle(t *testing.T) {
 		t.Error("esc should hide the preview and stay on the Templates tab")
 	}
 }
-

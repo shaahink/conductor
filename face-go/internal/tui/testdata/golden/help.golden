@@ -1,24 +1,24 @@
- ◆ conductor  ● LIVE  conductor-foreman  F7 Gate caching + truth gates + spee…  ● $0.12  cp 2/40  $0.42 
+ ◆ conductor  ● LIVE  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42 
   a Agent   h Sessions   t Timeline   s Procs   c Console   e Templates   g Plan   r Report  
                            │
- ▶ PLAN                    │  ▸ Session #12 started · Deliver · Stage F7 · Attempt 1
- ✓ F0 3/3 Foundations      │  ⁙ Let me examine the GateCache implementation...
- ✓ F6 5/5 Ink TUI v1       │  ⚙ read src/Conductor/Core/Gating/GateCache.cs
- ● F7 2/5 Gate c… 1× $0.30 │  ↳ GateCache.cs:142 lines — caches by (name, tier, sha)
-   ✓  F7.1 Plan import     │  ▸ Found the caching layer. Adding GetLastPassingGateResult to RunDb.
-   ✓  F7.2 Re-import diff  │╭───────────────────────────────────────────────────╮
-   ●  F7.3 Truth-gate tier ││                                                   │
- ○ F8 0/4 conductor chat … ││   ◆ conductor  ·  keys                            │
+ ▶ PLAN                    │  s12 Deliver · attempt 1/3  ◆ F7.3 Wire caching layer                     ⠋ 41s
+ ✓ F0 3/3 Foundations      │  build ✓ · test ● 4s · lint ○    task 1/3 ▸ Wire RunDb.GetLastPassingGateResult
+ ✓ F6 5/5 Ink TUI v1       │  ──────────────────────────────────────────────────────────────────────────────
+ ● F7 2/5 Gate … 1× $0.30  │  10:04:01 ▸ Session #12 started · Deliver · Stage F7 · Attempt 1
+   ✓ F7.1 Plan import      │  10:04:09 ⁙ Let me examine the GateCache implementation...
+   ✓ F7.2 Re-import diff   │╭───────────────────────────────────────────────────╮.cs
+   ● F7.3 Truth-gate tier  ││                                                   │, tier, sha)
+ ○ F8 0/4 conductor chat…  ││   ◆ conductor  ·  keys                            │assingGateResult to RunDb.
                            ││                                                   │
  ── GATES ──               ││   Tabs  (number or letter jumps straight there)   │
-   ✓  build                ││     a Agent    h Sessions   t Timeline            │
-   ●  test                 ││     s Procs    c Console    e Templates           │
-   ○  lint                 ││     g Plan     r Report     tab cycle tabs        │
+   ✓ build                 ││     a Agent    h Sessions   t Timeline            │
+   ● test 4s               ││     s Procs    c Console    e Templates           │
+   ○ lint                  ││     g Plan     r Report     tab cycle tabs        │
                            ││                                                   │
-                           ││   Actions                                         │
-                           ││     : command palette   i inject context          │
-                           ││     / search transcript f fold tool calls         │
-                           ││     p collapse sidebar  ↑↓ navigate               │
+ ── TASKS ──               ││   Actions                                         │
+   ✓ Add truth-tier con…   ││     : command palette   i inject context          │
+   ● Wire RunDb.GetLast…   ││     / search transcript f fold tool calls         │
+   ○ Cache gate results…   ││     p collapse sidebar  ↑↓ scroll / navigate      │
                            ││                                                   │
                            ││   Global                                          │
                            ││     q quit   esc close / cancel   ? this help     │
@@ -31,5 +31,4 @@
                            │
                            │
                            │
-                           │
- : cmd  i inject  / search  p sidebar  ? help  q quit   │   ↑↓ scroll · f fold · / search 
+ : cmd  i inject  / search  p sidebar  ? help  q quit   │   ↑↓ scroll · f fold · / search · end live-tail 

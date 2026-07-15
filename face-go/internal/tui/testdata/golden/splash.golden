@@ -1,9 +1,22 @@
- ◆ conductor  ● LIVE                                                                                          
+ ◆ conductor  ● OFFLINE  waiting for a run at http://127.0.0.1:4317                                           
   a Agent   h Sessions   t Timeline   s Procs   c Console   e Templates   g Plan   r Report                   
                            │                                                                                  
  ▶ PLAN                    │                                                                                  
                            │                                                                                  
- ── GATES ──               │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │  ◆ conductor  — the autonomous engineering conductor                             
+                           │                                                                                  
+                           │  No run attached.                                                                
+                           │                                                                                  
+                           │  Start one:                                                                      
+                           │    conductor run --control-plane -p plans/<your>.plan.json                       
+                           │                                                                                  
+                           │  This face auto-discovers .conductor/control-plane.json and attaches.            
+                           │  Or explore offline:  conductor-face --demo                                      
+                           │                                                                                  
+                           │  waiting on http://127.0.0.1:4317                                                
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
@@ -18,18 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
- : cmd  i inject  / search  p sidebar  ? help  q quit   │   ↑↓ scroll · f fold · / search                     
+ : cmd  i inject  / search  p sidebar  ? help  q quit   │   ↑↓ scroll · f fold · / search · end live-tail     

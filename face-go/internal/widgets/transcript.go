@@ -9,6 +9,9 @@ import (
 	"conductor-face-go/internal/api"
 )
 
+// TranscriptModel renders the agent's live transcript. ScrollOffset counts lines back from the
+// live tail (0 = pinned to the newest line), matching how a human thinks about scrollback — one
+// ↑ press moves one step into history, never teleports to the top of a 4000-line buffer.
 type TranscriptModel struct {
 	Lines          []api.TranscriptLineDto
 	ScrollOffset   int
@@ -19,7 +22,6 @@ type TranscriptModel struct {
 	FoldTools      bool
 	Width          int
 	Height         int
-	Focused        bool
 }
 
 func NewTranscript() TranscriptModel {
@@ -29,8 +31,6 @@ func NewTranscript() TranscriptModel {
 		Height:     20,
 	}
 }
-
-func (m TranscriptModel) Init() TranscriptModel { return m }
 
 func (m TranscriptModel) Update(msg any) TranscriptModel {
 	switch msg := msg.(type) {
@@ -43,38 +43,22 @@ func (m TranscriptModel) Update(msg any) TranscriptModel {
 		}
 		return m
 
-	case MsgSetLines:
-		if lines, ok := msg.Lines.([]api.TranscriptLineDto); ok {
-			m.Lines = lines
-		}
-		return m
-
 	case WidgetMsg:
 		switch msg {
 		case MsgScrollUp:
-			m.AutoScroll = false
-			m.ScrollOffset += 5
+			m.scrollBack(3)
 			return m
 
 		case MsgScrollDown:
-			m.ScrollOffset -= 5
-			if m.ScrollOffset <= 0 {
-				m.ScrollOffset = 0
-				m.AutoScroll = true
-			}
+			m.scrollForward(3)
 			return m
 
 		case MsgScrollPageUp:
-			m.AutoScroll = false
-			m.ScrollOffset += m.Height
+			m.scrollBack(m.Height)
 			return m
 
 		case MsgScrollPageDown:
-			m.ScrollOffset -= m.Height
-			if m.ScrollOffset <= 0 {
-				m.ScrollOffset = 0
-				m.AutoScroll = true
-			}
+			m.scrollForward(m.Height)
 			return m
 
 		case MsgScrollEnd:
@@ -85,6 +69,11 @@ func (m TranscriptModel) Update(msg any) TranscriptModel {
 		case MsgToggleFold:
 			m.FoldTools = !m.FoldTools
 			m.ScrollOffset = 0
+			m.AutoScroll = true
+			if m.SearchQuery != "" {
+				m.SearchMatches = m.findMatches(m.SearchQuery)
+				m.SearchMatchIdx = 0
+			}
 			return m
 
 		case MsgNextMatch:
@@ -111,50 +100,97 @@ func (m TranscriptModel) Update(msg any) TranscriptModel {
 		m.SearchMatches = nil
 		if msg.Query != "" {
 			m.SearchMatches = m.findMatches(msg.Query)
+			if len(m.SearchMatches) > 0 {
+				m.jumpToMatch()
+			}
+		} else {
+			m.ScrollOffset = 0
+			m.AutoScroll = true
 		}
 		return m
 	}
 	return m
 }
 
+func (m *TranscriptModel) scrollBack(step int) {
+	m.ScrollOffset += step
+	if maxOff := m.maxScrollOffset(); m.ScrollOffset > maxOff {
+		m.ScrollOffset = maxOff
+	}
+	m.AutoScroll = m.ScrollOffset == 0
+}
+
+// maxScrollOffset accounts for the "N lines below" note row that appears once scrolled, so the
+// oldest line remains reachable.
+func (m TranscriptModel) maxScrollOffset() int {
+	rows := m.Height - 1
+	if rows < 1 {
+		rows = 1
+	}
+	maxOff := len(m.visibleLines()) - rows
+	if maxOff < 0 {
+		maxOff = 0
+	}
+	return maxOff
+}
+
+func (m *TranscriptModel) scrollForward(step int) {
+	m.ScrollOffset -= step
+	if m.ScrollOffset <= 0 {
+		m.ScrollOffset = 0
+	}
+	m.AutoScroll = m.ScrollOffset == 0
+}
+
 func (m TranscriptModel) View() string {
 	visible := m.visibleLines()
-	if m.AutoScroll && len(visible) > m.Height {
-		start := len(visible) - m.Height
-		if start < 0 {
-			start = 0
-		}
-		visible = visible[start:]
-	} else if m.ScrollOffset > 0 {
-		start := m.ScrollOffset
-		if start > len(visible) {
-			start = len(visible) - 1
-		}
-		if start < 0 {
-			start = 0
-		}
-		visible = visible[start:]
-		if len(visible) > m.Height {
-			visible = visible[:m.Height]
-		}
-	} else if len(visible) > m.Height {
-		visible = visible[len(visible)-m.Height:]
+	total := len(visible)
+
+	off := m.ScrollOffset
+	if m.AutoScroll {
+		off = 0
+	}
+	if maxOff := m.maxScrollOffset(); off > maxOff {
+		off = maxOff
+	}
+
+	// When scrolled back, the last row becomes a "N lines below" note — inside the height
+	// budget, so the pane never grows and pushes the layout down.
+	h := m.Height
+	scrolled := off > 0
+	if scrolled && h > 1 {
+		h--
+	}
+
+	end := total - off
+	start := end - h
+	if start < 0 {
+		start = 0
+	}
+	window := visible[start:end]
+
+	matchLine := -1
+	if len(m.SearchMatches) > 0 && m.SearchMatchIdx < len(m.SearchMatches) {
+		matchLine = m.SearchMatches[m.SearchMatchIdx]
 	}
 
 	var sb strings.Builder
-
-	for _, line := range visible {
-		rendered := renderTranscriptLine(line, m.Width)
-		sb.WriteString(rendered)
+	for i, line := range window {
+		sb.WriteString(renderTranscriptLine(line, m.Width, m.SearchQuery, start+i == matchLine))
 		sb.WriteByte('\n')
 	}
 
 	content := strings.TrimRight(sb.String(), "\n")
 	linesRendered := len(strings.Split(content, "\n"))
-	for i := linesRendered; i < m.Height; i++ {
+	for i := linesRendered; i < h; i++ {
 		content += "\n"
 	}
 
+	if scrolled {
+		note := dimStyle.Render(fmt.Sprintf("↕ %d lines below · ", off)) +
+			lipgloss.NewStyle().Foreground(colYellow).Render("end") + dimStyle.Render(" to live-tail")
+		content += "\n" + note
+	}
 	return content
 }
 
@@ -192,6 +228,7 @@ func (m TranscriptModel) foldedLines() []api.TranscriptLineDto {
 			result = append(result, api.TranscriptLineDto{
 				Kind: "tool-fold",
 				Text: summary,
+				Ts:   line.Ts,
 			})
 			i = j
 		} else {
@@ -202,40 +239,81 @@ func (m TranscriptModel) foldedLines() []api.TranscriptLineDto {
 	return result
 }
 
-func renderTranscriptLine(line api.TranscriptLineDto, width int) string {
+func renderTranscriptLine(line api.TranscriptLineDto, width int, query string, isCurrentMatch bool) string {
 	var prefix string
 	var style lipgloss.Style
 
 	switch line.Kind {
 	case "thinking":
-		prefix = dim("\u2059 ")
+		prefix = dim("⁙ ")
 		style = txThinkingStyle
 	case "tool":
-		prefix = purple("\u2699 ")
+		prefix = purple("⚙ ")
 		style = txToolStyle
 	case "tool-fold":
-		prefix = purple("\u2699\u25B6 ")
+		prefix = purple("⚙▶ ")
 		style = txToolStyle
 	case "result":
-		prefix = green("\u21B3 ")
+		prefix = green("↳ ")
 		style = txResultStyle
 	case "stderr":
 		prefix = red("! ")
 		style = txStderrStyle
 	case "system":
-		prefix = blue("\u25B8 ")
+		prefix = blue("▸ ")
 		style = txSystemStyle
 	case "agent":
-		prefix = cyan("\u25B8 ")
+		prefix = cyan("▸ ")
 		style = txAgentStyle
 	default:
 		prefix = dim("  ")
 		style = txRawStyle
 	}
 
+	// A wall-clock prefix (like the Ink face had) — skipped at narrow widths and for lines whose
+	// producer didn't stamp a time. UTC so golden frames are timezone-independent.
+	clock := ""
+	if width >= 70 && !line.Ts.IsZero() {
+		clock = txTimeStyle.Render(line.Ts.UTC().Format("15:04:05")) + " "
+	}
+
+	body := highlightMatches(line.Text, query, style, isCurrentMatch)
+
 	// MaxWidth truncates ANSI-safely (via ansi.Truncate internally) — a manual byte-slice here
 	// would cut mid-escape-sequence and corrupt the rest of the line's styling.
-	return style.MaxWidth(width).Render(prefix + line.Text)
+	return lipgloss.NewStyle().MaxWidth(width).Render(clock + prefix + body)
+}
+
+// highlightMatches paints every occurrence of query inside text, keeping the line's own style for
+// the rest. The current match's line gets a bolder treatment via isCurrentMatch.
+func highlightMatches(text, query string, style lipgloss.Style, isCurrentMatch bool) string {
+	if query == "" {
+		return style.Render(text)
+	}
+	lowText, lowQuery := strings.ToLower(text), strings.ToLower(query)
+	// Case-folding can change byte length for exotic Unicode; byte offsets into lowText would
+	// then mis-slice text. Highlighting is best-effort — skip it rather than corrupt the line.
+	if len(lowText) != len(text) {
+		return style.Render(text)
+	}
+	idx := strings.Index(lowText, lowQuery)
+	if idx < 0 {
+		return style.Render(text)
+	}
+	match := txMatchStyle
+	if isCurrentMatch {
+		match = match.Bold(true)
+	}
+	var sb strings.Builder
+	for idx >= 0 {
+		sb.WriteString(style.Render(text[:idx]))
+		sb.WriteString(match.Render(text[idx : idx+len(query)]))
+		text = text[idx+len(query):]
+		lowText = lowText[idx+len(query):]
+		idx = strings.Index(lowText, lowQuery)
+	}
+	sb.WriteString(style.Render(text))
+	return sb.String()
 }
 
 func (m TranscriptModel) findMatches(query string) []int {
@@ -249,13 +327,20 @@ func (m TranscriptModel) findMatches(query string) []int {
 	return matches
 }
 
+// jumpToMatch scrolls so the current match sits mid-window.
 func (m *TranscriptModel) jumpToMatch() {
-	if len(m.SearchMatches) > 0 && m.SearchMatchIdx < len(m.SearchMatches) {
-		lineIdx := m.SearchMatches[m.SearchMatchIdx]
-		m.ScrollOffset = lineIdx
-		if m.ScrollOffset < 0 {
-			m.ScrollOffset = 0
-		}
-		m.AutoScroll = false
+	if len(m.SearchMatches) == 0 || m.SearchMatchIdx >= len(m.SearchMatches) {
+		return
 	}
+	total := len(m.visibleLines())
+	matchIdx := m.SearchMatches[m.SearchMatchIdx]
+	end := matchIdx + m.Height/2
+	if end < m.Height {
+		end = m.Height
+	}
+	if end > total {
+		end = total
+	}
+	m.ScrollOffset = total - end
+	m.AutoScroll = m.ScrollOffset == 0
 }

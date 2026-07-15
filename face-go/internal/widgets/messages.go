@@ -11,26 +11,18 @@ const (
 	MsgToggleFold
 	MsgNextMatch
 	MsgPrevMatch
-	MsgSelectUp
-	MsgSelectDown
-	MsgSelectExpand
 )
-
-type MsgSetLines struct {
-	Lines interface{}
-}
 
 type MsgAppendLine struct {
 	Line interface{}
 }
 
+// MsgSetData refreshes the sidebar's glanceable content: plan stages, gate battery, and the live
+// MCP task list for the current session.
 type MsgSetData struct {
 	Stages interface{}
 	Gates  interface{}
-}
-
-type MsgToggleStage struct {
-	StageId string
+	Tasks  interface{}
 }
 
 type MsgSetSearch struct {

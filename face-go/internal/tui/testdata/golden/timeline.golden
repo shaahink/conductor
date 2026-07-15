@@ -1,25 +1,24 @@
- ◆ conductor  ● LIVE  conductor-foreman  F7 Gate caching + truth gates + spee…  ● $0.12  cp 2/40  $0.42       
+ ◆ conductor  ● LIVE  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42                 
   a Agent   h Sessions   t Timeline   s Procs   c Console   e Templates   g Plan   r Report                   
                            │                                                                                  
  ▶ PLAN                    │  10:00:00 ◆ stage F7 entered                                                     
  ✓ F0 3/3 Foundations      │  10:00:05 ▸ session #11 Deliver started                                          
  ✓ F6 5/5 Ink TUI v1       │  10:03:40 ✗ gate test: FAIL (4100ms)                                             
- ● F7 2/5 Gate c… 1× $0.30 │  10:03:55 ▸ session #11 finished: NeedsRetry  $0.18                              
-   ✓  F7.1 Plan import     │  10:07:00 ⚠ needs human: verifier score 74 < 80                                  
-   ✓  F7.2 Re-import diff  │                                                                                  
-   ●  F7.3 Truth-gate tier │                                                                                  
- ○ F8 0/4 conductor chat … │                                                                                  
+ ● F7 2/5 Gate … 1× $0.30  │  10:03:55 ▸ session #11 finished: NeedsRetry  $0.18                              
+   ✓ F7.1 Plan import      │  10:07:00 ⚠ needs human: verifier score 74 < 80                                  
+   ✓ F7.2 Re-import diff   │  5 events · live                                                                 
+   ● F7.3 Truth-gate tier  │                                                                                  
+ ○ F8 0/4 conductor chat…  │                                                                                  
                            │                                                                                  
  ── GATES ──               │                                                                                  
-   ✓  build                │                                                                                  
-   ●  test                 │                                                                                  
-   ○  lint                 │                                                                                  
+   ✓ build                 │                                                                                  
+   ● test 4s               │                                                                                  
+   ○ lint                  │                                                                                  
                            │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
+ ── TASKS ──               │                                                                                  
+   ✓ Add truth-tier con…   │                                                                                  
+   ● Wire RunDb.GetLast…   │                                                                                  
+   ○ Cache gate results…   │                                                                                  
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  

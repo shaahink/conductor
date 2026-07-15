@@ -97,3 +97,13 @@ func CmdTick() tea.Cmd {
 		return MsgTick(t)
 	})
 }
+
+// MsgSpinnerTick drives the top-bar liveness spinner. It is armed only while the engine reports
+// an active agent session (see Update), so an idle dashboard costs nothing.
+type MsgSpinnerTick struct{}
+
+func cmdSpinnerTick() tea.Cmd {
+	return tea.Tick(120*time.Millisecond, func(time.Time) tea.Msg {
+		return MsgSpinnerTick{}
+	})
+}

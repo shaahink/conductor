@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"testing"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -154,12 +155,23 @@ func fixedPlan() *api.PlanDto {
 }
 
 func fixedTranscript() []api.TranscriptLineDto {
+	// Fixed UTC timestamps: the transcript renders a wall-clock prefix, and goldens must not
+	// depend on the machine's clock or timezone.
+	at := func(sec int) time.Time { return time.Date(2026, 7, 15, 10, 4, sec, 0, time.UTC) }
 	return []api.TranscriptLineDto{
-		{Seq: 1, SessionId: "12", Kind: "system", Text: "Session #12 started · Deliver · Stage F7 · Attempt 1"},
-		{Seq: 2, SessionId: "12", Kind: "thinking", Text: "Let me examine the GateCache implementation..."},
-		{Seq: 3, SessionId: "12", Kind: "tool", Text: "read src/Conductor/Core/Gating/GateCache.cs"},
-		{Seq: 4, SessionId: "12", Kind: "result", Text: "GateCache.cs:142 lines — caches by (name, tier, sha)"},
-		{Seq: 5, SessionId: "12", Kind: "agent", Text: "Found the caching layer. Adding GetLastPassingGateResult to RunDb."},
+		{Seq: 1, Ts: at(1), SessionId: "12", Kind: "system", Text: "Session #12 started · Deliver · Stage F7 · Attempt 1"},
+		{Seq: 2, Ts: at(9), SessionId: "12", Kind: "thinking", Text: "Let me examine the GateCache implementation..."},
+		{Seq: 3, Ts: at(14), SessionId: "12", Kind: "tool", Text: "read src/Conductor/Core/Gating/GateCache.cs"},
+		{Seq: 4, Ts: at(15), SessionId: "12", Kind: "result", Text: "GateCache.cs:142 lines — caches by (name, tier, sha)"},
+		{Seq: 5, Ts: at(22), SessionId: "12", Kind: "agent", Text: "Found the caching layer. Adding GetLastPassingGateResult to RunDb."},
+	}
+}
+
+func fixedTasks() []api.TaskDto {
+	return []api.TaskDto{
+		{TaskId: "T1", CheckpointId: "F7.3", Title: "Add truth-tier config to GateConfig", Status: "done", Source: "planner", Order: 1},
+		{TaskId: "T2", CheckpointId: "F7.3", Title: "Wire RunDb.GetLastPassingGateResult", Status: "in_progress", Source: "agent", Order: 2},
+		{TaskId: "T3", CheckpointId: "F7.4", Title: "Cache gate results by (name, tier, sha)", Status: "todo", Source: "planner", Order: 3},
 	}
 }
 
@@ -188,12 +200,14 @@ func newGoldenModel(width, height int) tea.Model {
 		{Pid: 4512, Purpose: "session", StageId: strPtr("F7"), Alive: true, StartedUtc: "2026-07-15T10:00:00Z", ExitedUtc: strPtr("2026-07-15T10:04:32Z"), LastOutputLine: strPtr("[agent] Working on gate caching...")},
 		{Pid: 8723, Purpose: "gate:test", StageId: strPtr("F7"), Alive: false, StartedUtc: "2026-07-15T10:01:00Z", ExitedUtc: strPtr("2026-07-15T10:01:19Z"), LastOutputLine: strPtr("Running GateCacheTests... (12/12)")},
 	}}})
+	// Newest-first, mirroring the real GET /sessions (ORDER BY number DESC).
 	m, _ = m.Update(MsgSessionsUpdated{Sessions: &api.SessionsDto{Sessions: []api.SessionRowDto{
+		{Number: 12, StageId: "F7", Kind: "Deliver", Outcome: nil, Attempt: 2, CommitCount: 0},
 		{Number: 11, StageId: "F7", Kind: "Deliver", Outcome: strPtr("needsRetry"), Attempt: 1, CommitCount: 2,
 			GateSummary:   strPtr("build ✓ test ✗ lint ○"),
 			ResultSummary: strPtr("Wired the **caching layer** in `RunDb` but `test` still red — see gate output.")},
-		{Number: 12, StageId: "F7", Kind: "Deliver", Outcome: nil, Attempt: 2, CommitCount: 0},
 	}}})
+	m, _ = m.Update(MsgTasksUpdated{Tasks: &api.TasksDto{Tasks: fixedTasks()}})
 	for _, tx := range fixedTranscript() {
 		m, _ = m.Update(MsgTranscriptLine{Line: tx})
 	}
@@ -297,16 +311,16 @@ func TestGolden(t *testing.T) {
 		{"plan_stage_fields", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("g"))
 			m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
-			m, _ = m.Update(specialKey(tea.KeyDown)) // select F7
+			m, _ = m.Update(specialKey(tea.KeyDown))  // select F7
 			m, _ = m.Update(specialKey(tea.KeyEnter)) // drill into fields
 			return m
 		}},
 		{"plan_stage_model_edit", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("g"))
 			m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
-			m, _ = m.Update(specialKey(tea.KeyEnter))  // drill F6
-			m, _ = m.Update(specialKey(tea.KeyDown))   // → model field
-			m, _ = m.Update(specialKey(tea.KeyEnter))  // begin editing the enum
+			m, _ = m.Update(specialKey(tea.KeyEnter)) // drill F6
+			m, _ = m.Update(specialKey(tea.KeyDown))  // → model field
+			m, _ = m.Update(specialKey(tea.KeyEnter)) // begin editing the enum
 			return m
 		}},
 		{"plan_gates", func(m tea.Model) tea.Model {
@@ -347,6 +361,15 @@ func TestGolden(t *testing.T) {
 		}},
 		{"help", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("?"))
+			return m
+		}},
+		{"attention", func(m tea.Model) tea.Model {
+			st := fixedState()
+			st.Status = "NeedsAttention"
+			reason := "verifier score 74 < 80 — see session #12 findings"
+			st.AttentionReason = &reason
+			st.AgentActive = false
+			m, _ = m.Update(MsgStateUpdated{State: st})
 			return m
 		}},
 	}

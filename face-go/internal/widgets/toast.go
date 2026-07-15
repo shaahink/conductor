@@ -51,16 +51,16 @@ func RenderToasts(toasts []Toast) string {
 		var prefix string
 		switch t.Kind {
 		case ToastSuccess:
-			style = lipgloss.NewStyle().Foreground(colorDone)
+			style = lipgloss.NewStyle().Foreground(colGreen)
 			prefix = "✓ "
 		case ToastError:
-			style = lipgloss.NewStyle().Foreground(colorFail)
+			style = lipgloss.NewStyle().Foreground(colRed)
 			prefix = "✗ "
 		case ToastWarn:
-			style = lipgloss.NewStyle().Foreground(colorWarn)
+			style = lipgloss.NewStyle().Foreground(colYellow)
 			prefix = "⚠ "
 		default:
-			style = lipgloss.NewStyle().Foreground(colorAccent)
+			style = lipgloss.NewStyle().Foreground(colMauve)
 			prefix = "ℹ "
 		}
 		sb.WriteString(style.Render(prefix + revealedText(t)))

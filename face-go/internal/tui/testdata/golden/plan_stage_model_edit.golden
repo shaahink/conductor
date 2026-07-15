@@ -1,19 +1,24 @@
- ◆ conductor  ● LIVE  conductor-foreman  F7 Gate caching + truth gates + spee…  ● $0.12  cp 2/40  $0.42       
+ ◆ conductor  ● LIVE  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42                 
   a Agent   h Sessions   t Timeline   s Procs   c Console   e Templates   g Plan   r Report                   
                            │                                                                                  
  ▶ PLAN                    │   Stages · Gates · Settings · Import    conductor-foreman · v7                   
  ✓ F0 3/3 Foundations      │                                                                                  
  ✓ F6 5/5 Ink TUI v1       │    editing F6                                                                    
- ● F7 2/5 Gate c… 1× $0.30 │                                                                                  
-   ✓  F7.1 Plan import     │    title            Ink TUI v1                                                   
-   ✓  F7.2 Re-import diff  │    model            ‹ claude-opus-4-8 › (1/5)                                    
-   ●  F7.3 Truth-gate tier │    workflow         deliver-verify                                               
- ○ F8 0/4 conductor chat … │    kind             deliver                                                      
+ ● F7 2/5 Gate … 1× $0.30  │                                                                                  
+   ✓ F7.1 Plan import      │    title            Ink TUI v1                                                   
+   ✓ F7.2 Re-import diff   │    model            ‹ claude-opus-4-8 › (1/5)                                    
+   ● F7.3 Truth-gate tier  │    workflow         deliver-verify                                               
+ ○ F8 0/4 conductor chat…  │    kind             deliver                                                      
                            │    sessions         5                                                            
  ── GATES ──               │    notes            (unset)                                                      
-   ✓  build                │    dependsOn        F5                                                           
-   ●  test                 │                                                                                  
-   ○  lint                 │                                                                                  
+   ✓ build                 │    dependsOn        F5                                                           
+   ● test 4s               │                                                                                  
+   ○ lint                  │                                                                                  
+                           │                                                                                  
+ ── TASKS ──               │                                                                                  
+   ✓ Add truth-tier con…   │                                                                                  
+   ● Wire RunDb.GetLast…   │                                                                                  
+   ○ Cache gate results…   │                                                                                  
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
@@ -26,10 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
- : cmd  i inject  / search  p sidebar  ? help  q quit   │   [←→/space: cycle] [enter: save] [esc: cancel]     
+ : cmd  i inject  / search  p sidebar  ? help  q quit   │   ←→ cycle · enter save · esc cancel                

@@ -496,9 +496,10 @@ func makeFakeState() *StateDto {
 }
 
 func makeFakeProcesses(now time.Time) []ProcessDto {
+	started := now.Add(-95 * time.Second).UTC().Format(time.RFC3339)
 	return []ProcessDto{
-		{Pid: 4512, Purpose: "session", StageId: strPtr("F7"), Alive: true, LastOutputLine: strPtr("[agent] Working on gate caching...")},
-		{Pid: 8723, Purpose: "gate:test", StageId: strPtr("F7"), Alive: true, LastOutputLine: strPtr("Running GateCacheTests... (12/12)")},
+		{Pid: 4512, Purpose: "session", StageId: strPtr("F7"), Alive: true, StartedUtc: started, LastOutputLine: strPtr("[agent] Working on gate caching...")},
+		{Pid: 8723, Purpose: "gate:test", StageId: strPtr("F7"), Alive: true, StartedUtc: started, LastOutputLine: strPtr("Running GateCacheTests... (12/12)")},
 	}
 }
 
@@ -516,13 +517,16 @@ func makeFakeTimeline() []TimelineEntryDto {
 	}
 }
 
+// makeFakeSessions mirrors the real wire order: GET /sessions returns newest-first
+// (SqliteRunStore ORDER BY number DESC), so index 0 is the current session.
 func makeFakeSessions() []SessionRowDto {
 	return []SessionRowDto{
-		{Number: 1, StageId: "F0", Kind: "Deliver", Outcome: strPtr("completed"), Attempt: 1, CommitCount: 3, GateSummary: strPtr("build ✓ test ✓")},
-		{Number: 2, StageId: "F1", Kind: "Deliver", Outcome: strPtr("completed"), Attempt: 1, CommitCount: 4, GateSummary: strPtr("build ✓ test ✓ lint ✓")},
-		{Number: 8, StageId: "F6", Kind: "Deliver", Outcome: strPtr("completed"), Attempt: 1, CommitCount: 1, GateSummary: strPtr("build ✓ test ✓")},
-		{Number: 11, StageId: "F7", Kind: "Deliver", Outcome: strPtr("needsRetry"), Attempt: 1, CommitCount: 2, GateSummary: strPtr("build ✓ test ✗ lint ○")},
 		{Number: 12, StageId: "F7", Kind: "Deliver", Outcome: nil, Attempt: 2, CommitCount: 0},
+		{Number: 11, StageId: "F7", Kind: "Deliver", Outcome: strPtr("needsRetry"), Attempt: 1, CommitCount: 2, GateSummary: strPtr("build ✓ test ✗ lint ○"),
+			ResultSummary: strPtr("Wired the **caching layer** in `RunDb` but `test` is still red — see the gate output.")},
+		{Number: 8, StageId: "F6", Kind: "Deliver", Outcome: strPtr("completed"), Attempt: 1, CommitCount: 1, GateSummary: strPtr("build ✓ test ✓")},
+		{Number: 2, StageId: "F1", Kind: "Deliver", Outcome: strPtr("completed"), Attempt: 1, CommitCount: 4, GateSummary: strPtr("build ✓ test ✓ lint ✓")},
+		{Number: 1, StageId: "F0", Kind: "Deliver", Outcome: strPtr("completed"), Attempt: 1, CommitCount: 3, GateSummary: strPtr("build ✓ test ✓")},
 	}
 }
 

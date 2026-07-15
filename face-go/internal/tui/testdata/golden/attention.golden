@@ -1,15 +1,15 @@
- ◆ conductor  ● LIVE  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42                 
+ ◆ conductor  ● LIVE  ⚠ ATTENTION  F7 Gate caching + trut…  cp 2/40  run $0.42                                
   a Agent   h Sessions   t Timeline   s Procs   c Console   e Templates   g Plan   r Report                   
                            │                                                                                  
- ▶ PLAN                    │  › #12  F7     Deliver  running      0 commits                                   
- ✓ F0 3/3 Foundations      │    #11  F7     Deliver  needsRetry   2 commits                                   
- ✓ F6 5/5 Ink TUI v1       │                                                                                  
- ● F7 2/5 Gate … 1× $0.30  │  Session #12 · F7 Deliver · attempt 2, 0 resumes                                 
-   ✓ F7.1 Plan import      │                                                                                  
-   ✓ F7.2 Re-import diff   │                                                                                  
-   ● F7.3 Truth-gate tier  │                                                                                  
- ○ F8 0/4 conductor chat…  │                                                                                  
-                           │                                                                                  
+ ▶ PLAN                    │  s12 Deliver · attempt 1/3  ◆ F7.3 Wire caching layer                            
+ ✓ F0 3/3 Foundations      │  build ✓ · test ● 4s · lint ○    task 1/3 ▸ Wire RunDb.GetLastPassingGateResult  
+ ✓ F6 5/5 Ink TUI v1       │  ⚠ needs human — verifier score 74 < 80 — see session #12 findings               
+ ● F7 2/5 Gate … 1× $0.30  │  ──────────────────────────────────────────────────────────────────────────────  
+   ✓ F7.1 Plan import      │  10:04:01 ▸ Session #12 started · Deliver · Stage F7 · Attempt 1                 
+   ✓ F7.2 Re-import diff   │  10:04:09 ⁙ Let me examine the GateCache implementation...                       
+   ● F7.3 Truth-gate tier  │  10:04:14 ⚙ read src/Conductor/Core/Gating/GateCache.cs                          
+ ○ F8 0/4 conductor chat…  │  10:04:15 ↳ GateCache.cs:142 lines — caches by (name, tier, sha)                 
+                           │  10:04:22 ▸ Found the caching layer. Adding GetLastPassingGateResult to RunDb.   
  ── GATES ──               │                                                                                  
    ✓ build                 │                                                                                  
    ● test 4s               │                                                                                  
@@ -31,4 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  p sidebar  ? help  q quit   │   ↑↓ navigate                                       
+ : cmd  i inject  / search  p sidebar  ? help  q quit   │   ↑↓ scroll · f fold · / search · end live-tail     

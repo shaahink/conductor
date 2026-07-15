@@ -70,7 +70,6 @@ func (m Model) workflowChoices() []string {
 	return []string{"deliver-verify", "big-dev-then-big-audit", "docs-only", "spike"}
 }
 
-
 func planVersionOf(r *api.PlanMutationResultDto) int {
 	if r == nil {
 		return 0
@@ -381,15 +380,13 @@ func derefOr(p *string, def string) string {
 
 // --- rendering ---
 
-func (m Model) renderPlanPane() (string, string, string) {
-	title := "Plan Editor"
+func (m Model) renderPlanPane() (string, string) {
 	if m.plan == nil {
-		return title, subtleStyle.Render("loading plan…"), "esc back"
+		return subtleStyle.Render("loading plan…"), "esc back"
 	}
 
 	tabs := m.renderPlanSections()
-	var body string
-	help := "←→ section · ↑↓ select · enter edit · esc back"
+	var body, help string
 
 	switch m.planTab {
 	case planTabStages:
@@ -411,7 +408,7 @@ func (m Model) renderPlanPane() (string, string, string) {
 		status = "\n\n" + st.Render(m.planStatus)
 	}
 	meta := subtleStyle.Render(fmt.Sprintf("%s · v%d", m.plan.Name, m.plan.PlanVersion))
-	return title, tabs + "   " + meta + "\n\n" + body + status, help
+	return tabs + "   " + meta + "\n\n" + body + status, help
 }
 
 func (m Model) renderPlanSections() string {
@@ -443,7 +440,7 @@ func (m Model) renderPlanStages() (string, string) {
 		}
 		lines = append(lines, "  "+accentStyle.Render(id)+" "+textStyle.Render(title)+" "+subtleStyle.Render(meta)+" "+purpleText(model))
 	}
-	return strings.Join(lines, "\n"), "[tab: switch] [↑↓: select] [enter: edit fields] [esc: close]"
+	return strings.Join(lines, "\n"), "←→ section · ↑↓ select · enter edit · esc back"
 }
 
 func (m Model) renderPlanGates() (string, string) {
@@ -461,14 +458,14 @@ func (m Model) renderPlanGates() (string, string) {
 		}
 		lines = append(lines, "  "+accentStyle.Render(name)+" "+tierBadge(g.Tier)+strings.Repeat(" ", max(1, 6-lipgloss.Width(g.Tier)))+subtleStyle.Render(cmd))
 	}
-	return strings.Join(lines, "\n"), "[tab: switch] [↑↓: select] [enter: edit fields] [esc: close]"
+	return strings.Join(lines, "\n"), "←→ section · ↑↓ select · enter edit · esc back"
 }
 
 func (m Model) renderPlanSettings() (string, string) {
 	body, _ := m.renderFieldList(m.settingsFields(), "")
 	extra := fmt.Sprintf("\n\n  %s %s",
 		subtleStyle.Render("plan file:"), subtleStyle.Render(m.plan.PlanFile))
-	return body + extra, "[tab: switch] [↑↓: select] [enter: edit] [esc: close]"
+	return body + extra, "←→ section · ↑↓ select · enter edit · esc back"
 }
 
 // renderFieldList shows a target's editable fields; the selected one enters an inline editor when active.
@@ -495,13 +492,13 @@ func (m Model) renderFieldList(fields []planField, ownerLabel string) (string, s
 		}
 		lines = append(lines, row)
 	}
-	help := "[↑↓: field] [enter: edit] [esc: back]"
+	help := "↑↓ field · enter edit · esc back"
 	if m.planEditing {
 		f := m.currentField()
 		if f.Kind == fieldEnum {
-			help = "[←→/space: cycle] [enter: save] [esc: cancel]"
+			help = "←→ cycle · enter save · esc cancel"
 		} else {
-			help = "[type: edit] [enter: save] [esc: cancel]"
+			help = "type · enter save · esc cancel"
 		}
 	}
 	return strings.Join(lines, "\n"), help
@@ -532,7 +529,7 @@ func (m Model) renderPlanImport() (string, string) {
 		errLine = "\n\n  " + destructStyle.Render("✗ "+m.planImportErr)
 	}
 	hint := "\n\n  " + subtleStyle.Render("e.g. docs/MAESTRO-PLAN.md")
-	return header + input + errLine + hint, "[type: path] [enter: preview diff] [esc: close]"
+	return header + input + errLine + hint, "type path · enter preview diff · esc back"
 }
 
 func (m Model) renderImportDiff() (string, string) {
@@ -540,7 +537,7 @@ func (m Model) renderImportDiff() (string, string) {
 	var lines []string
 	if d.IsEmpty() {
 		lines = append(lines, "  "+safeStyle.Render("Nothing to change — the plan already matches this import."))
-		return strings.Join(lines, "\n"), "[esc: back]"
+		return strings.Join(lines, "\n"), "esc back"
 	}
 	lines = append(lines, "  "+accentStyle.Render(fmt.Sprintf("%d change(s):", d.TotalChanges())), "")
 	for _, s := range d.AddedStages {
@@ -563,11 +560,11 @@ func (m Model) renderImportDiff() (string, string) {
 				subtleStyle.Render(derefOr(f.Old, "-")+" "), safeStyle.Render(derefOr(f.New, "-"))))
 		}
 	}
-	return strings.Join(lines, "\n"), "[a: apply] [esc: back]"
+	return strings.Join(lines, "\n"), "a apply · esc back"
 }
 
 func purpleText(s string) string {
-	return lipgloss.NewStyle().Foreground(lipgloss.Color("#A371F7")).Render(s)
+	return tealStyle.Render(s) // model names read as "tool-ish" — teal, from the one palette
 }
 
 func tierBadge(tier string) string {
