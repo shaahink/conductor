@@ -82,6 +82,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.MouseWheelMsg:
 		return m.handleMouseWheel(msg)
 
+	case MsgAnimTick:
+		if m.advanceToastAnims() {
+			return m, cmdAnimTick()
+		}
+		return m, nil
+
 	case MsgTick:
 		if m.activeModal == ModalNone {
 			return m, tea.Batch(CmdTick(), m.doPoll())
@@ -157,8 +163,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			text = fmt.Sprintf("%s rejected: %s", msg.Verb, reason)
 		}
-		m.toasts = append(m.toasts, widgets.NewToast(text, kind))
-		return m, nil
+		animCmd := m.addToast(text, kind)
+		return m, animCmd
 
 	case MsgInjectSent:
 		kind := widgets.ToastSuccess
@@ -167,8 +173,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			kind = widgets.ToastError
 			text = "Injection failed: " + msg.Error
 		}
-		m.toasts = append(m.toasts, widgets.NewToast(text, kind))
-		return m, nil
+		animCmd := m.addToast(text, kind)
+		return m, animCmd
 
 	case MsgReportResult:
 		m.data.ReportLoading = false
@@ -522,11 +528,10 @@ func (m *Model) handlePromptKey(key string) (tea.Model, tea.Cmd) {
 		if m.promptSelected < len(m.promptEntries) {
 			entry := m.promptEntries[m.promptSelected]
 			if err := templates.Write(entry.Path, m.promptContent); err != nil {
-				m.toasts = append(m.toasts, widgets.NewToast("Save failed: "+err.Error(), widgets.ToastError))
-			} else {
-				m.promptEntries[m.promptSelected].Exists = true
-				m.toasts = append(m.toasts, widgets.NewToast("Saved "+entry.Path, widgets.ToastSuccess))
+				return m, m.addToast("Save failed: "+err.Error(), widgets.ToastError)
 			}
+			m.promptEntries[m.promptSelected].Exists = true
+			return m, m.addToast("Saved "+entry.Path, widgets.ToastSuccess)
 		}
 		return m, nil
 	case "enter":

@@ -12,13 +12,30 @@ TUI at `face/`.
 - **Path:** `C:\Code\conductor-baton`  **Branch:** `feat/foreman`
 - **Do NOT touch:** `C:\Code\conductor` (master, the stable DRIVER) or the live `C:\Code\DevContext2-ui`
   Loom run (separate repo + lock).
-- **Faces:** `face/` — TypeScript + Ink TUI (existing, unchanged). `face-go/` — Go + Bubble Tea TUI,
-  now wired to the real control plane (control verbs, inject, report query, template editor file
-  I/O, live SSE transcript/events, session history, a new Processes modal) — no longer a visual-only
-  prototype. Verified against a real `ControlPlaneServer` (not just `--demo`), not only build/vet/test
-  — see "How to verify a face-go change" below before claiming a change works.
+- **Faces:** `face/` — TypeScript + Ink TUI. `face-go/` — Go + Bubble Tea TUI, wired to the real
+  control plane (control verbs, inject, report query, template editor file I/O, live SSE
+  transcript/events, session history, a Processes modal, a TTY guard, spring-animated toasts,
+  markdown-rendered session result summaries) — no longer a visual-only prototype. Verified against
+  a real `ControlPlaneServer` (not just `--demo`), not only build/vet/test — see "How to verify a
+  face-go change" below before claiming a change works.
+  **Retirement policy (explicit, from the user):** keep both until `face-go` is usable, then
+  retire `face/`. Not a judgment call to make unilaterally — ask before deleting `face/`, but do
+  ask again once `face-go` has seen real day-to-day use, since the user's stated intent is to
+  retire it, not to keep both indefinitely.
 - **Driver:** the STABLE `C:\Code\conductor\bin\conductor.exe` (built from master). The tool improving
   Conductor is never the tool under edit.
+
+## Resume here (latest face-go session, 2026-07-15)
+Delivered this round, on top of the control-plane wiring + golden/live-smoke verification from the
+prior session: a TTY guard + `FACE_FORCE_TTY` escape hatch + rich `-h`/`--help` text (`main.go`),
+a `README.md` section introducing Face to actual users (previously undocumented outside this file),
+spring-animated toast entrances (Harmonica, `internal/tui/anim.go`), and Glamour-rendered markdown
+for the Session History modal's result summary (`internal/tui/markdown.go`). All committed, all
+tests green, live-run smoke-checked (see the dependency gotcha below before touching `go.mod`).
+**Not yet done, and worth doing next:** nothing known-broken — the "next deliverables" list from
+the prior session (mouse routing beyond sidebar-row-select, `Tasks` UI, discovery-file
+auto-connect) is still open but optional/low-priority; ask the user before picking one up rather
+than assuming priority order.
 
 ## Go Face v2 — quick start
 ```powershell
@@ -27,13 +44,28 @@ go build -o bin/conductor-face.exe ./cmd/conductor-face/
 .\bin\conductor-face.exe --demo          # offline synthetic data
 .\bin\conductor-face.exe                  # live against conductor --control-plane (http://127.0.0.1:4317)
 ```
+Needs a real interactive terminal (exits with a clear message otherwise) — if you're an agent
+running this from a sandboxed shell tool with no real TTY (the common case), set
+`FACE_FORCE_TTY=1` to bypass the check when you just need to confirm it doesn't crash; that
+doesn't make output actually render anywhere you can see it, though — see "How to verify a
+face-go change" for how to actually check a change without a TTY.
+
+### Dependency gotcha: `go.mod` needs `x/cellbuf` pinned above what MVS picks by default
+Adding `github.com/charmbracelet/glamour` pulls in `charmbracelet/x/cellbuf` (via glamour's
+`lipgloss v1` dependency) at a version whose compiled API (`ansi.Style` methods) doesn't match
+the newer `charmbracelet/x/ansi` that `bubbletea v2`/`ultraviolet` already require elsewhere in
+the graph — a **real build failure**, not a hypothetical one (`b.Italic()` "not enough
+arguments", `b.SlowBlink undefined`, etc.). Fixed by explicitly bumping `x/cellbuf` to `v0.0.15`
+(`go get github.com/charmbracelet/x/cellbuf@v0.0.15`), which does implement the newer API. If a
+future `go get -u` / `go mod tidy` ever re-triggers this, the fix is the same: bump `x/cellbuf`
+to its latest, don't downgrade `x/ansi`.
 
 ## Architecture
 - **Language:** Go 1.26
 - **Framework:** Bubble Tea v2 (Elm Architecture) + Lip Gloss v2 (styling)
 - **Layout:** Crush-inspired — agent transcript is the primary view; sidebar (plan tree + gates) toggles with `p`; a compact inline gate bar shows when the sidebar is closed; everything else (including Processes, folded out of Ink's old always-on 3-pane tab model) is a modal overlay
 - **Data:** Same HTTP+SSE API as the Ink TUI (9 endpoints on localhost:4317), including `?since=` resume-on-reconnect for both SSE streams (server-supported, `ControlPlaneServer.Endpoints.cs` `ParseSince`)
-- **Tests:** `go test ./...` — all packages pass; `internal/tui/update_test.go` covers the control-plane wiring (palette send/confirm/goto, inject guard, report query, template read/write round-trip, processes nav, transcript search); `internal/tui/golden_test.go` renders `View()` headlessly (no real TTY needed) against fixed demo state and diffs it against `testdata/golden/*.golden` — `go test ./internal/tui/ -run TestGolden -v` prints every frame as plain text, `-update` refreshes the goldens after an intentional layout change. Mirrors the Ink side's `face/tests/golden.test.tsx`.
+- **Tests:** `go test ./...` — all packages pass; `internal/tui/update_test.go` covers the control-plane wiring (palette send/confirm/goto, inject guard, report query, template read/write round-trip, processes nav, transcript search); `internal/tui/anim_test.go` covers the toast spring animation (starts at 0, arms/re-arms/stops the ticker correctly, settles within a bounded tick count); `internal/tui/markdown_test.go` covers Glamour rendering (empty passthrough, markdown syntax stripped, never errors on plain text); `internal/tui/golden_test.go` renders `View()` headlessly (no real TTY needed) against fixed demo state and diffs it against `testdata/golden/*.golden` — `go test ./internal/tui/ -run TestGolden -v` prints every frame as plain text, `-update` refreshes the goldens after an intentional layout change. Mirrors the Ink side's `face/tests/golden.test.tsx`.
 
 ### How to verify a face-go change (no real TTY needed — read this before claiming something works)
 A Bubble Tea program renders via ANSI escapes to a real terminal; running the binary in a headless
@@ -105,9 +137,11 @@ verify against the real thing without spending on a real LLM session:
 ### Key files
 | Path | Purpose |
 |------|---------|
-| `cmd/conductor-face/main.go` | CLI entry: --demo, --url, --host, --port |
+| `cmd/conductor-face/main.go` | CLI entry: --demo, --url, --host, --port, TTY guard, --help |
 | `internal/api/` | HTTP client, SSE client (with since-resume), DTO types, demo data source |
 | `internal/tui/` | Root model, update loop, view, layout, messages, streaming (conn.go) |
+| `internal/tui/anim.go` | Harmonica spring animation: toast entrance reveal |
+| `internal/tui/markdown.go` | Glamour markdown rendering for prose detail panes (session result summary) |
 | `internal/widgets/` | Transcript, sidebar, ticker, footer, toasts, styles |
 | `internal/templates/` | Direct filesystem read/write for the template editor (planDir on disk) |
 

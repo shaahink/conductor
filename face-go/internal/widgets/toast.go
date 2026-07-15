@@ -12,6 +12,12 @@ type Toast struct {
 	Text      string
 	Kind      ToastKind
 	CreatedAt time.Time
+	// Reveal is a spring-animated 0..1 fraction of Text to show (typewriter-style entrance,
+	// driven by the tui package). 0 means "just appeared", 1 means fully settled. Toasts built
+	// directly via NewToast start at 0; a caller that doesn't drive the animation forward will
+	// simply never reveal any text, so anything appending a Toast for real display should go
+	// through tui.Model.addToast, which owns advancing this value every animation tick.
+	Reveal float64
 }
 
 type ToastKind int
@@ -34,6 +40,7 @@ func NewToast(text string, kind ToastKind) Toast {
 		Text:      text,
 		Kind:      kind,
 		CreatedAt: time.Now(),
+		Reveal:    0,
 	}
 }
 
@@ -45,21 +52,37 @@ func RenderToasts(toasts []Toast) string {
 		switch t.Kind {
 		case ToastSuccess:
 			style = lipgloss.NewStyle().Foreground(colorDone)
-			prefix = "\u2713 "
+			prefix = "✓ "
 		case ToastError:
 			style = lipgloss.NewStyle().Foreground(colorFail)
-			prefix = "\u2717 "
+			prefix = "✗ "
 		case ToastWarn:
 			style = lipgloss.NewStyle().Foreground(colorWarn)
-			prefix = "\u26A0 "
+			prefix = "⚠ "
 		default:
 			style = lipgloss.NewStyle().Foreground(colorAccent)
-			prefix = "\u2139 "
+			prefix = "ℹ "
 		}
-		sb.WriteString(style.Render(prefix + t.Text))
+		sb.WriteString(style.Render(prefix + revealedText(t)))
 		sb.WriteByte('\n')
 	}
 	return strings.TrimRight(sb.String(), "\n")
+}
+
+func revealedText(t Toast) string {
+	if t.Reveal >= 1 {
+		return t.Text
+	}
+	frac := t.Reveal
+	if frac < 0 {
+		frac = 0
+	}
+	runes := []rune(t.Text)
+	n := int(float64(len(runes)) * frac)
+	if n > len(runes) {
+		n = len(runes)
+	}
+	return string(runes[:n])
 }
 
 func PruneToasts(toasts []Toast, maxAge time.Duration) []Toast {

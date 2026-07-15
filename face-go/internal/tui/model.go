@@ -44,7 +44,8 @@ type Model struct {
 	transcript widgets.TranscriptModel
 	sidebar    widgets.SidebarModel
 
-	toasts []widgets.Toast
+	toasts     []widgets.Toast
+	toastAnims map[int]*toastAnimState
 
 	// Inline transcript search (not a modal — mirrors Ink's non-blocking agent-pane search).
 	searchActive bool

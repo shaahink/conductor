@@ -141,6 +141,42 @@ The default is a live Spectre dashboard with 5 zones:
 | `Enter` | Toggle stage expand/collapse |
 | `Esc` / `q` | Close modal |
 
+## Face — companion TUI (optional)
+
+The dashboard above runs *inside* `conductor run`'s own process. **Face** is a separate,
+optional companion app that attaches to a run over HTTP/SSE instead — useful for watching
+from a second terminal, or once you've set `--no-dashboard`. It needs the control plane
+enabled on the conductor side:
+
+```powershell
+conductor run -p <plan> --control-plane [--control-plane-port <n>]
+```
+
+Two implementations exist, functionally equivalent (same 9 HTTP+SSE endpoints):
+
+- **`face-go`** (Go + Bubble Tea) — a single ~22MB binary, no runtime dependency, ~5ms startup.
+  ```powershell
+  cd face-go
+  go build -o bin/conductor-face.exe ./cmd/conductor-face/
+  .\bin\conductor-face.exe --demo    # offline synthetic data, no conductor process needed
+  .\bin\conductor-face.exe            # live, default http://127.0.0.1:4317
+  ```
+- **`face`** (TypeScript + Ink) — the original implementation, kept alongside `face-go`
+  until the Go version has seen enough real-world use to fully replace it.
+  ```powershell
+  cd face
+  npm install && npm run build
+  node dist/cli.js --demo
+  node dist/cli.js
+  ```
+
+Both: `:` command palette (pause/resume/abort/kill/skip/goto/…, destructive verbs confirm
+first) · `p` plan sidebar · `i` inject a note for the next session · `e` edit prompt/persona
+templates (writes straight to the plan dir) · `h` session history · `r` report/query console
+(ad-hoc SQL against run.db) · `?` help. `face-go` additionally has `s` for a supervised-processes
+view and `/` for inline transcript search — press `?` in either for the authoritative,
+version-specific list.
+
 ## AFK awareness
 
 After every session, conductor rewrites `.conductor/REPORT.md` in the target repo and

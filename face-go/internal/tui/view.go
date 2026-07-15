@@ -317,7 +317,7 @@ func (m Model) renderSessionsModal() (string, string, string) {
 			detail += fmt.Sprintf("\n  Gates: %s", *s.GateSummary)
 		}
 		if s.ResultSummary != nil {
-			detail += fmt.Sprintf("\n  Result: %s", *s.ResultSummary)
+			detail += "\n  " + subtleStyle.Render("Result:") + "\n" + indent(renderMarkdown(*s.ResultSummary, 60), "  ")
 		}
 
 		tail := transcriptTailForSession(m.data.Transcript, s.Number, 12)

@@ -6,8 +6,6 @@
                                                                                                               
                                                                                                               
                                                                                                               
-                                                                                                              
-                                                                                                              
                  ╔══════════════════════════════════════════════════════════════════════════╗                 
                  ║                                                                          ║                 
                  ║  Session History                                                         ║                 
@@ -18,12 +16,14 @@
                  ║                                                                          ║                 
                  ║    Session #11 | F7 Deliver | attempt 1, 0 resumes                       ║                 
                  ║    Gates: build ✓ test ✗ lint ○                                          ║                 
+                 ║    Result:                                                               ║                 
+                 ║                                                                          ║                 
+                 ║      Wired the caching layer in  RunDb  but  test  still red             ║                 
+                 ║      — see gate output.                                                  ║                 
                  ║                                                                          ║                 
                  ║  [↑↓: navigate] [esc: close]                                             ║                 
                  ║                                                                          ║                 
                  ╚══════════════════════════════════════════════════════════════════════════╝                 
-                                                                                                              
-                                                                                                              
                                                                                                               
                                                                                                               
                                                                                                               
