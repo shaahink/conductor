@@ -26,6 +26,14 @@ public sealed class PlanCommand : Command<PlanCommand.Settings>
         [CommandArgument(2, "[VALUE]")]
         [Description("New value (set only).")]
         public string? Value { get; init; }
+
+        [CommandOption("--model <MODEL>")]
+        [Description("Model to use when importing freeform prose (import only). Fills a {model} placeholder in advisor args.")]
+        public string? Model { get; init; }
+
+        [CommandOption("-y|--yes")]
+        [Description("Apply an import without the confirm prompt (import only).")]
+        public bool Yes { get; init; }
     }
 
     public override int Execute(CommandContext context, Settings settings)
@@ -36,7 +44,7 @@ public sealed class PlanCommand : Command<PlanCommand.Settings>
             "set" => PlanSetCommand.ExecuteSet(settings.ResolvePlanPath(), settings.Key, settings.Value),
             "reload" => PlanReloadCommand.ExecuteReload(settings.ResolvePlanPath()),
             "add-stage" => PlanAddStageCommand.ExecuteAddStage(settings.ResolvePlanPath(), settings),
-            "import" => PlanImportCommand.ExecuteImport(settings.ResolvePlanPath(), settings.Key),
+            "import" => PlanImportCommand.ExecuteImport(settings.ResolvePlanPath(), settings.Key, settings.Model, settings.Yes),
             _ => PrintPlanSummary(settings),
         };
     }

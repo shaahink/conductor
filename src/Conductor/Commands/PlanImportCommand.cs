@@ -1,25 +1,25 @@
-using System.Diagnostics;
-
 using Conductor.Core;
-using Conductor.Core.Integrations;
+using Conductor.Core.Planning;
 using Conductor.Models;
 using Spectre.Console;
 
 namespace Conductor.Commands;
 
 /// <summary>
-/// F7.1: Plan import — an LLM pass (advisor model) converts a natural-language mega-plan description
-/// into structured stages, gates, and checkpoints in the plan JSON. Usage: conductor plan import
-/// <description-file.md|"free-text description">
+/// M6.1/M6.2 (was F7.1): Plan import. A <b>structured</b> markdown plan/tracker document is parsed
+/// deterministically into stages with no model call (zero spend); freeform prose falls back to the
+/// advisor model (<c>--model</c> picks it). The result is diffed against the current plan and only the
+/// added/changed stages+gates are applied — a re-import never clobbers hand-tuned entries (M6.2).
+/// Usage: <c>conductor plan import &lt;file.md|"free text"&gt; [--model X] [--yes]</c>
 /// </summary>
 public static class PlanImportCommand
 {
-    public static int ExecuteImport(string planPath, string? descriptionOrFile)
+    public static int ExecuteImport(string planPath, string? descriptionOrFile, string? model = null, bool assumeYes = false)
     {
         if (string.IsNullOrWhiteSpace(descriptionOrFile))
         {
             AnsiConsole.MarkupLine("[red]plan import requires a description (file path or quoted text).[/]");
-            AnsiConsole.MarkupLine("[grey]Example: conductor plan import ./MEGA-PLAN.md[/]");
+            AnsiConsole.MarkupLine("[grey]Example: conductor plan import ./docs/MAESTRO-PLAN.md[/]");
             AnsiConsole.MarkupLine("[grey]Example: conductor plan import \"deliver a REST API — stage 1: auth, stage 2: endpoints\"[/]");
             return 1;
         }
@@ -27,71 +27,60 @@ public static class PlanImportCommand
         try
         {
             var plan = PlanConfig.Load(planPath);
-            if (plan.Advisor is not { Enabled: true } || string.IsNullOrWhiteSpace(plan.Advisor.Command))
-            {
-                AnsiConsole.MarkupLine("[red]Advisor model is not configured. Set advisor.enabled, advisor.command, and advisor.args in your plan.[/]");
-                return 1;
-            }
 
             var description = descriptionOrFile;
-            // If the argument looks like a file path and exists, read it
             if (File.Exists(descriptionOrFile))
             {
                 description = File.ReadAllText(descriptionOrFile, System.Text.Encoding.UTF8);
-                AnsiConsole.MarkupLine($"[grey]Read description from {Markup.Escape(descriptionOrFile)} ({description.Length} chars)[/]");
+                AnsiConsole.MarkupLine($"[grey]Read {Markup.Escape(descriptionOrFile)} ({description.Length} chars)[/]");
             }
 
-            AnsiConsole.MarkupLine("[grey]Consulting advisor model to generate task graph...[/]");
-
-            var result = PlanImportService.ImportAsync(plan, description, msg => AnsiConsole.MarkupLine($"[grey]{Markup.Escape(msg)}[/]"))
-                .GetAwaiter().GetResult();
-
-            if (result == null)
+            // M6.1: prefer the deterministic markdown path — no model, no spend.
+            var result = PlanImportService.ParseStructured(description);
+            if (result is not null)
             {
-                AnsiConsole.MarkupLine("[red]Plan import failed — the advisor model could not generate a valid task graph.[/]");
-                AnsiConsole.MarkupLine("[grey]Check that the advisor command is working (try: conductor chat \"hello\") and that the description is clear.[/]");
+                AnsiConsole.MarkupLine($"[grey]Parsed structurally (no model call) → {result.Stages.Count} stages[/]");
+            }
+            else
+            {
+                if (plan.Advisor is not { Enabled: true } || string.IsNullOrWhiteSpace(plan.Advisor.Command))
+                {
+                    AnsiConsole.MarkupLine("[red]This text isn't a structured plan, and no advisor model is configured to interpret it.[/]");
+                    AnsiConsole.MarkupLine("[grey]Either pass a structured plan/tracker markdown file, or set advisor.enabled/command/args in the plan.[/]");
+                    return 1;
+                }
+                AnsiConsole.MarkupLine($"[grey]Freeform text — consulting the advisor model{(model is null ? "" : $" ({Markup.Escape(model)})")}…[/]");
+                result = PlanImportService.ImportAsync(plan, description, model,
+                        msg => AnsiConsole.MarkupLine($"[grey]{Markup.Escape(msg)}[/]"))
+                    .GetAwaiter().GetResult();
+            }
+
+            if (result is null)
+            {
+                AnsiConsole.MarkupLine("[red]Plan import failed — could not derive a task graph.[/]");
                 return 1;
             }
 
-            // Show a preview
-            AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine($"[bold aqua]Generated plan:[/] {result.Stages.Count} stages, {result.Gates.Count} gates");
-            AnsiConsole.WriteLine();
+            // M6.2: diff against the current plan; show exactly what would change.
+            var diff = PlanDiff.Compute(plan, result);
+            RenderDiff(diff);
 
-            var table = new Table();
-            table.AddColumn("Id");
-            table.AddColumn("Title");
-            table.AddColumn("Sessions");
-            table.AddColumn("Kind");
-            table.AddColumn("Depends On");
-            foreach (var stage in result.Stages)
+            if (diff.IsEmpty)
             {
-                table.AddRow(
-                    Markup.Escape(stage.Id),
-                    Markup.Escape(stage.Title ?? ""),
-                    stage.Sessions.ToString(),
-                    stage.Kind ?? "deliver",
-                    stage.DependsOn is { Count: > 0 } ? Markup.Escape(string.Join(", ", stage.DependsOn)) : "-");
-            }
-            AnsiConsole.Write(table);
-            AnsiConsole.WriteLine();
-
-            if (result.Gates.Count > 0)
-            {
-                AnsiConsole.MarkupLine("[bold]Gates:[/]");
-                foreach (var gate in result.Gates)
-                    AnsiConsole.MarkupLine($"  {Markup.Escape(gate.Name)}: {Markup.Escape(gate.Command ?? "")} (tier={gate.Tier})");
-            }
-
-            // Confirm
-            if (!AnsiConsole.Confirm("[yellow]Apply these stages and gates to the plan?[/]", false))
-            {
-                AnsiConsole.MarkupLine("[grey]Import cancelled.[/]");
+                AnsiConsole.MarkupLine("[green]Nothing to change — the plan already matches this import.[/]");
                 return 0;
             }
 
-            PlanImportService.ApplyToPlan(plan, result);
-            AnsiConsole.MarkupLine($"[green]Plan updated:[/] {result.Stages.Count} stages, {result.Gates.Count} gates added/merged");
+            if (!assumeYes && !AnsiConsole.Confirm($"[yellow]Apply {diff.TotalChanges} change(s) to the plan?[/]", false))
+            {
+                AnsiConsole.MarkupLine("[grey]Import cancelled — the plan was not modified.[/]");
+                return 0;
+            }
+
+            diff.Apply(plan);
+            AnsiConsole.MarkupLine($"[green]Plan updated[/] — {diff.AddedStages.Count} stage(s) added, {diff.ChangedStages.Count} changed, " +
+                $"{diff.AddedGates.Count} gate(s) added, {diff.ChangedGates.Count} changed. Now v{plan.PlanVersion}.");
+            AnsiConsole.MarkupLine("[grey]A running conductor picks up the change at its next session boundary.[/]");
             return 0;
         }
         catch (Exception ex) when (ex is InvalidOperationException or FileNotFoundException or IOException)
@@ -99,5 +88,46 @@ public static class PlanImportCommand
             AnsiConsole.MarkupLine($"[red]{Markup.Escape(ex.Message)}[/]");
             return 1;
         }
+    }
+
+    private static void RenderDiff(PlanDiff diff)
+    {
+        AnsiConsole.WriteLine();
+        if (diff.AddedStages.Count > 0)
+        {
+            var table = new Table().Border(TableBorder.Rounded).Title("[green]+ new stages[/]");
+            table.AddColumn("id"); table.AddColumn("title"); table.AddColumn("sessions"); table.AddColumn("dependsOn");
+            foreach (var s in diff.AddedStages)
+                table.AddRow(Markup.Escape(s.Id), Markup.Escape(s.Title ?? ""), s.Sessions.ToString(),
+                    s.DependsOn is { Count: > 0 } ? Markup.Escape(string.Join(", ", s.DependsOn)) : "-");
+            AnsiConsole.Write(table);
+        }
+
+        if (diff.ChangedStages.Count > 0)
+        {
+            var table = new Table().Border(TableBorder.Rounded).Title("[yellow]~ changed stages[/]");
+            table.AddColumn("id"); table.AddColumn("field"); table.AddColumn("old"); table.AddColumn("new");
+            foreach (var ch in diff.ChangedStages)
+                foreach (var f in ch.Fields)
+                    table.AddRow(Markup.Escape(ch.Id), Markup.Escape(f.Field),
+                        Markup.Escape(f.Old ?? "-"), $"[green]{Markup.Escape(f.New ?? "-")}[/]");
+            AnsiConsole.Write(table);
+        }
+
+        if (diff.AddedGates.Count > 0)
+        {
+            AnsiConsole.MarkupLine("[green]+ new gates:[/]");
+            foreach (var g in diff.AddedGates)
+                AnsiConsole.MarkupLine($"  {Markup.Escape(g.Name)}: {Markup.Escape(g.Command ?? "")} (tier={Markup.Escape(g.Tier)})");
+        }
+
+        if (diff.ChangedGates.Count > 0)
+        {
+            AnsiConsole.MarkupLine("[yellow]~ changed gates:[/]");
+            foreach (var ch in diff.ChangedGates)
+                foreach (var f in ch.Fields)
+                    AnsiConsole.MarkupLine($"  {Markup.Escape(ch.Name)}.{Markup.Escape(f.Field)}: {Markup.Escape(f.Old ?? "-")} → [green]{Markup.Escape(f.New ?? "-")}[/]");
+        }
+        AnsiConsole.WriteLine();
     }
 }

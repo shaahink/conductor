@@ -1,23 +1,39 @@
 using System.Text;
 using System.Text.Json;
+using Conductor.Core.Planning;
 using Conductor.Models;
 
 namespace Conductor.Core;
 
 /// <summary>
-/// F7.1: Converts a natural-language mega-plan description into a structured task graph
-/// (stages, gates, checkpoints) by consulting the advisor model, then adds the result to
-/// the plan file via PlanConfig's existing save/add-stage machinery.
+/// M6.1 (was F7.1): Converts a mega-plan into a structured task graph (stages, gates, checkpoints).
+/// A <b>structured</b> markdown plan/tracker document is parsed <b>deterministically</b> with no model
+/// call (<see cref="MarkdownPlanParser"/>) — the zero-spend path; freeform prose falls back to the
+/// advisor model. Neither writes the plan file — the caller diffs, previews, or confirms first.
 /// </summary>
 public static class PlanImportService
 {
+    /// <summary>The deterministic path: if the text looks like a structured plan/tracker, parse it into
+    /// a stage graph with no model call. Returns null when the text isn't structured (caller should then
+    /// try <see cref="ImportAsync"/>). This is what makes <c>conductor plan import DESIGN.md</c> free.</summary>
+    public static ImportResult? ParseStructured(string markdown)
+    {
+        if (!MarkdownPlanParser.LooksStructured(markdown)) return null;
+        var parsed = MarkdownPlanParser.Parse(markdown);
+        return parsed.Stages.Count == 0 ? null : MarkdownPlanParser.ToImportResult(parsed);
+    }
+
     /// <summary>Parse token from opencode (deepseek) or claude agent output. Returns stages, gates, and
     /// checkpoints parsed from the LLM's response. Does NOT write the plan file — the caller decides
-    /// whether to apply, preview, or interactively confirm.</summary>
-    public static async Task<ImportResult?> ImportAsync(PlanConfig plan, string description, Action<string>? log = null)
+    /// whether to apply, preview, or interactively confirm. <paramref name="model"/>, when set, fills a
+    /// <c>{model}</c> placeholder in the advisor's args (same convention as <c>{prompt}</c>).</summary>
+    public static async Task<ImportResult?> ImportAsync(PlanConfig plan, string description, string? model = null, Action<string>? log = null)
     {
         var prompt = BuildImportPrompt(plan, description);
-        var verdict = await Advisor.ConsultAsync(plan, prompt, log).ConfigureAwait(false);
+        var restoreArgs = ApplyModelOverride(plan, model);
+        AdvisorVerdict? verdict;
+        try { verdict = await Advisor.ConsultAsync(plan, prompt, log).ConfigureAwait(false); }
+        finally { restoreArgs?.Invoke(); }
         if (verdict is null) return null;
 
         var json = verdict.Reason;
@@ -81,6 +97,17 @@ public static class PlanImportService
 
         plan.BumpVersion();
         plan.Save();
+    }
+
+    /// <summary>Temporarily substitute a <c>{model}</c> placeholder in the advisor args so the caller can
+    /// pick the model for this one import (<c>--model</c>). Returns an action that restores the original
+    /// args; no-op when no model was given or the plan has no advisor.</summary>
+    private static Action? ApplyModelOverride(PlanConfig plan, string? model)
+    {
+        if (string.IsNullOrWhiteSpace(model) || plan.Advisor is null) return null;
+        var original = plan.Advisor.Args;
+        plan.Advisor.Args = [.. original.Select(x => x.Replace("{model}", model, StringComparison.Ordinal))];
+        return () => plan.Advisor.Args = original;
     }
 
     private static string BuildImportPrompt(PlanConfig plan, string description)
