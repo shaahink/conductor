@@ -4,8 +4,8 @@ using Conductor.Models;
 namespace Conductor.Core.Commands;
 
 /// <summary>
-/// Executes the 10 control verbs (pause/resume/abort/skip/kill/stop-after/retry-stage/rollback/
-/// pause-after-stage/goto) against run state. This is the single place verb behavior lives —
+/// Executes the 11 control verbs (pause/resume/abort/skip/kill/stop-after/retry-stage/rollback/
+/// pause-after-stage/goto/heartbeat) against run state. This is the single place verb behavior lives —
 /// every ingress (the TUI's in-process queue, the file-based control.json written by CLI verbs,
 /// and the F5 HTTP control-plane POST) converges on the same <see cref="ControlCommand"/> shape
 /// and calls <see cref="DispatchAsync"/>, so none of them can drift from what a verb actually does.
@@ -61,6 +61,15 @@ public sealed class ControlDispatcher(
             case ControlAction.StopAfterSession:
                 state.StopAfterSession = true;
                 sink.Toast(new ToastMessage("stop-after-session: will stop when current session ends", LogSeverity.Success));
+                deleteControlFile();
+                break;
+            case ControlAction.Heartbeat:
+                // Benign and takes effect *during* the session (it needs the live agent to snapshot),
+                // so unlike the other verbs it must NOT go through the "re-run after session" guard
+                // below — the run loop does the actual RefreshReport when this action bubbles back up.
+                sink.Toast(inSession
+                    ? new ToastMessage("heartbeat: refreshing report", LogSeverity.Success)
+                    : new ToastMessage("heartbeat: no active session to snapshot", LogSeverity.Info));
                 deleteControlFile();
                 break;
             case ControlAction.ResumeRun:

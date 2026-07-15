@@ -13,6 +13,7 @@ public class ControlFileTests
     [InlineData("approve", ControlAction.ResumeRun)]
     [InlineData("retry-stage", ControlAction.RetryStage)]
     [InlineData("pause-after-stage", ControlAction.PauseAfterStage)]
+    [InlineData("heartbeat", ControlAction.Heartbeat)]
     public void NonDestructiveCommandWithNullFlagsParsesWithoutThrowing(string command, ControlAction expected)
     {
         var json = JsonSerializer.Serialize(new

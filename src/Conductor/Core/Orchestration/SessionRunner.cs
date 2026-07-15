@@ -183,6 +183,7 @@ public sealed partial class SessionRunner
                 var ctl = await _handleControl(ct).ConfigureAwait(false);
                 if (ctl == ControlAction.KillSession) { killedByUser = true; _ctx.Log("kill requested"); agent.Kill(); }
                 if (ctl == ControlAction.AbortNow) { killedByUser = true; _ctx.State.Status = RunStatus.Aborted; _ctx.Log("abort requested"); agent.Kill(); }
+                if (ctl == ControlAction.Heartbeat) { RefreshReport(rec, stage, agent, preTrack); lastHeartbeat = DateTime.UtcNow; }
                 if (ct.IsCancellationRequested) { agent.Kill(); }
                 else
                 {

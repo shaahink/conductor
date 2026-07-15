@@ -17,7 +17,6 @@
                            │
  ── TASKS ──               │
    ✓ Add truth-tier con…   │
-   ● Wire RunDb.GetLast…   │
  ╭──────────────────────────────────────────────────────────────────╮
  │    pause            Pause after current session ends             │
  │   resume           Resume a paused run                           │
@@ -26,6 +25,7 @@
  │ ⚠ abort            Abort run immediately                         │
  │ ⚠ kill             Kill current agent session                    │
  │   stop-after       Stop after current session                    │
+ │   heartbeat        Refresh REPORT.md snapshot now                │
  │ ⚠ retry-stage      Reset attempt counter, retry stage            │
  │ ⚠ rollback         Git reset --hard to stage start               │
  │   pause-after-stage Pause once stage completes                   │

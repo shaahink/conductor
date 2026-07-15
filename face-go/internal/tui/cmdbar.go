@@ -27,6 +27,7 @@ var allVerbs = []struct {
 	{"abort", "Abort run immediately", false},
 	{"kill", "Kill current agent session", false},
 	{"stop-after", "Stop after current session", true},
+	{"heartbeat", "Refresh REPORT.md snapshot now", true},
 	{"retry-stage", "Reset attempt counter, retry stage", false},
 	{"rollback", "Git reset --hard to stage start", false},
 	{"pause-after-stage", "Pause once stage completes", true},

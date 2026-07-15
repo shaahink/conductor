@@ -56,6 +56,8 @@ app.Configure(c =>
         .WithDescription("Park at Paused after the current stage completes.");
     c.AddCommand<GotoCommand>("goto")
         .WithDescription("Jump to a different stage (clears pending state for the old stage).");
+    c.AddCommand<HeartbeatCommand>("heartbeat")
+        .WithDescription("Ask the running conductor to refresh .conductor/REPORT.md immediately (only meaningful during a live session; also in the : command palette).");
     c.AddCommand<PlanCommand>("plan")
         .WithDescription("Plan management: set a field, reload+validate, or add a stage. Sub-commands: set <key> <value>, reload, add-stage <json>.");
     c.AddCommand<TasksCommand>("tasks")
