@@ -112,7 +112,7 @@ public sealed class BugCommand : Command<BugCommand.Settings>
             AnsiConsole.MarkupLine("[red]bug write failed[/] (see run.db error log).");
             return 1;
         }
-        AnsiConsole.MarkupLine($"[green]bug #{id} filed:[/] [{Markup.Escape(settings.Severity ?? "medium")}] {Markup.Escape(title)}");
+        AnsiConsole.MarkupLine($"[green]bug #{id} filed[/] ({Markup.Escape(settings.Severity ?? "medium")}): {Markup.Escape(title)}");
         return 0;
     }
 

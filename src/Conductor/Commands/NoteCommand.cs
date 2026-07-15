@@ -64,7 +64,7 @@ public sealed class NoteCommand : Command<NoteCommand.Settings>
             AnsiConsole.MarkupLine($"[red]Note write failed:[/] {Markup.Escape(ex.Message)}");
             return 1;
         }
-        AnsiConsole.MarkupLine($"[green]note written:[/] [{Markup.Escape(kind)}] {Markup.Escape(settings.Text)}");
+        AnsiConsole.MarkupLine($"[green]note written[/] ({Markup.Escape(kind)}): {Markup.Escape(settings.Text)}");
         return 0;
     }
 }
