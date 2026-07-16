@@ -160,6 +160,45 @@ pass; the starred ones are load-bearing enough to fix in whichever earlier stage
    collapsed-by-default thinking addresses it; until then `T` folds.
 10. **Ghost transcript across runs** — fixed 2026-07-16 engine-side (run-scoped rotation +
     reconnected live feed); U-sessions must not regress the `?since=` resume contract.
+11. ★ **Kanban (and the sidebar TASKS section) is empty on every real run.** Root cause found
+    2026-07-17, server-side: `GET /tasks` folds only `TaskAdded`/`TaskStatusChanged`/
+    `TaskDetailEdited` events (`Core/Events/TaskGraph.cs`), but startup seeding
+    (`RunLoop.Plumbing.cs` `SeedCheckpointsFromTracker`) writes checkpoint ROWS via
+    `SeedCheckpoints` and emits no task events — the board only ever shows cards an agent created
+    through MCP task tools. Fix in U2: emit `TaskAdded` per seeded checkpoint (idempotent across
+    resumes — seeding runs on every start) or make `/tasks` union the seeded checkpoint rows.
+12. ★ **Transcript readability under live load** — the tail scrolls too fast to read, and thinking
+    vs. actual agent messages blend into one stream. U3.3's presentation rules are the fix
+    (thinking dim + collapsed by default, messages prominent, tool lines compact); no artificial
+    pacing — hierarchy and folding, not delay.
+13. ★ **Footer and the live tail can slip off-screen.** Observed on the owner's terminal during a
+    live run: bottom bar not visible and "I don't think I see the ending" — the frame is taller
+    than the window, so the autoscroll-pinned newest lines AND the bottom bar render below the
+    fold. One overflow explains both. U3.2 must make frame height == window height a hard
+    invariant: audit `ComputeLayout` + every pane's height math (e.g. `renderAgentPane` subtracting
+    the strip, banners/toasts growing rows), and add a golden/unit assertion that `View()` output
+    line count never exceeds the window height at any tested state and size.
+
+## Delivered engine-side ahead of the sessions (2026-07-16/17, do not redo — build on it)
+
+- Run-scoped live transcript feed + rotation (`TranscriptLog.OpenForRun`, SessionRunner taps).
+- `run.db` access serialised (`_persistGate` over Query/TryExecute) — the /tasks 500 class is gone.
+- `/state` stamped live: status, attention, kind, attempt, and `model` (also on `SessionStarted`).
+- Resume actually works: `RunStateResume.TryLoadLatest` reads the latest `run_state` row (state.json
+  is legacy-only), `RecoverFromCrash` resets a persisted Aborted → Idle, and stale `control.json`
+  from a previous process is purged at start. `RunCommand` prints an exit epilogue (status, crash
+  dumps, history path, resume command). U0.3's remaining scope: document all of this in the README
+  + prove gateless runs.
+
+## Beyond the U-series — orchestrator gaps (owner-endorsed backlog, next eras)
+
+Named by the owner ("what else do we miss as an orchestrator"), kept here so they survive:
+
+1. **First-run wizard** — `conductor init` exists but doesn't hand-hold empty-dir → running plan.
+2. **Park notifications** — a headless run that hits NeedsHuman is silent; desktop toast/webhook.
+3. **Cross-run history** — run.db keeps every run; nothing compares run #4 to run #5.
+4. **Cost forecasting** — `journey` could estimate spend from recorded per-session costs.
+5. **Approval inbox** — human gates exist as pause states; no single queue of "waiting on you".
 
 ## Out of scope (naming so sessions don't drift)
 
