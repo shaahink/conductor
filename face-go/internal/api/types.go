@@ -12,6 +12,12 @@ type DataSource interface {
 	// MCP task tools do, so the board and the agent drive one task graph.
 	PostTaskUpdate(req TaskUpdateRequestDto) (*TaskWriteResultDto, error)
 	PostTaskAdd(req TaskAddRequestDto) (*TaskWriteResultDto, error)
+
+	// P3: the Kanban card detail — a task's prompt as labeled building blocks, the structured
+	// title/context edit (the confirm step), and the advisor's proposed refinement (proposal only).
+	FetchPromptBlocks(taskId string) (*PromptBlocksDto, error)
+	PostTaskEdit(req TaskEditRequestDto) (*TaskWriteResultDto, error)
+	PostTaskRefine(req TaskRefineRequestDto) (*TaskRefineResultDto, error)
 	FetchProcesses() (*ProcessesDto, error)
 	FetchSessions() (*SessionsDto, error)
 	FetchTimeline() (*TimelineDto, error)
@@ -123,6 +129,7 @@ type TaskDto struct {
 	Status       string `json:"status"`
 	Source       string `json:"source"`
 	Order        int    `json:"order"`
+	Context      string `json:"context"` // P3: owner-editable per-task extra context
 }
 
 type TasksDto struct {
@@ -141,6 +148,48 @@ type TaskAddRequestDto struct {
 	CheckpointId string `json:"checkpointId"`
 	Title        string `json:"title"`
 	Order        int    `json:"order"`
+}
+
+// TaskEditRequestDto (P3, POST /tasks/edit): edit a task's own data. nil = leave unchanged; an
+// empty context clears it. This is also the confirm step of the advisor-refine flow.
+type TaskEditRequestDto struct {
+	TaskId  string  `json:"taskId"`
+	Title   *string `json:"title"`
+	Context *string `json:"context"`
+}
+
+// TaskRefineRequestDto (P3, POST /tasks/refine): ask the plan's advisor to refine one task.
+// The server only PROPOSES — nothing mutates until the owner posts /tasks/edit.
+type TaskRefineRequestDto struct {
+	TaskId      string `json:"taskId"`
+	Instruction string `json:"instruction,omitempty"`
+}
+
+type TaskRefineResultDto struct {
+	Ok          bool    `json:"ok"`
+	Error       *string `json:"error"`
+	TaskId      *string `json:"taskId"`
+	Title       *string `json:"title"`
+	Context     *string `json:"context"`
+	Interpreter *string `json:"interpreter"`
+}
+
+// PromptBlockDto (P3, GET /prompt/blocks?task=): one labeled building block of a task's prompt.
+// Editable marks the task-scoped blocks (title, extra context) the card detail lets the owner edit.
+type PromptBlockDto struct {
+	Kind     string `json:"kind"`
+	Label    string `json:"label"`
+	Content  string `json:"content"`
+	Editable bool   `json:"editable"`
+}
+
+type PromptBlocksDto struct {
+	Ok           bool             `json:"ok"`
+	Error        *string          `json:"error"`
+	TaskId       string           `json:"taskId"`
+	CheckpointId string           `json:"checkpointId"`
+	StageId      string           `json:"stageId"`
+	Blocks       []PromptBlockDto `json:"blocks"`
 }
 
 // TaskWriteResultDto: Status echoes the task's actual post-fold status — an illegal transition is

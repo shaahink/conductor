@@ -192,6 +192,19 @@ type Model struct {
 	kanbanAdding bool
 	kanbanAddBuf string
 	kanbanStatus string
+
+	// Kanban card detail (P3): the selected card's prompt building-blocks, the structured
+	// title/context editors, and the advisor-refine preview→confirm state.
+	kanbanDetail       bool
+	kanbanBlocks       *api.PromptBlocksDto
+	kanbanBlocksErr    string
+	kanbanEditingTitle bool
+	kanbanTitleBuf     string
+	kanbanEditingCtx   bool
+	kanbanCtxEditor    widgets.TextArea
+	kanbanRefining     bool
+	kanbanProposal     *api.TaskRefineResultDto
+	kanbanHandConfirm  bool
 }
 
 func New(source api.DataSource, isDemo bool, baseURL string) Model {

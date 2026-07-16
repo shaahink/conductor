@@ -31,6 +31,7 @@ namespace Conductor.Core.Events;
 [JsonDerivedType(typeof(McpCallFinished),       "mcpCallFinished")]
 [JsonDerivedType(typeof(TaskAdded),             "taskAdded")]
 [JsonDerivedType(typeof(TaskStatusChanged),     "taskStatusChanged")]
+[JsonDerivedType(typeof(TaskDetailEdited),      "taskDetailEdited")]
 [JsonDerivedType(typeof(NoteAdded),             "noteAdded")]
 [JsonDerivedType(typeof(SoftBreakRequested),    "softBreakRequested")]
         [JsonDerivedType(typeof(LaneStarted),           "laneStarted")]

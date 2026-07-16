@@ -12,4 +12,8 @@ public sealed class TaskItem
     public string Status { get; set; } = "todo";
     public string Source { get; set; } = "";
     public int Order { get; set; }
+
+    /// <summary>P3: owner-provided extra context for this task — structured task data that becomes
+    /// the editable "extra context" block of the task's prompt composition. Empty = none.</summary>
+    public string Context { get; set; } = "";
 }

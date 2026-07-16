@@ -1,0 +1,16 @@
+namespace Conductor.Core.Http;
+
+/// <summary>P3: edit a task's own data (<c>POST /tasks/edit</c>) — title and/or extra context.
+/// null = leave unchanged; an empty context clears it. This is the confirm step of the card-detail
+/// editor AND of the advisor-refine flow: nothing the advisor proposes lands until the owner posts
+/// it here.</summary>
+public sealed record TaskEditRequestDto(string? TaskId, string? Title, string? Context);
+
+/// <summary>P3: ask the plan's advisor model to refine one task (<c>POST /tasks/refine</c>).
+/// <c>Instruction</c> is the owner's optional steer ("split this", "make it testable").
+/// The endpoint only PROPOSES — the result carries suggested title/context and mutates nothing.</summary>
+public sealed record TaskRefineRequestDto(string? TaskId, string? Instruction);
+
+/// <summary>The advisor's proposed edit for a task — apply it by posting <c>/tasks/edit</c>.</summary>
+public sealed record TaskRefineResultDto(
+    bool Ok, string? Error, string? TaskId, string? Title, string? Context, string? Interpreter);

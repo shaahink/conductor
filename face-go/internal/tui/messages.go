@@ -110,10 +110,23 @@ type MsgPlanImported struct {
 	Err    string
 }
 
-// MsgTaskWritten is the result of a Kanban move/add (G2.2).
+// MsgTaskWritten is the result of a Kanban move/add (G2.2) or a card-detail edit (P3).
 type MsgTaskWritten struct {
-	Verb   string // "move" or "add" — for the status line
+	Verb   string // "move", "add", or "edit" — for the status line
 	Result *api.TaskWriteResultDto
+	Err    string
+}
+
+// MsgPromptBlocks carries a card's prompt composition for the detail panel (P3).
+type MsgPromptBlocks struct {
+	Blocks *api.PromptBlocksDto
+	Err    string
+}
+
+// MsgTaskRefined is the advisor's PROPOSED edit for a card (P3) — shown for confirm, never applied
+// by itself.
+type MsgTaskRefined struct {
+	Result *api.TaskRefineResultDto
 	Err    string
 }
 

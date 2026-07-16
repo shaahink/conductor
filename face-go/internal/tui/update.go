@@ -158,6 +158,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !msg.Success {
 			kind, text = widgets.ToastError, "Injection failed: "+msg.Error
 		}
+		if m.kanbanDetail { // P3 hand-off: reflect the result in the card detail's status line too
+			if msg.Success {
+				m.kanbanStatus = "✓ hand-off injected (next session boundary)"
+			} else {
+				m.kanbanStatus = "✗ " + msg.Error
+			}
+		}
 		return m, m.addToast(text, kind)
 
 	case MsgProcessKilled:
@@ -282,8 +289,46 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Verb == "add" && msg.Result != nil && msg.Result.TaskId != nil {
 			m.kanbanSelId = *msg.Result.TaskId // focus follows the new card
 		}
-		// Re-fetch so the board shows what the engine actually recorded.
+		// Re-fetch so the board shows what the engine actually recorded. A detail edit (P3) also
+		// recomposes the open card's blocks — the edited block must visibly change.
+		if msg.Verb == "edit" && m.kanbanDetail && m.kanbanBlocks != nil {
+			return m, tea.Batch(m.cmdFetchTasks(), m.cmdFetchPromptBlocks(m.kanbanBlocks.TaskId))
+		}
 		return m, m.cmdFetchTasks()
+
+	case MsgPromptBlocks:
+		if msg.Err != "" {
+			m.kanbanBlocksErr = msg.Err
+			return m, nil
+		}
+		if msg.Blocks != nil && !msg.Blocks.Ok {
+			if msg.Blocks.Error != nil {
+				m.kanbanBlocksErr = *msg.Blocks.Error
+			} else {
+				m.kanbanBlocksErr = "could not load the card"
+			}
+			return m, nil
+		}
+		m.kanbanBlocks, m.kanbanBlocksErr = msg.Blocks, ""
+		return m, nil
+
+	case MsgTaskRefined:
+		m.kanbanRefining = false
+		if msg.Err != "" {
+			m.kanbanStatus = "✗ " + msg.Err
+			return m, nil
+		}
+		if msg.Result != nil && !msg.Result.Ok {
+			reason := "refine rejected"
+			if msg.Result.Error != nil {
+				reason = *msg.Result.Error
+			}
+			m.kanbanStatus = "✗ " + reason
+			return m, nil
+		}
+		m.kanbanProposal = msg.Result // proposal only — enter applies, esc discards
+		m.kanbanStatus = ""
+		return m, nil
 
 	case MsgTelegramStatusUpdated:
 		if msg.Err != "" {
@@ -489,7 +534,8 @@ func (m Model) tabHandlesAllKeys() bool {
 	case TabKnowledge:
 		return m.knowledgeMode != knowledgeBrowse
 	case TabKanban:
-		return m.kanbanAdding
+		// The card detail (P3) owns t/c/a/h + its editors; the board itself only the add form.
+		return m.kanbanAdding || m.kanbanDetail
 	}
 	return false
 }

@@ -45,6 +45,28 @@ func (fakeSource) PostTaskAdd(req api.TaskAddRequestDto) (*api.TaskWriteResultDt
 	status := "todo"
 	return &api.TaskWriteResultDto{Ok: true, TaskId: &id, Status: &status, Order: 9}, nil
 }
+func (fakeSource) FetchPromptBlocks(taskId string) (*api.PromptBlocksDto, error) {
+	// Fixed composition for the card-detail golden: every block kind, editable ones marked.
+	return &api.PromptBlocksDto{
+		Ok: true, TaskId: taskId, CheckpointId: "F7.4", StageId: "F7",
+		Blocks: []api.PromptBlockDto{
+			{Kind: "persona", Label: "Persona — deliver", Content: "You are a delivery engineer.", Editable: false},
+			{Kind: "stageNotes", Label: "Stage notes — F7", Content: "Gate caching stage: reuse GateRunner.", Editable: false},
+			{Kind: "taskTitle", Label: "Task title", Content: "Wire RunDb.GetLastPassingGateResult", Editable: true},
+			{Kind: "taskContext", Label: "Extra context (task-scoped)", Content: "", Editable: true},
+			{Kind: "knowledge", Label: "Injected knowledge", Content: "## Ledger\n- goldens live in testdata", Editable: false},
+			{Kind: "tools", Label: "Tool contract", Content: "conductor note / bg / task --done", Editable: false},
+		},
+	}, nil
+}
+func (fakeSource) PostTaskEdit(req api.TaskEditRequestDto) (*api.TaskWriteResultDto, error) {
+	status := "in_progress"
+	return &api.TaskWriteResultDto{Ok: true, TaskId: &req.TaskId, Status: &status, Title: req.Title}, nil
+}
+func (fakeSource) PostTaskRefine(req api.TaskRefineRequestDto) (*api.TaskRefineResultDto, error) {
+	title, context, interp := "Refined title", "Refined context", "fake-advisor"
+	return &api.TaskRefineResultDto{Ok: true, TaskId: &req.TaskId, Title: &title, Context: &context, Interpreter: &interp}, nil
+}
 func (fakeSource) FetchProcesses() (*api.ProcessesDto, error) { return nil, nil }
 func (fakeSource) FetchSessions() (*api.SessionsDto, error)   { return nil, nil }
 func (fakeSource) FetchTimeline() (*api.TimelineDto, error)   { return nil, nil }
@@ -297,6 +319,18 @@ func newGoldenModel(width, height int) tea.Model {
 
 func strPtr(s string) *string { return &s }
 
+// openKanbanDetailGolden walks to the second card and opens its detail, feeding the fixed block
+// composition the way the live poll would (commands are never executed in golden runs).
+func openKanbanDetailGolden(m tea.Model) tea.Model {
+	m, _ = m.Update(keyMsg("b"))
+	m, _ = m.Update(MsgTasksUpdated{Tasks: &api.TasksDto{Tasks: kanbanFixtureTasks()}})
+	m, _ = m.Update(specialKey(tea.KeyDown)) // → T4, the human-sourced TODO card
+	m, _ = m.Update(specialKey(tea.KeyEnter))
+	blocks, _ := fakeSource{}.FetchPromptBlocks("T4")
+	m, _ = m.Update(MsgPromptBlocks{Blocks: blocks})
+	return m
+}
+
 func TestGolden(t *testing.T) {
 	cases := []struct {
 		name string
@@ -532,6 +566,28 @@ func TestGolden(t *testing.T) {
 			for _, ch := range "wire the goldens" {
 				m, _ = m.Update(keyMsg(string(ch)))
 			}
+			return m
+		}},
+		{"kanban_detail", func(m tea.Model) tea.Model {
+			// P3: enter on a card → its prompt as labeled building blocks (✎ marks editable ones).
+			m = openKanbanDetailGolden(m)
+			return m
+		}},
+		{"kanban_detail_ctx_edit", func(m tea.Model) tea.Model {
+			m = openKanbanDetailGolden(m)
+			m, _ = m.Update(keyMsg("c")) // edit the task-scoped extra context
+			for _, ch := range "cover the cache-miss path" {
+				m, _ = m.Update(keyMsg(string(ch)))
+			}
+			return m
+		}},
+		{"kanban_detail_proposal", func(m tea.Model) tea.Model {
+			m = openKanbanDetailGolden(m)
+			title, context, interp := "Wire RunDb.GetLastPassingGateResult (with eviction test)",
+				"Start from the smallest end-to-end slice.", "fake-advisor"
+			m, _ = m.Update(MsgTaskRefined{Result: &api.TaskRefineResultDto{
+				Ok: true, TaskId: strPtr("T4"), Title: &title, Context: &context, Interpreter: &interp,
+			}})
 			return m
 		}},
 		{"plan_prompt", func(m tea.Model) tea.Model {

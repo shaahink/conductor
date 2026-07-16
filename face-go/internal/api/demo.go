@@ -61,14 +61,94 @@ func (s *demoSource) FetchTasks() (*TasksDto, error) {
 }
 
 // makeFakeTasks seeds a board with all three Kanban columns populated — the state a reviewer
-// should see (and the goldens capture) by default.
+// should see (and the goldens capture) by default. T3 carries owner context so the card detail
+// (P3) shows a filled extra-context block out of the box.
 func makeFakeTasks() []TaskDto {
 	return []TaskDto{
 		{TaskId: "T1", CheckpointId: "F7.4", Title: "Implement gate caching by SHA", Status: "done", Source: "planner", Order: 1},
 		{TaskId: "T2", CheckpointId: "F7.4", Title: "Add per-stage truth gate config", Status: "done", Source: "agent", Order: 2},
-		{TaskId: "T3", CheckpointId: "F7.4", Title: "Wire RunDb.GetLastPassingGateResult", Status: "in_progress", Source: "agent", Order: 3},
+		{TaskId: "T3", CheckpointId: "F7.4", Title: "Wire RunDb.GetLastPassingGateResult", Status: "in_progress", Source: "agent", Order: 3,
+			Context: "Reuse the SHA cache from F7.4-a1; the miss path must stay allocation-free."},
 		{TaskId: "T4", CheckpointId: "F7.5", Title: "Add SkipIfFresh file-timestamp check", Status: "todo", Source: "planner", Order: 4},
 	}
+}
+
+// FetchPromptBlocks mirrors GET /prompt/blocks?task= — the same block order and editability the
+// server's PromptComposer emits, composed from the demo's own plan + task data.
+func (s *demoSource) FetchPromptBlocks(taskId string) (*PromptBlocksDto, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, t := range s.tasks {
+		if t.TaskId != taskId {
+			continue
+		}
+		stageId := t.CheckpointId
+		if i := strings.IndexByte(stageId, '.'); i > 0 {
+			stageId = stageId[:i]
+		}
+		blocks := []PromptBlockDto{
+			{Kind: "persona", Label: "Persona — deliver", Editable: false,
+				Content: "You are a delivery engineer: land the checkpoint with proof, never weaken the measurement."},
+			{Kind: "stageNotes", Label: "Stage notes — " + stageId, Editable: false,
+				Content: "Gate caching stage: reuse GateRunner, key results by content SHA."},
+			{Kind: "taskTitle", Label: "Task title", Content: t.Title, Editable: true},
+			{Kind: "taskContext", Label: "Extra context (task-scoped)", Content: t.Context, Editable: true},
+			{Kind: "knowledge", Label: "Injected knowledge", Editable: false,
+				Content: "## Ledger\n- goldens live in internal/tui/testdata\n## Open bugs\n- #3 flaky stall detector on wake"},
+			{Kind: "tools", Label: "Tool contract", Editable: false,
+				Content: "conductor note / bg / task --done <id> --evidence <path>"},
+		}
+		return &PromptBlocksDto{Ok: true, TaskId: t.TaskId, CheckpointId: t.CheckpointId, StageId: stageId, Blocks: blocks}, nil
+	}
+	msg := "task not found: " + taskId
+	return &PromptBlocksDto{Ok: false, Error: &msg}, nil
+}
+
+// PostTaskEdit mirrors POST /tasks/edit: nil = unchanged, blank title refused, empty context clears.
+func (s *demoSource) PostTaskEdit(req TaskEditRequestDto) (*TaskWriteResultDto, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if req.Title == nil && req.Context == nil {
+		msg := "nothing to edit — give a title and/or a context"
+		return &TaskWriteResultDto{Ok: false, Error: &msg}, nil
+	}
+	if req.Title != nil && strings.TrimSpace(*req.Title) == "" {
+		msg := "title cannot be blank"
+		return &TaskWriteResultDto{Ok: false, Error: &msg}, nil
+	}
+	for i := range s.tasks {
+		if s.tasks[i].TaskId != req.TaskId {
+			continue
+		}
+		if req.Title != nil {
+			s.tasks[i].Title = strings.TrimSpace(*req.Title)
+		}
+		if req.Context != nil {
+			s.tasks[i].Context = *req.Context
+		}
+		t := s.tasks[i]
+		return &TaskWriteResultDto{Ok: true, TaskId: &t.TaskId, Status: &t.Status, CheckpointId: &t.CheckpointId, Title: &t.Title, Order: t.Order}, nil
+	}
+	msg := "task not found: " + req.TaskId
+	return &TaskWriteResultDto{Ok: false, Error: &msg}, nil
+}
+
+// PostTaskRefine mirrors POST /tasks/refine: a deterministic canned proposal (the demo's "advisor"),
+// so the preview→confirm flow is fully exercisable offline.
+func (s *demoSource) PostTaskRefine(req TaskRefineRequestDto) (*TaskRefineResultDto, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, t := range s.tasks {
+		if t.TaskId != req.TaskId {
+			continue
+		}
+		title := t.Title + " (with eviction test)"
+		context := "Demo advisor: start from the smallest end-to-end slice; cover the cache-miss and eviction paths before wiring the UI."
+		interpreter := "demo-advisor"
+		return &TaskRefineResultDto{Ok: true, TaskId: &t.TaskId, Title: &title, Context: &context, Interpreter: &interpreter}, nil
+	}
+	msg := "task not found: " + req.TaskId
+	return &TaskRefineResultDto{Ok: false, Error: &msg}, nil
 }
 
 // PostTaskUpdate mirrors the server contract: transition legality lives in the fold, so an illegal

@@ -22,6 +22,8 @@ public partial class McpTaskServer
             status = t.Status,
             source = t.Source,
             order = t.Order,
+            // P3: owner-provided extra context rides the task, so the agent sees it too.
+            context = t.Context,
         }).ToArray();
 
         return JsonSerializer.SerializeToElement(new { tasks = list, count = list.Length });

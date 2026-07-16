@@ -59,6 +59,9 @@ func (m Model) kanbanSelected(cards []api.TaskDto) int {
 }
 
 func (m *Model) handleKanbanKey(key string) (tea.Model, tea.Cmd) {
+	if m.kanbanDetail {
+		return m.handleKanbanDetailKey(key)
+	}
 	if m.kanbanAdding {
 		return m.handleKanbanAddKey(key)
 	}
@@ -81,6 +84,10 @@ func (m *Model) handleKanbanKey(key string) (tea.Model, tea.Cmd) {
 		return m.kanbanMove(cards[sel], key == "right")
 	case "n":
 		m.kanbanBeginAdd()
+	case "enter":
+		// P3: open the card's detail — its prompt as labeled building blocks.
+		m.kanbanSelId = cards[sel].TaskId
+		return m, m.kanbanOpenDetail(cards[sel].TaskId)
 	}
 	return m, nil
 }
@@ -153,6 +160,9 @@ func (m *Model) handleKanbanAddKey(key string) (tea.Model, tea.Cmd) {
 // --- rendering ---
 
 func (m Model) renderKanbanPane() (string, string) {
+	if m.kanbanDetail {
+		return m.renderKanbanDetailPane()
+	}
 	cards := m.kanbanCards()
 	if len(cards) == 0 && !m.kanbanAdding {
 		body := subtleStyle.Render("No tasks yet — the agent files them via task_add, or press ") +
@@ -178,7 +188,7 @@ func (m Model) renderKanbanPane() (string, string) {
 			subtleStyle.Render("title: ") + textStyle.Render(m.kanbanAddBuf) + accentStyle.Render("▏")
 		return body + m.kanbanStatusLine(), "type · enter add · esc cancel"
 	}
-	return body + m.kanbanStatusLine(), "↑↓ card · ←→ move · n add · esc back"
+	return body + m.kanbanStatusLine(), "↑↓ card · ←→ move · enter detail · n add · esc back"
 }
 
 func (m Model) kanbanStatusLine() string {

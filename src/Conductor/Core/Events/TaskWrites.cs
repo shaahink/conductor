@@ -27,6 +27,24 @@ public static class TaskWrites
         return (new TaskStatusChanged { RunId = runId, TaskId = taskId, Status = status }, null);
     }
 
+    /// <summary>P3: validate and build a detail edit (title and/or extra context). null = leave the
+    /// field unchanged; an empty context clears it; a blank title is refused (a card must stay
+    /// nameable). At least one field must actually be given.</summary>
+    public static (TaskDetailEdited? Event, string? Error) BuildDetailEdit(
+        TaskGraph graph, string runId, string? taskId, string? title, string? context)
+    {
+        if (string.IsNullOrEmpty(taskId))
+            return (null, "taskId is required");
+        if (graph.Find(taskId) == null)
+            return (null, $"task not found: {taskId}");
+        if (title is null && context is null)
+            return (null, "nothing to edit — give a title and/or a context");
+        if (title is not null && string.IsNullOrWhiteSpace(title))
+            return (null, "title cannot be blank");
+
+        return (new TaskDetailEdited { RunId = runId, TaskId = taskId, Title = title?.Trim(), Context = context }, null);
+    }
+
     /// <summary>Validate and build a task-add: computes the next order within the checkpoint when the
     /// caller passes none, and generates a collision-free task id (<c>{cp}-a{order}</c>, suffixed on
     /// duplicates) — the exact algorithm the MCP handler used, now shared.</summary>

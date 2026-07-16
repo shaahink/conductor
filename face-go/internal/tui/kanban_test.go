@@ -150,3 +150,161 @@ func TestKanbanAddCardUnderSelectedCheckpoint(t *testing.T) {
 		t.Error("the added card was not found in TODO after the round-trip")
 	}
 }
+
+// --- P3: the card detail — blocks, structured edits, advisor refine, hand-off ---
+
+// openKanbanDetail opens the detail of the demo card T3 (the one seeded with owner context) and
+// runs the block fetch the way the live Update loop would.
+func openKanbanDetail(t *testing.T) (Model, api.DataSource) {
+	t.Helper()
+	m, src := openKanban(t)
+	m.kanbanSelId = "T3"
+	tm, cmd := m.handleKanbanKey("enter")
+	m = asModel(tm)
+	if !m.kanbanDetail {
+		t.Fatal("enter on a card should open the detail panel")
+	}
+	if cmd == nil {
+		t.Fatal("opening the detail should fetch the prompt blocks")
+	}
+	tm, _ = m.Update(cmd()) // MsgPromptBlocks
+	m = asModel(tm)
+	if m.kanbanBlocks == nil || m.kanbanBlocks.TaskId != "T3" {
+		t.Fatalf("expected T3's blocks, got %+v (err %q)", m.kanbanBlocks, m.kanbanBlocksErr)
+	}
+	return m, src
+}
+
+func TestKanbanDetailShowsLabeledBlocks(t *testing.T) {
+	m, _ := openKanbanDetail(t)
+	kinds := map[string]bool{}
+	for _, b := range m.kanbanBlocks.Blocks {
+		kinds[b.Kind] = true
+		if (b.Kind == "taskTitle" || b.Kind == "taskContext") != b.Editable {
+			t.Errorf("block %s: editable=%v — only the task-scoped blocks may be editable", b.Kind, b.Editable)
+		}
+	}
+	for _, want := range []string{"persona", "stageNotes", "taskTitle", "taskContext", "knowledge", "tools"} {
+		if !kinds[want] {
+			t.Errorf("missing block kind %q", want)
+		}
+	}
+}
+
+func TestKanbanDetailContextEditRoundTrip(t *testing.T) {
+	m, src := openKanbanDetail(t)
+
+	m = driveKanban(m, "c")
+	if !m.kanbanEditingCtx {
+		t.Fatal("c should open the context editor")
+	}
+	// The editor opens seeded with the task's current context; replace it wholesale.
+	m.kanbanCtxEditor.SetValue("cover the eviction path")
+	tm, cmd := m.handleKanbanKey("ctrl+s")
+	m = asModel(tm)
+	if cmd == nil {
+		t.Fatal("ctrl+s should post the structured edit")
+	}
+	msg := cmd().(MsgTaskWritten)
+	if msg.Verb != "edit" || msg.Result == nil || !msg.Result.Ok {
+		t.Fatalf("edit rejected: %+v", msg)
+	}
+
+	tasks, _ := src.FetchTasks()
+	for _, task := range tasks.Tasks {
+		if task.TaskId == "T3" && task.Context != "cover the eviction path" {
+			t.Errorf("context did not round-trip, got %q", task.Context)
+		}
+		if task.TaskId == "T3" && task.Title != "Wire RunDb.GetLastPassingGateResult" {
+			t.Errorf("a context-only edit must not touch the title, got %q", task.Title)
+		}
+	}
+}
+
+func TestKanbanDetailRefineProposesThenAppliesOnlyOnConfirm(t *testing.T) {
+	m, src := openKanbanDetail(t)
+	titleBefore := "Wire RunDb.GetLastPassingGateResult"
+
+	tm, cmd := m.handleKanbanKey("a")
+	m = asModel(tm)
+	if cmd == nil {
+		t.Fatal("a should ask the advisor")
+	}
+	tm, _ = m.Update(cmd()) // MsgTaskRefined
+	m = asModel(tm)
+	if m.kanbanProposal == nil {
+		t.Fatalf("expected a proposal, status %q", m.kanbanStatus)
+	}
+
+	// The proposal alone must not have mutated anything.
+	tasks, _ := src.FetchTasks()
+	for _, task := range tasks.Tasks {
+		if task.TaskId == "T3" && task.Title != titleBefore {
+			t.Fatalf("refine mutated the task before confirm: %q", task.Title)
+		}
+	}
+
+	// Confirm → the proposal lands through the same structured edit.
+	tm, cmd = m.handleKanbanKey("enter")
+	m = asModel(tm)
+	if cmd == nil {
+		t.Fatal("enter should apply the proposal")
+	}
+	msg := cmd().(MsgTaskWritten)
+	if msg.Verb != "edit" || msg.Result == nil || !msg.Result.Ok {
+		t.Fatalf("apply rejected: %+v", msg)
+	}
+	tasks, _ = src.FetchTasks()
+	applied := false
+	for _, task := range tasks.Tasks {
+		if task.TaskId == "T3" && task.Title != titleBefore {
+			applied = true
+		}
+	}
+	if !applied {
+		t.Error("confirming the proposal should change the task title")
+	}
+}
+
+func TestKanbanDetailRefineDiscardOnEsc(t *testing.T) {
+	m, src := openKanbanDetail(t)
+	tm, cmd := m.handleKanbanKey("a")
+	m = asModel(tm)
+	tm, _ = m.Update(cmd())
+	m = asModel(tm)
+	m = driveKanban(m, "esc")
+	if m.kanbanProposal != nil {
+		t.Error("esc should discard the proposal")
+	}
+	tasks, _ := src.FetchTasks()
+	for _, task := range tasks.Tasks {
+		if task.TaskId == "T3" && task.Title != "Wire RunDb.GetLastPassingGateResult" {
+			t.Errorf("a discarded proposal must not mutate the task, got %q", task.Title)
+		}
+	}
+}
+
+func TestKanbanDetailHandOffInjectsAfterConfirm(t *testing.T) {
+	m, _ := openKanbanDetail(t)
+	m = driveKanban(m, "h")
+	if !m.kanbanHandConfirm {
+		t.Fatal("h should ask for confirmation")
+	}
+	tm, cmd := m.handleKanbanKey("y")
+	m = asModel(tm)
+	if cmd == nil {
+		t.Fatal("y should post the injection")
+	}
+	msg := cmd().(MsgInjectSent)
+	if !msg.Success {
+		t.Fatalf("hand-off injection failed: %s", msg.Error)
+	}
+}
+
+func TestKanbanDetailEscClosesBackToTheBoard(t *testing.T) {
+	m, _ := openKanbanDetail(t)
+	m = driveKanban(m, "esc")
+	if m.kanbanDetail {
+		t.Error("esc should close the detail panel")
+	}
+}

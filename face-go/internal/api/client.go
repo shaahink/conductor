@@ -269,6 +269,31 @@ func (s *liveSource) PostTaskAdd(req TaskAddRequestDto) (*TaskWriteResultDto, er
 	return &res, nil
 }
 
+func (s *liveSource) FetchPromptBlocks(taskId string) (*PromptBlocksDto, error) {
+	var blocks PromptBlocksDto
+	if err := s.getJSON("/prompt/blocks?task="+urlEncode(taskId), &blocks); err != nil {
+		return nil, err
+	}
+	return &blocks, nil
+}
+
+func (s *liveSource) PostTaskEdit(req TaskEditRequestDto) (*TaskWriteResultDto, error) {
+	var res TaskWriteResultDto
+	if err := s.postJSONAllowError("/tasks/edit", req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (s *liveSource) PostTaskRefine(req TaskRefineRequestDto) (*TaskRefineResultDto, error) {
+	// Refine consults the advisor model server-side — minutes, not seconds; use the patient client.
+	var res TaskRefineResultDto
+	if err := s.postJSONAllowErrorWith(s.slowClient, "/tasks/refine", req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
 func (s *liveSource) FetchTelegramStatus() (*TelegramStatusDto, error) {
 	var status TelegramStatusDto
 	if err := s.getJSON("/telegram/status", &status); err != nil {

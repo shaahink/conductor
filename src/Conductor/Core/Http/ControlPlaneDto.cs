@@ -63,7 +63,7 @@ public static class ControlPlaneDto
         Checkpoints: [.. s.Checkpoints.Select(c => new CheckpointDto(c.Id, c.Title, c.Status))]);
 
     public static TasksDto FromTasks(IReadOnlyList<TaskItem> tasks) => new(
-        [.. tasks.Select(t => new TaskDto(t.TaskId, t.CheckpointId, t.Title, t.Status, t.Source, t.Order))]);
+        [.. tasks.Select(t => new TaskDto(t.TaskId, t.CheckpointId, t.Title, t.Status, t.Source, t.Order, t.Context))]);
 
     public static ProcessDto FromPid(PidRow p, bool alive, string? lastOutputLine) => new(
         Pid: p.Pid, Purpose: p.Purpose, StageId: p.StageId, SessionNumber: p.SessionNumber,
@@ -81,7 +81,11 @@ public static class ControlPlaneDto
 [JsonSerializable(typeof(TasksDto))]
 [JsonSerializable(typeof(TaskUpdateRequestDto))]
 [JsonSerializable(typeof(TaskAddRequestDto))]
+[JsonSerializable(typeof(TaskEditRequestDto))]
+[JsonSerializable(typeof(TaskRefineRequestDto))]
+[JsonSerializable(typeof(TaskRefineResultDto))]
 [JsonSerializable(typeof(TaskWriteResultDto))]
+[JsonSerializable(typeof(PromptBlocksDto))]
 [JsonSerializable(typeof(ControlRequestDto))]
 [JsonSerializable(typeof(ControlAcceptedDto))]
 [JsonSerializable(typeof(ProcessesDto))]

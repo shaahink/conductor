@@ -147,12 +147,15 @@ Discover a live run's URL from `.conductor/control-plane.json` → `url` (e.g. `
 All endpoints are localhost-only.
 
 **Read:** `GET /state` (current stage/session/cost/live metrics) · `/timeline` · `/tasks` · `/ledger`
-· `/bugs` · `/sessions` · `/plan` · `/prompt/preview?stage=&kind=` · `/console/current` and
+· `/bugs` · `/sessions` · `/plan` · `/prompt/preview?stage=&kind=` · `/prompt/blocks?task=` (P3: a
+task's prompt as labeled building blocks) · `/console/current` and
 `/transcript/current` (SSE streams of the live agent) · `GET /report/query?sql=` (read-only SQL).
 Reads need no token.
 
 **Write:** `POST /control` (same verbs as §2's control commands) · `POST /inject` · `POST /tasks/update`
-· `POST /tasks/add` · `POST /plan/edit` · `POST /plan/import` · `POST /telegram/test|token`.
+· `POST /tasks/add` · `POST /tasks/edit` (P3: title/extra-context as structured task data) ·
+`POST /tasks/refine` (P3: the advisor PROPOSES a title/context — nothing mutates until you confirm by
+posting `/tasks/edit`) · `POST /plan/edit` · `POST /plan/import` · `POST /telegram/test|token`.
 
 **Every write must send the per-run token** as `X-Conductor-Token`, read from the `token` field of
 `.conductor/control-plane.json`. Without it a POST is `401`. This is a CSRF guard: a browser can POST

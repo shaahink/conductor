@@ -31,4 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ card · ←→ move · n add · esc back              
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ card · ←→ move · enter detail · n add · esc bac

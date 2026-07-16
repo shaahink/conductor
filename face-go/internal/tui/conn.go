@@ -227,6 +227,39 @@ func (m Model) cmdPostTaskAdd(req api.TaskAddRequestDto) tea.Cmd {
 	}
 }
 
+func (m Model) cmdFetchPromptBlocks(taskId string) tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		blocks, err := source.FetchPromptBlocks(taskId)
+		if err != nil {
+			return MsgPromptBlocks{Err: err.Error()}
+		}
+		return MsgPromptBlocks{Blocks: blocks}
+	}
+}
+
+func (m Model) cmdPostTaskEdit(req api.TaskEditRequestDto) tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		res, err := source.PostTaskEdit(req)
+		if err != nil {
+			return MsgTaskWritten{Verb: "edit", Err: err.Error()}
+		}
+		return MsgTaskWritten{Verb: "edit", Result: res}
+	}
+}
+
+func (m Model) cmdPostTaskRefine(req api.TaskRefineRequestDto) tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		res, err := source.PostTaskRefine(req)
+		if err != nil {
+			return MsgTaskRefined{Err: err.Error()}
+		}
+		return MsgTaskRefined{Result: res}
+	}
+}
+
 func (m Model) cmdPostPlanImport(req api.PlanImportRequestDto) tea.Cmd {
 	source := m.source
 	return func() tea.Msg {

@@ -48,6 +48,16 @@ public sealed class TaskGraph
                             existing.Status = sc.Status;
                     }
                     break;
+
+                case TaskDetailEdited de:
+                    if (_byId.TryGetValue(de.TaskId, out var edited))
+                    {
+                        // null = unchanged; a blank title is refused at write time (TaskWrites), so a
+                        // replayed log can never blank a card. Context empty = cleared, by design.
+                        if (!string.IsNullOrWhiteSpace(de.Title)) edited.Title = de.Title;
+                        if (de.Context != null) edited.Context = de.Context;
+                    }
+                    break;
             }
         }
     }
