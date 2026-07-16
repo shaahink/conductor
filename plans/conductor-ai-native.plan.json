@@ -1,0 +1,137 @@
+{
+  "version": "1.0",
+  "planVersion": 1,
+  "name": "Conductor AI-native (G-series)",
+  "repo": "C:/code/conductor-baton",
+  "tracker": "CONDUCTOR-AI-NATIVE.md",
+  "planDoc": "docs/CONDUCTOR-AI-NATIVE.md",
+  "pauseOnBlocked": true,
+  "agent": {
+    "command": "claude",
+    "args": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--dangerously-skip-permissions",
+      "--model",
+      "{model}",
+      "--session-id",
+      "{sessionId}"
+    ],
+    "resumeArgs": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--dangerously-skip-permissions",
+      "--model",
+      "{model}",
+      "--resume",
+      "{claudeSessionId}"
+    ],
+    "provider": "claude",
+    "output": "stream-json",
+    "model": "claude-sonnet-5",
+    "tokenCeiling": 64000
+  },
+  "readOrder": [
+    "AGENTS.md",
+    "docs/CONDUCTOR-AI-NATIVE.md",
+    "CONDUCTOR-AI-NATIVE.md"
+  ],
+  "conventions": {
+    "stageIdPattern": "(?<stage>[A-Za-z]+\\d+)(?:\\.\\d+)?[a-z]?",
+    "handoffMarker": "## Handoff",
+    "humanToken": "HUMAN:",
+    "status": {
+      "done": [
+        "DONE"
+      ],
+      "blocked": [
+        "BLOCKED"
+      ],
+      "inProgress": [
+        "IN PROGRESS"
+      ],
+      "todo": [
+        "TODO"
+      ]
+    }
+  },
+  "stages": [
+    {
+      "id": "G1",
+      "title": "AI-native plan editing - prompt to diff to confirm to apply",
+      "sessions": 2,
+      "notes": "Deliver G1 per docs/CONDUCTOR-AI-NATIVE.md (G1) + CONDUCTOR-AI-NATIVE.md rows G1.1/G1.2. REUSE, do not fork: PlanImportService.ImportAsync (prose->advisor->plan), PlanDiff.Compute/Apply, and the Face import-diff view (plan.go renderImportDiff). G1.1: teach POST /plan/import (or a sibling /plan/prompt) to route freeform prose through the advisor(Fable) model instead of 400-ing, returning the same diff/confirm/apply contract; contract tests. G1.2: a Plan-tab Prompt box that posts the prompt and renders the returned PlanDiffDto with the existing view, a=apply/esc=cancel; goldens + a unit test driving the keys. Gate: curl {\"source\":\"add a lint gate that runs dotnet format\",\"apply\":false} returns a diff with the gate; apply:true persists + bumps planVersion; invalid result rejected without writing.",
+      "agent": {
+        "model": "claude-opus-4-8"
+      }
+    },
+    {
+      "id": "G2",
+      "title": "Kanban board - live task graph with move/add actions",
+      "sessions": 3,
+      "notes": "Deliver G2 per docs/CONDUCTOR-AI-NATIVE.md (G2) + rows G2.1/G2.2. REUSE: GET /tasks + TaskDto + TaskGraph; the MCP task_update/task_add write semantics (McpTaskServer.Handlers) - factor the shared write so HTTP and MCP can't drift. G2.1: POST /tasks/update {taskId,status} + POST /tasks/add {checkpointId,title,order} emitting TaskStatusChanged/TaskAdded; contract tests. G2.2: a Kanban tab (11th tab, mnemonic b for board; reachable by b + tab-cycle - there is NO spare digit past 0, do not imply one) with columns TODO/In-Progress/Done from GET /tasks, up/down select, left/right move a card across columns (POST /tasks/update), n add under the selected checkpoint (POST /tasks/add), re-fetch after a write; demo-source mirror + goldens at 80x24/120x30/200x50. Gate: POST /tasks/add then GET /tasks shows the card in TODO; update to done moves it; a Face golden shows three populated columns.",
+      "agent": {
+        "model": "claude-sonnet-5"
+      }
+    }
+  ],
+  "gates": [
+    {
+      "name": "build",
+      "command": "dotnet build Conductor.slnx",
+      "tier": "fast",
+      "timeoutMinutes": 10
+    },
+    {
+      "name": "test",
+      "command": "dotnet test Conductor.slnx --no-build",
+      "tier": "full",
+      "timeoutMinutes": 20
+    },
+    {
+      "name": "face",
+      "command": "go test ./...",
+      "cwd": "face-go",
+      "tier": "full",
+      "timeoutMinutes": 10
+    },
+    {
+      "name": "ratchet",
+      "command": "dotnet test Conductor.slnx --no-build --filter Category=Architecture",
+      "tier": "truth",
+      "timeoutMinutes": 15
+    }
+  ],
+  "gatePolicy": "perPhase",
+  "advisor": {
+    "enabled": true,
+    "command": "claude",
+    "args": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "stream-json",
+      "--model",
+      "claude-fable-5"
+    ],
+    "provider": "claude",
+    "output": "stream-json",
+    "timeoutMinutes": 6
+  },
+  "limits": {
+    "stallMinutes": 15,
+    "sessionTimeoutMinutes": 240,
+    "maxResumesPerSession": 3,
+    "stallPatternTermination": true
+  },
+  "report": {
+    "commit": true,
+    "push": false
+  }
+}
