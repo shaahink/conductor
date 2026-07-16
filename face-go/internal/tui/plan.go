@@ -143,8 +143,17 @@ func softBreakDisplay(raw string) string {
 	return raw
 }
 
-func rolloverThisRunDisplay(string) string {
-	return "(session-scoped override — type tokens · off · clear)"
+// rolloverThisRunDisplay renders the ACTIVE set-rollover override from /state (P5 follow-up):
+// no override is the default and must read as such — the plan's own rollover row is right above.
+func rolloverThisRunDisplay(raw string) string {
+	switch raw {
+	case "":
+		return "none — the plan decides (type tokens · off · clear)"
+	case "off":
+		return "OFF this run — overriding the plan"
+	default:
+		return "ON at " + raw + " tokens this run — overriding the plan"
+	}
 }
 
 func (m Model) workflowChoices() []string {
@@ -621,7 +630,15 @@ func (m Model) currentFieldValue(field string) string {
 			}
 			return ""
 		case "set-rollover":
-			return "" // session-scoped — the engine owns the state; the editor always starts blank
+			// Session-scoped — the engine owns the state; /state now surfaces the active
+			// override (P5 follow-up), so the row can show it instead of a blind hint.
+			if m.data.Plan != nil && m.data.Plan.MaxSessionTokensThisRun != nil {
+				if *m.data.Plan.MaxSessionTokensThisRun == 0 {
+					return "off"
+				}
+				return strconv.FormatInt(*m.data.Plan.MaxSessionTokensThisRun, 10)
+			}
+			return ""
 		}
 	case planTabGates:
 		if m.planGateIdx >= len(m.plan.Gates) {

@@ -533,3 +533,49 @@ func TestPlanSettingsRolloverThisRunPostsAControlVerbNotAPlanEdit(t *testing.T) 
 		t.Fatal("the this-run override must never write limits.maxSessionTokens")
 	}
 }
+
+// P5 follow-up: /state carries maxSessionTokensThisRun, so the "rollover (run)" row renders the
+// ACTIVE override instead of a blind hint — none = the plan decides, off = forced OFF this run,
+// a number = the cap this run. The demo source round-trips the verb like the real dispatcher.
+func TestPlanSettingsRolloverThisRunShowsTheActiveOverride(t *testing.T) {
+	m, src := openPlanEditor(t)
+
+	m = drive(m, "right") // Gates
+	m = drive(m, "right") // Settings
+	for range 12 {        // → rollover (run)
+		m = drive(m, "down")
+	}
+	f := m.currentField()
+	if f.Field != "set-rollover" {
+		t.Fatalf("expected the set-rollover control row, got %q", f.Field)
+	}
+	if got := f.Display(m.currentFieldValue(f.Field)); !strings.Contains(got, "the plan decides") {
+		t.Fatalf("no override on /state must read as the plan deciding, got %q", got)
+	}
+
+	// Post the verb through the editor; the demo source mutates its state like the dispatcher.
+	m = drive(m, "enter")
+	for _, ch := range "180000" {
+		m = drive(m, string(ch))
+	}
+	tm, cmd := m.handlePlanKey("enter")
+	m = asModel(tm)
+	if cmd == nil {
+		t.Fatal("saving the this-run row should post a control command")
+	}
+	m.Update(cmd())
+	state, _ := src.FetchState()
+	if state.MaxSessionTokensThisRun == nil || *state.MaxSessionTokensThisRun != 180000 {
+		t.Fatalf("expected the demo state to carry the 180000 override, got %v", state.MaxSessionTokensThisRun)
+	}
+	m.data.Plan = state // what the next poll delivers
+	if got := f.Display(m.currentFieldValue(f.Field)); !strings.Contains(got, "ON at 180000 tokens this run") {
+		t.Fatalf("an active cap must render as the this-run override, got %q", got)
+	}
+
+	off := int64(0)
+	m.data.Plan = &api.StateDto{MaxSessionTokensThisRun: &off}
+	if got := f.Display(m.currentFieldValue(f.Field)); !strings.Contains(got, "OFF this run") {
+		t.Fatalf("a forced-off override must render as OFF this run, got %q", got)
+	}
+}

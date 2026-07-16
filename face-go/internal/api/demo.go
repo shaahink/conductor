@@ -275,6 +275,23 @@ func (s *demoSource) QueryReport(sql string) (*QueryResultDto, error) {
 }
 
 func (s *demoSource) PostControl(cmd ControlRequestDto) (*ControlAcceptedDto, error) {
+	// set-rollover mutates the demo run state (mirrors ControlDispatcher.ParseRolloverValue) so
+	// the Settings row's active-override display round-trips offline like every other demo edit.
+	if cmd.Command == "set-rollover" {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		switch v := strings.ToLower(strings.TrimSpace(cmd.Value)); {
+		case v == "" || v == "clear":
+			s.state.MaxSessionTokensThisRun = nil
+		case v == "off" || v == "0":
+			off := int64(0)
+			s.state.MaxSessionTokensThisRun = &off
+		default:
+			if n, err := strconv.ParseInt(v, 10, 64); err == nil && n > 0 {
+				s.state.MaxSessionTokensThisRun = &n
+			}
+		}
+	}
 	return &ControlAcceptedDto{Accepted: true}, nil
 }
 

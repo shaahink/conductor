@@ -19,11 +19,16 @@ public sealed record StateDto(
     int SessionNumber, string SessionKind, int Attempt, int MaxAttempts,
     double SessionElapsedSec, bool AgentActive,
     decimal SessionCostUsd, long SessionTokensInput, long SessionTokensOutput, long SessionTokensReasoning,
-    IReadOnlyList<GateDto> Gates);
+    IReadOnlyList<GateDto> Gates,
+    // P5 follow-up: the set-rollover this-run override, read off the live RunState (it is run-state
+    // only, never event-folded). Absent on the wire = no override (the plan's limits.maxSessionTokens
+    // decides); 0 = rollover forced OFF this run; >0 = the per-session token cap this run.
+    long? MaxSessionTokensThisRun = null);
 
 public static class ControlPlaneDto
 {
-    public static StateDto FromSnapshot(DashboardSnapshot snap, string runId, string repo, string planDir) => new(
+    public static StateDto FromSnapshot(DashboardSnapshot snap, string runId, string repo, string planDir,
+        long? maxSessionTokensThisRun = null) => new(
         PlanName: snap.PlanName,
         Status: snap.Status,
         AttentionReason: snap.AttentionReason,
@@ -54,7 +59,8 @@ public static class ControlPlaneDto
         SessionTokensInput: snap.SessionTokensInput,
         SessionTokensOutput: snap.SessionTokensOutput,
         SessionTokensReasoning: snap.SessionTokensReasoning,
-        Gates: [.. snap.Gates.Select(g => new GateDto(g.Name, g.State, g.LiveElapsed(DateTime.UtcNow).TotalSeconds))]);
+        Gates: [.. snap.Gates.Select(g => new GateDto(g.Name, g.State, g.LiveElapsed(DateTime.UtcNow).TotalSeconds))],
+        MaxSessionTokensThisRun: maxSessionTokensThisRun);
 
     private static StageDto FromStage(StageProgress s) => new(
         Id: s.Id, Title: s.Title, Done: s.Done, Total: s.Total, State: s.State,

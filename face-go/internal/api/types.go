@@ -94,6 +94,9 @@ type StateDto struct {
 	SessionTokensOutput    int64      `json:"sessionTokensOutput"`
 	SessionTokensReasoning int64      `json:"sessionTokensReasoning"`
 	Gates                  []GateDto  `json:"gates"`
+	// P5 follow-up: the set-rollover this-run override. nil = no override (the plan's
+	// limits.maxSessionTokens decides); 0 = rollover forced OFF this run; >0 = the cap this run.
+	MaxSessionTokensThisRun *int64 `json:"maxSessionTokensThisRun"`
 }
 
 type StageDto struct {

@@ -15,7 +15,7 @@
    ● test 4s               │    sessionTimeout    240                                                         
    ○ lint                  │    sessionRollover   OFF — DeepSeek-style session rollover disabled (default)    
                            │    softBreakRatio    (0.8 default — active only when rollover is ON)             
- ── TASKS ──               │    rollover (run)    (session-scoped override — type tokens · off · clear)       
+ ── TASKS ──               │    rollover (run)    none — the plan decides (type tokens · off · clear)         
    ✓ Add truth-tier con…   │                                                                                  
    ● Wire RunDb.GetLast…   │    plan file: C:\Code\conductor\plans\conductor-foreman.plan.json                
    ○ Cache gate results…   │                                                                                  

@@ -23,7 +23,10 @@ public sealed partial class ControlPlaneServer
         var runState = RunStateProjection.Fold(events);
         var track = ReadTrackerSafe();
         var snap = SnapshotBuilder.Build(_plan, runState, track);
-        var dto = ControlPlaneDto.FromSnapshot(snap, runState.RunId, _plan.Repo, _plan.PlanDir);
+        // _state is the live RunState the dispatcher mutates — the set-rollover override lives only
+        // there (P5: run-state, not an event), so the fold above can never see it.
+        var dto = ControlPlaneDto.FromSnapshot(snap, runState.RunId, _plan.Repo, _plan.PlanDir,
+            _state.MaxSessionTokensThisRun);
         dto = WithLiveSessionMetrics(dto, events, runState);
         await WriteJsonAsync(ctx, dto, ControlPlaneJsonContext.Default.StateDto).ConfigureAwait(false);
     }

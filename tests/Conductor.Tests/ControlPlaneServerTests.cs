@@ -84,10 +84,10 @@ public sealed class ControlPlaneServerTests : IDisposable
             System.Threading.Thread.Sleep(10);
     }
 
-    private (ControlPlaneServer server, int port) StartServer()
+    private (ControlPlaneServer server, int port) StartServer(RunState? state = null)
     {
         var port = FreeLoopbackPort();
-        var state = new RunState { RunId = RunId };
+        state ??= new RunState { RunId = RunId };
         var server = new ControlPlaneServer(_plan, state, _store, _inbox, new NoOpTelegramService(), NullLogger.Instance, port);
         Assert.True(server.Start(), "control plane failed to bind — cannot run contract tests");
         _http.DefaultRequestHeaders.Remove("X-Conductor-Token");
@@ -119,6 +119,40 @@ public sealed class ControlPlaneServerTests : IDisposable
             var checkpoints = stages[0].GetProperty("checkpoints");
             Assert.Equal(1, checkpoints.GetArrayLength());
             Assert.Equal("S1.1", checkpoints[0].GetProperty("id").GetString());
+        }
+        finally { server.Dispose(); }
+    }
+
+    // P5 follow-up: /state surfaces the set-rollover this-run override straight off the live
+    // RunState — absent when there is no override (honest OFF-by-default), 0 when forced off,
+    // the cap when set. The server holds the same instance the dispatcher mutates, so flipping
+    // the override between GETs must be visible without a restart.
+    [Fact]
+    public async Task GetState_SurfacesTheSetRolloverOverride_AndOmitsItWhenClear()
+    {
+        WriteEvents(new RunStarted { Plan = "cps-test", Repo = _dir });
+        var state = new RunState { RunId = RunId };
+        var (server, port) = StartServer(state);
+        try
+        {
+            async Task<JsonDocument> GetStateAsync()
+            {
+                var resp = await _http.GetAsync($"http://127.0.0.1:{port}/state");
+                Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+                return JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            }
+
+            using (var doc = await GetStateAsync())
+                Assert.False(doc.RootElement.TryGetProperty("maxSessionTokensThisRun", out _),
+                    "no override queued — the field must be absent, not null/0");
+
+            state.MaxSessionTokensThisRun = 180000;
+            using (var doc = await GetStateAsync())
+                Assert.Equal(180000, doc.RootElement.GetProperty("maxSessionTokensThisRun").GetInt64());
+
+            state.MaxSessionTokensThisRun = 0; // set-rollover off: forced OFF is data, not absence
+            using (var doc = await GetStateAsync())
+                Assert.Equal(0, doc.RootElement.GetProperty("maxSessionTokensThisRun").GetInt64());
         }
         finally { server.Dispose(); }
     }
