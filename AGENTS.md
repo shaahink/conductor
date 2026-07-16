@@ -31,6 +31,37 @@ TUI at `face/`.
 - **Operating Conductor as an agent:** `docs/OPERATING-CONDUCTOR.md` is the control guide — commands,
   live-run steering, HTTP control plane, NEEDS-HUMAN handling, safety rules, and the known-gaps list.
 
+## Resume here (U-SERIES IN FLIGHT — conductor drives itself, 2026-07-17)
+
+**Read this first if you're the fresh session.** The active era is the **U-series** — the owner's
+UX era (landing page, workspace identity, organized/promptable controls, visual report, dev stats,
+themes, Claude-Code/opencode vibe, glitch pass) — and it is the first plan **conductor drives
+itself** with real claude-native sessions. This SUPERSEDES, for this plan only, the older "do NOT
+run `conductor run`" directive below: the owner explicitly asked for conductor-driven delivery.
+The Claude Code session's role is **supervisor** (author/monitor/intervene); never edit the working
+tree while an agent session is live.
+
+- **The three files:** `plans/conductor-ux.plan.json` (claude-native; U0 sonnet-5, U1–U3 opus-4-8,
+  fable advisor) · `docs/CONDUCTOR-UX.md` (THE spec — includes the 13-item dogfood appendix, the
+  "delivered engine-side, do not redo" ledger, and the owner's orchestrator-gaps backlog) ·
+  `CONDUCTOR-UX-START.md` (tracker; the engine regenerates it, don't hand-groom).
+- **Run state:** run `1a7c1714` in `.conductor/run.db`. Session #1 (Deliver U0, sonnet-5) was
+  interrupted by owner Ctrl+C at 00:48 mid-ritual with a queued resume; **U0.1 is a committed WIP**
+  (`e8f3f17` — PlanDiscovery + ResolvePlanPath wiring, tests still missing). Next session must QA
+  that WIP, add the resolution-order tests, then mark U0.1.
+- **To continue:** the owner runs `conductor run -p plans\conductor-ux.plan.json` from the repo
+  root (resumes the run — resume actually works now; the Face auto-spawns; the engine console is
+  muted while the Face owns the terminal and an exit epilogue always prints).
+- **Delivered engine-side this era (2026-07-16/17, all pushed — build on, don't redo):**
+  `d6f9b87` Face/console mute + local timestamps + fake-agent verifier; `877ff57` live transcript
+  wire + run.db access gate + truthful `/state` (+ `model` on the wire and in the agent strip);
+  `4fcecf7` stale-control purge + resume-from-run.db (`RunStateResume`) + exit epilogue;
+  `3cb0579` spec appendix 11–13. Known live bugs already root-caused and ASSIGNED in the spec
+  appendix: kanban empty (seeding emits no TaskAdded — U2), transcript readability (U3.3),
+  frame-height overflow hiding footer + live tail (U3.2).
+- The open-edges note's item 1 (pre-usage gate: one real-model run) is being satisfied BY this
+  era — the U-series run is that gate.
+
 ## Resume here (P-SERIES CLOSED + PF follow-ups landed, 2026-07-16)
 
 **Read this first if you're the fresh session.** The planner tracker (`CONDUCTOR-PLANNER.md`) is
