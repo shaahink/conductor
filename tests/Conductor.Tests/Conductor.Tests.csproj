@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <Using Include="Conductor.Planning" />
   </ItemGroup>
 
 </Project>

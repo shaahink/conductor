@@ -1,4 +1,4 @@
-namespace Conductor.Models;
+namespace Conductor.Planning;
 
 /// <summary>A single step in a workflow: what kind of session, with optional filters
 /// and overrides.</summary>

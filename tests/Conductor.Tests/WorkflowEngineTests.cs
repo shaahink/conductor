@@ -191,7 +191,8 @@ public sealed class WorkflowEngineTests
             NewCommits = ["abc1234"],
             NewlyDone = ["CP1", "CP2"],
         };
-        var vars = _engine.BuildRuntimeVars(rec, stageAttempts: 2, gatesGreen: true,
+        // P0: the adapter is engine-side now (WorkflowVarsFactory) — the library only sees the POCO.
+        var vars = WorkflowVarsFactory.Build(rec, stageAttempts: 2, gatesGreen: true,
             verifierScore: 92, verifierPassed: true, circuitBroken: false, stageComplete: false);
 
         Assert.Equal(92, vars.VerifierScore);

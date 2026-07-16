@@ -1,15 +1,14 @@
 using System.Globalization;
-using Conductor.Models;
 
-namespace Conductor.Core.Orchestration;
+namespace Conductor.Planning;
 
 /// <summary>
-/// Owns the declarative workflow lifecycle: reads workflow definitions from the plan,
-/// resolves which step to run next based on the prior session's outcome, and evaluates
-/// RunIf / SkipIf conditionals. Replaces the hardcoded Deliver→Verify→Fix state machine
-/// (M3.1–M3.2).
+/// Owns the declarative workflow lifecycle: resolves the effective workflow definition, walks steps
+/// with RunIf / SkipIf conditionals, and records the step index. Replaces the hardcoded
+/// Deliver→Verify→Fix state machine (M3.1–M3.2). Moved from the engine assembly in P0 — it is a pure
+/// decision component (data in, decisions out, no IO), the default <see cref="IWorkflowResolver"/>.
 /// </summary>
-public sealed class WorkflowEngine
+public sealed class WorkflowEngine : IWorkflowResolver
 {
     private readonly Dictionary<string, WorkflowDefinition> _builtIns;
 
@@ -99,17 +98,19 @@ public sealed class WorkflowEngine
         return dict;
     }
 
-    // ── public API ──
+    // ── public API (IWorkflowResolver) ──
 
-    /// <summary>Resolve the effective workflow for a stage: stage-level override wins,
-    /// then plan default, then the built-in "deliver-verify".</summary>
-    public WorkflowDefinition Resolve(PlanConfig plan, StageConfig stage)
+    /// <summary>Resolve the effective workflow: the stage-level name wins, then the plan default,
+    /// then the built-in "deliver-verify". Agnostic since P0 — takes the names + custom definitions,
+    /// not the engine's PlanConfig (the engine has a thin Resolve(plan, stage) extension).</summary>
+    public WorkflowDefinition Resolve(string? stageWorkflow, string? defaultWorkflow,
+        IReadOnlyDictionary<string, WorkflowDefinition>? customWorkflows)
     {
-        var name = stage.Workflow ?? plan.DefaultWorkflow ?? "deliver-verify";
+        var name = stageWorkflow ?? defaultWorkflow ?? "deliver-verify";
         if (_builtIns.TryGetValue(name, out var builtIn))
             return builtIn;
 
-        if (plan.Workflows is { } custom && custom.TryGetValue(name, out var customDef))
+        if (customWorkflows != null && customWorkflows.TryGetValue(name, out var customDef))
             return customDef;
 
         return _builtIns["deliver-verify"];
@@ -141,16 +142,17 @@ public sealed class WorkflowEngine
     }
 
     /// <summary>Resolve the next step for a stage AND durably record its index in
-    /// <paramref name="stepIndices"/> in the same call. Both SessionRunner (resolving the kind of
-    /// an upcoming session) and VerdictEngine (deciding what comes after one that just finished)
-    /// need "the next step, with the index kept in sync" — having two independent call sites each
-    /// read <paramref name="stepIndices"/>, compute a step, and separately write the index back is
-    /// exactly how they drifted out of sync (a real bug: SessionRunner's own resolution never
-    /// wrote the index back, so the entry permanently lagged one step behind after a stage's first
-    /// session, and the next PendingVerify/PendingAudit/PendingFix was never populated even though
-    /// the session's kind still resolved correctly by coincidence of the same lag — an NRE in
-    /// PromptBuilder.Verify/Audit/Fix). Single source of truth instead of mirrored bookkeeping.
-    /// Removes the dictionary entry and returns null when the workflow is exhausted.</summary>
+    /// <paramref name="stepIndices"/> in the same call. Both resolution call sites (the engine's
+    /// SessionRunner resolving an upcoming session's kind, and its VerdictEngine deciding what comes
+    /// after one that just finished) need "the next step, with the index kept in sync" — having two
+    /// independent call sites each read <paramref name="stepIndices"/>, compute a step, and
+    /// separately write the index back is exactly how they drifted out of sync (a real bug:
+    /// SessionRunner's own resolution never wrote the index back, so the entry permanently lagged
+    /// one step behind after a stage's first session, and the next PendingVerify/PendingAudit/
+    /// PendingFix was never populated even though the session's kind still resolved correctly by
+    /// coincidence of the same lag — an NRE in PromptBuilder.Verify/Audit/Fix). Single source of
+    /// truth instead of mirrored bookkeeping. Removes the dictionary entry and returns null when
+    /// the workflow is exhausted.</summary>
     public WorkflowStep? ResolveAndRecordStep(
         WorkflowDefinition workflow,
         Dictionary<string, int> stepIndices,
@@ -232,7 +234,7 @@ public sealed class WorkflowEngine
         return false;
     }
 
-    private double? ResolveNumeric(string name, WorkflowRuntimeVars vars)
+    private static double? ResolveNumeric(string name, WorkflowRuntimeVars vars)
     {
         return name switch
         {
@@ -268,30 +270,5 @@ public sealed class WorkflowEngine
     public WorkflowStep? GetInitialStep(WorkflowDefinition workflow, WorkflowRuntimeVars vars)
     {
         return GetNextStep(workflow, -1, vars);
-    }
-
-    /// <summary>Build runtime vars from a SessionRecord and VerdictEngine state after
-    /// EvaluateSessionAsync runs. Called by the engine before resolving the next step.</summary>
-    public WorkflowRuntimeVars BuildRuntimeVars(
-        SessionRecord rec,
-        int stageAttempts,
-        bool gatesGreen,
-        int? verifierScore,
-        bool verifierPassed,
-        bool circuitBroken,
-        bool stageComplete)
-    {
-        return new WorkflowRuntimeVars
-        {
-            VerifierScore = verifierScore,
-            VerifierPassed = verifierPassed,
-            CircuitBroken = circuitBroken,
-            StageAttempts = stageAttempts,
-            GatesGreen = gatesGreen,
-            HasCommits = rec.NewCommits is { Count: > 0 },
-            Stalled = rec.Outcome is SessionOutcome.Stalled or SessionOutcome.TimedOut,
-            NewlyDoneCount = rec.NewlyDone?.Count ?? 0,
-            StageComplete = stageComplete,
-        };
     }
 }

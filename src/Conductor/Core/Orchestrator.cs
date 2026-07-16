@@ -42,7 +42,8 @@ public sealed class Orchestrator
         IRunStore? store = null,
         ProcessSupervisor? processSupervisor = null,
         ControlDispatcher? dispatcher = null,
-        ConcurrentQueue<ControlCommand>? controlInbox = null)
+        ConcurrentQueue<ControlCommand>? controlInbox = null,
+        IWorkflowResolver? workflowResolver = null)
     {
         var prompts = BuildPromptBuilder(plan);
         var lessons = new LessonsManager(plan.StateDir);
@@ -53,7 +54,7 @@ public sealed class Orchestrator
         _ctx = new RunContext(
             plan, state, opts, sink, events, prompts, lessons, iPlanner, progress,
             agentProvider, store, processSupervisor, controlInbox, telegram, webhooks,
-            workflowEngine: new WorkflowEngine(), logger);
+            workflowResolver: workflowResolver ?? new WorkflowEngine(), logger);
 
         _gates = new GateOrchestrator(plan, state, events, store);
         _lanes = new LaneCoordinator(plan, state, sink, events, _ctx.Log, pathClaims: new PathClaimTracker());

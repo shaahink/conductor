@@ -1,4 +1,4 @@
-namespace Conductor.Models;
+namespace Conductor.Planning;
 
 /// <summary>Per-stage workflow override — drop QA, change model, or skip commit (M3.2).</summary>
 public sealed class WorkflowOverrides

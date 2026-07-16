@@ -5,6 +5,6 @@ namespace Conductor.Models;
 
 public enum RunStatus { Idle, Running, VerifyingGates, Backoff, Paused, NeedsHuman, AwaitingOwner, Completed, Aborted }
 
-public enum SessionKind { Deliver, Fix, Resume, Audit, Verify }
+// SessionKind moved to Conductor.Planning (P0) — shared vocabulary the planning library owns.
 
 public enum AwaitingOwnerReason { OwnerGate, ApprovalMode, Budget }

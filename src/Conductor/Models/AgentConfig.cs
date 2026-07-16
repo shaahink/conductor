@@ -21,8 +21,8 @@ public sealed class AgentConfig
     public string? Model { get; set; }
     /// <summary>Optional sampling temperature (0.0–2.0). null = default.</summary>
     public double? Temperature { get; set; }
-    /// <summary>Optional per-session token ceiling (output tokens).</summary>
-    public int? TokenCeiling { get; set; }
+    // TokenCeiling was deleted in P0: it was defined and merged but enforced NOWHERE — a no-op trap
+    // that looked active. The real per-session rollover knob is limits.maxSessionTokens (P5).
     /// <summary>Optional extra environment variables set on the agent process (e.g. OPENCODE_CONFIG).</summary>
     public Dictionary<string, string>? Env { get; set; }
     /// <summary>Merges an optional override into this config, returning a new instance.
@@ -43,7 +43,6 @@ public sealed class AgentConfig
             SystemPrompt = o.SystemPrompt ?? SystemPrompt,
             Model = o.Model ?? Model,
             Temperature = o.Temperature ?? Temperature,
-            TokenCeiling = o.TokenCeiling ?? TokenCeiling,
         };
         return m;
     }

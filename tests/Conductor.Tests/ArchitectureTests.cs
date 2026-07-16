@@ -135,6 +135,37 @@ public class ArchitectureTests
             "Architecture baseline is out of date. Debt you have paid must be removed from the ledger:\n" + string.Join("\n", stale));
     }
 
+    /// <summary>P0: the planning library is pure and standalone — the engine references
+    /// Conductor.Planning, NEVER the reverse. A reverse reference (or any IO/engine using creeping in)
+    /// would silently re-couple the planner to the app and kill the standalone-usable goal. Checked
+    /// both at the assembly level (compiled references) and at source level (using directives).</summary>
+    [Fact]
+    public void PlanningLibraryDoesNotReferenceTheEngine()
+    {
+        // Compiled truth: the Conductor.Planning assembly must not reference the engine assembly
+        // ("conductor" is the engine's AssemblyName). This is what the build actually linked.
+        var refs = typeof(Conductor.Planning.WorkflowEngine).Assembly.GetReferencedAssemblies();
+        Assert.DoesNotContain(refs, r =>
+            string.Equals(r.Name, "conductor", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(r.Name, "Conductor", StringComparison.Ordinal));
+
+        // Source truth: no file in the library may even name an engine namespace (catches a
+        // same-solution reference someone might add without changing the csproj).
+        var libDir = Path.Combine(RepoRoot(), "src", "Conductor.Planning");
+        var violations = new List<string>();
+        foreach (var file in EngineSources().Where(f => f.FullName.StartsWith(libDir, StringComparison.Ordinal)))
+        {
+            var text = File.ReadAllText(file.FullName);
+            foreach (var forbidden in new[] { "using Conductor.Core", "using Conductor.Models", "using Conductor.Commands", "using Spectre" })
+            {
+                if (text.Contains(forbidden, StringComparison.Ordinal))
+                    violations.Add($"  {file.Name} -> {forbidden}");
+            }
+        }
+        Assert.True(violations.Count == 0,
+            "Conductor.Planning must stay engine-free (one-way dependency):\n" + string.Join("\n", violations));
+    }
+
     /// <summary>The engine must not depend on the CLI or on any UI. The Face is a disposable client over the
     /// control plane and the CLI is merely one of three ingresses — if Core reaches back into either, the run
     /// can no longer outlive its UI, which is the entire point of the split.</summary>

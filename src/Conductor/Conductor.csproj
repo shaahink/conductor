@@ -14,6 +14,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- P0: the engine depends on the planning library, NEVER the reverse (arch-test enforced).
+         The global using keeps the moved planning vocabulary (SessionKind, Workflow*) available
+         everywhere without churning every file that already spoke it. -->
+    <ProjectReference Include="..\Conductor.Planning\Conductor.Planning.csproj" />
+    <Using Include="Conductor.Planning" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Spectre.Console" />
     <PackageReference Include="Spectre.Console.Cli" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />

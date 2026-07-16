@@ -1,4 +1,4 @@
-namespace Conductor.Models;
+namespace Conductor.Planning;
 
 /// <summary>A named, declarative workflow: an ordered list of session steps with conditionals.
 /// Replaces the hardcoded Deliver→Verify→Fix cycle with data-driven orchestration (M3.1).</summary>

@@ -12,7 +12,7 @@ takes-effect-on-restart.
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| P0 | New `Conductor.Planning` library (one-way dep, arch-test enforced) + agnostic `pipeline` rules block on PlanConfig + `IWorkflowResolver` seam; move the pure WorkflowEngine across; delete the dead `agent.tokenCeiling`. Behavior unchanged (defaults reproduce today). | TODO | | |
+| P0 | New `Conductor.Planning` library (one-way dep, arch-test enforced) + agnostic `pipeline` rules block on PlanConfig + `IWorkflowResolver` seam; move the pure WorkflowEngine across; delete the dead `agent.tokenCeiling`. Behavior unchanged (defaults reproduce today). | DONE | see git | `src/Conductor.Planning/` (no engine ref): SessionKind + Workflow{Definition,Step,Overrides,RuntimeVars} + WorkflowEngine (agnostic Resolve) + IWorkflowResolver + PipelineRules/RoleAgentRule/QaRule/MultiItemRule (one type/file); engine adapters WorkflowVarsFactory + Resolve(plan,stage) extension; RunContext.Workflows is the interface, DI-wired in ConductorHost; `PlanConfig.Pipeline` (null=classic); TokenCeiling deleted (property+Merge+ai-native plan JSON, grep-clean); arch test PlanningLibraryDoesNotReferenceTheEngine (assembly refs + source usings); suite 767 green, behavior unchanged |
 | P1 | `IAssignmentPolicy`: role→agent map (deliver/verify/audit/fix → model+persona) + multi-item session claim (conflict-free via PathClaims); engine asks the policy instead of hard-picking the first checkpoint. | TODO | | |
 | P2 | `IQaPolicy` dial (off / every-session / phase-gate + threshold) resolving onto the existing workflows/overrides; Face Settings edit + live via G3 reload; demo mirror + golden + contract test. | TODO | | |
 | P3 | Kanban card detail: pure `PromptComposition` (labeled building-blocks) at `GET /tasks/{id}/prompt`; Face panel with editable task-scoped context; advisor-refine + hand-to-Claude (reuse G1 advisor + /inject); goldens + composition unit test. | TODO | | |
@@ -20,11 +20,18 @@ takes-effect-on-restart.
 | P5 | Session-token rollover + limits surfaced honestly in the Face (labeled OFF by default), editable with a session-scoped this-run override; extend ApplyPlanEdit; ride G3 reload. | TODO | | |
 
 ## Handoff
-_Seed — no session has run yet. **Land G3 (G-series) first.** Then P0 is the keystone: it creates the
-decoupled `Conductor.Planning` home and the seam so P1–P3 build into the right place, and it clears the
-dead-`tokenCeiling` trap the audit found. P4 finishes the extraction and proves the library stands alone;
-P5 is independent. The whole point is code quality: a **pure**, **one-way-dependent**, **standalone-usable**
-planning library with **declarative, agnostic rules** — read the "Design principles" section of
-`docs/CONDUCTOR-PLANNER.md` before writing anything, and keep the architecture test (one-way dependency)
-green from P0 on. Reuse, don't fork: `WorkflowEngine`, the workflow/override model, the task graph, the
-Kanban tab, and G1's advisor plumbing already exist — surface and decouple them, don't rebuild them._
+_**G3 landed (prerequisite met) and P0 is DONE, 2026-07-16.** The decoupled home exists:
+`src/Conductor.Planning/` owns SessionKind, the Workflow* vocabulary, the (now-agnostic) WorkflowEngine,
+the `IWorkflowResolver` seam, and the `PipelineRules` schema (`pipeline` block on PlanConfig — null =
+classic behavior). The engine reaches it through DI + two thin adapters (`WorkflowVarsFactory`,
+`Resolve(plan, stage)` extension); a global `Using Include="Conductor.Planning"` in the two csproj
+files keeps the moved vocabulary available without churn. The one-way dependency is enforced by
+`ArchitectureTests.PlanningLibraryDoesNotReferenceTheEngine` (compiled assembly refs AND source-level
+using scan). `agent.tokenCeiling` is deleted and grep-clean. Suite 767 green — behavior unchanged._
+
+_**NEXT: P1 (role→agent assignment + multi-item sessions).** Build `IAssignmentPolicy` into
+`Conductor.Planning` (pure: rules + ready-task facts + kind in → `SessionAssignment` out); populate
+`PipelineRules.Roles`/`MultiItem` semantics; the engine's session-start path
+(`SessionRunner.ResolveSessionKind` + the active-checkpoint pick) asks the policy instead of
+hard-picking. Path-conflict validation stays in the policy (unit-test it); `StageConfig.PathClaims` +
+`PathClaimTracker` already exist. P2 (QA dial) can follow or interleave; P5 is independent._

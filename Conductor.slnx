@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Conductor/Conductor.csproj" />
+    <Project Path="src/Conductor.Planning/Conductor.Planning.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Conductor.Tests/Conductor.Tests.csproj" />

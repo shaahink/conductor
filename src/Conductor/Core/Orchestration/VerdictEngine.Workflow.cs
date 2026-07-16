@@ -18,7 +18,7 @@ public sealed partial class VerdictEngine
     {
         var workflow = _ctx.Workflows.Resolve(_ctx.Plan, stage);
         var stepIndex = _ctx.State.WorkflowStepIndices.GetValueOrDefault(stage.Id, -1);
-        var vars = _ctx.Workflows.BuildRuntimeVars(rec, _ctx.State.AttemptsThisStage,
+        var vars = WorkflowVarsFactory.Build(rec, _ctx.State.AttemptsThisStage,
             gatesGreen, verifierScore, verifierPassed, circuitBroken, stageComplete);
 
         // ResolveAndRecordStep resolves AND records the index in one call — see its doc comment

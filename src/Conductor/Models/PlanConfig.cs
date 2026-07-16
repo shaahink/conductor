@@ -87,6 +87,12 @@ public sealed class PlanConfig
     /// "deliver-verify" when unset (M3.1).</summary>
     public string? DefaultWorkflow { get; set; }
 
+    /// <summary>P0: the declarative pipeline rules block (<see cref="PipelineRules"/>, owned by
+    /// Conductor.Planning). Absent = null = every default reproduces the classic behavior exactly —
+    /// an existing plan with no `pipeline` block is byte-for-byte unchanged. P1 populates
+    /// roles/multi-item, P2 the QA dial.</summary>
+    public PipelineRules? Pipeline { get; set; }
+
     [JsonIgnore] public string PlanFilePath { get; internal set; } = "";
     [JsonIgnore] public string PlanDir => Path.GetDirectoryName(PlanFilePath) ?? ".";
     [JsonIgnore] public string StateDir => Path.Combine(Repo, ".conductor");

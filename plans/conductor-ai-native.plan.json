@@ -34,8 +34,7 @@
     ],
     "provider": "claude",
     "output": "stream-json",
-    "model": "claude-sonnet-5",
-    "tokenCeiling": 64000
+    "model": "claude-sonnet-5"
   },
   "readOrder": [
     "AGENTS.md",
