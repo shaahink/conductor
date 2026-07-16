@@ -58,6 +58,10 @@ public sealed partial class ControlPlaneServer
         }
 
         plan.Save();
+        // G3.2: a saved edit is dynamic by default — queue a live reload so the running loop swaps
+        // the plan in at its next session boundary (no restart). Harmless when no run is active:
+        // the verb is consumed at the loop's top and reloads the same file.
+        _inbox.Enqueue(ControlCommand.Of(ControlAction.ReloadPlan));
         await WriteJsonAsync(ctx, new PlanMutationResultDto(true, null, plan.PlanVersion),
             ControlPlaneJsonContext.Default.PlanMutationResultDto, HttpStatusCode.Accepted).ConfigureAwait(false);
     }
@@ -134,6 +138,8 @@ public sealed partial class ControlPlaneServer
             writable.Save();
             plan = writable;
             applied = true;
+            // G3.2: same as /plan/edit — an applied import reloads the live run at its next boundary.
+            _inbox.Enqueue(ControlCommand.Of(ControlAction.ReloadPlan));
         }
 
         await WriteJsonAsync(ctx, new PlanImportResultDto(true, null, PlanDiffDto.From(diff), applied, plan.PlanVersion, interpreter),

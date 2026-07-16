@@ -242,6 +242,64 @@ public sealed class ControlPlaneServerPlanTests : IDisposable
     }
 
     [Fact]
+    public async Task PostPlanEdit_EnqueuesLiveReload()
+    {
+        var (server, port) = StartServer();
+        try
+        {
+            Assert.Empty(_inbox);
+            var resp = await PostAsync(port, "/plan/edit",
+                """{"edits":[{"target":"stage","id":"S1","field":"sessions","value":"3"}]}""");
+            Assert.Equal(HttpStatusCode.Accepted, resp.StatusCode);
+
+            // G3.2: a saved edit queues reload-plan so a live run swaps the plan at its next boundary.
+            var cmd = Assert.Single(_inbox);
+            Assert.Equal(ControlAction.ReloadPlan, cmd.Action);
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task PostPlanEdit_Rejected_DoesNotEnqueueReload()
+    {
+        var (server, port) = StartServer();
+        try
+        {
+            var resp = await PostAsync(port, "/plan/edit",
+                """{"edits":[{"target":"stage","id":"NOPE","field":"title","value":"x"}]}""");
+            Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+            Assert.Empty(_inbox); // nothing saved → nothing to reload
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task PostPlanImport_ApplyEnqueuesLiveReload_PreviewDoesNot()
+    {
+        const string markdown = """
+            ### S8 — Imported stage
+            - **S8.1** something
+            ### S9 — Second imported stage
+            - **S9.1** something else
+            """;
+        var (server, port) = StartServer();
+        try
+        {
+            var preview = await PostAsync(port, "/plan/import",
+                JsonSerializer.Serialize(new { source = markdown, apply = false }));
+            Assert.Equal(HttpStatusCode.OK, preview.StatusCode);
+            Assert.Empty(_inbox); // a preview writes nothing, so it must not reload anything
+
+            var applied = await PostAsync(port, "/plan/import",
+                JsonSerializer.Serialize(new { source = markdown, apply = true }));
+            Assert.Equal(HttpStatusCode.Accepted, applied.StatusCode);
+            var cmd = Assert.Single(_inbox);
+            Assert.Equal(ControlAction.ReloadPlan, cmd.Action);
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
     public async Task PostPlanImport_RejectsFreeformProse()
     {
         var (server, port) = StartServer();

@@ -14,6 +14,7 @@ public class ControlFileTests
     [InlineData("retry-stage", ControlAction.RetryStage)]
     [InlineData("pause-after-stage", ControlAction.PauseAfterStage)]
     [InlineData("heartbeat", ControlAction.Heartbeat)]
+    [InlineData("reload-plan", ControlAction.ReloadPlan)]
     public void NonDestructiveCommandWithNullFlagsParsesWithoutThrowing(string command, ControlAction expected)
     {
         var json = JsonSerializer.Serialize(new

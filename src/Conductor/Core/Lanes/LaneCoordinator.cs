@@ -11,7 +11,7 @@ namespace Conductor.Core.Lanes;
 /// </summary>
 public sealed class LaneCoordinator
 {
-    private readonly PlanConfig _plan;
+    private PlanConfig _plan; // reassigned only by SwapPlan (G3.2 live reload, session boundary)
     private readonly RunState _state;
     private readonly IProgressSink _sink;
     private readonly IEventSink _events;
@@ -30,6 +30,10 @@ public sealed class LaneCoordinator
         _log = log;
         _pathClaims = pathClaims ?? new PathClaimTracker();
     }
+
+    /// <summary>G3.2 live plan reload: future lanes read the freshly loaded plan. Only called from the
+    /// run loop at a session boundary; lanes already in flight keep the plan they started with.</summary>
+    public void SwapPlan(PlanConfig fresh) => _plan = fresh;
 
     private static string Short(string sha) => string.IsNullOrEmpty(sha) ? "?" : sha.Length >= 7 ? sha[..7] : sha;
 

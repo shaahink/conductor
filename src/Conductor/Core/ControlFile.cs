@@ -37,6 +37,7 @@ public static class ControlFile
             "pause-after-stage" => ControlAction.PauseAfterStage,
             "goto" => ControlAction.Goto,
             "heartbeat" => ControlAction.Heartbeat,
+            "reload-plan" => ControlAction.ReloadPlan,
             _ => (ControlAction?)null,
         };
         var confirmed = root.TryGetProperty("confirmed", out var cf) && cf.ValueKind == JsonValueKind.True;

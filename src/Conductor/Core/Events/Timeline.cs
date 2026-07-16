@@ -104,6 +104,11 @@ public static class Timeline
                     entries.Add(new TimelineEntry(a.Seq, a.Ts, EntryKind.Attention, $"needs human — {a.Reason}", null));
                     break;
 
+                case PlanReloaded p:
+                    entries.Add(new TimelineEntry(p.Seq, p.Ts, EntryKind.Run,
+                        $"plan reloaded — v{p.PlanVersion} · {p.Stages} stages · {p.Gates} gates", null));
+                    break;
+
                 case OwnerApprovalRequested o:
                     entries.Add(new TimelineEntry(o.Seq, o.Ts, EntryKind.Owner, $"owner approval requested — {o.StageId}", null));
                     break;

@@ -439,6 +439,10 @@ public sealed partial class ControlPlaneServer
                     desc = $"stage {sConfirmed.StageId} confirmed";
                     stageId = sConfirmed.StageId;
                     break;
+                case PlanReloaded p:
+                    kind = "run";
+                    desc = $"plan reloaded — v{p.PlanVersion} · {p.Stages} stages · {p.Gates} gates";
+                    break;
                 default:
                     continue;
             }

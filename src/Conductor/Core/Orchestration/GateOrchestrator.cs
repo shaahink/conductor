@@ -11,6 +11,12 @@ namespace Conductor.Core.Orchestration;
 /// </summary>
 public sealed class GateOrchestrator(PlanConfig plan, RunState state, IEventSink events, IRunStore? store)
 {
+    private PlanConfig _plan = plan;
+
+    /// <summary>G3.2 live plan reload: point the gate battery at the freshly loaded _plan. Only called
+    /// from the run loop at a session boundary (never while gates are running).</summary>
+    public void SwapPlan(PlanConfig fresh) => _plan = fresh;
+
     public async Task<IReadOnlyList<GateResult>> RunBatteryAsync(
         Action<string> log,
         Action<string, string?> logWithOutcome,
@@ -18,13 +24,13 @@ public sealed class GateOrchestrator(PlanConfig plan, RunState state, IEventSink
         CancellationToken ct,
         bool fastOnly)
     {
-        await GateRunner.RunHookAsync(plan, plan.Setup, "setup", log, ct).ConfigureAwait(false);
-        var stage = plan.Stages.FirstOrDefault(s => s.Id == state.CurrentStage);
-        var headSha = Git.Head(plan.Repo);
-        var gates = await GateRunner.RunAllAsync(plan, log, ct, fastOnly,
+        await GateRunner.RunHookAsync(_plan, _plan.Setup, "setup", log, ct).ConfigureAwait(false);
+        var stage = _plan.Stages.FirstOrDefault(s => s.Id == state.CurrentStage);
+        var headSha = Git.Head(_plan.Repo);
+        var gates = await GateRunner.RunAllAsync(_plan, log, ct, fastOnly,
             state.CurrentStage, stage?.Kind, onGates,
             store, state.RunId, headSha).ConfigureAwait(false);
-        await GateRunner.RunHookAsync(plan, plan.Teardown, "teardown", log, ct).ConfigureAwait(false);
+        await GateRunner.RunHookAsync(_plan, _plan.Teardown, "teardown", log, ct).ConfigureAwait(false);
         foreach (var g in gates)
         {
             var outcome = g.Cached ? "cached" : g.Skipped ? "skip" : g.Passed ? "pass" : g.Optional ? "warn" : "fail";
@@ -36,7 +42,7 @@ public sealed class GateOrchestrator(PlanConfig plan, RunState state, IEventSink
     /// <summary>Persist gate results to the event log and run.db.</summary>
     public void PersistGates(IReadOnlyList<GateResult> gates, string scope, string? sessionId = null)
     {
-        var sha = Git.Head(plan.Repo);
+        var sha = Git.Head(_plan.Repo);
         foreach (var g in gates)
         {
             events.Emit(new GateFinished
@@ -50,7 +56,7 @@ public sealed class GateOrchestrator(PlanConfig plan, RunState state, IEventSink
                 DurationMs = (long)g.Duration.TotalMilliseconds,
                 Scope = scope,
             });
-            var tier = plan.Gates.FirstOrDefault(gc => gc.Name == g.Name)?.Tier ?? "full";
+            var tier = _plan.Gates.FirstOrDefault(gc => gc.Name == g.Name)?.Tier ?? "full";
             store?.RecordGate(state.RunId,
                 int.TryParse(sessionId, out var sn) ? sn : null,
                 state.CurrentStage, g.Name, tier, scope, sha,
@@ -68,14 +74,14 @@ public sealed class GateOrchestrator(PlanConfig plan, RunState state, IEventSink
     public void ScheduleGateOrAudit(string stageId, string startHead, Action<string> log, Func<string, bool> hasNextUnconfirmed)
     {
         state.StageStartHeads[stageId] = startHead;
-        if (plan.Audit is { Enabled: true, EnableParallel: true } && !state.AuditedStages.Contains(stageId)
+        if (_plan.Audit is { Enabled: true, EnableParallel: true } && !state.AuditedStages.Contains(stageId)
             && hasNextUnconfirmed(stageId))
         {
             state.PendingPhaseGate = new PendingPhaseGate { StageId = stageId, StageStartHead = startHead };
             state.PendingAudit = null;
             log($"stage {stageId} checkpoints all DONE — scheduling full-battery phase gate (parallel audit will follow)");
         }
-        else if (plan.Audit is { Enabled: true } && !state.AuditedStages.Contains(stageId))
+        else if (_plan.Audit is { Enabled: true } && !state.AuditedStages.Contains(stageId))
         {
             state.PendingAudit = new PendingAudit { StageId = stageId, StageStartHead = startHead };
             state.PendingPhaseGate = null;

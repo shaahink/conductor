@@ -17,14 +17,15 @@ namespace Conductor.Core.Orchestration;
 public sealed class RunContext
 {
     // ── immutable config + references ──
+    // (Plan/Prompts are reassignable through SwapPlan ONLY — the G3.2 live-reload session boundary.)
 
-    public PlanConfig Plan { get; }
+    public PlanConfig Plan { get; private set; }
     public RunState State { get; }
     public RunOptions Options { get; }
     public IProgressSink Sink { get; }
     public IEventSink Events { get; }
     public LessonsManager Lessons { get; }
-    public PromptBuilder Prompts { get; }
+    public PromptBuilder Prompts { get; private set; }
     public IPlanner Planner { get; }
     public IProgressProvider Progress { get; }
     public IAgentProvider AgentProvider { get; }
@@ -113,6 +114,17 @@ public sealed class RunContext
         LockPath = Path.Combine(plan.StateDir, "conductor.lock");
         ControlPath = Path.Combine(plan.StateDir, "control.json");
         LogPath = Path.Combine(plan.StateDir, "conductor.log");
+    }
+
+    /// <summary>G3.2 live plan reload: swap the plan every satellite reads through this context, and
+    /// rebuild the prompt builder (it caches the plan + persona registry). MUST only be called from
+    /// the run loop at a session boundary — never while an agent session is running against the old
+    /// stage graph. Callers are responsible for also swapping satellites that hold their own plan
+    /// reference (GateOrchestrator, LaneCoordinator, ControlDispatcher).</summary>
+    public void SwapPlan(PlanConfig fresh)
+    {
+        Plan = fresh;
+        Prompts = new PromptBuilder(fresh, new PersonaRegistry(fresh), Lessons);
     }
 
     // ── convenience delegations ──

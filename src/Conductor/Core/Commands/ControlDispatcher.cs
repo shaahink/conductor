@@ -4,8 +4,8 @@ using Conductor.Models;
 namespace Conductor.Core.Commands;
 
 /// <summary>
-/// Executes the 11 control verbs (pause/resume/abort/skip/kill/stop-after/retry-stage/rollback/
-/// pause-after-stage/goto/heartbeat) against run state. This is the single place verb behavior lives —
+/// Executes the 12 control verbs (pause/resume/abort/skip/kill/stop-after/retry-stage/rollback/
+/// pause-after-stage/goto/heartbeat/reload-plan) against run state. This is the single place verb behavior lives —
 /// every ingress (the TUI's in-process queue, the file-based control.json written by CLI verbs,
 /// and the F5 HTTP control-plane POST) converges on the same <see cref="ControlCommand"/> shape
 /// and calls <see cref="DispatchAsync"/>, so none of them can drift from what a verb actually does.
@@ -30,6 +30,8 @@ public sealed class ControlDispatcher(
     // consumes these once the current session ends via the Consume* methods below.
     private bool _pendingSkip;
     private bool _pausePending;
+    private bool _reloadPending;
+    private PlanConfig _plan = plan;
 
     public bool ConsumePendingSkip()
     {
@@ -44,6 +46,19 @@ public sealed class ControlDispatcher(
         _pausePending = false;
         return true;
     }
+
+    /// <summary>G3.2: a queued plan reload. Consumed by the run loop at the top of its iteration —
+    /// the session boundary — which is the ONLY place the live plan may be swapped (an agent may be
+    /// running against the old stage graph anywhere else).</summary>
+    public bool ConsumeReloadPending()
+    {
+        if (!_reloadPending) return false;
+        _reloadPending = false;
+        return true;
+    }
+
+    /// <summary>G3.2: point the goto/skip stage lookups at the freshly reloaded plan.</summary>
+    public void SwapPlan(PlanConfig fresh) => _plan = fresh;
 
     public async Task<ControlAction?> DispatchAsync(ControlCommand cmd, bool inSession, CancellationToken ct)
     {
@@ -72,6 +87,16 @@ public sealed class ControlDispatcher(
                     : new ToastMessage("heartbeat: no active session to snapshot", LogSeverity.Info));
                 deleteControlFile();
                 break;
+            case ControlAction.ReloadPlan:
+                // Always deferred to the session boundary (the run loop's top), never applied here:
+                // mid-session the agent is working against the current stage graph, and even between
+                // sessions the swap needs the loop's own machinery (context + satellites).
+                _reloadPending = true;
+                sink.Toast(new ToastMessage(inSession
+                    ? "plan reload queued — applies when this session ends"
+                    : "plan reload queued — applying at the session boundary", LogSeverity.Success));
+                deleteControlFile();
+                break;
             case ControlAction.ResumeRun:
                 if (state.Status is RunStatus.Paused or RunStatus.NeedsHuman or RunStatus.AwaitingOwner)
                 {
@@ -93,7 +118,7 @@ public sealed class ControlDispatcher(
                 if (inSession) _pendingSkip = true;
                 else if (state.CurrentStage != null)
                 {
-                    var s = plan.Stages.FirstOrDefault(x => x.Id == state.CurrentStage);
+                    var s = _plan.Stages.FirstOrDefault(x => x.Id == state.CurrentStage);
                     if (s != null) { skipStage(s, "skipped by user control"); sink.Toast(new ToastMessage($"stage {state.CurrentStage} skipped", LogSeverity.Success)); }
                 }
                 deleteControlFile();
@@ -122,15 +147,15 @@ public sealed class ControlDispatcher(
                     sink.Toast(new ToastMessage("rollback refused: no commit for current stage", LogSeverity.Error));
                     break;
                 }
-                if (!force && Git.IsDirty(plan.Repo))
+                if (!force && Git.IsDirty(_plan.Repo))
                 {
-                    log($"rollback refused: working tree is dirty — {Git.DirtySummary(plan.Repo)}. Re-run with --force to discard and reset.");
+                    log($"rollback refused: working tree is dirty — {Git.DirtySummary(_plan.Repo)}. Re-run with --force to discard and reset.");
                     sink.Toast(new ToastMessage("rollback refused: dirty working tree", LogSeverity.Error));
                     break;
                 }
-                var fromSha = Git.Head(plan.Repo);
-                log($"rollback: resetting to {Short(sha)} (stage {state.CurrentStage} start){(force && Git.IsDirty(plan.Repo) ? " — discarding dirty working tree (--force)" : "")}");
-                Git.Exec(plan.Repo, "reset", "--hard", sha);
+                var fromSha = Git.Head(_plan.Repo);
+                log($"rollback: resetting to {Short(sha)} (stage {state.CurrentStage} start){(force && Git.IsDirty(_plan.Repo) ? " — discarding dirty working tree (--force)" : "")}");
+                Git.Exec(_plan.Repo, "reset", "--hard", sha);
                 events.Emit(new RollbackExecuted { StageId = state.CurrentStage ?? "?", FromSha = fromSha, ToSha = sha, Forced = force });
                 state.Status = RunStatus.Idle;
                 save();
@@ -149,7 +174,7 @@ public sealed class ControlDispatcher(
                 if (cmd.StageId == null) { log("goto: no target stage — use `conductor goto <stage>`"); sink.Toast(new ToastMessage("goto: no target stage", LogSeverity.Error)); break; }
                 {
                     var tg = cmd.StageId;
-                    var target = plan.Stages.FirstOrDefault(s => s.Id == tg);
+                    var target = _plan.Stages.FirstOrDefault(s => s.Id == tg);
                     if (target == null) { log($"goto refused: stage '{tg}' not found in plan"); sink.Toast(new ToastMessage($"goto refused: stage '{tg}' not found", LogSeverity.Error)); break; }
                     if (state.SkippedStages.Contains(tg)) { log($"goto refused: stage '{tg}' is skipped"); sink.Toast(new ToastMessage($"goto refused: stage '{tg}' is skipped", LogSeverity.Error)); break; }
                     // A goto to an already-confirmed stage must actually take effect: un-confirm it (and
@@ -158,7 +183,7 @@ public sealed class ControlDispatcher(
                     state.OwnerApprovedStages.Remove(tg);
                     state.AwaitingOwnerReason = null;
                     state.CurrentStage = tg;
-                    state.CurrentStageStartHead = Git.Head(plan.Repo);
+                    state.CurrentStageStartHead = Git.Head(_plan.Repo);
                     state.AttemptsThisStage = 0;
                     state.PendingFix = null;
                     state.PendingResume = null;

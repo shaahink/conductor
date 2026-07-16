@@ -1,11 +1,15 @@
+using System.Text.Json;
+
 using Conductor.Models;
 using Spectre.Console;
 
 namespace Conductor.Commands;
 
 /// <summary>
-/// P1 — `conductor plan reload`: re-read the full plan JSON from disk, validate it, and report.
-/// The running orchestrator picks up changes at its next session boundary.
+/// `conductor plan reload`: re-read the full plan JSON from disk, validate it, report — and (G3.2)
+/// queue a `reload-plan` control verb so a running orchestrator actually swaps the live plan in at
+/// its next session boundary (this used to be validate-and-print only; the "picks up changes"
+/// wording was aspirational until the live reload landed).
 /// </summary>
 public static class PlanReloadCommand
 {
@@ -43,7 +47,13 @@ public static class PlanReloadCommand
             AnsiConsole.Write(table);
 
             AnsiConsole.MarkupLine($"[green]Plan validated — {stageCount} stages, {gateCount} gates, v{plan.PlanVersion}.[/]");
-            AnsiConsole.MarkupLine("[grey]The running conductor will pick up changes at its next session boundary.[/]");
+
+            // Only a valid plan gets queued: the run loop re-validates on its side too, but there is
+            // no point signalling a reload we already know would be skipped.
+            Directory.CreateDirectory(plan.StateDir);
+            File.WriteAllText(Path.Combine(plan.StateDir, "control.json"),
+                JsonSerializer.Serialize(new { command = "reload-plan", issuedUtc = DateTime.UtcNow }));
+            AnsiConsole.MarkupLine("[grey]reload-plan queued — a running conductor swaps the live plan at its next session boundary.[/]");
             return 0;
         }
         catch (Exception ex) when (ex is InvalidOperationException or FileNotFoundException)

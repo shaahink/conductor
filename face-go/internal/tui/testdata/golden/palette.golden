@@ -16,7 +16,6 @@
    ○ lint                  │
                            │
  ── TASKS ──               │
-   ✓ Add truth-tier con…   │
  ╭──────────────────────────────────────────────────────────────────╮
  │    pause            Pause after current session ends             │
  │   resume           Resume a paused run                           │
@@ -26,6 +25,7 @@
  │ ⚠ kill             Kill current agent session                    │
  │   stop-after       Stop after current session                    │
  │   heartbeat        Refresh REPORT.md snapshot now                │
+ │   reload-plan      Swap live plan at next session boundary       │
  │ ⚠ retry-stage      Reset attempt counter, retry stage            │
  │ ⚠ rollback         Git reset --hard to stage start               │
  │   pause-after-stage Pause once stage completes                   │

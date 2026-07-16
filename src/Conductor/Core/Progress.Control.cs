@@ -13,4 +13,5 @@ public enum ControlAction
     PauseAfterStage,
     Goto,
     Heartbeat,
+    ReloadPlan,
 }

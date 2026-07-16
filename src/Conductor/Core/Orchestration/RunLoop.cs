@@ -89,6 +89,12 @@ public sealed partial class RunLoop
                 {
                     await HandleControlAsync(ct: ct).ConfigureAwait(false);
                     if (_ctx.State.Status == RunStatus.Aborted) { _ctx.Store?.RecordRunEnd(_ctx.State.RunId, _ctx.State.Status.ToString()); _saveAndReport(); return 2; }
+
+                    // G3.2: the top of this loop is the session boundary — the only safe point to swap
+                    // the live plan (no agent is running here; paused/idle iterations pass through too,
+                    // so an edit made while parked is live before the next resume).
+                    if (Dispatcher.ConsumeReloadPending()) ApplyPlanReload();
+
                     if (!_ctx.Options.DryRun && _ctx.State.Status is RunStatus.Paused or RunStatus.NeedsHuman or RunStatus.AwaitingOwner)
                     {
                         PushIdleSnapshot();
@@ -365,6 +371,35 @@ public sealed partial class RunLoop
         finally { ReleaseLock(); }
     }
 
+    /// <summary>G3.2 live plan reload, applied ONLY from the top of the run loop (the session
+    /// boundary). Re-reads the plan file the run was started from, validates it (PlanConfig.Load
+    /// throws on an invalid plan → reload is skipped, old plan stays), and swaps it into the context
+    /// plus every satellite that caches a plan reference. A stale or deleted file never kills the
+    /// run — reload is best-effort and loud in the log either way.</summary>
+    private void ApplyPlanReload()
+    {
+        var path = _ctx.Plan.PlanFilePath;
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            _ctx.Log("plan reload skipped — this run's plan was not loaded from a file it can re-read");
+            return;
+        }
+        PlanConfig fresh;
+        try { fresh = PlanConfig.Load(path); }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException or JsonException or UnauthorizedAccessException)
+        {
+            _ctx.Log($"plan reload skipped — the plan file did not load cleanly: {ex.Message}");
+            return;
+        }
+        _ctx.SwapPlan(fresh);
+        _gates.SwapPlan(fresh);
+        _lanes.SwapPlan(fresh);
+        Dispatcher.SwapPlan(fresh);
+        _ctx.Events.Emit(new PlanReloaded { PlanVersion = fresh.PlanVersion, Stages = fresh.Stages.Count, Gates = fresh.Gates.Count });
+        _ctx.Log($"plan reloaded at session boundary — v{fresh.PlanVersion}, {fresh.Stages.Count} stages, {fresh.Gates.Count} gates");
+        _saveAndReport();
+    }
+
     /// <summary>G3.1 `run --paused`: park the run before the first session so the operator can author
     /// the plan / pre-seed the kanban with the control plane up. Pure so the flag→status wiring is
     /// unit-testable. Never masks a state that needs attention (NeedsHuman/Aborted keep their reason),
@@ -375,137 +410,5 @@ public sealed partial class RunLoop
         if (state.Status is RunStatus.NeedsHuman or RunStatus.Aborted) return false;
         state.Status = RunStatus.Paused;
         return true;
-    }
-
-    // ---------------------------------------------------------------- control & plumbing
-
-    internal async Task<ControlAction?> HandleControlAsync(bool inSession = false, CancellationToken ct = default)
-    {
-        var cmd = _ctx.Sink.PollControl() ?? PollInbox() ?? await ReadControlFileAsync(ct).ConfigureAwait(false);
-        if (cmd is not { } c) return null;
-        return await Dispatcher.DispatchAsync(c, inSession, ct).ConfigureAwait(false);
-    }
-
-    private ControlCommand? PollInbox() =>
-        _ctx.ControlInbox != null && _ctx.ControlInbox.TryDequeue(out var c) ? c : null;
-
-    private async Task<ControlCommand?> ReadControlFileAsync(CancellationToken ct)
-    {
-        try
-        {
-            if (!File.Exists(_ctx.ControlPath)) return null;
-            var writeTime = File.GetLastWriteTimeUtc(_ctx.ControlPath);
-            if (_ctx.LastControlWrite == writeTime) return null;
-            _ctx.LastControlWrite = writeTime;
-            var text = await File.ReadAllTextAsync(_ctx.ControlPath, ct).ConfigureAwait(false);
-            var parsed = ControlFile.Parse(text);
-            if (parsed.Action == null) return null;
-            if (parsed.Confirmed && parsed.IntentId != null)
-                _ctx.Log($"control confirmed [intent={parsed.IntentId}]");
-            return parsed;
-        }
-        catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException or InvalidOperationException)
-        {
-            return null;
-        }
-    }
-
-    private void DeleteControlFile()
-    {
-        try { if (File.Exists(_ctx.ControlPath)) File.Delete(_ctx.ControlPath); }
-        catch (IOException) { }
-        catch (UnauthorizedAccessException) { }
-        _ctx.LastControlWrite = null;
-    }
-
-    private void RecoverFromCrash()
-    {
-        var recovered = false;
-
-        if (_ctx.State.Status is RunStatus.Running or RunStatus.VerifyingGates or RunStatus.Backoff)
-        {
-            var last = _ctx.State.History.LastOrDefault();
-            if (last != null && last.EndedUtc == null)
-            {
-                last.EndedUtc = DateTime.UtcNow;
-                last.Outcome = SessionOutcome.Interrupted;
-                _verdicts.QueueResume(last, "conductor crashed or was killed mid-session");
-                _ctx.Log($"recovered: session #{last.Number} was interrupted — will resume its agent session");
-                recovered = true;
-            }
-            _ctx.State.Status = RunStatus.Idle;
-            _ctx.Save();
-        }
-
-        if (!recovered && _ctx.State.PendingResume == null)
-        {
-            if (_ctx.Store is { } store)
-            {
-                var interrupted = store.FindInterruptedSession(_ctx.State.RunId);
-                if (interrupted != null)
-                {
-                    var rec = _ctx.State.History.FirstOrDefault(h => h.Number == interrupted.Number);
-                    if (rec != null)
-                    {
-                        if (rec.EndedUtc == null) rec.EndedUtc = DateTime.UtcNow;
-                        rec.Outcome = SessionOutcome.Interrupted;
-                        _verdicts.QueueResume(rec, "event log shows interrupted session — recovering");
-                    }
-                    else
-                    {
-                        if (string.IsNullOrEmpty(interrupted.AgentSessionId))
-                        {
-                            _ctx.Log($"recovered from event log: session #{interrupted.Number} has no AgentSessionId — marking needs-attention (cannot resume without a session id)");
-                            _ctx.State.Status = RunStatus.NeedsHuman;
-                            _ctx.State.AttentionReason = $"Orphaned session #{interrupted.Number} in run.db has no AgentSessionId — manual review needed.";
-                            _ctx.Save();
-                        }
-                        else
-                        {
-                            rec = new SessionRecord
-                            {
-                                Number = interrupted.Number,
-                                Stage = interrupted.StageId,
-                                Kind = SessionKind.Deliver,
-                                Attempt = 1,
-                                StartedUtc = DateTime.UtcNow,
-                                ClaudeSessionId = interrupted.AgentSessionId,
-                                Outcome = SessionOutcome.Interrupted,
-                            };
-                            _ctx.State.History.Add(rec);
-                            _verdicts.QueueResume(rec, "event log shows interrupted session — recovering from orphaned SessionStarted");
-                        }
-                    }
-                    if (_ctx.State.Status != RunStatus.NeedsHuman)
-                    {
-                        _ctx.Log($"recovered from event log: session #{interrupted.Number} was interrupted — will resume");
-                        _ctx.State.Status = RunStatus.Idle;
-                        _ctx.Save();
-                    }
-                }
-
-                var events = store.ReadAllEvents(_ctx.State.RunId);
-                foreach (var evt in events)
-                {
-                    if (evt is TaskAdded ta)
-                        _ctx.DecomposedCheckpoints.Add(ta.CheckpointId);
-                }
-            }
-        }
-    }
-
-    private void WarnOnBranchPattern()
-    {
-        if (string.IsNullOrWhiteSpace(_ctx.Plan.BranchPattern)) return;
-        var branch = Git.Branch(_ctx.Plan.Repo);
-        if (!Regex.IsMatch(branch, _ctx.Plan.BranchPattern, RegexOptions.None, ProgressConventions.RegexTimeout))
-            _ctx.Log($"⚠ branch '{branch}' does not match plan branchPattern '{_ctx.Plan.BranchPattern}' — check before letting sessions commit");
-    }
-
-    private void EnsureStateDirGitignore()
-    {
-        var gi = Path.Combine(_ctx.Plan.StateDir, ".gitignore");
-        if (!File.Exists(gi))
-            File.WriteAllText(gi, "*\n!.gitignore\n!REPORT.md\n");
     }
 }

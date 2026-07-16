@@ -39,6 +39,7 @@ namespace Conductor.Core.Events;
         [JsonDerivedType(typeof(MutatingLaneFinished),  "mutatingLaneFinished")]
         [JsonDerivedType(typeof(MergeGateVerdict),      "mergeGateVerdict")]
         [JsonDerivedType(typeof(RollbackExecuted),     "rollbackExecuted")]
+        [JsonDerivedType(typeof(PlanReloaded),         "planReloaded")]
 public abstract record ConductorEvent
 {
     /// <summary>Monotonic 1-based ordinal within the log (continues across restarts). Stamped by

@@ -104,7 +104,7 @@ going. Destructive ones need `--yes`.
 |---|---|
 | `note "<text>" [-k kind] [-s stage]` | Write to the knowledge ledger (`run.db`); injected into later prompts. |
 | `bug new "<title>" [-d detail] [-s severity] [--stage S]` · `bug list [--all]` · `bug fix <id> [--wontfix]` | Tracked bugs that outlive the session that found them; open ones feed later prompts. |
-| `plan set <key> <value>` · `plan reload` · `plan add-stage <json>` · `plan import <file> [--model M] [-y]` | Edit the plan from the CLI. `import` parses a markdown mega-plan into stages and DIFFS against the current plan (never clobbers). |
+| `plan set <key> <value>` · `plan reload` · `plan add-stage <json>` · `plan import <file> [--model M] [-y]` | Edit the plan from the CLI. `import` parses a markdown mega-plan into stages and DIFFS against the current plan (never clobbers). `reload` validates the file and queues a live `reload-plan` — a running loop swaps the plan at its next session boundary. |
 
 ### Infra
 `bg start\|status\|logs\|stop` (long-running commands, so they don't look like a stall) ·
@@ -170,6 +170,14 @@ A **freeform `/plan/import`** (prose the advisor model interprets) must be **pre
 apply**: POST with `"apply":false` to get the diff, review it, then POST the same source with
 `"apply":true`. A blind `apply:true` with no prior preview is refused — the reviewable diff is the
 defence against a model-shaped gate command landing unseen.
+
+**Plan edits are live (G3.2).** A saved `/plan/edit` or applied `/plan/import` auto-queues a
+`reload-plan` control verb: the running loop re-reads the plan file at its **next session boundary**
+(never mid-session) and swaps the live plan — stages, gates, and limits changes take effect in the
+current run, no restart. The same verb is available directly (`POST /control
+{"command":"reload-plan"}`, the Face palette, or `conductor plan reload`), and the reload shows up in
+the timeline as `plan reloaded — vN`. An invalid or missing plan file makes the reload a loud no-op —
+the old plan stays.
 
 **From inside a session, the worker agent uses MCP tools** (not you): `conductor_note`, `ledger_list`,
 `task_add|list|update`, `bug_new|list|fix`, `bg_start|status|logs|stop`, `run_query`. You mostly won't
