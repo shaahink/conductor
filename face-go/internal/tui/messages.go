@@ -110,6 +110,13 @@ type MsgPlanImported struct {
 	Err    string
 }
 
+// MsgTaskWritten is the result of a Kanban move/add (G2.2).
+type MsgTaskWritten struct {
+	Verb   string // "move" or "add" — for the status line
+	Result *api.TaskWriteResultDto
+	Err    string
+}
+
 // M8.2 Telegram guided setup
 type MsgTelegramStatusUpdated struct {
 	Status *api.TelegramStatusDto

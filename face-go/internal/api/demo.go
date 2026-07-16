@@ -27,6 +27,7 @@ type demoSource struct {
 	sessions    []SessionRowDto
 	plan        *PlanDto
 	telegram    *TelegramStatusDto
+	tasks       []TaskDto
 }
 
 func NewDemoSource() DataSource {
@@ -39,6 +40,7 @@ func NewDemoSource() DataSource {
 		state:     makeFakeState(),
 		plan:      makeFakePlan(),
 		telegram:  makeFakeTelegramStatus(),
+		tasks:     makeFakeTasks(),
 	}
 
 	go s.runSimulation()
@@ -51,14 +53,88 @@ func (s *demoSource) FetchState() (*StateDto, error) {
 }
 
 func (s *demoSource) FetchTasks() (*TasksDto, error) {
-	return &TasksDto{
-		Tasks: []TaskDto{
-			{TaskId: "T1", CheckpointId: "F7.4", Title: "Implement gate caching by SHA", Status: "done", Source: "planner", Order: 1},
-			{TaskId: "T2", CheckpointId: "F7.4", Title: "Add per-stage truth gate config", Status: "done", Source: "agent", Order: 2},
-			{TaskId: "T3", CheckpointId: "F7.4", Title: "Wire RunDb.GetLastPassingGateResult", Status: "in_progress", Source: "agent", Order: 3},
-			{TaskId: "T4", CheckpointId: "F7.5", Title: "Add SkipIfFresh file-timestamp check", Status: "todo", Source: "planner", Order: 4},
-		},
-	}, nil
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make([]TaskDto, len(s.tasks))
+	copy(out, s.tasks)
+	return &TasksDto{Tasks: out}, nil
+}
+
+// makeFakeTasks seeds a board with all three Kanban columns populated — the state a reviewer
+// should see (and the goldens capture) by default.
+func makeFakeTasks() []TaskDto {
+	return []TaskDto{
+		{TaskId: "T1", CheckpointId: "F7.4", Title: "Implement gate caching by SHA", Status: "done", Source: "planner", Order: 1},
+		{TaskId: "T2", CheckpointId: "F7.4", Title: "Add per-stage truth gate config", Status: "done", Source: "agent", Order: 2},
+		{TaskId: "T3", CheckpointId: "F7.4", Title: "Wire RunDb.GetLastPassingGateResult", Status: "in_progress", Source: "agent", Order: 3},
+		{TaskId: "T4", CheckpointId: "F7.5", Title: "Add SkipIfFresh file-timestamp check", Status: "todo", Source: "planner", Order: 4},
+	}
+}
+
+// PostTaskUpdate mirrors the server contract: transition legality lives in the fold, so an illegal
+// move is an accepted no-op and Status echoes what actually happened (see TaskGraph.IsValidTransition).
+func (s *demoSource) PostTaskUpdate(req TaskUpdateRequestDto) (*TaskWriteResultDto, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i := range s.tasks {
+		if s.tasks[i].TaskId != req.TaskId {
+			continue
+		}
+		if isValidTaskTransition(s.tasks[i].Status, req.Status) {
+			s.tasks[i].Status = req.Status
+		}
+		actual := s.tasks[i].Status
+		return &TaskWriteResultDto{Ok: true, TaskId: &s.tasks[i].TaskId, Status: &actual}, nil
+	}
+	msg := "task not found: " + req.TaskId
+	return &TaskWriteResultDto{Ok: false, Error: &msg}, nil
+}
+
+func (s *demoSource) PostTaskAdd(req TaskAddRequestDto) (*TaskWriteResultDto, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if strings.TrimSpace(req.Title) == "" {
+		msg := "title is required"
+		return &TaskWriteResultDto{Ok: false, Error: &msg}, nil
+	}
+	if strings.TrimSpace(req.CheckpointId) == "" {
+		msg := "checkpointId is required"
+		return &TaskWriteResultDto{Ok: false, Error: &msg}, nil
+	}
+	order := req.Order
+	if order <= 0 {
+		for _, t := range s.tasks {
+			if t.CheckpointId == req.CheckpointId && t.Order >= order {
+				order = t.Order + 1
+			}
+		}
+		if order == 0 {
+			order = 1
+		}
+	}
+	task := TaskDto{
+		TaskId:       fmt.Sprintf("%s-a%d", req.CheckpointId, order),
+		CheckpointId: req.CheckpointId,
+		Title:        strings.TrimSpace(req.Title),
+		Status:       "todo",
+		Source:       "human",
+		Order:        order,
+	}
+	s.tasks = append(s.tasks, task)
+	status := "todo"
+	return &TaskWriteResultDto{Ok: true, TaskId: &task.TaskId, Status: &status, CheckpointId: &task.CheckpointId, Title: &task.Title, Order: order}, nil
+}
+
+// isValidTaskTransition mirrors Core/Events/TaskGraph.IsValidTransition, including the G2 reopen
+// moves back out of done/skipped.
+func isValidTaskTransition(from, to string) bool {
+	switch from + "→" + to {
+	case "todo→in_progress", "in_progress→done", "in_progress→todo", "todo→done",
+		"todo→skipped", "in_progress→skipped",
+		"done→in_progress", "done→todo", "skipped→todo", "skipped→in_progress":
+		return true
+	}
+	return false
 }
 
 func (s *demoSource) FetchProcesses() (*ProcessesDto, error) {
@@ -190,7 +266,13 @@ func (s *demoSource) PostPlanImport(req PlanImportRequestDto) (*PlanImportResult
 		s.plan.Stages = append(s.plan.Stages, diff.AddedStages...)
 		s.plan.PlanVersion++
 	}
-	return &PlanImportResultDto{Ok: true, Diff: diff, Applied: req.Apply, PlanVersion: s.plan.PlanVersion}, nil
+	// Mirror the server's interpreter surface: a path/markdown source parses structurally; anything
+	// else reads as prose the advisor model interpreted (G1.1).
+	interpreter := "structured"
+	if !strings.Contains(req.Source, "/") && !strings.Contains(req.Source, "\\") && !strings.Contains(req.Source, "#") {
+		interpreter = "claude-fable-5"
+	}
+	return &PlanImportResultDto{Ok: true, Diff: diff, Applied: req.Apply, PlanVersion: s.plan.PlanVersion, Interpreter: &interpreter}, nil
 }
 
 func (s *demoSource) FetchTelegramStatus() (*TelegramStatusDto, error) {

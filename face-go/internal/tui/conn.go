@@ -205,6 +205,28 @@ func (m Model) cmdPostPlanEdit(req api.PlanEditRequestDto) tea.Cmd {
 	}
 }
 
+func (m Model) cmdPostTaskUpdate(req api.TaskUpdateRequestDto) tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		res, err := source.PostTaskUpdate(req)
+		if err != nil {
+			return MsgTaskWritten{Verb: "move", Err: err.Error()}
+		}
+		return MsgTaskWritten{Verb: "move", Result: res}
+	}
+}
+
+func (m Model) cmdPostTaskAdd(req api.TaskAddRequestDto) tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		res, err := source.PostTaskAdd(req)
+		if err != nil {
+			return MsgTaskWritten{Verb: "add", Err: err.Error()}
+		}
+		return MsgTaskWritten{Verb: "add", Result: res}
+	}
+}
+
 func (m Model) cmdPostPlanImport(req api.PlanImportRequestDto) tea.Cmd {
 	source := m.source
 	return func() tea.Msg {

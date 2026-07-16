@@ -23,15 +23,18 @@ const (
 	TabReport
 	TabKnowledge
 	TabTelegram
+	TabKanban
 	tabCount
 )
 
-var tabNames = [tabCount]string{"Agent", "Sessions", "Timeline", "Procs", "Console", "Templates", "Plan", "Report", "Knowledge", "Telegram"}
+var tabNames = [tabCount]string{"Agent", "Sessions", "Timeline", "Procs", "Console", "Templates", "Plan", "Report", "Knowledge", "Telegram", "Kanban"}
 
 // tabKey is the mnemonic that jumps straight to each tab (also shown in the strip). First-letter where
-// it's free; Procs takes o and Telegram takes g (their first letters collide), and Plan takes p — freed
-// by moving sidebar-collapse to `\`. Keep this in sync with renderHelpOverlay's Tabs legend.
-var tabKey = [tabCount]string{"a", "s", "t", "o", "c", "e", "p", "r", "k", "g"}
+// it's free; Procs takes o and Telegram takes g (their first letters collide), Plan takes p — freed
+// by moving sidebar-collapse to `\` — and Kanban takes b ("board"; k is Knowledge). Kanban is the
+// 11th tab: there is no spare digit past 0, so it's reached by b and tab-cycle only. Keep this in
+// sync with renderHelpOverlay's Tabs legend.
+var tabKey = [tabCount]string{"a", "s", "t", "o", "c", "e", "p", "r", "k", "g", "b"}
 
 // CmdMode is a transient bottom-bar input that floats over the dashboard instead of a full modal.
 type CmdMode int
@@ -50,6 +53,8 @@ const (
 	planTabGates
 	planTabSettings
 	planTabImport
+	planTabPrompt
+	planTabCount
 )
 
 type PromptMode int
@@ -113,13 +118,13 @@ type Model struct {
 	injectField   int
 
 	// Templates tab (list + editor + compiled preview)
-	promptEntries    []templates.Entry
-	promptSelected   int
-	promptEditor     widgets.TextArea
-	promptMode       PromptMode
-	promptPreview    *api.PromptPreviewDto
-	promptPreviewOn  bool
-	promptPreviewErr string
+	promptEntries     []templates.Entry
+	promptSelected    int
+	promptEditor      widgets.TextArea
+	promptMode        PromptMode
+	promptPreview     *api.PromptPreviewDto
+	promptPreviewOn   bool
+	promptPreviewErr  string
 	promptPreviewKind int // index into previewKinds — which session kind's compiled prompt to show
 
 	// Timeline tab
@@ -162,6 +167,9 @@ type Model struct {
 	planImportInput  string
 	planImportResult *api.PlanImportResultDto
 	planImportErr    string
+	planImportSource string // what was actually posted (path or prompt) — `a` re-posts it with apply:true
+	planImportBusy   bool   // a prompt is at the advisor — block re-submits, show progress
+	planPromptEditor widgets.TextArea
 	planAdding       bool // add-stage / add-gate form open (id + title/command)
 	planAddField     int  // 0 = id/name, 1 = title/command
 	planAddIdBuf     string
@@ -177,6 +185,13 @@ type Model struct {
 	telegramEditBuf    string
 	telegramEnumIdx    int
 	telegramStatusLine string
+
+	// Kanban tab (G2.2): live board of the run's task graph. Selection is by task id so a card
+	// keeps focus while it moves between columns and across live refreshes.
+	kanbanSelId  string
+	kanbanAdding bool
+	kanbanAddBuf string
+	kanbanStatus string
 }
 
 func New(source api.DataSource, isDemo bool, baseURL string) Model {

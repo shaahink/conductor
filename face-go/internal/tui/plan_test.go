@@ -99,8 +99,8 @@ func TestPlanTabCyclesAndImportPreviewApplies(t *testing.T) {
 		t.Fatal("preview must not apply")
 	}
 
-	// 'a' → apply.
-	tm, cmd = m.handlePlanImportKey("a")
+	// 'a' → apply (routed via handlePlanKey — the diff view owns the keys wherever it came from).
+	tm, cmd = m.handlePlanKey("a")
 	m = asModel(tm)
 	if cmd == nil {
 		t.Fatal("'a' should apply the diff")
@@ -109,6 +109,75 @@ func TestPlanTabCyclesAndImportPreviewApplies(t *testing.T) {
 	imported, ok := msg.(MsgPlanImported)
 	if !ok || imported.Result == nil || !imported.Result.Applied {
 		t.Fatalf("expected an applied import, got %#v", msg)
+	}
+}
+
+// G1.2: the Prompt section sends prose to the advisor (via POST /plan/import) and lands on the same
+// diff/confirm/apply view the Import section uses.
+func TestPlanPromptSendsProseAndAppliesTheDiff(t *testing.T) {
+	m, _ := openPlanEditor(t)
+
+	for range 4 { // Stages → Gates → Settings → Import → Prompt
+		m = drive(m, "right")
+	}
+	if m.planTab != planTabPrompt {
+		t.Fatalf("expected Prompt section, got %v", m.planTab)
+	}
+
+	for _, ch := range "add a lint gate" {
+		m = drive(m, string(ch))
+	}
+	if m.planPromptEditor.Value() != "add a lint gate" {
+		t.Fatalf("prompt not accumulated: %q", m.planPromptEditor.Value())
+	}
+
+	tm, cmd := m.handlePlanKey("ctrl+s")
+	m = asModel(tm)
+	if cmd == nil {
+		t.Fatal("ctrl+s should send the prompt to the advisor")
+	}
+	if !m.planImportBusy {
+		t.Error("a prompt in flight should mark the import busy")
+	}
+	tm, _ = m.Update(cmd()) // MsgPlanImported (preview)
+	m = asModel(tm)
+	if m.planImportResult == nil || m.planImportResult.Diff.IsEmpty() {
+		t.Fatal("expected a non-empty diff from the prompt")
+	}
+	if m.planImportResult.Interpreter == nil || *m.planImportResult.Interpreter == "structured" {
+		t.Error("a prose prompt should surface the interpreting model")
+	}
+	if m.planImportBusy {
+		t.Error("the busy flag should clear when the diff lands")
+	}
+
+	// a → apply; the same source is re-posted with apply:true.
+	tm, cmd = m.handlePlanKey("a")
+	m = asModel(tm)
+	if cmd == nil {
+		t.Fatal("'a' should apply the previewed diff")
+	}
+	msg := cmd()
+	imported, ok := msg.(MsgPlanImported)
+	if !ok || imported.Result == nil || !imported.Result.Applied {
+		t.Fatalf("expected an applied import, got %#v", msg)
+	}
+}
+
+func TestPlanPromptEmptyOrBusyDoesNotSend(t *testing.T) {
+	m, _ := openPlanEditor(t)
+	for range 4 {
+		m = drive(m, "right")
+	}
+	if _, cmd := m.handlePlanKey("ctrl+s"); cmd != nil {
+		t.Error("an empty prompt must not consult the advisor")
+	}
+	for _, ch := range "do things" {
+		m = drive(m, string(ch))
+	}
+	m.planImportBusy = true
+	if _, cmd := m.handlePlanKey("ctrl+s"); cmd != nil {
+		t.Error("a prompt already in flight must not be re-sent")
 	}
 }
 

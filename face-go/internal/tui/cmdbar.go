@@ -301,7 +301,7 @@ func (m Model) renderHelpOverlay() string {
 		"  " + key("a") + " Agent    " + key("s") + " Sessions   " + key("t") + " Timeline\n" +
 		"  " + key("o") + " Procs    " + key("c") + " Console    " + key("e") + " Templates\n" +
 		"  " + key("p") + " Plan     " + key("r") + " Report     " + key("k") + " Knowledge\n" +
-		"  " + key("g") + " Telegram\n" +
+		"  " + key("g") + " Telegram " + key("b") + " Kanban\n" +
 		"  " + key("tab") + " cycle tabs\n\n" +
 		accentStyle.Render("Actions") + "\n" +
 		"  " + key(":") + " command palette   " + key("i") + " inject context\n" +

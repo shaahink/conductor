@@ -75,7 +75,16 @@ func (m Model) View() tea.View {
 // --- tab strip ---------------------------------------------------------------
 
 func (m Model) renderTabStrip(width int) string {
+	// Adaptive: full names when every tab fits, otherwise compact (key-only idle tabs, the active
+	// one keeps its name). A fixed width threshold silently clipped the last tab off the strip.
 	strip := lipgloss.NewStyle().Background(widgets.Mantle()).Padding(0, 1).MaxHeight(1).MaxWidth(width)
+	if full := m.joinTabParts(true); lipgloss.Width(full)+2 <= width { // +2: the strip's padding
+		return strip.Render(full)
+	}
+	return strip.Render(m.joinTabParts(false))
+}
+
+func (m Model) joinTabParts(fullNames bool) string {
 	activeTab := lipgloss.NewStyle().Background(widgets.Accent()).Foreground(widgets.Base()).Bold(true)
 	idleTab := lipgloss.NewStyle().Foreground(widgets.Overlay())
 	keyStyle := lipgloss.NewStyle().Foreground(widgets.Accent())
@@ -85,14 +94,14 @@ func (m Model) renderTabStrip(width int) string {
 		label := fmt.Sprintf(" %s %s ", tabKey[i], tabNames[i])
 		if MainTab(i) == m.tab {
 			parts = append(parts, activeTab.Render(label))
-		} else if width >= 100 {
+		} else if fullNames {
 			parts = append(parts, keyStyle.Render(" "+tabKey[i]+" ")+idleTab.Render(tabNames[i]+" "))
 		} else {
 			parts = append(parts, keyStyle.Render(tabKey[i]))
 		}
 	}
 	sep := lipgloss.NewStyle().Foreground(widgets.Surface()).Render(" ")
-	return strip.Render(strings.Join(parts, sep))
+	return strings.Join(parts, sep)
 }
 
 // --- sidebar (always visible unless collapsed) --------------------------------
@@ -141,6 +150,8 @@ func (m Model) paneView() (body, help string) {
 		return m.renderKnowledgePane()
 	case TabTelegram:
 		return m.renderTelegramPane()
+	case TabKanban:
+		return m.renderKanbanPane()
 	}
 	return "", ""
 }

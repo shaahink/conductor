@@ -244,14 +244,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.cmdFetchPlan()
 
 	case MsgPlanImported:
+		m.planImportBusy = false
 		if msg.Err != "" {
 			m.planImportErr, m.planImportResult = msg.Err, nil
+			m.planStatus = ""
 			return m, nil
 		}
 		m.planImportErr = ""
 		m.planImportResult = msg.Result
 		if msg.Result != nil && !msg.Result.Ok && msg.Result.Error != nil {
 			m.planImportErr, m.planImportResult = *msg.Result.Error, nil
+			m.planStatus = ""
 			return m, nil
 		}
 		if msg.Result != nil && msg.Result.Applied {
@@ -259,7 +262,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.planImportResult = nil
 			return m, m.cmdFetchPlan()
 		}
+		m.planStatus = ""
 		return m, nil
+
+	case MsgTaskWritten:
+		if msg.Err != "" {
+			m.kanbanStatus = "✗ " + msg.Err
+			return m, nil
+		}
+		if msg.Result != nil && !msg.Result.Ok {
+			reason := "rejected"
+			if msg.Result.Error != nil {
+				reason = *msg.Result.Error
+			}
+			m.kanbanStatus = "✗ " + reason
+			return m, nil
+		}
+		m.kanbanStatus = "✓ " + msg.Verb
+		if msg.Verb == "add" && msg.Result != nil && msg.Result.TaskId != nil {
+			m.kanbanSelId = *msg.Result.TaskId // focus follows the new card
+		}
+		// Re-fetch so the board shows what the engine actually recorded.
+		return m, m.cmdFetchTasks()
 
 	case MsgTelegramStatusUpdated:
 		if msg.Err != "" {
@@ -385,7 +409,8 @@ func (m Model) handleKey(key string) (tea.Model, tea.Cmd) {
 			return m.openTab(MainTab(t))
 		}
 	case "0":
-		// The 10th tab (index 9) has no 1–9 digit; "0" reaches it so every tab has a number too.
+		// The 10th tab (index 9) has no 1–9 digit; "0" reaches it. Tabs past that (Kanban, the
+		// 11th) have no digit at all — mnemonic and tab-cycle only.
 		if int(tabCount) > 9 {
 			return m.openTab(MainTab(9))
 		}
@@ -440,6 +465,9 @@ func (m Model) openTab(t MainTab) (tea.Model, tea.Cmd) {
 	case TabTelegram:
 		m.telegramFieldIdx, m.telegramEditing, m.telegramStatusLine = 0, false, ""
 		return m, m.cmdFetchTelegramStatus()
+	case TabKanban:
+		m.kanbanAdding, m.kanbanStatus = false, ""
+		return m, m.cmdFetchTasks()
 	}
 	return m, nil
 }
@@ -452,13 +480,16 @@ func (m Model) tabHandlesAllKeys() bool {
 	case TabTemplates:
 		return m.promptMode == PromptEdit || m.promptPreviewOn
 	case TabPlan:
-		return m.planDrill || m.planEditing || m.planAdding || m.planDeleting || m.planImportResult != nil || m.planTab == planTabImport
+		return m.planDrill || m.planEditing || m.planAdding || m.planDeleting || m.planImportResult != nil ||
+			m.planTab == planTabImport || m.planTab == planTabPrompt
 	case TabProcesses:
 		return m.processKilling
 	case TabTelegram:
 		return m.telegramEditing
 	case TabKnowledge:
 		return m.knowledgeMode != knowledgeBrowse
+	case TabKanban:
+		return m.kanbanAdding
 	}
 	return false
 }
@@ -486,6 +517,8 @@ func (m Model) handleTabKey(key string) (tea.Model, tea.Cmd) {
 		return m.handleKnowledgeKey(key)
 	case TabTelegram:
 		return m.handleTelegramKey(key)
+	case TabKanban:
+		return m.handleKanbanKey(key)
 	}
 	return m, nil
 }
@@ -514,6 +547,8 @@ func (m Model) handleMouseWheel(msg tea.MouseWheelMsg) (tea.Model, tea.Cmd) {
 		return m.handleProcessesKey(key)
 	case TabKnowledge:
 		return m.handleKnowledgeKey(key)
+	case TabKanban:
+		return m.handleKanbanKey(key)
 	}
 	return m, nil
 }

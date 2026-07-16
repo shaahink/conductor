@@ -7,6 +7,11 @@ import "time"
 type DataSource interface {
 	FetchState() (*StateDto, error)
 	FetchTasks() (*TasksDto, error)
+
+	// G2: Kanban writes — move a card / add a card. The server emits the very same events the
+	// MCP task tools do, so the board and the agent drive one task graph.
+	PostTaskUpdate(req TaskUpdateRequestDto) (*TaskWriteResultDto, error)
+	PostTaskAdd(req TaskAddRequestDto) (*TaskWriteResultDto, error)
 	FetchProcesses() (*ProcessesDto, error)
 	FetchSessions() (*SessionsDto, error)
 	FetchTimeline() (*TimelineDto, error)
@@ -122,6 +127,32 @@ type TaskDto struct {
 
 type TasksDto struct {
 	Tasks []TaskDto `json:"tasks"`
+}
+
+// --- G2.1: task writes (mirror Core/Http/ControlPlaneDto.TaskWrite.cs) ---
+
+type TaskUpdateRequestDto struct {
+	TaskId string `json:"taskId"`
+	Status string `json:"status"`
+}
+
+// Order 0 means "append after the checkpoint's last task" (the server computes it).
+type TaskAddRequestDto struct {
+	CheckpointId string `json:"checkpointId"`
+	Title        string `json:"title"`
+	Order        int    `json:"order"`
+}
+
+// TaskWriteResultDto: Status echoes the task's actual post-fold status — an illegal transition is
+// a recorded no-op, so render from what happened, not from what was asked.
+type TaskWriteResultDto struct {
+	Ok           bool    `json:"ok"`
+	Error        *string `json:"error"`
+	TaskId       *string `json:"taskId"`
+	Status       *string `json:"status"`
+	CheckpointId *string `json:"checkpointId"`
+	Title        *string `json:"title"`
+	Order        int     `json:"order"`
 }
 
 type ProcessDto struct {
@@ -368,6 +399,8 @@ type PlanMutationResultDto struct {
 	PlanVersion int     `json:"planVersion"`
 }
 
+// PlanImportRequestDto: a structured doc parses deterministically; freeform prose routes through
+// the plan's advisor model (G1.1) — same endpoint, the server decides.
 type PlanImportRequestDto struct {
 	Source string `json:"source"`
 	Apply  bool   `json:"apply"`
@@ -406,6 +439,9 @@ type PlanImportResultDto struct {
 	Diff        PlanDiffDto `json:"diff"`
 	Applied     bool        `json:"applied"`
 	PlanVersion int         `json:"planVersion"`
+	// What turned the source into a plan: "structured" (deterministic parse) or the advisor
+	// model that interpreted the prose (G1.1).
+	Interpreter *string `json:"interpreter"`
 }
 
 // --- M8.2: Telegram guided setup (mirror Core/Http/ControlPlaneDto.Telegram*.cs) ---

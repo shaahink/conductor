@@ -1,5 +1,5 @@
  ◆ conductor  ● LIVE  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42                 
-  a Agent   s Sessions   t Timeline   o Procs   c Console   e Templates   p Plan   r Report   k Knowledge   g 
+ a s t o  c Console  e p r k g b                                                                              
                            │                                                                                  
  ▶ PLAN                    │  {"type":"system","subtype":"init","session_id":"s12","model":"deepseek-v4-pro…  
  ✓ F0 3/3 Foundations      │  {"type":"assistant","message":{"content":[{"type":"text","text":"Examining Ga…  

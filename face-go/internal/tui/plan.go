@@ -9,6 +9,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"conductor-face-go/internal/api"
+	"conductor-face-go/internal/widgets"
 )
 
 // M6.3: the plan editor. Edit stages, gates, models, workflows, and settings live from the TUI, and
@@ -122,8 +123,16 @@ func (m *Model) handlePlanKey(key string) (tea.Model, tea.Cmd) {
 	if m.planDeleting {
 		return m.handlePlanDeleteKey(key)
 	}
+	// A returned diff owns the keys wherever it came from — the Import path box or the Prompt box
+	// both land on the same diff view with the same a-apply / esc-back contract.
+	if m.planImportResult != nil {
+		return m.handleImportDiffKey(key)
+	}
 	if m.planTab == planTabImport {
 		return m.handlePlanImportKey(key)
+	}
+	if m.planTab == planTabPrompt {
+		return m.handlePlanPromptKey(key)
 	}
 
 	switch key {
@@ -141,14 +150,14 @@ func (m *Model) handlePlanKey(key string) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "right":
 		if !m.planDrill {
-			m.planTab = (m.planTab + 1) % 4
+			m.planTab = (m.planTab + 1) % planTabCount
 			m.planFieldIdx = 0
 			m.planStatus = ""
 		}
 		return m, nil
 	case "left":
 		if !m.planDrill {
-			m.planTab = (m.planTab + 3) % 4
+			m.planTab = (m.planTab + planTabCount - 1) % planTabCount
 			m.planFieldIdx = 0
 			m.planStatus = ""
 		}
@@ -309,33 +318,47 @@ func (m *Model) savePlanFieldValue(f planField, value string) (tea.Model, tea.Cm
 	})
 }
 
-func (m *Model) handlePlanImportKey(key string) (tea.Model, tea.Cmd) {
-	if m.planImportResult != nil {
-		switch key {
-		case "esc":
-			m.planImportResult = nil
-			return m, nil
-		case "a":
-			if !m.planImportResult.Diff.IsEmpty() {
-				m.planStatus = "applying…"
-				return m, m.cmdPostPlanImport(api.PlanImportRequestDto{Source: m.planImportInput, Apply: true})
-			}
-			return m, nil
+// handleImportDiffKey drives the returned diff, shared by the Import and Prompt sections: `a`
+// re-posts exactly what was previewed with apply:true (the server applies the cached parse — the
+// advisor is not consulted twice), esc discards.
+func (m *Model) handleImportDiffKey(key string) (tea.Model, tea.Cmd) {
+	switch key {
+	case "esc":
+		m.planImportResult = nil
+		return m, nil
+	case "a":
+		if !m.planImportResult.Diff.IsEmpty() && !m.planImportBusy {
+			m.planStatus = "applying…"
+			m.planImportBusy = true
+			return m, m.cmdPostPlanImport(api.PlanImportRequestDto{Source: m.planImportSource, Apply: true})
 		}
 		return m, nil
 	}
+	return m, nil
+}
 
+func (m *Model) handlePlanImportKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
 	case "esc":
 		m.planTab = planTabStages // back to the Stages section, staying in the Plan tab
 		return m, nil
+	// The path input has no caret, so ←→ keep switching sections (the Prompt box next door needs
+	// its arrows for the real editor, so it only offers esc).
+	case "right":
+		m.planTab, m.planStatus = planTabPrompt, ""
+		return m, nil
+	case "left":
+		m.planTab, m.planStatus = planTabSettings, ""
+		return m, nil
 	case "enter":
-		if strings.TrimSpace(m.planImportInput) == "" {
+		if strings.TrimSpace(m.planImportInput) == "" || m.planImportBusy {
 			return m, nil
 		}
 		m.planImportErr = ""
 		m.planStatus = "parsing…"
-		return m, m.cmdPostPlanImport(api.PlanImportRequestDto{Source: strings.TrimSpace(m.planImportInput), Apply: false})
+		m.planImportSource = strings.TrimSpace(m.planImportInput)
+		m.planImportBusy = true
+		return m, m.cmdPostPlanImport(api.PlanImportRequestDto{Source: m.planImportSource, Apply: false})
 	case "backspace":
 		if len(m.planImportInput) > 0 {
 			m.planImportInput = m.planImportInput[:len(m.planImportInput)-1]
@@ -345,6 +368,32 @@ func (m *Model) handlePlanImportKey(key string) (tea.Model, tea.Cmd) {
 		if ch, ok := typedChar(key); ok {
 			m.planImportInput += ch
 		}
+		return m, nil
+	}
+}
+
+// handlePlanPromptKey is the G1.2 prompt box: a multi-line TextArea (enter = newline), ctrl+s
+// sends the prose to the advisor via the same POST /plan/import the Import section uses.
+func (m *Model) handlePlanPromptKey(key string) (tea.Model, tea.Cmd) {
+	switch key {
+	case "esc":
+		m.planTab = planTabStages
+		return m, nil
+	case "ctrl+s":
+		prompt := strings.TrimSpace(m.planPromptEditor.Value())
+		if prompt == "" || m.planImportBusy {
+			return m, nil
+		}
+		m.planImportErr = ""
+		m.planStatus = "consulting the advisor…"
+		m.planImportSource = prompt
+		m.planImportBusy = true
+		return m, m.cmdPostPlanImport(api.PlanImportRequestDto{Source: prompt, Apply: false})
+	default:
+		if m.planPromptEditor.Width == 0 { // lazily sized — the pane width isn't known at construction
+			m.planPromptEditor = widgets.NewTextArea("", max(20, m.paneCols()-4), 5)
+		}
+		m.planPromptEditor = m.planPromptEditor.Update(key)
 		return m, nil
 	}
 }
@@ -569,6 +618,8 @@ func (m Model) renderPlanPane() (string, string) {
 		body, help = m.renderPlanSettings()
 	case planTabImport:
 		body, help = m.renderPlanImport()
+	case planTabPrompt:
+		body, help = m.renderPlanPrompt()
 	}
 
 	status := ""
@@ -584,7 +635,7 @@ func (m Model) renderPlanPane() (string, string) {
 }
 
 func (m Model) renderPlanSections() string {
-	names := []string{"Stages", "Gates", "Settings", "Import"}
+	names := []string{"Stages", "Gates", "Settings", "Import", "Prompt"}
 	var parts []string
 	for i, n := range names {
 		if planTab(i) == m.planTab {
@@ -741,12 +792,49 @@ func (m Model) renderPlanImport() (string, string) {
 	return header + input + errLine + hint, "type path · enter preview diff · esc back"
 }
 
+// renderPlanPrompt is the G1.2 AI-native editor: describe the change in plain English, the plan's
+// advisor model turns it into the same diff/confirm/apply flow the Import section uses.
+func (m Model) renderPlanPrompt() (string, string) {
+	if m.planImportResult != nil {
+		return m.renderImportDiff()
+	}
+	header := "  " + textStyle.Render("Change the plan by prompt — plain English in, a reviewable diff out.") + "\n" +
+		"  " + subtleStyle.Render("The advisor model interprets it; nothing applies until you confirm.") + "\n\n"
+
+	ed := m.planPromptEditor
+	if ed.Width == 0 {
+		ed = widgets.NewTextArea("", max(20, m.paneCols()-4), 5)
+	}
+	box := indent(ed.View(), "  ")
+
+	errLine := ""
+	if m.planImportErr != "" {
+		errLine = "\n\n  " + destructStyle.Render("✗ "+m.planImportErr)
+	}
+	busy := ""
+	if m.planImportBusy {
+		busy = "\n\n  " + warnStyle.Render("● consulting the advisor model…")
+	}
+	hint := "\n\n  " + subtleStyle.Render(`e.g. "add a lint gate that runs dotnet format" · "split S1 into two stages"`)
+	return header + box + errLine + busy + hint, "type · ctrl+s send to advisor · esc back"
+}
+
 func (m Model) renderImportDiff() (string, string) {
 	d := m.planImportResult.Diff
+	interpreted := ""
+	if m.planImportResult.Interpreter != nil && *m.planImportResult.Interpreter != "structured" {
+		interpreted = "  " + subtleStyle.Render("interpreted by ") + tealStyle.Render(*m.planImportResult.Interpreter) + "\n"
+	}
 	var lines []string
 	if d.IsEmpty() {
+		if interpreted != "" {
+			lines = append(lines, strings.TrimSuffix(interpreted, "\n"), "")
+		}
 		lines = append(lines, "  "+safeStyle.Render("Nothing to change — the plan already matches this import."))
 		return strings.Join(lines, "\n"), "esc back"
+	}
+	if interpreted != "" {
+		lines = append(lines, strings.TrimSuffix(interpreted, "\n"))
 	}
 	lines = append(lines, "  "+accentStyle.Render(fmt.Sprintf("%d change(s):", d.TotalChanges())), "")
 	for _, s := range d.AddedStages {
@@ -760,7 +848,10 @@ func (m Model) renderImportDiff() (string, string) {
 		}
 	}
 	for _, g := range d.AddedGates {
-		lines = append(lines, "  "+safeStyle.Render("+ gate ")+accentStyle.Render(g.Name)+" "+subtleStyle.Render(g.Tier))
+		// Always show the command: a gate is a shell command the engine will execute — the whole
+		// point of the confirm step is reviewing exactly that before it lands in the plan.
+		lines = append(lines, "  "+safeStyle.Render("+ gate ")+accentStyle.Render(g.Name)+" "+
+			subtleStyle.Render(g.Tier)+"  "+textStyle.Render(truncate(g.Command, 48)))
 	}
 	for _, c := range d.ChangedGates {
 		for _, f := range c.Fields {

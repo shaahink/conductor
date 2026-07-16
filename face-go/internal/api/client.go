@@ -15,6 +15,7 @@ import (
 type liveSource struct {
 	baseURL    string
 	httpClient *http.Client
+	slowClient *http.Client
 	ctx        context.Context
 	cancel     context.CancelFunc
 
@@ -29,6 +30,11 @@ func NewLiveSource(baseURL string) DataSource {
 		baseURL: strings.TrimRight(baseURL, "/"),
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
+		},
+		// Plan import may consult the advisor model (G1.1) — minutes, not seconds. Its own
+		// client so the snappy 10s default keeps guarding every other call.
+		slowClient: &http.Client{
+			Timeout: 10 * time.Minute,
 		},
 		ctx:    ctx,
 		cancel: cancel,
@@ -225,8 +231,27 @@ func (s *liveSource) PostPlanEdit(req PlanEditRequestDto) (*PlanMutationResultDt
 }
 
 func (s *liveSource) PostPlanImport(req PlanImportRequestDto) (*PlanImportResultDto, error) {
+	// Freeform prose consults the advisor model server-side — use the patient client.
 	var res PlanImportResultDto
-	if err := s.postJSONAllowError("/plan/import", req, &res); err != nil {
+	if err := s.postJSONAllowErrorWith(s.slowClient, "/plan/import", req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (s *liveSource) PostTaskUpdate(req TaskUpdateRequestDto) (*TaskWriteResultDto, error) {
+	// A rejected write answers 400 with {ok:false,error:…} — decode it so the Kanban board can
+	// show the engine's reason, same as the plan endpoints.
+	var res TaskWriteResultDto
+	if err := s.postJSONAllowError("/tasks/update", req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (s *liveSource) PostTaskAdd(req TaskAddRequestDto) (*TaskWriteResultDto, error) {
+	var res TaskWriteResultDto
+	if err := s.postJSONAllowError("/tasks/add", req, &res); err != nil {
 		return nil, err
 	}
 	return &res, nil
@@ -261,6 +286,10 @@ func (s *liveSource) PostTelegramToken(req TelegramSetTokenRequestDto) (*Telegra
 // postJSONAllowError posts and decodes the response body even on a 4xx (the plan endpoints return a
 // structured {ok,error,…} on rejection); only a transport error or a 5xx surfaces as a Go error.
 func (s *liveSource) postJSONAllowError(path string, body any, v any) error {
+	return s.postJSONAllowErrorWith(s.httpClient, path, body, v)
+}
+
+func (s *liveSource) postJSONAllowErrorWith(client *http.Client, path string, body any, v any) error {
 	b, err := json.Marshal(body)
 	if err != nil {
 		return err
@@ -271,7 +300,7 @@ func (s *liveSource) postJSONAllowError(path string, body any, v any) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
-	resp, err := s.httpClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}

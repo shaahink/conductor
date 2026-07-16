@@ -1,0 +1,244 @@
+package tui
+
+// G2.2: the Kanban tab (`b` for board) — a live view of the run's task graph, the same graph the
+// engine's MCP task tools drive. Three columns (TODO · In Progress · Done) from GET /tasks; ↑↓ walk
+// the cards across columns, ←→ move the selected card (POST /tasks/update), `n` adds a card under
+// the selected checkpoint (POST /tasks/add). Every write re-fetches so the board shows what the
+// engine actually recorded, and the 1s poll keeps it live while the agent works.
+
+import (
+	"fmt"
+	"strings"
+
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+
+	"conductor-face-go/internal/api"
+	"conductor-face-go/internal/widgets"
+)
+
+// kanbanColumns is the board order; skipped cards live in the Done column, dimmed.
+var kanbanColumns = [3]string{"todo", "in_progress", "done"}
+var kanbanTitles = [3]string{"TODO", "In Progress", "Done"}
+
+// kanbanColumn maps a task status to its board column index.
+func kanbanColumn(status string) int {
+	switch status {
+	case "in_progress":
+		return 1
+	case "done", "skipped":
+		return 2
+	default:
+		return 0
+	}
+}
+
+// kanbanCards returns the board's cards column-major (all TODO, then In Progress, then Done) —
+// the ↑↓ walk order. Within a column the wire order (checkpoint → order) is kept.
+func (m Model) kanbanCards() []api.TaskDto {
+	var out []api.TaskDto
+	for col := range kanbanColumns {
+		for _, t := range m.data.Tasks {
+			if kanbanColumn(t.Status) == col {
+				out = append(out, t)
+			}
+		}
+	}
+	return out
+}
+
+// kanbanSelected resolves the selected card's index in the walk order; selection is by task id so
+// a card keeps focus while it changes columns or the poll refreshes the board underneath.
+func (m Model) kanbanSelected(cards []api.TaskDto) int {
+	for i, t := range cards {
+		if t.TaskId == m.kanbanSelId {
+			return i
+		}
+	}
+	return 0
+}
+
+func (m *Model) handleKanbanKey(key string) (tea.Model, tea.Cmd) {
+	if m.kanbanAdding {
+		return m.handleKanbanAddKey(key)
+	}
+
+	cards := m.kanbanCards()
+	if len(cards) == 0 {
+		if key == "n" {
+			m.kanbanBeginAdd()
+		}
+		return m, nil
+	}
+	sel := m.kanbanSelected(cards)
+
+	switch key {
+	case "up", "k":
+		m.kanbanSelId = cards[max(0, sel-1)].TaskId
+	case "down", "j":
+		m.kanbanSelId = cards[min(len(cards)-1, sel+1)].TaskId
+	case "left", "right":
+		return m.kanbanMove(cards[sel], key == "right")
+	case "n":
+		m.kanbanBeginAdd()
+	}
+	return m, nil
+}
+
+// kanbanMove posts the selected card one column over. The server folds the event and answers with
+// the card's actual status — an illegal move is a recorded no-op the re-fetch simply won't show.
+func (m *Model) kanbanMove(card api.TaskDto, right bool) (tea.Model, tea.Cmd) {
+	col := kanbanColumn(card.Status)
+	target := col + 1
+	if !right {
+		target = col - 1
+	}
+	if target < 0 || target > 2 {
+		return m, nil
+	}
+	status := kanbanColumns[target]
+	m.kanbanStatus = fmt.Sprintf("moving %s → %s…", card.TaskId, status)
+	return m, m.cmdPostTaskUpdate(api.TaskUpdateRequestDto{TaskId: card.TaskId, Status: status})
+}
+
+// kanbanBeginAdd opens the one-line title input. The new card lands under the selected card's
+// checkpoint, or the run's current checkpoint when the board is empty.
+func (m *Model) kanbanBeginAdd() {
+	if m.kanbanAddCheckpoint() == "" {
+		m.kanbanStatus = "✗ no checkpoint to add under (no cards, no active checkpoint)"
+		return
+	}
+	m.kanbanAdding = true
+	m.kanbanAddBuf = ""
+	m.kanbanStatus = ""
+}
+
+func (m Model) kanbanAddCheckpoint() string {
+	cards := m.kanbanCards()
+	if len(cards) > 0 {
+		return cards[m.kanbanSelected(cards)].CheckpointId
+	}
+	if m.data.Plan != nil {
+		return m.data.Plan.CurrentCheckpoint
+	}
+	return ""
+}
+
+func (m *Model) handleKanbanAddKey(key string) (tea.Model, tea.Cmd) {
+	switch key {
+	case "esc":
+		m.kanbanAdding = false
+		return m, nil
+	case "enter":
+		title := strings.TrimSpace(m.kanbanAddBuf)
+		if title == "" {
+			return m, nil // a title is required — stay in the form
+		}
+		cp := m.kanbanAddCheckpoint()
+		m.kanbanAdding = false
+		m.kanbanStatus = "adding…"
+		return m, m.cmdPostTaskAdd(api.TaskAddRequestDto{CheckpointId: cp, Title: title})
+	case "backspace":
+		if len(m.kanbanAddBuf) > 0 {
+			m.kanbanAddBuf = m.kanbanAddBuf[:len(m.kanbanAddBuf)-1]
+		}
+	default:
+		if ch, ok := typedChar(key); ok {
+			m.kanbanAddBuf += ch
+		}
+	}
+	return m, nil
+}
+
+// --- rendering ---
+
+func (m Model) renderKanbanPane() (string, string) {
+	cards := m.kanbanCards()
+	if len(cards) == 0 && !m.kanbanAdding {
+		body := subtleStyle.Render("No tasks yet — the agent files them via task_add, or press ") +
+			key("n") + subtleStyle.Render(" to add the first card.")
+		return body + m.kanbanStatusLine(), "n add · esc back"
+	}
+	selId := ""
+	if len(cards) > 0 {
+		selId = cards[m.kanbanSelected(cards)].TaskId
+	}
+
+	colW := max(16, (m.paneCols()-4)/3)
+	cols := make([]string, 3)
+	for c := range kanbanColumns {
+		cols[c] = m.renderKanbanColumn(c, colW, selId)
+	}
+	board := lipgloss.JoinHorizontal(lipgloss.Top, cols[0], "  ", cols[1], "  ", cols[2])
+
+	body := board
+	if m.kanbanAdding {
+		body += "\n\n  " + accentStyle.Render("+ new card") + subtleStyle.Render(" under ") +
+			accentStyle.Render(m.kanbanAddCheckpoint()) + "\n  " +
+			subtleStyle.Render("title: ") + textStyle.Render(m.kanbanAddBuf) + accentStyle.Render("▏")
+		return body + m.kanbanStatusLine(), "type · enter add · esc cancel"
+	}
+	return body + m.kanbanStatusLine(), "↑↓ card · ←→ move · n add · esc back"
+}
+
+func (m Model) kanbanStatusLine() string {
+	if m.kanbanStatus == "" {
+		return ""
+	}
+	st := safeStyle
+	if strings.HasPrefix(m.kanbanStatus, "✗") {
+		st = destructStyle
+	}
+	return "\n\n  " + st.Render(m.kanbanStatus)
+}
+
+func (m Model) renderKanbanColumn(col, width int, selId string) string {
+	count := 0
+	var rows []string
+	for _, t := range m.data.Tasks {
+		if kanbanColumn(t.Status) != col {
+			continue
+		}
+		count++
+		rows = append(rows, m.renderKanbanCard(t, width, t.TaskId == selId))
+	}
+
+	header := fmt.Sprintf("%s (%d)", kanbanTitles[col], count)
+	headStyle := subtleStyle
+	switch col {
+	case 1:
+		headStyle = lipgloss.NewStyle().Foreground(widgets.Blue()).Bold(true)
+	case 2:
+		headStyle = lipgloss.NewStyle().Foreground(widgets.Green()).Bold(true)
+	}
+	lines := []string{headStyle.Render(truncate(header, width)), subtleStyle.Render(strings.Repeat("─", width))}
+	if count == 0 {
+		lines = append(lines, subtleStyle.Render("  —"))
+	}
+	lines = append(lines, rows...)
+	return lipgloss.NewStyle().Width(width).Render(strings.Join(lines, "\n"))
+}
+
+// renderKanbanCard is one card: checkpoint id + title on the first line, a dim meta line under the
+// selected card. Pad plain text first, then style — never %-Ns an ANSI-wrapped string (STYLE.md).
+func (m Model) renderKanbanCard(t api.TaskDto, width int, selected bool) string {
+	label := truncate(fmt.Sprintf("%s · %s", t.CheckpointId, t.Title), width-2)
+	if t.Status == "skipped" {
+		label = truncate(fmt.Sprintf("%s · %s (skipped)", t.CheckpointId, t.Title), width-2)
+	}
+	if selected {
+		row := highlightBg.Render("▸ " + label)
+		meta := subtleStyle.Render(truncate(fmt.Sprintf("  %s · %s · #%d", t.TaskId, t.Source, t.Order), width))
+		return row + "\n" + meta
+	}
+	style := textStyle
+	switch t.Status {
+	case "done":
+		style = safeStyle
+	case "skipped":
+		style = subtleStyle
+	case "in_progress":
+		style = lipgloss.NewStyle().Foreground(widgets.Blue())
+	}
+	return style.Render("• " + label)
+}

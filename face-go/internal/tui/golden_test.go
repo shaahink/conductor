@@ -35,8 +35,16 @@ func stripANSI(s string) string {
 // wall-clock time, random ports, or the ticking demo simulation.
 type fakeSource struct{}
 
-func (fakeSource) FetchState() (*api.StateDto, error)         { return nil, nil }
-func (fakeSource) FetchTasks() (*api.TasksDto, error)         { return nil, nil }
+func (fakeSource) FetchState() (*api.StateDto, error) { return nil, nil }
+func (fakeSource) FetchTasks() (*api.TasksDto, error) { return nil, nil }
+func (fakeSource) PostTaskUpdate(req api.TaskUpdateRequestDto) (*api.TaskWriteResultDto, error) {
+	return &api.TaskWriteResultDto{Ok: true, TaskId: &req.TaskId, Status: &req.Status}, nil
+}
+func (fakeSource) PostTaskAdd(req api.TaskAddRequestDto) (*api.TaskWriteResultDto, error) {
+	id := req.CheckpointId + "-a9"
+	status := "todo"
+	return &api.TaskWriteResultDto{Ok: true, TaskId: &id, Status: &status, Order: 9}, nil
+}
 func (fakeSource) FetchProcesses() (*api.ProcessesDto, error) { return nil, nil }
 func (fakeSource) FetchSessions() (*api.SessionsDto, error)   { return nil, nil }
 func (fakeSource) FetchTimeline() (*api.TimelineDto, error)   { return nil, nil }
@@ -233,6 +241,18 @@ func fixedTasks() []api.TaskDto {
 		{TaskId: "T1", CheckpointId: "F7.3", Title: "Add truth-tier config to GateConfig", Status: "done", Source: "planner", Order: 1},
 		{TaskId: "T2", CheckpointId: "F7.3", Title: "Wire RunDb.GetLastPassingGateResult", Status: "in_progress", Source: "agent", Order: 2},
 		{TaskId: "T3", CheckpointId: "F7.4", Title: "Cache gate results by (name, tier, sha)", Status: "todo", Source: "planner", Order: 3},
+	}
+}
+
+// kanbanFixtureTasks populates all three board columns (plus a skipped card folded into Done) —
+// the G2.2 gate wants a golden with three populated columns and the move/add affordances.
+func kanbanFixtureTasks() []api.TaskDto {
+	return []api.TaskDto{
+		{TaskId: "T1", CheckpointId: "F7.3", Title: "Add truth-tier config to GateConfig", Status: "done", Source: "planner", Order: 1},
+		{TaskId: "T2", CheckpointId: "F7.3", Title: "Wire RunDb.GetLastPassingGateResult", Status: "in_progress", Source: "agent", Order: 2},
+		{TaskId: "T3", CheckpointId: "F7.4", Title: "Cache gate results by (name, tier, sha)", Status: "todo", Source: "planner", Order: 3},
+		{TaskId: "T4", CheckpointId: "F7.4", Title: "Add SkipIfFresh timestamp check", Status: "todo", Source: "human", Order: 4},
+		{TaskId: "T5", CheckpointId: "F7.5", Title: "Benchmark the warm path", Status: "skipped", Source: "agent", Order: 5},
 	}
 }
 
@@ -497,6 +517,45 @@ func TestGolden(t *testing.T) {
 			m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
 			m, _ = m.Update(specialKey(tea.KeyDown)) // select F7
 			m, _ = m.Update(keyMsg("d"))             // delete confirm
+			return m
+		}},
+		{"kanban", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("b"))
+			m, _ = m.Update(MsgTasksUpdated{Tasks: &api.TasksDto{Tasks: kanbanFixtureTasks()}})
+			m, _ = m.Update(specialKey(tea.KeyDown)) // select the second card
+			return m
+		}},
+		{"kanban_add", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("b"))
+			m, _ = m.Update(MsgTasksUpdated{Tasks: &api.TasksDto{Tasks: kanbanFixtureTasks()}})
+			m, _ = m.Update(keyMsg("n"))
+			for _, ch := range "wire the goldens" {
+				m, _ = m.Update(keyMsg(string(ch)))
+			}
+			return m
+		}},
+		{"plan_prompt", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("p"))
+			m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
+			for range 4 { // → Prompt section
+				m, _ = m.Update(specialKey(tea.KeyRight))
+			}
+			for _, ch := range "add a lint gate that runs dotnet format" {
+				m, _ = m.Update(keyMsg(string(ch)))
+			}
+			return m
+		}},
+		{"plan_prompt_diff", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("p"))
+			m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
+			for range 4 {
+				m, _ = m.Update(specialKey(tea.KeyRight))
+			}
+			m, _ = m.Update(MsgPlanImported{Result: &api.PlanImportResultDto{Ok: true, Interpreter: strPtr("claude-fable-5"), Diff: api.PlanDiffDto{
+				AddedGates: []api.PlanGateDto{
+					{Name: "lint", Command: "dotnet format --verify-no-changes", Tier: "fast", TimeoutMinutes: 5},
+				},
+			}}})
 			return m
 		}},
 		{"search", func(m tea.Model) tea.Model {

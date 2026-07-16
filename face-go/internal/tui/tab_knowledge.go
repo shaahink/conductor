@@ -138,7 +138,7 @@ func (m Model) knowledgeLines() []string {
 	for _, b := range m.data.Bugs {
 		stage := ""
 		if b.StageId != nil && *b.StageId != "" {
-			stage = subtleStyle.Render(" ["+*b.StageId+"]")
+			stage = subtleStyle.Render(" [" + *b.StageId + "]")
 		}
 		head := fmt.Sprintf("  %s %s%s %s",
 			peachStyle.Render(fmt.Sprintf("#%d", b.Id)),

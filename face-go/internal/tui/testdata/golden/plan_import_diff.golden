@@ -1,7 +1,7 @@
  ◆ conductor  ● LIVE  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42                 
-  a Agent   s Sessions   t Timeline   o Procs   c Console   e Templates   p Plan   r Report   k Knowledge   g 
+ a s t o c e  p Plan  r k g b                                                                                 
                            │                                                                                  
- ▶ PLAN                    │   Stages · Gates · Settings · Import    conductor-foreman · v7                   
+ ▶ PLAN                    │   Stages · Gates · Settings · Import · Prompt    conductor-foreman · v7          
  ✓ F0 3/3 Foundations      │                                                                                  
  ✓ F6 5/5 Ink TUI v1       │    2 change(s):                                                                  
  ● F7 2/5 Gate … 1× $0.30  │                                                                                  
