@@ -51,6 +51,15 @@ public sealed partial class ControlPlaneServer : IDisposable
     public int Port { get; private set; }
     public bool IsRunning => _running;
 
+    /// <summary>Per-run write token. Every POST must carry it in <c>X-Conductor-Token</c>; it is
+    /// published only through the discovery file, whose filesystem permissions are the trust
+    /// boundary. This is what stops a web page from driving the loopback control plane by CSRF
+    /// (browsers happily POST to 127.0.0.1, and <c>POST /inject</c> feeds text straight into the
+    /// next agent session's prompt — a prompt-injection vector; <c>/plan/edit</c> can plant a gate
+    /// shell command). Reads stay open: they're loopback-only and a browser can't read a
+    /// cross-origin response without CORS headers, which this server never sends.</summary>
+    public string Token { get; } = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16));
+
     public ControlPlaneServer(PlanConfig plan, RunState state, IRunStore store, ConcurrentQueue<ControlCommand> inbox,
         ITelegramService telegram, ILogger logger, int port)
     {
@@ -111,7 +120,7 @@ public sealed partial class ControlPlaneServer : IDisposable
         try
         {
             var payload = JsonSerializer.Serialize(new ControlPlaneInfo(
-                Port, $"http://127.0.0.1:{Port}", Environment.ProcessId, _plan.Name, DateTime.UtcNow),
+                Port, $"http://127.0.0.1:{Port}", Environment.ProcessId, _plan.Name, DateTime.UtcNow, Token),
                 ControlPlaneJsonContext.Default.ControlPlaneInfo);
             Directory.CreateDirectory(_plan.StateDir); // the server can start before anything else has touched .conductor/
             File.WriteAllText(DiscoveryPath(_plan.StateDir), payload);
@@ -149,6 +158,17 @@ public sealed partial class ControlPlaneServer : IDisposable
         {
             var path = ctx.Request.Url?.AbsolutePath ?? "/";
             var method = ctx.Request.HttpMethod;
+
+            // Writes require the per-run token (see Token). 401 before any handler runs, so an
+            // unauthorised caller can't reach a deserializer, the advisor, or the event log.
+            if (string.Equals(method, "POST", StringComparison.OrdinalIgnoreCase) && !IsAuthorized(ctx))
+            {
+                await WriteJsonAsync(ctx, new ControlAcceptedDto(false,
+                        "missing or invalid X-Conductor-Token — read it from .conductor/control-plane.json"),
+                    ControlPlaneJsonContext.Default.ControlAcceptedDto, HttpStatusCode.Unauthorized).ConfigureAwait(false);
+                return;
+            }
+
             switch (method, path)
             {
                 case ("GET", "/state"): await WriteStateAsync(ctx).ConfigureAwait(false); break;
@@ -188,6 +208,14 @@ public sealed partial class ControlPlaneServer : IDisposable
             _logger.LogWarning(ex, "control plane: request handling failed for {Path}", ctx.Request.Url);
             try { ctx.Response.StatusCode = 500; ctx.Response.Close(); } catch (Exception) { /* best effort */ }
         }
+    }
+
+    private bool IsAuthorized(HttpListenerContext ctx)
+    {
+        var given = ctx.Request.Headers["X-Conductor-Token"];
+        if (string.IsNullOrEmpty(given)) return false;
+        return System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(
+            Encoding.UTF8.GetBytes(given), Encoding.UTF8.GetBytes(Token));
     }
 
     public void Dispose()

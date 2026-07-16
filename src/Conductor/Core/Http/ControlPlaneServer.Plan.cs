@@ -86,13 +86,29 @@ public sealed partial class ControlPlaneServer
                     "not a structured plan/tracker, and no advisor model is configured to interpret prose — set advisor.enabled/command in the plan").ConfigureAwait(false);
                 return;
             }
+            // The model id lands in the advisor's process args ({model} placeholder) — reject
+            // anything that doesn't look like a model id so a caller can't smuggle CLI flags.
+            if (req.Model is { Length: > 0 } && !IsSafeModelId(req.Model))
+            {
+                await PlanImportErrorAsync(ctx, "invalid model id").ConfigureAwait(false);
+                return;
+            }
             interpreter = PlanImportService.ResolveInterpreterModel(planForAdvisor, req.Model) ?? advisor.Command;
 
             // Apply must persist exactly the previewed diff (and not consult — or bill — the model
             // twice), so the preview's parse is cached and reused when the same prompt comes back.
-            incoming = TakeCachedImport(text)
-                ?? await PlanImportService.ImportAsync(planForAdvisor, text, req.Model,
-                    msg => _logger.LogInformation("plan import: {Message}", msg)).ConfigureAwait(false);
+            // A blind apply with no prior preview is refused outright: a model-shaped result can
+            // carry gate shell commands, and the reviewable-diff step is the injection defence —
+            // it must not be skippable.
+            incoming = TakeCachedImport(text);
+            if (incoming is null && req.Apply)
+            {
+                await PlanImportErrorAsync(ctx,
+                    "freeform apply requires a preview first — post with apply:false, review the diff, then apply").ConfigureAwait(false);
+                return;
+            }
+            incoming ??= await PlanImportService.ImportAsync(planForAdvisor, text, req.Model,
+                msg => _logger.LogInformation("plan import: {Message}", msg)).ConfigureAwait(false);
             if (incoming is null)
             {
                 await PlanImportErrorAsync(ctx, $"the advisor ({interpreter}) could not derive stages or gates from this prompt").ConfigureAwait(false);
@@ -141,6 +157,9 @@ public sealed partial class ControlPlaneServer
 
     private void CacheImport(string key, ImportResult result) =>
         _importCache = new CachedImport(key, result, DateTime.UtcNow);
+
+    private static bool IsSafeModelId(string s) =>
+        s.Length <= 64 && s.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '.' or '_' or '/' or ':');
 
     /// <summary>Resolve an import source: an existing file path (absolute, or relative to repo/cwd) is
     /// read; anything else is treated as inline markdown. Keeps the Face's import as flexible as the CLI's.</summary>

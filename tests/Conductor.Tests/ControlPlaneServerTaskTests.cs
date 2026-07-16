@@ -58,6 +58,8 @@ public sealed class ControlPlaneServerTaskTests : IDisposable
         var state = new RunState { RunId = "run-tasks" };
         var server = new ControlPlaneServer(_plan, state, _store, _inbox, new NoOpTelegramService(), NullLogger.Instance, port);
         Assert.True(server.Start(), "control plane failed to bind");
+        _http.DefaultRequestHeaders.Remove("X-Conductor-Token");
+        _http.DefaultRequestHeaders.Add("X-Conductor-Token", server.Token);
         return (server, port);
     }
 
@@ -170,6 +172,41 @@ public sealed class ControlPlaneServerTaskTests : IDisposable
             Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
             using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
             Assert.Contains("title is required", doc.RootElement.GetProperty("error").GetString(), StringComparison.Ordinal);
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task Post_WithoutToken_Is401_AndWritesNothing()
+    {
+        var (server, port) = StartServer();
+        try
+        {
+            // A CSRF-style request (a web page POSTing to loopback) carries no token — refused
+            // before any handler runs. GET stays open, so the board is confirmed empty afterward.
+            using var noAuth = new HttpClient();
+            using var content = new StringContent("""{"checkpointId":"G2.1","title":"sneaky"}""", Encoding.UTF8, "application/json");
+            var resp = await noAuth.PostAsync($"http://127.0.0.1:{port}/tasks/add", content);
+            Assert.Equal(HttpStatusCode.Unauthorized, resp.StatusCode);
+
+            var tasks = await _http.GetStringAsync($"http://127.0.0.1:{port}/tasks");
+            using var tdoc = JsonDocument.Parse(tasks);
+            Assert.Empty(tdoc.RootElement.GetProperty("tasks").EnumerateArray());
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task Post_WithWrongToken_Is401()
+    {
+        var (server, port) = StartServer();
+        try
+        {
+            using var wrong = new HttpClient();
+            wrong.DefaultRequestHeaders.Add("X-Conductor-Token", "deadbeefdeadbeefdeadbeefdeadbeef");
+            using var content = new StringContent("""{"checkpointId":"G2.1","title":"x"}""", Encoding.UTF8, "application/json");
+            var resp = await wrong.PostAsync($"http://127.0.0.1:{port}/tasks/add", content);
+            Assert.Equal(HttpStatusCode.Unauthorized, resp.StatusCode);
         }
         finally { server.Dispose(); }
     }

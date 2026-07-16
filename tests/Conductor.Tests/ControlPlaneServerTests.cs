@@ -90,6 +90,8 @@ public sealed class ControlPlaneServerTests : IDisposable
         var state = new RunState { RunId = RunId };
         var server = new ControlPlaneServer(_plan, state, _store, _inbox, new NoOpTelegramService(), NullLogger.Instance, port);
         Assert.True(server.Start(), "control plane failed to bind — cannot run contract tests");
+        _http.DefaultRequestHeaders.Remove("X-Conductor-Token");
+        _http.DefaultRequestHeaders.Add("X-Conductor-Token", server.Token);
         return (server, port);
     }
 
@@ -554,6 +556,7 @@ public sealed class ControlPlaneServerTests : IDisposable
         Assert.NotNull(info);
         Assert.Equal(server.Port, info!.Port);
         Assert.Equal($"http://127.0.0.1:{server.Port}", info.BaseUrl);
+        Assert.Equal(server.Token, info.Token); // clients read the write token from here
 
         server.Dispose();
         Assert.False(File.Exists(discovery));

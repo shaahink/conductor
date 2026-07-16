@@ -14,6 +14,7 @@ import (
 
 type liveSource struct {
 	baseURL    string
+	token      string // per-run write token, sent as X-Conductor-Token on every POST
 	httpClient *http.Client
 	slowClient *http.Client
 	ctx        context.Context
@@ -25,9 +26,17 @@ type liveSource struct {
 }
 
 func NewLiveSource(baseURL string) DataSource {
+	return NewLiveSourceWithToken(baseURL, "")
+}
+
+// NewLiveSourceWithToken attaches with the per-run write token the control plane requires on every
+// POST (reads stay open). The token comes from .conductor/control-plane.json or CONDUCTOR_TOKEN;
+// without it, reads still work but writes answer 401 with a clear message.
+func NewLiveSourceWithToken(baseURL, token string) DataSource {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &liveSource{
 		baseURL: strings.TrimRight(baseURL, "/"),
+		token:   token,
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},
@@ -74,6 +83,9 @@ func (s *liveSource) postJSON(path string, body any, v any) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
+	if s.token != "" {
+		req.Header.Set("X-Conductor-Token", s.token)
+	}
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
 		return err
@@ -300,6 +312,9 @@ func (s *liveSource) postJSONAllowErrorWith(client *http.Client, path string, bo
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
+	if s.token != "" {
+		req.Header.Set("X-Conductor-Token", s.token)
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return err

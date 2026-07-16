@@ -53,7 +53,7 @@ Where to look when something's off (full table in `DOGFOOD-RUNBOOK.md`):
 | `logs/crash-*.log` | A forensic dump if it crashed. Newest near the time it went quiet = root cause. |
 | `logs/session-NNN.jsonl` / `.prompt.md` | Raw agent I/O + the exact compiled prompt. |
 | `sessions/NNN/` | Per-session `prompt.md` · `transcript.md` · `verdict.md` · `handover.md` · `cost.json` + `INDEX.md`. |
-| `control-plane.json` | `{ port, url, pid, planName, startedUtc }` — how to reach a LIVE run over HTTP. |
+| `control-plane.json` | `{ port, url, pid, planName, startedUtc, token }` — how to reach a LIVE run over HTTP; `token` is the write token every POST must send as `X-Conductor-Token`. |
 | `REPORT.md` | Human-readable progress snapshot, regenerated each session. |
 
 ---
@@ -148,10 +148,28 @@ All endpoints are localhost-only.
 
 **Read:** `GET /state` (current stage/session/cost/live metrics) · `/timeline` · `/tasks` · `/ledger`
 · `/bugs` · `/sessions` · `/plan` · `/prompt/preview?stage=&kind=` · `/console/current` and
-`/transcript/current` (SSE streams of the live agent) · `POST /report/query` (read-only SQL).
+`/transcript/current` (SSE streams of the live agent) · `GET /report/query?sql=` (read-only SQL).
+Reads need no token.
 
-**Write:** `POST /control` (same verbs as §2's control commands) · `POST /inject` · `POST /plan/edit`
-· `POST /plan/import` · `GET|POST /telegram/status|test|token`.
+**Write:** `POST /control` (same verbs as §2's control commands) · `POST /inject` · `POST /tasks/update`
+· `POST /tasks/add` · `POST /plan/edit` · `POST /plan/import` · `POST /telegram/test|token`.
+
+**Every write must send the per-run token** as `X-Conductor-Token`, read from the `token` field of
+`.conductor/control-plane.json`. Without it a POST is `401`. This is a CSRF guard: a browser can POST
+to `127.0.0.1` but can't read the token file, and `/inject` feeds text straight into the next agent's
+prompt (a prompt-injection vector) while `/plan/edit` and a prompt-driven `/plan/import` can plant a
+gate shell command. Example:
+
+```bash
+TOKEN=$(jq -r .token .conductor/control-plane.json)
+curl -s -X POST "$url/tasks/add" -H "X-Conductor-Token: $TOKEN" \
+  -H 'Content-Type: application/json' -d '{"checkpointId":"G2.1","title":"Wire the endpoints"}'
+```
+
+A **freeform `/plan/import`** (prose the advisor model interprets) must be **previewed before it can
+apply**: POST with `"apply":false` to get the diff, review it, then POST the same source with
+`"apply":true`. A blind `apply:true` with no prior preview is refused — the reviewable diff is the
+defence against a model-shaped gate command landing unseen.
 
 **From inside a session, the worker agent uses MCP tools** (not you): `conductor_note`, `ledger_list`,
 `task_add|list|update`, `bug_new|list|fix`, `bg_start|status|logs|stop`, `run_query`. You mostly won't

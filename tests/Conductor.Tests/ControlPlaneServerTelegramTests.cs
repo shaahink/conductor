@@ -67,6 +67,8 @@ public sealed class ControlPlaneServerTelegramTests : IDisposable
         var server = new ControlPlaneServer(_plan, new RunState { RunId = "run-telegram" }, _store, _inbox,
             telegram, NullLogger.Instance, port);
         Assert.True(server.Start(), "control plane failed to bind");
+        _http.DefaultRequestHeaders.Remove("X-Conductor-Token");
+        _http.DefaultRequestHeaders.Add("X-Conductor-Token", server.Token);
         return (server, port);
     }
 

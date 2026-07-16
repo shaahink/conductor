@@ -89,7 +89,8 @@ public sealed class RunCommand : Command<RunCommand.Settings>
                 face = FaceLauncher.Start(
                     $"http://127.0.0.1:{server!.Port}",
                     host.Services.GetRequiredService<ILogger<RunCommand>>(),
-                    host.Services.GetService<ProcessSupervisor>());
+                    host.Services.GetService<ProcessSupervisor>(),
+                    server.Token);
             }
 
 #pragma warning disable MA0045 // sync-over-async boundary: Spectre.Cli Execute must return int

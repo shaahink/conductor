@@ -29,8 +29,10 @@ public static class FaceLauncher
         OperatingSystem.IsWindows() ? "conductor-face.exe" : "conductor-face";
 
     /// <summary>Spawns the Face against <paramref name="baseUrl"/>. Returns null when it could not be
-    /// started, having logged why — the caller continues without a UI rather than failing the run.</summary>
-    public static FaceHandle? Start(string baseUrl, ILogger logger, ProcessSupervisor? supervisor = null)
+    /// started, having logged why — the caller continues without a UI rather than failing the run.
+    /// <paramref name="token"/> is the control plane's per-run write token, passed via env (never
+    /// argv, so it stays out of a process listing) so the Face's writes are accepted.</summary>
+    public static FaceHandle? Start(string baseUrl, ILogger logger, ProcessSupervisor? supervisor = null, string? token = null)
     {
         ArgumentNullException.ThrowIfNull(logger);
 
@@ -50,6 +52,7 @@ public static class FaceLauncher
         };
         psi.ArgumentList.Add("--url");
         psi.ArgumentList.Add(baseUrl);
+        if (!string.IsNullOrEmpty(token)) psi.Environment["CONDUCTOR_TOKEN"] = token;
 
         Process? proc = null;
         try

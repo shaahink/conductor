@@ -32,6 +32,7 @@ public sealed class FaceCommand : Command<FaceCommand.Settings>
         }
 
         string url;
+        string? token = null;
         if (settings.Demo)
         {
             url = "--demo";
@@ -48,11 +49,17 @@ public sealed class FaceCommand : Command<FaceCommand.Settings>
             var info = JsonSerializer.Deserialize(File.ReadAllText(discovery), ControlPlaneJsonContext.Default.ControlPlaneInfo);
             if (info is null) { AnsiConsole.MarkupLine("[red]error:[/] control-plane.json is unreadable."); return 1; }
             url = info.BaseUrl;
+            token = info.Token;
         }
 
         var psi = new ProcessStartInfo(entry) { UseShellExecute = false };
         if (settings.Demo) psi.ArgumentList.Add("--demo");
-        else { psi.ArgumentList.Add("--url"); psi.ArgumentList.Add(url); }
+        else
+        {
+            psi.ArgumentList.Add("--url"); psi.ArgumentList.Add(url);
+            // Pass the write token via env, not argv — it never shows in a process listing.
+            if (!string.IsNullOrEmpty(token)) psi.Environment["CONDUCTOR_TOKEN"] = token;
+        }
 
         using var proc = Process.Start(psi);
         if (proc is null) return 1;

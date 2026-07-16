@@ -71,6 +71,8 @@ public sealed class ControlPlaneServerPromptTests : IDisposable
         var state = new RunState { RunId = "run-prompt" };
         var server = new ControlPlaneServer(_plan, state, _store, _inbox, new NoOpTelegramService(), NullLogger.Instance, port);
         Assert.True(server.Start(), "control plane failed to bind");
+        _http.DefaultRequestHeaders.Remove("X-Conductor-Token");
+        _http.DefaultRequestHeaders.Add("X-Conductor-Token", server.Token);
         return (server, port);
     }
 
@@ -137,6 +139,42 @@ public sealed class ControlPlaneServerPromptTests : IDisposable
             using var doc = JsonDocument.Parse(await apply.Content.ReadAsStringAsync());
             Assert.Contains("invalid", doc.RootElement.GetProperty("error").GetString(), StringComparison.OrdinalIgnoreCase);
             Assert.Equal(before, await File.ReadAllTextAsync(_planPath)); // nothing written
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task FreeformPrompt_ApplyWithoutPreview_Rejected()
+    {
+        // The reviewable-diff step is the injection defence for model-shaped gate commands, so a
+        // blind apply (no prior preview to cache) must be refused — never silently applied.
+        await File.WriteAllTextAsync(_replyPath,
+            """{"stages":[],"gates":[{"name":"lint","command":"dotnet format","tier":"fast"}]}""");
+        var (server, port) = StartServer();
+        try
+        {
+            var before = await File.ReadAllTextAsync(_planPath);
+            var resp = await PostAsync(port, "/plan/import", """{"source":"add a lint gate","apply":true}""");
+            Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            Assert.Contains("preview first", doc.RootElement.GetProperty("error").GetString(), StringComparison.Ordinal);
+            Assert.Equal(before, await File.ReadAllTextAsync(_planPath));
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task FreeformPrompt_RejectsUnsafeModelId()
+    {
+        await File.WriteAllTextAsync(_replyPath, """{"stages":[],"gates":[]}""");
+        var (server, port) = StartServer();
+        try
+        {
+            var resp = await PostAsync(port, "/plan/import",
+                """{"source":"add a gate","apply":false,"model":"x --dangerously-skip-permissions"}""");
+            Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            Assert.Contains("invalid model id", doc.RootElement.GetProperty("error").GetString(), StringComparison.Ordinal);
         }
         finally { server.Dispose(); }
     }
