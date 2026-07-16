@@ -69,7 +69,7 @@ app.Configure(c =>
     c.AddCommand<NoteCommand>("note")
         .WithDescription("Write a note/finding to the knowledge ledger (run.db ledger table).");
     c.AddCommand<BugCommand>("bug")
-        .WithDescription("Tracked bugs that outlive the session that found them. Sub-commands: new <title>, list [--all], fix <id>.");
+        .WithDescription("Tracked bugs that outlive the session that found them. Sub-commands: new <title>, list [[--all]], fix <id>.");
     c.AddCommand<LogCommand>("log")
         .WithDescription("Query the structured JSON log. Filter by stage, gate, outcome, etc. Example: conductor log --query \"stage=P7 and gate=build and outcome=fail\"");
     c.AddCommand<NewPlanCommand>("new-plan")
@@ -90,8 +90,11 @@ app.Configure(c =>
         .WithDescription("F8.1: Ask questions about a running conductor plan. The agent has MCP access to run.db, the ledger, and control verbs. Example: conductor chat \"how did session 9 die?\"");
     c.SetExceptionHandler((ex, _) =>
     {
-        WriteCrashLog("Spectre.SetExceptionHandler", ex, null);
-        AnsiConsole.MarkupLine($"[red]error:[/] {Markup.Escape(ex is InvalidOperationException or FileNotFoundException ? ex.Message : ex.ToString())}");
+        // A parse/usage error is a typo, not a crash — no forensic dump, or every mistyped flag
+        // leaves a .conductor/logs/crash-*.log in whatever directory it was typed in.
+        if (ex is not (CommandParseException or CommandRuntimeException))
+            WriteCrashLog("Spectre.SetExceptionHandler", ex, null);
+        AnsiConsole.MarkupLine($"[red]error:[/] {Markup.Escape(ex is InvalidOperationException or FileNotFoundException or CommandParseException or CommandRuntimeException ? ex.Message : ex.ToString())}");
         return 1;
     });
 });

@@ -3,11 +3,17 @@ package widgets
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"charm.land/lipgloss/v2"
 
 	"conductor-face-go/internal/api"
 )
+
+// ClockLocation is the timezone every rendered wall-clock uses (transcript and timeline). Local by
+// default so face clocks agree with the engine's log lines, which are stamped in local time; golden
+// tests pin it to time.UTC so recorded frames stay timezone-independent.
+var ClockLocation = time.Local
 
 // TranscriptModel renders the agent's live transcript. ScrollOffset counts lines back from the
 // live tail (0 = pinned to the newest line), matching how a human thinks about scrollback — one
@@ -293,10 +299,10 @@ func renderTranscriptLine(line api.TranscriptLineDto, width int, query string, i
 	}
 
 	// A wall-clock prefix (like the Ink face had) — skipped at narrow widths and for lines whose
-	// producer didn't stamp a time. UTC so golden frames are timezone-independent.
+	// producer didn't stamp a time.
 	clock := ""
 	if width >= 70 && !line.Ts.IsZero() {
-		clock = txTimeStyle.Render(line.Ts.UTC().Format("15:04:05")) + " "
+		clock = txTimeStyle.Render(line.Ts.In(ClockLocation).Format("15:04:05")) + " "
 	}
 
 	body := highlightMatches(line.Text, query, style, isCurrentMatch)

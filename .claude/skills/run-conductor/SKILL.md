@@ -68,8 +68,10 @@ What a passing run proves (this is Conductor's trust model in action): the fake 
 tracker row to `DONE` and commits. The engine re-verifies independently and **discards** the edit —
 `WARNING: 1 checkpoint(s) marked DONE via direct tracker edit (not via conductor task --done): [T0.1]
 — discarded` → `verdict inputs: gates green · commits 1 · newly DONE [] · dirty no` → outcome
-`Progress`, **not** `Advanced`. Session #2 becomes a `Verify` session; the fake agent isn't a
-verifier, so it ends `AgentError`. `status` then reports `checkpoints 0/2`.
+`Progress`, **not** `Advanced`. Session #2 becomes a `Verify` session; the fake agent detects the
+verify prompt and answers with `{"score":95,"findings":[],"verdict":"PASS"}` → `verifier passed
+(95/80)` and the workflow cycles back to deliver. `status` still reports `checkpoints 0/2` — flips
+only count via `conductor task --done`, and the fake agent never calls it.
 
 To inspect the artifacts after a run:
 
@@ -125,9 +127,9 @@ dotnet test Conductor.slnx
   with a `HUMAN:` token in its handoff — a dry-run against it re-emits `NEEDS HUMAN` forever (kill it).
   dry-run only prints a prompt when there's a *next session* to run; use a fresh/TODO plan (what the
   driver scaffolds).
-- **`conductor --help` (top level) crashes partway.** It renders the `COMMANDS:` header then throws
-  `Could not find color or style '--all'` — a Spectre markup bug where a command description contains
-  bracketed text parsed as `[markup]`. Per-command help (`conductor run --help`) is fine.
+- **Command descriptions are Spectre markup — escape literal brackets.** `conductor --help` used to
+  crash partway (`Could not find color or style '--all'`) because a description contained `[--all]`;
+  it's `[[--all]]` now. Any new description with bracketed text needs the same doubling.
 - **Claims are never trusted — hand-edited tracker rows are discarded.** An agent that edits the
   tracker to `DONE` instead of calling `conductor task --done` does **not** advance the checkpoint.
   Note the split view afterward: `REPORT.md` reflects the tracker *text* (shows `1/2`) while `status`

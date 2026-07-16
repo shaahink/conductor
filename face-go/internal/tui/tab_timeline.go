@@ -128,5 +128,5 @@ func timelineClock(utc string) string {
 	if err != nil {
 		return "--:--:--"
 	}
-	return t.UTC().Format("15:04:05")
+	return t.In(widgets.ClockLocation).Format("15:04:05")
 }

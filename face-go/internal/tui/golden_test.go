@@ -21,7 +21,15 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"conductor-face-go/internal/api"
+	"conductor-face-go/internal/widgets"
 )
+
+// TestMain pins the render timezone: frames stamp wall-clocks in widgets.ClockLocation (local for
+// humans), which would make golden output depend on the machine running the tests.
+func TestMain(m *testing.M) {
+	widgets.ClockLocation = time.UTC
+	os.Exit(m.Run())
+}
 
 var updateGolden = flag.Bool("update", false, "update golden files")
 

@@ -83,7 +83,8 @@ public sealed class RunCommand : Command<RunCommand.Settings>
         {
             // When the Face owns the terminal, the engine's console sink must stay off or the two
             // interleave and corrupt the render. Everything still goes to .conductor/logs/.
-            using var host = ConductorHost.Build(plan, state, new PlainSink(), opts, consoleSink: !wantFace);
+            var sink = new PlainSink();
+            using var host = ConductorHost.Build(plan, state, sink, opts, consoleSink: !wantFace);
 
             var server = host.Services.GetService<ControlPlaneServer>();
             var bound = server?.Start() == true; // never fatal: a bind failure just means no clients
@@ -95,6 +96,16 @@ public sealed class RunCommand : Command<RunCommand.Settings>
                     host.Services.GetRequiredService<ILogger<RunCommand>>(),
                     host.Services.GetService<ProcessSupervisor>(),
                     server.Token);
+                if (face is not null)
+                {
+                    // The Face inherits this console: the sink must go quiet or its lines land in the
+                    // Face's alt-screen and shift every repaint (and PollControl steals its keys).
+                    // If the Face dies or the user quits it, the run continues — unmuted, headless.
+                    sink.Mute();
+                    face.Process.EnableRaisingEvents = true;
+                    face.Process.Exited += (_, _) => sink.Unmute();
+                    if (face.Process.HasExited) sink.Unmute();
+                }
             }
 
 #pragma warning disable MA0045 // sync-over-async boundary: Spectre.Cli Execute must return int

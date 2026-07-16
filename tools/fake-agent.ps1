@@ -45,9 +45,28 @@ if ($Mode -eq "limit") {
     exit 1
 }
 
+# ---- verify sessions: answer with the verdict JSON the engine parses ----
+# A Verify prompt (PromptBuilder verify.md) demands a single {"score":...} object; anything else is
+# treated as AgentError and burns a stage attempt per verify. Detect the prompt's role marker and
+# play the verifier so a token-free loop can pass verification and keep advancing.
+if ($Prompt -match "VERIFICATION session") {
+    O "text" @{ text = "Re-checking claims against the diff and re-running gates (fake verifier)..." }
+    Start-Sleep -Milliseconds 200
+    Step "verifying" 120 40 0.0001
+    O "text" @{ text = '{"score":95,"findings":[],"verdict":"PASS"}' }
+    exit 0
+}
+
 # ---- find tracker and flip first TODO to DONE ----
 $rx = '^(?<head>\|\s*(?<id>[A-Za-z]+[\d.-]*[a-z]?)\s*\|[^|]*)\|\s*TODO\s*\|[^|]*\|[^|]*\|'
 $trackerItem = Get-ChildItem $Repo -Filter "*-START.md" -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $trackerItem) {
+    # Not every plan names its tracker *-START.md (the playground uses PLAYGROUND.md): fall back to
+    # the first top-level .md that has a checkpoint-table TODO row.
+    $trackerItem = Get-ChildItem $Repo -Filter "*.md" -ErrorAction SilentlyContinue |
+        Where-Object { (Get-Content $_.FullName -Raw) -match '\|\s*TODO\s*\|' } |
+        Select-Object -First 1
+}
 
 if ($trackerItem) {
     $lines = (Get-Content $trackerItem.FullName -Raw) -split "`n"
@@ -67,7 +86,7 @@ if ($trackerItem) {
         # no TODO row found - scenario may already be advanced
     }
 } else {
-    O "text" @{ text = "No *-START.md tracker found in $Repo" }
+    O "text" @{ text = "No tracker with TODO checkpoint rows found in $Repo" }
 }
 
 # ---- true-red mode: write a compile-breaking file to make dotnet build fail ----

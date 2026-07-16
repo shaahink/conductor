@@ -1,22 +1,39 @@
 namespace Conductor.Core;
 
-/// <summary>Line-based output for --no-dashboard, redirected output, or CI.</summary>
+/// <summary>Line-based output for --no-dashboard, redirected output, or CI. While the Face TUI owns
+/// the terminal the sink is muted (see <see cref="Mute"/>): a second console writer shifts the Face's
+/// alt-screen repaints into garbage, and a competing <c>Console.ReadKey</c> steals its keystrokes.</summary>
 public sealed class PlainSink : IProgressSink
 {
     private DateTime _lastHeartbeat = DateTime.MinValue;
     private readonly bool _interactive = !Console.IsInputRedirected;
     private ControlAction? _pendingConfirm;
+    private volatile bool _muted;
 
-    public void Log(string line) => Console.WriteLine(line);
+    /// <summary>Silence console output and key polling while another process (the Face) owns the
+    /// terminal. Narration is not lost: it still reaches .conductor/conductor.log, the structured
+    /// Serilog files, and the event store the Face renders from.</summary>
+    public void Mute() => _muted = true;
+
+    /// <summary>Resume console output — the Face exited (or died), so this terminal is ours again.</summary>
+    public void Unmute() => _muted = false;
+
+    public void Log(string line)
+    {
+        if (_muted) return;
+        Console.WriteLine(line);
+    }
 
     public void AgentEvent(AgentEvent ev)
     {
+        if (_muted) return;
         if (ev.Kind is "tool" or "text" or "result" or "stderr")
-            Console.WriteLine($"[{ev.Utc:HH:mm:ss}]   {ev.Kind,-6} {ev.Text}");
+            Console.WriteLine($"[{ev.Utc.ToLocalTime():HH:mm:ss}]   {ev.Kind,-6} {ev.Text}");
     }
 
     public void Snapshot(DashboardSnapshot snap)
     {
+        if (_muted) return;
         if (DateTime.UtcNow - _lastHeartbeat < TimeSpan.FromSeconds(60)) return;
         _lastHeartbeat = DateTime.UtcNow;
         Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] ── {snap.Status} · stage {snap.StageId} · {snap.DoneCount}/{snap.TotalCount} done · ${snap.TotalCostUsd:0.00}" +
@@ -25,7 +42,7 @@ public sealed class PlainSink : IProgressSink
 
     public ControlCommand? PollControl()
     {
-        if (!_interactive) return null;
+        if (_muted || !_interactive) return null;
         try
         {
             while (Console.KeyAvailable)
