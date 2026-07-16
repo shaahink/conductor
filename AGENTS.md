@@ -43,6 +43,33 @@ only, `claimedPaths: null`), so someone has to decide where task-card path claim
 before the multi-item conflict refusal can bite on real data. There is no other committed next
 stage — pick up whatever the owner directs.
 
+### Open-edges note (owner-reviewed 2026-07-16 — do not lose these)
+
+The owner reviewed what's left before personal usage. None of it is tracked in a committed plan;
+this note is the pointer so it isn't missed:
+
+1. **Pre-usage gate: one real-model toy run (M9.1).** Everything was live-proven only under the
+   credential-free fake agent; the engine has never driven a real paid model end-to-end. Small
+   2–3-checkpoint plan, cheap model, exercise one live lever mid-run (QA-dial flip or
+   `conductor rollover`). Owner-started (paid). Telegram phone dogfood (M8.3) can ride the same run.
+2. **The one edge worth fixing: window-close kills the run.** `Console.CancelKeyPress` misses
+   `CTRL_CLOSE_EVENT` (window/tab close, logoff) — wire Win32 `SetConsoleCtrlHandler` into the same
+   graceful path as Ctrl+C. Flagged "not done" in `DOGFOOD-RUNBOOK.md`; the accidental-✕ data-loss
+   risk for daily personal use. Small, well-understood change.
+3. **PathClaims from real task data** — still parked on the owner schema decision above.
+4. **`.conductor/followups.md` needs a triage pass, not execution.** Last touched 2026-07-12;
+   its "planned for" tags point at series that already CLOSED (B/F/M), and the eight `FU-OWNER-*`
+   Face rows predate face-go (Ink era, one cites `node.exe`) — close the obsolete rows, re-home the
+   still-real ones.
+5. **`docs/OPERATING-CONDUCTOR.md` §7 known-gaps list is disclosure, not a backlog** — and is
+   partially stale: the "persona kill-list residue" item is resolved-by-design (F0 trimmed 9→3;
+   P1 role→persona assignment now USES the registry). The remaining §7 items (crash-net recovery,
+   `plan import` bootstrap, `perPhase` gating render, `status` sessions-0, `init` packs, CI) are
+   cosmetic or have documented workarounds — fix on demand, not a series.
+
+Suggested shape if the owner asks to act on this: a short hardening mini-series = item 2 + the
+item 4 triage; item 1 is the owner-run gate before daily use.
+
 ### What landed in the PF session (2026-07-16, pushed on `feat/foreman`)
 - **PF1** (`6401b6f`) — **the set-rollover override surfaced**: `GET /state` carries
   `maxSessionTokensThisRun` (absent = no override; 0 = forced OFF this run; >0 = the cap), read off
