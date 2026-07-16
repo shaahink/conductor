@@ -1,6 +1,6 @@
 ﻿# Conductor — Conductor AI-native (G-series) run report
 
-_Updated 2026-07-16 00:39 UTC · branch `feat/foreman` · HEAD `37320d6`_
+_Updated 2026-07-16 00:39 UTC · branch `feat/foreman` · HEAD `24519e0`_
 
 **Status:** NeedsHuman — tracker CONDUCTOR-AI-NATIVE.md has no parseable checkpoint rows — check the table format
 **Stage:** - · attempts used 0
@@ -25,7 +25,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 ```
 branch: feat/foreman
 working tree: ?? CONDUCTOR-AI-NATIVE.md, ?? docs/CONDUCTOR-AI-NATIVE.md, ?? plans/conductor-ai-native.plan.json
-vs upstream: 282 ahead
+vs upstream: 283 ahead
 ```
 
 ## Phase handovers (audit)
