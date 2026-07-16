@@ -3,18 +3,18 @@
                            │                                                                                  
  ▶ PLAN                    │   Stages · Gates · Settings · Import · Prompt    conductor-foreman · v7          
  ✓ F0 3/3 Foundations      │                                                                                  
- ✓ F6 5/5 Ink TUI v1       │    name             conductor-foreman                                            
- ● F7 2/5 Gate … 1× $0.30  │    gatePolicy       perPhase                                                     
-   ✓ F7.1 Plan import      │    defaultWorkflow  deliver-verify                                               
-   ✓ F7.2 Re-import diff   │    maxSessions      (unset)                                                      
-   ● F7.3 Truth-gate tier  │    maxRunCostUsd    (unset)                                                      
- ○ F8 0/4 conductor chat…  │    maxRunTokens     (unset)                                                      
-                           │    stallMinutes     12                                                           
- ── GATES ──               │    sessionTimeout   240                                                          
-   ✓ build                 │                                                                                  
-   ● test 4s               │    plan file: C:\Code\conductor\plans\conductor-foreman.plan.json                
+ ✓ F6 5/5 Ink TUI v1       │    name              conductor-foreman                                           
+ ● F7 2/5 Gate … 1× $0.30  │    gatePolicy        perPhase                                                    
+   ✓ F7.1 Plan import      │    defaultWorkflow   deliver-verify                                              
+   ✓ F7.2 Re-import diff   │    qa                (workflow decides)                                          
+   ● F7.3 Truth-gate tier  │    verifierThreshold 80                                                          
+ ○ F8 0/4 conductor chat…  │    maxSessions       (unset)                                                     
+                           │    maxRunCostUsd     (unset)                                                     
+ ── GATES ──               │    maxRunTokens      (unset)                                                     
+   ✓ build                 │    stallMinutes      12                                                          
+   ● test 4s               │    sessionTimeout    240                                                         
    ○ lint                  │                                                                                  
-                           │                                                                                  
+                           │    plan file: C:\Code\conductor\plans\conductor-foreman.plan.json                
  ── TASKS ──               │                                                                                  
    ✓ Add truth-tier con…   │                                                                                  
    ● Wire RunDb.GetLast…   │                                                                                  

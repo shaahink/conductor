@@ -6,7 +6,9 @@ public sealed partial class VerdictEngine
 {
     // ── workflow advancement (M3.1) ──
 
-    /// <summary>Consult the workflow engine for the next step after a session completes.</summary>
+    /// <summary>Consult the workflow engine for the next step after a session completes.
+    /// <paramref name="sessionStartHead"/> is the just-finished session's start commit — the audit
+    /// diff base when the QA dial narrows the audit to the latest session (P2).</summary>
     private void AdvanceWorkflowStep(
         StageConfig stage,
         SessionRecord rec,
@@ -14,9 +16,10 @@ public sealed partial class VerdictEngine
         int? verifierScore,
         bool verifierPassed,
         bool circuitBroken,
-        bool stageComplete = false)
+        bool stageComplete = false,
+        string? sessionStartHead = null)
     {
-        var workflow = _ctx.Workflows.Resolve(_ctx.Plan, stage);
+        var workflow = _ctx.Workflows.Resolve(_ctx.Plan, stage, _ctx.Qa);
         var stepIndex = _ctx.State.WorkflowStepIndices.GetValueOrDefault(stage.Id, -1);
         var vars = WorkflowVarsFactory.Build(rec, _ctx.State.AttemptsThisStage,
             gatesGreen, verifierScore, verifierPassed, circuitBroken, stageComplete);
@@ -35,12 +38,12 @@ public sealed partial class VerdictEngine
         var nextIndex = _ctx.State.WorkflowStepIndices[stage.Id];
         _ctx.Log($"workflow '{workflow.Name}': step {stepIndex} → {nextIndex} ({next.Id}, kind={next.Kind})");
 
-        if (next.Kind == SessionKind.Verify && (stage.Overrides?.SkipVerification == true || _ctx.State.SkipVerificationThisStage))
+        if (next.Kind == SessionKind.Verify && (_ctx.Qa.EffectiveSkipVerification(_ctx.Plan, stage) || _ctx.State.SkipVerificationThisStage))
         {
             _ctx.Log($"workflow override: skipping verification step for stage {stage.Id} — treating as passed");
             // M4.1: confirm checkpoints immediately when verification is skipped
             ConfirmPendingCheckpoints(stage.Id);
-            AdvanceWorkflowStep(stage, rec, gatesGreen, verifierScore, verifierPassed: true, circuitBroken, stageComplete);
+            AdvanceWorkflowStep(stage, rec, gatesGreen, verifierScore, verifierPassed: true, circuitBroken, stageComplete, sessionStartHead);
             return;
         }
 
@@ -63,10 +66,15 @@ public sealed partial class VerdictEngine
                 };
                 break;
             case SessionKind.Audit:
+                // P2: auditCoversPriorSessions=false narrows the audit's diff base from the stage
+                // start (everything accumulated, the classic phase-gate scope) to just the session
+                // that triggered it.
+                var coversPrior = _ctx.Qa.Project(_ctx.Plan, stage).AuditCoversPriorSessions;
                 _ctx.State.PendingAudit = new PendingAudit
                 {
                     StageId = stage.Id,
-                    StageStartHead = _ctx.State.CurrentStageStartHead ?? "",
+                    StageStartHead = (coversPrior ? _ctx.State.CurrentStageStartHead : sessionStartHead)
+                        ?? _ctx.State.CurrentStageStartHead ?? "",
                 };
                 break;
             case SessionKind.Deliver:

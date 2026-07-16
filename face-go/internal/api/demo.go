@@ -376,6 +376,12 @@ func applyDemoEdit(plan *PlanDto, e PlanEditDto) {
 				plan.Stages[i].Workflow = &val
 			case "notes":
 				plan.Stages[i].Notes = &val
+			case "qamode": // P2 per-stage QA dial — empty inherits the plan dial
+				if val == "" {
+					plan.Stages[i].QaMode = nil
+				} else {
+					plan.Stages[i].QaMode = &val
+				}
 			}
 		}
 	case "gate":
@@ -424,6 +430,30 @@ func applyDemoEdit(plan *PlanDto, e PlanEditDto) {
 		case "sessiontimeoutminutes":
 			if n, err := strconv.Atoi(val); err == nil && n > 0 {
 				plan.Limits.SessionTimeoutMinutes = n
+			}
+		case "verifierthreshold": // P2: the base verifier bar is editable now
+			if n, err := strconv.Atoi(val); err == nil && n >= 1 && n <= 100 {
+				plan.Limits.VerifierThreshold = n
+			}
+		}
+	case "qa": // P2 plan-wide QA dial — mirrors ApplyQaEdit (empty mode clears the dial)
+		switch e.Field {
+		case "mode":
+			if val == "" {
+				plan.Qa = nil
+			} else {
+				if plan.Qa == nil {
+					plan.Qa = &PlanQaDto{AuditCoversPriorSessions: true}
+				}
+				plan.Qa.Mode = val
+			}
+		case "verifierthreshold":
+			if plan.Qa != nil {
+				if n, err := strconv.Atoi(val); err == nil && n >= 1 && n <= 100 {
+					plan.Qa.VerifierThreshold = &n
+				} else {
+					plan.Qa.VerifierThreshold = nil
+				}
 			}
 		}
 	}

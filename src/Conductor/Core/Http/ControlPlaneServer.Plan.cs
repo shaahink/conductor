@@ -216,6 +216,8 @@ public sealed partial class ControlPlaneServer
                 return ApplyPlanEdit(plan, field, edit.Value);
             case "limits":
                 return ApplyLimitsEdit(plan.Limits, field, edit.Value);
+            case "qa":
+                return ApplyQaEdit(plan, field, edit.Value);
             case "telegram":
                 return ApplyTelegramEdit(plan, field, edit.Value);
             default:
@@ -281,6 +283,19 @@ public sealed partial class ControlPlaneServer
                     ? null
                     : [.. value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
                 return null;
+            case "qamode":
+                // P2: the per-stage QA dial. Empty = inherit the plan dial (or classic selection).
+                if (string.IsNullOrWhiteSpace(value)) { stage.Qa = null; return null; }
+                if (!DefaultQaPolicy.IsValidMode(value)) return "qa mode must be off, everySession, or phaseGate (or empty to inherit)";
+                stage.Qa ??= new QaRule();
+                stage.Qa.Mode = value;
+                return null;
+            case "qathreshold":
+                if (stage.Qa is null) return "set the stage qa mode first — the threshold rides the stage dial";
+                if (string.IsNullOrWhiteSpace(value)) { stage.Qa.VerifierThreshold = null; return null; }
+                if (!int.TryParse(value, out var qt) || qt is < 1 or > 100) return "qa threshold must be 1-100 (or empty to inherit)";
+                stage.Qa.VerifierThreshold = qt;
+                return null;
             default: return $"stage has no editable field '{field}'";
         }
     }
@@ -342,7 +357,51 @@ public sealed partial class ControlPlaneServer
             case "sessiontimeoutminutes":
                 if (!int.TryParse(value, out var timeout) || timeout < 1) return "sessionTimeoutMinutes must be a positive integer";
                 limits.SessionTimeoutMinutes = timeout; return null;
+            case "verifierthreshold":
+                // P2: the base verifier pass bar (a set QA dial's own threshold overrides it).
+                if (!int.TryParse(value, out var bar) || bar is < 1 or > 100) return "verifierThreshold must be 1-100";
+                limits.VerifierThreshold = bar; return null;
             default: return $"limits has no editable field '{field}'";
+        }
+    }
+
+    /// <summary>P2: the plan-wide QA dial (pipeline.qa). <c>mode</c> sets or clears it (empty = back
+    /// to classic workflow selection); <c>verifierthreshold</c> rides the dial and overrides
+    /// limits.verifierThreshold (empty = inherit); <c>auditcoverspriorsessions</c> narrows the
+    /// phaseGate audit to the latest session when false. Every save auto-queues a reload-plan, so
+    /// the dial steers the CURRENT run from its next session boundary.</summary>
+    private static string? ApplyQaEdit(PlanConfig plan, string field, string? value)
+    {
+        switch (field)
+        {
+            case "mode":
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    if (plan.Pipeline is { } rules)
+                    {
+                        rules.Qa = null;
+                        // Drop an all-empty pipeline block so the plan file stays clean.
+                        if (rules.Roles is null && rules.MultiItem is null) plan.Pipeline = null;
+                    }
+                    return null;
+                }
+                if (!DefaultQaPolicy.IsValidMode(value)) return "qa mode must be off, everySession, or phaseGate (or empty for classic workflow selection)";
+                plan.Pipeline ??= new PipelineRules();
+                plan.Pipeline.Qa ??= new QaRule();
+                plan.Pipeline.Qa.Mode = value;
+                return null;
+            case "threshold":
+            case "verifierthreshold":
+                if (plan.Pipeline?.Qa is not { } qa) return "set the qa mode first — the threshold rides the dial";
+                if (string.IsNullOrWhiteSpace(value)) { qa.VerifierThreshold = null; return null; }
+                if (!int.TryParse(value, out var t) || t is < 1 or > 100) return "qa verifierThreshold must be 1-100 (or empty to inherit limits.verifierThreshold)";
+                qa.VerifierThreshold = t;
+                return null;
+            case "auditcoverspriorsessions":
+                if (plan.Pipeline?.Qa is not { } qa2) return "set the qa mode first";
+                qa2.AuditCoversPriorSessions = !string.Equals(value, "false", StringComparison.OrdinalIgnoreCase);
+                return null;
+            default: return $"qa has no editable field '{field}'";
         }
     }
 

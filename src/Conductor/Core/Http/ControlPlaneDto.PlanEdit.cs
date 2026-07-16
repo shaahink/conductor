@@ -7,7 +7,7 @@ public sealed record PlanLimitsDto(
     int? MaxSessions = null);
 
 /// <summary>One edit the TUI applies to the plan. <c>Op</c> ∈ set|add|delete (absent/null ⇒ "set" for
-/// back-compat). <c>Target</c> ∈ stage|gate|plan|limits|telegram; <c>Id</c> is the stage id / gate name (empty
+/// back-compat). <c>Target</c> ∈ stage|gate|plan|limits|qa|telegram; <c>Id</c> is the stage id / gate name (empty
 /// for plan-level). For a <b>set</b>, <c>Field</c> is the property (title, model, workflow, kind, sessions,
 /// notes, persona, command, tier, timeout, gatePolicy, defaultWorkflow) and <c>Value</c> the new value
 /// (null clears optional fields). For an <b>add</b> (stage|gate only), <c>Id</c> is the new id/name and

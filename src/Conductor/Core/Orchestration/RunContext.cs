@@ -36,6 +36,7 @@ public sealed class RunContext
     public WebhookNotifier Webhooks { get; }
     public IWorkflowResolver Workflows { get; }
     public IAssignmentPolicy Assignments { get; }
+    public IQaPolicy Qa { get; }
 
     // ── file paths ──
 
@@ -93,7 +94,8 @@ public sealed class RunContext
         WebhookNotifier webhooks,
         IWorkflowResolver? workflowResolver,
         ILogger logger,
-        IAssignmentPolicy? assignmentPolicy = null)
+        IAssignmentPolicy? assignmentPolicy = null,
+        IQaPolicy? qaPolicy = null)
     {
         Plan = plan;
         State = state;
@@ -112,6 +114,7 @@ public sealed class RunContext
         Webhooks = webhooks;
         Workflows = workflowResolver ?? new WorkflowEngine();
         Assignments = assignmentPolicy ?? new DefaultAssignmentPolicy();
+        Qa = qaPolicy ?? new DefaultQaPolicy();
         Logger = logger;
         StateDir = plan.StateDir;
         LockPath = Path.Combine(plan.StateDir, "conductor.lock");
@@ -127,7 +130,7 @@ public sealed class RunContext
     public void SwapPlan(PlanConfig fresh)
     {
         Plan = fresh;
-        Prompts = new PromptBuilder(fresh, new PersonaRegistry(fresh), Lessons);
+        Prompts = new PromptBuilder(fresh, new PersonaRegistry(fresh), Lessons, Qa);
     }
 
     // ── convenience delegations ──

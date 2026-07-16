@@ -8,7 +8,8 @@ namespace Conductor.Core.Http;
 public sealed record PlanDto(
     string Name, int PlanVersion, string PlanFile, string GatePolicy, string? DefaultWorkflow,
     string DefaultModel, IReadOnlyList<string> Workflows,
-    IReadOnlyList<PlanStageDto> Stages, IReadOnlyList<PlanGateDto> Gates, PlanLimitsDto Limits)
+    IReadOnlyList<PlanStageDto> Stages, IReadOnlyList<PlanGateDto> Gates, PlanLimitsDto Limits,
+    PlanQaDto? Qa = null)
 {
     public static PlanDto FromPlan(PlanConfig p)
     {
@@ -30,17 +31,22 @@ public sealed record PlanDto(
                 p.ResolveAgent(s).Model,
                 s.Workflow ?? p.DefaultWorkflow,
                 s.Persona, s.Notes,
-                s.DependsOn is { Count: > 0 } ? [.. s.DependsOn] : []))],
+                s.DependsOn is { Count: > 0 } ? [.. s.DependsOn] : [],
+                s.Qa?.Mode, s.Qa?.VerifierThreshold))],
             Gates: [.. p.Gates.Select(g => new PlanGateDto(g.Name, g.Command, g.Tier, g.TimeoutMinutes, g.Optional))],
             Limits: new PlanLimitsDto(
                 p.Limits.StallMinutes, p.Limits.SessionTimeoutMinutes,
                 p.Limits.MaxRunCostUsd, p.Limits.MaxRunTokens, p.Limits.VerifierThreshold,
-                p.Limits.MaxSessions));
+                p.Limits.MaxSessions),
+            Qa: p.Pipeline?.Qa is { } qa
+                ? new PlanQaDto(qa.Mode, qa.VerifierThreshold, qa.AuditCoversPriorSessions)
+                : null);
     }
 }
 
 public sealed record PlanStageDto(
     string Id, string Title, int Sessions, string Kind, string? Model,
-    string? Workflow, string? Persona, string? Notes, IReadOnlyList<string> DependsOn);
+    string? Workflow, string? Persona, string? Notes, IReadOnlyList<string> DependsOn,
+    string? QaMode = null, int? QaThreshold = null);
 
 public sealed record PlanGateDto(string Name, string Command, string Tier, int TimeoutMinutes, bool Optional);

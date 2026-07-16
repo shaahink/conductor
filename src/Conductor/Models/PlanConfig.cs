@@ -245,7 +245,22 @@ public sealed class PlanConfig
                 errors.Add($"stage '{s.Id}' post-hook timeoutMinutes must be >= 1 (was {s.PostHook.TimeoutMinutes})");
         }
 
+        // P2: a typo'd QA dial must never silently project to classic behavior on a live run —
+        // reject it here so the plan can't load with a dial that looks active but isn't.
+        ValidateQaRule(Pipeline?.Qa, "plan.pipeline.qa", errors);
+        foreach (var s in Stages)
+            ValidateQaRule(s.Qa, $"stage '{s.Id}' qa", errors);
+
         return errors;
+    }
+
+    private static void ValidateQaRule(QaRule? qa, string where, List<string> errors)
+    {
+        if (qa is null) return;
+        if (!DefaultQaPolicy.IsValidMode(qa.Mode))
+            errors.Add($"{where}.mode is '{qa.Mode}' — use off, everySession, or phaseGate");
+        if (qa.VerifierThreshold is { } t && t is < 1 or > 100)
+            errors.Add($"{where}.verifierThreshold must be 1–100 (was {t})");
     }
 
     private bool HasDependencyCycle()

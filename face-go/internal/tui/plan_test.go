@@ -303,7 +303,7 @@ func TestPlanSettingsLimitsFieldRoundTrips(t *testing.T) {
 	if m.planTab != planTabSettings {
 		t.Fatalf("expected Settings section, got %v", m.planTab)
 	}
-	for range 3 { // name, gatePolicy, defaultWorkflow → maxSessions
+	for range 5 { // name, gatePolicy, defaultWorkflow, qa, verifierThreshold → maxSessions
 		m = drive(m, "down")
 	}
 	f := m.currentField()
@@ -341,6 +341,87 @@ func TestPlanSettingsLimitsFieldRoundTrips(t *testing.T) {
 	plan, _ = src.FetchPlan()
 	if plan.Limits.MaxSessions != nil {
 		t.Fatalf("expected limits.maxSessions cleared, got %v", *plan.Limits.MaxSessions)
+	}
+}
+
+// P2: the Settings QA dial posts through the "qa" edit target and round-trips the source; picking
+// the inherit sentinel clears the dial. The live counterpart is ApplyQaEdit + a plan reload at the
+// engine's next session boundary.
+func TestPlanSettingsQaDialRoundTrips(t *testing.T) {
+	m, src := openPlanEditor(t)
+
+	m = drive(m, "right") // Gates
+	m = drive(m, "right") // Settings
+	for range 3 {         // name, gatePolicy, defaultWorkflow → qa
+		m = drive(m, "down")
+	}
+	f := m.currentField()
+	if f.Field != "mode" || f.Target != "qa" {
+		t.Fatalf("expected the qa dial field, got %q target %q", f.Field, f.Target)
+	}
+
+	m = drive(m, "enter") // begin enum edit at "(workflow decides)"
+	m = drive(m, "right") // → off
+	tm, cmd := m.handlePlanKey("enter")
+	m = asModel(tm)
+	if cmd == nil {
+		t.Fatal("saving the qa dial should post an edit")
+	}
+	// MsgPlanEdited answers with a plan re-fetch — run it so the editor sees the saved dial.
+	tm, refetch := m.Update(cmd())
+	m = asModel(tm)
+	if refetch != nil {
+		tm, _ = m.Update(refetch())
+		m = asModel(tm)
+	}
+
+	plan, _ := src.FetchPlan()
+	if plan.Qa == nil || plan.Qa.Mode != "off" {
+		t.Fatalf("expected qa.mode=off after save, got %v", plan.Qa)
+	}
+
+	// Back to the inherit sentinel — the dial clears whole (nil, classic workflow selection).
+	m = drive(m, "enter")
+	m = drive(m, "left") // off → "(workflow decides)"
+	tm, cmd = m.handlePlanKey("enter")
+	m = asModel(tm)
+	if cmd == nil {
+		t.Fatal("saving the inherit sentinel should still post (it clears the dial)")
+	}
+	m.Update(cmd())
+	plan, _ = src.FetchPlan()
+	if plan.Qa != nil {
+		t.Fatalf("expected the qa dial cleared, got %v", plan.Qa)
+	}
+}
+
+// P2: the per-stage QA dial rides the stage target (field qamode) and round-trips the source.
+func TestPlanStageQaDialRoundTrips(t *testing.T) {
+	m, src := openPlanEditor(t)
+	firstStage := m.plan.Stages[0].Id
+
+	m = drive(m, "enter") // drill into the first stage
+	for range 5 {         // title, model, persona, workflow, kind → qa
+		m = drive(m, "down")
+	}
+	if got := m.currentField().Field; got != "qamode" {
+		t.Fatalf("expected to be on the stage qa field, got %q", got)
+	}
+	m = drive(m, "enter") // begin enum edit
+	m = drive(m, "right") // "(workflow decides)" → off
+	m = drive(m, "right") // off → everySession
+	tm, cmd := m.handlePlanKey("enter")
+	m = asModel(tm)
+	if cmd == nil {
+		t.Fatal("saving the stage qa dial should post an edit")
+	}
+	m.Update(cmd())
+
+	plan, _ := src.FetchPlan()
+	for _, s := range plan.Stages {
+		if s.Id == firstStage && (s.QaMode == nil || *s.QaMode != "everySession") {
+			t.Errorf("expected stage %s qaMode=everySession after save, got %v", firstStage, s.QaMode)
+		}
 	}
 }
 

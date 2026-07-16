@@ -13,7 +13,7 @@ public sealed class WorkflowEngineTests
     {
         var plan = new PlanConfig();
         var stage = new StageConfig { Id = "test" };
-        var wf = _engine.Resolve(plan, stage);
+        var wf = _engine.Resolve(plan, stage, new DefaultQaPolicy());
         Assert.Equal("deliver-verify", wf.Name);
         Assert.Equal(3, wf.Steps.Count);
         Assert.True(wf.Repeat);
@@ -24,7 +24,7 @@ public sealed class WorkflowEngineTests
     {
         var plan = new PlanConfig();
         var stage = new StageConfig { Id = "test", Workflow = "spike" };
-        var wf = _engine.Resolve(plan, stage);
+        var wf = _engine.Resolve(plan, stage, new DefaultQaPolicy());
         Assert.Equal("spike", wf.Name);
         Assert.Single(wf.Steps);
         Assert.False(wf.Repeat);
@@ -35,7 +35,7 @@ public sealed class WorkflowEngineTests
     {
         var plan = new PlanConfig { DefaultWorkflow = "docs-only" };
         var stage = new StageConfig { Id = "test" };
-        var wf = _engine.Resolve(plan, stage);
+        var wf = _engine.Resolve(plan, stage, new DefaultQaPolicy());
         Assert.Equal("docs-only", wf.Name);
         Assert.False(wf.Repeat);
     }
@@ -43,7 +43,7 @@ public sealed class WorkflowEngineTests
     [Fact]
     public void DeliverVerify_StepsThroughCycle()
     {
-        var wf = _engine.Resolve(new PlanConfig(), new StageConfig { Id = "test" });
+        var wf = _engine.Resolve(new PlanConfig(), new StageConfig { Id = "test" }, new DefaultQaPolicy());
 
         // Step -1 → step 0 (deliver)
         var step = _engine.GetNextStep(wf, -1, new WorkflowRuntimeVars());
@@ -69,7 +69,7 @@ public sealed class WorkflowEngineTests
     [Fact]
     public void DeliverVerify_FailedVerify_QueuesFix()
     {
-        var wf = _engine.Resolve(new PlanConfig(), new StageConfig { Id = "test" });
+        var wf = _engine.Resolve(new PlanConfig(), new StageConfig { Id = "test" }, new DefaultQaPolicy());
 
         // After verify FAILED → step 2 (fix) should run
         var afterFailedVerify = new WorkflowRuntimeVars { VerifierPassed = false, VerifierScore = 45 };
@@ -82,7 +82,7 @@ public sealed class WorkflowEngineTests
     [Fact]
     public void Spike_StopsAfterOneStep()
     {
-        var wf = _engine.Resolve(new PlanConfig(), new StageConfig { Id = "test", Workflow = "spike" });
+        var wf = _engine.Resolve(new PlanConfig(), new StageConfig { Id = "test", Workflow = "spike" }, new DefaultQaPolicy());
 
         var step = _engine.GetNextStep(wf, -1, new WorkflowRuntimeVars());
         Assert.NotNull(step);
@@ -98,7 +98,7 @@ public sealed class WorkflowEngineTests
     {
         var plan = new PlanConfig { DefaultWorkflow = "docs-only" };
         var stage = new StageConfig { Id = "test" };
-        var wf = _engine.Resolve(plan, stage);
+        var wf = _engine.Resolve(plan, stage, new DefaultQaPolicy());
 
         var step = _engine.GetNextStep(wf, -1, new WorkflowRuntimeVars());
         Assert.NotNull(step);
@@ -152,7 +152,7 @@ public sealed class WorkflowEngineTests
         // both sites now share — this test drives it exactly the way SessionRunner (session 1's
         // kind) then VerdictEngine (advancing after session 1) do, and asserts the second call
         // sees the first call's step, not a stale index.
-        var wf = _engine.Resolve(new PlanConfig(), new StageConfig { Id = "test" });
+        var wf = _engine.Resolve(new PlanConfig(), new StageConfig { Id = "test" }, new DefaultQaPolicy());
         var indices = new Dictionary<string, int>(StringComparer.Ordinal);
 
         // SessionRunner.ResolveSessionKind's fallback: stage's first session, no prior state.
@@ -172,7 +172,7 @@ public sealed class WorkflowEngineTests
     [Fact]
     public void ResolveAndRecordStep_RemovesEntry_WhenWorkflowExhausted()
     {
-        var wf = _engine.Resolve(new PlanConfig(), new StageConfig { Id = "test", Workflow = "spike" });
+        var wf = _engine.Resolve(new PlanConfig(), new StageConfig { Id = "test", Workflow = "spike" }, new DefaultQaPolicy());
         var indices = new Dictionary<string, int>(StringComparer.Ordinal) { ["test"] = 0 };
 
         var next = _engine.ResolveAndRecordStep(wf, indices, "test", new WorkflowRuntimeVars { HasCommits = true });

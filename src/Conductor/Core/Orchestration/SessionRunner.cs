@@ -60,6 +60,19 @@ public sealed partial class SessionRunner
         // for crash recovery (Resume must carry the agent session id).
         var kind = ResolveSessionKind(stage, pendingResume, pendingAudit, pendingVerify, pendingFix);
 
+        // A workflow-resolved kind can arrive without its pending context (a custom workflow that
+        // opens on a QA step, or a pending cleared out from under the recorded index). Verify and
+        // audit have a well-defined meaning without one — review the stage's work since it started
+        // — so synthesize that context rather than dereference null. A fix without failure context
+        // is just a delivery attempt; fall back honestly.
+        var lastSession = _ctx.State.History.Count > 0 ? _ctx.State.History[^1].Number : _ctx.State.SessionCounter;
+        if (kind == SessionKind.Verify && pendingVerify is null)
+            pendingVerify = new PendingVerify { FromSession = lastSession, StageId = stage.Id, StageStartHead = _ctx.State.CurrentStageStartHead ?? "" };
+        else if (kind == SessionKind.Audit && pendingAudit is null)
+            pendingAudit = new PendingAudit { StageId = stage.Id, StageStartHead = _ctx.State.CurrentStageStartHead ?? "" };
+        else if (kind == SessionKind.Fix && pendingFix is null)
+            kind = SessionKind.Deliver;
+
         // P1: ask the assignment policy who runs this session and which ready items it claims.
         // With no `pipeline` rules the default policy reproduces the classic behavior exactly
         // (stage/plan default agent, the first not-done checkpoint, one item).
@@ -337,71 +350,6 @@ public sealed partial class SessionRunner
     }
 
     private int MaxAttempts(StageConfig stage) => Math.Max(1, stage.Sessions * _ctx.Plan.Limits.StageSlackFactor);
-
-    // ── workflow-driven kind resolution (M3.1) ──
-
-    private SessionKind ResolveSessionKind(
-        StageConfig stage,
-        PendingResume? pendingResume,
-        PendingAudit? pendingAudit,
-        PendingVerify? pendingVerify,
-        PendingFix? pendingFix)
-    {
-        // Crash recovery: Resume always wins — it carries the agent session id
-        if (pendingResume != null) return SessionKind.Resume;
-
-        // Explicit pending states from the previous workflow step take priority
-        if (pendingAudit != null) return SessionKind.Audit;
-        if (pendingVerify != null) return SessionKind.Verify;
-        if (pendingFix != null) return SessionKind.Fix;
-
-        // Workflow-driven: what does the engine say is next? ResolveAndRecordStep both resolves
-        // AND records the step index in the same call — see its doc comment for why that matters
-        // (a real bug: this call site used to resolve a step without recording it, leaving
-        // WorkflowStepIndices stale for AdvanceWorkflowStep's next read).
-        var workflow = _ctx.Workflows.Resolve(_ctx.Plan, stage);
-        var vars = new WorkflowRuntimeVars(); // initial run — no prior session vars
-        var step = _ctx.Workflows.ResolveAndRecordStep(workflow, _ctx.State.WorkflowStepIndices, stage.Id, vars);
-        if (step != null)
-        {
-            var wfKind = step.Kind;
-            // Apply per-stage overrides: skip verification step
-            if (wfKind == SessionKind.Verify && stage.Overrides?.SkipVerification == true)
-                return SessionKind.Deliver; // fall through to next deliver
-            return wfKind;
-        }
-
-        // Workflow exhausted or not configured — default to Deliver
-        return SessionKind.Deliver;
-    }
-
-    public static SessionKind PendingToKind(
-        PendingResume? pr, PendingAudit? pa, PendingVerify? pv, PendingFix? pf)
-    {
-        if (pr != null) return SessionKind.Resume;
-        if (pa != null) return SessionKind.Audit;
-        if (pv != null) return SessionKind.Verify;
-        if (pf != null) return SessionKind.Fix;
-        return SessionKind.Deliver;
-    }
-
-    // ── prompt construction ──
-
-    private string BuildPrompt(SessionKind kind, StageConfig stage, int sessionNumber, int attempt, int maxAttempts,
-        PendingResume? pendingResume, PendingAudit? pendingAudit, PendingVerify? pendingVerify, PendingFix? pendingFix,
-        bool isReview, string reviewPath, string? personaOverride = null)
-    {
-        return kind switch
-        {
-            SessionKind.Resume => _ctx.Prompts.Resume(stage, sessionNumber, attempt, maxAttempts, pendingResume!),
-            SessionKind.Audit => _ctx.Prompts.Audit(stage, sessionNumber, pendingAudit!, _ctx.State.CurrentStageStartHead ?? "HEAD~1", personaOverride),
-            SessionKind.Verify => _ctx.Prompts.Verify(stage, sessionNumber, pendingVerify!, personaOverride),
-            SessionKind.Fix => _ctx.Prompts.Fix(stage, sessionNumber, attempt, maxAttempts, pendingFix!, personaOverride),
-            _ => isReview
-                ? _ctx.Prompts.Review(stage, sessionNumber, attempt, maxAttempts, reviewPath)
-                : _ctx.Prompts.Deliver(stage, sessionNumber, attempt, maxAttempts, personaOverride),
-        };
-    }
 
     // ── snapshot + activity tracking ──
 

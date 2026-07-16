@@ -45,7 +45,13 @@ const (
 	agentDefaultModel = "(agent default)"
 	noneValue         = "(none)"
 	customSentinel    = "✎ custom…"
+	qaInheritValue    = "(workflow decides)"
 )
+
+// P2: the QA frequency dial — a friendly projection onto the existing workflows (off =
+// deliver-only, everySession = deliver-verify, phaseGate = big-dev-then-big-audit). The sentinel
+// clears the dial so the stage/plan workflow decides, exactly the classic behavior.
+var qaModeChoices = []string{qaInheritValue, "off", "everySession", "phaseGate"}
 
 func (m Model) stageFields() []planField {
 	return []planField{
@@ -54,6 +60,7 @@ func (m Model) stageFields() []planField {
 		{Label: "persona", Field: "persona", Kind: fieldEnum, Options: personaChoices},
 		{Label: "workflow", Field: "workflow", Kind: fieldEnum, Options: m.workflowChoices()},
 		{Label: "kind", Field: "kind", Kind: fieldEnum, Options: []string{"deliver", "review"}},
+		{Label: "qa", Field: "qamode", Kind: fieldEnum, Options: qaModeChoices},
 		{Label: "sessions", Field: "sessions", Kind: fieldInt},
 		{Label: "notes", Field: "notes", Kind: fieldText},
 		{Label: "dependsOn", Field: "dependson", Kind: fieldText},
@@ -97,6 +104,10 @@ func (m Model) settingsFields() []planField {
 		{Label: "name", Field: "name", Kind: fieldText},
 		{Label: "gatePolicy", Field: "gatepolicy", Kind: fieldEnum, Options: []string{"perSession", "perPhase"}},
 		{Label: "defaultWorkflow", Field: "defaultworkflow", Kind: fieldEnum, Options: m.workflowChoices()},
+		// P2 QA dial: saved through the "qa" edit target (pipeline.qa); the threshold is the base
+		// verifier bar in limits. Both ride the same live reload as everything else here.
+		{Label: "qa", Field: "mode", Kind: fieldEnum, Options: qaModeChoices, Target: "qa"},
+		{Label: "verifierThreshold", Field: "verifierthreshold", Kind: fieldInt, Target: "limits"},
 		// G3.3 live limits: saved through the "limits" edit target; the engine reloads the plan at
 		// its next session boundary, so these steer the CURRENT run. Saving an empty value clears
 		// a nullable cap (maxSessions / maxRunCostUsd / maxRunTokens).
@@ -316,8 +327,8 @@ func (m *Model) savePlanField(f planField) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) savePlanFieldValue(f planField, value string) (tea.Model, tea.Cmd) {
-	if value == agentDefaultModel || value == noneValue {
-		value = "" // clears the per-stage model override / persona
+	if value == agentDefaultModel || value == noneValue || value == qaInheritValue {
+		value = "" // clears the per-stage model override / persona / QA dial
 	}
 	target, id := m.currentTarget()
 	if f.Target != "" { // field-level override (the Settings limits rows post to "limits")
@@ -539,6 +550,13 @@ func (m Model) currentFieldValue(field string) string {
 			return m.plan.GatePolicy
 		case "defaultworkflow":
 			return m.plan.DefaultWorkflow
+		case "mode":
+			if m.plan.Qa != nil {
+				return m.plan.Qa.Mode
+			}
+			return qaInheritValue
+		case "verifierthreshold":
+			return strconv.Itoa(m.plan.Limits.VerifierThreshold)
 		case "maxsessions":
 			if m.plan.Limits.MaxSessions != nil {
 				return strconv.Itoa(*m.plan.Limits.MaxSessions)
@@ -590,6 +608,8 @@ func (m Model) currentFieldValue(field string) string {
 			return derefOr(s.Workflow, "")
 		case "kind":
 			return s.Kind
+		case "qamode":
+			return derefOr(s.QaMode, qaInheritValue)
 		case "sessions":
 			return strconv.Itoa(s.Sessions)
 		case "notes":
@@ -772,9 +792,9 @@ func (m Model) renderFieldList(fields []planField, ownerLabel string) (string, s
 		} else {
 			disp = textStyle.Render(disp)
 		}
-		row := fmt.Sprintf("  %-16s %s", f.Label, disp)
+		row := fmt.Sprintf("  %-17s %s", f.Label, disp)
 		if i == m.planFieldIdx && !m.planEditing {
-			row = highlightBg.Render(fmt.Sprintf("  %-16s %s", f.Label, val))
+			row = highlightBg.Render(fmt.Sprintf("  %-17s %s", f.Label, val))
 		}
 		lines = append(lines, row)
 	}
@@ -792,7 +812,7 @@ func (m Model) renderFieldList(fields []planField, ownerLabel string) (string, s
 
 func (m Model) renderFieldEditor(f planField) string {
 	if m.planEnumCustom {
-		return fmt.Sprintf("%-16s %s", f.Label,
+		return fmt.Sprintf("%-17s %s", f.Label,
 			accentStyle.Render(m.planEditBuf)+accentStyle.Render("▏")+subtleStyle.Render("  type · enter save · esc back"))
 	}
 	if f.Kind == fieldEnum {
@@ -803,9 +823,9 @@ func (m Model) renderFieldEditor(f planField) string {
 		}
 		carousel := accentStyle.Render("‹") + highlightBg.Render(" "+sel+" ") + accentStyle.Render("›")
 		pos := subtleStyle.Render(fmt.Sprintf(" (%d/%d)", m.planEnumIdx+1, len(opts)))
-		return fmt.Sprintf("%-16s %s%s", f.Label, carousel, pos)
+		return fmt.Sprintf("%-17s %s%s", f.Label, carousel, pos)
 	}
-	return fmt.Sprintf("%-16s %s", f.Label, accentStyle.Render(m.planEditBuf)+accentStyle.Render("▏"))
+	return fmt.Sprintf("%-17s %s", f.Label, accentStyle.Render(m.planEditBuf)+accentStyle.Render("▏"))
 }
 
 func (m Model) renderPlanImport() (string, string) {

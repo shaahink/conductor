@@ -351,18 +351,29 @@ type PlanDto struct {
 	Stages          []PlanStageDto `json:"stages"`
 	Gates           []PlanGateDto  `json:"gates"`
 	Limits          PlanLimitsDto  `json:"limits"`
+	Qa              *PlanQaDto     `json:"qa"` // P2: plan-wide QA dial; nil = classic workflow selection
 }
 
 type PlanStageDto struct {
-	Id        string   `json:"id"`
-	Title     string   `json:"title"`
-	Sessions  int      `json:"sessions"`
-	Kind      string   `json:"kind"`
-	Model     *string  `json:"model"`
-	Workflow  *string  `json:"workflow"`
-	Persona   *string  `json:"persona"`
-	Notes     *string  `json:"notes"`
-	DependsOn []string `json:"dependsOn"`
+	Id          string   `json:"id"`
+	Title       string   `json:"title"`
+	Sessions    int      `json:"sessions"`
+	Kind        string   `json:"kind"`
+	Model       *string  `json:"model"`
+	Workflow    *string  `json:"workflow"`
+	Persona     *string  `json:"persona"`
+	Notes       *string  `json:"notes"`
+	DependsOn   []string `json:"dependsOn"`
+	QaMode      *string  `json:"qaMode"`      // P2: per-stage QA dial; nil = inherit the plan dial
+	QaThreshold *int     `json:"qaThreshold"` // P2: per-stage verifier bar riding the stage dial
+}
+
+// PlanQaDto is the plan-wide QA dial (pipeline.qa) — edited via the "qa" target on /plan/edit,
+// live-applied at the engine's next session boundary (P2).
+type PlanQaDto struct {
+	Mode                     string `json:"mode"`
+	VerifierThreshold        *int   `json:"verifierThreshold"`
+	AuditCoversPriorSessions bool   `json:"auditCoversPriorSessions"`
 }
 
 type PlanGateDto struct {

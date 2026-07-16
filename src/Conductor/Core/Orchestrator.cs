@@ -44,9 +44,11 @@ public sealed class Orchestrator
         ControlDispatcher? dispatcher = null,
         ConcurrentQueue<ControlCommand>? controlInbox = null,
         IWorkflowResolver? workflowResolver = null,
-        IAssignmentPolicy? assignmentPolicy = null)
+        IAssignmentPolicy? assignmentPolicy = null,
+        IQaPolicy? qaPolicy = null)
     {
-        var prompts = BuildPromptBuilder(plan);
+        var qa = qaPolicy ?? new DefaultQaPolicy();
+        var prompts = BuildPromptBuilder(plan, qa);
         var lessons = new LessonsManager(plan.StateDir);
         var iPlanner = planner ?? new CheckpointPlanner();
         var progress = ProgressProviderFactory.Create(plan);
@@ -56,7 +58,8 @@ public sealed class Orchestrator
             plan, state, opts, sink, events, prompts, lessons, iPlanner, progress,
             agentProvider, store, processSupervisor, controlInbox, telegram, webhooks,
             workflowResolver: workflowResolver ?? new WorkflowEngine(), logger,
-            assignmentPolicy: assignmentPolicy ?? new DefaultAssignmentPolicy());
+            assignmentPolicy: assignmentPolicy ?? new DefaultAssignmentPolicy(),
+            qaPolicy: qa);
 
         _gates = new GateOrchestrator(plan, state, events, store);
         _lanes = new LaneCoordinator(plan, state, sink, events, _ctx.Log, pathClaims: new PathClaimTracker());
@@ -139,10 +142,10 @@ public sealed class Orchestrator
         catch (Exception) { return new TrackerSnapshot(); }
     }
 
-    private static PromptBuilder BuildPromptBuilder(PlanConfig plan)
+    private static PromptBuilder BuildPromptBuilder(PlanConfig plan, IQaPolicy qa)
     {
         var registry = new PersonaRegistry(plan);
         var lessons = new LessonsManager(plan.StateDir);
-        return new PromptBuilder(plan, registry, lessons);
+        return new PromptBuilder(plan, registry, lessons, qa);
     }
 }

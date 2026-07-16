@@ -194,20 +194,22 @@ public sealed partial class VerdictEngine
                     verdict.Verdict, findingsText);
                 _ctx.Log($"verifier score: {verdict.Score}/100 — verdict: {verdict.Verdict} ({verdict.Findings.Count} finding(s))");
 
-                if (verdict.Passes(_ctx.Plan.Limits.VerifierThreshold))
+                // P2: the QA dial's threshold wins over limits.verifierThreshold when set
+                var threshold = _ctx.Qa.EffectiveVerifierThreshold(_ctx.Plan, stage);
+                if (verdict.Passes(threshold))
                 {
                     rec.Outcome = SessionOutcome.Progress;
                     _ctx.State.AttemptsThisStage = 0;
                     if (verdict.Findings.Count > 0)
                         WriteVerifierFollowups(stage.Id, verdict);
-                    _ctx.Log($"verifier passed ({verdict.Score}/{_ctx.Plan.Limits.VerifierThreshold}) — {(verdict.Findings.Count > 0 ? $"{verdict.Findings.Count} finding(s) tracked as follow-ups" : "no findings")}");
+                    _ctx.Log($"verifier passed ({verdict.Score}/{threshold}) — {(verdict.Findings.Count > 0 ? $"{verdict.Findings.Count} finding(s) tracked as follow-ups" : "no findings")}");
 
                     // M4.1: confirm checkpoints claimed by the preceding deliver session
                     ConfirmPendingCheckpoints(stage.Id);
 
                     // M3.1: workflow-driven next step
                     AdvanceWorkflowStep(stage, rec, gatesGreen: true, verifierScore: verdict.Score,
-                        verifierPassed: true, circuitBroken: false);
+                        verifierPassed: true, circuitBroken: false, sessionStartHead: startHead);
                 }
                 else
                 {
@@ -216,7 +218,7 @@ public sealed partial class VerdictEngine
                         FromSession = rec.Number,
                         VerifierFindings = findingsText,
                         VerifierScore = verdict.Score,
-                        GateFailures = $"verifier score {verdict.Score}/100 < threshold {_ctx.Plan.Limits.VerifierThreshold}",
+                        GateFailures = $"verifier score {verdict.Score}/100 < threshold {threshold}",
                         ProgressSummary = $"Verifier verdict: {verdict.Verdict}. " +
                             (verdict.Findings.Count > 0
                                 ? $"Findings: {string.Join("; ", verdict.Findings.Take(5))}"
@@ -224,11 +226,11 @@ public sealed partial class VerdictEngine
                     };
                     rec.Outcome = SessionOutcome.NoProgress;
                     _ctx.State.AttemptsThisStage++;
-                    _ctx.Log($"verifier failed ({verdict.Score}/{_ctx.Plan.Limits.VerifierThreshold}) — queuing fix session with {verdict.Findings.Count} finding(s)");
+                    _ctx.Log($"verifier failed ({verdict.Score}/{threshold}) — queuing fix session with {verdict.Findings.Count} finding(s)");
 
                     // M3.1: workflow-driven next step after failed verify
                     AdvanceWorkflowStep(stage, rec, gatesGreen: false, verifierScore: verdict.Score,
-                        verifierPassed: false, circuitBroken: false);
+                        verifierPassed: false, circuitBroken: false, sessionStartHead: startHead);
                 }
             }
             else
@@ -337,7 +339,8 @@ public sealed partial class VerdictEngine
 
             var stageComplete = postTrack.StageDone(stage.Id);
             AdvanceWorkflowStep(stage, rec, gatesGreen: true, verifierScore: null,
-                verifierPassed: false, circuitBroken: false, stageComplete: stageComplete);
+                verifierPassed: false, circuitBroken: false, stageComplete: stageComplete,
+                sessionStartHead: startHead);
 
             if (_ctx.Plan.PerPhaseGates && stageComplete)
             {

@@ -31,7 +31,7 @@ TUI at `face/`.
 - **Operating Conductor as an agent:** `docs/OPERATING-CONDUCTOR.md` is the control guide — commands,
   live-run steering, HTTP control plane, NEEDS-HUMAN handling, safety rules, and the known-gaps list.
 
-## Resume here (G-series CLOSED + P0/P1 DONE — next is P2, 2026-07-16)
+## Resume here (G-series CLOSED + P0/P1/P2 DONE — next is P3, 2026-07-16)
 
 **Read this first if you're the fresh session picking up the planner work.**
 
@@ -62,12 +62,22 @@ TUI at `face/`.
    asks the policy; personaOverride threads through PromptBuilder; multi-item prompts name every
    claimed item. Live harness proof: the {model} process arg = the role override; prompt.md names
    both claimed checkpoints.
+6. **P2** — **QA dial** (off/everySession/phaseGate): `IQaPolicy`/`DefaultQaPolicy`/`QaProjection`
+   in the library, a pure projection onto the existing workflows (pinned: projected == hand-picked
+   definition). One resolve choke point (`Resolve(plan, stage, qa)`, dial-blind overload deleted);
+   effective skip-verification/threshold extensions; per-stage `StageConfig.Qa`; `/plan/edit` `qa`
+   target + stage `qamode`/`qathreshold` + `limits.verifierthreshold`; Face Settings + stage rows +
+   demo + goldens. Live proof `P2QaDialLiveTests`: off = deliver-only; flip + reload verifies the
+   SAME run. Fixed 2 real engine bugs it exposed: session-start workflow double-advance (NRE onto
+   a pending-less verify — latent since M3.1) and stale session-scoped stage flags across a live
+   reload. Suite 793 green.
 
-**NEXT: P2 (QA dial) → P3 (card prompt blocks) → P4 (finish extraction + standalone consumer) →
+**NEXT: P3 (Kanban card prompt building-blocks) → P4 (finish extraction + standalone consumer) →
 P5 (rollover surfaced).** Read `CONDUCTOR-PLANNER.md` (tracker handoff) + `docs/CONDUCTOR-PLANNER.md`
-§P2 before starting. P2's hard constraint: the dial is a *projection onto the existing workflows* —
-resolving `off`/`everySession`/`phaseGate` must equal hand-picking the corresponding workflow (pin
-with a unit test comparing resolved definitions). Face dial edits ride G3.2's live reload.
+§P3 before starting. P3's shape: a pure `PromptComposition` (labeled `PromptBlock` list) decomposing
+what PromptBuilder already renders, served at `GET /tasks/{id}/prompt`; Face card-detail panel with
+an editable task-scoped context block persisted as task data (NOT free-form prompt splicing);
+advisor-refine + hand-to-Claude reuse G1's advisor plumbing + `/inject`.
 
 ### How to drive (owner directive, 2026-07-16): BE the delivering agent — do NOT run `conductor run`
 The owner wants plans driven **directly from Claude Code**: *you* are the delivering agent, not the

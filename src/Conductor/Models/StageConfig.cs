@@ -41,4 +41,7 @@ public sealed class StageConfig
     /// <summary>Declared file paths this stage touches (repo-relative). Used by the parallelism
     /// engine to detect collisions and serialize conflicting lanes (M3.3).</summary>
     public List<string>? PathClaims { get; set; }
+    /// <summary>Per-stage QA dial (P2) — replaces the plan-wide <c>pipeline.qa</c> rule whole for
+    /// this stage. null = inherit the plan dial (or classic behavior when neither is set).</summary>
+    public QaRule? Qa { get; set; }
 }

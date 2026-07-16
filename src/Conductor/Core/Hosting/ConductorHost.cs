@@ -101,9 +101,10 @@ public static class ConductorHost
         // B9.2: planner decomposition — produces ordered sub-tasks from a checkpoint.
         builder.Services.AddSingleton<IPlanner>(new CheckpointPlanner());
 
-        // P0/P1: the planning seams — the engine asks the interfaces, never the implementations.
+        // P0/P1/P2: the planning seams — the engine asks the interfaces, never the implementations.
         builder.Services.AddSingleton<IWorkflowResolver>(new WorkflowEngine());
         builder.Services.AddSingleton<IAssignmentPolicy>(new DefaultAssignmentPolicy());
+        builder.Services.AddSingleton<IQaPolicy>(new DefaultQaPolicy());
 
         // M2: SQLite run.db — the single authoritative store.
         // Registered as both IRunStore (write + query surface) and IEventSink (event spine).
@@ -169,7 +170,8 @@ public static class ConductorHost
             processSupervisor: sp.GetService<ProcessSupervisor>(),
             controlInbox: sp.GetRequiredService<ConcurrentQueue<ControlCommand>>(),
             workflowResolver: sp.GetRequiredService<IWorkflowResolver>(),
-            assignmentPolicy: sp.GetRequiredService<IAssignmentPolicy>()));
+            assignmentPolicy: sp.GetRequiredService<IAssignmentPolicy>(),
+            qaPolicy: sp.GetRequiredService<IQaPolicy>()));
 
         var host = builder.Build();
         ValidateOptionsOnStart(host.Services, plan);

@@ -245,7 +245,7 @@ public sealed class M4GatesTests : IDisposable
     public void WorkflowEngine_skips_fix_when_verify_passed()
     {
         var engine = new WorkflowEngine();
-        var wf = engine.Resolve(new PlanConfig(), new StageConfig { Id = "test" });
+        var wf = engine.Resolve(new PlanConfig(), new StageConfig { Id = "test" }, new DefaultQaPolicy());
 
         // After verify passed: step 2 (fix-if-needed) RunIf "!verifier.passed" → false → skipped
         var vars = new WorkflowRuntimeVars { VerifierPassed = true, VerifierScore = 85 };
@@ -258,7 +258,7 @@ public sealed class M4GatesTests : IDisposable
     public void WorkflowEngine_queues_fix_when_verify_failed()
     {
         var engine = new WorkflowEngine();
-        var wf = engine.Resolve(new PlanConfig(), new StageConfig { Id = "test" });
+        var wf = engine.Resolve(new PlanConfig(), new StageConfig { Id = "test" }, new DefaultQaPolicy());
 
         // After verify failed: step 2 (fix-if-needed) RunIf "!verifier.passed" → true → runs
         var vars = new WorkflowRuntimeVars { VerifierPassed = false, VerifierScore = 45 };
@@ -274,7 +274,7 @@ public sealed class M4GatesTests : IDisposable
         // When verification is skipped via override, verifierPassed should be true
         // to prevent the fix step from triggering incorrectly.
         var engine = new WorkflowEngine();
-        var wf = engine.Resolve(new PlanConfig(), new StageConfig { Id = "test" });
+        var wf = engine.Resolve(new PlanConfig(), new StageConfig { Id = "test" }, new DefaultQaPolicy());
 
         // Simulate what happens when verify is skipped: pass verifierPassed=true
         var vars = new WorkflowRuntimeVars { VerifierPassed = true, GatesGreen = true };

@@ -413,6 +413,13 @@ public sealed partial class RunLoop
         _ctx.Events.Emit(new PlanReloaded { PlanVersion = fresh.PlanVersion, Stages = fresh.Stages.Count, Gates = fresh.Gates.Count });
         _ctx.Log($"plan reloaded at session boundary — v{fresh.PlanVersion}, {fresh.Stages.Count} stages, {fresh.Gates.Count} gates");
 
+        // P2: the session-scoped stage flags (skip-gates/commit/verification) were computed from
+        // the OLD plan at stage entry and have no other writer — recompute them from the fresh
+        // plan, or a QA-dial/override edit would silently wait for the next stage transition.
+        if (_ctx.State.CurrentStage is { Length: > 0 } cur
+            && fresh.Stages.FirstOrDefault(s => s.Id.Equals(cur, StringComparison.OrdinalIgnoreCase)) is { } liveStage)
+            ApplyStageOverrides(liveStage);
+
         // G3.3: if this reload raised/cleared the session cap that parked the run, un-park it —
         // the operator's Plan-tab edit IS the resume. Only a cap-park is auto-resumed; an operator
         // pause stays paused.

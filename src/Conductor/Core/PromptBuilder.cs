@@ -1,3 +1,4 @@
+using Conductor.Core.Orchestration;
 using Conductor.Core.Store;
 using Conductor.Models;
 
@@ -13,12 +14,14 @@ public sealed class PromptBuilder
     private readonly PlanConfig _plan;
     private readonly PersonaRegistry _personas;
     private readonly LessonsManager _lessons;
+    private readonly IQaPolicy _qa;
 
-    public PromptBuilder(PlanConfig plan, PersonaRegistry? personaRegistry = null, LessonsManager? lessons = null)
+    public PromptBuilder(PlanConfig plan, PersonaRegistry? personaRegistry = null, LessonsManager? lessons = null, IQaPolicy? qa = null)
     {
         _plan = plan;
         _personas = personaRegistry ?? new PersonaRegistry(plan);
         _lessons = lessons ?? new LessonsManager(plan.StateDir);
+        _qa = qa ?? new DefaultQaPolicy();
     }
     public string Deliver(StageConfig stage, int sessionNumber, int attempt, int maxAttempts, string? personaOverride = null)
         => Render("session.md", Vars(stage, sessionNumber, attempt, maxAttempts, personaOverride));
@@ -110,7 +113,7 @@ public sealed class PromptBuilder
             ["persona"] = personaName ?? "",
             ["personaSystemPrompt"] = personaSystemPrompt,
             ["lessons"] = lessonsContent,
-            ["verifierThreshold"] = _plan.Limits.VerifierThreshold.ToString(),
+            ["verifierThreshold"] = _qa.EffectiveVerifierThreshold(_plan, stage).ToString(),
             ["tools"] = ToolContract.Render(_plan),
             ["packs"] = LoadPacks(),
             ["batteryCollapseNote"] = _plan.BatteryCollapse

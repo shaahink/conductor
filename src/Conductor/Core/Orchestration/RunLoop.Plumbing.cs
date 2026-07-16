@@ -54,7 +54,9 @@ public sealed partial class RunLoop
     {
         _ctx.State.SkipGatesThisStage = stage.Overrides?.SkipGates == true;
         _ctx.State.SkipCommitThisStage = stage.Overrides?.SkipCommit == true;
-        _ctx.State.SkipVerificationThisStage = stage.Overrides?.SkipVerification == true;
+        // P2: the QA dial owns verification skipping when set (off → skip; everySession/phaseGate
+        // → verify, superseding a stale overrides.skipVerification); absent → the override decides.
+        _ctx.State.SkipVerificationThisStage = _ctx.Qa.EffectiveSkipVerification(_ctx.Plan, stage);
         if (stage.Overrides is { } o)
         {
             var flags = new List<string>();
@@ -63,6 +65,8 @@ public sealed partial class RunLoop
             if (o.SkipVerification == true) flags.Add("skip-verification");
             if (flags.Count > 0) _ctx.Log($"stage overrides: {string.Join(", ", flags)}");
         }
+        if (DefaultQaPolicy.EffectiveRule(_ctx.Plan.Pipeline?.Qa, stage.Qa) is { } dial)
+            _ctx.Log($"qa dial: {dial.Mode}{(dial.VerifierThreshold is { } t ? $" (threshold {t})" : "")}");
     }
 
     // ---------------------------------------------------------------- budget

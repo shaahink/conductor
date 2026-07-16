@@ -344,6 +344,67 @@ public sealed class ControlPlaneServerPlanTests : IDisposable
     }
 
     [Fact]
+    public async Task PostPlanEdit_QaDial_RoundTripsPlanWideAndPerStage()
+    {
+        var (server, port) = StartServer();
+        try
+        {
+            // P2: the plan-wide dial + its threshold, and a per-stage dial, in one atomic batch.
+            var resp = await PostAsync(port, "/plan/edit",
+                """
+                {"edits":[
+                  {"target":"qa","id":"","field":"mode","value":"phaseGate"},
+                  {"target":"qa","id":"","field":"verifierthreshold","value":"90"},
+                  {"target":"qa","id":"","field":"auditcoverspriorsessions","value":"false"},
+                  {"target":"limits","id":"","field":"verifierthreshold","value":"85"},
+                  {"target":"stage","id":"S1","field":"qamode","value":"off"}]}
+                """);
+            Assert.Equal(HttpStatusCode.Accepted, resp.StatusCode);
+            var saved = PlanConfig.Load(_planPath);
+            Assert.Equal("phaseGate", saved.Pipeline?.Qa?.Mode);
+            Assert.Equal(90, saved.Pipeline?.Qa?.VerifierThreshold);
+            Assert.False(saved.Pipeline?.Qa?.AuditCoversPriorSessions);
+            Assert.Equal(85, saved.Limits.VerifierThreshold);
+            Assert.Equal("off", saved.Stages[0].Qa?.Mode);
+
+            // The save queued a live reload — the dial steers the CURRENT run at its next boundary.
+            Assert.Contains(_inbox, c => c.Action == ControlAction.ReloadPlan);
+
+            // GET /plan surfaces both dials (the Face Settings + stage rows read from here).
+            using (var doc = JsonDocument.Parse(await _http.GetStringAsync($"http://127.0.0.1:{port}/plan")))
+            {
+                Assert.Equal("phaseGate", doc.RootElement.GetProperty("qa").GetProperty("mode").GetString());
+                Assert.Equal(90, doc.RootElement.GetProperty("qa").GetProperty("verifierThreshold").GetInt32());
+                Assert.Equal("off", doc.RootElement.GetProperty("stages")[0].GetProperty("qaMode").GetString());
+                Assert.Equal(85, doc.RootElement.GetProperty("limits").GetProperty("verifierThreshold").GetInt32());
+            }
+
+            // An empty mode clears the dial whole (and drops the empty pipeline block).
+            var clear = await PostAsync(port, "/plan/edit",
+                """
+                {"edits":[
+                  {"target":"qa","id":"","field":"mode","value":""},
+                  {"target":"stage","id":"S1","field":"qamode","value":""}]}
+                """);
+            Assert.Equal(HttpStatusCode.Accepted, clear.StatusCode);
+            var cleared = PlanConfig.Load(_planPath);
+            Assert.Null(cleared.Pipeline);
+            Assert.Null(cleared.Stages[0].Qa);
+
+            // Garbage is rejected without writing: an unknown mode and an orphan threshold.
+            var before = await File.ReadAllTextAsync(_planPath);
+            var badMode = await PostAsync(port, "/plan/edit",
+                """{"edits":[{"target":"qa","id":"","field":"mode","value":"sometimes"}]}""");
+            Assert.Equal(HttpStatusCode.BadRequest, badMode.StatusCode);
+            var orphanThreshold = await PostAsync(port, "/plan/edit",
+                """{"edits":[{"target":"qa","id":"","field":"verifierthreshold","value":"90"}]}""");
+            Assert.Equal(HttpStatusCode.BadRequest, orphanThreshold.StatusCode);
+            Assert.Equal(before, await File.ReadAllTextAsync(_planPath));
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
     public async Task PostPlanImport_RejectsFreeformProse()
     {
         var (server, port) = StartServer();
