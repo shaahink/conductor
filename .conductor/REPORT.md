@@ -1,22 +1,83 @@
-﻿# Conductor — Conductor AI-native (G-series) run report
+﻿# Conductor — Conductor UX (U-series) run report
 
-_Updated 2026-07-16 00:39 UTC · branch `feat/foreman` · HEAD `a595b3a`_
+_Updated 2026-07-16 22:41 UTC · branch `feat/foreman` · HEAD `4f3231b`_
 
-**Status:** NeedsHuman — tracker CONDUCTOR-AI-NATIVE.md has no parseable checkpoint rows — check the table format
-**Stage:** - · attempts used 0
-**Checkpoints:** 0/0 done · **Sessions run:** 0 · **Cost:** $0.0000 (agent $0.0000 + gates $0.0000)
+**Status:** Aborted
+**Stage:** U0 — Engine: start, resume, journey · attempts used 0 · working ▸ U0.1
+**Checkpoints:** 0/10 done · **Sessions run:** 1 · **Cost:** $0.0000 (agent $0.0000 + gates $0.0000)
 
 ## Stage progress
 
 | Stage | Title | Progress | State |
 |---|---|---|---|
-| G1 | AI-native plan editing - prompt to diff to confirm to apply |  0/0 | todo |
-| G2 | Kanban board - live task graph with move/add actions |  0/0 | todo |
+| U0 | Engine: start, resume, journey | ░░░░░░░░░░ 0/3 | **← active** |
+| U1 | Face: landing page + workspace identity | ░░░░░░░░░░ 0/2 | todo |
+| U2 | Face: controls, visual report, dev stats | ░░░░░░░░░░ 0/3 | todo |
+| U3 | Face: curated themes + glitch pass | ░░░░░░░░░░ 0/2 | todo |
+
+<details><summary>U0 — Engine: start, resume, journey (0/3)</summary>
+
+| # | Title | Status | Commit |
+|---|---|---|---|
+| U0.1 | plan discovery: -p optional, cwd/plans scan, picker, friendly errors | ⬜ TODO |  |
+| U0.2 | `conductor journey`: itinerary with stages, gates, human moments, resume state | ⬜ TODO |  |
+| U0.3 | gateless plans proven + resume story documented (README) | ⬜ TODO |  |
+
+</details>
+
+<details><summary>U1 — Face: landing page + workspace identity (0/2)</summary>
+
+| # | Title | Status | Commit |
+|---|---|---|---|
+| U1.1 | Home landing tab: Server / Run / Workspace / Next-steps panels, demo parity | ⬜ TODO |  |
+| U1.2 | workspace identity in the top bar (repo basename, full path on Home) | ⬜ TODO |  |
+
+</details>
+
+<details><summary>U2 — Face: controls, visual report, dev stats (0/3)</summary>
+
+| # | Title | Status | Commit |
+|---|---|---|---|
+| U2.1 | palette groups (Run/Stage/Danger) + consequence-naming confirms | ⬜ TODO |  |
+| U2.2 | Report tab is a visual run report (progress, stages, sessions, gates, scores) | ⬜ TODO |  |
+| U2.3 | Dev tab: SQL console moved + run internals + per-session token/cost stats | ⬜ TODO |  |
+
+</details>
+
+<details><summary>U3 — Face: curated themes + glitch pass (0/2)</summary>
+
+| # | Title | Status | Commit |
+|---|---|---|---|
+| U3.1 | curated themes (mocha/latte/nord/gruvbox), --theme, live switch, persisted | ⬜ TODO |  |
+| U3.2 | golden glitch pass at 3 sizes — each fix noted in evidence | ⬜ TODO |  |
+
+</details>
 
 ## Sessions
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Overhead | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | U0 | Deliver | 1 | 07-16 22:27 | 0:14 | KilledByUser |  | 0 |  |  |  |  |
+
+## Timeline
+
+_Transitions with duration, from the event log (`.conductor/events.jsonl`)._
+
+```
+07-16 23:27:09  ◆ run started · Conductor UX (U-series)
+07-16 23:27:09  ▸ stage U0 entered — Engine: start, resume, journey
+07-16 23:27:09  • session #1 U0 Deliver started (attempt 1/6)
+07-16 23:41:37  • session #1 U0 → KilledByUser  (14m27s)
+```
+
+## Health
+
+_Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
+
+```
+sessions 1 · retries 0 (0 %) · overall Ok
+✓ no health concerns detected
+```
 
 ## Repo
 
@@ -24,8 +85,8 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/foreman
-working tree: ?? CONDUCTOR-AI-NATIVE.md, ?? docs/CONDUCTOR-AI-NATIVE.md, ?? plans/conductor-ai-native.plan.json
-vs upstream: 330 ahead
+working tree: M CONDUCTOR-UX-START.md, M src/Conductor/Commands/PlanSettings.cs, ?? src/Conductor/Core/Planning/PlanDiscovery.cs
+vs upstream: up to date
 ```
 
 ## Phase handovers (audit)
@@ -50,7 +111,9 @@ vs upstream: 330 ahead
 ## Tracker handoff
 
 ```
-_Seed — no session has run yet. G1 (prompt→plan, Opus) and G2 (kanban, Sonnet) are independent; either
-can go first. Both reuse existing surfaces (plan import for G1, the task graph + MCP task writes for
-G2) — see the design brief before writing anything new._
+last: (none) — tracker authored 2026-07-16 from the owner's playground dogfood feedback; no
+U-series session has run yet.
+stage: **U0 NOT STARTED**.
+gate: not run for this era (repo is green at authoring time: dotnet 849/849, go test ok, driver PASS).
+next: **U0.1** — plan discovery in `PlanSettings.ResolvePlanPath` (see docs/CONDUCTOR-UX.md §U0.1).
 ```
