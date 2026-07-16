@@ -3,7 +3,9 @@ namespace Conductor.Models;
 public sealed class AgentConfig
 {
     public string Command { get; set; } = "claude";
-    /// <summary>Placeholders: {prompt} {sessionId}</summary>
+    /// <summary>Placeholders: {prompt} {sessionId} {model}. {model} is substituted from <see cref="Model"/>
+    /// (per-stage override → plan default), so `"--model", "{model}"` routes models per stage; when no model
+    /// is set the flag+placeholder pair is dropped.</summary>
     public List<string> Args { get; set; } = new();
     /// <summary>Used to resume a stalled/interrupted agent session. Placeholders: {prompt} {claudeSessionId}</summary>
     public List<string>? ResumeArgs { get; set; }

@@ -65,13 +65,36 @@ public sealed class AgentSession : IDisposable
         }, tokenDelta);
     }
 
+    /// <summary>Substitutes the arg-template placeholders (<c>{prompt}</c>, <c>{sessionId}</c>,
+    /// <c>{claudeSessionId}</c>, <c>{model}</c>). <c>{model}</c> lets a plan route per stage — the plan
+    /// editor's model picker sets <see cref="AgentConfig.Model"/>, which lands here. When no model is set
+    /// (neither plan-wide nor per-stage), a lone <c>{model}</c> token is dropped along with the model flag
+    /// right before it (<c>--model</c>/<c>-m</c>), so the CLI never receives an empty <c>--model</c>.</summary>
+    internal static List<string> ResolveArgs(IReadOnlyList<string> template, string prompt, string sessionId, string? resumeClaudeId, string? model)
+    {
+        var args = new List<string>(template.Count);
+        foreach (var tok in template)
+        {
+            if (tok == "{model}" && string.IsNullOrWhiteSpace(model))
+            {
+                if (args.Count > 0 && IsModelFlag(args[^1])) args.RemoveAt(args.Count - 1);
+                continue;
+            }
+            args.Add(tok
+                .Replace("{prompt}", prompt)
+                .Replace("{sessionId}", sessionId)
+                .Replace("{claudeSessionId}", resumeClaudeId ?? sessionId)
+                .Replace("{model}", model ?? ""));
+        }
+        return args;
+    }
+
+    private static bool IsModelFlag(string s) => s is "--model" or "-m" or "--model=";
+
     public static AgentSession Start(AgentConfig cfg, string cwd, string prompt, string sessionId, string? resumeClaudeId, string rawLogPath, IEventSink? eventSink = null, string? conductorSessionId = null, Dictionary<string, string>? extraEnv = null, ProcessSupervisor? supervisor = null)
     {
         var template = (resumeClaudeId != null && cfg.ResumeArgs is { Count: > 0 }) ? cfg.ResumeArgs : cfg.Args;
-        var args = template.Select(a => a
-            .Replace("{prompt}", prompt)
-            .Replace("{sessionId}", sessionId)
-            .Replace("{claudeSessionId}", resumeClaudeId ?? sessionId)).ToList();
+        var args = ResolveArgs(template, prompt, sessionId, resumeClaudeId, cfg.Model);
 
         var psi = new ProcessStartInfo(cfg.Command)
         {
