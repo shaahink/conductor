@@ -93,10 +93,13 @@ candidates for a future series (not commitments): surface `MaxSessionTokensThisR
 so the Face can display the active override; a `conductor rollover` CLI verb; multi-item sessions
 driving PathClaims from real task data._
 
-_**Post-close follow-ups (2026-07-16, same day):** the first two candidates landed — **PF1**
+_**Post-close follow-ups (2026-07-16, same day): ALL THREE candidates landed.** **PF1**
 (`6401b6f`): `GET /state` serves `maxSessionTokensThisRun` off the live RunState and the Face's
 "rollover (run)" row displays the active override honestly; **PF2** (`2360ce0`): `conductor
 rollover <tokens|off|clear>` queues the verb from any terminal, value-checked by the dispatcher's
-own parser before anything is written. The third (PathClaims from real task data) remains open on
-purpose — it needs an owner decision on where task-card path claims originate (`ReadyItem.PathClaims`
-is populated nowhere today) before there is anything real to drive._
+own parser before anything is written; **PF3** (`12fcc87`): the owner chose the declared-paths
+schema — `TaskItem.Paths` (edited via the Face card detail's `p` editor / `/tasks/edit` `paths`,
+served on `GET /tasks` + MCP `task_list`) flows through `TaskGraph.DeclaredOpenPaths` into
+`ReadyItem.PathClaims`, so multi-item co-claims are refused on REAL task data — live-proven on a
+real run where two cards declaring the same file (case-variant) blocked the co-claim the P1 proof
+shows happening without them._

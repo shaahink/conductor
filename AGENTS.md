@@ -34,14 +34,11 @@ TUI at `face/`.
 ## Resume here (P-SERIES CLOSED + PF follow-ups landed, 2026-07-16)
 
 **Read this first if you're the fresh session.** The planner tracker (`CONDUCTOR-PLANNER.md`) is
-CLOSED: all six checkpoints DONE with evidence, gates green at every commit. Two of its three
-follow-up candidates landed the same day (the PF session, below); the one remaining candidate is
-**PathClaims from real task data** — deliberately NOT started, because it needs an owner schema
-decision first: `ReadyItem.PathClaims` is never populated (SessionRunner builds items Id+Title
-only, `claimedPaths: null`), so someone has to decide where task-card path claims originate (a new
-`TaskItem` field edited via the Face card detail / MCP task tools? inferred from git activity?)
-before the multi-item conflict refusal can bite on real data. There is no other committed next
-stage — pick up whatever the owner directs.
+CLOSED: all six checkpoints DONE with evidence, gates green at every commit. ALL THREE of its
+follow-up candidates landed the same day (the PF session, below) — PF3 closed the last one after
+the owner picked the declared-paths schema (a `paths` field on task cards, NOT git inference).
+There is no committed next stage — the open-edges note below is the owner-reviewed pointer to
+what's left before personal usage.
 
 ### Open-edges note (owner-reviewed 2026-07-16 — do not lose these)
 
@@ -56,7 +53,8 @@ this note is the pointer so it isn't missed:
    `CTRL_CLOSE_EVENT` (window/tab close, logoff) — wire Win32 `SetConsoleCtrlHandler` into the same
    graceful path as Ctrl+C. Flagged "not done" in `DOGFOOD-RUNBOOK.md`; the accidental-✕ data-loss
    risk for daily personal use. Small, well-understood change.
-3. **PathClaims from real task data** — still parked on the owner schema decision above.
+3. **PathClaims from real task data** — ~~parked~~ **DONE the same evening (PF3, `12fcc87`)**: the
+   owner chose the declared-paths schema and it shipped — see the PF session log below.
 4. **`.conductor/followups.md` needs a triage pass, not execution.** Last touched 2026-07-12;
    its "planned for" tags point at series that already CLOSED (B/F/M), and the eight `FU-OWNER-*`
    Face rows predate face-go (Ink era, one cites `node.exe`) — close the obsolete rows, re-home the
@@ -68,9 +66,20 @@ this note is the pointer so it isn't missed:
    cosmetic or have documented workarounds — fix on demand, not a series.
 
 Suggested shape if the owner asks to act on this: a short hardening mini-series = item 2 + the
-item 4 triage; item 1 is the owner-run gate before daily use.
+item 4 triage; item 1 is the owner-run gate before daily use. (Item 3 has since landed as PF3.)
 
 ### What landed in the PF session (2026-07-16, pushed on `feat/foreman`)
+- **PF3** (`12fcc87`) — **PathClaims from real task data** (owner decision: declared paths, not git
+  inference): `TaskItem.Paths` rides the P3 machinery (`TaskDetailEdited.Paths` — null unchanged,
+  empty clears; `TaskWrites` cleans entries; fold applies), `TaskGraph.DeclaredOpenPaths` unions
+  OPEN cards only, and SessionRunner folds the graph ONCE pre-assignment so every `ReadyItem`
+  carries its checkpoint's declared claims — multi-item co-claims now refused on real task data
+  (no cards/paths = classic behavior). Wire: `/tasks/edit` `paths`, `GET /tasks` + MCP `task_list`
+  serve them; Face card detail gained a declared-paths section + `p` editor (comma-separated,
+  empty save clears), goldens ×3. Live proof `FullCycle_ConflictingDeclaredTaskPaths_BlockTheMultiItemClaim`:
+  the P1 multi-item setup that claims BOTH checkpoints claims only one when the two cards declare
+  the same file (case-variant, so normalization is exercised) — checked on the real prompt.md.
+  Plus: the last four probe-port HTTP fixtures now return `server.Port` (the flake struck twice).
 - **PF1** (`6401b6f`) — **the set-rollover override surfaced**: `GET /state` carries
   `maxSessionTokensThisRun` (absent = no override; 0 = forced OFF this run; >0 = the cap), read off
   the LIVE RunState (the override is run-state only, never event-folded). Face "rollover (run)"
