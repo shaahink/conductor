@@ -23,7 +23,10 @@ public sealed record StateDto(
     // P5 follow-up: the set-rollover this-run override, read off the live RunState (it is run-state
     // only, never event-folded). Absent on the wire = no override (the plan's limits.maxSessionTokens
     // decides); 0 = rollover forced OFF this run; >0 = the per-session token cap this run.
-    long? MaxSessionTokensThisRun = null);
+    long? MaxSessionTokensThisRun = null,
+    // The model the current/last session's resolved agent runs (stage + assignment overrides applied),
+    // from the latest SessionStarted event; before any session, the stage/plan default. "" = unknown.
+    string Model = "");
 
 public static class ControlPlaneDto
 {

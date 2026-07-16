@@ -866,6 +866,7 @@ func makeFakeState() *StateDto {
 		PlanDir:                "plans",
 		SessionNumber:          12,
 		SessionKind:            "Deliver",
+		Model:                  "claude-opus-4-8",
 		Attempt:                1,
 		MaxAttempts:            3,
 		SessionElapsedSec:      0,

@@ -97,6 +97,9 @@ type StateDto struct {
 	// P5 follow-up: the set-rollover this-run override. nil = no override (the plan's
 	// limits.maxSessionTokens decides); 0 = rollover forced OFF this run; >0 = the cap this run.
 	MaxSessionTokensThisRun *int64 `json:"maxSessionTokensThisRun"`
+	// The model the current/last session's resolved agent runs (stage + assignment overrides
+	// applied) — the "what model is working" answer. "" = unknown / older engine.
+	Model string `json:"model"`
 }
 
 type StageDto struct {

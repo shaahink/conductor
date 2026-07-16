@@ -28,6 +28,22 @@ public sealed partial class ControlPlaneServer
         var dto = ControlPlaneDto.FromSnapshot(snap, runState.RunId, _plan.Repo, _plan.PlanDir,
             _state.MaxSessionTokensThisRun);
         dto = WithLiveSessionMetrics(dto, events, runState);
+
+        // The folded projection never carries run-loop status (it is runtime state, not an event):
+        // SnapshotBuilder saw a perpetual Idle, so the Face's top bar read IDLE — and its kind slot
+        // "s1 Idle" — through an entire live session (2026-07-16 dogfood). Stamp status, attention,
+        // kind, attempt, and model from the live RunState + the latest SessionStarted event instead.
+        var lastStart = events.OfType<SessionStarted>().LastOrDefault();
+        var stageCfg = _plan.Stages.FirstOrDefault(s => s.Id == _state.CurrentStage);
+        dto = dto with
+        {
+            Status = _state.Status.ToString(),
+            AttentionReason = _state.AttentionReason,
+            SessionKind = lastStart?.Kind ?? "-",
+            Attempt = lastStart?.Attempt ?? dto.Attempt,
+            MaxAttempts = lastStart?.MaxAttempts ?? dto.MaxAttempts,
+            Model = lastStart?.Model ?? stageCfg?.Agent?.Model ?? _plan.Agent.Model ?? "",
+        };
         await WriteJsonAsync(ctx, dto, ControlPlaneJsonContext.Default.StateDto).ConfigureAwait(false);
     }
 

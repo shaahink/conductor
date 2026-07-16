@@ -29,6 +29,7 @@ public static class PlanDiscovery
 
     /// <summary>Cheap peek at the plan's <c>name</c> field for the picker label — best-effort, never
     /// throws (an unreadable/malformed candidate just falls back to its filename).</summary>
+#pragma warning disable MA0045 // sync by design: called from Spectre.Cli settings resolution, a sync-only seam
     private static string? ReadPlanName(string path)
     {
         try
@@ -43,4 +44,5 @@ public static class PlanDiscovery
             return null;
         }
     }
+#pragma warning restore MA0045
 }

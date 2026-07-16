@@ -102,7 +102,7 @@ per session (consume what `/sessions` + `/state` already carry; if per-session t
 missing from `SessionRowDto`, extend GET /sessions server-side — the run.db sessions table already
 stores them). This is where stats live; Report stays owner-level.
 
-## U3 — Face: curated themes + the glitch pass
+## U3 — Face: curated themes, agent-terminal vibe, the glitch pass
 
 **U3.1 Themes.**
 3–4 curated schemes, each a complete palette for the existing role set (base/mantle/surface/…/
@@ -118,9 +118,48 @@ STYLE.md gains a Themes section naming the roles.
 Golden frames are the screenshots: render every tab at 132×40, 100×30, and 80×24 (the goldens'
 sizes + a narrow one), read the frames, and fix what a human would flinch at — truncation collisions,
 misaligned columns, orphan separators, missing hints, dead space. Every fix gets a one-line note in
-the tracker evidence column and an updated golden. Known suspects from the dogfood screenshots:
-top-bar chip crowding at narrow widths, sidebar GATES/TASKS section spacing, transcript wall-clock
-column at width ≥70 only.
+the tracker evidence column and an updated golden. Start from the appendix list below — each item is
+an observed defect from the owner's dogfood screenshots, not a guess.
+
+**U3.3 Agent-terminal vibe — feel like the CLIs it drives.**
+Owner: users arrive from Claude Code and opencode; the Agent tab should feel like those terminals,
+not a third dialect. Priority order: Claude Code first, opencode second. Concretely: (1) transcript
+presentation modeled on Claude Code's — `●`-bulleted tool calls with the tool name bold and its
+one-line argument dim, thinking rendered as the quiet interstitial it is (dim italic, collapsed by
+default beyond ~3 lines with a "+N lines (T to expand)" tail), result lines indented under their
+tool call; (2) a session footer strip like Claude Code's status line — model, elapsed, token/cost
+so far; (3) provider awareness — the plan's `agent.provider` ("claude" | "opencode") reaches the
+Face (extend GET /plan or /state with the provider string; server-side it's `AgentConfig.Provider`),
+and the transcript adopts that provider's glyph/label conventions; (4) keys users already have:
+`ctrl+c` double-tap to quit (single tap = hint toast), `esc` always backs out one layer. Golden
+frames for both provider renderings.
+
+## Appendix — dogfood screenshot findings (2026-07-16, owner session)
+
+Observed on live runs; each is a concrete defect for U-sessions to clear (most belong to U3.2's
+pass; the starred ones are load-bearing enough to fix in whichever earlier stage touches that pane).
+
+1. ★ **Top bar reads `LIVE · IDLE` with no labels** — connection state and run status side by side
+   look contradictory. Label them (`conn LIVE · run IDLE`) or separate them visually (U1.2).
+2. ★ **Chip row is cryptic**: `s16 $0.00 1s 0/0 cp 0/4 run $0.00` — the owner could not decode it.
+   Every chip needs a label or a legend on Home/help (`session`, `checkpoints`, `run cost`) (U1.1/U2).
+3. **`attempt 0/0` rendered pre-first-attempt** — fixed 2026-07-16 (hide when MaxAttempts is 0);
+   keep a golden pinning the hidden state.
+4. **`no gates` label ambiguous** — distinguish "gates: not run yet" from "no gates configured
+   (gateless plan)" (pairs with U0.3).
+5. **Kanban empty with no explanation while the sidebar shows a full plan** — a fetch failure or
+   pre-seed state must say so in-pane ("cannot reach /tasks: …" / "no cards yet — engine is
+   seeding"), never render as silent emptiness (U2/U3.2).
+6. **Timeline "poured" history on attach with no visual break** — separate replayed history from
+   live tail (a "— live —" rule line) so an attach never looks like an event storm (U3.2).
+7. **Which model is working was invisible** — fixed 2026-07-16 (`/state.model` + strip chip);
+   Home + Report should surface it too (U1.1/U2.2).
+8. **Right-pinned elapsed clips before left segments truncate** at ~100 cols in the agent strip —
+   padBetween should sacrifice the left side first (U3.2).
+9. **Wall of un-collapsed thinking dominates the transcript** during long reasoning — U3.3's
+   collapsed-by-default thinking addresses it; until then `T` folds.
+10. **Ghost transcript across runs** — fixed 2026-07-16 engine-side (run-scoped rotation +
+    reconnected live feed); U-sessions must not regress the `?since=` resume contract.
 
 ## Out of scope (naming so sessions don't drift)
 

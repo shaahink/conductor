@@ -65,22 +65,25 @@ public sealed partial class SqliteRunStore : IRunStore, IEventSink
     {
         if (_disposed != 0) throw new ObjectDisposedException(nameof(SqliteRunStore));
         var rows = new List<Dictionary<string, object?>>();
-        using var cmd = _conn.CreateCommand();
-        cmd.CommandText = sql;
-        foreach (var (name, value) in parameters)
+        lock (_persistGate)
         {
-            var p = cmd.CreateParameter();
-            p.ParameterName = name;
-            p.Value = value ?? DBNull.Value;
-            cmd.Parameters.Add(p);
-        }
-        using var reader = cmd.ExecuteReader();
-        while (reader.Read())
-        {
-            var row = new Dictionary<string, object?>(reader.FieldCount, StringComparer.OrdinalIgnoreCase);
-            for (var i = 0; i < reader.FieldCount; i++)
-                row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
-            rows.Add(row);
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = sql;
+            foreach (var (name, value) in parameters)
+            {
+                var p = cmd.CreateParameter();
+                p.ParameterName = name;
+                p.Value = value ?? DBNull.Value;
+                cmd.Parameters.Add(p);
+            }
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                var row = new Dictionary<string, object?>(reader.FieldCount, StringComparer.OrdinalIgnoreCase);
+                for (var i = 0; i < reader.FieldCount; i++)
+                    row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                rows.Add(row);
+            }
         }
         return rows;
     }
@@ -94,16 +97,19 @@ public sealed partial class SqliteRunStore : IRunStore, IEventSink
     {
         try
         {
-            using var cmd = _conn.CreateCommand();
-            cmd.CommandText = sql;
-            foreach (var (name, value) in parameters)
+            lock (_persistGate)
             {
-                var p = cmd.CreateParameter();
-                p.ParameterName = name;
-                p.Value = value ?? DBNull.Value;
-                cmd.Parameters.Add(p);
+                using var cmd = _conn.CreateCommand();
+                cmd.CommandText = sql;
+                foreach (var (name, value) in parameters)
+                {
+                    var p = cmd.CreateParameter();
+                    p.ParameterName = name;
+                    p.Value = value ?? DBNull.Value;
+                    cmd.Parameters.Add(p);
+                }
+                cmd.ExecuteNonQuery();
             }
-            cmd.ExecuteNonQuery();
             return true;
         }
         catch (Exception ex) when (ex is SqliteException or ObjectDisposedException or InvalidOperationException)

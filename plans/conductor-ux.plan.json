@@ -79,10 +79,10 @@
     },
     {
       "id": "U3",
-      "title": "Face: curated themes + glitch pass",
-      "sessions": 3,
+      "title": "Face: themes, agent-terminal vibe, glitch pass",
+      "sessions": 4,
       "dependsOn": ["U2"],
-      "notes": "Deliver U3 per docs/CONDUCTOR-UX.md (U3.1 themes mocha/latte/nord/gruvbox with ApplyTheme + --theme flag + persisted config + palette verb; U3.2 the golden glitch pass at 132x40, 100x30, 80x24). Theme switch rebuilds package style vars in widgets AND tui — one rebuild func per package, called at startup and on switch; goldens pin mocha. The glitch pass: read the rendered frames like screenshots, fix truncation collisions / misalignment / dead space, note each fix in the tracker evidence column. go test ./... green; STYLE.md updated.",
+      "notes": "Deliver U3 per docs/CONDUCTOR-UX.md (U3.1 themes mocha/latte/nord/gruvbox with ApplyTheme + --theme flag + persisted config + palette verb; U3.2 the golden glitch pass at 132x40, 100x30, 80x24 seeded from the spec's dogfood appendix; U3.3 agent-terminal vibe — transcript presentation modeled on Claude Code first / opencode second, provider-aware via agent.provider on the wire, collapsed thinking, session footer strip). Theme switch rebuilds package style vars in widgets AND tui — one rebuild func per package, called at startup and on switch; goldens pin mocha. go test ./... green; STYLE.md updated.",
       "agent": { "model": "claude-opus-4-8" }
     }
   ],

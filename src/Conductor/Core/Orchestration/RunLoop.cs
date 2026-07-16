@@ -383,7 +383,11 @@ public sealed partial class RunLoop
             _ctx.Save();
             return 130;
         }
-        finally { ReleaseLock(); }
+        finally
+        {
+            _ctx.DisposeTranscript();
+            ReleaseLock();
+        }
     }
 
     /// <summary>G3.2 live plan reload, applied ONLY from the top of the run loop (the session

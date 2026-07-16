@@ -36,6 +36,30 @@ public sealed class TranscriptLog : IDisposable
     private readonly ManualResetEventSlim _drainReady = new(false);
     private long _seq;
 
+    /// <summary>Opens the run-scoped transcript feed. The file is shared by every run in this state
+    /// dir, so when the last writer was a DIFFERENT run the old file is rotated away first — otherwise
+    /// <c>/transcript/current</c> replays a previous era's session into the Face (the "ghost transcript"
+    /// from the 2026-07-16 dogfood: an old run's session #1 rendered as if it were the live one). A
+    /// resumed run (same runId) keeps its file so reconnecting clients' <c>?since=</c> stays valid.</summary>
+    public static TranscriptLog OpenForRun(string path, string runId, TimeProvider? clock = null)
+    {
+        var marker = path + ".runid";
+        try
+        {
+            var prev = File.Exists(marker) ? File.ReadAllText(marker).Trim() : null;
+            if (!string.Equals(prev, runId, StringComparison.Ordinal))
+            {
+                if (File.Exists(path)) File.Delete(path);
+                File.WriteAllText(marker, runId);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Rotation is best-effort: a locked file just means old lines stay visible one more run.
+        }
+        return new TranscriptLog(path, clock);
+    }
+
     public TranscriptLog(string path, TimeProvider? clock = null)
     {
         _path = path;

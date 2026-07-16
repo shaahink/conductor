@@ -9,6 +9,9 @@ public sealed record SessionStarted : ConductorEvent
     public int MaxAttempts { get; init; }
     public string? AgentSessionId { get; init; }
     public string? Persona { get; init; }
+    /// <summary>The model the session's resolved agent actually runs (stage/assignment overrides
+    /// applied) — the Face's "what model is working" answer. null on events from older builds.</summary>
+    public string? Model { get; init; }
 }
 
 public sealed record SessionFinished : ConductorEvent

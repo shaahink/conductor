@@ -114,8 +114,11 @@ public sealed partial class SqliteRunStore
         }
     }
 
-    /// <summary>Serialises PersistBatch across the drain loop and FlushEvents — a single SQLite
-    /// connection supports only one open transaction.</summary>
+    /// <summary>Serialises ALL use of the single SqliteConnection — transactions (PersistBatch),
+    /// ad-hoc writes (TryExecute) and reads (Query). Microsoft.Data.Sqlite connections are not
+    /// thread-safe, and the control plane's HTTP threads query concurrently with the engine's
+    /// writes: without this gate that race corrupts the connection's internal command list
+    /// (SqliteConnection.RemoveCommand index crash — /tasks 500s in the 2026-07-16 dogfood).</summary>
     private readonly Lock _persistGate = new();
 
     private void PersistBatch(List<ConductorEvent> batch)

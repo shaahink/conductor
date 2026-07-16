@@ -67,8 +67,14 @@ func (m Model) renderAgentStrip() string {
 	var segs []string
 	if s.SessionNumber > 0 {
 		seg := accentStyle.Render("s"+fmt.Sprint(s.SessionNumber)) + " " +
-			textStyle.Render(s.SessionKind) +
-			subtleStyle.Render(fmt.Sprintf(" · attempt %d/%d", s.Attempt, s.MaxAttempts))
+			textStyle.Render(s.SessionKind)
+		// "attempt 0/0" is pre-first-attempt noise, not information — render only when real.
+		if s.MaxAttempts > 0 {
+			seg += subtleStyle.Render(fmt.Sprintf(" · attempt %d/%d", s.Attempt, s.MaxAttempts))
+		}
+		if s.Model != "" {
+			seg += subtleStyle.Render(" · ") + tealStyle.Render(shortModel(s.Model))
+		}
 		if s.Persona != nil && *s.Persona != "" {
 			seg += subtleStyle.Render(" · ") + tealStyle.Render(*s.Persona)
 		}
@@ -105,6 +111,12 @@ func (m Model) renderAgentStrip() string {
 	rule := lipgloss.NewStyle().Foreground(widgets.Surface()).Render(strings.Repeat("─", max(1, w)))
 	rows = append(rows, rule)
 	return strings.Join(rows, "\n")
+}
+
+// shortModel compresses a model id for the one-line strip: "claude-opus-4-8" → "opus-4-8".
+// Non-Claude ids pass through untouched — the strip should never guess at unknown vendors.
+func shortModel(id string) string {
+	return strings.TrimPrefix(id, "claude-")
 }
 
 // currentTaskSegment shows live MCP task progress: "task 3/4 ▸ Wire RunDb…".

@@ -83,6 +83,23 @@ public sealed class RunContext
     public List<(string Kind, string Text, DateTime Utc)> Activity { get; } = new();
     public HashSet<string> DecomposedCheckpoints { get; } = new(StringComparer.Ordinal);
 
+    // ── live transcript (the Face agent pane's /transcript/current feed) ──
+
+    private TranscriptLog? _transcript;
+
+    /// <summary>The run-scoped transcript writer. Created on first agent output (a dry run never
+    /// touches disk); rotates away another run's file so the Face never replays a previous era.
+    /// Disposed by the Orchestrator at run end via <see cref="DisposeTranscript"/>.</summary>
+    public TranscriptLog Transcript =>
+        _transcript ??= TranscriptLog.OpenForRun(Path.Combine(StateDir, "transcript.jsonl"), State.RunId);
+
+    /// <summary>Flush + close the transcript feed if it was ever opened. Safe to call twice.</summary>
+    public void DisposeTranscript()
+    {
+        _transcript?.Dispose();
+        _transcript = null;
+    }
+
     // ── structured logging ──
 
     public ILogger Logger { get; }

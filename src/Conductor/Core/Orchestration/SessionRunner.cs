@@ -199,6 +199,11 @@ public sealed partial class SessionRunner
         CleanSoftBreakSignal();
         _ctx.Log($"session #{rec.Number} start — {kind} {stage.Id} attempt {attempt}/{maxAttempts}" +
             (kind == SessionKind.Resume ? $" (resume #{rec.ResumeCount} of {rec.ClaudeSessionId[..8]})" : ""));
+        var resolvedAgent = _ctx.Plan.ResolveAgent(stage);
+        // P1: the role→agent rule overrides only what it names; ResolveAgent returns a fresh merged
+        // instance, so mutating it never touches the plan's own config.
+        if (assignment.Model is { Length: > 0 }) resolvedAgent.Model = assignment.Model;
+        if (assignment.Command is { Length: > 0 }) resolvedAgent.Command = assignment.Command;
         _ctx.Events.Emit(new SessionStarted
         {
             SessionId = rec.Number.ToString(),
@@ -209,15 +214,14 @@ public sealed partial class SessionRunner
             MaxAttempts = maxAttempts,
             AgentSessionId = rec.ClaudeSessionId,
             Persona = personaName,
+            Model = resolvedAgent.Model,
         });
+        _ctx.Transcript.Append(rec.Number.ToString(), "system",
+            $"Session #{rec.Number} started · {kind} · Stage {stage.Id} · Attempt {attempt}/{maxAttempts}" +
+            (string.IsNullOrEmpty(resolvedAgent.Model) ? "" : $" · {resolvedAgent.Model}"));
 
         bool stalled = false, timedOut = false, killedByUser = false;
         await GateRunner.RunHookAsync(_ctx.Plan, _ctx.Plan.Setup, "setup", _ctx.Log, ct).ConfigureAwait(false);
-        var resolvedAgent = _ctx.Plan.ResolveAgent(stage);
-        // P1: the role→agent rule overrides only what it names; ResolveAgent returns a fresh merged
-        // instance, so mutating it never touches the plan's own config.
-        if (assignment.Model is { Length: > 0 }) resolvedAgent.Model = assignment.Model;
-        if (assignment.Command is { Length: > 0 }) resolvedAgent.Command = assignment.Command;
 
         var mcpConfigPath = WireMcpServer(rec, stage);
         Dictionary<string, string>? extraEnv = null;
@@ -311,6 +315,9 @@ public sealed partial class SessionRunner
                 _ctx.State.AuditedStages.Add(stage.Id);
             _ctx.Log($"session #{rec.Number} exited (code {exit}, {(rec.EndedUtc - rec.StartedUtc).Value.TotalMinutes:0}m" +
                 (agent.CostUsd.HasValue ? $", ${agent.CostUsd:0.00}" : "") + ")");
+            _ctx.Transcript.Append(rec.Number.ToString(), "system",
+                $"Session #{rec.Number} exited · code {exit} · {(rec.EndedUtc - rec.StartedUtc).Value.TotalMinutes:0}m" +
+                (agent.CostUsd.HasValue ? $" · ${agent.CostUsd:0.00}" : ""));
 
             FoldMcpJournal();
             CleanupMcpConfig(mcpConfigPath);
@@ -374,7 +381,12 @@ public sealed partial class SessionRunner
 
     private void TrackActivity(AgentEvent ev, int sessionNumber)
     {
-        if (ev.Kind is not ("tool" or "text" or "result" or "thinking")) return;
+        if (ev.Kind is not ("tool" or "text" or "result" or "thinking" or "stderr")) return;
+        // The live transcript feed (/transcript/current → the Face agent pane). This was the
+        // disconnected wire of the 2026-07-16 dogfood: TranscriptLog existed but nothing wrote it,
+        // so the Face could only ever replay a stale file from an earlier build.
+        _ctx.Transcript.Append(sessionNumber.ToString(), ev.Kind, ev.Text);
+        if (ev.Kind is "stderr") return; // the activity ring buffer keeps its original vocabulary
         _ctx.Activity.Add((ev.Kind, ev.Text, ev.Utc));
         if (_ctx.Activity.Count > 60) _ctx.Activity.RemoveRange(0, 20);
     }

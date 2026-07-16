@@ -15,7 +15,7 @@ next: **U0.1** — plan discovery in `PlanSettings.ResolvePlanPath` (see docs/CO
 
 | Metric | Value |
 |---|---|
-| Total checkpoints | 10 |
+| Total checkpoints | 11 |
 | Done | 0 |
 
 ## Checkpoints
@@ -46,12 +46,13 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | U2.2 | Report tab is a visual run report (progress, stages, sessions, gates, scores) | TODO |  |  |
 | U2.3 | Dev tab: SQL console moved + run internals + per-session token/cost stats | TODO |  |  |
 
-### U3 — Face: curated themes + glitch pass
+### U3 — Face: themes, agent-terminal vibe, glitch pass
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | U3.1 | curated themes (mocha/latte/nord/gruvbox), --theme, live switch, persisted | TODO |  |  |
-| U3.2 | golden glitch pass at 3 sizes — each fix noted in evidence | TODO |  |  |
+| U3.2 | golden glitch pass at 3 sizes, seeded from the spec's dogfood appendix | TODO |  |  |
+| U3.3 | agent-terminal vibe: Claude Code-style transcript, provider-aware, footer strip | TODO |  |  |
 
 ## Dependencies
 
