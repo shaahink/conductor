@@ -68,7 +68,8 @@ func makeFakeTasks() []TaskDto {
 		{TaskId: "T1", CheckpointId: "F7.4", Title: "Implement gate caching by SHA", Status: "done", Source: "planner", Order: 1},
 		{TaskId: "T2", CheckpointId: "F7.4", Title: "Add per-stage truth gate config", Status: "done", Source: "agent", Order: 2},
 		{TaskId: "T3", CheckpointId: "F7.4", Title: "Wire RunDb.GetLastPassingGateResult", Status: "in_progress", Source: "agent", Order: 3,
-			Context: "Reuse the SHA cache from F7.4-a1; the miss path must stay allocation-free."},
+			Context: "Reuse the SHA cache from F7.4-a1; the miss path must stay allocation-free.",
+			Paths:   []string{"src/Conductor/Core/Gating/GateCache.cs", "src/Conductor/Core/Store/RunDb.cs"}},
 		{TaskId: "T4", CheckpointId: "F7.5", Title: "Add SkipIfFresh file-timestamp check", Status: "todo", Source: "planner", Order: 4},
 	}
 }
@@ -104,12 +105,13 @@ func (s *demoSource) FetchPromptBlocks(taskId string) (*PromptBlocksDto, error) 
 	return &PromptBlocksDto{Ok: false, Error: &msg}, nil
 }
 
-// PostTaskEdit mirrors POST /tasks/edit: nil = unchanged, blank title refused, empty context clears.
+// PostTaskEdit mirrors POST /tasks/edit: nil = unchanged, blank title refused, empty context
+// clears, and PF3 declared paths follow the same nil/empty contract (entries cleaned like C#).
 func (s *demoSource) PostTaskEdit(req TaskEditRequestDto) (*TaskWriteResultDto, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if req.Title == nil && req.Context == nil {
-		msg := "nothing to edit — give a title and/or a context"
+	if req.Title == nil && req.Context == nil && req.Paths == nil {
+		msg := "nothing to edit — give a title, a context, and/or paths"
 		return &TaskWriteResultDto{Ok: false, Error: &msg}, nil
 	}
 	if req.Title != nil && strings.TrimSpace(*req.Title) == "" {
@@ -125,6 +127,15 @@ func (s *demoSource) PostTaskEdit(req TaskEditRequestDto) (*TaskWriteResultDto, 
 		}
 		if req.Context != nil {
 			s.tasks[i].Context = *req.Context
+		}
+		if req.Paths != nil {
+			clean := make([]string, 0, len(req.Paths))
+			for _, p := range req.Paths {
+				if p = strings.TrimSpace(p); p != "" {
+					clean = append(clean, p)
+				}
+			}
+			s.tasks[i].Paths = clean
 		}
 		t := s.tasks[i]
 		return &TaskWriteResultDto{Ok: true, TaskId: &t.TaskId, Status: &t.Status, CheckpointId: &t.CheckpointId, Title: &t.Title, Order: t.Order}, nil

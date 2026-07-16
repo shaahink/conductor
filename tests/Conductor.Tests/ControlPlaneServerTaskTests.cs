@@ -60,7 +60,9 @@ public sealed class ControlPlaneServerTaskTests : IDisposable
         Assert.True(server.Start(), "control plane failed to bind");
         _http.DefaultRequestHeaders.Remove("X-Conductor-Token");
         _http.DefaultRequestHeaders.Add("X-Conductor-Token", server.Token);
-        return (server, port);
+        // server.Port, not the probe port: Start() scans forward when a parallel fixture grabbed
+        // the probed port first, and requests must follow the server, not the probe.
+        return (server, server.Port);
     }
 
     [Fact]

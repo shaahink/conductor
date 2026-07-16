@@ -4,6 +4,7 @@ package tui
 // so a move/add must round-trip: key → POST → re-fetch → the board shows the new column.
 
 import (
+	"strings"
 	"testing"
 
 	"conductor-face-go/internal/api"
@@ -217,6 +218,53 @@ func TestKanbanDetailContextEditRoundTrip(t *testing.T) {
 		}
 		if task.TaskId == "T3" && task.Title != "Wire RunDb.GetLastPassingGateResult" {
 			t.Errorf("a context-only edit must not touch the title, got %q", task.Title)
+		}
+	}
+}
+
+// PF3: the p editor round-trips the card's declared paths (comma-separated line → cleaned list),
+// seeds from the current claims, and an empty save clears them — nil is never sent from the editor,
+// so "save empty" is an explicit clear, mirroring the C# null/empty contract.
+func TestKanbanDetailPathsEditRoundTrip(t *testing.T) {
+	m, src := openKanbanDetail(t)
+
+	m = driveKanban(m, "p")
+	if !m.kanbanEditingPaths {
+		t.Fatal("p should open the paths editor")
+	}
+	if !strings.Contains(m.kanbanPathsBuf, "GateCache.cs") {
+		t.Fatalf("the editor must seed from the card's current claims, got %q", m.kanbanPathsBuf)
+	}
+	m.kanbanPathsBuf = " src/A.cs , , docs/B.md "
+	tm, cmd := m.handleKanbanKey("enter")
+	m = asModel(tm)
+	if cmd == nil {
+		t.Fatal("enter should post the structured edit")
+	}
+	msg := cmd().(MsgTaskWritten)
+	if msg.Verb != "edit" || msg.Result == nil || !msg.Result.Ok {
+		t.Fatalf("edit rejected: %+v", msg)
+	}
+
+	tasks, _ := src.FetchTasks()
+	for _, task := range tasks.Tasks {
+		if task.TaskId == "T3" {
+			if len(task.Paths) != 2 || task.Paths[0] != "src/A.cs" || task.Paths[1] != "docs/B.md" {
+				t.Errorf("paths did not round-trip cleaned, got %v", task.Paths)
+			}
+		}
+	}
+
+	// Empty save = clear the declared claims.
+	m = driveKanban(m, "p")
+	m.kanbanPathsBuf = ""
+	tm, cmd = m.handleKanbanKey("enter")
+	m = asModel(tm)
+	m.Update(cmd())
+	tasks, _ = src.FetchTasks()
+	for _, task := range tasks.Tasks {
+		if task.TaskId == "T3" && len(task.Paths) != 0 {
+			t.Errorf("an empty save must clear the claims, got %v", task.Paths)
 		}
 	}
 }

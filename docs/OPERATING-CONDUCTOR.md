@@ -154,7 +154,8 @@ task's prompt as labeled building blocks) · `/console/current` and
 Reads need no token.
 
 **Write:** `POST /control` (same verbs as §2's control commands) · `POST /inject` · `POST /tasks/update`
-· `POST /tasks/add` · `POST /tasks/edit` (P3: title/extra-context as structured task data) ·
+· `POST /tasks/add` · `POST /tasks/edit` (P3: title/extra-context as structured task data; PF3 adds
+`paths` — a card's declared repo-relative claims, which gate multi-item session claims) ·
 `POST /tasks/refine` (P3: the advisor PROPOSES a title/context — nothing mutates until you confirm by
 posting `/tasks/edit`) · `POST /plan/edit` · `POST /plan/import` · `POST /telegram/test|token`.
 

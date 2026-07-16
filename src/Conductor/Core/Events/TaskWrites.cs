@@ -27,22 +27,25 @@ public static class TaskWrites
         return (new TaskStatusChanged { RunId = runId, TaskId = taskId, Status = status }, null);
     }
 
-    /// <summary>P3: validate and build a detail edit (title and/or extra context). null = leave the
-    /// field unchanged; an empty context clears it; a blank title is refused (a card must stay
-    /// nameable). At least one field must actually be given.</summary>
+    /// <summary>P3: validate and build a detail edit (title, extra context, and/or declared paths —
+    /// PF3). null = leave the field unchanged; an empty context clears it; an empty paths array
+    /// clears the declared claims; a blank title is refused (a card must stay nameable). Path
+    /// entries are trimmed and blanks dropped, so a replayed log never carries junk claims.
+    /// At least one field must actually be given.</summary>
     public static (TaskDetailEdited? Event, string? Error) BuildDetailEdit(
-        TaskGraph graph, string runId, string? taskId, string? title, string? context)
+        TaskGraph graph, string runId, string? taskId, string? title, string? context, string[]? paths = null)
     {
         if (string.IsNullOrEmpty(taskId))
             return (null, "taskId is required");
         if (graph.Find(taskId) == null)
             return (null, $"task not found: {taskId}");
-        if (title is null && context is null)
-            return (null, "nothing to edit — give a title and/or a context");
+        if (title is null && context is null && paths is null)
+            return (null, "nothing to edit — give a title, a context, and/or paths");
         if (title is not null && string.IsNullOrWhiteSpace(title))
             return (null, "title cannot be blank");
 
-        return (new TaskDetailEdited { RunId = runId, TaskId = taskId, Title = title?.Trim(), Context = context }, null);
+        var cleanPaths = paths?.Select(p => p.Trim()).Where(p => p.Length > 0).ToArray();
+        return (new TaskDetailEdited { RunId = runId, TaskId = taskId, Title = title?.Trim(), Context = context, Paths = cleanPaths }, null);
     }
 
     /// <summary>Validate and build a task-add: computes the next order within the checkpoint when the

@@ -26,6 +26,7 @@ func (m *Model) kanbanOpenDetail(taskId string) tea.Cmd {
 	m.kanbanHandConfirm = false
 	m.kanbanEditingTitle = false
 	m.kanbanEditingCtx = false
+	m.kanbanEditingPaths = false
 	m.kanbanStatus = ""
 	return m.cmdFetchPromptBlocks(taskId)
 }
@@ -39,6 +40,7 @@ func (m *Model) kanbanCloseDetail() {
 	m.kanbanHandConfirm = false
 	m.kanbanEditingTitle = false
 	m.kanbanEditingCtx = false
+	m.kanbanEditingPaths = false
 }
 
 // kanbanDetailTask resolves the open card from the board data (title/context may be fresher there
@@ -75,6 +77,9 @@ func (m *Model) handleKanbanDetailKey(key string) (tea.Model, tea.Cmd) {
 	if m.kanbanEditingCtx {
 		return m.handleKanbanCtxKey(key)
 	}
+	if m.kanbanEditingPaths {
+		return m.handleKanbanPathsKey(key)
+	}
 	if m.kanbanProposal != nil {
 		return m.handleKanbanProposalKey(key)
 	}
@@ -99,6 +104,14 @@ func (m *Model) handleKanbanDetailKey(key string) (tea.Model, tea.Cmd) {
 			m.kanbanEditingCtx = true
 			w := max(10, m.paneCols()-8)
 			m.kanbanCtxEditor = widgets.NewTextArea(task.Context, w, max(3, min(8, m.paneRows()-6)))
+			m.kanbanStatus = ""
+		}
+		return m, nil
+	case "p":
+		// PF3: edit the card's declared paths — one line, comma-separated; empty clears.
+		if task != nil {
+			m.kanbanEditingPaths = true
+			m.kanbanPathsBuf = strings.Join(task.Paths, ", ")
 			m.kanbanStatus = ""
 		}
 		return m, nil
@@ -160,6 +173,35 @@ func (m *Model) handleKanbanCtxKey(key string) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// handleKanbanPathsKey edits the PF3 declared paths as one comma-separated line. Saving posts the
+// split-and-trimmed list (empty = clear) through the same structured /tasks/edit as title/context.
+func (m *Model) handleKanbanPathsKey(key string) (tea.Model, tea.Cmd) {
+	switch key {
+	case "esc":
+		m.kanbanEditingPaths = false
+		return m, nil
+	case "enter":
+		m.kanbanEditingPaths = false
+		paths := []string{}
+		for _, p := range strings.Split(m.kanbanPathsBuf, ",") {
+			if p = strings.TrimSpace(p); p != "" {
+				paths = append(paths, p)
+			}
+		}
+		m.kanbanStatus = "saving…"
+		return m, m.cmdPostTaskEdit(api.TaskEditRequestDto{TaskId: m.kanbanBlocks.TaskId, Paths: paths})
+	case "backspace":
+		if len(m.kanbanPathsBuf) > 0 {
+			m.kanbanPathsBuf = m.kanbanPathsBuf[:len(m.kanbanPathsBuf)-1]
+		}
+	default:
+		if ch, ok := typedChar(key); ok {
+			m.kanbanPathsBuf += ch
+		}
+	}
+	return m, nil
+}
+
 func (m *Model) handleKanbanProposalKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
 	case "enter":
@@ -216,6 +258,21 @@ func (m Model) renderKanbanDetailPane() (string, string) {
 		b.WriteString("\n" + m.renderKanbanBlock(blk, width))
 	}
 
+	// PF3: declared paths are claim metadata, not prompt content — their own line under the blocks.
+	if task := m.kanbanDetailTask(); task != nil {
+		b.WriteString("\n\n" + subtleStyle.Render("── ") + accentStyle.Render("✎ declared paths") + subtleStyle.Render(" ") +
+			subtleStyle.Render(strings.Repeat("─", max(0, width-lipgloss.Width("declared paths")-6))) + "\n")
+		if len(task.Paths) == 0 {
+			b.WriteString(subtleStyle.Render("  (none — press p to declare what this card touches)"))
+		} else {
+			b.WriteString(textStyle.Render("  " + truncate(strings.Join(task.Paths, " · "), width-2)))
+		}
+	}
+
+	if m.kanbanEditingPaths {
+		b.WriteString("\n\n" + accentStyle.Render("✎ paths (comma-separated): ") + textStyle.Render(m.kanbanPathsBuf) + accentStyle.Render("▏"))
+		return b.String() + m.kanbanStatusLine(), "type · enter save (empty clears) · esc cancel"
+	}
 	if m.kanbanEditingCtx {
 		b.WriteString("\n\n" + accentStyle.Render("✎ extra context") + "\n" + m.kanbanCtxEditor.View())
 		return b.String() + m.kanbanStatusLine(), "type · ctrl+s save · esc cancel"
@@ -233,7 +290,7 @@ func (m Model) renderKanbanDetailPane() (string, string) {
 			key("y") + subtleStyle.Render(" yes · ") + key("n") + subtleStyle.Render(" no"))
 		return b.String() + m.kanbanStatusLine(), "y confirm · n cancel"
 	}
-	return b.String() + m.kanbanStatusLine(), "t title · c context · a advisor refine · h hand off · esc back"
+	return b.String() + m.kanbanStatusLine(), "t title · c context · p paths · a advisor refine · h hand off · esc back"
 }
 
 // renderKanbanBlock renders one building block: label line (✎ marks editable), then the content —

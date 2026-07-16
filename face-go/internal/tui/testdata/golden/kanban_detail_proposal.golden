@@ -17,13 +17,13 @@
                            │  ── Tool contract ─────────────────────────────────────────────────────────      
  ── TASKS ──               │    conductor note / bg / task --done                                             
    ✓ Add truth-tier con…   │                                                                                  
-   ● Wire RunDb.GetLast…   │  proposal from fake-advisor                                                      
-   ○ Cache gate results…   │    title:   Wire RunDb.GetLastPassingGateResult (with eviction test)             
-   ○ Add SkipIfFresh ti…   │    context: Start from the smallest end-to-end slice.                            
-   ○ Benchmark the warm…   │    nothing is saved until you confirm                                            
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
+   ● Wire RunDb.GetLast…   │  ── ✎ declared paths ──────────────────────────────────────────────────────      
+   ○ Cache gate results…   │    src/Conductor/Core/Gating/GateCache.cs · docs/CONDUCTOR-VNEXT-PLAN.md         
+   ○ Add SkipIfFresh ti…   │                                                                                  
+   ○ Benchmark the warm…   │  proposal from fake-advisor                                                      
+                           │    title:   Wire RunDb.GetLastPassingGateResult (with eviction test)             
+                           │    context: Start from the smallest end-to-end slice.                            
+                           │    nothing is saved until you confirm                                            
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  

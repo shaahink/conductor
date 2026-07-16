@@ -17,11 +17,11 @@
                            │  ── Tool contract ─────────────────────────────────────────────────────────      
  ── TASKS ──               │    conductor note / bg / task --done                                             
    ✓ Add truth-tier con…   │                                                                                  
-   ● Wire RunDb.GetLast…   │  ✎ extra context                                                                 
-   ○ Cache gate results…   │  cover the cache-miss path                                                       
+   ● Wire RunDb.GetLast…   │  ── ✎ declared paths ──────────────────────────────────────────────────────      
+   ○ Cache gate results…   │    src/Conductor/Core/Gating/GateCache.cs · docs/CONDUCTOR-VNEXT-PLAN.md         
    ○ Add SkipIfFresh ti…   │                                                                                  
-   ○ Benchmark the warm…   │                                                                                  
-                           │                                                                                  
+   ○ Benchmark the warm…   │  ✎ extra context                                                                 
+                           │  cover the cache-miss path                                                       
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  

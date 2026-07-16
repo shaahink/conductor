@@ -53,9 +53,11 @@ public sealed class TaskGraph
                     if (_byId.TryGetValue(de.TaskId, out var edited))
                     {
                         // null = unchanged; a blank title is refused at write time (TaskWrites), so a
-                        // replayed log can never blank a card. Context empty = cleared, by design.
+                        // replayed log can never blank a card. Context empty = cleared, by design;
+                        // same for the declared paths (PF3) — an empty array clears the claims.
                         if (!string.IsNullOrWhiteSpace(de.Title)) edited.Title = de.Title;
                         if (de.Context != null) edited.Context = de.Context;
+                        if (de.Paths != null) edited.Paths = [.. de.Paths];
                     }
                     break;
             }
@@ -68,6 +70,24 @@ public sealed class TaskGraph
     public IReadOnlyList<TaskItem> ForCheckpoint(string checkpointId) =>
         _tasks.Where(t => t.CheckpointId.Equals(checkpointId, StringComparison.Ordinal))
               .OrderBy(t => t.Order).ToList();
+
+    /// <summary>PF3: the union of declared paths on a checkpoint's OPEN cards (todo/in_progress) —
+    /// what <c>ReadyItem.PathClaims</c> carries into the assignment policy. Done/skipped cards no
+    /// longer claim anything. null = no open card declares a path (no detectable conflict).</summary>
+    public IReadOnlyList<string>? DeclaredOpenPaths(string checkpointId)
+    {
+        List<string>? paths = null;
+        foreach (var t in _tasks)
+        {
+            if (t.CheckpointId != checkpointId || t.Status is not ("todo" or "in_progress")) continue;
+            foreach (var p in t.Paths)
+            {
+                paths ??= new List<string>();
+                if (!paths.Contains(p, StringComparer.OrdinalIgnoreCase)) paths.Add(p);
+            }
+        }
+        return paths;
+    }
 
     /// <summary>Current sub-task (first non-done, non-skipped) or null.</summary>
     public TaskItem? CurrentTask(string checkpointId)

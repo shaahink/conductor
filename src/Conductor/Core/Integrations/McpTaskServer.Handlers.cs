@@ -24,6 +24,8 @@ public partial class McpTaskServer
             order = t.Order,
             // P3: owner-provided extra context rides the task, so the agent sees it too.
             context = t.Context,
+            // PF3: declared paths ride along — the agent sees what each card claims to touch.
+            paths = t.Paths,
         }).ToArray();
 
         return JsonSerializer.SerializeToElement(new { tasks = list, count = list.Length });

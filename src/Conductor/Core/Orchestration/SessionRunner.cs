@@ -76,8 +76,17 @@ public sealed partial class SessionRunner
         // P1: ask the assignment policy who runs this session and which ready items it claims.
         // With no `pipeline` rules the default policy reproduces the classic behavior exactly
         // (stage/plan default agent, the first not-done checkpoint, one item).
+        // PF3: each item carries the declared paths of its OPEN task cards, so multi-item claims
+        // are refused on REAL data, not just plan-declared stage paths. Folded once here; the P3
+        // task-context section below reuses the same graph.
+        TaskGraph? taskGraph = null;
+        if (_ctx.Store != null)
+        {
+            taskGraph = new TaskGraph();
+            taskGraph.Fold(_ctx.Store.ReadAllEvents(_ctx.State.RunId));
+        }
         var readyItems = preTrack.ForStage(stage.Id).Where(c => !c.IsDone)
-            .Select(c => new ReadyItem { Id = c.Id, Title = c.Title })
+            .Select(c => new ReadyItem { Id = c.Id, Title = c.Title, PathClaims = taskGraph?.DeclaredOpenPaths(c.Id) })
             .ToList();
         var assignment = _ctx.Assignments.Assign(_ctx.Plan.Pipeline, kind, readyItems, claimedPaths: null);
         if (assignment.Model != null || assignment.Persona != null || assignment.Command != null)
@@ -147,10 +156,9 @@ public sealed partial class SessionRunner
 
         // P3: owner-provided per-task context must reach the session that delivers the task — the
         // card-detail edit is real prompt input, not decoration. Scope = the claimed checkpoints.
-        if (_ctx.Store != null)
+        // (taskGraph was folded once above, before the assignment — PF3.)
+        if (taskGraph != null)
         {
-            var taskGraph = new TaskGraph();
-            taskGraph.Fold(_ctx.Store.ReadAllEvents(_ctx.State.RunId));
             var contextSection = BuildTaskContextSection(taskGraph, assignment.Items.Select(i => i.Id));
             if (contextSection.Length > 0)
                 prompt = prompt.TrimEnd() + "\n\n" + contextSection;

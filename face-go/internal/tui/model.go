@@ -202,6 +202,9 @@ type Model struct {
 	kanbanTitleBuf     string
 	kanbanEditingCtx   bool
 	kanbanCtxEditor    widgets.TextArea
+	// PF3: the declared-paths editor (comma-separated single line; empty save clears the claims).
+	kanbanEditingPaths bool
+	kanbanPathsBuf     string
 	kanbanRefining     bool
 	kanbanProposal     *api.TaskRefineResultDto
 	kanbanHandConfirm  bool

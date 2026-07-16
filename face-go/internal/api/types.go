@@ -133,6 +133,9 @@ type TaskDto struct {
 	Source       string `json:"source"`
 	Order        int    `json:"order"`
 	Context      string `json:"context"` // P3: owner-editable per-task extra context
+	// PF3: repo-relative paths this card declares it will touch — the data behind multi-item
+	// claim conflicts. Empty = no declared claims.
+	Paths []string `json:"paths"`
 }
 
 type TasksDto struct {
@@ -159,6 +162,9 @@ type TaskEditRequestDto struct {
 	TaskId  string  `json:"taskId"`
 	Title   *string `json:"title"`
 	Context *string `json:"context"`
+	// PF3: nil = leave the declared paths unchanged (marshals as null); an empty non-nil slice
+	// clears them — mirrors the C# null/empty contract, so no omitempty here.
+	Paths []string `json:"paths"`
 }
 
 // TaskRefineRequestDto (P3, POST /tasks/refine): ask the plan's advisor to refine one task.

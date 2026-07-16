@@ -1,5 +1,7 @@
 using Conductor.Core;
+using Conductor.Core.Events;
 using Conductor.Core.Hosting;
+using Conductor.Core.Store;
 using Conductor.Models;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -240,6 +242,57 @@ public sealed class HarnessTests : IDisposable
         Assert.Contains("Claimed items this session", promptMd, StringComparison.Ordinal);
         Assert.Contains("H0.1", promptMd, StringComparison.Ordinal);
         Assert.Contains("H0.2", promptMd, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task FullCycle_ConflictingDeclaredTaskPaths_BlockTheMultiItemClaim()
+    {
+        // PF3 live proof: the same multi-item setup the P1 test proves claims BOTH checkpoints —
+        // except here each checkpoint's open task card DECLARES an overlapping path (differing only
+        // in case, which the policy's normalization must still collide). The policy refuses the
+        // co-claim, so the real prompt on disk carries no "Claimed items" section: real task data,
+        // not plan config, gated the claim.
+        await File.WriteAllTextAsync(Path.Combine(_repo, "TRACKER.md"),
+            "# Harness Plan\n\n## Handoff\nlast: none.\n\n## Checkpoints\n\n" +
+            "| # | Checkpoint | Status | Commit | Evidence |\n|---|---|---|---|---|\n" +
+            "| H0.1 | first harness checkpoint | TODO | | |\n" +
+            "| H0.2 | second harness checkpoint | TODO | | |\n");
+
+        var plan = new PlanConfig
+        {
+            Name = "HarnessPlan",
+            Repo = _repo,
+            Tracker = "TRACKER.md",
+            Stages = { new StageConfig { Id = "H0", Title = "Harness", Sessions = 1 } },
+            Agent = new AgentConfig
+            {
+                Command = "cmd.exe",
+                Args = { "/c", _agentScript, "{prompt}" },
+                Provider = "opencode",
+            },
+            Pipeline = new PipelineRules { MultiItem = new MultiItemRule { Enabled = true, MaxItems = 2 } },
+            GatePolicy = "perSession",
+            Gates = { new GateConfig { Name = "smoke", Command = "echo ok", Tier = "fast", TimeoutMinutes = 1 } },
+        };
+        plan.Report.Commit = false;
+
+        var state = new RunState { RunId = Guid.NewGuid().ToString("N") };
+        using var host = ConductorHost.Build(plan, state, new PlainSink(),
+            new RunOptions(DryRun: false, Once: true, MaxSessions: 0), consoleSink: false);
+
+        // Seed REAL task data before the run — the exact events the Kanban card editor writes.
+        var store = host.Services.GetRequiredService<IRunStore>();
+        store.AppendEvent(new TaskAdded { RunId = state.RunId, TaskId = "H0.1-a1", CheckpointId = "H0.1", Title = "First card", Order = 1, Source = "human" });
+        store.AppendEvent(new TaskAdded { RunId = state.RunId, TaskId = "H0.2-a1", CheckpointId = "H0.2", Title = "Second card", Order = 1, Source = "human" });
+        store.AppendEvent(new TaskDetailEdited { RunId = state.RunId, TaskId = "H0.1-a1", Paths = ["src/shared.cs"] });
+        store.AppendEvent(new TaskDetailEdited { RunId = state.RunId, TaskId = "H0.2-a1", Paths = ["SRC/Shared.cs"] });
+        store.FlushEvents();
+
+        var code = await host.Services.GetRequiredService<Orchestrator>().RunAsync(CancellationToken.None);
+        Assert.Equal(0, code);
+
+        var promptMd = await File.ReadAllTextAsync(Path.Combine(_stateDir, "logs", "session-001.prompt.md"));
+        Assert.DoesNotContain("Claimed items this session", promptMd, StringComparison.Ordinal);
     }
 
     [Fact]

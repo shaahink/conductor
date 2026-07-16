@@ -92,6 +92,29 @@ public sealed class ControlPlaneServerTaskDetailTests : IDisposable
         finally { server.Dispose(); }
     }
 
+    // PF3: declared paths are card data like context — a paths-only edit is valid, entries are
+    // cleaned, and GET /tasks serves them back so the Face and MCP task_list see the claims.
+    [Fact]
+    public async Task PostTasksEdit_PathsPersist_AndGetTasksServesThem()
+    {
+        var (server, port) = StartServer();
+        try
+        {
+            await PostAsync(port, "/tasks/add", """{"checkpointId":"P3.1","title":"Claim some files"}""");
+            var resp = await PostAsync(port, "/tasks/edit",
+                """{"taskId":"P3.1-a1","paths":[" src/Foo.cs ","","docs/PLAN.md"]}""");
+            Assert.Equal(HttpStatusCode.Accepted, resp.StatusCode);
+
+            var tasks = await _http.GetStringAsync($"http://127.0.0.1:{port}/tasks");
+            using var tdoc = JsonDocument.Parse(tasks);
+            var task = Assert.Single(tdoc.RootElement.GetProperty("tasks").EnumerateArray());
+            Assert.Equal("Claim some files", task.GetProperty("title").GetString());
+            var paths = task.GetProperty("paths").EnumerateArray().Select(p => p.GetString()).ToArray();
+            Assert.Equal(new[] { "src/Foo.cs", "docs/PLAN.md" }, paths);
+        }
+        finally { server.Dispose(); }
+    }
+
     [Fact]
     public async Task PostTasksEdit_ContextOnly_LeavesTheTitleAlone()
     {

@@ -16,4 +16,9 @@ public sealed class TaskItem
     /// <summary>P3: owner-provided extra context for this task — structured task data that becomes
     /// the editable "extra context" block of the task's prompt composition. Empty = none.</summary>
     public string Context { get; set; } = "";
+
+    /// <summary>PF3: repo-relative paths this card is DECLARED to touch — the real task data behind
+    /// <c>ReadyItem.PathClaims</c>, so a multi-item session refuses to co-claim checkpoints whose
+    /// open cards declare overlapping paths. Empty = no declared claims (the common case).</summary>
+    public List<string> Paths { get; set; } = new();
 }

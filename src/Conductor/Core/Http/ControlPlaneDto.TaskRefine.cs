@@ -1,10 +1,10 @@
 namespace Conductor.Core.Http;
 
-/// <summary>P3: edit a task's own data (<c>POST /tasks/edit</c>) — title and/or extra context.
-/// null = leave unchanged; an empty context clears it. This is the confirm step of the card-detail
-/// editor AND of the advisor-refine flow: nothing the advisor proposes lands until the owner posts
-/// it here.</summary>
-public sealed record TaskEditRequestDto(string? TaskId, string? Title, string? Context);
+/// <summary>P3: edit a task's own data (<c>POST /tasks/edit</c>) — title, extra context, and/or
+/// declared paths (PF3). null = leave unchanged; an empty context clears it; an empty paths array
+/// clears the declared claims. This is the confirm step of the card-detail editor AND of the
+/// advisor-refine flow: nothing the advisor proposes lands until the owner posts it here.</summary>
+public sealed record TaskEditRequestDto(string? TaskId, string? Title, string? Context, string[]? Paths = null);
 
 /// <summary>P3: ask the plan's advisor model to refine one task (<c>POST /tasks/refine</c>).
 /// <c>Instruction</c> is the owner's optional steer ("split this", "make it testable").
