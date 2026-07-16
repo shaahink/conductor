@@ -58,6 +58,7 @@ public sealed partial class RunLoop
         if (!AcquireLock()) return 4;
         try
         {
+            PurgeStaleControlFile();
             RecoverFromCrash();
             if (ApplyStartPause(_ctx.State, _ctx.Options))
             {

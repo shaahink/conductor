@@ -52,9 +52,44 @@ public sealed partial class RunLoop
         _ctx.LastControlWrite = null;
     }
 
+    /// <summary>A control.json left behind by a PREVIOUS process must never steer this one — the file
+    /// ingress is same-run control, not cross-run scheduling. The 2026-07-17 dogfood hit exactly this:
+    /// an abort written to stop run A survived A's death (mid-session aborts deliberately leave the
+    /// file for re-processing) and instantly killed run B at startup — from the owner's terminal, a
+    /// silent immediate exit. Purged once before the first poll, and loudly.</summary>
+    private void PurgeStaleControlFile()
+    {
+        try
+        {
+            if (!File.Exists(_ctx.ControlPath)) return;
+            var action = "unreadable";
+            try { action = ControlFile.Parse(File.ReadAllText(_ctx.ControlPath)).Action?.ToString() ?? "no action"; }
+            catch (Exception ex) when (ex is IOException or JsonException or InvalidOperationException) { }
+            var written = File.GetLastWriteTime(_ctx.ControlPath);
+            File.Delete(_ctx.ControlPath);
+            _ctx.Log($"stale control.json from a previous run ({action}, written {written:HH:mm:ss}) — removed, not executed");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Can't delete it — at least make the poller's dedupe treat it as already seen.
+            _ctx.LastControlWrite = File.Exists(_ctx.ControlPath) ? File.GetLastWriteTimeUtc(_ctx.ControlPath) : null;
+            _ctx.Log($"stale control.json could not be removed ({ex.GetType().Name}) — it will be ignored this run");
+        }
+    }
+
     private void RecoverFromCrash()
     {
         var recovered = false;
+
+        // An aborted run is stopped, not discarded: `conductor run` on it means "continue". Without
+        // this reset the loop's first status check re-exits immediately — the same silent instant
+        // death as a stale abort, but persisted (2026-07-17 dogfood).
+        if (_ctx.State.Status == RunStatus.Aborted)
+        {
+            _ctx.State.Status = RunStatus.Idle;
+            _ctx.Log("previous run ended aborted — continuing it (abort again with `conductor abort` if that was not the intent)");
+            _ctx.Save();
+        }
 
         if (_ctx.State.Status is RunStatus.Running or RunStatus.VerifyingGates or RunStatus.Backoff)
         {

@@ -54,10 +54,24 @@ public sealed class RunCommand : Command<RunCommand.Settings>
 
     public override int Execute(CommandContext context, Settings settings)
     {
-        var plan = PlanConfig.Load(settings.ResolvePlanPath());
+        var planPathArg = settings.ResolvePlanPath();
+        var plan = PlanConfig.Load(planPathArg);
         Directory.CreateDirectory(plan.StateDir);
         var statePath = Path.Combine(plan.StateDir, "state.json");
         var state = RunState.LoadOrNew(statePath, plan.Name);
+        // state.json is the pre-M2 legacy carrier — the live store is run.db's run_state table.
+        // When the file yields nothing, resume from the store, or `conductor run` silently starts a
+        // fresh run #1 every time and "run again to resume" is a lie (2026-07-17 dogfood).
+        if (string.IsNullOrEmpty(state.RunId) && state.SessionCounter == 0)
+        {
+            var resumed = Core.Store.RunStateResume.TryLoadLatest(Path.Combine(plan.StateDir, "run.db"), plan.Name);
+            if (resumed != null)
+            {
+                state = resumed;
+                AnsiConsole.MarkupLine(
+                    $"[grey]resuming run {Markup.Escape(Short(state.RunId))} — {state.SessionCounter} session(s) so far, status {state.Status}[/]");
+            }
+        }
         if (string.IsNullOrEmpty(state.RunId)) state.RunId = Guid.NewGuid().ToString("N");
 
         // `conductor run` is ONE command: engine + control plane + Face TUI, one process tree. The plain
@@ -78,6 +92,8 @@ public sealed class RunCommand : Command<RunCommand.Settings>
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 #pragma warning restore MA0045
 
+        var startedUtc = DateTime.UtcNow;
+        int exitCode;
         FaceLauncher.FaceHandle? face = null;
         try
         {
@@ -109,12 +125,46 @@ public sealed class RunCommand : Command<RunCommand.Settings>
             }
 
 #pragma warning disable MA0045 // sync-over-async boundary: Spectre.Cli Execute must return int
-            return host.Services.GetRequiredService<Orchestrator>().RunAsync(cts.Token).GetAwaiter().GetResult();
+            exitCode = host.Services.GetRequiredService<Orchestrator>().RunAsync(cts.Token).GetAwaiter().GetResult();
 #pragma warning restore MA0045
         }
         finally
         {
             face?.Dispose();
         }
+
+        // The Face owned the terminal (sink muted) — without this epilogue an early exit is a silent
+        // flash and the owner is left asking "what just happened?" (2026-07-17 dogfood: a stale abort
+        // ended the run in <1s with nothing on screen). Printed after the Face is gone, always.
+        PrintEpilogue(exitCode, plan, state, planPathArg, startedUtc);
+        return exitCode;
     }
+
+    private static void PrintEpilogue(int code, PlanConfig plan, RunState state, string planPathArg, DateTime startedUtc)
+    {
+        var meaning = code switch
+        {
+            0 => "stopped cleanly",
+            2 => "aborted",
+            4 => "another conductor already holds this plan's lock",
+            130 => "cancelled (Ctrl+C) — safe, nothing lost",
+            _ => $"exit code {code}",
+        };
+        AnsiConsole.MarkupLine($"[bold]run ended[/] — {Markup.Escape(state.Status.ToString())} · {Markup.Escape(meaning)}" +
+            (string.IsNullOrEmpty(state.AttentionReason) ? "" : $" · [yellow]{Markup.Escape(state.AttentionReason)}[/]"));
+
+        // A crash dump written during this run is the first thing to read — say so explicitly.
+        foreach (var dir in new[] { Path.Combine(plan.StateDir, "logs"), Path.Combine(Directory.GetCurrentDirectory(), ".conductor", "logs") }.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (!Directory.Exists(dir)) continue;
+            foreach (var crash in Directory.GetFiles(dir, "crash-*.log").Where(f => File.GetLastWriteTimeUtc(f) >= startedUtc))
+                AnsiConsole.MarkupLine($"[red]crash dump:[/] {Markup.Escape(crash)}");
+        }
+
+        AnsiConsole.MarkupLine($"[grey]history: {Markup.Escape(Path.Combine(plan.StateDir, "conductor.log"))} · run {Markup.Escape(Short(state.RunId))}, {state.SessionCounter} session(s)[/]");
+        if (code != 4)
+            AnsiConsole.MarkupLine($"resume: [yellow]conductor run -p {Markup.Escape(planPathArg)}[/]");
+    }
+
+    private static string Short(string id) => string.IsNullOrEmpty(id) ? "?" : id.Length >= 8 ? id[..8] : id;
 }

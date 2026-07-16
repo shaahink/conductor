@@ -296,6 +296,7 @@ public sealed class B12_3Tests
     [Trait("Category", "Integration")]
     public async Task MutatingLane_WorktreeCleanedUp_AfterCompletion()
     {
+        var startedUtc = DateTime.UtcNow;
         var (repo, cleanup) = CreateTestRepo();
         try
         {
@@ -318,10 +319,14 @@ public sealed class B12_3Tests
             Assert.DoesNotContain("conductor-lane-cleanup", branches);
             Assert.DoesNotContain("conductor-staging-cleanup", branches);
 
-            // Verify no conductor-mutating temp dirs were leaked in the temp parent
+            // Verify THIS lane leaked no temp dirs. Scoped to dirs created after the test started:
+            // the global temp also holds leftovers from sibling tests (the cancellation test can
+            // legitimately abandon a worktree when its 500ms cancel races the clone) and from any
+            // earlier aborted run on the machine — those must not fail this assertion.
             var tempRoot = Path.GetTempPath();
             var leakedDirs = Directory.GetDirectories(tempRoot, "conductor-mutating-*")
                 .Concat(Directory.GetDirectories(tempRoot, "conductor-mergegate-*"))
+                .Where(d => Directory.GetCreationTimeUtc(d) >= startedUtc)
                 .ToList();
             Assert.Empty(leakedDirs);
         }
