@@ -59,6 +59,11 @@ public sealed partial class RunLoop
         try
         {
             RecoverFromCrash();
+            if (ApplyStartPause(_ctx.State, _ctx.Options))
+            {
+                _ctx.Log("started paused (--paused) — dashboard + control plane are up, no session will spawn; press R or run `conductor resume` to start");
+                _ctx.Save();
+            }
             _ctx.Log($"conductor start — plan '{_ctx.Plan.Name}', repo {_ctx.Plan.Repo}, branch {Git.Branch(_ctx.Plan.Repo)}");
             _ctx.Events.Emit(new RunStarted
             {
@@ -358,6 +363,18 @@ public sealed partial class RunLoop
             return 130;
         }
         finally { ReleaseLock(); }
+    }
+
+    /// <summary>G3.1 `run --paused`: park the run before the first session so the operator can author
+    /// the plan / pre-seed the kanban with the control plane up. Pure so the flag→status wiring is
+    /// unit-testable. Never masks a state that needs attention (NeedsHuman/Aborted keep their reason),
+    /// and dry runs ignore it (nothing spawns anyway).</summary>
+    internal static bool ApplyStartPause(RunState state, RunOptions opts)
+    {
+        if (!opts.StartPaused || opts.DryRun) return false;
+        if (state.Status is RunStatus.NeedsHuman or RunStatus.Aborted) return false;
+        state.Status = RunStatus.Paused;
+        return true;
     }
 
     // ---------------------------------------------------------------- control & plumbing

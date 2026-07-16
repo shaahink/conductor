@@ -68,7 +68,7 @@ Where to look when something's off (full table in `DOGFOOD-RUNBOOK.md`):
 | `init [-o <dir>] [--name N] [--repo P]` | Scaffold a runnable plan + editable `templates/` + `TRACKER.md`, gates chosen from the detected repo type (dotnet/go/rust/node/python). Self-checks it loads. |
 | `new-plan [-o <dir>]` | Minimal scaffold (plan + tracker only), no templates/gates. `init` supersedes it. |
 | `doctor` | <2s health check: agent CLI, git, face-go binary, DNS/disk/API, budget, Telegram. Exit 1 if any `fail`. |
-| `run [--dry-run] [--once] [--max-sessions N] [--headless] [--no-face] [--no-control-plane] [--port P]` | Drive the plan. `--dry-run` = print the first prompt, spawn nothing. `--once` = one session. `--headless` = plain line output, no TUI (use this when driving from a non-interactive shell). `--no-face` = control plane up, no TUI. |
+| `run [--dry-run] [--once] [--max-sessions N] [--headless] [--no-face] [--no-control-plane] [--port P] [--paused]` | Drive the plan. `--dry-run` = print the first prompt, spawn nothing. `--once` = one session. `--headless` = plain line output, no TUI (use this when driving from a non-interactive shell). `--no-face` = control plane up, no TUI. `--paused` = come up idle (author the plan / pre-seed the kanban first); `resume` starts session 1. |
 | `face [--demo]` | Attach a TUI to an already-running engine (`--demo` = offline synthetic data). |
 
 ### Monitoring (read-only, safe any time)

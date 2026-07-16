@@ -128,6 +128,58 @@ public sealed class HarnessTests : IDisposable
     }
 
     [Fact]
+    public async Task FullCycle_StartPaused_IdlesUntilResume_ThenRunsSessionOne()
+    {
+        var plan = new PlanConfig
+        {
+            Name = "PausedPlan",
+            Repo = _repo,
+            Tracker = "TRACKER.md",
+            Stages = { new StageConfig { Id = "H0", Title = "Harness", Sessions = 1 } },
+            Agent = new AgentConfig
+            {
+                Command = "cmd.exe",
+                Args = { "/c", _agentScript, "{prompt}" },
+                Provider = "opencode",
+            },
+            GatePolicy = "perSession",
+            Gates =
+            {
+                new GateConfig { Name = "smoke", Command = "echo ok", Tier = "fast", TimeoutMinutes = 1 },
+            },
+        };
+        plan.Report.Commit = false;
+
+        var state = new RunState { RunId = Guid.NewGuid().ToString("N") };
+
+        using var host = ConductorHost.Build(plan, state, new PlainSink(),
+            new RunOptions(DryRun: false, Once: true, MaxSessions: 0, StartPaused: true), consoleSink: false);
+
+        var orchestrator = host.Services.GetRequiredService<Orchestrator>();
+        var runTask = orchestrator.RunAsync(CancellationToken.None);
+
+        // G3.1 gate, part 1: the engine comes up parked — Paused status, zero sessions spawned.
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        while (state.Status != RunStatus.Paused && DateTime.UtcNow < deadline)
+            await Task.Delay(50);
+        Assert.Equal(RunStatus.Paused, state.Status);
+
+        // Hold the pause a few idle cycles to prove it does not self-start.
+        await Task.Delay(2000);
+        Assert.Empty(state.History);
+        Assert.False(runTask.IsCompleted);
+
+        // G3.1 gate, part 2: a resume (same verb the Face palette / CLI send) starts session 1.
+        var inbox = host.Services.GetRequiredService<System.Collections.Concurrent.ConcurrentQueue<ControlCommand>>();
+        inbox.Enqueue(ControlCommand.Of(ControlAction.ResumeRun));
+
+        var code = await runTask.WaitAsync(TimeSpan.FromSeconds(60));
+        Assert.Equal(0, code);
+        Assert.Single(state.History);
+        Assert.Equal(SessionKind.Deliver, state.History[0].Kind);
+    }
+
+    [Fact]
     public async Task FullCycle_DryRun_DoesNotModifyRepo()
     {
         var plan = new PlanConfig

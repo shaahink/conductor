@@ -46,6 +46,10 @@ public sealed class RunCommand : Command<RunCommand.Settings>
         [CommandOption("--port <PORT>")]
         [Description("Preferred control-plane port (default 4317). If taken, the next free port is used — concurrent runs never collide.")]
         public int ControlPlanePort { get; init; } = 4317;
+
+        [CommandOption("--paused")]
+        [Description("Start idle: dashboard + control plane come up but no session spawns until you resume (author the plan / seed the board first).")]
+        public bool Paused { get; init; }
     }
 
     public override int Execute(CommandContext context, Settings settings)
@@ -68,7 +72,7 @@ public sealed class RunCommand : Command<RunCommand.Settings>
 
         // M2: the store (SqliteRunStore) is created inside ConductorHost.Build — it owns
         // the IEventSink (events table) and IRunStore (all writes).
-        var opts = new RunOptions(settings.DryRun, settings.Once, settings.MaxSessions, controlPlane, settings.ControlPlanePort);
+        var opts = new RunOptions(settings.DryRun, settings.Once, settings.MaxSessions, controlPlane, settings.ControlPlanePort, settings.Paused);
         using var cts = new CancellationTokenSource();
 #pragma warning disable MA0045 // CancelAsync doesn't exist on CancellationTokenSource
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };

@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Conductor.Core;
 
-public sealed record RunOptions(bool DryRun, bool Once, int MaxSessions, bool ControlPlane = false, int ControlPlanePort = 4317);
+public sealed record RunOptions(bool DryRun, bool Once, int MaxSessions, bool ControlPlane = false, int ControlPlanePort = 4317, bool StartPaused = false);
 
 /// <summary>
 /// Thin wiring hub: owns DI construction for RunContext + the five orchestration satellites.
