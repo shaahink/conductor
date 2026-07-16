@@ -1,19 +1,19 @@
 ﻿# Conductor — Conductor UX (U-series) run report
 
-_Updated 2026-07-16 22:41 UTC · branch `feat/foreman` · HEAD `4f3231b`_
+_Updated 2026-07-16 23:06 UTC · branch `feat/foreman` · HEAD `877ff57`_
 
 **Status:** Aborted
-**Stage:** U0 — Engine: start, resume, journey · attempts used 0 · working ▸ U0.1
-**Checkpoints:** 0/10 done · **Sessions run:** 1 · **Cost:** $0.0000 (agent $0.0000 + gates $0.0000)
+**Stage:** - · attempts used 0
+**Checkpoints:** 0/11 done · **Sessions run:** 0 · **Cost:** $0.0000 (agent $0.0000 + gates $0.0000)
 
 ## Stage progress
 
 | Stage | Title | Progress | State |
 |---|---|---|---|
-| U0 | Engine: start, resume, journey | ░░░░░░░░░░ 0/3 | **← active** |
+| U0 | Engine: start, resume, journey | ░░░░░░░░░░ 0/3 | todo |
 | U1 | Face: landing page + workspace identity | ░░░░░░░░░░ 0/2 | todo |
 | U2 | Face: controls, visual report, dev stats | ░░░░░░░░░░ 0/3 | todo |
-| U3 | Face: curated themes + glitch pass | ░░░░░░░░░░ 0/2 | todo |
+| U3 | Face: themes, agent-terminal vibe, glitch pass | ░░░░░░░░░░ 0/3 | todo |
 
 <details><summary>U0 — Engine: start, resume, journey (0/3)</summary>
 
@@ -44,12 +44,13 @@ _Updated 2026-07-16 22:41 UTC · branch `feat/foreman` · HEAD `4f3231b`_
 
 </details>
 
-<details><summary>U3 — Face: curated themes + glitch pass (0/2)</summary>
+<details><summary>U3 — Face: themes, agent-terminal vibe, glitch pass (0/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
 | U3.1 | curated themes (mocha/latte/nord/gruvbox), --theme, live switch, persisted | ⬜ TODO |  |
-| U3.2 | golden glitch pass at 3 sizes — each fix noted in evidence | ⬜ TODO |  |
+| U3.2 | golden glitch pass at 3 sizes, seeded from the spec's dogfood appendix | ⬜ TODO |  |
+| U3.3 | agent-terminal vibe: Claude Code-style transcript, provider-aware, footer strip | ⬜ TODO |  |
 
 </details>
 
@@ -57,26 +58,13 @@ _Updated 2026-07-16 22:41 UTC · branch `feat/foreman` · HEAD `4f3231b`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Overhead | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | U0 | Deliver | 1 | 07-16 22:27 | 0:14 | KilledByUser |  | 0 |  |  |  |  |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-16 23:27:09  ◆ run started · Conductor UX (U-series)
-07-16 23:27:09  ▸ stage U0 entered — Engine: start, resume, journey
-07-16 23:27:09  • session #1 U0 Deliver started (attempt 1/6)
-07-16 23:41:37  • session #1 U0 → KilledByUser  (14m27s)
-```
-
-## Health
-
-_Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
-
-```
-sessions 1 · retries 0 (0 %) · overall Ok
-✓ no health concerns detected
+07-17 00:06:50  ◆ run started · Conductor UX (U-series)
 ```
 
 ## Repo
@@ -85,7 +73,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/foreman
-working tree: M CONDUCTOR-UX-START.md, M src/Conductor/Commands/PlanSettings.cs, ?? src/Conductor/Core/Planning/PlanDiscovery.cs
+working tree: clean
 vs upstream: up to date
 ```
 
