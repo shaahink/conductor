@@ -79,6 +79,15 @@
       "agent": {
         "model": "claude-sonnet-5"
       }
+    },
+    {
+      "id": "G3",
+      "title": "Live and dynamic - author-before-run, live plan reload, live limits",
+      "sessions": 2,
+      "notes": "Deliver G3 per docs/CONDUCTOR-AI-NATIVE.md (G3) + rows G3.1/G3.2/G3.3. Closes the last live gaps. REUSE, do not fork: the Paused idle path already in RunLoop.cs (~L87), RunOptions (Orchestrator.cs), ControlFile.Parse (single-sources the POST /control whitelist), ControlDispatcher, LoadPlanFresh + ApplyPlanEdit (ControlPlaneServer.Plan.cs), the Plan-tab Settings section. G3.1: add --paused to RunCommand/RunOptions -> state.Status=Paused before the loop; dashboard+control plane up, engine idle, zero sessions until resume; unit test flag->status. G3.2: new ControlAction.ReloadPlan mapped in ControlFile.Parse + dispatched in ControlDispatcher; at the NEXT SESSION BOUNDARY ONLY (never mid-session), re-read the plan (PlanConfig.Load / LoadPlanFresh) and swap the live RunContext.Plan; /plan/edit + applied /plan/import auto-enqueue ReloadPlan; update PlanReloadCommand wording; contract test edits-then-reads-live-plan + defer-under-running-agent. G3.3: extend Plan-tab Settings + ApplyPlanEdit to edit limits (maxRunCostUsd/maxRunTokens/stallMinutes/sessionTimeoutMinutes) + a live session cap; loop honours them at the boundary (cap-down parks to Paused, never crash; cap-up continues); Face golden + key-driving test + contract test. Gate: run --paused shows Paused with 0 sessions then resume starts s1; a live stage edit is honoured by the next session after reload; maxSessions lowered below current count parks the run. The swap point is the session boundary and ONLY there.",
+      "agent": {
+        "model": "claude-opus-4-8"
+      }
     }
   ],
   "gates": [

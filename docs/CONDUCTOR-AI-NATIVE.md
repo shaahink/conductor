@@ -80,6 +80,68 @@ Kanban tab: render + move + add + live refresh (demo mirror, goldens).
 
 ---
 
+## G3 — Live & dynamic: author before you start, and re-plan without a restart
+
+**Why.** G1/G2 gave prompt→plan and a live board, but three gaps keep the loop from feeling live
+(owner review, 2026-07-16):
+1. **No "up but idle" start.** `conductor run` begins spawning sessions the instant it launches, so you
+   can't bring the dashboard up, look at the pipeline, and author *before* it does anything.
+2. **Edits aren't dynamic.** The running orchestrator holds a **fixed** plan instance
+   (`RunContext.Plan` is get-only, set once from `PlanConfig.Load` in `RunCommand`). A Face `/plan/edit`
+   or `/plan/import` rewrites the plan **file**, but the live run never re-reads it — `conductor plan
+   reload` today only *validates and prints* (`PlanReloadCommand`), and there is **no `ControlAction`
+   for reload**. So every "live" edit really only takes effect on a full process restart. The doc
+   comments that say "picks up at the next session boundary" are aspirational, not wired.
+3. **Next-session limits are static.** You can't tighten or extend a run in flight — `limits`
+   (maxRunCost/Tokens, stall/timeout) and the session budget are read from the fixed plan; there's no
+   way to cap a run that's overspending or extend one that's going well without editing JSON + restart.
+
+**Scope: one focused delivery stage, three checkpoints. Reuse the existing seams — do not fork a
+second plan store or a second control path.**
+
+- **G3.1 — `conductor run --paused` (author-before-run).** Add a `--paused` flag to `RunCommand`
+  (extend `RunOptions` — the record in `Orchestrator.cs`) that sets `state.Status = RunStatus.Paused`
+  **before** the run loop starts. The loop **already idles on `Paused`** (`RunLoop.cs` ~L87:
+  `PushIdleSnapshot` + delay), so this is a small, safe change: the engine + control plane + Face come
+  up, the engine waits at the gate, and `:`→**resume** (the existing `ResumeRun` verb) starts session 1.
+  Because the control plane is up while paused, this also unlocks **pre-seeding the Kanban board**
+  (`POST /tasks/add` works) and authoring the pipeline before any spend.
+  **Gate:** `run --paused` comes up, `conductor status` shows `Paused`, **zero** sessions spawned;
+  a resume (CLI or Face palette) starts session 1. Unit-test the flag→status wiring.
+
+- **G3.2 — live plan reload (the dynamicity core).** Add `ControlAction.ReloadPlan`
+  (`Progress.Control.cs`) mapped in `ControlFile.Parse` (which single-sources the `POST /control`
+  whitelist — so all three ingresses get it free, same as `heartbeat` did). Dispatch it in
+  `ControlDispatcher` to flag the context; at the **next session boundary** the run loop re-reads the
+  plan file (`PlanConfig.Load` / the control plane's existing `LoadPlanFresh`) and swaps the live plan
+  the loop reads — so stages/gates/limits changed via the Face take effect **in the current run**, no
+  restart. Make `RunContext.Plan` reassignable at that one safe point only (never mid-session — an
+  agent is running against the old stage graph). Then have the control plane's `/plan/edit` and an
+  applied `/plan/import` **enqueue a ReloadPlan** after a successful save, so a Face edit is dynamic by
+  default. Update `PlanReloadCommand`'s "next run" wording once the reload is real, and add a
+  `conductor plan reload` path that enqueues the verb against a live run.
+  **Gate:** with a paused/idle run up, edit a stage's `sessions` (or add a gate) via the Face, resume,
+  and the **next** session honours the new value — proven by a contract test that edits then reads the
+  live plan back, plus a golden showing the reloaded plan. A mid-session reload request is deferred to
+  the boundary, never applied under a running agent.
+
+- **G3.3 — live "next-session" limits from Settings.** Extend the Plan-tab **Settings** section and
+  `ApplyPlanEdit` (`ControlPlaneServer.Plan.cs`) to edit `limits` — `maxRunCostUsd`, `maxRunTokens`,
+  `stallMinutes`, `sessionTimeoutMinutes` — and a live **session cap** (the `--max-sessions`
+  equivalent) for the current run. Riding on G3.2's reload, the loop consults the updated limits at the
+  next boundary: lower the cap below the sessions already run and the run **parks** (`Paused`/idle,
+  never a hard crash); raise it and it continues. Face parity: fields + a golden + a key-driving test.
+  **Gate:** set `maxSessions` below the current count on a live run → it parks at the boundary with a
+  clear reason; raise it → it resumes. A contract test drives limit-down-parks / limit-up-continues.
+
+**Cross-cutting for G3:** the swap point is the **session boundary and only there** — reassigning the
+live plan while an agent runs against it is the one thing that must never happen (validate + defer).
+Everything else reuses what exists: the `Paused` idle path, `LoadPlanFresh`, the `ControlFile.Parse`
+whitelist, `ApplyPlanEdit`, and the Plan-tab Settings surface. "One more session" — the delivering
+agent adds sub-tasks via `task_add` and can split G3.2/G3.3 across a resume if the budget runs short.
+
+---
+
 ## Cross-cutting notes for the delivering agent
 - **Reuse, don't fork.** G1 is the import path with a prompt source; G2 is the task graph with two
   write endpoints + a view. If you find yourself writing a second diff engine or a second task store,
