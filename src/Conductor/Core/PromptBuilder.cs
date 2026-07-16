@@ -20,12 +20,12 @@ public sealed class PromptBuilder
         _personas = personaRegistry ?? new PersonaRegistry(plan);
         _lessons = lessons ?? new LessonsManager(plan.StateDir);
     }
-    public string Deliver(StageConfig stage, int sessionNumber, int attempt, int maxAttempts)
-        => Render("session.md", Vars(stage, sessionNumber, attempt, maxAttempts));
+    public string Deliver(StageConfig stage, int sessionNumber, int attempt, int maxAttempts, string? personaOverride = null)
+        => Render("session.md", Vars(stage, sessionNumber, attempt, maxAttempts, personaOverride));
 
-    public string Fix(StageConfig stage, int sessionNumber, int attempt, int maxAttempts, PendingFix fix)
+    public string Fix(StageConfig stage, int sessionNumber, int attempt, int maxAttempts, PendingFix fix, string? personaOverride = null)
     {
-        var vars = Vars(stage, sessionNumber, attempt, maxAttempts);
+        var vars = Vars(stage, sessionNumber, attempt, maxAttempts, personaOverride);
         vars["gateFailures"] = string.IsNullOrWhiteSpace(fix.GateFailures) ? "(no gate output captured)" : fix.GateFailures;
         vars["progressSummary"] = fix.ProgressSummary;
         vars["prevSession"] = fix.FromSession.ToString();
@@ -39,9 +39,9 @@ public sealed class PromptBuilder
         return Render("resume.md", vars);
     }
 
-    public string Audit(StageConfig stage, int sessionNumber, Models.PendingAudit audit, string stageStartHead)
+    public string Audit(StageConfig stage, int sessionNumber, Models.PendingAudit audit, string stageStartHead, string? personaOverride = null)
     {
-        var vars = Vars(stage, sessionNumber, 1, 1);
+        var vars = Vars(stage, sessionNumber, 1, 1, personaOverride);
         vars["diffBase"] = stageStartHead;
         vars["handoverPath"] = $".conductor/handovers/{stage.Id}.md";
         return Render("audit.md", vars);
@@ -58,9 +58,9 @@ public sealed class PromptBuilder
         return Render("advisor.md", vars);
     }
 
-    public string Verify(StageConfig stage, int sessionNumber, PendingVerify verify)
+    public string Verify(StageConfig stage, int sessionNumber, PendingVerify verify, string? personaOverride = null)
     {
-        var vars = Vars(stage, sessionNumber, 1, 1);
+        var vars = Vars(stage, sessionNumber, 1, 1, personaOverride);
         vars["prevSession"] = verify.FromSession.ToString();
         vars["diffBase"] = verify.StageStartHead;
         return Render("verify.md", vars);
@@ -73,7 +73,7 @@ public sealed class PromptBuilder
         return Render("review.md", vars);
     }
 
-    private Dictionary<string, string> Vars(StageConfig stage, int sessionNumber, int attempt, int maxAttempts)
+    private Dictionary<string, string> Vars(StageConfig stage, int sessionNumber, int attempt, int maxAttempts, string? personaOverride = null)
     {
         var readOrder = "";
         if (_plan.ReadOrder is { Count: > 0 } docs)
@@ -85,7 +85,8 @@ public sealed class PromptBuilder
             readOrder = sb.ToString();
         }
 
-        var personaName = _plan.ResolvePersona(stage);
+        // P1: a role→agent rule may override the stage persona for this one session.
+        var personaName = personaOverride ?? _plan.ResolvePersona(stage);
         var personaSystemPrompt = _personas.ResolveSystemPrompt(personaName) ?? "";
 
         var lessonsContent = _lessons.ReadRecent(5);

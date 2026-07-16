@@ -35,6 +35,7 @@ public sealed class RunContext
     public ITelegramService Telegram { get; }
     public WebhookNotifier Webhooks { get; }
     public IWorkflowResolver Workflows { get; }
+    public IAssignmentPolicy Assignments { get; }
 
     // ── file paths ──
 
@@ -91,7 +92,8 @@ public sealed class RunContext
         ITelegramService telegram,
         WebhookNotifier webhooks,
         IWorkflowResolver? workflowResolver,
-        ILogger logger)
+        ILogger logger,
+        IAssignmentPolicy? assignmentPolicy = null)
     {
         Plan = plan;
         State = state;
@@ -109,6 +111,7 @@ public sealed class RunContext
         Telegram = telegram;
         Webhooks = webhooks;
         Workflows = workflowResolver ?? new WorkflowEngine();
+        Assignments = assignmentPolicy ?? new DefaultAssignmentPolicy();
         Logger = logger;
         StateDir = plan.StateDir;
         LockPath = Path.Combine(plan.StateDir, "conductor.lock");

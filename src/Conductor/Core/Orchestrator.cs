@@ -43,7 +43,8 @@ public sealed class Orchestrator
         ProcessSupervisor? processSupervisor = null,
         ControlDispatcher? dispatcher = null,
         ConcurrentQueue<ControlCommand>? controlInbox = null,
-        IWorkflowResolver? workflowResolver = null)
+        IWorkflowResolver? workflowResolver = null,
+        IAssignmentPolicy? assignmentPolicy = null)
     {
         var prompts = BuildPromptBuilder(plan);
         var lessons = new LessonsManager(plan.StateDir);
@@ -54,7 +55,8 @@ public sealed class Orchestrator
         _ctx = new RunContext(
             plan, state, opts, sink, events, prompts, lessons, iPlanner, progress,
             agentProvider, store, processSupervisor, controlInbox, telegram, webhooks,
-            workflowResolver: workflowResolver ?? new WorkflowEngine(), logger);
+            workflowResolver: workflowResolver ?? new WorkflowEngine(), logger,
+            assignmentPolicy: assignmentPolicy ?? new DefaultAssignmentPolicy());
 
         _gates = new GateOrchestrator(plan, state, events, store);
         _lanes = new LaneCoordinator(plan, state, sink, events, _ctx.Log, pathClaims: new PathClaimTracker());

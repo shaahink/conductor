@@ -60,6 +60,21 @@ public sealed partial class SessionRunner
         // for crash recovery (Resume must carry the agent session id).
         var kind = ResolveSessionKind(stage, pendingResume, pendingAudit, pendingVerify, pendingFix);
 
+        // P1: ask the assignment policy who runs this session and which ready items it claims.
+        // With no `pipeline` rules the default policy reproduces the classic behavior exactly
+        // (stage/plan default agent, the first not-done checkpoint, one item).
+        var readyItems = preTrack.ForStage(stage.Id).Where(c => !c.IsDone)
+            .Select(c => new ReadyItem { Id = c.Id, Title = c.Title })
+            .ToList();
+        var assignment = _ctx.Assignments.Assign(_ctx.Plan.Pipeline, kind, readyItems, claimedPaths: null);
+        if (assignment.Model != null || assignment.Persona != null || assignment.Command != null)
+            _ctx.Log($"P1 assignment: role '{DefaultAssignmentPolicy.RoleFor(kind)}' → " +
+                     $"{(assignment.Command != null ? $"command {assignment.Command} " : "")}" +
+                     $"{(assignment.Model != null ? $"model {assignment.Model} " : "")}" +
+                     $"{(assignment.Persona != null ? $"persona {assignment.Persona}" : "")}".TrimEnd());
+        if (assignment.Items.Count > 1)
+            _ctx.Log($"P1 assignment: multi-item session — claims {string.Join(", ", assignment.Items.Select(i => i.Id))}");
+
         _ctx.State.SessionCounter++;
         var attempt = _ctx.State.AttemptsThisStage + 1;
         var maxAttempts = MaxAttempts(stage);
@@ -75,7 +90,7 @@ public sealed partial class SessionRunner
             _ctx.Log($"review stage {stage.Id}: scaffolded review artifact at {reviewPath}");
         }
 
-        var personaName = _ctx.Plan.ResolvePersona(stage);
+        var personaName = assignment.Persona ?? _ctx.Plan.ResolvePersona(stage);
         var activeCp = preTrack.ForStage(stage.Id).FirstOrDefault(c => !c.IsDone);
         if (kind == SessionKind.Deliver &&
             "deliver".Equals(personaName, StringComparison.OrdinalIgnoreCase) &&
@@ -101,10 +116,21 @@ public sealed partial class SessionRunner
         }
 
         var prompt = BuildPrompt(kind, stage, _ctx.State.SessionCounter, attempt, maxAttempts,
-            pendingResume, pendingAudit, pendingVerify, pendingFix, isReview, reviewPath);
+            pendingResume, pendingAudit, pendingVerify, pendingFix, isReview, reviewPath, assignment.Persona);
         var batterySection = _ctx.Prompts.BatterySection(_ctx.State, _ctx.Store);
         if (batterySection.Length > 0)
             prompt = prompt.TrimEnd() + "\n\n" + batterySection;
+
+        // P1: a multi-item session must SEE every item it claimed — the prompt names each one.
+        if (assignment.Items.Count > 1)
+        {
+            var claimedList = new StringBuilder();
+            claimedList.AppendLine("## Claimed items this session");
+            claimedList.AppendLine("The assignment policy claimed ALL of the following conflict-free items for this single session. Deliver each one and update its tracker row (Status + Commit + Evidence) individually.");
+            foreach (var item in assignment.Items)
+                claimedList.AppendLine($"- **{item.Id}** — {item.Title}");
+            prompt = prompt.TrimEnd() + "\n\n" + claimedList.ToString().TrimEnd() + "\n";
+        }
 
         if (kind == SessionKind.Deliver && _ctx.State.ParallelAuditOutcome is { Completed: true, MaxSeverity: not AuditFindingSeverity.High } outcome)
         {
@@ -150,12 +176,16 @@ public sealed partial class SessionRunner
             Attempt = attempt,
             MaxAttempts = maxAttempts,
             AgentSessionId = rec.ClaudeSessionId,
-            Persona = _ctx.Plan.ResolvePersona(stage),
+            Persona = personaName,
         });
 
         bool stalled = false, timedOut = false, killedByUser = false;
         await GateRunner.RunHookAsync(_ctx.Plan, _ctx.Plan.Setup, "setup", _ctx.Log, ct).ConfigureAwait(false);
         var resolvedAgent = _ctx.Plan.ResolveAgent(stage);
+        // P1: the role→agent rule overrides only what it names; ResolveAgent returns a fresh merged
+        // instance, so mutating it never touches the plan's own config.
+        if (assignment.Model is { Length: > 0 }) resolvedAgent.Model = assignment.Model;
+        if (assignment.Command is { Length: > 0 }) resolvedAgent.Command = assignment.Command;
 
         var mcpConfigPath = WireMcpServer(rec, stage);
         Dictionary<string, string>? extraEnv = null;
@@ -359,17 +389,17 @@ public sealed partial class SessionRunner
 
     private string BuildPrompt(SessionKind kind, StageConfig stage, int sessionNumber, int attempt, int maxAttempts,
         PendingResume? pendingResume, PendingAudit? pendingAudit, PendingVerify? pendingVerify, PendingFix? pendingFix,
-        bool isReview, string reviewPath)
+        bool isReview, string reviewPath, string? personaOverride = null)
     {
         return kind switch
         {
             SessionKind.Resume => _ctx.Prompts.Resume(stage, sessionNumber, attempt, maxAttempts, pendingResume!),
-            SessionKind.Audit => _ctx.Prompts.Audit(stage, sessionNumber, pendingAudit!, _ctx.State.CurrentStageStartHead ?? "HEAD~1"),
-            SessionKind.Verify => _ctx.Prompts.Verify(stage, sessionNumber, pendingVerify!),
-            SessionKind.Fix => _ctx.Prompts.Fix(stage, sessionNumber, attempt, maxAttempts, pendingFix!),
+            SessionKind.Audit => _ctx.Prompts.Audit(stage, sessionNumber, pendingAudit!, _ctx.State.CurrentStageStartHead ?? "HEAD~1", personaOverride),
+            SessionKind.Verify => _ctx.Prompts.Verify(stage, sessionNumber, pendingVerify!, personaOverride),
+            SessionKind.Fix => _ctx.Prompts.Fix(stage, sessionNumber, attempt, maxAttempts, pendingFix!, personaOverride),
             _ => isReview
                 ? _ctx.Prompts.Review(stage, sessionNumber, attempt, maxAttempts, reviewPath)
-                : _ctx.Prompts.Deliver(stage, sessionNumber, attempt, maxAttempts),
+                : _ctx.Prompts.Deliver(stage, sessionNumber, attempt, maxAttempts, personaOverride),
         };
     }
 

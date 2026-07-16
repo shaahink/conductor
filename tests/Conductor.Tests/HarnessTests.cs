@@ -180,6 +180,69 @@ public sealed class HarnessTests : IDisposable
     }
 
     [Fact]
+    public async Task FullCycle_RoleModelAndMultiItemClaim_ReachTheRealSession()
+    {
+        // P1 live proof: pipeline rules assign deliver → a distinct model, and multi-item claims two
+        // sibling checkpoints. The MODEL must reach the spawned agent's real process args ({model}
+        // placeholder) and the PROMPT on disk must name both claimed items.
+        await File.WriteAllTextAsync(Path.Combine(_repo, "TRACKER.md"),
+            "# Harness Plan\n\n## Handoff\nlast: none.\n\n## Checkpoints\n\n" +
+            "| # | Checkpoint | Status | Commit | Evidence |\n|---|---|---|---|---|\n" +
+            "| H0.1 | first harness checkpoint | TODO | | |\n" +
+            "| H0.2 | second harness checkpoint | TODO | | |\n");
+        var modelEcho = Path.Combine(_repo, "model-echo.cmd");
+        await File.WriteAllTextAsync(modelEcho, string.Join("\r\n",
+            "@echo off",
+            "echo %1> model-seen.txt",
+            "echo {\"type\":\"text\",\"part\":{\"text\":\"noop.\"}}",
+            "echo {\"type\":\"step_finish\",\"part\":{\"cost\":0.0001,\"tokens\":{\"input\":10,\"output\":5}}}",
+            "exit /b 0",
+            ""));
+
+        var plan = new PlanConfig
+        {
+            Name = "AssignmentPlan",
+            Repo = _repo,
+            Tracker = "TRACKER.md",
+            Stages = { new StageConfig { Id = "H0", Title = "Harness", Sessions = 1 } },
+            Agent = new AgentConfig
+            {
+                Command = "cmd.exe",
+                Args = { "/c", modelEcho, "{model}", "{prompt}" },
+                Provider = "opencode",
+            },
+            Pipeline = new PipelineRules
+            {
+                Roles = new Dictionary<string, RoleAgentRule>(StringComparer.Ordinal)
+                {
+                    ["deliver"] = new() { Model = "role-override-model" },
+                },
+                MultiItem = new MultiItemRule { Enabled = true, MaxItems = 2 },
+            },
+            GatePolicy = "perSession",
+            Gates = { new GateConfig { Name = "smoke", Command = "echo ok", Tier = "fast", TimeoutMinutes = 1 } },
+        };
+        plan.Report.Commit = false;
+
+        var state = new RunState { RunId = Guid.NewGuid().ToString("N") };
+        using var host = ConductorHost.Build(plan, state, new PlainSink(),
+            new RunOptions(DryRun: false, Once: true, MaxSessions: 0), consoleSink: false);
+
+        var code = await host.Services.GetRequiredService<Orchestrator>().RunAsync(CancellationToken.None);
+        Assert.Equal(0, code);
+
+        // The role model reached the REAL process: the fake agent echoed its first arg ({model}).
+        var seen = await File.ReadAllTextAsync(Path.Combine(_repo, "model-seen.txt"));
+        Assert.Contains("role-override-model", seen, StringComparison.Ordinal);
+
+        // The prompt on disk names BOTH claimed items.
+        var promptMd = await File.ReadAllTextAsync(Path.Combine(_stateDir, "logs", "session-001.prompt.md"));
+        Assert.Contains("Claimed items this session", promptMd, StringComparison.Ordinal);
+        Assert.Contains("H0.1", promptMd, StringComparison.Ordinal);
+        Assert.Contains("H0.2", promptMd, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task FullCycle_DryRun_DoesNotModifyRepo()
     {
         var plan = new PlanConfig
