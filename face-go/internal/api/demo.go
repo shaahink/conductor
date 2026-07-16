@@ -397,6 +397,35 @@ func applyDemoEdit(plan *PlanDto, e PlanEditDto) {
 		case "defaultworkflow":
 			plan.DefaultWorkflow = val
 		}
+	case "limits": // G3.3 live limits — mirrors ApplyLimitsEdit (empty clears a nullable cap)
+		switch e.Field {
+		case "maxsessions":
+			if n, err := strconv.Atoi(val); err == nil && n > 0 {
+				plan.Limits.MaxSessions = &n
+			} else {
+				plan.Limits.MaxSessions = nil
+			}
+		case "maxruncostusd":
+			if f, err := strconv.ParseFloat(val, 64); err == nil && f > 0 {
+				plan.Limits.MaxRunCostUsd = &f
+			} else {
+				plan.Limits.MaxRunCostUsd = nil
+			}
+		case "maxruntokens":
+			if n, err := strconv.ParseInt(val, 10, 64); err == nil && n > 0 {
+				plan.Limits.MaxRunTokens = &n
+			} else {
+				plan.Limits.MaxRunTokens = nil
+			}
+		case "stallminutes":
+			if n, err := strconv.Atoi(val); err == nil && n > 0 {
+				plan.Limits.StallMinutes = n
+			}
+		case "sessiontimeoutminutes":
+			if n, err := strconv.Atoi(val); err == nil && n > 0 {
+				plan.Limits.SessionTimeoutMinutes = n
+			}
+		}
 	}
 }
 

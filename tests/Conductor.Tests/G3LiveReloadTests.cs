@@ -136,4 +136,91 @@ public sealed class G3LiveReloadTests
             try { Directory.Delete(repo, recursive: true); } catch (IOException) { }
         }
     }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task LiveSessionCap_ParksAtBoundary_AndRaisingItResumes()
+    {
+        var repo = Path.Combine(Path.GetTempPath(), $"conductor-cap-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(repo);
+        using var cts = new CancellationTokenSource();
+        try
+        {
+            ProcResult Git(string args) => ProcessRunner.Run("git",
+                args.Split(' ', StringSplitOptions.RemoveEmptyEntries), repo,
+                TimeSpan.FromSeconds(30), CancellationToken.None);
+            Git("init -b main");
+            Git("config user.email cap@test");
+            Git("config user.name Cap");
+            await File.WriteAllTextAsync(Path.Combine(repo, "README.md"), "# c", CancellationToken.None);
+            Git("add README.md");
+            Git("commit -m init --no-gpg-sign");
+            await File.WriteAllTextAsync(Path.Combine(repo, "TRACKER.md"),
+                "# Plan\n\n## Handoff\nnone.\n\n| # | Checkpoint | Status | Commit | Evidence |\n|---|---|---|---|---|\n| H0.1 | never done | TODO | | |\n",
+                CancellationToken.None);
+            var agentScript = Path.Combine(repo, "fake-agent.cmd");
+            await File.WriteAllTextAsync(agentScript, string.Join("\r\n",
+                "@echo off",
+                "echo {\"type\":\"text\",\"part\":{\"text\":\"noop session.\"}}",
+                "echo {\"type\":\"step_finish\",\"part\":{\"cost\":0.0001,\"tokens\":{\"input\":10,\"output\":5}}}",
+                "exit /b 0",
+                ""), CancellationToken.None);
+
+            var planPath = Path.Combine(repo, "cap.plan.json");
+            var seed = new PlanConfig
+            {
+                Name = "cap-live",
+                Repo = repo.Replace("\\", "/"),
+                Tracker = "TRACKER.md",
+                Stages = [new StageConfig { Id = "H0", Title = "Cap", Sessions = 5 }],
+                Agent = new AgentConfig { Command = "cmd.exe", Args = ["/c", agentScript, "{prompt}"], Provider = "opencode" },
+                GatePolicy = "perSession",
+                Gates = [new GateConfig { Name = "smoke", Command = "echo ok", Tier = "fast", TimeoutMinutes = 1 }],
+            };
+            seed.Limits.MaxSessions = 1; // cap-down: park after session 1
+            seed.Report.Commit = false;
+            await File.WriteAllTextAsync(planPath, JsonSerializer.Serialize(seed, PlanConfig.JsonOpts),
+                new UTF8Encoding(encoderShouldEmitUTF8Identifier: true), CancellationToken.None);
+            var plan = PlanConfig.Load(planPath);
+
+            var state = new RunState { RunId = Guid.NewGuid().ToString("N") };
+            using var host = ConductorHost.Build(plan, state, new PlainSink(),
+                new RunOptions(DryRun: false, Once: false, MaxSessions: 0), consoleSink: false);
+            var runTask = host.Services.GetRequiredService<Orchestrator>().RunAsync(cts.Token);
+
+            // Gate half 1 — limit-down PARKS: session 1 runs, then the boundary parks the run
+            // (Paused + ParkedBySessionCap + a reason), it does NOT hard-stop or crash.
+            var deadline = DateTime.UtcNow.AddSeconds(60);
+            while (!(state.Status == RunStatus.Paused && state.ParkedBySessionCap) && DateTime.UtcNow < deadline)
+                await Task.Delay(100, CancellationToken.None);
+            Assert.True(state.ParkedBySessionCap, "run should park when the session cap is reached");
+            Assert.Equal(RunStatus.Paused, state.Status);
+            Assert.Single(state.History);
+            Assert.Contains("session cap", state.AttentionReason, StringComparison.OrdinalIgnoreCase);
+            Assert.False(runTask.IsCompleted); // parked, still up — the dashboard stays alive
+
+            // Gate half 2 — limit-up CONTINUES: raise the cap in the plan file (what the Face
+            // Settings edit does) and queue the live reload; the reload itself is the resume.
+            var edited = PlanConfig.Load(planPath);
+            edited.Limits.MaxSessions = 3;
+            edited.Save();
+            var inbox = host.Services.GetRequiredService<System.Collections.Concurrent.ConcurrentQueue<ControlCommand>>();
+            inbox.Enqueue(ControlCommand.Of(ControlAction.ReloadPlan));
+
+            deadline = DateTime.UtcNow.AddSeconds(60);
+            while (state.SessionCounter < 2 && DateTime.UtcNow < deadline)
+                await Task.Delay(100, CancellationToken.None);
+            Assert.True(state.SessionCounter >= 2, "raising the cap should let the next session run");
+            Assert.False(state.ParkedBySessionCap);
+
+            await cts.CancelAsync();
+            var code = await runTask.WaitAsync(TimeSpan.FromSeconds(30), CancellationToken.None);
+            Assert.Equal(130, code); // clean cancellation path, state saved
+        }
+        finally
+        {
+            await cts.CancelAsync();
+            try { Directory.Delete(repo, recursive: true); } catch (IOException) { }
+        }
+    }
 }

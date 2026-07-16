@@ -21,6 +21,10 @@ public sealed class RunState
     /// <summary>If true, the orchestrator parks at <c>Paused</c> after the current stage's checkpoints
     /// are all confirmed, rather than advancing automatically (B3.3).</summary>
     public bool PauseAfterStage { get; set; }
+    /// <summary>G3.3: the run is parked because <c>limits.maxSessions</c> was reached. Distinguishes a
+    /// cap-park from an operator pause so a live plan reload that raises/clears the cap can auto-resume
+    /// exactly this park and no other.</summary>
+    public bool ParkedBySessionCap { get; set; }
     public string? AttentionReason { get; set; }
     public HashSet<string> SkippedStages { get; set; } = new(StringComparer.Ordinal);
     public PendingFix? PendingFix { get; set; }

@@ -245,6 +245,21 @@ public sealed partial class RunLoop
                     return 0;
                 }
 
+                // G3.3: the LIVE session cap (limits.maxSessions) parks instead of stopping — the run
+                // stays up (dashboard + control plane), and raising/clearing the cap from the Plan tab
+                // triggers a reload that un-parks it (see ApplyPlanReload). Counts the run's total
+                // sessions (SessionCounter), not this process's, so a cap set below work already done
+                // parks immediately at the boundary.
+                if (_ctx.Plan.Limits.MaxSessions is { } liveCap && liveCap > 0 && _ctx.State.SessionCounter >= liveCap)
+                {
+                    _ctx.State.Status = RunStatus.Paused;
+                    _ctx.State.ParkedBySessionCap = true;
+                    _ctx.State.AttentionReason = $"session cap reached ({_ctx.State.SessionCounter}/{liveCap}) — raise or clear limits.maxSessions (Plan tab → Settings) to continue";
+                    _ctx.Log($"session cap reached ({_ctx.State.SessionCounter}/{liveCap}) — parking at the session boundary");
+                    _saveAndReport();
+                    continue;
+                }
+
                 if (_ctx.Options.DryRun)
                 {
                     var kind = _ctx.State.PendingResume != null ? SessionKind.Resume
@@ -397,6 +412,21 @@ public sealed partial class RunLoop
         Dispatcher.SwapPlan(fresh);
         _ctx.Events.Emit(new PlanReloaded { PlanVersion = fresh.PlanVersion, Stages = fresh.Stages.Count, Gates = fresh.Gates.Count });
         _ctx.Log($"plan reloaded at session boundary — v{fresh.PlanVersion}, {fresh.Stages.Count} stages, {fresh.Gates.Count} gates");
+
+        // G3.3: if this reload raised/cleared the session cap that parked the run, un-park it —
+        // the operator's Plan-tab edit IS the resume. Only a cap-park is auto-resumed; an operator
+        // pause stays paused.
+        if (_ctx.State.ParkedBySessionCap
+            && (fresh.Limits.MaxSessions is not { } cap || cap <= 0 || _ctx.State.SessionCounter < cap))
+        {
+            _ctx.State.ParkedBySessionCap = false;
+            _ctx.State.AttentionReason = null;
+            if (_ctx.State.Status == RunStatus.Paused)
+            {
+                _ctx.State.Status = RunStatus.Idle;
+                _ctx.Log("session cap raised/cleared by the reloaded plan — resuming");
+            }
+        }
         _saveAndReport();
     }
 

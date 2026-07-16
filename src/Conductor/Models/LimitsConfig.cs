@@ -57,6 +57,12 @@ public sealed class LimitsConfig
     /// and its checkpoints are marked DONE. Below this threshold the findings feed a retry.
     /// Default 80, per-stage overridable in the plan.</summary>
     public int VerifierThreshold { get; set; } = 80;
+    /// <summary>G3.3: live session cap for the run — when the run's total session count reaches this,
+    /// the loop PARKS at the next session boundary (Paused, with a clear reason) instead of spawning
+    /// another session; raising or clearing the cap (Plan tab → Settings, which triggers a live
+    /// reload) resumes it. Editable in flight, unlike the process-scoped <c>--max-sessions</c> flag
+    /// (which stops the process rather than parking). null/0 = no cap.</summary>
+    public int? MaxSessions { get; set; }
 }
 
 /// <summary>O2: DNS preflight configuration for network health validation before spawning.</summary>

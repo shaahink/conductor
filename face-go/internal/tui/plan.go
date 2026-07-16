@@ -30,6 +30,7 @@ type planField struct {
 	Kind    planFieldKind
 	Options []string // enum only
 	Custom  bool     // enum also accepts a free-text value via the "✎ custom…" option
+	Target  string   // edit target override (e.g. "limits"); empty = derived from the section
 }
 
 // Curated model choices for the picker; "(agent default)" clears the per-stage override, and the
@@ -96,6 +97,14 @@ func (m Model) settingsFields() []planField {
 		{Label: "name", Field: "name", Kind: fieldText},
 		{Label: "gatePolicy", Field: "gatepolicy", Kind: fieldEnum, Options: []string{"perSession", "perPhase"}},
 		{Label: "defaultWorkflow", Field: "defaultworkflow", Kind: fieldEnum, Options: m.workflowChoices()},
+		// G3.3 live limits: saved through the "limits" edit target; the engine reloads the plan at
+		// its next session boundary, so these steer the CURRENT run. Saving an empty value clears
+		// a nullable cap (maxSessions / maxRunCostUsd / maxRunTokens).
+		{Label: "maxSessions", Field: "maxsessions", Kind: fieldInt, Target: "limits"},
+		{Label: "maxRunCostUsd", Field: "maxruncostusd", Kind: fieldText, Target: "limits"},
+		{Label: "maxRunTokens", Field: "maxruntokens", Kind: fieldInt, Target: "limits"},
+		{Label: "stallMinutes", Field: "stallminutes", Kind: fieldInt, Target: "limits"},
+		{Label: "sessionTimeout", Field: "sessiontimeoutminutes", Kind: fieldInt, Target: "limits"},
 	}
 }
 
@@ -311,6 +320,9 @@ func (m *Model) savePlanFieldValue(f planField, value string) (tea.Model, tea.Cm
 		value = "" // clears the per-stage model override / persona
 	}
 	target, id := m.currentTarget()
+	if f.Target != "" { // field-level override (the Settings limits rows post to "limits")
+		target, id = f.Target, ""
+	}
 	m.planStatus = "saving…"
 	v := value
 	return m, m.cmdPostPlanEdit(api.PlanEditRequestDto{
@@ -527,6 +539,25 @@ func (m Model) currentFieldValue(field string) string {
 			return m.plan.GatePolicy
 		case "defaultworkflow":
 			return m.plan.DefaultWorkflow
+		case "maxsessions":
+			if m.plan.Limits.MaxSessions != nil {
+				return strconv.Itoa(*m.plan.Limits.MaxSessions)
+			}
+			return ""
+		case "maxruncostusd":
+			if m.plan.Limits.MaxRunCostUsd != nil {
+				return strconv.FormatFloat(*m.plan.Limits.MaxRunCostUsd, 'f', -1, 64)
+			}
+			return ""
+		case "maxruntokens":
+			if m.plan.Limits.MaxRunTokens != nil {
+				return strconv.FormatInt(*m.plan.Limits.MaxRunTokens, 10)
+			}
+			return ""
+		case "stallminutes":
+			return strconv.Itoa(m.plan.Limits.StallMinutes)
+		case "sessiontimeoutminutes":
+			return strconv.Itoa(m.plan.Limits.SessionTimeoutMinutes)
 		}
 	case planTabGates:
 		if m.planGateIdx >= len(m.plan.Gates) {

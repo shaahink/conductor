@@ -1,11 +1,13 @@
 namespace Conductor.Core.Http;
 
-/// <summary>Plan-level limits surfaced to the TUI editor (read-only today; a future edit target).</summary>
+/// <summary>Plan-level limits surfaced to the TUI editor — editable since G3.3 via the
+/// <c>limits</c> target on <c>POST /plan/edit</c>, live-applied at the next session boundary.</summary>
 public sealed record PlanLimitsDto(
-    int StallMinutes, int SessionTimeoutMinutes, decimal? MaxRunCostUsd, long? MaxRunTokens, int VerifierThreshold);
+    int StallMinutes, int SessionTimeoutMinutes, decimal? MaxRunCostUsd, long? MaxRunTokens, int VerifierThreshold,
+    int? MaxSessions = null);
 
 /// <summary>One edit the TUI applies to the plan. <c>Op</c> ∈ set|add|delete (absent/null ⇒ "set" for
-/// back-compat). <c>Target</c> ∈ stage|gate|plan|telegram; <c>Id</c> is the stage id / gate name (empty
+/// back-compat). <c>Target</c> ∈ stage|gate|plan|limits|telegram; <c>Id</c> is the stage id / gate name (empty
 /// for plan-level). For a <b>set</b>, <c>Field</c> is the property (title, model, workflow, kind, sessions,
 /// notes, persona, command, tier, timeout, gatePolicy, defaultWorkflow) and <c>Value</c> the new value
 /// (null clears optional fields). For an <b>add</b> (stage|gate only), <c>Id</c> is the new id/name and

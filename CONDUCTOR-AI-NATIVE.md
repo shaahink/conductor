@@ -13,26 +13,33 @@ agent adds sub-task rows via `task_add` as it works; the rows below are the conf
 | G2.2 | Face: Kanban tab (b) — TODO/In-Progress/Done columns, ↑↓ select, ←→ move, n add, live refresh; demo mirror + goldens | DONE | 11d77db | tab_kanban.go; kanban_test.go (move/reopen/add round-trips); goldens kanban / kanban_add (three populated columns) |
 | G3.1 | Backend: `conductor run --paused` — dashboard + control plane up, engine idle at the gate; resume starts it (author-before-run, pre-seed kanban) | DONE | see git | `RunOptions.StartPaused` + `RunLoop.ApplyStartPause` (pure, never masks NeedsHuman/Aborted, dry-run ignores); RunLoopStartPauseTests (4); HarnessTests.FullCycle_StartPaused_IdlesUntilResume_ThenRunsSessionOne — live paused idle (0 sessions, task still running) → inbox ResumeRun → session 1 runs, exit 0 |
 | G3.2 | Backend: live plan reload — `ControlAction.ReloadPlan` re-reads the plan at the next session boundary and swaps the live plan; Face `/plan/edit` + applied `/plan/import` auto-enqueue it; contract test | DONE | see git | 12th verb `reload-plan` (ControlFile.Parse → all 3 ingresses); dispatcher always defers (`ConsumeReloadPending`), swap ONLY at loop top = session boundary (`ApplyPlanReload`: SwapPlan on ctx+prompts/gates/lanes/dispatcher, `PlanReloaded` event, invalid file = loud no-op); `/plan/edit`+applied import enqueue it; CLI `plan reload` queues it; Face palette entry + golden; G3LiveReloadTests (live: paused run, file edit, reload+resume → StageEntered carries new title), 3 contract tests (edit enqueues / reject doesn't / apply-import does, preview doesn't); 764 C# green |
-| G3.3 | Face+backend: live "next-session" limits — edit `limits` + session cap from the Plan-tab Settings; loop honours them at the boundary (cap-down parks, cap-up continues); golden + contract test | TODO | | |
+| G3.3 | Face+backend: live "next-session" limits — edit `limits` + session cap from the Plan-tab Settings; loop honours them at the boundary (cap-down parks, cap-up continues); golden + contract test | DONE | see git | New `limits.maxSessions` (run-total cap; parks, never stops) + `limits` target on /plan/edit (5 fields, empty clears a cap, invalid rejected atomically); park sets Paused+ParkedBySessionCap+reason, reload that raises/clears cap auto-resumes exactly that park; Face Settings gains 5 limits rows (target:"limits"), plan_settings golden, TestPlanSettingsLimitsFieldRoundTrips (set 5→clear); live proof G3LiveReloadTests.LiveSessionCap_ParksAtBoundary_AndRaisingItResumes; contract PostPlanEdit_LimitsFields_PersistClearAndValidate; C# 766 + Go green |
 
 ## Handoff
-_**G1 + G2 DONE** and verified live (credential-free: a fake file-cat advisor subprocess plays the
-model). **G1** — `POST /plan/import` routes freeform prose through the plan's advisor model
-(`Advisor.AskTextAsync` fixed a latent bug where the import prompt's plan JSON could never satisfy the
-verdict regex); the Face's Plan tab gained a **Prompt** section beside Import, both landing on the
-shared import-diff view. **G2** — `POST /tasks/update|add` share one `TaskWrites` service with the MCP
-task tools (can't drift); the Face's **Kanban** tab (`b`, the 11th tab) is a live board with ←→ move /
-`n` add. **Hardening** (commit `4c96bd0`): the control plane now requires a **per-run write token**
-(`X-Conductor-Token`, from `control-plane.json`) on every POST — a CSRF guard, since `/inject` and a
-prompt-driven `/plan/import` are prompt-injection vectors; freeform apply must be previewed first.
-Suites at G2 close: C# 750, Go all packages._
+_**ALL G-SERIES STAGES DONE (G1+G2+G3), 2026-07-16 — this tracker is CLOSED.** G3 (live & dynamic)
+landed in three checkpoints, each verified live with zero model spend:_
 
-_**NEXT: G3 (live & dynamic) — the one gap left.** Today the running orchestrator holds a **fixed**
-plan (`RunContext.Plan` is get-only, loaded once); Face edits only apply on a full **restart**, and
-`conductor run` starts working immediately with no "author-first" idle. G3 closes that in one stage:
-**G3.1** `run --paused` (dashboard up, engine idle → resume to start — the `Paused` idle path already
-exists in `RunLoop.cs`); **G3.2** a real `ControlAction.ReloadPlan` that swaps the live plan at the
-**next session boundary** (never mid-session) and is auto-enqueued by `/plan/edit` + applied
-`/plan/import`; **G3.3** live `limits` + session cap from the Plan-tab Settings. Read the G3 section of
-`docs/CONDUCTOR-AI-NATIVE.md` before starting — it names every seam to reuse. Independent of G1/G2;
-this is the whole of the next session's work._
+- _**G3.1** `conductor run --paused`: engine + control plane + Face come up parked; `resume` (any
+  ingress) starts session 1. `RunLoop.ApplyStartPause` is pure + unit-tested; the harness proves the
+  full cycle (paused idles with 0 sessions → inbox ResumeRun → exactly one session runs)._
+- _**G3.2** live plan reload: 12th control verb `reload-plan` (via `ControlFile.Parse`, so all three
+  ingresses accept it). Always deferred — the run loop consumes it ONLY at the top of its iteration
+  (the session boundary; paused/idle iterations included, so an edit made while parked is live before
+  resume). `ApplyPlanReload` re-reads the plan file, swaps `RunContext.Plan` + PromptBuilder and the
+  plan-caching satellites (`GateOrchestrator`/`LaneCoordinator`/`ControlDispatcher` `SwapPlan`), emits
+  `PlanReloaded` (timeline/SSE). `/plan/edit` + applied `/plan/import` auto-enqueue it; `conductor
+  plan reload` queues it too. Invalid/missing file = loud no-op, old plan stays._
+- _**G3.3** live limits: new `limits.maxSessions` (run-total session cap) + a `limits` target on
+  `/plan/edit` (maxSessions/maxRunCostUsd/maxRunTokens/stallMinutes/sessionTimeoutMinutes; empty
+  clears a nullable cap). Cap reached → run PARKS at the boundary (`Paused` + `ParkedBySessionCap` +
+  clear reason) — never a stop/crash; a reload that raises/clears the cap auto-resumes exactly that
+  park (an operator pause is never auto-resumed). Face Plan-tab Settings gained the five rows._
+
+_Suites at close: **C# 766**, Go all packages, ratchet green (RunLoop split into `RunLoop.Control.cs`,
+`PlanReloaded` in its own file). Key tests: `G3LiveReloadTests` (live reload + live cap park/resume),
+`HarnessTests.FullCycle_StartPaused_*`, `ControlPlaneServerPlanTests` (limits + reload-enqueue
+contracts), `TestPlanSettingsLimitsFieldRoundTrips` + `plan_settings` golden (Go)._
+
+_**NEXT: the P-series** — `plans/conductor-planner.plan.json`, tracker `CONDUCTOR-PLANNER.md`, brief
+`docs/CONDUCTOR-PLANNER.md`. G3 was its prerequisite (live reload makes dynamic planning real);
+start at P0 (the `Conductor.Planning` library keystone + delete the dead `agent.tokenCeiling`)._

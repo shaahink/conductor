@@ -300,6 +300,50 @@ public sealed class ControlPlaneServerPlanTests : IDisposable
     }
 
     [Fact]
+    public async Task PostPlanEdit_LimitsFields_PersistClearAndValidate()
+    {
+        var (server, port) = StartServer();
+        try
+        {
+            // G3.3: the live-tunable limits, all five fields in one atomic batch.
+            var resp = await PostAsync(port, "/plan/edit",
+                """
+                {"edits":[
+                  {"target":"limits","id":"","field":"maxsessions","value":"7"},
+                  {"target":"limits","id":"","field":"maxruncostusd","value":"1.50"},
+                  {"target":"limits","id":"","field":"maxruntokens","value":"250000"},
+                  {"target":"limits","id":"","field":"stallminutes","value":"20"},
+                  {"target":"limits","id":"","field":"sessiontimeoutminutes","value":"90"}]}
+                """);
+            Assert.Equal(HttpStatusCode.Accepted, resp.StatusCode);
+            var l = PlanConfig.Load(_planPath).Limits;
+            Assert.Equal(7, l.MaxSessions);
+            Assert.Equal(1.50m, l.MaxRunCostUsd);
+            Assert.Equal(250_000, l.MaxRunTokens);
+            Assert.Equal(20, l.StallMinutes);
+            Assert.Equal(90, l.SessionTimeoutMinutes);
+
+            // GET /plan surfaces the cap (the Face Settings reads it from here).
+            using (var doc = JsonDocument.Parse(await _http.GetStringAsync($"http://127.0.0.1:{port}/plan")))
+                Assert.Equal(7, doc.RootElement.GetProperty("limits").GetProperty("maxSessions").GetInt32());
+
+            // An empty value clears a nullable cap.
+            var clear = await PostAsync(port, "/plan/edit",
+                """{"edits":[{"target":"limits","id":"","field":"maxsessions","value":""}]}""");
+            Assert.Equal(HttpStatusCode.Accepted, clear.StatusCode);
+            Assert.Null(PlanConfig.Load(_planPath).Limits.MaxSessions);
+
+            // Garbage is rejected without writing.
+            var before = await File.ReadAllTextAsync(_planPath);
+            var bad = await PostAsync(port, "/plan/edit",
+                """{"edits":[{"target":"limits","id":"","field":"maxsessions","value":"-3"}]}""");
+            Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
+            Assert.Equal(before, await File.ReadAllTextAsync(_planPath));
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
     public async Task PostPlanImport_RejectsFreeformProse()
     {
         var (server, port) = StartServer();

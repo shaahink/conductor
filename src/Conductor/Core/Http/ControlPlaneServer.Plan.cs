@@ -214,6 +214,8 @@ public sealed partial class ControlPlaneServer
                 return ApplyGateEdit(gate, field, edit.Value);
             case "plan":
                 return ApplyPlanEdit(plan, field, edit.Value);
+            case "limits":
+                return ApplyLimitsEdit(plan.Limits, field, edit.Value);
             case "telegram":
                 return ApplyTelegramEdit(plan, field, edit.Value);
             default:
@@ -310,6 +312,37 @@ public sealed partial class ControlPlaneServer
             case "defaultworkflow": plan.DefaultWorkflow = string.IsNullOrWhiteSpace(value) ? null : value; return null;
             case "name": if (!string.IsNullOrWhiteSpace(value)) plan.Name = value; return null;
             default: return $"plan has no editable field '{field}'";
+        }
+    }
+
+    /// <summary>G3.3: the live-tunable limits. An empty value CLEARS a nullable cap (maxSessions /
+    /// maxRunCostUsd / maxRunTokens); stall/timeout are required ints. Every save auto-queues a
+    /// reload-plan, so these take effect at the running loop's next session boundary.</summary>
+    private static string? ApplyLimitsEdit(LimitsConfig limits, string field, string? value)
+    {
+        switch (field)
+        {
+            case "maxsessions":
+                if (string.IsNullOrWhiteSpace(value) || value == "0") { limits.MaxSessions = null; return null; }
+                if (!int.TryParse(value, out var cap) || cap < 1) return "maxSessions must be a positive integer (or empty/0 for no cap)";
+                limits.MaxSessions = cap; return null;
+            case "maxruncostusd":
+                if (string.IsNullOrWhiteSpace(value)) { limits.MaxRunCostUsd = null; return null; }
+                if (!decimal.TryParse(value, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var cost) || cost <= 0)
+                    return "maxRunCostUsd must be a positive number (or empty for no cap)";
+                limits.MaxRunCostUsd = cost; return null;
+            case "maxruntokens":
+                if (string.IsNullOrWhiteSpace(value)) { limits.MaxRunTokens = null; return null; }
+                if (!long.TryParse(value, out var tokens) || tokens < 1) return "maxRunTokens must be a positive integer (or empty for no cap)";
+                limits.MaxRunTokens = tokens; return null;
+            case "stallminutes":
+                if (!int.TryParse(value, out var stall) || stall < 1) return "stallMinutes must be a positive integer";
+                limits.StallMinutes = stall; return null;
+            case "sessiontimeout":
+            case "sessiontimeoutminutes":
+                if (!int.TryParse(value, out var timeout) || timeout < 1) return "sessionTimeoutMinutes must be a positive integer";
+                limits.SessionTimeoutMinutes = timeout; return null;
+            default: return $"limits has no editable field '{field}'";
         }
     }
 

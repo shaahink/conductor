@@ -34,7 +34,8 @@ public sealed record PlanDto(
             Gates: [.. p.Gates.Select(g => new PlanGateDto(g.Name, g.Command, g.Tier, g.TimeoutMinutes, g.Optional))],
             Limits: new PlanLimitsDto(
                 p.Limits.StallMinutes, p.Limits.SessionTimeoutMinutes,
-                p.Limits.MaxRunCostUsd, p.Limits.MaxRunTokens, p.Limits.VerifierThreshold));
+                p.Limits.MaxRunCostUsd, p.Limits.MaxRunTokens, p.Limits.VerifierThreshold,
+                p.Limits.MaxSessions));
     }
 }
 

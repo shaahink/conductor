@@ -293,6 +293,57 @@ func TestPlanDeleteCancelDoesNotPost(t *testing.T) {
 	}
 }
 
+// G3.3: the Settings limits rows post through the "limits" edit target and round-trip the source —
+// the live counterpart is ApplyLimitsEdit + a plan reload at the engine's next session boundary.
+func TestPlanSettingsLimitsFieldRoundTrips(t *testing.T) {
+	m, src := openPlanEditor(t)
+
+	m = drive(m, "right") // Gates
+	m = drive(m, "right") // Settings
+	if m.planTab != planTabSettings {
+		t.Fatalf("expected Settings section, got %v", m.planTab)
+	}
+	for range 3 { // name, gatePolicy, defaultWorkflow → maxSessions
+		m = drive(m, "down")
+	}
+	f := m.currentField()
+	if f.Field != "maxsessions" || f.Target != "limits" {
+		t.Fatalf("expected the maxsessions limits field, got %q target %q", f.Field, f.Target)
+	}
+
+	m = drive(m, "enter")
+	if !m.planEditing {
+		t.Fatal("expected to be editing maxSessions")
+	}
+	m = drive(m, "5")
+	tm, cmd := m.handlePlanKey("enter") // save
+	m = asModel(tm)
+	if cmd == nil {
+		t.Fatal("saving maxSessions should post an edit")
+	}
+	tm, _ = m.Update(cmd()) // MsgPlanEdited
+	m = asModel(tm)
+
+	plan, _ := src.FetchPlan()
+	if plan.Limits.MaxSessions == nil || *plan.Limits.MaxSessions != 5 {
+		t.Fatalf("expected limits.maxSessions=5 after save, got %v", plan.Limits.MaxSessions)
+	}
+
+	// Saving an empty value clears the cap (mirrors ApplyLimitsEdit's nullable semantics).
+	m = drive(m, "enter")
+	m = drive(m, "backspace") // "5" → ""
+	tm, cmd = m.handlePlanKey("enter")
+	m = asModel(tm)
+	if cmd == nil {
+		t.Fatal("saving an empty maxSessions should still post (it clears the cap)")
+	}
+	m.Update(cmd())
+	plan, _ = src.FetchPlan()
+	if plan.Limits.MaxSessions != nil {
+		t.Fatalf("expected limits.maxSessions cleared, got %v", *plan.Limits.MaxSessions)
+	}
+}
+
 // drive applies one plan-editor key and unwraps the model.
 func drive(m Model, key string) Model {
 	tm, _ := m.handlePlanKey(key)
