@@ -211,6 +211,31 @@ public sealed class PlanImportServiceTests : IDisposable
     }
 
     [Fact]
+    public void ResolveInterpreterModel_OverrideWins()
+    {
+        _plan.Advisor = new AdvisorConfig { Args = ["--model", "claude-fable-5"] };
+        Assert.Equal("claude-opus-4-8", PlanImportService.ResolveInterpreterModel(_plan, "claude-opus-4-8"));
+    }
+
+    [Fact]
+    public void ResolveInterpreterModel_ReadsModelFromAdvisorArgs()
+    {
+        _plan.Advisor = new AdvisorConfig { Args = ["-p", "{prompt}", "--model", "claude-fable-5"] };
+        Assert.Equal("claude-fable-5", PlanImportService.ResolveInterpreterModel(_plan));
+    }
+
+    [Fact]
+    public void ResolveInterpreterModel_SkipsUnfilledPlaceholderAndMissingArgs()
+    {
+        _plan.Advisor = new AdvisorConfig { Args = ["--model", "{model}"] };
+        Assert.Null(PlanImportService.ResolveInterpreterModel(_plan));
+        _plan.Advisor = new AdvisorConfig { Args = ["-p", "{prompt}"] };
+        Assert.Null(PlanImportService.ResolveInterpreterModel(_plan));
+        _plan.Advisor = null;
+        Assert.Null(PlanImportService.ResolveInterpreterModel(_plan));
+    }
+
+    [Fact]
     public void ApplyToPlan_ClobbersDependsOnWhenProvided()
     {
         _plan.Stages.Add(new StageConfig { Id = "S1", Title = "S1", Sessions = 1, Kind = "deliver", DependsOn = ["F0"] });

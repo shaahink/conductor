@@ -57,4 +57,32 @@ public class AdvisorActionTests
             Assert.Equal(val, result);
         }
     }
+
+    // --- G1.1: envelope unwrapping shared by verdict consults and plan-import asks ---
+
+    [Fact]
+    public void UnwrapEnvelope_json_unwraps_claude_result_wrapper()
+    {
+        var text = """{"result":"the actual answer","total_cost_usd":0.01}""";
+        Assert.Equal("the actual answer", Advisor.UnwrapEnvelope(text, "json"));
+    }
+
+    [Fact]
+    public void UnwrapEnvelope_stream_json_takes_the_result_line()
+    {
+        var ndjson =
+            """{"type":"system","subtype":"init"}""" + "\n" +
+            """{"type":"assistant","message":{}}""" + "\n" +
+            """{"type":"result","subtype":"success","result":"{\"stages\":[],\"gates\":[]}"}""";
+        Assert.Equal("""{"stages":[],"gates":[]}""", Advisor.UnwrapEnvelope(ndjson, "stream-json"));
+    }
+
+    [Theory]
+    [InlineData("text")]
+    [InlineData("json")]       // malformed envelope falls through raw
+    [InlineData("stream-json")] // no result line falls through raw
+    public void UnwrapEnvelope_passes_through_raw_text(string kind)
+    {
+        Assert.Equal("plain answer", Advisor.UnwrapEnvelope("plain answer", kind));
+    }
 }

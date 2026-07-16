@@ -153,6 +153,8 @@ public sealed partial class ControlPlaneServer : IDisposable
             {
                 case ("GET", "/state"): await WriteStateAsync(ctx).ConfigureAwait(false); break;
                 case ("GET", "/tasks"): await WriteTasksAsync(ctx).ConfigureAwait(false); break;
+                case ("POST", "/tasks/update"): await HandleTaskUpdateAsync(ctx, ct).ConfigureAwait(false); break;
+                case ("POST", "/tasks/add"): await HandleTaskAddAsync(ctx, ct).ConfigureAwait(false); break;
                 case ("GET", "/events"): await StreamEventsAsync(ctx, ct).ConfigureAwait(false); break;
                 case ("GET", "/transcript/current"): await StreamTranscriptAsync(ctx, ct).ConfigureAwait(false); break;
                 case ("GET", "/console/current"): await StreamConsoleAsync(ctx, ct).ConfigureAwait(false); break;

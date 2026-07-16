@@ -85,6 +85,11 @@ public interface IRunStore : IDisposable
     // ---------------------------------------------------------------- events (replaces events.jsonl)
 
     void AppendEvent(ConductorEvent evt);
+
+    /// <summary>Synchronously persists any queued events (they are normally drained on a ~200ms
+    /// cadence). Call after a write whose caller will immediately read the event log back — e.g. the
+    /// control plane's task writes, where the Face re-fetches <c>GET /tasks</c> right away.</summary>
+    void FlushEvents();
     IReadOnlyList<ConductorEvent> ReadAllEvents(string runId);
     IReadOnlyList<ConductorEvent> ReadEventsAfter(string runId, long afterSeq);
 

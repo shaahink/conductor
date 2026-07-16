@@ -8,5 +8,6 @@ public sealed record PlanFieldChangeDto(string Field, string? Old, string? New);
 public sealed record PlanMutationResultDto(bool Ok, string? Error, int PlanVersion);
 
 /// <summary>Result of a plan import (<c>POST /plan/import</c>): the diff (always, for preview) plus, when
-/// applied, the new plan version. <c>Ok=false</c> with a reason when the source wasn't a structured plan.</summary>
-public sealed record PlanImportResultDto(bool Ok, string? Error, PlanDiffDto Diff, bool Applied, int PlanVersion);
+/// applied, the new plan version. <c>Interpreter</c> says what turned the source into a plan —
+/// <c>"structured"</c> for the deterministic parse, or the advisor model that read the prose (G1.1).</summary>
+public sealed record PlanImportResultDto(bool Ok, string? Error, PlanDiffDto Diff, bool Applied, int PlanVersion, string? Interpreter = null);

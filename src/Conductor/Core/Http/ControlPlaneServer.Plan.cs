@@ -74,10 +74,31 @@ public sealed partial class ControlPlaneServer
 
         var text = await ResolveImportSourceAsync(req.Source, ct).ConfigureAwait(false);
         var incoming = PlanImportService.ParseStructured(text);
+        var interpreter = "structured";
         if (incoming is null)
         {
-            await PlanImportErrorAsync(ctx, "not a structured plan/tracker — freeform prose needs the CLI advisor path (conductor plan import ... --model)").ConfigureAwait(false);
-            return;
+            // G1.1: freeform prose → the plan's advisor model, same prose path as the CLI's
+            // `conductor plan import "<free text>" --model X`, now first-class over the wire.
+            var planForAdvisor = LoadPlanFresh() ?? _plan;
+            if (planForAdvisor.Advisor is not { Enabled: true } advisor || string.IsNullOrWhiteSpace(advisor.Command))
+            {
+                await PlanImportErrorAsync(ctx,
+                    "not a structured plan/tracker, and no advisor model is configured to interpret prose — set advisor.enabled/command in the plan").ConfigureAwait(false);
+                return;
+            }
+            interpreter = PlanImportService.ResolveInterpreterModel(planForAdvisor, req.Model) ?? advisor.Command;
+
+            // Apply must persist exactly the previewed diff (and not consult — or bill — the model
+            // twice), so the preview's parse is cached and reused when the same prompt comes back.
+            incoming = TakeCachedImport(text)
+                ?? await PlanImportService.ImportAsync(planForAdvisor, text, req.Model,
+                    msg => _logger.LogInformation("plan import: {Message}", msg)).ConfigureAwait(false);
+            if (incoming is null)
+            {
+                await PlanImportErrorAsync(ctx, $"the advisor ({interpreter}) could not derive stages or gates from this prompt").ConfigureAwait(false);
+                return;
+            }
+            CacheImport(text, incoming);
         }
 
         var plan = LoadPlanFresh() ?? _plan;
@@ -85,15 +106,41 @@ public sealed partial class ControlPlaneServer
         var applied = false;
         if (req.Apply && !diff.IsEmpty && LoadPlanFresh() is { } writable)
         {
-            diff.Apply(writable);
+            // Atomic validate-then-save, the same guarantee /plan/edit gives: a model-shaped (or
+            // hand-shaped) import that would break the plan is rejected whole, nothing written.
+            diff.ApplyChanges(writable);
+            var errors = writable.CollectErrors();
+            if (errors.Count > 0)
+            {
+                await PlanImportErrorAsync(ctx, "import would make the plan invalid: " + errors[0]).ConfigureAwait(false);
+                return;
+            }
+            writable.Save();
             plan = writable;
             applied = true;
         }
 
-        await WriteJsonAsync(ctx, new PlanImportResultDto(true, null, PlanDiffDto.From(diff), applied, plan.PlanVersion),
+        await WriteJsonAsync(ctx, new PlanImportResultDto(true, null, PlanDiffDto.From(diff), applied, plan.PlanVersion, interpreter),
             ControlPlaneJsonContext.Default.PlanImportResultDto,
             applied ? HttpStatusCode.Accepted : HttpStatusCode.OK).ConfigureAwait(false);
     }
+
+    /// <summary>Single-slot preview→apply cache for advisor-interpreted imports (one operator, one
+    /// in-flight prompt). Keyed by the exact prose; a stale entry expires after 15 minutes.</summary>
+    private sealed record CachedImport(string Key, ImportResult Result, DateTime AtUtc);
+
+    private volatile CachedImport? _importCache;
+
+    private ImportResult? TakeCachedImport(string key)
+    {
+        var cached = _importCache;
+        if (cached is null || !string.Equals(cached.Key, key, StringComparison.Ordinal)) return null;
+        if (DateTime.UtcNow - cached.AtUtc > TimeSpan.FromMinutes(15)) return null;
+        return cached.Result;
+    }
+
+    private void CacheImport(string key, ImportResult result) =>
+        _importCache = new CachedImport(key, result, DateTime.UtcNow);
 
     /// <summary>Resolve an import source: an existing file path (absolute, or relative to repo/cwd) is
     /// read; anything else is treated as inline markdown. Keeps the Face's import as flexible as the CLI's.</summary>

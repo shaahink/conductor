@@ -4,8 +4,10 @@ namespace Conductor.Core.Http;
 
 /// <summary>M6.1/M6.2 over the wire: the TUI posts a plan/tracker file path (or inline markdown) and,
 /// with <c>Apply=false</c>, gets back the diff to preview; with <c>Apply=true</c> the diff is applied.
-/// Deterministic parse only (no model call) — the zero-spend import path lives in the Face too.</summary>
-public sealed record PlanImportRequestDto(string Source, bool Apply);
+/// A structured doc parses deterministically (no model call); G1.1: freeform prose routes through the
+/// plan's advisor model instead — <c>Model</c> optionally fills the advisor's <c>{model}</c>
+/// placeholder, same convention as the CLI's <c>--model</c>.</summary>
+public sealed record PlanImportRequestDto(string Source, bool Apply, string? Model = null);
 
 /// <summary>The computed diff, wire-shaped: added stages/gates and, for existing ones, the fields that
 /// would change. Mirrors <see cref="PlanDiff"/>; gate changes reuse <see cref="PlanStageChangeDto"/>

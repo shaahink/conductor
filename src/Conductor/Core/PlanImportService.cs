@@ -23,38 +23,54 @@ public static class PlanImportService
         return parsed.Stages.Count == 0 ? null : MarkdownPlanParser.ToImportResult(parsed);
     }
 
-    /// <summary>Parse token from opencode (deepseek) or claude agent output. Returns stages, gates, and
-    /// checkpoints parsed from the LLM's response. Does NOT write the plan file — the caller decides
-    /// whether to apply, preview, or interactively confirm. <paramref name="model"/>, when set, fills a
-    /// <c>{model}</c> placeholder in the advisor's args (same convention as <c>{prompt}</c>).</summary>
+    /// <summary>The advisor path for freeform prose: sends the import prompt to the plan's advisor
+    /// model and parses the plan JSON straight out of its raw answer. Does NOT write the plan file —
+    /// the caller diffs, previews, or interactively confirms. <paramref name="model"/>, when set,
+    /// fills a <c>{model}</c> placeholder in the advisor's args (same convention as <c>{prompt}</c>).</summary>
     public static async Task<ImportResult?> ImportAsync(PlanConfig plan, string description, string? model = null, Action<string>? log = null)
     {
         var prompt = BuildImportPrompt(plan, description);
         var restoreArgs = ApplyModelOverride(plan, model);
-        AdvisorVerdict? verdict;
-        try { verdict = await Advisor.ConsultAsync(plan, prompt, log).ConfigureAwait(false); }
+        string? text;
+        try { text = await Advisor.AskTextAsync(plan, prompt, log).ConfigureAwait(false); }
         finally { restoreArgs?.Invoke(); }
-        if (verdict is null) return null;
+        if (text is null) return null;
 
-        var json = verdict.Reason;
-        // Try to extract a JSON object from the reason text
-        var start = json.IndexOf('{');
-        var end = json.LastIndexOf('}');
-        if (start >= 0 && end > start)
-            json = json[start..(end + 1)];
+        // The prompt demands raw JSON, but models pad — take the outermost {...} slice.
+        var start = text.IndexOf('{');
+        var end = text.LastIndexOf('}');
+        if (start < 0 || end <= start)
+        {
+            log?.Invoke("plan import: the advisor returned no JSON");
+            return null;
+        }
 
-        ImportResult? result;
         try
         {
-            result = JsonSerializer.Deserialize<ImportResult>(json, PlanConfig.JsonOpts);
+            return JsonSerializer.Deserialize<ImportResult>(text[start..(end + 1)], PlanConfig.JsonOpts);
         }
         catch (JsonException)
         {
-            log?.Invoke("plan import: LLM returned unparseable JSON, falling back to raw text");
-            result = null;
+            log?.Invoke("plan import: the advisor returned unparseable JSON");
+            return null;
         }
+    }
 
-        return result;
+    /// <summary>The model that interprets a freeform import: an explicit override wins; otherwise the
+    /// value following <c>--model</c>/<c>-m</c> in the advisor args (skipping an unfilled
+    /// <c>{model}</c> placeholder). Null when the args don't name one — callers fall back to the
+    /// advisor command name for display.</summary>
+    public static string? ResolveInterpreterModel(PlanConfig plan, string? overrideModel = null)
+    {
+        if (!string.IsNullOrWhiteSpace(overrideModel)) return overrideModel;
+        if (plan.Advisor is not { } a) return null;
+        for (var i = 0; i < a.Args.Count - 1; i++)
+        {
+            if (a.Args[i] is not ("--model" or "-m")) continue;
+            var value = a.Args[i + 1];
+            return value.Contains("{model}", StringComparison.Ordinal) ? null : value;
+        }
+        return null;
     }
 
     /// <summary>Apply the imported stages and gates to the plan, merging with existing entries.</summary>

@@ -97,9 +97,35 @@ public sealed partial class SqliteRunStore
         }
     }
 
+    /// <summary>Drains and persists everything queued right now, on the caller's thread. Lets a
+    /// control-plane write respond only once its event is durably readable, instead of racing the
+    /// 200ms drain cadence. Safe alongside the drain loop: both paths dequeue from the same queue
+    /// (each event lands exactly once) and <see cref="PersistBatch"/> serialises on one gate.</summary>
+    public void FlushEvents()
+    {
+        var batch = new List<ConductorEvent>();
+        while (_eventQueue.TryDequeue(out var evt))
+            batch.Add(evt);
+        if (batch.Count == 0) return;
+        try { PersistBatch(batch); }
+        catch (Exception ex) when (ex is SqliteException or ObjectDisposedException)
+        {
+            _logger.LogError(ex, "Failed to flush {Count} events to run.db", batch.Count);
+        }
+    }
+
+    /// <summary>Serialises PersistBatch across the drain loop and FlushEvents — a single SQLite
+    /// connection supports only one open transaction.</summary>
+    private readonly Lock _persistGate = new();
+
     private void PersistBatch(List<ConductorEvent> batch)
     {
         if (batch.Count == 0) return;
+        lock (_persistGate) PersistBatchLocked(batch);
+    }
+
+    private void PersistBatchLocked(List<ConductorEvent> batch)
+    {
         using var tx = _conn.BeginTransaction();
         try
         {

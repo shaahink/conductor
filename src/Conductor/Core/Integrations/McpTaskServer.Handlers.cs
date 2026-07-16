@@ -27,9 +27,6 @@ public partial class McpTaskServer
         return JsonSerializer.SerializeToElement(new { tasks = list, count = list.Length });
     }
 
-    private static readonly HashSet<string> ValidStatuses =
-        ["todo", "in_progress", "done", "skipped"];
-
     private JsonElement HandleTaskUpdate(JsonElement? args)
     {
         var taskId = "";
@@ -40,25 +37,16 @@ public partial class McpTaskServer
             if (a.TryGetProperty("status", out var s)) status = s.GetString() ?? "";
         }
 
-        if (string.IsNullOrEmpty(taskId))
-            return JsonSerializer.SerializeToElement(new { ok = false, error = "taskId is required" });
-        if (!ValidStatuses.Contains(status))
-            return JsonSerializer.SerializeToElement(new { ok = false, error = $"invalid status: '{status}' (must be one of: {string.Join(", ", ValidStatuses)})" });
+        // Shared write semantics (G2.1): validation + event shape live in TaskWrites so the HTTP
+        // control plane's /tasks/update can't drift from this tool.
+        var (evt, error) = TaskWrites.BuildStatusChange(_graph, _runId, taskId, status);
+        if (evt is null)
+            return JsonSerializer.SerializeToElement(new { ok = false, error });
 
-        var existing = _graph.Find(taskId);
-        if (existing == null)
-            return JsonSerializer.SerializeToElement(new { ok = false, error = $"task not found: {taskId}" });
-
-        var evt = new TaskStatusChanged
-        {
-            RunId = _runId,
-            TaskId = taskId,
-            Status = status,
-        };
         WriteJournal(evt);
         _graph.Fold([evt]);
 
-        var actualStatus = _graph.Find(taskId)?.Status ?? existing.Status;
+        var actualStatus = _graph.Find(taskId)?.Status ?? "";
         return JsonSerializer.SerializeToElement(new { ok = true, taskId, status = actualStatus });
     }
 
@@ -74,35 +62,14 @@ public partial class McpTaskServer
             if (a.TryGetProperty("order", out var o) && o.TryGetInt32(out var ov)) order = ov;
         }
 
-        if (string.IsNullOrEmpty(cpId))
-            return JsonSerializer.SerializeToElement(new { ok = false, error = "checkpointId is required" });
-        if (string.IsNullOrWhiteSpace(title))
-            return JsonSerializer.SerializeToElement(new { ok = false, error = "title is required" });
+        var (evt, error) = TaskWrites.BuildAdd(_graph, _runId, cpId, title, order, source: "agent");
+        if (evt is null)
+            return JsonSerializer.SerializeToElement(new { ok = false, error });
 
-        var existing = _graph.ForCheckpoint(cpId);
-        var nextOrder = order > 0 ? order : (existing.Count > 0 ? existing.Max(t => t.Order) + 1 : 1);
-
-        var taskId = $"{cpId}-a{nextOrder}";
-        var attempt = 0;
-        while (_graph.Find(taskId) != null)
-        {
-            attempt++;
-            taskId = $"{cpId}-a{nextOrder}.{attempt}";
-        }
-
-        var evt = new TaskAdded
-        {
-            RunId = _runId,
-            TaskId = taskId,
-            CheckpointId = cpId,
-            Title = title,
-            Source = "agent",
-            Order = nextOrder,
-        };
         WriteJournal(evt);
         _graph.Fold([evt]);
 
-        return JsonSerializer.SerializeToElement(new { ok = true, taskId, checkpointId = cpId, title, order = nextOrder });
+        return JsonSerializer.SerializeToElement(new { ok = true, taskId = evt.TaskId, checkpointId = cpId, title, order = evt.Order });
     }
 
     /// <summary>F1.3: Write a finding/observation to the knowledge ledger.

@@ -45,10 +45,24 @@ public class TaskGraphTests
         graph.Fold([
             new TaskAdded { RunId = "r1", TaskId = "t1", CheckpointId = "B9.1", Title = "Add events", Source = "planner", Order = 1, Seq = 1 },
             new TaskStatusChanged { RunId = "r1", TaskId = "t1", Status = "done", Seq = 2 },
-            new TaskStatusChanged { RunId = "r1", TaskId = "t1", Status = "in_progress", Seq = 3 },
+            new TaskStatusChanged { RunId = "r1", TaskId = "t1", Status = "skipped", Seq = 3 }, // done → skipped stays illegal
         ]);
 
         Assert.Equal("done", graph.Find("t1")!.Status);
+    }
+
+    [Fact]
+    public void Fold_ReopeningADoneTask_IsLegal()
+    {
+        // G2: the Kanban ←-move — pulling a card back out of Done/Skipped reopens it.
+        var graph = new TaskGraph();
+        graph.Fold([
+            new TaskAdded { RunId = "r1", TaskId = "t1", CheckpointId = "B9.1", Title = "Add events", Source = "planner", Order = 1, Seq = 1 },
+            new TaskStatusChanged { RunId = "r1", TaskId = "t1", Status = "done", Seq = 2 },
+            new TaskStatusChanged { RunId = "r1", TaskId = "t1", Status = "in_progress", Seq = 3 },
+        ]);
+
+        Assert.Equal("in_progress", graph.Find("t1")!.Status);
     }
 
     [Fact]

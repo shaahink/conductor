@@ -5,7 +5,8 @@ namespace Conductor.Core.Events;
 /// <summary>
 /// B9.1: folds <see cref="TaskAdded"/> and <see cref="TaskStatusChanged"/> events into a live task
 /// graph ordered by checkpoint → task order. Pure projection — replay a log segment from any point.
-/// Allowed status transitions: todo → in_progress → done (also todo → skipped).
+/// Allowed status transitions: todo → in_progress → done (also todo → skipped), plus the G2 reopen
+/// moves back out of done/skipped so the Kanban board can pull a card left.
 /// </summary>
 public sealed class TaskGraph
 {
@@ -77,6 +78,12 @@ public sealed class TaskGraph
         ("todo", "done") => true,
         ("todo", "skipped") => true,
         ("in_progress", "skipped") => true,
+        // G2: a card on the Kanban board can be pulled back — reopening a done/skipped task makes it
+        // current again (CurrentTask picks it up), which is the point of moving it left.
+        ("done", "in_progress") => true,
+        ("done", "todo") => true,
+        ("skipped", "todo") => true,
+        ("skipped", "in_progress") => true,
         _ => false,
     };
 }

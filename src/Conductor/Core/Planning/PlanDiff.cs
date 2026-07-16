@@ -65,6 +65,15 @@ public sealed record PlanDiff(
     /// fields on existing ones), then bump the plan version and save. Untouched entries stay as-is.</summary>
     public void Apply(PlanConfig plan)
     {
+        ApplyChanges(plan);
+        plan.Save();
+    }
+
+    /// <summary>Apply without saving — for callers that must validate the mutated plan before
+    /// persisting it (the control plane's import handler runs CollectErrors between apply and save,
+    /// so a model-shaped import can never write an invalid plan file).</summary>
+    public void ApplyChanges(PlanConfig plan)
+    {
         foreach (var s in AddedStages)
             plan.Stages.Add(s);
         foreach (var ch in ChangedStages)
@@ -81,7 +90,6 @@ public sealed record PlanDiff(
             if (existing is null) continue;
             foreach (var f in ch.Fields) ApplyGateField(existing, f);
         }
-        plan.Save();
     }
 
     private static void ApplyStageField(StageConfig stage, FieldChange f)
