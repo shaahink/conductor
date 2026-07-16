@@ -28,4 +28,21 @@ public interface IWorkflowResolver
     /// <summary>Evaluate a RunIf / SkipIf expression ("!verifier.passed", "verifier.score >= 80", …)
     /// against the runtime facts.</summary>
     bool EvaluateCondition(string expr, WorkflowRuntimeVars vars);
+
+    /// <summary>P4: the complete "what comes after this session" decision. Walks the workflow from
+    /// the recorded index, consuming verification steps as skipped-as-passed when
+    /// <paramref name="skipVerification"/> is set (each such hop re-evaluates with
+    /// verifier.passed = true — the collapse the engine used to do by recursion), and records the
+    /// final index. The engine only effects the answer: logs the hops, confirms checkpoints for the
+    /// skips, and populates the pending context for the resolved kind.</summary>
+    WorkflowAdvance Advance(WorkflowDefinition workflow, Dictionary<string, int> stepIndices,
+        string stageId, WorkflowRuntimeVars vars, bool skipVerification);
+
+    /// <summary>P4: the session-START kind decision. A recorded index IS this session's step — the
+    /// previous advance resolved and recorded it — so it is consumed WITHOUT advancing; only a
+    /// stage's very first resolution advances (from -1, with blank facts). A verification step
+    /// downgrades to Deliver when <paramref name="skipVerification"/> is set; an exhausted or empty
+    /// workflow defaults to Deliver.</summary>
+    SessionKind ResolveStartKind(WorkflowDefinition workflow, Dictionary<string, int> stepIndices,
+        string stageId, bool skipVerification);
 }

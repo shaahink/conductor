@@ -21,36 +21,14 @@ public sealed partial class SessionRunner
         if (pendingVerify != null) return SessionKind.Verify;
         if (pendingFix != null) return SessionKind.Fix;
 
-        // Workflow-driven: what does the engine say is next? A recorded index IS this session's
-        // step — the previous evaluation resolved it (setting PendingVerify/Audit/Fix for those
-        // kinds, or landing on a deliver) and recorded it. Consume it WITHOUT advancing: resolving
-        // again here double-stepped the workflow onto a verify step no evaluation had populated
-        // PendingVerify for — an NRE in PromptBuilder.Verify — whenever evaluation had wrapped
-        // back to a deliver (latent) or the QA dial changed at a live boundary (P2, deterministic).
-        // Only the very first resolution of a stage (no index yet) advances, from -1.
+        // Workflow-driven: the START-kind decision lives behind the seam (P4). The library consumes
+        // a recorded index WITHOUT advancing (the previous advance resolved and recorded it —
+        // re-resolving here once double-stepped onto a verify no advance had populated PendingVerify
+        // for, an NRE in PromptBuilder.Verify); only a stage's very first resolution advances, and a
+        // verify downgrades to Deliver when the QA dial or per-stage override skips verification.
         var workflow = _ctx.Workflows.Resolve(_ctx.Plan, stage, _ctx.Qa);
-        WorkflowStep? step;
-        if (_ctx.State.WorkflowStepIndices.TryGetValue(stage.Id, out var recorded)
-            && recorded >= 0 && recorded < workflow.Steps.Count)
-        {
-            step = workflow.Steps[recorded];
-        }
-        else
-        {
-            var vars = new WorkflowRuntimeVars(); // initial run — no prior session vars
-            step = _ctx.Workflows.ResolveAndRecordStep(workflow, _ctx.State.WorkflowStepIndices, stage.Id, vars);
-        }
-        if (step != null)
-        {
-            var wfKind = step.Kind;
-            // Skip verification when the QA dial or the per-stage override says so (P2/M3.2)
-            if (wfKind == SessionKind.Verify && _ctx.Qa.EffectiveSkipVerification(_ctx.Plan, stage))
-                return SessionKind.Deliver; // fall through to next deliver
-            return wfKind;
-        }
-
-        // Workflow exhausted or not configured — default to Deliver
-        return SessionKind.Deliver;
+        return _ctx.Workflows.ResolveStartKind(workflow, _ctx.State.WorkflowStepIndices, stage.Id,
+            _ctx.Qa.EffectiveSkipVerification(_ctx.Plan, stage));
     }
 
     public static SessionKind PendingToKind(

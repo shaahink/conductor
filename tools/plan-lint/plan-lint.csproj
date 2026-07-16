@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- P4's standalone-usage proof: a consumer that references ONLY Conductor.Planning (which the
+       architecture test guarantees never references the engine), loads a plan file, and prints the
+       resolved workflow + assignment + QA decisions for its stages. If this project compiles and
+       runs, the planner is genuinely usable outside the engine — that is the P4 gate. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>plan-lint</AssemblyName>
+    <RootNamespace>PlanLint</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Conductor.Planning\Conductor.Planning.csproj" />
+  </ItemGroup>
+
+</Project>

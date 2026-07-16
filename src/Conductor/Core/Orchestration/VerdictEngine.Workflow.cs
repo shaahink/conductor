@@ -4,9 +4,12 @@ namespace Conductor.Core.Orchestration;
 
 public sealed partial class VerdictEngine
 {
-    // ── workflow advancement (M3.1) ──
+    // ── workflow advancement (M3.1; decision moved behind the seam in P4) ──
 
-    /// <summary>Consult the workflow engine for the next step after a session completes.
+    /// <summary>Ask the planning library what comes after a finished session, then EFFECT the
+    /// answer — log the hops, confirm checkpoints for skipped-as-passed verifications, and populate
+    /// the pending context the resolved kind needs. The walk itself (conditionals, repeat wrap,
+    /// skip-verification collapse) is the library's <see cref="IWorkflowResolver.Advance"/>.
     /// <paramref name="sessionStartHead"/> is the just-finished session's start commit — the audit
     /// diff base when the QA dial narrows the audit to the latest session (P2).</summary>
     private void AdvanceWorkflowStep(
@@ -20,30 +23,26 @@ public sealed partial class VerdictEngine
         string? sessionStartHead = null)
     {
         var workflow = _ctx.Workflows.Resolve(_ctx.Plan, stage, _ctx.Qa);
-        var stepIndex = _ctx.State.WorkflowStepIndices.GetValueOrDefault(stage.Id, -1);
         var vars = WorkflowVarsFactory.Build(rec, _ctx.State.AttemptsThisStage,
             gatesGreen, verifierScore, verifierPassed, circuitBroken, stageComplete);
+        var skipVerification = _ctx.Qa.EffectiveSkipVerification(_ctx.Plan, stage) || _ctx.State.SkipVerificationThisStage;
 
-        // ResolveAndRecordStep resolves AND records the index in one call — see its doc comment
-        // (WorkflowEngine.cs) for why that matters (a real bug: this used to be two independent
-        // read-resolve-write cycles here and in SessionRunner.ResolveSessionKind, which drifted
-        // out of sync and left PendingVerify/PendingAudit/PendingFix unpopulated in some cases).
-        var next = _ctx.Workflows.ResolveAndRecordStep(workflow, _ctx.State.WorkflowStepIndices, stage.Id, vars);
-        if (next == null)
+        var advance = _ctx.Workflows.Advance(workflow, _ctx.State.WorkflowStepIndices, stage.Id, vars, skipVerification);
+
+        foreach (var hop in advance.Hops)
         {
-            _ctx.Log($"workflow '{workflow.Name}' exhausted after step {stepIndex} — stage complete");
-            return;
+            _ctx.Log($"workflow '{workflow.Name}': step {hop.FromIndex} → {hop.ToIndex} ({hop.Step.Id}, kind={hop.Step.Kind})");
+            if (hop.SkippedAsPassed)
+            {
+                _ctx.Log($"workflow override: skipping verification step for stage {stage.Id} — treating as passed");
+                // M4.1: confirm checkpoints immediately when verification is skipped
+                ConfirmPendingCheckpoints(stage.Id);
+            }
         }
 
-        var nextIndex = _ctx.State.WorkflowStepIndices[stage.Id];
-        _ctx.Log($"workflow '{workflow.Name}': step {stepIndex} → {nextIndex} ({next.Id}, kind={next.Kind})");
-
-        if (next.Kind == SessionKind.Verify && (_ctx.Qa.EffectiveSkipVerification(_ctx.Plan, stage) || _ctx.State.SkipVerificationThisStage))
+        if (advance.Next is not { } next)
         {
-            _ctx.Log($"workflow override: skipping verification step for stage {stage.Id} — treating as passed");
-            // M4.1: confirm checkpoints immediately when verification is skipped
-            ConfirmPendingCheckpoints(stage.Id);
-            AdvanceWorkflowStep(stage, rec, gatesGreen, verifierScore, verifierPassed: true, circuitBroken, stageComplete, sessionStartHead);
+            _ctx.Log($"workflow '{workflow.Name}' exhausted after step {advance.ExhaustedFromIndex} — stage complete");
             return;
         }
 

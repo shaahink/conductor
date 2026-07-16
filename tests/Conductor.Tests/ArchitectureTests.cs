@@ -166,6 +166,54 @@ public class ArchitectureTests
             "Conductor.Planning must stay engine-free (one-way dependency):\n" + string.Join("\n", violations));
     }
 
+    /// <summary>P4: the standalone consumer is the proof the decoupling is real. plan-lint may
+    /// reference exactly one project — Conductor.Planning — and never name an engine namespace in
+    /// source. Combined with <see cref="PlanningLibraryDoesNotReferenceTheEngine"/>, this makes a
+    /// transitive engine dependency impossible: the consumer compiles and runs on the library alone.</summary>
+    [Fact]
+    public void PlanLintReferencesOnlyThePlanningLibrary()
+    {
+        var toolDir = Path.Combine(RepoRoot(), "tools", "plan-lint");
+        var csproj = File.ReadAllText(Path.Combine(toolDir, "plan-lint.csproj"));
+
+        var projectRefs = Regex.Matches(csproj, "ProjectReference\\s+Include=\"(?<path>[^\"]+)\"",
+                RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(2))
+            .Select(m => m.Groups["path"].Value)
+            .ToList();
+        var singleRef = Assert.Single(projectRefs);
+        Assert.EndsWith("Conductor.Planning.csproj", singleRef, StringComparison.Ordinal);
+        Assert.DoesNotContain("PackageReference", csproj, StringComparison.Ordinal);
+
+        var violations = new List<string>();
+        foreach (var file in new DirectoryInfo(toolDir).EnumerateFiles("*.cs", SearchOption.AllDirectories)
+                     .Where(f => !f.FullName.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)))
+        {
+            var text = File.ReadAllText(file.FullName);
+            foreach (var forbidden in new[] { "using Conductor.Core", "using Conductor.Models", "using Conductor.Commands", "using Spectre" })
+            {
+                if (text.Contains(forbidden, StringComparison.Ordinal))
+                    violations.Add($"  {file.Name} -> {forbidden}");
+            }
+        }
+        Assert.True(violations.Count == 0,
+            "plan-lint must consume ONLY Conductor.Planning — that is the standalone proof:\n" + string.Join("\n", violations));
+    }
+
+    /// <summary>P4: the planning domain lives in the library, whole. If the engine assembly declares
+    /// a type in the Conductor.Planning namespace, someone has started re-growing the planner inside
+    /// the app — the exact coupling the P-series exists to remove.</summary>
+    [Fact]
+    public void NoPlanningDomainTypeRemainsInTheEngineAssembly()
+    {
+        var engine = typeof(Core.PromptBuilder).Assembly;
+        var strays = engine.GetTypes()
+            .Where(t => t.Namespace?.StartsWith("Conductor.Planning", StringComparison.Ordinal) == true)
+            .Select(t => "  " + t.FullName)
+            .ToList();
+        Assert.True(strays.Count == 0,
+            "Planning-domain types must live in Conductor.Planning, not the engine:\n" + string.Join("\n", strays));
+    }
+
     /// <summary>The engine must not depend on the CLI or on any UI. The Face is a disposable client over the
     /// control plane and the CLI is merely one of three ingresses — if Core reaches back into either, the run
     /// can no longer outlive its UI, which is the entire point of the split.</summary>

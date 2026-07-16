@@ -172,6 +172,64 @@ public sealed class WorkflowEngine : IWorkflowResolver
         return step;
     }
 
+    /// <summary>P4: the post-session advance decision — see <see cref="IWorkflowResolver.Advance"/>.
+    /// Behavior-identical to the engine's former recursion: each skipped verification re-evaluates
+    /// with verifier.passed = true and every other fact unchanged.</summary>
+    public WorkflowAdvance Advance(WorkflowDefinition workflow, Dictionary<string, int> stepIndices,
+        string stageId, WorkflowRuntimeVars vars, bool skipVerification)
+    {
+        var hops = new List<WorkflowHop>();
+        var current = vars;
+        while (true)
+        {
+            var from = stepIndices.GetValueOrDefault(stageId, -1);
+            var step = ResolveAndRecordStep(workflow, stepIndices, stageId, current);
+            if (step == null)
+                return new WorkflowAdvance { Next = null, Hops = hops, ExhaustedFromIndex = from };
+
+            var to = stepIndices[stageId];
+            if (step.Kind == SessionKind.Verify && skipVerification)
+            {
+                hops.Add(new WorkflowHop(from, to, step, SkippedAsPassed: true));
+                current = WithVerifierPassed(current);
+                continue;
+            }
+            hops.Add(new WorkflowHop(from, to, step, SkippedAsPassed: false));
+            return new WorkflowAdvance { Next = step, Hops = hops };
+        }
+    }
+
+    /// <summary>P4: the session-start kind decision — see
+    /// <see cref="IWorkflowResolver.ResolveStartKind"/>.</summary>
+    public SessionKind ResolveStartKind(WorkflowDefinition workflow, Dictionary<string, int> stepIndices,
+        string stageId, bool skipVerification)
+    {
+        // A recorded index IS this session's step — consume it without advancing. Resolving again
+        // here double-stepped the workflow onto a verify no advance had populated context for.
+        WorkflowStep? step;
+        if (stepIndices.TryGetValue(stageId, out var recorded) && recorded >= 0 && recorded < workflow.Steps.Count)
+            step = workflow.Steps[recorded];
+        else
+            step = ResolveAndRecordStep(workflow, stepIndices, stageId, new WorkflowRuntimeVars());
+
+        if (step == null) return SessionKind.Deliver; // exhausted or not configured
+        if (step.Kind == SessionKind.Verify && skipVerification) return SessionKind.Deliver;
+        return step.Kind;
+    }
+
+    private static WorkflowRuntimeVars WithVerifierPassed(WorkflowRuntimeVars vars) => new()
+    {
+        VerifierScore = vars.VerifierScore,
+        VerifierPassed = true,
+        CircuitBroken = vars.CircuitBroken,
+        StageAttempts = vars.StageAttempts,
+        GatesGreen = vars.GatesGreen,
+        HasCommits = vars.HasCommits,
+        Stalled = vars.Stalled,
+        NewlyDoneCount = vars.NewlyDoneCount,
+        StageComplete = vars.StageComplete,
+    };
+
     /// <summary>Evaluate a RunIf / SkipIf expression against runtime variables.
     /// Supported expressions are simple boolean/logic: "!verifier.passed",
     /// "verifier.score >= 80", "circuit.broken", "newlyDoneCount > 0".</summary>

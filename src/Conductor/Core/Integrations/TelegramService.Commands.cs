@@ -87,7 +87,7 @@ public sealed partial class TelegramService
         }
         else
         {
-            WriteControlFile(controlAction);
+            await WriteControlFileAsync(controlAction).ConfigureAwait(false);
             await SendAsync(chatId, $"{controlAction} command sent to Conductor.", ct)
                 .ConfigureAwait(false);
         }

@@ -48,7 +48,7 @@ public sealed partial class TelegramService
 
         if (confirmed && cb.From != null)
         {
-            WriteControlFile(action, confirmed: true, intentId: parts[1]);
+            await WriteControlFileAsync(action, confirmed: true, intentId: parts[1]).ConfigureAwait(false);
             await SendAsync(cb.From.Id.ToString(CultureInfo.InvariantCulture),
                 $"{action} confirmed and sent to Conductor.", ct).ConfigureAwait(false);
         }

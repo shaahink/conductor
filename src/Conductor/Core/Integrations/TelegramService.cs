@@ -285,9 +285,8 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
         catch (Exception ex) { _log.LogWarning(ex, "answerCallbackQuery failed"); }
     }
 
-    internal void WriteControlFile(string action, bool confirmed = false, string? intentId = null)
+    internal async Task WriteControlFileAsync(string action, bool confirmed = false, string? intentId = null)
     {
-#pragma warning disable MA0045
         try
         {
             var path = Path.Combine(_plan.StateDir, "control.json");
@@ -298,8 +297,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
                 ["confirmed"] = confirmed,
             };
             if (intentId != null) payload["intentId"] = intentId;
-            File.WriteAllText(path, JsonSerializer.Serialize(payload, JsonOpts));
-#pragma warning restore MA0045
+            await File.WriteAllTextAsync(path, JsonSerializer.Serialize(payload, JsonOpts), _cts.Token).ConfigureAwait(false);
             _log.LogInformation("Telegram wrote control.json: {Action} (confirmed={Confirmed})", action, confirmed);
         }
         catch (Exception ex) { _log.LogWarning(ex, "Failed to write control.json"); }
