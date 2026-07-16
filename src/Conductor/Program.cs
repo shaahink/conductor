@@ -56,6 +56,8 @@ app.Configure(c =>
         .WithDescription("Park at Paused after the current stage completes.");
     c.AddCommand<GotoCommand>("goto")
         .WithDescription("Jump to a different stage (clears pending state for the old stage).");
+    c.AddCommand<RolloverCommand>("rollover")
+        .WithDescription("Set/clear the session-token rollover for THIS run only: rollover <tokens|off|clear>. Run-state only — never writes the plan.");
     c.AddCommand<HeartbeatCommand>("heartbeat")
         .WithDescription("Ask the running conductor to refresh .conductor/REPORT.md immediately (only meaningful during a live session; also in the : command palette).");
     c.AddCommand<PlanCommand>("plan")

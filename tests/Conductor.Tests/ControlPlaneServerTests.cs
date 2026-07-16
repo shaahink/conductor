@@ -92,7 +92,9 @@ public sealed class ControlPlaneServerTests : IDisposable
         Assert.True(server.Start(), "control plane failed to bind — cannot run contract tests");
         _http.DefaultRequestHeaders.Remove("X-Conductor-Token");
         _http.DefaultRequestHeaders.Add("X-Conductor-Token", server.Token);
-        return (server, port);
+        // server.Port, not the probe port: Start() scans forward when a parallel fixture grabbed
+        // the probed port first, and requests must follow the server (same fix as P5RolloverTests).
+        return (server, server.Port);
     }
 
     [Fact]

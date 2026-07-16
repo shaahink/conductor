@@ -98,7 +98,7 @@ going. Destructive ones need `--yes`.
 | `kill --yes` | Kill the current agent session; the loop re-evaluates. |
 | `abort --yes` | Kill the session AND stop the conductor. |
 | `rollback --yes [--force]` | Reset the working tree to the stage-start commit (`--force` if dirty). |
-| `set-rollover <tokens>\|off\|clear` (control verb) | P5: session-token rollover for THIS RUN ONLY — a session past the cap ends `RolledOver` (handoff written, next session fresh, no attempt burned). `off` forces it off even if the plan sets a cap; `clear` hands back to `limits.maxSessionTokens`. Run-state only — never writes the plan file. |
+| `rollover <tokens>\|off\|clear` (queues the `set-rollover` control verb) | P5: session-token rollover for THIS RUN ONLY — a session past the cap ends `RolledOver` (handoff written, next session fresh, no attempt burned). `off` forces it off even if the plan sets a cap; `clear` hands back to `limits.maxSessionTokens`. Run-state only — never writes the plan file. The active override is on `GET /state` as `maxSessionTokensThisRun` (absent = none) and in the Face's Settings "rollover (run)" row. |
 
 ### Knowledge & plan authoring
 | Command | Does |
