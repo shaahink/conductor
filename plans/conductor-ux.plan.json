@@ -1,0 +1,149 @@
+{
+  "version": "1.0",
+  "planVersion": 1,
+  "name": "Conductor UX (U-series)",
+  "repo": "C:/code/conductor-baton",
+  "tracker": "CONDUCTOR-UX-START.md",
+  "planDoc": "docs/CONDUCTOR-UX.md",
+  "pauseOnBlocked": true,
+  "agent": {
+    "command": "claude",
+    "args": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--dangerously-skip-permissions",
+      "--model",
+      "{model}",
+      "--session-id",
+      "{sessionId}"
+    ],
+    "resumeArgs": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--dangerously-skip-permissions",
+      "--model",
+      "{model}",
+      "--resume",
+      "{claudeSessionId}"
+    ],
+    "provider": "claude",
+    "output": "stream-json",
+    "model": "claude-sonnet-5"
+  },
+  "readOrder": [
+    "AGENTS.md",
+    "docs/CONDUCTOR-UX.md",
+    "CONDUCTOR-UX-START.md",
+    "face-go/STYLE.md"
+  ],
+  "conventions": {
+    "stageIdPattern": "(?<stage>[A-Za-z]+\\d+)(?:\\.\\d+)?[a-z]?",
+    "handoffMarker": "## Handoff",
+    "humanToken": "HUMAN:",
+    "status": {
+      "done": ["DONE"],
+      "blocked": ["BLOCKED"],
+      "inProgress": ["IN PROGRESS"],
+      "todo": ["TODO"]
+    }
+  },
+  "stages": [
+    {
+      "id": "U0",
+      "title": "Engine: start, resume, journey",
+      "sessions": 3,
+      "notes": "Deliver U0 per docs/CONDUCTOR-UX.md (U0.1 discovery, U0.2 journey verb, U0.3 gateless + resume docs). All C# engine work, no Face changes. REUSE: PlanSettings.ResolvePlanPath is the single ingress every verb shares — extend it there only. Spectre SelectionPrompt only when Console interactive. journey is a NEW Spectre verb registered in Program.cs (escape [ as [[ in descriptions — top-level help renders them as markup). Gateless: gates:[] must produce 'gates green (none configured)' verdicts; prove with a fake-agent scratch test (tools/fake-agent.ps1 pattern, see .claude/skills/run-conductor/driver.ps1 for scaffolding). Unit tests for resolution order + journey human-moments extraction. Gate: full suite green.",
+      "agent": { "model": "claude-sonnet-5" }
+    },
+    {
+      "id": "U1",
+      "title": "Face: landing page + workspace identity",
+      "sessions": 3,
+      "dependsOn": ["U0"],
+      "notes": "Deliver U1 per docs/CONDUCTOR-UX.md (U1.1 Home tab, U1.2 workspace in the top bar). Go/bubbletea v2 work in face-go. Home is a NEW first tab (key h), the startup tab, replacing the splash as landing; panels Server/Run/Workspace/Next-steps fed entirely from /state + /plan (StateDto.Repo and PlanDir already exist). Demo source must fill every field. Tab arrays in model.go are fixed-size — grow tabCount/tabNames/tabKey together and update renderHelpOverlay. Golden frames for Home (connected, disconnected, demo) + updated bar goldens. go test ./... green including goldens.",
+      "agent": { "model": "claude-opus-4-8" }
+    },
+    {
+      "id": "U2",
+      "title": "Face: controls, visual report, dev stats",
+      "sessions": 4,
+      "dependsOn": ["U1"],
+      "notes": "Deliver U2 per docs/CONDUCTOR-UX.md (U2.1 grouped palette + promptable danger, U2.2 visual Report tab, U2.3 Dev tab with the SQL console + per-session stats). The SQL console CODE MOVES from tab_report.go to the new Dev tab largely unchanged — keep its tests. Report renders from /state + /sessions; if per-session token columns are missing from SessionRowDto, extend GET /sessions in ControlPlaneServer (run.db sessions table already stores tokens) and mirror in api/types.go + demo. Danger verbs: kill/abort/rollback red + confirm naming consequences; no destructive action without y/N. Goldens for palette overlay, Report, Dev.",
+      "agent": { "model": "claude-opus-4-8" }
+    },
+    {
+      "id": "U3",
+      "title": "Face: curated themes + glitch pass",
+      "sessions": 3,
+      "dependsOn": ["U2"],
+      "notes": "Deliver U3 per docs/CONDUCTOR-UX.md (U3.1 themes mocha/latte/nord/gruvbox with ApplyTheme + --theme flag + persisted config + palette verb; U3.2 the golden glitch pass at 132x40, 100x30, 80x24). Theme switch rebuilds package style vars in widgets AND tui — one rebuild func per package, called at startup and on switch; goldens pin mocha. The glitch pass: read the rendered frames like screenshots, fix truncation collisions / misalignment / dead space, note each fix in the tracker evidence column. go test ./... green; STYLE.md updated.",
+      "agent": { "model": "claude-opus-4-8" }
+    }
+  ],
+  "gates": [
+    {
+      "name": "build",
+      "command": "dotnet build Conductor.slnx",
+      "tier": "fast",
+      "timeoutMinutes": 10
+    },
+    {
+      "name": "face-build",
+      "command": "go build ./...",
+      "cwd": "face-go",
+      "tier": "fast",
+      "timeoutMinutes": 5
+    },
+    {
+      "name": "test",
+      "command": "dotnet test Conductor.slnx --no-build",
+      "tier": "full",
+      "timeoutMinutes": 20
+    },
+    {
+      "name": "face-test",
+      "command": "go test ./...",
+      "cwd": "face-go",
+      "tier": "full",
+      "timeoutMinutes": 10
+    },
+    {
+      "name": "driver",
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File .claude/skills/run-conductor/driver.ps1",
+      "tier": "truth",
+      "timeoutMinutes": 15
+    }
+  ],
+  "gatePolicy": "perPhase",
+  "advisor": {
+    "enabled": true,
+    "command": "claude",
+    "args": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "stream-json",
+      "--model",
+      "claude-fable-5"
+    ],
+    "provider": "claude",
+    "output": "stream-json",
+    "timeoutMinutes": 6
+  },
+  "limits": {
+    "stallMinutes": 15,
+    "sessionTimeoutMinutes": 240,
+    "maxResumesPerSession": 3,
+    "stallPatternTermination": true
+  },
+  "report": {
+    "commit": true,
+    "push": false
+  }
+}
