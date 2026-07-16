@@ -1,16 +1,16 @@
 ﻿# Conductor — Conductor UX (U-series) run report
 
-_Updated 2026-07-16 23:06 UTC · branch `feat/foreman` · HEAD `877ff57`_
+_Updated 2026-07-16 23:48 UTC · branch `feat/foreman` · HEAD `3cb0579`_
 
-**Status:** Aborted
-**Stage:** - · attempts used 0
-**Checkpoints:** 0/11 done · **Sessions run:** 0 · **Cost:** $0.0000 (agent $0.0000 + gates $0.0000)
+**Status:** Running
+**Stage:** U0 — Engine: start, resume, journey · attempts used 0 · working ▸ U0.1
+**Checkpoints:** 0/11 done · **Sessions run:** 1 · **Cost:** $0.0000 (agent $0.0000 + gates $0.0000)
 
 ## Stage progress
 
 | Stage | Title | Progress | State |
 |---|---|---|---|
-| U0 | Engine: start, resume, journey | ░░░░░░░░░░ 0/3 | todo |
+| U0 | Engine: start, resume, journey | ░░░░░░░░░░ 0/3 | **← active** |
 | U1 | Face: landing page + workspace identity | ░░░░░░░░░░ 0/2 | todo |
 | U2 | Face: controls, visual report, dev stats | ░░░░░░░░░░ 0/3 | todo |
 | U3 | Face: themes, agent-terminal vibe, glitch pass | ░░░░░░░░░░ 0/3 | todo |
@@ -58,6 +58,7 @@ _Updated 2026-07-16 23:06 UTC · branch `feat/foreman` · HEAD `877ff57`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Overhead | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | U0 | Deliver | 1 | 07-16 23:42 | 0:05 | Interrupted |  | 0 |  |  |  |  |
 
 ## Timeline
 
@@ -65,6 +66,18 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
 07-17 00:06:50  ◆ run started · Conductor UX (U-series)
+07-17 00:42:31  ◆ run started · Conductor UX (U-series)
+07-17 00:42:32  ▸ stage U0 entered — Engine: start, resume, journey
+07-17 00:42:33  • session #1 U0 Deliver started (attempt 1/6)
+```
+
+## Health
+
+_Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
+
+```
+sessions 1 · retries 0 (0 %) · overall Ok
+✓ no health concerns detected
 ```
 
 ## Repo
@@ -73,7 +86,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/foreman
-working tree: clean
+working tree: M CONDUCTOR-UX-START.md
 vs upstream: up to date
 ```
 
