@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"strings"
 	"testing"
 
 	"conductor-face-go/internal/api"
@@ -429,4 +430,106 @@ func TestPlanStageQaDialRoundTrips(t *testing.T) {
 func drive(m Model, key string) Model {
 	tm, _ := m.handlePlanKey(key)
 	return asModel(tm)
+}
+
+// P5: the sessionRollover row surfaces limits.maxSessionTokens honestly — OFF by default — and
+// round-trips through the "limits" edit target; the "rollover (run)" row posts the set-rollover
+// control verb instead of a plan edit, so the plan file (and PlanVersion) is never touched.
+func TestPlanSettingsSessionRolloverRoundTrips(t *testing.T) {
+	m, src := openPlanEditor(t)
+
+	m = drive(m, "right") // Gates
+	m = drive(m, "right") // Settings
+	for range 10 {        // → sessionRollover
+		m = drive(m, "down")
+	}
+	f := m.currentField()
+	if f.Field != "maxsessiontokens" || f.Target != "limits" {
+		t.Fatalf("expected the maxsessiontokens limits field, got %q target %q", f.Field, f.Target)
+	}
+	// OFF by default, and the browse view must say so honestly.
+	if got := f.Display(m.currentFieldValue(f.Field)); !strings.Contains(got, "OFF") {
+		t.Fatalf("rollover must render as OFF by default, got %q", got)
+	}
+
+	m = drive(m, "enter")
+	for _, ch := range "250000" {
+		m = drive(m, string(ch))
+	}
+	tm, cmd := m.handlePlanKey("enter")
+	m = asModel(tm)
+	if cmd == nil {
+		t.Fatal("saving sessionRollover should post an edit")
+	}
+	tm, refetch := m.Update(cmd())
+	m = asModel(tm)
+	if refetch != nil {
+		tm, _ = m.Update(refetch())
+		m = asModel(tm)
+	}
+
+	plan, _ := src.FetchPlan()
+	if plan.Limits.MaxSessionTokens == nil || *plan.Limits.MaxSessionTokens != 250000 {
+		t.Fatalf("expected limits.maxSessionTokens=250000 after save, got %v", plan.Limits.MaxSessionTokens)
+	}
+	if got := f.Display(m.currentFieldValue(f.Field)); !strings.Contains(got, "ON") {
+		t.Fatalf("rollover must render as ON once set, got %q", got)
+	}
+
+	// Empty clears — back to OFF (mirrors ApplyLimitsEdit's nullable semantics).
+	m = drive(m, "enter")
+	for range 6 {
+		m = drive(m, "backspace")
+	}
+	tm, cmd = m.handlePlanKey("enter")
+	m = asModel(tm)
+	if cmd == nil {
+		t.Fatal("saving an empty rollover should still post (it clears the cap)")
+	}
+	m.Update(cmd())
+	plan, _ = src.FetchPlan()
+	if plan.Limits.MaxSessionTokens != nil {
+		t.Fatalf("expected rollover cleared (OFF), got %v", *plan.Limits.MaxSessionTokens)
+	}
+}
+
+func TestPlanSettingsRolloverThisRunPostsAControlVerbNotAPlanEdit(t *testing.T) {
+	m, src := openPlanEditor(t)
+	versionBefore := m.plan.PlanVersion
+
+	m = drive(m, "right") // Gates
+	m = drive(m, "right") // Settings
+	for range 12 {        // → rollover (run)
+		m = drive(m, "down")
+	}
+	f := m.currentField()
+	if f.Field != "set-rollover" || f.Target != "control" {
+		t.Fatalf("expected the set-rollover control row, got %q target %q", f.Field, f.Target)
+	}
+
+	m = drive(m, "enter")
+	for _, ch := range "180000" {
+		m = drive(m, string(ch))
+	}
+	tm, cmd := m.handlePlanKey("enter")
+	m = asModel(tm)
+	if cmd == nil {
+		t.Fatal("saving the this-run row should post a control command")
+	}
+	msg, ok := cmd().(MsgControlSent)
+	if !ok {
+		t.Fatalf("expected a control post (MsgControlSent), got %T — the this-run knob must not be a plan edit", cmd())
+	}
+	if msg.Verb != "set-rollover" || !msg.Success {
+		t.Fatalf("expected an accepted set-rollover, got %+v", msg)
+	}
+
+	// The plan file is untouched: same version, rollover still OFF in the plan.
+	plan, _ := src.FetchPlan()
+	if plan.PlanVersion != versionBefore {
+		t.Fatalf("the this-run override must never bump the plan (v%d → v%d)", versionBefore, plan.PlanVersion)
+	}
+	if plan.Limits.MaxSessionTokens != nil {
+		t.Fatal("the this-run override must never write limits.maxSessionTokens")
+	}
 }

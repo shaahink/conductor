@@ -75,6 +75,11 @@ public sealed class RunState
     /// <summary>When true, verification is advisory-only for the current stage (M3.2).
     /// Reset at stage-enter; read by VerdictEngine when deciding whether to queue PendingVerify.</summary>
     public bool SkipVerificationThisStage { get; set; }
+    /// <summary>P5: the session-scoped rollover override — the "this run only" knob layered over
+    /// <c>limits.maxSessionTokens</c> by the <c>set-rollover</c> control verb, NEVER by a plan-file
+    /// write. null = the plan decides; 0 = rollover forced OFF this run; &gt;0 = the per-session
+    /// token cap this run. Lives in run state so it evaporates when the run ends, by design.</summary>
+    public long? MaxSessionTokensThisRun { get; set; }
     public List<SessionRecord> History { get; set; } = new();
     /// <summary>Signature (HEAD sha + gate-set) of the last full battery that passed green — lets the
     /// orchestrator skip re-running an identical battery on an unchanged tree (e.g. across restarts).</summary>

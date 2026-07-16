@@ -439,7 +439,9 @@ type PlanLimitsDto struct {
 	MaxRunCostUsd         *float64 `json:"maxRunCostUsd"`
 	MaxRunTokens          *int64   `json:"maxRunTokens"`
 	VerifierThreshold     int      `json:"verifierThreshold"`
-	MaxSessions           *int     `json:"maxSessions"` // G3.3: live session cap; nil = no cap
+	MaxSessions           *int     `json:"maxSessions"`      // G3.3: live session cap; nil = no cap
+	MaxSessionTokens      *int64   `json:"maxSessionTokens"` // P5: session-token rollover; nil = OFF (default)
+	SoftBreakRatio        *float64 `json:"softBreakRatio"`   // P5: wind-down nudge point; nil = 0.8 default
 }
 
 type PlanEditDto struct {

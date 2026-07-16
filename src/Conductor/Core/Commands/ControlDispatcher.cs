@@ -4,8 +4,8 @@ using Conductor.Models;
 namespace Conductor.Core.Commands;
 
 /// <summary>
-/// Executes the 12 control verbs (pause/resume/abort/skip/kill/stop-after/retry-stage/rollback/
-/// pause-after-stage/goto/heartbeat/reload-plan) against run state. This is the single place verb behavior lives —
+/// Executes the 13 control verbs (pause/resume/abort/skip/kill/stop-after/retry-stage/rollback/
+/// pause-after-stage/goto/heartbeat/reload-plan/set-rollover) against run state. This is the single place verb behavior lives —
 /// every ingress (the TUI's in-process queue, the file-based control.json written by CLI verbs,
 /// and the F5 HTTP control-plane POST) converges on the same <see cref="ControlCommand"/> shape
 /// and calls <see cref="DispatchAsync"/>, so none of them can drift from what a verb actually does.
@@ -95,6 +95,37 @@ public sealed class ControlDispatcher(
                 sink.Toast(new ToastMessage(inSession
                     ? "plan reload queued — applies when this session ends"
                     : "plan reload queued — applying at the session boundary", LogSeverity.Success));
+                deleteControlFile();
+                break;
+            case ControlAction.SetRollover:
+                // P5: the "this run only" rollover knob. Run-state only — the plan file is never
+                // touched, so the override evaporates when the run ends. Applies immediately (the
+                // rollover check runs when the current session finishes; the soft-break watcher
+                // reads it live), so unlike reload-plan there is nothing to defer.
+                switch (ParseRolloverValue(cmd.Value))
+                {
+                    case (false, _):
+                        sink.Toast(new ToastMessage($"set-rollover: '{cmd.Value}' is not a token count, 'off', or 'clear'", LogSeverity.Error));
+                        break;
+                    case (true, null):
+                        state.MaxSessionTokensThisRun = null;
+                        save();
+                        log("set-rollover: this-run override cleared — limits.maxSessionTokens decides");
+                        sink.Toast(new ToastMessage("rollover override cleared — the plan decides again", LogSeverity.Success));
+                        break;
+                    case (true, 0):
+                        state.MaxSessionTokensThisRun = 0;
+                        save();
+                        log("set-rollover: session token rollover OFF for this run");
+                        sink.Toast(new ToastMessage("session token rollover OFF (this run only)", LogSeverity.Success));
+                        break;
+                    case (true, { } cap):
+                        state.MaxSessionTokensThisRun = cap;
+                        save();
+                        log($"set-rollover: session token rollover ON at {cap / 1000.0:0.#}k tokens for this run");
+                        sink.Toast(new ToastMessage($"session token rollover ON at {cap / 1000.0:0.#}k tokens (this run only)", LogSeverity.Success));
+                        break;
+                }
                 deleteControlFile();
                 break;
             case ControlAction.ResumeRun:
@@ -203,4 +234,14 @@ public sealed class ControlDispatcher(
     }
 
     private static string Short(string sha) => string.IsNullOrEmpty(sha) ? "?" : sha.Length >= 7 ? sha[..7] : sha;
+
+    /// <summary>Parses a set-rollover value. (ok, null) = clear the override; (ok, 0) = rollover
+    /// forced off this run; (ok, n&gt;0) = the per-session token cap this run.</summary>
+    internal static (bool Ok, long? Cap) ParseRolloverValue(string? value)
+    {
+        var v = value?.Trim() ?? "";
+        if (v.Length == 0 || v.Equals("clear", StringComparison.OrdinalIgnoreCase)) return (true, null);
+        if (v.Equals("off", StringComparison.OrdinalIgnoreCase) || v == "0") return (true, 0);
+        return long.TryParse(v, out var cap) && cap > 0 ? (true, cap) : (false, null);
+    }
 }

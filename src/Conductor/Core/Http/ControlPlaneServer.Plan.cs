@@ -361,6 +361,18 @@ public sealed partial class ControlPlaneServer
                 // P2: the base verifier pass bar (a set QA dial's own threshold overrides it).
                 if (!int.TryParse(value, out var bar) || bar is < 1 or > 100) return "verifierThreshold must be 1-100";
                 limits.VerifierThreshold = bar; return null;
+            case "maxsessiontokens":
+                // P5: the session-token rollover cap — null/empty/0 = OFF (the default), the honest label.
+                if (string.IsNullOrWhiteSpace(value) || value == "0") { limits.MaxSessionTokens = null; return null; }
+                if (!long.TryParse(value, out var sessionCap) || sessionCap < 1) return "maxSessionTokens must be a positive integer (or empty/0 for rollover OFF)";
+                limits.MaxSessionTokens = sessionCap; return null;
+            case "softbreakratio":
+                // P5: the cooperative wind-down nudge point; only active when maxSessionTokens is set.
+                if (string.IsNullOrWhiteSpace(value)) { limits.SoftBreakRatio = null; return null; }
+                if (!double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var ratio)
+                    || ratio is <= 0 or > 1)
+                    return "softBreakRatio must be between 0 (exclusive) and 1 (or empty for the 0.8 default)";
+                limits.SoftBreakRatio = ratio; return null;
             default: return $"limits has no editable field '{field}'";
         }
     }

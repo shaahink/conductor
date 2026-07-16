@@ -151,6 +151,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			kind, text = widgets.ToastError, fmt.Sprintf("%s rejected: %s", msg.Verb, reason)
 		}
+		if m.tab == TabPlan && strings.HasPrefix(m.planStatus, "sending") { // P5: the rollover (run) row
+			if msg.Success {
+				m.planStatus = "✓ " + msg.Verb + " sent (this run only — plan file untouched)"
+			} else {
+				m.planStatus = "✗ " + text
+			}
+		}
 		return m, m.addToast(text, kind)
 
 	case MsgInjectSent:

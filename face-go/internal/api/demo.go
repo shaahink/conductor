@@ -515,6 +515,18 @@ func applyDemoEdit(plan *PlanDto, e PlanEditDto) {
 			if n, err := strconv.Atoi(val); err == nil && n >= 1 && n <= 100 {
 				plan.Limits.VerifierThreshold = n
 			}
+		case "maxsessiontokens": // P5: session-token rollover — empty/0 = OFF, the default
+			if n, err := strconv.ParseInt(val, 10, 64); err == nil && n > 0 {
+				plan.Limits.MaxSessionTokens = &n
+			} else {
+				plan.Limits.MaxSessionTokens = nil
+			}
+		case "softbreakratio":
+			if f, err := strconv.ParseFloat(val, 64); err == nil && f > 0 && f <= 1 {
+				plan.Limits.SoftBreakRatio = &f
+			} else {
+				plan.Limits.SoftBreakRatio = nil
+			}
 		}
 	case "qa": // P2 plan-wide QA dial — mirrors ApplyQaEdit (empty mode clears the dial)
 		switch e.Field {

@@ -31,11 +31,34 @@ TUI at `face/`.
 - **Operating Conductor as an agent:** `docs/OPERATING-CONDUCTOR.md` is the control guide — commands,
   live-run steering, HTTP control plane, NEEDS-HUMAN handling, safety rules, and the known-gaps list.
 
-## Resume here (G-series CLOSED + P0/P1/P2 DONE — next is P3, 2026-07-16)
+## Resume here (P-SERIES CLOSED — P0–P5 all DONE, 2026-07-16)
 
-**Read this first if you're the fresh session picking up the planner work.**
+**Read this first if you're the fresh session.** The planner tracker (`CONDUCTOR-PLANNER.md`) is
+CLOSED: all six checkpoints DONE with evidence, gates green at every commit. There is no committed
+next stage — pick up whatever the owner directs (the tracker's closing handoff lists follow-up
+candidates: surface `MaxSessionTokensThisRun` in `GET /state`, a `conductor rollover` CLI verb,
+PathClaims from real task data).
 
-### What landed this session (all pushed on `feat/foreman`, all gates green at each commit)
+### What landed in the P3–P5 session (2026-07-16, pushed on `feat/foreman`)
+7. **P3** (`d174116`) — **Kanban card detail**: pure `PromptComposer` in the library (labeled
+   `PromptBlock` list; only task-scoped blocks editable — pinned: a context edit changes exactly
+   that block); `TaskItem.Context` via `TaskDetailEdited` event; `GET /prompt/blocks?task=`,
+   `POST /tasks/edit` (the one confirm step), `POST /tasks/refine` (advisor PROPOSES only);
+   owner context reaches the real session prompt + MCP task_list; Face detail panel (enter on a
+   card; t/c editors, a advisor preview→confirm, h hand-off via /inject); goldens ×3.
+8. **P4** (`a06f7b7`) — **decoupling finished + proven standalone**: `IWorkflowResolver.Advance`
+   (post-session walk incl. the skip-verification collapse, hop list out) + `ResolveStartKind`
+   (consume-recorded-index-without-advancing) — VerdictEngine/SessionRunner now effect-only;
+   `tools/plan-lint` consumes ONLY `Conductor.Planning`, prints workflow/QA/assignment decisions
+   from a plan file; 2 new arch tests. Bonus: ratchet.ps1's silent pragma breach (39>38 since
+   G3.3) fixed properly — Telegram control-file write went async, its bare MA0045 deleted.
+9. **P5** — **rollover surfaced**: `limits.maxSessionTokens`/`softBreakRatio` editable
+   (Face Settings rows, honest "OFF (default)" label) + the 13th verb `set-rollover`
+   (tokens/off/clear, this-run-only, `RunState.MaxSessionTokensThisRun`, never writes the plan) +
+   `RunContext.EffectiveMaxSessionTokens` choke point. Live-proven: no cap → normal session;
+   `set-rollover 10` → RolledOver, no attempt burned, plan file byte-identical.
+
+### The previous session's log (G3 + P0–P2, same branch)
 1. **G3.1** (`6205b9c`) — `conductor run --paused`: engine+control plane+Face come up parked, resume
    starts session 1. `RunLoop.ApplyStartPause` pure + tested; live harness proof.
 2. **G3.2** (`b5023f6`) — **live plan reload**: 12th verb `reload-plan` (all 3 ingresses via

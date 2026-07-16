@@ -340,7 +340,7 @@ public sealed partial class SessionRunner
             }
             _ctx.State.ConsecutiveBackoffs = 0;
 
-            if (_ctx.Plan.Limits.MaxSessionTokens is { } maxTok && rec.TokensTotal >= maxTok)
+            if (_ctx.EffectiveMaxSessionTokens is { } maxTok && rec.TokensTotal >= maxTok)
             {
                 rec.Outcome = SessionOutcome.RolledOver;
                 rec.ResultSummary = ExtractSessionResult(agent.ResultText);

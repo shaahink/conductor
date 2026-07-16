@@ -47,6 +47,17 @@ public sealed class RunContext
 
     // ── mutable run-loop state ──
 
+    /// <summary>P5: the per-session token cap the rollover machinery actually enforces — the
+    /// session-scoped this-run override when set (0 = forced off), else the plan's
+    /// <c>limits.maxSessionTokens</c>. null = rollover off. Every rollover/soft-break read goes
+    /// through here so the two knobs can never disagree.</summary>
+    public long? EffectiveMaxSessionTokens => State.MaxSessionTokensThisRun switch
+    {
+        0 => null,
+        { } thisRun => thisRun,
+        null => Plan.Limits.MaxSessionTokens,
+    };
+
     public IReadOnlyList<GateResult>? LastGates { get; set; }
     public DateTime? LastControlWrite { get; set; }
     public DateTime? BackoffUntil { get; set; }

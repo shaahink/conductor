@@ -28,9 +28,10 @@ type planField struct {
 	Label   string
 	Field   string
 	Kind    planFieldKind
-	Options []string // enum only
-	Custom  bool     // enum also accepts a free-text value via the "✎ custom…" option
-	Target  string   // edit target override (e.g. "limits"); empty = derived from the section
+	Options []string            // enum only
+	Custom  bool                // enum also accepts a free-text value via the "✎ custom…" option
+	Target  string              // edit target override (e.g. "limits"); empty = derived from the section
+	Display func(string) string // optional browse-view transform of the raw value (edit sees the raw)
 }
 
 // Curated model choices for the picker; "(agent default)" clears the per-stage override, and the
@@ -116,7 +117,34 @@ func (m Model) settingsFields() []planField {
 		{Label: "maxRunTokens", Field: "maxruntokens", Kind: fieldInt, Target: "limits"},
 		{Label: "stallMinutes", Field: "stallminutes", Kind: fieldInt, Target: "limits"},
 		{Label: "sessionTimeout", Field: "sessiontimeoutminutes", Kind: fieldInt, Target: "limits"},
+		// P5: the session-token rollover, honestly labeled — OFF is the default and stays the
+		// default. Editing writes limits.maxSessionTokens (empty = off) and rides the live reload.
+		{Label: "sessionRollover", Field: "maxsessiontokens", Kind: fieldInt, Target: "limits", Display: rolloverDisplay},
+		{Label: "softBreakRatio", Field: "softbreakratio", Kind: fieldText, Target: "limits", Display: softBreakDisplay},
+		// P5: the same knob session-scoped — posts the set-rollover control verb (tokens · off ·
+		// clear), which flips the CURRENT run live and never writes the plan file.
+		{Label: "rollover (run)", Field: "set-rollover", Kind: fieldText, Target: "control", Display: rolloverThisRunDisplay},
 	}
+}
+
+// rolloverDisplay renders limits.maxSessionTokens honestly: absent = the feature is OFF, which is
+// the default and must read as such (the audit's "honestly surfaced" requirement, P5).
+func rolloverDisplay(raw string) string {
+	if raw == "" {
+		return "OFF — DeepSeek-style session rollover disabled (default)"
+	}
+	return "ON — roll over past " + raw + " tokens/session"
+}
+
+func softBreakDisplay(raw string) string {
+	if raw == "" {
+		return "(0.8 default — active only when rollover is ON)"
+	}
+	return raw
+}
+
+func rolloverThisRunDisplay(string) string {
+	return "(session-scoped override — type tokens · off · clear)"
 }
 
 func (m Model) workflowChoices() []string {
@@ -333,6 +361,12 @@ func (m *Model) savePlanFieldValue(f planField, value string) (tea.Model, tea.Cm
 	target, id := m.currentTarget()
 	if f.Target != "" { // field-level override (the Settings limits rows post to "limits")
 		target, id = f.Target, ""
+	}
+	// P5: the "rollover (run)" row is not a plan edit at all — it posts the set-rollover control
+	// verb, which flips run state at the engine and NEVER writes the plan file.
+	if target == "control" {
+		m.planStatus = "sending " + f.Field + "…"
+		return m, m.cmdPostControl(api.ControlRequestDto{Command: f.Field, Value: value})
 	}
 	m.planStatus = "saving…"
 	v := value
@@ -576,6 +610,18 @@ func (m Model) currentFieldValue(field string) string {
 			return strconv.Itoa(m.plan.Limits.StallMinutes)
 		case "sessiontimeoutminutes":
 			return strconv.Itoa(m.plan.Limits.SessionTimeoutMinutes)
+		case "maxsessiontokens":
+			if m.plan.Limits.MaxSessionTokens != nil {
+				return strconv.FormatInt(*m.plan.Limits.MaxSessionTokens, 10)
+			}
+			return ""
+		case "softbreakratio":
+			if m.plan.Limits.SoftBreakRatio != nil {
+				return strconv.FormatFloat(*m.plan.Limits.SoftBreakRatio, 'f', -1, 64)
+			}
+			return ""
+		case "set-rollover":
+			return "" // session-scoped — the engine owns the state; the editor always starts blank
 		}
 	case planTabGates:
 		if m.planGateIdx >= len(m.plan.Gates) {
@@ -786,7 +832,11 @@ func (m Model) renderFieldList(fields []planField, ownerLabel string) (string, s
 			lines = append(lines, "  "+m.renderFieldEditor(f))
 			continue
 		}
-		disp := val
+		shown := val
+		if f.Display != nil { // P5: browse-view transform (e.g. rollover's honest OFF label)
+			shown = f.Display(val)
+		}
+		disp := shown
 		if disp == "" {
 			disp = subtleStyle.Render("(unset)")
 		} else {
@@ -794,7 +844,7 @@ func (m Model) renderFieldList(fields []planField, ownerLabel string) (string, s
 		}
 		row := fmt.Sprintf("  %-17s %s", f.Label, disp)
 		if i == m.planFieldIdx && !m.planEditing {
-			row = highlightBg.Render(fmt.Sprintf("  %-17s %s", f.Label, val))
+			row = highlightBg.Render(fmt.Sprintf("  %-17s %s", f.Label, shown))
 		}
 		lines = append(lines, row)
 	}

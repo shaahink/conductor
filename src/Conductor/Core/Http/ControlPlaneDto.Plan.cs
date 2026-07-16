@@ -37,7 +37,7 @@ public sealed record PlanDto(
             Limits: new PlanLimitsDto(
                 p.Limits.StallMinutes, p.Limits.SessionTimeoutMinutes,
                 p.Limits.MaxRunCostUsd, p.Limits.MaxRunTokens, p.Limits.VerifierThreshold,
-                p.Limits.MaxSessions),
+                p.Limits.MaxSessions, p.Limits.MaxSessionTokens, p.Limits.SoftBreakRatio),
             Qa: p.Pipeline?.Qa is { } qa
                 ? new PlanQaDto(qa.Mode, qa.VerifierThreshold, qa.AuditCoversPriorSessions)
                 : null);

@@ -13,11 +13,11 @@
  ── GATES ──               │    maxRunTokens      (unset)                                                     
    ✓ build                 │    stallMinutes      12                                                          
    ● test 4s               │    sessionTimeout    240                                                         
-   ○ lint                  │                                                                                  
-                           │    plan file: C:\Code\conductor\plans\conductor-foreman.plan.json                
- ── TASKS ──               │                                                                                  
+   ○ lint                  │    sessionRollover   OFF — DeepSeek-style session rollover disabled (default)    
+                           │    softBreakRatio    (0.8 default — active only when rollover is ON)             
+ ── TASKS ──               │    rollover (run)    (session-scoped override — type tokens · off · clear)       
    ✓ Add truth-tier con…   │                                                                                  
-   ● Wire RunDb.GetLast…   │                                                                                  
+   ● Wire RunDb.GetLast…   │    plan file: C:\Code\conductor\plans\conductor-foreman.plan.json                
    ○ Cache gate results…   │                                                                                  
                            │                                                                                  
                            │                                                                                  

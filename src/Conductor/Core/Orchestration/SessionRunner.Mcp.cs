@@ -22,7 +22,7 @@ public sealed partial class SessionRunner
 
         _ctx.SoftBreakSignalled = true;
         var activeCp = preTrack.Checkpoints.FirstOrDefault(c => !c.IsDone)?.Id;
-        var maxTokens = _ctx.Plan.Limits.MaxSessionTokens!.Value;
+        var maxTokens = _ctx.EffectiveMaxSessionTokens!.Value;
         var signalFile = Path.Combine(_ctx.Plan.StateDir, "soft-break");
         File.WriteAllText(signalFile, $"finish-subtask-and-handoff:{DateTime.UtcNow:o}");
 
@@ -38,7 +38,7 @@ public sealed partial class SessionRunner
 
     private long? ComputeSoftThreshold()
     {
-        if (_ctx.Plan.Limits.MaxSessionTokens is not { } max) return null;
+        if (_ctx.EffectiveMaxSessionTokens is not { } max) return null;
         var ratio = _ctx.Plan.Limits.SoftBreakRatio is { } r and > 0 and <= 1.0
             ? r : 0.8;
         return (long)(max * ratio);

@@ -4,7 +4,9 @@ namespace Conductor.Core.Http;
 /// <c>limits</c> target on <c>POST /plan/edit</c>, live-applied at the next session boundary.</summary>
 public sealed record PlanLimitsDto(
     int StallMinutes, int SessionTimeoutMinutes, decimal? MaxRunCostUsd, long? MaxRunTokens, int VerifierThreshold,
-    int? MaxSessions = null);
+    int? MaxSessions = null,
+    // P5: session-token rollover — null = OFF (the default, honestly labeled in the Face).
+    long? MaxSessionTokens = null, double? SoftBreakRatio = null);
 
 /// <summary>One edit the TUI applies to the plan. <c>Op</c> ∈ set|add|delete (absent/null ⇒ "set" for
 /// back-compat). <c>Target</c> ∈ stage|gate|plan|limits|qa|telegram; <c>Id</c> is the stage id / gate name (empty
