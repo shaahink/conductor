@@ -31,9 +31,43 @@ TUI at `face/`.
 - **Operating Conductor as an agent:** `docs/OPERATING-CONDUCTOR.md` is the control guide — commands,
   live-run steering, HTTP control plane, NEEDS-HUMAN handling, safety rules, and the known-gaps list.
 
-## Resume here (AI-native G-series DONE + G3/P-series PLANNED — drive from Claude Code, 2026-07-16)
+## Resume here (G-series CLOSED + P0/P1 DONE — next is P2, 2026-07-16)
 
 **Read this first if you're the fresh session picking up the planner work.**
+
+### What landed this session (all pushed on `feat/foreman`, all gates green at each commit)
+1. **G3.1** (`6205b9c`) — `conductor run --paused`: engine+control plane+Face come up parked, resume
+   starts session 1. `RunLoop.ApplyStartPause` pure + tested; live harness proof.
+2. **G3.2** (`b5023f6`) — **live plan reload**: 12th verb `reload-plan` (all 3 ingresses via
+   `ControlFile.Parse`); dispatcher always defers; the loop swaps the plan ONLY at its top (= the
+   session boundary, incl. paused iterations) via `ApplyPlanReload` → `SwapPlan` on RunContext +
+   prompts + gates/lanes/dispatcher; `/plan/edit` + applied `/plan/import` auto-enqueue it;
+   `conductor plan reload` queues it; `PlanReloaded` event in timeline/SSE; Face palette entry.
+   Live proof: paused run, plan file edited, reload+resume → session 1 ran against the new plan.
+3. **G3.3** (`4a3b430`) — **live limits**: `limits.maxSessions` (run-total cap → PARKS at boundary
+   with `ParkedBySessionCap`+reason; a reload that raises/clears the cap auto-resumes exactly that
+   park); `limits` target on `/plan/edit` (5 fields, empty clears); Face Settings gained the rows +
+   golden + round-trip test. Live proof: cap=1 parks after session 1, raise-to-3 + reload resumes.
+   **G-series tracker (`CONDUCTOR-AI-NATIVE.md`) is CLOSED — G1+G2+G3 all DONE.**
+4. **P0** (`9222274`) — **`Conductor.Planning` library** (the P-series keystone): owns SessionKind +
+   Workflow{Definition,Step,Overrides,RuntimeVars} + the (now-agnostic) WorkflowEngine +
+   `IWorkflowResolver` + the `pipeline` rules schema (PipelineRules/RoleAgentRule/QaRule/
+   MultiItemRule). One-way dependency enforced by
+   `ArchitectureTests.PlanningLibraryDoesNotReferenceTheEngine` (assembly refs + source usings).
+   Engine adapters: `WorkflowVarsFactory`, `Resolve(plan, stage)` extension; DI-wired. Dead
+   `agent.tokenCeiling` DELETED (grep-clean). Behavior unchanged.
+5. **P1** (`6ab268b`) — **role→agent assignment + multi-item sessions**: `IAssignmentPolicy` /
+   `DefaultAssignmentPolicy` (pure; role map deliver/verify/audit/fix → model/persona/command;
+   Resume exempt; multi-item deliver-only opt-in with declared-path conflict refusal). SessionRunner
+   asks the policy; personaOverride threads through PromptBuilder; multi-item prompts name every
+   claimed item. Live harness proof: the {model} process arg = the role override; prompt.md names
+   both claimed checkpoints.
+
+**NEXT: P2 (QA dial) → P3 (card prompt blocks) → P4 (finish extraction + standalone consumer) →
+P5 (rollover surfaced).** Read `CONDUCTOR-PLANNER.md` (tracker handoff) + `docs/CONDUCTOR-PLANNER.md`
+§P2 before starting. P2's hard constraint: the dial is a *projection onto the existing workflows* —
+resolving `off`/`everySession`/`phaseGate` must equal hand-picking the corresponding workflow (pin
+with a unit test comparing resolved definitions). Face dial edits ride G3.2's live reload.
 
 ### How to drive (owner directive, 2026-07-16): BE the delivering agent — do NOT run `conductor run`
 The owner wants plans driven **directly from Claude Code**: *you* are the delivering agent, not the
