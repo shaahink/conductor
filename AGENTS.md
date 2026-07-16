@@ -31,13 +31,33 @@ TUI at `face/`.
 - **Operating Conductor as an agent:** `docs/OPERATING-CONDUCTOR.md` is the control guide — commands,
   live-run steering, HTTP control plane, NEEDS-HUMAN handling, safety rules, and the known-gaps list.
 
-## Resume here (P-SERIES CLOSED — P0–P5 all DONE, 2026-07-16)
+## Resume here (P-SERIES CLOSED + PF follow-ups landed, 2026-07-16)
 
 **Read this first if you're the fresh session.** The planner tracker (`CONDUCTOR-PLANNER.md`) is
-CLOSED: all six checkpoints DONE with evidence, gates green at every commit. There is no committed
-next stage — pick up whatever the owner directs (the tracker's closing handoff lists follow-up
-candidates: surface `MaxSessionTokensThisRun` in `GET /state`, a `conductor rollover` CLI verb,
-PathClaims from real task data).
+CLOSED: all six checkpoints DONE with evidence, gates green at every commit. Two of its three
+follow-up candidates landed the same day (the PF session, below); the one remaining candidate is
+**PathClaims from real task data** — deliberately NOT started, because it needs an owner schema
+decision first: `ReadyItem.PathClaims` is never populated (SessionRunner builds items Id+Title
+only, `claimedPaths: null`), so someone has to decide where task-card path claims originate (a new
+`TaskItem` field edited via the Face card detail / MCP task tools? inferred from git activity?)
+before the multi-item conflict refusal can bite on real data. There is no other committed next
+stage — pick up whatever the owner directs.
+
+### What landed in the PF session (2026-07-16, pushed on `feat/foreman`)
+- **PF1** (`6401b6f`) — **the set-rollover override surfaced**: `GET /state` carries
+  `maxSessionTokensThisRun` (absent = no override; 0 = forced OFF this run; >0 = the cap), read off
+  the LIVE RunState (the override is run-state only, never event-folded). Face "rollover (run)"
+  Settings row now renders the ACTIVE override (none/OFF this run/ON at N) instead of a blind hint;
+  demo source round-trips the verb like the dispatcher. Wire lifecycle pinned by a contract test
+  over a real HttpListener.
+- **PF2** (`2360ce0`) — **`conductor rollover <tokens|off|clear>`**: the CLI ingress for the 13th
+  verb (GotoCommand pattern; value validated by the dispatcher's own `ParseRolloverValue` BEFORE
+  writing, exit 2 on a typo). Proven live against a scratch plan through the built binary.
+  Also: `ControlPlaneServerTests.StartServer` now returns `server.Port` (the parallel-run port
+  flake P5 fixed in the two newer HTTP fixtures — it hit once here, 841/842, then green).
+- **Gotcha fixed in the docs of record:** the ratchet gate script is `tools/gates/ratchet.ps1`
+  (NOT `tools/ratchet.ps1` — `powershell -File` on the wrong path prints an error but exits 0,
+  a silent false-green).
 
 ### What landed in the P3–P5 session (2026-07-16, pushed on `feat/foreman`)
 7. **P3** (`d174116`) — **Kanban card detail**: pure `PromptComposer` in the library (labeled
