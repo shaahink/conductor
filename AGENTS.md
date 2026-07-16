@@ -31,6 +31,70 @@ TUI at `face/`.
 - **Operating Conductor as an agent:** `docs/OPERATING-CONDUCTOR.md` is the control guide — commands,
   live-run steering, HTTP control plane, NEEDS-HUMAN handling, safety rules, and the known-gaps list.
 
+## Resume here (AI-native G-series DONE + G3/P-series PLANNED — drive from Claude Code, 2026-07-16)
+
+**Read this first if you're the fresh session picking up the planner work.**
+
+### How to drive (owner directive, 2026-07-16): BE the delivering agent — do NOT run `conductor run`
+The owner wants plans driven **directly from Claude Code**: *you* are the delivering agent, not the
+conductor orchestrator loop. The plan doc + tracker are your worklist. Per checkpoint:
+1. **Pre-session ritual** — read the tracker (`## Handoff` + read order), your stage section in the
+   design brief, and the docs it cites. Run the gate battery first; never build on red.
+2. **Deliver** the next incomplete checkpoint(s) of the target stage only. One landed-with-proof beats
+   three claimed.
+3. **Gate battery** — `dotnet build Conductor.slnx` · `dotnet test Conductor.slnx` · (in `face-go/`)
+   `go build/vet/test ./...` · ratchet (`dotnet test --filter Category=Architecture`). Green or fix.
+4. **Update the tracker** — overwrite the `## Handoff` block, fill the checkpoint row (Status DONE +
+   Commit + Evidence). If a row stays TODO the work isn't done.
+5. **Commit per checkpoint** and push (owner pre-authorized commit+push at checkpoints). Use the repo's
+   commit trailer convention.
+This is the same discipline the conductor prompt enforces — just executed in the interactive session so
+the owner can watch and redirect. `conductor run` is NOT used for this work.
+
+### What's DONE (this session, 2026-07-16) — verified live, all pushed on `feat/foreman`
+**AI-native G-series (G1 + G2) — `plans/conductor-ai-native.plan.json`, tracker `CONDUCTOR-AI-NATIVE.md`:**
+- **G1 (prompt→plan):** `POST /plan/import` routes freeform prose through the plan's advisor model
+  (`Advisor.AskTextAsync` — fixed a latent bug where the import prompt's plan JSON could never satisfy
+  the verdict regex); Face Plan tab gained a **Prompt** section beside Import (both land on the shared
+  import-diff view). Commit `5bffd0c`.
+- **G2 (kanban):** `POST /tasks/update|add` share one `TaskWrites` service with the MCP task tools;
+  Face **Kanban** tab (`b`, the 11th tab) — live board, ←→ move / `n` add. Commit `11d77db`.
+- **Hardening** (`4c96bd0`): control plane now requires a **per-run write token** (`X-Conductor-Token`,
+  from `control-plane.json`) on every POST — CSRF/prompt-injection guard; freeform apply must be
+  previewed first; advisor prompt frames its source as untrusted data. Face + `conductor run/face` pass
+  the token via env. See `docs/OPERATING-CONDUCTOR.md` §4.
+- Gates at close: **C# 750 green**, Go all packages green.
+
+### What's PLANNED (TODO — the next session's work, in dependency order)
+1. **G3 (live & dynamic)** — a TODO stage in `plans/conductor-ai-native.plan.json`; brief in
+   `docs/CONDUCTOR-AI-NATIVE.md` §G3. **The prerequisite for everything dynamic.** Today
+   `RunContext.Plan` is get-only/loaded-once, so Face edits only take effect on a full restart.
+   G3.1 `conductor run --paused` (the `Paused` idle path already exists in `RunLoop.cs` ~L87); G3.2
+   real `ControlAction.ReloadPlan` swapping the live plan at the **session boundary only**, auto-enqueued
+   by `/plan/edit` + applied `/plan/import`; G3.3 live limits + session cap from Plan-tab Settings.
+   **Start here** — small, self-contained, unblocks the P-series.
+2. **P-series (decoupled dynamic planner)** — `plans/conductor-planner.plan.json`, tracker
+   `CONDUCTOR-PLANNER.md`, brief `docs/CONDUCTOR-PLANNER.md` (validated: 6 stages; dry-run resolves P0).
+   P0 keystone = new **`Conductor.Planning`** library (one-way dependency, arch-test enforced from P0) +
+   agnostic `pipeline` rules block + `IWorkflowResolver` seam + **delete the dead `agent.tokenCeiling`**
+   (audit finding: defined/merged but enforced nowhere — a no-op trap). P1 role→agent assignment +
+   multi-item sessions; P2 QA policy dial (off/every-session/phase-gate) over the existing workflows; P3
+   Kanban card-detail prompt building-blocks + advisor-refine; P4 finish the extraction + a standalone
+   consumer; P5 rollover/limits surfaced (OFF by default, session-scoped). **Read the "Design principles"
+   section of `docs/CONDUCTOR-PLANNER.md` before writing — purity + one-way dependency + standalone-usable
+   are the code-quality gates that matter most.** Reuse, don't fork: `WorkflowEngine`, the workflow/override
+   model, the task graph, the Kanban tab, and G1's advisor plumbing all already exist.
+
+### Key audit findings baked into the plans (don't re-derive)
+- **`agent.tokenCeiling` is dead** — enforced nowhere; the real per-session rollover knob is
+  `limits.maxSessionTokens` (null = **off by default**; on-cross → `RolledOver`, handoff written, next
+  session fresh, **no attempt burned**). `softBreakRatio` (80% nudge) only fires when maxSessionTokens is
+  set. P0 deletes tokenCeiling; P5 surfaces the real knob.
+- **The pipeline is already a data-driven workflow engine** (deliver-verify / big-dev-then-big-audit /
+  docs-only / spike + RunIf/SkipIf + per-stage overrides). The P-series surfaces + decouples it.
+- **Agent↔session↔task is stage-sequential** (one session = first not-done checkpoint of the current
+  stage); per-task agent/auditor assignment and cross-checkpoint claims are net-new (P1).
+
 ## Resume here (face-go UX pass — gaps review closed, 2026-07-15)
 A review of the Go face against STYLE.md + the docs found ~20 gaps/glitches; this pass attacked them.
 **Face (Go):** finished the sessions outcome→colour map (AgentError/TimedOut/NeedsHuman were grey);
