@@ -4,34 +4,34 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: session #8 (Deliver, U2). Killed once mid-session; nothing was lost (it had only READ, tree
-was clean). **STAGE U2 IS CLOSED, 3/3.**
-qa: s7's U2.1 claim **audited against fresh artifacts and CONFIRMED** — verb grouping matches the
-spec verb-for-verb, `⚠` on unsafe rows, confirm reads `abort — kill session + stop conductor. y/N`,
-both its new tests pass, and every control send routes through the confirm path (no destructive
-hotkey bypasses it). Nothing over-claimed.
-done: **U2.2** (`c8ff55f`) Report is now a rendered report — header/progress/stages/sessions
-digest/gates/verifier scores from `/state`+`/sessions`, scroll-only. **U2.3** (`8749704`) Dev tab
-(`d`) = the moved SQL console (unchanged, tests moved with it) + run internals + per-session
-token/cost stats. `GET /sessions` now serves per-session cost+tokens, SUMMED via correlated
-subqueries (s7's warning was right: `costs` holds many rows per session — a JOIN triples every
-figure; 4 new tests are shaped to fail on a join, not just on a wrong number).
-gate: green — build 0w/0e, **897/897**, ratchet OK (826 tests / 38≤38 pragmas / archdebt 0,
-nothing weakened), face-go build/vet/test green + gofmt clean. Artifacts `.conductor/gate-u22.out`,
-`.conductor/gate-u23.out`.
-traps: **contention is probabilistic, not deterministic** — 897/897 passed twice WHILE the
-DevContext2 suite ran, and bug #3 passed too; a green run does not clear those flakes, a red one
-does not prove a defect. Inspect the box first, and never `Stop-Process dotnet` (it would kill
-another repo's suite + a live web server). Bug #2 is real and still bites: `conductor bg` logs are
-BOM-only 3 bytes for anything slow — redirect to your own file. Do NOT put double quotes or `>` in
-`conductor note` text (shim re-splits); call the exe, not the scoop shim.
-next: **U3** (`U3.1` themes → `U3.2` glitch pass → `U3.3` transcript vibe). U3.1 turns
-`widgets/style.go`'s palette into a `Theme` + `ApplyTheme(name)`; note U2.2 added `infoStyle` to
-view.go's shared var block and exported `widgets.StageGlyph`/`GateGlyph` (Report and the sidebar now
-share ONE vocabulary — a second copy is what made finished stages render `○` in Report). Read the
-ledger's two rendering traps first: measure RENDERED lines not slice elements, and gutter labels
-must be < homeLabelW(11). And assert the RENDER, not the state — a state-only assertion passed a
-pane whose scroll did nothing.
+last: session #11 (FIX, U3). Session #10 was right: **U3 had never been delivered** — nothing to
+verify. Delivered it from a clean tree instead. **U3.1 + U3.2 DONE, U3.3 PART 1 of 2.**
+done: **U3.1** (`45e8fba`) `widgets.Theme` = 16 roles + registry (mocha/latte/nord/gruvbox),
+`--theme` (one launch; bad name = exit 2), palette **Face** group switches live AND persists to
+`os.UserConfigDir()/conductor-face/config.json`. **U3.2** (`4fc2c61`) glitch pass. **U3.3 part 1**
+(`b69f761`) `/state.provider`, RESOLVED not raw; agent strip names the CLI.
+gate: green at every commit — build 0w/0e, **918/918** (+21), ratchet OK (832 tests / 38≤38 /
+archdebt 0, nothing weakened), go build/vet/test green + gofmt clean. `.conductor/gate-u31.out`,
+`gate-u32.out`, `gate-u33.out`.
+traps (NEW, cost me real time): **the goldens were pinning the bug** — `size_80x24.golden` had Home
+missing its whole Next steps section since the day it was written and matched itself forever; a
+golden proves a frame UNCHANGED, never CORRECT. Same shape twice more:
+`TestFrameNeverExceedsWindowHeight` built 30 transcript events then asserted against **Home**
+(never switched tabs), and `cmdFetchTasks` swallowed its error so a broken `/tasks` could not be
+told from an empty board *at the wire*. Prefer an invariant (does the body fit `paneRows()`?) over a
+pinned frame. Older traps still true: bug #2 (`conductor bg` logs are BOM-only 3 bytes — redirect to
+your own file; inline `powershell -Command` after `--` gets re-split, use `-File`); no double quotes
+or `>` in `conductor note`; call the exe, not the scoop shim; `CONDUCTOR_PLAN` must be set (7 plans).
+next: **U3.3 part 2** — the wire is done, the presentation is not. Build: Claude-Code transcript
+(`●` tool bullets, bold name + dim one-line arg, results indented under their call), thinking
+dim-italic collapsed past ~3 lines with a `+N lines (T to expand)` tail, session footer strip
+(model/elapsed/tokens/cost), `ctrl+c` double-tap to quit + single-tap hint toast, `esc` backs out
+one layer, goldens for BOTH provider renderings. `providerLabel()` in tab_agent.go is the seam;
+`""` = older engine = unknown, NOT "not claude". Then U3 is 3/3 and the plan is closed.
+bugs filed: **#7** (medium) `HostLoggingTests.DryRun…CorrelationProperties` is order-dependent —
+asserts the FIRST runId line in a globbed log is its own; a concurrent test's run fails it (hit
+once, 896/897; passes 5/5 isolated; re-ran full suite green twice). Unrelated to U3, left unfixed.
+**#6** (the verifier-misdispatch defect) is still open and will keep misdispatching every stage.
 
 
 ## Baseline numbers (from run.db)
@@ -40,7 +40,7 @@ pane whose scroll did nothing.
 |---|---|
 | Total checkpoints | 11 |
 | Done | 0 |
-| Claimed (unconfirmed) | 6 |
+| Claimed (unconfirmed) | 8 |
 
 ## Checkpoints
 
@@ -66,9 +66,9 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| U2.1 | palette groups (Run/Stage/Danger) + consequence-naming confirms | DONE | 26a4194 | face-go/internal/tui/testdata/golden/palette.golden + palette_confirm.golden + help.golden · go build/vet/test green, gofmt clean · QA'd by s8 against fresh artifacts: confirmed |
-| U2.2 | Report tab is a visual run report (progress, stages, sessions, gates, scores) | DONE | c8ff55f | .conductor/gate-u22.out (build 0w/0e · 897/897 · ratchet OK 826/38/0 · face-go green) · goldens report + report_scrolled + dev |
-| U2.3 | Dev tab: SQL console moved + run internals + per-session token/cost stats | DONE | 8749704 | .conductor/gate-u23.out (build 0w/0e · 897/897 · ratchet OK 826/38/0 · face-go green) · golden dev_scrolled |
+| U2.1 | palette groups (Run/Stage/Danger) + consequence-naming confirms | DONE | - | commit 26a4194 · face-go/internal/tui/testdata/golden/palette.golden + palette_confirm.golden + help.golden · go build/vet/test green, gofmt clean |
+| U2.2 | Report tab is a visual run report (progress, stages, sessions, gates, scores) | DONE | c8ff55f | build:OK · face-build:OK |
+| U2.3 | Dev tab: SQL console moved + run internals + per-session token/cost stats | DONE | c8ff55f | build:OK · face-build:OK |
 
 ### U3 — Face: themes, agent-terminal vibe, glitch pass
 
