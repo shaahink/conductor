@@ -1,10 +1,10 @@
 ﻿# Conductor — Conductor UX (U-series) run report
 
-_Updated 2026-07-16 23:48 UTC · branch `feat/foreman` · HEAD `3cb0579`_
+_Updated 2026-07-17 01:31 UTC · branch `feat/foreman` · HEAD `c829143`_
 
-**Status:** Running
+**Status:** Idle
 **Stage:** U0 — Engine: start, resume, journey · attempts used 0 · working ▸ U0.1
-**Checkpoints:** 0/11 done · **Sessions run:** 1 · **Cost:** $0.0000 (agent $0.0000 + gates $0.0000)
+**Checkpoints:** 0/11 done · **Sessions run:** 2 · **Cost:** $23.9455 (agent $23.9417 + gates $0.0038)
 
 ## Stage progress
 
@@ -59,6 +59,7 @@ _Updated 2026-07-16 23:48 UTC · branch `feat/foreman` · HEAD `3cb0579`_
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Overhead | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | U0 | Deliver | 1 | 07-16 23:42 | 0:05 | Interrupted |  | 0 |  |  |  |  |
+| 2 | U0 | Resume | 1r1 | 07-17 00:28 | 1:02 | Progress |  | 7 | build:OK · face-build:OK | $23.9417 | $0.0038 |  |
 
 ## Timeline
 
@@ -69,6 +70,9 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-17 00:42:31  ◆ run started · Conductor UX (U-series)
 07-17 00:42:32  ▸ stage U0 entered — Engine: start, resume, journey
 07-17 00:42:33  • session #1 U0 Deliver started (attempt 1/6)
+07-17 00:48:12  • session #1 U0 → Interrupted  (5m38s)
+07-17 01:28:28  ◆ run resumed · Conductor UX (U-series)
+07-17 01:28:29  • session #2 U0 Resume started (attempt 1/6)
 ```
 
 ## Health
@@ -76,7 +80,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 1 · retries 0 (0 %) · overall Ok
+sessions 2 · retries 0 (0 %) · overall Ok
 ✓ no health concerns detected
 ```
 
@@ -86,9 +90,20 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/foreman
-working tree: M CONDUCTOR-UX-START.md
+working tree: clean
 vs upstream: up to date
 ```
+
+### Commits by session
+
+- **s2 (U0 Resume)** — 7 commit(s):
+  - [`c829143`](https://github.com/shaahink/conductor/commit/c829143) docs(agents): U0 CLOSED 3/3 — session handoff, next stage is U1 (Face)
+  - [`84fe84f`](https://github.com/shaahink/conductor/commit/84fe84f) docs: U0.3 part 2 — resume story documented, --no-dashboard staleness fixed
+  - [`ebd0eca`](https://github.com/shaahink/conductor/commit/ebd0eca) feat(engine): U0.3 part 1 — gateless plans read honest, not blank or lying
+  - [`66e6f57`](https://github.com/shaahink/conductor/commit/66e6f57) feat(cli): U0.2 — conductor journey, a pre-flight itinerary before any spend
+  - [`ba80505`](https://github.com/shaahink/conductor/commit/ba80505) docs(agents): U0.1 done + ratchet-gate QA note — resume pointer at U0.2
+  - [`199f2c8`](https://github.com/shaahink/conductor/commit/199f2c8) test(planning): U0.1 — PlanDiscovery resolution-order unit tests; mark complete
+  - [`a15cce6`](https://github.com/shaahink/conductor/commit/a15cce6) fix(run): async RunCommand+RunStateResume — ratchet gate was silently red (40>38)
 
 ## Phase handovers (audit)
 
@@ -108,6 +123,14 @@ vs upstream: up to date
 - `.conductor/handovers/F1.md`
 - `.conductor/handovers/F2.md`
 - `.conductor/handovers/F4.md`
+
+## Last gate run
+
+build:OK · face-build:OK
+
+## Last session result
+
+> SESSION-RESULT: Stage U0 is CLOSED, 3/3. QA of session #1's interrupted work found the ratchet gate genuinely red (40 pragmas > ceiling 38, from two accumulated MA0045 suppressions); fixed by converting `RunCommand`/`RunStateResume` to real async (`a15cce6`), restoring 38≤38. **U0.1** (plan discovery) — session #1's implementation already matched spec exactly; added the missing resolution-order unit tests (`199f2c8`). **U0.2** (`conductor journey`) — new read-only pre-flight verb: identity/resume-state, resolved-workflow stages, gates by tier, human moments, footer commands; verified live against the actual running U-series plan and a scratch edge-case plan, <1s (`66e6f57`). **U0.3** (gatele…
 
 ## Tracker handoff
 
