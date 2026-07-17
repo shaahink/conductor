@@ -45,20 +45,40 @@ tree while an agent session is live.
   fable advisor) · `docs/CONDUCTOR-UX.md` (THE spec — includes the 13-item dogfood appendix, the
   "delivered engine-side, do not redo" ledger, and the owner's orchestrator-gaps backlog) ·
   `CONDUCTOR-UX-START.md` (tracker; the engine regenerates it, don't hand-groom).
-- **Run state:** run `1a7c1714` in `.conductor/run.db`. Session #1 (Deliver U0, sonnet-5) was
-  interrupted by owner Ctrl+C at 00:48 mid-ritual with a queued resume; **U0.1 is a committed WIP**
-  (`e8f3f17` — PlanDiscovery + ResolvePlanPath wiring, tests still missing). Next session must QA
-  that WIP, add the resolution-order tests, then mark U0.1.
+- **Run state:** run `1a7c1714` in `.conductor/run.db`, now on **session #2** (Resume U0, resume #1
+  of `6bd47a4c`) after session #1 was interrupted twice (owner Ctrl+C, then a hard cancel). **U0.1
+  is DONE** (`a15cce6` + `199f2c8`) — see below. Next session: **U0.2** (`conductor journey`,
+  docs/CONDUCTOR-UX.md §U0.2), then U0.3 (gateless + resume docs).
 - **To continue:** the owner runs `conductor run -p plans\conductor-ux.plan.json` from the repo
   root (resumes the run — resume actually works now; the Face auto-spawns; the engine console is
   muted while the Face owns the terminal and an exit epilogue always prints).
+- **This session's QA + delivery (2026-07-17, pushed):**
+  - **Ratchet gate was genuinely RED at session start** (40 pragmas > ceiling 38) — session #1's
+    committed WIP (`e8f3f17`, `PlanDiscovery.cs`) and the engine fix `4fcecf7` (`RunStateResume.cs`)
+    each added one MA0045 suppression without anyone noticing the ceiling breach (same silent-cheat
+    shape as the earlier G3.3 39>38 incident). Fixed for real, not by raising the ceiling
+    (`a15cce6`): `RunCommand` converted `Command<Settings>` → `AsyncCommand<Settings>` (same pattern
+    as `DoctorCommand`, M8.1), so its "Execute must return int" pragma is gone; `RunStateResume`
+    became genuinely async (`OpenAsync`/`ExecuteScalarAsync`) now that its only caller is a real
+    async boundary, dropping its pragma too. Net 40→38. Added the round-trip/no-match/torn-JSON
+    tests `RunStateResume` never had.
+  - **U0.1 marked DONE** (`199f2c8`) — session #1's discovery core matched the spec exactly (no
+    changes needed); added the resolution-order unit tests the spec asked for
+    (`tests/Conductor.Tests/PlanDiscoveryTests.cs`, 9/9): empty→none, single-in-cwd, multiple-in-cwd
+    ordered, empty-cwd-falls-back-to-plans, **cwd wins outright even with >1 candidate**,
+    malformed/missing name never throws.
+  - Gate battery at close: dotnet build 0w/0e, full suite **862/862**, ratchet OK (38≤38), go
+    build/vet/test green.
 - **Delivered engine-side this era (2026-07-16/17, all pushed — build on, don't redo):**
   `d6f9b87` Face/console mute + local timestamps + fake-agent verifier; `877ff57` live transcript
   wire + run.db access gate + truthful `/state` (+ `model` on the wire and in the agent strip);
-  `4fcecf7` stale-control purge + resume-from-run.db (`RunStateResume`) + exit epilogue;
-  `3cb0579` spec appendix 11–13. Known live bugs already root-caused and ASSIGNED in the spec
-  appendix: kanban empty (seeding emits no TaskAdded — U2), transcript readability (U3.3),
-  frame-height overflow hiding footer + live tail (U3.2).
+  `4fcecf7` stale-control purge + resume-from-run.db (`RunStateResume`, now async — see above) +
+  exit epilogue; `3cb0579` spec appendix 11–13; `7f2b88b` kanban seeded cards + frame-height
+  invariant + collapsed thinking + overnight limits. Known live bugs already root-caused and
+  ASSIGNED in the spec appendix: kanban empty (seeding emits no TaskAdded — U2, though `7f2b88b`
+  may have already closed this, check before redoing), transcript readability (U3.3), frame-height
+  overflow hiding footer + live tail (U3.2, `7f2b88b` added the invariant test — check before
+  redoing).
 - The open-edges note's item 1 (pre-usage gate: one real-model run) is being satisfied BY this
   era — the U-series run is that gate.
 
