@@ -4,17 +4,19 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: session #4 (FIX) — session #3 (Verify) crashed AgentError; root cause was
-SessionRunner.ExtractSessionResult cropping a real, valid verifier JSON to 700 chars before
-Verifier.Parse ever saw it (plus a regex too fragile for a quoted `{model}`-style brace in a
-finding). Both fixed; see the ledger note on this run. U0.1-U0.3's code was already correct
-(session #3's own analysis confirmed it before crashing) but never claimed — claimed now via
-`conductor task --done` with commit+evidence.
-stage: **U0 claimed 3/3 (unconfirmed — awaiting the next live verify session)**.
-gate: green — dotnet build 0w/0e, dotnet test 889/889, ratchet OK (pragmas 38≤38, nothing
-weakened), face-go build+vet+test green.
-next: **U1** — Face landing page + workspace identity (docs/CONDUCTOR-UX.md §U1), once U0 is
-confirmed by a live verify session.
+last: session #5 (Deliver, U1) — **U1 claimed 2/2**. QA of session #4: its gate claims
+reproduced exactly (build 0w/0e, 889/889, ratchet 38≤38) — verdict PASS, no findings, nothing
+to fix. U1.1 Home tab (`db9244a`) + U1.2 top-bar repo chip (`abccde2`).
+gate: green — dotnet build 0w/0e, dotnet test **890/890** (+1: the new /state wire test),
+ratchet OK (pragmas 38≤38, nothing weakened), go build/vet/test green, gofmt clean.
+note: `/state` gained `tracker`+`stateDir`. The spec's "state dir = `<planDir>/.conductor`" is
+WRONG vs the engine (PlanConfig.cs:98 roots StateDir at **Repo**) — Home renders the engine's
+truth; don't "fix" it back. See the ledger.
+bug #2 filed (high, NOT fixed — engine work, out of U1's scope): `conductor bg start` CLI logs
+are always empty for anything slower than ~300ms (it returns immediately, killing the read pump
+it just attached), so every build/test-suite run through it yields a BOM-only log while LOOKING
+healthy. Workaround in the ledger; this session's gates used it.
+next: **U2.1** — palette groups (Run/Stage/Danger) + consequence-naming confirms (§U2.1).
 
 
 ## Baseline numbers (from run.db)
@@ -23,7 +25,7 @@ confirmed by a live verify session.
 |---|---|
 | Total checkpoints | 11 |
 | Done | 0 |
-| Claimed (unconfirmed) | 3 |
+| Claimed (unconfirmed) | 5 |
 
 ## Checkpoints
 
@@ -34,16 +36,16 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| U0.1 | plan discovery: -p optional, cwd/plans scan, picker, friendly errors | DONE | 199f2c8 | 9 resolution-order unit tests; matches CONDUCTOR-UX.md §U0.1 exactly |
-| U0.2 | `conductor journey`: itinerary with stages, gates, human moments, resume state | DONE | 66e6f57 | conductor journey verb, 10 unit tests; matches CONDUCTOR-UX.md §U0.2 |
-| U0.3 | gateless plans proven + resume story documented (README) | DONE | 84fe84f | gateless verdicts + README resume story; U03GatelessLiveTests live proof |
+| U0.1 | plan discovery: -p optional, cwd/plans scan, picker, friendly errors | DONE | fbdef79 | build:OK · face-build:OK |
+| U0.2 | `conductor journey`: itinerary with stages, gates, human moments, resume state | DONE | fbdef79 | build:OK · face-build:OK |
+| U0.3 | gateless plans proven + resume story documented (README) | DONE | fbdef79 | build:OK · face-build:OK |
 
 ### U1 — Face: landing page + workspace identity
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| U1.1 | Home landing tab: Server / Run / Workspace / Next-steps panels, demo parity | TODO |  |  |
-| U1.2 | workspace identity in the top bar (repo basename, full path on Home) | TODO |  |  |
+| U1.1 | Home landing tab: Server / Run / Workspace / Next-steps panels, demo parity | DONE | db9244a | goldens home_demo/home_disconnected/default; tab_home_test.go (8); live /state wire test GetState_CarriesTheWorkspaceIdentity_...; demo_test.go parity |
+| U1.2 | workspace identity in the top bar (repo basename, full path on Home) | DONE | abccde2 | goldens size_80x24/size_200x50/default (bar line); widgets/ticker_test.go TestRepoBase (9 cases) |
 
 ### U2 — Face: controls, visual report, dev stats
 
