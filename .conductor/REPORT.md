@@ -1,10 +1,10 @@
 ﻿# Conductor — Conductor UX (U-series) run report
 
-_Updated 2026-07-17 03:10 UTC · branch `feat/foreman` · HEAD `489b4f0`_
+_Updated 2026-07-17 03:44 UTC · branch `feat/foreman` · HEAD `e1b5a57`_
 
 **Status:** Idle
 **Stage:** U2 — Face: controls, visual report, dev stats · attempts used 1 · working ▸ U2.1
-**Checkpoints:** 5/11 done · **Sessions run:** 6 · **Cost:** $56.2528 (agent $56.2401 + gates $0.0127)
+**Checkpoints:** 5/11 done · **Sessions run:** 7 · **Cost:** $69.5518 (agent $69.5351 + gates $0.0167)
 **Confirmed phases:** U0, U1
 
 ## Stage progress
@@ -65,16 +65,13 @@ _Updated 2026-07-17 03:10 UTC · branch `feat/foreman` · HEAD `489b4f0`_
 | 4 | U0 | Fix | 2 | 07-17 01:40 | 0:35 | Advanced | U0.1 U0.2 U0.3 | 1 | build:OK · face-build:OK | $10.3892 | $0.0049 |  |
 | 5 | U1 | Deliver | 1 | 07-17 02:20 | 0:36 | Advanced | U1.1 U1.2 | 3 | build:OK · face-build:OK | $17.2108 | $0.0039 |  |
 | 6 | U2 | Verify | 1 | 07-17 03:00 | 0:10 | AgentError |  | 0 |  | $2.6979 |  |  |
+| 7 | U2 | Fix | 2 | 07-17 03:10 | 0:33 | Progress |  | 3 | build:OK · face-build:OK | $13.2950 | $0.0040 |  |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-17 00:06:50  ◆ run started · Conductor UX (U-series)
-07-17 00:42:31  ◆ run started · Conductor UX (U-series)
-07-17 00:42:32  ▸ stage U0 entered — Engine: start, resume, journey
-07-17 00:42:33  • session #1 U0 Deliver started (attempt 1/6)
 07-17 00:48:12  • session #1 U0 → Interrupted  (5m38s)
 07-17 01:28:28  ◆ run resumed · Conductor UX (U-series)
 07-17 01:28:29  • session #2 U0 Resume started (attempt 1/6)
@@ -111,6 +108,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-17 03:59:59  ▸ stage U1 confirmed  (39m17s)
 07-17 04:00:00  ▸ stage U2 entered — Face: controls, visual report, dev stats
 07-17 04:00:00  • session #6 U2 Verify started (attempt 1/8)
+07-17 04:10:07  • session #6 U2 → AgentError  (10m07s)
+07-17 04:10:07  • session #7 U2 Fix started (attempt 2/8)
+07-17 04:44:34  ▪ gate build pass [session]  (36.3s)
+07-17 04:44:34  ▪ gate face-build pass [session]  (3.8s)
 ```
 
 ## Health
@@ -118,7 +119,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 6 · retries 1 (17 %) · overall Ok
+sessions 7 · retries 2 (29 %) · overall Ok
 ✓ no health concerns detected
 ```
 
@@ -128,8 +129,8 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/foreman
-working tree: M CONDUCTOR-UX-START.md
-vs upstream: 2 ahead
+working tree: clean
+vs upstream: up to date
 ```
 
 ### Commits by session
@@ -148,6 +149,10 @@ vs upstream: 2 ahead
   - [`b96958c`](https://github.com/shaahink/conductor/commit/b96958c) docs(conductor): U1 tracker — Home + workspace identity claimed 2/2
   - [`abccde2`](https://github.com/shaahink/conductor/commit/abccde2) feat(face): U1.2 workspace identity in the top bar
   - [`db9244a`](https://github.com/shaahink/conductor/commit/db9244a) feat(face): U1.1 Home landing tab — Server / Run / Workspace / Next steps
+- **s7 (U2 Fix)** — 3 commit(s):
+  - [`e1b5a57`](https://github.com/shaahink/conductor/commit/e1b5a57) docs(conductor): U2 tracker — s6 verdict recovered, U2.1 done, U2.3 premise corrected
+  - [`71fa214`](https://github.com/shaahink/conductor/commit/71fa214) fix(engine): claude provider records session token usage (bug #5)
+  - [`26a4194`](https://github.com/shaahink/conductor/commit/26a4194) feat(face): U2.1 grouped palette + promptable danger
 
 ## Phase handovers (audit)
 
@@ -170,28 +175,35 @@ vs upstream: 2 ahead
 
 ## Last gate run
 
-build:OK · face-build:OK · test:OK · face-test:OK · driver:OK
+build:OK · face-build:OK
 
 ## Last session result
 
-> Both landed — and the ledger itself confirms the diagnosis: my session row is `stage_id=U2, session_number=6` while session #5's is `stage_id=U1`. The run advanced to U2 and the verify prompt inherited the *current* stage label rather than the stage the verified session actually worked.
-> 
-> **What I verified.** Session #5 delivered U1, not U2. Its claims hold up: I independently reproduced `dotnet build` at 0 warnings/0 errors, the ratchet at pragmas 38≤38 with archdebt 0 and "nothing was weakened", and Go build/vet/test green with gofmt clean on a forced uncached run. The spec-deviation call is correct — `PlanConfig.cs:98` really does root `StateDir` at Repo, not planDir, so Home renders engin…
+> SESSION-RESULT: Root-caused s6's "no valid score JSON" to a STALE ENGINE BINARY, not a code defect — s6 actually returned a valid score-90 PASS (4093 chars) that the live orchestrator (installed binary, built 01:11, started 01:28) truncated to 701 because s4's fix `fbdef79` landed at 03:15, after the process started; `Verifier.Parse`/`ExtractSessionResult` are correct in source and must not be "fixed" a third time (ledger note filed; bug #4 filed for stale-engine detection). Nothing was over-claimed, so no downgrade was needed. Delivered U2.1 (`26a4194`): palette grouped Run/Stage/Danger with confirms that name consequences (`abort — kill session + stop conductor. y/N`), help legend derived …
 
 ## Tracker handoff
 
 ```
-last: session #5 (Deliver, U1) — **U1 claimed 2/2**. QA of session #4: its gate claims
-reproduced exactly (build 0w/0e, 889/889, ratchet 38≤38) — verdict PASS, no findings, nothing
-to fix. U1.1 Home tab (`db9244a`) + U1.2 top-bar repo chip (`abccde2`).
-gate: green — dotnet build 0w/0e, dotnet test **890/890** (+1: the new /state wire test),
-ratchet OK (pragmas 38≤38, nothing weakened), go build/vet/test green, gofmt clean.
-note: `/state` gained `tracker`+`stateDir`. The spec's "state dir = `<planDir>/.conductor`" is
-WRONG vs the engine (PlanConfig.cs:98 roots StateDir at **Repo**) — Home renders the engine's
-truth; don't "fix" it back. See the ledger.
-bug #2 filed (high, NOT fixed — engine work, out of U1's scope): `conductor bg start` CLI logs
-are always empty for anything slower than ~300ms (it returns immediately, killing the read pump
-it just attached), so every build/test-suite run through it yields a BOM-only log while LOOKING
-healthy. Workaround in the ledger; this session's gates used it.
-next: **U2.1** — palette groups (Run/Stage/Danger) + consequence-naming confirms (§U2.1).
+last: session #7 (Fix, U2). s6 did NOT fail: it returned a valid score-90 PASS. **The engine
+threw it away — the live orchestrator (PID 2148) is the INSTALLED binary, built 01:11 and
+started 01:28; s4's verifier-truncation fix (`fbdef79`) landed 03:15, so the running process
+predates its own fix and still applied the 700-char crop** (run.db result_summary = 701 chars vs
+the real 4093). Nothing to fix in code: `Verifier.Parse`/`ExtractSessionResult` are correct.
+**HUMAN: every Verify in this run keeps failing until the owner re-runs `tools/install.ps1` and
+RESTARTS** — no in-run session can (the restart kills it). Bug #4 filed (stale-engine detection).
+Record was already correct (nothing over-claimed): U0+U1 DONE, U2 was 3× TODO.
+done: **U2.1** (`26a4194`) palette Run/Stage/Danger + confirms that name consequences
+(`abort — kill session + stop conductor. y/N`); reading frames caught 3 real glitches (17-char
+`pause-after-stage` skewed its column; selected row off by one; help card hit 25 rows and clipped
+its own border at 80×24 — new guard test, not eye). Plus (`71fa214`) **bug #5**: ClaudeProvider
+never read `usage`, so ALL claude runs recorded 0 tokens — which silently disabled
+`limits.maxSessionTokens` (TokensTotal always 0). Fixed + closed.
+gate: green — build 0w/0e, ratchet OK (38≤38, archdebt 0), go build/vet/test green, gofmt clean.
+The 3 C# fails seen mid-session were a competing `dotnet test` in C:\code\DevContext2 saturating
+the box; all 31 pass isolated once quiet. **Do NOT run `Get-Process dotnet | Stop-Process` as
+AGENTS.md suggests — it would have killed that other repo's suite AND a live web server.**
+next: **U2.2** (visual Report) then **U2.3** (Dev tab). **U2.3's spec premise is FALSE**: the
+sessions table has NO token/cost columns — they live in a separate `costs` table, keyed by
+session_number with a `category` (agent|gate|advisor), so a session has MANY rows: SUM/GROUP BY,
+never a naive JOIN. See the ledger before starting.
 ```
