@@ -4,28 +4,34 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: session #7 (Fix, U2). s6 did NOT fail: it returned a valid score-90 PASS. **The engine
-threw it away — the live orchestrator (PID 2148) is the INSTALLED binary, built 01:11 and
-started 01:28; s4's verifier-truncation fix (`fbdef79`) landed 03:15, so the running process
-predates its own fix and still applied the 700-char crop** (run.db result_summary = 701 chars vs
-the real 4093). Nothing to fix in code: `Verifier.Parse`/`ExtractSessionResult` are correct.
-RESOLVED (owner via watch, 04:55): `tools/install.ps1` re-run, stale engine (PID 2148) stopped,
-resumed on the fixed binary (`fbdef79` included). Bug #4 filed (stale-engine detection).
-Record was already correct (nothing over-claimed): U0+U1 DONE, U2 was 3× TODO.
-done: **U2.1** (`26a4194`) palette Run/Stage/Danger + confirms that name consequences
-(`abort — kill session + stop conductor. y/N`); reading frames caught 3 real glitches (17-char
-`pause-after-stage` skewed its column; selected row off by one; help card hit 25 rows and clipped
-its own border at 80×24 — new guard test, not eye). Plus (`71fa214`) **bug #5**: ClaudeProvider
-never read `usage`, so ALL claude runs recorded 0 tokens — which silently disabled
-`limits.maxSessionTokens` (TokensTotal always 0). Fixed + closed.
-gate: green — build 0w/0e, ratchet OK (38≤38, archdebt 0), go build/vet/test green, gofmt clean.
-The 3 C# fails seen mid-session were a competing `dotnet test` in C:\code\DevContext2 saturating
-the box; all 31 pass isolated once quiet. **Do NOT run `Get-Process dotnet | Stop-Process` as
-AGENTS.md suggests — it would have killed that other repo's suite AND a live web server.**
-next: **U2.2** (visual Report) then **U2.3** (Dev tab). **U2.3's spec premise is FALSE**: the
-sessions table has NO token/cost columns — they live in a separate `costs` table, keyed by
-session_number with a `category` (agent|gate|advisor), so a session has MANY rows: SUM/GROUP BY,
-never a naive JOIN. See the ledger before starting.
+last: session #8 (Deliver, U2). Killed once mid-session; nothing was lost (it had only READ, tree
+was clean). **STAGE U2 IS CLOSED, 3/3.**
+qa: s7's U2.1 claim **audited against fresh artifacts and CONFIRMED** — verb grouping matches the
+spec verb-for-verb, `⚠` on unsafe rows, confirm reads `abort — kill session + stop conductor. y/N`,
+both its new tests pass, and every control send routes through the confirm path (no destructive
+hotkey bypasses it). Nothing over-claimed.
+done: **U2.2** (`c8ff55f`) Report is now a rendered report — header/progress/stages/sessions
+digest/gates/verifier scores from `/state`+`/sessions`, scroll-only. **U2.3** (`8749704`) Dev tab
+(`d`) = the moved SQL console (unchanged, tests moved with it) + run internals + per-session
+token/cost stats. `GET /sessions` now serves per-session cost+tokens, SUMMED via correlated
+subqueries (s7's warning was right: `costs` holds many rows per session — a JOIN triples every
+figure; 4 new tests are shaped to fail on a join, not just on a wrong number).
+gate: green — build 0w/0e, **897/897**, ratchet OK (826 tests / 38≤38 pragmas / archdebt 0,
+nothing weakened), face-go build/vet/test green + gofmt clean. Artifacts `.conductor/gate-u22.out`,
+`.conductor/gate-u23.out`.
+traps: **contention is probabilistic, not deterministic** — 897/897 passed twice WHILE the
+DevContext2 suite ran, and bug #3 passed too; a green run does not clear those flakes, a red one
+does not prove a defect. Inspect the box first, and never `Stop-Process dotnet` (it would kill
+another repo's suite + a live web server). Bug #2 is real and still bites: `conductor bg` logs are
+BOM-only 3 bytes for anything slow — redirect to your own file. Do NOT put double quotes or `>` in
+`conductor note` text (shim re-splits); call the exe, not the scoop shim.
+next: **U3** (`U3.1` themes → `U3.2` glitch pass → `U3.3` transcript vibe). U3.1 turns
+`widgets/style.go`'s palette into a `Theme` + `ApplyTheme(name)`; note U2.2 added `infoStyle` to
+view.go's shared var block and exported `widgets.StageGlyph`/`GateGlyph` (Report and the sidebar now
+share ONE vocabulary — a second copy is what made finished stages render `○` in Report). Read the
+ledger's two rendering traps first: measure RENDERED lines not slice elements, and gutter labels
+must be < homeLabelW(11). And assert the RENDER, not the state — a state-only assertion passed a
+pane whose scroll did nothing.
 
 
 ## Baseline numbers (from run.db)
@@ -60,9 +66,9 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| U2.1 | palette groups (Run/Stage/Danger) + consequence-naming confirms | DONE | - | commit 26a4194 · face-go/internal/tui/testdata/golden/palette.golden + palette_confirm.golden + help.golden · go build/vet/test green, gofmt clean |
-| U2.2 | Report tab is a visual run report (progress, stages, sessions, gates, scores) | TODO |  |  |
-| U2.3 | Dev tab: SQL console moved + run internals + per-session token/cost stats | TODO |  |  |
+| U2.1 | palette groups (Run/Stage/Danger) + consequence-naming confirms | DONE | 26a4194 | face-go/internal/tui/testdata/golden/palette.golden + palette_confirm.golden + help.golden · go build/vet/test green, gofmt clean · QA'd by s8 against fresh artifacts: confirmed |
+| U2.2 | Report tab is a visual run report (progress, stages, sessions, gates, scores) | DONE | c8ff55f | .conductor/gate-u22.out (build 0w/0e · 897/897 · ratchet OK 826/38/0 · face-go green) · goldens report + report_scrolled + dev |
+| U2.3 | Dev tab: SQL console moved + run internals + per-session token/cost stats | DONE | 8749704 | .conductor/gate-u23.out (build 0w/0e · 897/897 · ratchet OK 826/38/0 · face-go green) · golden dev_scrolled |
 
 ### U3 — Face: themes, agent-terminal vibe, glitch pass
 
