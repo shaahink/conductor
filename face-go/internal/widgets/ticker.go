@@ -33,9 +33,24 @@ func FmtTokens(n int64) string {
 	}
 }
 
-// RenderTopBar is the persistent status line: brand, connection, run status, plan/stage, session,
-// and live cost/tokens. Fields tier in by width so the row never wraps. spinnerFrame animates the
-// liveness glyph while an agent session is actually producing output.
+// RepoBase renders a repo path as its owning folder: `C:\Code\conductor-baton` → `…/conductor-baton`.
+// It splits on BOTH separators instead of using filepath.Base, because the path arrives over the wire
+// from whatever OS the engine runs on — which is not necessarily this binary's, and golden frames must
+// not render differently per platform. A bare name with no separator is returned as-is.
+func RepoBase(repo string) string {
+	trimmed := strings.TrimRight(repo, `/\`)
+	if trimmed == "" {
+		return ""
+	}
+	if i := strings.LastIndexAny(trimmed, `/\`); i >= 0 {
+		return "…/" + trimmed[i+1:]
+	}
+	return trimmed
+}
+
+// RenderTopBar is the persistent status line: brand, connection, workspace, run status, plan/stage,
+// session, and live cost/tokens. Fields tier in by width so the row never wraps. spinnerFrame animates
+// the liveness glyph while an agent session is actually producing output.
 func RenderTopBar(conn api.ConnectionState, state *api.StateDto, width, spinnerFrame int) string {
 	style := lipgloss.NewStyle().Background(colMantle).Foreground(colText).Padding(0, 1).MaxHeight(1).MaxWidth(width)
 	sep := lipgloss.NewStyle().Foreground(colSurface).Render("  ")
@@ -57,15 +72,30 @@ func RenderTopBar(conn api.ConnectionState, state *api.StateDto, width, spinnerF
 	parts = append(parts, dot+" "+dimStyle.Render(label))
 
 	if state != nil {
+		// U1.2: the folder every session edits, dim, never tiered away — the owner must always be able
+		// to see WHICH repo is being written to. Home carries the full path.
+		if base := RepoBase(state.Repo); base != "" {
+			parts = append(parts, dimStyle.Render(base))
+		}
 		parts = append(parts, StatusBadge(state.Status))
 		if width >= 124 {
 			parts = append(parts, lipgloss.NewStyle().Foreground(colText).Render(state.PlanName))
 		}
-		titleW := 20
-		if width >= 140 {
+		// The stage TITLE is what yields to the repo chip on a narrow bar: it is already spelled out in
+		// the sidebar and the Agent strip, whereas the repo is nowhere else on an 80-col screen. The
+		// stage ID always stays.
+		stage := lipgloss.NewStyle().Foreground(colMauve).Bold(true).Render(state.StageId)
+		titleW := 0
+		switch {
+		case width >= 140:
 			titleW = 34
+		case width >= 100:
+			titleW = 20
 		}
-		parts = append(parts, lipgloss.NewStyle().Foreground(colMauve).Bold(true).Render(state.StageId)+" "+dimStyle.Render(truncate(state.StageTitle, titleW)))
+		if titleW > 0 {
+			stage += " " + dimStyle.Render(truncate(state.StageTitle, titleW))
+		}
+		parts = append(parts, stage)
 
 		if state.AgentActive {
 			seg := lipgloss.NewStyle().Foreground(colGreen).Render(Spinner(spinnerFrame)) + " " +

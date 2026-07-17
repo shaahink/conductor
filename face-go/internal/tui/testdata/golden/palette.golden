@@ -1,34 +1,34 @@
- ◆ conductor  ● LIVE  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42 
-  h Home  a s t o c e p r k g b                                                               
-                           │                                                                  
- ▶ PLAN                    │  Server                                                          
- ✓ F0 3/3 Foundations      │  mode       live                                                 
- ✓ F6 5/5 Ink TUI v1       │  url        http://127.0.0.1:4317                                
- ● F7 2/5 Gate … 1× $0.30  │  streams    ● events   ● transcript                              
-   ✓ F7.1 Plan import      │                                                                  
-   ✓ F7.2 Re-import diff   │  Run                                                             
-   ● F7.3 Truth-gate tier  │  plan       conductor-foreman                                    
- ○ F8 0/4 conductor chat…  │  status     ▶ RUNNING                                            
-                           │  stage      F7 Gate caching + truth gates + speed program        
- ── GATES ──               │  session    s12 Deliver · attempt 1/3 · opus-4-8                 
-   ✓ build                 │  progress   ▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱ 2/40 checkpoints            
-   ● test 4s               │  cost       $0.42   +$0.02 overhead                              
-   ○ lint                  │  tokens     2.5k in · 1.8k out · 900 reasoning                   
-                           │  budget     $0.42 / $10.00  95% headroom                         
- ── TASKS ──               │  tokens cap 5.2k / 2.0M  99% headroom                            
- ╭──────────────────────────────────────────────────────────────────╮                         
- │    pause            Pause after current session ends             │                         
- │   resume           Resume a paused run                           │ts                       
- │   approve          Approve and continue                          │                         
- │   skip             Skip current stage                            │uctor-foreman.plan.json  
- │ ⚠ abort            Abort run immediately                         │                         
- │ ⚠ kill             Kill current agent session                    │                         
- │   stop-after       Stop after current session                    │                         
- │   heartbeat        Refresh REPORT.md snapshot now                │                         
- │   reload-plan      Swap live plan at next session boundary       │ng right now             
- │ ⚠ retry-stage      Reset attempt counter, retry stage            │                         
- │ ⚠ rollback         Git reset --hard to stage start               │                         
- │   pause-after-stage Pause once stage completes                   │                         
- │   goto             Jump to a different stage (requires stage ID) │                         
- ╰──────────────────────────────────────────────────────────────────╯                         
- : ▏  ↑↓ enter esc                                                                            
+ ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42 
+  h Home  a s t o c e p r k g b                                                                            
+                           │                                                                               
+ ▶ PLAN                    │  Server                                                                       
+ ✓ F0 3/3 Foundations      │  mode       live                                                              
+ ✓ F6 5/5 Ink TUI v1       │  url        http://127.0.0.1:4317                                             
+ ● F7 2/5 Gate … 1× $0.30  │  streams    ● events   ● transcript                                           
+   ✓ F7.1 Plan import      │                                                                               
+   ✓ F7.2 Re-import diff   │  Run                                                                          
+   ● F7.3 Truth-gate tier  │  plan       conductor-foreman                                                 
+ ○ F8 0/4 conductor chat…  │  status     ▶ RUNNING                                                         
+                           │  stage      F7 Gate caching + truth gates + speed program                     
+ ── GATES ──               │  session    s12 Deliver · attempt 1/3 · opus-4-8                              
+   ✓ build                 │  progress   ▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱ 2/40 checkpoints                         
+   ● test 4s               │  cost       $0.42   +$0.02 overhead                                           
+   ○ lint                  │  tokens     2.5k in · 1.8k out · 900 reasoning                                
+                           │  budget     $0.42 / $10.00  95% headroom                                      
+ ── TASKS ──               │  tokens cap 5.2k / 2.0M  99% headroom                                         
+ ╭──────────────────────────────────────────────────────────────────╮                                      
+ │    pause            Pause after current session ends             │                                      
+ │   resume           Resume a paused run                           │ts                                    
+ │   approve          Approve and continue                          │                                      
+ │   skip             Skip current stage                            │uctor-foreman.plan.json               
+ │ ⚠ abort            Abort run immediately                         │                                      
+ │ ⚠ kill             Kill current agent session                    │                                      
+ │   stop-after       Stop after current session                    │                                      
+ │   heartbeat        Refresh REPORT.md snapshot now                │                                      
+ │   reload-plan      Swap live plan at next session boundary       │ng right now                          
+ │ ⚠ retry-stage      Reset attempt counter, retry stage            │                                      
+ │ ⚠ rollback         Git reset --hard to stage start               │                                      
+ │   pause-after-stage Pause once stage completes                   │                                      
+ │   goto             Jump to a different stage (requires stage ID) │                                      
+ ╰──────────────────────────────────────────────────────────────────╯                                      
+ : ▏  ↑↓ enter esc                                                                                         

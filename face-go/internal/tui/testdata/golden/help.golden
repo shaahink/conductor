@@ -1,34 +1,34 @@
- ◆ conductor  ● LIVE  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42        
-  h Home  a s t o c e p r k g b                                                                      
-                           │                                                                         
- ▶ PLAN                    │  Server                                                                 
- ✓ F0 3/3 Foundations      │  mode       live                                                        
- ✓ F6 5/5 Ink TUI v1       │  url        http://127.0.0.1:4317                                       
- ● F7 2/5 Gate … 1× $0.30  │  streams    ● events   ● transcript                                     
-   ✓ F7.1 Plan import    ╭──────────────────────────────────────────────────────────╮                
-   ✓ F7.2 Re-import diff │                                                          │                
-   ● F7.3 Truth-gate tier│   ◆ conductor  ·  keys                                   │                
- ○ F8 0/4 conductor chat…│                                                          │                
-                         │   Tabs  (number or letter jumps straight there)          │m               
- ── GATES ──             │     h Home       a Agent      s Sessions                 │                
-   ✓ build               │     t Timeline   o Procs      c Console                  │                
-   ● test 4s             │     e Templates  p Plan       r Report                   │                
-   ○ lint                │     k Knowledge  g Telegram   b Kanban                   │                
-                         │     tab cycle tabs                                       │                
- ── TASKS ──             │                                                          │                
-   ✓ Add truth-tier con… │   Actions                                                │                
-   ● Wire RunDb.GetLast… │     : command palette   i inject context                 │                
-   ○ Cache gate results… │     / search transcript f fold tools · T fold thinking   │                
-                         │     \ collapse sidebar  ↑↓ scroll / navigate             │                
-                         │                                                          │an.json         
-                         │   Global                                                 │                
-                         │     q quit   esc close / cancel   ? this help            │                
-                         │                                                          │                
-                         ╰──────────────────────────────────────────────────────────╯                
-                           │    a  watch the live agent — it is working right now                    
-                           │    r  read the run report                                               
-                           │    ?  see every key                                                     
-                           │                                                                         
-                           │                                                                         
-                           │                                                                         
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   a agent · r report · : commands · ? keys 
+ ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42 
+  h Home  a s t o c e p r k g b                                                                            
+                           │                                                                               
+ ▶ PLAN                    │  Server                                                                       
+ ✓ F0 3/3 Foundations      │  mode       live                                                              
+ ✓ F6 5/5 Ink TUI v1       │  url        http://127.0.0.1:4317                                             
+ ● F7 2/5 Gate … 1× $0.30  │  streams    ● events   ● transcript                                           
+   ✓ F7.1 Plan import    ╭──────────────────────────────────────────────────────────╮                      
+   ✓ F7.2 Re-import diff │                                                          │                      
+   ● F7.3 Truth-gate tier│   ◆ conductor  ·  keys                                   │                      
+ ○ F8 0/4 conductor chat…│                                                          │                      
+                         │   Tabs  (number or letter jumps straight there)          │m                     
+ ── GATES ──             │     h Home       a Agent      s Sessions                 │                      
+   ✓ build               │     t Timeline   o Procs      c Console                  │                      
+   ● test 4s             │     e Templates  p Plan       r Report                   │                      
+   ○ lint                │     k Knowledge  g Telegram   b Kanban                   │                      
+                         │     tab cycle tabs                                       │                      
+ ── TASKS ──             │                                                          │                      
+   ✓ Add truth-tier con… │   Actions                                                │                      
+   ● Wire RunDb.GetLast… │     : command palette   i inject context                 │                      
+   ○ Cache gate results… │     / search transcript f fold tools · T fold thinking   │                      
+                         │     \ collapse sidebar  ↑↓ scroll / navigate             │                      
+                         │                                                          │an.json               
+                         │   Global                                                 │                      
+                         │     q quit   esc close / cancel   ? this help            │                      
+                         │                                                          │                      
+                         ╰──────────────────────────────────────────────────────────╯                      
+                           │    a  watch the live agent — it is working right now                          
+                           │    r  read the run report                                                     
+                           │    ?  see every key                                                           
+                           │                                                                               
+                           │                                                                               
+                           │                                                                               
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   a agent · r report · : commands · ? keys       
