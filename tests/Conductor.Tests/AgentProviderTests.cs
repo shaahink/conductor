@@ -102,6 +102,77 @@ public class AgentProviderTests
         Assert.Equal(3, state.NumTurns);
     }
 
+    // Bug #5: ClaudeProvider read total_cost_usd but never the usage object, so every claude-native
+    // session recorded 0 tokens (costs table all-zero while cost_usd was populated). That silently
+    // disabled limits.maxSessionTokens — SessionRecord.TokensTotal was always 0, so a token cap could
+    // never trigger — as well as HealthMetrics context saturation and the Face's token surfaces.
+    // Shape and numbers are lifted from a real session log (.conductor/logs/session-006.jsonl).
+    [Fact]
+    public void ClaudeAdapterReadsSessionTokenUsageFromResultEnvelope()
+    {
+        var provider = new ClaudeProvider();
+        var (state, _) = NewState();
+
+        provider.ParseLine(
+            """
+            {"type":"result","subtype":"success","result":"done","total_cost_usd":2.6979,"num_turns":43,
+             "usage":{"input_tokens":641,"cache_creation_input_tokens":96444,
+             "cache_read_input_tokens":2327709,"output_tokens":22543,"service_tier":"standard"}}
+            """, state);
+
+        // input_tokens + cache_creation_input_tokens: TokensTotal sums the four buckets to gate
+        // maxSessionTokens, and there is no cache-write bucket to put creation in.
+        Assert.Equal(641 + 96444, state.TokensInput);
+        Assert.Equal(22543, state.TokensOutput);
+        Assert.Equal(2327709, state.TokensCacheRead);
+        // claude reports no reasoning/thinking bucket — it is inside output_tokens. Don't invent one.
+        Assert.Null(state.TokensReasoning);
+    }
+
+    // The reason usage is read from `result` and not accumulated per line: claude emits the SAME
+    // message once per content block (thinking block + text block = two lines, one message.id, one
+    // identical usage). Summing per assistant line overcounted by 3-4x on real logs.
+    [Fact]
+    public void ClaudeAdapterDoesNotAccumulateRepeatedAssistantUsage()
+    {
+        var provider = new ClaudeProvider();
+        var (state, _) = NewState();
+
+        const string assistant =
+            """{"type":"assistant","message":{"id":"msg_01","content":[{"type":"text","text":"hi"}],"usage":{"input_tokens":2,"cache_creation_input_tokens":11374,"cache_read_input_tokens":12528,"output_tokens":1}}}""";
+        provider.ParseLine(assistant, state);
+        provider.ParseLine(assistant, state); // same message id, re-emitted for its next content block
+        provider.ParseLine(assistant, state);
+
+        Assert.Null(state.TokensInput);
+        Assert.Null(state.TokensOutput);
+        Assert.Null(state.TokensCacheRead);
+
+        provider.ParseLine(
+            """{"type":"result","subtype":"success","usage":{"input_tokens":2,"cache_creation_input_tokens":11374,"cache_read_input_tokens":12528,"output_tokens":1}}""",
+            state);
+
+        Assert.Equal(2 + 11374, state.TokensInput);
+        Assert.Equal(1, state.TokensOutput);
+        Assert.Equal(12528, state.TokensCacheRead);
+    }
+
+    // A result envelope with no usage (older CLI, or an error result) must not fabricate zeros —
+    // null means "not reported", which is what RecordCost's `?? 0` and the Face both key off.
+    [Fact]
+    public void ClaudeAdapterLeavesTokensUnsetWhenResultHasNoUsage()
+    {
+        var provider = new ClaudeProvider();
+        var (state, _) = NewState();
+
+        provider.ParseLine("""{"type":"result","subtype":"success","result":"done","total_cost_usd":0.25}""", state);
+
+        Assert.Equal(0.25m, state.CostUsd);
+        Assert.Null(state.TokensInput);
+        Assert.Null(state.TokensOutput);
+        Assert.Null(state.TokensCacheRead);
+    }
+
     [Fact]
     public void ClaudeAdapterFlagsErrorResult()
     {

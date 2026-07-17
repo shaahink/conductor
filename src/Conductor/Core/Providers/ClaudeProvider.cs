@@ -67,6 +67,7 @@ public sealed class ClaudeProvider : IAgentProvider
                 if (root.TryGetProperty("result", out var res) && res.ValueKind == JsonValueKind.String) state.ResultText = res.GetString();
                 if (root.TryGetProperty("total_cost_usd", out var c) && c.ValueKind == JsonValueKind.Number) state.CostUsd = c.GetDecimal();
                 if (root.TryGetProperty("num_turns", out var nt) && nt.ValueKind == JsonValueKind.Number) state.NumTurns = nt.GetInt32();
+                ReadUsage(root, state);
                 state.Emit("result", state.ResultIsError ? "ERROR result: " + ProviderText.Trunc(state.ResultText ?? "", 160) : "result received");
                 break;
             default:
@@ -74,4 +75,35 @@ public sealed class ClaudeProvider : IAgentProvider
                 break;
         }
     }
+
+    /// <summary>
+    /// Reads the session's token usage off the terminal <c>result</c> envelope — the same place
+    /// <c>total_cost_usd</c> comes from, and the CLI's own authoritative session total.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately NOT summed from <c>assistant</c> messages: claude re-emits one message once per
+    /// content block (a thinking block and a text block of the same <c>message.id</c> arrive as two
+    /// lines carrying the SAME usage), so accumulating per line overcounts by 3-4x. The result
+    /// envelope is emitted exactly once.
+    /// <para><c>cache_creation_input_tokens</c> folds into <see cref="AgentStreamState.TokensInput"/>:
+    /// the state has four buckets and no cache-write bucket, and
+    /// <c>SessionRecord.TokensTotal</c> sums all four to gate <c>limits.maxSessionTokens</c>. Dropping
+    /// cache-creation would understate the total the rollover cap is measured against. Both are input
+    /// billed at write/fresh rates, as distinct from <c>cache_read_input_tokens</c>.</para>
+    /// <para>Reasoning tokens are left unset: claude's usage has no thinking/reasoning field — that
+    /// spend is already inside <c>output_tokens</c>. Synthesising one would double-count it in
+    /// TokensTotal and invent a number the wire never reported.</para>
+    /// </remarks>
+    private static void ReadUsage(JsonElement root, AgentStreamState state)
+    {
+        if (!root.TryGetProperty("usage", out var u) || u.ValueKind != JsonValueKind.Object) return;
+
+        var input = Num(u, "input_tokens") + Num(u, "cache_creation_input_tokens");
+        if (input > 0) state.TokensInput = input;
+        if (Num(u, "output_tokens") is var output && output > 0) state.TokensOutput = output;
+        if (Num(u, "cache_read_input_tokens") is var cacheRead && cacheRead > 0) state.TokensCacheRead = cacheRead;
+    }
+
+    private static long Num(JsonElement obj, string name) =>
+        obj.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt64(out var n) ? n : 0;
 }
