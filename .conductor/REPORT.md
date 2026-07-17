@@ -1,10 +1,10 @@
 ﻿# Conductor — Conductor UX (U-series) run report
 
-_Updated 2026-07-17 06:25 UTC · branch `feat/foreman` · HEAD `3ae03f1`_
+_Updated 2026-07-17 12:02 UTC · branch `feat/foreman` · HEAD `69a5507`_
 
 **Status:** Idle
-**Stage:** U3 — Face: themes, agent-terminal vibe, glitch pass · attempts used 1 · working ▸ U3.1
-**Checkpoints:** 8/11 done · **Sessions run:** 11 · **Cost:** $139.6799 (agent $139.6590 + gates $0.0209) · **Tokens:** 718,768 in / 343,862 out
+**Stage:** U3 — Face: themes, agent-terminal vibe, glitch pass · attempts used 2 · working ▸ U3.3
+**Checkpoints:** 10/11 done · **Sessions run:** 12 · **Cost:** $139.6799 (agent $139.6590 + gates $0.0209) · **Tokens:** 718,768 in / 343,862 out
 **Confirmed phases:** U0, U1, U2
 
 ## Stage progress
@@ -14,7 +14,7 @@ _Updated 2026-07-17 06:25 UTC · branch `feat/foreman` · HEAD `3ae03f1`_
 | U0 | Engine: start, resume, journey | ██████████ 3/3 | confirmed ✓ |
 | U1 | Face: landing page + workspace identity | ██████████ 2/2 | confirmed ✓ |
 | U2 | Face: controls, visual report, dev stats | ██████████ 3/3 | confirmed ✓ |
-| U3 | Face: themes, agent-terminal vibe, glitch pass | ░░░░░░░░░░ 0/3 | **← active** |
+| U3 | Face: themes, agent-terminal vibe, glitch pass | ███████░░░ 2/3 | **← active** |
 
 <details> ✅<summary>U0 — Engine: start, resume, journey (3/3)</summary>
 
@@ -45,13 +45,13 @@ _Updated 2026-07-17 06:25 UTC · branch `feat/foreman` · HEAD `3ae03f1`_
 
 </details>
 
-<details><summary>U3 — Face: themes, agent-terminal vibe, glitch pass (0/3)</summary>
+<details><summary>U3 — Face: themes, agent-terminal vibe, glitch pass (2/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| U3.1 | curated themes (mocha/latte/nord/gruvbox), --theme, live switch, persisted | ⬜ TODO |  |
-| U3.2 | golden glitch pass at 3 sizes, seeded from the spec's dogfood appendix | ⬜ TODO |  |
-| U3.3 | agent-terminal vibe: Claude Code-style transcript, provider-aware, footer strip | ⬜ TODO |  |
+| U3.1 | curated themes (mocha/latte/nord/gruvbox), --theme, live switch, persisted | ✅ DONE | - |
+| U3.2 | golden glitch pass at 3 sizes, seeded from the spec's dogfood appendix | ✅ DONE | - |
+| U3.3 | agent-terminal vibe: Claude Code-style transcript, provider-aware, footer strip | 🔄 IN PROGRESS |  |
 
 </details>
 
@@ -70,14 +70,13 @@ _Updated 2026-07-17 06:25 UTC · branch `feat/foreman` · HEAD `3ae03f1`_
 | 9 | U2 | Resume | 2r1 | 07-17 03:54 | 0:55 | Advanced | U2.2 U2.3 | 4 | build:OK · face-build:OK | $25.9788 | $0.0017 | 272,633/124,152 |
 | 10 | U3 | Verify | 1 | 07-17 04:52 | 0:12 | NoProgress |  | 0 |  | $2.9283 |  | 86,252/25,727 |
 | 11 | U3 | Fix | 2 | 07-17 05:04 | 1:20 | Progress |  | 4 | build:OK · face-build:OK | $41.2169 | $0.0025 | 359,883/193,983 |
+| 12 | U3 | Verify | 2 | 07-17 06:25 | 5:37 | TimedOut |  | 0 |  |  |  |  |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-17 03:57:49  ▪ gate build pass [session]  (36.0s)
-07-17 03:57:49  ▪ gate face-build pass [session]  (3.4s)
 07-17 03:57:50  • session #5 U1 → Advanced · done U1.1,U1.2 · 3 commit(s)  (37m08s)
 07-17 03:57:50  ✓ checkpoint U1.1 confirmed
 07-17 03:57:50  ✓ checkpoint U1.2 confirmed
@@ -116,6 +115,8 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-17 06:04:32  • session #11 U3 Fix started (attempt 2/8)
 07-17 07:25:41  ▪ gate build pass [session]  (19.1s)
 07-17 07:25:41  ▪ gate face-build pass [session]  (6.1s)
+07-17 07:25:43  • session #11 U3 → Progress · 4 commit(s)  (1h21m10s)
+07-17 07:25:43  • session #12 U3 Verify started (attempt 2/8)
 ```
 
 ## Health
@@ -123,7 +124,8 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 11 · retries 5 (45 %) · overall Warn
+sessions 12 · retries 6 (50 %) · overall Warn
+⚠ [context-saturation] session #11: 65,535,433 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #9: 40,301,419 context tokens (≥ 20,000,000)
 ```
 
@@ -133,8 +135,8 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/foreman
-working tree: clean
-vs upstream: up to date
+working tree: M CONDUCTOR-UX-START.md
+vs upstream: 1 ahead
 ```
 
 ### Commits by session
