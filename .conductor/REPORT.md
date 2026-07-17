@@ -1,10 +1,10 @@
 ﻿# Conductor — Conductor UX (U-series) run report
 
-_Updated 2026-07-17 02:59 UTC · branch `feat/foreman` · HEAD `382cf3f`_
+_Updated 2026-07-17 03:10 UTC · branch `feat/foreman` · HEAD `489b4f0`_
 
 **Status:** Idle
-**Stage:** U1 — Face: landing page + workspace identity · attempts used 0
-**Checkpoints:** 5/11 done · **Sessions run:** 5 · **Cost:** $53.5549 (agent $53.5422 + gates $0.0127)
+**Stage:** U2 — Face: controls, visual report, dev stats · attempts used 1 · working ▸ U2.1
+**Checkpoints:** 5/11 done · **Sessions run:** 6 · **Cost:** $56.2528 (agent $56.2401 + gates $0.0127)
 **Confirmed phases:** U0, U1
 
 ## Stage progress
@@ -13,7 +13,7 @@ _Updated 2026-07-17 02:59 UTC · branch `feat/foreman` · HEAD `382cf3f`_
 |---|---|---|---|
 | U0 | Engine: start, resume, journey | ██████████ 3/3 | confirmed ✓ |
 | U1 | Face: landing page + workspace identity | ██████████ 2/2 | confirmed ✓ |
-| U2 | Face: controls, visual report, dev stats | ░░░░░░░░░░ 0/3 | todo |
+| U2 | Face: controls, visual report, dev stats | ░░░░░░░░░░ 0/3 | **← active** |
 | U3 | Face: themes, agent-terminal vibe, glitch pass | ░░░░░░░░░░ 0/3 | todo |
 
 <details> ✅<summary>U0 — Engine: start, resume, journey (3/3)</summary>
@@ -64,6 +64,7 @@ _Updated 2026-07-17 02:59 UTC · branch `feat/foreman` · HEAD `382cf3f`_
 | 3 | U0 | Verify | 1 | 07-17 01:31 | 0:09 | AgentError |  | 0 |  | $2.0005 |  |  |
 | 4 | U0 | Fix | 2 | 07-17 01:40 | 0:35 | Advanced | U0.1 U0.2 U0.3 | 1 | build:OK · face-build:OK | $10.3892 | $0.0049 |  |
 | 5 | U1 | Deliver | 1 | 07-17 02:20 | 0:36 | Advanced | U1.1 U1.2 | 3 | build:OK · face-build:OK | $17.2108 | $0.0039 |  |
+| 6 | U2 | Verify | 1 | 07-17 03:00 | 0:10 | AgentError |  | 0 |  | $2.6979 |  |  |
 
 ## Timeline
 
@@ -102,6 +103,14 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-17 03:57:50  • session #5 U1 → Advanced · done U1.1,U1.2 · 3 commit(s)  (37m08s)
 07-17 03:57:50  ✓ checkpoint U1.1 confirmed
 07-17 03:57:50  ✓ checkpoint U1.2 confirmed
+07-17 03:59:59  ▪ gate build pass [phase]  (36.0s)
+07-17 03:59:59  ▪ gate face-build pass [phase]  (3.4s)
+07-17 03:59:59  ▪ gate test pass [phase]  (1m10s)
+07-17 03:59:59  ▪ gate face-test pass [phase]  (2.5s)
+07-17 03:59:59  ▪ gate driver pass [phase]  (15.9s)
+07-17 03:59:59  ▸ stage U1 confirmed  (39m17s)
+07-17 04:00:00  ▸ stage U2 entered — Face: controls, visual report, dev stats
+07-17 04:00:00  • session #6 U2 Verify started (attempt 1/8)
 ```
 
 ## Health
@@ -109,7 +118,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 5 · retries 1 (20 %) · overall Ok
+sessions 6 · retries 1 (17 %) · overall Ok
 ✓ no health concerns detected
 ```
 
@@ -120,7 +129,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 ```
 branch: feat/foreman
 working tree: M CONDUCTOR-UX-START.md
-vs upstream: 1 ahead
+vs upstream: 2 ahead
 ```
 
 ### Commits by session
@@ -165,7 +174,9 @@ build:OK · face-build:OK · test:OK · face-test:OK · driver:OK
 
 ## Last session result
 
-> SESSION-RESULT: U1 delivered 2/2 and pushed on `feat/foreman` — U1.1 Home landing tab (`db9244a`) and U1.2 top-bar workspace identity (`abccde2`), tracker + run.db claims at `b96958c`, working tree clean, local and remote at the same sha. Gate battery green on the final tree: dotnet build 0w/0e, dotnet test 890/890, ratchet OK (38≤38, nothing weakened), go build/vet/test green, gofmt clean. QA of session #4 was a PASS with no findings (its claims independently reproduced, not trusted). Nothing is red. Two things the next session must not re-derive, both in the ledger and the handoff: (1) the spec's `<planDir>/.conductor` state dir is WRONG — the engine roots StateDir at Repo, and Home render…
+> Both landed — and the ledger itself confirms the diagnosis: my session row is `stage_id=U2, session_number=6` while session #5's is `stage_id=U1`. The run advanced to U2 and the verify prompt inherited the *current* stage label rather than the stage the verified session actually worked.
+> 
+> **What I verified.** Session #5 delivered U1, not U2. Its claims hold up: I independently reproduced `dotnet build` at 0 warnings/0 errors, the ratchet at pragmas 38≤38 with archdebt 0 and "nothing was weakened", and Go build/vet/test green with gofmt clean on a forced uncached run. The spec-deviation call is correct — `PlanConfig.cs:98` really does root `StateDir` at Repo, not planDir, so Home renders engin…
 
 ## Tracker handoff
 
