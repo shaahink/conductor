@@ -9,8 +9,8 @@ threw it away — the live orchestrator (PID 2148) is the INSTALLED binary, buil
 started 01:28; s4's verifier-truncation fix (`fbdef79`) landed 03:15, so the running process
 predates its own fix and still applied the 700-char crop** (run.db result_summary = 701 chars vs
 the real 4093). Nothing to fix in code: `Verifier.Parse`/`ExtractSessionResult` are correct.
-**HUMAN: every Verify in this run keeps failing until the owner re-runs `tools/install.ps1` and
-RESTARTS** — no in-run session can (the restart kills it). Bug #4 filed (stale-engine detection).
+RESOLVED (owner via watch, 04:55): `tools/install.ps1` re-run, stale engine (PID 2148) stopped,
+resumed on the fixed binary (`fbdef79` included). Bug #4 filed (stale-engine detection).
 Record was already correct (nothing over-claimed): U0+U1 DONE, U2 was 3× TODO.
 done: **U2.1** (`26a4194`) palette Run/Stage/Danger + confirms that name consequences
 (`abort — kill session + stop conductor. y/N`); reading frames caught 3 real glitches (17-char
@@ -34,7 +34,7 @@ never a naive JOIN. See the ledger before starting.
 |---|---|
 | Total checkpoints | 11 |
 | Done | 0 |
-| Claimed (unconfirmed) | 5 |
+| Claimed (unconfirmed) | 6 |
 
 ## Checkpoints
 
@@ -60,7 +60,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| U2.1 | palette groups (Run/Stage/Danger) + consequence-naming confirms | TODO |  |  |
+| U2.1 | palette groups (Run/Stage/Danger) + consequence-naming confirms | DONE | - | commit 26a4194 · face-go/internal/tui/testdata/golden/palette.golden + palette_confirm.golden + help.golden · go build/vet/test green, gofmt clean |
 | U2.2 | Report tab is a visual run report (progress, stages, sessions, gates, scores) | TODO |  |  |
 | U2.3 | Dev tab: SQL console moved + run internals + per-session token/cost stats | TODO |  |  |
 
