@@ -1,10 +1,10 @@
 ﻿# Conductor — Conductor UX (U-series) run report
 
-_Updated 2026-07-17 01:31 UTC · branch `feat/foreman` · HEAD `c829143`_
+_Updated 2026-07-17 01:40 UTC · branch `feat/foreman` · HEAD `0cf6035`_
 
 **Status:** Idle
-**Stage:** U0 — Engine: start, resume, journey · attempts used 0 · working ▸ U0.1
-**Checkpoints:** 0/11 done · **Sessions run:** 2 · **Cost:** $23.9455 (agent $23.9417 + gates $0.0038)
+**Stage:** U0 — Engine: start, resume, journey · attempts used 1 · working ▸ U0.1
+**Checkpoints:** 0/11 done · **Sessions run:** 3 · **Cost:** $25.9461 (agent $25.9423 + gates $0.0038)
 
 ## Stage progress
 
@@ -60,6 +60,7 @@ _Updated 2026-07-17 01:31 UTC · branch `feat/foreman` · HEAD `c829143`_
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | U0 | Deliver | 1 | 07-16 23:42 | 0:05 | Interrupted |  | 0 |  |  |  |  |
 | 2 | U0 | Resume | 1r1 | 07-17 00:28 | 1:02 | Progress |  | 7 | build:OK · face-build:OK | $23.9417 | $0.0038 |  |
+| 3 | U0 | Verify | 1 | 07-17 01:31 | 0:09 | AgentError |  | 0 |  | $2.0005 |  |  |
 
 ## Timeline
 
@@ -73,6 +74,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-17 00:48:12  • session #1 U0 → Interrupted  (5m38s)
 07-17 01:28:28  ◆ run resumed · Conductor UX (U-series)
 07-17 01:28:29  • session #2 U0 Resume started (attempt 1/6)
+07-17 02:31:29  ▪ gate build pass [session]  (34.7s)
+07-17 02:31:29  ▪ gate face-build pass [session]  (3.5s)
+07-17 02:31:30  • session #2 U0 → Progress · 7 commit(s)  (1h03m00s)
+07-17 02:31:30  • session #3 U0 Verify started (attempt 1/6)
 ```
 
 ## Health
@@ -80,7 +85,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 2 · retries 0 (0 %) · overall Ok
+sessions 3 · retries 0 (0 %) · overall Ok
 ✓ no health concerns detected
 ```
 
@@ -91,7 +96,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 ```
 branch: feat/foreman
 working tree: clean
-vs upstream: up to date
+vs upstream: 1 ahead
 ```
 
 ### Commits by session
@@ -130,7 +135,8 @@ build:OK · face-build:OK
 
 ## Last session result
 
-> SESSION-RESULT: Stage U0 is CLOSED, 3/3. QA of session #1's interrupted work found the ratchet gate genuinely red (40 pragmas > ceiling 38, from two accumulated MA0045 suppressions); fixed by converting `RunCommand`/`RunStateResume` to real async (`a15cce6`), restoring 38≤38. **U0.1** (plan discovery) — session #1's implementation already matched spec exactly; added the missing resolution-order unit tests (`199f2c8`). **U0.2** (`conductor journey`) — new read-only pre-flight verb: identity/resume-state, resolved-workflow stages, gates by tier, human moments, footer commands; verified live against the actual running U-series plan and a scratch edge-case plan, <1s (`66e6f57`). **U0.3** (gatele…
+> ```json
+> {"score":66,"findings":["CRITICAL: CONDUCTOR-UX-START.md's U0.1/U0.2/U0.3 checkpoint rows are unchanged from baseline — still Status=TODO, Commit and Evidence columns blank. The matching run.db checkpoints table for the live run (1a7c1714e844428fac1fb0b1619275e3) confirms the same: status='TODO', commit='', confirmed=0 for all three. VerdictEngine derives 'newly DONE' from a tracker-file diff, not from AGENTS.md prose — session #2's own recorded SessionOutcome for this run is 'Progress', not stage-advancing. Fix: edit the CONDUCTOR-UX-START.md checkpoint table rows to DONE with commit SHA + evidence path for U0.1 (199f2c8), U0.2 (66e6f57), U0.3 (ebd0eca/84fe84f) — this is the actual …
 
 ## Tracker handoff
 
