@@ -1,6 +1,6 @@
 namespace Conductor.Core;
 
-/// <summary>Line-based output for --no-dashboard, redirected output, or CI. While the Face TUI owns
+/// <summary>Line-based output for --headless, redirected output, or CI. While the Face TUI owns
 /// the terminal the sink is muted (see <see cref="Mute"/>): a second console writer shifts the Face's
 /// alt-screen repaints into garbage, and a competing <c>Console.ReadKey</c> steals its keystrokes.</summary>
 public sealed class PlainSink : IProgressSink

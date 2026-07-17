@@ -113,15 +113,15 @@ dotnet test Conductor.slnx
 
 ## Gotchas
 
-- **README verb list has drifted — trust `Program.cs`/`--help`, not the README.** `conductor
-  preview` and `conductor replay` are documented but **do not exist** in this build (`Unknown command
-  'preview'`). Real registered verbs live in `src\Conductor\Program.cs` (`AddCommand<...>`), and
-  include ones the README omits: `task`, `note`, `bug`, `bg`, `chat`.
-- **The run flag is `--headless`, not `--no-dashboard`.** The README says `--no-dashboard`; the actual
-  `RunCommand` option is `--headless` (plain line output; control plane still runs).
-- **Runtime state is a SQLite `run.db` (schema v7), not `events.jsonl`/`state.json`.** The README's
-  "Runtime files" section is stale. A real `.conductor\` after a run holds: `run.db`, `REPORT.md`,
-  `conductor.log`, `lessons.md`, `logs\`, `sessions\`, `.gitignore`. Assert on `run.db`.
+- **README staleness (verb list, `--no-dashboard`, Runtime files/Trust model sections) fixed
+  2026-07-17 (U0.3).** `conductor --help`/`Program.cs` is still the authoritative source going
+  forward — re-check before trusting the README again if it's been a while. Still trust
+  `Program.cs` (`AddCommand<...>`) over any doc if they ever disagree.
+- **Runtime state is a SQLite `run.db` (schema v7), not `events.jsonl`/`state.json`.** A real
+  `.conductor\` after a run holds: `run.db`, `REPORT.md`, `conductor.log`, `lessons.md`, `logs\`,
+  `sessions\`, `.gitignore`. Assert on `run.db`. `state.json` is a legacy carrier the live run loop
+  never writes (only a couple of standalone verbs like `conductor gate` still do); `RunContext.Save()`
+  only ever calls `SqliteRunStore.SaveRunState` (run.db).
 - **`run --dry-run` on a plan that's parked or complete loops instead of printing a prompt.**
   `plans\conductor-maestro.plan.json` is the self-referential plan, currently `NeedsHuman` at 30/30
   with a `HUMAN:` token in its handoff — a dry-run against it re-emits `NEEDS HUMAN` forever (kill it).

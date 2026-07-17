@@ -87,7 +87,7 @@ public class B11_2DoctorAndCompletionTests
         Assert.Contains("completion", output);
         Assert.Contains("new-plan", output);
         Assert.Contains("tasks", output);
-        Assert.Contains("replay", output);
+        Assert.Contains("journey", output);
         Assert.Contains("@('powershell','bash')", output);
         Assert.Contains("$newPlanOpts =", output);
         Assert.Contains("'new-plan'", output);
@@ -110,9 +110,10 @@ public class B11_2DoctorAndCompletionTests
     {
         var expectedVerbs = new HashSet<string>(StringComparer.Ordinal)
         {
-            "run", "status", "gate", "log", "report", "preview", "audit", "mcp-serve", "pause", "resume", "approve",
-            "kill", "skip", "inject", "abort", "retry-stage", "rollback",
-            "pause-after-stage", "goto", "plan", "tasks", "task", "new-plan", "note", "doctor", "completion", "chat", "bg"
+            "run", "journey", "face", "status", "gate", "log", "report", "audit", "mcp-serve", "pause", "resume",
+            "approve", "kill", "skip", "inject", "abort", "retry-stage", "rollback", "rollover", "heartbeat",
+            "pause-after-stage", "goto", "plan", "tasks", "task", "new-plan", "note", "bug", "init", "doctor",
+            "completion", "chat", "bg"
         };
 
         var ps = Conductor.Commands.CompletionCommand.GeneratePowerShell();

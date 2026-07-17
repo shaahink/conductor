@@ -407,17 +407,22 @@ conductor doctor -p conductor.plan.json
 ## 16. CLI option reference
 
 ```
+conductor journey [options]
+  -p, --plan <PATH>          Path to plan JSON (or CONDUCTOR_PLAN env var)
+                             Pre-flight itinerary — no state written, no agent spawned
+
 conductor run [options]
   -p, --plan <PATH>          Path to plan JSON (or CONDUCTOR_PLAN env var)
   --dry-run                  Print the prompt, spawn nothing
   --once                     Run one session, then stop
-  --max-sessions <N>         Stop after N sessions
-  --no-dashboard             Plain line output (for CI / redirected stdout)
+  --max-sessions <N>         Stop after N sessions this process
+  --paused                   Start idle: dashboard + control plane up, no session until resumed
+  --headless                 Plain line output, no Face TUI (for CI / redirected stdout)
 
 conductor status [options]
   -p, --plan <PATH>
-  --since <DATETIME>         Show delta since ISO 8601 timestamp
-  --no-llm                   Skip LLM analysis (fast, offline)
+  --since <DATETIME>         Show delta since ISO 8601 timestamp (with --deep)
+  --deep                     Add an LLM narrative on top of the fast database verdict
 
 conductor gate [options]
   -p, --plan <PATH>

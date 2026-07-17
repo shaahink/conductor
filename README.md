@@ -33,6 +33,7 @@ the repo's Debug build). After it, `conductor` works from any terminal:
 ```powershell
 conductor init                 # scaffold a new plan in the current repo (detects dotnet/go/rust/node/python)
 conductor doctor               # <2s health check — says exactly what's missing before a run
+conductor journey              # pre-flight itinerary: stages, gates, human moments — no state written, no spend
 conductor run --dry-run        # show the first session's prompt, spawn nothing
 conductor run --once           # run ONE session and stop (good for the first supervised run)
 conductor run                  # run the whole plan; Ctrl+C is always safe
@@ -49,19 +50,33 @@ works with no `-p`. In *this* repo the plans live under `plans/`, so pass
 `-p plans\conductor-maestro.plan.json` (or `dotnet run -- run -p ...` to drive with a fresh branch build,
 which the self-referential Maestro plan wants).
 
-## CLI commands (23 verbs)
+## CLI commands
+
+`conductor --help` (or `conductor <verb> --help`) is always the authoritative, current list straight
+from the binary — the table below covers the ones you'll reach for daily; it does not try to
+duplicate every flag of every verb.
 
 ```
+PRE-FLIGHT
+  journey      Pre-flight itinerary: identity, stages, gates, human moments — no state written,
+               no agent spawned. Run this before `run`.
+  doctor       <2s health check: agent CLI, git, face-go binary, DNS/disk/API, budget, Telegram —
+               says exactly what's missing (not a resume preview — see `status` for that)
+
 RUN
-  run          Run the plan loop (resumes from saved state)
+  run          Run the plan: engine + control plane + Face TUI, one command. Resumes from saved
+               state; Ctrl+C is safe.
                --dry-run            print the next session's prompt, spawn nothing
                --once               run exactly one session then stop
-               --max-sessions <N>   stop after N sessions
-               --no-dashboard       plain line output (for CI / redirected)
+               --max-sessions <N>   stop after N sessions this process
+               --paused             start idle: dashboard + control plane up, no session spawns
+                                    until you resume
+               --headless           plain line output, no Face TUI (control plane still runs)
 
 CONTROL
   pause        Pause after the current session
-  resume       Resume a paused / needs-attention run
+  resume       Resume a paused / needs-attention conductor (control verb — different from `run`
+               re-attaching to a live process; see "How resume actually works" below)
   kill         Kill the current agent session (loop re-evaluates)
   skip         Skip the current stage (flagged for human review)
   abort        Kill the session and stop the conductor
@@ -71,121 +86,81 @@ CONTROL
   goto <ID>    Jump to a different stage
   pause-after-stage  Park after the current stage completes
   inject <txt> Queue an instruction for the agent's next session
-  heartbeat on|off   Toggle heartbeat at runtime without restarting
-  plan set/reload/add-stage   Plan management (hot-update fields, reload, add stages)
+  heartbeat    Force a fresh .conductor/REPORT.md now (only meaningful mid-session)
+  rollover <tokens|off|clear>  Set/clear this run's session-token rollover (run-state only)
+  plan set/reload/add-stage/import   Plan management (hot-update fields, reload, add stages, import prose/markdown)
 
 DIAGNOSTICS
-  status       Show plan, tracker, and session status (+ optional LLM analysis)
-               --since <DATETIME>   show delta since a point in time
-               --no-llm             skip the LLM analysis (fast, offline)
+  status       Show plan, tracker, and session status, from the database, in under a second
+               --deep               add an LLM narrative on top (slower, opt-in)
   gate         Re-run the gate battery at HEAD (no agent spawned)
                --full               full battery (default: fast-tier only)
   report       Regenerate .conductor/REPORT.md from current state
   log          Query the structured JSON log
                -q "stage=P7 and gate=build and outcome=fail"
-               --since <DATETIME>   filter by time
-               --tail <N>           show last N matching entries
   tasks        Show sub-task graph per checkpoint from the event log
-  replay       Replay / time-travel through a past run's events.jsonl
-  preview      Render the dashboard offline from current state (+ synthetic data)
-  doctor       Print exactly what will happen on resume
+  task         Checkpoint CRUD from run.db: --list, --done, --in-progress
+  note / bug   Knowledge ledger + tracked bugs that outlive the session that found them
   audit <ID>   Post-hoc audit replay (read-only, --replay flag)
+  bg           Background process management: start|status|logs|stop
+  chat "..."   Ask questions about a running plan (MCP access to run.db, ledger, control verbs)
   mcp-serve    Run the MCP task server (JSON-RPC 2.0 over stdio)
-  new-plan     Scaffold a new plan + TRACKER.md from a built-in template
-               --template (minimal|dotnet|node|shamshir) -o <dir>
+  new-plan / init   Scaffold a new plan + TRACKER.md (init also detects the repo type + gates)
   completion   Generate shell completion scripts (powershell or bash)
 ```
 
-## Dashboard TUI
+## Dashboard — face-go
 
-The default is a live Spectre dashboard with 5 zones:
-
-```
-┌─ Conductor — Loom ● Running ────────────────────────── checkpoints 12/24 (50%) ─┐
-│ stage L4 Refactor → S3              cost $0.1245 agent $0.1123 gates $0.0122    │
-│ ▸ L4.1 Extract TfmScore             tokens 45.3k in · 12.1k out · 58.1k total   │
-│ ⠋ agent working · deliver · elapsed 12m34s · last output 3s ago                 │
-├─────────────────────────┬─────────────────────────────┬──────────────────────────┤
-│ plan (F/↑↓/D)          │ agent (O)    (C fold)      │ thinking (T)              │
-│ all/todo/active/failed │ 12:34:56 » read TRACKER.md  │ 12:34:57 ◎ goal Extract… │
-│                        │ 12:34:58 ◆ DONE verifying   │          ? hyp The name…  │
-│ ┌── L0 Truth harness   │ 12:35:02 » edit TfmScore.cs │          ✎ evidence…     │
-│ │ L0.1 ✅ Truth rst    │ 12:35:45 ◀ exit code 0     │          → action rename  │
-│ │ L0.2 ✅ Stub A       │                             │                          │
-│ ├── L1 Architecture    │                             ├──────────────────────────┤
-│ │ L1.1 ✅ Contracts    │                             │ gates                    │
-│ └── L2 …              │                             │ build  ✓ pass  2m12s     │
-│ ┌── L3 Database        │                             │ tests  … running 3m01s   │
-│ │ L3.1 TODO Schema    │                             │ lint   - skip            │
-└─────────────────────────┴─────────────────────────────┴──────────────────────────┘
-└─ [P] pause [K] kill [S] skip [I] inject [G] status [Q] quit [A] abort [H] hb ─┘
-```
-
-### Key bindings
-
-| Key | Effect |
-|---|---|
-| `P` | Pause after the current session (loop idles, process stays up) |
-| `R` | Resume a paused / needs-attention run / approve owner gate |
-| `K` (double-tap) | Kill the current agent session (conductor re-evaluates) |
-| `S` (double-tap) | Skip the current stage — flagged loudly for human review |
-| `A` (double-tap) | Abort now (kills session, stops conductor) |
-| `Q` | Quit after the current session (state saved; `run` continues later) |
-| `I` | Inject an instruction for the agent's next session |
-| `E` | Edit the selected stage's config |
-| `G` | Run the LLM status agent |
-| `H` | Toggle heartbeats on/off |
-| `T` | Open thinking panel |
-| `O` | Open agent output history |
-| `L` | Open timeline modal |
-| `F8` | Open replay / time-travel modal |
-| `F1` | Open health metrics modal |
-| `N` | Open confidence modal |
-| `B` | Open repo info modal |
-| `C` | Toggle agent fold expand/collapse |
-| `D` | Open the stage's plan doc section |
-| `V` | Open git diff view |
-| `X` | Open current session prompt |
-| `F` | Cycle plan tree filter (All/Todo/Active/Failed) |
-| `/` | Search focus |
-| `↑` / `↓` | Navigate plan tree |
-| `Enter` | Toggle stage expand/collapse |
-| `Esc` / `q` | Close modal |
-
-## Face — companion TUI (optional)
-
-The dashboard above runs *inside* `conductor run`'s own process. **Face** is a separate,
-optional companion app that attaches to a run over HTTP/SSE instead — useful for watching
-from a second terminal, or once you've set `--no-dashboard`. It needs the control plane
-enabled on the conductor side:
+`conductor run` is **one process tree**: it starts the engine + a localhost HTTP+SSE control
+plane, then **automatically spawns the Go face (`face-go`)** as the dashboard — a single ~22MB
+Bubble Tea binary, no runtime dependency. You never launch the Go binary yourself; if it dies the
+run continues headless, and `conductor face` attaches a fresh one to a live run.
 
 ```powershell
-conductor run -p <plan> --control-plane [--control-plane-port <n>]
+conductor run -p <plan>              # spawns face-go automatically
+conductor face -p <plan>             # attach another face to an already-running conductor
+conductor run -p <plan> --headless   # no Face — plain line output (CI / redirected output)
+conductor run -p <plan> --no-face    # control plane runs, but nothing is spawned to view it
 ```
 
-The Face is **`face-go`** (Go + Bubble Tea) — a single ~22MB binary, no runtime dependency,
-~5ms startup, wired to the control plane's HTTP+SSE endpoints. `conductor run` spawns it
-automatically; `conductor face` attaches a second one to a live run.
+`face-go`'s full keybinding and layout reference lives in `face-go/STYLE.md` (kept current there,
+not duplicated here) — eleven tabs (Agent · Sessions · Timeline · Procs · Console · Templates ·
+Plan · Report · Knowledge · Telegram · Kanban), an always-visible plan sidebar, and a `:` command
+palette for every control verb (pause/resume/abort/kill/skip/goto/…, destructive ones confirm
+first). `--demo` runs it fully offline against synthetic data:
 
-- **`face-go`** (Go + Bubble Tea)
-  ```powershell
-  cd face-go
-  go build -o bin/conductor-face.exe ./cmd/conductor-face/
-  .\bin\conductor-face.exe --demo    # offline synthetic data, no conductor process needed
-  .\bin\conductor-face.exe            # live, default http://127.0.0.1:4317
-  ```
+```powershell
+cd face-go
+go build -o bin/conductor-face.exe ./cmd/conductor-face/
+.\bin\conductor-face.exe --demo    # offline synthetic data, no conductor process needed
+```
 
 > The original TypeScript + Ink face (`face/`) was retired in M7 once `face-go` reached
 > day-to-day usability. Its history is in git.
 
-`face-go` (ten tabs, `a h t s c e g r k l` / `1`–`9`/`0`): `:` command palette
-(pause/resume/abort/kill/skip/goto/…, destructive verbs confirm first) · `p` plan sidebar (self-scrolls
-to the active stage) · `i` inject a note for the next session · `e` templates — edit prompt/persona
-files (full cursor editor) and preview the compiled prompt per session kind · `h` session history ·
-`t` timeline (drill into any event) · `r` report/query console (ad-hoc SQL against run.db, history +
-wide-table scroll) · `k` knowledge — ledger + tracked bugs, and file a note / file a bug / resolve one
-in place (`n`/`b`/`x`) · `l` Telegram guided setup · `s` supervised-processes view · `/` inline
-transcript search · `T` fold thinking — press `?` for the authoritative, up-to-date list.
+### How resume actually works
+
+Three different things are all called "resume" — they are not interchangeable:
+
+- **`conductor run -p <plan>`** is how you resume a run that isn't currently a live process
+  (you closed the terminal, the machine restarted, a previous run ended or was interrupted). It
+  reads the latest persisted `RunState` for that plan — `.conductor/state.json` if present and
+  non-empty, falling back to the `run_state` table in `.conductor/run.db` (the live source of
+  truth since M2; `state.json` is a legacy carrier kept for back-compat) — and continues from
+  exactly the recorded session count, stage, and budget. No flag needed; this is the default
+  behaviour of plain `run`. `conductor journey` shows you what it will do (`"resumes session #N,
+  stage X"` vs `"fresh run"`) before you run it.
+- **`--paused`** is a flag on `run`, not a separate resume mechanism: `conductor run -p <plan>
+  --paused` brings the dashboard + control plane up with no session spawning until you explicitly
+  resume — useful for reviewing/editing the plan in the Face before the first (or next) session
+  fires.
+- **`conductor resume`** is a *control verb* for a run that is already live and currently paused
+  or parked awaiting attention (e.g. after `conductor pause`, an owner-gate, or a budget cap trip)
+  — it does not start a process, it un-pauses one that's already running. From the Face, the same
+  action is available from the command palette or the `R` key.
+
+Ctrl+C during a live run is always safe: it saves state and prints an epilogue (status, exit
+meaning, attention reason, the exact resume command) rather than leaving you guessing.
 
 ## AFK awareness
 
@@ -335,10 +310,16 @@ Everything lives in one JSON file per mega plan. Below is the full schema refere
 | `cwd` | string | Working dir relative to repo root. |
 | `optional` | bool | Report but never block. |
 | `skipIfMissing` | string | Skip gate while this file path doesn't exist. |
-| `tier` | string | `"fast"` (per-session under perPhase) or `"full"` (phase end only). Default `"full"`. |
+| `tier` | string | `"fast"` (per-session under perPhase), `"full"` (phase end, and every session under perSession), or `"truth"` (phase confirmation only). Default `"full"`. |
 | `parallel` | bool | Run concurrently with other parallel gates in the same batch. |
 | `stages` | string[] | Only run when the current stage id is in this list. |
 | `timeoutMinutes` | int | Per-gate timeout. Default 20. |
+
+**`"gates": []` (or the field omitted entirely) is a supported, deliberate choice** — not a
+misconfiguration. Every verdict reads `"gates green (none configured)"` rather than failing or
+going silently blank, and `conductor doctor` flags it as a warn-level notice ("none configured —
+every session verdict will trust commits + tracker only"), never a failure. Useful for a docs-only
+or spike plan with no build/test surface.
 
 ### `limits` — Watchdog + budget
 
@@ -519,22 +500,27 @@ but left a note for the human. The checkpoint is auto-promoted.
 
 ```
 .conductor/
-  state.json            Resumable run state (atomic writes; .corrupt quarantine)
-  events.jsonl          Append-only event log (event-sourced backbone — 22 event types)
-  REPORT.md             The AFK report — the only file conductor commits
-  conductor.log         Orchestrator text log
-  control.json          Transient control verbs from the CLI/TUI/Telegram
-  conductor.lock        PID lock (two conductors can't fight over one repo)
-  lessons.md            Rolling lessons brief (bounded, rotating)
-  followups.md          Tracked follow-up items from audits
-  queue/                Injected instruction chain for the next session
+  run.db                 THE live run state (SQLite, run_state table) — every transition persists
+                          here; this is what `conductor run` resumes from, not state.json
+  state.json             Legacy resumable-state carrier (pre-M2). Only a couple of standalone
+                          verbs (e.g. `conductor gate`) still write it; the live run loop never
+                          does. Kept as a fallback `RunState.LoadOrNew` reads first; harmless if
+                          stale or absent — resume falls back to run.db either way
+  events.jsonl           Append-only event log (event-sourced backbone — 22 event types)
+  REPORT.md              The AFK report — the only file conductor commits
+  conductor.log          Orchestrator text log
+  control.json           Transient control verbs from the CLI/TUI/Telegram
+  conductor.lock         PID lock (two conductors can't fight over one repo)
+  lessons.md             Rolling lessons brief (bounded, rotating)
+  followups.md           Tracked follow-up items from audits
+  queue/                 Injected instruction chain for the next session
   logs/
     session-NNN.jsonl           Raw agent stream per session
     session-NNN.prompt.md       Exact prompt each session got
     conductor-YYYY-MM-DD.json   Structured JSON log (for conductor log --query)
-  lanes/                Analysis lane artifacts
-  handovers/            Phase-end audit handover documents
-  audits/               Post-hoc audit replay outputs
+  lanes/                 Analysis lane artifacts
+  handovers/              Phase-end audit handover documents
+  audits/                Post-hoc audit replay outputs
 ```
 
 A `.gitignore` inside keeps everything but `REPORT.md` out of the repo.
@@ -548,9 +534,9 @@ A `.gitignore` inside keeps everything but `REPORT.md` out of the repo.
   complete, conductor runs the full battery one more time before declaring victory.
 - **Failures loop back with evidence.** Red gates → the next session is a *fix
   session* whose prompt embeds the actual failing gate output.
-- **Everything is resumable.** State is persisted on every transition (atomic
-  `state.json` + event log). Kill conductor, reboot, Ctrl+C — running `conductor run`
-  again picks up where it left off.
+- **Everything is resumable.** State is persisted to `run.db` on every transition.
+  Kill conductor, reboot, Ctrl+C — running `conductor run` again picks up where it
+  left off (see "How resume actually works" above).
 
 ## Testing without burning tokens
 

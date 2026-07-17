@@ -35,8 +35,8 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
 
     internal static string GeneratePowerShell()
     {
-        var verbs = "run status gate log report preview pause resume approve kill skip inject abort retry-stage rollback pause-after-stage goto plan tasks task new-plan note doctor audit mcp-serve completion chat bg";
-        var opts = "-p --plan --yes --force --dry-run --once --max-sessions --no-dashboard -o --output --name --repo -q --query --since --tail";
+        var verbs = "run journey face status gate log report pause resume approve kill skip inject abort retry-stage rollback pause-after-stage goto rollover heartbeat plan tasks task new-plan note bug init doctor audit mcp-serve completion chat bg";
+        var opts = "-p --plan --yes --force --dry-run --once --max-sessions --paused --headless --deep --full -o --output --name --repo -q --query --since --tail";
         var auditOpts = "-p --plan --replay";
         var newPlanOpts = "-o --output --name --repo";
         return $$"""
@@ -67,7 +67,7 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
                     }
                 }
                 elseif ($tokens[1] -eq 'plan') {
-                    @('set','reload','add-stage') | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
+                    @('set','reload','add-stage','import') | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
                         [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
                     }
                 }
@@ -76,9 +76,9 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
                         [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterName', $_)
                     }
                 }
-                elseif ($tokens[1] -in @('run','status','gate','log','report','preview','pause','resume',
+                elseif ($tokens[1] -in @('run','journey','face','status','gate','log','report','pause','resume',
                         'approve','kill','skip','inject','abort','retry-stage','rollback','pause-after-stage',
-                        'goto','tasks','task','note','doctor')) {
+                        'goto','rollover','heartbeat','tasks','task','note','bug','init','doctor')) {
                     $opts | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
                         [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterName', $_)
                     }
@@ -106,12 +106,12 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
                 cur="${COMP_WORDS[COMP_CWORD]}"
 
                 if [[ $COMP_CWORD -eq 1 ]]; then
-                    COMPREPLY=($(compgen -W "run status gate log report preview audit mcp-serve pause resume approve kill skip inject abort retry-stage rollback pause-after-stage goto plan tasks task new-plan note doctor completion chat bg" -- "$cur"))
+                    COMPREPLY=($(compgen -W "run journey face status gate log report audit mcp-serve pause resume approve kill skip inject abort retry-stage rollback pause-after-stage goto rollover heartbeat plan tasks task new-plan note bug init doctor completion chat bg" -- "$cur"))
                     return
                 fi
                 case "${COMP_WORDS[1]}" in
-                    run|status|gate|log|report|preview|pause|resume|approve|kill|skip|inject|abort|retry-stage|rollback|pause-after-stage|goto|tasks|task|note|doctor|mcp-serve|chat|bg)
-                        COMPREPLY=($(compgen -W "-p --plan --yes --force --dry-run --once --max-sessions --no-dashboard -o --output --name --repo" -- "$cur"))
+                    run|journey|face|status|gate|log|report|pause|resume|approve|kill|skip|inject|abort|retry-stage|rollback|pause-after-stage|goto|rollover|heartbeat|tasks|task|note|bug|init|doctor|mcp-serve|chat|bg)
+                        COMPREPLY=($(compgen -W "-p --plan --yes --force --dry-run --once --max-sessions --paused --headless --deep --full -o --output --name --repo" -- "$cur"))
                         ;;
                     audit)
                         COMPREPLY=($(compgen -W "-p --plan --replay" -- "$cur"))
@@ -120,7 +120,7 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
                         COMPREPLY=($(compgen -W "powershell bash" -- "$cur"))
                         ;;
                     plan)
-                        COMPREPLY=($(compgen -W "set reload add-stage" -- "$cur"))
+                        COMPREPLY=($(compgen -W "set reload add-stage import" -- "$cur"))
                         ;;
                     new-plan)
                         COMPREPLY=($(compgen -W "-o --output --name --repo" -- "$cur"))
