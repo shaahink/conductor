@@ -1,18 +1,19 @@
 ﻿# Conductor — Conductor UX (U-series) run report
 
-_Updated 2026-07-17 02:20 UTC · branch `feat/foreman` · HEAD `7e30729`_
+_Updated 2026-07-17 02:57 UTC · branch `feat/foreman` · HEAD `b96958c`_
 
 **Status:** Idle
-**Stage:** U0 — Engine: start, resume, journey · attempts used 0
-**Checkpoints:** 3/11 done · **Sessions run:** 4 · **Cost:** $36.3402 (agent $36.3314 + gates $0.0088)
+**Stage:** U1 — Face: landing page + workspace identity · attempts used 0
+**Checkpoints:** 5/11 done · **Sessions run:** 5 · **Cost:** $53.5549 (agent $53.5422 + gates $0.0127)
 **Confirmed phases:** U0
+**Pending:** full-battery phase gate for U1
 
 ## Stage progress
 
 | Stage | Title | Progress | State |
 |---|---|---|---|
 | U0 | Engine: start, resume, journey | ██████████ 3/3 | confirmed ✓ |
-| U1 | Face: landing page + workspace identity | ░░░░░░░░░░ 0/2 | todo |
+| U1 | Face: landing page + workspace identity | ██████████ 2/2 | gating… |
 | U2 | Face: controls, visual report, dev stats | ░░░░░░░░░░ 0/3 | todo |
 | U3 | Face: themes, agent-terminal vibe, glitch pass | ░░░░░░░░░░ 0/3 | todo |
 
@@ -26,12 +27,12 @@ _Updated 2026-07-17 02:20 UTC · branch `feat/foreman` · HEAD `7e30729`_
 
 </details>
 
-<details><summary>U1 — Face: landing page + workspace identity (0/2)</summary>
+<details> ✅<summary>U1 — Face: landing page + workspace identity (2/2)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| U1.1 | Home landing tab: Server / Run / Workspace / Next-steps panels, demo parity | ⬜ TODO |  |
-| U1.2 | workspace identity in the top bar (repo basename, full path on Home) | ⬜ TODO |  |
+| U1.1 | Home landing tab: Server / Run / Workspace / Next-steps panels, demo parity | ✅ DONE | [`db9244a`](https://github.com/shaahink/conductor/commit/db9244a) |
+| U1.2 | workspace identity in the top bar (repo basename, full path on Home) | ✅ DONE | [`abccde2`](https://github.com/shaahink/conductor/commit/abccde2) |
 
 </details>
 
@@ -63,6 +64,7 @@ _Updated 2026-07-17 02:20 UTC · branch `feat/foreman` · HEAD `7e30729`_
 | 2 | U0 | Resume | 1r1 | 07-17 00:28 | 1:02 | Progress |  | 7 | build:OK · face-build:OK | $23.9417 | $0.0038 |  |
 | 3 | U0 | Verify | 1 | 07-17 01:31 | 0:09 | AgentError |  | 0 |  | $2.0005 |  |  |
 | 4 | U0 | Fix | 2 | 07-17 01:40 | 0:35 | Advanced | U0.1 U0.2 U0.3 | 1 | build:OK · face-build:OK | $10.3892 | $0.0049 |  |
+| 5 | U1 | Deliver | 1 | 07-17 02:20 | 0:36 | Advanced | U1.1 U1.2 | 3 | build:OK · face-build:OK | $17.2108 | $0.0039 |  |
 
 ## Timeline
 
@@ -94,6 +96,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-17 03:20:38  ▪ gate face-test pass [phase]  (4.8s)
 07-17 03:20:38  ▪ gate driver pass [phase]  (19.4s)
 07-17 03:20:38  ▸ stage U0 confirmed  (2h38m06s)
+07-17 03:20:42  ▸ stage U1 entered — Face: landing page + workspace identity
+07-17 03:20:42  • session #5 U1 Deliver started (attempt 1/6)
+07-17 03:57:49  ▪ gate build pass [session]  (36.0s)
+07-17 03:57:49  ▪ gate face-build pass [session]  (3.4s)
 ```
 
 ## Health
@@ -101,7 +107,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 4 · retries 1 (25 %) · overall Ok
+sessions 5 · retries 1 (20 %) · overall Ok
 ✓ no health concerns detected
 ```
 
@@ -111,8 +117,8 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/foreman
-working tree: M CONDUCTOR-UX-START.md
-vs upstream: 1 ahead
+working tree: clean
+vs upstream: up to date
 ```
 
 ### Commits by session
@@ -127,6 +133,10 @@ vs upstream: 1 ahead
   - [`a15cce6`](https://github.com/shaahink/conductor/commit/a15cce6) fix(run): async RunCommand+RunStateResume — ratchet gate was silently red (40>38)
 - **s4 (U0 Fix)** — 1 commit(s):
   - [`fbdef79`](https://github.com/shaahink/conductor/commit/fbdef79) fix(engine): U0 FIX session — verifier truncation + brace-fragile parsing
+- **s5 (U1 Deliver)** — 3 commit(s):
+  - [`b96958c`](https://github.com/shaahink/conductor/commit/b96958c) docs(conductor): U1 tracker — Home + workspace identity claimed 2/2
+  - [`abccde2`](https://github.com/shaahink/conductor/commit/abccde2) feat(face): U1.2 workspace identity in the top bar
+  - [`db9244a`](https://github.com/shaahink/conductor/commit/db9244a) feat(face): U1.1 Home landing tab — Server / Run / Workspace / Next steps
 
 ## Phase handovers (audit)
 
@@ -149,27 +159,26 @@ vs upstream: 1 ahead
 
 ## Last gate run
 
-build:OK · face-build:OK · test:OK · face-test:OK · driver:OK
+build:OK · face-build:OK
 
 ## Last session result
 
-> SESSION-RESULT:" crop meant for Deliver/Fix narrative paragraphs — session #3's real output was a valid 2682-char JSON verdict (score 66, WARN) that got chopped mid-string, destroying the closing brace before `Verifier.Parse` ever saw it.
-> 2. `Verifier.Parse`'s regex (`\{[^{}]*"score"[^{}]*\}`) forbade *any* brace character anywhere in the match — a finding quoting a `{model}`/`{planDoc}`-style placeholder (common in this repo's own docs) would break it even without truncation.
-> 
-> **Fixed both, ratchet-only:** `ExtractSessionResult` is now kind-aware (Verify sessions skip the narrative crop entirely, capped generously at 16,000 chars instead); `Verifier.Parse` now scans for balanced top-level `…
+> SESSION-RESULT: U1 delivered 2/2 and pushed on `feat/foreman` — U1.1 Home landing tab (`db9244a`) and U1.2 top-bar workspace identity (`abccde2`), tracker + run.db claims at `b96958c`, working tree clean, local and remote at the same sha. Gate battery green on the final tree: dotnet build 0w/0e, dotnet test 890/890, ratchet OK (38≤38, nothing weakened), go build/vet/test green, gofmt clean. QA of session #4 was a PASS with no findings (its claims independently reproduced, not trusted). Nothing is red. Two things the next session must not re-derive, both in the ledger and the handoff: (1) the spec's `<planDir>/.conductor` state dir is WRONG — the engine roots StateDir at Repo, and Home render…
 
 ## Tracker handoff
 
 ```
-last: session #4 (FIX) — session #3 (Verify) crashed AgentError; root cause was
-SessionRunner.ExtractSessionResult cropping a real, valid verifier JSON to 700 chars before
-Verifier.Parse ever saw it (plus a regex too fragile for a quoted `{model}`-style brace in a
-finding). Both fixed; see the ledger note on this run. U0.1-U0.3's code was already correct
-(session #3's own analysis confirmed it before crashing) but never claimed — claimed now via
-`conductor task --done` with commit+evidence.
-stage: **U0 claimed 3/3 (unconfirmed — awaiting the next live verify session)**.
-gate: green — dotnet build 0w/0e, dotnet test 889/889, ratchet OK (pragmas 38≤38, nothing
-weakened), face-go build+vet+test green.
-next: **U1** — Face landing page + workspace identity (docs/CONDUCTOR-UX.md §U1), once U0 is
-confirmed by a live verify session.
+last: session #5 (Deliver, U1) — **U1 claimed 2/2**. QA of session #4: its gate claims
+reproduced exactly (build 0w/0e, 889/889, ratchet 38≤38) — verdict PASS, no findings, nothing
+to fix. U1.1 Home tab (`db9244a`) + U1.2 top-bar repo chip (`abccde2`).
+gate: green — dotnet build 0w/0e, dotnet test **890/890** (+1: the new /state wire test),
+ratchet OK (pragmas 38≤38, nothing weakened), go build/vet/test green, gofmt clean.
+note: `/state` gained `tracker`+`stateDir`. The spec's "state dir = `<planDir>/.conductor`" is
+WRONG vs the engine (PlanConfig.cs:98 roots StateDir at **Repo**) — Home renders the engine's
+truth; don't "fix" it back. See the ledger.
+bug #2 filed (high, NOT fixed — engine work, out of U1's scope): `conductor bg start` CLI logs
+are always empty for anything slower than ~300ms (it returns immediately, killing the read pump
+it just attached), so every build/test-suite run through it yields a BOM-only log while LOOKING
+healthy. Workaround in the ledger; this session's gates used it.
+next: **U2.1** — palette groups (Run/Stage/Danger) + consequence-naming confirms (§U2.1).
 ```
