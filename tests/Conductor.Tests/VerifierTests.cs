@@ -148,4 +148,61 @@ public class VerifierTests
         Assert.Contains("valid item", result.Findings);
         Assert.Contains("another valid", result.Findings);
     }
+
+    [Fact]
+    public void Parse_survives_stray_braces_inside_a_finding_string()
+    {
+        // The old regex was `\{[^{}]*"score"[^{}]*\}` — ANY brace character between "score" and
+        // the closing `}`, even one quoted inside a finding's string value, broke the match
+        // outright. This project's own docs are full of `{model}`/`{planDoc}`/`{message}`
+        // placeholders, so a verifier commenting on them is a completely ordinary case, not an
+        // edge case.
+        var json = """{"score":88,"findings":["the {model} placeholder resolves correctly","{planDoc} falls back to the tracker"],"verdict":"PASS"}""";
+
+        var result = Verifier.Parse(json);
+
+        Assert.NotNull(result);
+        Assert.Equal(88, result.Score);
+        Assert.Equal(2, result.Findings.Count);
+        Assert.Contains(result.Findings, f => f.Contains("{model}"));
+    }
+
+    [Fact]
+    public void Parse_prefers_the_last_valid_candidate_when_several_appear()
+    {
+        var text = """
+            A draft verdict while thinking out loud: {"score":40,"findings":["draft"],"verdict":"FAIL"}
+            On reflection, the final verdict is:
+            {"score":92,"findings":["all good"],"verdict":"PASS"}
+            """;
+
+        var result = Verifier.Parse(text);
+
+        Assert.NotNull(result);
+        Assert.Equal(92, result.Score);
+        Assert.Equal("PASS", result.Verdict);
+    }
+
+    [Fact]
+    public void Parse_handles_the_real_session_003_verifier_output()
+    {
+        // Captured verbatim from .conductor/logs/session-003.jsonl's final "result" field
+        // (2026-07-17) — a real verifier response, code-fenced, that VerdictEngine failed to
+        // score because SessionRunner's 700-char SESSION-RESULT: cropping (fixed separately)
+        // cut the JSON's closing brace off before Verifier.Parse ever saw it. Proves the parser
+        // itself handles the full, untruncated real payload correctly.
+        var raw = """
+            ```json
+            {"score":66,"findings":["CRITICAL: CONDUCTOR-UX-START.md's U0.1/U0.2/U0.3 checkpoint rows are unchanged from baseline — still Status=TODO, Commit and Evidence columns blank. Fix: edit the CONDUCTOR-UX-START.md checkpoint table rows to DONE with commit SHA + evidence path for U0.1 (199f2c8), U0.2 (66e6f57), U0.3 (ebd0eca/84fe84f) — this is the actual mechanism the engine and any future session trust, not the AGENTS.md handoff text.","Zero conductor-note ledger rows exist for run 1a7c1714 despite session #2 claiming to have root-caused the ratchet-gate 40>38 pragma regression. Fix: retroactively write the ledger note and file+close the bug so the finding survives a session kill next time.","Code substance for all three U0 checkpoints was independently verified correct against docs/CONDUCTOR-UX.md.","Full gate battery independently reproduced green: dotnet build 0 warnings/0 errors; dotnet test 878/878 passed.","Commit c829143 ('U0 CLOSED 3/3 — session handoff') and the AGENTS.md 'U0 delivered this session' section overstate completion relative to the system of record."],"verdict":"WARN"}
+            ```
+            """;
+
+        var result = Verifier.Parse(raw);
+
+        Assert.NotNull(result);
+        Assert.Equal(66, result.Score);
+        Assert.Equal("WARN", result.Verdict);
+        Assert.Equal(5, result.Findings.Count);
+        Assert.Contains(result.Findings, f => f.StartsWith("CRITICAL:"));
+    }
 }

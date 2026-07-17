@@ -53,14 +53,6 @@ public sealed partial class VerdictEngine
 
     private static string Short(string sha) => string.IsNullOrEmpty(sha) ? "?" : sha.Length >= 7 ? sha[..7] : sha;
 
-    private static string ExtractSessionResult(string? resultText)
-    {
-        if (string.IsNullOrWhiteSpace(resultText)) return "";
-        var idx = resultText.IndexOf("SESSION-RESULT:", StringComparison.OrdinalIgnoreCase);
-        var s = idx >= 0 ? resultText[idx..] : resultText;
-        return Trunc(s.Trim(), 700);
-    }
-
     // ── instance helpers ──
 
     private int MaxAttempts(StageConfig stage) => Math.Max(1, stage.Sessions * _ctx.Plan.Limits.StageSlackFactor);
@@ -186,7 +178,7 @@ public sealed partial class VerdictEngine
         if (rec.Kind == SessionKind.Verify)
         {
             rec.NewCommits = Git.CommitsSince(_ctx.Plan.Repo, startHead);
-            var verdict = Verifier.Parse(ExtractSessionResult(rec.ResultSummary) ?? "");
+            var verdict = Verifier.Parse(rec.ResultSummary ?? "");
             if (verdict != null)
             {
                 var findingsText = string.Join("\n", verdict.Findings);

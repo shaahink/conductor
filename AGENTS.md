@@ -41,6 +41,24 @@ run `conductor run`" directive below: the owner explicitly asked for conductor-d
 The Claude Code session's role is **supervisor** (author/monitor/intervene); never edit the working
 tree while an agent session is live.
 
+- **Session #4 (FIX, 2026-07-17) — corrected the record + fixed the verifier crash.** Session #3
+  (Verify) ended AgentError ("verifier session produced no valid score JSON"). Root cause:
+  `SessionRunner.ExtractSessionResult` ran the verifier's full output through the same 700-char
+  SESSION-RESULT: crop used for Deliver/Fix narrative summaries — session #3's real output was a
+  valid 2682-char JSON verdict (score 66, WARN) but got chopped mid-string, so `Verifier.Parse`
+  never saw the closing brace. Separately, `Verifier.Parse`'s regex forbade ANY brace character
+  anywhere in the match, so a finding quoting a `{model}`/`{planDoc}`-style placeholder (this repo's
+  docs are full of them) could break it even without truncation. Both fixed: `ExtractSessionResult`
+  skips the 700-char convention for `SessionKind.Verify` (capped at 16,000 instead), and
+  `Verifier.Parse` now scans for balanced top-level `{...}` spans (string/escape-aware) instead of a
+  single-level regex. Proved live: a new test drives a real Deliver-then-Verify pair through the
+  orchestrator with a >700-char verdict containing a quoted `{model}` — reaches `Progress`, not
+  `AgentError`. Below, "U0 is CLOSED, 3/3" was true in substance (session #3's own analysis, before
+  it crashed, independently confirmed the code for all three checkpoints) but false in the system of
+  record — `CONDUCTOR-UX-START.md`/run.db still showed all three TODO, since session #2 never called
+  `conductor task --done`. Claimed now (commits `199f2c8`/`66e6f57`/`84fe84f`), matching the tracker;
+  still **unconfirmed** until a live verify session (now working) confirms them. Gate battery
+  reproduced green: dotnet build 0w/0e, dotnet test 889/889, ratchet OK (38≤38), face-go green.
 - **The three files:** `plans/conductor-ux.plan.json` (claude-native; U0 sonnet-5, U1–U3 opus-4-8,
   fable advisor) · `docs/CONDUCTOR-UX.md` (THE spec — includes the 13-item dogfood appendix, the
   "delivered engine-side, do not redo" ledger, and the owner's orchestrator-gaps backlog) ·

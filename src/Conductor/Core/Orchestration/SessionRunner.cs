@@ -310,7 +310,7 @@ public sealed partial class SessionRunner
             rec.TokensOutput = agent.TokensOutput;
             rec.TokensReasoning = agent.TokensReasoning;
             rec.TokensCacheRead = agent.TokensCacheRead;
-            rec.ResultSummary = ExtractSessionResult(agent.ResultText);
+            rec.ResultSummary = ExtractSessionResult(agent.ResultText, rec.Kind);
             if (kind == SessionKind.Audit && !_ctx.State.AuditedStages.Contains(stage.Id))
                 _ctx.State.AuditedStages.Add(stage.Id);
             _ctx.Log($"session #{rec.Number} exited (code {exit}, {(rec.EndedUtc - rec.StartedUtc).Value.TotalMinutes:0}m" +
@@ -358,7 +358,7 @@ public sealed partial class SessionRunner
             if (_ctx.EffectiveMaxSessionTokens is { } maxTok && rec.TokensTotal >= maxTok)
             {
                 rec.Outcome = SessionOutcome.RolledOver;
-                rec.ResultSummary = ExtractSessionResult(agent.ResultText);
+                rec.ResultSummary = ExtractSessionResult(agent.ResultText, rec.Kind);
                 if (kind == SessionKind.Audit && !_ctx.State.AuditedStages.Contains(stage.Id))
                     _ctx.State.AuditedStages.Add(stage.Id);
                 var resumeCtx = BuildRolloverResumeHint(preTrack);
@@ -393,9 +393,18 @@ public sealed partial class SessionRunner
 
     // ── static helpers ──
 
-    private static string ExtractSessionResult(string? resultText)
+    // A Verify session's entire payload is the JSON verdict (score/findings/verdict), which can
+    // legitimately run to several KB once a verifier lists five or six findings — nothing like the
+    // "one paragraph" SESSION-RESULT: convention Deliver/Fix/Audit sessions follow. Truncating it to
+    // the same 700 chars as a narrative summary cut the closing brace off a real, valid verdict JSON
+    // (session #3, 2026-07-17) and Verifier.Parse had nothing left to match — a genuine PASS/WARN
+    // got recorded as AgentError. Verify keeps the full text (generously capped, not narrative-cropped).
+    internal const int VerifyResultMaxChars = 16_000;
+
+    internal static string ExtractSessionResult(string? resultText, SessionKind kind)
     {
         if (string.IsNullOrWhiteSpace(resultText)) return "";
+        if (kind == SessionKind.Verify) return Trunc(resultText.Trim(), VerifyResultMaxChars);
         var idx = resultText.IndexOf("SESSION-RESULT:", StringComparison.OrdinalIgnoreCase);
         var s = idx >= 0 ? resultText[idx..] : resultText;
         return Trunc(s.Trim(), 700);

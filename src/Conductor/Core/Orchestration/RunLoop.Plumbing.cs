@@ -230,8 +230,10 @@ public sealed partial class RunLoop
 
         WriteSessionHistory(rec);
 
+        // Verify-session ResultSummary can run to several KB (the full verdict JSON, not a cropped
+        // narrative paragraph) — bound what actually goes to Telegram, which rejects long messages.
         _ = _ctx.Telegram.PushSessionEndAsync(rec.Number, rec.Stage, rec.Outcome?.ToString() ?? "Unknown",
-            rec.GateSummary, rec.ResultSummary, rec.CostUsd, _ctx.State.PendingFix?.VerifierScore);
+            rec.GateSummary, Trunc(rec.ResultSummary, 700), rec.CostUsd, _ctx.State.PendingFix?.VerifierScore);
     }
 
     // ---------------------------------------------------------------- notifications

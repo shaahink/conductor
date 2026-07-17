@@ -4,11 +4,17 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: (none) — tracker authored 2026-07-16 from the owner's playground dogfood feedback; no
-U-series session has run yet.
-stage: **U0 NOT STARTED**.
-gate: not run for this era (repo is green at authoring time: dotnet 849/849, go test ok, driver PASS).
-next: **U0.1** — plan discovery in `PlanSettings.ResolvePlanPath` (see docs/CONDUCTOR-UX.md §U0.1).
+last: session #4 (FIX) — session #3 (Verify) crashed AgentError; root cause was
+SessionRunner.ExtractSessionResult cropping a real, valid verifier JSON to 700 chars before
+Verifier.Parse ever saw it (plus a regex too fragile for a quoted `{model}`-style brace in a
+finding). Both fixed; see the ledger note on this run. U0.1-U0.3's code was already correct
+(session #3's own analysis confirmed it before crashing) but never claimed — claimed now via
+`conductor task --done` with commit+evidence.
+stage: **U0 claimed 3/3 (unconfirmed — awaiting the next live verify session)**.
+gate: green — dotnet build 0w/0e, dotnet test 889/889, ratchet OK (pragmas 38≤38, nothing
+weakened), face-go build+vet+test green.
+next: **U1** — Face landing page + workspace identity (docs/CONDUCTOR-UX.md §U1), once U0 is
+confirmed by a live verify session.
 
 
 ## Baseline numbers (from run.db)
@@ -17,6 +23,7 @@ next: **U0.1** — plan discovery in `PlanSettings.ResolvePlanPath` (see docs/CO
 |---|---|
 | Total checkpoints | 11 |
 | Done | 0 |
+| Claimed (unconfirmed) | 3 |
 
 ## Checkpoints
 
@@ -27,9 +34,9 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| U0.1 | plan discovery: -p optional, cwd/plans scan, picker, friendly errors | TODO |  |  |
-| U0.2 | `conductor journey`: itinerary with stages, gates, human moments, resume state | TODO |  |  |
-| U0.3 | gateless plans proven + resume story documented (README) | TODO |  |  |
+| U0.1 | plan discovery: -p optional, cwd/plans scan, picker, friendly errors | DONE | 199f2c8 | 9 resolution-order unit tests; matches CONDUCTOR-UX.md §U0.1 exactly |
+| U0.2 | `conductor journey`: itinerary with stages, gates, human moments, resume state | DONE | 66e6f57 | conductor journey verb, 10 unit tests; matches CONDUCTOR-UX.md §U0.2 |
+| U0.3 | gateless plans proven + resume story documented (README) | DONE | 84fe84f | gateless verdicts + README resume story; U03GatelessLiveTests live proof |
 
 ### U1 — Face: landing page + workspace identity
 
