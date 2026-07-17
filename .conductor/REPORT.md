@@ -1,12 +1,11 @@
 ﻿# Conductor — Conductor UX (U-series) run report
 
-_Updated 2026-07-17 04:50 UTC · branch `feat/foreman` · HEAD `a0437dd`_
+_Updated 2026-07-17 04:52 UTC · branch `feat/foreman` · HEAD `2c8ffe2`_
 
 **Status:** Idle
 **Stage:** U2 — Face: controls, visual report, dev stats · attempts used 0
 **Checkpoints:** 8/11 done · **Sessions run:** 9 · **Cost:** $95.5322 (agent $95.5138 + gates $0.0184) · **Tokens:** 272,633 in / 124,152 out
-**Confirmed phases:** U0, U1
-**Pending:** full-battery phase gate for U2
+**Confirmed phases:** U0, U1, U2
 
 ## Stage progress
 
@@ -14,7 +13,7 @@ _Updated 2026-07-17 04:50 UTC · branch `feat/foreman` · HEAD `a0437dd`_
 |---|---|---|---|
 | U0 | Engine: start, resume, journey | ██████████ 3/3 | confirmed ✓ |
 | U1 | Face: landing page + workspace identity | ██████████ 2/2 | confirmed ✓ |
-| U2 | Face: controls, visual report, dev stats | ██████████ 3/3 | gating… |
+| U2 | Face: controls, visual report, dev stats | ██████████ 3/3 | confirmed ✓ |
 | U3 | Face: themes, agent-terminal vibe, glitch pass | ░░░░░░░░░░ 0/3 | todo |
 
 <details> ✅<summary>U0 — Engine: start, resume, journey (3/3)</summary>
@@ -40,9 +39,9 @@ _Updated 2026-07-17 04:50 UTC · branch `feat/foreman` · HEAD `a0437dd`_
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| U2.1 | palette groups (Run/Stage/Danger) + consequence-naming confirms | ✅ DONE | [`26a4194`](https://github.com/shaahink/conductor/commit/26a4194) |
+| U2.1 | palette groups (Run/Stage/Danger) + consequence-naming confirms | ✅ DONE | - |
 | U2.2 | Report tab is a visual run report (progress, stages, sessions, gates, scores) | ✅ DONE | [`c8ff55f`](https://github.com/shaahink/conductor/commit/c8ff55f) |
-| U2.3 | Dev tab: SQL console moved + run internals + per-session token/cost stats | ✅ DONE | [`8749704`](https://github.com/shaahink/conductor/commit/8749704) |
+| U2.3 | Dev tab: SQL console moved + run internals + per-session token/cost stats | ✅ DONE | [`c8ff55f`](https://github.com/shaahink/conductor/commit/c8ff55f) |
 
 </details>
 
@@ -75,15 +74,6 @@ _Updated 2026-07-17 04:50 UTC · branch `feat/foreman` · HEAD `a0437dd`_
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-17 02:40:59  • session #4 U0 Fix started (attempt 2/6)
-07-17 03:17:44  ▪ gate build pass [session]  (42.0s)
-07-17 03:17:44  ▪ gate face-build pass [session]  (7.4s)
-07-17 03:17:45  • session #4 U0 → Advanced · done U0.1,U0.2,U0.3 · 1 commit(s)  (36m45s)
-07-17 03:17:45  ✓ checkpoint U0.1 confirmed
-07-17 03:17:45  ✓ checkpoint U0.2 confirmed
-07-17 03:17:45  ✓ checkpoint U0.3 confirmed
-07-17 03:20:38  ▪ gate build pass [phase]  (40.9s)
-07-17 03:20:38  ▪ gate face-build pass [phase]  (4.2s)
 07-17 03:20:38  ▪ gate test pass [phase]  (1m44s)
 07-17 03:20:38  ▪ gate face-test pass [phase]  (4.8s)
 07-17 03:20:38  ▪ gate driver pass [phase]  (19.4s)
@@ -115,6 +105,15 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-17 04:54:23  • session #9 U2 Resume started (attempt 2/8)
 07-17 05:50:28  ▪ gate build pass [session]  (13.6s)
 07-17 05:50:28  ▪ gate face-build pass [session]  (3.2s)
+07-17 05:50:29  • session #9 U2 → Advanced · done U2.2,U2.3 · 4 commit(s)  (56m06s)
+07-17 05:50:29  ✓ checkpoint U2.2 confirmed
+07-17 05:50:29  ✓ checkpoint U2.3 confirmed
+07-17 05:52:24  ▪ gate build pass [phase]  (12.2s)
+07-17 05:52:24  ▪ gate face-build pass [phase]  (3.0s)
+07-17 05:52:24  ▪ gate test pass [phase]  (1m18s)
+07-17 05:52:24  ▪ gate face-test pass [phase]  (5.7s)
+07-17 05:52:24  ▪ gate driver pass [phase]  (15.2s)
+07-17 05:52:24  ▸ stage U2 confirmed  (1h52m24s)
 ```
 
 ## Health
@@ -122,8 +121,8 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 9 · retries 4 (44 %) · overall Ok
-✓ no health concerns detected
+sessions 9 · retries 4 (44 %) · overall Warn
+⚠ [context-saturation] session #9: 40,301,419 context tokens (≥ 20,000,000)
 ```
 
 ## Repo
@@ -132,8 +131,8 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/foreman
-working tree: clean
-vs upstream: up to date
+working tree: M CONDUCTOR-UX-START.md
+vs upstream: 1 ahead
 ```
 
 ### Commits by session
@@ -183,7 +182,7 @@ vs upstream: up to date
 
 ## Last gate run
 
-build:OK · face-build:OK
+build:OK · face-build:OK · test:OK · face-test:OK · driver:OK
 
 ## Last session result
 
