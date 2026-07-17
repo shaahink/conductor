@@ -14,25 +14,29 @@ namespace Conductor.Core.Store;
 /// </summary>
 public static class RunStateResume
 {
-#pragma warning disable MA0045 // sync by design: runs once at command start, before any host exists
-    public static RunState? TryLoadLatest(string runDbPath, string planName)
+    public static async Task<RunState?> TryLoadLatestAsync(string runDbPath, string planName, CancellationToken ct)
     {
         if (!File.Exists(runDbPath)) return null;
         try
         {
-            using var conn = new SqliteConnection($"Data Source={runDbPath};Mode=ReadOnly");
-            conn.Open();
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText =
-                "SELECT state_json FROM run_state WHERE plan_name = @plan ORDER BY updated_utc DESC LIMIT 1";
-            cmd.Parameters.AddWithValue("@plan", planName);
-            if (cmd.ExecuteScalar() is not string json || json.Length == 0) return null;
-            return System.Text.Json.JsonSerializer.Deserialize<RunState>(json, PlanConfig.JsonOpts);
+            var conn = new SqliteConnection($"Data Source={runDbPath};Mode=ReadOnly");
+            await using (conn.ConfigureAwait(false))
+            {
+                await conn.OpenAsync(ct).ConfigureAwait(false);
+                var cmd = conn.CreateCommand();
+                await using (cmd.ConfigureAwait(false))
+                {
+                    cmd.CommandText =
+                        "SELECT state_json FROM run_state WHERE plan_name = @plan ORDER BY updated_utc DESC LIMIT 1";
+                    cmd.Parameters.AddWithValue("@plan", planName);
+                    if (await cmd.ExecuteScalarAsync(ct).ConfigureAwait(false) is not string json || json.Length == 0) return null;
+                    return System.Text.Json.JsonSerializer.Deserialize<RunState>(json, PlanConfig.JsonOpts);
+                }
+            }
         }
         catch (Exception ex) when (ex is SqliteException or System.Text.Json.JsonException or IOException or InvalidOperationException)
         {
             return null;
         }
     }
-#pragma warning restore MA0045
 }

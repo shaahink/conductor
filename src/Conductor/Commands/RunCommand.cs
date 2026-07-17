@@ -15,7 +15,7 @@ using Spectre.Console.Cli;
 
 namespace Conductor.Commands;
 
-public sealed class RunCommand : Command<RunCommand.Settings>
+public sealed class RunCommand : AsyncCommand<RunCommand.Settings>
 {
     public sealed class Settings : PlanSettings
     {
@@ -52,11 +52,12 @@ public sealed class RunCommand : Command<RunCommand.Settings>
         public bool Paused { get; init; }
     }
 
-    public override int Execute(CommandContext context, Settings settings)
+    public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
     {
         var planPathArg = settings.ResolvePlanPath();
         var plan = PlanConfig.Load(planPathArg);
         Directory.CreateDirectory(plan.StateDir);
+        using var cts = new CancellationTokenSource();
         var statePath = Path.Combine(plan.StateDir, "state.json");
         var state = RunState.LoadOrNew(statePath, plan.Name);
         // state.json is the pre-M2 legacy carrier — the live store is run.db's run_state table.
@@ -64,7 +65,7 @@ public sealed class RunCommand : Command<RunCommand.Settings>
         // fresh run #1 every time and "run again to resume" is a lie (2026-07-17 dogfood).
         if (string.IsNullOrEmpty(state.RunId) && state.SessionCounter == 0)
         {
-            var resumed = Core.Store.RunStateResume.TryLoadLatest(Path.Combine(plan.StateDir, "run.db"), plan.Name);
+            var resumed = await Core.Store.RunStateResume.TryLoadLatestAsync(Path.Combine(plan.StateDir, "run.db"), plan.Name, cts.Token).ConfigureAwait(false);
             if (resumed != null)
             {
                 state = resumed;
@@ -87,7 +88,6 @@ public sealed class RunCommand : Command<RunCommand.Settings>
         // M2: the store (SqliteRunStore) is created inside ConductorHost.Build — it owns
         // the IEventSink (events table) and IRunStore (all writes).
         var opts = new RunOptions(settings.DryRun, settings.Once, settings.MaxSessions, controlPlane, settings.ControlPlanePort, settings.Paused);
-        using var cts = new CancellationTokenSource();
 #pragma warning disable MA0045 // CancelAsync doesn't exist on CancellationTokenSource
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 #pragma warning restore MA0045
@@ -124,9 +124,7 @@ public sealed class RunCommand : Command<RunCommand.Settings>
                 }
             }
 
-#pragma warning disable MA0045 // sync-over-async boundary: Spectre.Cli Execute must return int
-            exitCode = host.Services.GetRequiredService<Orchestrator>().RunAsync(cts.Token).GetAwaiter().GetResult();
-#pragma warning restore MA0045
+            exitCode = await host.Services.GetRequiredService<Orchestrator>().RunAsync(cts.Token).ConfigureAwait(false);
         }
         finally
         {
