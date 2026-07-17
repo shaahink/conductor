@@ -1,17 +1,17 @@
 ﻿# Conductor — Conductor UX (U-series) run report
 
-_Updated 2026-07-17 02:17 UTC · branch `feat/foreman` · HEAD `fbdef79`_
+_Updated 2026-07-17 02:20 UTC · branch `feat/foreman` · HEAD `7e30729`_
 
 **Status:** Idle
 **Stage:** U0 — Engine: start, resume, journey · attempts used 0
 **Checkpoints:** 3/11 done · **Sessions run:** 4 · **Cost:** $36.3402 (agent $36.3314 + gates $0.0088)
-**Pending:** full-battery phase gate for U0
+**Confirmed phases:** U0
 
 ## Stage progress
 
 | Stage | Title | Progress | State |
 |---|---|---|---|
-| U0 | Engine: start, resume, journey | ██████████ 3/3 | gating… |
+| U0 | Engine: start, resume, journey | ██████████ 3/3 | confirmed ✓ |
 | U1 | Face: landing page + workspace identity | ░░░░░░░░░░ 0/2 | todo |
 | U2 | Face: controls, visual report, dev stats | ░░░░░░░░░░ 0/3 | todo |
 | U3 | Face: themes, agent-terminal vibe, glitch pass | ░░░░░░░░░░ 0/3 | todo |
@@ -20,9 +20,9 @@ _Updated 2026-07-17 02:17 UTC · branch `feat/foreman` · HEAD `fbdef79`_
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| U0.1 | plan discovery: -p optional, cwd/plans scan, picker, friendly errors | ✅ DONE | [`199f2c8`](https://github.com/shaahink/conductor/commit/199f2c8) |
-| U0.2 | `conductor journey`: itinerary with stages, gates, human moments, resume state | ✅ DONE | [`66e6f57`](https://github.com/shaahink/conductor/commit/66e6f57) |
-| U0.3 | gateless plans proven + resume story documented (README) | ✅ DONE | [`84fe84f`](https://github.com/shaahink/conductor/commit/84fe84f) |
+| U0.1 | plan discovery: -p optional, cwd/plans scan, picker, friendly errors | ✅ DONE | [`fbdef79`](https://github.com/shaahink/conductor/commit/fbdef79) |
+| U0.2 | `conductor journey`: itinerary with stages, gates, human moments, resume state | ✅ DONE | [`fbdef79`](https://github.com/shaahink/conductor/commit/fbdef79) |
+| U0.3 | gateless plans proven + resume story documented (README) | ✅ DONE | [`fbdef79`](https://github.com/shaahink/conductor/commit/fbdef79) |
 
 </details>
 
@@ -84,6 +84,16 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-17 02:40:59  • session #4 U0 Fix started (attempt 2/6)
 07-17 03:17:44  ▪ gate build pass [session]  (42.0s)
 07-17 03:17:44  ▪ gate face-build pass [session]  (7.4s)
+07-17 03:17:45  • session #4 U0 → Advanced · done U0.1,U0.2,U0.3 · 1 commit(s)  (36m45s)
+07-17 03:17:45  ✓ checkpoint U0.1 confirmed
+07-17 03:17:45  ✓ checkpoint U0.2 confirmed
+07-17 03:17:45  ✓ checkpoint U0.3 confirmed
+07-17 03:20:38  ▪ gate build pass [phase]  (40.9s)
+07-17 03:20:38  ▪ gate face-build pass [phase]  (4.2s)
+07-17 03:20:38  ▪ gate test pass [phase]  (1m44s)
+07-17 03:20:38  ▪ gate face-test pass [phase]  (4.8s)
+07-17 03:20:38  ▪ gate driver pass [phase]  (19.4s)
+07-17 03:20:38  ▸ stage U0 confirmed  (2h38m06s)
 ```
 
 ## Health
@@ -101,8 +111,8 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/foreman
-working tree: clean
-vs upstream: up to date
+working tree: M CONDUCTOR-UX-START.md
+vs upstream: 1 ahead
 ```
 
 ### Commits by session
@@ -139,7 +149,7 @@ vs upstream: up to date
 
 ## Last gate run
 
-build:OK · face-build:OK
+build:OK · face-build:OK · test:OK · face-test:OK · driver:OK
 
 ## Last session result
 
