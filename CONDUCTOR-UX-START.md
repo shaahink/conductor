@@ -4,19 +4,28 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: session #5 (Deliver, U1) — **U1 claimed 2/2**. QA of session #4: its gate claims
-reproduced exactly (build 0w/0e, 889/889, ratchet 38≤38) — verdict PASS, no findings, nothing
-to fix. U1.1 Home tab (`db9244a`) + U1.2 top-bar repo chip (`abccde2`).
-gate: green — dotnet build 0w/0e, dotnet test **890/890** (+1: the new /state wire test),
-ratchet OK (pragmas 38≤38, nothing weakened), go build/vet/test green, gofmt clean.
-note: `/state` gained `tracker`+`stateDir`. The spec's "state dir = `<planDir>/.conductor`" is
-WRONG vs the engine (PlanConfig.cs:98 roots StateDir at **Repo**) — Home renders the engine's
-truth; don't "fix" it back. See the ledger.
-bug #2 filed (high, NOT fixed — engine work, out of U1's scope): `conductor bg start` CLI logs
-are always empty for anything slower than ~300ms (it returns immediately, killing the read pump
-it just attached), so every build/test-suite run through it yields a BOM-only log while LOOKING
-healthy. Workaround in the ledger; this session's gates used it.
-next: **U2.1** — palette groups (Run/Stage/Danger) + consequence-naming confirms (§U2.1).
+last: session #7 (Fix, U2). s6 did NOT fail: it returned a valid score-90 PASS. **The engine
+threw it away — the live orchestrator (PID 2148) is the INSTALLED binary, built 01:11 and
+started 01:28; s4's verifier-truncation fix (`fbdef79`) landed 03:15, so the running process
+predates its own fix and still applied the 700-char crop** (run.db result_summary = 701 chars vs
+the real 4093). Nothing to fix in code: `Verifier.Parse`/`ExtractSessionResult` are correct.
+**HUMAN: every Verify in this run keeps failing until the owner re-runs `tools/install.ps1` and
+RESTARTS** — no in-run session can (the restart kills it). Bug #4 filed (stale-engine detection).
+Record was already correct (nothing over-claimed): U0+U1 DONE, U2 was 3× TODO.
+done: **U2.1** (`26a4194`) palette Run/Stage/Danger + confirms that name consequences
+(`abort — kill session + stop conductor. y/N`); reading frames caught 3 real glitches (17-char
+`pause-after-stage` skewed its column; selected row off by one; help card hit 25 rows and clipped
+its own border at 80×24 — new guard test, not eye). Plus (`71fa214`) **bug #5**: ClaudeProvider
+never read `usage`, so ALL claude runs recorded 0 tokens — which silently disabled
+`limits.maxSessionTokens` (TokensTotal always 0). Fixed + closed.
+gate: green — build 0w/0e, ratchet OK (38≤38, archdebt 0), go build/vet/test green, gofmt clean.
+The 3 C# fails seen mid-session were a competing `dotnet test` in C:\code\DevContext2 saturating
+the box; all 31 pass isolated once quiet. **Do NOT run `Get-Process dotnet | Stop-Process` as
+AGENTS.md suggests — it would have killed that other repo's suite AND a live web server.**
+next: **U2.2** (visual Report) then **U2.3** (Dev tab). **U2.3's spec premise is FALSE**: the
+sessions table has NO token/cost columns — they live in a separate `costs` table, keyed by
+session_number with a `category` (agent|gate|advisor), so a session has MANY rows: SUM/GROUP BY,
+never a naive JOIN. See the ledger before starting.
 
 
 ## Baseline numbers (from run.db)
@@ -44,8 +53,8 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| U1.1 | Home landing tab: Server / Run / Workspace / Next-steps panels, demo parity | DONE | db9244a | goldens home_demo/home_disconnected/default; tab_home_test.go (8); live /state wire test GetState_CarriesTheWorkspaceIdentity_...; demo_test.go parity |
-| U1.2 | workspace identity in the top bar (repo basename, full path on Home) | DONE | abccde2 | goldens size_80x24/size_200x50/default (bar line); widgets/ticker_test.go TestRepoBase (9 cases) |
+| U1.1 | Home landing tab: Server / Run / Workspace / Next-steps panels, demo parity | DONE | db9244a | build:OK · face-build:OK |
+| U1.2 | workspace identity in the top bar (repo basename, full path on Home) | DONE | db9244a | build:OK · face-build:OK |
 
 ### U2 — Face: controls, visual report, dev stats
 
