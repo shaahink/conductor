@@ -297,3 +297,39 @@ func TestPadBetweenSacrificesTheLeft(t *testing.T) {
 		t.Errorf("at 5 cols the right segment should survive, got %q", got)
 	}
 }
+
+// TestProviderLabelNamesTheCliOrNothing pins U3.3's wire contract Face-side. The engine serves the
+// RESOLVED provider, so "" means an OLDER ENGINE that does not serve the field — which is not the
+// same as "not claude". Guessing there would put a confident wrong label over the transcript.
+func TestProviderLabelNamesTheCliOrNothing(t *testing.T) {
+	for _, tc := range []struct{ in, want string }{
+		{"claude", "claude code"},
+		{"opencode", "opencode"},
+		{"CLAUDE", "claude code"},
+		{"  opencode  ", "opencode"},
+		{"text", ""},    // the generic adapter names no CLI, so there is no convention to announce
+		{"", ""},        // older engine — unknown, not "not claude"
+		{"dracula", ""}, // an unknown provider is not a licence to invent a label
+	} {
+		if got := providerLabel(tc.in); got != tc.want {
+			t.Errorf("providerLabel(%q) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
+// TestAgentStripNamesTheProvider: the label has to reach the frame, not just the helper.
+func TestAgentStripNamesTheProvider(t *testing.T) {
+	var tm tea.Model = newGoldenModel(132, 40)
+	tm, _ = tm.Update(keyMsg("a"))
+	if got := stripANSI(asModel(tm).renderAgentStrip()); !strings.Contains(got, "claude code") {
+		t.Errorf("the agent strip does not name the provider driving the transcript:\n%s", got)
+	}
+
+	// An older engine serves no provider: the strip says nothing rather than guessing.
+	st := fixedState()
+	st.Provider = ""
+	tm, _ = tm.Update(MsgStateUpdated{State: st})
+	if got := stripANSI(asModel(tm).renderAgentStrip()); strings.Contains(got, "claude code") {
+		t.Errorf("the strip invented a provider an older engine never served:\n%s", got)
+	}
+}

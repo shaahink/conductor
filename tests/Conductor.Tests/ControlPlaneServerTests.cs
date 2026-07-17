@@ -879,4 +879,62 @@ public sealed class ControlPlaneServerTests : IDisposable
         }
         finally { server.Dispose(); }
     }
+
+    // U3.3: /state must carry the RESOLVED provider so the Face can adopt that CLI's transcript
+    // conventions. This is the trap the checkpoint exists around: AgentConfig.Provider is nullable and
+    // most plans never set it — the real provider is inferred from the legacy `output` mode. A wire
+    // that served the raw field would send null for a run that is plainly Claude, which is precisely
+    // the default this fixture uses.
+    [Fact]
+    public async Task GetState_ServesTheResolvedProvider_NotTheRawNullableField()
+    {
+        Assert.Null(_plan.Agent.Provider); // the trap: unset, and the wire must still say "claude"
+        WriteEvents(new RunStarted { Plan = "cps-test", Repo = _dir },
+            new StageEntered { StageId = "S1", Title = "Stage One" });
+        var (server, port) = StartServer();
+        try
+        {
+            var body = await _http.GetStringAsync($"http://127.0.0.1:{port}/state");
+            using var doc = JsonDocument.Parse(body);
+            Assert.Equal("claude", doc.RootElement.GetProperty("provider").GetString());
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task GetState_ProviderFollowsTheStagesEffectiveAgent()
+    {
+        // The plan runs Claude; this stage overrides to opencode. The Face must be told what the
+        // CURRENT stage runs, not what the plan defaults to.
+        _plan.Agent.Output = "stream-json";
+        _plan.Stages[0].Agent = new AgentConfig { Provider = "opencode" };
+        WriteEvents(new RunStarted { Plan = "cps-test", Repo = _dir },
+            new StageEntered { StageId = "S1", Title = "Stage One" });
+        // CurrentStage is what picks the stage config — the events alone do not set it.
+        var (server, port) = StartServer(new RunState { RunId = RunId, CurrentStage = "S1" });
+        try
+        {
+            var body = await _http.GetStringAsync($"http://127.0.0.1:{port}/state");
+            using var doc = JsonDocument.Parse(body);
+            Assert.Equal("opencode", doc.RootElement.GetProperty("provider").GetString());
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task GetState_ProviderFallsBackToThePlanWhenNoStageMatches()
+    {
+        // Before the first stage is entered (and for a CurrentStage that no longer exists after a
+        // plan reload) there is no stage config to merge — the plan's own agent is the honest answer.
+        _plan.Agent.Output = "opencode-json";
+        WriteEvents(new RunStarted { Plan = "cps-test", Repo = _dir });
+        var (server, port) = StartServer(new RunState { RunId = RunId, CurrentStage = "" });
+        try
+        {
+            var body = await _http.GetStringAsync($"http://127.0.0.1:{port}/state");
+            using var doc = JsonDocument.Parse(body);
+            Assert.Equal("opencode", doc.RootElement.GetProperty("provider").GetString());
+        }
+        finally { server.Dispose(); }
+    }
 }

@@ -59,6 +59,21 @@ func (m Model) renderAgentPane() (string, string) {
 
 // renderAgentStrip is the glanceable header: status+session on line 1, gates+task on line 2,
 // an attention banner when the engine needs a human, then a hairline rule.
+// providerLabel names the agent CLI behind the transcript (U3.3). The engine serves the RESOLVED
+// provider, so "" means an older engine that does not serve it at all — which is not the same as
+// "not claude", and must render nothing rather than a guess. "text" is the generic adapter: it names
+// no particular CLI, so there is no convention to announce.
+func providerLabel(provider string) string {
+	switch strings.ToLower(strings.TrimSpace(provider)) {
+	case "claude":
+		return "claude code"
+	case "opencode":
+		return "opencode"
+	default:
+		return ""
+	}
+}
+
 func (m Model) renderAgentStrip() string {
 	s := m.data.Plan
 	w := m.paneCols()
@@ -71,6 +86,11 @@ func (m Model) renderAgentStrip() string {
 		// "attempt 0/0" is pre-first-attempt noise, not information — render only when real.
 		if s.MaxAttempts > 0 {
 			seg += subtleStyle.Render(fmt.Sprintf(" · attempt %d/%d", s.Attempt, s.MaxAttempts))
+		}
+		if label := providerLabel(s.Provider); label != "" {
+			// Which CLI is driving, next to which model it drives — the transcript below follows
+			// this provider's conventions, so naming it is what makes those conventions legible.
+			seg += subtleStyle.Render(" · ") + tealStyle.Render(label)
 		}
 		if s.Model != "" {
 			seg += subtleStyle.Render(" · ") + tealStyle.Render(shortModel(s.Model))

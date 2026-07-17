@@ -306,4 +306,57 @@ public class AgentProviderTests
         Assert.Contains(events, e => e.Kind == "text" && e.Text.Contains("landed T1.1", StringComparison.Ordinal));
         Assert.Contains("landed T1.1", state.ResultText ?? "", StringComparison.Ordinal);
     }
+
+    // --- U3.3: ResolveName, the provider's NAME for anything that has to report it ---------------
+
+    [Theory]
+    // Unset Provider is the common case — the plan says only `output`, and the provider is inferred.
+    [InlineData(null, "stream-json", "claude")]
+    [InlineData(null, "opencode-json", "opencode")]
+    [InlineData(null, "text", "text")]
+    [InlineData(null, "", "text")]
+    // Explicit Provider wins over output, including when they disagree.
+    [InlineData("opencode", "stream-json", "opencode")]
+    [InlineData("claude", "text", "claude")]
+    // Aliases and casing canonicalise, so the wire never carries two spellings of one provider.
+    [InlineData("stream-json", "text", "claude")]
+    [InlineData("opencode-json", "text", "opencode")]
+    [InlineData("CLAUDE", "text", "claude")]
+    [InlineData("  opencode  ", "text", "opencode")]
+    // An unknown name degrades to the generic text adapter rather than throwing.
+    [InlineData("dracula", "stream-json", "text")]
+    public void ResolveName_canonicalises_provider_and_infers_from_output(string? provider, string output, string expected)
+    {
+        var cfg = new AgentConfig { Provider = provider, Output = output };
+        Assert.Equal(expected, AgentProviderFactory.ResolveName(cfg));
+    }
+
+    /// <summary>ResolveName exists so the control plane can NAME what Create builds. If the two ever
+    /// disagreed, the Face would render one provider's conventions over another's wire format — so
+    /// pin them against each other rather than trusting that Create delegates.</summary>
+    [Theory]
+    [InlineData(null, "stream-json", typeof(ClaudeProvider))]
+    [InlineData(null, "opencode-json", typeof(OpencodeProvider))]
+    [InlineData(null, "text", typeof(GenericTextProvider))]
+    [InlineData("opencode", "stream-json", typeof(OpencodeProvider))]
+    [InlineData("stream-json", "text", typeof(ClaudeProvider))]
+    [InlineData("dracula", "stream-json", typeof(GenericTextProvider))]
+    public void ResolveName_always_names_the_adapter_Create_builds(string? provider, string output, Type expected)
+    {
+        var cfg = new AgentConfig { Provider = provider, Output = output };
+        var built = AgentProviderFactory.Create(cfg);
+        Assert.IsType(expected, built);
+
+        var namedType = AgentProviderFactory.ResolveName(cfg) switch
+        {
+            "claude" => typeof(ClaudeProvider),
+            "opencode" => typeof(OpencodeProvider),
+            _ => typeof(GenericTextProvider),
+        };
+        Assert.Equal(built.GetType(), namedType);
+    }
+
+    [Fact]
+    public void ResolveName_rejects_null_config()
+        => Assert.Throws<ArgumentNullException>(() => AgentProviderFactory.ResolveName(null!));
 }

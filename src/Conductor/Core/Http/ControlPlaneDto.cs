@@ -31,7 +31,13 @@ public sealed record StateDto(
     // (PlanConfig.Tracker / PlanConfig.StateDir) rather than re-derived Face-side: StateDir is rooted at
     // Repo, NOT PlanDir, so a plan whose json lives outside the repo root cannot be guessed from PlanDir.
     string Tracker = "",
-    string StateDir = "");
+    string StateDir = "",
+    // U3.3: the RESOLVED agent provider for the current stage ("claude" | "opencode" | "text"), so the
+    // Face can adopt that CLI's transcript conventions. Resolved, never the raw AgentConfig.Provider:
+    // that field is nullable and unset on most plans, where the real provider is inferred from the
+    // legacy `output` mode — serving the raw field would send null for a run that is plainly Claude.
+    // See AgentProviderFactory.ResolveName, which is the same decision the engine runs on.
+    string Provider = "");
 
 public static class ControlPlaneDto
 {

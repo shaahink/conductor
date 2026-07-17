@@ -111,6 +111,11 @@ type StateDto struct {
 	// "" = older engine that doesn't serve them yet; Home degrades to "—" rather than inventing a path.
 	Tracker  string `json:"tracker"`
 	StateDir string `json:"stateDir"`
+	// U3.3: the RESOLVED agent provider for the current stage — "claude" | "opencode" | "text".
+	// Engine-resolved (AgentProviderFactory.ResolveName) rather than the raw plan field, which is
+	// nullable and unset on most plans. "" = an older engine that does not serve it; callers must
+	// treat that as unknown and fall back, never as "not claude".
+	Provider string `json:"provider"`
 }
 
 type StageDto struct {

@@ -3,7 +3,6 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using Conductor.Core.Events;
-using Conductor.Core.Planning;
 using Conductor.Core.Store;
 using Conductor.Models;
 using Microsoft.Extensions.Logging;
@@ -12,78 +11,8 @@ namespace Conductor.Core.Http;
 
 public sealed partial class ControlPlaneServer
 {
-    private IReadOnlyList<ConductorEvent> ReadEvents()
-    {
-        return _store.ReadAllEvents(_state.RunId);
-    }
-
-    private async Task WriteStateAsync(HttpListenerContext ctx)
-    {
-        var events = ReadEvents();
-        var runState = RunStateProjection.Fold(events);
-        var track = ReadTrackerSafe();
-        var snap = SnapshotBuilder.Build(_plan, runState, track);
-        // _state is the live RunState the dispatcher mutates — the set-rollover override lives only
-        // there (P5: run-state, not an event), so the fold above can never see it.
-        var dto = ControlPlaneDto.FromSnapshot(snap, runState.RunId, _plan.Repo, _plan.PlanDir,
-            _state.MaxSessionTokensThisRun, _plan.Tracker, _plan.StateDir);
-        dto = WithLiveSessionMetrics(dto, events, runState);
-
-        // The folded projection never carries run-loop status (it is runtime state, not an event):
-        // SnapshotBuilder saw a perpetual Idle, so the Face's top bar read IDLE — and its kind slot
-        // "s1 Idle" — through an entire live session (2026-07-16 dogfood). Stamp status, attention,
-        // kind, attempt, and model from the live RunState + the latest SessionStarted event instead.
-        var lastStart = events.OfType<SessionStarted>().LastOrDefault();
-        var stageCfg = _plan.Stages.FirstOrDefault(s => s.Id == _state.CurrentStage);
-        dto = dto with
-        {
-            Status = _state.Status.ToString(),
-            AttentionReason = _state.AttentionReason,
-            SessionKind = lastStart?.Kind ?? "-",
-            Attempt = lastStart?.Attempt ?? dto.Attempt,
-            MaxAttempts = lastStart?.MaxAttempts ?? dto.MaxAttempts,
-            Model = lastStart?.Model ?? stageCfg?.Agent?.Model ?? _plan.Agent.Model ?? "",
-        };
-        await WriteJsonAsync(ctx, dto, ControlPlaneJsonContext.Default.StateDto).ConfigureAwait(false);
-    }
-
-    /// <summary>M5.4: fold <see cref="TokenDelta"/> for the current session so the ticker's cost/tokens
-    /// accrue DURING a session, not only when <c>SessionFinished</c> lands. The 3-arg
-    /// <see cref="SnapshotBuilder"/> can't see the event log, so it always reports zero live spend; here
-    /// we add the in-flight session's folded deltas on top of the (finished-session) totals it produced.
-    /// Once the session finishes its cost is in <see cref="RunState.History"/>, so we stop adding the
-    /// live estimate to avoid double-counting.</summary>
-    internal static StateDto WithLiveSessionMetrics(StateDto dto, IReadOnlyList<ConductorEvent> events, RunState runState)
-    {
-        if (runState.SessionCounter <= 0) return dto;
-
-        var current = runState.History.LastOrDefault(h => h.Number == runState.SessionCounter);
-        var live = LiveMetrics.ForSession(events, runState.SessionCounter);
-        var sessionLive = current is { EndedUtc: null };
-        var elapsed = sessionLive && current != null
-            ? Math.Max(0, (DateTime.UtcNow - current.StartedUtc).TotalSeconds)
-            : dto.SessionElapsedSec;
-
-        return dto with
-        {
-            AgentActive = sessionLive,
-            SessionElapsedSec = elapsed,
-            SessionCostUsd = live.CostUsd,
-            SessionTokensInput = live.Input,
-            SessionTokensOutput = live.Output,
-            SessionTokensReasoning = live.Reasoning,
-            TotalCostUsd = sessionLive ? dto.TotalCostUsd + live.CostUsd : dto.TotalCostUsd,
-            TokensInput = sessionLive ? dto.TokensInput + live.Input : dto.TokensInput,
-            TokensOutput = sessionLive ? dto.TokensOutput + live.Output : dto.TokensOutput,
-            TokensReasoning = sessionLive ? dto.TokensReasoning + live.Reasoning : dto.TokensReasoning,
-        };
-    }
-
-    private TrackerSnapshot ReadTrackerSafe()
-    {
-        try { return ProgressProviderFactory.Create(_plan).Read(_plan, CancellationToken.None); }
-        catch (Exception) { return new TrackerSnapshot(); }
-    }
+    // GET /state — its fold, its live-metrics layer, and the tracker read — lives in
+    // ControlPlaneServer.State.cs.
 
     private async Task WriteTasksAsync(HttpListenerContext ctx)
     {

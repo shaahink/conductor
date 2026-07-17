@@ -893,6 +893,7 @@ func makeFakeState() *StateDto {
 		SessionNumber:       12,
 		SessionKind:         "Deliver",
 		Model:               "claude-opus-4-8",
+		Provider:            "claude",
 		Attempt:             1,
 		MaxAttempts:         3,
 		SessionElapsedSec:   0,

@@ -18,14 +18,33 @@ public interface IAgentProvider
 public static class AgentProviderFactory
 {
     public static IAgentProvider Create(AgentConfig cfg)
+        => ResolveName(cfg) switch
+        {
+            "opencode" => new OpencodeProvider(),
+            "claude" => new ClaudeProvider(),
+            _ => new GenericTextProvider(),
+        };
+
+    /// <summary>The canonical provider name ("claude" | "opencode" | "text") for a config — the SAME
+    /// decision <see cref="Create"/> makes, which is why Create is written in terms of it: the two
+    /// cannot disagree about what a plan is running.
+    /// <para>Never read <see cref="AgentConfig.Provider"/> directly to display or serve the provider.
+    /// It is nullable and most plans leave it unset, in which case the real provider is INFERRED from
+    /// the legacy <c>output</c> mode (B2.4) — so the raw field is null exactly when the answer is
+    /// interesting, and anything reading it would report null for a run that is plainly Claude.</para>
+    /// </summary>
+    public static string ResolveName(AgentConfig cfg)
     {
         ArgumentNullException.ThrowIfNull(cfg);
         var name = string.IsNullOrWhiteSpace(cfg.Provider) ? InferFromOutput(cfg.Output) : cfg.Provider;
-        return name.ToLowerInvariant() switch
+        // Trim, not just lower: a hand-edited plan with `"provider": " opencode "` used to miss every
+        // arm and land on the generic text adapter — i.e. silently parse an opencode stream with the
+        // wrong parser, rather than fail. IsNullOrWhiteSpace above already treats all-blank as unset.
+        return name.Trim().ToLowerInvariant() switch
         {
-            "opencode" or "opencode-json" => new OpencodeProvider(),
-            "claude" or "stream-json" => new ClaudeProvider(),
-            _ => new GenericTextProvider(),
+            "opencode" or "opencode-json" => "opencode",
+            "claude" or "stream-json" => "claude",
+            _ => "text",
         };
     }
 
