@@ -11,6 +11,16 @@ import (
 	"conductor-face-go/internal/api"
 )
 
+// homeText flattens tiered Home rows back into the plain block these assertions read. The tiers are
+// only about what to SHED when the window is too short (U3.2); what each row says is unchanged.
+func homeText(lines []homeLine) string {
+	out := make([]string, 0, len(lines))
+	for _, l := range lines {
+		out = append(out, l.text)
+	}
+	return strings.Join(out, "\n")
+}
+
 func TestHomeIsTheStartupTab(t *testing.T) {
 	m := New(api.NewDemoSource(), true, "(demo)")
 	if m.tab != TabHome {
@@ -64,7 +74,7 @@ func TestHomeWorkspaceRendersEngineServedPaths(t *testing.T) {
 	}
 	m.plan = &api.PlanDto{PlanFile: `C:\Code\conductor-baton\plans\conductor-ux.plan.json`}
 
-	got := stripANSI(m.renderHomeWorkspace(m.paneCols()))
+	got := stripANSI(homeText(m.renderHomeWorkspace(m.paneCols())))
 	for _, want := range []string{
 		`C:\Code\conductor-baton`,
 		"CONDUCTOR-UX-START.md",
@@ -90,7 +100,7 @@ func TestHomeWorkspaceDegradesWhenTheEngineServesNothing(t *testing.T) {
 	m.data.Plan = &api.StateDto{Repo: `C:\Code\conductor-baton`}
 	m.plan = nil
 
-	got := stripANSI(m.renderHomeWorkspace(m.paneCols()))
+	got := stripANSI(homeText(m.renderHomeWorkspace(m.paneCols())))
 	if strings.Count(got, "—") != 3 { // tracker, state dir, plan file
 		t.Errorf("expected the three unknown fields to render as em-dashes:\n%s", got)
 	}
@@ -120,7 +130,7 @@ func TestHomeBudgetsOnlyWhenCapped(t *testing.T) {
 	if len(rows) != 1 {
 		t.Fatalf("a cost cap → exactly one budget row, got %d", len(rows))
 	}
-	if got := stripANSI(rows[0]); !strings.Contains(got, "$4.00 / $10.00") || !strings.Contains(got, "60% headroom") {
+	if got := stripANSI(rows[0].text); !strings.Contains(got, "$4.00 / $10.00") || !strings.Contains(got, "60% headroom") {
 		t.Errorf("budget row should state spend, cap and remaining headroom, got %q", got)
 	}
 }
@@ -161,23 +171,23 @@ func TestHomeHintsAreContextual(t *testing.T) {
 	m := newTestModel()
 	m.data.Plan = nil
 	m.data.Connection.Mode = api.ModeLive
-	if got := stripANSI(strings.Join(m.homeHints(), "\n")); !strings.Contains(got, "conductor run -p <plan>") {
+	if got := stripANSI(homeText(m.homeHints())); !strings.Contains(got, "conductor run -p <plan>") {
 		t.Errorf("no run → the hint must be how to start one, got:\n%s", got)
 	}
 
 	reason := "verifier score 74 < 80"
 	m.data.Plan = &api.StateDto{Status: "NeedsAttention", AttentionReason: &reason}
-	if got := stripANSI(strings.Join(m.homeHints(), "\n")); !strings.Contains(got, "needs a human") {
+	if got := stripANSI(homeText(m.homeHints())); !strings.Contains(got, "needs a human") {
 		t.Errorf("a blocked run must say so, got:\n%s", got)
 	}
 
 	m.data.Plan = &api.StateDto{Status: "Paused"}
-	if got := stripANSI(strings.Join(m.homeHints(), "\n")); !strings.Contains(got, "paused") {
+	if got := stripANSI(homeText(m.homeHints())); !strings.Contains(got, "paused") {
 		t.Errorf("a paused run must offer resume, got:\n%s", got)
 	}
 
 	m.data.Plan = &api.StateDto{Status: "Running", AgentActive: true}
-	if got := stripANSI(strings.Join(m.homeHints(), "\n")); !strings.Contains(got, "working right now") {
+	if got := stripANSI(homeText(m.homeHints())); !strings.Contains(got, "working right now") {
 		t.Errorf("a live agent must be the first thing offered, got:\n%s", got)
 	}
 }

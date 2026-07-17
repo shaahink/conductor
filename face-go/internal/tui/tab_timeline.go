@@ -55,8 +55,17 @@ func (m Model) renderTimelinePane() (string, string) {
 	if end > len(m.timelineEntries) {
 		end = len(m.timelineEntries)
 	}
+	// The rule costs a row inside the window, so the window holds one fewer event. Take it from the
+	// OLDEST end: this pane is a live tail, and dropping the newest event to make room for the line
+	// that says "the live ones start here" would defeat the point of drawing it.
+	if b := m.timelineLiveBoundary(); b > start && b < end && start+1 < end {
+		start++
+	}
 	var lines []string
 	for i := start; i < end; i++ {
+		if i == m.timelineLiveBoundary() {
+			lines = append(lines, m.timelineLiveRule())
+		}
 		e := m.timelineEntries[i]
 		glyph, gs := timelineGlyph(e)
 		clock := timelineClock(e.Utc)
@@ -71,8 +80,37 @@ func (m Model) renderTimelinePane() (string, string) {
 		}
 		lines = append(lines, line)
 	}
-	live := subtleStyle.Render(fmt.Sprintf("%d events · live", len(m.timelineEntries)))
-	return strings.Join(lines, "\n") + "\n" + live + "\n" + detail, "↑↓ navigate · r refresh"
+	// Just the count. The "· live" this used to carry now lives on the rule, where it marks WHERE
+	// live begins instead of restating it under a pane that already said it.
+	count := subtleStyle.Render(fmt.Sprintf("%d events", len(m.timelineEntries)))
+	return strings.Join(lines, "\n") + "\n" + count + "\n" + detail, "↑↓ navigate · r refresh"
+}
+
+// timelineLiveBoundary is the index of the first event that arrived AFTER this Face attached, or -1
+// when there is no line worth drawing: nothing fetched yet, an attach to a run with no history (the
+// whole pane is live — a rule at the top would say nothing), or nothing live since.
+func (m Model) timelineLiveBoundary() int {
+	if !m.timelineHistorySet || m.timelineHistoryCount <= 0 {
+		return -1
+	}
+	if len(m.timelineEntries) <= m.timelineHistoryCount {
+		return -1
+	}
+	return m.timelineHistoryCount
+}
+
+// timelineLiveRule separates replayed history from the live tail. Without it, attaching to a run
+// pours its whole spine in at once and reads as an event storm you have just missed (dogfood
+// appendix item 6) — the rule is what makes the top half legible as "before you got here".
+func (m Model) timelineLiveRule() string {
+	const label = " live "
+	w := max(1, m.paneCols())
+	side := (w - len(label)) / 2
+	if side < 1 {
+		return accentStyle.Render(strings.TrimSpace(label))
+	}
+	dash := lipgloss.NewStyle().Foreground(widgets.Surface()).Render(strings.Repeat("─", side))
+	return dash + accentStyle.Render(label) + dash
 }
 
 // timelineDetail renders the selected entry in full — the row truncates the description, so drilling

@@ -88,7 +88,8 @@ func (m Model) cmdFetchTasks() tea.Cmd {
 	return func() tea.Msg {
 		tasks, err := source.FetchTasks()
 		if err != nil {
-			return nil
+			// Report it. Swallowing this is what made a broken /tasks look like an empty board.
+			return MsgTasksUpdated{Err: err}
 		}
 		return MsgTasksUpdated{Tasks: tasks}
 	}

@@ -162,7 +162,19 @@ row, its `--theme` value and its help legend for free: all three are derived fro
   `testdata/golden/*.golden`. Add a scenario as a `{name, do}` case; run `-run TestGolden -v` to *see*
   frames, `-update` to refresh after an intentional change (always read the frame first).
 - `update_test.go` / `plan_test.go` exercise the routing through the exported handlers.
-- Every pane must render cleanly at 80×24 / 120×30 / 200×50 (`TestGoldenSizes`).
+- **Sizes.** `TestGoldenSizes` pins the DEFAULT tab at 80×24 / 120×30 / 200×50 (the M5 truth gate —
+  200×50 is the only wide coverage there is). `glitch_sweep_test.go` (U3.2) adds **every tab** at
+  132×40 / 100×30 / 80×24 under worst-case state, which is the axis nothing covered: every size test
+  before it rendered one tab. The two are additive on purpose — neither set is redundant.
+- **A golden proves a frame is UNCHANGED, never that it is CORRECT.** `size_80x24.golden` pinned a
+  Home page whose entire Next steps section had been clipped away since the day it was written, and
+  matched itself happily forever. Read the frame before `-update`, and for anything the height clamp
+  can silently eat, prefer an *invariant* (does the body fit `paneRows()`?) over a pinned frame.
+- **Drive tabs through `handleKey`, and actually switch to the one you are testing.**
+  `TestFrameNeverExceedsWindowHeight` built 30 multi-paragraph transcript events as its worst case
+  and asserted against **Home**, because `newGoldenModel` opens there and nothing switched — the
+  regression test for the overflow bug could not have exhibited the overflow bug. Same family as
+  `plan_test.go`'s `drive()` calling pane handlers directly and missing global key precedence.
 
 ## Running
 

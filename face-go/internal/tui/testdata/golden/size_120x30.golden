@@ -18,13 +18,13 @@
  ── TASKS ──                  │  tokens cap 5.2k / 2.0M  99% headroom                                                   
    ✓ Add truth-tier config…   │                                                                                         
    ● Wire RunDb.GetLastPas…   │  Workspace                                                                              
-   ○ Cache gate results by…   │  the working directory every session edits                                              
-                              │  repo       C:\Code\conductor                                                           
+   ○ Cache gate results by…   │  repo       C:\Code\conductor                                                           
                               │  plan file  C:\Code\conductor\plans\conductor-foreman.plan.json                         
-                              │  tracker    CONDUCTOR-VNEXT-PLAN.md                                                     
-                              │  state dir  C:\Code\conductor\.conductor                                                
                               │                                                                                         
                               │  Next steps                                                                             
                               │    a  watch the live agent — it is working right now                                    
                               │    r  read the run report                                                               
+                              │    ?  see every key                                                                     
+                              │                                                                                         
+                              │                                                                                         
  : cmd  i inject  / search  \ sidebar  ? help  q quit   │   a agent · r report · : commands · ? keys                    

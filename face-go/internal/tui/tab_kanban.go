@@ -159,15 +159,43 @@ func (m *Model) handleKanbanAddKey(key string) (tea.Model, tea.Cmd) {
 
 // --- rendering ---
 
+// kanbanFeedBanner names a broken /tasks feed. It rides ABOVE a populated board too, not just the
+// empty one: cards are kept when a poll fails (blanking a board on one dropped request would be
+// worse), which means a dead feed otherwise shows as a board that has simply stopped moving — the
+// same silent lie as appendix item 5, just with rows on it.
+func (m Model) kanbanFeedBanner() string {
+	return destructStyle.Render("⚠ cannot reach /tasks: ") +
+		textStyle.Render(truncate(m.tasksErr, max(20, m.paneCols()-24))) + "\n" +
+		subtleStyle.Render("  showing the last cards fetched — not the live graph")
+}
+
+// renderKanbanEmptyState says WHY the board is empty. Dogfood appendix item 5: an empty board beside
+// a sidebar full of plan is alarming, and "No tasks yet" was asserted in all three cases — never
+// fetched, fetch failed, genuinely no cards. Only the last of those is good news, and it was the one
+// the pane always claimed.
+func (m Model) renderKanbanEmptyState() string {
+	switch {
+	case m.tasksErr != "":
+		return m.kanbanFeedBanner()
+	case !m.tasksLoaded:
+		return subtleStyle.Render("Loading the task graph from /tasks…")
+	case m.data.Connection.Mode == api.ModeLive && !m.data.Connection.Connected:
+		return subtleStyle.Render("No cards, and nothing is attached — start a run, or explore with ") +
+			key("--demo") + subtleStyle.Render(".")
+	default:
+		return subtleStyle.Render("No cards yet — the engine seeds one per checkpoint at run start, "+
+			"and the agent files more via task_add. Press ") +
+			key("n") + subtleStyle.Render(" to add one yourself.")
+	}
+}
+
 func (m Model) renderKanbanPane() (string, string) {
 	if m.kanbanDetail {
 		return m.renderKanbanDetailPane()
 	}
 	cards := m.kanbanCards()
 	if len(cards) == 0 && !m.kanbanAdding {
-		body := subtleStyle.Render("No tasks yet — the agent files them via task_add, or press ") +
-			key("n") + subtleStyle.Render(" to add the first card.")
-		return body + m.kanbanStatusLine(), "n add · esc back"
+		return m.renderKanbanEmptyState() + m.kanbanStatusLine(), "n add · esc back"
 	}
 	selId := ""
 	if len(cards) > 0 {
@@ -182,6 +210,11 @@ func (m Model) renderKanbanPane() (string, string) {
 	board := lipgloss.JoinHorizontal(lipgloss.Top, cols[0], "  ", cols[1], "  ", cols[2])
 
 	body := board
+	// A dead feed over a board that still has rows: say so, or it just looks like nothing is
+	// happening. The banner goes on top — this is the first thing to know about what is below it.
+	if m.tasksErr != "" {
+		body = m.kanbanFeedBanner() + "\n\n" + board
+	}
 	if m.kanbanAdding {
 		body += "\n\n  " + accentStyle.Render("+ new card") + subtleStyle.Render(" under ") +
 			accentStyle.Render(m.kanbanAddCheckpoint()) + "\n  " +

@@ -18,24 +18,118 @@ import (
 // homeLabelW is the gutter every panel's labels share, so values line up down the whole page.
 const homeLabelW = 11
 
+// homeTier ranks a row by how badly the landing page needs it when the window is short.
+//
+// Home owns no keys by design (STYLE.md), so it cannot scroll — fitting is not optional. Its body is
+// a fixed 28 rows, which overflowed the pane at 100x30 (by 4) and 80x24 (by 10), and what the clamp
+// silently ate was the BOTTOM: Next steps, the one section that tells a newcomer what to press. A
+// landing page that sheds diagnostics is strictly better than one that loses its own answer.
+type homeTier int
+
+const (
+	homeEssential homeTier = iota // the landing's answer: what is running, where, what to do next
+	homeUseful                    // the numbers you came to read
+	homeDetail                    // diagnostics — first to go
+)
+
+// homeLine is one rendered row plus how droppable it is.
+type homeLine struct {
+	text string
+	tier homeTier
+}
+
 // homeRow renders one "label   value" line. The label is padded as PLAIN text and styled after —
 // padding an already-styled string pads its escape bytes and misaligns the column (STYLE.md).
 func homeRow(label, value string) string {
 	return subtleStyle.Render(fmt.Sprintf("%-*s", homeLabelW, label)) + value
 }
 
+// hRow / hLine build a homeLine; the tier-less forms are essential, since anything droppable should
+// have to say so explicitly.
+func hRow(label, value string, tier homeTier) homeLine {
+	return homeLine{text: homeRow(label, value), tier: tier}
+}
+
+func hLine(text string, tier homeTier) homeLine { return homeLine{text: text, tier: tier} }
+
+// homeSection is the plain untiered form, shared with the Dev tab (which has its own scroll and so
+// never needs to shed).
 func homeSection(title string, rows ...string) string {
 	return strings.Join(append([]string{accentStyle.Render(title)}, rows...), "\n")
 }
 
+// homePanel is Home's tiered form: a header (never dropped while it still has rows) plus its rows.
+func homePanel(title string, rows ...homeLine) []homeLine {
+	return append([]homeLine{hLine(accentStyle.Render(title), homeEssential)}, rows...)
+}
+
+// homeHeight is what the assembled page will actually measure: every surviving row, plus one blank
+// between sections that survive.
+func homeHeight(sections [][]homeLine) int {
+	rows, shown := 0, 0
+	for _, sec := range sections {
+		if len(sec) <= 1 {
+			continue // header with nothing under it — dropped, so it costs nothing
+		}
+		rows += len(sec)
+		shown++
+	}
+	if shown > 1 {
+		rows += shown - 1
+	}
+	return rows
+}
+
+// dropOneHomeLine removes a single row of the given tier, scanning from the LAST section backwards,
+// and reports whether it found one. Bottom-up because the page is ordered by importance already:
+// Workspace's state dir goes before Run's cost, and Next steps (all essential) never goes at all.
+func dropOneHomeLine(sections [][]homeLine, tier homeTier) bool {
+	for i := len(sections) - 1; i >= 0; i-- {
+		for j := len(sections[i]) - 1; j >= 0; j-- {
+			if sections[i][j].tier == tier {
+				sections[i] = append(sections[i][:j], sections[i][j+1:]...)
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// fitHome sheds the least-important rows until the page fits its budget, one ROW at a time rather
+// than a whole tier at once — dropping every "useful" row the moment the page is one line over would
+// trade a clipped footer for a screen of dead space.
+func fitHome(sections [][]homeLine, budget int) string {
+	for _, tier := range []homeTier{homeDetail, homeUseful} {
+		for homeHeight(sections) > budget && dropOneHomeLine(sections, tier) {
+		}
+		if homeHeight(sections) <= budget {
+			break
+		}
+	}
+
+	var out []string
+	for _, sec := range sections {
+		// A header with every row under it dropped is an orphan — worse than the rows it lost.
+		if len(sec) <= 1 {
+			continue
+		}
+		lines := make([]string, 0, len(sec))
+		for _, l := range sec {
+			lines = append(lines, l.text)
+		}
+		out = append(out, strings.Join(lines, "\n"))
+	}
+	return strings.Join(out, "\n\n")
+}
+
 func (m Model) renderHomePane() (string, string) {
 	w := m.paneCols()
-	body := strings.Join([]string{
+	body := fitHome([][]homeLine{
 		m.renderHomeServer(w),
 		m.renderHomeRun(w),
 		m.renderHomeWorkspace(w),
 		m.renderHomeNextSteps(),
-	}, "\n\n")
+	}, m.paneRows())
 	// Hard-clip every row to the pane. .Width() only pads short content — it never truncates — so one
 	// over-long row would WRAP and push every panel below it down and out of the pane (STYLE.md).
 	body = lipgloss.NewStyle().MaxWidth(w).Render(body)
@@ -44,7 +138,7 @@ func (m Model) renderHomePane() (string, string) {
 
 // --- Server ------------------------------------------------------------------
 
-func (m Model) renderHomeServer(w int) string {
+func (m Model) renderHomeServer(w int) []homeLine {
 	c := m.data.Connection
 
 	var mode string
@@ -56,28 +150,31 @@ func (m Model) renderHomeServer(w int) string {
 	default:
 		mode = destructStyle.Render("live — not connected")
 	}
-	rows := []string{homeRow("mode", mode)}
+	rows := []homeLine{hRow("mode", mode, homeEssential)}
 
 	if c.Mode == api.ModeLive {
 		rows = append(rows,
-			homeRow("url", tealStyle.Render(c.URL)),
-			homeRow("streams", homeStream("events", c.EventsConnected)+"   "+homeStream("transcript", c.TranscriptConnected)))
+			hRow("url", tealStyle.Render(c.URL), homeUseful),
+			hRow("streams", homeStream("events", c.EventsConnected)+"   "+homeStream("transcript", c.TranscriptConnected), homeDetail))
 		if c.LastError != nil && *c.LastError != "" {
-			rows = append(rows, homeRow("last error", destructStyle.Render(truncate(*c.LastError, max(10, w-homeLabelW)))))
+			// An error is never detail: it is the reason the page looks wrong.
+			rows = append(rows, hRow("last error", destructStyle.Render(truncate(*c.LastError, max(10, w-homeLabelW))), homeEssential))
 		}
 		if !c.Connected {
 			// U1.1: a disconnected Home IS the landing page, so the old splash's how-to-start folds
-			// in here rather than living on a separate screen nobody lands on.
-			rows = append(rows, "",
-				subtleStyle.Render("No run attached. Start one:"),
-				"  "+textStyle.Render("conductor run -p plans/<your>.plan.json"),
-				"  "+subtleStyle.Render("conductor journey -p plans/<your>.plan.json")+subtleStyle.Render("  (map it first)"),
-				"",
-				subtleStyle.Render("This Face finds .conductor/control-plane.json and attaches."),
-				subtleStyle.Render("Or explore offline:  conductor-face --demo"))
+			// in here rather than living on a separate screen nobody lands on. It is the whole point
+			// of the page in that state, so it never sheds.
+			rows = append(rows,
+				hLine("", homeEssential),
+				hLine(subtleStyle.Render("No run attached. Start one:"), homeEssential),
+				hLine("  "+textStyle.Render("conductor run -p plans/<your>.plan.json"), homeEssential),
+				hLine("  "+subtleStyle.Render("conductor journey -p plans/<your>.plan.json")+subtleStyle.Render("  (map it first)"), homeUseful),
+				hLine("", homeDetail),
+				hLine(subtleStyle.Render("This Face finds .conductor/control-plane.json and attaches."), homeDetail),
+				hLine(subtleStyle.Render("Or explore offline:  conductor-face --demo"), homeUseful))
 		}
 	}
-	return homeSection("Server", rows...)
+	return homePanel("Server", rows...)
 }
 
 func homeStream(name string, connected bool) string {
@@ -90,16 +187,16 @@ func homeStream(name string, connected bool) string {
 
 // --- Run ---------------------------------------------------------------------
 
-func (m Model) renderHomeRun(w int) string {
+func (m Model) renderHomeRun(w int) []homeLine {
 	s := m.data.Plan
 	if s == nil {
-		return homeSection("Run", subtleStyle.Render("no run detected"))
+		return homePanel("Run", hLine(subtleStyle.Render("no run detected"), homeEssential))
 	}
 
-	rows := []string{
-		homeRow("plan", textStyle.Render(s.PlanName)),
-		homeRow("status", widgets.StatusBadge(s.Status)),
-		homeRow("stage", accentStyle.Render(s.StageId)+" "+subtleStyle.Render(truncate(s.StageTitle, max(8, w-homeLabelW-len(s.StageId)-1)))),
+	rows := []homeLine{
+		hRow("plan", textStyle.Render(s.PlanName), homeUseful),
+		hRow("status", widgets.StatusBadge(s.Status), homeEssential),
+		hRow("stage", accentStyle.Render(s.StageId)+" "+subtleStyle.Render(truncate(s.StageTitle, max(8, w-homeLabelW-len(s.StageId)-1))), homeEssential),
 	}
 	if s.SessionNumber > 0 {
 		seg := textStyle.Render(fmt.Sprintf("s%d %s", s.SessionNumber, s.SessionKind))
@@ -109,7 +206,7 @@ func (m Model) renderHomeRun(w int) string {
 		if s.Model != "" {
 			seg += subtleStyle.Render(" · ") + tealStyle.Render(shortModel(s.Model))
 		}
-		rows = append(rows, homeRow("session", seg))
+		rows = append(rows, hRow("session", seg, homeUseful))
 	}
 
 	cost := peachStyle.Render(fmt.Sprintf("$%.2f", s.TotalCostUsd))
@@ -117,17 +214,15 @@ func (m Model) renderHomeRun(w int) string {
 		cost += subtleStyle.Render(fmt.Sprintf("   +$%.2f overhead", s.OverheadCostUsd))
 	}
 	rows = append(rows,
-		homeRow("progress", homeProgress(s)),
-		homeRow("cost", cost),
-		homeRow("tokens", subtleStyle.Render(fmt.Sprintf("%s in · %s out · %s reasoning",
-			widgets.FmtTokens(s.TokensInput), widgets.FmtTokens(s.TokensOutput), widgets.FmtTokens(s.TokensReasoning)))))
+		hRow("progress", homeProgress(s), homeUseful),
+		hRow("cost", cost, homeUseful),
+		hRow("tokens", subtleStyle.Render(fmt.Sprintf("%s in · %s out · %s reasoning",
+			widgets.FmtTokens(s.TokensInput), widgets.FmtTokens(s.TokensOutput), widgets.FmtTokens(s.TokensReasoning))), homeDetail))
 
 	// Budget rows appear only when the plan actually caps the run — an uncapped run must not be
 	// dressed up with a fake ceiling.
-	for _, b := range m.homeBudgets(s) {
-		rows = append(rows, b)
-	}
-	return homeSection("Run", rows...)
+	rows = append(rows, m.homeBudgets(s)...)
+	return homePanel("Run", rows...)
 }
 
 func homeProgress(s *api.StateDto) string {
@@ -145,20 +240,20 @@ func homeProgress(s *api.StateDto) string {
 
 // homeBudgets renders the run's caps with remaining headroom, one row per cap that is actually set
 // (limits.maxRunCostUsd / limits.maxRunTokens). No cap set = no row.
-func (m Model) homeBudgets(s *api.StateDto) []string {
+func (m Model) homeBudgets(s *api.StateDto) []homeLine {
 	if m.plan == nil {
 		return nil
 	}
-	var rows []string
+	var rows []homeLine
 	if lim := m.plan.Limits.MaxRunCostUsd; lim != nil && *lim > 0 {
-		rows = append(rows, homeRow("budget",
-			homeHeadroom(fmt.Sprintf("$%.2f / $%.2f", s.TotalCostUsd, *lim), s.TotalCostUsd / *lim)))
+		rows = append(rows, hRow("budget",
+			homeHeadroom(fmt.Sprintf("$%.2f / $%.2f", s.TotalCostUsd, *lim), s.TotalCostUsd / *lim), homeDetail))
 	}
 	if lim := m.plan.Limits.MaxRunTokens; lim != nil && *lim > 0 {
 		used := s.TokensInput + s.TokensOutput + s.TokensReasoning
-		rows = append(rows, homeRow("tokens cap",
+		rows = append(rows, hRow("tokens cap",
 			homeHeadroom(fmt.Sprintf("%s / %s", widgets.FmtTokens(used), widgets.FmtTokens(*lim)),
-				float64(used)/float64(*lim))))
+				float64(used)/float64(*lim)), homeDetail))
 	}
 	return rows
 }
@@ -180,7 +275,7 @@ func homeHeadroom(text string, usedRatio float64) string {
 
 // --- Workspace ---------------------------------------------------------------
 
-func (m Model) renderHomeWorkspace(w int) string {
+func (m Model) renderHomeWorkspace(w int) []homeLine {
 	dash := subtleStyle.Render("—")
 	repo, tracker, stateDir, planFile := dash, dash, dash, dash
 
@@ -201,12 +296,14 @@ func (m Model) renderHomeWorkspace(w int) string {
 		planFile = subtleStyle.Render(homePath(m.plan.PlanFile, w))
 	}
 
-	return homeSection("Workspace",
-		subtleStyle.Render("the working directory every session edits"),
-		homeRow("repo", repo),
-		homeRow("plan file", planFile),
-		homeRow("tracker", tracker),
-		homeRow("state dir", stateDir))
+	// repo is the answer to "which folder does this edit" — the reason U1.2 put the section here at
+	// all, and the one row that must survive a short window.
+	return homePanel("Workspace",
+		hLine(subtleStyle.Render("the working directory every session edits"), homeDetail),
+		hRow("repo", repo, homeEssential),
+		hRow("plan file", planFile, homeUseful),
+		hRow("tracker", tracker, homeDetail),
+		hRow("state dir", stateDir, homeDetail))
 }
 
 // homePath keeps a path's tail when it has to be shortened — the leading drive/prefix is the part
@@ -222,39 +319,43 @@ func homePath(p string, w int) string {
 
 // --- Next steps --------------------------------------------------------------
 
-func (m Model) renderHomeNextSteps() string {
-	return homeSection("Next steps", m.homeHints()...)
+// renderHomeNextSteps is the landing's point: every row is essential, so a short window sheds
+// diagnostics above it rather than the answer itself.
+func (m Model) renderHomeNextSteps() []homeLine {
+	return homePanel("Next steps", m.homeHints()...)
 }
 
 // homeHints is contextual, not a fixed menu: it names what is worth pressing given the run's actual
 // state, so the landing page reads as an answer rather than a legend.
-func (m Model) homeHints() []string {
-	hint := func(k, text string) string { return "  " + key(k) + "  " + subtleStyle.Render(text) }
+func (m Model) homeHints() []homeLine {
+	hint := func(k, text string) homeLine {
+		return hLine("  "+key(k)+"  "+subtleStyle.Render(text), homeEssential)
+	}
 	s := m.data.Plan
 
 	if s == nil {
 		if m.data.Connection.Mode == api.ModeDemo {
-			return []string{
+			return []homeLine{
 				hint("a", "watch the synthetic agent transcript"),
 				hint("p", "explore the plan editor"),
 				hint("?", "see every key"),
 			}
 		}
-		return []string{
-			"  " + subtleStyle.Render("no run detected — start one with ") + textStyle.Render("conductor run -p <plan>"),
-			"  " + subtleStyle.Render("map it first with ") + textStyle.Render("conductor journey -p <plan>"),
+		return []homeLine{
+			hLine("  "+subtleStyle.Render("no run detected — start one with ")+textStyle.Render("conductor run -p <plan>"), homeEssential),
+			hLine("  "+subtleStyle.Render("map it first with ")+textStyle.Render("conductor journey -p <plan>"), homeUseful),
 			hint("?", "see every key"),
 		}
 	}
 
-	var out []string
+	var out []homeLine
 	if s.AgentActive {
 		out = append(out, hint("a", "watch the live agent — it is working right now"))
 	} else {
 		out = append(out, hint("a", "open the agent transcript"))
 	}
 	if attentionReason(s.Status, s.AttentionReason) != "" {
-		out = append(out, "  "+key(":")+"  "+destructStyle.Render("needs a human — approve or inject from the palette"))
+		out = append(out, hLine("  "+key(":")+"  "+destructStyle.Render("needs a human — approve or inject from the palette"), homeEssential))
 	} else if strings.Contains(strings.ToLower(s.Status), "pause") {
 		out = append(out, hint(":", "the run is paused — resume it from the palette"))
 	}

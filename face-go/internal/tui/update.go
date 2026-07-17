@@ -79,7 +79,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case MsgTasksUpdated:
-		if msg.Tasks != nil {
+		// A failed poll must not blank a board that is already on screen — keep the last good cards
+		// and let the pane say the feed went away. Only the error text is replaced every poll, so a
+		// recovered fetch clears it.
+		if msg.Err != nil {
+			m.tasksErr = msg.Err.Error()
+		} else if msg.Tasks != nil {
+			m.tasksErr = ""
+			m.tasksLoaded = true
 			m.data.Tasks = msg.Tasks.Tasks
 			m.syncSidebar()
 		}
@@ -229,6 +236,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		} else if msg.Timeline != nil {
 			m.timelineEntries = msg.Timeline.Entries
 			m.timelineErr = ""
+			// The FIRST fetch is the attach: everything in it already happened, and everything after
+			// it is happening now. Recording where that line falls (once) is what lets the pane draw
+			// it — see dogfood appendix item 6, where an attach poured history in and read as an
+			// event storm. The timeline refetches wholesale on every spine event, so this cannot be
+			// inferred later.
+			if !m.timelineHistorySet {
+				m.timelineHistorySet = true
+				m.timelineHistoryCount = len(m.timelineEntries)
+			}
 			if m.timelineSelected >= len(m.timelineEntries) {
 				m.timelineSelected = max(0, len(m.timelineEntries)-1)
 			}

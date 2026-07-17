@@ -14,8 +14,13 @@ type MsgStateUpdated struct {
 	State *api.StateDto
 }
 
+// MsgTasksUpdated carries the task graph OR the reason it could not be fetched. The error is not
+// decoration: without it an unreachable /tasks and a genuinely empty board are the same message to
+// the Kanban pane, which is dogfood appendix item 5 — a board that read as silent emptiness while
+// the sidebar showed a full plan.
 type MsgTasksUpdated struct {
 	Tasks *api.TasksDto
+	Err   error
 }
 
 type MsgProcessesUpdated struct {

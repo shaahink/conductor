@@ -10,6 +10,7 @@ package tui
 // intentional layout change.
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -501,6 +502,17 @@ func TestGolden(t *testing.T) {
 			m, _ = m.Update(MsgTimelineUpdated{Timeline: &api.TimelineDto{Entries: fixedTimeline()}})
 			return m
 		}},
+		// U3.2 / dogfood appendix 6: the attach fetch is history, everything after it is live, and
+		// the rule between them is what stops an attach reading as an event storm.
+		{"timeline_live", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("t"))
+			hist := fixedTimeline()
+			m, _ = m.Update(MsgTimelineUpdated{Timeline: &api.TimelineDto{Entries: hist}})
+			m, _ = m.Update(MsgTimelineUpdated{Timeline: &api.TimelineDto{Entries: append(append([]api.TimelineEntryDto{}, hist...),
+				api.TimelineEntryDto{Kind: "session", Description: "session #12 Deliver started", Utc: "2026-07-15T10:09:00Z"},
+			)}})
+			return m
+		}},
 		{"knowledge", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("k"))
 			m, _ = m.Update(MsgKnowledgeUpdated{Ledger: fixedLedger(), Bugs: fixedBugs()})
@@ -649,6 +661,14 @@ func TestGolden(t *testing.T) {
 			m, _ = m.Update(keyMsg("b"))
 			m, _ = m.Update(MsgTasksUpdated{Tasks: &api.TasksDto{Tasks: kanbanFixtureTasks()}})
 			m, _ = m.Update(specialKey(tea.KeyDown)) // select the second card
+			return m
+		}},
+		// U3.2 / dogfood appendix 5: a board that cannot reach /tasks must say so. This used to render
+		// the same "No tasks yet" as a genuinely empty board — a confident claim, and a false one.
+		{"kanban_unreachable", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("b"))
+			m, _ = m.Update(MsgTasksUpdated{Err: errors.New(
+				"Get \"http://127.0.0.1:4317/tasks\": dial tcp 127.0.0.1:4317: connection refused")})
 			return m
 		}},
 		{"kanban_add", func(m tea.Model) tea.Model {

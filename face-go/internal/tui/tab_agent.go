@@ -172,13 +172,28 @@ func (m Model) renderSplash() string {
 }
 
 // padBetween joins left and right with enough spaces that right lands on the pane's right edge.
+//
+// When they do not both fit, the LEFT is sacrificed. MaxWidth truncates from the right edge, so the
+// old `MaxWidth(left + " " + right)` ate the right segment — the elapsed clock, which is pinned there
+// precisely because it must stay visible — while the left segments stayed whole. That is dogfood
+// appendix item 8: at ~100 cols the agent strip dropped its elapsed and kept everything else.
 func padBetween(left, right string, width int) string {
+	if width < 1 {
+		return ""
+	}
 	if right == "" {
 		return lipgloss.NewStyle().MaxWidth(width).Render(left)
 	}
 	gap := width - lipgloss.Width(left) - lipgloss.Width(right)
 	if gap < 1 {
-		return lipgloss.NewStyle().MaxWidth(width).Render(left + " " + right)
+		rw := lipgloss.Width(right)
+		// Not even the right half fits: it is still the more important one, so keep as much of it
+		// as the width allows rather than showing a left segment that is also cut off.
+		if rw+2 > width {
+			return lipgloss.NewStyle().MaxWidth(width).Render(right)
+		}
+		left = lipgloss.NewStyle().MaxWidth(width - rw - 1).Render(left)
+		return left + " " + right
 	}
 	return left + strings.Repeat(" ", gap) + right
 }

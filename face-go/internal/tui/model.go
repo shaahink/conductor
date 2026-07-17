@@ -143,6 +143,12 @@ type Model struct {
 	timelineSelected int
 	timelineLoading  bool
 	timelineErr      string
+	// timelineHistoryCount is how many events already existed when this Face attached; everything at
+	// or past that index arrived live, and the pane rules a "live" line there (dogfood appendix 6).
+	// timelineHistorySet distinguishes "attached to a run with zero events" from "never fetched" —
+	// a plain 0 count cannot.
+	timelineHistoryCount int
+	timelineHistorySet   bool
 
 	// Sessions tab
 	sessionSelected int
@@ -214,6 +220,11 @@ type Model struct {
 	kanbanAdding bool
 	kanbanAddBuf string
 	kanbanStatus string
+	// tasksErr / tasksLoaded exist so an empty board can say WHY it is empty (dogfood appendix 5).
+	// Three states read identically without them — never fetched, fetch failed, genuinely no cards —
+	// and the pane confidently claimed the third.
+	tasksErr    string
+	tasksLoaded bool
 
 	// Kanban card detail (P3): the selected card's prompt building-blocks, the structured
 	// title/context editors, and the advisor-refine preview→confirm state.

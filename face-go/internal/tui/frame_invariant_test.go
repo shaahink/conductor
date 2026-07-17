@@ -27,6 +27,13 @@ func TestFrameNeverExceedsWindowHeight(t *testing.T) {
 		t.Run(fmt.Sprintf("%dx%d", size.w, size.h), func(t *testing.T) {
 			m := newGoldenModel(size.w, size.h)
 
+			// The Agent tab, explicitly. This test builds a transcript worst case below and used to
+			// assert against HOME, because newGoldenModel opens there and nothing switched — so the
+			// 30 events it so carefully constructs were never drawn, and the regression test for the
+			// overflow bug could not have caught the overflow bug (found by U3.2's sweep, which
+			// drives every tab). Everything below is the shape that first overflowed the frame.
+			m, _ = m.Update(keyMsg("a"))
+
 			// Worst case on every axis at once: the strip grows an attention banner AND a
 			// disconnected notice, while the transcript takes multi-paragraph thinking + text
 			// events (the live-run shape that first overflowed the frame).
