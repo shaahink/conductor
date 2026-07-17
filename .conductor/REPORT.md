@@ -1,11 +1,12 @@
 ﻿# Conductor — Conductor UX (U-series) run report
 
-_Updated 2026-07-17 03:44 UTC · branch `feat/foreman` · HEAD `318cd1b`_
+_Updated 2026-07-17 04:50 UTC · branch `feat/foreman` · HEAD `a0437dd`_
 
-**Status:** NeedsHuman — agent asked for a human in the tracker handoff (HUMAN: line) — resolve, then run `conductor resume`
-**Stage:** U2 — Face: controls, visual report, dev stats · attempts used 1 · working ▸ U2.2
-**Checkpoints:** 6/11 done · **Sessions run:** 7 · **Cost:** $69.5518 (agent $69.5351 + gates $0.0167)
+**Status:** Idle
+**Stage:** U2 — Face: controls, visual report, dev stats · attempts used 0
+**Checkpoints:** 8/11 done · **Sessions run:** 9 · **Cost:** $95.5322 (agent $95.5138 + gates $0.0184) · **Tokens:** 272,633 in / 124,152 out
 **Confirmed phases:** U0, U1
+**Pending:** full-battery phase gate for U2
 
 ## Stage progress
 
@@ -13,7 +14,7 @@ _Updated 2026-07-17 03:44 UTC · branch `feat/foreman` · HEAD `318cd1b`_
 |---|---|---|---|
 | U0 | Engine: start, resume, journey | ██████████ 3/3 | confirmed ✓ |
 | U1 | Face: landing page + workspace identity | ██████████ 2/2 | confirmed ✓ |
-| U2 | Face: controls, visual report, dev stats | ███░░░░░░░ 1/3 | **← active** |
+| U2 | Face: controls, visual report, dev stats | ██████████ 3/3 | gating… |
 | U3 | Face: themes, agent-terminal vibe, glitch pass | ░░░░░░░░░░ 0/3 | todo |
 
 <details> ✅<summary>U0 — Engine: start, resume, journey (3/3)</summary>
@@ -35,13 +36,13 @@ _Updated 2026-07-17 03:44 UTC · branch `feat/foreman` · HEAD `318cd1b`_
 
 </details>
 
-<details><summary>U2 — Face: controls, visual report, dev stats (1/3)</summary>
+<details> ✅<summary>U2 — Face: controls, visual report, dev stats (3/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| U2.1 | palette groups (Run/Stage/Danger) + consequence-naming confirms | ✅ DONE | - |
-| U2.2 | Report tab is a visual run report (progress, stages, sessions, gates, scores) | ⬜ TODO |  |
-| U2.3 | Dev tab: SQL console moved + run internals + per-session token/cost stats | ⬜ TODO |  |
+| U2.1 | palette groups (Run/Stage/Danger) + consequence-naming confirms | ✅ DONE | [`26a4194`](https://github.com/shaahink/conductor/commit/26a4194) |
+| U2.2 | Report tab is a visual run report (progress, stages, sessions, gates, scores) | ✅ DONE | [`c8ff55f`](https://github.com/shaahink/conductor/commit/c8ff55f) |
+| U2.3 | Dev tab: SQL console moved + run internals + per-session token/cost stats | ✅ DONE | [`8749704`](https://github.com/shaahink/conductor/commit/8749704) |
 
 </details>
 
@@ -66,19 +67,14 @@ _Updated 2026-07-17 03:44 UTC · branch `feat/foreman` · HEAD `318cd1b`_
 | 5 | U1 | Deliver | 1 | 07-17 02:20 | 0:36 | Advanced | U1.1 U1.2 | 3 | build:OK · face-build:OK | $17.2108 | $0.0039 |  |
 | 6 | U2 | Verify | 1 | 07-17 03:00 | 0:10 | AgentError |  | 0 |  | $2.6979 |  |  |
 | 7 | U2 | Fix | 2 | 07-17 03:10 | 0:33 | Progress |  | 3 | build:OK · face-build:OK | $13.2950 | $0.0040 |  |
+| 8 | U2 | Deliver | 2 | 07-17 03:51 | 0:03 | Interrupted |  | 0 |  |  |  |  |
+| 9 | U2 | Resume | 2r1 | 07-17 03:54 | 0:55 | Advanced | U2.2 U2.3 | 4 | build:OK · face-build:OK | $25.9788 | $0.0017 | 272,633/124,152 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-17 01:28:28  ◆ run resumed · Conductor UX (U-series)
-07-17 01:28:29  • session #2 U0 Resume started (attempt 1/6)
-07-17 02:31:29  ▪ gate build pass [session]  (34.7s)
-07-17 02:31:29  ▪ gate face-build pass [session]  (3.5s)
-07-17 02:31:30  • session #2 U0 → Progress · 7 commit(s)  (1h03m00s)
-07-17 02:31:30  • session #3 U0 Verify started (attempt 1/6)
-07-17 02:40:59  • session #3 U0 → AgentError  (9m29s)
 07-17 02:40:59  • session #4 U0 Fix started (attempt 2/6)
 07-17 03:17:44  ▪ gate build pass [session]  (42.0s)
 07-17 03:17:44  ▪ gate face-build pass [session]  (7.4s)
@@ -112,6 +108,13 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-17 04:44:34  ▪ gate build pass [session]  (36.3s)
 07-17 04:44:34  ▪ gate face-build pass [session]  (3.8s)
 07-17 04:44:35  • session #7 U2 → Progress · 3 commit(s)  (34m27s)
+07-17 04:44:35  ■ needs human — agent asked for a human in the tracker handoff (HUMAN: line) — resolve, then run `conductor resume`
+07-17 04:50:45  ◆ run resumed · Conductor UX (U-series)
+07-17 04:51:01  • session #8 U2 Deliver started (attempt 2/8)
+07-17 04:54:23  ◆ run resumed · Conductor UX (U-series)
+07-17 04:54:23  • session #9 U2 Resume started (attempt 2/8)
+07-17 05:50:28  ▪ gate build pass [session]  (13.6s)
+07-17 05:50:28  ▪ gate face-build pass [session]  (3.2s)
 ```
 
 ## Health
@@ -119,7 +122,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 7 · retries 2 (29 %) · overall Ok
+sessions 9 · retries 4 (44 %) · overall Ok
 ✓ no health concerns detected
 ```
 
@@ -129,8 +132,8 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/foreman
-working tree: M CONDUCTOR-UX-START.md
-vs upstream: 1 ahead
+working tree: clean
+vs upstream: up to date
 ```
 
 ### Commits by session
@@ -153,6 +156,11 @@ vs upstream: 1 ahead
   - [`e1b5a57`](https://github.com/shaahink/conductor/commit/e1b5a57) docs(conductor): U2 tracker — s6 verdict recovered, U2.1 done, U2.3 premise corrected
   - [`71fa214`](https://github.com/shaahink/conductor/commit/71fa214) fix(engine): claude provider records session token usage (bug #5)
   - [`26a4194`](https://github.com/shaahink/conductor/commit/26a4194) feat(face): U2.1 grouped palette + promptable danger
+- **s9 (U2 Resume)** — 4 commit(s):
+  - [`a0437dd`](https://github.com/shaahink/conductor/commit/a0437dd) docs(conductor): U2 tracker — stage CLOSED 3/3, s7's U2.1 claim QA'd and confirmed
+  - [`8749704`](https://github.com/shaahink/conductor/commit/8749704) feat(face): U2.3 Dev tab — run internals + per-session token/cost stats
+  - [`ab96e15`](https://github.com/shaahink/conductor/commit/ab96e15) docs(face): U2.2 — STYLE.md records the 13th tab and the mnemonic trap
+  - [`c8ff55f`](https://github.com/shaahink/conductor/commit/c8ff55f) feat(face): U2.2 Report tab is a visual run report
 
 ## Phase handovers (audit)
 
@@ -179,31 +187,37 @@ build:OK · face-build:OK
 
 ## Last session result
 
-> SESSION-RESULT: Root-caused s6's "no valid score JSON" to a STALE ENGINE BINARY, not a code defect — s6 actually returned a valid score-90 PASS (4093 chars) that the live orchestrator (installed binary, built 01:11, started 01:28) truncated to 701 because s4's fix `fbdef79` landed at 03:15, after the process started; `Verifier.Parse`/`ExtractSessionResult` are correct in source and must not be "fixed" a third time (ledger note filed; bug #4 filed for stale-engine detection). Nothing was over-claimed, so no downgrade was needed. Delivered U2.1 (`26a4194`): palette grouped Run/Stage/Danger with confirms that name consequences (`abort — kill session + stop conductor. y/N`), help legend derived …
+> SESSION-RESULT: Stage U2 is CLOSED 3/3 on `feat/foreman` (pushed). QA verdict on session 7: U2.1 CONFIRMED against fresh artifacts. Landed U2.2 (`c8ff55f`, visual Report tab + Dev tab hosting the moved SQL console + `GET /sessions` extended with per-session cost/tokens summed from the many-rows-per-session `costs` table) and U2.3 (`8749704`, Dev run internals + per-session token/cost stats), plus STYLE.md (`ab96e15`) and the tracker (`a0437dd`). Reading frames caught four real bugs that tests missed: Report duplicating the sidebar's stage-glyph switch and getting the engine's real vocabulary wrong (finished stages rendered `○` — fixed by exporting `widgets.StageGlyph`/`GateGlyph` so there is…
 
 ## Tracker handoff
 
 ```
-last: session #7 (Fix, U2). s6 did NOT fail: it returned a valid score-90 PASS. **The engine
-threw it away — the live orchestrator (PID 2148) is the INSTALLED binary, built 01:11 and
-started 01:28; s4's verifier-truncation fix (`fbdef79`) landed 03:15, so the running process
-predates its own fix and still applied the 700-char crop** (run.db result_summary = 701 chars vs
-the real 4093). Nothing to fix in code: `Verifier.Parse`/`ExtractSessionResult` are correct.
-**HUMAN: every Verify in this run keeps failing until the owner re-runs `tools/install.ps1` and
-RESTARTS** — no in-run session can (the restart kills it). Bug #4 filed (stale-engine detection).
-Record was already correct (nothing over-claimed): U0+U1 DONE, U2 was 3× TODO.
-done: **U2.1** (`26a4194`) palette Run/Stage/Danger + confirms that name consequences
-(`abort — kill session + stop conductor. y/N`); reading frames caught 3 real glitches (17-char
-`pause-after-stage` skewed its column; selected row off by one; help card hit 25 rows and clipped
-its own border at 80×24 — new guard test, not eye). Plus (`71fa214`) **bug #5**: ClaudeProvider
-never read `usage`, so ALL claude runs recorded 0 tokens — which silently disabled
-`limits.maxSessionTokens` (TokensTotal always 0). Fixed + closed.
-gate: green — build 0w/0e, ratchet OK (38≤38, archdebt 0), go build/vet/test green, gofmt clean.
-The 3 C# fails seen mid-session were a competing `dotnet test` in C:\code\DevContext2 saturating
-the box; all 31 pass isolated once quiet. **Do NOT run `Get-Process dotnet | Stop-Process` as
-AGENTS.md suggests — it would have killed that other repo's suite AND a live web server.**
-next: **U2.2** (visual Report) then **U2.3** (Dev tab). **U2.3's spec premise is FALSE**: the
-sessions table has NO token/cost columns — they live in a separate `costs` table, keyed by
-session_number with a `category` (agent|gate|advisor), so a session has MANY rows: SUM/GROUP BY,
-never a naive JOIN. See the ledger before starting.
+last: session #8 (Deliver, U2). Killed once mid-session; nothing was lost (it had only READ, tree
+was clean). **STAGE U2 IS CLOSED, 3/3.**
+qa: s7's U2.1 claim **audited against fresh artifacts and CONFIRMED** — verb grouping matches the
+spec verb-for-verb, `⚠` on unsafe rows, confirm reads `abort — kill session + stop conductor. y/N`,
+both its new tests pass, and every control send routes through the confirm path (no destructive
+hotkey bypasses it). Nothing over-claimed.
+done: **U2.2** (`c8ff55f`) Report is now a rendered report — header/progress/stages/sessions
+digest/gates/verifier scores from `/state`+`/sessions`, scroll-only. **U2.3** (`8749704`) Dev tab
+(`d`) = the moved SQL console (unchanged, tests moved with it) + run internals + per-session
+token/cost stats. `GET /sessions` now serves per-session cost+tokens, SUMMED via correlated
+subqueries (s7's warning was right: `costs` holds many rows per session — a JOIN triples every
+figure; 4 new tests are shaped to fail on a join, not just on a wrong number).
+gate: green — build 0w/0e, **897/897**, ratchet OK (826 tests / 38≤38 pragmas / archdebt 0,
+nothing weakened), face-go build/vet/test green + gofmt clean. Artifacts `.conductor/gate-u22.out`,
+`.conductor/gate-u23.out`.
+traps: **contention is probabilistic, not deterministic** — 897/897 passed twice WHILE the
+DevContext2 suite ran, and bug #3 passed too; a green run does not clear those flakes, a red one
+does not prove a defect. Inspect the box first, and never `Stop-Process dotnet` (it would kill
+another repo's suite + a live web server). Bug #2 is real and still bites: `conductor bg` logs are
+BOM-only 3 bytes for anything slow — redirect to your own file. Do NOT put double quotes or `>` in
+`conductor note` text (shim re-splits); call the exe, not the scoop shim.
+next: **U3** (`U3.1` themes → `U3.2` glitch pass → `U3.3` transcript vibe). U3.1 turns
+`widgets/style.go`'s palette into a `Theme` + `ApplyTheme(name)`; note U2.2 added `infoStyle` to
+view.go's shared var block and exported `widgets.StageGlyph`/`GateGlyph` (Report and the sidebar now
+share ONE vocabulary — a second copy is what made finished stages render `○` in Report). Read the
+ledger's two rendering traps first: measure RENDERED lines not slice elements, and gutter labels
+must be < homeLabelW(11). And assert the RENDER, not the state — a state-only assertion passed a
+pane whose scroll did nothing.
 ```
