@@ -1,34 +1,34 @@
- ◆ conductor  ● LIVE  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42 
-  a Agent  s t o c e p r k g b 
-                           │
- ▶ PLAN                    │  s12 Deliver · attempt 1/3 · opus-4-8 · architect  ◆ F7.3 Wire caching layer ⠋
- ✓ F0 3/3 Foundations      │  build ✓ · test ● 4s · lint ○    task 1/3 ▸ Wire RunDb.GetLastPassingGateResult
- ✓ F6 5/5 Ink TUI v1       │  ──────────────────────────────────────────────────────────────────────────────
- ● F7 2/5 Gate … 1× $0.30  │  10:04:01 ▸ Session #12 started · Deliver · Stage F7 · Attempt 1
-   ✓ F7.1 Plan import    ╭──────────────────────────────────────────────────────────╮..
-   ✓ F7.2 Re-import diff │                                                          │
-   ● F7.3 Truth-gate tier│   ◆ conductor  ·  keys                                   │er, sha)
- ○ F8 0/4 conductor chat…│                                                          │ngGateResult to RunDb.
-                         │   Tabs  (number or letter jumps straight there)          │
- ── GATES ──             │     a Agent    s Sessions   t Timeline                   │
-   ✓ build               │     o Procs    c Console    e Templates                  │
-   ● test 4s             │     p Plan     r Report     k Knowledge                  │
-   ○ lint                │     g Telegram b Kanban                                  │
-                         │     tab cycle tabs                                       │
- ── TASKS ──             │                                                          │
-   ✓ Add truth-tier con… │   Actions                                                │
-   ● Wire RunDb.GetLast… │     : command palette   i inject context                 │
-   ○ Cache gate results… │     / search transcript f fold tools · T fold thinking   │
-                         │     \ collapse sidebar  ↑↓ scroll / navigate             │
-                         │                                                          │
-                         │   Global                                                 │
-                         │     q quit   esc close / cancel   ? this help            │
-                         │                                                          │
-                         ╰──────────────────────────────────────────────────────────╯
-                           │
-                           │
-                           │
-                           │
-                           │
-                           │
+ ◆ conductor  ● LIVE  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42                 
+  a Agent  s t o c e p r k g b                                                                                
+                           │                                                                                  
+ ▶ PLAN                    │  s12 Deliver · attempt 1/3 · opus-4-8 · architect  ◆ F7.3 Wire caching layer ⠋   
+ ✓ F0 3/3 Foundations      │  build ✓ · test ● 4s · lint ○    task 1/3 ▸ Wire RunDb.GetLastPassingGateResult  
+ ✓ F6 5/5 Ink TUI v1       │  ──────────────────────────────────────────────────────────────────────────────  
+ ● F7 2/5 Gate … 1× $0.30  │  10:04:01 ▸ Session #12 started · Deliver · Stage F7 · Attempt 1                 
+   ✓ F7.1 Plan import    ╭──────────────────────────────────────────────────────────╮..                       
+   ✓ F7.2 Re-import diff │                                                          │                         
+   ● F7.3 Truth-gate tier│   ◆ conductor  ·  keys                                   │er, sha)                 
+ ○ F8 0/4 conductor chat…│                                                          │ngGateResult to RunDb.   
+                         │   Tabs  (number or letter jumps straight there)          │                         
+ ── GATES ──             │     a Agent    s Sessions   t Timeline                   │                         
+   ✓ build               │     o Procs    c Console    e Templates                  │                         
+   ● test 4s             │     p Plan     r Report     k Knowledge                  │                         
+   ○ lint                │     g Telegram b Kanban                                  │                         
+                         │     tab cycle tabs                                       │                         
+ ── TASKS ──             │                                                          │                         
+   ✓ Add truth-tier con… │   Actions                                                │                         
+   ● Wire RunDb.GetLast… │     : command palette   i inject context                 │                         
+   ○ Cache gate results… │     / search transcript f fold tools · T fold thinking   │                         
+                         │     \ collapse sidebar  ↑↓ scroll / navigate             │                         
+                         │                                                          │                         
+                         │   Global                                                 │                         
+                         │     q quit   esc close / cancel   ? this help            │                         
+                         │                                                          │                         
+                         ╰──────────────────────────────────────────────────────────╯                         
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
  : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ scroll · f fold · T thinking · / search · end l

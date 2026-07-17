@@ -27,15 +27,20 @@ type TranscriptModel struct {
 	SearchMatches  []int
 	FoldTools      bool
 	HideThinking   bool
-	Width          int
-	Height         int
+	// CollapseThinking (the default) shows only the LAST row of each consecutive thinking run with
+	// a "(+N)" counter — live reasoning reads as one quiet, current thought instead of a wall that
+	// drowns the agent's actual messages. T cycles collapsed → full → hidden.
+	CollapseThinking bool
+	Width            int
+	Height           int
 }
 
 func NewTranscript() TranscriptModel {
 	return TranscriptModel{
-		AutoScroll: true,
-		Width:      80,
-		Height:     20,
+		AutoScroll:       true,
+		CollapseThinking: true,
+		Width:            80,
+		Height:           20,
 	}
 }
 
@@ -84,7 +89,16 @@ func (m TranscriptModel) Update(msg any) TranscriptModel {
 			return m
 
 		case MsgToggleThinking:
-			m.HideThinking = !m.HideThinking
+			// Three states: collapsed (default) → full → hidden → collapsed.
+			switch {
+			case m.CollapseThinking:
+				m.CollapseThinking = false
+			case !m.HideThinking:
+				m.HideThinking = true
+			default:
+				m.HideThinking = false
+				m.CollapseThinking = true
+			}
 			m.ScrollOffset = 0
 			m.AutoScroll = true
 			if m.SearchQuery != "" {
@@ -212,9 +226,28 @@ func (m TranscriptModel) View() string {
 }
 
 func (m TranscriptModel) visibleLines() []api.TranscriptLineDto {
-	lines := m.Lines
-	if m.HideThinking {
-		filtered := make([]api.TranscriptLineDto, 0, len(lines))
+	// One row per terminal line, FIRST: multi-paragraph text/thinking events arrive with embedded
+	// newlines, and a row taller than one breaks every height calculation downstream — the pane
+	// overflows the frame and the footer + live tail slip below the fold (owner dogfood 2026-07-17).
+	// Continuation rows drop the timestamp (zero Ts) so the clock column stays clean.
+	lines := make([]api.TranscriptLineDto, 0, len(m.Lines))
+	for _, l := range m.Lines {
+		if !strings.Contains(l.Text, "\n") {
+			lines = append(lines, l)
+			continue
+		}
+		for i, part := range strings.Split(strings.ReplaceAll(l.Text, "\r", ""), "\n") {
+			row := l
+			row.Text = part
+			if i > 0 {
+				row.Ts = time.Time{}
+			}
+			lines = append(lines, row)
+		}
+	}
+	switch {
+	case m.HideThinking:
+		filtered := lines[:0]
 		for _, l := range lines {
 			if l.Kind == "thinking" {
 				continue
@@ -222,11 +255,36 @@ func (m TranscriptModel) visibleLines() []api.TranscriptLineDto {
 			filtered = append(filtered, l)
 		}
 		lines = filtered
+	case m.CollapseThinking:
+		lines = collapseThinking(lines)
 	}
 	if m.FoldTools {
 		return foldTools(lines)
 	}
 	return lines
+}
+
+// collapseThinking keeps only the last row of each consecutive thinking run, annotated with how
+// many rows it stands for — the live tail shows the CURRENT thought, not the whole essay.
+func collapseThinking(src []api.TranscriptLineDto) []api.TranscriptLineDto {
+	out := make([]api.TranscriptLineDto, 0, len(src))
+	run := 0
+	for i, l := range src {
+		if l.Kind == "thinking" {
+			run++
+			if i+1 < len(src) && src[i+1].Kind == "thinking" {
+				continue
+			}
+			if run > 1 {
+				l.Text = fmt.Sprintf("(+%d) %s", run-1, l.Text)
+			}
+			out = append(out, l)
+			run = 0
+			continue
+		}
+		out = append(out, l)
+	}
+	return out
 }
 
 func foldTools(src []api.TranscriptLineDto) []api.TranscriptLineDto {

@@ -65,6 +65,11 @@ func (m Model) View() tea.View {
 		screen = compositeBottomRight(screen, toasts, m.width, m.height)
 	}
 
+	// Frame invariant: never hand the renderer more than the window. Everything above already
+	// budgets its height, but one miscounted row (a wrapped line, a grown banner) must degrade to
+	// a clipped pane — not to the bottom bar and the live tail sliding below the fold.
+	screen = lipgloss.NewStyle().MaxWidth(m.width).MaxHeight(m.height).Render(screen)
+
 	v := tea.NewView(screen)
 	v.AltScreen = true
 	v.MouseMode = tea.MouseModeCellMotion
@@ -111,18 +116,24 @@ func (m Model) renderSidebar(rect Rect) string {
 	m.sidebar.Width = rect.Width - 3
 	m.sidebar.Height = rect.Height - 2
 
+	// Max* are the hard clamp: .Width/.Height only pad SHORT content — an overgrown pane would
+	// otherwise stretch the frame past the window and push the bottom bar off-screen.
 	return lipgloss.NewStyle().
 		Width(rect.Width).Height(rect.Height).
+		MaxWidth(rect.Width).MaxHeight(rect.Height).
 		Padding(1, 1).
 		Border(lipgloss.NormalBorder(), false, true, false, false).
 		BorderForeground(widgets.Surface()).
 		Render(m.sidebar.View())
 }
 
-// frameContent gives every pane consistent breathing room and a fixed footprint.
+// frameContent gives every pane consistent breathing room and a fixed footprint. The Max* pair is
+// the overflow guard: .Width/.Height only pad short content, they never truncate tall content, so
+// without the clamp one overgrown row pushes the bottom bar (and a pinned live tail) below the fold.
 func (m Model) frameContent(body string, rect Rect) string {
 	return lipgloss.NewStyle().
 		Width(rect.Width).Height(rect.Height).
+		MaxWidth(rect.Width).MaxHeight(rect.Height).
 		Padding(1, 2).
 		Render(body)
 }

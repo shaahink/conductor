@@ -160,24 +160,20 @@ pass; the starred ones are load-bearing enough to fix in whichever earlier stage
    collapsed-by-default thinking addresses it; until then `T` folds.
 10. **Ghost transcript across runs** — fixed 2026-07-16 engine-side (run-scoped rotation +
     reconnected live feed); U-sessions must not regress the `?since=` resume contract.
-11. ★ **Kanban (and the sidebar TASKS section) is empty on every real run.** Root cause found
-    2026-07-17, server-side: `GET /tasks` folds only `TaskAdded`/`TaskStatusChanged`/
-    `TaskDetailEdited` events (`Core/Events/TaskGraph.cs`), but startup seeding
-    (`RunLoop.Plumbing.cs` `SeedCheckpointsFromTracker`) writes checkpoint ROWS via
-    `SeedCheckpoints` and emits no task events — the board only ever shows cards an agent created
-    through MCP task tools. Fix in U2: emit `TaskAdded` per seeded checkpoint (idempotent across
-    resumes — seeding runs on every start) or make `/tasks` union the seeded checkpoint rows.
-12. ★ **Transcript readability under live load** — the tail scrolls too fast to read, and thinking
-    vs. actual agent messages blend into one stream. U3.3's presentation rules are the fix
-    (thinking dim + collapsed by default, messages prominent, tool lines compact); no artificial
-    pacing — hierarchy and folding, not delay.
-13. ★ **Footer and the live tail can slip off-screen.** Observed on the owner's terminal during a
-    live run: bottom bar not visible and "I don't think I see the ending" — the frame is taller
-    than the window, so the autoscroll-pinned newest lines AND the bottom bar render below the
-    fold. One overflow explains both. U3.2 must make frame height == window height a hard
-    invariant: audit `ComputeLayout` + every pane's height math (e.g. `renderAgentPane` subtracting
-    the strip, banners/toasts growing rows), and add a golden/unit assertion that `View()` output
-    line count never exceeds the window height at any tested state and size.
+11. **Kanban empty on every real run — FIXED 2026-07-17** pre-run: seeding now emits one
+    `TaskAdded` (+ status) per tracker checkpoint (first-write-wins on TaskId = idempotent across
+    restarts; agent sub-cards use `<cp>-aN` ids, no collision). U2 still owns board polish
+    (empty-state messaging when /tasks genuinely fails or is empty).
+12. **Transcript readability under live load — PARTIALLY FIXED 2026-07-17**: multi-paragraph
+    events now split into real rows, and consecutive thinking collapses by default to the current
+    thought with a `(+N)` counter (`T` cycles collapsed → full → hidden). U3.3 still owns the full
+    Claude-Code/opencode presentation (tool bullets, footer strip, provider glyphs).
+13. **Footer and the live tail slipping off-screen — FIXED 2026-07-17**: root cause was rows with
+    embedded newlines counting as one line (plus overlay compositing that could double the frame —
+    the old palette/help goldens were 70 rows for a 34-row window). Every pane is now hard-clamped
+    (`frameContent`/`renderSidebar` Max*, plus a whole-screen clamp), and
+    `TestFrameNeverExceedsWindowHeight` pins the invariant at 4 sizes with worst-case state. U3.2
+    keeps the broader glitch pass; it must not regress this test.
 
 ## Delivered engine-side ahead of the sessions (2026-07-16/17, do not redo — build on it)
 

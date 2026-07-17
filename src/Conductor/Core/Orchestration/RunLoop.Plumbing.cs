@@ -263,7 +263,28 @@ public sealed partial class RunLoop
             c.IsDone ? "DONE" : c.IsInProgress ? "IN PROGRESS" : c.IsBlocked ? "BLOCKED" : "TODO",
             c.Commit, c.Evidence));
         db.SeedCheckpoints(_ctx.State.RunId, cps);
-        _ctx.Log($"seeded {track.Checkpoints.Count} checkpoints from tracker into run.db");
+
+        // The Kanban board (/tasks) folds task EVENTS, not checkpoint rows — without this emit the
+        // board opened empty on every real run until an agent created MCP cards by hand (2026-07-17
+        // dogfood). One card per checkpoint: TaskAdded is first-write-wins on TaskId, so restarts
+        // and resumes are no-ops; the status emit re-asserts tracker truth at every start (invalid
+        // transitions are dropped by the fold). Agent sub-cards use "<cp>-aN" ids — no collision.
+        var order = 0;
+        foreach (var c in track.Checkpoints)
+        {
+            _ctx.Events.Emit(new TaskAdded
+            {
+                TaskId = c.Id,
+                CheckpointId = c.Id,
+                Title = c.Title,
+                Source = "tracker",
+                Order = order++,
+            });
+            var status = c.IsDone ? "done" : c.IsInProgress ? "in_progress" : null;
+            if (status != null)
+                _ctx.Events.Emit(new TaskStatusChanged { TaskId = c.Id, Status = status });
+        }
+        _ctx.Log($"seeded {track.Checkpoints.Count} checkpoints from tracker into run.db (+ kanban cards)");
     }
 
     private TrackerSnapshot ReadTrackerSafe()

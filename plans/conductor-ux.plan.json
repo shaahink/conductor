@@ -138,8 +138,9 @@
   },
   "limits": {
     "stallMinutes": 15,
-    "sessionTimeoutMinutes": 240,
+    "sessionTimeoutMinutes": 90,
     "maxResumesPerSession": 3,
+    "maxSessions": 40,
     "stallPatternTermination": true
   },
   "report": {
