@@ -15,20 +15,20 @@
    ● test 4s               │  F7        0.08                                                                  
    ○ lint                  │  2 rows                                                                          
                            │                                                                                  
- ── TASKS ──               │                                                                                  
-   ✓ Add truth-tier con…   │                                                                                  
-   ● Wire RunDb.GetLast…   │                                                                                  
-   ○ Cache gate results…   │                                                                                  
+ ── TASKS ──               │  Run internals                                                                   
+   ✓ Add truth-tier con…   │  mode       live                                                                 
+   ● Wire RunDb.GetLast…   │  url        http://127.0.0.1:4317                                                
+   ○ Cache gate results…   │  token      present                                                              
+                           │  streams    ● events   ● transcript                                              
+                           │  seq        events 0 · transcript 0 · console 0                                  
+                           │  poll       state 1s · spinner 120ms · toast anim 33ms                           
+                           │  run id     demo-run-id                                                          
+                           │  state dir  C:\Code\conductor\.conductor                                         
+                           │                                                                                  
+                           │  Session stats                                                                   
+                           │    #    stage in       out      reason   cache-read cost                         
+                           │    #12  F7    41.2k    3.2k     1.0k     188.4k    $0.12                         
+                           │    #11  F7    52.9k    4.4k     2.3k     201.3k    $0.14                         
                            │                                                                                  
                            │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   tab focus · ↑↓ pick · ←→ scroll cols · enter run  
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   tab focus · ↑↓ pick · ←→ scroll cols · enter run ·

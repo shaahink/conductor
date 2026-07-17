@@ -10,23 +10,23 @@
    ● F7.3 Truth-gate tier  │  SQL (tab to focus/blur):                                                        
  ○ F8 0/4 conductor chat…  │   s ON s.number = c.session_number AND s.run_id = c.run_id GROUP BY s.stage_id   
                            │                                                                                  
- ── GATES ──               │                                                                                  
-   ✓ build                 │                                                                                  
-   ● test 4s               │                                                                                  
-   ○ lint                  │                                                                                  
+ ── GATES ──               │  Run internals                                                                   
+   ✓ build                 │  mode       live                                                                 
+   ● test 4s               │  url        http://127.0.0.1:4317                                                
+   ○ lint                  │  token      present                                                              
+                           │  streams    ● events   ● transcript                                              
+ ── TASKS ──               │  seq        events 0 · transcript 0 · console 0                                  
+   ✓ Add truth-tier con…   │  poll       state 1s · spinner 120ms · toast anim 33ms                           
+   ● Wire RunDb.GetLast…   │  run id     demo-run-id                                                          
+   ○ Cache gate results…   │  state dir  C:\Code\conductor\.conductor                                         
                            │                                                                                  
- ── TASKS ──               │                                                                                  
-   ✓ Add truth-tier con…   │                                                                                  
-   ● Wire RunDb.GetLast…   │                                                                                  
-   ○ Cache gate results…   │                                                                                  
+                           │  Session stats                                                                   
+                           │    #    stage in       out      reason   cache-read cost                         
+                           │    #12  F7    41.2k    3.2k     1.0k     188.4k    $0.12                         
+                           │    #11  F7    52.9k    4.4k     2.3k     201.3k    $0.14                         
+                           │    #8   F6    0        0        0        0         $0.09                         
                            │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
+                           │    1 session with cost but zero tokens — pre-bug-#5 data, not a Face bug         
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  

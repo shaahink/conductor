@@ -400,3 +400,7 @@ func urlEncode(s string) string {
 	}
 	return buf.String()
 }
+
+// HasWriteToken reports whether this live source can POST. Reads work without a token; writes are
+// refused by the control plane without it, so the Dev tab can say which of the two you have.
+func (s *liveSource) HasWriteToken() bool { return s.token != "" }

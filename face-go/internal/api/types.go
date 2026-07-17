@@ -31,6 +31,12 @@ type DataSource interface {
 	PostBugResolve(req BugResolveRequestDto) (*KnowledgeWriteResultDto, error)
 	FetchPromptPreview(stageId, kind string) (*PromptPreviewDto, error)
 	QueryReport(sql string) (*QueryResultDto, error)
+
+	// HasWriteToken reports whether this source carries the per-run write token every POST needs
+	// (U2.3). The Dev tab surfaces it because "my writes are silently refused" has exactly one
+	// common cause — attaching with --url but no token — and nothing in the Face said so.
+	HasWriteToken() bool
+
 	PostControl(cmd ControlRequestDto) (*ControlAcceptedDto, error)
 	PostInject(req InjectRequestDto) (*InjectAcceptedDto, error)
 	PostProcessKill(req ProcessKillRequestDto) (*ProcessKillResultDto, error)

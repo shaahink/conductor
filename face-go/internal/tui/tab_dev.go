@@ -84,6 +84,15 @@ func (m Model) handleDevKey(key string) (tea.Model, tea.Cmd) {
 		}
 	case "right", "l":
 		m.reportHScroll++ // scroll right (renderer clamps)
+	// U2.3: pgup/pgdn scroll the WHOLE pane, because internals + session stats sit below a result
+	// grid that can be arbitrarily tall. ↑↓ stays on the quick-query list (the console's existing
+	// behaviour, unchanged) — so the page keys are what reach the sections underneath.
+	case "pgup":
+		m.devScroll = max(0, m.devScroll-m.paneRows())
+	case "pgdown":
+		m.devScroll += m.paneRows()
+	case "home":
+		m.devScroll = 0
 	case "enter":
 		if m.reportQuickSelected < len(list) {
 			sql := list[m.reportQuickSelected].SQL
@@ -150,7 +159,132 @@ func (m Model) renderDevPane() (string, string) {
 		lines = append(lines, "")
 		lines = append(lines, m.renderResultTable(m.data.ReportResult)...)
 	}
-	return strings.Join(lines, "\n"), "tab focus · ↑↓ pick · ←→ scroll cols · enter run"
+
+	// U2.3: the developer screen's other half — what the machine is actually doing.
+	lines = append(lines, "", m.renderDevInternals(), "", m.renderDevSessionStats())
+
+	// The console's result grid is unbounded, so the sections below it are only reachable by
+	// scrolling the composed pane. Measure RENDERED lines, not slice elements: homeSection returns
+	// one multi-line string per section, so len(lines) is ~16 where the body is 26 lines — which
+	// computed maxScroll as 0 and made pgdn silently do nothing while the frame clipped the bottom.
+	rendered := strings.Split(strings.Join(lines, "\n"), "\n")
+	rows := m.paneRows()
+	maxScroll := max(0, len(rendered)-rows)
+	scroll := min(m.devScroll, maxScroll)
+	if maxScroll > 0 {
+		rendered = rendered[scroll:min(scroll+rows, len(rendered))]
+	}
+	help := "tab focus · ↑↓ pick · ←→ scroll cols · enter run"
+	if maxScroll > 0 {
+		help += fmt.Sprintf(" · pgup/pgdn pane (%d/%d)", scroll, maxScroll)
+	}
+	return strings.Join(rendered, "\n"), help
+}
+
+// --- U2.3: run internals ------------------------------------------------------
+
+// devInternalLabels is every label this pane puts in the shared homeRow gutter. homeRow pads a label
+// to homeLabelW with NO separator, so a label of exactly that width butts straight against its value
+// ("write tokenpresent" — the first cut of this pane did precisely that). Listing them here is what
+// makes the rule testable: TestDevInternalsLabelsFitTheGutter checks the whole set, so the next row
+// added can't reintroduce it.
+var devInternalLabels = []string{
+	"mode", "url", "token", "streams", "seq", "poll", "run id", "state dir", "last error",
+}
+
+// renderDevInternals answers "is the Face actually wired to anything, and how". Every value is read
+// from live client state — nothing here is a constant dressed up as a reading.
+func (m Model) renderDevInternals() string {
+	c := m.data.Connection
+	conn := func(ok bool, label string) string {
+		if ok {
+			return safeStyle.Render("●") + " " + textStyle.Render(label)
+		}
+		return destructStyle.Render("○") + " " + subtleStyle.Render(label)
+	}
+
+	url := m.baseURL
+	if url == "" {
+		url = "—"
+	}
+	// Token presence, never the token itself: this pane is the one a developer screenshots.
+	tok := destructStyle.Render("absent — writes will be refused")
+	if m.source.HasWriteToken() {
+		tok = safeStyle.Render("present")
+	}
+	if c.Mode == api.ModeDemo {
+		tok = subtleStyle.Render("n/a (demo)")
+	}
+
+	rows := []string{
+		homeRow("mode", textStyle.Render(string(c.Mode))),
+		homeRow("url", textStyle.Render(url)),
+		// "write token" is exactly homeLabelW (11) chars, so %-11s pads it to nothing and the value
+		// collides with the label ("write tokenpresent"). Labels in this gutter must be ≤10.
+		homeRow("token", tok),
+		homeRow("streams", conn(c.EventsConnected, "events")+"   "+
+			conn(c.TranscriptConnected, "transcript")),
+		homeRow("seq", subtleStyle.Render(fmt.Sprintf("events %d · transcript %d · console %d",
+			m.data.LastEventSeq, m.data.LastTxSeq, m.consoleSeq))),
+		// The cadences are the code's real constants (messages.go), not aspirations.
+		homeRow("poll", subtleStyle.Render("state 1s · spinner 120ms · toast anim 33ms")),
+	}
+	if s := m.data.Plan; s != nil {
+		if s.RunId != "" {
+			rows = append(rows, homeRow("run id", textStyle.Render(s.RunId)))
+		}
+		if s.StateDir != "" {
+			rows = append(rows, homeRow("state dir", subtleStyle.Render(s.StateDir)))
+		}
+	}
+	if c.LastError != nil && *c.LastError != "" {
+		rows = append(rows, homeRow("last error", destructStyle.Render(*c.LastError)))
+	}
+	return homeSection("Run internals", rows...)
+}
+
+// --- U2.3: per-session stats --------------------------------------------------
+
+// renderDevSessionStats is the per-session token/cost table. The numbers are SUMMED server-side from
+// the `costs` table (GET /sessions, U2.2) — the sessions table stores none of them.
+//
+// A session showing real cost against 0 tokens is NOT a bug here: every claude-native session before
+// bug #5 (ClaudeProvider never read the `usage` object, fixed in 71fa214) recorded exactly that. This
+// table renders what the database says and lets that read as odd, rather than hiding the row or
+// back-filling a plausible number — the whole point of a developer screen.
+func (m Model) renderDevSessionStats() string {
+	if len(m.data.Sessions) == 0 {
+		return homeSection("Session stats", subtleStyle.Render("no sessions yet"))
+	}
+	rows := []string{subtleStyle.Render(fmt.Sprintf("  %-4s %-5s %-8s %-8s %-8s %-9s %s",
+		"#", "stage", "in", "out", "reason", "cache-read", "cost"))}
+	var zeroTokenRows int
+	for _, r := range m.data.Sessions {
+		if r.TokensIn == 0 && r.TokensOut == 0 && r.CostUsd > 0 {
+			zeroTokenRows++
+		}
+		cost := subtleStyle.Render(pad("—", 7))
+		if r.CostUsd > 0 {
+			cost = peachStyle.Render(pad(fmtCost(r.CostUsd), 7))
+		}
+		row := textStyle.Render(pad(fmt.Sprintf("#%d", r.Number), 4)) + " " +
+			accentStyle.Render(pad(r.StageId, 5)) + " " +
+			textStyle.Render(pad(widgets.FmtTokens(r.TokensIn), 8)) + " " +
+			textStyle.Render(pad(widgets.FmtTokens(r.TokensOut), 8)) + " " +
+			textStyle.Render(pad(widgets.FmtTokens(r.TokensThink), 8)) + " " +
+			textStyle.Render(pad(widgets.FmtTokens(r.TokensCache), 9)) + " " +
+			cost
+		rows = append(rows, "  "+lipgloss.NewStyle().MaxWidth(max(1, m.paneCols()-2)).Render(row))
+	}
+	// Name the known cause rather than letting a developer debug the Face for an engine-side gap.
+	// Hard-clipped: a note that word-wraps loses its indent and shears the section (STYLE.md).
+	if zeroTokenRows > 0 {
+		note := fmt.Sprintf("%s with cost but zero tokens — pre-bug-#5 data, not a Face bug",
+			plural(zeroTokenRows, "session"))
+		rows = append(rows, "", "  "+subtleStyle.Render(
+			lipgloss.NewStyle().MaxWidth(max(1, m.paneCols()-2)).Render(note)))
+	}
+	return homeSection("Session stats", rows...)
 }
 
 // renderResultTable renders a result grid with padded, aligned columns and horizontal scrolling for

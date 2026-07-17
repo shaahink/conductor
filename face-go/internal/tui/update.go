@@ -520,6 +520,7 @@ func (m Model) openTab(t MainTab) (tea.Model, tea.Cmd) {
 			m.reportEditor = widgets.NewTextArea(defaultReportSQL, max(10, m.paneCols()), 1)
 		}
 		m.reportFocusQuery = true
+		m.devScroll = 0
 		return m, nil
 	case TabConsole:
 		m.consoleScroll = 0

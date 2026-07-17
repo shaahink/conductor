@@ -161,6 +161,9 @@ type Model struct {
 	reportFocusQuery    bool
 	reportHScroll       int      // horizontal scroll (steps) for wide result tables
 	reportHistory       []string // recently-run queries, most-recent-first
+	// devScroll scrolls the whole Dev pane (pgup/pgdn): the U2.3 internals + session stats sit under
+	// a result grid of unbounded height, so without this they can be pushed out of reach.
+	devScroll int
 
 	// Processes tab
 	processSelected int

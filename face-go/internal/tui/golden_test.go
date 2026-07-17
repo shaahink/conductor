@@ -94,6 +94,7 @@ func (fakeSource) FetchPromptPreview(_, _ string) (*api.PromptPreviewDto, error)
 	return nil, nil
 }
 func (fakeSource) QueryReport(sql string) (*api.QueryResultDto, error) { return nil, nil }
+func (fakeSource) HasWriteToken() bool                                 { return true }
 func (fakeSource) PostControl(api.ControlRequestDto) (*api.ControlAcceptedDto, error) {
 	return &api.ControlAcceptedDto{Accepted: true}, nil
 }
@@ -467,6 +468,23 @@ func TestGolden(t *testing.T) {
 					{Values: []string{"F7", "0.08"}},
 				},
 			}})
+			return m
+		}},
+		// U2.3: the run internals + per-session stats live below the console's result grid, so the
+		// bottom of the pane is the only place they can be pinned — including the note that names
+		// bug #5 for the cost-with-zero-tokens session.
+		{"dev_scrolled", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("d"))
+			m, _ = m.Update(MsgReportResult{Result: &api.QueryResultDto{
+				Columns: []string{"stage_id", "cost_usd"},
+				Rows: []api.QueryRowDto{
+					{Values: []string{"F1", "0.42"}},
+					{Values: []string{"F7", "0.08"}},
+				},
+			}})
+			mm := m.(Model)
+			mm.reportFocusQuery = false // the editor owns every key while focused
+			m, _ = mm.Update(keyMsg("pgdown"))
 			return m
 		}},
 		{"processes", func(m tea.Model) tea.Model {

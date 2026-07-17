@@ -1021,3 +1021,7 @@ func makeFakeSessions() []SessionRowDto {
 func strPtr(s string) *string {
 	return &s
 }
+
+// HasWriteToken: the demo source accepts every write locally — there is no control plane to refuse
+// one — so this is true rather than a fake "absent" that would send a reviewer token-hunting.
+func (s *demoSource) HasWriteToken() bool { return true }
