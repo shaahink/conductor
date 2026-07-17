@@ -27,18 +27,25 @@ const (
 	TabKnowledge
 	TabTelegram
 	TabKanban
+	// TabDev is the developer screen (U2.3): the SQL console that used to be Report, plus run
+	// internals and per-session token/cost stats. Report answers "how is the run going"; Dev
+	// answers "what is the machine actually doing". It goes LAST on purpose — see tabKey.
+	TabDev
 	tabCount
 )
 
-var tabNames = [tabCount]string{"Home", "Agent", "Sessions", "Timeline", "Procs", "Console", "Templates", "Plan", "Report", "Knowledge", "Telegram", "Kanban"}
+var tabNames = [tabCount]string{"Home", "Agent", "Sessions", "Timeline", "Procs", "Console", "Templates", "Plan", "Report", "Knowledge", "Telegram", "Kanban", "Dev"}
 
 // tabKey is the mnemonic that jumps straight to each tab (also shown in the strip). First-letter where
 // it's free; Procs takes o and Telegram takes g (their first letters collide), Plan takes p — freed
 // by moving sidebar-collapse to `\` — and Kanban takes b ("board"; k is Knowledge). Home takes h, free
-// since the tab-mnemonic relabel moved Sessions to s. Digits 1–9 reach Home…Report and 0 reaches
-// Knowledge; Telegram and Kanban are the two tabs past the digits — mnemonic and tab-cycle only. Keep
-// this in sync with renderHelpOverlay's Tabs legend.
-var tabKey = [tabCount]string{"h", "a", "s", "t", "o", "c", "e", "p", "r", "k", "g", "b"}
+// since the tab-mnemonic relabel moved Sessions to s. Dev takes d, freed by moving the Plan editor's
+// delete to `x` (matching Procs, where `x` is already the destructive-confirm key): a mnemonic is a
+// GLOBAL key, and handleKey runs the mnemonic loop before the pane handler whenever the tab isn't in
+// an owning sub-state, so leaving `d` on plan-delete would have made it unreachable from the list.
+// Digits 1–9 reach Home…Report and 0 reaches Knowledge; Telegram, Kanban and Dev are the three tabs
+// past the digits — mnemonic and tab-cycle only. Keep in sync with renderHelpOverlay's Tabs legend.
+var tabKey = [tabCount]string{"h", "a", "s", "t", "o", "c", "e", "p", "r", "k", "g", "b", "d"}
 
 // CmdMode is a transient bottom-bar input that floats over the dashboard instead of a full modal.
 type CmdMode int
@@ -140,7 +147,15 @@ type Model struct {
 	// Sessions tab
 	sessionSelected int
 
-	// Report tab
+	// Report tab (U2.2: the rendered run report — scroll is its only interaction)
+	reportScroll int
+	// reportScores holds the sanctioned canned scores query. It is deliberately NOT data.ReportResult:
+	// that field belongs to the Dev console, and sharing it would make opening Report silently wipe
+	// the developer's last query result.
+	reportScores *api.QueryResultDto
+
+	// Dev tab — the SQL console (moved here from Report in U2.2; see tab_dev.go for why these keep
+	// their report* names).
 	reportEditor        widgets.TextArea
 	reportQuickSelected int
 	reportFocusQuery    bool

@@ -1,5 +1,5 @@
  ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42 
-  h Home  a s t o c e p r k g b                                                                            
+  h Home  a s t o c e p r k g b d                                                                          
                            │                                                                               
  ▶ PLAN                    │  Server                                                                       
  ✓ F0 3/3 Foundations      │  mode       live                                                              
@@ -11,7 +11,7 @@
  ○ F8 0/4 cond│     h Home       a Agent      s Sessions                                       │           
               │     t Timeline   o Procs      c Console                                        │           
  ── GATES ──  │     e Templates  p Plan       r Report                                         │           
-   ✓ build    │     k Knowledge  g Telegram   b Kanban                                         │           
+   ✓ build    │     k Knowledge  g Telegram   b Kanban     d Dev                               │           
    ● test 4s  │                                                                                │           
    ○ lint     │   Palette  :  red = confirms, and says what it will do                         │           
               │     Run    pause · resume · stop-after · approve · heartbeat · reload-plan     │           

@@ -274,6 +274,19 @@ func (s *demoSource) FetchPromptPreview(stageId, kind string) (*PromptPreviewDto
 }
 
 func (s *demoSource) QueryReport(sql string) (*QueryResultDto, error) {
+	// The Report tab's scores section (U2.2) runs a canned query against `scores`, so the demo has to
+	// answer by SHAPE — a source that returns stage/cost columns to every query would render the
+	// verifier section as nonsense offline, which is exactly what --demo exists to catch.
+	if strings.Contains(strings.ToLower(sql), "from scores") {
+		return &QueryResultDto{
+			Columns: []string{"session_number", "score", "verdict"},
+			Rows: []QueryRowDto{
+				{Values: []string{"11", "66", "WARN"}},
+				{Values: []string{"8", "90", "PASS"}},
+				{Values: []string{"2", "88", "PASS"}},
+			},
+		}, nil
+	}
 	return &QueryResultDto{
 		Columns: []string{"stage", "cost"},
 		Rows: []QueryRowDto{
@@ -983,13 +996,25 @@ func makeFakeTelegramStatus() *TelegramStatusDto {
 // makeFakeSessions mirrors the real wire order: GET /sessions returns newest-first
 // (SqliteRunStore ORDER BY number DESC), so index 0 is the current session.
 func makeFakeSessions() []SessionRowDto {
+	// Costs/tokens mirror the real wire: SUMMED per session server-side, and session 8 deliberately
+	// carries a real cost with ZERO tokens — the shape a pre-bug-#5 session honestly recorded — so
+	// the Report digest and the Dev stats table are reviewed against that case, not only happy rows.
 	return []SessionRowDto{
-		{Number: 12, StageId: "F7", Kind: "Deliver", Outcome: nil, Attempt: 2, CommitCount: 0},
+		{Number: 12, StageId: "F7", Kind: "Deliver", Outcome: nil, Attempt: 2, CommitCount: 0,
+			StartedUtc: "2026-07-15T09:14:02Z", CostUsd: 0.12,
+			TokensIn: 41213, TokensOut: 3187, TokensThink: 1024, TokensCache: 188420},
 		{Number: 11, StageId: "F7", Kind: "Deliver", Outcome: strPtr("needsRetry"), Attempt: 1, CommitCount: 2, GateSummary: strPtr("build ✓ test ✗ lint ○"),
-			ResultSummary: strPtr("Wired the **caching layer** in `RunDb` but `test` is still red — see the gate output.")},
-		{Number: 8, StageId: "F6", Kind: "Deliver", Outcome: strPtr("completed"), Attempt: 1, CommitCount: 1, GateSummary: strPtr("build ✓ test ✓")},
-		{Number: 2, StageId: "F1", Kind: "Deliver", Outcome: strPtr("completed"), Attempt: 1, CommitCount: 4, GateSummary: strPtr("build ✓ test ✓ lint ✓")},
-		{Number: 1, StageId: "F0", Kind: "Deliver", Outcome: strPtr("completed"), Attempt: 1, CommitCount: 3, GateSummary: strPtr("build ✓ test ✓")},
+			ResultSummary: strPtr("Wired the **caching layer** in `RunDb` but `test` is still red — see the gate output."),
+			StartedUtc:    "2026-07-15T08:31:10Z", EndedUtc: strPtr("2026-07-15T09:12:55Z"), CostUsd: 0.1408,
+			TokensIn: 52881, TokensOut: 4402, TokensThink: 2310, TokensCache: 201338},
+		{Number: 8, StageId: "F6", Kind: "Deliver", Outcome: strPtr("completed"), Attempt: 1, CommitCount: 1, GateSummary: strPtr("build ✓ test ✓"),
+			StartedUtc: "2026-07-15T07:48:20Z", EndedUtc: strPtr("2026-07-15T08:29:44Z"), CostUsd: 0.0912},
+		{Number: 2, StageId: "F1", Kind: "Deliver", Outcome: strPtr("completed"), Attempt: 1, CommitCount: 4, GateSummary: strPtr("build ✓ test ✓ lint ✓"),
+			StartedUtc: "2026-07-15T07:02:05Z", EndedUtc: strPtr("2026-07-15T07:46:31Z"), CostUsd: 0.0405,
+			TokensIn: 18904, TokensOut: 2733, TokensCache: 60112},
+		{Number: 1, StageId: "F0", Kind: "Deliver", Outcome: strPtr("completed"), Attempt: 1, CommitCount: 3, GateSummary: strPtr("build ✓ test ✓"),
+			StartedUtc: "2026-07-15T06:40:12Z", EndedUtc: strPtr("2026-07-15T07:00:58Z"), CostUsd: 0.0275,
+			TokensIn: 9871, TokensOut: 1508, TokensCache: 22440},
 	}
 }
 

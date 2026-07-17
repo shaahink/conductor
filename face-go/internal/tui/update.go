@@ -195,6 +195,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case MsgReportScores:
+		// A failed scores query must not blank the whole report: the section renders the error and
+		// every other section (which came from /state + /sessions) still stands.
+		if msg.Err != "" {
+			errCopy := msg.Err
+			m.reportScores = &api.QueryResultDto{Error: &errCopy}
+		} else {
+			m.reportScores = msg.Result
+		}
+		return m, nil
+
 	case MsgKnowledgeUpdated:
 		if msg.Ledger != nil {
 			m.data.Ledger = msg.Ledger.Entries
@@ -500,6 +511,11 @@ func (m Model) openTab(t MainTab) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case TabReport:
+		// U2.2: the report is rendered, not queried. Scroll resets to the top so the run header —
+		// the answer to "how is it going" — is what opening the tab actually shows.
+		m.reportScroll = 0
+		return m, m.cmdFetchScores()
+	case TabDev:
 		if strings.TrimSpace(m.reportEditor.Value()) == "" {
 			m.reportEditor = widgets.NewTextArea(defaultReportSQL, max(10, m.paneCols()), 1)
 		}
@@ -527,7 +543,7 @@ func (m Model) openTab(t MainTab) (tea.Model, tea.Cmd) {
 // tabHandlesAllKeys reports whether the active tab is in a sub-state that should capture every key.
 func (m Model) tabHandlesAllKeys() bool {
 	switch m.tab {
-	case TabReport:
+	case TabDev:
 		return m.reportFocusQuery
 	case TabTemplates:
 		return m.promptMode == PromptEdit || m.promptPreviewOn
@@ -566,6 +582,8 @@ func (m Model) handleTabKey(key string) (tea.Model, tea.Cmd) {
 		return m.handlePlanKey(key)
 	case TabReport:
 		return m.handleReportKey(key)
+	case TabDev:
+		return m.handleDevKey(key)
 	case TabKnowledge:
 		return m.handleKnowledgeKey(key)
 	case TabTelegram:

@@ -1,14 +1,14 @@
  ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42    
- h a s t o c e  p Plan  r k g b                                                                               
+ h a s t o c e p r k g b  d Dev                                                                               
                            │                                                                                  
- ▶ PLAN                    │   Stages · Gates · Settings · Import · Prompt    conductor-foreman · v7          
- ✓ F0 3/3 Foundations      │                                                                                  
- ✓ F6 5/5 Ink TUI v1       │    F6   Ink TUI v1               5s·deliver claude-opus-4-8                      
- ● F7 2/5 Gate … 1× $0.30  │    F7   Gate caching + truth ga… 5s·deliver claude-opus-4-8                      
-   ✓ F7.1 Plan import      │    F8   conductor chat + Telegr… 4s·deliver claude-sonnet-5                      
+ ▶ PLAN                    │  Queries (↑↓ pick · enter run):                                                  
+ ✓ F0 3/3 Foundations      │    cost per stage                                                                
+ ✓ F6 5/5 Ink TUI v1       │    which gates fail most                                                         
+ ● F7 2/5 Gate … 1× $0.30  │    recent sessions                                                               
+   ✓ F7.1 Plan import      │    verifier scores                                                               
    ✓ F7.2 Re-import diff   │                                                                                  
-   ● F7.3 Truth-gate tier  │    ⚠ delete stage F7 ?  y/N                                                      
- ○ F8 0/4 conductor chat…  │                                                                                  
+   ● F7.3 Truth-gate tier  │  SQL (tab to focus/blur):                                                        
+ ○ F8 0/4 conductor chat…  │   s ON s.number = c.session_number AND s.run_id = c.run_id GROUP BY s.stage_id   
                            │                                                                                  
  ── GATES ──               │                                                                                  
    ✓ build                 │                                                                                  
@@ -31,4 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   y confirm · n cancel                              
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   tab focus · ↑↓ pick · ←→ scroll cols · enter run  

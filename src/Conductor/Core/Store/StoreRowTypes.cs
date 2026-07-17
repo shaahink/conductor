@@ -23,7 +23,15 @@ public sealed record SessionSummaryRow(
     int ResumeCount,
     string? GateSummary,
     string? ResultSummary,
-    int CommitCount
+    int CommitCount,
+    // U2.2/U2.3: per-session cost + tokens, aggregated from the `costs` table (which is keyed by
+    // session_number and holds MANY rows per session — one per category: agent | gate | advisor).
+    // The sessions table itself stores neither, so these are summed, never joined.
+    double CostUsd = 0,
+    long TokensIn = 0,
+    long TokensOut = 0,
+    long TokensThink = 0,
+    long TokensCache = 0
 );
 
 public sealed record SessionDetailRow(

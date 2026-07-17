@@ -65,10 +65,23 @@ public sealed partial class SqliteRunStore
 
     public IReadOnlyList<SessionSummaryRow> QuerySessions(string runId)
     {
+        // The cost/token columns come from `costs`, which holds MANY rows per session (one per
+        // category: agent | gate | advisor). Correlated SUM subqueries, never a JOIN — joining
+        // multiplies the session row by its cost rows and every per-session figure comes out wrong.
         var rows = Query(
-            "SELECT number, stage_id, kind, started_utc, ended_utc, outcome, attempt, " +
-            "resume_count, gate_summary, result_summary, commit_count " +
-            "FROM sessions WHERE run_id = @runId ORDER BY number DESC",
+            "SELECT s.number, s.stage_id, s.kind, s.started_utc, s.ended_utc, s.outcome, s.attempt, " +
+            "s.resume_count, s.gate_summary, s.result_summary, s.commit_count, " +
+            "(SELECT COALESCE(SUM(c.cost_usd), 0) FROM costs c " +
+            " WHERE c.run_id = s.run_id AND c.session_number = s.number) AS cost_usd, " +
+            "(SELECT COALESCE(SUM(c.tokens_in), 0) FROM costs c " +
+            " WHERE c.run_id = s.run_id AND c.session_number = s.number) AS tokens_in, " +
+            "(SELECT COALESCE(SUM(c.tokens_out), 0) FROM costs c " +
+            " WHERE c.run_id = s.run_id AND c.session_number = s.number) AS tokens_out, " +
+            "(SELECT COALESCE(SUM(c.tokens_think), 0) FROM costs c " +
+            " WHERE c.run_id = s.run_id AND c.session_number = s.number) AS tokens_think, " +
+            "(SELECT COALESCE(SUM(c.tokens_cache), 0) FROM costs c " +
+            " WHERE c.run_id = s.run_id AND c.session_number = s.number) AS tokens_cache " +
+            "FROM sessions s WHERE s.run_id = @runId ORDER BY s.number DESC",
             ("@runId", runId));
 
         return rows.Select(r => new SessionSummaryRow(
@@ -82,7 +95,12 @@ public sealed partial class SqliteRunStore
             ResumeCount: Convert.ToInt32(r["resume_count"]),
             GateSummary: r["gate_summary"] as string,
             ResultSummary: r["result_summary"] as string,
-            CommitCount: Convert.ToInt32(r["commit_count"])
+            CommitCount: Convert.ToInt32(r["commit_count"]),
+            CostUsd: Convert.ToDouble(r["cost_usd"]),
+            TokensIn: Convert.ToInt64(r["tokens_in"]),
+            TokensOut: Convert.ToInt64(r["tokens_out"]),
+            TokensThink: Convert.ToInt64(r["tokens_think"]),
+            TokensCache: Convert.ToInt64(r["tokens_cache"])
         )).ToList();
     }
 

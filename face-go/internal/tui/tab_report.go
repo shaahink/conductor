@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
@@ -11,207 +12,334 @@ import (
 	"conductor-face-go/internal/widgets"
 )
 
-var quickQueries = []struct {
-	Label string
-	SQL   string
-}{
-	{"cost per stage", "SELECT s.stage_id, SUM(c.cost_usd) as cost_usd FROM costs c JOIN sessions s ON s.number = c.session_number AND s.run_id = c.run_id GROUP BY s.stage_id ORDER BY cost_usd DESC"},
-	{"which gates fail most", "SELECT name, COUNT(*) as failures FROM gates WHERE passed = 0 GROUP BY name ORDER BY failures DESC"},
-	{"recent sessions", "SELECT number, stage_id, kind, outcome FROM sessions ORDER BY number DESC LIMIT 20"},
-	{"verifier scores", "SELECT session_number, score, verdict FROM scores ORDER BY session_number DESC LIMIT 20"},
-}
+// The Report tab is the OWNER's run report (U2.2): "how is this run going", rendered — not a SQL
+// prompt. It replaced the SQL console, which moved to Dev (tab_dev.go) unchanged; the owner's
+// verdict on the old tab was "report being sql is stupid — show a good report visually".
+//
+// Everything here is rendered from data the Face ALREADY polls (/state + /sessions), with one
+// exception: verifier scores have no DTO on the wire, so they come from the canned query the spec
+// sanctions for exactly that gap. That result is kept in its own field (reportScores) and never in
+// data.ReportResult, which belongs to the Dev console — sharing it would make opening Report wipe
+// whatever the developer had just queried.
+//
+// No interaction beyond scroll, by design: a report you can accidentally edit is not a report.
 
-const defaultReportSQL = "SELECT s.stage_id, SUM(c.cost_usd) as cost_usd FROM costs c JOIN sessions s ON s.number = c.session_number AND s.run_id = c.run_id GROUP BY s.stage_id"
+// scoresSQL is the canned query behind the "Verifier scores" section. Kept identical in shape to the
+// Dev console's "verifier scores" quick query.
+const scoresSQL = "SELECT session_number, score, verdict FROM scores ORDER BY session_number DESC LIMIT 20"
 
-const reportHScrollStep = 8 // columns of horizontal scroll per left/right press
-
-type labeledQuery struct{ Label, SQL string }
-
-// reportQueries is the pickable list: the curated quick queries, then this run's history (most-recent
-// first) so a query you just ran is one keypress away to re-run or tweak.
-func (m Model) reportQueries() []labeledQuery {
-	out := make([]labeledQuery, 0, len(quickQueries)+len(m.reportHistory))
-	for _, q := range quickQueries {
-		out = append(out, labeledQuery{q.Label, q.SQL})
-	}
-	for _, h := range m.reportHistory {
-		out = append(out, labeledQuery{"↺ " + truncate(h, 44), h})
-	}
-	return out
-}
+// sessionsDigestMax caps the sessions section: a report is a summary, and the Sessions tab is one
+// keypress away for the full list.
+const sessionsDigestMax = 8
 
 func (m Model) handleReportKey(key string) (tea.Model, tea.Cmd) {
-	// Query editor has focus: full cursor editing; enter runs (SQL is single logical line here).
-	if m.reportFocusQuery {
-		switch key {
-		case "esc", "tab":
-			m.reportFocusQuery = false
-			return m, nil
-		case "enter":
-			return m.runReport(m.reportEditor.Value())
-		default:
-			m.reportEditor = m.reportEditor.Update(key)
-			return m, nil
-		}
-	}
-
-	list := m.reportQueries()
 	switch key {
 	case "esc":
 		return m.openTab(TabAgent)
-	case "tab":
-		m.reportFocusQuery = true
 	case "up", "k":
-		if m.reportQuickSelected > 0 {
-			m.reportQuickSelected--
+		if m.reportScroll > 0 {
+			m.reportScroll--
 		}
 	case "down", "j":
-		if m.reportQuickSelected < len(list)-1 {
-			m.reportQuickSelected++
-		}
-	case "left", "h":
-		if m.reportHScroll > 0 {
-			m.reportHScroll-- // scroll a wide result table left
-		}
-	case "right", "l":
-		m.reportHScroll++ // scroll right (renderer clamps)
-	case "enter":
-		if m.reportQuickSelected < len(list) {
-			sql := list[m.reportQuickSelected].SQL
-			m.reportEditor = widgets.NewTextArea(sql, max(10, m.paneCols()), 1)
-			return m.runReport(sql)
-		}
+		m.reportScroll++ // clamped by the renderer against the real body height
+	case "home":
+		m.reportScroll = 0
+	case "pgup":
+		m.reportScroll = max(0, m.reportScroll-m.paneRows())
+	case "pgdown":
+		m.reportScroll += m.paneRows()
 	}
 	return m, nil
 }
 
-func (m Model) runReport(sql string) (tea.Model, tea.Cmd) {
-	sql = strings.TrimSpace(sql)
-	if sql == "" {
-		return m, nil
-	}
-	m.reportHistory = pushHistory(m.reportHistory, sql)
-	m.reportHScroll = 0
-	m.data.ReportLoading = true
-	return m, m.cmdQueryReport(sql)
-}
-
-// pushHistory keeps the last 8 distinct queries, most-recent-first.
-func pushHistory(hist []string, sql string) []string {
-	out := []string{sql}
-	for _, h := range hist {
-		if h != sql {
-			out = append(out, h)
-		}
-	}
-	if len(out) > 8 {
-		out = out[:8]
-	}
-	return out
-}
-
 func (m Model) renderReportPane() (string, string) {
-	var lines []string
-	list := m.reportQueries()
-	lines = append(lines, subtleStyle.Render("Queries (↑↓ pick · enter run):"))
-	for i, q := range list {
-		marker := "  "
-		if i == m.reportQuickSelected && !m.reportFocusQuery {
-			marker = accentStyle.Render("› ")
-		}
-		lines = append(lines, marker+truncate(q.Label, m.paneCols()-4))
+	s := m.data.Plan
+	if s == nil {
+		return subtleStyle.Render("No run attached — nothing to report yet."), "esc back"
 	}
-	lines = append(lines, "")
+	w := m.paneCols()
+	sections := []string{
+		m.renderReportRun(s),
+		m.renderReportStages(s, w),
+		m.renderReportSessions(w),
+		m.renderReportGates(s),
+	}
+	if sc := m.renderReportScores(); sc != "" {
+		sections = append(sections, sc)
+	}
+	body := strings.Join(sections, "\n\n")
 
-	sf := subtleStyle
-	if m.reportFocusQuery {
-		sf = accentStyle
+	// Clamp scroll to the real body: scrolling past the end leaves the owner staring at blank space
+	// wondering whether the report broke.
+	lines := strings.Split(body, "\n")
+	rows := m.paneRows()
+	maxScroll := max(0, len(lines)-rows)
+	scroll := min(m.reportScroll, maxScroll)
+	if scroll > 0 || maxScroll > 0 {
+		end := min(scroll+rows, len(lines))
+		lines = lines[scroll:end]
 	}
-	ed := m.reportEditor
-	ed.SetSize(max(10, m.paneCols()), 1)
-	sqlView := textStyle.Render(truncate(ed.Value(), m.paneCols()))
-	if m.reportFocusQuery {
-		sqlView = ed.View() // live caret + horizontal scroll within the line
+	help := "↑↓ scroll · esc back"
+	if maxScroll > 0 {
+		help = fmt.Sprintf("↑↓ scroll (%d/%d) · esc back", scroll, maxScroll)
 	}
-	lines = append(lines, sf.Render("SQL (tab to focus/blur):"), sqlView)
-
-	if m.data.ReportLoading {
-		lines = append(lines, "", subtleStyle.Render("running…"))
-	} else if m.data.ReportResult != nil {
-		lines = append(lines, "")
-		lines = append(lines, m.renderResultTable(m.data.ReportResult)...)
-	}
-	return strings.Join(lines, "\n"), "tab focus · ↑↓ pick · ←→ scroll cols · enter run"
+	return strings.Join(lines, "\n"), help
 }
 
-// renderResultTable renders a result grid with padded, aligned columns and horizontal scrolling for
-// tables wider than the pane (←→ when the query isn't focused).
-func (m Model) renderResultTable(res *api.QueryResultDto) []string {
-	if res.Error != nil {
-		return []string{destructStyle.Render("error: " + *res.Error)}
-	}
-	if len(res.Columns) == 0 {
-		return []string{subtleStyle.Render("no rows")}
-	}
+// --- run header ---------------------------------------------------------------
 
-	widths := make([]int, len(res.Columns))
-	for i, c := range res.Columns {
-		widths[i] = len([]rune(c))
+func (m Model) renderReportRun(s *api.StateDto) string {
+	cost := peachStyle.Render(fmt.Sprintf("$%.2f", s.TotalCostUsd))
+	if s.OverheadCostUsd > 0 {
+		cost += subtleStyle.Render(fmt.Sprintf("   +$%.2f overhead", s.OverheadCostUsd))
 	}
-	for _, row := range res.Rows {
-		for i, v := range row.Values {
-			if i < len(widths) && len([]rune(v)) > widths[i] {
-				widths[i] = len([]rune(v))
-			}
-		}
+	rows := []string{
+		homeRow("plan", textStyle.Render(s.PlanName)),
+		homeRow("status", widgets.StatusBadge(s.Status)),
+		homeRow("progress", homeProgress(s)),
+		homeRow("cost", cost),
+		homeRow("tokens", subtleStyle.Render(fmt.Sprintf("%s in · %s out · %s reasoning",
+			widgets.FmtTokens(s.TokensInput), widgets.FmtTokens(s.TokensOutput),
+			widgets.FmtTokens(s.TokensReasoning)))),
+		homeRow("elapsed", m.reportElapsed()),
 	}
-	// Build each row as full (untruncated) plain text, then window horizontally.
-	full := func(vals []string) string {
-		var cells []string
-		for i, v := range vals {
-			w := 8
-			if i < len(widths) {
-				w = widths[i]
-			}
-			cells = append(cells, v+strings.Repeat(" ", max(0, w-len([]rune(v)))))
-		}
-		return strings.Join(cells, "  ")
+	if s.AttentionReason != nil && *s.AttentionReason != "" {
+		rows = append(rows, homeRow("attention", destructStyle.Render(*s.AttentionReason)))
 	}
-	// Clamp the horizontal offset to the widest row so scroll-right can't run off into blank space.
-	rowWidth := len([]rune(full(res.Columns)))
-	maxOff := rowWidth - m.paneCols()
-	if maxOff < 0 {
-		maxOff = 0
-	}
-	off := min(m.reportHScroll*reportHScrollStep, maxOff)
-	hclip := func(s string) string {
-		r := []rune(s)
-		if off < len(r) {
-			r = r[off:]
-		} else {
-			r = nil
-		}
-		return lipgloss.NewStyle().MaxWidth(m.paneCols()).Render(string(r))
-	}
-
-	out := []string{accentStyle.Render(hclip(full(res.Columns)))}
-	for _, row := range res.Rows {
-		out = append(out, textStyle.Render(hclip(full(row.Values))))
-	}
-	if res.Truncated {
-		out = append(out, warnStyle.Render("… truncated"))
-	}
-	foot := pluralRows(len(res.Rows))
-	if maxOff > 0 {
-		foot += fmt.Sprintf(" · cols %d–… (←→ scroll)", off+1)
-	}
-	out = append(out, subtleStyle.Render(foot))
-	return out
+	return homeSection("Run", rows...)
 }
 
-func pluralRows(n int) string {
+// reportElapsed sums the wall time of every session on the wire — the run's actual working time,
+// which is honest and deterministic. It is NOT "now minus run start": a run that sat parked
+// overnight did not spend the night working, and a wall clock would also make this untestable.
+func (m Model) reportElapsed() string {
+	var total time.Duration
+	counted := 0
+	for _, r := range m.data.Sessions {
+		if d, ok := m.sessionDuration(r); ok {
+			total += d
+			counted++
+		}
+	}
+	if counted == 0 {
+		return subtleStyle.Render("—")
+	}
+	return textStyle.Render(fmtDuration(total)) +
+		subtleStyle.Render(fmt.Sprintf(" across %s", plural(counted, "session")))
+}
+
+// sessionDuration is a session's wall time. A session still running has no EndedUtc, so the engine's
+// live SessionElapsedSec is used for exactly the session /state says is current — never a local
+// clock, which would desync the Face from the engine and make every golden frame time-dependent.
+func (m Model) sessionDuration(r api.SessionRowDto) (time.Duration, bool) {
+	if r.EndedUtc != nil {
+		start, okS := parseUTC(r.StartedUtc)
+		end, okE := parseUTC(*r.EndedUtc)
+		if okS && okE && !end.Before(start) {
+			return end.Sub(start), true
+		}
+		return 0, false
+	}
+	if s := m.data.Plan; s != nil && s.SessionNumber == r.Number && s.SessionElapsedSec > 0 {
+		return time.Duration(s.SessionElapsedSec * float64(time.Second)), true
+	}
+	return 0, false
+}
+
+func parseUTC(s string) (time.Time, bool) {
+	if s == "" {
+		return time.Time{}, false
+	}
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		return time.Time{}, false
+	}
+	return t, true
+}
+
+// fmtDuration renders a wall time the way an owner reads one: the two largest units that matter,
+// never "3724.184s".
+func fmtDuration(d time.Duration) string {
+	if d <= 0 {
+		return "—"
+	}
+	switch {
+	case d < time.Minute:
+		return fmt.Sprintf("%ds", int(d.Seconds()))
+	case d < time.Hour:
+		return fmt.Sprintf("%dm %02ds", int(d.Minutes()), int(d.Seconds())%60)
+	default:
+		return fmt.Sprintf("%dh %02dm", int(d.Hours()), int(d.Minutes())%60)
+	}
+}
+
+func plural(n int, unit string) string {
 	if n == 1 {
-		return "1 row"
+		return fmt.Sprintf("%d %s", n, unit)
 	}
-	return fmt.Sprintf("%d rows", n)
+	return fmt.Sprintf("%d %ss", n, unit)
+}
+
+// fmtCost renders a cost the way the rest of the Face does — 2dp — with one carve-out: a real but
+// sub-cent charge must not render as "$0.00". A gate-only session genuinely costs $0.003, and
+// rounding that to zero reads as free. "<$0.01" is small AND true.
+func fmtCost(v float64) string {
+	if v > 0 && v < 0.005 {
+		return "<$0.01"
+	}
+	return fmt.Sprintf("$%.2f", v)
+}
+
+// --- stages -------------------------------------------------------------------
+
+func (m Model) renderReportStages(s *api.StateDto, w int) string {
+	if len(s.Stages) == 0 {
+		return homeSection("Stages", subtleStyle.Render("no stages"))
+	}
+	rows := []string{reportStagesHeader()}
+	for _, st := range s.Stages {
+		glyph, gs := widgets.StageGlyph(st.State)
+		attempts := subtleStyle.Render("—")
+		if st.Attempts > 0 {
+			attempts = textStyle.Render(fmt.Sprintf("%d×", st.Attempts))
+		}
+		cost := subtleStyle.Render("—")
+		if st.CostUsd > 0 {
+			cost = peachStyle.Render(fmtCost(st.CostUsd))
+		}
+		outcome := subtleStyle.Render("—")
+		if st.LastOutcome != nil && *st.LastOutcome != "" {
+			outcome = sessionOutcomeStyle(*st.LastOutcome).Render(*st.LastOutcome)
+		}
+		// Every column is padded as PLAIN text and styled after (STYLE.md): padding a styled string
+		// pads its escape bytes and the whole table shears.
+		row := gs.Render(glyph) + " " +
+			accentStyle.Render(pad(st.Id, 5)) + " " +
+			textStyle.Render(pad(fmt.Sprintf("%d/%d", st.Done, st.Total), 6)) + " " +
+			padStyled(attempts, fmt.Sprintf("%d×", st.Attempts), 4, st.Attempts > 0) + " " +
+			padStyled(cost, fmtCost(st.CostUsd), 7, st.CostUsd > 0) + " " +
+			outcome
+		rows = append(rows, lipgloss.NewStyle().MaxWidth(w).Render(row))
+	}
+	return homeSection("Stages", rows...)
+}
+
+func reportStagesHeader() string {
+	return subtleStyle.Render(fmt.Sprintf("  %-5s %-6s %-4s %-7s %s", "stage", "done", "att", "cost", "last outcome"))
+}
+
+// pad pads plain text to w runes (never bytes — a multi-byte glyph would blow the column).
+func pad(s string, w int) string {
+	r := []rune(s)
+	if len(r) >= w {
+		return string(r[:w])
+	}
+	return s + strings.Repeat(" ", w-len(r))
+}
+
+// padStyled pads an ALREADY-styled cell by measuring its plain source text, so the ANSI escapes
+// never count toward the column width.
+func padStyled(styled, plain string, w int, usePlain bool) string {
+	src := "—"
+	if usePlain {
+		src = plain
+	}
+	if n := len([]rune(src)); n < w {
+		return styled + strings.Repeat(" ", w-n)
+	}
+	return styled
+}
+
+// --- sessions digest ----------------------------------------------------------
+
+func (m Model) renderReportSessions(w int) string {
+	if len(m.data.Sessions) == 0 {
+		return homeSection("Sessions", subtleStyle.Render("no sessions yet"))
+	}
+	rows := []string{subtleStyle.Render(fmt.Sprintf("  %-4s %-5s %-9s %-11s %-8s %-7s %s",
+		"#", "stage", "kind", "outcome", "duration", "cost", "commits"))}
+
+	// /sessions is newest-first on the wire (STYLE.md) — the digest keeps that order: the session
+	// you care about is the one that just ran.
+	shown := m.data.Sessions
+	if len(shown) > sessionsDigestMax {
+		shown = shown[:sessionsDigestMax]
+	}
+	for _, r := range shown {
+		outcome, outStyle := "running", infoStyle
+		if r.Outcome != nil && *r.Outcome != "" {
+			outcome, outStyle = *r.Outcome, sessionOutcomeStyle(*r.Outcome)
+		}
+		dur := "—"
+		if d, ok := m.sessionDuration(r); ok {
+			dur = fmtDuration(d)
+		}
+		cost := subtleStyle.Render(pad("—", 7))
+		if r.CostUsd > 0 {
+			cost = peachStyle.Render(pad(fmtCost(r.CostUsd), 7))
+		}
+		row := textStyle.Render(pad(fmt.Sprintf("#%d", r.Number), 4)) + " " +
+			accentStyle.Render(pad(r.StageId, 5)) + " " +
+			textStyle.Render(pad(r.Kind, 9)) + " " +
+			outStyle.Render(pad(outcome, 11)) + " " +
+			textStyle.Render(pad(dur, 8)) + " " +
+			cost + " " +
+			textStyle.Render(fmt.Sprintf("%d", r.CommitCount))
+		rows = append(rows, "  "+lipgloss.NewStyle().MaxWidth(max(1, w-2)).Render(row))
+	}
+	if len(m.data.Sessions) > sessionsDigestMax {
+		rows = append(rows, subtleStyle.Render(fmt.Sprintf("  … %d older (Sessions tab)",
+			len(m.data.Sessions)-sessionsDigestMax)))
+	}
+	return homeSection("Sessions", rows...)
+}
+
+// --- gates --------------------------------------------------------------------
+
+func (m Model) renderReportGates(s *api.StateDto) string {
+	if len(s.Gates) == 0 {
+		// Mirrors the engine's own honest wording for a gateless plan (U0.3) rather than rendering
+		// an empty box that reads like a bug.
+		return homeSection("Gates", subtleStyle.Render("gates green (none configured)"))
+	}
+	rows := make([]string, 0, len(s.Gates))
+	for _, g := range s.Gates {
+		glyph, gs := widgets.GateGlyph(g.State)
+		el := ""
+		if g.ElapsedSec > 0 {
+			el = subtleStyle.Render(fmt.Sprintf("  %s", fmtDuration(
+				time.Duration(g.ElapsedSec*float64(time.Second)))))
+		}
+		rows = append(rows, "  "+gs.Render(glyph)+" "+textStyle.Render(pad(g.Name, 14))+el)
+	}
+	return homeSection("Gates", rows...)
+}
+
+// --- verifier scores ----------------------------------------------------------
+
+// renderReportScores renders the scores canned query if it returned anything. "When present" is
+// literal: a run with no verifier scores (QA dial off, or nothing verified yet) gets NO section
+// rather than an empty one, and a query error is shown as-is rather than swallowed into "no data".
+func (m Model) renderReportScores() string {
+	res := m.reportScores
+	if res == nil {
+		return ""
+	}
+	if res.Error != nil {
+		return homeSection("Verifier scores", "  "+subtleStyle.Render("unavailable: "+*res.Error))
+	}
+	if len(res.Rows) == 0 {
+		return ""
+	}
+	rows := []string{subtleStyle.Render(fmt.Sprintf("  %-8s %-6s %s", "session", "score", "verdict"))}
+	for _, r := range res.Rows {
+		v := r.Values
+		if len(v) < 3 {
+			continue
+		}
+		rows = append(rows, "  "+textStyle.Render(pad("#"+v[0], 8))+" "+
+			textStyle.Render(pad(v[1], 6))+" "+
+			sessionOutcomeStyle(v[2]).Render(v[2]))
+	}
+	return homeSection("Verifier scores", rows...)
 }

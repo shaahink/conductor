@@ -261,6 +261,15 @@ type SessionRowDto struct {
 	GateSummary   *string `json:"gateSummary"`
 	ResultSummary *string `json:"resultSummary"`
 	CommitCount   int     `json:"commitCount"`
+	// U2.2/U2.3: per-session cost + tokens, SUMMED server-side from the `costs` table (many rows
+	// per session, one per category). Absent on an older engine, which lands as 0 — and 0 tokens
+	// against a real cost is also what a pre-bug-#5 session honestly recorded, so neither the
+	// Report digest nor the Dev stats table may invent a number here.
+	CostUsd     float64 `json:"costUsd"`
+	TokensIn    int64   `json:"tokensIn"`
+	TokensOut   int64   `json:"tokensOut"`
+	TokensThink int64   `json:"tokensThink"`
+	TokensCache int64   `json:"tokensCache"`
 }
 
 type SessionsDto struct {

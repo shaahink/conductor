@@ -72,6 +72,13 @@ type MsgReportResult struct {
 	Err    string
 }
 
+// MsgReportScores carries the Report tab's canned verifier-scores query (U2.2). Separate from
+// MsgReportResult so the rendered report and the Dev SQL console never overwrite each other.
+type MsgReportScores struct {
+	Result *api.QueryResultDto
+	Err    string
+}
+
 type MsgTimelineUpdated struct {
 	Timeline *api.TimelineDto
 	Err      string

@@ -1,34 +1,34 @@
  ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42    
- h a s t o c e p  r Report  k g b                                                                             
+ h a s t o c e p  r Report  k g b d                                                                           
                            │                                                                                  
- ▶ PLAN                    │  Queries (↑↓ pick · enter run):                                                  
- ✓ F0 3/3 Foundations      │    cost per stage                                                                
- ✓ F6 5/5 Ink TUI v1       │    which gates fail most                                                         
- ● F7 2/5 Gate … 1× $0.30  │    recent sessions                                                               
-   ✓ F7.1 Plan import      │    verifier scores                                                               
-   ✓ F7.2 Re-import diff   │                                                                                  
-   ● F7.3 Truth-gate tier  │  SQL (tab to focus/blur):                                                        
- ○ F8 0/4 conductor chat…  │   s ON s.number = c.session_number AND s.run_id = c.run_id GROUP BY s.stage_id   
-                           │                                                                                  
- ── GATES ──               │  stage_id  cost_usd                                                              
-   ✓ build                 │  F1        0.42                                                                  
-   ● test 4s               │  F7        0.08                                                                  
-   ○ lint                  │  2 rows                                                                          
-                           │                                                                                  
+ ▶ PLAN                    │  Run                                                                             
+ ✓ F0 3/3 Foundations      │  plan       conductor-foreman                                                    
+ ✓ F6 5/5 Ink TUI v1       │  status     ▶ RUNNING                                                            
+ ● F7 2/5 Gate … 1× $0.30  │  progress   ▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱ 2/40 checkpoints                            
+   ✓ F7.1 Plan import      │  cost       $0.42   +$0.02 overhead                                              
+   ✓ F7.2 Re-import diff   │  tokens     2.5k in · 1.8k out · 900 reasoning                                   
+   ● F7.3 Truth-gate tier  │  elapsed    1h 27m across 3 sessions                                             
+ ○ F8 0/4 conductor chat…  │                                                                                  
+                           │  Stages                                                                          
+ ── GATES ──               │    stage done   att  cost    last outcome                                        
+   ✓ build                 │  ✓ F0    3/3    —    —       —                                                   
+   ● test 4s               │  ✓ F6    5/5    —    —       —                                                   
+   ○ lint                  │  ● F7    2/5    1×   $0.30   —                                                   
+                           │  ○ F8    0/4    —    —       —                                                   
  ── TASKS ──               │                                                                                  
-   ✓ Add truth-tier con…   │                                                                                  
-   ● Wire RunDb.GetLast…   │                                                                                  
-   ○ Cache gate results…   │                                                                                  
+   ✓ Add truth-tier con…   │  Sessions                                                                        
+   ● Wire RunDb.GetLast…   │    #    stage kind      outcome     duration cost    commits                     
+   ○ Cache gate results…   │    #12  F7    Deliver   running     41s      $0.12   0                           
+                           │    #11  F7    Deliver   needsRetry  45m 34s  $0.14   2                           
+                           │    #8   F6    Deliver   completed   41m 12s  $0.09   1                           
+                           │                                                                                  
+                           │  Gates                                                                           
+                           │    ✓ build           2s                                                          
+                           │    ● test            4s                                                          
+                           │    ○ lint                                                                        
+                           │                                                                                  
+                           │  Verifier scores                                                                 
+                           │    session  score  verdict                                                       
                            │                                                                                  
                            │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   tab focus · ↑↓ pick · ←→ scroll cols · enter run  
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ scroll (0/2) · esc back                        

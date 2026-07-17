@@ -776,6 +776,43 @@ public sealed class ControlPlaneServerTests : IDisposable
         finally { server.Dispose(); }
     }
 
+    /// <summary>
+    /// U2.2/U2.3: the Face's Report digest and Dev stats table read per-session cost/tokens straight
+    /// off GET /sessions, so the contract is pinned on the real wire — a real HttpListener, real
+    /// run.db, real JSON — not just at the store. The session gets TWO cost rows (agent + gate,
+    /// exactly how the engine records one session) so the summing is what's actually asserted.
+    /// </summary>
+    [Fact]
+    public async Task GetSessions_ServesPerSessionCostAndTokensSummedAcrossCategories()
+    {
+        var started = new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc);
+        _store.InitializeRun(RunId, "cps-test", _dir, "b", "v");
+        _store.InitializeStage(RunId, "S1", "Stage One");
+        _store.RecordSession(RunId, "S1", 1, "Deliver", started, started.AddMinutes(5),
+            "Advanced", "ses-1", 0, 1, "build:OK", "ok", 2, "S1.1");
+        _store.RecordCost(RunId, 1, "agent", 1000, 500, 200, 4000, 0.05m, 300000);
+        _store.RecordCost(RunId, 1, "gate", 0, 0, 0, 0, 0.0025m, 1500);
+
+        var (server, port) = StartServer();
+        try
+        {
+            var resp = await _http.GetAsync($"http://127.0.0.1:{port}/sessions");
+            Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            var sessions = doc.RootElement.GetProperty("sessions");
+            // One row, not two: a JOIN against the two cost rows would duplicate the session here.
+            Assert.Equal(1, sessions.GetArrayLength());
+            var s = sessions[0];
+            Assert.Equal(1, s.GetProperty("number").GetInt32());
+            Assert.Equal(0.0525, s.GetProperty("costUsd").GetDouble(), 4);
+            Assert.Equal(1000, s.GetProperty("tokensIn").GetInt64());
+            Assert.Equal(500, s.GetProperty("tokensOut").GetInt64());
+            Assert.Equal(200, s.GetProperty("tokensThink").GetInt64());
+            Assert.Equal(4000, s.GetProperty("tokensCache").GetInt64());
+        }
+        finally { server.Dispose(); }
+    }
+
     [Fact]
     public async Task GetReportQuery_RejectsNonSelectStatements()
     {

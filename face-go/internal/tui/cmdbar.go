@@ -378,7 +378,10 @@ func (m Model) renderHelpOverlay() string {
 		"  " + tabLegendCell("h", "Home") + tabLegendCell("a", "Agent") + tabLegendCell("s", "Sessions") + "\n" +
 		"  " + tabLegendCell("t", "Timeline") + tabLegendCell("o", "Procs") + tabLegendCell("c", "Console") + "\n" +
 		"  " + tabLegendCell("e", "Templates") + tabLegendCell("p", "Plan") + tabLegendCell("r", "Report") + "\n" +
-		"  " + tabLegendCell("k", "Knowledge") + tabLegendCell("g", "Telegram") + tabLegendCell("b", "Kanban") + "\n\n" +
+		// Dev rides the 4th row as a 4th cell rather than opening a 5th: the card is already at the
+		// 80x24 row budget (TestHelpOverlayFitsSmallestTerminal), and 4 cells still fit the width.
+		"  " + tabLegendCell("k", "Knowledge") + tabLegendCell("g", "Telegram") + tabLegendCell("b", "Kanban") +
+		tabLegendCell("d", "Dev") + "\n\n" +
 		accentStyle.Render("Palette") + subtleStyle.Render("  ") + key(":") + subtleStyle.Render("  ") +
 		destructStyle.Render("red") + subtleStyle.Render(" = confirms, and says what it will do") + "\n" +
 		"  " + verbGroupLegend(groupRun) + "\n" +

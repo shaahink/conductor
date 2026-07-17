@@ -159,6 +159,42 @@ func TestVerbKeyColumnFitsEveryVerb(t *testing.T) {
 	}
 }
 
+// U2.2: a tab mnemonic is a GLOBAL key — handleKey runs the mnemonic loop before the active pane's
+// handler whenever that pane isn't in an owning sub-state. So a duplicate mnemonic doesn't just
+// pick the wrong tab, it silently makes a pane key unreachable, which is exactly what adding Dev on
+// `d` did to the Plan editor's delete (it moved to `x`). Nothing else pins uniqueness.
+func TestTabMnemonicsAreUnique(t *testing.T) {
+	seen := map[string]MainTab{}
+	for i, k := range tabKey {
+		if k == "" {
+			t.Errorf("tab %s (%d) has no mnemonic", tabNames[i], i)
+			continue
+		}
+		if prev, dup := seen[k]; dup {
+			t.Errorf("mnemonic %q is claimed by both %s and %s — the earlier tab wins the global "+
+				"loop and the later one is unreachable", k, tabNames[prev], tabNames[i])
+		}
+		seen[k] = MainTab(i)
+	}
+}
+
+// U2.2: the Plan editor's delete moved off `d` when Dev claimed it globally. This drives handleKey —
+// the REAL router — not handlePlanKey. plan_test.go's own drive() calls the pane handler directly,
+// which is exactly why nothing there could ever have caught the shadowing: the precedence that
+// breaks the key only exists one level up.
+func TestPlanDeleteKeyIsNotShadowedByTheDevMnemonic(t *testing.T) {
+	m, _ := openPlanEditor(t)
+	if m.tabHandlesAllKeys() {
+		t.Fatal("precondition: the plan list must NOT own all keys, or this proves nothing")
+	}
+	if got := asModel(mustHandle(m.handleKey("d"))); got.tab != TabDev {
+		t.Errorf("d in the Plan list must reach the Dev tab (it is a global mnemonic), got tab %v", got.tab)
+	}
+	if got := asModel(mustHandle(m.handleKey("x"))); !got.planDeleting {
+		t.Error("x in the Plan list must open the delete confirm through the real router")
+	}
+}
+
 // U2.1: grouping is presentation, so pin the thing that would actually break the overlay's
 // single-pass header emission — allVerbs being ordered by group.
 func TestVerbsAreOrderedByGroup(t *testing.T) {
@@ -290,17 +326,20 @@ func TestKnowledgeResolveRejectsNonNumericId(t *testing.T) {
 	}
 }
 
-func TestReportQuickQueryRuns(t *testing.T) {
+// The SQL console moved from Report to Dev in U2.2 (Report became a rendered report). Its behaviour
+// is unchanged, so this test moved WITH the code — only the tab it opens and the handler it drives
+// are renamed. Everything it asserts about the console still holds byte for byte.
+func TestDevQuickQueryRuns(t *testing.T) {
 	m := newTestModel()
-	m = asModel(mustHandle(m.handleKey("r")))
-	if m.tab != TabReport || !m.reportFocusQuery {
-		t.Fatalf("expected Report tab focused on SQL; tab=%v focus=%v", m.tab, m.reportFocusQuery)
+	m = asModel(mustHandle(m.handleKey("d")))
+	if m.tab != TabDev || !m.reportFocusQuery {
+		t.Fatalf("expected Dev tab focused on SQL; tab=%v focus=%v", m.tab, m.reportFocusQuery)
 	}
-	m = asModel(mustHandle(m.handleReportKey("tab")))
+	m = asModel(mustHandle(m.handleDevKey("tab")))
 	if m.reportFocusQuery {
 		t.Fatal("tab should move focus to the quick-query list")
 	}
-	tm, cmd := m.handleReportKey("enter")
+	tm, cmd := m.handleDevKey("enter")
 	m = asModel(tm)
 	if !m.data.ReportLoading {
 		t.Error("expected ReportLoading while the query runs")

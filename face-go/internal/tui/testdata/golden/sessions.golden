@@ -1,11 +1,11 @@
  ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42    
- h a  s Sessions  t o c e p r k g b                                                                           
+ h a  s Sessions  t o c e p r k g b d                                                                         
                            │                                                                                  
  ▶ PLAN                    │  › #12  F7     Deliver  running      0 commits                                   
  ✓ F0 3/3 Foundations      │    #11  F7     Deliver  needsRetry   2 commits                                   
- ✓ F6 5/5 Ink TUI v1       │                                                                                  
- ● F7 2/5 Gate … 1× $0.30  │  Session #12 · F7 Deliver · attempt 2, 0 resumes                                 
-   ✓ F7.1 Plan import      │                                                                                  
+ ✓ F6 5/5 Ink TUI v1       │    #8   F6     Deliver  completed    1 commits                                   
+ ● F7 2/5 Gate … 1× $0.30  │                                                                                  
+   ✓ F7.1 Plan import      │  Session #12 · F7 Deliver · attempt 2, 0 resumes                                 
    ✓ F7.2 Re-import diff   │                                                                                  
    ● F7.3 Truth-gate tier  │                                                                                  
  ○ F8 0/4 conductor chat…  │                                                                                  

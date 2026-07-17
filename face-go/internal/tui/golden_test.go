@@ -330,12 +330,23 @@ func newGoldenModel(width, height int) tea.Model {
 		{Pid: 4512, Purpose: "session", StageId: strPtr("F7"), Alive: true, StartedUtc: "2026-07-15T10:00:00Z", ExitedUtc: strPtr("2026-07-15T10:04:32Z"), LastOutputLine: strPtr("[agent] Working on gate caching...")},
 		{Pid: 8723, Purpose: "gate:test", StageId: strPtr("F7"), Alive: false, StartedUtc: "2026-07-15T10:01:00Z", ExitedUtc: strPtr("2026-07-15T10:01:19Z"), LastOutputLine: strPtr("Running GateCacheTests... (12/12)")},
 	}}})
-	// Newest-first, mirroring the real GET /sessions (ORDER BY number DESC).
+	// Newest-first, mirroring the real GET /sessions (ORDER BY number DESC). Started/Ended and the
+	// summed cost/token columns are fixed strings, never a clock, so the Report digest (U2.2) renders
+	// a real duration and cost in a golden without flaking. Session 8 carries a real cost with ZERO
+	// tokens on purpose: that is what a session recorded before bug #5 honestly looks like, and the
+	// report must show it rather than dress it up.
 	m, _ = m.Update(MsgSessionsUpdated{Sessions: &api.SessionsDto{Sessions: []api.SessionRowDto{
-		{Number: 12, StageId: "F7", Kind: "Deliver", Outcome: nil, Attempt: 2, CommitCount: 0},
+		{Number: 12, StageId: "F7", Kind: "Deliver", Outcome: nil, Attempt: 2, CommitCount: 0,
+			StartedUtc: "2026-07-15T10:00:00Z", CostUsd: 0.12,
+			TokensIn: 41213, TokensOut: 3187, TokensThink: 1024, TokensCache: 188420},
 		{Number: 11, StageId: "F7", Kind: "Deliver", Outcome: strPtr("needsRetry"), Attempt: 1, CommitCount: 2,
 			GateSummary:   strPtr("build ✓ test ✗ lint ○"),
-			ResultSummary: strPtr("Wired the **caching layer** in `RunDb` but `test` still red — see gate output.")},
+			ResultSummary: strPtr("Wired the **caching layer** in `RunDb` but `test` still red — see gate output."),
+			StartedUtc:    "2026-07-15T09:12:30Z", EndedUtc: strPtr("2026-07-15T09:58:04Z"), CostUsd: 0.1408,
+			TokensIn: 52881, TokensOut: 4402, TokensThink: 2310, TokensCache: 201338},
+		{Number: 8, StageId: "F6", Kind: "Deliver", Outcome: strPtr("completed"), Attempt: 1, CommitCount: 1,
+			GateSummary: strPtr("build ✓ test ✓"),
+			StartedUtc:  "2026-07-15T08:30:00Z", EndedUtc: strPtr("2026-07-15T09:11:12Z"), CostUsd: 0.0912},
 	}}})
 	m, _ = m.Update(MsgTasksUpdated{Tasks: &api.TasksDto{Tasks: fixedTasks()}})
 	for _, tx := range fixedTranscript() {
@@ -416,8 +427,39 @@ func TestGolden(t *testing.T) {
 			m, _ = m.Update(keyMsg("s"))
 			return m
 		}},
+		// U2.2: Report is the rendered run report now. The scores section is the one part that comes
+		// off a canned query, so it is injected the way the real fetch would land it.
 		{"report", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("r"))
+			m, _ = m.Update(MsgReportScores{Result: &api.QueryResultDto{
+				Columns: []string{"session_number", "score", "verdict"},
+				Rows: []api.QueryRowDto{
+					{Values: []string{"11", "66", "WARN"}},
+					{Values: []string{"8", "90", "PASS"}},
+				},
+			}})
+			return m
+		}},
+		// The report is taller than the pane, so the sections the owner scrolls TO (gates, verifier
+		// scores) are only pinned by a scrolled frame. Without this the scores section would sit
+		// below the fold in every golden and could rot unseen.
+		{"report_scrolled", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("r"))
+			m, _ = m.Update(MsgReportScores{Result: &api.QueryResultDto{
+				Columns: []string{"session_number", "score", "verdict"},
+				Rows: []api.QueryRowDto{
+					{Values: []string{"11", "66", "WARN"}},
+					{Values: []string{"8", "90", "PASS"}},
+				},
+			}})
+			for i := 0; i < 6; i++ {
+				m, _ = m.Update(keyMsg("down"))
+			}
+			return m
+		}},
+		// U2.2: the SQL console, unchanged, on its new tab — this scenario is the old "report" one.
+		{"dev", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("d"))
 			m, _ = m.Update(MsgReportResult{Result: &api.QueryResultDto{
 				Columns: []string{"stage_id", "cost_usd"},
 				Rows: []api.QueryRowDto{

@@ -283,7 +283,12 @@ public sealed partial class ControlPlaneServer
             ResumeCount: r.ResumeCount,
             GateSummary: r.GateSummary,
             ResultSummary: r.ResultSummary,
-            CommitCount: r.CommitCount)).ToList();
+            CommitCount: r.CommitCount,
+            CostUsd: r.CostUsd,
+            TokensIn: r.TokensIn,
+            TokensOut: r.TokensOut,
+            TokensThink: r.TokensThink,
+            TokensCache: r.TokensCache)).ToList();
         await WriteJsonAsync(ctx, new SessionsDto(dtos), ControlPlaneJsonContext.Default.SessionsDto).ConfigureAwait(false);
     }
 

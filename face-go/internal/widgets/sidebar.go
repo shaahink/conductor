@@ -187,17 +187,27 @@ func (m SidebarModel) stageLine(glyph string, stage api.StageDto) string {
 }
 
 func stageGlyph(state string) (string, lipgloss.Style) {
+	g, s := StageGlyph(state)
+	return g + " ", s // the sidebar's rows carry the trailing space; other panes space themselves
+}
+
+// StageGlyph maps a stage state to its glyph + colour. Exported because the Report tab (U2.2) renders
+// the same states, and a second copy of this switch is how the same stage ends up ✓ in the sidebar
+// and ○ two panes over — which is exactly what a hand-written copy did before this was shared. The
+// vocabulary is the ENGINE's ("confirmed"/"gating"/"skipped" are real states, and were the ones the
+// duplicate got wrong), so extend it here or nowhere.
+func StageGlyph(state string) (string, lipgloss.Style) {
 	switch state {
 	case "confirmed", "done":
-		return "✓ ", stageDoneStyle
+		return "✓", stageDoneStyle
 	case "active", "gating":
-		return "● ", stageActiveStyle
+		return "●", stageActiveStyle
 	case "failed":
-		return "✗ ", stageFailStyle
+		return "✗", stageFailStyle
 	case "skipped":
-		return "⊘ ", stageSkippedStyle
+		return "⊘", stageSkippedStyle
 	default:
-		return "○ ", stageTodoStyle
+		return "○", stageTodoStyle
 	}
 }
 
@@ -226,17 +236,25 @@ func taskGlyph(status string) (string, lipgloss.Style) {
 }
 
 func gateGlyph(state string) (string, lipgloss.Style) {
+	g, s := GateGlyph(state)
+	return g + " ", s
+}
+
+// GateGlyph maps a gate state to its glyph + colour — shared with the Report tab for the same reason
+// as StageGlyph. The engine's gate vocabulary is "pass"/"running"/"fail"/"skip", NOT "passed"/
+// "failed": a near-miss synonym here renders every green gate as pending.
+func GateGlyph(state string) (string, lipgloss.Style) {
 	switch state {
 	case "pass":
-		return "✓ ", gatePassStyle
+		return "✓", gatePassStyle
 	case "running":
-		return "● ", gateRunningStyle
+		return "●", gateRunningStyle
 	case "fail":
-		return "✗ ", gateFailStyle
+		return "✗", gateFailStyle
 	case "skip":
-		return "⊘ ", gateSkipStyle
+		return "⊘", gateSkipStyle
 	default:
-		return "○ ", gatePendingStyle
+		return "○", gatePendingStyle
 	}
 }
 

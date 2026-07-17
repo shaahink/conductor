@@ -329,6 +329,19 @@ func (m Model) cmdQueryReport(sql string) tea.Cmd {
 	}
 }
 
+// cmdFetchScores runs the Report tab's canned verifier-scores query (U2.2). Verifier scores are the
+// one report section with no DTO on the wire; the spec sanctions a canned query for exactly that.
+func (m Model) cmdFetchScores() tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		result, err := source.QueryReport(scoresSQL)
+		if err != nil {
+			return MsgReportScores{Err: err.Error()}
+		}
+		return MsgReportScores{Result: result}
+	}
+}
+
 // subscribeStreams starts the two persistent SSE subscriptions (events + transcript) exactly once
 // per Model (called from Init). Both the live and demo DataSource implementations satisfy the same
 // interface, so this wiring is identical in either mode — demo mode gets the same replay-then-stream

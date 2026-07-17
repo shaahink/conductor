@@ -100,6 +100,76 @@ public sealed class RunDbTests : IDisposable
         Assert.Equal(0.05, (double)(costs[0]["cost_usd"] ?? 0.0), 3);
     }
 
+    /// <summary>
+    /// U2.2/U2.3: QuerySessions serves per-session cost + tokens for the Face's Report digest and Dev
+    /// stats table. The sessions table stores NEITHER — they are summed from `costs`, which holds one
+    /// row per category (agent | gate | advisor). This test gives session 1 THREE cost rows precisely
+    /// so it fails if anyone "simplifies" the correlated subqueries into a JOIN: a join would emit the
+    /// session three times and every consumer would silently read triple.
+    /// </summary>
+    [Fact]
+    public void QuerySessions_sums_the_many_cost_rows_per_session_instead_of_joining_them()
+    {
+        var started = new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc);
+        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        _db.InitializeStage("r1", "F1", "test stage");
+        _db.RecordSession("r1", "F1", 1, "Deliver", started, started.AddMinutes(5),
+            "Advanced", "ses-abc", 0, 1, "build:OK", "ok", 2, "F1.1");
+        _db.RecordCost("r1", 1, "agent", 1000, 500, 200, 4000, 0.05m, 300000);
+        _db.RecordCost("r1", 1, "gate", 0, 0, 0, 0, 0.0025m, 1500);
+        _db.RecordCost("r1", 1, "advisor", 100, 20, 0, 0, 0.01m, 900);
+
+        var rows = _db.QuerySessions("r1");
+
+        var s1 = Assert.Single(rows);
+        Assert.Equal(1, s1.Number);
+        Assert.Equal(0.0625, s1.CostUsd, 4); // 0.05 + 0.0025 + 0.01, summed across all categories
+        Assert.Equal(1100, s1.TokensIn);     // agent + advisor; the gate row contributes zero
+        Assert.Equal(520, s1.TokensOut);
+        Assert.Equal(200, s1.TokensThink);
+        Assert.Equal(4000, s1.TokensCache);
+    }
+
+    /// <summary>
+    /// A session with no cost rows at all must read as zero, not throw and not vanish from the list —
+    /// the Face renders every session, including one that died before recording anything.
+    /// </summary>
+    [Fact]
+    public void QuerySessions_reports_zero_cost_for_a_session_with_no_cost_rows()
+    {
+        var started = new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc);
+        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        _db.InitializeStage("r1", "F1", "test stage");
+        _db.RecordSession("r1", "F1", 1, "Deliver", started, null,
+            "AgentError", null, 0, 1, null, null, 0, null);
+
+        var s1 = Assert.Single(_db.QuerySessions("r1"));
+        Assert.Equal(0, s1.CostUsd);
+        Assert.Equal(0, s1.TokensIn);
+    }
+
+    /// <summary>
+    /// Costs are keyed by (run_id, session_number), and session numbers restart per run — so another
+    /// run's session 1 must not leak into this run's total.
+    /// </summary>
+    [Fact]
+    public void QuerySessions_does_not_sum_another_runs_costs_into_this_run()
+    {
+        var started = new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc);
+        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        _db.InitializeStage("r1", "F1", "test stage");
+        _db.RecordSession("r1", "F1", 1, "Deliver", started, started.AddMinutes(1),
+            "Advanced", null, 0, 1, null, null, 0, null);
+        _db.RecordCost("r1", 1, "agent", 10, 5, 0, 0, 0.01m, 100);
+        // A different run that also has a session numbered 1.
+        _db.InitializeRun("r2", "p", "/r", "b", "v");
+        _db.RecordCost("r2", 1, "agent", 9999, 9999, 0, 0, 99.99m, 100);
+
+        var s1 = Assert.Single(_db.QuerySessions("r1"));
+        Assert.Equal(0.01, s1.CostUsd, 4);
+        Assert.Equal(10, s1.TokensIn);
+    }
+
     [Fact]
     public void Gate_record_round_trip()
     {

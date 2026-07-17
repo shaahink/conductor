@@ -202,7 +202,10 @@ func (m *Model) handlePlanKey(key string) (tea.Model, tea.Cmd) {
 	case "n": // new stage/gate — n avoids the 'a' Agent-tab mnemonic
 		m.planBeginAdd()
 		return m, nil
-	case "d": // delete the selected stage/gate (confirm first)
+	case "x": // delete the selected stage/gate (confirm first) — `x` matches the Procs tab's kill
+		// key, the codebase's existing "destructive, asks y/N first" mnemonic. It moved off `d` when
+		// Dev claimed that letter globally (see tabKey): the list isn't an owning sub-state, so the
+		// mnemonic loop would have swallowed `d` before this handler ever saw it.
 		m.planBeginDelete()
 		return m, nil
 	case "right":

@@ -24,6 +24,9 @@ var (
 	safeStyle     = lipgloss.NewStyle().Foreground(widgets.Green())
 	tealStyle     = lipgloss.NewStyle().Foreground(widgets.Teal())
 	peachStyle    = lipgloss.NewStyle().Foreground(widgets.Peach())
+	// blue = active / in-progress (STYLE.md's role table). It had no shared var, so panes reached
+	// for widgets.Blue() ad hoc; the Report tab needs it for running stages/sessions/gates.
+	infoStyle = lipgloss.NewStyle().Foreground(widgets.Blue())
 
 	keyStyle = lipgloss.NewStyle().Foreground(widgets.Accent()).Bold(true)
 )
@@ -165,6 +168,8 @@ func (m Model) paneView() (body, help string) {
 		return m.renderTelegramPane()
 	case TabKanban:
 		return m.renderKanbanPane()
+	case TabDev:
+		return m.renderDevPane()
 	}
 	return "", ""
 }

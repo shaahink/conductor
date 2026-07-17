@@ -255,9 +255,9 @@ func TestPlanDeleteGateRoundTrips(t *testing.T) {
 	target := m.plan.Gates[m.planGateIdx].Name
 	before := len(m.plan.Gates)
 
-	m = drive(m, "d") // open the delete confirm
+	m = drive(m, "x") // open the delete confirm (x, not d — d is the Dev tab mnemonic since U2.2)
 	if !m.planDeleting {
-		t.Fatal("d should open the delete confirm")
+		t.Fatal("x should open the delete confirm")
 	}
 	tm, cmd := m.handlePlanKey("y")
 	m = asModel(tm)
@@ -280,9 +280,9 @@ func TestPlanDeleteGateRoundTrips(t *testing.T) {
 
 func TestPlanDeleteCancelDoesNotPost(t *testing.T) {
 	m, _ := openPlanEditor(t)
-	m = drive(m, "d") // confirm prompt
+	m = drive(m, "x") // confirm prompt
 	if !m.planDeleting {
-		t.Fatal("d should open the delete confirm")
+		t.Fatal("x should open the delete confirm")
 	}
 	tm, cmd := m.handlePlanKey("n") // n = no
 	m = asModel(tm)
