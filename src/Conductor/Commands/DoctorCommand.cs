@@ -55,6 +55,7 @@ public sealed class DoctorCommand : AsyncCommand<PlanSettings>
             CheckAgentCli(plan),
             CheckGit(plan),
             CheckFace(),
+            CheckGates(plan),
         };
 
         var (currentCostUsd, hasRun) = TryReadCostFromRunDb(plan);
@@ -148,6 +149,16 @@ public sealed class DoctorCommand : AsyncCommand<PlanSettings>
             : new Check("face", "warn",
                 $"no built {FaceLauncher.BinaryName} found — run `go build -o bin/{FaceLauncher.BinaryName} ./cmd/conductor-face/` in face-go/, or set {FaceLauncher.PathEnvVar}");
     }
+
+    /// <summary>U0.3: a gateless plan (`"gates": []` or absent) is a deliberate, supported choice —
+    /// not a misconfiguration — so this is a warn-level notice, never a failure. Every session
+    /// verdict on such a plan trusts commits + tracker diff alone (<see cref="GateRunner.Summary"/>
+    /// already renders "gates green (none configured)" rather than a blank/lying summary).</summary>
+    internal static Check CheckGates(PlanConfig plan)
+        => plan.Gates.Count == 0
+            ? new Check("gates", "warn", "none configured — every session verdict will trust commits + tracker only")
+            : new Check("gates", "ok",
+                $"{plan.Gates.Count} configured ({string.Join("/", plan.Gates.Select(g => g.Tier).Distinct(StringComparer.OrdinalIgnoreCase))})");
 
     internal static Check CheckBudget(PlanConfig plan, decimal currentCostUsd, bool hasRun)
     {

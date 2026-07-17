@@ -152,8 +152,16 @@ public static class GateRunner
         onProgress?.Invoke($"{label}: exit {r.ExitCode}{(r.TimedOut ? " (timed out)" : "")} in {r.Duration.TotalSeconds:0}s");
     }
 
+    /// <summary>U0.3: a plan with no gates configured must say so honestly — an empty string here
+    /// read as a blank/missing field everywhere it's embedded (session log, REPORT.md, the prompt),
+    /// indistinguishable from "gate info didn't make it into the record". "gates green (none
+    /// configured)" is the one true verdict for a gateless plan: <see cref="AllRequiredPassed"/>
+    /// already returns true on an empty list (vacuous), this just makes the TEXT match the verdict.</summary>
     public static string Summary(IEnumerable<GateResult> results)
-        => string.Join(" · ", results.Select(r => $"{r.Name}:{r.Glyph}"));
+    {
+        var list = results as ICollection<GateResult> ?? results.ToList();
+        return list.Count == 0 ? "gates green (none configured)" : string.Join(" · ", list.Select(r => $"{r.Name}:{r.Glyph}"));
+    }
 
     /// <summary>Failing gates with output tails, capped for prompt embedding.</summary>
     public static string FailureDetails(IEnumerable<GateResult> results, int maxCharsPerGate = 4000)

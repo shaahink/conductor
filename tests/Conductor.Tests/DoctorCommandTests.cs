@@ -202,4 +202,24 @@ public sealed class DoctorCommandTests : IDisposable
         var check = DoctorCommand.CheckFace();
         Assert.True(check.State is "ok" or "warn");
     }
+
+    // --- gates (U0.3) ---
+
+    [Fact]
+    public void CheckGates_Warn_WhenNoneConfigured()
+    {
+        var check = DoctorCommand.CheckGates(Plan()); // Plan() leaves Gates empty
+        Assert.Equal("warn", check.State);
+        Assert.Contains("none configured", check.Message, StringComparison.Ordinal);
+        Assert.Contains("trust commits + tracker only", check.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CheckGates_Ok_WhenConfigured()
+    {
+        var plan = Plan(p => p.Gates.Add(new GateConfig { Name = "build", Command = "echo ok", Tier = "fast" }));
+        var check = DoctorCommand.CheckGates(plan);
+        Assert.Equal("ok", check.State);
+        Assert.Contains("1 configured", check.Message, StringComparison.Ordinal);
+    }
 }

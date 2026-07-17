@@ -138,3 +138,27 @@ public class GateRunnerTests
         Assert.Contains("pass", states);
     }
 }
+
+/// <summary>U0.3: <see cref="GateRunner.Summary"/> on a gateless plan (pure, no process spawn —
+/// deliberately not in the Integration-tagged class above).</summary>
+public sealed class GateRunnerSummaryTests
+{
+    [Fact]
+    public void EmptyResults_ReadsGatesGreenNoneConfigured()
+    {
+        Assert.Equal("gates green (none configured)", GateRunner.Summary([]));
+    }
+
+    [Fact]
+    public void NonEmptyResults_JoinsNameAndGlyph()
+    {
+        var results = new[] { new GateResult("build", true, false, false, 0, TimeSpan.Zero, "") };
+        Assert.Equal("build:OK", GateRunner.Summary(results));
+    }
+
+    [Fact]
+    public void EmptyResults_AllRequiredPassedIsVacuouslyTrue()
+    {
+        Assert.True(GateRunner.AllRequiredPassed(Array.Empty<GateResult>()));
+    }
+}
