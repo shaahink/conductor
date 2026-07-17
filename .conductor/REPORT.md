@@ -1,19 +1,18 @@
 ﻿# Conductor — Conductor UX (U-series) run report
 
-_Updated 2026-07-17 02:57 UTC · branch `feat/foreman` · HEAD `b96958c`_
+_Updated 2026-07-17 02:59 UTC · branch `feat/foreman` · HEAD `382cf3f`_
 
 **Status:** Idle
 **Stage:** U1 — Face: landing page + workspace identity · attempts used 0
 **Checkpoints:** 5/11 done · **Sessions run:** 5 · **Cost:** $53.5549 (agent $53.5422 + gates $0.0127)
-**Confirmed phases:** U0
-**Pending:** full-battery phase gate for U1
+**Confirmed phases:** U0, U1
 
 ## Stage progress
 
 | Stage | Title | Progress | State |
 |---|---|---|---|
 | U0 | Engine: start, resume, journey | ██████████ 3/3 | confirmed ✓ |
-| U1 | Face: landing page + workspace identity | ██████████ 2/2 | gating… |
+| U1 | Face: landing page + workspace identity | ██████████ 2/2 | confirmed ✓ |
 | U2 | Face: controls, visual report, dev stats | ░░░░░░░░░░ 0/3 | todo |
 | U3 | Face: themes, agent-terminal vibe, glitch pass | ░░░░░░░░░░ 0/3 | todo |
 
@@ -32,7 +31,7 @@ _Updated 2026-07-17 02:57 UTC · branch `feat/foreman` · HEAD `b96958c`_
 | # | Title | Status | Commit |
 |---|---|---|---|
 | U1.1 | Home landing tab: Server / Run / Workspace / Next-steps panels, demo parity | ✅ DONE | [`db9244a`](https://github.com/shaahink/conductor/commit/db9244a) |
-| U1.2 | workspace identity in the top bar (repo basename, full path on Home) | ✅ DONE | [`abccde2`](https://github.com/shaahink/conductor/commit/abccde2) |
+| U1.2 | workspace identity in the top bar (repo basename, full path on Home) | ✅ DONE | [`db9244a`](https://github.com/shaahink/conductor/commit/db9244a) |
 
 </details>
 
@@ -100,6 +99,9 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-17 03:20:42  • session #5 U1 Deliver started (attempt 1/6)
 07-17 03:57:49  ▪ gate build pass [session]  (36.0s)
 07-17 03:57:49  ▪ gate face-build pass [session]  (3.4s)
+07-17 03:57:50  • session #5 U1 → Advanced · done U1.1,U1.2 · 3 commit(s)  (37m08s)
+07-17 03:57:50  ✓ checkpoint U1.1 confirmed
+07-17 03:57:50  ✓ checkpoint U1.2 confirmed
 ```
 
 ## Health
@@ -117,8 +119,8 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/foreman
-working tree: clean
-vs upstream: up to date
+working tree: M CONDUCTOR-UX-START.md
+vs upstream: 1 ahead
 ```
 
 ### Commits by session
@@ -159,7 +161,7 @@ vs upstream: up to date
 
 ## Last gate run
 
-build:OK · face-build:OK
+build:OK · face-build:OK · test:OK · face-test:OK · driver:OK
 
 ## Last session result
 
