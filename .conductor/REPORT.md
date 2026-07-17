@@ -1,10 +1,10 @@
 ﻿# Conductor — Conductor UX (U-series) run report
 
-_Updated 2026-07-17 04:52 UTC · branch `feat/foreman` · HEAD `2c8ffe2`_
+_Updated 2026-07-17 05:04 UTC · branch `feat/foreman` · HEAD `1dfd97c`_
 
 **Status:** Idle
-**Stage:** U2 — Face: controls, visual report, dev stats · attempts used 0
-**Checkpoints:** 8/11 done · **Sessions run:** 9 · **Cost:** $95.5322 (agent $95.5138 + gates $0.0184) · **Tokens:** 272,633 in / 124,152 out
+**Stage:** U3 — Face: themes, agent-terminal vibe, glitch pass · attempts used 1 · working ▸ U3.1
+**Checkpoints:** 8/11 done · **Sessions run:** 10 · **Cost:** $98.4605 (agent $98.4421 + gates $0.0184) · **Tokens:** 358,885 in / 149,879 out
 **Confirmed phases:** U0, U1, U2
 
 ## Stage progress
@@ -14,7 +14,7 @@ _Updated 2026-07-17 04:52 UTC · branch `feat/foreman` · HEAD `2c8ffe2`_
 | U0 | Engine: start, resume, journey | ██████████ 3/3 | confirmed ✓ |
 | U1 | Face: landing page + workspace identity | ██████████ 2/2 | confirmed ✓ |
 | U2 | Face: controls, visual report, dev stats | ██████████ 3/3 | confirmed ✓ |
-| U3 | Face: themes, agent-terminal vibe, glitch pass | ░░░░░░░░░░ 0/3 | todo |
+| U3 | Face: themes, agent-terminal vibe, glitch pass | ░░░░░░░░░░ 0/3 | **← active** |
 
 <details> ✅<summary>U0 — Engine: start, resume, journey (3/3)</summary>
 
@@ -68,14 +68,13 @@ _Updated 2026-07-17 04:52 UTC · branch `feat/foreman` · HEAD `2c8ffe2`_
 | 7 | U2 | Fix | 2 | 07-17 03:10 | 0:33 | Progress |  | 3 | build:OK · face-build:OK | $13.2950 | $0.0040 |  |
 | 8 | U2 | Deliver | 2 | 07-17 03:51 | 0:03 | Interrupted |  | 0 |  |  |  |  |
 | 9 | U2 | Resume | 2r1 | 07-17 03:54 | 0:55 | Advanced | U2.2 U2.3 | 4 | build:OK · face-build:OK | $25.9788 | $0.0017 | 272,633/124,152 |
+| 10 | U3 | Verify | 1 | 07-17 04:52 | 0:12 | NoProgress |  | 0 |  | $2.9283 |  | 86,252/25,727 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-17 03:20:38  ▪ gate test pass [phase]  (1m44s)
-07-17 03:20:38  ▪ gate face-test pass [phase]  (4.8s)
 07-17 03:20:38  ▪ gate driver pass [phase]  (19.4s)
 07-17 03:20:38  ▸ stage U0 confirmed  (2h38m06s)
 07-17 03:20:42  ▸ stage U1 entered — Face: landing page + workspace identity
@@ -114,6 +113,8 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-17 05:52:24  ▪ gate face-test pass [phase]  (5.7s)
 07-17 05:52:24  ▪ gate driver pass [phase]  (15.2s)
 07-17 05:52:24  ▸ stage U2 confirmed  (1h52m24s)
+07-17 05:52:27  ▸ stage U3 entered — Face: themes, agent-terminal vibe, glitch pass
+07-17 05:52:27  • session #10 U3 Verify started (attempt 1/8)
 ```
 
 ## Health
@@ -121,7 +122,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 9 · retries 4 (44 %) · overall Warn
+sessions 10 · retries 4 (40 %) · overall Warn
 ⚠ [context-saturation] session #9: 40,301,419 context tokens (≥ 20,000,000)
 ```
 
@@ -132,7 +133,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 ```
 branch: feat/foreman
 working tree: M CONDUCTOR-UX-START.md
-vs upstream: 1 ahead
+vs upstream: 2 ahead
 ```
 
 ### Commits by session
@@ -186,7 +187,25 @@ build:OK · face-build:OK · test:OK · face-test:OK · driver:OK
 
 ## Last session result
 
-> SESSION-RESULT: Stage U2 is CLOSED 3/3 on `feat/foreman` (pushed). QA verdict on session 7: U2.1 CONFIRMED against fresh artifacts. Landed U2.2 (`c8ff55f`, visual Report tab + Dev tab hosting the moved SQL console + `GET /sessions` extended with per-session cost/tokens summed from the many-rows-per-session `costs` table) and U2.3 (`8749704`, Dev run internals + per-session token/cost stats), plus STYLE.md (`ab96e15`) and the tracker (`a0437dd`). Reading frames caught four real bugs that tests missed: Report duplicating the sidebar's stage-glyph switch and getting the engine's real vocabulary wrong (finished stages rendered `○` — fixed by exporting `widgets.StageGlyph`/`GateGlyph` so there is…
+> ## Verification complete
+> 
+> **The headline: there is no U3 work to verify. Session #9 never delivered U3 — it delivered U2.**
+> 
+> I was told session #9 completed a deliver phase for "U3 — themes, agent-terminal vibe, glitch pass." That framing is false, and I confirmed it three independent ways:
+> 
+> - **run.db**: session #9 was `stage=U2 kind=Resume outcome=Advanced newly_done=U2.2,U2.3`. No U3 session exists.
+> - **Its own commits**: both read `s9 U2 Advanced`. The only commits after the U2 close are two engine REPORT.md updates.
+> - **The code**: `ApplyTheme`, `--theme`, `latte`/`nord`/`gruvbox`, `size_132x40` goldens, provider-on-the-wire — all return zero hits. `conductor task --list` still shows U3.1/U3.2/U3.3 as **TODO**.
+> 
+> **Root cause, found and filed as bug #6 (high).** This isn't a fluke. `SessionRunner.Kinds.cs:55` passes the run loop's *current* stage into `PromptBuilder.Verify`, and `PromptBuilder.cs:64-70` renders that stage into the prompt while taking `diffBase` from `verify.StageStartHead`. `PendingVerify.StageId` carries the correct stage, is populated correctly at `VerdictEngine.Workflow.cs:55` — and is never read by anything. So any verify that runs after its deliver advanced the stage gets the *next* stage's name with the *previous* stage's diff. It already happened: run.db records session #6 as `stage=U2 Verify` when it was verifying U1.
+> 
+> **Session #9's actual work is genuinely good** — that's worth saying plainly. Its U2.3 SQL uses correlated `SUM` subqueries with `COALESCE` exactly as claimed, and its tests are honestly shaped: three cost rows per session specifically so a JOIN would triple the figures and fail the test. No over-claiming.
+> 
+> I re-ran the full gate battery myself rather than trusting the handoff, and it is green: build 0w/0e, **897/897** in 1m28s, ratchet OK (826 tests / 38≤38 pragmas / archdebt 0, nothing weakened), Go build/vet/test green and gofmt clean.
+> 
+> I'm scoring this FAIL — not to punish session #9, but because a passing score would mark U3's three checkpoints DONE with zero code behind them, which is precisely the failure this project keeps getting burned by. My findings are written as delivery instructions so the retry builds U3 instead of re-litigating U2. I also left two ledger notes: the misdispatch root cause, and U3 prerequisites I verified (notably that U3.3's `agent.provider` premise is real — unlike U2.3's false premise — but the field is nullable and inferred from `agent.output`, so the wire must serve the *resolved* provider; and the spec's golden sizes overlap the existing ones only at 80×24).
+> 
+> {"score":15,"findings":["STAGE U3 WAS NEVER DELIVERED — there is nothing to verify, so deliver it. Do not re-verify, re-do, or re-open U2: it is CLOSED and confirmed 3/3, session #9's U2.2/U2.3 work is correct and independently re-gated green at HEAD 1dfd97c. Verified absent at HEAD: no Theme type, no ApplyTheme, no --theme flag, no theme palette verb, no persisted config, no latte/nord/gruvbox, no 132x40 or 100x30 goldens, no provider on the wire. conductor task --list shows U3.1, U3.2 and U3.3 all TODO. Start U3.1 from a clean tree.","U3.1 — themes. Greenfield: the palette is a flat set of vars in face-go/internal/widgets/style.go today. Turn the palette roles into a Theme struct covering the full role set (base/mantle/surface/.../accent/semantic), and add ApplyTheme(name) rebuilding the derived lipgloss styles. CRITICAL: one rebuild func PER PACKAGE — widgets AND tui each own style vars (U2.2 added infoStyle to view.go's shared var block) — and call both at startup and on switch, or a live switch will repaint half the frame. Ship: --theme <name> flag, palette verb 'theme <name>', persistence to os.UserConfigDir()/conductor-face/config.json. Goldens pin mocha. Add a Themes section to STYLE.md naming the roles.","U3.2 — glitch pass. The spec's sizes (132x40, 100x30, 80x24) DO NOT match the goldens that exist (size_120x30, size_200x50, size_80x24 — only 80x24 overlaps). Decide add-vs-replace deliberately and state which in the tracker evidence column; do not silently drop the 120x30/200x50 coverage. Render every tab at all three sizes, READ the frames, and fix what a human would flinch at. Seed from the spec's dogfood appendix (items 5, 6, 8 are explicitly assigned to U3.2), one tracker evidence line plus an updated golden per fix.","U3.3 — agent-terminal vibe. The premise is TRUE here (unlike U2.3's, which was false): AgentConfig.Provider really exists at src/Conductor/Models/AgentConfig.cs:17 and the U-series plan sets provider=claude explicitly. TRAP: it is nullable and back-compat INFERS it from agent.output when unset (stream-json -> claude, text -> opencode). Serve the RESOLVED provider on /state or /plan, never the raw field, or any plan omitting it sends null to the Face. Build: Claude Code-style transcript (bulleted tool calls, bold tool name, dim one-line arg, results indented under their call), thinking dim-italic and collapsed beyond ~3 lines with a '+N lines (T to expand)' tail, session footer strip (model, elapsed, tokens/cost), ctrl+c double-tap to quit with a single-tap hint toast, esc backs out one layer. Golden frames for BOTH provider renderings.","ORCHESTRATOR DEFECT, filed as bug #6 (high) — this is why this verify session was misdispatched, and it will recur every stage until fixed. PromptBuilder.Verify ignores PendingVerify.StageId and renders the run loop's CURRENT stage. SessionRunner.Kinds.cs:55 passes the current stage into _ctx.Prompts.Verify(...); PromptBuilder.cs:64-70 builds stageId/stageTitle/stageNotes from that argument while taking diffBase from verify.StageStartHead. PendingVerify.StageId (Models/Pending.cs:15) holds the correct stage, is populated correctly at VerdictEngine.Workflow.cs:55, and is read by NOTHING. Whenever a deliver Advances the stage before its verify runs, the verifier gets the next stage's identity with the previous stage's diff base. Not cosmetic and not new: run.db records session #6 as stage=U2 kind=Verify when it was verifying U1's delivery, so sessions.stage_id is corrupted for every post-advance verify. Fix: resolve the StageConfig for pendingVerify.StageId at the call site and pass that, falling back to the current stage when StageId is empty (the synthesized PendingVerify at SessionRunner.cs:70 sets it; the /prompt preview at ControlPlaneServer.Endpoints.cs:407 does NOT). Regression test: queue a PendingVerify for stage N, advance to N+1, assert the rendered prompt names stage N.","Gate battery re-run independently by this session, all green — no gate work needed before starting U3: dotnet build 0 warnings 0 errors; dotnet test 897/897 in 1m28s; ratchet OK via tools/gates/ratchet.ps1 (tests floor 550 now 826, pragmas 38<=38, archdebt base 0 now 0, nothing weakened); face-go go build/vet/test all green, gofmt clean. Session #9 over-claimed nothing: its U2.3 correlated SUM subqueries in SqliteRunStore.Queries.cs are correct and COALESCE-guarded, and its RunDbTests give session 1 three cost rows so a JOIN would triple the figures and fail — the tests are shaped as claimed. Operational note for the next session: run.db had a 2.4 MB uncheckpointed WAL, so copying run.db alone to query it silently shows only session #1 — copy run.db-wal and run.db-shm too or you will read a stale database and draw false conclusions."],"verdict":"FAIL"}
 
 ## Tracker handoff
 
