@@ -77,21 +77,59 @@ one page; fewer clicks; transparent overlays; better colour and spacing.*
   (`tabHandlesAllKeys`); otherwise the dashboard globals (`:` `i` `/` `p` `?` `q`, tab switches) win.
   Plan sub-sections switch with `←/→` (so `tab` stays free for main tabs).
 
-## Colour — Catppuccin Mocha, one scheme
+## Colour — roles, not hexes
 
 Defined once in `widgets/style.go`; the tui package pulls it via the exported accessors
-(`widgets.Accent()`, `.Green()`, `.Overlay()`, …). **Never hardcode a hex in a pane.** Roles:
+(`widgets.Accent()`, `.Green()`, `.Overlay()`, …). **Never hardcode a hex in a pane** — name the
+ROLE. Since U3.1 that rule has teeth: a pane that hardcodes `#CBA6F7` is correct in mocha and wrong
+in the other three schemes.
 
-| token | hex | use |
+| role | use | mocha (the default) |
 |-------|-----|-----|
-| accent (mauve) | `#CBA6F7` | brand, selection, active tab, keycaps |
-| blue | `#89B4FA` | active/in-progress |
-| green | `#A6E3A1` | success / done |
-| red | `#F38BA8` | fail / destructive |
-| yellow | `#F9E2AF` | warn / running |
-| peach | `#FAB387` | cost / attention |
-| teal | `#94E2D5` | tools |
-| text `#CDD6F4` · overlay `#6C7086` · surface `#313244` · mantle `#181825` · base `#1E1E2E` | | |
+| accent | brand, selection, active tab, keycaps | `#CBA6F7` |
+| blue | active / in-progress | `#89B4FA` |
+| green | success / done | `#A6E3A1` |
+| red | fail / destructive | `#F38BA8` |
+| yellow | warn / running | `#F9E2AF` |
+| peach | cost / attention | `#FAB387` |
+| teal | tools | `#94E2D5` |
+| sky | system | `#89DCEB` |
+| text | primary text | `#CDD6F4` |
+| overlay | muted text | `#6C7086` |
+| pending | todo / not reached | `#585B70` |
+| skipped | skipped / thinking | `#7F849C` |
+| surface | borders, rules | `#313244` |
+| selection | selection background | `#45475A` |
+| mantle | top/bottom bars, tab strip | `#181825` |
+| base | window background | `#1E1E2E` |
+
+## Themes (U3.1)
+
+Four curated schemes: **mocha** (Catppuccin Mocha, dark, the default), **latte** (Catppuccin Latte,
+light), **nord**, **gruvbox**. A scheme is a `widgets.Theme` — the sixteen roles above and nothing
+else — so **adding one is a new entry in `widgets.themes` and no pane changes**. It gets its palette
+row, its `--theme` value and its help legend for free: all three are derived from that registry.
+
+- **Selecting:** `--theme <name>` overrides for one launch (a bad name is a hard error — the user
+  named something specific). The palette's **Face** group (`:` then `theme`) switches live *and*
+  persists to `os.UserConfigDir()/conductor-face/config.json`; a stale name in that file falls back
+  to mocha rather than refusing to start. The flag deliberately does **not** write the config —
+  otherwise one `--theme x` would destroy the saved choice with no way back to it.
+- **Switching is TWO rebuilds, one per package.** `widgets` and `tui` each own a block of shared
+  style vars, and a lipgloss style captures its colour **by value** at construction — so swapping the
+  palette alone leaves those vars painting the old scheme. Each package therefore has exactly one
+  rebuild function, and `tui.ApplyTheme` is the only caller of both. **Rebuild one and the frame
+  renders in two themes at once.** Styles built *inside* a render func (`lipgloss.NewStyle().
+  Foreground(widgets.Blue())`) need no rebuild — they read the live palette every frame. That is the
+  cheap way to add colour to a pane, and the reason most of the tui package needed no changes.
+- **Goldens pin mocha**, so a theme test must restore the default (`t.Cleanup`) or it turns the
+  golden suite red from a distance.
+- **A new scheme must clear `TestEveryThemeIsLegibleOnItsBase`** — text ≥4.5:1, semantics and
+  overlay ≥3:1, quiet roles ≥1.5:1 and ordered (pending recedes furthest). This is not decoration:
+  the active tab paints `Base` **on** `Accent` and a search match paints `Base` **on** `Yellow`, so a
+  scheme whose yellow sits near its base renders invisible matches. Stock Catppuccin Latte does
+  exactly that (2.3:1) — which is why the shipped `latte` darkens green/yellow/peach/teal/sky in-hue.
+  Catppuccin tunes those for syntax highlighting; this Face paints them as status text and as fills.
 
 ## Spacing & alignment
 

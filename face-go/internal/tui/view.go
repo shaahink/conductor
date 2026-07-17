@@ -14,22 +14,43 @@ import (
 	"conductor-face-go/internal/widgets"
 )
 
+// This package's shared styles. They capture their colour BY VALUE at construction, so they are
+// declared bare and built by rebuildStyles — see ApplyTheme in theme.go for why this package needs a
+// rebuild of its own rather than riding the widgets one.
 var (
-	accentStyle   = lipgloss.NewStyle().Foreground(widgets.Accent()).Bold(true)
-	subtleStyle   = lipgloss.NewStyle().Foreground(widgets.Overlay())
-	textStyle     = lipgloss.NewStyle().Foreground(widgets.Text())
-	highlightBg   = lipgloss.NewStyle().Background(widgets.Selection()).Foreground(widgets.Text())
-	destructStyle = lipgloss.NewStyle().Foreground(widgets.Red())
-	warnStyle     = lipgloss.NewStyle().Foreground(widgets.Yellow())
-	safeStyle     = lipgloss.NewStyle().Foreground(widgets.Green())
-	tealStyle     = lipgloss.NewStyle().Foreground(widgets.Teal())
-	peachStyle    = lipgloss.NewStyle().Foreground(widgets.Peach())
+	accentStyle   lipgloss.Style
+	subtleStyle   lipgloss.Style
+	textStyle     lipgloss.Style
+	highlightBg   lipgloss.Style
+	destructStyle lipgloss.Style
+	warnStyle     lipgloss.Style
+	safeStyle     lipgloss.Style
+	tealStyle     lipgloss.Style
+	peachStyle    lipgloss.Style
 	// blue = active / in-progress (STYLE.md's role table). It had no shared var, so panes reached
 	// for widgets.Blue() ad hoc; the Report tab needs it for running stages/sessions/gates.
-	infoStyle = lipgloss.NewStyle().Foreground(widgets.Blue())
+	infoStyle lipgloss.Style
 
-	keyStyle = lipgloss.NewStyle().Foreground(widgets.Accent()).Bold(true)
+	keyStyle lipgloss.Style
 )
+
+func init() { rebuildStyles() }
+
+// rebuildStyles repaints this package's shared styles from the live palette. Only ApplyTheme (and
+// init) should call it.
+func rebuildStyles() {
+	accentStyle = lipgloss.NewStyle().Foreground(widgets.Accent()).Bold(true)
+	subtleStyle = lipgloss.NewStyle().Foreground(widgets.Overlay())
+	textStyle = lipgloss.NewStyle().Foreground(widgets.Text())
+	highlightBg = lipgloss.NewStyle().Background(widgets.Selection()).Foreground(widgets.Text())
+	destructStyle = lipgloss.NewStyle().Foreground(widgets.Red())
+	warnStyle = lipgloss.NewStyle().Foreground(widgets.Yellow())
+	safeStyle = lipgloss.NewStyle().Foreground(widgets.Green())
+	tealStyle = lipgloss.NewStyle().Foreground(widgets.Teal())
+	peachStyle = lipgloss.NewStyle().Foreground(widgets.Peach())
+	infoStyle = lipgloss.NewStyle().Foreground(widgets.Blue())
+	keyStyle = lipgloss.NewStyle().Foreground(widgets.Accent()).Bold(true)
+}
 
 // key styles a keycap for hint lines.
 func key(s string) string { return keyStyle.Render(s) }

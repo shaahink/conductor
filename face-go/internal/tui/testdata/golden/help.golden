@@ -17,8 +17,9 @@
               │     Run    pause · resume · stop-after · approve · heartbeat · reload-plan     │           
  ── TASKS ──  │     Stage  goto · retry-stage · skip · pause-after-stage                       │           
    ✓ Add truth│     Danger kill · abort · rollback                                             │           
-   ● Wire RunD│                                                                                │           
-   ○ Cache gat│   Actions                                                                      │           
+   ● Wire RunD│     Face   theme mocha · latte · nord · gruvbox                                │           
+   ○ Cache gat│                                                                                │           
+              │   Actions                                                                      │           
               │     i inject context    / search transcript · f fold tools · T fold thinking   │           
               │     \ collapse sidebar  ↑↓ scroll / navigate                                   │           
               │                                                                                │           
@@ -26,7 +27,6 @@
               │     q quit   esc close / cancel   ? this help                                  │           
               │                                                                                │           
               ╰────────────────────────────────────────────────────────────────────────────────╯           
-                           │    r  read the run report                                                     
                            │    ?  see every key                                                           
                            │                                                                               
                            │                                                                               

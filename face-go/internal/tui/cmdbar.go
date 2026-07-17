@@ -15,30 +15,33 @@ import (
 	"conductor-face-go/internal/widgets"
 )
 
-// verbGroup buckets the palette into the three questions the owner actually asks: what is the run
-// doing, what is this stage doing, and what will hurt. Grouping is presentation only — `Safe` stays
-// the single safety contract, so a verb's group can be reordered without changing what it confirms.
+// verbGroup buckets the palette into the questions the owner actually asks: what is the run doing,
+// what is this stage doing, what will hurt — and, since U3.1, what does this Face look like.
+// Grouping is presentation only: `Safe` stays the single safety contract and `Local` the single
+// dispatch one, so a verb's group can be reordered without changing what it confirms or where it
+// goes.
 type verbGroup string
 
 const (
 	groupRun    verbGroup = "Run"
 	groupStage  verbGroup = "Stage"
 	groupDanger verbGroup = "Danger"
+	// groupFace is the odd one out: its verbs change THIS Face and never reach the engine (see
+	// Local). It sits last so the three operational groups keep the top of the list.
+	groupFace verbGroup = "Face"
 )
 
 // groupOrder fixes the render order of the headers; allVerbs is kept sorted to match so the
 // overlay can emit a header on each group change in one pass.
-var groupOrder = []verbGroup{groupRun, groupStage, groupDanger}
+var groupOrder = []verbGroup{groupRun, groupStage, groupDanger, groupFace}
 
 // verbKeyPad is the palette's key column. It must clear the longest verb ("pause-after-stage", 17)
 // or that row's description hangs one column right of every other row's — pinned by
 // TestVerbKeyColumnFitsEveryVerb so adding a longer verb fails loudly instead of skewing the pane.
 const verbKeyPad = 18
 
-// allVerbs is a flat list deliberately ORDERED BY GROUP, not a map of groups: every existing
-// index-based path (filteredVerbs, paletteSelected, paletteVerbIdx) keeps working unchanged, and
-// the overlay just inserts a header whenever Group differs from the previous row.
-var allVerbs = []struct {
+// paletteVerb is one row of the palette.
+type paletteVerb struct {
 	Key  string
 	Desc string
 	Safe bool
@@ -49,27 +52,59 @@ var allVerbs = []struct {
 	// TestEveryUnsafeVerbNamesItsConsequence pins that, so a new danger verb cannot ship with a
 	// bare "confirm?" prompt.
 	Consequence string
-}{
+	// Local marks a verb the Face handles ITSELF — it never becomes a control-plane POST. Theme
+	// switching is the only one today, and it has to be: it must work in --demo and while nothing
+	// is listening, neither of which can be said of a control verb.
+	Local bool
+}
+
+// allVerbs is a flat list deliberately ORDERED BY GROUP, not a map of groups: every existing
+// index-based path (filteredVerbs, paletteSelected, paletteVerbIdx) keeps working unchanged, and
+// the overlay just inserts a header whenever Group differs from the previous row.
+var allVerbs = []paletteVerb{
 	// Run — steering the loop. All reversible, none confirm.
-	{"pause", "Pause after current session ends", true, groupRun, ""},
-	{"resume", "Resume a paused run", true, groupRun, ""},
-	{"stop-after", "Stop after current session", true, groupRun, ""},
-	{"approve", "Approve and continue", true, groupRun, ""},
-	{"heartbeat", "Refresh REPORT.md snapshot now", true, groupRun, ""},
-	{"reload-plan", "Swap live plan at next session boundary", true, groupRun, ""},
+	{Key: "pause", Desc: "Pause after current session ends", Safe: true, Group: groupRun},
+	{Key: "resume", Desc: "Resume a paused run", Safe: true, Group: groupRun},
+	{Key: "stop-after", Desc: "Stop after current session", Safe: true, Group: groupRun},
+	{Key: "approve", Desc: "Approve and continue", Safe: true, Group: groupRun},
+	{Key: "heartbeat", Desc: "Refresh REPORT.md snapshot now", Safe: true, Group: groupRun},
+	{Key: "reload-plan", Desc: "Swap live plan at next session boundary", Safe: true, Group: groupRun},
 	// Stage — moving around the plan.
-	{"goto", "Jump to a different stage (requires stage ID)", true, groupStage, ""},
-	{"retry-stage", "Reset attempt counter, retry stage", false, groupStage,
-		"reset attempt counter + rerun stage"},
-	{"skip", "Skip current stage", true, groupStage, ""},
-	{"pause-after-stage", "Pause once stage completes", true, groupStage, ""},
+	{Key: "goto", Desc: "Jump to a different stage (requires stage ID)", Safe: true, Group: groupStage},
+	{Key: "retry-stage", Desc: "Reset attempt counter, retry stage", Group: groupStage,
+		Consequence: "reset attempt counter + rerun stage"},
+	{Key: "skip", Desc: "Skip current stage", Safe: true, Group: groupStage},
+	{Key: "pause-after-stage", Desc: "Pause once stage completes", Safe: true, Group: groupStage},
 	// Danger — destroys work or stops the run.
-	{"kill", "Kill current agent session", false, groupDanger,
-		"kill this agent session; run continues"},
-	{"abort", "Abort run immediately", false, groupDanger,
-		"kill session + stop conductor"},
-	{"rollback", "Git reset --hard to stage start", false, groupDanger,
-		"git reset --hard to stage start; uncommitted work lost"},
+	{Key: "kill", Desc: "Kill current agent session", Group: groupDanger,
+		Consequence: "kill this agent session; run continues"},
+	{Key: "abort", Desc: "Abort run immediately", Group: groupDanger,
+		Consequence: "kill session + stop conductor"},
+	{Key: "rollback", Desc: "Git reset --hard to stage start", Group: groupDanger,
+		Consequence: "git reset --hard to stage start; uncommitted work lost"},
+}
+
+// themeVerbPrefix is the palette key's first word: `theme mocha`, `theme latte`, … Typing `:theme`
+// filters to exactly the curated set, so the names never have to be memorised.
+const themeVerbPrefix = "theme "
+
+// The Face group is DERIVED from the theme registry rather than hand-listed beside it, so a scheme
+// added in widgets gets its palette row (and its description) for free and the two cannot drift.
+// TestPaletteOffersEveryTheme pins that.
+func init() {
+	for _, name := range widgets.ThemeNames() {
+		t, ok := widgets.ThemeByName(name)
+		if !ok {
+			continue
+		}
+		allVerbs = append(allVerbs, paletteVerb{
+			Key:   themeVerbPrefix + t.Name,
+			Desc:  t.Description,
+			Safe:  true,
+			Group: groupFace,
+			Local: true,
+		})
+	}
 }
 
 // --- key handling ------------------------------------------------------------
@@ -169,6 +204,9 @@ func (m *Model) handlePaletteKey(key string) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			m.cmd = CmdNone
+			if verb.Local {
+				return m, m.runLocalVerb(verb.Key)
+			}
 			return m, m.cmdPostControl(api.ControlRequestDto{Command: verb.Key})
 		}
 	case "backspace":
@@ -181,6 +219,25 @@ func (m *Model) handlePaletteKey(key string) (tea.Model, tea.Cmd) {
 		}
 	}
 	return m, nil
+}
+
+// runLocalVerb executes a Local palette verb — one the Face answers itself, with no engine involved.
+// Theme switching is the only one: it has to work in --demo and with nothing listening.
+func (m *Model) runLocalVerb(key string) tea.Cmd {
+	name, ok := strings.CutPrefix(key, themeVerbPrefix)
+	if !ok {
+		return m.addToast("unknown command: "+key, widgets.ToastError)
+	}
+	if err := ApplyTheme(name); err != nil {
+		return m.addToast(err.Error(), widgets.ToastError)
+	}
+	// The repaint has already happened by the line above; persisting is what makes it STICK. Report
+	// that separately — a theme that switches now but silently reverts at the next launch is the
+	// genuinely confusing outcome, and it is the one the user cannot see.
+	if err := SaveConfig(Config{Theme: name}); err != nil {
+		return m.addToast("theme "+name+" — not saved: "+err.Error(), widgets.ToastWarn)
+	}
+	return m.addToast("theme "+name, widgets.ToastSuccess)
 }
 
 func (m *Model) handleInjectKey(key string) (tea.Model, tea.Cmd) {
@@ -319,8 +376,13 @@ func (m Model) overlayPalette(screen string, layout LayoutRects) string {
 			lastGroup = v.Group
 		}
 		mark, st := "  ", textStyle
-		if !v.Safe {
+		switch {
+		case !v.Safe:
 			mark, st = "⚠ ", destructStyle
+		case v.Local && v.Key == themeVerbPrefix+widgets.CurrentTheme().Name:
+			// Which scheme is live belongs where you switch it. The mark gutter is already 2 cols
+			// wide for the ⚠, so reusing it costs no layout — pinned by TestPaletteMarksActiveTheme.
+			mark, st = "● ", accentStyle
 		}
 		// Pad the plain text, then colour it (STYLE.md: never %-Ns a styled string). The selected
 		// row is built from the SAME plain layout so highlighting never shifts a row sideways.
@@ -368,6 +430,24 @@ func verbGroupLegend(g verbGroup) string {
 	return subtleStyle.Render(fmt.Sprintf("%-7s", string(g))) + strings.Join(keys, subtleStyle.Render(" · "))
 }
 
+// themeLegend renders the help card's Face row. Like verbGroupLegend it is DERIVED — here from the
+// theme registry, the same source the palette's Face rows come from — so help and palette cannot
+// drift. It collapses the `theme ` prefix those rows carry (four rows reading "theme X" are, in
+// prose, one verb and a list of names) and paints the live scheme in accent.
+func themeLegend() string {
+	names := widgets.ThemeNames()
+	styled := make([]string, 0, len(names))
+	for _, n := range names {
+		st := textStyle
+		if n == widgets.CurrentTheme().Name {
+			st = accentStyle
+		}
+		styled = append(styled, st.Render(n))
+	}
+	return subtleStyle.Render(fmt.Sprintf("%-7s", string(groupFace))) + key("theme") + " " +
+		strings.Join(styled, subtleStyle.Render(" · "))
+}
+
 func (m Model) renderHelpOverlay() string {
 	// Row budget matters: this card must stay inside an 80x24 terminal, border included
 	// (TestHelpOverlayFitsSmallestTerminal). The `tab` hint rides the Tabs heading and `:` is
@@ -386,7 +466,8 @@ func (m Model) renderHelpOverlay() string {
 		destructStyle.Render("red") + subtleStyle.Render(" = confirms, and says what it will do") + "\n" +
 		"  " + verbGroupLegend(groupRun) + "\n" +
 		"  " + verbGroupLegend(groupStage) + "\n" +
-		"  " + verbGroupLegend(groupDanger) + "\n\n" +
+		"  " + verbGroupLegend(groupDanger) + "\n" +
+		"  " + themeLegend() + "\n\n" +
 		accentStyle.Render("Actions") + "\n" +
 		"  " + key("i") + " inject context    " + key("/") + " search transcript · " + key("f") +
 		" fold tools · " + key("T") + " fold thinking\n" +
