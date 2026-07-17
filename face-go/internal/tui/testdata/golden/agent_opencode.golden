@@ -1,13 +1,13 @@
  ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42    
  h  a Agent  s t o c e p r k g b d                                                                            
                            │                                                                                  
- ▶ PLAN                    │  s12 Deliver · attempt 1/3 · claude code · opus-4-8 · architect  ◆ F7.3 W ⠋ 41s  
+ ▶ PLAN                    │  s12 Deliver · attempt 1/3 · opencode · opus-4-8 · architect  ◆ F7.3 Wire ⠋ 41s  
  ✓ F0 3/3 Foundations      │  build ✓ · test ● 4s · lint ○    task 1/3 ▸ Wire RunDb.GetLastPassingGateResult  
  ✓ F6 5/5 Ink TUI v1       │  ──────────────────────────────────────────────────────────────────────────────  
  ● F7 2/5 Gate … 1× $0.30  │  10:04:01 ▸ Session #12 started · Deliver · Stage F7 · Attempt 1                 
-   ✓ F7.1 Plan import      │  10:04:09 ✻ Let me examine the GateCache implementation...                       
-   ✓ F7.2 Re-import diff   │  10:04:14 ● read src/Conductor/Core/Gating/GateCache.cs                          
-   ● F7.3 Truth-gate tier  │  10:04:15   ⎿ GateCache.cs:142 lines — caches by (name, tier, sha)               
+   ✓ F7.1 Plan import      │  10:04:09 ◇ Let me examine the GateCache implementation...                       
+   ✓ F7.2 Re-import diff   │  10:04:14 ◆ read src/Conductor/Core/Gating/GateCache.cs                          
+   ● F7.3 Truth-gate tier  │  10:04:15   └ GateCache.cs:142 lines — caches by (name, tier, sha)               
  ○ F8 0/4 conductor chat…  │  10:04:22 ▸ Found the caching layer. Adding GetLastPassingGateResult to RunDb.   
                            │                                                                                  
  ── GATES ──               │                                                                                  
@@ -31,4 +31,4 @@
                            │  ──────────────────────────────────────────────────────────────────────────────  
                            │  opus-4-8 · 41s · ↑3.4k ↓1.9k +800r · $0.12                                      
                            │                                                                                  
- /gate▏  1/4  enter lock · esc clear                                                                          
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ scroll · f fold · T thinking · / search · end l

@@ -31,8 +31,12 @@ type TranscriptModel struct {
 	// a "(+N)" counter — live reasoning reads as one quiet, current thought instead of a wall that
 	// drowns the agent's actual messages. T cycles collapsed → full → hidden.
 	CollapseThinking bool
-	Width            int
-	Height           int
+	// Provider is the RESOLVED agent provider driving this transcript ("claude" | "opencode" |
+	// "text"), straight off /state. It selects the prefix vocabulary — see glyphsFor. "" means an
+	// older engine that does not serve it: unknown, NOT "not claude".
+	Provider string
+	Width    int
+	Height   int
 }
 
 func NewTranscript() TranscriptModel {
@@ -41,6 +45,37 @@ func NewTranscript() TranscriptModel {
 		CollapseThinking: true,
 		Width:            80,
 		Height:           20,
+	}
+}
+
+// transcriptGlyphs is the per-line prefix vocabulary the transcript borrows from the CLI it is
+// mirroring. Users arrive here from Claude Code and opencode and read those terminals all day; the
+// point of U3.3 is that the pane looks like the one actually driving, not a third dialect.
+//
+// An unrecognised provider gets the neutral house set on purpose. "" is an older engine that does
+// not serve the field and "text" is the generic adapter that names no CLI — in both cases there is
+// no convention to honour, and guessing "probably claude" would put Claude Code's vocabulary on an
+// opencode run. Generic is the honest rendering.
+type transcriptGlyphs struct {
+	tool     string
+	result   string
+	thinking string
+}
+
+var (
+	glyphsClaude   = transcriptGlyphs{tool: "●", result: "⎿", thinking: "✻"}
+	glyphsOpencode = transcriptGlyphs{tool: "◆", result: "└", thinking: "◇"}
+	glyphsHouse    = transcriptGlyphs{tool: "⚙", result: "↳", thinking: "⁙"}
+)
+
+func glyphsFor(provider string) transcriptGlyphs {
+	switch strings.ToLower(strings.TrimSpace(provider)) {
+	case "claude":
+		return glyphsClaude
+	case "opencode":
+		return glyphsOpencode
+	default:
+		return glyphsHouse
 	}
 }
 
@@ -205,9 +240,10 @@ func (m TranscriptModel) View() string {
 		matchLine = m.SearchMatches[m.SearchMatchIdx]
 	}
 
+	g := glyphsFor(m.Provider)
 	var sb strings.Builder
 	for i, line := range window {
-		sb.WriteString(renderTranscriptLine(line, m.Width, m.SearchQuery, start+i == matchLine))
+		sb.WriteString(renderTranscriptLine(line, m.Width, m.SearchQuery, start+i == matchLine, g))
 		sb.WriteByte('\n')
 	}
 
@@ -264,8 +300,16 @@ func (m TranscriptModel) visibleLines() []api.TranscriptLineDto {
 	return lines
 }
 
-// collapseThinking keeps only the last row of each consecutive thinking run, annotated with how
-// many rows it stands for — the live tail shows the CURRENT thought, not the whole essay.
+// collapseThinking keeps only the last row of each consecutive thinking run and hangs a
+// "+N lines (T to expand)" tail under it — the live tail shows the CURRENT thought, and the rows it
+// stands for announce both their number and the key that brings them back.
+//
+// U3.3's spec asked for the first ~3 lines plus that tail; keeping the LAST line instead is
+// deliberate, and is the newer of the two decisions (owner dogfood 2026-07-17: a wall of
+// un-collapsed reasoning drowned the agent's real messages). Under a live stream the opening rows
+// of an in-progress run are stale the moment they land, so a 3-line head would pin the pane to
+// thoughts the agent has already moved past. The tail is the half of the spec that was missing: the
+// old "(+7)" counter said how much was hidden but never how to get it back.
 func collapseThinking(src []api.TranscriptLineDto) []api.TranscriptLineDto {
 	out := make([]api.TranscriptLineDto, 0, len(src))
 	run := 0
@@ -275,10 +319,17 @@ func collapseThinking(src []api.TranscriptLineDto) []api.TranscriptLineDto {
 			if i+1 < len(src) && src[i+1].Kind == "thinking" {
 				continue
 			}
-			if run > 1 {
-				l.Text = fmt.Sprintf("(+%d) %s", run-1, l.Text)
-			}
 			out = append(out, l)
+			if run > 1 {
+				// Zero Ts: the tail is not its own event, and the clock column pads it into line
+				// under the thought it belongs to.
+				out = append(out, api.TranscriptLineDto{
+					Seq:       l.Seq,
+					SessionId: l.SessionId,
+					Kind:      "thinking-more",
+					Text:      fmt.Sprintf("+%d lines (T to expand)", run-1),
+				})
+			}
 			run = 0
 			continue
 		}
@@ -325,25 +376,42 @@ func foldTools(src []api.TranscriptLineDto) []api.TranscriptLineDto {
 	return result
 }
 
-func renderTranscriptLine(line api.TranscriptLineDto, width int, query string, isCurrentMatch bool) string {
+// splitToolCall splits a tool line's "<name> <argument>" into its two halves. The engine's adapters
+// emit tool lines in exactly that shape ("read src/Foo.cs"), and Claude Code renders the name bold
+// with its one-line argument dim beside it — the name is what you scan for, the argument is detail.
+func splitToolCall(text string) (name, arg string) {
+	text = strings.TrimSpace(text)
+	if i := strings.IndexAny(text, " \t"); i >= 0 {
+		return text[:i], strings.TrimSpace(text[i+1:])
+	}
+	return text, ""
+}
+
+func renderTranscriptLine(line api.TranscriptLineDto, width int, query string, isCurrentMatch bool, g transcriptGlyphs) string {
 	var prefix string
 	var style lipgloss.Style
 
 	switch line.Kind {
 	case "thinking":
-		prefix = dim("⁙ ")
+		prefix = dim(g.thinking + " ")
 		style = txThinkingStyle
+	case "thinking-more":
+		prefix = "  "
+		style = txThinkingMoreStyle
 	case "tool":
-		prefix = purple("⚙ ")
+		prefix = purple(g.tool + " ")
 		style = txToolStyle
 	case "tool-fold":
-		prefix = purple("⚙▶ ")
+		prefix = purple(g.tool + "▶ ")
 		style = txToolStyle
 	case "result":
-		prefix = green("↳ ")
+		// Results hang under the call that produced them. The indent is the whole point: a run of
+		// calls stays scannable AS calls, with their output visibly subordinate rather than
+		// competing for the same left edge.
+		prefix = "  " + green(g.result+" ")
 		style = txResultStyle
 	case "stderr":
-		prefix = red("! ")
+		prefix = "  " + red("! ")
 		style = txStderrStyle
 	case "system":
 		prefix = blue("▸ ")
@@ -357,13 +425,28 @@ func renderTranscriptLine(line api.TranscriptLineDto, width int, query string, i
 	}
 
 	// A wall-clock prefix (like the Ink face had) — skipped at narrow widths and for lines whose
-	// producer didn't stamp a time.
+	// producer didn't stamp a time. Continuation rows of a split multi-line event carry no stamp,
+	// so they pad to the same column instead: an unpadded continuation starts at the far left and
+	// reads as a new event rather than the same one still talking.
 	clock := ""
-	if width >= 70 && !line.Ts.IsZero() {
-		clock = txTimeStyle.Render(line.Ts.In(ClockLocation).Format("15:04:05")) + " "
+	if width >= 70 {
+		if line.Ts.IsZero() {
+			clock = strings.Repeat(" ", len("15:04:05")+1)
+		} else {
+			clock = txTimeStyle.Render(line.Ts.In(ClockLocation).Format("15:04:05")) + " "
+		}
 	}
 
-	body := highlightMatches(line.Text, query, style, isCurrentMatch)
+	var body string
+	if line.Kind == "tool" {
+		name, arg := splitToolCall(line.Text)
+		body = highlightMatches(name, query, txToolNameStyle, isCurrentMatch)
+		if arg != "" {
+			body += " " + highlightMatches(arg, query, txToolArgStyle, isCurrentMatch)
+		}
+	} else {
+		body = highlightMatches(line.Text, query, style, isCurrentMatch)
+	}
 
 	// MaxWidth truncates ANSI-safely (via ansi.Truncate internally) — a manual byte-slice here
 	// would cut mid-escape-sequence and corrupt the rest of the line's styling.

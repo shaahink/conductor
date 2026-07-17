@@ -50,11 +50,56 @@ func (m Model) renderAgentPane() (string, string) {
 	}
 
 	strip := m.renderAgentStrip()
+	footer := m.renderAgentFooter()
+	// The transcript takes whatever rows the strip and footer leave. Subtracting the footer here is
+	// what keeps it on screen: the pane is height-clamped by View(), so a footer the transcript did
+	// not make room for would be the row that clips (owner dogfood: "I don't see the footer").
 	m.transcript.Height -= lipgloss.Height(strip)
+	if footer != "" {
+		m.transcript.Height -= lipgloss.Height(footer) // footer's own rule separates it from the stream
+	}
 	if m.transcript.Height < 3 {
 		m.transcript.Height = 3
 	}
-	return strip + "\n" + m.transcript.View(), help
+	body := strip + "\n" + m.transcript.View()
+	if footer != "" {
+		body += "\n" + footer
+	}
+	return body, help
+}
+
+// renderAgentFooter is the Claude-Code-style status line pinned under the transcript: which CLI +
+// model is driving, session elapsed, tokens, and cost so far. The top bar carries the same figures
+// tiered by width; this one lives WHERE THE USER IS LOOKING — at the foot of the stream they are
+// reading — the way Claude Code's own status line sits under its transcript. "" when no session is
+// live (nothing to report), so the transcript reclaims the row.
+func (m Model) renderAgentFooter() string {
+	s := m.data.Plan
+	if s == nil || s.SessionNumber == 0 {
+		return ""
+	}
+	w := m.paneCols()
+
+	// Model only — which CLI is driving is already announced in the strip above and by the
+	// transcript's own glyphs; the footer is Claude Code's status line, and that shows the model.
+	var segs []string
+	if s.Model != "" {
+		segs = append(segs, tealStyle.Render(shortModel(s.Model)))
+	}
+	if s.AgentActive || s.SessionElapsedSec > 0 {
+		segs = append(segs, subtleStyle.Render(widgets.FmtWall(s.SessionElapsedSec)))
+	}
+	toks := "↑" + widgets.FmtTokens(s.SessionTokensInput) + " ↓" + widgets.FmtTokens(s.SessionTokensOutput)
+	if s.SessionTokensReasoning > 0 {
+		toks += " +" + widgets.FmtTokens(s.SessionTokensReasoning) + "r"
+	}
+	segs = append(segs, subtleStyle.Render(toks))
+	segs = append(segs, peachStyle.Render(fmt.Sprintf("$%.2f", s.SessionCostUsd)))
+
+	sep := subtleStyle.Render(" · ")
+	line := strings.Join(segs, sep)
+	rule := lipgloss.NewStyle().Foreground(widgets.Surface()).Render(strings.Repeat("─", max(1, w)))
+	return rule + "\n" + lipgloss.NewStyle().MaxWidth(w).Render(line)
 }
 
 // renderAgentStrip is the glanceable header: status+session on line 1, gates+task on line 2,

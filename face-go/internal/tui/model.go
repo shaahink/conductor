@@ -102,6 +102,11 @@ type Model struct {
 	// Inline transcript search (non-blocking, Agent tab only).
 	searchActive bool
 
+	// ctrl+c is a double-tap to quit (Claude Code's convention): the first tap arms this and shows a
+	// hint toast, the second quits. Any other keypress disarms it, so a stray ctrl+c never leaves the
+	// app one keystroke from exit. `q` remains the unguarded, explicit quit.
+	quitArmed bool
+
 	// Streaming channels (see conn.go).
 	eventCh      chan api.ConductorEventDto
 	txCh         chan api.TranscriptLineDto

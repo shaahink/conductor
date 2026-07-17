@@ -67,6 +67,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		if msg.State != nil {
 			m.data.Plan = msg.State
+			// The transcript borrows its prefix vocabulary from the provider driving this run
+			// (U3.3). "" (older engine) stays "" here → the neutral house set, never a guess.
+			m.transcript.Provider = msg.State.Provider
 			m.syncSidebar()
 			m.recalcDimensions()
 			if msg.State.AgentActive && !m.spinnerLive {
@@ -445,15 +448,31 @@ func (m *Model) syncSidebar() {
 
 // handleKey is the dashboard's top-level router when no command bar is open.
 func (m Model) handleKey(key string) (tea.Model, tea.Cmd) {
+	// ctrl+c is the one key handled before anything else, INCLUDING a tab that captures all keys:
+	// a global quit affordance must not be swallowable by a sub-state, and the double-tap is what
+	// makes it safe to answer everywhere. A second tap while armed quits; the first arms + hints.
+	if key == "ctrl+c" {
+		if m.quitArmed {
+			return m, tea.Quit
+		}
+		m.quitArmed = true
+		return m, m.addToast("press ctrl+c again to quit", widgets.ToastInfo)
+	}
+	// Any other key disarms — the quit intent does not survive a keystroke of real work.
+	m.quitArmed = false
+
 	// A tab in an editing/interactive sub-state owns every key; its handler processes esc internally.
 	if m.tabHandlesAllKeys() {
 		return m.handleTabKey(key)
 	}
 
 	switch key {
-	case "q", "ctrl+c":
+	case "q":
 		return m, tea.Quit
 	case "esc":
+		// esc backs out one layer. Search and command overlays are peeled earlier in Update (their
+		// own handlers own esc); by here the outstanding layer is a non-Agent tab, and Agent is the
+		// base the dashboard rests on. On Agent with nothing open, esc is a no-op — already home.
 		if m.tab != TabAgent {
 			return m.openTab(TabAgent)
 		}

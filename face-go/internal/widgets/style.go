@@ -191,15 +191,18 @@ var (
 	stageTodoStyle    lipgloss.Style
 	stageSkippedStyle lipgloss.Style
 
-	txThinkingStyle lipgloss.Style
-	txToolStyle     lipgloss.Style
-	txResultStyle   lipgloss.Style
-	txStderrStyle   lipgloss.Style
-	txSystemStyle   lipgloss.Style
-	txAgentStyle    lipgloss.Style
-	txRawStyle      lipgloss.Style
-	txTimeStyle     lipgloss.Style
-	txMatchStyle    lipgloss.Style
+	txThinkingStyle     lipgloss.Style
+	txThinkingMoreStyle lipgloss.Style
+	txToolStyle         lipgloss.Style
+	txToolNameStyle     lipgloss.Style
+	txToolArgStyle      lipgloss.Style
+	txResultStyle       lipgloss.Style
+	txStderrStyle       lipgloss.Style
+	txSystemStyle       lipgloss.Style
+	txAgentStyle        lipgloss.Style
+	txRawStyle          lipgloss.Style
+	txTimeStyle         lipgloss.Style
+	txMatchStyle        lipgloss.Style
 
 	gatePassStyle    lipgloss.Style
 	gateRunningStyle lipgloss.Style
@@ -251,7 +254,13 @@ func rebuildStyles() {
 	stageSkippedStyle = lipgloss.NewStyle().Foreground(colSkipped)
 
 	txThinkingStyle = lipgloss.NewStyle().Foreground(colSkipped).Italic(true)
+	// The collapse tail is quieter than the thought it hangs under — it is scaffolding, not content.
+	txThinkingMoreStyle = lipgloss.NewStyle().Foreground(colOverlay).Italic(true)
 	txToolStyle = lipgloss.NewStyle().Foreground(colTeal)
+	// A tool call reads name-first: the name bold in the tool colour, its one-line argument dim
+	// beside it (Claude Code's convention). txToolStyle stays the fold-summary / fallback style.
+	txToolNameStyle = lipgloss.NewStyle().Foreground(colTeal).Bold(true)
+	txToolArgStyle = lipgloss.NewStyle().Foreground(colOverlay)
 	txResultStyle = lipgloss.NewStyle().Foreground(colGreen)
 	txStderrStyle = lipgloss.NewStyle().Foreground(colRed)
 	txSystemStyle = lipgloss.NewStyle().Foreground(colSky)

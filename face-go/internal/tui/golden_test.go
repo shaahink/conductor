@@ -383,6 +383,17 @@ func TestGolden(t *testing.T) {
 			m, _ = m.Update(keyMsg("a"))
 			return m
 		}},
+		// U3.3: the SAME transcript under the opencode provider — the tool/result/thinking glyphs
+		// switch to opencode's vocabulary (◆/└/◇) where the claude frame shows ●/⎿/✻. The spec asks
+		// for a golden of BOTH renderings so a change to one provider's glyphs can never silently
+		// swap the other's.
+		{"agent_opencode", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("a"))
+			st := fixedState()
+			st.Provider = "opencode"
+			m, _ = m.Update(MsgStateUpdated{State: st})
+			return m
+		}},
 		{"sidebar_collapsed", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("\\"))
 			return m
