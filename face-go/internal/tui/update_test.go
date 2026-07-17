@@ -245,6 +245,7 @@ func TestProcessesNavigationClamps(t *testing.T) {
 
 func TestSearchActivateTypeAndLock(t *testing.T) {
 	m := newTestModel()
+	m = asModel(mustHandle(m.handleKey("a"))) // `/` searches the transcript, so it needs the Agent tab
 	m = asModel(mustHandle(m.handleKey("/")))
 	if !m.searchActive {
 		t.Fatal("expected search to activate")
@@ -262,7 +263,7 @@ func TestSearchActivateTypeAndLock(t *testing.T) {
 	if m.transcript.SearchQuery != "gate" {
 		t.Error("the locked query should persist")
 	}
-	m = asModel(mustHandle(m.handleKey("/")))
+	m = asModel(mustHandle(m.handleKey("/"))) // still on Agent from above
 	m = asModel(mustHandle(m.handleSearchKey("esc")))
 	if m.searchActive || m.transcript.SearchQuery != "" {
 		t.Error("esc should clear search state")

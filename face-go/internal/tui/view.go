@@ -141,6 +141,8 @@ func (m Model) frameContent(body string, rect Rect) string {
 // paneView returns the active tab's body plus the contextual help shown in the bottom bar.
 func (m Model) paneView() (body, help string) {
 	switch m.tab {
+	case TabHome:
+		return m.renderHomePane()
 	case TabAgent:
 		return m.renderAgentPane()
 	case TabSessions:

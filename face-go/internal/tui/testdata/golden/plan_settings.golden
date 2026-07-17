@@ -1,5 +1,5 @@
  ◆ conductor  ● LIVE  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42                 
- a s t o c e  p Plan  r k g b                                                                                 
+ h a s t o c e  p Plan  r k g b                                                                               
                            │                                                                                  
  ▶ PLAN                    │   Stages · Gates · Settings · Import · Prompt    conductor-foreman · v7          
  ✓ F0 3/3 Foundations      │                                                                                  
@@ -9,8 +9,8 @@
    ✓ F7.2 Re-import diff   │    qa                (workflow decides)                                          
    ● F7.3 Truth-gate tier  │    verifierThreshold 80                                                          
  ○ F8 0/4 conductor chat…  │    maxSessions       (unset)                                                     
-                           │    maxRunCostUsd     (unset)                                                     
- ── GATES ──               │    maxRunTokens      (unset)                                                     
+                           │    maxRunCostUsd     10                                                          
+ ── GATES ──               │    maxRunTokens      2000000                                                     
    ✓ build                 │    stallMinutes      12                                                          
    ● test 4s               │    sessionTimeout    240                                                         
    ○ lint                  │    sessionRollover   OFF — DeepSeek-style session rollover disabled (default)    

@@ -15,12 +15,16 @@ one page; fewer clicks; transparent overlays; better colour and spacing.*
 ```
 
 - **One page.** Everything the old build hid behind a modal is a **tab** in the content pane, one
-  keypress away. There are **eleven** tabs — Agent Sessions Timeline Procs Console Templates Plan
-  Report Knowledge Telegram Kanban — reached by `a s t o c e p r k g b`, or by `1`–`9`/`0` (the 11th,
-  Kanban, has no digit — mnemonic and tab-cycle only), or `tab`/`shift+tab`. The plan **sidebar is
-  always visible** beside it (collapse with `\`). Never add a full-screen modal for a view again —
-  add a tab (and extend `tabNames`/`tabKey`, both length `tabCount`). The tab strip is adaptive: full
-  names when they fit, key-only (active tab keeps its name) when they don't — never clipped.
+  keypress away. There are **twelve** tabs — Home Agent Sessions Timeline Procs Console Templates Plan
+  Report Knowledge Telegram Kanban — reached by `h a s t o c e p r k g b`, or by `1`–`9`/`0` (the last
+  two, Telegram and Kanban, have no digit — mnemonic and tab-cycle only), or `tab`/`shift+tab`. The plan
+  **sidebar is always visible** beside it (collapse with `\`). Never add a full-screen modal for a view
+  again — add a tab (and extend `tabNames`/`tabKey`, both length `tabCount`). The tab strip is adaptive:
+  full names when they fit, key-only (active tab keeps its name) when they don't — never clipped.
+- **Home is the landing.** `TabHome` is index 0 and the tab the Face opens on (U1.1): where am I, what
+  is running, in which directory, what does it cost, what next — answered before a keypress, from the
+  `/state` + `/plan` the Face already polls. It fetches nothing of its own and owns no keys. `esc` still
+  returns to Agent: Home is where you arrive, Agent is where the work is.
 - **One file per tab.** Each tab's key handler + renderer live together in `tab_<name>.go` (the plan
   editor in `plan.go`); the palette/inject/search/help layer is `cmdbar.go`; `view.go` only assembles
   the frame; `update.go` is only the message loop + global routing. Add a tab by creating its

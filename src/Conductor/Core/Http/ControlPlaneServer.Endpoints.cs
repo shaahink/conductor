@@ -26,7 +26,7 @@ public sealed partial class ControlPlaneServer
         // _state is the live RunState the dispatcher mutates — the set-rollover override lives only
         // there (P5: run-state, not an event), so the fold above can never see it.
         var dto = ControlPlaneDto.FromSnapshot(snap, runState.RunId, _plan.Repo, _plan.PlanDir,
-            _state.MaxSessionTokensThisRun);
+            _state.MaxSessionTokensThisRun, _plan.Tracker, _plan.StateDir);
         dto = WithLiveSessionMetrics(dto, events, runState);
 
         // The folded projection never carries run-loop status (it is runtime state, not an event):

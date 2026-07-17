@@ -198,7 +198,9 @@ func fixedState() *api.StateDto {
 		CurrentCheckpointTitle: "Wire caching layer",
 		RunId:                  "demo-run-id",
 		Repo:                   `C:\Code\conductor`,
-		PlanDir:                "plans",
+		PlanDir:                `C:\Code\conductor\plans`,
+		Tracker:                "CONDUCTOR-VNEXT-PLAN.md",
+		StateDir:               `C:\Code\conductor\.conductor`,
 		SessionNumber:          12,
 		SessionKind:            "Deliver",
 		Model:                  "claude-opus-4-8",
@@ -250,9 +252,16 @@ func fixedPlan() *api.PlanDto {
 			{Name: "test", Command: "dotnet test Conductor.slnx", Tier: "full", TimeoutMinutes: 20},
 			{Name: "ratchet", Command: "dotnet test --filter Category=Architecture", Tier: "truth", TimeoutMinutes: 15},
 		},
-		Limits: api.PlanLimitsDto{StallMinutes: 12, SessionTimeoutMinutes: 240, VerifierThreshold: 80},
+		// Caps are set so Home's budget/headroom rows are actually exercised by the goldens.
+		Limits: api.PlanLimitsDto{
+			StallMinutes: 12, SessionTimeoutMinutes: 240, VerifierThreshold: 80,
+			MaxRunCostUsd: f64Ptr(10), MaxRunTokens: i64Ptr(2_000_000),
+		},
 	}
 }
+
+func f64Ptr(f float64) *float64 { return &f }
+func i64Ptr(n int64) *int64     { return &n }
 
 func fixedTranscript() []api.TranscriptLineDto {
 	// Fixed UTC timestamps: the transcript renders a wall-clock prefix, and goldens must not
@@ -307,6 +316,13 @@ func newGoldenModel(width, height int) tea.Model {
 	var m tea.Model = New(fakeSource{}, false, "http://127.0.0.1:4317")
 	m, _ = m.Update(tea.WindowSizeMsg{Width: width, Height: height})
 	m, _ = m.Update(MsgStateUpdated{State: fixedState()})
+	// Init() fetches the plan up front for the Plan tab; Home reads it too (plan file + budget caps),
+	// so the fixture mirrors that rather than rendering a Home the real Face never shows.
+	m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
+	// Init() also subscribes to both SSE streams. Without these a "live, connected" fixture renders
+	// Home's stream dots RED — an attached run that looks half-broken. Mirror the real wire.
+	m, _ = m.Update(MsgEventsConnChanged{Connected: true})
+	m, _ = m.Update(MsgTxConnChanged{Connected: true})
 	m, _ = m.Update(MsgProcessesUpdated{Procs: &api.ProcessesDto{Processes: []api.ProcessDto{
 		// ExitedUtc is set on both (even the "alive" one) purely so the rendered runtime is a
 		// fixed value — formatProcessRuntime falls back to time.Now() for genuinely-alive
@@ -347,7 +363,12 @@ func TestGolden(t *testing.T) {
 		name string
 		do   func(m tea.Model) tea.Model
 	}{
+		// Home is the tab the Face opens on (U1.1), so "default" IS the landing page, connected.
 		{"default", func(m tea.Model) tea.Model { return m }},
+		{"agent", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("a"))
+			return m
+		}},
 		{"sidebar_collapsed", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("\\"))
 			return m
@@ -626,6 +647,7 @@ func TestGolden(t *testing.T) {
 			return m
 		}},
 		{"search", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("a")) // `/` searches the transcript — an Agent-tab affordance
 			m, _ = m.Update(keyMsg("/"))
 			for _, ch := range "gate" {
 				m, _ = m.Update(keyMsg(string(ch)))
@@ -656,10 +678,31 @@ func TestGolden(t *testing.T) {
 	}
 }
 
-// TestGoldenSplash renders the empty state (no run attached) that live mode shows before data arrives.
+// TestGoldenHomeDisconnected is the frame a person actually lands on with no engine running: Home,
+// live mode, nothing attached. U1.1 folds the old splash's how-to-start into the Server panel, so this
+// is the screen that has to explain itself with no data at all.
+func TestGoldenHomeDisconnected(t *testing.T) {
+	var m tea.Model = New(fakeSource{}, false, "http://127.0.0.1:4317")
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 110, Height: 34})
+	checkGolden(t, "home_disconnected", stripANSI(m.View().Content))
+}
+
+// TestGoldenHomeDemo is the same landing in --demo: the tour a reviewer sees with no engine and no
+// spend, which must fill every Home panel rather than degrading to dashes.
+func TestGoldenHomeDemo(t *testing.T) {
+	var m tea.Model = New(fakeSource{}, true, "http://127.0.0.1:4317")
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 110, Height: 34})
+	m, _ = m.Update(MsgStateUpdated{State: fixedState()})
+	m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
+	checkGolden(t, "home_demo", stripANSI(m.View().Content))
+}
+
+// TestGoldenSplash renders the Agent tab's empty state (no run attached) — still reachable with `a`
+// before an engine is up, even though Home is now the landing.
 func TestGoldenSplash(t *testing.T) {
 	var m tea.Model = New(fakeSource{}, false, "http://127.0.0.1:4317")
 	m, _ = m.Update(tea.WindowSizeMsg{Width: 110, Height: 34})
+	m, _ = m.Update(keyMsg("a"))
 	checkGolden(t, "splash", stripANSI(m.View().Content))
 }
 

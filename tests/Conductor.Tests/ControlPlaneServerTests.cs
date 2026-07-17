@@ -125,6 +125,41 @@ public sealed class ControlPlaneServerTests : IDisposable
         finally { server.Dispose(); }
     }
 
+    // U1.1: the Face's Home panel names the whole workspace, so /state has to carry the whole
+    // workspace. Golden frames can't catch a wire mismatch — only a real round-trip can.
+    // The load-bearing assertion is stateDir: PlanConfig.StateDir is rooted at Repo, NOT PlanDir, so
+    // a plan file living outside the repo (as it does here, and in the conductor repo itself) must
+    // NOT move the state dir. The spec text says "<planDir>/.conductor"; the engine disagrees, and
+    // the engine is what actually writes the files.
+    [Fact]
+    public async Task GetState_CarriesTheWorkspaceIdentity_WithStateDirRootedAtRepoNotPlanDir()
+    {
+        WriteEvents(new RunStarted { Plan = "cps-test", Repo = _dir });
+
+        var planDir = Path.Combine(_dir, "plans");
+        Directory.CreateDirectory(planDir);
+        _plan.PlanFilePath = Path.Combine(planDir, "cps-test.plan.json");
+
+        var (server, port) = StartServer();
+        try
+        {
+            var resp = await _http.GetAsync($"http://127.0.0.1:{port}/state");
+            Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+
+            Assert.Equal(_dir, doc.RootElement.GetProperty("repo").GetString());
+            Assert.Equal("TRACKER.md", doc.RootElement.GetProperty("tracker").GetString());
+            Assert.Equal(planDir, doc.RootElement.GetProperty("planDir").GetString());
+
+            var stateDir = doc.RootElement.GetProperty("stateDir").GetString();
+            Assert.Equal(Path.Combine(_dir, ".conductor"), stateDir);
+            Assert.Equal(_plan.StateDir, stateDir);
+            Assert.DoesNotContain("plans", stateDir!.Replace(_dir, "", StringComparison.Ordinal),
+                StringComparison.Ordinal);
+        }
+        finally { server.Dispose(); }
+    }
+
     // P5 follow-up: /state surfaces the set-rollover this-run override straight off the live
     // RunState — absent when there is no override (honest OFF-by-default), 0 when forced off,
     // the cap when set. The server holds the same instance the dispatcher mutates, so flipping

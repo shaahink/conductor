@@ -710,25 +710,33 @@ verify against the real thing without spending on a real LLM session:
 | `internal/templates/` | Direct filesystem read/write for the template editor (planDir on disk) |
 
 ### Keybindings (v3 dashboard)
-**Tabs** (jump straight there — also `1`–`8`, or `tab`/`shift+tab` to cycle; `esc` returns to Agent):
+**Tabs** (jump straight there — also `1`–`9`/`0`, or `tab`/`shift+tab` to cycle; `esc` returns to Agent).
+`tabKey` in `model.go` is the single source of truth for this table:
 | Key | Tab |
 |-----|-----|
+| `h` | **Home** (U1.1 landing + the startup tab: Server · Run · Workspace · Next steps, all from `/state`+`/plan`) |
 | `a` | Agent (mission control: status strip + transcript; `f` fold, `↑↓` scroll, `end`/`l` live-tail) |
-| `h` | Sessions (history + inline detail) |
+| `s` | Sessions (history + inline detail) |
 | `t` | Timeline (`r` refresh) |
-| `s` | Procs (supervised processes) |
+| `o` | Procs (supervised processes; `x` kills a live one after a confirm) |
 | `c` | Console (raw agent stdout) |
 | `e` | Templates (list + editor + `v` compiled-prompt preview, all on one page) |
-| `g` | Plan editor (M6.3) — `←→` sections Stages·Gates·Settings·Import; edit fields inline; Import → diff → apply |
+| `p` | Plan editor (M6.3) — `←→` sections Stages·Gates·Settings·Import·Prompt; `n` add, `d` delete |
 | `r` | Report / query console |
+| `k` | Knowledge (M7: ledger + tracked bugs; `n` note, `b` bug, `x` resolve) |
+| `g` | Telegram (M8.2 guided setup/status/test) |
+| `b` | Kanban (G2.2 board; `←→` move, `n` add, `enter` card detail) |
+
+Telegram and Kanban are past the digit row (`1`–`9` reach Home…Report, `0` reaches Knowledge) — they are
+mnemonic/tab-cycle only.
 
 **Actions** (bottom command bar / overlays):
 | Key | Action |
 |-----|--------|
-| `:` | Command palette (11 verbs, filterable, destructive ones confirm, `goto` asks for a stage id) |
+| `:` | Command palette (13 verbs, filterable, destructive ones confirm, `goto` asks for a stage id) |
 | `i` | Inject context (bottom bar: `tab` field, `ctrl+s` send) |
-| `/` | Inline transcript search (enter: lock, n/N: next/prev, esc: clear) |
-| `p` | Collapse / expand the plan sidebar |
+| `/` | Inline transcript search, Agent tab (enter: lock, n/N: next/prev, esc: clear) |
+| `\` | Collapse / expand the plan sidebar (moved off `p` so Plan could take its natural mnemonic) |
 | `?` | Help card (transparent overlay) |
 | `q / ^C` | Quit |
 

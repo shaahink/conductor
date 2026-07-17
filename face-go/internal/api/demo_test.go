@@ -5,6 +5,50 @@ import (
 	"time"
 )
 
+// The demo IS the product tour (CONDUCTOR-UX.md ground rules), so --demo has to fill every field
+// Home renders — a tour with dashes where the workspace should be teaches the product wrong. Driven
+// against the REAL demo source, not the goldens' fakeSource, which is where these fields would
+// otherwise go untested.
+func TestDemoSourceFillsHomeWorkspaceAndBudgets(t *testing.T) {
+	src := NewDemoSource()
+	defer src.Close()
+
+	state, err := src.FetchState()
+	if err != nil || state == nil {
+		t.Fatalf("FetchState failed: %v", err)
+	}
+	for _, f := range []struct{ name, got string }{
+		{"Repo", state.Repo},
+		{"PlanDir", state.PlanDir},
+		{"Tracker", state.Tracker},
+		{"StateDir", state.StateDir},
+	} {
+		if f.got == "" {
+			t.Errorf("demo state must fill %s — Home renders it", f.name)
+		}
+	}
+	// StateDir is repo-rooted (PlanConfig.StateDir), never planDir-rooted. The demo has to mirror the
+	// engine's real layout or the tour teaches a path that does not exist.
+	if want := state.Repo + `\.conductor`; state.StateDir != want {
+		t.Errorf("demo StateDir = %q, want %q (repo-rooted, not under planDir)", state.StateDir, want)
+	}
+
+	plan, err := src.FetchPlan()
+	if err != nil || plan == nil {
+		t.Fatalf("FetchPlan failed: %v", err)
+	}
+	if plan.PlanFile == "" {
+		t.Error("demo plan must carry PlanFile — Home's Workspace panel names it")
+	}
+	// Caps set = Home's budget/headroom rows are part of the tour.
+	if plan.Limits.MaxRunCostUsd == nil || *plan.Limits.MaxRunCostUsd <= 0 {
+		t.Error("demo plan must set limits.maxRunCostUsd so Home shows a budget row")
+	}
+	if plan.Limits.MaxRunTokens == nil || *plan.Limits.MaxRunTokens <= 0 {
+		t.Error("demo plan must set limits.maxRunTokens so Home shows a token-cap row")
+	}
+}
+
 func TestDemoSourceFetchState(t *testing.T) {
 	src := NewDemoSource()
 	defer src.Close()

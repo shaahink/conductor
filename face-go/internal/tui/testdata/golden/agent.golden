@@ -1,19 +1,19 @@
  ◆ conductor  ● LIVE  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42                 
- h a s t o c  e Templates  p r k g b                                                                          
+ h  a Agent  s t o c e p r k g b                                                                              
                            │                                                                                  
- ▶ PLAN                    │  • session.md              │ compiled · stage F7                                 
- ✓ F0 3/3 Foundations      │  ○ fix.md                    kind ‹  Deliver  Fix Resume Audit Review ›          
- ✓ F6 5/5 Ink TUI v1       │  ○ resume.md                                                                     
- ● F7 2/5 Gate … 1× $0.30  │  ○ advisor.md                model deepseek/deepseek-v4-pro · kind Deliver       
-   ✓ F7.1 Plan import      │  ○ audit.md                                                                      
-   ✓ F7.2 Re-import diff   │  ○ review.md                 # Deliver session — stage F7                        
-   ● F7.3 Truth-gate tier  │  ○ verify.md                                                                     
- ○ F8 0/4 conductor chat…  │                              You are the conductor's delivery agent. Land the    
-                           │                              checkpoints for stage F7.                           
+ ▶ PLAN                    │  s12 Deliver · attempt 1/3 · opus-4-8 · architect  ◆ F7.3 Wire caching layer ⠋   
+ ✓ F0 3/3 Foundations      │  build ✓ · test ● 4s · lint ○    task 1/3 ▸ Wire RunDb.GetLastPassingGateResult  
+ ✓ F6 5/5 Ink TUI v1       │  ──────────────────────────────────────────────────────────────────────────────  
+ ● F7 2/5 Gate … 1× $0.30  │  10:04:01 ▸ Session #12 started · Deliver · Stage F7 · Attempt 1                 
+   ✓ F7.1 Plan import      │  10:04:09 ⁙ Let me examine the GateCache implementation...                       
+   ✓ F7.2 Re-import diff   │  10:04:14 ⚙ read src/Conductor/Core/Gating/GateCache.cs                          
+   ● F7.3 Truth-gate tier  │  10:04:15 ↳ GateCache.cs:142 lines — caches by (name, tier, sha)                 
+ ○ F8 0/4 conductor chat…  │  10:04:22 ▸ Found the caching layer. Adding GetLastPassingGateResult to RunDb.   
+                           │                                                                                  
  ── GATES ──               │                                                                                  
-   ✓ build                 │                              ## Tools                                            
-   ● test 4s               │                              conductor note / bg / task --done <id> --           
-   ○ lint                  │                              evidence <path>                                     
+   ✓ build                 │                                                                                  
+   ● test 4s               │                                                                                  
+   ○ lint                  │                                                                                  
                            │                                                                                  
  ── TASKS ──               │                                                                                  
    ✓ Add truth-tier con…   │                                                                                  
@@ -31,4 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ←→ kind · v/esc close                             
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ scroll · f fold · T thinking · / search · end l

@@ -100,6 +100,11 @@ type StateDto struct {
 	// The model the current/last session's resolved agent runs (stage + assignment overrides
 	// applied) — the "what model is working" answer. "" = unknown / older engine.
 	Model string `json:"model"`
+	// U1.1: the rest of the workspace identity Home names. Engine-computed, never re-derived here —
+	// StateDir is rooted at Repo, not PlanDir, so it cannot be guessed by joining PlanDir.
+	// "" = older engine that doesn't serve them yet; Home degrades to "—" rather than inventing a path.
+	Tracker  string `json:"tracker"`
+	StateDir string `json:"stateDir"`
 }
 
 type StageDto struct {

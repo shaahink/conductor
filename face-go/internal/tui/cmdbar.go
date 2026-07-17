@@ -296,13 +296,19 @@ func (m Model) overlayPalette(screen string, layout LayoutRects) string {
 	return compositeAt(screen, box, x, y)
 }
 
+// tabLegendCell is one "k Name" column of the help card's Tabs grid. The NAME is padded as plain text
+// before any styling — padding a styled string pads its escape bytes (STYLE.md).
+func tabLegendCell(k, name string) string {
+	return key(k) + " " + fmt.Sprintf("%-11s", name)
+}
+
 func (m Model) renderHelpOverlay() string {
 	body := "" +
 		accentStyle.Render("Tabs") + subtleStyle.Render("  (number or letter jumps straight there)") + "\n" +
-		"  " + key("a") + " Agent    " + key("s") + " Sessions   " + key("t") + " Timeline\n" +
-		"  " + key("o") + " Procs    " + key("c") + " Console    " + key("e") + " Templates\n" +
-		"  " + key("p") + " Plan     " + key("r") + " Report     " + key("k") + " Knowledge\n" +
-		"  " + key("g") + " Telegram " + key("b") + " Kanban\n" +
+		"  " + tabLegendCell("h", "Home") + tabLegendCell("a", "Agent") + tabLegendCell("s", "Sessions") + "\n" +
+		"  " + tabLegendCell("t", "Timeline") + tabLegendCell("o", "Procs") + tabLegendCell("c", "Console") + "\n" +
+		"  " + tabLegendCell("e", "Templates") + tabLegendCell("p", "Plan") + tabLegendCell("r", "Report") + "\n" +
+		"  " + tabLegendCell("k", "Knowledge") + tabLegendCell("g", "Telegram") + tabLegendCell("b", "Kanban") + "\n" +
 		"  " + key("tab") + " cycle tabs\n\n" +
 		accentStyle.Render("Actions") + "\n" +
 		"  " + key(":") + " command palette   " + key("i") + " inject context\n" +

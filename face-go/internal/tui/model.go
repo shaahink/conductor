@@ -13,7 +13,10 @@ import (
 type MainTab int
 
 const (
-	TabAgent MainTab = iota
+	// TabHome is the landing page (U1.1) and the tab the Face opens on: where am I, what is running,
+	// in which directory, what does it cost, what next — answerable before pressing anything.
+	TabHome MainTab = iota
+	TabAgent
 	TabSessions
 	TabTimeline
 	TabProcesses
@@ -27,14 +30,15 @@ const (
 	tabCount
 )
 
-var tabNames = [tabCount]string{"Agent", "Sessions", "Timeline", "Procs", "Console", "Templates", "Plan", "Report", "Knowledge", "Telegram", "Kanban"}
+var tabNames = [tabCount]string{"Home", "Agent", "Sessions", "Timeline", "Procs", "Console", "Templates", "Plan", "Report", "Knowledge", "Telegram", "Kanban"}
 
 // tabKey is the mnemonic that jumps straight to each tab (also shown in the strip). First-letter where
 // it's free; Procs takes o and Telegram takes g (their first letters collide), Plan takes p — freed
-// by moving sidebar-collapse to `\` — and Kanban takes b ("board"; k is Knowledge). Kanban is the
-// 11th tab: there is no spare digit past 0, so it's reached by b and tab-cycle only. Keep this in
-// sync with renderHelpOverlay's Tabs legend.
-var tabKey = [tabCount]string{"a", "s", "t", "o", "c", "e", "p", "r", "k", "g", "b"}
+// by moving sidebar-collapse to `\` — and Kanban takes b ("board"; k is Knowledge). Home takes h, free
+// since the tab-mnemonic relabel moved Sessions to s. Digits 1–9 reach Home…Report and 0 reaches
+// Knowledge; Telegram and Kanban are the two tabs past the digits — mnemonic and tab-cycle only. Keep
+// this in sync with renderHelpOverlay's Tabs legend.
+var tabKey = [tabCount]string{"h", "a", "s", "t", "o", "c", "e", "p", "r", "k", "g", "b"}
 
 // CmdMode is a transient bottom-bar input that floats over the dashboard instead of a full modal.
 type CmdMode int
@@ -215,7 +219,7 @@ func New(source api.DataSource, isDemo bool, baseURL string) Model {
 		source:       source,
 		isDemo:       isDemo,
 		baseURL:      baseURL,
-		tab:          TabAgent,
+		tab:          TabHome,
 		cmd:          CmdNone,
 		transcript:   widgets.NewTranscript(),
 		sidebar:      widgets.NewSidebar(),

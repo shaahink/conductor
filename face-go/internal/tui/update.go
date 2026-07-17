@@ -461,8 +461,8 @@ func (m Model) handleKey(key string) (tea.Model, tea.Cmd) {
 			return m.openTab(MainTab(t))
 		}
 	case "0":
-		// The 10th tab (index 9) has no 1–9 digit; "0" reaches it. Tabs past that (Kanban, the
-		// 11th) have no digit at all — mnemonic and tab-cycle only.
+		// The 10th tab (index 9) has no 1–9 digit; "0" reaches it. Tabs past that (Telegram and
+		// Kanban, the 11th and 12th) have no digit at all — mnemonic and tab-cycle only.
 		if int(tabCount) > 9 {
 			return m.openTab(MainTab(9))
 		}

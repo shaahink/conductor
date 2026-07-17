@@ -26,12 +26,17 @@ public sealed record StateDto(
     long? MaxSessionTokensThisRun = null,
     // The model the current/last session's resolved agent runs (stage + assignment overrides applied),
     // from the latest SessionStarted event; before any session, the stage/plan default. "" = unknown.
-    string Model = "");
+    string Model = "",
+    // U1.1: the rest of the workspace identity the Face's Home panel names. Both are engine-computed
+    // (PlanConfig.Tracker / PlanConfig.StateDir) rather than re-derived Face-side: StateDir is rooted at
+    // Repo, NOT PlanDir, so a plan whose json lives outside the repo root cannot be guessed from PlanDir.
+    string Tracker = "",
+    string StateDir = "");
 
 public static class ControlPlaneDto
 {
     public static StateDto FromSnapshot(DashboardSnapshot snap, string runId, string repo, string planDir,
-        long? maxSessionTokensThisRun = null) => new(
+        long? maxSessionTokensThisRun = null, string tracker = "", string stateDir = "") => new(
         PlanName: snap.PlanName,
         Status: snap.Status,
         AttentionReason: snap.AttentionReason,
@@ -63,7 +68,9 @@ public static class ControlPlaneDto
         SessionTokensOutput: snap.SessionTokensOutput,
         SessionTokensReasoning: snap.SessionTokensReasoning,
         Gates: [.. snap.Gates.Select(g => new GateDto(g.Name, g.State, g.LiveElapsed(DateTime.UtcNow).TotalSeconds))],
-        MaxSessionTokensThisRun: maxSessionTokensThisRun);
+        MaxSessionTokensThisRun: maxSessionTokensThisRun,
+        Tracker: tracker,
+        StateDir: stateDir);
 
     private static StageDto FromStage(StageProgress s) => new(
         Id: s.Id, Title: s.Title, Done: s.Done, Total: s.Total, State: s.State,

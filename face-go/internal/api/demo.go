@@ -621,9 +621,17 @@ func makeFakePlan() *PlanDto {
 			{Name: "test", Command: "dotnet test Conductor.slnx", Tier: "full", TimeoutMinutes: 20},
 			{Name: "ratchet", Command: "dotnet test --filter Category=Architecture", Tier: "truth", TimeoutMinutes: 15},
 		},
-		Limits: PlanLimitsDto{StallMinutes: 12, SessionTimeoutMinutes: 240, VerifierThreshold: 80},
+		// U1.1: caps are set here so the demo tour actually shows Home's budget/headroom rows — an
+		// uncapped demo would render a Run panel the product mostly doesn't have.
+		Limits: PlanLimitsDto{
+			StallMinutes: 12, SessionTimeoutMinutes: 240, VerifierThreshold: 80,
+			MaxRunCostUsd: f64Ptr(10), MaxRunTokens: i64Ptr(2_000_000),
+		},
 	}
 }
+
+func f64Ptr(f float64) *float64 { return &f }
+func i64Ptr(n int64) *int64     { return &n }
 
 func (s *demoSource) SubscribeEvents(onEvent func(ConductorEventDto), onConnected func(bool)) func() {
 	ch := make(chan json.RawMessage, 64)
@@ -863,17 +871,22 @@ func makeFakeState() *StateDto {
 		GateSummary:            "build ✓ test ● lint ○",
 		RunId:                  "demo-run-id",
 		Repo:                   "C:\\Code\\conductor",
-		PlanDir:                "plans",
-		SessionNumber:          12,
-		SessionKind:            "Deliver",
-		Model:                  "claude-opus-4-8",
-		Attempt:                1,
-		MaxAttempts:            3,
-		SessionElapsedSec:      0,
-		AgentActive:            true,
-		SessionCostUsd:         0,
-		SessionTokensInput:     0,
-		SessionTokensOutput:    0,
+		PlanDir:                "C:\\Code\\conductor\\plans",
+		// U1.1: Home names the whole workspace, so the demo has to carry the whole workspace. StateDir
+		// is repo-rooted (PlanConfig.StateDir), NOT planDir-rooted — the demo must mirror that or it
+		// teaches the layout wrong.
+		Tracker:             "CONDUCTOR-VNEXT-PLAN.md",
+		StateDir:            "C:\\Code\\conductor\\.conductor",
+		SessionNumber:       12,
+		SessionKind:         "Deliver",
+		Model:               "claude-opus-4-8",
+		Attempt:             1,
+		MaxAttempts:         3,
+		SessionElapsedSec:   0,
+		AgentActive:         true,
+		SessionCostUsd:      0,
+		SessionTokensInput:  0,
+		SessionTokensOutput: 0,
 		Stages: []StageDto{
 			{Id: "F0", Title: "Foundations", Done: 3, Total: 3, State: "confirmed", Depth: 0},
 			{Id: "F1", Title: "run.db task store", Done: 4, Total: 4, State: "confirmed", Depth: 0},
