@@ -1,10 +1,10 @@
 ﻿# Conductor — Conductor UX (U-series) run report
 
-_Updated 2026-07-17 03:44 UTC · branch `feat/foreman` · HEAD `e1b5a57`_
+_Updated 2026-07-17 03:44 UTC · branch `feat/foreman` · HEAD `318cd1b`_
 
-**Status:** Idle
-**Stage:** U2 — Face: controls, visual report, dev stats · attempts used 1 · working ▸ U2.1
-**Checkpoints:** 5/11 done · **Sessions run:** 7 · **Cost:** $69.5518 (agent $69.5351 + gates $0.0167)
+**Status:** NeedsHuman — agent asked for a human in the tracker handoff (HUMAN: line) — resolve, then run `conductor resume`
+**Stage:** U2 — Face: controls, visual report, dev stats · attempts used 1 · working ▸ U2.2
+**Checkpoints:** 6/11 done · **Sessions run:** 7 · **Cost:** $69.5518 (agent $69.5351 + gates $0.0167)
 **Confirmed phases:** U0, U1
 
 ## Stage progress
@@ -13,7 +13,7 @@ _Updated 2026-07-17 03:44 UTC · branch `feat/foreman` · HEAD `e1b5a57`_
 |---|---|---|---|
 | U0 | Engine: start, resume, journey | ██████████ 3/3 | confirmed ✓ |
 | U1 | Face: landing page + workspace identity | ██████████ 2/2 | confirmed ✓ |
-| U2 | Face: controls, visual report, dev stats | ░░░░░░░░░░ 0/3 | **← active** |
+| U2 | Face: controls, visual report, dev stats | ███░░░░░░░ 1/3 | **← active** |
 | U3 | Face: themes, agent-terminal vibe, glitch pass | ░░░░░░░░░░ 0/3 | todo |
 
 <details> ✅<summary>U0 — Engine: start, resume, journey (3/3)</summary>
@@ -35,11 +35,11 @@ _Updated 2026-07-17 03:44 UTC · branch `feat/foreman` · HEAD `e1b5a57`_
 
 </details>
 
-<details><summary>U2 — Face: controls, visual report, dev stats (0/3)</summary>
+<details><summary>U2 — Face: controls, visual report, dev stats (1/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| U2.1 | palette groups (Run/Stage/Danger) + consequence-naming confirms | ⬜ TODO |  |
+| U2.1 | palette groups (Run/Stage/Danger) + consequence-naming confirms | ✅ DONE | - |
 | U2.2 | Report tab is a visual run report (progress, stages, sessions, gates, scores) | ⬜ TODO |  |
 | U2.3 | Dev tab: SQL console moved + run internals + per-session token/cost stats | ⬜ TODO |  |
 
@@ -72,7 +72,6 @@ _Updated 2026-07-17 03:44 UTC · branch `feat/foreman` · HEAD `e1b5a57`_
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-17 00:48:12  • session #1 U0 → Interrupted  (5m38s)
 07-17 01:28:28  ◆ run resumed · Conductor UX (U-series)
 07-17 01:28:29  • session #2 U0 Resume started (attempt 1/6)
 07-17 02:31:29  ▪ gate build pass [session]  (34.7s)
@@ -112,6 +111,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-17 04:10:07  • session #7 U2 Fix started (attempt 2/8)
 07-17 04:44:34  ▪ gate build pass [session]  (36.3s)
 07-17 04:44:34  ▪ gate face-build pass [session]  (3.8s)
+07-17 04:44:35  • session #7 U2 → Progress · 3 commit(s)  (34m27s)
 ```
 
 ## Health
@@ -129,8 +129,8 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/foreman
-working tree: clean
-vs upstream: up to date
+working tree: M CONDUCTOR-UX-START.md
+vs upstream: 1 ahead
 ```
 
 ### Commits by session
