@@ -3,6 +3,7 @@ package tui
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -89,6 +90,98 @@ func TestPaletteDestructiveConfirmFlow(t *testing.T) {
 	}
 	if msg := cmd().(MsgControlSent); msg.Verb != "abort" || !msg.Success {
 		t.Errorf("expected abort/success, got %+v", msg)
+	}
+}
+
+// U2.1: the safety contract, pinned against the verb table itself rather than a hand-listed set of
+// verbs — a verb added later inherits the check instead of quietly escaping it.
+func TestEveryUnsafeVerbNamesItsConsequence(t *testing.T) {
+	for _, v := range allVerbs {
+		if v.Safe {
+			if v.Consequence != "" {
+				t.Errorf("%s is Safe but carries a consequence line; it will never be shown", v.Key)
+			}
+			continue
+		}
+		if v.Consequence == "" {
+			t.Errorf("unsafe verb %q has no Consequence: its confirm would read as a bare prompt", v.Key)
+			continue
+		}
+		// The prompt already prints "<key> — "; a consequence that just repeats the key says nothing.
+		if strings.EqualFold(strings.TrimSpace(v.Consequence), v.Key) {
+			t.Errorf("unsafe verb %q restates itself instead of naming a consequence", v.Key)
+		}
+	}
+}
+
+// U2.1: no destructive verb may fire without a confirm — driven through the real handler for every
+// unsafe verb, so this cannot rot the way a spot-check of `abort` alone would.
+func TestNoUnsafeVerbFiresWithoutConfirm(t *testing.T) {
+	for _, v := range allVerbs {
+		if v.Safe {
+			continue
+		}
+		m := newTestModel()
+		m = asModel(mustHandle(m.handleKey(":")))
+		for _, ch := range v.Key {
+			m = asModel(mustHandle(m.handlePaletteKey(string(ch))))
+		}
+		tm, cmd := m.handlePaletteKey("enter")
+		m = asModel(tm)
+		if cmd != nil {
+			t.Errorf("%s fired on enter without a confirm", v.Key)
+			continue
+		}
+		if !m.paletteConfirming {
+			t.Errorf("%s did not enter confirm mode", v.Key)
+			continue
+		}
+		// The confirm line the owner reads must actually contain the consequence — and must still
+		// contain it at the narrowest supported width (80), where renderBottomBar's MaxWidth would
+		// otherwise silently clip the sentence into meaninglessness. That clipping is exactly how a
+		// "named consequence" rots back into a bare prompt, so pin the narrow case, not a roomy one.
+		bar := m.renderBottomBar(80, "")
+		if !strings.Contains(bar, v.Consequence) {
+			t.Errorf("%s confirm bar does not name its consequence at 80 cols (too long?).\n"+
+				"want substring: %s\ngot: %s", v.Key, v.Consequence, bar)
+		}
+	}
+}
+
+// U2.1: the palette's key column must clear the longest verb, or that row's description hangs one
+// column right of the rest (the pause-after-stage skew this checkpoint found and fixed).
+func TestVerbKeyColumnFitsEveryVerb(t *testing.T) {
+	for _, v := range allVerbs {
+		if len(v.Key) >= verbKeyPad {
+			t.Errorf("verb %q is %d chars but verbKeyPad is %d: its description column will skew "+
+				"right of every other row — widen verbKeyPad", v.Key, len(v.Key), verbKeyPad)
+		}
+	}
+}
+
+// U2.1: grouping is presentation, so pin the thing that would actually break the overlay's
+// single-pass header emission — allVerbs being ordered by group.
+func TestVerbsAreOrderedByGroup(t *testing.T) {
+	seen := map[verbGroup]bool{}
+	last := verbGroup("")
+	for _, v := range allVerbs {
+		if v.Group == last {
+			continue
+		}
+		if seen[v.Group] {
+			t.Fatalf("group %q is interleaved: allVerbs must stay sorted by group or the overlay "+
+				"emits a duplicate header for it", v.Group)
+		}
+		seen[v.Group] = true
+		last = v.Group
+	}
+	for _, g := range groupOrder {
+		if !seen[g] {
+			t.Errorf("group %q in groupOrder has no verbs", g)
+		}
+	}
+	if len(seen) != len(groupOrder) {
+		t.Errorf("allVerbs uses %d groups but groupOrder names %d", len(seen), len(groupOrder))
 	}
 }
 

@@ -247,10 +247,3 @@ func indent(s, prefix string) string {
 	}
 	return strings.Join(lines, "\n")
 }
-
-func ternary(cond bool, a, b string) string {
-	if cond {
-		return a
-	}
-	return b
-}

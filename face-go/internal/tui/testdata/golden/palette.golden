@@ -13,22 +13,22 @@
  ── GATES ──               │  session    s12 Deliver · attempt 1/3 · opus-4-8                              
    ✓ build                 │  progress   ▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱ 2/40 checkpoints                         
    ● test 4s               │  cost       $0.42   +$0.02 overhead                                           
-   ○ lint                  │  tokens     2.5k in · 1.8k out · 900 reasoning                                
-                           │  budget     $0.42 / $10.00  95% headroom                                      
- ── TASKS ──               │  tokens cap 5.2k / 2.0M  99% headroom                                         
- ╭──────────────────────────────────────────────────────────────────╮                                      
- │    pause            Pause after current session ends             │                                      
- │   resume           Resume a paused run                           │ts                                    
- │   approve          Approve and continue                          │                                      
- │   skip             Skip current stage                            │uctor-foreman.plan.json               
- │ ⚠ abort            Abort run immediately                         │                                      
- │ ⚠ kill             Kill current agent session                    │                                      
- │   stop-after       Stop after current session                    │                                      
- │   heartbeat        Refresh REPORT.md snapshot now                │                                      
- │   reload-plan      Swap live plan at next session boundary       │ng right now                          
- │ ⚠ retry-stage      Reset attempt counter, retry stage            │                                      
- │ ⚠ rollback         Git reset --hard to stage start               │                                      
- │   pause-after-stage Pause once stage completes                   │                                      
- │   goto             Jump to a different stage (requires stage ID) │                                      
- ╰──────────────────────────────────────────────────────────────────╯                                      
+ ╭────────────────────────────────────────────────────────────────────╮ning                                
+ │ Run                                                                │                                    
+ │   pause              Pause after current session ends              │                                    
+ │   resume             Resume a paused run                           │                                    
+ │   stop-after         Stop after current session                    │                                    
+ │   approve            Approve and continue                          │                                    
+ │   heartbeat          Refresh REPORT.md snapshot now                │                                    
+ │   reload-plan        Swap live plan at next session boundary       │tor-foreman.plan.json               
+ │ Stage                                                              │                                    
+ │   goto               Jump to a different stage (requires stage ID) │                                    
+ │ ⚠ retry-stage        Reset attempt counter, retry stage            │                                    
+ │   skip               Skip current stage                            │                                    
+ │   pause-after-stage  Pause once stage completes                    │ right now                          
+ │ Danger                                                             │                                    
+ │ ⚠ kill               Kill current agent session                    │                                    
+ │ ⚠ abort              Abort run immediately                         │                                    
+ │ ⚠ rollback           Git reset --hard to stage start               │                                    
+ ╰────────────────────────────────────────────────────────────────────╯                                    
  : ▏  ↑↓ enter esc                                                                                         
