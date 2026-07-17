@@ -45,30 +45,60 @@ tree while an agent session is live.
   fable advisor) · `docs/CONDUCTOR-UX.md` (THE spec — includes the 13-item dogfood appendix, the
   "delivered engine-side, do not redo" ledger, and the owner's orchestrator-gaps backlog) ·
   `CONDUCTOR-UX-START.md` (tracker; the engine regenerates it, don't hand-groom).
-- **Run state:** run `1a7c1714` in `.conductor/run.db`, now on **session #2** (Resume U0, resume #1
-  of `6bd47a4c`) after session #1 was interrupted twice (owner Ctrl+C, then a hard cancel). **U0.1
-  is DONE** (`a15cce6` + `199f2c8`) — see below. Next session: **U0.2** (`conductor journey`,
-  docs/CONDUCTOR-UX.md §U0.2), then U0.3 (gateless + resume docs).
+- **Run state:** run `1a7c1714` in `.conductor/run.db`, session #2 (Resume U0, resume #1 of
+  `6bd47a4c`) after session #1 was interrupted twice (owner Ctrl+C, then a hard cancel). **U0 is
+  CLOSED, 3/3** (U0.1 + U0.2 + U0.3 all DONE this session, see below). **Next: U1** (Face — landing
+  page + workspace identity, docs/CONDUCTOR-UX.md §U1; opus-4-8 per the plan). U1 is Go/face-go
+  work — this session did none of it (U0 was scoped engine-only, no Face changes).
 - **To continue:** the owner runs `conductor run -p plans\conductor-ux.plan.json` from the repo
   root (resumes the run — resume actually works now; the Face auto-spawns; the engine console is
   muted while the Face owns the terminal and an exit epilogue always prints).
-- **This session's QA + delivery (2026-07-17, pushed):**
-  - **Ratchet gate was genuinely RED at session start** (40 pragmas > ceiling 38) — session #1's
-    committed WIP (`e8f3f17`, `PlanDiscovery.cs`) and the engine fix `4fcecf7` (`RunStateResume.cs`)
-    each added one MA0045 suppression without anyone noticing the ceiling breach (same silent-cheat
-    shape as the earlier G3.3 39>38 incident). Fixed for real, not by raising the ceiling
-    (`a15cce6`): `RunCommand` converted `Command<Settings>` → `AsyncCommand<Settings>` (same pattern
-    as `DoctorCommand`, M8.1), so its "Execute must return int" pragma is gone; `RunStateResume`
-    became genuinely async (`OpenAsync`/`ExecuteScalarAsync`) now that its only caller is a real
-    async boundary, dropping its pragma too. Net 40→38. Added the round-trip/no-match/torn-JSON
-    tests `RunStateResume` never had.
-  - **U0.1 marked DONE** (`199f2c8`) — session #1's discovery core matched the spec exactly (no
-    changes needed); added the resolution-order unit tests the spec asked for
-    (`tests/Conductor.Tests/PlanDiscoveryTests.cs`, 9/9): empty→none, single-in-cwd, multiple-in-cwd
+- **U0 delivered this session (2026-07-17, all pushed on `feat/foreman`):**
+  - **QA finding, fixed first (`ebd0eca`'s prerequisite, `a15cce6`):** the ratchet gate was
+    genuinely RED at session start (40 pragmas > ceiling 38) — session #1's committed WIP
+    (`e8f3f17`, `PlanDiscovery.cs`) and the engine fix `4fcecf7` (`RunStateResume.cs`) each added one
+    MA0045 suppression without anyone noticing the ceiling breach (same silent-cheat shape as the
+    earlier G3.3 39>38 incident). Fixed for real, not by raising the ceiling: `RunCommand` converted
+    `Command<Settings>` → `AsyncCommand<Settings>` (same pattern as `DoctorCommand`, M8.1), so its
+    "Execute must return int" pragma is gone; `RunStateResume` became genuinely async
+    (`OpenAsync`/`ExecuteScalarAsync`). Net 40→38.
+  - **U0.1 DONE** (`199f2c8`) — session #1's discovery core (`PlanDiscovery.Discover` +
+    `PlanSettings.ResolvePlanPath`) matched the spec exactly, no changes needed; added the
+    resolution-order unit tests the spec asked for (9/9: empty→none, single/multiple-in-cwd
     ordered, empty-cwd-falls-back-to-plans, **cwd wins outright even with >1 candidate**,
-    malformed/missing name never throws.
-  - Gate battery at close: dotnet build 0w/0e, full suite **862/862**, ratchet OK (38≤38), go
-    build/vet/test green.
+    malformed/missing name never throws).
+  - **U0.2 DONE** (`66e6f57`) — new `conductor journey` verb: identity (resume-or-fresh, mirroring
+    `RunCommand`'s own state.json→run.db detection exactly), stages in resolved-workflow order
+    (`WorkflowEngine`+`DefaultQaPolicy`, "Deliver -> Verify -> Fix") with model + checkpoint counts,
+    gates by tier, human moments (pauseOnBlocked, owner-gated stages, live `HUMAN:` token, budget
+    caps), footer with next commands. Read-only, <1s (measured 0.885s built-binary). The
+    human-moments extraction + resume description are internal pure statics, unit-tested directly
+    (10 tests) rather than via rendered-output scraping — same split as `PlanDiscovery`. Verified
+    live against the actual running U-series plan mid-flight (correctly read "resumes session #N,
+    stage U0" without writing anything) and against a scratch gateless+ownerGate+HUMAN-token plan.
+  - **U0.3 DONE** (`ebd0eca` engine + `84fe84f` docs) — `GateRunner.Summary([])` used to join to an
+    empty string (every consumer — SessionRecord.GateSummary, REPORT.md, phase-gate logs — rendered
+    a blank where "gates: ..." belonged); now `"gates green (none configured)"`.
+    `AllRequiredPassed` was already vacuously true on empty, so only the TEXT was lying by omission.
+    `doctor` gained a `gates` check (warn, never fail, when empty). Proof is a REAL fake-agent
+    session through the actual Orchestrator/SessionRunner/VerdictEngine with `gates:[]`
+    (`U03GatelessLiveTests`, same scaffolding as `P2QaDialLiveTests`) reaching
+    `SessionOutcome.Progress` with the honest `GateSummary`. Docs: README's CLI table / "Dashboard
+    TUI" (a defunct 5-zone in-process console mockup, replaced with an accurate face-go section) /
+    "Face — companion TUI" sections were badly stale (`--no-dashboard` doesn't exist — renamed
+    `--headless` long ago, `.claude/skills/run-conductor/SKILL.md` had already flagged this gotcha
+    unfixed; `replay`/`preview` commands don't exist; `doctor`'s description was pre-M8.1) — rewrote
+    with a new "How resume actually works" section (the three different "resume"s: `run` re-loading
+    state, `--paused`, the `resume` control verb) and fixed "Runtime files"/"Trust model" to say
+    run.db is the live source of truth, not state.json (verified by reading `RunContext.Save()` —
+    it ONLY calls `SqliteRunStore.SaveRunState`, never touches state.json). Also fixed the same
+    staleness in `CompletionCommand.cs` (a real functional bug — tab-completion offered a dead flag
+    and was missing a third of the real verbs) and `docs/quickstart.md`.
+  - **Gate battery at close: dotnet build 0w/0e, full suite 878/878, ratchet OK (38≤38, nothing
+    weakened), go build/vet/test green.** One `B12_3Tests` flake + one crashed test host hit
+    mid-session, both traced to ~16 orphaned `dotnet` processes accumulated from earlier
+    interrupted sessions on this machine (not this change) — cleared via the AGENTS.md-sanctioned
+    `Get-Process dotnet | Stop-Process -Force`, reran clean twice after.
 - **Delivered engine-side this era (2026-07-16/17, all pushed — build on, don't redo):**
   `d6f9b87` Face/console mute + local timestamps + fake-agent verifier; `877ff57` live transcript
   wire + run.db access gate + truthful `/state` (+ `model` on the wire and in the agent strip);
