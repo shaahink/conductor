@@ -1,0 +1,2 @@
+# Go golden files compare byte-for-byte — keep them LF on every platform.
+face-go/internal/tui/testdata/golden/*.golden text eol=lf
