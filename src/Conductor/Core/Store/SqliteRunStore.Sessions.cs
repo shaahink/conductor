@@ -217,7 +217,8 @@ public sealed partial class SqliteRunStore
 
     public IReadOnlyList<CheckpointRow> GetCheckpoints(string runId)
     {
-        return FoldGraph(runId).Checkpoints().Select(t => new CheckpointRow(
+        // Archived items (W1.2 retire) left the declared plan — they stay in the log, out of views.
+        return FoldGraph(runId).Checkpoints().Where(t => t.Status != "archived").Select(t => new CheckpointRow(
             Id: t.TaskId,
             StageId: t.StageId,
             Title: t.Title,
@@ -300,6 +301,7 @@ public sealed partial class SqliteRunStore
         "IN PROGRESS" => "in_progress",
         "BLOCKED" => "blocked",
         "SKIPPED" => "skipped",
+        "ARCHIVED" => "archived",
         _ => "todo",
     };
 
@@ -310,6 +312,7 @@ public sealed partial class SqliteRunStore
         "in_progress" => "IN PROGRESS",
         "blocked" => "BLOCKED",
         "skipped" => "SKIPPED",
+        "archived" => "ARCHIVED",
         _ => "TODO",
     };
 

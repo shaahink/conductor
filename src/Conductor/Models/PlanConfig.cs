@@ -223,6 +223,26 @@ public sealed class PlanConfig
 
             if (HasParentCycle())
                 errors.Add("plan.stages has a parent hierarchy cycle — fix the parentId chain so no stage is its own ancestor");
+
+            // W1.2 (G13): inline declared work must cover real stages. An inline checkpoint whose
+            // derived stage is not in the plan can never be scheduled — that is an authoring error,
+            // caught here rather than as a mid-run surprise. (Tracker-file coverage is checked by
+            // `doctor` — the tracker is a generated view and validating it here would deadlock the
+            // authoring flow that regenerates it.)
+            if (Progress?.Checkpoints is { Count: > 0 } inline)
+            {
+                var dupCps = inline.GroupBy(c => c.Id, StringComparer.OrdinalIgnoreCase)
+                    .Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+                if (dupCps.Count > 0)
+                    errors.Add($"duplicate progress.checkpoints ids: {string.Join(", ", dupCps)} — each work item needs a unique id");
+                foreach (var cp in inline)
+                {
+                    if (string.IsNullOrWhiteSpace(cp.Id)) { errors.Add("a progress.checkpoints item is missing its id"); continue; }
+                    var owner = Conventions.DeriveStageId(cp.Id);
+                    if (!stageIds.Contains(owner))
+                        errors.Add($"progress.checkpoints item '{cp.Id}' derives stage '{owner}' which is not in plan.stages — fix the id or add the stage");
+                }
+            }
         }
 
         if (string.IsNullOrWhiteSpace(Agent.Command)) errors.Add("plan.agent.command is required — set the CLI command used to spawn agent sessions");

@@ -56,6 +56,7 @@ public sealed class DoctorCommand : AsyncCommand<PlanSettings>
             CheckGit(plan),
             CheckFace(),
             CheckGates(plan),
+            CheckWorkCoverage(plan),
         };
 
         var (currentCostUsd, hasRun) = TryReadCostFromRunDb(plan);
@@ -159,6 +160,37 @@ public sealed class DoctorCommand : AsyncCommand<PlanSettings>
             ? new Check("gates", "warn", "none configured — every session verdict will trust commits + tracker only")
             : new Check("gates", "ok",
                 $"{plan.Gates.Count} configured ({string.Join("/", plan.Gates.Select(g => g.Tier).Distinct(StringComparer.OrdinalIgnoreCase))})");
+
+    /// <summary>W1.2 (G13): stage↔work-item coverage. A declared work item pointing at a stage the
+    /// plan doesn't have is an authoring error the engine could never schedule (fail). A stage with
+    /// zero declared items is survivable — WorkGraphSync scaffolds a placeholder at the next
+    /// boundary — but the author should know (warn).</summary>
+    internal static Check CheckWorkCoverage(PlanConfig plan)
+    {
+        Core.TrackerSnapshot declared;
+        try { declared = Core.Planning.ProgressProviderFactory.Create(plan).Read(plan); }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException or UnauthorizedAccessException)
+        {
+            return new Check("work", "warn", $"declared work unreadable ({ex.Message}) — the graph cannot sync until this resolves");
+        }
+
+        if (declared.Checkpoints.Count == 0)
+            return new Check("work", "warn", "no declared work items — every stage gets a scaffolded placeholder checkpoint at the next sync");
+
+        var stageIds = plan.Stages.Select(s => s.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var orphans = declared.Checkpoints.Where(c => !stageIds.Contains(c.StageId)).Select(c => c.Id).ToList();
+        if (orphans.Count > 0)
+            return new Check("work", "fail",
+                $"work item(s) [{string.Join(", ", orphans)}] derive stages not in the plan — fix the ids or add the stages (G13)");
+
+        var uncovered = plan.Stages
+            .Where(s => !declared.Checkpoints.Any(c => c.StageId.Equals(s.Id, StringComparison.OrdinalIgnoreCase)))
+            .Select(s => s.Id).ToList();
+        return uncovered.Count > 0
+            ? new Check("work", "warn",
+                $"stage(s) [{string.Join(", ", uncovered)}] declare no work items — a placeholder checkpoint is scaffolded at the next sync")
+            : new Check("work", "ok", $"{declared.Checkpoints.Count} work item(s) cover all {plan.Stages.Count} stage(s)");
+    }
 
     internal static Check CheckBudget(PlanConfig plan, decimal currentCostUsd, bool hasRun)
     {

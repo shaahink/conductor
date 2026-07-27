@@ -62,6 +62,9 @@ public sealed partial class ControlPlaneServer
         // the plan in at its next session boundary (no restart). Harmless when no run is active:
         // the verb is consumed at the loop's top and reloads the same file.
         _inbox.Enqueue(ControlCommand.Of(ControlAction.ReloadPlan));
+        // W1.2: sync the work graph NOW, not at the next session boundary — an added stage's card
+        // must be on the board when the Face re-fetches, and the engine re-syncs harmlessly later.
+        SyncWorkGraph(plan);
         await WriteJsonAsync(ctx, new PlanMutationResultDto(true, null, plan.PlanVersion),
             ControlPlaneJsonContext.Default.PlanMutationResultDto, HttpStatusCode.Accepted).ConfigureAwait(false);
     }
@@ -140,6 +143,8 @@ public sealed partial class ControlPlaneServer
             applied = true;
             // G3.2: same as /plan/edit — an applied import reloads the live run at its next boundary.
             _inbox.Enqueue(ControlCommand.Of(ControlAction.ReloadPlan));
+            // W1.2: an applied import re-declares the work — sync the graph immediately.
+            SyncWorkGraph(writable);
         }
 
         await WriteJsonAsync(ctx, new PlanImportResultDto(true, null, PlanDiffDto.From(diff), applied, plan.PlanVersion, interpreter),
@@ -180,6 +185,21 @@ public sealed partial class ControlPlaneServer
         catch (IOException) { /* fall through to inline */ }
         catch (UnauthorizedAccessException) { /* fall through to inline */ }
         return source;
+    }
+
+    /// <summary>W1.2: the control-plane invocation of the one plan→graph sync — best-effort and
+    /// loud in the log; a sync hiccup must never fail the plan mutation that already saved.</summary>
+    private void SyncWorkGraph(PlanConfig plan)
+    {
+        try
+        {
+            WorkGraphSync.Sync(plan, _store, _state.RunId,
+                msg => _logger.LogInformation("plan mutation: {Message}", msg));
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException)
+        {
+            _logger.LogWarning(ex, "work-graph sync after plan mutation failed — the run loop re-syncs at its next boundary");
+        }
     }
 
     private PlanConfig? LoadPlanFresh()

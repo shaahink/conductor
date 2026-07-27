@@ -56,7 +56,25 @@ public static class PlanAddStageCommand
             plan.Save();
 
             AnsiConsole.MarkupLine($"[green]stage added[/] → [bold]{Markup.Escape(stage.Id)}[/] [grey]{Markup.Escape(stage.Title)}[/] (plan v{plan.PlanVersion})");
-            AnsiConsole.MarkupLine($"[grey]Total stages now: {plan.Stages.Count}. Don't forget to add checkpoint rows to the tracker.[/]");
+
+            // W1.2: sync the work graph so the new stage is schedulable and on the board — no more
+            // "don't forget the tracker" (the tracker is a generated view of the graph now).
+            var runDbPath = Path.Combine(plan.StateDir, "run.db");
+            if (File.Exists(runDbPath))
+            {
+                using var store = new Core.Store.SqliteRunStore(runDbPath,
+                    Microsoft.Extensions.Logging.Abstractions.NullLogger<Core.Store.SqliteRunStore>.Instance);
+                if (store.GetLatestRunId(plan.Name) is { Length: > 0 } runId)
+                {
+                    Core.Planning.WorkGraphSync.Sync(plan, store, runId,
+                        msg => AnsiConsole.MarkupLine($"[grey]{Markup.Escape(msg)}[/]"));
+                }
+            }
+            else
+            {
+                AnsiConsole.MarkupLine("[grey]No run.db yet — the stage's work item is scaffolded at the next run start.[/]");
+            }
+            AnsiConsole.MarkupLine($"[grey]Total stages now: {plan.Stages.Count}.[/]");
             return 0;
         }
         catch (System.Text.Json.JsonException ex)

@@ -154,6 +154,13 @@ public sealed class TaskGraph
         ("blocked", "todo") => true,
         ("blocked", "in_progress") => true,
         ("blocked", "done") => true,
+        // W1.2: retire-as-archived — a work item whose declaration disappeared leaves every live
+        // view but keeps its history; re-declaring it revives it (WorkGraphSync owns both moves).
+        (_, "archived") => true,
+        ("archived", "todo") => true,
+        ("archived", "in_progress") => true,
+        ("archived", "done") => true,
+        ("archived", "blocked") => true,
         _ => false,
     };
 }

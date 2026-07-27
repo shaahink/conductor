@@ -255,22 +255,15 @@ public sealed partial class RunLoop
 
     // ---------------------------------------------------------------- F1.2 tracker-as-view helpers
 
-    private void SeedCheckpointsFromTracker()
+    /// <summary>W1.2: run-start boundary of the ONE plan→graph sync (adds, title refreshes,
+    /// retire-as-archived, revives, zero-item-stage scaffolds — upsert-never-clobber). The tracker
+    /// was the sync's input moments ago, so it is not regenerated here; the view catches up at the
+    /// next mutation boundary or session end. The G4 restart split-brain (two seeds disagreeing) is
+    /// structurally gone: this is the only seed.</summary>
+    private void SyncWorkGraphFromDeclared()
     {
         if (_ctx.Store is not { } db) return;
-        var track = ReadTrackerSafe();
-        if (track.Checkpoints.Count == 0) return;
-
-        // W1.1: ONE seed path. SeedCheckpoints emits work-graph events (kind=checkpoint,
-        // provenance=tracker) — the same fold the Kanban board and GetCheckpoints serve — so the
-        // G4 restart split-brain (table seed vs board seed disagreeing) is structurally gone.
-        // New items land with their full tracker state; items already in the graph only refresh
-        // their declared title, never their runtime status (upsert-never-clobber).
-        var cps = track.Checkpoints.Select(c => (c.Id, c.StageId, c.Title,
-            c.IsDone ? "DONE" : c.IsInProgress ? "IN PROGRESS" : c.IsBlocked ? "BLOCKED" : "TODO",
-            c.Commit, c.Evidence));
-        db.SeedCheckpoints(_ctx.State.RunId, cps);
-        _ctx.Log($"seeded {track.Checkpoints.Count} checkpoints from tracker into the work graph");
+        WorkGraphSync.Sync(_ctx.Plan, db, _ctx.State.RunId, _ctx.Log, regenerateTracker: false);
     }
 
     private TrackerSnapshot ReadTrackerSafe()

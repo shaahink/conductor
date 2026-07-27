@@ -77,7 +77,7 @@ public sealed partial class RunLoop
             _ctx.Store?.InitializeRun(_ctx.State.RunId, _ctx.Plan.Name, _ctx.Plan.Repo, Git.Branch(_ctx.Plan.Repo),
                 typeof(RunLoop).Assembly.GetName().Version?.ToString());
             _ctx.ProcessSupervisor?.ReapOrphans();
-            SeedCheckpointsFromTracker();
+            SyncWorkGraphFromDeclared();
             WarnOnBranchPattern();
 
             var sessionsThisRun = 0;
@@ -417,6 +417,12 @@ public sealed partial class RunLoop
         Dispatcher.SwapPlan(fresh);
         _ctx.Events.Emit(new PlanReloaded { PlanVersion = fresh.PlanVersion, Stages = fresh.Stages.Count, Gates = fresh.Gates.Count });
         _ctx.Log($"plan reloaded at session boundary — v{fresh.PlanVersion}, {fresh.Stages.Count} stages, {fresh.Gates.Count} gates");
+
+        // W1.2: a reloaded plan re-declares the work — sync the graph (and, when anything changed,
+        // the tracker view) so an added stage is schedulable and on the board before the next
+        // session, not after a restart.
+        if (_ctx.Store is { } db)
+            WorkGraphSync.Sync(fresh, db, _ctx.State.RunId, _ctx.Log);
 
         // P2: the session-scoped stage flags (skip-gates/commit/verification) were computed from
         // the OLD plan at stage entry and have no other writer — recompute them from the fresh
