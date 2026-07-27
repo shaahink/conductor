@@ -99,11 +99,12 @@ public sealed class HostLoggingTests : IDisposable
         }
 
         var logDir = Path.Combine(plan.StateDir, "logs");
-        var log = await ReadLogWhenFlushedAsync(logDir, "conductor-*.log", $"run={runId}");
+        // Wait for the LAST-written marker (stage entry), not the first — waiting for run= and then
+        // asserting stage= immediately re-opens the flush race this helper exists to close.
+        var log = await ReadLogWhenFlushedAsync(logDir, "conductor-*.log", $"stage={plan.Stages[0].Id}");
 
         Assert.Contains($"run={runId}", log, StringComparison.Ordinal);      // correlation scope reached the sink
         Assert.Contains("conductor start", log, StringComparison.Ordinal);   // the run actually narrated through ILogger
-        Assert.Contains($"stage={plan.Stages[0].Id}", log, StringComparison.Ordinal);
     }
 
     [Fact]
