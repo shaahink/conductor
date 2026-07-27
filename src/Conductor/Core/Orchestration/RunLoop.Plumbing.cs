@@ -194,9 +194,9 @@ public sealed partial class RunLoop
             TokensReasoning = rec.TokensReasoning,
             TokensCacheRead = rec.TokensCacheRead,
         });
-        if (rec.Outcome == SessionOutcome.Advanced)
-            foreach (var id in rec.NewlyDone)
-                _ctx.Events.Emit(new CheckpointConfirmed { SessionId = sid, CheckpointId = id, StageId = rec.Stage });
+        // W1.1: CheckpointConfirmed is emitted by the CONFIRM path (IRunStore.ConfirmCheckpoints,
+        // called by the verdict engine after gates + verify evidence — M4.1), not here at Advanced.
+        // The claim moment is already visible as the done-status TaskStatusChanged below.
 
         if (_ctx.Store is { } db)
         {
@@ -218,7 +218,7 @@ public sealed partial class RunLoop
                 var commit = rec.NewCommits.Count > 0 ? rec.NewCommits[^1].Split(' ')[0] : "-";
                 var evidence = rec.GateSummary ?? "completed";
                 foreach (var cpId in rec.NewlyDone)
-                    db.UpdateCheckpoint(_ctx.State.RunId, cpId, "DONE", commit, evidence);
+                    db.UpdateCheckpoint(_ctx.State.RunId, cpId, "DONE", commit, evidence, source: "engine");
             }
 
             var track = ReadTrackerSafe();
@@ -261,32 +261,16 @@ public sealed partial class RunLoop
         var track = ReadTrackerSafe();
         if (track.Checkpoints.Count == 0) return;
 
+        // W1.1: ONE seed path. SeedCheckpoints emits work-graph events (kind=checkpoint,
+        // provenance=tracker) — the same fold the Kanban board and GetCheckpoints serve — so the
+        // G4 restart split-brain (table seed vs board seed disagreeing) is structurally gone.
+        // New items land with their full tracker state; items already in the graph only refresh
+        // their declared title, never their runtime status (upsert-never-clobber).
         var cps = track.Checkpoints.Select(c => (c.Id, c.StageId, c.Title,
             c.IsDone ? "DONE" : c.IsInProgress ? "IN PROGRESS" : c.IsBlocked ? "BLOCKED" : "TODO",
             c.Commit, c.Evidence));
         db.SeedCheckpoints(_ctx.State.RunId, cps);
-
-        // The Kanban board (/tasks) folds task EVENTS, not checkpoint rows — without this emit the
-        // board opened empty on every real run until an agent created MCP cards by hand (2026-07-17
-        // dogfood). One card per checkpoint: TaskAdded is first-write-wins on TaskId, so restarts
-        // and resumes are no-ops; the status emit re-asserts tracker truth at every start (invalid
-        // transitions are dropped by the fold). Agent sub-cards use "<cp>-aN" ids — no collision.
-        var order = 0;
-        foreach (var c in track.Checkpoints)
-        {
-            _ctx.Events.Emit(new TaskAdded
-            {
-                TaskId = c.Id,
-                CheckpointId = c.Id,
-                Title = c.Title,
-                Source = "tracker",
-                Order = order++,
-            });
-            var status = c.IsDone ? "done" : c.IsInProgress ? "in_progress" : null;
-            if (status != null)
-                _ctx.Events.Emit(new TaskStatusChanged { TaskId = c.Id, Status = status });
-        }
-        _ctx.Log($"seeded {track.Checkpoints.Count} checkpoints from tracker into run.db (+ kanban cards)");
+        _ctx.Log($"seeded {track.Checkpoints.Count} checkpoints from tracker into the work graph");
     }
 
     private TrackerSnapshot ReadTrackerSafe()

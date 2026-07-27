@@ -5,13 +5,17 @@ checkpoint). **Plan:** `plans/conductor-workgraph.plan.json`.
 
 ## Handoff
 
-**Series opened 2026-07-28.** Plan + brief + tracker authored from the 2026-07-27 gap analysis
-(`docs/GAP-ANALYSIS.md`, commit `875169c`). Baseline gate battery GREEN at authoring time:
-dotnet build 0w/0e · C# suite 918/918 · face-go build/vet/test green · ratchet OK (38≤38).
-One flaky test fixed en route (`HostLoggingTests.DryRunWritesStructuredLogWithRunIdCorrelation`
-waited for the first flushed marker, then asserted a later one — now waits for the last).
-`conductor journey -p plans\conductor-workgraph.plan.json` validates: 6 stages, 20 checkpoints
-parsed (4/3/3/4/2/4). Nothing delivered yet; **next = W1.1**.
+**W1.1 DONE 2026-07-28** (+ W6.1 delivered early on owner instruction: MIT LICENSE, publish/
+un-tracked from HEAD, ignore hardening — history purge still an open owner decision). W1.1
+landed the keystone: one event-sourced work graph — checkpoints table dropped (migration v8),
+IRunStore checkpoint methods are now event adapters (emit + fold), seq allocated at persist
+time inside the tx (two-writer safe), SeedCheckpointsFromTracker is a single seed path,
+CheckpointConfirmed moved to the M4.1 confirm path and folds into TaskGraph. ADR-0002 amended
+in place. Gate battery GREEN: 926/926 C# · face-go green · ratchet OK (tests 840≥550, pragmas
+38≤38). Known flake to watch: `HostLoggingTests.DryRunWritesJsonLogWithCorrelationProperties`
+failed once under full-suite load, passes in isolation (same family as the marker-race fix in
+the baseline note). **Next = W1.2** (WorkGraphSync at every boundary — run start, ApplyPlanReload,
+/plan/edit + /plan/import apply, plan add-stage; CollectErrors + doctor coverage check G13).
 
 Driving mode: Claude Code drives W1–W4 + W6 directly (owner directive 2026-07-16) — per
 checkpoint: pre-session ritual (tracker + brief stage section + cited docs, gate battery first,
@@ -29,7 +33,7 @@ Owner decisions pending (needed no earlier than the stage that names them):
 
 | Checkpoint | Title | Status | Commit | Evidence |
 |---|---|---|---|---|
-| W1.1 | Unify checkpoints + tasks into one event-sourced graph (kind, provenance; checkpoints table → projection; ADR-0002 amended) | TODO | | |
+| W1.1 | Unify checkpoints + tasks into one event-sourced graph (kind, provenance; checkpoints table → projection; ADR-0002 amended) | DONE | (this) | TaskAdded +kind/stageId, TaskStatusChanged +commit/evidence/source, CheckpointConfirmed folds; checkpoints table DROPPED (v8) — GetCheckpoints folds the log, write methods emit events (all callers unchanged); persist-time seq allocation kills the two-writer PK collision; single seed path (G4 gone); 8 truth-gate tests in W1WorkGraphTests incl. byte-for-byte replay + second-writer safety; battery 926/926 · go green · ratchet OK |
 | W1.2 | WorkGraphSync at every boundary (start, reload, plan edit/import, add-stage); coverage validation in CollectErrors + doctor | TODO | | |
 | W1.3 | Claims from the graph; tracker demoted to generated view; bug #6 fixed (verify consumes PendingVerify.StageId) | TODO | | |
 | W1.4 | One projection for all views (sidebar/chips + Kanban); card moves = claims through legal transitions | TODO | | |

@@ -66,14 +66,19 @@ public interface IRunStore : IDisposable
 
     void WriteInjection(string runId, string kind, int? sourceSession, string? targetStageId, string content);
 
-    // ---------------------------------------------------------------- checkpoints
+    // ---------------------------------------------------------------- checkpoints (W1.1: graph views)
 
-    void MarkCheckpointInProgress(string runId, string checkpointId);
-    void ConfirmCheckpoints(string runId, IEnumerable<string> checkpointIds);
+    // Since W1.1 these are adapters over the event-sourced work graph — writes emit task events,
+    // reads fold the log; the mutable checkpoints table is gone (migration v8). `source` is the
+    // claim provenance stamped on the emitted TaskStatusChanged (tracker | engine | agent | human).
+
+    void MarkCheckpointInProgress(string runId, string checkpointId, string source = "agent");
+    void ConfirmCheckpoints(string runId, IEnumerable<string> checkpointIds, int? sessionNumber = null);
     IReadOnlyList<CheckpointRow> GetCheckpoints(string runId);
     void SeedCheckpoints(string runId,
         IEnumerable<(string Id, string StageId, string Title, string Status, string Commit, string Evidence)> checkpoints);
-    void UpdateCheckpoint(string runId, string checkpointId, string status, string commit, string evidence);
+    void UpdateCheckpoint(string runId, string checkpointId, string status, string commit, string evidence,
+        string source = "engine");
 
     // ---------------------------------------------------------------- pids
 

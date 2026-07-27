@@ -43,7 +43,7 @@ public partial class McpTaskServer
 
         // Shared write semantics (G2.1): validation + event shape live in TaskWrites so the HTTP
         // control plane's /tasks/update can't drift from this tool.
-        var (evt, error) = TaskWrites.BuildStatusChange(_graph, _runId, taskId, status);
+        var (evt, error) = TaskWrites.BuildStatusChange(_graph, _runId, taskId, status, source: "agent");
         if (evt is null)
             return JsonSerializer.SerializeToElement(new { ok = false, error });
 

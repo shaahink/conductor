@@ -1,7 +1,7 @@
 # ADR-0002 — Event-sourced backbone (RunState becomes a projection)
 
-- **Status:** Accepted & implemented — B2 event log is live (B2.1); projections (RunState/TaskGraph/Timeline/Health/Confidence/McpMetrics) fold the log (B2.2–B5.4); crash recovery replays events (B2.3); parity tests green (StateCompatTests, RunStateProjectionTests). Additive discipline: events.jsonl is emitted ALONGSIDE state.json; no cutover is attempted until parity is proven.
-- **Date:** 2026-07-08 · **Last updated:** 2026-07-09 (B11.3 — implementation complete through B10, B11 clean-clone battery green)
+- **Status:** Accepted & implemented — B2 event log is live (B2.1); projections (RunState/TaskGraph/Timeline/Health/Confidence/McpMetrics) fold the log (B2.2–B5.4); crash recovery replays events (B2.3); parity tests green (StateCompatTests, RunStateProjectionTests). Additive discipline: events.jsonl is emitted ALONGSIDE state.json; no cutover is attempted until parity is proven. **Amended by W1.1 (2026-07-28) — see the amendment below.**
+- **Date:** 2026-07-08 · **Last updated:** 2026-07-28 (W1.1 — checkpoints join the fold; the mutable checkpoints table is dropped)
 - **Deciders:** Baton self-plan, session #1 (stage B0)
 - **Context source:** `docs/baton/BATON-BRIEF.md` §3.2 (the event log) + §0.1 (trust model) + D-5;
   findings F-3 (live token lag), F-9 (no history/replay/health).
@@ -61,6 +61,31 @@ tracked followup, never a silent regression.
   `.conductor/` runtime state).
 - Cost: dual-write during the additive window and a real parity test battery before cutover — an
   accepted, bounded cost paid once in B2.
+
+## Amendment — W1.1 (2026-07-28): checkpoints join the fold
+
+The F1-era `checkpoints` table (migration v2, `confirmed` in v6) was mutable state written in
+place by `SeedCheckpoints`/`UpdateCheckpoint` — this ADR's own violation, and the root of gap
+G4 (two seeds disagreeing on restart) and the `newly DONE []` claim-path split
+(`docs/GAP-ANALYSIS.md` §1). As of W1.1:
+
+- **Checkpoints and Kanban tasks are ONE event-sourced work graph.** `TaskAdded` carries
+  `kind` (`checkpoint` | `subtask`) and `stageId`; `Source` is the provenance vocabulary
+  (`plan` | `tracker` | `import` | `human` | `agent`). `TaskStatusChanged` carries the claim's
+  `commit`/`evidence`/`source`. `CheckpointConfirmed` folds into `TaskGraph` (sets
+  `Confirmed`) and is emitted by the M4.1 confirm path (`IRunStore.ConfirmCheckpoints`,
+  post-verify) — no longer at session-Advanced, where it overstated confirmation.
+- **The `checkpoints` table is dropped** (migration v8). `IRunStore.GetCheckpoints` folds the
+  event log; the write methods (`SeedCheckpoints`/`UpdateCheckpoint`/`MarkCheckpointInProgress`/
+  `ConfirmCheckpoints`) are adapters that emit graph events — signatures unchanged, so every
+  consumer (TrackerGenerator, verdict engine, `conductor task`) moved onto the graph without
+  edits. Replaying the log reproduces checkpoint state byte-for-byte (`W1WorkGraphTests`).
+- **Seq is allocated at persist time, from the database, inside the write transaction** —
+  the events PK is `(seq, run_id)` and two processes share run.db (engine + the
+  `conductor task` claim path); Emit-time stamps are provisional queue ordinals only.
+- Re-seeding is upsert-never-clobber: new items land with full tracker state; existing items
+  refresh their declared title only — runtime status is never overwritten by a re-sync
+  (the W-series design principle; `docs/CONDUCTOR-WORKGRAPH.md`).
 
 ## Alternatives considered
 

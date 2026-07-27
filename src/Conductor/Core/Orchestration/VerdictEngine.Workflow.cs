@@ -36,7 +36,7 @@ public sealed partial class VerdictEngine
             {
                 _ctx.Log($"workflow override: skipping verification step for stage {stage.Id} — treating as passed");
                 // M4.1: confirm checkpoints immediately when verification is skipped
-                ConfirmPendingCheckpoints(stage.Id);
+                ConfirmPendingCheckpoints(stage.Id, rec.Number);
             }
         }
 

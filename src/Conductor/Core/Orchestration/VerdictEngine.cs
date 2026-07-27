@@ -38,11 +38,13 @@ public sealed partial class VerdictEngine
 
     // ── M4.1: claims vs confirmations ──
 
-    private void ConfirmPendingCheckpoints(string stageId)
+    private void ConfirmPendingCheckpoints(string stageId, int? sessionNumber = null)
     {
         if (_ctx.State.PendingConfirmation.Count == 0) return;
         var ids = _ctx.State.PendingConfirmation.ToArray();
-        _ctx.Store?.ConfirmCheckpoints(_ctx.State.RunId, ids);
+        // W1.1: this emits CheckpointConfirmed into the work graph — the fold that TrackerGenerator's
+        // "DONE ✓" and every other view read. Confirmation stays the engine's verdict alone.
+        _ctx.Store?.ConfirmCheckpoints(_ctx.State.RunId, ids, sessionNumber);
         _ctx.Log($"confirmed {ids.Length} checkpoint(s) for stage {stageId}: [{string.Join(", ", ids)}]");
         _ctx.State.PendingConfirmation.Clear();
     }
@@ -197,7 +199,7 @@ public sealed partial class VerdictEngine
                     _ctx.Log($"verifier passed ({verdict.Score}/{threshold}) — {(verdict.Findings.Count > 0 ? $"{verdict.Findings.Count} finding(s) tracked as follow-ups" : "no findings")}");
 
                     // M4.1: confirm checkpoints claimed by the preceding deliver session
-                    ConfirmPendingCheckpoints(stage.Id);
+                    ConfirmPendingCheckpoints(stage.Id, rec.Number);
 
                     // M3.1: workflow-driven next step
                     AdvanceWorkflowStep(stage, rec, gatesGreen: true, verifierScore: verdict.Score,

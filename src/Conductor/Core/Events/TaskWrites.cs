@@ -13,9 +13,10 @@ public static class TaskWrites
 
     /// <summary>Validate and build a status change. The returned event is emitted as-is; the fold
     /// (<see cref="TaskGraph.Fold"/>) still owns transition legality, so an illegal transition is a
-    /// recorded no-op, exactly as the MCP path has always behaved.</summary>
+    /// recorded no-op, exactly as the MCP path has always behaved. <paramref name="source"/> is the
+    /// claim provenance (agent | human — who moved the card, W1.1).</summary>
     public static (TaskStatusChanged? Event, string? Error) BuildStatusChange(
-        TaskGraph graph, string runId, string? taskId, string? status)
+        TaskGraph graph, string runId, string? taskId, string? status, string? source = null)
     {
         if (string.IsNullOrEmpty(taskId))
             return (null, "taskId is required");
@@ -24,7 +25,7 @@ public static class TaskWrites
         if (graph.Find(taskId) == null)
             return (null, $"task not found: {taskId}");
 
-        return (new TaskStatusChanged { RunId = runId, TaskId = taskId, Status = status }, null);
+        return (new TaskStatusChanged { RunId = runId, TaskId = taskId, Status = status, Source = source }, null);
     }
 
     /// <summary>P3: validate and build a detail edit (title, extra context, and/or declared paths —
@@ -78,6 +79,10 @@ public static class TaskWrites
             Title = title,
             Source = source,
             Order = nextOrder,
+            // W1.1: cards added under a checkpoint are subtask-kind work items; the stage rides
+            // along from the parent so views never have to re-derive it.
+            Kind = WorkItemKinds.Subtask,
+            StageId = graph.Find(checkpointId)?.StageId,
         }, null);
     }
 }

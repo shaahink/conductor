@@ -130,20 +130,36 @@ public sealed partial class SqliteRunStore
     private void PersistBatchLocked(List<ConductorEvent> batch)
     {
         using var tx = _conn.BeginTransaction();
+        // W1.1: seq is (re)assigned HERE, from the database, inside the transaction — the Emit-time
+        // stamp is only a provisional queue ordinal. Two processes share run.db (the engine and the
+        // `conductor task` claim path), each with its own in-memory counter, and the events PK is
+        // (seq, run_id): persist-time allocation is the only stamp that cannot collide.
+        var nextSeq = new Dictionary<string, long>(StringComparer.Ordinal);
         try
         {
             foreach (var evt in batch)
             {
-                var payload = JsonSerializer.Serialize(evt, PlanConfig.JsonOpts);
+                var runId = evt.RunId ?? "";
+                if (!nextSeq.TryGetValue(runId, out var seq))
+                {
+                    using var maxCmd = _conn.CreateCommand();
+                    maxCmd.CommandText = "SELECT COALESCE(MAX(seq), 0) FROM events WHERE run_id = @runId";
+                    maxCmd.Parameters.AddWithValue("@runId", runId);
+                    seq = Convert.ToInt64(maxCmd.ExecuteScalar()!);
+                }
+                nextSeq[runId] = ++seq;
+                var stamped = evt with { Seq = seq };
+
+                var payload = JsonSerializer.Serialize(stamped, PlanConfig.JsonOpts);
                 using var cmd = _conn.CreateCommand();
                 cmd.CommandText =
                     "INSERT INTO events (seq, ts, run_id, session_id, type, payload) " +
                     "VALUES (@seq, @ts, @runId, @sessionId, @type, @payload)";
-                cmd.Parameters.AddWithValue("@seq", evt.Seq);
-                cmd.Parameters.AddWithValue("@ts", evt.Ts.ToString("O"));
-                cmd.Parameters.AddWithValue("@runId", evt.RunId ?? "");
-                cmd.Parameters.AddWithValue("@sessionId", (object?)evt.SessionId ?? DBNull.Value);
-                var typeName = evt.GetType().Name;
+                cmd.Parameters.AddWithValue("@seq", stamped.Seq);
+                cmd.Parameters.AddWithValue("@ts", stamped.Ts.ToString("O"));
+                cmd.Parameters.AddWithValue("@runId", runId);
+                cmd.Parameters.AddWithValue("@sessionId", (object?)stamped.SessionId ?? DBNull.Value);
+                var typeName = stamped.GetType().Name;
                 cmd.Parameters.AddWithValue("@type", typeName);
                 cmd.Parameters.AddWithValue("@payload", payload);
                 cmd.ExecuteNonQuery();
@@ -154,6 +170,17 @@ public sealed partial class SqliteRunStore
         {
             tx.Rollback();
             throw;
+        }
+
+        // Keep the provisional counter at or above the durable one, so queue ordinals stay monotone
+        // even after another process advanced the log underneath us.
+        if (nextSeq.TryGetValue(_runId, out var latest))
+        {
+            long observed;
+            while ((observed = Interlocked.Read(ref _seq)) < latest
+                   && Interlocked.CompareExchange(ref _seq, latest, observed) != observed)
+            {
+            }
         }
     }
 #pragma warning restore MA0045

@@ -44,7 +44,8 @@ public sealed class RunDbTests : IDisposable
         Assert.Contains("handovers", names);
         Assert.Contains("injections", names);
         Assert.Contains("costs", names);
-        Assert.Contains("checkpoints", names);
+        // W1.1: the mutable checkpoints table is gone (v8) — checkpoint state folds from events.
+        Assert.DoesNotContain("checkpoints", names);
         Assert.Contains("pids", names);
         Assert.Contains("events", names);
         Assert.Contains("run_state", names);
@@ -52,11 +53,11 @@ public sealed class RunDbTests : IDisposable
     }
 
     [Fact]
-    public void Schema_version_is_seven()
+    public void Schema_version_is_eight()
     {
         var rows = _db.Query("SELECT version FROM schema_version");
         Assert.Single(rows);
-        Assert.Equal(7L, (long)rows[0]["version"]!);
+        Assert.Equal(8L, (long)rows[0]["version"]!);
     }
 
     [Fact]

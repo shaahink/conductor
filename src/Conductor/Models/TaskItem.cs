@@ -1,8 +1,9 @@
 namespace Conductor.Models;
 
 /// <summary>
-/// A single sub-task beneath a checkpoint (B9.1). Tasks are advisory break-points — the checkpoint
-/// table stays the verified contract (D-8). Anti-pattern A16: keep lightweight; over-planning is banned.
+/// A single work item in the unified graph (B9.1 sub-tasks; W1.1 checkpoints joined the same
+/// fold). Kind "checkpoint" items are the verified contract the engine schedules; "subtask"
+/// items are advisory break-points beneath one. Anti-pattern A16: keep lightweight.
 /// </summary>
 public sealed class TaskItem
 {
@@ -10,8 +11,27 @@ public sealed class TaskItem
     public string CheckpointId { get; set; } = "";
     public string Title { get; set; } = "";
     public string Status { get; set; } = "todo";
+
+    /// <summary>Provenance: plan | tracker | import | human | agent (W1.1 vocabulary).</summary>
     public string Source { get; set; } = "";
     public int Order { get; set; }
+
+    /// <summary>W1.1: checkpoint | subtask (the <c>WorkItemKinds</c> vocabulary).</summary>
+    public string Kind { get; set; } = "subtask";
+
+    /// <summary>W1.1: owning stage id (checkpoint-kind items; derived for subtasks).</summary>
+    public string StageId { get; set; } = "";
+
+    /// <summary>W1.1: commit sha attributed by the latest done-claim ("-" = none yet).</summary>
+    public string Commit { get; set; } = "-";
+
+    /// <summary>W1.1: evidence carried by the latest done-claim ("-" = none yet).</summary>
+    public string Evidence { get; set; } = "-";
+
+    /// <summary>W1.1: true once the engine confirmed the claim (M4.1 — gates + verify evidence,
+    /// folded from <c>CheckpointConfirmed</c>). Claims flip Status; only the verdict engine
+    /// confirms.</summary>
+    public bool Confirmed { get; set; }
 
     /// <summary>P3: owner-provided extra context for this task — structured task data that becomes
     /// the editable "extra context" block of the task's prompt composition. Empty = none.</summary>

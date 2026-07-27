@@ -1,4 +1,5 @@
 using System.Data;
+using Conductor.Core.Events;
 
 namespace Conductor.Core.Store;
 
@@ -178,62 +179,142 @@ public sealed partial class SqliteRunStore
             ("@content", content));
     }
 
-    // ---------------------------------------------------------------- checkpoints
+    // ---------------------------------------------------------------- checkpoints (W1.1: graph views)
 
-    public void MarkCheckpointInProgress(string runId, string checkpointId)
+    // The mutable checkpoints table is gone (v8) — these methods are thin adapters over the
+    // event-sourced work graph: writes emit task events (flushed before returning, so a caller
+    // that reads straight back sees them), reads fold the log. Signatures are unchanged, so every
+    // caller — TrackerGenerator, the verdict engine, `conductor task` — moved onto the graph
+    // without knowing it. ADR-0002's tracker-as-view now includes the checkpoint rows themselves.
+
+    private TaskGraph FoldGraph(string runId)
     {
-        TryExecute(
-            "UPDATE checkpoints SET status = 'IN PROGRESS' WHERE id = @id AND run_id = @runId AND status = 'TODO'",
-            ("@runId", runId), ("@id", checkpointId));
+        var graph = new TaskGraph();
+        graph.Fold(ReadAllEvents(runId));
+        return graph;
+    }
+
+    /// <summary>Route a checkpoint write into the event log under the right run id. The engine sets
+    /// the run id once (ConductorHost); the CLI claim path (`conductor task`) passes it explicitly
+    /// and may target a different run than this store instance last stamped.</summary>
+    private void EmitForRun(string runId, ConductorEvent evt)
+    {
+        if (!string.Equals(_runId, runId, StringComparison.Ordinal)) SetRunId(runId);
+        Emit(evt);
+    }
+
+    public void MarkCheckpointInProgress(string runId, string checkpointId, string source = "agent")
+    {
+        // Parity with the SQL it replaces: TODO → IN PROGRESS only; never reopens a DONE row.
+        var item = FoldGraph(runId).Find(checkpointId);
+        if (item is not { Status: "todo" }) return;
+        EmitForRun(runId, new TaskStatusChanged
+        {
+            RunId = runId, TaskId = checkpointId, Status = "in_progress", Source = source,
+        });
+        FlushEvents();
     }
 
     public IReadOnlyList<CheckpointRow> GetCheckpoints(string runId)
     {
-        var rows = Query(
-            "SELECT id, stage_id, title, status, \"commit\", evidence, confirmed FROM checkpoints " +
-            "WHERE run_id = @runId ORDER BY stage_id, id",
-            ("@runId", runId));
-        return rows.Select(r => new CheckpointRow(
-            Id: (string)r["id"]!,
-            StageId: (string)r["stage_id"]!,
-            Title: (string)r["title"]!,
-            Status: (string)r["status"]!,
-            Commit: (string)(r["commit"] ?? "-")!,
-            Evidence: (string)(r["evidence"] ?? "-")!,
-            Confirmed: r["confirmed"] is long l && l == 1
+        return FoldGraph(runId).Checkpoints().Select(t => new CheckpointRow(
+            Id: t.TaskId,
+            StageId: t.StageId,
+            Title: t.Title,
+            Status: CheckpointStatusLabel(t.Status),
+            Commit: t.Commit,
+            Evidence: t.Evidence,
+            Confirmed: t.Confirmed
         )).ToList();
     }
 
     public void SeedCheckpoints(string runId,
         IEnumerable<(string Id, string StageId, string Title, string Status, string Commit, string Evidence)> checkpoints)
     {
+        var graph = FoldGraph(runId);
+        var order = graph.Count;
         foreach (var (id, stageId, title, status, commit, evidence) in checkpoints)
         {
-            TryExecute(
-                "INSERT INTO checkpoints (id, run_id, stage_id, title, status, \"commit\", evidence) " +
-                "VALUES (@id, @runId, @stageId, @title, @status, @commit, @evidence) " +
-                "ON CONFLICT(id, run_id) DO UPDATE SET title = excluded.title, stage_id = excluded.stage_id;",
-                ("@id", id), ("@runId", runId), ("@stageId", stageId),
-                ("@title", title), ("@status", status), ("@commit", commit), ("@evidence", evidence));
+            var existing = graph.Find(id);
+            if (existing == null)
+            {
+                EmitForRun(runId, new TaskAdded
+                {
+                    RunId = runId, TaskId = id, CheckpointId = id, Title = title,
+                    Source = "tracker", Order = order++,
+                    Kind = WorkItemKinds.Checkpoint, StageId = stageId,
+                });
+                var graphStatus = GraphStatus(status);
+                if (graphStatus != "todo")
+                {
+                    EmitForRun(runId, new TaskStatusChanged
+                    {
+                        RunId = runId, TaskId = id, Status = graphStatus,
+                        Commit = Placeholder(commit), Evidence = Placeholder(evidence),
+                        Source = "tracker",
+                    });
+                }
+            }
+            else if (!existing.Title.Equals(title, StringComparison.Ordinal))
+            {
+                // Parity with the old ON CONFLICT DO UPDATE SET title: declared titles refresh,
+                // runtime status is never re-asserted for an item already in the graph — the
+                // upsert-never-clobber principle (W1 design brief).
+                EmitForRun(runId, new TaskDetailEdited { RunId = runId, TaskId = id, Title = title });
+            }
         }
+        FlushEvents();
     }
 
-    public void UpdateCheckpoint(string runId, string checkpointId, string status, string commit, string evidence)
+    public void UpdateCheckpoint(string runId, string checkpointId, string status, string commit, string evidence,
+        string source = "engine")
     {
-        TryExecute(
-            "UPDATE checkpoints SET status = @status, \"commit\" = @commit, evidence = @evidence " +
-            "WHERE id = @id AND run_id = @runId",
-            ("@runId", runId), ("@id", checkpointId),
-            ("@status", status), ("@commit", commit), ("@evidence", evidence));
+        if (FoldGraph(runId).Find(checkpointId) == null) return; // parity: UPDATE on a missing row was a no-op
+        EmitForRun(runId, new TaskStatusChanged
+        {
+            RunId = runId, TaskId = checkpointId, Status = GraphStatus(status),
+            Commit = Placeholder(commit), Evidence = Placeholder(evidence), Source = source,
+        });
+        FlushEvents();
     }
 
-    public void ConfirmCheckpoints(string runId, IEnumerable<string> checkpointIds)
+    public void ConfirmCheckpoints(string runId, IEnumerable<string> checkpointIds, int? sessionNumber = null)
     {
+        var graph = FoldGraph(runId);
         foreach (var id in checkpointIds)
         {
-            TryExecute(
-                "UPDATE checkpoints SET confirmed = 1 WHERE id = @id AND run_id = @runId",
-                ("@runId", runId), ("@id", id));
+            if (graph.Find(id) is not { } item) continue; // parity: confirming a missing row was a no-op
+            EmitForRun(runId, new CheckpointConfirmed
+            {
+                RunId = runId, CheckpointId = id, StageId = item.StageId,
+                SessionId = sessionNumber?.ToString(),
+            });
         }
+        FlushEvents();
     }
+
+    /// <summary>Tracker-vocabulary status → graph status ("IN PROGRESS" → "in_progress", …).</summary>
+    private static string GraphStatus(string status) => status.Trim().ToUpperInvariant() switch
+    {
+        "DONE" => "done",
+        "IN PROGRESS" => "in_progress",
+        "BLOCKED" => "blocked",
+        "SKIPPED" => "skipped",
+        _ => "todo",
+    };
+
+    /// <summary>Graph status → the tracker-vocabulary label the checkpoints table stored.</summary>
+    private static string CheckpointStatusLabel(string status) => status switch
+    {
+        "done" => "DONE",
+        "in_progress" => "IN PROGRESS",
+        "blocked" => "BLOCKED",
+        "skipped" => "SKIPPED",
+        _ => "TODO",
+    };
+
+    /// <summary>The tracker's "-" placeholder means "nothing to record" — keep it out of the event
+    /// so the fold's own defaults hold and replayed logs stay lean.</summary>
+    private static string? Placeholder(string value) =>
+        string.IsNullOrWhiteSpace(value) || value == "-" ? null : value;
 }

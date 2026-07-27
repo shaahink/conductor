@@ -10,8 +10,8 @@ namespace Conductor.Commands;
 
 /// <summary>
 /// F1.3: Task/checkpoint CRUD — agents report progress via CLI verbs instead of hand-editing
-/// the tracker markdown. Writes go to the run.db checkpoints table; the tracker regenerates from
-/// that source of truth (F1.2 tracker-as-view).
+/// the tracker markdown. Since W1.1 the verbs emit work-graph events (claims with agent
+/// provenance) into run.db's event log; the tracker regenerates from that fold (tracker-as-view).
 /// </summary>
 public sealed class TaskCommand : Command<TaskCommand.Settings>
 {
@@ -68,7 +68,7 @@ public sealed class TaskCommand : Command<TaskCommand.Settings>
                     return 1;
                 }
                 store.UpdateCheckpoint(runId, settings.Done, "DONE",
-                    settings.Commit ?? "-", settings.Evidence ?? "marked done via CLI");
+                    settings.Commit ?? "-", settings.Evidence ?? "marked done via CLI", source: "agent");
                 AnsiConsole.MarkupLine($"[green]checkpoint {Markup.Escape(settings.Done)} → DONE[/]");
             }
             else if (settings.InProgress != null)

@@ -3,10 +3,13 @@ using Conductor.Models;
 namespace Conductor.Core.Events;
 
 /// <summary>
-/// B9.1: folds <see cref="TaskAdded"/> and <see cref="TaskStatusChanged"/> events into a live task
-/// graph ordered by checkpoint → task order. Pure projection — replay a log segment from any point.
-/// Allowed status transitions: todo → in_progress → done (also todo → skipped), plus the G2 reopen
-/// moves back out of done/skipped so the Kanban board can pull a card left.
+/// B9.1 (unified in W1.1): folds the task-event family into the live work graph — checkpoints and
+/// sub-tasks in one projection. Pure projection — replay a log segment from any point reproduces
+/// the same state (the W1.1 truth gate). Allowed status transitions: todo → in_progress → done
+/// (also todo → skipped), the G2 reopen moves back out of done/skipped, blocked in/out of the open
+/// states (tracker BLOCKED rows, W1.1), and same → same as a metadata refresh so a repeated
+/// done-claim can update its commit/evidence. <see cref="CheckpointConfirmed"/> folds here too:
+/// claims flip status, the engine's confirmation sets <see cref="TaskItem.Confirmed"/>.
 /// </summary>
 public sealed class TaskGraph
 {
@@ -28,6 +31,11 @@ public sealed class TaskGraph
                 case TaskAdded ta:
                     if (_byId.ContainsKey(ta.TaskId))
                         break; // duplicate — skip (first write wins, event-sourced)
+                    // Pre-W1 events carry no kind/stage: seeds always wrote checkpoint cards with
+                    // TaskId == CheckpointId, so that equality is the legacy discriminator, and the
+                    // split-on-first-dot default (TrackerParser's Loom convention) recovers the stage.
+                    var kind = ta.Kind ?? (ta.TaskId.Equals(ta.CheckpointId, StringComparison.Ordinal)
+                        ? WorkItemKinds.Checkpoint : WorkItemKinds.Subtask);
                     var item = new TaskItem
                     {
                         TaskId = ta.TaskId,
@@ -36,6 +44,8 @@ public sealed class TaskGraph
                         Status = "todo",
                         Source = ta.Source,
                         Order = ta.Order,
+                        Kind = kind,
+                        StageId = ta.StageId ?? ta.CheckpointId.Split('.')[0],
                     };
                     _tasks.Add(item);
                     _byId[ta.TaskId] = item;
@@ -45,7 +55,13 @@ public sealed class TaskGraph
                     if (_byId.TryGetValue(sc.TaskId, out var existing))
                     {
                         if (IsValidTransition(existing.Status, sc.Status))
+                        {
                             existing.Status = sc.Status;
+                            // A done-claim carries its attribution; keep the last non-null values so
+                            // a replay reproduces the checkpoint columns byte-for-byte (W1.1).
+                            if (sc.Commit is { Length: > 0 }) existing.Commit = sc.Commit;
+                            if (sc.Evidence is { Length: > 0 }) existing.Evidence = sc.Evidence;
+                        }
                     }
                     break;
 
@@ -60,12 +76,26 @@ public sealed class TaskGraph
                         if (de.Paths != null) edited.Paths = [.. de.Paths];
                     }
                     break;
+
+                case CheckpointConfirmed cc:
+                    // W1.1: confirmation is the engine's verdict, not a claim — set-only, never
+                    // cleared by replay (matches the M4.1 confirmed column it replaces).
+                    if (_byId.TryGetValue(cc.CheckpointId, out var confirmed))
+                        confirmed.Confirmed = true;
+                    break;
             }
         }
     }
 
     public TaskItem? Find(string taskId) =>
         _byId.TryGetValue(taskId, out var t) ? t : null;
+
+    /// <summary>W1.1: the checkpoint-kind items — what the dropped <c>checkpoints</c> table held,
+    /// in its historical order (stage, then id, ordinal).</summary>
+    public IReadOnlyList<TaskItem> Checkpoints() =>
+        _tasks.Where(t => t.Kind == WorkItemKinds.Checkpoint)
+              .OrderBy(t => t.StageId, StringComparer.Ordinal)
+              .ThenBy(t => t.TaskId, StringComparer.Ordinal).ToList();
 
     public IReadOnlyList<TaskItem> ForCheckpoint(string checkpointId) =>
         _tasks.Where(t => t.CheckpointId.Equals(checkpointId, StringComparison.Ordinal))
@@ -102,6 +132,9 @@ public sealed class TaskGraph
 
     private static bool IsValidTransition(string from, string to) => (from, to) switch
     {
+        // W1.1: same → same is a legal metadata refresh (a repeated done-claim updates its
+        // commit/evidence; seed re-asserts are no-ops) — never a state change.
+        (var f, var t) when f == t => true,
         ("todo", "in_progress") => true,
         ("in_progress", "done") => true,
         ("in_progress", "todo") => true,
@@ -114,6 +147,13 @@ public sealed class TaskGraph
         ("done", "todo") => true,
         ("skipped", "todo") => true,
         ("skipped", "in_progress") => true,
+        // W1.1: tracker BLOCKED lives in the graph now — in/out of the open states, and straight to
+        // done when the block resolves with the work already delivered.
+        ("todo", "blocked") => true,
+        ("in_progress", "blocked") => true,
+        ("blocked", "todo") => true,
+        ("blocked", "in_progress") => true,
+        ("blocked", "done") => true,
         _ => false,
     };
 }

@@ -19,7 +19,7 @@ public sealed partial class ControlPlaneServer
         catch (JsonException) { await TaskErrorAsync(ctx, "malformed JSON body").ConfigureAwait(false); return; }
 
         var graph = FoldTaskGraph();
-        var (evt, error) = TaskWrites.BuildStatusChange(graph, _state.RunId, req?.TaskId, req?.Status);
+        var (evt, error) = TaskWrites.BuildStatusChange(graph, _state.RunId, req?.TaskId, req?.Status, source: "human");
         if (evt is null) { await TaskErrorAsync(ctx, error ?? "invalid request").ConfigureAwait(false); return; }
 
         _store.AppendEvent(evt);
