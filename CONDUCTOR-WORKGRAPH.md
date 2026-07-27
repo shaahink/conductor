@@ -21,8 +21,9 @@ Evidence) → overwrite this Handoff block → commit + push. W5.1 = conductor d
 
 Owner decisions pending (needed no earlier than the stage that names them):
 - `HUMAN:` W5.2 — owner starts + pays for the real-model proof run.
-- `HUMAN:` W6.1 — license choice (MIT vs Apache-2.0) and whether to purge `publish/` from git
-  history (rewrites remote history) or only from HEAD.
+- `HUMAN:` W6.1 — ~~license choice~~ **MIT (decided 2026-07-28, delivered `51911f9`)**;
+  `publish/` un-tracked from HEAD same commit. Still open: whether to also purge `publish/`
+  from git *history* (`git filter-repo` + force-push — rewrites remote history).
 
 ## Checkpoints
 
@@ -44,7 +45,7 @@ Owner decisions pending (needed no earlier than the stage that names them):
 | W4.4 | Per-item QA dial (qa: inherit/verify/off on the card, honored by QaPolicy) | TODO | | |
 | W5.1 | Credential-free dress rehearsal: imported toy plan driven end-to-end, all in-flight levers exercised, first RunFinished | TODO | | |
 | W5.2 | HUMAN: real-model unattended proof run start → RunFinished; five criteria audited in docs/workgraph/W5-AUDIT.md | TODO | | |
-| W6.1 | HUMAN: LICENSE; un-commit publish/ (± history purge); .gitignore/.gitattributes hardening | TODO | | |
+| W6.1 | HUMAN: LICENSE; un-commit publish/ (± history purge); .gitignore/.gitattributes hardening | DONE (HEAD only) | 51911f9 | MIT chosen by owner 2026-07-28; publish/ (81 files) un-tracked from HEAD; .gitignore + .gitattributes hardened. History purge NOT done — needs explicit owner go-ahead (rewrites remote history). |
 | W6.2 | CI: .github/workflows/ci.yml (windows full battery + ubuntu dotnet/go), born green | TODO | | |
 | W6.3 | README overhaul (prereqs, platform, badges, VHS demo GIF); quickstart fixed; docs index | TODO | | |
 | W6.4 | Repo hygiene (archive trackers, scrub foreign refs, CONTRIBUTING/SECURITY); merge to master | TODO | | |
