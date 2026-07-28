@@ -10,11 +10,11 @@ while you watch from the laptop or your phone.
 
 ![The conductor dashboard: home, agent transcript, work board, card detail, timeline, plan editor, command palette](docs/assets/demo.gif)
 
-<sub>Seven screens of the Face (`conductor-face --demo`). Every frame is a committed golden from
-face-go's rendering tests — the exact bytes `View()` produced, diffed on every CI run — so the tour
-cannot drift from the real dashboard without a test going red first. Regenerate with
-`powershell -File tools/demo/make-demo-gif.ps1`, or record the live binary in colour with
-`vhs docs/assets/demo.tape`.</sub>
+<sub>Seven screens of the Face, recorded live from `conductor-face --demo` — a real terminal session
+against synthetic data, no engine and no credentials. Regenerate with
+`powershell -File tools/demo/make-demo-gif.ps1` (Docker + Go; it cross-compiles the Face and runs
+`docs/assets/demo.tape` in the VHS container), or `vhs docs/assets/demo.tape` directly where ttyd
+is available.</sub>
 
 It mechanises the session cycle you already run by hand:
 

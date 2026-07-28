@@ -94,8 +94,9 @@ cd face-go
 go test ./internal/tui/ -run TestGolden -update
 ```
 
-Read the diff before committing it — that is the review. The README's demo GIF is built from these
-same frames (`tools/demo/make-demo-gif.ps1`), so regenerating goldens is what keeps the demo honest.
+Read the diff before committing it — that is the review. The README's demo GIF used to be assembled
+from these same frames; it is now a live recording of the binary (`tools/demo/make-demo-gif.ps1`),
+so re-record it after a layout change you want the README to show.
 
 ## Commits and PRs
 

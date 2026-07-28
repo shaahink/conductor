@@ -3,105 +3,106 @@
   Renders docs/assets/demo.gif - the dashboard tour under the README's H1.
 
 .DESCRIPTION
-  The frames are not mock-ups. Each one is a COMMITTED GOLDEN from face-go's rendering tests
-  (face-go/internal/tui/testdata/golden/*.golden) - the exact bytes View() produced for that
-  screen, diffed byte-for-byte by `go test ./internal/tui/ -run TestGolden` on every CI run. So
-  the demo cannot drift from the real Face without a test going red first: regenerate the goldens
-  (`go test ./internal/tui/ -run TestGolden -update`), re-run this, and the GIF is current again.
+  Records the LIVE Face binary running `--demo` (fully offline synthetic data: no engine, no
+  credentials, no spend) through VHS, so the GIF is a real terminal session in real colour with
+  real typing and real transitions - not a slideshow of stills.
 
-  Goldens are ANSI-stripped, so the GIF is monochrome. That is the trade for frames that are
-  provably real. For a full-colour recording of the live binary use VHS instead:
+  VHS needs ttyd, which has no Windows build. Rather than make that a blocker, this runs the
+  official VHS container (ghcr.io/charmbracelet/vhs), which bundles vhs + ttyd + ffmpeg, and
+  cross-compiles the Face for linux to run inside it. The only local prerequisites are Docker and
+  Go. The tape itself - docs/assets/demo.tape - is what actually describes the tour; edit that to
+  change what the GIF shows.
 
-      vhs docs/assets/demo.tape        # needs vhs + ttyd + ffmpeg (macOS/Linux)
+  Geometry note: the tape's 1176x736 gives the shell exactly 110x34, matching the terminal size
+  face-go/internal/tui/golden_test.go renders every golden at. That is deliberate - it is the one
+  size the Face's layout is actually test-covered at. See the comment block in the tape.
 
-  ttyd has no Windows build, which is why the committed asset is produced this way on the
-  Windows-first dev box.
+  History: this script used to assemble the GIF from face-go's committed golden frames via ffmpeg
+  drawtext. That produced provably-real frames but two defects nothing caught: the goldens are
+  ANSI-stripped so the result was monochrome, and Cascadia's ~24px line advance meant a 680px
+  canvas fit only 28 of each frame's 34 rows, silently clipping the bottom six. Recording the live
+  binary fixes both, and cannot drift from the real Face at all.
 
-.PARAMETER Font
-  Any monospace TTF with box-drawing coverage. Cascadia Mono ships with Windows Terminal.
+.PARAMETER Tape
+  The VHS tape to run. Default docs/assets/demo.tape.
+
+.PARAMETER Image
+  VHS container image. Pinned by tag; pass a digest for full reproducibility.
+
+.PARAMETER SkipBuild
+  Reuse an existing face-go/bin/conductor-face (linux ELF) instead of cross-compiling.
 
 .EXAMPLE
   powershell -File tools/demo/make-demo-gif.ps1
 #>
 [CmdletBinding()]
 param(
-    [string]$Font            = "$env:WINDIR\Fonts\CascadiaMono.ttf",
-    [string]$Out             = "docs/assets/demo.gif",
-    [int]   $FontSize        = 15,
-    [double]$SecondsPerFrame = 2.2
+    [string]$Tape  = "docs/assets/demo.tape",
+    [string]$Image = "ghcr.io/charmbracelet/vhs:latest",
+    [switch]$SkipBuild
 )
 
 $ErrorActionPreference = "Stop"
+$ProgressPreference = "SilentlyContinue"
 
-# The tour, in order. Each name is a file in the golden dir, minus the extension.
-$frames = @(
-    "home_demo",      # the landing page: run, budget, gates, workspace, next steps
-    "agent",          # the live agent transcript
-    "kanban",         # the work board
-    "kanban_detail",  # one card, with the prompt block it contributes
-    "timeline",       # what happened, when
-    "plan_stages",    # editing the plan without restarting the run
-    "palette"         # the ':' command palette - every control verb
-)
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
+$tapePath = Join-Path $repoRoot $Tape
+$linuxBin = Join-Path $repoRoot "face-go\bin\conductor-face"
 
-$repoRoot  = Resolve-Path (Join-Path $PSScriptRoot "..\..")
-$goldenDir = Join-Path $repoRoot "face-go\internal\tui\testdata\golden"
-$outPath   = Join-Path $repoRoot $Out
+function Step($t) { Write-Host ""; Write-Host ("=== " + $t + " ===") -ForegroundColor Cyan }
+function Die($t)  { Write-Host ""; Write-Host ("STOP: " + $t) -ForegroundColor Red; exit 1 }
 
-if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) {
-    throw "ffmpeg is not on PATH. It must be built with libfreetype (the drawtext filter)."
+if (-not (Test-Path $tapePath)) { Die "tape not found: $tapePath" }
+
+# --- prerequisites -------------------------------------------------------------------------------
+Step "prerequisites"
+if (-not (Get-Command docker -ErrorAction SilentlyContinue)) { Die "docker is not on PATH." }
+docker version --format '{{.Server.Version}}' 2>&1 | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "docker daemon is not running - starting Docker Desktop..." -ForegroundColor Yellow
+    docker desktop start
+    if ($LASTEXITCODE -ne 0) { Die "could not start the docker daemon. Start Docker Desktop and re-run." }
 }
-if (-not (Test-Path $Font)) { throw "font not found: $Font" }
-if (-not (Test-Path $goldenDir)) { throw "golden dir not found: $goldenDir" }
+Write-Host ("docker  " + (docker version --format '{{.Server.Version}}')) -ForegroundColor Green
 
-# ffmpeg filtergraphs treat ':' as an argument separator and '\' as an escape, so a Windows font
-# path has to be spelled with forward slashes and an escaped drive colon.
-$fontArg = ($Font -replace '\\', '/') -replace '^([A-Za-z]):', '$1\:'
+if (-not $SkipBuild) {
+    if (-not (Get-Command go -ErrorAction SilentlyContinue)) { Die "go is not on PATH (needed to cross-compile the Face; pass -SkipBuild if you already have a linux binary)." }
+    Write-Host ("go      " + (go version)) -ForegroundColor Green
+}
 
-$work = Join-Path ([IO.Path]::GetTempPath()) ("conductor-demo-" + [Guid]::NewGuid().ToString("N"))
-New-Item -ItemType Directory -Path $work -Force | Out-Null
-
-try {
-    $i = 0
-    foreach ($name in $frames) {
-        $src = Join-Path $goldenDir "$name.golden"
-        if (-not (Test-Path $src)) { throw "golden not found: $src (was it renamed?)" }
-
-        $i++
-        $txt = Join-Path $work ("f{0:d2}.txt" -f $i)
-        $png = Join-Path $work ("f{0:d2}.png" -f $i)
-
-        # drawtext reads the file raw; copy it in verbatim so the frame is byte-identical.
-        Copy-Item $src $txt
-
-        # 110 cols x 34 rows at fontsize 15 in Cascadia Mono lands inside 1040x680 with margins.
-        # line_spacing=0 because the font's own leading already matches a terminal cell.
-        # expansion=none so a literal '%{...}' in a frame is never treated as a drawtext expression.
-        $vf = "drawtext=fontfile='$fontArg':textfile='" + (($txt -replace '\\','/') -replace '^([A-Za-z]):','$1\:') +
-              "':x=16:y=12:fontsize=$FontSize" + ":fontcolor=0xc9d1d9:line_spacing=0:expansion=none"
-
-        & ffmpeg -hide_banner -loglevel error `
-            -f lavfi -i "color=c=0x0d1117:s=1040x680" `
-            -vf $vf -frames:v 1 -y $png
-        if ($LASTEXITCODE -ne 0) { throw "ffmpeg failed rendering frame $name" }
-        Write-Host ("  frame {0,2}  {1}" -f $i, $name)
+# --- cross-compile the Face for linux -------------------------------------------------------------
+# The tape runs `./bin/conductor-face --demo` inside the container. bin/ is gitignored, and the
+# extensionless name does not collide with the Windows conductor-face.exe sitting beside it.
+if (-not $SkipBuild) {
+    Step "cross-compile Face for linux"
+    Push-Location (Join-Path $repoRoot "face-go")
+    try {
+        $env:GOOS = "linux"; $env:GOARCH = "amd64"
+        & go build -o bin/conductor-face ./cmd/conductor-face/
+        $code = $LASTEXITCODE
+    } finally {
+        Remove-Item Env:\GOOS, Env:\GOARCH -ErrorAction SilentlyContinue
+        Pop-Location
     }
-
-    New-Item -ItemType Directory -Path (Split-Path $outPath) -Force | Out-Null
-
-    # One palette generated across ALL frames (stats_mode=full) so colours do not shift between
-    # them, then applied without dithering - flat terminal text dithers into mud otherwise.
-    $rate = [Math]::Round(1.0 / $SecondsPerFrame, 4)
-    & ffmpeg -hide_banner -loglevel error `
-        -framerate $rate -i (Join-Path $work "f%02d.png") `
-        -filter_complex "[0:v]split[a][b];[a]palettegen=stats_mode=full[p];[b][p]paletteuse=dither=none" `
-        -loop 0 -y $outPath
-    if ($LASTEXITCODE -ne 0) { throw "ffmpeg failed assembling the gif" }
-
-    $kb = [Math]::Round((Get-Item $outPath).Length / 1KB, 1)
-    Write-Host ""
-    Write-Host ("wrote {0}  ({1} frames, {2}s each, {3} KB)" -f $Out, $frames.Count, $SecondsPerFrame, $kb) -ForegroundColor Green
+    if ($code -ne 0) { Die "go build failed" }
+    $mb = [Math]::Round((Get-Item $linuxBin).Length / 1MB, 1)
+    Write-Host ("built face-go/bin/conductor-face  ({0} MB, linux/amd64)" -f $mb) -ForegroundColor Green
+} elseif (-not (Test-Path $linuxBin)) {
+    Die "-SkipBuild given but face-go/bin/conductor-face does not exist."
 }
-finally {
-    Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue
-}
+
+# --- record ---------------------------------------------------------------------------------------
+Step "vhs"
+Write-Host "recording the live Face - this takes about half a minute..."
+docker run --rm -v "${repoRoot}:/vhs" -w /vhs $Image $Tape
+if ($LASTEXITCODE -ne 0) { Die "vhs failed" }
+
+# --- report -----------------------------------------------------------------------------------------
+$outLine = (Get-Content $tapePath | Select-String -Pattern '^\s*Output\s+(.+)$').Matches[0].Groups[1].Value.Trim('"', ' ')
+$outPath = Join-Path $repoRoot $outLine
+if (-not (Test-Path $outPath)) { Die "vhs reported success but $outLine is missing" }
+
+$kb = [Math]::Round((Get-Item $outPath).Length / 1KB, 1)
+Write-Host ""
+Write-Host ("wrote {0}  ({1} KB)" -f $outLine, $kb) -ForegroundColor Green
+Write-Host "GitHub caps inline README images at 10 MB; keep an eye on that if you lengthen the tape." -ForegroundColor DarkGray
