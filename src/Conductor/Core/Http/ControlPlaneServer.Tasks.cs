@@ -44,11 +44,17 @@ public sealed partial class ControlPlaneServer
         catch (JsonException) { await TaskErrorAsync(ctx, "malformed JSON body").ConfigureAwait(false); return; }
 
         var graph = FoldTaskGraph();
-        var (evt, error) = TaskWrites.BuildAdd(graph, _state.RunId, req?.CheckpointId, req?.Title, req?.Order ?? 0, source: "human");
+        var (evt, error) = TaskWrites.BuildAdd(graph, _state.RunId, req?.CheckpointId, req?.Title,
+            req?.Order ?? 0, source: "human", stageId: req?.StageId);
         if (evt is null) { await TaskErrorAsync(ctx, error ?? "invalid request").ConfigureAwait(false); return; }
 
         _store.AppendEvent(evt);
         _store.FlushEvents();
+        if (evt.Kind == WorkItemKinds.Checkpoint)
+        {
+            DeclareCheckpointInPlan(evt);
+            RefreshTrackerViewFor(FoldTaskGraph(), evt.TaskId);
+        }
 
         await WriteJsonAsync(ctx, new TaskWriteResultDto(true, null, evt.TaskId, "todo", evt.CheckpointId, evt.Title, evt.Order),
             ControlPlaneJsonContext.Default.TaskWriteResultDto, HttpStatusCode.Accepted).ConfigureAwait(false);
@@ -96,6 +102,36 @@ public sealed partial class ControlPlaneServer
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             _logger.LogWarning(ex, "tracker view refresh after a card write failed — it catches up at session end");
+        }
+    }
+
+    /// <summary>
+    /// W4.3: a checkpoint added mid-run has to become DECLARED work, not just graph work.
+    ///
+    /// For a markdown-table plan the regenerated tracker is the declaration, and
+    /// <see cref="RefreshTrackerViewFor"/> already writes it. For a plan that declares work inline
+    /// (every W4.1 import does), nothing else would — and W1.2's sync would then see the stage
+    /// re-declared without this item and ARCHIVE it. The card would not merely fail to schedule; it
+    /// would vanish at the next boundary.
+    /// </summary>
+    private void DeclareCheckpointInPlan(Events.TaskAdded evt)
+    {
+        var fresh = LoadPlanFresh();
+        if (fresh?.Progress is not { } progress) return;
+        if (!string.Equals(progress.Kind, "plan-checkpoints", StringComparison.OrdinalIgnoreCase)) return;
+
+        var declared = progress.Checkpoints ?? [];
+        if (declared.Any(c => c.Id.Equals(evt.TaskId, StringComparison.OrdinalIgnoreCase))) return;
+        declared.Add(new Models.PlanCheckpoint { Id = evt.TaskId, Title = evt.Title ?? evt.TaskId, Status = "TODO" });
+        progress.Checkpoints = declared;
+        try
+        {
+            fresh.Save();
+            _inbox.Enqueue(ControlCommand.Of(ControlAction.ReloadPlan));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogWarning(ex, "could not declare the new checkpoint {TaskId} in the plan — it is on the board but the engine will not schedule it", evt.TaskId);
         }
     }
 

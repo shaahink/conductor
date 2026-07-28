@@ -107,6 +107,8 @@ public static class ControlPlaneDto
 [JsonSerializable(typeof(TaskEditRequestDto))]
 [JsonSerializable(typeof(TaskRefineRequestDto))]
 [JsonSerializable(typeof(TaskRefineResultDto))]
+[JsonSerializable(typeof(TaskSplitRequestDto))]
+[JsonSerializable(typeof(TaskSplitResultDto))]
 [JsonSerializable(typeof(TaskWriteResultDto))]
 [JsonSerializable(typeof(PromptBlocksDto))]
 [JsonSerializable(typeof(ControlRequestDto))]

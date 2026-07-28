@@ -326,6 +326,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Verb == "add" && msg.Result != nil && msg.Result.TaskId != nil {
 			m.kanbanSelId = *msg.Result.TaskId // focus follows the new card
 		}
+		// W4.3: a confirmed split adds its children one at a time, each through this same path —
+		// so a rejected child is visible as a rejected add, not swallowed by a batch.
+		if msg.Verb == "add" && len(m.kanbanSplitPending) > 0 {
+			next := m.kanbanSplitPending[0]
+			m.kanbanSplitPending = m.kanbanSplitPending[1:]
+			checkpointId := ""
+			if msg.Result != nil && msg.Result.CheckpointId != nil {
+				checkpointId = *msg.Result.CheckpointId
+			}
+			return m, m.cmdPostTaskAdd(api.TaskAddRequestDto{CheckpointId: checkpointId, Title: next.Title})
+		}
 		// Re-fetch so the board shows what the engine actually recorded. A detail edit (P3) also
 		// recomposes the open card's blocks — the edited block must visibly change.
 		if msg.Verb == "edit" && m.kanbanDetail && m.kanbanBlocks != nil {
@@ -347,6 +358,24 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.kanbanBlocks, m.kanbanBlocksErr = msg.Blocks, ""
+		return m, nil
+
+	case MsgTaskSplit:
+		m.kanbanSplitting = false
+		if msg.Err != "" {
+			m.kanbanStatus = "✗ " + msg.Err
+			return m, nil
+		}
+		if msg.Result != nil && !msg.Result.Ok {
+			reason := "split rejected"
+			if msg.Result.Error != nil {
+				reason = *msg.Result.Error
+			}
+			m.kanbanStatus = "✗ " + reason
+			return m, nil
+		}
+		m.kanbanSplit = msg.Result // proposal only — enter adds the children, esc discards
+		m.kanbanStatus = ""
 		return m, nil
 
 	case MsgTaskRefined:

@@ -53,12 +53,21 @@ public static class TaskWrites
     /// caller passes none, and generates a collision-free task id (<c>{cp}-a{order}</c>, suffixed on
     /// duplicates) — the exact algorithm the MCP handler used, now shared.</summary>
     public static (TaskAdded? Event, string? Error) BuildAdd(
-        TaskGraph graph, string runId, string? checkpointId, string? title, int order, string source)
+        TaskGraph graph, string runId, string? checkpointId, string? title, int order, string source,
+        string? stageId = null)
     {
-        if (string.IsNullOrEmpty(checkpointId))
-            return (null, "checkpointId is required");
+        ArgumentNullException.ThrowIfNull(graph);
         if (string.IsNullOrWhiteSpace(title))
             return (null, "title is required");
+        // W4.3: a rough card added at STAGE level is a checkpoint-kind item — the unit the engine
+        // schedules — not a subtask needing a parent that does not exist yet. Without this, "we've
+        // realised there's another requirement" had nowhere to land mid-run except an existing card.
+        if (string.IsNullOrEmpty(checkpointId))
+        {
+            return string.IsNullOrWhiteSpace(stageId)
+                ? (null, "checkpointId or stageId is required")
+                : BuildStageLevelAdd(graph, runId, stageId, title, source);
+        }
 
         var existing = graph.ForCheckpoint(checkpointId);
         var nextOrder = order > 0 ? order : (existing.Count > 0 ? existing.Max(t => t.Order) + 1 : 1);
@@ -83,6 +92,42 @@ public static class TaskWrites
             // along from the parent so views never have to re-derive it.
             Kind = WorkItemKinds.Subtask,
             StageId = graph.Find(checkpointId)?.StageId,
+        }, null);
+    }
+
+    /// <summary>W4.3: the stage-level add. Ids follow the one convention the whole system reads —
+    /// <c>{stage}.{n}</c> — taking the next free number after the stage's existing checkpoints, so
+    /// the new card sorts and derives its stage exactly like a declared one.</summary>
+    private static (TaskAdded? Event, string? Error) BuildStageLevelAdd(
+        TaskGraph graph, string runId, string stageId, string title, string source)
+    {
+        stageId = stageId.Trim();
+        if (stageId.Contains('.', StringComparison.Ordinal))
+            return (null, $"stageId '{stageId}' looks like a checkpoint id — pass it as checkpointId");
+
+        var siblings = graph.Checkpoints()
+            .Where(c => string.Equals(c.StageId, stageId, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        var next = 1;
+        foreach (var s in siblings)
+        {
+            var dot = s.TaskId.IndexOf('.', StringComparison.Ordinal);
+            if (dot > 0 && int.TryParse(s.TaskId[(dot + 1)..], out var n) && n >= next) next = n + 1;
+        }
+
+        var id = $"{stageId}.{next}";
+        while (graph.Find(id) != null) id = $"{stageId}.{++next}";
+
+        return (new TaskAdded
+        {
+            RunId = runId,
+            TaskId = id,
+            CheckpointId = id,   // a checkpoint is its own parent, as every seeded one is
+            Title = title.Trim(),
+            Source = source,
+            Order = siblings.Count + 1,
+            Kind = WorkItemKinds.Checkpoint,
+            StageId = stageId,
         }, null);
     }
 }

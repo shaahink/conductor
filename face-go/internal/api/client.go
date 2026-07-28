@@ -294,6 +294,15 @@ func (s *liveSource) PostTaskRefine(req TaskRefineRequestDto) (*TaskRefineResult
 	return &res, nil
 }
 
+func (s *liveSource) PostTaskSplit(req TaskSplitRequestDto) (*TaskSplitResultDto, error) {
+	// W4.3: same shape as refine — the advisor runs server-side, so the patient client.
+	var res TaskSplitResultDto
+	if err := s.postJSONAllowErrorWith(s.slowClient, "/tasks/split", req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
 func (s *liveSource) FetchTelegramStatus() (*TelegramStatusDto, error) {
 	var status TelegramStatusDto
 	if err := s.getJSON("/telegram/status", &status); err != nil {

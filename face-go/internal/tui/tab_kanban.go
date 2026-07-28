@@ -68,6 +68,10 @@ func (m *Model) handleKanbanKey(key string) (tea.Model, tea.Cmd) {
 
 	cards := m.kanbanCards()
 	if len(cards) == 0 {
+		if key == "N" {
+			m.kanbanBeginAddStage()
+			return m, nil
+		}
 		if key == "n" {
 			m.kanbanBeginAdd()
 		}
@@ -82,6 +86,8 @@ func (m *Model) handleKanbanKey(key string) (tea.Model, tea.Cmd) {
 		m.kanbanSelId = cards[min(len(cards)-1, sel+1)].TaskId
 	case "left", "right":
 		return m.kanbanMove(cards[sel], key == "right")
+	case "N":
+		m.kanbanBeginAddStage()
 	case "n":
 		m.kanbanBeginAdd()
 	case "enter":
@@ -112,12 +118,43 @@ func (m *Model) kanbanMove(card api.TaskDto, right bool) (tea.Model, tea.Cmd) {
 // checkpoint, or the run's current checkpoint when the board is empty.
 func (m *Model) kanbanBeginAdd() {
 	if m.kanbanAddCheckpoint() == "" {
-		m.kanbanStatus = "✗ no checkpoint to add under (no cards, no active checkpoint)"
+		m.kanbanStatus = "✗ no checkpoint to add under — press N for a stage-level card"
 		return
 	}
 	m.kanbanAdding = true
+	m.kanbanAddStage = false
 	m.kanbanAddBuf = ""
 	m.kanbanStatus = ""
+}
+
+// kanbanBeginAddStage opens the same one-line input for a STAGE-level card (W4.3). The result is a
+// checkpoint the engine will schedule — the answer to "we've realised there's another requirement"
+// mid-run, which previously had nowhere to land because every add needed an existing parent.
+func (m *Model) kanbanBeginAddStage() {
+	if m.kanbanAddStageId() == "" {
+		m.kanbanStatus = "✗ no stage to add to (no cards, no active checkpoint, no plan stages)"
+		return
+	}
+	m.kanbanAdding = true
+	m.kanbanAddStage = true
+	m.kanbanAddBuf = ""
+	m.kanbanStatus = ""
+}
+
+// kanbanAddStageId resolves the stage a new stage-level card belongs to: the selected card's stage,
+// else the run's current checkpoint's stage, else the plan's first stage. Stage ids are the prefix
+// of a checkpoint id — the same convention the engine, the tracker and the graph all read.
+func (m Model) kanbanAddStageId() string {
+	if cp := m.kanbanAddCheckpoint(); cp != "" {
+		if i := strings.Index(cp, "."); i > 0 {
+			return cp[:i]
+		}
+		return cp
+	}
+	if m.data.Plan != nil && len(m.data.Plan.Stages) > 0 {
+		return m.data.Plan.Stages[0].Id
+	}
+	return ""
 }
 
 func (m Model) kanbanAddCheckpoint() string {
@@ -141,10 +178,12 @@ func (m *Model) handleKanbanAddKey(key string) (tea.Model, tea.Cmd) {
 		if title == "" {
 			return m, nil // a title is required — stay in the form
 		}
-		cp := m.kanbanAddCheckpoint()
 		m.kanbanAdding = false
 		m.kanbanStatus = "adding…"
-		return m, m.cmdPostTaskAdd(api.TaskAddRequestDto{CheckpointId: cp, Title: title})
+		if m.kanbanAddStage {
+			return m, m.cmdPostTaskAdd(api.TaskAddRequestDto{StageId: m.kanbanAddStageId(), Title: title})
+		}
+		return m, m.cmdPostTaskAdd(api.TaskAddRequestDto{CheckpointId: m.kanbanAddCheckpoint(), Title: title})
 	case "backspace":
 		if len(m.kanbanAddBuf) > 0 {
 			m.kanbanAddBuf = m.kanbanAddBuf[:len(m.kanbanAddBuf)-1]
@@ -195,7 +234,7 @@ func (m Model) renderKanbanPane() (string, string) {
 	}
 	cards := m.kanbanCards()
 	if len(cards) == 0 && !m.kanbanAdding {
-		return m.renderKanbanEmptyState() + m.kanbanStatusLine(), "n add · esc back"
+		return m.renderKanbanEmptyState() + m.kanbanStatusLine(), "n add · N stage card · esc back"
 	}
 	selId := ""
 	if len(cards) > 0 {
@@ -221,7 +260,7 @@ func (m Model) renderKanbanPane() (string, string) {
 			subtleStyle.Render("title: ") + textStyle.Render(m.kanbanAddBuf) + accentStyle.Render("▏")
 		return body + m.kanbanStatusLine(), "type · enter add · esc cancel"
 	}
-	return body + m.kanbanStatusLine(), "↑↓ card · ←→ move · enter detail · n add · esc back"
+	return body + m.kanbanStatusLine(), "↑↓ card · ←→ move · enter detail · n add · N stage card · esc back"
 }
 
 func (m Model) kanbanStatusLine() string {

@@ -6,8 +6,11 @@ namespace Conductor.Core.Http;
 /// so the Kanban board and the agent write the very same task graph.</summary>
 public sealed record TaskUpdateRequestDto(string? TaskId, string? Status);
 
-/// <summary>Order 0 (or absent) means "append after the checkpoint's last task".</summary>
-public sealed record TaskAddRequestDto(string? CheckpointId, string? Title, int Order);
+/// <summary>Order 0 (or absent) means "append after the checkpoint's last task".
+/// W4.3: pass <c>StageId</c> instead of <c>CheckpointId</c> to add a rough card at STAGE level — it
+/// lands as a checkpoint-kind item the engine will schedule, which is what "we've realised there's
+/// another requirement" needs mid-run.</summary>
+public sealed record TaskAddRequestDto(string? CheckpointId, string? Title, int Order, string? StageId = null);
 
 /// <summary>Result of either task write. <c>Status</c> echoes the task's <b>actual</b> post-fold
 /// status — an illegal transition is a recorded no-op (same contract as the MCP tools), so the

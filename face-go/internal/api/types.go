@@ -18,6 +18,9 @@ type DataSource interface {
 	FetchPromptBlocks(taskId string) (*PromptBlocksDto, error)
 	PostTaskEdit(req TaskEditRequestDto) (*TaskWriteResultDto, error)
 	PostTaskRefine(req TaskRefineRequestDto) (*TaskRefineResultDto, error)
+	// W4.3: ask the advisor to break one card into children. Proposal only — each child is
+	// confirmed through PostTaskAdd, exactly as a refine is confirmed through PostTaskEdit.
+	PostTaskSplit(req TaskSplitRequestDto) (*TaskSplitResultDto, error)
 	FetchProcesses() (*ProcessesDto, error)
 	FetchSessions() (*SessionsDto, error)
 	FetchTimeline() (*TimelineDto, error)
@@ -169,10 +172,13 @@ type TaskUpdateRequestDto struct {
 }
 
 // Order 0 means "append after the checkpoint's last task" (the server computes it).
+// W4.3: set StageId instead of CheckpointId to add a rough card at STAGE level — it lands as a
+// checkpoint-kind item the engine schedules, so work realised mid-run has somewhere to go.
 type TaskAddRequestDto struct {
 	CheckpointId string `json:"checkpointId"`
 	Title        string `json:"title"`
 	Order        int    `json:"order"`
+	StageId      string `json:"stageId,omitempty"`
 }
 
 // TaskEditRequestDto (P3, POST /tasks/edit): edit a task's own data. nil = leave unchanged; an
@@ -200,6 +206,28 @@ type TaskRefineResultDto struct {
 	Title       *string `json:"title"`
 	Context     *string `json:"context"`
 	Interpreter *string `json:"interpreter"`
+}
+
+// TaskSplitRequestDto (W4.3, POST /tasks/split): ask the plan's advisor to break one card into
+// children. The server only PROPOSES — nothing mutates until the owner confirms each child.
+type TaskSplitRequestDto struct {
+	TaskId      string `json:"taskId"`
+	Instruction string `json:"instruction,omitempty"`
+	Count       int    `json:"count,omitempty"`
+}
+
+type TaskSplitChildDto struct {
+	Title   string  `json:"title"`
+	Context *string `json:"context"`
+}
+
+type TaskSplitResultDto struct {
+	Ok           bool                `json:"ok"`
+	Error        *string             `json:"error"`
+	TaskId       *string             `json:"taskId"`
+	CheckpointId *string             `json:"checkpointId"`
+	Subtasks     []TaskSplitChildDto `json:"subtasks"`
+	Interpreter  *string             `json:"interpreter"`
 }
 
 // PromptBlockDto (P3, GET /prompt/blocks?task=): one labeled building block of a task's prompt.

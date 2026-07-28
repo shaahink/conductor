@@ -76,6 +76,12 @@ func (fakeSource) PostTaskRefine(req api.TaskRefineRequestDto) (*api.TaskRefineR
 	title, context, interp := "Refined title", "Refined context", "fake-advisor"
 	return &api.TaskRefineResultDto{Ok: true, TaskId: &req.TaskId, Title: &title, Context: &context, Interpreter: &interp}, nil
 }
+func (fakeSource) PostTaskSplit(req api.TaskSplitRequestDto) (*api.TaskSplitResultDto, error) {
+	cp, interp := "C1", "fake-advisor"
+	ctx := "start with the read path"
+	return &api.TaskSplitResultDto{Ok: true, TaskId: &req.TaskId, CheckpointId: &cp, Interpreter: &interp,
+		Subtasks: []api.TaskSplitChildDto{{Title: "First child", Context: &ctx}, {Title: "Second child"}}}, nil
+}
 func (fakeSource) FetchProcesses() (*api.ProcessesDto, error) { return nil, nil }
 func (fakeSource) FetchSessions() (*api.SessionsDto, error)   { return nil, nil }
 func (fakeSource) FetchTimeline() (*api.TimelineDto, error)   { return nil, nil }

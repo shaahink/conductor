@@ -319,13 +319,16 @@ public sealed class B12_3Tests
             Assert.DoesNotContain("conductor-lane-cleanup", branches);
             Assert.DoesNotContain("conductor-staging-cleanup", branches);
 
-            // Verify THIS lane leaked no temp dirs. Scoped to dirs created after the test started:
-            // the global temp also holds leftovers from sibling tests (the cancellation test can
-            // legitimately abandon a worktree when its 500ms cancel races the clone) and from any
-            // earlier aborted run on the machine — those must not fail this assertion.
+            // Verify THIS lane leaked no temp dirs. The runner names them
+            // `conductor-{mutating,mergegate}-{lane.Id}-{suffix}`, so scoping to this lane's OWN id
+            // is what makes the assertion about this lane. Scoping by creation time alone was not
+            // enough: the global temp also holds leftovers from sibling tests (the cancellation test
+            // can legitimately abandon a worktree when its 500ms cancel races the clone), and under a
+            // full parallel battery those siblings run DURING this test, not before it — the known
+            // "passes in isolation, fails once in ~8 full runs" flake.
             var tempRoot = Path.GetTempPath();
-            var leakedDirs = Directory.GetDirectories(tempRoot, "conductor-mutating-*")
-                .Concat(Directory.GetDirectories(tempRoot, "conductor-mergegate-*"))
+            var leakedDirs = Directory.GetDirectories(tempRoot, $"conductor-mutating-{lane.Id}-*")
+                .Concat(Directory.GetDirectories(tempRoot, $"conductor-mergegate-{lane.Id}-*"))
                 .Where(d => Directory.GetCreationTimeUtc(d) >= startedUtc)
                 .ToList();
             Assert.Empty(leakedDirs);

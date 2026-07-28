@@ -224,6 +224,9 @@ type Model struct {
 	kanbanSelId  string
 	kanbanAdding bool
 	kanbanAddBuf string
+	// W4.3: the pending add is a STAGE-level card (a checkpoint the engine will schedule),
+	// not a subtask under an existing checkpoint.
+	kanbanAddStage bool
 	kanbanStatus string
 	// tasksErr / tasksLoaded exist so an empty board can say WHY it is empty (dogfood appendix 5).
 	// Three states read identically without them — never fetched, fetch failed, genuinely no cards —
@@ -245,6 +248,10 @@ type Model struct {
 	kanbanPathsBuf     string
 	kanbanRefining     bool
 	kanbanProposal     *api.TaskRefineResultDto
+	// W4.3: the advisor's proposed split — a list of children, applied one /tasks/add at a time.
+	kanbanSplitting    bool
+	kanbanSplit        *api.TaskSplitResultDto
+	kanbanSplitPending []api.TaskSplitChildDto
 	kanbanHandConfirm  bool
 }
 

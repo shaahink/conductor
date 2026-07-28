@@ -177,6 +177,7 @@ public sealed partial class ControlPlaneServer : IDisposable
                 case ("POST", "/tasks/add"): await HandleTaskAddAsync(ctx, ct).ConfigureAwait(false); break;
                 case ("POST", "/tasks/edit"): await HandleTaskEditAsync(ctx, ct).ConfigureAwait(false); break;
                 case ("POST", "/tasks/refine"): await HandleTaskRefineAsync(ctx, ct).ConfigureAwait(false); break;
+                case ("POST", "/tasks/split"): await HandleTaskSplitAsync(ctx, ct).ConfigureAwait(false); break;
                 case ("GET", "/prompt/blocks"): await WritePromptBlocksAsync(ctx).ConfigureAwait(false); break;
                 case ("GET", "/events"): await StreamEventsAsync(ctx, ct).ConfigureAwait(false); break;
                 case ("GET", "/transcript/current"): await StreamTranscriptAsync(ctx, ct).ConfigureAwait(false); break;

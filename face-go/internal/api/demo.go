@@ -162,6 +162,29 @@ func (s *demoSource) PostTaskRefine(req TaskRefineRequestDto) (*TaskRefineResult
 	return &TaskRefineResultDto{Ok: false, Error: &msg}, nil
 }
 
+// PostTaskSplit mirrors POST /tasks/split (W4.3): a canned two-child proposal, so the
+// propose→confirm split flow is fully exercisable offline.
+func (s *demoSource) PostTaskSplit(req TaskSplitRequestDto) (*TaskSplitResultDto, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, t := range s.tasks {
+		if t.TaskId != req.TaskId {
+			continue
+		}
+		readCtx := "Demo advisor: cover the cache-miss path first."
+		interpreter := "demo-advisor"
+		return &TaskSplitResultDto{
+			Ok: true, TaskId: &t.TaskId, CheckpointId: &t.CheckpointId, Interpreter: &interpreter,
+			Subtasks: []TaskSplitChildDto{
+				{Title: t.Title + " — read path", Context: &readCtx},
+				{Title: t.Title + " — write path", Context: nil},
+			},
+		}, nil
+	}
+	msg := "task not found: " + req.TaskId
+	return &TaskSplitResultDto{Ok: false, Error: &msg}, nil
+}
+
 // PostTaskUpdate mirrors the server contract: transition legality lives in the fold, so an illegal
 // move is an accepted no-op and Status echoes what actually happened (see TaskGraph.IsValidTransition).
 func (s *demoSource) PostTaskUpdate(req TaskUpdateRequestDto) (*TaskWriteResultDto, error) {

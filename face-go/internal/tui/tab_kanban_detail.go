@@ -23,6 +23,9 @@ func (m *Model) kanbanOpenDetail(taskId string) tea.Cmd {
 	m.kanbanBlocksErr = ""
 	m.kanbanProposal = nil
 	m.kanbanRefining = false
+	m.kanbanSplit = nil
+	m.kanbanSplitting = false
+	m.kanbanSplitPending = nil
 	m.kanbanHandConfirm = false
 	m.kanbanEditingTitle = false
 	m.kanbanEditingCtx = false
@@ -37,6 +40,9 @@ func (m *Model) kanbanCloseDetail() {
 	m.kanbanBlocksErr = ""
 	m.kanbanProposal = nil
 	m.kanbanRefining = false
+	m.kanbanSplit = nil
+	m.kanbanSplitting = false
+	m.kanbanSplitPending = nil
 	m.kanbanHandConfirm = false
 	m.kanbanEditingTitle = false
 	m.kanbanEditingCtx = false
@@ -83,6 +89,9 @@ func (m *Model) handleKanbanDetailKey(key string) (tea.Model, tea.Cmd) {
 	if m.kanbanProposal != nil {
 		return m.handleKanbanProposalKey(key)
 	}
+	if m.kanbanSplit != nil {
+		return m.handleKanbanSplitKey(key)
+	}
 	if m.kanbanHandConfirm {
 		return m.handleKanbanHandKey(key)
 	}
@@ -120,6 +129,14 @@ func (m *Model) handleKanbanDetailKey(key string) (tea.Model, tea.Cmd) {
 			m.kanbanRefining = true
 			m.kanbanStatus = "asking the advisor…"
 			return m, m.cmdPostTaskRefine(api.TaskRefineRequestDto{TaskId: task.TaskId})
+		}
+		return m, nil
+	case "s":
+		// W4.3: ask the advisor to break this card into children. Proposal only.
+		if task != nil && !m.kanbanSplitting {
+			m.kanbanSplitting = true
+			m.kanbanStatus = "asking the advisor to split it…"
+			return m, m.cmdPostTaskSplit(api.TaskSplitRequestDto{TaskId: task.TaskId})
 		}
 		return m, nil
 	case "h":
@@ -198,6 +215,32 @@ func (m *Model) handleKanbanPathsKey(key string) (tea.Model, tea.Cmd) {
 		if ch, ok := typedChar(key); ok {
 			m.kanbanPathsBuf += ch
 		}
+	}
+	return m, nil
+}
+
+// handleKanbanSplitKey confirms or discards a proposed split. Enter applies the children one at a
+// time through the ordinary add path — the same confirm contract as a refine, so nothing the model
+// proposed reaches the board without the owner.
+func (m *Model) handleKanbanSplitKey(key string) (tea.Model, tea.Cmd) {
+	switch key {
+	case "enter":
+		p := m.kanbanSplit
+		m.kanbanSplit = nil
+		if p == nil || len(p.Subtasks) == 0 {
+			return m, nil
+		}
+		checkpointId := ""
+		if p.CheckpointId != nil {
+			checkpointId = *p.CheckpointId
+		}
+		m.kanbanSplitPending = p.Subtasks[1:]
+		m.kanbanStatus = fmt.Sprintf("adding %d subtask(s)…", len(p.Subtasks))
+		return m, m.cmdPostTaskAdd(api.TaskAddRequestDto{CheckpointId: checkpointId, Title: p.Subtasks[0].Title})
+	case "esc":
+		m.kanbanSplit = nil
+		m.kanbanStatus = "split discarded"
+		return m, nil
 	}
 	return m, nil
 }
@@ -290,7 +333,7 @@ func (m Model) renderKanbanDetailPane() (string, string) {
 			key("y") + subtleStyle.Render(" yes · ") + key("n") + subtleStyle.Render(" no"))
 		return b.String() + m.kanbanStatusLine(), "y confirm · n cancel"
 	}
-	return b.String() + m.kanbanStatusLine(), "t title · c context · p paths · a advisor refine · h hand off · esc back"
+	return b.String() + m.kanbanStatusLine(), "t title · c context · p paths · a advisor refine · s split · h hand off · esc back"
 }
 
 // renderKanbanBlock renders one building block: label line (✎ marks editable), then the content —
@@ -332,6 +375,25 @@ func (m Model) renderKanbanProposal(width int) string {
 		b.WriteString(subtleStyle.Render("  context: ") + textStyle.Render(truncate(*p.Context, width-11)) + "\n")
 	}
 	b.WriteString(subtleStyle.Render("  nothing is saved until you confirm"))
+	return b.String()
+}
+
+// renderKanbanSplit shows the proposed children — nothing is on the board until enter.
+func (m Model) renderKanbanSplit(width int) string {
+	p := m.kanbanSplit
+	interpreter := "advisor"
+	if p.Interpreter != nil {
+		interpreter = *p.Interpreter
+	}
+	var b strings.Builder
+	b.WriteString(accentStyle.Render(fmt.Sprintf("split proposed by %s", interpreter)) + "\n")
+	for _, c := range p.Subtasks {
+		b.WriteString(subtleStyle.Render("  • ") + textStyle.Render(truncate(c.Title, width-6)) + "\n")
+		if c.Context != nil && *c.Context != "" {
+			b.WriteString(subtleStyle.Render("    "+truncate(*c.Context, width-8)) + "\n")
+		}
+	}
+	b.WriteString(subtleStyle.Render("  nothing is added until you confirm"))
 	return b.String()
 }
 

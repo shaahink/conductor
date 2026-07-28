@@ -261,6 +261,18 @@ func (m Model) cmdPostTaskRefine(req api.TaskRefineRequestDto) tea.Cmd {
 	}
 }
 
+// W4.3: the split ask. Like refine, the advisor runs server-side; the answer is a proposal.
+func (m Model) cmdPostTaskSplit(req api.TaskSplitRequestDto) tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		res, err := source.PostTaskSplit(req)
+		if err != nil {
+			return MsgTaskSplit{Err: err.Error()}
+		}
+		return MsgTaskSplit{Result: res}
+	}
+}
+
 func (m Model) cmdPostPlanImport(req api.PlanImportRequestDto) tea.Cmd {
 	source := m.source
 	return func() tea.Msg {

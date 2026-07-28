@@ -142,6 +142,13 @@ type MsgTaskRefined struct {
 	Err    string
 }
 
+// MsgTaskSplit is the advisor's PROPOSED breakdown of a card into children (W4.3) — shown for
+// confirm; each child lands only through the ordinary add path, one at a time.
+type MsgTaskSplit struct {
+	Result *api.TaskSplitResultDto
+	Err    string
+}
+
 // M8.2 Telegram guided setup
 type MsgTelegramStatusUpdated struct {
 	Status *api.TelegramStatusDto
