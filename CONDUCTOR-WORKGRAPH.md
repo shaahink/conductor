@@ -149,9 +149,49 @@ knows, and a disagreement is silent. And `report --query`'s `events.type` column
 name (`RunFinished`), not the JSON discriminator (`runFinished`); querying the wire name returns "no
 rows", which reads exactly like a defect.
 
+**W6.2 + W6.3 + W6.4 DONE 2026-07-28 — the repo is GitHub-ready; W6.4 is PARTIAL by two deliberate
+calls, both `HUMAN:`.** Battery 1028/1028 · go green · ratchet OK. **CI is green on both legs**
+(run `30352861283`), which is the only evidence that counts for "born green" — the badge is live.
+
+CI paid for itself on its first run, and in the same currency W5.1 did: two defects that no local run
+could see. The self-plan test loaded a committed plan through `PlanConfig.Load`, which *validates*,
+and validation asserts `plan.repo` exists — so a test about one boolean field failed on every clone
+that is not the owner's directory. And a W2 truth gate waited on `File.Exists`, which is true the
+moment the engine *creates* the prompt file and still holds the handle; a local SSD closes that
+window, a 4-core runner does not. Neither is a flake. Both fixed, then re-proven green on the runner.
+
+The pattern is now three for three: **W2.1 (real provider), W5.1 (real binary, out of process),
+W6.2 (a machine that is not ours) each found defects a fully green suite could not.** Anything that
+asserts behaviour we control the shape of is worth less than the same assertion made from outside.
+
+The demo under the README's H1 is built from face-go's **committed golden frames** rather than a
+screen recording — the exact bytes `View()` produced, diffed on every CI run — so it cannot drift
+from the real Face without a test going red first (`tools/demo/make-demo-gif.ps1`; the VHS tape for
+a full-colour recording is committed too, but ttyd has no Windows build). Two documentation defects
+turned up while fixing quickstart: it taught a `conductor new-plan --template` flag that **does not
+exist**, and its Face keybinding table still described the Ink face retired in M7.
+
+W6.4's two open items are the honest ones. Moving `plans/shamshir-p0.plan.json` to `examples/` —
+where the repo's own convention puts project plans — trips the ratchet, which reads a relocation as
+removing that file's gate commands and says so: *"Gates are the contract; changing one is a human
+decision."* The move was reverted, not worked around. And the 56 `docs/baton/evidence/*-gate.txt`
+MSBuild logs were kept rather than scrubbed: 194 KB is not weight worth trading receipts for, in a
+repo whose thesis is evidence-or-it-didn't-happen.
+
+**Known intermittent, unresolved:** `HostLoggingTests.DryRunWritesStructuredLogWithRunIdCorrelation`
+timed out twice in ~12 full local runs (never in CI yet, never reproducibly, always under load; it
+passes in ~700 ms when it passes). Each test uses its own temp `StateDir`, so the long-standing
+"Serilog's sink is process-global" explanation in the sibling test's comment does not account for
+it. Not fixed — instead the timeout now prints the log directory's contents and sizes, so the next
+occurrence distinguishes "the sink never opened a file" from "the file is there but short of the
+marker", which are different bugs. Whoever sees it next: that message is the lead.
+
 **Next = W5.2** (`HUMAN:` — the owner starts and pays for the real-model unattended proof run, then
-`docs/workgraph/W5-AUDIT.md`). Also still wanting one manual ✕ on a live run: the W3.3 window-close
-rail, whose OS-delivery half cannot be synthesised in-process.
+`docs/workgraph/W5-AUDIT.md`). Then the three owner calls W6 leaves open: the merge of
+`feat/foreman` → `master` (deliberately NOT done here — the plan sequences it last, after W5.2, and
+the public tip should be the one that passed the real proof run), the shamshir plan relocation
+above, and the `publish/` history purge from W6.1. Also still wanting one manual ✕ on a live run:
+the W3.3 window-close rail, whose OS-delivery half cannot be synthesised in-process.
 
 Driving mode: Claude Code drives W1–W4 + W6 directly (owner directive 2026-07-16) — per
 checkpoint: pre-session ritual (tracker + brief stage section + cited docs, gate battery first,
@@ -161,6 +201,10 @@ Evidence) → overwrite this Handoff block → commit + push. W5.1 = conductor d
 
 Owner decisions pending (needed no earlier than the stage that names them):
 - `HUMAN:` W5.2 — owner starts + pays for the real-model proof run.
+- `HUMAN:` W6.4 — merge `feat/foreman` → `master` (public tip is ~950 commits stale) and point
+  branch protection at `master`. Held until after W5.2 so the public tip is a proven one.
+- `HUMAN:` W6.4 — relocate `plans/shamshir-p0.plan.json` to `examples/shamshir/`? The ratchet
+  blocks it as a gate-command change and defers to you.
 - `HUMAN:` W6.1 — ~~license choice~~ **MIT (decided 2026-07-28, delivered `51911f9`)**;
   `publish/` un-tracked from HEAD same commit. Still open: whether to also purge `publish/`
   from git *history* (`git filter-repo` + force-push — rewrites remote history).
@@ -186,6 +230,6 @@ Owner decisions pending (needed no earlier than the stage that names them):
 | W5.1 | Credential-free dress rehearsal: imported toy plan driven end-to-end, all in-flight levers exercised, first RunFinished | DONE | 2a2293a | `tools/w5/rehearsal.ps1` drives the REAL binary out of process (agent + advisor are token-free scripts): `TOY-PLAN.md` → `init --from-idea` → `doctor` → ONE `run --headless --paused` process → levers over the real HTTP control plane (card context · per-card QA dials · plan edit · stage-level card add · advisor split + confirm children · a QA dial and a card context flipped WHILE the engine runs) → the run finishes itself. **27/27 checks PASS**: 10 sessions, 6/6 checkpoints, exit 0, and `RunFinished{status:Completed, sessions:10, 6/6, seq:80}` as the last event — the event no run had ever emitted. Full write-up + criteria map in `docs/workgraph/W5-REHEARSAL.md`. **Three engine defects found, all fixed:** (1) the engine scheduled on the DECLARATION, not the graph — an inline (`plan-checkpoints`) plan, i.e. every W4.1 import, declares `TODO` for the life of the run, so the assignment policy re-picked delivered cards, the prompt's card section rendered empty (it reads the graph), the circuit breaker correctly called no progress, and the run parked at `0/5 done`; `AllEffectivelyDone` could never be true, so `RunFinished` was unreachable → new `Core/Planning/WorkSnapshot.cs` + `RunContext.ReadWork()`, the same projection `/state` and `/tasks` already served, now with ONE implementation. W4.1's live test missed it by running `Once: true` — one session is exactly the horizon where declaration and graph still agree. (2) `ApplyPlanReload` swapped the plan into the context/gates/lanes/dispatcher but NOT the control plane, so every Face surface served the pre-edit plan for the rest of the run (criterion 2 failing on the read side; invisible to in-process tests, which read `_ctx.Plan`) → `ControlPlaneServer.SwapPlan` + an `onPlanSwapped` hook; `SwapPlan` also rebuilds the progress provider, which captured the inline checkpoint list by value. (3) uncovered by (1): the completion guard named `PendingFix`/`PendingResume` but not `PendingVerify`/`PendingAudit` — harmless only while done-ness lagged a tracker regen behind the claim, so removing the lag let the run close over the verification it had just queued. Blast radius = the plan's LAST checkpoint, in every run, the one card nobody independently checked. 5 tests (W5RehearsalTests) incl. the completion gate (verified to FAIL on the pre-fix read) and the plan-edit-over-HTTP gate. Battery 1028/1028 · go green · ratchet OK (tests 929≥550, pragmas 37≤38, archdebt 0) |
 | W5.2 | HUMAN: real-model unattended proof run start → RunFinished; five criteria audited in docs/workgraph/W5-AUDIT.md | TODO | | |
 | W6.1 | HUMAN: LICENSE; un-commit publish/ (± history purge); .gitignore/.gitattributes hardening | DONE (HEAD only) | 51911f9 | MIT chosen by owner 2026-07-28; publish/ (81 files) un-tracked from HEAD; .gitignore + .gitattributes hardened. History purge NOT done — needs explicit owner go-ahead (rewrites remote history). |
-| W6.2 | CI: .github/workflows/ci.yml (windows full battery + ubuntu dotnet/go), born green | TODO | | |
-| W6.3 | README overhaul (prereqs, platform, badges, VHS demo GIF); quickstart fixed; docs index | TODO | | |
-| W6.4 | Repo hygiene (archive trackers, scrub foreign refs, CONTRIBUTING/SECURITY); merge to master | TODO | | |
+| W6.2 | CI: .github/workflows/ci.yml (windows full battery + ubuntu dotnet/go), born green | DONE | 06e7b27 | Two legs: `windows-latest` runs the checkpoint battery byte for byte (`dotnet build` → `dotnet test` → face-go build/vet/test → `powershell -File tools/gates/ratchet.ps1`, the exact path), `fetch-depth: 0` because a shallow clone has no `origin/<branch>` and silently degrades the ratchet to absolute floors; `ubuntu-latest` proves the tree is not accidentally Windows-only at compile time + runs the Go suite, and deliberately does NOT run `dotnet test` (those tests spawn PowerShell gates and `.exe` children — a red there would only restate that Linux is not a supported host). **CI earned its keep on its first run: two defects, neither a flake, both invisible on the owner's machine.** (1) `SelfPlanHasBatteryCollapseEnabled` read the committed self-plan through `PlanConfig.Load`, which *validates*, and validation asserts `plan.repo` EXISTS — the self-plan names the owner's checkout by absolute path, so the test failed on every clone that is not `C:/Code/conductor-baton`, i.e. on any contributor's machine. Now deserializes (still proving the JSON binds) instead of loading. (2) `CardDetailBytes_AreTheSessionPromptBytes` waited on `File.Exists`, which flips the instant the engine *creates* `session-001.prompt.md` while it still holds the handle, then read with `File.ReadAllTextAsync` (`FileShare.Read`) and lost the race — a local SSD hides the window, the runner did not. Now reads shared and waits for the section heading that proves the write finished, the shape `HostLoggingTests.ReadLogWhenFlushedAsync` already used. Green on both legs: run `30352861283` |
+| W6.3 | README overhaul (prereqs, platform, badges, VHS demo GIF); quickstart fixed; docs index | DONE | 06e7b27 | README gains badges (CI · MIT · .NET 10 · Go 1.26), a **Requirements** table, an honest **Platform** section (Windows is what is *tested*: PowerShell gate shell, Win32 process rails, `conductor-face.exe` — Linux/macOS compile and CI proves it, running the engine there is not yet proven), the credential-free rehearsal + the gate battery as copy-pasteable blocks, and Documentation/Contributing/License sections. **Demo under the H1:** `docs/assets/demo.gif` (7 screens, 218 KB) built by `tools/demo/make-demo-gif.ps1` from face-go's **committed golden frames** — the exact bytes `View()` produced, diffed by `go test -run TestGolden` on every CI run, so the tour cannot drift from the real Face without a test going red first. `docs/assets/demo.tape` is the VHS script for a full-colour recording of the live binary; VHS needs ttyd, which has no Windows build, hence the golden-frame path on the dev box (monochrome — goldens are ANSI-stripped). `docs/README.md` indexes the 138-file tree by era with a read-this-first path. `quickstart.md` fixed: .NET 10 + Go 1.26 (was "≥ 9.0"), `tools\install.ps1` as the build step, and its Face keybinding table — which still described the **retired Ink face** — replaced by a pointer to `face-go/STYLE.md` plus the keys verified against `cmdbar.go`. It also documented `conductor new-plan --template minimal\|dotnet\|node\|shamshir`; `NewPlanCommand.Settings` has **no `--template` option at all**, so all three call sites were rewritten around `conductor init` (which really does detect the repo type) |
+| W6.4 | Repo hygiene (archive trackers, scrub foreign refs, CONTRIBUTING/SECURITY); merge to master | PARTIAL | 06e7b27 | Root markdown reduced 14 → 3 (`README.md`, `AGENTS.md`, the live tracker). Seven historical trackers → `docs/archive/trackers/` with all six plans' `tracker` fields repointed so an old era still loads; `NEXT-ERA.md`, `FUSION.md`, `conductor-DEBT.md` → `docs/archive/`; `conductor-CLEANUP.md` deleted. `docs/archive/README.md` maps era → tracker → design authority so nothing is orphaned. New `CONTRIBUTING.md` (the gate battery IS the review; what the ratchet forbids and why; the W2/W5 lesson that in-process tests are too lenient for anything wire-visible) and `SECURITY.md` (private advisory route + a real threat model: the agent runs unsandboxed by design, **the plan file is executable**, the loopback control plane's per-run `X-Conductor-Token` and why reads stay open, prompt injection, and exactly which files can leak secrets). **Two items NOT done, deliberately.** (a) Relocating `plans/shamshir-p0.plan.json` to `examples/` — where the repo's own convention says it belongs — makes the ratchet read the move as removing that file's gate commands: *"Gates are the contract; changing one is a human decision. Put HUMAN: in the handoff instead."* The move was reverted rather than worked around; the gate did exactly its job. `HUMAN:` owner call. (b) The `docs/baton/evidence/*-gate.txt` MSBuild logs (56 files, 194 KB) were kept: they are receipts, not documentation, and deleting evidence to tidy a repo whose whole thesis is evidence-or-it-didn't-happen is the wrong trade for 194 KB. `docs/README.md` now says what they are and why they quote absolute paths. **Merge to master not done** — see handoff |
