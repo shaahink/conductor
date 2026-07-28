@@ -1,0 +1,120 @@
+# Conductor CI (W6.2).
+#
+# Two legs, and the split is deliberate:
+#
+#   windows  THE gate battery, byte for byte the one a checkpoint must pass locally
+#            (dotnet build -> dotnet test -> face-go build/vet/test -> ratchet). Conductor
+#            is a Windows-first orchestrator: the default gate shell is PowerShell, the
+#            process rails call kernel32, and the Face ships as conductor-face.exe. So the
+#            battery is only meaningful here, and this is the job that may block a merge.
+#
+#   ubuntu   Proof the code is not accidentally Windows-only at COMPILE time, plus the Go
+#            face's own suite, which is platform-independent (its goldens render fixture
+#            data, not host paths). It deliberately does NOT run `dotnet test`: that suite
+#            spawns real PowerShell gates and .exe children, so a red there would mean
+#            "Linux is not a supported host", which is already true and documented.
+#
+# Keep the windows leg's commands identical to docs/CONDUCTOR-WORKGRAPH.md's gate battery.
+# If they drift, CI stops being evidence for a checkpoint.
+
+name: CI
+
+on:
+  push:
+    branches: [master, "feat/**"]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "true"
+
+jobs:
+  windows:
+    name: windows - full gate battery
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      # fetch-depth: 0 because the ratchet's relative half compares this tree against
+      # origin/<this-branch>. With a shallow clone that ref is absent, Resolve-BaseRef
+      # returns "" and the gate silently degrades to absolute floors only.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.x"
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache-dependency-path: face-go/go.sum
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: dotnet build
+        run: dotnet build Conductor.slnx --configuration Debug
+
+      - name: dotnet test
+        run: dotnet test Conductor.slnx --configuration Debug --no-build
+
+      - name: face-go build + vet + test
+        working-directory: face-go
+        run: |
+          go build ./...
+          go vet ./...
+          go test ./... -count=1
+
+      # The exact invocation the checkpoint ritual uses. `powershell` (5.1) rather than
+      # `pwsh` on purpose: the gate is written ASCII-only for 5.1's ANSI codepage reader,
+      # and a gate that parses differently in CI than on the desk is not a gate.
+      - name: ratchet (anti-cheat gate)
+        run: powershell -File tools/gates/ratchet.ps1
+
+  ubuntu:
+    name: ubuntu - cross-platform build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.x"
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache-dependency-path: face-go/go.sum
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: dotnet build (compile-only - see header)
+        run: dotnet build Conductor.slnx --configuration Debug
+
+      - name: face-go build + vet + test
+        working-directory: face-go
+        run: |
+          go build ./...
+          go vet ./...
+          go test ./... -count=1
