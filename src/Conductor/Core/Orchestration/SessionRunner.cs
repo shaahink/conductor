@@ -73,6 +73,18 @@ public sealed partial class SessionRunner
         else if (kind == SessionKind.Fix && pendingFix is null)
             kind = SessionKind.Deliver;
 
+        // W1.3 (bug #6): a Verify session reviews the stage that DELIVERED. After an advance the
+        // loop's current stage has already moved on — PendingVerify.StageId is authoritative for
+        // the prompt, the session record, and the verdict scope. (All three U-series verifies were
+        // dispatched against the NEXT stage and produced nothing usable.)
+        if (kind == SessionKind.Verify && pendingVerify is { StageId.Length: > 0 } pv
+            && !pv.StageId.Equals(stage.Id, StringComparison.OrdinalIgnoreCase)
+            && _ctx.Plan.Stages.FirstOrDefault(s => s.Id.Equals(pv.StageId, StringComparison.OrdinalIgnoreCase)) is { } deliveredStage)
+        {
+            _ctx.Log($"verify session targets stage {deliveredStage.Id} (the delivered work), not the loop's current {stage.Id}");
+            stage = deliveredStage;
+        }
+
         // P1: ask the assignment policy who runs this session and which ready items it claims.
         // With no `pipeline` rules the default policy reproduces the classic behavior exactly
         // (stage/plan default agent, the first not-done checkpoint, one item).

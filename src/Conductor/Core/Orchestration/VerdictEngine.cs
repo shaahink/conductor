@@ -282,25 +282,29 @@ public sealed partial class VerdictEngine
 
         var postTrack = _ctx.Progress.Read(_ctx.Plan, ct);
         rec.NewCommits = Git.CommitsSince(_ctx.Plan.Repo, startHead);
-        rec.NewlyDone = postTrack.Checkpoints
+
+        // W1.3: the claim signal is the WORK GRAPH — what `conductor task --done` / MCP
+        // task_update wrote during this session. The tracker diff survives as a FLAGGED
+        // transition fallback so an old-habit agent still makes progress, loudly; a tracker
+        // hand-edit is no longer a claim of its own, so the M4.1 veto has nothing left to veto.
+        var trackerFlips = postTrack.Checkpoints
             .Where(c => c.IsDone && !(preTrack.ById(c.Id)?.IsDone ?? false))
             .Select(c => c.Id).ToList();
-
-        // M4.1: detect hand-edits — checkpoints marked DONE in tracker but not in DB
-        var dbCheckpoints = _ctx.Store?.GetCheckpoints(_ctx.State.RunId);
-        if (dbCheckpoints is { Count: > 0 } && rec.NewlyDone.Count > 0)
+        var graphClaims = GraphClaimsDuringSession(rec);
+        if (graphClaims is null)
         {
-            var dbDoneIds = new HashSet<string>(dbCheckpoints
-                .Where(c => c.Status.StartsWith("DONE", StringComparison.OrdinalIgnoreCase))
-                .Select(c => c.Id), StringComparer.OrdinalIgnoreCase);
-            var handEdits = rec.NewlyDone.Where(id => !dbDoneIds.Contains(id)).ToList();
-            if (handEdits.Count > 0)
+            rec.NewlyDone = trackerFlips; // no store / no session-start marker — legacy signal
+        }
+        else
+        {
+            rec.NewlyDone = graphClaims;
+            var legacy = trackerFlips.Except(graphClaims, StringComparer.OrdinalIgnoreCase).ToList();
+            if (legacy.Count > 0)
             {
-                _ctx.Log($"WARNING: {handEdits.Count} checkpoint(s) marked DONE via direct tracker edit (not via conductor task --done): [{string.Join(", ", handEdits)}] — discarded", "warn");
-                _ctx.Store?.WriteLedger(_ctx.State.RunId, rec.Number, stage.Id, "hand-edit",
-                    $"Agent directly edited TRACKER.md to mark checkpoints DONE: [{string.Join(", ", handEdits)}]. Use 'conductor task --done' instead. These claims are discarded.");
-                // M4.1: discard hand-edits — only DB-backed claims count
-                rec.NewlyDone = rec.NewlyDone.Except(handEdits, StringComparer.OrdinalIgnoreCase).ToList();
+                _ctx.Log($"WARNING: {legacy.Count} checkpoint(s) flipped DONE only in the tracker markdown: [{string.Join(", ", legacy)}] — accepted via the transition fallback; claim with `conductor task --done` or MCP task_update, the tracker is a generated view", "warn");
+                _ctx.Store?.WriteLedger(_ctx.State.RunId, rec.Number, stage.Id, "legacy-claim",
+                    $"Tracker-only DONE flips accepted via the W1.3 transition fallback: [{string.Join(", ", legacy)}]. The graph heard no claim — report through 'conductor task --done' or MCP task_update.");
+                rec.NewlyDone = [.. graphClaims, .. legacy];
             }
         }
 
@@ -309,6 +313,10 @@ public sealed partial class VerdictEngine
             .Select(c => c.Id).ToList();
         var gatesGreen = GateRunner.AllRequiredPassed(gates);
         var dirty = Git.IsDirty(_ctx.Plan.Repo);
+
+        // W1.3: stage completeness consults the graph too — a stage whose last item was claimed
+        // only via the graph is complete NOW, not one tracker regeneration later.
+        var stageComplete = postTrack.StageDone(stage.Id) || GraphStageDone(stage.Id);
 
         _ctx.Log($"verdict inputs: gates {(gatesGreen ? "green" : "RED")} · commits {rec.NewCommits.Count} · newly DONE [{string.Join(",", rec.NewlyDone)}] · dirty {(dirty ? "YES" : "no")}", gatesGreen ? "pass" : "fail");
 
@@ -319,7 +327,7 @@ public sealed partial class VerdictEngine
             return;
         }
 
-        if (gatesGreen && (rec.NewCommits.Count > 0 || postTrack.StageDone(stage.Id)) && !agentErrored)
+        if (gatesGreen && (rec.NewCommits.Count > 0 || stageComplete) && !agentErrored)
         {
             // M3.1: workflow-driven next step instead of hardcoded ShouldVerify
             _ctx.State.AttemptsThisStage = rec.NewlyDone.Count > 0 ? 0 : _ctx.State.AttemptsThisStage;
@@ -331,7 +339,6 @@ public sealed partial class VerdictEngine
             if (rec.NewlyDone.Count > 0)
                 _ctx.State.PendingConfirmation = [..rec.NewlyDone];
 
-            var stageComplete = postTrack.StageDone(stage.Id);
             AdvanceWorkflowStep(stage, rec, gatesGreen: true, verifierScore: null,
                 verifierPassed: false, circuitBroken: false, stageComplete: stageComplete,
                 sessionStartHead: startHead);
