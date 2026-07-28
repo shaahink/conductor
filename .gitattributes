@@ -8,3 +8,9 @@ face-go/internal/tui/testdata/golden/*.golden text eol=lf
 # Binary assets: never line-ending-normalise (a corrupted GIF is a silent README regression).
 *.gif binary
 *.png binary
+
+# Go sources must be LF in the WORKING TREE too, not just in the index. With core.autocrlf=true they
+# check out CRLF on Windows, and `gofmt -l` then reports every file in the repo as unformatted --
+# which makes gofmt useless locally and trains people to ignore it. The blobs are already LF, so this
+# changes nothing in git history; it only fixes what lands on disk.
+*.go text eol=lf

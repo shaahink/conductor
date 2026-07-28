@@ -227,7 +227,7 @@ type Model struct {
 	// W4.3: the pending add is a STAGE-level card (a checkpoint the engine will schedule),
 	// not a subtask under an existing checkpoint.
 	kanbanAddStage bool
-	kanbanStatus string
+	kanbanStatus   string
 	// tasksErr / tasksLoaded exist so an empty board can say WHY it is empty (dogfood appendix 5).
 	// Three states read identically without them — never fetched, fetch failed, genuinely no cards —
 	// and the pane confidently claimed the third.

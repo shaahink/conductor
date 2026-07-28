@@ -908,7 +908,7 @@ func makeFakeState() *StateDto {
 		CurrentCheckpointTitle: "Wire caching layer",
 		GateSummary:            "build ✓ test ● lint ○",
 		RunId:                  "demo-run-id",
-		Repo: "C:\\Code\\conductor",
+		Repo:                   "C:\\Code\\conductor",
 		// `--demo` is offline against SYNTHETIC data, but the Templates tab stats PlanDir and lists
 		// PlanDir/personas from the real filesystem. Pointed at a plausible-looking real path, the
 		// demo would show whoever ran it their own templates. Name one that cannot exist, so the tab
