@@ -29,6 +29,14 @@ public sealed class InitCommand : Command<InitCommand.Settings>
         [CommandOption("--repo <PATH>")]
         [Description("Absolute path to the repo to drive. Default: the output directory.")]
         public string? Repo { get; init; }
+
+        [CommandOption("--from-idea <TEXT_OR_FILE>")]
+        [Description("Scaffold, then turn this idea (quoted prose, or a path to a doc) into stages and checkpoints — one command from idea to drivable plan.")]
+        public string? FromIdea { get; init; }
+
+        [CommandOption("--model <MODEL>")]
+        [Description("Model the advisor uses to interpret --from-idea prose (fills the advisor's {model} placeholder). Ignored for a structured doc, which needs no model.")]
+        public string? Model { get; init; }
     }
 
     // W4.1: detection moved to Core (RepoKindDetector) so `plan import` proposes the same gates
@@ -84,10 +92,74 @@ public sealed class InitCommand : Command<InitCommand.Settings>
         AnsiConsole.MarkupLine($"[green]Created[/] {Markup.Escape(planPath)}");
         AnsiConsole.MarkupLine($"[green]Created[/] {Markup.Escape(trackerPath)}");
         AnsiConsole.MarkupLine($"[green]Created[/] {Markup.Escape(templatesDir)}{Path.DirectorySeparatorChar} (session.md, fix.md — edit these)");
+
+        if (!string.IsNullOrWhiteSpace(settings.FromIdea))
+            return FromIdea(planPath, settings.FromIdea, settings.Model);
+
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine("Next: edit the example stage in [aqua]conductor.plan.json[/], then [aqua]conductor doctor[/] and [aqua]conductor run[/].");
         return 0;
     }
+
+    /// <summary>
+    /// W4.2: the second half of one command — the scaffold exists, now make it about the idea.
+    ///
+    /// Until this, the documented bootstrap (`init` then `plan import`) could not use the AI path at
+    /// all: init wrote no advisor block, and both prose ingresses hard-refuse without one. And the
+    /// Face — where you would naturally type an idea — only attaches to a running control plane,
+    /// which needs a plan that already exists. So the first mile had no entrance.
+    ///
+    /// Structured docs still cost nothing (the deterministic parser); prose goes to the advisor.
+    /// Either way the scaffold's placeholder stage steps aside once real stages arrive.
+    /// </summary>
+    internal static int FromIdea(string planPath, string idea, string? model)
+    {
+        AnsiConsole.WriteLine();
+        var code = PlanImportCommand.ExecuteImport(planPath, idea, model, assumeYes: true);
+        if (code != 0)
+        {
+            AnsiConsole.MarkupLine("[yellow]The scaffold is on disk, but the idea was not turned into stages.[/]");
+            AnsiConsole.MarkupLine("[grey]Uncomment the advisor block in conductor.plan.json (or pass a structured plan doc), " +
+                                  "then: conductor plan import \"<your idea>\"[/]");
+            return code;
+        }
+
+        var plan = PlanConfig.Load(planPath);
+        if (DropPlaceholderStage(plan)) plan.Save();
+        AnsiConsole.WriteLine();
+        AnsiConsole.MarkupLine($"[green]Plan built from your idea[/] — {plan.Stages.Count} stage(s), " +
+            $"{plan.Progress?.Checkpoints?.Count ?? 0} checkpoint(s).");
+        AnsiConsole.MarkupLine("Next: [aqua]conductor doctor[/], then [aqua]conductor run[/] (add [aqua]--paused[/] to look before it moves).");
+        return 0;
+    }
+
+    /// <summary>The scaffold's "rename me" stage is a starting point, not content. Once an idea has
+    /// produced real stages it is noise on the board — dropped along with its placeholder row, but
+    /// only if nothing has claimed it yet. Returns true when the plan changed (the caller saves).</summary>
+    internal static bool DropPlaceholderStage(PlanConfig plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        if (plan.Stages.Count <= 1) return false;
+        var placeholder = plan.Stages.FirstOrDefault(s =>
+            s.Id == PlaceholderStageId && (s.Title ?? "").Contains("rename me", StringComparison.OrdinalIgnoreCase));
+        if (placeholder is null) return false;
+
+        var declared = plan.Progress?.Checkpoints ?? [];
+        if (declared.Any(c => c.Id.StartsWith(PlaceholderStageId + ".", StringComparison.OrdinalIgnoreCase)
+                              && !string.Equals(c.Status, "TODO", StringComparison.OrdinalIgnoreCase)))
+            return false;
+
+        plan.Stages.Remove(placeholder);
+        if (plan.Progress?.Checkpoints is { } cps)
+            plan.Progress.Checkpoints = [.. cps.Where(c =>
+                !c.Id.StartsWith(PlaceholderStageId + ".", StringComparison.OrdinalIgnoreCase))];
+        foreach (var s in plan.Stages)
+            if (s.DependsOn is { Count: > 0 } deps && deps.Contains(PlaceholderStageId, StringComparer.OrdinalIgnoreCase))
+                s.DependsOn = [.. deps.Where(d => !string.Equals(d, PlaceholderStageId, StringComparison.OrdinalIgnoreCase))];
+        return true;
+    }
+
+    internal const string PlaceholderStageId = "S1";
 
     internal static string BuildPlanJson(string name, string repo, RepoKind kind)
     {
@@ -112,6 +184,21 @@ public sealed class InitCommand : Command<InitCommand.Settings>
             "args": ["run", "{prompt}"],
             "provider": "opencode"
           },
+
+          // W4.2 — the advisor. A model consulted only where you ask for one: turning prose into a
+          // plan (`conductor init --from-idea "…"`, `conductor plan import "…"`), refining or
+          // splitting a card, and judging a stuck stage. Never inside scheduling — the loop stays
+          // deterministic. A structured plan document needs none of this; it parses for free.
+          // Uncomment and point it at any CLI that answers on stdout.
+          //
+          // "advisor": {
+          //   "enabled": true,
+          //   "command": "claude",
+          //   "args": ["-p", "{prompt}", "--output-format", "json", "--model", "{model}"],
+          //   "output": "json",
+          //   "timeoutMinutes": 6
+          // },
+
           "stages": [
             {
               "id": "S1",
