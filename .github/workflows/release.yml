@@ -1,0 +1,169 @@
+# Publish self-contained binaries on a version tag.
+#
+# The point of this workflow: before it existed, EVERY user — including one who only wanted to look —
+# had to install two toolchains and build from source. That tax was larger than any platform question.
+#
+# Everything cross-compiles from one Ubuntu runner. `dotnet publish -r <rid> --self-contained` pulls
+# the target runtime pack rather than needing that OS, and the Face is pure Go (CGO off), so GOOS /
+# GOARCH is enough. One job per target only because the artifacts differ, not because the host does.
+#
+# What a user downloads is ONE archive holding two files: `conductor` (the engine, single-file, no
+# .NET install needed) and `conductor-face` (the TUI, which the engine finds because it sits beside
+# it). Unpack anywhere, run `conductor demo`.
+#
+# macOS builds are NOT signed or notarised. Gatekeeper will quarantine them on first run; the
+# release notes say how to clear it. Signing needs an Apple Developer identity this project does
+# not have.
+
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to build (dry run — nothing is published)"
+        required: false
+
+permissions:
+  contents: write
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x64
+            rid: linux-x64
+            goos: linux
+            goarch: amd64
+            ext: ""
+            archive: tar.gz
+          - name: linux-arm64
+            rid: linux-arm64
+            goos: linux
+            goarch: arm64
+            ext: ""
+            archive: tar.gz
+          - name: macos-arm64
+            rid: osx-arm64
+            goos: darwin
+            goarch: arm64
+            ext: ""
+            archive: tar.gz
+          - name: macos-x64
+            rid: osx-x64
+            goos: darwin
+            goarch: amd64
+            ext: ""
+            archive: tar.gz
+          - name: windows-x64
+            rid: win-x64
+            goos: windows
+            goarch: amd64
+            ext: ".exe"
+            archive: zip
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.x"
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache-dependency-path: face-go/go.sum
+
+      - name: publish engine (self-contained, single file)
+        run: |
+          dotnet publish src/Conductor/Conductor.csproj \
+            -c Release -r ${{ matrix.rid }} \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:DebugType=none \
+            -o out --nologo
+
+      - name: build face
+        working-directory: face-go
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: go build -trimpath -ldflags="-s -w" -o ../out/conductor-face${{ matrix.ext }} ./cmd/conductor-face/
+
+      # Ship the two binaries and the licence, nothing else. Strip the publish leftovers so the
+      # archive is what it claims to be: an engine and a Face.
+      - name: stage archive
+        run: |
+          mkdir -p stage
+          cp out/conductor${{ matrix.ext }} stage/
+          cp out/conductor-face${{ matrix.ext }} stage/
+          cp LICENSE stage/
+          cp README.md stage/
+          chmod +x stage/conductor${{ matrix.ext }} stage/conductor-face${{ matrix.ext }} || true
+          ls -la stage
+
+      - name: archive (tar.gz)
+        if: matrix.archive == 'tar.gz'
+        run: tar -czf conductor-${{ matrix.name }}.tar.gz -C stage .
+
+      - name: archive (zip)
+        if: matrix.archive == 'zip'
+        run: cd stage && zip -r ../conductor-${{ matrix.name }}.zip .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: conductor-${{ matrix.name }}
+          path: conductor-${{ matrix.name }}.*
+          if-no-files-found: error
+
+  publish:
+    name: attach to release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - run: ls -la dist
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          body: |
+            ## Install
+
+            Download the archive for your platform, unpack it, and put the two binaries somewhere on
+            your PATH. They belong **next to each other** — the engine finds the Face by looking
+            beside itself.
+
+            Then, to see it work without credentials or spend:
+
+            ```
+            conductor demo
+            ```
+
+            No .NET or Go install is needed: the engine is self-contained and the Face is a static
+            Go binary.
+
+            **macOS:** these binaries are not signed or notarised. On first run:
+            `xattr -d com.apple.quarantine conductor conductor-face`
+
+            Building from source instead: `tools/install.sh` (macOS/Linux) or
+            `tools\install.ps1` (Windows).

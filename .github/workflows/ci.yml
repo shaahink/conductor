@@ -8,11 +8,17 @@
 #            process rails call kernel32, and the Face ships as conductor-face.exe. So the
 #            battery is only meaningful here, and this is the job that may block a merge.
 #
-#   ubuntu   Proof the code is not accidentally Windows-only at COMPILE time, plus the Go
-#            face's own suite, which is platform-independent (its goldens render fixture
-#            data, not host paths). It deliberately does NOT run `dotnet test`: that suite
-#            spawns real PowerShell gates and .exe children, so a red there would mean
-#            "Linux is not a supported host", which is already true and documented.
+#   ubuntu   Proof the code is not accidentally Windows-only, plus the Go face's own suite,
+#            which is platform-independent (its goldens render fixture data, not host paths).
+#            It deliberately does NOT run `dotnet test`: that suite spawns real PowerShell
+#            gates and .exe children, so a red there would mean "the TEST SUITE is Windows-
+#            first", which is true and uninteresting.
+#
+#            It DOES run `conductor demo`, and that is the leg's real job. Compiling on Linux
+#            never proved the engine RUNS there; the demo drives a complete plan — real git
+#            repo, real gates through the host's own shell, the real claim path — to a
+#            confirmed finish. It is the evidence behind docs/platforms.md. If it goes red,
+#            the honest response is to narrow that page, not to delete this step.
 #
 # Keep the windows leg's commands identical to docs/dev/CONDUCTOR-WORKGRAPH.md's gate battery.
 # If they drift, CI stops being evidence for a checkpoint.
@@ -118,3 +124,10 @@ jobs:
           go build ./...
           go vet ./...
           go test ./... -count=1
+
+      # The runtime proof for docs/platforms.md: a full plan driven to a confirmed finish on
+      # Linux, with no credentials and no PowerShell. The binary is invoked directly rather
+      # than through `dotnet run` because the demo re-spawns itself as the agent, and it must
+      # be the apphost that gets re-spawned, not the SDK host.
+      - name: conductor demo (full run, no credentials)
+        run: ./src/Conductor/bin/Debug/net10.0/conductor demo

@@ -77,6 +77,10 @@ the real surface.
 
 ## Testing without spending money
 
+- `conductor demo` drives a complete plan to a confirmed finish against a fake agent built into the
+  binary — no script, no interpreter, every platform. It is what the Ubuntu CI leg runs, and the
+  cheapest way to find out whether you broke the loop on a non-Windows host. `--keep` leaves the
+  throwaway repo behind so you can read the prompts and `run.db`.
 - `tools/fake-agent.ps1` impersonates an agent CLI's stream-json and can simulate success, stall,
   red gates, and usage limits.
 - `powershell -File tools/w5/rehearsal.ps1 -Keep` is the full dress rehearsal.

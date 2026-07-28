@@ -74,6 +74,10 @@ app.Configure(c =>
         .WithDescription("Tracked bugs that outlive the session that found them. Sub-commands: new <title>, list [[--all]], fix <id>.");
     c.AddCommand<LogCommand>("log")
         .WithDescription("Query the structured JSON log. Filter by stage, gate, outcome, etc. Example: conductor log --query \"stage=P7 and gate=build and outcome=fail\"");
+    c.AddCommand<DemoCommand>("demo")
+        .WithDescription("Drive a complete plan end to end against a built-in fake agent, in a throwaway repo. No credentials, no spend, every platform.");
+    // Hidden: the agent `demo` spawns. An implementation detail, not a verb to reach for.
+    c.AddCommand<FakeAgentCommand>("fake-agent").IsHidden();
     c.AddCommand<NewPlanCommand>("new-plan")
         .WithDescription("Scaffold a new plan + TRACKER.md.");
     c.AddCommand<InitCommand>("init")

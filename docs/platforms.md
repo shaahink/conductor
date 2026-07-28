@@ -47,15 +47,20 @@ Two safety rails are Windows-only, and they are the reason this repo's CI runs i
 Neither is required for a run to complete. They are what makes a run survive *unattended* on a
 desktop that might get closed, and their absence degrades gracefully.
 
-## What is not yet proven
+## What is proven, and what isn't
 
-`dotnet test` does not run on the Ubuntu CI leg, on purpose: the suite spawns real PowerShell gates
-and `.exe` children, so a red there would mean "Linux is not a supported build host for the test
-suite", which is already true and not interesting.
+**Proven on every push.** The Ubuntu CI leg compiles the engine, runs the Face's own suite, and then
+runs `conductor demo` — a complete plan driven to a confirmed finish: real git repo, real gates
+through the host's own shell, the real `conductor task --done` claim path. That is the evidence
+behind this page. Before it existed, "runs on Linux" rested on the code merely compiling.
 
-What *is* proven on every push is that the code compiles on Ubuntu and the Face's own suite passes
-there. `conductor demo` is the runtime proof — it drives a complete run with no credentials, and it
-is the right first thing to try on a non-Windows host:
+**Not proven.** `dotnet test` does not run on the Ubuntu leg, on purpose: the suite spawns real
+PowerShell gates and `.exe` children, so a red there would mean "the test suite is Windows-first",
+which is true and uninteresting. And no CI runner exercises macOS at all — the macOS column above is
+inference from the same code paths Linux exercises, not measurement.
+
+So the honest summary is: the loop is *demonstrated* on Linux and Windows, and *expected* to work on
+macOS. `conductor demo` is the right first thing to run on any host:
 
 ```bash
 conductor demo
