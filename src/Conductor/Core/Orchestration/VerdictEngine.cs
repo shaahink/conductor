@@ -450,6 +450,11 @@ public sealed partial class VerdictEngine
         Notify($"Conductor: plan {_ctx.Plan.Name} COMPLETE ({_ctx.State.SessionCounter} sessions)");
     }
 
+    /// <summary>W3.1: the operator notification path (Telegram + webhook + notify command), exposed
+    /// so the session watchdog can raise a hung or stalled session the moment it kills it. Before
+    /// W3.1 only a NeedsHuman park ever notified, so a hang stayed silent until a human looked.</summary>
+    public void NotifyOperator(string message) => Notify(message);
+
     public void NeedsHuman(string reason)
     {
         _ctx.State.Status = RunStatus.NeedsHuman;

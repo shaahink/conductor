@@ -26,6 +26,12 @@ public sealed class StallDetector
         _clock = clock ?? (() => DateTime.UtcNow);
     }
 
+    /// <summary>Quiet-on-all-signals duration that starts the grace window.</summary>
+    public TimeSpan Threshold => _stallThreshold;
+
+    /// <summary>Recovery window between first detection and the hard kill.</summary>
+    public TimeSpan Grace => _graceWindow;
+
     /// <summary>Reset detector state for a new session.</summary>
     public void Reset() => _firstDetectedAt = null;
 
@@ -83,35 +89,51 @@ public sealed class StallDetector
         return StallVerdict.GraceRunning;
     }
 
+    /// <summary>W3.1: only a deliberately backgrounded child (<c>conductor bg start</c>, the MCP
+    /// <c>bg_start</c> tool) is "work happening while the agent is quiet". Everything else the
+    /// supervisor tracks — the agent process itself, the Face, gate commands — is either the thing
+    /// we are judging or an unrelated bystander.</summary>
+    public const string BgPurposePrefix = "bg:";
+
     /// <summary>
-    /// Check whether any tracked bg process for the given run is still alive by
+    /// Check whether any tracked <c>bg:*</c> process for the given run is still alive by
     /// inspecting the OS process table. Used by the liveness signal in the detector.
     /// Returns false if run.db is unavailable, the query fails, or no db is provided.
+    ///
+    /// W3.1: the purpose filter is why this detector was dead code. Every session tracks the
+    /// agent's own pid (<c>agent:stage:…</c>) and most runs track the Face (<c>face:tui</c>) —
+    /// both always alive, so "a bg process is alive" was permanently true and no engine log ever
+    /// written contained a single <c>stall:</c> line.
     /// </summary>
     public static bool AnyBgProcessAlive(IRunStore? store, string? runId)
     {
         if (store == null || runId == null) return false;
+        var alive = false;
         try
         {
             var pids = store.GetAllPids(runId);
             foreach (var p in pids)
             {
                 if (p.ExitedUtc != null) continue;
+                var isBg = p.Purpose.StartsWith(BgPurposePrefix, StringComparison.OrdinalIgnoreCase);
+                if (isBg && alive) continue; // already answered; keep scanning only to reap dead rows
                 try
                 {
                     using var proc = Process.GetProcessById(p.Pid);
-                    if (!proc.HasExited) return true;
+                    if (!proc.HasExited && isBg) alive = true;
                 }
                 catch
                 {
                     // Process no longer exists (crashed/exited without run.db update);
-                    // best-effort: mark it as exited so the next query is faster.
+                    // best-effort: mark it as exited so the next query is faster. This sweep still
+                    // covers EVERY purpose — the filter above changes what counts as liveness, not
+                    // what gets cleaned up.
                     try { store.MarkPidExited(p.Pid, null); } catch { }
                 }
             }
         }
         catch { }
-        return false;
+        return alive;
     }
 }
 

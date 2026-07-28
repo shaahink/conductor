@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Conductor.Models;
 
 public sealed class LimitsConfig
@@ -9,6 +11,30 @@ public sealed class LimitsConfig
     /// before being hard-killed (F3.2). Default 3.</summary>
     public int StallGraceMinutes { get; set; } = 3;
     public int SessionTimeoutMinutes { get; set; } = 240;
+
+    // W3.1: sub-minute overrides for the three watchdog rails. Minutes are the right unit for a
+    // real plan; they are useless for a toy/rehearsal run whose sessions last seconds (and for the
+    // live tests that prove the rails fire at all). Null = use the minute field above.
+    /// <summary>Optional seconds-precision override for <see cref="SessionTimeoutMinutes"/>.</summary>
+    public int? SessionTimeoutSeconds { get; set; }
+    /// <summary>Optional seconds-precision override for <see cref="StallMinutes"/>.</summary>
+    public int? StallSeconds { get; set; }
+    /// <summary>Optional seconds-precision override for <see cref="StallGraceMinutes"/>.</summary>
+    public int? StallGraceSeconds { get; set; }
+
+    /// <summary>The hard session timeout the watchdog enforces.</summary>
+    [JsonIgnore]
+    public TimeSpan EffectiveSessionTimeout => SessionTimeoutSeconds is { } s
+        ? TimeSpan.FromSeconds(s) : TimeSpan.FromMinutes(SessionTimeoutMinutes);
+    /// <summary>The all-signals-quiet duration the watchdog enforces.</summary>
+    [JsonIgnore]
+    public TimeSpan EffectiveStall => StallSeconds is { } s
+        ? TimeSpan.FromSeconds(s) : TimeSpan.FromMinutes(StallMinutes);
+    /// <summary>The post-stall recovery window the watchdog enforces.</summary>
+    [JsonIgnore]
+    public TimeSpan EffectiveStallGrace => StallGraceSeconds is { } s
+        ? TimeSpan.FromSeconds(s) : TimeSpan.FromMinutes(StallGraceMinutes);
+
     public int MaxResumesPerSession { get; set; } = 2;
     /// <summary>Attempt budget per stage = stage.sessions * this.</summary>
     public int StageSlackFactor { get; set; } = 2;

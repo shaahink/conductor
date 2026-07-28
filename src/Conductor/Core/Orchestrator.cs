@@ -89,7 +89,8 @@ public sealed class Orchestrator
             evaluateSession: v.EvaluateSessionAsync,
             queueResume: v.QueueResume,
             needsHuman: v.NeedsHuman,
-            reflectionStep: v.ReflectionStep);
+            reflectionStep: v.ReflectionStep,
+            notify: v.NotifyOperator);
     }
 
     public Task<int> RunAsync(CancellationToken ct) => Loop.RunAsync(ct);

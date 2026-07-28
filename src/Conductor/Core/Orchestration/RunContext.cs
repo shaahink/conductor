@@ -70,8 +70,8 @@ public sealed class RunContext
     public decimal RunCostUsd { get; set; }
     public long RunTokens { get; set; }
     public decimal RunOverheadUsd { get; set; }
-    public DateTime? LastBgLivenessCheck { get; set; }
-    public bool CachedBgAlive { get; set; }
+    // W3.1: the bg-liveness cache moved into the SessionWatchdog's closure — it is read and written
+    // on the watchdog thread only, so it must not live in state the poll loop also touches.
 
     // ── correlation scope (log enrichment) ──
 

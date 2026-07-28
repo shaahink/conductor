@@ -24,6 +24,7 @@ public sealed partial class SessionRunner
     private readonly Action<SessionRecord, string, bool, bool> _queueResume;
     private readonly Action<string> _needsHuman;
     private readonly Action<SessionRecord> _reflectionStep;
+    private readonly Action<string> _notify;
 
     public SessionRunner(
         RunContext ctx,
@@ -34,7 +35,8 @@ public sealed partial class SessionRunner
         Func<SessionRecord, StageConfig, TrackerSnapshot, string, bool, bool, bool, bool, CancellationToken, Task> evaluateSession,
         Action<SessionRecord, string, bool, bool> queueResume,
         Action<string> needsHuman,
-        Action<SessionRecord> reflectionStep)
+        Action<SessionRecord> reflectionStep,
+        Action<string>? notify = null)
     {
         _ctx = ctx;
         _lanes = lanes;
@@ -45,6 +47,7 @@ public sealed partial class SessionRunner
         _queueResume = queueResume;
         _needsHuman = needsHuman;
         _reflectionStep = reflectionStep;
+        _notify = notify ?? (_ => { });
     }
 
     // ── entry point ──
@@ -259,10 +262,29 @@ public sealed partial class SessionRunner
         {
             _ctx.Activity.Clear();
             var lastHeartbeat = DateTime.UtcNow;
-            var stallDetector = new StallDetector(
-                TimeSpan.FromMinutes(_ctx.Plan.Limits.StallMinutes),
-                TimeSpan.FromMinutes(_ctx.Plan.Limits.StallGraceMinutes));
-            var stallGraceLogged = false;
+
+            // W3.1: the stall + hard-timeout rails run on their own thread. Inside this loop they
+            // could only fire when the loop got around to them — bug #8's 90-minute timeout firing
+            // at 337 minutes. The bg-liveness sample keeps its 5s cache, now owned by the watchdog
+            // thread alone (no shared mutable state with the poll loop).
+            DateTime? lastBgCheck = null;
+            var cachedBgAlive = false;
+            using var watchdog = new SessionWatchdog(
+                hardTimeout: _ctx.Plan.Limits.EffectiveSessionTimeout,
+                stallThreshold: _ctx.Plan.Limits.EffectiveStall,
+                stallGrace: _ctx.Plan.Limits.EffectiveStallGrace,
+                sample: () =>
+                {
+                    if (lastBgCheck == null || (DateTime.UtcNow - lastBgCheck.Value).TotalSeconds > 5)
+                    {
+                        cachedBgAlive = StallDetector.AnyBgProcessAlive(_ctx.Store, _ctx.State.RunId);
+                        lastBgCheck = DateTime.UtcNow;
+                    }
+                    return new WatchdogSignals(agent.LastActivityUtc, agent.LastToolCallUtc, cachedBgAlive);
+                },
+                onAction: (action, message) => OnWatchdogAction(agent, rec, stage, action, message));
+            watchdog.Start();
+
             while (!agent.HasExited)
             {
                 while (agent.TryDequeue(out var ev)) { _ctx.Sink.AgentEvent(ev); TrackActivity(ev, rec.Number); }
@@ -274,45 +296,6 @@ public sealed partial class SessionRunner
                 if (ctl == ControlAction.AbortNow) { killedByUser = true; _ctx.State.Status = RunStatus.Aborted; _ctx.Log("abort requested"); agent.Kill(); }
                 if (ctl == ControlAction.Heartbeat) { RefreshReport(rec, stage, agent, preTrack); lastHeartbeat = DateTime.UtcNow; }
                 if (ct.IsCancellationRequested) { agent.Kill(); }
-                else
-                {
-                    if (_ctx.LastBgLivenessCheck == null || (DateTime.UtcNow - _ctx.LastBgLivenessCheck.Value).TotalSeconds > 5)
-                    {
-                        _ctx.CachedBgAlive = StallDetector.AnyBgProcessAlive(_ctx.Store, _ctx.State.RunId);
-                        _ctx.LastBgLivenessCheck = DateTime.UtcNow;
-                    }
-
-                    var verdict = stallDetector.Evaluate(
-                        agent.LastActivityUtc,
-                        agent.LastToolCallUtc,
-                        _ctx.CachedBgAlive);
-
-                    switch (verdict)
-                    {
-                        case StallVerdict.Active:
-                            stallGraceLogged = false;
-                            break;
-                        case StallVerdict.SoftKillStarted:
-                            _ctx.Log($"stall: all signals quiet for {_ctx.Plan.Limits.StallMinutes}m — {_ctx.Plan.Limits.StallGraceMinutes}m soft-kill grace window started");
-                            stallGraceLogged = true;
-                            break;
-                        case StallVerdict.GraceRunning:
-                            if (!stallGraceLogged) { stallGraceLogged = true; _ctx.Log("stall: in soft-kill grace window — waiting for agent to recover"); }
-                            break;
-                        case StallVerdict.HardKill:
-                            stalled = true;
-                            _ctx.Log("stall: grace window expired — killing session");
-                            agent.Kill();
-                            break;
-                    }
-
-                    if ((DateTime.UtcNow - agent.StartedUtc).TotalMinutes > _ctx.Plan.Limits.SessionTimeoutMinutes)
-                    {
-                        timedOut = true;
-                        _ctx.Log($"timeout: session exceeded {_ctx.Plan.Limits.SessionTimeoutMinutes}m — killing");
-                        agent.Kill();
-                    }
-                }
                 _pushSessionSnapshot(agent, rec, stage, attempt, maxAttempts, preTrack);
                 if (_ctx.Plan.Report.HeartbeatMinutes > 0 && (DateTime.UtcNow - lastHeartbeat).TotalMinutes >= _ctx.Plan.Report.HeartbeatMinutes)
                 {
@@ -322,6 +305,11 @@ public sealed partial class SessionRunner
                 try { await Task.Delay(400, ct).ConfigureAwait(false); }
                 catch (OperationCanceledException) { killedByUser = true; agent.Kill(); }
             }
+            // W3.1: the rails' verdicts are read back here — the watchdog thread decided them,
+            // and it has already killed the process by the time this loop notices the exit.
+            watchdog.Stop();
+            stalled = watchdog.Stalled;
+            timedOut = watchdog.TimedOut;
             var exit = agent.WaitForExitCode();
             while (agent.TryDequeue(out var ev)) { _ctx.Sink.AgentEvent(ev); TrackActivity(ev, rec.Number); }
             agent.ReapStrays();
@@ -399,6 +387,30 @@ public sealed partial class SessionRunner
     }
 
     private int MaxAttempts(StageConfig stage) => Math.Max(1, stage.Sessions * _ctx.Plan.Limits.StageSlackFactor);
+
+    // ── W3.1: watchdog dispatch (runs on the watchdog thread, never the poll loop) ──
+
+    /// <summary>
+    /// Act on a watchdog verdict. The kill goes first and the notification second: the operator
+    /// notify command is allowed a minute of its own, and a hung session must not wait on it.
+    /// A hung or stalled session notifies immediately — before W3.1 the only thing that ever
+    /// reached Telegram was a NeedsHuman park, so bug #8's 337-minute hang was silent.
+    /// </summary>
+    private void OnWatchdogAction(AgentSession agent, SessionRecord rec, StageConfig stage,
+        WatchdogAction action, string message)
+    {
+        if (action == WatchdogAction.None) return;
+        _ctx.Log(message);
+        if (action is not (WatchdogAction.StallKill or WatchdogAction.Timeout)) return;
+
+        try { agent.Kill(); } catch (Exception ex) { _ctx.Log($"watchdog kill failed: {ex.Message}"); }
+        var what = action == WatchdogAction.Timeout ? "hit the hard timeout" : "stalled (no output)";
+        try
+        {
+            _notify($"Conductor {_ctx.Plan.Name}: session #{rec.Number} ({stage.Id}) {what} — killed by the watchdog. {message}");
+        }
+        catch (Exception ex) { _ctx.Log($"watchdog notify failed: {ex.Message}"); }
+    }
 
     // ── snapshot + activity tracking ──
 
