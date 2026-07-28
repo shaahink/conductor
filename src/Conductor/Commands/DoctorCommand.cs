@@ -214,8 +214,12 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
 
     internal static Check CheckBudget(PlanConfig plan, decimal currentCostUsd, bool hasRun)
     {
+        // W3.3: unbounded is a choice, and a defensible one — but silence made it a default nobody
+        // picked. The U-series run had no cap and spent $139.68 before it died.
         if (plan.Limits.MaxRunCostUsd is not { } cap)
-            return new Check("budget", "ok", "no cost cap configured (unbounded)");
+            return plan.Limits.MaxRunTokens.HasValue
+                ? new Check("budget", "ok", $"no cost cap, token cap {plan.Limits.MaxRunTokens / 1000.0:0.#}k")
+                : new Check("budget", "warn", "no spend cap — set limits.maxRunCostUsd (or maxRunTokens) unless unbounded is deliberate");
         if (!hasRun)
             return new Check("budget", "ok", $"cap ${cap:0.00}, no run yet");
         if (currentCostUsd >= cap)

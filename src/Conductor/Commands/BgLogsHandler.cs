@@ -32,8 +32,18 @@ internal static class BgLogsHandler
 
         if (int.TryParse(target, out var pid))
         {
-            var pidSuffix = $"-{pid}.log";
-            logFile = files.FirstOrDefault(f => f.EndsWith(pidSuffix, StringComparison.OrdinalIgnoreCase));
+            var runDb = Path.Combine(plan.StateDir, "run.db");
+            if (File.Exists(runDb))
+            {
+                try
+                {
+                    using var store = new SqliteRunStore(runDb,
+                        Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteRunStore>.Instance);
+                    logFile = BgLogs.Resolve(logDir, pid, store, store.GetLatestRunId(plan.Name));
+                }
+                catch (InvalidOperationException) { /* best-effort; fall through to the fuzzy paths */ }
+            }
+            logFile ??= BgLogs.Resolve(logDir, pid, null, null);
         }
 
         if (logFile == null)
@@ -45,37 +55,10 @@ internal static class BgLogsHandler
 
         if (logFile == null)
         {
-            // Check run.db for the PID's purpose and reconstruct the filename
-            var runDbPath = Path.Combine(plan.StateDir, "run.db");
-            if (File.Exists(runDbPath) && int.TryParse(target, out var dbPid))
-            {
-                try
-                {
-                    using var store = new SqliteRunStore(runDbPath,
-                        Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteRunStore>.Instance);
-                    var runId = store.GetLatestRunId(plan.Name);
-                    if (!string.IsNullOrEmpty(runId))
-                    {
-                        var allPids = store.GetAllPids(runId);
-                        var match = allPids.FirstOrDefault(p => p.Pid == dbPid);
-                        if (match != null)
-                        {
-                            var safePurpose = BgStartHandler.SanitizeFileName(match.Purpose.Replace("bg:", ""));
-                            var recons = Path.Combine(logDir, $"{safePurpose}-{match.Pid}.log");
-                            if (File.Exists(recons)) logFile = recons;
-                        }
-                    }
-                }
-                catch { /* best-effort */ }
-            }
-
-            if (logFile == null)
-            {
-                AnsiConsole.MarkupLine($"[red]No log file found for '{Markup.Escape(target)}'.[/]");
-                var availFiles = files.Select(Path.GetFileName);
-                AnsiConsole.MarkupLine($"[grey]Available: {Markup.Escape(string.Join(", ", availFiles))}[/]");
-                return 1;
-            }
+            AnsiConsole.MarkupLine($"[red]No log file found for '{Markup.Escape(target)}'.[/]");
+            var availFiles = files.Select(Path.GetFileName);
+            AnsiConsole.MarkupLine($"[grey]Available: {Markup.Escape(string.Join(", ", availFiles))}[/]");
+            return 1;
         }
 
         // Read and print the last N lines — synchronous by design (CLI command).

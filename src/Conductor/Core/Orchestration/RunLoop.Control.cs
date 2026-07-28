@@ -171,6 +171,17 @@ public sealed partial class RunLoop
             _ctx.Log($"⚠ branch '{branch}' does not match plan branchPattern '{_ctx.Plan.BranchPattern}' — check before letting sessions commit");
     }
 
+    /// <summary>W3.3: an unbounded run is a policy choice, not a default anyone opted into. The
+    /// U-series run had no cap and spent $139.68 before dying, so the run says so out loud at start
+    /// (and `doctor` warns). Caps stay the owner's to set — nothing is invented here.</summary>
+    private void WarnOnUnboundedSpend()
+    {
+        if (_ctx.Options.DryRun) return;
+        if (_ctx.Plan.Limits.MaxRunCostUsd.HasValue || _ctx.Plan.Limits.MaxRunTokens.HasValue) return;
+        _ctx.Log("⚠ no spend cap: limits.maxRunCostUsd and limits.maxRunTokens are both unset — " +
+                 "this run can spend without bound (set one in the plan, or in the Face's Plan tab)");
+    }
+
     /// <summary>W3.2: one ~$0.001 ping at run start so a run cannot begin on a dead credential.
     /// Once per process, never per session — the point is to fail before the first session's spend,
     /// not to re-bill the check all night. A failure parks for a human instead of starting: the

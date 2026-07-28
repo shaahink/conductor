@@ -63,41 +63,56 @@ public sealed class ProcessSupervisor : IDisposable
         _processes.TryGetValue(pid, out var tp) ? tp : null;
 
     /// <summary>Reap orphans from a previous run that were never cleaned up. Queries run.db for
-    /// unreaped PIDs belonging to the current run, kills any that are still alive, and marks them
-    /// as exited. Also marks as exited any PIDs whose processes no longer exist (already terminated).</summary>
+    /// unreaped PIDs belonging to the current run, kills any that are still ours, and marks them
+    /// as exited. Also marks as exited any PIDs whose processes no longer exist (already terminated).
+    /// <para>W3.3: a pid recorded hours ago is not proof of ownership — the OS recycles ids, and
+    /// this method tree-kills what it finds. It now kills only a process whose start time matches
+    /// the moment we tracked it (<see cref="PidLiveness"/>); a recycled or unverifiable id is
+    /// logged and released, never killed.</para></summary>
     public void ReapOrphans()
     {
         if (_store == null || _runId == null) return;
 
-        var orphans = _store.GetOrphanPids(_runId);
         var currentPid = Environment.ProcessId;
-        foreach (var (pid, purpose) in orphans)
+        foreach (var row in _store.GetAllPids(_runId))
         {
+            if (row.ExitedUtc != null) continue;
+            var pid = row.Pid;
             // Already tracked live in this process (e.g. the Face, spawned moments ago by this same
             // startup sequence, before this reap ran) — not an orphan from a dead prior process. Without
             // this check, ReapOrphans kills its own just-spawned Face every single run (see FaceLauncher).
             if (pid == currentPid || _processes.ContainsKey(pid)) continue;
 
-            try
+            switch (PidLiveness.Check(pid, row.StartedUtc))
             {
-                using var proc = Process.GetProcessById(pid);
-                _logger.LogWarning("reaping orphan pid={Pid} purpose={Purpose}", pid, purpose);
-                try { proc.Kill(entireProcessTree: true); } catch { /* already gone */ }
-                proc.WaitForExit(3000);
-            }
-            catch (ArgumentException)
-            {
-                // Process no longer exists — just mark as exited
-            }
-            catch (InvalidOperationException)
-            {
-                // Process already exited
-            }
-            catch (NotSupportedException)
-            {
-                // Platform does not support this API
+                case PidState.Ours:
+                    try
+                    {
+                        using var proc = Process.GetProcessById(pid);
+                        _logger.LogWarning("reaping orphan pid={Pid} purpose={Purpose}", pid, row.Purpose);
+                        try { proc.Kill(entireProcessTree: true); } catch { /* already gone */ }
+                        proc.WaitForExit(3000);
+                    }
+                    catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or NotSupportedException)
+                    {
+                        // Exited between the check and the kill, or the platform refuses — nothing to do.
+                    }
+                    break;
+
+                case PidState.Recycled:
+                    _logger.LogWarning(
+                        "pid={Pid} (purpose={Purpose}) now belongs to a process started after ours — id recycled, NOT killing",
+                        pid, row.Purpose);
+                    break;
+
+                case PidState.Unverifiable:
+                    _logger.LogWarning(
+                        "pid={Pid} (purpose={Purpose}) is alive but its identity cannot be verified — NOT killing",
+                        pid, row.Purpose);
+                    break;
             }
 
+            // Either way the row stops claiming to be live work of this run.
             _store.MarkPidExited(pid, null);
         }
     }

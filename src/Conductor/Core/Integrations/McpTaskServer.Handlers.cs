@@ -157,17 +157,14 @@ public partial class McpTaskServer
         if (string.IsNullOrWhiteSpace(purpose))
             purpose = Path.GetFileNameWithoutExtension(exe);
 
-        var psi = new ProcessStartInfo(exe)
-        {
-            WorkingDirectory = string.IsNullOrWhiteSpace(cwd) ? Directory.GetCurrentDirectory() : cwd,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
-            StandardOutputEncoding = Encoding.UTF8,
-            StandardErrorEncoding = Encoding.UTF8,
-        };
-        foreach (var a2 in exeArgs) psi.ArgumentList.Add(a2);
+        // W3.3 (bug #2): the OS writes the log, not an in-process pump. The CLI launcher's pump died
+        // with the launcher; this one used to die at session end, orphaning the tail of a long build.
+        var logDir = Path.Combine(_stateDir, "bg-logs");
+        Directory.CreateDirectory(logDir);
+        var startedUtc = DateTime.UtcNow;
+        var logPath = Path.Combine(logDir, BgLogs.NameFor(purpose, startedUtc));
+        var psi = BgLogs.RedirectedSpawn(exe, exeArgs,
+            string.IsNullOrWhiteSpace(cwd) ? Directory.GetCurrentDirectory() : cwd, logPath);
 
         Process? proc;
         try { proc = Process.Start(psi); }
@@ -179,20 +176,8 @@ public partial class McpTaskServer
         if (proc == null)
             return JsonSerializer.SerializeToElement(new { ok = false, error = "Process.Start returned null." });
 
-        var logDir = Path.Combine(_stateDir, "bg-logs");
-        Directory.CreateDirectory(logDir);
-        var safePurpose = string.Join("_", purpose.Split(Path.GetInvalidFileNameChars()));
-        if (string.IsNullOrWhiteSpace(safePurpose)) safePurpose = "bg-process";
-        var logPath = Path.Combine(logDir, $"{safePurpose}-{proc.Id}.log");
-
-#pragma warning disable CA2000
-        var logWriter = new StreamWriter(logPath, append: false, Encoding.UTF8) { AutoFlush = true };
-#pragma warning restore CA2000
-        var gate = new Lock();
-        proc.OutputDataReceived += (_, e) => { if (e.Data != null) lock (gate) logWriter.WriteLine(e.Data); };
-        proc.ErrorDataReceived += (_, e) => { if (e.Data != null) lock (gate) logWriter.WriteLine($"[stderr] {e.Data}"); };
-        proc.BeginOutputReadLine();
-        proc.BeginErrorReadLine();
+        // The exit watcher survives only as long as this session; the pids row is closed by the lazy
+        // PidLiveness sweep every reader runs, which does not care whether we are still here.
         _ = Task.Run(async () =>
         {
             try
@@ -203,14 +188,13 @@ public partial class McpTaskServer
                 _store?.MarkPidExited(proc.Id, exitCode);
             }
             catch { }
-            finally { try { await logWriter.DisposeAsync().ConfigureAwait(false); } catch { } }
         });
 
         if (_store != null)
         {
             try
             {
-                _store.TrackPid(proc.Id, _runId, $"bg:{purpose}", null, null, DateTime.UtcNow);
+                _store.TrackPid(proc.Id, _runId, $"bg:{purpose}", null, null, startedUtc);
             }
             catch { }
         }
@@ -266,9 +250,7 @@ public partial class McpTaskServer
         if (!Directory.Exists(logDir))
             return JsonSerializer.SerializeToElement(new { ok = false, error = "No bg-logs directory found." });
 
-        var pidSuffix = $"-{pid}.log";
-        var logFile = Directory.GetFiles(logDir, "*.log")
-            .FirstOrDefault(f => f.EndsWith(pidSuffix, StringComparison.OrdinalIgnoreCase));
+        var logFile = BgLogs.Resolve(logDir, pid, _store, _runId);
         if (logFile == null)
             return JsonSerializer.SerializeToElement(new { ok = false, error = $"No log file found for PID {pid}." });
 

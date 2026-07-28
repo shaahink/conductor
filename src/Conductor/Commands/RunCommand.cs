@@ -92,6 +92,17 @@ public sealed class RunCommand : AsyncCommand<RunCommand.Settings>
         Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
 #pragma warning restore MA0045
 
+        // W3.3: Ctrl+C was the only exit the engine knew about. Closing the window (or logging off)
+        // killed the process mid-session with nothing saved — §7.5's accidental-✕ data loss. The
+        // same cancellation now runs for those events, and the OS handler waits for the save.
+        using var stopped = new ManualResetEventSlim(false);
+        using var ctrlRails = ConsoleCtrlRails.Install(
+#pragma warning disable MA0045
+            gracefulStop: () => cts.Cancel(),
+#pragma warning restore MA0045
+            waitForStop: stopped.Wait,
+            log: msg => AnsiConsole.MarkupLine($"[yellow]{Markup.Escape(msg)}[/]"));
+
         var startedUtc = DateTime.UtcNow;
         int exitCode;
         FaceLauncher.FaceHandle? face = null;
@@ -128,6 +139,9 @@ public sealed class RunCommand : AsyncCommand<RunCommand.Settings>
         }
         finally
         {
+            // The run loop's own finally has already saved state and released the lock by now, so a
+            // close handler blocked on this is free to let the process die.
+            stopped.Set();
             face?.Dispose();
         }
 

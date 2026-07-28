@@ -39,17 +39,13 @@ internal static class BgStartHandler
         var exeArgs = cmdArgs.Skip(1).ToList();
         var purpose = settings.Purpose ?? Path.GetFileNameWithoutExtension(exe);
 
-        var psi = new ProcessStartInfo(exe)
-        {
-            WorkingDirectory = settings.Cwd ?? plan.Repo,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
-            StandardOutputEncoding = System.Text.Encoding.UTF8,
-            StandardErrorEncoding = System.Text.Encoding.UTF8,
-        };
-        foreach (var a in exeArgs) psi.ArgumentList.Add(a);
+        var logDir = Path.Combine(plan.StateDir, "bg-logs");
+        Directory.CreateDirectory(logDir);
+        // W3.3 (bug #2): one instant, used twice — it names the log AND is the pids row's
+        // started_utc, which is what lets `bg logs <pid>` find this file later.
+        var startedUtc = DateTime.UtcNow;
+        var logPath = Path.Combine(logDir, BgLogs.NameFor(purpose, startedUtc));
+        var psi = BgLogs.RedirectedSpawn(exe, exeArgs, settings.Cwd ?? plan.Repo, logPath);
 
         Process? proc;
         try
@@ -68,28 +64,15 @@ internal static class BgStartHandler
             return 1;
         }
 
-        var logDir = Path.Combine(plan.StateDir, "bg-logs");
-        Directory.CreateDirectory(logDir);
-        var safePurpose = SanitizeFileName(purpose);
-        var logPath = Path.Combine(logDir, $"{safePurpose}-{proc.Id}.log");
-
-        // Fire-and-forget log capture: the Process object stays alive inside the closure.
-        // The StreamWriter is disposed in the fire-and-forget task below — ownership transfers.
-#pragma warning disable CA2000
-        var logWriter = new StreamWriter(logPath, append: false, System.Text.Encoding.UTF8) { AutoFlush = true };
-#pragma warning restore CA2000
-        var gate = new Lock();
-        proc.OutputDataReceived += (_, e) => { if (e.Data != null) lock (gate) logWriter.WriteLine(e.Data); };
-        proc.ErrorDataReceived += (_, e) => { if (e.Data != null) lock (gate) logWriter.WriteLine($"[stderr] {e.Data}"); };
-        proc.BeginOutputReadLine();
-        proc.BeginErrorReadLine();
-        // Track in run.db
+        // Track in run.db. No exit watcher: this command returns in milliseconds, so anything it
+        // schedules dies with it (that WAS bug #2). A finished child's row is marked exited by the
+        // lazy sweep every reader now runs (PidLiveness).
         if (store != null)
         {
             try
             {
                 store.TrackPid(proc.Id, runId!, $"bg:{purpose}", currentStage,
-                    sessionCounter > 0 ? sessionCounter : null, DateTime.UtcNow);
+                    sessionCounter > 0 ? sessionCounter : null, startedUtc);
             }
             catch (Exception ex)
             {
@@ -97,39 +80,12 @@ internal static class BgStartHandler
             }
         }
 
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await proc.WaitForExitAsync().ConfigureAwait(false);
-                var exitCode = 0;
-                try { exitCode = proc.ExitCode; } catch { }
-                if (File.Exists(runDbPath))
-                {
-                    try
-                    {
-                        using var exitStore = new SqliteRunStore(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteRunStore>.Instance);
-                        exitStore.MarkPidExited(proc.Id, exitCode);
-                    }
-                    catch { }
-                }
-            }
-            catch { }
-            finally { try { await logWriter.DisposeAsync().ConfigureAwait(false); } catch { } }
-        });
-
         AnsiConsole.MarkupLine($"[green]bg started[/] PID={proc.Id} purpose=[bold]{Markup.Escape(purpose)}[/]");
         AnsiConsole.MarkupLine($"  log: [grey]{Markup.Escape(logPath)}[/]");
         return 0;
     }
 
-    public static string SanitizeFileName(string name)
-    {
-        var invalid = Path.GetInvalidFileNameChars();
-        var chars = name.Select(c => invalid.Contains(c) ? '_' : c).ToArray();
-        var result = new string(chars);
-        return string.IsNullOrWhiteSpace(result) ? "bg-process" : result;
-    }
+    public static string SanitizeFileName(string name) => BgLogs.Sanitize(name);
 
     private static string? GetCurrentStage(IRunStore? store, string? runId, PlanConfig plan)
     {

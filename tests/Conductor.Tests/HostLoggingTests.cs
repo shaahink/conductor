@@ -64,7 +64,11 @@ public sealed class HostLoggingTests : IDisposable
     /// these two tests flaky under parallel load. Waiting for the flush tests the same thing without lying.</summary>
     private static async Task<string> ReadLogWhenFlushedAsync(string logDir, string pattern, string expected)
     {
-        var deadline = DateTime.UtcNow.AddSeconds(10);
+        // W3.3: 10s was tight enough that a full battery — now several more live runs spawning real
+        // child processes in parallel — could starve Serilog's flush past it and fail a test that
+        // passes alone. This returns the instant the content appears, so a generous ceiling costs
+        // nothing on a healthy machine and only buys patience on a loaded one.
+        var deadline = DateTime.UtcNow.AddSeconds(60);
         var text = "";
         while (DateTime.UtcNow < deadline)
         {

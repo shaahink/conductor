@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Conductor.Core.Store;
 
 namespace Conductor.Core;
@@ -116,19 +115,18 @@ public sealed class StallDetector
             {
                 if (p.ExitedUtc != null) continue;
                 var isBg = p.Purpose.StartsWith(BgPurposePrefix, StringComparison.OrdinalIgnoreCase);
-                if (isBg && alive) continue; // already answered; keep scanning only to reap dead rows
-                try
+                // W3.3: "alive" means still OUR process, not merely "some process holds that id".
+                switch (PidLiveness.Check(p.Pid, p.StartedUtc))
                 {
-                    using var proc = Process.GetProcessById(p.Pid);
-                    if (!proc.HasExited && isBg) alive = true;
-                }
-                catch
-                {
-                    // Process no longer exists (crashed/exited without run.db update);
-                    // best-effort: mark it as exited so the next query is faster. This sweep still
-                    // covers EVERY purpose — the filter above changes what counts as liveness, not
-                    // what gets cleaned up.
-                    try { store.MarkPidExited(p.Pid, null); } catch { }
+                    case PidState.Ours or PidState.Unverifiable:
+                        if (isBg) alive = true;
+                        break;
+                    default:
+                        // Gone, or the id was recycled by something else: mark it exited so the next
+                        // query is faster. This sweep still covers EVERY purpose — the bg filter
+                        // changes what counts as liveness, not what gets cleaned up.
+                        try { store.MarkPidExited(p.Pid, null); } catch { }
+                        break;
                 }
             }
         }

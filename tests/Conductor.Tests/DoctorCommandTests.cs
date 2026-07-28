@@ -120,12 +120,14 @@ public sealed class DoctorCommandTests : IDisposable
 
     // --- budget ---
 
+    /// <summary>W3.3: an uncapped run used to report "ok — unbounded", which made a default nobody
+    /// chose look like a clean bill of health. The U-series run had no cap and spent $139.68.</summary>
     [Fact]
-    public void CheckBudget_Ok_WhenNoCapConfigured()
+    public void CheckBudget_Warns_WhenNoCapConfigured()
     {
         var check = DoctorCommand.CheckBudget(Plan(), currentCostUsd: 999m, hasRun: true);
-        Assert.Equal("ok", check.State);
-        Assert.Contains("unbounded", check.Message, StringComparison.Ordinal);
+        Assert.Equal("warn", check.State);
+        Assert.Contains("no spend cap", check.Message, StringComparison.Ordinal);
     }
 
     [Fact]

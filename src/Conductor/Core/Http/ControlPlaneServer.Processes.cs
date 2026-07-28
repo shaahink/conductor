@@ -19,7 +19,7 @@ public sealed partial class ControlPlaneServer
         {
             var alive = p.ExitedUtc == null && IsProcessAlive(p.Pid);
             var lastLine = p.Purpose.StartsWith("bg:", StringComparison.Ordinal)
-                ? await TailBgLogAsync(bgLogDir, p.Pid).ConfigureAwait(false)
+                ? await TailBgLogAsync(bgLogDir, p.Pid, _store, _state.RunId).ConfigureAwait(false)
                 : null;
             dtos.Add(ControlPlaneDto.FromPid(p, alive, lastLine));
         }

@@ -179,12 +179,12 @@ public sealed partial class ControlPlaneServer
         catch (InvalidOperationException) { return false; }
     }
 
-    private static async Task<string?> TailBgLogAsync(string bgLogDir, int pid)
+    private static async Task<string?> TailBgLogAsync(string bgLogDir, int pid, Store.IRunStore? store, string? runId)
     {
         try
         {
             if (!Directory.Exists(bgLogDir)) return null;
-            var match = Directory.EnumerateFiles(bgLogDir, $"*-{pid}.log").FirstOrDefault();
+            var match = BgLogs.Resolve(bgLogDir, pid, store, runId);
             if (match == null) return null;
             var fs = new FileStream(match, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, bufferSize: 4096, useAsync: true);
             await using (fs.ConfigureAwait(false))
