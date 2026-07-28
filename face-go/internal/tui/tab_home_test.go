@@ -153,7 +153,7 @@ func TestHomeHeadroomReportsRemainingNotSpent(t *testing.T) {
 
 // Paths are informative at the tail: shortening must keep the folder you are in, not the drive letter.
 func TestHomePathKeepsTheTail(t *testing.T) {
-	long := `C:\Users\shahi\very\deep\tree\conductor-baton`
+	long := `C:\Users\dev\very\deep\tree\conductor-baton`
 	got := homePath(long, 30)
 	if strings.HasPrefix(got, `C:\`) {
 		t.Errorf("a shortened path must drop the head, not the tail: %q", got)

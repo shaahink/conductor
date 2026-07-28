@@ -1,10 +1,10 @@
 {
-  // Conductor plan for the Loom mega phase (DevContext2-ui) — opencode variant.
+  // Conductor plan for the Loom mega phase (a dotnet + pnpm monorepo) — opencode variant.
   // Identical to loom.plan.json except the acting agent runs on opencode/deepseek-v4-pro
   // (the advisor already did). Docs remain the authority; this file only tells conductor
   // where things are and how to spawn/verify sessions.
   "name": "Loom",
-  "repo": "C:/code/DevContext2-ui",
+  "repo": "/path/to/your/monorepo",
   "tracker": "LOOM-START.md",
   "planDoc": "docs/dev/briefs/proposal-loom.md",
   "branchPattern": "^feat/(loom-|meridian-m0)",
@@ -35,11 +35,11 @@
   // job object in AgentSession/ProcessRunner already reaps most strays; these hooks are the
   // deterministic backstop for anything that escaped or was started outside conductor.)
   "setup": {
-    "command": "dotnet build-server shutdown; Get-Process DevContext.Server,DevContext.Cli -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; exit 0",
+    "command": "dotnet build-server shutdown; Get-Process App.Server,App.Cli -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; exit 0",
     "timeoutMinutes": 2
   },
   "teardown": {
-    "command": "Get-Process DevContext.Server,DevContext.Cli -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; dotnet build-server shutdown; exit 0",
+    "command": "Get-Process App.Server,App.Cli -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; dotnet build-server shutdown; exit 0",
     "timeoutMinutes": 2
   },
 
@@ -87,9 +87,9 @@
   // close-out. Under perPhase the full battery runs ONCE per phase (after the audit), and a
   // HEAD-sha cache skips reruns on an unchanged tree.
   "gates": [
-    { "name": "build", "command": "dotnet build DevContext.slnx", "tier": "fast", "timeoutMinutes": 15 },
-    { "name": "tests", "command": "dotnet test DevContext.slnx --filter \"Category!=Eval\" --no-build", "parallel": true, "timeoutMinutes": 30 },
-    { "name": "pnpm-check", "command": "pnpm check", "cwd": "src/DevContext.App", "parallel": true, "stages": ["L4", "L6", "L8"], "timeoutMinutes": 15 },
+    { "name": "build", "command": "dotnet build App.slnx", "tier": "fast", "timeoutMinutes": 15 },
+    { "name": "tests", "command": "dotnet test App.slnx --filter \"Category!=Eval\" --no-build", "parallel": true, "timeoutMinutes": 30 },
+    { "name": "pnpm-check", "command": "pnpm check", "cwd": "src/App.Web", "parallel": true, "stages": ["L4", "L6", "L8"], "timeoutMinutes": 15 },
     { "name": "mcp-qa", "command": "node eval/mcp-qa/run.js --quiet", "skipIfMissing": "eval/mcp-qa/run.js", "stages": ["L2", "L4", "L5", "L7", "L8"], "timeoutMinutes": 15 },
     { "name": "loom-guards", "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/loom-guards.ps1", "skipIfMissing": "scripts/loom-guards.ps1", "timeoutMinutes": 5 }
   ],

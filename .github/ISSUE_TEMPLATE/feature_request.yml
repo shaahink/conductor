@@ -1,0 +1,37 @@
+name: Feature request
+description: Something Conductor should do and doesn't.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Conductor is deliberately small and opinionated: the loop stays deterministic, no model sits
+        in the scheduling path, and agent claims are never trusted. Proposals that hold those lines
+        are much easier to say yes to.
+
+        `docs/dev/NEXT-FEATURES.md` is the backlog of captured-but-unbuilt ideas — worth a look
+        first, yours may already be there.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you unable to do today?
+      description: Describe the situation, not the solution. What did you reach for and not find?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like it to do?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What did you try instead?
+      description: >
+        Conductor has a lot of escape hatches — `gates[].shell`, `progress.kind: "script"`,
+        `templatesDir`, per-stage `agent` overrides, `"gates": []`. If one nearly worked, say where
+        it stopped.

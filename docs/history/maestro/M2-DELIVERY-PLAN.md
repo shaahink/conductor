@@ -345,7 +345,7 @@ No `state.json` or `events.jsonl` on disk.
 # Session Index
 | # | Stage | Kind | Started | Outcome | Cost | Dir |
 |---|---|---|---|---|---|---|
-| 001 | M1 | Deliver | 2026-07-12T... | Advanced | $0.42 | [001-M1/](001-M1/) |
+| 001 | M1 | Deliver | 2026-07-12T... | Advanced | $0.42 | `001-M1/` |
 ```
 
 Appended to on each session end.

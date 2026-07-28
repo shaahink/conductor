@@ -77,13 +77,25 @@ public sealed class AuditCommand : Command<AuditCommand.Settings>
             gitLog = "(git failed)";
         }
 
-        // Build evidence tail: read the stage's evidence files if any
+        // Build evidence tail: read the stage's evidence files if any.
+        //
+        // This used to hardcode docs/era3/evidence/<stage> — Conductor's OWN third era — which meant
+        // `conductor audit` went looking for a directory named after this project's history inside
+        // whatever repo you pointed it at, and therefore found evidence for exactly one repo in the
+        // world. The convention the tracker docs actually teach is docs/evidence/<stage>, so look
+        // there, and in .conductor/evidence/<stage> for runs that keep evidence with the run state.
         var evidenceTail = "";
-        var evidenceDir = Path.Combine(plan.StateDir, "..", "docs", "era3", "evidence", stageId);
+        var repoRoot = Path.Combine(plan.StateDir, "..");
+        string[] evidenceDirs =
+        [
+            Path.Combine(repoRoot, "docs", "evidence", stageId),
+            Path.Combine(plan.StateDir, "evidence", stageId),
+        ];
         try
         {
-            if (Directory.Exists(evidenceDir))
+            foreach (var evidenceDir in evidenceDirs)
             {
+                if (!Directory.Exists(evidenceDir)) continue;
                 var evidenceFiles = Directory.EnumerateFiles(evidenceDir, "*.txt", SearchOption.TopDirectoryOnly)
                     .OrderBy(f => f, StringComparer.Ordinal)
                     .Take(3)
@@ -94,6 +106,7 @@ public sealed class AuditCommand : Command<AuditCommand.Settings>
                     if (content.Length > 4000) content = content[..4000] + "\n…(truncated)";
                     evidenceTail += $"## Evidence: {Path.GetFileName(ef)}\n```\n{content}\n```\n\n";
                 }
+                if (evidenceTail.Length > 0) break;   // first directory that actually has evidence wins
             }
         }
         catch (IOException) { /* best-effort */ }

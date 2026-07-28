@@ -1,9 +1,9 @@
 {
-  // Conductor plan for the Loom mega phase (DevContext2-ui).
+  // Conductor plan for the Loom mega phase (a dotnet + pnpm monorepo).
   // Docs are the authority — this file only tells conductor where things are
   // and how to spawn/verify sessions.
   "name": "Loom",
-  "repo": "C:/code/DevContext2-ui",
+  "repo": "/path/to/your/monorepo",
   "tracker": "LOOM-START.md",
   "planDoc": "docs/dev/briefs/proposal-loom.md",
   "branchPattern": "^feat/(loom-|meridian-m0)",
@@ -53,9 +53,9 @@
   // The gate battery — conductor re-runs this itself after every session and
   // never trusts the agent's word for it. Real exit codes only.
   "gates": [
-    { "name": "build", "command": "dotnet build DevContext.slnx", "timeoutMinutes": 15 },
-    { "name": "tests", "command": "dotnet test DevContext.slnx --filter \"Category!=Eval\"", "timeoutMinutes": 30 },
-    { "name": "pnpm-check", "command": "pnpm check", "cwd": "src/DevContext.App", "timeoutMinutes": 15 },
+    { "name": "build", "command": "dotnet build App.slnx", "timeoutMinutes": 15 },
+    { "name": "tests", "command": "dotnet test App.slnx --filter \"Category!=Eval\"", "timeoutMinutes": 30 },
+    { "name": "pnpm-check", "command": "pnpm check", "cwd": "src/App.Web", "timeoutMinutes": 15 },
     { "name": "mcp-qa", "command": "node eval/mcp-qa/run.js --quiet", "skipIfMissing": "eval/mcp-qa/run.js", "timeoutMinutes": 15 },
     { "name": "loom-guards", "command": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/loom-guards.ps1", "skipIfMissing": "scripts/loom-guards.ps1", "timeoutMinutes": 5 }
   ],

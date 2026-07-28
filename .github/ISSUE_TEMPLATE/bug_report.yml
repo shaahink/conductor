@@ -1,0 +1,73 @@
+name: Bug report
+description: Something in Conductor behaved differently than it should have.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Conductor's whole thesis is that a claim is worth nothing without an independent check —
+        that applies to bug reports too. The more of the evidence below you can paste, the faster
+        this gets diagnosed.
+
+        If a run was involved, `.conductor/logs/session-NNN.prompt.md` is usually the file that
+        explains it: it is the exact text the agent received, not a reconstruction.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What you ran, what you expected, what happened
+      placeholder: |
+        Ran: conductor run -p ./conductor.plan.json
+        Expected: session 3 to advance past L2.1
+        Happened: parked at NeedsHuman with "identical stall"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Conductor version
+      description: Output of `conductor --version`, or the commit you built from.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Windows
+        - Linux
+        - macOS
+    validations:
+      required: true
+
+  - type: dropdown
+    id: demo
+    attributes:
+      label: Does `conductor demo` pass?
+      description: >
+        One command, no credentials, no spend — it drives a full plan end to end. If it fails, the
+        problem is in the loop itself and that output is the most useful thing you can attach.
+      options:
+        - "Yes — demo passes, the bug is elsewhere"
+        - "No — demo fails too"
+        - "Haven't tried it"
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Evidence
+      description: >
+        The tail of `.conductor/conductor.log`, plus `conductor status`. Redact anything private —
+        prompts can contain your source.
+      render: shell
+
+  - type: textarea
+    id: plan
+    attributes:
+      label: Plan config (optional)
+      description: The relevant part of your plan JSON — usually `gates`, `limits`, and `agent`.
+      render: json

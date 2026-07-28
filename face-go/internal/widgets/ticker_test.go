@@ -13,10 +13,10 @@ func TestRepoBase(t *testing.T) {
 		want string
 	}{
 		{"windows path", `C:\Code\conductor-baton`, "…/conductor-baton"},
-		{"posix path", "/home/shahin/code/conductor", "…/conductor"},
+		{"posix path", "/home/dev/code/conductor", "…/conductor"},
 		{"mixed separators", `C:\Code/conductor-baton`, "…/conductor-baton"},
 		{"trailing separator", `C:\Code\conductor-baton\`, "…/conductor-baton"},
-		{"trailing posix separator", "/home/shahin/conductor/", "…/conductor"},
+		{"trailing posix separator", "/home/dev/conductor/", "…/conductor"},
 		{"bare name has nothing to trim", "conductor-baton", "conductor-baton"},
 		{"empty stays empty", "", ""},
 		{"separators only", `\\`, ""},
