@@ -25,6 +25,12 @@ public sealed class AgentStreamState(Action<string, string> emit, Action<long, l
 
     public string? ResultText { get; set; }
     public bool ResultIsError { get; set; }
+
+    /// <summary>W3.2: set by the provider the moment the wire says the credential is dead (an HTTP
+    /// 401 / <c>authentication_failed</c> envelope), so the run can park on the FIRST retry instead
+    /// of inferring it from the result text ten retries later — if a result envelope arrives at all.
+    /// Null while the credential is good.</summary>
+    public string? AuthFailure { get; set; }
     public decimal? CostUsd { get; set; }
     public int? NumTurns { get; set; }
     public long? TokensInput { get; set; }

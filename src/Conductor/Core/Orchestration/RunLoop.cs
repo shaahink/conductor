@@ -79,6 +79,7 @@ public sealed partial class RunLoop
             _ctx.ProcessSupervisor?.ReapOrphans();
             SyncWorkGraphFromDeclared();
             WarnOnBranchPattern();
+            await AuthPreflightAsync(ct).ConfigureAwait(false);
 
             var sessionsThisRun = 0;
             _ctx.RestoreBudget();

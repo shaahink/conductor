@@ -38,6 +38,8 @@ public sealed class AgentSession : IDisposable
     public DateTime LastToolCallUtc => new(Interlocked.Read(ref _lastToolCallTicks), DateTimeKind.Utc);
     public string? ResultText => _stream.ResultText;
     public bool ResultIsError => _stream.ResultIsError;
+    /// <summary>W3.2: non-null once the provider stream reported a dead credential.</summary>
+    public string? AuthFailure => _stream.AuthFailure;
     public decimal? CostUsd => _stream.CostUsd;
     public int? NumTurns => _stream.NumTurns;
     public long? TokensInput => _stream.TokensInput;

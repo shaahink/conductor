@@ -14,6 +14,8 @@ public sealed class ClaudeProvider : IAgentProvider
 
     public bool DetectsUsageLimit(string evidence) => ProviderText.DetectsUsageLimit(evidence);
 
+    public bool DetectsAuthFailure(string evidence) => ProviderText.DetectsAuthFailure(evidence);
+
     public void ParseLine(string line, AgentStreamState state)
     {
         ArgumentNullException.ThrowIfNull(state);
@@ -37,7 +39,22 @@ public sealed class ClaudeProvider : IAgentProvider
         switch (type)
         {
             case "system":
-                state.Emit("system", root.TryGetProperty("subtype", out var st) ? st.GetString() ?? "system" : "system");
+                var subtype = root.TryGetProperty("subtype", out var st) ? st.GetString() ?? "system" : "system";
+                // W3.2: the system envelope carries the API's own verdict on a failed call
+                // (`{"subtype":"api_retry","error_status":401,"error":"authentication_failed"}`).
+                // Flattening it to the bare subtype threw that away — session #13 retried a dead
+                // OAuth token ten times and the run only ever saw the word "api_retry".
+                var errStatus = root.TryGetProperty("error_status", out var es) && es.ValueKind == JsonValueKind.Number
+                    ? es.GetInt32() : (int?)null;
+                var errText = root.TryGetProperty("error", out var er) && er.ValueKind == JsonValueKind.String
+                    ? er.GetString() : null;
+                if (errStatus is null && errText is null) { state.Emit("system", subtype); break; }
+
+                var detail = $"{subtype} — {(errStatus is { } code ? $"HTTP {code}" : "error")}" +
+                             (string.IsNullOrEmpty(errText) ? "" : $" {errText}");
+                state.Emit("system", detail);
+                if (errStatus == 401 || ProviderText.DetectsAuthFailure(errText ?? ""))
+                    state.AuthFailure ??= detail;
                 break;
             case "assistant":
                 if (root.TryGetProperty("message", out var msg) &&

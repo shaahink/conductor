@@ -13,6 +13,11 @@ public interface IAgentProvider
 
     /// <summary>True when the evidence text contains this backend's usage/rate-limit phrasing.</summary>
     bool DetectsUsageLimit(string evidence);
+
+    /// <summary>W3.2: True when the evidence text says the credential is dead (401, expired OAuth,
+    /// invalid key). Distinct from a usage limit: no amount of backoff fixes it, so the run parks
+    /// for a human instead of burning attempts.</summary>
+    bool DetectsAuthFailure(string evidence);
 }
 
 public static class AgentProviderFactory

@@ -133,7 +133,8 @@ public static partial class HealthMetrics
             {
                 SessionOutcome.Advanced or SessionOutcome.Progress => Productivity.Productive,
                 SessionOutcome.NoProgress or SessionOutcome.GatesRed or SessionOutcome.Stalled
-                    or SessionOutcome.TimedOut or SessionOutcome.AgentError => Productivity.Unproductive,
+                    or SessionOutcome.TimedOut or SessionOutcome.AgentError
+                    or SessionOutcome.AuthFailed => Productivity.Unproductive,
                 _ => Productivity.Neutral,
             }
             : Productivity.Neutral;

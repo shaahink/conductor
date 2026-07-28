@@ -11,6 +11,8 @@ public sealed class GenericTextProvider : IAgentProvider
 
     public bool DetectsUsageLimit(string evidence) => ProviderText.DetectsUsageLimit(evidence);
 
+    public bool DetectsAuthFailure(string evidence) => ProviderText.DetectsAuthFailure(evidence);
+
     public void ParseLine(string line, AgentStreamState state)
     {
         ArgumentNullException.ThrowIfNull(state);

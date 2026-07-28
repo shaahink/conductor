@@ -348,6 +348,24 @@ public sealed partial class SessionRunner
             }
 
             var limitEvidence = (agent.ResultText ?? "") + " " + (exit != 0 && agent.ResultText == null ? LastRawTail(rawLog) : "");
+
+            // W3.2: a dead credential is checked BEFORE the usage limit, because it looks like one
+            // (both are refusals from the backend) and is nothing like one: backing off 30 minutes
+            // and retrying cannot mint a new token, and the advisor is the same CLI, so its
+            // judgement died with the credential. U-series #13 was recorded as a generic AgentError
+            // and burned the stage's remaining attempts against a 401.
+            var authEvidence = (agent.AuthFailure ?? "") + " " + limitEvidence + " " +
+                               (agent.ResultText == null ? LastRawTail(rawLog) : "");
+            if ((agent.ResultIsError || exit != 0 || agent.AuthFailure != null)
+                && _ctx.AgentProvider.DetectsAuthFailure(authEvidence))
+            {
+                rec.Outcome = SessionOutcome.AuthFailed;
+                var detail = Trunc((agent.AuthFailure ?? agent.ResultText ?? "the agent backend rejected the credential").Trim(), 200);
+                _ctx.Log($"auth: the agent backend rejected the credential — {detail}");
+                _needsHuman($"re-auth: {ReauthHint(_ctx.AgentProvider.Name)} — {detail}");
+                return;
+            }
+
             if ((agent.ResultIsError || exit != 0) && _ctx.AgentProvider.DetectsUsageLimit(limitEvidence))
             {
                 rec.Outcome = SessionOutcome.LimitBackoff;
@@ -388,29 +406,6 @@ public sealed partial class SessionRunner
 
     private int MaxAttempts(StageConfig stage) => Math.Max(1, stage.Sessions * _ctx.Plan.Limits.StageSlackFactor);
 
-    // ── W3.1: watchdog dispatch (runs on the watchdog thread, never the poll loop) ──
-
-    /// <summary>
-    /// Act on a watchdog verdict. The kill goes first and the notification second: the operator
-    /// notify command is allowed a minute of its own, and a hung session must not wait on it.
-    /// A hung or stalled session notifies immediately — before W3.1 the only thing that ever
-    /// reached Telegram was a NeedsHuman park, so bug #8's 337-minute hang was silent.
-    /// </summary>
-    private void OnWatchdogAction(AgentSession agent, SessionRecord rec, StageConfig stage,
-        WatchdogAction action, string message)
-    {
-        if (action == WatchdogAction.None) return;
-        _ctx.Log(message);
-        if (action is not (WatchdogAction.StallKill or WatchdogAction.Timeout)) return;
-
-        try { agent.Kill(); } catch (Exception ex) { _ctx.Log($"watchdog kill failed: {ex.Message}"); }
-        var what = action == WatchdogAction.Timeout ? "hit the hard timeout" : "stalled (no output)";
-        try
-        {
-            _notify($"Conductor {_ctx.Plan.Name}: session #{rec.Number} ({stage.Id}) {what} — killed by the watchdog. {message}");
-        }
-        catch (Exception ex) { _ctx.Log($"watchdog notify failed: {ex.Message}"); }
-    }
 
     // ── snapshot + activity tracking ──
 

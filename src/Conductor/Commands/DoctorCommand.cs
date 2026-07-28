@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using Conductor.Core;
 using Conductor.Core.Face;
@@ -19,12 +20,22 @@ namespace Conductor.Commands;
 /// call; the only network is the cheap reachability probes <see cref="PreflightHealth"/> already
 /// does with a 10s timeout each. Read-only; never writes state.
 /// </summary>
-public sealed class DoctorCommand : AsyncCommand<PlanSettings>
+public sealed class DoctorSettings : PlanSettings
+{
+    /// <summary>W3.2: skip the one-token auth ping (the only check that spends money or talks to
+    /// the model backend).</summary>
+    [CommandOption("--no-auth-check")]
+    [Description("Skip the one-token auth smoke test (~$0.001) against the configured agent CLI")]
+    public bool NoAuthCheck { get; init; }
+}
+
+public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
 {
     internal sealed record Check(string Name, string State, string Message); // State: ok | warn | fail
 
-    public override async Task<int> ExecuteAsync(CommandContext context, PlanSettings settings)
+    public override async Task<int> ExecuteAsync(CommandContext context, DoctorSettings settings)
     {
+        ArgumentNullException.ThrowIfNull(settings);
         var sw = Stopwatch.StartNew();
         var plan = PlanConfig.Load(settings.ResolvePlanPath());
 
@@ -32,7 +43,7 @@ public sealed class DoctorCommand : AsyncCommand<PlanSettings>
         AnsiConsole.MarkupLine($"repo: {Markup.Escape(plan.Repo)}");
         AnsiConsole.WriteLine();
 
-        var checks = await RunChecksAsync(plan).ConfigureAwait(false);
+        var checks = await RunChecksAsync(plan, authCheck: !settings.NoAuthCheck).ConfigureAwait(false);
         sw.Stop();
 
         foreach (var c in checks) AnsiConsole.MarkupLine(RenderCheck(c));
@@ -48,7 +59,7 @@ public sealed class DoctorCommand : AsyncCommand<PlanSettings>
         return failed > 0 ? 1 : 0;
     }
 
-    private static async Task<List<Check>> RunChecksAsync(PlanConfig plan)
+    private static async Task<List<Check>> RunChecksAsync(PlanConfig plan, bool authCheck = false)
     {
         var checks = new List<Check>
         {
@@ -81,6 +92,15 @@ public sealed class DoctorCommand : AsyncCommand<PlanSettings>
 
         checks.Add(CheckBudget(plan, currentCostUsd, hasRun));
         checks.Add(CheckTelegram(plan));
+
+        // W3.2: the one check that talks to the model backend. A dead token is invisible to every
+        // other check here and kills a run thirteen sessions in, so it is on by default — and it is
+        // the only thing `--no-auth-check` turns off.
+        if (authCheck)
+        {
+            var auth = await AuthSmokeTest.RunAsync(plan, TimeSpan.FromSeconds(45)).ConfigureAwait(false);
+            checks.Add(new Check(auth.Name, auth.Passed ? "ok" : "fail", auth.Message));
+        }
 
         return checks;
     }

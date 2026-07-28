@@ -28,7 +28,7 @@ func sessionOutcomeStyle(outcome string) lipgloss.Style {
 		return peachStyle // attention — the run parked for a human
 	case "limitbackoff", "rolledover", "backoff", "ratelimited":
 		return warnStyle // transient — no attempt burned, the loop retries itself
-	case "gatesred", "stalled", "timedout", "agenterror", "noprogress", "needsretry", "failed", "error", "interrupted":
+	case "gatesred", "stalled", "timedout", "agenterror", "authfailed", "noprogress", "needsretry", "failed", "error", "interrupted":
 		return destructStyle // red — a failure the loop had to react to
 	default:
 		return subtleStyle

@@ -35,6 +35,11 @@ public sealed class LimitsConfig
     public TimeSpan EffectiveStallGrace => StallGraceSeconds is { } s
         ? TimeSpan.FromSeconds(s) : TimeSpan.FromMinutes(StallGraceMinutes);
 
+    /// <summary>W3.2: ask the agent CLI for one token (~$0.001) before the run's first session, so a
+    /// run cannot start on a dead credential. Only recognised provider CLIs are probed. Default true;
+    /// set false to opt out.</summary>
+    public bool AuthPreflight { get; set; } = true;
+
     public int MaxResumesPerSession { get; set; } = 2;
     /// <summary>Attempt budget per stage = stage.sessions * this.</summary>
     public int StageSlackFactor { get; set; } = 2;

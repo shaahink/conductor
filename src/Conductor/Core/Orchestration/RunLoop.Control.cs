@@ -171,6 +171,26 @@ public sealed partial class RunLoop
             _ctx.Log($"⚠ branch '{branch}' does not match plan branchPattern '{_ctx.Plan.BranchPattern}' — check before letting sessions commit");
     }
 
+    /// <summary>W3.2: one ~$0.001 ping at run start so a run cannot begin on a dead credential.
+    /// Once per process, never per session — the point is to fail before the first session's spend,
+    /// not to re-bill the check all night. A failure parks for a human instead of starting: the
+    /// U-series run began on a token that expired, and thirteen sessions later the symptom was a
+    /// generic agent error.</summary>
+    private async Task AuthPreflightAsync(CancellationToken ct)
+    {
+        if (_ctx.Options.DryRun || !_ctx.Plan.Limits.AuthPreflight) return;
+        if (!AuthSmokeTest.CanProbe(_ctx.Plan.Agent)) return;
+
+        var result = await AuthSmokeTest.RunAsync(_ctx.Plan, TimeSpan.FromSeconds(45), ct).ConfigureAwait(false);
+        if (result.Passed)
+        {
+            _ctx.Log($"auth preflight: {result.Message}");
+            return;
+        }
+        _ctx.Log($"auth preflight FAILED: {result.Message}");
+        _verdicts.NeedsHuman($"auth preflight failed before session 1 — {result.Message}");
+    }
+
     private void EnsureStateDirGitignore()
     {
         var gi = Path.Combine(_ctx.Plan.StateDir, ".gitignore");
