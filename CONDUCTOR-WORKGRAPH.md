@@ -187,11 +187,11 @@ occurrence distinguishes "the sink never opened a file" from "the file is there 
 marker", which are different bugs. Whoever sees it next: that message is the lead.
 
 **Next = W5.2** (`HUMAN:` — the owner starts and pays for the real-model unattended proof run, then
-`docs/workgraph/W5-AUDIT.md`). Then the three owner calls W6 leaves open: the merge of
-`feat/foreman` → `master` (deliberately NOT done here — the plan sequences it last, after W5.2, and
-the public tip should be the one that passed the real proof run), the shamshir plan relocation
-above, and the `publish/` history purge from W6.1. Also still wanting one manual ✕ on a live run:
-the W3.3 window-close rail, whose OS-delivery half cannot be synthesised in-process.
+`docs/workgraph/W5-AUDIT.md`). **After W5.2, the merge** of `feat/foreman` → `master`: owner-decided
+2026-07-28 to hold it until then, so the first public tip is a proven one. The shamshir relocation
+is closed (leave in place, owner-decided same day). Still open from W6.1: the `publish/` history
+purge. And still wanting one manual ✕ on a live run: the W3.3 window-close rail, whose OS-delivery
+half cannot be synthesised in-process.
 
 Driving mode: Claude Code drives W1–W4 + W6 directly (owner directive 2026-07-16) — per
 checkpoint: pre-session ritual (tracker + brief stage section + cited docs, gate battery first,
@@ -201,10 +201,12 @@ Evidence) → overwrite this Handoff block → commit + push. W5.1 = conductor d
 
 Owner decisions pending (needed no earlier than the stage that names them):
 - `HUMAN:` W5.2 — owner starts + pays for the real-model proof run.
-- `HUMAN:` W6.4 — merge `feat/foreman` → `master` (public tip is ~950 commits stale) and point
-  branch protection at `master`. Held until after W5.2 so the public tip is a proven one.
-- `HUMAN:` W6.4 — relocate `plans/shamshir-p0.plan.json` to `examples/shamshir/`? The ratchet
-  blocks it as a gate-command change and defers to you.
+- W6.4 — merge `feat/foreman` → `master` + point branch protection at `master`:
+  **owner decided 2026-07-28 — HOLD until after W5.2**, so the first public tip is one that passed
+  the real proof run and any defects W5.2 finds are fixed on the branch. The CI badge reads
+  "no status" on `master` until the merge lands; that is expected, not a broken badge.
+- W6.4 — relocate `plans/shamshir-p0.plan.json`: **owner decided 2026-07-28 — LEAVE IN PLACE.**
+  The ratchet's refusal stands; the exception is documented in `examples/README.md`. Closed.
 - `HUMAN:` W6.1 — ~~license choice~~ **MIT (decided 2026-07-28, delivered `51911f9`)**;
   `publish/` un-tracked from HEAD same commit. Still open: whether to also purge `publish/`
   from git *history* (`git filter-repo` + force-push — rewrites remote history).
