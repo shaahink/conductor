@@ -85,7 +85,8 @@ gap in the fix — only in what a test process may do to itself:
   C and BREAK), so the OS-delivery half is unautomatable here. The handler body is gated directly
   (close/logoff/shutdown all stop the run; the handler provably does not return before the save
   signals; Ctrl+C is left to CancelKeyPress), and the "clean park + resumable run.db" half is a
-  live gate on the same cancellation path. **`HUMAN:` worth one manual ✕ on a live run before W5.2.**
+  live gate on the same cancellation path. ~~`HUMAN:` worth one manual ✕ on a live run before W5.2.~~
+  **CLOSED 2026-07-28 — automated instead of clicked; see the W3.3 addendum at the end of this file.**
 - **Auth smoke test.** Proven on classification and on scope (a fake agent is never spawned, so
   no test invents a verdict). The paid one-token ping against a real CLI rides W5.2.
 
@@ -186,12 +187,50 @@ it. Not fixed — instead the timeout now prints the log directory's contents an
 occurrence distinguishes "the sink never opened a file" from "the file is there but short of the
 marker", which are different bugs. Whoever sees it next: that message is the lead.
 
+**Sweep 2026-07-28 (post-W6) — everything doable without the owner's wallet is now closed.** Two
+loose ends went with it, and neither needed a new feature. Battery 1028/1028 · go green · ratchet OK
+(tests 929≥550, pragmas 37≤38 — deliberately unchanged, see below — archdebt 0). No `src/` or
+`tests/` change in this sweep: the proof is a driver, and the triage was a triage.
+
+**The W3.3 manual ✕ is no longer manual.** `tools/w3/window-close.ps1` proves the rail from outside
+the process: it starts a real `conductor run` under `conhost.exe` so the run owns a genuine
+`ConsoleWindowClass` window, waits until a session is provably in flight (the agent announces
+itself from inside the worker), and posts `WM_CLOSE` — byte for byte the message the window manager
+sends when the ✕ is clicked. Windows turns it into `CTRL_CLOSE_EVENT`; the rail does the rest.
+**18/18 checks PASS**: the process died 0.42s later (graceful — an instant return is the failure
+mode, since Windows kills on return), no orphaned agent, the lock released, `sessions` row #1
+recorded `Interrupted` with an `ended_utc`, `SessionFinished` in the log, and the next
+`conductor run` printed `resuming run` and finished the interrupted work `3/3`. A hard-kill negative
+control on an identical scaffold leaves the lock behind and **no rows** in `sessions` — that gap is
+§7.5's data loss, and the difference between the two columns is the rail. Write-up:
+`docs/workgraph/W3-WINDOW-CLOSE.md`.
+
+The trick that made it possible is worth remembering: on Windows 11 the default terminal is
+ConPTY-hosted and `GetConsoleWindow()` returns a hidden `PseudoConsoleWindow` stub that swallows
+`WM_CLOSE` silently — which is exactly what "unautomatable" looked like. `conhost.exe` gives a real
+window and the classic path. The driver asserts the window class *before* it posts, so if that ever
+changes the run fails loudly instead of quietly proving nothing.
+
+**`.conductor/followups.md` triaged** (the open-edges note's item 4, untouched since 2026-07-12).
+No code changed — that was the ask. Every row was checked against the tree: **13 closed**, each with
+the evidence that closed it, and the rest re-homed onto owners that still exist (`on demand`,
+`next era`, `HUMAN:`) since every stage the file named — B, F, M — has since shut. Most of the
+closures had been true for weeks and nobody came back to record it: FU-B0-1/FU-B0-2 were still
+listed as deferred analyzer ratchets that `.editorconfig` has read `error` for since C2; FU-B3-2
+("graceful Ctrl+C is unproven") was closed twice, by W3.3's live cancel test and again by the
+window-close driver. The eight `FU-OWNER-*` Face rows are closed as obsolete — they describe the Ink
+TUI that M7 deleted — with a pointer, where the concern outlived the code, to what delivered it.
+The one that matters is `FU-OWNER-9` and it stays OPEN: an agent inferred the conductor's own pid
+was a stale orphan and killed its parent mid-run. W3.3's `PidLiveness` fixed the mirror image (the
+engine tree-killing a pid it no longer owns) and added nothing on the agent's side of the tool
+contract.
+
 **Next = W5.2** (`HUMAN:` — the owner starts and pays for the real-model unattended proof run, then
-`docs/workgraph/W5-AUDIT.md`). **After W5.2, the merge** of `feat/foreman` → `master`: owner-decided
-2026-07-28 to hold it until then, so the first public tip is a proven one. The shamshir relocation
-is closed (leave in place, owner-decided same day). Still open from W6.1: the `publish/` history
-purge. And still wanting one manual ✕ on a live run: the W3.3 window-close rail, whose OS-delivery
-half cannot be synthesised in-process.
+`docs/workgraph/W5-AUDIT.md`). It is now the ONLY thing standing between this branch and `master`.
+**After W5.2, the merge** of `feat/foreman` → `master`: owner-decided 2026-07-28 to hold it until
+then, so the first public tip is a proven one. The shamshir relocation is closed (leave in place,
+owner-decided same day). Still open from W6.1: the `publish/` history purge — the one remaining
+owner call, and the only one that rewrites remote history.
 
 Driving mode: Claude Code drives W1–W4 + W6 directly (owner directive 2026-07-16) — per
 checkpoint: pre-session ritual (tracker + brief stage section + cited docs, gate battery first,
@@ -224,7 +263,7 @@ Owner decisions pending (needed no earlier than the stage that names them):
 | W2.3 | One prompt composition (PromptBuilder renders PromptComposer blocks); ToolContract rewritten to one claim path | DONE | af74204 | New `PromptBlockRenderer` (Conductor.Planning) is the ONE place blocks become prompt text: the session prompt's task-scoped section and `GET /prompt/blocks` both render through it, and the DTO gains `promptSection` (additive — zero Go changes, goldens hold). Card TITLE now reaches the prompt, not just owner context — a titled card with no note used to be invisible to the session delivering it; the checkpoint card itself is skipped unless it carries context (the prompt already names it). ToolContract + `session.md`/`resume.md` built-ins + `plans/baton-templates/*` rewritten to exactly one claim path (G7/G8): the verb is the only channel, tracker checkpoint rows are generated, and the handoff block stays explicitly the agent's to write (RunLoop.Plumbing reads it back). Truth gate: live wire test byte-compares the card detail's `promptSection` against `session-001.prompt.md` on disk |
 | W3.1 | Independent watchdog timer (hard timeout + stall, bg-only liveness, clock-jump check, hung-session notification) | DONE | 6755772 | `SessionWatchdog` runs the hard timeout + stall rails on a dedicated background thread — the kill is no longer gated on the poll loop (bug #8: a 90m limit that fired at 337m); monotonic-vs-wall divergence per tick IS the machine's sleep and is excluded from BOTH budgets (a backwards NTP step is reported and ignored); `AnyBgProcessAlive` counts `bg:*` purposes only — it used to count the agent's own pid and the Face, which is why no engine log ever written contains a `stall:` line; both rails now notify (Telegram/webhook/notify command) instead of only NeedsHuman parks; nullable seconds-precision limit overrides (null = the existing minute fields) so a toy run — or a live test — can express a rail. 11 tests (W3WatchdogTests): timeout fires while the caller is hard-blocked in `Thread.Sleep`, a 4h wall jump kills neither budget, live silent-agent stall trip + live chatty-hang timeout, each asserting the notify command's output file. Battery 960/960 · go green · ratchet OK |
 | W3.2 | Auth failure first-class (401 classified → auth-park; doctor/preflight auth smoke test) | DONE | a71bf83 | `DetectsAuthFailure` on every provider, checked BEFORE the usage limit (backoff cannot mint a token, and the advisor is the same CLI); outcome `AuthFailed` → park naming the fix (`claude setup-token`), no gate battery, no attempts burned; `ClaudeProvider` stops flattening the system envelope, so `error_status:401` reaches the transcript and sets a stream-level `AuthFailure` on the FIRST retry instead of inferring it from result text ten retries later; `AuthSmokeTest` asks the plan's own agent invocation for one token (~$0.001) at run start + from `doctor` (`limits.authPreflight` / `--no-auth-check`), probing recognised provider CLIs only. Truth gate: `tests/…/fixtures/session-013-auth-401.jsonl` is the real U-series session, replayed line for line as a live run's agent → one session, AuthFailed, parked, gate marker absent. 16 tests (W3AuthTests). Battery 976/976 · go green · ratchet OK |
-| W3.3 | Process rails (CTRL_CLOSE graceful stop; pid-reuse guard; unbounded-spend warning; bg log pump fix) | DONE | c8f9b56 | `ConsoleCtrlRails` wires CTRL_CLOSE/LOGOFF/SHUTDOWN to the graceful stop and BLOCKS in the OS handler until the run has saved (Windows kills on return, so an early return makes the save decoration) — Ctrl+C stays with CancelKeyPress; `PidLiveness` settles pid identity by start time, so `ReapOrphans` kills only a verified match and a recycled/unverifiable id is logged and released (the stall rail reads the same answer); bug #2 fixed by deleting the pump — the bg child is spawned through the platform shell with the OS doing the redirect, so output survives the launcher's exit by design (same fix applied to MCP `bg_start`, whose pump died at session end); log names carry the start instant (the pid does not exist when the redirect target must) and the pids row stores the same instant, so pid→log stays exact, legacy names still resolve; an uncapped run says so at start and `doctor` warns. 11 tests (W3ProcessRailsTests) incl. live cancel→resumable run.db and a live bg log that keeps filling for 4s after the launcher returned. Battery 987/987 · go green · ratchet OK (pragmas 37≤38) |
+| W3.3 | Process rails (CTRL_CLOSE graceful stop; pid-reuse guard; unbounded-spend warning; bg log pump fix) | DONE | c8f9b56 | `ConsoleCtrlRails` wires CTRL_CLOSE/LOGOFF/SHUTDOWN to the graceful stop and BLOCKS in the OS handler until the run has saved (Windows kills on return, so an early return makes the save decoration) — Ctrl+C stays with CancelKeyPress; `PidLiveness` settles pid identity by start time, so `ReapOrphans` kills only a verified match and a recycled/unverifiable id is logged and released (the stall rail reads the same answer); bug #2 fixed by deleting the pump — the bg child is spawned through the platform shell with the OS doing the redirect, so output survives the launcher's exit by design (same fix applied to MCP `bg_start`, whose pump died at session end); log names carry the start instant (the pid does not exist when the redirect target must) and the pids row stores the same instant, so pid→log stays exact, legacy names still resolve; an uncapped run says so at start and `doctor` warns. 11 tests (W3ProcessRailsTests) incl. live cancel→resumable run.db and a live bg log that keeps filling for 4s after the launcher returned. Battery 987/987 · go green · ratchet OK (pragmas 37≤38). **The OS-delivery half was closed on 2026-07-28** (`HUMAN:` note retired without a human): `tools/w3/window-close.ps1` starts a real run under `conhost.exe` — which, unlike the Win11 default ConPTY host and its unclosable `PseudoConsoleWindow` stub, gives it a genuine `ConsoleWindowClass` window — waits for a session to be provably in flight, and posts `WM_CLOSE`, letting Windows deliver `CTRL_CLOSE_EVENT` itself. 18/18 PASS: died 0.42s after the post (graceful; an instant return is the failure mode), no orphaned agent, lock released, `sessions` #1 `Interrupted` with `ended_utc`, `SessionFinished` logged, and a real resume that printed `resuming run` and finished 3/3. Hard-kill negative control: lock left behind, `sessions` returns no rows. Write-up `docs/workgraph/W3-WINDOW-CLOSE.md` |
 | W4.1 | Import carries checkpoints end-to-end; imported plans drivable immediately; deterministic default gates | DONE | c07a882 | `ImportResult.Checkpoints` from BOTH paths — the deterministic parser emits what it already parsed (statuses included, so a re-imported tracker keeps its DONEs), and the advisor contract gains a `checkpoints` key per stage, deserialised through a wire DTO so a plan stage still does not own a checkpoint list; apply lands them in the plan's declared-work channel (inline `progress.checkpoints`), migrating a markdown-table plan with its existing rows folded in FIRST (nothing lost — the W1 model stated plainly: the plan declares, the tracker displays), `script` providers untouched; `RepoKindDetector` moved to Core so `plan import` proposes init's build+test pair instead of zero gates. 8 tests (W4ImportTests): init scaffold + import + run with no hand edits (doctor work-coverage `ok`, board populated), and the real `docs/MAESTRO-PLAN.md` parsed with every checkpoint attached to a declared stage. Battery 995/995 · go green · ratchet OK |
 | W4.2 | conductor init --from-idea + advisor block scaffold (one command: idea → drivable plan) | DONE | 580c114 | `init` writes a commented advisor block naming what the advisor is for (prose→plan, refine, split, judge) and what it is never used for (scheduling); `--from-idea "<prose>"`/`<file>` scaffolds then routes the idea through the W4.1 import path — free for a structured doc, advisor-interpreted for prose — and the scaffold's "rename me" stage steps aside once real stages arrive (unless something was delivered against it); prose with no advisor keeps the scaffold intact and names the two ways forward. 6 tests (W4FromIdeaTests) on a FAKE advisor CLI (a script printing the import contract's JSON, wired exactly as a real model would be): idea in → `conductor run --paused` → board is the idea, zero sessions, zero spend. Battery 1001/1001 · go green · ratchet OK |
 | W4.3 | AI split-into-subtasks on a card; stage-level rough-card add (schedulable) | DONE | 7994ac6 | `TaskWrites.BuildAdd` gains the stage-level add — a checkpoint-kind item numbered `{stage}.{n}`, ALSO written back into the plan's declared work (without which W1.2's sync would archive it at the next boundary, not merely fail to schedule it); `POST /tasks/split` asks the advisor for children — proposal only, card text framed as untrusted data, count bounded, parser takes the shapes models actually emit (object, fenced, bare array) — and each child lands through the ordinary `/tasks/add`; Face gains `s` (split, enter adds children one at a time) and `N` (stage-level card, which also gives the empty board an answer). 13 tests (W4SplitAndStageCardTests) incl. the live gate: add a stage card mid-run over HTTP → split → confirm both children → next session claims the card the owner invented. Also fixed the pre-existing B12_3 worktree flake for real (scoped by lane id, not creation time). Battery 1014/1014 · go green · ratchet OK |

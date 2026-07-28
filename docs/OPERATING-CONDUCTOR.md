@@ -238,9 +238,12 @@ caching, and NEEDS-HUMAN escalation. Full detail: `docs/maestro/M9-FINAL-AUDIT.m
    `statusAgent` / `telegram` unset for the user to fill in.
 
 **Operational limitations (see `DOGFOOD-RUNBOOK.md`):**
-5. **Closing the terminal window kills the run ungracefully.** `Console.CancelKeyPress` catches typed
-   Ctrl+C but not window/tab close or logoff (Win32 `SetConsoleCtrlHandler` for `CTRL_CLOSE_EVENT` is
-   not wired). **Always stop with Ctrl+C, never by closing the window.**
+5. ~~**Closing the terminal window kills the run ungracefully.**~~ **FIXED (W3.3, `c8f9b56`).**
+   `ConsoleCtrlRails` wires `CTRL_CLOSE_EVENT`/logoff/shutdown into the same graceful stop as Ctrl+C
+   and blocks inside the OS handler until the run has saved. Closing the window parks the run and
+   leaves it resumable — proven from outside the process by `tools/w3/window-close.ps1`
+   (`docs/workgraph/W3-WINDOW-CLOSE.md`). Ctrl+C is still the tidiest exit; the ✕ is no longer a
+   data-loss risk.
 6. **The crash-log net reports a crash but doesn't recover in-flight work** beyond what git already has.
 
 **Ergonomics / polish (minor):**

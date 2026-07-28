@@ -148,24 +148,32 @@ this note is the pointer so it isn't missed:
    credential-free fake agent; the engine has never driven a real paid model end-to-end. Small
    2–3-checkpoint plan, cheap model, exercise one live lever mid-run (QA-dial flip or
    `conductor rollover`). Owner-started (paid). Telegram phone dogfood (M8.3) can ride the same run.
-2. **The one edge worth fixing: window-close kills the run.** `Console.CancelKeyPress` misses
-   `CTRL_CLOSE_EVENT` (window/tab close, logoff) — wire Win32 `SetConsoleCtrlHandler` into the same
-   graceful path as Ctrl+C. Flagged "not done" in `DOGFOOD-RUNBOOK.md`; the accidental-✕ data-loss
-   risk for daily personal use. Small, well-understood change.
+2. ~~**The one edge worth fixing: window-close kills the run.**~~ **DONE (W3.3, `c8f9b56`)** —
+   `ConsoleCtrlRails` wires CTRL_CLOSE/LOGOFF/SHUTDOWN into the same graceful path as Ctrl+C and
+   blocks inside the OS handler until the save completes. The OS-delivery half that W3.3 left as
+   "worth one manual ✕" was closed 2026-07-28 **without a manual ✕**: `tools/w3/window-close.ps1`
+   posts `WM_CLOSE` to a real run's real console window and asserts the resumable park, with a
+   hard-kill negative control. 18/18. See `docs/workgraph/W3-WINDOW-CLOSE.md`.
 3. **PathClaims from real task data** — ~~parked~~ **DONE the same evening (PF3, `12fcc87`)**: the
    owner chose the declared-paths schema and it shipped — see the PF session log below.
-4. **`.conductor/followups.md` needs a triage pass, not execution.** Last touched 2026-07-12;
-   its "planned for" tags point at series that already CLOSED (B/F/M), and the eight `FU-OWNER-*`
-   Face rows predate face-go (Ink era, one cites `node.exe`) — close the obsolete rows, re-home the
-   still-real ones.
+4. ~~**`.conductor/followups.md` needs a triage pass, not execution.**~~ **DONE 2026-07-28.** 13 rows
+   closed with the evidence that closed them (most had been true for weeks — FU-B0-1/2 were still
+   listed as deferred analyzer ratchets that `.editorconfig` has read `error` for since C2); the
+   eight Ink-era `FU-OWNER-*` rows closed as obsolete; the rest re-homed onto owners that still
+   exist (`on demand`, `next era`, `HUMAN:`). No code changed, which was the ask. The one worth
+   knowing about is `FU-OWNER-9`, still OPEN: an agent killed its own parent conductor, and nothing
+   on the agent's side of the tool contract stops it.
 5. **`docs/OPERATING-CONDUCTOR.md` §7 known-gaps list is disclosure, not a backlog** — and is
    partially stale: the "persona kill-list residue" item is resolved-by-design (F0 trimmed 9→3;
    P1 role→persona assignment now USES the registry). The remaining §7 items (crash-net recovery,
    `plan import` bootstrap, `perPhase` gating render, `status` sessions-0, `init` packs, CI) are
    cosmetic or have documented workarounds — fix on demand, not a series.
 
-Suggested shape if the owner asks to act on this: a short hardening mini-series = item 2 + the
-item 4 triage; item 1 is the owner-run gate before daily use. (Item 3 has since landed as PF3.)
+~~Suggested shape if the owner asks to act on this: a short hardening mini-series = item 2 + the
+item 4 triage; item 1 is the owner-run gate before daily use.~~ **Status 2026-07-28: items 2, 3 and
+4 are all closed** (3 as PF3, 2 as W3.3 + the automated ✕, 4 as the post-W6 triage). **Item 1 is
+the only one left, and it is the owner's to start** — it is now W5.2 in the W-series tracker, and
+the merge to `master` is held behind it. Item 5 was never a backlog.
 
 ### What landed in the PF session (2026-07-16, pushed on `feat/foreman`)
 - **PF3** (`12fcc87`) — **PathClaims from real task data** (owner decision: declared paths, not git

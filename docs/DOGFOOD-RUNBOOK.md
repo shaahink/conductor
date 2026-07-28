@@ -60,12 +60,6 @@ calls and commits happening, that's DeepSeek, driven by whatever prompt `templat
 
 ## Known gaps (real, not yet fixed)
 
-- **Closing the terminal window/tab kills the process ungracefully.** `Console.CancelKeyPress`
-  only catches `CTRL_C_EVENT`/`CTRL_BREAK_EVENT`, not `CTRL_CLOSE_EVENT` (window/tab close) or
-  logoff/shutdown. Typed Ctrl+C reliably logs `cancelled — saving state` (verified across 4
-  separate interruptions on 2026-07-11); closing the window does not, and looks identical to a
-  crash after the fact. **Until this is fixed (Win32 `SetConsoleCtrlHandler`, not done — flagged,
-  not built), always stop a run with Ctrl+C in the terminal, never by closing the window.**
 - Crash-log safety net (commit `05e18ff`) tells you a crash happened and where, but doesn't
   prevent one or recover in-flight work beyond what git already has.
 
@@ -78,6 +72,7 @@ calls and commits happening, that's DeepSeek, driven by whatever prompt `templat
 | No stage-end audit/fix pass | `audit.enabled` was unset (= disabled) in the plan | `d0c977c` — `"audit": { "enabled": true, "enableParallel": false }` |
 | `conductor status` / Face `G` key did nothing useful | `statusAgent` was unset (= disabled) | `35435f6` — enabled, pointed at `deepseek/deepseek-chat` (cheap) |
 | Silent process death with zero trace | No crash-log path independent of the DI-built logger; console-only exception output invisible under the Face's alt-screen | `05e18ff` |
+| **Closing the terminal window/tab killed the run ungracefully** — state unsaved, no resume queued, indistinguishable from a crash after the fact. This runbook used to say "always stop with Ctrl+C, never by closing the window". | `Console.CancelKeyPress` only catches `CTRL_C_EVENT`/`CTRL_BREAK_EVENT` — not `CTRL_CLOSE_EVENT` (window/tab close), logoff or shutdown. | `c8f9b56` (W3.3) — `ConsoleCtrlRails` wires all three into the same graceful stop and **blocks inside the OS handler until the save completes** (Windows kills on return, so returning early makes the save decoration). Proven end to end by `tools/w3/window-close.ps1`, which posts a real `WM_CLOSE` to a real run's console window: 18/18, process dead 0.42s later, session recorded `Interrupted`, lock released, and the next `conductor run` resumed and finished the work. Closing the window is now a supported way to stop a run. |
 
 ## Current plan-level config (`plans/conductor-maestro.plan.json`) and why
 

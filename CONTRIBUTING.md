@@ -75,6 +75,11 @@ the real surface.
 - `tools/fake-agent.ps1` impersonates an agent CLI's stream-json and can simulate success, stall,
   red gates, and usage limits.
 - `powershell -File tools/w5/rehearsal.ps1 -Keep` is the full dress rehearsal.
+- `powershell -File tools/w3/window-close.ps1` proves the console-close rail by posting a real
+  `WM_CLOSE` to a real run's window, with a hard-kill negative control
+  ([write-up](docs/workgraph/W3-WINDOW-CLOSE.md)). Windows only, and interactive — a console window
+  appears on the desktop and is closed programmatically. Not part of CI: a runner has no window
+  station to close.
 - `cd face-go; ./bin/conductor-face.exe --demo` explores the whole dashboard offline.
 
 No test in this repo should require an API key.

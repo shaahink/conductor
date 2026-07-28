@@ -21,6 +21,7 @@ checkpoint be re-checked years later.
 | [`CONDUCTOR-WORKGRAPH.md`](CONDUCTOR-WORKGRAPH.md) | The W-series design brief — one event-sourced work graph, the real-provider claim path, autonomy rails, AI-native bootstrap, the proof runs, and GitHub-readiness. **The design authority for current work.** |
 | [`GAP-ANALYSIS.md`](GAP-ANALYSIS.md) | The owner-commissioned analysis that produced the W-series: why the loop broke and the road back. |
 | [`workgraph/W5-REHEARSAL.md`](workgraph/W5-REHEARSAL.md) | The credential-free dress rehearsal write-up: one real binary driven from a markdown document to the first `RunFinished`, and the three engine defects it found. |
+| [`workgraph/W3-WINDOW-CLOSE.md`](workgraph/W3-WINDOW-CLOSE.md) | The window-close rail proven by really closing a window: how `WM_CLOSE` reaches `CTRL_CLOSE_EVENT` from outside the process, and the hard-kill control that makes the evidence falsifiable. |
 | [`../CONDUCTOR-WORKGRAPH.md`](../CONDUCTOR-WORKGRAPH.md) | The live **tracker** (repo root) — checkpoint table + handoff block. |
 
 ## Reference — applies to every era
