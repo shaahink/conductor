@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using Conductor.Core.Events;
+using Microsoft.Extensions.Logging;
 
 namespace Conductor.Core.Http;
 
@@ -29,6 +30,7 @@ public sealed partial class ControlPlaneServer
         // so an illegal move is a recorded no-op — exactly the MCP tool's contract.
         graph.Fold([evt]);
         var actual = graph.Find(evt.TaskId)?.Status ?? "";
+        RefreshTrackerViewFor(graph, evt.TaskId);
         await WriteJsonAsync(ctx, new TaskWriteResultDto(true, null, evt.TaskId, actual, null, null, 0),
             ControlPlaneJsonContext.Default.TaskWriteResultDto, HttpStatusCode.Accepted).ConfigureAwait(false);
     }
@@ -71,6 +73,7 @@ public sealed partial class ControlPlaneServer
 
         graph.Fold([evt]);
         var task = graph.Find(evt.TaskId);
+        RefreshTrackerViewFor(graph, evt.TaskId);
         await WriteJsonAsync(ctx, new TaskWriteResultDto(true, null, evt.TaskId, task?.Status, task?.CheckpointId, task?.Title, task?.Order ?? 0),
             ControlPlaneJsonContext.Default.TaskWriteResultDto, HttpStatusCode.Accepted).ConfigureAwait(false);
     }
@@ -80,6 +83,20 @@ public sealed partial class ControlPlaneServer
         var graph = new TaskGraph();
         graph.Fold(ReadEvents());
         return graph;
+    }
+
+    /// <summary>W1.4: a checkpoint card's move/edit is a mutation of declared work state — a drag
+    /// to Done records a CLAIM (confirmation stays with the verdict engine, like any other claim),
+    /// never a silent no-op. Refresh the tracker view so the engine's (tracker-fed) schedule and
+    /// the sidebar agree immediately instead of at the next session boundary.</summary>
+    private void RefreshTrackerViewFor(TaskGraph graph, string taskId)
+    {
+        if (graph.Find(taskId) is not { Kind: WorkItemKinds.Checkpoint }) return;
+        try { TrackerGenerator.Write(_plan, _store, _state.RunId); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogWarning(ex, "tracker view refresh after a card write failed — it catches up at session end");
+        }
     }
 
     private static Task TaskErrorAsync(HttpListenerContext ctx, string reason) =>

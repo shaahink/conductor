@@ -24,7 +24,9 @@ public sealed partial class ControlPlaneServer
     {
         var events = ReadEvents();
         var runState = RunStateProjection.Fold(events);
-        var track = ReadTrackerSafe();
+        // W1.4: the sidebar/chips fold the same WORK GRAPH the Kanban serves — G11's
+        // "sidebar full / Kanban empty" split is structurally impossible now.
+        var track = GraphTrackerSnapshot();
         var snap = SnapshotBuilder.Build(_plan, runState, track);
         // _state is the live RunState the dispatcher mutates — the set-rollover override lives only
         // there (P5: run-state, not an event), so the fold above can never see it.
@@ -92,5 +94,34 @@ public sealed partial class ControlPlaneServer
     {
         try { return ProgressProviderFactory.Create(_plan).Read(_plan, CancellationToken.None); }
         catch (Exception) { return new TrackerSnapshot(); }
+    }
+
+    /// <summary>W1.4: the /state projection's checkpoint rows come from the WORK GRAPH — the same
+    /// fold <c>GET /tasks</c> serves — with explicit status flags (no conventions round-trip: the
+    /// graph's labels are canonical). Before anything is seeded, the declared tracker is all there
+    /// is; it also still carries the handoff block, which is view-only prose.</summary>
+    private TrackerSnapshot GraphTrackerSnapshot()
+    {
+        try
+        {
+            var rows = _store.GetCheckpoints(_state.RunId);
+            if (rows.Count == 0) return ReadTrackerSafe();
+            var declared = ReadTrackerSafe();
+            return new TrackerSnapshot
+            {
+                Checkpoints =
+                [
+                    .. rows.Select(r => new CheckpointRow(r.Id, r.Title, r.Status, r.Commit, r.Evidence)
+                    {
+                        StageId = r.StageId,
+                        IsDone = r.Status.StartsWith("DONE", StringComparison.OrdinalIgnoreCase),
+                        IsBlocked = r.Status.StartsWith("BLOCKED", StringComparison.OrdinalIgnoreCase),
+                        IsInProgress = r.Status.StartsWith("IN", StringComparison.OrdinalIgnoreCase),
+                    }),
+                ],
+                HandoffBlock = declared.HandoffBlock,
+            };
+        }
+        catch (Exception) { return ReadTrackerSafe(); }
     }
 }
