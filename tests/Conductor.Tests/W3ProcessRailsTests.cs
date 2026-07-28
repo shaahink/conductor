@@ -211,8 +211,17 @@ public sealed class W3ProcessRailsTests
             Assert.Equal(0, exit);
 
             // ExecuteStart has returned — under the old pump, the log stopped here at 3 bytes.
+            // The shell creates the redirect target as it starts, which is a few ms after the
+            // launcher hands back; on a loaded machine that is not instant.
             var logDir = Path.Combine(repo, ".conductor", "bg-logs");
-            var logFile = Directory.GetFiles(logDir, "slow-*.log").Single();
+            string? logFile = null;
+            var appear = DateTime.UtcNow.AddSeconds(30);
+            while (DateTime.UtcNow < appear && logFile == null)
+            {
+                logFile = Directory.GetFiles(logDir, "slow-*.log").FirstOrDefault();
+                if (logFile == null) await Task.Delay(100, CancellationToken.None);
+            }
+            Assert.NotNull(logFile);
 
             var deadline = DateTime.UtcNow.AddSeconds(30);
             string content = "";

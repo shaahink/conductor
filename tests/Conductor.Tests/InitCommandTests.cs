@@ -1,3 +1,4 @@
+using Conductor.Core;
 using Conductor.Commands;
 using Conductor.Models;
 
@@ -25,31 +26,31 @@ public sealed class InitCommandTests : IDisposable
     public void DetectsDotnetFromCsproj()
     {
         Touch("App.csproj");
-        Assert.Equal(InitCommand.RepoKind.Dotnet, InitCommand.DetectRepoKind(_dir));
+        Assert.Equal(RepoKind.Dotnet, InitCommand.DetectRepoKind(_dir));
     }
 
     [Fact]
     public void DetectsGoNodeRustPython()
     {
         Touch("go.mod");
-        Assert.Equal(InitCommand.RepoKind.Go, InitCommand.DetectRepoKind(_dir));
+        Assert.Equal(RepoKind.Go, InitCommand.DetectRepoKind(_dir));
         File.Delete(Path.Combine(_dir, "go.mod"));
 
         Touch("package.json");
-        Assert.Equal(InitCommand.RepoKind.Node, InitCommand.DetectRepoKind(_dir));
+        Assert.Equal(RepoKind.Node, InitCommand.DetectRepoKind(_dir));
         File.Delete(Path.Combine(_dir, "package.json"));
 
         Touch("Cargo.toml");
-        Assert.Equal(InitCommand.RepoKind.Rust, InitCommand.DetectRepoKind(_dir));
+        Assert.Equal(RepoKind.Rust, InitCommand.DetectRepoKind(_dir));
         File.Delete(Path.Combine(_dir, "Cargo.toml"));
 
         Touch("pyproject.toml");
-        Assert.Equal(InitCommand.RepoKind.Python, InitCommand.DetectRepoKind(_dir));
+        Assert.Equal(RepoKind.Python, InitCommand.DetectRepoKind(_dir));
     }
 
     [Fact]
     public void DetectsGenericWhenNoMarkers() =>
-        Assert.Equal(InitCommand.RepoKind.Generic, InitCommand.DetectRepoKind(_dir));
+        Assert.Equal(RepoKind.Generic, InitCommand.DetectRepoKind(_dir));
 
     [Fact]
     public void DotnetMarkerWinsOverNodeWhenBothPresent()
@@ -57,21 +58,21 @@ public sealed class InitCommandTests : IDisposable
         // A .NET repo that also ships a package.json (e.g. a web front-end) is still dotnet-first.
         Touch("App.csproj");
         Touch("package.json");
-        Assert.Equal(InitCommand.RepoKind.Dotnet, InitCommand.DetectRepoKind(_dir));
+        Assert.Equal(RepoKind.Dotnet, InitCommand.DetectRepoKind(_dir));
     }
 
     [Fact]
     public void GatesMatchRepoKind()
     {
-        Assert.Equal(("dotnet build", "dotnet test"), InitCommand.GatesFor(InitCommand.RepoKind.Dotnet));
-        Assert.Equal(("go build ./...", "go test ./..."), InitCommand.GatesFor(InitCommand.RepoKind.Go));
-        Assert.Equal(("", ""), InitCommand.GatesFor(InitCommand.RepoKind.Generic));
+        Assert.Equal(("dotnet build", "dotnet test"), InitCommand.GatesFor(RepoKind.Dotnet));
+        Assert.Equal(("go build ./...", "go test ./..."), InitCommand.GatesFor(RepoKind.Go));
+        Assert.Equal(("", ""), InitCommand.GatesFor(RepoKind.Generic));
     }
 
     [Fact]
     public void ScaffoldedPlanLoadsAndCarriesDetectedGates()
     {
-        var json = InitCommand.BuildPlanJson("Demo", _dir, InitCommand.RepoKind.Dotnet);
+        var json = InitCommand.BuildPlanJson("Demo", _dir, RepoKind.Dotnet);
         var planPath = Path.Combine(_dir, "conductor.plan.json");
         File.WriteAllText(planPath, json);
         File.WriteAllText(Path.Combine(_dir, "TRACKER.md"), InitCommand.BuildTrackerMd("Demo"));
@@ -86,7 +87,7 @@ public sealed class InitCommandTests : IDisposable
     [Fact]
     public void GenericScaffoldHasNoGates()
     {
-        var json = InitCommand.BuildPlanJson("Demo", _dir, InitCommand.RepoKind.Generic);
+        var json = InitCommand.BuildPlanJson("Demo", _dir, RepoKind.Generic);
         var planPath = Path.Combine(_dir, "conductor.plan.json");
         File.WriteAllText(planPath, json);
         File.WriteAllText(Path.Combine(_dir, "TRACKER.md"), InitCommand.BuildTrackerMd("Demo"));

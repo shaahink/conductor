@@ -80,7 +80,7 @@ public sealed partial class ControlPlaneServer
         if (string.IsNullOrWhiteSpace(req?.Source)) { await PlanImportErrorAsync(ctx, "missing 'source'").ConfigureAwait(false); return; }
 
         var text = await ResolveImportSourceAsync(req.Source, ct).ConfigureAwait(false);
-        var incoming = PlanImportService.ParseStructured(text);
+        var incoming = PlanImportService.ParseStructured(text, LoadPlanFresh() ?? _plan);
         var interpreter = "structured";
         if (incoming is null)
         {

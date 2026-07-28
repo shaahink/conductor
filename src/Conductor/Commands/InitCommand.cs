@@ -31,7 +31,11 @@ public sealed class InitCommand : Command<InitCommand.Settings>
         public string? Repo { get; init; }
     }
 
-    internal enum RepoKind { Generic, Dotnet, Node, Go, Rust, Python }
+    // W4.1: detection moved to Core (RepoKindDetector) so `plan import` proposes the same gates
+    // from the same signal. These forwarders keep init's call sites and tests unchanged.
+    internal static RepoKind DetectRepoKind(string repo) => RepoKindDetector.Detect(repo);
+
+    internal static (string build, string tests) GatesFor(RepoKind kind) => RepoKindDetector.GatesFor(kind);
 
     public override int Execute(CommandContext context, Settings settings)
     {
@@ -84,33 +88,6 @@ public sealed class InitCommand : Command<InitCommand.Settings>
         AnsiConsole.MarkupLine("Next: edit the example stage in [aqua]conductor.plan.json[/], then [aqua]conductor doctor[/] and [aqua]conductor run[/].");
         return 0;
     }
-
-    /// <summary>Cheapest reliable signal: the presence of a build-system marker file at the repo root.</summary>
-    internal static RepoKind DetectRepoKind(string repo)
-    {
-        if (!Directory.Exists(repo)) return RepoKind.Generic;
-        bool Any(params string[] globs) => globs.Any(g =>
-            g.Contains('*')
-                ? Directory.EnumerateFiles(repo, g, SearchOption.TopDirectoryOnly).Any()
-                : File.Exists(Path.Combine(repo, g)));
-
-        if (Any("*.sln", "*.slnx", "*.csproj", "*.fsproj")) return RepoKind.Dotnet;
-        if (Any("go.mod")) return RepoKind.Go;
-        if (Any("Cargo.toml")) return RepoKind.Rust;
-        if (Any("package.json")) return RepoKind.Node;
-        if (Any("pyproject.toml", "setup.py", "requirements.txt")) return RepoKind.Python;
-        return RepoKind.Generic;
-    }
-
-    internal static (string build, string tests) GatesFor(RepoKind kind) => kind switch
-    {
-        RepoKind.Dotnet => ("dotnet build", "dotnet test"),
-        RepoKind.Node => ("npm run build", "npm test"),
-        RepoKind.Go => ("go build ./...", "go test ./..."),
-        RepoKind.Rust => ("cargo build", "cargo test"),
-        RepoKind.Python => ("python -m compileall -q .", "pytest -q"),
-        _ => ("", ""),
-    };
 
     internal static string BuildPlanJson(string name, string repo, RepoKind kind)
     {

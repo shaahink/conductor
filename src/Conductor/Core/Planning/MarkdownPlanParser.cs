@@ -116,6 +116,7 @@ public static class MarkdownPlanParser
     /// so the readiness order matches the document order. Sessions are estimated from checkpoint count.</summary>
     public static ImportResult ToImportResult(ParsedPlan parsed, bool linearDeps = true)
     {
+        ArgumentNullException.ThrowIfNull(parsed);
         var result = new ImportResult();
         string? prev = null;
         foreach (var s in parsed.Stages)
@@ -129,6 +130,10 @@ public static class MarkdownPlanParser
                 Kind = "deliver",
                 DependsOn = linearDeps && prev != null ? [prev] : null,
             });
+            // W4.1: the checkpoints were parsed all along and thrown away here, which is why every
+            // imported plan was undrivable until a human hand-wrote the tracker table.
+            foreach (var c in s.Checkpoints)
+                result.Checkpoints.Add(new ImportedCheckpoint { Id = c.Id, Title = c.Title, Status = c.Status });
             prev = s.Id;
         }
         return result;

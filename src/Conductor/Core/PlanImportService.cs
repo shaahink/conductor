@@ -16,11 +16,30 @@ public static class PlanImportService
     /// <summary>The deterministic path: if the text looks like a structured plan/tracker, parse it into
     /// a stage graph with no model call. Returns null when the text isn't structured (caller should then
     /// try <see cref="ImportAsync"/>). This is what makes <c>conductor plan import DESIGN.md</c> free.</summary>
-    public static ImportResult? ParseStructured(string markdown)
+    public static ImportResult? ParseStructured(string markdown, PlanConfig? plan = null)
     {
         if (!MarkdownPlanParser.LooksStructured(markdown)) return null;
         var parsed = MarkdownPlanParser.Parse(markdown);
-        return parsed.Stages.Count == 0 ? null : MarkdownPlanParser.ToImportResult(parsed);
+        if (parsed.Stages.Count == 0) return null;
+        var result = MarkdownPlanParser.ToImportResult(parsed);
+        if (plan != null) ProposeDefaultGates(plan, result);
+        return result;
+    }
+
+    /// <summary>W4.1: a plan with no gates verifies nothing — every session verdict falls back to
+    /// "did it commit?". The deterministic path proposed zero; it now proposes the same build+test
+    /// pair `conductor init` derives from the repo's marker files. Only when the plan has no gates
+    /// and the import brought none: an existing battery is never second-guessed.</summary>
+    public static void ProposeDefaultGates(PlanConfig plan, ImportResult result)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(result);
+        if (plan.Gates.Count > 0 || result.Gates.Count > 0) return;
+
+        var (build, tests) = RepoKindDetector.GatesFor(RepoKindDetector.Detect(plan.Repo));
+        if (build.Length == 0 && tests.Length == 0) return;
+        result.Gates.Add(new GateConfig { Name = "build", Command = build, Tier = "fast", TimeoutMinutes = 10 });
+        result.Gates.Add(new GateConfig { Name = "tests", Command = tests, Tier = "full", TimeoutMinutes = 20 });
     }
 
     /// <summary>The advisor path for freeform prose: sends the import prompt to the plan's advisor
@@ -47,13 +66,75 @@ public static class PlanImportService
 
         try
         {
-            return JsonSerializer.Deserialize<ImportResult>(text[start..(end + 1)], PlanConfig.JsonOpts);
+            var wire = JsonSerializer.Deserialize<ImportWire>(text[start..(end + 1)], PlanConfig.JsonOpts);
+            if (wire is null) return null;
+            var result = FromWire(wire);
+            ProposeDefaultGates(plan, result);
+            return result;
         }
         catch (JsonException)
         {
             log?.Invoke("plan import: the advisor returned unparseable JSON");
             return null;
         }
+    }
+
+    /// <summary>W4.1: the advisor's stages carry their checkpoints, so a prose import lands drivable
+    /// for exactly the same reason a structured one does. The wire shape is separate from
+    /// <see cref="StageConfig"/> on purpose — a plan stage does not own a checkpoint list, and the
+    /// import contract must not be the thing that puts one there.</summary>
+    private static ImportResult FromWire(ImportWire wire)
+    {
+        var result = new ImportResult { Gates = wire.Gates ?? [] };
+        foreach (var s in wire.Stages ?? [])
+        {
+            if (string.IsNullOrWhiteSpace(s.Id)) continue;
+            result.Stages.Add(new StageConfig
+            {
+                Id = s.Id,
+                Title = s.Title ?? s.Id,
+                Notes = s.Notes,
+                Sessions = s.Sessions > 0 ? s.Sessions : 2,
+                Kind = string.IsNullOrWhiteSpace(s.Kind) ? "deliver" : s.Kind,
+                DependsOn = s.DependsOn is { Count: > 0 } ? s.DependsOn : null,
+            });
+            foreach (var c in s.Checkpoints ?? [])
+            {
+                if (string.IsNullOrWhiteSpace(c.Id) && string.IsNullOrWhiteSpace(c.Title)) continue;
+                // A model that numbers checkpoints loosely still has to hang them off THIS stage —
+                // the id prefix is the only link the graph has.
+                var id = string.IsNullOrWhiteSpace(c.Id) || !c.Id.StartsWith(s.Id + ".", StringComparison.OrdinalIgnoreCase)
+                    ? $"{s.Id}.{(s.Checkpoints ?? []).IndexOf(c) + 1}"
+                    : c.Id;
+                if (result.Checkpoints.Any(x => x.Id.Equals(id, StringComparison.OrdinalIgnoreCase))) continue;
+                result.Checkpoints.Add(new ImportedCheckpoint { Id = id, Title = c.Title ?? id, Status = c.Status });
+            }
+        }
+        return result;
+    }
+
+    private sealed class ImportWire
+    {
+        public List<StageWire>? Stages { get; set; }
+        public List<GateConfig>? Gates { get; set; }
+    }
+
+    private sealed class StageWire
+    {
+        public string Id { get; set; } = "";
+        public string? Title { get; set; }
+        public int Sessions { get; set; }
+        public string? Notes { get; set; }
+        public string? Kind { get; set; }
+        public List<string>? DependsOn { get; set; }
+        public List<CheckpointWire>? Checkpoints { get; set; }
+    }
+
+    private sealed class CheckpointWire
+    {
+        public string? Id { get; set; }
+        public string? Title { get; set; }
+        public string? Status { get; set; }
     }
 
     /// <summary>The model that interprets a freeform import: an explicit override wins; otherwise the
@@ -172,7 +253,13 @@ public static class PlanImportService
                   "sessions": NUMBER — estimated sessions (default 2),
                   "notes": "STRING — any stage-specific notes for the agent",
                   "kind": "STRING — 'deliver' or 'review'",
-                  "dependsOn": ["STRING array — stage ids that must complete first"]
+                  "dependsOn": ["STRING array — stage ids that must complete first"],
+                  "checkpoints": [
+                    {
+                      "id": "STRING — '<stage id>.<n>', e.g. F1.1",
+                      "title": "STRING — one deliverable, small enough for a single session"
+                    }
+                  ]
                 }
               ],
               "gates": [
@@ -195,6 +282,9 @@ public static class PlanImportService
             - Fast-tier gates run every session; full-tier gates run at stage confirmation.
             - Keep stage notes concise — one sentence max.
             - Estimate sessions conservatively (2-4 for typical stages).
+            - EVERY stage must carry at least one checkpoint. Checkpoints are the units of work the
+              orchestrator schedules and an agent claims — a stage without them cannot be driven.
+              Number them '<stage id>.<n>' and make each one a single session's deliverable.
 
             Output ONLY the JSON object, no other text.
             """;
@@ -205,4 +295,30 @@ public sealed class ImportResult
 {
     public List<StageConfig> Stages { get; set; } = [];
     public List<GateConfig> Gates { get; set; } = [];
+
+    /// <summary>W4.1: the work items the document declared. Until now an import produced stages and
+    /// gates and dropped the checkpoints on the floor — <c>MarkdownPlanParser</c> parsed them in full
+    /// and <c>ToImportResult</c> kept only their count — so every imported plan needed a
+    /// hand-authored tracker table before it could be driven at all.</summary>
+    public List<ImportedCheckpoint> Checkpoints { get; set; } = [];
+}
+
+/// <summary>W4.1: one declared work item from an import. <see cref="StageId"/> is the id's prefix,
+/// the same convention the tracker and the graph already use.</summary>
+public sealed class ImportedCheckpoint
+{
+    public string Id { get; set; } = "";
+    public string Title { get; set; } = "";
+    /// <summary>Declared status, when the source carried one (a re-imported tracker keeps its DONEs).
+    /// Null/empty means TODO.</summary>
+    public string? Status { get; set; }
+
+    public string StageId
+    {
+        get
+        {
+            var dot = Id.IndexOf('.', StringComparison.Ordinal);
+            return dot > 0 ? Id[..dot] : Id;
+        }
+    }
 }

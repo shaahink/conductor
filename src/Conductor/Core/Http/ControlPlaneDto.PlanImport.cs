@@ -14,7 +14,9 @@ public sealed record PlanImportRequestDto(string Source, bool Apply, string? Mod
 /// with <c>Id</c> holding the gate name.</summary>
 public sealed record PlanDiffDto(
     IReadOnlyList<PlanStageDto> AddedStages, IReadOnlyList<PlanStageChangeDto> ChangedStages,
-    IReadOnlyList<PlanGateDto> AddedGates, IReadOnlyList<PlanStageChangeDto> ChangedGates)
+    IReadOnlyList<PlanGateDto> AddedGates, IReadOnlyList<PlanStageChangeDto> ChangedGates,
+    // W4.1: the declared work an import brings. Additive and last, so existing clients are untouched.
+    IReadOnlyList<PlanCheckpointDto>? AddedCheckpoints = null)
 {
     public static PlanDiffDto From(PlanDiff d) => new(
         AddedStages: [.. d.AddedStages.Select(s => new PlanStageDto(
@@ -24,7 +26,9 @@ public sealed record PlanDiffDto(
             c.Id, [.. c.Fields.Select(f => new PlanFieldChangeDto(f.Field, f.Old, f.New))]))],
         AddedGates: [.. d.AddedGates.Select(g => new PlanGateDto(g.Name, g.Command, g.Tier, g.TimeoutMinutes, g.Optional))],
         ChangedGates: [.. d.ChangedGates.Select(c => new PlanStageChangeDto(
-            c.Name, [.. c.Fields.Select(f => new PlanFieldChangeDto(f.Field, f.Old, f.New))]))]);
+            c.Name, [.. c.Fields.Select(f => new PlanFieldChangeDto(f.Field, f.Old, f.New))]))],
+        AddedCheckpoints: [.. d.AddedCheckpoints.Select(c =>
+            new PlanCheckpointDto(c.Id, c.StageId, c.Title, c.Status ?? "TODO"))]);
 }
 
 public sealed record PlanStageChangeDto(string Id, IReadOnlyList<PlanFieldChangeDto> Fields);

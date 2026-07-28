@@ -36,10 +36,11 @@ public static class PlanImportCommand
             }
 
             // M6.1: prefer the deterministic markdown path — no model, no spend.
-            var result = PlanImportService.ParseStructured(description);
+            var result = PlanImportService.ParseStructured(description, plan);
             if (result is not null)
             {
-                AnsiConsole.MarkupLine($"[grey]Parsed structurally (no model call) → {result.Stages.Count} stages[/]");
+                AnsiConsole.MarkupLine($"[grey]Parsed structurally (no model call) → {result.Stages.Count} stages, " +
+                    $"{result.Checkpoints.Count} checkpoints[/]");
             }
             else
             {
@@ -79,7 +80,8 @@ public static class PlanImportCommand
 
             diff.Apply(plan);
             AnsiConsole.MarkupLine($"[green]Plan updated[/] — {diff.AddedStages.Count} stage(s) added, {diff.ChangedStages.Count} changed, " +
-                $"{diff.AddedGates.Count} gate(s) added, {diff.ChangedGates.Count} changed. Now v{plan.PlanVersion}.");
+                $"{diff.AddedGates.Count} gate(s) added, {diff.ChangedGates.Count} changed, " +
+                $"{diff.AddedCheckpoints.Count} checkpoint(s) declared. Now v{plan.PlanVersion}.");
             AnsiConsole.MarkupLine("[grey]A running conductor picks up the change at its next session boundary.[/]");
             return 0;
         }
@@ -119,6 +121,16 @@ public static class PlanImportCommand
             AnsiConsole.MarkupLine("[green]+ new gates:[/]");
             foreach (var g in diff.AddedGates)
                 AnsiConsole.MarkupLine($"  {Markup.Escape(g.Name)}: {Markup.Escape(g.Command ?? "")} (tier={Markup.Escape(g.Tier)})");
+        }
+
+        if (diff.AddedCheckpoints.Count > 0)
+        {
+            // W4.1: the work itself — what an imported plan used to arrive without.
+            var table = new Table().Border(TableBorder.Rounded).Title("[green]+ declared work[/]");
+            table.AddColumn("id"); table.AddColumn("checkpoint"); table.AddColumn("status");
+            foreach (var c in diff.AddedCheckpoints)
+                table.AddRow(Markup.Escape(c.Id), Markup.Escape(c.Title), Markup.Escape(c.Status ?? "TODO"));
+            AnsiConsole.Write(table);
         }
 
         if (diff.ChangedGates.Count > 0)
