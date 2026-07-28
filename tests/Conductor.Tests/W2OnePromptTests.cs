@@ -124,11 +124,7 @@ public sealed class W2OnePromptTests
                 Assert.Equal(HttpStatusCode.Accepted, (await http.PostAsync($"{baseUrl}/control", resume, cts.Token)).StatusCode);
 
             var promptPath = Path.Combine(repo, ".conductor", "logs", "session-001.prompt.md");
-            deadline = DateTime.UtcNow.AddSeconds(90);
-            while (!File.Exists(promptPath) && DateTime.UtcNow < deadline)
-                await Task.Delay(100, CancellationToken.None);
-            Assert.True(File.Exists(promptPath), "session 1 never wrote a prompt");
-            var prompt = await File.ReadAllTextAsync(promptPath, CancellationToken.None);
+            var prompt = await ReadPromptWhenCompleteAsync(promptPath, TimeSpan.FromSeconds(90));
 
             // THE GATE: the card detail's bytes appear verbatim in the prompt the agent was handed.
             Assert.Contains(promised, prompt, StringComparison.Ordinal);
@@ -166,5 +162,37 @@ public sealed class W2OnePromptTests
         // wholesale — only its generated checkpoint rows are.
         Assert.Contains("handoff block", text, StringComparison.Ordinal);
         Assert.DoesNotContain("editing its rows by hand achieves nothing", text, StringComparison.Ordinal);
+    }
+
+    /// <summary>Reads the session prompt once the engine has finished writing it.
+    /// <c>File.Exists</c> flips the instant the file is CREATED, while the writer still holds the
+    /// handle — and <c>File.ReadAllTextAsync</c> opens with <c>FileShare.Read</c>, so it loses that
+    /// race with "the process cannot access the file". A local SSD hides the window; the W6.2 CI
+    /// runner did not. Open shared, and wait for the section heading that proves the write
+    /// completed rather than for mere existence (a partial read would fail the byte comparison for
+    /// the wrong reason). Same shape as <c>HostLoggingTests.ReadLogWhenFlushedAsync</c>.</summary>
+    private static async Task<string> ReadPromptWhenCompleteAsync(string path, TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow.Add(timeout);
+        var text = "";
+        while (DateTime.UtcNow < deadline)
+        {
+            if (File.Exists(path))
+            {
+                try
+                {
+                    await using var stream = new FileStream(
+                        path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                    using var reader = new StreamReader(stream);
+                    text = await reader.ReadToEndAsync();
+                    if (text.Contains(Conductor.Planning.PromptBlockRenderer.SectionHeading, StringComparison.Ordinal))
+                        return text;
+                }
+                catch (IOException) { /* writer still holds it exclusively — try again */ }
+            }
+            await Task.Delay(100, CancellationToken.None);
+        }
+        Assert.Fail($"session 1 never wrote a complete prompt to {path}. Last content:\n{text}");
+        return text;
     }
 }

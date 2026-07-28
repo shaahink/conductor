@@ -105,7 +105,14 @@ public class B10_4BatteryCollapseTests
             Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "..",
                 "plans", "conductor.self.plan.json"));
         if (!File.Exists(selfPlanPath)) return; // skip if running from different layout
-        var plan = PlanConfig.Load(selfPlanPath);
+        // Deserialize rather than Load: Load also validates, and validation asserts that plan.repo
+        // EXISTS on this machine. The self-plan names the owner's checkout by absolute path, so on
+        // any other clone — a CI runner, a contributor's laptop — Load throws and this test fails for
+        // a reason that has nothing to do with batteryCollapse. The subject is one committed field;
+        // parse the file (which still proves it is well-formed JSON the real options bind) and read it.
+        var plan = System.Text.Json.JsonSerializer.Deserialize<PlanConfig>(
+            File.ReadAllText(selfPlanPath), PlanConfig.JsonOpts);
+        Assert.NotNull(plan);
         Assert.True(plan.BatteryCollapse,
             "The self-plan must have batteryCollapse: true for B10.4 to be active");
     }
