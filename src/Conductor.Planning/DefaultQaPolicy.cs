@@ -15,13 +15,33 @@ public sealed class DefaultQaPolicy : IQaPolicy
     /// defined once.</summary>
     public static QaRule? EffectiveRule(QaRule? planRule, QaRule? stageRule) => stageRule ?? planRule;
 
+    /// <summary>W4.4: the item's own dial sits above the stage's. An item says only whether it wants
+    /// verification, so it maps onto the existing modes (verify → everySession, off → off) and keeps
+    /// whatever threshold/audit shape it inherits — the item changes QA FREQUENCY for its own
+    /// session, not the shape of the stage around it.</summary>
+    public static QaRule? EffectiveRule(QaRule? planRule, QaRule? stageRule, string? itemQa)
+    {
+        var inherited = EffectiveRule(planRule, stageRule);
+        if (string.IsNullOrWhiteSpace(itemQa) || Is(itemQa, "inherit")) return inherited;
+        if (!Is(itemQa, ModeOff) && !Is(itemQa, "verify")) return inherited;
+
+        return new QaRule
+        {
+            Mode = Is(itemQa, ModeOff) ? ModeOff : ModeEverySession,
+            VerifierThreshold = inherited?.VerifierThreshold,
+            AuditCoversPriorSessions = inherited?.AuditCoversPriorSessions ?? true,
+        };
+    }
+
     /// <summary>Modes come from user JSON — compared case-insensitively everywhere.</summary>
     public static bool IsValidMode(string? mode) =>
         Is(mode, ModeOff) || Is(mode, ModeEverySession) || Is(mode, ModePhaseGate);
 
-    public QaProjection Project(QaRule? planRule, QaRule? stageRule)
+    public QaProjection Project(QaRule? planRule, QaRule? stageRule) => Project(planRule, stageRule, itemQa: null);
+
+    public QaProjection Project(QaRule? planRule, QaRule? stageRule, string? itemQa)
     {
-        var rule = EffectiveRule(planRule, stageRule);
+        var rule = EffectiveRule(planRule, stageRule, itemQa);
         if (rule is null) return QaProjection.Classic;
 
         // An unknown mode projects to classic; plan validation rejects it before a plan can load,

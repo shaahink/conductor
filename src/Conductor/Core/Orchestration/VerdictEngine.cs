@@ -203,7 +203,7 @@ public sealed partial class VerdictEngine
 
                     // M3.1: workflow-driven next step
                     AdvanceWorkflowStep(stage, rec, gatesGreen: true, verifierScore: verdict.Score,
-                        verifierPassed: true, circuitBroken: false, sessionStartHead: startHead);
+                        verifierPassed: true, circuitBroken: false, sessionStartHead: startHead, preTrack: preTrack);
                 }
                 else
                 {
@@ -224,7 +224,7 @@ public sealed partial class VerdictEngine
 
                     // M3.1: workflow-driven next step after failed verify
                     AdvanceWorkflowStep(stage, rec, gatesGreen: false, verifierScore: verdict.Score,
-                        verifierPassed: false, circuitBroken: false, sessionStartHead: startHead);
+                        verifierPassed: false, circuitBroken: false, sessionStartHead: startHead, preTrack: preTrack);
                 }
             }
             else
@@ -341,7 +341,7 @@ public sealed partial class VerdictEngine
 
             AdvanceWorkflowStep(stage, rec, gatesGreen: true, verifierScore: null,
                 verifierPassed: false, circuitBroken: false, stageComplete: stageComplete,
-                sessionStartHead: startHead);
+                sessionStartHead: startHead, preTrack: preTrack);
 
             if (_ctx.Plan.PerPhaseGates && stageComplete)
             {

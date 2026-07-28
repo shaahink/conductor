@@ -20,7 +20,8 @@
    ● Wire RunDb.GetLast…   │  ── ✎ declared paths ──────────────────────────────────────────────────────      
    ○ Cache gate results…   │    src/Conductor/Core/Gating/GateCache.cs · docs/CONDUCTOR-VNEXT-PLAN.md         
    ○ Add SkipIfFresh ti…   │                                                                                  
-   ○ Benchmark the warm…   │                                                                                  
+   ○ Benchmark the warm…   │  ── ✎ qa ──────────────────────────────────────────────────────────────────      
+                           │    inherit — the stage/plan dial decides (press q to override)                   
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
@@ -30,5 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
-                           │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   t title · c context · p paths · a advisor refine ·
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   t title · c context · p paths · q qa · a advisor r

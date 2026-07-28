@@ -9,6 +9,7 @@ namespace Conductor.Core.Orchestration;
 /// there is deliberately no dial-blind overload, so every resolution honors the dial.</summary>
 public static class WorkflowResolverExtensions
 {
-    public static WorkflowDefinition Resolve(this IWorkflowResolver resolver, PlanConfig plan, StageConfig stage, IQaPolicy qa)
-        => resolver.Resolve(qa.Project(plan, stage).WorkflowName ?? stage.Workflow, plan.DefaultWorkflow, plan.Workflows);
+    public static WorkflowDefinition Resolve(this IWorkflowResolver resolver, PlanConfig plan, StageConfig stage, IQaPolicy qa,
+        string? itemQa = null)
+        => resolver.Resolve(qa.Project(plan, stage, itemQa).WorkflowName ?? stage.Workflow, plan.DefaultWorkflow, plan.Workflows);
 }

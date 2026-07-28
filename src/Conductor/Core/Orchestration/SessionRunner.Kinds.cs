@@ -39,7 +39,7 @@ public sealed partial class SessionRunner
         PendingResume? pendingResume,
         PendingAudit? pendingAudit,
         PendingVerify? pendingVerify,
-        PendingFix? pendingFix)
+        PendingFix? pendingFix, TrackerSnapshot? preTrack)
     {
         // Crash recovery: Resume always wins — it carries the agent session id
         if (pendingResume != null) return SessionKind.Resume;
@@ -54,9 +54,12 @@ public sealed partial class SessionRunner
         // re-resolving here once double-stepped onto a verify no advance had populated PendingVerify
         // for, an NRE in PromptBuilder.Verify); only a stage's very first resolution advances, and a
         // verify downgrades to Deliver when the QA dial or per-stage override skips verification.
-        var workflow = _ctx.Workflows.Resolve(_ctx.Plan, stage, _ctx.Qa);
+        // W4.4: the dial of the item this session is about to claim sits above the stage's — "deliver
+        // these one-by-one, but verify THAT one" is decided here, before the kind is chosen.
+        var itemQa = _ctx.ItemQaFor(stage, preTrack);
+        var workflow = _ctx.Workflows.Resolve(_ctx.Plan, stage, _ctx.Qa, itemQa);
         return _ctx.Workflows.ResolveStartKind(workflow, _ctx.State.WorkflowStepIndices, stage.Id,
-            _ctx.Qa.EffectiveSkipVerification(_ctx.Plan, stage));
+            _ctx.Qa.EffectiveSkipVerification(_ctx.Plan, stage, itemQa));
     }
 
     public static SessionKind PendingToKind(

@@ -58,6 +58,25 @@ public sealed class RunContext
         null => Plan.Limits.MaxSessionTokens,
     };
 
+    /// <summary>W4.4: the QA override of the item a session is working on — the first not-done
+    /// checkpoint of the stage in the PRE-session snapshot, which is exactly the item the assignment
+    /// policy claims. Empty when the card has no override (the common case), so every caller
+    /// projects identically to the stage dial unless someone set one. Best-effort: no store, no
+    /// graph, no override.</summary>
+    public string ItemQaFor(StageConfig stage, TrackerSnapshot? preTrack)
+    {
+        if (Store == null || preTrack == null || stage == null) return "";
+        var itemId = preTrack.ForStage(stage.Id).FirstOrDefault(c => !c.IsDone)?.Id;
+        if (string.IsNullOrEmpty(itemId)) return "";
+        try
+        {
+            var graph = new TaskGraph();
+            graph.Fold(Store.ReadAllEvents(State.RunId));
+            return graph.Find(itemId)?.Qa ?? "";
+        }
+        catch (InvalidOperationException) { return ""; }
+    }
+
     public IReadOnlyList<GateResult>? LastGates { get; set; }
     public DateTime? LastControlWrite { get; set; }
     public DateTime? BackoffUntil { get; set; }

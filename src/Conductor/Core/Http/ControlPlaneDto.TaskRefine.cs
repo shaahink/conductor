@@ -4,7 +4,10 @@ namespace Conductor.Core.Http;
 /// declared paths (PF3). null = leave unchanged; an empty context clears it; an empty paths array
 /// clears the declared claims. This is the confirm step of the card-detail editor AND of the
 /// advisor-refine flow: nothing the advisor proposes lands until the owner posts it here.</summary>
-public sealed record TaskEditRequestDto(string? TaskId, string? Title, string? Context, string[]? Paths = null);
+/// <para>W4.4: <c>Qa</c> sets this item's QA override — <c>inherit</c> | <c>verify</c> | <c>off</c>;
+/// null leaves it unchanged and <c>inherit</c> clears it.</para>
+public sealed record TaskEditRequestDto(string? TaskId, string? Title, string? Context, string[]? Paths = null,
+    string? Qa = null);
 
 /// <summary>P3: ask the plan's advisor model to refine one task (<c>POST /tasks/refine</c>).
 /// <c>Instruction</c> is the owner's optional steer ("split this", "make it testable").

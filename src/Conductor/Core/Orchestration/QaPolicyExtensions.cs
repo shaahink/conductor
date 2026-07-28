@@ -10,15 +10,21 @@ public static class QaPolicyExtensions
     public static QaProjection Project(this IQaPolicy qa, PlanConfig plan, StageConfig stage)
         => qa.Project(plan.Pipeline?.Qa, stage.Qa);
 
+    /// <summary>W4.4: the projection for the item a session actually claimed. <paramref name="itemQa"/>
+    /// null/empty/"inherit" is identical to the stage-level projection — an item only participates
+    /// when someone set its dial.</summary>
+    public static QaProjection Project(this IQaPolicy qa, PlanConfig plan, StageConfig stage, string? itemQa)
+        => qa.Project(plan.Pipeline?.Qa, stage.Qa, itemQa);
+
     /// <summary>Whether verification is skipped for this stage. Precedence: the QA dial owns the
     /// answer when set (off → skip; everySession/phaseGate → verify, superseding a stale
     /// overrides.skipVerification); dial absent → the classic per-stage override decides. The
     /// operator's session-scoped skip flag is OR'd in by callers, never overridden here.</summary>
-    public static bool EffectiveSkipVerification(this IQaPolicy qa, PlanConfig plan, StageConfig stage)
-        => qa.Project(plan, stage).SkipVerification ?? stage.Overrides?.SkipVerification == true;
+    public static bool EffectiveSkipVerification(this IQaPolicy qa, PlanConfig plan, StageConfig stage, string? itemQa = null)
+        => qa.Project(plan, stage, itemQa).SkipVerification ?? stage.Overrides?.SkipVerification == true;
 
     /// <summary>The verifier pass bar for this stage: the QA dial's threshold when set, else the
     /// plan's limits.verifierThreshold.</summary>
-    public static int EffectiveVerifierThreshold(this IQaPolicy qa, PlanConfig plan, StageConfig stage)
-        => qa.Project(plan, stage).VerifierThreshold ?? plan.Limits.VerifierThreshold;
+    public static int EffectiveVerifierThreshold(this IQaPolicy qa, PlanConfig plan, StageConfig stage, string? itemQa = null)
+        => qa.Project(plan, stage, itemQa).VerifierThreshold ?? plan.Limits.VerifierThreshold;
 }

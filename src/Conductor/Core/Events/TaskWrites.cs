@@ -34,19 +34,29 @@ public static class TaskWrites
     /// entries are trimmed and blanks dropped, so a replayed log never carries junk claims.
     /// At least one field must actually be given.</summary>
     public static (TaskDetailEdited? Event, string? Error) BuildDetailEdit(
-        TaskGraph graph, string runId, string? taskId, string? title, string? context, string[]? paths = null)
+        TaskGraph graph, string runId, string? taskId, string? title, string? context, string[]? paths = null,
+        string? qa = null)
     {
+        ArgumentNullException.ThrowIfNull(graph);
         if (string.IsNullOrEmpty(taskId))
             return (null, "taskId is required");
         if (graph.Find(taskId) == null)
             return (null, $"task not found: {taskId}");
-        if (title is null && context is null && paths is null)
-            return (null, "nothing to edit — give a title, a context, and/or paths");
+        if (title is null && context is null && paths is null && qa is null)
+            return (null, "nothing to edit — give a title, a context, paths and/or qa");
         if (title is not null && string.IsNullOrWhiteSpace(title))
             return (null, "title cannot be blank");
+        // W4.4: the item dial's vocabulary is deliberately small — a card says whether it wants
+        // verification, not how to shape a stage.
+        if (qa is not null && !WorkItemQa.IsValid(qa))
+            return (null, $"invalid qa: '{qa}' (must be one of: {string.Join(", ", WorkItemQa.Valid)})");
 
         var cleanPaths = paths?.Select(p => p.Trim()).Where(p => p.Length > 0).ToArray();
-        return (new TaskDetailEdited { RunId = runId, TaskId = taskId, Title = title?.Trim(), Context = context, Paths = cleanPaths }, null);
+        return (new TaskDetailEdited
+        {
+            RunId = runId, TaskId = taskId, Title = title?.Trim(), Context = context,
+            Paths = cleanPaths, Qa = qa is null ? null : WorkItemQa.Normalize(qa),
+        }, null);
     }
 
     /// <summary>Validate and build a task-add: computes the next order within the checkpoint when the

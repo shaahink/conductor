@@ -41,4 +41,9 @@ public sealed class TaskItem
     /// <c>ReadyItem.PathClaims</c>, so a multi-item session refuses to co-claim checkpoints whose
     /// open cards declare overlapping paths. Empty = no declared claims (the common case).</summary>
     public List<string> Paths { get; set; } = new();
+
+    /// <summary>W4.4: per-item QA override — "" (inherit, the common case), "verify", or "off".
+    /// Consulted by <c>DefaultQaPolicy</c> ABOVE the stage and plan dials when a session claims
+    /// this item.</summary>
+    public string Qa { get; set; } = "";
 }

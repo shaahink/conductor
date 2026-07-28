@@ -124,6 +124,15 @@ func (m *Model) handleKanbanDetailKey(key string) (tea.Model, tea.Cmd) {
 			m.kanbanStatus = ""
 		}
 		return m, nil
+	case "q":
+		// W4.4: cycle this card's QA override — inherit → verify → off → inherit. Three values,
+		// so a cycle beats a text field; it saves through the same structured edit as everything else.
+		if task != nil {
+			next := nextQa(task.Qa)
+			m.kanbanStatus = "qa: " + qaLabel(next) + "…"
+			return m, m.cmdPostTaskEdit(api.TaskEditRequestDto{TaskId: task.TaskId, Qa: next})
+		}
+		return m, nil
 	case "a":
 		if task != nil && !m.kanbanRefining {
 			m.kanbanRefining = true
@@ -310,6 +319,15 @@ func (m Model) renderKanbanDetailPane() (string, string) {
 		} else {
 			b.WriteString(textStyle.Render("  " + truncate(strings.Join(task.Paths, " · "), width-2)))
 		}
+
+		// W4.4: the per-item QA dial — pipeline control that reaches this one card.
+		b.WriteString("\n\n" + subtleStyle.Render("── ") + accentStyle.Render("✎ qa") + subtleStyle.Render(" ") +
+			subtleStyle.Render(strings.Repeat("─", max(0, width-lipgloss.Width("qa")-6))) + "\n")
+		if task.Qa == "" {
+			b.WriteString(subtleStyle.Render("  inherit — the stage/plan dial decides (press q to override)"))
+		} else {
+			b.WriteString(textStyle.Render("  "+task.Qa) + subtleStyle.Render("  (this card only — press q to cycle)"))
+		}
 	}
 
 	if m.kanbanEditingPaths {
@@ -333,7 +351,7 @@ func (m Model) renderKanbanDetailPane() (string, string) {
 			key("y") + subtleStyle.Render(" yes · ") + key("n") + subtleStyle.Render(" no"))
 		return b.String() + m.kanbanStatusLine(), "y confirm · n cancel"
 	}
-	return b.String() + m.kanbanStatusLine(), "t title · c context · p paths · a advisor refine · s split · h hand off · esc back"
+	return b.String() + m.kanbanStatusLine(), "t title · c context · p paths · q qa · a advisor refine · s split · h hand off · esc back"
 }
 
 // renderKanbanBlock renders one building block: label line (✎ marks editable), then the content —
@@ -376,6 +394,26 @@ func (m Model) renderKanbanProposal(width int) string {
 	}
 	b.WriteString(subtleStyle.Render("  nothing is saved until you confirm"))
 	return b.String()
+}
+
+// nextQa cycles the per-item QA dial (W4.4). "" is inherit — the card follows the stage/plan dial.
+func nextQa(current string) string {
+	switch current {
+	case "verify":
+		return "off"
+	case "off":
+		return "inherit"
+	default:
+		return "verify"
+	}
+}
+
+// qaLabel names a stored QA override for the panel ("" is the absence of one).
+func qaLabel(qa string) string {
+	if qa == "" {
+		return "inherit"
+	}
+	return qa
 }
 
 // renderKanbanSplit shows the proposed children — nothing is on the board until enter.

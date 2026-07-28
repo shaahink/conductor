@@ -158,6 +158,9 @@ type TaskDto struct {
 	// PF3: repo-relative paths this card declares it will touch — the data behind multi-item
 	// claim conflicts. Empty = no declared claims.
 	Paths []string `json:"paths"`
+	// W4.4: this item's QA override — "" (inherit), "verify", or "off". It beats the stage and
+	// plan dials for the session that claims this card.
+	Qa string `json:"qa"`
 }
 
 type TasksDto struct {
@@ -190,6 +193,8 @@ type TaskEditRequestDto struct {
 	// PF3: nil = leave the declared paths unchanged (marshals as null); an empty non-nil slice
 	// clears them — mirrors the C# null/empty contract, so no omitempty here.
 	Paths []string `json:"paths"`
+	// W4.4: "inherit" | "verify" | "off". Omitted = leave the item's QA override unchanged.
+	Qa string `json:"qa,omitempty"`
 }
 
 // TaskRefineRequestDto (P3, POST /tasks/refine): ask the plan's advisor to refine one task.

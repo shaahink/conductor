@@ -9,4 +9,10 @@ public sealed record TaskDetailEdited : ConductorEvent
     public string? Title { get; init; }
     public string? Context { get; init; }
     public string[]? Paths { get; init; }
+
+    /// <summary>W4.4: this item's QA override — <c>inherit</c> | <c>verify</c> | <c>off</c>.
+    /// null = unchanged; <c>inherit</c> clears the override and the stage/plan dial decides again.
+    /// The dial existed at plan and stage level (P2) and could not reach the individual work item,
+    /// which is criterion 5: "deliver these one-by-one, but verify THAT one".</summary>
+    public string? Qa { get; init; }
 }

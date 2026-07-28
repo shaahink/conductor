@@ -20,12 +20,16 @@ public sealed partial class VerdictEngine
         bool verifierPassed,
         bool circuitBroken,
         bool stageComplete = false,
-        string? sessionStartHead = null)
+        string? sessionStartHead = null,
+        TrackerSnapshot? preTrack = null)
     {
-        var workflow = _ctx.Workflows.Resolve(_ctx.Plan, stage, _ctx.Qa);
+        // W4.4: the same item dial the dispatch consulted — the item this session delivered, taken
+        // from the PRE-session snapshot, so the claim it just made cannot move the answer.
+        var itemQa = _ctx.ItemQaFor(stage, preTrack);
+        var workflow = _ctx.Workflows.Resolve(_ctx.Plan, stage, _ctx.Qa, itemQa);
         var vars = WorkflowVarsFactory.Build(rec, _ctx.State.AttemptsThisStage,
             gatesGreen, verifierScore, verifierPassed, circuitBroken, stageComplete);
-        var skipVerification = _ctx.Qa.EffectiveSkipVerification(_ctx.Plan, stage) || _ctx.State.SkipVerificationThisStage;
+        var skipVerification = _ctx.Qa.EffectiveSkipVerification(_ctx.Plan, stage, itemQa) || _ctx.State.SkipVerificationThisStage;
 
         var advance = _ctx.Workflows.Advance(workflow, _ctx.State.WorkflowStepIndices, stage.Id, vars, skipVerification);
 

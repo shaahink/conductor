@@ -61,7 +61,7 @@ public sealed partial class SessionRunner
 
         // Resolve session kind: workflow-driven (M3.1) with pending-state fallback
         // for crash recovery (Resume must carry the agent session id).
-        var kind = ResolveSessionKind(stage, pendingResume, pendingAudit, pendingVerify, pendingFix);
+        var kind = ResolveSessionKind(stage, pendingResume, pendingAudit, pendingVerify, pendingFix, preTrack);
 
         // A workflow-resolved kind can arrive without its pending context (a custom workflow that
         // opens on a QA step, or a pending cleared out from under the recorded index). Verify and

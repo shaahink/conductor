@@ -74,6 +74,9 @@ public sealed class TaskGraph
                         if (!string.IsNullOrWhiteSpace(de.Title)) edited.Title = de.Title;
                         if (de.Context != null) edited.Context = de.Context;
                         if (de.Paths != null) edited.Paths = [.. de.Paths];
+                        // W4.4: "inherit" is the absence of an override, so it stores as empty.
+                        if (de.Qa != null)
+                            edited.Qa = WorkItemQa.IsInherit(de.Qa) ? "" : de.Qa.Trim().ToLowerInvariant();
                     }
                     break;
 
