@@ -25,6 +25,7 @@ public sealed class Orchestrator
     private readonly RunContext _ctx;
     private readonly GateOrchestrator _gates;
     private readonly LaneCoordinator _lanes;
+    private readonly Action<PlanConfig>? _onPlanSwapped;
     private SessionRunner? _sessions;
     private VerdictEngine? _verdictEngine;
     private RunLoop? _loop;
@@ -45,8 +46,10 @@ public sealed class Orchestrator
         ConcurrentQueue<ControlCommand>? controlInbox = null,
         IWorkflowResolver? workflowResolver = null,
         IAssignmentPolicy? assignmentPolicy = null,
-        IQaPolicy? qaPolicy = null)
+        IQaPolicy? qaPolicy = null,
+        Action<PlanConfig>? onPlanSwapped = null)
     {
+        _onPlanSwapped = onPlanSwapped;
         var qa = qaPolicy ?? new DefaultQaPolicy();
         var prompts = BuildPromptBuilder(plan, qa);
         var lessons = new LessonsManager(plan.StateDir);
@@ -74,10 +77,10 @@ public sealed class Orchestrator
         saveAndReport: () =>
         {
             _ctx.Save();
-            var track = ReadTrackerSafe();
-            Reporter.WriteAndPublish(_ctx.Plan, _ctx.State, track, _ctx.LastGates, _ctx.Log, store: _ctx.Store);
+            Reporter.WriteAndPublish(_ctx.Plan, _ctx.State, _ctx.ReadWork(), _ctx.LastGates, _ctx.Log, store: _ctx.Store);
             PushIdleSnapshot();
-        });
+        },
+        onPlanSwapped: _onPlanSwapped);
 
     private SessionRunner CreateSessions()
     {
@@ -103,21 +106,15 @@ public sealed class Orchestrator
         _ctx.Save();
         try
         {
-            var track = _ctx.Progress.Read(_ctx.Plan, CancellationToken.None);
-            Reporter.WriteAndPublish(_ctx.Plan, _ctx.State, track, _ctx.LastGates, _ctx.Log, store: _ctx.Store);
+            Reporter.WriteAndPublish(_ctx.Plan, _ctx.State, _ctx.ReadWork(), _ctx.LastGates, _ctx.Log, store: _ctx.Store);
         }
         catch (Exception) { }
         PushIdleSnapshot();
     }
 
     private void PushIdleSnapshot()
-    {
-        TrackerSnapshot track;
-        try { track = _ctx.Progress.Read(_ctx.Plan, CancellationToken.None); }
-        catch (Exception) { track = new TrackerSnapshot(); }
-        _ctx.Sink.Snapshot(SnapshotBuilder.Build(_ctx.Plan, _ctx.State, track,
+        => _ctx.Sink.Snapshot(SnapshotBuilder.Build(_ctx.Plan, _ctx.State, _ctx.ReadWork(),
             _ctx.LastGates != null ? GateRunner.Summary(_ctx.LastGates) : "", _ctx.BackoffUntil));
-    }
 
     private void PushSessionSnapshot(AgentSession agent, SessionRecord rec, StageConfig stage, int attempt, int maxAttempts, TrackerSnapshot track)
         => _ctx.Sink.Snapshot(SnapshotBuilder.Build(_ctx.Plan, _ctx.State, track,

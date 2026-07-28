@@ -111,9 +111,47 @@ Credential-free throughout: W4.2 and W4.3 prove the advisor paths against a FAKE
 script printing the import/split contract's JSON, wired exactly as a real model would be. The same
 trick is what W5.1 will lean on.
 
-**Next = W5.1** (credential-free dress rehearsal). W5 is the gate: nothing above is "met" until an
-unattended run produces the evidence. Note W5.1 now has W4.1's import path to drive (a toy plan
-imported from markdown, no hand-authored tracker) and W4.3/W4.4's in-flight levers to exercise.
+**W5.1 DONE 2026-07-28 — the rehearsal passes, and it earned its keep.** One `conductor.exe`, started
+once, took a markdown document to a finished run: 10 sessions, 6/6 checkpoints, exit 0, and
+`RunFinished` in `run.db` — the event no conductor run had ever emitted. Write-up:
+`docs/workgraph/W5-REHEARSAL.md`; driver: `powershell -File tools/w5/rehearsal.ps1 -Keep` (~90s, no
+credentials). Battery 1028/1028 · go green · ratchet OK.
+
+The rehearsal was built out of process on purpose — it drives the shipped binary, moves every lever
+over the real HTTP control plane, claims through `conductor task --done` inside the worker, and reads
+its verdict back with `conductor report --query`. That is W2.1's lesson applied: a harness we wrote
+ourselves is too lenient to be evidence. It paid immediately. Three defects, none of them visible to
+any test written before it:
+
+- **The engine was the last reader still scheduling on the DECLARATION rather than the graph.** W1
+  settled that the graph is the runtime truth; every reader moved except the run loop. On the
+  markdown-table path that is invisible, because the tracker is regenerated from the graph after each
+  session and agrees a moment later. An inline (`plan-checkpoints`) plan — what *every* W4.1 import
+  produces — has no write-back at all: it declares `TODO` forever. So the assignment policy re-picked
+  cards the graph already had as delivered, the prompt's card section rendered EMPTY (it reads the
+  graph, where a done card is history), the circuit breaker correctly called that no progress, and the
+  run parked `NEEDS HUMAN` at `0/5 done` with work actually delivered. `AllEffectivelyDone` could
+  never be true, so a plan imported from a document could not reach `RunFinished` at all. W4.1's own
+  live test missed it by running `Once: true` — one session is exactly the horizon at which the two
+  sources still agree.
+- **The plan reload skipped the control plane**, so a plan edit reached the engine and the tracker
+  while every Face surface served the pre-edit plan for the rest of the run. No in-process test could
+  see it: they all read `_ctx.Plan` directly.
+- **Completion closed the run over the verification it had just queued** — uncovered by the first fix,
+  because done-ness used to lag a tracker regeneration behind the claim and the queued verify always
+  got its turn first. The blast radius is the plan's LAST checkpoint in every run: the only card
+  nobody independently checked.
+
+Two things worth carrying to W5.2 rather than fixing blind (both in the write-up): the prompt names
+the STAGE and tells the agent to read the tracker, but never names the checkpoint the engine will judge
+the session against — so the agent re-derives by parsing markdown what `assignment.Items` already
+knows, and a disagreement is silent. And `report --query`'s `events.type` column holds the CLR event
+name (`RunFinished`), not the JSON discriminator (`runFinished`); querying the wire name returns "no
+rows", which reads exactly like a defect.
+
+**Next = W5.2** (`HUMAN:` — the owner starts and pays for the real-model unattended proof run, then
+`docs/workgraph/W5-AUDIT.md`). Also still wanting one manual ✕ on a live run: the W3.3 window-close
+rail, whose OS-delivery half cannot be synthesised in-process.
 
 Driving mode: Claude Code drives W1–W4 + W6 directly (owner directive 2026-07-16) — per
 checkpoint: pre-session ritual (tracker + brief stage section + cited docs, gate battery first,
@@ -145,7 +183,7 @@ Owner decisions pending (needed no earlier than the stage that names them):
 | W4.2 | conductor init --from-idea + advisor block scaffold (one command: idea → drivable plan) | DONE | 580c114 | `init` writes a commented advisor block naming what the advisor is for (prose→plan, refine, split, judge) and what it is never used for (scheduling); `--from-idea "<prose>"`/`<file>` scaffolds then routes the idea through the W4.1 import path — free for a structured doc, advisor-interpreted for prose — and the scaffold's "rename me" stage steps aside once real stages arrive (unless something was delivered against it); prose with no advisor keeps the scaffold intact and names the two ways forward. 6 tests (W4FromIdeaTests) on a FAKE advisor CLI (a script printing the import contract's JSON, wired exactly as a real model would be): idea in → `conductor run --paused` → board is the idea, zero sessions, zero spend. Battery 1001/1001 · go green · ratchet OK |
 | W4.3 | AI split-into-subtasks on a card; stage-level rough-card add (schedulable) | DONE | 7994ac6 | `TaskWrites.BuildAdd` gains the stage-level add — a checkpoint-kind item numbered `{stage}.{n}`, ALSO written back into the plan's declared work (without which W1.2's sync would archive it at the next boundary, not merely fail to schedule it); `POST /tasks/split` asks the advisor for children — proposal only, card text framed as untrusted data, count bounded, parser takes the shapes models actually emit (object, fenced, bare array) — and each child lands through the ordinary `/tasks/add`; Face gains `s` (split, enter adds children one at a time) and `N` (stage-level card, which also gives the empty board an answer). 13 tests (W4SplitAndStageCardTests) incl. the live gate: add a stage card mid-run over HTTP → split → confirm both children → next session claims the card the owner invented. Also fixed the pre-existing B12_3 worktree flake for real (scoped by lane id, not creation time). Battery 1014/1014 · go green · ratchet OK |
 | W4.4 | Per-item QA dial (qa: inherit/verify/off on the card, honored by QaPolicy) | DONE | 9196fa8 | Work items carry `qa: inherit \| verify \| off` (`TaskDetailEdited.Qa` → `TaskItem.Qa`, `/tasks/edit`, TaskDto — all additive); the item's dial sits above the stage's above the plan's, with a deliberately smaller vocabulary (an item says whether it wants verification, not how to shape the stage) so it maps onto the existing modes and inherits the threshold/audit shape it did not set; the engine consults the CLAIMED item — the first not-done checkpoint of the pre-session snapshot — at dispatch AND at the verdict, both pre-session so a session's own claim cannot move its answer; Face `q` cycles it. 9 tests (W4ItemQaTests) incl. the live gate: one stage, plan dial `everySession`, H0.1 `off` → no verification at all, H0.2 `verify` → the very next session gets one. Battery 1023/1023 · go green · ratchet OK |
-| W5.1 | Credential-free dress rehearsal: imported toy plan driven end-to-end, all in-flight levers exercised, first RunFinished | TODO | | |
+| W5.1 | Credential-free dress rehearsal: imported toy plan driven end-to-end, all in-flight levers exercised, first RunFinished | DONE | (this commit) | `tools/w5/rehearsal.ps1` drives the REAL binary out of process (agent + advisor are token-free scripts): `TOY-PLAN.md` → `init --from-idea` → `doctor` → ONE `run --headless --paused` process → levers over the real HTTP control plane (card context · per-card QA dials · plan edit · stage-level card add · advisor split + confirm children · a QA dial and a card context flipped WHILE the engine runs) → the run finishes itself. **27/27 checks PASS**: 10 sessions, 6/6 checkpoints, exit 0, and `RunFinished{status:Completed, sessions:10, 6/6, seq:80}` as the last event — the event no run had ever emitted. Full write-up + criteria map in `docs/workgraph/W5-REHEARSAL.md`. **Three engine defects found, all fixed:** (1) the engine scheduled on the DECLARATION, not the graph — an inline (`plan-checkpoints`) plan, i.e. every W4.1 import, declares `TODO` for the life of the run, so the assignment policy re-picked delivered cards, the prompt's card section rendered empty (it reads the graph), the circuit breaker correctly called no progress, and the run parked at `0/5 done`; `AllEffectivelyDone` could never be true, so `RunFinished` was unreachable → new `Core/Planning/WorkSnapshot.cs` + `RunContext.ReadWork()`, the same projection `/state` and `/tasks` already served, now with ONE implementation. W4.1's live test missed it by running `Once: true` — one session is exactly the horizon where declaration and graph still agree. (2) `ApplyPlanReload` swapped the plan into the context/gates/lanes/dispatcher but NOT the control plane, so every Face surface served the pre-edit plan for the rest of the run (criterion 2 failing on the read side; invisible to in-process tests, which read `_ctx.Plan`) → `ControlPlaneServer.SwapPlan` + an `onPlanSwapped` hook; `SwapPlan` also rebuilds the progress provider, which captured the inline checkpoint list by value. (3) uncovered by (1): the completion guard named `PendingFix`/`PendingResume` but not `PendingVerify`/`PendingAudit` — harmless only while done-ness lagged a tracker regen behind the claim, so removing the lag let the run close over the verification it had just queued. Blast radius = the plan's LAST checkpoint, in every run, the one card nobody independently checked. 5 tests (W5RehearsalTests) incl. the completion gate (verified to FAIL on the pre-fix read) and the plan-edit-over-HTTP gate. Battery 1028/1028 · go green · ratchet OK (tests 929≥550, pragmas 37≤38, archdebt 0) |
 | W5.2 | HUMAN: real-model unattended proof run start → RunFinished; five criteria audited in docs/workgraph/W5-AUDIT.md | TODO | | |
 | W6.1 | HUMAN: LICENSE; un-commit publish/ (± history purge); .gitignore/.gitattributes hardening | DONE (HEAD only) | 51911f9 | MIT chosen by owner 2026-07-28; publish/ (81 files) un-tracked from HEAD; .gitignore + .gitattributes hardened. History purge NOT done — needs explicit owner go-ahead (rewrites remote history). |
 | W6.2 | CI: .github/workflows/ci.yml (windows full battery + ubuntu dotnet/go), born green | TODO | | |

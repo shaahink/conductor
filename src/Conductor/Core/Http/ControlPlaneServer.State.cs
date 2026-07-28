@@ -100,28 +100,9 @@ public sealed partial class ControlPlaneServer
     /// fold <c>GET /tasks</c> serves — with explicit status flags (no conventions round-trip: the
     /// graph's labels are canonical). Before anything is seeded, the declared tracker is all there
     /// is; it also still carries the handoff block, which is view-only prose.</summary>
+    /// <remarks>W5.1 moved the fold itself into <see cref="Planning.WorkSnapshot"/>, which the ENGINE
+    /// now schedules on too — the projection had two implementations, and only one of them was the
+    /// truth the loop acted on.</remarks>
     private TrackerSnapshot GraphTrackerSnapshot()
-    {
-        try
-        {
-            var rows = _store.GetCheckpoints(_state.RunId);
-            if (rows.Count == 0) return ReadTrackerSafe();
-            var declared = ReadTrackerSafe();
-            return new TrackerSnapshot
-            {
-                Checkpoints =
-                [
-                    .. rows.Select(r => new CheckpointRow(r.Id, r.Title, r.Status, r.Commit, r.Evidence)
-                    {
-                        StageId = r.StageId,
-                        IsDone = r.Status.StartsWith("DONE", StringComparison.OrdinalIgnoreCase),
-                        IsBlocked = r.Status.StartsWith("BLOCKED", StringComparison.OrdinalIgnoreCase),
-                        IsInProgress = r.Status.StartsWith("IN", StringComparison.OrdinalIgnoreCase),
-                    }),
-                ],
-                HandoffBlock = declared.HandoffBlock,
-            };
-        }
-        catch (Exception) { return ReadTrackerSafe(); }
-    }
+        => Planning.WorkSnapshot.Read(_store, _state.RunId, ReadTrackerSafe);
 }

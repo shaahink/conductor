@@ -27,7 +27,7 @@ public sealed class RunContext
     public LessonsManager Lessons { get; }
     public PromptBuilder Prompts { get; private set; }
     public IPlanner Planner { get; }
-    public IProgressProvider Progress { get; }
+    public IProgressProvider Progress { get; private set; }
     public IAgentProvider AgentProvider { get; }
     public IRunStore? Store { get; }
     public ProcessSupervisor? ProcessSupervisor { get; }
@@ -173,11 +173,15 @@ public sealed class RunContext
     /// rebuild the prompt builder (it caches the plan + persona registry). MUST only be called from
     /// the run loop at a session boundary — never while an agent session is running against the old
     /// stage graph. Callers are responsible for also swapping satellites that hold their own plan
-    /// reference (GateOrchestrator, LaneCoordinator, ControlDispatcher).</summary>
+    /// reference (GateOrchestrator, LaneCoordinator, ControlDispatcher, the control plane).</summary>
     public void SwapPlan(PlanConfig fresh)
     {
         Plan = fresh;
         Prompts = new PromptBuilder(fresh, new PersonaRegistry(fresh), Lessons, Qa);
+        // W5.1: the progress provider is built FROM the plan and the inline one captures its
+        // checkpoint list by value — a card declared mid-run (or a switch of progress.kind) was
+        // invisible to every declared read until the process restarted.
+        Progress = Planning.ProgressProviderFactory.Create(fresh);
     }
 
     // ── convenience delegations ──
@@ -246,10 +250,19 @@ public sealed class RunContext
         }
     }
 
-    /// <summary>Read tracker (defensive — returns empty snapshot on failure).</summary>
+    /// <summary>Read tracker (defensive — returns empty snapshot on failure). This is the DECLARED
+    /// work, statuses included: the sync's input, the handoff block's home, and the base the verdict
+    /// diffs a hand-edited tracker against. For "what is the state of the work", use
+    /// <see cref="ReadWork"/> instead.</summary>
     public TrackerSnapshot ReadTrackerSafe()
     {
         try { return Progress.Read(Plan, CancellationToken.None); }
         catch (Exception) { return new TrackerSnapshot(); }
     }
+
+    /// <summary>W5.1: the work snapshot the engine SCHEDULES on — declared rows carrying the work
+    /// graph's status, the same projection the Face's board and sidebar read. See
+    /// <see cref="Planning.WorkSnapshot"/> for why the declared statuses cannot be the answer.</summary>
+    public TrackerSnapshot ReadWork()
+        => Planning.WorkSnapshot.Read(Store, State.RunId, ReadTrackerSafe);
 }

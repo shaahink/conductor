@@ -171,7 +171,10 @@ public static class ConductorHost
             controlInbox: sp.GetRequiredService<ConcurrentQueue<ControlCommand>>(),
             workflowResolver: sp.GetRequiredService<IWorkflowResolver>(),
             assignmentPolicy: sp.GetRequiredService<IAssignmentPolicy>(),
-            qaPolicy: sp.GetRequiredService<IQaPolicy>()));
+            qaPolicy: sp.GetRequiredService<IQaPolicy>(),
+            // W5.1: the control plane caches a plan reference and was the one satellite the reload
+            // never swapped, so the Face served the pre-edit plan for the rest of the run.
+            onPlanSwapped: fresh => sp.GetService<ControlPlaneServer>()?.SwapPlan(fresh)));
 
         var host = builder.Build();
         ValidateOptionsOnStart(host.Services, plan);

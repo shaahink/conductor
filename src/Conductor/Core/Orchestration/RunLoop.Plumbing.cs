@@ -139,20 +139,11 @@ public sealed partial class RunLoop
     private void SaveAndReport()
     {
         _ctx.Save();
-        TrackerSnapshot track;
-        try { track = _ctx.Progress.Read(_ctx.Plan, CancellationToken.None); }
-        catch (Exception) { track = new TrackerSnapshot(); }
-        Reporter.WriteAndPublish(_ctx.Plan, _ctx.State, track, _ctx.LastGates, _ctx.Log, store: _ctx.Store);
+        Reporter.WriteAndPublish(_ctx.Plan, _ctx.State, _ctx.ReadWork(), _ctx.LastGates, _ctx.Log, store: _ctx.Store);
         PushIdleSnapshot();
     }
 
-    private void PushIdleSnapshot()
-    {
-        TrackerSnapshot track;
-        try { track = _ctx.Progress.Read(_ctx.Plan, CancellationToken.None); }
-        catch (Exception) { track = new TrackerSnapshot(); }
-        _ctx.Sink.Snapshot(BaseSnapshot(track));
-    }
+    private void PushIdleSnapshot() => _ctx.Sink.Snapshot(BaseSnapshot(_ctx.ReadWork()));
 
     private void PushSessionSnapshot(AgentSession agent, SessionRecord rec, StageConfig stage, int attempt, int maxAttempts, TrackerSnapshot track)
         => _ctx.Sink.Snapshot(BaseSnapshot(track) with

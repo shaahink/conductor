@@ -25,6 +25,12 @@ public sealed partial class RunLoop
     private readonly LaneCoordinator _lanes;
     private readonly Action _saveAndReport;
 
+    /// <summary>W5.1: satellites OUTSIDE the run loop that cache a plan reference — today the HTTP
+    /// control plane, which every Face surface reads. It was missing from the reload's swap list, so
+    /// a plan edit reached the engine and the tracker while the TUI kept serving the pre-edit plan
+    /// for the rest of the run.</summary>
+    private readonly Action<PlanConfig>? _onPlanSwapped;
+
     private readonly ControlDispatcher? _dispatcher;
     private ControlDispatcher? _dispatcherLazy;
     private ControlDispatcher Dispatcher => _dispatcherLazy ??= _dispatcher ?? new ControlDispatcher(
@@ -38,7 +44,8 @@ public sealed partial class RunLoop
         GateOrchestrator gates,
         LaneCoordinator lanes,
         ControlDispatcher? dispatcher,
-        Action saveAndReport)
+        Action saveAndReport,
+        Action<PlanConfig>? onPlanSwapped = null)
     {
         _ctx = ctx;
         _sessions = sessions;
@@ -47,6 +54,7 @@ public sealed partial class RunLoop
         _lanes = lanes;
         _dispatcher = dispatcher;
         _saveAndReport = saveAndReport;
+        _onPlanSwapped = onPlanSwapped;
     }
 
     // ---------------------------------------------------------------- main loop
@@ -158,7 +166,10 @@ public sealed partial class RunLoop
                         }
                     }
 
-                var track = _ctx.Progress.Read(_ctx.Plan, ct);
+                // W5.1: the graph's status, not the declaration's — an imported plan declares TODO
+                // for the life of the run, so scheduling on the declaration re-picked delivered work
+                // and never completed. See Planning.WorkSnapshot.
+                var track = _ctx.ReadWork();
                 if (track.Checkpoints.Count == 0)
                 {
                     _verdicts.NeedsHuman($"tracker {_ctx.Plan.Tracker} has no parseable checkpoint rows — check the table format");
@@ -178,7 +189,14 @@ public sealed partial class RunLoop
                 }
 
                 var allDone = AllEffectivelyDone(track);
-                if (allDone && _ctx.State.PendingFix == null && _ctx.State.PendingResume == null)
+                // W5.1: a queued verification or audit is work this run still owes. The guard only
+                // named fix and resume, which was harmless while done-ness lagged a tracker
+                // regeneration behind the claim — the queued verify always got a turn first. Reading
+                // the graph directly removes that lag, so the LAST checkpoint's verification would be
+                // skipped by completion: the one card in the plan nobody checked. Consume what is
+                // queued, then close.
+                if (allDone && _ctx.State.PendingFix == null && _ctx.State.PendingResume == null
+                    && _ctx.State.PendingVerify == null && _ctx.State.PendingAudit == null)
                 {
                     if (await _verdicts.ConfirmCompletionAsync(ct).ConfigureAwait(false)) { _verdicts.CompletePlan(track); return 0; }
                     continue;
@@ -417,6 +435,7 @@ public sealed partial class RunLoop
         _gates.SwapPlan(fresh);
         _lanes.SwapPlan(fresh);
         Dispatcher.SwapPlan(fresh);
+        _onPlanSwapped?.Invoke(fresh);
         _ctx.Events.Emit(new PlanReloaded { PlanVersion = fresh.PlanVersion, Stages = fresh.Stages.Count, Gates = fresh.Gates.Count });
         _ctx.Log($"plan reloaded at session boundary — v{fresh.PlanVersion}, {fresh.Stages.Count} stages, {fresh.Gates.Count} gates");
 

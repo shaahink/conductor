@@ -31,7 +31,7 @@ namespace Conductor.Core.Http;
 /// </remarks>
 public sealed partial class ControlPlaneServer : IDisposable
 {
-    private readonly PlanConfig _plan;
+    private PlanConfig _plan;
     private readonly RunState _state;
     private readonly IRunStore _store;
     private readonly ConcurrentQueue<ControlCommand> _inbox;
@@ -72,6 +72,13 @@ public sealed partial class ControlPlaneServer : IDisposable
         _preferredPort = port;
         Port = port;
     }
+
+    /// <summary>W5.1: adopt the reloaded plan. The run loop swaps the plan into every satellite that
+    /// caches one at a session boundary, and this server was not on that list — so after any
+    /// <c>/plan/edit</c> the engine and the generated tracker moved on while every Face surface kept
+    /// rendering the plan the run started with. Called from the loop's reload boundary only, i.e.
+    /// never while a session is running.</summary>
+    public void SwapPlan(PlanConfig fresh) => _plan = fresh;
 
     /// <summary>Binds and starts the accept loop, scanning forward from the preferred port so a second
     /// concurrent run lands on a free one instead of failing. Returns false (never throws) if no port in
