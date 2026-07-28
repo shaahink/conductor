@@ -1,0 +1,68 @@
+===== P4: Squash Bookkeeping — Clean Git History =====
+Date: 2026-07-09
+Session: #89 (via Conductor orchestrator)
+Checkpoint: P4 — Squash bookkeeping — clean git history
+
+--- Gate: Build ---
+0 warnings, 0 errors
+
+--- Gate: Tests ---
+555 passed, 0 failed, 0 skipped (+4 new P4 tests)
+
+--- Feature: Squash bookkeeping on phase confirm ---
+Goal: Clean git history. On phase confirm, collapse consecutive
+chore(conductor): commits into one per group. Feature/audit commits
+(feat:, fix:, docs:) preserved. Idempotent.
+
+Implementation:
+
+Checkpoint 1 — Git.SquashChoreCommits (Git.cs):
+  - Probes git log for consecutive chore(conductor): commits
+  - No-op if none found (idempotent)
+  - Writes a PowerShell sequence-editor script that transforms the
+    rebase todo list: first chore in each group stays "pick",
+    subsequent ones become "fixup"
+  - Sets GIT_SEQUENCE_EDITOR, runs git rebase -i with
+    --committer-date-is-author-date flag
+  - Best-effort: returns boolean, caller decides how to handle failure
+
+Checkpoint 2 — RunState tracking (RunState.cs):
+  - SquashedStages: HashSet<string> — prevents re-squash (idempotency)
+  - StageStartHeads: Dictionary<string,string> — stores per-stage start
+    HEAD for the rebase window, populated by ScheduleGateOrAudit
+
+Checkpoint 3 — Orchestrator integration (Orchestrator.cs):
+  - ScheduleGateOrAudit: stores stage start head in StageStartHeads
+  - ConfirmStage: calls SquashBookkeeping(id) after event emit
+  - SquashBookkeeping():
+    * Skips if SquashedStages already contains stageId (idempotent)
+    * Skips if no start head recorded
+    * Marks SquashedStages BEFORE rebase (prevents re-entry on crash)
+    * Saves state before history rewrite
+    * Calls Git.SquashChoreCommits — best-effort, failure logged only
+    * On exception: removes from SquashedStages for retry
+
+Checkpoint 4 — Tests (P4SquashBookkeepingTests.cs, 4 tests):
+  - RunState_roundtrips_SquashedStages
+  - RunState_roundtrips_StageStartHeads
+  - SquashedStages_persist_across_restart
+  - LoadOrNew_defaults_are_empty_not_null
+
+Design decisions:
+  - Squash is best-effort: failure logged, never blocks confirmation
+  - Idempotency via SquashedStages set (survives crash recovery)
+  - Sequence editor uses PowerShell (native on Windows, simple)
+  - Feature/audit commits preserved by only touching chore(conductor):
+    lines in the rebase todo list
+  - Consecutive groups each collapse to one commit (not all into one)
+
+Files changed:
+  - src/Conductor/Core/Git.cs: SquashChoreCommits method
+  - src/Conductor/Models/RunState.cs: SquashedStages + StageStartHeads
+  - src/Conductor/Core/Orchestrator.cs: SquashBookkeeping + wiring
+  - tests/Conductor.Tests/P4SquashBookkeepingTests.cs: 4 new tests
+
+Verified by:
+  - 555 unit tests pass (no regressions)
+  - Build 0 warnings, 0 errors
+  - Branch: feat/era-v3

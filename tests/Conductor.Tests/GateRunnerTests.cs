@@ -3,6 +3,7 @@ using Conductor.Models;
 
 namespace Conductor.Tests;
 
+[Trait("Category", "Integration")]
 public class GateRunnerTests
 {
     private static PlanConfig Plan(params GateConfig[] gates) => new()
@@ -12,13 +13,13 @@ public class GateRunnerTests
     };
 
     [Fact]
-    public void CapturesRealExitCodes()
+    public async Task CapturesRealExitCodes()
     {
         // The lesson that motivated this tool: `cmd | tail` hid a non-building UI.
         var plan = Plan(
             new GateConfig { Name = "pass", Command = "exit 0", TimeoutMinutes = 1 },
             new GateConfig { Name = "fail", Command = "Write-Output 'boom'; exit 3", TimeoutMinutes = 1 });
-        var results = GateRunner.RunAll(plan);
+        var results = await GateRunner.RunAllAsync(plan);
         Assert.True(results[0].Passed);
         Assert.False(results[1].Passed);
         Assert.Equal(3, results[1].ExitCode);
@@ -27,60 +28,60 @@ public class GateRunnerTests
     }
 
     [Fact]
-    public void NativeCommandExitCodePropagates()
+    public async Task NativeCommandExitCodePropagates()
     {
         var plan = Plan(new GateConfig { Name = "git-fail", Command = "git rev-parse --verify definitely-not-a-ref", TimeoutMinutes = 1 });
-        var results = GateRunner.RunAll(plan);
+        var results = await GateRunner.RunAllAsync(plan);
         Assert.False(results[0].Passed);
         Assert.NotEqual(0, results[0].ExitCode);
     }
 
     [Fact]
-    public void SkipsGateWhenProbeMissing()
+    public async Task SkipsGateWhenProbeMissing()
     {
         var plan = Plan(new GateConfig { Name = "later", Command = "exit 1", SkipIfMissing = $"does-not-exist-{Guid.NewGuid():N}.ps1" });
-        var results = GateRunner.RunAll(plan);
+        var results = await GateRunner.RunAllAsync(plan);
         Assert.True(results[0].Skipped);
         Assert.True(GateRunner.AllRequiredPassed(results));
     }
 
     [Fact]
-    public void OptionalGateFailureDoesNotBlock()
+    public async Task OptionalGateFailureDoesNotBlock()
     {
         var plan = Plan(new GateConfig { Name = "advisory", Command = "exit 5", Optional = true, TimeoutMinutes = 1 });
-        var results = GateRunner.RunAll(plan);
+        var results = await GateRunner.RunAllAsync(plan);
         Assert.False(results[0].Passed);
         Assert.True(GateRunner.AllRequiredPassed(results));
     }
 
     [Fact]
-    public void FailureDetailsEmbedsTails()
+    public async Task FailureDetailsEmbedsTails()
     {
         var plan = Plan(new GateConfig { Name = "fail", Command = "Write-Output 'line-one'; Write-Output 'line-two'; exit 2", TimeoutMinutes = 1 });
-        var details = GateRunner.FailureDetails(GateRunner.RunAll(plan));
+        var details = GateRunner.FailureDetails(await GateRunner.RunAllAsync(plan));
         Assert.Contains("Gate `fail` FAILED (exit 2", details);
         Assert.Contains("line-two", details);
     }
 
     [Fact]
-    public void FastOnlyRunsOnlyFastTierGates()
+    public async Task FastOnlyRunsOnlyFastTierGates()
     {
         var plan = Plan(
             new GateConfig { Name = "build", Command = "exit 0", Tier = "fast", TimeoutMinutes = 1 },
             new GateConfig { Name = "tests", Command = "exit 0", Tier = "full", TimeoutMinutes = 1 });
-        var results = GateRunner.RunAll(plan, fastOnly: true);
+        var results = await GateRunner.RunAllAsync(plan, fastOnly: true);
         Assert.Single(results);
         Assert.Equal("build", results[0].Name);
     }
 
     [Fact]
-    public void ParallelGatesAllRunAndKeepOrderAndExitCodes()
+    public async Task ParallelGatesAllRunAndKeepOrderAndExitCodes()
     {
         var plan = Plan(
             new GateConfig { Name = "build", Command = "exit 0", TimeoutMinutes = 1 },
             new GateConfig { Name = "a", Command = "Start-Sleep -Milliseconds 200; exit 0", Parallel = true, TimeoutMinutes = 1 },
             new GateConfig { Name = "b", Command = "Start-Sleep -Milliseconds 200; exit 7", Parallel = true, TimeoutMinutes = 1 });
-        var results = GateRunner.RunAll(plan);
+        var results = await GateRunner.RunAllAsync(plan);
         // batch runs concurrently but results keep the configured order
         Assert.Equal(new[] { "build", "a", "b" }, results.Select(r => r.Name));
         Assert.True(results[0].Passed);
@@ -90,16 +91,16 @@ public class GateRunnerTests
     }
 
     [Fact]
-    public void StageFilterRunsOnlyMatchingStages()
+    public async Task StageFilterRunsOnlyMatchingStages()
     {
         var plan = Plan(
             new GateConfig { Name = "build", Command = "exit 0", TimeoutMinutes = 1 },
             new GateConfig { Name = "mcp-qa", Command = "exit 0", Stages = new() { "L5", "L8" }, TimeoutMinutes = 1 });
 
-        var onL1 = GateRunner.RunAll(plan, currentStage: "L1");
+        var onL1 = await GateRunner.RunAllAsync(plan, currentStage: "L1");
         Assert.Equal(new[] { "build" }, onL1.Select(r => r.Name)); // mcp-qa filtered out on L1
 
-        var onL5 = GateRunner.RunAll(plan, currentStage: "L5");
+        var onL5 = await GateRunner.RunAllAsync(plan, currentStage: "L5");
         Assert.Equal(new[] { "build", "mcp-qa" }, onL5.Select(r => r.Name));
     }
 
@@ -128,12 +129,36 @@ public class GateRunnerTests
     }
 
     [Fact]
-    public void LiveGateProgressReportsRunningThenFinal()
+    public async Task LiveGateProgressReportsRunningThenFinal()
     {
         var plan = Plan(new GateConfig { Name = "build", Command = "exit 0", TimeoutMinutes = 1 });
         var states = new List<string>();
-        GateRunner.RunAll(plan, onGates: g => { if (g.Count > 0) states.Add(g[0].State); });
+        await GateRunner.RunAllAsync(plan, onGates: g => { if (g.Count > 0) states.Add(g[0].State); });
         Assert.Contains("running", states);
         Assert.Contains("pass", states);
+    }
+}
+
+/// <summary>U0.3: <see cref="GateRunner.Summary"/> on a gateless plan (pure, no process spawn —
+/// deliberately not in the Integration-tagged class above).</summary>
+public sealed class GateRunnerSummaryTests
+{
+    [Fact]
+    public void EmptyResults_ReadsGatesGreenNoneConfigured()
+    {
+        Assert.Equal("gates green (none configured)", GateRunner.Summary([]));
+    }
+
+    [Fact]
+    public void NonEmptyResults_JoinsNameAndGlyph()
+    {
+        var results = new[] { new GateResult("build", true, false, false, 0, TimeSpan.Zero, "") };
+        Assert.Equal("build:OK", GateRunner.Summary(results));
+    }
+
+    [Fact]
+    public void EmptyResults_AllRequiredPassedIsVacuouslyTrue()
+    {
+        Assert.True(GateRunner.AllRequiredPassed(Array.Empty<GateResult>()));
     }
 }

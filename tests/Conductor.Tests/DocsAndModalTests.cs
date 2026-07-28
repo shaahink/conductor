@@ -1,6 +1,4 @@
 using Conductor.Core;
-using Conductor.Ui;
-using Spectre.Console;
 
 namespace Conductor.Tests;
 
@@ -39,27 +37,6 @@ public class DocsAndModalTests
     [Fact]
     public void DocsExtractorMissingStageReturnsEmpty()
         => Assert.Equal("", DocsExtractor.ForStage(Doc, "L9"));
-
-    [Fact]
-    public void ModalRendersWithScrollPositionAndDoesNotThrow()
-    {
-        var lines = Enumerable.Range(1, 100).Select(i => $"line {i}").ToList();
-        var writer = new StringWriter();
-        var console = AnsiConsole.Create(new AnsiConsoleSettings
-        {
-            Ansi = AnsiSupport.No,
-            ColorSystem = ColorSystemSupport.NoColors,
-            Out = new AnsiConsoleOutput(writer),
-        });
-        console.Profile.Width = 120;
-        console.Profile.Height = 30;
-        console.Write(DashboardRenderer.BuildModal("thinking", lines, offset: 50, width: 120, height: 30));
-        var outp = writer.ToString();
-        Assert.Contains("thinking", outp);
-        Assert.Contains("line 51", outp);       // window starts at the offset
-        Assert.Contains("/ 100", outp);          // position indicator
-        Assert.DoesNotContain("line 1 ", outp);  // scrolled past the top
-    }
 
     [Fact]
     public void GitViewOnNonRepoIsGracefulNotFatal()

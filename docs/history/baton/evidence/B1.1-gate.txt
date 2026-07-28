@@ -1,0 +1,51 @@
+# B1.1 evidence — Loom plan relocated to examples/loom/; loads + --dry-run green from the NEW path
+# Produced: 2026-07-08
+# Driver: C:\Code\conductor\bin\conductor.exe (STABLE, built 07/07/2026 22:13:32 from master)
+#
+# WHAT MOVED (git mv — rename, history preserved):
+#   plans/loom.plan.json          -> examples/loom/loom.plan.json
+#   plans/loom.opencode.plan.json -> examples/loom/loom.opencode.plan.json
+#   plans/templates/{advisor,fix,resume,session}.md -> examples/loom/templates/
+# Refs updated: README.md (quick-start + control verbs + config pointer),
+#   examples/README.md (drop "until B1.1 runs" caveat), PlanConfigTests.cs (locator path).
+# plans/ now holds ONLY the self-plan + baton-templates (as designed — see examples/README.md).
+#
+# GATE (B1.md): `conductor run --dry-run -p examples/loom/loom.opencode.plan.json` renders.
+# Run against a FIXTURE repo, NOT the live DevContext2-ui run (dry-run still touches the
+# target repo's .conductor via AcquireLock/EnsureStateDirGitignore — Orchestrator.cs:36-37).
+# The relocated examples/loom dir (plan + templates/) was copied next to the fixture and ONLY
+# the repo path rewritten to the fixture; templatesDir:"templates" resolves relative to the
+# plan's own dir, proving the templates travelled with the plan to the new location.
+#
+# PROOF the RELOCATED templates were used (not the built-in fallback):
+#   examples/loom/templates/session.md renders "target stage {stage} — {stageTitle}" with an
+#   EM-DASH (—); the built-in PromptBuilder default uses a HYPHEN (-). The dry-run output below
+#   shows the em-dash → the file template from examples/loom/templates/ was loaded.
+# =============================================================================
+
+[05:12:00] conductor start — plan 'Loom', repo C:/Users/shahi/AppData/Local/Temp/opencode/loom-fixture, branch feat/loom-l0
+[05:12:00] stage → L0 Truth harness
+--- DRY RUN: would start session #1 (Deliver, stage L0) with prompt: ---
+You are one autonomous engineering session inside the "Loom" mega plan, launched by the Conductor orchestrator (session #1, target stage L0 — Truth harness, attempt 1/4).
+
+Work in: C:/Users/shahi/AppData/Local/Temp/opencode/loom-fixture
+
+Do, in order:
+1. PRE-SESSION RITUAL — exactly as `docs/dev/briefs/proposal-loom.md` prescribes: read `LOOM-START.md` (handoff block + stated read order), your stage section, and the design docs it cites. Run the gate battery. Never build on red — fix or record first.
+2. QA THE PREVIOUS SESSION — audit its tracker claims against fresh artifacts (re-run things; do not trust claims). Fix real findings before new work; note the QA verdict in your final tracker handoff.
+3. DELIVER the next incomplete checkpoint(s) of stage L0 only. One checkpoint landed with proof beats three claimed. Do not start other stages' work.
+4. POST-SESSION RITUAL — re-run the gate battery plus your stage's truth gates; produce fresh evidence artifacts; update `LOOM-START.md` (overwrite the handoff block, fill checkpoint rows: Status, Commit, Evidence); commit per checkpoint using the plan's commit convention; push the branch.
+
+Conductor rules (in addition to the plan's):
+- Evidence or it didn't happen: a checkpoint without a fresh artifact path is not DONE.
+- Never weaken gates, goldens, or truth files to get green — ratchet-only policy.
+- If genuinely blocked on a human decision, set the row BLOCKED, add a line starting `HUMAN:` to the tracker handoff block, commit, push, and end the session.
+- Leave the working tree clean (commit or revert leftovers) and the branch pushed.
+- End by printing one paragraph starting with `SESSION-RESULT:` — what landed, what is red, what the next session should do.
+
+# =============================================================================
+# GATE BATTERY (this worktree, after the move + ref updates):
+#   dotnet build Conductor.slnx  -> Build succeeded. 0 Warning(s) 0 Error(s)
+#   dotnet test  Conductor.slnx  -> Passed! Failed: 0, Passed: 56, Skipped: 0, Total: 56
+# PlanConfigTests.ShippedLoomPlanParsesWhenPresent now locates the plan at its new
+# examples/loom/ path and still asserts the pnpm/mcp stage-scoping — green.

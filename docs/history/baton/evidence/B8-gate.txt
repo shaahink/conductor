@@ -1,0 +1,61 @@
+# B8 evidence — Brain layer
+# Produced: 2026-07-08 (session #47, stage B8, attempt 1/4)
+# Stable driver: C:\Code\conductor\bin\conductor.exe (from master)
+# In-tree build: C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.dll
+
+### GATE BATTERY (green) ###
+$ dotnet build Conductor.slnx
+Build succeeded. 0 Warning(s), 0 Error(s).
+
+$ dotnet test Conductor.slnx
+Passed! - Failed: 0, Passed: 326, Skipped: 0, Total: 326 - Conductor.Tests.dll (net10.0)
+
+### B8.1 — Reflection → bounded lessons.md (VERIFIED) ###
+- LessonsManager: manages .conductor/lessons.md with bounded, rotating entries
+- Append(): newest-first ordering, byte-capped (default 8KB), oldest evicted past cap
+- ReadContent() + ReadRecent(maxEntries) for prompt injection
+- StripHeader() separates entries from metadata
+- Integration: ReflectionStep() called after every session, extracts "what was hard"
+  from SESSION-RESULT: text
+- Tests: 9 LessonsManagerTests (file creation, ordering, rotation, entry count,
+  empty/whitespace, dir creation) — all pass
+
+### B8.2 — {lessons} battery injected into next prompt (VERIFIED) ###
+- PromptBuilder.Vars() now includes ["lessons"] from LessonsManager.ReadRecent(5)
+- {lessons} template variable available for custom templates; battery section also
+  injects lessons automatically via BatterySection() + Orchestrator.RunSession()
+- Tests: LessonsInjectedViaBatterySection, LessonsVariableEmptyWhenNoFile — all pass
+
+### B8.3 — Self-review stage kind (VERIFIED) ###
+- StageConfig.Kind property added (default "deliver", also "review")
+- Review stages: Orchestrator scaffolds .conductor/reviews/<stage>.md before session
+- Built-in review.md template: structures self-review into wins/hard/risks/adjustments
+- PromptBuilder.Review() method with {reviewPath} variable
+- Review artifact is ADVISORY ONLY — never auto-applied
+- Gate: a review stage produces .conductor/reviews/<stage>.md (skeleton written pre-session)
+
+### B8.4 — Handover → followups.md (VERIFIED) ###
+- ParseAuditFollowups(): parses .conductor/handovers/<stage>.md for "Weak / deferred"
+  and "Bugs not fixed" sections
+- Extracts bullet items, deduplicates against existing followups.md by title match
+- Tracks as FU-<stage>-NN rows in machine-readable .conductor/followups.md
+- Called after each audit session completes (EvaluateSession, audit branch)
+
+### B8.5 — IPromptBattery list + token rollover (VERIFIED) ###
+- IPromptBattery interface: Name, Section, IsEmpty
+- LessonsBattery: injects last N lessons from lessons.md
+- RecentFailureBattery: injects last failed session's summary (if any)
+- BatteryGroup: composes in order, byte-capped, skips empty batteries
+- BatteriesConfig in plan JSON: opt-in per plan (lessons, recentFailure, maxBytes)
+- SessionOutcome.RolledOver: new outcome for token budget rollover
+- LimitsConfig.MaxSessionTokens: per-session token cap (null = unlimited)
+- RunSession checks rec.TokensTotal >= maxSessionTokens → RolledOver, no attempt burned
+- Tests: 7 PromptBatteryTests (lessons, recent-failure, composition, bounds, empty)
+
+### Self-plan config additions ###
+- limits.maxSessionTokens: 2,000,000 (per-session rollover cap)
+- batteries: { lessons: true, recentFailure: true, lessonsMaxEntries: 3, maxBytes: 2048 }
+
+### CONCLUSION ###
+B8.1–B8.5 all landed. 326 tests green, 0 warnings, 0 errors. No analyzer suppressions,
+no lowered severity. 10 files changed (4 new, 6 modified) — within 15-file budget.

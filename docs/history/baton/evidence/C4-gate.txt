@@ -1,0 +1,51 @@
+=== C4 — Small debt sweep (gate battery) ===
+Date: 2026-07-09
+Host: MSI
+OS: Windows
+Session: #71
+
+--- Build ---
+dotnet build Conductor.slnx --nologo
+  Build succeeded. 0 Warning(s) 0 Error(s)
+
+--- Full Tests ---
+dotnet test Conductor.slnx --no-build --nologo
+  Passed! - Failed: 0, Passed: 497, Skipped: 0, Total: 497
+
+--- New tests (4 new) ---
+  AltScreenTests.SafetyNet_RegistersAndCleansUpProcessExit (FU-B4-2)
+  B11_2Tests.Completion_ContainsAllRegisteredVerbs_Exhaustive (FU-B11-1)
+  PromptBuilderTests.PersonaDivergence_DifferentPersonasProduceDifferentPrompts
+  B6_1TelegramTests.CallbackDataFormat_RoundTripsFromKeyboardToParse
+
+--- What landed ---
+FU-B0-4: fake-agent.ps1 `gatesred` renamed to `no-commits` (accurate: the mode skips commits,
+  not gates). Added `true-red` mode that writes a compile-breaking file for real gate-red
+  detection (tools/fake-agent.ps1).
+
+FU-B4-2: AltScreen safety-net test (AltScreenTests.cs) — verifies ProcessExit handler idempotency
+  and cleanup. Real signal/process test remains manual (Needs Human Verification item).
+
+FU-B4-3: Status-agent CancellationToken threading (LiveDashboard.cs) — `_statusCts` cancels
+  in-flight agent on modal close. Previously fire-and-forget leaked the task.
+
+FU-B10-3: HookConfig.TimeoutMinutes=0 rejected in PlanConfig.Validate() with clear error.
+
+FU-B10-4: ComputeDepth pre-computed once in SnapshotBuilder.PreComputeDepths() instead of
+  allocating per-stage HashSet. O(n·d) → O(n).
+
+FU-B11-1: Completion exhaustiveness test (B11_2Tests.cs) — asserts PowerShell and bash completion
+  verb lists contain all 20 registered commands and no stale ones.
+
+FU-B1-3: ScriptProvider now validates checkpoint id/title before conversion to CheckpointRow.
+
+FU-B0-7: CA1031 closed — suggestion severity appropriate since B2 structured logging (Serilog)
+  surfaces all boundary catches.
+
+LessonsManager: Lock gate added for thread-safety on Append.
+
+Persona divergence: test proves architect/qa/planner produce meaningfully different prompts.
+
+Telegram: callback-data format round-trip test verifies keyboard→control.json bridge.
+
+Battery-collapse: ComputeDepth memoization reduces allocation in hot Build path.

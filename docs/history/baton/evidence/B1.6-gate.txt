@@ -1,0 +1,34 @@
+=== B1.6 gate battery - new-plan scaffold + schema version ===
+date: 2026-07-08
+branch: feat/baton
+
+--- dotnet build Conductor.slnx ---
+Build succeeded. 0 Warning(s), 0 Error(s). net10.0.
+
+--- dotnet test Conductor.slnx (full battery) ---
+Passed!  - Failed: 0, Passed: 80 (pre-B1.7), Skipped: 0, Total: 80
+
+--- focused: PlanConfigTests (version + validation) ---
+DefaultPlanHasVersion1_0, UnsupportedVersionThrows, MissingVersionDefaultsTo1_0,
+MissingVersionLoadsAs1_0, ValidationReportsAllErrorsNotJustFirst — all pass.
+
+--- A6: live artifact ---
+conductor new-plan --template dotnet → produces conductor.plan.json + TRACKER.md
+→ PlanConfig.Load() succeeds (Validate() passes with repo + tracker + agent)
+→ conductor status -p <gen> → renders plan with stages, checkpoints, gate list
+→ conductor run --dry-run -p <gen> → outputs full session prompt (variables filled)
+→ STABLE driver (C:\Code\conductor\bin\conductor.exe) also dry-runs the generated plan
+
+--- A6: all 4 templates generate loadable plans ---
+dotnet:   verified (build + tests gates)
+node:     verified (lint + test + build gates)
+minimal:  verified (no gates)
+shamshir: verified (irregular conventions: stageIdPattern for P-0/P3.4b/F5, verbatim)
+
+--- schema version ---
+PlanConfig.Version (string, default "1.0") with fail-fast Validate() upgrade:
+- version != "1.0" → clear diagnostic naming the unsupported version
+- missing version → back-compat, reads as "1.0"
+- enhanced per-field messages (repo/tracker/stages/agent/args/gates)
+- duplicate stage-id detection
+- all errors accumulated and reported (not fail-on-first)

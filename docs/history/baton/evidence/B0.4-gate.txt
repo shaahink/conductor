@@ -1,0 +1,55 @@
+# B0.4 evidence — token-free --once smoke through the STABLE driver
+# Produced: 2026-07-08 04:33
+# Driver: C:\Code\conductor\bin\conductor.exe (built 07/07/2026 22:13:32 from master)
+#
+# FINDING FIXED THIS SESSION (anti-pattern A6, ship-without-launch): the prior
+# fake-agent.ps1 was "verified standalone" but had NEVER been run through the real
+# driver — and it CRASHED it. AgentSession.ParseOpencode (AgentSession.cs:123) reads
+# opencode-json payloads nested under `part` (part.text / part.state.title /
+# part.cost [NUMBER] / part.tokens.{...}); the script emitted them flat at root, so
+# TryGetProperty on the absent `part` threw InvalidOperationException and crashed the run.
+# Also: opencode-json has NO `result` event (that is Claude's stream-json) — the driver
+# builds ResultText from `text` events. Both fixed; the re-runs below are green.
+#
+# SCENARIO 1 — success: fake agent flips TODO->DONE + commits.
+#   verdict: "Advanced — B0.2 done" (gates green - commits 1 - newly DONE [B0.2])
+# SCENARIO 2 — gatesred: fake agent flips tracker but does NOT commit.
+#   verdict: "NoProgress — queuing fix session" (commits 0) — the trust model refuses
+#   the unverified tracker flip. Proves the three-way check (gates + commit + diff).
+# =============================================================================
+
+===== SCENARIO 1: success =====[04:32:58] conductor start GÇö plan 'BatonSmoke', repo C:/Users/shahi/AppData/Local/Temp/baton-self-test, branch feat/baton
+[04:32:58] stage GåÆ B0 Smoke
+[04:32:58] session #1 start GÇö Deliver B0 attempt 1/1
+[04:32:58] GöÇGöÇ Running -+ stage B0 -+ 1/2 done -+ $0.00 -+ session 00:00:00, last output 0s ago
+[03:32:58]   text   Reading tracker and plan docs...
+[03:32:59]   tool   Edit SMOKE-START.md
+[03:32:59]   tool   Bash git add -A; git commit
+[03:32:59]   text   SESSION-RESULT: delivered, gates green.
+[04:32:59] session #1 exited (code 0, 0m, $0.00)
+[04:32:59] verifying independently: fast gates + git + tracker diff (full battery at phase end)
+[04:32:59] gate build: exit 0
+[04:32:59] gate build: PASS in 0s
+[04:32:59] verdict inputs: gates green -+ commits 1 -+ newly DONE [B0.2] -+ dirty YES
+[04:32:59] note: working tree left dirty after green session: M once-raw.txt
+[04:32:59] session #1 Advanced GÇö B0.2 done
+[04:32:59] stage B0 checkpoints all DONE GÇö scheduling full-battery phase gate
+[04:32:59] --once: stopping after one session
+
+
+===== SCENARIO 2: gatesred =====
+[04:30:20] conductor start GÇö plan 'BatonSmoke', repo C:/Users/shahi/AppData/Local/Temp/baton-self-test, branch feat/baton
+[04:30:20] stage GåÆ B0 Smoke
+[04:30:20] session #1 start GÇö Deliver B0 attempt 1/1
+[04:30:20] GöÇGöÇ Running -+ stage B0 -+ 1/2 done -+ $0.00 -+ session 00:00:00, last output 0s ago
+[03:30:20]   text   Reading tracker and plan docs...
+[03:30:21]   tool   Edit SMOKE-START.md
+[03:30:21]   text   Skipping commit for gates-red scenario.
+[03:30:21]   text   SESSION-RESULT: tracker updated but no commit.
+[04:30:21] session #1 exited (code 0, 0m, $0.00)
+[04:30:21] verifying independently: fast gates + git + tracker diff (full battery at phase end)
+[04:30:21] gate build: exit 0
+[04:30:21] gate build: PASS in 0s
+[04:30:21] verdict inputs: gates green -+ commits 0 -+ newly DONE [B0.2] -+ dirty YES
+[04:30:21] session #1 NoProgress GÇö queuing fix session (attempt 1/1)
+[04:30:21] --once: stopping after one session

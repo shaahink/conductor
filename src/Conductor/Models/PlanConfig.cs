@@ -1,11 +1,20 @@
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace Conductor.Models;
 
 /// <summary>The per-mega-plan configuration file (e.g. plans/loom.plan.json).</summary>
 public sealed class PlanConfig
 {
+    /// <summary>Schema version. Currently only "1.0" is supported; a plan without a version or
+    /// with an unsupported version is rejected with a clear diagnostic (B1.6).</summary>
+    public string Version { get; set; } = "1.0";
+    /// <summary>P1: Monotonic plan-edit counter, bumped on every modification (set, reload, add-stage).
+    /// Starts at 1; the orchestrator can compare this against its loaded value to detect
+    /// external edits at session boundaries.</summary>
+    public int PlanVersion { get; set; } = 1;
     public string Name { get; set; } = "plan";
     public string Repo { get; set; } = "";
     public string Tracker { get; set; } = "";
@@ -18,25 +27,100 @@ public sealed class PlanConfig
     public HookConfig? Setup { get; set; }
     /// <summary>Optional command run after each gate battery to stop anything the session/gates left running.</summary>
     public HookConfig? Teardown { get; set; }
+    /// <summary>Selects and configures the progress provider (B1.3). Default = markdown-table (Loom's
+    /// strict TRACKER.md), so existing plans are unchanged. `script` and `plan-checkpoints` are the
+    /// escape hatches for projects whose progress isn't a strict markdown table (F-1, D-2).</summary>
+    public ProgressConfig Progress { get; set; } = new();
+    /// <summary>Per-plan progress conventions (B1.4, R1.3): checkpoint-id shape, handoff marker,
+    /// human token, status vocabulary. Defaults reproduce Loom's original behaviour, so existing
+    /// plans are unchanged; a differently-shaped tracker (e.g. Shamshir's P-0/P3.4b/F5 ids) overrides
+    /// only what differs.</summary>
+    public ProgressConventions Conventions { get; set; } = new();
     public List<StageConfig> Stages { get; set; } = new();
     public List<GateConfig> Gates { get; set; } = new();
-    /// <summary>"perSession" (full battery after every session) or "perPhase" (fast-tier gates per
-    /// session, full battery only when a stage's checkpoints are all DONE). Default perSession.</summary>
+    /// <summary>"perSession" (full battery every session) or "perPhase" (fast gates/session, full battery at stage-done). Default perSession.</summary>
     public string GatePolicy { get; set; } = "perSession";
     public AuditConfig? Audit { get; set; }
+    public bool VerifyEachDelivery { get; set; } = true; // false: skip per-Deliver Verify, rely on Audit/full battery (M3 stopgap)
     /// <summary>On-demand read-only "what's the status?" agent (dashboard `G` key). Default null → disabled.</summary>
     public StatusAgentConfig? StatusAgent { get; set; }
     public LimitsConfig Limits { get; set; } = new();
     public ReportConfig Report { get; set; } = new();
     public NotifyConfig? Notify { get; set; }
-    public string TemplatesDir { get; set; } = "templates";
+    public TelegramConfig? Telegram { get; set; }
     public string PromptExtra { get; set; } = "";
 
-    [JsonIgnore] public string PlanFilePath { get; private set; } = "";
+    /// <summary>Directory (relative to the plan file) holding the session templates — <c>session.md</c>,
+    /// <c>fix.md</c>, <c>verify.md</c>, … — and a <c>packs/</c> subdirectory. Falls back to the plan
+    /// directory itself, then to the built-in defaults. Prompts are editable content, not code: this is
+    /// what makes the .md files on disk the thing that actually ships to the agent.</summary>
+    public string? TemplatesDir { get; set; }
+
+    /// <summary>"Batteries included" domain packs merged into every prompt as <c>{packs}</c>, by name;
+    /// each resolves to <c>&lt;templatesDir&gt;/packs/&lt;name&gt;.md</c>. Use them to carry house style and
+    /// the mistakes agents habitually make in this codebase's domain (e.g. <c>dotnet-engineer</c>,
+    /// <c>modern-csharp</c>, <c>agent-pitfalls</c>) rather than restating them in every stage's notes.</summary>
+    public List<string> Packs { get; set; } = [];
+
+    /// <summary>Opt-in prompt batteries for bounded context injection (B8.5). null = none.</summary>
+    public BatteriesConfig? Batteries { get; set; }
+    /// <summary>When true, the agent is instructed to skip its own pre-session build+test ritual
+    /// and defer to Conductor's battery, which remains the single source of truth (B10.4). This
+    /// saves ~30-50% of agent-output tokens that were spent echoing build/test output that Conductor
+    /// re-runs anyway. Default false (back-compat).</summary>
+    public bool BatteryCollapse { get; set; }
+    /// <summary>Mandated docs to read in order at session start (paths relative to repo root).
+    /// Rendered as an ordered list in the session prompt. Empty/null = no list rendered (B1.5).</summary>
+    public List<string>? ReadOrder { get; set; }
+    /// <summary>Read-only analysis lanes that run concurrently with sessions (B12.1 Tier A).
+    /// Each lane spawns an agent in a scratch temp directory — it can never write the working tree.</summary>
+    public List<AnalysisLaneConfig> AnalysisLanes { get; set; } = new();
+    /// <summary>Tier B isolated-worktree mutating lanes that run behind a full-battery merge gate
+    /// (B12.3). Each lane runs in its own <c>git worktree</c> on a scratch branch; the lane's
+    /// changes are only merged into the primary tree if the merge-gate battery is green.</summary>
+    public List<MutatingLaneConfig> MutatingLanes { get; set; } = new();
+    /// <summary>Plan-level workflow definitions keyed by name. When a stage or the plan references
+    /// a workflow name not in this dictionary, the built-in definitions (deliver-verify, etc.) are used
+    /// as fallbacks (M3.1).</summary>
+    public Dictionary<string, WorkflowDefinition>? Workflows { get; set; }
+    /// <summary>The default workflow name used for stages that don't specify one. Falls back to
+    /// "deliver-verify" when unset (M3.1).</summary>
+    public string? DefaultWorkflow { get; set; }
+
+    /// <summary>P0: the declarative pipeline rules block (<see cref="PipelineRules"/>, owned by
+    /// Conductor.Planning). Absent = null = every default reproduces the classic behavior exactly —
+    /// an existing plan with no `pipeline` block is byte-for-byte unchanged. P1 populates
+    /// roles/multi-item, P2 the QA dial.</summary>
+    public PipelineRules? Pipeline { get; set; }
+
+    [JsonIgnore] public string PlanFilePath { get; internal set; } = "";
     [JsonIgnore] public string PlanDir => Path.GetDirectoryName(PlanFilePath) ?? ".";
     [JsonIgnore] public string StateDir => Path.Combine(Repo, ".conductor");
     [JsonIgnore] public string TrackerPath => Path.Combine(Repo, Tracker);
     [JsonIgnore] public bool PerPhaseGates => GatePolicy.Equals("perPhase", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Resolve the effective agent config for a stage: stage.Agent overrides plan.Agent
+    /// field-by-field via <see cref="AgentConfig.Merge"/>. When both are null/empty a fresh default
+    /// is returned so callers never dereference null (B7.1).</summary>
+    public AgentConfig ResolveAgent(StageConfig stage)
+        => Agent?.Merge(stage.Agent) ?? stage.Agent ?? new AgentConfig();
+
+    /// <summary>Resolve the persona name for a stage — stage.Persona falls back to plan-wide
+    /// scrape from stage.Notes (the "Persona: X" hint convention that existed before B7 landed).</summary>
+    public string? ResolvePersona(StageConfig stage)
+    {
+        if (!string.IsNullOrWhiteSpace(stage.Persona)) return stage.Persona;
+        // Fall back: parse legacy "Persona: architect" hints from notes (pre-B7 convention)
+        if (!string.IsNullOrWhiteSpace(stage.Notes))
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(stage.Notes,
+                @"Persona:\s*(?<persona>[\w-]+)",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.ExplicitCapture,
+                ProgressConventions.RegexTimeout);
+            if (match.Success) return match.Groups["persona"].Value;
+        }
+        return null;
+    }
 
     public static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -61,129 +145,192 @@ public sealed class PlanConfig
         return cfg;
     }
 
-    private void Validate()
+    public void Save()
     {
-        var errors = new List<string>();
-        if (string.IsNullOrWhiteSpace(Repo) || !Directory.Exists(Repo)) errors.Add($"repo not found: '{Repo}'");
-        else if (!File.Exists(TrackerPath)) errors.Add($"tracker not found: {TrackerPath}");
-        if (Stages.Count == 0) errors.Add("no stages defined");
-        if (string.IsNullOrWhiteSpace(Agent.Command)) errors.Add("agent.command missing");
-        if (!Agent.Args.Any(a => a.Contains("{prompt}"))) errors.Add("agent.args must contain a {prompt} placeholder");
+        BumpVersion();
+        var json = JsonSerializer.Serialize(this, JsonOpts);
+        File.WriteAllText(PlanFilePath, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+    }
+
+    public void BumpVersion() => PlanVersion++;
+
+    public void AddStage(StageConfig stage)
+    {
+        Stages.Add(stage);
+        BumpVersion();
+    }
+
+    internal void Validate()
+    {
+        var errors = CollectErrors();
         if (errors.Count > 0)
             throw new InvalidOperationException("Invalid plan config:\n  - " + string.Join("\n  - ", errors));
     }
-}
 
-public sealed class AgentConfig
-{
-    public string Command { get; set; } = "claude";
-    /// <summary>Placeholders: {prompt} {sessionId}</summary>
-    public List<string> Args { get; set; } = new();
-    /// <summary>Used to resume a stalled/interrupted agent session. Placeholders: {prompt} {claudeSessionId}</summary>
-    public List<string>? ResumeArgs { get; set; }
-    /// <summary>"stream-json" (claude) or "text" (opencode etc.)</summary>
-    public string Output { get; set; } = "stream-json";
-}
+    /// <summary>Gathers configuration problems without throwing, so both <see cref="Load"/> (fail-fast)
+    /// and the Options validator (<c>IValidateOptions&lt;PlanConfig&gt;</c>, validated on host start, B2.5)
+    /// share one source of truth.</summary>
+    internal List<string> CollectErrors()
+    {
+        var errors = new List<string>();
 
-public sealed class HookConfig
-{
-    /// <summary>PowerShell command line, run with real exit-code capture. Best-effort: a nonzero exit never blocks the run.</summary>
-    public string Command { get; set; } = "";
-    /// <summary>Working dir relative to repo root (default: repo root).</summary>
-    public string? Cwd { get; set; }
-    public int TimeoutMinutes { get; set; } = 3;
-}
+        // Schema version check (B1.6). A plan with no `version` deserialises to the "1.0" default
+        // (back-compat), so only an explicit unsupported value is rejected.
+        if (Version != "1.0")
+            errors.Add($"plan.version is '{Version}' but only \"1.0\" is supported — upgrade the plan or set version to \"1.0\"");
 
-public sealed class AdvisorConfig
-{
-    public bool Enabled { get; set; } = true;
-    public string Command { get; set; } = "claude";
-    public List<string> Args { get; set; } = new();
-    /// <summary>"text" or "json" (claude -p --output-format json envelope)</summary>
-    public string Output { get; set; } = "text";
-    public int TimeoutMinutes { get; set; } = 6;
-}
+        if (string.IsNullOrWhiteSpace(Repo)) errors.Add("plan.repo is empty — set it to the absolute path of the repository dir");
+        else if (!Directory.Exists(Repo)) errors.Add($"plan.repo '{Repo}' does not exist — create the dir or correct the path");
+        else if (!File.Exists(TrackerPath)) errors.Add($"plan.tracker '{Tracker}' not found at {TrackerPath} — create the file or correct path/repo");
 
-/// <summary>On-demand "what's the status?" agent (dashboard `G` key). Runs read-only: all context is
-/// embedded in the prompt and it executes in a scratch cwd, so it can't touch the working repo.</summary>
-public sealed class StatusAgentConfig
-{
-    public bool Enabled { get; set; } = true;
-    public string Command { get; set; } = "opencode";
-    /// <summary>Placeholders: {prompt}</summary>
-    public List<string> Args { get; set; } = new() { "run", "{prompt}", "-m", "deepseek/deepseek-v4-pro" };
-    public int TimeoutMinutes { get; set; } = 5;
-}
+        if (Stages.Count == 0) errors.Add("plan.stages is empty — define at least one stage with id, title, and sessions");
+        else
+        {
+            var dupes = Stages.GroupBy(s => s.Id, StringComparer.Ordinal).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+            if (dupes.Count > 0) errors.Add($"duplicate stage ids: {string.Join(", ", dupes)} — each stage must have a unique id");
+            foreach (var s in Stages)
+            {
+                if (string.IsNullOrWhiteSpace(s.Id)) errors.Add("a stage is missing its id — every stage needs an id field");
+                else if (s.Id.Length > 20) errors.Add($"stage '{s.Id}' id is too long ({s.Id.Length} chars) — keep ids under 20 chars");
+            }
 
-public sealed class StageConfig
-{
-    public string Id { get; set; } = "";
-    public string Title { get; set; } = "";
-    /// <summary>Expected session count from the plan doc; attempt budget = sessions * limits.stageSlackFactor.</summary>
-    public int Sessions { get; set; } = 2;
-    /// <summary>Optional stage-specific text appended to the session prompt.</summary>
-    public string? Notes { get; set; }
-}
+            // B10.1: dependency validation
+            var stageIds = Stages.Select(s => s.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (var s in Stages)
+            {
+                if (s.DependsOn is not { Count: > 0 }) continue;
+                foreach (var dep in s.DependsOn)
+                {
+                    if (!stageIds.Contains(dep))
+                        errors.Add($"stage '{s.Id}' dependsOn '{dep}' which is not a known stage id");
+                    if (dep.Equals(s.Id, StringComparison.OrdinalIgnoreCase))
+                        errors.Add($"stage '{s.Id}' dependsOn itself — circular self-dependency");
+                }
+            }
 
-public sealed class GateConfig
-{
-    public string Name { get; set; } = "";
-    /// <summary>PowerShell command line, run with real exit-code capture.</summary>
-    public string Command { get; set; } = "";
-    /// <summary>Working dir relative to repo root (default: repo root).</summary>
-    public string? Cwd { get; set; }
-    /// <summary>Optional gates report but never block.</summary>
-    public bool Optional { get; set; }
-    /// <summary>Skip the gate while this repo-relative path does not exist yet.</summary>
-    public string? SkipIfMissing { get; set; }
-    /// <summary>"fast" gates also run per-session under perPhase policy; "full" gates run only at
-    /// phase end (and every session under perSession policy). Default "full".</summary>
-    public string Tier { get; set; } = "full";
-    /// <summary>Gates sharing a truthy parallel flag run concurrently within their battery.</summary>
-    public bool Parallel { get; set; }
-    /// <summary>If set, this gate only runs while the current stage id is in this list (doc-scoped
-    /// gates, e.g. mcp-qa on MCP phases only). Empty/null = runs on every stage.</summary>
-    public List<string>? Stages { get; set; }
-    public int TimeoutMinutes { get; set; } = 20;
+            if (HasDependencyCycle())
+                errors.Add("plan.stages has a dependency cycle — fix the dependsOn graph so every stage can eventually become ready");
 
-    [JsonIgnore] public bool IsFast => Tier.Equals("fast", StringComparison.OrdinalIgnoreCase);
+            // B10.2: parent hierarchy validation
+            foreach (var s in Stages)
+            {
+                if (string.IsNullOrEmpty(s.ParentId)) continue;
+                if (s.ParentId.Equals(s.Id, StringComparison.OrdinalIgnoreCase))
+                    errors.Add($"stage '{s.Id}' has parentId '{s.ParentId}' which references itself");
+                else if (!stageIds.Contains(s.ParentId))
+                    errors.Add($"stage '{s.Id}' has parentId '{s.ParentId}' which is not a known stage id");
+            }
 
-    public bool AppliesToStage(string? stageId)
-        => Stages is not { Count: > 0 } || (stageId != null && Stages.Contains(stageId, StringComparer.OrdinalIgnoreCase));
-}
+            if (HasParentCycle())
+                errors.Add("plan.stages has a parent hierarchy cycle — fix the parentId chain so no stage is its own ancestor");
 
-public sealed class AuditConfig
-{
-    public bool Enabled { get; set; } = true;
-    /// <summary>Max audit sessions per phase before giving up and moving on (or escalating).</summary>
-    public int MaxAttempts { get; set; } = 1;
-}
+            // W1.2 (G13): inline declared work must cover real stages. An inline checkpoint whose
+            // derived stage is not in the plan can never be scheduled — that is an authoring error,
+            // caught here rather than as a mid-run surprise. (Tracker-file coverage is checked by
+            // `doctor` — the tracker is a generated view and validating it here would deadlock the
+            // authoring flow that regenerates it.)
+            if (Progress?.Checkpoints is { Count: > 0 } inline)
+            {
+                var dupCps = inline.GroupBy(c => c.Id, StringComparer.OrdinalIgnoreCase)
+                    .Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+                if (dupCps.Count > 0)
+                    errors.Add($"duplicate progress.checkpoints ids: {string.Join(", ", dupCps)} — each work item needs a unique id");
+                foreach (var cp in inline)
+                {
+                    if (string.IsNullOrWhiteSpace(cp.Id)) { errors.Add("a progress.checkpoints item is missing its id"); continue; }
+                    var owner = Conventions.DeriveStageId(cp.Id);
+                    if (!stageIds.Contains(owner))
+                        errors.Add($"progress.checkpoints item '{cp.Id}' derives stage '{owner}' which is not in plan.stages — fix the id or add the stage");
+                }
+            }
+        }
 
-public sealed class LimitsConfig
-{
-    /// <summary>No agent output for this long → session considered stalled and killed (then resumed).</summary>
-    public int StallMinutes { get; set; } = 12;
-    public int SessionTimeoutMinutes { get; set; } = 240;
-    public int MaxResumesPerSession { get; set; } = 2;
-    /// <summary>Attempt budget per stage = stage.sessions * this.</summary>
-    public int StageSlackFactor { get; set; } = 2;
-    /// <summary>Wait time when the agent backend reports a usage/rate limit.</summary>
-    public int BackoffMinutes { get; set; } = 30;
-    public int MaxBackoffs { get; set; } = 10;
-}
+        if (string.IsNullOrWhiteSpace(Agent.Command)) errors.Add("plan.agent.command is required — set the CLI command used to spawn agent sessions");
+        if (Agent.Args.Count == 0) errors.Add("plan.agent.args is empty — add at least a {prompt} placeholder");
+        else if (!Agent.Args.Any(a => a.Contains("{prompt}", StringComparison.Ordinal))) errors.Add("plan.agent.args must contain a {prompt} placeholder — agent won't receive instructions without it");
 
-public sealed class ReportConfig
-{
-    public bool Commit { get; set; } = true;
-    public bool Push { get; set; } = true;
-    /// <summary>During a long session, rewrite+commit REPORT.md every N minutes with the latest agent
-    /// activity so the AFK GitHub view reflects live progress. 0 = only report at session boundaries.</summary>
-    public int HeartbeatMinutes { get; set; }
-}
+        if (Gates.Any(g => string.IsNullOrWhiteSpace(g.Command)))
+            errors.Add("a gate is missing its command — every gate needs a shell command to run");
 
-public sealed class NotifyConfig
-{
-    /// <summary>Command run on needs-attention / completion. Placeholders in args: {message}</summary>
-    public string Command { get; set; } = "";
-    public List<string> Args { get; set; } = new();
+        // B10 trace: reject zero/negative timeouts on hooks (FU-B10-3).
+        if (Setup != null && !string.IsNullOrWhiteSpace(Setup.Command) && Setup.TimeoutMinutes < 1)
+            errors.Add("plan.setup.timeoutMinutes must be >= 1 (was " + Setup.TimeoutMinutes + ")");
+        if (Teardown != null && !string.IsNullOrWhiteSpace(Teardown.Command) && Teardown.TimeoutMinutes < 1)
+            errors.Add("plan.teardown.timeoutMinutes must be >= 1 (was " + Teardown.TimeoutMinutes + ")");
+        foreach (var s in Stages)
+        {
+            if (s.PreHook != null && !string.IsNullOrWhiteSpace(s.PreHook.Command) && s.PreHook.TimeoutMinutes < 1)
+                errors.Add($"stage '{s.Id}' pre-hook timeoutMinutes must be >= 1 (was {s.PreHook.TimeoutMinutes})");
+            if (s.PostHook != null && !string.IsNullOrWhiteSpace(s.PostHook.Command) && s.PostHook.TimeoutMinutes < 1)
+                errors.Add($"stage '{s.Id}' post-hook timeoutMinutes must be >= 1 (was {s.PostHook.TimeoutMinutes})");
+        }
+
+        // P2: a typo'd QA dial must never silently project to classic behavior on a live run —
+        // reject it here so the plan can't load with a dial that looks active but isn't.
+        ValidateQaRule(Pipeline?.Qa, "plan.pipeline.qa", errors);
+        foreach (var s in Stages)
+            ValidateQaRule(s.Qa, $"stage '{s.Id}' qa", errors);
+
+        return errors;
+    }
+
+    private static void ValidateQaRule(QaRule? qa, string where, List<string> errors)
+    {
+        if (qa is null) return;
+        if (!DefaultQaPolicy.IsValidMode(qa.Mode))
+            errors.Add($"{where}.mode is '{qa.Mode}' — use off, everySession, or phaseGate");
+        if (qa.VerifierThreshold is { } t && t is < 1 or > 100)
+            errors.Add($"{where}.verifierThreshold must be 1–100 (was {t})");
+    }
+
+    private bool HasDependencyCycle()
+    {
+        // Standard DFS cycle detection on the dependsOn graph.
+        var ids = Stages.Select(s => s.Id).ToList();
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var onStack = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        bool Dfs(string id)
+        {
+            if (onStack.Contains(id)) return true;
+            if (!visited.Add(id)) return false;
+            onStack.Add(id);
+            var stage = Stages.FirstOrDefault(s => s.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+            if (stage?.DependsOn != null)
+            {
+                foreach (var dep in stage.DependsOn)
+                {
+                    if (Dfs(dep)) return true;
+                }
+            }
+            onStack.Remove(id);
+            return false;
+        }
+
+        return ids.Any(id => Dfs(id));
+    }
+
+    /// <summary>B10.2: DFS cycle detection on the parentId graph. A cycle exists when walking parent
+    /// chains leads back to a previously visited node.</summary>
+    private bool HasParentCycle()
+    {
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var onStack = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        bool Dfs(string id)
+        {
+            if (onStack.Contains(id)) return true;
+            if (!visited.Add(id)) return false;
+            onStack.Add(id);
+            var stage = Stages.FirstOrDefault(s => s.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+            if (stage?.ParentId is { Length: > 0 } parent)
+            {
+                if (Dfs(parent)) return true;
+            }
+            onStack.Remove(id);
+            return false;
+        }
+
+        return Stages.Any(s => Dfs(s.Id));
+    }
 }

@@ -1,0 +1,91 @@
+# B5.4 evidence — confidence per checkpoint + MCP call metrics + repo-awareness strip
+# Produced: 2026-07-08  (session #37, stage B5, attempt 1)
+# In-tree build: C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.dll
+
+### GATE BATTERY (green) ###
+$ dotnet build Conductor.slnx
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+$ dotnet test Conductor.slnx
+Passed!  - Failed:     0, Passed:   275, Skipped:     0, Total:   275 - Conductor.Tests.dll (net10.0)
+# 251 -> 275 : +24 tests
+#   B5_4ConfidenceTests (4):
+#     CountEvidence_parses_comma_and_semicolon_separated_paths          (theory: 7 cases)
+#     Compute_returns_only_done_checkpoints
+#     Format_renders_summary_and_per_checkpoint_lines
+#     Format_empty_produces_placeholder
+#   B5_4McpMetricsTests (4):
+#     Empty_log_produces_zero_report
+#     Folds_mcp_calls_into_counts_and_latency
+#     All_successful_calls_produce_ok_health
+#     Format_renders_calls_and_tools_used
+#   B5_4RepoTests (5):
+#     RepoStrip_computes_branch_and_head_on_real_repo
+#     RepoStrip_handles_invalid_repo_gracefully
+#     Format_renders_branch_and_working_tree
+#     Format_shows_ahead_behind_when_upstream_exists
+#     Format_shows_up_to_date_when_synced
+#   B5_4ReporterTests (4):
+#     BuildRendersConfidenceSectionFromTracker
+#     BuildOmitsConfidenceWhenNoDoneCheckpoints
+#     BuildRendersMcpSectionWhenCallsExist
+#     BuildOmitsMcpSectionWhenZeroCalls
+#     BuildRendersRepoSection
+
+### WHAT LANDED ###
+
+1. Confidence per checkpoint (evidence count):
+   - `Confidence.cs`: parses `CheckpointRow.Evidence` (comma/semicolon-separated paths),
+     counts evidence items per checkpoint, only includes DONE checkpoints
+   - `## Confidence` section in REPORT.md: shows per-checkpoint evidence count with visual
+     bar (·/··/···); omits section when no checkpoints are confirmed
+   - TUI `N` panel: evidence count per checkpoint, reads live tracker
+
+2. MCP call metrics:
+   - New `McpCallFinished` event (toolName, durationMs, success) — forward-looking for B9
+   - `McpMetrics.cs`: pure fold over events → total calls, success/failure rate, avg latency,
+     per-tool breakdown, most-called tool
+   - `## MCP` section in REPORT.md (conditional on TotalCalls > 0)
+
+3. Repo-awareness strip:
+   - `Git.AheadBehind(repo)`: `git rev-list --left-right --count @{upstream}...HEAD`
+   - `RepoStrip.cs`: live git query — branch, HEAD, dirty, ahead/behind vs upstream
+   - Handles non-git directories gracefully (exit-code check on rev-parse)
+   - `## Repo` section in REPORT.md: uses `FormatStable` (omits volatile HEAD SHA) so
+     heartbeat no-op dedup doesn't break (F-4)
+   - TUI `B` panel: full format including HEAD
+
+4. All projections follow established patterns:
+   - Confidence from tracker (not event log — evidence is in tracker rows)
+   - MCP metrics: pure fold over events (same pattern as HealthMetrics)
+   - Repo strip: live git query (explicit B5 trap exemption per BRIEF)
+
+### CONSERVATIVE-BY-DESIGN ###
+- Confidence shows 0 for checkpoints without evidence (no false confidence)
+- `FormatStable` prevents heartbeat commits from git-HEAD-drift
+- MCP section only appears when events exist (B9 gate)
+- RepoStrip gracefully degrades on non-git repos (no crash — A15)
+
+### QA of previous session (#36, B5.3 deliver) — VERDICT: PASS ###
+- Re-ran stated gate: build 0w/0e, 275 tests green (251 pre-B5.4 baseline)
+- Claim 1 (tests): 11 HealthMetricsTests green. Full suite confirms 251 total pre-B5.4.
+- Claim 2 (report artifact): `Reporter.Build` wires `## Health` at line 102-113, proven by
+  `BuildRendersHealthSectionFromTheEventLog` (ReporterTests.cs:64) — creates synthetic loop
+  stream, folds via `HealthMetrics.Compute`, passes to `Reporter.Build`, asserts the section
+  renders with `same-failure-loop` flag and `overall Alert` text.
+- No findings. B5.3's health fold + report section + TUI H panel hold.
+
+### NEW FILES ###
+- src/Conductor/Core/Events/Confidence.cs
+- src/Conductor/Core/Events/McpMetrics.cs
+- src/Conductor/Core/Events/RepoStrip.cs
+- tests/Conductor.Tests/B5_4Tests.cs
+
+### MODIFIED FILES ###
+- src/Conductor/Core/Events/ConductorEvent.cs (+McpCallFinished event)
+- src/Conductor/Core/Git.cs (+AheadBehind)
+- src/Conductor/Core/Reporter.cs (+3 new sections + helper methods)
+- src/Conductor/Ui/DashboardRenderer.cs (+N +B in action bar)
+- src/Conductor/Ui/LiveDashboard.cs (+Confidence +Repo modals)

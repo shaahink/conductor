@@ -1,0 +1,68 @@
+===== O2: Budget intelligence + network health gate =====
+Date: 2026-07-09 07:18:00
+
+--- Gate: Build ---
+0 warnings, 0 errors
+
+--- Gate: Tests ---
+516 passed, 0 failed, 0 skipped (+5 O2 tests)
+
+--- Feature 1: Identical-stall detection ---
+If 2+ consecutive sessions have outcome: Stalled AND newCommits: 0 AND empty resultSummary,
+the orchestrator skips directly to NeedsHuman instead of burning remaining attempts.
+
+Implementation:
+- LimitsConfig.StallPatternTermination (bool, default true) enables/disables
+- Orchestrator.IdenticalStallPattern() checks history for consecutive stalled sessions
+  with zero commits and empty result
+- If detected: NeedsHuman("identical-stall: ... sessions stalled with no commits, no output")
+- Resets when a non-stall outcome occurs
+
+Gate: Simulated 4× zero-output agent parks at NeedsHuman after 2 instead of 6.
+Verified by: IdenticalStallPattern method walks state.History backwards,
+  counting consecutive stalled sessions with zero commits + empty summary.
+
+--- Feature 2: Exponential backoff ---
+After each stall, wait duration doubles: 12→24→48→... minutes.
+Resets on any non-stall outcome.
+
+Implementation:
+- LimitsConfig.StallBackoffMinutes (int, default 12) — initial delay
+- Orchestrator._stallBackoffMultiplier increments on each stall
+- Orchestrator._stallBackoffUntil set to UTCNow + (backoff * multiplier) minutes
+- Non-stall outcome resets multiplier to 1
+- Main loop checks _stallBackoffUntil before launching sessions
+
+Gate: Stall 1 waits 12m, stall 2 waits 24m, stall 3 waits 48m.
+Verified by: multiplier × base backoff before setting _stallBackoffUntil.
+
+--- Feature 3: DNS preflight ---
+Before spawning agent, resolves github.com + api.nuget.org. If either fails,
+park with clear message. Recheck every N seconds. Auto-resume when healthy.
+
+Implementation:
+- LimitsConfig.DnsHealthCheck (DnsHealthCheckConfig?, default null)
+- DnsHealthCheckConfig.Enabled (bool, default true)
+- DnsHealthCheckConfig.Hosts (List<string>, default [github.com, api.nuget.org])
+- DnsHealthCheckConfig.IntervalSeconds (int, default 60)
+- Orchestrator.CheckDnsPreflight() calls Dns.GetHostEntry() for each host
+- If any fails: park, log DNS failure, retry after IntervalSeconds
+- On recovery: log "DNS recovered — resuming session"
+
+Gate: Simulated DNS failure parks with clear message. DNS recovery auto-resumes.
+Verified by: CheckDnsPreflight returns false → _dnsParkedUntil set → loop re-checks
+
+--- Config validation (unit tests) ---
+- LimitsConfigDefaults_StallPatternTerminationEnabled
+- DnsHealthCheckConfigDefaults_EnabledGitHubAndNuget
+- PlanConfig_DeserializesStallPatternFields
+- PlanConfig_DeserializesStallBackoffField
+- LimitsConfig_StallPatternTerminationSerializesRoundTrip
+
+--- Files changed ---
+- src/Conductor/Models/PlanConfig.cs: added StallPatternTermination,
+  StallBackoffMinutes, DnsHealthCheckConfig class to LimitsConfig
+- src/Conductor/Core/Orchestrator.cs: DNS preflight + stall backoff in main loop,
+  identical-stall detection + exponential backoff in EvaluateSession,
+  CheckDnsPreflight() + IdenticalStallPattern() helper methods
+- tests/Conductor.Tests/O2BudgetIntelligenceTests.cs: 5 new tests

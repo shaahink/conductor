@@ -1,13 +1,32 @@
-using System.Text.RegularExpressions;
+using Conductor.Core.Planning;
+using Conductor.Models;
 
 namespace Conductor.Core;
 
 public sealed record CheckpointRow(string Id, string Title, string Status, string Commit, string Evidence)
 {
-    public string StageId => Id.Split('.')[0];
-    public bool IsDone => Status.StartsWith("DONE", StringComparison.OrdinalIgnoreCase);
-    public bool IsBlocked => Status.StartsWith("BLOCKED", StringComparison.OrdinalIgnoreCase);
-    public bool IsInProgress => Status.StartsWith("IN", StringComparison.OrdinalIgnoreCase);
+    /// <summary>Owning stage id. The parameterless default is Loom's split-on-first-dot; providers with
+    /// configured conventions set it via <see cref="Create"/> (B1.4).</summary>
+    public string StageId { get; init; } = Id.Split('.')[0];
+    public bool IsDone { get; init; } = Status.StartsWith("DONE", StringComparison.OrdinalIgnoreCase);
+    public bool IsBlocked { get; init; } = Status.StartsWith("BLOCKED", StringComparison.OrdinalIgnoreCase);
+    public bool IsInProgress { get; init; } = Status.StartsWith("IN", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Build a row whose stage id and status flags honour the given conventions (B1.4). All
+    /// fields are trimmed, matching the original parser.</summary>
+    public static CheckpointRow Create(
+        ProgressConventions conventions, string id, string title, string status, string commit, string evidence)
+    {
+        id = id.Trim();
+        status = status.Trim();
+        return new CheckpointRow(id, title.Trim(), status, commit.Trim(), evidence.Trim())
+        {
+            StageId = conventions.DeriveStageId(id),
+            IsDone = conventions.IsDone(status),
+            IsBlocked = conventions.IsBlocked(status),
+            IsInProgress = conventions.IsInProgress(status),
+        };
+    }
 }
 
 public sealed class TrackerSnapshot
@@ -31,35 +50,14 @@ public sealed class TrackerSnapshot
         => Checkpoints.FirstOrDefault(c => c.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
 }
 
+/// <summary>
+/// Back-compat facade over the default <see cref="MarkdownTableProvider"/>. Existing call sites and
+/// tests keep using <c>TrackerParser.Parse/ParseFile</c>; the engine's new seam is
+/// <see cref="IProgressProvider"/>. Both share the exact same parsing code, so behaviour is identical.
+/// </summary>
 public static class TrackerParser
 {
-    // Matches rows like: | L0.1 | Truth expectations (...) | TODO | | |
-    // Status cell may carry decoration after the keyword (e.g. "DONE ✅").
-    private static readonly Regex RowRx = new(
-        @"^\|\s*(?<id>[A-Za-z]+\d+(?:\.\d+)?[a-z]?)\s*\|(?<title>[^|]*)\|\s*(?<status>TODO|IN\s+PROGRESS|DONE|BLOCKED)(?<rest>[^|]*)\|(?<commit>[^|]*)\|(?<evidence>[^|]*)\|",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    public static TrackerSnapshot Parse(string trackerText) => MarkdownTableProvider.Parse(trackerText);
 
-    private static readonly Regex HandoffRx = new(
-        @"^##\s*Handoff[^\r\n]*\r?\n(?<body>.*?)(?=^##\s|\z)",
-        RegexOptions.Multiline | RegexOptions.Singleline | RegexOptions.Compiled);
-
-    public static TrackerSnapshot Parse(string trackerText)
-    {
-        var rows = new List<CheckpointRow>();
-        foreach (var line in trackerText.Split('\n'))
-        {
-            var m = RowRx.Match(line.TrimEnd());
-            if (!m.Success) continue;
-            rows.Add(new CheckpointRow(
-                m.Groups["id"].Value.Trim(),
-                m.Groups["title"].Value.Trim(),
-                (m.Groups["status"].Value + m.Groups["rest"].Value).Trim(),
-                m.Groups["commit"].Value.Trim(),
-                m.Groups["evidence"].Value.Trim()));
-        }
-        var handoff = HandoffRx.Match(trackerText) is { Success: true } h ? h.Groups["body"].Value.Trim() : "";
-        return new TrackerSnapshot { Checkpoints = rows, HandoffBlock = handoff, RawText = trackerText };
-    }
-
-    public static TrackerSnapshot ParseFile(string path) => Parse(File.ReadAllText(path));
+    public static TrackerSnapshot ParseFile(string path) => MarkdownTableProvider.ParseFile(path);
 }

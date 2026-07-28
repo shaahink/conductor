@@ -1,0 +1,34 @@
+ ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42    
+ h a s t o c e p r k g  b Kanban  d                                                                           
+                           │                                                                                  
+ ▶ PLAN                    │  T4 · F7.4 · stage F7                                                            
+ ✓ F0 3/3 Foundations      │                                                                                  
+ ✓ F6 5/5 Ink TUI v1       │  ── Persona — deliver ─────────────────────────────────────────────────────      
+ ● F7 2/5 Gate … 1× $0.30  │    You are a delivery engineer.                                                  
+   ✓ F7.1 Plan import      │  ── Stage notes — F7 ──────────────────────────────────────────────────────      
+   ✓ F7.2 Re-import diff   │    Gate caching stage: reuse GateRunner.                                         
+   ● F7.3 Truth-gate tier  │  ── ✎ Task title ──────────────────────────────────────────────────────────      
+ ○ F8 0/4 conductor chat…  │    Wire RunDb.GetLastPassingGateResult                                           
+                           │  ── ✎ Extra context (task-scoped) ─────────────────────────────────────────      
+ ── GATES ──               │    (empty — press c to fill)                                                     
+   ✓ build                 │  ── Injected knowledge ────────────────────────────────────────────────────      
+   ● test 4s               │    ## Ledger                                                                     
+   ○ lint                  │    - goldens live in testdata                                                    
+                           │  ── Tool contract ─────────────────────────────────────────────────────────      
+ ── TASKS ──               │    conductor note / bg / task --done                                             
+   ✓ Add truth-tier con…   │                                                                                  
+   ● Wire RunDb.GetLast…   │  ── ✎ declared paths ──────────────────────────────────────────────────────      
+   ○ Cache gate results…   │    src/Conductor/Core/Gating/GateCache.cs · docs/CONDUCTOR-VNEXT-PLAN.md         
+   ○ Add SkipIfFresh ti…   │                                                                                  
+   ○ Benchmark the warm…   │  ── ✎ qa ──────────────────────────────────────────────────────────────────      
+                           │    inherit — the stage/plan dial decides (press q to override)                   
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   t title · c context · p paths · q qa · a advisor r

@@ -1,0 +1,37 @@
+﻿=== B11.1 Cross-platform gate runner gate battery ===
+Date: 2026-07-09 00:16:38
+Host: MSI
+OS: Windows
+
+--- Build ---
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Conductor -> C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.dll
+  Conductor.Tests -> C:\Code\conductor-baton\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.42
+
+--- Tests ---
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Conductor -> C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.dll
+  Conductor.Tests -> C:\Code\conductor-baton\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll
+Test run for C:\Code\conductor-baton\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   424, Skipped:     0, Total:   424, Duration: 11 s - Conductor.Tests.dll (net10.0)
+
+--- B11.1-specific Tests ---
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Conductor -> C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.dll
+  Conductor.Tests -> C:\Code\conductor-baton\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll
+Test run for C:\Code\conductor-baton\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    15, Skipped:     0, Total:    15, Duration: 4 s - Conductor.Tests.dll (net10.0)
+

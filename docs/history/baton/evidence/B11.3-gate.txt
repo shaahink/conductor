@@ -1,0 +1,29 @@
+﻿=== B11.3 ADRs finalised + clean-clone battery ===
+Date: 2026-07-09 00:28:36
+Host: MSI
+OS: Windows
+
+--- Clean-clone build ---
+Cloned feat/baton to temp → dotnet build Conductor.slnx
+Build succeeded. 0 Warning(s) 0 Error(s)
+
+--- Clean-clone tests ---
+432 passed / 0 failed / 0 skipped
+
+--- StateCompat parity ---
+StateProjectionParity.Diff surface verified:
+  planName, runId, currentStage, currentStageStartHead,
+  sessionCounter, confirmedStages, auditedStages,
+  totalCostUsd, totalTokensInput/Output/Reasoning,
+  history (number/stage/kind/attempt/outcome/agentSessionId/
+          newCommits/newlyDone/costUsd/tokens*)
+
+--- ADRs ---
+ADR-0001 (tooling/ruleset): updated — MA0009 ratcheted to error (B1.4),
+  MA0002/MA0045 tracked followups. Build gate = quality gate.
+ADR-0002 (event-sourcing): updated — B2.1-B2.6 implementation complete,
+  projections (RunState/TaskGraph/Timeline/Health/Confidence/McpMetrics)
+  fold the log. Parity tests green. Additive discipline maintained.
+ADR-0003 (cross-platform/packaging/close-out): created — documents B11.1
+  shell dispatch, B11.2 PackAsTool + doctor + completion, B11.3
+  clean-clone battery decisions.

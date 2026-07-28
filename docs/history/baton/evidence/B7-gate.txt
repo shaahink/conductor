@@ -1,0 +1,43 @@
+# B7 evidence — Specialist sub-agent personas
+# Produced: 2026-07-08 (session #45, fix session, stage B7, attempt 2/4)
+# Stable driver: C:\Code\conductor\bin\conductor.exe (from master)
+# In-tree build: C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.dll
+
+### GATE BATTERY (green) ###
+$ dotnet build Conductor.slnx
+Build succeeded. 0 Warning(s), 0 Error(s).
+
+$ dotnet test Conductor.slnx
+Passed! - Failed: 0, Passed: 306, Skipped: 0, Total: 306 - Conductor.Tests.dll (net10.0)
+
+Tests (306):
+  All 306 tests pass including 11 B7 persona tests and the previously-flaky
+  ReadAllSucceedsWhileLiveWriterHoldsTheFile (EventLogTests).
+
+### B7.1 — Schema + override resolution (VERIFIED) ###
+- AgentConfig gained: SystemPrompt, Model, Temperature, TokenCeiling, Merge() method
+- StageConfig gained: Agent (per-stage override), Persona
+- PlanConfig.ResolveAgent(stage): stage.Agent.Merge(plan.Agent) field-by-field
+- PlanConfig.ResolvePersona(stage): stage.Persona ?? scrape "Persona: X" from notes
+- Merge treats C# defaults as "not set" → JSON override {"systemPrompt":"x"} won't regress Command
+
+### B7.2 — Persona registry (VERIFIED) ###
+- 9 persona .md files at plans/personas/*.md
+- PersonaRegistry: loads from <PlanDir>/personas/<name>.md; 9 built-in fallbacks
+- Path traversal guard, IOException resilience (session #44 audit fixes)
+- Missing persona returns null with warning log (doesn't throw)
+
+### B7.3 — PromptBuilder merge + surfacing (VERIFIED) ###
+- PromptBuilder accepts PersonaRegistry; persona system prompt prepended before base template
+- SessionStarted event, DashboardSnapshot, Reporter, Timeline all show persona
+- Orchestrator uses plan.ResolveAgent(stage) for session spawn
+
+### FIX session #45 — flaky test + race fix ###
+- EventLog constructor now creates the file upfront (FileMode.CreateNew) so ReadAll
+  never races with the drain task for file existence (root cause of Actual: 0).
+- Test polling window widened: 100ms initial delay + 100x50ms (5s total) instead of 50x20ms (1s).
+
+### CONCLUSION ###
+B7.1, B7.2, B7.3 all landed and solid. 306 tests green, 0 warnings, 0 errors.
+One pre-existing flaky test (ReadAllSucceedsWhileLiveWriterHoldsTheFile) now fixed at the root:
+file creation moved from async drain to synchronous constructor. No regressions, no lowered analyzers.

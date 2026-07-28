@@ -1,0 +1,70 @@
+===== P2: QA Parallelization =====
+Date: 2026-07-09
+Session: #87 (via Conductor orchestrator)
+
+--- Gate: Build ---
+0 warnings, 0 errors
+
+--- Gate: Tests ---
+530 passed, 0 failed, 0 skipped
+
+--- Feature: Audit + deliver concurrently via lane infrastructure ---
+Goal: Shave 20%+ off end-to-end time by running audit + deliver in parallel.
+Instead of blocking on a sequential audit session between stages, the audit
+for stage N runs as a read-only lane while stage N+1 delivers.
+
+Implementation:
+- AuditConfig.EnableParallel (default true) — when set, audits become read-only
+  lanes that run concurrently with the next stage's deliver
+
+Checkpoint 1 — Model + Config:
+  - AuditConfig.EnableParallel: bool, default true
+  - RunState.PendingParallelAudit { StageId, StageStartHead }
+  - RunState.ParallelAuditOutcome { StageId, MaxSeverity, Findings, Completed }
+  - AuditFindingSeverity enum: None, Low, Medium, High
+  - Git.WorktreeAddDetached(repo, path, sha) — creates detached worktree at SHA
+
+Checkpoint 2 — Launch audit as lane on next deliver:
+  - ScheduleGateOrAudit(): when parallel + next stage exists, always schedules
+    battery-first (PendingPhaseGate), skipping the sequential PendingAudit path
+  - RunPhaseGate(): on green, if parallel + next stage exists → ConfirmStage
+    immediately + store PendingParallelAudit (audit will follow)
+  - Orchestrator main loop: before RunSession for a deliver, if
+    PendingParallelAudit is set → StartParallelAudit() launches a read-only lane
+  - StartParallelAudit(): creates detached git worktree at pinned SHA, runs
+    audit agent read-only (scratch temp dir), parses output for severity
+
+Checkpoint 3 — Inject findings into deliver prompt:
+  - CheckParallelAuditCompletion(): polled in agent loop — when audit finishes,
+    stores outcome in state.ParallelAuditOutcome
+  - RunSession prompt building: if deliver + non-HIGH audit outcome exists,
+    findings are appended to the session prompt for the agent to address
+
+Checkpoint 4 — HIGH-severity interrupt + fix queue:
+  - Orchestrator main loop: before RunSession, checks if
+    ParallelAuditOutcome.HasHighFindings → queues PendingFix session with
+    audit findings in progressSummary
+  - The fix session runs before the next deliver, addressing audit issues
+  - LOW/MEDIUM findings are injected into the deliver prompt as advisory notes
+
+Files changed:
+- src/Conductor/Models/PlanConfig.cs: AuditConfig.EnableParallel
+- src/Conductor/Models/RunState.cs: PendingParallelAudit, ParallelAuditOutcome,
+  AuditFindingSeverity enum
+- src/Conductor/Core/Orchestrator.cs: ScheduleGateOrAudit rework,
+  RunPhaseGate parallel path, StartParallelAudit, BuildParallelAuditPrompt,
+  ParseAuditSeverity, CheckParallelAuditCompletion, HasNextUnconfirmedStage,
+  Prompt injection, Main-loop HIGH-findings check, CleanupLanePath
+- src/Conductor/Core/Git.cs: WorktreeAddDetached for detached worktrees
+
+Design decisions:
+- Read-only: audit lane runs in detached worktree — CANNOT modify working tree
+- Idempotent: re-running the audit is safe (read-only analysis)
+- Crash-safe: PendingParallelAudit/ParallelAuditOutcome serialized in state.json
+- Backward compatible: EnableParallel defaults true but can be set false to
+  restore sequential flow; single-stage plans use sequential path automatically
+
+Verified by:
+- 530 unit tests pass (no regressions)
+- Build 0 warnings, 0 errors
+- Branch: feat/era-v3, all changes clean

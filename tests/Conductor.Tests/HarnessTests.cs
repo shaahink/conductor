@@ -1,0 +1,329 @@
+using Conductor.Core;
+using Conductor.Core.Events;
+using Conductor.Core.Hosting;
+using Conductor.Core.Store;
+using Conductor.Models;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Conductor.Tests;
+
+/// <summary>
+/// F0.3 integration harness: fake agent + temp repo, full orchestration cycle.
+/// Proves the orchestrator can: pick a stage, spawn a session, parse agent output,
+/// run gates, evaluate outcome, and record the session.
+///
+/// The fake agent is a batch file that writes opencode-format JSON to stdout and
+/// creates a deliverable file. Git commits are verified via direct inspection after the run.
+/// </summary>
+[Trait("Category", "Integration")]
+public sealed class HarnessTests : IDisposable
+{
+    private readonly string _repo;
+    private readonly string _stateDir;
+    private readonly string _agentScript;
+    private readonly Action _cleanup;
+
+    public HarnessTests()
+    {
+        _repo = Path.Combine(Path.GetTempPath(), $"conductor-harness-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_repo);
+        _stateDir = Path.Combine(_repo, ".conductor");
+
+        GitRun("init -b main");
+        GitRun("config user.email harness@test");
+        GitRun("config user.name \"Harness Test\"");
+        File.WriteAllText(Path.Combine(_repo, "README.md"), "# Harness Test Repo");
+        GitRun("add README.md");
+        GitRun("commit -m \"chore: initial commit\" --no-gpg-sign");
+        WriteTracker();
+
+        _agentScript = Path.Combine(_repo, "fake-agent.cmd");
+        File.WriteAllText(_agentScript, FakeAgentScript());
+
+        _cleanup = () =>
+        {
+            try { Directory.Delete(_repo, recursive: true); }
+            catch (Exception) { }
+        };
+    }
+
+    public void Dispose() => _cleanup();
+
+    private ProcResult GitRun(string args) =>
+        Conductor.Core.ProcessRunner.Run("git", args.Split(' ', StringSplitOptions.RemoveEmptyEntries),
+            _repo, TimeSpan.FromSeconds(30), CancellationToken.None);
+
+    private void WriteTracker() => File.WriteAllText(Path.Combine(_repo, "TRACKER.md"),
+        "# Harness Plan\n\n## Handoff\nlast: none.\n\n## Checkpoints\n\n" +
+        "| # | Checkpoint | Status | Commit | Evidence |\n|---|---|---|---|---|\n" +
+        "| H0.1 | harness checkpoint | TODO | | |\n");
+
+    private static string FakeAgentScript() => string.Join("\r\n",
+        "@echo off",
+        "echo {\"type\":\"step_start\"}",
+        "echo {\"type\":\"text\",\"part\":{\"text\":\"Delivering harness checkpoint H0.1.\"}}",
+        "echo {\"type\":\"tool_use\",\"part\":{\"tool\":\"Write\",\"state\":{\"title\":\"Write harness-output.txt\",\"input\":\"{}\"}}}",
+        "echo {\"type\":\"text\",\"part\":{\"text\":\"Created deliverable. Committing.\"}}",
+        "echo {\"type\":\"step_finish\",\"part\":{\"cost\":0.00042,\"tokens\":{\"input\":350,\"output\":120,\"reasoning\":80,\"cache\":{\"read\":0}}}}",
+        "echo {\"type\":\"text\",\"part\":{\"text\":\"Session complete.\"}}",
+        "echo harness done> harness-output.txt",
+        // Agent also commits to prove full cycle: deliverable + git commit
+        "git add harness-output.txt",
+        "git commit -m \"feat: deliver harness checkpoint\"",
+        "exit /b 0",
+        "");
+
+    [Fact]
+    public async Task FullCycle_FakeAgent_RecordsSessionAndParsesOutput()
+    {
+        var plan = new PlanConfig
+        {
+            Name = "HarnessPlan",
+            Repo = _repo,
+            Tracker = "TRACKER.md",
+            Stages = { new StageConfig { Id = "H0", Title = "Harness", Sessions = 1 } },
+            Agent = new AgentConfig
+            {
+                Command = "cmd.exe",
+                Args = { "/c", _agentScript, "{prompt}" },
+                Provider = "opencode",
+            },
+            GatePolicy = "perSession",
+            Gates =
+            {
+                new GateConfig { Name = "smoke", Command = "echo ok", Tier = "fast", TimeoutMinutes = 1 },
+            },
+        };
+        plan.Report.Commit = false;
+
+        var state = new RunState { RunId = Guid.NewGuid().ToString("N") };
+
+        using var host = ConductorHost.Build(plan, state, new PlainSink(),
+            new RunOptions(DryRun: false, Once: true, MaxSessions: 0), consoleSink: false);
+
+        var orchestrator = host.Services.GetRequiredService<Orchestrator>();
+        var code = await orchestrator.RunAsync(CancellationToken.None);
+
+        Assert.Equal(0, code);
+
+        // M2: verify via in-memory RunState (modified by orchestrator) — no longer reads state.json
+        Assert.Single(state.History);
+
+        var session = state.History[0];
+        Assert.Equal(SessionKind.Deliver, session.Kind);
+        Assert.Equal("H0", session.Stage);
+        Assert.NotNull(session.EndedUtc);
+        Assert.NotNull(session.Outcome);
+
+        // Agent output was parsed — summary and cost/tokens populated
+        Assert.NotNull(session.ResultSummary);
+        Assert.Contains("Delivering harness", session.ResultSummary, StringComparison.Ordinal);
+        Assert.True(session.CostUsd > 0, $"CostUsd=${session.CostUsd}");
+        Assert.True(session.TokensInput > 0, $"TokensInput={session.TokensInput}");
+
+        // Agent created a deliverable file on disk
+        Assert.True(File.Exists(Path.Combine(_repo, "harness-output.txt")));
+
+        // Git commit made by the agent must be visible in the repo
+        var log = GitRun("log --oneline -3").Output.Trim();
+        Assert.Contains("feat: deliver harness checkpoint", log, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task FullCycle_StartPaused_IdlesUntilResume_ThenRunsSessionOne()
+    {
+        var plan = new PlanConfig
+        {
+            Name = "PausedPlan",
+            Repo = _repo,
+            Tracker = "TRACKER.md",
+            Stages = { new StageConfig { Id = "H0", Title = "Harness", Sessions = 1 } },
+            Agent = new AgentConfig
+            {
+                Command = "cmd.exe",
+                Args = { "/c", _agentScript, "{prompt}" },
+                Provider = "opencode",
+            },
+            GatePolicy = "perSession",
+            Gates =
+            {
+                new GateConfig { Name = "smoke", Command = "echo ok", Tier = "fast", TimeoutMinutes = 1 },
+            },
+        };
+        plan.Report.Commit = false;
+
+        var state = new RunState { RunId = Guid.NewGuid().ToString("N") };
+
+        using var host = ConductorHost.Build(plan, state, new PlainSink(),
+            new RunOptions(DryRun: false, Once: true, MaxSessions: 0, StartPaused: true), consoleSink: false);
+
+        var orchestrator = host.Services.GetRequiredService<Orchestrator>();
+        var runTask = orchestrator.RunAsync(CancellationToken.None);
+
+        // G3.1 gate, part 1: the engine comes up parked — Paused status, zero sessions spawned.
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        while (state.Status != RunStatus.Paused && DateTime.UtcNow < deadline)
+            await Task.Delay(50);
+        Assert.Equal(RunStatus.Paused, state.Status);
+
+        // Hold the pause a few idle cycles to prove it does not self-start.
+        await Task.Delay(2000);
+        Assert.Empty(state.History);
+        Assert.False(runTask.IsCompleted);
+
+        // G3.1 gate, part 2: a resume (same verb the Face palette / CLI send) starts session 1.
+        var inbox = host.Services.GetRequiredService<System.Collections.Concurrent.ConcurrentQueue<ControlCommand>>();
+        inbox.Enqueue(ControlCommand.Of(ControlAction.ResumeRun));
+
+        var code = await runTask.WaitAsync(TimeSpan.FromSeconds(60));
+        Assert.Equal(0, code);
+        Assert.Single(state.History);
+        Assert.Equal(SessionKind.Deliver, state.History[0].Kind);
+    }
+
+    [Fact]
+    public async Task FullCycle_RoleModelAndMultiItemClaim_ReachTheRealSession()
+    {
+        // P1 live proof: pipeline rules assign deliver → a distinct model, and multi-item claims two
+        // sibling checkpoints. The MODEL must reach the spawned agent's real process args ({model}
+        // placeholder) and the PROMPT on disk must name both claimed items.
+        await File.WriteAllTextAsync(Path.Combine(_repo, "TRACKER.md"),
+            "# Harness Plan\n\n## Handoff\nlast: none.\n\n## Checkpoints\n\n" +
+            "| # | Checkpoint | Status | Commit | Evidence |\n|---|---|---|---|---|\n" +
+            "| H0.1 | first harness checkpoint | TODO | | |\n" +
+            "| H0.2 | second harness checkpoint | TODO | | |\n");
+        var modelEcho = Path.Combine(_repo, "model-echo.cmd");
+        await File.WriteAllTextAsync(modelEcho, string.Join("\r\n",
+            "@echo off",
+            "echo %1> model-seen.txt",
+            "echo {\"type\":\"text\",\"part\":{\"text\":\"noop.\"}}",
+            "echo {\"type\":\"step_finish\",\"part\":{\"cost\":0.0001,\"tokens\":{\"input\":10,\"output\":5}}}",
+            "exit /b 0",
+            ""));
+
+        var plan = new PlanConfig
+        {
+            Name = "AssignmentPlan",
+            Repo = _repo,
+            Tracker = "TRACKER.md",
+            Stages = { new StageConfig { Id = "H0", Title = "Harness", Sessions = 1 } },
+            Agent = new AgentConfig
+            {
+                Command = "cmd.exe",
+                Args = { "/c", modelEcho, "{model}", "{prompt}" },
+                Provider = "opencode",
+            },
+            Pipeline = new PipelineRules
+            {
+                Roles = new Dictionary<string, RoleAgentRule>(StringComparer.Ordinal)
+                {
+                    ["deliver"] = new() { Model = "role-override-model" },
+                },
+                MultiItem = new MultiItemRule { Enabled = true, MaxItems = 2 },
+            },
+            GatePolicy = "perSession",
+            Gates = { new GateConfig { Name = "smoke", Command = "echo ok", Tier = "fast", TimeoutMinutes = 1 } },
+        };
+        plan.Report.Commit = false;
+
+        var state = new RunState { RunId = Guid.NewGuid().ToString("N") };
+        using var host = ConductorHost.Build(plan, state, new PlainSink(),
+            new RunOptions(DryRun: false, Once: true, MaxSessions: 0), consoleSink: false);
+
+        var code = await host.Services.GetRequiredService<Orchestrator>().RunAsync(CancellationToken.None);
+        Assert.Equal(0, code);
+
+        // The role model reached the REAL process: the fake agent echoed its first arg ({model}).
+        var seen = await File.ReadAllTextAsync(Path.Combine(_repo, "model-seen.txt"));
+        Assert.Contains("role-override-model", seen, StringComparison.Ordinal);
+
+        // The prompt on disk names BOTH claimed items.
+        var promptMd = await File.ReadAllTextAsync(Path.Combine(_stateDir, "logs", "session-001.prompt.md"));
+        Assert.Contains("Claimed items this session", promptMd, StringComparison.Ordinal);
+        Assert.Contains("H0.1", promptMd, StringComparison.Ordinal);
+        Assert.Contains("H0.2", promptMd, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task FullCycle_ConflictingDeclaredTaskPaths_BlockTheMultiItemClaim()
+    {
+        // PF3 live proof: the same multi-item setup the P1 test proves claims BOTH checkpoints —
+        // except here each checkpoint's open task card DECLARES an overlapping path (differing only
+        // in case, which the policy's normalization must still collide). The policy refuses the
+        // co-claim, so the real prompt on disk carries no "Claimed items" section: real task data,
+        // not plan config, gated the claim.
+        await File.WriteAllTextAsync(Path.Combine(_repo, "TRACKER.md"),
+            "# Harness Plan\n\n## Handoff\nlast: none.\n\n## Checkpoints\n\n" +
+            "| # | Checkpoint | Status | Commit | Evidence |\n|---|---|---|---|---|\n" +
+            "| H0.1 | first harness checkpoint | TODO | | |\n" +
+            "| H0.2 | second harness checkpoint | TODO | | |\n");
+
+        var plan = new PlanConfig
+        {
+            Name = "HarnessPlan",
+            Repo = _repo,
+            Tracker = "TRACKER.md",
+            Stages = { new StageConfig { Id = "H0", Title = "Harness", Sessions = 1 } },
+            Agent = new AgentConfig
+            {
+                Command = "cmd.exe",
+                Args = { "/c", _agentScript, "{prompt}" },
+                Provider = "opencode",
+            },
+            Pipeline = new PipelineRules { MultiItem = new MultiItemRule { Enabled = true, MaxItems = 2 } },
+            GatePolicy = "perSession",
+            Gates = { new GateConfig { Name = "smoke", Command = "echo ok", Tier = "fast", TimeoutMinutes = 1 } },
+        };
+        plan.Report.Commit = false;
+
+        var state = new RunState { RunId = Guid.NewGuid().ToString("N") };
+        using var host = ConductorHost.Build(plan, state, new PlainSink(),
+            new RunOptions(DryRun: false, Once: true, MaxSessions: 0), consoleSink: false);
+
+        // Seed REAL task data before the run — the exact events the Kanban card editor writes.
+        var store = host.Services.GetRequiredService<IRunStore>();
+        store.AppendEvent(new TaskAdded { RunId = state.RunId, TaskId = "H0.1-a1", CheckpointId = "H0.1", Title = "First card", Order = 1, Source = "human" });
+        store.AppendEvent(new TaskAdded { RunId = state.RunId, TaskId = "H0.2-a1", CheckpointId = "H0.2", Title = "Second card", Order = 1, Source = "human" });
+        store.AppendEvent(new TaskDetailEdited { RunId = state.RunId, TaskId = "H0.1-a1", Paths = ["src/shared.cs"] });
+        store.AppendEvent(new TaskDetailEdited { RunId = state.RunId, TaskId = "H0.2-a1", Paths = ["SRC/Shared.cs"] });
+        store.FlushEvents();
+
+        var code = await host.Services.GetRequiredService<Orchestrator>().RunAsync(CancellationToken.None);
+        Assert.Equal(0, code);
+
+        var promptMd = await File.ReadAllTextAsync(Path.Combine(_stateDir, "logs", "session-001.prompt.md"));
+        Assert.DoesNotContain("Claimed items this session", promptMd, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task FullCycle_DryRun_DoesNotModifyRepo()
+    {
+        var plan = new PlanConfig
+        {
+            Name = "DryRunPlan",
+            Repo = _repo,
+            Tracker = "TRACKER.md",
+            Stages = { new StageConfig { Id = "H0", Title = "Harness", Sessions = 1 } },
+            Agent = new AgentConfig
+            {
+                Command = "cmd.exe",
+                Args = { "/c", _agentScript, "{prompt}" },
+                Provider = "opencode",
+            },
+        };
+
+        var state = new RunState { RunId = Guid.NewGuid().ToString("N") };
+
+        using var host = ConductorHost.Build(plan, state, new PlainSink(),
+            new RunOptions(DryRun: true, Once: false, MaxSessions: 0), consoleSink: false);
+
+        var orchestrator = host.Services.GetRequiredService<Orchestrator>();
+        var code = await orchestrator.RunAsync(CancellationToken.None);
+
+        Assert.Equal(0, code);
+
+        // M2: verify via in-memory RunState — dry run produces no sessions
+        Assert.Empty(state.History);
+        Assert.False(File.Exists(Path.Combine(_repo, "harness-output.txt")));
+    }
+}

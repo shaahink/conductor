@@ -1,0 +1,96 @@
+# B4.3 evidence — Hierarchical plan tree (sub-checkpoints; expand/collapse; per-stage cost/attempts/last-outcome)
+
+Generated: 2026-07-08 (session #28, B4 deliver)
+
+## What landed
+- `src/Conductor/Ui/PlanTree.cs` (new) — pure plan-tree logic + renderable:
+  - `PlanTree.VisibleRows(stages, view)` flattens stages → rows honouring **filter**
+    (All/Todo/Active/Failed), free-text **search** (checkpoint id or title, or stage name), and
+    **expand/collapse** (active stage auto-expands; a narrowing filter/search auto-expands so
+    matches are visible; `E` toggles expand-all; explicit per-stage expand supported).
+  - `PlanTree.Build(...)` renders a Spectre table: stage header rows with collapse glyph (`▸`/`▾`),
+    per-stage columns folded into one right-aligned meta cell — **done · runs×+last-outcome · cost**
+    — and indented `↳` sub-checkpoint rows with short status.
+  - `PlanFilter` enum + `PlanTreeView` record (Filter/Search/Expanded/ExpandAll), `NextFilter`
+    cycle, `OutcomeAbbr` (compact SessionOutcome tags).
+- `src/Conductor/Core/Progress.cs` — new `StageProgress` record (Id/Title/Done/Total/State/
+  Attempts/LastOutcome/CostUsd/Checkpoints) + `DashboardSnapshot.Stages` (superset of the legacy
+  `StageOverview`/`StageCheckpoints` pair, kept for back-compat).
+- `src/Conductor/Core/SnapshotBuilder.cs` — populates `Stages`: attempts = sessions on the stage,
+  last-outcome = newest finished session's outcome, cost = Σ session cost. `StageState` factored out
+  and shared with `StageOverview` (no duplicated state vocabulary).
+- `src/Conductor/Ui/DashboardRenderer.cs` — left column is now **one** unified plan tree panel
+  (retired the two stacked `PlanTable` overview + `StageTable` checkpoint panels). The panel header
+  shows the active filter chips + search term. `StagesFor` falls back to deriving stages from the
+  legacy fields so older snapshots / focused tests still render. Action-bar hint adds `[F] filter`,
+  `[E] expand`.
+- `src/Conductor/Ui/DashboardState.cs` — carries `PlanTreeView Tree`.
+- `src/Conductor/Ui/LiveDashboard.cs` — `F` cycles the filter, `E` toggles expand-all (live + preview
+  key handlers); neither cancels a pending destructive confirm.
+
+Diff scope: 8 files (6 src + 2 test), within the ~15 budget.
+
+## Gate 1 — build (warnings-as-errors, analyzers)
+```
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+```
+
+## Gate 2 — stage-named renderer + tree tests
+```
+PlanTreeTests:         Passed! - Failed: 0, Passed: 10, Total: 10
+DashboardRendererTests: Passed! - Failed: 0, Passed: 29, Total: 29
+```
+Load-bearing tests (value, not coverage):
+- `PlanTreeTests` — active stage auto-expands while collapsed stages hide checkpoints; `ExpandAll`
+  reveals every checkpoint; **Todo** drops fully-done stages and shows only not-done checkpoints;
+  **Active** keeps only the active stage; **Failed** surfaces BLOCKED rows + failed last-outcomes;
+  **search** matches checkpoint id/title across stages and stage-name matches show the whole list;
+  explicit per-stage expand; filter cycles All→Todo→Active→Failed→All; `Build` emits per-stage
+  columns + collapse glyphs.
+- `DashboardRendererTests` (new) — through the **real `BuildRoot`** path: an active stage shows its
+  sub-checkpoints + `0/2` column while a collapsed stage hides its checkpoints; the Active filter
+  drops non-active stages from the rendered frame.
+
+## Gate 3 — full suite (ratchet: 172 → 184)
+```
+Passed!  - Failed:     0, Passed:   184, Skipped:     0, Total:   184, Duration: 5 s
+```
+
+## Gate 4 — running artifact: `conductor preview` renders the tree
+`src\Conductor\bin\Debug\net10.0\conductor.exe preview -p plans\conductor.self.plan.json`
+(→ `docs/baton/evidence/B4.3-preview.txt`, UTF-8):
+- exit code: 0
+- plan panel header: `plan (F) All/Todo/…` (filter chips) — present
+- stage rows with collapse glyph + per-stage columns: `▸ B0     6/6 · 4× · prog · $0.19` — present
+- action-bar hint contains `[F] filter` and `[E] expand` — present
+- NO alt-screen escapes leaked when redirected (B4.1 guard still inert) — confirmed
+
+Rendered left column (from B4.3-preview.txt):
+```
+╭─plan (F) All/Todo/…────╮
+│ #             meta     │
+│ ▸ B0     6/6 · 4×      │
+│            prog ·      │
+│              $0.19     │
+│ ▸ B1     7/7 · 6×      │
+│              $0.21     │
+│ ▸ B2     6/6 · 7×      │
+╰────────────────────────╯
+```
+
+Trap (unchanged from B4.2): the redirected `preview` reports SafeWidth=120 while the AnsiConsole
+surface is 80, so the left panel is squeezed to ~20 cols and the meta cell wraps across lines **in
+this artifact only**. At matched widths the meta is one clean line — proven by the renderer tests
+(160/80). Sub-checkpoint expansion + filter narrowing are covered by tests through `BuildRoot`
+(a redirected single-frame preview always shows the default view: active stage auto-expanded, no
+key input applied).
+
+## QA of session #27 (B4.2) — verdict PASS
+- Re-ran stated gate: build 0w/0e; 172 tests pass; DashboardRendererTests 27/27.
+- Claim 1 (tests): DashboardRendererTests re-ran green — `HeaderGridShowsIdentityAndLiveMetricsInSeparateColumns`
+  + `HeaderTitleRendersExactlyOnce_NoStacking` (13/23/24/40) confirm the Grid header + no F-5 stacking.
+- Claim 2 (running artifact): `conductor preview` redirected → exit 0, 3665 chars, renders
+  "Conductor" + `checkpoints`/`cost`/`tokens` header metrics + `log` Rule, emits NO alt-screen
+  escapes — matches B4.2-gate.txt exactly.

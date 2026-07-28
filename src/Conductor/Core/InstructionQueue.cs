@@ -39,7 +39,7 @@ public static class InstructionQueue
                 {
                     var prevDoc = JsonDocument.Parse(File.ReadAllText(prevPath));
                     var prevRoot = prevDoc.RootElement;
-                    var mutable = JsonSerializer.Deserialize<Dictionary<string, object>>(prevRoot.GetRawText(), Opts) ?? new();
+                    var mutable = JsonSerializer.Deserialize<Dictionary<string, object>>(prevRoot.GetRawText(), Opts) ?? new(StringComparer.Ordinal);
                     mutable["next"] = name;
                     File.WriteAllText(prevPath, JsonSerializer.Serialize(mutable, Opts));
                 }
@@ -53,6 +53,7 @@ public static class InstructionQueue
     /// <summary>All active (not-yet-consumed) instructions, in creation order.</summary>
     public static List<Entry> List(PlanConfig plan)
     {
+#pragma warning disable MA0045 // sync method — instruction queue is read synchronously from the control loop
         var dir = Dir(plan);
         if (!Directory.Exists(dir)) return new();
         return Directory.GetFiles(dir, "*.json")
@@ -71,12 +72,15 @@ public static class InstructionQueue
                         r.TryGetProperty("prev", out var p) && p.ValueKind == JsonValueKind.String ? p.GetString() : null,
                         r.TryGetProperty("next", out var n) && n.ValueKind == JsonValueKind.String ? n.GetString() : null);
                 }
-                catch { return null; }
+                // A malformed/locked queue entry is skipped (→ null, filtered below) rather than
+                // breaking the whole queue read; genuine programmer errors still propagate.
+                catch (Exception ex) when (ex is IOException or JsonException) { return null; }
             })
             .Where(e => e != null)
-            .OrderBy(e => e!.File)
+            .OrderBy(e => e!.File, StringComparer.Ordinal)
             .Select(e => e!)
             .ToList();
+#pragma warning restore MA0045
     }
 
     /// <summary>Mark all currently-active instructions as consumed (rename to .done). Call after a session prompt consumes them.</summary>
@@ -88,7 +92,9 @@ public static class InstructionQueue
         {
             if (f.EndsWith(".done.json", StringComparison.OrdinalIgnoreCase)) continue;
             var done = f.Replace(".json", ".done.json");
-            try { File.Move(f, done); } catch { }
+            // Best-effort consume: if the rename races another mark (already .done) it is a no-op, so
+            // an instruction is never re-injected — the chain stays intact either way.
+            try { File.Move(f, done); } catch (IOException) { /* already renamed/locked — safe to skip */ }
         }
     }
 

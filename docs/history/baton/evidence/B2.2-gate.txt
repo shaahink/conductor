@@ -1,0 +1,60 @@
+# B2.2 evidence — RunState projection (fold the event log) + StateCompat parity
+# Produced: 2026-07-08  (session #12, stage B2, attempt 1)
+# In-tree build: C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.dll
+#
+# WHAT B2.2 DELIVERS (additive — no cutover):
+#   RunStateProjection.Fold(events) reconstructs the durable spine of RunState from the append-only
+#   event log; StateProjectionParity.Diff() is the explicit event-owned parity surface. A parity test
+#   folds a REAL recorded stream and a Loom-shaped stream and asserts each equals its legacy state.json.
+#   Per the B2 trap, state.json is STILL written and stays authoritative — the fold is proven, not yet
+#   the source of truth (cutover waits until parity holds across several recorded runs).
+# =============================================================================
+
+### GATE BATTERY (green) ###
+$ dotnet build Conductor.slnx
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)                 # net10, warnings-as-errors + Meziantou/NetAnalyzers unchanged (A17 held)
+
+$ dotnet test Conductor.slnx --no-build
+Passed!  - Failed:     0, Passed:    96, Skipped:     0, Total:    96 - Conductor.Tests.dll (net10.0)
+# 92 -> 96 : +4 RunStateProjectionTests
+#   FoldedProjectionMatchesLegacyStateJson(CapturedRun)  parity: fold a REAL recorded run == its state.json
+#   FoldedProjectionMatchesLegacyStateJson(Loom)         parity: Loom-shaped stream (audited+confirmed L0,
+#                                                          running L1, token metrics) == its state.json
+#   ParityContractCatchesADivergentProjection            guard-the-guard: Diff goes RED on a real divergence
+#   FoldIsDeterministicRegardlessOfInputOrder            Fold orders by Seq; input order is irrelevant
+
+$ dotnet test Conductor.slnx --no-build --filter "FullyQualifiedName~RunStateProjection"
+Passed!  - Failed:     0, Passed:     4, Skipped:     0, Total:     4 - Conductor.Tests.dll (net10.0)
+
+### THE PARITY SURFACE (StateProjectionParity — the event-owned contract) ###
+# IN  (log is authoritative, fold reproduces it):
+#   planName, runId, currentStage, currentStageStartHead, sessionCounter, confirmedStages,
+#   auditedStages, totalCost/Tokens, and per-History-record: number, stage, kind, attempt, outcome,
+#   agentSessionId, newCommits, newlyDone, costUsd, tokens{Input,Output,Reasoning,CacheRead}.
+# OUT (state.json stays the cache until event-sourced later — additive):
+#   Status, AttemptsThisStage, ConsecutiveBackoffs, SkippedStages, Pending{Fix,Resume,PhaseGate,Audit},
+#   LastGreenGateSig, StopAfterSession, AttentionReason  (→ B2.3 recovery, B3 control);
+#   SessionRecord.{ResumeCount,NumTurns,GateSummary,ResultSummary};
+#   timestamps (StartedUtc/EndedUtc differ by construction: record-create time vs event-emit time).
+
+### THE CAPTURED-RUN FIXTURE IS A REAL RECORDED RUN (A6 — run it once for real) ###
+# The CapturedRun fixture embedded in RunStateProjectionTests.cs is verbatim from a genuine in-tree
+# orchestrator run driving the fake agent through two --once sessions:
+#   repo:   C:\Users\shahi\AppData\Local\Temp\opencode\b22-qa   (temp git repo, token-free)
+#   plan:   BatonSmoke (opencode-json fake agent, perPhase, audit off)
+#   result: 11-event events.jsonl under ONE runId (4cf56690…), seq 1->11, resumed false->true;
+#           state.json written alongside, its runId == the events' runId.
+# This same run also served as the QA claim-2 reproduction for session #11 (below). Folding its
+# events reproduces its state.json on the entire parity surface (diff == empty).
+
+### QA of previous session (#11, B2.1 deliver) — VERDICT: PASS ###
+# Re-ran its stated gate: build 0w/0e; tests 92 pass (baseline before this session's +4).
+# Claim 1 (tests): the 5 EventLogTests are green — round-trip all 9 event records, compact-camelCase
+#   NDJSON with discriminator, well-formed append-only writer, seq-continuity across restart,
+#   torn-tail tolerance.  (dotnet test --filter EventLog -> Passed 5.)
+# Claim 2 (running artifact): reproduced the self-run independently (b22-qa above) — the in-tree
+#   build emitted a well-formed 11-event events.jsonl across two --once invocations under one runId,
+#   seq monotonic 1->11, and state.json's runId matched the events' runId with state intact.
+# No findings; no fixes required before new B2.2 work.

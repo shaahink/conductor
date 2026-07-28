@@ -1,0 +1,34 @@
+=== B10.3 gate battery ===
+Date: 2026-07-08
+
+Build: dotnet build Conductor.slnx
+Result: 0 warnings, 0 errors (net10.0, warnings-as-errors)
+
+Tests: dotnet test Conductor.slnx
+Result: 401 passed, 0 failed, 0 skipped (+10 B10.3 tests)
+
+--- B10.3 test details ---
+B10_3HooksTests (10 tests):
+  DeserializesPreHookFromJson          — preHook command/cwd/timeout round-trip from JSON
+  DeserializesPostHookFromJson         — postHook command round-trips from JSON
+  PreHookIsNullWhenOmitted             — stages without hooks have null preHook/postHook
+  HookConfigDefaults                   — defaults: cwd=null, timeout=3min
+  RunStateSerializesPreHookRunStages   — PreHookRunStages appears in serialized JSON
+  RunStateDeserializesPreHookRunStages — PreHookRunStages list round-trips
+  RunStatePreHookRunStagesEmptyByDefault — new RunState starts with empty list
+  HookRunsSuccessfully                 — echo hello → exit 0, stdout contains hello
+  HookReturnsNonZeroOnFailure          — exit 42 → exit code 42
+  HookTimeoutIsCaptured                — sleep timeout → non-zero exit
+
+--- Changes (5 files, within ~15 budget) ---
+src/Conductor/Models/PlanConfig.cs        + 6  StageConfig.PreHook + PostHook fields
+src/Conductor/Models/RunState.cs          + 3  PreHookRunStages list
+src/Conductor/Core/Orchestrator.cs        +32  RunStageHook() + pre-hook in loop + post-hook in ConfirmStage
+tests/Conductor.Tests/B10_3Tests.cs       +155 10 new tests (new file)
+
+--- What landed ---
+- StageConfig.PreHook: HookConfig? — optional command run before the stage's first session
+- StageConfig.PostHook: HookConfig? — optional command run after stage confirmation
+- Pre-hook blocks on non-zero exit (NeedsHuman); post-hook is best-effort (logged only)
+- RunState.PreHookRunStages prevents re-running the pre-hook on resume/crash-recovery
+- RunStageHook() executes hooks via ProcessRunner.RunPowerShell, logs duration + exit code

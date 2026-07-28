@@ -1,0 +1,110 @@
+using System.Collections.Concurrent;
+using System.Text;
+using System.Text.Json;
+using System.Text.RegularExpressions;
+using Conductor.Core.Commands;
+using Conductor.Core.Events;
+using Conductor.Core.Integrations;
+using Conductor.Core.Lanes;
+using Conductor.Core.Orchestration;
+using Conductor.Core.Planning;
+using Conductor.Core.Providers;
+using Conductor.Models;
+using Microsoft.Extensions.Logging;
+
+namespace Conductor.Core.Orchestration;
+
+#pragma warning disable MA0045 // sync file I/O by design — fast local writes, not hot-path
+public sealed partial class RunLoop
+{
+    // ---------------------------------------------------------------- prompt construction
+
+    private string BuildPrompt(SessionKind kind, StageConfig stage, int sessionNumber, int attempt, int maxAttempts)
+    {
+        var isReview = stage.Kind.Equals("review", StringComparison.OrdinalIgnoreCase);
+        var reviewPath = isReview ? Path.Combine(_ctx.Plan.StateDir, "reviews", $"{stage.Id}.md") : "";
+        return kind switch
+        {
+            SessionKind.Resume => _ctx.Prompts.Resume(stage, sessionNumber, attempt, maxAttempts, _ctx.State.PendingResume!),
+            SessionKind.Audit => _ctx.Prompts.Audit(stage, sessionNumber, _ctx.State.PendingAudit!, _ctx.State.CurrentStageStartHead ?? "HEAD~1"),
+            SessionKind.Fix => _ctx.Prompts.Fix(stage, sessionNumber, attempt, maxAttempts, _ctx.State.PendingFix!),
+            _ => isReview
+                ? _ctx.Prompts.Review(stage, sessionNumber, attempt, maxAttempts, reviewPath)
+                : _ctx.Prompts.Deliver(stage, sessionNumber, attempt, maxAttempts),
+        };
+    }
+
+    private static PromptBuilder BuildPromptBuilder(PlanConfig plan)
+    {
+        var registry = new PersonaRegistry(plan);
+        var lessons = new LessonsManager(plan.StateDir);
+        return new PromptBuilder(plan, registry, lessons);
+    }
+
+    // ---------------------------------------------------------------- activity tracking
+
+    private void TrackActivity(AgentEvent ev, int sessionNumber)
+    {
+        if (ev.Kind is not ("tool" or "text" or "result" or "thinking")) return;
+        _ctx.Activity.Add((ev.Kind, ev.Text, ev.Utc));
+        if (_ctx.Activity.Count > 60) _ctx.Activity.RemoveRange(0, 20);
+    }
+
+    private string BuildActivitySection(SessionRecord rec, AgentSession agent)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"_Session #{rec.Number} ({rec.Kind}) · running {(DateTime.UtcNow - agent.StartedUtc).TotalMinutes:0}m · " +
+                      $"last output {(DateTime.UtcNow - agent.LastActivityUtc).TotalSeconds:0}s ago" +
+                      (agent.CostUsd is { } c ? $" · ${c:0.0000}" : "") + "_");
+        sb.AppendLine();
+        var think = _ctx.Activity.Where(a => a.Kind == "thinking").TakeLast(3).ToList();
+        if (think.Count > 0)
+        {
+            sb.AppendLine("**Thinking:**");
+            foreach (var t in think) sb.AppendLine($"> {Trunc(t.Text.Replace("\n", " "), 300)}");
+            sb.AppendLine();
+        }
+        var acts = _ctx.Activity.Where(a => a.Kind != "thinking").TakeLast(10).ToList();
+        if (acts.Count > 0)
+        {
+            sb.AppendLine("**Recent actions:**");
+            foreach (var a in acts)
+            {
+                var glyph = a.Kind switch { "tool" => "\u00bb", "result" => "\u25c6", _ => "\u00b7" };
+                sb.AppendLine($"- `{a.Utc.ToLocalTime():HH:mm:ss}` {glyph} {Trunc(a.Text.Replace("\n", " "), 160)}");
+            }
+        }
+        return sb.ToString().TrimEnd();
+    }
+
+    private void RefreshReport(SessionRecord rec, StageConfig stage, AgentSession agent, TrackerSnapshot track)
+    {
+        try
+        {
+            var cp = track.ForStage(stage.Id).FirstOrDefault(c => !c.IsDone)?.Id ?? stage.Id;
+            _ctx.Log($"report refresh @ {cp} (cost ${agent.CostUsd:0.00})");
+            Reporter.WriteReport(_ctx.Plan, _ctx.State, track, _ctx.LastGates, _ctx.Log, BuildActivitySection(rec, agent), store: _ctx.Store);
+        }
+        catch (Exception ex) { _ctx.Log($"report refresh failed: {ex.Message}"); }
+    }
+
+    // ---------------------------------------------------------------- static helpers
+
+    private static string ExtractSessionResult(string? resultText)
+    {
+        if (string.IsNullOrWhiteSpace(resultText)) return "";
+        var idx = resultText.IndexOf("SESSION-RESULT:", StringComparison.OrdinalIgnoreCase);
+        var s = idx >= 0 ? resultText[idx..] : resultText;
+        return Trunc(s.Trim(), 700);
+    }
+
+    private static string Trunc(string s, int max) => s.Length <= max ? s : s[..max] + "\u2026";
+
+    private static string Short(string sha) => string.IsNullOrEmpty(sha) ? "?" : sha.Length >= 7 ? sha[..7] : sha;
+
+    private string LastRawTail(string rawLogPath)
+    {
+        try { return GateRunner.TailOf(File.ReadAllText(rawLogPath), 10); }
+        catch (IOException) { return ""; }
+    }
+}

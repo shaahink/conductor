@@ -2,17 +2,43 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
     <AssemblyName>conductor</AssemblyName>
     <RootNamespace>Conductor</RootNamespace>
-    <InvariantGlobalization>true</InvariantGlobalization>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>conductor</ToolCommandName>
+    <PackageId>conductor</PackageId>
+    <Version>2.0.0</Version>
+    <PackageDescription>A stateful execution environment for days-long AI software engineering — one verifiable session at a time.</PackageDescription>
+    <PackageTags>dotnet-tool;ai-agent;orchestration;code-generation</PackageTags>
+    <RepositoryUrl>https://github.com/shahabaz/conductor</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Spectre.Console" Version="0.49.1" />
-    <PackageReference Include="Spectre.Console.Cli" Version="0.49.1" />
+    <!-- P0: the engine depends on the planning library, NEVER the reverse (arch-test enforced).
+         The global using keeps the moved planning vocabulary (SessionKind, Workflow*) available
+         everywhere without churning every file that already spoke it. -->
+    <ProjectReference Include="..\Conductor.Planning\Conductor.Planning.csproj" />
+    <Using Include="Conductor.Planning" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Spectre.Console" />
+    <PackageReference Include="Spectre.Console.Cli" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Serilog.Extensions.Hosting" />
+    <PackageReference Include="Serilog.Sinks.Console" />
+    <PackageReference Include="Serilog.Sinks.File" />
+    <PackageReference Include="Serilog.Formatting.Compact" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Core\Store\Migrations\*.sql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Conductor.Tests" />
   </ItemGroup>
 
 </Project>

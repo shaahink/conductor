@@ -1,0 +1,83 @@
+# B4.2 evidence — Spectre Layout rebuild of DashboardRenderer.BuildRoot
+
+Generated: 2026-07-08 15:29:32 (this session, #27, B4 deliver)
+
+## What landed
+- `src/Conductor/Ui/DashboardRenderer.cs` — `BuildRoot` rebuilt as one declarative Spectre
+  `Layout` tree (Split + Update leaves) instead of scattered `Rows`/`Panel` stacking:
+  - Header is now a two-column `Grid`: identity/activity (left) and the live metrics —
+    checkpoints · cost · tokens — right-aligned in their own column so they line up frame to
+    frame. Both columns are `NoWrap`, so every grid row is exactly one line: a long identity
+    string is clipped rather than wrapping and pushing the metrics rows down/out of the fixed
+    header region. This is what keeps the header-stacking bug (F-5) retired.
+  - Body is composed via nested `Layout` regions (`plan`/`stage`/`center`/`thinking`/`gates`
+    in wide mode; `plan`/`stage`/`agent`/`thinking` otherwise) — each panel is sized by the
+    layout engine, so nothing overflows the viewport. Retires `LeftColumn`/`RightColumn`
+    `Rows`-of-panels and `CompactHeaderPanel`.
+  - Footer: action bar first (survives bottom-crop on short viewports), then confirm/gate
+    summary, then the scrolling log under a `Rule("log")` separator (Layout/Grid/Panel/Rule
+    all now used).
+  - Kept the pure `DashboardState → IRenderable` split (no threads/IO/mutable state).
+- `tests/Conductor.Tests/DashboardRendererTests.cs` — 2 new load-bearing tests (below).
+
+Diff scope: 2 files (DashboardRenderer.cs + its test). No public API/behaviour removed;
+`CheckpointsLine` extracted (public) and reused by `ProgressLine`.
+
+## Gate 1 — build (warnings-as-errors, analyzers)
+```
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+```
+
+## Gate 2 — DashboardRendererTests against the new layout (stage-named gate)
+```
+Passed!  - Failed:     0, Passed:    27, Skipped:     0, Total:    27, Duration: 222 ms - Conductor.Tests.dll (net10.0)
+```
+New tests:
+- `HeaderGridShowsIdentityAndLiveMetricsInSeparateColumns` — asserts both Grid columns survive
+  the split: identity (Conductor / "Identity spine") AND metrics (checkpoints 3/35 / $0.0239 /
+  7.0k total) all render at 160×40.
+- `HeaderTitleRendersExactlyOnce_NoStacking` (13/23/24/40) — regression guard (F-5): the header
+  title appears exactly once across compact and full modes; never stacks.
+- Pre-existing `RendersOnShortTerminalsWithoutThrowing` (13/20/60) still passes → no header
+  stacking at small heights.
+
+## Gate 3 — full suite (ratchet: 167 -> 172)
+```
+Passed!  - Failed:     0, Passed:   172, Skipped:     0, Total:   172, Duration: 6 s - Conductor.Tests.dll (net10.0)
+```
+
+## Gate 4 — running artifact: `conductor preview` renders the rebuilt layout
+`src\Conductor\bin\Debug\net10.0\conductor.exe preview -p plans\conductor.self.plan.json`,
+output redirected to a file:
+- exit code: 0
+- output length: 3665 chars (was 3392 pre-rebuild — layout changed)
+- contains "Conductor": True
+- contains "checkpoints": True   (header metrics column)
+- contains "cost": True          (header metrics column)
+- contains "tokens": True        (header metrics column)
+- contains "log" Rule label: True (footer separator)
+- contains EnterAlt (\e[?1049h): False  (B4.1 guard still inert when redirected)
+- contains LeaveAlt (\e[?1049l): False
+
+Rendered header (redirected surface = 80 cols; the metrics wrap here only because the redirected
+preview reports SafeWidth=120 while the AnsiConsole surface is 80 — a pre-existing RunPreview
+width mismatch, NOT BuildRoot; at matched widths each row is one clean line as the renderer tests
+prove at 160/120):
+```
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Conductor — Baton   ● Running  PREVIEW —             checkpoints 25/65 (38%) │
+│ synthetic session data (not a live run)                                      │
+│ stage B4 TUI overhaul (alt-screen + tree) ·           cost $0.9582 (session  │
+│ session #27 Deliver · attempt 1/4                     $0.0239) · 6 untracked │
+│ ▸ B4.2 Spectre Layout rebuild of               tokens 432.6k in · 345.6k out │
+╰──────────────────────────────────────────────────────────────────────────────╯
+```
+
+## QA of session #26 (B4.1) — verdict PASS
+- Re-ran stated gate: build 0w/0e; 167 tests pass (before this session's +5).
+- Claim 1 (tests): `AltScreenTests` — 3/3 pass (enter/leave emitted; idempotent; redirected no-op).
+- Claim 2 (running artifact): `conductor preview` redirected → exit 0, 3392 chars, renders
+  "Conductor", emits NO alt-screen escapes (guard inert when redirected) — matches B4.1-gate.txt
+  exactly.

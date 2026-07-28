@@ -1,4 +1,6 @@
 using System.Text;
+using Conductor.Core.Events;
+using Conductor.Core.Store;
 using Conductor.Models;
 
 namespace Conductor.Core;
@@ -11,7 +13,9 @@ public static class Reporter
 
     public static string ReportPath(PlanConfig plan) => Path.Combine(plan.StateDir, "REPORT.md");
 
-    public static string Build(PlanConfig plan, RunState state, TrackerSnapshot track, IReadOnlyList<GateResult>? lastGates, string? liveActivity = null)
+    public static string Build(PlanConfig plan, RunState state, TrackerSnapshot track, IReadOnlyList<GateResult>? lastGates, string? liveActivity = null,
+        IReadOnlyList<Timeline.TimelineEntry>? timeline = null, HealthMetrics.HealthReport? health = null,
+        McpMetrics.McpReport? mcp = null, RepoStrip.RepoInfo? repo = null)
     {
         var sb = new StringBuilder();
         var done = track.Checkpoints.Count(c => c.IsDone);
@@ -24,9 +28,10 @@ public static class Reporter
         sb.AppendLine($"_Updated {DateTime.UtcNow:yyyy-MM-dd HH:mm} UTC · branch `{branch}` · HEAD `{Short(head)}`_");
         sb.AppendLine();
         sb.AppendLine($"**Status:** {state.Status}{(state.AttentionReason != null ? $" — {state.AttentionReason}" : "")}");
-        sb.AppendLine($"**Stage:** {state.CurrentStage ?? "-"}{(stage != null ? $" — {stage.Title}" : "")} · attempts used {state.AttemptsThisStage}" +
+        var stagePersona = stage != null ? plan.ResolvePersona(stage) : null;
+        sb.AppendLine($"**Stage:** {state.CurrentStage ?? "-"}{(stage != null ? $" — {stage.Title}" : "")}{(stagePersona != null ? $" · persona: {stagePersona}" : "")} · attempts used {state.AttemptsThisStage}" +
                       (NextCheckpoint(track, state.CurrentStage) is { } nc ? $" · working ▸ {nc}" : ""));
-        sb.AppendLine($"**Checkpoints:** {done}/{track.Checkpoints.Count} done · **Sessions run:** {state.SessionCounter} · **Cost:** ${state.TotalCostUsd:0.0000}" +
+        sb.AppendLine($"**Checkpoints:** {done}/{track.Checkpoints.Count} done · **Sessions run:** {state.SessionCounter} · **Cost:** ${state.TotalCostUsd + state.TotalOverheadCostUsd:0.0000} (agent ${state.TotalCostUsd:0.0000} + gates ${state.TotalOverheadCostUsd:0.0000})" +
                       (state.TotalTokensInput + state.TotalTokensOutput > 0
                           ? $" · **Tokens:** {state.TotalTokensInput:n0} in / {state.TotalTokensOutput:n0} out" + (state.TotalTokensReasoning > 0 ? $" / {state.TotalTokensReasoning:n0} think" : "")
                           : ""));
@@ -50,36 +55,120 @@ public static class Reporter
 
         sb.AppendLine("## Stage progress");
         sb.AppendLine();
-        sb.AppendLine("| Stage | Title | Done | State |");
+        sb.AppendLine("| Stage | Title | Progress | State |");
         sb.AppendLine("|---|---|---|---|");
         foreach (var s in plan.Stages)
         {
             var rows = track.ForStage(s.Id).ToList();
             var d = rows.Count(r => r.IsDone);
+            var bar = ProgressBar(d, rows.Count);
             var st = state.SkippedStages.Contains(s.Id) ? "SKIPPED ⚠"
                 : state.ConfirmedStages.Contains(s.Id) ? "confirmed ✓"
                 : rows.Count > 0 && d == rows.Count ? (plan.PerPhaseGates ? "gating…" : "done")
                 : s.Id == state.CurrentStage ? "**← active**"
                 : rows.Any(r => r.IsDone || r.IsInProgress) ? "partial"
                 : "todo";
-            sb.AppendLine($"| {s.Id} | {s.Title} | {d}/{rows.Count} | {st} |");
+            var depth = SnapshotBuilder.ComputeDepth(s.Id, plan.Stages);
+            var indent = new string(' ', depth * 2);
+            sb.AppendLine($"| {indent}{s.Id} | {indent}{s.Title} | {bar} {d}/{rows.Count} | {st} |");
         }
         sb.AppendLine();
 
+        // Collapsible per-stage checkpoint details
+        foreach (var s in plan.Stages)
+        {
+            var rows = track.ForStage(s.Id).ToList();
+            if (rows.Count == 0) continue;
+            var d = rows.Count(r => r.IsDone);
+            sb.AppendLine($"<details>{(d == rows.Count ? " ✅" : "")}<summary>{s.Id} — {s.Title} ({d}/{rows.Count})</summary>");
+            sb.AppendLine();
+            sb.AppendLine("| # | Title | Status | Commit |");
+            sb.AppendLine("|---|---|---|---|");
+            foreach (var r in rows)
+            {
+                var statusIcon = r.IsDone ? "✅ DONE" : r.IsInProgress ? "🔄 IN PROGRESS" : r.IsBlocked ? "🚫 BLOCKED" : "⬜ TODO";
+                var commitLink = FormatCommitLink(plan, r.Commit);
+                sb.AppendLine($"| {r.Id} | {r.Title} | {statusIcon} | {commitLink} |");
+            }
+            sb.AppendLine();
+            sb.AppendLine("</details>");
+            sb.AppendLine();
+        }
+
         sb.AppendLine("## Sessions");
         sb.AppendLine();
-        sb.AppendLine("| # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Tokens |");
-        sb.AppendLine("|---|---|---|---|---|---|---|---|---|---|---|---|");
+        sb.AppendLine("| # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Overhead | Tokens |");
+        sb.AppendLine("|---|---|---|---|---|---|---|---|---|---|---|---|---|");
         foreach (var h in state.History.TakeLast(30))
         {
             var dur = h.EndedUtc.HasValue ? (h.EndedUtc.Value - h.StartedUtc).ToString(@"h\:mm") : "…";
             var att = h.Attempt > 0 ? h.Attempt.ToString() + (h.ResumeCount > 0 ? $"r{h.ResumeCount}" : "") : "";
             var toks = (h.TokensInput ?? 0) + (h.TokensOutput ?? 0) > 0 ? $"{h.TokensInput ?? 0:n0}/{h.TokensOutput ?? 0:n0}" : "";
-            sb.AppendLine($"| {h.Number} | {h.Stage} | {h.Kind} | {att} | {h.StartedUtc:MM-dd HH:mm} | {dur} | {h.Outcome?.ToString() ?? "running"} | {string.Join(" ", h.NewlyDone)} | {h.NewCommits.Count} | {h.GateSummary} | {(h.CostUsd.HasValue ? "$" + h.CostUsd.Value.ToString("0.0000") : "")} | {toks} |");
+            var overhead = h.OverheadCostUsd.HasValue && h.OverheadCostUsd.Value > 0 ? "$" + h.OverheadCostUsd.Value.ToString("0.0000") : "";
+            sb.AppendLine($"| {h.Number} | {h.Stage} | {h.Kind} | {att} | {h.StartedUtc:MM-dd HH:mm} | {dur} | {h.Outcome?.ToString() ?? "running"} | {string.Join(" ", h.NewlyDone)} | {h.NewCommits.Count} | {h.GateSummary} | {(h.CostUsd.HasValue ? "$" + h.CostUsd.Value.ToString("0.0000") : "")} | {overhead} | {toks} |");
         }
         sb.AppendLine();
 
-        // per-session commit detail (recent sessions that committed) — so you can review without digging into git
+        // Timeline (B5.1): state transitions with durations, folded from the event log. Every row here
+        // derives from .conductor/events.jsonl — the single source (B5 trap: no parallel store).
+        if (timeline is { Count: > 0 })
+        {
+            sb.AppendLine("## Timeline");
+            sb.AppendLine();
+            sb.AppendLine("_Transitions with duration, from the event log (`.conductor/events.jsonl`)._");
+            sb.AppendLine();
+            sb.AppendLine("```");
+            foreach (var e in timeline.TakeLast(40))
+                sb.AppendLine(Timeline.Format(e));
+            sb.AppendLine("```");
+            sb.AppendLine();
+        }
+
+        // Health (B5.3): execution-health signals folded from the same event log — retry rate plus any
+        // same-failure loop / gate repetition / oscillation / context-saturation flags (B5 trap: a pure
+        // fold, no parallel store). Conservative thresholds so a normal fix cycle never false-alarms.
+        if (health is { Sessions: > 0 })
+        {
+            sb.AppendLine("## Health");
+            sb.AppendLine();
+            sb.AppendLine("_Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._");
+            sb.AppendLine();
+            sb.AppendLine("```");
+            foreach (var line in HealthMetrics.Format(health))
+                sb.AppendLine(line);
+            sb.AppendLine("```");
+            sb.AppendLine();
+        }
+
+        // MCP (B5.4): tool-call metrics folded from McpCallFinished events — total calls, success
+        // rate, per-tool breakdown, average latency. Forward-looking: populates once B9 MCP events land.
+        if (mcp is { TotalCalls: > 0 })
+        {
+            sb.AppendLine("## MCP");
+            sb.AppendLine();
+            sb.AppendLine("_Tool-call metrics from the event log (`.conductor/events.jsonl`)._");
+            sb.AppendLine();
+            sb.AppendLine("```");
+            foreach (var line in McpMetrics.Format(mcp))
+                sb.AppendLine(line);
+            sb.AppendLine("```");
+            sb.AppendLine();
+        }
+
+        // Repo (B5.4): live git snapshot — branch, HEAD, working-tree, ahead/behind vs upstream.
+        if (repo != null)
+        {
+            sb.AppendLine("## Repo");
+            sb.AppendLine();
+            sb.AppendLine("_Live git snapshot (branch, working tree, sync vs upstream)._");
+            sb.AppendLine();
+            sb.AppendLine("```");
+            foreach (var line in RepoStrip.FormatStable(repo))
+                sb.AppendLine(line);
+            sb.AppendLine("```");
+            sb.AppendLine();
+        }
+
         var withCommits = state.History.Where(h => h.NewCommits.Count > 0).TakeLast(8).ToList();
         if (withCommits.Count > 0)
         {
@@ -88,7 +177,12 @@ public static class Reporter
             foreach (var h in withCommits)
             {
                 sb.AppendLine($"- **s{h.Number} ({h.Stage} {h.Kind})** — {h.NewCommits.Count} commit(s):");
-                foreach (var c in h.NewCommits.Take(12)) sb.AppendLine($"  - {c}");
+                foreach (var c in h.NewCommits.Take(12))
+                {
+                    var sha = c.Split(' ')[0];
+                    var link = FormatCommitLink(plan, sha);
+                    sb.AppendLine($"  - {link} {c[(sha.Length)..].TrimStart()}");
+                }
             }
             sb.AppendLine();
         }
@@ -97,7 +191,7 @@ public static class Reporter
         var handoverDir = Path.Combine(plan.StateDir, "handovers");
         if (Directory.Exists(handoverDir))
         {
-            var files = Directory.GetFiles(handoverDir, "*.md").OrderBy(f => f).ToList();
+            var files = Directory.GetFiles(handoverDir, "*.md").OrderBy(f => f, StringComparer.Ordinal).ToList();
             if (files.Count > 0)
             {
                 sb.AppendLine("## Phase handovers (audit)");
@@ -148,7 +242,7 @@ public static class Reporter
         return sb.ToString();
     }
 
-    public static void WriteAndPublish(PlanConfig plan, RunState state, TrackerSnapshot track, IReadOnlyList<GateResult>? lastGates, Action<string> log, string? liveActivity = null, string? commitMessage = null)
+    public static void WriteAndPublish(PlanConfig plan, RunState state, TrackerSnapshot track, IReadOnlyList<GateResult>? lastGates, Action<string> log, string? liveActivity = null, string? commitMessage = null, IRunStore? store = null)
     {
         string newContent;
         string path = ReportPath(plan);
@@ -156,7 +250,8 @@ public static class Reporter
         try
         {
             Directory.CreateDirectory(plan.StateDir);
-            newContent = Build(plan, state, track, lastGates, liveActivity);
+            newContent = Build(plan, state, track, lastGates, liveActivity,
+                ReadTimeline(store, state.RunId), ReadHealth(store, state.RunId), ReadMcpMetrics(store, state.RunId), ReadRepoStrip(plan));
             old = File.Exists(path) ? File.ReadAllText(path) : null;
             File.WriteAllText(path, newContent, Utf8Bom);
         }
@@ -168,7 +263,6 @@ public static class Reporter
 
         if (!plan.Report.Commit) return;
         // Skip no-op commits: if nothing but the timestamp changed, don't add to the git history
-        // (this removes the duplicate "chore(conductor): … — Idle" commits).
         if (old != null && Normalize(old) == Normalize(newContent)) return;
 
         var rel = ".conductor/REPORT.md";
@@ -187,12 +281,149 @@ public static class Reporter
         }
     }
 
+    /// <summary>Write REPORT.md to disk only — no git commit, no push. Used for mid-session
+    /// report refreshes (the report lives in .conductor/, not on the feature branch).</summary>
+    public static void WriteReport(PlanConfig plan, RunState state, TrackerSnapshot track, IReadOnlyList<GateResult>? lastGates, Action<string> log, string? liveActivity = null, IRunStore? store = null)
+    {
+        try
+        {
+            Directory.CreateDirectory(plan.StateDir);
+            var content = Build(plan, state, track, lastGates, liveActivity,
+                ReadTimeline(store, state.RunId), ReadHealth(store, state.RunId), ReadMcpMetrics(store, state.RunId), ReadRepoStrip(plan));
+            File.WriteAllText(ReportPath(plan), content, Utf8Bom);
+        }
+        catch (Exception ex)
+        {
+            log($"report write failed: {ex.Message}");
+        }
+    }
+
     /// <summary>Strip the volatile timestamp line so timestamp-only rewrites don't produce commits.</summary>
     private static string Normalize(string s)
         => string.Join("\n", s.Replace("\r\n", "\n").Split('\n').Where(l => !l.StartsWith("_Updated ", StringComparison.Ordinal)));
+
+    /// <summary>Fold the append-only event log into a timeline for the report. When no store is
+    /// available (e.g. standalone report generation) returns an empty list, same tolerance as the
+    /// old file-based read.</summary>
+    public static IReadOnlyList<Timeline.TimelineEntry> ReadTimeline(IRunStore? store, string runId)
+    {
+        try
+        {
+            if (store == null || string.IsNullOrEmpty(runId)) return [];
+            return Timeline.Build(store.ReadAllEvents(runId));
+        }
+        catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException or UnauthorizedAccessException)
+        {
+            return [];
+        }
+    }
+
+
+
+    /// <summary>Fold the event log into execution-health signals (B5.3) — retry rate plus any
+    /// same-failure loop / gate repetition / oscillation / context-saturation flags. Same tolerant
+    /// read as <see cref="ReadTimeline"/> (a run may not have emitted events yet, or the log may be
+    /// locked mid-write) — the report/panel render nothing rather than failing (A15: no crash on I/O).</summary>
+    public static HealthMetrics.HealthReport ReadHealth(IRunStore? store, string runId)
+    {
+        ArgumentNullException.ThrowIfNull(runId);
+        try
+        {
+            if (store == null || string.IsNullOrEmpty(runId))
+                return new HealthMetrics.HealthReport(0, 0, 0, []);
+            return HealthMetrics.Compute(store.ReadAllEvents(runId));
+        }
+        catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException or UnauthorizedAccessException)
+        {
+            return new HealthMetrics.HealthReport(0, 0, 0, []);
+        }
+    }
+
+    /// <summary>Fold MCP tool-call events from the event log into call-count + latency metrics (B5.4).
+    /// Tolerant read: returns an empty report when the store is unavailable or the log is empty (A15).</summary>
+    public static McpMetrics.McpReport ReadMcpMetrics(IRunStore? store, string runId)
+    {
+        ArgumentNullException.ThrowIfNull(runId);
+        try
+        {
+            if (store == null || string.IsNullOrEmpty(runId))
+                return new McpMetrics.McpReport(0, 0, 0, 0, 0, "", 0, []);
+            return McpMetrics.Compute(store.ReadAllEvents(runId));
+        }
+        catch (Exception ex) when (ex is IOException or System.Text.Json.JsonException or UnauthorizedAccessException)
+        {
+            return new McpMetrics.McpReport(0, 0, 0, 0, 0, "", 0, []);
+        }
+    }
+
+    /// <summary>Live git snapshot for the repo-awareness strip (B5.4) — branch, HEAD, dirty/ahead/behind.
+    /// Not an event fold; this is a live query (B5 trap explicitly exempts it). Catches git I/O errors
+    /// and returns a degraded snapshot rather than throwing (A15).</summary>
+    public static RepoStrip.RepoInfo ReadRepoStrip(PlanConfig plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        return RepoStrip.Compute(plan.Repo);
+    }
 
     private static string Short(string sha) => sha.Length >= 7 ? sha[..7] : sha;
 
     private static string? NextCheckpoint(TrackerSnapshot track, string? stageId)
         => stageId == null ? null : track.ForStage(stageId).FirstOrDefault(c => !c.IsDone)?.Id;
+
+    /// <summary>Unicode progress bar: █ for done, ░ for remaining, 10 chars wide.</summary>
+    private static string ProgressBar(int done, int total)
+    {
+        if (total <= 0) return "";
+        const int width = 10;
+        var filled = (int)Math.Round((double)done / total * width);
+        return new string('█', Math.Min(filled, width)) + new string('░', width - filled);
+    }
+
+    /// <summary>Format a commit SHA as a link to the remote if a GitHub/remote URL is available,
+    /// otherwise just the short SHA.</summary>
+    private static string FormatCommitLink(PlanConfig plan, string commit)
+    {
+        var sha = Short(commit);
+        if (string.IsNullOrWhiteSpace(commit) || commit == "-" || commit == "?") return sha;
+        var remote = GetRemoteUrl(plan.Repo);
+        if (remote == null) return $"`{sha}`";
+        return $"[`{sha}`]({remote}/commit/{commit})";
+    }
+
+    private static string? _cachedRemoteUrl;
+    private static string? _cachedRemoteRepo;
+    private static readonly Lock _remoteUrlLock = new();
+
+    private static string? GetRemoteUrl(string repo)
+    {
+        lock (_remoteUrlLock)
+        {
+            if (_cachedRemoteRepo == repo && _cachedRemoteUrl != null) return _cachedRemoteUrl;
+        }
+        try
+        {
+            var result = Git.Exec(repo, "remote", "get-url", "origin");
+            if (result.ExitCode != 0) return null;
+            var url = result.Output.Trim();
+            if (url.StartsWith("git@", StringComparison.Ordinal))
+            {
+                var parts = url.Split('@', ':');
+                if (parts.Length >= 3)
+                {
+                    url = $"https://{parts[1]}/{parts[2].Replace(".git", "", StringComparison.Ordinal)}";
+                }
+            }
+            else
+            {
+                url = url.Replace(".git", "", StringComparison.Ordinal);
+            }
+            lock (_remoteUrlLock)
+            {
+                _cachedRemoteUrl = url;
+                _cachedRemoteRepo = repo;
+            }
+            return url;
+        }
+        catch { return null; }
+    }
 }

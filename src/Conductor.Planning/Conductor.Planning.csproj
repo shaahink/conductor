@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The decoupled planning library (P0). Pure decision logic: data in (plan + declarative rules +
+       runtime facts), decisions out (next step, assignment, QA action). It must NEVER reference the
+       engine (`Conductor`), the store, HTTP, or any UI — the engine references THIS assembly, one
+       way only, and an architecture test enforces that direction. No IO, no clocks, no processes. -->
+  <PropertyGroup>
+    <RootNamespace>Conductor.Planning</RootNamespace>
+  </PropertyGroup>
+
+</Project>

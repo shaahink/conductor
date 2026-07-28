@@ -1,0 +1,77 @@
+# B2.4 evidence — IAgentProvider + Opencode/Claude/GenericText adapters; Orchestrator provider-switch removed
+# Produced: 2026-07-08  (session #14, stage B2, attempt 1)
+# In-tree build: C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.exe
+# =============================================================================
+
+### GATE BATTERY (green) ###
+$ dotnet build Conductor.slnx
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+$ dotnet test Conductor.slnx --no-build
+Passed!  - Failed:     0, Passed:   113, Skipped:     0, Total:   113 - Conductor.Tests.dll (net10.0)
+# 98 → 113 : +15 AgentProviderTests
+
+### STAGE TRUTH GATE — each backend stream parses via its adapter (captured-sample unit tests) ###
+# AgentProviderTests (11 facts, some [Theory]) — all PASS:
+#   OpencodeAdapterFoldsTextThinkingToolAndTokenDeltas      (real session-013.jsonl shape:
+#     text→result buffer, reasoning→thinking, tool_use→tool, step_finish→token/cost deltas)
+#   OpencodeAdapterAccumulatesTokenDeltasAcrossSteps        (deltas summed, not overwritten)
+#   OpencodeAdapterFlagsErrorEvent                          (error part → ResultIsError)
+#   ClaudeAdapterParsesAssistantBlocksAndResultEnvelope     (system/assistant text+tool_use/result)
+#   ClaudeAdapterFlagsErrorResult                           (is_error + error subtype)
+#   GenericTextAdapterEmitsEachLineAsRaw                    (no structured usage in text mode)
+#   NonJsonLineFallsBackToRawInJsonAdapters                 (plugin banner / junk → raw, no throw)
+#   FactorySelectsAdapterByProviderThenOutput [7 cases]     (explicit name, then legacy output infer)
+#   UsageLimitDetectionMatchesKnownBackendPhrasing          (usage limit / 429 → true; green build → false)
+
+### LOOM PARITY — opencode-json plan still loads + dry-runs via the new provider path ###
+# The live Loom plan targets the running DevContext2-ui repo (read-only, not touched here); instead a
+# Loom-SHAPED opencode-json plan was dry-run against a scratch git repo with the IN-TREE build (the
+# only binary carrying B2.4). AgentProviderFactory.Create(plan.Agent) resolves the OpencodeProvider
+# on load; dry-run printed the seeded session #1 prompt for stage L0 and exited 0 (no agent spawned).
+$ conductor.exe run --dry-run -p <scratch>\loom-parity.plan.json
+[08:36:30] conductor start — plan 'B24LoomParity', repo ...\b24-loom, branch master
+[08:36:30] stage → L0 Seed
+--- DRY RUN: would start session #1 (Deliver, stage L0) ... ---   (exit 0)
+
+### WHAT LANDED ###
+- Core/Providers/IAgentProvider.cs   : IAgentProvider (ParseLine + DetectsUsageLimit), AgentStreamState
+                                       (the mutable fold target owned by AgentSession), AgentProviderFactory
+                                       (select by agent.provider, infer from legacy output), ProviderText
+                                       (shared Trunc + the usage-limit regex, moved out of Orchestrator).
+- Core/Providers/OpencodeProvider.cs : opencode `run --format json` parser (verbatim from AgentSession).
+- Core/Providers/ClaudeProvider.cs   : claude `stream-json` parser (verbatim from AgentSession).
+- Core/Providers/GenericTextProvider.cs : plain-text fallback (every line → raw).
+- AgentSession.cs                    : no longer knows any wire format — delegates every stdout line to
+                                       its IAgentProvider; -164/+~50 (ParseOpencode/ParseClaude/Push deleted).
+- Orchestrator.cs                    : removed the LimitRx field; usage-limit detection now delegates to
+                                       _agentProvider.DetectsUsageLimit (no provider switch on `output`).
+- Models/PlanConfig.cs               : AgentConfig.Provider (nullable) — explicit adapter selection;
+                                       falls back to Output inference so every existing plan is unchanged.
+- plans/conductor.self.plan.json     : agent.provider="opencode" added additively (output kept so the
+                                       STABLE master driver still selects correctly; it ignores provider).
+
+### ADDITIVE / BACK-COMPAT ###
+# `output` is retained everywhere; `provider` is preferred only when set. The STABLE bin\conductor.exe
+# from master (which has no B2.4 code) ignores the unknown `provider` JSON field and keeps working from
+# `output`. Parsing behaviour is byte-for-byte the pre-B2.4 logic, relocated — no stall/usage-limit
+# regression (stage trap honoured).
+
+### DIFF (git diff --stat + untracked) ###
+# plans/conductor.self.plan.json     |  13 +-
+# src/Conductor/Core/AgentSession.cs | 164 +--  (parsing extracted to providers)
+# src/Conductor/Core/Orchestrator.cs |  10 +-
+# src/Conductor/Models/PlanConfig.cs |   6 +-
+# src/Conductor/Core/Providers/      | (new: IAgentProvider.cs, OpencodeProvider.cs, ClaudeProvider.cs, GenericTextProvider.cs)
+# tests/Conductor.Tests/AgentProviderTests.cs | (new, +15 tests)
+# 8 files — within the ~15 diff budget.
+
+### QA OF SESSION #13 (B2.3) ###
+- Re-ran stated gate: build 0w/0e, 98 tests pass — CONFIRMED.
+- Claim 1 (tests): RunStateProjection recovery tests + all 6 projection tests green (targeted run) — CONFIRMED.
+- Claim 2 (artifact): RecoverFromCrash reads .conductor/events.jsonl via FindInterruptedSession
+  (Orchestrator.cs:831); the B2.1 artifact shows the in-tree build emits a well-formed events.jsonl.
+  (No on-disk events.jsonl in this worktree because the STABLE master driver — no B2 code — drives it.) — CONFIRMED.
+Verdict: PASS. No findings.

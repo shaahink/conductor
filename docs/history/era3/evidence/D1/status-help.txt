@@ -1,0 +1,14 @@
+﻿DESCRIPTION:
+Show plan, tracker, and session status.
+
+USAGE:
+    conductor status [OPTIONS]
+
+OPTIONS:
+    -h, --help                Prints help information                           
+    -p, --plan <PLAN>         Path to the plan JSON. Falls back to              
+                              CONDUCTOR_PLAN env var, then ./conductor.plan.json
+        --since <DATETIME>    Only show delta since the given UTC datetime (ISO 
+                              8601). Default: full report                       
+        --no-llm              Skip the LLM analysis ΓÇö show only tables (fast,   
+                              offline)                                          

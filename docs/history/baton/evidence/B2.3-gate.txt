@@ -1,0 +1,42 @@
+﻿=== B2.3 Gate Battery ===
+Date: 2026-07-08
+Stage: B2.3 — Crash recovery replays the event log
+
+=== dotnet build Conductor.slnx ===
+0 Warnings, 0 Errors — GREEN
+
+=== dotnet test Conductor.slnx (full) ===
+98 passed, 0 failed, 0 skipped (96→98, +2 B2.3 recovery tests)
+
+=== Recovery tests (RunStateProjectionTests) ===
+  InterruptedSessionIsDetectedFromTruncatedEventStream — PASS
+  NoInterruptedSessionWhenAllSessionsHaveFinishedEvents — PASS
+  FoldedProjectionMatchesLegacyStateJson(BatonSmoke) — PASS
+  FoldedProjectionMatchesLegacyStateJson(Loom) — PASS
+  FoldIsDeterministicRegardlessOfInputOrder — PASS
+  ParityContractCatchesADivergentProjection — PASS
+
+=== What landed ===
+- RunStateProjection.FindInterruptedSession(IEnumerable<ConductorEvent>): detects
+  SessionStarted without matching SessionFinished — returns InterruptedSessionInfo
+  (Number, StageId, AgentSessionId)
+- RecoverFromCrash enhanced with event-log-based recovery:
+  1. State.json path (existing, authoritative for transient control fields)
+  2. Event-log path (B2.3 safety net): if state.json didn't recover a crash but
+     events.jsonl shows an unmatched SessionStarted, queue a resume
+  3. Creates a history record if state.json lacks one for the interrupted session
+- Defensive null-safe fold: NewCommits/NewlyDone null-coalescing in SessionFinished case
+
+=== Diff summary ===
+src/Conductor/Core/Events/RunStateProjection.cs  +47 (FindInterruptedSession + record + null-safe fold)
+src/Conductor/Core/Orchestrator.cs               +65 (event-log-based recovery leg)
+tests/Conductor.Tests/RunStateProjectionTests.cs  +53 (2 new B2.3 tests)
+3 files, +154/-11
+
+=== QA of session #12 (B2.2) ===
+- Build 0w/0e, test suite 96 pass — CONFIRMED
+- Targeted EventLogTests (5/5) + RunStateProjectionTests (4/4) all green — CONFIRMED
+- Parity claim: CapturedRunEvents fixture (11 events, runId 4cf56690..., seq 1→11)
+  folded equals legacy state.json with empty diff. Guard-the-guard test proves
+  Diff catches divergence. — CONFIRMED
+Verdict: PASS. No findings.

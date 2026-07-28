@@ -1,0 +1,43 @@
+D4 Mid-session Control Feedback — 2026-07-09
+
+Gate Battery:
+  Build: PASS (0 warnings, 0 errors)
+    Command: dotnet build Conductor.slnx --nologo
+  Tests: PASS (510 passed, 0 failed, 0 skipped)
+    Command: dotnet test Conductor.slnx --no-build --nologo
+
+Verification:
+  1. Toast mechanism: IProgressSink.Toast(ToastMessage) added
+     - Plain sinks: no-op default
+     - LiveDashboard: stores toast with ~3s auto-dismiss (12 ticks @ 250ms)
+     - DashboardRenderer: renders toast with severity glyph in footer
+
+  2. Control feedback: every accepted/rejected control emits a toast
+     - Accepted controls (pause-after-session, stop-after-session, resume,
+       skip, abort, retry-stage, rollback, pause-after-stage, goto, heartbeat):
+       emit Success/Info toast with confirmation message
+     - Rejected controls (rollback no-commit, rollback dirty-tree,
+       goto no-target, goto not-found, goto skipped):
+       emit Error toast with refusal reason
+     - Deferred controls (mid-session retry/rollback/goto etc.):
+       logged with "received mid-session" (existing behavior, unchanged)
+
+  3. Control file not consumed on guard failure:
+     - ReadControlFile tracks file LastWriteTime; doesn't delete immediately
+     - DeleteControlFile() called only after successful handling
+     - On rejection: file persists for operator to edit and re-issue
+     - On re-edit: new LastWriteTime triggers re-read
+
+  4. All rejection paths produce:
+     - log message to conductor.log via Log() (existing)
+     - structured log via ILogger (existing)
+     - TUI toast with reason (NEW)
+
+Files changed:
+  - src/Conductor/Core/Progress.cs: +ToastMessage record, +ActiveToast on snapshot, +Toast() on IProgressSink
+  - src/Conductor/Core/Orchestrator.cs: +_lastControlWrite tracking, +DeleteControlFile(), +Toast emissions in HandleControl
+  - src/Conductor/Ui/DashboardState.cs: +Toast field
+  - src/Conductor/Ui/DashboardRenderer.cs: +Toast rendering in FooterPanel
+  - src/Conductor/Ui/LiveDashboard.cs: +Toast() method, +toast tick countdown in BuildState
+
+All 510 tests pass. No regressions.

@@ -1,0 +1,76 @@
+# B2.5 evidence — Host/DI/Options (validated) + Microsoft.Extensions.Logging/Serilog sinks with correlation scope; catch-site audit
+# Produced: 2026-07-08  (session #15, stage B2, attempt 1)
+# In-tree build: C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.exe
+# =============================================================================
+
+### GATE BATTERY (green) ###
+$ dotnet build Conductor.slnx
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+$ dotnet test Conductor.slnx --no-build
+Passed!  - Failed:     0, Passed:   118, Skipped:     0, Total:   118 - Conductor.Tests.dll (net10.0)
+# 113 -> 118 : +4 HostLoggingTests, +1 EventLogTests (share-read regression)
+
+### STAGE TRUTH GATE 1 — a run writes a structured log with runId/sessionId (+ stage/gate) ###
+# A real `--once` self-run (fake-agent, token-free) in a scratch git repo, in-tree build.
+# The Serilog file sink under .conductor/logs/conductor-YYYYMMDD.log (UTF-8), correlation scope
+# attached per line by Orchestrator.BeginCorrelationScope via ILogger.BeginScope + Enrich.FromLogContext.
+$ conductor.exe run --once --no-dashboard -p <scratch>\plan.json   (exit 0)
+$ type <scratch>\.conductor\logs\conductor-20260708.log
+2026-07-08 09:03:20.675 [INF] run=1c36ab8a56474963afb892330ca01b7f s=  stage=    gate=            conductor start — plan 'B25Run', repo ...\b25run2, branch master
+2026-07-08 09:03:20.829 [INF] run=1c36ab8a56474963afb892330ca01b7f s=  stage=S1  gate=            stage → S1 First
+2026-07-08 09:03:20.938 [INF] run=1c36ab8a56474963afb892330ca01b7f s=1 stage=S1  gate=            session #1 start — Deliver S1 attempt 1/2
+2026-07-08 09:03:22.202 [INF] run=1c36ab8a56474963afb892330ca01b7f s=1 stage=S1  gate=            session #1 exited (code 0, 0m, $0.00)
+2026-07-08 09:03:22.210 [INF] run=1c36ab8a56474963afb892330ca01b7f s=1 stage=S1  gate=            verifying independently: gate battery + git + tracker diff
+2026-07-08 09:03:22.217 [INF] run=1c36ab8a56474963afb892330ca01b7f s=1 stage=S1  gate=battery:full gate build: exit 0
+2026-07-08 09:03:22.567 [INF] run=1c36ab8a56474963afb892330ca01b7f s=1 stage=S1  gate=battery:full gate build: PASS in 0s
+2026-07-08 09:03:22.686 [INF] run=1c36ab8a56474963afb892330ca01b7f s=1 stage=S1  gate=            session #1 Advanced — S1.1 done
+2026-07-08 09:03:22.794 [INF] run=1c36ab8a56474963afb892330ca01b7f s=1 stage=S1  gate=            --once: stopping after one session
+# All FOUR correlation dimensions present: runId (whole run), sessionId (s=1 once a session starts),
+# stage (S1), gate (battery:full during the battery). The plain .conductor/conductor.log is kept
+# additively for back-compat; the structured log above is the authoritative record.
+
+### STAGE TRUTH GATE 2 — options validated on start; a bad config surfaces (not swallowed) ###
+# HostLoggingTests (xUnit) — all PASS:
+#   InvalidPlanSurfacesAsOptionsValidationExceptionOnStart  (PlanConfigValidator via IValidateOptions;
+#     ConductorHost.Build throws OptionsValidationException before the run loop — error surfaces, A15)
+#   ValidPlanComposesOrchestratorViaDi                      (Orchestrator resolved from IHost.Services)
+#   DryRunWritesStructuredLogWithRunIdCorrelation           (real dry-run → conductor-*.log has run=<id>, stage=)
+#   CorrelationTemplateCoversRunSessionStageGate            (sink template carries all four dimensions)
+
+### HOST / DI / OPTIONS COMPOSITION ###
+- Core/Hosting/ConductorHost.cs : Host.CreateApplicationBuilder → DI-registers PlanConfig/RunState/
+                                   RunOptions/IProgressSink/IEventSink/Orchestrator; Serilog file sink
+                                   (rolling daily, .conductor/logs/) + optional console sink (off under
+                                   the TUI so it never corrupts the dashboard); PlanConfigValidator
+                                   (IValidateOptions<PlanConfig>) run on start — fail-fast.
+- Commands.cs (RunCommand)       : builds the host (plain: consoleSink on; dashboard: file-only) and
+                                   resolves the Orchestrator from the container instead of `new`.
+- Orchestrator.cs                : takes ILogger<Orchestrator>; Log() writes the legacy plain log
+                                   (best-effort, typed catch) AND logger.LogInformation inside a
+                                   BeginCorrelationScope (runId/sessionId/stage/gate); _curGate marks
+                                   the battery window.
+- Models/PlanConfig.cs           : validation extracted to internal CollectErrors() so Load (throws)
+                                   and the Options validator share one rule set.
+
+### CATCH-SITE AUDIT (R2.5 / A15 — no silent swallow) ###
+# Every bare, untyped `catch { }` / `catch { return … }` narrowed to specific exception types with a
+# one-line rationale; genuinely best-effort cleanup (disposal, process-already-gone, best-effort I/O)
+# is now typed + commented so no REAL failure is hidden. Files: AgentSession.cs, InstructionQueue.cs,
+# StatusAgent.cs, DocsExtractor.cs, Commands.cs (PreviewCommand), Orchestrator.cs (progress-read /
+# lock-release), PlainSink.cs. Already-typed+commented sites (ProcessRunner/JobObject/Advisor/GitView/
+# LiveDashboard) reviewed — no change needed.
+
+### ADDITIVE / RESUMABILITY ###
+# state.json + events.jsonl writing unchanged; the host is a composition + logging root (no behaviour
+# change to the session loop). The EventLog share-read fix (commit fix bB2.3) makes crash recovery's
+# real path launchable — resumability strengthened, not regressed.
+
+### QA OF SESSION #14 (B2.4) ###
+- Re-ran stated gate: build 0w/0e, 113 tests pass — CONFIRMED.
+- Claim 1 (tests): 15 AgentProviderTests green (targeted run) — CONFIRMED.
+- Claim 2 (artifact): in-tree build dry-run of an opencode-json plan in a scratch repo resolved the
+  OpencodeProvider via AgentProviderFactory and printed the seeded prompt (exit 0) — CONFIRMED.
+Verdict: PASS. No findings against B2.4. (Separately surfaced a latent B2.3 recovery bug — fixed.)

@@ -1,0 +1,142 @@
+{
+  // Conductor self-plan — "Baton" v2. Conductor drives its own next iteration.
+  //
+  // DRIVER: run this with the STABLE binary built from `master`
+  //   (C:\Code\conductor\bin\conductor.exe), NOT a binary built from this worktree —
+  //   the tool improving Conductor must never be the tool under edit.
+  //
+  // REPO: the isolated worktree C:\Code\conductor-baton on branch feat/baton.
+  //   Cannot collide with C:\Code\conductor (master) or the live DevContext2-ui Loom run
+  //   (different repo, different .conductor lock).
+  //
+  // The design authority is docs/history/baton/BATON-BRIEF.md; per-stage specs live in
+  // docs/history/baton/stages/B<n>.md; CONDUCTOR-START.md is the tracker conductor parses.
+  "name": "Baton",
+  "repo": "C:/Code/conductor-baton",
+  "tracker": "docs/history/archive/trackers/CONDUCTOR-START.md",
+  "planDoc": "docs/history/baton/BATON-BRIEF.md",
+  "branchPattern": "^feat/baton",
+  "pauseOnBlocked": false,
+  "batteryCollapse": true,
+
+  // Acting agent: opencode/deepseek-v4-pro (same as the Loom run). provider "opencode" selects the
+  // IAgentProvider adapter (B2.4) that parses opencode's --format json stream (text/reasoning/tool/
+  // cost/tokens). --auto = headless (skip permission prompts); --thinking emits reasoning; --share
+  // prints a live opncd.ai URL for phone viewing. Resume uses --continue (opencode's own last session).
+  // `output` is kept for back-compat: the STABLE master driver still selects by it and ignores the
+  // unknown `provider` field, while the in-tree build prefers `provider` (falls back to output).
+  "agent": {
+    "command": "opencode",
+    "args": [
+      "run", "-m", "deepseek/deepseek-v4-pro", "--auto", "--thinking", "--share", "--format", "json", "{prompt}"
+    ],
+    "resumeArgs": [
+      "run", "-m", "deepseek/deepseek-v4-pro", "--auto", "--thinking", "--share", "--format", "json", "--continue", "{prompt}"
+    ],
+    "provider": "opencode",
+    "output": "opencode-json"
+  },
+
+  // Clean-slate discipline: free the MSBuild/Roslyn build servers that can hold DLL locks on
+  // conductor.dll between the build gate and the test gate. setup runs before every agent session
+  // AND before every gate battery; teardown after every gate battery.
+  // IMPORTANT: do NOT kill processes named "conductor" (that is the DRIVER running this plan) or
+  // "opencode"/"dotnet" broadly (that would kill the agent / the gate run). build-server shutdown
+  // is the safe, targeted backstop.
+  "setup": {
+    "command": "dotnet build-server shutdown; exit 0",
+    "timeoutMinutes": 2
+  },
+  "teardown": {
+    "command": "dotnet build-server shutdown; exit 0",
+    "timeoutMinutes": 2
+  },
+
+  // Cheap second brain for stuck/failed sessions — deepseek via opencode, so it still works
+  // when the primary agent's quota is the thing that broke.
+  "advisor": {
+    "enabled": true,
+    "command": "opencode",
+    "args": ["run", "{prompt}", "-m", "deepseek/deepseek-v4-pro"],
+    "output": "text",
+    "timeoutMinutes": 6
+  },
+
+  // Stages map 1:1 to docs/history/baton/stages/B<n>.md. `sessions` is the expected session count
+  // (attempt budget = sessions * limits.stageSlackFactor). `notes` points the agent at its
+  // stage file and, where useful, names the persona template it should adopt (personas become
+  // first-class in B7; until then the note nudges the agent into the right mindset).
+  "stages": [
+    { "id": "B0",  "title": "Repo modernisation + self-hosting harness",   "sessions": 2, "notes": "Read docs/history/baton/stages/B0.md. Migrate to net10.0, add Directory.Build.props/Directory.Packages.props/.editorconfig/Meziantou.Analyzer/Conductor.slnx, keep 56 tests green under warnings-as-errors. This stage sets the guardrails every later stage is held to." },
+    { "id": "B1",  "title": "Decouple Loom + pluggable progress providers", "sessions": 3, "notes": "Read docs/history/baton/stages/B1.md. Move plans/loom* to examples/loom/, introduce IProgressProvider (Markdown default, Script, PlanCheckpoint), configurable conventions incl. irregular ids (P-0/P3.4b/F5), read-order battery, new-plan scaffold, and author the Shamshir parity-pipeline TRACKER.md." },
+    { "id": "B2",  "title": "Event-sourced backbone + provider decoupling","sessions": 3, "notes": "Read docs/history/baton/stages/B2.md. Append-only events.jsonl; RunState becomes a projection (StateCompat parity before cutover); IAgentProvider replaces the provider switch; Host/DI/Options + Serilog; TokenDelta per step_finish. Additive first — resumability must never regress.", "persona": "architect" },
+    { "id": "B3",  "title": "Safety, owner-gates & process control",        "sessions": 2, "notes": "Read docs/history/baton/stages/B3.md. Confirm destructive actions (A/K/S + CLI), owner-gate step type (AwaitingOwner), retry/rollback/pause-after-stage/goto, budget+token caps, approval mode, graceful Ctrl+C." },
+    { "id": "B4",  "title": "TUI overhaul (alt-screen + tree)",             "sessions": 3, "notes": "Read docs/history/baton/stages/B4.md. Alternate-screen buffer with clean restore; Spectre Layout rebuild; hierarchical plan tree; severity model; structured thinking + tool-call folding; command search/filters; live-consistent tokens; doc-on-select.", "persona": "refactor" },
+    { "id": "B5",  "title": "Observability & health",                       "sessions": 2, "notes": "Read docs/history/baton/stages/B5.md. Timeline + replay/time-travel from the event log; AI-health metrics; confidence tracking; MCP metrics; repo strip. All derive from B2's events.", "persona": "qa" },
+    { "id": "B6",  "title": "AFK + two-way Telegram",                       "sessions": 2, "notes": "Read docs/history/baton/stages/B6.md. Long-poll getUpdates + inline-keyboard control→control.json (chat-id allowlist, destructive confirm); richer REPORT.md with clean heartbeat; notify hooks. ACCEPTANCE: drive Shamshir P-0 + P0.1 headless." },
+    { "id": "B7",  "title": "Specialist sub-agent personas",               "sessions": 2, "notes": "Read docs/history/baton/stages/B7.md. Per-stage/per-checkpoint agent override; built-in persona registry (planner/reviewer/architect/qa/docs/...); PromptBuilder merges base+persona; persona surfaced in dashboard/report/events.", "persona": "architect" },
+    { "id": "B8",  "title": "Brain layer",                                  "sessions": 2, "notes": "Read docs/history/baton/stages/B8.md. Reflection→lessons.md; lessons injected into next prompt; self-review stage kind; handover gaps→followups.md; IPromptBattery; token-budget rollover (RolledOver).", "persona": "reviewer" },
+    { "id": "B9",  "title": "Task graph + smart session management",       "sessions": 3, "notes": "Read docs/history/baton/stages/B9.md. Event-sourced task graph BENEATH the checkpoint contract; planner decomposition; MCP task server (persists agent todo list across sessions); cooperative soft-break + hard fallback; CLI/TUI/Telegram task views.", "persona": "planner" },
+    { "id": "B10", "title": "Advanced orchestration",                      "sessions": 2, "notes": "Read docs/history/baton/stages/B10.md. dependsOn graph + ready-stage ordering; first-class hierarchical stages; per-stage pre/post hooks; collapse the double gate battery (measure token drop). No session branching (deferred)." },
+    { "id": "B11", "title": "Close-out + Shamshir owner-gated proof",      "sessions": 2, "notes": "Read docs/history/baton/stages/B11.md. Cross-platform gate runner; dotnet tool packaging + tab completion + doctor; ADRs; clean-clone battery. ACCEPTANCE: drive a full owner-gated Shamshir phase (parity-pipeline P2.2).", "persona": "docs" },
+    { "id": "B12", "title": "Controlled parallelism",                      "sessions": 3, "notes": "Read docs/history/baton/stages/B12.md. Tier A read-only analysis lanes FIRST (scratch cwd, artifacts feed prompts+handover, no git contention); THEN Tier B isolated-worktree mutating lanes behind a full-battery MERGE GATE; bounded worker pool + concurrency cap; fix-lanes consume followups.md. Never accept a lane mutation without the merge gate.", "persona": "architect" }
+  ],
+
+  // perPhase: fast-tier gates (build) run per session for a cheap compile check; the FULL
+  // battery (build + tests) runs once when a stage's checkpoints are all DONE, then the audit.
+  // A HEAD-sha cache skips reruns on an unchanged tree.
+  "gatePolicy": "perPhase",
+
+  // Auto-fix audit at the end of every phase: after the full battery is green, an audit session
+  // reviews the phase diff, fixes bugs / shallow impls / missing edge cases, re-verifies, and
+  // writes an honest handover to .conductor/handovers/<stage>.md before the plan advances. Its
+  // weak/deferred bullets are the raw material B8 turns into tracked followups.
+  "audit": { "enabled": true, "maxAttempts": 1 },
+
+  // The gate battery — conductor re-runs this itself and never trusts the agent's word.
+  // Real exit codes only. build is fast-tier (also per session); tests is full-tier (phase end),
+  // run --no-build since the fast build already compiled, in parallel is a no-op here (single
+  // heavy gate) but kept explicit. Under warnings-as-errors (B0) a warning fails the build gate.
+  "gates": [
+    { "name": "build", "command": "dotnet build Conductor.slnx", "tier": "fast", "timeoutMinutes": 10 },
+    { "name": "tests", "command": "dotnet test Conductor.slnx --no-build", "parallel": true, "timeoutMinutes": 20 }
+  ],
+
+  "limits": {
+    "stallMinutes": 12,
+    "sessionTimeoutMinutes": 180,
+    "maxResumesPerSession": 2,
+    "stageSlackFactor": 2,
+    "backoffMinutes": 30,
+    "maxBackoffs": 10,
+    "maxSessionTokens": 2000000
+  },
+
+  "report": { "commit": true, "push": true, "heartbeatMinutes": 10 },
+
+  // Optional notifier ({message} substituted). Wire a BurntToast/webhook/Telegram command here;
+  // Telegram becomes first-class in B6.
+  "notify": { "command": "", "args": [] },
+
+  // On-demand status reporter (dashboard G key). Read-only by construction (scratch cwd,
+  // context embedded in the prompt). Enable to use.
+  "statusAgent": {
+    "enabled": true,
+    "command": "opencode",
+    "args": ["run", "{prompt}", "-m", "deepseek/deepseek-v4-pro"],
+    "timeoutMinutes": 5
+  },
+
+  "readOrder": [
+    "CONDUCTOR-START.md",
+    "docs/history/baton/BATON-BRIEF.md"
+  ],
+  "batteries": {
+    "lessons": true,
+    "recentFailure": true,
+    "lessonsMaxEntries": 3,
+    "maxBytes": 2048
+  },
+  "templatesDir": "baton-templates",
+  "promptExtra": "This plan is self-referential: you are improving Conductor itself. The DRIVER that verifies you is the STABLE bin\\conductor.exe from master — never assume your in-tree build is what's judging you. Respect the diff budget (~15 files); keep the 56+ test suite green under warnings-as-errors; never lower an analyzer severity to pass. Honour the anti-pattern catalog in docs/history/baton/BATON-BRIEF.md §7."
+}

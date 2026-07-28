@@ -1,0 +1,67 @@
+# B2.6 evidence — TokenDelta events per step_finish + LiveMetrics projection (fixes F-3 live-token lag)
+# Produced: 2026-07-08  (session #16, stage B2, attempt 1)
+# In-tree build: C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.exe
+# =============================================================================
+
+### GATE BATTERY (green) ###
+$ dotnet build Conductor.slnx
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+$ dotnet test Conductor.slnx --no-build
+Passed!  - Failed:     0, Passed:   125, Skipped:     0, Total:   125 - Conductor.Tests.dll (net10.0)
+# 118 -> 125 : +7 tests (2 AgentProvider token-delta, 4 LiveMetrics projection, 1 DashboardRenderer live-token)
+
+### B2.6-SPECIFIC TESTS (all GREEN, 9 total incl. round-trip) ###
+$ dotnet test Conductor.slnx --no-build --filter "FullyQualifiedName~TokenDelta|FullyQualifiedName~LiveMetrics|FullyQualifiedName~OpencodeAdapterEmitsToken|FullyQualifiedName~TokenLineIncludesLive"
+Passed!  - Failed:     0, Passed:     9, Skipped:     0, Total:     9
+
+Test details:
+  EveryEventTypeRoundTripsThroughSourceGen   — includes TokenDelta in the polymorphic round-trip
+  TokenDeltaEmittedOnStepFinishViaDelegate   — AgentStreamState.EmitTokenDelta fires on step_finish
+  OpencodeAdapterEmitsTokenDeltaPerStepFinish — one delta per step_finish, accumulated totals hold
+  LiveMetricsTests.ForSessionSumsOnlyDeltasWithMatchingSessionId — folds per-session, ignores others
+  LiveMetricsTests.RunWideSumsAllTokenDeltas — folds across all sessions
+  LiveMetricsTests.EmptyStreamReturnsZeroes
+  LiveMetricsTests.NonExistentSessionReturnsZeroes
+  TokenLineShowsTotal                        — existing, still passes
+  TokenLineIncludesLiveSessionTokens         — 6.5k in / 2.5k out / 9.0k total (historical + live)
+
+### SCHEMA — TokenDelta event type ###
+- ConductorEvent.cs: new TokenDelta record with Input/Output/Reasoning/CacheRead/CostUsd.
+  Registered via [JsonDerivedType(typeof(TokenDelta), "tokenDelta")]; round-trips through
+  System.Text.Json source-gen with camelCase compact NDJSON (proven by the round-trip test).
+
+### EMISSION — provider → event log flow ###
+- IAgentProvider.cs / AgentStreamState: added optional `onTokenDelta` delegate + EmitTokenDelta method.
+- OpencodeProvider.cs: on step_finish, captures per-step delta values and calls state.EmitTokenDelta()
+  AFTER accumulating into the state (so both the event log and the agent totals stay consistent).
+- AgentSession.cs: accepts IEventSink? parameter (plumbed through Start() → constructor); creates the
+  TokenDelta event and enqueues it via the sink. Default null keeps existing callers compiling.
+- Orchestrator.cs: passes `events` (the IEventSink) to AgentSession.Start().
+
+### LIVE SNAPSHOT (F-3 fix — dashboard token line now includes the live session) ###
+- DashboardSnapshot (Progress.cs): added SessionTokensInput/Output/Reasoning fields — mirrors the
+  SessionCostUsd pattern (historical + live burn).
+- Orchestrator.PushSessionSnapshot: reads live tokens from agent.Tokens* (already accumulated during
+  the session) and stamps them into the snapshot.
+- DashboardRenderer.TokenLine: combines historical (TokensInput) + live session (SessionTokensInput)
+  in the token line, exactly matching the cost-line pattern that already fixed F-3 for cost.
+
+### PROJECTION — LiveMetrics ###
+- Core/Events/LiveMetrics.cs: pure projection folding TokenDelta events.
+  - ForSession(events, sessionNumber) → SessionTokenTotals per session.
+  - RunWide(events) → SessionTokenTotals across all sessions.
+  - SessionTokenTotals record: Input/Output/Reasoning/CacheRead/CostUsd + computed Total.
+
+### DIFF BUDGET ###
+- 8 files modified (ConductorEvent.cs, IAgentProvider.cs, OpencodeProvider.cs, AgentSession.cs,
+  Orchestrator.cs, Progress.cs, DashboardRenderer.cs, EventLogTests.cs)
+- 2 files created (LiveMetrics.cs, LiveMetricsTests.cs)
+- Within the ~15 file budget. No unrelated changes.
+
+### ADDITIVE / RESUMABILITY ###
+- TokenDelta events are emitted ADDITIVELY alongside state.json; no behaviour changed.
+- The AgentStreamState delegate is optional (defaults null) — all existing callers compile unchanged.
+- The event log schema is append-only; adding a new derived type is backwards-compatible for readers.

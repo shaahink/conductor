@@ -1,0 +1,53 @@
+# B2.1 evidence — ConductorEvent schema + append-only events.jsonl writer (additive)
+# Produced: 2026-07-08 07:42  (session #11, stage B2, attempt 1)
+# In-tree build: C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.dll
+#
+# WHY the in-tree build (not the STABLE driver) produced this artifact:
+#   B2.1 adds NEW behaviour (event emission) that exists ONLY in this worktree's build. The
+#   STABLE bin\conductor.exe from master cannot emit events, so the events.jsonl artifact can
+#   only be produced by the in-tree binary. The STABLE driver still JUDGES this checkpoint the
+#   usual way (build gate + tests + new commit + tracker row flip) — all green below.
+# =============================================================================
+
+### GATE BATTERY (green) ###
+$ dotnet build Conductor.slnx
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+$ dotnet test Conductor.slnx
+Passed!  - Failed:     0, Passed:    92, Skipped:     0, Total:    92 - Conductor.Tests.dll (net10.0)
+# 87 → 92 : +5 EventLogTests
+#   EveryEventTypeRoundTripsThroughSourceGen         (schema round-trip, all 9 event records)
+#   SerializedLineIsCompactCamelCaseNdjsonWithDiscriminator
+#   WriterProducesWellFormedAppendOnlyLogInOrder
+#   SequenceContinuesAcrossRestart
+#   ReadAllToleratesATrailingTornLine                (crash-safe fold: torn tail dropped)
+
+### SELF-RUN GATE (fake-agent --once, token-free, in a temp git repo) ###
+# Plan: BatonSmoke (opencode-json fake agent, perPhase, audit off). Two --once invocations.
+# Verifier: every physical line parsed back via ConvertFrom-Json → 6/6 then 11/11 valid JSON.
+# Additive proof: .conductor/state.json STILL written alongside; its runId == the events' runId
+#   (38962fd0…), status idle, sessionCounter advanced, S1.1/S1.2 recorded — resumability intact.
+# Resume proof: 2nd invocation appended under the SAME runId with seq continuing 6→7…11
+#   (no reset), and RunStarted.resumed flipped false→true. One logical run = one event stream.
+
+--- .conductor/events.jsonl (11 events across 2 sessions, one runId) ---
+{"type":"runStarted","plan":"BatonSmoke","repo":"C:/Users/shahi/AppData/Local/Temp/opencode/b21-smoke","branch":"master","driverVersion":"1.0.0.0","resumed":false,"seq":1,"ts":"2026-07-08T06:42:02.8634087+00:00","runId":"38962fd00058460ea231993d7c42c321"}
+{"type":"stageEntered","stageId":"S1","title":"Smoke","startHead":"9b3546be89b86f3c6a7104895e5fc7165bb278d0","seq":2,"ts":"2026-07-08T06:42:02.9117498+00:00","runId":"38962fd00058460ea231993d7c42c321"}
+{"type":"sessionStarted","number":1,"stageId":"S1","kind":"Deliver","attempt":1,"maxAttempts":4,"agentSessionId":"c36a6066-f734-4976-9afd-d928d2c3b3bf","seq":3,"ts":"2026-07-08T06:42:02.9904411+00:00","runId":"38962fd00058460ea231993d7c42c321","sessionId":"1"}
+{"type":"gateFinished","name":"build","passed":true,"skipped":false,"optional":false,"exitCode":0,"durationMs":378,"scope":"session","seq":4,"ts":"2026-07-08T06:42:04.2645378+00:00","runId":"38962fd00058460ea231993d7c42c321","sessionId":"1"}
+{"type":"sessionFinished","number":1,"stageId":"S1","outcome":"Advanced","newCommits":["e705218 feat(fake): checkpoint delivered by fake agent"],"newlyDone":["S1.1"],"costUsd":0.0003,"tokensInput":230,"tokensOutput":140,"tokensReasoning":0,"tokensCacheRead":0,"seq":5,"ts":"2026-07-08T06:42:04.4397404+00:00","runId":"38962fd00058460ea231993d7c42c321","sessionId":"1"}
+{"type":"checkpointConfirmed","checkpointId":"S1.1","stageId":"S1","seq":6,"ts":"2026-07-08T06:42:04.4399524+00:00","runId":"38962fd00058460ea231993d7c42c321","sessionId":"1"}
+{"type":"runStarted","plan":"BatonSmoke","repo":"C:/Users/shahi/AppData/Local/Temp/opencode/b21-smoke","branch":"master","driverVersion":"1.0.0.0","resumed":true,"seq":7,"ts":"2026-07-08T06:42:34.0833719+00:00","runId":"38962fd00058460ea231993d7c42c321"}
+{"type":"sessionStarted","number":2,"stageId":"S1","kind":"Deliver","attempt":1,"maxAttempts":4,"agentSessionId":"541ecffa-06bc-4ca6-a1fc-d120f7806b74","seq":8,"ts":"2026-07-08T06:42:34.1811066+00:00","runId":"38962fd00058460ea231993d7c42c321","sessionId":"2"}
+{"type":"gateFinished","name":"build","passed":true,"skipped":false,"optional":false,"exitCode":0,"durationMs":457,"scope":"session","seq":9,"ts":"2026-07-08T06:42:35.9124442+00:00","runId":"38962fd00058460ea231993d7c42c321","sessionId":"2"}
+{"type":"sessionFinished","number":2,"stageId":"S1","outcome":"Advanced","newCommits":["66efe10 feat(fake): checkpoint delivered by fake agent"],"newlyDone":["S1.2"],"costUsd":0.0003,"tokensInput":230,"tokensOutput":140,"tokensReasoning":0,"tokensCacheRead":0,"seq":10,"ts":"2026-07-08T06:42:36.1332428+00:00","runId":"38962fd00058460ea231993d7c42c321","sessionId":"2"}
+{"type":"checkpointConfirmed","checkpointId":"S1.2","stageId":"S1","seq":11,"ts":"2026-07-08T06:42:36.1335433+00:00","runId":"38962fd00058460ea231993d7c42c321","sessionId":"2"}
+
+### QA of previous session (#10, B1 audit) — VERDICT: PASS ###
+# Re-ran its stated gate: build 0w/0e, tests green (baseline 87 before this session's +5).
+# Claim 1 (tests): 6 targeted tests green — NewPlanScaffoldTests (4 templates own ≥1 row) +
+#   ProgressConventionsTests.InProgress_WithIrregularInnerWhitespace_StillClassifies.
+# Claim 2 (running artifact): `new-plan --template shamshir` emits stage-coherent rows
+#   (P-0 / P0.1 / P1.1); the STABLE driver dry-runs it and resolves `stage → P-0`. No findings.

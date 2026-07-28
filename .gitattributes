@@ -1,0 +1,10 @@
+# Go golden files compare byte-for-byte — keep them LF on every platform.
+face-go/internal/tui/testdata/golden/*.golden text eol=lf
+
+# Shell scripts must be LF everywhere: a CRLF shebang line ("#!/usr/bin/env bash\r") is not a
+# shebang, and the failure reads as "bad interpreter" rather than "wrong line endings".
+*.sh text eol=lf
+
+# Binary assets: never line-ending-normalise (a corrupted GIF is a silent README regression).
+*.gif binary
+*.png binary

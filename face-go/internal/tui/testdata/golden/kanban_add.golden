@@ -1,0 +1,34 @@
+ ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42    
+ h a s t o c e p r k g  b Kanban  d                                                                           
+                           │                                                                                  
+ ▶ PLAN                    │  TODO (2)                  In Progress (1)           Done (2)                    
+ ✓ F0 3/3 Foundations      │  ────────────────────────  ────────────────────────  ────────────────────────    
+ ✓ F6 5/5 Ink TUI v1       │  ▸ F7.4 · Cache gate res…  • F7.3 · Wire RunDb.Get…  • F7.3 · Add truth-tier…    
+ ● F7 2/5 Gate … 1× $0.30  │    T3 · planner · #3                                 • F7.5 · Benchmark the …    
+   ✓ F7.1 Plan import      │  • F7.4 · Add SkipIfFres…                                                        
+   ✓ F7.2 Re-import diff   │                                                                                  
+   ● F7.3 Truth-gate tier  │    + new card under F7.4                                                         
+ ○ F8 0/4 conductor chat…  │    title: wire the goldens▏                                                      
+                           │                                                                                  
+ ── GATES ──               │                                                                                  
+   ✓ build                 │                                                                                  
+   ● test 4s               │                                                                                  
+   ○ lint                  │                                                                                  
+                           │                                                                                  
+ ── TASKS ──               │                                                                                  
+   ✓ Add truth-tier con…   │                                                                                  
+   ● Wire RunDb.GetLast…   │                                                                                  
+   ○ Cache gate results…   │                                                                                  
+   ○ Add SkipIfFresh ti…   │                                                                                  
+   ○ Benchmark the warm…   │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   type · enter add · esc cancel                     

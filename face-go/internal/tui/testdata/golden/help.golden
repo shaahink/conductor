@@ -1,0 +1,34 @@
+ ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42 
+  h Home  a s t o c e p r k g b d                                                                          
+                           │                                                                               
+ ▶ PLAN                    │  Server                                                                       
+ ✓ F0 3/3 Foundations      │  mode       live                                                              
+ ✓ F6 5/5 Ink ╭────────────────────────────────────────────────────────────────────────────────╮           
+ ● F7 2/5 Gate│                                                                                │           
+   ✓ F7.1 Plan│   ◆ conductor  ·  keys                                                         │           
+   ✓ F7.2 Re-i│                                                                                │           
+   ● F7.3 Trut│   Tabs  (letter or number jumps · tab cycles)                                  │           
+ ○ F8 0/4 cond│     h Home       a Agent      s Sessions                                       │           
+              │     t Timeline   o Procs      c Console                                        │           
+ ── GATES ──  │     e Templates  p Plan       r Report                                         │           
+   ✓ build    │     k Knowledge  g Telegram   b Kanban     d Dev                               │           
+   ● test 4s  │                                                                                │           
+   ○ lint     │   Palette  :  red = confirms, and says what it will do                         │           
+              │     Run    pause · resume · stop-after · approve · heartbeat · reload-plan     │           
+ ── TASKS ──  │     Stage  goto · retry-stage · skip · pause-after-stage                       │           
+   ✓ Add truth│     Danger kill · abort · rollback                                             │           
+   ● Wire RunD│     Face   theme mocha · latte · nord · gruvbox                                │           
+   ○ Cache gat│                                                                                │           
+              │   Actions                                                                      │           
+              │     i inject context    / search transcript · f fold tools · T fold thinking   │           
+              │     \ collapse sidebar  ↑↓ scroll / navigate                                   │           
+              │                                                                                │           
+              │   Global                                                                       │           
+              │     q quit   esc close / cancel   ? this help                                  │           
+              │                                                                                │           
+              ╰────────────────────────────────────────────────────────────────────────────────╯           
+                           │    ?  see every key                                                           
+                           │                                                                               
+                           │                                                                               
+                           │                                                                               
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   a agent · r report · : commands · ? keys       

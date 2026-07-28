@@ -2,3 +2,8 @@ bin/
 obj/
 *.user
 .vs/
+.idea/
+.DS_Store
+publish/
+*.log
+.claude/settings.local.json

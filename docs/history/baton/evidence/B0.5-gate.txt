@@ -1,0 +1,28 @@
+# B0.5 evidence — baseline audit doc
+
+Generated: 2026-07-08 (session #2)
+Checkpoint: B0.5 — baseline audit doc written as B0 evidence
+Gate: doc exists, every claim cites a file:line
+
+## dotnet build Conductor.slnx (TreatWarningsAsErrors=true)
+```
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+```
+
+## dotnet test Conductor.slnx --no-build
+```
+Passed!  - Failed:     0, Passed:    56, Skipped:     0, Total:    56
+```
+
+## Audit doc verification
+- Path: docs/baton/audits/B0-baseline.md
+- Source files audited: 25 .cs + 1 .csproj in src/Conductor/
+- File:line citations: 40+ (every claim references a concrete file:line)
+- Sections: provider coupling, tracker-parser Loom-isms, mutable RunState,
+  dashboard render split, token-lag F-3, heartbeat pollution F-4,
+  cross-cutting duplication (stage overview 3x, glyph mapping 2x, key mapping 2x),
+  synchronous blocking, file-based IPC, monolithic Orchestrator,
+  limit-detection regex, 14 additional items in debt table with B-stage targets.
+- To verify any claim: grep the cited file:line in the source tree.

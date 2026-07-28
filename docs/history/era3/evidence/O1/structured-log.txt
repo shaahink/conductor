@@ -1,0 +1,49 @@
+﻿===== O1: Structured log + conductor log --query =====
+Date: 2026-07-09 07:02:36
+
+--- Gate: Build ---
+0 warnings, 0 errors
+
+--- Gate: Tests ---
+511 passed, 0 failed, 0 skipped
+
+--- JSON sink evidence ---
+File: .conductor/logs/conductor-{Date}.json (one valid JSON object per line)
+
+Sample line:
+{"@t":"2026-07-09T05:59:22.7530994Z","@m":"\"conductor start â€” plan 'o1-smoke2', repo C:/Users/shahi/AppData/Local/Temp/conductor-o1-test2, branch \"","@i":"51f29f93","ConductorMessage":"conductor start â€” plan 'o1-smoke2', repo C:/Users/shahi/AppData/Local/Temp/conductor-o1-test2, branch ","SourceContext":"Conductor.Core.Orchestrator","runId":"8a1f334914f943d38fb152de0281994c"}
+
+Sample line (with stage correlation):
+{"@t":"2026-07-09T05:59:22.8728532Z","@m":"\"stage â†’ S1 First\"","@i":"51f29f93","ConductorMessage":"stage â†’ S1 First","SourceContext":"Conductor.Core.Orchestrator","runId":"8a1f334914f943d38fb152de0281994c","stage":"S1"}
+
+--- conductor log --query examples ---
+
+1. No filter (all entries):
+$ (conductor log -p <plan>)
+→ shows all log entries
+
+2. Filter by stage:
+$ (dotnet run --project src\Conductor -- log -p "C:\Users\shahi\AppData\Local\Temp\conductor-o1-test2\conductor.plan.json" --query "stage=S1")
+Result: 1 match for 'stage=S1'
+  2026-07-09 05:59:22 [?] [stage:S1] "stage → S1 First"
+
+3. Compound query:
+$ (dotnet run --project src\Conductor -- log -p "C:\Users\shahi\AppData\Local\Temp\conductor-o1-test2\conductor.plan.json" --query "runId=8a1f334914f943d38fb152de0281994c and stage=S1")
+Result: 1 match — correct filter
+
+--- Files changed ---
+- Directory.Packages.props: added Serilog.Formatting.Compact 3.0.0
+- src/Conductor/Conductor.csproj: added PackageReference
+- src/Conductor/Core/Hosting/ConductorHost.cs: added RenderedCompactJsonFormatter sink to conductor-.json
+- src/Conductor/Core/Orchestrator.cs: added _outcome field, Log(string,string?) overload, BeginCorrelationScope includes outcome, RunGateBattery emits per-gate outcome lines, key verdict lines pass outcome
+- src/Conductor/Commands/Commands.cs: added LogCommand with --query/--since/--tail
+- src/Conductor/Program.cs: registered 'log' command
+- tests/Conductor.Tests/HostLoggingTests.cs: added DryRunWritesJsonLogWithCorrelationProperties test
+- tests/Conductor.Tests/B11_2Tests.cs: updated completion verb list (gate, log)
+- CONDUCTOR-ERA3-START.md: fixed D4 commit hash (4bc5760→f40a974)
+
+--- Text sink preserved ---
+conductor-.log (text format) still written alongside conductor-.json (JSON format)
+
+--- Queryable properties ---
+Each JSON line supports filtering by: runId, sessionId, stage, gate, outcome, level

@@ -1,7 +1,8 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
-using System.Text.Json;
+using Conductor.Core.Events;
+using Conductor.Core.Providers;
 using Conductor.Models;
 
 namespace Conductor.Core;
@@ -14,9 +15,10 @@ public sealed class AgentEvent
 }
 
 /// <summary>
-/// One headless agent run (claude -p / opencode run). Parses claude stream-json or opencode
-/// --format json (text/reasoning/tool/cost/tokens) when configured, tracks last-activity for
-/// stall detection, tees the raw stream to a log file.
+/// One headless agent run (claude -p / opencode run). Owns the process, the raw-stream tee, and the
+/// stall watchdog clock; delegates all wire-format parsing to an <see cref="IAgentProvider"/> (B2.4),
+/// so the session core no longer knows any backend's JSON shape. The provider folds text/thinking/
+/// tool/cost/token events into a shared <see cref="AgentStreamState"/> the Orchestrator reads back.
 /// </summary>
 public sealed class AgentSession : IDisposable
 {
@@ -24,37 +26,80 @@ public sealed class AgentSession : IDisposable
     private readonly StreamWriter _raw;
     private readonly JobObject _job = new();
     private readonly ConcurrentQueue<AgentEvent> _events = new();
-    private readonly string _mode; // "stream-json" | "opencode-json" | "text"
-    private readonly object _gate = new();
-    private readonly StringBuilder _resultText = new();
+    private readonly IAgentProvider _provider;
+    private readonly AgentStreamState _stream;
+    private readonly Lock _gate = new();
     private long _lastActivityTicks = DateTime.UtcNow.Ticks;
+    private long _lastToolCallTicks = DateTime.UtcNow.Ticks;
+    private IDisposable? _supervisorTrack; // F2.1: tracked handle if supervisor assigned, set after construction
 
     public DateTime StartedUtc { get; } = DateTime.UtcNow;
     public DateTime LastActivityUtc => new(Interlocked.Read(ref _lastActivityTicks), DateTimeKind.Utc);
-    public string? ResultText { get; private set; }
-    public bool ResultIsError { get; private set; }
-    public decimal? CostUsd { get; private set; }
-    public int? NumTurns { get; private set; }
-    public long? TokensInput { get; private set; }
-    public long? TokensOutput { get; private set; }
-    public long? TokensReasoning { get; private set; }
-    public long? TokensCacheRead { get; private set; }
+    public DateTime LastToolCallUtc => new(Interlocked.Read(ref _lastToolCallTicks), DateTimeKind.Utc);
+    public string? ResultText => _stream.ResultText;
+    public bool ResultIsError => _stream.ResultIsError;
+    /// <summary>W3.2: non-null once the provider stream reported a dead credential.</summary>
+    public string? AuthFailure => _stream.AuthFailure;
+    public decimal? CostUsd => _stream.CostUsd;
+    public int? NumTurns => _stream.NumTurns;
+    public long? TokensInput => _stream.TokensInput;
+    public long? TokensOutput => _stream.TokensOutput;
+    public long? TokensReasoning => _stream.TokensReasoning;
+    public long? TokensCacheRead => _stream.TokensCacheRead;
     public bool WasKilled { get; private set; }
 
-    private AgentSession(Process proc, StreamWriter raw, string mode)
+    private AgentSession(Process proc, StreamWriter raw, IAgentProvider provider, IEventSink? eventSink, string? conductorSessionId, IDisposable? supervisorTrack)
     {
         _proc = proc;
         _raw = raw;
-        _mode = mode;
+        _provider = provider;
+        _supervisorTrack = supervisorTrack;
+        // Stamp the conductor session number on every TokenDelta so the LiveMetrics.ForSession fold
+        // (B2.6) can attribute live burn to a session — EventLog only stamps Seq/Ts/RunId, not the
+        // per-event SessionId, so it MUST be set here or ForSession folds nothing (B2.6 regression).
+        Action<long, long, long, long, decimal>? tokenDelta = eventSink != null
+            ? (i, o, r, c, cost) => eventSink.Emit(new TokenDelta { SessionId = conductorSessionId, Input = i, Output = o, Reasoning = r, CacheRead = c, CostUsd = cost })
+            : null;
+        _stream = new AgentStreamState((kind, text) =>
+        {
+            _events.Enqueue(new AgentEvent { Kind = kind, Text = text });
+            if (kind == "tool") Interlocked.Exchange(ref _lastToolCallTicks, DateTime.UtcNow.Ticks);
+        }, tokenDelta);
     }
 
-    public static AgentSession Start(AgentConfig cfg, string cwd, string prompt, string sessionId, string? resumeClaudeId, string rawLogPath)
+    /// <summary>Substitutes the arg-template placeholders (<c>{prompt}</c>, <c>{sessionId}</c>,
+    /// <c>{claudeSessionId}</c>, <c>{model}</c>). <c>{model}</c> lets a plan route per stage — the plan
+    /// editor's model picker sets <see cref="AgentConfig.Model"/>, which lands here. When no model is set
+    /// (neither plan-wide nor per-stage), a lone <c>{model}</c> token is dropped along with the model flag
+    /// right before it (<c>--model</c>/<c>-m</c>), so the CLI never receives an empty <c>--model</c>.</summary>
+    internal static List<string> ResolveArgs(IReadOnlyList<string> template, string prompt, string sessionId, string? resumeClaudeId, string? model)
+    {
+        var args = new List<string>(template.Count);
+        foreach (var tok in template)
+        {
+            if (tok == "{model}" && string.IsNullOrWhiteSpace(model))
+            {
+                if (args.Count > 0 && IsModelFlag(args[^1])) args.RemoveAt(args.Count - 1);
+                continue;
+            }
+            args.Add(tok
+                .Replace("{prompt}", prompt)
+                .Replace("{sessionId}", sessionId)
+                .Replace("{claudeSessionId}", resumeClaudeId ?? sessionId)
+                .Replace("{model}", model ?? ""));
+        }
+        return args;
+    }
+
+    private static bool IsModelFlag(string s) => s is "--model" or "-m" or "--model=";
+
+    public static AgentSession Start(AgentConfig cfg, string cwd, string prompt, string sessionId, string? resumeClaudeId, string rawLogPath, IEventSink? eventSink = null, string? conductorSessionId = null, Dictionary<string, string>? extraEnv = null, ProcessSupervisor? supervisor = null, IReadOnlyList<string>? extraArgs = null)
     {
         var template = (resumeClaudeId != null && cfg.ResumeArgs is { Count: > 0 }) ? cfg.ResumeArgs : cfg.Args;
-        var args = template.Select(a => a
-            .Replace("{prompt}", prompt)
-            .Replace("{sessionId}", sessionId)
-            .Replace("{claudeSessionId}", resumeClaudeId ?? sessionId)).ToList();
+        var args = ResolveArgs(template, prompt, sessionId, resumeClaudeId, cfg.Model);
+        // W2.1: orchestrator-supplied flags (claude's --mcp-config) go AFTER the plan's own template so
+        // a plan can never accidentally position {prompt} behind them.
+        if (extraArgs is { Count: > 0 }) args.AddRange(extraArgs);
 
         var psi = new ProcessStartInfo(cfg.Command)
         {
@@ -69,21 +114,22 @@ public sealed class AgentSession : IDisposable
         };
         foreach (var a in args) psi.ArgumentList.Add(a);
 
+        // Apply plan-level env vars first, then any session-level extra env vars (extra wins).
+        if (cfg.Env != null)
+            foreach (var kv in cfg.Env) psi.Environment[kv.Key] = kv.Value;
+        if (extraEnv != null)
+            foreach (var kv in extraEnv) psi.Environment[kv.Key] = kv.Value;
+
         Directory.CreateDirectory(Path.GetDirectoryName(rawLogPath)!);
         var raw = new StreamWriter(rawLogPath, append: false, Encoding.UTF8) { AutoFlush = true };
 
         var proc = new Process { StartInfo = psi };
-        var mode = cfg.Output.ToLowerInvariant() switch
-        {
-            "stream-json" => "stream-json",
-            "opencode-json" => "opencode-json",
-            _ => "text",
-        };
-        var session = new AgentSession(proc, raw, mode);
+        var session = new AgentSession(proc, raw, AgentProviderFactory.Create(cfg), eventSink, conductorSessionId, supervisorTrack: null);
         proc.OutputDataReceived += (_, e) => session.OnLine(e.Data, stderr: false);
         proc.ErrorDataReceived += (_, e) => session.OnLine(e.Data, stderr: true);
         proc.Start();
         session._job.Assign(proc);
+        session._supervisorTrack = supervisor?.Track(proc, $"agent:stage:{conductorSessionId ?? sessionId}:session#{conductorSessionId ?? sessionId}");
         try { proc.StandardInput.Close(); } catch { /* agent may not read stdin */ }
         proc.BeginOutputReadLine();
         proc.BeginErrorReadLine();
@@ -94,130 +140,25 @@ public sealed class AgentSession : IDisposable
     {
         if (line == null) return;
         Interlocked.Exchange(ref _lastActivityTicks, DateTime.UtcNow.Ticks);
-        lock (_gate) { try { _raw.WriteLine((stderr ? "[stderr] " : "") + line); } catch { } }
+        lock (_gate) { try { _raw.WriteLine((stderr ? "[stderr] " : "") + line); } catch (IOException) { /* raw tee is best-effort; a full/locked disk must not drop the live event below */ } catch (ObjectDisposedException) { /* session tearing down */ } }
 
-        if (stderr) { Push("stderr", Trunc(line, 220)); return; }
-        var t = line.TrimStart();
-        if (_mode == "text" || !t.StartsWith('{')) { Push("raw", Trunc(line, 220)); return; }
+        if (stderr) { _events.Enqueue(new AgentEvent { Kind = "stderr", Text = Trunc(line, 220) }); return; }
 
+        // This runs on the Process stdout callback thread: an exception escaping here is unhandled and
+        // takes the whole conductor process down mid-run (killing every other stage with it). Agent
+        // output is untrusted — a provider that chokes on one malformed line must cost us that line,
+        // not the run. The raw tee above already persisted it, so nothing is lost for forensics.
         try
         {
-            using var doc = JsonDocument.Parse(t);
-            if (_mode == "opencode-json") { ParseOpencode(doc.RootElement, line); return; }
-            ParseClaude(doc.RootElement, line);
+            _provider.ParseLine(line, _stream);
         }
-        catch (JsonException)
+        catch (Exception ex)
         {
-            Push("raw", Trunc(line, 180));
+            _events.Enqueue(new AgentEvent { Kind = "raw", Text = Trunc(line, 220) });
+            _events.Enqueue(new AgentEvent { Kind = "stderr", Text = $"[parse error: {ex.GetType().Name}] {Trunc(line, 160)}" });
         }
     }
 
-    /// <summary>opencode `run --format json` nd-JSON: text / reasoning / tool_use / step_finish.</summary>
-    private void ParseOpencode(JsonElement root, string line)
-    {
-        var type = root.TryGetProperty("type", out var ty) ? ty.GetString() : null;
-        var part = root.TryGetProperty("part", out var p) ? p : default;
-        switch (type)
-        {
-            case "text":
-                if (part.TryGetProperty("text", out var txt))
-                {
-                    var s = (txt.GetString() ?? "").Trim();
-                    if (s.Length > 0) { lock (_gate) _resultText.AppendLine(s); Push("text", Trunc(s, 220)); }
-                }
-                break;
-            case "reasoning":
-                if (part.TryGetProperty("text", out var rtxt))
-                {
-                    // Push full reasoning text (no truncation) — the buffer dedups growing snapshots
-                    // and the pop-out pager shows it in full; the live panel clips for display.
-                    var s = (rtxt.GetString() ?? "").Trim();
-                    if (s.Length > 0) Push("thinking", s);
-                }
-                break;
-            case "tool_use":
-                var tool = part.TryGetProperty("tool", out var tn) ? tn.GetString() ?? "tool" : "tool";
-                var detail = "";
-                if (part.TryGetProperty("state", out var stt))
-                {
-                    if (stt.TryGetProperty("title", out var title) && title.ValueKind == JsonValueKind.String)
-                        detail = title.GetString() ?? "";
-                    else if (stt.TryGetProperty("input", out var inp))
-                        detail = Trunc(inp.GetRawText(), 150);
-                }
-                Push("tool", $"{tool} {detail}".Trim());
-                break;
-            case "step_finish":
-                if (part.TryGetProperty("cost", out var c) && c.ValueKind == JsonValueKind.Number)
-                    CostUsd = (CostUsd ?? 0m) + c.GetDecimal();
-                if (part.TryGetProperty("tokens", out var tk))
-                {
-                    if (tk.TryGetProperty("input", out var ti) && ti.ValueKind == JsonValueKind.Number) TokensInput = (TokensInput ?? 0) + ti.GetInt64();
-                    if (tk.TryGetProperty("output", out var to) && to.ValueKind == JsonValueKind.Number) TokensOutput = (TokensOutput ?? 0) + to.GetInt64();
-                    if (tk.TryGetProperty("reasoning", out var tr) && tr.ValueKind == JsonValueKind.Number) TokensReasoning = (TokensReasoning ?? 0) + tr.GetInt64();
-                    if (tk.TryGetProperty("cache", out var ca) && ca.TryGetProperty("read", out var cr) && cr.ValueKind == JsonValueKind.Number) TokensCacheRead = (TokensCacheRead ?? 0) + cr.GetInt64();
-                }
-                NumTurns = (NumTurns ?? 0) + 1;
-                break;
-            case "error":
-                ResultIsError = true;
-                Push("result", "ERROR: " + Trunc(root.GetRawText(), 200));
-                break;
-            case "step_start":
-                break;
-            default:
-                Push("raw", Trunc(line, 180));
-                break;
-        }
-        ResultText = _resultText.ToString();
-    }
-
-    /// <summary>claude `-p --output-format stream-json`.</summary>
-    private void ParseClaude(JsonElement root, string line)
-    {
-        var type = root.TryGetProperty("type", out var ty) ? ty.GetString() : null;
-        switch (type)
-        {
-            case "system":
-                Push("system", root.TryGetProperty("subtype", out var st) ? st.GetString() ?? "system" : "system");
-                break;
-            case "assistant":
-                if (root.TryGetProperty("message", out var msg) &&
-                    msg.TryGetProperty("content", out var content) &&
-                    content.ValueKind == JsonValueKind.Array)
-                {
-                    foreach (var block in content.EnumerateArray())
-                    {
-                        var bt = block.TryGetProperty("type", out var b) ? b.GetString() : null;
-                        if (bt == "text" && block.TryGetProperty("text", out var txt))
-                        {
-                            var s = (txt.GetString() ?? "").Trim();
-                            if (s.Length > 0) Push("text", Trunc(s, 220));
-                        }
-                        else if (bt == "tool_use")
-                        {
-                            var name = block.TryGetProperty("name", out var n) ? n.GetString() ?? "tool" : "tool";
-                            var input = block.TryGetProperty("input", out var inp) ? Trunc(inp.GetRawText(), 150) : "";
-                            Push("tool", $"{name} {input}");
-                        }
-                    }
-                }
-                break;
-            case "result":
-                if (root.TryGetProperty("is_error", out var ie) && ie.ValueKind == JsonValueKind.True) ResultIsError = true;
-                if (root.TryGetProperty("subtype", out var sub) && (sub.GetString() ?? "").StartsWith("error")) ResultIsError = true;
-                if (root.TryGetProperty("result", out var res) && res.ValueKind == JsonValueKind.String) ResultText = res.GetString();
-                if (root.TryGetProperty("total_cost_usd", out var c) && c.ValueKind == JsonValueKind.Number) CostUsd = c.GetDecimal();
-                if (root.TryGetProperty("num_turns", out var nt) && nt.ValueKind == JsonValueKind.Number) NumTurns = nt.GetInt32();
-                Push("result", ResultIsError ? "ERROR result: " + Trunc(ResultText ?? "", 160) : "result received");
-                break;
-            default:
-                Push("raw", Trunc(line, 180));
-                break;
-        }
-    }
-
-    private void Push(string kind, string text) => _events.Enqueue(new AgentEvent { Kind = kind, Text = text });
 
     private static string Trunc(string s, int max)
     {
@@ -227,7 +168,8 @@ public sealed class AgentSession : IDisposable
 
     public bool HasExited
     {
-        get { try { return _proc.HasExited; } catch { return true; } }
+        // A disposed/never-started process reports as exited so the watchdog stops waiting on it.
+        get { try { return _proc.HasExited; } catch (InvalidOperationException) { return true; } }
     }
 
     public bool TryDequeue(out AgentEvent ev) => _events.TryDequeue(out ev!);
@@ -245,13 +187,20 @@ public sealed class AgentSession : IDisposable
 
     public int WaitForExitCode()
     {
-        try { _proc.WaitForExit(); return _proc.ExitCode; } catch { return -1; }
+        // A process that never started / was already reaped has no exit code — report -1 (treated as
+        // a failed session by the verdict logic) rather than throwing.
+        try { _proc.WaitForExit(); return _proc.ExitCode; }
+        catch (InvalidOperationException) { return -1; }
     }
 
     public void Dispose()
     {
-        lock (_gate) { try { _raw.Dispose(); } catch { } }
-        try { _job.Dispose(); } catch { }
-        try { _proc.Dispose(); } catch { }
+        // Teardown is best-effort across three unmanaged-ish handles; each is guarded independently so
+        // one already-gone handle can't leak the others. ObjectDisposed/InvalidOperation mean "already
+        // released"; nothing here hides a real fault.
+        lock (_gate) { try { _raw.Dispose(); } catch (ObjectDisposedException) { } }
+        try { _supervisorTrack?.Dispose(); } catch (ObjectDisposedException) { }
+        try { _job.Dispose(); } catch (ObjectDisposedException) { }
+        try { _proc.Dispose(); } catch (InvalidOperationException) { }
     }
 }

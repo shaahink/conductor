@@ -1,0 +1,73 @@
+===== P3: Stronger Advisor — Structured Verdicts =====
+Date: 2026-07-09
+Session: #88 (via Conductor orchestrator)
+Checkpoint: P3 — Stronger advisor — structured verdicts
+
+--- Gate: Build ---
+0 warnings, 0 errors
+
+--- Gate: Tests ---
+551 passed, 0 failed, 0 skipped (+21 new AdvisorAction tests)
+
+--- Feature: Structured AdvisorVerdict.Action enum ---
+Goal: Advisor can act, not just diagnose. Orchestrator honors structured actions.
+
+Implementation:
+
+Checkpoint 1 — AdvisorAction enum (Advisor.cs):
+  - AdvisorAction enum: BlockRetry, ResetBudget, NeedsHuman, ApplyFix, RerunGates
+  - Legacy actions preserved for backward compat: Retry, Resume, Skip
+  - AdvisorVerdict record updated: AdvisorAction Action (was string)
+  - TryParseAction() — case-insensitive parser accepting both CamelCase and snake_case
+  - Legacy "human" maps to NeedsHuman; all old string actions still parse
+
+Checkpoint 2 — AdvisorConfig.RemediationScript (PlanConfig.cs):
+  - New optional string field — shell command run when advisor returns ApplyFix
+  - Example: "taskkill /f /im opencode.exe" or "git clean -fdx"
+  - Runs via default shell with 5-minute timeout in repo root
+
+Checkpoint 3 — Updated advisor templates:
+  - Built-in template in PromptBuilder.cs lists all 8 actions with descriptions
+  - plans/baton-templates/advisor.md updated
+  - examples/loom/templates/advisor.md updated
+
+Checkpoint 4 — Orchestrator.ApplyVerdict handles all actions:
+  - BlockRetry: exhausts attempt budget + NeedsHuman (prevents auto-retry)
+  - ResetBudget: resets AttemptsThisStage=0, clears pending fix/resume
+  - NeedsHuman: same as legacy "human"
+  - ApplyFix: runs RemediationScript, then decrements attempt counter
+  - RerunGates: clears PendingFix — gates will re-verify on next loop
+  - Retry/Resume/Skip: existing behavior preserved
+  - New RunRemediation() helper runs the configured script
+
+Checkpoint 5 — EscalateExhaustedStage updated:
+  - Compares against AdvisorAction enum (was string)
+  - ResetBudget now grants more attempts like Retry/Resume
+
+Checkpoint 6 — Advisor action tests (AdvisorActionTests.cs, 21 tests):
+  - TryParseAction: 14 known actions (both formats) + 5 unknown
+  - AdvisorVerdict enum usage
+  - All 8 enum values round-trip via ToString().ToLower()
+
+Files changed:
+- src/Conductor/Core/Advisor.cs: AdvisorAction enum, AdvisorVerdict record, TryParseAction
+- src/Conductor/Models/PlanConfig.cs: AdvisorConfig.RemediationScript
+- src/Conductor/Core/PromptBuilder.cs: built-in advisor template
+- src/Conductor/Core/Orchestrator.cs: ApplyVerdict (6 new actions), EscalateExhaustedStage,
+  RunRemediation helper
+- plans/baton-templates/advisor.md: action vocabulary
+- examples/loom/templates/advisor.md: action vocabulary
+- tests/Conductor.Tests/AdvisorActionTests.cs: 21 new tests
+
+Design decisions:
+- Backward compatible: all legacy action strings ("retry", "resume", "skip", "human")
+  are parsed by TryParseAction. Old templates produce valid AdvisorAction values.
+- Remediation is configurable but optional — no RemediationScript means ApplyFix
+  logs a warning and continues as retry.
+- BlockRetry is stronger than NeedsHuman — it also exhausts the attempt budget so
+  the orchestrator loop won't auto-retry even after a human resumes.
+
+Verified by:
+- 551 unit tests pass (no regressions)
+- Build 0 warnings, 0 errors
+- Branch: feat/era-v3, all changes clean

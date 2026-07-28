@@ -1,4 +1,5 @@
 using Conductor.Core;
+using Conductor.Core.Events;
 using Conductor.Models;
 
 namespace Conductor.Tests;
@@ -23,6 +24,77 @@ public class ReporterTests
             new TrackerSnapshot(), null, "**Recent actions:**\n- did a thing");
         Assert.Contains("Latest activity (live)", report);
         Assert.Contains("did a thing", report);
+    }
+
+    [Fact]
+    public void BuildRendersTimelineSectionFromTheEventLog()
+    {
+        // B5.1: the report's Timeline section derives from the folded event log (no parallel store).
+        const string ndjson = """
+        {"type":"runStarted","plan":"T","repo":"C:/r","resumed":false,"seq":1,"ts":"2026-07-08T06:53:00Z","runId":"r"}
+        {"type":"sessionStarted","number":1,"stageId":"S1","kind":"Deliver","attempt":1,"maxAttempts":6,"agentSessionId":"a","seq":2,"ts":"2026-07-08T06:53:01Z","runId":"r","sessionId":"1"}
+        {"type":"sessionFinished","number":1,"stageId":"S1","outcome":"Advanced","newlyDone":["S1.1"],"seq":3,"ts":"2026-07-08T06:53:06Z","runId":"r","sessionId":"1"}
+        """;
+        var path = Path.Combine(Path.GetTempPath(), $"conductor-rep-{Guid.NewGuid():N}.jsonl");
+        File.WriteAllText(path, ndjson);
+        try
+        {
+            var timeline = Timeline.Build(EventLog.ReadAll(path));
+            var report = Reporter.Build(PlanIn(Path.GetTempPath()), new RunState { PlanName = "T" },
+                new TrackerSnapshot(), null, null, timeline);
+
+            Assert.Contains("## Timeline", report);
+            Assert.Contains("events.jsonl", report);
+            Assert.Contains("session #1 S1 Deliver started", report);
+            Assert.Contains("session #1 S1 → Advanced", report);
+            Assert.Contains("(5.0s)", report);           // the session span duration
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public void BuildOmitsTimelineSectionWhenNoEvents()
+    {
+        var report = Reporter.Build(PlanIn(Path.GetTempPath()), new RunState { PlanName = "T" },
+            new TrackerSnapshot(), null, null, timeline: null);
+        Assert.DoesNotContain("## Timeline", report);
+    }
+
+    [Fact]
+    public void BuildRendersHealthSectionFromTheEventLog()
+    {
+        // B5.3: the report's Health section derives from the same folded event log — a stuck stage
+        // (three consecutive red sessions) surfaces as a same-failure-loop flag.
+        const string ndjson = """
+        {"type":"stageEntered","stageId":"S1","seq":1,"ts":"2026-07-08T10:00:00Z","runId":"r"}
+        {"type":"sessionStarted","number":1,"stageId":"S1","kind":"Deliver","attempt":1,"maxAttempts":4,"seq":2,"ts":"2026-07-08T10:00:10Z","runId":"r","sessionId":"1"}
+        {"type":"sessionFinished","number":1,"stageId":"S1","outcome":"GatesRed","seq":3,"ts":"2026-07-08T10:00:20Z","runId":"r","sessionId":"1"}
+        {"type":"sessionStarted","number":2,"stageId":"S1","kind":"Fix","attempt":2,"maxAttempts":4,"seq":4,"ts":"2026-07-08T10:00:30Z","runId":"r","sessionId":"2"}
+        {"type":"sessionFinished","number":2,"stageId":"S1","outcome":"GatesRed","seq":5,"ts":"2026-07-08T10:00:40Z","runId":"r","sessionId":"2"}
+        {"type":"sessionStarted","number":3,"stageId":"S1","kind":"Fix","attempt":3,"maxAttempts":4,"seq":6,"ts":"2026-07-08T10:00:50Z","runId":"r","sessionId":"3"}
+        {"type":"sessionFinished","number":3,"stageId":"S1","outcome":"GatesRed","seq":7,"ts":"2026-07-08T10:01:00Z","runId":"r","sessionId":"3"}
+        """;
+        var path = Path.Combine(Path.GetTempPath(), $"conductor-hrep-{Guid.NewGuid():N}.jsonl");
+        File.WriteAllText(path, ndjson);
+        try
+        {
+            var health = HealthMetrics.Compute(EventLog.ReadAll(path));
+            var report = Reporter.Build(PlanIn(Path.GetTempPath()), new RunState { PlanName = "T" },
+                new TrackerSnapshot(), null, null, null, health);
+
+            Assert.Contains("## Health", report);
+            Assert.Contains("same-failure-loop", report);
+            Assert.Contains("overall Alert", report);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public void BuildOmitsHealthSectionWhenNoSessions()
+    {
+        var report = Reporter.Build(PlanIn(Path.GetTempPath()), new RunState { PlanName = "T" },
+            new TrackerSnapshot(), null, null, null, health: null);
+        Assert.DoesNotContain("## Health", report);
     }
 
     [Fact]

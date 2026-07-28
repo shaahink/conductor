@@ -1,0 +1,26 @@
+﻿=== B9.5 gate battery ===
+
+Build: dotnet build Conductor.slnx
+Result: 0 warnings, 0 errors (net10.0, warnings-as-errors)
+
+Tests: dotnet test Conductor.slnx
+Result: 367 passed, 0 failed, 0 skipped (+4 TaskViewTests)
+
+--- New B9.5 test details ---
+TaskViewTests (4 tests):
+  ReadAll_Fold_CheckpointsGroupedCorrectly  — full pipeline: event log → TaskGraph → per-checkpoint query
+  ReadAll_EmptyLog_ReturnsEmptyGraph        — empty events.jsonl edge case
+  ReadAll_MissingFile_ReturnsEmptyList      — missing file edge case
+  Fold_ChecksGroupingAndOrder               — multi-checkpoint ordering correctness
+
+--- New B9.5 CLI/TUI/Telegram ---
+CLI:  conductor tasks — lists task graph grouped by checkpoint, handles empty/missing gracefully
+TUI:  Modal.Tasks (U key) — reads events.jsonl live, folds through TaskGraph, renders per checkpoint
+TG:   /tasks handler — same pipeline via TelegramService.BuildTasksText(), HTML-formatted
+
+--- Changes (5 files, within ~15 budget) ---
+src/Conductor/Commands/Commands.cs                 +65  TasksCommand
+src/Conductor/Program.cs                           +2   CLI registration
+src/Conductor/Ui/LiveDashboard.cs                  +48  Modal.Tasks + TaskLines() + U key
+src/Conductor/Core/Integrations/TelegramService.cs +56  /tasks + BuildTasksText()
+tests/Conductor.Tests/TaskViewTests.cs             +113 4 new tests

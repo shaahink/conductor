@@ -1,0 +1,42 @@
+=== C3 — Events + metrics + budget + recovery (gate battery) ===
+Date: 2026-07-09
+Host: MSI
+OS: Windows
+
+--- Build ---
+dotnet build Conductor.slnx --nologo
+  Build succeeded. 0 Warning(s) 0 Error(s)
+
+--- Full Tests ---
+dotnet test Conductor.slnx --no-build --nologo
+  Passed! - Failed: 0, Passed: 493, Skipped: 0, Total: 493
+
+--- C3-specific tests ---
+dotnet test Conductor.slnx --no-build --nologo --filter "FullyQualifiedName~C3Events"
+  Passed! - Failed: 0, Passed: 13, Skipped: 0, Total: 13
+
+--- What landed ---
+RollbackExecuted event: added to ConductorEvent.cs schema (type discriminator "rollbackExecuted").
+  - Round-trips through JSON with StageId, FromSha, ToSha, Forced fields.
+  - Emitted from Orchestrator.HandleControl on successful git reset --hard.
+
+Budget persistence: PerRunCostUsd/PerRunTokens fields added to RunState.
+  - Orchestrator restores budget from state on startup (not reset to 0).
+  - Budget saved after each session (state.PerRunCostUsd / state.PerRunTokens).
+  - Reset on owner approval clears both transient and persisted fields.
+  - Survives crashes: killed mid-accrual budget counts toward caps on restart.
+
+Mid-session control feedback: rejected-in-session verbs (RetryStage, Rollback,
+  PauseAfterStage, Goto, AbortNow) now log a message when consumed mid-session,
+  telling the operator to re-run after session ends. Previously silently dropped.
+
+Orphaned resume hardening: if an orphaned SessionStarted in events.jsonl has no
+  AgentSessionId, the orchestrator now marks NeedsHuman instead of silently
+  creating a resume with an empty session id (which would start a fresh session).
+
+Test file: tests/Conductor.Tests/C3EventsAndRecoveryTests.cs (13 tests)
+  - RollbackExecuted round-trip (forced + non-forced)
+  - Budget persistence save/load, zero-default, separate from total summary
+  - Orphaned session detection: matched, unmatched, empty AgentSessionId, highest unmatched
+  - LiveMetrics: ForSession filters, RunWide aggregates, SessionTokenTotals.Total
+  - ControlFile.Parse: unknown verb returns null action

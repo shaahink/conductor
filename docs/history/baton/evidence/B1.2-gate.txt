@@ -1,0 +1,62 @@
+# B1.2 evidence — IProgressProvider abstraction + MarkdownTableProvider (default, byte-identical)
+# Produced: 2026-07-08
+# Driver used for QA of prior session: C:\Code\conductor\bin\conductor.exe (STABLE, built 07/07/2026 22:13:32 from master)
+# In-tree build exercised for A6 (this session's refactor is what must run): dotnet run --project src/Conductor
+#
+# WHAT LANDED
+#   New seam (BRIEF §3.1 Conductor.Core.Planning, F-1 decoupling, D-2):
+#     src/Conductor/Core/Planning/IProgressProvider.cs   — interface { Name; TrackerSnapshot Read(PlanConfig) }
+#     src/Conductor/Core/Planning/MarkdownTableProvider.cs — default provider; OWNS the canonical parse
+#       (row regex + ## Handoff regex), now via [GeneratedRegex] source-gen (net10, no runtime Regex ctor).
+#   src/Conductor/Core/TrackerParser.cs — reduced to a thin BACK-COMPAT FACADE delegating to
+#       MarkdownTableProvider.Parse/ParseFile. Every existing call site + all TrackerParserTests keep
+#       working, byte-identical (same code path).
+#   src/Conductor/Core/Orchestrator.cs — the ENGINE now depends on the abstraction, not the shape:
+#       new field `_progress = new MarkdownTableProvider()`; all 5 tracker reads switched
+#       TrackerParser.ParseFile(plan.TrackerPath) -> _progress.Read(plan) (lines 66/352/401/842/904).
+#       This makes the interface load-bearing (not a dead abstraction — A1 guard).
+#
+#   NOTE (scope): Commands.cs status/report/preview still call TrackerParser.* directly — those are
+#   read-only CLI surfaces, not the execution engine; the facade keeps them byte-identical. Wiring
+#   them through DI belongs with the Host/DI work in B2.5, not this checkpoint's diff budget.
+#
+# GATE (B1.md B1.2): existing TrackerParserTests pass unchanged, now exercising MarkdownTableProvider.
+# =============================================================================
+
+# --- git diff --stat (this checkpoint) ---
+#  src/Conductor/Core/Orchestrator.cs             | 12 +++++++-----
+#  src/Conductor/Core/Planning/IProgressProvider.cs      |  new
+#  src/Conductor/Core/Planning/MarkdownTableProvider.cs  |  new
+#  src/Conductor/Core/TrackerParser.cs            | 37 +++-----------------
+#  tests/Conductor.Tests/TrackerParserTests.cs    | 40 ++++++++++++++++++++-
+#   (5 files — within the ~15 budget)
+
+# --- BUILD GATE (fast tier) ---
+# > dotnet build Conductor.slnx
+#   Conductor -> ...\src\Conductor\bin\Debug\net10.0\conductor.dll
+#   Conductor.Tests -> ...\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll
+#   Build succeeded.
+#       0 Warning(s)
+#       0 Error(s)
+
+# --- TEST GATE (full tier) ---
+# > dotnet test Conductor.slnx
+#   Passed!  - Failed: 0, Passed: 57, Skipped: 0, Total: 57, Duration: 7 s
+#   (56 -> 57: added TrackerParserTests.MarkdownTableProviderIsByteIdenticalToFacade —
+#    asserts facade-vs-provider parity on rows, HandoffBlock, RawText, and provider Name;
+#    the 6 pre-existing TrackerParserTests still green, now flowing through MarkdownTableProvider.)
+
+# --- A6: run the IN-TREE build for real (the refactored engine parses via IProgressProvider) ---
+# > dotnet run --project src/Conductor --no-build -- run --dry-run -p <fixture>/loom/loom.opencode.plan.json
+#   [05:42:01] conductor start — plan 'Loom', repo .../b12-fixture, branch feat/loom-l0
+#   [05:42:01] stage → L0 Truth harness
+#   --- DRY RUN: would start session #1 (Deliver, stage L0) ...
+#   => _progress.Read(plan) read the 2-row fixture tracker, SelectStage picked L0, session #1 started.
+#      (fixture repo, NOT the live DevContext2-ui run — dry-run touches target .conductor via AcquireLock.)
+
+# --- QA of session #5 (B1.1): PASS ---
+#   claim 1 (tests): dotnet test --filter PlanConfigTests -> 2 passed; ShippedLoomPlanParsesWhenPresent
+#     resolves examples/loom/loom.opencode.plan.json + asserts pnpm/mcp stage scoping. VERIFIED.
+#   claim 2 (running artifact): STABLE bin\conductor.exe run --dry-run -p examples/loom/loom.opencode.plan.json
+#     (copied to a fixture, only repo path rewritten) -> loads plan from new path, renders session #1
+#     prompt. VERIFIED. No findings.

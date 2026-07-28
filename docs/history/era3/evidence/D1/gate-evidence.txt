@@ -1,0 +1,29 @@
+D1 Gate Evidence — 2026-07-09
+
+Build: PASS (0 warnings, 0 errors)
+  Command: dotnet build Conductor.slnx --nologo
+
+Tests: PASS (510 passed, 0 failed, 0 skipped)
+  Command: dotnet test Conductor.slnx --nologo
+  Existing: 497 tests
+  New (D1): 13 tests in StatusCommandTests.cs
+
+New tests cover:
+  - StatusCommand.Settings defaults + --since, --no-llm parsing
+  - StatusAgent.BuildCliPrompt: context embedding, since mode, pending fix, phase gate, history, attention reason
+  - StatusAgentConfig deserialization: Model (default null), MaxPerHour (default 12), custom values
+  - PlanConfig integration: new statusAgent fields load from JSON
+  - Back-compat: BuildPrompt still works for dashboard
+
+CLI smoke tests:
+  - conductor status --help: shows --since and --no-llm options
+  - conductor status --no-llm -p <plan>: renders tables, reports 0/13 checkpoints
+
+Files changed:
+  - src/Conductor/Models/PlanConfig.cs: +Model, +MaxPerHour on StatusAgentConfig
+  - src/Conductor/Core/StatusAgent.cs: +BuildCliPrompt, +ResolveArgs (model override)
+  - src/Conductor/Commands/Commands.cs: enhanced StatusCommand with Settings (+--since, +--no-llm), rate-limiting, log-tail, LLM call
+  - .conductor/plans/conductor-era3.plan.json: enabled statusAgent, set model + maxPerHour
+  - tests/Conductor.Tests/StatusCommandTests.cs: 13 new tests
+
+Cost estimate: $0.002/call (deepseek-flash via opencode CLI), < $0.01 per invocation.

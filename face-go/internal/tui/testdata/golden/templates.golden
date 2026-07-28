@@ -1,0 +1,34 @@
+ ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42    
+ h a s t o c  e Templates  p r k g b d                                                                        
+                           │                                                                                  
+ ▶ PLAN                    │  • session.md              │ Select a template on the left.                      
+ ✓ F0 3/3 Foundations      │  ○ fix.md                                                                        
+ ✓ F6 5/5 Ink TUI v1       │  ○ resume.md                                               ● on disk   ○         
+ ● F7 2/5 Gate … 1× $0.30  │  ○ advisor.md                built-in default                                    
+   ✓ F7.1 Plan import      │  ○ audit.md                                                                      
+   ✓ F7.2 Re-import diff   │  ○ review.md                 Saved to planDir — the engine hot-reloads           
+   ● F7.3 Truth-gate tier  │  ○ verify.md                 at the next session.                                
+ ○ F8 0/4 conductor chat…  │                                                                                  
+                           │                                                                       enter      
+ ── GATES ──               │                              edit · v compiled preview                           
+   ✓ build                 │                                                                                  
+   ● test 4s               │                                                                                  
+   ○ lint                  │                                                                                  
+                           │                                                                                  
+ ── TASKS ──               │                                                                                  
+   ✓ Add truth-tier con…   │                                                                                  
+   ● Wire RunDb.GetLast…   │                                                                                  
+   ○ Cache gate results…   │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ select · enter edit · v preview                

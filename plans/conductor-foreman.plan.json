@@ -1,0 +1,121 @@
+{
+  // Conductor self-plan — "Foreman" v-next. Conductor drives its own next iteration.
+  //
+  // DRIVER: run this with the STABLE binary built from `master`
+  //   (C:\Code\conductor\bin\conductor.exe), NOT a binary built from this worktree —
+  //   the tool improving Conductor must never be the tool under edit.
+  //
+  // REPO: the isolated worktree C:\Code\conductor-baton on branch feat/foreman.
+  //   Cannot collide with C:\Code\conductor (master) or other worktrees.
+  //
+  // The design authority is docs/history/CONDUCTOR-VNEXT-PLAN.md; the tracker is
+  // CONDUCTOR-VNEXT-PLAN.md (this plan's companion tracker — 34 checkpoints across 10 stages).
+  "name": "Foreman",
+  "repo": "C:/Code/conductor-baton",
+  "tracker": "docs/history/archive/trackers/CONDUCTOR-VNEXT-PLAN.md",
+  "planDoc": "docs/history/CONDUCTOR-VNEXT-PLAN.md",
+  "branchPattern": "^feat/foreman",
+  "pauseOnBlocked": false,
+  "batteryCollapse": true,
+
+  // The Foreman is a rewrite-level evolution. The architecture splits:
+  //   Engine (C#) — authoritative: orchestration, process supervision, event log, git, gates,
+  //     providers, Telegram, HTTP+SSE control plane on localhost
+  //   Face (TS+Ink) — disposable TUI client over the control plane; crash doesn't kill the run
+  //   Store (SQLite) — run.db replaces events.jsonl+state.json as the single truth
+  //
+  // Agent remains deepseek-v4-pro via opencode (cheap, proven). Verifier role (F4) uses
+  // same model for scoring — the observed fail-then-better-retry effect made systematic.
+  "agent": {
+    "command": "opencode",
+    "args": [
+      "run", "-m", "deepseek/deepseek-v4-pro", "--auto", "--thinking", "--share", "--format", "json", "{prompt}"
+    ],
+    "resumeArgs": [
+      "run", "-m", "deepseek/deepseek-v4-pro", "--auto", "--thinking", "--share", "--format", "json", "--continue", "{prompt}"
+    ],
+    "provider": "opencode",
+    "output": "opencode-json"
+  },
+
+  // Clean-slate discipline: free MSBuild/Roslyn build servers holding DLL locks.
+  "setup": {
+    "command": "dotnet build-server shutdown; exit 0",
+    "timeoutMinutes": 2
+  },
+  "teardown": {
+    "command": "dotnet build-server shutdown; exit 0",
+    "timeoutMinutes": 2
+  },
+
+  // Advisor: cheap second brain for stuck/failed sessions. Post-F4 the Advisor's
+  // structured verdicts are honored by the orchestrator (not ignored as today).
+  "advisor": {
+    "enabled": true,
+    "command": "opencode",
+    "args": ["run", "{prompt}", "-m", "deepseek/deepseek-v4-pro"],
+    "output": "text",
+    "timeoutMinutes": 6
+  },
+
+  // Stages map 1:1 to design doc §4. Dependencies: F0→F1→(F2,F3)→F4; F1→F7; F5→F6; F5→F8; F9 last.
+  "stages": [
+    { "id": "F0", "title": "Foundations — kill list, async engine, integration harness", "sessions": 2, "notes": "Read CONDUCTOR-VNEXT-PLAN.md §§0-2 + F0 deliverables. Execute the kill list (delete replay/time-travel, persona bloat → keep 3 roles, confidence pane, heartbeat commits to feature branch, template system). Async control loop (B4.7 debt). Integration harness (B4.8): fake agent + temp repo, full cycle asserted. Gate: 0w/0e, harness cycle green. This stage sets the guardrails every later stage is held to.", "persona": "refactor" },
+    { "id": "F1", "title": "run.db task store + tracker-as-view + task/note verbs", "sessions": 2, "notes": "Read CONDUCTOR-VNEXT-PLAN.md §3.3 + F1 deliverables. SQLite run.db schema (D8 telemetry tables). Tracker generated FROM run.db (markdown becomes a view). conductor task/note verbs + MCP surface. conductor report --query. Gate: import→run→report round-trip on a toy plan; tracker regenerates byte-stable.", "persona": "architect" },
+    { "id": "F2", "title": "ProcessSupervisor + Job Objects + bg primitives", "sessions": 2, "notes": "Read CONDUCTOR-VNEXT-PLAN.md §3.5 + F2 deliverables. ProcessSupervisor: every child in Job Object, kill-by-tree, PID registry in run.db, orphan reaper. conductor bg start|status|logs|stop + MCP. Gate: harness proves kill-by-tree, orphan reap, bg liveness feeds stall detector.", "persona": "architect" },
+    { "id": "F3", "title": "Stall v2 + same-failure breaker + pre-flight", "sessions": 2, "notes": "Read CONDUCTOR-VNEXT-PLAN.md §3.3 + F3 deliverables. Stall detection v2 (stdout+tool-events+bg-liveness). Soft-kill debrief (grace window). Same-failure circuit breaker (2 identical → Advisor). Pre-flight health check (DNS/API/disk/git/budget) + exponential backoff.", "persona": "qa" },
+    { "id": "F4", "title": "Verifier role + scoring loop + findings-as-retry", "sessions": 3, "notes": "Read CONDUCTOR-VNEXT-PLAN.md §3.2 + F4 deliverables. 3 roles replace 9 personas: Deliver, Verify, Advise. Verifier (fresh context, cheap) re-runs truth gate, outputs {score 0-100, findings[], verdict}. Threshold 80 default. Findings injected into Retry of Deliver (fail-then-better-retry systematic). Advisor verdicts honored. Handoff fact-check against git/log/artifacts. Gate: rigged bad delivery scores <80 and retry fixes; rigged good delivery not blocked.", "persona": "architect" },
+    { "id": "F5", "title": "Control plane — HTTP+SSE on localhost", "sessions": 1, "notes": "DELIVERED (commits 5370cec, 4c3aa00) — see CONDUCTOR-VNEXT-PLAN.md F5 rows for evidence. Shipped: ControlDispatcher command/query extraction (Core/Commands/), GET /state + /tasks + /events (SSE) + POST /control on 127.0.0.1:<port> via HttpListener, off by default (--control-plane flag), 9 contract tests. Deliberately deferred to F6 (documented, not a gap): GET /transcript/current (thinking-stream SSE) — build it alongside the F6 agent pane that will actually consume it, not before. Also deferred: lane-coordinator extraction (no F5 gate needed it).", "persona": "architect" },
+    { "id": "F6", "title": "Ink TUI v1 — TypeScript rebuild", "sessions": 3, "notes": "Read CONDUCTOR-VNEXT-PLAN.md §2 AD-2 + D11 + F6 deliverables. TS+Ink over local control plane. Build split (TS outside dotnet). Panes: plan tree w/ scores, transcript WITH thinking, process pane, command palette (: or Ctrl+K), ticker. Golden-layout snapshot tests at 80×24/120×30/200×50. TUI crash ≠ run crash. Gate: all D11 checklist items pass; snapshot tests green.", "persona": "refactor" },
+    { "id": "F7", "title": "Plan import + truth gates + speed program", "sessions": 2, "notes": "Read CONDUCTOR-VNEXT-PLAN.md §3.1 + §§3.4-3.8 + F7 deliverables. plan import (LLM converts mega plan → task graph). Re-import diff (mid-plan changes). Truth-gate tier (per-stage product assertions). Gate caching by SHA (engine-enforced). Per-stage gate selection (docs-only = 0 dotnet gates). Speed program: solution-filter, skipIfFresh, parallel lanes. Gate: import Shamshir iter-land-fix PLAN.md → correct graph; docs-only stage runs 0 dotnet gates.", "persona": "planner" },
+    { "id": "F8", "title": "conductor chat + Telegram v2", "sessions": 2, "notes": "Read CONDUCTOR-VNEXT-PLAN.md §3.7 + D7 + F8 deliverables. conductor chat (MCP-wired agent over run.db+ledger+logs+control). Telegram v2: session-end one-liner with score, NeedsHuman inline buttons, reply-to-inject, /status from run.db, daily digest. Gate: chat updates a task + injects into next session; full phone-only drive of a toy run.", "persona": "qa" },
+    { "id": "F9", "title": "Dogfood close — real Shamshir A2 under v-next", "sessions": 2, "notes": "Read CONDUCTOR-VNEXT-PLAN.md §4 F9 + F9 deliverables. Run one real Shamshir stage (A2) end-to-end under Foreman. Fix what bleeds. Final audit + checklist rated CONFORMS/DEVIATES against design doc.", "persona": "docs" }
+  ],
+
+  "gatePolicy": "perPhase",
+
+  "audit": { "enabled": false },
+
+  // Fast tier (per session): build. Full tier (phase end): tests. Truth gates (F7) per stage in plan.
+  "gates": [
+    { "name": "build", "command": "dotnet build Conductor.slnx", "tier": "fast", "timeoutMinutes": 10 },
+    { "name": "tests", "command": "dotnet test Conductor.slnx --no-build", "parallel": true, "timeoutMinutes": 20 }
+  ],
+
+  "limits": {
+    "stallMinutes": 12,
+    "sessionTimeoutMinutes": 180,
+    "maxResumesPerSession": 2,
+    "stageSlackFactor": 2,
+    "backoffMinutes": 30,
+    "maxBackoffs": 10,
+    "maxSessionTokens": 2000000
+  },
+
+  "report": { "commit": true, "push": true, "heartbeatMinutes": 10 },
+
+  "notify": { "command": "", "args": [] },
+
+  "statusAgent": {
+    "enabled": true,
+    "command": "opencode",
+    "args": ["run", "{prompt}", "-m", "deepseek/deepseek-v4-pro"],
+    "timeoutMinutes": 5
+  },
+
+  "readOrder": [
+    "CONDUCTOR-VNEXT-PLAN.md",
+    "docs/history/CONDUCTOR-VNEXT-PLAN.md"
+  ],
+
+  "batteries": {
+    "lessons": true,
+    "recentFailure": true,
+    "lessonsMaxEntries": 3,
+    "maxBytes": 2048
+  },
+
+  "templatesDir": "baton-templates",
+
+  "promptExtra": "This plan is self-referential: you are improving Conductor itself — architecturally evolving it to Foreman (engine/UI split, SQLite run.db, Verifier scoring loop, TS+Ink TUI). The DRIVER that verifies you is the STABLE bin\\conductor.exe from master — never assume your in-tree build is what's judging you. Respect the diff budget (~15 files); keep the 555+ test suite green under warnings-as-errors; never lower an analyzer severity to pass. Design doc is docs/history/CONDUCTOR-VNEXT-PLAN.md — it catalogs 10 failures from evidence and defines the target architecture. Follow the session protocol: read-tracker → QA-previous → deliver → verify-gates → update-tracker."
+}

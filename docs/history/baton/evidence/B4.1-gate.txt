@@ -1,0 +1,36 @@
+﻿# B4.1 evidence — alt-screen buffer with clean restore
+
+Generated: 2026-07-08 15:13:06 (this session, #26, B4 deliver)
+
+## What landed
+- `src/Conductor/Ui/AltScreen.cs` — IDisposable guard: enters the alt-screen buffer
+  (`\e[?1049h` + hide cursor) on start; restores (`\e[?1049l` + show cursor) on EVERY exit
+  path — normal (using/finally), exception (finally), Ctrl+C / SIGTERM / SIGQUIT
+  (PosixSignalRegistration net), and hard exit (AppDomain.ProcessExit). Restore is idempotent
+  + thread-safe. Redirected output → inert no-op (inline fallback).
+- Wired into `LiveDashboard.RunUiLoop` (live run) and `LiveDashboard.RunPreview` (offline preview).
+
+## Gate 1 — build (warnings-as-errors)
+```
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+```
+
+## Gate 2 — headless AltScreen tests (enter/leave emitted; idempotent; redirected no-op)
+```
+Passed!  - Failed:     0, Passed:     3, Skipped:     0, Total:     3, Duration: 16 ms - Conductor.Tests.dll (net10.0)
+```
+
+## Gate 3 — full suite (ratchet: 164 -> 167)
+```
+Passed!  - Failed:     0, Passed:   167, Skipped:     0, Total:   167, Duration: 8 s - Conductor.Tests.dll (net10.0)
+```
+
+## Gate 4 — running artifact: `conductor preview` still works redirected
+Redirected (piped) preview renders inline with NO alt-screen escapes leaking:
+- exit code: 0
+- output length: 3392 chars
+- contains "Conductor": True
+- contains EnterAlt (\e[?1049h): False  (expected False — guard inert when redirected)
+- contains LeaveAlt (\e[?1049l): False  (expected False)

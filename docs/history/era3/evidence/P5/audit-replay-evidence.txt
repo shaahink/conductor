@@ -1,0 +1,83 @@
+===== P5: Post-hoc Audit Replay =====
+Date: 2026-07-09
+Session: #90 (via Conductor orchestrator)
+Checkpoint: P5 — Post-hoc audit replay
+Commit: (see git log for `feat(era3): P5`)
+
+--- Gate: Build ---
+0 warnings, 0 errors
+
+--- Gate: Tests ---
+555 passed, 0 failed, 0 skipped
+
+--- Feature: conductor audit <stage> --replay ---
+Goal: Re-audit completed phases with new knowledge. Read-only diagnostic.
+No RunState modification.
+
+Implementation:
+- AuditCommand in Commands.cs (~85 lines)
+- Registerd as "audit" verb in Program.cs
+- Completion scripts (PowerShell + bash) updated
+
+Command contract:
+  conductor audit <STAGE> [--replay] [-p|--plan <PLAN>]
+
+  Without --replay: warns and exits 0 (regular audits are orchestrated).
+  With --replay:
+    1. Loads plan, state, tracker
+    2. Finds the stage config (canonical casing)
+    3. Gathers context:
+       - Stage checkpoints (status, commit, evidence)
+       - Git log (20 most recent non-merge commits)
+       - Evidence file tails (up to 3 files, 4K chars each)
+    4. Builds a structured replay audit prompt (~2-5K chars)
+    5. Spawns the plan's agent (scratch dir, read-only)
+    6. Saves output to .conductor/audits/<stage>-replay-<timestamp>.md
+    7. Prints output to stdout
+
+Prompt structure:
+  - Read-only directive (no file modification)
+  - Stage identity + notes + checkpoint table
+  - Git history with hashes, subjects, authors, timestamps
+  - Evidence file contents (tail, truncated at 4K each)
+  - Six-section audit rubric: What was built, Correctness,
+    Code quality, Testing, Risks & followups, Verdict
+
+Files changed:
+  - src/Conductor/Commands/Commands.cs: AuditCommand class + prompt builder
+  - src/Conductor/Program.cs: audit verb registration
+  - tests/Conductor.Tests/B11_2Tests.cs: added "audit" to expected verbs
+
+--- QA of P4 (Previous Session) ---
+P4 gate re-run: build 0w/0e, tests 555 pass. Evidence claims match reality.
+Verdict: CLEAN — no regressions, P4 work verified.
+
+--- Help Output ---
+> conductor audit --help
+
+DESCRIPTION:
+Post-hoc audit replay: run an audit prompt against a completed stage (read-only
+diagnostic). Requires --replay flag. Output written to .conductor/audits/.
+
+USAGE:
+    conductor audit <STAGE> [OPTIONS]
+
+ARGUMENTS:
+    <STAGE>    Stage ID to replay-audit (e.g., D1, P4)
+
+OPTIONS:
+    -h, --help           Prints help information
+    -p, --plan <PLAN>    Path to the plan JSON
+        --replay         Run as a read-only diagnostic audit replay
+
+--- Without --replay ---
+> conductor audit P4 -p .conductor\plans\conductor-era3.plan.json
+Use --replay to run a post-hoc audit replay. Without --replay, this command
+is a no-op (regular audits are orchestrated, not CLI-driven).
+
+--- Verification ---
+- Build: 0 warnings, 0 errors
+- Tests: 555 pass, 0 fail, 0 skip
+- Help text: correct usage shown
+- Non-replay mode: warns gracefully
+- Branch: feat/era-v3

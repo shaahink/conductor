@@ -1,0 +1,87 @@
+# B5.3 evidence — AI-health metrics folded from the event log (health panel + REPORT.md section)
+# Produced: 2026-07-08  (session #36, stage B5, attempt 1)
+# In-tree build: C:\Code\conductor-baton\src\Conductor\bin\Debug\net10.0\conductor.dll
+#
+# WHY the in-tree build (not the STABLE driver) produced the health artifact:
+#   B5.3 adds NEW behaviour (the HealthMetrics projection + the `## Health` report section + the TUI
+#   `H` panel) that exists ONLY in this worktree's build. The STABLE bin\conductor.exe from master has
+#   no health projection, so the artifact can only come from the in-tree binary. The STABLE driver
+#   still JUDGES this checkpoint the usual way (build gate + tests + new commit + tracker row flip).
+# =============================================================================
+
+### GATE BATTERY (green) ###
+$ dotnet build Conductor.slnx
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+$ dotnet test Conductor.slnx
+Passed!  - Failed:     0, Passed:   251, Skipped:     0, Total:   251 - Conductor.Tests.dll (net10.0)
+# 238 -> 251 : +13 tests
+#   HealthMetricsTests (11):
+#     HealthyRun_NoFlags_RetryRateZero
+#     EmptyLog_IsHealthy
+#     SameFailureLoop_FlaggedAsAlert                         (gate: a loop stream -> the expected flag)
+#     GateOscillation_FlaggedAsWarn_WithoutFalseLoop         (gate: an oscillation stream -> the expected flag)
+#     GateRepetition_FlaggedAsAlert_AcrossStagesWithoutStageLoop
+#     ContextSaturation_FlaggedAsWarn_NamingTheSession       (F-8 bloated-context signal)
+#     NormalFixCycle_ProducesNoFlags_TrustInvariant          (B5 trap: a fail->fix cycle must NOT alarm)
+#     HighRetryRate_FlaggedOnlyOncePastTheSampleFloor        (no tiny-sample false alarm)
+#     BackoffBetweenFailuresDoesNotInflateTheLoopStreak      (neutral outcomes never masquerade as a loop)
+#     FoldIsDeterministicRegardlessOfInputOrder              (pure fold, ordered by Seq)
+#     Format_RendersHeadlineThenOneLinePerFlag
+#   ReporterTests (2 new): BuildRendersHealthSectionFromTheEventLog, BuildOmitsHealthSectionWhenNoSessions
+
+### REAL RUN — the in-tree `report` verb folds a recorded stream into the ## Health section (A6) ###
+# Source: a recorded, deliberately-unhealthy run (runId h1) at
+#   C:\Users\shahi\AppData\Local\Temp\opencode\b53-qa\.conductor\events.jsonl
+#   — three consecutive RED sessions on stage B5, each re-running the failing `build` gate, and
+#     session #1 accruing 25M cache-read context tokens (the F-8 bloated-context case).
+# Command that produced the artifact:
+#   dotnet run --project src\Conductor -- report -p <plan.json>
+#   -> report written to ...\b53-qa\.conductor\REPORT.md
+#
+# The rendered ## Health block (verbatim from the UTF-8 REPORT.md; glyphs are U+26D4 ⛔ / U+26A0 ⚠):
+#
+# ## Health
+#
+# _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
+#
+# ```
+# sessions 3 · retries 2 (67 %) · overall Alert
+# ⛔ [gate-repetition] gate 'build' failed 3x in a row
+# ⛔ [same-failure-loop] stage B5: 3 consecutive sessions made no progress
+# ⚠ [context-saturation] session #1: 25,000,000 context tokens (≥ 20,000,000)
+# ```
+#
+# Every flag derives from the SAME events.jsonl the timeline/replay projections fold — no parallel
+# store (B5 trap). The retry rate is computed (2 of 3 sessions were retries); the loop, the repeated
+# gate failure, and the bloated context each cross a conservative threshold and surface with severity.
+
+### CONSERVATIVE-BY-DESIGN (the trust invariant) ###
+# A normal recover-from-red cycle (one build FAIL then a build PASS on the next session) produces
+# ZERO flags — proven by NormalFixCycle_ProducesNoFlags_TrustInvariant. A false "looping" alarm erodes
+# trust (B5 trap), so the trip-points (FailureLoopStreak=3, GateFailureStreak=3, GateOscillationFlips=3,
+# ContextSaturationTokens=20M, HighRetryRate>0.5 past a 4-session floor) are injectable + unit-tested.
+
+### DERIVED FROM LOGGED TRANSITIONS ONLY (per the handoff constraint) ###
+# The schema has no Thought/ToolCalled/CommandStarted events yet, so the heuristics fold the
+# transitions that ARE recorded: session outcomes (loop / retry rate / context tokens) and the gate
+# battery (repetition = consecutive same-gate failures; oscillation = pass/fail flips). The gate stream
+# is today's faithful proxy for "commands Conductor re-runs"; the same fold sharpens to tool level once
+# command/tool events land (B9 / provider stream) with no change to the HealthMetrics contract.
+
+### TUI — health panel wired (H) ###
+# The action bar advertises the pop-out; H opens the health panel, which renders the SAME fold via
+# Reporter.ReadHealth + HealthMetrics.Format through the already-tested modal pager
+# (DashboardRenderer.BuildModal; DocsAndModalTests.ModalRendersWithScrollPositionAndDoesNotThrow):
+#   [T] think · [O] history · [L] timeline · [F8] replay · [H] health · [C] fold · [↑↓] select · …
+
+### QA of previous session (#35, B5.2 deliver) — VERDICT: PASS ###
+# Re-ran its stated gate: build 0w/0e, 238 tests green (the pre-B5.3 baseline).
+# Claim 1 (tests): 7 ReplayTests green (dotnet test --filter ReplayTests).
+# Claim 2 (running artifact): the in-tree `replay` verb reconstructed the recorded 8-transition run
+#   (runId qa1) with correct time-travel state — checkpoints climb 0->1 only at the S1.1-confirmed
+#   step, session #1's cost ($0.0003 / 230/140 tok) appears only after it finishes, durations are the
+#   shared Timeline spans. No findings; B5.2's Replay fold + verb + F8 modal hold. B5.3 reuses the same
+#   event log + Reporter tolerant-read pattern (one source, no drift).

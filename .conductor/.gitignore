@@ -1,0 +1,7 @@
+*
+!.gitignore
+!REPORT.md
+# Phase handovers + tracked followups are versioned (audit deliverables).
+!followups.md
+!handovers/
+!handovers/**
