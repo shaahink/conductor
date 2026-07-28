@@ -22,6 +22,8 @@ checkpoint be re-checked years later.
 | [`GAP-ANALYSIS.md`](GAP-ANALYSIS.md) | The owner-commissioned analysis that produced the W-series: why the loop broke and the road back. |
 | [`workgraph/W5-REHEARSAL.md`](workgraph/W5-REHEARSAL.md) | The credential-free dress rehearsal write-up: one real binary driven from a markdown document to the first `RunFinished`, and the three engine defects it found. |
 | [`workgraph/W3-WINDOW-CLOSE.md`](workgraph/W3-WINDOW-CLOSE.md) | The window-close rail proven by really closing a window: how `WM_CLOSE` reaches `CTRL_CLOSE_EVENT` from outside the process, and the hard-kill control that makes the evidence falsifiable. |
+| [`workgraph/W5.2-RUNBOOK.md`](workgraph/W5.2-RUNBOOK.md) | **Read this before starting W5.2.** The one command, what it guards against before spending anything, which rails are armed, and what each outcome means. |
+| [`workgraph/W5.2-TRACKER.md`](workgraph/W5.2-TRACKER.md) | The tracker the W5.2 proof run drives — four followup rows, three stages. Generated view; claims come from `conductor task --done`. |
 | [`../CONDUCTOR-WORKGRAPH.md`](../CONDUCTOR-WORKGRAPH.md) | The live **tracker** (repo root) — checkpoint table + handoff block. |
 
 ## Reference — applies to every era

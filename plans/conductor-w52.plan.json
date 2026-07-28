@@ -1,0 +1,143 @@
+{
+  "version": "1.0",
+  "planVersion": 1,
+  "name": "Conductor W5.2 proof run",
+  "repo": "C:/code/conductor-baton",
+  "tracker": "docs/workgraph/W5.2-TRACKER.md",
+  "planDoc": "docs/CONDUCTOR-WORKGRAPH.md",
+  "pauseOnBlocked": true,
+  "agent": {
+    "command": "claude",
+    "args": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--dangerously-skip-permissions",
+      "--model",
+      "{model}",
+      "--session-id",
+      "{sessionId}"
+    ],
+    "resumeArgs": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--dangerously-skip-permissions",
+      "--model",
+      "{model}",
+      "--resume",
+      "{claudeSessionId}"
+    ],
+    "provider": "claude",
+    "output": "stream-json",
+    "model": "claude-sonnet-5"
+  },
+  "readOrder": [
+    "AGENTS.md",
+    ".conductor/followups.md",
+    "docs/workgraph/W5.2-TRACKER.md"
+  ],
+  "conventions": {
+    "stageIdPattern": "(?<stage>[A-Za-z]+\\d+)(?:\\.\\d+)?[a-z]?",
+    "handoffMarker": "## Handoff",
+    "humanToken": "HUMAN:",
+    "status": {
+      "done": ["DONE"],
+      "blocked": ["BLOCKED"],
+      "inProgress": ["IN PROGRESS"],
+      "todo": ["TODO"]
+    }
+  },
+  "stages": [
+    {
+      "id": "V1",
+      "title": "A test that cannot lie about coverage",
+      "sessions": 2,
+      "notes": "Deliver V1.1 = followup FU-F1-07. `tests/Conductor.Tests/B11_2Tests.cs:111` hardcodes an `expectedVerbs` HashSet and calls the resulting test 'exhaustive'. It is not: `task` and `note` were missing from BOTH the completion scripts and this list for nine audit sessions, and every run stayed green. Replace the hardcoded set with the registered verbs read at runtime from the same source Program.cs registers them in, so adding a command and forgetting the completion script fails the test instead of passing it. Keep both existing assertions (every registered verb present in the PowerShell AND bash completion output; no stale verb in either). Do not weaken either direction to make the new source fit. Scope: the test and, only if unavoidable, a small seam in Program.cs to expose the verb list -- no behaviour change to any command."
+    },
+    {
+      "id": "V2",
+      "title": "run.db stops claiming a parked run is still running",
+      "sessions": 2,
+      "dependsOn": ["V1"],
+      "notes": "Deliver V2.1 = followup FU-F1-06. `RecordRunEnd` (`src/Conductor/Core/Store/SqliteRunStore.Sessions.cs:20`) is the only writer of `runs.status`, and it stamps `ended_utc` at the same time -- so it is wrong to call for a run that has merely PARKED. The result is that NeedsHuman, Paused, AwaitingOwner, VerifyingGates and Backoff all leave `runs.status = 'running'` in run.db. Add a status-only update (no `ended_utc`) to IRunStore + SqliteRunStore and call it from the non-terminal transitions, so a parked run reads as parked. Keep it additive and best-effort in the established style: run state itself lives in the `run_state` table, and `InitializeRun` (INSERT OR REPLACE) must still repair the row on resume. Cover it with a test that drives a real store: park, read `runs.status` back, assert `ended_utc` is still NULL."
+    },
+    {
+      "id": "V3",
+      "title": "The async edges nobody watches",
+      "sessions": 3,
+      "dependsOn": ["V2"],
+      "notes": "Two independent followups, one per checkpoint. V3.1 = FU-F0-3: five fire-and-forget notifier calls (`RunLoop.cs:323`, `RunLoop.Plumbing.cs:234`, `VerdictEngine.cs:79`, `VerdictEngine.cs:466`, `VerdictEngine.Phase.cs:125`) are launched as `_ = PushAsync(...)` with no fault continuation. The methods catch internally today, so the live failure mode is a silently unsent notification -- give the pattern a single shared helper that observes the task and logs a failure, and use it at all five sites. V3.2 = FU-F0-2: `LaneCoordinator.StartParallelAudit` (`src/Conductor/Core/Lanes/LaneCoordinator.cs:45`) takes the run's CancellationToken, so the audit dies with the run but cannot be cancelled on its own; give it a linked CTS so closing/cancelling the audit stops just the audit, and observe the task rather than dropping it. Neither checkpoint may change when a notification or an audit is triggered -- only what happens to the task once it is."
+    }
+  ],
+  "gates": [
+    {
+      "name": "build",
+      "command": "dotnet build Conductor.slnx",
+      "tier": "fast",
+      "timeoutMinutes": 10
+    },
+    {
+      "name": "face-build",
+      "command": "go build ./...",
+      "cwd": "face-go",
+      "tier": "fast",
+      "timeoutMinutes": 5
+    },
+    {
+      "name": "test",
+      "command": "dotnet test Conductor.slnx --no-build",
+      "tier": "full",
+      "timeoutMinutes": 20
+    },
+    {
+      "name": "face-test",
+      "command": "go test ./...",
+      "cwd": "face-go",
+      "tier": "full",
+      "timeoutMinutes": 10
+    },
+    {
+      "name": "ratchet",
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/gates/ratchet.ps1",
+      "tier": "full",
+      "timeoutMinutes": 10
+    }
+  ],
+  "gatePolicy": "perSession",
+  "advisor": {
+    "enabled": true,
+    "command": "claude",
+    "args": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "stream-json",
+      "--model",
+      "claude-fable-5"
+    ],
+    "provider": "claude",
+    "output": "stream-json",
+    "timeoutMinutes": 6
+  },
+  "limits": {
+    "stallMinutes": 12,
+    "stallGraceMinutes": 3,
+    "sessionTimeoutMinutes": 45,
+    "maxResumesPerSession": 3,
+    "maxSessions": 24,
+    "maxRunCostUsd": 25,
+    "authPreflight": true,
+    "stallPatternTermination": true,
+    "sameFailureCircuitBreaker": true,
+    "verifierThreshold": 80
+  },
+  "report": {
+    "commit": true,
+    "push": true
+  }
+}
