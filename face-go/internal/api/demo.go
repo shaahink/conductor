@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -906,8 +908,13 @@ func makeFakeState() *StateDto {
 		CurrentCheckpointTitle: "Wire caching layer",
 		GateSummary:            "build ✓ test ● lint ○",
 		RunId:                  "demo-run-id",
-		Repo:                   "C:\\Code\\conductor",
-		PlanDir:                "C:\\Code\\conductor\\plans",
+		Repo: "C:\\Code\\conductor",
+		// `--demo` is offline against SYNTHETIC data, but the Templates tab stats PlanDir and lists
+		// PlanDir/personas from the real filesystem. Pointed at a plausible-looking real path, the
+		// demo would show whoever ran it their own templates. Name one that cannot exist, so the tab
+		// always renders the built-in defaults. Cosmetic paths above/below stay plausible: they are
+		// only ever printed.
+		PlanDir: filepath.Join(os.TempDir(), "conductor-demo-plandir-that-does-not-exist"),
 		// U1.1: Home names the whole workspace, so the demo has to carry the whole workspace. StateDir
 		// is repo-rooted (PlanConfig.StateDir), NOT planDir-rooted — the demo must mirror that or it
 		// teaches the layout wrong.

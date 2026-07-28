@@ -187,6 +187,17 @@ func fixedTelegramStatus() *api.TelegramStatusDto {
 	}
 }
 
+// The Templates tab STATs planDir and lists planDir/personas from the REAL filesystem, so a golden
+// that points PlanDir at a path which happens to exist renders whatever is on that machine's disk.
+// It used to be hardcoded to `C:\Code\conductor\plans` — the author's own checkout — which meant the
+// templates goldens passed on CI (where that path is absent) and silently depended on the author's
+// working tree everywhere else. Merging the era branch into master created `plans/personas/` at
+// exactly that path and three goldens went red with no code change behind it.
+//
+// So: name a directory that cannot exist. PlanDir is not rendered anywhere (Home shows PlanFile),
+// so this is invisible in the frames and the goldens are unchanged.
+var goldenPlanDir = filepath.Join(os.TempDir(), "conductor-golden-plandir-that-does-not-exist")
+
 func fixedState() *api.StateDto {
 	persona := "architect"
 	return &api.StateDto{
@@ -206,7 +217,7 @@ func fixedState() *api.StateDto {
 		CurrentCheckpointTitle: "Wire caching layer",
 		RunId:                  "demo-run-id",
 		Repo:                   `C:\Code\conductor`,
-		PlanDir:                `C:\Code\conductor\plans`,
+		PlanDir:                goldenPlanDir,
 		Tracker:                "CONDUCTOR-VNEXT-PLAN.md",
 		StateDir:               `C:\Code\conductor\.conductor`,
 		SessionNumber:          12,
