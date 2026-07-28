@@ -128,6 +128,7 @@ public sealed class HostLoggingTests : IDisposable
         Assert.NotEmpty(lines);
 
         // Every line must be valid JSON with @t + @m fields
+        var correlated = false;
         foreach (var line in lines)
         {
             System.Text.Json.JsonDocument doc;
@@ -137,13 +138,15 @@ public sealed class HostLoggingTests : IDisposable
             Assert.True(root.TryGetProperty("@t", out _), "missing @t timestamp");
             Assert.True(root.TryGetProperty("@m", out _), "missing @m message");
 
-            // At least one line must carry the run correlation
-            if (root.TryGetProperty("runId", out var rid))
-            {
-                Assert.Equal(runId, rid.GetString());
-                break; // found the correlated entry
-            }
+            // At least one line must carry THIS run's correlation. Scanning for it rather than
+            // asserting on the first runId-bearing line is the difference between the property under
+            // test and an ordering accident: Serilog's file sink is process-global, so any host another
+            // test composes in parallel interleaves its own correlated lines into this file. "My run is
+            // correlated" is the guarantee; "nobody else ever wrote here" was never one.
+            if (root.TryGetProperty("runId", out var rid) && string.Equals(rid.GetString(), runId, StringComparison.Ordinal))
+                correlated = true;
         }
+        Assert.True(correlated, $"no log line carried runId={runId}");
 
         // Verify text log still present (backward compatibility)
         var textFile = Directory.EnumerateFiles(logDir, "conductor-*.log").Single();

@@ -6,8 +6,9 @@ using Conductor.Models;
 namespace Conductor.Tests;
 
 /// <summary>P3 helpers: the advisor-refine answer parser (tolerant of prose/fences, strict about
-/// shape) and the owner task-context prompt section (absent when no card carries context, so
-/// untouched plans keep byte-identical prompts).</summary>
+/// shape) and the task-scoped prompt section — since W2.3 composed through
+/// <see cref="Conductor.Planning.PromptBlockRenderer"/>, carrying each open card's title as well as
+/// any owner-attached context, and absent entirely when no card is in scope.</summary>
 public sealed class TaskRefineAndContextTests
 {
     [Fact]
@@ -49,8 +50,16 @@ public sealed class TaskRefineAndContextTests
         Assert.Contains("P3-a1", prompt, StringComparison.Ordinal);
     }
 
+    private static PlanConfig MinimalPlan() => new()
+    {
+        Name = "p3",
+        Repo = ".",
+        Tracker = "TRACKER.md",
+        Stages = [new StageConfig { Id = "P3", Title = "Cards", Sessions = 1 }],
+    };
+
     [Fact]
-    public void TaskContextSection_ListsOnlyOpenCardsWithContext()
+    public void TaskContextSection_CarriesEveryOpenCard_TitleAndContext()
     {
         var graph = new TaskGraph();
         graph.Fold(
@@ -63,19 +72,28 @@ public sealed class TaskRefineAndContextTests
             new TaskStatusChanged { RunId = "r", Seq = 6, TaskId = "P3.1-a3", Status = "done" },
         ]);
 
-        var section = SessionRunner.BuildTaskContextSection(graph, ["P3.1"]);
+        var section = SessionRunner.BuildTaskContextSection(MinimalPlan(), graph, ["P3.1"]);
 
-        Assert.Contains("## Task context (owner-provided)", section, StringComparison.Ordinal);
-        Assert.Contains("P3.1-a1 — With context**: start in tab_kanban.go", section, StringComparison.Ordinal);
-        Assert.DoesNotContain("No context", section, StringComparison.Ordinal);
-        Assert.DoesNotContain("stale steer", section, StringComparison.Ordinal); // done card: no longer prompt input
+        Assert.Contains(Conductor.Planning.PromptBlockRenderer.SectionHeading, section, StringComparison.Ordinal);
+        Assert.Contains("- **P3.1-a1 — With context**\n  start in tab_kanban.go", section, StringComparison.Ordinal);
+        // W2.3: a card with only a title is no longer invisible to the session that must deliver it.
+        Assert.Contains("- **P3.1-a2 — No context**", section, StringComparison.Ordinal);
+        // A done card is history, not an instruction — neither it nor its stale steer is prompt input.
+        Assert.DoesNotContain("Done already", section, StringComparison.Ordinal);
+        Assert.DoesNotContain("stale steer", section, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void TaskContextSection_IsEmptyWhenNoCardCarriesContext()
+    public void TaskContextSection_IsEmptyWhenNoCardIsInScope()
     {
+        // No open cards under the claimed checkpoint means no section at all — not a bare heading.
         var graph = new TaskGraph();
-        graph.Fold([new TaskAdded { RunId = "r", Seq = 1, TaskId = "A-a1", CheckpointId = "A", Title = "Plain", Source = "agent", Order = 1 }]);
-        Assert.Equal("", SessionRunner.BuildTaskContextSection(graph, ["A"]));
+        graph.Fold(
+        [
+            new TaskAdded { RunId = "r", Seq = 1, TaskId = "A-a1", CheckpointId = "A", Title = "Plain", Source = "agent", Order = 1 },
+            new TaskStatusChanged { RunId = "r", Seq = 2, TaskId = "A-a1", Status = "done" },
+        ]);
+        Assert.Equal("", SessionRunner.BuildTaskContextSection(MinimalPlan(), graph, ["A"]));
+        Assert.Equal("", SessionRunner.BuildTaskContextSection(MinimalPlan(), graph, ["nothing-here"]));
     }
 }

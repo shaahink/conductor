@@ -52,7 +52,17 @@ public sealed partial class SessionRunner
         catch (UnauthorizedAccessException) { }
     }
 
-    private string? WireMcpServer(SessionRecord rec, StageConfig stage)
+    /// <summary>W2.1: the MCP wiring for one session. Both provider shapes are written every time —
+    /// which one the child actually reads is decided by how it is launched (env var vs CLI flag), and
+    /// writing both keeps that decision at the launch site instead of inside the config writer.</summary>
+    internal sealed record McpWiring(string OpencodeConfigPath, string ClaudeConfigPath);
+
+    /// <summary>W2.1: emits the conductor-tasks MCP server in BOTH provider dialects. Opencode reads a
+    /// <c>{mcp:{name:{type:"local",command:[exe,...args]}}}</c> file via <c>OPENCODE_CONFIG</c>; claude
+    /// reads a <c>{mcpServers:{name:{type:"stdio",command:exe,args:[...]}}}</c> file via
+    /// <c>--mcp-config</c>. Until this wrote the second shape, every claude-provider run launched with
+    /// an empty <c>mcp_servers</c> list — the task/note/bug verbs were wired and unreachable.</summary>
+    private McpWiring? WireMcpServer(SessionRecord rec, StageConfig stage)
     {
         try
         {
@@ -76,7 +86,7 @@ public sealed partial class SessionRunner
                 "--repo", repoPath,
             };
 
-            var mcpConfig = new
+            var opencodeConfig = new
             {
                 mcp = new Dictionary<string, object>(StringComparer.Ordinal)
                 {
@@ -89,10 +99,25 @@ public sealed partial class SessionRunner
                 }
             };
 
-            var configPath = Path.Combine(_ctx.Plan.StateDir, "mcp-config.json");
-            var json = JsonSerializer.Serialize(mcpConfig, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(configPath, json);
-            return configPath;
+            var claudeConfig = new
+            {
+                mcpServers = new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    ["conductor-tasks"] = new Dictionary<string, object>(StringComparer.Ordinal)
+                    {
+                        ["type"] = "stdio",
+                        ["command"] = conductorExe,
+                        ["args"] = commandArgs.ToArray(),
+                    }
+                }
+            };
+
+            var opts = new JsonSerializerOptions { WriteIndented = true };
+            var opencodePath = Path.Combine(_ctx.Plan.StateDir, "mcp-config.json");
+            var claudePath = Path.Combine(_ctx.Plan.StateDir, "mcp-config.claude.json");
+            File.WriteAllText(opencodePath, JsonSerializer.Serialize(opencodeConfig, opts));
+            File.WriteAllText(claudePath, JsonSerializer.Serialize(claudeConfig, opts));
+            return new McpWiring(opencodePath, claudePath);
         }
         catch (Exception ex)
         {
@@ -101,12 +126,27 @@ public sealed partial class SessionRunner
         }
     }
 
-    private void CleanupMcpConfig(string? configPath)
+    /// <summary>W2.1: the CLI flags a claude-shaped child needs to actually load the server. Appended
+    /// only when the plan's own args do not already carry <c>--mcp-config</c>, so a plan that wires MCP
+    /// by hand keeps full control instead of getting a second, conflicting config.</summary>
+    internal static IReadOnlyList<string> McpArgsFor(string providerName, IReadOnlyList<string>? plannedArgs, string claudeConfigPath)
     {
-        if (configPath == null) return;
-        try { if (File.Exists(configPath)) File.Delete(configPath); }
-        catch (IOException) { }
-        catch (UnauthorizedAccessException) { }
+        if (!string.Equals(providerName, "claude", StringComparison.Ordinal)) return [];
+        if (plannedArgs != null && plannedArgs.Any(a => a.Contains("--mcp-config", StringComparison.Ordinal))) return [];
+        // --strict-mcp-config: the session gets exactly the conductor server and nothing the developer
+        // happens to have in ~/.claude.json — a run must not depend on the operator's local MCP setup.
+        return ["--mcp-config", claudeConfigPath, "--strict-mcp-config"];
+    }
+
+    private void CleanupMcpConfig(McpWiring? wiring)
+    {
+        if (wiring == null) return;
+        foreach (var path in new[] { wiring.OpencodeConfigPath, wiring.ClaudeConfigPath })
+        {
+            try { if (File.Exists(path)) File.Delete(path); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
     }
 
     private void FoldMcpJournal()

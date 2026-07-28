@@ -1,3 +1,4 @@
+using Conductor.Core.Events;
 using Conductor.Models;
 
 namespace Conductor.Core.Orchestration;
@@ -5,6 +6,33 @@ namespace Conductor.Core.Orchestration;
 public sealed partial class SessionRunner
 {
     // ── workflow-driven kind resolution (M3.1) + prompt construction ──
+
+    /// <summary>W2.3: the prompt's task-scoped section, composed and rendered through the SAME path
+    /// <c>GET /prompt/blocks</c> serves — <see cref="TaskPromptComposition"/> then
+    /// <see cref="Conductor.Planning.PromptBlockRenderer"/>. The card detail and the prompt on disk are
+    /// therefore the same bytes, which is what makes the card detail honest (criterion 3).
+    /// <para>Open cards only (todo/in_progress) — a done card is history, not an instruction. A card's
+    /// TITLE now reaches the prompt as well as its context, so a sub-task with no owner note is no
+    /// longer invisible to the session meant to deliver it. The one exception is the CHECKPOINT card
+    /// itself: the prompt already names the checkpoint through the stage and tracker rows, so it earns
+    /// a line only when it carries context, which nothing else in the prompt says.</para></summary>
+    internal static string BuildTaskContextSection(PlanConfig plan, TaskGraph graph, IEnumerable<string> checkpointIds)
+    {
+        var personas = new PersonaRegistry(plan);
+        var compositions = new List<Conductor.Planning.PromptComposition>();
+        foreach (var cpId in checkpointIds)
+        {
+            foreach (var t in graph.ForCheckpoint(cpId))
+            {
+                if (t.Status is not ("todo" or "in_progress")) continue;
+                if (t.Kind == WorkItemKinds.Checkpoint && string.IsNullOrWhiteSpace(t.Context)) continue;
+                // Knowledge stays empty here: the battery section already carries it once, and the
+                // renderer reads only the task-scoped blocks anyway.
+                compositions.Add(TaskPromptComposition.Compose(plan, t, injectedKnowledge: "", personas));
+            }
+        }
+        return Conductor.Planning.PromptBlockRenderer.RenderSection(compositions);
+    }
 
     private SessionKind ResolveSessionKind(
         StageConfig stage,

@@ -13,6 +13,7 @@ public partial class McpTaskServer
         if (args is { } a && a.TryGetProperty("checkpointId", out var cp))
             cpId = cp.GetString() ?? "";
 
+        RefreshGraph(); // W2.2: cards the owner added mid-session are part of the answer
         var tasks = _graph.ForCheckpoint(cpId);
         var list = tasks.Select(t => new
         {
@@ -43,11 +44,12 @@ public partial class McpTaskServer
 
         // Shared write semantics (G2.1): validation + event shape live in TaskWrites so the HTTP
         // control plane's /tasks/update can't drift from this tool.
+        RefreshGraph();
         var (evt, error) = TaskWrites.BuildStatusChange(_graph, _runId, taskId, status, source: "agent");
         if (evt is null)
             return JsonSerializer.SerializeToElement(new { ok = false, error });
 
-        WriteJournal(evt);
+        WriteEvent(evt);
         _graph.Fold([evt]);
 
         var actualStatus = _graph.Find(taskId)?.Status ?? "";
@@ -66,11 +68,14 @@ public partial class McpTaskServer
             if (a.TryGetProperty("order", out var o) && o.TryGetInt32(out var ov)) order = ov;
         }
 
+        // W2.2: refresh first — the id is allocated against every writer's events, not a start-of-
+        // process snapshot, so two allocators can no longer mint the same id for different cards.
+        RefreshGraph();
         var (evt, error) = TaskWrites.BuildAdd(_graph, _runId, cpId, title, order, source: "agent");
         if (evt is null)
             return JsonSerializer.SerializeToElement(new { ok = false, error });
 
-        WriteJournal(evt);
+        WriteEvent(evt);
         _graph.Fold([evt]);
 
         return JsonSerializer.SerializeToElement(new { ok = true, taskId = evt.TaskId, checkpointId = cpId, title, order = evt.Order });
@@ -107,7 +112,9 @@ public partial class McpTaskServer
 #pragma warning restore CA1031
         }
 
-        // Also emit as a journal event so the note appears in events.jsonl projections
+        // Also emit an event so the note appears in event-log projections. W2.2 lands it in run.db
+        // immediately when a store is wired: a note journaled and never folded dies with a killed
+        // session, which is the exact knowledge loss the ledger exists to prevent.
         var evt = new NoteAdded
         {
             RunId = _runId,
@@ -115,7 +122,7 @@ public partial class McpTaskServer
             Content = content,
             StageId = string.IsNullOrWhiteSpace(stageId) ? null : stageId,
         };
-        WriteJournal(evt);
+        WriteEvent(evt);
 
         return JsonSerializer.SerializeToElement(new { ok = true, kind, stageId = string.IsNullOrWhiteSpace(stageId) ? null : stageId });
     }

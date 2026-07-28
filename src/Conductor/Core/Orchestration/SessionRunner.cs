@@ -166,12 +166,12 @@ public sealed partial class SessionRunner
             prompt = prompt.TrimEnd() + "\n\n" + claimedList.ToString().TrimEnd() + "\n";
         }
 
-        // P3: owner-provided per-task context must reach the session that delivers the task — the
-        // card-detail edit is real prompt input, not decoration. Scope = the claimed checkpoints.
+        // P3/W2.3: the cards for the claimed checkpoints — title and owner-attached context — are real
+        // prompt input, not decoration, and are rendered by the same composer the card detail serves.
         // (taskGraph was folded once above, before the assignment — PF3.)
         if (taskGraph != null)
         {
-            var contextSection = BuildTaskContextSection(taskGraph, assignment.Items.Select(i => i.Id));
+            var contextSection = BuildTaskContextSection(_ctx.Plan, taskGraph, assignment.Items.Select(i => i.Id));
             if (contextSection.Length > 0)
                 prompt = prompt.TrimEnd() + "\n\n" + contextSection;
         }
@@ -235,16 +235,27 @@ public sealed partial class SessionRunner
         bool stalled = false, timedOut = false, killedByUser = false;
         await GateRunner.RunHookAsync(_ctx.Plan, _ctx.Plan.Setup, "setup", _ctx.Log, ct).ConfigureAwait(false);
 
-        var mcpConfigPath = WireMcpServer(rec, stage);
-        Dictionary<string, string>? extraEnv = null;
-        if (mcpConfigPath != null)
+        var mcpWiring = WireMcpServer(rec, stage);
+        // W2.1: CONDUCTOR_PLAN scopes every in-worker `conductor task/bug/note` to THIS run's plan.
+        // Without it the child resolved by scanning the cwd, and a repo holding more than one
+        // *.plan.json killed the verb outright ("Multiple plan files found") with output redirected —
+        // the four U-series crash-*.logs. Set unconditionally: the CLI verbs matter even if the MCP
+        // config could not be written.
+        var extraEnv = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (!string.IsNullOrEmpty(_ctx.Plan.PlanFilePath))
+            extraEnv["CONDUCTOR_PLAN"] = _ctx.Plan.PlanFilePath;
+        IReadOnlyList<string> extraArgs = [];
+        if (mcpWiring != null)
         {
-            extraEnv = new Dictionary<string, string>(StringComparer.Ordinal) { ["OPENCODE_CONFIG"] = mcpConfigPath };
-            _ctx.Log("I1: MCP task server wired (opencode config at " + mcpConfigPath + ")");
+            extraEnv["OPENCODE_CONFIG"] = mcpWiring.OpencodeConfigPath;
+            var provider = Providers.AgentProviderFactory.ResolveName(resolvedAgent);
+            extraArgs = McpArgsFor(provider, resolvedAgent.Args, mcpWiring.ClaudeConfigPath);
+            _ctx.Log($"I1: MCP task server wired ({provider}) — opencode config {mcpWiring.OpencodeConfigPath}" +
+                     (extraArgs.Count > 0 ? $", claude --mcp-config {mcpWiring.ClaudeConfigPath}" : ""));
         }
 
         using (var agent = AgentSession.Start(resolvedAgent, _ctx.Plan.Repo, prompt, rec.ClaudeSessionId,
-                   kind == SessionKind.Resume ? rec.ClaudeSessionId : null, rawLog, _ctx.Events, rec.Number.ToString(), extraEnv, supervisor: _ctx.ProcessSupervisor))
+                   kind == SessionKind.Resume ? rec.ClaudeSessionId : null, rawLog, _ctx.Events, rec.Number.ToString(), extraEnv, supervisor: _ctx.ProcessSupervisor, extraArgs: extraArgs))
         {
             _ctx.Activity.Clear();
             var lastHeartbeat = DateTime.UtcNow;
@@ -332,7 +343,7 @@ public sealed partial class SessionRunner
                 (agent.CostUsd.HasValue ? $" · ${agent.CostUsd:0.00}" : ""));
 
             FoldMcpJournal();
-            CleanupMcpConfig(mcpConfigPath);
+            CleanupMcpConfig(mcpWiring);
 
             if (ct.IsCancellationRequested)
             {
@@ -429,26 +440,6 @@ public sealed partial class SessionRunner
     }
 
     private static string Trunc(string s, int max) => s.Length <= max ? s : s[..max] + "\u2026";
-
-    /// <summary>P3: the prompt section carrying owner-provided per-task context for the claimed
-    /// checkpoints \u2014 only open cards (todo/in_progress) with non-empty context appear; empty when
-    /// there is nothing to say, so untouched plans keep byte-identical prompts.</summary>
-    internal static string BuildTaskContextSection(TaskGraph graph, IEnumerable<string> checkpointIds)
-    {
-        var lines = new List<string>();
-        foreach (var cpId in checkpointIds)
-        {
-            foreach (var t in graph.ForCheckpoint(cpId))
-            {
-                if (t.Status is not ("todo" or "in_progress") || string.IsNullOrWhiteSpace(t.Context)) continue;
-                lines.Add($"- **{t.TaskId} \u2014 {t.Title}**: {t.Context.Trim()}");
-            }
-        }
-        if (lines.Count == 0) return "";
-        return "## Task context (owner-provided)\n" +
-               "The owner attached extra context to these open sub-tasks \u2014 honor it when delivering them.\n" +
-               string.Join("\n", lines) + "\n";
-    }
 
     private static string Short(string sha) => string.IsNullOrEmpty(sha) ? "?" : sha.Length >= 7 ? sha[..7] : sha;
 

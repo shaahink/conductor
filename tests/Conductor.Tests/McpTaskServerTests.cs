@@ -39,6 +39,40 @@ public class McpTaskServerTests
         return JsonSerializer.Serialize(payload, opts);
     }
 
+    /// <summary>W2.1: a <c>tools/call</c> result is the MCP envelope
+    /// <c>{content:[{type:"text",text:&lt;json&gt;}], isError}</c> — the tool's own payload is that
+    /// text. Asserting through this is what keeps these tests honest about the wire: they used to read
+    /// a bare payload no real client would ever render.</summary>
+    private static JsonElement Payload(JsonElement response)
+    {
+        var text = response.GetProperty("result").GetProperty("content")[0].GetProperty("text").GetString();
+        return JsonSerializer.Deserialize<JsonElement>(text!);
+    }
+
+    [Fact]
+    public async Task ToolCall_ReturnsTheMcpContentEnvelope()
+    {
+        // The gate on the shape itself: a bare payload made every tool render as "completed with no
+        // output" on the real claude CLI while every one of these tests passed.
+        var journal = TempPath();
+        try
+        {
+            var server = new McpTaskServer("nonexistent.jsonl", journal, "r-env");
+            var responses = await RunMcpExchange(server,
+                Rpc(new { jsonrpc = "2.0", id = 1, method = "tools/call", @params = new { name = "task_list", arguments = new { checkpointId = "X" } } }),
+                Rpc(new { jsonrpc = "2.0", id = 2, method = "tools/call", @params = new { name = "nope" } }));
+
+            var ok = responses[0].GetProperty("result");
+            Assert.Equal("text", ok.GetProperty("content")[0].GetProperty("type").GetString());
+            Assert.False(ok.GetProperty("isError").GetBoolean());
+            // JSON-RPC 2.0: result and error are mutually exclusive — a strict client rejects both.
+            Assert.False(responses[0].TryGetProperty("error", out _));
+
+            Assert.True(responses[1].GetProperty("result").GetProperty("isError").GetBoolean());
+        }
+        finally { Cleanup(journal); }
+    }
+
     [Fact]
     public async Task Initialize_ReturnsServerCapabilities()
     {
@@ -50,8 +84,11 @@ public class McpTaskServerTests
             var responses = await RunMcpExchange(server, req);
 
             Assert.Single(responses);
+            // initialize is a protocol response, not a tools/call result — no content envelope.
             var result = responses[0].GetProperty("result");
             Assert.Equal("conductor-task-server", result.GetProperty("serverInfo").GetProperty("name").GetString());
+            // The negotiated revision is the client's, echoed back (W2.1).
+            Assert.Equal("2024-11-05", result.GetProperty("protocolVersion").GetString());
         }
         finally { Cleanup(journal); }
     }
@@ -100,7 +137,7 @@ public class McpTaskServerTests
             var responses = await RunMcpExchange(server, req);
 
             Assert.Single(responses);
-            var result = responses[0].GetProperty("result");
+            var result = Payload(responses[0]);
             Assert.Equal(0, result.GetProperty("count").GetInt32());
         }
         finally { Cleanup(journal); }
@@ -129,11 +166,11 @@ public class McpTaskServerTests
             Assert.Equal(3, responses.Count);
 
             // add response
-            Assert.True(responses[0].GetProperty("result").GetProperty("ok").GetBoolean());
+            Assert.True(Payload(responses[0]).GetProperty("ok").GetBoolean());
             // update response
-            Assert.True(responses[1].GetProperty("result").GetProperty("ok").GetBoolean());
+            Assert.True(Payload(responses[1]).GetProperty("ok").GetBoolean());
             // list response
-            var tasks = responses[2].GetProperty("result").GetProperty("tasks");
+            var tasks = Payload(responses[2]).GetProperty("tasks");
             Assert.Equal(2, tasks.GetArrayLength());
             Assert.Equal("done", tasks[0].GetProperty("status").GetString());    // Model (order 1)
             Assert.Equal("todo", tasks[1].GetProperty("status").GetString());    // Tests (order 2)
@@ -176,7 +213,7 @@ public class McpTaskServerTests
             var listReq = Rpc(new { jsonrpc = "2.0", id = 2, method = "tools/call", @params = new { name = "task_list", arguments = new { checkpointId = "B9.3" } } });
             var responses = await RunMcpExchange(server2, listReq);
             Assert.Single(responses);
-            var tasks = responses[0].GetProperty("result").GetProperty("tasks");
+            var tasks = Payload(responses[0]).GetProperty("tasks");
             Assert.Equal(1, tasks.GetArrayLength());
             Assert.Equal("done", tasks[0].GetProperty("status").GetString());
         }
@@ -198,7 +235,7 @@ public class McpTaskServerTests
             var responses = await RunMcpExchange(server, req);
 
             Assert.Single(responses);
-            Assert.True(responses[0].GetProperty("result").TryGetProperty("error", out _));
+            Assert.True(Payload(responses[0]).TryGetProperty("error", out _));
         }
         finally { Cleanup(journal); }
     }
@@ -232,7 +269,7 @@ public class McpTaskServerTests
             var responses = await RunMcpExchange(server, req);
 
             Assert.Single(responses);
-            var result = responses[0].GetProperty("result");
+            var result = Payload(responses[0]);
             Assert.False(result.GetProperty("ok").GetBoolean());
             Assert.Contains("not found", result.GetProperty("error").GetString());
         }
@@ -255,7 +292,7 @@ public class McpTaskServerTests
             var responses = await RunMcpExchange(server, req);
 
             Assert.Single(responses);
-            var result = responses[0].GetProperty("result");
+            var result = Payload(responses[0]);
             Assert.False(result.GetProperty("ok").GetBoolean());
             Assert.Contains("invalid status", result.GetProperty("error").GetString());
         }
@@ -280,8 +317,8 @@ public class McpTaskServerTests
             var responses = await RunMcpExchange(server, add1, add2);
 
             Assert.Equal(2, responses.Count);
-            var id1 = responses[0].GetProperty("result").GetProperty("taskId").GetString();
-            var id2 = responses[1].GetProperty("result").GetProperty("taskId").GetString();
+            var id1 = Payload(responses[0]).GetProperty("taskId").GetString();
+            var id2 = Payload(responses[1]).GetProperty("taskId").GetString();
             Assert.NotEqual(id1, id2);
         }
         finally { Cleanup(journal); }
@@ -298,7 +335,7 @@ public class McpTaskServerTests
             var responses = await RunMcpExchange(server, req);
 
             Assert.Single(responses);
-            var result = responses[0].GetProperty("result");
+            var result = Payload(responses[0]);
             Assert.False(result.GetProperty("ok").GetBoolean());
         }
         finally { Cleanup(journal); }
@@ -326,7 +363,7 @@ public class McpTaskServerTests
             var responses = await RunMcpExchange(server, req);
 
             Assert.Single(responses);
-            var result = responses[0].GetProperty("result");
+            var result = Payload(responses[0]);
             Assert.True(result.GetProperty("ok").GetBoolean());
             Assert.Equal(1, result.GetProperty("count").GetInt32());
             var rows = result.GetProperty("rows");
@@ -349,7 +386,7 @@ public class McpTaskServerTests
             var responses = await RunMcpExchange(server, req);
 
             Assert.Single(responses);
-            var result = responses[0].GetProperty("result");
+            var result = Payload(responses[0]);
             Assert.False(result.GetProperty("ok").GetBoolean());
             Assert.Contains("Only SELECT", result.GetProperty("error").GetString());
         }
@@ -368,7 +405,7 @@ public class McpTaskServerTests
             var responses = await RunMcpExchange(server, req);
 
             Assert.Single(responses);
-            var result = responses[0].GetProperty("result");
+            var result = Payload(responses[0]);
             Assert.False(result.GetProperty("ok").GetBoolean());
             Assert.Contains("sql is required", result.GetProperty("error").GetString());
         }
@@ -391,7 +428,7 @@ public class McpTaskServerTests
             var responses = await RunMcpExchange(server, req);
 
             Assert.Single(responses);
-            var result = responses[0].GetProperty("result");
+            var result = Payload(responses[0]);
             Assert.True(result.GetProperty("ok").GetBoolean());
             var entries = result.GetProperty("entries");
             Assert.Equal(1, entries.GetArrayLength());
@@ -411,7 +448,7 @@ public class McpTaskServerTests
             // file a bug
             var newReq = Rpc(new { jsonrpc = "2.0", id = 1, method = "tools/call", @params = new { name = "bug_new", arguments = new { title = "cache miss on truth tier", severity = "high", stage_id = "M7" } } });
             var newResp = await RunMcpExchange(new McpTaskServer("nonexistent.jsonl", journal, "r-mcp", store: db), newReq);
-            var newResult = newResp[0].GetProperty("result");
+            var newResult = Payload(newResp[0]);
             Assert.True(newResult.GetProperty("ok").GetBoolean());
             var id = newResult.GetProperty("id").GetInt64();
             Assert.True(id > 0);
@@ -419,7 +456,7 @@ public class McpTaskServerTests
             // list open bugs — the one we filed is there
             var listReq = Rpc(new { jsonrpc = "2.0", id = 2, method = "tools/call", @params = new { name = "bug_list", arguments = new { } } });
             var listResp = await RunMcpExchange(new McpTaskServer("nonexistent.jsonl", journal, "r-mcp", store: db), listReq);
-            var bugs = listResp[0].GetProperty("result").GetProperty("bugs");
+            var bugs = Payload(listResp[0]).GetProperty("bugs");
             Assert.Equal(1, bugs.GetArrayLength());
             Assert.Equal("cache miss on truth tier", bugs[0].GetProperty("title").GetString());
             Assert.Equal("open", bugs[0].GetProperty("status").GetString());
@@ -427,7 +464,7 @@ public class McpTaskServerTests
             // fix it — then it's no longer open
             var fixReq = Rpc(new { jsonrpc = "2.0", id = 3, method = "tools/call", @params = new { name = "bug_fix", arguments = new { id } } });
             var fixResp = await RunMcpExchange(new McpTaskServer("nonexistent.jsonl", journal, "r-mcp", store: db), fixReq);
-            Assert.True(fixResp[0].GetProperty("result").GetProperty("ok").GetBoolean());
+            Assert.True(Payload(fixResp[0]).GetProperty("ok").GetBoolean());
             Assert.Empty(db.QueryBugs("r-mcp", "open"));
         }
         finally { Cleanup(journal); }
@@ -452,7 +489,7 @@ public class McpTaskServerTests
             var responses = await RunMcpExchange(server, req);
 
             Assert.Single(responses);
-            var result = responses[0].GetProperty("result");
+            var result = Payload(responses[0]);
             Assert.True(result.GetProperty("ok").GetBoolean());
             Assert.Equal(3, result.GetProperty("count").GetInt32());
         }
@@ -477,7 +514,7 @@ public class McpTaskServerTests
             var responses = await RunMcpExchange(server, req);
 
             Assert.Single(responses);
-            var result = responses[0].GetProperty("result");
+            var result = Payload(responses[0]);
             Assert.True(result.GetProperty("ok").GetBoolean());
             var session = result.GetProperty("session");
             Assert.Equal(42, session.GetProperty("number").GetInt32());
@@ -503,7 +540,7 @@ public class McpTaskServerTests
             var responses = await RunMcpExchange(server, req);
 
             Assert.Single(responses);
-            var result = responses[0].GetProperty("result");
+            var result = Payload(responses[0]);
             Assert.False(result.GetProperty("ok").GetBoolean());
             Assert.Contains("not found", result.GetProperty("error").GetString());
         }
@@ -523,7 +560,7 @@ public class McpTaskServerTests
             var responses = await RunMcpExchange(server, req);
 
             Assert.Single(responses);
-            var result = responses[0].GetProperty("result");
+            var result = Payload(responses[0]);
             Assert.True(result.GetProperty("ok").GetBoolean());
             Assert.Equal("F8", result.GetProperty("stageId").GetString());
 
@@ -549,7 +586,7 @@ public class McpTaskServerTests
             var responses = await RunMcpExchange(server, req);
 
             Assert.Single(responses);
-            var result = responses[0].GetProperty("result");
+            var result = Payload(responses[0]);
             Assert.False(result.GetProperty("ok").GetBoolean());
             Assert.Contains("content is required", result.GetProperty("error").GetString());
         }

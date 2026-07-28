@@ -232,7 +232,7 @@ public sealed class PromptBuilder
             1. PRE-SESSION RITUAL — exactly as `{planDoc}` prescribes: read `{tracker}` (handoff block + stated read order), your stage section, and the design docs it cites. Run the gate battery. Never build on red — fix or record first.{batteryCollapseNote}
             2. QA THE PREVIOUS SESSION — audit its tracker claims against fresh artifacts (re-run things; do not trust claims). Fix real findings before new work; note the QA verdict in your final tracker handoff.
             3. DELIVER the next incomplete checkpoint(s) of stage {stage} only. One checkpoint landed with proof beats three claimed. Do not start other stages' work.
-            4. POST-SESSION RITUAL — re-run the gate battery plus your stage's truth gates; produce fresh evidence artifacts; update `{tracker}` (overwrite the handoff block, fill checkpoint rows: Status, Commit, Evidence); commit per checkpoint using the plan's commit convention; push the branch.
+            4. POST-SESSION RITUAL — re-run the gate battery plus your stage's truth gates; produce fresh evidence artifacts; CLAIM each delivered checkpoint with `conductor task --done <id> --evidence <path>` (the only channel Conductor reads — the tracker's checkpoint rows are generated from it); overwrite the `{tracker}` handoff block for the next session; commit per checkpoint using the plan's commit convention; push the branch.
 
             {tools}
 
@@ -275,7 +275,7 @@ public sealed class PromptBuilder
             Conductor detected that your previous run in "{planName}" stage {stage} was interrupted ({reason}).
 
             {readOrder}
-            Re-orient before acting: run `git status` and `git log --oneline -5` in {repo}, re-read the `{tracker}` handoff block, and inspect what you had in flight. Then finish the in-flight work and complete the full post-session ritual: gate battery green, fresh evidence artifacts, `{tracker}` updated (handoff + checkpoint rows), committed per checkpoint, pushed.
+            Re-orient before acting: run `git status` and `git log --oneline -5` in {repo}, re-read the `{tracker}` handoff block, and inspect what you had in flight. Then finish the in-flight work and complete the full post-session ritual: gate battery green, fresh evidence artifacts, each delivered checkpoint claimed with `conductor task --done <id> --evidence <path>`, the `{tracker}` handoff block overwritten, committed per checkpoint, pushed.
 
             Before anything else, run `ledger_list` — your previous self may have recorded what it was doing and why. Do not re-derive what it already knew.
 

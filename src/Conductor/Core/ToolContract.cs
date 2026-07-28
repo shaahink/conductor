@@ -57,10 +57,15 @@ public static class ToolContract
                 conductor task --list
                 conductor task --in-progress <id>
                 conductor task --done <id> --evidence <path-to-artifact>
+            THIS IS THE ONLY WAY TO REPORT PROGRESS. It is the one channel Conductor reads when it works
+            out what you delivered: a checkpoint you did not claim through this verb did not happen, no
+            matter what you wrote elsewhere. There is no second mechanism to also update.
             You CLAIM a checkpoint; you do not confirm it. Conductor confirms it — and only after its own
-            independent gate battery and the Verifier agree with your claim. `{{plan.Tracker}}` is a
-            GENERATED VIEW of the database: editing its rows by hand achieves nothing, because it is
-            rewritten from the database. Report through the verb.
+            independent gate battery and the Verifier agree with your claim.
+            `{{plan.Tracker}}` is a GENERATED VIEW of the database, rewritten from it every time, so its
+            checkpoint rows are not somewhere you report — edits there are overwritten. The one part of
+            that file that IS yours to write is the **handoff block**: Conductor reads it back and gives
+            it to the next session, so put your handoff there.
 
             **Ask the database — MCP `run_query`, `ledger_list`, `bug_list`, `session_detail`**
             Prior sessions, gate history, costs, filed bugs, what previous agents learned and struggled with

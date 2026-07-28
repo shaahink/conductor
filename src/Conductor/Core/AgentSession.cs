@@ -91,10 +91,13 @@ public sealed class AgentSession : IDisposable
 
     private static bool IsModelFlag(string s) => s is "--model" or "-m" or "--model=";
 
-    public static AgentSession Start(AgentConfig cfg, string cwd, string prompt, string sessionId, string? resumeClaudeId, string rawLogPath, IEventSink? eventSink = null, string? conductorSessionId = null, Dictionary<string, string>? extraEnv = null, ProcessSupervisor? supervisor = null)
+    public static AgentSession Start(AgentConfig cfg, string cwd, string prompt, string sessionId, string? resumeClaudeId, string rawLogPath, IEventSink? eventSink = null, string? conductorSessionId = null, Dictionary<string, string>? extraEnv = null, ProcessSupervisor? supervisor = null, IReadOnlyList<string>? extraArgs = null)
     {
         var template = (resumeClaudeId != null && cfg.ResumeArgs is { Count: > 0 }) ? cfg.ResumeArgs : cfg.Args;
         var args = ResolveArgs(template, prompt, sessionId, resumeClaudeId, cfg.Model);
+        // W2.1: orchestrator-supplied flags (claude's --mcp-config) go AFTER the plan's own template so
+        // a plan can never accidentally position {prompt} behind them.
+        if (extraArgs is { Count: > 0 }) args.AddRange(extraArgs);
 
         var psi = new ProcessStartInfo(cfg.Command)
         {

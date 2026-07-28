@@ -56,7 +56,15 @@ public sealed class McpServeCommand : Command<McpServeCommand.Settings>
         IRunStore? store = null;
         if (File.Exists(runDbPath))
         {
-            try { store = new SqliteRunStore(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteRunStore>.Instance); }
+            try
+            {
+                var sqlite = new SqliteRunStore(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteRunStore>.Instance);
+                // W2.2: task/note events now go straight into the run's event log, and Emit stamps
+                // whatever run id the store last saw. Unset, that is the empty string — the events
+                // would persist under a run nobody reads, i.e. vanish. Stamp it before first use.
+                sqlite.SetRunId(settings.RunId);
+                store = sqlite;
+            }
             catch { /* best-effort — MCP works without store */ }
         }
 

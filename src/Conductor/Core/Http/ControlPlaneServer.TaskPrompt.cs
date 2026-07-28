@@ -39,7 +39,9 @@ public sealed partial class ControlPlaneServer
         var composition = TaskPromptComposition.Compose(_plan, task, knowledge);
         var stageId = _plan.Conventions.DeriveStageId(task.CheckpointId);
         await WriteJsonAsync(ctx, new PromptBlocksDto(true, null, task.TaskId, task.CheckpointId, stageId,
-                [.. composition.Blocks.Select(b => new PromptBlockDto(CamelCase(b.Kind.ToString()), b.Label, b.Content, b.Editable))]),
+                [.. composition.Blocks.Select(b => new PromptBlockDto(CamelCase(b.Kind.ToString()), b.Label, b.Content, b.Editable))],
+                // W2.3: the same renderer the session prompt runs — not a second rendering of it.
+                Conductor.Planning.PromptBlockRenderer.RenderCard(composition)),
             ControlPlaneJsonContext.Default.PromptBlocksDto).ConfigureAwait(false);
     }
 

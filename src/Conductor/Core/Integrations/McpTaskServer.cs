@@ -21,10 +21,16 @@ public sealed partial class McpTaskServer
     private readonly string _eventsPath;
     private readonly string _journalPath;
     private readonly string _runId;
-    private readonly TaskGraph _graph = new();
+    private TaskGraph _graph = new();
     private readonly IRunStore? _store;
     private readonly string? _stateDir;
     private readonly string? _repoPath;
+
+    /// <summary>W2.2: true when this server writes straight into the run's event log. Then run.db is
+    /// the one log both this process and the control plane read and write, so the board is live and
+    /// there is a single task-id allocator. Without a store (standalone <c>mcp-serve</c>) the side
+    /// journal remains the sink, folded at session end.</summary>
+    private bool WritesLive => _store != null;
 
     public McpTaskServer(string eventsPath, string journalPath, string runId, IRunStore? store = null,
         string? stateDir = null, string? repoPath = null)
@@ -65,6 +71,39 @@ public sealed partial class McpTaskServer
         }
     }
 
+    /// <summary>W2.2: rebuild the graph from the authoritative log before every tool call that reads or
+    /// writes work items. Two consequences, both required: the agent's <c>task_list</c> sees cards the
+    /// owner added from the TUI mid-session, and <see cref="TaskWrites.BuildAdd"/> allocates ids
+    /// against every other writer's events instead of against a snapshot taken at process start — the
+    /// two-independent-allocators shape whose collisions <see cref="TaskGraph.Fold"/> silently dropped.
+    /// A rebuild, not an incremental fold: re-folding events already folded would be first-write-wins
+    /// against ourselves. No store means no shared log to re-read, so the journal-fed graph stands.</summary>
+    private void RefreshGraph()
+    {
+        if (!WritesLive) return;
+        var fresh = new TaskGraph();
+        try { fresh.Fold(_store!.ReadAllEvents(_runId)); }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException)
+        {
+            return; // keep the last good graph — a transient read failure must not blank the board
+        }
+        _graph = fresh;
+    }
+
+    /// <summary>W2.2: the single sink for task events. Live into run.db when a store is wired (visible
+    /// to <c>GET /tasks</c> on the very next poll), else the side journal the session-end fold picks
+    /// up. The flush is what makes it *immediately* readable rather than on the drain's 200ms cadence.</summary>
+    private void WriteEvent(ConductorEvent evt)
+    {
+        if (_store is { } store)
+        {
+            store.AppendEvent(evt);
+            store.FlushEvents();
+            return;
+        }
+        WriteJournal(evt);
+    }
+
     /// <summary>
     /// Run the MCP JSON-RPC 2.0 loop over stdio. Reads one JSON-RPC message per line from stdin,
     /// writes one response/notification line to stdout.
@@ -98,6 +137,17 @@ public sealed partial class McpTaskServer
         }
     }
 
+    internal const string DefaultProtocolVersion = "2024-11-05";
+
+    /// <summary>The protocol revision the client asked for, when it named one.</summary>
+    private static string? RequestedProtocolVersion(JsonElement? @params)
+    {
+        if (@params is not { } p || p.ValueKind != JsonValueKind.Object) return null;
+        if (!p.TryGetProperty("protocolVersion", out var v) || v.ValueKind != JsonValueKind.String) return null;
+        var version = v.GetString();
+        return string.IsNullOrWhiteSpace(version) ? null : version;
+    }
+
     private JsonRpcResponse? HandleRequest(JsonRpcRequest req)
     {
         // "id" is omitted for notifications — we never respond to those.
@@ -112,7 +162,10 @@ public sealed partial class McpTaskServer
                 Id = id,
                 Result = JsonSerializer.SerializeToElement(new
                 {
-                    protocolVersion = "2024-11-05",
+                    // W2.1: negotiate rather than dictate. This server's surface is plain tools/call,
+                    // valid in every MCP revision, so agreeing to the client's revision is honest and
+                    // stops a newer client from being told to speak a 2024 dialect it has moved past.
+                    protocolVersion = RequestedProtocolVersion(req.Params) ?? DefaultProtocolVersion,
                     capabilities = new {
                         tools = new { listChanged = false }
                     },
@@ -162,7 +215,7 @@ public sealed partial class McpTaskServer
 
         try
         {
-            var result = name switch
+            var payload = name switch
             {
                 "task_list" => HandleTaskList(args),
                 "task_update" => HandleTaskUpdate(args),
@@ -181,12 +234,39 @@ public sealed partial class McpTaskServer
                 "inject_instruction" => HandleInjectInstruction(args),
                 _ => JsonSerializer.SerializeToElement(new { error = $"Unknown tool: {name}" }),
             };
-            return new JsonRpcResponse { Id = id, Result = result };
+            return new JsonRpcResponse { Id = id, Result = ToolResult(payload) };
         }
         catch (Exception ex)
         {
-            return new JsonRpcResponse { Id = id, Result = JsonSerializer.SerializeToElement(new { error = ex.Message }) };
+            return new JsonRpcResponse
+            {
+                Id = id,
+                Result = ToolResult(JsonSerializer.SerializeToElement(new { ok = false, error = ex.Message })),
+            };
         }
+    }
+
+    /// <summary>
+    /// W2.1: wrap a tool's payload in the MCP <c>tools/call</c> result envelope —
+    /// <c>{content:[{type:"text",text:…}], isError:…}</c>.
+    /// </summary>
+    /// <remarks>
+    /// Returning the bare payload is what made every conductor tool useless on the real provider: the
+    /// call SUCCEEDED, and the agent was shown "(mcp__conductor-tasks__task_list completed with no
+    /// output)", because a client renders <c>content</c> and there was none. The verbs looked wired
+    /// from the engine side and answered nothing from the agent's side. The payload itself is
+    /// unchanged, carried as JSON text, so a model still gets structured data to read.
+    /// </remarks>
+    private static JsonElement ToolResult(JsonElement payload)
+    {
+        var isError = payload.ValueKind == JsonValueKind.Object
+            && ((payload.TryGetProperty("ok", out var ok) && ok.ValueKind == JsonValueKind.False)
+                || payload.TryGetProperty("error", out _));
+        return JsonSerializer.SerializeToElement(new
+        {
+            content = new[] { new { type = "text", text = payload.GetRawText() } },
+            isError,
+        });
     }
 }
 
