@@ -20,10 +20,17 @@ the baseline note).
 /plan/edit / /plan/import apply / plan add-stage; upsert-never-clobber + retire-as-archived +
 revive + zero-item-stage scaffolds; G13 checks in CollectErrors (inline) + doctor (work
 coverage); live HTTP truth gate green (stage added mid-run → card on the board, no restart).
-Battery 933/933 · go green · ratchet OK. **Next = W1.3** (claims from the graph — task --done +
-MCP already emit graph events since W1.1; the remaining work is VerdictEngine.newlyDone from
-graph claims with a flagged tracker-diff fallback, hand-edit demotion, and bug #6 — verify
-dispatch consuming PendingVerify.StageId at SessionRunner.Kinds.cs:55).
+Battery 933/933 · go green · ratchet OK.
+
+**W1.3 DONE 2026-07-28** (`f94528d`): newlyDone from graph claims (session-scoped by
+SessionStarted seq), tracker diff = loud transition fallback, hand-edit veto retired, bug #6
+fixed at the dispatch root (verify swaps to the PendingVerify.StageId stage). Three live
+fake-agent truth gates green, incl. the U-series `newly DONE []` incident shape inverted.
+Battery 936/936 · go green · ratchet OK. **Next = W1.4** (one projection for all views:
+/state sidebar/chips + GET /tasks serve the same graph projection; card moves route through
+legal transitions and a drag-to-Done records a CLAIM; engine checkpoint transitions already
+emit graph events since W1.1 — remaining: SnapshotBuilder off the tracker, Face unified DTOs,
+goldens; truth gate = verdict flip visible on the board before the next session).
 
 Driving mode: Claude Code drives W1–W4 + W6 directly (owner directive 2026-07-16) — per
 checkpoint: pre-session ritual (tracker + brief stage section + cited docs, gate battery first,
@@ -43,7 +50,7 @@ Owner decisions pending (needed no earlier than the stage that names them):
 |---|---|---|---|---|
 | W1.1 | Unify checkpoints + tasks into one event-sourced graph (kind, provenance; checkpoints table → projection; ADR-0002 amended) | DONE | cac48c7 | TaskAdded +kind/stageId, TaskStatusChanged +commit/evidence/source, CheckpointConfirmed folds; checkpoints table DROPPED (v8) — GetCheckpoints folds the log, write methods emit events (all callers unchanged); persist-time seq allocation kills the two-writer PK collision; single seed path (G4 gone); 8 truth-gate tests in W1WorkGraphTests incl. byte-for-byte replay + second-writer safety; battery 926/926 · go green · ratchet OK |
 | W1.2 | WorkGraphSync at every boundary (start, reload, plan edit/import, add-stage); coverage validation in CollectErrors + doctor | DONE | 9907715 | One WorkGraphSync (Core/Planning): add/refresh-title/retire-as-archived/revive + zero-item-stage scaffold ({stage}.1), upsert-never-clobber, torn-tracker safety rail; wired at run start, ApplyPlanReload, /plan/edit, /plan/import apply, plan add-stage ("don't forget" printout deleted); archived status folds + excluded from GetCheckpoints and /tasks; G13: CollectErrors validates inline progress.checkpoints coverage, doctor gains work-coverage check (orphan=fail, uncovered=warn); truth gate GREEN — live paused run + real HTTP /plan/edit stage add → scaffolded card on GET /tasks + regenerated tracker, no restart (W1WorkGraphSyncTests, 7 tests); battery 933/933 · go green · ratchet OK |
-| W1.3 | Claims from the graph; tracker demoted to generated view; bug #6 fixed (verify consumes PendingVerify.StageId) | TODO | | |
+| W1.3 | Claims from the graph; tracker demoted to generated view; bug #6 fixed (verify consumes PendingVerify.StageId) | DONE | f94528d | newlyDone = graph claims between SessionStarted seq and verdict (VerdictEngine.Claims.cs); tracker diff demoted to flagged fallback (log WARNING + legacy-claim ledger); M4.1 veto gone; GraphStageDone joins completeness; bug #6 fixed at dispatch root (SessionRunner swaps to PendingVerify.StageId stage — prompt, SessionStarted, record, score all name the delivered stage); 3 live truth gates in W1ClaimPathTests incl. the U-series newly-DONE-[] incident inverted; battery 936/936 · go green · ratchet OK |
 | W1.4 | One projection for all views (sidebar/chips + Kanban); card moves = claims through legal transitions | TODO | | |
 | W2.1 | Claude-shaped MCP config + CONDUCTOR_PLAN in child env; in-worker task/bug/note verbs work | TODO | | |
 | W2.2 | Live board mid-session (journal folded on read or direct events; single id allocator) | TODO | | |
