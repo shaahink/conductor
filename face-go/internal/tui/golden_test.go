@@ -302,7 +302,7 @@ func kanbanFixtureTasks() []api.TaskDto {
 		{TaskId: "T3", CheckpointId: "F7.4", Title: "Cache gate results by (name, tier, sha)", Status: "todo", Source: "planner", Order: 3},
 		{TaskId: "T4", CheckpointId: "F7.4", Title: "Add SkipIfFresh timestamp check", Status: "todo", Source: "human", Order: 4,
 			// PF3: declared paths — the detail golden shows the filled claims line.
-			Paths: []string{"src/Conductor/Core/Gating/GateCache.cs", "docs/history/CONDUCTOR-VNEXT-PLAN.md"}},
+			Paths: []string{"src/Conductor/Core/Gating/GateCache.cs", "docs/CONDUCTOR-VNEXT-PLAN.md"}},
 		{TaskId: "T5", CheckpointId: "F7.5", Title: "Benchmark the warm path", Status: "skipped", Source: "agent", Order: 5},
 	}
 }

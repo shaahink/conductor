@@ -909,7 +909,7 @@ func (m Model) renderPlanImport() (string, string) {
 	if m.planImportErr != "" {
 		errLine = "\n\n  " + destructStyle.Render("✗ "+m.planImportErr)
 	}
-	hint := "\n\n  " + subtleStyle.Render("e.g. docs/history/MAESTRO-PLAN.md")
+	hint := "\n\n  " + subtleStyle.Render("e.g. docs/PLAN.md")
 	return header + input + errLine + hint, "type path · enter preview diff · esc back"
 }
 
