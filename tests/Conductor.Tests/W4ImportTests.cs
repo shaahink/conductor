@@ -244,7 +244,7 @@ public sealed class W4ImportTests
     public void ImportingTheProjectsOwnMaestroPlan_YieldsDrivableWork()
     {
         // The brief's named case: a real, long design doc from this repo.
-        var docPath = Path.Combine(RepoRoot(), "docs", "MAESTRO-PLAN.md");
+        var docPath = Path.Combine(RepoRoot(), "docs", "history", "MAESTRO-PLAN.md");
         Assert.True(File.Exists(docPath), $"expected the plan doc at {docPath}");
 
         var result = PlanImportService.ParseStructured(File.ReadAllText(docPath));

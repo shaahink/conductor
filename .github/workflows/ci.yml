@@ -14,7 +14,7 @@
 #            spawns real PowerShell gates and .exe children, so a red there would mean
 #            "Linux is not a supported host", which is already true and documented.
 #
-# Keep the windows leg's commands identical to docs/CONDUCTOR-WORKGRAPH.md's gate battery.
+# Keep the windows leg's commands identical to docs/dev/CONDUCTOR-WORKGRAPH.md's gate battery.
 # If they drift, CI stops being evidence for a checkpoint.
 
 name: CI

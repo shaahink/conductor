@@ -10,11 +10,11 @@
   //   Dogfooding is the gate. If a change to the engine breaks the engine, the run stops and you find
   //   out immediately — which is the point.
   //
-  // DESIGN AUTHORITY: docs/MAESTRO-PLAN.md   TRACKER: MAESTRO-TRACKER.md
+  // DESIGN AUTHORITY: docs/history/MAESTRO-PLAN.md   TRACKER: MAESTRO-TRACKER.md
   "name": "Maestro",
   "repo": "C:/Code/conductor-baton",
-  "tracker": "docs/archive/trackers/MAESTRO-TRACKER.md",
-  "planDoc": "docs/MAESTRO-PLAN.md",
+  "tracker": "docs/history/archive/trackers/MAESTRO-TRACKER.md",
+  "planDoc": "docs/history/MAESTRO-PLAN.md",
   "branchPattern": "^feat/(foreman|maestro)",
   "pauseOnBlocked": false,
   "batteryCollapse": true,
@@ -52,56 +52,56 @@
       "id": "M1",
       "title": "Deconstruction — delete the old face, break the god classes",
       "sessions": 4,
-      "notes": "Read docs/MAESTRO-PLAN.md sections 0, 2 and M1. This stage is mostly SUBTRACTION and that is the deliverable — do not be shy about deleting. Order: (1) delete src/Conductor/Ui/** entirely plus PreviewCommand/DashboardPreview and the tests that exist only to test them; the Face is the only UI. (2) Split Commands.cs (2574 lines, 54 types) into one file per command. (3) Split Orchestrator.cs (2334 lines) into RunLoop + SessionRunner + VerdictEngine alongside the existing GateOrchestrator/LaneCoordinator/ControlDispatcher. (4) Split the remaining offenders listed in tests/Conductor.Tests/architecture-baseline.json. DONE means that baseline file is empty — the fitness tests then hold the line forever. Deleting a test to shrink a file is the one move that will fail you: the ratchet gate counts them."
+      "notes": "Read docs/history/MAESTRO-PLAN.md sections 0, 2 and M1. This stage is mostly SUBTRACTION and that is the deliverable — do not be shy about deleting. Order: (1) delete src/Conductor/Ui/** entirely plus PreviewCommand/DashboardPreview and the tests that exist only to test them; the Face is the only UI. (2) Split Commands.cs (2574 lines, 54 types) into one file per command. (3) Split Orchestrator.cs (2334 lines) into RunLoop + SessionRunner + VerdictEngine alongside the existing GateOrchestrator/LaneCoordinator/ControlDispatcher. (4) Split the remaining offenders listed in tests/Conductor.Tests/architecture-baseline.json. DONE means that baseline file is empty — the fitness tests then hold the line forever. Deleting a test to shrink a file is the one move that will fail you: the ratchet gate counts them."
     },
     {
       "id": "M2",
       "title": "One truth — run.db is authoritative, state.json and events.jsonl are deleted",
       "sessions": 4,
-      "notes": "Read docs/MAESTRO-PLAN.md M2 and AD-3. run.db is today a SHADOW store: the run loop actually trusts state.json, and the schema is defined twice (create path and migrate path), which is how the ledger's created_at column went missing. Fix the schema to a single versioned source, put ALL SQL behind IRunStore/SqliteRunStore, make failed writes loud instead of silently swallowed, then make run.db authoritative and DELETE state.json and events.jsonl. The truth gate is not a unit test: run a toy plan, kill -9 the process mid-session, restart, and prove it resumes from run.db alone. Also land the session-history directory (.conductor/sessions/<NNN>/prompt.md, transcript.md, verdict.md, handover.md, cost.json + INDEX.md) and accurate per-session cost/token accounting."
+      "notes": "Read docs/history/MAESTRO-PLAN.md M2 and AD-3. run.db is today a SHADOW store: the run loop actually trusts state.json, and the schema is defined twice (create path and migrate path), which is how the ledger's created_at column went missing. Fix the schema to a single versioned source, put ALL SQL behind IRunStore/SqliteRunStore, make failed writes loud instead of silently swallowed, then make run.db authoritative and DELETE state.json and events.jsonl. The truth gate is not a unit test: run a toy plan, kill -9 the process mid-session, restart, and prove it resumes from run.db alone. Also land the session-history directory (.conductor/sessions/<NNN>/prompt.md, transcript.md, verdict.md, handover.md, cost.json + INDEX.md) and accurate per-session cost/token accounting."
     },
     {
       "id": "M3",
       "title": "Workflows that bend — declarative steps, per-session overrides, safe parallelism",
       "sessions": 3,
-      "notes": "Read docs/MAESTRO-PLAN.md M3. The session shape is hardcoded today (Deliver -> Verify -> Fix). Make it a declarative list of steps in the plan: {id, role, model?, runIf?, skipIf?, deliver?}. Ship built-in workflows as markdown + JSON: deliver-verify (default), big-dev-then-big-audit (the owner's preferred shape: several delivery sessions, then ONE audit/QA/fix/handover sweep), docs-only (zero dotnet gates), spike (no QA, no commit). Per-stage AND per-session overrides — drop QA here, use a different model for deep analysis there — settable in the plan file and from the TUI. Then safe parallelism with collision avoidance by declared path claims. Prove each with a toy run asserted from run.db, never from a log line."
+      "notes": "Read docs/history/MAESTRO-PLAN.md M3. The session shape is hardcoded today (Deliver -> Verify -> Fix). Make it a declarative list of steps in the plan: {id, role, model?, runIf?, skipIf?, deliver?}. Ship built-in workflows as markdown + JSON: deliver-verify (default), big-dev-then-big-audit (the owner's preferred shape: several delivery sessions, then ONE audit/QA/fix/handover sweep), docs-only (zero dotnet gates), spike (no QA, no commit). Per-stage AND per-session overrides — drop QA here, use a different model for deep analysis there — settable in the plan file and from the TUI. Then safe parallelism with collision avoidance by declared path claims. Prove each with a toy run asserted from run.db, never from a log line."
     },
     {
       "id": "M4",
       "title": "Gates that cannot be escaped — claims vs confirmations",
       "sessions": 3,
-      "notes": "Read docs/MAESTRO-PLAN.md M4 and AD-4. THE central mechanism: an agent may CLAIM a checkpoint (conductor task --done), but only the engine CONFIRMS one, and only after its own gate battery is green at this SHA and the Verifier scores >= threshold. TRACKER.md becomes generated-only; a hand-edit is detected, discarded, and noted to the ledger. Then: truth-gate tier per stage, and gate caching by (gate, HEAD sha, tier) that DEMONSTRABLY hits — the gates table has zero rows under the old driver, so the cache has never once been exercised. Truth gate: a rigged agent that marks every tracker row DONE and delivers nothing must advance exactly zero checkpoints."
+      "notes": "Read docs/history/MAESTRO-PLAN.md M4 and AD-4. THE central mechanism: an agent may CLAIM a checkpoint (conductor task --done), but only the engine CONFIRMS one, and only after its own gate battery is green at this SHA and the Verifier scores >= threshold. TRACKER.md becomes generated-only; a hand-edit is detected, discarded, and noted to the ledger. Then: truth-gate tier per stage, and gate caching by (gate, HEAD sha, tier) that DEMONSTRABLY hits — the gates table has zero rows under the old driver, so the cache has never once been exercised. Truth gate: a rigged agent that marks every tracker row DONE and delivers nothing must advance exactly zero checkpoints."
     },
     {
       "id": "M5",
       "title": "Observability — timeline, live plan, the native console, compiled prompts",
       "sessions": 4,
-      "notes": "Read docs/MAESTRO-PLAN.md M5 AND .conductor/followups.md's 'Opened by owner (manual dogfooding observation, 2026-07-12)' section FIRST — 7 concrete bugs (FU-OWNER-1..7: flicker, notes vanishing unreadably fast, the command palette rendering merged/illegible over the panel behind it, no visibility into agent reasoning beyond terse tool-call lines, sparse/empty-looking panes, a cramped top bar, an unlabeled footer hotkey strip) from a real owner run, screenshots on file. These are this stage's acceptance criteria, not a later cleanup pass — fix them as part of the deliverables below, and close each FU-OWNER row with the commit that fixed it. This is the 'enjoy looking at it' stage — budget real design time, the owner will judge it by feel. Nearly all the data already exists and is simply not on screen. Deliver: (1) a visual scrollable TIMELINE pane (Core/Events/Timeline.cs exists and only the deleted TUI ever read it); (2) a live plan pane with per-stage state/score/cost/attempts and no truncation at any width; (3) the NATIVE CONSOLE — stream the agent's raw stdout (already captured in rawLog) over GET /console/current and show exactly what the CLI is printing, with a toggle to the clean folded view; (4) a ticker with LIVE cost/tokens by folding tokenDelta events (it reads zero until session end today); (5) compiled-prompt preview — GET /prompt/preview returns the exact prompt that would be sent, shown beside the template editor so editing the markdown updates the compiled result; (6) conductor status answering 'where are we, how did it go, what hurt' from the database in under a second. Golden snapshots at 80x24/120x30/200x50. Killing the Face must leave the run alive.",
+      "notes": "Read docs/history/MAESTRO-PLAN.md M5 AND .conductor/followups.md's 'Opened by owner (manual dogfooding observation, 2026-07-12)' section FIRST — 7 concrete bugs (FU-OWNER-1..7: flicker, notes vanishing unreadably fast, the command palette rendering merged/illegible over the panel behind it, no visibility into agent reasoning beyond terse tool-call lines, sparse/empty-looking panes, a cramped top bar, an unlabeled footer hotkey strip) from a real owner run, screenshots on file. These are this stage's acceptance criteria, not a later cleanup pass — fix them as part of the deliverables below, and close each FU-OWNER row with the commit that fixed it. This is the 'enjoy looking at it' stage — budget real design time, the owner will judge it by feel. Nearly all the data already exists and is simply not on screen. Deliver: (1) a visual scrollable TIMELINE pane (Core/Events/Timeline.cs exists and only the deleted TUI ever read it); (2) a live plan pane with per-stage state/score/cost/attempts and no truncation at any width; (3) the NATIVE CONSOLE — stream the agent's raw stdout (already captured in rawLog) over GET /console/current and show exactly what the CLI is printing, with a toggle to the clean folded view; (4) a ticker with LIVE cost/tokens by folding tokenDelta events (it reads zero until session end today); (5) compiled-prompt preview — GET /prompt/preview returns the exact prompt that would be sent, shown beside the template editor so editing the markdown updates the compiled result; (6) conductor status answering 'where are we, how did it go, what hurt' from the database in under a second. Golden snapshots at 80x24/120x30/200x50. Killing the Face must leave the run alive.",
       "kind": "deliver"
     },
     {
       "id": "M6",
       "title": "Plan authoring — import, re-import diff, edit from the TUI",
       "sessions": 2,
-      "notes": "Read docs/MAESTRO-PLAN.md M6. conductor plan import <file|paste>: a model of the user's choosing converts a mega plan into the task graph, rendered as a table to confirm or edit. Re-import DIFFS, never clobbers — mid-plan changes are first-class, not a restart. Then plan editing from inside the TUI (stages, models, workflows, gates) so that tweaking a workflow never again requires spinning up an agent to do it. Truth gate: import docs/MAESTRO-PLAN.md itself and get back a graph whose stage ids are M1..M9."
+      "notes": "Read docs/history/MAESTRO-PLAN.md M6. conductor plan import <file|paste>: a model of the user's choosing converts a mega plan into the task graph, rendered as a table to confirm or edit. Re-import DIFFS, never clobbers — mid-plan changes are first-class, not a restart. Then plan editing from inside the TUI (stages, models, workflows, gates) so that tweaking a workflow never again requires spinning up an agent to do it. Truth gate: import docs/history/MAESTRO-PLAN.md itself and get back a graph whose stage ids are M1..M9."
     },
     {
       "id": "M7",
       "title": "Knowledge that compounds — ledger, tracked bugs, structured handovers",
       "sessions": 2,
-      "notes": "Read docs/MAESTRO-PLAN.md M7. M0 mandated the ledger in the prompt; now make it pay. Inject the ledger into the next session's prompt, surface it in the Face, make it queryable. Add conductor bug new|list|fix (+ MCP) so a found bug becomes a tracked row that outlives the session that found it and feeds the audit phase — agents must stop re-finding the same bug. Structured handovers stored as rows, rendered to markdown, carrying what the last session STRUGGLED with, not just what it did. Truth gate: in a 2-session toy run, session 1 writes a note and files a bug, and session 2's compiled prompt.md ON DISK contains both — asserted against the file so it cannot be faked."
+      "notes": "Read docs/history/MAESTRO-PLAN.md M7. M0 mandated the ledger in the prompt; now make it pay. Inject the ledger into the next session's prompt, surface it in the Face, make it queryable. Add conductor bug new|list|fix (+ MCP) so a found bug becomes a tracked row that outlives the session that found it and feeds the audit phase — agents must stop re-finding the same bug. Structured handovers stored as rows, rendered to markdown, carrying what the last session STRUGGLED with, not just what it did. Truth gate: in a 2-session toy run, session 1 writes a note and files a bug, and session 2's compiled prompt.md ON DISK contains both — asserted against the file so it cannot be faked."
     },
     {
       "id": "M8",
       "title": "AFK — doctor, init, Telegram driven for real",
       "sessions": 2,
-      "notes": "Read docs/MAESTRO-PLAN.md M8. conductor doctor in under 2 seconds: agent CLI present, model reachable, node + Face built, git clean, disk, DNS, budget — and it must say exactly what is missing and how to fix it. conductor init scaffolds a plan + templates + packs and detects the repo type. Telegram v2 exists on paper and has never been driven: session-end one-liner with score, NeedsHuman with inline buttons, reply-to-inject, /status from run.db. Drive it end to end and fix what bleeds."
+      "notes": "Read docs/history/MAESTRO-PLAN.md M8. conductor doctor in under 2 seconds: agent CLI present, model reachable, node + Face built, git clean, disk, DNS, budget — and it must say exactly what is missing and how to fix it. conductor init scaffolds a plan + templates + packs and detects the repo type. Telegram v2 exists on paper and has never been driven: session-end one-liner with score, NeedsHuman with inline buttons, reply-to-inject, /status from run.db. Drive it end to end and fix what bleeds."
     },
     {
       "id": "M9",
       "title": "Dogfood close — run a real plan, fix what bleeds, final audit",
       "sessions": 2,
-      "notes": "Read docs/MAESTRO-PLAN.md M9. Run a real plan end-to-end under Maestro and fix what bleeds. Then a final audit rating every checkpoint in the design doc CONFORMS or DEVIATES with evidence — written by a Verifier session that re-runs each stage's truth gate itself rather than trusting the tracker. Be honest: DEVIATES with a clear reason is worth more than a CONFORMS nobody can reproduce.",
+      "notes": "Read docs/history/MAESTRO-PLAN.md M9. Run a real plan end-to-end under Maestro and fix what bleeds. Then a final audit rating every checkpoint in the design doc CONFORMS or DEVIATES with evidence — written by a Verifier session that re-runs each stage's truth gate itself rather than trusting the tracker. Be honest: DEVIATES with a clear reason is worth more than a CONFORMS nobody can reproduce.",
       "kind": "review"
     }
   ],
@@ -165,7 +165,7 @@
 
   "readOrder": [
     "MAESTRO-TRACKER.md",
-    "docs/MAESTRO-PLAN.md"
+    "docs/history/MAESTRO-PLAN.md"
   ],
 
   "promptExtra": "This plan is self-referential: you are improving Conductor, using Conductor, and the binary running you is built from this branch. If you break the engine, the run stops — that is the dogfood gate working as designed, not a disaster. Do not 'fix' it by disabling a gate.\n\nThe previous era shipped 40 checkpoints of features that were NEVER ONCE EXECUTED, because it drove itself with an old binary that contained none of them. Everything you build, you must also RUN. A green test suite proved nothing for eight months here — the first real run of that code crashed in two seconds on a malformed agent line.\n\nRespect the diff budget (~15 files per session). Never lower an analyzer severity, delete a test, or raise an architecture ceiling to get green: six such cheats are mechanically detected and will fail your session outright. If the bar is genuinely wrong, write HUMAN: in the handoff and stop."

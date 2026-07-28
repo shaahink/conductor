@@ -8,7 +8,7 @@ namespace Conductor.Core.Planning;
 /// document — stage headers like <c>### M6 — Plan authoring</c> plus <c>**M6.1**</c> checkpoint
 /// bullets or <c>| M6.1 | … |</c> tracker table rows — into a stage graph with NO model call. This
 /// is the zero-spend path for <c>conductor plan import</c>; freeform prose still falls back to the
-/// advisor model. Its truth gate: importing <c>docs/MAESTRO-PLAN.md</c> yields stages M1…M9.</summary>
+/// advisor model. Its truth gate: importing <c>docs/history/MAESTRO-PLAN.md</c> yields stages M1…M9.</summary>
 public static class MarkdownPlanParser
 {
     // "### M6 — Plan authoring" / "## F7 — Gate caching — subtitle" → id, remainder-after-dash.

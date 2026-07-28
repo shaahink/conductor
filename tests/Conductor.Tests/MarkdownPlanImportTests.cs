@@ -5,7 +5,7 @@ using Conductor.Models;
 namespace Conductor.Tests;
 
 /// <summary>M6.1/M6.2: the deterministic markdown → task-graph parser and the re-import diff. The
-/// headline test is the design-doc truth gate: importing <c>docs/MAESTRO-PLAN.md</c> yields exactly
+/// headline test is the design-doc truth gate: importing <c>docs/history/MAESTRO-PLAN.md</c> yields exactly
 /// stages M1…M9, with no model call.</summary>
 public sealed class MarkdownPlanImportTests
 {
@@ -160,7 +160,7 @@ public sealed class MarkdownPlanImportTests
     [Fact]
     public void TruthGate_ImportMaestroDesignDoc_YieldsM1ThroughM9()
     {
-        var docPath = Path.Combine(RepoRoot(), "docs", "MAESTRO-PLAN.md");
+        var docPath = Path.Combine(RepoRoot(), "docs", "history", "MAESTRO-PLAN.md");
         Assert.True(File.Exists(docPath), $"design doc not found at {docPath}");
 
         var markdown = File.ReadAllText(docPath);

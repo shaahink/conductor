@@ -3,8 +3,8 @@
   "planVersion": 1,
   "name": "Conductor W5.2 proof run",
   "repo": "C:/code/conductor-baton",
-  "tracker": "docs/workgraph/W5.2-TRACKER.md",
-  "planDoc": "docs/CONDUCTOR-WORKGRAPH.md",
+  "tracker": "docs/dev/workgraph/W5.2-TRACKER.md",
+  "planDoc": "docs/dev/CONDUCTOR-WORKGRAPH.md",
   "pauseOnBlocked": true,
   "agent": {
     "command": "claude",
@@ -39,7 +39,7 @@
   "readOrder": [
     "AGENTS.md",
     ".conductor/followups.md",
-    "docs/workgraph/W5.2-TRACKER.md"
+    "docs/dev/workgraph/W5.2-TRACKER.md"
   ],
   "conventions": {
     "stageIdPattern": "(?<stage>[A-Za-z]+\\d+)(?:\\.\\d+)?[a-z]?",

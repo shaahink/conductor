@@ -1,5 +1,5 @@
 # Curated style + analyzer severities for Conductor (B0.2).
-# Rationale in docs/baton/adr/0001-tooling-and-ruleset.md (why each rule, what is relaxed and why).
+# Rationale in docs/dev/adr/0001-tooling-and-ruleset.md (why each rule, what is relaxed and why).
 # Curated, not the raw firehose: the theme is correct async/threading (Conductor spawns processes,
 # drains streams on background tasks, must never deadlock or leak).
 root = true

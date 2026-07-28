@@ -3,8 +3,8 @@
   "planVersion": 1,
   "name": "Conductor UX (U-series)",
   "repo": "C:/code/conductor-baton",
-  "tracker": "docs/archive/trackers/CONDUCTOR-UX-START.md",
-  "planDoc": "docs/CONDUCTOR-UX.md",
+  "tracker": "docs/history/archive/trackers/CONDUCTOR-UX-START.md",
+  "planDoc": "docs/history/CONDUCTOR-UX.md",
   "pauseOnBlocked": true,
   "agent": {
     "command": "claude",
@@ -38,7 +38,7 @@
   },
   "readOrder": [
     "AGENTS.md",
-    "docs/CONDUCTOR-UX.md",
+    "docs/history/CONDUCTOR-UX.md",
     "CONDUCTOR-UX-START.md",
     "face-go/STYLE.md"
   ],
@@ -58,7 +58,7 @@
       "id": "U0",
       "title": "Engine: start, resume, journey",
       "sessions": 3,
-      "notes": "Deliver U0 per docs/CONDUCTOR-UX.md (U0.1 discovery, U0.2 journey verb, U0.3 gateless + resume docs). All C# engine work, no Face changes. REUSE: PlanSettings.ResolvePlanPath is the single ingress every verb shares — extend it there only. Spectre SelectionPrompt only when Console interactive. journey is a NEW Spectre verb registered in Program.cs (escape [ as [[ in descriptions — top-level help renders them as markup). Gateless: gates:[] must produce 'gates green (none configured)' verdicts; prove with a fake-agent scratch test (tools/fake-agent.ps1 pattern, see .claude/skills/run-conductor/driver.ps1 for scaffolding). Unit tests for resolution order + journey human-moments extraction. Gate: full suite green.",
+      "notes": "Deliver U0 per docs/history/CONDUCTOR-UX.md (U0.1 discovery, U0.2 journey verb, U0.3 gateless + resume docs). All C# engine work, no Face changes. REUSE: PlanSettings.ResolvePlanPath is the single ingress every verb shares — extend it there only. Spectre SelectionPrompt only when Console interactive. journey is a NEW Spectre verb registered in Program.cs (escape [ as [[ in descriptions — top-level help renders them as markup). Gateless: gates:[] must produce 'gates green (none configured)' verdicts; prove with a fake-agent scratch test (tools/fake-agent.ps1 pattern, see .claude/skills/run-conductor/driver.ps1 for scaffolding). Unit tests for resolution order + journey human-moments extraction. Gate: full suite green.",
       "agent": { "model": "claude-sonnet-5" }
     },
     {
@@ -66,7 +66,7 @@
       "title": "Face: landing page + workspace identity",
       "sessions": 3,
       "dependsOn": ["U0"],
-      "notes": "Deliver U1 per docs/CONDUCTOR-UX.md (U1.1 Home tab, U1.2 workspace in the top bar). Go/bubbletea v2 work in face-go. Home is a NEW first tab (key h), the startup tab, replacing the splash as landing; panels Server/Run/Workspace/Next-steps fed entirely from /state + /plan (StateDto.Repo and PlanDir already exist). Demo source must fill every field. Tab arrays in model.go are fixed-size — grow tabCount/tabNames/tabKey together and update renderHelpOverlay. Golden frames for Home (connected, disconnected, demo) + updated bar goldens. go test ./... green including goldens.",
+      "notes": "Deliver U1 per docs/history/CONDUCTOR-UX.md (U1.1 Home tab, U1.2 workspace in the top bar). Go/bubbletea v2 work in face-go. Home is a NEW first tab (key h), the startup tab, replacing the splash as landing; panels Server/Run/Workspace/Next-steps fed entirely from /state + /plan (StateDto.Repo and PlanDir already exist). Demo source must fill every field. Tab arrays in model.go are fixed-size — grow tabCount/tabNames/tabKey together and update renderHelpOverlay. Golden frames for Home (connected, disconnected, demo) + updated bar goldens. go test ./... green including goldens.",
       "agent": { "model": "claude-opus-4-8" }
     },
     {
@@ -74,7 +74,7 @@
       "title": "Face: controls, visual report, dev stats",
       "sessions": 4,
       "dependsOn": ["U1"],
-      "notes": "Deliver U2 per docs/CONDUCTOR-UX.md (U2.1 grouped palette + promptable danger, U2.2 visual Report tab, U2.3 Dev tab with the SQL console + per-session stats). The SQL console CODE MOVES from tab_report.go to the new Dev tab largely unchanged — keep its tests. Report renders from /state + /sessions; if per-session token columns are missing from SessionRowDto, extend GET /sessions in ControlPlaneServer (run.db sessions table already stores tokens) and mirror in api/types.go + demo. Danger verbs: kill/abort/rollback red + confirm naming consequences; no destructive action without y/N. Goldens for palette overlay, Report, Dev.",
+      "notes": "Deliver U2 per docs/history/CONDUCTOR-UX.md (U2.1 grouped palette + promptable danger, U2.2 visual Report tab, U2.3 Dev tab with the SQL console + per-session stats). The SQL console CODE MOVES from tab_report.go to the new Dev tab largely unchanged — keep its tests. Report renders from /state + /sessions; if per-session token columns are missing from SessionRowDto, extend GET /sessions in ControlPlaneServer (run.db sessions table already stores tokens) and mirror in api/types.go + demo. Danger verbs: kill/abort/rollback red + confirm naming consequences; no destructive action without y/N. Goldens for palette overlay, Report, Dev.",
       "agent": { "model": "claude-opus-4-8" }
     },
     {
@@ -82,7 +82,7 @@
       "title": "Face: themes, agent-terminal vibe, glitch pass",
       "sessions": 4,
       "dependsOn": ["U2"],
-      "notes": "Deliver U3 per docs/CONDUCTOR-UX.md (U3.1 themes mocha/latte/nord/gruvbox with ApplyTheme + --theme flag + persisted config + palette verb; U3.2 the golden glitch pass at 132x40, 100x30, 80x24 seeded from the spec's dogfood appendix; U3.3 agent-terminal vibe — transcript presentation modeled on Claude Code first / opencode second, provider-aware via agent.provider on the wire, collapsed thinking, session footer strip). Theme switch rebuilds package style vars in widgets AND tui — one rebuild func per package, called at startup and on switch; goldens pin mocha. go test ./... green; STYLE.md updated.",
+      "notes": "Deliver U3 per docs/history/CONDUCTOR-UX.md (U3.1 themes mocha/latte/nord/gruvbox with ApplyTheme + --theme flag + persisted config + palette verb; U3.2 the golden glitch pass at 132x40, 100x30, 80x24 seeded from the spec's dogfood appendix; U3.3 agent-terminal vibe — transcript presentation modeled on Claude Code first / opencode second, provider-aware via agent.provider on the wire, collapsed thinking, session footer strip). Theme switch rebuilds package style vars in widgets AND tui — one rebuild func per package, called at startup and on switch; goldens pin mocha. go test ./... green; STYLE.md updated.",
       "agent": { "model": "claude-opus-4-8" }
     }
   ],

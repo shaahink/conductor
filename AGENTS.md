@@ -28,7 +28,7 @@ TUI at `face/`.
   features, so everything was built, tested, marked DONE, and NEVER EXECUTED. Dogfooding IS the gate. For
   a self-referential run, use the branch build. For everyday non-self-referential use, install the global
   command once: `powershell -File tools/install.ps1` → `conductor` on PATH.
-- **Operating Conductor as an agent:** `docs/OPERATING-CONDUCTOR.md` is the control guide — commands,
+- **Operating Conductor as an agent:** `docs/operating.md` is the control guide — commands,
   live-run steering, HTTP control plane, NEEDS-HUMAN handling, safety rules, and the known-gaps list.
 
 ## Resume here (U-SERIES IN FLIGHT — conductor drives itself, 2026-07-17)
@@ -60,13 +60,13 @@ tree while an agent session is live.
   still **unconfirmed** until a live verify session (now working) confirms them. Gate battery
   reproduced green: dotnet build 0w/0e, dotnet test 889/889, ratchet OK (38≤38), face-go green.
 - **The three files:** `plans/conductor-ux.plan.json` (claude-native; U0 sonnet-5, U1–U3 opus-4-8,
-  fable advisor) · `docs/CONDUCTOR-UX.md` (THE spec — includes the 13-item dogfood appendix, the
+  fable advisor) · `docs/history/CONDUCTOR-UX.md` (THE spec — includes the 13-item dogfood appendix, the
   "delivered engine-side, do not redo" ledger, and the owner's orchestrator-gaps backlog) ·
   `CONDUCTOR-UX-START.md` (tracker; the engine regenerates it, don't hand-groom).
 - **Run state:** run `1a7c1714` in `.conductor/run.db`, session #2 (Resume U0, resume #1 of
   `6bd47a4c`) after session #1 was interrupted twice (owner Ctrl+C, then a hard cancel). **U0 is
   CLOSED, 3/3** (U0.1 + U0.2 + U0.3 all DONE this session, see below). **Next: U1** (Face — landing
-  page + workspace identity, docs/CONDUCTOR-UX.md §U1; opus-4-8 per the plan). U1 is Go/face-go
+  page + workspace identity, docs/history/CONDUCTOR-UX.md §U1; opus-4-8 per the plan). U1 is Go/face-go
   work — this session did none of it (U0 was scoped engine-only, no Face changes).
 - **To continue:** the owner runs `conductor run -p plans\conductor-ux.plan.json` from the repo
   root (resumes the run — resume actually works now; the Face auto-spawns; the engine console is
@@ -153,7 +153,7 @@ this note is the pointer so it isn't missed:
    blocks inside the OS handler until the save completes. The OS-delivery half that W3.3 left as
    "worth one manual ✕" was closed 2026-07-28 **without a manual ✕**: `tools/w3/window-close.ps1`
    posts `WM_CLOSE` to a real run's real console window and asserts the resumable park, with a
-   hard-kill negative control. 18/18. See `docs/workgraph/W3-WINDOW-CLOSE.md`.
+   hard-kill negative control. 18/18. See `docs/dev/workgraph/W3-WINDOW-CLOSE.md`.
 3. **PathClaims from real task data** — ~~parked~~ **DONE the same evening (PF3, `12fcc87`)**: the
    owner chose the declared-paths schema and it shipped — see the PF session log below.
 4. ~~**`.conductor/followups.md` needs a triage pass, not execution.**~~ **DONE 2026-07-28.** 13 rows
@@ -163,7 +163,7 @@ this note is the pointer so it isn't missed:
    exist (`on demand`, `next era`, `HUMAN:`). No code changed, which was the ask. The one worth
    knowing about is `FU-OWNER-9`, still OPEN: an agent killed its own parent conductor, and nothing
    on the agent's side of the tool contract stops it.
-5. **`docs/OPERATING-CONDUCTOR.md` §7 known-gaps list is disclosure, not a backlog** — and is
+5. **`docs/operating.md` §7 known-gaps list is disclosure, not a backlog** — and is
    partially stale: the "persona kill-list residue" item is resolved-by-design (F0 trimmed 9→3;
    P1 role→persona assignment now USES the registry). The remaining §7 items (crash-net recovery,
    `plan import` bootstrap, `perPhase` gating render, `status` sessions-0, `init` packs, CI) are
@@ -259,7 +259,7 @@ the merge to `master` is held behind it. Item 5 was never a backlog.
    reload. Suite 793 green.
 
 **NEXT: P3 (Kanban card prompt building-blocks) → P4 (finish extraction + standalone consumer) →
-P5 (rollover surfaced).** Read `CONDUCTOR-PLANNER.md` (tracker handoff) + `docs/CONDUCTOR-PLANNER.md`
+P5 (rollover surfaced).** Read `CONDUCTOR-PLANNER.md` (tracker handoff) + `docs/history/CONDUCTOR-PLANNER.md`
 §P3 before starting. P3's shape: a pure `PromptComposition` (labeled `PromptBlock` list) decomposing
 what PromptBuilder already renders, served at `GET /tasks/{id}/prompt`; Face card-detail panel with
 an editable task-scoped context block persisted as task data (NOT free-form prompt splicing);
@@ -292,26 +292,26 @@ the owner can watch and redirect. `conductor run` is NOT used for this work.
 - **Hardening** (`4c96bd0`): control plane now requires a **per-run write token** (`X-Conductor-Token`,
   from `control-plane.json`) on every POST — CSRF/prompt-injection guard; freeform apply must be
   previewed first; advisor prompt frames its source as untrusted data. Face + `conductor run/face` pass
-  the token via env. See `docs/OPERATING-CONDUCTOR.md` §4.
+  the token via env. See `docs/operating.md` §4.
 - Gates at close: **C# 750 green**, Go all packages green.
 
 ### What's PLANNED (TODO — the next session's work, in dependency order)
 1. **G3 (live & dynamic)** — a TODO stage in `plans/conductor-ai-native.plan.json`; brief in
-   `docs/CONDUCTOR-AI-NATIVE.md` §G3. **The prerequisite for everything dynamic.** Today
+   `docs/history/CONDUCTOR-AI-NATIVE.md` §G3. **The prerequisite for everything dynamic.** Today
    `RunContext.Plan` is get-only/loaded-once, so Face edits only take effect on a full restart.
    G3.1 `conductor run --paused` (the `Paused` idle path already exists in `RunLoop.cs` ~L87); G3.2
    real `ControlAction.ReloadPlan` swapping the live plan at the **session boundary only**, auto-enqueued
    by `/plan/edit` + applied `/plan/import`; G3.3 live limits + session cap from Plan-tab Settings.
    **Start here** — small, self-contained, unblocks the P-series.
 2. **P-series (decoupled dynamic planner)** — `plans/conductor-planner.plan.json`, tracker
-   `CONDUCTOR-PLANNER.md`, brief `docs/CONDUCTOR-PLANNER.md` (validated: 6 stages; dry-run resolves P0).
+   `CONDUCTOR-PLANNER.md`, brief `docs/history/CONDUCTOR-PLANNER.md` (validated: 6 stages; dry-run resolves P0).
    P0 keystone = new **`Conductor.Planning`** library (one-way dependency, arch-test enforced from P0) +
    agnostic `pipeline` rules block + `IWorkflowResolver` seam + **delete the dead `agent.tokenCeiling`**
    (audit finding: defined/merged but enforced nowhere — a no-op trap). P1 role→agent assignment +
    multi-item sessions; P2 QA policy dial (off/every-session/phase-gate) over the existing workflows; P3
    Kanban card-detail prompt building-blocks + advisor-refine; P4 finish the extraction + a standalone
    consumer; P5 rollover/limits surfaced (OFF by default, session-scoped). **Read the "Design principles"
-   section of `docs/CONDUCTOR-PLANNER.md` before writing — purity + one-way dependency + standalone-usable
+   section of `docs/history/CONDUCTOR-PLANNER.md` before writing — purity + one-way dependency + standalone-usable
    are the code-quality gates that matter most.** Reuse, don't fork: `WorkflowEngine`, the workflow/override
    model, the task graph, the Kanban tab, and G1's advisor plumbing all already exist.
 
@@ -412,7 +412,7 @@ path end-to-end.
   build+test gates, drops editable copies of the built-in `session.md`/`fix.md` templates, and self-checks
   the scaffold loads. This closes the audit's clearest DEVIATE. Also fixed the stale `doctor` `--help`
   text (still described the pre-M8.1 resume preview).
-- **M9.2 final audit written: `docs/maestro/M9-FINAL-AUDIT.md`** — every design-doc checkpoint rated
+- **M9.2 final audit written: `docs/history/maestro/M9-FINAL-AUDIT.md`** — every design-doc checkpoint rated
   CONFORMS/DEVIATES, truth gates **re-run live this session** where credential-free. Verified live:
   M4.1 (rigged tracker edit discarded → 0 checkpoints), M4.2 (gate cache HIT), M3.1 (workflow step
   0→1), M6.1/6.2 (`plan import` → M1…M9, diff), M8.1 (`doctor` <2s), M5.6 (`status` 514ms), M2.3 (no
@@ -438,7 +438,7 @@ path end-to-end.
   rewritten around it. (For the self-referential Maestro plan specifically, still drive with the fresh
   BRANCH build — `dotnet run -- run -p plans/conductor-maestro.plan.json` — so a regression is caught
   immediately; the installed command is for everything else.)
-- **New: `docs/OPERATING-CONDUCTOR.md`** — a control guide written for an AGENT driving Conductor on the
+- **New: `docs/operating.md`** — a control guide written for an AGENT driving Conductor on the
   owner's behalf: full command reference (every verb + flags), how to monitor a live run, how to steer it
   (`inject`/`approve`/`pause`), how to respond to NEEDS HUMAN, the HTTP control plane + `control-plane.json`
   discovery, the MCP tools, the safety rules, and a **consolidated "known gaps & missing features" list
@@ -570,7 +570,7 @@ and the truth gate is met with **zero LLM spend**. What's new this era:
   plan/tracker doc (`### M6 — …` headers + `**M6.1**` bullets or `| M6.1 |` rows) parses into a stage
   graph with **no model call**. Freeform prose still falls back to the advisor (`--model` fills a
   `{model}` placeholder in advisor args); `--yes` skips the confirm. `conductor plan import <file>`.
-  **Truth gate met**: `plan import docs/MAESTRO-PLAN.md` → exactly M1…M9 (a `(DONE …)`-marked bootstrap
+  **Truth gate met**: `plan import docs/history/MAESTRO-PLAN.md` → exactly M1…M9 (a `(DONE …)`-marked bootstrap
   header like M0 is excluded). Unit test reads the *real* doc; also CLI-verified.
 - **M6.2 re-import diff** (`PlanDiff.cs`): `Compute` + `Apply` — a re-import shows added/changed
   stages+gates and applies only those; hand-tuned entries are never clobbered. Idempotent (a second
@@ -760,13 +760,13 @@ go build -o bin/conductor-face.exe ./cmd/conductor-face/   # build
 ## Read order
 1. `C:\Code\conductor\NEXT-ERA.md` — strategic roadmap for Era v3 (post-Baton)
 2. `CONDUCTOR-START.md` — tracker, all 67/67 checkpoints DONE
-3. `docs/qa-reports/CONDUCTOR-FINAL.md` — final audit + Needs Human checklist
-4. `docs/baton/BATON-BRIEF.md` — v2 design authority (reference)
+3. `docs/history/qa-reports/CONDUCTOR-FINAL.md` — final audit + Needs Human checklist
+4. `docs/history/baton/BATON-BRIEF.md` — v2 design authority (reference)
 
 ## Deliverables authored on this branch (plan, not yet executed)
-- `docs/baton/BATON-BRIEF.md` + `docs/baton/stages/B0.md`…`B12.md`
-- `docs/baton/tooling/` (B0 drafts: editorconfig, Directory.Build.props, Directory.Packages.props,
-  Meziantou ruleset rationale) + `docs/baton/adr/` (created in B0.6)
+- `docs/history/baton/BATON-BRIEF.md` + `docs/history/baton/stages/B0.md`…`B12.md`
+- `docs/history/baton/tooling/` (B0 drafts: editorconfig, Directory.Build.props, Directory.Packages.props,
+  Meziantou ruleset rationale) + `docs/dev/adr/` (created in B0.6)
 - `CONDUCTOR-START.md` (tracker — verified parses: 65 checkpoints, 13 stages)
 - `plans/conductor.self.plan.json` + `plans/baton-templates/` (session/fix/resume/audit/advisor,
   tuned: value-only gates, audit-fixes-leftovers, fix-session leftover sweep)
@@ -788,7 +788,7 @@ C:\Code\conductor\bin\conductor.exe run         -p .conductor\plans\conductor-de
 - **Foreman v3 ACTIVE** — 31/40 checkpoints DONE, F0-F6 confirmed, F7 (Gate caching + truth gates + speed program) IN PROGRESS (3/5 DONE, 1 cancelled, 1 TODO pending F7.1).
 - **Branch:** `feat/foreman` is the active branch; `feat/baton` is the worktree.
 - **Driver:** `C:\Code\conductor\bin\conductor.exe run -p plans\conductor-foreman.plan.json`
-- **Read order:** `CONDUCTOR-VNEXT-PLAN.md` (tracker) → `docs/CONDUCTOR-VNEXT-PLAN.md` (design doc) → this section.
+- **Read order:** `CONDUCTOR-VNEXT-PLAN.md` (tracker) → `docs/history/CONDUCTOR-VNEXT-PLAN.md` (design doc) → this section.
 
 ### F6 COMPLETE (verified 2026-07-11)
 

@@ -9,7 +9,7 @@ The previous session (#{prevSession}) did not verify. Conductor independently re
 Progress observed by the orchestrator: {progressSummary}
 
 Your job: make the previous session's claims true, AND clean up any leftovers it left behind.
-1. Read `{tracker}` handoff + your stage file `docs/baton/stages/{stage}.md` first.
+1. Read `{tracker}` handoff + your stage file `docs/history/baton/stages/{stage}.md` first.
 2. Reproduce each failure above and fix root causes. A warnings-as-errors build failure is a real failure — fix the code, never lower the analyzer severity or disable the rule (§7 A17). Never weaken tests to pass — ratchet-only.
 3. Sweep for leftovers from the prior session(s): half-done edits, uncommitted WIP named in the handoff, `// TODO` left in this stage's diff (A14), dead/stubbed paths (A1/A3), and any followups the audit flagged for this stage in `.conductor/followups.md`. Fix what you can within the diff budget; if a leftover is genuinely out of this session's scope, record it explicitly in the handoff (don't silently drop it).
 4. Re-run the full gate battery (`dotnet build Conductor.slnx`; `dotnet test Conductor.slnx`) until green. Add a test only if it locks a real regression you just fixed — not for coverage's sake.

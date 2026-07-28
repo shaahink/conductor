@@ -8,12 +8,12 @@
   // REPO: the isolated worktree C:\Code\conductor-baton on branch feat/foreman.
   //   Cannot collide with C:\Code\conductor (master) or other worktrees.
   //
-  // The design authority is docs/CONDUCTOR-VNEXT-PLAN.md; the tracker is
+  // The design authority is docs/history/CONDUCTOR-VNEXT-PLAN.md; the tracker is
   // CONDUCTOR-VNEXT-PLAN.md (this plan's companion tracker — 34 checkpoints across 10 stages).
   "name": "Foreman",
   "repo": "C:/Code/conductor-baton",
-  "tracker": "docs/archive/trackers/CONDUCTOR-VNEXT-PLAN.md",
-  "planDoc": "docs/CONDUCTOR-VNEXT-PLAN.md",
+  "tracker": "docs/history/archive/trackers/CONDUCTOR-VNEXT-PLAN.md",
+  "planDoc": "docs/history/CONDUCTOR-VNEXT-PLAN.md",
   "branchPattern": "^feat/foreman",
   "pauseOnBlocked": false,
   "batteryCollapse": true,
@@ -105,7 +105,7 @@
 
   "readOrder": [
     "CONDUCTOR-VNEXT-PLAN.md",
-    "docs/CONDUCTOR-VNEXT-PLAN.md"
+    "docs/history/CONDUCTOR-VNEXT-PLAN.md"
   ],
 
   "batteries": {
@@ -117,5 +117,5 @@
 
   "templatesDir": "baton-templates",
 
-  "promptExtra": "This plan is self-referential: you are improving Conductor itself — architecturally evolving it to Foreman (engine/UI split, SQLite run.db, Verifier scoring loop, TS+Ink TUI). The DRIVER that verifies you is the STABLE bin\\conductor.exe from master — never assume your in-tree build is what's judging you. Respect the diff budget (~15 files); keep the 555+ test suite green under warnings-as-errors; never lower an analyzer severity to pass. Design doc is docs/CONDUCTOR-VNEXT-PLAN.md — it catalogs 10 failures from evidence and defines the target architecture. Follow the session protocol: read-tracker → QA-previous → deliver → verify-gates → update-tracker."
+  "promptExtra": "This plan is self-referential: you are improving Conductor itself — architecturally evolving it to Foreman (engine/UI split, SQLite run.db, Verifier scoring loop, TS+Ink TUI). The DRIVER that verifies you is the STABLE bin\\conductor.exe from master — never assume your in-tree build is what's judging you. Respect the diff budget (~15 files); keep the 555+ test suite green under warnings-as-errors; never lower an analyzer severity to pass. Design doc is docs/history/CONDUCTOR-VNEXT-PLAN.md — it catalogs 10 failures from evidence and defines the target architecture. Follow the session protocol: read-tracker → QA-previous → deliver → verify-gates → update-tracker."
 }

@@ -1,4 +1,4 @@
-using Conductor.Core;
+using Conductor.Core;
 using Conductor.Commands;
 using Conductor.Models;
 

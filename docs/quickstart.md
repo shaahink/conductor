@@ -2,7 +2,7 @@
 
 Get a mega-plan running autonomously in 10 minutes.
 
-```powershell
+```
 # Prerequisites
 dotnet --version          # 10.x  (the engine targets net10.0)
 go version                # 1.26  (the Face)
@@ -10,12 +10,21 @@ git --version             # any modern git
 opencode --version        # or claude — the headless agent backend, already authenticated
 ```
 
-Windows is the supported host — see the platform note in the [README](../README.md#platform).
+Windows, Linux and macOS all work — see [platforms.md](platforms.md) for the two rails that are
+Windows-only. Paths below use Windows separators; substitute yours.
+
+**In a hurry?** `conductor demo` drives a complete run against a built-in fake agent with no
+credentials and no spend. Do that first — it answers "does this work here" in seconds, and the rest
+of this guide is about pointing it at *your* work.
 
 ## 1. Build conductor
 
+```bash
+# From your clone of this repo — macOS / Linux:
+./tools/install.sh
+```
 ```powershell
-# From your clone of this repo:
+# Windows:
 powershell -File tools\install.ps1
 ```
 

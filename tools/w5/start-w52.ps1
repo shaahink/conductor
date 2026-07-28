@@ -154,5 +154,5 @@ if ($Headless) {
 $code = $LASTEXITCODE
 Step "run ended"
 Say ("exit " + $code)
-Say "Next: hand the run to a session for the audit -- conductor report -p plans/conductor-w52.plan.json --query ... writes docs/workgraph/W5-AUDIT.md"
+Say "Next: hand the run to a session for the audit -- conductor report -p plans/conductor-w52.plan.json --query ... writes docs/dev/workgraph/W5-AUDIT.md"
 exit $code

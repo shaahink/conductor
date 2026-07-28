@@ -19,7 +19,7 @@ public static class PlanImportCommand
         if (string.IsNullOrWhiteSpace(descriptionOrFile))
         {
             AnsiConsole.MarkupLine("[red]plan import requires a description (file path or quoted text).[/]");
-            AnsiConsole.MarkupLine("[grey]Example: conductor plan import ./docs/MAESTRO-PLAN.md[/]");
+            AnsiConsole.MarkupLine("[grey]Example: conductor plan import ./docs/history/MAESTRO-PLAN.md[/]");
             AnsiConsole.MarkupLine("[grey]Example: conductor plan import \"deliver a REST API — stage 1: auth, stage 2: endpoints\"[/]");
             return 1;
         }

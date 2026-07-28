@@ -210,7 +210,7 @@ public class PlanConfigTests
     public void PersonaScrapedFromNotesFallback()
     {
         var cfg = new PlanConfig { Repo = ".", Tracker = "t.md" };
-        cfg.Stages.Add(new StageConfig { Id = "S1", Notes = "Read docs/baton/stages/B2.md. Persona: deliver. Do the thing." });
+        cfg.Stages.Add(new StageConfig { Id = "S1", Notes = "Read docs/history/baton/stages/B2.md. Persona: deliver. Do the thing." });
         cfg.Stages.Add(new StageConfig { Id = "S2", Notes = "No persona here." });
 
         Assert.Equal("deliver", cfg.ResolvePersona(cfg.Stages[0]));

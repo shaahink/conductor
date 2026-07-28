@@ -5,12 +5,17 @@ page is mostly about **how work is verified** — that is the part that will sur
 
 ## The short version
 
-1. Read [`README.md`](README.md) → **Requirements** and **Platform**. Windows is the supported host.
+1. Read [`README.md`](README.md) → **Requirements**, and [`docs/platforms.md`](docs/platforms.md).
 2. Build and run the gate battery before you change anything, so you know the tree was green when
    you started.
 3. Make the change.
 4. Run the gate battery again. All four commands, in order.
 5. Open a PR. CI runs the same battery on `windows-latest` plus a cross-platform compile job.
+
+**On Windows you can run the whole battery locally; elsewhere you cannot.** The ratchet is PowerShell
+and — by its own rule — may not be edited, so contributors on Linux and macOS build, test what they
+can, and let CI's `windows-latest` leg run the check that decides. That is a limitation of *this
+repo's tooling*, not of Conductor: the engine and the Face run anywhere .NET 10 and Go run.
 
 ## The gate battery
 
@@ -77,7 +82,7 @@ the real surface.
 - `powershell -File tools/w5/rehearsal.ps1 -Keep` is the full dress rehearsal.
 - `powershell -File tools/w3/window-close.ps1` proves the console-close rail by posting a real
   `WM_CLOSE` to a real run's window, with a hard-kill negative control
-  ([write-up](docs/workgraph/W3-WINDOW-CLOSE.md)). Windows only, and interactive — a console window
+  ([write-up](docs/dev/workgraph/W3-WINDOW-CLOSE.md)). Windows only, and interactive — a console window
   appears on the desktop and is closed programmatically. Not part of CI: a runner has no window
   station to close.
 - `cd face-go; ./bin/conductor-face.exe --demo` explores the whole dashboard offline.
@@ -117,11 +122,14 @@ tests/                one xUnit project; live tests spawn real processes
 tools/                install, gates, fake agent, rehearsal, demo generator
 plans/                Conductor's own plans (it drives itself)
 examples/             ready-to-run plans that are NOT part of the engine
-docs/                 see docs/README.md for the index
+docs/                 user documentation
+  dev/                contributor material — design briefs, ADRs, findings, backlog
+  history/            closed eras and their raw gate transcripts. Receipts, not documentation.
 ```
 
-Architecture decisions live in [`docs/baton/adr/`](docs/baton/adr/). If you are changing something
-an ADR settled, amend the ADR in the same PR.
+Start at [`docs/dev/README.md`](docs/dev/README.md). Architecture decisions live in
+[`docs/dev/adr/`](docs/dev/adr/) — if you are changing something an ADR settled, amend the ADR in the
+same PR.
 
 ## Reporting bugs
 

@@ -3,7 +3,7 @@ You are one autonomous engineering session inside the "{planName}" mega plan —
 Work in: {repo}  (this is the `feat/baton` worktree — NOT C:\Code\conductor / master, and NOT the live DevContext2-ui Loom run).
 
 Do, in order:
-1. PRE-SESSION RITUAL — read `{tracker}` (the `## Handoff` block + this stage's checkpoint rows), the design authority `{planDoc}`, and your stage file `docs/baton/stages/{stage}.md`. Run the gate battery (`dotnet build Conductor.slnx`; `dotnet test Conductor.slnx`). Never build on red — fix or record first.
+1. PRE-SESSION RITUAL — read `{tracker}` (the `## Handoff` block + this stage's checkpoint rows), the design authority `{planDoc}`, and your stage file `docs/history/baton/stages/{stage}.md`. Run the gate battery (`dotnet build Conductor.slnx`; `dotnet test Conductor.slnx`). Never build on red — fix or record first.
 2. QA THE PREVIOUS SESSION — re-run its stated gate; independently verify two of its claims (one against tests, one against a running artifact). Fix real findings before new work; note the QA verdict in your final handoff.
 3. DELIVER the next incomplete checkpoint(s) of stage {stage} only. One checkpoint landed with proof beats three claimed. Do not start other stages' work.
 4. POST-SESSION RITUAL — re-run the full gate battery; produce fresh evidence artifacts; CLAIM each delivered checkpoint with `conductor task --done <id> --evidence <path>` (the only channel Conductor reads — the tracker's checkpoint rows are generated from it); overwrite the `{tracker}` `## Handoff` block; commit per checkpoint (`feat(b{stage}.N): …` / `fix(b{stage}.N): …`) with gate output pasted in the body; push the branch.
