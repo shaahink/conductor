@@ -12,7 +12,7 @@
   // CONDUCTOR-VNEXT-PLAN.md (this plan's companion tracker — 34 checkpoints across 10 stages).
   "name": "Foreman",
   "repo": "C:/Code/conductor-baton",
-  "tracker": "CONDUCTOR-VNEXT-PLAN.md",
+  "tracker": "docs/archive/trackers/CONDUCTOR-VNEXT-PLAN.md",
   "planDoc": "docs/CONDUCTOR-VNEXT-PLAN.md",
   "branchPattern": "^feat/foreman",
   "pauseOnBlocked": false,

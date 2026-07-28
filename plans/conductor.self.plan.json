@@ -13,7 +13,7 @@
   // docs/baton/stages/B<n>.md; CONDUCTOR-START.md is the tracker conductor parses.
   "name": "Baton",
   "repo": "C:/Code/conductor-baton",
-  "tracker": "CONDUCTOR-START.md",
+  "tracker": "docs/archive/trackers/CONDUCTOR-START.md",
   "planDoc": "docs/baton/BATON-BRIEF.md",
   "branchPattern": "^feat/baton",
   "pauseOnBlocked": false,

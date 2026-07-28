@@ -1,7 +1,20 @@
 # Conductor
 
+[![CI](https://github.com/shaahink/conductor/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/shaahink/conductor/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4.svg)](https://dotnet.microsoft.com/)
+[![Go 1.26](https://img.shields.io/badge/Go-1.26-00ADD8.svg)](https://go.dev/)
+
 A minimal, resilient orchestrator that drives **mega plans** autonomously — one agent session at a time,
 while you watch from the laptop or your phone.
+
+![The conductor dashboard: home, agent transcript, work board, card detail, timeline, plan editor, command palette](docs/assets/demo.gif)
+
+<sub>Seven screens of the Face (`conductor-face --demo`). Every frame is a committed golden from
+face-go's rendering tests — the exact bytes `View()` produced, diffed on every CI run — so the tour
+cannot drift from the real dashboard without a test going red first. Regenerate with
+`powershell -File tools/demo/make-demo-gif.ps1`, or record the live binary in colour with
+`vhs docs/assets/demo.tape`.</sub>
 
 It mechanises the session cycle you already run by hand:
 
@@ -18,6 +31,35 @@ pick next stage from the tracker
 The plan docs stay the authority — conductor never re-plans your work. It only enforces
 the rituals (pre/post-session, QA-previous-session, evidence-or-it-didn't-happen) and
 keeps the loop moving without you.
+
+## Requirements
+
+| | Version | Why |
+|---|---|---|
+| **.NET SDK** | 10.0 | The engine (`conductor`). `dotnet --version` must report `10.*`. |
+| **Go** | 1.26 | The Face (`face-go`), a single ~22 MB Bubble Tea binary with no runtime dependency. |
+| **Git** | any modern | Conductor verifies work by diffing commits; a run without git has no independent evidence. |
+| **An agent CLI** | — | `claude` or `opencode` on PATH, already authenticated. This is what actually writes code. |
+| **PowerShell** | 5.1+ / pwsh | The default gate shell on Windows, and how the install script runs. |
+
+Optional: `ffmpeg` (only to regenerate the demo GIF), a Telegram bot token (`CONDUCTOR_TELEGRAM_TOKEN`)
+for phone control.
+
+## Platform
+
+**Windows is the supported host.** That is a statement about what is tested, not a licence
+restriction — the engine targets `net10.0` and the Face is plain Go, so both *compile* on Linux and
+macOS (CI proves it on every push), but the parts that make a run survive unattended are
+Windows-specific today:
+
+- gates default to the PowerShell shell, and the shipped plans use PowerShell commands;
+- the process rails (graceful stop on window close, pid-identity checks that stop conductor killing
+  a recycled pid) call Win32 directly;
+- the Face is spawned as `conductor-face.exe`.
+
+So the full gate battery runs on `windows-latest` in CI and the cross-platform job is a compile +
+Go-test check. Running the engine on Linux/macOS is not blocked, but it is not yet proven — if you
+try it, expect the shell and process-rail edges first, and please open an issue with what broke.
 
 ## Quick start
 
@@ -46,9 +88,10 @@ continues; `conductor face` attaches a fresh one. You never launch the Go binary
 
 **Zero flags:** commands resolve the plan from `-p`, else `CONDUCTOR_PLAN`, else `./conductor.plan.json`.
 So `cd` into a repo that has a `conductor.plan.json` (what `conductor init` writes) and every command
-works with no `-p`. In *this* repo the plans live under `plans/`, so pass
-`-p plans\conductor-maestro.plan.json` (or `dotnet run -- run -p ...` to drive with a fresh branch build,
-which the self-referential Maestro plan wants).
+works with no `-p`. In *this* repo the plans live under `plans/`, so pass one explicitly —
+`-p plans\conductor-workgraph.plan.json` is the current era's — or `dotnet run -- run -p ...` to drive
+with a fresh branch build, which the self-referential plans want. Note their `repo` field is an
+absolute path to the author's checkout; point it at yours before driving one.
 
 ## CLI commands
 
@@ -456,9 +499,14 @@ Optional commands run before/after every session and every gate battery.
 
 ## Tracker format
 
-The tracker is a Markdown file (typically `TRACKER.md` or `CONDUCTOR-START.md`)
-that serves as both the human-readable progress document AND the machine-parsable
-state that Conductor reads.
+The tracker is a Markdown file (`TRACKER.md` is what `conductor init` writes; this repo's own is
+`CONDUCTOR-WORKGRAPH.md`) that serves as both the human-readable progress document AND the
+machine-parsable state that Conductor reads.
+
+Since W1 the tracker is a **generated view**: the work graph in `run.db` is the runtime truth, and
+the tracker is re-rendered from it after every session. Hand-editing a checkpoint row no longer
+claims anything — `conductor task --done <id>` (or the Face's board) is the one claim path. The
+handoff block stays yours to write.
 
 ### Handoff block
 
@@ -543,6 +591,31 @@ A `.gitignore` inside keeps everything but `REPORT.md` out of the repo.
 `tools/fake-agent.ps1` impersonates opencode's stream-json and can simulate
 success / stall / red-gates / usage-limit. Unit tests: `dotnet test`.
 
+For a full end-to-end proof with **no credentials and no spend**, run the dress rehearsal — it takes
+a markdown document to a finished run through the real `conductor.exe`, driving every lever over the
+live HTTP control plane:
+
+```powershell
+powershell -File tools/w5/rehearsal.ps1 -Keep    # ~90s, 27 checks, no API key needed
+```
+
+The write-up (including the three engine defects it found) is
+[`docs/workgraph/W5-REHEARSAL.md`](docs/workgraph/W5-REHEARSAL.md).
+
+### The gate battery
+
+What CI runs, and what every checkpoint in this repo must pass:
+
+```powershell
+dotnet build Conductor.slnx
+dotnet test  Conductor.slnx
+cd face-go; go build ./...; go vet ./...; go test ./...
+powershell -File tools/gates/ratchet.ps1     # exact path — a wrong path exits 0
+```
+
+The ratchet is an anti-cheat gate: it fails if the *bar* moved down (tests deleted, analyzer
+suppressions added, gate commands softened) rather than if the code is wrong.
+
 ## Design decisions
 
 - **The tracker is the progress database.** No parallel bookkeeping to drift.
@@ -563,3 +636,24 @@ success / stall / red-gates / usage-limit. Unit tests: `dotnet test`.
   and `plan-checkpoints` escape hatches for non-standard workflows.
 - **Battery collapse.** Opt-in to skip the agent's redundant pre-session ritual,
   saving 30-50% of output tokens.
+
+## Documentation
+
+[`docs/README.md`](docs/README.md) is the index. The short path:
+
+- [`docs/quickstart.md`](docs/quickstart.md) — plan → tracker → dry run → first supervised session.
+- [`docs/OPERATING-CONDUCTOR.md`](docs/OPERATING-CONDUCTOR.md) — every control verb and when to reach for it.
+- [`docs/DOGFOOD-RUNBOOK.md`](docs/DOGFOOD-RUNBOOK.md) — triage when a run looks stuck, dead, or wrong.
+- [`face-go/STYLE.md`](face-go/STYLE.md) — the Face's live keybinding + layout reference.
+- [`docs/CONDUCTOR-WORKGRAPH.md`](docs/CONDUCTOR-WORKGRAPH.md) — the current design authority;
+  [`CONDUCTOR-WORKGRAPH.md`](CONDUCTOR-WORKGRAPH.md) at the root is its live tracker.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) — the short version is that the gate battery above is the
+review, and the ratchet means a PR may not make the bar smaller. Security reports:
+[SECURITY.md](SECURITY.md).
+
+## License
+
+MIT — see [LICENSE](LICENSE).

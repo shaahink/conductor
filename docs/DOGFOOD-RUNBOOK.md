@@ -1,9 +1,13 @@
 # Dogfood runbook — read this first if the run looks stuck, dead, or wrong
 
-Not design docs (that's `MAESTRO-PLAN.md`) and not progress (that's `MAESTRO-TRACKER.md`). This is
-what a fresh session — any model, including a cheap one — needs to know to diagnose a live or dead
-`conductor run` the way we've been doing it by hand. Keep this updated when a new failure class
-shows up; it's a living doc, not a snapshot.
+Not design docs and not progress. This is what a fresh session — any model, including a cheap one —
+needs to know to diagnose a live or dead `conductor run` the way we've been doing it by hand. Keep
+this updated when a new failure class shows up; it's a living doc, not a snapshot.
+
+> Written during the Maestro (M) era, so it names that era's files: the design doc was
+> `docs/MAESTRO-PLAN.md` and the tracker `MAESTRO-TRACKER.md` (now
+> [`docs/archive/trackers/`](archive/trackers/)). Substitute the current pair — see
+> [`docs/README.md`](README.md). The triage itself is era-independent.
 
 ## The mental model
 

@@ -13,7 +13,7 @@
   // DESIGN AUTHORITY: docs/MAESTRO-PLAN.md   TRACKER: MAESTRO-TRACKER.md
   "name": "Maestro",
   "repo": "C:/Code/conductor-baton",
-  "tracker": "MAESTRO-TRACKER.md",
+  "tracker": "docs/archive/trackers/MAESTRO-TRACKER.md",
   "planDoc": "docs/MAESTRO-PLAN.md",
   "branchPattern": "^feat/(foreman|maestro)",
   "pauseOnBlocked": false,

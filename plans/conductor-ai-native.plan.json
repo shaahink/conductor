@@ -3,7 +3,7 @@
   "planVersion": 1,
   "name": "Conductor AI-native (G-series)",
   "repo": "C:/code/conductor-baton",
-  "tracker": "CONDUCTOR-AI-NATIVE.md",
+  "tracker": "docs/archive/trackers/CONDUCTOR-AI-NATIVE.md",
   "planDoc": "docs/CONDUCTOR-AI-NATIVE.md",
   "pauseOnBlocked": true,
   "agent": {

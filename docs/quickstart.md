@@ -4,31 +4,47 @@ Get a mega-plan running autonomously in 10 minutes.
 
 ```powershell
 # Prerequisites
-dotnet --version          # ≥ 9.0
+dotnet --version          # 10.x  (the engine targets net10.0)
+go version                # 1.26  (the Face)
 git --version             # any modern git
-opencode --version        # or claude — the headless agent backend
+opencode --version        # or claude — the headless agent backend, already authenticated
 ```
+
+Windows is the supported host — see the platform note in the [README](../README.md#platform).
 
 ## 1. Build conductor
 
 ```powershell
-cd C:\Code\conductor-baton
-dotnet build Conductor.slnx
+# From your clone of this repo:
+powershell -File tools\install.ps1
+```
 
-# Optional: compile a standalone exe and put it on PATH
-dotnet publish -c Release -o bin
-# then add C:\Code\conductor-baton\bin to your PATH
+That builds the engine *and* the Go face and puts a global `conductor` on your PATH, which is what
+the rest of this guide assumes. To work against a branch build instead:
+
+```powershell
+dotnet build Conductor.slnx
+dotnet run --project src\Conductor -- run -p <plan>
 ```
 
 ## 2. Scaffold a new plan
 
 ```powershell
-# Pick a template: minimal, dotnet, node, shamshir
-conductor new-plan --template dotnet -o C:\MyProject
+# Preferred: detects the repo type (dotnet/node/go/rust/python) and writes matching build+test
+# gates, plus editable copies of the prompt templates.
+cd C:\MyProject
+conductor init
 
 # Creates:
 #   C:\MyProject\conductor.plan.json
 #   C:\MyProject\TRACKER.md
+#   C:\MyProject\templates\{session.md,fix.md}
+
+# Have only an idea? Route it through the advisor and get a drivable plan out:
+conductor init --from-idea "port the ingest pipeline off the legacy scheduler"
+
+# Bare-minimum scaffold with no gate detection:
+conductor new-plan -o C:\MyProject --name MyProject
 ```
 
 ## 3. Edit the plan
@@ -267,33 +283,29 @@ _Transitions with duration, from the event log (.conductor/events.jsonl)._
 ...
 ```
 
-## 12. Dashboard key bindings (full list)
+## 12. Dashboard key bindings
+
+The full, current reference lives with the Face itself — [`face-go/STYLE.md`](../face-go/STYLE.md) —
+so it cannot drift from the binary. `?` inside the dashboard shows the same thing.
+
+The handful you need on day one:
 
 ```
-    WHILE RUNNING                    MODALS
-  P  Pause after session           ↑↓  Scroll
-  R  Resume / approve               PgUp/PgDn  Page
-  K  Kill session (double-tap)      Home/End  Top/bottom
-  S  Skip stage (double-tap)        Esc/q  Close
-  A  Abort (double-tap)
-  Q  Quit after session             T  Thinking panel
-  I  Inject instruction             O  Agent output history
-  E  Edit stage config              L  Timeline modal
-  G  Run status agent               F8  Replay modal
-  H  Toggle heartbeat               F1  Health modal
-                                    N  Confidence modal
-    PLAN TREE                       B  Repo info
-  ↑↓  Navigate                      C  Toggle fold
-  Enter  Toggle expand/collapse     D  Open doc section
-  /  Search focus                   V  Git view
-  F  Cycle filter                   X  Prompt view
+  h a s t o c e p r k g b d   switch tab (Home, Agent, Sessions, Timeline, …, Kanban)
+  :                           command palette — every control verb, destructive ones confirm
+  \                           collapse / restore the plan sidebar
+  ?                           help
+  q                           quit the Face (the run keeps going)
 ```
+
+Closing the Face never stops the run: it is a viewer over the control plane, and
+`conductor face` attaches a fresh one.
 
 ## 13. Quick reference: creating a new iteration
 
 ```powershell
-# 1. Scaffold
-conductor new-plan --template dotnet -o . -n MyIteration
+# 1. Scaffold (detects repo type, writes matching gates)
+conductor init
 
 # 2. Edit plan JSON (set repo, stages, gates)
 notepad conductor.plan.json
@@ -444,11 +456,14 @@ conductor audit <STAGE> [options]
   -p, --plan <PATH>
   --replay                   Read-only diagnostic audit (required)
 
-conductor new-plan [options]
-  --template <NAME>          minimal | dotnet (default) | node | shamshir
-  -o, --output <DIR>         Output directory
+conductor new-plan [options]        # bare scaffold; prefer `init`
+  -o, --output <DIR>         Output directory (default: cwd)
   --name <NAME>              Plan name (default: directory name)
   --repo <PATH>              Repo path (default: output dir)
+
+conductor init [options]
+  --from-idea <TEXT|FILE>    Route prose (or a structured doc) through the advisor into a
+                             drivable plan. A structured doc is parsed for free.
 
 conductor completion <SHELL>
   powershell                 Generate PowerShell tab completion

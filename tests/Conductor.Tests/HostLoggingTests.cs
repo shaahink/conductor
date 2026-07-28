@@ -68,7 +68,8 @@ public sealed class HostLoggingTests : IDisposable
         // child processes in parallel — could starve Serilog's flush past it and fail a test that
         // passes alone. This returns the instant the content appears, so a generous ceiling costs
         // nothing on a healthy machine and only buys patience on a loaded one.
-        var deadline = DateTime.UtcNow.AddSeconds(60);
+        const int deadlineSeconds = 60;
+        var deadline = DateTime.UtcNow.AddSeconds(deadlineSeconds);
         var text = "";
         while (DateTime.UtcNow < deadline)
         {
@@ -83,7 +84,16 @@ public sealed class HostLoggingTests : IDisposable
             }
             await Task.Delay(100);
         }
-        Assert.Fail($"'{expected}' never reached {pattern} within 10s. Last content:\n{text}");
+        // This helper has timed out a handful of times across the W-series, always under full-suite
+        // load and never reproducibly, so the failure message has to carry the diagnosis with it:
+        // "no file at all" (the sink never opened one) and "file present but short of the marker"
+        // (a flush or a run-path problem) are different bugs and the old message could not tell
+        // them apart.
+        var listing = Directory.Exists(logDir)
+            ? string.Join(", ", Directory.EnumerateFiles(logDir).Select(f => $"{Path.GetFileName(f)} ({new FileInfo(f).Length}B)"))
+            : "<log dir does not exist>";
+        Assert.Fail($"'{expected}' never reached {pattern} within {deadlineSeconds}s.\n" +
+                    $"log dir {logDir} contains: {listing}\nLast content ({text.Length} chars):\n{text}");
         return text;
     }
 

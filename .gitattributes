@@ -1,2 +1,6 @@
 # Go golden files compare byte-for-byte — keep them LF on every platform.
 face-go/internal/tui/testdata/golden/*.golden text eol=lf
+
+# Binary assets: never line-ending-normalise (a corrupted GIF is a silent README regression).
+*.gif binary
+*.png binary
