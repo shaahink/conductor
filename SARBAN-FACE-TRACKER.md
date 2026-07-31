@@ -4,22 +4,27 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SF0.4 CLAIMED** — SF0 is now complete. Open bugs outlive their RUN, not just their session:
-  every read was `WHERE run_id = @runId`, so `bug list` printed 1 of this repo's 12 open rows. Now
-  carried in `bug list`, the next session's PROMPT, the run-end epilogue, `RUN-SUMMARY.md`, `/bugs`
-  and MCP — and `bug fix` reaches across runs, so the 11 core-run bugs are CLOSED for real.
-  Live proof 12/12 over two real completed runs sharing one `.conductor`; suite 1508/1508.
-stage: **SF0 DONE (all four claimed)**. Evidence: `.conductor/evidence/SF0/` (gitignored, local).
-gate: not run by me (conductor owns it). Fast loop green: build clean, go build/vet clean.
-next: **SF1.1** — a real `GET /scores` endpoint so the Report tab renders Verifier scores without
-  SQL. It is the one coupling that must land before SF1.2 deletes the Dev SQL console.
-open: bugs **#15** (prompt >8191 chars silently drops a cmd.exe agent — read it before growing
-  `ToolContract`; bisect by deleting, not editing) and **#16** (the gate battery can try to rebuild a
-  `conductor.exe` that is running — you will hit this the moment you drive a live proof from
-  `src/Conductor/bin/`). Both now ride run.db and will follow you.
-trap: a live-proof rig needs `verifyEachDelivery:false` or the fake agent goes Deliver→Verify→Fix and
-  PARKS at the session cap — and a parked run waits for its owner FOREVER, so `& $exe run` hangs your
-  script. Drive it with `Start-Process` + `WaitForExit(ms)`. See `tools/sf0/sf0-4-live-proof.ps1`.
+last: **SF1.1 CLAIMED** (`9d993ef` code+tests, `ada42a4` goldens). `GET /scores` serves a typed
+  `ScoresDto`, so the Report tab renders verifier scores with no SQL and SF1.2 is unblocked. The DTO
+  carries two things the canned SELECT could not: `threshold`, resolved PER STAGE by the same
+  expression VerdictEngine judges with, and `passed`, the engine's answer. Live proof 10/10 -
+  a 92 on a stage with `verifierThreshold:95` comes back `passed:false` while an identical 92 on a
+  default-bar stage comes back `passed:true`. Evidence `.conductor/evidence/SF1/SF1.1-summary.md`.
+stage: **SF1 — 1 of 3 claimed.** gate: not run by me. Fast loop green (build 0w/0e, CP tests 91/91,
+  go build/vet/test clean).
+next: **SF1.2** — delete the console. Still alive on purpose: `QueryReport` across
+  api/client/demo/types, `/report/query`, `report --query`, `TabDev`, and `tab_dev.go:30` which holds
+  its OWN copy of the scores SELECT. Re-home the two non-SQL Dev panels; keep MCP `run_query`.
+read: `conductor note` has SF1.1's measurements — in particular, nothing may recompute pass/fail from
+  a hardcoded 80; read `passed`. `verdict` (what the agent wrote) and `passed` (what the run decided)
+  are deliberately different fields.
+trap: a rig agent that never CLAIMS makes a stage immortal — it delivers and verifies until the
+  session cap. And the engine APPENDS its generated tracker view below your seeded table, so a
+  first-match scan for an open row reads the frozen seed forever. Both cost this session a run each;
+  `tools/sf1/sf1-1-live-proof.ps1` shows the working shape, including `ownerGate` to keep the control
+  plane alive and `POST /control abort` to end it.
+open: bugs **#15** (prompt >8191 chars silently drops a cmd.exe agent) and **#16** (the gate battery
+  can try to rebuild a running `conductor.exe`). Neither was hit this session.
 
 
 ## Baseline numbers (from run.db)
@@ -28,7 +33,7 @@ trap: a live-proof rig needs `verifyEachDelivery:false` or the fake agent goes D
 |---|---|
 | Total checkpoints | 24 |
 | Done | 0 |
-| Claimed (unconfirmed) | 3 |
+| Claimed (unconfirmed) | 4 |
 
 ## Checkpoints
 
@@ -42,7 +47,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | SF0.1 | Bugs 6 and 11 die as a class — an inert plan key is either wired to its documented meaning or rejected at load, never readable-and-ignored — and bug 2 plus FU-OWNER-12 stop the notification path lying: no start line for a service that early-returned, and one logged sentence at run start saying whether pushes can be delivered at all | DONE | 5217986 | engine-fast:OK · face-fast:OK |
 | SF0.2 | Bug 10 — a claim made during a Verify or Audit session is counted, stamped and confirmed like any other, with the empty-string GateSummary evidence fallback fixed in the same change — plus bug 4 (a phase-gate RED names the session kind it actually queues), bug 3 (a confirmed last stage completes instead of spinning forever) and bug 8 (the harness git helper asserts its exit code, so NewCommits assertions stop being vacuous) | DONE | fdd78ae | engine-fast:OK · face-fast:OK |
 | SF0.3 | Bugs 9, 5, 12 and 13 — one pid-liveness policy everywhere including MCP, bg status survives an uninspectable pid, bg start stops leaking the caller's stdout handle, bg logs reads a live log — and FU-OWNER-9's self-PID guard lands with the locked-by-conductor warning in the fix prompt | DONE | c84ccfc | engine-fast:OK · face-fast:OK |
-| SF0.4 | Open bugs survive the run that found them — a new run in this repo sees the previous run's open rows, and run-ended says how many are open — and every remaining followups.md row is fixed, closed with its evidence, or re-homed to a living owner, with FU-F1-07 verified against SC8's scanning verb-parity test and FU-B10-2 measured from the core run's own sessions | TODO | - | - |
+| SF0.4 | Open bugs survive the run that found them — a new run in this repo sees the previous run's open rows, and run-ended says how many are open — and every remaining followups.md row is fixed, closed with its evidence, or re-homed to a living owner, with FU-F1-07 verified against SC8's scanning verb-parity test and FU-B10-2 measured from the core run's own sessions | DONE | d5b81cb | engine-fast:OK · face-fast:OK |
 
 ### SF1 — The face sheds dead weight
 

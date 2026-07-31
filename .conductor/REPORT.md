@@ -1,16 +1,17 @@
 ﻿# Conductor — Sarban face - the watcher and the surfaces run report
 
-_Updated 2026-07-31 21:06 UTC · branch `feat/sarban` · HEAD `ccf65e5`_
+_Updated 2026-07-31 21:50 UTC · branch `feat/sarban` · HEAD `ab37e2f`_
 
 **Status:** Idle
-**Stage:** SF0 — The ledger closes - the core run's leftovers · attempts used 0 · working ▸ SF0.4
-**Checkpoints:** 3/24 done · **Sessions run:** 3 · **Cost:** $41.3115 (agent $41.2893 + gates $0.0222) · **Tokens:** 627,480 in / 250,627 out
+**Stage:** SF0 — The ledger closes - the core run's leftovers · attempts used 0
+**Checkpoints:** 4/24 done · **Sessions run:** 4 · **Cost:** $56.5297 (agent $56.5007 + gates $0.0290) · **Tokens:** 853,374 in / 341,339 out
+**Confirmed phases:** SF0
 
 ## Stage progress
 
 | Stage | Title | Progress | State |
 |---|---|---|---|
-| SF0 | The ledger closes - the core run's leftovers | ████████░░ 3/4 | **← active** |
+| SF0 | The ledger closes - the core run's leftovers | ██████████ 4/4 | confirmed ✓ |
 | SF1 | The face sheds dead weight | ░░░░░░░░░░ 0/3 | todo |
 | SF2 | The face tells the truth kindly - state, time, money | ░░░░░░░░░░ 0/3 | todo |
 | SF3 | Reading a session becomes cheap | ░░░░░░░░░░ 0/3 | todo |
@@ -19,14 +20,14 @@ _Updated 2026-07-31 21:06 UTC · branch `feat/sarban` · HEAD `ccf65e5`_
 | SF6 | The prompt bank compounds | ░░░░░░░░░░ 0/3 | todo |
 | SF7 | Ship the era | ░░░░░░░░░░ 0/2 | todo |
 
-<details><summary>SF0 — The ledger closes - the core run's leftovers (3/4)</summary>
+<details> ✅<summary>SF0 — The ledger closes - the core run's leftovers (4/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
 | SF0.1 | Bugs 6 and 11 die as a class — an inert plan key is either wired to its documented meaning or rejected at load, never readable-and-ignored — and bug 2 plus FU-OWNER-12 stop the notification path lying: no start line for a service that early-returned, and one logged sentence at run start saying whether pushes can be delivered at all | ✅ DONE | [`5217986`](https://github.com/shaahink/conductor/commit/5217986) |
 | SF0.2 | Bug 10 — a claim made during a Verify or Audit session is counted, stamped and confirmed like any other, with the empty-string GateSummary evidence fallback fixed in the same change — plus bug 4 (a phase-gate RED names the session kind it actually queues), bug 3 (a confirmed last stage completes instead of spinning forever) and bug 8 (the harness git helper asserts its exit code, so NewCommits assertions stop being vacuous) | ✅ DONE | [`fdd78ae`](https://github.com/shaahink/conductor/commit/fdd78ae) |
-| SF0.3 | Bugs 9, 5, 12 and 13 — one pid-liveness policy everywhere including MCP, bg status survives an uninspectable pid, bg start stops leaking the caller's stdout handle, bg logs reads a live log — and FU-OWNER-9's self-PID guard lands with the locked-by-conductor warning in the fix prompt | ✅ DONE | - |
-| SF0.4 | Open bugs survive the run that found them — a new run in this repo sees the previous run's open rows, and run-ended says how many are open — and every remaining followups.md row is fixed, closed with its evidence, or re-homed to a living owner, with FU-F1-07 verified against SC8's scanning verb-parity test and FU-B10-2 measured from the core run's own sessions | ⬜ TODO | - |
+| SF0.3 | Bugs 9, 5, 12 and 13 — one pid-liveness policy everywhere including MCP, bg status survives an uninspectable pid, bg start stops leaking the caller's stdout handle, bg logs reads a live log — and FU-OWNER-9's self-PID guard lands with the locked-by-conductor warning in the fix prompt | ✅ DONE | [`c84ccfc`](https://github.com/shaahink/conductor/commit/c84ccfc) |
+| SF0.4 | Open bugs survive the run that found them — a new run in this repo sees the previous run's open rows, and run-ended says how many are open — and every remaining followups.md row is fixed, closed with its evidence, or re-homed to a living owner, with FU-F1-07 verified against SC8's scanning verb-parity test and FU-B10-2 measured from the core run's own sessions | ✅ DONE | [`d5b81cb`](https://github.com/shaahink/conductor/commit/d5b81cb) |
 
 </details>
 
@@ -106,6 +107,7 @@ _Updated 2026-07-31 21:06 UTC · branch `feat/sarban` · HEAD `ccf65e5`_
 | 1 | SF0 | Deliver | 1 | 07-31 19:15 | 0:22 | Advanced | SF0.1 | 1 | engine-fast:OK · face-fast:OK | $10.7229 | $0.0085 | 176,730/68,746 |
 | 2 | SF0 | Deliver | 1 | 07-31 19:38 | 0:45 | Advanced | SF0.2 | 2 | engine-fast:OK · face-fast:OK | $13.1360 | $0.0086 | 210,694/76,633 |
 | 3 | SF0 | Deliver | 1 | 07-31 20:26 | 0:39 | Advanced | SF0.3 | 3 | engine-fast:OK · face-fast:OK | $17.4303 | $0.0051 | 240,056/105,248 |
+| 4 | SF0 | Deliver | 1 | 07-31 21:06 | 0:39 | Advanced | SF0.4 | 3 | engine-fast:OK · face-fast:OK | $15.2114 | $0.0068 | 225,894/90,712 |
 
 ## Timeline
 
@@ -125,6 +127,14 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-31 21:26:25  • session #3 SF0 Deliver started (attempt 1/6)
 07-31 22:06:25  ▪ gate engine-fast pass [session]  (45.7s)
 07-31 22:06:25  ▪ gate face-fast pass [session]  (4.9s)
+07-31 22:06:26  • session #3 SF0 → Advanced · done SF0.3 · 3 commit(s)  (40m00s)
+07-31 22:06:26  • session #4 SF0 Deliver started (attempt 1/6)
+07-31 22:47:02  ▪ gate engine-fast pass [session]  (1m00s)
+07-31 22:47:02  ▪ gate face-fast pass [session]  (8.2s)
+07-31 22:47:03  • session #4 SF0 → Advanced · done SF0.4 · 3 commit(s)  (40m37s)
+07-31 22:50:35  ▪ gate engine-fast pass [phase]  (0.0s)
+07-31 22:50:35  ▪ gate face-fast pass [phase]  (0.0s)
+07-31 22:50:35  ▪ gate engine-full pass [phase]  (3m18s)
 ```
 
 ## Health
@@ -132,8 +142,9 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 3 · retries 0 (0 %) · overall Ok
-✓ no health concerns detected
+sessions 4 · retries 0 (0 %) · overall Warn
+⚠ [context-saturation] session #3: 24,790,251 context tokens (≥ 20,000,000)
+⚠ [context-saturation] session #4: 21,397,049 context tokens (≥ 20,000,000)
 ```
 
 ## Repo
@@ -142,7 +153,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/sarban
-working tree: clean
+working tree: M .conductor/REPORT.md, M SARBAN-FACE-TRACKER.md
 ```
 
 ### Commits by session
@@ -156,6 +167,10 @@ working tree: clean
   - [`ccf65e5`](https://github.com/shaahink/conductor/commit/ccf65e5) docs(followups): close FU-OWNER-9 on SF0.3's evidence, and say plainly which third of it is still open
   - [`10e1812`](https://github.com/shaahink/conductor/commit/10e1812) docs(tracker): SF0.3 handoff - what landed, the two-half fix bug 12 needed, and the prompt-length cliff
   - [`c84ccfc`](https://github.com/shaahink/conductor/commit/c84ccfc) fix(bg): one pid-liveness policy including MCP, a bg start that lets go of the caller's pipe, a live log that reads, and a supervising pid the agent is told
+- **s4 (SF0 Deliver)** — 3 commit(s):
+  - [`ab37e2f`](https://github.com/shaahink/conductor/commit/ab37e2f) docs(tracker): SF0.4 handoff - SF0 closes, and the two rig traps that cost this session an hour
+  - [`14c4be1`](https://github.com/shaahink/conductor/commit/14c4be1) docs(followups): reconcile every remaining row - fixed, closed with evidence, or re-homed to an owner that can act
+  - [`d5b81cb`](https://github.com/shaahink/conductor/commit/d5b81cb) fix(bugs): an open bug outlives the RUN that found it, not just the session
 
 ## Phase handovers (audit)
 
@@ -178,29 +193,29 @@ working tree: clean
 
 ## Last gate run
 
-engine-fast:OK · face-fast:OK
+engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
 
 ## Last session result
 
-> SESSION-RESULT: **SF0.3 landed and is claimed** (`conductor task --done SF0.3 --evidence .conductor/evidence/SF0/sf0-3-pids-and-background-work.md`), commits `c84ccfc` (engine + tests), `10e1812` (handoff), `ccf65e5` (followups), all pushed to `feat/sarban`. Every assertion was written and run against the unmodified engine first — pre-fix **6 failed / 2 passed**, post-fix **11/11**, full suite **1496/1496** (was 1485; nothing skipped, deleted or relaxed). **Bug 9** is fixed by deleting `McpTaskServer.IsProcessAliveMcp` outright and routing MCP `bg_status` through `PidLiveness.LooksAlive` with the same two arguments the CLI uses — it was wrong in *both* directions (uninspectable read dead, re…
+> SESSION-RESULT:** SF0.4 landed and is claimed DONE (`.conductor/evidence/SF0/SF0.4-summary.md`), closing stage SF0. Half (a): an open bug now outlives the *run* that found it, not just the session — every read was `WHERE run_id = @runId`, so this repo's `bug list` printed 1 of its 12 open rows; `QueryCarriedBugs` now carries earlier runs' open rows (with the plan that filed each) into `bug list`, the next session's **prompt** via `BugsBattery`, the run-end epilogue, `RUN-SUMMARY.md`, `GET /bugs` and MCP `bug_list`, and `bug fix` reaches across runs — so the 11 core-run bugs SF0.1–SF0.3 fixed are now genuinely closed in the ledger, leaving #15 and the newly-filed #16. Proven live 12/12 by `to…
 
 ## Tracker handoff
 
 ```
-last: **SF0.3 CLAIMED** (commit `c84ccfc`) — bugs 9, 13, 12 fixed; bug 5 was ALREADY fixed by SC4.1
-  and is closed on a measurement (its test passed pre-fix) with a regression pin. Reproduced first:
-  pre-fix 6 failed / 2 passed, fixed 11/11, suite 1496/1496. Bug 12 needed TWO halves — redirecting
-  the child's streams was NOT enough, because `Process.Start` uses `bInheritHandles=TRUE` and leaks
-  every inheritable handle; clearing `HANDLE_FLAG_INHERIT` on our own std handles is the other half.
-stage: **SF0 IN PROGRESS** (attempt 1). Evidence: `.conductor/evidence/SF0/` (gitignored, local).
-gate: not run by me (conductor owns it). Fast loop green: build clean, full suite 1496/1496.
-next: **SF0.4** — open bugs must survive the run that found them (a new run in this repo sees the
-  previous run's open rows; `run ended` says how many), then reconcile every remaining
-  `.conductor/followups.md` row. FU-OWNER-9 is now CLOSED there; note **bug #15 is newly filed**.
-trap: **do not grow `ToolContract` without reading bug #15.** The composed prompt reaches a
-  cmd.exe-based agent as a command-line ARGUMENT and cmd caps that at 8191 chars; past it the agent
-  never runs and the run still reports success. A 740-char addition took six live tests red with
-  symptoms that all looked like agent misbehaviour. It is NOT the quotes — it is length; bisect by
-  deleting, not editing. A `<6000` ceiling test now guards it. Also: the repo TFM is net10.0 only —
-  `dotnet test -f net9.0` silently runs a July dll and reports "No test matches the filter".
+last: **SF0.4 CLAIMED** — SF0 is now complete. Open bugs outlive their RUN, not just their session:
+  every read was `WHERE run_id = @runId`, so `bug list` printed 1 of this repo's 12 open rows. Now
+  carried in `bug list`, the next session's PROMPT, the run-end epilogue, `RUN-SUMMARY.md`, `/bugs`
+  and MCP — and `bug fix` reaches across runs, so the 11 core-run bugs are CLOSED for real.
+  Live proof 12/12 over two real completed runs sharing one `.conductor`; suite 1508/1508.
+stage: **SF0 DONE (all four claimed)**. Evidence: `.conductor/evidence/SF0/` (gitignored, local).
+gate: not run by me (conductor owns it). Fast loop green: build clean, go build/vet clean.
+next: **SF1.1** — a real `GET /scores` endpoint so the Report tab renders Verifier scores without
+  SQL. It is the one coupling that must land before SF1.2 deletes the Dev SQL console.
+open: bugs **#15** (prompt >8191 chars silently drops a cmd.exe agent — read it before growing
+  `ToolContract`; bisect by deleting, not editing) and **#16** (the gate battery can try to rebuild a
+  `conductor.exe` that is running — you will hit this the moment you drive a live proof from
+  `src/Conductor/bin/`). Both now ride run.db and will follow you.
+trap: a live-proof rig needs `verifyEachDelivery:false` or the fake agent goes Deliver→Verify→Fix and
+  PARKS at the session cap — and a parked run waits for its owner FOREVER, so `& $exe run` hangs your
+  script. Drive it with `Start-Process` + `WaitForExit(ms)`. See `tools/sf0/sf0-4-live-proof.ps1`.
 ```
