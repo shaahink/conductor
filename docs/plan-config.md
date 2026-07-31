@@ -6,7 +6,21 @@ working one; this page is the full schema behind it.
 You do not need most of this. A plan with `name`, `repo`, `tracker`, `agent`, `stages` and `gates`
 runs. Everything else has a default that is chosen to be the right answer.
 
-Comments (`//`) are allowed — the loader tolerates them, and the scaffold uses them.
+Comments (`//`) are allowed — the loader tolerates them, and the scaffold uses them. `conductor plan
+set` cannot keep them: it re-serialises the file from the parsed model, so it says how many comment
+lines the rewrite drops and saves the annotated original next to it as `<plan>.bak`. Editing the file
+by hand keeps them.
+
+`plan set` only writes keys this page declares. An undeclared key — a typo like
+`limits.maxRunCostUsdd`, or the right name in the wrong place like a bare `maxRunCostUsd` — is
+refused with the path it thinks you meant, because nothing in the engine would ever read it.
+`--create` writes one anyway. A key that is *declared* but absent from the file (any optional field:
+it is null, so the serialiser omits it) sets normally, and so does a whole missing block —
+`plan set telegram.pollIntervalSeconds 10` creates the `telegram` object.
+
+An edit only reaches a **running** engine through the `reload-plan` control verb: `plan set` queues it
+for you when a live engine holds the plan's `.conductor` lock (and says so, naming the pid), and
+prints the exact `conductor plan reload` command when it does not.
 
 ## Root fields
 

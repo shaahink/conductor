@@ -34,6 +34,10 @@ public sealed class PlanCommand : Command<PlanCommand.Settings>
         [CommandOption("-y|--yes")]
         [Description("Apply an import without the confirm prompt (import only).")]
         public bool Yes { get; init; }
+
+        [CommandOption("--create")]
+        [Description("Write a key the plan schema does not declare (set only). Without it, an undeclared key is refused — nothing reads one.")]
+        public bool Create { get; init; }
     }
 
     public override int Execute(CommandContext context, Settings settings)
@@ -41,7 +45,7 @@ public sealed class PlanCommand : Command<PlanCommand.Settings>
         var verb = settings.Verb.ToLowerInvariant();
         return verb switch
         {
-            "set" => PlanSetCommand.ExecuteSet(settings.ResolvePlanPath(), settings.Key, settings.Value),
+            "set" => PlanSetCommand.ExecuteSet(settings.ResolvePlanPath(), settings.Key, settings.Value, settings.Create),
             "reload" => PlanReloadCommand.ExecuteReload(settings.ResolvePlanPath()),
             "add-stage" => PlanAddStageCommand.ExecuteAddStage(settings.ResolvePlanPath(), settings),
             "import" => PlanImportCommand.ExecuteImport(settings.ResolvePlanPath(), settings.Key, settings.Model, settings.Yes),
