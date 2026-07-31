@@ -51,7 +51,7 @@ jobs:
     outputs:
       version: ${{ steps.tag.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -74,7 +74,7 @@ jobs:
           echo "--- release body ---"
           cat release-body.md
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: steps.tag.outputs.version != ''
         with:
           name: release-body
@@ -125,15 +125,15 @@ jobs:
       # fetch-depth: 0 is what makes the version real (SC8.2). The engine's version is derived from
       # git tag height, and the default depth-1 checkout carries no tags at all - it would build a
       # binary that answers 0.0.0-alpha.0 and publish it under a v1.2.3 release without a murmur.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "10.x"
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: "1.26"
           cache-dependency-path: face-go/go.sum
@@ -192,7 +192,7 @@ jobs:
         if: matrix.archive == 'zip'
         run: cd stage && zip -r ../conductor-${{ matrix.name }}.zip .
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: conductor-${{ matrix.name }}
           path: conductor-${{ matrix.name }}.*
@@ -206,13 +206,13 @@ jobs:
     steps:
       # Two downloads, not one: the archives are what gets attached, and the changelog section the
       # guard extracted is what gets said. Merging them into one directory would attach the notes.
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
           pattern: conductor-*
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: release-body
           path: notes
@@ -263,7 +263,7 @@ jobs:
           EOF
           cat body.md
 
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: dist/*
           generate_release_notes: true
