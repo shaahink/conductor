@@ -9,14 +9,20 @@ claims nothing.
 `tools/install.ps1` (owner, between plans), anything in Part II of the spec.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: nothing yet — this tracker was authored together with the era spec; no session has run.
-stage: **SC1 TODO** (attempt 0).
-gate: not yet run this era — battery green on master 5cf77f1 per CI at authoring time.
-next: **SC1.1** — start the Telegram service on the real run path and prove it with a real push.
-trap: never run tools/install.ps1 mid-run; keep every prose surface brace-free — the engine
-  driving this run still has the brace landmine SC3.3 fixes. Exercise changes through YOUR build
-  (dotnet run --project src/Conductor), never the conductor on PATH — that is the old engine
-  driving you; live-run proofs go in a scratch repo, never against this repo's .conductor.
+last: **SC1.1 claimed** (commit b7d6eb4). Nothing ever started the host, so Telegram was dead;
+  ConductorHost.StartRunServicesAsync now starts every registered IHostedService and RunCommand
+  plus DemoCommand call it. Live-proved: real Telegram returned HTTP 200 for the two-way status
+  reply, the attention push, the NeedsHuman keyboard push and the session-end push, all to chat
+  99205495. Evidence: .conductor/evidence/SC1/SC1.1-telegram-starts-on-run-path.md
+gate: build green, 169/169 on the scoped suite, ratchet OK at 37 pragmas (ceiling 38).
+next: **SC1.2** — willDeliver verdict on /telegram/status, and make POST /telegram/test route
+  through the real send queue instead of bypassing it. Much of SC1.2's logging half is already
+  there: StartAsync logs on start, and Run services started names what came up.
+know: the owner's chat id 99205495 lives in plans/conductor-sarban-core.plan.json; the bot is
+  conductor_app_bot; getUpdates is empty so the chat id cannot be bootstrapped from the API.
+  telegram.apiBaseUrl is new and lets you point a scratch run at a recording proxy - the
+  fastest way to prove a push really left the engine. Rig kept at TEMP/sarban-proofs/sc1.
+trap: bg stop takes a PID, not --name. bg logs cannot read a live log - filed as bug 1.
 
 ## Checkpoints
 
