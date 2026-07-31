@@ -4,19 +4,19 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SC1.3 claimed** (7d7372e engine+face, 4620370 goldens). SC1 is now complete: a late token
-  and a late telegram block both reach the RUNNING engine - TelegramService re-resolves both and
-  restarts itself, ConductorHost always registers the real service so a block added mid-run has
-  somewhere to land, and restartRequired names the one case a live save cannot fix. Evidence:
-  .conductor/evidence/SC1/SC1.3-late-config-takes-effect.md
-gate: build clean 0 warnings, 172/172 scoped, ratchet OK at 37 pragmas, face build+vet+tests green.
+last: **battery red repaired** (d9b0ba4). The red was NOT the Telegram work: HostLoggingTests'
+  correlation test held one line and stopped, because ConductorHost took AddSerilog's default
+  preserveStaticLogger false. That assigns the global Serilog.Log.Logger AND disposes via
+  Log.CloseAndFlush, so with two hosts alive the first disposed closes the OTHER host's live sink.
+  Fixed with preserveStaticLogger true. Evidence: docs/dev/FINDING-2026-07-31-host-logger-isolation.md
+gate: engine-full 1058 passed / 0 failed / 1m38s (was 1055 pass + 1 fail of 1056; +2 = new tests).
+  Negative control BEFORE the fix: both new HostLoggerIsolationTests failed. Nothing weakened.
 next: **SC2.1** - status must stop calling a healthy run interrupted during the exit-to-verdict
   window; a gate executing counts as engine liveness. StatusReportBuilder scans spawned pids only.
-know: TelegramService is restartable now - the send Channel and the CTS are recreated per start
-  (a completed channel drops everything silently), and start/stop/reload are serialised by the
-  _gate semaphore. Every run without a telegram block now logs one extra INFO line, deliberately.
-  Bug 2 is still open: 'Run services started: TelegramService' prints even when that service
-  early-returned; SC2's honest-surfaces work is the natural home for it.
+know: the suite composes ~40 hosts, production composes one per process - so a second host in any
+  process silences the first. Keep it at one, or keep preserveStaticLogger true. SC1.1-SC1.3 stand
+  as claimed; none was over-claimed, the failing test never touched Telegram. Bug 2 still open:
+  'Run services started: TelegramService' prints even when that service early-returned.
 rig: live proofs at TEMP/sarban-proofs/sc13 (plan-swap) and sc13b (control-plane token). sc13b's
   run-engine.cmd clears CONDUCTOR_TELEGRAM_TOKEN for the child. A staged secrets.local.json must
   use PascalCase TelegramToken - lowercase does not bind and looks exactly like a missing token.
@@ -28,7 +28,7 @@ rig: live proofs at TEMP/sarban-proofs/sc13 (plan-swap) and sc13b (control-plane
 |---|---|
 | Total checkpoints | 26 |
 | Done | 0 |
-| Claimed (unconfirmed) | 2 |
+| Claimed (unconfirmed) | 3 |
 
 ## Checkpoints
 
@@ -41,7 +41,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | SC1.1 | The engine starts Telegram on every run path: a configured live run delivers a real session-end push and answers two-way status, and a regression test drives the real run-start path | DONE | b7d6eb4 | engine-fast:OK · face-fast:OK |
 | SC1.2 | /telegram/status carries a derived willDeliver verdict; POST /telegram/test routes through the real send queue or loudly says it bypassed it; StartAsync logs on both outcomes naming any missing half | DONE | 160f731 | engine-fast:OK · face-fast:OK |
-| SC1.3 | Late token or telegram-block configuration takes effect without a full restart, or every surface honestly says restart required — including the NoOp-service swap path; the chat-id bootstrap is documented | TODO | - | - |
+| SC1.3 | Late token or telegram-block configuration takes effect without a full restart, or every surface honestly says restart required — including the NoOp-service swap path; the chat-id bootstrap is documented | DONE | 7d7372e | engine-fast:OK · face-fast:OK |
 
 ### SC2 — Truthful surfaces
 
