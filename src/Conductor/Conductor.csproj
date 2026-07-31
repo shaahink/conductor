@@ -7,7 +7,6 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>conductor</ToolCommandName>
     <PackageId>conductor</PackageId>
-    <Version>2.0.0</Version>
     <PackageDescription>A stateful execution environment for days-long AI software engineering — one verifiable session at a time.</PackageDescription>
     <PackageTags>dotnet-tool;ai-agent;orchestration;code-generation</PackageTags>
     <RepositoryUrl>https://github.com/shahabaz/conductor</RepositoryUrl>
@@ -21,7 +20,26 @@
     <Using Include="Conductor.Planning" />
   </ItemGroup>
 
+  <!-- SC8.2: the version NUMBER is derived, not typed. There is deliberately no <Version> property
+       above and no MinVerMinimumMajorMinor floor: the `v*` tags release.yml builds from are the
+       single source of truth, and a floor is a second, hand-maintained source that can silently
+       disagree with them - the exact defect class this era exists to kill. Consequences, both
+       intended:
+
+         * at tag `v1.2.3`, HEAD == the tag  ->  1.2.3, so a downloaded release binary answers with
+           its own tag and nothing has to remember to bump anything;
+         * N commits past `v1.2.3`           ->  1.2.4-alpha.0.N, unique per commit and ordered
+           between 1.2.3 and 1.2.4 by plain semver precedence.
+
+       MinVer reads the repository directly (no `git` on PATH required) but it DOES require the tags
+       to be present: a depth-1 checkout has none and silently yields 0.0.0-alpha.0. That is why both
+       workflows check out with fetch-depth 0 - see .github/workflows/release.yml. -->
+  <PropertyGroup>
+    <MinVerTagPrefix>v</MinVerTagPrefix>
+  </PropertyGroup>
+
   <ItemGroup>
+    <PackageReference Include="MinVer" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
     <PackageReference Include="Spectre.Console" />
     <PackageReference Include="Spectre.Console.Cli" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
@@ -57,7 +75,11 @@
        The UTC timestamp changes on every build, so this target defeats incremental compilation of
        this one project. That is the price of a build date that is actually the build's date, and it
        is paid deliberately: a stale-binary question the operator cannot answer costs far more. -->
-  <Target Name="StampBuildInfo" BeforeTargets="GetAssemblyAttributes">
+  <!-- DependsOnTargets="MinVer" is not decoration. MinVer sets InformationalVersion itself (to the
+       bare version, no commit), so if this target ran first its stamp would be overwritten and the
+       binary would lose its sha. Declaring the dependency makes the order explicit instead of
+       relying on GetAssemblyAttributes happening to depend on GetAssemblyVersion. -->
+  <Target Name="StampBuildInfo" BeforeTargets="GetAssemblyAttributes" DependsOnTargets="MinVer">
     <Exec Command="git rev-parse --short=12 HEAD"
           WorkingDirectory="$(MSBuildProjectDirectory)"
           ConsoleToMSBuild="true" StandardOutputImportance="low" StandardErrorImportance="low"
@@ -76,7 +98,8 @@
       <ConductorCommitDirty>false</ConductorCommitDirty>
       <ConductorCommitDirty Condition="'$(_ConductorPorcelain)' != ''">true</ConductorCommitDirty>
       <ConductorBuildDate>$([System.DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'))</ConductorBuildDate>
-      <!-- semver build metadata: 2.0.0+abc123def456 , or +abc123def456.dirty when the tree was not clean. -->
+      <!-- semver build metadata on top of MinVer's tag-derived $(Version):
+           0.1.1-alpha.0.54+abc123def456 , or +abc123def456.dirty when the tree was not clean. -->
       <InformationalVersion>$(Version)+$(ConductorCommitSha)</InformationalVersion>
       <InformationalVersion Condition="'$(ConductorCommitDirty)' == 'true'">$(Version)+$(ConductorCommitSha).dirty</InformationalVersion>
     </PropertyGroup>

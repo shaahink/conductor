@@ -97,7 +97,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
+      # fetch-depth: 0 here for the second reason (SC8.2): the engine's version comes from git tag
+      # height, and a depth-1 clone has no tags, so this leg would build a binary calling itself
+      # 0.0.0-alpha.0 and the demo would run against it.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-dotnet@v4
         with:

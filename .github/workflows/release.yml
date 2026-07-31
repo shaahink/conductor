@@ -34,8 +34,56 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: "true"
 
 jobs:
+  # SC8.2. Two things must be true before five platforms are worth compiling, and both used to be
+  # discovered afterwards or not at all:
+  #
+  #   1. the tag has a CHANGELOG.md section (it becomes the release body);
+  #   2. the version the build derives from the tag IS the tag.
+  #
+  # (2) is not a formality. The version comes from git tag height, so a checkout without tags
+  # produces 0.0.0-alpha.0 and publishes it happily - and `actions/checkout` defaults to a depth-1
+  # clone with no tags. That is why every checkout here is fetch-depth 0, and why this job asserts
+  # the result instead of trusting the setting to stay put.
+  guard:
+    name: tag is releasable
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # A workflow_dispatch with no tag input is the documented dry run: it compiles, it publishes
+      # nothing, and it has no release to gate. Everything below is conditional on a real tag rather
+      # than failing that path.
+      - name: resolve the tag
+        id: tag
+        run: |
+          ref="${{ github.event.inputs.tag || github.ref_name }}"
+          case "$ref" in
+            v[0-9]*) echo "version=${ref#v}" >> "$GITHUB_OUTPUT" ;;
+            *) echo "no version tag ('$ref') - dry run, release gates skipped." ;;
+          esac
+
+      - name: changelog has a section for this release
+        if: steps.tag.outputs.version != ''
+        run: |
+          tools/changelog-section.sh "${{ steps.tag.outputs.version }}" > release-body.md
+          echo "--- release body ---"
+          cat release-body.md
+
+      - uses: actions/upload-artifact@v4
+        if: steps.tag.outputs.version != ''
+        with:
+          name: release-body
+          path: release-body.md
+          if-no-files-found: error
+
   build:
     name: ${{ matrix.name }}
+    needs: guard
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -74,7 +122,12 @@ jobs:
             archive: zip
 
     steps:
+      # fetch-depth: 0 is what makes the version real (SC8.2). The engine's version is derived from
+      # git tag height, and the default depth-1 checkout carries no tags at all - it would build a
+      # binary that answers 0.0.0-alpha.0 and publish it under a v1.2.3 release without a murmur.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-dotnet@v4
         with:
@@ -94,6 +147,22 @@ jobs:
             -p:IncludeNativeLibrariesForSelfExtract=true \
             -p:DebugType=none \
             -o out --nologo
+
+      # The assertion that closes the loop, and it deliberately runs against the ARTIFACT rather than
+      # a second build: this exact file is what a user downloads, and it is asked what it is. If the
+      # checkout lost its tags, or a literal <Version> came back to the csproj, the answer is not the
+      # tag and nothing gets published. Only the native leg can execute here; one execution is enough,
+      # since every leg derives its version from the same checkout.
+      - name: the shipped binary answers with its tag
+        if: matrix.rid == 'linux-x64' && needs.guard.outputs.version != ''
+        run: |
+          actual=$(./out/conductor version --short)
+          expected="${{ needs.guard.outputs.version }}"
+          echo "tag=$expected  binary=$actual"
+          case "$actual" in
+            "$expected"|"$expected"+*) echo "version matches the tag." ;;
+            *) echo "::error::binary reports '$actual' but the tag is '$expected'. A checkout without tags yields 0.0.0-alpha.0 - check fetch-depth."; exit 1 ;;
+          esac
 
       - name: build face
         working-directory: face-go
@@ -131,39 +200,61 @@ jobs:
 
   publish:
     name: attach to release
-    needs: build
+    needs: [guard, build]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
+      # Two downloads, not one: the archives are what gets attached, and the changelog section the
+      # guard extracted is what gets said. Merging them into one directory would attach the notes.
       - uses: actions/download-artifact@v4
         with:
           path: dist
           merge-multiple: true
+          pattern: conductor-*
 
-      - run: ls -la dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-body
+          path: notes
+
+      - run: ls -la dist && cat notes/release-body.md
+
+      # The release body is the CHANGELOG section, then the install instructions. generate_release_notes
+      # still appends the commit list underneath, so nothing is lost - but a human-written summary of
+      # what changed now leads, and it cannot go missing: the guard job fails the release without it.
+      - name: compose release notes
+        run: |
+          cat notes/release-body.md > body.md
+          printf '\n' >> body.md
+          cat >> body.md <<'EOF'
+          ## Install
+
+          Download the archive for your platform, unpack it, and put the two binaries somewhere on
+          your PATH. They belong **next to each other** — the engine finds the Face by looking
+          beside itself.
+
+          Then, to see it work without credentials or spend:
+
+          ```
+          conductor demo
+          ```
+
+          Confirm what you unpacked with `conductor version` — it answers with this release's tag,
+          the commit it was built from, and the build date.
+
+          No .NET or Go install is needed: the engine is self-contained and the Face is a static
+          Go binary.
+
+          **macOS:** these binaries are not signed or notarised. On first run:
+          `xattr -d com.apple.quarantine conductor conductor-face`
+
+          Building from source instead: `tools/install.sh` (macOS/Linux) or
+          `tools\install.ps1` (Windows).
+          EOF
+          cat body.md
 
       - uses: softprops/action-gh-release@v2
         with:
           files: dist/*
           generate_release_notes: true
-          body: |
-            ## Install
-
-            Download the archive for your platform, unpack it, and put the two binaries somewhere on
-            your PATH. They belong **next to each other** — the engine finds the Face by looking
-            beside itself.
-
-            Then, to see it work without credentials or spend:
-
-            ```
-            conductor demo
-            ```
-
-            No .NET or Go install is needed: the engine is self-contained and the Face is a static
-            Go binary.
-
-            **macOS:** these binaries are not signed or notarised. On first run:
-            `xattr -d com.apple.quarantine conductor conductor-face`
-
-            Building from source instead: `tools/install.sh` (macOS/Linux) or
-            `tools\install.ps1` (Windows).
+          body_path: body.md

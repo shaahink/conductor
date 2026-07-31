@@ -11,6 +11,9 @@
     <!-- Analyzers (B0.2) -->
     <PackageVersion Include="Meziantou.Analyzer" Version="2.0.207" />
 
+    <!-- Versioning (SC8.2): tag height decides the version, no human types one. Build-only. -->
+    <PackageVersion Include="MinVer" Version="7.0.0" />
+
     <!-- Runtime -->
     <PackageVersion Include="Spectre.Console" Version="0.49.1" />
     <PackageVersion Include="Spectre.Console.Cli" Version="0.49.1" />

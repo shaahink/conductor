@@ -24,7 +24,7 @@ public sealed class VersionCommand : Command<VersionCommand.Settings>
         public bool Json { get; init; }
 
         [CommandOption("--short")]
-        [Description("Emit only the version string (e.g. 2.0.0+abc123def456), for scripts.")]
+        [Description("Emit only the version string (e.g. 0.1.1-alpha.0.54+abc123def456), for scripts.")]
         public bool Short { get; init; }
     }
 

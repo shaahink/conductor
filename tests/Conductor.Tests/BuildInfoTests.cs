@@ -98,7 +98,9 @@ public sealed class BuildInfoTests
         var engine = typeof(BuildInfo).Assembly;
         var info = BuildInfo.FromAssembly(engine);
 
-        Assert.Matches(@"^\d+\.\d+\.\d+$", info.Version);
+        // Full semver, prerelease included: since SC8.2 the version is tag-derived, so between
+        // releases it legitimately reads 0.1.1-alpha.0.54 rather than a bare triple.
+        Assert.Matches(@"^\d+\.\d+\.\d+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$", info.Version);
         Assert.NotEqual(BuildInfo.UnknownCommit, info.CommitSha);
         Assert.Matches("^[0-9a-f]{7,40}$", info.CommitSha);
         Assert.NotNull(info.BuildDate);
