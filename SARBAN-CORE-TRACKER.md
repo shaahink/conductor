@@ -4,20 +4,20 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SC3.1 claimed**, both parts, commit d4c9103. doctor gained a model check: per stage it reads
-  the MERGED agent and fails when a pinned model (plan, stage, or pipeline.roles.X) is missing the
-  placeholder from args, and separately from a non-empty resumeArgs - Start swaps templates on
-  resume. New ConditionVocabulary mirrors EvaluateCondition's parse; PlanConfig rejects unknown
-  runIf/skipIf naming the vocabulary. doctor renders a plan-load failure as a check, not a crash.
-gate: fast loop green - build clean, 143 scoped tests, nothing weakened. Rig TEMP/sarban-proofs/sc31,
-  every after has a published-engine before: .conductor/evidence/SC3/SC3.1-config-traps.md. The typo
-  plan the published engine accepts twice over now makes run exit 1 leaving NO .conductor - nothing
-  spent.
-next: **SC3.2** - plan set refuses an absent leaf without --create, suggests the dotted path on a
-  single nested match, warns before stripping comments, reaches the live engine or prints the reload.
-know: MEASURED, correcting devcontext #4 - unknown tokens are not simply 'always run': bare junk is
-  stuck TRUE, negated junk (!gatesgreen) is stuck FALSE, so a fix step can vanish. New bug 6:
-  workflowStep.model and stage.overrides.model are read by NOTHING. Bugs 2, 3, 4, 5, 6 open.
+last: **SC3.2 claimed**, all four parts, commit 587eadd. New PlanKeySchema walks PlanConfig's declared
+  TYPE GRAPH, not the serialised doc - JsonOpts omits nulls, so an unset limits.maxRunCostUsd is
+  absent from the JSON and is still the most documented edit there is. plan set now refuses an
+  undeclared key (file left byte-identical), suggests the dotted path for a bare name using paths that
+  exist in THAT file, creates a declared-but-absent block, reports the comment lines it drops and
+  keeps a .bak, and queues reload-plan for a live EngineLock holder or prints the reload command.
+gate: fast loop green - build clean, 106 scoped tests, 0 skipped, pragmas still 37 of 38, nothing
+  weakened. Evidence .conductor/evidence/SC3/SC3.2-plan-set.md, rig TEMP/sarban-proofs/sc32. Reach is
+  proven on a REAL 3-session run: published engine queued nothing, fresh build got 'plan reloaded at
+  session boundary - v2' into that run's own log.
+next: **SC3.3** - brace safety: doctor catches an unresolvable placeholder in stage notes/promptExtra
+  at plan load, runtime PARKS instead of a stderr-only exit, and double-brace escapes to a literal.
+know: NEW bug 7 - advisor.provider is set in FIVE shipped plans and AdvisorConfig declares no such
+  field, so it is dropped silently; SC3.4 owns it. Bugs 2,3,4,5,6,7 open.
 
 
 ## Baseline numbers (from run.db)
@@ -26,7 +26,7 @@ know: MEASURED, correcting devcontext #4 - unknown tokens are not simply 'always
 |---|---|
 | Total checkpoints | 26 |
 | Done | 0 |
-| Claimed (unconfirmed) | 7 |
+| Claimed (unconfirmed) | 8 |
 
 ## Checkpoints
 
@@ -54,7 +54,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| SC3.1 | doctor FAILS when agent.model is set without the model token in both args and resumeArgs; unknown RunIf or SkipIf tokens fail at plan load naming the valid vocabulary | TODO | - | - |
+| SC3.1 | doctor FAILS when agent.model is set without the model token in both args and resumeArgs; unknown RunIf or SkipIf tokens fail at plan load naming the valid vocabulary | DONE | d4c9103 | engine-fast:OK · face-fast:OK |
 | SC3.2 | plan set refuses an absent leaf key without --create, suggests the dotted path when one nested leaf matches, warns before stripping comments, and reaches the live engine or prints the exact reload command | TODO | - | - |
 | SC3.3 | A literal brace in stage notes or promptExtra is caught by doctor at plan load; at runtime an unresolved placeholder parks the run and writes the refusal to conductor.log; a double brace escapes to a literal | TODO | - | - |
 | SC3.4 | The default advisor invocation works headless or is refused loudly at load with a doctor line; plan-config.md matches the code | TODO | - | - |
