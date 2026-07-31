@@ -132,7 +132,6 @@
       "--model",
       "claude-fable-5"
     ],
-    "provider": "claude",
     "output": "stream-json",
     "timeoutMinutes": 6
   },

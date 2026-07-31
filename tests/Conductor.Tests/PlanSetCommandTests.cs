@@ -149,13 +149,13 @@ public sealed class PlanSetCommandTests : IDisposable
     /// <summary>The mirror is load-bearing: if the schema walk disagrees with what a plan file may
     /// really contain, this rule would refuse working edits. Every leaf of every plan this repo ships
     /// must resolve — the same shape of check SC3.1's model rule got.
-    /// <para>It resolves all but one, and the exception is not a false positive: five shipped plans
-    /// set <c>advisor.provider</c>, which <c>AdvisorConfig</c> does not declare and the deserialiser
-    /// therefore drops on the floor. That is the same defect this checkpoint refuses at the CLI, found
-    /// by pointing the rule at real files (bug #7, SC3.4's advisor work owns the fix). It is pinned
-    /// here rather than excluded, so a SECOND dead key cannot slip in behind it.</para></summary>
+    /// <para>It used to resolve all but one: five shipped plans set <c>advisor.provider</c>, which
+    /// <c>AdvisorConfig</c> does not declare and the deserialiser dropped on the floor (bug #7, found
+    /// by pointing this rule at real files). SC3.4 removed the key from those plans and made an
+    /// unknown advisor key a plan-load failure, so the exception is gone and the rule is now
+    /// unconditional — which is what stops a second dead key slipping in behind the first.</para></summary>
     [Fact]
-    public void EveryKeyInEveryShippedPlanResolves_ExceptTheOneKnownDeadOne()
+    public void EveryKeyInEveryShippedPlanResolves()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "Conductor.slnx"))) dir = dir.Parent;
@@ -175,9 +175,7 @@ public sealed class PlanSetCommandTests : IDisposable
             }
         }
 
-        var unexpected = unknown.Where(u => !u.EndsWith(": advisor.provider", StringComparison.Ordinal)).ToList();
-        Assert.True(unexpected.Count == 0, "Shipped plans carry keys the schema walk refuses:\n  " + string.Join("\n  ", unexpected));
-        Assert.NotEmpty(unknown);   // bug #7 is still open — when it is fixed, this line is what says so
+        Assert.True(unknown.Count == 0, "Shipped plans carry keys the schema walk refuses:\n  " + string.Join("\n  ", unknown));
     }
 
     private static IEnumerable<string> LeafPaths(JsonNode? node, string prefix)

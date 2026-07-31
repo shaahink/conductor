@@ -37,6 +37,14 @@ public sealed class ControlPlaneServerPromptTests : IDisposable
 
         _replyPath = Path.Combine(_dir, "advisor-reply.json");
         _planPath = Path.Combine(_dir, "test.plan.json");
+        // The "advisor model" is a stub script that answers from a canned file — the real
+        // prose→advisor→diff path, no spend. It takes the prompt as its argument and ignores it:
+        // SC3.4 refuses an advisor whose args carry no {prompt}, because a real one spawned that way
+        // is asked nothing, and this fixture should not be shaped like the defect.
+        var stub = Path.Combine(_dir, OperatingSystem.IsWindows() ? "advisor-stub.cmd" : "advisor-stub.sh");
+        File.WriteAllText(stub, OperatingSystem.IsWindows()
+            ? "@echo off\r\ntype \"%~dp0advisor-reply.json\"\r\n"
+            : "cat \"$(dirname \"$0\")/advisor-reply.json\"\n");
         var seed = new PlanConfig
         {
             Name = "prompt-test",
@@ -45,10 +53,9 @@ public sealed class ControlPlaneServerPromptTests : IDisposable
             Agent = new AgentConfig { Command = "echo", Args = ["{prompt}"] },
             Stages = [new StageConfig { Id = "S1", Title = "Stage One", Sessions = 2, Kind = "deliver" }],
             Gates = [new GateConfig { Name = "build", Command = "dotnet build", Tier = "fast", TimeoutMinutes = 10 }],
-            // The "advisor model" is a local file-cat — the real prose→advisor→diff path, no spend.
             Advisor = OperatingSystem.IsWindows()
-                ? new AdvisorConfig { Enabled = true, Command = "cmd", Args = ["/c", "type", "advisor-reply.json"], Output = "text", TimeoutMinutes = 1 }
-                : new AdvisorConfig { Enabled = true, Command = "/bin/sh", Args = ["-c", "cat advisor-reply.json"], Output = "text", TimeoutMinutes = 1 },
+                ? new AdvisorConfig { Enabled = true, Command = "cmd", Args = ["/c", stub, "{prompt}"], Output = "text", TimeoutMinutes = 1 }
+                : new AdvisorConfig { Enabled = true, Command = "/bin/sh", Args = [stub, "{prompt}"], Output = "text", TimeoutMinutes = 1 },
         };
         File.WriteAllText(_planPath, JsonSerializer.Serialize(seed, PlanConfig.JsonOpts),
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));

@@ -295,7 +295,47 @@ public sealed class PlanConfig
             ValidateProse($"stage '{s.Id}' notes", s.Notes, errors);
         ValidateProse("plan.promptExtra", PromptExtra, errors);
 
+        // SC3.4: an advisor that cannot answer is worse than no advisor. Every consult still spawns
+        // it, waits out its timeout and then falls back to the deterministic default, saying so in
+        // one grey log line nobody reads — so the plan looks like it has a second brain for as long
+        // as the run lasts. Judge it here, where the author can still fix it for free.
+        ValidateAdvisor(Advisor, errors);
+
         return errors;
+    }
+
+    private static void ValidateAdvisor(AdvisorConfig? a, List<string> errors)
+    {
+        if (a is null) return; // no advisor block is a supported choice — ambiguity takes the default
+
+        // bug 7: an inert key that looks like agent.provider is a lie about which model answers.
+        foreach (var key in (a.UnknownFields?.Keys ?? Enumerable.Empty<string>()).OrderBy(k => k, StringComparer.Ordinal))
+        {
+            var hint = key.Equals("provider", StringComparison.OrdinalIgnoreCase)
+                ? " The advisor has no provider adapter: advisor.command plus its args pick the CLI and the model, and advisor.output only says how to unwrap the answer."
+                : "";
+            errors.Add($"plan.advisor.{key} is not an advisor field — nothing reads it, so it cannot do what it looks like it does. " +
+                       $"Known fields: {string.Join(", ", AdvisorConfig.KnownFields)}.{hint}");
+        }
+
+        if (!a.Enabled) return; // a disabled advisor is never spawned, so its invocation is moot
+
+        if (string.IsNullOrWhiteSpace(a.Command))
+            errors.Add("plan.advisor.command is empty — name the CLI that answers, or set advisor.enabled false");
+
+        if (a.Args.Count == 0)
+            errors.Add("plan.advisor.args is empty — a CLI spawned with no arguments is handed no question: it waits on " +
+                       $"stdin until advisor.timeoutMinutes expires and answers nothing. Use [\"{string.Join("\", \"", AdvisorConfig.DefaultArgs)}\"] " +
+                       "(the shipped default), or set advisor.enabled false");
+        else if (!a.Args.Any(x => x.Contains("{prompt}", StringComparison.Ordinal)))
+            errors.Add("plan.advisor.args carries no {prompt} placeholder — the advisor would be spawned without the question it is being asked");
+
+        if (!AdvisorConfig.IsKnownOutput(a.Output))
+            errors.Add($"plan.advisor.output is '{a.Output}' — use {string.Join(", ", AdvisorConfig.OutputKinds)}. An unknown kind is passed " +
+                       "through raw, so a JSON envelope reaches the parser still wrapped and every answer reads as unparseable");
+
+        if (a.TimeoutMinutes < 1)
+            errors.Add($"plan.advisor.timeoutMinutes must be >= 1 (was {a.TimeoutMinutes}) — a zero timeout kills the advisor before it can answer");
     }
 
     private static void ValidateProse(string where, string? prose, List<string> errors)

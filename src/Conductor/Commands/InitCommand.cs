@@ -189,7 +189,9 @@ public sealed class InitCommand : Command<InitCommand.Settings>
           // plan (`conductor init --from-idea "…"`, `conductor plan import "…"`), refining or
           // splitting a card, and judging a stuck stage. Never inside scheduling — the loop stays
           // deterministic. A structured plan document needs none of this; it parses for free.
-          // Uncomment and point it at any CLI that answers on stdout.
+          // Uncomment and point it at any CLI that answers on stdout. Omit "args" and you get the
+          // shipped default, ["-p", "{prompt}"]; an unfilled "{model}" (and the flag before it) is
+          // dropped, so this block works with or without `plan import --model`.
           //
           // "advisor": {
           //   "enabled": true,

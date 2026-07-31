@@ -91,7 +91,9 @@ public sealed class AgentSession : IDisposable
         return args;
     }
 
-    private static bool IsModelFlag(string s) => s is "--model" or "-m" or "--model=";
+    /// <summary>One definition of "the flag a model name follows" — shared with the advisor's arg
+    /// resolution (SC3.4), which drops an unfilled <c>{model}</c> the same way this does.</summary>
+    internal static bool IsModelFlag(string s) => s is "--model" or "-m" or "--model=";
 
     public static AgentSession Start(AgentConfig cfg, string cwd, string prompt, string sessionId, string? resumeClaudeId, string rawLogPath, IEventSink? eventSink = null, string? conductorSessionId = null, Dictionary<string, string>? extraEnv = null, ProcessSupervisor? supervisor = null, IReadOnlyList<string>? extraArgs = null)
     {

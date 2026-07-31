@@ -65,14 +65,31 @@ dropped, so the CLI never receives an empty flag.
 A model consulted only where you ask for one: turning prose into a plan, refining or splitting a
 card, and judging a stuck stage. Never inside scheduling — the loop stays deterministic.
 
+There is no default advisor: with no `advisor` block, an ambiguous session outcome takes conductor's
+deterministic default and nothing is ever consulted. The defaults below apply once the block exists.
+
 | Field | Type | Description |
 |---|---|---|
 | `enabled` | bool | Default true. |
-| `command` | string | CLI exe (cheap model: deepseek via opencode by default). |
-| `args` | string[] | Args with `{prompt}` placeholder. |
-| `output` | string | `"text"` or `"json"` (claude `--output-format json`). |
-| `timeoutMinutes` | int | Advisor timeout. Default 6. |
+| `command` | string | CLI exe. Default `"claude"`. Any executable that answers on stdout works — e.g. `"opencode"` for a cheap model. |
+| `args` | string[] | Args with a `{prompt}` placeholder. Default `["-p", "{prompt}"]` — headless, one-shot, question on argv. A `{model}` placeholder is filled by `plan import --model`. |
+| `output` | string | How to unwrap the answer: `"text"` (raw stdout, the default), `"json"` (claude `--output-format json`), or `"stream-json"` (NDJSON whose final result line carries it). |
+| `timeoutMinutes` | int | Advisor timeout. Default 6. Minimum 1. |
 | `remediationScript` | string | Shell command run when advisor returns `ApplyFix`. |
+
+There is **no `advisor.provider`**. The advisor does not go through an agent adapter: `command` plus
+its `args` pick the CLI and the model, and `output` only says how to unwrap the answer. Five shipped
+plans carried the key anyway, copied from the `agent` block, where it really does select an adapter —
+so the plan claimed one model was the second brain while another one answered. Any key this table
+does not declare is now refused at plan load, naming it (SC3.4).
+
+**An advisor that cannot answer is refused at load, not at 3am.** `args` that are explicitly empty (a
+CLI spawned with no question sits on stdin until `timeoutMinutes` and answers nothing — the old
+default), `args` with no `{prompt}`, an `output` kind nothing unwraps, and `timeoutMinutes` below 1
+all fail the plan the way SC3.1's model gap does, and `doctor` reports them as the `plan` check.
+`doctor` also carries an `advisor` line of its own: the invocation it would spawn and its timeout, or
+a warn when the CLI named in `command` is not installed — that one is survivable (the consult fails
+to spawn and the deterministic default takes over) but you should know before the run, not after.
 
 ## `statusAgent` — On-demand LLM status reporter
 

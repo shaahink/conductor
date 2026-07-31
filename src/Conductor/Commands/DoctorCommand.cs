@@ -87,6 +87,7 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
             CheckGates(plan),
             CheckWorkCoverage(plan),
             CheckPrompt(plan),
+            CheckAdvisor(plan),
         };
 
         var (currentCostUsd, hasRun) = TryReadCostFromRunDb(plan);
@@ -130,9 +131,7 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
         if (string.IsNullOrWhiteSpace(cmd))
             return new Check("agent", "fail", "no agent.command configured in the plan");
 
-        if (cmd.Contains(Path.DirectorySeparatorChar, StringComparison.Ordinal)
-            || cmd.Contains(Path.AltDirectorySeparatorChar, StringComparison.Ordinal)
-            || Path.IsPathRooted(cmd))
+        if (IsPathLike(cmd))
         {
             return File.Exists(cmd)
                 ? new Check("agent", "ok", $"{cmd}")
@@ -144,6 +143,34 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
             ? new Check("agent", "ok", $"{cmd} → {resolved}")
             : new Check("agent", "fail", $"'{cmd}' not found on PATH — install it or fix plan.agent.command");
     }
+
+    /// <summary>SC3.4 — the advisor is optional, but a CONFIGURED one that cannot answer is worse than
+    /// none: the consult spawns, burns its timeout, falls back to the deterministic default, and says so
+    /// in one grey log line. The invocation that cannot answer at all (no <c>args</c>, no
+    /// <c>{prompt}</c>, an unknown output kind, an unknown key) is refused at plan load and lands here
+    /// as the <c>plan</c> check; what is left for doctor is the half only the machine knows — whether
+    /// the CLI named in <c>advisor.command</c> is actually installed — plus printing the invocation, so
+    /// "which model is my second brain" is answerable without reading the plan file.</summary>
+    internal static Check CheckAdvisor(PlanConfig plan)
+    {
+        if (plan.Advisor is not { } a)
+            return new Check("advisor", "ok", "not configured — an ambiguous session outcome takes the deterministic default");
+        if (!a.Enabled)
+            return new Check("advisor", "ok", "disabled — an ambiguous session outcome takes the deterministic default");
+
+        var invocation = $"{a.Command} {string.Join(" ", a.Args)}".TrimEnd();
+        var found = IsPathLike(a.Command) ? (File.Exists(a.Command) ? a.Command : null) : ResolveOnPath(a.Command);
+        return found is null
+            ? new Check("advisor", "warn",
+                $"'{a.Command}' not found on PATH — every consult fails to spawn and falls back to the deterministic default " +
+                "(install it, fix advisor.command, or set advisor.enabled false)")
+            : new Check("advisor", "ok", $"{invocation} → {a.Output}, {a.TimeoutMinutes}m timeout");
+    }
+
+    private static bool IsPathLike(string cmd)
+        => cmd.Contains(Path.DirectorySeparatorChar, StringComparison.Ordinal)
+        || cmd.Contains(Path.AltDirectorySeparatorChar, StringComparison.Ordinal)
+        || Path.IsPathRooted(cmd);
 
     private static string? ResolveOnPath(string command)
     {

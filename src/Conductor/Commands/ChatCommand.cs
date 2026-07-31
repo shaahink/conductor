@@ -89,43 +89,24 @@ public sealed class ChatCommand : Command<ChatCommand.Settings>
             USER QUERY: {query}
             """;
 
-        // Get the advisor config
+        // SC3.4: one advisor spawn path. This used to re-implement the spawn and the envelope unwrap
+        // inline, so `chat` and a verdict consult could disagree about what the advisor does — and
+        // chat missed every guard the shared path grew (an argless invocation, chief among them).
         var advisorCfg = plan.Advisor!;
-        var args = advisorCfg.Args.Select(a => a.Replace("{prompt}", prompt)).ToList();
-
-        AnsiConsole.MarkupLine($"[grey]Running: {Markup.Escape(advisorCfg.Command)} {Markup.Escape(string.Join(" ", args))}[/]");
+        AnsiConsole.MarkupLine($"[grey]Running: {Markup.Escape(advisorCfg.Command)} " +
+                               $"{Markup.Escape(string.Join(" ", advisorCfg.Args))} ({advisorCfg.TimeoutMinutes}m timeout)[/]");
         AnsiConsole.WriteLine();
 
-        var r = await ProcessRunner.RunAsync(advisorCfg.Command, args, plan.Repo,
-            TimeSpan.FromMinutes(advisorCfg.TimeoutMinutes)).ConfigureAwait(false);
+        var answer = await Advisor.AskTextAsync(plan, prompt,
+            m => AnsiConsole.MarkupLine($"[grey]{Markup.Escape(m)}[/]")).ConfigureAwait(false);
 
-        if (r.TimedOut)
+        if (string.IsNullOrWhiteSpace(answer))
         {
-            AnsiConsole.MarkupLine("[red]Chat agent timed out.[/]");
+            AnsiConsole.MarkupLine("[red]The advisor answered nothing — it failed to spawn, timed out, or printed no output.[/]");
             return 1;
         }
 
-        // Output the agent's raw response
-        var output = r.Output.Trim();
-        if (advisorCfg.Output.Equals("json", StringComparison.OrdinalIgnoreCase))
-        {
-            try
-            {
-                using var doc = System.Text.Json.JsonDocument.Parse(output);
-                if (doc.RootElement.TryGetProperty("result", out var res) && res.ValueKind == System.Text.Json.JsonValueKind.String)
-                    output = res.GetString() ?? output;
-            }
-            catch (System.Text.Json.JsonException) { /* print raw */ }
-        }
-
-        if (output.Length > 0)
-            AnsiConsole.WriteLine(output);
-        else
-            AnsiConsole.MarkupLine("[grey](agent produced no output)[/]");
-
-        if (!string.IsNullOrWhiteSpace(r.StdErr))
-            AnsiConsole.MarkupLine($"[grey](stderr: {r.StdErr.Trim()})[/]");
-
-        return r.ExitCode == 0 ? 0 : 1;
+        AnsiConsole.WriteLine(answer.Trim());
+        return 0;
     }
 }

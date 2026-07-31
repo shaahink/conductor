@@ -55,9 +55,18 @@ public static class Advisor
     {
         var a = plan.Advisor;
         if (a is not { Enabled: true } || string.IsNullOrWhiteSpace(a.Command)) return null;
+        // SC3.4: a plan loaded from disk can no longer get here with an argless advisor — PlanConfig
+        // refuses it — but a PlanConfig built in code still can. Spawning a CLI with nothing to answer
+        // is how the advisor came to burn its whole timeout and return null, so say it instead.
+        if (a.Args.Count == 0)
+        {
+            log?.Invoke($"advisor not consulted: advisor.args is empty, so '{a.Command}' would be spawned with no question — " +
+                        $"set advisor.args (default: {string.Join(" ", AdvisorConfig.DefaultArgs)})");
+            return null;
+        }
         try
         {
-            var args = a.Args.Select(x => x.Replace("{prompt}", prompt)).ToList();
+            var args = ResolveArgs(a.Args, prompt);
             var r = await ProcessRunner.RunAsync(a.Command, args, plan.Repo, TimeSpan.FromMinutes(a.TimeoutMinutes)).ConfigureAwait(false);
             if (r.TimedOut) { log?.Invoke("advisor timed out"); return null; }
             return UnwrapEnvelope(r.Output, a.Output);
@@ -67,6 +76,26 @@ public static class Advisor
             log?.Invoke($"advisor failed: {ex.Message}");
             return null;
         }
+    }
+
+    /// <summary>SC3.4: advisor args live by the same rule as agent args (<see cref="AgentSession.ResolveArgs"/>)
+    /// — an unfilled <c>{model}</c>, and the <c>--model</c>/<c>-m</c> flag in front of it, are dropped
+    /// rather than passed through as a literal. The scaffold's advisor block ships with
+    /// <c>"--model", "{model}"</c> for <c>plan import --model</c>; without this, every OTHER consult
+    /// spawned the CLI asking for a model literally named <c>{model}</c> and got nothing back.</summary>
+    internal static List<string> ResolveArgs(IReadOnlyList<string> template, string prompt)
+    {
+        var args = new List<string>(template.Count);
+        foreach (var tok in template)
+        {
+            if (tok == "{model}")
+            {
+                if (args.Count > 0 && AgentSession.IsModelFlag(args[^1])) args.RemoveAt(args.Count - 1);
+                continue;
+            }
+            args.Add(tok.Replace("{prompt}", prompt, StringComparison.Ordinal));
+        }
+        return args;
     }
 
     /// <summary>Peels the provider's transport envelope off the model's answer: "json" is claude's
