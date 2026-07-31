@@ -35,7 +35,7 @@ prints the exact `conductor plan reload` command when it does not.
 | `planDoc` | string | Path (relative to repo) to the plan/design doc. |
 | `branchPattern` | string | Regex — conductor warns if the current branch doesn't match. |
 | `pauseOnBlocked` | bool | Park at NeedsHuman when a BLOCKED row is found. Default true. |
-| `batteryCollapse` | bool | Skip agent's pre-session ritual, defer to conductor's battery. Saves ~30-50% tokens. |
+| `batteryCollapse` | bool | Skip agent's pre-session ritual, defer to conductor's battery. Saves tokens by not paying an agent to run gates the engine runs anyway; **the size of the saving has never been measured** (FU-B10-2 — it needs an A/B on the same checkpoints with only this flag flipped). |
 | `promptExtra` | string | Prepended to every session prompt (high-level context). |
 
 ### `satelliteRepos` — when the work lands next door (SC4.3)
