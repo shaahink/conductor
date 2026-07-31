@@ -11,10 +11,15 @@ namespace Conductor.Core.Http;
 // ViaQueue answers the same question for the test button: did this go through the real send queue,
 // or a parallel path that works when the feature does not?
 
+// SC1.3: RestartRequired is the one thing a live surface cannot fix by asking again — this engine
+// process holds no Telegram service, so nothing saved here reaches the current run however valid it
+// is. Everywhere else it is false, because a token or a telegram block saved against a live service
+// now takes effect without a restart.
+
 public sealed record TelegramStatusDto(
     bool Configured, bool Started, bool HasToken, IReadOnlyList<string> AllowedChatIds,
     int PollIntervalSeconds, bool EnableTwoWay, string? BotUsername, string? LastError, string? LastPollUtc,
-    bool WillDeliver, string? WillDeliverReason);
+    bool WillDeliver, string? WillDeliverReason, bool RestartRequired);
 
 public sealed record TelegramTestResultDto(
     bool Ok, string? BotUsername, string? Error, bool ViaQueue, string? Detail);

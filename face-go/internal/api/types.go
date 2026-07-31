@@ -581,6 +581,12 @@ type PlanImportResultDto struct {
 
 // TelegramStatusDto is GET /telegram/status: everything the guided-setup tab needs to show live
 // connection health, not just "configured or not".
+// SC1.2/SC1.3: the first six fields are each a PRECONDITION for delivery, and the Face read them as
+// if any of them were the verdict — "connected" on Started && HasToken, over an engine that could not
+// notify anybody. WillDeliver is the engine's own derived verdict (block AND token AND a chat id AND
+// a running service); WillDeliverReason carries doctor's sentence for the missing half;
+// RestartRequired is the single case a live save cannot fix, because this engine process holds no
+// Telegram service at all.
 type TelegramStatusDto struct {
 	Configured          bool     `json:"configured"`
 	Started             bool     `json:"started"`
@@ -591,21 +597,32 @@ type TelegramStatusDto struct {
 	BotUsername         *string  `json:"botUsername"`
 	LastError           *string  `json:"lastError"`
 	LastPollUtc         *string  `json:"lastPollUtc"`
+	WillDeliver         bool     `json:"willDeliver"`
+	WillDeliverReason   *string  `json:"willDeliverReason"`
+	RestartRequired     bool     `json:"restartRequired"`
 }
 
+// ViaQueue is what makes a green test mean anything: true = the message travelled the same send queue
+// every run push travels; false = it was sent directly and proved only that Telegram is reachable,
+// which is exactly what the old always-green Test button proved over a dead feature. Detail says which.
 type TelegramTestResultDto struct {
 	Ok          bool    `json:"ok"`
 	BotUsername *string `json:"botUsername"`
 	Error       *string `json:"error"`
+	ViaQueue    bool    `json:"viaQueue"`
+	Detail      *string `json:"detail"`
 }
 
 type TelegramSetTokenRequestDto struct {
 	Token string `json:"token"`
 }
 
+// Ok = the token was saved; WillDeliver = the running engine can now actually notify somebody with
+// it. Two questions, and one green tick used to answer both wrongly.
 type TelegramSetTokenResultDto struct {
-	Ok      bool    `json:"ok"`
-	Message *string `json:"message"`
+	Ok          bool    `json:"ok"`
+	Message     *string `json:"message"`
+	WillDeliver bool    `json:"willDeliver"`
 }
 
 // --- Session-local state for connection management ---

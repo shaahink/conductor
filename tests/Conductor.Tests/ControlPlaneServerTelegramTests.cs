@@ -74,16 +74,25 @@ public sealed class ControlPlaneServerTelegramTests : IDisposable
         return (server, server.Port);
     }
 
+    /// <summary>SC1.3 sharpened this: with no live Telegram service the endpoint used to report the
+    /// PLAN as unconfigured, which is a different (and false) statement — this fixture's plan has a
+    /// telegram block. What is missing is a service to hand it to, and that is the one state a live
+    /// save cannot fix, so it is now reported as exactly that.</summary>
     [Fact]
-    public async Task GetTelegramStatus_NotConfigured_WhenNoTelegramService()
+    public async Task GetTelegramStatus_SaysRestartRequired_WhenTheProcessHasNoTelegramService()
     {
         var (server, port) = StartServer(new NoOpTelegramService());
         try
         {
             var body = await _http.GetStringAsync($"http://127.0.0.1:{port}/telegram/status");
             using var doc = JsonDocument.Parse(body);
-            Assert.False(doc.RootElement.GetProperty("configured").GetBoolean());
+            Assert.True(doc.RootElement.GetProperty("configured").GetBoolean());
             Assert.False(doc.RootElement.GetProperty("hasToken").GetBoolean());
+            Assert.False(doc.RootElement.GetProperty("started").GetBoolean());
+            Assert.False(doc.RootElement.GetProperty("willDeliver").GetBoolean());
+            Assert.True(doc.RootElement.GetProperty("restartRequired").GetBoolean());
+            Assert.Contains("no Telegram service exists",
+                doc.RootElement.GetProperty("willDeliverReason").GetString(), StringComparison.Ordinal);
         }
         finally { server.Dispose(); }
     }

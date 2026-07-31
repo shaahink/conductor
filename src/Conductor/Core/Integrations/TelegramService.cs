@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net.Http.Json;
 using System.Text;
@@ -34,22 +35,33 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
-    private readonly TelegramConfig? _cfg;
-    private readonly string? _token;
-    internal readonly PlanConfig _plan;
+    /// <summary>SC1.3: config, token and API base are re-resolvable at runtime, not snapshots taken
+    /// in the constructor. A token typed into the Face and a telegram block added by a plan edit both
+    /// arrive AFTER this object exists; while these were readonly the only way to pick either up was
+    /// to restart the engine, and no surface said so. Written only under <see cref="_gate"/>.</summary>
+    private TelegramConfig? _cfg;
+    private string? _token;
+    internal PlanConfig _plan;
     internal readonly RunState _state;
-    internal readonly IProgressProvider _progress;
+    internal IProgressProvider _progress;
     internal readonly ILogger<TelegramService> _log;
     /// <summary>SC1.2: the ack is how <c>POST /telegram/test</c> can route through the REAL queue and
     /// still answer its HTTP caller — the send loop completes it with null on success or the error
-    /// text on failure. Every ordinary push leaves it null and stays fire-and-forget.</summary>
-    private readonly Channel<(string ChatId, string Text, string? KeyboardJson, TaskCompletionSource<string?>? Ack)> _sendQueue;
+    /// text on failure. Every ordinary push leaves it null and stays fire-and-forget.
+    /// SC1.3: recreated on every start, because <see cref="StopAsync"/> completes the writer and a
+    /// completed channel can never carry another message — a restart on a reloaded token would
+    /// otherwise come up with a queue that silently drops everything.</summary>
+    private Channel<(string ChatId, string Text, string? KeyboardJson, TaskCompletionSource<string?>? Ack)> _sendQueue;
     private readonly HttpClient _http;
-    private readonly CancellationTokenSource _cts = new();
+    private CancellationTokenSource _cts = new();
     private Task? _pollTask;
     private Task? _sendTask;
     private int _offset;
     internal bool _started;
+    /// <summary>Serialises start / stop / reload against each other: a reload arriving from an HTTP
+    /// thread while the run loop's plan swap is mid-restart would otherwise interleave two stops and
+    /// two starts and leave orphaned loops behind.</summary>
+    private readonly SemaphoreSlim _gate = new(1, 1);
     internal readonly IRunStore? _store;
     internal DateTime _lastDigestUtc = DateTime.UtcNow;
     internal readonly Dictionary<string, bool> _pendingInjections = new(StringComparer.Ordinal);
@@ -64,7 +76,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
     internal const string DefaultApiRoot = "https://api.telegram.org";
 
     /// <summary>Bot API prefix up to and including <c>/bot</c>; the token is appended per call.</summary>
-    private readonly string _apiBase;
+    private string _apiBase;
 
     public TelegramService(
         PlanConfig plan,
@@ -72,21 +84,33 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
         ILogger<TelegramService> logger,
         IRunStore? store = null)
     {
-        _plan = plan;
         _state = state;
-        _progress = ProgressProviderFactory.Create(plan);
         _log = logger;
+        _store = store;
+        AdoptPlan(plan);
+
+        _sendQueue = NewSendQueue();
+        _http = new HttpClient { Timeout = TimeSpan.FromSeconds(65) };
+    }
+
+    private static Channel<(string ChatId, string Text, string? KeyboardJson, TaskCompletionSource<string?>? Ack)> NewSendQueue() =>
+        Channel.CreateUnbounded<(string, string, string?, TaskCompletionSource<string?>?)>(
+            new UnboundedChannelOptions { SingleReader = true });
+
+    /// <summary>SC1.3: take everything this service derives from the plan, from THIS plan — used by
+    /// the constructor and again by every reload, so there is one derivation and the two cannot
+    /// drift. The token is re-resolved here too: it lives outside the plan (env var or secrets file)
+    /// and can appear at any moment, which is exactly the case that used to need a restart.</summary>
+    [MemberNotNull(nameof(_plan), nameof(_progress), nameof(_apiBase))]
+    private void AdoptPlan(PlanConfig plan)
+    {
+        _plan = plan;
+        _progress = ProgressProviderFactory.Create(plan);
         _cfg = plan.Telegram;
         _token = ResolveToken(plan);
-        _store = store;
 
         var root = string.IsNullOrWhiteSpace(_cfg?.ApiBaseUrl) ? DefaultApiRoot : _cfg!.ApiBaseUrl!.Trim();
         _apiBase = root.TrimEnd('/') + "/bot";
-
-        _sendQueue = Channel.CreateUnbounded<(string, string, string?, TaskCompletionSource<string?>?)>(
-            new UnboundedChannelOptions { SingleReader = true });
-
-        _http = new HttpClient { Timeout = TimeSpan.FromSeconds(65) };
     }
 
     /// <summary>Env var wins (unchanged, existing behavior); falls back to the M8.2 local secrets
@@ -100,6 +124,11 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
     }
 
     internal bool IsConfigured => _cfg != null && _token != null;
+
+    /// <summary>SC1.3: the telegram block this service is actually running on, which after a live
+    /// reload is not necessarily the one any other holder of a plan reference has. Status must report
+    /// what the service will do, not what the plan file says it should.</summary>
+    internal TelegramConfig? LiveConfig => _cfg;
 
     /// <summary>SC1.2: how long the queue-routed test waits for the send loop to report back before
     /// it gives up and says so. A wedged send loop must not hold an HTTP request open forever.</summary>
@@ -160,7 +189,8 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
         var ack = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
         var text = $"✅ Conductor test message — bot @{bot} is connected. Sent through the live push queue, "
                  + "the same path every run notification takes.";
-        if (!_sendQueue.Writer.TryWrite((chatId, text, null, ack)))
+        var queue = _sendQueue;   // SC1.3: the queue this test's ack belongs to, even if a reload swaps it
+        if (!queue.Writer.TryWrite((chatId, text, null, ack)))
             return new TelegramTestOutcome(false, bot, "the send queue is closed — the service is shutting down",
                 false, TelegramReadiness.NotStarted);
 
@@ -200,79 +230,6 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
         }
     }
 
-    /// <summary>SC1.2: logs on BOTH outcomes. The silent early return is the exact shape of the bug
-    /// SC1.1 fixed — a process that has decided to deliver nothing for the rest of the run, and says
-    /// so nowhere. Not-started names the missing half in doctor's own words; started names the poll
-    /// interval and how many chat ids it will actually reach, because "started" with an empty
-    /// allowedChatIds is push-only to nobody and would otherwise read as success.</summary>
-    public Task StartAsync(CancellationToken ct)
-    {
-        if (!IsConfigured)
-        {
-            var missing = TelegramReadiness.MissingHalf(
-                hasBlock: _cfg is not null, hasToken: _token is not null,
-                allowedChatIds: _cfg?.AllowedChatIds.Count ?? 0, started: false);
-            // No telegram block at all is an ordinary, deliberate choice; a block that cannot deliver
-            // is a misconfiguration the owner meant to work, and warrants the louder level.
-            if (_cfg is null) _log.LogInformation("Telegram not started: {Reason}", missing);
-            else _log.LogWarning("Telegram not started: {Reason}", missing);
-            return Task.CompletedTask;
-        }
-
-        _started = true;
-        _pollTask = Task.Run(() => PollLoopAsync(_cts.Token), CancellationToken.None);
-        _sendTask = Task.Run(() => SendLoopAsync(_cts.Token), CancellationToken.None);
-
-        var chatIds = _cfg!.AllowedChatIds.Count;
-        if (chatIds == 0)
-            _log.LogWarning("Telegram bot started (poll interval {Interval}s) but will deliver nothing: {Reason}",
-                _cfg.PollIntervalSeconds, TelegramReadiness.NoChatIds);
-        else
-            _log.LogInformation("Telegram bot started (poll interval {Interval}s, {ChatIds} allowed chat id(s))",
-                _cfg.PollIntervalSeconds, chatIds);
-        return Task.CompletedTask;
-    }
-
-    /// <summary>SC1.1: how long the send queue is allowed to flush before shutdown stops waiting.
-    /// The run's last act is a fire-and-forget session-end push, so cancelling the send loop the
-    /// instant the loop exits is how "the push arrives" quietly degrades into "the push was queued".</summary>
-    internal static readonly TimeSpan DrainGrace = TimeSpan.FromSeconds(10);
-
-    public async Task StopAsync(CancellationToken ct)
-    {
-        var poll = _pollTask;
-        var send = _sendTask;
-        if (poll == null && send == null) { _started = false; return; }
-
-        // 1. Close the queue and let the send loop drain what is already in it. Nothing new can be
-        //    enqueued after this (PushAsync uses TryWrite, which just returns false on a closed
-        //    channel) so the drain always terminates.
-        _sendQueue.Writer.TryComplete();
-        if (send != null)
-        {
-            try { await send.WaitAsync(DrainGrace, CancellationToken.None).ConfigureAwait(false); }
-            catch (TimeoutException)
-            {
-                _log.LogWarning("Telegram send queue did not drain within {Grace}s — some pushes were not delivered",
-                    DrainGrace.TotalSeconds);
-            }
-            catch (OperationCanceledException) { /* already cancelled elsewhere — nothing left to flush */ }
-        }
-
-        // 2. Then stop the long-poll. Its loops end by cancellation, so the tasks complete in the
-        //    Canceled state — awaiting them bare would rethrow and turn a clean exit into a crash.
-        await _cts.CancelAsync().ConfigureAwait(false);
-        _started = false;
-        if (poll != null)
-        {
-            try { await poll.WaitAsync(DrainGrace, CancellationToken.None).ConfigureAwait(false); }
-            catch (TimeoutException) { /* a wedged long-poll must not hold the process open */ }
-            catch (OperationCanceledException) { /* expected: the loop was cancelled, not failed */ }
-        }
-
-        _pollTask = null;
-        _sendTask = null;
-    }
 
     public void Dispose()
     {
@@ -285,19 +242,23 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
     // and never throws — it just returns false once StopAsync has closed the channel.
     public Task PushAsync(string message, CancellationToken ct = default)
     {
+        // SC1.3: read the queue field ONCE — a reload can swap it between the check and the write,
+        // and a push split across two queues would be delivered twice or not at all.
+        var queue = _sendQueue;
         if (!_started || _cfg?.AllowedChatIds is not { Count: > 0 } ids) return Task.CompletedTask;
         foreach (var cid in ids)
-            _sendQueue.Writer.TryWrite((cid, message, null, null));
+            queue.Writer.TryWrite((cid, message, null, null));
         return Task.CompletedTask;
     }
 
     public Task PushWithKeyboardAsync(string message,
         IReadOnlyList<(string Text, string CallbackData)> buttons, CancellationToken ct = default)
     {
-        if (!_started || _cfg is not { EnableTwoWay: true, AllowedChatIds.Count: > 0 }) return Task.CompletedTask;
+        var queue = _sendQueue;
+        if (!_started || _cfg is not { EnableTwoWay: true, AllowedChatIds.Count: > 0 } cfg) return Task.CompletedTask;
         var kb = BuildInlineKeyboard(buttons);
-        foreach (var cid in _cfg.AllowedChatIds)
-            _sendQueue.Writer.TryWrite((cid, message, kb, null));
+        foreach (var cid in cfg.AllowedChatIds)
+            queue.Writer.TryWrite((cid, message, kb, null));
         return Task.CompletedTask;
     }
 
@@ -355,13 +316,17 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
         }
     }
 
-    private async Task SendLoopAsync(CancellationToken ct)
+    /// <summary>Reads the queue it was STARTED with, not the current field: a reload swaps in a new
+    /// queue, and a loop that followed the field would end up as a second reader on it.</summary>
+    private async Task SendLoopAsync(
+        Channel<(string ChatId, string Text, string? KeyboardJson, TaskCompletionSource<string?>? Ack)> queue,
+        CancellationToken ct)
     {
         // ReadAllAsync completes normally once the writer is closed AND the backlog is drained —
         // that is what lets StopAsync flush the final session-end push instead of dropping it.
         try
         {
-            await foreach (var item in _sendQueue.Reader.ReadAllAsync(ct).ConfigureAwait(false))
+            await foreach (var item in queue.Reader.ReadAllAsync(ct).ConfigureAwait(false))
             {
                 try
                 {
@@ -421,6 +386,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
     {
         try
         {
+            var cts = _cts;   // SC1.3: the token of the loop this handler is running on
             var path = Path.Combine(_plan.StateDir, "control.json");
             var payload = new Dictionary<string, object>(StringComparer.Ordinal)
             {
@@ -429,7 +395,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
                 ["confirmed"] = confirmed,
             };
             if (intentId != null) payload["intentId"] = intentId;
-            await File.WriteAllTextAsync(path, JsonSerializer.Serialize(payload, JsonOpts), _cts.Token).ConfigureAwait(false);
+            await File.WriteAllTextAsync(path, JsonSerializer.Serialize(payload, JsonOpts), cts.Token).ConfigureAwait(false);
             _log.LogInformation("Telegram wrote control.json: {Action} (confirmed={Confirmed})", action, confirmed);
         }
         catch (Exception ex) { _log.LogWarning(ex, "Failed to write control.json"); }

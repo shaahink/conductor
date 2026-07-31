@@ -420,7 +420,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Result != nil && msg.Result.BotUsername != nil {
 			name = "@" + *msg.Result.BotUsername
 		}
-		m.telegramStatusLine = "✓ sent — " + name + " is connected"
+		// SC1.3: a test that bypassed the send queue proved Telegram is reachable, not that this run
+		// can notify anybody — the distinction the old always-green tick erased. Say which one it was.
+		if msg.Result != nil && !msg.Result.ViaQueue {
+			detail := "it did NOT go through the run's push queue"
+			if msg.Result.Detail != nil && *msg.Result.Detail != "" {
+				detail = *msg.Result.Detail
+			}
+			m.telegramStatusLine = "⚠ sent by " + name + ", but " + detail
+			return m, m.cmdFetchTelegramStatus()
+		}
+		m.telegramStatusLine = "✓ sent — " + name + " delivered through the run's own push queue"
 		return m, m.cmdFetchTelegramStatus()
 
 	case MsgTelegramTokenSaved:
@@ -440,7 +450,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Result != nil && msg.Result.Message != nil {
 			msgText = *msg.Result.Message
 		}
-		m.telegramStatusLine = "✓ " + msgText
+		// SC1.3: the save succeeding and the engine being able to deliver are different facts. The
+		// engine now says which it is (WillDeliver plus a sentence naming what is still missing, or
+		// that a restart is required), and the Face stops rendering both as one green tick.
+		if msg.Result != nil && !msg.Result.WillDeliver {
+			m.telegramStatusLine = "⚠ " + msgText
+		} else {
+			m.telegramStatusLine = "✓ " + msgText
+		}
 		m.telegramEditing = false
 		return m, m.cmdFetchTelegramStatus()
 

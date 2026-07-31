@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"conductor-face-go/internal/api"
 )
@@ -190,7 +191,9 @@ func (m Model) renderTelegramPane() (string, string) {
 			subtleStyle.Render("saving a token or chat id here configures it for you."))
 	}
 
-	if !s.HasToken || len(s.AllowedChatIds) == 0 || !s.Started {
+	// SC1.3: the guide stays up until the engine says it will deliver — not until the last
+	// precondition is ticked, which is how a setup that could never notify anybody looked finished.
+	if !s.WillDeliver {
 		lines = append(lines, "", m.renderTelegramGuide(s))
 	}
 
@@ -202,6 +205,10 @@ func (m Model) renderTelegramPane() (string, string) {
 		switch {
 		case strings.HasPrefix(m.telegramStatusLine, "✗"):
 			st = destructStyle
+		// SC1.3: "saved, but it still cannot deliver" and "sent, but not through the queue" are
+		// warnings, not successes — rendering them in the success colour is the same lie in paint.
+		case strings.HasPrefix(m.telegramStatusLine, "⚠"):
+			st = warnStyle
 		case m.telegramStatusLine == "saving…" || m.telegramStatusLine == "testing…":
 			st = warnStyle
 		}
@@ -223,21 +230,37 @@ func (m Model) renderTelegramPane() (string, string) {
 	return strings.Join(lines, "\n"), help
 }
 
+// SC1.3: this line used to say "connected" whenever Started && HasToken — a claim about two
+// preconditions, printed as if it were a claim about delivery. On the engine's own dead feature both
+// were true and nothing was ever delivered. It now reports the engine's verdict (WillDeliver), and
+// when that is false it says which half is missing in doctor's words, on its own line so a long
+// sentence cannot shove the pane sideways.
 func (m Model) renderTelegramStatusLine(s *api.TelegramStatusDto) string {
+	head := ""
 	switch {
-	case s.Started && s.HasToken:
+	case s.WillDeliver:
 		name := "bot"
 		if s.BotUsername != nil {
 			name = "@" + *s.BotUsername
 		}
-		return safeStyle.Render("● connected") + " " + textStyle.Render("as "+name)
-	case s.HasToken:
-		return warnStyle.Render("◐ token saved, not yet tested")
+		head = safeStyle.Render("● delivering") + " " + textStyle.Render("as "+name)
+	case s.RestartRequired:
+		head = warnStyle.Render("◐ saved — restart required")
 	case s.Configured:
-		return warnStyle.Render("◐ configured, no bot token yet")
+		head = warnStyle.Render("◐ will not deliver yet")
 	default:
-		return subtleStyle.Render("○ not configured")
+		head = subtleStyle.Render("○ not configured")
 	}
+	if s.WillDeliver || s.WillDeliverReason == nil || *s.WillDeliverReason == "" {
+		return head
+	}
+	return head + "\n" + m.telegramReasonLine(*s.WillDeliverReason)
+}
+
+// One reason, wrapped to the pane by lipgloss (never byte-sliced — STYLE.md), dimmed so the verdict
+// above it stays the thing the eye lands on.
+func (m Model) telegramReasonLine(reason string) string {
+	return lipgloss.NewStyle().MaxWidth(max(1, m.paneCols())).Render(subtleStyle.Render(reason))
 }
 
 func (m Model) renderTelegramGuide(s *api.TelegramStatusDto) string {
@@ -251,8 +274,11 @@ func (m Model) renderTelegramGuide(s *api.TelegramStatusDto) string {
 	lines := []string{
 		accentStyle.Render("Guided setup"),
 		step(1, s.HasToken, "Create a bot via @BotFather on Telegram, then paste the token below."),
-		step(2, len(s.AllowedChatIds) > 0, "Get your chat id from @userinfobot, then add it to allowed chat ids."),
-		step(3, s.Started, "Send a test message to confirm the whole path works."),
+		step(2, len(s.AllowedChatIds) > 0, "Message your bot once, then get the chat id from @userinfobot."),
+		// SC1.3: the other way to bootstrap a chat id, said here because it is the one an owner with
+		// a token but no chat id needs and cannot guess.
+		"     " + subtleStyle.Render("(or: curl https://api.telegram.org/bot<TOKEN>/getUpdates after messaging it)"),
+		step(3, s.WillDeliver, "Send a test message — it goes through the run's own push queue."),
 	}
 	return strings.Join(lines, "\n")
 }

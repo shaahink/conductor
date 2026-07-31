@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using Conductor.Core.Integrations;
+using Microsoft.Extensions.Logging;
 
 namespace Conductor.Core.Http;
 
@@ -28,12 +29,30 @@ public sealed partial class ControlPlaneServer
     /// half in the same words doctor uses, from the same helper.</summary>
     private TelegramStatusDto BuildTelegramStatus()
     {
-        var cfg = _plan.Telegram;
-        if (cfg is null || _telegram is not TelegramService svc)
+        // SC1.3: no service in this process is a state of its own — the plan can be fully configured
+        // and nothing here can ever deliver, because there is nobody to hand the configuration to.
+        // RestartRequired says that out loud instead of letting it read as "configured, not started".
+        if (_telegram is not TelegramService svc)
+        {
+            var block = _plan.Telegram;
+            return new TelegramStatusDto(
+                Configured: block is not null, Started: false, HasToken: false,
+                AllowedChatIds: block?.AllowedChatIds ?? [],
+                PollIntervalSeconds: block?.PollIntervalSeconds ?? 4, EnableTwoWay: block?.EnableTwoWay ?? false,
+                BotUsername: null, LastError: null, LastPollUtc: null,
+                WillDeliver: false,
+                WillDeliverReason: block is null ? TelegramReadiness.NoBlock : TelegramReadiness.RestartRequired,
+                RestartRequired: block is not null);
+        }
+
+        // The service's OWN block, not _plan's: after a live reload those can differ for a moment,
+        // and only one of them describes what the next push will actually do.
+        var cfg = svc.LiveConfig;
+        if (cfg is null)
             return new TelegramStatusDto(
                 Configured: false, Started: false, HasToken: false, AllowedChatIds: [],
                 PollIntervalSeconds: 4, EnableTwoWay: false, BotUsername: null, LastError: null, LastPollUtc: null,
-                WillDeliver: false, WillDeliverReason: TelegramReadiness.NoBlock);
+                WillDeliver: false, WillDeliverReason: TelegramReadiness.NoBlock, RestartRequired: false);
 
         var missing = TelegramReadiness.MissingHalf(
             hasBlock: true, hasToken: svc.IsConfigured,
@@ -50,7 +69,11 @@ public sealed partial class ControlPlaneServer
             LastError: svc._lastError,
             LastPollUtc: svc._lastPollUtc?.ToString("O"),
             WillDeliver: missing is null,
-            WillDeliverReason: missing);
+            WillDeliverReason: missing,
+            // A live service can take a new token or a new block without a restart — that is the
+            // whole of SC1.3, and saying "restart required" here would be a lie in the other
+            // direction.
+            RestartRequired: false);
     }
 
     private async Task HandleTelegramTestAsync(HttpListenerContext ctx, CancellationToken ct)
@@ -78,20 +101,35 @@ public sealed partial class ControlPlaneServer
         try { req = JsonSerializer.Deserialize(body, ControlPlaneJsonContext.Default.TelegramSetTokenRequestDto); }
         catch (JsonException)
         {
-            await WriteJsonAsync(ctx, new TelegramSetTokenResultDto(false, "malformed JSON body"),
+            await WriteJsonAsync(ctx, new TelegramSetTokenResultDto(false, "malformed JSON body", WillDeliver: false),
                 ControlPlaneJsonContext.Default.TelegramSetTokenResultDto, HttpStatusCode.BadRequest).ConfigureAwait(false);
             return;
         }
 
         if (string.IsNullOrWhiteSpace(req?.Token))
         {
-            await WriteJsonAsync(ctx, new TelegramSetTokenResultDto(false, "token is empty"),
+            await WriteJsonAsync(ctx, new TelegramSetTokenResultDto(false, "token is empty", WillDeliver: false),
                 ControlPlaneJsonContext.Default.TelegramSetTokenResultDto, HttpStatusCode.BadRequest).ConfigureAwait(false);
             return;
         }
 
         SecretsStore.WriteTelegramToken(_plan.StateDir, req.Token);
-        await WriteJsonAsync(ctx, new TelegramSetTokenResultDto(true, "saved — restart conductor to connect with the new token"),
+
+        // SC1.3: the token was resolved ONCE, in the service's constructor, so this endpoint's old
+        // reply ("restart conductor to connect with the new token") was the honest description of a
+        // feature that could not pick a token up — and the Face showed it as a plain green save.
+        // Now the running service re-resolves and starts, and the reply says what actually happened.
+        if (_telegram is TelegramService svc)
+        {
+            var outcome = await svc.ReloadAsync(ct: ct).ConfigureAwait(false);
+            _logger.LogInformation("Telegram token saved from the control plane: {Message}", outcome.Message);
+            await WriteJsonAsync(ctx, new TelegramSetTokenResultDto(true, outcome.Message, outcome.WillDeliver),
+                ControlPlaneJsonContext.Default.TelegramSetTokenResultDto, HttpStatusCode.Accepted).ConfigureAwait(false);
+            return;
+        }
+
+        await WriteJsonAsync(ctx, new TelegramSetTokenResultDto(true,
+                "saved, but " + TelegramReadiness.RestartRequired, WillDeliver: false),
             ControlPlaneJsonContext.Default.TelegramSetTokenResultDto, HttpStatusCode.Accepted).ConfigureAwait(false);
     }
 }

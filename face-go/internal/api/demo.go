@@ -434,13 +434,23 @@ func (s *demoSource) PostTelegramTest() (*TelegramTestResultDto, error) {
 	if !s.telegram.HasToken {
 		return &TelegramTestResultDto{Ok: false, Error: strPtr("no bot token — save one below first")}, nil
 	}
+	// SC1.2/SC1.3: with no chat id there is nobody to send to, and the demo must not tick green on a
+	// state the engine now refuses — the demo is where this flow gets reviewed.
+	if len(s.telegram.AllowedChatIds) == 0 {
+		return &TelegramTestResultDto{Ok: false,
+			Error:  strPtr("token present but no allowedChatIds — bot is push-only to nobody"),
+			Detail: strPtr("the token is valid, but no test message was sent — there is no chat to send it to")}, nil
+	}
 	name := "conductor_demo_bot"
 	s.telegram.Started = true
 	s.telegram.BotUsername = &name
+	s.telegram.WillDeliver = true
+	s.telegram.WillDeliverReason = nil
 	now := time.Now().UTC().Format(time.RFC3339)
 	s.telegram.LastPollUtc = &now
 	s.telegram.LastError = nil
-	return &TelegramTestResultDto{Ok: true, BotUsername: &name}, nil
+	return &TelegramTestResultDto{Ok: true, BotUsername: &name, ViaQueue: true,
+		Detail: strPtr("sent through the live send queue — the same path every run push takes")}, nil
 }
 
 func (s *demoSource) PostTelegramToken(req TelegramSetTokenRequestDto) (*TelegramSetTokenResultDto, error) {
@@ -450,8 +460,20 @@ func (s *demoSource) PostTelegramToken(req TelegramSetTokenRequestDto) (*Telegra
 		return &TelegramSetTokenResultDto{Ok: false, Message: strPtr("token is empty")}, nil
 	}
 	s.telegram.HasToken = true
-	msg := "saved — restart conductor to connect with the new token"
-	return &TelegramSetTokenResultDto{Ok: true, Message: &msg}, nil
+	// SC1.3: the engine now takes a late token without a restart, and says what is still missing when
+	// the token alone is not enough. The demo mirrors that, including the not-enough case.
+	if len(s.telegram.AllowedChatIds) == 0 {
+		reason := "token present but no allowedChatIds — bot is push-only to nobody"
+		s.telegram.WillDeliverReason = &reason
+		msg := "saved, but this run still will not deliver: " + reason
+		return &TelegramSetTokenResultDto{Ok: true, Message: &msg, WillDeliver: false}, nil
+	}
+	s.telegram.Started = true
+	s.telegram.WillDeliver = true
+	s.telegram.WillDeliverReason = nil
+	msg := "the running engine picked it up — Telegram is delivering to " +
+		strconv.Itoa(len(s.telegram.AllowedChatIds)) + " chat id(s) now, no restart needed"
+	return &TelegramSetTokenResultDto{Ok: true, Message: &msg, WillDeliver: true}, nil
 }
 
 // applyDemoTelegramEdit mirrors ControlPlaneServer.Plan.cs's ApplyTelegramEdit — same field names,
@@ -475,6 +497,32 @@ func applyDemoTelegramEdit(t *TelegramStatusDto, e PlanEditDto) {
 	case "enabletwoway":
 		t.EnableTwoWay = val == "true"
 	}
+	recomputeDemoTelegramVerdict(t)
+}
+
+// recomputeDemoTelegramVerdict mirrors Core/Integrations/TelegramReadiness.cs: delivery needs a
+// block, a token, at least one chat id and a running service — checking fewer of those is reporting
+// a prefix of the truth, which is exactly how the demo (and the engine) used to read as connected
+// over something that would never send a message.
+func recomputeDemoTelegramVerdict(t *TelegramStatusDto) {
+	var reason string
+	switch {
+	case !t.Configured:
+		reason = "not configured — optional; add a telegram block to the plan, or set it up from the Face's Telegram tab"
+	case !t.HasToken:
+		reason = "configured but no bot token — set CONDUCTOR_TELEGRAM_TOKEN, or save one from the Face's Telegram tab"
+	case len(t.AllowedChatIds) == 0:
+		reason = "token present but no allowedChatIds — bot is push-only to nobody"
+	case !t.Started:
+		reason = "configured, but the Telegram service is not running in this process — every push is dropped silently until it is started"
+	}
+	if reason == "" {
+		t.WillDeliver = true
+		t.WillDeliverReason = nil
+		return
+	}
+	t.WillDeliver = false
+	t.WillDeliverReason = &reason
 }
 
 func applyDemoEdit(plan *PlanDto, e PlanEditDto) {
@@ -1014,6 +1062,7 @@ func makeFakeBugs() []BugDto {
 // since it's the one that exercises the guided onboarding flow (paste token → add chat id → test)
 // rather than a dashboard that's already fully wired up.
 func makeFakeTelegramStatus() *TelegramStatusDto {
+	reason := "configured but no bot token — set CONDUCTOR_TELEGRAM_TOKEN, or save one from the Face's Telegram tab"
 	return &TelegramStatusDto{
 		Configured:          true,
 		Started:             false,
@@ -1021,6 +1070,12 @@ func makeFakeTelegramStatus() *TelegramStatusDto {
 		AllowedChatIds:      []string{},
 		PollIntervalSeconds: 4,
 		EnableTwoWay:        false,
+		// SC1.2/SC1.3: the demo starts where a real half-configured engine starts — it will NOT
+		// deliver, and it says why. A demo that showed the old green "connected" would be the one
+		// place this era's whole point is invisible.
+		WillDeliver:       false,
+		WillDeliverReason: &reason,
+		RestartRequired:   false,
 	}
 }
 

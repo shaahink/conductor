@@ -147,11 +147,46 @@ docs-only or spike plan with no build/test surface.
 
 | Field | Type | Description |
 |---|---|---|
-| `allowedChatIds` | string[] | Allowed chat IDs for commands. Empty = push-only. |
+| `allowedChatIds` | string[] | Allowed chat IDs for commands. Empty = push-only **to nobody** — the bot has no chat to send to, and `doctor` warns. |
 | `pollIntervalSeconds` | int | getUpdate polling interval. Default 4. |
 | `enableTwoWay` | bool | Enable incoming commands via Telegram. |
+| `apiBaseUrl` | string | Bot API root. Defaults to `https://api.telegram.org`; set it only to point at a test double. |
 
-Token read from the `CONDUCTOR_TELEGRAM_TOKEN` environment variable.
+Token read from the `CONDUCTOR_TELEGRAM_TOKEN` environment variable, or from
+`<stateDir>/secrets.local.json` (written by the Face's Telegram tab / `POST /telegram/token`, and
+never committed). The environment variable wins.
+
+### Setup, end to end
+
+1. **Create the bot.** Message [@BotFather](https://t.me/BotFather) → `/newbot` → it replies with the
+   token. Either `setx CONDUCTOR_TELEGRAM_TOKEN <token>` (restart the shell) or paste it into the
+   Face's Telegram tab, which saves it to the local secrets file for this plan.
+2. **Find your chat id — the bootstrap that is easy to get stuck on.** The bot cannot message you
+   first; Telegram only reveals a chat once *you* have written to it. So:
+   - Open your new bot in Telegram and send it any message (`/start` will do).
+   - Then read the chat id back from the Bot API:
+
+     ```
+     curl "https://api.telegram.org/bot<TOKEN>/getUpdates"
+     ```
+
+     The id is `result[0].message.chat.id` — a bare integer for a direct chat, negative for a group.
+     If `result` is empty, the message did not arrive at the bot: check you messaged the right
+     username, and note that a *running* Conductor consumes updates as it polls, so query while no
+     run is polling (or just read the id from [@userinfobot](https://t.me/userinfobot) instead).
+   - Put it in `allowedChatIds` (plan file, `plan set`, or the Face's Telegram tab).
+3. **Confirm the whole path.** The Face's Telegram tab → "send test": it sends through the run's own
+   push queue, so a green result is evidence about delivery, not just about reachability. `doctor`
+   and `GET /telegram/status` report the same verdict (`willDeliver`) in the same words.
+
+### Late configuration takes effect without a restart (SC1.3)
+
+A token saved through `POST /telegram/token`, and a `telegram` block added or changed by a plan edit
+(which queues a plan reload, applied at the next session boundary), are picked up by the **running**
+engine: the service starts, restarts, or stops to match, and the log says which. The only case that
+genuinely needs a restart is an engine process that holds no Telegram service at all — an older
+build — and there `GET /telegram/status` answers `restartRequired: true` and the token endpoint says
+so instead of reporting a silent success.
 
 ## `progress` — Tracker provider
 

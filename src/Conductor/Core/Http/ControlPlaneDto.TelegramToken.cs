@@ -6,4 +6,8 @@ namespace Conductor.Core.Http;
 
 public sealed record TelegramSetTokenRequestDto(string Token);
 
-public sealed record TelegramSetTokenResultDto(bool Ok, string? Message);
+// SC1.3: Ok means the token was saved; WillDeliver means the running engine can now actually notify
+// somebody with it. They are different questions, and collapsing them into one green tick is how a
+// saved token on a service that could never load it read as success.
+
+public sealed record TelegramSetTokenResultDto(bool Ok, string? Message, bool WillDeliver);

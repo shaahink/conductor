@@ -92,19 +92,18 @@ public static class ConductorHost
         builder.Services.AddSingleton(opts);
         builder.Services.AddSingleton(sink);
 
-        // B6: Telegram bot
-        if (plan.Telegram != null)
-        {
-            builder.Services.AddSingleton<TelegramService>(sp =>
-                new TelegramService(plan, state, sp.GetRequiredService<ILogger<TelegramService>>(),
-                    store: opts.DryRun ? null : sp.GetRequiredService<IRunStore>()));
-            builder.Services.AddSingleton<ITelegramService>(sp => sp.GetRequiredService<TelegramService>());
-            builder.Services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<TelegramService>());
-        }
-        else
-        {
-            builder.Services.AddSingleton<ITelegramService>(new NoOpTelegramService());
-        }
+        // B6: Telegram bot.
+        // SC1.3: registered whether or not the plan has a telegram block today. The old `else` branch
+        // pinned a NoOpTelegramService for the life of the process, so a telegram block added later —
+        // by the Face's setup tab, by `plan set`, by any /plan/edit — reached a service that could
+        // never exist, and every surface still reported the setup as saved. The real service is a
+        // no-op too when there is no block (StartAsync says so and returns), the difference being
+        // that this one can be handed the block when it arrives.
+        builder.Services.AddSingleton<TelegramService>(sp =>
+            new TelegramService(plan, state, sp.GetRequiredService<ILogger<TelegramService>>(),
+                store: opts.DryRun ? null : sp.GetRequiredService<IRunStore>()));
+        builder.Services.AddSingleton<ITelegramService>(sp => sp.GetRequiredService<TelegramService>());
+        builder.Services.AddSingleton<IHostedService>(sp => sp.GetRequiredService<TelegramService>());
 
         // B6.4: Webhook notifier (generic/Discord/Slack) — fire-and-forget HTTP POST.
         builder.Services.AddSingleton<WebhookNotifier>();
@@ -185,7 +184,18 @@ public static class ConductorHost
             qaPolicy: sp.GetRequiredService<IQaPolicy>(),
             // W5.1: the control plane caches a plan reference and was the one satellite the reload
             // never swapped, so the Face served the pre-edit plan for the rest of the run.
-            onPlanSwapped: fresh => sp.GetService<ControlPlaneServer>()?.SwapPlan(fresh)));
+            onPlanSwapped: fresh =>
+            {
+                sp.GetService<ControlPlaneServer>()?.SwapPlan(fresh);
+                // SC1.3: Telegram was the other satellite holding a private copy of the plan — its
+                // block AND its token were frozen at construction, so a telegram edit reloaded into
+                // every other collaborator and stopped dead here. Not awaited: this runs on the run
+                // loop's session boundary and a reload restarts the service, which drains the send
+                // queue for up to DrainGrace. ApplyPlanAsync is non-throwing and logs its own
+                // outcome, so nothing is lost by letting it finish behind the loop.
+                if (sp.GetService<TelegramService>() is { } telegram)
+                    _ = telegram.ApplyPlanAsync(fresh);
+            }));
 
         var host = builder.Build();
         ValidateOptionsOnStart(host.Services, plan);

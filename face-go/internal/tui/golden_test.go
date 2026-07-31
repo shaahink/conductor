@@ -125,11 +125,13 @@ func (fakeSource) FetchTelegramStatus() (*api.TelegramStatusDto, error) {
 }
 func (fakeSource) PostTelegramTest() (*api.TelegramTestResultDto, error) {
 	name := "conductor_test_bot"
-	return &api.TelegramTestResultDto{Ok: true, BotUsername: &name}, nil
+	detail := "sent through the live send queue — the same path every run push takes"
+	return &api.TelegramTestResultDto{Ok: true, BotUsername: &name, ViaQueue: true, Detail: &detail}, nil
 }
 func (fakeSource) PostTelegramToken(api.TelegramSetTokenRequestDto) (*api.TelegramSetTokenResultDto, error) {
-	msg := "saved — restart conductor to connect with the new token"
-	return &api.TelegramSetTokenResultDto{Ok: true, Message: &msg}, nil
+	// SC1.3: the live engine takes the token without a restart, and the reply says so.
+	msg := "the running engine picked it up — Telegram is delivering to 1 chat id(s) now, no restart needed"
+	return &api.TelegramSetTokenResultDto{Ok: true, Message: &msg, WillDeliver: true}, nil
 }
 func (fakeSource) SubscribeEvents(_ func(api.ConductorEventDto), onConnected func(bool)) func() {
 	onConnected(true)
@@ -177,6 +179,9 @@ func fixedBugs() *api.BugsDto {
 }
 
 func fixedTelegramStatus() *api.TelegramStatusDto {
+	// SC1.3: the engine's verdict travels with the preconditions now, so the fixture carries it too —
+	// a fixture that left WillDeliver false with no reason would pin a frame the engine cannot emit.
+	reason := "configured but no bot token — set CONDUCTOR_TELEGRAM_TOKEN, or save one from the Face's Telegram tab"
 	return &api.TelegramStatusDto{
 		Configured:          true,
 		Started:             false,
@@ -184,6 +189,8 @@ func fixedTelegramStatus() *api.TelegramStatusDto {
 		AllowedChatIds:      []string{},
 		PollIntervalSeconds: 4,
 		EnableTwoWay:        false,
+		WillDeliver:         false,
+		WillDeliverReason:   &reason,
 	}
 }
 
@@ -574,10 +581,35 @@ func TestGolden(t *testing.T) {
 			m, _ = m.Update(keyMsg("g"))
 			name := "conductor_bot"
 			now := "2026-07-15T10:05:00Z"
+			// SC1.3: WillDeliver is what makes this frame "connected". Started+HasToken alone is the
+			// state the dead feature was in for its whole life, and it is pinned separately below.
 			m, _ = m.Update(MsgTelegramStatusUpdated{Status: &api.TelegramStatusDto{
 				Configured: true, Started: true, HasToken: true,
 				AllowedChatIds: []string{"111222333"}, PollIntervalSeconds: 4,
-				BotUsername: &name, LastPollUtc: &now,
+				BotUsername: &name, LastPollUtc: &now, WillDeliver: true,
+			}})
+			return m
+		}},
+		// SC1.3: the two states the old status line rendered as success. "Started and has a token but
+		// no chat id" is the dead-feature shape; "restart required" is the one a live save cannot fix.
+		{"telegram_will_not_deliver", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("g"))
+			name := "conductor_bot"
+			reason := "token present but no allowedChatIds — bot is push-only to nobody"
+			m, _ = m.Update(MsgTelegramStatusUpdated{Status: &api.TelegramStatusDto{
+				Configured: true, Started: true, HasToken: true,
+				AllowedChatIds: []string{}, PollIntervalSeconds: 4,
+				BotUsername: &name, WillDeliver: false, WillDeliverReason: &reason,
+			}})
+			return m
+		}},
+		{"telegram_restart_required", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("g"))
+			reason := "no Telegram service exists in this engine process — the saved settings take effect on the next `conductor run`"
+			m, _ = m.Update(MsgTelegramStatusUpdated{Status: &api.TelegramStatusDto{
+				Configured: true, Started: false, HasToken: false,
+				AllowedChatIds: []string{"111222333"}, PollIntervalSeconds: 4,
+				WillDeliver: false, WillDeliverReason: &reason, RestartRequired: true,
 			}})
 			return m
 		}},
