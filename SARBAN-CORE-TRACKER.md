@@ -4,31 +4,30 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SC8.1 landed** (commit f45563e). Conductor.csproj target `StampBuildInfo` writes the git
-  short sha, a dirty flag and a UTC timestamp into AssemblyInformationalVersion plus three
-  AssemblyMetadata attributes at COMPILE time - nothing is typed into a .cs file. BuildInfo reads it
-  back; VersionReport is ONE record served by both `conductor version --json` and `GET /version`, so
-  CLI and wire cannot drift. `conductor version` also prints WHICH BINARY answered, which is trap 3
-  made checkable. install.ps1 and install.sh print before -> after, falling back to the exe's
-  ProductVersion on a pre-SC8 binary; install.ps1 gained `-SkipShim`.
+last: **SC8.1 landed** (f45563e code, 70c0bef completion). Conductor.csproj target `StampBuildInfo`
+  writes the git short sha, a dirty flag and a UTC timestamp into AssemblyInformationalVersion plus
+  AssemblyMetadata at COMPILE time - nothing typed into a .cs file. VersionReport is ONE record
+  served by both `conductor version --json` and `GET /version`, so CLI and wire cannot drift; the
+  verb also prints WHICH BINARY answered (trap 3, made checkable). install.ps1/.sh print
+  before -> after; install.ps1 gained `-SkipShim`.
 gate: rig `%TEMP%\sarban-proofs\sc81` + a clean detached worktree. Published engine: `version` is an
-  unknown command and GET /version 404s while /state 200s. Fresh build: three builds, three stamps,
-  each matching git - 6d805e1ce073.dirty, f45563e82469.dirty, and f45563e82469 clean from the
+  unknown command, GET /version 404s while /state 200s. Fresh build: three builds, three stamps,
+  each matching git - `6d805e1ce073.dirty`, `f45563e82469.dirty`, and `f45563e82469` clean from the
   worktree, so the dirty flag is computed. Live rig on :4318 answered GET /version 200 token-free
-  while /state said status=Running. Installer proof against a SCRATCH dir with the shim skipped.
-  Scoped tests 56/0/0, build 0 warnings. Evidence
+  while /state said Running. Evidence
   .conductor/evidence/SC8/SC8.1-version-identity-stamped-at-build.md.
 next: **SC8.2** - tag-height versioning (MinVer or equivalent) reconciled with release.yml so a
   downloaded binary answers with its TAG, plus CHANGELOG.md per release. The csproj `Version` is
-  still hand-set to 2.0.0; that property is what SC8.2 must take over. Note the SDK already sets
-  SourceRevisionId via built-in SourceLink - check for a double `+` append when Version changes.
-know: **NEW RIG TRAP.** `conductor bg start ... | <anything>` BLOCKS the whole PowerShell pipeline
-  until the spawned engine exits - the pipe holds the inherited stdout handle, so a poll loop after
-  it never runs. Start the run in its own call with no pipe, poll in the NEXT call. And the rig's
-  `.conductor/control-plane.json` is DELETED at run end, so make the fake agent hold the session
-  open (`ping -n 150 127.0.0.1`) or there is nothing to find. A read-only GET on THIS repo's own
-  control-plane port is the cheapest BEFORE artifact and aims no run-control verb at it.
-  Bugs 2,3,4,5,6,8,9,10,11,12,13 open.
+  still hand-set to 2.0.0; that property is what SC8.2 takes over. The SDK already sets
+  SourceRevisionId via built-in SourceLink - watch for a double `+` append when Version changes.
+know: **A NEW VERB IS THREE PLACES**, and SC8.3 adds one (`update`): Program.cs, both lists in
+  CompletionCommand, and the expected set in B11_2Tests - that parity test is hand-maintained and
+  stayed GREEN with `version` missing from all of completion. **RIG TRAP:** `conductor bg start
+  ... | <anything>` blocks the whole PowerShell pipeline until the engine exits (the pipe holds the
+  inherited stdout handle), so a poll loop after it never runs - start the run in its own call, poll
+  in the next. The rig's `.conductor/control-plane.json` is DELETED at run end, so hold the session
+  open (`ping -n 150 127.0.0.1`). A read-only GET on THIS repo's control-plane port is the cheapest
+  BEFORE artifact and aims no run-control verb at it. Bugs 2,3,4,5,6,8,9,10,11,12,13 open.
 
 
 ## Baseline numbers (from run.db)
