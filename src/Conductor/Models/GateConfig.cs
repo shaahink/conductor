@@ -34,6 +34,12 @@ public sealed class GateConfig
     /// newer than the most recent commit touching source files, the gate is skipped (cached
     /// freshness). E.g. "src/Conductor/bin/" — skips dotnet build if the output dir is fresh.</summary>
     public string? SkipIfFresh { get; set; }
+    /// <summary>SC4.3: extra inputs whose newest write time joins this gate's result-cache key.
+    /// The cache normally keys on the gate's working-directory HEAD, which is the right answer when
+    /// the inputs are git-tracked; declare watch paths when they are not (a generated source tree, a
+    /// vendored drop) so a change to them still invalidates the gate's cached pass. Paths are
+    /// repo-relative or absolute. Empty/null = HEAD alone, unchanged.</summary>
+    public List<string>? WatchPaths { get; set; }
     public int TimeoutMinutes { get; set; } = 20;
 
     [JsonIgnore] public bool IsFast => Tier.Equals("fast", StringComparison.OrdinalIgnoreCase);

@@ -65,6 +65,7 @@ public static class StateProjectionParity
             Scalar(diffs, $"{at}.outcome", p.Outcome, l.Outcome);
             Scalar(diffs, $"{at}.agentSessionId", p.ClaudeSessionId, l.ClaudeSessionId);
             Sequence(diffs, $"{at}.newCommits", p.NewCommits, l.NewCommits);
+            Sequence(diffs, $"{at}.satelliteCommits", p.SatelliteCommits, l.SatelliteCommits);
             Sequence(diffs, $"{at}.newlyDone", p.NewlyDone, l.NewlyDone);
             Scalar(diffs, $"{at}.costUsd", p.CostUsd, l.CostUsd);
             Scalar(diffs, $"{at}.tokensInput", p.TokensInput, l.TokensInput);

@@ -20,6 +20,10 @@ public sealed record SessionFinished : ConductorEvent
     public required string StageId { get; init; }
     public required string Outcome { get; init; }
     public IReadOnlyList<string> NewCommits { get; init; } = [];
+    /// <summary>SC4.3: commits this session landed in the plan's declared satelliteRepos. Carried on
+    /// the event so a state rebuilt from the log still knows the session delivered — without it, a
+    /// projection replay turns satellite-only work back into the empty history sk #3 misread.</summary>
+    public IReadOnlyList<string> SatelliteCommits { get; init; } = [];
     public IReadOnlyList<string> NewlyDone { get; init; } = [];
     public decimal? CostUsd { get; init; }
     public long? TokensInput { get; init; }

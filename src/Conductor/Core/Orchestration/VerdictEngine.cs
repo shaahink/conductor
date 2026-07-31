@@ -59,6 +59,16 @@ public sealed partial class VerdictEngine
 
     private int MaxAttempts(StageConfig stage) => Math.Max(1, stage.Sessions * _ctx.Plan.Limits.StageSlackFactor);
 
+    /// <summary>SC4.3: the ONE place a finished session's commits are collected, primary repo and
+    /// declared satellites together. Four call sites used to read <c>Git.CommitsSince</c> on the
+    /// primary repo alone, so a session that delivered in a sibling looked idle from every one
+    /// of them.</summary>
+    private void CollectCommits(SessionRecord rec, string startHead)
+    {
+        rec.NewCommits = Git.CommitsSince(_ctx.Plan.Repo, startHead);
+        rec.SatelliteCommits = SatelliteRepos.CommitsSince(_ctx.Plan, rec.SatelliteStartHeads);
+    }
+
     /// <summary>SC4.1: every battery in this engine goes through here, so this is the one place the
     /// settle has to live. The session judged is the last one on record — the one that just exited
     /// for a session battery, the stage's final one for a phase gate or the closing battery.</summary>
@@ -118,7 +128,7 @@ public sealed partial class VerdictEngine
         {
             rec.Outcome = stalled ? SessionOutcome.Stalled : SessionOutcome.TimedOut;
             _ctx.State.AttemptsThisStage++;
-            rec.NewCommits = Git.CommitsSince(_ctx.Plan.Repo, startHead);
+            CollectCommits(rec, startHead);
             var prevSession = _ctx.State.History.Count >= 2 ? _ctx.State.History[^2] : null;
             if (_ctx.Plan.Limits.SameFailureCircuitBreaker
                 && FailureCircuitBreaker.ShouldBreak(prevSession, rec, null))
@@ -171,7 +181,7 @@ public sealed partial class VerdictEngine
 
         if (rec.Kind == SessionKind.Audit)
         {
-            rec.NewCommits = Git.CommitsSince(_ctx.Plan.Repo, startHead);
+            CollectCommits(rec, startHead);
             rec.Outcome = SessionOutcome.Progress;
             if (!_ctx.State.AuditedStages.Contains(stage.Id)) _ctx.State.AuditedStages.Add(stage.Id);
             _ctx.State.PendingAudit = null;
@@ -189,7 +199,7 @@ public sealed partial class VerdictEngine
 
         if (rec.Kind == SessionKind.Verify)
         {
-            rec.NewCommits = Git.CommitsSince(_ctx.Plan.Repo, startHead);
+            CollectCommits(rec, startHead);
             var verdict = Verifier.Parse(rec.ResultSummary ?? "");
             if (verdict != null)
             {
@@ -291,7 +301,7 @@ public sealed partial class VerdictEngine
         }
 
         var postTrack = _ctx.Progress.Read(_ctx.Plan, ct);
-        rec.NewCommits = Git.CommitsSince(_ctx.Plan.Repo, startHead);
+        CollectCommits(rec, startHead);
 
         // W1.3: the claim signal is the WORK GRAPH — what `conductor task --done` / MCP
         // task_update wrote during this session. The tracker diff survives as a FLAGGED
@@ -331,11 +341,18 @@ public sealed partial class VerdictEngine
         // SC4.2: the commit count the verdict acts on is the AGENT's commits. Conductor's own
         // chore(conductor): status writes land inside the session window too, and counting them
         // scored a session green for the engine's own bookkeeping (devcontext #14).
-        var workCommits = Git.ExcludeBookkeeping(rec.NewCommits);
-        var bookkeeping = rec.NewCommits.Count - workCommits.Count;
+        // SC4.3: and they are the agent's commits WHEREVER the plan says work may land — a stage
+        // delivered in a declared satellite is delivery, not an empty git log.
+        var workCommits = SessionProgress.WorkCommits(rec);
+        var allRaw = rec.NewCommits.Count + rec.SatelliteCommits.Count;
+        var bookkeeping = allRaw - workCommits.Count;
         var bookkeepingNote = bookkeeping > 0 ? $" (+{bookkeeping} conductor bookkeeping, not counted)" : "";
+        var satelliteWork = Git.ExcludeBookkeeping(rec.SatelliteCommits);
+        var satelliteNote = satelliteWork.Count > 0
+            ? $" (incl. {satelliteWork.Count} in satellite repo(s): {string.Join("; ", satelliteWork.Take(4).Select(c => Trunc(c, 60)))})"
+            : "";
 
-        _ctx.Log($"verdict inputs: {GateRunner.Token(gates)} · commits {workCommits.Count}{bookkeepingNote} · newly DONE [{string.Join(",", rec.NewlyDone)}] · dirty {(dirty ? "YES" : "no")}", gatesGreen ? "pass" : "fail");
+        _ctx.Log($"verdict inputs: {GateRunner.Token(gates)} · commits {workCommits.Count}{satelliteNote}{bookkeepingNote} · newly DONE [{string.Join(",", rec.NewlyDone)}] · dirty {(dirty ? "YES" : "no")}", gatesGreen ? "pass" : "fail");
 
         if (newlyBlocked.Count > 0 && _ctx.Plan.PauseOnBlocked)
         {
@@ -344,9 +361,10 @@ public sealed partial class VerdictEngine
             return;
         }
 
-        // SC4.2: NoProgress has to mean no progress. A checkpoint claimed through the work graph IS
-        // delivery even when this repo's git log is empty — sk #3 scored NoProgress twice for a
-        // stage delivered in a sibling repo, in a plan written to avoid exactly that.
+        // SC4.2/SC4.3: NoProgress has to mean no progress. A checkpoint claimed through the work
+        // graph IS delivery even when this repo's git log is empty, and so is a commit in a declared
+        // satellite — sk #3 scored NoProgress twice for a stage delivered in a sibling repo, in a
+        // plan written to avoid exactly that. workCommits now spans every repo the plan declares.
         if (gatesGreen && (workCommits.Count > 0 || rec.NewlyDone.Count > 0 || stageComplete) && !agentErrored)
         {
             // M3.1: workflow-driven next step instead of hardcoded ShouldVerify
@@ -450,7 +468,8 @@ public sealed partial class VerdictEngine
     private bool IdenticalStallPattern(SessionRecord rec)
     {
         // SC4.2: a stall that produced only conductor's own bookkeeping commits produced nothing.
-        if (Git.ExcludeBookkeeping(rec.NewCommits).Count > 0) return false;
+        // SC4.3: a stall that committed to a declared satellite produced something.
+        if (SessionProgress.HasWorkCommits(rec)) return false;
         var summary = rec.ResultSummary?.Trim();
         if (!string.IsNullOrEmpty(summary)) return false;
 
@@ -459,7 +478,7 @@ public sealed partial class VerdictEngine
         {
             var prev = _ctx.State.History[i];
             if (prev.Outcome != SessionOutcome.Stalled) break;
-            if (Git.ExcludeBookkeeping(prev.NewCommits).Count == 0 && string.IsNullOrEmpty(prev.ResultSummary?.Trim()))
+            if (!SessionProgress.HasWorkCommits(prev) && string.IsNullOrEmpty(prev.ResultSummary?.Trim()))
             {
                 stalledCount++;
                 if (stalledCount >= 2) return true;

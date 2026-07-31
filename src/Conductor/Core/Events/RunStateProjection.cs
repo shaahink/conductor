@@ -65,6 +65,7 @@ public static class RunStateProjection
                     fin.EndedUtc = evt.Ts.UtcDateTime;
                     fin.Outcome = ParseOutcome(e.Outcome);
                     fin.NewCommits = [.. e.NewCommits ?? []];
+                    fin.SatelliteCommits = [.. e.SatelliteCommits ?? []];
                     fin.NewlyDone = [.. e.NewlyDone ?? []];
                     fin.CostUsd = e.CostUsd;
                     fin.TokensInput = e.TokensInput;

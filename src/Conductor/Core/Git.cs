@@ -108,6 +108,69 @@ public static class Git
         return null;
     }
 
+    /// <summary>SC4.3: the newest moment this repo's SOURCE changed — the most recent commit, or a
+    /// newer UNCOMMITTED edit. <see cref="MostRecentCommitTime"/> alone is the wrong clock for a
+    /// freshness cache: mid-session the agent's work is uncommitted by definition, so a build output
+    /// left over from before the edits still dated "newer than the last commit" and every skipIfFresh
+    /// gate skipped over exactly the changes it existed to check.</summary>
+    /// <param name="excludeRelPath">Repo-relative path to ignore while scanning the dirty set — the
+    /// freshness artifact itself, which is frequently untracked and would otherwise date itself.</param>
+    public static DateTime? MostRecentChangeTime(string repo, string? excludeRelPath = null)
+    {
+        var commit = MostRecentCommitTime(repo);
+        var dirty = NewestDirtyChangeTime(repo, excludeRelPath);
+        if (commit is null) return dirty;
+        if (dirty is null) return commit;
+        return dirty > commit ? dirty : commit;
+    }
+
+    /// <summary>Newest last-write time across the paths <c>git status --porcelain</c> reports as
+    /// changed (staged, unstaged or untracked), or null when the tree is clean. Best-effort and
+    /// bounded: a huge dirty set is sampled rather than fully stat'ed.</summary>
+    public static DateTime? NewestDirtyChangeTime(string repo, string? excludeRelPath = null, int maxPaths = 500)
+    {
+        var r = Exec(repo, "status", "--porcelain");
+        if (r.ExitCode != 0) return null;
+        var exclude = string.IsNullOrWhiteSpace(excludeRelPath)
+            ? null
+            : excludeRelPath.Replace('\\', '/').Trim('/');
+        DateTime? newest = null;
+        var seen = 0;
+        foreach (var line in r.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (seen >= maxPaths) break;
+            var rel = PorcelainPath(line);
+            if (rel.Length == 0) continue;
+            if (exclude != null &&
+                (rel.Equals(exclude, StringComparison.OrdinalIgnoreCase) ||
+                 rel.StartsWith(exclude + "/", StringComparison.OrdinalIgnoreCase)))
+                continue;
+            seen++;
+            var full = Path.Combine(repo, rel.Replace('/', Path.DirectorySeparatorChar));
+            DateTime? t = File.Exists(full) ? File.GetLastWriteTimeUtc(full)
+                : Directory.Exists(full) ? Directory.GetLastWriteTimeUtc(full)
+                : null; // deleted — the deletion itself is not timestamped; the commit clock covers it
+            if (t is { } when_ && (newest is null || when_ > newest)) newest = when_;
+        }
+        return newest;
+    }
+
+    /// <summary>The path out of one <c>git status --porcelain</c> row: two status columns, a space,
+    /// then the path. A rename row carries <c>old -&gt; new</c> (the new side is the live file), and a
+    /// path with unusual characters arrives C-quoted.</summary>
+    private static string PorcelainPath(string line)
+    {
+        var s = line.TrimEnd('\r');
+        if (s.Length < 4) return "";
+        var rest = s[3..].Trim();
+        var arrow = rest.IndexOf(" -> ", StringComparison.Ordinal);
+        if (arrow >= 0) rest = rest[(arrow + 4)..];
+        rest = rest.Trim();
+        if (rest.Length >= 2 && rest[0] == '"' && rest[^1] == '"')
+            rest = rest[1..^1].Replace("\\\"", "\"").Replace("\\\\", "\\");
+        return rest.Replace('\\', '/').TrimEnd('/');
+    }
+
     /// <summary>P4: squashes consecutive <c>chore(conductor):</c> commits between
     /// <paramref name="sinceSha"/> and HEAD into one per group using an interactive rebase.
     /// Non-chore commits (<c>feat:</c>, <c>fix:</c>, <c>docs:</c>, etc.) are preserved.

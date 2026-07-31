@@ -17,6 +17,11 @@ public sealed class PlanConfig
     public int PlanVersion { get; set; } = 1;
     public string Name { get; set; } = "plan";
     public string Repo { get; set; } = "";
+    /// <summary>SC4.3: sibling repositories this plan's work may land in, absolute or relative to
+    /// <see cref="Repo"/>. The session verdict diffs each of them for commits alongside the primary
+    /// repo, so a checkpoint delivered entirely in a sibling is progress instead of
+    /// <c>NoProgress</c> (sk #3 scored it NoProgress twice). Empty = single-repo plan, unchanged.</summary>
+    public List<string> SatelliteRepos { get; set; } = [];
     public string Tracker { get; set; } = "";
     public string PlanDoc { get; set; } = "";
     public string? BranchPattern { get; set; }

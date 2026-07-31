@@ -54,10 +54,11 @@ public static class GateRunner
         async Task<GateResult> RunTrackedAsync(int i)
         {
             var gate = gates[i];
-            // F7.4: per-gate SHA cache — if this gate already passed at this tier+SHA, skip execution.
+            // F7.4: per-gate SHA cache — if this gate already passed at this tier+key, skip execution.
+            // SC4.3: the key is the gate's whole world now, not just the primary repo's HEAD.
             if (db != null && runId != null && headSha != null)
             {
-                var cachedResult = db.GetLastPassingGateResult(runId, gate.Name, gate.Tier, headSha);
+                var cachedResult = db.GetLastPassingGateResult(runId, gate.Name, gate.Tier, CacheKey(plan, gate, headSha));
                 if (cachedResult is true)
                 {
                     Mark(i, new GateProgress(gate.Name, "cached", TimeSpan.Zero));
@@ -128,11 +129,90 @@ public static class GateRunner
     }
 
     /// <summary>Signature of the full gate battery for a given tree state — used to skip identical reruns.</summary>
+    /// <remarks>SC4.3: the gates' COMMANDS are part of the signature, not just their names. A plan
+    /// edited mid-run to change what a gate actually executes produced a byte-identical signature at
+    /// the same HEAD, so the phase gate reported "tree unchanged since last green battery — reusing
+    /// result" for a battery that no longer existed. <see cref="GateConfig.Shell"/> stays out by
+    /// B11.1's contract (adding the shell selector must not invalidate existing signatures).</remarks>
     public static string BatterySignature(PlanConfig plan, string headSha, string? currentStage)
     {
-        var names = plan.Gates.Where(g => g.AppliesToStage(currentStage)).Select(g => g.Name).OrderBy(n => n, StringComparer.Ordinal);
-        return headSha + "|" + string.Join(",", names);
+        ArgumentNullException.ThrowIfNull(plan);
+        var applicable = plan.Gates.Where(g => g.AppliesToStage(currentStage))
+            .OrderBy(g => g.Name, StringComparer.Ordinal).ToList();
+        var names = applicable.Select(g => g.Name);
+        return headSha + "|" + string.Join(",", names) + "|" + CommandDigest(applicable);
     }
+
+    /// <summary>SC4.3: the key one gate's pass is filed and looked up under.
+    ///
+    /// <para>The F7.4 cache keyed a gate result on the PRIMARY repo's HEAD alone, which answers a
+    /// different question than the one the cache is asked. A gate whose <c>cwd</c> is a sibling repo
+    /// was served a 40-minute-old pass for a tree that had changed underneath it — the sibling's
+    /// commits are invisible to this repo's HEAD. And a gate whose command was edited mid-run kept
+    /// being served the OLD command's pass, because the key never mentioned what the gate runs.</para>
+    ///
+    /// <para>So the key carries all three: the primary HEAD, the gate's own working directory HEAD
+    /// (or the newest write time under its declared <see cref="GateConfig.WatchPaths"/>, for a cwd
+    /// that is not itself a repo), and a digest of the command text. Anything the key cannot read —
+    /// a missing directory, a cwd outside git — degrades to a marker that simply never matches a
+    /// previous key, which costs one gate run and never a false pass.</para>
+    /// </summary>
+    public static string CacheKey(PlanConfig plan, GateConfig gate, string headSha)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(gate);
+        var cwd = ResolveCwd(plan, gate);
+        var parts = new List<string>(4) { headSha, "cwd:" + CwdMarker(plan, cwd) };
+        if (gate.WatchPaths is { Count: > 0 })
+            parts.Add("watch:" + WatchMarker(plan, gate));
+        parts.Add("cmd:" + CommandDigest([gate]));
+        return string.Join("|", parts);
+    }
+
+    /// <summary>The gate's working directory HEAD, or a marker that cannot match a stale key. When the
+    /// cwd is inside the primary repo this is simply the primary HEAD, so single-repo plans keep the
+    /// behaviour they had.</summary>
+    private static string CwdMarker(PlanConfig plan, string cwd)
+    {
+        if (!Directory.Exists(cwd)) return "absent";
+        var r = Git.Exec(cwd, "rev-parse", "HEAD");
+        var sha = r.Output.Trim();
+        return r.ExitCode == 0 && sha.Length >= 7 && sha.All(Uri.IsHexDigit) ? sha : "nogit";
+    }
+
+    /// <summary>Newest last-write time under the gate's declared watch paths, as ticks. The escape
+    /// hatch for a gate whose inputs are not under any git HEAD (generated sources, a vendored drop).</summary>
+    private static string WatchMarker(PlanConfig plan, GateConfig gate)
+    {
+        long newest = 0;
+        foreach (var rel in gate.WatchPaths!)
+        {
+            if (string.IsNullOrWhiteSpace(rel)) continue;
+            var full = Path.IsPathRooted(rel) ? rel : Path.Combine(plan.Repo, rel);
+            try
+            {
+                if (File.Exists(full)) newest = Math.Max(newest, File.GetLastWriteTimeUtc(full).Ticks);
+                else if (Directory.Exists(full))
+                    foreach (var f in Directory.EnumerateFiles(full, "*", SearchOption.AllDirectories))
+                        newest = Math.Max(newest, File.GetLastWriteTimeUtc(f).Ticks);
+            }
+            catch (IOException) { return "unreadable"; }
+            catch (UnauthorizedAccessException) { return "unreadable"; }
+        }
+        return newest.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>Short stable digest of what a set of gates actually RUNS — command text and working
+    /// directory. Not a security boundary; it only has to change when the gate does.</summary>
+    private static string CommandDigest(IEnumerable<GateConfig> gates)
+    {
+        var text = string.Join(" ", gates.Select(g => $"{g.Name}{g.Command}{g.Cwd}"));
+        var hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(text));
+        return Convert.ToHexString(hash)[..12].ToLowerInvariant();
+    }
+
+    private static string ResolveCwd(PlanConfig plan, GateConfig g)
+        => string.IsNullOrWhiteSpace(g.Cwd) ? plan.Repo : Path.Combine(plan.Repo, g.Cwd);
 
     private static async Task<GateResult> RunOneAsync(PlanConfig plan, GateConfig g, Action<string>? onProgress, CancellationToken ct)
     {
@@ -145,30 +225,41 @@ public static class GateRunner
                 return new GateResult(g.Name, false, true, g.Optional, 0, TimeSpan.Zero, $"skipped — {g.SkipIfMissing} does not exist yet");
             }
         }
-        // F7.5: skipIfFresh — skip if the output artifact exists and is newer than the most
-        // recent git commit touching source files. This avoids re-running builds when nothing
-        // has changed since the last successful run.
+        // F7.5: skipIfFresh — skip if the output artifact exists and is newer than the newest
+        // change to the source. This avoids re-running builds when nothing has changed since the
+        // last successful run.
+        // SC4.3: "newest change" used to mean the last COMMIT, and a session's work is uncommitted
+        // for almost its whole length — so a build output left over from BEFORE the agent started
+        // editing still dated newer than the last commit, and every skipIfFresh gate skipped
+        // straight over the changes it exists to check. The clock is now the last commit OR a newer
+        // uncommitted edit, whichever is later, with the artifact itself excluded from the scan so
+        // an untracked output never dates itself fresh.
         if (g.SkipIfFresh is { } freshPath)
         {
             var fullFresh = Path.Combine(plan.Repo, freshPath);
             if (File.Exists(fullFresh) || Directory.Exists(fullFresh))
             {
-                var freshTime = File.GetLastWriteTimeUtc(fullFresh);
+                var freshTime = Directory.Exists(fullFresh) && !File.Exists(fullFresh)
+                    ? Directory.GetLastWriteTimeUtc(fullFresh)
+                    : File.GetLastWriteTimeUtc(fullFresh);
                 try
                 {
-                    var mostRecentCommit = Git.MostRecentCommitTime(plan.Repo);
-                    if (mostRecentCommit is { } commitTime && freshTime > commitTime)
+                    var mostRecentChange = Git.MostRecentChangeTime(plan.Repo, freshPath);
+                    if (mostRecentChange is { } changeTime && freshTime > changeTime)
                     {
-                        onProgress?.Invoke($"gate {g.Name}: cached (output at {freshPath} is fresh — newer than most recent commit)");
+                        onProgress?.Invoke($"gate {g.Name}: cached (output at {freshPath} is fresh — newer than the last commit and than every uncommitted change)");
                         return new GateResult(g.Name, true, false, g.Optional, 0, TimeSpan.Zero,
                             $"cached — output at {freshPath} is fresh") { Cached = true };
                     }
+                    if (mostRecentChange is { } t && Git.IsDirty(plan.Repo))
+                        onProgress?.Invoke($"gate {g.Name}: running — the working tree has changes newer than {freshPath} (source {t:HH:mm:ss}Z vs output {freshTime:HH:mm:ss}Z)");
                 }
-                catch { /* freshness check is best-effort — run the gate if it fails */ }
+                catch (IOException) { /* freshness check is best-effort — run the gate if it fails */ }
+                catch (UnauthorizedAccessException) { /* ditto */ }
             }
         }
         onProgress?.Invoke($"gate {g.Name}: {g.Command}");
-        var cwd = string.IsNullOrWhiteSpace(g.Cwd) ? plan.Repo : Path.Combine(plan.Repo, g.Cwd);
+        var cwd = ResolveCwd(plan, g);
         var shell = string.IsNullOrWhiteSpace(g.Shell) ? ProcessRunner.DefaultShell : g.Shell;
         var r = await ProcessRunner.RunShellAsync(shell, g.Command, cwd, TimeSpan.FromMinutes(g.TimeoutMinutes), ct).ConfigureAwait(false);
         var passed = !r.TimedOut && r.ExitCode == 0;

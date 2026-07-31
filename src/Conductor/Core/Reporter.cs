@@ -169,20 +169,29 @@ public static class Reporter
             sb.AppendLine();
         }
 
-        var withCommits = state.History.Where(h => h.NewCommits.Count > 0).TakeLast(8).ToList();
+        // SC4.3: a session that delivered in a declared satelliteRepo landed nothing here, and this
+        // section used to skip it entirely — the exact reading that made sk #3's delivered stage look
+        // like two sessions of nothing. Satellite commits are listed and labelled as such; the
+        // per-session count stays the count for THIS repo, so neither number quietly means the other.
+        var withCommits = state.History
+            .Where(h => h.NewCommits.Count > 0 || h.SatelliteCommits.Count > 0).TakeLast(8).ToList();
         if (withCommits.Count > 0)
         {
             sb.AppendLine("### Commits by session");
             sb.AppendLine();
             foreach (var h in withCommits)
             {
-                sb.AppendLine($"- **s{h.Number} ({h.Stage} {h.Kind})** — {h.NewCommits.Count} commit(s):");
+                var satNote = h.SatelliteCommits.Count > 0 ? $" (+{h.SatelliteCommits.Count} in satellite repo(s))" : "";
+                sb.AppendLine($"- **s{h.Number} ({h.Stage} {h.Kind})** — {h.NewCommits.Count} commit(s){satNote}:");
                 foreach (var c in h.NewCommits.Take(12))
                 {
                     var sha = c.Split(' ')[0];
                     var link = FormatCommitLink(plan, sha);
                     sb.AppendLine($"  - {link} {c[(sha.Length)..].TrimStart()}");
                 }
+                // Satellite shas belong to another repo — never link them against this repo's remote.
+                foreach (var c in h.SatelliteCommits.Take(12))
+                    sb.AppendLine($"  - `{c.Split(' ')[0]}` {c[Math.Min(c.Length, c.Split(' ')[0].Length)..].TrimStart()}");
             }
             sb.AppendLine();
         }

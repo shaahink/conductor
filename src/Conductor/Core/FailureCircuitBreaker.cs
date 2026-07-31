@@ -32,10 +32,12 @@ public static class FailureCircuitBreaker
             // SC4.2: "produced nothing" reads the AGENT's commits — conductor's own
             // chore(conductor): status writes are not output, and letting one of them stand in for
             // work would keep the breaker open through an otherwise identical pair of stalls.
+            // SC4.3: and it reads them across every repo the plan declares, so a pair of stalls that
+            // still landed satellite commits is not "identical failure, nothing produced".
             SessionOutcome.Stalled or SessionOutcome.TimedOut =>
-                Git.ExcludeBookkeeping(current.NewCommits).Count == 0
+                !SessionProgress.HasWorkCommits(current)
                 && string.IsNullOrWhiteSpace(current.ResultSummary)
-                && Git.ExcludeBookkeeping(previous.NewCommits).Count == 0
+                && !SessionProgress.HasWorkCommits(previous)
                 && string.IsNullOrWhiteSpace(previous.ResultSummary),
 
             SessionOutcome.GatesRed or SessionOutcome.NoProgress =>

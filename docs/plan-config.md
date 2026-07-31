@@ -30,12 +30,37 @@ prints the exact `conductor plan reload` command when it does not.
 | `planVersion` | int | Monotonic edit counter, bumped on every `plan set/reload/add-stage`. |
 | `name` | string | Plan name — appears in dashboard header + report. |
 | `repo` | string | Absolute path to the repository directory. |
+| `satelliteRepos` | string[] | Sibling repos this plan's work may also land in — absolute, or relative to `repo`. The session verdict diffs each of them for commits. See below. |
 | `tracker` | string | Path (relative to repo) to the TRACKER.md file. |
 | `planDoc` | string | Path (relative to repo) to the plan/design doc. |
 | `branchPattern` | string | Regex — conductor warns if the current branch doesn't match. |
 | `pauseOnBlocked` | bool | Park at NeedsHuman when a BLOCKED row is found. Default true. |
 | `batteryCollapse` | bool | Skip agent's pre-session ritual, defer to conductor's battery. Saves ~30-50% tokens. |
 | `promptExtra` | string | Prepended to every session prompt (high-level context). |
+
+### `satelliteRepos` — when the work lands next door (SC4.3)
+
+The verdict asks git whether the session produced anything. Asking only `repo` is wrong for any plan
+whose deliverable lives partly in a sibling checkout: one such stage was delivered in full and scored
+**NoProgress twice**, because the primary repo's log was empty exactly as intended.
+
+```jsonc
+"repo": "C:/code/app",
+"satelliteRepos": ["../app-sdk", "C:/code/shared-protos"]
+```
+
+- Every declared repo is diffed for commits over the session window alongside `repo`, and a commit in
+  any of them makes the session **Progress**, sets the workflow's `hasCommits`, and keeps the stall
+  and circuit-breaker checks from calling the session empty. Conductor's own `chore(conductor):`
+  commits are excluded there just as they are here.
+- Satellite commits are reported **separately**, never folded into this repo's count: the verdict line
+  reads `commits 2 (incl. 1 in satellite repo(s): …)`, and the report lists them tagged `[<label>]`.
+  A checkpoint delivered next door records its commit as `<sha>@<label>`.
+- The label is the satellite's directory name. Entries that are blank, duplicated, or point at `repo`
+  itself are ignored — counting the primary twice would double every commit.
+- **`conductor doctor` FAILS on a satellite path that is missing or is not a git repo**, naming it.
+  A typo here is silent otherwise: the run keeps scoring, it just never counts the repo it was told
+  about, which is the failure the setting exists to prevent.
 
 ## `agent` — Agent process config
 
@@ -166,9 +191,12 @@ typo costs a startup message instead of a stage.
 | `cwd` | string | Working dir relative to repo root. |
 | `optional` | bool | Report but never block. |
 | `skipIfMissing` | string | Skip gate while this file path doesn't exist. |
+| `skipIfFresh` | string | Repo-relative output artifact. Skip the gate while it is newer than every change to the source — see below. |
+| `watchPaths` | string[] | Extra inputs whose newest write time joins this gate's result-cache key. For inputs no git HEAD covers. |
 | `tier` | string | `"fast"` (per-session under perPhase), `"full"` (phase end, and every session under perSession), or `"truth"` (phase confirmation only). Default `"full"`. |
 | `parallel` | bool | Run concurrently with other parallel gates in the same batch. |
 | `stages` | string[] | Only run when the current stage id is in this list. |
+| `stageKinds` | string[] | Only run when the current stage's `kind` is in this list. Applies in addition to `stages`. |
 | `timeoutMinutes` | int | Per-gate timeout. Default 20. |
 
 **Leave `shell` unset for portable gates.** `conductor init` does, which is why a scaffolded plan
@@ -219,6 +247,31 @@ to stop the verdict scoring the environment instead of the work:
   red. If the second run passes, the line reads `PASS on retry`; if it fails again the gate is red
   and the fix prompt says it failed twice. Optional gates are never retried — their failure blocks
   nothing. A failure line also carries the gate's duration against its last passing duration.
+
+### What invalidates a cached gate pass (SC4.3)
+
+A gate that already passed is not re-run. What "already" means is the whole question, and the key it
+was decided on used to be the primary repo's HEAD alone — so a gate could be served a pass belonging
+to a different tree, or to a different command. A gate's cached pass is now filed and looked up under:
+
+- this repo's HEAD, **and**
+- the gate's own `cwd` HEAD — for a gate that builds a sibling checkout, this is the only part of the
+  key that moves when that checkout does, **and**
+- the newest write time under any `watchPaths` the gate declares — the escape hatch for inputs that
+  no git HEAD covers (a generated tree, a vendored drop), **and**
+- a digest of the gate's `command` and `cwd`. **Editing a gate mid-run invalidates its cache**, and
+  the phase gate's whole-battery reuse (`tree unchanged since last green battery`) reads the same
+  digest, so an edited battery is never reused as if it were the one that passed.
+
+Anything the key cannot read — a `cwd` that has been deleted, a directory outside git — becomes a
+marker that matches no previous key. The cost is one gate run; it is never a false pass.
+
+**`skipIfFresh` compares against uncommitted work too.** The artifact is fresh only when it is newer
+than the last commit **and** newer than every uncommitted change in the tree (the artifact itself
+excluded, so an untracked build output never dates itself fresh). Comparing against the last commit
+alone made this useless where it mattered most: mid-session an agent's work is uncommitted by
+definition, so a build output from before the edits still looked fresh and the gate skipped straight
+over the changes it exists to check.
 
 ## `report` — AFK reporting
 

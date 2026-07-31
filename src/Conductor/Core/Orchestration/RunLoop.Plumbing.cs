@@ -165,6 +165,7 @@ public sealed partial class RunLoop
             StageId = rec.Stage,
             Outcome = rec.Outcome?.ToString() ?? "Unknown",
             NewCommits = rec.NewCommits,
+            SatelliteCommits = rec.SatelliteCommits,
             NewlyDone = rec.NewlyDone,
             CostUsd = rec.CostUsd,
             TokensInput = rec.TokensInput,
@@ -193,7 +194,10 @@ public sealed partial class RunLoop
 
             if (rec.NewlyDone.Count > 0)
             {
-                var commit = rec.NewCommits.Count > 0 ? rec.NewCommits[^1].Split(' ')[0] : "-";
+                // SC4.3: a checkpoint delivered in a declared satellite has a commit — it is just not
+                // in this repo. Recording "-" for it is how sk #3's delivered work read as nothing.
+                var commit = rec.NewCommits.Count > 0 ? rec.NewCommits[^1].Split(' ')[0]
+                    : SessionProgress.LastSatelliteCommitRef(rec) ?? "-";
                 var evidence = rec.GateSummary ?? "completed";
                 foreach (var cpId in rec.NewlyDone)
                     db.UpdateCheckpoint(_ctx.State.RunId, cpId, "DONE", commit, evidence, source: "engine");

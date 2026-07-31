@@ -83,6 +83,7 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
             CheckAgentCli(plan),
             CheckModelToken(plan),
             CheckGit(plan),
+            CheckSatelliteRepos(plan),
             CheckFace(),
             CheckGates(plan),
             CheckWorkCoverage(plan),
@@ -266,6 +267,37 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
         {
             return new Check("git", "fail", ex.Message);
         }
+    }
+
+    /// <summary>SC4.3: a declared satellite that is not a readable git repo is a silent hole in the
+    /// verdict — the run keeps scoring, it just never counts the commits that repo receives, which is
+    /// the failure the setting exists to prevent. A typo in the path has to be loud at authoring time,
+    /// not discovered as a second NoProgress on a delivered stage.</summary>
+    internal static Check CheckSatelliteRepos(PlanConfig plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        var resolved = SatelliteRepos.Resolve(plan);
+        var declared = plan.SatelliteRepos?.Count(s => !string.IsNullOrWhiteSpace(s)) ?? 0;
+        if (declared == 0)
+            return new Check("satellites", "ok", "none declared — the verdict counts commits in this repo only");
+
+        var bad = new List<string>();
+        foreach (var (label, path) in resolved)
+        {
+            if (!Directory.Exists(path)) { bad.Add($"{label}: path does not exist ({path})"); continue; }
+            var r = Git.Exec(path, "rev-parse", "HEAD");
+            var sha = r.Output.Trim();
+            if (r.ExitCode != 0 || sha.Length < 7 || !sha.All(Uri.IsHexDigit))
+                bad.Add($"{label}: not a git repository with commits ({path})");
+        }
+        if (bad.Count > 0)
+            return new Check("satellites", "fail",
+                $"{bad.Count} of {declared} satelliteRepos unusable — their commits will NOT count toward the verdict: {string.Join("; ", bad)}");
+
+        var dropped = declared - resolved.Count;
+        var note = dropped > 0 ? $" ({dropped} duplicate or same-as-repo entr(y/ies) ignored)" : "";
+        return new Check("satellites", "ok",
+            $"{resolved.Count} satellite repo(s) diffed for commits alongside this one: {string.Join(", ", resolved.Select(s => s.Label))}{note}");
     }
 
     internal static Check CheckFace()

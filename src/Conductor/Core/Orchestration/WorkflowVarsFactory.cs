@@ -26,7 +26,9 @@ public static class WorkflowVarsFactory
             GatesGreen = gatesGreen,
             // SC4.2: a workflow branching on hasCommits is asking whether the AGENT committed, so
             // conductor's own chore(conductor): bookkeeping never answers that question for it.
-            HasCommits = Git.ExcludeBookkeeping(rec.NewCommits).Count > 0,
+            // SC4.3: and it is asking about the plan's work, not about one directory — a commit in a
+            // declared satelliteRepo answers "did the agent commit?" with yes.
+            HasCommits = SessionProgress.HasWorkCommits(rec),
             Stalled = rec.Outcome is SessionOutcome.Stalled or SessionOutcome.TimedOut,
             NewlyDoneCount = rec.NewlyDone?.Count ?? 0,
             StageComplete = stageComplete,

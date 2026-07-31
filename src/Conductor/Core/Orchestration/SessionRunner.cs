@@ -209,6 +209,11 @@ public sealed partial class SessionRunner
         var rawLog = Path.Combine(logsDir, $"session-{rec.Number:000}.jsonl");
 
         var startHead = Git.Head(_ctx.Plan.Repo);
+        // SC4.3: the satellites' start markers have to be taken HERE, next to the primary repo's,
+        // or the post-session diff has nothing to diff against.
+        rec.SatelliteStartHeads = SatelliteRepos.Heads(_ctx.Plan, _ctx.Log);
+        if (rec.SatelliteStartHeads.Count > 0)
+            _ctx.Log($"watching {rec.SatelliteStartHeads.Count} satellite repo(s) for commits: {string.Join(", ", rec.SatelliteStartHeads.Select(kv => $"{kv.Key}@{kv.Value[..Math.Min(7, kv.Value.Length)]}"))}");
         _ctx.State.History.Add(rec);
         _ctx.State.Status = RunStatus.Running;
         _ctx.Save();

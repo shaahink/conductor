@@ -68,7 +68,7 @@ public sealed class GateOrchestrator(PlanConfig plan, RunState state, IEventSink
     /// <summary>Persist gate results to the event log and run.db.</summary>
     public void PersistGates(IReadOnlyList<GateResult> gates, string scope, string? sessionId = null)
     {
-        var sha = Git.Head(_plan.Repo);
+        var head = Git.Head(_plan.Repo);
         foreach (var g in gates)
         {
             events.Emit(new GateFinished
@@ -82,7 +82,12 @@ public sealed class GateOrchestrator(PlanConfig plan, RunState state, IEventSink
                 DurationMs = (long)g.Duration.TotalMilliseconds,
                 Scope = scope,
             });
-            var tier = _plan.Gates.FirstOrDefault(gc => gc.Name == g.Name)?.Tier ?? "full";
+            var cfg = _plan.Gates.FirstOrDefault(gc => gc.Name == g.Name);
+            var tier = cfg?.Tier ?? "full";
+            // SC4.3: file the result under the SAME key the lookup will use — the gate's own working
+            // directory and command text, not just this repo's HEAD. A pass filed under a bare HEAD
+            // is a pass the next lookup can be served for a different command entirely.
+            var sha = cfg is null ? head : GateRunner.CacheKey(_plan, cfg, head);
             store?.RecordGate(state.RunId,
                 int.TryParse(sessionId, out var sn) ? sn : null,
                 state.CurrentStage, g.Name, tier, scope, sha,
