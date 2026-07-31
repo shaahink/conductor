@@ -227,19 +227,31 @@ public static class ConductorHost
     /// own their I/O and their own error handling), so a throw here means a wiring fault worth
     /// hearing about, not a flaky network.
     /// </remarks>
-    /// <returns>The names of the services that were started, in registration order.</returns>
+    /// <returns>The names of the services that ACTUALLY started, in registration order — not the ones
+    /// StartAsync was called on. SF0.1 / bug 2: those were the same list, so a run whose plan had no
+    /// telegram block still logged <c>Run services started: TelegramService</c> after that service's
+    /// start early-returned and started nothing. A service that declines now says why, on its own
+    /// line, in its own words (<see cref="IReportsStartOutcome"/>).</returns>
     public static async Task<IReadOnlyList<string>> StartRunServicesAsync(IHost host, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(host);
         var log = host.Services.GetRequiredService<ILogger<IHost>>();
         var started = new List<string>();
+        var declined = new List<string>();
         foreach (var svc in host.Services.GetServices<IHostedService>())
         {
             await svc.StartAsync(ct).ConfigureAwait(false);
-            started.Add(svc.GetType().Name);
+            var name = svc.GetType().Name;
+            // Asked AFTER StartAsync returned, so the answer is about this start and not the last one.
+            if (svc is IReportsStartOutcome outcome && !outcome.IsStarted)
+                declined.Add($"{name} ({outcome.NotStartedReason ?? "no reason given"})");
+            else
+                started.Add(name);
         }
         log.LogInformation("Run services started: {Services}",
-            started.Count == 0 ? "(none registered)" : string.Join(", ", started));
+            started.Count == 0 ? "(none)" : string.Join(", ", started));
+        if (declined.Count > 0)
+            log.LogInformation("Run services not started: {Services}", string.Join(", ", declined));
         return started;
     }
 

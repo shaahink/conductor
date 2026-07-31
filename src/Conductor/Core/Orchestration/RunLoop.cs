@@ -74,6 +74,7 @@ public sealed partial class RunLoop
                 _ctx.Save();
             }
             _ctx.Log($"conductor start — plan '{_ctx.Plan.Name}', repo {_ctx.Plan.Repo}, branch {Git.Branch(_ctx.Plan.Repo)}");
+            LogNotificationReadiness();
             _ctx.Events.Emit(new RunStarted
             {
                 Plan = _ctx.Plan.Name,

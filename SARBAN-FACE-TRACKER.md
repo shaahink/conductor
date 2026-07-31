@@ -20,18 +20,23 @@ truth for the lane.
 do not perform it.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: nothing yet — authored with the era spec, amended 2026-07-31 with the FU-OWNER rows and SF0.
-stage: **SF0 TODO** (attempt 0).
-gate: not yet run this era.
-next: **SF0.1** — inert plan keys (bugs 6, 11) either work or are rejected at load; the Telegram
-  start line stops claiming a service that early-returned. Read the carried-forward bug table in
-  `.conductor/followups.md` first — those eleven bugs are NOT in your run.db.
-trap: a SECOND conductor run is live on this machine in another repo — no install.ps1, and never
-  kill a conductor or dotnet pid without checking its command line first (promptExtra trap 0).
-  Tab changes touch tabKey in model.go AND the hand-maintained help legend in cmdbar.go; goldens
-  regenerate in a separate rebaseline commit. Exercise changes through YOUR build, never the
-  conductor on PATH; live-run proofs go in a scratch repo with its own port, never against this
-  repo's .conductor.
+last: **SF0.1 CLAIMED** — bugs 6, 11, 2 + FU-OWNER-12. Bug 6's two model pins are DELETED and
+  refused at plan load (bug-7's `[JsonExtensionData]` precedent; deleting the property is the
+  load-bearing half — `plan set` validates off the type graph). Bug 11's `verifyEachDelivery` is
+  WIRED as lowest-precedence input to `EffectiveSkipVerification` — not deleted, because
+  `conductor-maestro.plan.json:117` has set it false since M3; the phantom `ShouldVerify` is gone.
+stage: **SF0 IN PROGRESS** (attempt 1). Evidence: `.conductor/evidence/SF0/`.
+gate: not run by me (conductor owns it). Fast loop green: build clean, 87 tests pass across the new
+  `SF0_1InertPlanKeysTests` + DefaultQaPolicy/Advisor/PlanSet/ItemQa/QaDial suites.
+next: **SF0.2** — bug 10 (a claim made during Verify/Audit belongs to no session) with the
+  `rec.GateSummary ?? completed` empty-string evidence fallback fixed in the SAME change, plus bugs
+  4, 3 and 8. Read the carried-forward bug table in `.conductor/followups.md`; those eleven are NOT
+  in your run.db.
+trap: reusable proof rig at `%TEMP%\sarban-proofs\sf01` — wire a fake agent as THREE args
+  (`"/c"`, absolute `.cmd`, `"{prompt}"`); combining them makes cmd fail silently and every verdict
+  reads `commits 0`. `ClearProviders()` means ILogger lines never reach `conductor.log` — only
+  `_ctx.Log` does. A pipe in a `dotnet test --filter` needs PowerShell's `--%` before `conductor bg`.
+  Second conductor run live on this machine: no install.ps1, no killing pids unchecked, own port.
 
 ## Checkpoints
 

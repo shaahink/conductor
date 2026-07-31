@@ -46,7 +46,10 @@ public sealed class PlanConfig
     /// <summary>"perSession" (full battery every session) or "perPhase" (fast gates/session, full battery at stage-done). Default perSession.</summary>
     public string GatePolicy { get; set; } = "perSession";
     public AuditConfig? Audit { get; set; }
-    public bool VerifyEachDelivery { get; set; } = true; // false: skip per-Deliver Verify, rely on Audit/full battery (M3 stopgap)
+    /// <summary>false: skip the per-delivery Verify and rely on Audit / the full battery (M3 stopgap).
+    /// The LOWEST-precedence input to <c>QaPolicyExtensions.EffectiveSkipVerification</c> — a QA dial
+    /// or a stage's <c>overrides.skipVerification</c> both outrank it (SF0.1 / bug 11).</summary>
+    public bool VerifyEachDelivery { get; set; } = true;
     /// <summary>On-demand read-only "what's the status?" agent (dashboard `G` key). Default null → disabled.</summary>
     public StatusAgentConfig? StatusAgent { get; set; }
     public LimitsConfig Limits { get; set; } = new();
@@ -287,9 +290,19 @@ public sealed class PlanConfig
                 {
                     ValidateCondition(name, step.Id, "runIf", step.RunIf, errors);
                     ValidateCondition(name, step.Id, "skipIf", step.SkipIf, errors);
+                    ValidateInertKeys($"workflow '{name}' step '{step.Id}'", step.UnknownFields,
+                        WorkflowStep.KnownFields, InertModelHint, errors);
                 }
             }
         }
+
+        // SF0.1 / bug 6: an inert key is the trap SC3 was written to kill, and two survived it —
+        // `workflowStep.model` and `stage.overrides.model` were declared, settable, round-tripped by
+        // `plan save`, and read by nothing. Both are deleted now, so the JSON that used to set them
+        // lands in the extension bucket and is REFUSED here, naming the key that does the job.
+        foreach (var s in Stages)
+            ValidateInertKeys($"stage '{s.Id}' overrides", s.Overrides?.UnknownFields,
+                WorkflowOverrides.KnownFields, InertModelHint, errors);
 
         // SC3.3: a literal brace in authored prose is the trap that killed a 13-hour run at a stage
         // boundary. Prose is substituted into the prompt as a VALUE, so `{model}` in a stage's notes
@@ -342,6 +355,29 @@ public sealed class PlanConfig
         if (a.TimeoutMinutes < 1)
             errors.Add($"plan.advisor.timeoutMinutes must be >= 1 (was {a.TimeoutMinutes}) — a zero timeout kills the advisor before it can answer");
     }
+
+    /// <summary>SF0.1 / bug 6: the general form of the advisor block's bug-7 check — a key the type
+    /// does not declare is named and refused rather than parsed into a bucket nobody reads. The hint
+    /// exists because "unknown key" is not the useful half of the message; "here is the key that
+    /// really does this" is.</summary>
+    private static void ValidateInertKeys(string where, Dictionary<string, JsonElement>? unknown,
+        IReadOnlyList<string> known, Func<string, string> hint, List<string> errors)
+    {
+        foreach (var key in (unknown?.Keys ?? Enumerable.Empty<string>()).OrderBy(k => k, StringComparer.Ordinal))
+        {
+            errors.Add($"{where}.{key} is not a field here — nothing reads it, so it cannot do what it " +
+                       $"looks like it does. Known fields: {string.Join(", ", known)}.{hint(key)}");
+        }
+    }
+
+    /// <summary>The one inert key both deleted blocks shared, and the only one worth a sentence: a
+    /// pinned model that never reached the agent is a plan claiming one model answered while another
+    /// one did.</summary>
+    private static string InertModelHint(string key) =>
+        key.Equals("model", StringComparison.OrdinalIgnoreCase)
+            ? " A session's model comes from pipeline.roles.<role>.model, else stage.agent.model, else plan.agent.model —" +
+              " set it in one of those."
+            : "";
 
     private static void ValidateProse(string where, string? prose, List<string> errors)
     {
