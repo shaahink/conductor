@@ -66,7 +66,7 @@ public sealed class RunContext
     public string ItemQaFor(StageConfig stage, TrackerSnapshot? preTrack)
     {
         if (Store == null || preTrack == null || stage == null) return "";
-        var itemId = preTrack.ForStage(stage.Id).FirstOrDefault(c => !c.IsDone)?.Id;
+        var itemId = preTrack.ForStage(stage.Id).FirstOrDefault(c => c.IsOpen)?.Id;
         if (string.IsNullOrEmpty(itemId)) return "";
         try
         {

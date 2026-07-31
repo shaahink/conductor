@@ -21,7 +21,7 @@ public sealed partial class SessionRunner
         if (liveTokens < thresh) return;
 
         _ctx.SoftBreakSignalled = true;
-        var activeCp = preTrack.Checkpoints.FirstOrDefault(c => !c.IsDone)?.Id;
+        var activeCp = preTrack.Checkpoints.FirstOrDefault(c => c.IsOpen)?.Id;
         var maxTokens = _ctx.EffectiveMaxSessionTokens!.Value;
         var signalFile = Path.Combine(_ctx.Plan.StateDir, "soft-break");
         File.WriteAllText(signalFile, $"finish-subtask-and-handoff:{DateTime.UtcNow:o}");
@@ -179,7 +179,7 @@ public sealed partial class SessionRunner
             var taskGraph = new TaskGraph();
             taskGraph.Fold(allEvents);
             var activeCp = preTrack.ForStage(_ctx.State.CurrentStage ?? "")
-                .FirstOrDefault(c => !c.IsDone);
+                .FirstOrDefault(c => c.IsOpen);
             if (activeCp == null) return null;
             var next = taskGraph.CurrentTask(activeCp.Id);
             return next != null

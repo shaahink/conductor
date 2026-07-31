@@ -62,7 +62,7 @@ public static class TrackerGenerator
 
         sb.AppendLine("## Checkpoints");
         sb.AppendLine();
-        sb.AppendLine("Status ∈ TODO · IN PROGRESS · DONE · DONE ✓ (confirmed) · BLOCKED. Evidence = artifact path produced by a run this" +
+        sb.AppendLine("Status ∈ TODO · IN PROGRESS · DONE · DONE ✓ (confirmed) · BLOCKED · SKIPPED. Evidence = artifact path produced by a run this" +
                        "\nphase (a code path is not evidence). Agent claims are marked DONE; engine confirms as DONE ✓.");
         sb.AppendLine();
 
@@ -160,6 +160,9 @@ public static class TrackerGenerator
         "DONE" => "DONE",
         "IN PROGRESS" => "IN PROGRESS",
         "BLOCKED" => "BLOCKED",
+        // SC5.3: a skipped card used to render as TODO — the view flatly contradicting the board.
+        // The word is in the status vocabulary now, so the row still parses on the way back in.
+        "SKIPPED" => "SKIPPED",
         _ => "TODO",
     };
 }

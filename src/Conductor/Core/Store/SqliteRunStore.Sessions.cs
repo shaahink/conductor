@@ -218,16 +218,54 @@ public sealed partial class SqliteRunStore
         Emit(evt);
     }
 
-    public void MarkCheckpointInProgress(string runId, string checkpointId, string source = "agent")
+    /// <summary>SC5.3: returns the checkpoint's POST-FOLD status — "in_progress" when the move landed,
+    /// whatever the card actually is when it did not, "" when there is no such card. The refusal used
+    /// to be a silent no-op the CLI printed success over (round-four #1).</summary>
+    public string MarkCheckpointInProgress(string runId, string checkpointId, string source = "agent")
     {
-        // Parity with the SQL it replaces: TODO → IN PROGRESS only; never reopens a DONE row.
-        var item = FoldGraph(runId).Find(checkpointId);
-        if (item is not { Status: "todo" }) return;
-        EmitForRun(runId, new TaskStatusChanged
-        {
-            RunId = runId, TaskId = checkpointId, Status = "in_progress", Source = source,
-        });
+        // Parity with the SQL it replaces: TODO → IN PROGRESS only; never reopens a DONE row. The
+        // fold would allow done → in_progress (the G2 board pull-back), so the narrower rule is the
+        // CLI's, deliberately: an agent must not un-claim a checkpoint by fat-fingering an id.
+        var graph = FoldGraph(runId);
+        var item = graph.Find(checkpointId);
+        if (item is null) return "";
+        if (item.Status is not "todo") return item.Status;
+
+        var (evt, _) = TaskWrites.BuildStatusChange(graph, runId, checkpointId, "in_progress", source);
+        if (evt is null) return item.Status;
+        EmitForRun(runId, evt);
         FlushEvents();
+        graph.Fold([evt]);
+        return graph.Find(checkpointId)?.Status ?? "";
+    }
+
+    /// <summary>SC5.3: the one status move every board ingress makes. <see cref="TaskWrites"/> validates,
+    /// the fold owns transition legality, and the POST-FOLD status comes back so the caller reports what
+    /// actually happened rather than what it asked for — the contract <c>POST /tasks/update</c> has had
+    /// since G2.1 and the CLI did not. A refused transition is a recorded no-op, never an error.</summary>
+    public (string? Status, string? Error) ApplyTaskStatus(string runId, string taskId, string status,
+        string? commit = null, string? evidence = null, string source = "agent")
+    {
+        var graph = FoldGraph(runId);
+        var (evt, error) = TaskWrites.BuildStatusChange(graph, runId, taskId, status, source, commit, evidence);
+        if (evt is null) return (null, error);
+        EmitForRun(runId, evt);
+        FlushEvents();
+        graph.Fold([evt]);
+        return (graph.Find(taskId)?.Status ?? "", null);
+    }
+
+    /// <summary>SC5.3: append a stamped acceptance correction to a card, returning the card's post-fold
+    /// context. Routed like every other cross-process write so the CLI can amend a run it is not hosting.</summary>
+    public (string? Context, string? Error) AmendTask(string runId, string taskId, string note)
+    {
+        var graph = FoldGraph(runId);
+        var (evt, error) = TaskWrites.BuildAmendment(graph, runId, taskId, note, DateTimeOffset.UtcNow);
+        if (evt is null) return (null, error);
+        EmitForRun(runId, evt);
+        FlushEvents();
+        graph.Fold([evt]);
+        return (graph.Find(taskId)?.Context ?? "", null);
     }
 
     public void RequestBlockedUntil(string runId, DateTimeOffset untilUtc, string reason, string? stageId,
@@ -330,16 +368,9 @@ public sealed partial class SqliteRunStore
         _ => "todo",
     };
 
-    /// <summary>Graph status → the tracker-vocabulary label the checkpoints table stored.</summary>
-    private static string CheckpointStatusLabel(string status) => status switch
-    {
-        "done" => "DONE",
-        "in_progress" => "IN PROGRESS",
-        "blocked" => "BLOCKED",
-        "skipped" => "SKIPPED",
-        "archived" => "ARCHIVED",
-        _ => "TODO",
-    };
+    /// <summary>Graph status → the tracker-vocabulary label the checkpoints table stored. SC5.3 moved
+    /// the mapping into <see cref="TaskWrites"/> so the CLI's messages and this view read one table.</summary>
+    private static string CheckpointStatusLabel(string status) => TaskWrites.Label(status);
 
     /// <summary>The tracker's "-" placeholder means "nothing to record" — keep it out of the event
     /// so the fold's own defaults hold and replayed logs stay lean.</summary>

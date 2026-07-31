@@ -59,6 +59,9 @@ public sealed class TasksCommand : Command<PlanSettings>
                     "done" => "[green]DONE[/]",
                     "in_progress" => "[yellow]▶ ACTV[/]",
                     "skipped" => "[red]SKIP[/]",
+                    // SC5.3: the graph has folded blocked cards since W1.1; without this arm the
+                    // catch-all printed them as TODO.
+                    "blocked" => "[red]BLKD[/]",
                     _ => "[grey]TODO[/]",
                 };
                 var source = task.Source switch

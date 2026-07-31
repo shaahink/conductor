@@ -66,6 +66,15 @@ public static class ToolContract
             that file that IS yours to write is the **handoff block**: Conductor reads it back and gives
             it to the next session, so put your handoff there.
 
+            **Correcting the board — `conductor task --todo|--blocked|--skipped <id>` and `--amend <id> --note "<text>"`**
+            The board moves both ways. Put a card back with `--todo`, park one you cannot proceed on with
+            `--blocked`, retire one you deliberately did not deliver with `--skipped`. Every move prints the
+            card's REAL status afterwards and exits non-zero if the move was refused — believe the output,
+            not the intent. When a checkpoint's acceptance encodes a false premise, do not silently deliver
+            against it and do not argue in prose nothing reads:
+                conductor task --amend <id> --note "acceptance says X; X is impossible because Y - delivering Z instead"
+            The amendment rides the card into the next session's prompt and lands in the ledger.
+
             **Blocked on a clock — `conductor task --blocked-until <iso8601> --reason "<text>"`  (MCP: `task_blocked_until`)**
             When you CANNOT proceed until a known future instant — an external rate-limit window, a deploy
             slot, a scheduled reset — do not end the session hoping the next one finds the wall gone, and do

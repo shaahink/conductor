@@ -149,5 +149,6 @@ public static class WorkGraphSync
     }
 
     private static string DeclaredStatusLabel(CheckpointRow row) =>
-        row.IsDone ? "DONE" : row.IsInProgress ? "IN PROGRESS" : row.IsBlocked ? "BLOCKED" : "TODO";
+        row.IsDone ? "DONE" : row.IsInProgress ? "IN PROGRESS" : row.IsBlocked ? "BLOCKED"
+        : row.IsSkipped ? "SKIPPED" : "TODO";
 }

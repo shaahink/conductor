@@ -77,7 +77,21 @@ public interface IRunStore : IDisposable
     // reads fold the log; the mutable checkpoints table is gone (migration v8). `source` is the
     // claim provenance stamped on the emitted TaskStatusChanged (tracker | engine | agent | human).
 
-    void MarkCheckpointInProgress(string runId, string checkpointId, string source = "agent");
+    /// <summary>Returns the checkpoint's POST-FOLD status (SC5.3) — "in_progress" when the move landed,
+    /// the card's real status when the todo-only rule refused it, "" when no such card exists.</summary>
+    string MarkCheckpointInProgress(string runId, string checkpointId, string source = "agent");
+
+    /// <summary>SC5.3: the shared status move every board ingress makes — validated by
+    /// <see cref="TaskWrites.BuildStatusChange"/>, legality owned by the fold, and the POST-FOLD status
+    /// returned so a caller reports what happened, not what it asked for. Error is set only for a
+    /// malformed request (unknown id, unknown status); a transition the fold refuses comes back Ok with
+    /// the card's unchanged status, exactly as <c>POST /tasks/update</c> answers.</summary>
+    (string? Status, string? Error) ApplyTaskStatus(string runId, string taskId, string status,
+        string? commit = null, string? evidence = null, string source = "agent");
+
+    /// <summary>SC5.3: append a stamped acceptance correction to a card's context, returning the
+    /// post-fold context. The correction reaches the next session through the composed prompt.</summary>
+    (string? Context, string? Error) AmendTask(string runId, string taskId, string note);
     void ConfirmCheckpoints(string runId, IEnumerable<string> checkpointIds, int? sessionNumber = null);
     IReadOnlyList<CheckpointRow> GetCheckpoints(string runId);
     void SeedCheckpoints(string runId,

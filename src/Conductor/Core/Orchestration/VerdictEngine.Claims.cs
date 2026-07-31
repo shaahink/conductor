@@ -37,12 +37,15 @@ public sealed partial class VerdictEngine
 
     /// <summary>All of a stage's checkpoint rows in the graph read DONE (and it has some) — so a
     /// stage whose last item was claimed only via the graph is complete NOW, not one tracker
-    /// regeneration later.</summary>
+    /// regeneration later. SC5.3: a SKIPPED row is settled too, or one `task --skipped` would leave
+    /// the stage permanently incomplete.</summary>
     private bool GraphStageDone(string stageId)
     {
         if (_ctx.Store is not { } db) return false;
         var rows = db.GetCheckpoints(_ctx.State.RunId)
             .Where(r => r.StageId.Equals(stageId, StringComparison.OrdinalIgnoreCase)).ToList();
-        return rows.Count > 0 && rows.All(r => r.Status.StartsWith("DONE", StringComparison.OrdinalIgnoreCase));
+        return rows.Count > 0 && rows.All(r =>
+            r.Status.StartsWith("DONE", StringComparison.OrdinalIgnoreCase) ||
+            r.Status.StartsWith("SKIPPED", StringComparison.OrdinalIgnoreCase));
     }
 }

@@ -8,15 +8,24 @@ namespace Conductor.Core.Events;
 /// (MCP journal vs run.db event log).</summary>
 public static class TaskWrites
 {
+    /// <summary>SC5.3: <c>blocked</c> belongs here. <see cref="TaskGraph.Fold"/> has folded BLOCKED
+    /// cards in and out of the open states since W1.1 and the tracker renders the label, but no write
+    /// ingress would accept the word — so a card could only reach BLOCKED by being seeded that way.
+    /// A vocabulary the fold understands and no ingress will speak is a board that is read-only in
+    /// one direction.</summary>
     public static readonly IReadOnlySet<string> ValidStatuses =
-        new HashSet<string>(StringComparer.Ordinal) { "todo", "in_progress", "done", "skipped" };
+        new HashSet<string>(StringComparer.Ordinal) { "todo", "in_progress", "blocked", "done", "skipped" };
 
     /// <summary>Validate and build a status change. The returned event is emitted as-is; the fold
     /// (<see cref="TaskGraph.Fold"/>) still owns transition legality, so an illegal transition is a
     /// recorded no-op, exactly as the MCP path has always behaved. <paramref name="source"/> is the
-    /// claim provenance (agent | human — who moved the card, W1.1).</summary>
+    /// claim provenance (agent | human — who moved the card, W1.1).
+    /// <para>SC5.3: <paramref name="commit"/>/<paramref name="evidence"/> ride the same event, so the
+    /// CLI's claim (<c>task --done -c -e</c>) no longer needs a private write path to carry its
+    /// attribution — one builder, one set of rules, for every ingress.</para></summary>
     public static (TaskStatusChanged? Event, string? Error) BuildStatusChange(
-        TaskGraph graph, string runId, string? taskId, string? status, string? source = null)
+        TaskGraph graph, string runId, string? taskId, string? status, string? source = null,
+        string? commit = null, string? evidence = null)
     {
         if (string.IsNullOrEmpty(taskId))
             return (null, "taskId is required");
@@ -25,8 +34,54 @@ public static class TaskWrites
         if (graph.Find(taskId) == null)
             return (null, $"task not found: {taskId}");
 
-        return (new TaskStatusChanged { RunId = runId, TaskId = taskId, Status = status, Source = source }, null);
+        return (new TaskStatusChanged
+        {
+            RunId = runId, TaskId = taskId, Status = status, Source = source,
+            Commit = Placeholder(commit), Evidence = Placeholder(evidence),
+        }, null);
     }
+
+    /// <summary>SC5.3: an acceptance correction on a live card (field log S3.2 — a checkpoint whose
+    /// acceptance encoded a false premise had no correctable path, so the session either delivered
+    /// against a premise it knew to be wrong or argued with the board in prose nothing reads).
+    /// <para>The note is APPENDED, stamped, never a replacement: the premise being corrected has to
+    /// stay readable next to its correction, and two amendments must both survive. The card's context
+    /// is what <see cref="Conductor.Core.Orchestration.SessionRunner.BuildTaskContextSection"/> puts
+    /// in the next session's prompt, so this is a correction the engine actually says out loud.</para></summary>
+    public static (TaskDetailEdited? Event, string? Error) BuildAmendment(
+        TaskGraph graph, string runId, string? taskId, string? note, DateTimeOffset stampUtc)
+    {
+        ArgumentNullException.ThrowIfNull(graph);
+        if (string.IsNullOrEmpty(taskId))
+            return (null, "taskId is required");
+        if (string.IsNullOrWhiteSpace(note))
+            return (null, "an amendment needs a note — say what the acceptance should be instead");
+        if (graph.Find(taskId) is not { } item)
+            return (null, $"task not found: {taskId}");
+
+        var stamped = $"AMENDED {stampUtc.UtcDateTime:yyyy-MM-dd HH:mm}Z: {note.Trim()}";
+        var merged = string.IsNullOrWhiteSpace(item.Context)
+            ? stamped
+            : item.Context.TrimEnd() + "\n" + stamped;
+        return BuildDetailEdit(graph, runId, taskId, title: null, context: merged);
+    }
+
+    /// <summary>Graph status → the tracker-vocabulary label every surface prints. One mapping, so a
+    /// CLI message and a tracker row cannot disagree about what a card is.</summary>
+    public static string Label(string status) => status switch
+    {
+        "done" => "DONE",
+        "in_progress" => "IN PROGRESS",
+        "blocked" => "BLOCKED",
+        "skipped" => "SKIPPED",
+        "archived" => "ARCHIVED",
+        _ => "TODO",
+    };
+
+    /// <summary>The tracker's "-" placeholder means "nothing to record" — keep it out of the event so
+    /// the fold's own defaults hold and replayed logs stay lean.</summary>
+    private static string? Placeholder(string? value) =>
+        string.IsNullOrWhiteSpace(value) || value == "-" ? null : value;
 
     /// <summary>P3: validate and build a detail edit (title, extra context, and/or declared paths —
     /// PF3). null = leave the field unchanged; an empty context clears it; an empty paths array

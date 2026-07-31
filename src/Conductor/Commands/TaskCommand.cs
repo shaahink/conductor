@@ -45,6 +45,29 @@ public sealed class TaskCommand : Command<TaskCommand.Settings>
         [CommandOption("--reason <TEXT>")]
         [Description("Why the run is blocked (for --blocked-until). Required.")]
         public string? Reason { get; init; }
+
+        // SC5.3: the board's other three moves. They existed on the Kanban board and in the fold from
+        // W1.1 onward; from the CLI, undoing a mis-drag needed a hand-rolled HTTP POST (round-four #2).
+
+        [CommandOption("--todo <CHECKPOINT>")]
+        [Description("Move a checkpoint back to TODO (reopens a done/skipped/blocked card).")]
+        public string? Todo { get; init; }
+
+        [CommandOption("--blocked <CHECKPOINT>")]
+        [Description("Mark a checkpoint BLOCKED — work that cannot proceed, distinct from a timed wait (--blocked-until).")]
+        public string? Blocked { get; init; }
+
+        [CommandOption("--skipped <CHECKPOINT>")]
+        [Description("Mark a checkpoint SKIPPED — deliberately not delivered.")]
+        public string? Skipped { get; init; }
+
+        [CommandOption("--amend <CHECKPOINT>")]
+        [Description("Record an acceptance correction on a checkpoint. Requires --note.")]
+        public string? Amend { get; init; }
+
+        [CommandOption("--note <TEXT>")]
+        [Description("The correction text (for --amend). Required.")]
+        public string? Note { get; init; }
     }
 
     public override int Execute(CommandContext context, Settings settings)
@@ -89,28 +112,25 @@ public sealed class TaskCommand : Command<TaskCommand.Settings>
                     $"[yellow]blocked-until accepted[/] — {Markup.Escape(BlockedUntilRequest.Describe(untilUtc, settings.Reason!.Trim()))}");
                 AnsiConsole.MarkupLine("[grey]the run loop will sleep until then and spawn one more session; no attempt is burned. End your session now.[/]");
             }
-            else if (settings.Done != null)
+            else if (settings.Amend != null)
             {
-                var allCps = store.GetCheckpoints(runId);
-                if (!allCps.Any(c => c.Id.Equals(settings.Done, StringComparison.OrdinalIgnoreCase)))
+                if (string.IsNullOrWhiteSpace(settings.Note))
                 {
-                    AnsiConsole.MarkupLine($"[red]Checkpoint '{Markup.Escape(settings.Done)}' not found in run.db[/]");
+                    AnsiConsole.MarkupLine("[red]--amend needs --note <text>[/] — say what the acceptance should be instead.");
                     return 1;
                 }
-                store.UpdateCheckpoint(runId, settings.Done, "DONE",
-                    settings.Commit ?? "-", settings.Evidence ?? "marked done via CLI", source: "agent");
-                AnsiConsole.MarkupLine($"[green]checkpoint {Markup.Escape(settings.Done)} → DONE[/]");
+                return Report(TaskBoard.Amend(store, runId, settings.Amend, settings.Note, CurrentStage(store, runId)));
+            }
+            else if (RequestedMove(settings) is { } move)
+            {
+                // SC5.3: one write path for every move, and the answer is the card's POST-FOLD status —
+                // a transition the fold refuses prints what the card really is and exits non-zero.
+                var evidence = move.Status == "done" ? settings.Evidence ?? "marked done via CLI" : settings.Evidence;
+                return Report(TaskBoard.Move(store, runId, move.Id, move.Status, settings.Commit, evidence));
             }
             else if (settings.InProgress != null)
             {
-                var allCps = store.GetCheckpoints(runId);
-                if (!allCps.Any(c => c.Id.Equals(settings.InProgress, StringComparison.OrdinalIgnoreCase)))
-                {
-                    AnsiConsole.MarkupLine($"[red]Checkpoint '{Markup.Escape(settings.InProgress)}' not found in run.db[/]");
-                    return 1;
-                }
-                store.MarkCheckpointInProgress(runId, settings.InProgress);
-                AnsiConsole.MarkupLine($"[yellow]checkpoint {Markup.Escape(settings.InProgress)} → IN PROGRESS[/]");
+                return Report(TaskBoard.Start(store, runId, settings.InProgress));
             }
             else if (settings.List)
             {
@@ -132,11 +152,15 @@ public sealed class TaskCommand : Command<TaskCommand.Settings>
 
                 foreach (var cp in cps)
                 {
+                    // SC5.3: the SKIPPED arm is here because the live rig caught its absence — the
+                    // catch-all made a skipped card print TODO, contradicting the tracker the same
+                    // engine had just regenerated.
                     var icon = cp.Status switch
                     {
                         var s when s.StartsWith("DONE", StringComparison.OrdinalIgnoreCase) => "[green]DONE[/]",
                         var s when s.StartsWith("IN", StringComparison.OrdinalIgnoreCase) => "[yellow]IN PROG[/]",
                         var s when s.StartsWith("BLOCKED", StringComparison.OrdinalIgnoreCase) => "[red]BLOCKED[/]",
+                        var s when s.StartsWith("SKIPPED", StringComparison.OrdinalIgnoreCase) => "[grey]SKIPPED[/]",
                         _ => "[grey]TODO[/]",
                     };
                     table.AddRow(Markup.Escape(cp.StageId), Markup.Escape(cp.Id), Markup.Escape(cp.Title), icon);
@@ -145,7 +169,10 @@ public sealed class TaskCommand : Command<TaskCommand.Settings>
             }
             else
             {
-                AnsiConsole.MarkupLine("[grey]Usage: conductor task --list | --done <id> | --in-progress <id> | --blocked-until <iso8601> --reason <text>[/]");
+                AnsiConsole.MarkupLine("[grey]Usage: conductor task --list | --in-progress <id> | --done <id> [[-e <evidence>]][/]");
+                AnsiConsole.MarkupLine("[grey]                    | --todo <id> | --blocked <id> | --skipped <id>[/]");
+                AnsiConsole.MarkupLine("[grey]                    | --amend <id> --note <text>[/]");
+                AnsiConsole.MarkupLine("[grey]                    | --blocked-until <iso8601> --reason <text>[/]");
             }
         }
         catch (Exception ex)
@@ -155,6 +182,25 @@ public sealed class TaskCommand : Command<TaskCommand.Settings>
         }
 
         return 0;
+    }
+
+    /// <summary>SC5.3: which move the flags asked for, in graph vocabulary. First flag wins — the four
+    /// are alternatives, not a combination.</summary>
+    private static (string Id, string Status)? RequestedMove(Settings s) =>
+        s.Done != null ? (s.Done, "done")
+        : s.Todo != null ? (s.Todo, "todo")
+        : s.Blocked != null ? (s.Blocked, "blocked")
+        : s.Skipped != null ? (s.Skipped, "skipped")
+        : null;
+
+    /// <summary>Print a board write's outcome and turn it into an exit code. A refused move exits 1:
+    /// the shell is one of the surfaces that used to be lied to (round-four #1), and a script reading
+    /// $? deserves the same truth the message carries.</summary>
+    private static int Report(TaskBoardResult result)
+    {
+        var colour = result.Ok ? (result.Message.Contains("→ IN PROGRESS", StringComparison.Ordinal) ? "yellow" : "green") : "red";
+        AnsiConsole.MarkupLine($"[{colour}]{Markup.Escape(result.Message)}[/]");
+        return result.Ok ? 0 : 1;
     }
 
     /// <summary>The stage the run is on, read from persisted run state — the wait is stamped with it

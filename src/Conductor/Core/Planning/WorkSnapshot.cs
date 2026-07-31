@@ -50,6 +50,7 @@ public static class WorkSnapshot
                         IsDone = r.Status.StartsWith("DONE", StringComparison.OrdinalIgnoreCase),
                         IsBlocked = r.Status.StartsWith("BLOCKED", StringComparison.OrdinalIgnoreCase),
                         IsInProgress = r.Status.StartsWith("IN", StringComparison.OrdinalIgnoreCase),
+                        IsSkipped = r.Status.StartsWith("SKIPPED", StringComparison.OrdinalIgnoreCase),
                     }),
                 ],
                 HandoffBlock = declared.HandoffBlock,

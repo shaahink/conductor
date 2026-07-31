@@ -100,7 +100,9 @@ public sealed partial class SessionRunner
             taskGraph = new TaskGraph();
             taskGraph.Fold(_ctx.Store.ReadAllEvents(_ctx.State.RunId));
         }
-        var readyItems = preTrack.ForStage(stage.Id).Where(c => !c.IsDone)
+        // SC5.3: a SKIPPED checkpoint is settled work — the engine must stop scheduling it, or
+        // `task --skipped` is a verb that moves a card on the board and changes nothing at all.
+        var readyItems = preTrack.ForStage(stage.Id).Where(c => c.IsOpen)
             .Select(c => new ReadyItem { Id = c.Id, Title = c.Title, PathClaims = taskGraph?.DeclaredOpenPaths(c.Id) })
             .ToList();
         var assignment = _ctx.Assignments.Assign(_ctx.Plan.Pipeline, kind, readyItems, claimedPaths: null);
@@ -128,7 +130,7 @@ public sealed partial class SessionRunner
         }
 
         var personaName = assignment.Persona ?? _ctx.Plan.ResolvePersona(stage);
-        var activeCp = preTrack.ForStage(stage.Id).FirstOrDefault(c => !c.IsDone);
+        var activeCp = preTrack.ForStage(stage.Id).FirstOrDefault(c => c.IsOpen);
         if (kind == SessionKind.Deliver &&
             "deliver".Equals(personaName, StringComparison.OrdinalIgnoreCase) &&
             activeCp != null &&
@@ -456,44 +458,4 @@ public sealed partial class SessionRunner
     private static string Trunc(string s, int max) => s.Length <= max ? s : s[..max] + "\u2026";
 
     private static string Short(string sha) => string.IsNullOrEmpty(sha) ? "?" : sha.Length >= 7 ? sha[..7] : sha;
-
-    // ── report refresh (delegated from RunLoop) ──
-
-    private void RefreshReport(SessionRecord rec, StageConfig stage, AgentSession agent, TrackerSnapshot track)
-    {
-        try
-        {
-            var cp = track.ForStage(stage.Id).FirstOrDefault(c => !c.IsDone)?.Id ?? stage.Id;
-            _ctx.Log($"report refresh @ {cp} (cost ${agent.CostUsd:0.00})");
-            Reporter.WriteReport(_ctx.Plan, _ctx.State, track, _ctx.LastGates, _ctx.Log, BuildActivitySection(rec, agent), store: _ctx.Store);
-        }
-        catch (Exception ex) { _ctx.Log($"report refresh failed: {ex.Message}"); }
-    }
-
-    private string BuildActivitySection(SessionRecord rec, AgentSession agent)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine($"_Session #{rec.Number} ({rec.Kind}) · running {(DateTime.UtcNow - agent.StartedUtc).TotalMinutes:0}m · " +
-                      $"last output {(DateTime.UtcNow - agent.LastActivityUtc).TotalSeconds:0}s ago" +
-                      (agent.CostUsd is { } c ? $" · ${c:0.0000}" : "") + "_");
-        sb.AppendLine();
-        var think = _ctx.Activity.Where(a => a.Kind == "thinking").TakeLast(3).ToList();
-        if (think.Count > 0)
-        {
-            sb.AppendLine("**Thinking:**");
-            foreach (var t in think) sb.AppendLine($"> {Trunc(t.Text.Replace("\n", " "), 300)}");
-            sb.AppendLine();
-        }
-        var acts = _ctx.Activity.Where(a => a.Kind != "thinking").TakeLast(10).ToList();
-        if (acts.Count > 0)
-        {
-            sb.AppendLine("**Recent actions:**");
-            foreach (var a in acts)
-            {
-                var glyph = a.Kind switch { "tool" => "\u00bb", "result" => "\u25c6", _ => "\u00b7" };
-                sb.AppendLine($"- `{a.Utc.ToLocalTime():HH:mm:ss}` {glyph} {Trunc(a.Text.Replace("\n", " "), 160)}");
-            }
-        }
-        return sb.ToString().TrimEnd();
-    }
 }

@@ -50,6 +50,10 @@ public sealed class ProgressConventions
     public bool IsBlocked(string status) => StartsWithAny(status, Status.Blocked);
     public bool IsInProgress(string status) => StartsWithAny(status, Status.InProgress);
 
+    /// <summary>SC5.3: deliberately not delivered. Distinct from BLOCKED (still owed) — a skipped
+    /// checkpoint is settled, so the engine stops scheduling it and it does not hold a stage open.</summary>
+    public bool IsSkipped(string status) => StartsWithAny(status, Status.Skipped);
+
     /// <summary>Does the handoff block ask for a human decision (<see cref="HumanToken"/>)?</summary>
     public bool MentionsHuman(string handoff)
         => !string.IsNullOrEmpty(HumanToken) && handoff.Contains(HumanToken, StringComparison.OrdinalIgnoreCase);
@@ -127,5 +131,10 @@ public sealed class StatusVocabulary
     public List<string> InProgress { get; set; } = ["IN PROGRESS"];
     public List<string> Todo { get; set; } = ["TODO"];
 
-    internal IEnumerable<string> All() => Done.Concat(Blocked).Concat(InProgress).Concat(Todo);
+    /// <summary>SC5.3: the work graph has folded <c>skipped</c> since W1.1 and <c>task --skipped</c>
+    /// now writes it, so the row regex must know the word — a status the alternation does not list
+    /// makes the whole row fail to match, and the checkpoint silently leaves the parsed snapshot.</summary>
+    public List<string> Skipped { get; set; } = ["SKIPPED"];
+
+    internal IEnumerable<string> All() => Done.Concat(Blocked).Concat(InProgress).Concat(Todo).Concat(Skipped);
 }

@@ -94,7 +94,7 @@ public sealed partial class RunLoop
     {
         try
         {
-            var cp = track.ForStage(stage.Id).FirstOrDefault(c => !c.IsDone)?.Id ?? stage.Id;
+            var cp = track.ForStage(stage.Id).FirstOrDefault(c => c.IsOpen)?.Id ?? stage.Id;
             _ctx.Log($"report refresh @ {cp} (cost ${agent.CostUsd:0.00})");
             Reporter.WriteReport(_ctx.Plan, _ctx.State, track, _ctx.LastGates, _ctx.Log, BuildActivitySection(rec, agent), store: _ctx.Store);
         }
