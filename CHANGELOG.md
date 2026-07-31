@@ -15,6 +15,29 @@ it was built from. It orders above `0.1.0` and below `0.1.1`, and it is unique p
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-08-01
+
+0.2.1 built the rails and left them reading a gauge that was wired to nothing. This is the wire.
+
+### Fixed
+
+- **The live token counters now move while the session runs.** `ClaudeProvider` emitted each assistant
+  message's usage to the event stream but never folded it onto the session state, so
+  `TokensInput/Output/CacheRead` stayed **null** for the entire session and were first set by the
+  terminal `result` envelope. Every rail that asks the live session what it has spent — the
+  soft-break and the `maxSessionTokens` ceiling both do — therefore read zero until the session was
+  already over. Observed on a real run within an hour of shipping 0.2.1: a session under a 6M ceiling
+  reached **17.13M**, and the log recorded the nudge and the ceiling firing in the same second, as the
+  agent was exiting anyway. Both rails now fire when they can still change the outcome.
+  Accumulation is safe because `TryCountMessageOnce` already rejects the re-emitted content blocks
+  that would otherwise count a message three or four times, and `ReadUsage` still ASSIGNS the
+  envelope's totals at the end, so the CLI's own number remains authoritative.
+
+Two tests asserted the old behaviour and were rewritten rather than deleted: they encoded the
+reasoning that live deltas must not touch the session totals because double-counting would break the
+cap. The first half was right; the conclusion was backwards. Leaving those totals null did not
+protect the cap, it disabled it.
+
 ## [0.2.1] - 2026-08-01
 
 The session budget stops being decorative. Everything below was already configurable, already
