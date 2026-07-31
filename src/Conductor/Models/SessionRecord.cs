@@ -39,6 +39,13 @@ public sealed class SessionRecord
     /// the first few.</summary>
     public List<string> OutsideRepoWrites { get; set; } = new();
 
+    /// <summary>SC7.2 (devcontext #10): what this session did, folded live from its structured tool
+    /// events — tool mix, files written with counts, board claims, bg-start purposes as a storyline,
+    /// notable build/test commands. Accumulated as the session runs, so a session killed mid-flight
+    /// still carries a digest of what it managed; persisted to <c>sessions.digest</c> in run.db and
+    /// served on <c>/sessions</c>.</summary>
+    public Conductor.Core.Events.SessionDigest Digest { get; set; } = new();
+
     [JsonIgnore] public long TokensTotal =>
         (TokensInput ?? 0) + (TokensOutput ?? 0) + (TokensReasoning ?? 0) + (TokensCacheRead ?? 0);
 }

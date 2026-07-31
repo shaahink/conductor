@@ -78,7 +78,7 @@ public sealed class OpencodeProvider : IAgentProvider
                 if (hasState && TryProp(stt, "input", out var inp) && inp.ValueKind == JsonValueKind.Object)
                 {
                     var call = ToolEventExtractor.Extract(tool, inp);
-                    state.EmitTool(call, ToolEventExtractor.Render(call));
+                    state.EmitTool(call, ToolLine.Render(call)); // SC7.2: one readable line, same as claude's
                     break;
                 }
                 // No argument object on the wire: opencode's own rendered `title` is the best structure
@@ -87,7 +87,7 @@ public sealed class OpencodeProvider : IAgentProvider
                     ? (tt.GetString() ?? "").Trim() : "";
                 var titled = new ToolCall(tool, new Dictionary<string, string>(StringComparer.Ordinal));
                 if (title.Length > 0) titled.Fields["purpose"] = ProviderText.Trunc(title, ToolEventExtractor.MaxFieldChars);
-                state.EmitTool(titled, $"{tool} {title}".Trim());
+                state.EmitTool(titled, ToolLine.Render(titled));
                 break;
             case "step_finish":
                 long di = 0, dout = 0, dr = 0, dc = 0;

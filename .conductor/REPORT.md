@@ -1,10 +1,10 @@
 ﻿# Conductor — Sarban core - the engine says what it knows run report
 
-_Updated 2026-07-31 14:29 UTC · branch `feat/sarban` · HEAD `bf83cf4`_
+_Updated 2026-07-31 14:59 UTC · branch `feat/sarban` · HEAD `2a7b8a0`_
 
 **Status:** Idle
-**Stage:** SC6 — Clean history without lying about it · attempts used 0
-**Checkpoints:** 21/26 done · **Sessions run:** 23 · **Cost:** $297.5890 (agent $297.4610 + gates $0.1280) · **Tokens:** 4,386,625 in / 1,876,769 out
+**Stage:** SC7 — The transcript captures structure · attempts used 0 · working ▸ SC7.2
+**Checkpoints:** 22/26 done · **Sessions run:** 24 · **Cost:** $310.8505 (agent $310.7127 + gates $0.1378) · **Tokens:** 4,586,980 in / 1,969,495 out
 **Confirmed phases:** SC1, SC2, SC3, SC4, SC5, SC6
 
 ## Stage progress
@@ -17,7 +17,7 @@ _Updated 2026-07-31 14:29 UTC · branch `feat/sarban` · HEAD `bf83cf4`_
 | SC4 | Verdicts judge the work, not the environment | ██████████ 4/4 | confirmed ✓ |
 | SC5 | The engine can wait, detach, and correct the board | ██████████ 4/4 | confirmed ✓ |
 | SC6 | Clean history without lying about it | ██████████ 2/2 | confirmed ✓ |
-| SC7 | The transcript captures structure | ░░░░░░░░░░ 0/2 | todo |
+| SC7 | The transcript captures structure | █████░░░░░ 1/2 | **← active** |
 | SC8 | The program knows what it is and can update itself | ░░░░░░░░░░ 0/3 | todo |
 
 <details> ✅<summary>SC1 — Telegram actually delivers (3/3)</summary>
@@ -83,11 +83,11 @@ _Updated 2026-07-31 14:29 UTC · branch `feat/sarban` · HEAD `bf83cf4`_
 
 </details>
 
-<details><summary>SC7 — The transcript captures structure (0/2)</summary>
+<details><summary>SC7 — The transcript captures structure (1/2)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| SC7.1 | Tool events are stored structured — name plus extracted fields, values truncated, JSON never cut — with back-compat reading of old lines; writes outside the repo are counted and noted in the session verdict | ⬜ TODO | - |
+| SC7.1 | Tool events are stored structured — name plus extracted fields, values truncated, JSON never cut — with back-compat reading of old lines; writes outside the repo are counted and noted in the session verdict | ✅ DONE | - |
 | SC7.2 | The provider emits one-liner tool lines on the wire, and a per-session digest is computed, stored and served on /sessions matching the spec's worked example | ⬜ TODO | - |
 
 </details>
@@ -129,21 +129,13 @@ _Updated 2026-07-31 14:29 UTC · branch `feat/sarban` · HEAD `bf83cf4`_
 | 21 | SC5 | Deliver | 1 | 07-31 12:41 | 0:28 | Advanced | SC5.4 | 2 | engine-fast:OK · face-fast:OK | $10.5666 | $0.0076 | 168,870/76,777 |
 | 22 | SC6 | Deliver | 1 | 07-31 13:13 | 0:27 | Advanced | SC6.1 | 2 | engine-fast:OK · face-fast:OK | $11.4474 | $0.0055 | 187,779/73,830 |
 | 23 | SC6 | Deliver | 1 | 07-31 13:41 | 0:43 | Advanced | SC6.2 | 2 | engine-fast:OK · face-fast:OK | $12.9192 | $0.0023 | 191,080/96,632 |
+| 24 | SC7 | Deliver | 1 | 07-31 14:29 | 0:28 | Advanced | SC7.1 | 2 | engine-fast:OK · face-fast:OK | $13.2517 | $0.0098 | 200,355/92,726 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-31 11:14:10  • session #17 SC4 → Progress · 1 commit(s)  (11m33s)
-07-31 11:15:42  ▪ gate engine-fast pass [phase]  (0.0s)
-07-31 11:15:42  ▪ gate face-fast pass [phase]  (0.0s)
-07-31 11:15:42  ▪ gate engine-full pass [phase]  (1m28s)
-07-31 11:15:42  ▪ gate face-full pass [phase]  (1.4s)
-07-31 11:15:42  ▸ stage SC4 confirmed  (2h12m51s)
-07-31 11:15:42  ▸ stage SC5 entered — The engine can wait, detach, and correct the board
-07-31 11:15:42  • session #18 SC5 Deliver started (attempt 1/6)
-07-31 11:52:44  ▪ gate engine-fast pass [session]  (39.3s)
 07-31 11:52:44  ▪ gate face-fast pass [session]  (11.8s)
 07-31 11:52:44  • session #18 SC5 → Advanced · done SC5.1 · 1 commit(s)  (37m01s)
 07-31 11:52:45  • session #19 SC5 Deliver started (attempt 1/6)
@@ -175,6 +167,15 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-31 15:25:32  ▪ gate engine-fast pass [session]  (4.1s)
 07-31 15:25:32  ▪ gate face-fast pass [session]  (19.0s)
 07-31 15:25:33  • session #23 SC6 → Advanced · done SC6.2 · 2 commit(s)  (43m35s)
+07-31 15:29:06  ▪ gate engine-fast pass [phase]  (0.0s)
+07-31 15:29:06  ▪ gate face-fast pass [phase]  (0.0s)
+07-31 15:29:06  ▪ gate engine-full pass [phase]  (3m26s)
+07-31 15:29:06  ▪ gate face-full pass [phase]  (4.1s)
+07-31 15:29:06  ▸ stage SC6 confirmed  (1h16m00s)
+07-31 15:29:07  ▸ stage SC7 entered — The transcript captures structure
+07-31 15:29:07  • session #24 SC7 Deliver started (attempt 1/6)
+07-31 15:59:35  ▪ gate engine-fast pass [session]  (47.4s)
+07-31 15:59:35  ▪ gate face-fast pass [session]  (50.6s)
 ```
 
 ## Health
@@ -182,7 +183,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 23 · retries 2 (9 %) · overall Warn
+sessions 24 · retries 2 (8 %) · overall Warn
 ⚠ [context-saturation] session #13: 29,057,299 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #15: 20,145,044 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #18: 32,959,198 context tokens (≥ 20,000,000)
@@ -200,14 +201,11 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/sarban
-working tree: M .conductor/REPORT.md, M SARBAN-CORE-TRACKER.md
+working tree: clean
 ```
 
 ### Commits by session
 
-- **s16 (SC4 Deliver)** — 2 commit(s):
-  - [`d96963e`](https://github.com/shaahink/conductor/commit/d96963e) docs(sarban): hand SC5.1 the completed SC4, and the red-gate fix-prompt rig
-  - [`cfdb1ad`](https://github.com/shaahink/conductor/commit/cfdb1ad) fix(sc4): put the human correction above the evidence it corrects
 - **s17 (SC4 Fix)** — 1 commit(s):
   - [`49451ed`](https://github.com/shaahink/conductor/commit/49451ed) fix(sc4): stop a live gate standing on the verdict bug SC4.2 removed
 - **s18 (SC5 Deliver)** — 1 commit(s):
@@ -229,6 +227,9 @@ working tree: M .conductor/REPORT.md, M SARBAN-CORE-TRACKER.md
 - **s23 (SC6 Deliver)** — 2 commit(s):
   - [`bf83cf4`](https://github.com/shaahink/conductor/commit/bf83cf4) docs(sarban): hand SC7 the transcript work and what the squash rewrite taught
   - [`5c357b2`](https://github.com/shaahink/conductor/commit/5c357b2) fix(sc6): squash by rebuilding, not rebasing, and say what it did
+- **s24 (SC7 Deliver)** — 2 commit(s):
+  - [`2a7b8a0`](https://github.com/shaahink/conductor/commit/2a7b8a0) docs(sarban): hand SC7.2 the digest work and the rig trap that nearly hit this repo
+  - [`33d1f81`](https://github.com/shaahink/conductor/commit/33d1f81) feat(sc7): capture tool calls as structure, not a blob cut at 150 chars
 
 ## Phase handovers (audit)
 
@@ -251,33 +252,32 @@ working tree: M .conductor/REPORT.md, M SARBAN-CORE-TRACKER.md
 
 ## Last gate run
 
-engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
+engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: **SC6.2 landed and is claimed** (`conductor task --done SC6.2 --evidence .conductor/evidence/SC6/SC6.2-honest-safe-squash.md`), closing stage SC6. The squash no longer rebases at all: `Git.SquashChoreCommits` reads the stage's commit range once, groups consecutive `chore(conductor):` commits, rebuilds the tail with `git commit-tree` reusing the trees that already exist (fixup semantics — first commit's message and authorship, last commit's tree), and moves the branch with a compare-and-swap `update-ref` after writing `ORIG_HEAD`. Nothing is ever checked out, which is what makes a dirty tree irrelevant, a conflict unreachable, and a half-finished rebase impossible to leave beh…
+> SESSION-RESULT: **SC7.1 landed and claimed** (`conductor task --done SC7.1 --evidence .conductor/evidence/SC7/SC7.1-structured-tool-events.md`, commits `33d1f81` + `2a7b8a0`, pushed). Tool calls are now captured as structure instead of `Trunc(input.GetRawText(), 150)`: a new `ToolEventExtractor` turns a tool's argument object into name plus canonical fields (`path`, `command`, `taskId`, `status`, `purpose`, `bytes`, `lines`, `linesAdded`, `linesRemoved`, `edits`), each value capped at 400 chars on its own so the stored object is always complete JSON; file bodies are never stored, only counted; nested arguments are reported by shape. Both providers share it, so claude and opencode cannot drif…
 
 ## Tracker handoff
 
 ```
-last: **SC6.2 landed - SC6 is closed.** The squash no longer rebases: it groups consecutive
-  chore(conductor): commits, rebuilds the tail with `git commit-tree` reusing the trees that already
-  exist (fixup semantics - first message and authorship, last tree), then moves the branch with a
-  compare-and-swap `update-ref`. Nothing is ever checked out, so a dirty tree is irrelevant and a
-  conflict unreachable. It refuses a merge in the range or a range not ending at HEAD, aborts a
-  rebase it finds in progress, writes ORIG_HEAD, and marks a stage squashed only after one that
-  worked - the failure line carries git's exit code, its stderr and the failing command.
-gate: rig `%TEMP%\sarban-proofs\sc62`, same baseline, published engine vs FRESH build: `git rebase
-  returned non-zero` becomes `squashed 2 chore(conductor): commits into 1 (4 commits -> 3)`, chore
-  commits 5 to 2, and the unstaged + staged + untracked work all intact. Scoped 48/0, plus 41/0 for
-  ProcessRunner's own consumers. Evidence .conductor/evidence/SC6/SC6.2-honest-safe-squash.md.
-next: **SC7.1** - structured tool events in transcript.jsonl (name plus extracted fields, values
-  truncated and JSON never cut), schema v2 that still reads v1, out-of-repo writes in the verdict.
-know: the spec asked the squash to DEGRADE off Windows; there is nothing left to degrade, it launches
-  only git - SquashResult.Commands records every process it starts and a test asserts they are all
-  git. No non-Windows box ran it. Rig trap that cost a rerun: an agent .cmd invoking the PATH
-  conductor SHIM without `call` transfers control and never returns, so the BEFORE rig silently lost
-  every line after the claim. `RunOptions.Once` returns before the loop reaches the pending phase
-  gate, so a stage-close test needs MaxSessions. Bugs 2,3,4,5,6,8,9,10,11,12 open (5 is fixed in
-  source, only the published engine still crashes).
+last: **SC7.1 landed.** Tool calls are captured as STRUCTURE. ToolEventExtractor turns a tool's
+  argument object into name plus canonical fields - path, command, taskId, status, purpose, bytes,
+  lines, linesAdded, linesRemoved, edits - each value capped at 400 chars on its own, so the stored
+  object is always complete JSON. File bodies are never stored, only counted. Transcript schema v2
+  carries v and tool; ReadV1OrV2 reads a pre-v2 line, stamps it v=1 honestly and recovers the tool
+  NAME while reporting cut-away fields absent. RepoScope judges written paths against plan.repo AND
+  declared satellites; the verdict logs the out-of-repo note ahead of every early return.
+gate: rig `%TEMP%\sarban-proofs\sc71`, one baseline, published engine vs FRESH build. Published
+  stored `Write ...138 z's...` with the path GONE and logged nothing; fresh stored the whole path
+  plus `bytes=400 lines=1` and logged `note: 1 file(s) written outside the repo: <path>`. Scoped
+  33/0 and 188/0 and 38/0. Evidence .conductor/evidence/SC7/SC7.1-structured-tool-events.md.
+next: **SC7.2** - readable one-liner per call on the wire, and a per-session digest computed, stored
+  and served on /sessions. Every field it needs is already captured and proven.
+know: **RIG TRAP that nearly aimed a run verb at THIS repo** - CONDUCTOR_PLAN is set in your session
+  env and OUTRANKS the cwd plan scan, so `Set-Location <rig>; conductor run` resolves to
+  C:/code/conductor and tries to resume the LIVE run; only the instance lock stopped it. Set
+  `$env:CONDUCTOR_PLAN` to the rig's plan first, or pass `-p`. VerdictEngine.cs sits at 478 of its
+  500 ratchet ceiling - any addition there needs a matching move out. `conductor bg logs` cannot read
+  a LIVE log (bug 13); read it with FileShare ReadWrite. Bugs 2,3,4,5,6,8,9,10,11,12,13 open.
 ```

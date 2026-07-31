@@ -25,7 +25,8 @@ public interface IRunStore : IDisposable
         string runId, string stageId, int number, string kind,
         DateTime startedUtc, DateTime? endedUtc, string? outcome,
         string? agentSessionId, int resumeCount, int attempt,
-        string? gateSummary, string? resultSummary, int commitCount, string? newlyDone);
+        string? gateSummary, string? resultSummary, int commitCount, string? newlyDone,
+        string? digest = null);
 
     // ---------------------------------------------------------------- costs
 

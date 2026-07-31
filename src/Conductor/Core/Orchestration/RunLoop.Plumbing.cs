@@ -182,7 +182,8 @@ public sealed partial class RunLoop
             db.RecordSession(_ctx.State.RunId, rec.Stage, rec.Number, rec.Kind.ToString(),
                 rec.StartedUtc, rec.EndedUtc, rec.Outcome?.ToString(), rec.ClaudeSessionId,
                 rec.ResumeCount, rec.Attempt, rec.GateSummary, rec.ResultSummary,
-                rec.NewCommits.Count, rec.NewlyDone.Count > 0 ? string.Join(",", rec.NewlyDone) : null);
+                rec.NewCommits.Count, rec.NewlyDone.Count > 0 ? string.Join(",", rec.NewlyDone) : null,
+                rec.Digest.ToJson());
             if (rec.CostUsd is { } costUsd)
                 db.RecordCost(_ctx.State.RunId, rec.Number, "agent",
                     rec.TokensInput ?? 0, rec.TokensOutput ?? 0, rec.TokensReasoning ?? 0,

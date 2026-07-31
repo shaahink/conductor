@@ -72,7 +72,7 @@ public sealed partial class SqliteRunStore
     {
         var rows = Query(
             "SELECT number, stage_id, kind, started_utc, ended_utc, outcome, agent_session_id, " +
-            "resume_count, attempt, gate_summary, result_summary, commit_count, newly_done " +
+            "resume_count, attempt, gate_summary, result_summary, commit_count, newly_done, digest " +
             "FROM sessions WHERE run_id = @runId AND number = @num",
             ("@runId", runId), ("@num", number));
 
@@ -91,7 +91,8 @@ public sealed partial class SqliteRunStore
             GateSummary: r["gate_summary"] as string,
             ResultSummary: r["result_summary"] as string,
             CommitCount: Convert.ToInt32(r["commit_count"]),
-            NewlyDone: r["newly_done"] as string
+            NewlyDone: r["newly_done"] as string,
+            Digest: r["digest"] as string
         );
     }
 
@@ -102,7 +103,7 @@ public sealed partial class SqliteRunStore
         // multiplies the session row by its cost rows and every per-session figure comes out wrong.
         var rows = Query(
             "SELECT s.number, s.stage_id, s.kind, s.started_utc, s.ended_utc, s.outcome, s.attempt, " +
-            "s.resume_count, s.gate_summary, s.result_summary, s.commit_count, " +
+            "s.resume_count, s.gate_summary, s.result_summary, s.commit_count, s.digest, " +
             "(SELECT COALESCE(SUM(c.cost_usd), 0) FROM costs c " +
             " WHERE c.run_id = s.run_id AND c.session_number = s.number) AS cost_usd, " +
             "(SELECT COALESCE(SUM(c.tokens_in), 0) FROM costs c " +
@@ -132,7 +133,8 @@ public sealed partial class SqliteRunStore
             TokensIn: Convert.ToInt64(r["tokens_in"]),
             TokensOut: Convert.ToInt64(r["tokens_out"]),
             TokensThink: Convert.ToInt64(r["tokens_think"]),
-            TokensCache: Convert.ToInt64(r["tokens_cache"])
+            TokensCache: Convert.ToInt64(r["tokens_cache"]),
+            Digest: r["digest"] as string
         )).ToList();
     }
 

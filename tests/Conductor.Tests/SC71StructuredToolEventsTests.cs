@@ -202,7 +202,7 @@ public sealed class SC71StructuredToolEventsTests
         new ClaudeProvider().ParseLine(line, state);
         var call = Assert.Single(tools);
 
-        var stored = new TranscriptLine(1, DateTimeOffset.UnixEpoch, "7", "tool", ToolEventExtractor.Render(call))
+        var stored = new TranscriptLine(1, DateTimeOffset.UnixEpoch, "7", "tool", ToolLine.Render(call))
         {
             V = TranscriptLog.SchemaVersion,
             Tool = call,
@@ -245,7 +245,7 @@ public sealed class SC71StructuredToolEventsTests
                     ["path"] = @"C:\code\conductor\src\App.cs",
                     ["bytes"] = "922",
                 });
-                log.Append("7", "tool", ToolEventExtractor.Render(call), call);
+                log.Append("7", "tool", ToolLine.Render(call), call);
             }
 
             var read = Assert.Single(TranscriptLog.ReadAll(path));
@@ -438,6 +438,8 @@ public sealed class SC71StructuredToolEventsTests
 
         var (kind, text) = Assert.Single(seen);
         Assert.Equal("tool", kind);
-        Assert.Equal("Read path=README.md", text);
+        // SC7.2 made this line the readable one (`Read README.md`, not the `Read path=…` field dump).
+        // The bar this test holds is unchanged: a consumer wiring no tool handler still gets the line.
+        Assert.Equal("Read README.md", text);
     }
 }

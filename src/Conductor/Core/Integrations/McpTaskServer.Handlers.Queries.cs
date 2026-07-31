@@ -204,6 +204,10 @@ public partial class McpTaskServer
                     gateSummary = s.GateSummary,
                     resultSummary = s.ResultSummary,
                     newlyDone = s.NewlyDone,
+                    // SC7.2: what that session actually did — tool mix, files it wrote, claims,
+                    // bg-start purposes as a storyline, build/test commands. Reading an earlier
+                    // session is now one tool call instead of a transcript crawl.
+                    digest = Core.Events.SessionDigest.FromJson(s.Digest)?.Render(),
                 },
                 gates,
             });

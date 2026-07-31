@@ -76,10 +76,13 @@ public sealed class ClaudeProvider : IAgentProvider
                             // `Trunc(inp.GetRawText(), 150)` — the whole argument object cut at 150
                             // characters, mid-string — so a Write whose file_path sat past that point
                             // had no recoverable path in any downstream reader (devcontext #10).
+                            // SC7.2: and the line the wire carries is the READABLE one —
+                            // `Edit LibrarySurfaceRenderer.cs (+12/-3)`, not the structural dump of
+                            // the same fields. The structure travels beside it, so nothing is lost.
                             var name = block.TryGetProperty("name", out var n) ? n.GetString() ?? "tool" : "tool";
                             block.TryGetProperty("input", out var inp);
                             var call = ToolEventExtractor.Extract(name, inp);
-                            state.EmitTool(call, ToolEventExtractor.Render(call));
+                            state.EmitTool(call, ToolLine.Render(call));
                         }
                     }
                 }

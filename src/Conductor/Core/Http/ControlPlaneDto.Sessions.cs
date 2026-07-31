@@ -7,7 +7,10 @@ public sealed record SessionRowDto(
     int Number, string StageId, string Kind, string StartedUtc, string? EndedUtc, string? Outcome,
     int Attempt, int ResumeCount, string? GateSummary, string? ResultSummary, int CommitCount,
     double CostUsd = 0, long TokensIn = 0, long TokensOut = 0, long TokensThink = 0,
-    long TokensCache = 0);
+    long TokensCache = 0,
+    // SC7.2: what the session actually DID, from its structured tool events. Null when the session
+    // predates the digest or captured no tool calls — never an empty digest standing in for one.
+    SessionDigestDto? Digest = null);
 
 public sealed record SessionsDto(IReadOnlyList<SessionRowDto> Sessions);
 

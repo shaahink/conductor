@@ -4,25 +4,28 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SC7.1 landed.** Tool calls are captured as STRUCTURE. ToolEventExtractor turns a tool's
-  argument object into name plus canonical fields - path, command, taskId, status, purpose, bytes,
-  lines, linesAdded, linesRemoved, edits - each value capped at 400 chars on its own, so the stored
-  object is always complete JSON. File bodies are never stored, only counted. Transcript schema v2
-  carries v and tool; ReadV1OrV2 reads a pre-v2 line, stamps it v=1 honestly and recovers the tool
-  NAME while reporting cut-away fields absent. RepoScope judges written paths against plan.repo AND
-  declared satellites; the verdict logs the out-of-repo note ahead of every early return.
-gate: rig `%TEMP%\sarban-proofs\sc71`, one baseline, published engine vs FRESH build. Published
-  stored `Write ...138 z's...` with the path GONE and logged nothing; fresh stored the whole path
-  plus `bytes=400 lines=1` and logged `note: 1 file(s) written outside the repo: <path>`. Scoped
-  33/0 and 188/0 and 38/0. Evidence .conductor/evidence/SC7/SC7.1-structured-tool-events.md.
-next: **SC7.2** - readable one-liner per call on the wire, and a per-session digest computed, stored
-  and served on /sessions. Every field it needs is already captured and proven.
-know: **RIG TRAP that nearly aimed a run verb at THIS repo** - CONDUCTOR_PLAN is set in your session
-  env and OUTRANKS the cwd plan scan, so `Set-Location <rig>; conductor run` resolves to
-  C:/code/conductor and tries to resume the LIVE run; only the instance lock stopped it. Set
-  `$env:CONDUCTOR_PLAN` to the rig's plan first, or pass `-p`. VerdictEngine.cs sits at 478 of its
-  500 ratchet ceiling - any addition there needs a matching move out. `conductor bg logs` cannot read
-  a LIVE log (bug 13); read it with FileShare ReadWrite. Bugs 2,3,4,5,6,8,9,10,11,12,13 open.
+last: **SC7.2 landed - SC7 is complete.** ToolLine renders a ToolCall as the line a human reads
+  (`Edit ToolLine.cs (+40/-1)`, `conductor task_update SC7.2 -> done`); the structured tool object
+  still travels beside it, so this is a rendering, not a second capture. ToolEventExtractor.Render
+  is deleted - no production caller left. An argv ARRAY under `command` now joins into a command
+  line instead of `[3 items]`. SessionDigest folds tool mix, files written with counts, claims,
+  bg-start purposes and notable build/test commands live in TrackActivity; stored as JSON in
+  run.db `sessions.digest` (migration v9), served ranked on /sessions, one-line summary in the log,
+  rendered block returned by the MCP `session_detail` tool.
+gate: rig `%TEMP%\sarban-proofs\sc72`, one baseline, published engine vs FRESH build. Published
+  wrote escaped-JSON blobs with the Write path cut away and logged no digest; fresh wrote all ten
+  worked-example one-liners, logged `digest: 10 tool calls - 7 tools - 2 files (3 writes) ...`,
+  stored it in run.db and served it on GET /sessions:4399. Full suite 1396/0/0. Evidence
+  .conductor/evidence/SC7/SC7.2-readable-wire-and-session-digest.md.
+next: **SC8.1** - `conductor version` and GET /version reporting semver, git sha and build date
+  stamped at build; install.ps1 prints the version before and after. Nothing in SC7 blocks it.
+know: **RIG TRAP, new one.** The fake agent ends with `git add -A; git commit`, so it COMMITS the
+  rig's own conductor.plan.json and agent .cmd - `git reset --hard <baseline>` between runs then
+  deletes them and the next run dies with "Plan file not found". Recreate both, or keep them
+  outside the rig repo. Still true: CONDUCTOR_PLAN outranks the cwd plan scan - set it to the rig's
+  plan before any run verb. Do NOT read a defect off the PATH conductor: its `bg status` shows a
+  negative runtime for running rows, which is SC5.4 already fixed in the tree, not a live bug.
+  Bugs 2,3,4,5,6,8,9,10,11,12,13 open.
 
 
 ## Baseline numbers (from run.db)
@@ -31,7 +34,7 @@ know: **RIG TRAP that nearly aimed a run verb at THIS repo** - CONDUCTOR_PLAN is
 |---|---|
 | Total checkpoints | 26 |
 | Done | 0 |
-| Claimed (unconfirmed) | 21 |
+| Claimed (unconfirmed) | 22 |
 
 ## Checkpoints
 
@@ -93,7 +96,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| SC7.1 | Tool events are stored structured — name plus extracted fields, values truncated, JSON never cut — with back-compat reading of old lines; writes outside the repo are counted and noted in the session verdict | TODO | - | - |
+| SC7.1 | Tool events are stored structured — name plus extracted fields, values truncated, JSON never cut — with back-compat reading of old lines; writes outside the repo are counted and noted in the session verdict | DONE | 33d1f81 | engine-fast:OK · face-fast:OK |
 | SC7.2 | The provider emits one-liner tool lines on the wire, and a per-session digest is computed, stored and served on /sessions matching the spec's worked example | TODO | - | - |
 
 ### SC8 — The program knows what it is and can update itself

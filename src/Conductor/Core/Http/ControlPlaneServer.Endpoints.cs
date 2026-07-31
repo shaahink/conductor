@@ -224,7 +224,8 @@ public sealed partial class ControlPlaneServer
             TokensIn: r.TokensIn,
             TokensOut: r.TokensOut,
             TokensThink: r.TokensThink,
-            TokensCache: r.TokensCache)).ToList();
+            TokensCache: r.TokensCache,
+            Digest: SessionDigestDto.From(Events.SessionDigest.FromJson(r.Digest)))).ToList();
         await WriteJsonAsync(ctx, new SessionsDto(dtos), ControlPlaneJsonContext.Default.SessionsDto).ConfigureAwait(false);
     }
 

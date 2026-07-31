@@ -31,7 +31,10 @@ public sealed record SessionSummaryRow(
     long TokensIn = 0,
     long TokensOut = 0,
     long TokensThink = 0,
-    long TokensCache = 0
+    long TokensCache = 0,
+    // SC7.2: the session digest as stored JSON (Core.Events.SessionDigest). Null for a session
+    // recorded before the column existed, or one that produced no captured tool calls.
+    string? Digest = null
 );
 
 public sealed record SessionDetailRow(
@@ -47,5 +50,6 @@ public sealed record SessionDetailRow(
     string? GateSummary,
     string? ResultSummary,
     int CommitCount,
-    string? NewlyDone
+    string? NewlyDone,
+    string? Digest = null
 );

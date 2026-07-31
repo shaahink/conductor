@@ -16,7 +16,7 @@ namespace Conductor.Tests;
 /// creates a deliverable file. Git commits are verified via direct inspection after the run.
 /// </summary>
 [Trait("Category", "Integration")]
-public sealed class HarnessTests : IDisposable
+public sealed partial class HarnessTests : IDisposable
 {
     private readonly string _repo;
     private readonly string _stateDir;

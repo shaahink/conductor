@@ -335,6 +335,8 @@ public sealed partial class SessionRunner
                 _ctx.State.AuditedStages.Add(stage.Id);
             _ctx.Log($"session #{rec.Number} exited (code {exit}, {(rec.EndedUtc - rec.StartedUtc).Value.TotalMinutes:0}m" +
                 (agent.CostUsd.HasValue ? $", ${agent.CostUsd:0.00}" : "") + ")");
+            // SC7.2: the digest at a glance, in the log, beside the exit it describes.
+            if (!rec.Digest.IsEmpty) _ctx.Log($"session #{rec.Number} digest: {rec.Digest.Summary()}");
             _ctx.Transcript.Append(rec.Number.ToString(), "system",
                 $"Session #{rec.Number} exited · code {exit} · {(rec.EndedUtc - rec.StartedUtc).Value.TotalMinutes:0}m" +
                 (agent.CostUsd.HasValue ? $" · ${agent.CostUsd:0.00}" : ""));
@@ -427,7 +429,8 @@ public sealed partial class SessionRunner
         // SC7.1: a tool event carries its STRUCTURE here too, so the stored line holds the real path
         // or command instead of a JSON blob cut at 150 characters.
         _ctx.Transcript.Append(rec.Number.ToString(), ev.Kind, ev.Text, ev.Tool);
-        if (ev.Tool != null) NoteOutsideRepoWrite(ev.Tool, rec);
+        // SC7.2: the same funnel folds the per-session digest, so it survives a kill mid-session.
+        if (ev.Tool != null) { rec.Digest.Add(ev.Tool, _ctx.Plan.Repo); NoteOutsideRepoWrite(ev.Tool, rec); }
         if (ev.Kind is "stderr") return; // the activity ring buffer keeps its original vocabulary
         _ctx.Activity.Add((ev.Kind, ev.Text, ev.Utc));
         if (_ctx.Activity.Count > 60) _ctx.Activity.RemoveRange(0, 20);

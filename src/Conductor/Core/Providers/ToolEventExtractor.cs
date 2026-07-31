@@ -88,7 +88,7 @@ public static class ToolEventExtractor
             var key = CanonicalKey(prop.Name, normalized);
             if (key == null) continue; // a body — folded into the derived counts below
             var value = prop.Value.ValueKind == JsonValueKind.Object || prop.Value.ValueKind == JsonValueKind.Array
-                ? Shape(prop.Value)
+                ? (JoinArgv(key, prop.Value) ?? Shape(prop.Value))
                 : Trunc(Scalar(prop.Value));
             if (value.Length == 0) continue;
             if (Array.IndexOf(CanonicalOrder, key) >= 0) fields[key] = value;
@@ -141,19 +141,23 @@ public static class ToolEventExtractor
     /// <summary>True when a call by this name writes to the path in its <c>path</c> field.</summary>
     public static bool IsWrite(string? name) => name != null && WriteTools.Contains(Normalize(name));
 
-    /// <summary>The structural one-liner stored as the transcript line's text: the tool name plus
-    /// <c>key=value</c> pairs. Readable, and — unlike the raw blob it replaces — every value in it is
-    /// whole. (SC7.2 turns this into the polished wire one-liner; SC7.1 only owes it structure.)</summary>
-    public static string Render(ToolCall call)
+    /// <summary>SC7.2 — a <c>command</c> that arrives as an argv ARRAY (conductor's own
+    /// <c>bg_start</c> sends <c>["dotnet","test","Conductor.slnx"]</c>) is joined back into the
+    /// command line a human recognises. Reporting it by shape as <c>[3 items]</c> obeyed the
+    /// never-cut rule but told a reader nothing, and the shell call is the single field most worth
+    /// reading. Returns null — meaning "not an argv array, describe it by shape" — for anything else.</summary>
+    private static string? JoinArgv(string key, JsonElement value)
     {
-        ArgumentNullException.ThrowIfNull(call);
-        if (call.Fields.Count == 0) return call.Name;
-        var sb = new StringBuilder(call.Name);
-        foreach (var (key, value) in call.Fields)
+        if (!string.Equals(key, "command", StringComparison.Ordinal)) return null;
+        if (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() == 0) return null;
+        var sb = new StringBuilder();
+        foreach (var item in value.EnumerateArray())
         {
-            sb.Append(' ').Append(key).Append('=').Append(value);
+            if (item.ValueKind != JsonValueKind.String) return null;
+            if (sb.Length > 0) sb.Append(' ');
+            sb.Append(item.GetString());
         }
-        return sb.ToString();
+        return Trunc(sb.ToString());
     }
 
     /// <summary>Strips an MCP server prefix (<c>mcp__conductor-tasks__task_update</c> →
