@@ -1,0 +1,140 @@
+{
+  // SARBAN plan 2 of 2 — face overhaul, human queue, supervision, prompt bank, era close.
+  // Launch ONLY after the core plan lands and tools/install.ps1 has republished the engine.
+  // The annotated master brief is docs/history/CONDUCTOR-SARBAN.md.
+  "name": "Sarban face - the watcher and the surfaces",
+  "repo": "C:/code/conductor",
+  "tracker": "SARBAN-FACE-TRACKER.md",
+  "planDoc": "docs/history/CONDUCTOR-SARBAN.md",
+  "branchPattern": "^feat/sarban$",
+  "pauseOnBlocked": true,
+  "batteryCollapse": false,
+
+  "agent": {
+    "command": "claude",
+    "model": "claude-opus-5",
+    "args": [
+      "-p", "{prompt}",
+      "--output-format", "stream-json",
+      "--verbose",
+      "--dangerously-skip-permissions",
+      "--model", "{model}",
+      "--session-id", "{sessionId}"
+    ],
+    "resumeArgs": [
+      "-p", "{prompt}",
+      "--output-format", "stream-json",
+      "--verbose",
+      "--dangerously-skip-permissions",
+      "--model", "{model}",
+      "--resume", "{claudeSessionId}"
+    ],
+    "output": "stream-json"
+  },
+
+  "advisor": {
+    "enabled": true,
+    "command": "claude",
+    "args": ["-p", "{prompt}", "--output-format", "json", "--model", "claude-haiku-4-5-20251001"],
+    "output": "json",
+    "timeoutMinutes": 6
+  },
+
+  "defaultWorkflow": "deliver",
+  "workflows": {
+    "deliver": {
+      "name": "deliver",
+      "description": "Deliver until the stage's checkpoints are confirmed; fix only when gates are red.",
+      "repeat": true,
+      "steps": [
+        { "id": "deliver", "kind": "Deliver", "deliver": true },
+        { "id": "fix-if-red", "kind": "Fix", "deliver": true, "runIf": "!gatesGreen" }
+      ]
+    }
+  },
+
+  "templatesDir": "sarban-templates",
+
+  "setup": {
+    "command": "dotnet build-server shutdown; exit 0",
+    "timeoutMinutes": 2
+  },
+  "teardown": {
+    "command": "dotnet build-server shutdown; exit 0",
+    "timeoutMinutes": 2
+  },
+
+  "stages": [
+    {
+      "id": "SF1",
+      "title": "The face sheds dead weight",
+      "sessions": 2,
+      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SF1. Verifier scores get a real DTO first, then the Dev SQL console goes with all its traces - tab, endpoint, report query flag - while the MCP run_query stays for chat and the two non-SQL Dev panels are re-homed, not deleted. Then tabs consolidate to at most ten with a design note before code. The face agent map in the spec names every reference site."
+    },
+    {
+      "id": "SF2",
+      "title": "The face tells the truth kindly - state, time, money",
+      "sessions": 3,
+      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SF2, including the screenshot-critique table. Home reorganized around what-is-happening-and-what-should-I-do with one honest connection line and a last-run summary when offline; one shared time formatter with relative age and the Timeline UTC mislabel fixed; money honesty - over-budget renders as OVER, window vs lifetime distinguished, in-flight session cost live in the top bar, and the attempts marker gets a legend."
+    },
+    {
+      "id": "SF3",
+      "title": "Reading a session becomes cheap",
+      "sessions": 3,
+      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SF3. The digest layer spends what SC7 captured: one-liner tool calls, a per-session digest panel with the bg-purpose storyline, rune-safe fold; the kanban answers where-are-we - stage grouping, active-stage highlight, card meta without selection, column totals, separated skips, in-column scroll, a you-are-here ribbon; git awareness lands on the wire and in the face - branch chip, dirty state, ahead-behind, commit subjects."
+    },
+    {
+      "id": "SF4",
+      "title": "The human queue is a first-class surface",
+      "sessions": 2,
+      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SF4. Productize the SHAHIN.md pattern: the engine collects every open HUMAN line, ownerGated stage, park with reason and age, blocked-until wait and owner-marked item into OWNER-QUEUE.md and an owner-queue endpoint, each entry saying what it unblocks and the exact command that clears it; the face surfaces it with age, and a new item pushes to Telegram."
+    },
+    {
+      "id": "SF5",
+      "title": "Supervision without a polling meter",
+      "sessions": 4,
+      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SF5. The watch verb blocks silently and returns only on the wake set - park, circuit breaker, budget park, phase RED twice on one stage, engine gone, run ended - never on backoffs or session churn, with a json brief of about thirty lines; a supervisor plan block runs a command on wake with the brief on stdin; the remote pattern is documented and proven once; conductor ps lists every run on the machine and the face gains a run picker. The watch-run skill is the behavioural spec."
+    },
+    {
+      "id": "SF6",
+      "title": "The prompt bank compounds",
+      "sessions": 2,
+      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SF6. Built-in session and fix templates carry the field lessons - mark in-progress first, claim before the handoff, the deferred-MCP note with the CLI fallback, long commands under conductor bg, the anchor-commit rule for multi-repo plans; the bank under plans/ is pruned, enriched from the rounds and indexed; conductor init scaffolds the refreshed set and passes doctor clean."
+    },
+    {
+      "id": "SF7",
+      "title": "Ship the era",
+      "sessions": 2,
+      "ownerGate": true,
+      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SF7. Docs reconciled with reality - plan-config advisor default, tracker runtime files, operating gains the supervision section, NEXT-FEATURES refreshed, the field notes gain a closure ledger; era CHANGELOG; then the owner-signed merge of feat/sarban to master, the tagged release through the SC8 pipeline, and a reinstall whose conductor version matches the releases page."
+    }
+  ],
+
+  "gatePolicy": "perPhase",
+  "gates": [
+    { "name": "engine-fast", "command": "dotnet build Conductor.slnx -clp:ErrorsOnly", "tier": "fast", "timeoutMinutes": 15 },
+    { "name": "face-fast", "command": "cmd /c \"cd /d C:\\code\\conductor\\face-go && go build ./... && go vet ./...\"", "tier": "fast", "timeoutMinutes": 10 },
+    { "name": "engine-full", "command": "dotnet test Conductor.slnx", "tier": "full", "timeoutMinutes": 40 },
+    { "name": "face-full", "command": "cmd /c \"cd /d C:\\code\\conductor\\face-go && go test ./...\"", "tier": "full", "timeoutMinutes": 15 }
+  ],
+
+  "limits": {
+    "stallMinutes": 15,
+    "sessionTimeoutMinutes": 120,
+    "maxResumesPerSession": 2,
+    "stageSlackFactor": 2,
+    "backoffMinutes": 30,
+    "maxBackoffs": 10,
+    "maxRunCostUsd": 220
+  },
+
+  "report": { "commit": false, "push": false },
+
+  "telegram": { "allowedChatIds": ["99205495"], "pollIntervalSeconds": 4, "enableTwoWay": true },
+
+  "readOrder": [
+    "docs/history/CONDUCTOR-SARBAN.md"
+  ],
+
+  "promptExtra": "TRAPS THIS REPO HAS ALREADY PAID FOR, in order of cost:\n1. NEVER run tools/install.ps1 or overwrite the published engine - the conductor driving you runs from that published copy. The owner reinstalls between plans.\n2. The ratchet gate is tools/gates/ratchet.ps1 - the wrong path prints an error but exits 0, a silent false green. Never raise the pragma ceiling; fix the cause.\n3. face-go: pad plain text then style, never width-format an ANSI string; clamp with MaxWidth and MaxHeight; goldens pin UTC and live in face-go/internal/tui/testdata/golden - regenerate them in a separate rebaseline commit, and read face-go/STYLE.md before any face change.\n4. Orphaned dotnet test hosts flake the full suite; stopping stray dotnet processes between full runs is sanctioned, but never kill the conductor process itself.\n5. PowerShell tooling targets Windows PowerShell 5.1 and must stay ASCII-only - em-dashes have torn string literals here before.\n6. Keep tracker handoffs, checkpoint titles and all plan prose free of curly braces until you have verified the SC3.3 engine fix is what is driving you.\n7. The conductor MCP task tools may arrive deferred in your harness - ToolSearch for task_update first, or use the CLI: conductor task --done ID --evidence PATH. That command is the only claim; prose moves nothing.\n8. Commit per checkpoint with the repo's trailer convention and push feat/sarban. Go sources are checked out LF; keep them that way.\n9. Tab changes: tabKey in model.go is the single source for mnemonics; the help legend in cmdbar.go is hand-maintained - update both or the help lies."
+}

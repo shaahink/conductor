@@ -31,6 +31,25 @@ TUI at `face/`.
 - **Operating Conductor as an agent:** `docs/operating.md` is the control guide — commands,
   live-run steering, HTTP control plane, NEEDS-HUMAN handling, safety rules, and the known-gaps list.
 
+## Resume here (SARBAN ERA — field-report-driven evolution, 2026-07-31)
+
+**Read this first if you're the fresh session.** The active era is **Sarban** — two self-hosted
+plans built from three real-run field reports, the owner's screenshot critique, and the driver
+skill's field log. The spec is `docs/history/CONDUCTOR-SARBAN.md` (mission, per-stage acceptance,
+traceability); the plans are `plans/conductor-sarban-core.plan.json` (SC1–SC8: Telegram,
+truthful surfaces, config-trap validation, verdict correctness, wait/detach/board verbs, history
+hygiene, structured transcript, versioning + self-update) and `plans/conductor-sarban-face.plan.json`
+(SF1–SF7: kill the SQL console + tab consolidation, honest Home/time/money, digest layer + kanban
+clarity + git awareness, the owner queue, `conductor watch` supervision, prompt bank, era close).
+Trackers: `SARBAN-CORE-TRACKER.md`, `SARBAN-FACE-TRACKER.md`. Branch: `feat/sarban`; everything
+below this section describes EARLIER eras — historical record, not current instructions.
+
+Era rules: the core plan runs first, driven by the engine published from this branch at launch;
+**never run `tools/install.ps1` mid-run** (the owner reinstalls between plans); keep tracker
+handoffs and plan prose brace-free until SC3.3's fix is the engine driving you; the field-notes
+files under `docs/dev/FIELD-NOTES-*.md` stay **untracked** (they carry private client context —
+same scrub rule as commit 5cf77f1).
+
 ## Resume here (U-SERIES IN FLIGHT — conductor drives itself, 2026-07-17)
 
 **Read this first if you're the fresh session.** The active era is the **U-series** — the owner's
