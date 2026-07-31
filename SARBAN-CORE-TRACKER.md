@@ -4,21 +4,20 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SC2.4 claimed**, all four parts, SC2 stage complete. CompletePlan now writes RUN-SUMMARY.md
-  from run.db (new QueryRun + QueryCostTotals). conductor report opens run.db instead of passing
-  store null - the offline report went 41 lines / Status Idle / 0 sessions / $0.00 to 74 lines with
-  Timeline and Health. SharedFileRead (FileShare.ReadWrite) fixes conductor log and bg logs. New
-  FileLineTail gives /transcript and /console byte-offset tails, /events uses ReadEventsAfter.
-gate: fast loop green - 223/223, nothing weakened. Every 'after' has a measured 'before' from the
-  PUBLISHED engine on the SAME rigs (TEMP/sarban-proofs/sc24):
-  .conductor/evidence/SC2/SC2.4-run-outlives-engine.md. Headline: 30s idle with 3 SSE clients and a
-  40 MB backlog read 1046.9 MB before, 0.0 MB after, same 45000 frames delivered either way.
-next: **SC3.1** - doctor FAILS on agent.model without the model token in args AND resumeArgs;
-  unknown RunIf/SkipIf tokens fail at plan load naming the valid vocabulary.
-know: the ratchet was ALREADY red at HEAD - VerdictEngine.Phase.cs was 534 lines with no recorded
-  debt. Split it (advisor limb out) rather than touching the baseline; baseline stays empty. Bug 1
-  CLOSED and its cause was two-sided: the old /console read also LOCKED the live session log against
-  writers. Bugs 2, 3, 4, 5 still open.
+last: **SC3.1 claimed**, both parts, commit d4c9103. doctor gained a model check: per stage it reads
+  the MERGED agent and fails when a pinned model (plan, stage, or pipeline.roles.X) is missing the
+  placeholder from args, and separately from a non-empty resumeArgs - Start swaps templates on
+  resume. New ConditionVocabulary mirrors EvaluateCondition's parse; PlanConfig rejects unknown
+  runIf/skipIf naming the vocabulary. doctor renders a plan-load failure as a check, not a crash.
+gate: fast loop green - build clean, 143 scoped tests, nothing weakened. Rig TEMP/sarban-proofs/sc31,
+  every after has a published-engine before: .conductor/evidence/SC3/SC3.1-config-traps.md. The typo
+  plan the published engine accepts twice over now makes run exit 1 leaving NO .conductor - nothing
+  spent.
+next: **SC3.2** - plan set refuses an absent leaf without --create, suggests the dotted path on a
+  single nested match, warns before stripping comments, reaches the live engine or prints the reload.
+know: MEASURED, correcting devcontext #4 - unknown tokens are not simply 'always run': bare junk is
+  stuck TRUE, negated junk (!gatesgreen) is stuck FALSE, so a fix step can vanish. New bug 6:
+  workflowStep.model and stage.overrides.model are read by NOTHING. Bugs 2, 3, 4, 5, 6 open.
 
 
 ## Baseline numbers (from run.db)
