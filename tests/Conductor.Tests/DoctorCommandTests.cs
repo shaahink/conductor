@@ -224,4 +224,133 @@ public sealed class DoctorCommandTests : IDisposable
         Assert.Equal("ok", check.State);
         Assert.Contains("1 configured", check.Message, StringComparison.Ordinal);
     }
+
+    // --- model token (SC3.1) ---
+    // The trap: AgentSession.ResolveArgs only substitutes where the template already says {model},
+    // so a pinned model with no placeholder runs the CLI's own default while every surface keeps
+    // reporting the pinned one. These assert the fail is a FAIL — a warn is not enough for a defect
+    // nothing downstream can detect.
+
+    /// <summary>The premise, measured against the substitution the engine actually performs rather
+    /// than taken from the field note: with a model pinned and no placeholder in the template, the
+    /// model appears NOWHERE in the spawned argv — the CLI picks its own default and the plan file,
+    /// journey and /state all keep saying otherwise. This is what the doctor check above exists to
+    /// catch, so if this behaviour ever changes the check should be revisited, not the test.</summary>
+    [Fact]
+    public void ResolveArgs_DropsThePinnedModel_WhenTheTemplateHasNoPlaceholder()
+    {
+        var withoutToken = AgentSession.ResolveArgs(["-p", "{prompt}"], "PROMPT", "sess-1", null, "claude-opus-5");
+        Assert.DoesNotContain(withoutToken, a => a.Contains("opus", StringComparison.OrdinalIgnoreCase));
+
+        var withToken = AgentSession.ResolveArgs(["-p", "{prompt}", "--model", "{model}"], "PROMPT", "sess-1", null, "claude-opus-5");
+        Assert.Contains("claude-opus-5", withToken, StringComparer.Ordinal);
+    }
+
+    private static PlanConfig ModelPlan(AgentConfig agent, Action<PlanConfig>? configure = null) => Plan(p =>
+    {
+        p.Agent = agent;
+        p.Stages.Add(new StageConfig { Id = "S1", Title = "one", Sessions = 1 });
+        configure?.Invoke(p);
+    });
+
+    [Fact]
+    public void CheckModelToken_Fail_WhenModelPinnedButArgsHaveNoPlaceholder()
+    {
+        var plan = ModelPlan(new AgentConfig { Command = "cmd", Args = ["-p", "{prompt}"], Model = "claude-opus-5" });
+        var check = DoctorCommand.CheckModelToken(plan);
+        Assert.Equal("fail", check.State);
+        Assert.Contains("plan.agent.model", check.Message, StringComparison.Ordinal);
+        Assert.Contains("args for stage(s) [S1]", check.Message, StringComparison.Ordinal);
+        Assert.Contains("CLI's default model", check.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CheckModelToken_Fail_WhenResumeArgsAloneHaveNoPlaceholder()
+    {
+        // The harder half: the first session honours the pinned model, and only the RESUMED one
+        // silently switches — AgentSession.Start swaps templates on resume.
+        var plan = ModelPlan(new AgentConfig
+        {
+            Command = "cmd",
+            Args = ["-p", "{prompt}", "--model", "{model}"],
+            ResumeArgs = ["-p", "{prompt}", "--resume", "{claudeSessionId}"],
+            Model = "claude-opus-5",
+        });
+        var check = DoctorCommand.CheckModelToken(plan);
+        Assert.Equal("fail", check.State);
+        Assert.Contains("resumeArgs for stage(s) [S1]", check.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("args for stage(s)", check.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CheckModelToken_Fail_WhenOnlyAStageOverridePinsTheModel()
+    {
+        var plan = ModelPlan(new AgentConfig { Command = "cmd", Args = ["-p", "{prompt}"] });
+        plan.Stages[0].Agent = new AgentConfig { Model = "claude-haiku-4-5-20251001" };
+        var check = DoctorCommand.CheckModelToken(plan);
+        Assert.Equal("fail", check.State);
+        Assert.Contains("stage 'S1' agent.model", check.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CheckModelToken_Fail_WhenARoleRulePinsTheModel()
+    {
+        // pipeline.roles.*.model reaches the same substitution via SessionRunner, so it is a pin too.
+        var plan = ModelPlan(new AgentConfig { Command = "cmd", Args = ["-p", "{prompt}"] }, p =>
+            p.Pipeline = new PipelineRules
+            {
+                Roles = new Dictionary<string, RoleAgentRule>(StringComparer.Ordinal)
+                {
+                    ["audit"] = new RoleAgentRule { Model = "claude-opus-5" },
+                },
+            });
+        var check = DoctorCommand.CheckModelToken(plan);
+        Assert.Equal("fail", check.State);
+        Assert.Contains("pipeline.roles.audit.model", check.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CheckModelToken_Ok_WhenBothTemplatesCarryThePlaceholder()
+    {
+        var plan = ModelPlan(new AgentConfig
+        {
+            Command = "cmd",
+            Args = ["-p", "{prompt}", "--model", "{model}"],
+            ResumeArgs = ["--resume", "{claudeSessionId}", "--model", "{model}", "{prompt}"],
+            Model = "claude-opus-5",
+        });
+        var check = DoctorCommand.CheckModelToken(plan);
+        Assert.Equal("ok", check.State);
+    }
+
+    [Fact]
+    public void CheckModelToken_Ok_WhenNoModelIsPinnedAtAll()
+    {
+        var plan = ModelPlan(new AgentConfig { Command = "cmd", Args = ["-p", "{prompt}"] });
+        var check = DoctorCommand.CheckModelToken(plan);
+        Assert.Equal("ok", check.State);
+        Assert.Contains("no model pinned", check.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>The plans this repo ships are the worked examples; a rule they trip is a rule that
+    /// would have to be explained away rather than fixed.</summary>
+    [Fact]
+    public void ShippedPlans_PassTheModelTokenCheck()
+    {
+        string? plansDir = null;
+        for (var d = new DirectoryInfo(AppContext.BaseDirectory); d != null; d = d.Parent)
+        {
+            var candidate = Path.Combine(d.FullName, "plans");
+            if (Directory.Exists(candidate)) { plansDir = candidate; break; }
+        }
+        if (plansDir == null) return; // not in a full checkout — soft skip
+
+        foreach (var file in Directory.EnumerateFiles(plansDir, "*.plan.json"))
+        {
+            var cfg = System.Text.Json.JsonSerializer.Deserialize<PlanConfig>(File.ReadAllText(file), PlanConfig.JsonOpts);
+            if (cfg is null) continue;
+            var check = DoctorCommand.CheckModelToken(cfg);
+            Assert.True(check.State != "fail", $"{Path.GetFileName(file)}: {check.Message}");
+        }
+    }
 }

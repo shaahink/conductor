@@ -271,7 +271,29 @@ public sealed class PlanConfig
         foreach (var s in Stages)
             ValidateQaRule(s.Qa, $"stage '{s.Id}' qa", errors);
 
+        // SC3.1: a runIf/skipIf token the evaluator doesn't know evaluates to TRUE at runtime
+        // (WorkflowEngine.EvaluateCondition's permissive default), so a mis-cased "!gatesgreen"
+        // runs a step that was written to be conditional and nothing ever says so. Refuse here.
+        if (Workflows is { Count: > 0 })
+        {
+            foreach (var (name, wf) in Workflows)
+            {
+                foreach (var step in wf?.Steps ?? [])
+                {
+                    ValidateCondition(name, step.Id, "runIf", step.RunIf, errors);
+                    ValidateCondition(name, step.Id, "skipIf", step.SkipIf, errors);
+                }
+            }
+        }
+
         return errors;
+    }
+
+    private static void ValidateCondition(string workflow, string stepId, string field, string? expr, List<string> errors)
+    {
+        if (expr is null) return; // absent is the normal case — only a written condition is judged
+        if (ConditionVocabulary.Validate(expr) is not { } why) return;
+        errors.Add($"workflow '{workflow}' step '{stepId}' {field} '{expr}' {why} — valid: {ConditionVocabulary.Describe()}");
     }
 
     private static void ValidateQaRule(QaRule? qa, string where, List<string> errors)

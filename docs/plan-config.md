@@ -28,15 +28,23 @@ Comments (`//`) are allowed — the loader tolerates them, and the scaffold uses
 | Field | Type | Description |
 |---|---|---|
 | `command` | string | CLI exe: `"opencode"`, `"claude"`, or any executable. |
-| `args` | string[] | Arguments. `{prompt}` and `{sessionId}` are substituted. |
-| `resumeArgs` | string[] | Arguments for resuming a session (`{prompt}`, `{claudeSessionId}`). |
+| `args` | string[] | Arguments. `{prompt}`, `{sessionId}` and `{model}` are substituted. |
+| `resumeArgs` | string[] | Arguments for resuming a session (`{prompt}`, `{claudeSessionId}`, `{model}`). |
 | `provider` | string | Adapter: `"opencode"`, `"claude"`, `"text"`. Inferred from `output` if unset. |
 | `output` | string | `"stream-json"` (claude) or `"text"` (opencode etc.). Legacy. |
 | `systemPrompt` | string | System prompt injected before the base prompt (persona). |
-| `model` | string | Model override (e.g. `"claude-sonnet-4-20250514"`). |
+| `model` | string | Model override (e.g. `"claude-sonnet-4-20250514"`). **Only reaches the CLI where the template says `{model}`** — see below. |
 | `temperature` | double | Sampling temperature (0.0–2.0). |
-| `tokenCeiling` | int | Per-session output token ceiling. |
 | `env` | object | Extra environment variables for the agent process. |
+
+**`model` needs a `{model}` placeholder, in both templates.** The model is substituted, never appended:
+a plan that sets `model` but whose `args` have no `{model}` runs the CLI's own default model while the
+plan file, `journey` and `/state` all keep reporting the pinned one. `resumeArgs` is a separate template
+that replaces `args` on resume, so a placeholder missing *there* switches model halfway through a stage.
+`doctor` FAILS (not warns) on either gap, naming the stages (SC3.1) — it is the one config error nothing
+downstream can detect. A stage `agent.model` override and a `pipeline.roles.*.model` rule count the same
+way. When no model is set anywhere, a lone `{model}` token and the `--model`/`-m` flag before it are
+dropped, so the CLI never receives an empty flag.
 
 ## `advisor` — Second brain for dead-ends
 
@@ -78,6 +86,24 @@ card, and judging a stuck stage. Never inside scheduling — the loop stays dete
 | `agent` | object | Per-stage agent override (merged over plan default). |
 | `preHook` | object | Command run before the first session. Non-zero exit blocks the stage. |
 | `postHook` | object | Command run after confirmation. Best-effort, never blocks. |
+
+## `workflows` — Declarative session steps
+
+Named workflows keyed by name; a stage picks one with `workflow`, the plan with `defaultWorkflow`.
+Built-ins: `deliver-verify` (default), `big-dev-then-big-audit`, `docs-only`, `spike`. Each step is
+`{ "id", "kind", "deliver", "runIf", "skipIf" }`, where `kind` ∈ `Deliver` · `Verify` · `Audit` · `Fix`.
+
+`runIf` / `skipIf` speak one small vocabulary, **case-sensitive**:
+
+| Kind | Tokens |
+|---|---|
+| boolean | `verifier.passed`, `circuit.broken`, `gatesGreen`, `hasCommits`, `stalled`, `stageComplete` |
+| numeric | `verifier.score`, `stage.attempts`, `newlyDoneCount` — compared against a number with `>=` `<=` `>` `<` `==` `!=` |
+
+A leading `!` negates: `"runIf": "!gatesGreen"`. An unrecognised token used to be permissive at runtime,
+so `"!gatesgreen"` (wrong case) silently stopped depending on the run at all — bare junk always ran the
+step, negated junk never did. The plan is now **refused at load** naming the vocabulary (SC3.1), so a
+typo costs a startup message instead of a stage.
 
 ## `gates[]` — Gate battery
 

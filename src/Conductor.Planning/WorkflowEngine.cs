@@ -232,7 +232,11 @@ public sealed class WorkflowEngine : IWorkflowResolver
 
     /// <summary>Evaluate a RunIf / SkipIf expression against runtime variables.
     /// Supported expressions are simple boolean/logic: "!verifier.passed",
-    /// "verifier.score >= 80", "circuit.broken", "newlyDoneCount > 0".</summary>
+    /// "verifier.score >= 80", "circuit.broken", "newlyDoneCount > 0".
+    /// <para>The permissive default below is deliberate — a condition this evaluator cannot parse
+    /// must not silently stop a step mid-run. It is also why an unparseable condition can never
+    /// reach here: <see cref="ConditionVocabulary"/> mirrors this parse and the plan is refused at
+    /// load (SC3.1), so "permissive" is a runtime safety net, not an authoring-time shrug.</para></summary>
     public bool EvaluateCondition(string expr, WorkflowRuntimeVars vars)
     {
         expr = expr.Trim();

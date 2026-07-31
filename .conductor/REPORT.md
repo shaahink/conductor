@@ -1,18 +1,18 @@
 ﻿# Conductor — Sarban core - the engine says what it knows run report
 
-_Updated 2026-07-31 05:38 UTC · branch `feat/sarban` · HEAD `177039b`_
+_Updated 2026-07-31 06:17 UTC · branch `feat/sarban` · HEAD `87d7fcd`_
 
 **Status:** Idle
-**Stage:** SC2 — Truthful surfaces · attempts used 0 · working ▸ SC2.4
-**Checkpoints:** 6/26 done · **Sessions run:** 7 · **Cost:** $82.7174 (agent $82.6636 + gates $0.0539) · **Tokens:** 1,252,017 in / 549,535 out
-**Confirmed phases:** SC1
+**Stage:** SC2 — Truthful surfaces · attempts used 0
+**Checkpoints:** 7/26 done · **Sessions run:** 8 · **Cost:** $106.2693 (agent $106.2106 + gates $0.0587) · **Tokens:** 1,542,917 in / 666,176 out
+**Confirmed phases:** SC1, SC2
 
 ## Stage progress
 
 | Stage | Title | Progress | State |
 |---|---|---|---|
 | SC1 | Telegram actually delivers | ██████████ 3/3 | confirmed ✓ |
-| SC2 | Truthful surfaces | ████████░░ 3/4 | **← active** |
+| SC2 | Truthful surfaces | ██████████ 4/4 | confirmed ✓ |
 | SC3 | Config traps die at authoring time | ░░░░░░░░░░ 0/4 | todo |
 | SC4 | Verdicts judge the work, not the environment | ░░░░░░░░░░ 0/4 | todo |
 | SC5 | The engine can wait, detach, and correct the board | ░░░░░░░░░░ 0/4 | todo |
@@ -30,14 +30,14 @@ _Updated 2026-07-31 05:38 UTC · branch `feat/sarban` · HEAD `177039b`_
 
 </details>
 
-<details><summary>SC2 — Truthful surfaces (3/4)</summary>
+<details> ✅<summary>SC2 — Truthful surfaces (4/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
 | SC2.1 | conductor status never reports a healthy run as interrupted during the verdict window — a gate executing counts as engine liveness — with a regression test | ✅ DONE | [`a3e970e`](https://github.com/shaahink/conductor/commit/a3e970e) |
 | SC2.2 | Sticky failure fields carry timestamps or clear; phase-gate lines emit the canonical gates GREEN or RED token with an honest no-gates-configured state; attempt numbering agrees across the two log lines; doctor warns on zero-gate stages | ✅ DONE | [`603fbbb`](https://github.com/shaahink/conductor/commit/603fbbb) |
-| SC2.3 | /state carries in-flight session spend plus costSpent, costCap, costRemaining, meanSessionCost, checkpointsRemaining, and window-vs-lifetime spend after a budget approval | ✅ DONE | - |
-| SC2.4 | A completed run leaves RUN-SUMMARY.md; report and status work offline from run.db; conductor log reads a live log without crashing; the SSE streams tail incrementally instead of re-reading the backlog every second | ⬜ TODO | - |
+| SC2.3 | /state carries in-flight session spend plus costSpent, costCap, costRemaining, meanSessionCost, checkpointsRemaining, and window-vs-lifetime spend after a budget approval | ✅ DONE | [`55da220`](https://github.com/shaahink/conductor/commit/55da220) |
+| SC2.4 | A completed run leaves RUN-SUMMARY.md; report and status work offline from run.db; conductor log reads a live log without crashing; the SSE streams tail incrementally instead of re-reading the backlog every second | ✅ DONE | [`87d7fcd`](https://github.com/shaahink/conductor/commit/87d7fcd) |
 
 </details>
 
@@ -113,21 +113,13 @@ _Updated 2026-07-31 05:38 UTC · branch `feat/sarban` · HEAD `177039b`_
 | 5 | SC2 | Deliver | 1 | 07-31 03:46 | 0:55 | Advanced | SC2.1 | 2 | engine-fast:OK · face-fast:OK | $12.5819 | $0.0095 | 187,251/84,278 |
 | 6 | SC2 | Deliver | 1 | 07-31 04:43 | 0:23 | Advanced | SC2.2 | 3 | engine-fast:OK · face-fast:OK | $13.9238 | $0.0085 | 195,137/73,903 |
 | 7 | SC2 | Deliver | 1 | 07-31 05:08 | 0:29 | Advanced | SC2.3 | 2 | engine-fast:OK · face-fast:OK | $11.8482 | $0.0037 | 196,445/75,881 |
+| 8 | SC2 | Deliver | 1 | 07-31 05:38 | 0:36 | Advanced | SC2.4 | 1 | engine-fast:OK · face-fast:OK | $23.5470 | $0.0048 | 290,900/116,641 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-31 02:48:41  ◆ run started · Sarban core - the engine says what it knows
-07-31 02:48:42  ▸ stage SC1 entered — Telegram actually delivers
-07-31 02:48:42  • session #1 SC1 Deliver started (attempt 1/4)
-07-31 03:13:58  ▪ gate engine-fast pass [session]  (40.8s)
-07-31 03:13:58  ▪ gate face-fast pass [session]  (46.9s)
-07-31 03:13:59  • session #1 SC1 → Advanced · done SC1.1 · 2 commit(s)  (25m16s)
-07-31 03:13:59  • session #2 SC1 Deliver started (attempt 1/4)
-07-31 03:43:41  ▪ gate engine-fast pass [session]  (40.2s)
-07-31 03:43:41  ▪ gate face-fast pass [session]  (4.7s)
 07-31 03:43:42  • session #2 SC1 → Advanced · done SC1.2 · 2 commit(s)  (29m42s)
 07-31 03:43:42  • session #3 SC1 Deliver started (attempt 1/4)
 07-31 04:24:33  ▪ gate engine-fast pass [session]  (42.3s)
@@ -158,6 +150,16 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-31 06:08:55  • session #7 SC2 Deliver started (attempt 1/6)
 07-31 06:38:41  ▪ gate engine-fast pass [session]  (33.9s)
 07-31 06:38:41  ▪ gate face-fast pass [session]  (3.2s)
+07-31 06:38:41  • session #7 SC2 → Advanced · done SC2.3 · 2 commit(s)  (29m46s)
+07-31 06:38:42  • session #8 SC2 Deliver started (attempt 1/6)
+07-31 07:16:16  ▪ gate engine-fast pass [session]  (43.3s)
+07-31 07:16:16  ▪ gate face-fast pass [session]  (4.9s)
+07-31 07:16:16  • session #8 SC2 → Advanced · done SC2.4 · 1 commit(s)  (37m34s)
+07-31 07:17:48  ▪ gate engine-fast pass [phase]  (0.0s)
+07-31 07:17:48  ▪ gate face-fast pass [phase]  (0.0s)
+07-31 07:17:48  ▪ gate engine-full pass [phase]  (1m23s)
+07-31 07:17:48  ▪ gate face-full pass [phase]  (6.2s)
+07-31 07:17:48  ▸ stage SC2 confirmed  (2h31m03s)
 ```
 
 ## Health
@@ -165,9 +167,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 7 · retries 1 (14 %) · overall Warn
+sessions 8 · retries 1 (12 %) · overall Warn
 ⚠ [context-saturation] session #3: 28,499,145 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #6: 20,274,223 context tokens (≥ 20,000,000)
+⚠ [context-saturation] session #8: 35,438,955 context tokens (≥ 20,000,000)
 ```
 
 ## Repo
@@ -176,7 +179,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/sarban
-working tree: clean
+working tree: M .conductor/REPORT.md, M SARBAN-CORE-TRACKER.md
 ```
 
 ### Commits by session
@@ -204,6 +207,8 @@ working tree: clean
 - **s7 (SC2 Deliver)** — 2 commit(s):
   - [`177039b`](https://github.com/shaahink/conductor/commit/177039b) docs(sarban): hand SC2.4 a live ticker and a filed bg-status bug
   - [`55da220`](https://github.com/shaahink/conductor/commit/55da220) fix(sc2): make /state show spend as it happens, and say how it knows
+- **s8 (SC2 Deliver)** — 1 commit(s):
+  - [`87d7fcd`](https://github.com/shaahink/conductor/commit/87d7fcd) fix(sc2): let the run outlive the engine
 
 ## Phase handovers (audit)
 
@@ -226,26 +231,28 @@ working tree: clean
 
 ## Last gate run
 
-engine-fast:OK · face-fast:OK
+engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
 
 ## Last session result
 
-> SESSION-RESULT: **SC2.3 claimed** (commits `55da220` + `177039b`, pushed on `feat/sarban`), all four parts landed with a measured before-and-after from the *published* engine on the same scratch rig (`%TEMP%\sarban-proofs\sc23`, a claude-provider fake agent emitting real slow `stream-json` envelopes, cap `$3.00` so session 2 parks) — evidence at `.conductor/evidence/SC2/SC2.3-live-spend.md`. The dead ticker was one missing call: `TokenDelta`, the only event the live fold reads, was emitted from exactly one place in the engine (`OpencodeProvider`), so a claude run folded an empty set for a session's whole length — measured before the fix as `sessionCost=0 sIn=0 sOut=0` on every sample from t+…
+> SESSION-RESULT: **SC2.4 landed and claimed** (`conductor task --done SC2.4 --evidence .conductor/evidence/SC2/SC2.4-run-outlives-engine.md`), commit `87d7fcd` pushed to `feat/sarban`, tree clean — that completes stage SC2. All four parts were measured against the PUBLISHED engine on identical scratch rigs under `%TEMP%\sarban-proofs\sc24`, never this repo. (1) A completed run left nothing behind; `CompletePlan` now writes `.conductor/RUN-SUMMARY.md` built from run.db via two new store queries (`QueryRun`, `QueryCostTotals`) — the agent/overhead split reads the costs *category* because the per-session cost column already sums agent+gate+advisor and the obvious subtraction double-counts. (2) `…
 
 ## Tracker handoff
 
 ```
-last: **SC2.3 claimed**, all four parts. The dead ticker was one missing call: TokenDelta - the only
-  event the live fold reads - was emitted ONLY by OpencodeProvider, so a claude run folded nothing.
-  ClaudeProvider now emits one delta per NEW assistant message id and never touches the authoritative
-  result-envelope totals. /state gained sessionCostBasis, costSpent, costCap, costRemaining,
-  meanSessionCost, checkpointsRemaining, windowCostUsd, lifetimeCostUsd, budgetWindowStartedUtc,
-  budgetApprovals. Approval stamps the window and logs what it forgave vs the untouched lifetime.
-gate: fast loop green - 204/204 across the classes touched, nothing weakened. Every 'after' line has a
-  measured 'before' from the PUBLISHED engine on the SAME rig:
-  .conductor/evidence/SC2/SC2.3-live-spend.md. Rig TEMP/sarban-proofs/sc23, cap 3.00.
-next: **SC2.4** - RUN-SUMMARY.md, offline report/status, shared-read log, incremental SSE tails.
-know: LiveCostEstimator has NO price table ON PURPOSE - live tokens are priced at what THIS RUN was
-  really billed, and session 1 honestly reads basis=no-rate-yet rather than guessing. NEW bug 5:
-  bg status dies entirely on one un-openable pid. Bugs 3 and 4 still open - 3 is SC2.4's problem.
+last: **SC2.4 claimed**, all four parts, SC2 stage complete. CompletePlan now writes RUN-SUMMARY.md
+  from run.db (new QueryRun + QueryCostTotals). conductor report opens run.db instead of passing
+  store null - the offline report went 41 lines / Status Idle / 0 sessions / $0.00 to 74 lines with
+  Timeline and Health. SharedFileRead (FileShare.ReadWrite) fixes conductor log and bg logs. New
+  FileLineTail gives /transcript and /console byte-offset tails, /events uses ReadEventsAfter.
+gate: fast loop green - 223/223, nothing weakened. Every 'after' has a measured 'before' from the
+  PUBLISHED engine on the SAME rigs (TEMP/sarban-proofs/sc24):
+  .conductor/evidence/SC2/SC2.4-run-outlives-engine.md. Headline: 30s idle with 3 SSE clients and a
+  40 MB backlog read 1046.9 MB before, 0.0 MB after, same 45000 frames delivered either way.
+next: **SC3.1** - doctor FAILS on agent.model without the model token in args AND resumeArgs;
+  unknown RunIf/SkipIf tokens fail at plan load naming the valid vocabulary.
+know: the ratchet was ALREADY red at HEAD - VerdictEngine.Phase.cs was 534 lines with no recorded
+  debt. Split it (advisor limb out) rather than touching the baseline; baseline stays empty. Bug 1
+  CLOSED and its cause was two-sided: the old /console read also LOCKED the live session log against
+  writers. Bugs 2, 3, 4, 5 still open.
 ```

@@ -37,7 +37,24 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
     {
         ArgumentNullException.ThrowIfNull(settings);
         var sw = Stopwatch.StartNew();
-        var plan = PlanConfig.Load(settings.ResolvePlanPath());
+
+        // SC3.1: a plan that fails validation is the commonest thing doctor is asked about, so it
+        // reports it as a check — not as an unhandled exception that also drops a crash log in
+        // whatever directory the operator happened to be standing in.
+        PlanConfig plan;
+        try
+        {
+            plan = PlanConfig.Load(settings.ResolvePlanPath());
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or FileNotFoundException or System.Text.Json.JsonException)
+        {
+            AnsiConsole.MarkupLine("[bold aqua]conductor doctor[/]");
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine(RenderCheck(new Check("plan", "fail", ex.Message)));
+            AnsiConsole.WriteLine();
+            AnsiConsole.MarkupLine($"[red]0 ok · 0 warn · 1 fail[/] — the plan does not load, so no other check ran ({sw.Elapsed.TotalMilliseconds:0}ms)");
+            return 1;
+        }
 
         AnsiConsole.MarkupLine($"[bold aqua]conductor doctor[/] — {Markup.Escape(plan.Name)}");
         AnsiConsole.MarkupLine($"repo: {Markup.Escape(plan.Repo)}");
@@ -64,6 +81,7 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
         var checks = new List<Check>
         {
             CheckAgentCli(plan),
+            CheckModelToken(plan),
             CheckGit(plan),
             CheckFace(),
             CheckGates(plan),
@@ -142,6 +160,66 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
         }
         return null;
     }
+
+    /// <summary>SC3.1 — the single most dangerous config trap found in the field (devcontext #2).
+    /// <c>AgentSession.ResolveArgs</c> substitutes the model ONLY where the template already says
+    /// <c>{model}</c>, so a plan that pins <c>agent.model</c> in a template without that placeholder
+    /// runs the agent CLI's own default model — while <c>journey</c>, <c>/state</c> and the plan file
+    /// all keep reporting the pinned one. It was caught once, by reading a raw session stream.
+    /// <para>Checked per stage against the MERGED agent (stage overrides fold into the plan default),
+    /// and per template: <c>AgentSession.Start</c> swaps <c>args</c> for <c>resumeArgs</c> on resume,
+    /// so a resumeArgs template missing the placeholder silently changes model halfway through a
+    /// stage — the harder half to notice. A role rule model (<c>pipeline.roles.*.model</c>) reaches
+    /// the same substitution via <c>SessionRunner</c>, so it counts as a pinned model too.
+    /// This is <c>fail</c>, never <c>warn</c>: nothing downstream can detect it.</para></summary>
+    internal static Check CheckModelToken(PlanConfig plan)
+    {
+        var roleModels = plan.Pipeline?.Roles?
+            .Where(kv => !string.IsNullOrWhiteSpace(kv.Value?.Model))
+            .Select(kv => $"pipeline.roles.{kv.Key}.model")
+            .ToList() ?? [];
+
+        var pinned = new SortedSet<string>(StringComparer.Ordinal);
+        var argsGaps = new List<string>();
+        var resumeGaps = new List<string>();
+
+        foreach (var stage in plan.Stages)
+        {
+            var eff = plan.ResolveAgent(stage);
+            var sources = new List<string>(roleModels);
+            if (!string.IsNullOrWhiteSpace(eff.Model))
+                sources.Add(stage.Agent?.Model is { Length: > 0 } ? $"stage '{stage.Id}' agent.model" : "plan.agent.model");
+            if (sources.Count == 0) continue;
+
+            var argsMissing = !HasModelToken(eff.Args);
+            var resumeMissing = eff.ResumeArgs is { Count: > 0 } && !HasModelToken(eff.ResumeArgs);
+            if (!argsMissing && !resumeMissing) continue;
+
+            if (argsMissing) argsGaps.Add(stage.Id);
+            if (resumeMissing) resumeGaps.Add(stage.Id);
+            foreach (var s in sources) pinned.Add(s);
+        }
+
+        if (argsGaps.Count == 0 && resumeGaps.Count == 0)
+        {
+            var configured = plan.Agent.Model ?? plan.Stages.Select(s => plan.ResolveAgent(s).Model).FirstOrDefault(m => !string.IsNullOrWhiteSpace(m));
+            return string.IsNullOrWhiteSpace(configured) && roleModels.Count == 0
+                ? new Check("model", "ok", "no model pinned — every session runs the agent CLI's own default")
+                : new Check("model", "ok", $"pinned model reaches the CLI — every args/resumeArgs template carries {{model}}");
+        }
+
+        var parts = new List<string>();
+        if (argsGaps.Count > 0)
+            parts.Add($"args for stage(s) [{string.Join(", ", argsGaps)}] carry no {{model}} placeholder, so those sessions run the CLI's default model instead");
+        if (resumeGaps.Count > 0)
+            parts.Add($"resumeArgs for stage(s) [{string.Join(", ", resumeGaps)}] carry no {{model}} placeholder, so a resumed session silently switches model");
+
+        return new Check("model", "fail",
+            $"{string.Join(" + ", pinned)} set, but {string.Join("; ", parts)} — add \"--model\", \"{{model}}\" to the template(s), or clear the model");
+    }
+
+    private static bool HasModelToken(IEnumerable<string> template)
+        => template.Any(a => a.Contains("{model}", StringComparison.Ordinal));
 
     internal static Check CheckGit(PlanConfig plan)
     {
