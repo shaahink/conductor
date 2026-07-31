@@ -109,6 +109,8 @@ public interface IRunStore : IDisposable
     // ---------------------------------------------------------------- typed queries
 
     IReadOnlyList<LedgerRow> QueryLedger(string runId, string? stageId = null, string? kind = null);
+    RunRow? QueryRun(string runId);
+    IReadOnlyList<CostCategoryRow> QueryCostTotals(string runId);
     SessionDetailRow? QuerySessionByNumber(string runId, int number);
     IReadOnlyList<SessionSummaryRow> QuerySessions(string runId);
     IReadOnlyList<GateDetailRow> QueryGatesForSession(string runId, int sessionNumber);

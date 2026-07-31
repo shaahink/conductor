@@ -35,8 +35,12 @@ public sealed partial class ControlPlaneServer
         {
             while (!ct.IsCancellationRequested)
             {
-                var events = ReadEvents();
-                foreach (var evt in events.Where(e => e.Seq > lastSeq).OrderBy(e => e.Seq))
+                // SC2.4: ask the database for the tail, not for everything. ReadEvents() selects every
+                // row of the run and deserialises it — once a second, per connected client, to find the
+                // nought-to-few that are new. The WHERE seq > ? is the same filter this loop was doing
+                // in C# after paying for the whole read.
+                var events = ReadEventsAfter(lastSeq);
+                foreach (var evt in events.OrderBy(e => e.Seq))
                 {
                     var json = JsonSerializer.Serialize<ConductorEvent>(evt, EventJsonContext.Default.ConductorEvent);
                     var frame = Encoding.UTF8.GetBytes($"data: {json}\n\n");
@@ -64,20 +68,25 @@ public sealed partial class ControlPlaneServer
         var output = ctx.Response.OutputStream;
         var transcriptPath = Path.Combine(_plan.StateDir, "transcript.jsonl");
         var lastSeq = ParseSince(ctx);
+        // SC2.4: one backlog read on connect (to honour ?since=), then bytes appended since — instead
+        // of deserialising every transcript line ever written, once a second, forever.
+        var tail = new FileLineTail();
+        tail.Follow(transcriptPath);
         try
         {
             while (!ct.IsCancellationRequested)
             {
-                if (File.Exists(transcriptPath))
+                foreach (var raw in tail.ReadAppended())
                 {
-                    var lines = TranscriptLog.ReadAll(transcriptPath);
-                    foreach (var line in lines.Where(l => l.Seq > lastSeq).OrderBy(l => l.Seq))
-                    {
-                        var json = JsonSerializer.Serialize(line, TranscriptJsonContext.Default.TranscriptLine);
-                        var frame = Encoding.UTF8.GetBytes($"data: {json}\n\n");
-                        await output.WriteAsync(frame, ct).ConfigureAwait(false);
-                        lastSeq = line.Seq;
-                    }
+                    if (string.IsNullOrWhiteSpace(raw)) continue;
+                    TranscriptLine? line;
+                    try { line = JsonSerializer.Deserialize(raw, TranscriptJsonContext.Default.TranscriptLine); }
+                    catch (JsonException) { continue; }
+                    if (line == null || line.Seq <= lastSeq) continue;
+                    var json = JsonSerializer.Serialize(line, TranscriptJsonContext.Default.TranscriptLine);
+                    var frame = Encoding.UTF8.GetBytes($"data: {json}\n\n");
+                    await output.WriteAsync(frame, ct).ConfigureAwait(false);
+                    lastSeq = line.Seq;
                 }
                 await output.FlushAsync(ct).ConfigureAwait(false);
                 await Task.Delay(1000, ct).ConfigureAwait(false);
@@ -109,32 +118,31 @@ public sealed partial class ControlPlaneServer
         ctx.Response.SendChunked = true;
         var output = ctx.Response.OutputStream;
         var since = ParseSince(ctx);
-        string? followingPath = null;
+        // SC2.4: the line counter and the byte offset advance together. Before, every poll called
+        // File.ReadAllLinesAsync on the WHOLE session log and skipped the lines it had already sent —
+        // the pane got quieter as the session grew and the reading got more expensive.
+        var tail = new FileLineTail();
+        var emitted = 0L;
         try
         {
             while (!ct.IsCancellationRequested)
             {
                 var path = CurrentRawLogPath();
-                if (path != followingPath)
+                if (tail.Follow(path))
                 {
-                    followingPath = path; // a new session started — replay its log from the top
+                    // A new session started — replay its log from the top, line numbers restart.
                     since = 0;
+                    emitted = 0;
                 }
-                if (path != null && File.Exists(path))
+                foreach (var text in tail.ReadAppended())
                 {
-                    string[] lines;
-                    try { lines = await File.ReadAllLinesAsync(path, ct).ConfigureAwait(false); }
-                    catch (IOException) { lines = []; }
-                    for (var i = 0; i < lines.Length; i++)
-                    {
-                        var seq = i + 1;
-                        if (seq <= since) continue;
-                        var json = JsonSerializer.Serialize(new ConsoleLineDto(seq, lines[i]),
-                            ControlPlaneJsonContext.Default.ConsoleLineDto);
-                        var frame = Encoding.UTF8.GetBytes($"data: {json}\n\n");
-                        await output.WriteAsync(frame, ct).ConfigureAwait(false);
-                        since = seq;
-                    }
+                    var seq = ++emitted;
+                    if (seq <= since) continue;
+                    var json = JsonSerializer.Serialize(new ConsoleLineDto(seq, text),
+                        ControlPlaneJsonContext.Default.ConsoleLineDto);
+                    var frame = Encoding.UTF8.GetBytes($"data: {json}\n\n");
+                    await output.WriteAsync(frame, ct).ConfigureAwait(false);
+                    since = seq;
                 }
                 await output.FlushAsync(ct).ConfigureAwait(false);
                 await Task.Delay(1000, ct).ConfigureAwait(false);

@@ -20,6 +20,14 @@ public sealed partial class ControlPlaneServer
         return _store.ReadAllEvents(_state.RunId);
     }
 
+    /// <summary>SC2.4: the incremental read behind <c>GET /events</c>. The folds (<c>/state</c>,
+    /// <c>/tasks</c>) genuinely need every event; a TAIL does not, and paying for the full log once a
+    /// second per client was the difference between an idle engine and a busy one on a long run.</summary>
+    private IReadOnlyList<ConductorEvent> ReadEventsAfter(long afterSeq)
+    {
+        return _store.ReadEventsAfter(_state.RunId, afterSeq);
+    }
+
     private async Task WriteStateAsync(HttpListenerContext ctx)
     {
         var events = ReadEvents();

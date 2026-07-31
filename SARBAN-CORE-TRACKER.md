@@ -4,19 +4,21 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SC2.3 claimed**, all four parts. The dead ticker was one missing call: TokenDelta - the only
-  event the live fold reads - was emitted ONLY by OpencodeProvider, so a claude run folded nothing.
-  ClaudeProvider now emits one delta per NEW assistant message id and never touches the authoritative
-  result-envelope totals. /state gained sessionCostBasis, costSpent, costCap, costRemaining,
-  meanSessionCost, checkpointsRemaining, windowCostUsd, lifetimeCostUsd, budgetWindowStartedUtc,
-  budgetApprovals. Approval stamps the window and logs what it forgave vs the untouched lifetime.
-gate: fast loop green - 204/204 across the classes touched, nothing weakened. Every 'after' line has a
-  measured 'before' from the PUBLISHED engine on the SAME rig:
-  .conductor/evidence/SC2/SC2.3-live-spend.md. Rig TEMP/sarban-proofs/sc23, cap 3.00.
-next: **SC2.4** - RUN-SUMMARY.md, offline report/status, shared-read log, incremental SSE tails.
-know: LiveCostEstimator has NO price table ON PURPOSE - live tokens are priced at what THIS RUN was
-  really billed, and session 1 honestly reads basis=no-rate-yet rather than guessing. NEW bug 5:
-  bg status dies entirely on one un-openable pid. Bugs 3 and 4 still open - 3 is SC2.4's problem.
+last: **SC2.4 claimed**, all four parts, SC2 stage complete. CompletePlan now writes RUN-SUMMARY.md
+  from run.db (new QueryRun + QueryCostTotals). conductor report opens run.db instead of passing
+  store null - the offline report went 41 lines / Status Idle / 0 sessions / $0.00 to 74 lines with
+  Timeline and Health. SharedFileRead (FileShare.ReadWrite) fixes conductor log and bg logs. New
+  FileLineTail gives /transcript and /console byte-offset tails, /events uses ReadEventsAfter.
+gate: fast loop green - 223/223, nothing weakened. Every 'after' has a measured 'before' from the
+  PUBLISHED engine on the SAME rigs (TEMP/sarban-proofs/sc24):
+  .conductor/evidence/SC2/SC2.4-run-outlives-engine.md. Headline: 30s idle with 3 SSE clients and a
+  40 MB backlog read 1046.9 MB before, 0.0 MB after, same 45000 frames delivered either way.
+next: **SC3.1** - doctor FAILS on agent.model without the model token in args AND resumeArgs;
+  unknown RunIf/SkipIf tokens fail at plan load naming the valid vocabulary.
+know: the ratchet was ALREADY red at HEAD - VerdictEngine.Phase.cs was 534 lines with no recorded
+  debt. Split it (advisor limb out) rather than touching the baseline; baseline stays empty. Bug 1
+  CLOSED and its cause was two-sided: the old /console read also LOCKED the live session log against
+  writers. Bugs 2, 3, 4, 5 still open.
 
 
 ## Baseline numbers (from run.db)
@@ -25,7 +27,7 @@ know: LiveCostEstimator has NO price table ON PURPOSE - live tokens are priced a
 |---|---|
 | Total checkpoints | 26 |
 | Done | 0 |
-| Claimed (unconfirmed) | 5 |
+| Claimed (unconfirmed) | 6 |
 
 ## Checkpoints
 
@@ -46,7 +48,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | SC2.1 | conductor status never reports a healthy run as interrupted during the verdict window — a gate executing counts as engine liveness — with a regression test | DONE | a3e970e | engine-fast:OK · face-fast:OK |
 | SC2.2 | Sticky failure fields carry timestamps or clear; phase-gate lines emit the canonical gates GREEN or RED token with an honest no-gates-configured state; attempt numbering agrees across the two log lines; doctor warns on zero-gate stages | DONE | 603fbbb | engine-fast:OK · face-fast:OK |
-| SC2.3 | /state carries in-flight session spend plus costSpent, costCap, costRemaining, meanSessionCost, checkpointsRemaining, and window-vs-lifetime spend after a budget approval | TODO | - | - |
+| SC2.3 | /state carries in-flight session spend plus costSpent, costCap, costRemaining, meanSessionCost, checkpointsRemaining, and window-vs-lifetime spend after a budget approval | DONE | 55da220 | engine-fast:OK · face-fast:OK |
 | SC2.4 | A completed run leaves RUN-SUMMARY.md; report and status work offline from run.db; conductor log reads a live log without crashing; the SSE streams tail incrementally instead of re-reading the backlog every second | TODO | - | - |
 
 ### SC3 — Config traps die at authoring time

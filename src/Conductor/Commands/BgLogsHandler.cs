@@ -66,10 +66,13 @@ internal static class BgLogsHandler
         try
         {
             var tail = settings.Tail > 0 ? settings.Tail : 30;
-            var allLines = File.ReadAllLines(logFile);
-            var lines = allLines.Length <= tail ? allLines : allLines[^tail..];
+            // SC2.4 (bug 1): the whole point of `bg logs` is a log a child is STILL writing — the shell
+            // doing the redirect holds a Write handle, which File.ReadAllLines' FileShare.Read does not
+            // permit, so this printed "being used by another process" for every live job.
+            var allLines = SharedFileRead.ReadAllLines(logFile);
+            var lines = allLines.Count <= tail ? allLines : allLines.Skip(allLines.Count - tail).ToList();
 
-            AnsiConsole.MarkupLine($"[bold aqua]Log: {Markup.Escape(Path.GetFileName(logFile))}[/] ({lines.Length}/{allLines.Length} lines)");
+            AnsiConsole.MarkupLine($"[bold aqua]Log: {Markup.Escape(Path.GetFileName(logFile))}[/] ({lines.Count}/{allLines.Count} lines)");
             AnsiConsole.WriteLine();
             foreach (var line in lines)
             {

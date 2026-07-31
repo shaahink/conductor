@@ -36,6 +36,38 @@ public sealed partial class SqliteRunStore
         )).ToList();
     }
 
+    public RunRow? QueryRun(string runId)
+    {
+        var rows = Query(
+            "SELECT run_id, plan_name, repo, branch, driver_ver, status, started_utc, ended_utc " +
+            "FROM runs WHERE run_id = @runId",
+            ("@runId", runId));
+        if (rows.Count == 0) return null;
+        var r = rows[0];
+        return new RunRow(
+            RunId: (string)r["run_id"]!,
+            PlanName: (string)r["plan_name"]!,
+            Repo: (string)r["repo"]!,
+            Branch: r["branch"] as string,
+            DriverVersion: r["driver_ver"] as string,
+            Status: (string)(r["status"] ?? "unknown")!,
+            StartedUtc: (string)(r["started_utc"] ?? "")!,
+            EndedUtc: r["ended_utc"] as string);
+    }
+
+    public IReadOnlyList<CostCategoryRow> QueryCostTotals(string runId)
+    {
+        var rows = Query(
+            "SELECT category, COALESCE(SUM(cost_usd), 0) AS cost_usd, " +
+            "COALESCE(SUM(tokens_in + tokens_out + tokens_think + tokens_cache), 0) AS tokens " +
+            "FROM costs WHERE run_id = @runId GROUP BY category ORDER BY category",
+            ("@runId", runId));
+        return rows.Select(r => new CostCategoryRow(
+            Category: (string)(r["category"] ?? "unknown")!,
+            CostUsd: Convert.ToDecimal(r["cost_usd"]),
+            Tokens: Convert.ToInt64(r["tokens"]))).ToList();
+    }
+
     public SessionDetailRow? QuerySessionByNumber(string runId, int number)
     {
         var rows = Query(

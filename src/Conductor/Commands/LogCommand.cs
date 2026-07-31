@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 
+using Conductor.Core;
 using Conductor.Models;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -68,7 +69,18 @@ public sealed class LogCommand : Command<LogCommand.Settings>
         var matched = new List<JsonLogEntry>();
         foreach (var file in jsonFiles)
         {
-            foreach (var line in File.ReadLines(file))
+            // SC2.4: the newest of these files is the log the RUNNING engine holds open for writing.
+            // File.ReadLines asks for FileShare.Read, which does not permit the writer's Write handle
+            // — so `conductor log` threw a sharing violation on a live run, the only run worth
+            // querying. SharedFileRead asks for FileShare.ReadWrite (round-four #3).
+            IReadOnlyList<string> lines;
+            try { lines = SharedFileRead.ReadAllLines(file); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                AnsiConsole.MarkupLine($"[yellow]skipped unreadable log file[/] {Markup.Escape(Path.GetFileName(file))}: {Markup.Escape(ex.Message)}");
+                continue;
+            }
+            foreach (var line in lines)
             {
                 if (string.IsNullOrWhiteSpace(line)) continue;
                 try
