@@ -192,3 +192,50 @@ func TestReportScrollClampsToTheBody(t *testing.T) {
 		t.Error("scrolling past the end blanked the report — the offset is not clamped to the body")
 	}
 }
+
+// --- session tokens, re-homed from the deleted Dev tab (SF1.2) ----------------
+
+// This came from tab_dev_test.go with the table it measures. The Dev tab's stats table renders what
+// run.db says, including the ugly truth: a session that recorded a real cost against zero tokens is
+// what EVERY claude-native session looked like before bug #5 (ClaudeProvider never read `usage`). The
+// table must show that, name the reason, and never quietly drop the row or invent a plausible count.
+func TestReportSessionTokensShowsZeroTokenSessionsAndNamesTheCause(t *testing.T) {
+	m := newGoldenModel(120, 30).(Model)
+	stats := stripANSI(m.renderReportSessionTokens())
+
+	if !strings.Contains(stats, "#8") {
+		t.Fatalf("the zero-token session must still be listed:\n%s", stats)
+	}
+	if !strings.Contains(stats, "$0.09") {
+		t.Errorf("its real cost must render:\n%s", stats)
+	}
+	if !strings.Contains(stats, "#5") {
+		t.Errorf("a cost-with-zero-tokens row must name the known cause (bug #5), or it reads as a "+
+			"Face bug:\n%s", stats)
+	}
+	// A run where every session has tokens must NOT carry the note — it would be a lie about the data.
+	m.data.Sessions = []api.SessionRowDto{
+		{Number: 1, StageId: "F1", TokensIn: 10, TokensOut: 5, CostUsd: 0.01},
+	}
+	if got := stripANSI(m.renderReportSessionTokens()); strings.Contains(got, "#5") {
+		t.Errorf("no zero-token session means no note:\n%s", got)
+	}
+}
+
+// The table has to be REACHABLE, not merely rendered: it is the last section of a scrolling pane, and
+// the Dev tab shipped with exactly this bug — a pane whose scroll maximum was computed from slice
+// elements instead of rendered lines, so the bottom was silently clipped and pgdn did nothing.
+func TestReportSessionTokensIsReachableByScrolling(t *testing.T) {
+	var m = newGoldenModel(120, 30).(Model)
+	top, _ := m.renderReportPane()
+	if strings.Contains(stripANSI(top), "Session tokens") {
+		t.Skip("the table already fits on the first frame at this size; nothing to prove about scroll")
+	}
+	for i := 0; i < 200; i++ {
+		m = asModel(mustHandle(m.handleReportKey("pgdown")))
+	}
+	bottom, _ := m.renderReportPane()
+	if !strings.Contains(stripANSI(bottom), "Session tokens") {
+		t.Errorf("scrolling to the end never reaches the re-homed token table:\n%s", stripANSI(bottom))
+	}
+}

@@ -145,16 +145,25 @@ func TestDemoSourceSimulation(t *testing.T) {
 	}
 }
 
-func TestDemoSourceQuery(t *testing.T) {
+// SF1.2 deleted TestDemoSourceQuery with the QueryReport it exercised. The demo source's typed
+// replacement is covered by TestDemoSourceScores — a demo Face must still render a full Report tab
+// offline, which is the behaviour that mattered.
+func TestDemoSourceScores(t *testing.T) {
 	src := NewDemoSource()
 	defer src.Close()
 
-	result, err := src.QueryReport("SELECT * FROM stages")
+	scores, err := src.FetchScores()
 	if err != nil {
-		t.Fatalf("QueryReport failed: %v", err)
+		t.Fatalf("FetchScores failed: %v", err)
 	}
-	if len(result.Columns) < 1 {
-		t.Error("expected at least 1 column")
+	if len(scores.Scores) == 0 {
+		t.Fatal("the demo source must serve verifier scores — the Report tab renders them offline")
+	}
+	for _, sc := range scores.Scores {
+		if sc.Threshold == 0 {
+			t.Errorf("session #%d has no threshold; the Report tab renders score/threshold and would "+
+				"print \"88/0\"", sc.SessionNumber)
+		}
 	}
 }
 

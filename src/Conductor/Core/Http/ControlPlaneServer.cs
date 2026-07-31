@@ -194,7 +194,6 @@ public sealed partial class ControlPlaneServer : IDisposable
                 case ("POST", "/processes/kill"): await HandleProcessKillAsync(ctx, ct).ConfigureAwait(false); break;
                 case ("GET", "/sessions"): await WriteSessionsAsync(ctx).ConfigureAwait(false); break;
                 case ("GET", "/scores"): await WriteScoresAsync(ctx).ConfigureAwait(false); break;
-                case ("GET", "/report/query"): await WriteQueryAsync(ctx).ConfigureAwait(false); break;
                 case ("GET", "/prompt/preview"): await WritePromptPreviewAsync(ctx).ConfigureAwait(false); break;
                 case ("GET", "/timeline"): await WriteTimelineAsync(ctx).ConfigureAwait(false); break;
                 case ("GET", "/ledger"): await WriteLedgerAsync(ctx).ConfigureAwait(false); break;

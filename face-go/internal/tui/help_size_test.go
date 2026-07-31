@@ -33,3 +33,28 @@ func TestHelpOverlayFitsSmallestTerminal(t *testing.T) {
 		t.Error("help card lost a horizontal border at 80x24 — it is being clipped, not composited")
 	}
 }
+
+// Trap 11, made testable. tabKey in model.go is the single source for tab mnemonics, but this legend
+// is hand-maintained string concatenation — so a mnemonic changed in one and not the other makes the
+// help lie, silently, until someone presses the key it advertises. SF1.2 removed a tab and had to
+// touch both; this is what keeps the next one honest.
+func TestHelpLegendNamesEveryTabItsRealMnemonic(t *testing.T) {
+	var tm tea.Model = newGoldenModel(120, 40)
+	tm, _ = tm.Update(keyMsg("?"))
+	help := stripANSI(tm.(Model).View().Content)
+
+	for i, name := range tabNames {
+		// The rendered cell is "<key> <name padded to 11>" — assert the PAIR, so a legend that lists
+		// the right tab under the wrong key still fails.
+		if cell := tabKey[i] + " " + name; !strings.Contains(help, cell) {
+			t.Errorf("the help card does not show %q — tab %s is unreachable-looking or listed under "+
+				"the wrong key:\n%s", cell, name, help)
+		}
+	}
+	// And nothing the legend advertises may be a tab that no longer exists.
+	for _, gone := range []string{"Dev", "Debug"} {
+		if strings.Contains(help, gone) {
+			t.Errorf("the help card still advertises the deleted %q tab:\n%s", gone, help)
+		}
+	}
+}

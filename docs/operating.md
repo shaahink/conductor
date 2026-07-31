@@ -48,7 +48,7 @@ Where to look when something's off (full table in `DOGFOOD-RUNBOOK.md`):
 
 | File (under `.conductor/`) | Tells you |
 |---|---|
-| `run.db` | Everything structured. Query via `conductor log`/`report --query` or MCP `run_query`. |
+| `run.db` | Everything structured. Query via `conductor log` or the MCP `run_query` tool (behind `conductor chat`). SF1.2 deleted `report --query` with the rest of the SQL console; `conductor report` writes a report. |
 | `logs/conductor-YYYYMMDD.log` | The engine's structured log. Tail it first. |
 | `logs/crash-*.log` | A forensic dump if it crashed. Newest near the time it went quiet = root cause. |
 | `logs/session-NNN.jsonl` / `.prompt.md` | Raw agent I/O + the exact compiled prompt. |
@@ -151,8 +151,11 @@ All endpoints are localhost-only.
 · `/bugs` · `/sessions` · `/scores` (SF1.1: the verifier's verdicts, each with the per-stage bar it
 was judged against and whether it passed) · `/plan` · `/prompt/preview?stage=&kind=` ·
 `/prompt/blocks?task=` (P3: a task's prompt as labeled building blocks) · `/console/current` and
-`/transcript/current` (SSE streams of the live agent) · `GET /report/query?sql=` (read-only SQL).
-Reads need no token.
+`/transcript/current` (SSE streams of the live agent). Reads need no token.
+
+There is no ad-hoc SQL endpoint: SF1.2 deleted `GET /report/query?sql=` along with the Face's Dev
+console, so every read above is a typed DTO. SQL against `run.db` lives in the MCP `run_query` tool,
+which is what `conductor chat` asks questions through.
 
 **Write:** `POST /control` (same verbs as §2's control commands) · `POST /inject` · `POST /tasks/update`
 · `POST /tasks/add` · `POST /tasks/edit` (P3: title/extra-context as structured task data; PF3 adds

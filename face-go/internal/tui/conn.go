@@ -331,19 +331,9 @@ func (m Model) cmdPostTelegramSettingsEdit(edit api.PlanEditDto) tea.Cmd {
 	}
 }
 
-func (m Model) cmdQueryReport(sql string) tea.Cmd {
-	source := m.source
-	return func() tea.Msg {
-		result, err := source.QueryReport(sql)
-		if err != nil {
-			return MsgReportResult{Err: err.Error()}
-		}
-		return MsgReportResult{Result: result}
-	}
-}
-
 // cmdFetchScores fetches the Report tab's verifier scores (SF1.1). This used to run a canned SELECT
-// through QueryReport — the last thing making a RENDERED report depend on the SQL console.
+// through QueryReport — the last thing making a RENDERED report depend on the SQL console, which
+// SF1.2 then deleted along with cmdQueryReport itself.
 func (m Model) cmdFetchScores() tea.Cmd {
 	source := m.source
 	return func() tea.Msg {

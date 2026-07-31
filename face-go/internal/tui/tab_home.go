@@ -52,8 +52,8 @@ func hRow(label, value string, tier homeTier) homeLine {
 
 func hLine(text string, tier homeTier) homeLine { return homeLine{text: text, tier: tier} }
 
-// homeSection is the plain untiered form, shared with the Dev tab (which has its own scroll and so
-// never needs to shed).
+// homeSection is the plain untiered form, shared with the Report tab (which scrolls, and so never
+// needs to shed).
 func homeSection(title string, rows ...string) string {
 	return strings.Join(append([]string{accentStyle.Render(title)}, rows...), "\n")
 }
@@ -129,6 +129,9 @@ func (m Model) renderHomePane() (string, string) {
 		m.renderHomeRun(w),
 		m.renderHomeWorkspace(w),
 		m.renderHomeNextSteps(),
+		// SF1.2's re-homed wiring diagnostics go last: see homeWiring for why position is what makes
+		// them shed before anything Home already showed.
+		m.homeWiring(),
 	}, m.paneRows())
 	// Hard-clip every row to the pane. .Width() only pads short content — it never truncates — so one
 	// over-long row would WRAP and push every panel below it down and out of the pane (STYLE.md).
@@ -183,6 +186,54 @@ func homeStream(name string, connected bool) string {
 		dot = safeStyle.Render("●")
 	}
 	return dot + " " + subtleStyle.Render(name)
+}
+
+// --- wiring (re-homed from the deleted Dev tab, SF1.2) -------------------------
+
+// homeWiringLabels is every label the Wiring panel puts in the shared gutter. homeRow pads a label to
+// homeLabelW with NO separator, so a label of exactly that width butts straight against its value
+// ("write tokenpresent" — the Dev pane's first cut did precisely that). Listing them here is what
+// makes the rule testable: TestHomeWiringLabelsFitTheGutter checks the whole set, so the next row
+// added can't reintroduce it. `mode`, `url` and `streams` are the Server panel's own labels, which
+// this section extends rather than repeats.
+var homeWiringLabels = []string{"token", "seq", "poll", "run id"}
+
+// homeWiring answers "is the Face actually wired to anything, and how" — the question the deleted Dev
+// tab's internals pane existed for (U2.3). SF1.2 re-homed it here rather than deleting it with the SQL
+// console: Home already states mode, url, streams, last error and state dir, so only the rows Home was
+// missing moved.
+//
+// It is a section of its own, LAST on the page, for a mechanical reason: Home cannot scroll, and
+// dropOneHomeLine sheds from the last section backwards. Folded into Server (the first section) these
+// diagnostics would have pushed Workspace's `tracker` and `state dir` off a 120x30 window — a
+// re-homing that quietly cost two other rows. Last means they are the first thing to go, which is
+// exactly what they are worth. Next steps sits above and is all homeEssential, so it never sheds
+// wherever it sits.
+//
+// Every value is read from live client state. Nothing here is a constant dressed up as a reading,
+// except the poll cadences, which ARE the code's constants (messages.go) and say so.
+func (m Model) homeWiring() []homeLine {
+	// Demo mode has no engine to be wired to: mode already says "synthetic data · no engine".
+	if m.data.Connection.Mode != api.ModeLive {
+		return homePanel("Wiring")
+	}
+	// Token presence, never the token itself: Home is the page a developer screenshots into a bug
+	// report. An ABSENT token is not detail — it is the single most common reason a Face's writes are
+	// silently refused — so that row is ranked to survive one tier longer than the rest.
+	tok, tokTier := safeStyle.Render("present"), homeDetail
+	if !m.source.HasWriteToken() {
+		tok, tokTier = destructStyle.Render("absent — writes will be refused"), homeUseful
+	}
+	rows := []homeLine{
+		hRow("token", tok, tokTier),
+		hRow("seq", subtleStyle.Render(fmt.Sprintf("events %d · transcript %d · console %d",
+			m.data.LastEventSeq, m.data.LastTxSeq, m.consoleSeq)), homeDetail),
+		hRow("poll", subtleStyle.Render("state 1s · spinner 120ms · toast anim 33ms"), homeDetail),
+	}
+	if s := m.data.Plan; s != nil && s.RunId != "" {
+		rows = append(rows, hRow("run id", textStyle.Render(s.RunId), homeDetail))
+	}
+	return homePanel("Wiring", rows...)
 }
 
 // --- Run ---------------------------------------------------------------------

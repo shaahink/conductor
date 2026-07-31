@@ -68,6 +68,10 @@ func (m Model) renderReportPane() (string, string) {
 	if sc := m.renderReportScores(); sc != "" {
 		sections = append(sections, sc)
 	}
+	// SF1.2: the per-session token/cost table, re-homed from the deleted Dev tab. It goes LAST because
+	// it is the accounting behind the numbers above, not the headline — and because the Report pane
+	// scrolls, so a long table costs the sections above it nothing.
+	sections = append(sections, m.renderReportSessionTokens())
 	body := strings.Join(sections, "\n\n")
 
 	// Clamp scroll to the real body: scrolling past the end leaves the owner staring at blank space
@@ -314,6 +318,56 @@ func (m Model) renderReportGates(s *api.StateDto) string {
 		rows = append(rows, "  "+gs.Render(glyph)+" "+textStyle.Render(pad(g.Name, 14))+el)
 	}
 	return homeSection("Gates", rows...)
+}
+
+// --- per-session tokens (re-homed from the deleted Dev tab, SF1.2) -------------
+
+// renderReportSessionTokens is the per-session token/cost table. The numbers are SUMMED server-side
+// from the `costs` table (GET /sessions, U2.2) — the sessions table stores none of them.
+//
+// It answers a different question from the Sessions digest above it, which is why both exist: that one
+// is "what happened in each session" (kind, outcome, duration, commits); this one is "what did each
+// session BURN". SF1.2 re-homed it here from the Dev tab rather than deleting it with the SQL console,
+// because the token accounting was never the part the owner called stupid.
+//
+// A session showing real cost against 0 tokens is NOT a bug here: every claude-native session before
+// bug #5 (ClaudeProvider never read the `usage` object, fixed in 71fa214) recorded exactly that. This
+// table renders what the database says and lets that read as odd, rather than hiding the row or
+// back-filling a plausible number.
+func (m Model) renderReportSessionTokens() string {
+	if len(m.data.Sessions) == 0 {
+		return homeSection("Session tokens", subtleStyle.Render("no sessions yet"))
+	}
+	rows := []string{subtleStyle.Render(fmt.Sprintf("  %-4s %-5s %-8s %-8s %-8s %-9s %s",
+		"#", "stage", "in", "out", "reason", "cache-read", "cost"))}
+	var zeroTokenRows int
+	for _, r := range m.data.Sessions {
+		if r.TokensIn == 0 && r.TokensOut == 0 && r.CostUsd > 0 {
+			zeroTokenRows++
+		}
+		cost := subtleStyle.Render(pad("—", 7))
+		if r.CostUsd > 0 {
+			cost = peachStyle.Render(pad(fmtCost(r.CostUsd), 7))
+		}
+		// Every column is padded as PLAIN text and styled after (STYLE.md).
+		row := textStyle.Render(pad(fmt.Sprintf("#%d", r.Number), 4)) + " " +
+			accentStyle.Render(pad(r.StageId, 5)) + " " +
+			textStyle.Render(pad(widgets.FmtTokens(r.TokensIn), 8)) + " " +
+			textStyle.Render(pad(widgets.FmtTokens(r.TokensOut), 8)) + " " +
+			textStyle.Render(pad(widgets.FmtTokens(r.TokensThink), 8)) + " " +
+			textStyle.Render(pad(widgets.FmtTokens(r.TokensCache), 9)) + " " +
+			cost
+		rows = append(rows, "  "+lipgloss.NewStyle().MaxWidth(max(1, m.paneCols()-2)).Render(row))
+	}
+	// Name the known cause rather than letting a reader debug the Face for an engine-side gap.
+	// Hard-clipped: a note that word-wraps loses its indent and shears the section (STYLE.md).
+	if zeroTokenRows > 0 {
+		note := fmt.Sprintf("%s with cost but zero tokens — pre-bug-#5 data, not a Face bug",
+			plural(zeroTokenRows, "session"))
+		rows = append(rows, "", "  "+subtleStyle.Render(
+			lipgloss.NewStyle().MaxWidth(max(1, m.paneCols()-2)).Render(note)))
+	}
+	return homeSection("Session tokens", rows...)
 }
 
 // --- verifier scores ----------------------------------------------------------

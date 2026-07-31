@@ -33,15 +33,15 @@ type DataSource interface {
 	PostBug(req BugNewRequestDto) (*KnowledgeWriteResultDto, error)
 	PostBugResolve(req BugResolveRequestDto) (*KnowledgeWriteResultDto, error)
 	FetchPromptPreview(stageId, kind string) (*PromptPreviewDto, error)
-	QueryReport(sql string) (*QueryResultDto, error)
 
-	// SF1.1: the Report tab's verifier scores, typed. This is the endpoint that lets a rendered
-	// report stop depending on the SQL console.
+	// SF1.1: the Report tab's verifier scores, typed. This is the endpoint that let a rendered report
+	// stop depending on the SQL console — and SF1.2 then deleted that console, so there is no longer
+	// any ad-hoc SQL on this interface at all. Every read here is a typed DTO.
 	FetchScores() (*ScoresDto, error)
 
 	// HasWriteToken reports whether this source carries the per-run write token every POST needs
-	// (U2.3). The Dev tab surfaces it because "my writes are silently refused" has exactly one
-	// common cause — attaching with --url but no token — and nothing in the Face said so.
+	// (U2.3). Home surfaces it because "my writes are silently refused" has exactly one common
+	// cause — attaching with --url but no token — and nothing in the Face said so.
 	HasWriteToken() bool
 
 	PostControl(cmd ControlRequestDto) (*ControlAcceptedDto, error)
@@ -322,17 +322,6 @@ type SessionRowDto struct {
 
 type SessionsDto struct {
 	Sessions []SessionRowDto `json:"sessions"`
-}
-
-type QueryResultDto struct {
-	Columns   []string      `json:"columns"`
-	Rows      []QueryRowDto `json:"rows"`
-	Truncated bool          `json:"truncated"`
-	Error     *string       `json:"error"`
-}
-
-type QueryRowDto struct {
-	Values []string `json:"values"`
 }
 
 // ScoreDto mirrors the C# record (GET /scores): one verifier verdict. Passed and Threshold are the
@@ -684,7 +673,4 @@ type AppState struct {
 	Bugs         []BugDto
 	LastEventSeq int64
 	LastTxSeq    int64
-
-	ReportResult  *QueryResultDto
-	ReportLoading bool
 }

@@ -813,35 +813,42 @@ public sealed class ControlPlaneServerTests : IDisposable
         finally { server.Dispose(); }
     }
 
+    // SF1.2: the SQL endpoint is DELETED, not disabled. These two tests replace
+    // GetReportQuery_ExecutesSelectAgainstRunDb / _RejectsNonSelectStatements, which asserted the
+    // behaviour of the route that just died. A 404 here is the whole point: an arbitrary-SELECT hole in
+    // a control plane whose every other read is a typed DTO is gone, and the SELECT-only guard that
+    // used to police it is gone with it — there is nothing left to police.
     [Fact]
-    public async Task GetReportQuery_RejectsNonSelectStatements()
-    {
-        var (server, port) = StartServer();
-        try
-        {
-            var resp = await _http.GetAsync($"http://127.0.0.1:{port}/report/query?sql=DELETE FROM runs");
-            Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
-            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
-            Assert.Contains("SELECT", doc.RootElement.GetProperty("error").GetString());
-        }
-        finally { server.Dispose(); }
-    }
-
-    [Fact]
-    public async Task GetReportQuery_ExecutesSelectAgainstRunDb()
+    public async Task GetReportQuery_IsGone_TheSqlEndpointNoLongerExists()
     {
         _store.InitializeRun(RunId, "cps-test", _dir, null, null);
         var (server, port) = StartServer();
         try
         {
+            // The exact SELECT the deleted endpoint used to answer with a row.
             var resp = await _http.GetAsync($"http://127.0.0.1:{port}/report/query?sql=SELECT run_id, plan_name FROM runs");
-            Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
-            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
-            var rows = doc.RootElement.GetProperty("rows");
-            Assert.Equal(1, rows.GetArrayLength());
-            var values = rows[0].GetProperty("values");
-            Assert.Equal(RunId, values[0].GetString());
-            Assert.Equal("cps-test", values[1].GetString());
+            Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+            // And a write attempt gets the same 404 — not a 400 from a guard that is still running.
+            var write = await _http.GetAsync($"http://127.0.0.1:{port}/report/query?sql=DELETE FROM runs");
+            Assert.Equal(HttpStatusCode.NotFound, write.StatusCode);
+        }
+        finally { server.Dispose(); }
+    }
+
+    // The endpoint's death must not take the run report's data with it: /sessions and /scores are the
+    // typed reads that replaced every canned SELECT the Face used to run.
+    [Fact]
+    public async Task TypedReadsSurviveTheSqlEndpointsDeletion()
+    {
+        _store.InitializeRun(RunId, "cps-test", _dir, null, null);
+        _store.WriteScore(RunId, 3, "S1", 91, "PASS", "");
+        var (server, port) = StartServer();
+        try
+        {
+            using var scores = JsonDocument.Parse(await _http.GetStringAsync($"http://127.0.0.1:{port}/scores"));
+            Assert.Equal(1, scores.RootElement.GetProperty("scores").GetArrayLength());
+            using var sessions = JsonDocument.Parse(await _http.GetStringAsync($"http://127.0.0.1:{port}/sessions"));
+            Assert.True(sessions.RootElement.TryGetProperty("sessions", out _));
         }
         finally { server.Dispose(); }
     }

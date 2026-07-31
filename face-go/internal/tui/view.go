@@ -189,8 +189,6 @@ func (m Model) paneView() (body, help string) {
 		return m.renderTelegramPane()
 	case TabKanban:
 		return m.renderKanbanPane()
-	case TabDev:
-		return m.renderDevPane()
 	}
 	return "", ""
 }

@@ -72,13 +72,9 @@ type MsgProcessKilled struct {
 	Error   string
 }
 
-type MsgReportResult struct {
-	Result *api.QueryResultDto
-	Err    string
-}
-
-// MsgReportScores carries the Report tab's verifier scores from GET /scores (SF1.1). Separate from
-// MsgReportResult so the rendered report and the Dev SQL console never overwrite each other.
+// MsgReportScores carries the Report tab's verifier scores from GET /scores (SF1.1). It used to sit
+// beside MsgReportResult, which carried the Dev SQL console's rows; SF1.2 deleted that message with
+// the console, so the Report tab's typed scores are now the only report result there is.
 type MsgReportScores struct {
 	Result *api.ScoresDto
 	Err    string

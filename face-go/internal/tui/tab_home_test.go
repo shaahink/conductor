@@ -191,3 +191,98 @@ func TestHomeHintsAreContextual(t *testing.T) {
 		t.Errorf("a live agent must be the first thing offered, got:\n%s", got)
 	}
 }
+
+// --- wiring rows, re-homed from the deleted Dev tab (SF1.2) --------------------
+
+// These tests came from tab_dev_test.go with the panel they measure. The Dev tab's internals pane was
+// never the part the owner called stupid — it answered "is the Face actually wired to anything" — so
+// SF1.2 moved the rows Home did not already have into Home's own Wiring section and moved their tests
+// with them, rather than deleting a measurement along with the SQL console it happened to sit beside.
+
+// Home is the page a developer screenshots into a bug report. It must say whether a write token is
+// present — never what it is.
+func TestHomeWiringReportsTokenPresenceWithoutLeakingIt(t *testing.T) {
+	m := newGoldenModel(120, 30).(Model)
+	got := stripANSI(homeText(m.homeWiring()))
+	if !strings.Contains(got, "present") {
+		t.Errorf("token presence must be stated:\n%s", got)
+	}
+	if url := stripANSI(homeText(m.renderHomeServer(100))); !strings.Contains(url, "http://127.0.0.1:4317") {
+		t.Errorf("the control-plane url must be stated:\n%s", url)
+	}
+	// fakeSource reports a token; the rendered rows must never contain a token-looking secret. The
+	// Face only ever holds presence, so this pins that the panel can't start echoing one later.
+	for _, leak := range []string{"543BCE", "X-Conductor-Token"} {
+		if strings.Contains(got, leak) {
+			t.Errorf("Home leaked a secret (%s):\n%s", leak, got)
+		}
+	}
+}
+
+// homeRow pads a label to homeLabelW with no separator, so a label of exactly that width butts
+// straight against its value — "write token" rendered as "write tokenpresent". Reading the frame
+// caught it; nothing else would have. Pin the rule for every label the section uses, not just that one.
+func TestHomeWiringLabelsFitTheGutter(t *testing.T) {
+	for _, label := range homeWiringLabels {
+		if len([]rune(label)) >= homeLabelW {
+			t.Errorf("label %q is %d runes; homeLabelW is %d, so homeRow pads it to nothing and the "+
+				"value collides with it — keep gutter labels under %d",
+				label, len([]rune(label)), homeLabelW, homeLabelW)
+		}
+	}
+	// And prove it end-to-end on the rendered rows: every label must be followed by a space. The
+	// fixture's run has an id, so `run id` renders too — all four labels are covered here.
+	m := newGoldenModel(120, 30).(Model)
+	got := stripANSI(homeText(m.homeWiring()) + "\n" + homeText(m.renderHomeServer(100)))
+	for _, label := range append([]string{"mode", "url", "streams"}, homeWiringLabels...) {
+		if !strings.Contains(got, label+" ") {
+			t.Errorf("label %q is not followed by a gap in the rendered rows:\n%s", label, got)
+		}
+	}
+}
+
+// Home cannot scroll (STYLE.md), so every row SF1.2 added has to be sheddable — otherwise the wiring
+// diagnostics push "Next steps" off the bottom of a short window, which is the exact regression the
+// tier system exists to prevent.
+func TestHomeWiringRowsShedBeforeTheLandingsAnswer(t *testing.T) {
+	m := newGoldenModel(120, 30).(Model)
+	rows := m.homeWiring()
+	for _, l := range rows[1:] { // rows[0] is the section header, which homePanel makes essential
+		if l.tier == homeEssential {
+			t.Errorf("a wiring row is homeEssential (%q) — Home cannot scroll, so diagnostics must "+
+				"shed before Next steps does", stripANSI(l.text))
+		}
+	}
+	// And prove it on the real page: at 80x24 the wiring rows are gone and the answer is still there.
+	body, _ := newGoldenModel(80, 24).(Model).renderHomePane()
+	plain := stripANSI(body)
+	if !strings.Contains(plain, "Next steps") {
+		t.Errorf("Next steps was shed on a short window:\n%s", plain)
+	}
+	if strings.Contains(plain, "spinner 120ms") {
+		t.Errorf("a homeDetail wiring row survived a window too short for it:\n%s", plain)
+	}
+	// The regression this section's POSITION exists to prevent, stated as the property rather than as
+	// a guess about one window size: at EVERY budget, the page with the re-homed diagnostics must
+	// still show everything the page without them showed. Folded into the Server panel instead (the
+	// first section, so the last to shed) this failed at budget 24 — Workspace lost `tracker` and
+	// `state dir` to make room. fitHome mutates the slices it is given, so each call gets fresh ones.
+	without := func() [][]homeLine {
+		return [][]homeLine{m.renderHomeServer(100), m.renderHomeRun(100), m.renderHomeWorkspace(100),
+			m.renderHomeNextSteps()}
+	}
+	with := func() [][]homeLine { return append(without(), m.homeWiring()) }
+	for _, budget := range []int{12, 18, 22, 24, 28, 40} {
+		base := strings.Split(stripANSI(fitHome(without(), budget)), "\n")
+		got := stripANSI(fitHome(with(), budget))
+		for _, line := range base {
+			if strings.TrimSpace(line) == "" {
+				continue
+			}
+			if !strings.Contains(got, line) {
+				t.Errorf("at budget %d the Wiring section displaced a row Home already showed: %q\n%s",
+					budget, line, got)
+			}
+		}
+	}
+}

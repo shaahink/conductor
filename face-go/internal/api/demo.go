@@ -314,18 +314,6 @@ func (s *demoSource) FetchScores() (*ScoresDto, error) {
 	}}, nil
 }
 
-func (s *demoSource) QueryReport(sql string) (*QueryResultDto, error) {
-	return &QueryResultDto{
-		Columns: []string{"stage", "cost"},
-		Rows: []QueryRowDto{
-			{Values: []string{"F1", "$0.42"}},
-			{Values: []string{"F6", "$0.18"}},
-			{Values: []string{"F7", "$0.08"}},
-		},
-		Truncated: false,
-	}, nil
-}
-
 func (s *demoSource) PostControl(cmd ControlRequestDto) (*ControlAcceptedDto, error) {
 	// set-rollover mutates the demo run state (mirrors ControlDispatcher.ParseRolloverValue) so
 	// the Settings row's active-override display round-trips offline like every other demo edit.

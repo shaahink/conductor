@@ -13,5 +13,3 @@ public sealed record SessionRowDto(
     SessionDigestDto? Digest = null);
 
 public sealed record SessionsDto(IReadOnlyList<SessionRowDto> Sessions);
-
-public sealed record QueryRowDto(IReadOnlyList<string> Values);

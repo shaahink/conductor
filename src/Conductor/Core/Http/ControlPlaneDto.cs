@@ -157,7 +157,6 @@ public static class ControlPlaneDto
 [JsonSerializable(typeof(ProcessKillRequestDto))]
 [JsonSerializable(typeof(ProcessKillResultDto))]
 [JsonSerializable(typeof(SessionsDto))]
-[JsonSerializable(typeof(QueryResultDto))]
 [JsonSerializable(typeof(ScoresDto))]
 [JsonSerializable(typeof(InjectRequestDto))]
 [JsonSerializable(typeof(InjectAcceptedDto))]

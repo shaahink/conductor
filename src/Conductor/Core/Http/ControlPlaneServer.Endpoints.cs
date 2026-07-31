@@ -231,8 +231,9 @@ public sealed partial class ControlPlaneServer
     }
 
     /// <summary>SF1.1: GET /scores — the verifier's verdicts, typed. The Report tab used to get these
-    /// through a canned SELECT on GET /report/query, which is why a rendered report still depended on
-    /// the SQL console the owner asked to delete.</summary>
+    /// through a canned SELECT on the SQL endpoint, which is why a rendered report still depended on
+    /// the SQL console the owner asked to delete. SF1.2 deleted that endpoint; this is the only way
+    /// the Face reads a score now.</summary>
     private async Task WriteScoresAsync(HttpListenerContext ctx)
     {
         var dtos = _store.QueryScores(_state.RunId).Select(r =>
@@ -269,39 +270,10 @@ public sealed partial class ControlPlaneServer
     /// its own rather than threading an extra constructor dependency through every call site.</summary>
     private static readonly Conductor.Planning.DefaultQaPolicy ScoreQaPolicy = new();
 
-    private async Task WriteQueryAsync(HttpListenerContext ctx)
-    {
-        var sql = ctx.Request.QueryString["sql"];
-        if (string.IsNullOrWhiteSpace(sql))
-        {
-            await WriteJsonAsync(ctx, new QueryResultDto([], [], false, "missing 'sql' query parameter"),
-                ControlPlaneJsonContext.Default.QueryResultDto, HttpStatusCode.BadRequest).ConfigureAwait(false);
-            return;
-        }
-        if (!sql.TrimStart().StartsWith("select", StringComparison.OrdinalIgnoreCase))
-        {
-            await WriteJsonAsync(ctx, new QueryResultDto([], [], false, "only SELECT queries are allowed"),
-                ControlPlaneJsonContext.Default.QueryResultDto, HttpStatusCode.BadRequest).ConfigureAwait(false);
-            return;
-        }
-        const int maxRows = 500;
-        try
-        {
-            var rows = _store.Query(sql);
-            var columns = rows.Count > 0 ? rows[0].Keys.ToList() : [];
-            var truncated = rows.Count > maxRows;
-            var dtoRows = rows.Take(maxRows)
-                .Select(r => new QueryRowDto([.. columns.Select(c => Convert.ToString(r[c], System.Globalization.CultureInfo.InvariantCulture) ?? "")]))
-                .ToList();
-            await WriteJsonAsync(ctx, new QueryResultDto(columns, dtoRows, truncated, null),
-                ControlPlaneJsonContext.Default.QueryResultDto).ConfigureAwait(false);
-        }
-        catch (Exception ex) when (ex is Microsoft.Data.Sqlite.SqliteException or InvalidOperationException)
-        {
-            await WriteJsonAsync(ctx, new QueryResultDto([], [], false, ex.Message),
-                ControlPlaneJsonContext.Default.QueryResultDto, HttpStatusCode.BadRequest).ConfigureAwait(false);
-        }
-    }
+    // SF1.2: GET /report/query is gone. It was the SQL console's endpoint — an arbitrary-SELECT hole in
+    // a control plane whose every other read is a typed DTO — and the owner's verdict on the surface it
+    // fed was "delete this stupid sql query report and its traces". Ad-hoc SQL against run.db survives
+    // where it is actually asked for: the MCP `run_query` tool, which serves `conductor chat`.
 
     private async Task HandleControlPostAsync(HttpListenerContext ctx, CancellationToken ct)
     {

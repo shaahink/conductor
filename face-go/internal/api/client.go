@@ -197,15 +197,6 @@ func (s *liveSource) FetchScores() (*ScoresDto, error) {
 	return &scores, nil
 }
 
-func (s *liveSource) QueryReport(sql string) (*QueryResultDto, error) {
-	path := "/report/query?sql=" + urlEncode(sql)
-	var result QueryResultDto
-	if err := s.getJSON(path, &result); err != nil {
-		return nil, err
-	}
-	return &result, nil
-}
-
 func (s *liveSource) PostControl(cmd ControlRequestDto) (*ControlAcceptedDto, error) {
 	var accepted ControlAcceptedDto
 	if err := s.postJSON("/control", cmd, &accepted); err != nil {

@@ -705,8 +705,8 @@ verify against the real thing without spending on a real LLM session:
   `store.Emit(new RunStarted{...})` / `new StageEntered{...}` / `new GateFinished{...}` for the
   event-log-derived parts of `/state`, and a `TranscriptLog` for `/transcript/current`. Note `/state`'s
   `Gates`/`TotalCostUsd` are folded from the **event log**, not the `gates`/`costs` SQL tables directly
-  — seeding only the SQL tables (for `/report/query`, `/sessions`, `/processes`) without matching
-  events will correctly leave `/state` showing zero cost / no gates. That's expected, not a bug.
+  — seeding only the SQL tables (for `/sessions`, `/scores`, `/processes`) without matching events
+  will correctly leave `/state` showing zero cost / no gates. That's expected, not a bug.
 - Write this as a throwaway xUnit `[Fact]` in `tests/Conductor.Tests/` (reuses the project's
   references — no new csproj needed) that starts the server, writes its port to a temp file, then
   `await Task.Delay(...)` for long enough to drive the Go side against it. Run it with

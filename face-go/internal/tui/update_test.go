@@ -178,20 +178,50 @@ func TestTabMnemonicsAreUnique(t *testing.T) {
 	}
 }
 
-// U2.2: the Plan editor's delete moved off `d` when Dev claimed it globally. This drives handleKey —
-// the REAL router — not handlePlanKey. plan_test.go's own drive() calls the pane handler directly,
-// which is exactly why nothing there could ever have caught the shadowing: the precedence that
-// breaks the key only exists one level up.
-func TestPlanDeleteKeyIsNotShadowedByTheDevMnemonic(t *testing.T) {
+// U2.2 moved the Plan editor's delete off `d` when the Dev tab claimed `d` globally. SF1.2 deleted
+// that tab, and `d` stayed unbound — so delete stays on `x`. This drives handleKey — the REAL router —
+// not handlePlanKey. plan_test.go's own drive() calls the pane handler directly, which is exactly why
+// nothing there could ever have caught the shadowing: the precedence lives one level up.
+func TestPlanDeleteStaysOnXNowThatTheDevMnemonicIsGone(t *testing.T) {
 	m, _ := openPlanEditor(t)
 	if m.tabHandlesAllKeys() {
 		t.Fatal("precondition: the plan list must NOT own all keys, or this proves nothing")
 	}
-	if got := asModel(mustHandle(m.handleKey("d"))); got.tab != TabDev {
-		t.Errorf("d in the Plan list must reach the Dev tab (it is a global mnemonic), got tab %v", got.tab)
-	}
 	if got := asModel(mustHandle(m.handleKey("x"))); !got.planDeleting {
 		t.Error("x in the Plan list must open the delete confirm through the real router")
+	}
+	// `d` must stay inert rather than silently becoming plan-delete again: a key that used to open the
+	// SQL console must never turn into a destructive one.
+	got := asModel(mustHandle(m.handleKey("d")))
+	if got.planDeleting {
+		t.Error("d must not open the plan delete confirm — it was the SQL console's mnemonic, and a " +
+			"freed key becoming destructive is the worst possible reuse")
+	}
+	if got.tab != TabPlan {
+		t.Errorf("d is unbound since SF1.2 deleted the Dev tab; it must leave the tab alone, got %v", got.tab)
+	}
+}
+
+// SF1.2: the Dev tab is gone, so the Face has twelve tabs and no mnemonic reaches a thirteenth. This
+// pins BOTH halves of trap 11 — tabKey is the single source for mnemonics, and every one of them must
+// still land on the tab its own name claims.
+func TestNoTabSurvivesTheDeletedSqlConsole(t *testing.T) {
+	if tabCount != 12 {
+		t.Errorf("SF1.2 took the tab count from 13 to 12; got %d", tabCount)
+	}
+	if len(tabNames) != int(tabCount) || len(tabKey) != int(tabCount) {
+		t.Fatalf("tabNames (%d) and tabKey (%d) must both be tabCount (%d)",
+			len(tabNames), len(tabKey), tabCount)
+	}
+	for i, k := range tabKey {
+		if k == "d" {
+			t.Errorf("tab %q took over the freed `d` mnemonic; SF1.2 left it deliberately unbound",
+				tabNames[i])
+		}
+		m := asModel(mustHandle(newTestModel().handleKey(k)))
+		if m.tab != MainTab(i) {
+			t.Errorf("mnemonic %q must open %s, got %s", k, tabNames[i], tabNames[m.tab])
+		}
 	}
 }
 
@@ -326,33 +356,23 @@ func TestKnowledgeResolveRejectsNonNumericId(t *testing.T) {
 	}
 }
 
-// The SQL console moved from Report to Dev in U2.2 (Report became a rendered report). Its behaviour
-// is unchanged, so this test moved WITH the code — only the tab it opens and the handler it drives
-// are renamed. Everything it asserts about the console still holds byte for byte.
-func TestDevQuickQueryRuns(t *testing.T) {
+// SF1.2 deleted TestDevQuickQueryRuns along with the console it drove (quick-query list, SQL editor,
+// MsgReportResult round trip). Nothing it asserted survives to be re-pointed: the whole mechanism is
+// gone. What replaced it as the Report tab's only fetch is TestReportOpensWithTypedScores below.
+func TestReportOpensWithTypedScoresAndNoSql(t *testing.T) {
 	m := newTestModel()
-	m = asModel(mustHandle(m.handleKey("d")))
-	if m.tab != TabDev || !m.reportFocusQuery {
-		t.Fatalf("expected Dev tab focused on SQL; tab=%v focus=%v", m.tab, m.reportFocusQuery)
-	}
-	m = asModel(mustHandle(m.handleDevKey("tab")))
-	if m.reportFocusQuery {
-		t.Fatal("tab should move focus to the quick-query list")
-	}
-	tm, cmd := m.handleDevKey("enter")
-	m = asModel(tm)
-	if !m.data.ReportLoading {
-		t.Error("expected ReportLoading while the query runs")
-	}
-	if m.reportEditor.Value() != quickQueries[0].SQL {
-		t.Errorf("expected the editor set to the quick query, got %q", m.reportEditor.Value())
+	tm, cmd := m.handleKey("r")
+	m = asModel(mustHandle(tm, cmd))
+	if m.tab != TabReport {
+		t.Fatalf("expected the Report tab, got %v", m.tab)
 	}
 	if cmd == nil {
-		t.Fatal("expected a query command")
+		t.Fatal("opening Report must fetch something — the scores endpoint")
 	}
-	m = asModel(mustHandle2(m.Update(cmd())))
-	if m.data.ReportLoading || m.data.ReportResult == nil || len(m.data.ReportResult.Columns) == 0 {
-		t.Error("expected results populated and loading cleared")
+	// The one command Report issues must be the typed scores fetch. Before SF1.1 this was a canned
+	// SELECT, and before SF1.2 the console's MsgReportResult could still land here.
+	if _, ok := cmd().(MsgReportScores); !ok {
+		t.Errorf("opening Report must issue GET /scores and produce MsgReportScores, got %T", cmd())
 	}
 }
 

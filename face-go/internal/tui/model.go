@@ -27,25 +27,29 @@ const (
 	TabKnowledge
 	TabTelegram
 	TabKanban
-	// TabDev is the developer screen (U2.3): the SQL console that used to be Report, plus run
-	// internals and per-session token/cost stats. Report answers "how is the run going"; Dev
-	// answers "what is the machine actually doing". It goes LAST on purpose — see tabKey.
-	TabDev
+	// SF1.2: TabDev is gone. It was the developer screen (U2.3) built around the SQL console that used
+	// to BE Report, and the owner's verdict was "delete this stupid sql query report and its traces".
+	// Its two non-SQL panels were not deleted with it — they were re-homed to the surfaces that already
+	// answer their question: the wiring internals to Home's Server/Workspace panels, and the per-session
+	// token/cost table to the Report tab.
 	tabCount
 )
 
-var tabNames = [tabCount]string{"Home", "Agent", "Sessions", "Timeline", "Procs", "Console", "Templates", "Plan", "Report", "Knowledge", "Telegram", "Kanban", "Dev"}
+var tabNames = [tabCount]string{"Home", "Agent", "Sessions", "Timeline", "Procs", "Console", "Templates", "Plan", "Report", "Knowledge", "Telegram", "Kanban"}
 
 // tabKey is the mnemonic that jumps straight to each tab (also shown in the strip). First-letter where
 // it's free; Procs takes o and Telegram takes g (their first letters collide), Plan takes p — freed
 // by moving sidebar-collapse to `\` — and Kanban takes b ("board"; k is Knowledge). Home takes h, free
-// since the tab-mnemonic relabel moved Sessions to s. Dev takes d, freed by moving the Plan editor's
-// delete to `x` (matching Procs, where `x` is already the destructive-confirm key): a mnemonic is a
-// GLOBAL key, and handleKey runs the mnemonic loop before the pane handler whenever the tab isn't in
-// an owning sub-state, so leaving `d` on plan-delete would have made it unreachable from the list.
-// Digits 1–9 reach Home…Report and 0 reaches Knowledge; Telegram, Kanban and Dev are the three tabs
-// past the digits — mnemonic and tab-cycle only. Keep in sync with renderHelpOverlay's Tabs legend.
-var tabKey = [tabCount]string{"h", "a", "s", "t", "o", "c", "e", "p", "r", "k", "g", "b", "d"}
+// since the tab-mnemonic relabel moved Sessions to s. Digits 1–9 reach Home…Report and 0 reaches
+// Knowledge; Telegram and Kanban are the two tabs past the digits — mnemonic and tab-cycle only.
+//
+// SF1.2 freed `d` when the Dev tab went. It is deliberately left UNBOUND rather than reassigned: `d`
+// meant "the SQL console" to anyone who used this Face, and quietly landing them somewhere else is
+// worse than a keypress that does nothing. The Plan editor's delete stays on `x`, where U2.3 moved it.
+//
+// Keep in sync with renderHelpOverlay's Tabs legend — that legend is hand-maintained, so a mnemonic
+// changed here and not there makes the help lie.
+var tabKey = [tabCount]string{"h", "a", "s", "t", "o", "c", "e", "p", "r", "k", "g", "b"}
 
 // CmdMode is a transient bottom-bar input that floats over the dashboard instead of a full modal.
 type CmdMode int
@@ -158,7 +162,10 @@ type Model struct {
 	// Sessions tab
 	sessionSelected int
 
-	// Report tab (U2.2: the rendered run report — scroll is its only interaction)
+	// Report tab (U2.2: the rendered run report — scroll is its only interaction). SF1.2 deleted the
+	// Dev console's state that used to sit below this block (reportEditor, reportQuickSelected,
+	// reportFocusQuery, reportHScroll, reportHistory, devScroll) — the console is gone, so none of it
+	// has a reader.
 	reportScroll int
 	// reportScores holds the verifier scores from GET /scores (SF1.1). It is deliberately NOT
 	// data.ReportResult: that field belongs to the Dev console, and sharing it would make opening
@@ -167,17 +174,6 @@ type Model struct {
 	// reportScoresErr is the fetch failure, kept beside the data rather than smuggled into it — a
 	// ScoresDto has no error field, because a typed endpoint's failure is an HTTP failure.
 	reportScoresErr string
-
-	// Dev tab — the SQL console (moved here from Report in U2.2; see tab_dev.go for why these keep
-	// their report* names).
-	reportEditor        widgets.TextArea
-	reportQuickSelected int
-	reportFocusQuery    bool
-	reportHScroll       int      // horizontal scroll (steps) for wide result tables
-	reportHistory       []string // recently-run queries, most-recent-first
-	// devScroll scrolls the whole Dev pane (pgup/pgdn): the U2.3 internals + session stats sit under
-	// a result grid of unbounded height, so without this they can be pushed out of reach.
-	devScroll int
 
 	// Processes tab
 	processSelected int

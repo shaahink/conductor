@@ -195,16 +195,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, m.addToast(fmt.Sprintf("kill pid %d rejected: %s", msg.Pid, reason), widgets.ToastError)
 
-	case MsgReportResult:
-		m.data.ReportLoading = false
-		if msg.Err != "" {
-			errCopy := msg.Err
-			m.data.ReportResult = &api.QueryResultDto{Error: &errCopy}
-		} else {
-			m.data.ReportResult = msg.Result
-		}
-		return m, nil
-
 	case MsgReportScores:
 		// A failed scores fetch must not blank the whole report: the section renders the error and
 		// every other section (which came from /state + /sessions) still stands.
@@ -594,13 +584,6 @@ func (m Model) openTab(t MainTab) (tea.Model, tea.Cmd) {
 		// the answer to "how is it going" — is what opening the tab actually shows.
 		m.reportScroll = 0
 		return m, m.cmdFetchScores()
-	case TabDev:
-		if strings.TrimSpace(m.reportEditor.Value()) == "" {
-			m.reportEditor = widgets.NewTextArea(defaultReportSQL, max(10, m.paneCols()), 1)
-		}
-		m.reportFocusQuery = true
-		m.devScroll = 0
-		return m, nil
 	case TabConsole:
 		m.consoleScroll = 0
 		return m, nil
@@ -623,8 +606,6 @@ func (m Model) openTab(t MainTab) (tea.Model, tea.Cmd) {
 // tabHandlesAllKeys reports whether the active tab is in a sub-state that should capture every key.
 func (m Model) tabHandlesAllKeys() bool {
 	switch m.tab {
-	case TabDev:
-		return m.reportFocusQuery
 	case TabTemplates:
 		return m.promptMode == PromptEdit || m.promptPreviewOn
 	case TabPlan:
@@ -662,8 +643,6 @@ func (m Model) handleTabKey(key string) (tea.Model, tea.Cmd) {
 		return m.handlePlanKey(key)
 	case TabReport:
 		return m.handleReportKey(key)
-	case TabDev:
-		return m.handleDevKey(key)
 	case TabKnowledge:
 		return m.handleKnowledgeKey(key)
 	case TabTelegram:
