@@ -124,7 +124,14 @@ public class ReporterTests
 
             state.History.Add(new SessionRecord { Number = 2, Stage = "L1", Kind = SessionKind.Fix, Outcome = SessionOutcome.Advanced });
             Reporter.WriteAndPublish(plan, state, track, null, _ => { });
-            Assert.Equal(afterFirst + 1, CommitCount(repo));       // real change → one new commit
+            // SC6.1: a real change still reaches git — but it FOLDS INTO the bookkeeping commit that is
+            // still the tip instead of stacking a second one beside it. What this test has always been
+            // about is that history does not grow for nothing, so the assertion moved from "one more
+            // commit exists" to the stronger "the new session is in the committed report", plus the
+            // count staying flat because the two were coalesced.
+            Assert.Equal(afterFirst, CommitCount(repo));
+            Assert.Contains("| 2 | L1 | Fix |",
+                Git.Exec(repo, "show", "HEAD:.conductor/REPORT.md").Output, StringComparison.Ordinal);
         }
         finally { try { Directory.Delete(repo, recursive: true); } catch { } }
     }

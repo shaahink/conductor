@@ -169,8 +169,12 @@ public sealed partial class VerdictEngine
         }
         _ctx.Events.Emit(new StageConfirmed { StageId = id, Audited = _ctx.State.AuditedStages.Contains(id) });
         _ctx.Store?.ConfirmStage(_ctx.State.RunId, id);
-        SquashBookkeeping(id);
+        // SC6.1: state write FIRST, squash after. The other order collapsed the stage's bookkeeping and
+        // then appended to it one second later — devcontext #14 watched stage G2 finish with two
+        // identical chore commits despite the cleanup reporting success. Nothing below this line writes
+        // history for the stage, so the squash is now the last word on it.
         _saveAndReport();
+        SquashBookkeeping(id);
     }
 
     internal bool HasNextUnconfirmedStage(string stageId)
@@ -288,6 +292,10 @@ public sealed partial class VerdictEngine
         }
 
         _ctx.State.SquashedStages.Add(stageId);
+        // SC6.1: whatever the rebase does to the tip, the sha the report publisher was holding is no
+        // longer a commit it may amend. Dropped before the attempt, not after, so a crash mid-rebase
+        // still leaves a state that cannot amend a stranger's commit.
+        _ctx.State.LastReportCommitSha = null;
         _ctx.Save();
         _ctx.Log($"P4 squash: collapsing chore(conductor): commits for stage {stageId} since {Short(startHead)}");
 
@@ -303,6 +311,7 @@ public sealed partial class VerdictEngine
         {
             _ctx.Log($"P4 squash: failed for stage {stageId}: {ex.Message} — history unchanged", "warn");
             _ctx.State.SquashedStages.Remove(stageId);
+            _ctx.Save();
         }
     }
 

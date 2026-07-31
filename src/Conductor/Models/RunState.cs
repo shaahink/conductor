@@ -66,6 +66,16 @@ public sealed class RunState
     /// stage). Populated by <c>ScheduleGateOrAudit</c> and consumed by the squash-on-confirm
     /// logic so the rebase window is correct even when the owner-approval path defers confirmation.</summary>
     public Dictionary<string, string> StageStartHeads { get; set; } = new(StringComparer.Ordinal);
+    /// <summary>SC6.1: <c>ReportSubstance.Of</c> as of the last REPORT.md commit — the work the
+    /// committed report already describes. The next publish commits only when this moves, so the
+    /// engine's own Idle/Paused/Aborted churn stays disk-only. Persisted so a restart does not
+    /// mistake its first write for new work. Null before the run's first report commit.</summary>
+    public string? LastReportSubstance { get; set; }
+    /// <summary>SC6.1: the sha of that commit. When it is still HEAD, no other commit has landed on
+    /// top and the next report publish AMENDS it rather than stacking a second bookkeeping commit
+    /// beside it. Any other value — the agent committed, a rebase moved history — means a fresh
+    /// commit instead, which is why this stores a sha and not a bool.</summary>
+    public string? LastReportCommitSha { get; set; }
     /// <summary>Stages whose auto-fix audit has completed, to avoid re-auditing on resume.</summary>
     public HashSet<string> AuditedStages { get; set; } = new(StringComparer.Ordinal);
     /// <summary>Stages whose owner has explicitly approved via CLI/TUI (B3.2). An owner-gated stage

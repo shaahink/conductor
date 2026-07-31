@@ -278,6 +278,13 @@ public static class Reporter
         // Skip no-op commits: if nothing but the timestamp changed, don't add to the git history
         if (old != null && Normalize(old) == Normalize(newContent)) return;
 
+        // SC6.1: and skip commits that carry no WORK either. Everything above this line still ran —
+        // the report on disk is current — but a rewrite whose only news is the engine's own status,
+        // attention sentence, timeline or cost is not history. devcontext #14 watched three such
+        // commits land in eight minutes, two of them four seconds apart.
+        var substance = ReportSubstance.Of(state, track);
+        if (state.LastReportSubstance == substance) return;
+
         var rel = ".conductor/REPORT.md";
         var add = Git.Exec(plan.Repo, "add", "--force", rel);
         if (add.ExitCode != 0) { log($"report git add failed: {GateRunner.TailOf(add.Output, 3)}"); return; }
@@ -285,13 +292,45 @@ public static class Reporter
         var msg = commitMessage ?? (last != null
             ? $"chore(conductor): s{last.Number} {last.Stage} {last.Outcome?.ToString() ?? "running"} — {state.Status}"
             : $"chore(conductor): {state.Status}");
-        var commit = Git.Exec(plan.Repo, "commit", "-m", msg, "--", rel);
+
+        // SC6.1 coalescing: if the previous bookkeeping commit is still the tip, fold this one into it
+        // rather than stacking a near-identical subject beside it. The pathspec keeps the amend to the
+        // report alone, so work the agent has already staged is neither swept in nor disturbed.
+        var amend = CanAmendReportCommit(plan, state, rel);
+        var commit = amend
+            ? Git.Exec(plan.Repo, "commit", "--amend", "-m", msg, "--", rel)
+            : Git.Exec(plan.Repo, "commit", "-m", msg, "--", rel);
         // exit 1 with "nothing to commit" is fine
-        if (commit.ExitCode == 0 && plan.Report.Push)
+        if (commit.ExitCode != 0) return;
+        state.LastReportSubstance = substance;
+        state.LastReportCommitSha = Git.Head(plan.Repo);
+        if (plan.Report.Push)
         {
+            // A plain push, still — an amend only ever happens to a commit the upstream has not seen
+            // (see CanAmendReportCommit), so this never needs to become a force.
             var push = Git.Exec(plan.Repo, "push");
             if (push.ExitCode != 0) log($"report push failed: {GateRunner.TailOf(push.Output, 3)}");
         }
+    }
+
+    /// <summary>SC6.1: true when the last report commit this run made is still exactly HEAD, still
+    /// touches nothing but the report, and has not left this machine. All three matter — a sha that is
+    /// no longer HEAD means someone else's commit (the agent's, or a rebase's) sits on top and amending
+    /// would rewrite THAT; a tip already on the upstream means an amend turns every later push into a
+    /// force. No upstream at all is safe, and is the common case for a scratch or local-only branch.
+    /// <para>The name check is deliberately re-read from git rather than trusted from the sha alone:
+    /// an agent session can be committing concurrently, and re-asking git what the tip actually
+    /// contains is the last thing this does before handing the amend over.</para></summary>
+    private static bool CanAmendReportCommit(PlanConfig plan, RunState state, string rel)
+    {
+        if (string.IsNullOrWhiteSpace(state.LastReportCommitSha)) return false;
+        if (!string.Equals(Git.Head(plan.Repo), state.LastReportCommitSha, StringComparison.OrdinalIgnoreCase))
+            return false;
+        var ab = Git.AheadBehind(plan.Repo);
+        if (ab is { Ahead: 0 }) return false;
+        var touched = Git.Exec(plan.Repo, "show", "--name-only", "--format=", "HEAD").Output
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).Where(s => s.Length > 0).ToList();
+        return touched.Count == 1 && touched[0].Equals(rel, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>Write REPORT.md to disk only — no git commit, no push. Used for mid-session
