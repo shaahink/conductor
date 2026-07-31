@@ -116,10 +116,14 @@ public sealed class BugCommand : Command<BugCommand.Settings>
         return 0;
     }
 
+    /// <summary>SF0.4: lists this run's bugs AND the open ones earlier runs in this repo left behind.
+    /// The carried rows are the whole point — before this the ledger was silently reset by every new
+    /// run, so eleven open bugs became an empty list that read like a clean bill of health.</summary>
     private static int List(SqliteRunStore store, string runId, bool all)
     {
         var bugs = store.QueryBugs(runId, status: all ? null : "open");
-        if (bugs.Count == 0)
+        var carried = store.QueryCarriedBugs(runId);
+        if (bugs.Count == 0 && carried.Count == 0)
         {
             AnsiConsole.MarkupLine(all ? "[grey]No bugs filed.[/]" : "[grey]No open bugs.[/]");
             return 0;
@@ -130,20 +134,45 @@ public sealed class BugCommand : Command<BugCommand.Settings>
         table.AddColumn("status");
         table.AddColumn("stage");
         table.AddColumn("title");
+        // Only when there is something to attribute — an extra column on every run would cost width
+        // for a value that is "this run" on every row.
+        if (carried.Count > 0) table.AddColumn("filed by");
+
         foreach (var b in bugs)
-        {
-            var sevColor = b.Severity switch { "high" => "red", "low" => "grey", _ => "yellow" };
-            var statusColor = b.Status switch { "open" => "yellow", "fixed" => "green", _ => "grey" };
-            table.AddRow(
-                b.Id.ToString(CultureInfo.InvariantCulture),
-                $"[{sevColor}]{Markup.Escape(b.Severity)}[/]",
-                $"[{statusColor}]{Markup.Escape(b.Status)}[/]",
-                Markup.Escape(b.StageId ?? "-"),
-                Markup.Escape(b.Title));
-        }
+            AddRow(table, b, carried.Count > 0 ? "this run" : null);
+        foreach (var c in carried)
+            AddRow(table, c.Bug, $"[yellow]{Markup.Escape(ShortPlan(c.PlanName))}[/]");
+
         AnsiConsole.Write(table);
+        if (carried.Count > 0)
+            AnsiConsole.MarkupLine(
+                $"[grey]{carried.Count} open bug(s) carried forward from an earlier run in this repo. " +
+                "They are still yours: fix and close them with [/][yellow]conductor bug fix <id>[/][grey].[/]");
         return 0;
     }
+
+    private static void AddRow(Table table, BugRow b, string? filedBy)
+    {
+        var sevColor = b.Severity switch { "high" => "red", "low" => "grey", _ => "yellow" };
+        var statusColor = b.Status switch { "open" => "yellow", "fixed" => "green", _ => "grey" };
+        var cells = new List<string>
+        {
+            b.Id.ToString(CultureInfo.InvariantCulture),
+            $"[{sevColor}]{Markup.Escape(b.Severity)}[/]",
+            $"[{statusColor}]{Markup.Escape(b.Status)}[/]",
+            Markup.Escape(b.StageId ?? "-"),
+            Markup.Escape(b.Title),
+        };
+        if (filedBy != null) cells.Add(filedBy);
+        table.AddRow(cells.ToArray());
+    }
+
+    /// <summary>Plan names are sentences ("Sarban core - the engine says what it knows"); the column
+    /// only needs enough to tell one run from another.</summary>
+    private static string ShortPlan(string planName) =>
+        string.IsNullOrWhiteSpace(planName) ? "an earlier run"
+        : planName.Length <= 24 ? planName
+        : planName[..23].TrimEnd() + "…";
 
     private static int Fix(SqliteRunStore store, RunState state, Settings settings)
     {
@@ -154,9 +183,11 @@ public sealed class BugCommand : Command<BugCommand.Settings>
         }
         var status = settings.WontFix ? "wontfix" : "fixed";
         var fixedSession = state.SessionCounter > 0 ? (int?)state.SessionCounter : null;
+        // SF0.4: no longer "for this run" — a bug an earlier run filed is closable here, which is the
+        // only way carrying it forward means anything.
         if (!store.UpdateBugStatus(state.RunId, id, status, fixedSession))
         {
-            AnsiConsole.MarkupLine($"[red]no open bug #{id} for this run[/] (already closed, or wrong id — try [yellow]conductor bug list --all[/]).");
+            AnsiConsole.MarkupLine($"[red]no bug #{id} in this repo's run.db[/] (wrong id — try [yellow]conductor bug list --all[/]).");
             return 1;
         }
         AnsiConsole.MarkupLine($"[green]bug #{id} → {status}[/]");

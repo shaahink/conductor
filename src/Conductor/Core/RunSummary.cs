@@ -92,6 +92,10 @@ public static class RunSummary
         }
         sb.AppendLine();
 
+        // SF0.4: the ledger a finished run leaves behind. Written from run.db, like everything else
+        // here, so the open bugs survive the engine that filed them.
+        sb.Append(OpenBugsReport.Markdown(store, state.RunId));
+
         if (state.SkippedStages.Count > 0)
         {
             sb.AppendLine("## Skipped stages (never delivered)");

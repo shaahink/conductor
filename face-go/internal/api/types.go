@@ -375,6 +375,10 @@ type BugDto struct {
 	FixedSession *int    `json:"fixedSession"`
 	CreatedAt    string  `json:"createdAt"`
 	UpdatedAt    string  `json:"updatedAt"`
+	// CarriedFromPlan (SF0.4) names the plan of the EARLIER run that filed this bug; nil when the
+	// current run filed it. Open bugs outlive the run that found them, so the ledger no longer
+	// resets to empty every time a new plan starts in the same repo.
+	CarriedFromPlan *string `json:"carriedFromPlan"`
 }
 
 type BugsDto struct {

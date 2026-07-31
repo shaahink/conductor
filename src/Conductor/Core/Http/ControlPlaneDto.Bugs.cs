@@ -2,9 +2,12 @@ namespace Conductor.Core.Http;
 
 // M7.2: tracked bugs, surfaced to the Face (GET /bugs).
 
+// SF0.4: CarriedFromPlan is the plan of the EARLIER run that filed this bug, or null when this run
+// filed it. Without it the Face showed a clean ledger to a repo with eleven open bugs in it.
 public sealed record BugDto(
     long Id, string Title, string? Detail, string Severity, string Status,
-    string? StageId, int? FoundSession, int? FixedSession, string CreatedAt, string UpdatedAt);
+    string? StageId, int? FoundSession, int? FixedSession, string CreatedAt, string UpdatedAt,
+    string? CarriedFromPlan = null);
 
 public sealed record BugsDto(IReadOnlyList<BugDto> Bugs);
 

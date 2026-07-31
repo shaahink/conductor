@@ -117,8 +117,10 @@ public partial class McpTaskServer
             status = s.GetString() ?? "open";
         var filter = status.Equals("all", StringComparison.OrdinalIgnoreCase) ? null : status;
 
-        var bugs = _store.QueryBugs(_runId, filter);
-        var list = bugs.Select(b => new
+        // SF0.4: this run's rows plus the open ones earlier runs in this repo left behind, each tagged
+        // with the plan that filed it. `bug_list` is how an agent checks what is already known before
+        // hunting; a per-run view told it "nothing known" the moment a new run started.
+        static object Describe(Store.BugRow b, string? carriedFromPlan) => new
         {
             id = b.Id,
             title = b.Title,
@@ -128,8 +130,20 @@ public partial class McpTaskServer
             stageId = b.StageId,
             foundSession = b.FoundSession,
             fixedSession = b.FixedSession,
-        }).ToArray();
-        return JsonSerializer.SerializeToElement(new { ok = true, bugs = list, count = list.Length });
+            carriedFromPlan,
+        };
+
+        var carriedRows = _store.QueryCarriedBugs(_runId);
+        var list = _store.QueryBugs(_runId, filter).Select(b => Describe(b, null))
+            .Concat(carriedRows.Select(c => Describe(c.Bug, c.PlanName)))
+            .ToArray();
+        return JsonSerializer.SerializeToElement(new
+        {
+            ok = true,
+            bugs = list,
+            count = list.Length,
+            carried = carriedRows.Count,
+        });
     }
 
     private JsonElement HandleBugFix(JsonElement? args)
@@ -150,7 +164,7 @@ public partial class McpTaskServer
         var status = wontfix ? "wontfix" : "fixed";
         return _store.UpdateBugStatus(_runId, id, status, fixedSession: null)
             ? JsonSerializer.SerializeToElement(new { ok = true, id, status })
-            : JsonSerializer.SerializeToElement(new { ok = false, error = $"no open bug #{id} for this run" });
+            : JsonSerializer.SerializeToElement(new { ok = false, error = $"no bug #{id} in this repo's run.db" });
     }
 
     private JsonElement HandleSessionDetail(JsonElement? args)

@@ -63,6 +63,10 @@ public interface IRunStore : IDisposable
     IReadOnlyList<BugRow> QueryBugs(string runId, string? status = null);
     bool UpdateBugStatus(string runId, long bugId, string status, int? fixedSession);
 
+    /// <summary>SF0.4: open bugs filed by EARLIER runs in this same run.db, so a bug outlives the run that
+    /// found it and not just the session. See <see cref="CarriedBugRow"/>.</summary>
+    IReadOnlyList<CarriedBugRow> QueryCarriedBugs(string currentRunId);
+
     // ---------------------------------------------------------------- handovers
 
     void WriteHandover(string runId, int sessionNumber, string stageId, string content);
