@@ -4,30 +4,29 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SC8.1 landed** (f45563e code, 70c0bef completion). Conductor.csproj target `StampBuildInfo`
-  writes the git short sha, a dirty flag and a UTC timestamp into AssemblyInformationalVersion plus
-  AssemblyMetadata at COMPILE time - nothing typed into a .cs file. VersionReport is ONE record
-  served by both `conductor version --json` and `GET /version`, so CLI and wire cannot drift; the
-  verb also prints WHICH BINARY answered (trap 3, made checkable). install.ps1/.sh print
-  before -> after; install.ps1 gained `-SkipShim`.
-gate: rig `%TEMP%\sarban-proofs\sc81` + a clean detached worktree. Published engine: `version` is an
-  unknown command, GET /version 404s while /state 200s. Fresh build: three builds, three stamps,
-  each matching git - `6d805e1ce073.dirty`, `f45563e82469.dirty`, and `f45563e82469` clean from the
-  worktree, so the dirty flag is computed. Live rig on :4318 answered GET /version 200 token-free
-  while /state said Running. Evidence
-  .conductor/evidence/SC8/SC8.1-version-identity-stamped-at-build.md.
-next: **SC8.2** - tag-height versioning (MinVer or equivalent) reconciled with release.yml so a
-  downloaded binary answers with its TAG, plus CHANGELOG.md per release. The csproj `Version` is
-  still hand-set to 2.0.0; that property is what SC8.2 takes over. The SDK already sets
-  SourceRevisionId via built-in SourceLink - watch for a double `+` append when Version changes.
-know: **A NEW VERB IS THREE PLACES**, and SC8.3 adds one (`update`): Program.cs, both lists in
-  CompletionCommand, and the expected set in B11_2Tests - that parity test is hand-maintained and
-  stayed GREEN with `version` missing from all of completion. **RIG TRAP:** `conductor bg start
-  ... | <anything>` blocks the whole PowerShell pipeline until the engine exits (the pipe holds the
-  inherited stdout handle), so a poll loop after it never runs - start the run in its own call, poll
-  in the next. The rig's `.conductor/control-plane.json` is DELETED at run end, so hold the session
-  open (`ping -n 150 127.0.0.1`). A read-only GET on THIS repo's control-plane port is the cheapest
-  BEFORE artifact and aims no run-control verb at it. Bugs 2,3,4,5,6,8,9,10,11,12,13 open.
+last: **SC8.2 landed** (094ece6). MinVer 7.0.0 derives the version from tag height; the csproj has NO
+  `Version` element and deliberately no `MinVerMinimumMajorMinor` floor - the `v*` tags are the whole
+  answer. `StampBuildInfo` gained `DependsOnTargets="MinVer"` because MinVer sets
+  InformationalVersion itself and would drop the SC8.1 sha. CHANGELOG.md is new and load-bearing:
+  release.yml's new `guard` job extracts the tag's section via `tools/changelog-section.sh`, fails
+  the release without it, and publishes it as the release body.
+gate: rig `%TEMP%\sarban-proofs\sc82`, two clones of commit 094ece6 - full and `--depth 1`. Shallow
+  answers `0.0.0-alpha.0` (no tags), full tagged v2.1.0 answers `2.1.0` exactly; one and two commits
+  past give `2.1.1-alpha.0.1` and `.2`. Both workflows now `fetch-depth: 0`, and release.yml asks the
+  SHIPPED artifact - that `case` block run live exits 0 on the tagged binary and 1 on the shallow
+  one. Evidence .conductor/evidence/SC8/SC8.2-tag-height-versioning-reconciled.md.
+next: **SC8.3** - `conductor update`: check the latest GitHub release, compare to the running
+  version, download the platform asset, verify, rename-dance the swap, REFUSE while a run is live;
+  `doctor` gains an update-available line. You will need a semver comparator (running version vs
+  release tag) - none exists yet, and note the running version is a PRERELEASE between tags, which
+  sorts BELOW the release it precedes. Prove the swap on a scratch copy, never the published engine.
+know: **A NEW VERB IS THREE PLACES** and `update` is one: Program.cs, BOTH lists in CompletionCommand,
+  and the expected set in B11_2Tests - that parity test is hand-maintained and stayed green with
+  `version` missing everywhere. Meziantou MA0009 rejects `Regex.Match` without a timeout: use
+  `GeneratedRegex(..., matchTimeoutMilliseconds: 1000)`. `git clone --depth 1` needs a `file://` URL
+  for a local source or the flag is ignored. Tag freely in a scratch clone, never in this repo.
+  `.conductor/evidence` is gitignored - the artifact is the path, not a commit. Bugs
+  2,3,4,5,6,8,9,10,11,12,13 open.
 
 
 ## Baseline numbers (from run.db)
@@ -36,7 +35,7 @@ know: **A NEW VERB IS THREE PLACES**, and SC8.3 adds one (`update`): Program.cs,
 |---|---|
 | Total checkpoints | 26 |
 | Done | 0 |
-| Claimed (unconfirmed) | 23 |
+| Claimed (unconfirmed) | 24 |
 
 ## Checkpoints
 
@@ -105,7 +104,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| SC8.1 | conductor version and GET /version report semver, git sha and build date stamped at build; install.ps1 prints the version before and after | TODO | - | - |
+| SC8.1 | conductor version and GET /version report semver, git sha and build date stamped at build; install.ps1 prints the version before and after | DONE | f45563e | engine-fast:OK · face-fast:OK |
 | SC8.2 | Tag-height versioning is automatic and reconciled with release.yml so a released binary answers with its tag; CHANGELOG.md carries a section per release | TODO | - | - |
 | SC8.3 | conductor update downloads and safely swaps the matching release binary, refusing while a run is live; doctor reports update-available | TODO | - | - |
 

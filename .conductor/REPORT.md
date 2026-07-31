@@ -1,10 +1,10 @@
 ﻿# Conductor — Sarban core - the engine says what it knows run report
 
-_Updated 2026-07-31 15:38 UTC · branch `feat/sarban` · HEAD `6d805e1`_
+_Updated 2026-07-31 16:15 UTC · branch `feat/sarban` · HEAD `1c2330f`_
 
 **Status:** Idle
-**Stage:** SC7 — The transcript captures structure · attempts used 0
-**Checkpoints:** 23/26 done · **Sessions run:** 25 · **Cost:** $324.5626 (agent $324.4173 + gates $0.1454) · **Tokens:** 4,799,998 in / 2,063,587 out
+**Stage:** SC8 — The program knows what it is and can update itself · attempts used 0 · working ▸ SC8.2
+**Checkpoints:** 24/26 done · **Sessions run:** 26 · **Cost:** $336.5639 (agent $336.4134 + gates $0.1505) · **Tokens:** 4,974,776 in / 2,154,692 out
 **Confirmed phases:** SC1, SC2, SC3, SC4, SC5, SC6, SC7
 
 ## Stage progress
@@ -18,7 +18,7 @@ _Updated 2026-07-31 15:38 UTC · branch `feat/sarban` · HEAD `6d805e1`_
 | SC5 | The engine can wait, detach, and correct the board | ██████████ 4/4 | confirmed ✓ |
 | SC6 | Clean history without lying about it | ██████████ 2/2 | confirmed ✓ |
 | SC7 | The transcript captures structure | ██████████ 2/2 | confirmed ✓ |
-| SC8 | The program knows what it is and can update itself | ░░░░░░░░░░ 0/3 | todo |
+| SC8 | The program knows what it is and can update itself | ███░░░░░░░ 1/3 | **← active** |
 
 <details> ✅<summary>SC1 — Telegram actually delivers (3/3)</summary>
 
@@ -92,11 +92,11 @@ _Updated 2026-07-31 15:38 UTC · branch `feat/sarban` · HEAD `6d805e1`_
 
 </details>
 
-<details><summary>SC8 — The program knows what it is and can update itself (0/3)</summary>
+<details><summary>SC8 — The program knows what it is and can update itself (1/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| SC8.1 | conductor version and GET /version report semver, git sha and build date stamped at build; install.ps1 prints the version before and after | ⬜ TODO | - |
+| SC8.1 | conductor version and GET /version report semver, git sha and build date stamped at build; install.ps1 prints the version before and after | ✅ DONE | - |
 | SC8.2 | Tag-height versioning is automatic and reconciled with release.yml so a released binary answers with its tag; CHANGELOG.md carries a section per release | ⬜ TODO | - |
 | SC8.3 | conductor update downloads and safely swaps the matching release binary, refusing while a run is live; doctor reports update-available | ⬜ TODO | - |
 
@@ -131,21 +131,13 @@ _Updated 2026-07-31 15:38 UTC · branch `feat/sarban` · HEAD `6d805e1`_
 | 23 | SC6 | Deliver | 1 | 07-31 13:41 | 0:43 | Advanced | SC6.2 | 2 | engine-fast:OK · face-fast:OK | $12.9192 | $0.0023 | 191,080/96,632 |
 | 24 | SC7 | Deliver | 1 | 07-31 14:29 | 0:28 | Advanced | SC7.1 | 2 | engine-fast:OK · face-fast:OK | $13.2517 | $0.0098 | 200,355/92,726 |
 | 25 | SC7 | Deliver | 1 | 07-31 14:59 | 0:32 | Advanced | SC7.2 | 1 | engine-fast:OK · face-fast:OK | $13.7045 | $0.0076 | 213,018/94,092 |
+| 26 | SC8 | Deliver | 1 | 07-31 15:38 | 0:36 | Advanced | SC8.1 | 4 | engine-fast:OK · face-fast:OK | $11.9962 | $0.0051 | 174,778/91,105 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-31 12:39:45  • session #19 SC5 → Advanced · done SC5.2 · 3 commit(s)  (47m00s)
-07-31 12:39:45  • session #20 SC5 Deliver started (attempt 1/6)
-07-31 13:16:55  ▪ gate engine-fast pass [session]  (39.9s)
-07-31 13:16:55  ▪ gate face-fast pass [session]  (30.4s)
-07-31 13:16:56  • session #20 SC5 → Advanced · done SC5.3 · 3 commit(s)  (37m10s)
-07-31 13:16:56  § owner approval requested — SC5
-07-31 13:16:57  ◆ plan reloaded — v2 · 8 stages · 4 gates
-07-31 13:41:06  § owner approval granted — SC5
-07-31 13:41:06  • session #21 SC5 Deliver started (attempt 1/6)
 07-31 14:11:11  ▪ gate engine-fast pass [session]  (41.9s)
 07-31 14:11:11  ▪ gate face-fast pass [session]  (33.9s)
 07-31 14:11:12  • session #21 SC5 → Advanced · done SC5.4 · 2 commit(s)  (30m05s)
@@ -177,6 +169,15 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-31 16:33:50  ▪ gate engine-fast pass [session]  (42.7s)
 07-31 16:33:50  ▪ gate face-fast pass [session]  (33.3s)
 07-31 16:33:51  • session #25 SC7 → Advanced · done SC7.2 · 1 commit(s)  (34m14s)
+07-31 16:38:27  ▪ gate engine-fast pass [phase]  (0.0s)
+07-31 16:38:27  ▪ gate face-fast pass [phase]  (0.0s)
+07-31 16:38:27  ▪ gate engine-full pass [phase]  (4m29s)
+07-31 16:38:27  ▪ gate face-full pass [phase]  (4.0s)
+07-31 16:38:27  ▸ stage SC7 confirmed  (1h09m20s)
+07-31 16:38:28  ▸ stage SC8 entered — The program knows what it is and can update itself
+07-31 16:38:28  • session #26 SC8 Deliver started (attempt 1/6)
+07-31 17:15:58  ▪ gate engine-fast pass [session]  (46.9s)
+07-31 17:15:58  ▪ gate face-fast pass [session]  (4.4s)
 ```
 
 ## Health
@@ -184,7 +185,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 25 · retries 2 (8 %) · overall Warn
+sessions 26 · retries 2 (8 %) · overall Warn
 ⚠ [context-saturation] session #13: 29,057,299 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #15: 20,145,044 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #18: 32,959,198 context tokens (≥ 20,000,000)
@@ -202,13 +203,11 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/sarban
-working tree: M .conductor/REPORT.md, M SARBAN-CORE-TRACKER.md
+working tree: clean
 ```
 
 ### Commits by session
 
-- **s18 (SC5 Deliver)** — 1 commit(s):
-  - [`ac70123`](https://github.com/shaahink/conductor/commit/ac70123) feat(sc5): let a session say "blocked until T" and have the engine wait
 - **s19 (SC5 Deliver)** — 3 commit(s):
   - [`8948a10`](https://github.com/shaahink/conductor/commit/8948a10) docs(sarban): hand SC5.3 the detached run loop and three rig-found traps
   - [`e6b15c7`](https://github.com/shaahink/conductor/commit/e6b15c7) feat(sc5): let a run outlive the shell that launched it
@@ -231,6 +230,11 @@ working tree: M .conductor/REPORT.md, M SARBAN-CORE-TRACKER.md
   - [`33d1f81`](https://github.com/shaahink/conductor/commit/33d1f81) feat(sc7): capture tool calls as structure, not a blob cut at 150 chars
 - **s25 (SC7 Deliver)** — 1 commit(s):
   - [`6d805e1`](https://github.com/shaahink/conductor/commit/6d805e1) feat(sc7): render the wire readable and give every session a digest
+- **s26 (SC8 Deliver)** — 4 commit(s):
+  - [`1c2330f`](https://github.com/shaahink/conductor/commit/1c2330f) docs(sc8): fold the completion-parity lesson into the SC8.1 handoff
+  - [`70c0bef`](https://github.com/shaahink/conductor/commit/70c0bef) feat(sc8): teach tab-completion the version verb
+  - [`58c2685`](https://github.com/shaahink/conductor/commit/58c2685) docs(sc8): evidence and handoff for SC8.1
+  - [`f45563e`](https://github.com/shaahink/conductor/commit/f45563e) feat(sc8): stamp the build, and let the engine say what it is
 
 ## Phase handovers (audit)
 
@@ -253,35 +257,37 @@ working tree: M .conductor/REPORT.md, M SARBAN-CORE-TRACKER.md
 
 ## Last gate run
 
-engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
+engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: SC7.2 landed and is claimed with evidence (`conductor task --done SC7.2`), commit `6d805e1` pushed on `feat/sarban`, working tree clean — the provider now emits a readable one-liner per tool call and every session gets a digest that is computed live, stored in run.db behind migration v9, and served ranked on `/sessions`, proven against a scratch rig through the fresh build (published-vs-fresh contrast captured) plus a full-cycle harness test that reads the digest back out of run.db rather than out of the object that wrote it; full suite 1396/0/0, nothing skipped or relaxed, and the only test edits were the schema-version pin and two SC7.1 assertions on the display string this…
+> SESSION-RESULT: **SC8.1 landed and is claimed.** `Conductor.csproj` gained a `StampBuildInfo` target that writes the git short sha, a dirty flag and a UTC timestamp into `AssemblyInformationalVersion` plus `AssemblyMetadata` at compile time — nothing typed into a `.cs` file; `BuildInfo` reads it back with the parse split out from reflection so every emitted shape is testable; `VersionReport` is one record served by both `conductor version --json` and the new `GET /version`, so CLI and wire cannot drift; the verb also prints which binary answered, making this repo's trap 3 checkable rather than assumed; `install.ps1`/`install.sh` print before → after with an honest fallback for a pre-SC8 bina…
 
 ## Tracker handoff
 
 ```
-last: **SC7.2 landed - SC7 is complete.** ToolLine renders a ToolCall as the line a human reads
-  (`Edit ToolLine.cs (+40/-1)`, `conductor task_update SC7.2 -> done`); the structured tool object
-  still travels beside it, so this is a rendering, not a second capture. ToolEventExtractor.Render
-  is deleted - no production caller left. An argv ARRAY under `command` now joins into a command
-  line instead of `[3 items]`. SessionDigest folds tool mix, files written with counts, claims,
-  bg-start purposes and notable build/test commands live in TrackActivity; stored as JSON in
-  run.db `sessions.digest` (migration v9), served ranked on /sessions, one-line summary in the log,
-  rendered block returned by the MCP `session_detail` tool.
-gate: rig `%TEMP%\sarban-proofs\sc72`, one baseline, published engine vs FRESH build. Published
-  wrote escaped-JSON blobs with the Write path cut away and logged no digest; fresh wrote all ten
-  worked-example one-liners, logged `digest: 10 tool calls - 7 tools - 2 files (3 writes) ...`,
-  stored it in run.db and served it on GET /sessions:4399. Full suite 1396/0/0. Evidence
-  .conductor/evidence/SC7/SC7.2-readable-wire-and-session-digest.md.
-next: **SC8.1** - `conductor version` and GET /version reporting semver, git sha and build date
-  stamped at build; install.ps1 prints the version before and after. Nothing in SC7 blocks it.
-know: **RIG TRAP, new one.** The fake agent ends with `git add -A; git commit`, so it COMMITS the
-  rig's own conductor.plan.json and agent .cmd - `git reset --hard <baseline>` between runs then
-  deletes them and the next run dies with "Plan file not found". Recreate both, or keep them
-  outside the rig repo. Still true: CONDUCTOR_PLAN outranks the cwd plan scan - set it to the rig's
-  plan before any run verb. Do NOT read a defect off the PATH conductor: its `bg status` shows a
-  negative runtime for running rows, which is SC5.4 already fixed in the tree, not a live bug.
-  Bugs 2,3,4,5,6,8,9,10,11,12,13 open.
+last: **SC8.1 landed** (f45563e code, 70c0bef completion). Conductor.csproj target `StampBuildInfo`
+  writes the git short sha, a dirty flag and a UTC timestamp into AssemblyInformationalVersion plus
+  AssemblyMetadata at COMPILE time - nothing typed into a .cs file. VersionReport is ONE record
+  served by both `conductor version --json` and `GET /version`, so CLI and wire cannot drift; the
+  verb also prints WHICH BINARY answered (trap 3, made checkable). install.ps1/.sh print
+  before -> after; install.ps1 gained `-SkipShim`.
+gate: rig `%TEMP%\sarban-proofs\sc81` + a clean detached worktree. Published engine: `version` is an
+  unknown command, GET /version 404s while /state 200s. Fresh build: three builds, three stamps,
+  each matching git - `6d805e1ce073.dirty`, `f45563e82469.dirty`, and `f45563e82469` clean from the
+  worktree, so the dirty flag is computed. Live rig on :4318 answered GET /version 200 token-free
+  while /state said Running. Evidence
+  .conductor/evidence/SC8/SC8.1-version-identity-stamped-at-build.md.
+next: **SC8.2** - tag-height versioning (MinVer or equivalent) reconciled with release.yml so a
+  downloaded binary answers with its TAG, plus CHANGELOG.md per release. The csproj `Version` is
+  still hand-set to 2.0.0; that property is what SC8.2 takes over. The SDK already sets
+  SourceRevisionId via built-in SourceLink - watch for a double `+` append when Version changes.
+know: **A NEW VERB IS THREE PLACES**, and SC8.3 adds one (`update`): Program.cs, both lists in
+  CompletionCommand, and the expected set in B11_2Tests - that parity test is hand-maintained and
+  stayed GREEN with `version` missing from all of completion. **RIG TRAP:** `conductor bg start
+  ... | <anything>` blocks the whole PowerShell pipeline until the engine exits (the pipe holds the
+  inherited stdout handle), so a poll loop after it never runs - start the run in its own call, poll
+  in the next. The rig's `.conductor/control-plane.json` is DELETED at run end, so hold the session
+  open (`ping -n 150 127.0.0.1`). A read-only GET on THIS repo's control-plane port is the cheapest
+  BEFORE artifact and aims no run-control verb at it. Bugs 2,3,4,5,6,8,9,10,11,12,13 open.
 ```
