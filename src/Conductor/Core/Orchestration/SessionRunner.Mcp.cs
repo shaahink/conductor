@@ -84,6 +84,8 @@ public sealed partial class SessionRunner
                 "--run-id", runId,
                 "--state-dir", stateDir,
                 "--repo", repoPath,
+                // SC4.1: whose bg children these are. The battery settle waits on this session's.
+                "--session", rec.Number.ToString(),
             };
 
             var opencodeConfig = new

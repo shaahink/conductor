@@ -6,9 +6,18 @@ namespace Conductor.Core;
 public sealed record GateResult(string Name, bool Passed, bool Skipped, bool Optional, int ExitCode, TimeSpan Duration, string Tail)
 {
     public bool Cached { get; init; }
-    public string Glyph => Cached ? "cached" : Skipped ? "-" : Passed ? "OK" : Optional ? "warn" : "FAIL";
-    /// <summary>Estimated overhead cost = Duration × rate (O3). Skipped or cached gates contribute zero.</summary>
-    public decimal EstimatedCostUsd(decimal ratePerSecond) => (Skipped || Cached) ? 0m : (decimal)Duration.TotalSeconds * ratePerSecond;
+    /// <summary>SC4.1: this result is the SECOND run of the gate — the first one failed.</summary>
+    public bool Retried { get; init; }
+    /// <summary>SC4.1: wall time the discarded first attempt burned. Counted in the cost estimate,
+    /// kept OUT of <see cref="Duration"/> so a duration-vs-last-pass comparison stays like-for-like.</summary>
+    public TimeSpan FirstAttemptDuration { get; init; }
+    public string Glyph => Cached ? "cached" : Skipped ? "-"
+        : Passed ? (Retried ? "OK-retry" : "OK")
+        : Optional ? "warn" : (Retried ? "FAIL-retry" : "FAIL");
+    /// <summary>Estimated overhead cost = Duration × rate (O3). Skipped or cached gates contribute zero.
+    /// A retried gate is charged for both attempts — the battery really spent that time.</summary>
+    public decimal EstimatedCostUsd(decimal ratePerSecond) =>
+        (Skipped || Cached) ? 0m : (decimal)(Duration + FirstAttemptDuration).TotalSeconds * ratePerSecond;
 
     public bool IsGreen => Skipped || Passed || Optional || Cached;
 }
@@ -84,6 +93,35 @@ public static class GateRunner
             results[i] = await RunTrackedAsync(i).ConfigureAwait(false);
         }
         await FlushAsync().ConfigureAwait(false);
+
+        // SC4.1: one unconditional retry of every REQUIRED gate that failed, before anything is
+        // allowed to call this battery red. devcontext #12 analysed the wrong verdict and refuted
+        // the tempting duration heuristic ("it failed too fast to be real") — a genuine compile
+        // error also fails in two seconds. Running the gate again is the only cheap test that tells
+        // a broken tree from a flaky one, and it costs exactly nothing on a green battery. Optional
+        // gates are left alone: their failure never blocks a verdict, so a retry buys nothing.
+        for (var i = 0; i < gates.Count && !ct.IsCancellationRequested; i++)
+        {
+            if (results[i] is not { } first || first.IsGreen) continue;
+            onProgress?.Invoke($"gate {gates[i].Name}: failed (exit {first.ExitCode} in {first.Duration.TotalSeconds:0}s) — retrying once before the battery is called red");
+            Mark(i, new GateProgress(gates[i].Name, "running", TimeSpan.Zero, DateTime.UtcNow));
+            var second = await RunOneAsync(plan, gates[i], onProgress, ct).ConfigureAwait(false);
+            // A skipIfFresh gate whose own failed run touched the watched artifact would come back
+            // "cached" here. That is not a pass — keep the failure the gate actually produced.
+            if (second.Cached || second.Skipped)
+            {
+                Mark(i, new GateProgress(gates[i].Name, first.Optional ? "warn" : "fail", first.Duration));
+                continue;
+            }
+            results[i] = second with
+            {
+                Retried = true,
+                FirstAttemptDuration = first.Duration,
+                Tail = $"[conductor] retried once (SC4.1): the first attempt exited {first.ExitCode} after " +
+                       $"{first.Duration.TotalSeconds:0}s. Below is the SECOND run.\n{second.Tail}",
+            };
+            Mark(i, new GateProgress(gates[i].Name, second.Passed ? "pass" : second.Optional ? "warn" : "fail", second.Duration));
+        }
 
         // any not-yet-populated slots (e.g. cancelled before reached) get a skipped placeholder
         return results.Select((r, i) => r ?? new GateResult(gates[i].Name, false, true, gates[i].Optional, 0, TimeSpan.Zero, "not run (cancelled)")).ToList();
@@ -216,7 +254,10 @@ public static class GateRunner
             .Select(r =>
             {
                 var tail = r.Tail.Length > maxCharsPerGate ? "…" + r.Tail[^maxCharsPerGate..] : r.Tail;
-                return $"### Gate `{r.Name}` FAILED (exit {r.ExitCode}, {r.Duration.TotalSeconds:0}s)\n```\n{tail}\n```";
+                // SC4.1: say it was retried. A fix session that knows the gate failed TWICE does not
+                // waste its first move re-running it to see whether the battery was just unlucky.
+                var retried = r.Retried ? ", failed twice — retried once" : "";
+                return $"### Gate `{r.Name}` FAILED (exit {r.ExitCode}, {r.Duration.TotalSeconds:0}s{retried})\n```\n{tail}\n```";
             });
         return string.Join("\n\n", parts);
     }

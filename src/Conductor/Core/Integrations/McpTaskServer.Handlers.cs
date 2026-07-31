@@ -194,7 +194,8 @@ public partial class McpTaskServer
         {
             try
             {
-                _store.TrackPid(proc.Id, _runId, $"bg:{purpose}", null, null, startedUtc);
+                // SC4.1: stamp the session — the battery settle needs to know whose child this is.
+                _store.TrackPid(proc.Id, _runId, $"bg:{purpose}", null, _sessionNumber, startedUtc);
             }
             catch { }
         }

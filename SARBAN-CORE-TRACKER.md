@@ -4,24 +4,21 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SC3.4 claimed**, commit abe0eb1 - stage SC3 is complete. The advisor answers by default now:
-  AdvisorConfig.Args defaults to a headless one-shot, and an invocation that cannot answer is refused
-  at plan LOAD - empty args, no prompt placeholder, an output kind nothing unwraps, timeout under 1 -
-  with doctor reporting it as the plan check plus a new advisor line naming the invocation. Bug 7
-  closed: advisor.provider is gone from 5 plans and any unknown advisor key is now named at load.
-  Also fixed in the same family: an unfilled model placeholder in advisor args is dropped with its
-  flag (the init scaffold ships one), and chat now uses the one shared spawn path.
-gate: full suite 1212 passed, 0 failed, 0 skipped; build clean; ratchet OK (pragmas 37 of 38, archdebt
-  0), nothing weakened. Evidence .conductor/evidence/SC3/SC3.4-advisor.md, rig TEMP/sarban-proofs/sc34.
-  LIVE both ways on the same rig run: published engine logs 'advisor gave no parseable verdict' then
-  'advisor unavailable'; fresh build logs 'advisor verdict: ResetBudget - ...' and the loop acts on it.
-next: **SC4.1** - the battery must settle before it judges: wait for the session's tracked bg children
-  to exit before starting gates, retry a failed required gate once unconditionally before GatesRed,
-  and put duration vs last passing duration on the failure line.
-know: A rig BEFORE proof of the advisor hang did NOT reproduce - claude.exe errors in 2.5s on a
-  non-interactive stdin rather than hanging 6 min; the defect that reproduces is that it answers
-  nothing. Brace discipline for THIS repo's prose still stands until the owner reinstalls, and keep
-  double quotes out of conductor note text (the arg parser reads embedded flags). Bugs 2,3,4,5,6 open.
+last: **SC4.1 claimed**. New BatterySettler holds every battery until this session's `bg:` children
+  exit (limits.batterySettleSeconds, default 120, 0 = off; at the cap it starts anyway with a warn and
+  never kills the child). GateRunner now re-runs any failed REQUIRED gate once before the battery can
+  be called red - optional/skipped/cached are not retried, a retry returning cached leaves the first
+  failure standing, and two failures stay red with 'failed twice' in the fix prompt. The per-gate
+  FAIL line carries duration vs the gate's last passing duration (per gate AND per tier).
+gate: build clean; scoped `dotnet test` over 24 touched/neighbouring classes: 451 passed, 0 failed,
+  0 skipped (incl. ArchitectureTests). Nothing weakened. Evidence .conductor/evidence/SC4/, six rigs
+  under TEMP/sarban-proofs/sc41, BEFORE published vs AFTER fresh build on each.
+next: **SC4.2** - NoProgress must mean no commits AND no newly-DONE (VerdictEngine.cs line ~355 today
+  ignores newlyDoneCount), and conductor's own `chore(conductor):` commits must not count as progress.
+know: PidLiveness.Check let a Win32 access-denied out of Process.HasExited - it killed `conductor bg
+  status` live mid-session, and the same hand-rolled check sat in 3 places; all now go through
+  PidLiveness (denied = Unverifiable, not Gone). `powershell -File script.ps1 -Only a,b` does NOT
+  split a comma list into a string array - call the script directly instead. Bugs 2,3,4,5,6 open.
 
 
 ## Baseline numbers (from run.db)
@@ -30,7 +27,7 @@ know: A rig BEFORE proof of the advisor hang did NOT reproduce - claude.exe erro
 |---|---|
 | Total checkpoints | 26 |
 | Done | 0 |
-| Claimed (unconfirmed) | 10 |
+| Claimed (unconfirmed) | 11 |
 
 ## Checkpoints
 
@@ -61,7 +58,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | SC3.1 | doctor FAILS when agent.model is set without the model token in both args and resumeArgs; unknown RunIf or SkipIf tokens fail at plan load naming the valid vocabulary | DONE | d4c9103 | engine-fast:OK · face-fast:OK |
 | SC3.2 | plan set refuses an absent leaf key without --create, suggests the dotted path when one nested leaf matches, warns before stripping comments, and reaches the live engine or prints the exact reload command | DONE | 587eadd | engine-fast:OK · face-fast:OK |
 | SC3.3 | A literal brace in stage notes or promptExtra is caught by doctor at plan load; at runtime an unresolved placeholder parks the run and writes the refusal to conductor.log; a double brace escapes to a literal | DONE | 503d7e6 | engine-fast:OK · face-fast:OK |
-| SC3.4 | The default advisor invocation works headless or is refused loudly at load with a doctor line; plan-config.md matches the code | TODO | - | - |
+| SC3.4 | The default advisor invocation works headless or is refused loudly at load with a doctor line; plan-config.md matches the code | DONE | abe0eb1 | engine-fast:OK · face-fast:OK |
 
 ### SC4 — Verdicts judge the work, not the environment
 

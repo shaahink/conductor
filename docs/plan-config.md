@@ -204,6 +204,21 @@ docs-only or spike plan with no build/test surface.
 | `maxConcurrentLanes` | int | 2 | Max concurrent Tier A analysis lanes. |
 | `dnsHealthCheck` | object | — | Pre-session DNS check (hosts, intervalSeconds). |
 | `overheadCostPerSecond` | decimal | 0.0001 | Gate runtime cost estimate rate. |
+| `batterySettleSeconds` | int | 120 | Ceiling on how long the gate battery waits for the session's own `bg:` children to exit before it judges. `0` disables the wait. |
+
+### The battery settles, then retries once (SC4.1)
+
+Two rules apply to every battery and are not configurable beyond the cap above, because both exist
+to stop the verdict scoring the environment instead of the work:
+
+- **Settle.** Before gates start, conductor waits for the background children *this session* started
+  (`conductor bg start`, MCP `bg_start`) to actually exit, logging `battery settle: …`. If they are
+  still running at `batterySettleSeconds` it starts anyway and says so — a child that never exits
+  delays the verdict, it does not block the run.
+- **One retry.** A **required** gate that fails is run again, once, before the battery can be called
+  red. If the second run passes, the line reads `PASS on retry`; if it fails again the gate is red
+  and the fix prompt says it failed twice. Optional gates are never retried — their failure blocks
+  nothing. A failure line also carries the gate's duration against its last passing duration.
 
 ## `report` — AFK reporting
 

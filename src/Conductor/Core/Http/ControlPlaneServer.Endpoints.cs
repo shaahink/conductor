@@ -176,16 +176,10 @@ public sealed partial class ControlPlaneServer
 
     // GET /processes and POST /processes/kill live in ControlPlaneServer.Processes.cs.
 
-    private static bool IsProcessAlive(int pid)
-    {
-        try
-        {
-            using var proc = System.Diagnostics.Process.GetProcessById(pid);
-            return !proc.HasExited;
-        }
-        catch (ArgumentException) { return false; }
-        catch (InvalidOperationException) { return false; }
-    }
+    /// <summary>SC4.1: the third hand-rolled copy of this check, and the third one that let a Win32
+    /// access-denied out of <c>HasExited</c> — here it would 500 the whole <c>/processes</c> endpoint.
+    /// <see cref="PidLiveness"/> is the one implementation; it treats an un-openable id as alive.</summary>
+    private static bool IsProcessAlive(int pid) => PidLiveness.LooksAlive(pid, DateTime.UtcNow);
 
     private static async Task<string?> TailBgLogAsync(string bgLogDir, int pid, Store.IRunStore? store, string? runId)
     {

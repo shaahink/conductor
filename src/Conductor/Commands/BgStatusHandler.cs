@@ -46,7 +46,7 @@ internal static class BgStatusHandler
 
         foreach (var p in pids)
         {
-            var alive = IsProcessAlive(p.Pid);
+            var alive = PidLiveness.LooksAlive(p.Pid, p.StartedUtc);
             var status = p.ExitedUtc != null
                 ? $"[grey]exited ({p.ExitedUtc:HH:mm:ss})[/]"
                 : alive
@@ -73,16 +73,11 @@ internal static class BgStatusHandler
         return 0;
     }
 
-    public static bool IsProcessAlive(int pid)
-    {
-        try
-        {
-            using var proc = Process.GetProcessById(pid);
-            return !proc.HasExited;
-        }
-        catch (ArgumentException) { return false; }
-        catch (InvalidOperationException) { return false; }
-    }
+    /// <summary>SC4.1: this had its own copy of the liveness check, and that copy let a Win32
+    /// access-denied escape — `conductor bg status` died with a stack trace the moment run.db held a
+    /// pid now owned by a process this one may not open. One implementation, in
+    /// <see cref="PidLiveness"/>, which treats "cannot inspect" as alive rather than as a crash.</summary>
+    public static bool IsProcessAlive(int pid) => PidLiveness.LooksAlive(pid, DateTime.UtcNow);
 
     public static string FormatDuration(TimeSpan ts)
     {

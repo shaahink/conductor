@@ -41,7 +41,15 @@ public static class PidLiveness
         try
         {
             using var proc = Process.GetProcessById(pid);
-            if (proc.HasExited) return PidState.Gone;
+            bool exited;
+            // SC4.1: HasExited opens a handle, and OpenProcess returns access-denied (Win32 5) for a
+            // process this one may not touch — an elevated or protected owner of a RECYCLED id. That
+            // throw escaped every caller: it took down `conductor bg status` outright, and it sits on
+            // the path the battery settle and the stall rail both walk. Access denied is not "gone";
+            // it is proof the process EXISTS and nothing more, which is exactly Unverifiable.
+            try { exited = proc.HasExited; }
+            catch (System.ComponentModel.Win32Exception) { return PidState.Unverifiable; }
+            if (exited) return PidState.Gone;
             DateTime actualStartUtc;
             try { actualStartUtc = proc.StartTime.ToUniversalTime(); }
             catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or NotSupportedException)
@@ -53,6 +61,11 @@ public static class PidLiveness
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
             return PidState.Gone;
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            // GetProcessById itself was refused: the id is in use by something we cannot inspect.
+            return PidState.Unverifiable;
         }
     }
 

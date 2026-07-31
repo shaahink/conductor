@@ -43,6 +43,11 @@ public interface IRunStore : IDisposable
 
     bool? GetLastPassingGateResult(string runId, string gateName, string tier, string sha);
 
+    /// <summary>SC4.1: how long this gate took the last time it genuinely passed, in ms, for the
+    /// comparison a failure line has to carry. Skipped and cached rows are excluded — they measure
+    /// nothing. Null when this run has no passing run of the gate on record.</summary>
+    long? GetLastPassingGateDurationMs(string runId, string gateName, string tier);
+
     // ---------------------------------------------------------------- scores
 
     void WriteScore(string runId, int sessionNumber, string? stageId, int score, string verdict, string findings);

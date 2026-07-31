@@ -1,11 +1,11 @@
 ﻿# Conductor — Sarban core - the engine says what it knows run report
 
-_Updated 2026-07-31 07:32 UTC · branch `feat/sarban` · HEAD `dcd7055`_
+_Updated 2026-07-31 08:02 UTC · branch `feat/sarban` · HEAD `b93fc06`_
 
 **Status:** Idle
-**Stage:** SC3 — Config traps die at authoring time · attempts used 0 · working ▸ SC3.4
-**Checkpoints:** 10/26 done · **Sessions run:** 11 · **Cost:** $139.0389 (agent $138.9678 + gates $0.0711) · **Tokens:** 2,080,712 in / 892,961 out
-**Confirmed phases:** SC1, SC2
+**Stage:** SC3 — Config traps die at authoring time · attempts used 0
+**Checkpoints:** 11/26 done · **Sessions run:** 12 · **Cost:** $151.0433 (agent $150.9661 + gates $0.0772) · **Tokens:** 2,274,846 in / 978,650 out
+**Confirmed phases:** SC1, SC2, SC3
 
 ## Stage progress
 
@@ -13,7 +13,7 @@ _Updated 2026-07-31 07:32 UTC · branch `feat/sarban` · HEAD `dcd7055`_
 |---|---|---|---|
 | SC1 | Telegram actually delivers | ██████████ 3/3 | confirmed ✓ |
 | SC2 | Truthful surfaces | ██████████ 4/4 | confirmed ✓ |
-| SC3 | Config traps die at authoring time | ████████░░ 3/4 | **← active** |
+| SC3 | Config traps die at authoring time | ██████████ 4/4 | confirmed ✓ |
 | SC4 | Verdicts judge the work, not the environment | ░░░░░░░░░░ 0/4 | todo |
 | SC5 | The engine can wait, detach, and correct the board | ░░░░░░░░░░ 0/4 | todo |
 | SC6 | Clean history without lying about it | ░░░░░░░░░░ 0/2 | todo |
@@ -41,14 +41,14 @@ _Updated 2026-07-31 07:32 UTC · branch `feat/sarban` · HEAD `dcd7055`_
 
 </details>
 
-<details><summary>SC3 — Config traps die at authoring time (3/4)</summary>
+<details> ✅<summary>SC3 — Config traps die at authoring time (4/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
 | SC3.1 | doctor FAILS when agent.model is set without the model token in both args and resumeArgs; unknown RunIf or SkipIf tokens fail at plan load naming the valid vocabulary | ✅ DONE | [`d4c9103`](https://github.com/shaahink/conductor/commit/d4c9103) |
 | SC3.2 | plan set refuses an absent leaf key without --create, suggests the dotted path when one nested leaf matches, warns before stripping comments, and reaches the live engine or prints the exact reload command | ✅ DONE | [`587eadd`](https://github.com/shaahink/conductor/commit/587eadd) |
-| SC3.3 | A literal brace in stage notes or promptExtra is caught by doctor at plan load; at runtime an unresolved placeholder parks the run and writes the refusal to conductor.log; a double brace escapes to a literal | ✅ DONE | - |
-| SC3.4 | The default advisor invocation works headless or is refused loudly at load with a doctor line; plan-config.md matches the code | ⬜ TODO | - |
+| SC3.3 | A literal brace in stage notes or promptExtra is caught by doctor at plan load; at runtime an unresolved placeholder parks the run and writes the refusal to conductor.log; a double brace escapes to a literal | ✅ DONE | [`503d7e6`](https://github.com/shaahink/conductor/commit/503d7e6) |
+| SC3.4 | The default advisor invocation works headless or is refused loudly at load with a doctor line; plan-config.md matches the code | ✅ DONE | [`abe0eb1`](https://github.com/shaahink/conductor/commit/abe0eb1) |
 
 </details>
 
@@ -117,17 +117,13 @@ _Updated 2026-07-31 07:32 UTC · branch `feat/sarban` · HEAD `dcd7055`_
 | 9 | SC3 | Deliver | 1 | 07-31 06:17 | 0:18 | Advanced | SC3.1 | 2 | engine-fast:OK · face-fast:OK | $7.6133 | $0.0041 | 148,043/61,242 |
 | 10 | SC3 | Deliver | 1 | 07-31 06:36 | 0:26 | Advanced | SC3.2 | 2 | engine-fast:OK · face-fast:OK | $11.5864 | $0.0042 | 175,423/83,786 |
 | 11 | SC3 | Deliver | 1 | 07-31 07:04 | 0:27 | Advanced | SC3.3 | 2 | engine-fast:OK · face-fast:OK | $13.5575 | $0.0041 | 214,329/81,757 |
+| 12 | SC3 | Deliver | 1 | 07-31 07:32 | 0:27 | Advanced | SC3.4 | 2 | engine-fast:OK · face-fast:OK | $11.9983 | $0.0061 | 194,134/85,689 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-31 04:44:53  • session #4 SC1 → Progress · 2 commit(s)  (18m14s)
-07-31 04:46:44  ▪ gate engine-fast pass [phase]  (0.0s)
-07-31 04:46:44  ▪ gate face-fast pass [phase]  (0.0s)
-07-31 04:46:44  ▪ gate engine-full pass [phase]  (1m43s)
-07-31 04:46:44  ▪ gate face-full pass [phase]  (4.3s)
 07-31 04:46:44  ▸ stage SC1 confirmed  (1h58m02s)
 07-31 04:46:45  ▸ stage SC2 entered — Truthful surfaces
 07-31 04:46:45  • session #5 SC2 Deliver started (attempt 1/6)
@@ -163,6 +159,11 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-31 08:04:40  • session #11 SC3 Deliver started (attempt 1/6)
 07-31 08:32:32  ▪ gate engine-fast pass [session]  (37.0s)
 07-31 08:32:32  ▪ gate face-fast pass [session]  (4.4s)
+07-31 08:32:32  • session #11 SC3 → Advanced · done SC3.3 · 2 commit(s)  (27m52s)
+07-31 08:32:33  • session #12 SC3 Deliver started (attempt 1/6)
+07-31 09:01:18  ▪ gate engine-fast pass [session]  (35.6s)
+07-31 09:01:18  ▪ gate face-fast pass [session]  (25.2s)
+07-31 09:01:18  • session #12 SC3 → Advanced · done SC3.4 · 2 commit(s)  (28m45s)
 ```
 
 ## Health
@@ -170,7 +171,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 11 · retries 1 (9 %) · overall Warn
+sessions 12 · retries 1 (8 %) · overall Warn
 ⚠ [context-saturation] session #3: 28,499,145 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #6: 20,274,223 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #8: 35,438,955 context tokens (≥ 20,000,000)
@@ -182,14 +183,11 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/sarban
-working tree: clean
+working tree: M .conductor/REPORT.md, M SARBAN-CORE-TRACKER.md
 ```
 
 ### Commits by session
 
-- **s4 (SC1 Fix)** — 2 commit(s):
-  - [`f5a90c6`](https://github.com/shaahink/conductor/commit/f5a90c6) docs(sarban): hand SC2 an honest account of the red
-  - [`d9b0ba4`](https://github.com/shaahink/conductor/commit/d9b0ba4) fix(sc1): stop one host's disposal from closing another host's log sink
 - **s5 (SC2 Deliver)** — 2 commit(s):
   - [`e3d9b9b`](https://github.com/shaahink/conductor/commit/e3d9b9b) docs(sarban): hand SC2.2 a measured lie and a filed loop bug
   - [`a3e970e`](https://github.com/shaahink/conductor/commit/a3e970e) fix(sc2): stop status calling the verdict window a crash
@@ -211,6 +209,9 @@ working tree: clean
 - **s11 (SC3 Deliver)** — 2 commit(s):
   - [`dcd7055`](https://github.com/shaahink/conductor/commit/dcd7055) docs(sarban): hand SC3.4 the advisor, and the ratchet lesson from SC3.3
   - [`503d7e6`](https://github.com/shaahink/conductor/commit/503d7e6) fix(sc3): make a literal brace prose, and a broken prompt a park
+- **s12 (SC3 Deliver)** — 2 commit(s):
+  - [`b93fc06`](https://github.com/shaahink/conductor/commit/b93fc06) docs(sarban): hand SC4.1 the settled battery, and what the advisor rig could not reproduce
+  - [`abe0eb1`](https://github.com/shaahink/conductor/commit/abe0eb1) fix(sc3): make the shipped advisor answer, and a dead advisor key fatal
 
 ## Phase handovers (audit)
 
@@ -233,31 +234,31 @@ working tree: clean
 
 ## Last gate run
 
-engine-fast:OK · face-fast:OK
+engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
 
 ## Last session result
 
-> SESSION-RESULT: **SC3.3 landed and claimed** (`conductor task --done SC3.3 --evidence .conductor/evidence/SC3/SC3.3-brace-safety.md`, commits `503d7e6` + handoff `dcd7055`, pushed to `feat/sarban`, tree clean). Brace safety is closed at all three places it detonated, with a BEFORE measured on the published engine and an AFTER on the fresh build on rig `%TEMP%\sarban-proofs\sc33`: (1) a literal `{model}` in a stage's `notes` now fails `PlanConfig.CollectErrors`, so plan load, live reload and `doctor` all refuse it naming the stage, the token and the escape — the published engine's doctor passed the same plan with 0 fails; (2) every substituted **value** — stage notes, tracker handoff, gate ou…
+> SESSION-RESULT: SC3.4 landed and claimed (commit abe0eb1, evidence `.conductor/evidence/SC3/SC3.4-advisor.md` plus the two live run logs beside it) — the shipped advisor default now answers headless, an advisor that cannot answer is refused at plan load with a doctor line, doctor grew an `advisor` check, bug 7 is fixed and closed, and `docs/plan-config.md` matches the code; stage SC3 is complete. Nothing is red: build clean, full suite 1212/0/0, ratchet OK with no ceiling raised, branch `feat/sarban` pushed at b93fc06 with a clean tree. Next session picks up **SC4.1** — make the gate battery wait for the session's tracked bg children to exit before judging, retry a failed required gate once …
 
 ## Tracker handoff
 
 ```
-last: **SC3.3 claimed**, commit 503d7e6. One definition now owns what a placeholder is and what the
-  doubled-brace escape means (Conductor.Planning.PromptPlaceholders, beside ConditionVocabulary).
-  Authored prose - stage notes, promptExtra - is judged at plan LOAD, so load, live reload and doctor
-  refuse the same thing. Every substituted VALUE is held as written, so a brace in a handoff, gate
-  output, an agent tail or a stage title is prose and can never throw - that was the killer class.
-  A genuinely broken template PARKS at NeedsHuman instead of exiting; doctor composes every session
-  kind per stage to catch it pre-launch, and run --dry-run refuses with the same sentence.
-gate: fast loop green - build clean, 160 scoped tests, 0 skipped, ratchet OK (pragmas 37 of 38,
-  archdebt 0). NOTE the ratchet caught RunLoop.cs at 506 over its 500 ceiling; the ceiling was NOT
-  raised, the park handler moved to RunLoop.Snapshot.cs. Evidence
-  .conductor/evidence/SC3/SC3.3-brace-safety.md, rig TEMP/sarban-proofs/sc33. Live-proven both ways:
-  published engine stderr-only + log silent + status 'idle'; fresh build stderr 0 bytes, whole refusal
-  in conductor.log, engine still up, and 'session #1 start' after the operator fixed the template.
-next: **SC3.4** - advisor: the shipped default args launch a bare interactive REPL that hangs 6 min and
-  returns null; make it a working headless invocation or refuse at load with a doctor line, and fix
-  docs/plan-config.md's advisor section. Bug 7 (advisor.provider dropped in 5 plans) is yours too.
-know: The brace discipline for THIS repo's prose still stands until the owner reinstalls - the engine
-  driving these sessions is the old published one. Bugs 2,3,4,5,6,7 open.
+last: **SC3.4 claimed**, commit abe0eb1 - stage SC3 is complete. The advisor answers by default now:
+  AdvisorConfig.Args defaults to a headless one-shot, and an invocation that cannot answer is refused
+  at plan LOAD - empty args, no prompt placeholder, an output kind nothing unwraps, timeout under 1 -
+  with doctor reporting it as the plan check plus a new advisor line naming the invocation. Bug 7
+  closed: advisor.provider is gone from 5 plans and any unknown advisor key is now named at load.
+  Also fixed in the same family: an unfilled model placeholder in advisor args is dropped with its
+  flag (the init scaffold ships one), and chat now uses the one shared spawn path.
+gate: full suite 1212 passed, 0 failed, 0 skipped; build clean; ratchet OK (pragmas 37 of 38, archdebt
+  0), nothing weakened. Evidence .conductor/evidence/SC3/SC3.4-advisor.md, rig TEMP/sarban-proofs/sc34.
+  LIVE both ways on the same rig run: published engine logs 'advisor gave no parseable verdict' then
+  'advisor unavailable'; fresh build logs 'advisor verdict: ResetBudget - ...' and the loop acts on it.
+next: **SC4.1** - the battery must settle before it judges: wait for the session's tracked bg children
+  to exit before starting gates, retry a failed required gate once unconditionally before GatesRed,
+  and put duration vs last passing duration on the failure line.
+know: A rig BEFORE proof of the advisor hang did NOT reproduce - claude.exe errors in 2.5s on a
+  non-interactive stdin rather than hanging 6 min; the defect that reproduces is that it answers
+  nothing. Brace discipline for THIS repo's prose still stands until the owner reinstalls, and keep
+  double quotes out of conductor note text (the arg parser reads embedded flags). Bugs 2,3,4,5,6 open.
 ```

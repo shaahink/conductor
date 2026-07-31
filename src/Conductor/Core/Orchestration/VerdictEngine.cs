@@ -59,8 +59,18 @@ public sealed partial class VerdictEngine
 
     private int MaxAttempts(StageConfig stage) => Math.Max(1, stage.Sessions * _ctx.Plan.Limits.StageSlackFactor);
 
+    /// <summary>SC4.1: every battery in this engine goes through here, so this is the one place the
+    /// settle has to live. The session judged is the last one on record — the one that just exited
+    /// for a session battery, the stage's final one for a phase gate or the closing battery.</summary>
+    private Task SettleBeforeGatesAsync(CancellationToken ct) =>
+        BatterySettler.SettleAsync(
+            _ctx.Store, _ctx.State.RunId,
+            _ctx.State.History.Count > 0 ? _ctx.State.History[^1].Number : null,
+            _ctx.Plan.Limits.EffectiveBatterySettle, _ctx.LogWithOutcome, ct: ct);
+
     private async Task<IReadOnlyList<GateResult>> RunGateBatteryAsync(CancellationToken ct, bool fastOnly = false)
     {
+        await SettleBeforeGatesAsync(ct).ConfigureAwait(false);
         _ctx.CurGate = fastOnly ? "battery:fast" : "battery:full";
         try
         {

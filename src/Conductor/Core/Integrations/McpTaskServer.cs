@@ -25,6 +25,10 @@ public sealed partial class McpTaskServer
     private readonly IRunStore? _store;
     private readonly string? _stateDir;
     private readonly string? _repoPath;
+    /// <summary>SC4.1: the conductor session this server was wired for, stamped on every bg child it
+    /// starts. Without it the pids row said nothing about who spawned the child, so the battery could
+    /// not tell "the session I am about to judge left this running" from "somebody's old server".</summary>
+    private readonly int? _sessionNumber;
 
     /// <summary>W2.2: true when this server writes straight into the run's event log. Then run.db is
     /// the one log both this process and the control plane read and write, so the board is live and
@@ -33,7 +37,7 @@ public sealed partial class McpTaskServer
     private bool WritesLive => _store != null;
 
     public McpTaskServer(string eventsPath, string journalPath, string runId, IRunStore? store = null,
-        string? stateDir = null, string? repoPath = null)
+        string? stateDir = null, string? repoPath = null, int? sessionNumber = null)
     {
         _eventsPath = eventsPath;
         _journalPath = journalPath;
@@ -41,6 +45,7 @@ public sealed partial class McpTaskServer
         _store = store;
         _stateDir = stateDir;
         _repoPath = repoPath;
+        _sessionNumber = sessionNumber;
     }
 
     /// <summary>Boot the graph from the existing event log.</summary>

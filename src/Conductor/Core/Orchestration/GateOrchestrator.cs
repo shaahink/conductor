@@ -34,9 +34,35 @@ public sealed class GateOrchestrator(PlanConfig plan, RunState state, IEventSink
         foreach (var g in gates)
         {
             var outcome = g.Cached ? "cached" : g.Skipped ? "skip" : g.Passed ? "pass" : g.Optional ? "warn" : "fail";
-            logWithOutcome($"gate {g.Name}: {(g.Cached ? "CACHED" : g.Skipped ? "SKIP" : g.Passed ? "PASS" : g.Optional ? "WARN" : "FAIL")} ({g.Duration.TotalSeconds:0}s)", outcome);
+            logWithOutcome(OutcomeLine(g), outcome);
         }
         return gates;
+    }
+
+    /// <summary>SC4.1: the per-gate outcome line. A FAILURE carries the one comparison a human needs
+    /// and this log has never printed — how long the gate took against how long it took the last time
+    /// it passed. devcontext #12's wrong verdict was argued from duration by someone who had to time
+    /// it by hand from the surrounding timestamps.</summary>
+    private string OutcomeLine(GateResult g)
+    {
+        if (g.Cached) return $"gate {g.Name}: CACHED (0s)";
+        if (g.Skipped) return $"gate {g.Name}: SKIP";
+        var secs = $"{g.Duration.TotalSeconds:0}s";
+        if (g.Passed)
+            return g.Retried
+                ? $"gate {g.Name}: PASS on retry ({secs}; the first attempt failed after {g.FirstAttemptDuration.TotalSeconds:0}s)"
+                : $"gate {g.Name}: PASS ({secs})";
+        return $"gate {g.Name}: {(g.Optional ? "WARN" : "FAIL")}{(g.Retried ? " after retry" : "")} ({secs} {VersusLastPass(g)})";
+    }
+
+    private string VersusLastPass(GateResult g)
+    {
+        var tier = _plan.Gates.FirstOrDefault(gc => string.Equals(gc.Name, g.Name, StringComparison.Ordinal))?.Tier ?? "full";
+        if (store?.GetLastPassingGateDurationMs(state.RunId, g.Name, tier) is not { } ms || ms <= 0)
+            return "— no passing run of this gate on record";
+        var lastSeconds = ms / 1000.0;
+        var delta = (g.Duration.TotalSeconds - lastSeconds) / lastSeconds * 100;
+        return $"vs {lastSeconds:0}s when it last passed, {(delta >= 0 ? "+" : "")}{delta:0}%";
     }
 
     /// <summary>Persist gate results to the event log and run.db.</summary>

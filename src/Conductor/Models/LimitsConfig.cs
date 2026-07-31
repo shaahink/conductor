@@ -35,6 +35,17 @@ public sealed class LimitsConfig
     public TimeSpan EffectiveStallGrace => StallGraceSeconds is { } s
         ? TimeSpan.FromSeconds(s) : TimeSpan.FromMinutes(StallGraceMinutes);
 
+    /// <summary>SC4.1: ceiling in seconds on how long the gate battery waits for the session's own
+    /// tracked bg children to exit before it starts judging. A battery taken against a tree the
+    /// session is still writing scores the teardown, not the work (devcontext #12). 0 disables the
+    /// wait; the cap exists so a dev server the agent left running delays the verdict rather than
+    /// blocking the run forever. Default 120.</summary>
+    public int BatterySettleSeconds { get; set; } = 120;
+
+    /// <summary>The settle ceiling the battery actually enforces.</summary>
+    [JsonIgnore]
+    public TimeSpan EffectiveBatterySettle => TimeSpan.FromSeconds(Math.Max(0, BatterySettleSeconds));
+
     /// <summary>W3.2: ask the agent CLI for one token (~$0.001) before the run's first session, so a
     /// run cannot start on a dead credential. Only recognised provider CLIs are probed. Default true;
     /// set false to opt out.</summary>

@@ -44,6 +44,10 @@ public sealed class McpServeCommand : Command<McpServeCommand.Settings>
         [CommandOption("--repo <path>")]
         [Description("Repo root for bg_start working directory. Optional.")]
         public string? Repo { get; init; }
+
+        [CommandOption("--session <number>")]
+        [Description("SC4.1: conductor session number, stamped on every bg child this server starts.")]
+        public int? Session { get; init; }
     }
 
     public override int Execute(CommandContext context, Settings settings)
@@ -71,7 +75,7 @@ public sealed class McpServeCommand : Command<McpServeCommand.Settings>
         var stateDir = settings.StateDir ?? Path.GetDirectoryName(eventsPath);
         var repoPath = settings.Repo ?? (stateDir != null ? Path.GetDirectoryName(stateDir) : null);
 
-        var server = new McpTaskServer(eventsPath, journalPath, settings.RunId, store, stateDir, repoPath);
+        var server = new McpTaskServer(eventsPath, journalPath, settings.RunId, store, stateDir, repoPath, settings.Session);
         server.Init();
         server.FoldJournal();
 

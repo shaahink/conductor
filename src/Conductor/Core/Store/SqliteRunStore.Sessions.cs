@@ -119,6 +119,21 @@ public sealed partial class SqliteRunStore
         return Convert.ToInt64(rows[0]["passed"]) != 0;
     }
 
+    public long? GetLastPassingGateDurationMs(string runId, string gateName, string tier)
+    {
+        if (_disposed != 0) return null;
+        var rows = Query(
+            """
+            SELECT duration_ms FROM gates
+            WHERE run_id = @runId AND name = @name AND tier = @tier
+              AND passed = 1 AND skipped = 0 AND duration_ms > 0
+            ORDER BY id DESC LIMIT 1
+            """,
+            ("@runId", runId), ("@name", gateName), ("@tier", tier));
+        if (rows.Count == 0) return null;
+        return Convert.ToInt64(rows[0]["duration_ms"]);
+    }
+
     // ---------------------------------------------------------------- scores
 
     public void WriteScore(string runId, int sessionNumber, string? stageId, int score, string verdict, string findings)
