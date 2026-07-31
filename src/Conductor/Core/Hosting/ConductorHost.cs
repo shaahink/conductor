@@ -20,9 +20,20 @@ namespace Conductor.Core.Hosting;
 /// structured logs through Serilog (file sink under <c>.conductor/logs/</c>, plus an optional console
 /// sink for non-dashboard runs). Correlation properties (runId/sessionId/stage/gate) are attached per
 /// log line by the Orchestrator via <c>ILogger.BeginScope</c> and flow to Serilog through
-/// <c>Enrich.FromLogContext</c>. The host is used purely as a composition + logging root (no
-/// long-running <c>IHostedService</c>): disposing it flushes Serilog.
+/// <c>Enrich.FromLogContext</c>. Disposing it flushes Serilog.
 /// </summary>
+/// <remarks>
+/// SC1.1: this comment used to claim the host ran "no long-running <c>IHostedService</c>", and that
+/// claim was false — <see cref="TelegramService"/> has been registered as one since B6. Because the
+/// claim was believed, nobody ever started the host, so <c>TelegramService.StartAsync</c> never ran,
+/// <c>_started</c> stayed false, and every push returned early in silence for the life of the
+/// feature. (<c>TestConnectionAsync</c> bypasses <c>_started</c>, which is why the Face's Test button
+/// kept reporting success over a dead service.) The host is still not run as a hosted-lifetime
+/// application; instead <see cref="StartRunServicesAsync"/> starts the registered hosted services
+/// explicitly, following <c>ControlPlaneServer.Start()</c>'s precedent. Anything registered as an
+/// <c>IHostedService</c> here is therefore genuinely started on the run path — and must be, since
+/// the registration is now the only thing the run path consults.
+/// </remarks>
 public static class ConductorHost
 {
     /// <summary>Output template carrying the correlation scope; missing properties render empty so a
@@ -179,6 +190,46 @@ public static class ConductorHost
         var host = builder.Build();
         ValidateOptionsOnStart(host.Services, plan);
         return host;
+    }
+
+    /// <summary>
+    /// SC1.1: starts every <see cref="IHostedService"/> the composition root registered. Call this on
+    /// the run path, next to <c>ControlPlaneServer.Start()</c> — building the host only composes it.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately does NOT swallow start failures. The instinct is to wrap each start in a catch-all
+    /// so a broken notifier cannot take the run down — but a service that failed to start and said
+    /// nothing about it is the exact shape of the bug this checkpoint exists to fix, just relocated.
+    /// Starting is cheap and local (the implementations spawn their own loops and return; the loops
+    /// own their I/O and their own error handling), so a throw here means a wiring fault worth
+    /// hearing about, not a flaky network.
+    /// </remarks>
+    /// <returns>The names of the services that were started, in registration order.</returns>
+    public static async Task<IReadOnlyList<string>> StartRunServicesAsync(IHost host, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(host);
+        var log = host.Services.GetRequiredService<ILogger<IHost>>();
+        var started = new List<string>();
+        foreach (var svc in host.Services.GetServices<IHostedService>())
+        {
+            await svc.StartAsync(ct).ConfigureAwait(false);
+            started.Add(svc.GetType().Name);
+        }
+        log.LogInformation("Run services started: {Services}",
+            started.Count == 0 ? "(none registered)" : string.Join(", ", started));
+        return started;
+    }
+
+    /// <summary>SC1.1: the matching stop, so queued pushes flush and long-polls end before the
+    /// process exits. Call it while the host is still alive — disposing it just drops the backlog.
+    /// Implementations are responsible for making their own shutdown non-throwing and bounded
+    /// (see <see cref="TelegramService.StopAsync"/>), because this runs in the run path's finally
+    /// and must not replace the run's own outcome with a shutdown error.</summary>
+    public static async Task StopRunServicesAsync(IHost host, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(host);
+        foreach (var svc in host.Services.GetServices<IHostedService>())
+            await svc.StopAsync(ct).ConfigureAwait(false);
     }
 
     private static void ValidateOptionsOnStart(IServiceProvider services, PlanConfig plan)

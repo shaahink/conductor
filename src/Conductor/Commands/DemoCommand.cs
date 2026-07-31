@@ -120,7 +120,20 @@ public sealed class DemoCommand : AsyncCommand<DemoCommand.Settings>
         // a healthy demo finishes because every checkpoint is confirmed.
         var opts = new RunOptions(DryRun: false, Once: false, MaxSessions: 16, ControlPlane: false, ControlPlanePort: 0, StartPaused: false);
         using var host = ConductorHost.Build(plan, state, new PlainSink(), opts, consoleSink: true);
-        var code = await host.Services.GetRequiredService<Orchestrator>().RunAsync(cts.Token).ConfigureAwait(false);
+
+        // SC1.1: the demo is a real run, so it gets the run path's real wiring. The scaffolded demo
+        // plan has no Telegram block today, which makes this a no-op — but "every run path starts
+        // its hosted services" is the invariant that stops the next one from silently regressing.
+        await ConductorHost.StartRunServicesAsync(host, cts.Token).ConfigureAwait(false);
+        int code;
+        try
+        {
+            code = await host.Services.GetRequiredService<Orchestrator>().RunAsync(cts.Token).ConfigureAwait(false);
+        }
+        finally
+        {
+            await ConductorHost.StopRunServicesAsync(host, CancellationToken.None).ConfigureAwait(false);
+        }
         return (code, state, plan);
     }
 

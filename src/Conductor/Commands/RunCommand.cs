@@ -116,26 +116,42 @@ public sealed class RunCommand : AsyncCommand<RunCommand.Settings>
             var server = host.Services.GetService<ControlPlaneServer>();
             var bound = server?.Start() == true; // never fatal: a bind failure just means no clients
 
-            if (wantFace && bound)
+            // SC1.1: building the host only COMPOSES it. Telegram is registered as an IHostedService,
+            // and until this call existed nothing ever started it — so `_started` stayed false and
+            // every push was dropped in silence while the Face's Test button (which bypasses the
+            // flag) reported the bot as working. Started here, next to the control plane, for the
+            // same reason and in the same place: this is where the run's collaborators come up.
+            await ConductorHost.StartRunServicesAsync(host, cts.Token).ConfigureAwait(false);
+            try
             {
-                face = FaceLauncher.Start(
-                    $"http://127.0.0.1:{server!.Port}",
-                    host.Services.GetRequiredService<ILogger<RunCommand>>(),
-                    host.Services.GetService<ProcessSupervisor>(),
-                    server.Token);
-                if (face is not null)
+                if (wantFace && bound)
                 {
-                    // The Face inherits this console: the sink must go quiet or its lines land in the
-                    // Face's alt-screen and shift every repaint (and PollControl steals its keys).
-                    // If the Face dies or the user quits it, the run continues — unmuted, headless.
-                    sink.Mute();
-                    face.Process.EnableRaisingEvents = true;
-                    face.Process.Exited += (_, _) => sink.Unmute();
-                    if (face.Process.HasExited) sink.Unmute();
+                    face = FaceLauncher.Start(
+                        $"http://127.0.0.1:{server!.Port}",
+                        host.Services.GetRequiredService<ILogger<RunCommand>>(),
+                        host.Services.GetService<ProcessSupervisor>(),
+                        server.Token);
+                    if (face is not null)
+                    {
+                        // The Face inherits this console: the sink must go quiet or its lines land in the
+                        // Face's alt-screen and shift every repaint (and PollControl steals its keys).
+                        // If the Face dies or the user quits it, the run continues — unmuted, headless.
+                        sink.Mute();
+                        face.Process.EnableRaisingEvents = true;
+                        face.Process.Exited += (_, _) => sink.Unmute();
+                        if (face.Process.HasExited) sink.Unmute();
+                    }
                 }
-            }
 
-            exitCode = await host.Services.GetRequiredService<Orchestrator>().RunAsync(cts.Token).ConfigureAwait(false);
+                exitCode = await host.Services.GetRequiredService<Orchestrator>().RunAsync(cts.Token).ConfigureAwait(false);
+            }
+            finally
+            {
+                // Inside the `using`, so the host is still alive: the final session-end push is
+                // fire-and-forget and is still sitting in the send queue at this point. Stopping
+                // here is what flushes it — disposing the host would just drop it.
+                await ConductorHost.StopRunServicesAsync(host, CancellationToken.None).ConfigureAwait(false);
+            }
         }
         finally
         {

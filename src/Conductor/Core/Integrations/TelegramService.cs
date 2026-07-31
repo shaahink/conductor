@@ -58,7 +58,10 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
     internal string? _lastError;
     internal string? _botUsername;
 
-    private const string ApiBase = "https://api.telegram.org/bot";
+    internal const string DefaultApiRoot = "https://api.telegram.org";
+
+    /// <summary>Bot API prefix up to and including <c>/bot</c>; the token is appended per call.</summary>
+    private readonly string _apiBase;
 
     public TelegramService(
         PlanConfig plan,
@@ -73,6 +76,9 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
         _cfg = plan.Telegram;
         _token = ResolveToken(plan);
         _store = store;
+
+        var root = string.IsNullOrWhiteSpace(_cfg?.ApiBaseUrl) ? DefaultApiRoot : _cfg!.ApiBaseUrl!.Trim();
+        _apiBase = root.TrimEnd('/') + "/bot";
 
         _sendQueue = Channel.CreateUnbounded<(string, string, string?)>(
             new UnboundedChannelOptions { SingleReader = true });
@@ -102,7 +108,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
 
         try
         {
-            var resp = await _http.GetAsync($"{ApiBase}{_token}/getMe", ct).ConfigureAwait(false);
+            var resp = await _http.GetAsync($"{_apiBase}{_token}/getMe", ct).ConfigureAwait(false);
             var body = await resp.Content.ReadFromJsonAsync<TgGetMeResponse>(JsonOpts, ct).ConfigureAwait(false);
             if (!resp.IsSuccessStatusCode || body is not { Ok: true, Result: { } me })
             {
@@ -147,19 +153,45 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
         return Task.CompletedTask;
     }
 
+    /// <summary>SC1.1: how long the send queue is allowed to flush before shutdown stops waiting.
+    /// The run's last act is a fire-and-forget session-end push, so cancelling the send loop the
+    /// instant the loop exits is how "the push arrives" quietly degrades into "the push was queued".</summary>
+    internal static readonly TimeSpan DrainGrace = TimeSpan.FromSeconds(10);
+
     public async Task StopAsync(CancellationToken ct)
     {
-        await _cts.CancelAsync().ConfigureAwait(false);
-        _started = false;
         var poll = _pollTask;
         var send = _sendTask;
-        if (poll != null || send != null)
+        if (poll == null && send == null) { _started = false; return; }
+
+        // 1. Close the queue and let the send loop drain what is already in it. Nothing new can be
+        //    enqueued after this (PushAsync uses TryWrite, which just returns false on a closed
+        //    channel) so the drain always terminates.
+        _sendQueue.Writer.TryComplete();
+        if (send != null)
         {
-            var tasks = new List<Task>(2);
-            if (poll != null) tasks.Add(poll);
-            if (send != null) tasks.Add(send);
-            await Task.WhenAll(tasks).ConfigureAwait(false);
+            try { await send.WaitAsync(DrainGrace, CancellationToken.None).ConfigureAwait(false); }
+            catch (TimeoutException)
+            {
+                _log.LogWarning("Telegram send queue did not drain within {Grace}s — some pushes were not delivered",
+                    DrainGrace.TotalSeconds);
+            }
+            catch (OperationCanceledException) { /* already cancelled elsewhere — nothing left to flush */ }
         }
+
+        // 2. Then stop the long-poll. Its loops end by cancellation, so the tasks complete in the
+        //    Canceled state — awaiting them bare would rethrow and turn a clean exit into a crash.
+        await _cts.CancelAsync().ConfigureAwait(false);
+        _started = false;
+        if (poll != null)
+        {
+            try { await poll.WaitAsync(DrainGrace, CancellationToken.None).ConfigureAwait(false); }
+            catch (TimeoutException) { /* a wedged long-poll must not hold the process open */ }
+            catch (OperationCanceledException) { /* expected: the loop was cancelled, not failed */ }
+        }
+
+        _pollTask = null;
+        _sendTask = null;
     }
 
     public void Dispose()
@@ -168,20 +200,25 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
         _http.Dispose();
     }
 
-    public async Task PushAsync(string message, CancellationToken ct = default)
+    // Every real caller is `_ = Push…(…)` fire-and-forget, so an exception here would be an
+    // unobserved task exception nobody ever sees. The queue is unbounded, so TryWrite never blocks
+    // and never throws — it just returns false once StopAsync has closed the channel.
+    public Task PushAsync(string message, CancellationToken ct = default)
     {
-        if (!_started || _cfg?.AllowedChatIds is not { Count: > 0 } ids) return;
+        if (!_started || _cfg?.AllowedChatIds is not { Count: > 0 } ids) return Task.CompletedTask;
         foreach (var cid in ids)
-            await _sendQueue.Writer.WriteAsync((cid, message, null), ct).ConfigureAwait(false);
+            _sendQueue.Writer.TryWrite((cid, message, null));
+        return Task.CompletedTask;
     }
 
-    public async Task PushWithKeyboardAsync(string message,
+    public Task PushWithKeyboardAsync(string message,
         IReadOnlyList<(string Text, string CallbackData)> buttons, CancellationToken ct = default)
     {
-        if (!_started || _cfg is not { EnableTwoWay: true, AllowedChatIds.Count: > 0 }) return;
+        if (!_started || _cfg is not { EnableTwoWay: true, AllowedChatIds.Count: > 0 }) return Task.CompletedTask;
         var kb = BuildInlineKeyboard(buttons);
         foreach (var cid in _cfg.AllowedChatIds)
-            await _sendQueue.Writer.WriteAsync((cid, message, kb), ct).ConfigureAwait(false);
+            _sendQueue.Writer.TryWrite((cid, message, kb));
+        return Task.CompletedTask;
     }
 
     private async Task PollLoopAsync(CancellationToken ct)
@@ -208,7 +245,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
 
     private async Task PollOnceAsync(CancellationToken ct)
     {
-        var url = $"{ApiBase}{_token}/getUpdates?offset={_offset}&timeout=30";
+        var url = $"{_apiBase}{_token}/getUpdates?offset={_offset}&timeout=30";
         var resp = await _http.GetAsync(url, ct).ConfigureAwait(false);
         resp.EnsureSuccessStatusCode();
         var body = await resp.Content.ReadFromJsonAsync<TgResponse>(JsonOpts, ct).ConfigureAwait(false);
@@ -240,17 +277,26 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
 
     private async Task SendLoopAsync(CancellationToken ct)
     {
-        while (!ct.IsCancellationRequested)
+        // ReadAllAsync completes normally once the writer is closed AND the backlog is drained —
+        // that is what lets StopAsync flush the final session-end push instead of dropping it.
+        try
         {
-            try
+            await foreach (var item in _sendQueue.Reader.ReadAllAsync(ct).ConfigureAwait(false))
             {
-                var item = await _sendQueue.Reader.ReadAsync(ct).ConfigureAwait(false);
-                await SendAsync(item.ChatId, item.Text, ct, item.KeyboardJson)
-                    .ConfigureAwait(false);
+                try
+                {
+                    await SendAsync(item.ChatId, item.Text, ct, item.KeyboardJson).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
+                catch (Exception ex)
+                {
+                    _lastError = ex.Message;
+                    _log.LogWarning(ex, "Telegram send error");
+                }
             }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
-            catch (Exception ex) { _log.LogWarning(ex, "Telegram send error"); }
         }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+        catch (ChannelClosedException) { }
     }
 
     internal async Task SendAsync(string chatId, string text, CancellationToken ct,
@@ -270,7 +316,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
 
         var json = JsonSerializer.Serialize(payload, JsonOpts);
         using var content = new StringContent(json, Encoding.UTF8, "application/json");
-        var resp = await _http.PostAsync($"{ApiBase}{_token}/sendMessage", content, ct)
+        var resp = await _http.PostAsync($"{_apiBase}{_token}/sendMessage", content, ct)
             .ConfigureAwait(false);
         resp.EnsureSuccessStatusCode();
     }
@@ -279,7 +325,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
     {
         try
         {
-            var url = $"{ApiBase}{_token}/answerCallbackQuery?callback_query_id={Uri.EscapeDataString(callbackQueryId)}";
+            var url = $"{_apiBase}{_token}/answerCallbackQuery?callback_query_id={Uri.EscapeDataString(callbackQueryId)}";
             await _http.GetAsync(url, ct).ConfigureAwait(false);
         }
         catch (Exception ex) { _log.LogWarning(ex, "answerCallbackQuery failed"); }
