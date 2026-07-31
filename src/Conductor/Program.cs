@@ -91,6 +91,8 @@ app.Configure(c =>
         .WithDescription("Post-hoc audit replay: run an audit prompt against a completed stage (read-only diagnostic). Requires --replay flag. Output written to .conductor/audits/.");
     c.AddCommand<McpServeCommand>("mcp-serve")
         .WithDescription("Run the MCP task server (JSON-RPC 2.0 over stdio) for agent task management.");
+    // Hidden: run by the agent CLI as a PostToolUse hook, not by a person.
+    c.AddCommand<HookBudgetCommand>("hook-budget").IsHidden();
     c.AddCommand<CompletionCommand>("completion")
         .WithDescription("Generate shell completion scripts (powershell or bash).");
     c.AddCommand<BgCommand>("bg")

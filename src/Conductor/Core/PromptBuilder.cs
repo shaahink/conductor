@@ -9,7 +9,7 @@ namespace Conductor.Core;
 /// falling back to built-in defaults when a template file is absent.
 /// Placeholders: {name} replaced verbatim.
 /// </summary>
-public sealed class PromptBuilder
+public sealed partial class PromptBuilder
 {
     private readonly PlanConfig _plan;
     private readonly PersonaRegistry _personas;
@@ -190,6 +190,12 @@ public sealed class PromptBuilder
         // a fact the injection might be there to correct.
         var queued = InstructionQueue.PromptSection(_plan);
         if (queued.Length > 0) text = InsertAfterRoleLine(text, queued);
+
+        // B13.4: the session's economics, stated once, high in the prompt. Below the human injection
+        // because a correction outranks a budget, above everything else because how the agent paces
+        // itself changes every decision that follows.
+        var budget = BudgetSection();
+        if (budget.Length > 0) text = InsertAfterRoleLine(text, budget);
 
         // Merge in persona system prompt — appended after base prompt rendering so the
         // persona doesn't need to be referenced in every template (B7.3). Conductor contract

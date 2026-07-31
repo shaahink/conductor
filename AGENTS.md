@@ -338,7 +338,10 @@ the owner can watch and redirect. `conductor run` is NOT used for this work.
 - **`agent.tokenCeiling` is dead** — enforced nowhere; the real per-session rollover knob is
   `limits.maxSessionTokens` (null = **off by default**; on-cross → `RolledOver`, handoff written, next
   session fresh, **no attempt burned**). `softBreakRatio` (80% nudge) only fires when maxSessionTokens is
-  set. P0 deletes tokenCeiling; P5 surfaces the real knob.
+  set. P0 deletes tokenCeiling; P5 surfaces the real knob. **B13 made both rails real**: the ceiling is
+  enforced live rather than read after the agent exits, the nudge is carried into the running session by
+  a `PostToolUse` hook instead of being written to a file nobody read, and a plan edit re-applies itself
+  at the session boundary instead of waiting for someone to remember `plan reload`.
 - **The pipeline is already a data-driven workflow engine** (deliver-verify / big-dev-then-big-audit /
   docs-only / spike + RunIf/SkipIf + per-stage overrides). The P-series surfaces + decouples it.
 - **Agent↔session↔task is stage-sequential** (one session = first not-done checkpoint of the current

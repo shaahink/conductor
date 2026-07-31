@@ -244,7 +244,7 @@ public sealed partial class SessionRunner
             $"Session #{rec.Number} started · {kind} · Stage {stage.Id} · Attempt {attempt}/{maxAttempts}" +
             (string.IsNullOrEmpty(resolvedAgent.Model) ? "" : $" · {resolvedAgent.Model}"));
 
-        bool stalled = false, timedOut = false, killedByUser = false;
+        bool stalled = false, timedOut = false, killedByUser = false, budgetKilled = false;
         await GateRunner.RunHookAsync(_ctx.Plan, _ctx.Plan.Setup, "setup", _ctx.Log, ct).ConfigureAwait(false);
 
         var mcpWiring = WireMcpServer(rec, stage);
@@ -269,7 +269,7 @@ public sealed partial class SessionRunner
         {
             extraEnv["OPENCODE_CONFIG"] = mcpWiring.OpencodeConfigPath;
             var provider = Providers.AgentProviderFactory.ResolveName(resolvedAgent);
-            extraArgs = McpArgsFor(provider, resolvedAgent.Args, mcpWiring.ClaudeConfigPath);
+            extraArgs = McpArgsFor(provider, resolvedAgent.Args, mcpWiring.ClaudeConfigPath, mcpWiring.ClaudeSettingsPath);
             _ctx.Log($"I1: MCP task server wired ({provider}) — opencode config {mcpWiring.OpencodeConfigPath}" +
                      (extraArgs.Count > 0 ? $", claude --mcp-config {mcpWiring.ClaudeConfigPath}" : ""));
         }
@@ -308,6 +308,7 @@ public sealed partial class SessionRunner
                 _lanes.PollLaneCompletion();
                 await _lanes.CheckParallelAuditCompletionAsync().ConfigureAwait(false);
                 CheckSoftBreak(agent, preTrack);
+                if (!budgetKilled && OverSessionTokenBudget(agent)) budgetKilled = EndOnBudget(agent, rec);
                 var ctl = await _handleControl(ct).ConfigureAwait(false);
                 if (ctl == ControlAction.KillSession) { killedByUser = true; _ctx.Log("kill requested"); agent.Kill(); }
                 if (ctl == ControlAction.AbortNow) { killedByUser = true; _ctx.State.Status = RunStatus.Aborted; _ctx.Log("abort requested"); agent.Kill(); }
@@ -333,6 +334,7 @@ public sealed partial class SessionRunner
 
             rec.EndedUtc = DateTime.UtcNow;
             rec.CostUsd = agent.CostUsd;
+            if (budgetKilled) rec.CostUsd ??= PriceBudgetKill(agent);
             rec.NumTurns = agent.NumTurns;
             rec.TokensInput = agent.TokensInput;
             rec.TokensOutput = agent.TokensOutput;
@@ -375,7 +377,10 @@ public sealed partial class SessionRunner
             // and burned the stage's remaining attempts against a 401.
             var authEvidence = (agent.AuthFailure ?? "") + " " + limitEvidence + " " +
                                (agent.ResultText == null ? LastRawTail(rawLog) : "");
-            if ((agent.ResultIsError || exit != 0 || agent.AuthFailure != null)
+            // budgetKilled short-circuits both refusal checks below: WE ended this process, so its
+            // nonzero exit and truncated tail are our own doing. Read as a dead credential it would go
+            // to NeedsHuman; as a rate limit it would park 30 minutes. Both are wrong answers here.
+            if (!budgetKilled && (agent.ResultIsError || exit != 0 || agent.AuthFailure != null)
                 && _ctx.AgentProvider.DetectsAuthFailure(authEvidence))
             {
                 rec.Outcome = SessionOutcome.AuthFailed;
@@ -385,7 +390,7 @@ public sealed partial class SessionRunner
                 return;
             }
 
-            if ((agent.ResultIsError || exit != 0) && _ctx.AgentProvider.DetectsUsageLimit(limitEvidence))
+            if (!budgetKilled && (agent.ResultIsError || exit != 0) && _ctx.AgentProvider.DetectsUsageLimit(limitEvidence))
             {
                 rec.Outcome = SessionOutcome.LimitBackoff;
                 _ctx.State.ConsecutiveBackoffs++;
@@ -403,7 +408,7 @@ public sealed partial class SessionRunner
             }
             _ctx.State.ConsecutiveBackoffs = 0;
 
-            if (_ctx.EffectiveMaxSessionTokens is { } maxTok && rec.TokensTotal >= maxTok)
+            if (_ctx.EffectiveMaxSessionTokens is { } maxTok && (budgetKilled || rec.TokensTotal >= maxTok))
             {
                 rec.Outcome = SessionOutcome.RolledOver;
                 rec.ResultSummary = ExtractSessionResult(agent.ResultText, rec.Kind);

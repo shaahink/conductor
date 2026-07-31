@@ -134,7 +134,9 @@
     "stageSlackFactor": 2,
     "backoffMinutes": 30,
     "maxBackoffs": 10,
-    "maxRunCostUsd": 350
+    "maxRunCostUsd": 350,
+    "maxSessionTokens": 8000000,
+    "softBreakRatio": 0.75
   },
 
   "report": { "commit": false, "push": false },

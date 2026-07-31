@@ -15,6 +15,55 @@ it was built from. It orders above `0.1.0` and below `0.1.1`, and it is unique p
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-08-01
+
+The session budget stops being decorative. Everything below was already configurable, already
+documented and already wired to a surface; none of it could change what a run spent. Two live runs
+on one machine spent roughly $200 in a night with `maxSessionTokens` set, because every rail between
+that number and the agent was open at one end.
+
+### Fixed
+
+- **A plan edit now applies by itself.** `limits` were only re-read on an explicit
+  `conductor plan reload`, and nothing said so: the file could read `maxSessionTokens: 6000000`
+  while the engine ran the plan it had loaded hours earlier, and the operator would watch sessions
+  sail past a ceiling they had already set. The plan file is stamped when loaded and re-applied at
+  the next session boundary when it changes. The reload line now names the budget it just put into
+  force, so an edit that took hold says so.
+- **The per-session token ceiling ends the session.** The check ran only *after* the agent exited,
+  which made it a label rather than a limit — a session ran its full length and was then noted as
+  having been over budget the whole time. It is now enforced live. This is the change that matters
+  most for spend: a session is billed roughly turns × context and context only grows, so the last
+  stretch of a long session costs several times the first, and that is exactly the part a ceiling
+  has to be able to cut. Measured here, splitting one 164-turn session into three cuts its bill by
+  about half for the same work.
+- **A budget-killed session reports what it cost.** It emits no result envelope, so the one session
+  the rail acts on was the one session reporting $0 — the ledger read as though stopping early were
+  free. It is now priced at the run's own observed dollars-per-token, or left blank when no rate
+  has been learned yet.
+- **The run-level token total counts cache reads.** It summed input, output and reasoning while the
+  per-session total also counted cache, so the two disagreed by roughly forty times on real work: a
+  run that had read 79M tokens reported 2.9M. Every surface fed from it — the ledger, the report,
+  `doctor`'s headroom, and `limits.maxRunTokens` — inherited that, which put a run cap set from
+  observed numbers permanently out of reach. Runs carried over from an older engine step up once.
+
+### Added
+
+- **The cooperative soft-break reaches the agent.** It was written as: spend most of the budget,
+  then be asked to land the current sub-task and hand off cleanly. Half of it was missing. The
+  engine wrote `.conductor/soft-break` and emitted an event, and nothing carried either to the
+  agent — a non-interactive session has no inbox and was never told the file existed — so the nudge
+  fired into a void every time and the only rail that could still act was the hard one, which is a
+  kill. A per-session `--settings` file now attaches a `PostToolUse` hook (`conductor hook-budget`,
+  hidden) that speaks once, when and only when the signal is up, riding a tool call the session was
+  making anyway.
+- **Sessions are told what they may spend.** When a plan sets a per-session ceiling, the prompt
+  carries the budget, the arithmetic behind it (turns × context, context only grows) and the few
+  habits that actually move the number: commit early and often, read the sections a checkpoint
+  names rather than whole design documents, never re-read what is already in context. It names the
+  opposite failure too — a session that reads a few files, declares the problem complex and exits
+  without landing anything has spent its whole context and delivered nothing.
+
 ## [0.2.0] - 2026-07-31
 
 The Sarban core era: the engine says what it knows. Truthful surfaces, board correction verbs,

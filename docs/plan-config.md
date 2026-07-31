@@ -224,8 +224,8 @@ docs-only or spike plan with no build/test surface.
 | `maxBackoffs` | int | 10 | Hard cap on consecutive backoffs. |
 | `maxRunCostUsd` | decimal | null | Total cost cap. Parks at AwaitingOwner when hit. |
 | `maxRunTokens` | long | null | Total token cap. Same parking behaviour. |
-| `maxSessionTokens` | long | null | Per-session token budget → RolledOver with handoff. |
-| `softBreakRatio` | double | 0.8 | Fraction of `maxSessionTokens` at which agent gets a cooperative "wrap up" nudge. |
+| `maxSessionTokens` | long | null | Per-session token budget, counting cache reads. Enforced live: on cross the session is ended → RolledOver with handoff, next session fresh, no attempt burned. Also puts the budget in the session prompt. |
+| `softBreakRatio` | double | 0.8 | Fraction of `maxSessionTokens` at which the agent is asked to land its sub-task and hand off. Delivered into the running session by a `PostToolUse` hook, so it arrives within one tool call. Leave room to act on it — 0.75 gives the agent the last quarter of the budget to finish and commit. |
 | `approvalMode` | bool | false | Park at AwaitingOwner before every session. |
 | `stallPatternTermination` | bool | true | 2× consecutive zero-output stall → NeedsHuman. |
 | `stallBackoffMinutes` | int | 12 | Initial stall backoff, doubles each consecutive stall. |

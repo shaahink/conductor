@@ -105,7 +105,7 @@ public sealed partial class RunLoop
                     // G3.2: the top of this loop is the session boundary — the only safe point to swap
                     // the live plan (no agent is running here; paused/idle iterations pass through too,
                     // so an edit made while parked is live before the next resume).
-                    if (Dispatcher.ConsumeReloadPending()) ApplyPlanReload();
+                    if (Dispatcher.ConsumeReloadPending() || PlanFileChangedOnDisk()) ApplyPlanReload();
 
                     if (!_ctx.Options.DryRun && _ctx.State.Status is RunStatus.Paused or RunStatus.NeedsHuman or RunStatus.AwaitingOwner)
                     {
@@ -399,7 +399,15 @@ public sealed partial class RunLoop
                 await _lanes.CollectLaneArtifactsAsync(stage.Id, ct).ConfigureAwait(false);
 
                 _ctx.RunCostUsd += rec.CostUsd ?? 0;
-                _ctx.RunTokens += (rec.TokensInput ?? 0) + (rec.TokensOutput ?? 0) + (rec.TokensReasoning ?? 0);
+                // B13.5: TokensTotal, which counts cache reads too. Summing only the other three made
+                // the run-level total disagree with the per-session one by roughly forty times on real
+                // work — a run that had actually read 79M tokens reported 2.9M — because a long agent
+                // session is almost entirely cache read. Every surface fed from here (the ledger, the
+                // report, doctor's headroom, and `limits.maxRunTokens`) inherited that, so a run cap
+                // set from observed numbers could never be reached. The two rails now count the same
+                // thing. Runs carried over from an older engine step up once when this first lands;
+                // that discontinuity is the correction, not a new error.
+                _ctx.RunTokens += rec.TokensTotal;
                 _ctx.PersistBudget();
                 EmitSessionFinished(rec);
                 // SC5.1: the park lands AFTER the session's finish event, so it is the last thing in
