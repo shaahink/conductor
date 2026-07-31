@@ -328,7 +328,14 @@ public sealed partial class VerdictEngine
         // only via the graph is complete NOW, not one tracker regeneration later.
         var stageComplete = postTrack.StageDone(stage.Id) || GraphStageDone(stage.Id);
 
-        _ctx.Log($"verdict inputs: {GateRunner.Token(gates)} · commits {rec.NewCommits.Count} · newly DONE [{string.Join(",", rec.NewlyDone)}] · dirty {(dirty ? "YES" : "no")}", gatesGreen ? "pass" : "fail");
+        // SC4.2: the commit count the verdict acts on is the AGENT's commits. Conductor's own
+        // chore(conductor): status writes land inside the session window too, and counting them
+        // scored a session green for the engine's own bookkeeping (devcontext #14).
+        var workCommits = Git.ExcludeBookkeeping(rec.NewCommits);
+        var bookkeeping = rec.NewCommits.Count - workCommits.Count;
+        var bookkeepingNote = bookkeeping > 0 ? $" (+{bookkeeping} conductor bookkeeping, not counted)" : "";
+
+        _ctx.Log($"verdict inputs: {GateRunner.Token(gates)} · commits {workCommits.Count}{bookkeepingNote} · newly DONE [{string.Join(",", rec.NewlyDone)}] · dirty {(dirty ? "YES" : "no")}", gatesGreen ? "pass" : "fail");
 
         if (newlyBlocked.Count > 0 && _ctx.Plan.PauseOnBlocked)
         {
@@ -337,7 +344,10 @@ public sealed partial class VerdictEngine
             return;
         }
 
-        if (gatesGreen && (rec.NewCommits.Count > 0 || stageComplete) && !agentErrored)
+        // SC4.2: NoProgress has to mean no progress. A checkpoint claimed through the work graph IS
+        // delivery even when this repo's git log is empty — sk #3 scored NoProgress twice for a
+        // stage delivered in a sibling repo, in a plan written to avoid exactly that.
+        if (gatesGreen && (workCommits.Count > 0 || rec.NewlyDone.Count > 0 || stageComplete) && !agentErrored)
         {
             // M3.1: workflow-driven next step instead of hardcoded ShouldVerify
             _ctx.State.AttemptsThisStage = rec.NewlyDone.Count > 0 ? 0 : _ctx.State.AttemptsThisStage;
@@ -380,8 +390,12 @@ public sealed partial class VerdictEngine
             {
                 FromSession = rec.Number,
                 GateFailures = GateRunner.FailureDetails(gates),
-                ProgressSummary = $"new commits: {rec.NewCommits.Count}" +
-                                  (rec.NewCommits.Count > 0 ? $" ({string.Join("; ", rec.NewCommits.Take(5))})" : "") +
+                // SC4.2: the fix session is told the same number the verdict acted on. Telling it
+                // "new commits: 3" when three were conductor's own status writes sends it hunting
+                // for work that was never done.
+                ProgressSummary = $"new commits: {workCommits.Count}" +
+                                  (workCommits.Count > 0 ? $" ({string.Join("; ", workCommits.Take(5))})" : "") +
+                                  (bookkeeping > 0 ? $" · {bookkeeping} conductor bookkeeping commit(s) excluded" : "") +
                                   $" · newly DONE: {(rec.NewlyDone.Count > 0 ? string.Join(", ", rec.NewlyDone) : "none")}" +
                                   $" · working tree: {(dirty ? "DIRTY — " + Git.DirtySummary(_ctx.Plan.Repo) : "clean")}" +
                                   (agentErrored ? " · agent process reported an error result" : ""),
@@ -435,7 +449,8 @@ public sealed partial class VerdictEngine
 
     private bool IdenticalStallPattern(SessionRecord rec)
     {
-        if (rec.NewCommits is { Count: > 0 }) return false;
+        // SC4.2: a stall that produced only conductor's own bookkeeping commits produced nothing.
+        if (Git.ExcludeBookkeeping(rec.NewCommits).Count > 0) return false;
         var summary = rec.ResultSummary?.Trim();
         if (!string.IsNullOrEmpty(summary)) return false;
 
@@ -444,7 +459,7 @@ public sealed partial class VerdictEngine
         {
             var prev = _ctx.State.History[i];
             if (prev.Outcome != SessionOutcome.Stalled) break;
-            if (prev.NewCommits is { Count: 0 } && string.IsNullOrEmpty(prev.ResultSummary?.Trim()))
+            if (Git.ExcludeBookkeeping(prev.NewCommits).Count == 0 && string.IsNullOrEmpty(prev.ResultSummary?.Trim()))
             {
                 stalledCount++;
                 if (stalledCount >= 2) return true;

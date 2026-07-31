@@ -1,10 +1,10 @@
 ﻿# Conductor — Sarban core - the engine says what it knows run report
 
-_Updated 2026-07-31 08:02 UTC · branch `feat/sarban` · HEAD `b93fc06`_
+_Updated 2026-07-31 08:42 UTC · branch `feat/sarban` · HEAD `ba9b523`_
 
 **Status:** Idle
-**Stage:** SC3 — Config traps die at authoring time · attempts used 0
-**Checkpoints:** 11/26 done · **Sessions run:** 12 · **Cost:** $151.0433 (agent $150.9661 + gates $0.0772) · **Tokens:** 2,274,846 in / 978,650 out
+**Stage:** SC4 — Verdicts judge the work, not the environment · attempts used 0 · working ▸ SC4.2
+**Checkpoints:** 12/26 done · **Sessions run:** 13 · **Cost:** $170.6923 (agent $170.6103 + gates $0.0820) · **Tokens:** 2,541,791 in / 1,077,715 out
 **Confirmed phases:** SC1, SC2, SC3
 
 ## Stage progress
@@ -14,7 +14,7 @@ _Updated 2026-07-31 08:02 UTC · branch `feat/sarban` · HEAD `b93fc06`_
 | SC1 | Telegram actually delivers | ██████████ 3/3 | confirmed ✓ |
 | SC2 | Truthful surfaces | ██████████ 4/4 | confirmed ✓ |
 | SC3 | Config traps die at authoring time | ██████████ 4/4 | confirmed ✓ |
-| SC4 | Verdicts judge the work, not the environment | ░░░░░░░░░░ 0/4 | todo |
+| SC4 | Verdicts judge the work, not the environment | ██░░░░░░░░ 1/4 | **← active** |
 | SC5 | The engine can wait, detach, and correct the board | ░░░░░░░░░░ 0/4 | todo |
 | SC6 | Clean history without lying about it | ░░░░░░░░░░ 0/2 | todo |
 | SC7 | The transcript captures structure | ░░░░░░░░░░ 0/2 | todo |
@@ -52,11 +52,11 @@ _Updated 2026-07-31 08:02 UTC · branch `feat/sarban` · HEAD `b93fc06`_
 
 </details>
 
-<details><summary>SC4 — Verdicts judge the work, not the environment (0/4)</summary>
+<details><summary>SC4 — Verdicts judge the work, not the environment (1/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| SC4.1 | The battery waits for the session's tracked bg children to exit, and retries a failed required gate once before declaring GatesRed; the failure line carries duration vs last passing duration | ⬜ TODO | - |
+| SC4.1 | The battery waits for the session's tracked bg children to exit, and retries a failed required gate once before declaring GatesRed; the failure line carries duration vs last passing duration | ✅ DONE | - |
 | SC4.2 | NoProgress requires no commits AND no newly-DONE checkpoints; chore conductor commits are excluded from the verdict's commit count | ⬜ TODO | - |
 | SC4.3 | satelliteRepos are diffed for hasCommits; the gate cache key covers the gate's own working directory HEAD and its command text; skipIfFresh accounts for a dirty tree | ⬜ TODO | - |
 | SC4.4 | Queued injections render at the top of the composed prompt, and a gate-failures block they supersede is stamped SUPERSEDED or dropped | ⬜ TODO | - |
@@ -118,21 +118,13 @@ _Updated 2026-07-31 08:02 UTC · branch `feat/sarban` · HEAD `b93fc06`_
 | 10 | SC3 | Deliver | 1 | 07-31 06:36 | 0:26 | Advanced | SC3.2 | 2 | engine-fast:OK · face-fast:OK | $11.5864 | $0.0042 | 175,423/83,786 |
 | 11 | SC3 | Deliver | 1 | 07-31 07:04 | 0:27 | Advanced | SC3.3 | 2 | engine-fast:OK · face-fast:OK | $13.5575 | $0.0041 | 214,329/81,757 |
 | 12 | SC3 | Deliver | 1 | 07-31 07:32 | 0:27 | Advanced | SC3.4 | 2 | engine-fast:OK · face-fast:OK | $11.9983 | $0.0061 | 194,134/85,689 |
+| 13 | SC4 | Deliver | 1 | 07-31 08:02 | 0:38 | Advanced | SC4.1 | 1 | engine-fast:OK · face-fast:OK | $19.6442 | $0.0048 | 266,945/99,065 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-31 04:46:44  ▸ stage SC1 confirmed  (1h58m02s)
-07-31 04:46:45  ▸ stage SC2 entered — Truthful surfaces
-07-31 04:46:45  • session #5 SC2 Deliver started (attempt 1/6)
-07-31 05:43:47  ▪ gate engine-fast pass [session]  (54.9s)
-07-31 05:43:47  ▪ gate face-fast pass [session]  (39.9s)
-07-31 05:43:48  • session #5 SC2 → Advanced · done SC2.1 · 2 commit(s)  (57m02s)
-07-31 05:43:48  • session #6 SC2 Deliver started (attempt 1/6)
-07-31 06:08:53  ▪ gate engine-fast pass [session]  (43.8s)
-07-31 06:08:53  ▪ gate face-fast pass [session]  (41.0s)
 07-31 06:08:54  • session #6 SC2 → Advanced · done SC2.2 · 3 commit(s)  (25m06s)
 07-31 06:08:55  • session #7 SC2 Deliver started (attempt 1/6)
 07-31 06:38:41  ▪ gate engine-fast pass [session]  (33.9s)
@@ -164,6 +156,15 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-31 09:01:18  ▪ gate engine-fast pass [session]  (35.6s)
 07-31 09:01:18  ▪ gate face-fast pass [session]  (25.2s)
 07-31 09:01:18  • session #12 SC3 → Advanced · done SC3.4 · 2 commit(s)  (28m45s)
+07-31 09:02:49  ▪ gate engine-fast pass [phase]  (0.0s)
+07-31 09:02:49  ▪ gate face-fast pass [phase]  (0.0s)
+07-31 09:02:49  ▪ gate engine-full pass [phase]  (1m26s)
+07-31 09:02:49  ▪ gate face-full pass [phase]  (2.7s)
+07-31 09:02:49  ▸ stage SC3 confirmed  (1h45m00s)
+07-31 09:02:50  ▸ stage SC4 entered — Verdicts judge the work, not the environment
+07-31 09:02:50  • session #13 SC4 Deliver started (attempt 1/6)
+07-31 09:42:06  ▪ gate engine-fast pass [session]  (42.4s)
+07-31 09:42:06  ▪ gate face-fast pass [session]  (5.8s)
 ```
 
 ## Health
@@ -171,7 +172,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 12 · retries 1 (8 %) · overall Warn
+sessions 13 · retries 1 (8 %) · overall Warn
 ⚠ [context-saturation] session #3: 28,499,145 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #6: 20,274,223 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #8: 35,438,955 context tokens (≥ 20,000,000)
@@ -183,14 +184,11 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/sarban
-working tree: M .conductor/REPORT.md, M SARBAN-CORE-TRACKER.md
+working tree: clean
 ```
 
 ### Commits by session
 
-- **s5 (SC2 Deliver)** — 2 commit(s):
-  - [`e3d9b9b`](https://github.com/shaahink/conductor/commit/e3d9b9b) docs(sarban): hand SC2.2 a measured lie and a filed loop bug
-  - [`a3e970e`](https://github.com/shaahink/conductor/commit/a3e970e) fix(sc2): stop status calling the verdict window a crash
 - **s6 (SC2 Deliver)** — 3 commit(s):
   - [`c9aa663`](https://github.com/shaahink/conductor/commit/c9aa663) docs(sarban): hand SC2.3 a canonical gate vocabulary and two open bugs
   - [`3645780`](https://github.com/shaahink/conductor/commit/3645780) docs: track the field notes this era is built on, and the shamshir prompt templates
@@ -212,6 +210,8 @@ working tree: M .conductor/REPORT.md, M SARBAN-CORE-TRACKER.md
 - **s12 (SC3 Deliver)** — 2 commit(s):
   - [`b93fc06`](https://github.com/shaahink/conductor/commit/b93fc06) docs(sarban): hand SC4.1 the settled battery, and what the advisor rig could not reproduce
   - [`abe0eb1`](https://github.com/shaahink/conductor/commit/abe0eb1) fix(sc3): make the shipped advisor answer, and a dead advisor key fatal
+- **s13 (SC4 Deliver)** — 1 commit(s):
+  - [`ba9b523`](https://github.com/shaahink/conductor/commit/ba9b523) fix(sc4): make the battery settle before it judges, and retry a red gate once
 
 ## Phase handovers (audit)
 
@@ -234,31 +234,28 @@ working tree: M .conductor/REPORT.md, M SARBAN-CORE-TRACKER.md
 
 ## Last gate run
 
-engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
+engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: SC3.4 landed and claimed (commit abe0eb1, evidence `.conductor/evidence/SC3/SC3.4-advisor.md` plus the two live run logs beside it) — the shipped advisor default now answers headless, an advisor that cannot answer is refused at plan load with a doctor line, doctor grew an `advisor` check, bug 7 is fixed and closed, and `docs/plan-config.md` matches the code; stage SC3 is complete. Nothing is red: build clean, full suite 1212/0/0, ratchet OK with no ceiling raised, branch `feat/sarban` pushed at b93fc06 with a clean tree. Next session picks up **SC4.1** — make the gate battery wait for the session's tracked bg children to exit before judging, retry a failed required gate once …
+> SESSION-RESULT: **SC4.1 landed** — the gate battery now settles before it judges, retries a red required gate once, and reports duration against the last passing duration. A new `BatterySettler` holds every battery (session, phase gate, closing — one chokepoint in `VerdictEngine.RunGateBatteryAsync`) until this session's tracked `bg:` children have actually exited, sweeping run.db as it goes; bounded by `limits.batterySettleSeconds` (default 120, `0` disables), and at the cap it starts anyway with a `warn` line and never kills the child. `GateRunner.RunAllAsync` now re-runs any failed **required** gate once before anything may call the battery red; optional/skipped/cached gates are not retri…
 
 ## Tracker handoff
 
 ```
-last: **SC3.4 claimed**, commit abe0eb1 - stage SC3 is complete. The advisor answers by default now:
-  AdvisorConfig.Args defaults to a headless one-shot, and an invocation that cannot answer is refused
-  at plan LOAD - empty args, no prompt placeholder, an output kind nothing unwraps, timeout under 1 -
-  with doctor reporting it as the plan check plus a new advisor line naming the invocation. Bug 7
-  closed: advisor.provider is gone from 5 plans and any unknown advisor key is now named at load.
-  Also fixed in the same family: an unfilled model placeholder in advisor args is dropped with its
-  flag (the init scaffold ships one), and chat now uses the one shared spawn path.
-gate: full suite 1212 passed, 0 failed, 0 skipped; build clean; ratchet OK (pragmas 37 of 38, archdebt
-  0), nothing weakened. Evidence .conductor/evidence/SC3/SC3.4-advisor.md, rig TEMP/sarban-proofs/sc34.
-  LIVE both ways on the same rig run: published engine logs 'advisor gave no parseable verdict' then
-  'advisor unavailable'; fresh build logs 'advisor verdict: ResetBudget - ...' and the loop acts on it.
-next: **SC4.1** - the battery must settle before it judges: wait for the session's tracked bg children
-  to exit before starting gates, retry a failed required gate once unconditionally before GatesRed,
-  and put duration vs last passing duration on the failure line.
-know: A rig BEFORE proof of the advisor hang did NOT reproduce - claude.exe errors in 2.5s on a
-  non-interactive stdin rather than hanging 6 min; the defect that reproduces is that it answers
-  nothing. Brace discipline for THIS repo's prose still stands until the owner reinstalls, and keep
-  double quotes out of conductor note text (the arg parser reads embedded flags). Bugs 2,3,4,5,6 open.
+last: **SC4.1 claimed**. New BatterySettler holds every battery until this session's `bg:` children
+  exit (limits.batterySettleSeconds, default 120, 0 = off; at the cap it starts anyway with a warn and
+  never kills the child). GateRunner now re-runs any failed REQUIRED gate once before the battery can
+  be called red - optional/skipped/cached are not retried, a retry returning cached leaves the first
+  failure standing, and two failures stay red with 'failed twice' in the fix prompt. The per-gate
+  FAIL line carries duration vs the gate's last passing duration (per gate AND per tier).
+gate: build clean; scoped `dotnet test` over 24 touched/neighbouring classes: 451 passed, 0 failed,
+  0 skipped (incl. ArchitectureTests). Nothing weakened. Evidence .conductor/evidence/SC4/, six rigs
+  under TEMP/sarban-proofs/sc41, BEFORE published vs AFTER fresh build on each.
+next: **SC4.2** - NoProgress must mean no commits AND no newly-DONE (VerdictEngine.cs line ~355 today
+  ignores newlyDoneCount), and conductor's own `chore(conductor):` commits must not count as progress.
+know: PidLiveness.Check let a Win32 access-denied out of Process.HasExited - it killed `conductor bg
+  status` live mid-session, and the same hand-rolled check sat in 3 places; all now go through
+  PidLiveness (denied = Unverifiable, not Gone). `powershell -File script.ps1 -Only a,b` does NOT
+  split a comma list into a string array - call the script directly instead. Bugs 2,3,4,5,6 open.
 ```

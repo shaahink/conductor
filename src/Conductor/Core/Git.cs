@@ -17,6 +17,35 @@ public static class Git
         return r.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
     }
 
+    // ---------------------------------------------------------------- SC4.2: conductor's own commits
+
+    /// <summary>SC4.2: the subject prefix <c>Reporter.WriteAndPublish</c> stamps on conductor's own
+    /// REPORT.md bookkeeping commits, and the string <see cref="SquashChoreCommits"/> already keys
+    /// off. One constant so the writer, the squash and the verdict can never drift apart.</summary>
+    public const string BookkeepingSubjectPrefix = "chore(conductor):";
+
+    /// <summary>SC4.2: true when a <c>git log --oneline</c> line is one of conductor's OWN
+    /// bookkeeping commits. These carry a status transition and nothing else, so counting them as
+    /// the agent's work let a session that delivered nothing score green — devcontext #14 caught
+    /// session #2 reading <c>commits 3</c> of which only one was the agent's.</summary>
+    public static bool IsBookkeepingCommit(string onelineOrSubject)
+        => SubjectOf(onelineOrSubject).StartsWith(BookkeepingSubjectPrefix, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary><paramref name="commits"/> with conductor's own bookkeeping commits removed.</summary>
+    public static List<string> ExcludeBookkeeping(IEnumerable<string> commits)
+        => commits.Where(c => !IsBookkeepingCommit(c)).ToList();
+
+    /// <summary>Strips the leading abbreviated sha from a <c>--oneline</c> row. A bare subject with
+    /// no sha is passed through: the leading token only counts as a sha when it is all hex AND at
+    /// least git's 7-character minimum, so an English first word is never mistaken for one.</summary>
+    private static string SubjectOf(string oneline)
+    {
+        var s = oneline.Trim();
+        var sp = s.IndexOf(' ');
+        if (sp >= 7 && s[..sp].All(Uri.IsHexDigit)) return s[(sp + 1)..].TrimStart();
+        return s;
+    }
+
     public static bool IsDirty(string repo)
         => Exec(repo, "status", "--porcelain").Output.Trim().Length > 0;
 

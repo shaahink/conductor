@@ -4,21 +4,23 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SC4.1 claimed**. New BatterySettler holds every battery until this session's `bg:` children
-  exit (limits.batterySettleSeconds, default 120, 0 = off; at the cap it starts anyway with a warn and
-  never kills the child). GateRunner now re-runs any failed REQUIRED gate once before the battery can
-  be called red - optional/skipped/cached are not retried, a retry returning cached leaves the first
-  failure standing, and two failures stay red with 'failed twice' in the fix prompt. The per-gate
-  FAIL line carries duration vs the gate's last passing duration (per gate AND per tier).
-gate: build clean; scoped `dotnet test` over 24 touched/neighbouring classes: 451 passed, 0 failed,
-  0 skipped (incl. ArchitectureTests). Nothing weakened. Evidence .conductor/evidence/SC4/, six rigs
-  under TEMP/sarban-proofs/sc41, BEFORE published vs AFTER fresh build on each.
-next: **SC4.2** - NoProgress must mean no commits AND no newly-DONE (VerdictEngine.cs line ~355 today
-  ignores newlyDoneCount), and conductor's own `chore(conductor):` commits must not count as progress.
-know: PidLiveness.Check let a Win32 access-denied out of Process.HasExited - it killed `conductor bg
-  status` live mid-session, and the same hand-rolled check sat in 3 places; all now go through
-  PidLiveness (denied = Unverifiable, not Gone). `powershell -File script.ps1 -Only a,b` does NOT
-  split a comma list into a string array - call the script directly instead. Bugs 2,3,4,5,6 open.
+last: **SC4.2 claimed**. The verdict's green condition is now `workCommits OR newlyDone OR
+  stageComplete`, so a claim with no commits in this repo is Advanced, not NoProgress. New
+  `Git.IsBookkeepingCommit` / `ExcludeBookkeeping` (sharing the P4 squash's `chore(conductor):`
+  prefix constant) is the single discriminator; the verdict, the fix prompt's ProgressSummary,
+  IdenticalStallPattern, FailureCircuitBreaker's stall arm and WorkflowVarsFactory.HasCommits all
+  read it. `rec.NewCommits` stays RAW, so report/status/history still say what really landed.
+gate: build clean; scoped `dotnet test` over 26 touched/neighbouring classes: 268 passed, 0 failed,
+  0 skipped (incl. ArchitectureTests). Nothing weakened. Evidence .conductor/evidence/SC4/, seven
+  rigs under TEMP/sarban-proofs/sc42, BEFORE published vs AFTER fresh build on each.
+next: **SC4.3** - satelliteRepos diffed for hasCommits (WorkflowVarsFactory.HasCommits and the
+  verdict's workCommits are the two seams SC4.2 left ready); gate cache key must cover the gate's
+  own working dir HEAD and its command text; skipIfFresh must account for a dirty tree.
+know: a rig that scores NoProgress parks on NeedsHuman and idles FOREVER - `--max-sessions` never
+  fires because no second session starts - so SC42-run.ps1 watches stdout and stops that one pid.
+  Every verdict line is logged TWICE (structured + plain); anchor counting patterns on `^\d{4}-`.
+  Bug #8 filed: HarnessTests' GitRun splits on spaces, so its repo has no initial commit at all and
+  its NewCommits assertions are vacuous. Bugs 2,3,4,5,6,8 open.
 
 
 ## Baseline numbers (from run.db)
@@ -27,7 +29,7 @@ know: PidLiveness.Check let a Win32 access-denied out of Process.HasExited - it 
 |---|---|
 | Total checkpoints | 26 |
 | Done | 0 |
-| Claimed (unconfirmed) | 11 |
+| Claimed (unconfirmed) | 12 |
 
 ## Checkpoints
 
@@ -64,7 +66,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| SC4.1 | The battery waits for the session's tracked bg children to exit, and retries a failed required gate once before declaring GatesRed; the failure line carries duration vs last passing duration | TODO | - | - |
+| SC4.1 | The battery waits for the session's tracked bg children to exit, and retries a failed required gate once before declaring GatesRed; the failure line carries duration vs last passing duration | DONE | ba9b523 | engine-fast:OK · face-fast:OK |
 | SC4.2 | NoProgress requires no commits AND no newly-DONE checkpoints; chore conductor commits are excluded from the verdict's commit count | TODO | - | - |
 | SC4.3 | satelliteRepos are diffed for hasCommits; the gate cache key covers the gate's own working directory HEAD and its command text; skipIfFresh accounts for a dirty tree | TODO | - | - |
 | SC4.4 | Queued injections render at the top of the composed prompt, and a gate-failures block they supersede is stamped SUPERSEDED or dropped | TODO | - | - |

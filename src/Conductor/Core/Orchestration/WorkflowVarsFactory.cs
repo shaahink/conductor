@@ -24,7 +24,9 @@ public static class WorkflowVarsFactory
             CircuitBroken = circuitBroken,
             StageAttempts = stageAttempts,
             GatesGreen = gatesGreen,
-            HasCommits = rec.NewCommits is { Count: > 0 },
+            // SC4.2: a workflow branching on hasCommits is asking whether the AGENT committed, so
+            // conductor's own chore(conductor): bookkeeping never answers that question for it.
+            HasCommits = Git.ExcludeBookkeeping(rec.NewCommits).Count > 0,
             Stalled = rec.Outcome is SessionOutcome.Stalled or SessionOutcome.TimedOut,
             NewlyDoneCount = rec.NewlyDone?.Count ?? 0,
             StageComplete = stageComplete,

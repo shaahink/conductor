@@ -29,10 +29,13 @@ public static class FailureCircuitBreaker
 
         return current.Outcome switch
         {
+            // SC4.2: "produced nothing" reads the AGENT's commits — conductor's own
+            // chore(conductor): status writes are not output, and letting one of them stand in for
+            // work would keep the breaker open through an otherwise identical pair of stalls.
             SessionOutcome.Stalled or SessionOutcome.TimedOut =>
-                current.NewCommits.Count == 0
+                Git.ExcludeBookkeeping(current.NewCommits).Count == 0
                 && string.IsNullOrWhiteSpace(current.ResultSummary)
-                && previous.NewCommits.Count == 0
+                && Git.ExcludeBookkeeping(previous.NewCommits).Count == 0
                 && string.IsNullOrWhiteSpace(previous.ResultSummary),
 
             SessionOutcome.GatesRed or SessionOutcome.NoProgress =>
