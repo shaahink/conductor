@@ -27,9 +27,15 @@ public sealed class DoctorSettings : PlanSettings
     [CommandOption("--no-auth-check")]
     [Description("Skip the one-token auth smoke test (~$0.001) against the configured agent CLI")]
     public bool NoAuthCheck { get; init; }
+
+    /// <summary>SC8.3: skip the release-feed lookup. Also honoured as
+    /// <c>CONDUCTOR_NO_UPDATE_CHECK</c>, for a machine that should never phone home.</summary>
+    [CommandOption("--no-update-check")]
+    [Description("Skip the check for a newer released engine")]
+    public bool NoUpdateCheck { get; init; }
 }
 
-public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
+public sealed partial class DoctorCommand : AsyncCommand<DoctorSettings>
 {
     internal sealed record Check(string Name, string State, string Message); // State: ok | warn | fail
 
@@ -60,7 +66,7 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
         AnsiConsole.MarkupLine($"repo: {Markup.Escape(plan.Repo)}");
         AnsiConsole.WriteLine();
 
-        var checks = await RunChecksAsync(plan, authCheck: !settings.NoAuthCheck).ConfigureAwait(false);
+        var checks = await RunChecksAsync(plan, authCheck: !settings.NoAuthCheck, updateCheck: !settings.NoUpdateCheck).ConfigureAwait(false);
         sw.Stop();
 
         foreach (var c in checks) AnsiConsole.MarkupLine(RenderCheck(c));
@@ -76,7 +82,7 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
         return failed > 0 ? 1 : 0;
     }
 
-    private static async Task<List<Check>> RunChecksAsync(PlanConfig plan, bool authCheck = false)
+    private static async Task<List<Check>> RunChecksAsync(PlanConfig plan, bool authCheck = false, bool updateCheck = true)
     {
         var checks = new List<Check>
         {
@@ -122,6 +128,8 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
             var auth = await AuthSmokeTest.RunAsync(plan, TimeSpan.FromSeconds(45)).ConfigureAwait(false);
             checks.Add(new Check(auth.Name, auth.Passed ? "ok" : "fail", auth.Message));
         }
+
+        if (updateCheck) checks.Add(await CheckUpdateAsync(DateTimeOffset.UtcNow).ConfigureAwait(false));
 
         return checks;
     }

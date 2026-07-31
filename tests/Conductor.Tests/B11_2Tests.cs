@@ -105,16 +105,16 @@ public class B11_2DoctorAndCompletionTests
     // FU-B11-1: Completion verb list must be exhaustive — every command registered in Program.cs
     // must appear in the completion output so tab-complete doesn't silently break when a new command
     // is added. Also verifies the count stays in parity.
+    //
+    // SC8.3: the expected set is now READ OFF Program.cs instead of hand-typed here. It was a
+    // hand-maintained list, which meant it measured nothing: `version` shipped in SC8.1 missing from
+    // BOTH completion lists AND from this set, and the test stayed green the whole time. A new verb
+    // was three places; it is now two, and the third is enforced.
     [Fact]
     public void Completion_ContainsAllRegisteredVerbs_Exhaustive()
     {
-        var expectedVerbs = new HashSet<string>(StringComparer.Ordinal)
-        {
-            "run", "journey", "face", "status", "gate", "log", "report", "audit", "mcp-serve", "pause", "resume",
-            "approve", "kill", "skip", "inject", "abort", "retry-stage", "rollback", "rollover", "heartbeat",
-            "pause-after-stage", "goto", "plan", "tasks", "task", "new-plan", "note", "bug", "init", "doctor",
-            "completion", "chat", "bg", "version"
-        };
+        var expectedVerbs = RegisteredVerbs();
+        Assert.True(expectedVerbs.Count > 30, $"only {expectedVerbs.Count} verbs parsed out of Program.cs — the scan is broken, not the completion");
 
         var ps = Conductor.Commands.CompletionCommand.GeneratePowerShell();
         var bash = Conductor.Commands.CompletionCommand.GenerateBash();
@@ -148,5 +148,31 @@ public class B11_2DoctorAndCompletionTests
         Assert.True(bashMatch.Success, "Bash completion missing compgen -W definition");
         var bashVerbs = bashMatch.Groups["verbs"].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         Assert.Equal(expectedVerbs.Count, bashVerbs.Length);
+    }
+
+    /// <summary>Every verb <c>Program.cs</c> registers and does not hide. Source-scanned rather than
+    /// reflected because Spectre's <c>CommandApp</c> keeps its configuration private, and the source
+    /// is the thing a future session will edit.</summary>
+    private static HashSet<string> RegisteredVerbs()
+    {
+        var program = Path.Combine(RepoRoot(), "src", "Conductor", "Program.cs");
+        var verbs = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var line in File.ReadAllLines(program))
+        {
+            var m = System.Text.RegularExpressions.Regex.Match(line,
+                @"AddCommand<\w+>\(""(?<verb>[a-z][a-z0-9-]*)""\)",
+                System.Text.RegularExpressions.RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(2));
+            if (!m.Success) continue;
+            if (line.Contains(".IsHidden()", StringComparison.Ordinal)) continue;
+            verbs.Add(m.Groups["verb"].Value);
+        }
+        return verbs;
+    }
+
+    private static string RepoRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "Conductor.slnx"))) dir = dir.Parent;
+        return dir?.FullName ?? throw new InvalidOperationException("could not locate repo root (Conductor.slnx)");
     }
 }

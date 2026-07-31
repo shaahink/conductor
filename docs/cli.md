@@ -89,6 +89,8 @@ command palette, and from Telegram.
 | `chat "…"` | Ask questions about a running plan (MCP access to run.db, ledger, control verbs). |
 | `mcp-serve` | Run the MCP task server (JSON-RPC 2.0 over stdio). |
 | `completion` | Generate shell completion scripts (`powershell` or `bash`). |
+| `version` | What this binary is: semver, git sha, build date — stamped at build — and *which file answered*. `--json` for machines, `--short` for scripts. Takes no plan and works in any directory. |
+| `update` | Check the latest release, and swap this binary for it. `--check` looks without installing. Verifies the download's checksum, then runs it and asks its version before replacing anything, and **refuses while a run is live**. |
 
 ## Overriding the defaults
 

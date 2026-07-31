@@ -4,29 +4,27 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SC8.2 landed** (094ece6). MinVer 7.0.0 derives the version from tag height; the csproj has NO
-  `Version` element and deliberately no `MinVerMinimumMajorMinor` floor - the `v*` tags are the whole
-  answer. `StampBuildInfo` gained `DependsOnTargets="MinVer"` because MinVer sets
-  InformationalVersion itself and would drop the SC8.1 sha. CHANGELOG.md is new and load-bearing:
-  release.yml's new `guard` job extracts the tag's section via `tools/changelog-section.sh`, fails
-  the release without it, and publishes it as the release body.
-gate: rig `%TEMP%\sarban-proofs\sc82`, two clones of commit 094ece6 - full and `--depth 1`. Shallow
-  answers `0.0.0-alpha.0` (no tags), full tagged v2.1.0 answers `2.1.0` exactly; one and two commits
-  past give `2.1.1-alpha.0.1` and `.2`. Both workflows now `fetch-depth: 0`, and release.yml asks the
-  SHIPPED artifact - that `case` block run live exits 0 on the tagged binary and 1 on the shallow
-  one. Evidence .conductor/evidence/SC8/SC8.2-tag-height-versioning-reconciled.md.
-next: **SC8.3** - `conductor update`: check the latest GitHub release, compare to the running
-  version, download the platform asset, verify, rename-dance the swap, REFUSE while a run is live;
-  `doctor` gains an update-available line. You will need a semver comparator (running version vs
-  release tag) - none exists yet, and note the running version is a PRERELEASE between tags, which
-  sorts BELOW the release it precedes. Prove the swap on a scratch copy, never the published engine.
-know: **A NEW VERB IS THREE PLACES** and `update` is one: Program.cs, BOTH lists in CompletionCommand,
-  and the expected set in B11_2Tests - that parity test is hand-maintained and stayed green with
-  `version` missing everywhere. Meziantou MA0009 rejects `Regex.Match` without a timeout: use
-  `GeneratedRegex(..., matchTimeoutMilliseconds: 1000)`. `git clone --depth 1` needs a `file://` URL
-  for a local source or the flag is ignored. Tag freely in a scratch clone, never in this repo.
-  `.conductor/evidence` is gitignored - the artifact is the path, not a commit. Bugs
-  2,3,4,5,6,8,9,10,11,12,13 open.
+last: **SC8.3 landed** - stage SC8 is complete. `conductor update` lives in `Core/Update/` (SemVer,
+  ReleaseClient, UpdateTarget, UpdateCheck, ArchiveUnpacker, BinarySwap, UpdateSafety) plus
+  `Commands/UpdateCommand.cs`; doctor's line is `Commands/DoctorCommand.Update.cs`, a partial,
+  because DoctorCommand.cs was 6 lines under the 500-line ceiling. Verification is three-deep:
+  platform asset match, sha256 vs the release's new SHA256SUMS.txt, then RUN the download and make it
+  answer `version --short` with the tag. Refusal = live engine lock OR another process on that image.
+gate: rig `%TEMP%\sarban-proofs\sc83`. Two single-file publishes at 9.9.8 and 9.9.9 via
+  `-p:MinVerVersionOverride=`, served from a local TcpListener feed via `CONDUCTOR_UPDATE_FEED`.
+  Live lock -> exit 2 and sha256 IDENTICAL; lock cleared -> download, checksum, exec-verify, rename
+  dance, sha256 CHANGED, `version` answers 9.9.9. doctor warns on the behind engine and is ok on the
+  updated one. 123 scoped tests green. Evidence .conductor/evidence/SC8/SC8.3-update-swap-and-doctor.md.
+next: **stage SC8 has no incomplete checkpoints.** Take the next stage the board gives you, or clear
+  open bugs. Bug #14 (release could never compile) was filed and CLOSED here; 2,3,4,5,6,8,9,10,11,
+  12,13 remain open.
+know: The rig found a **release blocker** and it is fixed: `-p:PublishSingleFile=true` (release.yml's
+  own flags) makes IL3000 on `Assembly.Location` an ERROR - BuildInfo and RunDetach both had one, and
+  that workflow only runs on a `v*` tag so it had never compiled. Use `AppContext.BaseDirectory` +
+  the assembly SIMPLE NAME, never a suppression; publish once locally if you touch publish flags.
+  The verb-parity test now SCANS Program.cs instead of a hand-typed list, so a new verb is two places,
+  not three. Windows: file globs still use DOS 8.3 rules (`x.old.*` misses `x.old.4123`) - filter in
+  code; `Set-Location` does NOT move a child process's cwd, use `Start-Process -WorkingDirectory`.
 
 
 ## Baseline numbers (from run.db)
@@ -35,7 +33,7 @@ know: **A NEW VERB IS THREE PLACES** and `update` is one: Program.cs, BOTH lists
 |---|---|
 | Total checkpoints | 26 |
 | Done | 0 |
-| Claimed (unconfirmed) | 24 |
+| Claimed (unconfirmed) | 25 |
 
 ## Checkpoints
 
@@ -105,7 +103,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | SC8.1 | conductor version and GET /version report semver, git sha and build date stamped at build; install.ps1 prints the version before and after | DONE | f45563e | engine-fast:OK · face-fast:OK |
-| SC8.2 | Tag-height versioning is automatic and reconciled with release.yml so a released binary answers with its tag; CHANGELOG.md carries a section per release | TODO | - | - |
+| SC8.2 | Tag-height versioning is automatic and reconciled with release.yml so a released binary answers with its tag; CHANGELOG.md carries a section per release | DONE | 094ece6 | engine-fast:OK · face-fast:OK |
 | SC8.3 | conductor update downloads and safely swaps the matching release binary, refusing while a run is live; doctor reports update-available | TODO | - | - |
 
 ## Dependencies

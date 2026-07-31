@@ -22,6 +22,16 @@ it was built from. It orders above `0.1.0` and below `0.1.1`, and it is unique p
   rather than typed into a source file, so "is this run using stale engine code" has an answer.
 - Automatic tag-height versioning. The csproj no longer carries a hand-typed version number; the
   `v*` tags are the single source of truth, and a release binary answers with its own tag.
+- `conductor update` — checks the latest release, and swaps this binary for it. It verifies the
+  download against the release's `SHA256SUMS.txt`, then **runs the downloaded engine and asks its
+  version** before replacing anything, and swaps by rename so a failure puts the old binary back.
+  It **refuses while a run is live**, because every task claim and background start during a session
+  spawns the engine again — a mid-run swap means the back half of a session runs on different code.
+  `--check` looks without installing.
+- `doctor` gained an `update` line: which engine is running and whether a newer release exists. Never
+  a failure (an offline machine is not a broken one), memoised for six hours in a user-level cache so
+  it costs nothing, and switchable off with `--no-update-check` or `CONDUCTOR_NO_UPDATE_CHECK`.
+- Releases now publish a `SHA256SUMS.txt` manifest alongside the platform archives.
 - `CHANGELOG.md` (this file), enforced at release time by `tools/changelog-section.sh`.
 - `conductor task --blocked-until`, `--todo`, `--blocked`, `--skipped` and `--amend`, so the board
   can be corrected rather than only appended to.
@@ -30,6 +40,13 @@ it was built from. It orders above `0.1.0` and below `0.1.1`, and it is unique p
 - Per-session digests on `/sessions` — tool mix, files touched with counts, claims, and background
   work as a storyline — built from structured tool events rather than truncated JSON blobs.
 - A `RUN-SUMMARY.md` at the end of a run; `report` and `status` work offline from `run.db`.
+
+### Fixed
+
+- The release build could never have compiled. `-p:PublishSingleFile=true` — the flag every platform
+  in `release.yml` publishes with — enables the single-file analyzer, and two reads of
+  `Assembly.Location` were IL3000 errors under `TreatWarningsAsErrors`. Since that workflow only runs
+  on a `v*` tag push, nothing had ever exercised it. Both reads now use `AppContext.BaseDirectory`.
 
 ### Changed
 

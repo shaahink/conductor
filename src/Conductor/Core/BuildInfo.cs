@@ -44,15 +44,23 @@ public sealed record BuildInfo(
 
     /// <summary>The file that is actually executing. Trap 3 of this repo's own trap list is
     /// "you exercised the published engine on PATH, not your fresh build" — this line is how the
-    /// operator sees which one answered without guessing from behaviour.</summary>
+    /// operator sees which one answered without guessing from behaviour.
+    /// <para>SC8.3: the fallback deliberately does NOT read <c>Assembly.Location</c>. That property
+    /// returns an empty string in a single-file app — which is exactly how the release archives are
+    /// published — and reading it is an IL3000 error under the single-file analyzer, so the line
+    /// added in SC8.1 made <c>release.yml</c> fail to compile on every platform. The documented
+    /// single-file-safe pair is <see cref="AppContext.BaseDirectory"/> plus the assembly's simple
+    /// name.</para></summary>
     public static string BinaryPath
     {
         get
         {
             var path = Environment.ProcessPath;
             if (!string.IsNullOrEmpty(path)) return path;
-            var loc = typeof(BuildInfo).Assembly.Location;
-            return string.IsNullOrEmpty(loc) ? "(unknown)" : loc;
+            var name = typeof(BuildInfo).Assembly.GetName().Name;
+            if (string.IsNullOrEmpty(name)) return "(unknown)";
+            var guess = Path.Combine(AppContext.BaseDirectory, name + ".dll");
+            return File.Exists(guess) ? guess : "(unknown)";
         }
     }
 

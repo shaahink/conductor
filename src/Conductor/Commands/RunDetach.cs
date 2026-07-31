@@ -75,8 +75,14 @@ public static class RunDetach
         if (!string.Equals(stem, "dotnet", StringComparison.OrdinalIgnoreCase))
             return (exe, [], null);
 
-        var dll = Assembly.GetEntryAssembly()?.Location;
-        return string.IsNullOrEmpty(dll)
+        // SC8.3: NOT Assembly.Location — it is empty in a single-file app and reading it is an
+        // IL3000 error under the analyzer PublishSingleFile turns on, which made release.yml fail to
+        // compile. This branch is unreachable in a single-file build anyway (the host would have to
+        // be `dotnet`), but the compiler cannot know that. BaseDirectory + the simple name is the
+        // documented replacement and resolves to the same file under `dotnet Conductor.dll`.
+        var name = Assembly.GetEntryAssembly()?.GetName().Name;
+        var dll = string.IsNullOrEmpty(name) ? null : Path.Combine(AppContext.BaseDirectory, name + ".dll");
+        return string.IsNullOrEmpty(dll) || !File.Exists(dll)
             ? ("", [], "running under the dotnet host with no locatable entry assembly")
             : (exe, new[] { dll }, null);
     }

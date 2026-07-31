@@ -97,6 +97,8 @@ app.Configure(c =>
         .WithDescription("Background process management: start|status|logs|stop.");
     c.AddCommand<VersionCommand>("version")
         .WithDescription("What this binary is: semver, git sha and build date stamped at build, plus which file answered. --json for machines, --short for scripts.");
+    c.AddCommand<UpdateCommand>("update")
+        .WithDescription("Check the latest release and swap this binary for it. Refuses while a run is live. --check to look without installing.");
     c.AddCommand<ChatCommand>("chat")
         .WithDescription("F8.1: Ask questions about a running conductor plan. The agent has MCP access to run.db, the ledger, and control verbs. Example: conductor chat \"how did session 9 die?\"");
     c.SetExceptionHandler((ex, _) =>

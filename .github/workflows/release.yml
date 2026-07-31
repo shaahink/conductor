@@ -219,6 +219,16 @@ jobs:
 
       - run: ls -la dist && cat notes/release-body.md
 
+      # SC8.3. `conductor update` downloads one of these archives and has to decide whether to trust
+      # it before it replaces the binary the operator is standing on. Without a manifest its only
+      # check is "does the thing execute and answer with the right version", which catches a wrong
+      # build but not a truncated download. One file, computed over exactly what gets attached.
+      - name: checksum manifest
+        working-directory: dist
+        run: |
+          sha256sum conductor-* > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
       # The release body is the CHANGELOG section, then the install instructions. generate_release_notes
       # still appends the commit list underneath, so nothing is lost - but a human-written summary of
       # what changed now leads, and it cannot go missing: the guard job fails the release without it.

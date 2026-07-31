@@ -1,10 +1,10 @@
 ﻿# Conductor — Sarban core - the engine says what it knows run report
 
-_Updated 2026-07-31 16:15 UTC · branch `feat/sarban` · HEAD `1c2330f`_
+_Updated 2026-07-31 16:37 UTC · branch `feat/sarban` · HEAD `d38fb9a`_
 
 **Status:** Idle
-**Stage:** SC8 — The program knows what it is and can update itself · attempts used 0 · working ▸ SC8.2
-**Checkpoints:** 24/26 done · **Sessions run:** 26 · **Cost:** $336.5639 (agent $336.4134 + gates $0.1505) · **Tokens:** 4,974,776 in / 2,154,692 out
+**Stage:** SC8 — The program knows what it is and can update itself · attempts used 0 · working ▸ SC8.3
+**Checkpoints:** 25/26 done · **Sessions run:** 27 · **Cost:** $343.1039 (agent $342.9489 + gates $0.1549) · **Tokens:** 5,094,672 in / 2,216,979 out
 **Confirmed phases:** SC1, SC2, SC3, SC4, SC5, SC6, SC7
 
 ## Stage progress
@@ -18,7 +18,7 @@ _Updated 2026-07-31 16:15 UTC · branch `feat/sarban` · HEAD `1c2330f`_
 | SC5 | The engine can wait, detach, and correct the board | ██████████ 4/4 | confirmed ✓ |
 | SC6 | Clean history without lying about it | ██████████ 2/2 | confirmed ✓ |
 | SC7 | The transcript captures structure | ██████████ 2/2 | confirmed ✓ |
-| SC8 | The program knows what it is and can update itself | ███░░░░░░░ 1/3 | **← active** |
+| SC8 | The program knows what it is and can update itself | ███████░░░ 2/3 | **← active** |
 
 <details> ✅<summary>SC1 — Telegram actually delivers (3/3)</summary>
 
@@ -92,12 +92,12 @@ _Updated 2026-07-31 16:15 UTC · branch `feat/sarban` · HEAD `1c2330f`_
 
 </details>
 
-<details><summary>SC8 — The program knows what it is and can update itself (1/3)</summary>
+<details><summary>SC8 — The program knows what it is and can update itself (2/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| SC8.1 | conductor version and GET /version report semver, git sha and build date stamped at build; install.ps1 prints the version before and after | ✅ DONE | - |
-| SC8.2 | Tag-height versioning is automatic and reconciled with release.yml so a released binary answers with its tag; CHANGELOG.md carries a section per release | ⬜ TODO | - |
+| SC8.1 | conductor version and GET /version report semver, git sha and build date stamped at build; install.ps1 prints the version before and after | ✅ DONE | [`f45563e`](https://github.com/shaahink/conductor/commit/f45563e) |
+| SC8.2 | Tag-height versioning is automatic and reconciled with release.yml so a released binary answers with its tag; CHANGELOG.md carries a section per release | ✅ DONE | - |
 | SC8.3 | conductor update downloads and safely swaps the matching release binary, refusing while a run is live; doctor reports update-available | ⬜ TODO | - |
 
 </details>
@@ -132,16 +132,13 @@ _Updated 2026-07-31 16:15 UTC · branch `feat/sarban` · HEAD `1c2330f`_
 | 24 | SC7 | Deliver | 1 | 07-31 14:29 | 0:28 | Advanced | SC7.1 | 2 | engine-fast:OK · face-fast:OK | $13.2517 | $0.0098 | 200,355/92,726 |
 | 25 | SC7 | Deliver | 1 | 07-31 14:59 | 0:32 | Advanced | SC7.2 | 1 | engine-fast:OK · face-fast:OK | $13.7045 | $0.0076 | 213,018/94,092 |
 | 26 | SC8 | Deliver | 1 | 07-31 15:38 | 0:36 | Advanced | SC8.1 | 4 | engine-fast:OK · face-fast:OK | $11.9962 | $0.0051 | 174,778/91,105 |
+| 27 | SC8 | Deliver | 1 | 07-31 16:15 | 0:20 | Advanced | SC8.2 | 2 | engine-fast:OK · face-fast:OK | $6.5355 | $0.0044 | 119,896/62,287 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-31 14:11:11  ▪ gate engine-fast pass [session]  (41.9s)
-07-31 14:11:11  ▪ gate face-fast pass [session]  (33.9s)
-07-31 14:11:12  • session #21 SC5 → Advanced · done SC5.4 · 2 commit(s)  (30m05s)
-07-31 14:13:05  ▪ gate engine-fast pass [phase]  (0.0s)
 07-31 14:13:05  ▪ gate face-fast pass [phase]  (0.0s)
 07-31 14:13:05  ▪ gate engine-full pass [phase]  (1m42s)
 07-31 14:13:05  ▪ gate face-full pass [phase]  (6.8s)
@@ -178,6 +175,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-31 16:38:28  • session #26 SC8 Deliver started (attempt 1/6)
 07-31 17:15:58  ▪ gate engine-fast pass [session]  (46.9s)
 07-31 17:15:58  ▪ gate face-fast pass [session]  (4.4s)
+07-31 17:15:58  • session #26 SC8 → Advanced · done SC8.1 · 4 commit(s)  (37m30s)
+07-31 17:15:59  • session #27 SC8 Deliver started (attempt 1/6)
+07-31 17:37:36  ▪ gate engine-fast pass [session]  (40.5s)
+07-31 17:37:36  ▪ gate face-fast pass [session]  (3.9s)
 ```
 
 ## Health
@@ -185,7 +186,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 26 · retries 2 (8 %) · overall Warn
+sessions 27 · retries 2 (7 %) · overall Warn
 ⚠ [context-saturation] session #13: 29,057,299 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #15: 20,145,044 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #18: 32,959,198 context tokens (≥ 20,000,000)
@@ -208,10 +209,6 @@ working tree: clean
 
 ### Commits by session
 
-- **s19 (SC5 Deliver)** — 3 commit(s):
-  - [`8948a10`](https://github.com/shaahink/conductor/commit/8948a10) docs(sarban): hand SC5.3 the detached run loop and three rig-found traps
-  - [`e6b15c7`](https://github.com/shaahink/conductor/commit/e6b15c7) feat(sc5): let a run outlive the shell that launched it
-  - [`d496179`](https://github.com/shaahink/conductor/commit/d496179) ﻿fix(sc5): split the two files SC5.1 pushed past the architecture ratchet
 - **s20 (SC5 Deliver)** — 3 commit(s):
   - [`a685719`](https://github.com/shaahink/conductor/commit/a685719) docs(sarban): hand SC5.4 the board work and two things the rig taught
   - [`9024e57`](https://github.com/shaahink/conductor/commit/9024e57) feat(sc5): make every board move go one way and report what happened
@@ -235,6 +232,9 @@ working tree: clean
   - [`70c0bef`](https://github.com/shaahink/conductor/commit/70c0bef) feat(sc8): teach tab-completion the version verb
   - [`58c2685`](https://github.com/shaahink/conductor/commit/58c2685) docs(sc8): evidence and handoff for SC8.1
   - [`f45563e`](https://github.com/shaahink/conductor/commit/f45563e) feat(sc8): stamp the build, and let the engine say what it is
+- **s27 (SC8 Deliver)** — 2 commit(s):
+  - [`d38fb9a`](https://github.com/shaahink/conductor/commit/d38fb9a) docs(sc8): hand SC8.3 the update verb and the semver-comparison trap
+  - [`094ece6`](https://github.com/shaahink/conductor/commit/094ece6) feat(sc8): let the tags decide the version, and make the release prove it
 
 ## Phase handovers (audit)
 
@@ -261,33 +261,32 @@ engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: **SC8.1 landed and is claimed.** `Conductor.csproj` gained a `StampBuildInfo` target that writes the git short sha, a dirty flag and a UTC timestamp into `AssemblyInformationalVersion` plus `AssemblyMetadata` at compile time — nothing typed into a `.cs` file; `BuildInfo` reads it back with the parse split out from reflection so every emitted shape is testable; `VersionReport` is one record served by both `conductor version --json` and the new `GET /version`, so CLI and wire cannot drift; the verb also prints which binary answered, making this repo's trap 3 checkable rather than assumed; `install.ps1`/`install.sh` print before → after with an honest fallback for a pre-SC8 bina…
+> SESSION-RESULT: SC8.2 landed and is claimed (`conductor task --done SC8.2`) against `.conductor/evidence/SC8/SC8.2-tag-height-versioning-reconciled.md`, commits `094ece6` (code) and `d38fb9a` (handoff), pushed to `feat/sarban`. Tag-height versioning via MinVer replaces the hand-typed `2.0.0`; `release.yml` gained a `guard` job (tag shape + CHANGELOG section → release body), `fetch-depth: 0` on every checkout in both workflows, and an assertion against the actual shipped binary that fails the release if its version is not the tag — proved in a two-clone rig at one commit where the shallow build reports `0.0.0-alpha.0` and the tagged build reports `2.1.0`. Nothing is red: `dotnet build Conduct…
 
 ## Tracker handoff
 
 ```
-last: **SC8.1 landed** (f45563e code, 70c0bef completion). Conductor.csproj target `StampBuildInfo`
-  writes the git short sha, a dirty flag and a UTC timestamp into AssemblyInformationalVersion plus
-  AssemblyMetadata at COMPILE time - nothing typed into a .cs file. VersionReport is ONE record
-  served by both `conductor version --json` and `GET /version`, so CLI and wire cannot drift; the
-  verb also prints WHICH BINARY answered (trap 3, made checkable). install.ps1/.sh print
-  before -> after; install.ps1 gained `-SkipShim`.
-gate: rig `%TEMP%\sarban-proofs\sc81` + a clean detached worktree. Published engine: `version` is an
-  unknown command, GET /version 404s while /state 200s. Fresh build: three builds, three stamps,
-  each matching git - `6d805e1ce073.dirty`, `f45563e82469.dirty`, and `f45563e82469` clean from the
-  worktree, so the dirty flag is computed. Live rig on :4318 answered GET /version 200 token-free
-  while /state said Running. Evidence
-  .conductor/evidence/SC8/SC8.1-version-identity-stamped-at-build.md.
-next: **SC8.2** - tag-height versioning (MinVer or equivalent) reconciled with release.yml so a
-  downloaded binary answers with its TAG, plus CHANGELOG.md per release. The csproj `Version` is
-  still hand-set to 2.0.0; that property is what SC8.2 takes over. The SDK already sets
-  SourceRevisionId via built-in SourceLink - watch for a double `+` append when Version changes.
-know: **A NEW VERB IS THREE PLACES**, and SC8.3 adds one (`update`): Program.cs, both lists in
-  CompletionCommand, and the expected set in B11_2Tests - that parity test is hand-maintained and
-  stayed GREEN with `version` missing from all of completion. **RIG TRAP:** `conductor bg start
-  ... | <anything>` blocks the whole PowerShell pipeline until the engine exits (the pipe holds the
-  inherited stdout handle), so a poll loop after it never runs - start the run in its own call, poll
-  in the next. The rig's `.conductor/control-plane.json` is DELETED at run end, so hold the session
-  open (`ping -n 150 127.0.0.1`). A read-only GET on THIS repo's control-plane port is the cheapest
-  BEFORE artifact and aims no run-control verb at it. Bugs 2,3,4,5,6,8,9,10,11,12,13 open.
+last: **SC8.2 landed** (094ece6). MinVer 7.0.0 derives the version from tag height; the csproj has NO
+  `Version` element and deliberately no `MinVerMinimumMajorMinor` floor - the `v*` tags are the whole
+  answer. `StampBuildInfo` gained `DependsOnTargets="MinVer"` because MinVer sets
+  InformationalVersion itself and would drop the SC8.1 sha. CHANGELOG.md is new and load-bearing:
+  release.yml's new `guard` job extracts the tag's section via `tools/changelog-section.sh`, fails
+  the release without it, and publishes it as the release body.
+gate: rig `%TEMP%\sarban-proofs\sc82`, two clones of commit 094ece6 - full and `--depth 1`. Shallow
+  answers `0.0.0-alpha.0` (no tags), full tagged v2.1.0 answers `2.1.0` exactly; one and two commits
+  past give `2.1.1-alpha.0.1` and `.2`. Both workflows now `fetch-depth: 0`, and release.yml asks the
+  SHIPPED artifact - that `case` block run live exits 0 on the tagged binary and 1 on the shallow
+  one. Evidence .conductor/evidence/SC8/SC8.2-tag-height-versioning-reconciled.md.
+next: **SC8.3** - `conductor update`: check the latest GitHub release, compare to the running
+  version, download the platform asset, verify, rename-dance the swap, REFUSE while a run is live;
+  `doctor` gains an update-available line. You will need a semver comparator (running version vs
+  release tag) - none exists yet, and note the running version is a PRERELEASE between tags, which
+  sorts BELOW the release it precedes. Prove the swap on a scratch copy, never the published engine.
+know: **A NEW VERB IS THREE PLACES** and `update` is one: Program.cs, BOTH lists in CompletionCommand,
+  and the expected set in B11_2Tests - that parity test is hand-maintained and stayed green with
+  `version` missing everywhere. Meziantou MA0009 rejects `Regex.Match` without a timeout: use
+  `GeneratedRegex(..., matchTimeoutMilliseconds: 1000)`. `git clone --depth 1` needs a `file://` URL
+  for a local source or the flag is ignored. Tag freely in a scratch clone, never in this repo.
+  `.conductor/evidence` is gitignored - the artifact is the path, not a commit. Bugs
+  2,3,4,5,6,8,9,10,11,12,13 open.
 ```
