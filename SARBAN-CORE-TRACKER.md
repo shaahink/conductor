@@ -4,20 +4,24 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SC3.2 claimed**, all four parts, commit 587eadd. New PlanKeySchema walks PlanConfig's declared
-  TYPE GRAPH, not the serialised doc - JsonOpts omits nulls, so an unset limits.maxRunCostUsd is
-  absent from the JSON and is still the most documented edit there is. plan set now refuses an
-  undeclared key (file left byte-identical), suggests the dotted path for a bare name using paths that
-  exist in THAT file, creates a declared-but-absent block, reports the comment lines it drops and
-  keeps a .bak, and queues reload-plan for a live EngineLock holder or prints the reload command.
-gate: fast loop green - build clean, 106 scoped tests, 0 skipped, pragmas still 37 of 38, nothing
-  weakened. Evidence .conductor/evidence/SC3/SC3.2-plan-set.md, rig TEMP/sarban-proofs/sc32. Reach is
-  proven on a REAL 3-session run: published engine queued nothing, fresh build got 'plan reloaded at
-  session boundary - v2' into that run's own log.
-next: **SC3.3** - brace safety: doctor catches an unresolvable placeholder in stage notes/promptExtra
-  at plan load, runtime PARKS instead of a stderr-only exit, and double-brace escapes to a literal.
-know: NEW bug 7 - advisor.provider is set in FIVE shipped plans and AdvisorConfig declares no such
-  field, so it is dropped silently; SC3.4 owns it. Bugs 2,3,4,5,6,7 open.
+last: **SC3.3 claimed**, commit 503d7e6. One definition now owns what a placeholder is and what the
+  doubled-brace escape means (Conductor.Planning.PromptPlaceholders, beside ConditionVocabulary).
+  Authored prose - stage notes, promptExtra - is judged at plan LOAD, so load, live reload and doctor
+  refuse the same thing. Every substituted VALUE is held as written, so a brace in a handoff, gate
+  output, an agent tail or a stage title is prose and can never throw - that was the killer class.
+  A genuinely broken template PARKS at NeedsHuman instead of exiting; doctor composes every session
+  kind per stage to catch it pre-launch, and run --dry-run refuses with the same sentence.
+gate: fast loop green - build clean, 160 scoped tests, 0 skipped, ratchet OK (pragmas 37 of 38,
+  archdebt 0). NOTE the ratchet caught RunLoop.cs at 506 over its 500 ceiling; the ceiling was NOT
+  raised, the park handler moved to RunLoop.Snapshot.cs. Evidence
+  .conductor/evidence/SC3/SC3.3-brace-safety.md, rig TEMP/sarban-proofs/sc33. Live-proven both ways:
+  published engine stderr-only + log silent + status 'idle'; fresh build stderr 0 bytes, whole refusal
+  in conductor.log, engine still up, and 'session #1 start' after the operator fixed the template.
+next: **SC3.4** - advisor: the shipped default args launch a bare interactive REPL that hangs 6 min and
+  returns null; make it a working headless invocation or refuse at load with a doctor line, and fix
+  docs/plan-config.md's advisor section. Bug 7 (advisor.provider dropped in 5 plans) is yours too.
+know: The brace discipline for THIS repo's prose still stands until the owner reinstalls - the engine
+  driving these sessions is the old published one. Bugs 2,3,4,5,6,7 open.
 
 
 ## Baseline numbers (from run.db)
