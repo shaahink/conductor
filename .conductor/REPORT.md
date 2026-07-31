@@ -1,11 +1,11 @@
 ﻿# Conductor — Sarban core - the engine says what it knows run report
 
-_Updated 2026-07-31 14:59 UTC · branch `feat/sarban` · HEAD `2a7b8a0`_
+_Updated 2026-07-31 15:38 UTC · branch `feat/sarban` · HEAD `6d805e1`_
 
 **Status:** Idle
-**Stage:** SC7 — The transcript captures structure · attempts used 0 · working ▸ SC7.2
-**Checkpoints:** 22/26 done · **Sessions run:** 24 · **Cost:** $310.8505 (agent $310.7127 + gates $0.1378) · **Tokens:** 4,586,980 in / 1,969,495 out
-**Confirmed phases:** SC1, SC2, SC3, SC4, SC5, SC6
+**Stage:** SC7 — The transcript captures structure · attempts used 0
+**Checkpoints:** 23/26 done · **Sessions run:** 25 · **Cost:** $324.5626 (agent $324.4173 + gates $0.1454) · **Tokens:** 4,799,998 in / 2,063,587 out
+**Confirmed phases:** SC1, SC2, SC3, SC4, SC5, SC6, SC7
 
 ## Stage progress
 
@@ -17,7 +17,7 @@ _Updated 2026-07-31 14:59 UTC · branch `feat/sarban` · HEAD `2a7b8a0`_
 | SC4 | Verdicts judge the work, not the environment | ██████████ 4/4 | confirmed ✓ |
 | SC5 | The engine can wait, detach, and correct the board | ██████████ 4/4 | confirmed ✓ |
 | SC6 | Clean history without lying about it | ██████████ 2/2 | confirmed ✓ |
-| SC7 | The transcript captures structure | █████░░░░░ 1/2 | **← active** |
+| SC7 | The transcript captures structure | ██████████ 2/2 | confirmed ✓ |
 | SC8 | The program knows what it is and can update itself | ░░░░░░░░░░ 0/3 | todo |
 
 <details> ✅<summary>SC1 — Telegram actually delivers (3/3)</summary>
@@ -83,12 +83,12 @@ _Updated 2026-07-31 14:59 UTC · branch `feat/sarban` · HEAD `2a7b8a0`_
 
 </details>
 
-<details><summary>SC7 — The transcript captures structure (1/2)</summary>
+<details> ✅<summary>SC7 — The transcript captures structure (2/2)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| SC7.1 | Tool events are stored structured — name plus extracted fields, values truncated, JSON never cut — with back-compat reading of old lines; writes outside the repo are counted and noted in the session verdict | ✅ DONE | - |
-| SC7.2 | The provider emits one-liner tool lines on the wire, and a per-session digest is computed, stored and served on /sessions matching the spec's worked example | ⬜ TODO | - |
+| SC7.1 | Tool events are stored structured — name plus extracted fields, values truncated, JSON never cut — with back-compat reading of old lines; writes outside the repo are counted and noted in the session verdict | ✅ DONE | [`33d1f81`](https://github.com/shaahink/conductor/commit/33d1f81) |
+| SC7.2 | The provider emits one-liner tool lines on the wire, and a per-session digest is computed, stored and served on /sessions matching the spec's worked example | ✅ DONE | [`6d805e1`](https://github.com/shaahink/conductor/commit/6d805e1) |
 
 </details>
 
@@ -130,17 +130,13 @@ _Updated 2026-07-31 14:59 UTC · branch `feat/sarban` · HEAD `2a7b8a0`_
 | 22 | SC6 | Deliver | 1 | 07-31 13:13 | 0:27 | Advanced | SC6.1 | 2 | engine-fast:OK · face-fast:OK | $11.4474 | $0.0055 | 187,779/73,830 |
 | 23 | SC6 | Deliver | 1 | 07-31 13:41 | 0:43 | Advanced | SC6.2 | 2 | engine-fast:OK · face-fast:OK | $12.9192 | $0.0023 | 191,080/96,632 |
 | 24 | SC7 | Deliver | 1 | 07-31 14:29 | 0:28 | Advanced | SC7.1 | 2 | engine-fast:OK · face-fast:OK | $13.2517 | $0.0098 | 200,355/92,726 |
+| 25 | SC7 | Deliver | 1 | 07-31 14:59 | 0:32 | Advanced | SC7.2 | 1 | engine-fast:OK · face-fast:OK | $13.7045 | $0.0076 | 213,018/94,092 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-31 11:52:44  ▪ gate face-fast pass [session]  (11.8s)
-07-31 11:52:44  • session #18 SC5 → Advanced · done SC5.1 · 1 commit(s)  (37m01s)
-07-31 11:52:45  • session #19 SC5 Deliver started (attempt 1/6)
-07-31 12:39:44  ▪ gate engine-fast pass [session]  (4.1s)
-07-31 12:39:44  ▪ gate face-fast pass [session]  (3.6s)
 07-31 12:39:45  • session #19 SC5 → Advanced · done SC5.2 · 3 commit(s)  (47m00s)
 07-31 12:39:45  • session #20 SC5 Deliver started (attempt 1/6)
 07-31 13:16:55  ▪ gate engine-fast pass [session]  (39.9s)
@@ -176,6 +172,11 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-31 15:29:07  • session #24 SC7 Deliver started (attempt 1/6)
 07-31 15:59:35  ▪ gate engine-fast pass [session]  (47.4s)
 07-31 15:59:35  ▪ gate face-fast pass [session]  (50.6s)
+07-31 15:59:36  • session #24 SC7 → Advanced · done SC7.1 · 2 commit(s)  (30m29s)
+07-31 15:59:37  • session #25 SC7 Deliver started (attempt 1/6)
+07-31 16:33:50  ▪ gate engine-fast pass [session]  (42.7s)
+07-31 16:33:50  ▪ gate face-fast pass [session]  (33.3s)
+07-31 16:33:51  • session #25 SC7 → Advanced · done SC7.2 · 1 commit(s)  (34m14s)
 ```
 
 ## Health
@@ -183,7 +184,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 24 · retries 2 (8 %) · overall Warn
+sessions 25 · retries 2 (8 %) · overall Warn
 ⚠ [context-saturation] session #13: 29,057,299 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #15: 20,145,044 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #18: 32,959,198 context tokens (≥ 20,000,000)
@@ -201,13 +202,11 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/sarban
-working tree: clean
+working tree: M .conductor/REPORT.md, M SARBAN-CORE-TRACKER.md
 ```
 
 ### Commits by session
 
-- **s17 (SC4 Fix)** — 1 commit(s):
-  - [`49451ed`](https://github.com/shaahink/conductor/commit/49451ed) fix(sc4): stop a live gate standing on the verdict bug SC4.2 removed
 - **s18 (SC5 Deliver)** — 1 commit(s):
   - [`ac70123`](https://github.com/shaahink/conductor/commit/ac70123) feat(sc5): let a session say "blocked until T" and have the engine wait
 - **s19 (SC5 Deliver)** — 3 commit(s):
@@ -230,6 +229,8 @@ working tree: clean
 - **s24 (SC7 Deliver)** — 2 commit(s):
   - [`2a7b8a0`](https://github.com/shaahink/conductor/commit/2a7b8a0) docs(sarban): hand SC7.2 the digest work and the rig trap that nearly hit this repo
   - [`33d1f81`](https://github.com/shaahink/conductor/commit/33d1f81) feat(sc7): capture tool calls as structure, not a blob cut at 150 chars
+- **s25 (SC7 Deliver)** — 1 commit(s):
+  - [`6d805e1`](https://github.com/shaahink/conductor/commit/6d805e1) feat(sc7): render the wire readable and give every session a digest
 
 ## Phase handovers (audit)
 
@@ -252,32 +253,35 @@ working tree: clean
 
 ## Last gate run
 
-engine-fast:OK · face-fast:OK
+engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
 
 ## Last session result
 
-> SESSION-RESULT: **SC7.1 landed and claimed** (`conductor task --done SC7.1 --evidence .conductor/evidence/SC7/SC7.1-structured-tool-events.md`, commits `33d1f81` + `2a7b8a0`, pushed). Tool calls are now captured as structure instead of `Trunc(input.GetRawText(), 150)`: a new `ToolEventExtractor` turns a tool's argument object into name plus canonical fields (`path`, `command`, `taskId`, `status`, `purpose`, `bytes`, `lines`, `linesAdded`, `linesRemoved`, `edits`), each value capped at 400 chars on its own so the stored object is always complete JSON; file bodies are never stored, only counted; nested arguments are reported by shape. Both providers share it, so claude and opencode cannot drif…
+> SESSION-RESULT: SC7.2 landed and is claimed with evidence (`conductor task --done SC7.2`), commit `6d805e1` pushed on `feat/sarban`, working tree clean — the provider now emits a readable one-liner per tool call and every session gets a digest that is computed live, stored in run.db behind migration v9, and served ranked on `/sessions`, proven against a scratch rig through the fresh build (published-vs-fresh contrast captured) plus a full-cycle harness test that reads the digest back out of run.db rather than out of the object that wrote it; full suite 1396/0/0, nothing skipped or relaxed, and the only test edits were the schema-version pin and two SC7.1 assertions on the display string this…
 
 ## Tracker handoff
 
 ```
-last: **SC7.1 landed.** Tool calls are captured as STRUCTURE. ToolEventExtractor turns a tool's
-  argument object into name plus canonical fields - path, command, taskId, status, purpose, bytes,
-  lines, linesAdded, linesRemoved, edits - each value capped at 400 chars on its own, so the stored
-  object is always complete JSON. File bodies are never stored, only counted. Transcript schema v2
-  carries v and tool; ReadV1OrV2 reads a pre-v2 line, stamps it v=1 honestly and recovers the tool
-  NAME while reporting cut-away fields absent. RepoScope judges written paths against plan.repo AND
-  declared satellites; the verdict logs the out-of-repo note ahead of every early return.
-gate: rig `%TEMP%\sarban-proofs\sc71`, one baseline, published engine vs FRESH build. Published
-  stored `Write ...138 z's...` with the path GONE and logged nothing; fresh stored the whole path
-  plus `bytes=400 lines=1` and logged `note: 1 file(s) written outside the repo: <path>`. Scoped
-  33/0 and 188/0 and 38/0. Evidence .conductor/evidence/SC7/SC7.1-structured-tool-events.md.
-next: **SC7.2** - readable one-liner per call on the wire, and a per-session digest computed, stored
-  and served on /sessions. Every field it needs is already captured and proven.
-know: **RIG TRAP that nearly aimed a run verb at THIS repo** - CONDUCTOR_PLAN is set in your session
-  env and OUTRANKS the cwd plan scan, so `Set-Location <rig>; conductor run` resolves to
-  C:/code/conductor and tries to resume the LIVE run; only the instance lock stopped it. Set
-  `$env:CONDUCTOR_PLAN` to the rig's plan first, or pass `-p`. VerdictEngine.cs sits at 478 of its
-  500 ratchet ceiling - any addition there needs a matching move out. `conductor bg logs` cannot read
-  a LIVE log (bug 13); read it with FileShare ReadWrite. Bugs 2,3,4,5,6,8,9,10,11,12,13 open.
+last: **SC7.2 landed - SC7 is complete.** ToolLine renders a ToolCall as the line a human reads
+  (`Edit ToolLine.cs (+40/-1)`, `conductor task_update SC7.2 -> done`); the structured tool object
+  still travels beside it, so this is a rendering, not a second capture. ToolEventExtractor.Render
+  is deleted - no production caller left. An argv ARRAY under `command` now joins into a command
+  line instead of `[3 items]`. SessionDigest folds tool mix, files written with counts, claims,
+  bg-start purposes and notable build/test commands live in TrackActivity; stored as JSON in
+  run.db `sessions.digest` (migration v9), served ranked on /sessions, one-line summary in the log,
+  rendered block returned by the MCP `session_detail` tool.
+gate: rig `%TEMP%\sarban-proofs\sc72`, one baseline, published engine vs FRESH build. Published
+  wrote escaped-JSON blobs with the Write path cut away and logged no digest; fresh wrote all ten
+  worked-example one-liners, logged `digest: 10 tool calls - 7 tools - 2 files (3 writes) ...`,
+  stored it in run.db and served it on GET /sessions:4399. Full suite 1396/0/0. Evidence
+  .conductor/evidence/SC7/SC7.2-readable-wire-and-session-digest.md.
+next: **SC8.1** - `conductor version` and GET /version reporting semver, git sha and build date
+  stamped at build; install.ps1 prints the version before and after. Nothing in SC7 blocks it.
+know: **RIG TRAP, new one.** The fake agent ends with `git add -A; git commit`, so it COMMITS the
+  rig's own conductor.plan.json and agent .cmd - `git reset --hard <baseline>` between runs then
+  deletes them and the next run dies with "Plan file not found". Recreate both, or keep them
+  outside the rig repo. Still true: CONDUCTOR_PLAN outranks the cwd plan scan - set it to the rig's
+  plan before any run verb. Do NOT read a defect off the PATH conductor: its `bg status` shows a
+  negative runtime for running rows, which is SC5.4 already fixed in the tree, not a live bug.
+  Bugs 2,3,4,5,6,8,9,10,11,12,13 open.
 ```

@@ -4,27 +4,30 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SC7.2 landed - SC7 is complete.** ToolLine renders a ToolCall as the line a human reads
-  (`Edit ToolLine.cs (+40/-1)`, `conductor task_update SC7.2 -> done`); the structured tool object
-  still travels beside it, so this is a rendering, not a second capture. ToolEventExtractor.Render
-  is deleted - no production caller left. An argv ARRAY under `command` now joins into a command
-  line instead of `[3 items]`. SessionDigest folds tool mix, files written with counts, claims,
-  bg-start purposes and notable build/test commands live in TrackActivity; stored as JSON in
-  run.db `sessions.digest` (migration v9), served ranked on /sessions, one-line summary in the log,
-  rendered block returned by the MCP `session_detail` tool.
-gate: rig `%TEMP%\sarban-proofs\sc72`, one baseline, published engine vs FRESH build. Published
-  wrote escaped-JSON blobs with the Write path cut away and logged no digest; fresh wrote all ten
-  worked-example one-liners, logged `digest: 10 tool calls - 7 tools - 2 files (3 writes) ...`,
-  stored it in run.db and served it on GET /sessions:4399. Full suite 1396/0/0. Evidence
-  .conductor/evidence/SC7/SC7.2-readable-wire-and-session-digest.md.
-next: **SC8.1** - `conductor version` and GET /version reporting semver, git sha and build date
-  stamped at build; install.ps1 prints the version before and after. Nothing in SC7 blocks it.
-know: **RIG TRAP, new one.** The fake agent ends with `git add -A; git commit`, so it COMMITS the
-  rig's own conductor.plan.json and agent .cmd - `git reset --hard <baseline>` between runs then
-  deletes them and the next run dies with "Plan file not found". Recreate both, or keep them
-  outside the rig repo. Still true: CONDUCTOR_PLAN outranks the cwd plan scan - set it to the rig's
-  plan before any run verb. Do NOT read a defect off the PATH conductor: its `bg status` shows a
-  negative runtime for running rows, which is SC5.4 already fixed in the tree, not a live bug.
+last: **SC8.1 landed** (commit f45563e). Conductor.csproj target `StampBuildInfo` writes the git
+  short sha, a dirty flag and a UTC timestamp into AssemblyInformationalVersion plus three
+  AssemblyMetadata attributes at COMPILE time - nothing is typed into a .cs file. BuildInfo reads it
+  back; VersionReport is ONE record served by both `conductor version --json` and `GET /version`, so
+  CLI and wire cannot drift. `conductor version` also prints WHICH BINARY answered, which is trap 3
+  made checkable. install.ps1 and install.sh print before -> after, falling back to the exe's
+  ProductVersion on a pre-SC8 binary; install.ps1 gained `-SkipShim`.
+gate: rig `%TEMP%\sarban-proofs\sc81` + a clean detached worktree. Published engine: `version` is an
+  unknown command and GET /version 404s while /state 200s. Fresh build: three builds, three stamps,
+  each matching git - 6d805e1ce073.dirty, f45563e82469.dirty, and f45563e82469 clean from the
+  worktree, so the dirty flag is computed. Live rig on :4318 answered GET /version 200 token-free
+  while /state said status=Running. Installer proof against a SCRATCH dir with the shim skipped.
+  Scoped tests 56/0/0, build 0 warnings. Evidence
+  .conductor/evidence/SC8/SC8.1-version-identity-stamped-at-build.md.
+next: **SC8.2** - tag-height versioning (MinVer or equivalent) reconciled with release.yml so a
+  downloaded binary answers with its TAG, plus CHANGELOG.md per release. The csproj `Version` is
+  still hand-set to 2.0.0; that property is what SC8.2 must take over. Note the SDK already sets
+  SourceRevisionId via built-in SourceLink - check for a double `+` append when Version changes.
+know: **NEW RIG TRAP.** `conductor bg start ... | <anything>` BLOCKS the whole PowerShell pipeline
+  until the spawned engine exits - the pipe holds the inherited stdout handle, so a poll loop after
+  it never runs. Start the run in its own call with no pipe, poll in the NEXT call. And the rig's
+  `.conductor/control-plane.json` is DELETED at run end, so make the fake agent hold the session
+  open (`ping -n 150 127.0.0.1`) or there is nothing to find. A read-only GET on THIS repo's own
+  control-plane port is the cheapest BEFORE artifact and aims no run-control verb at it.
   Bugs 2,3,4,5,6,8,9,10,11,12,13 open.
 
 
@@ -34,7 +37,7 @@ know: **RIG TRAP, new one.** The fake agent ends with `git add -A; git commit`, 
 |---|---|
 | Total checkpoints | 26 |
 | Done | 0 |
-| Claimed (unconfirmed) | 22 |
+| Claimed (unconfirmed) | 23 |
 
 ## Checkpoints
 
@@ -97,7 +100,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | SC7.1 | Tool events are stored structured — name plus extracted fields, values truncated, JSON never cut — with back-compat reading of old lines; writes outside the repo are counted and noted in the session verdict | DONE | 33d1f81 | engine-fast:OK · face-fast:OK |
-| SC7.2 | The provider emits one-liner tool lines on the wire, and a per-session digest is computed, stored and served on /sessions matching the spec's worked example | TODO | - | - |
+| SC7.2 | The provider emits one-liner tool lines on the wire, and a per-session digest is computed, stored and served on /sessions matching the spec's worked example | DONE | 6d805e1 | engine-fast:OK · face-fast:OK |
 
 ### SC8 — The program knows what it is and can update itself
 
