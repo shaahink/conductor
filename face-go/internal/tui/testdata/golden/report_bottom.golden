@@ -1,0 +1,34 @@
+ ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42    
+ h a s t o c e p  r Report  k g b                                                                             
+                           │                                                                                  
+ ▶ PLAN                    │  ✓ F0    3/3    —    —       —                                                   
+ ✓ F0 3/3 Foundations      │  ✓ F6    5/5    —    —       —                                                   
+ ✓ F6 5/5 Ink TUI v1       │  ● F7    2/5    1×   $0.30   —                                                   
+ ● F7 2/5 Gate … 1× $0.30  │  ○ F8    0/4    —    —       —                                                   
+   ✓ F7.1 Plan import      │                                                                                  
+   ✓ F7.2 Re-import diff   │  Sessions                                                                        
+   ● F7.3 Truth-gate tier  │    #    stage kind      outcome     duration cost    commits                     
+ ○ F8 0/4 conductor chat…  │    #12  F7    Deliver   running     41s      $0.12   0                           
+                           │    #11  F7    Deliver   needsRetry  45m 34s  $0.14   2                           
+ ── GATES ──               │    #8   F6    Deliver   completed   41m 12s  $0.09   1                           
+   ✓ build                 │                                                                                  
+   ● test 4s               │  Gates                                                                           
+   ○ lint                  │    ✓ build           2s                                                          
+                           │    ● test            4s                                                          
+ ── TASKS ──               │    ○ lint                                                                        
+   ✓ Add truth-tier con…   │                                                                                  
+   ● Wire RunDb.GetLast…   │  Verifier scores                                                                 
+   ○ Cache gate results…   │    session  stage score     verdict  findings                                    
+                           │    #11      F7    66/80     WARN     2 findings                                  
+                           │    #8       F6    90/80     PASS     —                                           
+                           │                                                                                  
+                           │  Session tokens                                                                  
+                           │    #    stage in       out      reason   cache-read cost                         
+                           │    #12  F7    41.2k    3.2k     1.0k     188.4k    $0.12                         
+                           │    #11  F7    52.9k    4.4k     2.3k     201.3k    $0.14                         
+                           │    #8   F6    0        0        0        0         $0.09                         
+                           │                                                                                  
+                           │    1 session with cost but zero tokens — pre-bug-#5 data, not a Face bug         
+                           │                                                                                  
+                           │                                                                                  
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ scroll (10/10) · esc back                      

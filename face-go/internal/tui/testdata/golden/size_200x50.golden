@@ -1,5 +1,5 @@
  ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  conductor-foreman  F7 Gate caching + truth gates + spee…  ⠋ s12 $0.12 41s 3.4k/1.9k +800r  cp 2/40  run $0.42 +$0.02 oh                                   
-  h Home   a Agent   s Sessions   t Timeline   o Procs   c Console   e Templates   p Plan   r Report   k Knowledge   g Telegram   b Kanban   d Dev                                                      
+  h Home   a Agent   s Sessions   t Timeline   o Procs   c Console   e Templates   p Plan   r Report   k Knowledge   g Telegram   b Kanban                                                              
                                      │                                                                                                                                                                  
  ▶ PLAN                              │  Server                                                                                                                                                          
  ✓ F0 3/3 Foundations                │  mode       live                                                                                                                                                 
@@ -29,11 +29,11 @@
                                      │    r  read the run report                                                                                                                                        
                                      │    ?  see every key                                                                                                                                              
                                      │                                                                                                                                                                  
-                                     │                                                                                                                                                                  
-                                     │                                                                                                                                                                  
-                                     │                                                                                                                                                                  
-                                     │                                                                                                                                                                  
-                                     │                                                                                                                                                                  
+                                     │  Wiring                                                                                                                                                          
+                                     │  token      present                                                                                                                                              
+                                     │  seq        events 0 · transcript 0 · console 0                                                                                                                  
+                                     │  poll       state 1s · spinner 120ms · toast anim 33ms                                                                                                           
+                                     │  run id     demo-run-id                                                                                                                                          
                                      │                                                                                                                                                                  
                                      │                                                                                                                                                                  
                                      │                                                                                                                                                                  
