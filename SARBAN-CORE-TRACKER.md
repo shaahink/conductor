@@ -4,26 +4,25 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SC6.2 landed - SC6 is closed.** The squash no longer rebases: it groups consecutive
-  chore(conductor): commits, rebuilds the tail with `git commit-tree` reusing the trees that already
-  exist (fixup semantics - first message and authorship, last tree), then moves the branch with a
-  compare-and-swap `update-ref`. Nothing is ever checked out, so a dirty tree is irrelevant and a
-  conflict unreachable. It refuses a merge in the range or a range not ending at HEAD, aborts a
-  rebase it finds in progress, writes ORIG_HEAD, and marks a stage squashed only after one that
-  worked - the failure line carries git's exit code, its stderr and the failing command.
-gate: rig `%TEMP%\sarban-proofs\sc62`, same baseline, published engine vs FRESH build: `git rebase
-  returned non-zero` becomes `squashed 2 chore(conductor): commits into 1 (4 commits -> 3)`, chore
-  commits 5 to 2, and the unstaged + staged + untracked work all intact. Scoped 48/0, plus 41/0 for
-  ProcessRunner's own consumers. Evidence .conductor/evidence/SC6/SC6.2-honest-safe-squash.md.
-next: **SC7.1** - structured tool events in transcript.jsonl (name plus extracted fields, values
-  truncated and JSON never cut), schema v2 that still reads v1, out-of-repo writes in the verdict.
-know: the spec asked the squash to DEGRADE off Windows; there is nothing left to degrade, it launches
-  only git - SquashResult.Commands records every process it starts and a test asserts they are all
-  git. No non-Windows box ran it. Rig trap that cost a rerun: an agent .cmd invoking the PATH
-  conductor SHIM without `call` transfers control and never returns, so the BEFORE rig silently lost
-  every line after the claim. `RunOptions.Once` returns before the loop reaches the pending phase
-  gate, so a stage-close test needs MaxSessions. Bugs 2,3,4,5,6,8,9,10,11,12 open (5 is fixed in
-  source, only the published engine still crashes).
+last: **SC7.1 landed.** Tool calls are captured as STRUCTURE. ToolEventExtractor turns a tool's
+  argument object into name plus canonical fields - path, command, taskId, status, purpose, bytes,
+  lines, linesAdded, linesRemoved, edits - each value capped at 400 chars on its own, so the stored
+  object is always complete JSON. File bodies are never stored, only counted. Transcript schema v2
+  carries v and tool; ReadV1OrV2 reads a pre-v2 line, stamps it v=1 honestly and recovers the tool
+  NAME while reporting cut-away fields absent. RepoScope judges written paths against plan.repo AND
+  declared satellites; the verdict logs the out-of-repo note ahead of every early return.
+gate: rig `%TEMP%\sarban-proofs\sc71`, one baseline, published engine vs FRESH build. Published
+  stored `Write ...138 z's...` with the path GONE and logged nothing; fresh stored the whole path
+  plus `bytes=400 lines=1` and logged `note: 1 file(s) written outside the repo: <path>`. Scoped
+  33/0 and 188/0 and 38/0. Evidence .conductor/evidence/SC7/SC7.1-structured-tool-events.md.
+next: **SC7.2** - readable one-liner per call on the wire, and a per-session digest computed, stored
+  and served on /sessions. Every field it needs is already captured and proven.
+know: **RIG TRAP that nearly aimed a run verb at THIS repo** - CONDUCTOR_PLAN is set in your session
+  env and OUTRANKS the cwd plan scan, so `Set-Location <rig>; conductor run` resolves to
+  C:/code/conductor and tries to resume the LIVE run; only the instance lock stopped it. Set
+  `$env:CONDUCTOR_PLAN` to the rig's plan first, or pass `-p`. VerdictEngine.cs sits at 478 of its
+  500 ratchet ceiling - any addition there needs a matching move out. `conductor bg logs` cannot read
+  a LIVE log (bug 13); read it with FileShare ReadWrite. Bugs 2,3,4,5,6,8,9,10,11,12,13 open.
 
 
 ## Baseline numbers (from run.db)
