@@ -96,28 +96,20 @@ public sealed partial class RunLoop
 
     // ---------------------------------------------------------------- process lock
 
+    // SC2.1: the lock is no longer only a mutex — it is the engine's liveness, read back by
+    // `conductor status` so the verdict window stops looking like a crash. EngineLock owns both halves.
     private bool AcquireLock()
     {
         try
         {
-            if (File.Exists(_ctx.LockPath))
+            var holder = EngineLock.Read(_ctx.Plan.StateDir);
+            if (holder != null && EngineLock.IsLive(holder))
             {
-                var pidText = File.ReadAllText(_ctx.LockPath).Trim();
-                if (int.TryParse(pidText, out var pid))
-                {
-                    try
-                    {
-                        var p = System.Diagnostics.Process.GetProcessById(pid);
-                        if (!p.HasExited)
-                        {
-                            _ctx.Sink.Log($"another conductor (pid {pid}) is already running this plan — exiting");
-                            return false;
-                        }
-                    }
-                    catch (ArgumentException) { /* stale lock — process gone */ }
-                }
+                _ctx.Sink.Log($"another conductor (pid {holder.Pid}) is already running this plan — exiting");
+                return false;
             }
-            File.WriteAllText(_ctx.LockPath, Environment.ProcessId.ToString());
+            // Nothing there, a pid the OS has forgotten, or an id since recycled: the lock is stale.
+            EngineLock.Write(_ctx.Plan.StateDir);
             return true;
         }
         catch (Exception ex)
@@ -127,12 +119,7 @@ public sealed partial class RunLoop
         }
     }
 
-    private void ReleaseLock()
-    {
-        try { if (File.Exists(_ctx.LockPath)) File.Delete(_ctx.LockPath); }
-        catch (IOException) { /* reclaimed next start via pid-liveness */ }
-        catch (UnauthorizedAccessException) { /* ditto */ }
-    }
+    private void ReleaseLock() => EngineLock.Delete(_ctx.Plan.StateDir);
 
     // ---------------------------------------------------------------- save, report, snapshot
 

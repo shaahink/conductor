@@ -24,12 +24,15 @@ public static class StatusReportBuilder
     private static readonly HashSet<string> HealthyOutcomes =
         new(StringComparer.OrdinalIgnoreCase) { "Advanced", "Progress", "RolledOver" };
 
+    /// <param name="isProcessAlive">Seam for tests: given a tracked pid and the instant it was tracked,
+    /// is that same process still running? Production answers with <see cref="PidLiveness.LooksAlive"/>,
+    /// so a recycled id cannot pass itself off as live work.</param>
     public static StatusReport Build(PlanConfig plan, IRunStore store,
-        Func<int, bool>? isProcessAlive = null, CancellationToken ct = default)
+        Func<int, DateTime, bool>? isProcessAlive = null, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(store);
-        isProcessAlive ??= IsProcessAlive;
+        isProcessAlive ??= PidLiveness.LooksAlive;
 
         var runId = store.GetLatestRunId(plan.Name);
         if (string.IsNullOrEmpty(runId))
@@ -41,7 +44,7 @@ public static class StatusReportBuilder
         var track = ReadTrackerSafe(plan, ct);
         var snap = SnapshotBuilder.Build(plan, state, track);
 
-        var (verdict, kind) = DeriveVerdict(events, store, runId, isProcessAlive);
+        var (verdict, kind) = DeriveVerdict(events, store, runId, isProcessAlive, plan.StateDir);
         var whatHurt = DeriveWhatHurt(events);
 
         var stages = snap.Stages
@@ -64,7 +67,8 @@ public static class StatusReportBuilder
     }
 
     private static (string verdict, string kind) DeriveVerdict(
-        IReadOnlyList<ConductorEvent> events, IRunStore store, string runId, Func<int, bool> isAlive)
+        IReadOnlyList<ConductorEvent> events, IRunStore store, string runId,
+        Func<int, DateTime, bool> isAlive, string stateDir)
     {
         var last = events.LastOrDefault(e => e is not TokenDelta);
 
@@ -84,10 +88,18 @@ public static class StatusReportBuilder
         var interrupted = RunStateProjection.FindInterruptedSession(events);
         if (interrupted != null)
         {
-            return RunHasLiveProcess(store, runId, isAlive)
-                ? ($"running — session #{interrupted.Number} in {interrupted.StageId}", "active")
-                : ($"interrupted mid-session — #{interrupted.Number} in {interrupted.StageId} never finished; resume with `conductor run`",
-                    "interrupted");
+            if (RunHasLiveProcess(store, runId, isAlive))
+                return ($"running — session #{interrupted.Number} in {interrupted.StageId}", "active");
+
+            // SC2.1: no live child does NOT mean no engine. SessionFinished is emitted only after the
+            // verdict, so for the whole gate battery the engine is working with nothing spawned under it.
+            // Its lock says so, and its own work is liveness — calling this a crash advised `conductor
+            // run` against a healthy run.
+            if (EngineLock.IsHeldByLiveEngine(stateDir))
+                return ($"running — session #{interrupted.Number} in {interrupted.StageId}: agent exited, engine still working (verdict and gates)", "active");
+
+            return ($"interrupted mid-session — #{interrupted.Number} in {interrupted.StageId} never finished; resume with `conductor run`",
+                "interrupted");
         }
 
         return last switch
@@ -99,10 +111,10 @@ public static class StatusReportBuilder
         };
     }
 
-    private static bool RunHasLiveProcess(IRunStore store, string runId, Func<int, bool> isAlive)
+    private static bool RunHasLiveProcess(IRunStore store, string runId, Func<int, DateTime, bool> isAlive)
     {
         foreach (var p in store.GetAllPids(runId))
-            if (p.ExitedUtc == null && isAlive(p.Pid))
+            if (p.ExitedUtc == null && isAlive(p.Pid, p.StartedUtc))
                 return true;
         return false;
     }
@@ -133,14 +145,4 @@ public static class StatusReportBuilder
         catch (Exception) { return new TrackerSnapshot(); }
     }
 
-    private static bool IsProcessAlive(int pid)
-    {
-        try
-        {
-            using var proc = System.Diagnostics.Process.GetProcessById(pid);
-            return !proc.HasExited;
-        }
-        catch (ArgumentException) { return false; }
-        catch (InvalidOperationException) { return false; }
-    }
 }

@@ -31,7 +31,7 @@ public class StatusCommandTests
 
         Assert.False(File.Exists(Path.Combine(tmp.StateDir, "state.json")), "test must not write state.json");
 
-        var report = tmp.BuildReport(_ => false);
+        var report = tmp.BuildReport((_, _) => false);
 
         Assert.Equal("ok", report.Kind);
         Assert.Contains("Completed", report.Verdict);
@@ -48,7 +48,7 @@ public class StatusCommandTests
     {
         using var tmp = new TempRunDb();
         // No InitializeRun / no events — there is a run.db file but no run recorded.
-        var report = tmp.BuildReport(_ => false);
+        var report = tmp.BuildReport((_, _) => false);
         Assert.Equal("norun", report.Kind);
     }
 
@@ -61,7 +61,7 @@ public class StatusCommandTests
             new StageEntered { StageId = "D1" },
             new SessionStarted { Number = 3, StageId = "D1", Kind = "Deliver" });
         // No SessionFinished(#3) — a crash. No live process backs it.
-        var report = tmp.BuildReport(_ => false);
+        var report = tmp.BuildReport((_, _) => false);
         Assert.Equal("interrupted", report.Kind);
         Assert.Contains("#3", report.Verdict);
     }
@@ -75,8 +75,88 @@ public class StatusCommandTests
             new StageEntered { StageId = "D1" },
             new SessionStarted { Number = 3, StageId = "D1", Kind = "Deliver" });
         tmp.TrackLivePid(4242);
-        var report = tmp.BuildReport(pid => pid == 4242); // that pid is "alive"
+        var report = tmp.BuildReport((pid, _) => pid == 4242); // that pid is "alive"
         Assert.Equal("active", report.Kind);
+    }
+
+    // ── SC2.1: the verdict window is the engine working, not a crash ──
+
+    /// <summary>
+    /// SC2.1 regression. Between the agent process exiting and <c>SessionFinished</c> landing, the engine
+    /// runs the entire gate battery — minutes, during which run.db holds an unmatched
+    /// <c>SessionStarted</c> and not one live spawned pid (gate commands were never tracked in the pids
+    /// table). Status called that healthy window "interrupted mid-session" and advised
+    /// <c>conductor run</c> — the one command that starts a second engine on a live run. The engine's own
+    /// lock file is the liveness the pids table never carried.
+    /// </summary>
+    [Fact]
+    public void StatusReport_VerdictWindow_IsRunning_NotInterrupted_WhenEngineAlive()
+    {
+        using var tmp = new TempRunDb();
+        tmp.Seed(
+            new RunStarted { Plan = TempRunDb.Plan, Repo = "." },
+            new StageEntered { StageId = "D1" },
+            new SessionStarted { Number = 3, StageId = "D1", Kind = "Deliver" });
+        tmp.TrackExitedPid(4242);   // the agent process is gone — the battery is what is running now
+        tmp.WriteLiveEngineLock();  // ...inside an engine that is genuinely alive: this very process
+
+        // No spawned pid is alive, and that answer is correct — the engine alone must carry the verdict.
+        var report = tmp.BuildReport((_, _) => false);
+
+        Assert.Equal("active", report.Kind);
+        Assert.DoesNotContain("interrupted", report.Verdict, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("conductor run", report.Verdict, StringComparison.Ordinal);
+        Assert.Contains("#3", report.Verdict);
+    }
+
+    /// <summary>
+    /// The other half of SC2.1: the fix must not blanket-suppress the honest verdict. A lock file left
+    /// behind by an engine that died holds a pid the OS may since have handed to something else — alive,
+    /// but not ours. That is still an interrupted run.
+    /// </summary>
+    [Fact]
+    public void StatusReport_RecycledEngineLockPid_IsStillInterrupted()
+    {
+        using var tmp = new TempRunDb();
+        tmp.Seed(
+            new RunStarted { Plan = TempRunDb.Plan, Repo = "." },
+            new StageEntered { StageId = "D1" },
+            new SessionStarted { Number = 3, StageId = "D1", Kind = "Deliver" });
+        // A live pid — this process — recorded as having started years before it really did: exactly what
+        // a recycled id looks like from run.db's side.
+        tmp.WriteEngineLock(Environment.ProcessId, new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+
+        var report = tmp.BuildReport((_, _) => false);
+
+        Assert.Equal("interrupted", report.Kind);
+    }
+
+    /// <summary>A lock naming a pid the OS no longer knows at all is a dead engine, not a live one.</summary>
+    [Fact]
+    public void StatusReport_DeadEngineLockPid_IsStillInterrupted()
+    {
+        using var tmp = new TempRunDb();
+        tmp.Seed(
+            new RunStarted { Plan = TempRunDb.Plan, Repo = "." },
+            new StageEntered { StageId = "D1" },
+            new SessionStarted { Number = 3, StageId = "D1", Kind = "Deliver" });
+        tmp.WriteEngineLock(DeadPid(), DateTime.UtcNow);
+
+        var report = tmp.BuildReport((_, _) => false);
+
+        Assert.Equal("interrupted", report.Kind);
+        Assert.Contains("conductor run", report.Verdict, StringComparison.Ordinal);
+    }
+
+    /// <summary>A pid that really has exited: spawned here, waited on, and reaped.</summary>
+    private static int DeadPid()
+    {
+        using var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
+            OperatingSystem.IsWindows() ? "cmd.exe" : "/bin/sh",
+            OperatingSystem.IsWindows() ? "/c exit 0" : "-c \"exit 0\"")
+        { UseShellExecute = false, CreateNoWindow = true })!;
+        p.WaitForExit();
+        return p.Id;
     }
 
     [Fact]
@@ -89,7 +169,7 @@ public class StatusCommandTests
             new SessionStarted { Number = 1, StageId = "D1", Kind = "Deliver" },
             new GateFinished { Name = "tests", Passed = false, Scope = "D1", DurationMs = 10 },
             new SessionFinished { Number = 1, StageId = "D1", Outcome = "GatesRed", CostUsd = 0.1m });
-        var report = tmp.BuildReport(_ => false);
+        var report = tmp.BuildReport((_, _) => false);
         Assert.NotNull(report.WhatHurt);
         Assert.Contains("tests", report.WhatHurt);
     }
@@ -104,7 +184,7 @@ public class StatusCommandTests
             new SessionStarted { Number = 1, StageId = "D1", Kind = "Deliver" },
             new GateFinished { Name = "tests", Passed = false, Scope = "D1", DurationMs = 10 },
             new AttentionRequested { Reason = "gate build failed 3 times consecutively" });
-        var report = tmp.BuildReport(_ => false);
+        var report = tmp.BuildReport((_, _) => false);
         Assert.Equal("gate build failed 3 times consecutively", report.WhatHurt);
         Assert.Equal("attention", report.Kind);
     }
@@ -408,7 +488,25 @@ public class StatusCommandTests
             store.TrackPid(pid, RunId, "agent:deliver", "D1", 3, DateTime.UtcNow);
         }
 
-        public StatusReport BuildReport(Func<int, bool> isAlive)
+        /// <summary>An agent process that has already exited — the state of every spawned pid while the
+        /// engine works through the gate battery.</summary>
+        public void TrackExitedPid(int pid)
+        {
+            using var store = new SqliteRunStore(_dbPath, NullLogger<SqliteRunStore>.Instance);
+            store.TrackPid(pid, RunId, "agent:deliver", "D1", 3, DateTime.UtcNow.AddMinutes(-5));
+            store.MarkPidExited(pid, 0);
+        }
+
+        /// <summary>The lock a live engine holds, written by the engine's own code path and naming this
+        /// test process — real pid, real start time, so liveness is answered by the OS with no stub in
+        /// the way.</summary>
+        public void WriteLiveEngineLock() => EngineLock.Write(StateDir);
+
+        public void WriteEngineLock(int pid, DateTime startedUtc) =>
+            File.WriteAllText(EngineLock.PathFor(StateDir),
+                pid.ToString(System.Globalization.CultureInfo.InvariantCulture) + "\n" + startedUtc.ToString("O"));
+
+        public StatusReport BuildReport(Func<int, DateTime, bool> isAlive)
         {
             using var store = new SqliteRunStore(_dbPath, NullLogger<SqliteRunStore>.Instance);
             return StatusReportBuilder.Build(PlanConfig, store, isAlive);

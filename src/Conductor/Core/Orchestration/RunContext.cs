@@ -164,7 +164,7 @@ public sealed class RunContext
         Qa = qaPolicy ?? new DefaultQaPolicy();
         Logger = logger;
         StateDir = plan.StateDir;
-        LockPath = Path.Combine(plan.StateDir, "conductor.lock");
+        LockPath = EngineLock.PathFor(plan.StateDir);
         ControlPath = Path.Combine(plan.StateDir, "control.json");
         LogPath = Path.Combine(plan.StateDir, "conductor.log");
     }

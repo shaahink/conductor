@@ -60,6 +60,15 @@ public static class PidLiveness
     public static bool IsOurs(int pid, DateTime trackedStartUtc) => Check(pid, trackedStartUtc) == PidState.Ours;
 
     /// <summary>
+    /// SC2.1: the liveness question every reporting surface asks — "is the thing we tracked still
+    /// running?" — which is <see cref="IsOurs"/> widened by one case. A process whose start time cannot
+    /// be read is alive and probably ours; <see cref="Sweep"/> already refuses to bury it, so the report
+    /// must not either. Only <see cref="PidState.Gone"/> and <see cref="PidState.Recycled"/> mean dead.
+    /// </summary>
+    public static bool LooksAlive(int pid, DateTime trackedStartUtc) =>
+        Check(pid, trackedStartUtc) is PidState.Ours or PidState.Unverifiable;
+
+    /// <summary>
     /// Mark every tracked pid that the OS no longer knows — or that now belongs to someone else —
     /// as exited, so `bg status`, the Processes tab, and the stall rail stop reading a recycled id
     /// as live work. Best-effort: a store error is never fatal to the caller.
