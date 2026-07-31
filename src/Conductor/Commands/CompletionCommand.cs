@@ -35,7 +35,7 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
 
     internal static string GeneratePowerShell()
     {
-        var verbs = "run journey face status gate log report pause resume approve kill skip inject abort retry-stage rollback pause-after-stage goto rollover heartbeat plan tasks task new-plan note bug init doctor audit mcp-serve completion chat bg";
+        var verbs = "run journey face status gate log report pause resume approve kill skip inject abort retry-stage rollback pause-after-stage goto rollover heartbeat plan tasks task new-plan note bug init doctor audit mcp-serve completion chat bg version";
         var opts = "-p --plan --yes --force --dry-run --once --max-sessions --paused --headless --deep --full -o --output --name --repo -q --query --since --tail";
         var auditOpts = "-p --plan --replay";
         var newPlanOpts = "-o --output --name --repo";
@@ -106,7 +106,7 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
                 cur="${COMP_WORDS[COMP_CWORD]}"
 
                 if [[ $COMP_CWORD -eq 1 ]]; then
-                    COMPREPLY=($(compgen -W "run journey face status gate log report audit mcp-serve pause resume approve kill skip inject abort retry-stage rollback pause-after-stage goto rollover heartbeat plan tasks task new-plan note bug init doctor completion chat bg" -- "$cur"))
+                    COMPREPLY=($(compgen -W "run journey face status gate log report audit mcp-serve pause resume approve kill skip inject abort retry-stage rollback pause-after-stage goto rollover heartbeat plan tasks task new-plan note bug init doctor completion chat bg version" -- "$cur"))
                     return
                 fi
                 case "${COMP_WORDS[1]}" in

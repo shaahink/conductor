@@ -113,7 +113,7 @@ public class B11_2DoctorAndCompletionTests
             "run", "journey", "face", "status", "gate", "log", "report", "audit", "mcp-serve", "pause", "resume",
             "approve", "kill", "skip", "inject", "abort", "retry-stage", "rollback", "rollover", "heartbeat",
             "pause-after-stage", "goto", "plan", "tasks", "task", "new-plan", "note", "bug", "init", "doctor",
-            "completion", "chat", "bg"
+            "completion", "chat", "bg", "version"
         };
 
         var ps = Conductor.Commands.CompletionCommand.GeneratePowerShell();
