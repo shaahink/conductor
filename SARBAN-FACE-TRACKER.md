@@ -4,25 +4,23 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SF1.2 CLAIMED** (`8f96ef2` code+tests+docs+rigs, `4bb6c24` goldens). The SQL console is gone:
-  `TabDev`, `tab_dev.go`, `QueryReport`, `QueryResultDto`, `MsgReportResult`, `GET /report/query`,
-  `report --query`. MCP `run_query` stays. The two non-SQL panels were re-homed with their tests —
-  wiring internals to a new **Wiring** section on Home, the token/cost table to the bottom of Report.
-  Live proof 12/12. Evidence `.conductor/evidence/SF1/SF1.2-summary.md`.
-stage: **SF1 — 2 of 3 claimed.** gate: not run by me. Fast loop green (build 0w/0e, CP+MCP tests
-  69/69, go build/vet/test clean, all four rigs parse-check clean and ASCII).
-next: **SF1.3** — tabs to ≤10, design note BEFORE code. You start at **12**, so two must go: Console
-  folds into Agent as a raw toggle, Timeline+Sessions merge into one history surface. Edit `tabKey`
-  AND the hand-maintained legend in `cmdbar.go` — `TestHelpLegendNamesEveryTabItsRealMnemonic` now
-  fails if you change one and not the other. `TestNoTabSurvivesTheDeletedSqlConsole` asserts
-  `tabCount == 12`; update that number deliberately. `d` is free but deliberately unbound.
-trap: **`git status` here is no longer a clean signal.** Six engine files I never touched (RunLoop,
-  SessionRunner, PromptBuilder, Program.cs) plus a new `HookBudgetCommand.cs` appeared mid-session —
-  someone else's `hook-budget` feature in flight. I staged only my own paths, file by file. Do the
-  same; never `git add -A` here, and do not revert or stash what is not yours.
-open: bug **#17** (new) — the CLI silently accepts and ignores EVERY unknown option on EVERY verb
-  (`conductor status --bogus` exits 0); that is why SF1.2 could delete `report --query` but not make
-  it error. Plus **#15** and **#16**, neither hit this session.
+last: **SF1.3 CLAIMED** — twelve tabs are ten. `8f6b12c` ADR-0004 (the note, committed BEFORE code),
+  `378cf9c` code+tests, `8aabbd3` goldens, `bfb4947` demo drive + CLI help. Console folded into Agent
+  as a raw-stream mode (strip kept); Sessions+Timeline merged into **History**, two views on `←/→`.
+  `c`/`t` are NOT dead like `d` — they open the fold. Evidence `.conductor/evidence/SF1/SF1.3-summary.md`.
+stage: **SF1 — 3 of 3 claimed, stage complete.** gate: not run by me. Fast loop green (build/vet/test
+  all packages ok, 51/51 goldens, the eleven SF1.3 tests PASS).
+next: **SF2.1** — Home's one honest connection line. Note before you start: Home is the tab most
+  affected by SF1.3 (its Next steps still say `a`/`r`), and `historyRows()` in view.go is the pattern
+  for a pane that owes a row to a header.
+trap: **`tabKey` is no longer the whole keyboard story.** `foldedTabKey` in model.go is the second
+  half, and the help legend has a hand-maintained **folded** row. Change one of the three and
+  `TestTabMnemonicsAreUnique` / `TestHelpLegendNamesEveryTabItsRealMnemonic` will catch it — trust
+  them, do not edit them. Also: the face binary CANNOT be driven headless here (no TTY, winpty fails
+  too); use `TestDemoDriveOfTheConsolidatedTabs` as the template for face live proof.
+open: bug **#18** (new, low) — the bottom bar hard-clips a pane's contextual help with NO ellipsis, so
+  the Agent tab advertised a nonexistent `end l` key for months and a golden pinned it as correct.
+  Width-tiering fix belongs in SF2. Plus **#15**, **#16**, **#17**, none hit this session.
 
 
 ## Baseline numbers (from run.db)
@@ -31,7 +29,7 @@ open: bug **#17** (new) — the CLI silently accepts and ignores EVERY unknown o
 |---|---|
 | Total checkpoints | 24 |
 | Done | 0 |
-| Claimed (unconfirmed) | 5 |
+| Claimed (unconfirmed) | 6 |
 
 ## Checkpoints
 
@@ -52,7 +50,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | SF1.1 | Verifier scores are served by a real endpoint and the Report tab renders them without SQL | DONE | 9d993ef | engine-fast:OK · face-fast:OK |
-| SF1.2 | The Dev SQL console and its traces are gone — tab, /report/query, report --query — while MCP run_query stays for chat and the two non-SQL Dev panels are re-homed, not deleted | TODO | - | - |
+| SF1.2 | The Dev SQL console and its traces are gone — tab, /report/query, report --query — while MCP run_query stays for chat and the two non-SQL Dev panels are re-homed, not deleted | DONE | 8f96ef2 | engine-fast:OK · face-fast:OK |
 | SF1.3 | The face has at most ten tabs after a written consolidation note: Console folds into Agent as a raw toggle, Timeline merges with Sessions into one history surface; keys, help and goldens regenerated | TODO | - | - |
 
 ### SF2 — The face tells the truth kindly - state, time, money
