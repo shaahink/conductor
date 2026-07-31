@@ -4,20 +4,20 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SC2.1 claimed** (a3e970e). SessionFinished lands only AFTER the gate battery, so the whole
-  verdict window has an unmatched SessionStarted and no live spawned pid - status called it
-  'interrupted, resume with conductor run'. New EngineLock owns .conductor/conductor.lock (now pid
-  PLUS an ISO start stamp, checked via PidLiveness so a recycled id reads dead; legacy bare-pid
-  files still parse). Status reads it only after the pids table comes up empty.
-gate: fast loop green - StatusCommandTests+EngineLockTests 29/29, rails+doctor+SC1 38/38.
-  Two negative controls, one BEFORE any edit, both: Expected active, Actual interrupted.
-next: **SC2.2**, four parts, and part 2 is already measured for you - see the note ledger and
-  .conductor/evidence/SC2/SC2.2-premeasure-gateless-confirmation.txt. Rig at TEMP/sarban-proofs/sc22.
-know: on a plan with NO gates the engine prints 'phase gate T0 finished - GREEN: gates green (none
-  configured)' and then, next line, 'phase T0 CONFIRMED (full battery green)'. Phase.cs:147 is a
-  constant string. Attempt numbering and sticky what-hurt timestamps are the other two parts.
-  NEW bug 3 filed and diagnosed from that same run: a confirmed LAST stage plus a queued verify
-  session spins RunLoop.cs 198/244 forever at ~3 Hz and never emits RunFinished (hits SC2.4).
+last: **SC2.2 claimed** (603fbbb), all four parts. GateRunner.Token is the ONLY spelling of a battery
+  verdict now - gates GREEN / gates RED / gates NONE - on the session verdict, both phase-gate lines
+  and the reuse path. ConfirmationBasis kills 'CONFIRMED (full battery green)' on gateless stages.
+  RunState.NextAttemptNumber is the one source for every attempt line. what-hurt carries its age and
+  clears when that gate passes later or the stage confirms; AttentionReason gained AttentionSinceUtc.
+  doctor warns naming stages that match no gate.
+gate: fast loop green - 158/158 across the 13 classes touched. Every 'after' line has a measured
+  'before' from the PUBLISHED engine on the SAME rig: .conductor/evidence/SC2/SC2.2-truthful-gate-vocabulary.md.
+  Rigs: TEMP/sarban-proofs/sc22 (gateless) and sc22b (fast gate passes, truth gate always fails).
+next: **SC2.3** - /state live spend. Field log says it read 0.00 for a whole 55-minute session.
+know: computing the confirmation basis from battery RESULTS alone rebuilds the same lie - a reused
+  battery has an empty result list and is NOT a gateless stage; take the plan's stage-scoped count too.
+  NEW bug 4 filed: a phase RED logs 'queuing fix session' but the workflow can queue Verify instead.
+  Bug 3 (gateless confirm loop, never emits RunFinished) is still open and still reproduces - SC2.4.
 
 
 ## Baseline numbers (from run.db)
@@ -26,7 +26,7 @@ know: on a plan with NO gates the engine prints 'phase gate T0 finished - GREEN:
 |---|---|
 | Total checkpoints | 26 |
 | Done | 0 |
-| Claimed (unconfirmed) | 3 |
+| Claimed (unconfirmed) | 4 |
 
 ## Checkpoints
 
@@ -45,7 +45,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| SC2.1 | conductor status never reports a healthy run as interrupted during the verdict window — a gate executing counts as engine liveness — with a regression test | TODO | - | - |
+| SC2.1 | conductor status never reports a healthy run as interrupted during the verdict window — a gate executing counts as engine liveness — with a regression test | DONE | a3e970e | engine-fast:OK · face-fast:OK |
 | SC2.2 | Sticky failure fields carry timestamps or clear; phase-gate lines emit the canonical gates GREEN or RED token with an honest no-gates-configured state; attempt numbering agrees across the two log lines; doctor warns on zero-gate stages | TODO | - | - |
 | SC2.3 | /state carries in-flight session spend plus costSpent, costCap, costRemaining, meanSessionCost, checkpointsRemaining, and window-vs-lifetime spend after a budget approval | TODO | - | - |
 | SC2.4 | A completed run leaves RUN-SUMMARY.md; report and status work offline from run.db; conductor log reads a live log without crashing; the SSE streams tail incrementally instead of re-reading the backlog every second | TODO | - | - |
