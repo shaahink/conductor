@@ -1,5 +1,5 @@
  ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42 
-  h Home  a s t o c e p r k g b                                                                            
+  h Home  a s o e p r k g b                                                                                
                            │                                                                               
  ▶ PLAN                    │  Server                                                                       
  ✓ F0 3/3 Foundations      │  mode       live                                                              
@@ -8,10 +8,10 @@
    ✓ F7.1 Plan│   ◆ conductor  ·  keys                                                         │           
    ✓ F7.2 Re-i│                                                                                │           
    ● F7.3 Trut│   Tabs  (letter or number jumps · tab cycles)                                  │           
- ○ F8 0/4 cond│     h Home       a Agent      s Sessions                                       │           
-              │     t Timeline   o Procs      c Console                                        │           
- ── GATES ──  │     e Templates  p Plan       r Report                                         │           
-   ✓ build    │     k Knowledge  g Telegram   b Kanban                                         │           
+ ○ F8 0/4 cond│     h Home       a Agent      s History    o Procs                             │           
+              │     e Templates  p Plan       r Report     k Knowledge                         │           
+ ── GATES ──  │     g Telegram   b Kanban                                                      │           
+   ✓ build    │     folded  c Agent's raw stream · t History's spine · ←/→ History views       │           
    ● test 4s  │                                                                                │           
    ○ lint     │   Palette  :  red = confirms, and says what it will do                         │           
               │     Run    pause · resume · stop-after · approve · heartbeat · reload-plan     │           

@@ -1,17 +1,17 @@
  ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42    
- h a s  t Timeline  o c e p r k g b                                                                           
+ h a  s History  o e p r k g b                                                                                
                            │                                                                                  
- ▶ PLAN                    │  10:00:05 ▸ session #11 Deliver started                                          
- ✓ F0 3/3 Foundations      │  10:03:40 ✗ gate test: FAIL (4100ms)                                             
- ✓ F6 5/5 Ink TUI v1       │  10:03:55 ▸ session #11 finished: NeedsRetry  $0.18                              
- ● F7 2/5 Gate … 1× $0.30  │  10:07:00 ⚠ needs human: verifier score 74 < 80                                  
-   ✓ F7.1 Plan import      │  ──────────────────────────────────── live ────────────────────────────────────  
-   ✓ F7.2 Re-import diff   │  10:09:00 ▸ session #12 Deliver started                                          
-   ● F7.3 Truth-gate tier  │  6 events                                                                        
- ○ F8 0/4 conductor chat…  │  ──────────────────────────────────────────────────────────────────────────────  
-                           │  ◆ stage                                                                         
- ── GATES ──               │  stage F7 entered                                                                
-   ✓ build                 │  stage F7 · 10:00:00 UTC                                                         
+ ▶ PLAN                    │  ● Sessions s   ○ Spine t                                                        
+ ✓ F0 3/3 Foundations      │  › #12  F7     Deliver  running      0 commits                                   
+ ✓ F6 5/5 Ink TUI v1       │    #11  F7     Deliver  needsRetry   2 commits                                   
+ ● F7 2/5 Gate … 1× $0.30  │    #8   F6     Deliver  completed    1 commits                                   
+   ✓ F7.1 Plan import      │                                                                                  
+   ✓ F7.2 Re-import diff   │  Session #12 · F7 Deliver · attempt 2, 0 resumes                                 
+   ● F7.3 Truth-gate tier  │                                                                                  
+ ○ F8 0/4 conductor chat…  │                                                                                  
+                           │                                                                                  
+ ── GATES ──               │                                                                                  
+   ✓ build                 │                                                                                  
    ● test 4s               │                                                                                  
    ○ lint                  │                                                                                  
                            │                                                                                  
@@ -31,4 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ navigate · r refresh                           
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ navigate · ←/→ view                            

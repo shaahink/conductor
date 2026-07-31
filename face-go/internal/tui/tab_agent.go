@@ -49,9 +49,13 @@ func (m Model) handleAgentKey(key string) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) renderAgentPane() (string, string) {
-	help := "↑↓ scroll · f fold · T thinking · / search · c raw · end live-tail"
+	// Kept under ~50 cols on purpose: the bottom bar HARD-CLIPS this line with no ellipsis, so the
+	// last hint in a longer string is silently deleted rather than marked (that is how the old
+	// "…/ search · end live-tail" had been rendering as "end l"). `/ search` is dropped from this side
+	// because the bar's own left half already advertises it.
+	help := "↑↓ scroll · f fold · T thinking · c raw · end tail"
 	if m.agentRaw {
-		help = "↑↓ scroll · pgup/pgdn · home/end · c back to the parsed stream"
+		help = "↑↓ scroll · pgup/pgdn · home/end · c parsed"
 	}
 	if m.data.Plan == nil {
 		return m.renderSplash(), help

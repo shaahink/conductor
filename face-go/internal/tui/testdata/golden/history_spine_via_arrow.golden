@@ -1,17 +1,17 @@
  ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42    
- h a s  o Procs  e p r k g b                                                                                  
+ h a  s History  o e p r k g b                                                                                
                            │                                                                                  
- ▶ PLAN                    │    PID    PURPOSE                STAGE  RUNTIME                                  
- ✓ F0 3/3 Foundations      │  ● 4512   session                F7     4m32s                                    
- ✓ F6 5/5 Ink TUI v1       │  ○ 8723   gate:test              F7     19s                                      
- ● F7 2/5 Gate … 1× $0.30  │                                                                                  
-   ✓ F7.1 Plan import      │  last: [agent] Working on gate caching...                                        
-   ✓ F7.2 Re-import diff   │                                                                                  
-   ● F7.3 Truth-gate tier  │    ⚠ kill pid 4512 (session) ?  y/N                                              
- ○ F8 0/4 conductor chat…  │                                                                                  
-                           │                                                                                  
- ── GATES ──               │                                                                                  
-   ✓ build                 │                                                                                  
+ ▶ PLAN                    │  ○ Sessions s   ● Spine t                                                        
+ ✓ F0 3/3 Foundations      │  10:00:00 ◆ stage F7 entered                                                     
+ ✓ F6 5/5 Ink TUI v1       │  10:00:05 ▸ session #11 Deliver started                                          
+ ● F7 2/5 Gate … 1× $0.30  │  10:03:40 ✗ gate test: FAIL (4100ms)                                             
+   ✓ F7.1 Plan import      │  10:03:55 ▸ session #11 finished: NeedsRetry  $0.18                              
+   ✓ F7.2 Re-import diff   │  10:07:00 ⚠ needs human: verifier score 74 < 80                                  
+   ● F7.3 Truth-gate tier  │  5 events                                                                        
+ ○ F8 0/4 conductor chat…  │  ──────────────────────────────────────────────────────────────────────────────  
+                           │  ◆ stage                                                                         
+ ── GATES ──               │  stage F7 entered                                                                
+   ✓ build                 │  stage F7 · 10:00:00 UTC                                                         
    ● test 4s               │                                                                                  
    ○ lint                  │                                                                                  
                            │                                                                                  
@@ -31,4 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   y confirm · n cancel                              
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ navigate · r refresh · ←/→ view                
