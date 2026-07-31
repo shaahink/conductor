@@ -26,9 +26,9 @@
                            │    ○ lint                                                                        
                            │                                                                                  
                            │  Verifier scores                                                                 
-                           │    session  score  verdict                                                       
-                           │    #11      66     WARN                                                          
-                           │    #8       90     PASS                                                          
+                           │    session  stage score     verdict  findings                                    
+                           │    #11      F7    66/80     WARN     2 findings                                  
+                           │    #8       F6    90/80     PASS     —                                           
                            │                                                                                  
                            │                                                                                  
  : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ scroll (2/2) · esc back                        
