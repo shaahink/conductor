@@ -86,8 +86,8 @@ vocabulary → whitespace-tolerant `StartsWithAny` + regression test. See `.cond
 | id | item | detail | owning stage | status |
 |----|------|--------|--------------|--------|
 | FU-B2-1 | `LiveMetrics` has no production consumer | `ForSession`/`RunWide` are called only from tests; the dashboard reads `agent.Tokens*` directly. The B2 audit FIXED the persisted-data bug (TokenDelta now carries `sessionId`), so the log is now correct � but the end-to-end "consumer folds live tokens from the log" loop is unproven by a real run. Wire it and prove against a recorded log. | B5 | CLOSED — `LiveMetrics` now has production consumers: `Core/Http/ControlPlaneServer.State.cs` (what the Face renders) and `Core/Events/Timeline.cs`. |
-| FU-B2-2 | `RunStateProjection.FindInterruptedSession` assumes single-session | Tracks one "most recent unmatched start"; cannot represent two concurrently-interrupted sessions. Matches today's one-session-at-a-time model but is an undocumented invariant parallel-lane stages must revisit. | next era (concurrency) | OPEN — still exactly as described; the model is still one session at a time, so nothing has forced the issue. |
-| FU-B2-3 | Orphaned-`SessionStarted` recovery may queue a non-resume | Event-log recovery of a `SessionStarted` with no matching `state.json` record synthesises a `SessionRecord` and queues a resume with the event's `AgentSessionId` � possibly empty ? starts a FRESH agent, not a true resume (safe-ish re-deliver, but silent). Double-hard-crash-only path; untested against an empty-id orphaned stream. Add a test + decide skip vs re-deliver vs needs-human. | next era (recovery) | OPEN — untouched, and now the *only* recovery path with no live gate on it: W3.3 proved the graceful close and today's `tools/w3/window-close.ps1` proved the hard-kill contrast, but the double-hard-crash orphan is still reasoned about rather than tested. |
+| FU-B2-2 | `RunStateProjection.FindInterruptedSession` assumes single-session | Tracks one "most recent unmatched start"; cannot represent two concurrently-interrupted sessions. Matches today's one-session-at-a-time model but is an undocumented invariant parallel-lane stages must revisit. | SF0.4 (was: next era, concurrency) | OPEN — still exactly as described; the model is still one session at a time, so nothing has forced the issue. |
+| FU-B2-3 | Orphaned-`SessionStarted` recovery may queue a non-resume | Event-log recovery of a `SessionStarted` with no matching `state.json` record synthesises a `SessionRecord` and queues a resume with the event's `AgentSessionId` � possibly empty ? starts a FRESH agent, not a true resume (safe-ish re-deliver, but silent). Double-hard-crash-only path; untested against an empty-id orphaned stream. Add a test + decide skip vs re-deliver vs needs-human. | SF0.4 (was: next era, recovery) | OPEN — untouched, and now the *only* recovery path with no live gate on it: W3.3 proved the graceful close and today's `tools/w3/window-close.ps1` proved the hard-kill contrast, but the double-hard-crash orphan is still reasoned about rather than tested. |
 
 **Fixed in-phase by the B2 audit** (no followup, recorded for the trail): persisted `TokenDelta`
 events never carried a `sessionId`, so `LiveMetrics.ForSession` folded zero against a real log � the
@@ -219,4 +219,82 @@ went. FU-OWNER-9 is not a Face row and stays OPEN.
 | FU-OWNER-6 | Top status bar is cramped | session cost / run cost / timer / stage are crammed into one thin strip, hard to scan at a glance. | — | CLOSED (obsolete) — face-go's status strip is a different widget with its own golden-frame tests. |
 | FU-OWNER-7 | Footer hotkey bar doesn't read as interactive | `Tab 1 2 3 : or Ctrl+K i e h r ? q or Ctrl+C` renders as a dense unlabeled string, not obviously a set of buttons/actions. | — | CLOSED (obsolete) — those keybindings are gone; face-go's are in `cmdbar.go` and documented in `face-go/STYLE.md` (quickstart's table, which still described THIS Ink footer, was fixed in W6.3). |
 | FU-OWNER-8 | Face TUI crash when clicking a work item | Clicking on a work item in the Face TUI killed both `conductor.exe` and `node.exe` with no crash dump (`crash-*.log` absent). No `pendingResume` set, consistent with terminal-window close (known `CTRL_CLOSE_EVENT` gap) rather than an app-domain crash. In-flight agent work survived on disk. Reproduce by clicking any checkpoint row in the PLAN or TASK pane mid-run. | — | CLOSED — obsolete as filed (`node.exe` is the retired Ink face), and its own diagnosis was closed for real by W3.3: it reads as a `CTRL_CLOSE_EVENT` window-close, which now stops the run gracefully and leaves a resumable run.db. Proven end to end by `tools/w3/window-close.ps1`. |
-| FU-OWNER-9 | Agent kills its own parent conductor process | A fix session's prompt showed a build error `"locked by: conductor (15300)"`. The agent inferred PID 15300 was a stale orphan, set a todo to kill it, ran `Stop-Process -Id 15300` — but PID 15300 was the CURRENT conductor (handled both sessions 3 and 4). No crash dump (external process kill). **Suggested fix:** (1) add a self-PID guard to the agent tool contract so Stop-Process rejects the conductor's own PID; (2) gate battery should skip rebuilding Conductor.csproj when the running binary IS the one being built (detect via PID matching); (3) add a warning in the fix prompt: "locked by conductor (PID)" usually means the current run, not a leftover. | next era (safety) | **OPEN — the most consequential row left in this file.** Not a Face bug and not obsolete: the agent runs unsandboxed by design (see `SECURITY.md`), so nothing today stops a session from killing the process supervising it. W3.3's `PidLiveness` fixed the mirror-image defect — the *engine* tree-killing a pid it no longer owns — but added no guard on the agent's side of the tool contract. Suggested fixes (1)–(3) still stand as written. |
+| FU-OWNER-9 | Agent kills its own parent conductor process | A fix session's prompt showed a build error `"locked by: conductor (15300)"`. The agent inferred PID 15300 was a stale orphan, set a todo to kill it, ran `Stop-Process -Id 15300` — but PID 15300 was the CURRENT conductor (handled both sessions 3 and 4). No crash dump (external process kill). **Suggested fix:** (1) add a self-PID guard to the agent tool contract so Stop-Process rejects the conductor's own PID; (2) gate battery should skip rebuilding Conductor.csproj when the running binary IS the one being built (detect via PID matching); (3) add a warning in the fix prompt: "locked by conductor (PID)" usually means the current run, not a leftover. | SF0.3 (was: next era, safety) | **OPEN — the most consequential row left in this file.** Not a Face bug and not obsolete: the agent runs unsandboxed by design (see `SECURITY.md`), so nothing today stops a session from killing the process supervising it. W3.3's `PidLiveness` fixed the mirror-image defect — the *engine* tree-killing a pid it no longer owns — but added no guard on the agent's side of the tool contract. Suggested fixes (1)–(3) still stand as written. **Owner: SF0.3** (2026-07-31) — and the hazard grew: this machine now runs two conductors at once, so a pid an agent writes off as stale can belong to another repo's live run. |
+
+## Opened by owner (dogfooding the v0.2.0 install against a live run, 2026-07-31)
+
+Filed while driving the **NINE STREETS** plan in `C:/Code/sk-studio` (run `7951c3ca…`) with the
+freshly installed `0.2.0+f638ba6f7f14`. All three are the same shape: **the system knows the answer
+and never volunteers it**, so a correct install looks identical to a stale one.
+
+Context that is *not* a defect and should not be re-filed: `conductor face` still renders the
+pre-Sarban face because the face era is unbuilt — every checkpoint in `SARBAN-FACE-TRACKER.md`
+(SF1.1–SF7.2) is TODO. v0.2.0 shipped the **core** era (SC1–SC8). The installed
+`conductor-face.exe` is stamped `vcs.revision=f638ba6…`, `vcs.modified=false`, i.e. already the
+newest face code that exists.
+
+| id | item | detail | owning stage | status |
+|----|------|--------|--------------|--------|
+| FU-OWNER-10 | Nothing on the wire says which build you are attached to | `GET /state` carries plan, run id, repo, model, cost — and no engine version, commit or face build. The face therefore cannot show it either, so "did my reinstall take?" is unanswerable from inside the tool. Proving this run was on the new engine took `Get-CimInstance Win32_Process` for the image path, the file's mtime against the run's start, `conductor version`, and `go version -m` on the face binary — four out-of-band checks for a fact the engine already holds (`version` prints it: commit, built, runtime, os, binary). **Suggested fix:** add `engineVersion` / `engineCommit` / `faceBuild` to the `/state` payload and put the short form in the face's status strip; SF3.3 already opens that payload and that strip for branch/dirty/ahead-behind/HEAD sha, so this is the same edit, not a new one. | SF3.3 | OPEN |
+| FU-OWNER-11 | Telegram pushes carry no identity — repo, plan, run id or build | A run notification reads `s2 NoProgress — P0` + gates + result + cost, with nothing naming the repo, the plan or the run. One chat receiving two machines' runs cannot attribute a line, and a message read hours later cannot be dated to a build. The corollary bit today: a hand-sent operator message ("Sarban core complete… New engine `0.1.1-alpha.0.57+2fea7032749d` installed") is indistinguishable in the chat from an engine push, and quoted a version the engine had already superseded — the engine's own pushes would have been right by construction. **Suggested fix:** prefix each push with `<planName> · s<N>` and carry repo + engine version in the run-start/run-end message; if FU-OWNER-10 lands, take the version from the same field. | SF4.2 (owns the push path) | OPEN |
+| FU-OWNER-13 | Between a saved plan edit and the next session boundary, Telegram status contradicts the plan on disk (owner: **SF4.2**) | Wiring Telegram into the live NINE STREETS run: `POST /plan/edit` returned `ok:true, planVersion:3` and the block was on disk, then `POST /telegram/token` answered *"saved, but this run still will not deliver: not configured — **add a telegram block to the plan**"* — advising the edit that had just been made and accepted seconds earlier. `GET /telegram/status` says the same, because both read the live in-memory `PlanConfig`, which by design is not mutated on the HTTP path (`ControlPlaneServer.Plan.cs:11`); the reload is queued (`control: ReloadPlan (during session)`) and applied at the next boundary. The behaviour is right; the sentence is not — it names a cause that no longer exists and gives an instruction that would be a no-op. **Suggested fix:** when a reload is pending, both replies should say so instead — "a plan reload is queued; Telegram starts at the next session boundary" — and `/telegram/status` should carry a `reloadPending` bool so the Face's Telegram tab can show *waiting*, not *unconfigured*. This is the same failure SC1.3 was written to kill (a saved thing reporting as if nothing were saved), one layer out. | SF4.2 / SC1 fix-lane | OPEN |
+| FU-OWNER-12 | A run never says its notification path is dead (owner: **SF0.1**) | With no `telegram` block, `grep -ci telegram .conductor/conductor.log` on a live run returns **0** — startup logs nothing, so the operator watches a silent chat and cannot tell "nothing happened" from "nothing can be delivered". The verdict *is* computed and it is good: `conductor doctor` warns `⚠ telegram not configured — optional; add a telegram block to the plan, or set it up from the Face's Telegram tab`, and `GET /telegram/status` answers `willDeliver:false` with the identical sentence (SC1.2's same-words requirement, working). Both only answer when asked. **Suggested fix:** log that one sentence once at run start, at the same level as the control-plane URL. | SF0.1 | OPEN |
+
+## Carried forward from the core run's bug ledger — 2026-07-31
+
+**Why this section exists.** `conductor bug` is **run-scoped**, not repo-scoped. Measured while
+setting up the face run:
+
+```
+> conductor bug list -p plans\conductor-sarban-face.plan.json
+No run found in run.db. Initialize the run first.
+```
+
+The Sarban **core** run filed 14 bugs and closed 3 in flight (#1, #7, #14). The remaining **11 are
+open**, and the moment the face plan starts a new run they become invisible to every session working
+in this repo — no error, no warning, an empty ledger that looks like a clean one. They are
+transcribed here because this file is tracked, survives eras, and is the one place the project has
+agreed never to drop a row silently. Full repro text stays in `run.db`'s `bugs` table (`detail`
+column) — read it with
+`sqlite3 "file:.conductor/run.db?mode=ro&immutable=1" "select id, detail from bugs where status='open'"`.
+
+**SF0.4 owns making this stop happening**, not just cleaning up after it: open bugs must survive the
+run that found them.
+
+| bug | filed under | item | owner |
+|-----|-------------|------|-------|
+| #2 | SC1 | `Run services started: TelegramService` prints even when that service early-returned and started nothing. | SF0.1 |
+| #6 | SC3 | `workflowStep.model` and `stage.overrides.model` are read by nothing — a model pinned there is inert. Same class as the trap SC3 was written to kill. | SF0.1 |
+| #11 | SC4 | `plan.verifyEachDelivery` is read by nothing: its one reader `VerdictEngine.ShouldVerify` (`VerdictEngine.Advisor.cs:114`) is called from nowhere since M3.1 made the workflow pick the next step; the live decision is `Qa.EffectiveSkipVerification`. A plan setting it `false` still runs a verify after every delivery, silently. Fix by folding it in as lowest-precedence input **or** deleting the key and failing plan load on it. | SF0.1 |
+| #3 | SC2 | A confirmed LAST stage with a queued verify session spins the run loop forever instead of completing. The only outright hang on the list. | SF0.2 |
+| #4 | SC2 | A phase-gate RED logs `queuing fix session` and the next line is `session #N start — Verify`. `RunPhaseGateAsync` writes `PendingFix` and announces a fix while the workflow engine may hand back a Verify; the attempt number agrees (SC2.2), the kind does not. Name the kind the workflow will actually select, or stop asserting one. | SF0.2 |
+| #10 | SC4 | A checkpoint claimed during a Verify or Audit session is counted in **no** session's `newlyDone` — `ComputeVerdict` returns at `VerdictEngine.cs:264` before `GraphClaimsDuringSession` runs, and the next delivery session's pre-set already contains the claim. History, report, timeline and StatusAgent show it belonging to nobody; `PendingConfirmation` never gets it; the engine-side commit+evidence stamp never runs. Real trigger: the owner runs `conductor task --done` from another shell mid-verify. **Trap:** `RunLoop.Plumbing.cs:199` uses `rec.GateSummary ?? completed` and `GateSummary` is the empty **string** on a verify session — fix the evidence fallback in the same change or it stamps empty evidence over the agent's. | SF0.2 |
+| #8 | SC4 | `HarnessTests.GitRun(string args)` splits on spaces and hands the pieces to `ArgumentList`, so the initial commit reaches git with quotes as data and message words as pathspecs. It fails, nothing checks the exit code, the harness repo has **zero commits**, and `Git.CommitsSince(repo, "")` short-circuits — every harness assertion about `NewCommits` is vacuously true. `SC42NoProgressTests`' params-array `GitRun` that asserts the exit code is the pattern. | SF0.2 |
+| #5 | SC2 (tagged SC5) | `conductor bg status` crashes with a Win32 access-denied when a tracked pid cannot be opened. | SF0.3 |
+| #9 | SC4 | `McpTaskServer.IsProcessAliveMcp` (`McpTaskServer.Handlers.cs:304`) answers `false` for a pid it cannot inspect — the exact inversion of the policy SC4.1 set in `PidLiveness.LooksAlive` (cannot-inspect means ALIVE), so MCP `bg_status` can mark a live tracked child dead. Route it through `PidLiveness.LooksAlive` as `BgStatusHandler` already does. | SF0.3 |
+| #12 | SC5 | `conductor bg start` leaks the caller's stdout handle to the detached grandchild, so piping `bg start` blocks until that child exits. | SF0.3 |
+| #13 | SC7 | `conductor bg logs` cannot read a **live** background log — it opens without `FileShare.ReadWrite` and fails with a sharing violation, i.e. it fails at the one case the verb exists for. | SF0.3 |
+
+## Re-homed to SF0.4 — 2026-07-31
+
+The 2026-07-28 triage left 12 rows open and gave four of them owners that do not exist (`next era`,
+`on demand`). SF0.4 is a real stage with real sessions, so it owns the triage — every row below ends
+that stage either fixed, closed with the evidence that closed it, or re-homed to a living owner.
+No row is deleted.
+
+- **FU-B2-2**, **FU-B2-3** (was `next era` — concurrency / recovery): the double-hard-crash orphan is
+  still the only recovery path with no live gate on it. Test it or write down why not.
+- **FU-B4-1**, **FU-F0-2**, **FU-F0-3**, **FU-F1-03**, **FU-F1-06** (was `on demand`): cosmetic or
+  advisory. Expected disposition is a documented accept-by-design, not silent carry.
+- **FU-F1-07** — likely **already closed** by SC8 without anyone saying so: that stage's handoff
+  records *"the verb-parity test now SCANS Program.cs instead of a hand-typed list, so a new verb is
+  two places, not three"*, which is exactly what this row asked for. Verify against
+  `tests/Conductor.Tests/B11_2Tests.cs` and close it with the commit, or say why it does not count.
+- **FU-B10-2** (was `HUMAN:` riding W5.2): deferred for want of a real model. The core run produced
+  28 real sessions in `run.db` with `batteryCollapse` known per plan — the before/after
+  token-per-checkpoint number is now computable. Measure it or retire the row as unanswerable.
+- **FU-B11-2** (PARTIAL): running the engine on Linux is still unproven and README says so. Leave
+  partial with that sentence, or close it as won't-do.
+- **FU-B11-3** stays **`HUMAN:`** — real cTrader credentials and real money, outside this era. State
+  it as owner-gated rather than carrying it as if a session could clear it.
+- **FU-OWNER-9** moves to **SF0.3** (self-PID guard) — see the row for why it is now sharper.

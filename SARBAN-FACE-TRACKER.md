@@ -5,20 +5,33 @@ screenshot-critique table). This file is the checkpoint surface conductor drives
 **generated view** of the work graph in `.conductor/run.db`. Claim with
 `conductor task --done <id> --evidence <path>` — hand-editing a row claims nothing.
 
-**Prerequisite:** the core plan is complete and the owner has republished the engine with
-`tools/install.ps1` — SF3 spends the structure SC7 captured, and SF4.2 pushes through SC1's fix.
+**Prerequisite — MET 2026-07-31:** the core plan completed 26/26, the owner republished the engine
+(now the v0.2.0 release build `0.2.0+f638ba6f7f14`), and a Telegram test push arrived. SF3 spends
+the structure SC7 captured; SF4.2 pushes through SC1's fix.
+
+**SF0 is the leftovers lane and it runs FIRST**, added 2026-07-31: the core run's eleven open bugs
+(ledger ids 2,3,4,5,6,8,9,10,11,12,13) plus the still-open rows in `.conductor/followups.md`. It
+leads because a debt lane scheduled last is a debt lane that gets dropped — which is how this
+backlog was built. The bug ledger is **run-scoped** — `conductor bug list` under this plan cannot
+see them — so they are transcribed into `followups.md` and that transcription is the source of
+truth for the lane.
 
 **Out of scope, deliberately:** the SF7.2 merge itself is owner-signed (ownerGate) — prepare it,
 do not perform it.
 
 ## Handoff  (overwrite this block, ≤12 lines, no history)
-last: nothing yet — authored with the era spec; the core plan must land first.
-stage: **SF1 TODO** (attempt 0).
+last: nothing yet — authored with the era spec, amended 2026-07-31 with the FU-OWNER rows and SF0.
+stage: **SF0 TODO** (attempt 0).
 gate: not yet run this era.
-next: **SF1.1** — a real DTO for verifier scores, so the SQL console can die without collateral.
-trap: tab changes touch tabKey in model.go AND the hand-maintained help legend in cmdbar.go;
-  goldens regenerate in a separate rebaseline commit. Exercise changes through YOUR build, never
-  the conductor on PATH; live-run proofs go in a scratch repo, never against this repo's .conductor.
+next: **SF0.1** — inert plan keys (bugs 6, 11) either work or are rejected at load; the Telegram
+  start line stops claiming a service that early-returned. Read the carried-forward bug table in
+  `.conductor/followups.md` first — those eleven bugs are NOT in your run.db.
+trap: a SECOND conductor run is live on this machine in another repo — no install.ps1, and never
+  kill a conductor or dotnet pid without checking its command line first (promptExtra trap 0).
+  Tab changes touch tabKey in model.go AND the hand-maintained help legend in cmdbar.go; goldens
+  regenerate in a separate rebaseline commit. Exercise changes through YOUR build, never the
+  conductor on PATH; live-run proofs go in a scratch repo with its own port, never against this
+  repo's .conductor.
 
 ## Checkpoints
 
@@ -27,6 +40,10 @@ Checkpoint ids share a prefix with their stage id (SF1.1 belongs to stage SF1).
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
+| SF0.1 | Bugs 6 and 11 die as a class — an inert plan key is either wired to its documented meaning or rejected at load, never readable-and-ignored — and bug 2 plus FU-OWNER-12 stop the notification path lying: no start line for a service that early-returned, and one logged sentence at run start saying whether pushes can be delivered at all | TODO | | |
+| SF0.2 | Bug 10 — a claim made during a Verify or Audit session is counted, stamped and confirmed like any other, with the empty-string GateSummary evidence fallback fixed in the same change — plus bug 4 (a phase-gate RED names the session kind it actually queues), bug 3 (a confirmed last stage completes instead of spinning forever) and bug 8 (the harness git helper asserts its exit code, so NewCommits assertions stop being vacuous) | TODO | | |
+| SF0.3 | Bugs 9, 5, 12 and 13 — one pid-liveness policy everywhere including MCP, bg status survives an uninspectable pid, bg start stops leaking the caller's stdout handle, bg logs reads a live log — and FU-OWNER-9's self-PID guard lands with the locked-by-conductor warning in the fix prompt | TODO | | |
+| SF0.4 | Open bugs survive the run that found them — a new run in this repo sees the previous run's open rows, and run-ended says how many are open — and every remaining followups.md row is fixed, closed with its evidence, or re-homed to a living owner, with FU-F1-07 verified against SC8's scanning verb-parity test and FU-B10-2 measured from the core run's own sessions | TODO | | |
 | SF1.1 | Verifier scores are served by a real endpoint and the Report tab renders them without SQL | TODO | | |
 | SF1.2 | The Dev SQL console and its traces are gone — tab, /report/query, report --query — while MCP run_query stays for chat and the two non-SQL Dev panels are re-homed, not deleted | TODO | | |
 | SF1.3 | The face has at most ten tabs after a written consolidation note: Console folds into Agent as a raw toggle, Timeline merges with Sessions into one history surface; keys, help and goldens regenerated | TODO | | |

@@ -16,12 +16,13 @@ the watcher itself.
 | Plan | Stages | Checkpoints | Cap | Tracker | Driven by |
 |---|---|---|---|---|---|
 | `plans/conductor-sarban-core.plan.json` | SC1–SC8 | 26 | $260 | `SARBAN-CORE-TRACKER.md` | the engine published from this branch at launch |
-| `plans/conductor-sarban-face.plan.json` | SF1–SF7 | 20 | $220 | `SARBAN-FACE-TRACKER.md` | the engine republished after core lands |
+| `plans/conductor-sarban-face.plan.json` | SF0–SF7 | 24 | $350 | `SARBAN-FACE-TRACKER.md` | the engine republished after core lands |
 
 Core: SC1 Telegram · SC2 truthful surfaces · SC3 config traps · SC4 verdict correctness ·
 SC5 wait/detach/board · SC6 clean history · SC7 structured transcript · SC8 version + update.
-Face: SF1 shed dead weight · SF2 honest state/time/money · SF3 cheap session reading ·
-SF4 human queue · SF5 supervision · SF6 prompt bank · SF7 ship the era (owner-gated).
+Face: SF0 the core run's leftovers · SF1 shed dead weight · SF2 honest state/time/money ·
+SF3 cheap session reading · SF4 human queue · SF5 supervision · SF6 prompt bank ·
+SF7 ship the era (owner-gated).
 
 **Sources of truth** (read the one your stage cites, not all of them):
 
@@ -41,9 +42,12 @@ SF4 human queue · SF5 supervision · SF6 prompt bank · SF7 ship the era (owner
 
 1. **`plans/conductor-sarban-core.plan.json`** (stages SC1–SC8) — engine correctness, Telegram,
    versioning + update. Run FIRST, driven by the engine published from this branch at launch.
-2. **`plans/conductor-sarban-face.plan.json`** (stages SF1–SF7) — face overhaul, human queue,
-   supervision, prompt bank, era close. Launched only AFTER the core plan lands and
-   `tools/install.ps1` republishes — so the improved conductor drives its own remaining development.
+2. **`plans/conductor-sarban-face.plan.json`** (stages SF0–SF7) — the core run's leftover ledgers,
+   face overhaul, human queue, supervision, prompt bank, era close. Launched only AFTER the core
+   plan lands and `tools/install.ps1` republishes — so the improved conductor drives its own
+   remaining development. **SF0 was added 2026-07-31**, after the core run finished, to own what it
+   left behind: eleven open bugs in a run-scoped ledger the next run cannot see, and the
+   `followups.md` rows whose owning stages have all closed.
 
 **Era discipline (every session, non-negotiable):**
 
@@ -287,6 +291,75 @@ every item lands in a stage:
 | 8 | Workspace paths mix `C:/code/…` and `C:\Code\…` casing | SF2.1 |
 | 9 | Disconnected banner is good but has no age ("retrying…" since when?) | SF2.1 |
 
+## SF0 — The ledger closes (the core run's leftovers)
+
+**Why.** The core run finished 26/26 and left two ledgers behind it. `conductor bug list` carries
+**eleven open bugs** the run filed against itself (ids 2,3,4,5,6,8,9,10,11,12,13 — #1, #7 and #14
+were fixed in flight), and `.conductor/followups.md` still carries the pre-era rows nobody owns.
+Neither ledger has a stage that will ever open again, which is the exact failure the 2026-07-28
+triage pass described: *a row pointing at a stage that will never open again is a row nobody will
+ever clear.*
+
+**The finding that forces this stage to exist** (measured 2026-07-31 while authoring it):
+`conductor bug list -p plans/conductor-sarban-face.plan.json` answers **"No run found in run.db.
+Initialize the run first."** The bug ledger is **run-scoped**, not repo-scoped — so the moment the
+face run starts, those eleven bugs become invisible to every session working in this repo. They are
+transcribed into `followups.md` (section "Carried forward from the core run's bug ledger") so the
+lane has a durable source; SF0.4 makes the disappearance itself stop happening.
+
+Every bug id below is the core run's ledger id. Full repro text lives in `run.db`'s `bugs` table
+(`detail` column) and in the transcribed followups rows.
+
+- **SF0.1 Keys nothing reads, lines nobody can trust.** Bug **#6** (`workflowStep.model` and
+  `stage.overrides.model` are read by nothing — a model pinned there is inert) and bug **#11**
+  (`plan.verifyEachDelivery` has one reader, `VerdictEngine.ShouldVerify`, which is called from
+  nowhere; the live decision is `Qa.EffectiveSkipVerification`) are the same shape as the traps SC3
+  was written to kill, and they survived it. Each key is either **wired to its documented meaning**
+  or **deleted and rejected at plan load** — never left readable-but-inert, and `doctor` says so at
+  authoring time. Bug **#2**: `Run services started: TelegramService` prints even when the service
+  early-returned and started nothing. FU-OWNER-12: with no `telegram` block a run logs *nothing*
+  about notifications, so a silent chat cannot be told from an undeliverable one — the sentence
+  `doctor` and `/telegram/status` already agree on gets logged once at run start, at the same level
+  as the control-plane URL.
+- **SF0.2 The verdict counts every claim, and names the session it is about to queue.** Bug **#10**:
+  a checkpoint claimed during a Verify or Audit session is counted in **no** session's `newlyDone`
+  (`ComputeVerdict` returns before `GraphClaimsDuringSession`), so the claim belongs to nobody in
+  history, the report, the timeline or `PendingConfirmation`, and the engine-side commit/evidence
+  stamp never runs — fix the `rec.GateSummary ?? completed` evidence fallback in the same change or
+  it stamps empty evidence over the agent's. Bug **#4**: a phase-gate RED logs `queuing fix session`
+  and the next line is `session #N start — Verify` — the attempt number agrees, the session kind
+  does not. Bug **#3**: a confirmed LAST stage with a queued verify session **spins the run loop
+  forever** instead of completing — the only outright hang on the list. Bug **#8** rides here
+  because it is why none of this was caught: `HarnessTests`' `GitRun` splits on spaces, the initial
+  commit fails unchecked, and every harness assertion about `NewCommits` is **vacuously true**;
+  `SC42NoProgressTests`' params-array `GitRun` that asserts the exit code is the pattern to adopt.
+- **SF0.3 Pids and background work tell the truth.** Bug **#9**: `McpTaskServer.IsProcessAliveMcp`
+  answers DEAD for a pid it cannot inspect — the exact inversion of the policy SC4.1 established in
+  `PidLiveness.LooksAlive` (cannot-inspect means ALIVE), so MCP `bg_status` can mark a live child
+  dead. Bug **#5**: `bg status` crashes with a Win32 access-denied on the same uninspectable pid.
+  Bug **#12**: `bg start` leaks the caller's stdout handle to the detached grandchild, so piping
+  `bg start` blocks until that child exits. Bug **#13**: `bg logs` opens without
+  `FileShare.ReadWrite` and cannot read a **live** background log — the one case the verb exists
+  for. And FU-OWNER-9, the most consequential row in `followups.md` and the reason this group is not
+  cosmetic: a fix session read `locked by: conductor (15300)`, inferred a stale orphan, and killed
+  **the conductor that was running it**. The agent side of the tool contract still has no self-PID
+  guard. It is now worse than when filed — this machine runs more than one conductor at a time, so
+  the pid an agent decides is stale may belong to **another repo's live run**. Deliver the guard and
+  the "locked by conductor (PID) usually means the run you are inside" warning in the fix prompt.
+- **SF0.4 The ledger closes and stays closed.** Two halves. (a) **Stop the disappearance:** open
+  bugs must survive the run that found them — `conductor bug list` from a new run in the same repo
+  shows the previous run's open rows (or an equivalent documented export written at run end), and
+  `run ended` with open bugs says how many, where. (b) **Reconcile what is left:** every row still
+  open in `followups.md` is either fixed, closed with the evidence that closed it, or re-homed to a
+  named owner that can still act — no row is deleted. Check the ones the core era may already have
+  closed without saying so: **FU-F1-07** (the "exhaustive" completion test hardcodes its verb list)
+  looks closed by SC8, whose handoff records *"the verb-parity test now SCANS Program.cs instead of
+  a hand-typed list"* — verify and close it with the commit, or say why not. **FU-B10-2**
+  (token-per-checkpoint before/after battery collapse, deferred for want of a real model) is now
+  answerable from the core run's 28 real sessions in `run.db` — measure it or retire the row.
+  `FU-B11-3` stays `HUMAN:` (real credentials, real money) and is stated as such, not silently
+  carried.
+
 ## SF1 — The face sheds dead weight
 
 **Why.** Owner: "delete this stupid sql query report and its traces. silly." The SQL console is the
@@ -445,6 +518,8 @@ unblocks") measurably worked on the owner.
 | "optimise the prompt bank" | SF6 |
 | "branch management and so on" | era branch + SF7.2, SC6 |
 | screenshots critique | SF2, SF3, Part II table |
+| "set up the rest of the run for the leftovers" (2026-07-31) | SF0 (core-run bug ledger + open followups) |
+| dogfooding the v0.2.0 install (2026-07-31) | FU-OWNER-10→SF3.3 · FU-OWNER-11→SF4.2 · FU-OWNER-13→SF4.2 · FU-OWNER-12→SF0.1 |
 
 # Appendix B — field-notes finding → stage index
 
@@ -490,20 +565,57 @@ NEXT-FEATURES with the field-log evidence)
    the only wake signal. A `stage → X` line with no `session #N start` within two minutes means
    the engine is gone: read the stderr file from step 5.
 
-**Budget:** caps are the authorised totals ($260 core, $220 face). If more is authorised, raise
+**Budget:** caps are the authorised totals ($260 core — raised to $450 mid-run after one park;
+$350 face, authorised 2026-07-31 when SF0 was added, sized from the core run's realized $12.86 per
+session across 21 declared sessions plus the slack the core run actually used). If more is authorised, raise
 EARLY and past the tripwire while the counter is still honest (`plan set limits.maxRunCostUsd <n>`
 then `plan reload`). `approve` on a budget park RESETS the window counter — before approving, set
 the cap to the *remaining* allowance.
 
 **Between plans, in order:**
 
-1. Verify core landed: `conductor version` answers (the verb SC8 adds), and a Telegram test push
-   arrives on the phone.
-2. Reinstall: `powershell -File tools\install.ps1` — the improved engine now drives its own face
-   round.
+1. ~~Verify core landed~~ **DONE 2026-07-31 18:33**: `conductor version` answers and a Telegram test
+   push arrived (message_id 18) — SC1's fix confirmed live.
+2. ~~Reinstall~~ **DONE 2026-07-31 18:33**: `0.1.1-alpha.0.57+2fea7032749d`, since superseded by the
+   v0.2.0 release build `0.2.0+f638ba6f7f14`. Kill any `conductor face` / `conductor-face` first —
+   they lock the install dir.
 3. **Re-derive the monitor filter from the NEW engine's log strings** before arming it for the
    face run — SC2.2 canonicalises the gate vocabulary and SC3.3 turns the brace exit into a park,
    so the old filter's tokens may no longer match. Grep the source for the actual `Log($"…")`
    lines; never reuse a filter on faith.
 4. Pre-flight and launch the face plan exactly as steps 4–6 above (swap in the face plan path and
    `sarban-face-*.txt` redirect names).
+
+**The face run launches onto a machine that is already running conductor** (from 2026-07-31: the
+NINE STREETS plan in `C:/Code/sk-studio`, headless on port 4317, plus the owner's `conductor face`
+attached to it). That is supported — concurrent runs coexist, which is what SF5.4 makes visible —
+but it changes four things, and every one of them is a way to break **someone else's** run:
+
+1. **`tools/install.ps1` is off the table for the whole run**, not just "not mid-run". Both runs
+   execute the same published binaries; republishing swaps the engine underneath a live third-party
+   run and the publish itself fails on the locked files.
+2. **Never kill a `conductor.exe`, `conductor-face.exe` or stray `dotnet` process by pid.** Trap 6's
+   "stopping stray dotnet processes between full runs is sanctioned" was written for a single-run
+   machine; a `dotnet` host here may belong to the other run's gate battery. Check the command line
+   (`Get-CimInstance Win32_Process`) and leave anything whose path is not this repo alone. This is
+   FU-OWNER-9 as a live hazard rather than a filed row.
+3. **Scratch-rig proofs must not collide.** The other run holds port 4317; give every rig under
+   `%TEMP%\sarban-proofs` its own `--port` and its own state dir, and read the port back from the
+   rig's own discovery file rather than assuming a default.
+4. **Both runs draw on the same subscription.** Usage-limit backoffs will be more frequent and are
+   NOT an intervention — they self-resume. Check `/usage` before launching, not after the first
+   backoff.
+
+**Token at launch (this bites every time):** `CONDUCTOR_TELEGRAM_TOKEN` is set user-wide, so only
+shells started *after* that `setx` inherit it. Any agent harness shell older than it must read the
+value across without echoing it:
+
+```powershell
+$env:CONDUCTOR_TELEGRAM_TOKEN = [Environment]::GetEnvironmentVariable('CONDUCTOR_TELEGRAM_TOKEN','User')
+Start-Process conductor -ArgumentList 'run','-p','plans\conductor-sarban-face.plan.json','--headless' `
+  -WorkingDirectory C:\code\conductor -WindowStyle Hidden `
+  -RedirectStandardOutput $env:TEMP\sarban-face-out.txt -RedirectStandardError $env:TEMP\sarban-face-err.txt
+```
+
+`conductor doctor` warning `telegram configured but no bot token` in a given shell means that shell,
+not the machine — check with `[Environment]::GetEnvironmentVariable(...,'User')` before believing it.
