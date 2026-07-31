@@ -15,6 +15,11 @@ it was built from. It orders above `0.1.0` and below `0.1.1`, and it is unique p
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-31
+
+The Sarban core era: the engine says what it knows. Truthful surfaces, board correction verbs,
+detach, structured transcripts — and the engine now knows what version it is and can update itself.
+
 ### Added
 
 - `conductor version` and `GET /version` report the semver, the git commit, whether the tree was
