@@ -4,28 +4,30 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SC5.3 landed - the board is two-way and every move reports the truth.** All `conductor task`
-  moves go through `TaskWrites.BuildStatusChange` (the validator /tasks/update and MCP task_update
-  use) and answer with the card's POST-FOLD status: a refused move prints what the card really is
-  and exits 1 - that covers `--in-progress` AND `--done`. New `--todo|--blocked|--skipped`, plus
-  `--amend <id> --note <text>`, which APPENDS a stamped correction to the card context the next
-  session's composed prompt carries. `blocked` joined ValidStatuses (the fold always allowed it).
-gate: live rig `%TEMP%\sarban-proofs\sc53` on the FRESH build ran all 14 verb cases from inside a
-  real session (`sc53-verbs.log` holds the exit codes); the amendment appears in that run's
-  `session-023.prompt.md`. Full suite 1321 passed / 0 failed, ratchet OK. Evidence
-  .conductor/evidence/SC5/SC5.3-board-writes.md.
-next: **SC5.4** - `bg logs` on an agent row points at that session's stream file; `bg status`
-  runtimes computed in one timezone.
-know: making `--skipped` REACHABLE forced three surfaces to learn the word - the tracker rendered it
-  TODO, the row regex is built from the status vocabulary so the row would not have parsed at all
-  (and WorkGraphSync archives what the tracker stops declaring), and the scheduler asked only
-  is-it-done. SKIPPED now counts as settled in StageDone/AllDone; BLOCKED deliberately does not.
-  The rig - not a test - caught `task --list` printing a skipped card as TODO; every status switch
-  here ending in a catch-all TODO arm is a candidate lie. `plans/conductor-sarban-core.plan.json`
-  arrived ALREADY modified: the owner ran a plan write at 12:54 (log: ReloadPlan) raising
-  maxRunCostUsd 260 to 450. Committed as its own chore commit, not reverted; ratchet rule 3d fires
-  on that rewrite because the gate commands got JSON-escaped, though their VALUES are unchanged.
-  Bugs 2,3,4,5,6,8,9,10,11 open (5 is fixed in source, only the published engine still crashes).
+last: **SC5.4 landed - stage SC5 is complete.** `bg logs <agent pid>` resolves to
+  `logs/session-NNN.jsonl`, tail folded by the plan's OWN provider (so it cannot drift from the live
+  feed); `bg status` gained a Log column naming the file for every row; MCP `bg_logs` takes the same
+  branch. The negative Runtime was ONE bare `DateTime.Parse` in `SqliteRunStore.GetAllPids`: default
+  styles CONVERT a `Z` string to local and return Kind=Local, so `PidRow.StartedUtc` was local under
+  a UTC name. Fixed at the parse with AssumeUniversal|AdjustToUniversal.
+gate: live rig `%TEMP%\sarban-proofs\sc54` on the FRESH build, before/after against the SAME row at
+  the same instant - fresh `24s`, published engine `-3571s`; published `bg logs` refused the agent
+  pid, fresh printed the stream. Same proof read-only against THIS repo's live session #21.
+  Scoped pass 100/0 over every class that reads a pid row. Evidence
+  .conductor/evidence/SC5/SC5.4-bg-mapping.md.
+next: **SC6.1** - pure status-transition updates stop landing commits, and any squash runs AFTER the
+  stage's final state write.
+know: the timezone half is INVISIBLE from this machine and severe elsewhere. `PidLiveness.Check`
+  compares the OS's real start against the tracked one; east of UTC the skew reads later and the
+  check is right by luck, WEST of UTC it reads earlier so every live tracked pid answers Recycled -
+  `bg status` prints running jobs dead, Sweep buries live children, SC4.1's battery settle stops
+  waiting for them, ReapOrphans never kills a real orphan. Assertions that hold everywhere are Kind
+  and the exact instant, not the sign of a subtraction. `BgLogs.Resolve` was right BEFORE the fix by
+  calling ToUniversalTime on the local value - check that class of accidental correctness before
+  touching a parse. Agent pid rows had stage_id and session_number NULL forever; the `session#N`
+  purpose tail is the fallback that keeps old rows resolvable. New bug 12 (bg start leaks the
+  caller's stdout handle to the grandchild - piping it blocks, and it reads as a hung session).
+  Bugs 2,3,4,5,6,8,9,10,11,12 open (5 is fixed in source, only the published engine still crashes).
 
 
 ## Baseline numbers (from run.db)
@@ -34,7 +36,7 @@ know: making `--skipped` REACHABLE forced three surfaces to learn the word - the
 |---|---|
 | Total checkpoints | 26 |
 | Done | 0 |
-| Claimed (unconfirmed) | 17 |
+| Claimed (unconfirmed) | 18 |
 
 ## Checkpoints
 
@@ -82,7 +84,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | SC5.1 | conductor task --blocked-until with a reason yields a BlockedUntil outcome the run loop honours by sleeping and respawning once, burning no attempt; the wait is visible on status, state and the report | DONE | ac70123 | engine-fast:OK · face-fast:OK |
 | SC5.2 | conductor run --detach spawns the engine into its own process group, prints pid and control-plane url, and survives its launching shell; the stall warning names the likely cause and the remedy | DONE | d496179 | engine-fast:OK · face-fast:OK |
-| SC5.3 | task --todo, --blocked, --skipped and --amend exist through the shared task-writes path, and --in-progress reports the post-fold status instead of unconditional success | TODO | - | - |
+| SC5.3 | task --todo, --blocked, --skipped and --amend exist through the shared task-writes path, and --in-progress reports the post-fold status instead of unconditional success | DONE | 2e06530 | engine-fast:OK · face-fast:OK |
 | SC5.4 | bg logs on an agent row points at that session's stream file, and bg status runtimes are computed in one timezone | TODO | - | - |
 
 ### SC6 — Clean history without lying about it
