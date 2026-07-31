@@ -22,7 +22,7 @@ Usage:
   conductor-face --url <base>    Attach to a specific control-plane URL
 
 Options:
-  --demo         Explore the whole dashboard offline (plan editor, timeline, console, palette …).
+  --demo         Explore the whole dashboard offline (plan editor, history, raw stream, palette …).
   --url <base>   Control-plane base URL (overrides auto-discovery).
   --host <ip>    Host, combined with --port (default 127.0.0.1).
   --port <n>     Port, combined with --host (default 4317).
