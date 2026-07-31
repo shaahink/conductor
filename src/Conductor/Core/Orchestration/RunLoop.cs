@@ -264,8 +264,20 @@ public sealed partial class RunLoop
                     continue;
                 }
 
+                // SF0.2 (bug #3): PendingVerify belongs in this guard for the same reason it belongs
+                // in the completion guard above — a queued verification is work this run still owes,
+                // and this branch `continue`s, so anything it does not stand aside for NEVER GETS A
+                // TURN. Without it a CONFIRMED last stage with a verify queued spun the run loop
+                // forever at full speed: completion declined (PendingVerify != null), the stage read
+                // done here, a phase gate was re-scheduled for a stage already in ConfirmedStages,
+                // the gate reused its green signature and re-confirmed, and round again — no session,
+                // no delay, no exit. The only outright hang the core run filed against itself.
+                // A stage already confirmed has nothing left to gate either; re-scheduling one is at
+                // best a wasted battery, and it is what made the loop tight rather than merely wrong.
                 if (_ctx.Plan.PerPhaseGates && track.StageDone(stage.Id)
-                    && _ctx.State.PendingFix == null && _ctx.State.PendingResume == null && _ctx.State.PendingAudit == null)
+                    && !_ctx.State.ConfirmedStages.Contains(stage.Id)
+                    && _ctx.State.PendingFix == null && _ctx.State.PendingResume == null
+                    && _ctx.State.PendingVerify == null && _ctx.State.PendingAudit == null)
                 {
                     if (_ctx.Options.DryRun)
                     {

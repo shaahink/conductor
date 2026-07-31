@@ -29,12 +29,12 @@ public sealed partial class HarnessTests : IDisposable
         Directory.CreateDirectory(_repo);
         _stateDir = Path.Combine(_repo, ".conductor");
 
-        GitRun("init -b main");
-        GitRun("config user.email harness@test");
-        GitRun("config user.name \"Harness Test\"");
+        GitRun("init", "-b", "main");
+        GitRun("config", "user.email", "harness@test");
+        GitRun("config", "user.name", "Harness Test");
         File.WriteAllText(Path.Combine(_repo, "README.md"), "# Harness Test Repo");
-        GitRun("add README.md");
-        GitRun("commit -m \"chore: initial commit\" --no-gpg-sign");
+        GitRun("add", "README.md");
+        GitRun("commit", "-m", "chore: initial commit", "--no-gpg-sign");
         WriteTracker();
 
         _agentScript = Path.Combine(_repo, "fake-agent.cmd");
@@ -49,9 +49,21 @@ public sealed partial class HarnessTests : IDisposable
 
     public void Dispose() => _cleanup();
 
-    private ProcResult GitRun(string args) =>
-        Conductor.Core.ProcessRunner.Run("git", args.Split(' ', StringSplitOptions.RemoveEmptyEntries),
+    /// <summary>SF0.2 (bug #8): one argument per parameter, and the exit code is ASSERTED.
+    /// The old helper took a single string and split it on spaces before handing the pieces to
+    /// <see cref="Conductor.Core.ProcessRunner"/>'s ArgumentList, so
+    /// <c>commit -m "chore: initial commit"</c> reached git as five arguments — message truncated to
+    /// a literal quote, the remaining words read as pathspecs. It failed, nothing checked the exit
+    /// code, and the harness repo was left with ZERO commits: <c>Git.Head</c> returned "",
+    /// <c>Git.CommitsSince(repo, "")</c> short-circuited, and every harness assertion about
+    /// <c>NewCommits</c> was vacuously true. Same pattern as <c>SC42NoProgressTests.GitRun</c>.</summary>
+    private ProcResult GitRun(params string[] args)
+    {
+        var r = Conductor.Core.ProcessRunner.Run("git", args,
             _repo, TimeSpan.FromSeconds(30), CancellationToken.None);
+        Assert.True(r.ExitCode == 0, $"git {string.Join(" ", args)} failed ({r.ExitCode}): {r.Output} {r.StdErr}");
+        return r;
+    }
 
     private void WriteTracker() => File.WriteAllText(Path.Combine(_repo, "TRACKER.md"),
         "# Harness Plan\n\n## Handoff\nlast: none.\n\n## Checkpoints\n\n" +
@@ -125,8 +137,14 @@ public sealed partial class HarnessTests : IDisposable
         Assert.True(File.Exists(Path.Combine(_repo, "harness-output.txt")));
 
         // Git commit made by the agent must be visible in the repo
-        var log = GitRun("log --oneline -3").Output.Trim();
+        var log = GitRun("log", "--oneline", "-3").Output.Trim();
         Assert.Contains("feat: deliver harness checkpoint", log, StringComparison.Ordinal);
+
+        // SF0.2 (bug #8): the assertion the vacuous helper hid. With no initial commit the repo had
+        // zero commits, the session's start head was "", and CommitsSince short-circuited to empty —
+        // so the fake agent's commit was invisible to the verdict that is supposed to grade it.
+        Assert.Single(session.NewCommits);
+        Assert.Contains("feat: deliver harness checkpoint", session.NewCommits[0], StringComparison.Ordinal);
     }
 
     [Fact]

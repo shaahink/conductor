@@ -191,6 +191,7 @@ public sealed partial class VerdictEngine
         if (rec.Kind == SessionKind.Audit)
         {
             CollectCommits(rec, startHead);
+            RecordNonDeliveryClaims(rec); // SF0.2 (bug #10)
             rec.Outcome = SessionOutcome.Progress;
             if (!_ctx.State.AuditedStages.Contains(stage.Id)) _ctx.State.AuditedStages.Add(stage.Id);
             _ctx.State.PendingAudit = null;
@@ -209,6 +210,12 @@ public sealed partial class VerdictEngine
         if (rec.Kind == SessionKind.Verify)
         {
             CollectCommits(rec, startHead);
+            // SF0.2 (bug #10): read the claim BEFORE the pass/fail split, so ConfirmPendingCheckpoints
+            // below sees it. A claim landing mid-verify is covered by the verdict this session is
+            // about to return on this very tree — if the verifier passes, it is confirmed with the
+            // rest; if it fails, ConfirmPendingCheckpoints does not run and the claim correctly stays
+            // pending for the fix session and the verification after it.
+            RecordNonDeliveryClaims(rec);
             var verdict = Verifier.Parse(rec.ResultSummary ?? "");
             if (verdict != null)
             {

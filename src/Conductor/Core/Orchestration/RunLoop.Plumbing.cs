@@ -199,9 +199,27 @@ public sealed partial class RunLoop
                 // in this repo. Recording "-" for it is how sk #3's delivered work read as nothing.
                 var commit = rec.NewCommits.Count > 0 ? rec.NewCommits[^1].Split(' ')[0]
                     : SessionProgress.LastSatelliteCommitRef(rec) ?? "-";
-                var evidence = rec.GateSummary ?? "completed";
+
+                // SF0.2 (bug #10, the rider): `rec.GateSummary ?? "completed"` was dead code.
+                // SessionRecord.GateSummary is a NON-NULLABLE string that defaults to "", so `??`
+                // could never fire — and it is still "" on every session kind that returns before the
+                // battery runs, which is precisely the verify and audit sessions this change just
+                // taught to carry claims. Worse on the delivery path, where it holds a real battery
+                // token and OVERWROTE the artifact path the agent claimed with
+                // `task --done --evidence <path>` — the one field a reviewer reads, replaced by
+                // "engine-fast:OK". Precedence: the agent's own evidence wins, the battery summary
+                // stands in when the claim carried none, "completed" is the last resort.
+                var battery = string.IsNullOrWhiteSpace(rec.GateSummary) ? "completed" : rec.GateSummary;
+                var claimed = db.GetCheckpoints(_ctx.State.RunId)
+                    .ToDictionary(c => c.Id, c => c.Evidence, StringComparer.OrdinalIgnoreCase);
                 foreach (var cpId in rec.NewlyDone)
+                {
+                    var evidence = claimed.TryGetValue(cpId, out var agentEvidence)
+                        && !string.IsNullOrWhiteSpace(agentEvidence) && agentEvidence != "-"
+                        ? agentEvidence
+                        : battery;
                     db.UpdateCheckpoint(_ctx.State.RunId, cpId, "DONE", commit, evidence, source: "engine");
+                }
             }
 
             var track = ReadTrackerSafe();

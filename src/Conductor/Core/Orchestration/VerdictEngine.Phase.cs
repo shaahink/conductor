@@ -116,7 +116,14 @@ public sealed partial class VerdictEngine
             _ctx.State.Status = RunStatus.Idle;
             // SC2.2: NextAttemptNumber, not AttemptsThisStage — this line names the session it is queuing,
             // and that session announces itself with the same number (devcontext #19).
-            _ctx.Log($"phase {pg.StageId} full battery — {GateRunner.Token(gates)} — queuing fix session (attempt {_ctx.State.NextAttemptNumber}/{MaxAttempts(CurrentStageConfig())})", "fail");
+            // SF0.2 (bug #4): and it names the KIND the dispatcher will actually pick, by asking the
+            // same function the dispatcher asks. Writing PendingFix does not make the next session a
+            // fix: SessionRunner.ResolveSessionKind ranks resume > audit > VERIFY > fix, so a stage
+            // whose delivery already queued a verify announced "queuing fix session" and the very
+            // next line read "session #N start — Verify". The attempt number agreed; the kind lied.
+            var nextKind = SessionRunner.PendingToKind(_ctx.State.PendingResume, _ctx.State.PendingAudit,
+                _ctx.State.PendingVerify, _ctx.State.PendingFix);
+            _ctx.Log($"phase {pg.StageId} full battery — {GateRunner.Token(gates)} — queuing {nextKind.ToString().ToLowerInvariant()} session (attempt {_ctx.State.NextAttemptNumber}/{MaxAttempts(CurrentStageConfig())})", "fail");
             _saveAndReport();
         }
     }
@@ -148,6 +155,12 @@ public sealed partial class VerdictEngine
         basis ??= GateRunner.ConfirmationBasis(
             stage != null ? GateRunner.ConfiguredForStage(_ctx.Plan, stage) : _ctx.Plan.Gates.Count, _ctx.LastGates);
         if (!_ctx.State.ConfirmedStages.Contains(id)) _ctx.State.ConfirmedStages.Add(id);
+        // SF0.2 (bug #10): the last place a pending claim can still be confirmed. Only two sites
+        // drained PendingConfirmation — a passing verify and a skipped-as-passed workflow hop — so a
+        // claim made during an AUDIT session (which queues a phase gate, not a verify) would sit
+        // pending forever, reading DONE and never DONE ✓. A stage does not get to close over
+        // checkpoints its own full green battery has already covered.
+        ConfirmPendingCheckpoints(id, _ctx.State.History.LastOrDefault()?.Number);
         _ctx.State.AwaitingOwnerReason = null;
         _ctx.State.PendingPhaseGate = null;
         _ctx.State.PendingAudit = null;
