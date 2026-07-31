@@ -4,24 +4,22 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SC4.4 claimed - SC4 is now complete (4/4).** `PromptBuilder.Render` SPLICES the queue
-  section in after the role line (new `InsertAfterRoleLine`) instead of appending it, and does so
-  BEFORE the persona is prepended, so only a role definition can sit above an injection - never a
-  fact it exists to correct. `PromptBuilder.Fix` stamps the `gateFailures` VALUE with the new
-  `InstructionQueue.SupersedeStamp(n)` whenever the queue is non-empty, so a custom `fix.md` gets it
-  too; nothing is dropped, the gate text stays readable as history. `PromptSection`'s header now
-  states the rank in words, and the control-plane card preview orders queued-then-batteries.
-gate: build clean, 0 warnings; scoped `dotnet test` over 18 touched/neighbouring classes: 140
-  passed, 0 failed, 0 skipped (incl. ArchitectureTests). Nothing weakened. Evidence
-  .conductor/evidence/SC4/SC4.4-*, four prompt files BEFORE published vs AFTER fresh build:
-  injection L76-of-78 and L85-of-87 BEFORE, L3 on both AFTER, stamp at L11 above the gate at L13.
-next: **SC5.1** - `conductor task --blocked-until <iso8601> --reason <text>` (CLI + MCP) as a first
-  class outcome the run loop honours by sleeping and respawning once, no attempt burned.
-know: for a rig that must reach a FIX prompt, a red REQUIRED gate + `stageSlackFactor` 3 is enough
-  on its own - GatesRed queues the fix session directly and bypasses the workflow, so the
-  verifyEachDelivery/defaultWorkflow recipe is only needed when every session passes. Injection
-  text is spliced in AFTER PromptValidator, so a brace in an instruction cannot kill a run.
-  Bugs 2,3,4,5,6,8,9 open (#9: `McpTaskServer.IsProcessAliveMcp` inverts SC4.1's pid policy).
+last: **SC4.4 claimed - SC4 complete (4/4).** `PromptBuilder.Render` SPLICES the queue section in
+  under the role line (new `InsertAfterRoleLine`) instead of appending it, and BEFORE the persona is
+  prepended, so only a role definition can sit above an injection - never a fact it exists to
+  correct. `Fix` stamps the `gateFailures` VALUE with new `InstructionQueue.SupersedeStamp(n)` when
+  the queue is non-empty, so a custom `fix.md` gets it too; nothing dropped, gate text stays as
+  history. `PromptSection` now states its rank in words; card preview orders queued-then-batteries.
+gate: build clean 0 warnings; scoped `dotnet test` over 18 touched/neighbouring classes: 140 passed,
+  0 failed, 0 skipped (incl. ArchitectureTests). Nothing weakened. Evidence
+  .conductor/evidence/SC4/SC4.4-*: BEFORE published vs AFTER fresh build, injection L76-of-78 and
+  L85-of-87 before, L3 on both after, stamp L11 above the gate at L13.
+next: **SC5.1** - `task --blocked-until <iso8601> --reason <text>` (CLI + MCP) as an outcome the run
+  loop honours by sleeping then respawning once, no attempt burned.
+know: to reach a FIX prompt a rig needs only a red REQUIRED gate + `stageSlackFactor` 3 - GatesRed
+  queues the fix session directly, bypassing the workflow; the verifyEachDelivery/defaultWorkflow
+  recipe is for rigs whose sessions all pass. Injections splice in AFTER PromptValidator, so a brace
+  in one cannot kill a run. Bug #5 reproduced today. Bugs 2,3,4,5,6,8,9 open.
 
 
 ## Baseline numbers (from run.db)
