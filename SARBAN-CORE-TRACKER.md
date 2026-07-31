@@ -14,7 +14,9 @@ stage: **SC1 TODO** (attempt 0).
 gate: not yet run this era — battery green on master 5cf77f1 per CI at authoring time.
 next: **SC1.1** — start the Telegram service on the real run path and prove it with a real push.
 trap: never run tools/install.ps1 mid-run; keep every prose surface brace-free — the engine
-  driving this run still has the brace landmine SC3.3 fixes.
+  driving this run still has the brace landmine SC3.3 fixes. Exercise changes through YOUR build
+  (dotnet run --project src/Conductor), never the conductor on PATH — that is the old engine
+  driving you; live-run proofs go in a scratch repo, never against this repo's .conductor.
 
 ## Checkpoints
 

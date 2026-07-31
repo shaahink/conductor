@@ -11,6 +11,18 @@ surface a human reads — the transcript — stores truncated JSON nobody can pa
 gap between what conductor knows and what it tells the person (or agent) watching it — then builds
 the watcher itself.
 
+**At a glance.**
+
+| Plan | Stages | Checkpoints | Cap | Tracker | Driven by |
+|---|---|---|---|---|---|
+| `plans/conductor-sarban-core.plan.json` | SC1–SC8 | 26 | $260 | `SARBAN-CORE-TRACKER.md` | the engine published from this branch at launch |
+| `plans/conductor-sarban-face.plan.json` | SF1–SF7 | 20 | $220 | `SARBAN-FACE-TRACKER.md` | the engine republished after core lands |
+
+Core: SC1 Telegram · SC2 truthful surfaces · SC3 config traps · SC4 verdict correctness ·
+SC5 wait/detach/board · SC6 clean history · SC7 structured transcript · SC8 version + update.
+Face: SF1 shed dead weight · SF2 honest state/time/money · SF3 cheap session reading ·
+SF4 human queue · SF5 supervision · SF6 prompt bank · SF7 ship the era (owner-gated).
+
 **Sources of truth** (read the one your stage cites, not all of them):
 
 - `docs/dev/FIELD-NOTES-2026-07-29-devcontext.md` — 20 findings, DevContext graph-v2 run
@@ -38,6 +50,15 @@ the watcher itself.
 - Branch: `feat/sarban`. Commit per checkpoint, push. Trailer convention as in recent history.
 - **Never run `tools/install.ps1` mid-run.** The engine driving you is the published copy; replacing
   binaries under a live run is undefined. The owner reinstalls between plans.
+- **This repo's `.conductor/` belongs to the run driving you.** The claim/note verbs
+  (`task`, `note`, `bug`, `bg`) and read-only verbs (`status`, `task --list`) are yours; never aim
+  run-control verbs (`run`, `pause`, `resume`, `abort`, `approve`, `plan set/reload`, `goto`,
+  `skip`, `rollback`, `kill`) at this repo. Live-run proofs spawn YOUR build against a scratch repo
+  with its own tiny plan and its own `.conductor` (e.g. `%TEMP%\sarban-proofs`).
+- **The `conductor` on PATH is the published engine, not your working tree.** Exercise your changes
+  through the fresh build — `dotnet run --project src/Conductor -- <verb>` or the exe it builds. A
+  new verb tested through the PATH shim proves only that the old engine lacks it. Task claims are
+  the deliberate exception: they go through the PATH copy because they target the driving run.
 - Gate battery (conductor runs it independently; you use the fast loop mid-work):
   `dotnet build Conductor.slnx` · `dotnet test Conductor.slnx --filter <narrow>` · in `face-go/`:
   `go build ./... && go vet ./... && go test ./<changed pkg>`. The ratchet
@@ -439,12 +460,50 @@ NEXT-FEATURES with the field-log evidence)
 
 # Appendix C — run discipline for whoever drives these plans
 
-- Publish the branch build before each launch: `powershell -File tools\install.ps1` (never mid-run).
-- Pre-flight: `conductor doctor` → `conductor journey` (Model column must NOT read "(default)") →
-  `conductor run --dry-run` and read the whole first prompt. After ANY plan edit: dry-run again.
-- Launch detached with stderr redirected to a file (until SC5.2 lands, the skill's
-  `Start-Process … -RedirectStandardError` pattern is mandatory — a prompt refusal is stderr-only).
-- Budget: caps are set to the authorised total; if a park is coming, raise EARLY
-  (`plan set limits.maxRunCostUsd <n>` then `plan reload`) — `approve` RESETS the window counter.
-- Between plans: verify core landed (`conductor version` exists and Telegram test arrives on the
-  phone), reinstall, then launch the face plan.
+**Before launching the core plan (all free, in order):**
+
+1. **Telegram token.** Set it machine-wide so every process tree inherits it:
+   `setx CONDUCTOR_TELEGRAM_TOKEN <token>`, then restart the shell. SC1's proof needs the token in
+   the *session's* environment — without it SC1 parks on a `HUMAN:` line. Chat id 99205495 is
+   already in both plans.
+2. **Publish the branch build**: `powershell -File tools\install.ps1` (done 2026-07-31 — repeat
+   only if engine source moved since; NEVER mid-run).
+3. **Working tree**: commit plan/tracker/spec edits to `feat/sarban`. The doctor warn about the
+   untracked `FIELD-NOTES-*` files and `plans/shamshir-templates/` is expected — those stay
+   untracked deliberately (private content, public repo).
+4. **Pre-flight**: `conductor doctor -p plans\conductor-sarban-core.plan.json` (0 fail, and after
+   step 1 the telegram warn must be gone) → `conductor journey -p …` (Model column reads
+   claude-opus-5, never "(default)") → `conductor run -p … --dry-run`; read the whole first
+   prompt — it must open with the sarban-templates session text (a silent fallback to built-ins
+   means `templatesDir` broke) — then sweep it:
+   `[regex]::Matches($out,'\{[A-Za-z_][A-Za-z0-9_]*\}')` must return nothing. After ANY plan
+   edit: dry-run again.
+5. **Launch detached with stderr redirected** (a prompt refusal is stderr-only until SC3.3 lands):
+
+   ```powershell
+   Start-Process conductor -ArgumentList 'run','-p','plans\conductor-sarban-core.plan.json','--headless' `
+     -WorkingDirectory C:\code\conductor -WindowStyle Hidden `
+     -RedirectStandardOutput $env:TEMP\sarban-core-out.txt -RedirectStandardError $env:TEMP\sarban-core-err.txt
+   ```
+6. **Arm the log-tail monitor** with the conductor-drive skill's canonical filter. During the core
+   run Telegram cannot push — the driving engine still has the bug SC1 fixes — so the monitor is
+   the only wake signal. A `stage → X` line with no `session #N start` within two minutes means
+   the engine is gone: read the stderr file from step 5.
+
+**Budget:** caps are the authorised totals ($260 core, $220 face). If more is authorised, raise
+EARLY and past the tripwire while the counter is still honest (`plan set limits.maxRunCostUsd <n>`
+then `plan reload`). `approve` on a budget park RESETS the window counter — before approving, set
+the cap to the *remaining* allowance.
+
+**Between plans, in order:**
+
+1. Verify core landed: `conductor version` answers (the verb SC8 adds), and a Telegram test push
+   arrives on the phone.
+2. Reinstall: `powershell -File tools\install.ps1` — the improved engine now drives its own face
+   round.
+3. **Re-derive the monitor filter from the NEW engine's log strings** before arming it for the
+   face run — SC2.2 canonicalises the gate vocabulary and SC3.3 turns the brace exit into a park,
+   so the old filter's tokens may no longer match. Grep the source for the actual `Log($"…")`
+   lines; never reuse a filter on faith.
+4. Pre-flight and launch the face plan exactly as steps 4–6 above (swap in the face plan path and
+   `sarban-face-*.txt` redirect names).

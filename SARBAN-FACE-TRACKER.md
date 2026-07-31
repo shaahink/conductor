@@ -17,7 +17,8 @@ stage: **SF1 TODO** (attempt 0).
 gate: not yet run this era.
 next: **SF1.1** — a real DTO for verifier scores, so the SQL console can die without collateral.
 trap: tab changes touch tabKey in model.go AND the hand-maintained help legend in cmdbar.go;
-  goldens regenerate in a separate rebaseline commit.
+  goldens regenerate in a separate rebaseline commit. Exercise changes through YOUR build, never
+  the conductor on PATH; live-run proofs go in a scratch repo, never against this repo's .conductor.
 
 ## Checkpoints
 

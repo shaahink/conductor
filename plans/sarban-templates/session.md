@@ -22,6 +22,10 @@ evidence a claim requires. Engine behaviour claims want a live proof against a r
 this repo's own test suite has harness fixtures (HarnessTests, fake-agent tooling) built for exactly
 that; prefer extending them over asserting from source reading. A face change is not verified by
 build/vet/test alone — drive the real control plane or `--demo` and capture what a reviewer would see.
+Two hard rules when you drive anything live: exercise YOUR code through the fresh build
+(`dotnet run --project src/Conductor -- <verb>`), never through the `conductor` on PATH — that is the
+published engine driving this very session; and any live-run proof targets a scratch repo with its own
+plan and `.conductor`, never this repo's — see the traps below.
 
 ## Do, in order
 
