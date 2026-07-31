@@ -4,22 +4,22 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SC4.4 claimed - SC4 complete (4/4).** `PromptBuilder.Render` SPLICES the queue section in
-  under the role line (new `InsertAfterRoleLine`) instead of appending it, and BEFORE the persona is
-  prepended, so only a role definition can sit above an injection - never a fact it exists to
-  correct. `Fix` stamps the `gateFailures` VALUE with new `InstructionQueue.SupersedeStamp(n)` when
-  the queue is non-empty, so a custom `fix.md` gets it too; nothing dropped, gate text stays as
-  history. `PromptSection` now states its rank in words; card preview orders queued-then-batteries.
-gate: build clean 0 warnings; scoped `dotnet test` over 18 touched/neighbouring classes: 140 passed,
-  0 failed, 0 skipped (incl. ArchitectureTests). Nothing weakened. Evidence
-  .conductor/evidence/SC4/SC4.4-*: BEFORE published vs AFTER fresh build, injection L76-of-78 and
-  L85-of-87 before, L3 on both after, stamp L11 above the gate at L13.
+last: **SC4 red battery repaired - the engine was right, the rig was stale.** The single failure in
+  1267, `W4SplitAndStageCardTests.StageCardAddedMidRun_..._ClaimedByASession`, needed session 2 to be
+  a DELIVERY session. It used to get one from the bug SC4.2 fixed: a claim with zero commits scored
+  NoProgress, so session 2 was a Fix. Now session 1 correctly scores Advanced and `deliver-verify`
+  takes session 2 for its verify step, whose branch returns before `NewlyDone` is ever computed. The
+  scaffold's stage now ASKS for what it needs - `Overrides.SkipVerification` - so the rig no longer
+  stands on a verdict bug. Zero assertions touched; no engine change.
+gate: reproduced deterministically in 7s, fixed, class green 13/13. NOT the flake shape: 102s red vs
+  86.5s last green, no stray dotnet/testhost. Evidence
+  .conductor/evidence/SC4/SC4-red-battery-w43-rig.md with before/after run logs.
 next: **SC5.1** - `task --blocked-until <iso8601> --reason <text>` (CLI + MCP) as an outcome the run
   loop honours by sleeping then respawning once, no attempt burned.
-know: to reach a FIX prompt a rig needs only a red REQUIRED gate + `stageSlackFactor` 3 - GatesRed
-  queues the fix session directly, bypassing the workflow; the verifyEachDelivery/defaultWorkflow
-  recipe is for rigs whose sessions all pass. Injections splice in AFTER PromptValidator, so a brace
-  in one cannot kill a run. Bug #5 reproduced today. Bugs 2,3,4,5,6,8,9 open.
+know: SC4.2 is NOT over-claimed and was not downgraded - it shipped exactly what it claimed. New bug
+  #10: a claim landing during a Verify or Audit session is counted by NO session's newlyDone, sk #3
+  narrowed to the verify window. New bug #11: `plan.verifyEachDelivery` is read by nothing since M3.1
+  - `Qa.EffectiveSkipVerification` is the live decision. Bugs 2,3,4,5,6,8,9,10,11 open.
 
 
 ## Baseline numbers (from run.db)
@@ -28,7 +28,7 @@ know: to reach a FIX prompt a rig needs only a red REQUIRED gate + `stageSlackFa
 |---|---|
 | Total checkpoints | 26 |
 | Done | 0 |
-| Claimed (unconfirmed) | 14 |
+| Claimed (unconfirmed) | 15 |
 
 ## Checkpoints
 
@@ -68,7 +68,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | SC4.1 | The battery waits for the session's tracked bg children to exit, and retries a failed required gate once before declaring GatesRed; the failure line carries duration vs last passing duration | DONE | ba9b523 | engine-fast:OK · face-fast:OK |
 | SC4.2 | NoProgress requires no commits AND no newly-DONE checkpoints; chore conductor commits are excluded from the verdict's commit count | DONE | 1ce4ba7 | engine-fast:OK · face-fast:OK |
 | SC4.3 | satelliteRepos are diffed for hasCommits; the gate cache key covers the gate's own working directory HEAD and its command text; skipIfFresh accounts for a dirty tree | DONE | c3e0813 | engine-fast:OK · face-fast:OK |
-| SC4.4 | Queued injections render at the top of the composed prompt, and a gate-failures block they supersede is stamped SUPERSEDED or dropped | TODO | - | - |
+| SC4.4 | Queued injections render at the top of the composed prompt, and a gate-failures block they supersede is stamped SUPERSEDED or dropped | DONE | cfdb1ad | engine-fast:OK · face-fast:OK |
 
 ### SC5 — The engine can wait, detach, and correct the board
 

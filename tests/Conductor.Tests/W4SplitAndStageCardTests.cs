@@ -8,6 +8,7 @@ using Conductor.Core.Hosting;
 using Conductor.Core.Http;
 using Conductor.Core.Store;
 using Conductor.Models;
+using Conductor.Planning;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Conductor.Tests;
@@ -292,7 +293,23 @@ public sealed class W4SplitAndStageCardTests
             Name = "w43-live",
             Repo = repo.Replace("\\", "/"),
             Tracker = "TRACKER.md",
-            Stages = [new StageConfig { Id = "H1", Title = "In flight", Sessions = 4 }],
+            Stages =
+            [
+                new StageConfig
+                {
+                    Id = "H1", Title = "In flight", Sessions = 4,
+                    // The stand-in agent is a DELIVERY stand-in: it claims the item it is given and
+                    // emits no verifier JSON, so a verify session here can only ever be an agent
+                    // error. Both of this rig's sessions have to be delivery sessions for the
+                    // "a session claims the card" assertion to be about anything. The rig used to
+                    // get that shape by accident: before SC4.2 a session that claimed a checkpoint
+                    // with zero commits scored NoProgress, so session 2 was a Fix — also a delivery
+                    // session. SC4.2 made a claim count as progress (correctly), and deliver-verify
+                    // then took session 2 for its verify step. Say what the rig needs instead of
+                    // depending on a verdict bug to supply it.
+                    Overrides = new WorkflowOverrides { SkipVerification = true },
+                },
+            ],
             Agent = new AgentConfig { Command = "cmd.exe", Args = ["/c", agentScript, "{prompt}"], Provider = "opencode" },
             Advisor = new AdvisorConfig { Enabled = true, Command = "cmd.exe", Args = ["/c", advisorScript, "{prompt}"], Output = "text" },
             Progress = new ProgressConfig
