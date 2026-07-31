@@ -40,7 +40,10 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
     internal readonly RunState _state;
     internal readonly IProgressProvider _progress;
     internal readonly ILogger<TelegramService> _log;
-    private readonly Channel<(string ChatId, string Text, string? KeyboardJson)> _sendQueue;
+    /// <summary>SC1.2: the ack is how <c>POST /telegram/test</c> can route through the REAL queue and
+    /// still answer its HTTP caller — the send loop completes it with null on success or the error
+    /// text on failure. Every ordinary push leaves it null and stays fire-and-forget.</summary>
+    private readonly Channel<(string ChatId, string Text, string? KeyboardJson, TaskCompletionSource<string?>? Ack)> _sendQueue;
     private readonly HttpClient _http;
     private readonly CancellationTokenSource _cts = new();
     private Task? _pollTask;
@@ -80,7 +83,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
         var root = string.IsNullOrWhiteSpace(_cfg?.ApiBaseUrl) ? DefaultApiRoot : _cfg!.ApiBaseUrl!.Trim();
         _apiBase = root.TrimEnd('/') + "/bot";
 
-        _sendQueue = Channel.CreateUnbounded<(string, string, string?)>(
+        _sendQueue = Channel.CreateUnbounded<(string, string, string?, TaskCompletionSource<string?>?)>(
             new UnboundedChannelOptions { SingleReader = true });
 
         _http = new HttpClient { Timeout = TimeSpan.FromSeconds(65) };
@@ -98,13 +101,24 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
 
     internal bool IsConfigured => _cfg != null && _token != null;
 
-    /// <summary>M8.2: validates the configured token against Telegram's getMe, and — if at least
-    /// one allowed chat id is configured — also sends a real test push, so "test" proves the whole
-    /// path (token valid AND a chat can actually be reached), not just the token in isolation.</summary>
-    internal async Task<(bool Ok, string? BotUsername, string? Error)> TestConnectionAsync(CancellationToken ct)
+    /// <summary>SC1.2: how long the queue-routed test waits for the send loop to report back before
+    /// it gives up and says so. A wedged send loop must not hold an HTTP request open forever.</summary>
+    internal static readonly TimeSpan TestAckTimeout = TimeSpan.FromSeconds(30);
+
+    /// <summary>Validates the configured token against Telegram's getMe, then sends a real test push.
+    /// SC1.2: the push now goes through the SAME send queue every run push uses when the service is
+    /// running, so a green test proves the delivery path rather than a parallel one that happens to
+    /// work. Bypassing <c>_started</c> and the queue is exactly why the Face's Test button reported
+    /// success for the entire life of a feature that delivered nothing (SC1.1); when the queue really
+    /// is unavailable the test still sends, but says loudly — in the reply AND in the Telegram message
+    /// itself — that it bypassed it.</summary>
+    internal async Task<TelegramTestOutcome> TestConnectionAsync(CancellationToken ct)
     {
-        if (_cfg == null) return (false, null, "Telegram is not configured on this plan");
-        if (_token == null) return (false, null, "no bot token — set CONDUCTOR_TELEGRAM_TOKEN or save one from the Face");
+        if (_cfg == null)
+            return new TelegramTestOutcome(false, null, "Telegram is not configured on this plan", false, TelegramReadiness.NoBlock);
+        if (_token == null)
+            return new TelegramTestOutcome(false, null, "no bot token — set CONDUCTOR_TELEGRAM_TOKEN or save one from the Face",
+                false, TelegramReadiness.NoToken);
 
         try
         {
@@ -114,42 +128,108 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
             {
                 var err = $"getMe failed: HTTP {(int)resp.StatusCode}";
                 _lastError = err;
-                return (false, null, err);
+                return new TelegramTestOutcome(false, null, err, false, null);
             }
 
             _botUsername = me.Username;
 
+            // A test that sends nothing is not a passing test, however valid the token: with no
+            // allowed chat id there is nobody to deliver to, and the old "true" here is what let the
+            // Face tick step 3 of its guided setup on a bot that could never reach the owner.
             if (_cfg.AllowedChatIds.Count == 0)
-                return (true, me.Username, null);
+                return new TelegramTestOutcome(false, me.Username, TelegramReadiness.NoChatIds, false,
+                    "the token is valid, but no test message was sent — there is no chat to send it to");
 
-            try
-            {
-                await SendAsync(_cfg.AllowedChatIds[0], $"✅ Conductor test message — bot @{me.Username} is connected.", ct)
-                    .ConfigureAwait(false);
-                return (true, me.Username, null);
-            }
-            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
-            {
-                var err = $"getMe succeeded (@{me.Username}) but the test message failed: {ex.Message}";
-                _lastError = err;
-                return (false, me.Username, err);
-            }
+            return _started
+                ? await SendTestViaQueueAsync(_cfg.AllowedChatIds[0], me.Username, ct).ConfigureAwait(false)
+                : await SendTestBypassingQueueAsync(_cfg.AllowedChatIds[0], me.Username, ct).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
         {
             var err = $"could not reach Telegram: {ex.Message}";
             _lastError = err;
-            return (false, null, err);
+            return new TelegramTestOutcome(false, null, err, false, null);
         }
     }
 
+    /// <summary>The honest path: hand the message to the live queue and report what the send loop
+    /// actually did with it. Everything this exercises — started flag, queue, send loop, token,
+    /// chat id — is exercised by a real session-end push too.</summary>
+    private async Task<TelegramTestOutcome> SendTestViaQueueAsync(string chatId, string? bot, CancellationToken ct)
+    {
+        var ack = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var text = $"✅ Conductor test message — bot @{bot} is connected. Sent through the live push queue, "
+                 + "the same path every run notification takes.";
+        if (!_sendQueue.Writer.TryWrite((chatId, text, null, ack)))
+            return new TelegramTestOutcome(false, bot, "the send queue is closed — the service is shutting down",
+                false, TelegramReadiness.NotStarted);
+
+        string? error;
+        try { error = await ack.Task.WaitAsync(TestAckTimeout, ct).ConfigureAwait(false); }
+        catch (TimeoutException)
+        {
+            return new TelegramTestOutcome(false, bot, "queued, but the send loop did not report back within 30s",
+                true, "the message is still sitting in the live queue — real pushes are stuck the same way");
+        }
+
+        return error is null
+            ? new TelegramTestOutcome(true, bot, null, true,
+                "sent through the live send queue — the same path every run push takes")
+            : new TelegramTestOutcome(false, bot, error, true,
+                "the live send queue accepted the message and failed to deliver it — real pushes are failing the same way");
+    }
+
+    /// <summary>The loud path. The queue is not running, so this proves only that Telegram can be
+    /// reached from this process — NOT that this run will ever notify anybody. Both the HTTP reply
+    /// and the message that lands on the phone say so.</summary>
+    private async Task<TelegramTestOutcome> SendTestBypassingQueueAsync(string chatId, string? bot, CancellationToken ct)
+    {
+        const string bypassed = "sent DIRECTLY, bypassing the send queue — this test did NOT prove delivery: "
+                              + TelegramReadiness.NotStarted;
+        try
+        {
+            await SendAsync(chatId, $"⚠️ Conductor test message — bot @{bot} answered, but the push queue is NOT "
+                + "running in this process, so real notifications from this run are being dropped.", ct).ConfigureAwait(false);
+            return new TelegramTestOutcome(true, bot, null, false, bypassed);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            var err = $"getMe succeeded (@{bot}) but the test message failed: {ex.Message}";
+            _lastError = err;
+            return new TelegramTestOutcome(false, bot, err, false, bypassed);
+        }
+    }
+
+    /// <summary>SC1.2: logs on BOTH outcomes. The silent early return is the exact shape of the bug
+    /// SC1.1 fixed — a process that has decided to deliver nothing for the rest of the run, and says
+    /// so nowhere. Not-started names the missing half in doctor's own words; started names the poll
+    /// interval and how many chat ids it will actually reach, because "started" with an empty
+    /// allowedChatIds is push-only to nobody and would otherwise read as success.</summary>
     public Task StartAsync(CancellationToken ct)
     {
-        if (!IsConfigured) return Task.CompletedTask;
+        if (!IsConfigured)
+        {
+            var missing = TelegramReadiness.MissingHalf(
+                hasBlock: _cfg is not null, hasToken: _token is not null,
+                allowedChatIds: _cfg?.AllowedChatIds.Count ?? 0, started: false);
+            // No telegram block at all is an ordinary, deliberate choice; a block that cannot deliver
+            // is a misconfiguration the owner meant to work, and warrants the louder level.
+            if (_cfg is null) _log.LogInformation("Telegram not started: {Reason}", missing);
+            else _log.LogWarning("Telegram not started: {Reason}", missing);
+            return Task.CompletedTask;
+        }
+
         _started = true;
         _pollTask = Task.Run(() => PollLoopAsync(_cts.Token), CancellationToken.None);
         _sendTask = Task.Run(() => SendLoopAsync(_cts.Token), CancellationToken.None);
-        _log.LogInformation("Telegram bot started (poll interval {Interval}s)", _cfg!.PollIntervalSeconds);
+
+        var chatIds = _cfg!.AllowedChatIds.Count;
+        if (chatIds == 0)
+            _log.LogWarning("Telegram bot started (poll interval {Interval}s) but will deliver nothing: {Reason}",
+                _cfg.PollIntervalSeconds, TelegramReadiness.NoChatIds);
+        else
+            _log.LogInformation("Telegram bot started (poll interval {Interval}s, {ChatIds} allowed chat id(s))",
+                _cfg.PollIntervalSeconds, chatIds);
         return Task.CompletedTask;
     }
 
@@ -207,7 +287,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
     {
         if (!_started || _cfg?.AllowedChatIds is not { Count: > 0 } ids) return Task.CompletedTask;
         foreach (var cid in ids)
-            _sendQueue.Writer.TryWrite((cid, message, null));
+            _sendQueue.Writer.TryWrite((cid, message, null, null));
         return Task.CompletedTask;
     }
 
@@ -217,7 +297,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
         if (!_started || _cfg is not { EnableTwoWay: true, AllowedChatIds.Count: > 0 }) return Task.CompletedTask;
         var kb = BuildInlineKeyboard(buttons);
         foreach (var cid in _cfg.AllowedChatIds)
-            _sendQueue.Writer.TryWrite((cid, message, kb));
+            _sendQueue.Writer.TryWrite((cid, message, kb, null));
         return Task.CompletedTask;
     }
 
@@ -286,12 +366,18 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
                 try
                 {
                     await SendAsync(item.ChatId, item.Text, ct, item.KeyboardJson).ConfigureAwait(false);
+                    item.Ack?.TrySetResult(null);
                 }
-                catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                {
+                    item.Ack?.TrySetResult("the send queue was shutting down");
+                    break;
+                }
                 catch (Exception ex)
                 {
                     _lastError = ex.Message;
                     _log.LogWarning(ex, "Telegram send error");
+                    item.Ack?.TrySetResult(ex.Message);
                 }
             }
         }

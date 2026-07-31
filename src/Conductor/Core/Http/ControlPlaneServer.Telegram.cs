@@ -22,13 +22,22 @@ public sealed partial class ControlPlaneServer
         await WriteJsonAsync(ctx, BuildTelegramStatus(), ControlPlaneJsonContext.Default.TelegramStatusDto).ConfigureAwait(false);
     }
 
+    /// <summary>SC1.2: the four older booleans each described a precondition; none of them answered
+    /// the only question an operator asks — will this run actually reach my phone? WillDeliver is
+    /// that answer, derived (never stored), and when it is false WillDeliverReason names the missing
+    /// half in the same words doctor uses, from the same helper.</summary>
     private TelegramStatusDto BuildTelegramStatus()
     {
         var cfg = _plan.Telegram;
         if (cfg is null || _telegram is not TelegramService svc)
             return new TelegramStatusDto(
                 Configured: false, Started: false, HasToken: false, AllowedChatIds: [],
-                PollIntervalSeconds: 4, EnableTwoWay: false, BotUsername: null, LastError: null, LastPollUtc: null);
+                PollIntervalSeconds: 4, EnableTwoWay: false, BotUsername: null, LastError: null, LastPollUtc: null,
+                WillDeliver: false, WillDeliverReason: TelegramReadiness.NoBlock);
+
+        var missing = TelegramReadiness.MissingHalf(
+            hasBlock: true, hasToken: svc.IsConfigured,
+            allowedChatIds: cfg.AllowedChatIds.Count, started: svc._started);
 
         return new TelegramStatusDto(
             Configured: true,
@@ -39,22 +48,26 @@ public sealed partial class ControlPlaneServer
             EnableTwoWay: cfg.EnableTwoWay,
             BotUsername: svc._botUsername,
             LastError: svc._lastError,
-            LastPollUtc: svc._lastPollUtc?.ToString("O"));
+            LastPollUtc: svc._lastPollUtc?.ToString("O"),
+            WillDeliver: missing is null,
+            WillDeliverReason: missing);
     }
 
     private async Task HandleTelegramTestAsync(HttpListenerContext ctx, CancellationToken ct)
     {
         if (_telegram is not TelegramService svc)
         {
-            await WriteJsonAsync(ctx, new TelegramTestResultDto(false, null, "Telegram is not configured on this plan — add a Telegram block first"),
+            await WriteJsonAsync(ctx, new TelegramTestResultDto(false, null,
+                    "Telegram is not configured on this plan — add a Telegram block first", ViaQueue: false,
+                    Detail: TelegramReadiness.NoBlock),
                 ControlPlaneJsonContext.Default.TelegramTestResultDto, HttpStatusCode.BadRequest).ConfigureAwait(false);
             return;
         }
 
-        var (ok, botUsername, error) = await svc.TestConnectionAsync(ct).ConfigureAwait(false);
-        await WriteJsonAsync(ctx, new TelegramTestResultDto(ok, botUsername, error),
+        var r = await svc.TestConnectionAsync(ct).ConfigureAwait(false);
+        await WriteJsonAsync(ctx, new TelegramTestResultDto(r.Ok, r.BotUsername, r.Error, r.ViaQueue, r.Detail),
             ControlPlaneJsonContext.Default.TelegramTestResultDto,
-            ok ? HttpStatusCode.OK : HttpStatusCode.BadRequest).ConfigureAwait(false);
+            r.Ok ? HttpStatusCode.OK : HttpStatusCode.BadRequest).ConfigureAwait(false);
     }
 
     private async Task HandleTelegramTokenAsync(HttpListenerContext ctx, CancellationToken ct)

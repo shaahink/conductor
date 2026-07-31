@@ -231,18 +231,23 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
             : new Check("budget", "ok", $"${currentCostUsd:0.00} / ${cap:0.00} ({pct:0}%)");
     }
 
+    /// <summary>SC1.2: the sentences live in <see cref="TelegramReadiness"/>, which
+    /// <c>GET /telegram/status</c> and <c>TelegramService.StartAsync</c> also read, so doctor and the
+    /// live surfaces cannot drift apart on what "working" means. Started-ness is passed as null:
+    /// doctor runs outside the engine and has no honest way to know it.</summary>
     internal static Check CheckTelegram(PlanConfig plan)
     {
-        if (plan.Telegram is not { } cfg)
-            return new Check("telegram", "warn", "not configured — optional; add a telegram block to the plan, or set it up from the Face's Telegram tab");
-
+        var cfg = plan.Telegram;
         var hasToken = Environment.GetEnvironmentVariable("CONDUCTOR_TELEGRAM_TOKEN") is { Length: > 0 }
             || SecretsStore.TryReadTelegramToken(plan.StateDir) != null;
-        if (!hasToken)
-            return new Check("telegram", "warn", "configured but no bot token — set CONDUCTOR_TELEGRAM_TOKEN, or save one from the Face's Telegram tab");
-        if (cfg.AllowedChatIds.Count == 0)
-            return new Check("telegram", "warn", "token present but no allowedChatIds — bot is push-only to nobody");
-        return new Check("telegram", "ok", $"token present, {cfg.AllowedChatIds.Count} allowed chat id(s)");
+
+        var missing = TelegramReadiness.MissingHalf(
+            hasBlock: cfg is not null, hasToken: hasToken,
+            allowedChatIds: cfg?.AllowedChatIds.Count ?? 0, started: null);
+
+        return missing is not null
+            ? new Check("telegram", "warn", missing)
+            : new Check("telegram", "ok", $"token present, {cfg!.AllowedChatIds.Count} allowed chat id(s)");
     }
 
     private static (decimal CostUsd, bool HasRun) TryReadCostFromRunDb(PlanConfig plan)
