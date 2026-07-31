@@ -1,59 +1,55 @@
-{
-  // SARBAN plan 1 of 2 — engine correctness, Telegram, versioning + update.
-  // The annotated master brief is docs/history/CONDUCTOR-SARBAN.md (plan set strips these comments).
+﻿{
+  "version": "1.0",
+  "planVersion": 2,
   "name": "Sarban core - the engine says what it knows",
   "repo": "C:/code/conductor",
   "tracker": "SARBAN-CORE-TRACKER.md",
   "planDoc": "docs/history/CONDUCTOR-SARBAN.md",
   "branchPattern": "^feat/sarban$",
   "pauseOnBlocked": true,
-  "batteryCollapse": false,
-
   "agent": {
     "command": "claude",
-    "model": "claude-opus-5",
     "args": [
-      "-p", "{prompt}",
-      "--output-format", "stream-json",
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "stream-json",
       "--verbose",
       "--dangerously-skip-permissions",
-      "--model", "{model}",
-      "--session-id", "{sessionId}"
+      "--model",
+      "{model}",
+      "--session-id",
+      "{sessionId}"
     ],
     "resumeArgs": [
-      "-p", "{prompt}",
-      "--output-format", "stream-json",
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "stream-json",
       "--verbose",
       "--dangerously-skip-permissions",
-      "--model", "{model}",
-      "--resume", "{claudeSessionId}"
+      "--model",
+      "{model}",
+      "--resume",
+      "{claudeSessionId}"
     ],
-    "output": "stream-json"
+    "output": "stream-json",
+    "model": "claude-opus-5"
   },
-
   "advisor": {
     "enabled": true,
     "command": "claude",
-    "args": ["-p", "{prompt}", "--output-format", "json", "--model", "claude-haiku-4-5-20251001"],
+    "args": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "json",
+      "--model",
+      "claude-haiku-4-5-20251001"
+    ],
     "output": "json",
     "timeoutMinutes": 6
   },
-
-  "defaultWorkflow": "deliver",
-  "workflows": {
-    "deliver": {
-      "name": "deliver",
-      "description": "Deliver until the stage's checkpoints are confirmed; fix only when gates are red.",
-      "repeat": true,
-      "steps": [
-        { "id": "deliver", "kind": "Deliver", "deliver": true },
-        { "id": "fix-if-red", "kind": "Fix", "deliver": true, "runIf": "!gatesGreen" }
-      ]
-    }
-  },
-
-  "templatesDir": "sarban-templates",
-
   "setup": {
     "command": "dotnet build-server shutdown; exit 0",
     "timeoutMinutes": 2
@@ -62,85 +58,188 @@
     "command": "dotnet build-server shutdown; exit 0",
     "timeoutMinutes": 2
   },
-
+  "progress": {
+    "kind": "markdown-table"
+  },
+  "conventions": {
+    "stageIdPattern": "(?\u003Cstage\u003E[A-Za-z]\u002B\\d\u002B)(?:\\.\\d\u002B)?[a-z]?",
+    "handoffMarker": "## Handoff",
+    "humanToken": "HUMAN:",
+    "status": {
+      "done": [
+        "DONE"
+      ],
+      "blocked": [
+        "BLOCKED"
+      ],
+      "inProgress": [
+        "IN PROGRESS"
+      ],
+      "todo": [
+        "TODO"
+      ]
+    }
+  },
   "stages": [
     {
       "id": "SC1",
       "title": "Telegram actually delivers",
       "sessions": 2,
-      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SC1. Root cause is cited there: nothing ever starts the hosted service - RunCommand resolves the Orchestrator straight from the container, so _started stays false and every push is silently dropped while the test button works. Follow the ControlPlaneServer precedent of an explicit start. Acceptance: a real run path delivers a real push, two-way answers, and a regression test drives the actual run-start path. The live proof is a nested run of YOUR build against a scratch repo (promptExtra trap 2) - CONDUCTOR_TELEGRAM_TOKEN must be present in your environment; the owner sets it before launch. If the token is genuinely absent, record a HUMAN: line and park - never mock the push to claim."
+      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SC1. Root cause is cited there: nothing ever starts the hosted service - RunCommand resolves the Orchestrator straight from the container, so _started stays false and every push is silently dropped while the test button works. Follow the ControlPlaneServer precedent of an explicit start. Acceptance: a real run path delivers a real push, two-way answers, and a regression test drives the actual run-start path. The live proof is a nested run of YOUR build against a scratch repo (promptExtra trap 2) - CONDUCTOR_TELEGRAM_TOKEN must be present in your environment; the owner sets it before launch. If the token is genuinely absent, record a HUMAN: line and park - never mock the push to claim.",
+      "ownerGate": false,
+      "kind": "deliver"
     },
     {
       "id": "SC2",
       "title": "Truthful surfaces",
       "sessions": 3,
-      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SC2. Status never calls a healthy run interrupted; sticky failure fields age or clear; one canonical gates GREEN or RED vocabulary on phase-gate lines plus an honest no-gates-configured confirmation state and consistent attempt numbering; /state carries in-flight and window-vs-lifetime spend; RUN-SUMMARY.md on completion, offline report and status, shared-read log, incremental SSE tails."
+      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SC2. Status never calls a healthy run interrupted; sticky failure fields age or clear; one canonical gates GREEN or RED vocabulary on phase-gate lines plus an honest no-gates-configured confirmation state and consistent attempt numbering; /state carries in-flight and window-vs-lifetime spend; RUN-SUMMARY.md on completion, offline report and status, shared-read log, incremental SSE tails.",
+      "ownerGate": false,
+      "kind": "deliver"
     },
     {
       "id": "SC3",
       "title": "Config traps die at authoring time",
       "sessions": 3,
-      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SC3. Doctor FAILS on a dropped model token; unknown RunIf and SkipIf tokens fail at plan load; plan set refuses absent leaf keys, suggests the dotted path, and reaches the live engine or says how; a literal brace in plan prose is caught by doctor and parks at runtime instead of a silent stderr-only exit, with a double-brace escape; advisor defaults work headless or refuse loudly, and plan-config.md stops documenting a default that does not exist."
+      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SC3. Doctor FAILS on a dropped model token; unknown RunIf and SkipIf tokens fail at plan load; plan set refuses absent leaf keys, suggests the dotted path, and reaches the live engine or says how; a literal brace in plan prose is caught by doctor and parks at runtime instead of a silent stderr-only exit, with a double-brace escape; advisor defaults work headless or refuse loudly, and plan-config.md stops documenting a default that does not exist.",
+      "ownerGate": false,
+      "kind": "deliver"
     },
     {
       "id": "SC4",
       "title": "Verdicts judge the work, not the environment",
       "sessions": 3,
-      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SC4. Settle before the battery and retry a red required gate once before GatesRed; NoProgress requires no commits AND no newly-DONE checkpoints, with conductor's own chore commits excluded from the count; satelliteRepos for multi-repo diffs and gate-cache keys that cover the gate's own working directory and command text; injections render at the top of the prompt and supersede a stale gate-failures block."
+      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SC4. Settle before the battery and retry a red required gate once before GatesRed; NoProgress requires no commits AND no newly-DONE checkpoints, with conductor\u0027s own chore commits excluded from the count; satelliteRepos for multi-repo diffs and gate-cache keys that cover the gate\u0027s own working directory and command text; injections render at the top of the prompt and supersede a stale gate-failures block.",
+      "ownerGate": false,
+      "kind": "deliver"
     },
     {
       "id": "SC5",
       "title": "The engine can wait, detach, and correct the board",
       "sessions": 3,
-      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SC5. Blocked-until as a first-class session outcome the run loop honours by sleeping and respawning once, surfaced everywhere; run --detach prints pid and control-plane url and survives its launching shell; task --todo --blocked --skipped --amend land through the shared writes path and --in-progress reports the post-fold truth; bg rows map to their session stream and runtimes use one timezone. Prove detach and blocked-until with YOUR build against a scratch repo (promptExtra trap 2) - never by aiming run verbs at this repo."
+      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SC5. Blocked-until as a first-class session outcome the run loop honours by sleeping and respawning once, surfaced everywhere; run --detach prints pid and control-plane url and survives its launching shell; task --todo --blocked --skipped --amend land through the shared writes path and --in-progress reports the post-fold truth; bg rows map to their session stream and runtimes use one timezone. Prove detach and blocked-until with YOUR build against a scratch repo (promptExtra trap 2) - never by aiming run verbs at this repo.",
+      "ownerGate": false,
+      "kind": "deliver"
     },
     {
       "id": "SC6",
       "title": "Clean history without lying about it",
       "sessions": 2,
-      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SC6. Pure status-transition commits stop landing; any squash runs AFTER the final state write, works on a dirty tree, reports real counts, logs git stderr and exit code on failure, un-marks the stage on failure instead of permanently marking it squashed, aborts a half-started rebase, and degrades gracefully off Windows."
+      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SC6. Pure status-transition commits stop landing; any squash runs AFTER the final state write, works on a dirty tree, reports real counts, logs git stderr and exit code on failure, un-marks the stage on failure instead of permanently marking it squashed, aborts a half-started rebase, and degrades gracefully off Windows.",
+      "ownerGate": false,
+      "kind": "deliver"
     },
     {
       "id": "SC7",
       "title": "The transcript captures structure",
       "sessions": 3,
-      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SC7. Store tool events structured - name plus extracted fields, values truncated, JSON never cut - with back-compat reading of the old lines; note writes outside the repo in the verdict; emit readable one-liner wire lines from the provider and compute, store and serve a per-session digest. The worked example in the spec is the acceptance shape. This stage enables the whole face round."
+      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SC7. Store tool events structured - name plus extracted fields, values truncated, JSON never cut - with back-compat reading of the old lines; note writes outside the repo in the verdict; emit readable one-liner wire lines from the provider and compute, store and serve a per-session digest. The worked example in the spec is the acceptance shape. This stage enables the whole face round.",
+      "ownerGate": false,
+      "kind": "deliver"
     },
     {
       "id": "SC8",
       "title": "The program knows what it is and can update itself",
       "sessions": 3,
-      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SC8. A version verb and /version endpoint stamped at build with semver, git sha and date; automatic tag-height versioning reconciled with the release workflow so a downloaded binary answers with its tag; install.ps1 prints before and after versions; CHANGELOG per release; conductor update checks the latest release and swaps binaries safely, refusing while a run is live; doctor reports update-available. Prove the swap against a scratch copy of an installed engine - never the live published one driving you (promptExtra traps 1 and 2)."
+      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SC8. A version verb and /version endpoint stamped at build with semver, git sha and date; automatic tag-height versioning reconciled with the release workflow so a downloaded binary answers with its tag; install.ps1 prints before and after versions; CHANGELOG per release; conductor update checks the latest release and swaps binaries safely, refusing while a run is live; doctor reports update-available. Prove the swap against a scratch copy of an installed engine - never the live published one driving you (promptExtra traps 1 and 2).",
+      "ownerGate": false,
+      "kind": "deliver"
     }
   ],
-
-  "gatePolicy": "perPhase",
   "gates": [
-    { "name": "engine-fast", "command": "dotnet build Conductor.slnx -clp:ErrorsOnly", "tier": "fast", "timeoutMinutes": 15 },
-    { "name": "face-fast", "command": "cmd /c \"cd /d C:\\code\\conductor\\face-go && go build ./... && go vet ./...\"", "tier": "fast", "timeoutMinutes": 10 },
-    { "name": "engine-full", "command": "dotnet test Conductor.slnx", "tier": "full", "timeoutMinutes": 40 },
-    { "name": "face-full", "command": "cmd /c \"cd /d C:\\code\\conductor\\face-go && go test ./...\"", "tier": "full", "timeoutMinutes": 15 }
+    {
+      "name": "engine-fast",
+      "command": "dotnet build Conductor.slnx -clp:ErrorsOnly",
+      "optional": false,
+      "tier": "fast",
+      "parallel": false,
+      "timeoutMinutes": 15
+    },
+    {
+      "name": "face-fast",
+      "command": "cmd /c \u0022cd /d C:\\code\\conductor\\face-go \u0026\u0026 go build ./... \u0026\u0026 go vet ./...\u0022",
+      "optional": false,
+      "tier": "fast",
+      "parallel": false,
+      "timeoutMinutes": 10
+    },
+    {
+      "name": "engine-full",
+      "command": "dotnet test Conductor.slnx",
+      "optional": false,
+      "tier": "full",
+      "parallel": false,
+      "timeoutMinutes": 40
+    },
+    {
+      "name": "face-full",
+      "command": "cmd /c \u0022cd /d C:\\code\\conductor\\face-go \u0026\u0026 go test ./...\u0022",
+      "optional": false,
+      "tier": "full",
+      "parallel": false,
+      "timeoutMinutes": 15
+    }
   ],
-
+  "gatePolicy": "perPhase",
+  "verifyEachDelivery": true,
   "limits": {
     "stallMinutes": 15,
+    "stallGraceMinutes": 3,
     "sessionTimeoutMinutes": 120,
+    "authPreflight": true,
     "maxResumesPerSession": 2,
     "stageSlackFactor": 2,
     "backoffMinutes": 30,
     "maxBackoffs": 10,
-    "maxRunCostUsd": 260
+    "maxRunCostUsd": 450,
+    "approvalMode": false,
+    "maxConcurrentLanes": 2,
+    "stallPatternTermination": true,
+    "sameFailureCircuitBreaker": true,
+    "stallBackoffMinutes": 12,
+    "overheadCostPerSecond": 0.0001,
+    "verifierThreshold": 80
   },
-
-  "report": { "commit": false, "push": false },
-
-  // Push-only until SC1 lands (the CURRENT engine never starts the service - that is the point
-  // of SC1). Token lives in env CONDUCTOR_TELEGRAM_TOKEN or .conductor/secrets.local.json.
-  "telegram": { "allowedChatIds": ["99205495"], "pollIntervalSeconds": 4, "enableTwoWay": true },
-
+  "report": {
+    "commit": false,
+    "push": false,
+    "heartbeatMinutes": 0
+  },
+  "telegram": {
+    "allowedChatIds": [
+      "99205495"
+    ],
+    "pollIntervalSeconds": 4,
+    "enableTwoWay": true
+  },
+  "promptExtra": "TRAPS THIS REPO HAS ALREADY PAID FOR, in order of cost:\n1. NEVER run tools/install.ps1 or overwrite the published engine - the conductor driving you runs from that published copy. The owner reinstalls between plans.\n2. This repo\u0027s .conductor/ is the LIVE state of the run driving you. The claim and note verbs (conductor task, note, bug, bg) and read-only verbs (status, task --list) are yours; NEVER aim run-control verbs (run, pause, resume, abort, approve, plan set, plan reload, goto, skip, retry-stage, rollback, kill) at this repo. Any live-run proof spawns YOUR build against a scratch repo with its own tiny plan and its own .conductor - for example under %TEMP%\\sarban-proofs - never against C:/code/conductor.\n3. The conductor on PATH is the OLD published engine - the one driving you. Exercise YOUR changes through the fresh build: dotnet run --project src/Conductor -- VERB, or the exe it builds. Testing a new verb through the PATH shim only proves the old engine lacks it. Exception by design: task claims go through the PATH copy, because they target the driving run.\n4. The ratchet gate is tools/gates/ratchet.ps1 - the wrong path prints an error but exits 0, a silent false green. Never raise the pragma ceiling; fix the cause instead, as DoctorCommand\u0027s AsyncCommand conversion did.\n5. face-go: pad plain text then style, never width-format an ANSI string; clamp with MaxWidth and MaxHeight; goldens pin UTC and live in face-go/internal/tui/testdata/golden - regenerate them in a separate rebaseline commit, and read face-go/STYLE.md before any face change.\n6. Orphaned dotnet test hosts flake the full suite; stopping stray dotnet processes between full runs is sanctioned, but never kill the conductor process itself.\n7. PowerShell tooling targets Windows PowerShell 5.1 and must stay ASCII-only - em-dashes have torn string literals here before.\n8. Keep tracker handoffs, checkpoint titles and all plan prose free of curly braces - a literal brace token reaches the composed prompt and kills the CURRENT engine at the stage boundary. SC3.3 fixes this; until the owner reinstalls the fixed engine, the discipline stands.\n9. The conductor MCP task tools may arrive deferred in your harness - ToolSearch for task_update first, or use the CLI: conductor task --done ID --evidence PATH. That command is the only claim; prose moves nothing.\n10. Commit per checkpoint with the repo\u0027s trailer convention and push feat/sarban. Go sources are checked out LF; keep them that way.",
+  "templatesDir": "sarban-templates",
+  "packs": [],
+  "batteryCollapse": false,
   "readOrder": [
     "docs/history/CONDUCTOR-SARBAN.md"
   ],
-
-  "promptExtra": "TRAPS THIS REPO HAS ALREADY PAID FOR, in order of cost:\n1. NEVER run tools/install.ps1 or overwrite the published engine - the conductor driving you runs from that published copy. The owner reinstalls between plans.\n2. This repo's .conductor/ is the LIVE state of the run driving you. The claim and note verbs (conductor task, note, bug, bg) and read-only verbs (status, task --list) are yours; NEVER aim run-control verbs (run, pause, resume, abort, approve, plan set, plan reload, goto, skip, retry-stage, rollback, kill) at this repo. Any live-run proof spawns YOUR build against a scratch repo with its own tiny plan and its own .conductor - for example under %TEMP%\\sarban-proofs - never against C:/code/conductor.\n3. The conductor on PATH is the OLD published engine - the one driving you. Exercise YOUR changes through the fresh build: dotnet run --project src/Conductor -- VERB, or the exe it builds. Testing a new verb through the PATH shim only proves the old engine lacks it. Exception by design: task claims go through the PATH copy, because they target the driving run.\n4. The ratchet gate is tools/gates/ratchet.ps1 - the wrong path prints an error but exits 0, a silent false green. Never raise the pragma ceiling; fix the cause instead, as DoctorCommand's AsyncCommand conversion did.\n5. face-go: pad plain text then style, never width-format an ANSI string; clamp with MaxWidth and MaxHeight; goldens pin UTC and live in face-go/internal/tui/testdata/golden - regenerate them in a separate rebaseline commit, and read face-go/STYLE.md before any face change.\n6. Orphaned dotnet test hosts flake the full suite; stopping stray dotnet processes between full runs is sanctioned, but never kill the conductor process itself.\n7. PowerShell tooling targets Windows PowerShell 5.1 and must stay ASCII-only - em-dashes have torn string literals here before.\n8. Keep tracker handoffs, checkpoint titles and all plan prose free of curly braces - a literal brace token reaches the composed prompt and kills the CURRENT engine at the stage boundary. SC3.3 fixes this; until the owner reinstalls the fixed engine, the discipline stands.\n9. The conductor MCP task tools may arrive deferred in your harness - ToolSearch for task_update first, or use the CLI: conductor task --done ID --evidence PATH. That command is the only claim; prose moves nothing.\n10. Commit per checkpoint with the repo's trailer convention and push feat/sarban. Go sources are checked out LF; keep them that way."
+  "analysisLanes": [],
+  "mutatingLanes": [],
+  "workflows": {
+    "deliver": {
+      "name": "deliver",
+      "description": "Deliver until the stage\u0027s checkpoints are confirmed; fix only when gates are red.",
+      "steps": [
+        {
+          "id": "deliver",
+          "kind": "deliver",
+          "deliver": true
+        },
+        {
+          "id": "fix-if-red",
+          "kind": "fix",
+          "runIf": "!gatesGreen",
+          "deliver": true
+        }
+      ],
+      "repeat": true
+    }
+  },
+  "defaultWorkflow": "deliver"
 }
