@@ -116,6 +116,7 @@ public sealed partial class VerdictEngine
     public async Task EvaluateSessionAsync(SessionRecord rec, StageConfig stage, TrackerSnapshot preTrack, string startHead,
         bool stalled, bool timedOut, bool killedByUser, bool agentErrored, CancellationToken ct)
     {
+        NoteOutsideRepoWrites(rec);
         if (killedByUser)
         {
             rec.Outcome = SessionOutcome.KilledByUser;
@@ -471,29 +472,6 @@ public sealed partial class VerdictEngine
             ("Inject\u2026", "inject:needsHuman"),
             ("Chat", "chat:needsHuman"),
         ]);
-    }
-
-    private bool IdenticalStallPattern(SessionRecord rec)
-    {
-        // SC4.2: a stall that produced only conductor's own bookkeeping commits produced nothing.
-        // SC4.3: a stall that committed to a declared satellite produced something.
-        if (SessionProgress.HasWorkCommits(rec)) return false;
-        var summary = rec.ResultSummary?.Trim();
-        if (!string.IsNullOrEmpty(summary)) return false;
-
-        var stalledCount = 1;
-        for (var i = _ctx.State.History.Count - 2; i >= 0; i--)
-        {
-            var prev = _ctx.State.History[i];
-            if (prev.Outcome != SessionOutcome.Stalled) break;
-            if (!SessionProgress.HasWorkCommits(prev) && string.IsNullOrEmpty(prev.ResultSummary?.Trim()))
-            {
-                stalledCount++;
-                if (stalledCount >= 2) return true;
-            }
-            else break;
-        }
-        return false;
     }
 
 }

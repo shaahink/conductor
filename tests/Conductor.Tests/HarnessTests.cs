@@ -391,4 +391,108 @@ public sealed class HarnessTests : IDisposable
         Assert.Contains("{stageBudget}", log, StringComparison.Ordinal);
         Assert.Contains("session.md", log, StringComparison.Ordinal);
     }
+
+    /// <summary>SC7.1 live proof, driven through the real orchestrator and a real agent process
+    /// speaking claude's <c>stream-json</c>.
+    ///
+    /// The agent makes three tool calls whose arguments are shaped exactly like the ones the old
+    /// capture destroyed: a Write whose 400-character <c>content</c> comes BEFORE its
+    /// <c>file_path</c> (so <c>Trunc(rawJson, 150)</c> cut the path away entirely), a Bash with a long
+    /// description ahead of its command, and an Edit inside the repo. It really does write the
+    /// out-of-repo file.
+    ///
+    /// What must be true afterwards: transcript.jsonl holds schema-v2 lines carrying the WHOLE path
+    /// and the WHOLE command; the session record names the out-of-repo write and only that one; and
+    /// the verdict says so in conductor.log.</summary>
+    [Fact]
+    public async Task FullCycle_StructuredToolEvents_ReachTheTranscriptAndTheVerdict()
+    {
+        var outsideFile = Path.Combine(Path.GetTempPath(), $"sc71-outside-{Guid.NewGuid():N}.txt");
+        var outsideJson = outsideFile.Replace("\\", "\\\\", StringComparison.Ordinal);
+        var body = new string('z', 400);
+        var longPurpose = "probe the toolchain before touching anything, because the last three attempts " +
+                          "died on a missing SDK and nobody could tell from the transcript which command ran";
+        var claudeAgent = Path.Combine(_repo, "fake-claude.cmd");
+        await File.WriteAllTextAsync(claudeAgent, string.Join("\r\n",
+            "@echo off",
+            "echo {\"type\":\"system\",\"subtype\":\"init\"}",
+            "echo {\"type\":\"assistant\",\"message\":{\"id\":\"m1\",\"content\":[{\"type\":\"tool_use\",\"name\":\"Bash\"," +
+                $"\"input\":{{\"description\":\"{longPurpose}\",\"command\":\"dotnet build Conductor.slnx -clp:ErrorsOnly\"}}}}]}}}}",
+            "echo {\"type\":\"assistant\",\"message\":{\"id\":\"m2\",\"content\":[{\"type\":\"tool_use\",\"name\":\"Write\"," +
+                $"\"input\":{{\"content\":\"{body}\",\"file_path\":\"{outsideJson}\"}}}}]}}}}",
+            "echo {\"type\":\"assistant\",\"message\":{\"id\":\"m3\",\"content\":[{\"type\":\"tool_use\",\"name\":\"Edit\"," +
+                "\"input\":{\"file_path\":\"README.md\",\"old_string\":\"a\",\"new_string\":\"a\\nb\"}}]}}",
+            $"echo {body}>\"{outsideFile}\"",
+            "echo harness done> harness-output.txt",
+            "git add harness-output.txt",
+            "git commit -m \"feat: deliver harness checkpoint\"",
+            "echo {\"type\":\"result\",\"total_cost_usd\":0.01,\"num_turns\":3," +
+                "\"result\":\"SESSION-RESULT: probed and wrote.\",\"usage\":{\"input_tokens\":120,\"output_tokens\":40}}",
+            "exit /b 0",
+            ""));
+
+        var plan = new PlanConfig
+        {
+            Name = "StructuredPlan",
+            Repo = _repo,
+            Tracker = "TRACKER.md",
+            Stages = { new StageConfig { Id = "H0", Title = "Harness", Sessions = 1 } },
+            Agent = new AgentConfig
+            {
+                Command = "cmd.exe",
+                Args = { "/c", claudeAgent, "{prompt}" },
+                Provider = "claude",
+            },
+            GatePolicy = "perSession",
+            Gates = { new GateConfig { Name = "smoke", Command = "echo ok", Tier = "fast", TimeoutMinutes = 1 } },
+        };
+        plan.Report.Commit = false;
+
+        var state = new RunState { RunId = Guid.NewGuid().ToString("N") };
+        using var host = ConductorHost.Build(plan, state, new PlainSink(),
+            new RunOptions(DryRun: false, Once: true, MaxSessions: 0), consoleSink: false);
+
+        try
+        {
+            var code = await host.Services.GetRequiredService<Orchestrator>().RunAsync(CancellationToken.None);
+            Assert.Equal(0, code);
+            Assert.Single(state.History);
+
+            // ── the transcript holds STRUCTURE, at schema v2 ──
+            var lines = TranscriptLog.ReadAll(Path.Combine(_stateDir, "transcript.jsonl"));
+            var tools = lines.Where(l => l.Kind == "tool").ToList();
+            Assert.Equal(3, tools.Count);
+            Assert.All(tools, l => Assert.Equal(2, l.V));
+            Assert.All(tools, l => Assert.NotNull(l.Tool));
+
+            var write = tools.Single(l => l.Tool!.Name == "Write").Tool!;
+            // The WHOLE path — the old capture cut 400 characters of content before ever reaching it.
+            Assert.Equal(outsideFile, write.Field("path"));
+            Assert.Equal("400", write.Field("bytes"));
+
+            var bash = tools.Single(l => l.Tool!.Name == "Bash").Tool!;
+            Assert.Equal("dotnet build Conductor.slnx -clp:ErrorsOnly", bash.Field("command"));
+            Assert.Equal(longPurpose, bash.Field("purpose"));
+
+            var edit = tools.Single(l => l.Tool!.Name == "Edit").Tool!;
+            Assert.Equal("README.md", edit.Field("path"));
+            Assert.Equal("2", edit.Field("linesAdded"));
+
+            // ── the verdict knows where the session wrote ──
+            var session = state.History[0];
+            var stray = Assert.Single(session.OutsideRepoWrites);
+            Assert.Equal(outsideFile, stray);
+            // The in-repo Edit is not a stray, and the agent really did write the outside file.
+            Assert.DoesNotContain(session.OutsideRepoWrites, p => p.EndsWith("README.md", StringComparison.OrdinalIgnoreCase));
+            Assert.True(File.Exists(outsideFile), "the fake agent's out-of-repo write must be real");
+
+            var log = await File.ReadAllTextAsync(Path.Combine(_stateDir, "conductor.log"), CancellationToken.None);
+            Assert.Contains("note: 1 file(s) written outside the repo", log, StringComparison.Ordinal);
+            Assert.Contains(outsideFile, log, StringComparison.Ordinal);
+        }
+        finally
+        {
+            try { File.Delete(outsideFile); } catch (IOException) { }
+        }
+    }
 }

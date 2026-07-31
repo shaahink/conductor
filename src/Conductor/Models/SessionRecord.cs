@@ -32,6 +32,13 @@ public sealed class SessionRecord
     public int Attempt { get; set; }
     public string ResultSummary { get; set; } = "";
 
+    /// <summary>SC7.1 (devcontext #11): absolute paths this session wrote OUTSIDE the plan's repo and
+    /// outside every declared satellite, deduped, capped. Collected from the structured tool events —
+    /// impossible before SC7.1, because a <c>file_path</c> past the old 150-character argument cut was
+    /// never captured at all. The session verdict reports the count; the paths are kept so it can name
+    /// the first few.</summary>
+    public List<string> OutsideRepoWrites { get; set; } = new();
+
     [JsonIgnore] public long TokensTotal =>
         (TokensInput ?? 0) + (TokensOutput ?? 0) + (TokensReasoning ?? 0) + (TokensCacheRead ?? 0);
 }

@@ -12,6 +12,12 @@ public sealed class AgentEvent
     public DateTime Utc { get; } = DateTime.UtcNow;
     public string Kind { get; init; } = "raw"; // system | text | thinking | tool | result | stderr | raw
     public string Text { get; init; } = "";
+
+    /// <summary>SC7.1 — on a <c>tool</c> event, the call's extracted structure (name + fields, each
+    /// value truncated on its own). Null on every other kind. This is what carries a real
+    /// <c>file_path</c> or <c>command</c> to the transcript and to the out-of-repo write check;
+    /// <see cref="Text"/> is a rendering of it and cannot be parsed back.</summary>
+    public ToolCall? Tool { get; init; }
 }
 
 /// <summary>
@@ -64,7 +70,14 @@ public sealed class AgentSession : IDisposable
         {
             _events.Enqueue(new AgentEvent { Kind = kind, Text = text });
             if (kind == "tool") Interlocked.Exchange(ref _lastToolCallTicks, DateTime.UtcNow.Ticks);
-        }, tokenDelta);
+        }, tokenDelta,
+        // SC7.1: the structured half of a tool call. Same queue, same watchdog stamp — the only
+        // difference is that the event reaching the transcript still knows what path was written.
+        onTool: (call, text) =>
+        {
+            _events.Enqueue(new AgentEvent { Kind = "tool", Text = text, Tool = call });
+            Interlocked.Exchange(ref _lastToolCallTicks, DateTime.UtcNow.Ticks);
+        });
     }
 
     /// <summary>Substitutes the arg-template placeholders (<c>{prompt}</c>, <c>{sessionId}</c>,

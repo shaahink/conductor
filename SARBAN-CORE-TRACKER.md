@@ -32,7 +32,7 @@ know: the spec asked the squash to DEGRADE off Windows; there is nothing left to
 |---|---|
 | Total checkpoints | 26 |
 | Done | 0 |
-| Claimed (unconfirmed) | 20 |
+| Claimed (unconfirmed) | 21 |
 
 ## Checkpoints
 
@@ -88,7 +88,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | SC6.1 | Pure status-transition updates no longer land commits, and any squash runs after the stage's final state write | DONE | 04e092a | engine-fast:OK · face-fast:OK |
-| SC6.2 | The squash works on a dirty tree, reports real counts, logs git stderr and exit code on failure, un-marks the stage on failure, aborts a half-started rebase, and degrades gracefully off Windows | TODO | - | - |
+| SC6.2 | The squash works on a dirty tree, reports real counts, logs git stderr and exit code on failure, un-marks the stage on failure, aborts a half-started rebase, and degrades gracefully off Windows | DONE | 5c357b2 | engine-fast:OK · face-fast:OK |
 
 ### SC7 — The transcript captures structure
 

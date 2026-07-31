@@ -72,9 +72,14 @@ public sealed class ClaudeProvider : IAgentProvider
                         }
                         else if (bt == "tool_use")
                         {
+                            // SC7.1: extract, THEN truncate each value. The old capture was
+                            // `Trunc(inp.GetRawText(), 150)` — the whole argument object cut at 150
+                            // characters, mid-string — so a Write whose file_path sat past that point
+                            // had no recoverable path in any downstream reader (devcontext #10).
                             var name = block.TryGetProperty("name", out var n) ? n.GetString() ?? "tool" : "tool";
-                            var input = block.TryGetProperty("input", out var inp) ? ProviderText.Trunc(inp.GetRawText(), 150) : "";
-                            state.Emit("tool", $"{name} {input}");
+                            block.TryGetProperty("input", out var inp);
+                            var call = ToolEventExtractor.Extract(name, inp);
+                            state.EmitTool(call, ToolEventExtractor.Render(call));
                         }
                     }
                 }

@@ -1,11 +1,11 @@
 ﻿# Conductor — Sarban core - the engine says what it knows run report
 
-_Updated 2026-07-31 13:41 UTC · branch `feat/sarban` · HEAD `17f5627`_
+_Updated 2026-07-31 14:29 UTC · branch `feat/sarban` · HEAD `bf83cf4`_
 
 **Status:** Idle
-**Stage:** SC6 — Clean history without lying about it · attempts used 0 · working ▸ SC6.2
-**Checkpoints:** 20/26 done · **Sessions run:** 22 · **Cost:** $284.6675 (agent $284.5418 + gates $0.1257) · **Tokens:** 4,195,545 in / 1,780,137 out
-**Confirmed phases:** SC1, SC2, SC3, SC4, SC5
+**Stage:** SC6 — Clean history without lying about it · attempts used 0
+**Checkpoints:** 21/26 done · **Sessions run:** 23 · **Cost:** $297.5890 (agent $297.4610 + gates $0.1280) · **Tokens:** 4,386,625 in / 1,876,769 out
+**Confirmed phases:** SC1, SC2, SC3, SC4, SC5, SC6
 
 ## Stage progress
 
@@ -16,7 +16,7 @@ _Updated 2026-07-31 13:41 UTC · branch `feat/sarban` · HEAD `17f5627`_
 | SC3 | Config traps die at authoring time | ██████████ 4/4 | confirmed ✓ |
 | SC4 | Verdicts judge the work, not the environment | ██████████ 4/4 | confirmed ✓ |
 | SC5 | The engine can wait, detach, and correct the board | ██████████ 4/4 | confirmed ✓ |
-| SC6 | Clean history without lying about it | █████░░░░░ 1/2 | **← active** |
+| SC6 | Clean history without lying about it | ██████████ 2/2 | confirmed ✓ |
 | SC7 | The transcript captures structure | ░░░░░░░░░░ 0/2 | todo |
 | SC8 | The program knows what it is and can update itself | ░░░░░░░░░░ 0/3 | todo |
 
@@ -74,12 +74,12 @@ _Updated 2026-07-31 13:41 UTC · branch `feat/sarban` · HEAD `17f5627`_
 
 </details>
 
-<details><summary>SC6 — Clean history without lying about it (1/2)</summary>
+<details> ✅<summary>SC6 — Clean history without lying about it (2/2)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| SC6.1 | Pure status-transition updates no longer land commits, and any squash runs after the stage's final state write | ✅ DONE | - |
-| SC6.2 | The squash works on a dirty tree, reports real counts, logs git stderr and exit code on failure, un-marks the stage on failure, aborts a half-started rebase, and degrades gracefully off Windows | ⬜ TODO | - |
+| SC6.1 | Pure status-transition updates no longer land commits, and any squash runs after the stage's final state write | ✅ DONE | [`04e092a`](https://github.com/shaahink/conductor/commit/04e092a) |
+| SC6.2 | The squash works on a dirty tree, reports real counts, logs git stderr and exit code on failure, un-marks the stage on failure, aborts a half-started rebase, and degrades gracefully off Windows | ✅ DONE | [`5c357b2`](https://github.com/shaahink/conductor/commit/5c357b2) |
 
 </details>
 
@@ -128,17 +128,13 @@ _Updated 2026-07-31 13:41 UTC · branch `feat/sarban` · HEAD `17f5627`_
 | 20 | SC5 | Deliver | 1 | 07-31 11:39 | 0:35 | Advanced | SC5.3 | 3 | engine-fast:OK · face-fast:OK | $19.9087 | $0.0070 | 256,628/103,130 |
 | 21 | SC5 | Deliver | 1 | 07-31 12:41 | 0:28 | Advanced | SC5.4 | 2 | engine-fast:OK · face-fast:OK | $10.5666 | $0.0076 | 168,870/76,777 |
 | 22 | SC6 | Deliver | 1 | 07-31 13:13 | 0:27 | Advanced | SC6.1 | 2 | engine-fast:OK · face-fast:OK | $11.4474 | $0.0055 | 187,779/73,830 |
+| 23 | SC6 | Deliver | 1 | 07-31 13:41 | 0:43 | Advanced | SC6.2 | 2 | engine-fast:OK · face-fast:OK | $12.9192 | $0.0023 | 191,080/96,632 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-31 11:02:36  ▪ gate engine-full FAIL [phase]  (1m42s)
-07-31 11:02:36  ▪ gate face-full pass [phase]  (4.0s)
-07-31 11:02:36  • session #17 SC4 Fix started (attempt 2/6)
-07-31 11:14:10  ▪ gate engine-fast pass [session]  (40.5s)
-07-31 11:14:10  ▪ gate face-fast pass [session]  (3.3s)
 07-31 11:14:10  • session #17 SC4 → Progress · 1 commit(s)  (11m33s)
 07-31 11:15:42  ▪ gate engine-fast pass [phase]  (0.0s)
 07-31 11:15:42  ▪ gate face-fast pass [phase]  (0.0s)
@@ -174,6 +170,11 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-31 14:13:06  • session #22 SC6 Deliver started (attempt 1/4)
 07-31 14:41:57  ▪ gate engine-fast pass [session]  (51.0s)
 07-31 14:41:57  ▪ gate face-fast pass [session]  (4.3s)
+07-31 14:41:58  • session #22 SC6 → Advanced · done SC6.1 · 2 commit(s)  (28m52s)
+07-31 14:41:58  • session #23 SC6 Deliver started (attempt 1/4)
+07-31 15:25:32  ▪ gate engine-fast pass [session]  (4.1s)
+07-31 15:25:32  ▪ gate face-fast pass [session]  (19.0s)
+07-31 15:25:33  • session #23 SC6 → Advanced · done SC6.2 · 2 commit(s)  (43m35s)
 ```
 
 ## Health
@@ -181,7 +182,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 22 · retries 2 (9 %) · overall Warn
+sessions 23 · retries 2 (9 %) · overall Warn
 ⚠ [context-saturation] session #13: 29,057,299 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #15: 20,145,044 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #18: 32,959,198 context tokens (≥ 20,000,000)
@@ -199,14 +200,11 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/sarban
-working tree: clean
+working tree: M .conductor/REPORT.md, M SARBAN-CORE-TRACKER.md
 ```
 
 ### Commits by session
 
-- **s15 (SC4 Deliver)** — 2 commit(s):
-  - [`314e868`](https://github.com/shaahink/conductor/commit/314e868) docs(sarban): hand SC4.4 the satellite-aware verdict, and the two-session rig recipe
-  - [`c3e0813`](https://github.com/shaahink/conductor/commit/c3e0813) fix(sc4): count the sibling repo, key a gate on its own world, and see uncommitted work
 - **s16 (SC4 Deliver)** — 2 commit(s):
   - [`d96963e`](https://github.com/shaahink/conductor/commit/d96963e) docs(sarban): hand SC5.1 the completed SC4, and the red-gate fix-prompt rig
   - [`cfdb1ad`](https://github.com/shaahink/conductor/commit/cfdb1ad) fix(sc4): put the human correction above the evidence it corrects
@@ -228,6 +226,9 @@ working tree: clean
 - **s22 (SC6 Deliver)** — 2 commit(s):
   - [`17f5627`](https://github.com/shaahink/conductor/commit/17f5627) docs(sarban): hand SC6.2 the dirty tree the ordering fix exposed
   - [`04e092a`](https://github.com/shaahink/conductor/commit/04e092a) fix(sc6): stop committing the engine's opinion of itself, and squash last
+- **s23 (SC6 Deliver)** — 2 commit(s):
+  - [`bf83cf4`](https://github.com/shaahink/conductor/commit/bf83cf4) docs(sarban): hand SC7 the transcript work and what the squash rewrite taught
+  - [`5c357b2`](https://github.com/shaahink/conductor/commit/5c357b2) fix(sc6): squash by rebuilding, not rebasing, and say what it did
 
 ## Phase handovers (audit)
 
@@ -250,37 +251,33 @@ working tree: clean
 
 ## Last gate run
 
-engine-fast:OK · face-fast:OK
+engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
 
 ## Last session result
 
-> SESSION-RESULT: **SC6.1 is claimed** (`conductor task --done SC6.1 --evidence .conductor/evidence/SC6/SC6.1-status-transitions-and-squash-order.md`, commits `04e092a` + `17f5627`, pushed on `feat/sarban`). The report's commit trigger is no longer "the rendered text changed" but a new `ReportSubstance.Of(state, track)` digest — checkpoint statuses and commits, *finished* session records, confirmed and skipped stages; everything the engine says about itself (status, attention, timeline, health, cost, pendings, the timestamp) is excluded by name, as is a session that has only started, because its record churns cost and tokens every heartbeat. The file on disk still refreshes every time. What st…
+> SESSION-RESULT: **SC6.2 landed and is claimed** (`conductor task --done SC6.2 --evidence .conductor/evidence/SC6/SC6.2-honest-safe-squash.md`), closing stage SC6. The squash no longer rebases at all: `Git.SquashChoreCommits` reads the stage's commit range once, groups consecutive `chore(conductor):` commits, rebuilds the tail with `git commit-tree` reusing the trees that already exist (fixup semantics — first commit's message and authorship, last commit's tree), and moves the branch with a compare-and-swap `update-ref` after writing `ORIG_HEAD`. Nothing is ever checked out, which is what makes a dirty tree irrelevant, a conflict unreachable, and a half-finished rebase impossible to leave beh…
 
 ## Tracker handoff
 
 ```
-last: **SC6.1 landed.** The report commit trigger is no longer "the rendered text changed" but
-  `ReportSubstance.Of(state, track)` - checkpoint statuses/commits, FINISHED session records,
-  confirmed and skipped stages. Everything the engine says about itself is excluded by name, and so
-  is a session that has only STARTED (its record churns cost/tokens every heartbeat). What still
-  commits is coalesced: the next publish AMENDS the previous report commit while it is still the tip.
-  `ConfirmStageAsync` now does `_saveAndReport()` THEN `SquashBookkeeping(id)`.
-gate: live rig `%TEMP%\sarban-proofs\sc61`, one stage close, published engine vs FRESH build.
-  Chore commits landing AFTER the squash 3 to 0; the engine's own bookkeeping commits 4 to 1 (2 more
-  in each run were agent-seeded, so the engine's share stayed separable); AFTER reflog carries
-  `commit (amend)`. Scoped 41/0 including a full-orchestrator stage-close test with report.commit ON.
-  Evidence .conductor/evidence/SC6/SC6.1-status-transitions-and-squash-order.md.
-next: **SC6.2** - the squash works on a dirty tree, reports real counts, logs git stderr and the exit
-  code, un-marks the stage on failure, aborts a half-started rebase, degrades off Windows.
-know: the SC6.1 rig proves the ORDER but NOT a working rebase - `git rebase returned non-zero` still,
-  in BOTH engines, because the engine rewrites TRACKER.md after the agent commits it so the tree is
-  never clean at a stage close. That is SC6.2's whole job and the rig is already built for it: rerun
-  `SC61-run.ps1` and look for a reflog `rebase (finish)`. Third cause found by that rig and worth
-  keeping: REPORT.md embeds the repo's HEAD sha, so every report commit changed the next report and
-  justified another - a self-feeding loop, 3 identical commits in 5 seconds while merely idling.
-  Rig trap: `conductor` on PATH is a scoop .cmd SHIM, so Start-Process returns the shim's pid and
-  Stop-Process leaves the real engine alive holding the log file; sweep Win32_Process for
-  conductor.exe matching THIS rig's plan path. `RunOptions.Once` returns before the loop reaches the
-  pending phase gate, so a stage-close test must use MaxSessions, not Once.
-  Bugs 2,3,4,5,6,8,9,10,11,12 open (5 is fixed in source, only the published engine still crashes).
+last: **SC6.2 landed - SC6 is closed.** The squash no longer rebases: it groups consecutive
+  chore(conductor): commits, rebuilds the tail with `git commit-tree` reusing the trees that already
+  exist (fixup semantics - first message and authorship, last tree), then moves the branch with a
+  compare-and-swap `update-ref`. Nothing is ever checked out, so a dirty tree is irrelevant and a
+  conflict unreachable. It refuses a merge in the range or a range not ending at HEAD, aborts a
+  rebase it finds in progress, writes ORIG_HEAD, and marks a stage squashed only after one that
+  worked - the failure line carries git's exit code, its stderr and the failing command.
+gate: rig `%TEMP%\sarban-proofs\sc62`, same baseline, published engine vs FRESH build: `git rebase
+  returned non-zero` becomes `squashed 2 chore(conductor): commits into 1 (4 commits -> 3)`, chore
+  commits 5 to 2, and the unstaged + staged + untracked work all intact. Scoped 48/0, plus 41/0 for
+  ProcessRunner's own consumers. Evidence .conductor/evidence/SC6/SC6.2-honest-safe-squash.md.
+next: **SC7.1** - structured tool events in transcript.jsonl (name plus extracted fields, values
+  truncated and JSON never cut), schema v2 that still reads v1, out-of-repo writes in the verdict.
+know: the spec asked the squash to DEGRADE off Windows; there is nothing left to degrade, it launches
+  only git - SquashResult.Commands records every process it starts and a test asserts they are all
+  git. No non-Windows box ran it. Rig trap that cost a rerun: an agent .cmd invoking the PATH
+  conductor SHIM without `call` transfers control and never returns, so the BEFORE rig silently lost
+  every line after the claim. `RunOptions.Once` returns before the loop reaches the pending phase
+  gate, so a stage-close test needs MaxSessions. Bugs 2,3,4,5,6,8,9,10,11,12 open (5 is fixed in
+  source, only the published engine still crashes).
 ```

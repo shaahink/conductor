@@ -1,8 +1,12 @@
 using System.Text;
+using Conductor.Core.Events;
 
 namespace Conductor.Core.Providers;
 
-public sealed class AgentStreamState(Action<string, string> emit, Action<long, long, long, long, decimal>? onTokenDelta = null)
+public sealed class AgentStreamState(
+    Action<string, string> emit,
+    Action<long, long, long, long, decimal>? onTokenDelta = null,
+    Action<ToolCall, string>? onTool = null)
 {
     private readonly Lock _lock = new();
     private readonly StringBuilder _buffer = new();
@@ -10,6 +14,17 @@ public sealed class AgentStreamState(Action<string, string> emit, Action<long, l
     private readonly Action<long, long, long, long, decimal>? _onTokenDelta = onTokenDelta;
 
     public void Emit(string kind, string text) => emit(kind, text);
+
+    /// <summary>SC7.1 — a tool call, emitted with its STRUCTURE intact. A consumer that wants the
+    /// fields (the transcript, the verdict's out-of-repo check) wires <c>onTool</c>; one that only
+    /// renders a line (the <c>bg logs</c> tail, a test) wires nothing and still gets the same text on
+    /// the plain <c>tool</c> channel. Two channels rather than a widened <c>emit</c> so no existing
+    /// caller has to care.</summary>
+    public void EmitTool(ToolCall tool, string text)
+    {
+        if (onTool != null) onTool(tool, text);
+        else emit("tool", text);
+    }
 
     public void EmitTokenDelta(long input, long output, long reasoning, long cacheRead, decimal costUsd)
         => _onTokenDelta?.Invoke(input, output, reasoning, cacheRead, costUsd);

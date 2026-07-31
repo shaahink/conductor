@@ -83,6 +83,9 @@ public sealed partial class ControlPlaneServer
                     try { line = JsonSerializer.Deserialize(raw, TranscriptJsonContext.Default.TranscriptLine); }
                     catch (JsonException) { continue; }
                     if (line == null || line.Seq <= lastSeq) continue;
+                    // SC7.1: a line written before schema v2 is served upgraded — v1 stamped, tool
+                    // name recovered — so a client never has to carry two readers.
+                    line = TranscriptLine.ReadV1OrV2(line);
                     var json = JsonSerializer.Serialize(line, TranscriptJsonContext.Default.TranscriptLine);
                     var frame = Encoding.UTF8.GetBytes($"data: {json}\n\n");
                     await output.WriteAsync(frame, ct).ConfigureAwait(false);

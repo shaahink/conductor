@@ -13,7 +13,37 @@ namespace Conductor.Core.Events;
 /// mixing the two would regress every existing control-plane endpoint for a reader that doesn't
 /// need it (only the new <c>/transcript/current</c> stream does, F5 stage-map entry).
 /// </summary>
-public sealed record TranscriptLine(long Seq, DateTimeOffset Ts, string? SessionId, string Kind, string Text);
+public sealed record TranscriptLine(long Seq, DateTimeOffset Ts, string? SessionId, string Kind, string Text)
+{
+    /// <summary>SC7.1 — the transcript's schema version. <c>2</c> is the structured era: a
+    /// <c>tool</c> line carries <see cref="Tool"/> alongside its text. A line written before this
+    /// checkpoint has no <c>v</c> at all and deserialises to <c>0</c>; <see cref="ReadV1OrV2"/> is the
+    /// one place that turns such a line into a v1 line rather than a versionless one, so nothing
+    /// downstream has to know the absence means anything.</summary>
+    public int V { get; init; }
+
+    /// <summary>SC7.1 — the structured payload of a <c>tool</c> line: name plus extracted fields, each
+    /// value truncated on its own so the object is always complete JSON. Null on every other kind, and
+    /// on a v1 tool line whose truncated blob could not be recovered.</summary>
+    public ToolCall? Tool { get; init; }
+
+    /// <summary>Reads a line at whatever schema it was written at. A v2 line is returned as-is; a v1
+    /// line (no <c>v</c>, no <c>tool</c>) is stamped <c>V = 1</c> — honestly, so a reader can tell an
+    /// old line from a new one — and, when it is a tool line, has whatever
+    /// <see cref="Providers.ToolEventExtractor.FromLegacyText"/> can recover attached. The tool NAME
+    /// always survives that recovery; the fields usually do not, which is the loss this schema
+    /// exists to stop making.</summary>
+    public static TranscriptLine ReadV1OrV2(TranscriptLine line)
+    {
+        ArgumentNullException.ThrowIfNull(line);
+        if (line.V >= 2) return line;
+        return line with
+        {
+            V = 1,
+            Tool = line.Tool ?? (line.Kind == "tool" ? Providers.ToolEventExtractor.FromLegacyText(line.Text) : null),
+        };
+    }
+}
 
 [JsonSourceGenerationOptions(
     PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
@@ -80,12 +110,23 @@ public sealed class TranscriptLog : IDisposable
 
     public string FilePath => _path;
 
+    /// <summary>SC7.1: every line this writer produces is schema v2. Bumping it here rather than at
+    /// each call site means a new writer can never forget to stamp it.</summary>
+    public const int SchemaVersion = 2;
+
     /// <summary>Enqueue one transcript line. Non-blocking; safe to call from the orchestrator's
     /// synchronous drain loop exactly like <see cref="IEventSink.Emit"/>.</summary>
-    public void Append(string? sessionId, string kind, string text)
+    /// <param name="tool">SC7.1 — the structured payload of a <c>tool</c> line. Passing it is what
+    /// makes the file's <c>file_path</c>/<c>command</c> recoverable downstream; the text alone never
+    /// was.</param>
+    public void Append(string? sessionId, string kind, string text, ToolCall? tool = null)
     {
         if (string.IsNullOrEmpty(text)) return;
-        var line = new TranscriptLine(Interlocked.Increment(ref _seq), _clock.GetUtcNow(), sessionId, kind, text);
+        var line = new TranscriptLine(Interlocked.Increment(ref _seq), _clock.GetUtcNow(), sessionId, kind, text)
+        {
+            V = SchemaVersion,
+            Tool = tool,
+        };
         _channel.Writer.TryWrite(line);
     }
 
@@ -118,7 +159,9 @@ public sealed class TranscriptLog : IDisposable
     }
 
     /// <summary>Reads the whole transcript back, tolerating a trailing torn line (crash safety) —
-    /// same contract as <see cref="EventLog.ReadAll"/>.</summary>
+    /// same contract as <see cref="EventLog.ReadAll"/>. SC7.1: lines written before schema v2 come
+    /// back through <see cref="TranscriptLine.ReadV1OrV2"/>, so a reader never has to ask which era
+    /// wrote the file it is holding.</summary>
     public static IReadOnlyList<TranscriptLine> ReadAll(string path)
     {
         if (!File.Exists(path)) return [];
@@ -141,7 +184,7 @@ public sealed class TranscriptLog : IDisposable
             {
                 break;
             }
-            if (line != null) result.Add(line);
+            if (line != null) result.Add(TranscriptLine.ReadV1OrV2(line));
         }
         return result;
     }
