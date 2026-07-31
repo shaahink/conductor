@@ -1,10 +1,10 @@
 ﻿# Conductor — Sarban core - the engine says what it knows run report
 
-_Updated 2026-07-31 10:52 UTC · branch `feat/sarban` · HEAD `ac70123`_
+_Updated 2026-07-31 11:39 UTC · branch `feat/sarban` · HEAD `8948a10`_
 
 **Status:** Idle
-**Stage:** SC5 — The engine can wait, detach, and correct the board · attempts used 0 · working ▸ SC5.2
-**Checkpoints:** 16/26 done · **Sessions run:** 18 · **Cost:** $226.7119 (agent $226.6072 + gates $0.1047) · **Tokens:** 3,378,703 in / 1,413,653 out
+**Stage:** SC5 — The engine can wait, detach, and correct the board · attempts used 0 · working ▸ SC5.3
+**Checkpoints:** 17/26 done · **Sessions run:** 19 · **Cost:** $242.7247 (agent $242.6192 + gates $0.1055) · **Tokens:** 3,582,268 in / 1,526,400 out
 **Confirmed phases:** SC1, SC2, SC3, SC4
 
 ## Stage progress
@@ -15,7 +15,7 @@ _Updated 2026-07-31 10:52 UTC · branch `feat/sarban` · HEAD `ac70123`_
 | SC2 | Truthful surfaces | ██████████ 4/4 | confirmed ✓ |
 | SC3 | Config traps die at authoring time | ██████████ 4/4 | confirmed ✓ |
 | SC4 | Verdicts judge the work, not the environment | ██████████ 4/4 | confirmed ✓ |
-| SC5 | The engine can wait, detach, and correct the board | ██░░░░░░░░ 1/4 | **← active** |
+| SC5 | The engine can wait, detach, and correct the board | █████░░░░░ 2/4 | **← active** |
 | SC6 | Clean history without lying about it | ░░░░░░░░░░ 0/2 | todo |
 | SC7 | The transcript captures structure | ░░░░░░░░░░ 0/2 | todo |
 | SC8 | The program knows what it is and can update itself | ░░░░░░░░░░ 0/3 | todo |
@@ -63,12 +63,12 @@ _Updated 2026-07-31 10:52 UTC · branch `feat/sarban` · HEAD `ac70123`_
 
 </details>
 
-<details><summary>SC5 — The engine can wait, detach, and correct the board (1/4)</summary>
+<details><summary>SC5 — The engine can wait, detach, and correct the board (2/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| SC5.1 | conductor task --blocked-until with a reason yields a BlockedUntil outcome the run loop honours by sleeping and respawning once, burning no attempt; the wait is visible on status, state and the report | ✅ DONE | - |
-| SC5.2 | conductor run --detach spawns the engine into its own process group, prints pid and control-plane url, and survives its launching shell; the stall warning names the likely cause and the remedy | ⬜ TODO | - |
+| SC5.1 | conductor task --blocked-until with a reason yields a BlockedUntil outcome the run loop honours by sleeping and respawning once, burning no attempt; the wait is visible on status, state and the report | ✅ DONE | [`ac70123`](https://github.com/shaahink/conductor/commit/ac70123) |
+| SC5.2 | conductor run --detach spawns the engine into its own process group, prints pid and control-plane url, and survives its launching shell; the stall warning names the likely cause and the remedy | ✅ DONE | - |
 | SC5.3 | task --todo, --blocked, --skipped and --amend exist through the shared task-writes path, and --in-progress reports the post-fold status instead of unconditional success | ⬜ TODO | - |
 | SC5.4 | bg logs on an agent row points at that session's stream file, and bg status runtimes are computed in one timezone | ⬜ TODO | - |
 
@@ -124,16 +124,13 @@ _Updated 2026-07-31 10:52 UTC · branch `feat/sarban` · HEAD `ac70123`_
 | 16 | SC4 | Deliver | 1 | 07-31 09:45 | 0:14 | Advanced | SC4.4 | 2 | engine-fast:OK · face-fast:OK | $4.8776 | $0.0045 | 107,838/44,470 |
 | 17 | SC4 | Fix | 2 | 07-31 10:02 | 0:10 | Progress |  | 1 | engine-fast:OK · face-fast:OK | $4.2441 | $0.0044 | 110,901/37,667 |
 | 18 | SC5 | Deliver | 1 | 07-31 10:15 | 0:36 | Advanced | SC5.1 | 1 | engine-fast:OK · face-fast:OK | $21.5187 | $0.0051 | 256,885/98,705 |
+| 19 | SC5 | Deliver | 1 | 07-31 10:52 | 0:46 | Advanced | SC5.2 | 3 | engine-fast:OK · face-fast:OK | $16.0120 | $0.0008 | 203,565/112,747 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-31 09:01:18  • session #12 SC3 → Advanced · done SC3.4 · 2 commit(s)  (28m45s)
-07-31 09:02:49  ▪ gate engine-fast pass [phase]  (0.0s)
-07-31 09:02:49  ▪ gate face-fast pass [phase]  (0.0s)
-07-31 09:02:49  ▪ gate engine-full pass [phase]  (1m26s)
 07-31 09:02:49  ▪ gate face-full pass [phase]  (2.7s)
 07-31 09:02:49  ▸ stage SC3 confirmed  (1h45m00s)
 07-31 09:02:50  ▸ stage SC4 entered — Verdicts judge the work, not the environment
@@ -170,6 +167,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-31 11:15:42  • session #18 SC5 Deliver started (attempt 1/6)
 07-31 11:52:44  ▪ gate engine-fast pass [session]  (39.3s)
 07-31 11:52:44  ▪ gate face-fast pass [session]  (11.8s)
+07-31 11:52:44  • session #18 SC5 → Advanced · done SC5.1 · 1 commit(s)  (37m01s)
+07-31 11:52:45  • session #19 SC5 Deliver started (attempt 1/6)
+07-31 12:39:44  ▪ gate engine-fast pass [session]  (4.1s)
+07-31 12:39:44  ▪ gate face-fast pass [session]  (3.6s)
 ```
 
 ## Health
@@ -177,9 +178,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 18 · retries 2 (11 %) · overall Warn
+sessions 19 · retries 2 (11 %) · overall Warn
 ⚠ [context-saturation] session #13: 29,057,299 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #15: 20,145,044 context tokens (≥ 20,000,000)
+⚠ [context-saturation] session #18: 32,959,198 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #3: 28,499,145 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #6: 20,274,223 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #8: 35,438,955 context tokens (≥ 20,000,000)
@@ -197,9 +199,6 @@ working tree: clean
 
 ### Commits by session
 
-- **s11 (SC3 Deliver)** — 2 commit(s):
-  - [`dcd7055`](https://github.com/shaahink/conductor/commit/dcd7055) docs(sarban): hand SC3.4 the advisor, and the ratchet lesson from SC3.3
-  - [`503d7e6`](https://github.com/shaahink/conductor/commit/503d7e6) fix(sc3): make a literal brace prose, and a broken prompt a park
 - **s12 (SC3 Deliver)** — 2 commit(s):
   - [`b93fc06`](https://github.com/shaahink/conductor/commit/b93fc06) docs(sarban): hand SC4.1 the settled battery, and what the advisor rig could not reproduce
   - [`abe0eb1`](https://github.com/shaahink/conductor/commit/abe0eb1) fix(sc3): make the shipped advisor answer, and a dead advisor key fatal
@@ -217,6 +216,10 @@ working tree: clean
   - [`49451ed`](https://github.com/shaahink/conductor/commit/49451ed) fix(sc4): stop a live gate standing on the verdict bug SC4.2 removed
 - **s18 (SC5 Deliver)** — 1 commit(s):
   - [`ac70123`](https://github.com/shaahink/conductor/commit/ac70123) feat(sc5): let a session say "blocked until T" and have the engine wait
+- **s19 (SC5 Deliver)** — 3 commit(s):
+  - [`8948a10`](https://github.com/shaahink/conductor/commit/8948a10) docs(sarban): hand SC5.3 the detached run loop and three rig-found traps
+  - [`e6b15c7`](https://github.com/shaahink/conductor/commit/e6b15c7) feat(sc5): let a run outlive the shell that launched it
+  - [`d496179`](https://github.com/shaahink/conductor/commit/d496179) ﻿fix(sc5): split the two files SC5.1 pushed past the architecture ratchet
 
 ## Phase handovers (audit)
 
@@ -243,28 +246,27 @@ engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: **SC5.1 landed and is claimed** — `conductor task --blocked-until <iso8601> --reason <text>` (CLI, plus MCP `task_blocked_until`) now writes a session-scoped event that the verdict engine reads alongside kill/stall/timeout, parks `RunState.BlockedUntilUtc`, and the run loop sleeps at the session boundary then spawns exactly one more session — no attempt burned, no fix queued, bounded by a 24h ceiling and a three-consecutive-blocks escalation to NeedsHuman. Proved on a scratch rig at `%TEMP%\sarban-proofs\sc51` driven by the fresh build, never this repo: `session #1 BlockedUntil … attempts stay 0/2` → `window opened … after 1.8m asleep` → `session #2 start — Deliver R1 attempt…
+> SESSION-RESULT: SC5.2 landed and is claimed with evidence at `.conductor/evidence/SC5/SC5.2-detach.md` — `conductor run --detach` puts the engine in its own process group, prints a pid and a control-plane URL read back from the child's own discovery file, and survives its launching shell, proven by a controlled two-arm rig on the fresh build against a scratch repo (arm A died with its shell, arm B ran three further sessions and a gate battery after the same teardown); the stall warning now names the foreground-command cause and the `conductor bg start` remedy. Three defects the rig caught and no unit test did were fixed along the way: a banner path that did not exist, a `bInheritHandles` lea…
 
 ## Tracker handoff
 
 ```
-last: **SC5.1 landed - the engine can wait.** `task --blocked-until <iso> --reason <text>` (CLI +
-  MCP `task_blocked_until`) writes a session-scoped event; the verdict reads it alongside
-  kill/stall/timeout, parks `RunState.BlockedUntilUtc`, and the run loop sleeps at the session
-  boundary then spawns exactly one session. No attempt burned, no fix queued. Bounded on purpose:
-  24h ceiling, 3 consecutive blocks then NeedsHuman.
-gate: live rig `%TEMP%\sarban-proofs\sc51` on the FRESH build - `session #1 BlockedUntil ... attempts
-  stay 0/2` / `window opened after 1.8m asleep` / `session #2 start - Deliver R1 attempt 1/2`.
-  9 SC51 tests + 26 McpTaskServer green; StatusCommand 26, ControlPlane 39, StateCompat 1 green.
-  Evidence .conductor/evidence/SC5/SC5.1-blocked-until.md.
-next: **SC5.2** - `run --detach` into its own process group, printing pid + control-plane url,
-  surviving its launching shell; stall warning names cause and remedy.
-know: TRAP the live rig caught and no unit test did - `GET /state` folds the event log and re-stamps
-  transient control fields BY HAND in `ControlPlaneServer.State.cs`. A new RunState field reaches
-  status, REPORT.md and the SSE snapshot but arrives NULL on the Face's wire until you add it beside
-  `AttentionSinceUtc`. Prove any new field with a real socket, not a DashboardSnapshot assertion.
-  Also: in a cmd rig `echo x=%ERRORLEVEL%> f` writes an EMPTY file - a digit before `>` is a stream
-  redirect; use `>f echo x=%ERRORLEVEL%`. face-go still renders status `Waiting` via its default
-  branch and ignores `blockedUntilUtc`/`blockedReason` - a face-tracker item, not core.
-  Bugs 2,3,4,5,6,8,9,10,11 open.
+last: **SC5.2 landed - the run outlives its shell.** `run --detach` spawns the engine via
+  `CreateProcessW` (DETACHED_PROCESS + new process group + breakaway-if-allowed; POSIX setsid),
+  waits for the child's OWN `control-plane.json`, prints pid + the URL it actually bound + verified
+  logs/attach/watch/stop lines, and returns in 1s. Stall messages now name cause (a long FOREGROUND
+  command) and remedy (`conductor bg start`).
+gate: controlled 2-arm rig `%TEMP%\sarban-proofs\sc52` on the FRESH build, same `taskkill /T /F` on
+  the launcher: arm A (no detach) engine DIED with its shell; arm B SURVIVED and ran sessions #1-#3
+  plus gates after it. 47 tests green, ratchet OK. Evidence .conductor/evidence/SC5/SC5.2-detach.md.
+next: **SC5.3** - `task --todo|--blocked|--skipped|--amend` through the shared TaskWrites path, and
+  `--in-progress` reporting the post-fold status instead of unconditional success.
+know: ArchitectureTests was ALREADY RED on this branch from SC5.1 (RunLoop.cs 513 lines,
+  ConductorEvent.Session.cs 5 types). Fixed by splitting, not by raising the ceiling - never assume
+  the battery was green just because the last handoff listed green filters. THREE defects the live
+  rig caught and no test did: a banner path that did not exist; `bInheritHandles=TRUE` leaking the
+  caller's stdout pipe into a long-lived child, so `run --detach | Out-Null` HUNG forever (fix:
+  STARTUPINFOEX + PROC_THREAD_ATTRIBUTE_HANDLE_LIST); and the engine publishing control-plane.json
+  BEFORE taking the plan lock, so a doomed second run serves a real URL for ~1s. Also: `conductor
+  note` breaks on embedded double quotes in PowerShell 5.1. Bugs 2,3,4,5,6,8,9,10,11 open.
 ```

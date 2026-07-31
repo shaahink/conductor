@@ -4,24 +4,28 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SC5.2 landed - the run outlives its shell.** `run --detach` spawns the engine via
-  `CreateProcessW` (DETACHED_PROCESS + new process group + breakaway-if-allowed; POSIX setsid),
-  waits for the child's OWN `control-plane.json`, prints pid + the URL it actually bound + verified
-  logs/attach/watch/stop lines, and returns in 1s. Stall messages now name cause (a long FOREGROUND
-  command) and remedy (`conductor bg start`).
-gate: controlled 2-arm rig `%TEMP%\sarban-proofs\sc52` on the FRESH build, same `taskkill /T /F` on
-  the launcher: arm A (no detach) engine DIED with its shell; arm B SURVIVED and ran sessions #1-#3
-  plus gates after it. 47 tests green, ratchet OK. Evidence .conductor/evidence/SC5/SC5.2-detach.md.
-next: **SC5.3** - `task --todo|--blocked|--skipped|--amend` through the shared TaskWrites path, and
-  `--in-progress` reporting the post-fold status instead of unconditional success.
-know: ArchitectureTests was ALREADY RED on this branch from SC5.1 (RunLoop.cs 513 lines,
-  ConductorEvent.Session.cs 5 types). Fixed by splitting, not by raising the ceiling - never assume
-  the battery was green just because the last handoff listed green filters. THREE defects the live
-  rig caught and no test did: a banner path that did not exist; `bInheritHandles=TRUE` leaking the
-  caller's stdout pipe into a long-lived child, so `run --detach | Out-Null` HUNG forever (fix:
-  STARTUPINFOEX + PROC_THREAD_ATTRIBUTE_HANDLE_LIST); and the engine publishing control-plane.json
-  BEFORE taking the plan lock, so a doomed second run serves a real URL for ~1s. Also: `conductor
-  note` breaks on embedded double quotes in PowerShell 5.1. Bugs 2,3,4,5,6,8,9,10,11 open.
+last: **SC5.3 landed - the board is two-way and every move reports the truth.** All `conductor task`
+  moves go through `TaskWrites.BuildStatusChange` (the validator /tasks/update and MCP task_update
+  use) and answer with the card's POST-FOLD status: a refused move prints what the card really is
+  and exits 1 - that covers `--in-progress` AND `--done`. New `--todo|--blocked|--skipped`, plus
+  `--amend <id> --note <text>`, which APPENDS a stamped correction to the card context the next
+  session's composed prompt carries. `blocked` joined ValidStatuses (the fold always allowed it).
+gate: live rig `%TEMP%\sarban-proofs\sc53` on the FRESH build ran all 14 verb cases from inside a
+  real session (`sc53-verbs.log` holds the exit codes); the amendment appears in that run's
+  `session-023.prompt.md`. Full suite 1321 passed / 0 failed, ratchet OK. Evidence
+  .conductor/evidence/SC5/SC5.3-board-writes.md.
+next: **SC5.4** - `bg logs` on an agent row points at that session's stream file; `bg status`
+  runtimes computed in one timezone.
+know: making `--skipped` REACHABLE forced three surfaces to learn the word - the tracker rendered it
+  TODO, the row regex is built from the status vocabulary so the row would not have parsed at all
+  (and WorkGraphSync archives what the tracker stops declaring), and the scheduler asked only
+  is-it-done. SKIPPED now counts as settled in StageDone/AllDone; BLOCKED deliberately does not.
+  The rig - not a test - caught `task --list` printing a skipped card as TODO; every status switch
+  here ending in a catch-all TODO arm is a candidate lie. `plans/conductor-sarban-core.plan.json`
+  arrived ALREADY modified: the owner ran a plan write at 12:54 (log: ReloadPlan) raising
+  maxRunCostUsd 260 to 450. Committed as its own chore commit, not reverted; ratchet rule 3d fires
+  on that rewrite because the gate commands got JSON-escaped, though their VALUES are unchanged.
+  Bugs 2,3,4,5,6,8,9,10,11 open (5 is fixed in source, only the published engine still crashes).
 
 
 ## Baseline numbers (from run.db)
@@ -30,7 +34,7 @@ know: ArchitectureTests was ALREADY RED on this branch from SC5.1 (RunLoop.cs 51
 |---|---|
 | Total checkpoints | 26 |
 | Done | 0 |
-| Claimed (unconfirmed) | 16 |
+| Claimed (unconfirmed) | 17 |
 
 ## Checkpoints
 
@@ -77,7 +81,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | SC5.1 | conductor task --blocked-until with a reason yields a BlockedUntil outcome the run loop honours by sleeping and respawning once, burning no attempt; the wait is visible on status, state and the report | DONE | ac70123 | engine-fast:OK · face-fast:OK |
-| SC5.2 | conductor run --detach spawns the engine into its own process group, prints pid and control-plane url, and survives its launching shell; the stall warning names the likely cause and the remedy | TODO | - | - |
+| SC5.2 | conductor run --detach spawns the engine into its own process group, prints pid and control-plane url, and survives its launching shell; the stall warning names the likely cause and the remedy | DONE | d496179 | engine-fast:OK · face-fast:OK |
 | SC5.3 | task --todo, --blocked, --skipped and --amend exist through the shared task-writes path, and --in-progress reports the post-fold status instead of unconditional success | TODO | - | - |
 | SC5.4 | bg logs on an agent row points at that session's stream file, and bg status runtimes are computed in one timezone | TODO | - | - |
 
