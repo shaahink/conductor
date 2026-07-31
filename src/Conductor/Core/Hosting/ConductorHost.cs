@@ -20,7 +20,8 @@ namespace Conductor.Core.Hosting;
 /// structured logs through Serilog (file sink under <c>.conductor/logs/</c>, plus an optional console
 /// sink for non-dashboard runs). Correlation properties (runId/sessionId/stage/gate) are attached per
 /// log line by the Orchestrator via <c>ILogger.BeginScope</c> and flow to Serilog through
-/// <c>Enrich.FromLogContext</c>. Disposing it flushes Serilog.
+/// <c>Enrich.FromLogContext</c>. Disposing it flushes and closes <em>this host's</em> Serilog logger,
+/// and no other's.
 /// </summary>
 /// <remarks>
 /// SC1.1: this comment used to claim the host ran "no long-running <c>IHostedService</c>", and that
@@ -61,6 +62,18 @@ public static class ConductorHost
         Directory.CreateDirectory(logDir);
 
         builder.Logging.ClearProviders();
+        // preserveStaticLogger: the host's logger is the host's own, and disposing this host disposes
+        // exactly it. The default (false) does two global things instead: it assigns the process-wide
+        // Serilog.Log.Logger, and it registers the logger factory with a NULL logger — whose disposal
+        // path is Log.CloseAndFlush(), i.e. "close whatever the static logger happens to be right
+        // now". With two hosts alive in one process the second to be built owns the static slot, so
+        // the first to be disposed closes the OTHER host's logger and its file sink, mid-run: no
+        // throw, no warning, a log that simply stops. A logger resolved after the second build is
+        // delivered to the second host's file for the same reason. That is what made
+        // HostLoggingTests.DryRunWritesStructuredLogWithRunIdCorrelation red under the full battery
+        // and green alone — its log held the "conductor start" line and nothing after it. Nothing in
+        // this codebase reads the static Serilog.Log, so preserving it costs nothing.
+        // See HostLoggerIsolationTests, which reproduces both halves without any parallelism.
         builder.Services.AddSerilog((_, lc) =>
         {
             lc.MinimumLevel.Debug()
@@ -79,7 +92,7 @@ public static class ConductorHost
             // attached for plain/dry-run/redirected runs where narration is already going to stdout.
             if (consoleSink)
                 lc.WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Information, outputTemplate: FileTemplate);
-        });
+        }, preserveStaticLogger: true);
 
         // Options pattern with fail-fast validation on start (B2.5, §5). The plan is loaded via
         // System.Text.Json (comment/trailing-comma tolerant), so it is registered as a prebuilt option

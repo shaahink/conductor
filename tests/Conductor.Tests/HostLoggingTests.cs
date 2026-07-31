@@ -154,9 +154,16 @@ public sealed class HostLoggingTests : IDisposable
 
             // At least one line must carry THIS run's correlation. Scanning for it rather than
             // asserting on the first runId-bearing line is the difference between the property under
-            // test and an ordering accident: Serilog's file sink is process-global, so any host another
-            // test composes in parallel interleaves its own correlated lines into this file. "My run is
-            // correlated" is the guarantee; "nobody else ever wrote here" was never one.
+            // test and an ordering accident. "My run is correlated" is the guarantee; "nobody else
+            // ever wrote here" was never one.
+            //
+            // This comment used to explain the scan by saying Serilog's file sink is process-global.
+            // It is not — each host opens its own file. The *logger* was global (AddSerilog defaulted
+            // to preserveStaticLogger: false), which is a different and much worse bug: one host's
+            // disposal closed another host's live sink, and that is what made the sibling test above
+            // red under the full battery. Fixed in ConductorHost; see HostLoggerIsolationTests and
+            // docs/dev/FINDING-2026-07-31-host-logger-isolation.md. The scan stays because it is the
+            // honest assertion, not because of the sink.
             if (root.TryGetProperty("runId", out var rid) && string.Equals(rid.GetString(), runId, StringComparison.Ordinal))
                 correlated = true;
         }
