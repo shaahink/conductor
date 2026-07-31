@@ -9,6 +9,7 @@ namespace Conductor.Commands;
 
 internal static class BgLogsHandler
 {
+#pragma warning disable MA0045 // sync file I/O at the Spectre.Cli sync boundary (same pattern as GateCommand/StatusCommand)
     public static int ExecuteLogs(BgCommand.Settings settings)
     {
         var target = settings.PidOrPurpose;
@@ -74,8 +75,7 @@ internal static class BgLogsHandler
             return 1;
         }
 
-        // Read and print the last N lines — synchronous by design (CLI command).
-#pragma warning disable MA0045
+        // Read and print the last N lines.
         try
         {
             var tail = tailCount;
@@ -100,7 +100,6 @@ internal static class BgLogsHandler
             AnsiConsole.MarkupLine($"[red]Cannot read log: {Markup.Escape(ex.Message)}[/]");
             return 1;
         }
-#pragma warning restore MA0045
 
         return 0;
     }
@@ -129,7 +128,6 @@ internal static class BgLogsHandler
         if (File.Exists(prompt))
             AnsiConsole.MarkupLine($"[grey]Prompt: {Markup.Escape(prompt)}[/]");
 
-#pragma warning disable MA0045 // sync read is deliberate — CLI command
         try
         {
             var lines = SessionStreamTail.Render(stream, AgentProviderFactory.Create(plan.Agent), tail);
@@ -141,7 +139,7 @@ internal static class BgLogsHandler
             AnsiConsole.MarkupLine($"[red]Cannot read stream: {Markup.Escape(ex.Message)}[/]");
             return 1;
         }
-#pragma warning restore MA0045
         return 0;
     }
+#pragma warning restore MA0045
 }
