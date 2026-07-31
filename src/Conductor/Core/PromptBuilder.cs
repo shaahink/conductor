@@ -29,7 +29,15 @@ public sealed class PromptBuilder
     public string Fix(StageConfig stage, int sessionNumber, int attempt, int maxAttempts, PendingFix fix, string? personaOverride = null)
     {
         var vars = Vars(stage, sessionNumber, attempt, maxAttempts, personaOverride);
-        vars["gateFailures"] = string.IsNullOrWhiteSpace(fix.GateFailures) ? "(no gate output captured)" : fix.GateFailures;
+        var gateFailures = string.IsNullOrWhiteSpace(fix.GateFailures) ? "(no gate output captured)" : fix.GateFailures;
+        // SC4.4: a fix prompt is the one place where a human correction and the engine's own evidence
+        // are both present, and they used to arrive as peers — the gate output at the top, the
+        // injection at the bottom. When anything is queued for this session the evidence is stamped
+        // as outranked, so the agent cannot read the two and pick the nearer one.
+        var queuedCount = InstructionQueue.List(_plan).Count;
+        if (queuedCount > 0)
+            gateFailures = InstructionQueue.SupersedeStamp(queuedCount) + "\n\n" + gateFailures;
+        vars["gateFailures"] = gateFailures;
         vars["progressSummary"] = fix.ProgressSummary;
         vars["prevSession"] = fix.FromSession.ToString();
         return Render("fix.md", vars);
@@ -172,6 +180,17 @@ public sealed class PromptBuilder
         PromptValidator.ThrowIfUnresolved(text, templateFile);
         text = PromptPlaceholders.Restore(text).Trim();
 
+        // SC4.4. Human-injected instructions (from the TUI `I` key / `.conductor/queue/`) go into
+        // every session prompt whether or not the template names them — but WHERE decides whether
+        // they are read. They used to be appended last, which put a correction below the very
+        // evidence it corrected plus the batteries, the task cards and the audit findings that
+        // SessionRunner appends after this (devcontext #15: 113 lines below, and the agent worked
+        // the evidence). They now splice in immediately after the role line, before the persona is
+        // prepended — so the only thing that can sit above an injection is a role definition, never
+        // a fact the injection might be there to correct.
+        var queued = InstructionQueue.PromptSection(_plan);
+        if (queued.Length > 0) text = InsertAfterRoleLine(text, queued);
+
         // Merge in persona system prompt — appended after base prompt rendering so the
         // persona doesn't need to be referenced in every template (B7.3). Conductor contract
         // rules (the built-in template's rules block) remain last and win over persona content.
@@ -179,12 +198,22 @@ public sealed class PromptBuilder
         if (personaSystemPrompt.Length > 0)
             text = personaSystemPrompt + "\n\n" + text;
 
-        // Human-injected instructions (from the TUI `I` key / `.conductor/queue/`) are appended to
-        // every session prompt so they're delivered even if a custom template omits the placeholder.
-        var queued = InstructionQueue.PromptSection(_plan);
-        if (queued.Length > 0) text += "\n\n" + queued;
-
         return text;
+    }
+
+    /// <summary>SC4.4: splices <paramref name="block"/> in directly beneath the prompt's role line —
+    /// the first line, the "You are a FIX session ..." sentence every template opens with — so the
+    /// block is the first thing the agent reads that is not its own job description. A template that
+    /// is a single line gets the block appended, which is the same position.</summary>
+    internal static string InsertAfterRoleLine(string text, string block)
+    {
+        var nl = text.IndexOf('\n', StringComparison.Ordinal);
+        if (nl < 0) return text + "\n\n" + block;
+        // Keep the template's own line ending: a CRLF template must not sprout lone LFs mid-prompt.
+        var eol = nl > 0 && text[nl - 1] == '\r' ? "\r\n" : "\n";
+        var roleLine = text[..nl].TrimEnd('\r');
+        var rest = text[(nl + 1)..].TrimStart('\r', '\n');
+        return roleLine + eol + eol + block + eol + eol + rest;
     }
 
     /// <summary>Builds and renders the battery group section from the plan's

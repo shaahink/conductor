@@ -4,26 +4,24 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SC4.3 claimed**, all three parts. New `SessionProgress.WorkCommits` =
-  `ExcludeBookkeeping(NewCommits + SatelliteCommits)` is now THE progress signal - verdict,
-  `WorkflowVarsFactory.HasCommits`, FailureCircuitBreaker and IdenticalStallPattern all read that
-  one function. New `plan.satelliteRepos`; doctor FAILS on a satellite that is missing or non-git.
-  `GateRunner.CacheKey` = head + cwd HEAD + optional `gate.watchPaths` mtime + command digest, and
-  GateOrchestrator now FILES under the same key it looks up under. skipIfFresh reads
-  `Git.MostRecentChangeTime` (last commit OR a newer uncommitted edit, artifact excluded).
-gate: build clean; scoped `dotnet test` over 24 touched/neighbouring classes: 267 passed, 0 failed,
-  0 skipped (incl. ArchitectureTests). Nothing weakened. Evidence .conductor/evidence/SC4/, seven
-  rigs under TEMP/sarban-proofs/sc43, BEFORE published vs AFTER fresh build on each.
-next: **SC4.4** - queued injections render at the TOP of the composed prompt, right after the role
-  line; a `gateFailures` block an injection supersedes is stamped SUPERSEDED or dropped. Seams:
-  `PromptBuilder` + `InstructionQueue.ConsumeAll` (SessionRunner.cs, just before the prompt write).
-know: satellite rows are `<sha> <subject> [<label>]` - the label is a SUFFIX because
-  `Git.SubjectOf` strips a leading hex token, so a prefix would hide `chore(conductor):` from
-  SC4.2's filter. A two-session rig needs `verifyEachDelivery:false` AND an explicit one-step
-  `defaultWorkflow`; verifyEachDelivery alone still queued a Verify session, which runs no battery.
-  A rig parked on NeedsHuman refuses a second run - delete its `.conductor` to re-run.
-  Bug #9 filed: `McpTaskServer.IsProcessAliveMcp` answers DEAD for a pid it cannot open, inverting
-  the policy SC4.1 set in PidLiveness. Bugs 2,3,4,5,6,8,9 open.
+last: **SC4.4 claimed - SC4 is now complete (4/4).** `PromptBuilder.Render` SPLICES the queue
+  section in after the role line (new `InsertAfterRoleLine`) instead of appending it, and does so
+  BEFORE the persona is prepended, so only a role definition can sit above an injection - never a
+  fact it exists to correct. `PromptBuilder.Fix` stamps the `gateFailures` VALUE with the new
+  `InstructionQueue.SupersedeStamp(n)` whenever the queue is non-empty, so a custom `fix.md` gets it
+  too; nothing is dropped, the gate text stays readable as history. `PromptSection`'s header now
+  states the rank in words, and the control-plane card preview orders queued-then-batteries.
+gate: build clean, 0 warnings; scoped `dotnet test` over 18 touched/neighbouring classes: 140
+  passed, 0 failed, 0 skipped (incl. ArchitectureTests). Nothing weakened. Evidence
+  .conductor/evidence/SC4/SC4.4-*, four prompt files BEFORE published vs AFTER fresh build:
+  injection L76-of-78 and L85-of-87 BEFORE, L3 on both AFTER, stamp at L11 above the gate at L13.
+next: **SC5.1** - `conductor task --blocked-until <iso8601> --reason <text>` (CLI + MCP) as a first
+  class outcome the run loop honours by sleeping and respawning once, no attempt burned.
+know: for a rig that must reach a FIX prompt, a red REQUIRED gate + `stageSlackFactor` 3 is enough
+  on its own - GatesRed queues the fix session directly and bypasses the workflow, so the
+  verifyEachDelivery/defaultWorkflow recipe is only needed when every session passes. Injection
+  text is spliced in AFTER PromptValidator, so a brace in an instruction cannot kill a run.
+  Bugs 2,3,4,5,6,8,9 open (#9: `McpTaskServer.IsProcessAliveMcp` inverts SC4.1's pid policy).
 
 
 ## Baseline numbers (from run.db)
@@ -32,7 +30,7 @@ know: satellite rows are `<sha> <subject> [<label>]` - the label is a SUFFIX bec
 |---|---|
 | Total checkpoints | 26 |
 | Done | 0 |
-| Claimed (unconfirmed) | 13 |
+| Claimed (unconfirmed) | 14 |
 
 ## Checkpoints
 
@@ -71,7 +69,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | SC4.1 | The battery waits for the session's tracked bg children to exit, and retries a failed required gate once before declaring GatesRed; the failure line carries duration vs last passing duration | DONE | ba9b523 | engine-fast:OK · face-fast:OK |
 | SC4.2 | NoProgress requires no commits AND no newly-DONE checkpoints; chore conductor commits are excluded from the verdict's commit count | DONE | 1ce4ba7 | engine-fast:OK · face-fast:OK |
-| SC4.3 | satelliteRepos are diffed for hasCommits; the gate cache key covers the gate's own working directory HEAD and its command text; skipIfFresh accounts for a dirty tree | TODO | - | - |
+| SC4.3 | satelliteRepos are diffed for hasCommits; the gate cache key covers the gate's own working directory HEAD and its command text; skipIfFresh accounts for a dirty tree | DONE | c3e0813 | engine-fast:OK · face-fast:OK |
 | SC4.4 | Queued injections render at the top of the composed prompt, and a gate-failures block they supersede is stamped SUPERSEDED or dropped | TODO | - | - |
 
 ### SC5 — The engine can wait, detach, and correct the board

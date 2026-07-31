@@ -29,12 +29,13 @@ public sealed partial class ControlPlaneServer
             return;
         }
 
-        // Injected knowledge = the same compounding sections a real session prompt gets: the
-        // ledger/bugs/lessons batteries plus any queued human instructions.
+        // Injected knowledge = the same compounding sections a real session prompt gets: any queued
+        // human instructions plus the ledger/bugs/lessons batteries. SC4.4 order: the instructions
+        // come FIRST here too, so the card preview ranks them the way the session prompt now does.
         var runState = RunStateProjection.Fold(events);
         var battery = new PromptBuilder(_plan).BatterySection(runState, _store);
         var queued = InstructionQueue.PromptSection(_plan);
-        var knowledge = string.Join("\n\n", new[] { battery, queued }.Where(s => s.Length > 0));
+        var knowledge = string.Join("\n\n", new[] { queued, battery }.Where(s => s.Length > 0));
 
         var composition = TaskPromptComposition.Compose(_plan, task, knowledge);
         var stageId = _plan.Conventions.DeriveStageId(task.CheckpointId);

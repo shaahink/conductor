@@ -99,17 +99,29 @@ public static class InstructionQueue
     }
 
     /// <summary>Render active instructions into a prompt section (or empty string if none).
-    /// The agent's pre-ritual prompt instructs it to check this — here we guarantee the text is in the prompt.</summary>
+    /// The agent's pre-ritual prompt instructs it to check this — here we guarantee the text is in the prompt.
+    /// <para>SC4.4: the header states the RANK, not just the content. Position alone was not enough —
+    /// an injection can only outrank the evidence it corrects if the prompt says so out loud.</para></summary>
     public static string PromptSection(PlanConfig plan)
     {
         var items = List(plan);
         if (items.Count == 0) return "";
         var sb = new StringBuilder();
-        sb.AppendLine("📋 **QUEUED INSTRUCTIONS** (human-injected, consume in order):");
+        sb.AppendLine("📋 **QUEUED INSTRUCTIONS** — human-injected, and they OUTRANK everything below them in this prompt (gate output, verifier findings, batteries, prior handoff). Where this section and a block below disagree, this section wins. Consume in order:");
         sb.AppendLine();
         foreach (var (i, item) in items.Select((e, i) => (i, e)))
             sb.AppendLine($"{i + 1}. [{item.Slug}] {item.Text}");
         return sb.ToString().TrimEnd();
+    }
+
+    /// <summary>SC4.4: the banner stamped onto a fix prompt's <c>gateFailures</c> block when instructions
+    /// are queued for that session, so the human correction and the engine's stale evidence never stand
+    /// as peers (devcontext #15: the correction rendered 113 lines BELOW the evidence it corrected, and
+    /// the agent worked the evidence). Nothing is deleted — the gate output stays readable as history.</summary>
+    public static string SupersedeStamp(int queuedCount)
+    {
+        var plural = queuedCount == 1 ? "instruction is" : "instructions are";
+        return $"> ⚠ **SUPERSEDED — read the QUEUED INSTRUCTIONS at the top of this prompt first.** {queuedCount} human {plural} queued for this session and they outrank this gate output: where the two disagree, the instructions win and the block below is history, not your task list.";
     }
 
     private static string Sanitize(string text)

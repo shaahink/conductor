@@ -1,10 +1,10 @@
 ﻿# Conductor — Sarban core - the engine says what it knows run report
 
-_Updated 2026-07-31 09:13 UTC · branch `feat/sarban` · HEAD `1ce4ba7`_
+_Updated 2026-07-31 09:45 UTC · branch `feat/sarban` · HEAD `314e868`_
 
 **Status:** Idle
-**Stage:** SC4 — Verdicts judge the work, not the environment · attempts used 0 · working ▸ SC4.3
-**Checkpoints:** 13/26 done · **Sessions run:** 14 · **Cost:** $181.9078 (agent $181.8213 + gates $0.0865) · **Tokens:** 2,707,348 in / 1,148,302 out
+**Stage:** SC4 — Verdicts judge the work, not the environment · attempts used 0 · working ▸ SC4.4
+**Checkpoints:** 14/26 done · **Sessions run:** 15 · **Cost:** $196.0575 (agent $195.9668 + gates $0.0908) · **Tokens:** 2,903,079 in / 1,232,811 out
 **Confirmed phases:** SC1, SC2, SC3
 
 ## Stage progress
@@ -14,7 +14,7 @@ _Updated 2026-07-31 09:13 UTC · branch `feat/sarban` · HEAD `1ce4ba7`_
 | SC1 | Telegram actually delivers | ██████████ 3/3 | confirmed ✓ |
 | SC2 | Truthful surfaces | ██████████ 4/4 | confirmed ✓ |
 | SC3 | Config traps die at authoring time | ██████████ 4/4 | confirmed ✓ |
-| SC4 | Verdicts judge the work, not the environment | █████░░░░░ 2/4 | **← active** |
+| SC4 | Verdicts judge the work, not the environment | ████████░░ 3/4 | **← active** |
 | SC5 | The engine can wait, detach, and correct the board | ░░░░░░░░░░ 0/4 | todo |
 | SC6 | Clean history without lying about it | ░░░░░░░░░░ 0/2 | todo |
 | SC7 | The transcript captures structure | ░░░░░░░░░░ 0/2 | todo |
@@ -52,13 +52,13 @@ _Updated 2026-07-31 09:13 UTC · branch `feat/sarban` · HEAD `1ce4ba7`_
 
 </details>
 
-<details><summary>SC4 — Verdicts judge the work, not the environment (2/4)</summary>
+<details><summary>SC4 — Verdicts judge the work, not the environment (3/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
 | SC4.1 | The battery waits for the session's tracked bg children to exit, and retries a failed required gate once before declaring GatesRed; the failure line carries duration vs last passing duration | ✅ DONE | [`ba9b523`](https://github.com/shaahink/conductor/commit/ba9b523) |
-| SC4.2 | NoProgress requires no commits AND no newly-DONE checkpoints; chore conductor commits are excluded from the verdict's commit count | ✅ DONE | - |
-| SC4.3 | satelliteRepos are diffed for hasCommits; the gate cache key covers the gate's own working directory HEAD and its command text; skipIfFresh accounts for a dirty tree | ⬜ TODO | - |
+| SC4.2 | NoProgress requires no commits AND no newly-DONE checkpoints; chore conductor commits are excluded from the verdict's commit count | ✅ DONE | [`1ce4ba7`](https://github.com/shaahink/conductor/commit/1ce4ba7) |
+| SC4.3 | satelliteRepos are diffed for hasCommits; the gate cache key covers the gate's own working directory HEAD and its command text; skipIfFresh accounts for a dirty tree | ✅ DONE | - |
 | SC4.4 | Queued injections render at the top of the composed prompt, and a gate-failures block they supersede is stamped SUPERSEDED or dropped | ⬜ TODO | - |
 
 </details>
@@ -120,16 +120,13 @@ _Updated 2026-07-31 09:13 UTC · branch `feat/sarban` · HEAD `1ce4ba7`_
 | 12 | SC3 | Deliver | 1 | 07-31 07:32 | 0:27 | Advanced | SC3.4 | 2 | engine-fast:OK · face-fast:OK | $11.9983 | $0.0061 | 194,134/85,689 |
 | 13 | SC4 | Deliver | 1 | 07-31 08:02 | 0:38 | Advanced | SC4.1 | 1 | engine-fast:OK · face-fast:OK | $19.6442 | $0.0048 | 266,945/99,065 |
 | 14 | SC4 | Deliver | 1 | 07-31 08:42 | 0:30 | Advanced | SC4.2 | 1 | engine-fast:OK · face-fast:OK | $11.2110 | $0.0044 | 165,557/70,587 |
+| 15 | SC4 | Deliver | 1 | 07-31 09:13 | 0:31 | Advanced | SC4.3 | 2 | engine-fast:OK · face-fast:OK | $14.1455 | $0.0043 | 195,731/84,509 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-31 06:38:41  • session #7 SC2 → Advanced · done SC2.3 · 2 commit(s)  (29m46s)
-07-31 06:38:42  • session #8 SC2 Deliver started (attempt 1/6)
-07-31 07:16:16  ▪ gate engine-fast pass [session]  (43.3s)
-07-31 07:16:16  ▪ gate face-fast pass [session]  (4.9s)
 07-31 07:16:16  • session #8 SC2 → Advanced · done SC2.4 · 1 commit(s)  (37m34s)
 07-31 07:17:48  ▪ gate engine-fast pass [phase]  (0.0s)
 07-31 07:17:48  ▪ gate face-fast pass [phase]  (0.0s)
@@ -166,6 +163,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-31 09:42:07  • session #14 SC4 Deliver started (attempt 1/6)
 07-31 10:13:16  ▪ gate engine-fast pass [session]  (40.6s)
 07-31 10:13:16  ▪ gate face-fast pass [session]  (3.7s)
+07-31 10:13:16  • session #14 SC4 → Advanced · done SC4.2 · 1 commit(s)  (31m09s)
+07-31 10:13:17  • session #15 SC4 Deliver started (attempt 1/6)
+07-31 10:45:34  ▪ gate engine-fast pass [session]  (39.6s)
+07-31 10:45:34  ▪ gate face-fast pass [session]  (3.5s)
 ```
 
 ## Health
@@ -173,7 +174,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 14 · retries 1 (7 %) · overall Warn
+sessions 15 · retries 1 (7 %) · overall Warn
 ⚠ [context-saturation] session #13: 29,057,299 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #3: 28,499,145 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #6: 20,274,223 context tokens (≥ 20,000,000)
@@ -191,9 +192,6 @@ working tree: clean
 
 ### Commits by session
 
-- **s7 (SC2 Deliver)** — 2 commit(s):
-  - [`177039b`](https://github.com/shaahink/conductor/commit/177039b) docs(sarban): hand SC2.4 a live ticker and a filed bg-status bug
-  - [`55da220`](https://github.com/shaahink/conductor/commit/55da220) fix(sc2): make /state show spend as it happens, and say how it knows
 - **s8 (SC2 Deliver)** — 1 commit(s):
   - [`87d7fcd`](https://github.com/shaahink/conductor/commit/87d7fcd) fix(sc2): let the run outlive the engine
 - **s9 (SC3 Deliver)** — 2 commit(s):
@@ -212,6 +210,9 @@ working tree: clean
   - [`ba9b523`](https://github.com/shaahink/conductor/commit/ba9b523) fix(sc4): make the battery settle before it judges, and retry a red gate once
 - **s14 (SC4 Deliver)** — 1 commit(s):
   - [`1ce4ba7`](https://github.com/shaahink/conductor/commit/1ce4ba7) fix(sc4): make a claim count as progress, and conductor's own commits not
+- **s15 (SC4 Deliver)** — 2 commit(s):
+  - [`314e868`](https://github.com/shaahink/conductor/commit/314e868) docs(sarban): hand SC4.4 the satellite-aware verdict, and the two-session rig recipe
+  - [`c3e0813`](https://github.com/shaahink/conductor/commit/c3e0813) fix(sc4): count the sibling repo, key a gate on its own world, and see uncommitted work
 
 ## Phase handovers (audit)
 
@@ -238,26 +239,29 @@ engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT:** SC4.2 landed and is claimed with evidence at `.conductor/evidence/SC4/SC4.2-noprogress-and-chore-commits.md` (commit `1ce4ba7`, pushed to `feat/sarban`). The verdict's green condition in `VerdictEngine.cs` now reads `workCommits OR newlyDone OR stageComplete` — measured live on scratch rigs under `%TEMP%\sarban-proofs\sc42`, a session that committed nothing and claimed `T0.1` through `conductor task --done` went from **`NoProgress`** on the published engine to **`Advanced — T0.1 done`** on the fresh build, with the rig stage carrying two checkpoints so `stageComplete` could not mask it (sk #3 reproduced and fixed). New `Git.IsBookkeepingCommit`/`ExcludeBookkeeping` — sharin…
+> SESSION-RESULT: **SC4.3 landed and claimed** (`c3e0813`, handoff `314e868`, pushed to `feat/sarban`), all three parts of the checkpoint, each proven by a live BEFORE/AFTER on scratch rigs under `%TEMP%\sarban-proofs\sc43` — published engine vs fresh build on byte-identical rigs. **(1) satelliteRepos:** a session committing only in a declared sibling went from `commits 0 → NoProgress` to `commits 1 (incl. 1 in satellite repo(s): …) → Progress`; new `SessionProgress.WorkCommits` (= `ExcludeBookkeeping(NewCommits + SatelliteCommits)`) is now the single progress signal read by the verdict, `WorkflowVarsFactory.HasCommits`, `FailureCircuitBreaker` and `IdenticalStallPattern`, `rec.NewCommits` sta…
 
 ## Tracker handoff
 
 ```
-last: **SC4.2 claimed**. The verdict's green condition is now `workCommits OR newlyDone OR
-  stageComplete`, so a claim with no commits in this repo is Advanced, not NoProgress. New
-  `Git.IsBookkeepingCommit` / `ExcludeBookkeeping` (sharing the P4 squash's `chore(conductor):`
-  prefix constant) is the single discriminator; the verdict, the fix prompt's ProgressSummary,
-  IdenticalStallPattern, FailureCircuitBreaker's stall arm and WorkflowVarsFactory.HasCommits all
-  read it. `rec.NewCommits` stays RAW, so report/status/history still say what really landed.
-gate: build clean; scoped `dotnet test` over 26 touched/neighbouring classes: 268 passed, 0 failed,
+last: **SC4.3 claimed**, all three parts. New `SessionProgress.WorkCommits` =
+  `ExcludeBookkeeping(NewCommits + SatelliteCommits)` is now THE progress signal - verdict,
+  `WorkflowVarsFactory.HasCommits`, FailureCircuitBreaker and IdenticalStallPattern all read that
+  one function. New `plan.satelliteRepos`; doctor FAILS on a satellite that is missing or non-git.
+  `GateRunner.CacheKey` = head + cwd HEAD + optional `gate.watchPaths` mtime + command digest, and
+  GateOrchestrator now FILES under the same key it looks up under. skipIfFresh reads
+  `Git.MostRecentChangeTime` (last commit OR a newer uncommitted edit, artifact excluded).
+gate: build clean; scoped `dotnet test` over 24 touched/neighbouring classes: 267 passed, 0 failed,
   0 skipped (incl. ArchitectureTests). Nothing weakened. Evidence .conductor/evidence/SC4/, seven
-  rigs under TEMP/sarban-proofs/sc42, BEFORE published vs AFTER fresh build on each.
-next: **SC4.3** - satelliteRepos diffed for hasCommits (WorkflowVarsFactory.HasCommits and the
-  verdict's workCommits are the two seams SC4.2 left ready); gate cache key must cover the gate's
-  own working dir HEAD and its command text; skipIfFresh must account for a dirty tree.
-know: a rig that scores NoProgress parks on NeedsHuman and idles FOREVER - `--max-sessions` never
-  fires because no second session starts - so SC42-run.ps1 watches stdout and stops that one pid.
-  Every verdict line is logged TWICE (structured + plain); anchor counting patterns on `^\d{4}-`.
-  Bug #8 filed: HarnessTests' GitRun splits on spaces, so its repo has no initial commit at all and
-  its NewCommits assertions are vacuous. Bugs 2,3,4,5,6,8 open.
+  rigs under TEMP/sarban-proofs/sc43, BEFORE published vs AFTER fresh build on each.
+next: **SC4.4** - queued injections render at the TOP of the composed prompt, right after the role
+  line; a `gateFailures` block an injection supersedes is stamped SUPERSEDED or dropped. Seams:
+  `PromptBuilder` + `InstructionQueue.ConsumeAll` (SessionRunner.cs, just before the prompt write).
+know: satellite rows are `<sha> <subject> [<label>]` - the label is a SUFFIX because
+  `Git.SubjectOf` strips a leading hex token, so a prefix would hide `chore(conductor):` from
+  SC4.2's filter. A two-session rig needs `verifyEachDelivery:false` AND an explicit one-step
+  `defaultWorkflow`; verifyEachDelivery alone still queued a Verify session, which runs no battery.
+  A rig parked on NeedsHuman refuses a second run - delete its `.conductor` to re-run.
+  Bug #9 filed: `McpTaskServer.IsProcessAliveMcp` answers DEAD for a pid it cannot open, inverting
+  the policy SC4.1 set in PidLiveness. Bugs 2,3,4,5,6,8,9 open.
 ```
