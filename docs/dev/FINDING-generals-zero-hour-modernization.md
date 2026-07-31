@@ -2,6 +2,11 @@
 
 **Status:** assessment only. No code, no commitment. Written 2026-07-31.
 
+> **Follow-up:** [`FINDING-generals-stack-and-program-shape.md`](FINDING-generals-stack-and-program-shape.md)
+> revisits the conclusion under tighter constraints — no C++ in the product, agent-driven,
+> offline-vs-AI first, browser with no server — and lands on a different path (§4 Path C rather than
+> Path D) with a concrete stack and phase plan. Read this one for the *why*, that one for the *what*.
+
 **Question asked:** given EA's GPL source release, is it more doable to (a) plan a modernization of
 the released C++ codebase and fix its long-standing defects, or (b) treat it as greenfield — rebuild
 the game from the rules and raw materials, using the old code only as an observation source — with
