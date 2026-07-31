@@ -4,27 +4,25 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SF1.1 CLAIMED** (`9d993ef` code+tests, `ada42a4` goldens). `GET /scores` serves a typed
-  `ScoresDto`, so the Report tab renders verifier scores with no SQL and SF1.2 is unblocked. The DTO
-  carries two things the canned SELECT could not: `threshold`, resolved PER STAGE by the same
-  expression VerdictEngine judges with, and `passed`, the engine's answer. Live proof 10/10 -
-  a 92 on a stage with `verifierThreshold:95` comes back `passed:false` while an identical 92 on a
-  default-bar stage comes back `passed:true`. Evidence `.conductor/evidence/SF1/SF1.1-summary.md`.
-stage: **SF1 — 1 of 3 claimed.** gate: not run by me. Fast loop green (build 0w/0e, CP tests 91/91,
-  go build/vet/test clean).
-next: **SF1.2** — delete the console. Still alive on purpose: `QueryReport` across
-  api/client/demo/types, `/report/query`, `report --query`, `TabDev`, and `tab_dev.go:30` which holds
-  its OWN copy of the scores SELECT. Re-home the two non-SQL Dev panels; keep MCP `run_query`.
-read: `conductor note` has SF1.1's measurements — in particular, nothing may recompute pass/fail from
-  a hardcoded 80; read `passed`. `verdict` (what the agent wrote) and `passed` (what the run decided)
-  are deliberately different fields.
-trap: a rig agent that never CLAIMS makes a stage immortal — it delivers and verifies until the
-  session cap. And the engine APPENDS its generated tracker view below your seeded table, so a
-  first-match scan for an open row reads the frozen seed forever. Both cost this session a run each;
-  `tools/sf1/sf1-1-live-proof.ps1` shows the working shape, including `ownerGate` to keep the control
-  plane alive and `POST /control abort` to end it.
-open: bugs **#15** (prompt >8191 chars silently drops a cmd.exe agent) and **#16** (the gate battery
-  can try to rebuild a running `conductor.exe`). Neither was hit this session.
+last: **SF1.2 CLAIMED** (`8f96ef2` code+tests+docs+rigs, `4bb6c24` goldens). The SQL console is gone:
+  `TabDev`, `tab_dev.go`, `QueryReport`, `QueryResultDto`, `MsgReportResult`, `GET /report/query`,
+  `report --query`. MCP `run_query` stays. The two non-SQL panels were re-homed with their tests —
+  wiring internals to a new **Wiring** section on Home, the token/cost table to the bottom of Report.
+  Live proof 12/12. Evidence `.conductor/evidence/SF1/SF1.2-summary.md`.
+stage: **SF1 — 2 of 3 claimed.** gate: not run by me. Fast loop green (build 0w/0e, CP+MCP tests
+  69/69, go build/vet/test clean, all four rigs parse-check clean and ASCII).
+next: **SF1.3** — tabs to ≤10, design note BEFORE code. You start at **12**, so two must go: Console
+  folds into Agent as a raw toggle, Timeline+Sessions merge into one history surface. Edit `tabKey`
+  AND the hand-maintained legend in `cmdbar.go` — `TestHelpLegendNamesEveryTabItsRealMnemonic` now
+  fails if you change one and not the other. `TestNoTabSurvivesTheDeletedSqlConsole` asserts
+  `tabCount == 12`; update that number deliberately. `d` is free but deliberately unbound.
+trap: **`git status` here is no longer a clean signal.** Six engine files I never touched (RunLoop,
+  SessionRunner, PromptBuilder, Program.cs) plus a new `HookBudgetCommand.cs` appeared mid-session —
+  someone else's `hook-budget` feature in flight. I staged only my own paths, file by file. Do the
+  same; never `git add -A` here, and do not revert or stash what is not yours.
+open: bug **#17** (new) — the CLI silently accepts and ignores EVERY unknown option on EVERY verb
+  (`conductor status --bogus` exits 0); that is why SF1.2 could delete `report --query` but not make
+  it error. Plus **#15** and **#16**, neither hit this session.
 
 
 ## Baseline numbers (from run.db)
@@ -33,7 +31,7 @@ open: bugs **#15** (prompt >8191 chars silently drops a cmd.exe agent) and **#16
 |---|---|
 | Total checkpoints | 24 |
 | Done | 0 |
-| Claimed (unconfirmed) | 4 |
+| Claimed (unconfirmed) | 5 |
 
 ## Checkpoints
 
@@ -53,7 +51,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| SF1.1 | Verifier scores are served by a real endpoint and the Report tab renders them without SQL | TODO | - | - |
+| SF1.1 | Verifier scores are served by a real endpoint and the Report tab renders them without SQL | DONE | 9d993ef | engine-fast:OK · face-fast:OK |
 | SF1.2 | The Dev SQL console and its traces are gone — tab, /report/query, report --query — while MCP run_query stays for chat and the two non-SQL Dev panels are re-homed, not deleted | TODO | - | - |
 | SF1.3 | The face has at most ten tabs after a written consolidation note: Console folds into Agent as a raw toggle, Timeline merges with Sessions into one history surface; keys, help and goldens regenerated | TODO | - | - |
 
