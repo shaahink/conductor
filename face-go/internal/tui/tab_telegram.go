@@ -257,10 +257,17 @@ func (m Model) renderTelegramStatusLine(s *api.TelegramStatusDto) string {
 	return head + "\n" + m.telegramReasonLine(*s.WillDeliverReason)
 }
 
-// One reason, wrapped to the pane by lipgloss (never byte-sliced — STYLE.md), dimmed so the verdict
-// above it stays the thing the eye lands on.
+// One reason, wrapped to the pane and dimmed so the verdict above it stays what the eye lands on.
+// Wrapped as PLAIN text and styled per line afterwards — width-formatting an already-styled string
+// measures the escape bytes and misaligns the pane (STYLE.md), and truncating would cut doctor's
+// sentence exactly where it names the thing that is missing.
 func (m Model) telegramReasonLine(reason string) string {
-	return lipgloss.NewStyle().MaxWidth(max(1, m.paneCols())).Render(subtleStyle.Render(reason))
+	wrapped := lipgloss.NewStyle().Width(max(20, m.paneCols()-2)).Render(reason)
+	lines := strings.Split(wrapped, "\n")
+	for i, l := range lines {
+		lines[i] = subtleStyle.Render(strings.TrimRight(l, " "))
+	}
+	return strings.Join(lines, "\n")
 }
 
 func (m Model) renderTelegramGuide(s *api.TelegramStatusDto) string {
@@ -277,7 +284,7 @@ func (m Model) renderTelegramGuide(s *api.TelegramStatusDto) string {
 		step(2, len(s.AllowedChatIds) > 0, "Message your bot once, then get the chat id from @userinfobot."),
 		// SC1.3: the other way to bootstrap a chat id, said here because it is the one an owner with
 		// a token but no chat id needs and cannot guess.
-		"     " + subtleStyle.Render("(or: curl https://api.telegram.org/bot<TOKEN>/getUpdates after messaging it)"),
+		"     " + subtleStyle.Render("(or read it from the bot API's /getUpdates after messaging it)"),
 		step(3, s.WillDeliver, "Send a test message — it goes through the run's own push queue."),
 	}
 	return strings.Join(lines, "\n")

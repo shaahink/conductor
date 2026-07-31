@@ -1,6 +1,8 @@
 package api
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 )
@@ -153,5 +155,104 @@ func TestDemoSourceQuery(t *testing.T) {
 	}
 	if len(result.Columns) < 1 {
 		t.Error("expected at least 1 column")
+	}
+}
+
+// SC1.3: the Face's Telegram DTOs are hand-written mirrors of the engine's records, and a field
+// renamed on one side is invisible until an operator stares at a pane that says nothing. So this
+// decodes the EXACT bytes a live engine returned during SC1.3's proof run (dotnet run, control plane
+// on 127.0.0.1, real api.telegram.org) rather than bytes this package made up.
+func TestTelegramStatusDecodesTheEnginesRealBytes(t *testing.T) {
+	const beforeTheToken = `{"configured":true,"started":false,"hasToken":false,` +
+		`"allowedChatIds":["99205495"],"pollIntervalSeconds":4,"enableTwoWay":true,"willDeliver":false,` +
+		`"willDeliverReason":"configured but no bot token — set CONDUCTOR_TELEGRAM_TOKEN, or save one from the Face's Telegram tab",` +
+		`"restartRequired":false}`
+	const afterTheToken = `{"configured":true,"started":true,"hasToken":true,"allowedChatIds":["99205495"],` +
+		`"pollIntervalSeconds":4,"enableTwoWay":true,"willDeliver":true,"restartRequired":false}`
+
+	var before TelegramStatusDto
+	if err := json.Unmarshal([]byte(beforeTheToken), &before); err != nil {
+		t.Fatalf("decoding the engine's status: %v", err)
+	}
+	if before.WillDeliver {
+		t.Error("willDeliver must be false before the token — the Face renders this as 'delivering'")
+	}
+	if before.WillDeliverReason == nil || !strings.Contains(*before.WillDeliverReason, "no bot token") {
+		t.Errorf("willDeliverReason did not decode: %v", before.WillDeliverReason)
+	}
+	if before.RestartRequired {
+		t.Error("restartRequired must be false when a live service exists — it means 'nothing you save here can work'")
+	}
+
+	var after TelegramStatusDto
+	if err := json.Unmarshal([]byte(afterTheToken), &after); err != nil {
+		t.Fatalf("decoding the engine's post-token status: %v", err)
+	}
+	if !after.WillDeliver || !after.Started {
+		t.Errorf("the late token's effect did not decode: started=%v willDeliver=%v", after.Started, after.WillDeliver)
+	}
+
+	// And the token endpoint's reply, whose WillDeliver is what stops the Face ticking green over a
+	// save that cannot deliver.
+	const tokenReply = `{"ok":true,"message":"the running engine picked it up — Telegram is delivering to 1 chat id(s) now, no restart needed","willDeliver":true}`
+	var saved TelegramSetTokenResultDto
+	if err := json.Unmarshal([]byte(tokenReply), &saved); err != nil {
+		t.Fatalf("decoding the token reply: %v", err)
+	}
+	if !saved.Ok || !saved.WillDeliver {
+		t.Errorf("token reply did not decode: ok=%v willDeliver=%v", saved.Ok, saved.WillDeliver)
+	}
+
+	// The test button's reply: ViaQueue is the difference between proof and theatre.
+	const testReply = `{"ok":true,"botUsername":"conductor_app_bot","viaQueue":true,"detail":"sent through the live send queue — the same path every run push takes"}`
+	var tested TelegramTestResultDto
+	if err := json.Unmarshal([]byte(testReply), &tested); err != nil {
+		t.Fatalf("decoding the test reply: %v", err)
+	}
+	if !tested.ViaQueue || tested.Detail == nil {
+		t.Errorf("test reply did not decode: viaQueue=%v detail=%v", tested.ViaQueue, tested.Detail)
+	}
+}
+
+// The demo is where this flow gets reviewed, so it must not tick green where the engine now refuses:
+// a token saved with no chat id still cannot notify anybody.
+func TestDemoTelegramTokenSaveIsHonestAboutDelivery(t *testing.T) {
+	src := NewDemoSource()
+	defer src.Close()
+
+	saved, err := src.PostTelegramToken(TelegramSetTokenRequestDto{Token: "123:abc"})
+	if err != nil {
+		t.Fatalf("PostTelegramToken: %v", err)
+	}
+	if !saved.Ok {
+		t.Fatal("the save itself should succeed")
+	}
+	if saved.WillDeliver {
+		t.Error("no chat id is configured in the demo yet — the save cannot make it deliver")
+	}
+
+	tested, err := src.PostTelegramTest()
+	if err != nil {
+		t.Fatalf("PostTelegramTest: %v", err)
+	}
+	if tested.Ok {
+		t.Error("a test that sends nothing is not a passing test")
+	}
+
+	// Add a chat id the way the Face does (plan edit, target telegram) and the verdict flips.
+	val := "99205495"
+	if _, err := src.PostPlanEdit(PlanEditRequestDto{Edits: []PlanEditDto{{Target: "telegram", Field: "allowedchatids", Value: &val}}}); err != nil {
+		t.Fatalf("PostPlanEdit: %v", err)
+	}
+	tested, err = src.PostTelegramTest()
+	if err != nil {
+		t.Fatalf("PostTelegramTest: %v", err)
+	}
+	if !tested.Ok || !tested.ViaQueue {
+		t.Errorf("with a token and a chat id the demo test must pass through the queue: ok=%v viaQueue=%v", tested.Ok, tested.ViaQueue)
+	}
+	status, err := src.FetchTelegramStatus()
+	if err != nil || !status.WillDeliver {
+		t.Errorf("demo status must report willDeliver once it can: %v", err)
 	}
 }

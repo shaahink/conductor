@@ -2,20 +2,20 @@
  h a s t o c e p r k  g Telegram  b d                                                                         
                            │                                                                                  
  ▶ PLAN                    │  ◐ will not deliver yet                                                          
- ✓ F0 3/3 Foundations      │  configured but no bot token — set CONDUCTOR_TELEGRAM_TOKEN, or save one from    
- ✓ F6 5/5 Ink TUI v1       │  the Face's Telegram tab                                                         
- ● F7 2/5 Gate … 1× $0.30  │                                                                                  
-   ✓ F7.1 Plan import      │  Guided setup                                                                    
-   ✓ F7.2 Re-import diff   │    1. Create a bot via @BotFather on Telegram, then paste the token below.       
-   ● F7.3 Truth-gate tier  │    2. Message your bot once, then get the chat id from @userinfobot.             
- ○ F8 0/4 conductor chat…  │       (or read it from the bot API's /getUpdates after messaging it)             
-                           │    3. Send a test message — it goes through the run's own push queue.            
- ── GATES ──               │                                                                                  
-   ✓ build                 │    bot token          •••▏                                                       
-   ● test 4s               │    allowed chat ids   (none)                                                     
-   ○ lint                  │    poll interval      4s                                                         
-                           │    two-way control    false                                                      
- ── TASKS ──               │    send test          ▶ press enter to send a real message                       
+ ✓ F0 3/3 Foundations      │  token present but no allowedChatIds — bot is push-only to nobody                
+ ✓ F6 5/5 Ink TUI v1       │                                                                                  
+ ● F7 2/5 Gate … 1× $0.30  │  Guided setup                                                                    
+   ✓ F7.1 Plan import      │    1. ✓ Create a bot via @BotFather on Telegram, then paste the token below.     
+   ✓ F7.2 Re-import diff   │    2. Message your bot once, then get the chat id from @userinfobot.             
+   ● F7.3 Truth-gate tier  │       (or read it from the bot API's /getUpdates after messaging it)             
+ ○ F8 0/4 conductor chat…  │    3. Send a test message — it goes through the run's own push queue.            
+                           │                                                                                  
+ ── GATES ──               │    bot token          •••••••• (set)                                             
+   ✓ build                 │    allowed chat ids   (none)                                                     
+   ● test 4s               │    poll interval      4s                                                         
+   ○ lint                  │    two-way control    false                                                      
+                           │    send test          ▶ press enter to send a real message                       
+ ── TASKS ──               │                                                                                  
    ✓ Add truth-tier con…   │                                                                                  
    ● Wire RunDb.GetLast…   │                                                                                  
    ○ Cache gate results…   │                                                                                  
@@ -31,4 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   type · enter save · esc cancel                    
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ field · enter edit/send · esc back             

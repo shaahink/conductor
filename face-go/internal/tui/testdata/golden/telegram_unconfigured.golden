@@ -1,21 +1,21 @@
  ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42    
  h a s t o c e p r k  g Telegram  b d                                                                         
                            │                                                                                  
- ▶ PLAN                    │  ◐ configured, no bot token yet                                                  
- ✓ F0 3/3 Foundations      │                                                                                  
- ✓ F6 5/5 Ink TUI v1       │  Guided setup                                                                    
- ● F7 2/5 Gate … 1× $0.30  │    1. Create a bot via @BotFather on Telegram, then paste the token below.       
-   ✓ F7.1 Plan import      │    2. Get your chat id from @userinfobot, then add it to allowed chat ids.       
-   ✓ F7.2 Re-import diff   │    3. Send a test message to confirm the whole path works.                       
-   ● F7.3 Truth-gate tier  │                                                                                  
- ○ F8 0/4 conductor chat…  │    bot token          (not set)                                                  
-                           │    allowed chat ids   (none)                                                     
- ── GATES ──               │    poll interval      4s                                                         
-   ✓ build                 │    two-way control    false                                                      
-   ● test 4s               │    send test          ▶ press enter to send a real message                       
-   ○ lint                  │                                                                                  
-                           │                                                                                  
- ── TASKS ──               │                                                                                  
+ ▶ PLAN                    │  ◐ will not deliver yet                                                          
+ ✓ F0 3/3 Foundations      │  configured but no bot token — set CONDUCTOR_TELEGRAM_TOKEN, or save one from    
+ ✓ F6 5/5 Ink TUI v1       │  the Face's Telegram tab                                                         
+ ● F7 2/5 Gate … 1× $0.30  │                                                                                  
+   ✓ F7.1 Plan import      │  Guided setup                                                                    
+   ✓ F7.2 Re-import diff   │    1. Create a bot via @BotFather on Telegram, then paste the token below.       
+   ● F7.3 Truth-gate tier  │    2. Message your bot once, then get the chat id from @userinfobot.             
+ ○ F8 0/4 conductor chat…  │       (or read it from the bot API's /getUpdates after messaging it)             
+                           │    3. Send a test message — it goes through the run's own push queue.            
+ ── GATES ──               │                                                                                  
+   ✓ build                 │    bot token          (not set)                                                  
+   ● test 4s               │    allowed chat ids   (none)                                                     
+   ○ lint                  │    poll interval      4s                                                         
+                           │    two-way control    false                                                      
+ ── TASKS ──               │    send test          ▶ press enter to send a real message                       
    ✓ Add truth-tier con…   │                                                                                  
    ● Wire RunDb.GetLast…   │                                                                                  
    ○ Cache gate results…   │                                                                                  
