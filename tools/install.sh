@@ -51,18 +51,35 @@ need dotnet "the engine targets net10.0 (https://dotnet.microsoft.com/)"
 need go     "the Face is a Go binary (https://go.dev/)"
 need git    "conductor verifies work by diffing commits; a run without git has no evidence"
 
+# SC8.1: say which version we replaced and which we installed. Publishing in silence is why
+# "rebuild before trusting it" had to be taken on faith. Falls back honestly on a binary that
+# predates the `version` verb rather than inventing a number.
+conductor_version() {
+    if [ ! -x "$1" ]; then echo "(none installed)"; return 0; fi
+    local out
+    if out="$("$1" version --short 2>/dev/null)" && [ -n "$out" ]; then
+        printf '%s\n' "$out" | head -n 1
+        return 0
+    fi
+    echo "(unknown - predates the version verb)"
+}
+
+exe="$INSTALL_DIR/conductor"
+before="$(conductor_version "$exe")"
+
 echo "conductor installer"
 echo "  repo:    $repo"
 echo "  install: $INSTALL_DIR"
 echo "  bin:     $BIN_DIR"
 echo "  config:  $CONFIG"
+echo "  current: $before"
 echo
 
 echo "[1/3] publishing engine..."
 dotnet publish "$repo/src/Conductor/Conductor.csproj" -c "$CONFIG" -o "$INSTALL_DIR" --nologo -v q
-exe="$INSTALL_DIR/conductor"
 [ -f "$exe" ] || { echo "error: expected $exe after publish, not found" >&2; exit 1; }
 chmod +x "$exe"
+after="$(conductor_version "$exe")"
 
 echo "[2/3] building Go face..."
 ( cd "$repo/face-go" && go build -o "$INSTALL_DIR/conductor-face" ./cmd/conductor-face/ )
@@ -74,6 +91,11 @@ echo "  shim: $BIN_DIR/conductor -> $exe"
 
 echo
 echo "Done."
+echo "  version: $before  ->  $after"
+# An `[ ... ] && echo` one-liner would trip `set -e` on the false branch. An if does not.
+if [ "$before" = "$after" ]; then
+    echo "  (unchanged - same commit, clean tree, and nothing to rebuild)"
+fi
 case ":${PATH}:" in
     *":${BIN_DIR}:"*)
         echo "Try it now:  conductor demo"

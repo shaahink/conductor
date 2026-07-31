@@ -921,6 +921,37 @@ public sealed class ControlPlaneServerTests : IDisposable
         finally { server.Dispose(); }
     }
 
+    // SC8.1: the running engine can be asked what it is. Deliberately with a token-free client:
+    // "which engine is serving this run?" gets asked from a shell that has not read
+    // control-plane.json, and an endpoint that 401s there is an endpoint nobody can use.
+    [Fact]
+    public async Task GetVersion_ReportsTheEnginesOwnBuildStamp_WithoutAToken()
+    {
+        var (server, port) = StartServer();
+        try
+        {
+            using var anonymous = new HttpClient();
+            var resp = await anonymous.GetAsync($"http://127.0.0.1:{port}/version");
+            Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+            Assert.Equal("application/json", resp.Content.Headers.ContentType?.MediaType);
+
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            var root = doc.RootElement;
+            // The wire must carry the same stamp the CLI verb prints — one shape, one truth.
+            var expected = Conductor.Core.VersionReport.Current();
+            Assert.Equal(expected.Version, root.GetProperty("version").GetString());
+            Assert.Equal(expected.Full, root.GetProperty("full").GetString());
+            Assert.Equal(expected.Commit, root.GetProperty("commit").GetString());
+            Assert.Equal(expected.Dirty, root.GetProperty("dirty").GetBoolean());
+            Assert.Equal(expected.BuildDate, root.GetProperty("buildDate").GetString());
+            // And it must be a real stamp, not a placeholder: this is the assertion that fails if
+            // the build stops stamping.
+            Assert.NotEqual(Conductor.Core.BuildInfo.UnknownCommit, root.GetProperty("commit").GetString());
+            Assert.False(string.IsNullOrWhiteSpace(root.GetProperty("binary").GetString()));
+        }
+        finally { server.Dispose(); }
+    }
+
     [Fact]
     public async Task GetState_ProviderFallsBackToThePlanWhenNoStageMatches()
     {

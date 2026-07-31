@@ -22,6 +22,9 @@ var app = new CommandApp();
 app.Configure(c =>
 {
     c.SetApplicationName("conductor");
+    // SC8.1: `conductor --version` answers the same thing the `version` verb does, because half the
+    // world types the flag and a flag that prints "1.0.0" (Spectre's default) would be a lie.
+    c.SetApplicationVersion(Conductor.Core.BuildInfo.Current.Full);
     c.AddCommand<RunCommand>("run")
         .WithDescription("Run the plan: engine + control plane + Face TUI, one command. Resumes from saved state; Ctrl+C is safe.");
     c.AddCommand<JourneyCommand>("journey")
@@ -92,6 +95,8 @@ app.Configure(c =>
         .WithDescription("Generate shell completion scripts (powershell or bash).");
     c.AddCommand<BgCommand>("bg")
         .WithDescription("Background process management: start|status|logs|stop.");
+    c.AddCommand<VersionCommand>("version")
+        .WithDescription("What this binary is: semver, git sha and build date stamped at build, plus which file answered. --json for machines, --short for scripts.");
     c.AddCommand<ChatCommand>("chat")
         .WithDescription("F8.1: Ask questions about a running conductor plan. The agent has MCP access to run.db, the ledger, and control verbs. Example: conductor chat \"how did session 9 die?\"");
     c.SetExceptionHandler((ex, _) =>

@@ -41,4 +41,59 @@
     <InternalsVisibleTo Include="Conductor.Tests" />
   </ItemGroup>
 
+  <!-- SC8.1: the version identity is produced by the BUILD, never typed into a source file.
+       The defect this answers is "is the run using stale engine code" (GAP-ANALYSIS: three sessions
+       burned on it), and a constant a human edits cannot answer it, because the human forgets. The
+       only trustworthy stamp is one the compiler puts there.
+
+       Two Execs, and deliberately no git-log format percent codes: MSBuild unescapes %XX, and on
+       Windows Exec runs the command through a generated .cmd where % is special AGAIN, so a format
+       string is two escaping layers deep for no gain. rev-parse and status porcelain need neither.
+
+       ContinueOnError: a build from a source archive (no .git) or on a machine without git must
+       still produce a working binary — it reports commit "unknown", which is honest, rather than
+       failing the build over a cosmetic field.
+
+       The UTC timestamp changes on every build, so this target defeats incremental compilation of
+       this one project. That is the price of a build date that is actually the build's date, and it
+       is paid deliberately: a stale-binary question the operator cannot answer costs far more. -->
+  <Target Name="StampBuildInfo" BeforeTargets="GetAssemblyAttributes">
+    <Exec Command="git rev-parse --short=12 HEAD"
+          WorkingDirectory="$(MSBuildProjectDirectory)"
+          ConsoleToMSBuild="true" StandardOutputImportance="low" StandardErrorImportance="low"
+          ContinueOnError="true" IgnoreExitCode="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_ConductorShaRaw" />
+    </Exec>
+    <Exec Command="git status --porcelain --untracked-files=no"
+          WorkingDirectory="$(MSBuildProjectDirectory)"
+          ConsoleToMSBuild="true" StandardOutputImportance="low" StandardErrorImportance="low"
+          ContinueOnError="true" IgnoreExitCode="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_ConductorPorcelain" />
+    </Exec>
+    <PropertyGroup>
+      <ConductorCommitSha Condition="'$(_ConductorShaRaw)' != ''">$(_ConductorShaRaw.Trim())</ConductorCommitSha>
+      <ConductorCommitSha Condition="'$(ConductorCommitSha)' == ''">unknown</ConductorCommitSha>
+      <ConductorCommitDirty>false</ConductorCommitDirty>
+      <ConductorCommitDirty Condition="'$(_ConductorPorcelain)' != ''">true</ConductorCommitDirty>
+      <ConductorBuildDate>$([System.DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'))</ConductorBuildDate>
+      <!-- semver build metadata: 2.0.0+abc123def456 , or +abc123def456.dirty when the tree was not clean. -->
+      <InformationalVersion>$(Version)+$(ConductorCommitSha)</InformationalVersion>
+      <InformationalVersion Condition="'$(ConductorCommitDirty)' == 'true'">$(Version)+$(ConductorCommitSha).dirty</InformationalVersion>
+    </PropertyGroup>
+    <ItemGroup>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>CommitSha</_Parameter1>
+        <_Parameter2>$(ConductorCommitSha)</_Parameter2>
+      </AssemblyAttribute>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>CommitDirty</_Parameter1>
+        <_Parameter2>$(ConductorCommitDirty)</_Parameter2>
+      </AssemblyAttribute>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>BuildDate</_Parameter1>
+        <_Parameter2>$(ConductorBuildDate)</_Parameter2>
+      </AssemblyAttribute>
+    </ItemGroup>
+  </Target>
+
 </Project>

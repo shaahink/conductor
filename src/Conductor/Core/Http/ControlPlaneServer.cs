@@ -178,6 +178,7 @@ public sealed partial class ControlPlaneServer : IDisposable
 
             switch (method, path)
             {
+                case ("GET", "/version"): await WriteVersionAsync(ctx).ConfigureAwait(false); break;
                 case ("GET", "/state"): await WriteStateAsync(ctx).ConfigureAwait(false); break;
                 case ("GET", "/tasks"): await WriteTasksAsync(ctx).ConfigureAwait(false); break;
                 case ("POST", "/tasks/update"): await HandleTaskUpdateAsync(ctx, ct).ConfigureAwait(false); break;
