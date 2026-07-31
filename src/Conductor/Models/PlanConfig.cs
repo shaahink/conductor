@@ -286,7 +286,24 @@ public sealed class PlanConfig
             }
         }
 
+        // SC3.3: a literal brace in authored prose is the trap that killed a 13-hour run at a stage
+        // boundary. Prose is substituted into the prompt as a VALUE, so `{model}` in a stage's notes
+        // is not a variable and never was — it either reaches the agent as a broken instruction or
+        // (before this landed) took the engine down with a stderr-only refusal. Refuse it here,
+        // where doctor reports it as a plan check and the author can still fix it for free.
+        foreach (var s in Stages)
+            ValidateProse($"stage '{s.Id}' notes", s.Notes, errors);
+        ValidateProse("plan.promptExtra", PromptExtra, errors);
+
         return errors;
+    }
+
+    private static void ValidateProse(string where, string? prose, List<string> errors)
+    {
+        var tokens = PromptPlaceholders.UnresolvableIn(prose);
+        if (tokens.Count == 0) return;
+        errors.Add($"{where} contains {string.Join(", ", tokens)} — prose is substituted as a value, so no " +
+                   $"placeholder in it is ever resolved. Write {PromptPlaceholders.Escaped(tokens[0])} for a literal brace, or remove it");
     }
 
     private static void ValidateCondition(string workflow, string stepId, string field, string? expr, List<string> errors)

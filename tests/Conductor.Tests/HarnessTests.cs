@@ -326,4 +326,69 @@ public sealed class HarnessTests : IDisposable
         Assert.Empty(state.History);
         Assert.False(File.Exists(Path.Combine(_repo, "harness-output.txt")));
     }
+
+    /// <summary>SC3.3 live proof: a template the plan supplies with an unresolvable placeholder used
+    /// to throw out of the run loop, out of the process and onto stderr — nothing in conductor.log,
+    /// no state written, and `status` still calling the dead run idle. Now the run PARKS: NeedsHuman,
+    /// the refusal named on the attention surface and in conductor.log, the engine still up, and the
+    /// session number not burned — so the operator fixes the template and resumes into the same run.
+    /// Driven through the real orchestrator against the real repo, not by calling the renderer.</summary>
+    [Fact]
+    public async Task FullCycle_UnresolvablePlaceholder_ParksTheRunAndSaysSoInTheLog()
+    {
+        Directory.CreateDirectory(Path.Combine(_repo, "tpl"));
+        await File.WriteAllTextAsync(Path.Combine(_repo, "tpl", "session.md"),
+            "Deliver stage {stage} of {planName} in {repo}.\nBudget for this stage: {stageBudget}\n{stageNotes}");
+
+        var plan = new PlanConfig
+        {
+            Name = "ParkPlan",
+            Repo = _repo,
+            Tracker = "TRACKER.md",
+            TemplatesDir = "tpl",
+            Stages = { new StageConfig { Id = "H0", Title = "Harness", Sessions = 1 } },
+            Agent = new AgentConfig
+            {
+                Command = "cmd.exe",
+                Args = { "/c", _agentScript, "{prompt}" },
+                Provider = "opencode",
+            },
+            GatePolicy = "perSession",
+            Gates = { new GateConfig { Name = "smoke", Command = "echo ok", Tier = "fast", TimeoutMinutes = 1 } },
+        };
+        plan.PlanFilePath = Path.Combine(_repo, "conductor.plan.json");
+        plan.Report.Commit = false;
+
+        var state = new RunState { RunId = Guid.NewGuid().ToString("N") };
+        using var host = ConductorHost.Build(plan, state, new PlainSink(),
+            new RunOptions(DryRun: false, Once: true, MaxSessions: 0), consoleSink: false);
+
+        using var cts = new CancellationTokenSource();
+        var runTask = host.Services.GetRequiredService<Orchestrator>().RunAsync(cts.Token);
+
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        while (state.Status != RunStatus.NeedsHuman && !runTask.IsCompleted && DateTime.UtcNow < deadline)
+            await Task.Delay(50, cts.Token);
+
+        // The park, not a crash: the loop is still running and the process is still ours.
+        Assert.Equal(RunStatus.NeedsHuman, state.Status);
+        Assert.False(runTask.IsCompleted, "a parked run stays up — the operator fixes the template and resumes");
+        Assert.NotNull(state.AttentionReason);
+        Assert.Contains("{stageBudget}", state.AttentionReason!, StringComparison.Ordinal);
+        Assert.Contains("H0", state.AttentionReason!, StringComparison.Ordinal);
+
+        // No session was spawned and no session number was burned.
+        Assert.Empty(state.History);
+        Assert.Equal(0, state.SessionCounter);
+        Assert.False(File.Exists(Path.Combine(_repo, "harness-output.txt")));
+
+        await cts.CancelAsync();
+        await runTask.WaitAsync(TimeSpan.FromSeconds(30), CancellationToken.None);
+
+        // The refusal reached the log an operator actually reads.
+        var log = await File.ReadAllTextAsync(Path.Combine(_stateDir, "conductor.log"), CancellationToken.None);
+        Assert.Contains("NEEDS HUMAN", log, StringComparison.Ordinal);
+        Assert.Contains("{stageBudget}", log, StringComparison.Ordinal);
+        Assert.Contains("session.md", log, StringComparison.Ordinal);
+    }
 }

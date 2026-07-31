@@ -298,7 +298,7 @@ public class PromptBuilderTests
         var ex = Record.Exception(() =>
             PromptValidator.ThrowIfUnresolved("Deliver stage {stage} within {someTypo} attempts.", "session.md"));
 
-        Assert.IsType<InvalidOperationException>(ex);
+        Assert.IsType<PromptCompositionException>(ex);   // SC3.3: its own type — the run loop parks on exactly this
         Assert.Contains("{stage}", ex.Message, StringComparison.Ordinal);
         Assert.Contains("{someTypo}", ex.Message, StringComparison.Ordinal);
     }

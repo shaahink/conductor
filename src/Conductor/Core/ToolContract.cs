@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using Conductor.Models;
 
 namespace Conductor.Core;
@@ -84,38 +83,5 @@ public static class ToolContract
     {
         var slowest = plan.Gates?.FirstOrDefault(g => g.Command?.Contains("test", StringComparison.OrdinalIgnoreCase) == true);
         return slowest?.Command ?? "<your long command>";
-    }
-}
-
-/// <summary>
-/// Fails a prompt that still contains an unresolved <c>{placeholder}</c> after rendering.
-/// </summary>
-/// <remarks>
-/// A silent miss ships broken instructions to the agent and nobody notices. The live proof: the verifier
-/// template contained <c>{plan.VerifierThreshold}</c>, which was never a template variable, so every
-/// verifier was told its bar was literally "≥{plan.VerifierThreshold}". Prompts are code; an unbound name
-/// is a compile error, not a formatting quirk.
-/// </remarks>
-public static partial class PromptValidator
-{
-    /// <summary>A placeholder is <c>{name}</c> / <c>{name.with.dots}</c> — deliberately NOT matching
-    /// <c>{"json": ...}</c> or <c>{}</c>, both of which legitimately appear in prompt bodies (the verifier
-    /// is asked to emit a JSON object).</summary>
-    [GeneratedRegex(@"\{[a-zA-Z][a-zA-Z0-9_.]*\}", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex PlaceholderRegex();
-
-    public static void ThrowIfUnresolved(string rendered, string templateName)
-    {
-        var leftovers = PlaceholderRegex().Matches(rendered)
-            .Select(m => m.Value)
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-
-        if (leftovers.Count == 0) return;
-
-        throw new InvalidOperationException(
-            $"Template '{templateName}' has unresolved placeholder(s): {string.Join(", ", leftovers)}. " +
-            "Either the name is misspelled or the variable is not supplied by PromptBuilder.Vars(). " +
-            "An unresolved placeholder would be sent to the agent verbatim.");
     }
 }

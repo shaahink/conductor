@@ -1,10 +1,10 @@
 ﻿# Conductor — Sarban core - the engine says what it knows run report
 
-_Updated 2026-07-31 06:36 UTC · branch `feat/sarban` · HEAD `4c69541`_
+_Updated 2026-07-31 07:04 UTC · branch `feat/sarban` · HEAD `69aae8f`_
 
 **Status:** Idle
-**Stage:** SC3 — Config traps die at authoring time · attempts used 0 · working ▸ SC3.2
-**Checkpoints:** 8/26 done · **Sessions run:** 9 · **Cost:** $113.8867 (agent $113.8239 + gates $0.0628) · **Tokens:** 1,690,960 in / 727,418 out
+**Stage:** SC3 — Config traps die at authoring time · attempts used 0 · working ▸ SC3.3
+**Checkpoints:** 9/26 done · **Sessions run:** 10 · **Cost:** $125.4773 (agent $125.4103 + gates $0.0670) · **Tokens:** 1,866,383 in / 811,204 out
 **Confirmed phases:** SC1, SC2
 
 ## Stage progress
@@ -13,7 +13,7 @@ _Updated 2026-07-31 06:36 UTC · branch `feat/sarban` · HEAD `4c69541`_
 |---|---|---|---|
 | SC1 | Telegram actually delivers | ██████████ 3/3 | confirmed ✓ |
 | SC2 | Truthful surfaces | ██████████ 4/4 | confirmed ✓ |
-| SC3 | Config traps die at authoring time | ██░░░░░░░░ 1/4 | **← active** |
+| SC3 | Config traps die at authoring time | █████░░░░░ 2/4 | **← active** |
 | SC4 | Verdicts judge the work, not the environment | ░░░░░░░░░░ 0/4 | todo |
 | SC5 | The engine can wait, detach, and correct the board | ░░░░░░░░░░ 0/4 | todo |
 | SC6 | Clean history without lying about it | ░░░░░░░░░░ 0/2 | todo |
@@ -41,12 +41,12 @@ _Updated 2026-07-31 06:36 UTC · branch `feat/sarban` · HEAD `4c69541`_
 
 </details>
 
-<details><summary>SC3 — Config traps die at authoring time (1/4)</summary>
+<details><summary>SC3 — Config traps die at authoring time (2/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| SC3.1 | doctor FAILS when agent.model is set without the model token in both args and resumeArgs; unknown RunIf or SkipIf tokens fail at plan load naming the valid vocabulary | ✅ DONE | - |
-| SC3.2 | plan set refuses an absent leaf key without --create, suggests the dotted path when one nested leaf matches, warns before stripping comments, and reaches the live engine or prints the exact reload command | ⬜ TODO | - |
+| SC3.1 | doctor FAILS when agent.model is set without the model token in both args and resumeArgs; unknown RunIf or SkipIf tokens fail at plan load naming the valid vocabulary | ✅ DONE | [`d4c9103`](https://github.com/shaahink/conductor/commit/d4c9103) |
+| SC3.2 | plan set refuses an absent leaf key without --create, suggests the dotted path when one nested leaf matches, warns before stripping comments, and reaches the live engine or prints the exact reload command | ✅ DONE | - |
 | SC3.3 | A literal brace in stage notes or promptExtra is caught by doctor at plan load; at runtime an unresolved placeholder parks the run and writes the refusal to conductor.log; a double brace escapes to a literal | ⬜ TODO | - |
 | SC3.4 | The default advisor invocation works headless or is refused loudly at load with a doctor line; plan-config.md matches the code | ⬜ TODO | - |
 
@@ -115,16 +115,13 @@ _Updated 2026-07-31 06:36 UTC · branch `feat/sarban` · HEAD `4c69541`_
 | 7 | SC2 | Deliver | 1 | 07-31 05:08 | 0:29 | Advanced | SC2.3 | 2 | engine-fast:OK · face-fast:OK | $11.8482 | $0.0037 | 196,445/75,881 |
 | 8 | SC2 | Deliver | 1 | 07-31 05:38 | 0:36 | Advanced | SC2.4 | 1 | engine-fast:OK · face-fast:OK | $23.5470 | $0.0048 | 290,900/116,641 |
 | 9 | SC3 | Deliver | 1 | 07-31 06:17 | 0:18 | Advanced | SC3.1 | 2 | engine-fast:OK · face-fast:OK | $7.6133 | $0.0041 | 148,043/61,242 |
+| 10 | SC3 | Deliver | 1 | 07-31 06:36 | 0:26 | Advanced | SC3.2 | 2 | engine-fast:OK · face-fast:OK | $11.5864 | $0.0042 | 175,423/83,786 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-31 04:24:34  • session #3 SC1 → Advanced · done SC1.3 · 3 commit(s)  (40m51s)
-07-31 04:26:38  ▪ gate engine-fast pass [phase]  (0.0s)
-07-31 04:26:38  ▪ gate face-fast pass [phase]  (0.0s)
-07-31 04:26:38  ▪ gate engine-full FAIL [phase]  (1m51s)
 07-31 04:26:38  ▪ gate face-full pass [phase]  (10.4s)
 07-31 04:26:38  • session #4 SC1 Fix started (attempt 2/4)
 07-31 04:44:52  ▪ gate engine-fast pass [session]  (1m03s)
@@ -161,6 +158,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-31 07:17:49  • session #9 SC3 Deliver started (attempt 1/6)
 07-31 07:36:55  ▪ gate engine-fast pass [session]  (37.8s)
 07-31 07:36:55  ▪ gate face-fast pass [session]  (3.1s)
+07-31 07:36:56  • session #9 SC3 → Advanced · done SC3.1 · 2 commit(s)  (19m06s)
+07-31 07:36:56  • session #10 SC3 Deliver started (attempt 1/6)
+07-31 08:04:39  ▪ gate engine-fast pass [session]  (38.9s)
+07-31 08:04:39  ▪ gate face-fast pass [session]  (3.3s)
 ```
 
 ## Health
@@ -168,7 +169,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 9 · retries 1 (11 %) · overall Warn
+sessions 10 · retries 1 (10 %) · overall Warn
 ⚠ [context-saturation] session #3: 28,499,145 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #6: 20,274,223 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #8: 35,438,955 context tokens (≥ 20,000,000)
@@ -185,9 +186,6 @@ working tree: clean
 
 ### Commits by session
 
-- **s2 (SC1 Deliver)** — 2 commit(s):
-  - [`8a6672c`](https://github.com/shaahink/conductor/commit/8a6672c) docs(sarban): hand SC1.3 the surfaces SC1.2 made honest
-  - [`160f731`](https://github.com/shaahink/conductor/commit/160f731) feat(sc1): make the Telegram surfaces answer the question that matters
 - **s3 (SC1 Deliver)** — 3 commit(s):
   - [`a3223c1`](https://github.com/shaahink/conductor/commit/a3223c1) docs(sarban): hand SC2 the ground SC1 finished
   - [`4620370`](https://github.com/shaahink/conductor/commit/4620370) test(face): rebaseline the telegram goldens, and pin two states they never had
@@ -210,6 +208,9 @@ working tree: clean
 - **s9 (SC3 Deliver)** — 2 commit(s):
   - [`4c69541`](https://github.com/shaahink/conductor/commit/4c69541) docs(sarban): hand SC3.2 the plan-set traps and a corrected condition finding
   - [`d4c9103`](https://github.com/shaahink/conductor/commit/d4c9103) fix(sc3): refuse the two config traps at authoring time
+- **s10 (SC3 Deliver)** — 2 commit(s):
+  - [`69aae8f`](https://github.com/shaahink/conductor/commit/69aae8f) docs(sarban): hand SC3.3 the brace landmine and a dead advisor key
+  - [`587eadd`](https://github.com/shaahink/conductor/commit/587eadd) fix(sc3): make plan set refuse what nothing reads, and reach the live run
 
 ## Phase handovers (audit)
 
@@ -236,23 +237,23 @@ engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: SC3.1 landed and is claimed with evidence at `.conductor/evidence/SC3/SC3.1-config-traps.md` (commits d4c9103 + 4c69541, pushed to `feat/sarban`). Both halves were measured against the published engine on a scratch rig (`%TEMP%\sarban-proofs\sc31`), never this repo: `doctor` gained a `model` check that reads the merged agent per stage and fails — never warns — when a pinned model (`plan.agent.model`, a stage override, or a `pipeline.roles.*.model` rule) is missing `{model}` from `args`, and separately from a non-empty `resumeArgs`, since `AgentSession.Start` swaps templates on resume; the published engine reports `0 fail / exit 0` on both trap plans where the fresh build repo…
+> SESSION-RESULT: **SC3.2 is claimed** (`conductor task --done SC3.2 --evidence .conductor/evidence/SC3/SC3.2-plan-set.md`), commits 587eadd + 69aae8f, pushed to `feat/sarban`, tree clean. All four parts of the checkpoint landed and each has a published-engine BEFORE on the same scratch rig (`%TEMP%\sarban-proofs\sc32`): (1) an undeclared key is refused with exit 1 and the plan file left byte-identical — the check walks `PlanConfig`'s declared *type graph*, not the serialised document, because `JsonOpts` omits nulls and an unset `limits.maxRunCostUsd` is absent from the JSON yet is the most documented edit there is; `--create` writes it anyway, loudly; (2) a bare `maxRunCostUsd` comes back as …
 
 ## Tracker handoff
 
 ```
-last: **SC3.1 claimed**, both parts, commit d4c9103. doctor gained a model check: per stage it reads
-  the MERGED agent and fails when a pinned model (plan, stage, or pipeline.roles.X) is missing the
-  placeholder from args, and separately from a non-empty resumeArgs - Start swaps templates on
-  resume. New ConditionVocabulary mirrors EvaluateCondition's parse; PlanConfig rejects unknown
-  runIf/skipIf naming the vocabulary. doctor renders a plan-load failure as a check, not a crash.
-gate: fast loop green - build clean, 143 scoped tests, nothing weakened. Rig TEMP/sarban-proofs/sc31,
-  every after has a published-engine before: .conductor/evidence/SC3/SC3.1-config-traps.md. The typo
-  plan the published engine accepts twice over now makes run exit 1 leaving NO .conductor - nothing
-  spent.
-next: **SC3.2** - plan set refuses an absent leaf without --create, suggests the dotted path on a
-  single nested match, warns before stripping comments, reaches the live engine or prints the reload.
-know: MEASURED, correcting devcontext #4 - unknown tokens are not simply 'always run': bare junk is
-  stuck TRUE, negated junk (!gatesgreen) is stuck FALSE, so a fix step can vanish. New bug 6:
-  workflowStep.model and stage.overrides.model are read by NOTHING. Bugs 2, 3, 4, 5, 6 open.
+last: **SC3.2 claimed**, all four parts, commit 587eadd. New PlanKeySchema walks PlanConfig's declared
+  TYPE GRAPH, not the serialised doc - JsonOpts omits nulls, so an unset limits.maxRunCostUsd is
+  absent from the JSON and is still the most documented edit there is. plan set now refuses an
+  undeclared key (file left byte-identical), suggests the dotted path for a bare name using paths that
+  exist in THAT file, creates a declared-but-absent block, reports the comment lines it drops and
+  keeps a .bak, and queues reload-plan for a live EngineLock holder or prints the reload command.
+gate: fast loop green - build clean, 106 scoped tests, 0 skipped, pragmas still 37 of 38, nothing
+  weakened. Evidence .conductor/evidence/SC3/SC3.2-plan-set.md, rig TEMP/sarban-proofs/sc32. Reach is
+  proven on a REAL 3-session run: published engine queued nothing, fresh build got 'plan reloaded at
+  session boundary - v2' into that run's own log.
+next: **SC3.3** - brace safety: doctor catches an unresolvable placeholder in stage notes/promptExtra
+  at plan load, runtime PARKS instead of a stderr-only exit, and double-brace escapes to a literal.
+know: NEW bug 7 - advisor.provider is set in FIVE shipped plans and AdvisorConfig declares no such
+  field, so it is dropped silently; SC3.4 owns it. Bugs 2,3,4,5,6,7 open.
 ```

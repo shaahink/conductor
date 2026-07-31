@@ -186,7 +186,9 @@ public sealed partial class SessionRunner
             {
                 prompt = prompt.TrimEnd() + $"\n\n## Parallel audit findings for stage {outcome.StageId}\n" +
                     "The following audit findings were produced by a read-only audit lane running concurrently with the previous stage. " +
-                    "Address LOW and MEDIUM findings in this session if convenient.\n\n{findings}";
+                    // SC3.3: this line was not interpolated, so every parallel-audit hand-off since
+                    // B12 shipped the agent the literal text "{findings}" and dropped the findings.
+                    $"Address LOW and MEDIUM findings in this session if convenient.\n\n{findings}";
                 _ctx.State.ParallelAuditOutcome = null;
             }
         }

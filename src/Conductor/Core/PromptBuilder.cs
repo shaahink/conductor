@@ -158,9 +158,19 @@ public sealed class PromptBuilder
         var path = ResolveTemplatePath(templateFile);
         var text = File.Exists(path) ? File.ReadAllText(path) : BuiltIn(templateFile);
 #pragma warning restore MA0045
-        foreach (var (k, v) in vars) text = text.Replace("{" + k + "}", v);
+
+        // SC3.3. Two protections, and the order is the whole point:
+        //   1. the template's own {{word}} escapes are held BEFORE substitution, so `{{extra}}`
+        //      renders the literal `{extra}` instead of the extra's value;
+        //   2. every substituted VALUE is held as it goes in, so a brace inside stage notes, a
+        //      tracker handoff, gate output or an agent's transcript tail is prose — it can neither
+        //      be re-substituted by a later variable (which used to depend on dictionary order) nor
+        //      read as an unresolved placeholder and kill the run.
+        // Only the template can carry a placeholder, so only the template can be refused.
+        text = PromptPlaceholders.ProtectEscapes(text);
+        foreach (var (k, v) in vars) text = text.Replace("{" + k + "}", PromptPlaceholders.ProtectValue(v), StringComparison.Ordinal);
         PromptValidator.ThrowIfUnresolved(text, templateFile);
-        text = text.Trim();
+        text = PromptPlaceholders.Restore(text).Trim();
 
         // Merge in persona system prompt — appended after base prompt rendering so the
         // persona doesn't need to be referenced in every template (B7.3). Conductor contract

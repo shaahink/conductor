@@ -34,6 +34,19 @@ public sealed partial class RunLoop
         };
     }
 
+    /// <summary>SC3.3: an unresolvable placeholder is a config defect, not a crash. It used to travel
+    /// all the way out of the process — the refusal reached stderr, nothing reached conductor.log, and
+    /// <c>status</c> went on calling the dead run idle. Park instead: the control plane stays up, the
+    /// reason is on every surface, and the operator fixes the template or the plan and resumes into
+    /// the same run. The session number is handed back too — nothing was spawned to spend it.</summary>
+    private void ParkOnPromptRefusal(StageConfig stage, PromptCompositionException ex)
+    {
+        if (_ctx.State.History.LastOrDefault()?.Number != _ctx.State.SessionCounter)
+            _ctx.State.SessionCounter--;
+        _verdicts.NeedsHuman($"prompt for stage {stage.Id} could not be composed — {ex.Message} " +
+            "Fix the template or the plan, then `conductor resume` (a plan edit also needs `conductor plan reload`).");
+    }
+
     private static PromptBuilder BuildPromptBuilder(PlanConfig plan)
     {
         var registry = new PersonaRegistry(plan);

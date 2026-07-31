@@ -286,7 +286,10 @@ public sealed partial class RunLoop
                     var kind = _ctx.State.PendingResume != null ? SessionKind.Resume
                         : _ctx.State.PendingAudit != null ? SessionKind.Audit
                         : _ctx.State.PendingFix != null ? SessionKind.Fix : SessionKind.Deliver;
-                    var prompt = BuildPrompt(kind, stage, _ctx.State.SessionCounter + 1, _ctx.State.NextAttemptNumber, maxAttempts);
+                    string prompt;
+                    // SC3.3: --dry-run exists to find exactly this before a run spends anything.
+                    try { prompt = BuildPrompt(kind, stage, _ctx.State.SessionCounter + 1, _ctx.State.NextAttemptNumber, maxAttempts); }
+                    catch (PromptCompositionException ex) { _ctx.Sink.Log($"--- DRY RUN: prompt for stage {stage.Id} REFUSED: {ex.Message} ---"); return 1; }
                     var batterySection = _ctx.Prompts.BatterySection(_ctx.State, _ctx.Store);
                     if (batterySection.Length > 0)
                         prompt = prompt.TrimEnd() + "\n\n" + batterySection;
@@ -353,7 +356,8 @@ public sealed partial class RunLoop
                     }
                 }
 
-                await _sessions.RunAsync(stage, track, ct).ConfigureAwait(false);
+                try { await _sessions.RunAsync(stage, track, ct).ConfigureAwait(false); }
+                catch (PromptCompositionException ex) { ParkOnPromptRefusal(stage, ex); continue; }
                 sessionsThisRun++;
                 var rec = _ctx.State.History[^1];
 

@@ -91,7 +91,7 @@ card, and judging a stuck stage. Never inside scheduling — the loop stays dete
 | `id` | string | Short identifier, must match tracker checkpoint prefix (e.g. `"L0"`, `"P7.3"`). |
 | `title` | string | Human-readable stage name. |
 | `sessions` | int | Expected session count. Budget = `sessions × stageSlackFactor`. |
-| `notes` | string | Stage-specific text appended to the session prompt. |
+| `notes` | string | Stage-specific text appended to the session prompt. Braces: see below. |
 | `ownerGate` | bool | Park at `AwaitingOwner` when stage goes green. Owner must approve to advance. |
 | `persona` | string | Specialist persona: `architect`, `planner`, `qa`, `docs`, `reviewer`, `refactor`, `test-writer`, `git-cleanup`, `security-audit`. |
 | `kind` | string | `"deliver"` (default) or `"review"` (advisory artifact, no mutations). |
@@ -100,6 +100,26 @@ card, and judging a stuck stage. Never inside scheduling — the loop stays dete
 | `agent` | object | Per-stage agent override (merged over plan default). |
 | `preHook` | object | Command run before the first session. Non-zero exit blocks the stage. |
 | `postHook` | object | Command run after confirmation. Best-effort, never blocks. |
+
+### Braces in prose — `{word}` is refused, `{{word}}` is a literal
+
+Stage `notes` and `promptExtra` are substituted into the prompt as **values**, so nothing in them is
+ever expanded: a `{word}` there is not a variable, it is a broken instruction on its way to the
+agent. The plan is refused at load — `doctor` reports it as the `plan` check — naming the stage and
+the token. Write **doubled braces** when the prose really means a brace:
+
+```json
+"notes": "Serve it at GET /tasks/{{id}}/prompt, and add \"--model\", {{model}} to args."
+```
+
+renders as `GET /tasks/{id}/prompt` and `"--model", {model}`. Placeholders belong in **templates**
+(`templatesDir/*.md`) and in `agent.args`, where they are resolved; a template that carries one
+nothing resolves is caught by `doctor` (the `prompt` check composes every session kind for every
+stage) and, at runtime, parks the run at NEEDS HUMAN with the refusal in `conductor.log` — fix the
+template and `conductor resume` continues the same run.
+
+Text the engine substitutes for you — a tracker handoff, gate output, an agent's transcript tail —
+is data: braces in it are passed through verbatim and can never fail a run.
 
 ## `workflows` — Declarative session steps
 

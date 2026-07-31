@@ -86,6 +86,7 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
             CheckFace(),
             CheckGates(plan),
             CheckWorkCoverage(plan),
+            CheckPrompt(plan),
         };
 
         var (currentCostUsd, hasRun) = TryReadCostFromRunDb(plan);
@@ -302,6 +303,49 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
             ? new Check("work", "warn",
                 $"stage(s) [{string.Join(", ", uncovered)}] declare no work items — a placeholder checkpoint is scaffolded at the next sync")
             : new Check("work", "ok", $"{declared.Checkpoints.Count} work item(s) cover all {plan.Stages.Count} stage(s)");
+    }
+
+    /// <summary>SC3.3 — the prompt is the product, so doctor composes it. A brace in authored prose is
+    /// refused at plan load (and lands here as the <c>plan</c> check), but a template FILE under
+    /// <c>templatesDir</c> is not part of the plan document and nothing validated it: a single typo'd
+    /// <c>{name}</c> in it killed the run at the next stage boundary, mid-plan, after the operator had
+    /// walked away. Rendering every session kind for every stage costs a few file reads and turns that
+    /// into a pre-launch failure naming the template and the token.</summary>
+    internal static Check CheckPrompt(PlanConfig plan)
+    {
+        var prompts = new PromptBuilder(plan);
+        var fix = new PendingFix { FromSession = 1, GateFailures = "(doctor)", ProgressSummary = "(doctor)" };
+        var resume = new PendingResume { FromSession = 1, Reason = "(doctor)" };
+        var verify = new PendingVerify { FromSession = 1, StageStartHead = "HEAD" };
+        var audit = new PendingAudit { StageId = plan.Stages.FirstOrDefault()?.Id ?? "", StageStartHead = "HEAD" };
+
+        foreach (var stage in plan.Stages)
+        {
+            var kinds = new (string Template, Func<string> Render)[]
+            {
+                ("session.md", () => prompts.Deliver(stage, 1, 1, 1)),
+                ("fix.md", () => prompts.Fix(stage, 1, 1, 1, fix)),
+                ("resume.md", () => prompts.Resume(stage, 1, 1, 1, resume)),
+                ("verify.md", () => prompts.Verify(stage, 1, verify)),
+                ("audit.md", () => prompts.Audit(stage, 1, audit, "HEAD")),
+                ("review.md", () => prompts.Review(stage, 1, 1, 1, "(doctor)")),
+            };
+            foreach (var (template, render) in kinds)
+            {
+                try { render(); }
+                catch (PromptCompositionException ex)
+                {
+                    return new Check("prompt", "fail", $"stage '{stage.Id}' {template}: {ex.Message}");
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    return new Check("prompt", "warn", $"stage '{stage.Id}' {template} could not be read ({ex.Message})");
+                }
+            }
+        }
+
+        return new Check("prompt", "ok",
+            $"every session kind renders for all {plan.Stages.Count} stage(s) with no unresolved placeholder");
     }
 
     internal static Check CheckBudget(PlanConfig plan, decimal currentCostUsd, bool hasRun)
