@@ -10,7 +10,7 @@ public static class ProcessRunner
     /// <summary>The default shell for the current OS: <c>powershell</c> on Windows, <c>bash</c> everywhere else.</summary>
     public static string DefaultShell => OperatingSystem.IsWindows() ? "powershell" : "bash";
 
-    private static Process CreateProcess(string fileName, IEnumerable<string> args, string cwd, StringBuilder stdout, StringBuilder stderr, Lock gate)
+    private static Process CreateProcess(string fileName, IEnumerable<string> args, string cwd, StringBuilder stdout, StringBuilder stderr, Lock gate, IReadOnlyDictionary<string, string>? env = null)
     {
         var psi = new ProcessStartInfo(fileName)
         {
@@ -23,6 +23,10 @@ public static class ProcessRunner
             StandardErrorEncoding = Encoding.UTF8,
         };
         foreach (var a in args) psi.ArgumentList.Add(a);
+        // SC6.2: per-call environment on top of the inherited one — git's identity variables
+        // (GIT_AUTHOR_*/GIT_COMMITTER_*) are the only supported way to write a commit with an
+        // authorship that is not the ambient config's.
+        if (env != null) foreach (var kv in env) psi.Environment[kv.Key] = kv.Value;
 
         var p = new Process { StartInfo = psi };
         p.OutputDataReceived += (_, e) => { if (e.Data != null) lock (gate) stdout.AppendLine(e.Data); };
@@ -43,14 +47,14 @@ public static class ProcessRunner
     /// <summary>Run a process, capture stdout+stderr interleaved, kill the whole tree on timeout/cancel.
     /// When <paramref name="supervisor"/> is provided, the process is assigned to the run-level
     /// JobObject for crash safety and tracked in the PID registry (F2.1).</summary>
-    public static ProcResult Run(string fileName, IEnumerable<string> args, string cwd, TimeSpan timeout, CancellationToken ct = default, ProcessSupervisor? supervisor = null)
+    public static ProcResult Run(string fileName, IEnumerable<string> args, string cwd, TimeSpan timeout, CancellationToken ct = default, ProcessSupervisor? supervisor = null, IReadOnlyDictionary<string, string>? env = null)
     {
         var stdout = new StringBuilder();
         var stderr = new StringBuilder();
         var gate = new Lock();
         var sw = Stopwatch.StartNew();
 
-        using var p = CreateProcess(fileName, args, cwd, stdout, stderr, gate);
+        using var p = CreateProcess(fileName, args, cwd, stdout, stderr, gate, env);
 
         try
         {

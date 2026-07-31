@@ -291,28 +291,53 @@ public sealed partial class VerdictEngine
             return;
         }
 
-        _ctx.State.SquashedStages.Add(stageId);
-        // SC6.1: whatever the rebase does to the tip, the sha the report publisher was holding is no
-        // longer a commit it may amend. Dropped before the attempt, not after, so a crash mid-rebase
+        // SC6.1: whatever the squash does to the tip, the sha the report publisher was holding is no
+        // longer a commit it may amend. Dropped before the attempt, not after, so a crash mid-squash
         // still leaves a state that cannot amend a stranger's commit.
         _ctx.State.LastReportCommitSha = null;
         _ctx.Save();
-        _ctx.Log($"P4 squash: collapsing chore(conductor): commits for stage {stageId} since {Short(startHead)}");
+        _ctx.Log($"P4 squash: collapsing {Git.BookkeepingSubjectPrefix} commits for stage {stageId} since {Short(startHead)}");
 
+        Git.SquashResult result;
         try
         {
-            var ok = Git.SquashChoreCommits(_ctx.Plan.Repo, startHead);
-            if (ok)
-                _ctx.Log($"P4 squash: stage {stageId} complete — chore(conductor): commits squashed");
-            else
-                _ctx.Log($"P4 squash: git rebase returned non-zero for stage {stageId} — history unchanged", "warn");
+            result = Git.SquashChoreCommits(_ctx.Plan.Repo, startHead);
         }
         catch (Exception ex)
         {
-            _ctx.Log($"P4 squash: failed for stage {stageId}: {ex.Message} — history unchanged", "warn");
-            _ctx.State.SquashedStages.Remove(stageId);
-            _ctx.Save();
+            result = new Git.SquashResult(Git.SquashStatus.Failed, $"squash threw: {ex.Message}",
+                ExitCode: -1, StdErr: ex.GetType().Name);
         }
+        ApplySquashResult(_ctx.State, stageId, result, _ctx.Log);
+        _ctx.Save();
+    }
+
+    /// <summary>SC6.2: the marking policy, kept apart from the git work so both halves can be measured
+    /// against a real result. Only a squash that actually succeeded marks a stage. The old code added
+    /// the stage BEFORE the attempt and removed it only on an exception, so a rebase that merely
+    /// returned non-zero — four stage closes of six, devcontext #20 — left the stage permanently
+    /// marked squashed and unretryable, with git's reason thrown away.</summary>
+    /// <returns>true when the stage is now marked squashed.</returns>
+    internal static bool ApplySquashResult(RunState state, string stageId, Git.SquashResult result, Action<string, string?> log)
+    {
+        if (result.AbortedRebase)
+            log($"P4 squash: stage {stageId} — aborted a half-finished rebase found in the repo before rewriting anything", "warn");
+
+        if (result.Ok)
+        {
+            state.SquashedStages.Add(stageId);
+            log($"P4 squash: stage {stageId} — {result.Message}", null);
+            return true;
+        }
+
+        var why = result.Status == Git.SquashStatus.Failed
+            ? $"FAILED — {result.Message}: git exit {result.ExitCode}" +
+              (string.IsNullOrWhiteSpace(result.StdErr) ? "" : $", stderr: {result.StdErr}") +
+              (result.Commands.Count == 0 ? "" : $", last command: {result.Commands[^1]}")
+            : $"refused — {result.Message}";
+        state.SquashedStages.Remove(stageId);
+        log($"P4 squash: stage {stageId} {why} — history unchanged, stage left unsquashed so it can be retried", "warn");
+        return false;
     }
 
     private StageConfig CurrentStageConfig()

@@ -114,7 +114,12 @@ public sealed class SC61StageCloseHistoryTests : IDisposable
 
         var seeded = subjects.Count(s => s.StartsWith("chore(conductor): seeded", StringComparison.Ordinal));
         var fromEngine = subjects.Count(s => s.StartsWith("chore(conductor):", StringComparison.Ordinal)) - seeded;
-        Assert.Equal(2, seeded);
+        // Was 2 until SC6.2. The seeded pair is consecutive and the tree is dirty at the close, so
+        // under SC6.1 the rebase refused and both survived; the squash that replaced it works on a
+        // dirty tree and collapses them into the first one. The claim this test exists for is the
+        // NEXT line — what the ENGINE left — and that arithmetic is unchanged.
+        Assert.Equal(1, seeded);
+        Assert.Contains("chore(conductor): seeded one", subjects);
         Assert.True(fromEngine <= 1,
             $"engine left {fromEngine} bookkeeping commits at the stage close:\n  " + string.Join("\n  ", subjects));
     }

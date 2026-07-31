@@ -171,70 +171,248 @@ public static class Git
         return rest.Replace('\\', '/').TrimEnd('/');
     }
 
-    /// <summary>P4: squashes consecutive <c>chore(conductor):</c> commits between
-    /// <paramref name="sinceSha"/> and HEAD into one per group using an interactive rebase.
-    /// Non-chore commits (<c>feat:</c>, <c>fix:</c>, <c>docs:</c>, etc.) are preserved.
-    /// Idempotent — if no consecutive chore commits exist, returns true without touching history.
-    /// Returns true on success (including no-op).</summary>
-    public static bool SquashChoreCommits(string repo, string sinceSha)
+    /// <summary>SC6.2: is a rebase half-finished in <paramref name="repo"/>? Returns the state
+    /// directory git left behind (<c>rebase-merge</c> or <c>rebase-apply</c>), or null. While one
+    /// exists HEAD is detached at a partially replayed commit, so no history rewrite may proceed.</summary>
+    public static string? RebaseStateDir(string repo)
     {
-        if (string.IsNullOrWhiteSpace(sinceSha)) return false;
-
-        // 1. Probe: are there consecutive chore(conductor): commits to squash?
-        var log = Exec(repo, "log", "--format=%H %s", "--reverse", $"{sinceSha}..HEAD");
-        if (log.ExitCode != 0) return false;
-
-        var lines = log.Output.Trim().Split('\n', StringSplitOptions.RemoveEmptyEntries);
-        if (lines.Length == 0) return true;
-
-        var squasheableCount = 0;
-        var prevWasChore = false;
-        foreach (var line in lines)
+        foreach (var name in new[] { "rebase-merge", "rebase-apply" })
         {
-            var spaceIdx = line.IndexOf(' ');
-            if (spaceIdx < 0) continue;
-            var subject = line[(spaceIdx + 1)..];
-            var isChore = subject.StartsWith("chore(conductor):", StringComparison.OrdinalIgnoreCase);
-            if (isChore && prevWasChore) squasheableCount++;
-            prevWasChore = isChore;
+            var r = Exec(repo, "rev-parse", "--git-path", name);
+            if (r.ExitCode != 0) continue;
+            var p = r.Output.Trim();
+            if (p.Length == 0) continue;
+            var full = Path.IsPathRooted(p) ? p : Path.Combine(repo, p);
+            if (Directory.Exists(full)) return full;
         }
-        if (squasheableCount == 0) return true;
+        return null;
+    }
 
-        // 2. Write a sequence-editor PowerShell script to a temp file.
-        var editorPath = Path.Combine(Path.GetTempPath(), $"conductor-sqedit-{Guid.NewGuid():N}.ps1");
-        File.WriteAllText(editorPath, string.Join("\r\n",
-            "param($TodoFile)",
-            "$lines = Get-Content -LiteralPath $TodoFile",
-            "$prevWasChore = $false",
-            "for ($i = 0; $i -lt $lines.Count; $i++) {",
-            "    $line = $lines[$i]",
-            "    if ($line -match '^pick \\S+ chore\\(conductor\\):') {",
-            "        if ($prevWasChore) {",
-            "            $lines[$i] = $line -replace '^pick ', 'fixup '",
-            "        }",
-            "        $prevWasChore = $true",
-            "    } else {",
-            "        $prevWasChore = $false",
-            "    }",
-            "}",
-            "Set-Content -LiteralPath $TodoFile -Value $lines"));
+    // ---------------------------------------------------------------- SC6.2: the honest squash
+
+    public enum SquashStatus
+    {
+        /// <summary>History was rewritten: at least one group of consecutive chore commits collapsed.</summary>
+        Squashed,
+        /// <summary>Nothing to do — no two consecutive chore commits in the range. History untouched.</summary>
+        NothingToSquash,
+        /// <summary>Declined on purpose (no start head, a merge in the range, HEAD not where expected).
+        /// Not an error, but not a success either: the caller must leave the stage retryable.</summary>
+        Refused,
+        /// <summary>A git command failed. <see cref="SquashResult.ExitCode"/> and
+        /// <see cref="SquashResult.StdErr"/> carry git's own words.</summary>
+        Failed,
+    }
+
+    /// <summary>SC6.2: what the squash actually did, in numbers a log line can quote. devcontext #20
+    /// caught the old <c>bool</c>: it reported success for a no-op, and threw away git's reason on
+    /// failure, so four of six stage closes failed silently.</summary>
+    /// <param name="Trace">Every process this squash launched, as <c>program args -&gt; exit</c>.
+    /// Recorded so the portability claim is measurable rather than asserted: the squash launches
+    /// nothing but <c>git</c>, on any OS.</param>
+    public sealed record SquashResult(
+        SquashStatus Status,
+        string Message,
+        int CommitsBefore = 0,
+        int CommitsAfter = 0,
+        int Collapsed = 0,
+        int Groups = 0,
+        int ExitCode = 0,
+        string StdErr = "",
+        bool AbortedRebase = false,
+        IReadOnlyList<string>? Trace = null)
+    {
+        /// <summary>True when history is in the state the caller asked for — rewritten, or already
+        /// clean. Only then may a stage be marked squashed.</summary>
+        public bool Ok => Status is SquashStatus.Squashed or SquashStatus.NothingToSquash;
+
+        public IReadOnlyList<string> Commands => Trace ?? Array.Empty<string>();
+    }
+
+    /// <summary>SC6.2: collapse each run of consecutive <c>chore(conductor):</c> commits between
+    /// <paramref name="sinceSha"/> and HEAD into one, keeping the first commit's message and the
+    /// last one's tree — exactly what an interactive rebase's <c>fixup</c> produces.
+    ///
+    /// <para>It does NOT rebase. The chain is rebuilt with <c>commit-tree</c> from the trees that
+    /// already exist and the branch is moved with a compare-and-swap <c>update-ref</c>, so nothing is
+    /// ever checked out. Three defects fall out of that: it works on a dirty tree (the engine rewrites
+    /// the tracker after the agent commits it, so the tree is never clean at a stage close and git
+    /// refused the rebase outright — devcontext #20); it cannot leave a half-finished rebase behind;
+    /// and it launches nothing but <c>git</c>, where the rebase it replaces was a Windows-only
+    /// PowerShell sequence-editor script with unescaped path interpolation.</para>
+    ///
+    /// <para>Diffs are never replayed, only trees reused, so a conflict is not reachable.</para></summary>
+    public static SquashResult SquashChoreCommits(string repo, string sinceSha)
+    {
+        var trace = new List<string>();
+        var msgFiles = new List<string>();
+
+        ProcResult Run(params string[] args)
+        {
+            var r = Exec(repo, args);
+            trace.Add($"git {string.Join(' ', args)} -> {r.ExitCode}");
+            return r;
+        }
+        ProcResult RunEnv(IReadOnlyDictionary<string, string> env, params string[] args)
+        {
+            var r = ProcessRunner.Run("git", new[] { "-C", repo }.Concat(args), repo,
+                TimeSpan.FromMinutes(10), env: env);
+            trace.Add($"git {string.Join(' ', args)} -> {r.ExitCode}");
+            return r;
+        }
+        SquashResult Refuse(string why) => new(SquashStatus.Refused, why, Trace: trace);
+        SquashResult Fail(string why, ProcResult r) => new(SquashStatus.Failed, why,
+            ExitCode: r.ExitCode, StdErr: FirstLines(string.IsNullOrWhiteSpace(r.StdErr) ? r.Output : r.StdErr, 4),
+            Trace: trace);
 
         try
         {
-            // 3. Set GIT_SEQUENCE_EDITOR to our script, run the interactive rebase.
-            var psCmd = string.Join("; ",
-                $"$env:GIT_SEQUENCE_EDITOR = 'powershell -NoProfile -File ''{editorPath}'''",
-                $"git -C '{repo}' rebase -i '{sinceSha}^' --committer-date-is-author-date 2>&1",
-                $"$exitCode = $LASTEXITCODE",
-                $"Remove-Item -LiteralPath '{editorPath}' -ErrorAction SilentlyContinue",
-                $"exit $exitCode");
-            var result = ProcessRunner.RunPowerShell(psCmd, repo, TimeSpan.FromMinutes(5));
-            return result.ExitCode == 0;
+            if (string.IsNullOrWhiteSpace(sinceSha)) return Refuse("no start-head recorded for the stage");
+
+            // A half-started rebase (a crashed predecessor, or the PowerShell rebase this replaced)
+            // detaches HEAD onto a partially replayed commit. Rewriting from there would move the
+            // wrong ref, so it is aborted first — the recovery devcontext #20 never had.
+            var aborted = false;
+            if (RebaseStateDir(repo) is { } stuck)
+            {
+                var abort = Run("rebase", "--abort");
+                if (abort.ExitCode != 0 || RebaseStateDir(repo) != null)
+                    return Fail($"a half-finished rebase ({Path.GetFileName(stuck)}) could not be aborted", abort);
+                aborted = true;
+            }
+
+            var headResult = Run("rev-parse", "HEAD");
+            if (headResult.ExitCode != 0) return Fail("git could not resolve HEAD", headResult);
+            var oldHead = headResult.Output.Trim();
+
+            const char FS = '', RS = '';   // ASCII unit/record separators: git bodies never contain them
+            var log = Run("log", "--reverse",
+                $"--format=%H{FS}%T{FS}%P{FS}%an{FS}%ae{FS}%aI{FS}%cn{FS}%ce{FS}%cI{FS}%B{RS}",
+                $"{sinceSha}..HEAD");
+            if (log.ExitCode != 0) return Fail($"git could not read the range {Short(sinceSha)}..HEAD", log);
+
+            var commits = ParseCommits(log.Output, FS, RS);
+            if (commits.Count == 0)
+                return new SquashResult(SquashStatus.NothingToSquash, "nothing to squash — no commits in the range", Trace: trace);
+            if (commits.Any(c => c.Parents.Length > 1))
+                return Refuse("the range contains a merge commit — refusing to linearise history");
+            if (!string.Equals(commits[^1].Sha, oldHead, StringComparison.Ordinal))
+                return Refuse($"the range does not end at HEAD ({Short(oldHead)}) — refusing to move it");
+
+            // Group runs of consecutive chore commits. A group of one is carried through untouched.
+            var groups = new List<List<CommitRow>>();
+            foreach (var c in commits)
+            {
+                if (c.IsChore && groups.Count > 0 && groups[^1][^1].IsChore) groups[^1].Add(c);
+                else groups.Add(new List<CommitRow> { c });
+            }
+
+            var collapsed = commits.Count - groups.Count;
+            var foldedGroups = groups.Count(g => g.Count > 1);
+            var foldedInputs = groups.Where(g => g.Count > 1).Sum(g => g.Count);
+            if (collapsed == 0)
+                return new SquashResult(SquashStatus.NothingToSquash,
+                    $"nothing to squash — no consecutive {BookkeepingSubjectPrefix} commits among {commits.Count} commit(s)",
+                    CommitsBefore: commits.Count, CommitsAfter: commits.Count, AbortedRebase: aborted, Trace: trace);
+
+            // Everything BELOW the first fold keeps its original sha: only the tail is rebuilt, so a
+            // squash rewrites the least history it possibly can.
+            var firstFold = groups.FindIndex(g => g.Count > 1);
+            var parent = groups[firstFold][0].Parents.FirstOrDefault();
+
+            for (var i = firstFold; i < groups.Count; i++)
+            {
+                var g = groups[i];
+                var first = g[0];   // the surviving message and authorship — fixup semantics
+                var last = g[^1];   // the surviving tree, and when the collapsed work landed
+                var msgFile = Path.Combine(Path.GetTempPath(), $"conductor-squash-{Guid.NewGuid():N}.msg");
+                File.WriteAllText(msgFile, first.Body);
+                msgFiles.Add(msgFile);
+
+                var args = new List<string> { "-c", "commit.gpgsign=false", "commit-tree", last.Tree };
+                if (!string.IsNullOrEmpty(parent)) { args.Add("-p"); args.Add(parent!); }
+                args.Add("-F"); args.Add(msgFile);
+
+                var env = new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["GIT_AUTHOR_NAME"] = first.AuthorName,
+                    ["GIT_AUTHOR_EMAIL"] = first.AuthorEmail,
+                    ["GIT_AUTHOR_DATE"] = first.AuthorDate,
+                    ["GIT_COMMITTER_NAME"] = last.CommitterName,
+                    ["GIT_COMMITTER_EMAIL"] = last.CommitterEmail,
+                    ["GIT_COMMITTER_DATE"] = last.CommitterDate,
+                };
+                var built = RunEnv(env, args.ToArray());
+                if (built.ExitCode != 0 || built.Output.Trim().Length == 0)
+                    return Fail($"git commit-tree failed rebuilding commit {i - firstFold + 1} of {groups.Count - firstFold}", built);
+                parent = built.Output.Trim();
+            }
+
+            // ORIG_HEAD first: a human who dislikes the result has the pre-squash tip by name, the
+            // same way a real rebase would have left it.
+            Run("update-ref", "-m", "conductor: before chore(conductor) squash", "ORIG_HEAD", oldHead);
+            // Compare-and-swap: an agent session commits concurrently with the engine, and a squash
+            // that moved the branch past a commit that landed in the window would delete it.
+            var moved = Run("update-ref",
+                "-m", $"conductor: squashed {foldedInputs} {BookkeepingSubjectPrefix} commits into {foldedGroups}",
+                "HEAD", parent!, oldHead);
+            if (moved.ExitCode != 0)
+                return Fail("git update-ref refused to move the branch (HEAD moved under the squash?)", moved);
+
+            return new SquashResult(SquashStatus.Squashed,
+                $"squashed {foldedInputs} {BookkeepingSubjectPrefix} commits into {foldedGroups} " +
+                $"({commits.Count} commits -> {groups.Count})",
+                CommitsBefore: commits.Count, CommitsAfter: groups.Count, Collapsed: collapsed,
+                Groups: foldedGroups, AbortedRebase: aborted, Trace: trace);
         }
-        catch
+        catch (Exception ex)
         {
-            try { File.Delete(editorPath); } catch { /* best-effort */ }
-            return false;
+            return new SquashResult(SquashStatus.Failed, $"squash threw: {ex.Message}", ExitCode: -1,
+                StdErr: ex.GetType().Name, Trace: trace);
         }
+        finally
+        {
+            foreach (var f in msgFiles) { try { File.Delete(f); } catch { /* best-effort */ } }
+        }
+    }
+
+    /// <summary>One commit as the squash needs it: identity, both trees' worth of metadata, and the
+    /// raw body (never the subject alone — trailers are the repo's convention and must survive).</summary>
+    private sealed record CommitRow(
+        string Sha, string Tree, string[] Parents,
+        string AuthorName, string AuthorEmail, string AuthorDate,
+        string CommitterName, string CommitterEmail, string CommitterDate,
+        string Body)
+    {
+        public string Subject => Body.Split('\n')[0].Trim();
+        public bool IsChore => IsBookkeepingCommit(Subject);
+    }
+
+    private static List<CommitRow> ParseCommits(string output, char fs, char rs)
+    {
+        var rows = new List<CommitRow>();
+        foreach (var raw in output.Split(rs, StringSplitOptions.RemoveEmptyEntries))
+        {
+            // git separates records with a newline of its own; the body inside a record keeps every
+            // newline it had, so only the leading one is stripped.
+            var entry = raw.TrimStart('\n', '\r');
+            if (entry.Length == 0) continue;
+            var f = entry.Split(fs);
+            if (f.Length < 10) continue;
+            rows.Add(new CommitRow(f[0], f[1],
+                f[2].Split(' ', StringSplitOptions.RemoveEmptyEntries),
+                f[3], f[4], f[5], f[6], f[7], f[8], f[9]));
+        }
+        return rows;
+    }
+
+    private static string Short(string sha) => string.IsNullOrEmpty(sha) ? "?" : sha.Length >= 7 ? sha[..7] : sha;
+
+    /// <summary>git's reason, trimmed to something a log line can carry whole.</summary>
+    private static string FirstLines(string text, int max)
+    {
+        var lines = text.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+            .Select(l => l.TrimEnd('\r').Trim()).Where(l => l.Length > 0).Take(max).ToList();
+        return string.Join(" | ", lines);
     }
 }
