@@ -4,25 +4,24 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SC5.1 landed - the engine can wait.** `task --blocked-until <iso> --reason <text>` (CLI +
-  MCP `task_blocked_until`) writes a session-scoped event; the verdict reads it alongside
-  kill/stall/timeout, parks `RunState.BlockedUntilUtc`, and the run loop sleeps at the session
-  boundary then spawns exactly one session. No attempt burned, no fix queued. Bounded on purpose:
-  24h ceiling, 3 consecutive blocks then NeedsHuman.
-gate: live rig `%TEMP%\sarban-proofs\sc51` on the FRESH build - `session #1 BlockedUntil ... attempts
-  stay 0/2` / `window opened after 1.8m asleep` / `session #2 start - Deliver R1 attempt 1/2`.
-  9 SC51 tests + 26 McpTaskServer green; StatusCommand 26, ControlPlane 39, StateCompat 1 green.
-  Evidence .conductor/evidence/SC5/SC5.1-blocked-until.md.
-next: **SC5.2** - `run --detach` into its own process group, printing pid + control-plane url,
-  surviving its launching shell; stall warning names cause and remedy.
-know: TRAP the live rig caught and no unit test did - `GET /state` folds the event log and re-stamps
-  transient control fields BY HAND in `ControlPlaneServer.State.cs`. A new RunState field reaches
-  status, REPORT.md and the SSE snapshot but arrives NULL on the Face's wire until you add it beside
-  `AttentionSinceUtc`. Prove any new field with a real socket, not a DashboardSnapshot assertion.
-  Also: in a cmd rig `echo x=%ERRORLEVEL%> f` writes an EMPTY file - a digit before `>` is a stream
-  redirect; use `>f echo x=%ERRORLEVEL%`. face-go still renders status `Waiting` via its default
-  branch and ignores `blockedUntilUtc`/`blockedReason` - a face-tracker item, not core.
-  Bugs 2,3,4,5,6,8,9,10,11 open.
+last: **SC5.2 landed - the run outlives its shell.** `run --detach` spawns the engine via
+  `CreateProcessW` (DETACHED_PROCESS + new process group + breakaway-if-allowed; POSIX setsid),
+  waits for the child's OWN `control-plane.json`, prints pid + the URL it actually bound + verified
+  logs/attach/watch/stop lines, and returns in 1s. Stall messages now name cause (a long FOREGROUND
+  command) and remedy (`conductor bg start`).
+gate: controlled 2-arm rig `%TEMP%\sarban-proofs\sc52` on the FRESH build, same `taskkill /T /F` on
+  the launcher: arm A (no detach) engine DIED with its shell; arm B SURVIVED and ran sessions #1-#3
+  plus gates after it. 47 tests green, ratchet OK. Evidence .conductor/evidence/SC5/SC5.2-detach.md.
+next: **SC5.3** - `task --todo|--blocked|--skipped|--amend` through the shared TaskWrites path, and
+  `--in-progress` reporting the post-fold status instead of unconditional success.
+know: ArchitectureTests was ALREADY RED on this branch from SC5.1 (RunLoop.cs 513 lines,
+  ConductorEvent.Session.cs 5 types). Fixed by splitting, not by raising the ceiling - never assume
+  the battery was green just because the last handoff listed green filters. THREE defects the live
+  rig caught and no test did: a banner path that did not exist; `bInheritHandles=TRUE` leaking the
+  caller's stdout pipe into a long-lived child, so `run --detach | Out-Null` HUNG forever (fix:
+  STARTUPINFOEX + PROC_THREAD_ATTRIBUTE_HANDLE_LIST); and the engine publishing control-plane.json
+  BEFORE taking the plan lock, so a doomed second run serves a real URL for ~1s. Also: `conductor
+  note` breaks on embedded double quotes in PowerShell 5.1. Bugs 2,3,4,5,6,8,9,10,11 open.
 
 
 ## Baseline numbers (from run.db)
@@ -31,7 +30,7 @@ know: TRAP the live rig caught and no unit test did - `GET /state` folds the eve
 |---|---|
 | Total checkpoints | 26 |
 | Done | 0 |
-| Claimed (unconfirmed) | 15 |
+| Claimed (unconfirmed) | 16 |
 
 ## Checkpoints
 
@@ -77,7 +76,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| SC5.1 | conductor task --blocked-until with a reason yields a BlockedUntil outcome the run loop honours by sleeping and respawning once, burning no attempt; the wait is visible on status, state and the report | TODO | - | - |
+| SC5.1 | conductor task --blocked-until with a reason yields a BlockedUntil outcome the run loop honours by sleeping and respawning once, burning no attempt; the wait is visible on status, state and the report | DONE | ac70123 | engine-fast:OK · face-fast:OK |
 | SC5.2 | conductor run --detach spawns the engine into its own process group, prints pid and control-plane url, and survives its launching shell; the stall warning names the likely cause and the remedy | TODO | - | - |
 | SC5.3 | task --todo, --blocked, --skipped and --amend exist through the shared task-writes path, and --in-progress reports the post-fold status instead of unconditional success | TODO | - | - |
 | SC5.4 | bg logs on an agent row points at that session's stream file, and bg status runtimes are computed in one timezone | TODO | - | - |
