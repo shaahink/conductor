@@ -11,7 +11,7 @@ public sealed record StatusReport(
     string PlanName,
     string RunId,
     string Verdict,
-    // ok | active | attention | interrupted | idle | norun — drives the header colour only.
+    // ok | active | attention | interrupted | idle | waiting | norun — drives the header colour only.
     string Kind,
     int DoneCount,
     int TotalCount,

@@ -25,6 +25,16 @@ public sealed class RunState
     /// cap-park from an operator pause so a live plan reload that raises/clears the cap can auto-resume
     /// exactly this park and no other.</summary>
     public bool ParkedBySessionCap { get; set; }
+    /// <summary>SC5.1: the instant an agent-declared wait opens. Non-null means the run loop is asleep
+    /// on it — it sleeps at the session boundary until this passes, then spawns exactly one session.
+    /// Persisted, so an engine restarted mid-wait resumes the wait instead of paying for a session
+    /// that will only re-derive the same timestamp (field notes sk-platform #1).</summary>
+    public DateTime? BlockedUntilUtc { get; set; }
+    /// <summary>SC5.1: what the run is waiting for, in the words of the session that knew. Rendered by
+    /// status/state/report and handed to the session that wakes up.</summary>
+    public string? BlockedReason { get; set; }
+    /// <summary>SC5.1: when the wait was accepted, so a surface can age it like any other park.</summary>
+    public DateTime? BlockedSinceUtc { get; set; }
     public string? AttentionReason { get; set; }
     /// <summary>SC2.2: the instant <see cref="AttentionReason"/> was raised. Without it the reason is a
     /// sticky sentence with no age — a park from four hours ago and one from four seconds ago read

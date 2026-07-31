@@ -66,6 +66,8 @@ public sealed class StatusCommand : Command<StatusCommand.Settings>
             "active" => "yellow",
             "attention" => "red",
             "interrupted" => "orange1",
+            // SC5.1: waiting is a healthy park, not a failure — blue, not red.
+            "waiting" => "blue",
             "norun" => "grey",
             _ => "aqua",
         };

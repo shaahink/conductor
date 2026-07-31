@@ -4,22 +4,25 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SC4 red battery repaired - the engine was right, the rig was stale.** The single failure in
-  1267, `W4SplitAndStageCardTests.StageCardAddedMidRun_..._ClaimedByASession`, needed session 2 to be
-  a DELIVERY session. It used to get one from the bug SC4.2 fixed: a claim with zero commits scored
-  NoProgress, so session 2 was a Fix. Now session 1 correctly scores Advanced and `deliver-verify`
-  takes session 2 for its verify step, whose branch returns before `NewlyDone` is ever computed. The
-  scaffold's stage now ASKS for what it needs - `Overrides.SkipVerification` - so the rig no longer
-  stands on a verdict bug. Zero assertions touched; no engine change.
-gate: reproduced deterministically in 7s, fixed, class green 13/13. NOT the flake shape: 102s red vs
-  86.5s last green, no stray dotnet/testhost. Evidence
-  .conductor/evidence/SC4/SC4-red-battery-w43-rig.md with before/after run logs.
-next: **SC5.1** - `task --blocked-until <iso8601> --reason <text>` (CLI + MCP) as an outcome the run
-  loop honours by sleeping then respawning once, no attempt burned.
-know: SC4.2 is NOT over-claimed and was not downgraded - it shipped exactly what it claimed. New bug
-  #10: a claim landing during a Verify or Audit session is counted by NO session's newlyDone, sk #3
-  narrowed to the verify window. New bug #11: `plan.verifyEachDelivery` is read by nothing since M3.1
-  - `Qa.EffectiveSkipVerification` is the live decision. Bugs 2,3,4,5,6,8,9,10,11 open.
+last: **SC5.1 landed - the engine can wait.** `task --blocked-until <iso> --reason <text>` (CLI +
+  MCP `task_blocked_until`) writes a session-scoped event; the verdict reads it alongside
+  kill/stall/timeout, parks `RunState.BlockedUntilUtc`, and the run loop sleeps at the session
+  boundary then spawns exactly one session. No attempt burned, no fix queued. Bounded on purpose:
+  24h ceiling, 3 consecutive blocks then NeedsHuman.
+gate: live rig `%TEMP%\sarban-proofs\sc51` on the FRESH build - `session #1 BlockedUntil ... attempts
+  stay 0/2` / `window opened after 1.8m asleep` / `session #2 start - Deliver R1 attempt 1/2`.
+  9 SC51 tests + 26 McpTaskServer green; StatusCommand 26, ControlPlane 39, StateCompat 1 green.
+  Evidence .conductor/evidence/SC5/SC5.1-blocked-until.md.
+next: **SC5.2** - `run --detach` into its own process group, printing pid + control-plane url,
+  surviving its launching shell; stall warning names cause and remedy.
+know: TRAP the live rig caught and no unit test did - `GET /state` folds the event log and re-stamps
+  transient control fields BY HAND in `ControlPlaneServer.State.cs`. A new RunState field reaches
+  status, REPORT.md and the SSE snapshot but arrives NULL on the Face's wire until you add it beside
+  `AttentionSinceUtc`. Prove any new field with a real socket, not a DashboardSnapshot assertion.
+  Also: in a cmd rig `echo x=%ERRORLEVEL%> f` writes an EMPTY file - a digit before `>` is a stream
+  redirect; use `>f echo x=%ERRORLEVEL%`. face-go still renders status `Waiting` via its default
+  branch and ignores `blockedUntilUtc`/`blockedReason` - a face-tracker item, not core.
+  Bugs 2,3,4,5,6,8,9,10,11 open.
 
 
 ## Baseline numbers (from run.db)
@@ -66,7 +69,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | SC4.1 | The battery waits for the session's tracked bg children to exit, and retries a failed required gate once before declaring GatesRed; the failure line carries duration vs last passing duration | DONE | ba9b523 | engine-fast:OK · face-fast:OK |
-| SC4.2 | NoProgress requires no commits AND no newly-DONE checkpoints; chore conductor commits are excluded from the verdict's commit count | DONE | 1ce4ba7 | engine-fast:OK · face-fast:OK |
+| SC4.2 | NoProgress requires no commits AND no newly-DONE checkpoints; chore conductor commits are excluded from the verdict's commit count | DONE | 1ce4ba7 | .conductor/evidence/SC4/SC4-red-battery-w43-rig.md |
 | SC4.3 | satelliteRepos are diffed for hasCommits; the gate cache key covers the gate's own working directory HEAD and its command text; skipIfFresh accounts for a dirty tree | DONE | c3e0813 | engine-fast:OK · face-fast:OK |
 | SC4.4 | Queued injections render at the top of the composed prompt, and a gate-failures block they supersede is stamped SUPERSEDED or dropped | DONE | cfdb1ad | engine-fast:OK · face-fast:OK |
 

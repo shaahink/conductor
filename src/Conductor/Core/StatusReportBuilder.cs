@@ -21,8 +21,10 @@ namespace Conductor.Core;
 public static class StatusReportBuilder
 {
     // SessionOutcomes that are not, on their own, a sign of trouble worth surfacing under "what hurt".
+    // SC5.1: BlockedUntil belongs here — a session that correctly reported an external window and let
+    // the engine sleep on it did its job; calling that "what hurt" would punish the right behaviour.
     private static readonly HashSet<string> HealthyOutcomes =
-        new(StringComparer.OrdinalIgnoreCase) { "Advanced", "Progress", "RolledOver" };
+        new(StringComparer.OrdinalIgnoreCase) { "Advanced", "Progress", "RolledOver", "BlockedUntil" };
 
     /// <param name="isProcessAlive">Seam for tests: given a tracked pid and the instant it was tracked,
     /// is that same process still running? Production answers with <see cref="PidLiveness.LooksAlive"/>,
@@ -80,6 +82,14 @@ public static class StatusReportBuilder
                 return ($"{f.Status} — {f.CheckpointsDone}/{f.CheckpointsTotal} checkpoints over {f.Sessions} sessions", "ok");
             case AttentionRequested a:
                 return ($"needs human — {a.Reason}", "attention");
+            // SC5.1: a declared wait is the most deliberate park there is — the engine is alive and
+            // asleep on purpose. Once the window has opened the run is merely idle again, and saying
+            // "waiting" past the instant it was waiting for would be the same stale-sentence lie
+            // SC2.2 removed from "what hurt".
+            case RunBlockedUntil b:
+                return DateTimeOffset.UtcNow < b.UntilUtc
+                    ? (BlockedUntilRequest.Describe(b.UntilUtc, b.Reason), "waiting")
+                    : ($"idle — the blocked-until window opened at {b.UntilUtc:yyyy-MM-dd HH:mm:ss}Z ({b.Reason}); resume with `conductor run`", "idle");
         }
 
         // A crash leaves a SessionStarted with no matching SessionFinished and no deliberate park after it.

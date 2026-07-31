@@ -69,7 +69,12 @@ public sealed record StateDto(
     decimal WindowCostUsd = 0m,
     decimal LifetimeCostUsd = 0m,
     DateTime? BudgetWindowStartedUtc = null,
-    int BudgetApprovals = 0);
+    int BudgetApprovals = 0,
+    // ── SC5.1: the declared wait. Null = the run is not waiting on anything. Both fields together or
+    // neither: a timestamp with no reason is the knowledge loss the verb exists to prevent, and a
+    // reason with no timestamp cannot be counted down.
+    DateTime? BlockedUntilUtc = null,
+    string? BlockedReason = null);
 
 public static class ControlPlaneDto
 {
@@ -109,7 +114,9 @@ public static class ControlPlaneDto
         MaxSessionTokensThisRun: maxSessionTokensThisRun,
         Tracker: tracker,
         StateDir: stateDir,
-        AttentionSinceUtc: snap.AttentionSinceUtc);
+        AttentionSinceUtc: snap.AttentionSinceUtc,
+        BlockedUntilUtc: snap.BlockedUntilUtc,
+        BlockedReason: snap.BlockedReason);
 
     private static StageDto FromStage(StageProgress s) => new(
         Id: s.Id, Title: s.Title, Done: s.Done, Total: s.Total, State: s.State,

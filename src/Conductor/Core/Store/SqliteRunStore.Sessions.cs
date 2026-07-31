@@ -230,6 +230,16 @@ public sealed partial class SqliteRunStore
         FlushEvents();
     }
 
+    public void RequestBlockedUntil(string runId, DateTimeOffset untilUtc, string reason, string? stageId,
+        string source = "agent")
+    {
+        EmitForRun(runId, new BlockedUntilRequested
+        {
+            RunId = runId, UntilUtc = untilUtc, Reason = reason, StageId = stageId, Source = source,
+        });
+        FlushEvents();
+    }
+
     public IReadOnlyList<CheckpointRow> GetCheckpoints(string runId)
     {
         // Archived items (W1.2 retire) left the declared plan — they stay in the log, out of views.

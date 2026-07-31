@@ -1,6 +1,7 @@
 using System.ComponentModel;
 
 using Conductor.Core;
+using Conductor.Core.Events;
 using Conductor.Core.Store;
 using Conductor.Models;
 using Spectre.Console;
@@ -36,6 +37,14 @@ public sealed class TaskCommand : Command<TaskCommand.Settings>
         [CommandOption("-e|--evidence <TEXT>")]
         [Description("Evidence string (for --done).")]
         public string? Evidence { get; init; }
+
+        [CommandOption("--blocked-until <ISO8601>")]
+        [Description("This session cannot proceed until the given UTC instant (e.g. 2026-07-31T15:12:00Z). Requires --reason.")]
+        public string? BlockedUntil { get; init; }
+
+        [CommandOption("--reason <TEXT>")]
+        [Description("Why the run is blocked (for --blocked-until). Required.")]
+        public string? Reason { get; init; }
     }
 
     public override int Execute(CommandContext context, Settings settings)
@@ -59,7 +68,28 @@ public sealed class TaskCommand : Command<TaskCommand.Settings>
                 return 1;
             }
 
-            if (settings.Done != null)
+            if (settings.BlockedUntil != null)
+            {
+                // SC5.1: the same rules the run loop will re-apply at verdict time — refused HERE, in
+                // front of the agent that can still do something about it, rather than swallowed and
+                // silently ignored after the session has exited.
+                var (until, error) = BlockedUntilRequest.Parse(settings.BlockedUntil, settings.Reason);
+                if (until is not { } untilUtc)
+                {
+                    AnsiConsole.MarkupLine($"[red]blocked-until refused:[/] {Markup.Escape(error ?? "invalid request")}");
+                    return 1;
+                }
+                var stage = CurrentStage(store, runId);
+                store.RequestBlockedUntil(runId, untilUtc, settings.Reason!.Trim(), stage);
+                // The reason is knowledge, not just a control signal: it belongs in the ledger the
+                // waking session reads, exactly as sk #1's agent wrote its window into lessons.md.
+                store.WriteLedger(runId, null, stage, "blocked-until",
+                    $"Blocked until {untilUtc:yyyy-MM-dd HH:mm:ss}Z: {settings.Reason!.Trim()}");
+                AnsiConsole.MarkupLine(
+                    $"[yellow]blocked-until accepted[/] — {Markup.Escape(BlockedUntilRequest.Describe(untilUtc, settings.Reason!.Trim()))}");
+                AnsiConsole.MarkupLine("[grey]the run loop will sleep until then and spawn one more session; no attempt is burned. End your session now.[/]");
+            }
+            else if (settings.Done != null)
             {
                 var allCps = store.GetCheckpoints(runId);
                 if (!allCps.Any(c => c.Id.Equals(settings.Done, StringComparison.OrdinalIgnoreCase)))
@@ -115,7 +145,7 @@ public sealed class TaskCommand : Command<TaskCommand.Settings>
             }
             else
             {
-                AnsiConsole.MarkupLine("[grey]Usage: conductor task --list | --done <id> | --in-progress <id>[/]");
+                AnsiConsole.MarkupLine("[grey]Usage: conductor task --list | --done <id> | --in-progress <id> | --blocked-until <iso8601> --reason <text>[/]");
             }
         }
         catch (Exception ex)
@@ -125,5 +155,21 @@ public sealed class TaskCommand : Command<TaskCommand.Settings>
         }
 
         return 0;
+    }
+
+    /// <summary>The stage the run is on, read from persisted run state — the wait is stamped with it
+    /// so status and the report can say which stage is waiting, not just that something is.</summary>
+    private static string? CurrentStage(SqliteRunStore store, string runId)
+    {
+        try
+        {
+            var json = store.LoadRunStateJson(runId);
+            if (string.IsNullOrEmpty(json)) return null;
+            return System.Text.Json.JsonSerializer.Deserialize<RunState>(json, PlanConfig.JsonOpts)?.CurrentStage;
+        }
+        catch (Exception ex) when (ex is System.Text.Json.JsonException or IOException)
+        {
+            return null;
+        }
     }
 }

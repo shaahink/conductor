@@ -85,6 +85,13 @@ public interface IRunStore : IDisposable
     void UpdateCheckpoint(string runId, string checkpointId, string status, string commit, string evidence,
         string source = "engine");
 
+    /// <summary>SC5.1: record a session's "cannot proceed until T" into the run's event log, from
+    /// whichever process the agent called from. Routed like every other cross-process write
+    /// (<see cref="MarkCheckpointInProgress"/>) and flushed before returning, so the engine reading
+    /// the log at verdict time cannot miss a request the CLI already acknowledged.</summary>
+    void RequestBlockedUntil(string runId, DateTimeOffset untilUtc, string reason, string? stageId,
+        string source = "agent");
+
     // ---------------------------------------------------------------- pids
 
     void TrackPid(int pid, string runId, string purpose, string? stageId, int? sessionNumber, DateTime startedUtc);

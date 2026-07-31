@@ -13,6 +13,10 @@ public enum SessionOutcome
     /// run — no gate battery, no retry, no backoff; the run parks until a human re-authenticates.</summary>
     AuthFailed,
     LimitBackoff,
+    /// <summary>SC5.1: the session could not proceed until a known future instant and said so
+    /// (`conductor task --blocked-until`). Not a failure — no attempt is burned and no fix session is
+    /// queued; the run loop sleeps until the timestamp and spawns one more session.</summary>
+    BlockedUntil,
     KilledByUser,
     Interrupted,
     RolledOver,

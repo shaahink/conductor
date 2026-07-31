@@ -66,6 +66,16 @@ public static class ToolContract
             that file that IS yours to write is the **handoff block**: Conductor reads it back and gives
             it to the next session, so put your handoff there.
 
+            **Blocked on a clock — `conductor task --blocked-until <iso8601> --reason "<text>"`  (MCP: `task_blocked_until`)**
+            When you CANNOT proceed until a known future instant — an external rate-limit window, a deploy
+            slot, a scheduled reset — do not end the session hoping the next one finds the wall gone, and do
+            not spend the session re-measuring the clock. Say when:
+                conductor task --blocked-until 2026-07-31T15:12:00Z --reason "vercel deploy window 100/100, next slot 15:12"
+            Conductor sleeps until then and spawns ONE more session. No attempt is burned, no fix session is
+            queued, and your reason is handed to the session that wakes up so it does not re-derive it. The
+            timestamp must be in the future and within 24h; longer than that is a `HUMAN:` line, not a nap.
+            End your session immediately after calling it — you are done, the engine is waiting.
+
             **Ask the database — MCP `run_query`, `ledger_list`, `bug_list`, `session_detail`**
             Prior sessions, gate history, costs, filed bugs, what previous agents learned and struggled with
             are all queryable. Query before you guess.

@@ -57,6 +57,12 @@ public sealed partial class ControlPlaneServer
             Status = _state.Status.ToString(),
             AttentionReason = _state.AttentionReason,
             AttentionSinceUtc = _state.AttentionSinceUtc,
+            // SC5.1: the declared wait is run-state for the same reason the status is — the fold
+            // cannot see it. Measured, not assumed: a live rig served `status: Waiting` with an empty
+            // blockedUntilUtc until these two lines existed, which is the exact half-truth this file
+            // exists to stop.
+            BlockedUntilUtc = _state.BlockedUntilUtc,
+            BlockedReason = _state.BlockedReason,
             SessionKind = lastStart?.Kind ?? "-",
             Attempt = lastStart?.Attempt ?? dto.Attempt,
             MaxAttempts = lastStart?.MaxAttempts ?? dto.MaxAttempts,

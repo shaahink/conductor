@@ -113,6 +113,28 @@ public sealed partial class RunLoop
                         continue;
                     }
 
+                    // SC5.1: the wait an agent declared. It lives in RunState, not in a field of this
+                    // process, so an engine restarted mid-wait resumes the wait rather than paying for
+                    // a session that would only re-derive the same timestamp. Clearing it here is the
+                    // "respawn once": the next turn of this loop spawns exactly one session.
+                    if (!_ctx.Options.DryRun && _ctx.State.BlockedUntilUtc is { } blockedUntil)
+                    {
+                        if (DateTime.UtcNow < blockedUntil)
+                        {
+                            PushIdleSnapshot();
+                            await Task.Delay(1000, ct).ConfigureAwait(false);
+                            continue;
+                        }
+                        var waited = _ctx.State.BlockedSinceUtc is { } since
+                            ? $" after {(DateTime.UtcNow - since).TotalMinutes:0.#}m asleep" : "";
+                        _ctx.Log($"blocked-until window opened ({blockedUntil:HH:mm:ss}Z){waited} — resuming: {_ctx.State.BlockedReason}");
+                        _ctx.State.BlockedUntilUtc = null;
+                        _ctx.State.BlockedReason = null;
+                        _ctx.State.BlockedSinceUtc = null;
+                        if (_ctx.State.Status == RunStatus.Waiting) _ctx.State.Status = RunStatus.Idle;
+                        _ctx.Save();
+                    }
+
                     if (!_ctx.Options.DryRun && _ctx.BackoffUntil is { } until)
                     {
                         if (DateTime.UtcNow < until) { PushIdleSnapshot(); await Task.Delay(1000, ct).ConfigureAwait(false); continue; }
@@ -367,6 +389,10 @@ public sealed partial class RunLoop
                 _ctx.RunTokens += (rec.TokensInput ?? 0) + (rec.TokensOutput ?? 0) + (rec.TokensReasoning ?? 0);
                 _ctx.PersistBudget();
                 EmitSessionFinished(rec);
+                // SC5.1: the park lands AFTER the session's finish event, so it is the last thing in
+                // the log and every reader that asks "what is happening now" is told "waiting", not
+                // "idle — last session finished".
+                _verdicts.EmitBlockedUntilPark(rec);
 
                 if (CheckBudgetCap()) continue;
 

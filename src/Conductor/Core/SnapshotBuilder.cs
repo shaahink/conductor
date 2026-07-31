@@ -40,6 +40,10 @@ public static class SnapshotBuilder
             GateSummary = gateSummary,
             Branch = "",
             BackoffUntilUtc = backoffUntil,
+            // SC5.1: read off RunState, not passed in — the wait is persisted precisely so it survives
+            // the process, and every caller of Build would otherwise have to remember to thread it.
+            BlockedUntilUtc = state.BlockedUntilUtc,
+            BlockedReason = state.BlockedReason,
             SessionNumber = state.SessionCounter,
             SessionKind = state.Status.ToString(),
             StageCheckpoints = state.CurrentStage != null

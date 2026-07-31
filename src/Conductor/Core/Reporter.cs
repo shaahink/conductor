@@ -35,6 +35,10 @@ public static class Reporter
                       (state.TotalTokensInput + state.TotalTokensOutput > 0
                           ? $" · **Tokens:** {state.TotalTokensInput:n0} in / {state.TotalTokensOutput:n0} out" + (state.TotalTokensReasoning > 0 ? $" / {state.TotalTokensReasoning:n0} think" : "")
                           : ""));
+        // SC5.1: a sleeping run must read as sleeping. Without this the report of a run waiting on a
+        // rate-limit window is indistinguishable from one that has quietly stopped.
+        if (state.BlockedUntilUtc is { } blockedUntil)
+            sb.AppendLine($"**Waiting:** {Events.BlockedUntilRequest.Describe(new DateTimeOffset(blockedUntil, TimeSpan.Zero), state.BlockedReason)}{Staleness.Since(state.BlockedSinceUtc)}");
         if (state.ConfirmedStages.Count > 0)
             sb.AppendLine($"**Confirmed phases:** {string.Join(", ", state.ConfirmedStages)}");
         if (state.PendingPhaseGate != null)

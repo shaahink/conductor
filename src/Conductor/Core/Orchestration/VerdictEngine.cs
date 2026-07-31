@@ -179,6 +179,14 @@ public sealed partial class VerdictEngine
         }
         _ctx.StallBackoffMultiplier = 1;
 
+        // SC5.1: "I cannot proceed until T" is a control outcome, not a work verdict — it is judged
+        // here, alongside kill/stall/timeout, and for the same reason: there is nothing about the
+        // WORK to grade. Paying for a gate battery over a session that spent itself reading a clock
+        // is the cost this checkpoint exists to remove.
+        if (BlockedUntilDuringSession(rec) is { } blockRequest
+            && HonourBlockedUntil(rec, stage, blockRequest, startHead))
+            return;
+
         if (rec.Kind == SessionKind.Audit)
         {
             CollectCommits(rec, startHead);

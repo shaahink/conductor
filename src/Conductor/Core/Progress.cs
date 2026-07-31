@@ -52,6 +52,11 @@ public sealed record DashboardSnapshot
     public IReadOnlyList<GateProgress> Gates { get; init; } = Array.Empty<GateProgress>();
     public string Branch { get; init; } = "";
     public DateTime? BackoffUntilUtc { get; init; }
+    /// <summary>SC5.1: the instant an agent-declared blocked-until window opens. Non-null = the run
+    /// is asleep on it, and every surface should say so instead of showing an idle engine.</summary>
+    public DateTime? BlockedUntilUtc { get; init; }
+    /// <summary>SC5.1: what the run is waiting for — the reason the blocking session recorded.</summary>
+    public string? BlockedReason { get; init; }
     public IReadOnlyList<(string Id, string Title, string Status)> StageCheckpoints { get; init; } = Array.Empty<(string, string, string)>();
     public IReadOnlyList<(string StageId, int Done, int Total, string State)> StageOverview { get; init; } = Array.Empty<(string, int, int, string)>();
     /// <summary>Full per-stage roll-up (progress + attempts/last-outcome/cost + sub-checkpoints) that

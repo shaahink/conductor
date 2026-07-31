@@ -1,11 +1,11 @@
 ﻿# Conductor — Sarban core - the engine says what it knows run report
 
-_Updated 2026-07-31 10:02 UTC · branch `feat/sarban` · HEAD `d96963e`_
+_Updated 2026-07-31 10:15 UTC · branch `feat/sarban` · HEAD `49451ed`_
 
 **Status:** Idle
-**Stage:** SC4 — Verdicts judge the work, not the environment · attempts used 1
-**Checkpoints:** 15/26 done · **Sessions run:** 16 · **Cost:** $200.9396 (agent $200.8443 + gates $0.0953) · **Tokens:** 3,010,917 in / 1,277,281 out
-**Confirmed phases:** SC1, SC2, SC3
+**Stage:** SC4 — Verdicts judge the work, not the environment · attempts used 0
+**Checkpoints:** 15/26 done · **Sessions run:** 17 · **Cost:** $205.1881 (agent $205.0885 + gates $0.0996) · **Tokens:** 3,121,818 in / 1,314,948 out
+**Confirmed phases:** SC1, SC2, SC3, SC4
 
 ## Stage progress
 
@@ -14,7 +14,7 @@ _Updated 2026-07-31 10:02 UTC · branch `feat/sarban` · HEAD `d96963e`_
 | SC1 | Telegram actually delivers | ██████████ 3/3 | confirmed ✓ |
 | SC2 | Truthful surfaces | ██████████ 4/4 | confirmed ✓ |
 | SC3 | Config traps die at authoring time | ██████████ 4/4 | confirmed ✓ |
-| SC4 | Verdicts judge the work, not the environment | ██████████ 4/4 | gating… |
+| SC4 | Verdicts judge the work, not the environment | ██████████ 4/4 | confirmed ✓ |
 | SC5 | The engine can wait, detach, and correct the board | ░░░░░░░░░░ 0/4 | todo |
 | SC6 | Clean history without lying about it | ░░░░░░░░░░ 0/2 | todo |
 | SC7 | The transcript captures structure | ░░░░░░░░░░ 0/2 | todo |
@@ -122,20 +122,13 @@ _Updated 2026-07-31 10:02 UTC · branch `feat/sarban` · HEAD `d96963e`_
 | 14 | SC4 | Deliver | 1 | 07-31 08:42 | 0:30 | Advanced | SC4.2 | 1 | engine-fast:OK · face-fast:OK | $11.2110 | $0.0044 | 165,557/70,587 |
 | 15 | SC4 | Deliver | 1 | 07-31 09:13 | 0:31 | Advanced | SC4.3 | 2 | engine-fast:OK · face-fast:OK | $14.1455 | $0.0043 | 195,731/84,509 |
 | 16 | SC4 | Deliver | 1 | 07-31 09:45 | 0:14 | Advanced | SC4.4 | 2 | engine-fast:OK · face-fast:OK | $4.8776 | $0.0045 | 107,838/44,470 |
+| 17 | SC4 | Fix | 2 | 07-31 10:02 | 0:10 | Progress |  | 1 | engine-fast:OK · face-fast:OK | $4.2441 | $0.0044 | 110,901/37,667 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-31 07:17:48  ▸ stage SC2 confirmed  (2h31m03s)
-07-31 07:17:49  ▸ stage SC3 entered — Config traps die at authoring time
-07-31 07:17:49  • session #9 SC3 Deliver started (attempt 1/6)
-07-31 07:36:55  ▪ gate engine-fast pass [session]  (37.8s)
-07-31 07:36:55  ▪ gate face-fast pass [session]  (3.1s)
-07-31 07:36:56  • session #9 SC3 → Advanced · done SC3.1 · 2 commit(s)  (19m06s)
-07-31 07:36:56  • session #10 SC3 Deliver started (attempt 1/6)
-07-31 08:04:39  ▪ gate engine-fast pass [session]  (38.9s)
 07-31 08:04:39  ▪ gate face-fast pass [session]  (3.3s)
 07-31 08:04:40  • session #10 SC3 → Advanced · done SC3.2 · 2 commit(s)  (27m43s)
 07-31 08:04:40  • session #11 SC3 Deliver started (attempt 1/6)
@@ -168,6 +161,14 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-31 11:00:47  ▪ gate engine-fast pass [session]  (41.0s)
 07-31 11:00:47  ▪ gate face-fast pass [session]  (3.8s)
 07-31 11:00:47  • session #16 SC4 → Advanced · done SC4.4 · 2 commit(s)  (15m12s)
+07-31 11:02:36  ▪ gate engine-fast pass [phase]  (0.0s)
+07-31 11:02:36  ▪ gate face-fast pass [phase]  (0.0s)
+07-31 11:02:36  ▪ gate engine-full FAIL [phase]  (1m42s)
+07-31 11:02:36  ▪ gate face-full pass [phase]  (4.0s)
+07-31 11:02:36  • session #17 SC4 Fix started (attempt 2/6)
+07-31 11:14:10  ▪ gate engine-fast pass [session]  (40.5s)
+07-31 11:14:10  ▪ gate face-fast pass [session]  (3.3s)
+07-31 11:14:10  • session #17 SC4 → Progress · 1 commit(s)  (11m33s)
 ```
 
 ## Health
@@ -175,7 +176,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 16 · retries 1 (6 %) · overall Warn
+sessions 17 · retries 2 (12 %) · overall Warn
 ⚠ [context-saturation] session #13: 29,057,299 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #15: 20,145,044 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #3: 28,499,145 context tokens (≥ 20,000,000)
@@ -194,9 +195,6 @@ working tree: M .conductor/REPORT.md, M SARBAN-CORE-TRACKER.md
 
 ### Commits by session
 
-- **s9 (SC3 Deliver)** — 2 commit(s):
-  - [`4c69541`](https://github.com/shaahink/conductor/commit/4c69541) docs(sarban): hand SC3.2 the plan-set traps and a corrected condition finding
-  - [`d4c9103`](https://github.com/shaahink/conductor/commit/d4c9103) fix(sc3): refuse the two config traps at authoring time
 - **s10 (SC3 Deliver)** — 2 commit(s):
   - [`69aae8f`](https://github.com/shaahink/conductor/commit/69aae8f) docs(sarban): hand SC3.3 the brace landmine and a dead advisor key
   - [`587eadd`](https://github.com/shaahink/conductor/commit/587eadd) fix(sc3): make plan set refuse what nothing reads, and reach the live run
@@ -216,6 +214,8 @@ working tree: M .conductor/REPORT.md, M SARBAN-CORE-TRACKER.md
 - **s16 (SC4 Deliver)** — 2 commit(s):
   - [`d96963e`](https://github.com/shaahink/conductor/commit/d96963e) docs(sarban): hand SC5.1 the completed SC4, and the red-gate fix-prompt rig
   - [`cfdb1ad`](https://github.com/shaahink/conductor/commit/cfdb1ad) fix(sc4): put the human correction above the evidence it corrects
+- **s17 (SC4 Fix)** — 1 commit(s):
+  - [`49451ed`](https://github.com/shaahink/conductor/commit/49451ed) fix(sc4): stop a live gate standing on the verdict bug SC4.2 removed
 
 ## Phase handovers (audit)
 
@@ -238,51 +238,29 @@ working tree: M .conductor/REPORT.md, M SARBAN-CORE-TRACKER.md
 
 ## Last gate run
 
-engine-fast:cached · face-fast:cached · engine-full:FAIL · face-full:OK
-
-<details><summary>engine-full — exit 1</summary>
-
-```
-Determining projects to restore...
-  All projects are up-to-date for restore.
-  Conductor.Planning -> C:\code\conductor\src\Conductor.Planning\bin\Debug\net10.0\Conductor.Planning.dll
-  Conductor -> C:\code\conductor\src\Conductor\bin\Debug\net10.0\conductor.dll
-  Conductor.Tests -> C:\code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll
-Test run for C:\code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0)
-A total of 1 test files matched the specified pattern.
-  Failed Conductor.Tests.W4SplitAndStageCardTests.StageCardAddedMidRun_IsSplit_AndThenClaimedByASession [10 s]
-  Error Message:
-   Assert.Contains() Failure: Filter not matched in collection
-Collection: [SessionRecord { Attempt = 1, ClaudeSessionId = "02656dda-8299-4719-a7e2-fbab4e39e2dd", CostUsd = 0.0001, EndedUtc = 2026-07-31T10:02:11.8622692Z, GateSummary = "gates green (none configured)", ··· }, SessionRecord { Attempt = 1, ClaudeSessionId = "1c6b295c-0f18-4397-a846-4df8e1d86691", CostUsd = 0.0001, EndedUtc = 2026-07-31T10:02:14.3209229Z, GateSummary = "", ··· }]
-  Stack Trace:
-     at Conductor.Tests.W4SplitAndStageCardTests.StageCardAddedMidRun_IsSplit_AndThenClaimedByASession() in C:\code\conductor\tests\Conductor.Tests\W4SplitAndStageCardTests.cs:line 200
---- End of stack trace from previous location ---
-
-Failed!  - Failed:     1, Passed:  1266, Skipped:     0, Total:  1267, Duration: 1 m 32 s - Conductor.Tests.dll (net10.0)
-```
-</details>
+engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
 
 ## Last session result
 
-> SESSION-RESULT:** SC4.4 landed and is claimed (`conductor task --done SC4.4 --evidence .conductor/evidence/SC4/SC4.4-injections-outrank-evidence.md`), completing SC4 at 4/4. Both halves are implemented and measured live, never against this repo: `PromptBuilder.Render` now splices the queued-instruction section in directly under the role line via a new `InsertAfterRoleLine`, and does so *before* the persona is prepended so the only thing that can precede an injection is a role definition — never a fact the injection exists to correct; and `PromptBuilder.Fix` stamps the `gateFailures` **value** with a new `InstructionQueue.SupersedeStamp(n)` whenever anything is queued for that session, so a p…
+> SESSION-RESULT: I fixed the SC4 red battery — its one failure in 1267 was `W4SplitAndStageCardTests.StageCardAddedMidRun_IsSplit_AndThenClaimedByASession`, and the cause was a stale test rig, not a defect in the SC4 work; that test needed session 2 to be a delivery session and had been getting one from the very scoring bug SC4.2 removed (a zero-commit claim scoring NoProgress queued a Fix session, which runs the full verdict path), so once session 1 correctly scored Advanced the workflow took session 2 for its verify step, whose branch returns before `NewlyDone` is ever computed; I made the scaffold declare the shape it needs via `stage.overrides.skipVerification` rather than inherit it from…
 
 ## Tracker handoff
 
 ```
-last: **SC4.4 claimed - SC4 complete (4/4).** `PromptBuilder.Render` SPLICES the queue section in
-  under the role line (new `InsertAfterRoleLine`) instead of appending it, and BEFORE the persona is
-  prepended, so only a role definition can sit above an injection - never a fact it exists to
-  correct. `Fix` stamps the `gateFailures` VALUE with new `InstructionQueue.SupersedeStamp(n)` when
-  the queue is non-empty, so a custom `fix.md` gets it too; nothing dropped, gate text stays as
-  history. `PromptSection` now states its rank in words; card preview orders queued-then-batteries.
-gate: build clean 0 warnings; scoped `dotnet test` over 18 touched/neighbouring classes: 140 passed,
-  0 failed, 0 skipped (incl. ArchitectureTests). Nothing weakened. Evidence
-  .conductor/evidence/SC4/SC4.4-*: BEFORE published vs AFTER fresh build, injection L76-of-78 and
-  L85-of-87 before, L3 on both after, stamp L11 above the gate at L13.
+last: **SC4 red battery repaired - the engine was right, the rig was stale.** The single failure in
+  1267, `W4SplitAndStageCardTests.StageCardAddedMidRun_..._ClaimedByASession`, needed session 2 to be
+  a DELIVERY session. It used to get one from the bug SC4.2 fixed: a claim with zero commits scored
+  NoProgress, so session 2 was a Fix. Now session 1 correctly scores Advanced and `deliver-verify`
+  takes session 2 for its verify step, whose branch returns before `NewlyDone` is ever computed. The
+  scaffold's stage now ASKS for what it needs - `Overrides.SkipVerification` - so the rig no longer
+  stands on a verdict bug. Zero assertions touched; no engine change.
+gate: reproduced deterministically in 7s, fixed, class green 13/13. NOT the flake shape: 102s red vs
+  86.5s last green, no stray dotnet/testhost. Evidence
+  .conductor/evidence/SC4/SC4-red-battery-w43-rig.md with before/after run logs.
 next: **SC5.1** - `task --blocked-until <iso8601> --reason <text>` (CLI + MCP) as an outcome the run
   loop honours by sleeping then respawning once, no attempt burned.
-know: to reach a FIX prompt a rig needs only a red REQUIRED gate + `stageSlackFactor` 3 - GatesRed
-  queues the fix session directly, bypassing the workflow; the verifyEachDelivery/defaultWorkflow
-  recipe is for rigs whose sessions all pass. Injections splice in AFTER PromptValidator, so a brace
-  in one cannot kill a run. Bug #5 reproduced today. Bugs 2,3,4,5,6,8,9 open.
+know: SC4.2 is NOT over-claimed and was not downgraded - it shipped exactly what it claimed. New bug
+  #10: a claim landing during a Verify or Audit session is counted by NO session's newlyDone, sk #3
+  narrowed to the verify window. New bug #11: `plan.verifyEachDelivery` is read by nothing since M3.1
+  - `Qa.EffectiveSkipVerification` is the live decision. Bugs 2,3,4,5,6,8,9,10,11 open.
 ```

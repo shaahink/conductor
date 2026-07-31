@@ -81,6 +81,48 @@ public partial class McpTaskServer
         return JsonSerializer.SerializeToElement(new { ok = true, taskId = evt.TaskId, checkpointId = cpId, title, order = evt.Order });
     }
 
+    /// <summary>SC5.1: the MCP half of `conductor task --blocked-until`. Same parse, same ceiling, same
+    /// event — <see cref="BlockedUntilRequest"/> owns the rules so the two ingresses cannot drift.
+    /// A refusal comes back as an error the agent can act on, never as a silently dropped wait.</summary>
+    private JsonElement HandleBlockedUntil(JsonElement? args)
+    {
+        var until = "";
+        var reason = "";
+        if (args is { } a)
+        {
+            if (a.TryGetProperty("until", out var u)) until = u.GetString() ?? "";
+            if (a.TryGetProperty("reason", out var r)) reason = r.GetString() ?? "";
+        }
+
+        var (untilUtc, error) = BlockedUntilRequest.Parse(until, reason);
+        if (untilUtc is not { } resolved)
+            return JsonSerializer.SerializeToElement(new { ok = false, error });
+
+        var evt = new BlockedUntilRequested
+        {
+            RunId = _runId, UntilUtc = resolved, Reason = reason.Trim(), Source = "agent",
+        };
+        WriteEvent(evt);
+
+        // The reason is knowledge the waking session needs, so it lands in the ledger too — the same
+        // pairing the CLI verb makes.
+        if (_store != null)
+        {
+            try { _store.WriteLedger(_runId, _sessionNumber, null, "blocked-until", $"Blocked until {resolved:yyyy-MM-dd HH:mm:ss}Z: {reason.Trim()}"); }
+#pragma warning disable CA1031 // best-effort: the event above is the control signal, the ledger is the note
+            catch { }
+#pragma warning restore CA1031
+        }
+
+        return JsonSerializer.SerializeToElement(new
+        {
+            ok = true,
+            until = resolved.ToString("O"),
+            reason = reason.Trim(),
+            note = "the run loop will sleep until then and spawn one more session; no attempt is burned. End your session now.",
+        });
+    }
+
     /// <summary>F1.3: Write a finding/observation to the knowledge ledger.
     /// If run.db is available, writes directly to the ledger table (immediate persistence).
     /// Always emits a <see cref="NoteAdded"/> journal event as a fallback so the note survives

@@ -105,11 +105,12 @@ public class McpTaskServerTests
 
             Assert.Single(responses);
             var tools = responses[0].GetProperty("result").GetProperty("tools");
-            Assert.Equal(15, tools.GetArrayLength());
+            Assert.Equal(16, tools.GetArrayLength());
             var names = tools.EnumerateArray().Select(t => t.GetProperty("name").GetString()).ToHashSet();
             Assert.Contains("task_list", names);
             Assert.Contains("task_update", names);
             Assert.Contains("task_add", names);
+            Assert.Contains("task_blocked_until", names);   // SC5.1
             Assert.Contains("conductor_note", names);
             Assert.Contains("bg_start", names);
             Assert.Contains("bg_status", names);
@@ -604,5 +605,93 @@ public class McpTaskServerTests
     private static void Cleanup(string path)
     {
         try { if (File.Exists(path)) File.Delete(path); } catch { }
+    }
+
+    // ── SC5.1: the MCP half of `conductor task --blocked-until` ──
+
+    /// <summary>The tool writes the SAME event the CLI writes, so the run loop has one thing to read
+    /// no matter which ingress the agent reached for.</summary>
+    [Fact]
+    public async Task BlockedUntil_EmitsTheRequestEvent()
+    {
+        var journal = TempPath();
+        try
+        {
+            var server = new McpTaskServer("nonexistent.jsonl", journal, "r-block");
+            var until = DateTimeOffset.UtcNow.AddHours(2);
+            var responses = await RunMcpExchange(server, Rpc(new
+            {
+                jsonrpc = "2.0",
+                id = 1,
+                method = "tools/call",
+                @params = new
+                {
+                    name = "task_blocked_until",
+                    arguments = new { until = until.ToString("O"), reason = "npm registry 429 until the hour" },
+                },
+            }));
+
+            var payload = Payload(responses[0]);
+            Assert.True(payload.GetProperty("ok").GetBoolean());
+
+            var written = EventLog.ReadAll(journal).OfType<BlockedUntilRequested>().Single();
+            Assert.Equal("npm registry 429 until the hour", written.Reason);
+            Assert.Equal("agent", written.Source);
+            Assert.Equal(until.ToUnixTimeSeconds(), written.UntilUtc.ToUnixTimeSeconds());
+        }
+        finally { Cleanup(journal); }
+    }
+
+    /// <summary>A refused wait must come back as an error the agent can act on — never as ok:true with
+    /// nothing written, which would leave it believing the engine is asleep on its behalf.</summary>
+    [Theory]
+    [InlineData("2020-01-01T00:00:00Z", "the window is long gone", "not in the future")]
+    [InlineData("not a timestamp", "whatever", "ISO 8601")]
+    public async Task BlockedUntil_RefusesLoudlyAndWritesNothing(string until, string reason, string expected)
+    {
+        var journal = TempPath();
+        try
+        {
+            var server = new McpTaskServer("nonexistent.jsonl", journal, "r-block-bad");
+            var responses = await RunMcpExchange(server, Rpc(new
+            {
+                jsonrpc = "2.0",
+                id = 1,
+                method = "tools/call",
+                @params = new { name = "task_blocked_until", arguments = new { until, reason } },
+            }));
+
+            var payload = Payload(responses[0]);
+            Assert.False(payload.GetProperty("ok").GetBoolean());
+            Assert.Contains(expected, payload.GetProperty("error").GetString(), StringComparison.Ordinal);
+            Assert.False(File.Exists(journal), "a refused wait must leave no event behind");
+        }
+        finally { Cleanup(journal); }
+    }
+
+    [Fact]
+    public async Task BlockedUntil_RefusesAWaitWithNoReason()
+    {
+        var journal = TempPath();
+        try
+        {
+            var server = new McpTaskServer("nonexistent.jsonl", journal, "r-block-noreason");
+            var responses = await RunMcpExchange(server, Rpc(new
+            {
+                jsonrpc = "2.0",
+                id = 1,
+                method = "tools/call",
+                @params = new
+                {
+                    name = "task_blocked_until",
+                    arguments = new { until = DateTimeOffset.UtcNow.AddHours(1).ToString("O") },
+                },
+            }));
+
+            var payload = Payload(responses[0]);
+            Assert.False(payload.GetProperty("ok").GetBoolean());
+            Assert.Contains("reason is required", payload.GetProperty("error").GetString(), StringComparison.Ordinal);
+        }
+        finally { Cleanup(journal); }
     }
 }
