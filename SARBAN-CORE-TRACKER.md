@@ -4,20 +4,19 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SC2.2 claimed** (603fbbb), all four parts. GateRunner.Token is the ONLY spelling of a battery
-  verdict now - gates GREEN / gates RED / gates NONE - on the session verdict, both phase-gate lines
-  and the reuse path. ConfirmationBasis kills 'CONFIRMED (full battery green)' on gateless stages.
-  RunState.NextAttemptNumber is the one source for every attempt line. what-hurt carries its age and
-  clears when that gate passes later or the stage confirms; AttentionReason gained AttentionSinceUtc.
-  doctor warns naming stages that match no gate.
-gate: fast loop green - 158/158 across the 13 classes touched. Every 'after' line has a measured
-  'before' from the PUBLISHED engine on the SAME rig: .conductor/evidence/SC2/SC2.2-truthful-gate-vocabulary.md.
-  Rigs: TEMP/sarban-proofs/sc22 (gateless) and sc22b (fast gate passes, truth gate always fails).
-next: **SC2.3** - /state live spend. Field log says it read 0.00 for a whole 55-minute session.
-know: computing the confirmation basis from battery RESULTS alone rebuilds the same lie - a reused
-  battery has an empty result list and is NOT a gateless stage; take the plan's stage-scoped count too.
-  NEW bug 4 filed: a phase RED logs 'queuing fix session' but the workflow can queue Verify instead.
-  Bug 3 (gateless confirm loop, never emits RunFinished) is still open and still reproduces - SC2.4.
+last: **SC2.3 claimed**, all four parts. The dead ticker was one missing call: TokenDelta - the only
+  event the live fold reads - was emitted ONLY by OpencodeProvider, so a claude run folded nothing.
+  ClaudeProvider now emits one delta per NEW assistant message id and never touches the authoritative
+  result-envelope totals. /state gained sessionCostBasis, costSpent, costCap, costRemaining,
+  meanSessionCost, checkpointsRemaining, windowCostUsd, lifetimeCostUsd, budgetWindowStartedUtc,
+  budgetApprovals. Approval stamps the window and logs what it forgave vs the untouched lifetime.
+gate: fast loop green - 204/204 across the classes touched, nothing weakened. Every 'after' line has a
+  measured 'before' from the PUBLISHED engine on the SAME rig:
+  .conductor/evidence/SC2/SC2.3-live-spend.md. Rig TEMP/sarban-proofs/sc23, cap 3.00.
+next: **SC2.4** - RUN-SUMMARY.md, offline report/status, shared-read log, incremental SSE tails.
+know: LiveCostEstimator has NO price table ON PURPOSE - live tokens are priced at what THIS RUN was
+  really billed, and session 1 honestly reads basis=no-rate-yet rather than guessing. NEW bug 5:
+  bg status dies entirely on one un-openable pid. Bugs 3 and 4 still open - 3 is SC2.4's problem.
 
 
 ## Baseline numbers (from run.db)
@@ -26,7 +25,7 @@ know: computing the confirmation basis from battery RESULTS alone rebuilds the s
 |---|---|
 | Total checkpoints | 26 |
 | Done | 0 |
-| Claimed (unconfirmed) | 4 |
+| Claimed (unconfirmed) | 5 |
 
 ## Checkpoints
 
@@ -46,7 +45,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | SC2.1 | conductor status never reports a healthy run as interrupted during the verdict window — a gate executing counts as engine liveness — with a regression test | DONE | a3e970e | engine-fast:OK · face-fast:OK |
-| SC2.2 | Sticky failure fields carry timestamps or clear; phase-gate lines emit the canonical gates GREEN or RED token with an honest no-gates-configured state; attempt numbering agrees across the two log lines; doctor warns on zero-gate stages | TODO | - | - |
+| SC2.2 | Sticky failure fields carry timestamps or clear; phase-gate lines emit the canonical gates GREEN or RED token with an honest no-gates-configured state; attempt numbering agrees across the two log lines; doctor warns on zero-gate stages | DONE | 603fbbb | engine-fast:OK · face-fast:OK |
 | SC2.3 | /state carries in-flight session spend plus costSpent, costCap, costRemaining, meanSessionCost, checkpointsRemaining, and window-vs-lifetime spend after a budget approval | TODO | - | - |
 | SC2.4 | A completed run leaves RUN-SUMMARY.md; report and status work offline from run.db; conductor log reads a live log without crashing; the SSE streams tail incrementally instead of re-reading the backlog every second | TODO | - | - |
 

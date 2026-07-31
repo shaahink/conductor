@@ -1,57 +1,104 @@
-﻿# Conductor — Conductor UX (U-series) run report
+﻿# Conductor — Sarban core - the engine says what it knows run report
 
-_Updated 2026-07-17 12:02 UTC · branch `feat/foreman` · HEAD `69a5507`_
+_Updated 2026-07-31 05:08 UTC · branch `feat/sarban` · HEAD `c9aa663`_
 
 **Status:** Idle
-**Stage:** U3 — Face: themes, agent-terminal vibe, glitch pass · attempts used 2 · working ▸ U3.3
-**Checkpoints:** 10/11 done · **Sessions run:** 12 · **Cost:** $139.6799 (agent $139.6590 + gates $0.0209) · **Tokens:** 718,768 in / 343,862 out
-**Confirmed phases:** U0, U1, U2
+**Stage:** SC2 — Truthful surfaces · attempts used 0 · working ▸ SC2.3
+**Checkpoints:** 5/26 done · **Sessions run:** 6 · **Cost:** $70.8656 (agent $70.8154 + gates $0.0502) · **Tokens:** 1,055,572 in / 473,654 out
+**Confirmed phases:** SC1
 
 ## Stage progress
 
 | Stage | Title | Progress | State |
 |---|---|---|---|
-| U0 | Engine: start, resume, journey | ██████████ 3/3 | confirmed ✓ |
-| U1 | Face: landing page + workspace identity | ██████████ 2/2 | confirmed ✓ |
-| U2 | Face: controls, visual report, dev stats | ██████████ 3/3 | confirmed ✓ |
-| U3 | Face: themes, agent-terminal vibe, glitch pass | ███████░░░ 2/3 | **← active** |
+| SC1 | Telegram actually delivers | ██████████ 3/3 | confirmed ✓ |
+| SC2 | Truthful surfaces | █████░░░░░ 2/4 | **← active** |
+| SC3 | Config traps die at authoring time | ░░░░░░░░░░ 0/4 | todo |
+| SC4 | Verdicts judge the work, not the environment | ░░░░░░░░░░ 0/4 | todo |
+| SC5 | The engine can wait, detach, and correct the board | ░░░░░░░░░░ 0/4 | todo |
+| SC6 | Clean history without lying about it | ░░░░░░░░░░ 0/2 | todo |
+| SC7 | The transcript captures structure | ░░░░░░░░░░ 0/2 | todo |
+| SC8 | The program knows what it is and can update itself | ░░░░░░░░░░ 0/3 | todo |
 
-<details> ✅<summary>U0 — Engine: start, resume, journey (3/3)</summary>
+<details> ✅<summary>SC1 — Telegram actually delivers (3/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| U0.1 | plan discovery: -p optional, cwd/plans scan, picker, friendly errors | ✅ DONE | [`fbdef79`](https://github.com/shaahink/conductor/commit/fbdef79) |
-| U0.2 | `conductor journey`: itinerary with stages, gates, human moments, resume state | ✅ DONE | [`fbdef79`](https://github.com/shaahink/conductor/commit/fbdef79) |
-| U0.3 | gateless plans proven + resume story documented (README) | ✅ DONE | [`fbdef79`](https://github.com/shaahink/conductor/commit/fbdef79) |
+| SC1.1 | The engine starts Telegram on every run path: a configured live run delivers a real session-end push and answers two-way status, and a regression test drives the real run-start path | ✅ DONE | [`b7d6eb4`](https://github.com/shaahink/conductor/commit/b7d6eb4) |
+| SC1.2 | /telegram/status carries a derived willDeliver verdict; POST /telegram/test routes through the real send queue or loudly says it bypassed it; StartAsync logs on both outcomes naming any missing half | ✅ DONE | [`160f731`](https://github.com/shaahink/conductor/commit/160f731) |
+| SC1.3 | Late token or telegram-block configuration takes effect without a full restart, or every surface honestly says restart required — including the NoOp-service swap path; the chat-id bootstrap is documented | ✅ DONE | [`7d7372e`](https://github.com/shaahink/conductor/commit/7d7372e) |
 
 </details>
 
-<details> ✅<summary>U1 — Face: landing page + workspace identity (2/2)</summary>
+<details><summary>SC2 — Truthful surfaces (2/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| U1.1 | Home landing tab: Server / Run / Workspace / Next-steps panels, demo parity | ✅ DONE | [`db9244a`](https://github.com/shaahink/conductor/commit/db9244a) |
-| U1.2 | workspace identity in the top bar (repo basename, full path on Home) | ✅ DONE | [`db9244a`](https://github.com/shaahink/conductor/commit/db9244a) |
+| SC2.1 | conductor status never reports a healthy run as interrupted during the verdict window — a gate executing counts as engine liveness — with a regression test | ✅ DONE | [`a3e970e`](https://github.com/shaahink/conductor/commit/a3e970e) |
+| SC2.2 | Sticky failure fields carry timestamps or clear; phase-gate lines emit the canonical gates GREEN or RED token with an honest no-gates-configured state; attempt numbering agrees across the two log lines; doctor warns on zero-gate stages | ✅ DONE | - |
+| SC2.3 | /state carries in-flight session spend plus costSpent, costCap, costRemaining, meanSessionCost, checkpointsRemaining, and window-vs-lifetime spend after a budget approval | ⬜ TODO | - |
+| SC2.4 | A completed run leaves RUN-SUMMARY.md; report and status work offline from run.db; conductor log reads a live log without crashing; the SSE streams tail incrementally instead of re-reading the backlog every second | ⬜ TODO | - |
 
 </details>
 
-<details> ✅<summary>U2 — Face: controls, visual report, dev stats (3/3)</summary>
+<details><summary>SC3 — Config traps die at authoring time (0/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| U2.1 | palette groups (Run/Stage/Danger) + consequence-naming confirms | ✅ DONE | - |
-| U2.2 | Report tab is a visual run report (progress, stages, sessions, gates, scores) | ✅ DONE | [`c8ff55f`](https://github.com/shaahink/conductor/commit/c8ff55f) |
-| U2.3 | Dev tab: SQL console moved + run internals + per-session token/cost stats | ✅ DONE | [`c8ff55f`](https://github.com/shaahink/conductor/commit/c8ff55f) |
+| SC3.1 | doctor FAILS when agent.model is set without the model token in both args and resumeArgs; unknown RunIf or SkipIf tokens fail at plan load naming the valid vocabulary | ⬜ TODO | - |
+| SC3.2 | plan set refuses an absent leaf key without --create, suggests the dotted path when one nested leaf matches, warns before stripping comments, and reaches the live engine or prints the exact reload command | ⬜ TODO | - |
+| SC3.3 | A literal brace in stage notes or promptExtra is caught by doctor at plan load; at runtime an unresolved placeholder parks the run and writes the refusal to conductor.log; a double brace escapes to a literal | ⬜ TODO | - |
+| SC3.4 | The default advisor invocation works headless or is refused loudly at load with a doctor line; plan-config.md matches the code | ⬜ TODO | - |
 
 </details>
 
-<details><summary>U3 — Face: themes, agent-terminal vibe, glitch pass (2/3)</summary>
+<details><summary>SC4 — Verdicts judge the work, not the environment (0/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| U3.1 | curated themes (mocha/latte/nord/gruvbox), --theme, live switch, persisted | ✅ DONE | - |
-| U3.2 | golden glitch pass at 3 sizes, seeded from the spec's dogfood appendix | ✅ DONE | - |
-| U3.3 | agent-terminal vibe: Claude Code-style transcript, provider-aware, footer strip | 🔄 IN PROGRESS |  |
+| SC4.1 | The battery waits for the session's tracked bg children to exit, and retries a failed required gate once before declaring GatesRed; the failure line carries duration vs last passing duration | ⬜ TODO | - |
+| SC4.2 | NoProgress requires no commits AND no newly-DONE checkpoints; chore conductor commits are excluded from the verdict's commit count | ⬜ TODO | - |
+| SC4.3 | satelliteRepos are diffed for hasCommits; the gate cache key covers the gate's own working directory HEAD and its command text; skipIfFresh accounts for a dirty tree | ⬜ TODO | - |
+| SC4.4 | Queued injections render at the top of the composed prompt, and a gate-failures block they supersede is stamped SUPERSEDED or dropped | ⬜ TODO | - |
+
+</details>
+
+<details><summary>SC5 — The engine can wait, detach, and correct the board (0/4)</summary>
+
+| # | Title | Status | Commit |
+|---|---|---|---|
+| SC5.1 | conductor task --blocked-until with a reason yields a BlockedUntil outcome the run loop honours by sleeping and respawning once, burning no attempt; the wait is visible on status, state and the report | ⬜ TODO | - |
+| SC5.2 | conductor run --detach spawns the engine into its own process group, prints pid and control-plane url, and survives its launching shell; the stall warning names the likely cause and the remedy | ⬜ TODO | - |
+| SC5.3 | task --todo, --blocked, --skipped and --amend exist through the shared task-writes path, and --in-progress reports the post-fold status instead of unconditional success | ⬜ TODO | - |
+| SC5.4 | bg logs on an agent row points at that session's stream file, and bg status runtimes are computed in one timezone | ⬜ TODO | - |
+
+</details>
+
+<details><summary>SC6 — Clean history without lying about it (0/2)</summary>
+
+| # | Title | Status | Commit |
+|---|---|---|---|
+| SC6.1 | Pure status-transition updates no longer land commits, and any squash runs after the stage's final state write | ⬜ TODO | - |
+| SC6.2 | The squash works on a dirty tree, reports real counts, logs git stderr and exit code on failure, un-marks the stage on failure, aborts a half-started rebase, and degrades gracefully off Windows | ⬜ TODO | - |
+
+</details>
+
+<details><summary>SC7 — The transcript captures structure (0/2)</summary>
+
+| # | Title | Status | Commit |
+|---|---|---|---|
+| SC7.1 | Tool events are stored structured — name plus extracted fields, values truncated, JSON never cut — with back-compat reading of old lines; writes outside the repo are counted and noted in the session verdict | ⬜ TODO | - |
+| SC7.2 | The provider emits one-liner tool lines on the wire, and a per-session digest is computed, stored and served on /sessions matching the spec's worked example | ⬜ TODO | - |
+
+</details>
+
+<details><summary>SC8 — The program knows what it is and can update itself (0/3)</summary>
+
+| # | Title | Status | Commit |
+|---|---|---|---|
+| SC8.1 | conductor version and GET /version report semver, git sha and build date stamped at build; install.ps1 prints the version before and after | ⬜ TODO | - |
+| SC8.2 | Tag-height versioning is automatic and reconciled with release.yml so a released binary answers with its tag; CHANGELOG.md carries a section per release | ⬜ TODO | - |
+| SC8.3 | conductor update downloads and safely swaps the matching release binary, refusing while a run is live; doctor reports update-available | ⬜ TODO | - |
 
 </details>
 
@@ -59,64 +106,53 @@ _Updated 2026-07-17 12:02 UTC · branch `feat/foreman` · HEAD `69a5507`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Overhead | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | U0 | Deliver | 1 | 07-16 23:42 | 0:05 | Interrupted |  | 0 |  |  |  |  |
-| 2 | U0 | Resume | 1r1 | 07-17 00:28 | 1:02 | Progress |  | 7 | build:OK · face-build:OK | $23.9417 | $0.0038 |  |
-| 3 | U0 | Verify | 1 | 07-17 01:31 | 0:09 | AgentError |  | 0 |  | $2.0005 |  |  |
-| 4 | U0 | Fix | 2 | 07-17 01:40 | 0:35 | Advanced | U0.1 U0.2 U0.3 | 1 | build:OK · face-build:OK | $10.3892 | $0.0049 |  |
-| 5 | U1 | Deliver | 1 | 07-17 02:20 | 0:36 | Advanced | U1.1 U1.2 | 3 | build:OK · face-build:OK | $17.2108 | $0.0039 |  |
-| 6 | U2 | Verify | 1 | 07-17 03:00 | 0:10 | AgentError |  | 0 |  | $2.6979 |  |  |
-| 7 | U2 | Fix | 2 | 07-17 03:10 | 0:33 | Progress |  | 3 | build:OK · face-build:OK | $13.2950 | $0.0040 |  |
-| 8 | U2 | Deliver | 2 | 07-17 03:51 | 0:03 | Interrupted |  | 0 |  |  |  |  |
-| 9 | U2 | Resume | 2r1 | 07-17 03:54 | 0:55 | Advanced | U2.2 U2.3 | 4 | build:OK · face-build:OK | $25.9788 | $0.0017 | 272,633/124,152 |
-| 10 | U3 | Verify | 1 | 07-17 04:52 | 0:12 | NoProgress |  | 0 |  | $2.9283 |  | 86,252/25,727 |
-| 11 | U3 | Fix | 2 | 07-17 05:04 | 1:20 | Progress |  | 4 | build:OK · face-build:OK | $41.2169 | $0.0025 | 359,883/193,983 |
-| 12 | U3 | Verify | 2 | 07-17 06:25 | 5:37 | TimedOut |  | 0 |  |  |  |  |
+| 1 | SC1 | Deliver | 1 | 07-31 01:48 | 0:23 | Advanced | SC1.1 | 2 | engine-fast:OK · face-fast:OK | $9.6547 | $0.0088 | 160,368/73,647 |
+| 2 | SC1 | Deliver | 1 | 07-31 02:13 | 0:28 | Advanced | SC1.2 | 2 | engine-fast:OK · face-fast:OK | $10.1037 | $0.0045 | 162,317/83,343 |
+| 3 | SC1 | Deliver | 1 | 07-31 02:43 | 0:40 | Advanced | SC1.3 | 3 | engine-fast:OK · face-fast:OK | $19.5776 | $0.0049 | 247,269/114,099 |
+| 4 | SC1 | Fix | 2 | 07-31 03:26 | 0:15 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $4.9738 | $0.0141 | 103,230/44,384 |
+| 5 | SC2 | Deliver | 1 | 07-31 03:46 | 0:55 | Advanced | SC2.1 | 2 | engine-fast:OK · face-fast:OK | $12.5819 | $0.0095 | 187,251/84,278 |
+| 6 | SC2 | Deliver | 1 | 07-31 04:43 | 0:23 | Advanced | SC2.2 | 3 | engine-fast:OK · face-fast:OK | $13.9238 | $0.0085 | 195,137/73,903 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-17 03:57:50  • session #5 U1 → Advanced · done U1.1,U1.2 · 3 commit(s)  (37m08s)
-07-17 03:57:50  ✓ checkpoint U1.1 confirmed
-07-17 03:57:50  ✓ checkpoint U1.2 confirmed
-07-17 03:59:59  ▪ gate build pass [phase]  (36.0s)
-07-17 03:59:59  ▪ gate face-build pass [phase]  (3.4s)
-07-17 03:59:59  ▪ gate test pass [phase]  (1m10s)
-07-17 03:59:59  ▪ gate face-test pass [phase]  (2.5s)
-07-17 03:59:59  ▪ gate driver pass [phase]  (15.9s)
-07-17 03:59:59  ▸ stage U1 confirmed  (39m17s)
-07-17 04:00:00  ▸ stage U2 entered — Face: controls, visual report, dev stats
-07-17 04:00:00  • session #6 U2 Verify started (attempt 1/8)
-07-17 04:10:07  • session #6 U2 → AgentError  (10m07s)
-07-17 04:10:07  • session #7 U2 Fix started (attempt 2/8)
-07-17 04:44:34  ▪ gate build pass [session]  (36.3s)
-07-17 04:44:34  ▪ gate face-build pass [session]  (3.8s)
-07-17 04:44:35  • session #7 U2 → Progress · 3 commit(s)  (34m27s)
-07-17 04:44:35  ■ needs human — agent asked for a human in the tracker handoff (HUMAN: line) — resolve, then run `conductor resume`
-07-17 04:50:45  ◆ run resumed · Conductor UX (U-series)
-07-17 04:51:01  • session #8 U2 Deliver started (attempt 2/8)
-07-17 04:54:23  ◆ run resumed · Conductor UX (U-series)
-07-17 04:54:23  • session #9 U2 Resume started (attempt 2/8)
-07-17 05:50:28  ▪ gate build pass [session]  (13.6s)
-07-17 05:50:28  ▪ gate face-build pass [session]  (3.2s)
-07-17 05:50:29  • session #9 U2 → Advanced · done U2.2,U2.3 · 4 commit(s)  (56m06s)
-07-17 05:50:29  ✓ checkpoint U2.2 confirmed
-07-17 05:50:29  ✓ checkpoint U2.3 confirmed
-07-17 05:52:24  ▪ gate build pass [phase]  (12.2s)
-07-17 05:52:24  ▪ gate face-build pass [phase]  (3.0s)
-07-17 05:52:24  ▪ gate test pass [phase]  (1m18s)
-07-17 05:52:24  ▪ gate face-test pass [phase]  (5.7s)
-07-17 05:52:24  ▪ gate driver pass [phase]  (15.2s)
-07-17 05:52:24  ▸ stage U2 confirmed  (1h52m24s)
-07-17 05:52:27  ▸ stage U3 entered — Face: themes, agent-terminal vibe, glitch pass
-07-17 05:52:27  • session #10 U3 Verify started (attempt 1/8)
-07-17 06:04:32  • session #10 U3 → NoProgress  (12m04s)
-07-17 06:04:32  • session #11 U3 Fix started (attempt 2/8)
-07-17 07:25:41  ▪ gate build pass [session]  (19.1s)
-07-17 07:25:41  ▪ gate face-build pass [session]  (6.1s)
-07-17 07:25:43  • session #11 U3 → Progress · 4 commit(s)  (1h21m10s)
-07-17 07:25:43  • session #12 U3 Verify started (attempt 2/8)
+07-31 02:48:41  ◆ run started · Sarban core - the engine says what it knows
+07-31 02:48:42  ▸ stage SC1 entered — Telegram actually delivers
+07-31 02:48:42  • session #1 SC1 Deliver started (attempt 1/4)
+07-31 03:13:58  ▪ gate engine-fast pass [session]  (40.8s)
+07-31 03:13:58  ▪ gate face-fast pass [session]  (46.9s)
+07-31 03:13:59  • session #1 SC1 → Advanced · done SC1.1 · 2 commit(s)  (25m16s)
+07-31 03:13:59  • session #2 SC1 Deliver started (attempt 1/4)
+07-31 03:43:41  ▪ gate engine-fast pass [session]  (40.2s)
+07-31 03:43:41  ▪ gate face-fast pass [session]  (4.7s)
+07-31 03:43:42  • session #2 SC1 → Advanced · done SC1.2 · 2 commit(s)  (29m42s)
+07-31 03:43:42  • session #3 SC1 Deliver started (attempt 1/4)
+07-31 04:24:33  ▪ gate engine-fast pass [session]  (42.3s)
+07-31 04:24:33  ▪ gate face-fast pass [session]  (6.5s)
+07-31 04:24:34  • session #3 SC1 → Advanced · done SC1.3 · 3 commit(s)  (40m51s)
+07-31 04:26:38  ▪ gate engine-fast pass [phase]  (0.0s)
+07-31 04:26:38  ▪ gate face-fast pass [phase]  (0.0s)
+07-31 04:26:38  ▪ gate engine-full FAIL [phase]  (1m51s)
+07-31 04:26:38  ▪ gate face-full pass [phase]  (10.4s)
+07-31 04:26:38  • session #4 SC1 Fix started (attempt 2/4)
+07-31 04:44:52  ▪ gate engine-fast pass [session]  (1m03s)
+07-31 04:44:52  ▪ gate face-fast pass [session]  (1m17s)
+07-31 04:44:53  • session #4 SC1 → Progress · 2 commit(s)  (18m14s)
+07-31 04:46:44  ▪ gate engine-fast pass [phase]  (0.0s)
+07-31 04:46:44  ▪ gate face-fast pass [phase]  (0.0s)
+07-31 04:46:44  ▪ gate engine-full pass [phase]  (1m43s)
+07-31 04:46:44  ▪ gate face-full pass [phase]  (4.3s)
+07-31 04:46:44  ▸ stage SC1 confirmed  (1h58m02s)
+07-31 04:46:45  ▸ stage SC2 entered — Truthful surfaces
+07-31 04:46:45  • session #5 SC2 Deliver started (attempt 1/6)
+07-31 05:43:47  ▪ gate engine-fast pass [session]  (54.9s)
+07-31 05:43:47  ▪ gate face-fast pass [session]  (39.9s)
+07-31 05:43:48  • session #5 SC2 → Advanced · done SC2.1 · 2 commit(s)  (57m02s)
+07-31 05:43:48  • session #6 SC2 Deliver started (attempt 1/6)
+07-31 06:08:53  ▪ gate engine-fast pass [session]  (43.8s)
+07-31 06:08:53  ▪ gate face-fast pass [session]  (41.0s)
 ```
 
 ## Health
@@ -124,9 +160,8 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 12 · retries 6 (50 %) · overall Warn
-⚠ [context-saturation] session #11: 65,535,433 context tokens (≥ 20,000,000)
-⚠ [context-saturation] session #9: 40,301,419 context tokens (≥ 20,000,000)
+sessions 6 · retries 1 (17 %) · overall Warn
+⚠ [context-saturation] session #3: 28,499,145 context tokens (≥ 20,000,000)
 ```
 
 ## Repo
@@ -134,41 +169,32 @@ sessions 12 · retries 6 (50 %) · overall Warn
 _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
-branch: feat/foreman
-working tree: M CONDUCTOR-UX-START.md
-vs upstream: 1 ahead
+branch: feat/sarban
+working tree: M .conductor/REPORT.md
 ```
 
 ### Commits by session
 
-- **s2 (U0 Resume)** — 7 commit(s):
-  - [`c829143`](https://github.com/shaahink/conductor/commit/c829143) docs(agents): U0 CLOSED 3/3 — session handoff, next stage is U1 (Face)
-  - [`84fe84f`](https://github.com/shaahink/conductor/commit/84fe84f) docs: U0.3 part 2 — resume story documented, --no-dashboard staleness fixed
-  - [`ebd0eca`](https://github.com/shaahink/conductor/commit/ebd0eca) feat(engine): U0.3 part 1 — gateless plans read honest, not blank or lying
-  - [`66e6f57`](https://github.com/shaahink/conductor/commit/66e6f57) feat(cli): U0.2 — conductor journey, a pre-flight itinerary before any spend
-  - [`ba80505`](https://github.com/shaahink/conductor/commit/ba80505) docs(agents): U0.1 done + ratchet-gate QA note — resume pointer at U0.2
-  - [`199f2c8`](https://github.com/shaahink/conductor/commit/199f2c8) test(planning): U0.1 — PlanDiscovery resolution-order unit tests; mark complete
-  - [`a15cce6`](https://github.com/shaahink/conductor/commit/a15cce6) fix(run): async RunCommand+RunStateResume — ratchet gate was silently red (40>38)
-- **s4 (U0 Fix)** — 1 commit(s):
-  - [`fbdef79`](https://github.com/shaahink/conductor/commit/fbdef79) fix(engine): U0 FIX session — verifier truncation + brace-fragile parsing
-- **s5 (U1 Deliver)** — 3 commit(s):
-  - [`b96958c`](https://github.com/shaahink/conductor/commit/b96958c) docs(conductor): U1 tracker — Home + workspace identity claimed 2/2
-  - [`abccde2`](https://github.com/shaahink/conductor/commit/abccde2) feat(face): U1.2 workspace identity in the top bar
-  - [`db9244a`](https://github.com/shaahink/conductor/commit/db9244a) feat(face): U1.1 Home landing tab — Server / Run / Workspace / Next steps
-- **s7 (U2 Fix)** — 3 commit(s):
-  - [`e1b5a57`](https://github.com/shaahink/conductor/commit/e1b5a57) docs(conductor): U2 tracker — s6 verdict recovered, U2.1 done, U2.3 premise corrected
-  - [`71fa214`](https://github.com/shaahink/conductor/commit/71fa214) fix(engine): claude provider records session token usage (bug #5)
-  - [`26a4194`](https://github.com/shaahink/conductor/commit/26a4194) feat(face): U2.1 grouped palette + promptable danger
-- **s9 (U2 Resume)** — 4 commit(s):
-  - [`a0437dd`](https://github.com/shaahink/conductor/commit/a0437dd) docs(conductor): U2 tracker — stage CLOSED 3/3, s7's U2.1 claim QA'd and confirmed
-  - [`8749704`](https://github.com/shaahink/conductor/commit/8749704) feat(face): U2.3 Dev tab — run internals + per-session token/cost stats
-  - [`ab96e15`](https://github.com/shaahink/conductor/commit/ab96e15) docs(face): U2.2 — STYLE.md records the 13th tab and the mnemonic trap
-  - [`c8ff55f`](https://github.com/shaahink/conductor/commit/c8ff55f) feat(face): U2.2 Report tab is a visual run report
-- **s11 (U3 Fix)** — 4 commit(s):
-  - [`3ae03f1`](https://github.com/shaahink/conductor/commit/3ae03f1) chore(conductor): U3 tracker — U3.1 + U3.2 DONE, U3.3 part 1 of 2, handoff overwritten
-  - [`b69f761`](https://github.com/shaahink/conductor/commit/b69f761) feat(engine,face): U3.3 (part 1) — serve the RESOLVED agent provider on /state
-  - [`4fc2c61`](https://github.com/shaahink/conductor/commit/4fc2c61) fix(face): U3.2 glitch pass — render every tab at 3 sizes, read the frames, fix what flinched
-  - [`45e8fba`](https://github.com/shaahink/conductor/commit/45e8fba) feat(face): U3.1 curated themes — Theme role set, ApplyTheme, --theme, palette verb, persisted
+- **s1 (SC1 Deliver)** — 2 commit(s):
+  - [`6895e6c`](https://github.com/shaahink/conductor/commit/6895e6c) docs(sarban): hand SC1.2 the ground SC1.1 cleared
+  - [`b7d6eb4`](https://github.com/shaahink/conductor/commit/b7d6eb4) fix(sc1): start Telegram on the run path, and drain it on the way out
+- **s2 (SC1 Deliver)** — 2 commit(s):
+  - [`8a6672c`](https://github.com/shaahink/conductor/commit/8a6672c) docs(sarban): hand SC1.3 the surfaces SC1.2 made honest
+  - [`160f731`](https://github.com/shaahink/conductor/commit/160f731) feat(sc1): make the Telegram surfaces answer the question that matters
+- **s3 (SC1 Deliver)** — 3 commit(s):
+  - [`a3223c1`](https://github.com/shaahink/conductor/commit/a3223c1) docs(sarban): hand SC2 the ground SC1 finished
+  - [`4620370`](https://github.com/shaahink/conductor/commit/4620370) test(face): rebaseline the telegram goldens, and pin two states they never had
+  - [`7d7372e`](https://github.com/shaahink/conductor/commit/7d7372e) feat(sc1): let a late token or telegram block reach the running engine
+- **s4 (SC1 Fix)** — 2 commit(s):
+  - [`f5a90c6`](https://github.com/shaahink/conductor/commit/f5a90c6) docs(sarban): hand SC2 an honest account of the red
+  - [`d9b0ba4`](https://github.com/shaahink/conductor/commit/d9b0ba4) fix(sc1): stop one host's disposal from closing another host's log sink
+- **s5 (SC2 Deliver)** — 2 commit(s):
+  - [`e3d9b9b`](https://github.com/shaahink/conductor/commit/e3d9b9b) docs(sarban): hand SC2.2 a measured lie and a filed loop bug
+  - [`a3e970e`](https://github.com/shaahink/conductor/commit/a3e970e) fix(sc2): stop status calling the verdict window a crash
+- **s6 (SC2 Deliver)** — 3 commit(s):
+  - [`c9aa663`](https://github.com/shaahink/conductor/commit/c9aa663) docs(sarban): hand SC2.3 a canonical gate vocabulary and two open bugs
+  - [`3645780`](https://github.com/shaahink/conductor/commit/3645780) docs: track the field notes this era is built on, and the shamshir prompt templates
+  - [`603fbbb`](https://github.com/shaahink/conductor/commit/603fbbb) fix(sc2): make the engine name what it actually measured
 
 ## Phase handovers (audit)
 
@@ -191,41 +217,27 @@ vs upstream: 1 ahead
 
 ## Last gate run
 
-build:OK · face-build:OK
+engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: Session #10's verdict was right — U3 was never delivered, so I delivered it from a clean tree instead of re-verifying. U3.1 (themes: 16-role Theme struct + mocha/latte/nord/gruvbox registry, ApplyTheme per package, --theme flag, palette Face group switching live and persisting to os.UserConfigDir()/conductor-face/config.json, goldens still pinning mocha) and U3.2 (glitch pass — sizes ADDED not replaced, keeping 80x24/120x30/200x50 and adding every-tab at 132x40/100x30/80x24; appendix items 5, 6 and 8 all closed) are DONE with gate artifacts as evidence; U3.3 is IN PROGRESS with part 1 landed (the documented provider trap closed — /state serves the RESOLVED provider via a new …
+> SESSION-RESULT: SC2.2 landed and claimed with evidence — the canonical `gates GREEN|RED|NONE` token now spelled in exactly one place and used by the session verdict, both phase-gate lines and the reuse path; the confirmation line computed from the plan's stage-scoped gate set plus the battery result in three honest states (the trap avoided: a reused battery has an empty result list and must not report itself as gateless); `RunState.NextAttemptNumber` as the one source for every attempt line; `what hurt` carrying its age and clearing when the condition clears, with `AttentionSinceUtc` stamped and cleared alongside `AttentionReason`; and doctor warning by name on stages that match no gate. Fas…
 
 ## Tracker handoff
 
 ```
-last: session #11 (FIX, U3). Session #10 was right: **U3 had never been delivered** — nothing to
-verify. Delivered it from a clean tree instead. **U3.1 + U3.2 DONE, U3.3 PART 1 of 2.**
-done: **U3.1** (`45e8fba`) `widgets.Theme` = 16 roles + registry (mocha/latte/nord/gruvbox),
-`--theme` (one launch; bad name = exit 2), palette **Face** group switches live AND persists to
-`os.UserConfigDir()/conductor-face/config.json`. **U3.2** (`4fc2c61`) glitch pass. **U3.3 part 1**
-(`b69f761`) `/state.provider`, RESOLVED not raw; agent strip names the CLI.
-gate: green at every commit — build 0w/0e, **918/918** (+21), ratchet OK (832 tests / 38≤38 /
-archdebt 0, nothing weakened), go build/vet/test green + gofmt clean. `.conductor/gate-u31.out`,
-`gate-u32.out`, `gate-u33.out`.
-traps (NEW, cost me real time): **the goldens were pinning the bug** — `size_80x24.golden` had Home
-missing its whole Next steps section since the day it was written and matched itself forever; a
-golden proves a frame UNCHANGED, never CORRECT. Same shape twice more:
-`TestFrameNeverExceedsWindowHeight` built 30 transcript events then asserted against **Home**
-(never switched tabs), and `cmdFetchTasks` swallowed its error so a broken `/tasks` could not be
-told from an empty board *at the wire*. Prefer an invariant (does the body fit `paneRows()`?) over a
-pinned frame. Older traps still true: bug #2 (`conductor bg` logs are BOM-only 3 bytes — redirect to
-your own file; inline `powershell -Command` after `--` gets re-split, use `-File`); no double quotes
-or `>` in `conductor note`; call the exe, not the scoop shim; `CONDUCTOR_PLAN` must be set (7 plans).
-next: **U3.3 part 2** — the wire is done, the presentation is not. Build: Claude-Code transcript
-(`●` tool bullets, bold name + dim one-line arg, results indented under their call), thinking
-dim-italic collapsed past ~3 lines with a `+N lines (T to expand)` tail, session footer strip
-(model/elapsed/tokens/cost), `ctrl+c` double-tap to quit + single-tap hint toast, `esc` backs out
-one layer, goldens for BOTH provider renderings. `providerLabel()` in tab_agent.go is the seam;
-`""` = older engine = unknown, NOT "not claude". Then U3 is 3/3 and the plan is closed.
-bugs filed: **#7** (medium) `HostLoggingTests.DryRun…CorrelationProperties` is order-dependent —
-asserts the FIRST runId line in a globbed log is its own; a concurrent test's run fails it (hit
-once, 896/897; passes 5/5 isolated; re-ran full suite green twice). Unrelated to U3, left unfixed.
-**#6** (the verifier-misdispatch defect) is still open and will keep misdispatching every stage.
+last: **SC2.2 claimed** (603fbbb), all four parts. GateRunner.Token is the ONLY spelling of a battery
+  verdict now - gates GREEN / gates RED / gates NONE - on the session verdict, both phase-gate lines
+  and the reuse path. ConfirmationBasis kills 'CONFIRMED (full battery green)' on gateless stages.
+  RunState.NextAttemptNumber is the one source for every attempt line. what-hurt carries its age and
+  clears when that gate passes later or the stage confirms; AttentionReason gained AttentionSinceUtc.
+  doctor warns naming stages that match no gate.
+gate: fast loop green - 158/158 across the 13 classes touched. Every 'after' line has a measured
+  'before' from the PUBLISHED engine on the SAME rig: .conductor/evidence/SC2/SC2.2-truthful-gate-vocabulary.md.
+  Rigs: TEMP/sarban-proofs/sc22 (gateless) and sc22b (fast gate passes, truth gate always fails).
+next: **SC2.3** - /state live spend. Field log says it read 0.00 for a whole 55-minute session.
+know: computing the confirmation basis from battery RESULTS alone rebuilds the same lie - a reused
+  battery has an empty result list and is NOT a gateless stage; take the plan's stage-scoped count too.
+  NEW bug 4 filed: a phase RED logs 'queuing fix session' but the workflow can queue Verify instead.
+  Bug 3 (gateless confirm loop, never emits RunFinished) is still open and still reproduces - SC2.4.
 ```
