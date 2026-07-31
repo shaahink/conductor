@@ -33,7 +33,7 @@ know: The rig found a **release blocker** and it is fixed: `-p:PublishSingleFile
 |---|---|
 | Total checkpoints | 26 |
 | Done | 0 |
-| Claimed (unconfirmed) | 25 |
+| Claimed (unconfirmed) | 26 |
 
 ## Checkpoints
 
@@ -104,7 +104,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | SC8.1 | conductor version and GET /version report semver, git sha and build date stamped at build; install.ps1 prints the version before and after | DONE | f45563e | engine-fast:OK · face-fast:OK |
 | SC8.2 | Tag-height versioning is automatic and reconciled with release.yml so a released binary answers with its tag; CHANGELOG.md carries a section per release | DONE | 094ece6 | engine-fast:OK · face-fast:OK |
-| SC8.3 | conductor update downloads and safely swaps the matching release binary, refusing while a run is live; doctor reports update-available | TODO | - | - |
+| SC8.3 | conductor update downloads and safely swaps the matching release binary, refusing while a run is live; doctor reports update-available | DONE | 2fea703 | engine-fast:OK · face-fast:OK |
 
 ## Dependencies
 
