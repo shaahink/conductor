@@ -4,22 +4,20 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **battery red repaired** (d9b0ba4). The red was NOT the Telegram work: HostLoggingTests'
-  correlation test held one line and stopped, because ConductorHost took AddSerilog's default
-  preserveStaticLogger false. That assigns the global Serilog.Log.Logger AND disposes via
-  Log.CloseAndFlush, so with two hosts alive the first disposed closes the OTHER host's live sink.
-  Fixed with preserveStaticLogger true. Evidence: docs/dev/FINDING-2026-07-31-host-logger-isolation.md
-gate: engine-full 1058 passed / 0 failed / 1m38s (was 1055 pass + 1 fail of 1056; +2 = new tests).
-  Negative control BEFORE the fix: both new HostLoggerIsolationTests failed. Nothing weakened.
-next: **SC2.1** - status must stop calling a healthy run interrupted during the exit-to-verdict
-  window; a gate executing counts as engine liveness. StatusReportBuilder scans spawned pids only.
-know: the suite composes ~40 hosts, production composes one per process - so a second host in any
-  process silences the first. Keep it at one, or keep preserveStaticLogger true. SC1.1-SC1.3 stand
-  as claimed; none was over-claimed, the failing test never touched Telegram. Bug 2 still open:
-  'Run services started: TelegramService' prints even when that service early-returned.
-rig: live proofs at TEMP/sarban-proofs/sc13 (plan-swap) and sc13b (control-plane token). sc13b's
-  run-engine.cmd clears CONDUCTOR_TELEGRAM_TOKEN for the child. A staged secrets.local.json must
-  use PascalCase TelegramToken - lowercase does not bind and looks exactly like a missing token.
+last: **SC2.1 claimed** (a3e970e). SessionFinished lands only AFTER the gate battery, so the whole
+  verdict window has an unmatched SessionStarted and no live spawned pid - status called it
+  'interrupted, resume with conductor run'. New EngineLock owns .conductor/conductor.lock (now pid
+  PLUS an ISO start stamp, checked via PidLiveness so a recycled id reads dead; legacy bare-pid
+  files still parse). Status reads it only after the pids table comes up empty.
+gate: fast loop green - StatusCommandTests+EngineLockTests 29/29, rails+doctor+SC1 38/38.
+  Two negative controls, one BEFORE any edit, both: Expected active, Actual interrupted.
+next: **SC2.2**, four parts, and part 2 is already measured for you - see the note ledger and
+  .conductor/evidence/SC2/SC2.2-premeasure-gateless-confirmation.txt. Rig at TEMP/sarban-proofs/sc22.
+know: on a plan with NO gates the engine prints 'phase gate T0 finished - GREEN: gates green (none
+  configured)' and then, next line, 'phase T0 CONFIRMED (full battery green)'. Phase.cs:147 is a
+  constant string. Attempt numbering and sticky what-hurt timestamps are the other two parts.
+  NEW bug 3 filed and diagnosed from that same run: a confirmed LAST stage plus a queued verify
+  session spins RunLoop.cs 198/244 forever at ~3 Hz and never emits RunFinished (hits SC2.4).
 
 
 ## Baseline numbers (from run.db)
@@ -41,7 +39,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | SC1.1 | The engine starts Telegram on every run path: a configured live run delivers a real session-end push and answers two-way status, and a regression test drives the real run-start path | DONE | b7d6eb4 | engine-fast:OK · face-fast:OK |
 | SC1.2 | /telegram/status carries a derived willDeliver verdict; POST /telegram/test routes through the real send queue or loudly says it bypassed it; StartAsync logs on both outcomes naming any missing half | DONE | 160f731 | engine-fast:OK · face-fast:OK |
-| SC1.3 | Late token or telegram-block configuration takes effect without a full restart, or every surface honestly says restart required — including the NoOp-service swap path; the chat-id bootstrap is documented | DONE | 7d7372e | engine-fast:OK · face-fast:OK |
+| SC1.3 | Late token or telegram-block configuration takes effect without a full restart, or every surface honestly says restart required — including the NoOp-service swap path; the chat-id bootstrap is documented | DONE | 7d7372e | docs/dev/FINDING-2026-07-31-host-logger-isolation.md |
 
 ### SC2 — Truthful surfaces
 
