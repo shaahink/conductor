@@ -1,11 +1,11 @@
 ﻿# Conductor — Sarban core - the engine says what it knows run report
 
-_Updated 2026-07-31 12:16 UTC · branch `feat/sarban` · HEAD `a685719`_
+_Updated 2026-07-31 13:13 UTC · branch `feat/sarban` · HEAD `884ea3e`_
 
-**Status:** AwaitingOwner
-**Stage:** SC5 — The engine can wait, detach, and correct the board · attempts used 0 · working ▸ SC5.4
-**Checkpoints:** 18/26 done · **Sessions run:** 20 · **Cost:** $262.6404 (agent $262.5278 + gates $0.1125) · **Tokens:** 3,838,896 in / 1,629,530 out
-**Confirmed phases:** SC1, SC2, SC3, SC4
+**Status:** Idle
+**Stage:** SC5 — The engine can wait, detach, and correct the board · attempts used 0
+**Checkpoints:** 19/26 done · **Sessions run:** 21 · **Cost:** $273.2145 (agent $273.0944 + gates $0.1201) · **Tokens:** 4,007,766 in / 1,706,307 out
+**Confirmed phases:** SC1, SC2, SC3, SC4, SC5
 
 ## Stage progress
 
@@ -15,7 +15,7 @@ _Updated 2026-07-31 12:16 UTC · branch `feat/sarban` · HEAD `a685719`_
 | SC2 | Truthful surfaces | ██████████ 4/4 | confirmed ✓ |
 | SC3 | Config traps die at authoring time | ██████████ 4/4 | confirmed ✓ |
 | SC4 | Verdicts judge the work, not the environment | ██████████ 4/4 | confirmed ✓ |
-| SC5 | The engine can wait, detach, and correct the board | ████████░░ 3/4 | **← active** |
+| SC5 | The engine can wait, detach, and correct the board | ██████████ 4/4 | confirmed ✓ |
 | SC6 | Clean history without lying about it | ░░░░░░░░░░ 0/2 | todo |
 | SC7 | The transcript captures structure | ░░░░░░░░░░ 0/2 | todo |
 | SC8 | The program knows what it is and can update itself | ░░░░░░░░░░ 0/3 | todo |
@@ -63,14 +63,14 @@ _Updated 2026-07-31 12:16 UTC · branch `feat/sarban` · HEAD `a685719`_
 
 </details>
 
-<details><summary>SC5 — The engine can wait, detach, and correct the board (3/4)</summary>
+<details> ✅<summary>SC5 — The engine can wait, detach, and correct the board (4/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
 | SC5.1 | conductor task --blocked-until with a reason yields a BlockedUntil outcome the run loop honours by sleeping and respawning once, burning no attempt; the wait is visible on status, state and the report | ✅ DONE | [`ac70123`](https://github.com/shaahink/conductor/commit/ac70123) |
 | SC5.2 | conductor run --detach spawns the engine into its own process group, prints pid and control-plane url, and survives its launching shell; the stall warning names the likely cause and the remedy | ✅ DONE | [`d496179`](https://github.com/shaahink/conductor/commit/d496179) |
 | SC5.3 | task --todo, --blocked, --skipped and --amend exist through the shared task-writes path, and --in-progress reports the post-fold status instead of unconditional success | ✅ DONE | [`2e06530`](https://github.com/shaahink/conductor/commit/2e06530) |
-| SC5.4 | bg logs on an agent row points at that session's stream file, and bg status runtimes are computed in one timezone | ⬜ TODO | - |
+| SC5.4 | bg logs on an agent row points at that session's stream file, and bg status runtimes are computed in one timezone | ✅ DONE | [`58bf293`](https://github.com/shaahink/conductor/commit/58bf293) |
 
 </details>
 
@@ -126,23 +126,13 @@ _Updated 2026-07-31 12:16 UTC · branch `feat/sarban` · HEAD `a685719`_
 | 18 | SC5 | Deliver | 1 | 07-31 10:15 | 0:36 | Advanced | SC5.1 | 1 | engine-fast:OK · face-fast:OK | $21.5187 | $0.0051 | 256,885/98,705 |
 | 19 | SC5 | Deliver | 1 | 07-31 10:52 | 0:46 | Advanced | SC5.2 | 3 | engine-fast:OK · face-fast:OK | $16.0120 | $0.0008 | 203,565/112,747 |
 | 20 | SC5 | Deliver | 1 | 07-31 11:39 | 0:35 | Advanced | SC5.3 | 3 | engine-fast:OK · face-fast:OK | $19.9087 | $0.0070 | 256,628/103,130 |
+| 21 | SC5 | Deliver | 1 | 07-31 12:41 | 0:28 | Advanced | SC5.4 | 2 | engine-fast:OK · face-fast:OK | $10.5666 | $0.0076 | 168,870/76,777 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-31 09:42:07  • session #13 SC4 → Advanced · done SC4.1 · 1 commit(s)  (39m16s)
-07-31 09:42:07  • session #14 SC4 Deliver started (attempt 1/6)
-07-31 10:13:16  ▪ gate engine-fast pass [session]  (40.6s)
-07-31 10:13:16  ▪ gate face-fast pass [session]  (3.7s)
-07-31 10:13:16  • session #14 SC4 → Advanced · done SC4.2 · 1 commit(s)  (31m09s)
-07-31 10:13:17  • session #15 SC4 Deliver started (attempt 1/6)
-07-31 10:45:34  ▪ gate engine-fast pass [session]  (39.6s)
-07-31 10:45:34  ▪ gate face-fast pass [session]  (3.5s)
-07-31 10:45:34  • session #15 SC4 → Advanced · done SC4.3 · 2 commit(s)  (32m17s)
-07-31 10:45:35  • session #16 SC4 Deliver started (attempt 1/6)
-07-31 11:00:47  ▪ gate engine-fast pass [session]  (41.0s)
 07-31 11:00:47  ▪ gate face-fast pass [session]  (3.8s)
 07-31 11:00:47  • session #16 SC4 → Advanced · done SC4.4 · 2 commit(s)  (15m12s)
 07-31 11:02:36  ▪ gate engine-fast pass [phase]  (0.0s)
@@ -172,6 +162,17 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-31 13:16:55  ▪ gate face-fast pass [session]  (30.4s)
 07-31 13:16:56  • session #20 SC5 → Advanced · done SC5.3 · 3 commit(s)  (37m10s)
 07-31 13:16:56  § owner approval requested — SC5
+07-31 13:16:57  ◆ plan reloaded — v2 · 8 stages · 4 gates
+07-31 13:41:06  § owner approval granted — SC5
+07-31 13:41:06  • session #21 SC5 Deliver started (attempt 1/6)
+07-31 14:11:11  ▪ gate engine-fast pass [session]  (41.9s)
+07-31 14:11:11  ▪ gate face-fast pass [session]  (33.9s)
+07-31 14:11:12  • session #21 SC5 → Advanced · done SC5.4 · 2 commit(s)  (30m05s)
+07-31 14:13:05  ▪ gate engine-fast pass [phase]  (0.0s)
+07-31 14:13:05  ▪ gate face-fast pass [phase]  (0.0s)
+07-31 14:13:05  ▪ gate engine-full pass [phase]  (1m42s)
+07-31 14:13:05  ▪ gate face-full pass [phase]  (6.8s)
+07-31 14:13:05  ▸ stage SC5 confirmed  (2h57m22s)
 ```
 
 ## Health
@@ -179,7 +180,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 20 · retries 2 (10 %) · overall Warn
+sessions 21 · retries 2 (10 %) · overall Warn
 ⚠ [context-saturation] session #13: 29,057,299 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #15: 20,145,044 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #18: 32,959,198 context tokens (≥ 20,000,000)
@@ -202,8 +203,6 @@ working tree: M .conductor/REPORT.md, M SARBAN-CORE-TRACKER.md
 
 ### Commits by session
 
-- **s13 (SC4 Deliver)** — 1 commit(s):
-  - [`ba9b523`](https://github.com/shaahink/conductor/commit/ba9b523) fix(sc4): make the battery settle before it judges, and retry a red gate once
 - **s14 (SC4 Deliver)** — 1 commit(s):
   - [`1ce4ba7`](https://github.com/shaahink/conductor/commit/1ce4ba7) fix(sc4): make a claim count as progress, and conductor's own commits not
 - **s15 (SC4 Deliver)** — 2 commit(s):
@@ -224,6 +223,9 @@ working tree: M .conductor/REPORT.md, M SARBAN-CORE-TRACKER.md
   - [`a685719`](https://github.com/shaahink/conductor/commit/a685719) docs(sarban): hand SC5.4 the board work and two things the rig taught
   - [`9024e57`](https://github.com/shaahink/conductor/commit/9024e57) feat(sc5): make every board move go one way and report what happened
   - [`2e06530`](https://github.com/shaahink/conductor/commit/2e06530) chore(plan): commit the owner's mid-session plan rewrite
+- **s21 (SC5 Deliver)** — 2 commit(s):
+  - [`884ea3e`](https://github.com/shaahink/conductor/commit/884ea3e) docs(sarban): hand SC6 the clean-history work and what the timezone taught
+  - [`58bf293`](https://github.com/shaahink/conductor/commit/58bf293) feat(sc5): point bg logs at the session stream and put the clock in one zone
 
 ## Phase handovers (audit)
 
@@ -246,35 +248,37 @@ working tree: M .conductor/REPORT.md, M SARBAN-CORE-TRACKER.md
 
 ## Last gate run
 
-engine-fast:OK · face-fast:OK
+engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
 
 ## Last session result
 
-> SESSION-RESULT: SC5.3 landed and is claimed with evidence at `.conductor/evidence/SC5/SC5.3-board-writes.md` (commits `9024e57` feat, `2e06530` chore-plan, `a685719` handoff, pushed to `feat/sarban`) — every `conductor task` board move now writes through the shared `TaskWrites` path and reports the card's post-fold status with an exit code that follows it, `--todo|--blocked|--skipped|--amend` exist, and SKIPPED became a status the tracker, the row parser and the scheduler all honour; proven on a live scratch rig with the fresh build, full suite 1321/0 and ratchet OK, nothing red. The one thing that is not mine and is worth a look: the owner's mid-session plan rewrite (maxRunCostUsd 260→450) …
+> SESSION-RESULT: SC5.4 landed and claimed with evidence at `.conductor/evidence/SC5/SC5.4-bg-mapping.md`, completing stage SC5 — `bg logs` on an agent row now resolves to `logs/session-NNN.jsonl` with a provider-folded tail (CLI and MCP), `bg status` gained a Log column naming the file for every row, agent pid rows finally carry their stage and session number, and the negative-runtime bug was root-caused to a single bare `DateTime.Parse` in `SqliteRunStore.GetAllPids` whose local-kind result also made `PidLiveness` declare every live process recycled west of UTC; proven by a live before/after rig on the fresh build against a scratch repo plus a read-only repeat on this repo's own session #21,…
 
 ## Tracker handoff
 
 ```
-last: **SC5.3 landed - the board is two-way and every move reports the truth.** All `conductor task`
-  moves go through `TaskWrites.BuildStatusChange` (the validator /tasks/update and MCP task_update
-  use) and answer with the card's POST-FOLD status: a refused move prints what the card really is
-  and exits 1 - that covers `--in-progress` AND `--done`. New `--todo|--blocked|--skipped`, plus
-  `--amend <id> --note <text>`, which APPENDS a stamped correction to the card context the next
-  session's composed prompt carries. `blocked` joined ValidStatuses (the fold always allowed it).
-gate: live rig `%TEMP%\sarban-proofs\sc53` on the FRESH build ran all 14 verb cases from inside a
-  real session (`sc53-verbs.log` holds the exit codes); the amendment appears in that run's
-  `session-023.prompt.md`. Full suite 1321 passed / 0 failed, ratchet OK. Evidence
-  .conductor/evidence/SC5/SC5.3-board-writes.md.
-next: **SC5.4** - `bg logs` on an agent row points at that session's stream file; `bg status`
-  runtimes computed in one timezone.
-know: making `--skipped` REACHABLE forced three surfaces to learn the word - the tracker rendered it
-  TODO, the row regex is built from the status vocabulary so the row would not have parsed at all
-  (and WorkGraphSync archives what the tracker stops declaring), and the scheduler asked only
-  is-it-done. SKIPPED now counts as settled in StageDone/AllDone; BLOCKED deliberately does not.
-  The rig - not a test - caught `task --list` printing a skipped card as TODO; every status switch
-  here ending in a catch-all TODO arm is a candidate lie. `plans/conductor-sarban-core.plan.json`
-  arrived ALREADY modified: the owner ran a plan write at 12:54 (log: ReloadPlan) raising
-  maxRunCostUsd 260 to 450. Committed as its own chore commit, not reverted; ratchet rule 3d fires
-  on that rewrite because the gate commands got JSON-escaped, though their VALUES are unchanged.
-  Bugs 2,3,4,5,6,8,9,10,11 open (5 is fixed in source, only the published engine still crashes).
+last: **SC5.4 landed - stage SC5 is complete.** `bg logs <agent pid>` resolves to
+  `logs/session-NNN.jsonl`, tail folded by the plan's OWN provider (so it cannot drift from the live
+  feed); `bg status` gained a Log column naming the file for every row; MCP `bg_logs` takes the same
+  branch. The negative Runtime was ONE bare `DateTime.Parse` in `SqliteRunStore.GetAllPids`: default
+  styles CONVERT a `Z` string to local and return Kind=Local, so `PidRow.StartedUtc` was local under
+  a UTC name. Fixed at the parse with AssumeUniversal|AdjustToUniversal.
+gate: live rig `%TEMP%\sarban-proofs\sc54` on the FRESH build, before/after against the SAME row at
+  the same instant - fresh `24s`, published engine `-3571s`; published `bg logs` refused the agent
+  pid, fresh printed the stream. Same proof read-only against THIS repo's live session #21.
+  Scoped pass 100/0 over every class that reads a pid row. Evidence
+  .conductor/evidence/SC5/SC5.4-bg-mapping.md.
+next: **SC6.1** - pure status-transition updates stop landing commits, and any squash runs AFTER the
+  stage's final state write.
+know: the timezone half is INVISIBLE from this machine and severe elsewhere. `PidLiveness.Check`
+  compares the OS's real start against the tracked one; east of UTC the skew reads later and the
+  check is right by luck, WEST of UTC it reads earlier so every live tracked pid answers Recycled -
+  `bg status` prints running jobs dead, Sweep buries live children, SC4.1's battery settle stops
+  waiting for them, ReapOrphans never kills a real orphan. Assertions that hold everywhere are Kind
+  and the exact instant, not the sign of a subtraction. `BgLogs.Resolve` was right BEFORE the fix by
+  calling ToUniversalTime on the local value - check that class of accidental correctness before
+  touching a parse. Agent pid rows had stage_id and session_number NULL forever; the `session#N`
+  purpose tail is the fallback that keeps old rows resolvable. New bug 12 (bg start leaks the
+  caller's stdout handle to the grandchild - piping it blocks, and it reads as a hung session).
+  Bugs 2,3,4,5,6,8,9,10,11,12 open (5 is fixed in source, only the published engine still crashes).
 ```

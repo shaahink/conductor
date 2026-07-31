@@ -4,29 +4,29 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SC5.4 landed - stage SC5 is complete.** `bg logs <agent pid>` resolves to
-  `logs/session-NNN.jsonl`, tail folded by the plan's OWN provider (so it cannot drift from the live
-  feed); `bg status` gained a Log column naming the file for every row; MCP `bg_logs` takes the same
-  branch. The negative Runtime was ONE bare `DateTime.Parse` in `SqliteRunStore.GetAllPids`: default
-  styles CONVERT a `Z` string to local and return Kind=Local, so `PidRow.StartedUtc` was local under
-  a UTC name. Fixed at the parse with AssumeUniversal|AdjustToUniversal.
-gate: live rig `%TEMP%\sarban-proofs\sc54` on the FRESH build, before/after against the SAME row at
-  the same instant - fresh `24s`, published engine `-3571s`; published `bg logs` refused the agent
-  pid, fresh printed the stream. Same proof read-only against THIS repo's live session #21.
-  Scoped pass 100/0 over every class that reads a pid row. Evidence
-  .conductor/evidence/SC5/SC5.4-bg-mapping.md.
-next: **SC6.1** - pure status-transition updates stop landing commits, and any squash runs AFTER the
-  stage's final state write.
-know: the timezone half is INVISIBLE from this machine and severe elsewhere. `PidLiveness.Check`
-  compares the OS's real start against the tracked one; east of UTC the skew reads later and the
-  check is right by luck, WEST of UTC it reads earlier so every live tracked pid answers Recycled -
-  `bg status` prints running jobs dead, Sweep buries live children, SC4.1's battery settle stops
-  waiting for them, ReapOrphans never kills a real orphan. Assertions that hold everywhere are Kind
-  and the exact instant, not the sign of a subtraction. `BgLogs.Resolve` was right BEFORE the fix by
-  calling ToUniversalTime on the local value - check that class of accidental correctness before
-  touching a parse. Agent pid rows had stage_id and session_number NULL forever; the `session#N`
-  purpose tail is the fallback that keeps old rows resolvable. New bug 12 (bg start leaks the
-  caller's stdout handle to the grandchild - piping it blocks, and it reads as a hung session).
+last: **SC6.1 landed.** The report commit trigger is no longer "the rendered text changed" but
+  `ReportSubstance.Of(state, track)` - checkpoint statuses/commits, FINISHED session records,
+  confirmed and skipped stages. Everything the engine says about itself is excluded by name, and so
+  is a session that has only STARTED (its record churns cost/tokens every heartbeat). What still
+  commits is coalesced: the next publish AMENDS the previous report commit while it is still the tip.
+  `ConfirmStageAsync` now does `_saveAndReport()` THEN `SquashBookkeeping(id)`.
+gate: live rig `%TEMP%\sarban-proofs\sc61`, one stage close, published engine vs FRESH build.
+  Chore commits landing AFTER the squash 3 to 0; the engine's own bookkeeping commits 4 to 1 (2 more
+  in each run were agent-seeded, so the engine's share stayed separable); AFTER reflog carries
+  `commit (amend)`. Scoped 41/0 including a full-orchestrator stage-close test with report.commit ON.
+  Evidence .conductor/evidence/SC6/SC6.1-status-transitions-and-squash-order.md.
+next: **SC6.2** - the squash works on a dirty tree, reports real counts, logs git stderr and the exit
+  code, un-marks the stage on failure, aborts a half-started rebase, degrades off Windows.
+know: the SC6.1 rig proves the ORDER but NOT a working rebase - `git rebase returned non-zero` still,
+  in BOTH engines, because the engine rewrites TRACKER.md after the agent commits it so the tree is
+  never clean at a stage close. That is SC6.2's whole job and the rig is already built for it: rerun
+  `SC61-run.ps1` and look for a reflog `rebase (finish)`. Third cause found by that rig and worth
+  keeping: REPORT.md embeds the repo's HEAD sha, so every report commit changed the next report and
+  justified another - a self-feeding loop, 3 identical commits in 5 seconds while merely idling.
+  Rig trap: `conductor` on PATH is a scoop .cmd SHIM, so Start-Process returns the shim's pid and
+  Stop-Process leaves the real engine alive holding the log file; sweep Win32_Process for
+  conductor.exe matching THIS rig's plan path. `RunOptions.Once` returns before the loop reaches the
+  pending phase gate, so a stage-close test must use MaxSessions, not Once.
   Bugs 2,3,4,5,6,8,9,10,11,12 open (5 is fixed in source, only the published engine still crashes).
 
 
@@ -36,7 +36,7 @@ know: the timezone half is INVISIBLE from this machine and severe elsewhere. `Pi
 |---|---|
 | Total checkpoints | 26 |
 | Done | 0 |
-| Claimed (unconfirmed) | 18 |
+| Claimed (unconfirmed) | 19 |
 
 ## Checkpoints
 
@@ -85,7 +85,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | SC5.1 | conductor task --blocked-until with a reason yields a BlockedUntil outcome the run loop honours by sleeping and respawning once, burning no attempt; the wait is visible on status, state and the report | DONE | ac70123 | engine-fast:OK · face-fast:OK |
 | SC5.2 | conductor run --detach spawns the engine into its own process group, prints pid and control-plane url, and survives its launching shell; the stall warning names the likely cause and the remedy | DONE | d496179 | engine-fast:OK · face-fast:OK |
 | SC5.3 | task --todo, --blocked, --skipped and --amend exist through the shared task-writes path, and --in-progress reports the post-fold status instead of unconditional success | DONE | 2e06530 | engine-fast:OK · face-fast:OK |
-| SC5.4 | bg logs on an agent row points at that session's stream file, and bg status runtimes are computed in one timezone | TODO | - | - |
+| SC5.4 | bg logs on an agent row points at that session's stream file, and bg status runtimes are computed in one timezone | DONE | 58bf293 | engine-fast:OK · face-fast:OK |
 
 ### SC6 — Clean history without lying about it
 
