@@ -44,6 +44,19 @@ public sealed class SessionWatchdog : IDisposable
     /// not measurement noise.</summary>
     public static readonly TimeSpan DefaultClockJumpTolerance = TimeSpan.FromSeconds(30);
 
+    /// <summary>
+    /// SC5.2: a stall line that says only "all signals quiet" tells the operator — and the agent
+    /// reading its own killed-session verdict next attempt — nothing they can act on. By far the
+    /// most common cause is not a wedged agent: it is a session blocking the foreground on a build
+    /// or a test suite, which produces no output, no tool call and no tracked child, so all three
+    /// liveness signals go dark while real work is happening. The remedy is one command, and it is
+    /// named here rather than in a doc nobody reads at 3am.
+    /// </summary>
+    public const string Remedy =
+        "Likely cause: a long command running in the FOREGROUND (build, full test suite, server) — " +
+        "it emits no output, no tool call and no tracked child, so all three liveness signals go dark. " +
+        "Remedy: start it with `conductor bg start --name build -- dotnet test`; a live bg child counts as proof of life.";
+
     private readonly TimeSpan _hardTimeout;
     private readonly StallDetector _stall;
     private readonly Func<WatchdogSignals> _sample;
@@ -190,14 +203,15 @@ public sealed class SessionWatchdog : IDisposable
                 case StallVerdict.SoftKillStarted:
                     _graceReported = true;
                     return (WatchdogAction.StallGraceStarted,
-                        $"stall: all signals quiet for {Fmt(_stall.Threshold)} — {Fmt(_stall.Grace)} soft-kill grace window started");
+                        $"stall: all signals quiet for {Fmt(_stall.Threshold)} — {Fmt(_stall.Grace)} soft-kill grace window started. {Remedy}");
                 case StallVerdict.GraceRunning:
                     if (_graceReported) return (WatchdogAction.None, "");
                     _graceReported = true;
                     return (WatchdogAction.StallGraceRunning, "stall: in soft-kill grace window — waiting for agent to recover");
                 default:
                     _stalled = true;
-                    return (WatchdogAction.StallKill, "stall: grace window expired — killing session");
+                    return (WatchdogAction.StallKill,
+                        $"stall: grace window expired — killing session after {Fmt(_stall.Threshold + _stall.Grace)} quiet. {Remedy}");
             }
         }
     }

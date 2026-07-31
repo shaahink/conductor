@@ -50,6 +50,10 @@ public sealed class RunCommand : AsyncCommand<RunCommand.Settings>
         [CommandOption("--paused")]
         [Description("Start idle: dashboard + control plane come up but no session spawns until you resume (author the plan / seed the board first).")]
         public bool Paused { get; init; }
+
+        [CommandOption("--detach")]
+        [Description("Start the engine in its own process group and return: it prints pid + control-plane URL and survives this shell closing. Attach later with `conductor face`.")]
+        public bool Detach { get; init; }
     }
 
     public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
@@ -57,6 +61,12 @@ public sealed class RunCommand : AsyncCommand<RunCommand.Settings>
         var planPathArg = settings.ResolvePlanPath();
         var plan = PlanConfig.Load(planPathArg);
         Directory.CreateDirectory(plan.StateDir);
+
+        // SC5.2: --detach never runs the engine here. It spawns the SAME command minus the flag into
+        // a process group of its own and returns, so the run outlives this shell (devcontext #16).
+        if (settings.Detach)
+            return await RunDetach.LaunchAsync(settings, planPathArg, plan, CancellationToken.None).ConfigureAwait(false);
+
         using var cts = new CancellationTokenSource();
         var statePath = Path.Combine(plan.StateDir, "state.json");
         var state = RunState.LoadOrNew(statePath, plan.Name);
