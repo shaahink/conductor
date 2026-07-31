@@ -4,22 +4,22 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SF0.2 CLAIMED** (commit `fdd78ae`) — bugs 10, 4, 3, 8. All three ENGINE bugs were first
-  reproduced against the engine at `5217986` with the same test code, then fixed: pre-fix 3 failed
-  / 13 passed (bug 3's hang killed at 4m1s by the test's own deadline), fixed 16/16, suite 1485/1485.
-  Bug 10's rider is bigger than the ledger says: the dead `GateSummary` fallback was OVERWRITING the
-  agent's `--evidence` path with the battery token — that is why SF0.1's row reads `engine-fast:OK`.
+last: **SF0.3 CLAIMED** (commit `c84ccfc`) — bugs 9, 13, 12 fixed; bug 5 was ALREADY fixed by SC4.1
+  and is closed on a measurement (its test passed pre-fix) with a regression pin. Reproduced first:
+  pre-fix 6 failed / 2 passed, fixed 11/11, suite 1496/1496. Bug 12 needed TWO halves — redirecting
+  the child's streams was NOT enough, because `Process.Start` uses `bInheritHandles=TRUE` and leaks
+  every inheritable handle; clearing `HANDLE_FLAG_INHERIT` on our own std handles is the other half.
 stage: **SF0 IN PROGRESS** (attempt 1). Evidence: `.conductor/evidence/SF0/` (gitignored, local).
-gate: not run by me (conductor owns it). Fast loop green: build clean, full suite 1485/1485.
-next: **SF0.3** — bugs 9, 5, 12, 13 (one pid-liveness policy incl. MCP, bg status survives an
-  uninspectable pid, bg start's leaked stdout handle, bg logs on a LIVE log) + FU-OWNER-9's self-PID
-  guard. Read the carried-forward bug table in `.conductor/followups.md`; those rows are NOT in run.db.
-trap: for a live proof, copy `SC51BlockedUntilLiveTests` — `conductor.exe` sits beside the test
-  assembly, the plan is serialised so the CLI and engine share one run.db, a marker file switches the
-  fake agent's behaviour, and the agent is THREE args (`"/c"`, absolute `.cmd`, `"{prompt}"`). In cmd
-  put the redirect FIRST or the digit before `>` is read as a stream number. `IProgressSink` is 4
-  members — a recording sink costs ten lines. A pipe in `--filter` needs PowerShell's `--%`.
-  Second conductor run live on this machine: no install.ps1, no killing pids unchecked, own port.
+gate: not run by me (conductor owns it). Fast loop green: build clean, full suite 1496/1496.
+next: **SF0.4** — open bugs must survive the run that found them (a new run in this repo sees the
+  previous run's open rows; `run ended` says how many), then reconcile every remaining
+  `.conductor/followups.md` row. FU-OWNER-9 is now CLOSED there; note **bug #15 is newly filed**.
+trap: **do not grow `ToolContract` without reading bug #15.** The composed prompt reaches a
+  cmd.exe-based agent as a command-line ARGUMENT and cmd caps that at 8191 chars; past it the agent
+  never runs and the run still reports success. A 740-char addition took six live tests red with
+  symptoms that all looked like agent misbehaviour. It is NOT the quotes — it is length; bisect by
+  deleting, not editing. A `<6000` ceiling test now guards it. Also: the repo TFM is net10.0 only —
+  `dotnet test -f net9.0` silently runs a July dll and reports "No test matches the filter".
 
 
 ## Baseline numbers (from run.db)
@@ -28,7 +28,7 @@ trap: for a live proof, copy `SC51BlockedUntilLiveTests` — `conductor.exe` sit
 |---|---|
 | Total checkpoints | 24 |
 | Done | 0 |
-| Claimed (unconfirmed) | 1 |
+| Claimed (unconfirmed) | 2 |
 
 ## Checkpoints
 
@@ -40,7 +40,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | SF0.1 | Bugs 6 and 11 die as a class — an inert plan key is either wired to its documented meaning or rejected at load, never readable-and-ignored — and bug 2 plus FU-OWNER-12 stop the notification path lying: no start line for a service that early-returned, and one logged sentence at run start saying whether pushes can be delivered at all | DONE | 5217986 | engine-fast:OK · face-fast:OK |
-| SF0.2 | Bug 10 — a claim made during a Verify or Audit session is counted, stamped and confirmed like any other, with the empty-string GateSummary evidence fallback fixed in the same change — plus bug 4 (a phase-gate RED names the session kind it actually queues), bug 3 (a confirmed last stage completes instead of spinning forever) and bug 8 (the harness git helper asserts its exit code, so NewCommits assertions stop being vacuous) | TODO | - | - |
+| SF0.2 | Bug 10 — a claim made during a Verify or Audit session is counted, stamped and confirmed like any other, with the empty-string GateSummary evidence fallback fixed in the same change — plus bug 4 (a phase-gate RED names the session kind it actually queues), bug 3 (a confirmed last stage completes instead of spinning forever) and bug 8 (the harness git helper asserts its exit code, so NewCommits assertions stop being vacuous) | DONE | fdd78ae | engine-fast:OK · face-fast:OK |
 | SF0.3 | Bugs 9, 5, 12 and 13 — one pid-liveness policy everywhere including MCP, bg status survives an uninspectable pid, bg start stops leaking the caller's stdout handle, bg logs reads a live log — and FU-OWNER-9's self-PID guard lands with the locked-by-conductor warning in the fix prompt | TODO | - | - |
 | SF0.4 | Open bugs survive the run that found them — a new run in this repo sees the previous run's open rows, and run-ended says how many are open — and every remaining followups.md row is fixed, closed with its evidence, or re-homed to a living owner, with FU-F1-07 verified against SC8's scanning verb-parity test and FU-B10-2 measured from the core run's own sessions | TODO | - | - |
 

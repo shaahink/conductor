@@ -1,16 +1,16 @@
 ﻿# Conductor — Sarban face - the watcher and the surfaces run report
 
-_Updated 2026-07-31 19:38 UTC · branch `feat/sarban` · HEAD `5217986`_
+_Updated 2026-07-31 20:26 UTC · branch `feat/sarban` · HEAD `3e53a3c`_
 
 **Status:** Idle
-**Stage:** SF0 — The ledger closes - the core run's leftovers · attempts used 0 · working ▸ SF0.2
-**Checkpoints:** 1/24 done · **Sessions run:** 1 · **Cost:** $10.7314 (agent $10.7229 + gates $0.0085) · **Tokens:** 176,730 in / 68,746 out
+**Stage:** SF0 — The ledger closes - the core run's leftovers · attempts used 0 · working ▸ SF0.3
+**Checkpoints:** 2/24 done · **Sessions run:** 2 · **Cost:** $23.8761 (agent $23.8590 + gates $0.0171) · **Tokens:** 387,424 in / 145,379 out
 
 ## Stage progress
 
 | Stage | Title | Progress | State |
 |---|---|---|---|
-| SF0 | The ledger closes - the core run's leftovers | ██░░░░░░░░ 1/4 | **← active** |
+| SF0 | The ledger closes - the core run's leftovers | █████░░░░░ 2/4 | **← active** |
 | SF1 | The face sheds dead weight | ░░░░░░░░░░ 0/3 | todo |
 | SF2 | The face tells the truth kindly - state, time, money | ░░░░░░░░░░ 0/3 | todo |
 | SF3 | Reading a session becomes cheap | ░░░░░░░░░░ 0/3 | todo |
@@ -19,12 +19,12 @@ _Updated 2026-07-31 19:38 UTC · branch `feat/sarban` · HEAD `5217986`_
 | SF6 | The prompt bank compounds | ░░░░░░░░░░ 0/3 | todo |
 | SF7 | Ship the era | ░░░░░░░░░░ 0/2 | todo |
 
-<details><summary>SF0 — The ledger closes - the core run's leftovers (1/4)</summary>
+<details><summary>SF0 — The ledger closes - the core run's leftovers (2/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| SF0.1 | Bugs 6 and 11 die as a class — an inert plan key is either wired to its documented meaning or rejected at load, never readable-and-ignored — and bug 2 plus FU-OWNER-12 stop the notification path lying: no start line for a service that early-returned, and one logged sentence at run start saying whether pushes can be delivered at all | ✅ DONE | - |
-| SF0.2 | Bug 10 — a claim made during a Verify or Audit session is counted, stamped and confirmed like any other, with the empty-string GateSummary evidence fallback fixed in the same change — plus bug 4 (a phase-gate RED names the session kind it actually queues), bug 3 (a confirmed last stage completes instead of spinning forever) and bug 8 (the harness git helper asserts its exit code, so NewCommits assertions stop being vacuous) | ⬜ TODO | - |
+| SF0.1 | Bugs 6 and 11 die as a class — an inert plan key is either wired to its documented meaning or rejected at load, never readable-and-ignored — and bug 2 plus FU-OWNER-12 stop the notification path lying: no start line for a service that early-returned, and one logged sentence at run start saying whether pushes can be delivered at all | ✅ DONE | [`5217986`](https://github.com/shaahink/conductor/commit/5217986) |
+| SF0.2 | Bug 10 — a claim made during a Verify or Audit session is counted, stamped and confirmed like any other, with the empty-string GateSummary evidence fallback fixed in the same change — plus bug 4 (a phase-gate RED names the session kind it actually queues), bug 3 (a confirmed last stage completes instead of spinning forever) and bug 8 (the harness git helper asserts its exit code, so NewCommits assertions stop being vacuous) | ✅ DONE | - |
 | SF0.3 | Bugs 9, 5, 12 and 13 — one pid-liveness policy everywhere including MCP, bg status survives an uninspectable pid, bg start stops leaking the caller's stdout handle, bg logs reads a live log — and FU-OWNER-9's self-PID guard lands with the locked-by-conductor warning in the fix prompt | ⬜ TODO | - |
 | SF0.4 | Open bugs survive the run that found them — a new run in this repo sees the previous run's open rows, and run-ended says how many are open — and every remaining followups.md row is fixed, closed with its evidence, or re-homed to a living owner, with FU-F1-07 verified against SC8's scanning verb-parity test and FU-B10-2 measured from the core run's own sessions | ⬜ TODO | - |
 
@@ -104,6 +104,7 @@ _Updated 2026-07-31 19:38 UTC · branch `feat/sarban` · HEAD `5217986`_
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Overhead | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | SF0 | Deliver | 1 | 07-31 19:15 | 0:22 | Advanced | SF0.1 | 1 | engine-fast:OK · face-fast:OK | $10.7229 | $0.0085 | 176,730/68,746 |
+| 2 | SF0 | Deliver | 1 | 07-31 19:38 | 0:45 | Advanced | SF0.2 | 2 | engine-fast:OK · face-fast:OK | $13.1360 | $0.0086 | 210,694/76,633 |
 
 ## Timeline
 
@@ -115,6 +116,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 07-31 20:15:19  • session #1 SF0 Deliver started (attempt 1/6)
 07-31 20:38:57  ▪ gate engine-fast pass [session]  (48.1s)
 07-31 20:38:57  ▪ gate face-fast pass [session]  (36.5s)
+07-31 20:38:58  • session #1 SF0 → Advanced · done SF0.1 · 1 commit(s)  (23m38s)
+07-31 20:38:58  • session #2 SF0 Deliver started (attempt 1/6)
+07-31 21:26:24  ▪ gate engine-fast pass [session]  (1m14s)
+07-31 21:26:24  ▪ gate face-fast pass [session]  (11.7s)
 ```
 
 ## Health
@@ -122,7 +127,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 1 · retries 0 (0 %) · overall Ok
+sessions 2 · retries 0 (0 %) · overall Ok
 ✓ no health concerns detected
 ```
 
@@ -139,6 +144,9 @@ working tree: clean
 
 - **s1 (SF0 Deliver)** — 1 commit(s):
   - [`5217986`](https://github.com/shaahink/conductor/commit/5217986) fix(plan): inert model pins die at load, verifyEachDelivery finally decides, and a run says whether it can notify
+- **s2 (SF0 Deliver)** — 2 commit(s):
+  - [`3e53a3c`](https://github.com/shaahink/conductor/commit/3e53a3c) docs(tracker): SF0.2 handoff - what landed, what SF0.3 picks up, and the live-proof recipe
+  - [`fdd78ae`](https://github.com/shaahink/conductor/commit/fdd78ae) fix(verdict): every claim gets a session, the RED line names what it queues, and a confirmed last stage stops spinning
 
 ## Phase handovers (audit)
 
@@ -165,26 +173,25 @@ engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: SF0.1 delivered and claimed with evidence at `.conductor/evidence/SF0/SF0.1-inert-keys-and-the-notification-path.md` (commit `5217986`, pushed to `feat/sarban`) — bug 6's two inert model pins deleted and refused at plan load with doctor naming the key that works, bug 11's `verifyEachDelivery` wired as the lowest-precedence input to `EffectiveSkipVerification` with the phantom `ShouldVerify` deleted, bug 2's false `Run services started: TelegramService` replaced by an honest started/not-started pair via the new `IReportsStartOutcome`, and FU-OWNER-12's readiness sentence now logged once at run start in `TelegramReadiness`' words. Nothing is red: build clean, 87 scoped tests pa…
+> SESSION-RESULT: **SF0.2 landed and is claimed** (`conductor task --done SF0.2 --evidence .conductor/evidence/SF0/SF0.2-verdict-counts-every-claim.md`), commits `fdd78ae` (fix) and `3e53a3c` (handoff), pushed to `feat/sarban`; working tree clean. All four of the core run's bugs in this checkpoint are fixed, and the three *engine* bugs were first **reproduced against the pre-fix engine at `5217986` with the identical test code** — pre-fix 3 failed / 13 passed (bug 3's hang killed at 4m1s by the test's own deadline), fixed 16/16, full suite 1485/1485. **Bug 10:** `EvaluateSessionAsync` read the work graph on the delivery path only, so a checkpoint claimed during a Verify or Audit session was co…
 
 ## Tracker handoff
 
 ```
-last: **SF0.1 CLAIMED** — bugs 6, 11, 2 + FU-OWNER-12. Bug 6's two model pins are DELETED and
-  refused at plan load (bug-7's `[JsonExtensionData]` precedent; deleting the property is the
-  load-bearing half — `plan set` validates off the type graph). Bug 11's `verifyEachDelivery` is
-  WIRED as lowest-precedence input to `EffectiveSkipVerification` — not deleted, because
-  `conductor-maestro.plan.json:117` has set it false since M3; the phantom `ShouldVerify` is gone.
-stage: **SF0 IN PROGRESS** (attempt 1). Evidence: `.conductor/evidence/SF0/`.
-gate: not run by me (conductor owns it). Fast loop green: build clean, 87 tests pass across the new
-  `SF0_1InertPlanKeysTests` + DefaultQaPolicy/Advisor/PlanSet/ItemQa/QaDial suites.
-next: **SF0.2** — bug 10 (a claim made during Verify/Audit belongs to no session) with the
-  `rec.GateSummary ?? completed` empty-string evidence fallback fixed in the SAME change, plus bugs
-  4, 3 and 8. Read the carried-forward bug table in `.conductor/followups.md`; those eleven are NOT
-  in your run.db.
-trap: reusable proof rig at `%TEMP%\sarban-proofs\sf01` — wire a fake agent as THREE args
-  (`"/c"`, absolute `.cmd`, `"{prompt}"`); combining them makes cmd fail silently and every verdict
-  reads `commits 0`. `ClearProviders()` means ILogger lines never reach `conductor.log` — only
-  `_ctx.Log` does. A pipe in a `dotnet test --filter` needs PowerShell's `--%` before `conductor bg`.
+last: **SF0.2 CLAIMED** (commit `fdd78ae`) — bugs 10, 4, 3, 8. All three ENGINE bugs were first
+  reproduced against the engine at `5217986` with the same test code, then fixed: pre-fix 3 failed
+  / 13 passed (bug 3's hang killed at 4m1s by the test's own deadline), fixed 16/16, suite 1485/1485.
+  Bug 10's rider is bigger than the ledger says: the dead `GateSummary` fallback was OVERWRITING the
+  agent's `--evidence` path with the battery token — that is why SF0.1's row reads `engine-fast:OK`.
+stage: **SF0 IN PROGRESS** (attempt 1). Evidence: `.conductor/evidence/SF0/` (gitignored, local).
+gate: not run by me (conductor owns it). Fast loop green: build clean, full suite 1485/1485.
+next: **SF0.3** — bugs 9, 5, 12, 13 (one pid-liveness policy incl. MCP, bg status survives an
+  uninspectable pid, bg start's leaked stdout handle, bg logs on a LIVE log) + FU-OWNER-9's self-PID
+  guard. Read the carried-forward bug table in `.conductor/followups.md`; those rows are NOT in run.db.
+trap: for a live proof, copy `SC51BlockedUntilLiveTests` — `conductor.exe` sits beside the test
+  assembly, the plan is serialised so the CLI and engine share one run.db, a marker file switches the
+  fake agent's behaviour, and the agent is THREE args (`"/c"`, absolute `.cmd`, `"{prompt}"`). In cmd
+  put the redirect FIRST or the digit before `>` is read as a stream number. `IProgressSink` is 4
+  members — a recording sink costs ten lines. A pipe in `--filter` needs PowerShell's `--%`.
   Second conductor run live on this machine: no install.ps1, no killing pids unchecked, own port.
 ```
