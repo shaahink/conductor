@@ -101,6 +101,17 @@ public sealed class RunState
     /// Same crash-survival semantics as <see cref="PerRunCostUsd"/>.</summary>
     public decimal PerRunOverheadCostUsd { get; set; }
 
+    /// <summary>SC2.3: when the CURRENT budget window opened — i.e. the instant of the owner approval
+    /// that last zeroed <see cref="PerRunCostUsd"/>. Null means no approval has happened, so the window
+    /// IS the run and window spend equals lifetime spend. Without it, <c>PerRunCostUsd</c> is a number
+    /// with no anchor: a surface reading "$4 spent" cannot say spent since when, and the difference
+    /// between that and <see cref="TotalCostUsd"/> was silently read as a discount.</summary>
+    public DateTime? BudgetWindowStartedUtc { get; set; }
+
+    /// <summary>SC2.3: how many times an owner has approved past a budget park on this run. Zero means
+    /// every spend figure on every surface is a lifetime figure and can be compared directly.</summary>
+    public int BudgetApprovals { get; set; }
+
     /// <summary>SC2.2: the attempt number the NEXT session on this stage will report. <see
     /// cref="AttemptsThisStage"/> counts attempts already spent, so every line that announces a session
     /// it is about to queue must say this — the phase-gate RED line said <c>attempt 1/2</c> three

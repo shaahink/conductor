@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Conductor.Core;
+using Conductor.Core.Events;
 using Conductor.Core.Store;
 using Conductor.Models;
 
@@ -41,7 +42,34 @@ public sealed record StateDto(
     // SC2.2: the instant AttentionReason was raised. A reason with no age reads the same after four
     // seconds and after four hours, and the Face had no way to tell them apart. Absent/null = no
     // attention raised, or a run whose state.json predates SC2.2.
-    DateTime? AttentionSinceUtc = null);
+    DateTime? AttentionSinceUtc = null,
+    // ── SC2.3: the budget block. Every one of these was computed OUTSIDE the engine before, by each
+    // surface subtracting numbers it had to guess the meaning of — and after a budget approval the
+    // guess was wrong, because the cap is measured against a window that the approval resets while
+    // TotalCostUsd keeps counting the whole run. The engine answers all of it now, once.
+    //
+    // How the live session's cost is known: "measured" (the CLI's own recorded total, session over),
+    // "streamed" (the provider put cost on the wire), "estimated-from-run-rate" (real tokens priced at
+    // this run's observed dollars-per-token), "no-rate-yet" (real tokens, no rate to price them with),
+    // "none" (nothing in flight). See LiveCostEstimator — the vocabulary is closed and lives there.
+    string SessionCostBasis = LiveCostEstimator.BasisNone,
+    // Spend against the cap: the CURRENT budget window, in-flight session included. This — not
+    // LifetimeCostUsd — is what limits.maxRunCostUsd is compared with.
+    decimal CostSpent = 0m,
+    // limits.maxRunCostUsd, or null when the plan sets no cost cap. Null cap = null remaining, not
+    // an infinite one: "no cap" and "loads left" are different facts and must not render the same.
+    decimal? CostCap = null,
+    decimal? CostRemaining = null,
+    // Mean cost of the run's finished, priced sessions — the honest input to "how many more fit".
+    decimal MeanSessionCost = 0m,
+    int CheckpointsRemaining = 0,
+    // Window vs lifetime. Equal until an owner approves past a budget park; after that the window
+    // restarts at that instant and the lifetime keeps counting, so a takeover can no longer subtract
+    // one from the other and call the difference spend.
+    decimal WindowCostUsd = 0m,
+    decimal LifetimeCostUsd = 0m,
+    DateTime? BudgetWindowStartedUtc = null,
+    int BudgetApprovals = 0);
 
 public static class ControlPlaneDto
 {

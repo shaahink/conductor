@@ -6,12 +6,24 @@ public sealed class AgentStreamState(Action<string, string> emit, Action<long, l
 {
     private readonly Lock _lock = new();
     private readonly StringBuilder _buffer = new();
+    private readonly HashSet<string> _countedMessageIds = new(StringComparer.Ordinal);
     private readonly Action<long, long, long, long, decimal>? _onTokenDelta = onTokenDelta;
 
     public void Emit(string kind, string text) => emit(kind, text);
 
     public void EmitTokenDelta(long input, long output, long reasoning, long cacheRead, decimal costUsd)
         => _onTokenDelta?.Invoke(input, output, reasoning, cacheRead, costUsd);
+
+    /// <summary>SC2.3: true the FIRST time a given wire message id is offered for live accounting,
+    /// false every time after. A provider whose stream re-emits one message once per content block
+    /// (claude does — a thinking block and a text block of the same <c>message.id</c> arrive as two
+    /// lines carrying the SAME usage) calls this before folding that usage, so the live ticker counts
+    /// each API call once instead of overcounting 3-4x. The set is per-session because this state is:
+    /// ids never leak between sessions.</summary>
+    public bool TryCountMessageOnce(string messageId)
+    {
+        lock (_lock) return _countedMessageIds.Add(messageId);
+    }
 
     public void AppendResultLine(string s)
     {

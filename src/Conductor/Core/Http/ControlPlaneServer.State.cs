@@ -33,6 +33,10 @@ public sealed partial class ControlPlaneServer
         var dto = ControlPlaneDto.FromSnapshot(snap, runState.RunId, _plan.Repo, _plan.PlanDir,
             _state.MaxSessionTokensThisRun, _plan.Tracker, _plan.StateDir);
         dto = WithLiveSessionMetrics(dto, events, runState);
+        // SC2.3: the budget block reads the LIVE RunState, not the fold — PerRunCostUsd (the window
+        // the cap is actually measured against) and the approval bookkeeping are run-state, so the
+        // fold cannot see them, and every surface that tried to derive them got it wrong.
+        dto = WithBudget(dto, _plan.Limits, _state);
 
         // The folded projection never carries run-loop status (it is runtime state, not an event):
         // SnapshotBuilder saw a perpetual Idle, so the Face's top bar read IDLE — and its kind slot
@@ -64,9 +68,16 @@ public sealed partial class ControlPlaneServer
     /// <see cref="SnapshotBuilder"/> can't see the event log, so it always reports zero live spend; here
     /// we add the in-flight session's folded deltas on top of the (finished-session) totals it produced.
     /// Once the session finishes its cost is in <see cref="RunState.History"/>, so we stop adding the
-    /// live estimate to avoid double-counting.</summary>
+    /// live estimate to avoid double-counting.
+    /// <para>SC2.3 extends it two ways. In flight, the folded deltas are priced by
+    /// <see cref="LiveCostEstimator"/> and the answer is LABELLED, because for a claude-provider run
+    /// the deltas carry tokens but no money. Once the session is over, its cost and tokens are read
+    /// off the finished record: the fold is a live estimate and has no business outliving the thing
+    /// it estimated — reporting it after exit is how <c>sessionCostUsd</c> snapped back to 0.00 the
+    /// instant a claude session ended.</para></summary>
     internal static StateDto WithLiveSessionMetrics(StateDto dto, IReadOnlyList<ConductorEvent> events, RunState runState)
     {
+        ArgumentNullException.ThrowIfNull(runState);
         if (runState.SessionCounter <= 0) return dto;
 
         var current = runState.History.LastOrDefault(h => h.Number == runState.SessionCounter);
@@ -76,18 +87,79 @@ public sealed partial class ControlPlaneServer
             ? Math.Max(0, (DateTime.UtcNow - current.StartedUtc).TotalSeconds)
             : dto.SessionElapsedSec;
 
+        if (!sessionLive)
+        {
+            // Session over: the CLI's own recorded numbers, or nothing to say if it recorded none.
+            var recorded = current?.CostUsd;
+            return dto with
+            {
+                AgentActive = false,
+                SessionElapsedSec = elapsed,
+                SessionCostUsd = recorded ?? 0m,
+                SessionCostBasis = recorded is null ? LiveCostEstimator.BasisNone : LiveCostEstimator.BasisMeasured,
+                SessionTokensInput = current?.TokensInput ?? 0,
+                SessionTokensOutput = current?.TokensOutput ?? 0,
+                SessionTokensReasoning = current?.TokensReasoning ?? 0,
+            };
+        }
+
+        var estimate = LiveCostEstimator.ForLiveSession(live, runState.History);
         return dto with
         {
-            AgentActive = sessionLive,
+            AgentActive = true,
             SessionElapsedSec = elapsed,
-            SessionCostUsd = live.CostUsd,
+            SessionCostUsd = estimate.CostUsd,
+            SessionCostBasis = estimate.Basis,
             SessionTokensInput = live.Input,
             SessionTokensOutput = live.Output,
             SessionTokensReasoning = live.Reasoning,
-            TotalCostUsd = sessionLive ? dto.TotalCostUsd + live.CostUsd : dto.TotalCostUsd,
-            TokensInput = sessionLive ? dto.TokensInput + live.Input : dto.TokensInput,
-            TokensOutput = sessionLive ? dto.TokensOutput + live.Output : dto.TokensOutput,
-            TokensReasoning = sessionLive ? dto.TokensReasoning + live.Reasoning : dto.TokensReasoning,
+            TotalCostUsd = dto.TotalCostUsd + estimate.CostUsd,
+            TokensInput = dto.TokensInput + live.Input,
+            TokensOutput = dto.TokensOutput + live.Output,
+            TokensReasoning = dto.TokensReasoning + live.Reasoning,
+        };
+    }
+
+    /// <summary>SC2.3: the spend-vs-cap block, computed once by the engine instead of re-derived by
+    /// every surface. <paramref name="liveState"/> is the run loop's own RunState — the only place
+    /// <see cref="RunState.PerRunCostUsd"/> (spend in the CURRENT budget window) and the approval
+    /// bookkeeping live.</summary>
+    /// <remarks>The distinction that makes this worth a function: <c>limits.maxRunCostUsd</c> is
+    /// compared against the WINDOW, and an owner approval resets that window to zero — while
+    /// <see cref="RunState.TotalCostUsd"/> keeps counting every session the run ever ran. Serving one
+    /// number and letting readers subtract produced a remaining figure that was wrong by the entire
+    /// pre-approval spend. Both are on the wire now, each named for what it is.
+    /// <para><paramref name="dto"/> arrives with the in-flight estimate already folded into
+    /// <c>TotalCostUsd</c> and <c>SessionCostUsd</c> by <see cref="WithLiveSessionMetrics"/>, so the
+    /// window adds the same in-flight figure and the two stay consistent to the cent.</para></remarks>
+    internal static StateDto WithBudget(StateDto dto, LimitsConfig? limits, RunState liveState)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        ArgumentNullException.ThrowIfNull(liveState);
+
+        var inFlight = dto.AgentActive ? dto.SessionCostUsd : 0m;
+        var window = liveState.PerRunCostUsd + inFlight;
+        var lifetime = dto.TotalCostUsd;
+        var cap = limits?.MaxRunCostUsd;
+
+        var priced = liveState.History.Where(h => h.EndedUtc != null && h.CostUsd is > 0).ToList();
+        var mean = priced.Count > 0
+            ? decimal.Round(priced.Sum(h => h.CostUsd!.Value) / priced.Count, 4, MidpointRounding.AwayFromZero)
+            : 0m;
+
+        return dto with
+        {
+            CostSpent = window,
+            CostCap = cap,
+            // No cap means no remaining — NOT an unbounded one. A surface must be able to tell
+            // "this plan set no ceiling" apart from "there is plenty left".
+            CostRemaining = cap is { } c ? c - window : null,
+            MeanSessionCost = mean,
+            CheckpointsRemaining = Math.Max(0, dto.TotalCount - dto.DoneCount),
+            WindowCostUsd = window,
+            LifetimeCostUsd = lifetime,
+            BudgetWindowStartedUtc = liveState.BudgetWindowStartedUtc,
+            BudgetApprovals = liveState.BudgetApprovals,
         };
     }
 

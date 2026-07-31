@@ -57,8 +57,9 @@ public sealed class ClaudeProvider : IAgentProvider
                     state.AuthFailure ??= detail;
                 break;
             case "assistant":
-                if (root.TryGetProperty("message", out var msg) &&
-                    msg.TryGetProperty("content", out var content) &&
+                if (!root.TryGetProperty("message", out var msg)) break;
+                EmitLiveUsage(msg, state);
+                if (msg.TryGetProperty("content", out var content) &&
                     content.ValueKind == JsonValueKind.Array)
                 {
                     foreach (var block in content.EnumerateArray())
@@ -91,6 +92,38 @@ public sealed class ClaudeProvider : IAgentProvider
                 state.Emit("raw", ProviderText.Trunc(line, 180));
                 break;
         }
+    }
+
+    /// <summary>
+    /// SC2.3 — the LIVE half of usage accounting: one <see cref="AgentStreamState.EmitTokenDelta"/>
+    /// per assistant message, as it streams, so <c>/state</c> can show spend accruing during a session
+    /// instead of a flat $0.00 for its whole length followed by a jump at exit.
+    /// </summary>
+    /// <remarks>
+    /// This does NOT touch <see cref="AgentStreamState.TokensInput"/> and friends — those stay the
+    /// authoritative session totals read off the terminal <c>result</c> envelope by
+    /// <see cref="ReadUsage"/>. Two channels on purpose: the deltas are a live estimate the ticker
+    /// consumes and discards the moment the session ends; the result envelope is what the run records.
+    /// <para>Deduplicated by <c>message.id</c>, because claude re-emits one message once per content
+    /// block carrying the SAME usage — the exact overcount (3-4x on real logs) that put usage on the
+    /// result envelope in the first place. An envelope with no id is skipped rather than guessed at:
+    /// with no id there is no way to tell a fresh API call from a re-emission, and a live ticker that
+    /// reads 4x high is no better than one that reads zero.</para>
+    /// <para>The delta carries no cost. Claude's wire reports no money before the result envelope, so
+    /// there is none to report; <c>LiveCostEstimator</c> turns these real token counts into a labelled
+    /// dollar estimate downstream rather than this parser inventing one.</para>
+    /// </remarks>
+    private static void EmitLiveUsage(JsonElement msg, AgentStreamState state)
+    {
+        if (!msg.TryGetProperty("usage", out var u) || u.ValueKind != JsonValueKind.Object) return;
+        if (!msg.TryGetProperty("id", out var mid) || mid.ValueKind != JsonValueKind.String) return;
+        if (mid.GetString() is not { Length: > 0 } id || !state.TryCountMessageOnce(id)) return;
+
+        var input = Num(u, "input_tokens") + Num(u, "cache_creation_input_tokens");
+        var output = Num(u, "output_tokens");
+        var cacheRead = Num(u, "cache_read_input_tokens");
+        if (input == 0 && output == 0 && cacheRead == 0) return;
+        state.EmitTokenDelta(input, output, reasoning: 0, cacheRead, costUsd: 0m);
     }
 
     /// <summary>
