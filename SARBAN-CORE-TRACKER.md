@@ -4,24 +4,24 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SC3.3 claimed**, commit 503d7e6. One definition now owns what a placeholder is and what the
-  doubled-brace escape means (Conductor.Planning.PromptPlaceholders, beside ConditionVocabulary).
-  Authored prose - stage notes, promptExtra - is judged at plan LOAD, so load, live reload and doctor
-  refuse the same thing. Every substituted VALUE is held as written, so a brace in a handoff, gate
-  output, an agent tail or a stage title is prose and can never throw - that was the killer class.
-  A genuinely broken template PARKS at NeedsHuman instead of exiting; doctor composes every session
-  kind per stage to catch it pre-launch, and run --dry-run refuses with the same sentence.
-gate: fast loop green - build clean, 160 scoped tests, 0 skipped, ratchet OK (pragmas 37 of 38,
-  archdebt 0). NOTE the ratchet caught RunLoop.cs at 506 over its 500 ceiling; the ceiling was NOT
-  raised, the park handler moved to RunLoop.Snapshot.cs. Evidence
-  .conductor/evidence/SC3/SC3.3-brace-safety.md, rig TEMP/sarban-proofs/sc33. Live-proven both ways:
-  published engine stderr-only + log silent + status 'idle'; fresh build stderr 0 bytes, whole refusal
-  in conductor.log, engine still up, and 'session #1 start' after the operator fixed the template.
-next: **SC3.4** - advisor: the shipped default args launch a bare interactive REPL that hangs 6 min and
-  returns null; make it a working headless invocation or refuse at load with a doctor line, and fix
-  docs/plan-config.md's advisor section. Bug 7 (advisor.provider dropped in 5 plans) is yours too.
-know: The brace discipline for THIS repo's prose still stands until the owner reinstalls - the engine
-  driving these sessions is the old published one. Bugs 2,3,4,5,6,7 open.
+last: **SC3.4 claimed**, commit abe0eb1 - stage SC3 is complete. The advisor answers by default now:
+  AdvisorConfig.Args defaults to a headless one-shot, and an invocation that cannot answer is refused
+  at plan LOAD - empty args, no prompt placeholder, an output kind nothing unwraps, timeout under 1 -
+  with doctor reporting it as the plan check plus a new advisor line naming the invocation. Bug 7
+  closed: advisor.provider is gone from 5 plans and any unknown advisor key is now named at load.
+  Also fixed in the same family: an unfilled model placeholder in advisor args is dropped with its
+  flag (the init scaffold ships one), and chat now uses the one shared spawn path.
+gate: full suite 1212 passed, 0 failed, 0 skipped; build clean; ratchet OK (pragmas 37 of 38, archdebt
+  0), nothing weakened. Evidence .conductor/evidence/SC3/SC3.4-advisor.md, rig TEMP/sarban-proofs/sc34.
+  LIVE both ways on the same rig run: published engine logs 'advisor gave no parseable verdict' then
+  'advisor unavailable'; fresh build logs 'advisor verdict: ResetBudget - ...' and the loop acts on it.
+next: **SC4.1** - the battery must settle before it judges: wait for the session's tracked bg children
+  to exit before starting gates, retry a failed required gate once unconditionally before GatesRed,
+  and put duration vs last passing duration on the failure line.
+know: A rig BEFORE proof of the advisor hang did NOT reproduce - claude.exe errors in 2.5s on a
+  non-interactive stdin rather than hanging 6 min; the defect that reproduces is that it answers
+  nothing. Brace discipline for THIS repo's prose still stands until the owner reinstalls, and keep
+  double quotes out of conductor note text (the arg parser reads embedded flags). Bugs 2,3,4,5,6 open.
 
 
 ## Baseline numbers (from run.db)
@@ -30,7 +30,7 @@ know: The brace discipline for THIS repo's prose still stands until the owner re
 |---|---|
 | Total checkpoints | 26 |
 | Done | 0 |
-| Claimed (unconfirmed) | 9 |
+| Claimed (unconfirmed) | 10 |
 
 ## Checkpoints
 
@@ -60,7 +60,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | SC3.1 | doctor FAILS when agent.model is set without the model token in both args and resumeArgs; unknown RunIf or SkipIf tokens fail at plan load naming the valid vocabulary | DONE | d4c9103 | engine-fast:OK · face-fast:OK |
 | SC3.2 | plan set refuses an absent leaf key without --create, suggests the dotted path when one nested leaf matches, warns before stripping comments, and reaches the live engine or prints the exact reload command | DONE | 587eadd | engine-fast:OK · face-fast:OK |
-| SC3.3 | A literal brace in stage notes or promptExtra is caught by doctor at plan load; at runtime an unresolved placeholder parks the run and writes the refusal to conductor.log; a double brace escapes to a literal | TODO | - | - |
+| SC3.3 | A literal brace in stage notes or promptExtra is caught by doctor at plan load; at runtime an unresolved placeholder parks the run and writes the refusal to conductor.log; a double brace escapes to a literal | DONE | 503d7e6 | engine-fast:OK · face-fast:OK |
 | SC3.4 | The default advisor invocation works headless or is refused loudly at load with a doctor line; plan-config.md matches the code | TODO | - | - |
 
 ### SC4 — Verdicts judge the work, not the environment
