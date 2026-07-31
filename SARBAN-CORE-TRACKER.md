@@ -4,23 +4,22 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SC1.2 claimed** (commit 160f731). One helper, Core/Integrations/TelegramReadiness, now owns
-  the delivery verdict; doctor, GET /telegram/status and StartAsync all read it. Status carries
-  willDeliver plus doctor's own sentence; POST /telegram/test travels the real send queue and says
-  loudly when it cannot; StartAsync logs both outcomes. Evidence:
-  .conductor/evidence/SC1/SC1.2-status-tells-the-truth.md
-gate: build clean, 65/65 scoped, ratchet OK at 37 pragmas, face build+vet+goldens green.
-next: **SC1.3** - late token or telegram-block config takes effect without a restart, or every
-  surface says restart required, including the plan.Telegram null to NoOp swap path.
-know: TelegramService resolves the token ONCE in its constructor, so POST /telegram/token cannot
-  take effect today - that is SC1.3's core. The Face is now the weakest surface and SC1.3 names it:
-  renderTelegramStatusLine still says connected on started+hasToken and ignores willDeliver, and
-  MsgTelegramTested drops the new viaQueue and detail, so a bypass is invisible to whoever presses
-  Test. face-go/internal/api/types.go needs those four fields; telegram_* goldens then need their
-  own rebaseline commit.
-rig: TEMP/sarban-proofs/sc12 plus proof-drive.ps1. control-plane.json is DELETED on shutdown, so
-  interrogate during the run - hold the session open with a pinging fake agent. The url field is
-  baseUrl. GET needs no token; POST needs X-Conductor-Token from that file.
+last: **SC1.3 claimed** (7d7372e engine+face, 4620370 goldens). SC1 is now complete: a late token
+  and a late telegram block both reach the RUNNING engine - TelegramService re-resolves both and
+  restarts itself, ConductorHost always registers the real service so a block added mid-run has
+  somewhere to land, and restartRequired names the one case a live save cannot fix. Evidence:
+  .conductor/evidence/SC1/SC1.3-late-config-takes-effect.md
+gate: build clean 0 warnings, 172/172 scoped, ratchet OK at 37 pragmas, face build+vet+tests green.
+next: **SC2.1** - status must stop calling a healthy run interrupted during the exit-to-verdict
+  window; a gate executing counts as engine liveness. StatusReportBuilder scans spawned pids only.
+know: TelegramService is restartable now - the send Channel and the CTS are recreated per start
+  (a completed channel drops everything silently), and start/stop/reload are serialised by the
+  _gate semaphore. Every run without a telegram block now logs one extra INFO line, deliberately.
+  Bug 2 is still open: 'Run services started: TelegramService' prints even when that service
+  early-returned; SC2's honest-surfaces work is the natural home for it.
+rig: live proofs at TEMP/sarban-proofs/sc13 (plan-swap) and sc13b (control-plane token). sc13b's
+  run-engine.cmd clears CONDUCTOR_TELEGRAM_TOKEN for the child. A staged secrets.local.json must
+  use PascalCase TelegramToken - lowercase does not bind and looks exactly like a missing token.
 
 
 ## Baseline numbers (from run.db)
@@ -29,7 +28,7 @@ rig: TEMP/sarban-proofs/sc12 plus proof-drive.ps1. control-plane.json is DELETED
 |---|---|
 | Total checkpoints | 26 |
 | Done | 0 |
-| Claimed (unconfirmed) | 1 |
+| Claimed (unconfirmed) | 2 |
 
 ## Checkpoints
 
@@ -41,7 +40,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | SC1.1 | The engine starts Telegram on every run path: a configured live run delivers a real session-end push and answers two-way status, and a regression test drives the real run-start path | DONE | b7d6eb4 | engine-fast:OK · face-fast:OK |
-| SC1.2 | /telegram/status carries a derived willDeliver verdict; POST /telegram/test routes through the real send queue or loudly says it bypassed it; StartAsync logs on both outcomes naming any missing half | TODO | - | - |
+| SC1.2 | /telegram/status carries a derived willDeliver verdict; POST /telegram/test routes through the real send queue or loudly says it bypassed it; StartAsync logs on both outcomes naming any missing half | DONE | 160f731 | engine-fast:OK · face-fast:OK |
 | SC1.3 | Late token or telegram-block configuration takes effect without a full restart, or every surface honestly says restart required — including the NoOp-service swap path; the chat-id bootstrap is documented | TODO | - | - |
 
 ### SC2 — Truthful surfaces
