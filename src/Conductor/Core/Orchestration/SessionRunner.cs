@@ -267,7 +267,7 @@ public sealed partial class SessionRunner
         }
 
         using (var agent = AgentSession.Start(resolvedAgent, _ctx.Plan.Repo, prompt, rec.ClaudeSessionId,
-                   kind == SessionKind.Resume ? rec.ClaudeSessionId : null, rawLog, _ctx.Events, rec.Number.ToString(), extraEnv, supervisor: _ctx.ProcessSupervisor, extraArgs: extraArgs))
+                   kind == SessionKind.Resume ? rec.ClaudeSessionId : null, rawLog, _ctx.Events, rec.Number.ToString(), extraEnv, supervisor: _ctx.ProcessSupervisor, extraArgs: extraArgs, stageId: stage.Id))
         {
             _ctx.Activity.Clear();
             var lastHeartbeat = DateTime.UtcNow;

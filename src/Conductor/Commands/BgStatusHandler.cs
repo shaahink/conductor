@@ -41,18 +41,23 @@ internal static class BgStatusHandler
             .AddColumn("PID")
             .AddColumn("Purpose")
             .AddColumn("Status")
-            .AddColumn("Started")
-            .AddColumn("Runtime");
+            .AddColumn("Started (local)")
+            .AddColumn("Runtime")
+            .AddColumn("Log");
 
+        var bgLogDir = Path.Combine(plan.StateDir, "bg-logs");
         foreach (var p in pids)
         {
             var alive = PidLiveness.LooksAlive(p.Pid, p.StartedUtc);
             var status = p.ExitedUtc != null
-                ? $"[grey]exited ({p.ExitedUtc:HH:mm:ss})[/]"
+                ? $"[grey]exited ({p.ExitedUtc.Value.ToLocalTime():HH:mm:ss})[/]"
                 : alive
                     ? "[green]running[/]"
                     : "[red]dead[/]";
-            var startStr = p.StartedUtc.ToString("HH:mm:ss");
+            // SC5.4: clock times render LOCAL, matching `status` and the log lines; durations are
+            // computed entirely in UTC. Mixing the two is what printed `-1694s` for a live job
+            // (round-four #4) — see SqliteRunStore.ParseUtc for why the row read local to begin with.
+            var startStr = p.StartedUtc.ToLocalTime().ToString("HH:mm:ss");
             var runtime = p.ExitedUtc != null
                 ? FormatDuration(p.ExitedUtc.Value - p.StartedUtc)
                 : alive
@@ -64,13 +69,25 @@ internal static class BgStatusHandler
                 Markup.Escape(p.Purpose),
                 status,
                 Markup.Escape(startStr),
-                Markup.Escape(runtime));
+                Markup.Escape(runtime),
+                Markup.Escape(LogTargetFor(bgLogDir, store, runId, p)));
         }
         AnsiConsole.Write(table);
 
         // Hint about log paths
         AnsiConsole.MarkupLine("[grey]Logs: .conductor/bg-logs/  (use 'conductor bg logs <pid>' to tail)[/]");
         return 0;
+    }
+
+    /// <summary>SC5.4: the file `bg logs &lt;pid&gt;` will actually read for this row, named in the
+    /// table so the operator never has to guess. An agent row points at its session stream under
+    /// <c>logs/</c>; everything else at its child log under <c>bg-logs/</c>.</summary>
+    private static string LogTargetFor(string bgLogDir, IRunStore store, string runId, PidRow p)
+    {
+        if (BgLogs.IsAgentRow(p))
+            return BgLogs.SessionNumberFor(p) is { } n ? $"logs/{BgLogs.StreamName(n)}" : "—";
+        var log = BgLogs.Resolve(bgLogDir, p.Pid, store, runId);
+        return log == null ? "—" : $"bg-logs/{Path.GetFileName(log)}";
     }
 
     /// <summary>SC4.1: this had its own copy of the liveness check, and that copy let a Win32

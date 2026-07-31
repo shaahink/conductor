@@ -95,7 +95,7 @@ public sealed class AgentSession : IDisposable
     /// resolution (SC3.4), which drops an unfilled <c>{model}</c> the same way this does.</summary>
     internal static bool IsModelFlag(string s) => s is "--model" or "-m" or "--model=";
 
-    public static AgentSession Start(AgentConfig cfg, string cwd, string prompt, string sessionId, string? resumeClaudeId, string rawLogPath, IEventSink? eventSink = null, string? conductorSessionId = null, Dictionary<string, string>? extraEnv = null, ProcessSupervisor? supervisor = null, IReadOnlyList<string>? extraArgs = null)
+    public static AgentSession Start(AgentConfig cfg, string cwd, string prompt, string sessionId, string? resumeClaudeId, string rawLogPath, IEventSink? eventSink = null, string? conductorSessionId = null, Dictionary<string, string>? extraEnv = null, ProcessSupervisor? supervisor = null, IReadOnlyList<string>? extraArgs = null, string? stageId = null)
     {
         var template = (resumeClaudeId != null && cfg.ResumeArgs is { Count: > 0 }) ? cfg.ResumeArgs : cfg.Args;
         var args = ResolveArgs(template, prompt, sessionId, resumeClaudeId, cfg.Model);
@@ -131,7 +131,19 @@ public sealed class AgentSession : IDisposable
         proc.ErrorDataReceived += (_, e) => session.OnLine(e.Data, stderr: true);
         proc.Start();
         session._job.Assign(proc);
-        session._supervisorTrack = supervisor?.Track(proc, $"agent:stage:{conductorSessionId ?? sessionId}:session#{conductorSessionId ?? sessionId}");
+        // SC5.4: stamp the row with the stage and session it belongs to. Both columns were NULL for
+        // every agent row ever written, and the purpose read `agent:stage:14:session#14` — where the
+        // "stage" was the session number a second time, not a stage. That is why `bg logs <agent pid>`
+        // had nothing to resolve against: `bg status` could list the session but the row did not say
+        // which session it was. The `session#N` tail stays in the purpose as the fallback for rows
+        // already in run.db (BgLogs.SessionNumberFor).
+        var sessionNumber = int.TryParse(conductorSessionId, System.Globalization.CultureInfo.InvariantCulture, out var sn)
+            ? (int?)sn : null;
+        session._supervisorTrack = supervisor?.Track(
+            proc,
+            $"agent:{stageId ?? "stage"}:session#{conductorSessionId ?? sessionId}",
+            stageId,
+            sessionNumber);
         try { proc.StandardInput.Close(); } catch { /* agent may not read stdin */ }
         proc.BeginOutputReadLine();
         proc.BeginErrorReadLine();

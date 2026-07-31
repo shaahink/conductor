@@ -25,6 +25,49 @@ public static class BgLogs
     /// <summary>Compact, sortable, filename-safe UTC stamp.</summary>
     public const string StampFormat = "yyyyMMdd-HHmmssfff";
 
+    /// <summary>The purpose prefix <see cref="AgentSession"/> tracks a live agent under. An agent is
+    /// the one tracked pid that has no bg-log at all — its output goes to the session stream.</summary>
+    public const string AgentPurposePrefix = "agent:";
+
+    /// <summary>SC5.4: true for the run's own agent sessions, which <see cref="Resolve"/> can never
+    /// answer for — there is no file under <c>bg-logs/</c> with their name on it.</summary>
+    public static bool IsAgentRow(PidRow row) =>
+        row is not null && row.Purpose.StartsWith(AgentPurposePrefix, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>The session an agent pid row belongs to. The column is authoritative; the
+    /// <c>session#N</c> tail of the purpose is the fallback that keeps rows written before SC5.4
+    /// (stage_id and session_number both NULL for every agent row) resolvable.</summary>
+    public static int? SessionNumberFor(PidRow row)
+    {
+        if (!IsAgentRow(row)) return null;
+        if (row!.SessionNumber is > 0) return row.SessionNumber;
+        var hash = row.Purpose.LastIndexOf("session#", StringComparison.OrdinalIgnoreCase);
+        if (hash < 0) return null;
+        var digits = new string(row.Purpose[(hash + "session#".Length)..].TakeWhile(char.IsAsciiDigit).ToArray());
+        return int.TryParse(digits, System.Globalization.CultureInfo.InvariantCulture, out var n) && n > 0 ? n : null;
+    }
+
+    /// <summary>The raw agent stream for session <paramref name="number"/>, written live by
+    /// <see cref="AgentSession"/>. Kept next to <see cref="PromptName"/> under <c>logs/</c>.</summary>
+    public static string StreamName(int number) => $"session-{number:000}.jsonl";
+
+    /// <summary>The composed prompt that started session <paramref name="number"/>.</summary>
+    public static string PromptName(int number) => $"session-{number:000}.prompt.md";
+
+    /// <summary>
+    /// SC5.4 (round-four #4): where `bg logs` on an AGENT row has to look. `bg status` lists the live
+    /// agent, so `bg logs &lt;that pid&gt;` is the obvious way to watch a session — and it answered
+    /// "No log file found" and then printed 67 unrelated bg log names, because an agent's output never
+    /// goes to <c>bg-logs/</c>. It goes here.
+    /// </summary>
+    /// <returns>The stream path, or null when the row is not an agent row or the file is not there.</returns>
+    public static string? ResolveAgentStream(string stateDir, PidRow row)
+    {
+        if (SessionNumberFor(row) is not { } number) return null;
+        var path = Path.Combine(stateDir, "logs", StreamName(number));
+        return File.Exists(path) ? path : null;
+    }
+
     public static string Sanitize(string name)
     {
         var invalid = Path.GetInvalidFileNameChars();
@@ -36,6 +79,15 @@ public static class BgLogs
     /// instant recorded in the pids row — that identity is what makes <see cref="Resolve"/> exact.</summary>
     public static string NameFor(string purpose, DateTime startedUtc) =>
         $"{Sanitize(purpose)}-{startedUtc.ToUniversalTime().ToString(StampFormat, System.Globalization.CultureInfo.InvariantCulture)}.log";
+
+    /// <summary>The pids row for <paramref name="pid"/> in this run, or null when the store cannot be
+    /// asked. Best-effort by design: every caller has a fuzzier path to fall back to.</summary>
+    public static PidRow? FindRow(IRunStore? store, string? runId, int pid)
+    {
+        if (store == null || string.IsNullOrEmpty(runId)) return null;
+        try { return store.GetAllPids(runId).FirstOrDefault(p => p.Pid == pid); }
+        catch (InvalidOperationException) { return null; }
+    }
 
     /// <summary>Find a bg child's log by pid: the legacy pid-suffixed name first, then the exact
     /// name reconstructed from its pids row. Null when there is nothing to read.</summary>

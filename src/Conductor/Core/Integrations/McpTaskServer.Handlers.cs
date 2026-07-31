@@ -256,10 +256,12 @@ public partial class McpTaskServer
             var alive = IsProcessAliveMcp(r.Pid);
             var status = r.ExitedUtc != null ? "exited"
                 : alive ? "running" : "dead";
+            // SC5.4: both operands UTC — `started` is now honestly UTC (SqliteRunStore.ParseUtc), so
+            // this stopped subtracting a local clock from a UTC one and reporting a negative age.
             var runtime = r.ExitedUtc != null
-                ? (r.ExitedUtc.Value - r.StartedUtc).ToString()
+                ? Conductor.Commands.BgStatusHandler.FormatDuration(r.ExitedUtc.Value - r.StartedUtc)
                 : alive
-                    ? (DateTime.UtcNow - r.StartedUtc).ToString()
+                    ? Conductor.Commands.BgStatusHandler.FormatDuration(DateTime.UtcNow - r.StartedUtc)
                     : "";
             return new
             {
@@ -268,6 +270,10 @@ public partial class McpTaskServer
                 status,
                 started = r.StartedUtc.ToString("O"),
                 runtime,
+                // The file `bg_logs` will read for this row — an agent's stream is not under bg-logs/.
+                log = BgLogs.IsAgentRow(r) && BgLogs.SessionNumberFor(r) is { } n
+                    ? $"logs/{BgLogs.StreamName(n)}"
+                    : null,
             };
         }).ToArray();
 
@@ -289,6 +295,25 @@ public partial class McpTaskServer
         if (pid <= 0)
             return JsonSerializer.SerializeToElement(new { ok = false, error = "pid is required." });
 
+        // SC5.4 (round-four #4): an agent's output is not under bg-logs/ and never was — its stream is
+        // logs/session-NNN.jsonl. `bg_status` lists the agent, so this is a pid an agent WILL ask
+        // about; answering "no log file found" sent the operator hunting through 67 unrelated names.
+        // The CLI folds this stream through the plan's provider; this server has no plan, so it
+        // returns the path (the useful half) with a bounded raw tail beside it.
+        var agentRow = BgLogs.FindRow(_store, _runId, pid);
+        if (agentRow != null && BgLogs.IsAgentRow(agentRow))
+        {
+            var number = BgLogs.SessionNumberFor(agentRow);
+            var stream = BgLogs.ResolveAgentStream(_stateDir, agentRow);
+            if (stream == null)
+                return JsonSerializer.SerializeToElement(new
+                {
+                    ok = false,
+                    error = $"pid {pid} is agent session #{number?.ToString() ?? "?"}, but its stream is not on disk.",
+                });
+            return AgentStreamTail(pid, number, stream, tail);
+        }
+
         var logDir = Path.Combine(_stateDir, "bg-logs");
         if (!Directory.Exists(logDir))
             return JsonSerializer.SerializeToElement(new { ok = false, error = "No bg-logs directory found." });
@@ -308,6 +333,37 @@ public partial class McpTaskServer
         catch (IOException ex)
         {
             return JsonSerializer.SerializeToElement(new { ok = false, error = $"Cannot read log: {ex.Message}" });
+        }
+    }
+
+    /// <summary>SC5.4: the tail of an agent's raw stream. One envelope carries a whole assistant
+    /// message, so lines are clipped — an MCP client that wants the full text has the path.</summary>
+    private static JsonElement AgentStreamTail(int pid, int? sessionNumber, string stream, int tail)
+    {
+        try
+        {
+            var window = new Queue<string>(tail);
+            foreach (var line in SharedFileRead.ReadLines(stream))
+            {
+                window.Enqueue(line.Length <= 400 ? line : line[..399] + "…");
+                if (window.Count > tail) window.Dequeue();
+            }
+            return JsonSerializer.SerializeToElement(new
+            {
+                ok = true,
+                pid,
+                sessionNumber,
+                stream,
+                prompt = sessionNumber is { } n
+                    ? Path.Combine(Path.GetDirectoryName(stream)!, BgLogs.PromptName(n))
+                    : null,
+                tail,
+                lines = window.ToArray(),
+            });
+        }
+        catch (IOException ex)
+        {
+            return JsonSerializer.SerializeToElement(new { ok = false, error = $"Cannot read stream: {ex.Message}" });
         }
     }
 

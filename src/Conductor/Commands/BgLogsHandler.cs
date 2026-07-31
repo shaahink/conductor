@@ -1,4 +1,5 @@
 using Conductor.Core;
+using Conductor.Core.Providers;
 using Conductor.Core.Store;
 using Conductor.Models;
 using Spectre.Console;
@@ -20,15 +21,13 @@ internal static class BgLogsHandler
 
         var plan = PlanConfig.Load(settings.ResolvePlanPath());
         var logDir = Path.Combine(plan.StateDir, "bg-logs");
-        if (!Directory.Exists(logDir))
-        {
-            AnsiConsole.MarkupLine("[grey]No bg-logs directory found.[/]");
-            return 0;
-        }
+        var tailCount = settings.Tail > 0 ? settings.Tail : 30;
 
         // Find log file: if target is numeric, match by PID in filename; otherwise try partial match
         string? logFile = null;
-        var files = Directory.GetFiles(logDir, "*.log").OrderByDescending(File.GetLastWriteTime).ToList();
+        var files = Directory.Exists(logDir)
+            ? Directory.GetFiles(logDir, "*.log").OrderByDescending(File.GetLastWriteTime).ToList()
+            : [];
 
         if (int.TryParse(target, out var pid))
         {
@@ -39,11 +38,25 @@ internal static class BgLogsHandler
                 {
                     using var store = new SqliteRunStore(runDb,
                         Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteRunStore>.Instance);
-                    logFile = BgLogs.Resolve(logDir, pid, store, store.GetLatestRunId(plan.Name));
+                    var runId = store.GetLatestRunId(plan.Name);
+                    // SC5.4 (round-four #4): `bg status` lists the live agent, so `bg logs <that pid>`
+                    // is the obvious next move — and it used to answer "No log file found" plus 67
+                    // unrelated names, because an agent never writes to bg-logs/. Its stream is
+                    // logs/session-NNN.jsonl, and this is the branch that says so.
+                    var row = BgLogs.FindRow(store, runId, pid);
+                    if (row != null && BgLogs.IsAgentRow(row))
+                        return PrintAgentStream(plan, row, tailCount);
+                    logFile = BgLogs.Resolve(logDir, pid, store, runId);
                 }
                 catch (InvalidOperationException) { /* best-effort; fall through to the fuzzy paths */ }
             }
             logFile ??= BgLogs.Resolve(logDir, pid, null, null);
+        }
+
+        if (logFile == null && !Directory.Exists(logDir))
+        {
+            AnsiConsole.MarkupLine("[grey]No bg-logs directory found.[/]");
+            return 0;
         }
 
         if (logFile == null)
@@ -65,7 +78,7 @@ internal static class BgLogsHandler
 #pragma warning disable MA0045
         try
         {
-            var tail = settings.Tail > 0 ? settings.Tail : 30;
+            var tail = tailCount;
             // SC2.4 (bug 1): the whole point of `bg logs` is a log a child is STILL writing — the shell
             // doing the redirect holds a Write handle, which File.ReadAllLines' FileShare.Read does not
             // permit, so this printed "being used by another process" for every live job.
@@ -89,6 +102,46 @@ internal static class BgLogsHandler
         }
 #pragma warning restore MA0045
 
+        return 0;
+    }
+
+    /// <summary>SC5.4: what `bg logs` shows for an AGENT row. Names the stream and the prompt beside
+    /// it — the two files an operator watching a session actually wants — then folds the tail through
+    /// the plan's own provider so the envelopes read like the live feed instead of like NDJSON.</summary>
+    private static int PrintAgentStream(PlanConfig plan, PidRow row, int tail)
+    {
+        var number = BgLogs.SessionNumberFor(row);
+        var stream = BgLogs.ResolveAgentStream(plan.StateDir, row);
+        if (stream == null)
+        {
+            AnsiConsole.MarkupLine(
+                $"[red]pid {row.Pid} is agent session #{(number?.ToString() ?? "?")}, but its stream is not on disk.[/]");
+            AnsiConsole.MarkupLine(
+                $"[grey]Expected: {Markup.Escape(Path.Combine(plan.StateDir, "logs", BgLogs.StreamName(number ?? 0)))}[/]");
+            return 1;
+        }
+
+        AnsiConsole.MarkupLine(
+            $"[bold aqua]Agent session #{number}[/] [grey](pid {row.Pid}" +
+            (string.IsNullOrEmpty(row.StageId) ? "" : $", stage {Markup.Escape(row.StageId)}") + ")[/]");
+        AnsiConsole.MarkupLine($"[grey]Stream: {Markup.Escape(stream)}[/]");
+        var prompt = Path.Combine(plan.StateDir, "logs", BgLogs.PromptName(number!.Value));
+        if (File.Exists(prompt))
+            AnsiConsole.MarkupLine($"[grey]Prompt: {Markup.Escape(prompt)}[/]");
+
+#pragma warning disable MA0045 // sync read is deliberate — CLI command
+        try
+        {
+            var lines = SessionStreamTail.Render(stream, AgentProviderFactory.Create(plan.Agent), tail);
+            AnsiConsole.WriteLine();
+            foreach (var line in lines) Console.WriteLine(line);
+        }
+        catch (IOException ex)
+        {
+            AnsiConsole.MarkupLine($"[red]Cannot read stream: {Markup.Escape(ex.Message)}[/]");
+            return 1;
+        }
+#pragma warning restore MA0045
         return 0;
     }
 }
