@@ -30,14 +30,22 @@ public sealed partial class VerdictEngine
     {
         var head = Git.Head(_ctx.Plan.Repo);
         var sig = GateRunner.BatterySignature(_ctx.Plan, head, pg.StageId);
+        var configured = GateRunner.ConfiguredForStage(_ctx.Plan, StageConfigFor(pg.StageId));
         IReadOnlyList<GateResult> gates;
         bool green;
+        var reused = false;
 
         if (sig == _ctx.State.LastGreenGateSig)
         {
-            _ctx.Log($"phase gate {pg.StageId}: tree unchanged since last green battery ({Short(head)}) — reusing result, skipping rerun");
+            reused = true;
             green = true;
             gates = _ctx.LastGates ?? Array.Empty<GateResult>();
+            // SC2.2: the reuse path carried no gate token at all, so a log consumer grepping the canonical
+            // vocabulary saw a stage confirm with no battery verdict anywhere in the run. The signature
+            // match IS a green battery for this exact tree and gate set, so a restart that lost the
+            // in-memory results still reports GREEN rather than mistaking itself for a gateless stage.
+            var reusedToken = gates.Count > 0 ? GateRunner.Token(gates) : configured > 0 ? "gates GREEN" : "gates NONE";
+            _ctx.Log($"phase gate {pg.StageId} finished in 0s — {reusedToken}: tree unchanged since last green battery ({Short(head)}) — reusing result, skipping rerun", "pass");
         }
         else
         {
@@ -60,9 +68,14 @@ public sealed partial class VerdictEngine
             EmitGates(gates, "phase");
             _ctx.RunOverheadUsd += gates.Sum(g => g.EstimatedCostUsd(_ctx.Plan.Limits.OverheadCostPerSecond));
             _ctx.State.PerRunOverheadCostUsd = _ctx.RunOverheadUsd;
-            _ctx.Log($"phase gate {pg.StageId} finished in {sw.Elapsed.TotalSeconds:0}s — {(green ? "GREEN" : "RED")}: {GateRunner.Summary(gates)}", green ? "pass" : "fail");
+            _ctx.Log($"phase gate {pg.StageId} finished in {sw.Elapsed.TotalSeconds:0}s — {GateRunner.Token(gates)}: {GateRunner.Summary(gates)}", green ? "pass" : "fail");
             if (green) _ctx.State.LastGreenGateSig = sig;
         }
+
+        // SC2.2: what this confirmation will actually rest on, decided ONCE here where the plan's
+        // stage-scoped gate set and the battery result are both in hand — not re-guessed by a constant
+        // string at the confirmation site.
+        var basis = GateRunner.ConfirmationBasis(configured, gates, reused);
 
         if (green)
         {
@@ -73,8 +86,8 @@ public sealed partial class VerdictEngine
                 _ctx.State.PendingAudit = null;
                 _ctx.State.PendingPhaseGate = null;
                 _ctx.State.AuditedStages.Add(pg.StageId);
-                _ctx.Log($"phase {pg.StageId} full battery GREEN — confirming now, audit will run in parallel with next deliver");
-                await ConfirmStageAsync(pg.StageId, ct).ConfigureAwait(false);
+                _ctx.Log($"phase {pg.StageId} full battery — {basis} — confirming now, audit will run in parallel with next deliver");
+                await ConfirmStageAsync(pg.StageId, ct, basis).ConfigureAwait(false);
                 return;
             }
             if (_ctx.Plan.Audit is { Enabled: true } && !_ctx.State.AuditedStages.Contains(pg.StageId))
@@ -82,12 +95,12 @@ public sealed partial class VerdictEngine
                 _ctx.State.PendingAudit = new PendingAudit { StageId = pg.StageId, StageStartHead = pg.StageStartHead };
                 _ctx.State.PendingPhaseGate = null;
                 _ctx.State.Status = RunStatus.Idle;
-                _ctx.Log($"phase {pg.StageId} full battery GREEN — queuing auto-fix audit session");
+                _ctx.Log($"phase {pg.StageId} full battery — {basis} — queuing auto-fix audit session");
                 _saveAndReport();
             }
             else
             {
-                await ConfirmStageAsync(pg.StageId, ct).ConfigureAwait(false);
+                await ConfirmStageAsync(pg.StageId, ct, basis).ConfigureAwait(false);
             }
         }
         else
@@ -97,11 +110,13 @@ public sealed partial class VerdictEngine
             {
                 FromSession = _ctx.State.History.LastOrDefault()?.Number ?? 0,
                 GateFailures = GateRunner.FailureDetails(gates),
-                ProgressSummary = $"phase {pg.StageId} full battery RED — make the claims true",
+                ProgressSummary = $"phase {pg.StageId} full battery — {GateRunner.Token(gates)} — make the claims true",
             };
             _ctx.State.PendingPhaseGate = null;
             _ctx.State.Status = RunStatus.Idle;
-            _ctx.Log($"phase {pg.StageId} full battery RED — queuing fix session (attempt {_ctx.State.AttemptsThisStage}/{MaxAttempts(CurrentStageConfig())})");
+            // SC2.2: NextAttemptNumber, not AttemptsThisStage — this line names the session it is queuing,
+            // and that session announces itself with the same number (devcontext #19).
+            _ctx.Log($"phase {pg.StageId} full battery — {GateRunner.Token(gates)} — queuing fix session (attempt {_ctx.State.NextAttemptNumber}/{MaxAttempts(CurrentStageConfig())})", "fail");
             _saveAndReport();
         }
     }
@@ -111,7 +126,11 @@ public sealed partial class VerdictEngine
         _gates.ScheduleGateOrAudit(stageId, startHead, _ctx.Log, HasNextUnconfirmedStage);
     }
 
-    internal async Task ConfirmStageAsync(string id, CancellationToken ct)
+    /// <param name="basis">SC2.2: what this confirmation rests on, in <see cref="GateRunner.ConfirmationBasis"/>'s
+    /// vocabulary. Callers that ran the battery pass what they measured; the owner-approval path has no
+    /// battery in hand and falls back to the plan's stage-scoped gate set plus the last results, which is
+    /// still measured — never the old constant "(full battery green)" that nine gateless stages printed.</param>
+    internal async Task ConfirmStageAsync(string id, CancellationToken ct, string? basis = null)
     {
         var stage = _ctx.Plan.Stages.FirstOrDefault(s => s.Id == id);
         if (stage is { OwnerGate: true } && !_ctx.State.OwnerApprovedStages.Contains(id))
@@ -126,6 +145,8 @@ public sealed partial class VerdictEngine
                 [("Approve", "approve")], CancellationToken.None);
             return;
         }
+        basis ??= GateRunner.ConfirmationBasis(
+            stage != null ? GateRunner.ConfiguredForStage(_ctx.Plan, stage) : _ctx.Plan.Gates.Count, _ctx.LastGates);
         if (!_ctx.State.ConfirmedStages.Contains(id)) _ctx.State.ConfirmedStages.Add(id);
         _ctx.State.AwaitingOwnerReason = null;
         _ctx.State.PendingPhaseGate = null;
@@ -139,12 +160,12 @@ public sealed partial class VerdictEngine
         {
             _ctx.State.PauseAfterStage = false;
             _ctx.State.Status = RunStatus.Paused;
-            _ctx.Log($"✓ phase {id} CONFIRMED — parked (pause-after-stage was set)");
+            _ctx.Log($"✓ phase {id} CONFIRMED ({basis}) — parked (pause-after-stage was set)");
         }
         else
         {
             _ctx.State.Status = RunStatus.Idle;
-            _ctx.Log($"✓ phase {id} CONFIRMED (full battery green{(_ctx.State.AuditedStages.Contains(id) ? " + audit" : "")}) — advancing");
+            _ctx.Log($"✓ phase {id} CONFIRMED ({basis}{(_ctx.State.AuditedStages.Contains(id) ? " + audit" : "")}) — advancing");
         }
         _ctx.Events.Emit(new StageConfirmed { StageId = id, Audited = _ctx.State.AuditedStages.Contains(id) });
         _ctx.Store?.ConfirmStage(_ctx.State.RunId, id);
@@ -423,6 +444,9 @@ public sealed partial class VerdictEngine
 
     private StageConfig CurrentStageConfig()
         => _ctx.Plan.Stages.FirstOrDefault(s => s.Id == _ctx.State.CurrentStage) ?? _ctx.Plan.Stages[^1];
+
+    private StageConfig StageConfigFor(string stageId)
+        => _ctx.Plan.Stages.FirstOrDefault(s => s.Id == stageId) ?? CurrentStageConfig();
 
 #pragma warning disable MA0045 // sync file I/O by design — fast local writes, not hot-path
     private void ParseAuditFollowups(string stageId)

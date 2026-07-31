@@ -41,7 +41,7 @@ public sealed partial class TelegramService
         sb.AppendLine($"Sessions: {_state.SessionCounter}  |  Cost: ${_state.TotalCostUsd:0.0000}");
 
         if (_state.AttentionReason != null)
-            sb.AppendLine($"\n{_state.AttentionReason}");
+            sb.AppendLine($"\n{_state.AttentionReason}{Staleness.Since(_state.AttentionSinceUtc)}");
 
         if (_state.CurrentStage != null)
         {

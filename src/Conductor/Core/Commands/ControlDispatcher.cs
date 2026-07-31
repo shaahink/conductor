@@ -138,7 +138,7 @@ public sealed class ControlDispatcher(
                         break;
                     }
                     state.Status = RunStatus.Idle;
-                    state.AttentionReason = null;
+                    state.SetAttention(null);
                     save();
                     log("resumed by user");
                     sink.Toast(new ToastMessage("run resumed", LogSeverity.Success));

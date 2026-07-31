@@ -126,7 +126,7 @@ public sealed partial class RunLoop
                         {
                             _ctx.Log($"recovered from event log: session #{interrupted.Number} has no AgentSessionId — marking needs-attention (cannot resume without a session id)");
                             _ctx.State.Status = RunStatus.NeedsHuman;
-                            _ctx.State.AttentionReason = $"Orphaned session #{interrupted.Number} in run.db has no AgentSessionId — manual review needed.";
+                            _ctx.State.SetAttention($"Orphaned session #{interrupted.Number} in run.db has no AgentSessionId — manual review needed.");
                             _ctx.Save();
                         }
                         else

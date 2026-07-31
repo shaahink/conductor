@@ -6,6 +6,8 @@ public sealed record DashboardSnapshot
     public string PlanName { get; init; } = "";
     public string Status { get; init; } = "";
     public string? AttentionReason { get; init; }
+    /// <summary>SC2.2: when <see cref="AttentionReason"/> was raised, so every surface can age it.</summary>
+    public DateTime? AttentionSinceUtc { get; init; }
     public string StageId { get; init; } = "";
     public string StageTitle { get; init; } = "";
     /// <summary>Active persona for the current stage/session (B7.3). null = default.</summary>

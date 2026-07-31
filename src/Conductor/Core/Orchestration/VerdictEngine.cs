@@ -318,7 +318,7 @@ public sealed partial class VerdictEngine
         // only via the graph is complete NOW, not one tracker regeneration later.
         var stageComplete = postTrack.StageDone(stage.Id) || GraphStageDone(stage.Id);
 
-        _ctx.Log($"verdict inputs: gates {(gatesGreen ? "green" : "RED")} · commits {rec.NewCommits.Count} · newly DONE [{string.Join(",", rec.NewlyDone)}] · dirty {(dirty ? "YES" : "no")}", gatesGreen ? "pass" : "fail");
+        _ctx.Log($"verdict inputs: {GateRunner.Token(gates)} · commits {rec.NewCommits.Count} · newly DONE [{string.Join(",", rec.NewlyDone)}] · dirty {(dirty ? "YES" : "no")}", gatesGreen ? "pass" : "fail");
 
         if (newlyBlocked.Count > 0 && _ctx.Plan.PauseOnBlocked)
         {
@@ -376,7 +376,8 @@ public sealed partial class VerdictEngine
                                   $" · working tree: {(dirty ? "DIRTY — " + Git.DirtySummary(_ctx.Plan.Repo) : "clean")}" +
                                   (agentErrored ? " · agent process reported an error result" : ""),
             };
-            _ctx.Log($"session #{rec.Number} {rec.Outcome} — queuing fix session (attempt {_ctx.State.AttemptsThisStage}/{MaxAttempts(stage)})", rec.Outcome?.ToString().ToLowerInvariant() ?? "unknown");
+            // SC2.2: NextAttemptNumber — the number the queued session will announce itself with.
+            _ctx.Log($"session #{rec.Number} {rec.Outcome} — queuing fix session (attempt {_ctx.State.NextAttemptNumber}/{MaxAttempts(stage)})", rec.Outcome?.ToString().ToLowerInvariant() ?? "unknown");
         }
         _ctx.State.Status = RunStatus.Idle;
         _saveAndReport();
@@ -434,9 +435,9 @@ public sealed partial class VerdictEngine
     internal void CompletePlan(TrackerSnapshot track)
     {
         _ctx.State.Status = RunStatus.Completed;
-        _ctx.State.AttentionReason = _ctx.State.SkippedStages.Count > 0
+        _ctx.State.SetAttention(_ctx.State.SkippedStages.Count > 0
             ? $"plan complete EXCEPT skipped stages: {string.Join(", ", _ctx.State.SkippedStages)}"
-            : null;
+            : null);
         _ctx.Log($"🎉 plan '{_ctx.Plan.Name}' complete — {track.Checkpoints.Count(c => c.IsDone)}/{track.Checkpoints.Count} checkpoints done");
         _ctx.Events.Emit(new RunFinished
         {
@@ -458,7 +459,7 @@ public sealed partial class VerdictEngine
     public void NeedsHuman(string reason)
     {
         _ctx.State.Status = RunStatus.NeedsHuman;
-        _ctx.State.AttentionReason = reason;
+        _ctx.State.SetAttention(reason);
         _ctx.Events.Emit(new AttentionRequested { Reason = reason });
         _ctx.Log($"🛑 NEEDS HUMAN: {reason}");
         _saveAndReport();

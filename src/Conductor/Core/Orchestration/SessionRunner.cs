@@ -113,7 +113,7 @@ public sealed partial class SessionRunner
             _ctx.Log($"P1 assignment: multi-item session — claims {string.Join(", ", assignment.Items.Select(i => i.Id))}");
 
         _ctx.State.SessionCounter++;
-        var attempt = _ctx.State.AttemptsThisStage + 1;
+        var attempt = _ctx.State.NextAttemptNumber; // SC2.2: the one source every attempt line reads
         var maxAttempts = MaxAttempts(stage);
         var isReview = stage.Kind.Equals("review", StringComparison.OrdinalIgnoreCase);
         var reviewDir = Path.Combine(_ctx.Plan.StateDir, "reviews");

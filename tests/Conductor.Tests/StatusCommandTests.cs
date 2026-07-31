@@ -185,8 +185,83 @@ public class StatusCommandTests
             new GateFinished { Name = "tests", Passed = false, Scope = "D1", DurationMs = 10 },
             new AttentionRequested { Reason = "gate build failed 3 times consecutively" });
         var report = tmp.BuildReport((_, _) => false);
-        Assert.Equal("gate build failed 3 times consecutively", report.WhatHurt);
+        Assert.StartsWith("gate build failed 3 times consecutively", report.WhatHurt, StringComparison.Ordinal);
         Assert.Equal("attention", report.Kind);
+    }
+
+    // ── SC2.2: the sticky failure field ages, and clears when the condition clears ──
+
+    /// <summary>SC2.2. "what hurt" was a sentence with no age: a failure from four seconds ago and one
+    /// from four hours ago read identically, so an operator could not tell a live problem from an old
+    /// one without opening the log.</summary>
+    [Fact]
+    public void StatusReport_WhatHurt_CarriesItsAge()
+    {
+        using var tmp = new TempRunDb();
+        tmp.Seed(
+            new RunStarted { Plan = TempRunDb.Plan, Repo = "." },
+            new StageEntered { StageId = "D1" },
+            new SessionStarted { Number = 1, StageId = "D1", Kind = "Deliver" },
+            new GateFinished { Name = "tests", Passed = false, Scope = "D1", DurationMs = 10 },
+            new SessionFinished { Number = 1, StageId = "D1", Outcome = "GatesRed", CostUsd = 0.1m });
+        var report = tmp.BuildReport((_, _) => false);
+        Assert.NotNull(report.WhatHurt);
+        Assert.Contains(" ago, ", report.WhatHurt, StringComparison.Ordinal);
+        Assert.Contains("Z]", report.WhatHurt, StringComparison.Ordinal);
+    }
+
+    /// <summary>SC2.2. The old rule was "newest failure anywhere in the log wins", so a gate that failed
+    /// once and has passed on every run since stayed the headline complaint for the rest of the run.</summary>
+    [Fact]
+    public void StatusReport_WhatHurt_Clears_WhenTheSameGatePassesLater()
+    {
+        using var tmp = new TempRunDb();
+        tmp.Seed(
+            new RunStarted { Plan = TempRunDb.Plan, Repo = "." },
+            new StageEntered { StageId = "D1" },
+            new SessionStarted { Number = 1, StageId = "D1", Kind = "Deliver" },
+            new GateFinished { Name = "tests", Passed = false, Scope = "D1", DurationMs = 10 },
+            new SessionFinished { Number = 1, StageId = "D1", Outcome = "GatesRed", CostUsd = 0.1m },
+            new SessionStarted { Number = 2, StageId = "D1", Kind = "Fix" },
+            new GateFinished { Name = "tests", Passed = true, Scope = "D1", DurationMs = 10 },
+            new SessionFinished { Number = 2, StageId = "D1", Outcome = "Advanced", CostUsd = 0.1m, NewlyDone = ["D1"] });
+        var report = tmp.BuildReport((_, _) => false);
+        Assert.Null(report.WhatHurt);
+    }
+
+    /// <summary>A gate that is still failing is still the complaint — the clearing rule must not blanket
+    /// every old failure just because some other gate went green afterwards.</summary>
+    [Fact]
+    public void StatusReport_WhatHurt_Survives_WhenADifferentGatePasses()
+    {
+        using var tmp = new TempRunDb();
+        tmp.Seed(
+            new RunStarted { Plan = TempRunDb.Plan, Repo = "." },
+            new StageEntered { StageId = "D1" },
+            new SessionStarted { Number = 1, StageId = "D1", Kind = "Deliver" },
+            new GateFinished { Name = "tests", Passed = false, Scope = "D1", DurationMs = 10 },
+            new GateFinished { Name = "build", Passed = true, Scope = "D1", DurationMs = 10 },
+            new SessionFinished { Number = 1, StageId = "D1", Outcome = "GatesRed", CostUsd = 0.1m });
+        var report = tmp.BuildReport((_, _) => false);
+        Assert.NotNull(report.WhatHurt);
+        Assert.Contains("tests", report.WhatHurt, StringComparison.Ordinal);
+    }
+
+    /// <summary>A confirmed stage is a green full battery. Nothing older than it is still hurting — and a
+    /// park the operator has since cleared is exactly the "sticky for hours" complaint.</summary>
+    [Fact]
+    public void StatusReport_WhatHurt_Clears_AfterTheStageConfirms()
+    {
+        using var tmp = new TempRunDb();
+        tmp.Seed(
+            new RunStarted { Plan = TempRunDb.Plan, Repo = "." },
+            new StageEntered { StageId = "D1" },
+            new SessionStarted { Number = 1, StageId = "D1", Kind = "Deliver" },
+            new AttentionRequested { Reason = "stage D1 used all 2 attempts" },
+            new SessionFinished { Number = 1, StageId = "D1", Outcome = "Advanced", CostUsd = 0.1m, NewlyDone = ["D1"] },
+            new StageConfirmed { StageId = "D1" });
+        var report = tmp.BuildReport((_, _) => false);
+        Assert.Null(report.WhatHurt);
     }
 
     [Fact]

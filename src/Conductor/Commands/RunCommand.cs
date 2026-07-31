@@ -179,7 +179,7 @@ public sealed class RunCommand : AsyncCommand<RunCommand.Settings>
             _ => $"exit code {code}",
         };
         AnsiConsole.MarkupLine($"[bold]run ended[/] — {Markup.Escape(state.Status.ToString())} · {Markup.Escape(meaning)}" +
-            (string.IsNullOrEmpty(state.AttentionReason) ? "" : $" · [yellow]{Markup.Escape(state.AttentionReason)}[/]"));
+            (string.IsNullOrEmpty(state.AttentionReason) ? "" : $" · [yellow]{Markup.Escape(state.AttentionReason + Staleness.Since(state.AttentionSinceUtc))}[/]"));
 
         // A crash dump written during this run is the first thing to read — say so explicitly.
         foreach (var dir in new[] { Path.Combine(plan.StateDir, "logs"), Path.Combine(Directory.GetCurrentDirectory(), ".conductor", "logs") }.Distinct(StringComparer.OrdinalIgnoreCase))

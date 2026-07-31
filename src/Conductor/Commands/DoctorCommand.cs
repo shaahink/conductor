@@ -175,11 +175,25 @@ public sealed class DoctorCommand : AsyncCommand<DoctorSettings>
     /// not a misconfiguration — so this is a warn-level notice, never a failure. Every session
     /// verdict on such a plan trusts commits + tracker diff alone (<see cref="GateRunner.Summary"/>
     /// already renders "gates green (none configured)" rather than a blank/lying summary).</summary>
+    /// <remarks>SC2.2 adds the per-stage half. Gates scoped with <c>gates[].stages</c> or
+    /// <c>gates[].stageKinds</c> leave the stages they do not name with NO battery at all, and nothing
+    /// said so: on one run nine of thirteen stages confirmed with zero gates — including the stage that
+    /// deployed the live site — and the only way to learn that was to cross-reference the plan by hand
+    /// (sk-platform #2). Still a warn: a gateless stage is a legitimate choice, an unknowing one is not.</remarks>
     internal static Check CheckGates(PlanConfig plan)
-        => plan.Gates.Count == 0
-            ? new Check("gates", "warn", "none configured — every session verdict will trust commits + tracker only")
-            : new Check("gates", "ok",
-                $"{plan.Gates.Count} configured ({string.Join("/", plan.Gates.Select(g => g.Tier).Distinct(StringComparer.OrdinalIgnoreCase))})");
+    {
+        if (plan.Gates.Count == 0)
+            return new Check("gates", "warn", "none configured — every session verdict will trust commits + tracker only");
+
+        var tiers = string.Join("/", plan.Gates.Select(g => g.Tier).Distinct(StringComparer.OrdinalIgnoreCase));
+        var gateless = plan.Stages.Where(s => Core.GateRunner.ConfiguredForStage(plan, s) == 0).Select(s => s.Id).ToList();
+        if (gateless.Count > 0)
+            return new Check("gates", "warn",
+                $"{plan.Gates.Count} configured ({tiers}), but stage(s) [{string.Join(", ", gateless)}] match none of them — " +
+                "those stages confirm on claims, commits and tracker diff alone (widen gates[].stages / gates[].stageKinds, or accept it knowingly)");
+
+        return new Check("gates", "ok", $"{plan.Gates.Count} configured ({tiers}), every stage covered");
+    }
 
     /// <summary>W1.2 (G13): stage↔work-item coverage. A declared work item pointing at a stage the
     /// plan doesn't have is an authoring error the engine could never schedule (fail). A stage with

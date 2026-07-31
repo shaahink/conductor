@@ -23,6 +23,7 @@ public static class SnapshotBuilder
             PlanName = plan.Name,
             Status = state.Status.ToString(),
             AttentionReason = state.AttentionReason,
+            AttentionSinceUtc = state.AttentionSinceUtc,
             StageId = state.CurrentStage ?? "-",
             StageTitle = stage?.Title ?? "",
             Persona = stage != null ? plan.ResolvePersona(stage) : null,

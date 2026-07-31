@@ -53,14 +53,14 @@ public sealed class GateCommand : Command<GateCommand.Settings>
                 AnsiConsole.WriteLine(g.Tail);
         }
 
-        LogGateEvent(logPath, $"gate battery done — {(allGreen ? "GREEN" : "RED")}: {summary}");
+        LogGateEvent(logPath, $"gate battery done — {GateRunner.Token(gates)}: {summary}");
 
         // If all green and previously-red, clear pendingFix
         if (allGreen && state.PendingFix != null)
         {
             state.PendingFix = null;
             state.Status = RunStatus.Idle;
-            state.AttentionReason = null;
+            state.SetAttention(null);
             state.Save(statePath);
             LogGateEvent(logPath, "gate: all green — cleared pendingFix, set Idle");
             AnsiConsole.MarkupLine("[green]Pending fix cleared — state set to Idle.[/]");

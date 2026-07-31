@@ -44,6 +44,7 @@ public sealed partial class ControlPlaneServer
         {
             Status = _state.Status.ToString(),
             AttentionReason = _state.AttentionReason,
+            AttentionSinceUtc = _state.AttentionSinceUtc,
             SessionKind = lastStart?.Kind ?? "-",
             Attempt = lastStart?.Attempt ?? dto.Attempt,
             MaxAttempts = lastStart?.MaxAttempts ?? dto.MaxAttempts,

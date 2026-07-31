@@ -15,7 +15,8 @@ namespace Conductor.Core.Events;
 /// <list type="bullet">
 ///   <item><description>the transient control surface — <c>Status</c>, <c>AttemptsThisStage</c>,
 ///   <c>ConsecutiveBackoffs</c>, <c>SkippedStages</c>, <c>Pending*</c>, <c>LastGreenGateSig</c>,
-///   <c>StopAfterSession</c>, <c>AttentionReason</c> (B2.3 recovery, B3 process control);</description></item>
+///   <c>StopAfterSession</c>, <c>AttentionReason</c> and its SC2.2 stamp <c>AttentionSinceUtc</c>
+///   (B2.3 recovery, B3 process control);</description></item>
 ///   <item><description>the non-event <see cref="SessionRecord"/> fields — <c>ResumeCount</c>,
 ///   <c>NumTurns</c>, <c>GateSummary</c>, <c>ResultSummary</c>;</description></item>
 ///   <item><description>timestamps — a session's <c>StartedUtc</c>/<c>EndedUtc</c> are stamped when

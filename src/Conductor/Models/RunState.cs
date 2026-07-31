@@ -26,6 +26,11 @@ public sealed class RunState
     /// exactly this park and no other.</summary>
     public bool ParkedBySessionCap { get; set; }
     public string? AttentionReason { get; set; }
+    /// <summary>SC2.2: the instant <see cref="AttentionReason"/> was raised. Without it the reason is a
+    /// sticky sentence with no age — a park from four hours ago and one from four seconds ago read
+    /// identically on status, the report and Telegram. Stamped and cleared together with the reason by
+    /// <see cref="SetAttention"/>; null on a state.json written before SC2.2.</summary>
+    public DateTime? AttentionSinceUtc { get; set; }
     public HashSet<string> SkippedStages { get; set; } = new(StringComparer.Ordinal);
     public PendingFix? PendingFix { get; set; }
     public PendingVerify? PendingVerify { get; set; }
@@ -95,6 +100,21 @@ public sealed class RunState
     /// <summary>O3: cumulative overhead cost (gate runtime estimate) since the last budget reset.
     /// Same crash-survival semantics as <see cref="PerRunCostUsd"/>.</summary>
     public decimal PerRunOverheadCostUsd { get; set; }
+
+    /// <summary>SC2.2: the attempt number the NEXT session on this stage will report. <see
+    /// cref="AttemptsThisStage"/> counts attempts already spent, so every line that announces a session
+    /// it is about to queue must say this — the phase-gate RED line said <c>attempt 1/2</c> three
+    /// seconds before the session it queued announced itself as <c>attempt 2/2</c> (devcontext #19).</summary>
+    [JsonIgnore]
+    public int NextAttemptNumber => AttemptsThisStage + 1;
+
+    /// <summary>SC2.2: raise or clear the attention reason and its timestamp together, so no surface can
+    /// show a reason without an age or an age without a reason. Pass null to clear.</summary>
+    public void SetAttention(string? reason, DateTime? nowUtc = null)
+    {
+        AttentionReason = reason;
+        AttentionSinceUtc = reason == null ? null : (nowUtc ?? DateTime.UtcNow);
+    }
 
     public decimal TotalCostUsd => History.Sum(h => h.CostUsd ?? 0m);
     public decimal TotalOverheadCostUsd => History.Sum(h => h.OverheadCostUsd ?? 0m);

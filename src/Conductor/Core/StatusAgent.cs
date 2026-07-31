@@ -24,7 +24,7 @@ public static class StatusAgent
         sb.AppendLine($"Stage {snap.StageId} ({snap.StageTitle}) · session #{snap.SessionNumber} {snap.SessionKind}" +
                       (snap.Attempt > 0 ? $" · attempt {snap.Attempt}/{snap.MaxAttempts}" : ""));
         sb.AppendLine($"Checkpoints {snap.DoneCount}/{snap.TotalCount} · working ▸ {snap.CurrentCheckpoint} {snap.CurrentCheckpointTitle}");
-        if (snap.AttentionReason != null) sb.AppendLine($"Attention: {snap.AttentionReason}");
+        if (snap.AttentionReason != null) sb.AppendLine($"Attention: {snap.AttentionReason}{Staleness.Since(snap.AttentionSinceUtc)}");
         sb.AppendLine();
 
         if (snap.StageOverview.Count > 0)
@@ -85,7 +85,7 @@ public static class StatusAgent
         sb.AppendLine($"Repo: {plan.Repo} · Branch: {Git.Branch(plan.Repo)}");
         sb.AppendLine($"Status: {state.Status} · Current stage: {state.CurrentStage ?? "(none)"}");
         sb.AppendLine($"Sessions: {state.SessionCounter} · Total cost: ${state.TotalCostUsd:0.00}");
-        if (state.AttentionReason != null) sb.AppendLine($"Attention: {state.AttentionReason}");
+        if (state.AttentionReason != null) sb.AppendLine($"Attention: {state.AttentionReason}{Staleness.Since(state.AttentionSinceUtc)}");
         if (sinceUtc.HasValue) sb.AppendLine($"Since: events after {sinceUtc.Value:u}");
         sb.AppendLine();
 

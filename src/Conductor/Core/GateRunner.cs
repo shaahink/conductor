@@ -163,6 +163,51 @@ public static class GateRunner
         return list.Count == 0 ? "gates green (none configured)" : string.Join(" · ", list.Select(r => $"{r.Name}:{r.Glyph}"));
     }
 
+    /// <summary>SC2.2: THE canonical gate verdict token — one spelling for every log line that reports a
+    /// battery, session verdict and phase gate alike. The single most consequential line in a run (a
+    /// phase-gate RED) used to be spelled differently from the session verdict, so a watcher filtering on
+    /// one grammar saw eleven minutes of silence and then a Fix session with no stated cause
+    /// (devcontext #18). Three-valued on purpose: an empty battery is vacuously "all required passed",
+    /// and calling that GREEN is exactly the lie SC2.2 exists to kill.</summary>
+    public static string Token(IEnumerable<GateResult> results)
+    {
+        var list = results as ICollection<GateResult> ?? results.ToList();
+        if (list.Count == 0) return "gates NONE";
+        return AllRequiredPassed(list) ? "gates GREEN" : "gates RED";
+    }
+
+    /// <summary>SC2.2: what a stage confirmation actually rests on, in the three honest states the
+    /// confirmation line must distinguish. Nine of thirteen stages on one run logged "CONFIRMED (full
+    /// battery green)" when <em>no battery existed</em> for them (sk-platform #2) — gates were scoped per
+    /// stage via <c>gates[].stages</c> and those stages matched none.</summary>
+    /// <param name="configuredForStage">Gates the plan scopes to this stage — the difference between
+    /// "no gates exist for this stage" and "the battery result is not on record right now" (a reused
+    /// battery after a restart), which must never be reported as the same thing.</param>
+    /// <param name="reused">The battery was not re-run: an identical tree already passed it.</param>
+    public static string ConfirmationBasis(int configuredForStage, IEnumerable<GateResult>? results, bool reused = false)
+    {
+        if (configuredForStage == 0)
+            return "no gates configured for this stage — advanced on claims, commits and tracker diff alone";
+
+        var list = results as ICollection<GateResult> ?? results?.ToList();
+        if (list is null || list.Count == 0)
+            return $"{configuredForStage} gate(s) configured for this stage but no battery result on record";
+
+        var suffix = reused ? ", reused on an unchanged tree" : "";
+        return AllRequiredPassed(list)
+            ? $"gates GREEN: {string.Join(", ", list.Select(r => r.Name))}{suffix}"
+            : $"gates RED: {string.Join(", ", list.Where(r => !r.IsGreen).Select(r => r.Name))} — confirmed anyway";
+    }
+
+    /// <summary>Gates the plan scopes to a given stage — the denominator behind
+    /// <see cref="ConfirmationBasis"/> and doctor's zero-gate-stage warning.</summary>
+    public static int ConfiguredForStage(PlanConfig plan, StageConfig stage)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(stage);
+        return plan.Gates.Count(g => g.AppliesToStage(stage.Id) && g.AppliesToStageKind(stage.Kind));
+    }
+
     /// <summary>Failing gates with output tails, capped for prompt embedding.</summary>
     public static string FailureDetails(IEnumerable<GateResult> results, int maxCharsPerGate = 4000)
     {

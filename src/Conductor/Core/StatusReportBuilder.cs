@@ -119,23 +119,46 @@ public static class StatusReportBuilder
         return false;
     }
 
-    private static string? DeriveWhatHurt(IReadOnlyList<ConductorEvent> events)
+    /// <summary>
+    /// SC2.2. "what hurt" used to be a sentence with no age that never went away: the newest failure in
+    /// the whole log won, so a gate that failed once and passed on every run since, or a park the operator
+    /// cleared hours ago, still read as the current complaint. Two rules fix that, and both are
+    /// measurements rather than heuristics:
+    /// <list type="bullet">
+    ///   <item><description>a failure is <em>cleared</em> once the thing that failed has since succeeded —
+    ///   a later passing run of that same gate, or a <see cref="StageConfirmed"/>, which only happens on a
+    ///   green battery and therefore clears everything older than it;</description></item>
+    ///   <item><description>whatever survives carries its age and wall-clock, so a reader can tell a
+    ///   four-second-old failure from a four-hour-old one without opening the log.</description></item>
+    /// </list>
+    /// </summary>
+    private static string? DeriveWhatHurt(IReadOnlyList<ConductorEvent> events, DateTimeOffset? now = null)
     {
-        // Most recent hard signal of trouble, in priority order.
+        // Gates that have passed since (walking backwards, so "since" = already seen).
+        var passedSince = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         for (var i = events.Count - 1; i >= 0; i--)
         {
             switch (events[i])
             {
+                // A confirmed stage is a green full battery: nothing older than it is still hurting.
+                case StageConfirmed:
+                case OwnerApprovalGranted:
+                    return null;
                 case AttentionRequested a:
-                    return a.Reason;
-                case GateFinished g when !g.Passed && !g.Skipped && !g.Optional:
-                    return $"gate '{g.Name}' failed{(g.Scope is { Length: > 0 } sc ? $" ({sc})" : "")}";
+                    return a.Reason + Staleness.Since(a.Ts, now);
+                case GateFinished { Passed: true } ok:
+                    passedSince.Add(ok.Name);
+                    break;
+                case GateFinished g when !g.Passed && !g.Skipped && !g.Optional && !passedSince.Contains(g.Name):
+                    return $"gate '{g.Name}' failed{(g.Scope is { Length: > 0 } sc ? $" ({sc})" : "")}"
+                           + Staleness.Since(g.Ts, now);
             }
         }
         // No hard failure — surface a non-advancing last session, if any.
         var lastFinished = events.OfType<SessionFinished>().LastOrDefault();
         if (lastFinished != null && !HealthyOutcomes.Contains(lastFinished.Outcome))
-            return $"session #{lastFinished.Number} ended {lastFinished.Outcome}";
+            return $"session #{lastFinished.Number} ended {lastFinished.Outcome}" + Staleness.Since(lastFinished.Ts, now);
         return null;
     }
 

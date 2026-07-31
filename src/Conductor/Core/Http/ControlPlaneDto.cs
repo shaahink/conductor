@@ -37,7 +37,11 @@ public sealed record StateDto(
     // that field is nullable and unset on most plans, where the real provider is inferred from the
     // legacy `output` mode — serving the raw field would send null for a run that is plainly Claude.
     // See AgentProviderFactory.ResolveName, which is the same decision the engine runs on.
-    string Provider = "");
+    string Provider = "",
+    // SC2.2: the instant AttentionReason was raised. A reason with no age reads the same after four
+    // seconds and after four hours, and the Face had no way to tell them apart. Absent/null = no
+    // attention raised, or a run whose state.json predates SC2.2.
+    DateTime? AttentionSinceUtc = null);
 
 public static class ControlPlaneDto
 {
@@ -76,7 +80,8 @@ public static class ControlPlaneDto
         Gates: [.. snap.Gates.Select(g => new GateDto(g.Name, g.State, g.LiveElapsed(DateTime.UtcNow).TotalSeconds))],
         MaxSessionTokensThisRun: maxSessionTokensThisRun,
         Tracker: tracker,
-        StateDir: stateDir);
+        StateDir: stateDir,
+        AttentionSinceUtc: snap.AttentionSinceUtc);
 
     private static StageDto FromStage(StageProgress s) => new(
         Id: s.Id, Title: s.Title, Done: s.Done, Total: s.Total, State: s.State,

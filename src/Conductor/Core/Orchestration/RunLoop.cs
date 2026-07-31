@@ -275,7 +275,7 @@ public sealed partial class RunLoop
                 {
                     _ctx.State.Status = RunStatus.Paused;
                     _ctx.State.ParkedBySessionCap = true;
-                    _ctx.State.AttentionReason = $"session cap reached ({_ctx.State.SessionCounter}/{liveCap}) — raise or clear limits.maxSessions (Plan tab → Settings) to continue";
+                    _ctx.State.SetAttention($"session cap reached ({_ctx.State.SessionCounter}/{liveCap}) — raise or clear limits.maxSessions (Plan tab → Settings) to continue");
                     _ctx.Log($"session cap reached ({_ctx.State.SessionCounter}/{liveCap}) — parking at the session boundary");
                     _saveAndReport();
                     continue;
@@ -286,7 +286,7 @@ public sealed partial class RunLoop
                     var kind = _ctx.State.PendingResume != null ? SessionKind.Resume
                         : _ctx.State.PendingAudit != null ? SessionKind.Audit
                         : _ctx.State.PendingFix != null ? SessionKind.Fix : SessionKind.Deliver;
-                    var prompt = BuildPrompt(kind, stage, _ctx.State.SessionCounter + 1, _ctx.State.AttemptsThisStage + 1, maxAttempts);
+                    var prompt = BuildPrompt(kind, stage, _ctx.State.SessionCounter + 1, _ctx.State.NextAttemptNumber, maxAttempts);
                     var batterySection = _ctx.Prompts.BatterySection(_ctx.State, _ctx.Store);
                     if (batterySection.Length > 0)
                         prompt = prompt.TrimEnd() + "\n\n" + batterySection;
@@ -459,7 +459,7 @@ public sealed partial class RunLoop
             && (fresh.Limits.MaxSessions is not { } cap || cap <= 0 || _ctx.State.SessionCounter < cap))
         {
             _ctx.State.ParkedBySessionCap = false;
-            _ctx.State.AttentionReason = null;
+            _ctx.State.SetAttention(null);
             if (_ctx.State.Status == RunStatus.Paused)
             {
                 _ctx.State.Status = RunStatus.Idle;
