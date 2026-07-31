@@ -47,6 +47,10 @@ internal static class BgStartHandler
         var logPath = Path.Combine(logDir, BgLogs.NameFor(purpose, startedUtc));
         var psi = BgLogs.RedirectedSpawn(exe, exeArgs, settings.Cwd ?? plan.Repo, logPath);
 
+        // SF0.3 (bug #12): both halves of the detach, and BOTH are needed — see
+        // BgLogs.StopLeakingConsoleHandles. This one must precede the spawn.
+        BgLogs.StopLeakingConsoleHandles();
+
         Process? proc;
         try
         {
@@ -63,6 +67,11 @@ internal static class BgStartHandler
             AnsiConsole.MarkupLine("[red]Process.Start returned null.[/]");
             return 1;
         }
+
+        // SF0.3 (bug #12): drop our ends of the child's streams. Before this, the child inherited THIS
+        // process's stdout, so `conductor bg start ... | anything` saw no EOF until the background job
+        // finished — a piped 60-second child held the pipe for the full 60 seconds (measured).
+        BgLogs.DetachStandardStreams(proc);
 
         // Track in run.db. No exit watcher: this command returns in milliseconds, so anything it
         // schedules dies with it (that WAS bug #2). A finished child's row is marked exited by the

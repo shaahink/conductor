@@ -297,6 +297,7 @@ public sealed class PromptBuilder
             Your job: make the previous session's claims true.
             1. Read `{tracker}` handoff + your stage section in `{planDoc}` first. Check `ledger_list` — the failing session may already have recorded why.
             2. Reproduce each failure above and fix root causes. Never weaken gates, goldens, or truth files to pass — ratchet-only policy.
+               A gate failure that says a file is `locked by: conductor (PID)` is almost always THIS run holding its own binary — that pid is in `CONDUCTOR_PID` and is named in the tools block below. It is not a stale orphan to clear. A fix session read that exact line, inferred an orphan, ran `Stop-Process` on the pid, and killed the conductor supervising it. Retry the gate, or say in the handoff what is locked; do not kill it.
             3. Re-run the full gate battery until green.
             4. Correct the record via `conductor task` — downgrade over-claimed checkpoints rather than leaving a false DONE.
             5. Commit (plan's commit convention), push, overwrite the tracker handoff block.

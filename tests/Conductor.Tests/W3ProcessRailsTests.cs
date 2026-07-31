@@ -177,9 +177,14 @@ public sealed class W3ProcessRailsTests
         Assert.Contains("my tool.exe", line, StringComparison.Ordinal);
         Assert.Contains("out.log", line, StringComparison.Ordinal);
         Assert.Contains("2>&1", line, StringComparison.Ordinal);
-        // Nothing is redirected in-process: there is no pump to die.
-        Assert.False(psi.RedirectStandardOutput);
-        Assert.False(psi.RedirectStandardError);
+        // W3.3's property, restated as what it actually is. This used to assert
+        // `!RedirectStandardOutput`, which was a PROXY for "no in-process pump to die" and stopped
+        // being one at SF0.3: bug #12 needed those flags set so the launcher's console handles are not
+        // inherited by a child that outlives it. The invariant bug #2 cares about is unchanged and is
+        // right here on the command line — the SHELL writes the log, so no handle this process owns
+        // has to survive for the log to fill. The load-bearing gate on that is the integration test
+        // below (BgStart_LogKeepsFilling_AfterTheLauncherHasReturned), which drives a real child.
+        Assert.Contains("> \"C:\\logs dir\\out.log\"", line, StringComparison.Ordinal);
     }
 
     [Fact]

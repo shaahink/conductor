@@ -256,6 +256,14 @@ public sealed partial class SessionRunner
         var extraEnv = new Dictionary<string, string>(StringComparer.Ordinal);
         if (!string.IsNullOrEmpty(_ctx.Plan.PlanFilePath))
             extraEnv["CONDUCTOR_PLAN"] = _ctx.Plan.PlanFilePath;
+        // SF0.3 (FU-OWNER-9): the pid of the process supervising this session, so an agent can CHECK
+        // instead of inferring. A fix session met a build error reading `locked by: conductor (15300)`,
+        // reasoned that a leftover orphan held the lock, and ran `Stop-Process -Id 15300` on the very
+        // conductor that had spawned it — two sessions' worth of work gone with no crash dump. It had
+        // no way to know: nothing in its environment or its prompt named that number. Now both do
+        // (see ToolContract). It matters more since: this machine runs more than one conductor, so a
+        // pid an agent writes off as stale can belong to another repo's live run.
+        extraEnv["CONDUCTOR_PID"] = Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture);
         IReadOnlyList<string> extraArgs = [];
         if (mcpWiring != null)
         {

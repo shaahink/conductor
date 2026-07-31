@@ -208,6 +208,10 @@ public partial class McpTaskServer
         var psi = BgLogs.RedirectedSpawn(exe, exeArgs,
             string.IsNullOrWhiteSpace(cwd) ? Directory.GetCurrentDirectory() : cwd, logPath);
 
+        // SF0.3 (bug #12): must precede the spawn — this server's stdout is its JSON-RPC wire, and a
+        // detached child that inherits it holds the client's pipe open past this process's exit.
+        BgLogs.StopLeakingConsoleHandles();
+
         Process? proc;
         try { proc = Process.Start(psi); }
         catch (Exception ex)
@@ -217,6 +221,11 @@ public partial class McpTaskServer
 
         if (proc == null)
             return JsonSerializer.SerializeToElement(new { ok = false, error = "Process.Start returned null." });
+
+        // SF0.3 (bug #12): the same detach the CLI does. This server talks JSON-RPC over ITS stdout —
+        // handing that handle to a detached child is how a bg job could interleave bytes into the MCP
+        // wire, and it would keep the pipe open past this process's own exit.
+        BgLogs.DetachStandardStreams(proc);
 
         // The exit watcher survives only as long as this session; the pids row is closed by the lazy
         // PidLiveness sweep every reader runs, which does not care whether we are still here.
@@ -253,7 +262,14 @@ public partial class McpTaskServer
         var rows = _store.GetAllPids(_runId);
         var list = rows.Select(r =>
         {
-            var alive = IsProcessAliveMcp(r.Pid);
+            // SF0.3 (bug #9): the SAME call `bg status` makes, with the SAME two arguments. This used
+            // to be a private `!HasExited` with a bare `catch { return false; }`, which got the answer
+            // wrong in both directions against the policy SC4.1 settled: a pid this process may not
+            // open read DEAD (so an agent's own bg_status buried its running build and it started a
+            // second one), and a RECYCLED id — one the OS has since handed to a stranger — read
+            // RUNNING, because start time was never consulted. Two surfaces, one run.db row, opposite
+            // words. There is now no second implementation to drift.
+            var alive = PidLiveness.LooksAlive(r.Pid, r.StartedUtc);
             var status = r.ExitedUtc != null ? "exited"
                 : alive ? "running" : "dead";
             // SC5.4: both operands UTC — `started` is now honestly UTC (SqliteRunStore.ParseUtc), so
@@ -325,10 +341,16 @@ public partial class McpTaskServer
         try
         {
 #pragma warning disable MA0045 // sync read is deliberate — called from sync MCP handlers
-            var allLines = File.ReadAllLines(logFile);
+            // SF0.3 (bug #13): a bg child's log is held open for Write by the shell doing the `>`
+            // redirect, and `File.ReadAllLines` asks for FileShare.Read — which on Windows must also
+            // permit what the existing handle holds, and does not. So this failed with a sharing
+            // violation for the ONE case bg_logs exists to serve: a job that is still running.
+            // SC2.4 fixed the CLI with SharedFileRead and left this path bare; the agent-stream branch
+            // a few lines up already uses it, which is why only half the verb worked.
+            var allLines = SharedFileRead.ReadAllLines(logFile);
 #pragma warning restore MA0045
-            var lines = allLines.Length <= tail ? allLines : allLines[^tail..];
-            return JsonSerializer.SerializeToElement(new { ok = true, pid, tail, totalLines = allLines.Length, lines });
+            var lines = allLines.Count <= tail ? allLines : allLines.Skip(allLines.Count - tail).ToList();
+            return JsonSerializer.SerializeToElement(new { ok = true, pid, tail, totalLines = allLines.Count, lines });
         }
         catch (IOException ex)
         {
@@ -399,13 +421,4 @@ public partial class McpTaskServer
         }
     }
 
-    private static bool IsProcessAliveMcp(int pid)
-    {
-        try
-        {
-            using var proc = Process.GetProcessById(pid);
-            return !proc.HasExited;
-        }
-        catch { return false; }
-    }
 }

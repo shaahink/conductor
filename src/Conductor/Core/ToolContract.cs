@@ -45,6 +45,12 @@ public static class ToolContract
             doing perfectly good work. Never kill processes by name (`Stop-Process dotnet`): you will take
             out unrelated work. Use `conductor bg stop`.
 
+            **Never kill a pid you have not identified.** The conductor supervising you is PID {{Environment.ProcessId}},
+            also in `CONDUCTOR_PID`. A build error saying `locked by: conductor (PID)` is almost always THIS
+            run holding its own binary, not a stale orphan: a fix session read that line, inferred an orphan,
+            and killed the conductor running it. Another repo's run may share this machine. Check a pid's
+            command line before touching it; never kill by name.
+
             **Tracked bugs — `conductor bug new|list|fix`  (MCP: `bug_new`/`bug_list`/`bug_fix`)**
             When you find a real defect you are not fixing right now, FILE it: `conductor bug new "<title>"`.
             A filed bug is a row in run.db that outlives your session — it is injected into later prompts and
