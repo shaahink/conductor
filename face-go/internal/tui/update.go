@@ -114,8 +114,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.eventSeq = msg.Event.Seq
 		next := waitForEvent(m.eventCh)
-		// Keep the Timeline live while it's on screen: any spine event refreshes it.
-		if m.tab == TabTimeline && !m.timelineLoading {
+		// Keep the spine live while it's on screen: any spine event refreshes it. Scoped to the
+		// VISIBLE view, not the whole History tab — sitting on the sessions list must not fetch the
+		// timeline on every event, and switching into the spine refetches anyway (applyHistoryView).
+		if m.tab == TabHistory && m.historyView == historyTimeline && !m.timelineLoading {
 			m.timelineLoading = true
 			return m, tea.Batch(next, m.cmdFetchTimeline())
 		}
@@ -505,11 +507,13 @@ func (m Model) handleKey(key string) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	case "esc":
 		// esc backs out one layer. Search and command overlays are peeled earlier in Update (their
-		// own handlers own esc); by here the outstanding layer is a non-Agent tab, and Agent is the
-		// base the dashboard rests on. On Agent with nothing open, esc is a no-op — already home.
+		// own handlers own esc); by here the outstanding layer is a non-Agent tab, or Agent's raw
+		// stream — which IS a layer over the parsed transcript, and the transcript is the base the
+		// dashboard rests on. On the parsed Agent view esc is a no-op — already home.
 		if m.tab != TabAgent {
 			return m.openTab(TabAgent)
 		}
+		m.agentRaw = false
 		return m, nil
 	case ":":
 		m.cmd = CmdPalette
@@ -541,8 +545,9 @@ func (m Model) handleKey(key string) (tea.Model, tea.Cmd) {
 			return m.openTab(MainTab(t))
 		}
 	case "0":
-		// The 10th tab (index 9) has no 1–9 digit; "0" reaches it. Tabs past that (Telegram and
-		// Kanban, the 11th and 12th) have no digit at all — mnemonic and tab-cycle only.
+		// The 10th tab (index 9) has no 1–9 digit; "0" reaches it. Since SF1.3 took the Face to ten
+		// tabs, that is the LAST one — the digit row now addresses every tab, and the caveat this
+		// comment used to carry ("the tabs past the digits are mnemonic-only") is simply gone.
 		if int(tabCount) > 9 {
 			return m.openTab(MainTab(9))
 		}
@@ -555,7 +560,57 @@ func (m Model) handleKey(key string) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	// …and the folded tabs' mnemonics jump straight to what they always opened, one level in
+	// (SF1.3). Global, exactly as they were when they were tab mnemonics, so no pane key changes
+	// hands. See foldedTabKey for why these are alive and `d` is not.
+	if t, folded := foldedTabKey[key]; folded {
+		return m.openFolded(key, t)
+	}
+
 	return m.handleTabKey(key)
+}
+
+// openFolded opens the tab that absorbed a folded surface, showing that surface.
+//
+// `c` is a TOGGLE once Agent is up — Agent has two bodies and the raw one needs a way back that is
+// not "go somewhere else and come back". `t`/`s` are not: History's two views are each other's way
+// back, so each key is idempotent and pressing it twice is never a surprise.
+func (m Model) openFolded(key string, t MainTab) (tea.Model, tea.Cmd) {
+	switch t {
+	case TabAgent:
+		if m.tab == TabAgent {
+			m.agentRaw = !m.agentRaw
+		} else {
+			m.agentRaw = true
+		}
+		if m.agentRaw {
+			m.consoleScroll = 0 // land on the live tail, as opening the Console tab used to
+		}
+		return m.openTab(TabAgent)
+	case TabHistory:
+		return m.openHistory(historyTimeline)
+	}
+	return m.openTab(t)
+}
+
+// openHistory opens the History tab on a specific view.
+func (m Model) openHistory(v historyView) (tea.Model, tea.Cmd) {
+	m.tab = TabHistory
+	return m.applyHistoryView(v)
+}
+
+// applyHistoryView selects a History view and resets what opening it means — assumes m.tab is already
+// TabHistory. Switching INTO the spine refetches it: the live-refresh in Update only runs while the
+// spine is the VISIBLE view, so arriving from the sessions list would otherwise show whatever the
+// last fetch left behind.
+func (m Model) applyHistoryView(v historyView) (tea.Model, tea.Cmd) {
+	m.historyView = v
+	if v == historyTimeline {
+		m.timelineSelected, m.timelineLoading, m.timelineErr = 0, true, ""
+		return m, m.cmdFetchTimeline()
+	}
+	m.sessionSelected = 0 // /sessions is newest-first; land on the current one
+	return m, nil
 }
 
 func (m Model) switchTab(delta int) (tea.Model, tea.Cmd) {
@@ -567,9 +622,11 @@ func (m Model) switchTab(delta int) (tea.Model, tea.Cmd) {
 func (m Model) openTab(t MainTab) (tea.Model, tea.Cmd) {
 	m.tab = t
 	switch t {
-	case TabTimeline:
-		m.timelineSelected, m.timelineLoading, m.timelineErr = 0, true, ""
-		return m, m.cmdFetchTimeline()
+	case TabHistory:
+		// Opening History lands on the sessions list, the way every other tab resets what it shows on
+		// open. The spine is `t`, or `←/→` from here — both one keypress, and both say which view
+		// they mean, which a preserved-across-tab-cycle view would not.
+		return m.applyHistoryView(historySessions)
 	case TabTemplates:
 		m.promptEntries = templates.List(m.currentPlanDir())
 		m.promptSelected, m.promptMode, m.promptPreviewOn = 0, PromptList, false
@@ -584,12 +641,6 @@ func (m Model) openTab(t MainTab) (tea.Model, tea.Cmd) {
 		// the answer to "how is it going" — is what opening the tab actually shows.
 		m.reportScroll = 0
 		return m, m.cmdFetchScores()
-	case TabConsole:
-		m.consoleScroll = 0
-		return m, nil
-	case TabSessions:
-		m.sessionSelected = 0 // /sessions is newest-first; land on the current one
-		return m, nil
 	case TabKnowledge:
 		m.knowledgeScroll, m.knowledgeMode = 0, knowledgeBrowse
 		return m, m.cmdFetchKnowledge()
@@ -629,14 +680,10 @@ func (m Model) handleTabKey(key string) (tea.Model, tea.Cmd) {
 	switch m.tab {
 	case TabAgent:
 		return m.handleAgentKey(key)
-	case TabSessions:
-		return m.handleSessionsKey(key)
-	case TabTimeline:
-		return m.handleTimelineKey(key)
+	case TabHistory:
+		return m.handleHistoryKey(key)
 	case TabProcesses:
 		return m.handleProcessesKey(key)
-	case TabConsole:
-		return m.handleConsoleKey(key)
 	case TabTemplates:
 		return m.handleTemplatesKey(key)
 	case TabPlan:
@@ -667,12 +714,8 @@ func (m Model) handleMouseWheel(msg tea.MouseWheelMsg) (tea.Model, tea.Cmd) {
 	switch m.tab {
 	case TabAgent:
 		return m.handleAgentKey(key)
-	case TabConsole:
-		return m.handleConsoleKey(key)
-	case TabSessions:
-		return m.handleSessionsKey(key)
-	case TabTimeline:
-		return m.handleTimelineKey(key)
+	case TabHistory:
+		return m.handleHistoryKey(key)
 	case TabProcesses:
 		return m.handleProcessesKey(key)
 	case TabKnowledge:

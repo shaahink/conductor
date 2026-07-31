@@ -17,10 +17,11 @@ const (
 	// in which directory, what does it cost, what next — answerable before pressing anything.
 	TabHome MainTab = iota
 	TabAgent
-	TabSessions
-	TabTimeline
+	// TabHistory is SF1.3's merge of the old Sessions and Timeline tabs: they were one question asked
+	// twice, because a session IS a timeline span (the spine's `session` entries carry the very
+	// SessionNumber /sessions lists). Two views, one surface — see historyView.
+	TabHistory
 	TabProcesses
-	TabConsole
 	TabTemplates
 	TabPlan
 	TabReport
@@ -32,16 +33,21 @@ const (
 	// Its two non-SQL panels were not deleted with it — they were re-homed to the surfaces that already
 	// answer their question: the wiring internals to Home's Server/Workspace panels, and the per-session
 	// token/cost table to the Report tab.
+	//
+	// SF1.3: TabConsole is gone too, but FOLDED rather than deleted — the raw agent stdout it rendered
+	// is now the Agent tab's raw-stream mode (`agentRaw`), strip and all. See docs/dev/adr/0004.
 	tabCount
 )
 
-var tabNames = [tabCount]string{"Home", "Agent", "Sessions", "Timeline", "Procs", "Console", "Templates", "Plan", "Report", "Knowledge", "Telegram", "Kanban"}
+var tabNames = [tabCount]string{"Home", "Agent", "History", "Procs", "Templates", "Plan", "Report", "Knowledge", "Telegram", "Kanban"}
 
 // tabKey is the mnemonic that jumps straight to each tab (also shown in the strip). First-letter where
 // it's free; Procs takes o and Telegram takes g (their first letters collide), Plan takes p — freed
-// by moving sidebar-collapse to `\` — and Kanban takes b ("board"; k is Knowledge). Home takes h, free
-// since the tab-mnemonic relabel moved Sessions to s. Digits 1–9 reach Home…Report and 0 reaches
-// Knowledge; Telegram and Kanban are the two tabs past the digits — mnemonic and tab-cycle only.
+// by moving sidebar-collapse to `\` — and Kanban takes b ("board"; k is Knowledge). Home takes h, and
+// History keeps Sessions' `s` rather than claiming `h`: Home is the landing page every user hits
+// first, and `s`/`t` both still reach History anyway (see foldedTabKey), which is worth more than a
+// first-letter match. At ten tabs the digit row addresses ALL of them — 1–9 then 0 — so unlike every
+// earlier version of this comment there is no "and the last few have no digit" caveat to make.
 //
 // SF1.2 freed `d` when the Dev tab went. It is deliberately left UNBOUND rather than reassigned: `d`
 // meant "the SQL console" to anyone who used this Face, and quietly landing them somewhere else is
@@ -49,7 +55,28 @@ var tabNames = [tabCount]string{"Home", "Agent", "Sessions", "Timeline", "Procs"
 //
 // Keep in sync with renderHelpOverlay's Tabs legend — that legend is hand-maintained, so a mnemonic
 // changed here and not there makes the help lie.
-var tabKey = [tabCount]string{"h", "a", "s", "t", "o", "c", "e", "p", "r", "k", "g", "b"}
+var tabKey = [tabCount]string{"h", "a", "s", "o", "e", "p", "r", "k", "g", "b"}
+
+// foldedTabKey is the second half of the mnemonic story, and the reason SF1.3 is not SF1.2. `d` went
+// dead because its surface was DELETED — landing that user anywhere would be a lie. `c` and `t` name
+// surfaces that still EXIST, one level in, so they keep their meaning: each opens the tab that
+// absorbed it, already showing the absorbed view. Nothing a user of this Face has learned stops
+// working. Declared as a map, not scattered `case` arms, so TestTabMnemonicsAreUnique can pin these
+// and tabKey as ONE namespace — an alias colliding with a tab mnemonic is unreachable in exactly the
+// way a duplicate tabKey entry is. Keep in sync with the help legend's folded row.
+var foldedTabKey = map[string]MainTab{
+	"c": TabAgent,   // the old Console tab — Agent's raw stream (and a toggle once Agent is up)
+	"t": TabHistory, // the old Timeline tab — History's spine view
+}
+
+// historyView selects which of TabHistory's two views fills the pane. `←/→` switches them, which is
+// this codebase's sub-section idiom (planTab), and `s`/`t` jump straight to one from anywhere.
+type historyView int
+
+const (
+	historySessions historyView = iota
+	historyTimeline
+)
 
 // CmdMode is a transient bottom-bar input that floats over the dashboard instead of a full modal.
 type CmdMode int
@@ -123,6 +150,14 @@ type Model struct {
 	consoleSeq int64
 
 	consoleScroll int
+
+	// agentRaw swaps the Agent tab's body from the parsed transcript to the raw agent stdout that used
+	// to be the Console tab (SF1.3). The strip stays in both modes — keeping mission control on screen
+	// while reading raw output is the whole reason this folded instead of staying its own tab.
+	agentRaw bool
+
+	// historyView selects TabHistory's view: the sessions list or the run's spine.
+	historyView historyView
 
 	// Palette (bottom command bar)
 	paletteQuery      string

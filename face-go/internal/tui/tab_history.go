@@ -12,6 +12,46 @@ import (
 	"conductor-face-go/internal/widgets"
 )
 
+// The History tab is the run's past, in two views of one chronology (SF1.3, docs/dev/adr/0004): the
+// SESSIONS list — every session with its outcome and result summary — and the SPINE, the timeline of
+// sessions, gates, stalls and verdicts as they happened. They were two tabs asking one question,
+// because a session IS a timeline span: the spine's `session` entries carry the very SessionNumber
+// the sessions list renders. `←/→` switches views (planTab's idiom), `s` and `t` jump straight to one.
+
+// handleHistoryKey routes to the active view, after taking the two keys the tab itself owns.
+func (m Model) handleHistoryKey(key string) (tea.Model, tea.Cmd) {
+	switch key {
+	case "left", "right":
+		return m.openHistory(1 - m.historyView) // two views: the other one
+	}
+	if m.historyView == historyTimeline {
+		return m.handleTimelineKey(key)
+	}
+	return m.handleSessionsKey(key)
+}
+
+// renderHistoryPane draws the view switcher, then the active view under it.
+func (m Model) renderHistoryPane() (body, help string) {
+	if m.historyView == historyTimeline {
+		body, help = m.renderTimelineView()
+	} else {
+		body, help = m.renderSessionsView()
+	}
+	return m.historySwitcher() + "\n" + body, help + " · ←/→ view"
+}
+
+// historySwitcher names both views and marks the active one. Without it the second view is folklore:
+// a merged tab that shows one of its halves and nothing else is just the other half, deleted.
+func (m Model) historySwitcher() string {
+	cell := func(v historyView, k, name string) string {
+		if m.historyView == v {
+			return accentStyle.Render("● "+name) + subtleStyle.Render(" "+k)
+		}
+		return subtleStyle.Render("○ " + name + " " + k)
+	}
+	return cell(historySessions, "s", "Sessions") + subtleStyle.Render("   ") + cell(historyTimeline, "t", "Spine")
+}
+
 func (m Model) handleTimelineKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
 	case "r":
@@ -29,9 +69,9 @@ func (m Model) handleTimelineKey(key string) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// renderTimelinePane shows the run's spine — sessions, gates, stalls, verdicts, cost over time.
+// renderTimelineView shows the run's spine — sessions, gates, stalls, verdicts, cost over time.
 // It refreshes itself whenever a new engine event lands (see Update), so it is live while open.
-func (m Model) renderTimelinePane() (string, string) {
+func (m Model) renderTimelineView() (string, string) {
 	if m.timelineLoading && len(m.timelineEntries) == 0 {
 		return subtleStyle.Render("loading…"), "r refresh"
 	}
@@ -42,8 +82,9 @@ func (m Model) renderTimelinePane() (string, string) {
 		return subtleStyle.Render("(no events on the run's spine yet)"), "r refresh"
 	}
 	// Reserve the bottom of the pane for the selected entry's detail (full description + meta).
+	// historyRows, not paneRows: the view switcher above costs a row in every History view.
 	detail := m.timelineDetail()
-	window := m.paneRows() - lipgloss.Height(detail) - 1
+	window := m.historyRows() - lipgloss.Height(detail) - 1
 	if window < 3 {
 		window = 3
 	}
@@ -167,4 +208,90 @@ func timelineClock(utc string) string {
 		return "--:--:--"
 	}
 	return t.In(widgets.ClockLocation).Format("15:04:05")
+}
+
+// --- sessions view (the folded Sessions tab, SF1.3) -----------------------------
+
+// sessionOutcomeStyle colours a session outcome against the engine's real outcome vocabulary
+// (RunLoop verdicts). Normalised so "NeedsHuman", "needs-human", "needshuman" all match — the old
+// map missed AgentError/TimedOut/NeedsHuman/RolledOver, so an error session rendered plain grey.
+func sessionOutcomeStyle(outcome string) lipgloss.Style {
+	norm := strings.Map(func(r rune) rune {
+		if r >= 'a' && r <= 'z' {
+			return r
+		}
+		if r >= 'A' && r <= 'Z' {
+			return r + 32
+		}
+		return -1 // drop digits, spaces, dashes
+	}, outcome)
+	switch norm {
+	case "advanced", "progress", "completed", "confirmed", "done":
+		return safeStyle // green — real forward motion
+	case "needshuman":
+		return peachStyle // attention — the run parked for a human
+	case "limitbackoff", "rolledover", "backoff", "ratelimited":
+		return warnStyle // transient — no attempt burned, the loop retries itself
+	case "gatesred", "stalled", "timedout", "agenterror", "authfailed", "noprogress", "needsretry", "failed", "error", "interrupted":
+		return destructStyle // red — a failure the loop had to react to
+	default:
+		return subtleStyle
+	}
+}
+
+func (m Model) handleSessionsKey(key string) (tea.Model, tea.Cmd) {
+	switch key {
+	case "up", "k":
+		if m.sessionSelected > 0 {
+			m.sessionSelected--
+		}
+	case "down", "j":
+		if m.sessionSelected < len(m.data.Sessions)-1 {
+			m.sessionSelected++
+		}
+	}
+	return m, nil
+}
+
+// renderSessionsView lists sessions newest-first (the wire order) with the selected one's detail
+// inline underneath — history and drill-down on one page.
+func (m Model) renderSessionsView() (string, string) {
+	if len(m.data.Sessions) == 0 {
+		return subtleStyle.Render("(no sessions yet — they appear as the engine runs)"), ""
+	}
+	var lines []string
+	for i, s := range m.data.Sessions {
+		outcome, oStyle := "running", warnStyle
+		if s.Outcome != nil {
+			outcome = *s.Outcome
+			oStyle = sessionOutcomeStyle(outcome)
+		}
+		// Pad each cell as plain text first, then colour — ANSI-safe alignment (STYLE.md).
+		num := fmt.Sprintf("#%-3d", s.Number)
+		stage := fmt.Sprintf("%-6s", s.StageId)
+		kind := fmt.Sprintf("%-8s", s.Kind)
+		out := fmt.Sprintf("%-12s", outcome)
+		commits := fmt.Sprintf("%d commits", s.CommitCount)
+		if i == m.sessionSelected {
+			lines = append(lines, highlightBg.Render("› "+num+" "+stage+" "+kind+" "+out+" "+commits))
+			continue
+		}
+		lines = append(lines, "  "+subtleStyle.Render(num)+" "+accentStyle.Render(stage)+" "+
+			textStyle.Render(kind)+" "+oStyle.Render(out)+" "+subtleStyle.Render(commits))
+	}
+
+	if m.sessionSelected < len(m.data.Sessions) {
+		s := m.data.Sessions[m.sessionSelected]
+		detail := fmt.Sprintf("\n%s #%d · %s %s · %s",
+			accentStyle.Render("Session"), s.Number, accentStyle.Render(s.StageId), textStyle.Render(s.Kind),
+			subtleStyle.Render(fmt.Sprintf("attempt %d, %d resumes", s.Attempt, s.ResumeCount)))
+		if s.GateSummary != nil {
+			detail += "\n" + subtleStyle.Render("Gates: ") + textStyle.Render(*s.GateSummary)
+		}
+		if s.ResultSummary != nil {
+			detail += "\n" + subtleStyle.Render("Result:") + "\n" + indent(renderMarkdown(*s.ResultSummary, m.paneCols()-4), "  ")
+		}
+		lines = append(lines, detail)
+	}
+	return strings.Join(lines, "\n"), "↑↓ navigate"
 }

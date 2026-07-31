@@ -473,7 +473,10 @@ func TestGolden(t *testing.T) {
 			}
 			return m
 		}},
-		{"sessions", func(m tea.Model) tea.Model {
+		// SF1.3: Sessions and Timeline are the two views of one History tab, so both goldens are named
+		// for the tab that holds them and BOTH pin the view switcher — the row that makes the second
+		// view discoverable instead of folklore.
+		{"history_sessions", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("s"))
 			return m
 		}},
@@ -517,14 +520,22 @@ func TestGolden(t *testing.T) {
 			m, _ = m.Update(keyMsg("x")) // kill confirm for the selected (alive) process
 			return m
 		}},
-		{"timeline", func(m tea.Model) tea.Model {
+		{"history_spine", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("t"))
+			m, _ = m.Update(MsgTimelineUpdated{Timeline: &api.TimelineDto{Entries: fixedTimeline()}})
+			return m
+		}},
+		// SF1.3: ←/→ is the documented way between History's views, and a golden reached by ← proves
+		// the switcher actually routes — the `t` scenarios above would pass even if it did not.
+		{"history_spine_via_arrow", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("s"))     // sessions list
+			m, _ = m.Update(keyMsg("right")) // …and across to the spine
 			m, _ = m.Update(MsgTimelineUpdated{Timeline: &api.TimelineDto{Entries: fixedTimeline()}})
 			return m
 		}},
 		// U3.2 / dogfood appendix 6: the attach fetch is history, everything after it is live, and
 		// the rule between them is what stops an attach reading as an event storm.
-		{"timeline_live", func(m tea.Model) tea.Model {
+		{"history_spine_live", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("t"))
 			hist := fixedTimeline()
 			m, _ = m.Update(MsgTimelineUpdated{Timeline: &api.TimelineDto{Entries: hist}})
@@ -597,7 +608,10 @@ func TestGolden(t *testing.T) {
 			}})
 			return m
 		}},
-		{"console", func(m tea.Model) tea.Model {
+		// SF1.3: the Console tab folded into Agent, so this pins the RAW MODE of the Agent tab — the
+		// agent strip above undecorated stdout, which is the thing tabbing away to a console used to
+		// cost you. Reached by `c`, the key that has always meant "show me the raw output".
+		{"agent_raw", func(m tea.Model) tea.Model {
 			for i, raw := range []string{
 				`{"type":"system","subtype":"init","session_id":"s12","model":"deepseek-v4-pro"}`,
 				`{"type":"assistant","message":{"content":[{"type":"text","text":"Examining GateCache..."}]}}`,

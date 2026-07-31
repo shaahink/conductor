@@ -16,6 +16,11 @@ import (
 )
 
 func (m Model) handleAgentKey(key string) (tea.Model, tea.Cmd) {
+	// Raw mode is the old Console tab's pane, so it keeps the old Console tab's keys — the parsed
+	// stream's fold/thinking/search keys mean nothing against undecorated stdout.
+	if m.agentRaw {
+		return m.handleAgentRawKey(key)
+	}
 	switch key {
 	case "up", "k":
 		m.transcript = m.transcript.Update(widgets.MsgScrollUp)
@@ -44,12 +49,24 @@ func (m Model) handleAgentKey(key string) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) renderAgentPane() (string, string) {
-	help := "↑↓ scroll · f fold · T thinking · / search · end live-tail"
+	help := "↑↓ scroll · f fold · T thinking · / search · c raw · end live-tail"
+	if m.agentRaw {
+		help = "↑↓ scroll · pgup/pgdn · home/end · c back to the parsed stream"
+	}
 	if m.data.Plan == nil {
 		return m.renderSplash(), help
 	}
 
 	strip := m.renderAgentStrip()
+	// Raw mode keeps the strip and drops the footer. The strip is mission control — session,
+	// checkpoint, gates, the attention banner — and losing it was the actual cost of tabbing away to
+	// the old Console. The footer (model · elapsed · tokens · cost) is the PARSED view's status line;
+	// under undecorated stdout it is furniture, and the rows are better spent on output.
+	if m.agentRaw {
+		body := strip + "\n" + m.renderAgentRawBody(m.paneRows()-lipgloss.Height(strip))
+		return body, help
+	}
+
 	footer := m.renderAgentFooter()
 	// The transcript takes whatever rows the strip and footer leave. Subtracting the footer here is
 	// what keeps it on screen: the pane is height-clamped by View(), so a footer the transcript did
@@ -66,6 +83,79 @@ func (m Model) renderAgentPane() (string, string) {
 		body += "\n" + footer
 	}
 	return body, help
+}
+
+// --- raw stream (the folded Console tab, SF1.3) ---------------------------------
+//
+// These two moved here whole from tab_console.go when TabConsole was folded into Agent: one file per
+// tab (STYLE.md), and the raw stream is no longer a tab of its own.
+
+// handleAgentRawKey is the old Console tab's key handler. Offsets count back FROM THE TAIL, so 0 is
+// pinned-live and `end` re-pins — never offset-from-top on a live stream (STYLE.md).
+func (m Model) handleAgentRawKey(key string) (tea.Model, tea.Cmd) {
+	page := m.paneRows() - 1
+	if page < 1 {
+		page = 1
+	}
+	maxScroll := len(m.data.RawConsole)
+	switch key {
+	case "up", "k":
+		m.consoleScroll++
+	case "down", "j":
+		if m.consoleScroll > 0 {
+			m.consoleScroll--
+		}
+	case "pgup":
+		m.consoleScroll += page
+	case "pgdown":
+		m.consoleScroll -= page
+		if m.consoleScroll < 0 {
+			m.consoleScroll = 0
+		}
+	case "home":
+		m.consoleScroll = maxScroll // oldest line (renderer clamps)
+	case "end":
+		m.consoleScroll = 0
+	}
+	if m.consoleScroll > maxScroll {
+		m.consoleScroll = maxScroll
+	}
+	return m, nil
+}
+
+// renderAgentRawBody is the native console: the agent CLI's raw stdout, exactly as it prints. `rows`
+// is what the strip left over — the pane is height-clamped by View(), so a body that sized itself
+// against the whole pane would push its own tail below the fold.
+func (m Model) renderAgentRawBody(rows int) string {
+	lines := m.data.RawConsole
+	if len(lines) == 0 {
+		return subtleStyle.Render("(no raw output yet — the agent tees stdout to .conductor/logs/session-NNN.jsonl)")
+	}
+	window := rows - 1 // the counter row below costs one
+	if window < 3 {
+		window = 3
+	}
+	end := len(lines) - m.consoleScroll
+	if end < 1 {
+		end = 1
+	}
+	if end > len(lines) {
+		end = len(lines)
+	}
+	start := end - window
+	if start < 0 {
+		start = 0
+	}
+	var out []string
+	for i := start; i < end; i++ {
+		out = append(out, subtleStyle.Render(truncate(lines[i].Text, m.paneCols())))
+	}
+	pos := safeStyle.Render("● live tail")
+	if m.consoleScroll > 0 {
+		pos = warnStyle.Render(fmt.Sprintf("↕ scrolled back %d — end to live-tail", m.consoleScroll))
+	}
+	out = append(out, subtleStyle.Render(fmt.Sprintf("%d raw lines · ", len(lines)))+pos)
+	return strings.Join(out, "\n")
 }
 
 // renderAgentFooter is the Claude-Code-style status line pinned under the transcript: which CLI +

@@ -455,13 +455,16 @@ func (m Model) renderHelpOverlay() string {
 	body := "" +
 		accentStyle.Render("Tabs") + subtleStyle.Render("  (letter or number jumps · ") + key("tab") +
 		subtleStyle.Render(" cycles)") + "\n" +
-		"  " + tabLegendCell("h", "Home") + tabLegendCell("a", "Agent") + tabLegendCell("s", "Sessions") + "\n" +
-		"  " + tabLegendCell("t", "Timeline") + tabLegendCell("o", "Procs") + tabLegendCell("c", "Console") + "\n" +
-		"  " + tabLegendCell("e", "Templates") + tabLegendCell("p", "Plan") + tabLegendCell("r", "Report") + "\n" +
-		// SF1.2 deleted the Dev tab, so this row lost its 4th cell (`d Dev`) and is back to three.
-		// This legend is hand-maintained: a mnemonic changed in tabKey and not here makes the help lie,
-		// which is what TestHelpLegendNamesEveryTabItsRealMnemonic exists to catch.
-		"  " + tabLegendCell("k", "Knowledge") + tabLegendCell("g", "Telegram") + tabLegendCell("b", "Kanban") + "\n\n" +
+		"  " + tabLegendCell("h", "Home") + tabLegendCell("a", "Agent") + tabLegendCell("s", "History") + tabLegendCell("o", "Procs") + "\n" +
+		"  " + tabLegendCell("e", "Templates") + tabLegendCell("p", "Plan") + tabLegendCell("r", "Report") + tabLegendCell("k", "Knowledge") + "\n" +
+		"  " + tabLegendCell("g", "Telegram") + tabLegendCell("b", "Kanban") + "\n" +
+		// The folded row. SF1.3 merged Console into Agent and Timeline into History, and kept both
+		// mnemonics pointing at the surfaces they always named — so the help must say where they went,
+		// or the two keys look deleted. This whole legend is hand-maintained: a mnemonic changed in
+		// tabKey (or foldedTabKey) and not here makes the help lie, which is what
+		// TestHelpLegendNamesEveryTabItsRealMnemonic exists to catch.
+		"  " + subtleStyle.Render("folded  ") + key("c") + subtleStyle.Render(" Agent's raw stream · ") +
+		key("t") + subtleStyle.Render(" History's spine · ") + key("←/→") + subtleStyle.Render(" History views") + "\n\n" +
 		accentStyle.Render("Palette") + subtleStyle.Render("  ") + key(":") + subtleStyle.Render("  ") +
 		destructStyle.Render("red") + subtleStyle.Render(" = confirms, and says what it will do") + "\n" +
 		"  " + verbGroupLegend(groupRun) + "\n" +

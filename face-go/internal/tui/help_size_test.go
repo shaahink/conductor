@@ -51,10 +51,23 @@ func TestHelpLegendNamesEveryTabItsRealMnemonic(t *testing.T) {
 				"the wrong key:\n%s", cell, name, help)
 		}
 	}
-	// And nothing the legend advertises may be a tab that no longer exists.
-	for _, gone := range []string{"Dev", "Debug"} {
+	// And nothing the legend advertises may be a tab that no longer exists. Asserted as the rendered
+	// CELL (`key name`), not the bare word: after SF1.3 the folded row legitimately mentions Agent's
+	// raw stream and History's spine, and a bare-word check could not tell "c Console is a tab" from
+	// "c reaches the raw stream inside Agent".
+	for _, gone := range []string{"d Dev", "c Console", "t Timeline", "s Sessions"} {
 		if strings.Contains(help, gone) {
-			t.Errorf("the help card still advertises the deleted %q tab:\n%s", gone, help)
+			t.Errorf("the help card still advertises %q as a tab — that surface was deleted or "+
+				"folded:\n%s", gone, help)
+		}
+	}
+
+	// SF1.3: the folded mnemonics are alive and the help is the only place that says where they went.
+	// Without this the two keys look deleted, and a user who learned them concludes the surface is.
+	for k := range foldedTabKey {
+		if !strings.Contains(help, "folded") || !strings.Contains(help, k+" ") {
+			t.Errorf("the help card does not document the folded mnemonic %q — it still works, so a "+
+				"legend that omits it makes the surface look deleted:\n%s", k, help)
 		}
 	}
 }

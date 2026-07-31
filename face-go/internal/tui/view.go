@@ -169,14 +169,10 @@ func (m Model) paneView() (body, help string) {
 		return m.renderHomePane()
 	case TabAgent:
 		return m.renderAgentPane()
-	case TabSessions:
-		return m.renderSessionsPane()
-	case TabTimeline:
-		return m.renderTimelinePane()
+	case TabHistory:
+		return m.renderHistoryPane()
 	case TabProcesses:
 		return m.renderProcessesPane()
-	case TabConsole:
-		return m.renderConsolePane()
 	case TabTemplates:
 		return m.renderTemplatesPane()
 	case TabPlan:
@@ -205,6 +201,17 @@ func (m Model) paneCols() int {
 
 func (m Model) paneRows() int {
 	r := ComputeLayout(m.width, m.height, m.sidebarCollapsed).Content.Height - 3
+	if r < 3 {
+		r = 3
+	}
+	return r
+}
+
+// historyRows is what a History VIEW gets: the pane minus the view switcher that sits above both of
+// them. A view that sized itself against paneRows would be one row too tall and lose its own last
+// row to the frame's height clamp — which for the spine is the detail pane it exists to show.
+func (m Model) historyRows() int {
+	r := m.paneRows() - 1
 	if r < 3 {
 		r = 3
 	}

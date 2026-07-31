@@ -5,8 +5,10 @@ package tui
 // On sizes — this ADDS, it does not replace. `TestGoldenSizes` keeps 80x24 / 120x30 / 200x50 (the M5
 // truth gate; 200x50 is the only wide coverage there is, and the spec's parenthetical "the goldens'
 // sizes" was simply wrong about what they are). This file adds the spec's 132x40 / 100x30 / 80x24
-// across all thirteen tabs, which is the axis nothing covered: every size test before this rendered
-// the DEFAULT tab only.
+// across every tab (thirteen when it was written, ten since SF1.3 — the loop is driven by tabCount,
+// so it never needed the number), which is the axis nothing covered: every size test before this
+// rendered the DEFAULT tab only. SF1.3 added a second loop for the folded MODES, which are panes the
+// tabCount loop can no longer reach.
 //
 // That gap was not theoretical. TestFrameNeverExceedsWindowHeight builds 30 multi-paragraph
 // transcript events as its worst case and asserts the frame still fits — but newGoldenModel opens on
@@ -83,6 +85,52 @@ func TestEveryTabFitsEverySize(t *testing.T) {
 				}
 				if last := rows[len(rows)-1]; !strings.Contains(last, "quit") && !strings.Contains(last, "cmd") {
 					t.Errorf("last visible row is not the bottom bar: %q", last)
+				}
+			})
+		}
+	}
+}
+
+// SF1.3 folded two tabs into modes of other tabs, and the sweep above is driven by tabKey — so a
+// folded mode is a pane the sweep stopped covering the moment its tab stopped existing. The old
+// Console tab WAS in that loop; Agent's raw stream and History's spine must not quietly fall out of
+// it. Same mechanical checks, reached by the same real router.
+func TestEveryFoldedModeFitsEverySize(t *testing.T) {
+	modes := []struct {
+		name string
+		keys []string
+	}{
+		{"AgentRaw", []string{"c"}},              // the folded Console
+		{"HistorySpine", []string{"t"}},          // the folded Timeline
+		{"HistoryArrow", []string{"s", "right"}}, // …and reached the documented other way
+	}
+	for _, size := range glitchSizes {
+		for _, mode := range modes {
+			t.Run(fmt.Sprintf("%s_%dx%d", mode.name, size.w, size.h), func(t *testing.T) {
+				m := worstCaseModel(size.w, size.h)
+				// Worst case for a raw stream is a full buffer of over-wide lines.
+				for i := 0; i < 200; i++ {
+					m, _ = m.Update(MsgConsoleLine{Line: api.ConsoleLineDto{Seq: int64(i + 1),
+						Text: strings.Repeat("raw stdout that is far wider than any terminal ", 6)}})
+				}
+				m, _ = m.Update(MsgTimelineUpdated{Timeline: &api.TimelineDto{Entries: fixedTimeline()}})
+				for _, k := range mode.keys {
+					m = asModel(mustHandle(asModel(m).handleKey(k)))
+				}
+
+				frame := stripANSI(asModel(m).View().Content)
+				rows := strings.Split(strings.TrimRight(frame, "\n"), "\n")
+				if len(rows) > size.h {
+					t.Errorf("%s frame is %d rows for a %d-row window", mode.name, len(rows), size.h)
+				}
+				for n, row := range rows {
+					if got := len([]rune(strings.TrimRight(row, " "))); got > size.w {
+						t.Errorf("row %d is %d cols wide in a %d-col window: %q", n, got, size.w, row)
+					}
+				}
+				body, _ := asModel(m).paneView()
+				if strings.TrimSpace(stripANSI(body)) == "" {
+					t.Errorf("the %s pane renders completely blank", mode.name)
 				}
 			})
 		}
