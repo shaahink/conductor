@@ -4,30 +4,26 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SC6.1 landed.** The report commit trigger is no longer "the rendered text changed" but
-  `ReportSubstance.Of(state, track)` - checkpoint statuses/commits, FINISHED session records,
-  confirmed and skipped stages. Everything the engine says about itself is excluded by name, and so
-  is a session that has only STARTED (its record churns cost/tokens every heartbeat). What still
-  commits is coalesced: the next publish AMENDS the previous report commit while it is still the tip.
-  `ConfirmStageAsync` now does `_saveAndReport()` THEN `SquashBookkeeping(id)`.
-gate: live rig `%TEMP%\sarban-proofs\sc61`, one stage close, published engine vs FRESH build.
-  Chore commits landing AFTER the squash 3 to 0; the engine's own bookkeeping commits 4 to 1 (2 more
-  in each run were agent-seeded, so the engine's share stayed separable); AFTER reflog carries
-  `commit (amend)`. Scoped 41/0 including a full-orchestrator stage-close test with report.commit ON.
-  Evidence .conductor/evidence/SC6/SC6.1-status-transitions-and-squash-order.md.
-next: **SC6.2** - the squash works on a dirty tree, reports real counts, logs git stderr and the exit
-  code, un-marks the stage on failure, aborts a half-started rebase, degrades off Windows.
-know: the SC6.1 rig proves the ORDER but NOT a working rebase - `git rebase returned non-zero` still,
-  in BOTH engines, because the engine rewrites TRACKER.md after the agent commits it so the tree is
-  never clean at a stage close. That is SC6.2's whole job and the rig is already built for it: rerun
-  `SC61-run.ps1` and look for a reflog `rebase (finish)`. Third cause found by that rig and worth
-  keeping: REPORT.md embeds the repo's HEAD sha, so every report commit changed the next report and
-  justified another - a self-feeding loop, 3 identical commits in 5 seconds while merely idling.
-  Rig trap: `conductor` on PATH is a scoop .cmd SHIM, so Start-Process returns the shim's pid and
-  Stop-Process leaves the real engine alive holding the log file; sweep Win32_Process for
-  conductor.exe matching THIS rig's plan path. `RunOptions.Once` returns before the loop reaches the
-  pending phase gate, so a stage-close test must use MaxSessions, not Once.
-  Bugs 2,3,4,5,6,8,9,10,11,12 open (5 is fixed in source, only the published engine still crashes).
+last: **SC6.2 landed - SC6 is closed.** The squash no longer rebases: it groups consecutive
+  chore(conductor): commits, rebuilds the tail with `git commit-tree` reusing the trees that already
+  exist (fixup semantics - first message and authorship, last tree), then moves the branch with a
+  compare-and-swap `update-ref`. Nothing is ever checked out, so a dirty tree is irrelevant and a
+  conflict unreachable. It refuses a merge in the range or a range not ending at HEAD, aborts a
+  rebase it finds in progress, writes ORIG_HEAD, and marks a stage squashed only after one that
+  worked - the failure line carries git's exit code, its stderr and the failing command.
+gate: rig `%TEMP%\sarban-proofs\sc62`, same baseline, published engine vs FRESH build: `git rebase
+  returned non-zero` becomes `squashed 2 chore(conductor): commits into 1 (4 commits -> 3)`, chore
+  commits 5 to 2, and the unstaged + staged + untracked work all intact. Scoped 48/0, plus 41/0 for
+  ProcessRunner's own consumers. Evidence .conductor/evidence/SC6/SC6.2-honest-safe-squash.md.
+next: **SC7.1** - structured tool events in transcript.jsonl (name plus extracted fields, values
+  truncated and JSON never cut), schema v2 that still reads v1, out-of-repo writes in the verdict.
+know: the spec asked the squash to DEGRADE off Windows; there is nothing left to degrade, it launches
+  only git - SquashResult.Commands records every process it starts and a test asserts they are all
+  git. No non-Windows box ran it. Rig trap that cost a rerun: an agent .cmd invoking the PATH
+  conductor SHIM without `call` transfers control and never returns, so the BEFORE rig silently lost
+  every line after the claim. `RunOptions.Once` returns before the loop reaches the pending phase
+  gate, so a stage-close test needs MaxSessions. Bugs 2,3,4,5,6,8,9,10,11,12 open (5 is fixed in
+  source, only the published engine still crashes).
 
 
 ## Baseline numbers (from run.db)
@@ -36,7 +32,7 @@ know: the SC6.1 rig proves the ORDER but NOT a working rebase - `git rebase retu
 |---|---|
 | Total checkpoints | 26 |
 | Done | 0 |
-| Claimed (unconfirmed) | 19 |
+| Claimed (unconfirmed) | 20 |
 
 ## Checkpoints
 
@@ -91,7 +87,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| SC6.1 | Pure status-transition updates no longer land commits, and any squash runs after the stage's final state write | TODO | - | - |
+| SC6.1 | Pure status-transition updates no longer land commits, and any squash runs after the stage's final state write | DONE | 04e092a | engine-fast:OK · face-fast:OK |
 | SC6.2 | The squash works on a dirty tree, reports real counts, logs git stderr and exit code on failure, un-marks the stage on failure, aborts a half-started rebase, and degrades gracefully off Windows | TODO | - | - |
 
 ### SC7 — The transcript captures structure
