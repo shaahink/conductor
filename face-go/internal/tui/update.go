@@ -206,12 +206,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case MsgReportScores:
-		// A failed scores query must not blank the whole report: the section renders the error and
+		// A failed scores fetch must not blank the whole report: the section renders the error and
 		// every other section (which came from /state + /sessions) still stands.
-		if msg.Err != "" {
-			errCopy := msg.Err
-			m.reportScores = &api.QueryResultDto{Error: &errCopy}
-		} else {
+		m.reportScoresErr = msg.Err
+		if msg.Err == "" {
 			m.reportScores = msg.Result
 		}
 		return m, nil

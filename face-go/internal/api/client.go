@@ -189,6 +189,14 @@ func (s *liveSource) FetchPromptPreview(stageId, kind string) (*PromptPreviewDto
 	return &preview, nil
 }
 
+func (s *liveSource) FetchScores() (*ScoresDto, error) {
+	var scores ScoresDto
+	if err := s.getJSON("/scores", &scores); err != nil {
+		return nil, err
+	}
+	return &scores, nil
+}
+
 func (s *liveSource) QueryReport(sql string) (*QueryResultDto, error) {
 	path := "/report/query?sql=" + urlEncode(sql)
 	var result QueryResultDto

@@ -148,8 +148,9 @@ Discover a live run's URL from `.conductor/control-plane.json` → `url` (e.g. `
 All endpoints are localhost-only.
 
 **Read:** `GET /state` (current stage/session/cost/live metrics) · `/timeline` · `/tasks` · `/ledger`
-· `/bugs` · `/sessions` · `/plan` · `/prompt/preview?stage=&kind=` · `/prompt/blocks?task=` (P3: a
-task's prompt as labeled building blocks) · `/console/current` and
+· `/bugs` · `/sessions` · `/scores` (SF1.1: the verifier's verdicts, each with the per-stage bar it
+was judged against and whether it passed) · `/plan` · `/prompt/preview?stage=&kind=` ·
+`/prompt/blocks?task=` (P3: a task's prompt as labeled building blocks) · `/console/current` and
 `/transcript/current` (SSE streams of the live agent) · `GET /report/query?sql=` (read-only SQL).
 Reads need no token.
 

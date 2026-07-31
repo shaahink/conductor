@@ -846,6 +846,97 @@ public sealed class ControlPlaneServerTests : IDisposable
         finally { server.Dispose(); }
     }
 
+    // SF1.1: the Report tab's verifier-scores section used to be a canned SELECT through
+    // /report/query — the single reason a RENDERED report still needed the SQL console. These pin the
+    // wire type that replaced it.
+    [Fact]
+    public async Task GetScores_ReturnsTypedVerdictsNewestFirstWithFindingsSplit()
+    {
+        _store.InitializeRun(RunId, "cps-test", _dir, null, null);
+        // WriteScore joins the verdict's findings with "\n" (VerdictEngine does exactly this), so the
+        // endpoint has to split them back — a client must never be handed a blob to parse.
+        _store.WriteScore(RunId, 2, "S1", 88, "PASS", "checkpoint S1.1 landed without an evidence path");
+        _store.WriteScore(RunId, 11, "S1", 66, "WARN", "gate cache key ignores the tier\nno test covers the miss path");
+        var (server, port) = StartServer();
+        try
+        {
+            var resp = await _http.GetAsync($"http://127.0.0.1:{port}/scores");
+            Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            var scores = doc.RootElement.GetProperty("scores");
+            Assert.Equal(2, scores.GetArrayLength());
+
+            // Newest session first, matching /sessions.
+            var latest = scores[0];
+            Assert.Equal(11, latest.GetProperty("sessionNumber").GetInt32());
+            Assert.Equal("S1", latest.GetProperty("stageId").GetString());
+            Assert.Equal(66, latest.GetProperty("score").GetInt32());
+            Assert.Equal("WARN", latest.GetProperty("verdict").GetString());
+            Assert.Equal(80, latest.GetProperty("threshold").GetInt32());
+            Assert.False(latest.GetProperty("passed").GetBoolean());
+            var findings = latest.GetProperty("findings");
+            Assert.Equal(2, findings.GetArrayLength());
+            Assert.Equal("gate cache key ignores the tier", findings[0].GetString());
+
+            var older = scores[1];
+            Assert.Equal(2, older.GetProperty("sessionNumber").GetInt32());
+            Assert.True(older.GetProperty("passed").GetBoolean());
+            Assert.Equal(1, older.GetProperty("findings").GetArrayLength());
+        }
+        finally { server.Dispose(); }
+    }
+
+    // The bar is per stage. A client that derived "did it pass" from a hardcoded 80 — which is all the
+    // canned SELECT's three columns allowed — would disagree with the run's own verdict here.
+    [Fact]
+    public async Task GetScores_ResolvesTheThresholdFromTheStagesOwnQaDial()
+    {
+        _store.InitializeRun(RunId, "cps-test", _dir, null, null);
+        _plan.Stages.Add(new StageConfig
+        {
+            Id = "S2",
+            Title = "Strict stage",
+            Sessions = 1,
+            Qa = new Conductor.Planning.QaRule { Mode = "everySession", VerifierThreshold = 95 },
+        });
+        _store.WriteScore(RunId, 5, "S2", 88, "PASS", "");
+        _store.WriteScore(RunId, 4, "S1", 88, "PASS", "");
+        var (server, port) = StartServer();
+        try
+        {
+            using var doc = JsonDocument.Parse(
+                await _http.GetStringAsync($"http://127.0.0.1:{port}/scores"));
+            var scores = doc.RootElement.GetProperty("scores");
+
+            var strict = scores[0];
+            Assert.Equal("S2", strict.GetProperty("stageId").GetString());
+            Assert.Equal(95, strict.GetProperty("threshold").GetInt32());
+            Assert.False(strict.GetProperty("passed").GetBoolean());
+            // An empty findings column is an empty list, not a one-element list holding "".
+            Assert.Equal(0, strict.GetProperty("findings").GetArrayLength());
+
+            var lenient = scores[1];
+            Assert.Equal("S1", lenient.GetProperty("stageId").GetString());
+            Assert.Equal(80, lenient.GetProperty("threshold").GetInt32());
+            Assert.True(lenient.GetProperty("passed").GetBoolean());
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task GetScores_ReturnsAnEmptyListWhenNothingWasVerified()
+    {
+        _store.InitializeRun(RunId, "cps-test", _dir, null, null);
+        var (server, port) = StartServer();
+        try
+        {
+            using var doc = JsonDocument.Parse(
+                await _http.GetStringAsync($"http://127.0.0.1:{port}/scores"));
+            Assert.Equal(0, doc.RootElement.GetProperty("scores").GetArrayLength());
+        }
+        finally { server.Dispose(); }
+    }
+
     [Fact]
     public async Task PostInject_MissingContent_Returns400()
     {

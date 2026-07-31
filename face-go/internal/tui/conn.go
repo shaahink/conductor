@@ -342,12 +342,12 @@ func (m Model) cmdQueryReport(sql string) tea.Cmd {
 	}
 }
 
-// cmdFetchScores runs the Report tab's canned verifier-scores query (U2.2). Verifier scores are the
-// one report section with no DTO on the wire; the spec sanctions a canned query for exactly that.
+// cmdFetchScores fetches the Report tab's verifier scores (SF1.1). This used to run a canned SELECT
+// through QueryReport — the last thing making a RENDERED report depend on the SQL console.
 func (m Model) cmdFetchScores() tea.Cmd {
 	source := m.source
 	return func() tea.Msg {
-		result, err := source.QueryReport(scoresSQL)
+		result, err := source.FetchScores()
 		if err != nil {
 			return MsgReportScores{Err: err.Error()}
 		}

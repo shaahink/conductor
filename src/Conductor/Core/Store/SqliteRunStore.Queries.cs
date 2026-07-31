@@ -36,6 +36,23 @@ public sealed partial class SqliteRunStore
         )).ToList();
     }
 
+    public IReadOnlyList<ScoreRow> QueryScores(string runId)
+    {
+        // session_number DESC then id DESC: a stage that failed verification and was re-verified has
+        // two rows for the same session, and the LATEST verdict is the one that decided the outcome.
+        var rows = Query(
+            "SELECT id, session_number, stage_id, score, verdict, findings " +
+            "FROM scores WHERE run_id = @runId ORDER BY session_number DESC, id DESC",
+            ("@runId", runId));
+        return rows.Select(r => new ScoreRow(
+            Id: Convert.ToInt64(r["id"]),
+            SessionNumber: Convert.ToInt32(r["session_number"]),
+            StageId: r["stage_id"] as string,
+            Score: Convert.ToInt32(r["score"]),
+            Verdict: r["verdict"] as string,
+            Findings: r["findings"] as string)).ToList();
+    }
+
     public RunRow? QueryRun(string runId)
     {
         var rows = Query(

@@ -101,6 +101,7 @@ func (fakeSource) FetchPromptPreview(_, _ string) (*api.PromptPreviewDto, error)
 	return nil, nil
 }
 func (fakeSource) QueryReport(sql string) (*api.QueryResultDto, error) { return nil, nil }
+func (fakeSource) FetchScores() (*api.ScoresDto, error)                { return nil, nil }
 func (fakeSource) HasWriteToken() bool                                 { return true }
 func (fakeSource) PostControl(api.ControlRequestDto) (*api.ControlAcceptedDto, error) {
 	return &api.ControlAcceptedDto{Accepted: true}, nil
@@ -337,6 +338,18 @@ func fixedTimeline() []api.TimelineEntryDto {
 	}
 }
 
+// goldenScores is the Report tab's /scores fixture (SF1.1). Session #11 failed its stage's bar and
+// carries findings; #8 passed clean. Both cases are pinned because the score column renders against
+// the threshold and takes its colour from the engine's Passed bool — a fixture of passes only would
+// let the failing style rot unseen.
+func goldenScores() []api.ScoreDto {
+	return []api.ScoreDto{
+		{SessionNumber: 11, StageId: strPtr("F7"), Score: 66, Verdict: "WARN", Passed: false, Threshold: 80,
+			Findings: []string{"gate cache key ignores the tier", "no test covers the cache miss path"}},
+		{SessionNumber: 8, StageId: strPtr("F6"), Score: 90, Verdict: "PASS", Passed: true, Threshold: 80},
+	}
+}
+
 // newGoldenModel builds a Model with fixed plan/gate/transcript state and a known terminal size,
 // without ever calling Init() — golden output must not depend on background polling or SSE.
 func newGoldenModel(width, height int) tea.Model {
@@ -465,17 +478,12 @@ func TestGolden(t *testing.T) {
 			m, _ = m.Update(keyMsg("s"))
 			return m
 		}},
-		// U2.2: Report is the rendered run report now. The scores section is the one part that comes
-		// off a canned query, so it is injected the way the real fetch would land it.
+		// U2.2: Report is the rendered run report now. SF1.1: its scores section comes off GET /scores,
+		// injected here the way the real fetch would land it — one failing verdict and one passing one,
+		// so a golden pins BOTH colours (the canned-query version rendered every verdict the same grey).
 		{"report", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("r"))
-			m, _ = m.Update(MsgReportScores{Result: &api.QueryResultDto{
-				Columns: []string{"session_number", "score", "verdict"},
-				Rows: []api.QueryRowDto{
-					{Values: []string{"11", "66", "WARN"}},
-					{Values: []string{"8", "90", "PASS"}},
-				},
-			}})
+			m, _ = m.Update(MsgReportScores{Result: &api.ScoresDto{Scores: goldenScores()}})
 			return m
 		}},
 		// The report is taller than the pane, so the sections the owner scrolls TO (gates, verifier
@@ -483,13 +491,7 @@ func TestGolden(t *testing.T) {
 		// below the fold in every golden and could rot unseen.
 		{"report_scrolled", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("r"))
-			m, _ = m.Update(MsgReportScores{Result: &api.QueryResultDto{
-				Columns: []string{"session_number", "score", "verdict"},
-				Rows: []api.QueryRowDto{
-					{Values: []string{"11", "66", "WARN"}},
-					{Values: []string{"8", "90", "PASS"}},
-				},
-			}})
+			m, _ = m.Update(MsgReportScores{Result: &api.ScoresDto{Scores: goldenScores()}})
 			for i := 0; i < 6; i++ {
 				m, _ = m.Update(keyMsg("down"))
 			}

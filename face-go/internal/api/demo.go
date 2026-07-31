@@ -298,20 +298,23 @@ func (s *demoSource) FetchPromptPreview(stageId, kind string) (*PromptPreviewDto
 	}, nil
 }
 
+// FetchScores answers the Report tab's verifier section offline (SF1.1). Newest session first, the
+// same order the live endpoint sorts in, and the failing row carries findings — a section that only
+// ever renders passes offline hides every layout bug the failing case has.
+func (s *demoSource) FetchScores() (*ScoresDto, error) {
+	return &ScoresDto{Scores: []ScoreDto{
+		{SessionNumber: 11, StageId: strPtr("F7"), Score: 66, Verdict: "WARN", Passed: false, Threshold: 80,
+			Findings: []string{
+				"gate cache key ignores the tier, so a full-tier pass satisfies a fast-tier check",
+				"no test covers the cache miss path",
+			}},
+		{SessionNumber: 8, StageId: strPtr("F6"), Score: 90, Verdict: "PASS", Passed: true, Threshold: 80},
+		{SessionNumber: 2, StageId: strPtr("F1"), Score: 88, Verdict: "PASS", Passed: true, Threshold: 80,
+			Findings: []string{"checkpoint F1.4 landed without an evidence path"}},
+	}}, nil
+}
+
 func (s *demoSource) QueryReport(sql string) (*QueryResultDto, error) {
-	// The Report tab's scores section (U2.2) runs a canned query against `scores`, so the demo has to
-	// answer by SHAPE — a source that returns stage/cost columns to every query would render the
-	// verifier section as nonsense offline, which is exactly what --demo exists to catch.
-	if strings.Contains(strings.ToLower(sql), "from scores") {
-		return &QueryResultDto{
-			Columns: []string{"session_number", "score", "verdict"},
-			Rows: []QueryRowDto{
-				{Values: []string{"11", "66", "WARN"}},
-				{Values: []string{"8", "90", "PASS"}},
-				{Values: []string{"2", "88", "PASS"}},
-			},
-		}, nil
-	}
 	return &QueryResultDto{
 		Columns: []string{"stage", "cost"},
 		Rows: []QueryRowDto{

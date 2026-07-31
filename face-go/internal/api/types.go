@@ -35,6 +35,10 @@ type DataSource interface {
 	FetchPromptPreview(stageId, kind string) (*PromptPreviewDto, error)
 	QueryReport(sql string) (*QueryResultDto, error)
 
+	// SF1.1: the Report tab's verifier scores, typed. This is the endpoint that lets a rendered
+	// report stop depending on the SQL console.
+	FetchScores() (*ScoresDto, error)
+
 	// HasWriteToken reports whether this source carries the per-run write token every POST needs
 	// (U2.3). The Dev tab surfaces it because "my writes are silently refused" has exactly one
 	// common cause — attaching with --url but no token — and nothing in the Face said so.
@@ -329,6 +333,24 @@ type QueryResultDto struct {
 
 type QueryRowDto struct {
 	Values []string `json:"values"`
+}
+
+// ScoreDto mirrors the C# record (GET /scores): one verifier verdict. Passed and Threshold are the
+// ENGINE's answer, resolved per stage from the same QA dial the run judged with — the Report tab
+// used to read these rows through a canned SELECT and had no way to know a stage's own bar, so it
+// could only show the raw number and hope the reader knew what 74 meant.
+type ScoreDto struct {
+	SessionNumber int      `json:"sessionNumber"`
+	StageId       *string  `json:"stageId"`
+	Score         int      `json:"score"`
+	Verdict       string   `json:"verdict"`
+	Passed        bool     `json:"passed"`
+	Threshold     int      `json:"threshold"`
+	Findings      []string `json:"findings"`
+}
+
+type ScoresDto struct {
+	Scores []ScoreDto `json:"scores"`
 }
 
 // TimelineEntryDto mirrors the C# record (GET /timeline): one folded event on the run's spine —

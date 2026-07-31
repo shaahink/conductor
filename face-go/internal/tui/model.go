@@ -160,10 +160,13 @@ type Model struct {
 
 	// Report tab (U2.2: the rendered run report — scroll is its only interaction)
 	reportScroll int
-	// reportScores holds the sanctioned canned scores query. It is deliberately NOT data.ReportResult:
-	// that field belongs to the Dev console, and sharing it would make opening Report silently wipe
-	// the developer's last query result.
-	reportScores *api.QueryResultDto
+	// reportScores holds the verifier scores from GET /scores (SF1.1). It is deliberately NOT
+	// data.ReportResult: that field belongs to the Dev console, and sharing it would make opening
+	// Report silently wipe the developer's last query result.
+	reportScores *api.ScoresDto
+	// reportScoresErr is the fetch failure, kept beside the data rather than smuggled into it — a
+	// ScoresDto has no error field, because a typed endpoint's failure is an HTTP failure.
+	reportScoresErr string
 
 	// Dev tab — the SQL console (moved here from Report in U2.2; see tab_dev.go for why these keep
 	// their report* names).

@@ -16,21 +16,22 @@ import (
 // prompt. It replaced the SQL console, which moved to Dev (tab_dev.go) unchanged; the owner's
 // verdict on the old tab was "report being sql is stupid — show a good report visually".
 //
-// Everything here is rendered from data the Face ALREADY polls (/state + /sessions), with one
-// exception: verifier scores have no DTO on the wire, so they come from the canned query the spec
-// sanctions for exactly that gap. That result is kept in its own field (reportScores) and never in
-// data.ReportResult, which belongs to the Dev console — sharing it would make opening Report wipe
-// whatever the developer had just queried.
+// Everything here is rendered from data the Face polls over typed endpoints — /state, /sessions and
+// (SF1.1) /scores. The scores section used to be the exception: a canned SELECT through the Dev SQL
+// console's endpoint, which is why deleting that console was blocked on giving this one section a
+// wire type. That result is kept in its own field (reportScores) and never in data.ReportResult,
+// which belongs to the Dev console — sharing it would make opening Report wipe whatever the
+// developer had just queried.
 //
 // No interaction beyond scroll, by design: a report you can accidentally edit is not a report.
-
-// scoresSQL is the canned query behind the "Verifier scores" section. Kept identical in shape to the
-// Dev console's "verifier scores" quick query.
-const scoresSQL = "SELECT session_number, score, verdict FROM scores ORDER BY session_number DESC LIMIT 20"
 
 // sessionsDigestMax caps the sessions section: a report is a summary, and the Sessions tab is one
 // keypress away for the full list.
 const sessionsDigestMax = 8
+
+// scoresDigestMax caps the scores section the same way. The old canned query carried a LIMIT 20;
+// the endpoint returns everything, so the cap lives here where the reader can see it.
+const scoresDigestMax = 10
 
 func (m Model) handleReportKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
@@ -317,29 +318,55 @@ func (m Model) renderReportGates(s *api.StateDto) string {
 
 // --- verifier scores ----------------------------------------------------------
 
-// renderReportScores renders the scores canned query if it returned anything. "When present" is
-// literal: a run with no verifier scores (QA dial off, or nothing verified yet) gets NO section
-// rather than an empty one, and a query error is shown as-is rather than swallowed into "no data".
+// renderReportScores renders GET /scores if it returned anything. "When present" is literal: a run
+// with no verifier scores (QA dial off, or nothing verified yet) gets NO section rather than an empty
+// one, and a fetch error is shown as-is rather than swallowed into "no data".
+//
+// SF1.1: the score is rendered against the bar it was judged by ("66/80") and coloured by the
+// engine's own Passed verdict. The canned-query version could do neither — the SELECT returned three
+// raw columns, so every verdict rendered the same grey (PASS, FAIL and WARN all miss
+// sessionOutcomeStyle's vocabulary and fall through to subtle), and a reader had no way to know
+// whether 66 was good.
 func (m Model) renderReportScores() string {
+	if m.reportScoresErr != "" {
+		return homeSection("Verifier scores", "  "+subtleStyle.Render("unavailable: "+m.reportScoresErr))
+	}
 	res := m.reportScores
-	if res == nil {
+	if res == nil || len(res.Scores) == 0 {
 		return ""
 	}
-	if res.Error != nil {
-		return homeSection("Verifier scores", "  "+subtleStyle.Render("unavailable: "+*res.Error))
+	rows := []string{subtleStyle.Render(fmt.Sprintf("  %-8s %-5s %-9s %-8s %s",
+		"session", "stage", "score", "verdict", "findings"))}
+
+	shown := res.Scores
+	if len(shown) > scoresDigestMax {
+		shown = shown[:scoresDigestMax]
 	}
-	if len(res.Rows) == 0 {
-		return ""
-	}
-	rows := []string{subtleStyle.Render(fmt.Sprintf("  %-8s %-6s %s", "session", "score", "verdict"))}
-	for _, r := range res.Rows {
-		v := r.Values
-		if len(v) < 3 {
-			continue
+	for _, sc := range shown {
+		stage := "—"
+		if sc.StageId != nil && *sc.StageId != "" {
+			stage = *sc.StageId
 		}
-		rows = append(rows, "  "+textStyle.Render(pad("#"+v[0], 8))+" "+
-			textStyle.Render(pad(v[1], 6))+" "+
-			sessionOutcomeStyle(v[2]).Render(v[2]))
+		verdictStyle := destructStyle
+		if sc.Passed {
+			verdictStyle = safeStyle
+		}
+		// Every column is padded as PLAIN text and styled after (STYLE.md).
+		score := fmt.Sprintf("%d/%d", sc.Score, sc.Threshold)
+		findings := subtleStyle.Render("—")
+		if n := len(sc.Findings); n > 0 {
+			findings = textStyle.Render(plural(n, "finding"))
+		}
+		rows = append(rows, "  "+
+			textStyle.Render(pad(fmt.Sprintf("#%d", sc.SessionNumber), 8))+" "+
+			accentStyle.Render(pad(stage, 5))+" "+
+			verdictStyle.Render(pad(score, 9))+" "+
+			verdictStyle.Render(pad(sc.Verdict, 8))+" "+
+			findings)
+	}
+	if len(res.Scores) > scoresDigestMax {
+		rows = append(rows, subtleStyle.Render(fmt.Sprintf("  … %d older",
+			len(res.Scores)-scoresDigestMax)))
 	}
 	return homeSection("Verifier scores", rows...)
 }

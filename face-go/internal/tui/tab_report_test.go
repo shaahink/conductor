@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -45,23 +46,100 @@ func TestFmtCostNeverRoundsARealChargeToZero(t *testing.T) {
 }
 
 // "when present" is literal: no scores = no section. An empty "Verifier scores" heading reads like
-// the query broke.
+// the fetch broke.
 func TestReportScoresSectionAbsentWhenNoScores(t *testing.T) {
 	m := newGoldenModel(120, 30).(Model)
 	if got := m.renderReportScores(); got != "" {
 		t.Errorf("no scores fetched yet must render nothing, got:\n%s", got)
 	}
-	m.reportScores = &api.QueryResultDto{Columns: []string{"session_number", "score", "verdict"}}
+	m.reportScores = &api.ScoresDto{}
 	if got := m.renderReportScores(); got != "" {
 		t.Errorf("an empty scores result must render nothing, got:\n%s", got)
 	}
-	// A failed query is surfaced, not swallowed — the owner needs to know the section is unavailable
+	// A failed fetch is surfaced, not swallowed — the owner needs to know the section is unavailable
 	// rather than conclude the run has no scores.
-	errMsg := "no such table: scores"
-	m.reportScores = &api.QueryResultDto{Error: &errMsg}
-	if got := stripANSI(m.renderReportScores()); !strings.Contains(got, "no such table") {
-		t.Errorf("a scores query error must be surfaced, got:\n%s", got)
+	m.reportScoresErr = "GET /scores: 500"
+	if got := stripANSI(m.renderReportScores()); !strings.Contains(got, "GET /scores: 500") {
+		t.Errorf("a scores fetch error must be surfaced, got:\n%s", got)
 	}
+}
+
+// SF1.1: the whole point of the DTO. The canned SELECT returned three raw columns, so the section
+// could only print the number — a reader had no way to tell whether 66 was a pass, and PASS/FAIL/WARN
+// all fell through sessionOutcomeStyle to the same grey. The score now renders against the bar the
+// ENGINE judged it by, and a stage with its own QA dial must show ITS bar, not a hardcoded 80.
+func TestReportScoresShowTheBarTheEngineJudgedBy(t *testing.T) {
+	m := newGoldenModel(120, 30).(Model)
+	m.reportScores = &api.ScoresDto{Scores: []api.ScoreDto{
+		{SessionNumber: 11, StageId: strPtr("F7"), Score: 66, Verdict: "WARN", Passed: false, Threshold: 80,
+			Findings: []string{"one", "two"}},
+		// A stricter stage dial: 88 is a FAIL here, and a client deriving pass/fail itself would say
+		// otherwise. Only the engine knows this.
+		{SessionNumber: 9, StageId: strPtr("F9"), Score: 88, Verdict: "FAIL", Passed: false, Threshold: 95},
+		{SessionNumber: 8, StageId: strPtr("F6"), Score: 90, Verdict: "PASS", Passed: true, Threshold: 80},
+	}}
+	plain := stripANSI(m.renderReportScores())
+	for _, want := range []string{"66/80", "88/95", "90/80", "F7", "F9", "2 findings"} {
+		if !strings.Contains(plain, want) {
+			t.Errorf("the scores section must show %q:\n%s", want, plain)
+		}
+	}
+
+	// Colour is the other half: a failing verdict must not render identically to a passing one, which
+	// is exactly what the canned query produced.
+	styled := m.renderReportScores()
+	failLine, passLine := "", ""
+	for _, line := range strings.Split(styled, "\n") {
+		if strings.Contains(stripANSI(line), "#11") {
+			failLine = line
+		}
+		if strings.Contains(stripANSI(line), "#8 ") {
+			passLine = line
+		}
+	}
+	if failLine == "" || passLine == "" {
+		t.Fatalf("expected a row for #11 and #8:\n%s", stripANSI(styled))
+	}
+	if ansiCodes(failLine) == ansiCodes(passLine) {
+		t.Errorf("a failed verdict renders with the same styling as a passed one:\n%s\n%s", failLine, passLine)
+	}
+}
+
+// ansiCodes returns just the escape sequences of a styled line, so a test can assert that two rows
+// are coloured DIFFERENTLY without pinning any particular palette.
+func ansiCodes(s string) string {
+	return strings.Join(ansiRe.FindAllString(s, -1), "")
+}
+
+// --demo has to render this section too, off the REAL demo source — not the golden fixture. An
+// offline face whose scores section renders nothing (or nonsense) is exactly what --demo exists to
+// catch, and it is how the section is reviewed without a live engine. Prints the frame under -v so
+// the rendered result is capturable as evidence.
+func TestDemoSourceRendersTheScoresSection(t *testing.T) {
+	src := api.NewDemoSource()
+	defer src.Close()
+	scores, err := src.FetchScores()
+	if err != nil {
+		t.Fatalf("the demo source must answer FetchScores: %v", err)
+	}
+	if len(scores.Scores) == 0 {
+		t.Fatal("the demo source returned no scores — the offline Report tab would show no section at all")
+	}
+
+	m := newGoldenModel(120, 40).(Model)
+	m.reportScores = scores
+	section := m.renderReportScores()
+	plain := stripANSI(section)
+	if !strings.Contains(plain, "Verifier scores") {
+		t.Fatalf("the demo scores section did not render:\n%s", plain)
+	}
+	for _, sc := range scores.Scores {
+		want := fmt.Sprintf("%d/%d", sc.Score, sc.Threshold)
+		if !strings.Contains(plain, want) {
+			t.Errorf("demo score %q is missing from the rendered section:\n%s", want, plain)
+		}
+	}
+	t.Logf("--demo Report tab, Verifier scores section:\n%s", section)
 }
 
 // The live session has no EndedUtc. Its duration must come from the engine's SessionElapsedSec —

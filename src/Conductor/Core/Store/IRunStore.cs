@@ -53,6 +53,11 @@ public interface IRunStore : IDisposable
 
     void WriteScore(string runId, int sessionNumber, string? stageId, int score, string verdict, string findings);
 
+    /// <summary>SF1.1: every verifier verdict this run recorded, newest session first. Behind
+    /// <c>GET /scores</c>, which replaced the Report tab's canned SELECT against this table — the one
+    /// report section that had no wire type and so kept the SQL console alive.</summary>
+    IReadOnlyList<ScoreRow> QueryScores(string runId);
+
     // ---------------------------------------------------------------- ledger
 
     void WriteLedger(string runId, int? sessionNumber, string? stageId, string kind, string content);
