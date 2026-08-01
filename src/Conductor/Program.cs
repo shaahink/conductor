@@ -99,6 +99,8 @@ app.Configure(c =>
         .WithDescription("Generate shell completion scripts (powershell or bash).");
     c.AddCommand<BgCommand>("bg")
         .WithDescription("Background process management: start|status|logs|stop.");
+    c.AddCommand<PsCommand>("ps")
+        .WithDescription("SF5.4: every conductor run on this machine — repo, plan, run id, port, pid, status. Read-only; --json for machines.");
     c.AddCommand<VersionCommand>("version")
         .WithDescription("What this binary is: semver, git sha and build date stamped at build, plus which file answered. --json for machines, --short for scripts.");
     c.AddCommand<UpdateCommand>("update")
