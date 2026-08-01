@@ -86,6 +86,9 @@ public sealed partial class RunLoop
             _ctx.Store?.InitializeRun(_ctx.State.RunId, _ctx.Plan.Name, _ctx.Plan.Repo, Git.Branch(_ctx.Plan.Repo),
                 typeof(RunLoop).Assembly.GetName().Version?.ToString());
             NotifyRunStart();
+            // SF5.4: two engines on one machine are two identical entries in a task manager until one of
+            // them says which run it is. Set once here, refreshed on every stage entry below.
+            Core.Fleet.ProcessTitle.Set(_ctx.Plan.Repo, _ctx.Plan.Name, _ctx.State.RunId, _ctx.State.CurrentStage);
             _ctx.ProcessSupervisor?.ReapOrphans();
             SyncWorkGraphFromDeclared();
             WarnOnBranchPattern();
@@ -248,6 +251,7 @@ public sealed partial class RunLoop
                     _ctx.Log($"stage → {stage.Id} {stage.Title}");
                     _ctx.Events.Emit(new StageEntered { StageId = stage.Id, Title = stage.Title, StartHead = _ctx.State.CurrentStageStartHead });
                     _ctx.Store?.InitializeStage(_ctx.State.RunId, stage.Id, stage.Title);
+                    Core.Fleet.ProcessTitle.Set(_ctx.Plan.Repo, _ctx.Plan.Name, _ctx.State.RunId, stage.Id);
                     _ctx.Save();
                 }
 

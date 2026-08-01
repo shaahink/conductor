@@ -119,7 +119,13 @@ public sealed partial class RunLoop
         }
     }
 
-    private void ReleaseLock() => EngineLock.Delete(_ctx.Plan.StateDir);
+    private void ReleaseLock()
+    {
+        EngineLock.Delete(_ctx.Plan.StateDir);
+        // SF5.4: a finished run must not leave its stage id sitting in a terminal tab — a stale title
+        // reads as live, which is worse than no title at all.
+        Core.Fleet.ProcessTitle.Restore();
+    }
 
     // ---------------------------------------------------------------- save, report, snapshot
 

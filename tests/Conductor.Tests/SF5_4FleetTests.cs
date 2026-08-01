@@ -296,4 +296,45 @@ public sealed class SF5_4FleetTests
     {
         Assert.Equal("?", PsCommand.Age(null, DateTime.UtcNow));
     }
+
+    // ── The process title: the same answer, for anyone who never types `ps` ─────────────────────
+
+    [Fact]
+    public void Title_leads_with_the_identity_because_that_is_what_survives_truncation()
+    {
+        Assert.Equal("conductor conductor SF5 8cefa5de - Sarban face - the watcher",
+            ProcessTitle.Compose("C:/code/conductor", "Sarban face - the watcher", "8cefa5de8f164848bd42b275e14ba9cf", "SF5"));
+    }
+
+    [Fact]
+    public void Title_elides_a_plan_name_that_would_bury_the_run_id()
+    {
+        var title = ProcessTitle.Compose("C:/Code/sk-studio", new string('x', 80), "7951c3ca149a4c12", "E");
+
+        Assert.StartsWith("conductor sk-studio E 7951c3ca - ", title, StringComparison.Ordinal);
+        Assert.EndsWith("...", title, StringComparison.Ordinal);
+        Assert.True(title.Length < 80, title);
+    }
+
+    [Theory]
+    [InlineData(null, null, null, null, "conductor")]
+    [InlineData("", "", "", "", "conductor")]
+    [InlineData(@"C:\code\conductor\", null, null, null, "conductor conductor")]
+    [InlineData("C:/", null, "abc", null, "conductor C abc")]     // a drive root still names something
+    [InlineData(null, "plan only", null, null, "conductor - plan only")]
+    [InlineData("/home/me/site", null, "short", "S1", "conductor site S1 short")]
+    public void Title_degrades_one_piece_at_a_time(string? repo, string? plan, string? run, string? stage, string expected)
+    {
+        Assert.Equal(expected, ProcessTitle.Compose(repo, plan, run, stage));
+    }
+
+    /// <summary>Setting a title must never be able to take a run down — a service host, a redirected
+    /// pipe and a platform with no console all reach this code.</summary>
+    [Fact]
+    public void Setting_the_title_never_throws()
+    {
+        ProcessTitle.Set("C:/code/conductor", "Sarban", "8cefa5de8f164848", "SF5");
+        ProcessTitle.Restore();
+        ProcessTitle.Restore();   // idempotent: a second restore is not an error
+    }
 }
