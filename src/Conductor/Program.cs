@@ -33,6 +33,8 @@ app.Configure(c =>
         .WithDescription("Attach a Face TUI to a run that is already going (or --demo for offline synthetic data).");
     c.AddCommand<StatusCommand>("status")
         .WithDescription("Show plan, tracker, and session status.");
+    c.AddCommand<WatchCommand>("watch")
+        .WithDescription("Block silently on a live run and return only when something needs judgment: a park, a churn loop, a phase gate RED twice, the engine gone, the run ended. --json for the brief, --timeout for a heartbeat, --hook to hand it to a supervisor.");
     c.AddCommand<GateCommand>("gate")
         .WithDescription("Re-run the gate battery at HEAD (no agent spawned). --full for full battery, default fast-tier only. Clears pendingFix if all green.");
     c.AddCommand<ReportCommand>("report")
