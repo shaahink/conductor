@@ -2,21 +2,21 @@
 
 **Plan:** Sarban face - the watcher and the surfaces | **Branch:** `feat/sarban` | **Design doc:** docs/history/CONDUCTOR-SARBAN.md
 
-## Handoff (overwrite this block, ≤12 lines, no history)
+## Handoff (overwrite this block, <=12 lines, no history)
 
-last: **SF5.3 CLOSED - the wake leaves the machine** (`2cd9083`, `65846c6`). `supervisor.remote`:
-  `webhookUrl` + `headers` + `telegram`. The webhook body IS the brief, byte for byte. Header values
-  expand `${NAME}`/`%NAME%` at send time; an unset var **drops the header and names it** on stderr.
-  The remote fires BEFORE the local command and **regardless of the supervisor fuse** - that hour is
-  when a human off-box most needs it - so it has its own ledger (`supervisor-remote-fires.log`).
-  `--notify <URL>` replaces the WHOLE block, phone included. Failures never fail the watch; stderr
-  names the host, never the URL. operating.md carries the cloud pattern + 5 what-stays-manual notes.
-next: **SF5.4** - `conductor ps` from the control-plane discovery files, process titles carrying
-  repo + run id, and the face's run picker when more than one plane answers.
-green: SF5 suite **56/56** (SF5_3RemoteTests 24); live drive of MY build proved all five claims,
-  incl. a REAL telegram delivery (chat 200 in 0.4s): `.conductor/evidence/SF5/SF5.3-live-drive.log`.
-tip: rig `SF5.3-remote-drive.ps1` + `SF5.3-listener.ps1` - the rig plan name renders `SF51WatchRig_<n>`
-  (underscore), and PS 5.1 needs `Get-Content -Encoding UTF8` to read a .NET child's stderr.
+last: **SF5.4 parts 1+2 landed, checkpoint still IN PROGRESS** (`a599d26`, `9adb15f`).
+  `conductor ps` lists every run on the machine; **the port probe leads, not a discovery-file walk** -
+  measured: this repo's live run serves 4317 with **no** `.conductor/control-plane.json`, so a file
+  scan would miss the run it runs inside. `GET /state` already carries plan/run id/repo/state dir;
+  the discovery file only enriches (pid), one naming another port is ignored, `conductor.lock` is the
+  fallback. Read-only: loopback GETs, no token, no POST. A lock with no plane lists as `no control
+  plane`. Engine process titles now carry repo + stage + run id, restored on exit.
+next: **the face run picker** - the last piece of SF5.4. `conductor face` reads ONLY the local
+  discovery file, so it is **broken in this repo today** (says "no live run" at a live run). Feed it
+  from `FleetScan`; when more than one plane answers, hand the fleet to the Go face for a picker
+  (suggest env `CONDUCTOR_FLEET` json, so tokens stay off the process listing). Then a live title capture.
+green: SF5_4FleetTests **45**, SF5 + harness **132**. Live drive of MY build listed both runs on this
+  box (this repo 4317 pid 35412, sk-studio 4318): `.conductor/evidence/SF5/SF5.4-ps-live.log`.
 red: nothing. open: bugs **#15 #16 #17 #18 #19 #20**.
 
 
@@ -26,7 +26,7 @@ red: nothing. open: bugs **#15 #16 #17 #18 #19 #20**.
 |---|---|
 | Total checkpoints | 24 |
 | Done | 4 |
-| Claimed (unconfirmed) | 13 |
+| Claimed (unconfirmed) | 14 |
 
 ## Checkpoints
 
@@ -79,7 +79,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | SF5.1 | conductor watch blocks silently and returns or fires a hook only on the wake set — park, circuit breaker, budget park, phase RED twice on a stage, engine gone, run ended — with a json brief of about thirty lines and a timeout heartbeat | DONE | - | .conductor/evidence/SF5/SF5.1-live-drive.log |
 | SF5.2 | A supervisor plan block runs a configured command on wake with the brief on stdin; operating.md carries the wake and dont-wake table and the standing-order pattern | DONE | 4efedac | .conductor/evidence/SF5/SF5.2-supervisor-block.md |
-| SF5.3 | The remote supervision pattern is documented and proven once end to end — a wake reaching a remote listener — with an honest note of what stays manual | TODO | - | - |
+| SF5.3 | The remote supervision pattern is documented and proven once end to end — a wake reaching a remote listener — with an honest note of what stays manual | DONE | 2cd9083 | .conductor/evidence/SF5/SF5.3-live-drive.log |
 | SF5.4 | conductor ps lists every run on the machine from the control-plane discovery files; process titles carry repo and run id; the face offers a run picker when more than one control plane answers | TODO | - | - |
 
 ### SF6 — The prompt bank compounds
