@@ -21,7 +21,7 @@
    ○ Cache gate results…   │    src/Conductor/Core/Gating/GateCache.cs · docs/CONDUCTOR-VNEXT-PLAN.md         
    ○ Add SkipIfFresh ti…   │                                                                                  
    ○ Benchmark the warm…   │  ── ✎ qa ──────────────────────────────────────────────────────────────────      
-                           │    inherit — the stage/plan dial decides (press q to override)                   
+   ○ conductor chat ove…   │    inherit — the stage/plan dial decides (press q to override)                   
                            │                                                                                  
                            │  ✎ extra context                                                                 
                            │  cover the cache-miss path                                                       

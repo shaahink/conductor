@@ -16,8 +16,8 @@
    ○ lint                  │  • F8.2 · Telegram v2 ne…                              skipped · s11 · 1d        
                            │    blocked · s12 · 30m                                                           
  ── TASKS ──               │                                                                                  
-   ✓ Add truth-tier con…   │    + new card under F7.4                                                         
-   ● Wire RunDb.GetLast…   │    title: wire the goldens▏                                                      
+   ✓ Add truth-tier con…   │                                                                                  
+   ● Wire RunDb.GetLast…   │                                                                                  
    ○ Cache gate results…   │                                                                                  
    ○ Add SkipIfFresh ti…   │                                                                                  
    ○ Benchmark the warm…   │                                                                                  
@@ -31,4 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   type · enter add · esc cancel                     
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ card · ←→ move · enter detail · n add · N stage
