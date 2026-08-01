@@ -21,13 +21,13 @@
    ○ Cache gate results…   │         → F7.4 - gate suite after the cache lands                                
                            │  Cmds:  dotnet build src/App                                                     
                            │         dotnet test --filter GateCacheTests                                      
+                           │  Commits:                                                                        
+                           │    4b81d33 test(gates): the last-passing lookup joins attempts                   
+                           │    c07e5a9 refactor(store): one place that opens run.db                          
                            │  Result:                                                                         
                            │                                                                                  
                            │      Wired the caching layer in  RunDb  but  test  still red — see gate          
                            │      output.                                                                     
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
