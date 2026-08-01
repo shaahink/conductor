@@ -1,0 +1,34 @@
+{
+  "reason": "run-ended",
+  "firedFrom": "event",
+  "detail": "run Completed \u2014 2/2 checkpoints over 2 session(s)",
+  "at": "2026-08-01T12:39:25.2897528Z",
+  "plan": "SF53-REMOTE-PROOF-scratch-rig-not-your-run",
+  "repo": "C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf53a",
+  "runId": "d70c3a00349e49bd9c81b4cb9c70ce91",
+  "status": "Completed",
+  "engineAlive": true,
+  "stage": "T1",
+  "attempt": 0,
+  "sessions": 2,
+  "checkpoints": "2/2",
+  "spendUsd": 0.01,
+  "costCapUsd": null,
+  "tokens": 3200,
+  "tokenCap": null,
+  "attention": null,
+  "whatHurt": null,
+  "standingOrders": "SF5.3 proof rig: escalate everything.",
+  "stages": [
+    "T0 1/1 done",
+    "T1 1/1 done"
+  ],
+  "recentSessions": [
+    "#1 T0 Deliver Advanced $0.01",
+    "#2 T1 Deliver Advanced $0.01"
+  ],
+  "suggest": [
+    "conductor status",
+    "conductor report"
+  ]
+}

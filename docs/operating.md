@@ -81,7 +81,7 @@ Where to look when something's off (full table in `DOGFOOD-RUNBOOK.md`):
 | `task --list` | Checkpoint status from `run.db`. |
 | `gate [--full]` | Re-run the gate battery at HEAD (no agent). `--full` = whole battery, else fast tier. Clears `pendingFix` if green. |
 | `chat "<question>"` | Ask a model about the run; it has MCP access to `run.db`, the ledger, control verbs. |
-| `watch [--json] [--timeout M] [--hook "<cmd>"]` | Block silently until the run needs judgment, then emit a ~30-line brief (exit 0) — or exit 10 on the `--timeout` heartbeat. Runs the plan's `supervisor` command with the brief on stdin. See §3 "Unattended supervision". |
+| `watch [--json] [--timeout M] [--hook "<cmd>"] [--notify <url>]` | Block silently until the run needs judgment, then emit a ~30-line brief (exit 0) — or exit 10 on the `--timeout` heartbeat. Runs the plan's `supervisor` command with the brief on stdin, and POSTs it to the `supervisor.remote` webhook / phone. See §3 "Unattended supervision". |
 
 ### Control a LIVE run (queue an intent the engine picks up at the next boundary)
 These write `.conductor/control.json` (or POST `/control`) — they work from any terminal while a run is
@@ -204,6 +204,64 @@ the terminal it was started from and gets reviewed in a diff like everything els
 wake. An agent that cannot see its limits has none. Two rules that keep this honest: name the
 *escalation* half explicitly (silence about a limit reads as permission), and keep everything that
 spends money, merges, or edits the plan on the human's side of the line.
+
+**When the supervisor is not on this machine (SF5.3).** The two supervisors an owner actually has at
+3am are a phone and a cloud session, and neither can be a local `command`. A `remote` block inside the
+supervisor block sends the wake off-box, on the same wake set and nothing else:
+
+```json
+"supervisor": {
+  "command": "claude -p \"night watch; brief on stdin\"",
+  "remote": {
+    "webhookUrl": "https://api.github.com/repos/me/site/dispatches",
+    "headers": { "Authorization": "Bearer ${GH_WAKE_TOKEN}", "Accept": "application/vnd.github+json" },
+    "telegram": true,
+    "maxPerHour": 12
+  }
+}
+```
+
+- **The webhook body IS the brief** — byte for byte the document the local supervisor reads on stdin,
+  `standingOrders` included. A ping that only says "something happened" makes the remote reader go and
+  look, which is the polling cost this verb exists to delete, paid over a network instead of a pipe.
+- **Header values expand `${NAME}` and `%NAME%` from the environment**, so the plan names a credential
+  and never contains one. A variable that is not set **drops that header and says which one** on
+  stderr — posting a literal `${TOKEN}` earns a 401 whose cause is invisible from the far end.
+- **`telegram: true`** sends a phone-sized wake line (reason, stage, spend vs cap, first verbs) to
+  `telegram.allowedChatIds`. It is sent by the **watch** process, not the engine, so it still arrives
+  when the engine is the thing that died — the one failure the run's own push path can never report.
+- **The remote goes out first, and goes anyway.** It is dispatched before the local `command` and does
+  not care whether that command is absent, disabled, or rate limited: the hour a local babysitter has
+  burnt its fuse is exactly the hour a human off the box needs to hear. Its own fuse
+  (`maxPerHour`, default 12, in `.conductor/supervisor-remote-fires.log`) is separate from the
+  supervisor's for the same reason — one shared ledger would have each quietly spending the other.
+- **`--notify <URL>`** replaces the whole block, phone included, for a deliberate one-off, and is not
+  bound by the plan's fuse — the same bargain `--hook` makes.
+- **A dead endpoint is reported, not thrown.** Failure prints a stderr line and the watch still exits
+  on its wake code; a watch that crashed because a webhook was down would turn one parked run into two
+  outages. Delivery lines name the **host**, never the URL: a webhook path routinely carries its own
+  secret and a Telegram one always carries the bot token.
+
+**The cloud pattern**, end to end: `conductor watch` POSTs the brief to a small always-on relay (a
+`repository_dispatch` on GitHub, a Worker, any endpoint you control); the relay holds the credential
+and starts a cloud Claude Code session with repo access, handing it the brief as its prompt. The
+session reads what fired, what it cost, what the board looks like and what its standing orders permit,
+without a single polling tick having been paid for.
+
+**What stays manual — say it out loud, because the gap is where the 3am surprise lives:**
+
+1. **Conductor does not host the relay.** `watch` delivers to something on the internet; it does not
+   become that something. No relay, no cloud session — the webhook just 404s into the evidence log.
+2. **The control plane is localhost-only.** A cloud session can read the repo and push commits, but it
+   cannot `conductor approve` your run from a datacentre. Until you give it a path back to the box (a
+   tailnet, an SSH hop, an agent already running there), remote supervision is **read-and-advise**:
+   the acting is still the local supervisor's or yours.
+3. **Nothing retries.** One POST inside one timeout window. If the far end was down, that fact is on
+   stderr and in the fires ledger — it is not queued for later.
+4. **The brief is not signed.** Anything that can reach your webhook URL can post something shaped
+   like a wake; authenticating what arrives is the receiving end's job, not this one's.
+5. **The brief leaves the machine.** It carries the repo path, plan name, stage, spend and your
+   standing orders. Point it only at a channel you would paste `conductor status` into.
 
 ---
 

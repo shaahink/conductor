@@ -1,0 +1,8 @@
+method: POST
+path: /wake
+content-type: application/json; charset=utf-8
+bytes: 889
+header X-Wake-Auth : Bearer live-drive-secret-861944895
+header Content-Length : 889
+header Content-Type : application/json; charset=utf-8
+header Host : 127.0.0.1:65142

@@ -241,6 +241,23 @@ public sealed class SF5_3RemoteTests : IDisposable
     }
 
     [Fact]
+    public async Task Notify_override_replaces_the_whole_block_including_the_phone()
+    {
+        SecretsStore.WriteTelegramToken(_dir, "sf53-test-token");
+        using var bot = new StubEndpoint { TelegramMode = true };
+        using var oneOff = new StubEndpoint();
+
+        var plan = Plan(new SupervisorRemote { Telegram = true },
+            new TelegramConfig { AllowedChatIds = { "1234" }, ApiBaseUrl = bot.Root });
+        var d = await WatchRemote.DispatchAsync(plan, Brief(), Json(Brief()), oneOff.Root + "/one-off", Now);
+
+        Assert.Single(oneOff.Received);
+        // An operator aiming one wake at one URL has not asked to also ring the owner at 3am.
+        Assert.Empty(bot.Received);
+        Assert.Single(d.Deliveries);
+    }
+
+    [Fact]
     public async Task A_plan_with_no_remote_block_does_nothing_and_says_nothing()
     {
         var d = await WatchRemote.DispatchAsync(Plan(null), Brief(), Json(Brief()), null, Now);

@@ -1,0 +1,111 @@
+2026-08-01 13:39:02.434 [INF] run= s= stage= gate= Creating fresh run.db (v9)
+2026-08-01 13:39:02.539 [INF] run= s= stage= gate= Telegram bot started (poll interval 4s, 1 allowed chat id(s))
+2026-08-01 13:39:02.541 [INF] run= s= stage= gate= Run services started: TelegramService
+2026-08-01 13:39:02.680 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s= stage= gate= conductor start — plan 'SF53-REMOTE-PROOF-scratch-rig-not-your-run', repo C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf53a, branch master
+[13:39:02] conductor start — plan 'SF53-REMOTE-PROOF-scratch-rig-not-your-run', repo C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf53a, branch master
+2026-08-01 13:39:02.687 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s= stage= gate= notifications: telegram will deliver this run's pushes
+[13:39:02] notifications: telegram will deliver this run's pushes
+2026-08-01 13:39:03.009 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s= stage= gate= work-graph sync: 2 added · 0 titles · 0 scaffolded · 0 archived · 0 revived
+[13:39:03] work-graph sync: 2 added · 0 titles · 0 scaffolded · 0 archived · 0 revived
+2026-08-01 13:39:03.011 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s= stage= gate= ⚠ no spend cap: limits.maxRunCostUsd and limits.maxRunTokens are both unset — this run can spend without bound (set one in the plan, or in the Face's Plan tab)
+[13:39:03] ⚠ no spend cap: limits.maxRunCostUsd and limits.maxRunTokens are both unset — this run can spend without bound (set one in the plan, or in the Face's Plan tab)
+2026-08-01 13:39:03.151 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s= stage=T0 gate= qa dial: off
+[13:39:03] qa dial: off
+2026-08-01 13:39:03.154 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s= stage=T0 gate= stage → T0 First rig stage
+[13:39:03] stage → T0 First rig stage
+2026-08-01 13:39:03.474 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=1 stage=T0 gate= session #1 start — Deliver T0 attempt 1/6
+[13:39:03] session #1 start — Deliver T0 attempt 1/6
+2026-08-01 13:39:03.519 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=1 stage=T0 gate= I1: MCP task server wired (opencode) — opencode config C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf53a\.conductor\mcp-config.json
+[13:39:03] I1: MCP task server wired (opencode) — opencode config C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf53a\.conductor\mcp-config.json
+[13:39:03] ── Running · stage T0 · 0/2 done · $0.00 · session 00:00:00, last output 0s ago
+[13:39:04]   text   rig agent: working the checkpoint
+2026-08-01 13:39:04.662 [WRN] run= s= stage= gate= Telegram poll error
+System.Net.Http.HttpRequestException: Response status code does not indicate success: 409 (Conflict).
+   at System.Net.Http.HttpResponseMessage.EnsureSuccessStatusCode()
+   at Conductor.Core.Integrations.TelegramService.PollOnceAsync(CancellationToken ct) in C:\code\conductor\src\Conductor\Core\Integrations\TelegramService.cs:line 320
+   at Conductor.Core.Integrations.TelegramService.PollLoopAsync(CancellationToken ct) in C:\code\conductor\src\Conductor\Core\Integrations\TelegramService.cs:line 301
+[13:39:10]   stderr warning: LF will be replaced by CRLF in TRACKER.md.
+[13:39:10]   stderr The file will have its original line endings in your working directory
+[13:39:10]   stderr warning: LF will be replaced by CRLF in agent.ps1.
+[13:39:10]   stderr The file will have its original line endings in your working directory
+[13:39:10]   stderr warning: LF will be replaced by CRLF in rig.plan.json.
+[13:39:10]   stderr The file will have its original line endings in your working directory
+[13:39:10]   stderr warning: LF will be replaced by CRLF in .conductor/.gitignore.
+[13:39:10]   stderr The file will have its original line endings in your working directory
+[13:39:11]   text   SESSION-RESULT: rig session claimed T0.1 and committed.
+2026-08-01 13:39:12.245 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=1 stage=T0 gate= session #1 exited (code 0, 0m, $0.01)
+[13:39:12] session #1 exited (code 0, 0m, $0.01)
+2026-08-01 13:39:12.277 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=1 stage=T0 gate= verifying independently: gate battery + git + tracker diff
+[13:39:12] verifying independently: gate battery + git + tracker diff
+2026-08-01 13:39:12.521 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=1 stage=T0 gate=battery:full gate quick: exit 0
+[13:39:12] gate quick: exit 0
+2026-08-01 13:39:12.767 [WRN] run= s= stage= gate= Telegram poll error
+System.Net.Http.HttpRequestException: Response status code does not indicate success: 409 (Conflict).
+   at System.Net.Http.HttpResponseMessage.EnsureSuccessStatusCode()
+   at Conductor.Core.Integrations.TelegramService.PollOnceAsync(CancellationToken ct) in C:\code\conductor\src\Conductor\Core\Integrations\TelegramService.cs:line 320
+   at Conductor.Core.Integrations.TelegramService.PollLoopAsync(CancellationToken ct) in C:\code\conductor\src\Conductor\Core\Integrations\TelegramService.cs:line 301
+2026-08-01 13:39:13.066 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=1 stage=T0 gate=battery:full gate quick: PASS in 1s
+[13:39:13] gate quick: PASS in 1s
+2026-08-01 13:39:13.072 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=1 stage=T0 gate=battery:full gate quick: PASS (1s)
+[13:39:13] gate quick: PASS (1s)
+2026-08-01 13:39:13.437 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=1 stage=T0 gate= verdict inputs: gates GREEN · commits 1 · newly DONE [T0.1] · dirty no
+[13:39:13] verdict inputs: gates GREEN · commits 1 · newly DONE [T0.1] · dirty no
+2026-08-01 13:39:13.445 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=1 stage=T0 gate= workflow 'deliver-verify': step 0 → 1 (verify, kind=Verify)
+[13:39:13] workflow 'deliver-verify': step 0 → 1 (verify, kind=Verify)
+2026-08-01 13:39:13.446 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=1 stage=T0 gate= workflow override: skipping verification step for stage T0 — treating as passed
+[13:39:13] workflow override: skipping verification step for stage T0 — treating as passed
+2026-08-01 13:39:13.451 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=1 stage=T0 gate= confirmed 1 checkpoint(s) for stage T0: [T0.1]
+[13:39:13] confirmed 1 checkpoint(s) for stage T0: [T0.1]
+2026-08-01 13:39:13.453 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=1 stage=T0 gate= workflow 'deliver-verify': step 1 → 0 (deliver, kind=Deliver)
+[13:39:13] workflow 'deliver-verify': step 1 → 0 (deliver, kind=Deliver)
+2026-08-01 13:39:13.455 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=1 stage=T0 gate= session #1 Advanced — T0.1 done
+[13:39:13] session #1 Advanced — T0.1 done
+2026-08-01 13:39:14.405 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=1 stage=T1 gate= qa dial: off
+[13:39:14] qa dial: off
+2026-08-01 13:39:14.407 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=1 stage=T1 gate= stage → T1 Second rig stage
+[13:39:14] stage → T1 Second rig stage
+2026-08-01 13:39:14.514 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=2 stage=T1 gate= session #2 start — Deliver T1 attempt 1/6
+[13:39:14] session #2 start — Deliver T1 attempt 1/6
+2026-08-01 13:39:14.518 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=2 stage=T1 gate= I1: MCP task server wired (opencode) — opencode config C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf53a\.conductor\mcp-config.json
+[13:39:14] I1: MCP task server wired (opencode) — opencode config C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf53a\.conductor\mcp-config.json
+[13:39:15]   text   rig agent: working the checkpoint
+2026-08-01 13:39:20.823 [WRN] run= s= stage= gate= Telegram poll error
+System.Net.Http.HttpRequestException: Response status code does not indicate success: 409 (Conflict).
+   at System.Net.Http.HttpResponseMessage.EnsureSuccessStatusCode()
+   at Conductor.Core.Integrations.TelegramService.PollOnceAsync(CancellationToken ct) in C:\code\conductor\src\Conductor\Core\Integrations\TelegramService.cs:line 320
+   at Conductor.Core.Integrations.TelegramService.PollLoopAsync(CancellationToken ct) in C:\code\conductor\src\Conductor\Core\Integrations\TelegramService.cs:line 301
+[13:39:21]   stderr warning: LF will be replaced by CRLF in TRACKER.md.
+[13:39:21]   stderr The file will have its original line endings in your working directory
+[13:39:22]   text   SESSION-RESULT: rig session claimed T1.1 and committed.
+2026-08-01 13:39:22.384 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=2 stage=T1 gate= session #2 exited (code 0, 0m, $0.01)
+[13:39:22] session #2 exited (code 0, 0m, $0.01)
+2026-08-01 13:39:22.390 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=2 stage=T1 gate= verifying independently: gate battery + git + tracker diff
+[13:39:22] verifying independently: gate battery + git + tracker diff
+2026-08-01 13:39:22.533 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=2 stage=T1 gate=battery:full gate quick: exit 0
+[13:39:22] gate quick: exit 0
+2026-08-01 13:39:23.098 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=2 stage=T1 gate=battery:full gate quick: PASS in 1s
+[13:39:23] gate quick: PASS in 1s
+2026-08-01 13:39:23.101 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=2 stage=T1 gate=battery:full gate quick: PASS (1s)
+[13:39:23] gate quick: PASS (1s)
+2026-08-01 13:39:23.440 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=2 stage=T1 gate= verdict inputs: gates GREEN · commits 1 · newly DONE [T1.1] · dirty no
+[13:39:23] verdict inputs: gates GREEN · commits 1 · newly DONE [T1.1] · dirty no
+2026-08-01 13:39:23.442 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=2 stage=T1 gate= workflow 'deliver-verify': step 0 → 1 (verify, kind=Verify)
+[13:39:23] workflow 'deliver-verify': step 0 → 1 (verify, kind=Verify)
+2026-08-01 13:39:23.444 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=2 stage=T1 gate= workflow override: skipping verification step for stage T1 — treating as passed
+[13:39:23] workflow override: skipping verification step for stage T1 — treating as passed
+2026-08-01 13:39:23.446 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=2 stage=T1 gate= confirmed 1 checkpoint(s) for stage T1: [T1.1]
+[13:39:23] confirmed 1 checkpoint(s) for stage T1: [T1.1]
+2026-08-01 13:39:23.447 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=2 stage=T1 gate= workflow 'deliver-verify': step 1 → 0 (deliver, kind=Deliver)
+[13:39:23] workflow 'deliver-verify': step 1 → 0 (deliver, kind=Deliver)
+2026-08-01 13:39:23.448 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=2 stage=T1 gate= session #2 Advanced — T1.1 done
+[13:39:23] session #2 Advanced — T1.1 done
+2026-08-01 13:39:24.509 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=2 stage=T1 gate= 🎉 plan 'SF53-REMOTE-PROOF-scratch-rig-not-your-run' complete — 2/2 checkpoints done
+[13:39:24] 🎉 plan 'SF53-REMOTE-PROOF-scratch-rig-not-your-run' complete — 2/2 checkpoints done
+2026-08-01 13:39:25.979 [INF] run=d70c3a00349e49bd9c81b4cb9c70ce91 s=2 stage=T1 gate= run summary written to C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf53a\.conductor\RUN-SUMMARY.md
+[13:39:25] run summary written to C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf53a\.conductor\RUN-SUMMARY.md
+run ended — Completed · stopped cleanly
+history: 
+C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf53a\.conductor\conductor.log ·
+run d70c3a00, 2 session(s)
+resume: conductor run -p 
+C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf53a/rig.plan.json

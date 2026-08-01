@@ -58,7 +58,7 @@ public sealed class WatchCommand : AsyncCommand<WatchCommand.Settings>
         public string? Hook { get; init; }
 
         [CommandOption("--notify <URL>")]
-        [Description("SF5.3: POST the brief to this URL on wake, overriding the plan's supervisor.remote block. Not bound by its hourly fuse.")]
+        [Description("SF5.3: POST the brief to this URL on wake, replacing the plan's supervisor.remote block (phone included). Not bound by its hourly fuse.")]
         public string? Notify { get; init; }
 
         [CommandOption("--hook-timeout <MINUTES>")]

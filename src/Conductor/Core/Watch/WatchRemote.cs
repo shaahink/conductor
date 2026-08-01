@@ -95,7 +95,10 @@ public static partial class WatchRemote
         else if (!string.IsNullOrWhiteSpace(cfg!.WebhookUrl))
             rows.Add(await PostBriefAsync(http, cfg.WebhookUrl!, cfg.Headers, briefJson, ct).ConfigureAwait(false));
 
-        if (cfg is { Telegram: true })
+        // --notify replaces the WHOLE block, phone included, for the same reason --hook replaces the
+        // whole supervisor: an operator aiming one wake at one URL from a terminal has not asked to
+        // also ring the owner, and a one-off that spams a phone stops being used.
+        if (!oneOff && cfg is { Telegram: true })
             rows.AddRange(await SendTelegramAsync(http, plan, brief, ct).ConfigureAwait(false));
 
         // Stamped when the plan's block attempted something, delivered or not: a fuse that only counts
