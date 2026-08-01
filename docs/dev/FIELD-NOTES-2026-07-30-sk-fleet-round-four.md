@@ -139,3 +139,17 @@ cost me a minute of thinking a session had been idle since 23:42.
 - **`run.db` is readable concurrently and the event log is complete.** Everything in #2 was
   established from outside the engine, mid-session, with a read-only SQLite connection and no risk to
   the run.
+
+---
+
+## Closure ledger (SF7.1, 2026-08-01)
+
+All four findings closed. `9024e57`'s own body names this log: "both of round-four's complaints fall
+out of that."
+
+| # | Finding | Stage | Commit | What closed it |
+|---|---|---|---|---|
+| 1 | `--in-progress` reports a transition it silently refused | SC5.3 | `9024e57` | `conductor task` owned a private write path; every move now goes through `IRunStore.ApplyTaskStatus` and reports the post-fold status, so a refused move is visibly a no-op. `--done` had the same hole and is fixed with it |
+| 2 | A human kanban move is one-way from the CLI | SC5.3 | `9024e57` | `--todo`, `--blocked` and `--skipped` exist, so undoing a mis-drag no longer needs a hand-rolled HTTP POST against the control plane |
+| 3 | `conductor log` cannot read its own log while the engine runs | SC2.4 | `87d7fcd` | Both `log` and `bg logs` asked for `FileShare.Read`, which on Windows does not permit the writer's Write handle. The share mode now admits the live writer |
+| 4 | `bg status` lists the session pid; `bg logs` says no such log | SC5.4 | `58bf293` | `bg logs` points at the session stream for agent rows, and the runtime column is computed in one timezone — the UTC-vs-local subtraction that made a live session look idle since 23:42 |

@@ -523,10 +523,16 @@ unblocks") measurably worked on the owner.
 
 # Appendix B — field-notes finding → stage index
 
-devcontext: #1→SC2.3 · #2→SC3.1 · #3→SC3.4 · #4→SC3.1 · #5→SC5.2 · #6→SC3.2 · #7→SC1.2 ·
-#8→SF6.1 · #9→SF6.1 · #10→SC7 · #11→SC7.1 · #12→SC4.1 · #13→SC1 · #14→SC6 · #15→SC4.4 ·
-#16→SC5.2 · #17→SF7.1 · #18→SC2.2 · #19→SC2.2 · #20→SC6.2
-sk-platform: #1→SC5.1 · #2→SC2.2 · #3→SC4.2 · #4→SC4.3 · #5→SC2.3 · #6→SC2.4 · #7→SC2.3
+**This index was written before the work and was wrong in three places. SF7.1 rewrote it from the
+commits, which cite their own finding numbers; the authoritative version — with the commit sha and
+one line on what actually closed each finding — is the `## Closure ledger` section at the foot of
+each of the three `docs/dev/FIELD-NOTES-*.md` files. What follows is that measurement, condensed.**
+
+devcontext: #1→SC2.3 · #2→SC3.1 · #3→SC3.4 · #4→SC3.1 · #5→SC5.2+SF6.1 · #6→SC3.2 · #7→SC1.2 ·
+#8→SF6.1 · #9→SF6.1 · #10→SC7.1+SC7.2 · #11→SC7.1 · #12→SC4.1 · #13→SC1.1 · #14→SC6.1+SC4.2 ·
+#15→SC4.4 · #16→SC5.2 · #17→SF7.1 · #18→SC2.2 · #19→SC2.2 (numbering only — the attempt-budget
+half was considered and not adopted) · #20→SC6.2
+sk-platform: #1→SC5.1 · #2→SC2.2 · #3→SC4.2+SC4.3 · #4→SC4.3 · #5→SC2.3 · #6→SC2.4 · #7→SC2.3
 round-four: #1→SC5.3 · #2→SC5.3 · #3→SC2.4 · #4→SC5.4
 field log extras: plan set traps→SC3.2 · budget window semantics→SC2.3 · engine liveness→SC2.1 ·
 brace landmine→SC3.3 · squash silence→SC6.2 · no version verb→SC8.1 · MCP-absent-in-sessions→SF6.1
