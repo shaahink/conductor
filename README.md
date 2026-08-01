@@ -193,6 +193,9 @@ gate transcripts: [`docs/history/`](docs/history/).
 > Conductor drives itself. [`CONDUCTOR-WORKGRAPH.md`](CONDUCTOR-WORKGRAPH.md) at the repo root is a
 > **live tracker** — the same checkpoint-table format described in
 > [`docs/tracker.md`](docs/tracker.md), being used on this repo by the tool in this repo.
+> `SARBAN-CORE-TRACKER.md` and `SARBAN-FACE-TRACKER.md` are the same thing for the two plans that
+> built the Sarban era — each is the `tracker` path a [`plans/`](plans/) plan file points at, so they
+> stay at the repo root by convention rather than under `docs/`.
 
 ## Testing without spending anything
 
