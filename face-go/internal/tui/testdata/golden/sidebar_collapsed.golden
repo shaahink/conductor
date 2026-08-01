@@ -2,8 +2,7 @@
   h Home  a s o e p r k g b                                                                                   
                                                                                                               
   Server                                                                                                      
-  mode       live                                                                                             
-  url        http://127.0.0.1:4317                                                                            
+  engine     running — answering on http://127.0.0.1:4317                                                     
   streams    ● events   ● transcript                                                                          
                                                                                                               
   Run                                                                                                         
@@ -19,15 +18,16 @@
                                                                                                               
   Workspace                                                                                                   
   the working directory every session edits                                                                   
-  repo       C:\Code\conductor                                                                                
-  plan file  C:\Code\conductor\plans\conductor-foreman.plan.json                                              
+  repo       C:/Code/conductor                                                                                
+  plan file  plans/conductor-foreman.plan.json                                                                
   tracker    CONDUCTOR-VNEXT-PLAN.md                                                                          
-  state dir  C:\Code\conductor\.conductor                                                                     
+  state dir  .conductor                                                                                       
                                                                                                               
   Next steps                                                                                                  
     a  watch the live agent — it is working right now                                                         
     r  read the run report                                                                                    
     ?  see every key                                                                                          
+                                                                                                              
                                                                                                               
                                                                                                               
                                                                                                               

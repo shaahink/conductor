@@ -2,7 +2,7 @@
   h Home  a s o e p r k g b                                                                                
                            │                                                                               
  ▶ PLAN                    │  Server                                                                       
- ✓ F0 3/3 Foundations      │  mode       live                                                              
+ ✓ F0 3/3 Foundations      │  engine     running — answering on http://127.0.0.1:4317                      
  ✓ F6 5/5 Ink ╭────────────────────────────────────────────────────────────────────────────────╮           
  ● F7 2/5 Gate│                                                                                │           
    ✓ F7.1 Plan│   ◆ conductor  ·  keys                                                         │           
@@ -27,7 +27,7 @@
               │     q quit   esc close / cancel   ? this help                                  │           
               │                                                                                │           
               ╰────────────────────────────────────────────────────────────────────────────────╯           
-                           │    ?  see every key                                                           
+                           │                                                                               
                            │                                                                               
                            │                                                                               
                            │                                                                               

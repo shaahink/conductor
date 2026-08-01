@@ -1,0 +1,40 @@
+ ◆ conductor  ● OFFLINE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42 
+  h Home  a s o e p r k g b                                                                                   
+                           │                                                                                  
+ ▶ PLAN                    │  Server                                                                          
+ ✓ F0 3/3 Foundations      │  engine     not running — nothing is listening on http… · last contact 7m ago    
+ ✓ F6 5/5 Ink TUI v1       │  streams    ● events   ● transcript                                              
+ ● F7 2/5 Gate … 1× $0.30  │                                                                                  
+   ✓ F7.1 Plan import      │  Last run                                                                        
+   ✓ F7.2 Re-import diff   │  outcome    ✓ COMPLETED  ended 4h ago                                            
+   ● F7.3 Truth-gate tier  │  plan       beta                                                                 
+ ○ F8 0/4 conductor chat…  │  progress   1/1 done                                                             
+                           │  sessions   1 (1 deliver)                                                        
+ ── GATES ──               │  spend      $0.0001 total (agent $0.0000 + gates $0.0001) · cap $1.00 (0% used)  
+   ✓ build                 │  from       testdata/lastrun/.conductor/RUN-SUMMARY.md                           
+   ● test 4s               │                                                                                  
+   ○ lint                  │  Run                                                                             
+                           │  plan       conductor-foreman                                                    
+                           │  status     ▶ RUNNING  as last seen 7m ago                                       
+                           │  stage      F7 Gate caching + truth gates + speed program                        
+                           │  session    s12 Deliver · attempt 1/3 · opus-4-8                                 
+                           │  progress   ▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱ 2/40 checkpoints                            
+                           │  cost       $0.42   +$0.02 overhead                                              
+                           │  tokens     2.5k in · 1.8k out · 900 reasoning                                   
+                           │  budget     $0.42 / $10.00  95% headroom                                         
+                           │  tokens cap 5.2k / 2.0M  99% headroom                                            
+                           │                                                                                  
+                           │  Workspace                                                                       
+                           │  the working directory every session edits                                       
+                           │  repo       C:/Code/conductor                                                    
+                           │  plan file  plans/conductor-foreman.plan.json                                    
+                           │  tracker    CONDUCTOR-VNEXT-PLAN.md                                              
+                           │                                                                                  
+                           │  Next steps                                                                      
+                           │    the engine is not answering — nothing on this page is live                    
+                           │    what it did is above; the full record is in RUN-SUMMARY.md                    
+                           │    start a run with conductor run -p <plan>                                      
+                           │    ?  see every key                                                              
+                           │                                                                                  
+                           │                                                                                  
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   a agent · r report · : commands · ? keys          
