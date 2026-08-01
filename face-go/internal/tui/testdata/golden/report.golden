@@ -19,7 +19,9 @@
    ✓ Add truth-tier con…   │  Sessions                                                                        
    ● Wire RunDb.GetLast…   │    #    stage kind      outcome     duration cost    commits                     
    ○ Cache gate results…   │    #12  F7    Deliver   running     41s      $0.12   0                           
+                           │         31 calls · Bash ×14  Read ×9  Edit ×6  +1 more · 6 edits / 2 files       
                            │    #11  F7    Deliver   needsRetry  45m 34s  $0.14   2                           
+                           │         104 calls · Bash ×57  Edit ×26  Read ×9  +5 more · 15 edits / 5 file…    
                            │    #8   F6    Deliver   completed   41m 12s  $0.09   1                           
                            │                                                                                  
                            │  Gates                                                                           
@@ -27,8 +29,6 @@
                            │    ● test            4s                                                          
                            │    ○ lint                                                                        
                            │                                                                                  
-                           │  Verifier scores                                                                 
-                           │    session  stage score     verdict  findings                                    
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ scroll (0/10) · esc back                       
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ scroll (0/12) · esc back                       

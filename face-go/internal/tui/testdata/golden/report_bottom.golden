@@ -1,15 +1,15 @@
  ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42    
  h a s o e p  r Report  k g b                                                                                 
                            │                                                                                  
- ▶ PLAN  n× attempts       │  ✓ F0    3/3    —    —       —                                                   
- ✓ F0 3/3 Foundations      │  ✓ F6    5/5    —    —       —                                                   
- ✓ F6 5/5 Ink TUI v1       │  ● F7    2/5    1×   $0.30   —                                                   
- ● F7 2/5 Gate … 1× $0.30  │  ○ F8    0/4    —    —       —                                                   
-   ✓ F7.1 Plan import      │                                                                                  
-   ✓ F7.2 Re-import diff   │  Sessions                                                                        
-   ● F7.3 Truth-gate tier  │    #    stage kind      outcome     duration cost    commits                     
- ○ F8 0/4 conductor chat…  │    #12  F7    Deliver   running     41s      $0.12   0                           
-                           │    #11  F7    Deliver   needsRetry  45m 34s  $0.14   2                           
+ ▶ PLAN  n× attempts       │  ● F7    2/5    1×   $0.30   —                                                   
+ ✓ F0 3/3 Foundations      │  ○ F8    0/4    —    —       —                                                   
+ ✓ F6 5/5 Ink TUI v1       │                                                                                  
+ ● F7 2/5 Gate … 1× $0.30  │  Sessions                                                                        
+   ✓ F7.1 Plan import      │    #    stage kind      outcome     duration cost    commits                     
+   ✓ F7.2 Re-import diff   │    #12  F7    Deliver   running     41s      $0.12   0                           
+   ● F7.3 Truth-gate tier  │         31 calls · Bash ×14  Read ×9  Edit ×6  +1 more · 6 edits / 2 files       
+ ○ F8 0/4 conductor chat…  │    #11  F7    Deliver   needsRetry  45m 34s  $0.14   2                           
+                           │         104 calls · Bash ×57  Edit ×26  Read ×9  +5 more · 15 edits / 5 file…    
  ── GATES ──               │    #8   F6    Deliver   completed   41m 12s  $0.09   1                           
    ✓ build                 │                                                                                  
    ● test 4s               │  Gates                                                                           
@@ -31,4 +31,4 @@
                            │    1 session with cost but zero tokens — pre-bug-#5 data, not a Face bug         
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ scroll (10/10) · esc back                      
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ scroll (12/12) · esc back                      

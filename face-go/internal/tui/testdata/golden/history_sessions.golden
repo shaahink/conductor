@@ -8,11 +8,11 @@
    ✓ F7.1 Plan import      │                                                                                  
    ✓ F7.2 Re-import diff   │  Session #12 · F7 Deliver · attempt 2, 0 resumes                                 
    ● F7.3 Truth-gate tier  │  Ran:   10:00 · 8m ago → still running                                           
- ○ F8 0/4 conductor chat…  │                                                                                  
-                           │                                                                                  
- ── GATES ──               │                                                                                  
-   ✓ build                 │                                                                                  
-   ● test 4s               │                                                                                  
+ ○ F8 0/4 conductor chat…  │  Did:   31 tool calls · 4 tools · 6 edits over 2 files                           
+                           │  Tools: Bash ×14  Read ×9  Edit ×6  Grep ×2                                      
+ ── GATES ──               │  Files: src/Core/GateCache.cs ×4                                                 
+   ✓ build                 │         src/Core/RunLoop.cs ×2                                                   
+   ● test 4s               │  Cmds:  dotnet build src/App                                                     
    ○ lint                  │                                                                                  
                            │                                                                                  
  ── TASKS ──               │                                                                                  

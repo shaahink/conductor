@@ -13,12 +13,14 @@
  ── GATES ──               │  Sessions                                                                        
    ✓ build                 │    #    stage kind      outcome     duration cost    commits                     
    ● test 4s               │    #12  F7    Deliver   running     41s      $0.12   0                           
-   ○ lint                  │    #11  F7    Deliver   needsRetry  45m 34s  $0.14   2                           
-                           │    #8   F6    Deliver   completed   41m 12s  $0.09   1                           
- ── TASKS ──               │                                                                                  
-   ✓ Add truth-tier con…   │  Gates                                                                           
-   ● Wire RunDb.GetLast…   │    ✓ build           2s                                                          
-   ○ Cache gate results…   │    ● test            4s                                                          
+   ○ lint                  │         31 calls · Bash ×14  Read ×9  Edit ×6  +1 more · 6 edits / 2 files       
+                           │    #11  F7    Deliver   needsRetry  45m 34s  $0.14   2                           
+ ── TASKS ──               │         104 calls · Bash ×57  Edit ×26  Read ×9  +5 more · 15 edits / 5 file…    
+   ✓ Add truth-tier con…   │    #8   F6    Deliver   completed   41m 12s  $0.09   1                           
+   ● Wire RunDb.GetLast…   │                                                                                  
+   ○ Cache gate results…   │  Gates                                                                           
+                           │    ✓ build           2s                                                          
+                           │    ● test            4s                                                          
                            │    ○ lint                                                                        
                            │                                                                                  
                            │  Verifier scores                                                                 
@@ -27,8 +29,6 @@
                            │    #8       F6    90/80     PASS     —                                           
                            │                                                                                  
                            │  Session tokens                                                                  
-                           │    #    stage in       out      reason   cache-read cost                         
-                           │    #12  F7    41.2k    3.2k     1.0k     188.4k    $0.12                         
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ scroll (6/10) · esc back                       
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ scroll (6/12) · esc back                       

@@ -1,0 +1,34 @@
+ ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42    
+ h a  s History  o e p r k g b                                                                                
+                           │                                                                                  
+ ▶ PLAN  n× attempts       │  ● Sessions s   ○ Spine t                                                        
+ ✓ F0 3/3 Foundations      │    #12  F7     Deliver  running      0 commits  10:00                            
+ ✓ F6 5/5 Ink TUI v1       │  › #11  F7     Deliver  needsRetry   2 commits  09:12                            
+ ● F7 2/5 Gate … 1× $0.30  │    #8   F6     Deliver  completed    1 commits  08:30                            
+   ✓ F7.1 Plan import      │                                                                                  
+   ✓ F7.2 Re-import diff   │  Session #11 · F7 Deliver · attempt 1, 0 resumes                                 
+   ● F7.3 Truth-gate tier  │  Ran:   09:12 · 55m ago → 09:58  (45m 34s)                                       
+ ○ F8 0/4 conductor chat…  │  Gates: build ✓ test ✗ lint ○                                                    
+                           │  Did:   104 tool calls · 8 tools · 15 edits over 5 files                         
+ ── GATES ──               │  Tools: Bash ×57  Edit ×26  Read ×9  PowerShell ×3  conductor_note ×3  run_que…  
+   ✓ build                 │  Files: src/Core/RunDb.Gates.cs ×6                                               
+   ● test 4s               │         src/Core/GateCache.cs ×3                                                 
+   ○ lint                  │         tests/GateCacheTests.cs ×3                                               
+                           │         src/Core/RunLoop.cs ×2                                                   
+ ── TASKS ──               │         +1 more                                                                  
+   ✓ Add truth-tier con…   │  Board: F7.4 -> done                                                             
+   ● Wire RunDb.GetLast…   │  Bg:    F7.4 cache key derivation - full build                                   
+   ○ Cache gate results…   │         → F7.4 - gate suite after the cache lands                                
+                           │  Cmds:  dotnet build src/App                                                     
+                           │         dotnet test --filter GateCacheTests                                      
+                           │  Result:                                                                         
+                           │                                                                                  
+                           │      Wired the caching layer in  RunDb  but  test  still red — see gate          
+                           │      output.                                                                     
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ navigate · ←/→ view                            
