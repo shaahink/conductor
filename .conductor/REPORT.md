@@ -1,11 +1,11 @@
 ﻿# Conductor — Sarban face - the watcher and the surfaces run report
 
-_Updated 2026-08-01 00:54 UTC · branch `feat/sarban` · HEAD `3dc1cd8`_
+_Updated 2026-08-01 01:40 UTC · branch `feat/sarban` · HEAD `6170612`_
 
-**Status:** Idle
-**Stage:** SF2 — The face tells the truth kindly - state, time, money · attempts used 0 · working ▸ SF2.3
-**Checkpoints:** 9/24 done · **Sessions run:** 11 · **Cost:** $128.1099 (agent $128.0534 + gates $0.0565) · **Tokens:** 2,014,739 in / 727,681 out
-**Confirmed phases:** SF0, SF1
+**Status:** Running
+**Stage:** SF3 — Reading a session becomes cheap · attempts used 0 · working ▸ SF3.1
+**Checkpoints:** 10/24 done · **Sessions run:** 13 · **Cost:** $139.7843 (agent $139.7202 + gates $0.0641) · **Tokens:** 2,260,883 in / 776,997 out
+**Confirmed phases:** SF0, SF1, SF2
 
 ## Stage progress
 
@@ -13,8 +13,8 @@ _Updated 2026-08-01 00:54 UTC · branch `feat/sarban` · HEAD `3dc1cd8`_
 |---|---|---|---|
 | SF0 | The ledger closes - the core run's leftovers | ██████████ 4/4 | confirmed ✓ |
 | SF1 | The face sheds dead weight | ██████████ 3/3 | confirmed ✓ |
-| SF2 | The face tells the truth kindly - state, time, money | ███████░░░ 2/3 | **← active** |
-| SF3 | Reading a session becomes cheap | ░░░░░░░░░░ 0/3 | todo |
+| SF2 | The face tells the truth kindly - state, time, money | ██████████ 3/3 | confirmed ✓ |
+| SF3 | Reading a session becomes cheap | ░░░░░░░░░░ 0/3 | **← active** |
 | SF4 | The human queue is a first-class surface | ░░░░░░░░░░ 0/2 | todo |
 | SF5 | Supervision without a polling meter | ░░░░░░░░░░ 0/4 | todo |
 | SF6 | The prompt bank compounds | ░░░░░░░░░░ 0/3 | todo |
@@ -41,13 +41,13 @@ _Updated 2026-08-01 00:54 UTC · branch `feat/sarban` · HEAD `3dc1cd8`_
 
 </details>
 
-<details><summary>SF2 — The face tells the truth kindly - state, time, money (2/3)</summary>
+<details> ✅<summary>SF2 — The face tells the truth kindly - state, time, money (3/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
 | SF2.1 | Home shows one honest connection line with age, start-a-run instructions only when no run exists, a last-run summary card when offline, one Connected definition, and consistent path casing | ✅ DONE | [`93611dd`](https://github.com/shaahink/conductor/commit/93611dd) |
-| SF2.2 | One shared time formatter renders local time with relative age and a date when not today; the Timeline UTC mislabel is fixed and the previously-unrendered timestamps render | ✅ DONE | - |
-| SF2.3 | Over-budget renders as OVER never zero-percent headroom; window and lifetime spend are distinguished; the top bar shows in-flight session cost live; the attempts marker has a legend | ⬜ TODO | - |
+| SF2.2 | One shared time formatter renders local time with relative age and a date when not today; the Timeline UTC mislabel is fixed and the previously-unrendered timestamps render | ✅ DONE | [`f05791b`](https://github.com/shaahink/conductor/commit/f05791b) |
+| SF2.3 | Over-budget renders as OVER never zero-percent headroom; window and lifetime spend are distinguished; the top bar shows in-flight session cost live; the attempts marker has a legend | ✅ DONE | [`ef1620f`](https://github.com/shaahink/conductor/commit/ef1620f) |
 
 </details>
 
@@ -55,7 +55,7 @@ _Updated 2026-08-01 00:54 UTC · branch `feat/sarban` · HEAD `3dc1cd8`_
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| SF3.1 | Tool calls render as one-liners and each session has a digest panel — tool mix, files touched, claims, bg-purpose storyline; fold is rune-safe | ⬜ TODO | - |
+| SF3.1 | Tool calls render as one-liners and each session has a digest panel — tool mix, files touched, claims, bg-purpose storyline; fold is rune-safe | 🔄 IN PROGRESS | - |
 | SF3.2 | The kanban groups by stage with the active stage highlighted, card meta visible unselected, column totals, skips separated from Done, in-column scroll, and a you-are-here ribbon | ⬜ TODO | - |
 | SF3.3 | Branch, dirty state, ahead-behind and HEAD sha are on the wire and in the face; session history shows commit subjects; the sidebar cues execution-vs-declared stage order | ⬜ TODO | - |
 
@@ -115,25 +115,14 @@ _Updated 2026-08-01 00:54 UTC · branch `feat/sarban` · HEAD `3dc1cd8`_
 | 9 | SF2 | Deliver | 1 | 08-01 00:04 | 0:15 | RolledOver |  | 0 |  | $5.5132 |  | 126,902/1,912 |
 | 10 | SF2 | Deliver | 1 | 08-01 00:20 | 0:18 | Advanced | SF2.1 | 4 | engine-fast:OK · face-fast:OK | $7.1733 | $0.0075 | 244,321/55,057 |
 | 11 | SF2 | Deliver | 1 | 08-01 00:39 | 0:13 | Advanced | SF2.2 | 3 | engine-fast:OK · face-fast:OK | $6.2995 | $0.0082 | 129,922/49,189 |
+| 12 | SF2 | Deliver | 1 | 08-01 00:54 | 0:19 | Advanced | SF2.3 | 3 | engine-fast:OK · face-fast:OK | $5.9701 | $0.0076 | 113,302/47,111 |
+| 13 | SF3 | Deliver | 1 | 08-01 01:19 | 0:20 | RolledOver |  | 0 |  | $5.6967 |  | 132,842/2,205 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-31 22:50:35  ▪ gate face-fast pass [phase]  (0.0s)
-07-31 22:50:35  ▪ gate engine-full pass [phase]  (3m18s)
-07-31 22:50:35  ▪ gate face-full pass [phase]  (11.1s)
-07-31 22:50:35  ▸ stage SF0 confirmed  (2h35m16s)
-07-31 22:50:36  ▸ stage SF1 entered — The face sheds dead weight
-07-31 22:50:36  • session #5 SF1 Deliver started (attempt 1/4)
-07-31 23:21:40  ▪ gate engine-fast pass [session]  (55.7s)
-07-31 23:21:40  ▪ gate face-fast pass [session]  (7.8s)
-07-31 23:21:41  • session #5 SF1 → Advanced · done SF1.1 · 3 commit(s)  (31m05s)
-07-31 23:21:42  • session #6 SF1 Deliver started (attempt 1/4)
-07-31 23:55:20  ▪ gate engine-fast pass [session]  (47.6s)
-07-31 23:55:20  ▪ gate face-fast pass [session]  (6.6s)
-07-31 23:55:21  • session #6 SF1 → Advanced · done SF1.2 · 3 commit(s)  (33m39s)
 08-01 00:06:42  ◆ run resumed · Sarban face - the watcher and the surfaces
 08-01 00:11:14  ◆ run resumed · Sarban face - the watcher and the surfaces
 08-01 00:11:23  • session #7 SF1 Deliver started (attempt 1/4)
@@ -161,6 +150,19 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-01 01:39:40  • session #11 SF2 Deliver started (attempt 1/6)
 08-01 01:54:55  ▪ gate engine-fast pass [session]  (1m14s)
 08-01 01:54:55  ▪ gate face-fast pass [session]  (7.1s)
+08-01 01:54:57  • session #11 SF2 → Advanced · done SF2.2 · 3 commit(s)  (15m16s)
+08-01 01:54:57  • session #12 SF2 Deliver started (attempt 1/6)
+08-01 02:15:39  ▪ gate engine-fast pass [session]  (1m09s)
+08-01 02:15:39  ▪ gate face-fast pass [session]  (6.5s)
+08-01 02:15:40  • session #12 SF2 → Advanced · done SF2.3 · 3 commit(s)  (20m42s)
+08-01 02:19:45  ▪ gate engine-fast pass [phase]  (0.0s)
+08-01 02:19:45  ▪ gate face-fast pass [phase]  (0.0s)
+08-01 02:19:45  ▪ gate engine-full pass [phase]  (3m44s)
+08-01 02:19:45  ▪ gate face-full pass [phase]  (16.9s)
+08-01 02:19:45  ✓ checkpoint SF2.3 confirmed
+08-01 02:19:45  ▸ stage SF2 confirmed  (1h14m51s)
+08-01 02:19:46  ▸ stage SF3 entered — Reading a session becomes cheap
+08-01 02:19:46  • session #13 SF3 Deliver started (attempt 1/6)
 ```
 
 ## Health
@@ -168,7 +170,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 11 · retries 1 (9 %) · overall Warn
+sessions 13 · retries 1 (8 %) · overall Warn
 ⚠ [context-saturation] session #3: 24,790,251 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #4: 21,397,049 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #5: 36,996,007 context tokens (≥ 20,000,000)
@@ -181,13 +183,11 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/sarban
-working tree: clean
+working tree: M .conductor/REPORT.md, M SARBAN-FACE-TRACKER.md
 ```
 
 ### Commits by session
 
-- **s1 (SF0 Deliver)** — 1 commit(s):
-  - [`5217986`](https://github.com/shaahink/conductor/commit/5217986) fix(plan): inert model pins die at load, verifyEachDelivery finally decides, and a run says whether it can notify
 - **s2 (SF0 Deliver)** — 2 commit(s):
   - [`3e53a3c`](https://github.com/shaahink/conductor/commit/3e53a3c) docs(tracker): SF0.2 handoff - what landed, what SF0.3 picks up, and the live-proof recipe
   - [`fdd78ae`](https://github.com/shaahink/conductor/commit/fdd78ae) fix(verdict): every claim gets a session, the RED line names what it queues, and a confirmed last stage stops spinning
@@ -216,6 +216,10 @@ working tree: clean
   - [`3dc1cd8`](https://github.com/shaahink/conductor/commit/3dc1cd8) docs(tracker): SF2.2 handoff - two wire time formats, one clock vocabulary, and a UTC label that was never true
   - [`d02559c`](https://github.com/shaahink/conductor/commit/d02559c) test(face): rebaseline the nine frames the one clock vocabulary changed
   - [`f05791b`](https://github.com/shaahink/conductor/commit/f05791b) feat(face): one clock vocabulary - a parser for both wire formats, a date when it is not today, and three timestamps that were on the wire and on no screen
+- **s12 (SF2 Deliver)** — 3 commit(s):
+  - [`da28eb0`](https://github.com/shaahink/conductor/commit/da28eb0) docs(tracker): SF2.3 handoff - a budget block the Face never read, and an assertion inverted on the record
+  - [`9cfe572`](https://github.com/shaahink/conductor/commit/9cfe572) test(face): rebaseline the frames the honest money changed, plus one new one
+  - [`ef1620f`](https://github.com/shaahink/conductor/commit/ef1620f) feat(face): money honesty - OVER in dollars, a window that is not the lifetime, and a cost the Face can stand behind
 
 ## Phase handovers (audit)
 
@@ -238,28 +242,28 @@ working tree: clean
 
 ## Last gate run
 
-engine-fast:OK · face-fast:OK
+engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
 
 ## Last session result
 
-> SESSION-RESULT: SF2.2 is claimed DONE with evidence at `.conductor/evidence/SF2/SF2.2-summary.md`, across three pushed commits on `feat/sarban` — `f05791b` (code + tests), `d02559c` (golden rebaseline of 9 frames), `3dc1cd8` (handoff). `internal/timefmt` now owns the absolute half of the Face's clock vocabulary: `Parse` accepts **both** wire formats — measured off this run's own run.db, not assumed, because ledger and bug `created_at` arrive as SQLite `datetime('now')` (`"2026-08-01 00:37:30"`, no T, no zone) while sessions/timeline are RFC3339, and an RFC3339-only reader is the likeliest reason those two columns were on the DTO and on no screen; `Stamp` shows a date only when it is not toda…
+> SESSION-RESULT: **SF2.3 landed and claimed** (`conductor task --done SF2.3 --evidence .conductor/evidence/SF2/SF2.3-summary.md`), across three pushed commits on `feat/sarban`: `ef1620f` (code + tests), `9cfe572` (17 rebaselined goldens + one new `home_over_budget` frame), `da28eb0` (handoff). The root cause was measurable rather than stylistic — the Face was ignoring the **entire SC2.3 budget block**: ten JSON names served by `ControlPlaneDto.cs:46-72` since SC2.3, **zero hits** anywhere in `face-go`. Home was comparing `TotalCostUsd` (lifetime) against `maxRunCostUsd` (a window cap), which is exactly how `$224.21 / $125.00 · 0% headroom` reached a screenshot. Now: the wire block is decoded,…
 
 ## Tracker handoff
 
 ```
-last: **SF2.2 CLAIMED** — `f05791b` code+tests, `d02559c` rebaseline (9 frames). `internal/timefmt`
-  now owns the absolute half too: `Parse`/`Clock`/`Stamp`/`StampAge`/`Duration`/`Location`. Evidence
-  `.conductor/evidence/SF2/SF2.2-summary.md`.
-stage: **SF2 — 2 of 3 claimed.** gate: not run by me. Fast loop green: `go build/vet/test ./...`
-  all 7 packages ok.
-next: **SF2.3** (money honesty). The top bar is `widgets/ticker.go` `RenderTopBar` — it already has
-  `state.SessionCostUsd` in hand at line ~103 but only renders it when `state.AgentActive`, which is
-  half of critique #4. Budget line + headroom live on Home (`tab_home.go`); the `N×` attempts marker
-  is in the sidebar (`plan.go`).
-trap: **TWO wire time formats.** ledger/bug `created_at` are SQLite `datetime('now')` —
-  `"2026-08-01 00:37:30"`, no T, no zone — while sessions/timeline are RFC3339. Always parse through
-  `timefmt.Parse`; `time.Parse(RFC3339, …)` silently renders nothing. Golden clock+zone are pinned
-  in `TestMain` now; use `pinClock`/`pinClockFunc`, never restore `timefmt.Now` to `time.Now`.
-open: bugs **#15 #16 #17 #18** still open; #18 (bottom bar offers a live agent while offline) is
-  SF2.3-adjacent since that bar is the same one showing `$0.00` beside `$13.07`.
+last: **SF2.3 CLAIMED** — `ef1620f` code+tests, `9cfe572` rebaseline (17 frames + 1 new).
+  Evidence `.conductor/evidence/SF2/SF2.3-summary.md`. Fast loop green: `go build/vet/test ./...`,
+  all 7 packages ok. **Stage SF2 is 3 of 3 claimed.**
+next: **SF3.1** (digest layer). Nothing in SF2 is half-done.
+finding: the Face was ignoring the ENTIRE SC2.3 budget block — ten json names on the wire since
+  SC2.3, zero hits in face-go. Before writing arithmetic on the face side, grep
+  `ControlPlaneDto.cs` for a field that already answers it; the engine computed it once on purpose.
+gap: `internal/api/demo.go` serves no budget block, so `--demo` still walks the pre-SC2.3 fallback
+  and never shows the window/lifetime/OVER rows. Golden `home_over_budget` covers them instead.
+  `meanSessionCost`/`checkpointsRemaining` are decoded but rendered nowhere yet.
+trap: one assertion was INVERTED on purpose — `over cap → 0%% headroom` was pinned as correct and
+  is the defect SF2.3 kills. It moved into `TestHomeHeadroomRendersAnOverrunAsDollarsNotZeroPercent`
+  with the opposite expectation. Nothing was skipped, relaxed or deleted.
+open: bugs **#15 #16 #17 #18** still open. **#18 is now stale-ish** — the bottom bar it complains
+  about no longer prints a $0.00 it cannot stand behind; re-read it before working it.
 ```
