@@ -1,56 +1,98 @@
 using Conductor.Core;
+using Conductor.Core.Events;
+using Conductor.Core.Store;
 using Conductor.Core.Watch;
 using Conductor.Models;
+
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Conductor.Tests;
 
 /// <summary>
-/// SF5.1 — the blocking half, against real files: the backlog fold, the already-parked check, the
-/// incremental drain and the heartbeat. These use a temp <c>.conductor</c> rather than mocks because
-/// the failure mode being guarded against is a watch that reads the wrong file or replays history as
-/// if it were news, and a mock cannot be wrong about that.
+/// SF5.1 — the blocking half, against the store the engine actually writes: the backlog fold, the
+/// already-parked check, the incremental drain and the heartbeat.
+///
+/// <para>These drive a real <see cref="SqliteRunStore"/> in a temp <c>.conductor</c>, not a mock and
+/// not a hand-written file. That is the whole lesson of this checkpoint: the first version of these
+/// tests appended to <c>events.jsonl</c>, they all passed, and the verb could never fire once against
+/// a live engine — because no engine has written that file since events moved into <c>run.db</c>. A
+/// test that supplies its own source of truth cannot be wrong about the source of truth.</para>
 /// </summary>
 public sealed class SF5_1WatchLoopTests : IDisposable
 {
-    private readonly string _dir = Path.Combine(Path.GetTempPath(), $"conductor-sf51-{Guid.NewGuid():N}", ".conductor");
+    private const string Plan = "sf51-watch";
+    private const string Run = "sf51run";
 
-    public SF5_1WatchLoopTests() => Directory.CreateDirectory(_dir);
+    private readonly string _root = Path.Combine(Path.GetTempPath(), $"conductor-sf51-{Guid.NewGuid():N}");
+    private readonly string _dir;
+    private readonly SqliteRunStore _store;
+
+    public SF5_1WatchLoopTests()
+    {
+        _dir = Path.Combine(_root, ".conductor");
+        Directory.CreateDirectory(_dir);
+        _store = new SqliteRunStore(Path.Combine(_dir, "run.db"), NullLogger<SqliteRunStore>.Instance);
+        _store.InitializeRun(Run, Plan, _root, null, null);
+        _store.SetRunId(Run);
+    }
 
     public void Dispose()
     {
-        try { Directory.Delete(Path.GetDirectoryName(_dir)!, recursive: true); } catch (IOException) { }
+        _store.Dispose();
+        try { Directory.Delete(_root, recursive: true); } catch (IOException) { }
         GC.SuppressFinalize(this);
     }
 
-    private string Events => Path.Combine(_dir, "events.jsonl");
+    private WatchLoop NewLoop() => new(_dir, Plan, TimeSpan.FromMilliseconds(20));
 
-    private void Append(params string[] lines) => File.AppendAllLines(Events, lines);
+    /// <summary>Write events the way the engine does — through the sink — and make them durable
+    /// immediately, so a test never races the 200ms drain.</summary>
+    private void Emit(params ConductorEvent[] events)
+    {
+        foreach (var e in events) ((IRunStore)_store).AppendEvent(e);
+        _store.FlushEvents();
+    }
 
-    private const string Park = """{"type":"attentionRequested","reason":"agent asked for a human","seq":9,"ts":"2026-08-01T10:00:00Z","runId":"r"}""";
-    private const string Backoff = """{"type":"sessionFinished","number":1,"stageId":"S1","outcome":"LimitBackoff","seq":1,"ts":"2026-08-01T09:00:00Z","runId":"r"}""";
-    private const string Enter = """{"type":"stageEntered","stageId":"S1","startHead":"abc","seq":2,"ts":"2026-08-01T09:01:00Z","runId":"r"}""";
+    private void SaveState(RunState state) =>
+        _store.SaveRunState(Run, Plan, System.Text.Json.JsonSerializer.Serialize(state, PlanConfig.JsonOpts));
+
+    private static AttentionRequested Park => new() { Reason = "agent asked for a human" };
+    private static SessionFinished Backoff => new() { Number = 1, StageId = "S1", Outcome = "LimitBackoff" };
+    private static StageEntered Enter => new() { StageId = "S1", StartHead = "abc" };
 
     [Fact]
     public void Arm_folds_history_without_waking_on_it()
     {
         // A park that happened BEFORE the watch was armed must not be replayed as a fresh wake —
         // otherwise every supervisor restart fires on the same ancient event forever.
-        Append(Backoff, Enter, Park);
-        var loop = new WatchLoop(_dir, TimeSpan.FromMilliseconds(20));
+        Emit(Backoff, Enter, Park);
+        using var loop = NewLoop();
 
         Assert.Equal(3, loop.Arm());
         Assert.Null(loop.Drain());
     }
 
     [Fact]
+    public void Arm_attaches_to_the_run_the_engine_is_writing()
+    {
+        // The regression that made every other test in this class meaningless: the loop must find the
+        // run through the store, not assume a file path that nothing produces.
+        Emit(Enter);
+        using var loop = NewLoop();
+        loop.Arm();
+
+        Assert.Equal(Run, loop.RunId);
+    }
+
+    [Fact]
     public void Arm_keeps_the_stage_context_it_folded()
     {
         // The fold is not decoration: without it the first wake after arming has no stage to name.
-        Append(Enter);
-        var loop = new WatchLoop(_dir, TimeSpan.FromMilliseconds(20));
+        Emit(Enter);
+        using var loop = NewLoop();
         loop.Arm();
 
-        Append(Park);
+        Emit(Park);
         var wake = loop.Drain();
 
         Assert.NotNull(wake);
@@ -61,31 +103,17 @@ public sealed class SF5_1WatchLoopTests : IDisposable
     [Fact]
     public void Drain_reads_only_what_was_appended()
     {
-        var loop = new WatchLoop(_dir, TimeSpan.FromMilliseconds(20));
+        using var loop = NewLoop();
         loop.Arm();
 
-        Append(Backoff);
+        Emit(Backoff);
         Assert.Null(loop.Drain());
 
-        Append(Park);
+        Emit(Park);
         Assert.Equal(WatchReason.NeedsHuman, loop.Drain()?.Reason);
 
         // Nothing new: silence, not a repeat of the wake just handed out.
         Assert.Null(loop.Drain());
-    }
-
-    [Fact]
-    public void A_torn_or_unknown_line_does_not_kill_the_watch()
-    {
-        var loop = new WatchLoop(_dir, TimeSpan.FromMilliseconds(20));
-        loop.Arm();
-
-        Append("""{"type":"somethingFromANewerEngine","x":1,"seq":3,"ts":"2026-08-01T10:00:00Z","runId":"r"}""");
-        Append("""{"type":"attentionRequested","reas""");
-        Assert.Null(loop.Drain());
-
-        Append(Park);
-        Assert.Equal(WatchReason.NeedsHuman, loop.Drain()?.Reason);
     }
 
     [Theory]
@@ -129,9 +157,27 @@ public sealed class SF5_1WatchLoopTests : IDisposable
     }
 
     [Fact]
+    public async Task The_state_is_re_read_every_poll_not_only_at_arm()
+    {
+        // The session-cap park emits NO event (RunLoop sets Paused + ParkedBySessionCap and continues),
+        // so a watch armed on a healthy run and checking state only at entry would sleep through the
+        // one park that cannot clear itself.
+        SaveState(new RunState { Status = RunStatus.Running });
+        using var loop = NewLoop();
+        loop.Arm();
+
+        var watching = loop.RunAsync(TimeSpan.FromSeconds(30), CancellationToken.None);
+        SaveState(new RunState { Status = RunStatus.Paused, ParkedBySessionCap = true, AttentionReason = "session cap reached (2/2)" });
+        var wake = await watching;
+
+        Assert.Equal(WatchReason.NeedsHuman, wake.Reason);
+        Assert.Equal("state", wake.FiredFrom);
+    }
+
+    [Fact]
     public async Task The_heartbeat_returns_timeout_and_nothing_else()
     {
-        var loop = new WatchLoop(_dir, TimeSpan.FromMilliseconds(20));
+        using var loop = NewLoop();
         loop.Arm();
 
         var wake = await loop.RunAsync(TimeSpan.FromMilliseconds(200), CancellationToken.None);
@@ -143,11 +189,11 @@ public sealed class SF5_1WatchLoopTests : IDisposable
     [Fact]
     public async Task A_wake_beats_the_heartbeat_it_arrives_before()
     {
-        var loop = new WatchLoop(_dir, TimeSpan.FromMilliseconds(20));
+        using var loop = NewLoop();
         loop.Arm();
 
         var watching = loop.RunAsync(TimeSpan.FromSeconds(30), CancellationToken.None);
-        Append(Park);
+        Emit(Park);
         var wake = await watching;
 
         Assert.Equal(WatchReason.NeedsHuman, wake.Reason);
@@ -160,7 +206,7 @@ public sealed class SF5_1WatchLoopTests : IDisposable
         // A live lock (this test process is unquestionably alive), then no lock at all — a crashed or
         // closed engine, which is otherwise indistinguishable from a quiet one.
         EngineLock.Write(_dir);
-        var loop = new WatchLoop(_dir, TimeSpan.FromMilliseconds(20));
+        using var loop = NewLoop();
         loop.Arm();
         Assert.True(loop.EngineAlive());
 
@@ -178,11 +224,11 @@ public sealed class SF5_1WatchLoopTests : IDisposable
         // The engine emits RunFinished and only THEN releases the lock. Reporting engine-gone for a
         // completed run would send a supervisor hunting a crash that never happened.
         EngineLock.Write(_dir);
-        var loop = new WatchLoop(_dir, TimeSpan.FromMilliseconds(20));
+        using var loop = NewLoop();
         loop.Arm();
 
         var watching = loop.RunAsync(TimeSpan.FromSeconds(30), CancellationToken.None);
-        Append("""{"type":"runFinished","status":"Completed","sessions":26,"checkpointsDone":24,"checkpointsTotal":24,"seq":50,"ts":"2026-08-01T11:00:00Z","runId":"r"}""");
+        Emit(new RunFinished { Status = "Completed", Sessions = 26, CheckpointsDone = 24, CheckpointsTotal = 24 });
         EngineLock.Delete(_dir);
         var wake = await watching;
 

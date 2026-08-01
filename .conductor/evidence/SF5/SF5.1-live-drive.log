@@ -1,0 +1,24 @@
+﻿=== SF5.1 live drive ===
+build under test : C:\code\conductor\src\Conductor\bin\Debug\net10.0\conductor.exe
+build stamp      : 2026-08-01 12:57:12Z
+rig plan         : C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf51a/rig.plan.json
+
+engine pid 35124 started
+watch A pid 31548: heartbeat 0.35 min, hook armed (must never fire)
+watch B pid 22748: no timeout, hook armed (must fire once)
+engine log lines when both armed: 8  (backlog folded, wakes discarded)
+
+watch A returned at t+23s : exit 10   [0=wake 10=heartbeat 1=could-not-arm]
+  engine transitions while it waited : 15 log line(s)
+  watch B still blocked           : True
+  watch A hook fired              : False
+
+watch B returned at t+41s : exit 0
+  engine transitions it slept through: 28 log line(s)
+  watch B hook received stdin     : True
+engine exited: 0
+
+--- rig engine log tail (what happened while the watches were silent) ---
+[12:58:58] verdict inputs: gates GREEN Â· commits 1 Â· newly DONE [T1.1] Â· dirty no
+[12:58:58] workflow 'deliver-verify': step 0 â†’ 1 (verify, kind=Verify)
+[12:58:58] workflow override: skipping verification step for stage T1 â€” treating as passed

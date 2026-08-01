@@ -72,13 +72,16 @@ public sealed class WatchCommand : AsyncCommand<WatchCommand.Settings>
         }
 
         var poll = TimeSpan.FromSeconds(Math.Clamp(settings.PollSeconds, 0.1, 3600));
-        var loop = new WatchLoop(plan.StateDir, poll);
+        using var loop = new WatchLoop(plan.StateDir, plan.Name, poll);
         var folded = loop.Arm();
 
         // The armed line goes to stderr so `conductor watch --json > brief.json` yields a file that is
         // exactly a JSON document, and a human running it in a terminal still sees that it started.
+        // The run id is on it because "0 event(s) folded" has two very different causes — a fresh run,
+        // and a watch that attached to nothing — and only this line tells them apart.
         await Console.Error.WriteLineAsync(
-            $"watching {plan.Name} ({plan.StateDir}) — {folded} event(s) of history folded, engine {(loop.EngineAlive() ? "alive" : "not running")}" +
+            $"watching {plan.Name} ({plan.StateDir}) — run {loop.RunId?[..Math.Min(8, loop.RunId.Length)] ?? "none found"}, " +
+            $"{folded} event(s) of history folded, engine {(loop.EngineAlive() ? "alive" : "not running")}" +
             (settings.TimeoutMinutes is { } tm ? $", heartbeat in {tm:0.#}m" : ", no heartbeat") +
             " — silent until the wake set fires").ConfigureAwait(false);
 

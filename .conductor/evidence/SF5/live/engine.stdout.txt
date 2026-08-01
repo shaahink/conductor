@@ -1,0 +1,97 @@
+2026-08-01 12:58:21.464 [INF] run= s= stage= gate= Creating fresh run.db (v9)
+2026-08-01 12:58:21.587 [INF] run= s= stage= gate= Telegram not started: not configured — optional; add a telegram block to the plan, or set it up from the Face's Telegram tab
+2026-08-01 12:58:21.589 [INF] run= s= stage= gate= Run services started: (none)
+2026-08-01 12:58:21.589 [INF] run= s= stage= gate= Run services not started: TelegramService (not configured — optional; add a telegram block to the plan, or set it up from the Face's Telegram tab)
+2026-08-01 12:58:21.707 [INF] run=999853eb10524c9fa01b8f7843760a0f s= stage= gate= conductor start — plan 'SF51WatchRig_sf51a', repo C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf51a, branch master
+[12:58:21] conductor start — plan 'SF51WatchRig_sf51a', repo C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf51a, branch master
+2026-08-01 12:58:21.712 [INF] run=999853eb10524c9fa01b8f7843760a0f s= stage= gate= notifications: telegram will NOT deliver — not configured — optional; add a telegram block to the plan, or set it up from the Face's Telegram tab
+[12:58:21] notifications: telegram will NOT deliver — not configured — optional; add a telegram block to the plan, or set it up from the Face's Telegram tab
+2026-08-01 12:58:22.013 [INF] run=999853eb10524c9fa01b8f7843760a0f s= stage= gate= work-graph sync: 2 added · 0 titles · 0 scaffolded · 0 archived · 0 revived
+[12:58:22] work-graph sync: 2 added · 0 titles · 0 scaffolded · 0 archived · 0 revived
+2026-08-01 12:58:22.018 [INF] run=999853eb10524c9fa01b8f7843760a0f s= stage= gate= ⚠ no spend cap: limits.maxRunCostUsd and limits.maxRunTokens are both unset — this run can spend without bound (set one in the plan, or in the Face's Plan tab)
+[12:58:22] ⚠ no spend cap: limits.maxRunCostUsd and limits.maxRunTokens are both unset — this run can spend without bound (set one in the plan, or in the Face's Plan tab)
+2026-08-01 12:58:22.150 [INF] run=999853eb10524c9fa01b8f7843760a0f s= stage=T0 gate= qa dial: off
+[12:58:22] qa dial: off
+2026-08-01 12:58:22.152 [INF] run=999853eb10524c9fa01b8f7843760a0f s= stage=T0 gate= stage → T0 First rig stage
+[12:58:22] stage → T0 First rig stage
+2026-08-01 12:58:22.487 [INF] run=999853eb10524c9fa01b8f7843760a0f s=1 stage=T0 gate= session #1 start — Deliver T0 attempt 1/6
+[12:58:22] session #1 start — Deliver T0 attempt 1/6
+2026-08-01 12:58:22.546 [INF] run=999853eb10524c9fa01b8f7843760a0f s=1 stage=T0 gate= I1: MCP task server wired (opencode) — opencode config C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf51a\.conductor\mcp-config.json
+[12:58:22] I1: MCP task server wired (opencode) — opencode config C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf51a\.conductor\mcp-config.json
+[12:58:22] ── Running · stage T0 · 0/2 done · $0.00 · session 00:00:00, last output 0s ago
+[12:58:23]   text   rig agent: working the checkpoint
+[12:58:35]   stderr warning: LF will be replaced by CRLF in TRACKER.md.
+[12:58:35]   stderr The file will have its original line endings in your working directory
+[12:58:35]   stderr warning: LF will be replaced by CRLF in agent.ps1.
+[12:58:35]   stderr The file will have its original line endings in your working directory
+[12:58:35]   stderr warning: LF will be replaced by CRLF in rig.plan.json.
+[12:58:35]   stderr The file will have its original line endings in your working directory
+[12:58:35]   stderr warning: LF will be replaced by CRLF in .conductor/.gitignore.
+[12:58:35]   stderr The file will have its original line endings in your working directory
+[12:58:36]   text   SESSION-RESULT: rig session claimed T0.1 and committed.
+2026-08-01 12:58:36.872 [INF] run=999853eb10524c9fa01b8f7843760a0f s=1 stage=T0 gate= session #1 exited (code 0, 0m, $0.01)
+[12:58:36] session #1 exited (code 0, 0m, $0.01)
+2026-08-01 12:58:36.908 [INF] run=999853eb10524c9fa01b8f7843760a0f s=1 stage=T0 gate= verifying independently: gate battery + git + tracker diff
+[12:58:36] verifying independently: gate battery + git + tracker diff
+2026-08-01 12:58:37.109 [INF] run=999853eb10524c9fa01b8f7843760a0f s=1 stage=T0 gate=battery:full gate quick: exit 0
+[12:58:37] gate quick: exit 0
+2026-08-01 12:58:37.692 [INF] run=999853eb10524c9fa01b8f7843760a0f s=1 stage=T0 gate=battery:full gate quick: PASS in 1s
+[12:58:37] gate quick: PASS in 1s
+2026-08-01 12:58:37.701 [INF] run=999853eb10524c9fa01b8f7843760a0f s=1 stage=T0 gate=battery:full gate quick: PASS (1s)
+[12:58:37] gate quick: PASS (1s)
+2026-08-01 12:58:38.123 [INF] run=999853eb10524c9fa01b8f7843760a0f s=1 stage=T0 gate= verdict inputs: gates GREEN · commits 1 · newly DONE [T0.1] · dirty no
+[12:58:38] verdict inputs: gates GREEN · commits 1 · newly DONE [T0.1] · dirty no
+2026-08-01 12:58:38.133 [INF] run=999853eb10524c9fa01b8f7843760a0f s=1 stage=T0 gate= workflow 'deliver-verify': step 0 → 1 (verify, kind=Verify)
+[12:58:38] workflow 'deliver-verify': step 0 → 1 (verify, kind=Verify)
+2026-08-01 12:58:38.135 [INF] run=999853eb10524c9fa01b8f7843760a0f s=1 stage=T0 gate= workflow override: skipping verification step for stage T0 — treating as passed
+[12:58:38] workflow override: skipping verification step for stage T0 — treating as passed
+2026-08-01 12:58:38.140 [INF] run=999853eb10524c9fa01b8f7843760a0f s=1 stage=T0 gate= confirmed 1 checkpoint(s) for stage T0: [T0.1]
+[12:58:38] confirmed 1 checkpoint(s) for stage T0: [T0.1]
+2026-08-01 12:58:38.141 [INF] run=999853eb10524c9fa01b8f7843760a0f s=1 stage=T0 gate= workflow 'deliver-verify': step 1 → 0 (deliver, kind=Deliver)
+[12:58:38] workflow 'deliver-verify': step 1 → 0 (deliver, kind=Deliver)
+2026-08-01 12:58:38.143 [INF] run=999853eb10524c9fa01b8f7843760a0f s=1 stage=T0 gate= session #1 Advanced — T0.1 done
+[12:58:38] session #1 Advanced — T0.1 done
+2026-08-01 12:58:39.095 [INF] run=999853eb10524c9fa01b8f7843760a0f s=1 stage=T1 gate= qa dial: off
+[12:58:39] qa dial: off
+2026-08-01 12:58:39.098 [INF] run=999853eb10524c9fa01b8f7843760a0f s=1 stage=T1 gate= stage → T1 Second rig stage
+[12:58:39] stage → T1 Second rig stage
+2026-08-01 12:58:39.201 [INF] run=999853eb10524c9fa01b8f7843760a0f s=2 stage=T1 gate= session #2 start — Deliver T1 attempt 1/6
+[12:58:39] session #2 start — Deliver T1 attempt 1/6
+2026-08-01 12:58:39.205 [INF] run=999853eb10524c9fa01b8f7843760a0f s=2 stage=T1 gate= I1: MCP task server wired (opencode) — opencode config C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf51a\.conductor\mcp-config.json
+[12:58:39] I1: MCP task server wired (opencode) — opencode config C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf51a\.conductor\mcp-config.json
+[12:58:39]   text   rig agent: working the checkpoint
+[12:58:55]   stderr warning: LF will be replaced by CRLF in TRACKER.md.
+[12:58:55]   stderr The file will have its original line endings in your working directory
+[12:58:57]   text   SESSION-RESULT: rig session claimed T1.1 and committed.
+2026-08-01 12:58:57.534 [INF] run=999853eb10524c9fa01b8f7843760a0f s=2 stage=T1 gate= session #2 exited (code 0, 0m, $0.01)
+[12:58:57] session #2 exited (code 0, 0m, $0.01)
+2026-08-01 12:58:57.539 [INF] run=999853eb10524c9fa01b8f7843760a0f s=2 stage=T1 gate= verifying independently: gate battery + git + tracker diff
+[12:58:57] verifying independently: gate battery + git + tracker diff
+2026-08-01 12:58:57.778 [INF] run=999853eb10524c9fa01b8f7843760a0f s=2 stage=T1 gate=battery:full gate quick: exit 0
+[12:58:57] gate quick: exit 0
+2026-08-01 12:58:58.565 [INF] run=999853eb10524c9fa01b8f7843760a0f s=2 stage=T1 gate=battery:full gate quick: PASS in 1s
+[12:58:58] gate quick: PASS in 1s
+2026-08-01 12:58:58.566 [INF] run=999853eb10524c9fa01b8f7843760a0f s=2 stage=T1 gate=battery:full gate quick: PASS (1s)
+[12:58:58] gate quick: PASS (1s)
+2026-08-01 12:58:58.944 [INF] run=999853eb10524c9fa01b8f7843760a0f s=2 stage=T1 gate= verdict inputs: gates GREEN · commits 1 · newly DONE [T1.1] · dirty no
+[12:58:58] verdict inputs: gates GREEN · commits 1 · newly DONE [T1.1] · dirty no
+2026-08-01 12:58:58.947 [INF] run=999853eb10524c9fa01b8f7843760a0f s=2 stage=T1 gate= workflow 'deliver-verify': step 0 → 1 (verify, kind=Verify)
+[12:58:58] workflow 'deliver-verify': step 0 → 1 (verify, kind=Verify)
+2026-08-01 12:58:58.948 [INF] run=999853eb10524c9fa01b8f7843760a0f s=2 stage=T1 gate= workflow override: skipping verification step for stage T1 — treating as passed
+[12:58:58] workflow override: skipping verification step for stage T1 — treating as passed
+2026-08-01 12:58:58.951 [INF] run=999853eb10524c9fa01b8f7843760a0f s=2 stage=T1 gate= confirmed 1 checkpoint(s) for stage T1: [T1.1]
+[12:58:58] confirmed 1 checkpoint(s) for stage T1: [T1.1]
+2026-08-01 12:58:58.952 [INF] run=999853eb10524c9fa01b8f7843760a0f s=2 stage=T1 gate= workflow 'deliver-verify': step 1 → 0 (deliver, kind=Deliver)
+[12:58:58] workflow 'deliver-verify': step 1 → 0 (deliver, kind=Deliver)
+2026-08-01 12:58:58.953 [INF] run=999853eb10524c9fa01b8f7843760a0f s=2 stage=T1 gate= session #2 Advanced — T1.1 done
+[12:58:58] session #2 Advanced — T1.1 done
+2026-08-01 12:59:00.318 [INF] run=999853eb10524c9fa01b8f7843760a0f s=2 stage=T1 gate= 🎉 plan 'SF51WatchRig_sf51a' complete — 2/2 checkpoints done
+[12:59:00] 🎉 plan 'SF51WatchRig_sf51a' complete — 2/2 checkpoints done
+2026-08-01 12:59:01.580 [INF] run=999853eb10524c9fa01b8f7843760a0f s=2 stage=T1 gate= run summary written to C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf51a\.conductor\RUN-SUMMARY.md
+[12:59:01] run summary written to C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf51a\.conductor\RUN-SUMMARY.md
+run ended — Completed · stopped cleanly
+history: 
+C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf51a\.conductor\conductor.log ·
+run 999853eb, 2 session(s)
+resume: conductor run -p 
+C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf51a/rig.plan.json
