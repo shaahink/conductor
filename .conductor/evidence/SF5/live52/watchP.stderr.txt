@@ -1,0 +1,3 @@
+watching SF51WatchRig_sf52a (C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf52a\.conductor) — run b50d46df, 4 event(s) of history folded, engine alive, no heartbeat — silent until the wake set fires
+supervisor (plan.supervisor) — running, brief on stdin, up to 2m
+supervisor exit 0 in 1.1s

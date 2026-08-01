@@ -1,0 +1,2 @@
+watching SF51WatchRig_sf52b (C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf52b\.conductor) — run 9a8c39e7, 4 event(s) of history folded, engine alive, no heartbeat — silent until the wake set fires
+supervisor not run — rate limited: 1 supervisor fire(s) this hour, cap 1 (raise supervisor.maxPerHour, or read the brief yourself — a supervisor hitting this is usually a run stuck on one cause)

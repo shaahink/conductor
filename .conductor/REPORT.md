@@ -1,11 +1,11 @@
 ﻿# Conductor — Sarban face - the watcher and the surfaces run report
 
-_Updated 2026-08-01 10:58 UTC · branch `feat/sarban` · HEAD `9fe57f0`_
+_Updated 2026-08-01 12:00 UTC · branch `feat/sarban` · HEAD `400fe20`_
 
-**Status:** Idle
-**Stage:** SF4 — The human queue is a first-class surface · attempts used 1
-**Checkpoints:** 15/24 done · **Sessions run:** 24 · **Cost:** $206.1310 (agent $206.0050 + gates $0.1260) · **Tokens:** 3,651,410 in / 1,129,689 out
-**Confirmed phases:** SF0, SF1, SF2, SF3
+**Status:** Running
+**Stage:** SF5 — Supervision without a polling meter · attempts used 0 · working ▸ SF5.2
+**Checkpoints:** 16/24 done · **Sessions run:** 27 · **Cost:** $221.4448 (agent $221.3075 + gates $0.1373) · **Tokens:** 3,998,476 in / 1,159,563 out
+**Confirmed phases:** SF0, SF1, SF2, SF3, SF4
 
 ## Stage progress
 
@@ -15,8 +15,8 @@ _Updated 2026-08-01 10:58 UTC · branch `feat/sarban` · HEAD `9fe57f0`_
 | SF1 | The face sheds dead weight | ██████████ 3/3 | confirmed ✓ |
 | SF2 | The face tells the truth kindly - state, time, money | ██████████ 3/3 | confirmed ✓ |
 | SF3 | Reading a session becomes cheap | ██████████ 3/3 | confirmed ✓ |
-| SF4 | The human queue is a first-class surface | ██████████ 2/2 | gating… |
-| SF5 | Supervision without a polling meter | ░░░░░░░░░░ 0/4 | todo |
+| SF4 | The human queue is a first-class surface | ██████████ 2/2 | confirmed ✓ |
+| SF5 | Supervision without a polling meter | ██░░░░░░░░ 1/4 | **← active** |
 | SF6 | The prompt bank compounds | ░░░░░░░░░░ 0/3 | todo |
 | SF7 | Ship the era | ░░░░░░░░░░ 0/2 | todo |
 
@@ -70,11 +70,11 @@ _Updated 2026-08-01 10:58 UTC · branch `feat/sarban` · HEAD `9fe57f0`_
 
 </details>
 
-<details><summary>SF5 — Supervision without a polling meter (0/4)</summary>
+<details><summary>SF5 — Supervision without a polling meter (1/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| SF5.1 | conductor watch blocks silently and returns or fires a hook only on the wake set — park, circuit breaker, budget park, phase RED twice on a stage, engine gone, run ended — with a json brief of about thirty lines and a timeout heartbeat | ⬜ TODO | - |
+| SF5.1 | conductor watch blocks silently and returns or fires a hook only on the wake set — park, circuit breaker, budget park, phase RED twice on a stage, engine gone, run ended — with a json brief of about thirty lines and a timeout heartbeat | ✅ DONE | - |
 | SF5.2 | A supervisor plan block runs a configured command on wake with the brief on stdin; operating.md carries the wake and dont-wake table and the standing-order pattern | ⬜ TODO | - |
 | SF5.3 | The remote supervision pattern is documented and proven once end to end — a wake reaching a remote listener — with an honest note of what stays manual | ⬜ TODO | - |
 | SF5.4 | conductor ps lists every run on the machine from the control-plane discovery files; process titles carry repo and run id; the face offers a run picker when more than one control plane answers | ⬜ TODO | - |
@@ -128,27 +128,15 @@ _Updated 2026-08-01 10:58 UTC · branch `feat/sarban` · HEAD `9fe57f0`_
 | 22 | SF4 | Deliver | 1 | 08-01 09:51 | 0:22 | Progress |  | 3 | engine-fast:OK · face-fast:OK | $6.6960 | $0.0087 | 166,359/55,772 |
 | 23 | SF4 | Deliver | 1 | 08-01 10:15 | 0:14 | RolledOver |  | 0 |  | $5.8501 |  | 120,122/2,480 |
 | 24 | SF4 | Deliver | 1 | 08-01 10:30 | 0:16 | Advanced | SF4.2 | 3 | engine-fast:OK · face-fast:OK | $6.0372 | $0.0086 | 109,716/45,426 |
+| 25 | SF4 | Fix | 2 | 08-01 10:58 | 0:10 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $3.4157 | $0.0114 | 72,338/26,184 |
+| 26 | SF5 | Deliver | 1 | 08-01 11:15 | 0:18 | RolledOver |  | 0 |  | $5.9470 |  | 141,879/1,823 |
+| 27 | SF5 | Deliver | 1 | 08-01 11:33 | 0:26 | RolledOver |  | 0 |  | $5.9398 |  | 132,849/1,867 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-01 03:17:22  • session #15 SF3 → Advanced · done SF3.2 · 3 commit(s)  (19m42s)
-08-01 03:17:22  • session #16 SF3 Deliver started (attempt 1/6)
-08-01 03:49:15  • session #16 SF3 → RolledOver  (31m52s)
-08-01 03:49:15  • session #17 SF3 Deliver started (attempt 1/6)
-08-01 04:07:33  ▪ gate engine-fast pass [session]  (1m07s)
-08-01 04:07:33  ▪ gate face-fast pass [session]  (5.9s)
-08-01 04:07:34  • session #17 SF3 → Progress · 2 commit(s)  (18m18s)
-08-01 04:07:34  • session #18 SF3 Deliver started (attempt 1/6)
-08-01 04:28:56  • session #18 SF3 → RolledOver  (21m22s)
-08-01 04:28:57  • session #19 SF3 Deliver started (attempt 1/6)
-08-01 04:44:37  ▪ gate engine-fast pass [session]  (1m04s)
-08-01 04:44:37  ▪ gate face-fast pass [session]  (8.2s)
-08-01 04:44:38  • session #19 SF3 → Advanced · done SF3.3 · 3 commit(s)  (15m41s)
-08-01 04:48:51  ▪ gate engine-fast pass [phase]  (0.0s)
-08-01 04:48:51  ▪ gate face-fast pass [phase]  (0.0s)
 08-01 04:48:51  ▪ gate engine-full pass [phase]  (3m52s)
 08-01 04:48:51  ▪ gate face-full pass [phase]  (16.0s)
 08-01 04:48:51  ✓ checkpoint SF3.3 confirmed
@@ -174,6 +162,21 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-01 11:58:26  ▪ gate engine-fast pass [phase]  (0.0s)
 08-01 11:58:26  ▪ gate face-fast pass [phase]  (0.0s)
 08-01 11:58:26  ▪ gate engine-full FAIL [phase]  (4m54s)
+08-01 11:58:26  ▪ gate face-full pass [phase]  (18.0s)
+08-01 11:58:27  • session #25 SF4 Fix started (attempt 2/4)
+08-01 12:10:44  ▪ gate engine-fast pass [session]  (1m17s)
+08-01 12:10:44  ▪ gate face-fast pass [session]  (36.0s)
+08-01 12:10:45  • session #25 SF4 → Progress · 2 commit(s)  (12m17s)
+08-01 12:15:16  ▪ gate engine-fast pass [phase]  (0.0s)
+08-01 12:15:16  ▪ gate face-fast pass [phase]  (0.0s)
+08-01 12:15:17  ▪ gate engine-full pass [phase]  (4m22s)
+08-01 12:15:17  ▪ gate face-full pass [phase]  (6.1s)
+08-01 12:15:17  ✓ checkpoint SF4.2 confirmed
+08-01 12:15:26  ▸ stage SF4 confirmed  (7h26m31s)
+08-01 12:15:28  ▸ stage SF5 entered — Supervision without a polling meter
+08-01 12:15:28  • session #26 SF5 Deliver started (attempt 1/8)
+08-01 12:33:48  • session #26 SF5 → RolledOver  (18m19s)
+08-01 12:33:48  • session #27 SF5 Deliver started (attempt 1/8)
 ```
 
 ## Health
@@ -181,12 +184,12 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 24 · retries 1 (4 %) · overall Warn
+sessions 27 · retries 2 (7 %) · overall Warn
 ⚠ [context-saturation] session #3: 24,790,251 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #4: 21,397,049 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #5: 36,996,007 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #6: 24,716,690 context tokens (≥ 20,000,000)
-⚠ [gate-oscillation] gate 'engine-full' flipped pass/fail 3x
+⚠ [gate-oscillation] gate 'engine-full' flipped pass/fail 4x
 ```
 
 ## Repo
@@ -195,15 +198,11 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/sarban
-working tree: M .conductor/REPORT.md, M SARBAN-FACE-TRACKER.md
+working tree: M .conductor/REPORT.md, M .conductor/followups.md, M SARBAN-FACE-TRACKER.md
 ```
 
 ### Commits by session
 
-- **s12 (SF2 Deliver)** — 3 commit(s):
-  - [`da28eb0`](https://github.com/shaahink/conductor/commit/da28eb0) docs(tracker): SF2.3 handoff - a budget block the Face never read, and an assertion inverted on the record
-  - [`9cfe572`](https://github.com/shaahink/conductor/commit/9cfe572) test(face): rebaseline the frames the honest money changed, plus one new one
-  - [`ef1620f`](https://github.com/shaahink/conductor/commit/ef1620f) feat(face): money honesty - OVER in dollars, a window that is not the lifetime, and a cost the Face can stand behind
 - **s14 (SF3 Deliver)** — 3 commit(s):
   - [`0159bb4`](https://github.com/shaahink/conductor/commit/0159bb4) docs(tracker): SF3.1 claimed, SF3.2 data half landed with the rendering design in the ledger
   - [`e8fb296`](https://github.com/shaahink/conductor/commit/e8fb296) feat(face): read the card's identity and meta off the wire (SF3.2, part 1)
@@ -230,6 +229,9 @@ working tree: M .conductor/REPORT.md, M SARBAN-FACE-TRACKER.md
   - [`9fe57f0`](https://github.com/shaahink/conductor/commit/9fe57f0) docs(tracker): SF4.2 closes, and the frame that caught what green tests missed
   - [`017c8a9`](https://github.com/shaahink/conductor/commit/017c8a9) feat(face): prove the owner queue against a live engine, and finish FU-OWNER-13's second layer (SF4.2)
   - [`d61da19`](https://github.com/shaahink/conductor/commit/d61da19) test(face): rebaseline the eleven goldens the owner-queue key moved (SF4.2)
+- **s25 (SF4 Fix)** — 2 commit(s):
+  - [`9e608d6`](https://github.com/shaahink/conductor/commit/9e608d6) docs(tracker): the red is closed, and the filtered battery that let it in (SF4)
+  - [`758c2d2`](https://github.com/shaahink/conductor/commit/758c2d2) test(telegram): SC1 expected the wire text FU-OWNER-11 stopped sending (SF4)
 
 ## Phase handovers (audit)
 
@@ -252,51 +254,28 @@ working tree: M .conductor/REPORT.md, M SARBAN-FACE-TRACKER.md
 
 ## Last gate run
 
-engine-fast:cached · face-fast:cached · engine-full:FAIL-retry · face-full:OK
-
-<details><summary>engine-full — exit 1</summary>
-
-```
-[conductor] retried once (SC4.1): the first attempt exited 1 after 261s. Below is the SECOND run.
-Determining projects to restore...
-  All projects are up-to-date for restore.
-  Conductor.Planning -> C:\code\conductor\src\Conductor.Planning\bin\Debug\net10.0\Conductor.Planning.dll
-  Conductor -> C:\code\conductor\src\Conductor\bin\Debug\net10.0\conductor.dll
-  Conductor.Tests -> C:\code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll
-Test run for C:\code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0)
-A total of 1 test files matched the specified pattern.
-  Failed Conductor.Tests.SC1TelegramStatusTruthTests.PostTelegramTest_TravelsTheRealSendQueue_NotAParallelPath [1 s]
-  Error Message:
-   Assert.Equal() Failure: Strings differ
-           ↓ (pos 0)
-Expected: "QUEUED-FIRST"
-Actual:   "<i>sc12-plan · s0</i>\nQUEUED-FIRST"
-           ↑ (pos 0)
-  Stack Trace:
-     at Conductor.Tests.SC1TelegramStatusTruthTests.PostTelegramTest_TravelsTheRealSendQueue_NotAParallelPath() in C:\code\conductor\tests\Conductor.Tests\SC1TelegramStatusTruthTests.cs:line 253
---- End of stack trace from previous location ---
-
-Failed!  - Failed:     1, Passed:  1579, Skipped:     0, Total:  1580, Duration: 3 m 36 s - Conductor.Tests.dll (net10.0)
-```
-</details>
+engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
 
 ## Last session result
 
-> SESSION-RESULT: **SF4.2 is closed — claimed via `conductor task --done SF4.2 --evidence .conductor/evidence/SF4/SF4.2-part4-face-owner-queue.md`.** Session 23 had landed the face owner-queue surface in `8580cca` but was killed before rebaselining, proving or claiming it, so this session finished it in three commits: `d61da19` rebaselines the eleven goldens the `w` key moved (regenerated with `-update` off the fresh build, and verified in reverse first — restoring the committed goldens fails 11, so it is a rebaseline and not a re-declaration); `017c8a9` proves the surface against a **live engine** and fixes a real defect; `9fe57f0` is the handoff. The live proof drove a scratch rig (`%TEMP%\s…
+> SESSION-RESULT: Fixed the `engine-full` red in full — it was a stale test expectation, not a defect and not the known environment flake (it reproduced deterministically in 850ms on the single class, with a content mismatch rather than a lock or host crash, and a *longer* duration than the last pass, so all three environment theories were ruled out before touching code). SF4.2 part 2 (`bc7ff3f`, FU-OWNER-11) began stamping `<i>plan · sN</i>` onto every outbound Telegram message at `TelegramService.SendAsync`, the one chokepoint every push, digest, command reply and test message crosses; `SC1TelegramStatusTruthTests.PostTelegramTest_TravelsTheRealSendQueue_NotAParallelPath` was written before …
 
 ## Tracker handoff
 
 ```
-last: **SF4.2 is CLOSED — all four parts.** `d61da19` rebaselines the eleven goldens the `w` key
-  moved (verified in reverse first: restore the committed ones and 11 fail, so it is a rebaseline,
-  not a re-declaration). `017c8a9` proves the surface against a LIVE engine and fixes what only a
-  rendered frame could show: FU-OWNER-13 was one layer thin — the status line said *waiting* while
-  the paragraph beneath it still said "Not configured … saving a token here configures it for you",
-  advising the edit the engine was holding. The old test missed it by asserting lowercase
-  "not configured" against a capital N. Fold case in frame assertions.
-next: **SF5.1 — `conductor watch`.** Nothing in SF4 is left open.
-green: `go build` + `go vet` clean; `internal/tui` and `internal/api` both ok. Live rig served
-  `count=4`, and both undated obligations rendered "age unknown", not "just now".
+last: **`engine-full` is green — the red was a stale expectation, not a defect** (`758c2d2`).
+  SF4.2 part 2 (`bc7ff3f`) stamps identity onto every outbound message at `TelegramService.cs:409`;
+  `SC1TelegramStatusTruthTests` predates it and still pinned the *unstamped* wire text of a push.
+  Corrected to `Assert.Equal(svc.IdentityLine + "\nQUEUED-FIRST", sent[0])` — still exact equality,
+  not `Contains`, so no weaker, and it now also proves a plain push is attributable.
+  **The lesson costs more than the fix:** ledger 147 offered a *name-filtered* battery as proof for
+  part 2, and three sessions then built on a suite that was already red. A change at a universal
+  chokepoint (`SendAsync`, `Reporter.Write`, the frame renderer) has a blast radius of everything —
+  run the FULL suite for those, never a slice.
+next: **SF5.1 — `conductor watch`.** Nothing in SF4 is open; SF4.1/SF4.2 stay DONE — the deliverable
+  was real and the engine was right throughout, only an older test's expectation of it was stale.
+green: engine suite **1580/1580, skipped 0, 4m5s** — the same total the red battery counted, so
+  nothing was deleted or skipped to get here (`bg-logs/engine-full suite after SC1 fix-*.log`).
 red: nothing.
 open: bugs **#15 #16 #17 #18 #19 #20**. #20 is new and it bites any session that spawns a rig:
   `run` prefers `CONDUCTOR_PLAN` over the CWD, so a scratch rig launched from inside a session
