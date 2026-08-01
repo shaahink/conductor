@@ -81,6 +81,7 @@ Where to look when something's off (full table in `DOGFOOD-RUNBOOK.md`):
 | `task --list` | Checkpoint status from `run.db`. |
 | `gate [--full]` | Re-run the gate battery at HEAD (no agent). `--full` = whole battery, else fast tier. Clears `pendingFix` if green. |
 | `chat "<question>"` | Ask a model about the run; it has MCP access to `run.db`, the ledger, control verbs. |
+| `watch [--json] [--timeout M] [--hook "<cmd>"]` | Block silently until the run needs judgment, then emit a ~30-line brief (exit 0) — or exit 10 on the `--timeout` heartbeat. Runs the plan's `supervisor` command with the brief on stdin. See §3 "Unattended supervision". |
 
 ### Control a LIVE run (queue an intent the engine picks up at the next boundary)
 These write `.conductor/control.json` (or POST `/control`) — they work from any terminal while a run is
@@ -139,6 +140,70 @@ session's prompt. Use for "do X before Y", "the real bug is in file Z", "stop go
 process alive? → log tail → `crash-*.log`? → `git status` (uncommitted work is real, not corruption)
 → `conductor run -p <plan>` to resume (it reads `run.db` alone and the next prompt tells the worker to
 re-orient).
+
+### Unattended supervision — the night watch (SF5)
+
+**The problem with babysitting by polling.** An agent tailing the log every 30s spends its budget on
+*accumulation*, not on the polls: over ten hours ~95% of its ticks say "still running", and each of
+those ticks is paid for again inside every later tick's context. `conductor watch` inverts it — the
+waiting is a file-stat loop that costs nothing, and the expensive reader is invoked once, at the
+moment that actually needed judgment.
+
+```powershell
+conductor watch --json --timeout 60      # block; print a brief on wake (exit 0) or heartbeat (exit 10)
+while ($true) { conductor watch --json } # the night watch: the plan's supervisor block runs on each wake
+```
+
+**Wake set — `watch` returns (and runs the supervisor) on exactly these:**
+
+| Wake | Means | First moves |
+|---|---|---|
+| `needs-human` | Agent escalated a `HUMAN:` item, or `pauseOnBlocked` parked the run | `status` → `inject` / `resume` / `skip` |
+| `owner-gate` · `approval-park` | A stage wants owner approval before it advances | `status` → `approve` |
+| `budget-park` | Cost or token cap hit; the run stopped rather than spend past it | `status` → `approve` re-opens the window |
+| `circuit-breaker` | Repeated failures on one stage tripped the breaker | `status` → `inject "<what to try instead>"` → `pause` |
+| `phase-red-twice` | A phase gate went RED twice on the same stage — the agent is not converging | `gate --full` → `inject` → `pause` |
+| `engine-gone` | The conductor process vanished (crash, closed terminal, reboot) | `status` → `run` (resumes from `run.db`) |
+| `run-ended` | The plan finished, or the run stopped for good | `status` → `report` |
+
+**Don't-wake set — `watch` stays silent through these, and that is the point:**
+
+| Quiet event | Why it must not wake anyone |
+|---|---|
+| Usage-limit backoff | Self-resumes. On a real run these were 2 of the last 3 events — waking on them *is* the polling babysitter |
+| Stall backoff / session retry | The watchdog already handles it; a second supervisor is noise |
+| Session start / exit / rollover / `blocked-until` | Churn, not a decision |
+| Gate PASS, checkpoint confirmed, stage advance | Good news needs no night call |
+| A single phase RED | One red is work in progress; the *second* on the same stage is the signal |
+
+The `--timeout <min>` heartbeat is the long fallback for "did the watch itself die" — it returns exit
+**10** with `reason=timeout` and, deliberately, does **not** run the supervisor. A heartbeat that
+invoked the model would put back exactly the per-tick cost this verb exists to remove.
+
+**The supervisor block.** Keep the babysitter in the plan, not in a shell history — it then survives
+the terminal it was started from and gets reviewed in a diff like everything else:
+
+```json
+"supervisor": {
+  "command": "claude -p \"You are the night watch for this run. The wake brief is on stdin; your standing orders are in it. Act, then say in one line what you did.\"",
+  "timeoutMinutes": 10,
+  "maxPerHour": 6,
+  "standingOrders": "You MAY: approve an owner gate whose checkpoint has an evidence path; inject a hint on a circuit breaker; resume after a self-resolved park. You MUST escalate (notify and stop): anything that spends money, any merge or push to master, any plan edit, any second circuit breaker on the same stage."
+}
+```
+
+- It costs nothing while quiet — the command runs only when the wake set fires.
+- `--hook '<command>'` overrides the block for a one-off, and is not bound by the hourly fuse.
+- `maxPerHour` (default 6, `0` = unlimited) is a **cost fuse**, counted in
+  `.conductor/supervisor-fires.log` so it survives across the fresh process every wake starts. A
+  supervisor that hits the cap is usually a run stuck on one cause, not a busy night — read the brief
+  yourself before raising it. Whenever the supervisor does not run, `watch` says so on stderr.
+
+**The standing-order pattern.** Write the orders in the plan, not in the prompt that starts the loop:
+`standingOrders` is copied into the brief, so the agent reads its authority on the same stdin as the
+wake. An agent that cannot see its limits has none. Two rules that keep this honest: name the
+*escalation* half explicitly (silence about a limit reads as permission), and keep everything that
+spends money, merges, or edits the plan on the human's side of the line.
 
 ---
 

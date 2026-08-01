@@ -24,7 +24,12 @@ namespace Conductor.Commands;
 /// <code>
 ///   conductor watch --json --timeout 60          # one wake or one heartbeat, then exit
 ///   while ($true) { conductor watch --json --hook 'claude -p "you are the night watch. brief on stdin."' }
+///   while ($true) { conductor watch --json }     # SF5.2: the babysitter is the plan's supervisor block
 /// </code>
+///
+/// <para>SF5.2 — a <c>supervisor</c> block in the plan names that command once, with its own timeout,
+/// an hourly fuse and the standing orders the brief carries to it; <c>--hook</c> overrides it for a
+/// deliberate one-off. See <see cref="Models.SupervisorConfig"/>.</para>
 ///
 /// <para>Exit codes are the loop's control flow, so a shell can tell the two apart without a model:
 /// <b>0</b> the wake set fired, <b>10</b> the timeout heartbeat expired with nothing to report,
@@ -49,11 +54,11 @@ public sealed class WatchCommand : AsyncCommand<WatchCommand.Settings>
         public double? TimeoutMinutes { get; init; }
 
         [CommandOption("--hook <COMMAND>")]
-        [Description("Run this command on wake with the brief on stdin. Fires on the wake set ONLY — never on a timeout heartbeat.")]
+        [Description("Run this command on wake with the brief on stdin, overriding the plan's supervisor block. Fires on the wake set ONLY — never on a timeout heartbeat.")]
         public string? Hook { get; init; }
 
         [CommandOption("--hook-timeout <MINUTES>")]
-        [Description("How long the hook may run before it is killed (default 10).")]
+        [Description("How long a --hook command may run before it is killed (default 10). The plan block uses its own supervisor.timeoutMinutes.")]
         public double HookTimeoutMinutes { get; init; } = 10;
 
         [CommandOption("--poll <SECONDS>")]
@@ -97,12 +102,31 @@ public sealed class WatchCommand : AsyncCommand<WatchCommand.Settings>
 
         // "Fires a hook ONLY on the wake set" is load-bearing: a heartbeat that invoked the expensive
         // supervisor would reintroduce exactly the per-tick cost this verb was built to remove.
-        if (wake.Reason != WatchReason.Timeout && !string.IsNullOrWhiteSpace(settings.Hook))
+        if (wake.Reason != WatchReason.Timeout)
         {
-            var r = await WatchHook.RunAsync(settings.Hook, plan.Repo, text,
-                TimeSpan.FromMinutes(Math.Clamp(settings.HookTimeoutMinutes, 0.1, 1440))).ConfigureAwait(false);
-            await Console.Error.WriteLineAsync($"hook exit {r.ExitCode} in {r.Duration.TotalSeconds:0.#}s"
-                + (string.IsNullOrWhiteSpace(r.StdErr) ? "" : $" — {r.StdErr.Trim()}")).ConfigureAwait(false);
+            var now = DateTimeOffset.UtcNow;
+            var decision = SupervisorPolicy.Decide(plan, settings.Hook,
+                TimeSpan.FromMinutes(Math.Clamp(settings.HookTimeoutMinutes, 0.1, 1440)), now);
+
+            if (decision.ShouldRun)
+            {
+                // Stamped before the run, not after: a supervisor that hangs for its whole timeout has
+                // spent its invocation, and a fuse that only counts clean exits does not bound anything.
+                if (decision.Source == "plan.supervisor") SupervisorPolicy.RecordFire(plan.StateDir, now);
+                await Console.Error.WriteLineAsync(
+                    $"supervisor ({decision.Source}) — running, brief on stdin, up to {decision.Timeout.TotalMinutes:0.#}m").ConfigureAwait(false);
+
+                var r = await WatchHook.RunAsync(decision.Command!, plan.Repo, text, decision.Timeout).ConfigureAwait(false);
+                await Console.Error.WriteLineAsync(
+                    $"supervisor exit {r.ExitCode}{(r.TimedOut ? " (timed out)" : "")} in {r.Duration.TotalSeconds:0.#}s"
+                    + (string.IsNullOrWhiteSpace(r.StdErr) ? "" : $" — {r.StdErr.Trim()}")).ConfigureAwait(false);
+            }
+            else if (decision.Skipped is { } why)
+            {
+                // A supervisor that does not run says so. Silence here reads identically to a supervisor
+                // that ran and had nothing to say, and those are opposite situations.
+                await Console.Error.WriteLineAsync($"supervisor not run — {why}").ConfigureAwait(false);
+            }
         }
 
         return wake.Reason == WatchReason.Timeout ? ExitTimeout : ExitWake;

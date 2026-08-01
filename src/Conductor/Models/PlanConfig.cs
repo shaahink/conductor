@@ -56,6 +56,9 @@ public sealed class PlanConfig
     public ReportConfig Report { get; set; } = new();
     public NotifyConfig? Notify { get; set; }
     public TelegramConfig? Telegram { get; set; }
+    /// <summary>SF5.2: the babysitter <c>conductor watch</c> invokes on wake, with the brief on stdin.
+    /// null → nothing runs on wake unless <c>--hook</c> says so.</summary>
+    public SupervisorConfig? Supervisor { get; set; }
     public string PromptExtra { get; set; } = "";
 
     /// <summary>Directory (relative to the plan file) holding the session templates — <c>session.md</c>,

@@ -106,6 +106,12 @@ public static class WatchBrief
             ["whatHurt"] = status?.WhatHurt,
         };
 
+        // SF5.2: the supervisor's authority rides on the same stdin as the wake. Orders kept anywhere
+        // else — a README, the prompt that started the loop, the operator's memory — are orders the
+        // agent reading this brief cannot see, and an agent that cannot see its limits has none.
+        if (plan.Supervisor is { Enabled: true, StandingOrders: { } orders } && !string.IsNullOrWhiteSpace(orders))
+            o["standingOrders"] = orders;
+
         o["stages"] = StageRows(status);
         o["recentSessions"] = SessionRows(status);
         o["suggest"] = new JsonArray([.. SuggestedVerbs(slug).Select(v => (JsonNode)JsonValue.Create(v)!)]);
