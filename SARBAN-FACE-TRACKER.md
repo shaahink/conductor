@@ -26,7 +26,7 @@ next: nothing plan-owned remains in SF7. If a session opens after this, it is co
 |---|---|
 | Total checkpoints | 24 |
 | Done | 6 |
-| Claimed (unconfirmed) | 17 |
+| Claimed (unconfirmed) | 18 |
 
 ## Checkpoints
 
@@ -95,7 +95,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | SF7.1 | The docs match the code — plan-config advisor default, tracker runtime files, operating supervision section, NEXT-FEATURES refresh — the field notes carry a closure ledger, and the era CHANGELOG is written | DONE | 37a75ef | .conductor/evidence/SF7/SF7.1-field-notes-closure-ledger.md |
-| SF7.2 | feat/sarban is merged to master by the owner, the release is tagged through the SC8 pipeline, and the installed conductor version matches the releases page | TODO | - | - |
+| SF7.2 | feat/sarban is merged to master by the owner, the release is tagged through the SC8 pipeline, and the installed conductor version matches the releases page | DONE | 7d8b327 | .conductor/evidence/SF7/SF7.2-tag-release.md |
 
 ## Dependencies
 
