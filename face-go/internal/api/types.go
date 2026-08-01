@@ -217,6 +217,33 @@ type TaskDto struct {
 	// W4.4: this item's QA override — "" (inherit), "verify", or "off". It beats the stage and
 	// plan dials for the session that claims this card.
 	Qa string `json:"qa"`
+	// W1.4's work-graph identity, served by the engine since W1.4 and dropped by the Face until
+	// SF3.2 — which is why the board grouped nothing and split checkpoint ids on a dot to guess a
+	// stage. Kind is "checkpoint" | "subtask"; StageId is the OWNING stage, authoritative;
+	// Confirmed is the verdict engine's flag, and the difference between a card an agent CLAIMED
+	// and one the engine agreed with.
+	Kind      string `json:"kind"`
+	StageId   string `json:"stageId"`
+	Confirmed bool   `json:"confirmed"`
+	// SF3.2's card meta, folded by the engine's TaskGraph so every reader gets one answer: the
+	// session whose work last moved this card (0 = none), when it entered its current status
+	// ("" = never moved / older engine), and how many times it has been picked up into in_progress.
+	SessionNumber  int    `json:"sessionNumber"`
+	StatusSinceUtc string `json:"statusSinceUtc"`
+	Attempts       int    `json:"attempts"`
+}
+
+// Stage returns the card's owning stage. The wire's stageId is authoritative (W1.4); the split on
+// the first dot is the LEGACY fallback for an engine that does not serve it — the convention the
+// tracker parser uses — and never overrides a served value.
+func (t TaskDto) Stage() string {
+	if t.StageId != "" {
+		return t.StageId
+	}
+	if i := strings.IndexByte(t.CheckpointId, '.'); i > 0 {
+		return t.CheckpointId[:i]
+	}
+	return t.CheckpointId
 }
 
 type TasksDto struct {
