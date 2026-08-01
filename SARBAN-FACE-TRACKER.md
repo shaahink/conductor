@@ -4,23 +4,19 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SF3.1 CLAIMED** (session 13 delivered it and died before claiming; I re-ran the face fast
-  loop, all 7 packages ok, and claimed it — `dee3074` + `6170612`, evidence
-  `.conductor/evidence/SF3/SF3.1-summary.md`). **Do not redo SF3.1.**
-half-done: **SF3.2, data half landed, rendering NOT started.** `352bc1a` engine —
-  `TaskGraph` folds `SessionStarted` so a card knows the session that moved it, plus
-  `statusSinceUtc` and per-card `attempts`; 161 engine tests green. `e8fb296` face —
-  `api.TaskDto` now decodes `kind`/`stageId`/`confirmed` (served since W1.4, dropped until now)
-  and the three new meta fields, with `TaskDto.Stage()`. Tree is clean: `tab_kanban.go` is
-  untouched at HEAD, nothing half-written was left in it.
-next: the rendering — stage grouping, active-stage mark, always-on card meta, `n/total` headers,
-  the skipped shelf, in-column scroll, the you-are-here ribbon. **The full design is in the
-  ledger note "SF3.2 session 14" (item 4) — read it before designing anything.**
-gap: `internal/api/demo.go` tasks carry none of the new fields, so `--demo` shows the old board;
-  `blocked` still maps to the TODO column and renders as a plain todo card.
-open: bugs **#15 #16 #17 #18 #19** open. #18 is stale-ish; #19 (claims empty in every digest) is
-  engine-side and unfixed.
-
+last: **SF3.2 CLAIMED and complete** — rendering half landed in `3e7c4b3` (code + 11 tests) and
+  `88a966a` (goldens), evidence `.conductor/evidence/SF3/SF3.2-summary.md`. All seven acceptance
+  items are visible in one frame, `kanban_grouped.golden`. **Do not redo SF3.2.** The `--demo` gap
+  the last handoff named is CLOSED — `internal/api/demo.go` serves the full card shape now.
+next: **SF3.3, nothing started.** Git awareness on the wire and in the face: branch chip, dirty
+  state, ahead-behind, commit subjects. It also carries **FU-OWNER-10** from
+  `.conductor/followups.md` — `GET /state` names no `engineVersion`, `engineCommit` or `faceBuild`,
+  so the face cannot say which build you are attached to. Add all three to the same payload SF3.3
+  opens, plus the short form in the status strip beside the branch chip.
+traps: `truncate()` in view.go rune-slices — it is PLAIN text only; clipping a styled string with it
+  printed a raw escape sequence on the ribbon this session. See ledger note "SF3.2 rendering half".
+green: face `go build` / `go vet` / `go test ./internal/...` all ok at `88a966a`. Tree clean.
+open: bugs **#15 #16 #17 #18 #19** still open; #19 (claims empty in every digest) is engine-side.
 
 ## Baseline numbers (from run.db)
 
@@ -28,7 +24,7 @@ open: bugs **#15 #16 #17 #18 #19** open. #18 is stale-ish; #19 (claims empty in 
 |---|---|
 | Total checkpoints | 24 |
 | Done | 2 |
-| Claimed (unconfirmed) | 8 |
+| Claimed (unconfirmed) | 9 |
 
 ## Checkpoints
 
@@ -64,8 +60,8 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| SF3.1 | Tool calls render as one-liners and each session has a digest panel — tool mix, files touched, claims, bg-purpose storyline; fold is rune-safe | IN PROGRESS | - | - |
-| SF3.2 | The kanban groups by stage with the active stage highlighted, card meta visible unselected, column totals, skips separated from Done, in-column scroll, and a you-are-here ribbon | TODO | - | - |
+| SF3.1 | Tool calls render as one-liners and each session has a digest panel — tool mix, files touched, claims, bg-purpose storyline; fold is rune-safe | DONE | 352bc1a | .conductor/evidence/SF3/SF3.1-summary.md |
+| SF3.2 | The kanban groups by stage with the active stage highlighted, card meta visible unselected, column totals, skips separated from Done, in-column scroll, and a you-are-here ribbon | IN PROGRESS | - | - |
 | SF3.3 | Branch, dirty state, ahead-behind and HEAD sha are on the wire and in the face; session history shows commit subjects; the sidebar cues execution-vs-declared stage order | TODO | - | - |
 
 ### SF4 — The human queue is a first-class surface
