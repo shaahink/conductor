@@ -1,11 +1,11 @@
 ﻿# Conductor — Sarban face - the watcher and the surfaces run report
 
-_Updated 2026-08-01 13:08 UTC · branch `feat/sarban` · HEAD `3365138`_
+_Updated 2026-08-01 14:17 UTC · branch `feat/sarban` · HEAD `55ef743`_
 
 **Status:** Idle
-**Stage:** SF5 — Supervision without a polling meter · attempts used 0 · working ▸ SF5.4
-**Checkpoints:** 18/24 done · **Sessions run:** 30 · **Cost:** $239.7581 (agent $239.5913 + gates $0.1667) · **Tokens:** 4,356,925 in / 1,325,784 out
-**Confirmed phases:** SF0, SF1, SF2, SF3, SF4
+**Stage:** SF5 — Supervision without a polling meter · attempts used 0
+**Checkpoints:** 19/24 done · **Sessions run:** 32 · **Cost:** $252.3885 (agent $252.2118 + gates $0.1767) · **Tokens:** 4,626,805 in / 1,391,274 out
+**Confirmed phases:** SF0, SF1, SF2, SF3, SF4, SF5
 
 ## Stage progress
 
@@ -16,7 +16,7 @@ _Updated 2026-08-01 13:08 UTC · branch `feat/sarban` · HEAD `3365138`_
 | SF2 | The face tells the truth kindly - state, time, money | ██████████ 3/3 | confirmed ✓ |
 | SF3 | Reading a session becomes cheap | ██████████ 3/3 | confirmed ✓ |
 | SF4 | The human queue is a first-class surface | ██████████ 2/2 | confirmed ✓ |
-| SF5 | Supervision without a polling meter | ████████░░ 3/4 | **← active** |
+| SF5 | Supervision without a polling meter | ██████████ 4/4 | confirmed ✓ |
 | SF6 | The prompt bank compounds | ░░░░░░░░░░ 0/3 | todo |
 | SF7 | Ship the era | ░░░░░░░░░░ 0/2 | todo |
 
@@ -70,14 +70,14 @@ _Updated 2026-08-01 13:08 UTC · branch `feat/sarban` · HEAD `3365138`_
 
 </details>
 
-<details><summary>SF5 — Supervision without a polling meter (3/4)</summary>
+<details> ✅<summary>SF5 — Supervision without a polling meter (4/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
 | SF5.1 | conductor watch blocks silently and returns or fires a hook only on the wake set — park, circuit breaker, budget park, phase RED twice on a stage, engine gone, run ended — with a json brief of about thirty lines and a timeout heartbeat | ✅ DONE | - |
 | SF5.2 | A supervisor plan block runs a configured command on wake with the brief on stdin; operating.md carries the wake and dont-wake table and the standing-order pattern | ✅ DONE | [`4efedac`](https://github.com/shaahink/conductor/commit/4efedac) |
 | SF5.3 | The remote supervision pattern is documented and proven once end to end — a wake reaching a remote listener — with an honest note of what stays manual | ✅ DONE | [`2cd9083`](https://github.com/shaahink/conductor/commit/2cd9083) |
-| SF5.4 | conductor ps lists every run on the machine from the control-plane discovery files; process titles carry repo and run id; the face offers a run picker when more than one control plane answers | 🔄 IN PROGRESS | - |
+| SF5.4 | conductor ps lists every run on the machine from the control-plane discovery files; process titles carry repo and run id; the face offers a run picker when more than one control plane answers | ✅ DONE | [`3f0ff2e`](https://github.com/shaahink/conductor/commit/3f0ff2e) |
 
 </details>
 
@@ -104,8 +104,6 @@ _Updated 2026-08-01 13:08 UTC · branch `feat/sarban` · HEAD `3365138`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Overhead | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | SF0 | Deliver | 1 | 07-31 19:15 | 0:22 | Advanced | SF0.1 | 1 | engine-fast:OK · face-fast:OK | $10.7229 | $0.0085 | 176,730/68,746 |
-| 2 | SF0 | Deliver | 1 | 07-31 19:38 | 0:45 | Advanced | SF0.2 | 2 | engine-fast:OK · face-fast:OK | $13.1360 | $0.0086 | 210,694/76,633 |
 | 3 | SF0 | Deliver | 1 | 07-31 20:26 | 0:39 | Advanced | SF0.3 | 3 | engine-fast:OK · face-fast:OK | $17.4303 | $0.0051 | 240,056/105,248 |
 | 4 | SF0 | Deliver | 1 | 07-31 21:06 | 0:39 | Advanced | SF0.4 | 3 | engine-fast:OK · face-fast:OK | $15.2114 | $0.0068 | 225,894/90,712 |
 | 5 | SF1 | Deliver | 1 | 07-31 21:50 | 0:29 | Advanced | SF1.1 | 3 | engine-fast:OK · face-fast:OK | $23.1233 | $0.0064 | 236,481/90,307 |
@@ -134,28 +132,14 @@ _Updated 2026-08-01 13:08 UTC · branch `feat/sarban` · HEAD `3365138`_
 | 28 | SF5 | Deliver | 1 | 08-01 12:00 | 0:17 | Advanced | SF5.2 | 2 | engine-fast:OK · face-fast:OK | $5.4927 | $0.0095 | 104,311/43,176 |
 | 29 | SF5 | Deliver | 1 | 08-01 12:19 | 0:21 | Advanced | SF5.3 | 3 | engine-fast:OK · face-fast:OK | $6.5167 | $0.0088 | 141,509/64,444 |
 | 30 | SF5 | Deliver | 1 | 08-01 12:43 | 0:23 | Progress |  | 3 | engine-fast:OK · face-fast:OK | $6.2744 | $0.0111 | 112,629/58,601 |
+| 31 | SF5 | Deliver | 1 | 08-01 13:08 | 0:22 | Advanced | SF5.4 | 3 | engine-fast:OK · face-fast:OK | $6.6372 | $0.0099 | 141,596/63,361 |
+| 32 | SF5 | Fix | 2 | 08-01 13:45 | 0:24 | RolledOver |  | 0 |  | $5.9833 |  | 128,284/2,129 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-01 10:51:26  • session #22 SF4 Deliver started (attempt 1/4)
-08-01 11:15:54  ▪ gate engine-fast pass [session]  (1m14s)
-08-01 11:15:55  ▪ gate face-fast pass [session]  (11.8s)
-08-01 11:15:56  • session #22 SF4 → Progress · 3 commit(s)  (24m29s)
-08-01 11:15:56  • session #23 SF4 Deliver started (attempt 1/4)
-08-01 11:30:48  • session #23 SF4 → RolledOver  (14m51s)
-08-01 11:30:48  • session #24 SF4 Deliver started (attempt 1/4)
-08-01 11:48:47  ▪ gate engine-fast pass [session]  (1m19s)
-08-01 11:48:47  ▪ gate face-fast pass [session]  (7.0s)
-08-01 11:48:48  • session #24 SF4 → Advanced · done SF4.2 · 3 commit(s)  (18m00s)
-08-01 11:58:26  ▪ gate engine-fast pass [phase]  (0.0s)
-08-01 11:58:26  ▪ gate face-fast pass [phase]  (0.0s)
-08-01 11:58:26  ▪ gate engine-full FAIL [phase]  (4m54s)
-08-01 11:58:26  ▪ gate face-full pass [phase]  (18.0s)
-08-01 11:58:27  • session #25 SF4 Fix started (attempt 2/4)
-08-01 12:10:44  ▪ gate engine-fast pass [session]  (1m17s)
 08-01 12:10:44  ▪ gate face-fast pass [session]  (36.0s)
 08-01 12:10:45  • session #25 SF4 → Progress · 2 commit(s)  (12m17s)
 08-01 12:15:16  ▪ gate engine-fast pass [phase]  (0.0s)
@@ -180,6 +164,22 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-01 13:43:07  • session #30 SF5 Deliver started (attempt 1/8)
 08-01 14:08:24  ▪ gate engine-fast pass [session]  (1m38s)
 08-01 14:08:24  ▪ gate face-fast pass [session]  (13.1s)
+08-01 14:08:25  • session #30 SF5 → Progress · 3 commit(s)  (25m17s)
+08-01 14:08:25  • session #31 SF5 Deliver started (attempt 1/8)
+08-01 14:32:18  ▪ gate engine-fast pass [session]  (1m31s)
+08-01 14:32:19  ▪ gate face-fast pass [session]  (7.7s)
+08-01 14:32:20  • session #31 SF5 → Advanced · done SF5.4 · 3 commit(s)  (23m54s)
+08-01 14:45:08  ▪ gate engine-fast pass [phase]  (0.0s)
+08-01 14:45:08  ▪ gate face-fast pass [phase]  (0.0s)
+08-01 14:45:09  ▪ gate engine-full FAIL [phase]  (5m55s)
+08-01 14:45:09  ▪ gate face-full pass [phase]  (32.6s)
+08-01 14:45:10  • session #32 SF5 Fix started (attempt 2/8)
+08-01 15:09:30  • session #32 SF5 → RolledOver  (24m19s)
+08-01 15:17:18  ▪ gate engine-fast pass [phase]  (1m27s)
+08-01 15:17:18  ▪ gate face-fast pass [phase]  (49.8s)
+08-01 15:17:18  ▪ gate engine-full pass [phase]  (5m12s)
+08-01 15:17:18  ▪ gate face-full pass [phase]  (11.3s)
+08-01 15:17:18  ✓ checkpoint SF5.4 confirmed
 ```
 
 ## Health
@@ -187,12 +187,12 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 30 · retries 2 (7 %) · overall Warn
+sessions 32 · retries 3 (9 %) · overall Warn
 ⚠ [context-saturation] session #3: 24,790,251 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #4: 21,397,049 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #5: 36,996,007 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #6: 24,716,690 context tokens (≥ 20,000,000)
-⚠ [gate-oscillation] gate 'engine-full' flipped pass/fail 4x
+⚠ [gate-oscillation] gate 'engine-full' flipped pass/fail 6x
 ```
 
 ## Repo
@@ -201,16 +201,12 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/sarban
-working tree: M .conductor/REPORT.md
-vs upstream: up to date
+working tree: M .conductor/REPORT.md, M SARBAN-FACE-TRACKER.md
+vs upstream: 1 ahead
 ```
 
 ### Commits by session
 
-- **s19 (SF3 Deliver)** — 3 commit(s):
-  - [`5d88b21`](https://github.com/shaahink/conductor/commit/5d88b21) docs(tracker): SF3.3 claimed complete, SF3 closes and SF4.1 is next
-  - [`1579880`](https://github.com/shaahink/conductor/commit/1579880) test(face): rebaseline the session detail, and pin the jumped-stage rail (SF3.3)
-  - [`f91fa5e`](https://github.com/shaahink/conductor/commit/f91fa5e) feat(face): what a session landed, and when the run left the declared order (SF3.3, part 2d)
 - **s21 (SF4 Deliver)** — 2 commit(s):
   - [`1eeda0b`](https://github.com/shaahink/conductor/commit/1eeda0b) docs(tracker): SF4.2 part 1 landed, and the disk that failed 18 tests
   - [`f0d12bb`](https://github.com/shaahink/conductor/commit/f0d12bb) fix(telegram): a queued reload says so, instead of advising the edit you just made (FU-OWNER-13)
@@ -236,6 +232,10 @@ vs upstream: up to date
   - [`3365138`](https://github.com/shaahink/conductor/commit/3365138) docs(tracker): SF5.4 parts 1+2, and the face picker that is left (SF5.4)
   - [`9adb15f`](https://github.com/shaahink/conductor/commit/9adb15f) feat(ps): the engine says which run it is, in its title (SF5.4)
   - [`a599d26`](https://github.com/shaahink/conductor/commit/a599d26) feat(ps): the fleet is visible, and the probe leads (SF5.4)
+- **s31 (SF5 Deliver)** — 3 commit(s):
+  - [`eae70d9`](https://github.com/shaahink/conductor/commit/eae70d9) docs(tracker): SF5 closes with the picker, and the file that was not the run (SF5.4)
+  - [`e60f380`](https://github.com/shaahink/conductor/commit/e60f380) feat(face): the picker reads live, and the face says which run it took (SF5.4)
+  - [`3f0ff2e`](https://github.com/shaahink/conductor/commit/3f0ff2e) feat(face): the face finds the run by probing, and asks when it cannot tell (SF5.4)
 
 ## Phase handovers (audit)
 
@@ -258,27 +258,27 @@ vs upstream: up to date
 
 ## Last gate run
 
-engine-fast:OK · face-fast:OK
+engine-fast:OK · face-fast:OK · engine-full:OK · face-full:OK
 
 ## Last session result
 
-> SESSION-RESULT: Landed two of SF5.4's three parts, both committed, pushed, and green. `conductor ps` (`a599d26`) lists every conductor run on the machine — repo, plan, run id, port, pid, status, uptime — plus `--json`; a live drive of the fresh build listed **both** real runs on this box (this repo on 4317 pid 35412, `C:/Code/sk-studio` on 4318 pid 19056), evidence at `.conductor/evidence/SF5/SF5.4-ps-live.log`. The design turns on a measured finding, not the spec's assumed mechanism: this repo's live run serves its control plane with **no** `.conductor/control-plane.json`, so a discovery-file walk would have missed the very run it runs inside — the port probe of 4317-4336 leads (`GET /state…
+> SESSION-RESULT: SF5.4 is closed and claimed (`conductor task --done SF5.4 --evidence .conductor/evidence/SF5/SF5.4-part3-run-picker.md`), which completes stage SF5 — SF5.1–SF5.4 are all DONE. This session delivered the last piece, the face run picker, in three commits (`3f0ff2e` code+tests, `e60f380` polish+goldens+live evidence, `eae70d9` tracker). The bug it closes was measured live, not argued: the published `conductor face` prints "no live run for plan …" while standing in this repo at an engine live on 4317, because it read `.conductor/control-plane.json` and that file does not exist (`ps --json` reports `discoveryFile:false` for that row). `FaceCommand` now resolves its target through …
 
 ## Tracker handoff
 
 ```
-last: **SF5.4 parts 1+2 landed, checkpoint still IN PROGRESS** (`a599d26`, `9adb15f`).
-  `conductor ps` lists every run on the machine; **the port probe leads, not a discovery-file walk** -
-  measured: this repo's live run serves 4317 with **no** `.conductor/control-plane.json`, so a file
-  scan would miss the run it runs inside. `GET /state` already carries plan/run id/repo/state dir;
-  the discovery file only enriches (pid), one naming another port is ignored, `conductor.lock` is the
-  fallback. Read-only: loopback GETs, no token, no POST. A lock with no plane lists as `no control
-  plane`. Engine process titles now carry repo + stage + run id, restored on exit.
-next: **the face run picker** - the last piece of SF5.4. `conductor face` reads ONLY the local
-  discovery file, so it is **broken in this repo today** (says "no live run" at a live run). Feed it
-  from `FleetScan`; when more than one plane answers, hand the fleet to the Go face for a picker
-  (suggest env `CONDUCTOR_FLEET` json, so tokens stay off the process listing). Then a live title capture.
-green: SF5_4FleetTests **45**, SF5 + harness **132**. Live drive of MY build listed both runs on this
-  box (this repo 4317 pid 35412, sk-studio 4318): `.conductor/evidence/SF5/SF5.4-ps-live.log`.
-red: nothing. open: bugs **#15 #16 #17 #18 #19 #20**.
+last: **FIX session 32** (`55ef743`) - the three `engine-full` reds at `eae70d9`, all real, none
+  weakened. (1) Ratchet: SF5.4 shipped FaceFleet.cs at 6 types / FleetScan.cs at 5 vs a ceiling of 3
+  and EMPTY debt lists - split into FaceTarget.cs / FaceFleet.cs / FleetScan.cs / FleetRun.cs /
+  FleetReport.cs. The regex counts INDENTED types, so nested ones count. (2) `watch` and `ps` were in
+  neither completion script; the PS and bash generators each had their own literal - both now read one
+  `Verbs` constant. (3) `SF0_2...ClaimDuringAVerifySession` is NOT a flake: seq is allocated at
+  PERSIST time off a 200ms drain, the claim CLI is another process writing through, so a starved drain
+  stamps `SessionStarted` ABOVE a later claim and `GraphClaimsDuringSession` folds it into its own PRE
+  set - `NewlyDone` empty while the CLI exits 0. `SessionRunner` now flushes the marker before the
+  setup hook. `SF5SessionStartSeqTests` (3) pins the inversion, the ordering, and the flush position.
+next: **SF5.1-SF5.4 all DONE, nothing incomplete.** Next action: let the battery re-run; if green,
+  move to the next stage. `SessionRunner.cs` is at 499/500 lines - the next edit there must split it.
+green: 62/62 on ratchet + completion + SF0_2 verdict class + SF5_4 fleet
+  (`.conductor/evidence/SF5-fix-s32-gates.log`). red: nothing known. open: bugs **#15 #16 #17 #18 #19 #20**.
 ```

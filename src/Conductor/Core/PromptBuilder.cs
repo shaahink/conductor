@@ -274,14 +274,15 @@ public sealed partial class PromptBuilder
             Work in: {repo}
             {readOrder}
             Do, in order:
-            1. PRE-SESSION RITUAL — exactly as `{planDoc}` prescribes: read `{tracker}` (handoff block + stated read order), your stage section, and the design docs it cites. Run the gate battery. Never build on red — fix or record first.{batteryCollapseNote}
-            2. QA THE PREVIOUS SESSION — audit its tracker claims against fresh artifacts (re-run things; do not trust claims). Fix real findings before new work; note the QA verdict in your final tracker handoff.
+            1. ORIENT, THEN SAY WHAT YOU ARE TAKING. Pre-session ritual exactly as `{planDoc}` prescribes: read `{tracker}` (handoff block + stated read order), your stage section, and the docs it cites. Run the gate battery — under `conductor bg` if it takes over ~3 minutes, since a silent foreground reads as a stall and gets you killed. Never build on red — fix or record first.{batteryCollapseNote} Then, BEFORE your first edit, `conductor task --in-progress <id>`: that is what makes the board show work in flight instead of a wall of TODO.
+            2. QA THE PREVIOUS SESSION — audit its tracker claims against fresh artifacts; re-run things, do not trust claims. Fix real findings before new work and note the QA verdict in your handoff.
             3. DELIVER the next incomplete checkpoint(s) of stage {stage} only. One checkpoint landed with proof beats three claimed. Do not start other stages' work.
-            4. POST-SESSION RITUAL — re-run the gate battery plus your stage's truth gates; produce fresh evidence artifacts; CLAIM each delivered checkpoint with `conductor task --done <id> --evidence <path>` (the only channel Conductor reads — the tracker's checkpoint rows are generated from it); overwrite the `{tracker}` handoff block for the next session; commit per checkpoint using the plan's commit convention; push the branch.
+            4. CLAIM, THEN HAND OFF. Re-run the gate battery plus your stage's truth gates; produce fresh evidence artifacts. Then `conductor task --done <id> --evidence <path>` per delivered checkpoint — BEFORE you write the handoff, so a session that runs out of room still lands the claim. That command IS the claim; the tracker's checkpoint rows are generated from the database, so DONE written in prose moves nothing. Only then overwrite the `{tracker}` handoff block for the next session, commit per checkpoint using the plan's commit convention, and push.
 
             {tools}
 
             Conductor rules (in addition to the plan's):
+            - Keep the handoff, checkpoint titles and notes free of curly braces: a literal brace in prose the engine composes back into a prompt reads as an unresolved placeholder and parks the run.
             - If genuinely blocked on a human decision, add a line starting `HUMAN:` to the tracker handoff block, `conductor note` the reason, commit, push, and end the session.
             - Leave the working tree clean (commit or revert leftovers) and the branch pushed.
             - End by printing one paragraph starting with `SESSION-RESULT:` — what landed, what is red, what the next session should do.
@@ -301,12 +302,12 @@ public sealed partial class PromptBuilder
             Progress observed by the orchestrator: {progressSummary}
 
             Your job: make the previous session's claims true.
-            1. Read `{tracker}` handoff + your stage section in `{planDoc}` first. Check `ledger_list` — the failing session may already have recorded why.
+            1. Read `{tracker}` handoff + your stage section in `{planDoc}` first. Check `ledger_list` — the failing session may already have recorded why. Then, BEFORE your first edit, `conductor task --in-progress <id>` for the checkpoint you are repairing: a fix session that leaves the board untouched looks like nothing is happening.
             2. Reproduce each failure above and fix root causes. Never weaken gates, goldens, or truth files to pass — ratchet-only policy.
                A gate failure that says a file is `locked by: conductor (PID)` is almost always THIS run holding its own binary — that pid is in `CONDUCTOR_PID` and is named in the tools block below. It is not a stale orphan to clear. A fix session read that exact line, inferred an orphan, ran `Stop-Process` on the pid, and killed the conductor supervising it. Retry the gate, or say in the handoff what is locked; do not kill it.
-            3. Re-run the full gate battery until green.
-            4. Correct the record via `conductor task` — downgrade over-claimed checkpoints rather than leaving a false DONE.
-            5. Commit (plan's commit convention), push, overwrite the tracker handoff block.
+            3. Re-run the full gate battery until green — under `conductor bg`, not the foreground: a battery that takes minutes with no output reads as a stall and gets you killed mid-repair.
+            4. Correct the record via `conductor task` — downgrade over-claimed checkpoints rather than leaving a false DONE, and claim what you genuinely made true with `conductor task --done <id> --evidence <path>`. Do this BEFORE you write the handoff; the command is the claim and prose is not.
+            5. Commit (plan's commit convention), push, overwrite the tracker handoff block — keeping it free of curly braces, which the engine reads as unresolved placeholders and parks on.
             Only if gates are green and time allows, continue stage {stage}'s next checkpoint per the normal ritual.
 
             {tools}

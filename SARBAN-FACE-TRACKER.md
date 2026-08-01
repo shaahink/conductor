@@ -4,17 +4,19 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SF5.4 CLOSED** (`3f0ff2e`, `e60f380`) - the face run picker, the last piece.
-  `conductor face` no longer reads the local discovery file: it resolves through **FleetScan's port
-  probe**. Measured live - the PUBLISHED verb says "no live run" standing at a live run on 4317
-  (`discoveryFile:false`), this build attaches to it. Rule (`FaceTarget.Choose`, pure): run in THIS
-  directory -> attach; only run on the box -> attach; else or `--pick` -> hand over `CONDUCTOR_FLEET`
-  (env, never argv - it carries write tokens) and the Go pre-flight picker asks. Port-0 runs are
-  listed by `ps` but never offered. Evidence `.conductor/evidence/SF5/SF5.4-part3-run-picker.md`.
-next: **SF5 has no incomplete checkpoints** - SF5.1-SF5.4 all DONE. Move to the next stage.
-green: SF5_4 suites **64** (19 new), face-go build/vet/test green, 3 new picker goldens
-  (`testdata/golden/run_picker_*`) built from the real two-run fleet, tokens excluded.
-red: nothing. open: bugs **#15 #16 #17 #18 #19 #20**.
+last: **session 33, SF6.1 DONE** - the built-in session/fix templates now carry the field lessons:
+  mark in-progress BEFORE the first edit (devcontext #9), claim BEFORE writing the handoff (#8),
+  the deferred-MCP note with the CLI fallback on ONE line (#8), `conductor bg` named in the step
+  that runs the gate battery, not only in the tools block (#5), brace discipline where the agent
+  writes prose, and an anchor-repo rule that renders ONLY when the plan declares satelliteRepos.
+  `SF6_1TemplateLessonsTests` (10) asserts all of it against the RENDERED prompt, not the source.
+next: **SF6.2** - prune/enrich the bank under `plans/` and add the index doc. READ THIS FIRST: the
+  composed built-in deliver prompt is now ~7.9k chars against the ~8191 cmd.exe argv ceiling (bug
+  #15) - about 200 chars of headroom for the whole bank. Every SF6.1 line was paid for by cutting
+  existing tools-block prose; SF6.2 must do the same. Unrun leftover: `tools/scratch/sf6-prompt-rig.ps1`
+  drives the fresh build against two TEMP repos and diffs the real `session-001.prompt.md` - never
+  executed, treat as unproven. green: 65/65 (`.conductor/evidence/SF6/SF6-1-prompt-gates.log`).
+  red: nothing known. open: bugs **#15 #16 #17 #18 #19 #20**.
 
 
 ## Baseline numbers (from run.db)
@@ -23,7 +25,7 @@ red: nothing. open: bugs **#15 #16 #17 #18 #19 #20**.
 |---|---|
 | Total checkpoints | 24 |
 | Done | 4 |
-| Claimed (unconfirmed) | 14 |
+| Claimed (unconfirmed) | 15 |
 
 ## Checkpoints
 
@@ -77,7 +79,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | SF5.1 | conductor watch blocks silently and returns or fires a hook only on the wake set — park, circuit breaker, budget park, phase RED twice on a stage, engine gone, run ended — with a json brief of about thirty lines and a timeout heartbeat | DONE | - | .conductor/evidence/SF5/SF5.1-live-drive.log |
 | SF5.2 | A supervisor plan block runs a configured command on wake with the brief on stdin; operating.md carries the wake and dont-wake table and the standing-order pattern | DONE | 4efedac | .conductor/evidence/SF5/SF5.2-supervisor-block.md |
 | SF5.3 | The remote supervision pattern is documented and proven once end to end — a wake reaching a remote listener — with an honest note of what stays manual | DONE | 2cd9083 | .conductor/evidence/SF5/SF5.3-live-drive.log |
-| SF5.4 | conductor ps lists every run on the machine from the control-plane discovery files; process titles carry repo and run id; the face offers a run picker when more than one control plane answers | IN PROGRESS | - | - |
+| SF5.4 | conductor ps lists every run on the machine from the control-plane discovery files; process titles carry repo and run id; the face offers a run picker when more than one control plane answers | DONE | 3f0ff2e | .conductor/evidence/SF5/SF5.4-part3-run-picker.md |
 
 ### SF6 — The prompt bank compounds
 
