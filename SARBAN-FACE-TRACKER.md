@@ -2,21 +2,22 @@
 
 **Plan:** Sarban face - the watcher and the surfaces | **Branch:** `feat/sarban` | **Design doc:** docs/history/CONDUCTOR-SARBAN.md
 
-## Handoff (overwrite this block, <=12 lines, no history)
+## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **session 38 - SF7.1 part 2, four commits, still NOT claimed.** `3268e54` `65e59fa` `de3256f`
-  `36e406e`. `SF7_1DocsMatchRealityTests` now 12/12 across 4 partials. Done: NEXT-FEATURES refreshed
-  (ten items it called future had SHIPPED) and the MCP item filed; the closure ledger over
-  followups.md + the 7 open bugs; the era CHANGELOG under Unreleased (verified through the release
-  pipeline's own reader, `tools/changelog-section.sh Unreleased`, exit 0); and SKILL.md's trust
-  model, which said the OPPOSITE of the engine - a tracker hand-edit is accepted via the W1.3
-  fallback, not discarded. Also fixed: FU-OWNER-10/11/13 each closed by the token `CLOSED (bFU-...)`,
-  which names nothing; they now name stage + commit + file.
-next: **SF7.1 has ONE part left** - spec line 492: the three `docs/dev/FIELD-NOTES-*.md` files gain a
-  finding -> stage -> commit ledger (31 findings). The ledger note has my resolved stage->commit map
-  so you do not redo it, AND the warning that Appendix B's finding->stage index is not reliable
-  (devcontext #5 is mapped to SC5.2; that commit fixes #16). Then claim SF7.1 and SF7.2 is the merge.
+last: **session 39 - SF7.1 CLAIMED DONE.** One commit `37a75ef`. The three `FIELD-NOTES-*.md` logs
+  each end in a closure ledger, 31 rows, finding -> stage -> commit -> what closed it. Map measured
+  from the commits (fifteen cite their own finding number) not from Appendix B, which was wrong in
+  three places and is now corrected in place. devcontext #19 is the one half-closure and its row
+  says what was NOT adopted. `SF7_1DocsMatchRealityTests` 16/16; the two new structural pins were
+  driven RED on purpose before being trusted. Note 191's warning about `#5 -> SC5.2` was itself
+  wrong - `SessionWatchdog.Remedy` is #5's fix and `git log -S Remedy` returns `e6b15c7`.
+next: **SF7.2, the last checkpoint - and most of it is the owner's, not yours.** Merge `feat/sarban`
+  to master is **ownerGate**: do not merge unsigned. `tools/install.ps1` is trap 0/1 - it is the
+  FIRST install of this run and needs the owner to confirm no other conductor run is live first, so
+  expect a `HUMAN:` line rather than a reinstall you perform. Tag through the SC8 pipeline; the era
+  CHANGELOG sits under `Unreleased` and `tools/changelog-section.sh` is the reader that pipeline uses.
   red: nothing known. open: bugs **#15 #16 #17 #18 #19 #20 #21**.
+
 
 ## Baseline numbers (from run.db)
 
