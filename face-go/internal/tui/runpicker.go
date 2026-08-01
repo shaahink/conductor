@@ -275,10 +275,16 @@ func (p PickerModel) renderDetail(width int) string {
 	if r.Total > 0 {
 		progress = fmt.Sprintf("  ·  %d/%d checkpoints", r.Done, r.Total)
 	}
-	head := fmt.Sprintf("%s  ·  run %s  ·  pid %d  ·  %s%s",
-		r.PlanName, r.ShortRunID(), r.Pid, write, progress)
+	// Identity and reachability lead; the plan name and the path are the long, clippable half. Put
+	// them first and an 80-column terminal loses "read-only" — which is the fact that decides whether
+	// this Face can do anything once it attaches.
+	head := fmt.Sprintf("run %s  ·  pid %d  ·  %s%s", r.ShortRunID(), r.Pid, write, progress)
+	tail := r.PlanName
+	if r.Repo != "" {
+		tail += "  ·  " + r.Repo
+	}
 	return subtleStyle.Render(truncate(head, width)) + "\n" +
-		subtleStyle.Render(truncate("  "+r.Repo, width))
+		subtleStyle.Render(truncate(tail, width))
 }
 
 // stageLabel is the stage id, or its title when the run reports no id, or a dash.

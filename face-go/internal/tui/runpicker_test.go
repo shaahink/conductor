@@ -29,6 +29,48 @@ func twoRunFleet() []FleetRun {
 	}
 }
 
+// liveFleet is the fleet this machine ACTUALLY had at 2026-08-01T13:26Z, copied field for field from
+// `conductor ps --json` (.conductor/evidence/SF5/SF5.4-picker-live.log): two engines, two ports, and
+// the detail the whole design turns on — the run in THIS repo has no discovery file, so it has no
+// write token and the picker must say so, while the other repo's run does.
+//
+// The tokens are the one thing not copied: a real write token is never written to a test fixture, a
+// golden, or an evidence file. The picker never renders it either — TestPickerNeverRendersAToken.
+func liveFleet() []FleetRun {
+	return []FleetRun{
+		{
+			Repo: "C:/code/conductor", PlanName: "Sarban face - the watcher and the surfaces",
+			RunID: "8cefa5de8f164848bd42b275e14ba9cf", Status: "Running", Port: 4317, Pid: 35412,
+			StageID: "SF5", StageTitle: "Supervision without a polling meter",
+			Done: 18, Total: 24, CostUsd: 243.47,
+			BaseURL: "http://127.0.0.1:4317", StateDir: `C:/code/conductor\.conductor`,
+			Token: "", Self: true,
+		},
+		{
+			Repo: "C:/Code/sk-studio", PlanName: "NINE STREETS",
+			RunID: "7951c3ca149a4c12a5a7fb973bbea1bf", Status: "Running", Port: 4318, Pid: 19056,
+			StageID: "E", StageTitle: "The three that mean it is not a game yet",
+			Done: 29, Total: 46, CostUsd: 280.81,
+			BaseURL: "http://127.0.0.1:4318", StateDir: `C:/Code/sk-studio\.conductor`,
+			Token: "redacted", Self: false,
+		},
+	}
+}
+
+// The frame a reviewer would see, pinned. checkGolden prints it, which is how a frame gets read on a
+// machine with no TTY to run the Face in.
+func TestGoldenRunPicker(t *testing.T) {
+	p := NewPicker(liveFleet())
+	p.width, p.height = 100, 24
+	checkGolden(t, "run_picker_100x24", p.Render())
+
+	checkGolden(t, "run_picker_second_row", pick(t, p, "down").Render())
+
+	narrow := NewPicker(liveFleet())
+	narrow.width, narrow.height = 80, 24
+	checkGolden(t, "run_picker_80x24", narrow.Render())
+}
+
 func TestParseFleetRejectsWhatCannotBeOffered(t *testing.T) {
 	for _, tc := range []struct{ name, raw string }{
 		{"empty", ""},

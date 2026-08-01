@@ -77,6 +77,10 @@ public sealed class FaceCommand : AsyncCommand<FaceCommand.Settings>
         switch (decision.Kind)
         {
             case FaceTarget.Kind.Single when decision.Run is { } run:
+                // Say which run was chosen. It used to be unambiguous — this directory's, or nothing —
+                // and now it can be another repo's, so the one line before the TUI takes the terminal
+                // is the only chance the user has to notice they are looking at the wrong website.
+                AnsiConsole.MarkupLine($"[grey]attaching to[/] [white]{Markup.Escape(string.IsNullOrWhiteSpace(run.RepoLabel) ? run.PlanName : run.RepoLabel)}[/] [grey]{Markup.Escape(run.StageId)} · {Markup.Escape(run.BaseUrl)}[/]");
                 psi.ArgumentList.Add("--url");
                 psi.ArgumentList.Add(run.BaseUrl);
                 // The write token goes via env, never argv — it must not show in a process listing.
