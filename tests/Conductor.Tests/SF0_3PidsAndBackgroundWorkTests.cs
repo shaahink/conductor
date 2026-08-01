@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
 
@@ -48,10 +49,14 @@ public sealed class SF0_3PidsAndBackgroundWorkTests : IDisposable
     private const string RunId = "run-sf03";
     private const string PlanName = "sf03";
 
-    /// <summary>Windows' System process. It exists for the whole life of the machine and cannot be
-    /// opened even from an elevated process, which makes it the only genuinely uninspectable pid
-    /// available to a test. The tests that rely on that ASSERT it rather than guarding on it, so a
-    /// machine where it stops holding fails loudly instead of passing vacuously.</summary>
+    /// <summary>Windows' System process. It exists for the whole life of the machine and, from an
+    /// ordinary process, cannot be inspected past <c>HasExited</c> — reading its <c>StartTime</c>
+    /// throws access-denied, which makes it the only genuinely uninspectable pid available to a
+    /// test. That does NOT hold from a fully-elevated token (no UAC filtering, as CI's runner
+    /// account carries): there, <c>StartTime</c> reads clean, so this pid stops being uninspectable.
+    /// <see cref="McpBgStatus_CallsAnUninspectablePidRunning_NotDead"/> checks for that token and
+    /// guards on it rather than asserting through it, so it fails loudly on a machine where the
+    /// UNPRIVILEGED case stops holding, without demanding the impossible of a privileged one.</summary>
     private const int SystemPid = 4;
 
     public SF0_3PidsAndBackgroundWorkTests()
@@ -83,6 +88,17 @@ public sealed class SF0_3PidsAndBackgroundWorkTests : IDisposable
         try { Directory.Delete(_repo, recursive: true); } catch (IOException) { }
     }
 
+    /// <summary>True only for a token with no UAC filtering — an interactive admin session's own
+    /// token answers false here even though the account IS an administrator, which is the whole
+    /// reason UAC exists. A non-interactive runner (a scheduled task, a service, CI) typically gets
+    /// the unfiltered token instead, and that is what makes <see cref="SystemPid"/> inspectable.</summary>
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    private static bool IsFullyElevated()
+    {
+        using var identity = WindowsIdentity.GetCurrent();
+        return new WindowsPrincipal(identity).IsInRole(WindowsBuiltInRole.Administrator);
+    }
+
     // ---------------------------------------------------------------- bug #9: one liveness policy
 
     /// <summary>The deterministic half of bug #9, and the one that needs no special pid: a tracked id
@@ -109,9 +125,15 @@ public sealed class SF0_3PidsAndBackgroundWorkTests : IDisposable
     public async Task McpBgStatus_CallsAnUninspectablePidRunning_NotDead()
     {
         if (!OperatingSystem.IsWindows()) return; // pid 4 is the Windows System process
+        // A fully-elevated token — no interactive UAC filtering, which is how CI's runner account
+        // executes this process — can read the System process's StartTime with no exception at all.
+        // There is then no genuinely uninspectable pid left to drive bug #9's scenario with, so this
+        // guards on the token rather than asserting through it (see the SystemPid doc comment).
+        if (IsFullyElevated()) return;
         var tracked = DateTime.UtcNow.AddMinutes(-5);
-        // Stated as an assertion, not a silent guard: if this ever stops holding, the two tests below
-        // would pass for the wrong reason and bug #9's real case would go untested again.
+        // Stated as an assertion, not a silent guard: if this ever stops holding on an UNPRIVILEGED
+        // token, the two tests below would pass for the wrong reason and bug #9's real case would go
+        // untested again.
         Assert.Equal(PidState.Unverifiable, PidLiveness.Check(SystemPid, tracked));
 
         _store.TrackPid(SystemPid, RunId, "bg:uninspectable", "SF0", 3, tracked);
