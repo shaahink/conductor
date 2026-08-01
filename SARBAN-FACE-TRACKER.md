@@ -27,7 +27,7 @@ next: **SF6.3** - `conductor init` scaffolds the refreshed set with telegram + s
 |---|---|
 | Total checkpoints | 24 |
 | Done | 5 |
-| Claimed (unconfirmed) | 15 |
+| Claimed (unconfirmed) | 16 |
 
 ## Checkpoints
 
@@ -88,7 +88,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | SF6.1 | The built-in session and fix templates carry the field lessons: in-progress first, claim before handoff, deferred-MCP fallback on one line, long commands under conductor bg, the anchor-commit rule for multi-repo plans | DONE | 8dd1aa3 | .conductor/evidence/SF6/SF6-1-prompt-gates.log |
-| SF6.2 | The prompt bank under plans/ is pruned, enriched from the rounds — proof-note pattern, owner-block alternate completions, the unblocks voice — and indexed so it is choosable | TODO | - | - |
+| SF6.2 | The prompt bank under plans/ is pruned, enriched from the rounds — proof-note pattern, owner-block alternate completions, the unblocks voice — and indexed so it is choosable | DONE | 4b894c1 | .conductor/evidence/SF6/SF6-2-prompt-bank.md |
 | SF6.3 | conductor init scaffolds the refreshed template set with telegram and supervisor hints, and its output passes doctor clean | TODO | - | - |
 
 ### SF7 — Ship the era

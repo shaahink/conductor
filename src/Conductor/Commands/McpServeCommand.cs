@@ -80,9 +80,7 @@ public sealed class McpServeCommand : Command<McpServeCommand.Settings>
         server.FoldJournal();
 
         using var cts = new CancellationTokenSource();
-#pragma warning disable MA0045
-        Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
-#pragma warning restore MA0045
+        Console.CancelKeyPress += (_, e) => { e.Cancel = true; SyncCancellation.RequestStop(cts); };
         try
         {
             server.RunAsync(Console.In, Console.Out, cts.Token).GetAwaiter().GetResult();

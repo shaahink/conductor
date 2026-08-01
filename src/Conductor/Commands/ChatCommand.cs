@@ -64,30 +64,11 @@ public sealed class ChatCommand : Command<ChatCommand.Settings>
         AnsiConsole.MarkupLine("[grey]Consulting advisor model...[/]");
         AnsiConsole.WriteLine();
 
-        // Build a chat prompt with the user's query
-        var promptBuilder = new PromptBuilder(plan);
-        var stage = new StageConfig { Id = "chat", Title = "Conductor Chat", Kind = "deliver", Sessions = 1 };
-        promptBuilder.Deliver(stage, 0, 1, 1); // warm the builder — we need the BuiltIn access pattern
-
-        // Construct the prompt manually with the chat template
-        var readOrder = plan.ReadOrder is { Count: > 0 }
-            ? string.Join("\n", plan.ReadOrder.Select((d, i) => $"{i + 1}. {d}"))
-            : "(no read order configured)";
-
-        var prompt = $"""
-            System: You are a helpful engineering analyst that answers questions about the "{plan.Name}" conductor run. You have access to MCP tools (run.db SQL querying, session detail lookup, ledger entries, task management, bg process control). Be concise and data-driven.
-
-            Context:
-            - Repo: {plan.Repo}
-            - Tracker file: {plan.Tracker}
-            - The run.db is at: .conductor/run.db relative to the repo root
-            - Use the `run_query` MCP tool to execute SQL queries against run.db
-            - Use `session_detail` to look up specific session info
-            - Use `ledger_list` to see recent findings
-            - Use `inject_instruction` to write an instruction if asked
-
-            USER QUERY: {query}
-            """;
+        // SF6.3: one resolution path. This used to hand-roll the prompt here — which meant the
+        // chat.md template (built-in AND any templates/chat.md an operator wrote) was never read, and
+        // the throwaway Deliver() call above it rendered a full session prompt, persona and packs
+        // included, purely to be discarded.
+        var prompt = new PromptBuilder(plan).Chat(query);
 
         // SC3.4: one advisor spawn path. This used to re-implement the spawn and the envelope unwrap
         // inline, so `chat` and a verdict consult could disagree about what the advisor does — and

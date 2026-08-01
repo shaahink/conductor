@@ -98,18 +98,14 @@ public sealed class RunCommand : AsyncCommand<RunCommand.Settings>
         // M2: the store (SqliteRunStore) is created inside ConductorHost.Build — it owns
         // the IEventSink (events table) and IRunStore (all writes).
         var opts = new RunOptions(settings.DryRun, settings.Once, settings.MaxSessions, controlPlane, settings.ControlPlanePort, settings.Paused);
-#pragma warning disable MA0045 // CancelAsync doesn't exist on CancellationTokenSource
-        Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
-#pragma warning restore MA0045
+        Console.CancelKeyPress += (_, e) => { e.Cancel = true; SyncCancellation.RequestStop(cts); };
 
         // W3.3: Ctrl+C was the only exit the engine knew about. Closing the window (or logging off)
         // killed the process mid-session with nothing saved — §7.5's accidental-✕ data loss. The
         // same cancellation now runs for those events, and the OS handler waits for the save.
         using var stopped = new ManualResetEventSlim(false);
         using var ctrlRails = ConsoleCtrlRails.Install(
-#pragma warning disable MA0045
-            gracefulStop: () => cts.Cancel(),
-#pragma warning restore MA0045
+            gracefulStop: () => SyncCancellation.RequestStop(cts),
             waitForStop: stopped.Wait,
             log: msg => AnsiConsole.MarkupLine($"[yellow]{Markup.Escape(msg)}[/]"));
 

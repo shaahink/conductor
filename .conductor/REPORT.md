@@ -1,10 +1,10 @@
 ﻿# Conductor — Sarban face - the watcher and the surfaces run report
 
-_Updated 2026-08-01 14:41 UTC · branch `feat/sarban` · HEAD `8dd1aa3`_
+_Updated 2026-08-01 15:02 UTC · branch `feat/sarban` · HEAD `09ae2f1`_
 
 **Status:** Idle
-**Stage:** SF6 — The prompt bank compounds · attempts used 0 · working ▸ SF6.2
-**Checkpoints:** 20/24 done · **Sessions run:** 33 · **Cost:** $258.5364 (agent $258.3523 + gates $0.1841) · **Tokens:** 4,733,754 in / 1,446,095 out
+**Stage:** SF6 — The prompt bank compounds · attempts used 0 · working ▸ SF6.3
+**Checkpoints:** 21/24 done · **Sessions run:** 34 · **Cost:** $264.0833 (agent $263.8876 + gates $0.1957) · **Tokens:** 4,837,764 in / 1,498,837 out
 **Confirmed phases:** SF0, SF1, SF2, SF3, SF4, SF5
 
 ## Stage progress
@@ -17,7 +17,7 @@ _Updated 2026-08-01 14:41 UTC · branch `feat/sarban` · HEAD `8dd1aa3`_
 | SF3 | Reading a session becomes cheap | ██████████ 3/3 | confirmed ✓ |
 | SF4 | The human queue is a first-class surface | ██████████ 2/2 | confirmed ✓ |
 | SF5 | Supervision without a polling meter | ██████████ 4/4 | confirmed ✓ |
-| SF6 | The prompt bank compounds | ███░░░░░░░ 1/3 | **← active** |
+| SF6 | The prompt bank compounds | ███████░░░ 2/3 | **← active** |
 | SF7 | Ship the era | ░░░░░░░░░░ 0/2 | todo |
 
 <details> ✅<summary>SF0 — The ledger closes - the core run's leftovers (4/4)</summary>
@@ -81,12 +81,12 @@ _Updated 2026-08-01 14:41 UTC · branch `feat/sarban` · HEAD `8dd1aa3`_
 
 </details>
 
-<details><summary>SF6 — The prompt bank compounds (1/3)</summary>
+<details><summary>SF6 — The prompt bank compounds (2/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| SF6.1 | The built-in session and fix templates carry the field lessons: in-progress first, claim before handoff, deferred-MCP fallback on one line, long commands under conductor bg, the anchor-commit rule for multi-repo plans | ✅ DONE | - |
-| SF6.2 | The prompt bank under plans/ is pruned, enriched from the rounds — proof-note pattern, owner-block alternate completions, the unblocks voice — and indexed so it is choosable | ⬜ TODO | - |
+| SF6.1 | The built-in session and fix templates carry the field lessons: in-progress first, claim before handoff, deferred-MCP fallback on one line, long commands under conductor bg, the anchor-commit rule for multi-repo plans | ✅ DONE | [`8dd1aa3`](https://github.com/shaahink/conductor/commit/8dd1aa3) |
+| SF6.2 | The prompt bank under plans/ is pruned, enriched from the rounds — proof-note pattern, owner-block alternate completions, the unblocks voice — and indexed so it is choosable | ✅ DONE | - |
 | SF6.3 | conductor init scaffolds the refreshed template set with telegram and supervisor hints, and its output passes doctor clean | ⬜ TODO | - |
 
 </details>
@@ -104,7 +104,6 @@ _Updated 2026-08-01 14:41 UTC · branch `feat/sarban` · HEAD `8dd1aa3`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Overhead | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 4 | SF0 | Deliver | 1 | 07-31 21:06 | 0:39 | Advanced | SF0.4 | 3 | engine-fast:OK · face-fast:OK | $15.2114 | $0.0068 | 225,894/90,712 |
 | 5 | SF1 | Deliver | 1 | 07-31 21:50 | 0:29 | Advanced | SF1.1 | 3 | engine-fast:OK · face-fast:OK | $23.1233 | $0.0064 | 236,481/90,307 |
 | 6 | SF1 | Deliver | 1 | 07-31 22:21 | 0:32 | Advanced | SF1.2 | 3 | engine-fast:OK · face-fast:OK | $17.5303 | $0.0054 | 248,779/107,715 |
 | 7 | SF1 | Deliver | 1 | 07-31 23:11 | 0:22 | RolledOver |  | 0 |  | $11.9132 |  | 174,960/82,162 |
@@ -134,16 +133,13 @@ _Updated 2026-08-01 14:41 UTC · branch `feat/sarban` · HEAD `8dd1aa3`_
 | 31 | SF5 | Deliver | 1 | 08-01 13:08 | 0:22 | Advanced | SF5.4 | 3 | engine-fast:OK · face-fast:OK | $6.6372 | $0.0099 | 141,596/63,361 |
 | 32 | SF5 | Fix | 2 | 08-01 13:45 | 0:24 | RolledOver |  | 0 |  | $5.9833 |  | 128,284/2,129 |
 | 33 | SF6 | Deliver | 1 | 08-01 14:17 | 0:22 | Advanced | SF6.1 | 1 | engine-fast:OK · face-fast:OK | $6.1405 | $0.0074 | 106,949/54,821 |
+| 34 | SF6 | Deliver | 1 | 08-01 14:41 | 0:19 | Advanced | SF6.2 | 2 | engine-fast:OK · face-fast:OK | $5.5353 | $0.0116 | 104,010/52,742 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-01 12:15:17  ▪ gate face-full pass [phase]  (6.1s)
-08-01 12:15:17  ✓ checkpoint SF4.2 confirmed
-08-01 12:15:26  ▸ stage SF4 confirmed  (7h26m31s)
-08-01 12:15:28  ▸ stage SF5 entered — Supervision without a polling meter
 08-01 12:15:28  • session #26 SF5 Deliver started (attempt 1/8)
 08-01 12:33:48  • session #26 SF5 → RolledOver  (18m19s)
 08-01 12:33:48  • session #27 SF5 Deliver started (attempt 1/8)
@@ -180,6 +176,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-01 15:17:21  • session #33 SF6 Deliver started (attempt 1/4)
 08-01 15:41:06  ▪ gate engine-fast pass [session]  (1m03s)
 08-01 15:41:06  ▪ gate face-fast pass [session]  (10.5s)
+08-01 15:41:07  • session #33 SF6 → Advanced · done SF6.1 · 1 commit(s)  (23m46s)
+08-01 15:41:07  • session #34 SF6 Deliver started (attempt 1/4)
+08-01 16:02:19  ▪ gate engine-fast pass [session]  (1m00s)
+08-01 16:02:20  ▪ gate face-fast pass [session]  (55.1s)
 ```
 
 ## Health
@@ -187,7 +187,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 33 · retries 3 (9 %) · overall Warn
+sessions 34 · retries 3 (9 %) · overall Warn
 ⚠ [context-saturation] session #3: 24,790,251 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #4: 21,397,049 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #5: 36,996,007 context tokens (≥ 20,000,000)
@@ -207,10 +207,6 @@ vs upstream: up to date
 
 ### Commits by session
 
-- **s22 (SF4 Deliver)** — 3 commit(s):
-  - [`57a79f1`](https://github.com/shaahink/conductor/commit/57a79f1) docs(tracker): SF4.2 is 3 of 4, and the last quarter is all Go
-  - [`0d2ce47`](https://github.com/shaahink/conductor/commit/0d2ce47) feat(owner): a queue item that arrives while you are away pushes to Telegram (SF4.2)
-  - [`bc7ff3f`](https://github.com/shaahink/conductor/commit/bc7ff3f) feat(telegram): every push says which plan, which session, which repo, which build (FU-OWNER-11)
 - **s24 (SF4 Deliver)** — 3 commit(s):
   - [`9fe57f0`](https://github.com/shaahink/conductor/commit/9fe57f0) docs(tracker): SF4.2 closes, and the frame that caught what green tests missed
   - [`017c8a9`](https://github.com/shaahink/conductor/commit/017c8a9) feat(face): prove the owner queue against a live engine, and finish FU-OWNER-13's second layer (SF4.2)
@@ -235,6 +231,9 @@ vs upstream: up to date
   - [`3f0ff2e`](https://github.com/shaahink/conductor/commit/3f0ff2e) feat(face): the face finds the run by probing, and asks when it cannot tell (SF5.4)
 - **s33 (SF6 Deliver)** — 1 commit(s):
   - [`8dd1aa3`](https://github.com/shaahink/conductor/commit/8dd1aa3) feat(prompts): the built-ins carry the field lessons, and every line is paid for (SF6.1)
+- **s34 (SF6 Deliver)** — 2 commit(s):
+  - [`09ae2f1`](https://github.com/shaahink/conductor/commit/09ae2f1) docs(tracker): SF6.2 closes, and the ceiling was never the bank's fault (SF6.2)
+  - [`4b894c1`](https://github.com/shaahink/conductor/commit/4b894c1) feat(prompts): the bank becomes choosable, and the packs that never rendered (SF6.2)
 
 ## Phase handovers (audit)
 
@@ -261,22 +260,24 @@ engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: **SF6.1 landed and claimed** (`8dd1aa3`, evidence `.conductor/evidence/SF6/SF6-1-prompt-gates.log`, 65/65 green). The built-in `session.md` and `fix.md` now carry the six field lessons — mark in-progress before the first edit (devcontext #9), claim before writing the handoff (#8), the deferred-MCP warning with the CLI fallback on one physical line (#8's literal ask), `conductor bg` named in the step that runs the gate battery rather than only in the tools block (#5), brace discipline where the agent writes prose, and an anchor-repo commit rule that renders **only** when the plan declares `satelliteRepos` (SC4.3 already makes declared-satellite commits count, so the rule says …
+> SESSION-RESULT:** SF6.2 is claimed DONE with evidence at `.conductor/evidence/SF6/SF6-2-prompt-bank.md` (commits `4b894c1`, `09ae2f1`, pushed to `feat/sarban`). Two measured defects in the bank were fixed rather than documented: packs resolved *only* from `planDir/templatesDir/packs`, so both shipped packs were stranded under `maestro-templates` and no current plan could load them even by naming them, and only `maestro-templates/session.md` carried a `{packs}` placeholder — between them the pack feature had exactly one working configuration in the whole bank. `PromptBuilder.ResolvePackPath` now goes era-first then shared `plans/packs` (and refuses a name carrying a separator or `..`), the pa…
 
 ## Tracker handoff
 
 ```
-last: **session 33, SF6.1 DONE** - the built-in session/fix templates now carry the field lessons:
-  mark in-progress BEFORE the first edit (devcontext #9), claim BEFORE writing the handoff (#8),
-  the deferred-MCP note with the CLI fallback on ONE line (#8), `conductor bg` named in the step
-  that runs the gate battery, not only in the tools block (#5), brace discipline where the agent
-  writes prose, and an anchor-repo rule that renders ONLY when the plan declares satelliteRepos.
-  `SF6_1TemplateLessonsTests` (10) asserts all of it against the RENDERED prompt, not the source.
-next: **SF6.2** - prune/enrich the bank under `plans/` and add the index doc. READ THIS FIRST: the
-  composed built-in deliver prompt is now ~7.9k chars against the ~8191 cmd.exe argv ceiling (bug
-  #15) - about 200 chars of headroom for the whole bank. Every SF6.1 line was paid for by cutting
-  existing tools-block prose; SF6.2 must do the same. Unrun leftover: `tools/scratch/sf6-prompt-rig.ps1`
-  drives the fresh build against two TEMP repos and diffs the real `session-001.prompt.md` - never
-  executed, treat as unproven. green: 65/65 (`.conductor/evidence/SF6/SF6-1-prompt-gates.log`).
-  red: nothing known. open: bugs **#15 #16 #17 #18 #19 #20**.
+last: **session 34, SF6.2 DONE** - the bank is choosable. Two measured defects fixed: packs resolved
+  only from planDir/templatesDir/packs so both shipped packs were stranded under maestro-templates,
+  and only maestro's session.md had a packs placeholder - the feature had ONE working config in the
+  whole bank. Now era-first then shared `plans/packs`, sarban-templates renders packs, `plans/README.md`
+  is the index (resolution order, per-item char cost, budget), `SF6_2PromptBankTests` (12) pins that
+  index to the filesystem both ways so it cannot rot. Personas pruned of contract duplication and
+  enriched: proof-note in the pitfalls pack, owner-block alternate completions in planner, unblocks
+  voice in docs. Evidence `.conductor/evidence/SF6/SF6-2-prompt-bank.md`.
+next: **SF6.3** - `conductor init` scaffolds the refreshed set with telegram + supervisor hints, doctor
+  clean. READ THIS FIRST, it corrects SF6.1's number: the live rig measured the sarban FILE template at
+  **10,191 chars with no persona and no packs** - already 2,000 OVER the ~8191 ceiling. SF6.1's "~200
+  chars headroom" measured the BUILT-IN template; the plan sets templatesDir, so the file one renders.
+  Bug #15 is now REPRODUCED, not inferred - every rig session-001.jsonl is one line, `[stderr] The
+  command line is too long.`, agent never ran, run carried on. Reproducer: `tools/scratch/sf6-2-bank-rig.ps1`.
+  green: 51/51 scoped. red: nothing known. open: bugs **#15 #16 #17 #18 #19 #20 #21**.
 ```
