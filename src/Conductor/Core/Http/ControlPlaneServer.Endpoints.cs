@@ -209,6 +209,15 @@ public sealed partial class ControlPlaneServer
     private async Task WriteSessionsAsync(HttpListenerContext ctx)
     {
         var rows = _store.QuerySessions(_state.RunId);
+        // SF3.3: the commit SUBJECTS, not just the count. The sessions table persists commit_count
+        // and nothing else, but the event log has carried the `--oneline` strings on SessionFinished
+        // since B5 — so the subjects come from the log rather than from a schema migration, and a
+        // session that predates the event (or landed nothing) simply carries an empty list.
+        var commitsByNumber = _store.ReadAllEvents(_state.RunId)
+            .OfType<Events.SessionFinished>()
+            .GroupBy(e => e.Number)
+            .ToDictionary(g => g.Key, g => (IReadOnlyList<string>)[.. g.Last().NewCommits
+                .Concat(g.Last().SatelliteCommits)]);
         var dtos = rows.Select(r => new SessionRowDto(
             Number: r.Number,
             StageId: r.StageId,
@@ -226,7 +235,8 @@ public sealed partial class ControlPlaneServer
             TokensOut: r.TokensOut,
             TokensThink: r.TokensThink,
             TokensCache: r.TokensCache,
-            Digest: SessionDigestDto.From(Events.SessionDigest.FromJson(r.Digest)))).ToList();
+            Digest: SessionDigestDto.From(Events.SessionDigest.FromJson(r.Digest)),
+            Commits: commitsByNumber.TryGetValue(r.Number, out var cs) ? cs : [])).ToList();
         await WriteJsonAsync(ctx, new SessionsDto(dtos), ControlPlaneJsonContext.Default.SessionsDto).ConfigureAwait(false);
     }
 

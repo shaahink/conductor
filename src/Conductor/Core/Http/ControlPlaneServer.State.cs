@@ -1,5 +1,6 @@
 using System.Net;
 using Conductor.Core.Events;
+using Conductor.Core.Face;
 using Conductor.Core.Planning;
 using Conductor.Core.Providers;
 using Conductor.Models;
@@ -73,6 +74,18 @@ public sealed partial class ControlPlaneServer
             // falls back to the plan's own agent rather than reporting nothing.
             Provider = AgentProviderFactory.ResolveName(
                 stageCfg is null ? _plan.Agent : _plan.ResolveAgent(stageCfg)),
+            // SF3.3: the repo's git state. Cached (GitSnapshotCache.Ttl), because this endpoint is
+            // polled once a second by every attached Face and git awareness must not cost two
+            // process spawns per second per viewer.
+            Git = GitDto.From(GitSnapshotCache.Get(_plan.Repo)),
+            // FU-OWNER-10: which build is serving this run, and which Face would it launch. The
+            // engine's half is free (assembly attributes); the Face's is a cached byte scan of the
+            // binary FaceLauncher resolves, and says "unstamped" rather than inventing a sha.
+            EngineVersion = BuildInfo.Current.Version,
+            EngineCommit = BuildInfo.Current.Dirty
+                ? BuildInfo.Current.CommitSha + ".dirty"
+                : BuildInfo.Current.CommitSha,
+            FaceBuild = FaceBuildStamp.Current(),
         };
         await WriteJsonAsync(ctx, dto, ControlPlaneJsonContext.Default.StateDto).ConfigureAwait(false);
     }
