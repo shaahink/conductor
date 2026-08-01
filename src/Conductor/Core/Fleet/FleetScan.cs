@@ -162,6 +162,29 @@ public static class FleetScan
             await TryReadAsync(EngineLock.PathFor(run.StateDir)).ConfigureAwait(false));
     }
 
+    /// <summary>The write token for a run, out of its discovery file. Null when there is no file, no
+    /// token in it, or — the case that matters — the file names a DIFFERENT port than the plane that
+    /// answered: a stale token from a previous engine in the same state dir would 401 every write, and
+    /// silently, since reads never need one.</summary>
+    public static string? TokenFrom(string? discoveryJson, int port)
+    {
+        if (string.IsNullOrWhiteSpace(discoveryJson)) return null;
+        ControlPlaneInfo? info;
+        try { info = JsonSerializer.Deserialize(discoveryJson, ControlPlaneJsonContext.Default.ControlPlaneInfo); }
+        catch (JsonException) { return null; }
+        if (info is null || info.Port != port) return null;
+        return string.IsNullOrWhiteSpace(info.Token) ? null : info.Token;
+    }
+
+    /// <summary>Reads one run's write token off disk. Best effort: a run whose state dir this user
+    /// cannot read still lists, read-only.</summary>
+    public static async Task<string?> ReadTokenAsync(FleetRun run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+        if (string.IsNullOrWhiteSpace(run.StateDir)) return null;
+        return TokenFrom(await TryReadAsync(ControlPlaneServer.DiscoveryPath(run.StateDir)).ConfigureAwait(false), run.Port);
+    }
+
     private static async Task<string?> TryReadAsync(string path)
     {
         try { return File.Exists(path) ? await File.ReadAllTextAsync(path).ConfigureAwait(false) : null; }

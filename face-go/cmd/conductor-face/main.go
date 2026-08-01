@@ -36,6 +36,12 @@ attaches to it — so inside a repo with a live run, just type 'conductor-face'.
 The discovery file also carries the write token every POST needs; reads work
 without it. With --url, pass --token or set CONDUCTOR_TOKEN so writes are accepted.
 
+When several runs are live on one machine, 'conductor face' probes the control
+plane ports itself and — when it cannot tell which run you mean, or you passed
+--pick — hands them over in CONDUCTOR_FLEET. A run picker then runs before the
+dashboard: ↑↓ or 1-9 to choose, enter to attach, esc to quit. That envelope
+carries each run's write token, which is why it is an env var and not a flag.
+
 --theme overrides the scheme for this launch only. To CHANGE the saved choice,
 switch live from the palette (':' then 'theme') — that writes it to
 <user config dir>/conductor-face/config.json, which every later launch reads.
@@ -61,18 +67,42 @@ func main() {
 		os.Exit(2)
 	}
 
+	// The fleet, if the engine handed one over (SF5.4). Read before the TTY check so a Face that
+	// cannot paint still says WHICH runs it was about to offer — that message is the only thing a
+	// non-interactive caller (a log capture, a wrapper script) would otherwise get.
+	fleet, fleetErr := tui.ParseFleet(os.Getenv(fleetEnv))
+
 	if !term.IsTerminal(os.Stdout.Fd()) && os.Getenv("FACE_FORCE_TTY") == "" {
 		fmt.Fprintln(os.Stderr, "conductor-face needs an interactive terminal (stdout is not a TTY).")
+		if fleetErr == nil {
+			fmt.Fprintf(os.Stderr, "The run picker had %d runs to offer:\n", len(fleet.Runs))
+			for i, r := range fleet.Runs {
+				fmt.Fprintf(os.Stderr, "  %d) %-16s %-10s %-24s %s  pid %d  %s\n",
+					i+1, r.RepoLabel(), stageOrDash(r), r.StatusText(), r.BaseURL, r.Pid, writeMode(r))
+			}
+		}
 		fmt.Fprintln(os.Stderr, "Try:  conductor-face --demo   (or run inside a real terminal)")
 		os.Exit(1)
 	}
 
 	var source api.DataSource
 	var baseURL string
+	stateDir := ""
 
-	if *demo {
+	switch {
+	case *demo:
 		source, baseURL = api.NewDemoSource(), "(demo)"
-	} else {
+	case fleetErr == nil && *url == "":
+		// The engine could not pick for us: run the picker FIRST, then attach to what came back.
+		// An explicit --url outranks it — the caller already named the run they mean.
+		chosen, ok := runPicker(fleet.Runs)
+		if !ok {
+			return // looked at the fleet, attached to nothing — a normal exit, not a failure
+		}
+		baseURL, stateDir = chosen.BaseURL, chosen.StateDir
+		source = api.NewLiveSourceWithToken(baseURL,
+			firstNonEmpty(*token, chosen.Token, os.Getenv("CONDUCTOR_TOKEN")))
+	default:
 		var discoveredToken string
 		baseURL, discoveredToken = resolveBaseURL(*url, *host, *port)
 		tok := firstNonEmpty(*token, os.Getenv("CONDUCTOR_TOKEN"), discoveredToken)
@@ -85,13 +115,53 @@ func main() {
 		// SF2.1: find this run's state dir on disk BEFORE anything is polled, so a Face opened after
 		// the engine exited can still say what the run did. Demo mode is excluded because it has no
 		// disk state and must never read a real run's summary into a synthetic tour.
-		model = model.WithStateDir(discoverStateDir())
+		//
+		// A run chosen from the picker names its own state dir, which is the one that matters: walking
+		// up from the working directory would find THIS repo's .conductor while showing another repo's
+		// run, and the last-run card would describe a run nobody is looking at.
+		model = model.WithStateDir(firstNonEmpty(stateDir, discoverStateDir()))
 	}
 
 	if _, err := tea.NewProgram(model).Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "conductor-face: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+// fleetEnv carries the runs `conductor face` found by probing the control-plane ports. It is an
+// environment variable and not a flag because it contains each run's write token, and argv is visible
+// to every process on the machine.
+const fleetEnv = "CONDUCTOR_FLEET"
+
+// runPicker shows the pre-flight run picker and returns the chosen run. A fleet of one still gets the
+// screen: the engine only hands one over when it could NOT decide (or when the user asked to choose),
+// so showing a list of one is the honest answer to "which run?" rather than a silent attach.
+func runPicker(runs []tui.FleetRun) (tui.FleetRun, bool) {
+	final, err := tea.NewProgram(tui.NewPicker(runs)).Run()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "conductor-face: %v\n", err)
+		os.Exit(1)
+	}
+	picker, ok := final.(tui.PickerModel)
+	if !ok {
+		return tui.FleetRun{}, false
+	}
+	return picker.Chosen()
+}
+
+// stageOrDash and writeMode format the no-TTY fleet listing above; the picker itself renders them.
+func stageOrDash(r tui.FleetRun) string {
+	if r.StageID != "" {
+		return r.StageID
+	}
+	return "-"
+}
+
+func writeMode(r tui.FleetRun) string {
+	if r.Token != "" {
+		return "read/write"
+	}
+	return "read-only"
 }
 
 // resolveBaseURL prefers an explicit --url, then an auto-discovered running control plane, then the
