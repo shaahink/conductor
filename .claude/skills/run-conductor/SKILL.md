@@ -65,13 +65,22 @@ Ends with `DRIVER: PASS` and exit code 0. The scratch repo is deleted on exit un
 | `-NoBuild` | fail instead of building if the exe is missing |
 
 What a passing run proves (this is Conductor's trust model in action): the fake agent hand-edits the
-tracker row to `DONE` and commits. The engine re-verifies independently and **discards** the edit —
-`WARNING: 1 checkpoint(s) marked DONE via direct tracker edit (not via conductor task --done): [T0.1]
-— discarded` → `verdict inputs: gates green · commits 1 · newly DONE [] · dirty no` → outcome
-`Progress`, **not** `Advanced`. Session #2 becomes a `Verify` session; the fake agent detects the
-verify prompt and answers with `{"score":95,"findings":[],"verdict":"PASS"}` → `verifier passed
-(95/80)` and the workflow cycles back to deliver. `status` still reports `checkpoints 0/2` — flips
-only count via `conductor task --done`, and the fake agent never calls it.
+tracker row to `DONE` and commits, and the engine re-verifies independently rather than believing it.
+The claim signal is the **work graph** — what `conductor task --done` or MCP `task_update` wrote
+during the session — not the markdown (`VerdictEngine.cs`, W1.3). A tracker-only flip is not silently
+honoured: it is **flagged and accepted via the transition fallback**, so an old-habit agent still
+makes progress but does it loudly, with a `WARNING: … flipped DONE only in the tracker markdown … —
+accepted via the transition fallback` and a `legacy-claim` row in the ledger.
+
+Session #2 becomes a `Verify` session; the fake agent detects the verify prompt and answers with
+`{"score":95,"findings":[],"verdict":"PASS"}` → `verifier passed (95/80)` and the workflow cycles back
+to deliver.
+
+> **Re-capture this transcript when you next run the loop.** An earlier revision of this page quoted a
+> `— discarded` warning and `newly DONE []` / `checkpoints 0/2`. The engine has not behaved that way
+> since W1.3 added the fallback: it emits different text and *counts* the flip. The exact console
+> output of a `-Mode success` run at the current revision has not been re-recorded, so it is described
+> above rather than quoted (SF7.1).
 
 To inspect the artifacts after a run:
 
@@ -130,10 +139,14 @@ dotnet test Conductor.slnx
 - **Command descriptions are Spectre markup — escape literal brackets.** `conductor --help` used to
   crash partway (`Could not find color or style '--all'`) because a description contained `[--all]`;
   it's `[[--all]]` now. Any new description with bracketed text needs the same doubling.
-- **Claims are never trusted — hand-edited tracker rows are discarded.** An agent that edits the
-  tracker to `DONE` instead of calling `conductor task --done` does **not** advance the checkpoint.
-  Note the split view afterward: `REPORT.md` reflects the tracker *text* (shows `1/2`) while `status`
-  reflects *confirmed* advancement from `run.db` (shows `0/2`). This is by design.
+- **Claims come from the work graph, not the markdown — and a tracker hand-edit is flagged, not
+  silently honoured.** `conductor task --done` / MCP `task_update` is the claim. An agent that instead
+  edits the tracker to `DONE` still advances the checkpoint, via the W1.3 **transition fallback**, but
+  the engine logs `WARNING: … flipped DONE only in the tracker markdown … — accepted via the
+  transition fallback` and writes a `legacy-claim` ledger row naming it. The tracker is a generated
+  view of `run.db`; treat a flip there as a legacy signal that will be reported on, not as a way to
+  claim work quietly. (Corrected at SF7.1 — this bullet used to say such edits are *discarded* and the
+  checkpoint does not advance, which the engine has not done since W1.3.)
 - **`face-go` is a real Bubble Tea TUI — you cannot "screenshot" it by piping stdout.** Redirecting
   its output yields only terminal-negotiation bytes (`[?2026$p...`), not a frame, even with
   `FACE_FORCE_TTY=1` (that bypasses the interactive-terminal *check*, but a pipe still has no size).
