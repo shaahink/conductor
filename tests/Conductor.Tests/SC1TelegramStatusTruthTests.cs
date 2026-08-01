@@ -248,9 +248,13 @@ public sealed class SC1TelegramStatusTruthTests : IDisposable
         Assert.True(body.GetProperty("viaQueue").GetBoolean());
         Assert.Contains("live send queue", Str(body, "detail"), StringComparison.Ordinal);
 
-        // And it really did land behind the earlier push, in queue order.
+        // And it really did land behind the earlier push, in queue order. Since FU-OWNER-11 every
+        // outbound message is stamped at SendAsync, so an ordinary push reaches the wire as the
+        // identity line and then its body. Read the stamp off the live service rather than pinning
+        // its shape a second time here — FuOwner11PushIdentityTests owns that — but keep the exact
+        // equality, which now also proves a plain push is attributable.
         var sent = bot.Sent;
-        Assert.Equal("QUEUED-FIRST", sent[0]);
+        Assert.Equal(svc.IdentityLine + "\nQUEUED-FIRST", sent[0]);
         Assert.Contains("live push queue", sent[1], StringComparison.Ordinal);
     }
 
