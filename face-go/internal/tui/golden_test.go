@@ -264,6 +264,32 @@ func fixedState() *api.StateDto {
 		SessionTokensInput:     3400,
 		SessionTokensOutput:    1900,
 		SessionTokensReasoning: 800,
+		// SF3.3. The golden fixture carries the INTERESTING git state — tracked, ahead, behind and
+		// dirty — because a fixture that is clean and in sync exercises none of the rendering: the
+		// chip's divergence mark, its dirty dot and Home's dirty summary would all be blank, and the
+		// frames would pin an empty result as if it were the feature.
+		Git: &api.GitDto{
+			IsRepo:       true,
+			Branch:       "feat/gate-caching",
+			Upstream:     strPtr("origin/feat/gate-caching"),
+			Ahead:        intPtr(3),
+			Behind:       intPtr(1),
+			HeadSha:      "9f2c1ab7d4e60b83a5c1e2f0d7b6a94c3e8f1d20",
+			HeadShortSha: "9f2c1ab",
+			HeadSubject:  "feat(gates): key the cache by (name, tier, sha)",
+			Dirty:        true,
+			DirtyCount:   4,
+			DirtySummary: "M src/Core/GateCache.cs, M src/Core/RunDb.cs, M tests/GateCacheTests.cs, ?? notes.md",
+			RecentCommits: []api.GitCommitDto{
+				{Sha: "9f2c1ab", Subject: "feat(gates): key the cache by (name, tier, sha)"},
+				{Sha: "4b81d33", Subject: "test(gates): the last-passing lookup joins attempts"},
+			},
+		},
+		// FU-OWNER-10: which build is serving this run, pinned in the frames so a change to the
+		// stamp's shape shows up as a diff rather than as a screenshot nobody compared.
+		EngineVersion: "0.2.3-alpha.0.20",
+		EngineCommit:  "7d2b1e378ae3",
+		FaceBuild:     "d500f00a1b2c",
 		Stages: []api.StageDto{
 			{Id: "F0", Title: "Foundations", Done: 3, Total: 3, State: "confirmed"},
 			{Id: "F6", Title: "Ink TUI v1", Done: 5, Total: 5, State: "confirmed"},
@@ -481,6 +507,7 @@ func newGoldenModel(width, height int) tea.Model {
 }
 
 func strPtr(s string) *string { return &s }
+func intPtr(i int) *int       { return &i }
 
 // openKanbanDetailGolden walks to the second card and opens its detail, feeding the fixed block
 // composition the way the live poll would (commands are never executed in golden runs).
