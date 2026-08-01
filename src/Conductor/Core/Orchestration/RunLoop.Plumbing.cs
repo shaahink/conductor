@@ -239,6 +239,21 @@ public sealed partial class RunLoop
 
     // ---------------------------------------------------------------- notifications
 
+    /// <summary>FU-OWNER-11 — the run says, once, which machine it is running on and which engine
+    /// build is driving it. The session-level identity rides every message (see
+    /// <c>TelegramService.IdentityLine</c>), but repo and build are run-scoped facts that would
+    /// otherwise never reach the chat at all: an owner reading a notification hours later could not
+    /// tell which checkout it came from, and could not date it to a binary. The version comes from
+    /// <see cref="BuildInfo.Current"/> — the assembly's own stamp, FU-OWNER-10's field — never from a
+    /// hand-maintained constant, which is exactly how a hand-typed message once quoted a version the
+    /// engine had already replaced.</summary>
+    private void NotifyRunStart()
+    {
+        var verb = _ctx.State.SessionCounter > 0 ? "resumed" : "started";
+        Notify($"Conductor {_ctx.Plan.Name}: run {verb} — repo {_ctx.Plan.Repo} " +
+               $"(branch {Git.Branch(_ctx.Plan.Repo)}) · engine {BuildInfo.Current.Full}");
+    }
+
     private void Notify(string message)
     {
         _ = _ctx.Telegram.PushAsync(message);

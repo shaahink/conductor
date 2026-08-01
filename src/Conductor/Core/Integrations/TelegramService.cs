@@ -379,13 +379,34 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
         catch (ChannelClosedException) { }
     }
 
+    /// <summary>FU-OWNER-11 — the two facts a Telegram message cannot recover on its own: WHICH plan
+    /// sent it and WHICH session it belongs to. One chat can receive two machines' runs, so an
+    /// unattributed line is unreadable; and a message read hours later has no other way to be placed
+    /// in the run's history. The observed failure was the mirror image — a hand-typed operator
+    /// message was indistinguishable from an engine push, and quoted an engine version the run had
+    /// already superseded.
+    /// <para>Read off the LIVE plan and state rather than a constructor snapshot: a reload can rename
+    /// the plan (SC1.3) and the session counter moves under every message.</para></summary>
+    internal string IdentityLine
+    {
+        get
+        {
+            var name = string.IsNullOrWhiteSpace(_plan.Name) ? "conductor" : _plan.Name.Trim();
+            return FormattableString.Invariant($"<i>{EscapeHtml(name)} · s{_state.SessionCounter}</i>");
+        }
+    }
+
     internal async Task SendAsync(string chatId, string text, CancellationToken ct,
         string? keyboardJson = null)
     {
         var payload = new Dictionary<string, object>(StringComparer.Ordinal)
         {
             ["chat_id"] = chatId,
-            ["text"] = text,
+            // FU-OWNER-11: stamped HERE, the one point every push, digest, command reply and test
+            // message passes through on its way to the wire — so no existing call site can forget it
+            // and no call site added later can either. Prefixing at PushAsync would have left the
+            // /status replies, the daily digest and the token-test message anonymous.
+            ["text"] = FormattableString.Invariant($"{IdentityLine}\n{text}"),
             ["parse_mode"] = "HTML",
         };
         if (keyboardJson != null)

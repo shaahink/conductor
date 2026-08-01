@@ -1,10 +1,10 @@
 ﻿# Conductor — Sarban face - the watcher and the surfaces run report
 
-_Updated 2026-08-01 09:27 UTC · branch `feat/sarban` · HEAD `ea6edc7`_
+_Updated 2026-08-01 09:51 UTC · branch `feat/sarban` · HEAD `1eeda0b`_
 
-**Status:** Running
+**Status:** Idle
 **Stage:** SF4 — The human queue is a first-class surface · attempts used 0 · working ▸ SF4.2
-**Checkpoints:** 14/24 done · **Sessions run:** 20 · **Cost:** $181.3823 (agent $181.2893 + gates $0.0930) · **Tokens:** 3,135,338 in / 979,024 out
+**Checkpoints:** 14/24 done · **Sessions run:** 21 · **Cost:** $187.5304 (agent $187.4217 + gates $0.1087) · **Tokens:** 3,255,213 in / 1,026,011 out
 **Confirmed phases:** SF0, SF1, SF2, SF3
 
 ## Stage progress
@@ -66,7 +66,7 @@ _Updated 2026-08-01 09:27 UTC · branch `feat/sarban` · HEAD `ea6edc7`_
 | # | Title | Status | Commit |
 |---|---|---|---|
 | SF4.1 | OWNER-QUEUE.md and GET /owner/queue collect every open human item — HUMAN lines, ownerGates, parks with age, blocked-until waits — each saying what it unblocks and the command that clears it, regenerated at session boundaries | ✅ DONE | - |
-| SF4.2 | The face surfaces the owner queue with age and unblocks, and a newly-arrived item pushes to Telegram | ⬜ TODO | - |
+| SF4.2 | The face surfaces the owner queue with age and unblocks, and a newly-arrived item pushes to Telegram | 🔄 IN PROGRESS | - |
 
 </details>
 
@@ -124,16 +124,13 @@ _Updated 2026-08-01 09:27 UTC · branch `feat/sarban` · HEAD `ea6edc7`_
 | 18 | SF3 | Deliver | 1 | 08-01 03:07 | 0:21 | RolledOver |  | 0 |  | $5.8529 |  | 118,847/2,848 |
 | 19 | SF3 | Deliver | 1 | 08-01 03:28 | 0:14 | Advanced | SF3.3 | 3 | engine-fast:OK · face-fast:OK | $6.0631 | $0.0072 | 129,054/48,297 |
 | 20 | SF4 | Deliver | 1 | 08-01 09:00 | 0:27 | RolledOver |  | 0 |  | $5.8124 |  | 131,809/1,841 |
+| 21 | SF4 | Deliver | 1 | 08-01 09:27 | 0:21 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $6.1325 | $0.0157 | 119,875/46,987 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-01 02:15:39  ▪ gate face-fast pass [session]  (6.5s)
-08-01 02:15:40  • session #12 SF2 → Advanced · done SF2.3 · 3 commit(s)  (20m42s)
-08-01 02:19:45  ▪ gate engine-fast pass [phase]  (0.0s)
-08-01 02:19:45  ▪ gate face-fast pass [phase]  (0.0s)
 08-01 02:19:45  ▪ gate engine-full pass [phase]  (3m44s)
 08-01 02:19:45  ▪ gate face-full pass [phase]  (16.9s)
 08-01 02:19:45  ✓ checkpoint SF2.3 confirmed
@@ -170,6 +167,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-01 04:48:55  ▸ stage SF4 entered — The human queue is a first-class surface
 08-01 04:48:55  ■ needs human — agent asked for a human in the tracker handoff (HUMAN: line) — resolve, then run `conductor resume`
 08-01 10:00:13  • session #20 SF4 Deliver started (attempt 1/4)
+08-01 10:27:27  • session #20 SF4 → RolledOver  (27m14s)
+08-01 10:27:28  • session #21 SF4 Deliver started (attempt 1/4)
+08-01 10:51:24  ▪ gate engine-fast pass [session]  (1m28s)
+08-01 10:51:24  ▪ gate face-fast pass [session]  (1m08s)
 ```
 
 ## Health
@@ -177,7 +178,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 20 · retries 1 (5 %) · overall Warn
+sessions 21 · retries 1 (5 %) · overall Warn
 ⚠ [context-saturation] session #3: 24,790,251 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #4: 21,397,049 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #5: 36,996,007 context tokens (≥ 20,000,000)
@@ -195,10 +196,6 @@ working tree: clean
 
 ### Commits by session
 
-- **s6 (SF1 Deliver)** — 3 commit(s):
-  - [`ed4ed29`](https://github.com/shaahink/conductor/commit/ed4ed29) docs(tracker): SF1.2 handoff - twelve tabs, a new bug class, and a second writer in this tree
-  - [`4bb6c24`](https://github.com/shaahink/conductor/commit/4bb6c24) test(face): rebaseline every golden for twelve tabs, plus Home's Wiring and Report's token table
-  - [`8f96ef2`](https://github.com/shaahink/conductor/commit/8f96ef2) feat(face): delete the SQL console and re-home the two panels that were never the problem
 - **s10 (SF2 Deliver)** — 4 commit(s):
   - [`6d2c024`](https://github.com/shaahink/conductor/commit/6d2c024) docs(tracker): SF2.1 handoff - one connection line, a run that outlives its engine, and a truncate() that eats meaning
   - [`bb58cc8`](https://github.com/shaahink/conductor/commit/bb58cc8) test(face): rebaseline every golden for the honest Home - one engine line, normalised paths, and a run that outlives its engine
@@ -227,6 +224,9 @@ working tree: clean
   - [`5d88b21`](https://github.com/shaahink/conductor/commit/5d88b21) docs(tracker): SF3.3 claimed complete, SF3 closes and SF4.1 is next
   - [`1579880`](https://github.com/shaahink/conductor/commit/1579880) test(face): rebaseline the session detail, and pin the jumped-stage rail (SF3.3)
   - [`f91fa5e`](https://github.com/shaahink/conductor/commit/f91fa5e) feat(face): what a session landed, and when the run left the declared order (SF3.3, part 2d)
+- **s21 (SF4 Deliver)** — 2 commit(s):
+  - [`1eeda0b`](https://github.com/shaahink/conductor/commit/1eeda0b) docs(tracker): SF4.2 part 1 landed, and the disk that failed 18 tests
+  - [`f0d12bb`](https://github.com/shaahink/conductor/commit/f0d12bb) fix(telegram): a queued reload says so, instead of advising the edit you just made (FU-OWNER-13)
 
 ## Phase handovers (audit)
 
@@ -249,27 +249,28 @@ working tree: clean
 
 ## Last gate run
 
-engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
+engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: **SF3.3 is complete and claimed** (`conductor task --done SF3.3 --evidence .conductor/evidence/SF3/SF3.3-part2d-renderers.md`), which closes stage SF3. I found the handoff block stale — session 18 had landed parts 2b and 2c (top-bar branch chip + build stamp, Home's Git panel) but was killed before writing a handoff — so I delivered the two renderers that were genuinely missing. `f91fa5e`: the session-history detail now renders the session's own commits as `<short sha> <subject>` lines between the digest and the result summary, with the count-without-subjects case (an engine older than SF3.3) saying so rather than contradicting the "1 commit" on the row above, and overflow co…
+> SESSION-RESULT: Landed **one of SF4.2's four deliverables** — FU-OWNER-13 (`f0d12bb`), which stops `GET /telegram/status` and `POST /telegram/token` from telling the owner to "add a telegram block to the plan" during the window between a saved plan edit and the run loop's next session boundary; both now say the reload is queued, and `reloadPending` rides the status payload so the face can show *waiting* rather than *unconfigured*. `ControlPlaneServer.QueueReload(saved)` replaces all three bare `_inbox.Enqueue(ReloadPlan)` sites and `SwapPlan` clears the flag, so "pending" cannot outlive its reload; two honesty rails are pinned by tests (a non-telegram edit's queued reload leaves the original…
 
 ## Tracker handoff
 
 ```
-last: **SF4.1 DONE and claimed.** `287f5e2` + this commit. `OwnerQueue.Collect` folds six live
-  sources (HUMAN lines, unapproved ownerGates, the park, a live blocked-until wait, BLOCKED cards,
-  skipped stages) into one urgency-ordered list; each entry says what it UNBLOCKS and the exact
-  command that clears it. `.conductor/OWNER-QUEUE.md` rides the report write path (every session
-  boundary) and `GET /owner/queue` serves the same entries from the LIVE RunState. Evidence
-  `.conductor/evidence/SF4/SF4.1-owner-queue.md`; 16/16 new tests, 60/60 neighbours.
-next: **SF4.2** - the face half. Home section when short, own view when not, with age and unblocks;
-  a NEW queue item pushes to Telegram. Same commit also owes FU-OWNER-11 (prefix every push with
-  plan name + session number, repo + engine version in run-start/run-end) and FU-OWNER-13
-  (`reloadPending` on /telegram/status and both replies saying a reload is queued).
-traps: null `ageSeconds` on the wire means UNKNOWN, never zero - use a pointer field. A `wait`
-  entry carries an EMPTY command on purpose: `conductor resume` does not clear a blocked-until.
-green: build clean; OwnerQueueTests 16/16; Architecture/ControlPlaneServer/Reporter 60/60.
+last: **SF4.2 part 1 of 4** (`f0d12bb`) - FU-OWNER-13 only. SF4.2 stays IN PROGRESS, not claimed.
+  A queued plan reload now says so: `reloadPending` on `GET /telegram/status`, and both that reply
+  and `POST /telegram/token` stop advising the telegram block the edit just added.
+  `ControlPlaneServer.QueueReload(saved)` is the only enqueue path; `SwapPlan` clears it.
+  Evidence `.conductor/evidence/SF4/SF4.2-part1-reload-pending.md`; 4/4 new tests.
+next: the other THREE quarters of SF4.2, in this order. (a) FIRST re-run the neighbour battery -
+  see red below. (b) Face owner-queue surface off `GET /owner/queue`: Home section when short,
+  full-pane view on the free key `w` when long - do NOT add an 11th tab, SF1.3 capped it at ten;
+  update the cmdbar help legend too (trap 11). (c) new queue item -> Telegram push, diffed at the
+  report write path. (d) FU-OWNER-11 identity, at the one choke point TelegramService.PushAsync.
+red: **drive C: hit 0 bytes free** - 18 tests failed on `not enough space on the disk`, NOT a
+  regression. `tools/scratch/purge-leaked-test-temp.ps1` (committed) reclaims the 24k leaked
+  `conductor-*` %TEMP% dirs; a partial pass freed 1 GB. Neighbours were never re-run after it.
+green: build clean; FuOwner13ReloadPendingTests 4/4.
 open: bugs **#15 #16 #17 #18 #19**.
 ```

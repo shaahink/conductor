@@ -85,6 +85,7 @@ public sealed partial class RunLoop
             });
             _ctx.Store?.InitializeRun(_ctx.State.RunId, _ctx.Plan.Name, _ctx.Plan.Repo, Git.Branch(_ctx.Plan.Repo),
                 typeof(RunLoop).Assembly.GetName().Version?.ToString());
+            NotifyRunStart();
             _ctx.ProcessSupervisor?.ReapOrphans();
             SyncWorkGraphFromDeclared();
             WarnOnBranchPattern();
