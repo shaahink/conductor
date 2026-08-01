@@ -4,21 +4,23 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **session 36, FIX - all three battery reds green, nothing weakened.** Full engine suite
-  **1756 passed / 0 failed** at be0394d. (a) The 8000-char budget red was NOT SF6.3's prose: the
-  session template is byte-identical across the split and ToolContract has not changed since SF6.1.
-  The only term that varies per run is `Environment.ProcessId`, so the guard had ~1 char of margin
-  and a 5-digit test-host pid tipped it. Fixed by compressing tools-block prose with every lesson
-  kept, and the guard was TIGHTENED 8000 -> **7900**. (b) SC4.4 re-anchored on headings the current
-  built-in has, one assertion added, none removed - bug **22 closed**. (c) SF6.3's switch enumerator
-  now LOCATES the switch across `PromptBuilder*.cs` instead of naming a file that moved.
-next: **SF7.1** - docs reconciled with reality. red: nothing known.
-  TRAP measured here: a fix session CANNOT follow its own step 1 - `task --in-progress` is refused on
-  a DONE card. Leave it claimed, re-claim with fresh evidence; never `--todo` a real delivery. fix.md
-  now says so. TRAP: prompt bytes are the tightest budget in the system - deliver 7803, fix 7731
-  against 7900; adding a template line still means cutting one. Sessions carry `CONDUCTOR_PLAN`, so
-  `cd $rig; conductor doctor` measures THIS repo - pass --plan.
-  open: bugs **#15 #16 #17 #18 #19 #20 #21**.
+last: **session 37 - SF7.1 part 1 of 2 landed, NOT claimed.** `1ebb536` `d4f8993`. Suite **1761/0**.
+  tracker.md's runtime tree described a run that does not happen: after 36 sessions `events.jsonl`,
+  `state.json`, `queue/`, `lanes/`, `audits/` are all ABSENT, and 13 real artifacts were undocumented.
+  Nothing constructs an `EventLog` any more - the spine is run.db's `events` table. Rewritten and now
+  PINNED by `SF7_1DocsMatchRealityTests`, which scans src for `StateDir, "x"` literals; falsified on
+  the old doc first (it named all 13). operating.md section 7 re-measured: 4 rows closed, rest re-owned.
+next: **SF7.1 part 2** - three parts remain, and the ledger note for SF7 has the measured lists so
+  you do NOT re-derive them: (1) `docs/dev/NEXT-FEATURES.md` refresh - I measured which items shipped
+  and which are still open, both lists are in the note; also file the MCP item the spec orders
+  (evidence: devcontext field notes section 8, lines 170-172). (2) the closure ledger over
+  `.conductor/followups.md` AND the 7 open bug ids. (3) the era `CHANGELOG.md` entry under Unreleased.
+  MEASURED, do not redo: plan-config.md's advisor section is already CORRECT (SC3.4 fixed it - the
+  spec's "wrong today" is stale); operating.md's SF5 supervision section was already complete.
+  Of the followups still open, SF3.3/SF4/SF4.2 DID close FU-OWNER-10/11/13 (ControlPlaneDto.cs:82-88,
+  TelegramService.cs:382, ControlPlaneDto.Telegram.cs:27) - but **FU-F1-06 is still open and its
+  re-home premise was wrong**: `IRunStore` has only `RecordRunEnd`, which stamps `ended_utc`, and SF2.1
+  never needed a status-only writer. red: nothing known. open: bugs **#15 #16 #17 #18 #19 #20 #21**.
 
 
 ## Baseline numbers (from run.db)
@@ -87,9 +89,9 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| SF6.1 | The built-in session and fix templates carry the field lessons: in-progress first, claim before handoff, deferred-MCP fallback on one line, long commands under conductor bg, the anchor-commit rule for multi-repo plans | DONE | 8dd1aa3 | .conductor/evidence/SF6/SF6-1-prompt-gates.log |
+| SF6.1 | The built-in session and fix templates carry the field lessons: in-progress first, claim before handoff, deferred-MCP fallback on one line, long commands under conductor bg, the anchor-commit rule for multi-repo plans | DONE | 8dd1aa3 | .conductor/evidence/SF6/SF6-fix-s36-budget-and-anchors.md |
 | SF6.2 | The prompt bank under plans/ is pruned, enriched from the rounds — proof-note pattern, owner-block alternate completions, the unblocks voice — and indexed so it is choosable | DONE | 4b894c1 | .conductor/evidence/SF6/SF6-2-prompt-bank.md |
-| SF6.3 | conductor init scaffolds the refreshed template set with telegram and supervisor hints, and its output passes doctor clean | DONE | - | .conductor/evidence/SF6/SF6-3-init-scaffold.md |
+| SF6.3 | conductor init scaffolds the refreshed template set with telegram and supervisor hints, and its output passes doctor clean | DONE | - | .conductor/evidence/SF6/SF6-fix-s36-budget-and-anchors.md |
 
 ### SF7 — Ship the era
 
