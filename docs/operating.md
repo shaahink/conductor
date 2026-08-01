@@ -346,44 +346,52 @@ caching, and NEEDS-HUMAN escalation. Full detail: `docs/history/maestro/M9-FINAL
 
 ---
 
-## 7. Known gaps & missing features (as of 2026-07-15, Maestro closed 30/30)
+## 7. Known gaps & missing features (as of 2026-08-01, end of the Sarban era)
+
+Re-measured at the close of the Sarban era, not carried forward. Four of the ten items on the
+2026-07-15 list are gone — closed by the two eras that ran since — and what is left is stated with
+what still owns it. The open engineering rows also live in
+[`docs/dev/NEXT-FEATURES.md`](dev/NEXT-FEATURES.md), which is where new ones should be filed.
 
 **Owner-only (credential-gated `HUMAN:` — neither blocks engine use):**
-1. **Live Telegram phone dogfood (M8.3).** Backend (`SecretsStore`, `/telegram/*`, `TestConnectionAsync`)
-   and the Face's guided-setup tab are built and tested; the actual phone-driven run needs the owner's
-   real bot token pasted into the Face. Truth gate ("toy run driven from the phone, lid closed") unmet.
-2. **Full real-model run (M9.1).** The engine, gates, escalation, history, and cost accounting are all
-   green under the token-free fake agent; the confirmation on the real DeepSeek/opencode model is a
-   paid run only the owner can start.
+1. **Live Telegram phone dogfood.** The backend is done and then some: SC1 made the readiness verdict
+   the same sentence everywhere, SF0.1 made a run *volunteer* it at startup, and SF4.2 gave the pushes
+   an identity (repo, plan, run) and a `reloadPending` answer. The phone-driven run still needs the
+   owner's real bot token — on this repo's own run the startup line reads *"telegram will NOT
+   deliver — configured but no bot token"*, which is the gap saying its own name.
+2. ~~**Full real-model run.**~~ **CLOSED by the Sarban era itself** — two self-hosted plans, 8 + 8
+   stages, driven end to end by a real model against this repo, with claims, gates, escalation and
+   cost accounting all exercised on live sessions rather than a fake agent.
 
 **Incomplete design-doc items:**
 3. **Persona kill-list residue.** The design doc's kill-list wants the 9-persona system gone; the heavy
-   system was removed but a slim `PersonaRegistry` (~83 lines) + scattered `persona` references remain.
-   Harmless (no failing test), but not the clean deletion the doc asked for.
-4. **`conductor init` is intentionally minimal.** It scaffolds plan + templates + gates + repo
-   detection, but NOT domain "packs" (the design's M8.2 mentioned packs), and leaves `advisor` /
-   `statusAgent` / `telegram` unset for the user to fill in.
+   system was removed but a slim `PersonaRegistry` + scattered `persona` references remain (`RunContext`,
+   `RunLoop.Snapshot`, the control-plane DTO). Harmless — no failing test, and SF6.2 pruned the stale
+   persona *content* out of the prompt bank — but not the clean deletion the doc asked for.
+4. ~~**`conductor init` is intentionally minimal.**~~ **CLOSED by SF6.3.** It now scaffolds the whole
+   template set rather than two of them, and writes commented `advisor` / `telegram` blocks into the
+   plan so the two settings most runs want are one uncomment away instead of one doc-read away.
 
-**Operational limitations (see `DOGFOOD-RUNBOOK.md`):**
-5. ~~**Closing the terminal window kills the run ungracefully.**~~ **FIXED (W3.3, `c8f9b56`).**
-   `ConsoleCtrlRails` wires `CTRL_CLOSE_EVENT`/logoff/shutdown into the same graceful stop as Ctrl+C
-   and blocks inside the OS handler until the run has saved. Closing the window parks the run and
-   leaves it resumable — proven from outside the process by `tools/w3/window-close.ps1`
-   (`docs/dev/workgraph/W3-WINDOW-CLOSE.md`). Ctrl+C is still the tidiest exit; the ✕ is no longer a
-   data-loss risk.
-6. **The crash-log net reports a crash but doesn't recover in-flight work** beyond what git already has.
+**Operational limitations:**
+5. **The crash-log net reports a crash but doesn't recover in-flight work** beyond what git already
+   has. Closing the terminal window is *not* in this category any more — `ConsoleCtrlRails` wires
+   `CTRL_CLOSE_EVENT`/logoff/shutdown into the same graceful stop as Ctrl+C and blocks inside the OS
+   handler until the run has saved, proven from outside the process by `tools/w3/window-close.ps1`
+   (W3.3, `c8f9b56`; `docs/dev/workgraph/W3-WINDOW-CLOSE.md`).
 
 **Ergonomics / polish (minor):**
-7. **`plan import` needs an existing valid plan to diff against** — there's no clean from-scratch
+6. **`plan import` needs an existing valid plan to diff against** — there's no clean from-scratch
    bootstrap. Workaround: `conductor init` first, then `plan import`.
-8. **A fully-done stage in a `perPhase` plan renders `gating` indefinitely** (`SnapshotBuilder`), which
+7. **A fully-done stage in a `perPhase` plan renders `gating` indefinitely** (`SnapshotBuilder`), which
    can read as "stuck" long after the phase gate passed. By-design, but easy to misread.
-9. **`status` can show `sessions 0` against a re-seeded `run.db`** — the checkpoint count (seeded from
+8. **`status` can show `sessions 0` against a re-seeded `run.db`** — the checkpoint count (seeded from
    the tracker on startup) and the recorded-session count can diverge.
-10. **No CI / release automation** (`.github/workflows` absent) and the installer publishes
-    framework-dependent (needs the .NET 10 runtime present, which it is here). Expected for a one-user
-    tool; noted for completeness.
+9. ~~**No CI / release automation.**~~ **CLOSED by SC8.** `.github/workflows/ci.yml` builds and tests
+   the tree (including a `ubuntu-latest` leg) on every push, and `release.yml` publishes a tagged
+   build whose notes are the matching `CHANGELOG.md` section — it refuses a tag that has none. The
+   installer still publishes framework-dependent (needs the .NET 10 runtime present).
 
-None of items 3–10 blocks day-to-day operation. The engine builds clean (0w/0e), the full C# suite is
-green (704), the anti-cheat ratchet is green, face-go is green, and a real `conductor run` drives a
-plan end-to-end with correct claims-vs-confirmations, gate caching, and human escalation.
+None of items 3–8 blocks day-to-day operation, and the era closed with the engine building clean
+(0w/0e), the C# suite green, the anti-cheat ratchet green, face-go green, and a real `conductor run`
+driving two full plans end to end with correct claims-vs-confirmations, gate caching and human
+escalation.
