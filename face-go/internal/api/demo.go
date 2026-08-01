@@ -1033,6 +1033,37 @@ func makeFakeState() *StateDto {
 			{Name: "lint", State: "pending", ElapsedSec: 0},
 			{Name: "audit", State: "pending", ElapsedSec: 0},
 		},
+		// SF3.3. The demo repo is the INTERESTING case on purpose — a feature branch that tracks a
+		// remote, is ahead of it, and has an unclean tree — because that is the state a run is
+		// actually in while it works, and a demo that only ever shows `main / clean / in sync`
+		// exercises none of the rendering that matters. The two degenerate cases (no upstream, not a
+		// repo) are covered by tests rather than by the demo, which can only show one repo at a time.
+		Git: &GitDto{
+			IsRepo:       true,
+			Branch:       "feat/gate-caching",
+			Upstream:     strPtr("origin/feat/gate-caching"),
+			Ahead:        intPtr(3),
+			Behind:       intPtr(1),
+			HeadSha:      "9f2c1ab7d4e60b83a5c1e2f0d7b6a94c3e8f1d20",
+			HeadShortSha: "9f2c1ab",
+			HeadSubject:  "feat(gates): key the cache by (name, tier, sha)",
+			Dirty:      true,
+			DirtyCount: 4,
+			// The engine serves porcelain rows joined with commas, not a prose summary — verified
+			// against a live `GET /state` (testdata/state_git_wire.json). The demo must carry the
+			// wire's shape, or the renderer is designed against a sentence that never arrives.
+			DirtySummary: "M src/Core/GateCache.cs, M src/Core/RunDb.cs, M tests/GateCacheTests.cs, ?? notes.md",
+			RecentCommits: []GitCommitDto{
+				{Sha: "9f2c1ab", Subject: "feat(gates): key the cache by (name, tier, sha)"},
+				{Sha: "4b81d33", Subject: "test(gates): the last-passing lookup joins attempts"},
+				{Sha: "c07e5a9", Subject: "refactor(store): one place that opens run.db"},
+			},
+		},
+		// FU-OWNER-10, in the demo too: "which build am I attached to" must be visible to someone
+		// evaluating the Face offline, or the answer is only ever discoverable on a live run.
+		EngineVersion: "0.2.3-alpha.0.20",
+		EngineCommit:  "7d2b1e378ae3",
+		FaceBuild:     "d500f00a1b2c",
 	}
 }
 
@@ -1123,9 +1154,18 @@ func makeFakeSessions() []SessionRowDto {
 				FileWrites:     12,
 				BackgroundJobs: []string{"F7 gate cache - full solution build", "F7 gate cache - test sweep"},
 				Commands:       []string{"dotnet build src/App", "dotnet test --filter GateCacheTests"},
+			},
+			// SF3.3: two commits, and the row above them says "2 commits". The subjects are the half
+			// that says what the two WERE — which is the whole reason the count alone was not enough.
+			Commits: []string{
+				"4b81d33 test(gates): the last-passing lookup joins attempts",
+				"c07e5a9 refactor(store): one place that opens run.db",
 			}},
 		// A session with NO digest, on purpose: sessions recorded before SC7.2 carry none, and the
 		// panel has to render nothing for them rather than a row of zeros.
+		// It also carries a commit COUNT with no subjects — a session finished before SF3.3 taught the
+		// engine to read them out of the event log. The detail pane must fall back to the count it has
+		// always had rather than reporting a session with one commit as having landed nothing.
 		{Number: 8, StageId: "F6", Kind: "Deliver", Outcome: strPtr("completed"), Attempt: 1, CommitCount: 1, GateSummary: strPtr("build ✓ test ✓"),
 			StartedUtc: "2026-07-15T07:48:20Z", EndedUtc: strPtr("2026-07-15T08:29:44Z"), CostUsd: 0.0912},
 		{Number: 2, StageId: "F1", Kind: "Deliver", Outcome: strPtr("completed"), Attempt: 1, CommitCount: 4, GateSummary: strPtr("build ✓ test ✓ lint ✓"),
@@ -1159,6 +1199,10 @@ func demoDigest() *SessionDigestDto {
 
 func strPtr(s string) *string {
 	return &s
+}
+
+func intPtr(n int) *int {
+	return &n
 }
 
 // HasWriteToken: the demo source accepts every write locally — there is no control plane to refuse

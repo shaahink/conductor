@@ -154,6 +154,61 @@ type StateDto struct {
 	// When the current window opened — the instant of the approval. "" = never approved past a park.
 	BudgetWindowStartedUtc string `json:"budgetWindowStartedUtc"`
 	BudgetApprovals        int    `json:"budgetApprovals"`
+
+	// ── SF3.3: the repo's git state, served since the engine half of SF3.3.
+	//
+	// NIL AND EMPTY ARE DIFFERENT FACTS, and the whole block exists to keep them apart. A nil Git is
+	// an engine that predates SF3.3 — it knows nothing about the repo and the Face must say nothing
+	// rather than paint a wrong "clean". A non-nil Git with IsRepo false is an engine that looked and
+	// found a directory that is not a git repo at all, which is worth saying out loud.
+	Git *GitDto `json:"git"`
+
+	// ── FU-OWNER-10: which build is serving this run. The owner spent four out-of-band checks
+	// answering "did my reinstall take?" because no surface named the engine it was attached to.
+	// "" = an engine that predates the field; render nothing rather than "unknown", which reads like
+	// a failed lookup rather than an old engine.
+	EngineVersion string `json:"engineVersion"`
+	EngineCommit  string `json:"engineCommit"`
+	FaceBuild     string `json:"faceBuild"`
+}
+
+// GitDto mirrors Core/Http/ControlPlaneDto.Git.cs.
+//
+// Upstream, Ahead and Behind are POINTERS because the engine OMITS them when the branch has no
+// upstream, and nil is not zero: a never-pushed branch and a branch level with its remote are
+// different facts that must never render the same. Decoding them as plain ints would turn "you have
+// never pushed this" into a confident "↑0 ↓0 — you are in sync".
+type GitDto struct {
+	// False with the rest of the block empty = a workspace that is genuinely not a git repo. That is
+	// not the same as a nil StateDto.Git, which means an engine too old to know.
+	IsRepo bool `json:"isRepo"`
+	// "" with Detached true = a detached HEAD. The engine never serves the literal string "HEAD".
+	Branch   string  `json:"branch"`
+	Detached bool    `json:"detached"`
+	Upstream *string `json:"upstream"`
+	Ahead    *int    `json:"ahead"`
+	Behind   *int    `json:"behind"`
+	// HeadSha is the full 40; HeadShortSha is the 7 an operator pastes into `git show`.
+	HeadSha      string `json:"headSha"`
+	HeadShortSha string `json:"headShortSha"`
+	HeadSubject  string `json:"headSubject"`
+	// DirtyCount counts porcelain rows (a modified file and an untracked one are one row each), so
+	// it is what the status strip renders; DirtySummary is the human sentence Home renders.
+	Dirty         bool           `json:"dirty"`
+	DirtyCount    int            `json:"dirtyCount"`
+	DirtySummary  string         `json:"dirtySummary"`
+	RecentCommits []GitCommitDto `json:"recentCommits"`
+}
+
+// HasUpstream reports whether the branch tracks anything at all. Every ahead/behind renderer goes
+// through this rather than testing the pointers itself, so "no upstream" cannot be spelled two ways.
+func (g *GitDto) HasUpstream() bool {
+	return g != nil && g.Upstream != nil && *g.Upstream != ""
+}
+
+type GitCommitDto struct {
+	Sha     string `json:"sha"`
+	Subject string `json:"subject"`
 }
 
 // The cost-basis vocabulary, verbatim from the engine's Core/Events/LiveCostEstimator.cs. It is
@@ -402,6 +457,11 @@ type SessionRowDto struct {
 	// captured no tool calls — never an empty digest standing in for one, so a pane can tell "this
 	// session did nothing we recorded" from "this engine does not send digests".
 	Digest *SessionDigestDto `json:"digest"`
+	// SF3.3: the session's own commits as `<short sha> <subject>` lines, read by the engine out of
+	// the event log (the sessions table only ever persisted CommitCount). Empty on a session that
+	// landed nothing OR predates the event — so a reader falls back to CommitCount, which is the
+	// number that was always there, rather than reporting "no commits" for an old session.
+	Commits []string `json:"commits"`
 }
 
 // SessionDigestDto mirrors Core/Http/ControlPlaneDto.Digest.cs. Mix and FilesTouched arrive ALREADY
