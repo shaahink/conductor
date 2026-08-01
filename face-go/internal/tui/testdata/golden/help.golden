@@ -21,7 +21,7 @@
    ○ Cache gat│                                                                                │           
               │   Actions                                                                      │           
               │     i inject context    / search transcript · f fold tools · T fold thinking   │           
-              │     \ collapse sidebar  ↑↓ scroll / navigate                                   │           
+              │     \ collapse sidebar  ↑↓ scroll / navigate · w owner queue                   │           
               │                                                                                │           
               │   Global                                                                       │           
               │     q quit   esc close / cancel   ? this help                                  │           
@@ -31,4 +31,4 @@
                            │    ?  see every key                                                           
                            │                                                                               
                            │                                                                               
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   a agent · r report · : commands · ? keys       
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   a agent · r report · w owner queue · ? keys    

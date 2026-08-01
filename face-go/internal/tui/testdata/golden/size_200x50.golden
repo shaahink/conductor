@@ -47,4 +47,4 @@
                                      │                                                                                                                                                                  
                                      │                                                                                                                                                                  
                                      │                                                                                                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   a agent · r report · : commands · ? keys                                                                                                    
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   a agent · r report · w owner queue · ? keys                                                                                                 
