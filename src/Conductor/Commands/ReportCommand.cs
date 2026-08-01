@@ -48,6 +48,13 @@ public sealed class ReportCommand : Command<ReportCommand.Settings>
         AnsiConsole.MarkupLine($"report written to [bold]{Markup.Escape(Reporter.ReportPath(plan))}[/]" +
                                (store != null ? " [grey](from run.db)[/]" : " [yellow](no run.db — declared plan only)[/]"));
 
+        // SF4.1: the owner queue regenerates with the report on the engine's path; the hand verb must
+        // do the same, or "regenerate my surfaces" would silently leave the one the OWNER reads stale.
+        OwnerQueue.Write(plan, state, track, m => AnsiConsole.MarkupLine($"[yellow]{Markup.Escape(m)}[/]"));
+        var owed = OwnerQueue.Collect(plan, state, track, DateTime.UtcNow).Count;
+        AnsiConsole.MarkupLine($"owner queue written to [bold]{Markup.Escape(OwnerQueue.QueuePath(plan))}[/] " +
+                               (owed == 0 ? "[grey](nothing waiting on you)[/]" : $"[yellow]({owed} waiting on you)[/]"));
+
         // SC2.4: the same closing statement the engine writes on completion, regenerable by hand from
         // the database long after the process that ran the plan is gone.
         if (store != null && !string.IsNullOrEmpty(state.RunId))

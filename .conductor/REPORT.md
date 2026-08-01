@@ -1,11 +1,11 @@
 ﻿# Conductor — Sarban face - the watcher and the surfaces run report
 
-_Updated 2026-08-01 03:28 UTC · branch `feat/sarban` · HEAD `c01a0c2`_
+_Updated 2026-08-01 03:48 UTC · branch `feat/sarban` · HEAD `5d88b21`_
 
-**Status:** Running
-**Stage:** SF3 — Reading a session becomes cheap · attempts used 0 · working ▸ SF3.3
-**Checkpoints:** 12/24 done · **Sessions run:** 18 · **Cost:** $169.4995 (agent $169.4138 + gates $0.0857) · **Tokens:** 2,874,475 in / 928,886 out
-**Confirmed phases:** SF0, SF1, SF2
+**Status:** NeedsHuman — agent asked for a human in the tracker handoff (HUMAN: line) — resolve, then run `conductor resume` [1s ago, 03:48:55Z]
+**Stage:** SF4 — The human queue is a first-class surface · attempts used 0 · working ▸ SF4.1
+**Checkpoints:** 13/24 done · **Sessions run:** 19 · **Cost:** $175.5699 (agent $175.4769 + gates $0.0930) · **Tokens:** 3,003,529 in / 977,183 out
+**Confirmed phases:** SF0, SF1, SF2, SF3
 
 ## Stage progress
 
@@ -14,8 +14,8 @@ _Updated 2026-08-01 03:28 UTC · branch `feat/sarban` · HEAD `c01a0c2`_
 | SF0 | The ledger closes - the core run's leftovers | ██████████ 4/4 | confirmed ✓ |
 | SF1 | The face sheds dead weight | ██████████ 3/3 | confirmed ✓ |
 | SF2 | The face tells the truth kindly - state, time, money | ██████████ 3/3 | confirmed ✓ |
-| SF3 | Reading a session becomes cheap | ███████░░░ 2/3 | **← active** |
-| SF4 | The human queue is a first-class surface | ░░░░░░░░░░ 0/2 | todo |
+| SF3 | Reading a session becomes cheap | ██████████ 3/3 | confirmed ✓ |
+| SF4 | The human queue is a first-class surface | ░░░░░░░░░░ 0/2 | **← active** |
 | SF5 | Supervision without a polling meter | ░░░░░░░░░░ 0/4 | todo |
 | SF6 | The prompt bank compounds | ░░░░░░░░░░ 0/3 | todo |
 | SF7 | Ship the era | ░░░░░░░░░░ 0/2 | todo |
@@ -51,13 +51,13 @@ _Updated 2026-08-01 03:28 UTC · branch `feat/sarban` · HEAD `c01a0c2`_
 
 </details>
 
-<details><summary>SF3 — Reading a session becomes cheap (2/3)</summary>
+<details> ✅<summary>SF3 — Reading a session becomes cheap (3/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
 | SF3.1 | Tool calls render as one-liners and each session has a digest panel — tool mix, files touched, claims, bg-purpose storyline; fold is rune-safe | ✅ DONE | [`352bc1a`](https://github.com/shaahink/conductor/commit/352bc1a) |
 | SF3.2 | The kanban groups by stage with the active stage highlighted, card meta visible unselected, column totals, skips separated from Done, in-column scroll, and a you-are-here ribbon | ✅ DONE | [`3e7c4b3`](https://github.com/shaahink/conductor/commit/3e7c4b3) |
-| SF3.3 | Branch, dirty state, ahead-behind and HEAD sha are on the wire and in the face; session history shows commit subjects; the sidebar cues execution-vs-declared stage order | 🔄 IN PROGRESS | - |
+| SF3.3 | Branch, dirty state, ahead-behind and HEAD sha are on the wire and in the face; session history shows commit subjects; the sidebar cues execution-vs-declared stage order | ✅ DONE | [`f91fa5e`](https://github.com/shaahink/conductor/commit/f91fa5e) |
 
 </details>
 
@@ -122,23 +122,13 @@ _Updated 2026-08-01 03:28 UTC · branch `feat/sarban` · HEAD `c01a0c2`_
 | 16 | SF3 | Deliver | 1 | 08-01 02:17 | 0:31 | RolledOver |  | 0 |  | $5.7775 |  | 126,846/2,452 |
 | 17 | SF3 | Deliver | 1 | 08-01 02:49 | 0:16 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $5.9184 | $0.0073 | 119,065/42,337 |
 | 18 | SF3 | Deliver | 1 | 08-01 03:07 | 0:21 | RolledOver |  | 0 |  | $5.8529 |  | 118,847/2,848 |
+| 19 | SF3 | Deliver | 1 | 08-01 03:28 | 0:14 | Advanced | SF3.3 | 3 | engine-fast:OK · face-fast:OK | $6.0631 | $0.0072 | 129,054/48,297 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-01 01:04:53  ▸ stage SF1 confirmed  (2h14m17s)
-08-01 01:04:54  ▸ stage SF2 entered — The face tells the truth kindly - state, time, money
-08-01 01:04:55  • session #9 SF2 Deliver started (attempt 1/6)
-08-01 01:20:16  • session #9 SF2 → RolledOver  (15m21s)
-08-01 01:20:17  • session #10 SF2 Deliver started (attempt 1/6)
-08-01 01:39:39  ▪ gate engine-fast pass [session]  (1m06s)
-08-01 01:39:39  ▪ gate face-fast pass [session]  (8.6s)
-08-01 01:39:40  • session #10 SF2 → Advanced · done SF2.1 · 4 commit(s)  (19m23s)
-08-01 01:39:40  • session #11 SF2 Deliver started (attempt 1/6)
-08-01 01:54:55  ▪ gate engine-fast pass [session]  (1m14s)
-08-01 01:54:55  ▪ gate face-fast pass [session]  (7.1s)
 08-01 01:54:57  • session #11 SF2 → Advanced · done SF2.2 · 3 commit(s)  (15m16s)
 08-01 01:54:57  • session #12 SF2 Deliver started (attempt 1/6)
 08-01 02:15:39  ▪ gate engine-fast pass [session]  (1m09s)
@@ -168,6 +158,17 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-01 04:07:33  ▪ gate face-fast pass [session]  (5.9s)
 08-01 04:07:34  • session #17 SF3 → Progress · 2 commit(s)  (18m18s)
 08-01 04:07:34  • session #18 SF3 Deliver started (attempt 1/6)
+08-01 04:28:56  • session #18 SF3 → RolledOver  (21m22s)
+08-01 04:28:57  • session #19 SF3 Deliver started (attempt 1/6)
+08-01 04:44:37  ▪ gate engine-fast pass [session]  (1m04s)
+08-01 04:44:37  ▪ gate face-fast pass [session]  (8.2s)
+08-01 04:44:38  • session #19 SF3 → Advanced · done SF3.3 · 3 commit(s)  (15m41s)
+08-01 04:48:51  ▪ gate engine-fast pass [phase]  (0.0s)
+08-01 04:48:51  ▪ gate face-fast pass [phase]  (0.0s)
+08-01 04:48:51  ▪ gate engine-full pass [phase]  (3m52s)
+08-01 04:48:51  ▪ gate face-full pass [phase]  (16.0s)
+08-01 04:48:51  ✓ checkpoint SF3.3 confirmed
+08-01 04:48:54  ▸ stage SF3 confirmed  (2h29m07s)
 ```
 
 ## Health
@@ -175,7 +176,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 18 · retries 1 (6 %) · overall Warn
+sessions 19 · retries 1 (5 %) · overall Warn
 ⚠ [context-saturation] session #3: 24,790,251 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #4: 21,397,049 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #5: 36,996,007 context tokens (≥ 20,000,000)
@@ -188,15 +189,11 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/sarban
-working tree: M .conductor/REPORT.md, M SARBAN-FACE-TRACKER.md
+working tree: M .conductor/REPORT.md, M .conductor/followups.md, M SARBAN-FACE-TRACKER.md
 ```
 
 ### Commits by session
 
-- **s5 (SF1 Deliver)** — 3 commit(s):
-  - [`a0f030a`](https://github.com/shaahink/conductor/commit/a0f030a) docs(tracker): SF1.1 handoff - the endpoint that unblocks SF1.2, and the two rig traps behind it
-  - [`ada42a4`](https://github.com/shaahink/conductor/commit/ada42a4) test(face): rebaseline the two Report goldens for the typed scores section
-  - [`9d993ef`](https://github.com/shaahink/conductor/commit/9d993ef) feat(scores): verifier scores get a real endpoint, so a rendered report stops needing SQL
 - **s6 (SF1 Deliver)** — 3 commit(s):
   - [`ed4ed29`](https://github.com/shaahink/conductor/commit/ed4ed29) docs(tracker): SF1.2 handoff - twelve tabs, a new bug class, and a second writer in this tree
   - [`4bb6c24`](https://github.com/shaahink/conductor/commit/4bb6c24) test(face): rebaseline every golden for twelve tabs, plus Home's Wiring and Report's token table
@@ -225,6 +222,10 @@ working tree: M .conductor/REPORT.md, M SARBAN-FACE-TRACKER.md
 - **s17 (SF3 Deliver)** — 2 commit(s):
   - [`87a47c9`](https://github.com/shaahink/conductor/commit/87a47c9) docs(tracker): SF3.3 face wire mirror landed, the four renderers remain
   - [`7f2c4a7`](https://github.com/shaahink/conductor/commit/7f2c4a7) feat(face): the wire's git block and build identity, decoded (SF3.3, part 2a)
+- **s19 (SF3 Deliver)** — 3 commit(s):
+  - [`5d88b21`](https://github.com/shaahink/conductor/commit/5d88b21) docs(tracker): SF3.3 claimed complete, SF3 closes and SF4.1 is next
+  - [`1579880`](https://github.com/shaahink/conductor/commit/1579880) test(face): rebaseline the session detail, and pin the jumped-stage rail (SF3.3)
+  - [`f91fa5e`](https://github.com/shaahink/conductor/commit/f91fa5e) feat(face): what a session landed, and when the run left the declared order (SF3.3, part 2d)
 
 ## Phase handovers (audit)
 
@@ -247,28 +248,27 @@ working tree: M .conductor/REPORT.md, M SARBAN-FACE-TRACKER.md
 
 ## Last gate run
 
-engine-fast:OK · face-fast:OK
+engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
 
 ## Last session result
 
-> SESSION-RESULT: SF3.3's **face wire mirror** landed and is pushed — commit `7f2c4a7` (code, demo source, fixtures, tests) plus `87a47c9` (tracker handoff, evidence at `.conductor/evidence/SF3/SF3.3-part2a-face-wire.md`). `api.StateDto` now decodes the engine's `git` block and FU-OWNER-10's `engineVersion`/`engineCommit`/`faceBuild`, `SessionRowDto` decodes `commits[]`, and `GitDto` uses `*string`/`*int` for upstream/ahead/behind so "never pushed" can never render as "in sync". The two fixtures are **real captures** off a fresh build of this working tree serving a scratch git rig (`--paused --headless --no-face --port 4423`, its own `.conductor`, port read back from the rig's discovery file) …
+> SESSION-RESULT: **SF3.3 is complete and claimed** (`conductor task --done SF3.3 --evidence .conductor/evidence/SF3/SF3.3-part2d-renderers.md`), which closes stage SF3. I found the handoff block stale — session 18 had landed parts 2b and 2c (top-bar branch chip + build stamp, Home's Git panel) but was killed before writing a handoff — so I delivered the two renderers that were genuinely missing. `f91fa5e`: the session-history detail now renders the session's own commits as `<short sha> <subject>` lines between the digest and the result summary, with the count-without-subjects case (an engine older than SF3.3) saying so rather than contradicting the "1 commit" on the row above, and overflow co…
 
 ## Tracker handoff
 
 ```
-last: **SF3.3 FACE WIRE MIRROR landed, `7f2c4a7`** — evidence
-  `.conductor/evidence/SF3/SF3.3-part2a-face-wire.md`. `api.StateDto` now decodes `Git`,
-  `EngineVersion`, `EngineCommit`, `FaceBuild`; `SessionRowDto` decodes `Commits`; the demo repo is
-  a dirty tracked branch ahead of its remote. Two REAL `/state` captures in
-  `internal/api/testdata/` (tracked+ahead, and no-upstream) with 6 decode tests over them.
-  **SF3.3 is still IN PROGRESS: no renderer was written — nothing about git is on screen.**
-next: **the four renderers, in this order.** (1) branch chip + FU-OWNER-10 short form in
-  `widgets/ticker.go RenderTopBar`; (2) a Git section on Home + the full build line in Home's
-  Server section; (3) commit subjects in `tab_history.go renderSessionsView`, after the digest
-  block; (4) the divergence cue in `widgets/sidebar.go View`. Then goldens, separate commit.
-traps: the top bar is ALREADY crowded at 120 cols and `style.MaxWidth` **clips silently** — tier the
-  chip and READ the 80/120/200 frames before pinning. `dirtySummary` is porcelain rows joined with
-  commas, NOT prose. `ahead`/`behind`/`upstream` are absent with no upstream: nil is not zero.
-green: `go build`, `go vet`, `go test ./internal/...` all clean; goldens untouched.
+last: **SF3.3 DONE and claimed — SF3 is complete.** Renderers 3 and 4 landed in `f91fa5e`,
+  goldens in `1579880`, evidence `.conductor/evidence/SF3/SF3.3-part2d-renderers.md`. Session
+  history's detail now shows the session's commit subjects (between the digest and the result);
+  the sidebar marks stages the run went PAST and names them in one line above the active row.
+next: **SF4.1** — spec `docs/history/CONDUCTOR-SARBAN.md` section SF4. The engine collects
+  owner-work into `.conductor/OWNER-QUEUE.md` + `GET /owner/queue`: every open `HUMAN:` line,
+  ownerGated stage, park (reason + age), blocked-until wait, each saying what it UNBLOCKS and the
+  exact command that clears it. Regenerated at every session boundary; items clear when their
+  condition does. `SHAHIN.md` from the sk round is the voice to copy.
+traps: a handoff can be STALE — session 18 landed two commits and died before writing one, so
+  check `git log` before believing this block. Sidebar: `windowRows` anchors on the ACTIVE row,
+  so anything appended at the top of the rail scrolls off first. Goldens: separate commit, always.
+green: `go build`, `go vet`, `go test ./...` all clean in `face-go/`. Engine untouched this session.
 open: bugs **#15 #16 #17 #18 #19**; #19 (claims empty in every digest) is engine-side.
 ```

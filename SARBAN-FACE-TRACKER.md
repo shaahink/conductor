@@ -2,23 +2,22 @@
 
 **Plan:** Sarban face - the watcher and the surfaces | **Branch:** `feat/sarban` | **Design doc:** docs/history/CONDUCTOR-SARBAN.md
 
-## Handoff (overwrite this block, ≤12 lines, no history)
+## Handoff (overwrite this block, <=12 lines, no history)
 
-last: **SF3.3 DONE and claimed — SF3 is complete.** Renderers 3 and 4 landed in `f91fa5e`,
-  goldens in `1579880`, evidence `.conductor/evidence/SF3/SF3.3-part2d-renderers.md`. Session
-  history's detail now shows the session's commit subjects (between the digest and the result);
-  the sidebar marks stages the run went PAST and names them in one line above the active row.
-next: **SF4.1** — spec `docs/history/CONDUCTOR-SARBAN.md` section SF4. The engine collects
-  owner-work into `.conductor/OWNER-QUEUE.md` + `GET /owner/queue`: every open `HUMAN:` line,
-  ownerGated stage, park (reason + age), blocked-until wait, each saying what it UNBLOCKS and the
-  exact command that clears it. Regenerated at every session boundary; items clear when their
-  condition does. `SHAHIN.md` from the sk round is the voice to copy.
-traps: a handoff can be STALE — session 18 landed two commits and died before writing one, so
-  check `git log` before believing this block. Sidebar: `windowRows` anchors on the ACTIVE row,
-  so anything appended at the top of the rail scrolls off first. Goldens: separate commit, always.
-green: `go build`, `go vet`, `go test ./...` all clean in `face-go/`. Engine untouched this session.
-open: bugs **#15 #16 #17 #18 #19**; #19 (claims empty in every digest) is engine-side.
-
+last: **SF4.1 DONE and claimed.** `287f5e2` + this commit. `OwnerQueue.Collect` folds six live
+  sources (HUMAN lines, unapproved ownerGates, the park, a live blocked-until wait, BLOCKED cards,
+  skipped stages) into one urgency-ordered list; each entry says what it UNBLOCKS and the exact
+  command that clears it. `.conductor/OWNER-QUEUE.md` rides the report write path (every session
+  boundary) and `GET /owner/queue` serves the same entries from the LIVE RunState. Evidence
+  `.conductor/evidence/SF4/SF4.1-owner-queue.md`; 16/16 new tests, 60/60 neighbours.
+next: **SF4.2** - the face half. Home section when short, own view when not, with age and unblocks;
+  a NEW queue item pushes to Telegram. Same commit also owes FU-OWNER-11 (prefix every push with
+  plan name + session number, repo + engine version in run-start/run-end) and FU-OWNER-13
+  (`reloadPending` on /telegram/status and both replies saying a reload is queued).
+traps: null `ageSeconds` on the wire means UNKNOWN, never zero - use a pointer field. A `wait`
+  entry carries an EMPTY command on purpose: `conductor resume` does not clear a blocked-until.
+green: build clean; OwnerQueueTests 16/16; Architecture/ControlPlaneServer/Reporter 60/60.
+open: bugs **#15 #16 #17 #18 #19**.
 
 ## Baseline numbers (from run.db)
 
@@ -26,7 +25,7 @@ open: bugs **#15 #16 #17 #18 #19**; #19 (claims empty in every digest) is engine
 |---|---|
 | Total checkpoints | 24 |
 | Done | 2 |
-| Claimed (unconfirmed) | 10 |
+| Claimed (unconfirmed) | 11 |
 
 ## Checkpoints
 
@@ -64,7 +63,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | SF3.1 | Tool calls render as one-liners and each session has a digest panel — tool mix, files touched, claims, bg-purpose storyline; fold is rune-safe | DONE | 352bc1a | .conductor/evidence/SF3/SF3.1-summary.md |
 | SF3.2 | The kanban groups by stage with the active stage highlighted, card meta visible unselected, column totals, skips separated from Done, in-column scroll, and a you-are-here ribbon | DONE | 3e7c4b3 | .conductor/evidence/SF3/SF3.2-summary.md |
-| SF3.3 | Branch, dirty state, ahead-behind and HEAD sha are on the wire and in the face; session history shows commit subjects; the sidebar cues execution-vs-declared stage order | IN PROGRESS | - | - |
+| SF3.3 | Branch, dirty state, ahead-behind and HEAD sha are on the wire and in the face; session history shows commit subjects; the sidebar cues execution-vs-declared stage order | DONE | f91fa5e | .conductor/evidence/SF3/SF3.3-part2d-renderers.md |
 
 ### SF4 — The human queue is a first-class surface
 
