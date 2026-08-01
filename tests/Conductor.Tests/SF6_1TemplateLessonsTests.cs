@@ -139,17 +139,31 @@ public class SF6_1TemplateLessonsTests
     /// command-line ARGUMENT, the agent silently never runs, and the run still reports success. Lessons are
     /// prose and prose costs bytes, so the budget is pinned here — including the multi-repo case, which the
     /// existing 6000-char guard never renders. Pay for new prose by cutting old prose, never by raising this.</summary>
+    /// <remarks>
+    /// The budget is 7,900 rather than the ~8,191 the cliff actually sits at, and the difference is not
+    /// decoration. One term of the composed prompt — <c>Environment.ProcessId</c> in the tools block — is a
+    /// different width on every run, so a guard set flush against the measured size passes on a four-digit
+    /// pid and fails on a six-digit one. It did: the SF6 battery came back red at exactly 8,000 chars on a
+    /// prompt no commit had touched since this guard was written. The margin is what stops a budget test
+    /// from being decided by the process table, and it also leaves room for a queued injection, which
+    /// SC4.4 renders ABOVE everything else in the prompt.
+    /// </remarks>
     [Fact]
     public void TheLessonsFitTheCommandLineBudgetEvenOnAMultiRepoPlan()
     {
+        const int budget = 7_900;
         var plan = Plan();
         plan.SatelliteRepos = ["../sk-studio", "../elfine-site"];
 
         var tools = ToolContract.Render(plan);
         Assert.True(tools.Length < 6_000, $"tool contract with satellites is {tools.Length} chars — see bug #15 before growing it");
 
-        foreach (var (what, prompt) in new[] { ("deliver", Deliver(plan)), ("fix", Fix(plan)) })
-            Assert.True(prompt.Length < 8_000, $"built-in {what} prompt is {prompt.Length} chars — bug #15 drops the agent past ~8191");
+        // Both prompts are measured before either is asserted, so a fix session reading the battery output
+        // learns every number in one run instead of one number per rebuild.
+        var sizes = new[] { ("deliver", Deliver(plan).Length), ("fix", Fix(plan).Length) };
+        var measured = string.Join(", ", sizes.Select(s => $"{s.Item1}={s.Item2}"));
+        foreach (var (what, length) in sizes)
+            Assert.True(length < budget, $"built-in {what} prompt is {length} chars, over the {budget} budget (cliff ~8191, bug #15). Measured this run: {measured}. Pay for new prose by cutting old prose.");
     }
 
     /// <summary>The lessons are prose, and prose is where braces get in. A rendered prompt with a stray

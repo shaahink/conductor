@@ -40,10 +40,10 @@ public static class ToolContract
             kill processes by name (`Stop-Process dotnet`): you will take out unrelated work.
 
             **Never kill a pid you have not identified.** The conductor supervising you is PID {{Environment.ProcessId}},
-            also in `CONDUCTOR_PID`. A build error saying `locked by: conductor (PID)` is almost always THIS
-            run holding its own binary, not a stale orphan: a fix session read that line, inferred an orphan,
-            and killed the conductor running it. Another repo's run may share this machine. Check a pid's
-            command line before touching it; never kill by name.
+            also in `CONDUCTOR_PID`. `locked by: conductor (PID)` in a build error is almost always THIS run
+            holding its own binary, not a stale orphan: a fix session read that line, inferred an orphan, and
+            killed the conductor running it. Another repo's run may share this machine — check a pid's command
+            line before touching it, and never kill by name.
 
             **Tracked bugs — `conductor bug new|list|fix`  (MCP: `bug_new`/`bug_list`/`bug_fix`)**
             Found a defect you are not fixing now? `conductor bug new "<title>"` — it outlives your session
@@ -54,18 +54,16 @@ public static class ToolContract
                 conductor task --list
                 conductor task --in-progress <id>          # BEFORE your first edit, not after the work
                 conductor task --done <id> --evidence <path-to-artifact>
-            THIS IS THE ONLY WAY TO REPORT PROGRESS. It is the one channel Conductor reads when it works
-            out what you delivered: a checkpoint you did not claim through this verb did not happen, no
-            matter what you wrote elsewhere. There is no second mechanism to also update.
-            Mark IN PROGRESS BEFORE your first edit. The board is what the owner watches, and a session that
-            delivered for 56 minutes without it left a wall of TODO and the owner asking what was happening.
-            Claim BEFORE you write the handoff, not after — a session that does the work, writes DONE in the
-            tracker and runs out of room before calling this verb has delivered nothing that counts.
+            THIS IS THE ONLY WAY TO REPORT PROGRESS — the one channel Conductor reads when it works out what
+            you delivered. A checkpoint not claimed through this verb did not happen, whatever you wrote
+            elsewhere. There is no second mechanism to also update. Mark IN PROGRESS BEFORE your first edit:
+            a session that delivered for 56 minutes without it left the owner watching a wall of TODO. Claim
+            BEFORE writing the handoff — do the work, write DONE in the tracker, run out of room before this
+            verb, and you delivered nothing that counts.
             If the MCP tools arrive DEFERRED in your harness, `ToolSearch` for `task_update` first — or skip that and use the CLI: `conductor task --done <id> --evidence <path>`.
-            You CLAIM; Conductor confirms, and only after its own gate battery and the Verifier agree with
-            you. `{{plan.Tracker}}` is a GENERATED VIEW of the database:
-            its checkpoint rows are overwritten, so they are not where you report. The one part of that file
-            that IS yours is the **handoff block** — Conductor reads it back and hands it to the next session.
+            You CLAIM; Conductor confirms, and only once its gate battery and the Verifier agree. `{{plan.Tracker}}`
+            is a GENERATED VIEW of the database — its checkpoint rows are overwritten, so they are not where
+            you report. The part that IS yours is the **handoff block**, handed to the next session.
 
             **Correcting the board — `conductor task --todo|--blocked|--skipped <id>` and `--amend <id> --note "<text>"`**
             Put a card back with `--todo`, park one with `--blocked`, retire one with `--skipped`. Every move
@@ -79,8 +77,8 @@ public static class ToolContract
             the session hoping the wall is gone next time, and do not re-measure the clock:
                 conductor task --blocked-until 2026-07-31T15:12:00Z --reason "deploy window full, next slot 15:12"
             Conductor sleeps until then and spawns ONE more session — no attempt burned, your reason handed
-            to it. Must be in the future and within 24h; longer is a `HUMAN:` line, not a nap. Then end the
-            session: you are done, the engine is waiting.
+            to it. Must be in the future and within 24h; longer is a `HUMAN:` line, not a nap. End the
+            session immediately after: the engine is waiting.
 
             **Ask the database — MCP `run_query`, `ledger_list`, `bug_list`, `session_detail`.** Prior
             sessions, gates, costs, bugs, what earlier agents learned are queryable. Query before you guess.

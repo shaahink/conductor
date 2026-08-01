@@ -60,8 +60,13 @@ public sealed class SF6_3InitScaffoldTests : IDisposable
     [Fact]
     public void BuiltInNamesEnumeratesEveryCaseOfTheBuiltInSwitch()
     {
-        var source = ReadRepoFile(Path.Combine("src", "Conductor", "Core", "PromptBuilder.cs"));
-        var body = source[source.IndexOf("internal static string BuiltIn(string name) => name switch", StringComparison.Ordinal)..];
+        // Located, not assumed: the switch has already moved once (SF6.3 split the content out of the
+        // renderer at the 500-line ceiling) and a hard-coded partial name went stale the same day, failing
+        // as `Substring(-1)`. A test that cannot find its subject must say which subject, in a sentence.
+        var partials = RepoFilesContaining(Path.Combine("src", "Conductor", "Core"), "PromptBuilder*.cs", BuiltInSignature);
+        Assert.True(partials.Count == 1,
+            $"expected exactly one PromptBuilder partial to declare `{BuiltInSignature}`, found {partials.Count} — has it moved or been duplicated?");
+        var body = partials[0][partials[0].IndexOf(BuiltInSignature, StringComparison.Ordinal)..];
         var cases = Regex.Matches(body, @"^\s{8}""(?<n>[a-z]+\.md)"" =>", RegexOptions.Multiline, TimeSpan.FromSeconds(5))
             .Select(m => m.Groups["n"].Value)
             .ToArray();
@@ -213,12 +218,19 @@ public sealed class SF6_3InitScaffoldTests : IDisposable
             File.WriteAllText(path, content);
     }
 
-    private static string ReadRepoFile(string relative)
+    private const string BuiltInSignature = "internal static string BuiltIn(string name) => name switch";
+
+    /// <summary>Every file under <paramref name="relativeDir"/> matching <paramref name="glob"/> whose text
+    /// contains <paramref name="needle"/>. Searching beats naming a path: the partial this class reads was
+    /// renamed within a day of the test being written, and the path constant did not complain.</summary>
+    private static List<string> RepoFilesContaining(string relativeDir, string glob, string needle)
     {
         var dir = AppContext.BaseDirectory;
         while (dir is not null && !File.Exists(Path.Combine(dir, "Conductor.slnx")))
             dir = Path.GetDirectoryName(dir);
         Assert.NotNull(dir);
-        return File.ReadAllText(Path.Combine(dir!, relative));
+        return [.. Directory.EnumerateFiles(Path.Combine(dir!, relativeDir), glob)
+            .Select(File.ReadAllText)
+            .Where(text => text.Contains(needle, StringComparison.Ordinal))];
     }
 }
