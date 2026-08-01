@@ -4,21 +4,20 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SF3.3 ENGINE HALF landed, `d500f00`** — evidence
-  `.conductor/evidence/SF3/SF3.3-part1-engine-wire.md`. `GET /state` now serves a `git` block
-  (branch, detached, upstream, ahead/behind, headSha/headShortSha/headSubject, dirty, dirtyCount,
-  dirtySummary, recentCommits) plus **FU-OWNER-10**'s `engineVersion`/`engineCommit`/`faceBuild`;
-  `GET /sessions` rows gain `commits[]`. 22 tests green, 3 of them over a real socket.
-  **SF3.3 is still IN PROGRESS — do not re-do the engine half.**
-next: **the FACE half, nothing started.** In order: mirror the fields in `api/types.go` +
-  `api/demo.go`, then branch chip and build short form in `widgets/ticker.go RenderTopBar`, repo
-  state on Home, `commits[]` in the session detail, and the sidebar's execution-vs-declared-order
-  cue. Goldens in a separate rebaseline commit.
-traps: `ahead`/`behind`/`upstream` are **ABSENT** from the json when there is no upstream (the wire
-  omits nulls) — use `*int`/`*string` and render nil as "no upstream", never `0/0`. A `git` block
-  with `isRepo:false` means "not a git repo"; a **missing** `git` means an older engine — say
-  different things. And `truncate()` in view.go is PLAIN text only (SF3.2's ribbon bug).
-green: engine `dotnet build` clean, `--filter SF3_3` 22/22. Face untouched, green at `88a966a`.
+last: **SF3.3 FACE WIRE MIRROR landed, `7f2c4a7`** — evidence
+  `.conductor/evidence/SF3/SF3.3-part2a-face-wire.md`. `api.StateDto` now decodes `Git`,
+  `EngineVersion`, `EngineCommit`, `FaceBuild`; `SessionRowDto` decodes `Commits`; the demo repo is
+  a dirty tracked branch ahead of its remote. Two REAL `/state` captures in
+  `internal/api/testdata/` (tracked+ahead, and no-upstream) with 6 decode tests over them.
+  **SF3.3 is still IN PROGRESS: no renderer was written — nothing about git is on screen.**
+next: **the four renderers, in this order.** (1) branch chip + FU-OWNER-10 short form in
+  `widgets/ticker.go RenderTopBar`; (2) a Git section on Home + the full build line in Home's
+  Server section; (3) commit subjects in `tab_history.go renderSessionsView`, after the digest
+  block; (4) the divergence cue in `widgets/sidebar.go View`. Then goldens, separate commit.
+traps: the top bar is ALREADY crowded at 120 cols and `style.MaxWidth` **clips silently** — tier the
+  chip and READ the 80/120/200 frames before pinning. `dirtySummary` is porcelain rows joined with
+  commas, NOT prose. `ahead`/`behind`/`upstream` are absent with no upstream: nil is not zero.
+green: `go build`, `go vet`, `go test ./internal/...` all clean; goldens untouched.
 open: bugs **#15 #16 #17 #18 #19**; #19 (claims empty in every digest) is engine-side.
 
 
@@ -66,7 +65,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | SF3.1 | Tool calls render as one-liners and each session has a digest panel — tool mix, files touched, claims, bg-purpose storyline; fold is rune-safe | DONE | 352bc1a | .conductor/evidence/SF3/SF3.1-summary.md |
 | SF3.2 | The kanban groups by stage with the active stage highlighted, card meta visible unselected, column totals, skips separated from Done, in-column scroll, and a you-are-here ribbon | DONE | 3e7c4b3 | .conductor/evidence/SF3/SF3.2-summary.md |
-| SF3.3 | Branch, dirty state, ahead-behind and HEAD sha are on the wire and in the face; session history shows commit subjects; the sidebar cues execution-vs-declared stage order | TODO | - | - |
+| SF3.3 | Branch, dirty state, ahead-behind and HEAD sha are on the wire and in the face; session history shows commit subjects; the sidebar cues execution-vs-declared stage order | IN PROGRESS | - | - |
 
 ### SF4 — The human queue is a first-class surface
 
