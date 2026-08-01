@@ -2,34 +2,29 @@
 
 **Plan:** Sarban face - the watcher and the surfaces | **Branch:** `feat/sarban` | **Design doc:** docs/history/CONDUCTOR-SARBAN.md
 
-## Handoff (overwrite this block, ≤12 lines, no history)
+## Handoff (overwrite this block, <=12 lines, no history)
 
-last: **session 37 - SF7.1 part 1 of 2 landed, NOT claimed.** `1ebb536` `d4f8993`. Suite **1761/0**.
-  tracker.md's runtime tree described a run that does not happen: after 36 sessions `events.jsonl`,
-  `state.json`, `queue/`, `lanes/`, `audits/` are all ABSENT, and 13 real artifacts were undocumented.
-  Nothing constructs an `EventLog` any more - the spine is run.db's `events` table. Rewritten and now
-  PINNED by `SF7_1DocsMatchRealityTests`, which scans src for `StateDir, "x"` literals; falsified on
-  the old doc first (it named all 13). operating.md section 7 re-measured: 4 rows closed, rest re-owned.
-next: **SF7.1 part 2** - three parts remain, and the ledger note for SF7 has the measured lists so
-  you do NOT re-derive them: (1) `docs/dev/NEXT-FEATURES.md` refresh - I measured which items shipped
-  and which are still open, both lists are in the note; also file the MCP item the spec orders
-  (evidence: devcontext field notes section 8, lines 170-172). (2) the closure ledger over
-  `.conductor/followups.md` AND the 7 open bug ids. (3) the era `CHANGELOG.md` entry under Unreleased.
-  MEASURED, do not redo: plan-config.md's advisor section is already CORRECT (SC3.4 fixed it - the
-  spec's "wrong today" is stale); operating.md's SF5 supervision section was already complete.
-  Of the followups still open, SF3.3/SF4/SF4.2 DID close FU-OWNER-10/11/13 (ControlPlaneDto.cs:82-88,
-  TelegramService.cs:382, ControlPlaneDto.Telegram.cs:27) - but **FU-F1-06 is still open and its
-  re-home premise was wrong**: `IRunStore` has only `RecordRunEnd`, which stamps `ended_utc`, and SF2.1
-  never needed a status-only writer. red: nothing known. open: bugs **#15 #16 #17 #18 #19 #20 #21**.
-
+last: **session 38 - SF7.1 part 2, four commits, still NOT claimed.** `3268e54` `65e59fa` `de3256f`
+  `36e406e`. `SF7_1DocsMatchRealityTests` now 12/12 across 4 partials. Done: NEXT-FEATURES refreshed
+  (ten items it called future had SHIPPED) and the MCP item filed; the closure ledger over
+  followups.md + the 7 open bugs; the era CHANGELOG under Unreleased (verified through the release
+  pipeline's own reader, `tools/changelog-section.sh Unreleased`, exit 0); and SKILL.md's trust
+  model, which said the OPPOSITE of the engine - a tracker hand-edit is accepted via the W1.3
+  fallback, not discarded. Also fixed: FU-OWNER-10/11/13 each closed by the token `CLOSED (bFU-...)`,
+  which names nothing; they now name stage + commit + file.
+next: **SF7.1 has ONE part left** - spec line 492: the three `docs/dev/FIELD-NOTES-*.md` files gain a
+  finding -> stage -> commit ledger (31 findings). The ledger note has my resolved stage->commit map
+  so you do not redo it, AND the warning that Appendix B's finding->stage index is not reliable
+  (devcontext #5 is mapped to SC5.2; that commit fixes #16). Then claim SF7.1 and SF7.2 is the merge.
+  red: nothing known. open: bugs **#15 #16 #17 #18 #19 #20 #21**.
 
 ## Baseline numbers (from run.db)
 
 | Metric | Value |
 |---|---|
 | Total checkpoints | 24 |
-| Done | 5 |
-| Claimed (unconfirmed) | 17 |
+| Done | 6 |
+| Claimed (unconfirmed) | 16 |
 
 ## Checkpoints
 
@@ -90,14 +85,14 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | SF6.1 | The built-in session and fix templates carry the field lessons: in-progress first, claim before handoff, deferred-MCP fallback on one line, long commands under conductor bg, the anchor-commit rule for multi-repo plans | DONE | 8dd1aa3 | .conductor/evidence/SF6/SF6-fix-s36-budget-and-anchors.md |
-| SF6.2 | The prompt bank under plans/ is pruned, enriched from the rounds — proof-note pattern, owner-block alternate completions, the unblocks voice — and indexed so it is choosable | DONE | 4b894c1 | .conductor/evidence/SF6/SF6-2-prompt-bank.md |
+| SF6.2 | The prompt bank under plans/ is pruned, enriched from the rounds — proof-note pattern, owner-block alternate completions, the unblocks voice — and indexed so it is choosable | DONE ✓ | 4b894c1 | .conductor/evidence/SF6/SF6-2-prompt-bank.md |
 | SF6.3 | conductor init scaffolds the refreshed template set with telegram and supervisor hints, and its output passes doctor clean | DONE | - | .conductor/evidence/SF6/SF6-fix-s36-budget-and-anchors.md |
 
 ### SF7 — Ship the era
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| SF7.1 | The docs match the code — plan-config advisor default, tracker runtime files, operating supervision section, NEXT-FEATURES refresh — the field notes carry a closure ledger, and the era CHANGELOG is written | TODO | - | - |
+| SF7.1 | The docs match the code — plan-config advisor default, tracker runtime files, operating supervision section, NEXT-FEATURES refresh — the field notes carry a closure ledger, and the era CHANGELOG is written | IN PROGRESS | - | - |
 | SF7.2 | feat/sarban is merged to master by the owner, the release is tagged through the SC8 pipeline, and the installed conductor version matches the releases page | TODO | - | - |
 
 ## Dependencies

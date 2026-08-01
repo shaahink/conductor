@@ -1,10 +1,10 @@
 ﻿# Conductor — Sarban face - the watcher and the surfaces run report
 
-_Updated 2026-08-01 16:10 UTC · branch `feat/sarban` · HEAD `d8d80f8`_
+_Updated 2026-08-01 16:36 UTC · branch `feat/sarban` · HEAD `d97546c`_
 
 **Status:** Idle
-**Stage:** SF6 — The prompt bank compounds · attempts used 0
-**Checkpoints:** 22/24 done · **Sessions run:** 36 · **Cost:** $276.3182 (agent $276.1096 + gates $0.2086) · **Tokens:** 5,063,658 in / 1,558,561 out
+**Stage:** SF7 — Ship the era · attempts used 0 · working ▸ SF7.1
+**Checkpoints:** 22/24 done · **Sessions run:** 37 · **Cost:** $282.6208 (agent $282.4029 + gates $0.2179) · **Tokens:** 5,188,993 in / 1,611,092 out
 **Confirmed phases:** SF0, SF1, SF2, SF3, SF4, SF5, SF6
 
 ## Stage progress
@@ -18,7 +18,7 @@ _Updated 2026-08-01 16:10 UTC · branch `feat/sarban` · HEAD `d8d80f8`_
 | SF4 | The human queue is a first-class surface | ██████████ 2/2 | confirmed ✓ |
 | SF5 | Supervision without a polling meter | ██████████ 4/4 | confirmed ✓ |
 | SF6 | The prompt bank compounds | ██████████ 3/3 | confirmed ✓ |
-| SF7 | Ship the era | ░░░░░░░░░░ 0/2 | todo |
+| SF7 | Ship the era | ░░░░░░░░░░ 0/2 | **← active** |
 
 <details> ✅<summary>SF0 — The ledger closes - the core run's leftovers (4/4)</summary>
 
@@ -95,7 +95,7 @@ _Updated 2026-08-01 16:10 UTC · branch `feat/sarban` · HEAD `d8d80f8`_
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| SF7.1 | The docs match the code — plan-config advisor default, tracker runtime files, operating supervision section, NEXT-FEATURES refresh — the field notes carry a closure ledger, and the era CHANGELOG is written | ⬜ TODO | - |
+| SF7.1 | The docs match the code — plan-config advisor default, tracker runtime files, operating supervision section, NEXT-FEATURES refresh — the field notes carry a closure ledger, and the era CHANGELOG is written | 🔄 IN PROGRESS | - |
 | SF7.2 | feat/sarban is merged to master by the owner, the release is tagged through the SC8 pipeline, and the installed conductor version matches the releases page | ⬜ TODO | - |
 
 </details>
@@ -104,7 +104,6 @@ _Updated 2026-08-01 16:10 UTC · branch `feat/sarban` · HEAD `d8d80f8`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Overhead | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 7 | SF1 | Deliver | 1 | 07-31 23:11 | 0:22 | RolledOver |  | 0 |  | $11.9132 |  | 174,960/82,162 |
 | 8 | SF1 | Fix | 2 | 07-31 23:41 | 0:06 | KilledByUser |  | 0 |  |  |  |  |
 | 9 | SF2 | Deliver | 1 | 08-01 00:04 | 0:15 | RolledOver |  | 0 |  | $5.5132 |  | 126,902/1,912 |
 | 10 | SF2 | Deliver | 1 | 08-01 00:20 | 0:18 | Advanced | SF2.1 | 4 | engine-fast:OK · face-fast:OK | $7.1733 | $0.0075 | 244,321/55,057 |
@@ -134,17 +133,13 @@ _Updated 2026-08-01 16:10 UTC · branch `feat/sarban` · HEAD `d8d80f8`_
 | 34 | SF6 | Deliver | 1 | 08-01 14:41 | 0:19 | Advanced | SF6.2 | 2 | engine-fast:OK · face-fast:OK | $5.5353 | $0.0116 | 104,010/52,742 |
 | 35 | SF6 | Deliver | 1 | 08-01 15:02 | 0:25 | RolledOver |  | 0 |  | $6.0288 |  | 114,436/2,225 |
 | 36 | SF6 | Fix | 2 | 08-01 15:42 | 0:20 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $6.1931 | $0.0129 | 111,458/57,499 |
+| 37 | SF7 | Deliver | 1 | 08-01 16:10 | 0:23 | Progress |  | 3 | engine-fast:OK · face-fast:OK | $6.2933 | $0.0093 | 125,335/52,531 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-01 14:08:25  • session #31 SF5 Deliver started (attempt 1/8)
-08-01 14:32:18  ▪ gate engine-fast pass [session]  (1m31s)
-08-01 14:32:19  ▪ gate face-fast pass [session]  (7.7s)
-08-01 14:32:20  • session #31 SF5 → Advanced · done SF5.4 · 3 commit(s)  (23m54s)
-08-01 14:45:08  ▪ gate engine-fast pass [phase]  (0.0s)
 08-01 14:45:08  ▪ gate face-fast pass [phase]  (0.0s)
 08-01 14:45:09  ▪ gate engine-full FAIL [phase]  (5m55s)
 08-01 14:45:09  ▪ gate face-full pass [phase]  (32.6s)
@@ -180,6 +175,11 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-01 17:10:51  ▪ gate engine-full pass [phase]  (4m47s)
 08-01 17:10:51  ▪ gate face-full pass [phase]  (16.2s)
 08-01 17:10:51  ✓ checkpoint SF6.2 confirmed
+08-01 17:10:51  ▸ stage SF6 confirmed  (1h53m31s)
+08-01 17:10:52  ▸ stage SF7 entered — Ship the era
+08-01 17:10:52  • session #37 SF7 Deliver started (attempt 1/4)
+08-01 17:36:23  ▪ gate engine-fast pass [session]  (1m06s)
+08-01 17:36:23  ▪ gate face-fast pass [session]  (26.0s)
 ```
 
 ## Health
@@ -187,7 +187,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 36 · retries 4 (11 %) · overall Warn
+sessions 37 · retries 4 (11 %) · overall Warn
 ⚠ [context-saturation] session #3: 24,790,251 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #4: 21,397,049 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #5: 36,996,007 context tokens (≥ 20,000,000)
@@ -201,15 +201,12 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/sarban
-working tree: M .conductor/REPORT.md, M SARBAN-FACE-TRACKER.md
+working tree: clean
 vs upstream: up to date
 ```
 
 ### Commits by session
 
-- **s25 (SF4 Fix)** — 2 commit(s):
-  - [`9e608d6`](https://github.com/shaahink/conductor/commit/9e608d6) docs(tracker): the red is closed, and the filtered battery that let it in (SF4)
-  - [`758c2d2`](https://github.com/shaahink/conductor/commit/758c2d2) test(telegram): SC1 expected the wire text FU-OWNER-11 stopped sending (SF4)
 - **s28 (SF5 Deliver)** — 2 commit(s):
   - [`299ae8b`](https://github.com/shaahink/conductor/commit/299ae8b) docs(tracker): SF5.2 closes, and the fuse that had to be a file (SF5.2)
   - [`4efedac`](https://github.com/shaahink/conductor/commit/4efedac) feat(watch): the babysitter belongs in the plan, not a shell history (SF5.2)
@@ -233,6 +230,10 @@ vs upstream: up to date
 - **s36 (SF6 Fix)** — 2 commit(s):
   - [`d8d80f8`](https://github.com/shaahink/conductor/commit/d8d80f8) fix(prompts): the fix template stops ordering a move the board refuses (SF6)
   - [`be0394d`](https://github.com/shaahink/conductor/commit/be0394d) fix(prompts): the budget test that a five-digit pid could fail, and two anchors that moved (SF6)
+- **s37 (SF7 Deliver)** — 3 commit(s):
+  - [`d97546c`](https://github.com/shaahink/conductor/commit/d97546c) docs(tracker): SF7.1 part 1 - the evidence, and the three parts still owed (SF7.1)
+  - [`d4f8993`](https://github.com/shaahink/conductor/commit/d4f8993) docs(operating): the known-gaps list stops being a July snapshot (SF7.1)
+  - [`1ebb536`](https://github.com/shaahink/conductor/commit/1ebb536) docs(tracker): the runtime-files tree stops describing a run that does not happen (SF7.1)
 
 ## Phase handovers (audit)
 
@@ -255,28 +256,30 @@ vs upstream: up to date
 
 ## Last gate run
 
-engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
+engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: All three `engine-full` reds are green with nothing weakened — full suite **1756 passed / 0 failed** at `be0394d`, and the prompt-prose suites 68/68 at `d8d80f8`. The budget red was not SF6.3's prose: I measured the session template byte-identical across the SF6.3 file split (2585 bytes both sides) and `ToolContract.cs` unchanged since SF6.1, the commit that wrote the guard — so the real defect was that the guard sat ~1 char from its own limit against `Environment.ProcessId`, whose width changes every run, and a 5-digit test-host pid tipped it to exactly 8000. I bought real headroom by compressing tools-block prose with every field lesson kept, and **tightened** the ceiling 8…
+> SESSION-RESULT: Session 37 landed the first half of SF7.1 across three commits (`1ebb536`, `d4f8993`, `d97546c`) with the full engine suite at **1761 passed / 0 failed** — `docs/tracker.md`'s runtime-files tree was reconciled against this repo's own 36-session `.conductor/`, where five documented entries (`events.jsonl`, `state.json`, `queue/`, `lanes/`, `audits/`) do not exist and thirteen real artifacts were documented nowhere; nothing in `src/` constructs an `EventLog` any more, so the event spine is `run.db`'s `events` table and the two dead carriers are now labelled LEGACY. The page is pinned rather than proofread by a new `SF7_1DocsMatchRealityTests`, which scans the source for every `…
 
 ## Tracker handoff
 
 ```
-last: **session 36, FIX - all three battery reds green, nothing weakened.** Full engine suite
-  **1756 passed / 0 failed** at be0394d. (a) The 8000-char budget red was NOT SF6.3's prose: the
-  session template is byte-identical across the split and ToolContract has not changed since SF6.1.
-  The only term that varies per run is `Environment.ProcessId`, so the guard had ~1 char of margin
-  and a 5-digit test-host pid tipped it. Fixed by compressing tools-block prose with every lesson
-  kept, and the guard was TIGHTENED 8000 -> **7900**. (b) SC4.4 re-anchored on headings the current
-  built-in has, one assertion added, none removed - bug **22 closed**. (c) SF6.3's switch enumerator
-  now LOCATES the switch across `PromptBuilder*.cs` instead of naming a file that moved.
-next: **SF7.1** - docs reconciled with reality. red: nothing known.
-  TRAP measured here: a fix session CANNOT follow its own step 1 - `task --in-progress` is refused on
-  a DONE card. Leave it claimed, re-claim with fresh evidence; never `--todo` a real delivery. fix.md
-  now says so. TRAP: prompt bytes are the tightest budget in the system - deliver 7803, fix 7731
-  against 7900; adding a template line still means cutting one. Sessions carry `CONDUCTOR_PLAN`, so
-  `cd $rig; conductor doctor` measures THIS repo - pass --plan.
-  open: bugs **#15 #16 #17 #18 #19 #20 #21**.
+last: **session 37 - SF7.1 part 1 of 2 landed, NOT claimed.** `1ebb536` `d4f8993`. Suite **1761/0**.
+  tracker.md's runtime tree described a run that does not happen: after 36 sessions `events.jsonl`,
+  `state.json`, `queue/`, `lanes/`, `audits/` are all ABSENT, and 13 real artifacts were undocumented.
+  Nothing constructs an `EventLog` any more - the spine is run.db's `events` table. Rewritten and now
+  PINNED by `SF7_1DocsMatchRealityTests`, which scans src for `StateDir, "x"` literals; falsified on
+  the old doc first (it named all 13). operating.md section 7 re-measured: 4 rows closed, rest re-owned.
+next: **SF7.1 part 2** - three parts remain, and the ledger note for SF7 has the measured lists so
+  you do NOT re-derive them: (1) `docs/dev/NEXT-FEATURES.md` refresh - I measured which items shipped
+  and which are still open, both lists are in the note; also file the MCP item the spec orders
+  (evidence: devcontext field notes section 8, lines 170-172). (2) the closure ledger over
+  `.conductor/followups.md` AND the 7 open bug ids. (3) the era `CHANGELOG.md` entry under Unreleased.
+  MEASURED, do not redo: plan-config.md's advisor section is already CORRECT (SC3.4 fixed it - the
+  spec's "wrong today" is stale); operating.md's SF5 supervision section was already complete.
+  Of the followups still open, SF3.3/SF4/SF4.2 DID close FU-OWNER-10/11/13 (ControlPlaneDto.cs:82-88,
+  TelegramService.cs:382, ControlPlaneDto.Telegram.cs:27) - but **FU-F1-06 is still open and its
+  re-home premise was wrong**: `IRunStore` has only `RecordRunEnd`, which stamps `ended_utc`, and SF2.1
+  never needed a status-only writer. red: nothing known. open: bugs **#15 #16 #17 #18 #19 #20 #21**.
 ```
