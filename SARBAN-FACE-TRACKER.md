@@ -4,19 +4,20 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **session 39 - SF7.1 CLAIMED DONE.** One commit `37a75ef`. The three `FIELD-NOTES-*.md` logs
-  each end in a closure ledger, 31 rows, finding -> stage -> commit -> what closed it. Map measured
-  from the commits (fifteen cite their own finding number) not from Appendix B, which was wrong in
-  three places and is now corrected in place. devcontext #19 is the one half-closure and its row
-  says what was NOT adopted. `SF7_1DocsMatchRealityTests` 16/16; the two new structural pins were
-  driven RED on purpose before being trusted. Note 191's warning about `#5 -> SC5.2` was itself
-  wrong - `SessionWatchdog.Remedy` is #5's fix and `git log -S Remedy` returns `e6b15c7`.
-next: **SF7.2, the last checkpoint - and most of it is the owner's, not yours.** Merge `feat/sarban`
-  to master is **ownerGate**: do not merge unsigned. `tools/install.ps1` is trap 0/1 - it is the
-  FIRST install of this run and needs the owner to confirm no other conductor run is live first, so
-  expect a `HUMAN:` line rather than a reinstall you perform. Tag through the SC8 pipeline; the era
-  CHANGELOG sits under `Unreleased` and `tools/changelog-section.sh` is the reader that pipeline uses.
-  red: nothing known. open: bugs **#15 #16 #17 #18 #19 #20 #21**.
+last: **session 40 - SF7.2 CLAIMED DONE**, commit `e897c2c` (on `master`, via a scratch worktree)
+  + tag `v0.3.0`. `CHANGELOG.md` `[Unreleased]` cut to `[0.3.0] - 2026-08-01` (minor bump, same
+  pattern as the 0.2.0/0.2.2 cuts). `git push origin v0.3.0` fired `release.yml` for real: guard +
+  5 platform builds + attach-to-release all green (run 30710653729), binary self-reports
+  `tag=0.3.0 binary=0.3.0+e897c2c7e1b0`. Release live: releases/tag/v0.3.0, 6 assets.
+  Evidence: `.conductor/evidence/SF7/SF7.2-tag-release.md`.
+era status: **all 24 SF checkpoints now claimed DONE.** Merge (`8286d63`) + tag (`v0.3.0`) both
+  closed. Reinstall alone is deliberately outstanding — re-homed as `FU-OWNER-14` in
+  `.conductor/followups.md` (owner runs `tools/install.ps1` once no other conductor run is live,
+  then confirms `conductor version` matches the release page).
+next: nothing plan-owned remains in SF7. If a session opens after this, it is confirmation/gate
+  work, or the next era. red: `ci.yml` windows gate battery is flaky on
+  `SF0_3PidsAndBackgroundWorkTests...NotDead` (bug **#23**, pre-existing, not release-blocking).
+  open bugs: **#15 #16 #17 #18 #19 #20 #21 #23**.
 
 
 ## Baseline numbers (from run.db)
@@ -25,7 +26,7 @@ next: **SF7.2, the last checkpoint - and most of it is the owner's, not yours.**
 |---|---|
 | Total checkpoints | 24 |
 | Done | 6 |
-| Claimed (unconfirmed) | 16 |
+| Claimed (unconfirmed) | 17 |
 
 ## Checkpoints
 
@@ -93,7 +94,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| SF7.1 | The docs match the code — plan-config advisor default, tracker runtime files, operating supervision section, NEXT-FEATURES refresh — the field notes carry a closure ledger, and the era CHANGELOG is written | IN PROGRESS | - | - |
+| SF7.1 | The docs match the code — plan-config advisor default, tracker runtime files, operating supervision section, NEXT-FEATURES refresh — the field notes carry a closure ledger, and the era CHANGELOG is written | DONE | 37a75ef | .conductor/evidence/SF7/SF7.1-field-notes-closure-ledger.md |
 | SF7.2 | feat/sarban is merged to master by the owner, the release is tagged through the SC8 pipeline, and the installed conductor version matches the releases page | TODO | - | - |
 
 ## Dependencies

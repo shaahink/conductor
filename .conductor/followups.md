@@ -405,3 +405,9 @@ here only so this ledger is complete, with the owner each one needs.
 **Nothing here is homeless and nothing is silently dropped.** Four rows need the owner; one row and
 seven bugs ride into the next era, and unlike last time the bugs ride in the database rather than in
 markdown, so nobody has to remember to copy them.
+
+## SF7.2 — the reinstall clause, re-homed to the owner — 2026-08-01
+
+| id | item | detail | owning stage | status |
+|----|------|--------|--------------|--------|
+| FU-OWNER-14 | The installed `conductor` on this machine has not been reinstalled against the v0.3.0 release | SF7.2's spec asks for "a reinstall whose conductor version matches the releases page." The other two clauses closed this session: the merge (`8286d63` on `master`) and the tag (`v0.3.0`, published, binary self-reports `0.3.0+e897c2c7e1b0`). The reinstall did not run, on the owner's own instruction (session-39 handoff, 2026-08-01): a second conductor run is live in `C:/Code/sk-studio` (NINE STREETS, mid-session) at the time of this write-up, and `tools/install.ps1` overwrites the one published binary both runs execute — running it now would swap the ground out from under the other run's live session, not just this one's. | SF7.2 | **HUMAN** — the owner runs `tools/install.ps1` once no other conductor run is live on the machine, then confirms `conductor version --short` reads `0.3.0` (or the matching commit-height prerelease) against https://github.com/shaahink/conductor/releases/tag/v0.3.0. |

@@ -1,10 +1,10 @@
 ﻿# Conductor — Sarban face - the watcher and the surfaces run report
 
-_Updated 2026-08-01 16:59 UTC · branch `feat/sarban` · HEAD `3abe51c`_
+_Updated 2026-08-01 17:30 UTC · branch `feat/sarban` · HEAD `9f1ea98`_
 
-**Status:** Idle
-**Stage:** SF7 — Ship the era · attempts used 0 · working ▸ SF7.1
-**Checkpoints:** 22/24 done · **Sessions run:** 38 · **Cost:** $288.5969 (agent $288.3709 + gates $0.2259) · **Tokens:** 5,302,818 in / 1,661,227 out
+**Status:** NeedsHuman — agent asked for a human in the tracker handoff (HUMAN: line) — resolve, then run `conductor resume` [16m ago, 17:15:00Z]
+**Stage:** SF7 — Ship the era · attempts used 0 · working ▸ SF7.2
+**Checkpoints:** 23/24 done · **Sessions run:** 39 · **Cost:** $292.8812 (agent $292.6477 + gates $0.2335) · **Tokens:** 5,397,411 in / 1,703,888 out
 **Confirmed phases:** SF0, SF1, SF2, SF3, SF4, SF5, SF6
 
 ## Stage progress
@@ -18,7 +18,7 @@ _Updated 2026-08-01 16:59 UTC · branch `feat/sarban` · HEAD `3abe51c`_
 | SF4 | The human queue is a first-class surface | ██████████ 2/2 | confirmed ✓ |
 | SF5 | Supervision without a polling meter | ██████████ 4/4 | confirmed ✓ |
 | SF6 | The prompt bank compounds | ██████████ 3/3 | confirmed ✓ |
-| SF7 | Ship the era | ░░░░░░░░░░ 0/2 | **← active** |
+| SF7 | Ship the era | █████░░░░░ 1/2 | **← active** |
 
 <details> ✅<summary>SF0 — The ledger closes - the core run's leftovers (4/4)</summary>
 
@@ -91,11 +91,11 @@ _Updated 2026-08-01 16:59 UTC · branch `feat/sarban` · HEAD `3abe51c`_
 
 </details>
 
-<details><summary>SF7 — Ship the era (0/2)</summary>
+<details><summary>SF7 — Ship the era (1/2)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| SF7.1 | The docs match the code — plan-config advisor default, tracker runtime files, operating supervision section, NEXT-FEATURES refresh — the field notes carry a closure ledger, and the era CHANGELOG is written | 🔄 IN PROGRESS | - |
+| SF7.1 | The docs match the code — plan-config advisor default, tracker runtime files, operating supervision section, NEXT-FEATURES refresh — the field notes carry a closure ledger, and the era CHANGELOG is written | ✅ DONE | [`37a75ef`](https://github.com/shaahink/conductor/commit/37a75ef) |
 | SF7.2 | feat/sarban is merged to master by the owner, the release is tagged through the SC8 pipeline, and the installed conductor version matches the releases page | ⬜ TODO | - |
 
 </details>
@@ -104,7 +104,6 @@ _Updated 2026-08-01 16:59 UTC · branch `feat/sarban` · HEAD `3abe51c`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Overhead | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 9 | SF2 | Deliver | 1 | 08-01 00:04 | 0:15 | RolledOver |  | 0 |  | $5.5132 |  | 126,902/1,912 |
 | 10 | SF2 | Deliver | 1 | 08-01 00:20 | 0:18 | Advanced | SF2.1 | 4 | engine-fast:OK · face-fast:OK | $7.1733 | $0.0075 | 244,321/55,057 |
 | 11 | SF2 | Deliver | 1 | 08-01 00:39 | 0:13 | Advanced | SF2.2 | 3 | engine-fast:OK · face-fast:OK | $6.2995 | $0.0082 | 129,922/49,189 |
 | 12 | SF2 | Deliver | 1 | 08-01 00:54 | 0:19 | Advanced | SF2.3 | 3 | engine-fast:OK · face-fast:OK | $5.9701 | $0.0076 | 113,302/47,111 |
@@ -134,19 +133,13 @@ _Updated 2026-08-01 16:59 UTC · branch `feat/sarban` · HEAD `3abe51c`_
 | 36 | SF6 | Fix | 2 | 08-01 15:42 | 0:20 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $6.1931 | $0.0129 | 111,458/57,499 |
 | 37 | SF7 | Deliver | 1 | 08-01 16:10 | 0:23 | Progress |  | 3 | engine-fast:OK · face-fast:OK | $6.2933 | $0.0093 | 125,335/52,531 |
 | 38 | SF7 | Deliver | 1 | 08-01 16:36 | 0:21 | Progress |  | 5 | engine-fast:OK · face-fast:OK | $5.9680 | $0.0081 | 113,825/50,135 |
+| 39 | SF7 | Deliver | 1 | 08-01 16:59 | 0:14 | Advanced | SF7.1 | 2 | engine-fast:OK · face-fast:OK | $4.2768 | $0.0075 | 94,593/42,661 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-01 15:09:30  • session #32 SF5 → RolledOver  (24m19s)
-08-01 15:17:18  ▪ gate engine-fast pass [phase]  (1m27s)
-08-01 15:17:18  ▪ gate face-fast pass [phase]  (49.8s)
-08-01 15:17:18  ▪ gate engine-full pass [phase]  (5m12s)
-08-01 15:17:18  ▪ gate face-full pass [phase]  (11.3s)
-08-01 15:17:18  ✓ checkpoint SF5.4 confirmed
-08-01 15:17:18  ▸ stage SF5 confirmed  (3h01m50s)
 08-01 15:17:20  ▸ stage SF6 entered — The prompt bank compounds
 08-01 15:17:21  • session #33 SF6 Deliver started (attempt 1/4)
 08-01 15:41:06  ▪ gate engine-fast pass [session]  (1m03s)
@@ -180,6 +173,13 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-01 17:36:24  • session #38 SF7 Deliver started (attempt 1/4)
 08-01 17:59:11  ▪ gate engine-fast pass [session]  (1m11s)
 08-01 17:59:12  ▪ gate face-fast pass [session]  (9.3s)
+08-01 17:59:13  • session #38 SF7 → Progress · 5 commit(s)  (22m48s)
+08-01 17:59:13  • session #39 SF7 Deliver started (attempt 1/4)
+08-01 18:14:59  ▪ gate engine-fast pass [session]  (1m08s)
+08-01 18:14:59  ▪ gate face-fast pass [session]  (7.2s)
+08-01 18:15:00  • session #39 SF7 → Advanced · done SF7.1 · 2 commit(s)  (15m46s)
+08-01 18:15:00  ■ needs human — agent asked for a human in the tracker handoff (HUMAN: line) — resolve, then run `conductor resume`
+08-01 18:28:40  ◆ plan reloaded — v2 · 8 stages · 4 gates
 ```
 
 ## Health
@@ -187,7 +187,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 38 · retries 4 (11 %) · overall Warn
+sessions 39 · retries 4 (10 %) · overall Warn
 ⚠ [context-saturation] session #3: 24,790,251 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #4: 21,397,049 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #5: 36,996,007 context tokens (≥ 20,000,000)
@@ -201,16 +201,12 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/sarban
-working tree: clean
+working tree: M .conductor/REPORT.md, M SARBAN-FACE-TRACKER.md, M plans/conductor-sarban-face.plan.json
 vs upstream: up to date
 ```
 
 ### Commits by session
 
-- **s29 (SF5 Deliver)** — 3 commit(s):
-  - [`02460a9`](https://github.com/shaahink/conductor/commit/02460a9) docs(tracker): SF5.3 closes, and the wake that had to outlive the fuse (SF5.3)
-  - [`65846c6`](https://github.com/shaahink/conductor/commit/65846c6) docs(watch): remote supervision, proven against a listener that is not us (SF5.3)
-  - [`2cd9083`](https://github.com/shaahink/conductor/commit/2cd9083) feat(watch): the wake leaves the machine (SF5.3)
 - **s30 (SF5 Deliver)** — 3 commit(s):
   - [`3365138`](https://github.com/shaahink/conductor/commit/3365138) docs(tracker): SF5.4 parts 1+2, and the face picker that is left (SF5.4)
   - [`9adb15f`](https://github.com/shaahink/conductor/commit/9adb15f) feat(ps): the engine says which run it is, in its title (SF5.4)
@@ -237,6 +233,9 @@ vs upstream: up to date
   - [`de3256f`](https://github.com/shaahink/conductor/commit/de3256f) docs(changelog): the era entry, written from the commits not from memory (SF7.1)
   - [`65e59fa`](https://github.com/shaahink/conductor/commit/65e59fa) docs(followups): the closure ledger, and three rows that closed by naming nothing (SF7.1)
   - [`3268e54`](https://github.com/shaahink/conductor/commit/3268e54) docs(dev): the backlog stops promising what already shipped (SF7.1)
+- **s39 (SF7 Deliver)** — 2 commit(s):
+  - [`9f1ea98`](https://github.com/shaahink/conductor/commit/9f1ea98) docs(tracker): SF7.1 closed, and what SF7.2 is not free to do (SF7.1)
+  - [`37a75ef`](https://github.com/shaahink/conductor/commit/37a75ef) docs(field-notes): every finding says which commit answered it (SF7.1)
 
 ## Phase handovers (audit)
 
@@ -263,22 +262,22 @@ engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: Landed four commits against SF7.1, all pushed on `feat/sarban`, tree clean, `SF7_1DocsMatchRealityTests` green at 12/12 across four partial files. (1) `3268e54` — `docs/dev/NEXT-FEATURES.md` was listing ten already-shipped features as future work; refreshed into shipped/open sections each naming what closed it, and filed the MCP item the spec ordered (`WireMcpServer` writes a config naming only `conductor-tasks`, so harness tools arrive deferred). Pinned both directions — the open-side pin asserts `requireCleanTree`/`RepoMapBattery`/`DefinitionOfDoneBattery` do *not* exist, which is the half that actually rots; it caught an error in my own first draft. (2) `65e59fa` — the clo…
+> SESSION-RESULT: SF7.1 is claimed DONE with evidence at `.conductor/evidence/SF7/SF7.1-field-notes-closure-ledger.md`, closing the last of its six parts — the three `docs/dev/FIELD-NOTES-*.md` logs each now end in a closure ledger, 31 rows total (devcontext 20, sk-platform 7, round-four 4), each carrying finding → stage → commit sha → one line on what actually closed it. The map was measured from the commits rather than the era spec's Appendix B index: fifteen era commits cite their own finding number in their bodies (`33d1f81` says "devcontext #10 and #11"; `c3e0813` and `1ce4ba7` both say "sk #3 verbatim"), and the remaining sixteen findings were matched by reading the candidate commit's bo…
 
 ## Tracker handoff
 
 ```
-last: **session 38 - SF7.1 part 2, four commits, still NOT claimed.** `3268e54` `65e59fa` `de3256f`
-  `36e406e`. `SF7_1DocsMatchRealityTests` now 12/12 across 4 partials. Done: NEXT-FEATURES refreshed
-  (ten items it called future had SHIPPED) and the MCP item filed; the closure ledger over
-  followups.md + the 7 open bugs; the era CHANGELOG under Unreleased (verified through the release
-  pipeline's own reader, `tools/changelog-section.sh Unreleased`, exit 0); and SKILL.md's trust
-  model, which said the OPPOSITE of the engine - a tracker hand-edit is accepted via the W1.3
-  fallback, not discarded. Also fixed: FU-OWNER-10/11/13 each closed by the token `CLOSED (bFU-...)`,
-  which names nothing; they now name stage + commit + file.
-next: **SF7.1 has ONE part left** - spec line 492: the three `docs/dev/FIELD-NOTES-*.md` files gain a
-  finding -> stage -> commit ledger (31 findings). The ledger note has my resolved stage->commit map
-  so you do not redo it, AND the warning that Appendix B's finding->stage index is not reliable
-  (devcontext #5 is mapped to SC5.2; that commit fixes #16). Then claim SF7.1 and SF7.2 is the merge.
-  red: nothing known. open: bugs **#15 #16 #17 #18 #19 #20 #21**.
+last: **session 39 - SF7.1 CLAIMED DONE**, commit `37a75ef`. The three `FIELD-NOTES-*.md` logs each
+  end in a closure ledger, 31 rows, finding -> stage -> commit, measured from the commits not from
+  Appendix B. `SF7_1DocsMatchRealityTests` 16/16.
+owner decided 2026-08-01, both clauses of SF7.2 that were his:
+  1. **Merge is DONE** - `feat/sarban` merged to `master` as `8286d63` (a `--no-ff` merge commit,
+     repo convention) and pushed. Do not re-merge; verify with `git log --oneline -1 origin/master`
+     and cite that as the evidence.
+  2. **Reinstall is WAIVED for this run** - a second conductor run is live in `C:/Code/sk-studio`
+     (NINE STREETS, mid-session), so **do NOT run `tools/install.ps1`**. Re-home the version-match
+     clause as an owner-owed row in `.conductor/followups.md` with that reason.
+next: **SF7.2 is now tag-only.** Tag the release through the SC8 pipeline off the merged master; the
+  era CHANGELOG sits under `Unreleased`, `tools/changelog-section.sh` is the reader that pipeline
+  uses. SF7.2 closes on merge + tag. red: none. open: bugs **#15 #16 #17 #18 #19 #20 #21**.
 ```

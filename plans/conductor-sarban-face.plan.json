@@ -1,63 +1,65 @@
-{
+﻿{
   // SARBAN plan 2 of 2 — face overhaul, human queue, supervision, prompt bank,
   // the core run's leftover ledgers (SF0), era close.
   // Prerequisites MET 2026-07-31: core plan complete 26/26, engine republished, v0.2.0 released.
   // Amended 2026-07-31 to carry the four FU-OWNER dogfooding rows into SF3/SF4/SF0 and to add SF0.
   // The annotated master brief is docs/history/CONDUCTOR-SARBAN.md (Appendix C is the launch drill).
-  // A SECOND RUN IS LIVE on this machine (sk-studio, port 4317) — see promptExtra trap 0.
+  // A SECOND RUN IS LIVE on this machine (sk-studio, port 4318) — see promptExtra trap 0.
+  // NOTE: `conductor plan set` round-trips this file through System.Text.Json — it drops every
+  // comment and materialises defaults. These six lines were restored by hand on 2026-08-01 after
+  // `plan set agent.model claude-sonnet-5`; expect to restore them again after the next `plan set`.
+  "version": "1.0",
+  "planVersion": 2,
   "name": "Sarban face - the watcher and the surfaces",
   "repo": "C:/code/conductor",
+  "satelliteRepos": [],
   "tracker": "SARBAN-FACE-TRACKER.md",
   "planDoc": "docs/history/CONDUCTOR-SARBAN.md",
   "branchPattern": "^feat/sarban$",
   "pauseOnBlocked": true,
-  "batteryCollapse": false,
-
   "agent": {
     "command": "claude",
-    "model": "claude-opus-5",
     "args": [
-      "-p", "{prompt}",
-      "--output-format", "stream-json",
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "stream-json",
       "--verbose",
       "--dangerously-skip-permissions",
-      "--model", "{model}",
-      "--session-id", "{sessionId}"
+      "--model",
+      "{model}",
+      "--session-id",
+      "{sessionId}"
     ],
     "resumeArgs": [
-      "-p", "{prompt}",
-      "--output-format", "stream-json",
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "stream-json",
       "--verbose",
       "--dangerously-skip-permissions",
-      "--model", "{model}",
-      "--resume", "{claudeSessionId}"
+      "--model",
+      "{model}",
+      "--resume",
+      "{claudeSessionId}"
     ],
-    "output": "stream-json"
+    "output": "stream-json",
+    "model": "claude-sonnet-5"
   },
-
   "advisor": {
     "enabled": true,
     "command": "claude",
-    "args": ["-p", "{prompt}", "--output-format", "json", "--model", "claude-haiku-4-5-20251001"],
+    "args": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "json",
+      "--model",
+      "claude-haiku-4-5-20251001"
+    ],
     "output": "json",
     "timeoutMinutes": 6
   },
-
-  "defaultWorkflow": "deliver",
-  "workflows": {
-    "deliver": {
-      "name": "deliver",
-      "description": "Deliver until the stage's checkpoints are confirmed; fix only when gates are red.",
-      "repeat": true,
-      "steps": [
-        { "id": "deliver", "kind": "Deliver", "deliver": true },
-        { "id": "fix-if-red", "kind": "Fix", "deliver": true, "runIf": "!gatesGreen" }
-      ]
-    }
-  },
-
-  "templatesDir": "sarban-templates",
-
   "setup": {
     "command": "dotnet build-server shutdown; exit 0",
     "timeoutMinutes": 2
@@ -66,86 +68,194 @@
     "command": "dotnet build-server shutdown; exit 0",
     "timeoutMinutes": 2
   },
-
+  "progress": {
+    "kind": "markdown-table"
+  },
+  "conventions": {
+    "stageIdPattern": "(?\u003Cstage\u003E[A-Za-z]\u002B\\d\u002B)(?:\\.\\d\u002B)?[a-z]?",
+    "handoffMarker": "## Handoff",
+    "humanToken": "HUMAN:",
+    "status": {
+      "done": [
+        "DONE"
+      ],
+      "blocked": [
+        "BLOCKED"
+      ],
+      "inProgress": [
+        "IN PROGRESS"
+      ],
+      "todo": [
+        "TODO"
+      ],
+      "skipped": [
+        "SKIPPED"
+      ]
+    }
+  },
   "stages": [
     {
       "id": "SF0",
-      "title": "The ledger closes - the core run's leftovers",
+      "title": "The ledger closes - the core run\u0027s leftovers",
       "sessions": 3,
-      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SF0. The core run left two ledgers and no stage that will ever open again to clear them: eleven bugs it filed against itself (ledger ids 2,3,4,5,6,8,9,10,11,12,13) and the still-open rows in .conductor/followups.md. The bug ledger is RUN-scoped - bug list under this plan answers no run found - so those eleven are invisible to you in run.db; they are transcribed into followups.md under Carried forward from the core run's bug ledger, and that transcription is your source. SF0.1 kills the keys nothing reads and the lines nobody can trust - inert model pins, inert verifyEachDelivery, a TelegramService start line for a service that early-returned, and a run that never says its notification path is dead. SF0.2 makes the verdict count every claim and name the session it queues, including the only outright hang on the list and the harness git helper that made every NewCommits assertion vacuous. SF0.3 makes pids and background work honest and finally delivers FU-OWNER-9's self-PID guard, which matters more now that a second run shares this machine. SF0.4 stops open bugs from vanishing with their run and reconciles every remaining followup row - fixed, closed with evidence, or re-homed to an owner that can act; never deleted."
+      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SF0. The core run left two ledgers and no stage that will ever open again to clear them: eleven bugs it filed against itself (ledger ids 2,3,4,5,6,8,9,10,11,12,13) and the still-open rows in .conductor/followups.md. The bug ledger is RUN-scoped - bug list under this plan answers no run found - so those eleven are invisible to you in run.db; they are transcribed into followups.md under Carried forward from the core run\u0027s bug ledger, and that transcription is your source. SF0.1 kills the keys nothing reads and the lines nobody can trust - inert model pins, inert verifyEachDelivery, a TelegramService start line for a service that early-returned, and a run that never says its notification path is dead. SF0.2 makes the verdict count every claim and name the session it queues, including the only outright hang on the list and the harness git helper that made every NewCommits assertion vacuous. SF0.3 makes pids and background work honest and finally delivers FU-OWNER-9\u0027s self-PID guard, which matters more now that a second run shares this machine. SF0.4 stops open bugs from vanishing with their run and reconciles every remaining followup row - fixed, closed with evidence, or re-homed to an owner that can act; never deleted.",
+      "ownerGate": false,
+      "kind": "deliver"
     },
     {
       "id": "SF1",
       "title": "The face sheds dead weight",
       "sessions": 2,
-      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SF1. Verifier scores get a real DTO first, then the Dev SQL console goes with all its traces - tab, endpoint, report query flag - while the MCP run_query stays for chat and the two non-SQL Dev panels are re-homed, not deleted. Then tabs consolidate to at most ten with a design note before code. The face agent map in the spec names every reference site."
+      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SF1. Verifier scores get a real DTO first, then the Dev SQL console goes with all its traces - tab, endpoint, report query flag - while the MCP run_query stays for chat and the two non-SQL Dev panels are re-homed, not deleted. Then tabs consolidate to at most ten with a design note before code. The face agent map in the spec names every reference site.",
+      "ownerGate": false,
+      "kind": "deliver"
     },
     {
       "id": "SF2",
       "title": "The face tells the truth kindly - state, time, money",
       "sessions": 3,
-      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SF2, including the screenshot-critique table. Home reorganized around what-is-happening-and-what-should-I-do with one honest connection line and a last-run summary when offline; one shared time formatter with relative age and the Timeline UTC mislabel fixed; money honesty - over-budget renders as OVER, window vs lifetime distinguished, in-flight session cost live in the top bar, and the attempts marker gets a legend."
+      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SF2, including the screenshot-critique table. Home reorganized around what-is-happening-and-what-should-I-do with one honest connection line and a last-run summary when offline; one shared time formatter with relative age and the Timeline UTC mislabel fixed; money honesty - over-budget renders as OVER, window vs lifetime distinguished, in-flight session cost live in the top bar, and the attempts marker gets a legend.",
+      "ownerGate": false,
+      "kind": "deliver"
     },
     {
       "id": "SF3",
       "title": "Reading a session becomes cheap",
       "sessions": 3,
-      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SF3. The digest layer spends what SC7 captured: one-liner tool calls, a per-session digest panel with the bg-purpose storyline, rune-safe fold; the kanban answers where-are-we - stage grouping, active-stage highlight, card meta without selection, column totals, separated skips, in-column scroll, a you-are-here ribbon; git awareness lands on the wire and in the face - branch chip, dirty state, ahead-behind, commit subjects. SF3.3 also carries FU-OWNER-10 in .conductor/followups.md - GET /state names no engine version, commit or face build, so the face cannot show which build you are attached to and did-my-reinstall-take took four out-of-band checks to answer. Add engineVersion, engineCommit and faceBuild to the same payload SF3.3 already opens, and the short form to the status strip beside the branch chip."
+      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SF3. The digest layer spends what SC7 captured: one-liner tool calls, a per-session digest panel with the bg-purpose storyline, rune-safe fold; the kanban answers where-are-we - stage grouping, active-stage highlight, card meta without selection, column totals, separated skips, in-column scroll, a you-are-here ribbon; git awareness lands on the wire and in the face - branch chip, dirty state, ahead-behind, commit subjects. SF3.3 also carries FU-OWNER-10 in .conductor/followups.md - GET /state names no engine version, commit or face build, so the face cannot show which build you are attached to and did-my-reinstall-take took four out-of-band checks to answer. Add engineVersion, engineCommit and faceBuild to the same payload SF3.3 already opens, and the short form to the status strip beside the branch chip.",
+      "ownerGate": false,
+      "kind": "deliver"
     },
     {
       "id": "SF4",
       "title": "The human queue is a first-class surface",
       "sessions": 2,
-      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SF4. Productize the SHAHIN.md pattern: the engine collects every open HUMAN line, ownerGated stage, park with reason and age, blocked-until wait and owner-marked item into OWNER-QUEUE.md and an owner-queue endpoint, each entry saying what it unblocks and the exact command that clears it; the face surfaces it with age, and a new item pushes to Telegram. SF4.2 owns the push path, so two owner rows in .conductor/followups.md land with it. FU-OWNER-11: a push carries no identity - no repo, plan, run id or build - so one chat receiving two machines cannot attribute a line and a message read hours later cannot be dated to a build; prefix every push with plan name and session number and carry repo plus engine version in the run-start and run-end messages, taking the version from FU-OWNER-10's field. FU-OWNER-13: between a saved plan edit and the next session boundary, POST /telegram/token and GET /telegram/status both answer add a telegram block to the plan - advising the edit that was just accepted - because both read the in-memory PlanConfig while the reload is queued; when a reload is pending both must say so instead and the status payload needs a reloadPending flag so the face can show waiting, not unconfigured. That is the SC1.3 failure one layer out."
+      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SF4. Productize the SHAHIN.md pattern: the engine collects every open HUMAN line, ownerGated stage, park with reason and age, blocked-until wait and owner-marked item into OWNER-QUEUE.md and an owner-queue endpoint, each entry saying what it unblocks and the exact command that clears it; the face surfaces it with age, and a new item pushes to Telegram. SF4.2 owns the push path, so two owner rows in .conductor/followups.md land with it. FU-OWNER-11: a push carries no identity - no repo, plan, run id or build - so one chat receiving two machines cannot attribute a line and a message read hours later cannot be dated to a build; prefix every push with plan name and session number and carry repo plus engine version in the run-start and run-end messages, taking the version from FU-OWNER-10\u0027s field. FU-OWNER-13: between a saved plan edit and the next session boundary, POST /telegram/token and GET /telegram/status both answer add a telegram block to the plan - advising the edit that was just accepted - because both read the in-memory PlanConfig while the reload is queued; when a reload is pending both must say so instead and the status payload needs a reloadPending flag so the face can show waiting, not unconfigured. That is the SC1.3 failure one layer out.",
+      "ownerGate": false,
+      "kind": "deliver"
     },
     {
       "id": "SF5",
       "title": "Supervision without a polling meter",
       "sessions": 4,
-      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SF5. The watch verb blocks silently and returns only on the wake set - park, circuit breaker, budget park, phase RED twice on one stage, engine gone, run ended - never on backoffs or session churn, with a json brief of about thirty lines; a supervisor plan block runs a command on wake with the brief on stdin; the remote pattern is documented and proven once; conductor ps lists every run on the machine and the face gains a run picker. The watch-run skill (.claude/skills/watch-run/SKILL.md, in this repo) is the behavioural spec. Prove watch against a scratch run of YOUR build (promptExtra trap 2); conductor ps is read-only, so listing the run driving you is legitimate evidence."
+      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SF5. The watch verb blocks silently and returns only on the wake set - park, circuit breaker, budget park, phase RED twice on one stage, engine gone, run ended - never on backoffs or session churn, with a json brief of about thirty lines; a supervisor plan block runs a command on wake with the brief on stdin; the remote pattern is documented and proven once; conductor ps lists every run on the machine and the face gains a run picker. The watch-run skill (.claude/skills/watch-run/SKILL.md, in this repo) is the behavioural spec. Prove watch against a scratch run of YOUR build (promptExtra trap 2); conductor ps is read-only, so listing the run driving you is legitimate evidence.",
+      "ownerGate": false,
+      "kind": "deliver"
     },
     {
       "id": "SF6",
       "title": "The prompt bank compounds",
       "sessions": 2,
-      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SF6. Built-in session and fix templates carry the field lessons - mark in-progress first, claim before the handoff, the deferred-MCP note with the CLI fallback, long commands under conductor bg, the anchor-commit rule for multi-repo plans; the bank under plans/ is pruned, enriched from the rounds and indexed; conductor init scaffolds the refreshed set and passes doctor clean."
+      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SF6. Built-in session and fix templates carry the field lessons - mark in-progress first, claim before the handoff, the deferred-MCP note with the CLI fallback, long commands under conductor bg, the anchor-commit rule for multi-repo plans; the bank under plans/ is pruned, enriched from the rounds and indexed; conductor init scaffolds the refreshed set and passes doctor clean.",
+      "ownerGate": false,
+      "kind": "deliver"
     },
     {
       "id": "SF7",
       "title": "Ship the era",
       "sessions": 2,
+      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SF7. Docs reconciled with reality - plan-config advisor default, tracker runtime files, operating gains the supervision section, NEXT-FEATURES refreshed, the field notes gain a closure ledger; era CHANGELOG; then the owner-signed merge of feat/sarban to master, the tagged release through the SC8 pipeline, and a reinstall whose conductor version matches the releases page. The closure ledger covers both era ledgers, not just the field notes: every followups.md row and every core-run bug id says which stage closed it and with which commit, and anything still open names a living owner. The reinstall in SF7.2 is the FIRST install.ps1 of this run and only after the owner confirms no other conductor run is live on the machine.",
       "ownerGate": true,
-      "notes": "SPEC: docs/history/CONDUCTOR-SARBAN.md section SF7. Docs reconciled with reality - plan-config advisor default, tracker runtime files, operating gains the supervision section, NEXT-FEATURES refreshed, the field notes gain a closure ledger; era CHANGELOG; then the owner-signed merge of feat/sarban to master, the tagged release through the SC8 pipeline, and a reinstall whose conductor version matches the releases page. The closure ledger covers both era ledgers, not just the field notes: every followups.md row and every core-run bug id says which stage closed it and with which commit, and anything still open names a living owner. The reinstall in SF7.2 is the FIRST install.ps1 of this run and only after the owner confirms no other conductor run is live on the machine."
+      "kind": "deliver"
     }
   ],
-
-  "gatePolicy": "perPhase",
   "gates": [
-    { "name": "engine-fast", "command": "dotnet build Conductor.slnx -clp:ErrorsOnly", "tier": "fast", "timeoutMinutes": 15 },
-    { "name": "face-fast", "command": "cmd /c \"cd /d C:\\code\\conductor\\face-go && go build ./... && go vet ./...\"", "tier": "fast", "timeoutMinutes": 10 },
-    { "name": "engine-full", "command": "dotnet test Conductor.slnx", "tier": "full", "timeoutMinutes": 40 },
-    { "name": "face-full", "command": "cmd /c \"cd /d C:\\code\\conductor\\face-go && go test ./...\"", "tier": "full", "timeoutMinutes": 15 }
+    {
+      "name": "engine-fast",
+      "command": "dotnet build Conductor.slnx -clp:ErrorsOnly",
+      "optional": false,
+      "tier": "fast",
+      "parallel": false,
+      "timeoutMinutes": 15
+    },
+    {
+      "name": "face-fast",
+      "command": "cmd /c \u0022cd /d C:\\code\\conductor\\face-go \u0026\u0026 go build ./... \u0026\u0026 go vet ./...\u0022",
+      "optional": false,
+      "tier": "fast",
+      "parallel": false,
+      "timeoutMinutes": 10
+    },
+    {
+      "name": "engine-full",
+      "command": "dotnet test Conductor.slnx",
+      "optional": false,
+      "tier": "full",
+      "parallel": false,
+      "timeoutMinutes": 40
+    },
+    {
+      "name": "face-full",
+      "command": "cmd /c \u0022cd /d C:\\code\\conductor\\face-go \u0026\u0026 go test ./...\u0022",
+      "optional": false,
+      "tier": "full",
+      "parallel": false,
+      "timeoutMinutes": 15
+    }
   ],
-
+  "gatePolicy": "perPhase",
+  "verifyEachDelivery": true,
   "limits": {
     "stallMinutes": 15,
+    "stallGraceMinutes": 3,
     "sessionTimeoutMinutes": 120,
+    "batterySettleSeconds": 120,
+    "authPreflight": true,
     "maxResumesPerSession": 2,
     "stageSlackFactor": 2,
     "backoffMinutes": 30,
     "maxBackoffs": 10,
     "maxRunCostUsd": 350,
+    "approvalMode": false,
     "maxSessionTokens": 8000000,
-    "softBreakRatio": 0.75
+    "softBreakRatio": 0.75,
+    "maxConcurrentLanes": 2,
+    "stallPatternTermination": true,
+    "sameFailureCircuitBreaker": true,
+    "stallBackoffMinutes": 12,
+    "overheadCostPerSecond": 0.0001,
+    "verifierThreshold": 80
   },
-
-  "report": { "commit": false, "push": false },
-
-  "telegram": { "allowedChatIds": ["99205495"], "pollIntervalSeconds": 4, "enableTwoWay": true },
-
+  "report": {
+    "commit": false,
+    "push": false,
+    "heartbeatMinutes": 0
+  },
+  "telegram": {
+    "allowedChatIds": [
+      "99205495"
+    ],
+    "pollIntervalSeconds": 4,
+    "enableTwoWay": true
+  },
+  "promptExtra": "TRAPS THIS REPO HAS ALREADY PAID FOR, in order of cost:\n0. A SECOND CONDUCTOR RUN IS LIVE ON THIS MACHINE, in another repo, and you can break it without touching it. Never run tools/install.ps1 - both runs execute the same published binaries. Never kill a conductor.exe, conductor-face.exe or stray dotnet process by pid: check its command line with Get-CimInstance Win32_Process and leave anything whose path is not this repo alone, no matter how stale it looks. Trap 6\u0027s permission to stop stray dotnet hosts was written for a machine running one thing. Give every scratch rig its own port and its own state dir - the other run holds 4317 - and read the port back from the rig\u0027s own discovery file instead of assuming a default. Usage-limit backoffs will be more frequent because both runs draw on one subscription; they self-resume and are not your problem.\n1. NEVER run tools/install.ps1 or overwrite the published engine - the conductor driving you runs from that published copy, and so does the other run. The owner reinstalls at SF7.2, not before.\n2. This repo\u0027s .conductor/ is the LIVE state of the run driving you. The claim and note verbs (conductor task, note, bug, bg) and read-only verbs (status, task --list) are yours; NEVER aim run-control verbs (run, pause, resume, abort, approve, plan set, plan reload, goto, skip, retry-stage, rollback, kill) at this repo. Any live-run proof spawns YOUR build against a scratch repo with its own tiny plan and its own .conductor - for example under %TEMP%\\sarban-proofs - never against C:/code/conductor.\n3. The conductor on PATH is the published engine driving you - post-core, but still NOT your working tree. Exercise YOUR changes through the fresh build: dotnet run --project src/Conductor -- VERB (or go run ./cmd/... in face-go). Testing a new verb through the PATH shim only proves the published engine lacks it. Exception by design: task claims go through the PATH copy, because they target the driving run.\n4. The ratchet gate is tools/gates/ratchet.ps1 - the wrong path prints an error but exits 0, a silent false green. Never raise the pragma ceiling; fix the cause.\n5. face-go: pad plain text then style, never width-format an ANSI string; clamp with MaxWidth and MaxHeight; goldens pin UTC and live in face-go/internal/tui/testdata/golden - regenerate them in a separate rebaseline commit, and read face-go/STYLE.md before any face change.\n6. Orphaned dotnet test hosts flake the full suite. Stopping one is sanctioned ONLY after trap 0\u0027s command-line check proves it belongs to this repo; never kill a conductor process, yours or anyone\u0027s.\n7. PowerShell tooling targets Windows PowerShell 5.1 and must stay ASCII-only - em-dashes have torn string literals here before.\n8. Keep tracker handoffs, checkpoint titles and all plan prose free of curly braces until you have verified the SC3.3 engine fix is what is driving you.\n9. The conductor MCP task tools may arrive deferred in your harness - ToolSearch for task_update first, or use the CLI: conductor task --done ID --evidence PATH. That command is the only claim; prose moves nothing.\n10. Commit per checkpoint with the repo\u0027s trailer convention and push feat/sarban. Go sources are checked out LF; keep them that way.\n11. Tab changes: tabKey in model.go is the single source for mnemonics; the help legend in cmdbar.go is hand-maintained - update both or the help lies.\n12. The core run\u0027s eleven open bugs are NOT in your run.db - the bug ledger is run-scoped and this plan starts a new run. Read them from .conductor/followups.md, section Carried forward from the core run\u0027s bug ledger, and file anything new with conductor bug new so SF0.4 can close the loop.",
+  "templatesDir": "sarban-templates",
+  "packs": [],
+  "batteryCollapse": false,
   "readOrder": [
     "docs/history/CONDUCTOR-SARBAN.md"
   ],
-
-  "promptExtra": "TRAPS THIS REPO HAS ALREADY PAID FOR, in order of cost:\n0. A SECOND CONDUCTOR RUN IS LIVE ON THIS MACHINE, in another repo, and you can break it without touching it. Never run tools/install.ps1 - both runs execute the same published binaries. Never kill a conductor.exe, conductor-face.exe or stray dotnet process by pid: check its command line with Get-CimInstance Win32_Process and leave anything whose path is not this repo alone, no matter how stale it looks. Trap 6's permission to stop stray dotnet hosts was written for a machine running one thing. Give every scratch rig its own port and its own state dir - the other run holds 4317 - and read the port back from the rig's own discovery file instead of assuming a default. Usage-limit backoffs will be more frequent because both runs draw on one subscription; they self-resume and are not your problem.\n1. NEVER run tools/install.ps1 or overwrite the published engine - the conductor driving you runs from that published copy, and so does the other run. The owner reinstalls at SF7.2, not before.\n2. This repo's .conductor/ is the LIVE state of the run driving you. The claim and note verbs (conductor task, note, bug, bg) and read-only verbs (status, task --list) are yours; NEVER aim run-control verbs (run, pause, resume, abort, approve, plan set, plan reload, goto, skip, retry-stage, rollback, kill) at this repo. Any live-run proof spawns YOUR build against a scratch repo with its own tiny plan and its own .conductor - for example under %TEMP%\\sarban-proofs - never against C:/code/conductor.\n3. The conductor on PATH is the published engine driving you - post-core, but still NOT your working tree. Exercise YOUR changes through the fresh build: dotnet run --project src/Conductor -- VERB (or go run ./cmd/... in face-go). Testing a new verb through the PATH shim only proves the published engine lacks it. Exception by design: task claims go through the PATH copy, because they target the driving run.\n4. The ratchet gate is tools/gates/ratchet.ps1 - the wrong path prints an error but exits 0, a silent false green. Never raise the pragma ceiling; fix the cause.\n5. face-go: pad plain text then style, never width-format an ANSI string; clamp with MaxWidth and MaxHeight; goldens pin UTC and live in face-go/internal/tui/testdata/golden - regenerate them in a separate rebaseline commit, and read face-go/STYLE.md before any face change.\n6. Orphaned dotnet test hosts flake the full suite. Stopping one is sanctioned ONLY after trap 0's command-line check proves it belongs to this repo; never kill a conductor process, yours or anyone's.\n7. PowerShell tooling targets Windows PowerShell 5.1 and must stay ASCII-only - em-dashes have torn string literals here before.\n8. Keep tracker handoffs, checkpoint titles and all plan prose free of curly braces until you have verified the SC3.3 engine fix is what is driving you.\n9. The conductor MCP task tools may arrive deferred in your harness - ToolSearch for task_update first, or use the CLI: conductor task --done ID --evidence PATH. That command is the only claim; prose moves nothing.\n10. Commit per checkpoint with the repo's trailer convention and push feat/sarban. Go sources are checked out LF; keep them that way.\n11. Tab changes: tabKey in model.go is the single source for mnemonics; the help legend in cmdbar.go is hand-maintained - update both or the help lies.\n12. The core run's eleven open bugs are NOT in your run.db - the bug ledger is run-scoped and this plan starts a new run. Read them from .conductor/followups.md, section Carried forward from the core run's bug ledger, and file anything new with conductor bug new so SF0.4 can close the loop."
+  "analysisLanes": [],
+  "mutatingLanes": [],
+  "workflows": {
+    "deliver": {
+      "name": "deliver",
+      "description": "Deliver until the stage\u0027s checkpoints are confirmed; fix only when gates are red.",
+      "steps": [
+        {
+          "id": "deliver",
+          "kind": "deliver",
+          "deliver": true
+        },
+        {
+          "id": "fix-if-red",
+          "kind": "fix",
+          "runIf": "!gatesGreen",
+          "deliver": true
+        }
+      ],
+      "repeat": true
+    }
+  },
+  "defaultWorkflow": "deliver"
 }
