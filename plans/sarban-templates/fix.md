@@ -37,4 +37,5 @@ without weakening it.
 
 End by printing one paragraph starting with `SESSION-RESULT:` — what you fixed, what is still red, why.
 {tools}
+{packs}
 {stageNotes}{extra}

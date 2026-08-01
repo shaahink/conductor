@@ -38,5 +38,14 @@ not sure it works, SAY SO plainly. "This is thin and I could not verify the erro
 your successor than a confident sentence that turns out to be false — and the Advisor fact-checks handoffs
 against git and the artifacts anyway, so a contradiction gets flagged, not believed.
 
+**Landing a whole session's work in a sibling repo.** On a multi-repo plan the engine judges progress from
+the ANCHOR repo — the one the plan's `repo` points at. A session whose entire output was a sibling-repo PR
+is recorded as NoProgress, burns an attempt, and queues a Fix session for nothing being broken. That has
+happened twice in one run, at $3.82 for the first spurious fix alone, in a plan already written to avoid
+it. So: land at least one anchor-repo commit every session. A dated proof-note is enough and is the
+established shape — append to the anchor's field notes or tracker, e.g. `2026-07-29 — S4: shipped
+sk-studio#41 (deploy window full, next slot 15:12)`, with the sibling sha or PR number in it. It is not
+ceremony; it is the only record the run history will keep of what you did.
+
 **Sprawling the diff.** Roughly 15 files per session. If you find yourself touching 40, you have taken on
 too much — land what is solid, note the rest as follow-ups, hand off cleanly.

@@ -143,21 +143,47 @@ public sealed partial class PromptBuilder
         return Path.Combine(_plan.PlanDir, templateFile);
     }
 
-    /// <summary>Concatenates the plan's domain packs (<c>templatesDir/packs/&lt;name&gt;.md</c>) — the
-    /// "batteries included" context: house C# style, the mistakes agents make in this domain, etc.</summary>
+    /// <summary>Concatenates the plan's domain packs — the "batteries included" context: house C#
+    /// style, the mistakes agents make in this domain, etc. Resolves era-first then shared, the same
+    /// way personas already do (SF6.2): <c>templatesDir/packs/&lt;name&gt;.md</c> wins when it exists,
+    /// otherwise <c>&lt;PlanDir&gt;/packs/&lt;name&gt;.md</c>. Without the shared fallback a pack is
+    /// stranded in whichever era set first wrote it and no later plan can choose it.</summary>
     private string LoadPacks()
     {
         if (_plan.Packs is not { Count: > 0 }) return "";
         var sb = new System.Text.StringBuilder();
         foreach (var name in _plan.Packs)
         {
-            var path = Path.Combine(_plan.PlanDir, _plan.TemplatesDir ?? "", "packs", name + ".md");
+            var path = ResolvePackPath(name);
+            if (path is null) continue;
 #pragma warning disable MA0045 // sync read — Render is sync on the control loop's session-start path
-            if (!File.Exists(path)) continue;
             sb.AppendLine(File.ReadAllText(path).Trim()).AppendLine();
 #pragma warning restore MA0045
         }
         return sb.ToString().TrimEnd();
+    }
+
+    /// <summary>Era set first, shared bank second, null when neither has it. Pack names are plain
+    /// identifiers — a name carrying a separator or <c>..</c> is refused outright rather than
+    /// combined into a path, since plan JSON can arrive over the control plane's import endpoint.</summary>
+    private string? ResolvePackPath(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return null;
+        name = name.Trim();
+        if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ||
+            name.Contains("..", StringComparison.Ordinal) ||
+            name.Contains('/', StringComparison.Ordinal) ||
+            name.Contains('\\', StringComparison.Ordinal))
+            return null;
+
+        var file = name + ".md";
+        if (!string.IsNullOrWhiteSpace(_plan.TemplatesDir))
+        {
+            var inEra = Path.Combine(_plan.PlanDir, _plan.TemplatesDir, "packs", file);
+            if (File.Exists(inEra)) return inEra;
+        }
+        var shared = Path.Combine(_plan.PlanDir, "packs", file);
+        return File.Exists(shared) ? shared : null;
     }
 
     private string Render(string templateFile, Dictionary<string, string> vars)
