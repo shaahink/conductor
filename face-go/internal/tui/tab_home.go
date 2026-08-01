@@ -133,6 +133,9 @@ func (m Model) renderHomePane() (string, string) {
 		m.renderHomeLastRun(w),
 		m.renderHomeRun(w),
 		m.renderHomeWorkspace(w),
+		// Directly under Workspace: the repo row says WHICH folder is being edited, and this says what
+		// state that folder is in. SF3.3.
+		m.renderHomeGit(w),
 		m.renderHomeNextSteps(),
 		// SF1.2's re-homed wiring diagnostics go last: see homeWiring for why position is what makes
 		// them shed before anything Home already showed.
@@ -169,6 +172,14 @@ func (m Model) renderHomeServer(w int) []homeLine {
 	rows := []homeLine{
 		hRow("engine", homeEngineLine(st, style, max(20, w-homeLabelW)), homeEssential),
 		hRow("streams", homeStream("events", c.EventsConnected)+"   "+homeStream("transcript", c.TranscriptConnected), homeDetail),
+	}
+	// FU-OWNER-10. The top bar carries a short form when it has the columns; this is the full line,
+	// on the page an owner opens to ask "am I attached to anything" — which is the same breath as
+	// "and is it the thing I just installed". Answering that took four out-of-band checks because no
+	// surface named the build at all. It is homeUseful, not homeDetail: a reinstall that did not take
+	// is not a diagnostic, it is every subsequent observation being about the wrong binary.
+	if line := homeBuildLine(m.data.Plan, max(20, w-homeLabelW)); line != "" {
+		rows = append(rows, hRow("build", line, homeUseful))
 	}
 
 	if !c.Connected && !m.knowsARun() {
@@ -220,6 +231,117 @@ func homeEngineLine(st engineStateText, style lipgloss.Style, avail int) string 
 		out += subtleStyle.Render(" — " + detail)
 	}
 	return out + subtleStyle.Render(tail)
+}
+
+// homeBuildLine is FU-OWNER-10's full form: engine version, engine commit, and the Face's own build.
+//
+// Two builds are named because two binaries are involved and they are installed separately — the
+// question "did my reinstall take" has been answered wrongly by looking at only one of them. An
+// engine that predates the field serves "", and "" renders NOTHING rather than "unknown": an old
+// engine is not a failed lookup, and a row that says "unknown" invites a hunt that has no quarry.
+func homeBuildLine(s *api.StateDto, avail int) string {
+	if s == nil || s.EngineVersion == "" {
+		return ""
+	}
+	head := textStyle.Render("v" + s.EngineVersion)
+	tail := ""
+	if s.EngineCommit != "" {
+		tail += "  " + s.EngineCommit
+	}
+	if s.FaceBuild != "" {
+		tail += "  ·  face " + s.FaceBuild
+	}
+	if tail == "" {
+		return head
+	}
+	// Shorten the PLAIN tail and style afterwards: truncate cuts runes but measures with
+	// lipgloss.Width, so handing it a styled string spends the budget on escape bytes (STYLE.md).
+	return head + subtleStyle.Render(truncate(tail, max(4, avail-lipgloss.Width("v"+s.EngineVersion))))
+}
+
+// --- Git (SF3.3) --------------------------------------------------------------
+
+// renderHomeGit is the repo state an owner would otherwise get by alt-tabbing to a shell: which
+// branch this run is writing to, whether that branch has ever been pushed, how far it has drifted
+// from its remote, what HEAD says, and whether the tree is clean.
+//
+// The three absences stay three different sentences. A nil Git is an engine older than SF3.3 — it
+// knows nothing, so the panel renders no rows and fitHome drops the orphaned header, leaving Home
+// silent rather than confidently clean. A present block with IsRepo false is a workspace that is
+// genuinely not a repo, which is worth saying out loud precisely because it explains why no commit
+// will ever be attributed to this run. Only a real repo gets the rows.
+func (m Model) renderHomeGit(w int) []homeLine {
+	s := m.data.Plan
+	if s == nil || s.Git == nil {
+		return homePanel("Git")
+	}
+	g := s.Git
+	if !g.IsRepo {
+		return homePanel("Git", hLine(subtleStyle.Render(truncate(
+			"not a git repository — this run's sessions cannot land commits here", w)), homeDetail))
+	}
+
+	avail := max(12, w-homeLabelW)
+	branch := textStyle.Render(truncate(g.Branch, avail))
+	if g.Branch == "" {
+		branch = warnStyle.Render("detached") + subtleStyle.Render("  at "+g.HeadShortSha)
+	}
+	rows := []homeLine{hRow("branch", branch, homeUseful)}
+
+	// "No upstream" and "level with the upstream" are the pair this row exists to keep apart. A
+	// branch that has never been pushed is one machine failure away from being gone, and rendering
+	// it the same way as a branch that is safely mirrored is the most expensive lie this panel could
+	// tell. So the unpushed case gets its own words and its own colour, not a blank.
+	if !g.HasUpstream() {
+		rows = append(rows, hRow("upstream", warnStyle.Render("none")+
+			subtleStyle.Render("  this branch has never been pushed"), homeUseful))
+	} else {
+		up := textStyle.Render(truncate(*g.Upstream, max(8, avail-24)))
+		switch a, b := derefInt(g.Ahead), derefInt(g.Behind); {
+		case a == 0 && b == 0:
+			up += safeStyle.Render("  in sync")
+		default:
+			var d []string
+			if a > 0 {
+				d = append(d, fmt.Sprintf("%d ahead", a))
+			}
+			if b > 0 {
+				d = append(d, fmt.Sprintf("%d behind", b))
+			}
+			up += peachStyle.Render("  " + strings.Join(d, " · "))
+		}
+		rows = append(rows, hRow("upstream", up, homeUseful))
+	}
+
+	if g.HeadShortSha != "" {
+		head := accentStyle.Render(g.HeadShortSha)
+		if g.HeadSubject != "" {
+			head += subtleStyle.Render("  " + truncate(firstLine(g.HeadSubject), max(8, avail-len(g.HeadShortSha)-2)))
+		}
+		rows = append(rows, hRow("head", head, homeDetail))
+	}
+
+	if g.Dirty {
+		rows = append(rows, hRow("tree", warnStyle.Render(fmt.Sprintf("%s uncommitted", plural(g.DirtyCount, "change"))), homeUseful))
+		// The engine serves porcelain rows joined with commas ("M src/Core/RunDb.cs, ?? notes.md"),
+		// not a prose sentence — verified against a live GET /state. Rendered as what it is.
+		if g.DirtySummary != "" {
+			rows = append(rows, hRow("changes", subtleStyle.Render(truncate(g.DirtySummary, avail)), homeDetail))
+		}
+	} else {
+		rows = append(rows, hRow("tree", safeStyle.Render("clean"), homeDetail))
+	}
+	return homePanel("Git", rows...)
+}
+
+// derefInt reads an omitted count as zero ONLY where the caller has already established that the
+// field is meaningful — every ahead/behind path tests HasUpstream first, because outside that guard
+// a nil is "never pushed" and not "level".
+func derefInt(p *int) int {
+	if p == nil {
+		return 0
+	}
+	return *p
 }
 
 func homeStream(name string, connected bool) string {
