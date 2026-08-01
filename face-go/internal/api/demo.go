@@ -65,14 +65,33 @@ func (s *demoSource) FetchTasks() (*TasksDto, error) {
 // makeFakeTasks seeds a board with all three Kanban columns populated — the state a reviewer
 // should see (and the goldens capture) by default. T3 carries owner context so the card detail
 // (P3) shows a filled extra-context block out of the box.
+//
+// SF3.2: the demo now serves the work-graph identity (kind/stageId/confirmed) and the card meta
+// (sessionNumber/statusSinceUtc/attempts) that the engine has on the wire, because `--demo` is what
+// a reviewer looks at first — a demo board that renders the OLD card is a demo that hides the
+// feature. Two stages, so grouping and the active-stage mark are visible; one blocked card, because
+// blocked shares the TODO column and used to be indistinguishable inside it; and one done card
+// confirmed against one only claimed, which is the distinction the board could not draw at all.
+// The since-stamps are relative to now so the ages read as ages rather than as an old fixture.
 func makeFakeTasks() []TaskDto {
+	ago := func(d time.Duration) string { return time.Now().UTC().Add(-d).Format(time.RFC3339) }
 	return []TaskDto{
-		{TaskId: "T1", CheckpointId: "F7.4", Title: "Implement gate caching by SHA", Status: "done", Source: "planner", Order: 1},
-		{TaskId: "T2", CheckpointId: "F7.4", Title: "Add per-stage truth gate config", Status: "done", Source: "agent", Order: 2},
+		{TaskId: "T1", CheckpointId: "F7.4", Title: "Implement gate caching by SHA", Status: "done", Source: "planner", Order: 1,
+			Kind: "subtask", StageId: "F7", Confirmed: true, SessionNumber: 10, StatusSinceUtc: ago(94 * time.Minute), Attempts: 1},
+		{TaskId: "T2", CheckpointId: "F7.4", Title: "Add per-stage truth gate config", Status: "done", Source: "agent", Order: 2,
+			Kind: "subtask", StageId: "F7", SessionNumber: 11, StatusSinceUtc: ago(38 * time.Minute), Attempts: 2},
 		{TaskId: "T3", CheckpointId: "F7.4", Title: "Wire RunDb.GetLastPassingGateResult", Status: "in_progress", Source: "agent", Order: 3,
+			Kind: "subtask", StageId: "F7", SessionNumber: 12, StatusSinceUtc: ago(4 * time.Minute), Attempts: 2,
 			Context: "Reuse the SHA cache from F7.4-a1; the miss path must stay allocation-free.",
 			Paths:   []string{"src/Conductor/Core/Gating/GateCache.cs", "src/Conductor/Core/Store/RunDb.cs"}},
-		{TaskId: "T4", CheckpointId: "F7.5", Title: "Add SkipIfFresh file-timestamp check", Status: "todo", Source: "planner", Order: 4},
+		{TaskId: "T4", CheckpointId: "F7.5", Title: "Add SkipIfFresh file-timestamp check", Status: "todo", Source: "planner", Order: 4,
+			Kind: "checkpoint", StageId: "F7"},
+		{TaskId: "T5", CheckpointId: "F7.5", Title: "Benchmark the warm path", Status: "skipped", Source: "agent", Order: 5,
+			Kind: "subtask", StageId: "F7", SessionNumber: 11, StatusSinceUtc: ago(29 * time.Hour)},
+		{TaskId: "T6", CheckpointId: "F8.1", Title: "conductor chat over the control plane", Status: "todo", Source: "planner", Order: 6,
+			Kind: "checkpoint", StageId: "F8"},
+		{TaskId: "T7", CheckpointId: "F8.2", Title: "Telegram v2 needs a bot token", Status: "blocked", Source: "agent", Order: 7,
+			Kind: "checkpoint", StageId: "F8", SessionNumber: 12, StatusSinceUtc: ago(30 * time.Minute), Attempts: 3},
 	}
 }
 
@@ -298,28 +317,51 @@ func (s *demoSource) FetchPromptPreview(stageId, kind string) (*PromptPreviewDto
 	}, nil
 }
 
-func (s *demoSource) QueryReport(sql string) (*QueryResultDto, error) {
-	// The Report tab's scores section (U2.2) runs a canned query against `scores`, so the demo has to
-	// answer by SHAPE — a source that returns stage/cost columns to every query would render the
-	// verifier section as nonsense offline, which is exactly what --demo exists to catch.
-	if strings.Contains(strings.ToLower(sql), "from scores") {
-		return &QueryResultDto{
-			Columns: []string{"session_number", "score", "verdict"},
-			Rows: []QueryRowDto{
-				{Values: []string{"11", "66", "WARN"}},
-				{Values: []string{"8", "90", "PASS"}},
-				{Values: []string{"2", "88", "PASS"}},
-			},
-		}, nil
+// FetchScores answers the Report tab's verifier section offline (SF1.1). Newest session first, the
+// same order the live endpoint sorts in, and the failing row carries findings — a section that only
+// ever renders passes offline hides every layout bug the failing case has.
+func (s *demoSource) FetchScores() (*ScoresDto, error) {
+	return &ScoresDto{Scores: []ScoreDto{
+		{SessionNumber: 11, StageId: strPtr("F7"), Score: 66, Verdict: "WARN", Passed: false, Threshold: 80,
+			Findings: []string{
+				"gate cache key ignores the tier, so a full-tier pass satisfies a fast-tier check",
+				"no test covers the cache miss path",
+			}},
+		{SessionNumber: 8, StageId: strPtr("F6"), Score: 90, Verdict: "PASS", Passed: true, Threshold: 80},
+		{SessionNumber: 2, StageId: strPtr("F1"), Score: 88, Verdict: "PASS", Passed: true, Threshold: 80,
+			Findings: []string{"checkpoint F1.4 landed without an evidence path"}},
+	}}, nil
+}
+
+// FetchOwnerQueue answers SF4.2's owner queue offline. Four entries, deliberately: enough that the
+// demo overflows Home's cap and shows the "+N more" hand-off to `w`, three of the six kinds so the
+// glyph column is exercised, one entry with NO timestamp — the tracker's HUMAN: line — because
+// "age unknown must not render as just-now" is the one thing about this pane that can silently lie,
+// and a demo whose every row is dated could never show it.
+func (s *demoSource) FetchOwnerQueue() (*OwnerQueueDto, error) {
+	now := time.Now().UTC()
+	since := func(d time.Duration) *string {
+		t := now.Add(-d).Format(time.RFC3339Nano)
+		return &t
 	}
-	return &QueryResultDto{
-		Columns: []string{"stage", "cost"},
-		Rows: []QueryRowDto{
-			{Values: []string{"F1", "$0.42"}},
-			{Values: []string{"F6", "$0.18"}},
-			{Values: []string{"F7", "$0.08"}},
+	return &OwnerQueueDto{
+		Count:        4,
+		GeneratedUtc: now.Format(time.RFC3339Nano),
+		Items: []OwnerQueueItemDto{
+			{Id: "park", Kind: "park", Title: "Run is parked: budget window exhausted",
+				Unblocks: "the whole run — nothing advances until this clears",
+				Command:  "conductor resume", SinceUtc: since(52 * time.Minute), AgeSeconds: i64Ptr(3120),
+				Detail: strPtr("window spend $18.40 of $18.00")},
+			{Id: "gate-F8", Kind: "ownerGate", Title: "Stage F8 needs owner approval before it starts",
+				Unblocks: "stage F8 and the 3 checkpoints under it",
+				Command:  "conductor approve F8", SinceUtc: since(14 * time.Minute), AgeSeconds: i64Ptr(840)},
+			{Id: "human-1", Kind: "human", Title: "HUMAN: pick the release channel before F9 publishes",
+				Unblocks: "checkpoint F9.1",
+				Command:  "edit the handoff block in TRACKER.md and delete the HUMAN: line"},
+			{Id: "wait-1", Kind: "wait", Title: "Waiting until 15:12Z — vercel deploy window is full",
+				Unblocks: "checkpoint F7.3 (the engine resumes itself)",
+				Command:  "", SinceUtc: since(3 * time.Minute), AgeSeconds: i64Ptr(180)},
 		},
-		Truncated: false,
 	}, nil
 }
 
@@ -812,27 +854,35 @@ func (s *demoSource) runSimulation() {
 	ticker := time.NewTicker(1200 * time.Millisecond)
 	defer ticker.Stop()
 
+	// SC7.1/SF3.1: the tool lines are v2 — the engine's readable one-liner in `text`, the structure
+	// that produced it beside it in `tool`. The demo carries both because the fold summary counts
+	// tool NAMES, and a demo whose tool lines were text-only would exercise the v1 fallback instead
+	// of the wire the Face actually reads.
+	tool := func(name string, fields map[string]string) *ToolCallDto {
+		return &ToolCallDto{Name: name, Fields: fields}
+	}
 	transcriptLines := []struct {
 		kind string
 		text string
+		tool *ToolCallDto
 	}{
-		{"system", "Session #12 started · Deliver · Stage F7 · Attempt 1"},
-		{"thinking", "Let me examine the GateCache implementation to understand the caching pattern..."},
-		{"tool", "read src/Conductor/Core/Gating/GateCache.cs"},
-		{"result", "GateCache.cs:142 lines — caches by (name, tier, sha)"},
-		{"thinking", "I see the pattern. GateResult is stored with a composite key. I need to expose the last-passing result via RunDb so the orchestrator can skip re-running green gates."},
-		{"agent", "Found the caching layer. I'll add GetLastPassingGateResult to RunDb and wire it into GateRunner.RunTrackedAsync."},
-		{"tool", "write src/Conductor/Core/Store/RunDb.Gates.cs"},
-		{"result", "Created RunDb.Gates.cs with GetLastPassingGateResult query"},
-		{"thinking", "The query needs to join gates with attempts to find the most recent pass. Let me verify with a test."},
-		{"tool", "run dotnet test --filter GateCacheTests"},
-		{"result", "12/12 tests pass. 0w/0e. 2.3s elapsed"},
-		{"agent", "All tests pass. Ready for the next checkpoint."},
-		{"system", "Gate build ✓ (2.3s)"},
-		{"tool", "run dotnet build Conductor.slnx"},
-		{"result", "Build succeeded. 0 Error(s), 0 Warning(s)"},
-		{"system", "Gate test ✓ (4.1s)"},
-		{"agent", "Running gate battery: build ✓, test ✓, lint is next."},
+		{"system", "Session #12 started · Deliver · Stage F7 · Attempt 1", nil},
+		{"thinking", "Let me examine the GateCache implementation to understand the caching pattern...", nil},
+		{"tool", "Read src/Conductor/Core/Gating/GateCache.cs", tool("Read", map[string]string{"path": "src/Conductor/Core/Gating/GateCache.cs"})},
+		{"result", "GateCache.cs:142 lines — caches by (name, tier, sha)", nil},
+		{"thinking", "I see the pattern. GateResult is stored with a composite key. I need to expose the last-passing result via RunDb so the orchestrator can skip re-running green gates.", nil},
+		{"agent", "Found the caching layer. I'll add GetLastPassingGateResult to RunDb and wire it into GateRunner.RunTrackedAsync.", nil},
+		{"tool", "Write src/Conductor/Core/Store/RunDb.Gates.cs (+84)", tool("Write", map[string]string{"path": "src/Conductor/Core/Store/RunDb.Gates.cs", "lines": "84"})},
+		{"result", "Created RunDb.Gates.cs with GetLastPassingGateResult query", nil},
+		{"thinking", "The query needs to join gates with attempts to find the most recent pass. Let me verify with a test.", nil},
+		{"tool", "Bash dotnet test --filter GateCacheTests", tool("Bash", map[string]string{"command": "dotnet test --filter GateCacheTests"})},
+		{"result", "12/12 tests pass. 0w/0e. 2.3s elapsed", nil},
+		{"agent", "All tests pass. Ready for the next checkpoint.", nil},
+		{"system", "Gate build ✓ (2.3s)", nil},
+		{"tool", "Bash dotnet build Conductor.slnx", tool("Bash", map[string]string{"command": "dotnet build Conductor.slnx"})},
+		{"result", "Build succeeded. 0 Error(s), 0 Warning(s)", nil},
+		{"system", "Gate test ✓ (4.1s)", nil},
+		{"agent", "Running gate battery: build ✓, test ✓, lint is next.", nil},
 	}
 
 	processNames := []string{"dotnet test", "dotnet build", "git status", "npm test"}
@@ -852,6 +902,8 @@ func (s *demoSource) runSimulation() {
 				SessionId: "s12",
 				Kind:      tx.kind,
 				Text:      tx.text,
+				V:         2,
+				Tool:      tx.tool,
 			}
 			s.transcripts = append(s.transcripts, line)
 
@@ -1013,6 +1065,37 @@ func makeFakeState() *StateDto {
 			{Name: "lint", State: "pending", ElapsedSec: 0},
 			{Name: "audit", State: "pending", ElapsedSec: 0},
 		},
+		// SF3.3. The demo repo is the INTERESTING case on purpose — a feature branch that tracks a
+		// remote, is ahead of it, and has an unclean tree — because that is the state a run is
+		// actually in while it works, and a demo that only ever shows `main / clean / in sync`
+		// exercises none of the rendering that matters. The two degenerate cases (no upstream, not a
+		// repo) are covered by tests rather than by the demo, which can only show one repo at a time.
+		Git: &GitDto{
+			IsRepo:       true,
+			Branch:       "feat/gate-caching",
+			Upstream:     strPtr("origin/feat/gate-caching"),
+			Ahead:        intPtr(3),
+			Behind:       intPtr(1),
+			HeadSha:      "9f2c1ab7d4e60b83a5c1e2f0d7b6a94c3e8f1d20",
+			HeadShortSha: "9f2c1ab",
+			HeadSubject:  "feat(gates): key the cache by (name, tier, sha)",
+			Dirty:        true,
+			DirtyCount:   4,
+			// The engine serves porcelain rows joined with commas, not a prose summary — verified
+			// against a live `GET /state` (testdata/state_git_wire.json). The demo must carry the
+			// wire's shape, or the renderer is designed against a sentence that never arrives.
+			DirtySummary: "M src/Core/GateCache.cs, M src/Core/RunDb.cs, M tests/GateCacheTests.cs, ?? notes.md",
+			RecentCommits: []GitCommitDto{
+				{Sha: "9f2c1ab", Subject: "feat(gates): key the cache by (name, tier, sha)"},
+				{Sha: "4b81d33", Subject: "test(gates): the last-passing lookup joins attempts"},
+				{Sha: "c07e5a9", Subject: "refactor(store): one place that opens run.db"},
+			},
+		},
+		// FU-OWNER-10, in the demo too: "which build am I attached to" must be visible to someone
+		// evaluating the Face offline, or the answer is only ever discoverable on a live run.
+		EngineVersion: "0.2.3-alpha.0.20",
+		EngineCommit:  "7d2b1e378ae3",
+		FaceBuild:     "d500f00a1b2c",
 	}
 }
 
@@ -1088,11 +1171,33 @@ func makeFakeSessions() []SessionRowDto {
 	return []SessionRowDto{
 		{Number: 12, StageId: "F7", Kind: "Deliver", Outcome: nil, Attempt: 2, CommitCount: 0,
 			StartedUtc: "2026-07-15T09:14:02Z", CostUsd: 0.12,
-			TokensIn: 41213, TokensOut: 3187, TokensThink: 1024, TokensCache: 188420},
+			TokensIn: 41213, TokensOut: 3187, TokensThink: 1024, TokensCache: 188420,
+			Digest: demoDigest()},
 		{Number: 11, StageId: "F7", Kind: "Deliver", Outcome: strPtr("needsRetry"), Attempt: 1, CommitCount: 2, GateSummary: strPtr("build ✓ test ✗ lint ○"),
 			ResultSummary: strPtr("Wired the **caching layer** in `RunDb` but `test` is still red — see the gate output."),
 			StartedUtc:    "2026-07-15T08:31:10Z", EndedUtc: strPtr("2026-07-15T09:12:55Z"), CostUsd: 0.1408,
-			TokensIn: 52881, TokensOut: 4402, TokensThink: 2310, TokensCache: 201338},
+			TokensIn: 52881, TokensOut: 4402, TokensThink: 2310, TokensCache: 201338,
+			Digest: &SessionDigestDto{
+				ToolCalls: 61, DistinctTools: 5,
+				Mix: []DigestCountDto{{Name: "Bash", Count: 24}, {Name: "Read", Count: 18},
+					{Name: "Edit", Count: 12}, {Name: "bg_start", Count: 4}, {Name: "task_update", Count: 3}},
+				FilesTouched: []DigestCountDto{{Name: "src/Core/RunDb.cs", Count: 7},
+					{Name: "src/Core/GateCache.cs", Count: 3}, {Name: "tests/GateCacheTests.cs", Count: 2}},
+				FileWrites:     12,
+				BackgroundJobs: []string{"F7 gate cache - full solution build", "F7 gate cache - test sweep"},
+				Commands:       []string{"dotnet build src/App", "dotnet test --filter GateCacheTests"},
+			},
+			// SF3.3: two commits, and the row above them says "2 commits". The subjects are the half
+			// that says what the two WERE — which is the whole reason the count alone was not enough.
+			Commits: []string{
+				"4b81d33 test(gates): the last-passing lookup joins attempts",
+				"c07e5a9 refactor(store): one place that opens run.db",
+			}},
+		// A session with NO digest, on purpose: sessions recorded before SC7.2 carry none, and the
+		// panel has to render nothing for them rather than a row of zeros.
+		// It also carries a commit COUNT with no subjects — a session finished before SF3.3 taught the
+		// engine to read them out of the event log. The detail pane must fall back to the count it has
+		// always had rather than reporting a session with one commit as having landed nothing.
 		{Number: 8, StageId: "F6", Kind: "Deliver", Outcome: strPtr("completed"), Attempt: 1, CommitCount: 1, GateSummary: strPtr("build ✓ test ✓"),
 			StartedUtc: "2026-07-15T07:48:20Z", EndedUtc: strPtr("2026-07-15T08:29:44Z"), CostUsd: 0.0912},
 		{Number: 2, StageId: "F1", Kind: "Deliver", Outcome: strPtr("completed"), Attempt: 1, CommitCount: 4, GateSummary: strPtr("build ✓ test ✓ lint ✓"),
@@ -1104,8 +1209,32 @@ func makeFakeSessions() []SessionRowDto {
 	}
 }
 
+// demoDigest is the CURRENT session's digest (SC7.2 on the wire, SF3.1 on the face): the shape
+// devcontext #10 asked for, including the two lists that were invisible before it — the board claims
+// and the bg-start purposes, which read end to end as the session's own narrative.
+func demoDigest() *SessionDigestDto {
+	return &SessionDigestDto{
+		ToolCalls:     47,
+		DistinctTools: 6,
+		Mix: []DigestCountDto{{Name: "Bash", Count: 18}, {Name: "Read", Count: 11},
+			{Name: "Edit", Count: 9}, {Name: "Grep", Count: 5}, {Name: "bg_start", Count: 2},
+			{Name: "task_update", Count: 2}},
+		FilesTouched: []DigestCountDto{{Name: "src/Core/GateCache.cs", Count: 5},
+			{Name: "src/Core/RunLoop.cs", Count: 2}, {Name: "tests/GateCacheTests.cs", Count: 2},
+			{Name: "docs/dev/adr/0007.md", Count: 1}},
+		FileWrites:     10,
+		Claims:         []string{"F7.2 -> done"},
+		BackgroundJobs: []string{"F7.2 cache key derivation - full build", "F7.2 - gate suite after the cache lands"},
+		Commands:       []string{"dotnet build src/App", "dotnet test --filter GateCacheTests", "tools/gates/ratchet.ps1"},
+	}
+}
+
 func strPtr(s string) *string {
 	return &s
+}
+
+func intPtr(n int) *int {
+	return &n
 }
 
 // HasWriteToken: the demo source accepts every write locally — there is no control plane to refuse

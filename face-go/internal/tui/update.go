@@ -67,6 +67,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		if msg.State != nil {
 			m.data.Plan = msg.State
+			// Learn where this run keeps its state while the engine is still able to tell us: when it
+			// dies, that directory is where RUN-SUMMARY.md will be, and /state will not be answering
+			// to point at it. Discovery (main.go) covers the cold-start case; this covers the one that
+			// matters more, a Face that was watching when the run ended.
+			//
+			// The engine's answer OVERWRITES discovery's guess rather than deferring to it: discovery
+			// can only find a directory literally named `.conductor`, while PlanConfig.StateDir is
+			// configurable, so the walk-up is the fallback and /state is the fact.
+			if msg.State.StateDir != "" {
+				m.stateDir = msg.State.StateDir
+			}
 			// The transcript borrows its prefix vocabulary from the provider driving this run
 			// (U3.3). "" (older engine) stays "" here → the neutral house set, never a guess.
 			m.transcript.Provider = msg.State.Provider
@@ -77,7 +88,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmd = cmdSpinnerTick()
 			}
 		}
-		m.data.Connection.Connected = true
+		m.setConnected(true)
 		m.data.Connection.LastError = nil
 		return m, cmd
 
@@ -92,6 +103,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.tasksLoaded = true
 			m.data.Tasks = msg.Tasks.Tasks
 			m.syncSidebar()
+		}
+
+	case MsgOwnerQueueUpdated:
+		// Same rule as the task board: a failed poll keeps the last good rows and says the feed went
+		// away. The owner's obligations do not stop existing because one fetch timed out.
+		if msg.Err != "" {
+			m.ownerQueueErr = msg.Err
+		} else if msg.Queue != nil {
+			m.ownerQueueErr = ""
+			m.ownerQueue = msg.Queue
 		}
 
 	case MsgProcessesUpdated:
@@ -114,8 +135,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.eventSeq = msg.Event.Seq
 		next := waitForEvent(m.eventCh)
-		// Keep the Timeline live while it's on screen: any spine event refreshes it.
-		if m.tab == TabTimeline && !m.timelineLoading {
+		// Keep the spine live while it's on screen: any spine event refreshes it. Scoped to the
+		// VISIBLE view, not the whole History tab — sitting on the sessions list must not fetch the
+		// timeline on every event, and switching into the spine refetches anyway (applyHistoryView).
+		if m.tab == TabHistory && m.historyView == historyTimeline && !m.timelineLoading {
 			m.timelineLoading = true
 			return m, tea.Batch(next, m.cmdFetchTimeline())
 		}
@@ -140,17 +163,27 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case MsgFetchError:
 		m.data.Connection.LastError = &msg.Err
-		m.data.Connection.Connected = false
+		wasConnected := m.data.Connection.Connected
+		m.setConnected(false)
+		if wasConnected || m.lastRun == nil {
+			// The engine just went away (or we have never looked): its RUN-SUMMARY.md is the only
+			// thing left that can say what happened, and it is written at completion — so the read
+			// belongs HERE, on the transition, not once at startup.
+			return m, m.cmdLoadLastRun()
+		}
 
+	// The two stream messages move their OWN indicator and nothing else. Deriving Connected from
+	// them is what made a healthy poll with a dropped SSE read as "disconnected" (SF2.1).
 	case MsgEventsConnChanged:
 		m.data.Connection.EventsConnected = msg.Connected
-		m.data.Connection.Connected = m.data.Connection.EventsConnected || m.data.Connection.TranscriptConnected
 		return m, waitForEventsConn(m.eventsConnCh)
 
 	case MsgTxConnChanged:
 		m.data.Connection.TranscriptConnected = msg.Connected
-		m.data.Connection.Connected = m.data.Connection.EventsConnected || m.data.Connection.TranscriptConnected
 		return m, waitForTxConn(m.txConnCh)
+
+	case MsgLastRunLoaded:
+		m.lastRun = msg.Summary
 
 	case MsgControlSent:
 		kind, text := widgets.ToastSuccess, fmt.Sprintf("%s accepted", msg.Verb)
@@ -195,23 +228,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, m.addToast(fmt.Sprintf("kill pid %d rejected: %s", msg.Pid, reason), widgets.ToastError)
 
-	case MsgReportResult:
-		m.data.ReportLoading = false
-		if msg.Err != "" {
-			errCopy := msg.Err
-			m.data.ReportResult = &api.QueryResultDto{Error: &errCopy}
-		} else {
-			m.data.ReportResult = msg.Result
-		}
-		return m, nil
-
 	case MsgReportScores:
-		// A failed scores query must not blank the whole report: the section renders the error and
+		// A failed scores fetch must not blank the whole report: the section renders the error and
 		// every other section (which came from /state + /sessions) still stands.
-		if msg.Err != "" {
-			errCopy := msg.Err
-			m.reportScores = &api.QueryResultDto{Error: &errCopy}
-		} else {
+		m.reportScoresErr = msg.Err
+		if msg.Err == "" {
 			m.reportScores = msg.Result
 		}
 		return m, nil
@@ -517,11 +538,20 @@ func (m Model) handleKey(key string) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	case "esc":
 		// esc backs out one layer. Search and command overlays are peeled earlier in Update (their
-		// own handlers own esc); by here the outstanding layer is a non-Agent tab, and Agent is the
-		// base the dashboard rests on. On Agent with nothing open, esc is a no-op — already home.
+		// own handlers own esc); by here the outstanding layer is a non-Agent tab, or Agent's raw
+		// stream — which IS a layer over the parsed transcript, and the transcript is the base the
+		// dashboard rests on. On the parsed Agent view esc is a no-op — already home.
+		// SF4.2: the owner queue is a layer over Home the same way the raw stream is a layer over the
+		// transcript, so esc peels it FIRST — leaving Home rather than leaving for Agent. Checked
+		// before the tab test below, or `w` would be the only way back off a full-pane list.
+		if m.tab == TabHome && m.homeView != homeLanding {
+			m.homeView = homeLanding
+			return m, nil
+		}
 		if m.tab != TabAgent {
 			return m.openTab(TabAgent)
 		}
+		m.agentRaw = false
 		return m, nil
 	case ":":
 		m.cmd = CmdPalette
@@ -544,6 +574,14 @@ func (m Model) handleKey(key string) (tea.Model, tea.Cmd) {
 			m.transcript = m.transcript.Update(widgets.MsgSetSearch{Query: ""})
 		}
 		return m, nil
+	case "w":
+		// SF4.2's owner queue — a GLOBAL key, resolved here alongside the tab mnemonics and before any
+		// pane handler, because that is the precedence a letter that opens a surface has to have to be
+		// reachable from every pane. `w` was free: it is not a tab mnemonic, not a folded one, and no
+		// pane handler claimed it (STYLE.md's rule for adding a letter — grep the pane handlers first).
+		// A toggle once Home is up, like `c` on Agent: a full-pane list needs a way back that is not
+		// "go somewhere else and come back".
+		return m.openOwnerQueue()
 	case "tab":
 		return m.switchTab(1)
 	case "shift+tab":
@@ -553,8 +591,9 @@ func (m Model) handleKey(key string) (tea.Model, tea.Cmd) {
 			return m.openTab(MainTab(t))
 		}
 	case "0":
-		// The 10th tab (index 9) has no 1–9 digit; "0" reaches it. Tabs past that (Telegram and
-		// Kanban, the 11th and 12th) have no digit at all — mnemonic and tab-cycle only.
+		// The 10th tab (index 9) has no 1–9 digit; "0" reaches it. Since SF1.3 took the Face to ten
+		// tabs, that is the LAST one — the digit row now addresses every tab, and the caveat this
+		// comment used to carry ("the tabs past the digits are mnemonic-only") is simply gone.
 		if int(tabCount) > 9 {
 			return m.openTab(MainTab(9))
 		}
@@ -567,7 +606,73 @@ func (m Model) handleKey(key string) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	// …and the folded tabs' mnemonics jump straight to what they always opened, one level in
+	// (SF1.3). Global, exactly as they were when they were tab mnemonics, so no pane key changes
+	// hands. See foldedTabKey for why these are alive and `d` is not.
+	if t, folded := foldedTabKey[key]; folded {
+		return m.openFolded(key, t)
+	}
+
 	return m.handleTabKey(key)
+}
+
+// openFolded opens the tab that absorbed a folded surface, showing that surface.
+//
+// `c` is a TOGGLE once Agent is up — Agent has two bodies and the raw one needs a way back that is
+// not "go somewhere else and come back". `t`/`s` are not: History's two views are each other's way
+// back, so each key is idempotent and pressing it twice is never a surprise.
+func (m Model) openFolded(key string, t MainTab) (tea.Model, tea.Cmd) {
+	switch t {
+	case TabAgent:
+		if m.tab == TabAgent {
+			m.agentRaw = !m.agentRaw
+		} else {
+			m.agentRaw = true
+		}
+		if m.agentRaw {
+			m.consoleScroll = 0 // land on the live tail, as opening the Console tab used to
+		}
+		return m.openTab(TabAgent)
+	case TabHistory:
+		return m.openHistory(historyTimeline)
+	}
+	return m.openTab(t)
+}
+
+// openOwnerQueue opens Home's full owner-queue view, or closes it again if it is already up.
+//
+// It does NOT wait for a fetch: the queue is polled with everything else, so `w` renders whatever the
+// last poll left — and if that is nothing yet, the pane says so rather than showing an empty list
+// that reads as "nothing is owed".
+func (m Model) openOwnerQueue() (tea.Model, tea.Cmd) {
+	if m.tab == TabHome && m.homeView == homeOwnerQueue {
+		m.homeView = homeLanding
+		return m, nil
+	}
+	m.tab = TabHome
+	m.homeView = homeOwnerQueue
+	m.ownerQueueScroll = 0
+	return m, m.cmdFetchOwnerQueue()
+}
+
+// openHistory opens the History tab on a specific view.
+func (m Model) openHistory(v historyView) (tea.Model, tea.Cmd) {
+	m.tab = TabHistory
+	return m.applyHistoryView(v)
+}
+
+// applyHistoryView selects a History view and resets what opening it means — assumes m.tab is already
+// TabHistory. Switching INTO the spine refetches it: the live-refresh in Update only runs while the
+// spine is the VISIBLE view, so arriving from the sessions list would otherwise show whatever the
+// last fetch left behind.
+func (m Model) applyHistoryView(v historyView) (tea.Model, tea.Cmd) {
+	m.historyView = v
+	if v == historyTimeline {
+		m.timelineSelected, m.timelineLoading, m.timelineErr = 0, true, ""
+		return m, m.cmdFetchTimeline()
+	}
+	m.sessionSelected = 0 // /sessions is newest-first; land on the current one
+	return m, nil
 }
 
 func (m Model) switchTab(delta int) (tea.Model, tea.Cmd) {
@@ -579,9 +684,16 @@ func (m Model) switchTab(delta int) (tea.Model, tea.Cmd) {
 func (m Model) openTab(t MainTab) (tea.Model, tea.Cmd) {
 	m.tab = t
 	switch t {
-	case TabTimeline:
-		m.timelineSelected, m.timelineLoading, m.timelineErr = 0, true, ""
-		return m, m.cmdFetchTimeline()
+	case TabHome:
+		// Opening Home lands on the LANDING, the way opening History lands on the sessions list: `h`
+		// means "show me where I am", and a preserved owner-queue view would answer a question the
+		// keypress did not ask. `w` is one key away and says which view it means.
+		m.homeView = homeLanding
+	case TabHistory:
+		// Opening History lands on the sessions list, the way every other tab resets what it shows on
+		// open. The spine is `t`, or `←/→` from here — both one keypress, and both say which view
+		// they mean, which a preserved-across-tab-cycle view would not.
+		return m.applyHistoryView(historySessions)
 	case TabTemplates:
 		m.promptEntries = templates.List(m.currentPlanDir())
 		m.promptSelected, m.promptMode, m.promptPreviewOn = 0, PromptList, false
@@ -596,19 +708,6 @@ func (m Model) openTab(t MainTab) (tea.Model, tea.Cmd) {
 		// the answer to "how is it going" — is what opening the tab actually shows.
 		m.reportScroll = 0
 		return m, m.cmdFetchScores()
-	case TabDev:
-		if strings.TrimSpace(m.reportEditor.Value()) == "" {
-			m.reportEditor = widgets.NewTextArea(defaultReportSQL, max(10, m.paneCols()), 1)
-		}
-		m.reportFocusQuery = true
-		m.devScroll = 0
-		return m, nil
-	case TabConsole:
-		m.consoleScroll = 0
-		return m, nil
-	case TabSessions:
-		m.sessionSelected = 0 // /sessions is newest-first; land on the current one
-		return m, nil
 	case TabKnowledge:
 		m.knowledgeScroll, m.knowledgeMode = 0, knowledgeBrowse
 		return m, m.cmdFetchKnowledge()
@@ -625,8 +724,6 @@ func (m Model) openTab(t MainTab) (tea.Model, tea.Cmd) {
 // tabHandlesAllKeys reports whether the active tab is in a sub-state that should capture every key.
 func (m Model) tabHandlesAllKeys() bool {
 	switch m.tab {
-	case TabDev:
-		return m.reportFocusQuery
 	case TabTemplates:
 		return m.promptMode == PromptEdit || m.promptPreviewOn
 	case TabPlan:
@@ -648,24 +745,24 @@ func (m Model) tabHandlesAllKeys() bool {
 // handleTabKey routes navigation keys to the active pane's handler.
 func (m Model) handleTabKey(key string) (tea.Model, tea.Cmd) {
 	switch m.tab {
+	case TabHome:
+		// The landing owns no keys, by design (STYLE.md). Its owner-queue view does — it is a list
+		// that can outgrow the pane, and a full-pane view with no scroll is a clipped one.
+		if m.homeView == homeOwnerQueue {
+			return m.handleOwnerQueueKey(key)
+		}
 	case TabAgent:
 		return m.handleAgentKey(key)
-	case TabSessions:
-		return m.handleSessionsKey(key)
-	case TabTimeline:
-		return m.handleTimelineKey(key)
+	case TabHistory:
+		return m.handleHistoryKey(key)
 	case TabProcesses:
 		return m.handleProcessesKey(key)
-	case TabConsole:
-		return m.handleConsoleKey(key)
 	case TabTemplates:
 		return m.handleTemplatesKey(key)
 	case TabPlan:
 		return m.handlePlanKey(key)
 	case TabReport:
 		return m.handleReportKey(key)
-	case TabDev:
-		return m.handleDevKey(key)
 	case TabKnowledge:
 		return m.handleKnowledgeKey(key)
 	case TabTelegram:
@@ -690,12 +787,8 @@ func (m Model) handleMouseWheel(msg tea.MouseWheelMsg) (tea.Model, tea.Cmd) {
 	switch m.tab {
 	case TabAgent:
 		return m.handleAgentKey(key)
-	case TabConsole:
-		return m.handleConsoleKey(key)
-	case TabSessions:
-		return m.handleSessionsKey(key)
-	case TabTimeline:
-		return m.handleTimelineKey(key)
+	case TabHistory:
+		return m.handleHistoryKey(key)
 	case TabProcesses:
 		return m.handleProcessesKey(key)
 	case TabKnowledge:

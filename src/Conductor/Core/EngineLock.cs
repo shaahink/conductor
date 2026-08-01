@@ -67,6 +67,14 @@ public static class EngineLock
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return null; }
 
+        return Parse(text);
+    }
+
+    /// <summary>The lock file's contents, parsed. Split out for SF5.4: <c>conductor ps</c> reads other
+    /// runs' lock files and needs the parse without a second file-existence dance.</summary>
+    public static Holder? Parse(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return null;
         var lines = text.Split('\n', StringSplitOptions.RemoveEmptyEntries);
         if (lines.Length == 0) return null;
         if (!int.TryParse(lines[0].Trim(), System.Globalization.NumberStyles.Integer,

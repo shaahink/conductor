@@ -1,104 +1,85 @@
 # Conductor — next features backlog
 
-Ideas captured during the v2 dashboard work. Not yet implemented; kept here so they survive
-across sessions. Each should stay **resume-friendly** (persisted in RunState / `.conductor/`) and
-must never disrupt an in-flight run.
+Ideas captured during the v2 dashboard work, kept here so they survive across sessions. Each should
+stay **resume-friendly** (persisted in RunState / `.conductor/`) and must never disrupt an in-flight
+run.
 
-## Smarter session management (needs care)
-- **Token-budget rollover.** Track cumulative session tokens (already captured). When a session
-  exceeds a configurable threshold (`limits.maxSessionTokens`), conductor decides it's cheaper/safer
-  to end it cleanly and start a *fresh* session rather than continue a bloated context.
-  - The current session must first write a compact handoff (tracker handoff block + `SESSION-RESULT`)
-    so the fresh session resumes without loss.
-  - Distinct from stall/timeout: this is a *healthy* rollover, not a failure — new `SessionOutcome`
-    (e.g. `RolledOver`) and no attempt burned.
-  - Config: `limits.maxSessionTokens`, maybe `maxSessionTurns`.
+**Refreshed 2026-08-01 (SF7.1).** This page had drifted into the failure mode the Sarban era exists
+to kill: it promised as *future* a long list of things the tree already does. Ten of its entries had
+shipped — some of them eras ago — and a reader planning work off it would have rebuilt them. Every
+item below was checked against the code on that date, not against this page's own prose, and the
+check is pinned by `SF7_1DocsMatchRealityTests` so the next drift is a red test rather than a
+re-read: an item named shipped whose symbol disappears fails, and an item named open whose symbol
+appears fails too.
 
-## Learning pipeline / instruction "batteries" (dynamic, resume-friendly)
-- **Struggle log → briefing.** At session end, ask the agent to emit a short "what I struggled with /
-  gotchas for the next agent" note. Conductor appends it to a rolling brief that is injected into the
-  next session's prompt (via the `{queuedInstructions}` / a new `{lessons}` var).
-- **Bounded AGENTS.md.** Fold durable lessons into `AGENTS.md`, but cap its size: keep a rotating
-  "Lessons (last N)" section, summarise/evict oldest when it grows past a byte budget so it never
-  balloons. Consider a separate `.conductor/lessons.md` that is periodically distilled into AGENTS.md.
-- **Other candidate batteries** (all opt-in per plan, composed into the prompt builder):
-  - *Repo map / hot files*: cache the files most-touched this phase and surface them next session.
-  - *Recent-failure digest*: last few gate failures summarised so the agent front-loads them.
-  - *Definition-of-done recap*: the active checkpoint's acceptance criteria pulled from the doc.
-  - *Time/cost budget hint*: remaining attempt/cost budget so the agent scopes appropriately.
-  - Design: a pluggable `IPromptBattery` list in PromptBuilder, each contributing a named section;
-    plan config chooses which are active. Keep every battery bounded and deterministic.
+---
 
-## Deeper child-process / shell visibility (bonus A, partial today)
-- Live gate timers already surface conductor's own shell (gates/hooks). Could go further: a small
-  "processes" lane showing nested CLI invocations (agent bash tools + conductor gates + hooks) with
-  live status, à la Claude Code's tool tree.
+## Shipped — kept as a record of what closed, not as work
 
-## Enforced rituals / "batteries" & skills (research + implement)
-The agent is *told* the rules; conductor should also *enforce* the safe ones so AFK runs stay clean.
-- **Branch hygiene.** Optionally create/checkout the per-stage branch (`feat/loom-l<stage>`) itself and
-  assert `branchPattern` before letting a session commit (today it only warns).
-- **Commit/push discipline.** After a green session: assert working tree is clean (commit-or-revert
-  policy), assert the branch is pushed, assert per-checkpoint commit convention — surface violations.
-- **Git safety.** Refuse to run on a detached HEAD / wrong remote; guard against force-push; ensure
-  `.conductor/` stays gitignored except REPORT.md.
-- **Skill batteries** (composable, opt-in per plan, bounded, resume-friendly): pre-session ritual
-  checklist, definition-of-done recap from the doc, recent-failure digest, repo-map/hot-files,
-  lessons brief (see learning pipeline). Design as pluggable `IPromptBattery` sections.
-- Deliverable: research common practices, report findings, and define which become enforced vs advisory.
+Do not re-plan these. Each names the thing in the tree that answers it.
 
-- Gate: optionally fail phase-confirm if the handover lists an unacknowledged critical gap.
+- **Token-budget rollover.** `RolloverCommand`, `limits.maxSessionTokens`, and the live
+  `set-rollover` control on `ControlDispatcher`. A session that crosses the ceiling ends cleanly
+  after writing its handoff, and no attempt is burned.
+- **Learning pipeline / instruction batteries.** The whole section landed as `IPromptBattery`
+  composed by `PromptBuilder.BatterySection`: `LessonsBattery` (over `.conductor/lessons.md`),
+  `LedgerBattery`, `BugsBattery`, `RecentFailureBattery`, `LaneArtifactBattery`. `plan.batteryCollapse`
+  is the single-source-of-truth switch that stops the agent and the engine running the battery twice.
+- **Handover gaps → follow-up work.** `FollowupParser` reads the handover's weak/deferred/bug bullets
+  into `.conductor/followups.md`, and `LaneCoordinator` opens Tier B lanes from them.
+- **Heartbeat REPORT.md.** `HeartbeatCommand` writes the report *during* a long session, so the AFK
+  view stops lagging a session behind.
+- **Serilog structured logging.** Referenced in `src/Conductor/Conductor.csproj`, file+console sinks,
+  written to `logs/conductor-YYYYMMDD.json`.
+- **Diagnostic console.** The Face's Agent tab (SF1.3) — a scrollable live view of what the engine and
+  the agent are doing, without tailing a log file.
+- **Graceful Ctrl+C, and window close.** `ConsoleCtrlRails` (W3.3): state saved, resume queued, logs
+  flushed, on both the interrupt and the close-button paths.
+- **Zero-config bootstrap.** `InitCommand` detects dotnet / node / go / rust / python and scaffolds a
+  starter plan with sensible default gates.
+- **Cost per checkpoint.** `sessions/NNN/cost.json` plus the `costs` table in `run.db`; surfaced in
+  the digest and the Face.
+- **Colour/readability + beauty pass.** SF1–SF3 across the Go Face.
+- **Lifecycle pause → redeploy → resume.** Supported and documented; `conductor doctor` prints what
+  will happen on resume, and `conductor update` (SC8.3) replaces the binary and refuses to do it
+  mid-run.
 
-## Handover gaps → follow-up work (close the loop)
-The audit fixes what it can, then writes an honest handover listing what's still weak / shortcut /
-deferred. Today those noted gaps can persist (audit is `maxAttempts:1`, and it may *document* rather
-than *fix* risky/low-priority items). Better pipeline options:
-- Parse the handover's "weak / deferred / bugs-not-fixed" bullets into tracked follow-up items
-  (e.g. `.conductor/followups.md` or synthetic checkpoints) so they're not silently forgotten.
-- Feed them into the next phase's session prompt as "known debts to address if cheap".
-- Optionally allow >1 audit pass, or a dedicated "harden" session when the handover flags material gaps.
-- Gate: optionally fail phase-confirm if the handover lists an unacknowledged critical gap.
+## Still open — real work, none of it started
 
-## Reporting fidelity (AFK)
-- Mid-session, the checkpoint table stays TODO until the agent writes the tracker at the end, and the
-  header "▸ L1.1" can lag the agent's real focus (it's the first not-done row). Improve by:
-  - Writing REPORT.md on a heartbeat during long sessions (not only between sessions) with the latest
-    agent tool-calls + current thinking, so the AFK GitHub view reflects live progress.
-  - Encouraging incremental tracker updates in the ritual, and/or inferring an in-progress checkpoint.
+- **Branch hygiene is warn-only.** `RunLoop.Control.cs` `WarnOnBranchPattern` is the *only* enforcement
+  of `branchPattern` in the engine: a session on the wrong branch is told so and proceeds. The open
+  work is optionally creating/checking out the per-stage branch and asserting the pattern before a
+  session is allowed to commit.
+- **Commit/push discipline and git safety are unenforced.** There is no `requireCleanTree` anywhere in
+  the tree — no post-session assertion that the working tree is clean, that the branch was pushed, or
+  that the per-checkpoint commit convention held. Nothing refuses a detached HEAD or a wrong remote,
+  and nothing guards a force-push. The rules exist only as prose the agent is asked to follow.
+- **The processes lane.** Live gate timers surface conductor's own shell; a nested view of agent bash
+  tools + gates + hooks, à la Claude Code's tool tree, does not exist.
+- **Two batteries that were designed and never built.** `RepoMapBattery` (most-touched files this
+  phase, surfaced next session) and a definition-of-done recap pulling the active checkpoint's
+  acceptance from the doc. Both fit the shipped `IPromptBattery` seam — this is implementation, not
+  design.
+- **Plan import still needs an existing plan to diff against.** There is no from-scratch import path.
+- **Gate on unacknowledged handover gaps.** Phase-confirm could fail when the handover lists a
+  critical gap nobody acknowledged. The parse exists; the gate does not.
 
-## Lifecycle: pause → redeploy → resume (verify + document)
-- Common flow: pause today, deploy a new conductor build, resume tomorrow. Mostly supported already
-  (control `pause`, atomic `state.json`, pid lock, crash recovery→resume). Consolidate and document:
-  - `conductor pause` (or `Q` quit-after-session) → clean stop at a session boundary.
-  - Swap `bin\conductor.exe` (state schema is additive/back-compatible — covered by StateCompatTests).
-  - `conductor run` → resumes from `state.json` (fix/resume/phase-gate/audit all persisted).
-  - Add a `conductor doctor`/`status --verbose` that prints exactly what will happen on resume.
+## Filed 2026-08-01 (SF7.1) — the MCP config the engine writes is not the one the harness gets
 
-## Zero-config bootstrap ("just run it in the folder")
-- `conductor` with no plan in the cwd should offer to scaffold: detect repo, tracker, gates
-  (build/test/lint by ecosystem), write a starter `conductor.plan.json`, then run.
-- Auto-detect ecosystem batteries (dotnet/node/pnpm/cargo…) for sensible default gates.
+`SessionRunner.Mcp.cs` `WireMcpServer` writes a config containing **only** the `conductor-tasks`
+server, in both dialects. Any MCP server the operator has configured for their harness is absent from
+what conductor hands the agent, and in at least one shipped harness the conductor tools themselves
+arrive **deferred** — the agent must search for `task_update` before it can claim a checkpoint at all.
+Field evidence: `docs/dev/FIELD-NOTES-2026-07-29-devcontext.md` section 8, lines 170–172, where
+exactly that happened and the session nearly ended without a claim.
 
-## Observability & diagnostics (next iteration)
-- **Serilog structured logging** — replace StringBuilder/Console.WriteLine with proper structured logging
-  (Serilog, file+console sinks, levels). No more silent failures. Include session id, stage, attempt,
-  gate name as context properties.
-- **Diagnostic console** — a simulated scrollable log view in the dashboard (like Claude Code's debug
-  pane) so you can watch what conductor is doing without tailing the log file.
-- **Graceful Ctrl+C** — already safe (state saved, sessions resumed), but enhance: on Ctrl+C, write a
-  final heartbeat REPORT.md, queue resume, flush logs, then exit — zero log loss.
-- **Resume with enhanced prompts** — when resuming after an interrupt, inject a short "you were
-  interrupted because X" context into the resume prompt (already partly there in the base template).
-
-## Token/pipeline efficiency — faster delivery, less chatter
-- Review the agent↔conductor back-and-forth; optimise prompts + rituals for lower token use without
-  losing quality. The agent runs the full battery in its ritual AND conductor re-runs it — collapse
-  to one source of truth to cut tokens/time.
-- Terser session prompt templates: drop boilerplate, keep only the contract rules; stick tightly to
-  the expected deliverable.
-- Optional planning step for complex checkpoints (agent decides whether to plan first, not forced).
-- Track token-cost-per-checkpoint to detect bloat early.
+SF6.1 folded the fallback into the session template, so an agent that hits it now recovers in one
+line. That is the *workaround*. The engine-side fix — merge conductor's server into the harness's
+existing config rather than replacing it, and verify the tools are live before the session is told to
+depend on them — is deliberately out of the Sarban era's scope and belongs to whoever opens the next.
 
 ## Research + polish (queued)
+
 - Survey comparable autonomous multi-session/agent orchestrators; blend useful patterns.
-- Color-coding/readability + beauty pass inspired by opencode / Claude Code terminals.
+- Terser session prompt templates: drop boilerplate, keep only the contract rules.
+- Optional planning step for complex checkpoints (agent decides whether to plan first, not forced).

@@ -3,6 +3,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using Conductor.Core.Events;
+using Conductor.Core.Orchestration; // QaPolicyExtensions — the verifier threshold, resolved per stage
 using Conductor.Core.Store;
 using Conductor.Models;
 using Microsoft.Extensions.Logging;
@@ -208,6 +209,15 @@ public sealed partial class ControlPlaneServer
     private async Task WriteSessionsAsync(HttpListenerContext ctx)
     {
         var rows = _store.QuerySessions(_state.RunId);
+        // SF3.3: the commit SUBJECTS, not just the count. The sessions table persists commit_count
+        // and nothing else, but the event log has carried the `--oneline` strings on SessionFinished
+        // since B5 — so the subjects come from the log rather than from a schema migration, and a
+        // session that predates the event (or landed nothing) simply carries an empty list.
+        var commitsByNumber = _store.ReadAllEvents(_state.RunId)
+            .OfType<Events.SessionFinished>()
+            .GroupBy(e => e.Number)
+            .ToDictionary(g => g.Key, g => (IReadOnlyList<string>)[.. g.Last().NewCommits
+                .Concat(g.Last().SatelliteCommits)]);
         var dtos = rows.Select(r => new SessionRowDto(
             Number: r.Number,
             StageId: r.StageId,
@@ -225,43 +235,55 @@ public sealed partial class ControlPlaneServer
             TokensOut: r.TokensOut,
             TokensThink: r.TokensThink,
             TokensCache: r.TokensCache,
-            Digest: SessionDigestDto.From(Events.SessionDigest.FromJson(r.Digest)))).ToList();
+            Digest: SessionDigestDto.From(Events.SessionDigest.FromJson(r.Digest)),
+            Commits: commitsByNumber.TryGetValue(r.Number, out var cs) ? cs : [])).ToList();
         await WriteJsonAsync(ctx, new SessionsDto(dtos), ControlPlaneJsonContext.Default.SessionsDto).ConfigureAwait(false);
     }
 
-    private async Task WriteQueryAsync(HttpListenerContext ctx)
+    /// <summary>SF1.1: GET /scores — the verifier's verdicts, typed. The Report tab used to get these
+    /// through a canned SELECT on the SQL endpoint, which is why a rendered report still depended on
+    /// the SQL console the owner asked to delete. SF1.2 deleted that endpoint; this is the only way
+    /// the Face reads a score now.</summary>
+    private async Task WriteScoresAsync(HttpListenerContext ctx)
     {
-        var sql = ctx.Request.QueryString["sql"];
-        if (string.IsNullOrWhiteSpace(sql))
+        var dtos = _store.QueryScores(_state.RunId).Select(r =>
         {
-            await WriteJsonAsync(ctx, new QueryResultDto([], [], false, "missing 'sql' query parameter"),
-                ControlPlaneJsonContext.Default.QueryResultDto, HttpStatusCode.BadRequest).ConfigureAwait(false);
-            return;
-        }
-        if (!sql.TrimStart().StartsWith("select", StringComparison.OrdinalIgnoreCase))
-        {
-            await WriteJsonAsync(ctx, new QueryResultDto([], [], false, "only SELECT queries are allowed"),
-                ControlPlaneJsonContext.Default.QueryResultDto, HttpStatusCode.BadRequest).ConfigureAwait(false);
-            return;
-        }
-        const int maxRows = 500;
-        try
-        {
-            var rows = _store.Query(sql);
-            var columns = rows.Count > 0 ? rows[0].Keys.ToList() : [];
-            var truncated = rows.Count > maxRows;
-            var dtoRows = rows.Take(maxRows)
-                .Select(r => new QueryRowDto([.. columns.Select(c => Convert.ToString(r[c], System.Globalization.CultureInfo.InvariantCulture) ?? "")]))
-                .ToList();
-            await WriteJsonAsync(ctx, new QueryResultDto(columns, dtoRows, truncated, null),
-                ControlPlaneJsonContext.Default.QueryResultDto).ConfigureAwait(false);
-        }
-        catch (Exception ex) when (ex is Microsoft.Data.Sqlite.SqliteException or InvalidOperationException)
-        {
-            await WriteJsonAsync(ctx, new QueryResultDto([], [], false, ex.Message),
-                ControlPlaneJsonContext.Default.QueryResultDto, HttpStatusCode.BadRequest).ConfigureAwait(false);
-        }
+            // Resolve the bar per stage, exactly as VerdictEngine did when it judged: a stage with its
+            // own QA dial has its own threshold, and a client cannot know that.
+            var stage = r.StageId == null
+                ? null
+                : _plan.Stages.FirstOrDefault(s => string.Equals(s.Id, r.StageId, StringComparison.OrdinalIgnoreCase));
+            var threshold = stage != null
+                ? ScoreQaPolicy.EffectiveVerifierThreshold(_plan, stage)
+                : _plan.Limits.VerifierThreshold;
+            // WriteScore joins the verdict's findings with "\n"; split them back so the client renders
+            // a list instead of parsing a blob (and so an empty findings column is an empty list, not
+            // a one-element list holding "").
+            string[] findings = string.IsNullOrWhiteSpace(r.Findings)
+                ? []
+                : r.Findings.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            return new ScoreDto(
+                SessionNumber: r.SessionNumber,
+                StageId: r.StageId,
+                Score: r.Score,
+                // A pre-SF1.1 row could have a null verdict (the column is nullable); fall back to the
+                // same score>=80 default Verifier.Parse uses when the agent omitted one.
+                Verdict: string.IsNullOrWhiteSpace(r.Verdict) ? (r.Score >= 80 ? "PASS" : "FAIL") : r.Verdict,
+                Passed: r.Score >= threshold,
+                Threshold: threshold,
+                Findings: findings);
+        }).ToList();
+        await WriteJsonAsync(ctx, new ScoresDto(dtos), ControlPlaneJsonContext.Default.ScoresDto).ConfigureAwait(false);
     }
+
+    /// <summary>The QA dial is a pure projection (P2) with no per-run state, so the read path builds
+    /// its own rather than threading an extra constructor dependency through every call site.</summary>
+    private static readonly Conductor.Planning.DefaultQaPolicy ScoreQaPolicy = new();
+
+    // SF1.2: GET /report/query is gone. It was the SQL console's endpoint — an arbitrary-SELECT hole in
+    // a control plane whose every other read is a typed DTO — and the owner's verdict on the surface it
+    // fed was "delete this stupid sql query report and its traces". Ad-hoc SQL against run.db survives
+    // where it is actually asked for: the MCP `run_query` tool, which serves `conductor chat`.
 
     private async Task HandleControlPostAsync(HttpListenerContext ctx, CancellationToken ct)
     {

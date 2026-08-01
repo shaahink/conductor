@@ -171,6 +171,21 @@ public sealed partial class RunLoop
             _ctx.Log($"⚠ branch '{branch}' does not match plan branchPattern '{_ctx.Plan.BranchPattern}' — check before letting sessions commit");
     }
 
+    /// <summary>SF0.1 / FU-OWNER-12: say once, at run start, whether this run's pushes can reach a
+    /// phone at all. The verdict was already computed and already good — <c>doctor</c> warns it and
+    /// <c>GET /telegram/status</c> answers it in the identical words — but both only answer when
+    /// ASKED, and a run that is never asked logs nothing: <c>grep -ci telegram .conductor/conductor.log</c>
+    /// returned 0 on a live run. So an operator watching a silent chat could not tell "nothing has
+    /// happened yet" from "nothing can ever be delivered". Logged next to the start line, from
+    /// <see cref="Conductor.Core.Integrations.TelegramReadiness"/>, so all three surfaces stay in one
+    /// voice (SC1.2).</summary>
+    private void LogNotificationReadiness()
+    {
+        _ctx.Log(_ctx.Telegram.DeliveryBlocker is { } blocker
+            ? $"notifications: telegram will NOT deliver — {blocker}"
+            : "notifications: telegram will deliver this run's pushes");
+    }
+
     /// <summary>W3.3: an unbounded run is a policy choice, not a default anyone opted into. The
     /// U-series run had no cap and spent $139.68 before dying, so the run says so out loud at start
     /// (and `doctor` warns). Caps stay the owner's to set — nothing is invented here.</summary>

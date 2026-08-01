@@ -57,8 +57,18 @@ public class SC23LiveSpendTests
         Assert.All(deltas, d => Assert.Equal(0m, d.CostUsd));
     }
 
+    /// <summary>B13.6: the live deltas now also fold onto the session totals, and the result envelope
+    /// overwrites them at the end.</summary>
+    /// <remarks>This test previously asserted the opposite — that the totals stayed null until the
+    /// result envelope — on the reasoning that <c>TokensTotal</c> gates <c>limits.maxSessionTokens</c>
+    /// and double-counting here would break the cap. The first half was right and the conclusion was
+    /// backwards: the cap reads those totals, so leaving them null did not protect the cap, it disabled
+    /// it. A run with a 6M ceiling reached 17M and first noticed as the session was already ending,
+    /// because that is when the envelope finally set the numbers. There is no double-count to fear:
+    /// <c>ReadUsage</c> ASSIGNS the envelope's totals rather than adding to them, so the authoritative
+    /// figure still wins, and the message-id dedupe keeps the running figure honest until it lands.</remarks>
     [Fact]
-    public void ClaudeAdapterLiveDeltasNeverTouchTheAuthoritativeSessionTotals()
+    public void ClaudeAdapterLiveDeltasAlsoTrackTheSessionTotals_AndTheEnvelopeStillWins()
     {
         var provider = new ClaudeProvider();
         var (state, deltas) = NewClaudeState();
@@ -69,11 +79,21 @@ public class SC23LiveSpendTests
 
         // The live channel fired…
         Assert.Single(deltas);
-        // …and the recorded-session channel is still untouched: those come from the result envelope
-        // only. TokensTotal gates limits.maxSessionTokens; double-counting here would break the cap.
-        Assert.Null(state.TokensInput);
-        Assert.Null(state.TokensOutput);
-        Assert.Null(state.TokensCacheRead);
+        // …and the session totals moved with it, so a rail asking what this session has spent gets an
+        // answer while it can still act on one.
+        Assert.Equal(2 + 11374, state.TokensInput);
+        Assert.Equal(1, state.TokensOutput);
+        Assert.Equal(12528, state.TokensCacheRead);
+
+        // The envelope is still the authority: it assigns, so the session's recorded total is the
+        // CLI's own number and not a sum this parser accumulated.
+        provider.ParseLine(
+            """{"type":"result","subtype":"success","usage":{"input_tokens":7,"cache_creation_input_tokens":20000,"cache_read_input_tokens":99999,"output_tokens":42}}""",
+            state);
+
+        Assert.Equal(7 + 20000, state.TokensInput);
+        Assert.Equal(42, state.TokensOutput);
+        Assert.Equal(99999, state.TokensCacheRead);
     }
 
     [Fact]

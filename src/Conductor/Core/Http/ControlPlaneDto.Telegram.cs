@@ -19,7 +19,12 @@ namespace Conductor.Core.Http;
 public sealed record TelegramStatusDto(
     bool Configured, bool Started, bool HasToken, IReadOnlyList<string> AllowedChatIds,
     int PollIntervalSeconds, bool EnableTwoWay, string? BotUsername, string? LastError, string? LastPollUtc,
-    bool WillDeliver, string? WillDeliverReason, bool RestartRequired);
+    bool WillDeliver, string? WillDeliverReason, bool RestartRequired,
+    // FU-OWNER-13: true while a plan edit this control plane accepted is still waiting for the run
+    // loop's next session boundary. The Face shows *waiting*, not *unconfigured* — the two look
+    // identical in every other field of this payload, which is exactly how a just-saved telegram
+    // block read as "not configured".
+    bool ReloadPending = false);
 
 public sealed record TelegramTestResultDto(
     bool Ok, string? BotUsername, string? Error, bool ViaQueue, string? Detail);

@@ -168,9 +168,12 @@ Worth carrying into W5.2 rather than fixing blind.
 - **The generated tracker is a tracked file the engine rewrites after the verdict**, so a run with
   `report.commit: false` reports `dirty` after otherwise clean sessions. Cosmetic here (the note is
   informational), but it is noise a real run should not have to read past.
-- **`report --query` is the honest way to assert on a finished run**, with one trap: the `events`
+- **Reading run.db back is the honest way to assert on a finished run**, with one trap: the `events`
   table's `type` column holds the CLR event name (`RunFinished`), not the JSON discriminator
   (`runFinished`). Querying the wire name returns "no rows", which reads exactly like a defect.
+  W5.1 did this read through `conductor report --query`. SF1.2 deleted that option with the rest of
+  the SQL console; the rig now reads through the surviving path, the MCP `run_query` tool, via
+  `tools/lib/run-query.ps1`. The trap above is unchanged — it is about the column, not the reader.
 
 ## Harness notes
 

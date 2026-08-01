@@ -1,7 +1,7 @@
- ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42    
- h a s t o c e p  r Report  k g b d                                                                           
+ ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7  ⠋ s12 $0.12 41s  cp 2/40  run $0.42  ⎇ feat/gate… ↑3↓1 ●    
+ h a s o e p  r Report  k g b                                                                                 
                            │                                                                                  
- ▶ PLAN                    │  Run                                                                             
+ ▶ PLAN  n× attempts       │  Run                                                                             
  ✓ F0 3/3 Foundations      │  plan       conductor-foreman                                                    
  ✓ F6 5/5 Ink TUI v1       │  status     ▶ RUNNING                                                            
  ● F7 2/5 Gate … 1× $0.30  │  progress   ▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱ 2/40 checkpoints                            
@@ -19,7 +19,9 @@
    ✓ Add truth-tier con…   │  Sessions                                                                        
    ● Wire RunDb.GetLast…   │    #    stage kind      outcome     duration cost    commits                     
    ○ Cache gate results…   │    #12  F7    Deliver   running     41s      $0.12   0                           
+                           │         31 calls · Bash ×14  Read ×9  Edit ×6  +1 more · 6 edits / 2 files       
                            │    #11  F7    Deliver   needsRetry  45m 34s  $0.14   2                           
+                           │         104 calls · Bash ×57  Edit ×26  Read ×9  +5 more · 15 edits / 5 file…    
                            │    #8   F6    Deliver   completed   41m 12s  $0.09   1                           
                            │                                                                                  
                            │  Gates                                                                           
@@ -27,8 +29,6 @@
                            │    ● test            4s                                                          
                            │    ○ lint                                                                        
                            │                                                                                  
-                           │  Verifier scores                                                                 
-                           │    session  score  verdict                                                       
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ scroll (0/2) · esc back                        
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ scroll (0/12) · esc back                       

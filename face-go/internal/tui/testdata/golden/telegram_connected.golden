@@ -1,7 +1,7 @@
- ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42    
- h a s t o c e p r k  g Telegram  b d                                                                         
+ ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7  ⠋ s12 $0.12 41s  cp 2/40  run $0.42  ⎇ feat/gate… ↑3↓1 ●    
+ h a s o e p r k  g Telegram  b                                                                               
                            │                                                                                  
- ▶ PLAN                    │  ● delivering as @conductor_bot                                                  
+ ▶ PLAN  n× attempts       │  ● delivering as @conductor_bot · last poll 3m ago                               
  ✓ F0 3/3 Foundations      │                                                                                  
  ✓ F6 5/5 Ink TUI v1       │    bot token          •••••••• (set)                                             
  ● F7 2/5 Gate … 1× $0.30  │    allowed chat ids   111222333                                                  

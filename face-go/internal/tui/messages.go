@@ -6,6 +6,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"conductor-face-go/internal/api"
+	"conductor-face-go/internal/lastrun"
 )
 
 type MsgTick time.Time
@@ -72,21 +73,24 @@ type MsgProcessKilled struct {
 	Error   string
 }
 
-type MsgReportResult struct {
-	Result *api.QueryResultDto
-	Err    string
-}
-
-// MsgReportScores carries the Report tab's canned verifier-scores query (U2.2). Separate from
-// MsgReportResult so the rendered report and the Dev SQL console never overwrite each other.
+// MsgReportScores carries the Report tab's verifier scores from GET /scores (SF1.1). It used to sit
+// beside MsgReportResult, which carried the Dev SQL console's rows; SF1.2 deleted that message with
+// the console, so the Report tab's typed scores are now the only report result there is.
 type MsgReportScores struct {
-	Result *api.QueryResultDto
+	Result *api.ScoresDto
 	Err    string
 }
 
 type MsgTimelineUpdated struct {
 	Timeline *api.TimelineDto
 	Err      string
+}
+
+// MsgLastRunLoaded carries the engine's RUN-SUMMARY.md, read off disk when the link to the control
+// plane drops (SF2.1). A nil Summary is the normal answer — most state dirs have no finished run in
+// them — and it must leave Home saying nothing rather than showing an empty card.
+type MsgLastRunLoaded struct {
+	Summary *lastrun.Summary
 }
 
 // MsgKnowledgeUpdated carries the M7 ledger + bugs snapshot (polled together).
@@ -147,6 +151,13 @@ type MsgTaskRefined struct {
 type MsgTaskSplit struct {
 	Result *api.TaskSplitResultDto
 	Err    string
+}
+
+// MsgOwnerQueueUpdated carries GET /owner/queue (SF4.2). Err is a string, and both fields can be
+// set-or-empty independently, because a failed poll must not blank a queue already on screen.
+type MsgOwnerQueueUpdated struct {
+	Queue *api.OwnerQueueDto
+	Err   string
 }
 
 // M8.2 Telegram guided setup

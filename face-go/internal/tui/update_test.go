@@ -163,8 +163,11 @@ func TestVerbKeyColumnFitsEveryVerb(t *testing.T) {
 // handler whenever that pane isn't in an owning sub-state. So a duplicate mnemonic doesn't just
 // pick the wrong tab, it silently makes a pane key unreachable, which is exactly what adding Dev on
 // `d` did to the Plan editor's delete (it moved to `x`). Nothing else pins uniqueness.
+// SF1.3: tabKey and foldedTabKey are ONE namespace — both are consumed by the same global loop in
+// handleKey, so an alias that collides with a tab mnemonic is unreachable in exactly the way a
+// duplicate tabKey entry is (tabKey is checked first, so the alias is the one that dies).
 func TestTabMnemonicsAreUnique(t *testing.T) {
-	seen := map[string]MainTab{}
+	seen := map[string]string{}
 	for i, k := range tabKey {
 		if k == "" {
 			t.Errorf("tab %s (%d) has no mnemonic", tabNames[i], i)
@@ -172,26 +175,120 @@ func TestTabMnemonicsAreUnique(t *testing.T) {
 		}
 		if prev, dup := seen[k]; dup {
 			t.Errorf("mnemonic %q is claimed by both %s and %s — the earlier tab wins the global "+
-				"loop and the later one is unreachable", k, tabNames[prev], tabNames[i])
+				"loop and the later one is unreachable", k, prev, tabNames[i])
 		}
-		seen[k] = MainTab(i)
+		seen[k] = tabNames[i]
+	}
+	for k, tab := range foldedTabKey {
+		if prev, dup := seen[k]; dup {
+			t.Errorf("folded-tab alias %q is already the mnemonic of %s — tabKey is checked first, so "+
+				"the alias into %s is dead code", k, prev, tabNames[tab])
+		}
+		seen[k] = "folded → " + tabNames[tab]
 	}
 }
 
-// U2.2: the Plan editor's delete moved off `d` when Dev claimed it globally. This drives handleKey —
-// the REAL router — not handlePlanKey. plan_test.go's own drive() calls the pane handler directly,
-// which is exactly why nothing there could ever have caught the shadowing: the precedence that
-// breaks the key only exists one level up.
-func TestPlanDeleteKeyIsNotShadowedByTheDevMnemonic(t *testing.T) {
+// U2.2 moved the Plan editor's delete off `d` when the Dev tab claimed `d` globally. SF1.2 deleted
+// that tab, and `d` stayed unbound — so delete stays on `x`. This drives handleKey — the REAL router —
+// not handlePlanKey. plan_test.go's own drive() calls the pane handler directly, which is exactly why
+// nothing there could ever have caught the shadowing: the precedence lives one level up.
+func TestPlanDeleteStaysOnXNowThatTheDevMnemonicIsGone(t *testing.T) {
 	m, _ := openPlanEditor(t)
 	if m.tabHandlesAllKeys() {
 		t.Fatal("precondition: the plan list must NOT own all keys, or this proves nothing")
 	}
-	if got := asModel(mustHandle(m.handleKey("d"))); got.tab != TabDev {
-		t.Errorf("d in the Plan list must reach the Dev tab (it is a global mnemonic), got tab %v", got.tab)
-	}
 	if got := asModel(mustHandle(m.handleKey("x"))); !got.planDeleting {
 		t.Error("x in the Plan list must open the delete confirm through the real router")
+	}
+	// `d` must stay inert rather than silently becoming plan-delete again: a key that used to open the
+	// SQL console must never turn into a destructive one.
+	got := asModel(mustHandle(m.handleKey("d")))
+	if got.planDeleting {
+		t.Error("d must not open the plan delete confirm — it was the SQL console's mnemonic, and a " +
+			"freed key becoming destructive is the worst possible reuse")
+	}
+	if got.tab != TabPlan {
+		t.Errorf("d is unbound since SF1.2 deleted the Dev tab; it must leave the tab alone, got %v", got.tab)
+	}
+}
+
+// SF1.3: the Face is down to ten tabs — SF1.2 deleted Dev (13→12), SF1.3 folded Console into Agent
+// and merged Sessions+Timeline into History (12→10). This pins BOTH halves of trap 11: tabKey is the
+// single source for mnemonics, and every one of them must still land on the tab its own name claims.
+func TestTabsConsolidatedToTen(t *testing.T) {
+	if tabCount != 10 {
+		t.Errorf("SF1.3 took the tab count from 12 to 10; got %d. If a tab was ADDED, it was supposed "+
+			"to fold into an existing one — see docs/dev/adr/0004", tabCount)
+	}
+	if len(tabNames) != int(tabCount) || len(tabKey) != int(tabCount) {
+		t.Fatalf("tabNames (%d) and tabKey (%d) must both be tabCount (%d)",
+			len(tabNames), len(tabKey), tabCount)
+	}
+	for _, gone := range []string{"Dev", "Console", "Timeline", "Sessions"} {
+		for i, n := range tabNames {
+			if n == gone {
+				t.Errorf("tab %d is named %q — that surface was deleted or folded; it must not be a tab",
+					i, gone)
+			}
+		}
+	}
+	for i, k := range tabKey {
+		if k == "d" {
+			t.Errorf("tab %q took over the freed `d` mnemonic; SF1.2 left it deliberately unbound",
+				tabNames[i])
+		}
+		m := asModel(mustHandle(newTestModel().handleKey(k)))
+		if m.tab != MainTab(i) {
+			t.Errorf("mnemonic %q must open %s, got %s", k, tabNames[i], tabNames[m.tab])
+		}
+	}
+}
+
+// Ten tabs is not a round number picked for a brief: `1`-`9` plus `0` addresses exactly ten, so at
+// ten every tab is reachable by digit for the first time. That is the reason to stop at ten, so pin
+// it — an eleventh tab would silently make one unreachable by digit again.
+func TestEveryTabHasADigit(t *testing.T) {
+	digits := []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "0"}
+	if int(tabCount) > len(digits) {
+		t.Fatalf("%d tabs but only %d digits — a tab is unreachable by number; fold one (ADR-0004)",
+			tabCount, len(digits))
+	}
+	for i, d := range digits[:tabCount] {
+		m := asModel(mustHandle(newTestModel().handleKey(d)))
+		if m.tab != MainTab(i) {
+			t.Errorf("digit %q must open %s (tab %d), got %s", d, tabNames[i], i, tabNames[m.tab])
+		}
+	}
+}
+
+// The promise SF1.3 made in exchange for deleting two tabs: every keystroke that reached a surface
+// before still reaches it. Driven through handleKey, from a tab that is NOT the destination, because
+// these are global keys and the fold is worthless if it only works from where you already are.
+func TestFoldedTabKeysStillReachTheirSurface(t *testing.T) {
+	// `s` is History's real mnemonic and must land on the sessions list, not wherever it was left.
+	m := asModel(mustHandle(newTestModel().handleKey("t")))
+	if m.historyView != historyTimeline {
+		t.Fatalf("precondition: t must select the spine, got %v", m.historyView)
+	}
+	m = asModel(mustHandle(m.handleKey("s")))
+	if m.tab != TabHistory || m.historyView != historySessions {
+		t.Errorf("s must open History's sessions list; tab=%v view=%v", m.tab, m.historyView)
+	}
+	// ←/→ switches between the two views, this codebase's sub-section idiom.
+	m = asModel(mustHandle(m.handleKey("right")))
+	if m.historyView != historyTimeline {
+		t.Errorf("→ must switch to the other History view, got %v", m.historyView)
+	}
+	m = asModel(mustHandle(m.handleKey("left")))
+	if m.historyView != historySessions {
+		t.Errorf("← must switch back, got %v", m.historyView)
+	}
+	// And `d` stays inert — its surface was DELETED, which is the case the aliases are NOT.
+	m = asModel(mustHandle(newTestModel().handleKey("r")))
+	before := m.tab
+	m = asModel(mustHandle(m.handleKey("d")))
+	if m.tab != before {
+		t.Errorf("d must stay unbound (SF1.2), got a jump to %s", tabNames[m.tab])
 	}
 }
 
@@ -326,33 +423,23 @@ func TestKnowledgeResolveRejectsNonNumericId(t *testing.T) {
 	}
 }
 
-// The SQL console moved from Report to Dev in U2.2 (Report became a rendered report). Its behaviour
-// is unchanged, so this test moved WITH the code — only the tab it opens and the handler it drives
-// are renamed. Everything it asserts about the console still holds byte for byte.
-func TestDevQuickQueryRuns(t *testing.T) {
+// SF1.2 deleted TestDevQuickQueryRuns along with the console it drove (quick-query list, SQL editor,
+// MsgReportResult round trip). Nothing it asserted survives to be re-pointed: the whole mechanism is
+// gone. What replaced it as the Report tab's only fetch is TestReportOpensWithTypedScores below.
+func TestReportOpensWithTypedScoresAndNoSql(t *testing.T) {
 	m := newTestModel()
-	m = asModel(mustHandle(m.handleKey("d")))
-	if m.tab != TabDev || !m.reportFocusQuery {
-		t.Fatalf("expected Dev tab focused on SQL; tab=%v focus=%v", m.tab, m.reportFocusQuery)
-	}
-	m = asModel(mustHandle(m.handleDevKey("tab")))
-	if m.reportFocusQuery {
-		t.Fatal("tab should move focus to the quick-query list")
-	}
-	tm, cmd := m.handleDevKey("enter")
-	m = asModel(tm)
-	if !m.data.ReportLoading {
-		t.Error("expected ReportLoading while the query runs")
-	}
-	if m.reportEditor.Value() != quickQueries[0].SQL {
-		t.Errorf("expected the editor set to the quick query, got %q", m.reportEditor.Value())
+	tm, cmd := m.handleKey("r")
+	m = asModel(mustHandle(tm, cmd))
+	if m.tab != TabReport {
+		t.Fatalf("expected the Report tab, got %v", m.tab)
 	}
 	if cmd == nil {
-		t.Fatal("expected a query command")
+		t.Fatal("opening Report must fetch something — the scores endpoint")
 	}
-	m = asModel(mustHandle2(m.Update(cmd())))
-	if m.data.ReportLoading || m.data.ReportResult == nil || len(m.data.ReportResult.Columns) == 0 {
-		t.Error("expected results populated and loading cleared")
+	// The one command Report issues must be the typed scores fetch. Before SF1.1 this was a canned
+	// SELECT, and before SF1.2 the console's MsgReportResult could still land here.
+	if _, ok := cmd().(MsgReportScores); !ok {
+		t.Errorf("opening Report must issue GET /scores and produce MsgReportScores, got %T", cmd())
 	}
 }
 
@@ -441,7 +528,10 @@ func TestTemplateEditorReadWriteRoundTrip(t *testing.T) {
 	}
 }
 
-func TestConsoleTabReceivesAndScrolls(t *testing.T) {
+// SF1.3: the Console tab folded into Agent as a raw-stream mode. Every assertion here is driven
+// through handleKey — the REAL router — because the whole point of the fold is that `c` still works
+// from anywhere, and a test that called the pane handler directly could not tell.
+func TestRawStreamFoldsIntoTheAgentTab(t *testing.T) {
 	m := newTestModel()
 	for i := 0; i < 3; i++ {
 		m = asModel(mustHandle2(m.Update(MsgConsoleLine{Line: api.ConsoleLineDto{Seq: int64(i + 1), Text: "raw line"}})))
@@ -449,21 +539,41 @@ func TestConsoleTabReceivesAndScrolls(t *testing.T) {
 	if len(m.data.RawConsole) != 3 {
 		t.Fatalf("expected 3 buffered console lines, got %d", len(m.data.RawConsole))
 	}
+	// From another tab, `c` lands on Agent showing raw output pinned to the tail — what opening the
+	// Console tab used to do.
+	m = asModel(mustHandle(m.handleKey("p")))
 	m = asModel(mustHandle(m.handleKey("c")))
-	if m.tab != TabConsole || m.consoleScroll != 0 {
-		t.Fatalf("expected Console tab pinned to tail; tab=%v scroll=%d", m.tab, m.consoleScroll)
+	if m.tab != TabAgent || !m.agentRaw || m.consoleScroll != 0 {
+		t.Fatalf("c must open Agent's raw stream pinned to the tail; tab=%v raw=%v scroll=%d",
+			m.tab, m.agentRaw, m.consoleScroll)
 	}
-	m = asModel(mustHandle(m.handleConsoleKey("up")))
+	// Raw mode owns the old Console keys, through the router.
+	m = asModel(mustHandle(m.handleKey("up")))
 	if m.consoleScroll != 1 {
-		t.Errorf("up should scroll back, got %d", m.consoleScroll)
+		t.Errorf("up should scroll the raw stream back, got %d", m.consoleScroll)
 	}
-	m = asModel(mustHandle(m.handleConsoleKey("end")))
+	m = asModel(mustHandle(m.handleKey("end")))
 	if m.consoleScroll != 0 {
 		t.Error("end should re-pin to the tail")
 	}
+	// …and the parsed transcript's own keys must NOT be reachable while raw output is showing: `f`
+	// folds tool calls in the transcript, which is not a thing raw stdout has.
+	before := m.transcript.FoldTools
+	m = asModel(mustHandle(m.handleKey("f")))
+	if m.transcript.FoldTools != before {
+		t.Error("f must not toggle transcript folding while the raw stream is showing")
+	}
+	// On Agent, `c` toggles back — the raw view needs a way out that is not "leave and come back".
+	m = asModel(mustHandle(m.handleKey("c")))
+	if m.tab != TabAgent || m.agentRaw {
+		t.Fatalf("c on Agent must toggle raw off; tab=%v raw=%v", m.tab, m.agentRaw)
+	}
+	// esc backs out of raw mode too: it is a layer over the transcript, and esc peels layers.
+	m = asModel(mustHandle(m.handleKey("c")))
 	m = asModel(mustHandle(m.handleKey("esc")))
-	if m.tab != TabAgent {
-		t.Error("esc should return to the Agent tab")
+	if m.tab != TabAgent || m.agentRaw {
+		t.Errorf("esc should drop the raw stream and leave the parsed Agent view; tab=%v raw=%v",
+			m.tab, m.agentRaw)
 	}
 }
 
@@ -471,8 +581,9 @@ func TestTimelineOpenFetchNavigate(t *testing.T) {
 	m := newTestModel()
 	tm, cmd := m.handleKey("t")
 	m = asModel(tm)
-	if m.tab != TabTimeline || !m.timelineLoading {
-		t.Fatalf("expected Timeline tab loading; tab=%v loading=%v", m.tab, m.timelineLoading)
+	if m.tab != TabHistory || m.historyView != historyTimeline || !m.timelineLoading {
+		t.Fatalf("t must open History on the spine, loading; tab=%v view=%v loading=%v",
+			m.tab, m.historyView, m.timelineLoading)
 	}
 	if cmd == nil {
 		t.Fatal("expected a fetch command")

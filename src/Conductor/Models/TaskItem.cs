@@ -46,4 +46,21 @@ public sealed class TaskItem
     /// Consulted by <c>DefaultQaPolicy</c> ABOVE the stage and plan dials when a session claims
     /// this item.</summary>
     public string Qa { get; set; } = "";
+
+    /// <summary>SF3.2: the instant this card last CHANGED status, taken from the event envelope, so
+    /// a board can say how long it has sat where it is. null = it has not moved since it was added,
+    /// or the log's events carry no stamp (hand-built events in tests).</summary>
+    public DateTimeOffset? StatusSinceUtc { get; set; }
+
+    /// <summary>SF3.2: the session whose work last moved this card — the session in flight when the
+    /// fold saw the status change. A status-change event carries no session of its own, so the graph
+    /// tracks the last <c>SessionStarted</c> and stamps it here; an engine-side confirmation landing
+    /// after the session ends therefore names the session that just finished, which is the session
+    /// whose work it is. 0 = never moved inside a session (a seeded card).</summary>
+    public int SessionNumber { get; set; }
+
+    /// <summary>SF3.2: how many times this card has been PICKED UP — entered in_progress. NOT the
+    /// stage's attempt counter: a card reopened after a failed session reads 2 here while its stage
+    /// may be on an entirely different number.</summary>
+    public int Attempts { get; set; }
 }

@@ -274,13 +274,16 @@ try {
     Check 'the lock was released -- the next `conductor run` is not locked out' `
         (-not (Test-Path $lockPath)) $lockPath
 
-    $q = { param($sql, $plan) (& $Exe report -p $plan --query $sql 2>&1 | Out-String) }
-    $sessions = & $q "SELECT number, kind, outcome, ended_utc FROM sessions ORDER BY number" $main.Plan
+    # SF1.2: `report --query` is gone. Ad-hoc SQL against run.db survives as the MCP `run_query` tool,
+    # driven out-of-process against the shipped binary exactly as the old read was.
+    . (Join-Path $PSScriptRoot "..\lib\run-query.ps1")
+    $q = { param($sql, $dir) (Invoke-ConductorQuery -Exe $Exe -StateDir (Join-Path $dir ".conductor") -Sql $sql | Out-String) }
+    $sessions = & $q "SELECT number, kind, outcome, ended_utc FROM sessions ORDER BY number" $main.Dir
     Write-Host $sessions
     Check "the interrupted session was RECORDED, with an outcome and an end time" `
         (($sessions -match "Interrupted") -and ($sessions -notmatch "no rows")) $sessions
 
-    $events = & $q "SELECT type FROM events ORDER BY seq DESC LIMIT 6" $main.Plan
+    $events = & $q "SELECT type FROM events ORDER BY seq DESC LIMIT 6" $main.Dir
     Write-Host $events
     Check "run.db survived the close and still reads back" ($events -notmatch "no rows") $events
     Check "the session was closed off in the event log, not left hanging" `

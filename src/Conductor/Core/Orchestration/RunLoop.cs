@@ -74,6 +74,7 @@ public sealed partial class RunLoop
                 _ctx.Save();
             }
             _ctx.Log($"conductor start — plan '{_ctx.Plan.Name}', repo {_ctx.Plan.Repo}, branch {Git.Branch(_ctx.Plan.Repo)}");
+            LogNotificationReadiness();
             _ctx.Events.Emit(new RunStarted
             {
                 Plan = _ctx.Plan.Name,
@@ -84,6 +85,10 @@ public sealed partial class RunLoop
             });
             _ctx.Store?.InitializeRun(_ctx.State.RunId, _ctx.Plan.Name, _ctx.Plan.Repo, Git.Branch(_ctx.Plan.Repo),
                 typeof(RunLoop).Assembly.GetName().Version?.ToString());
+            NotifyRunStart();
+            // SF5.4: two engines on one machine are two identical entries in a task manager until one of
+            // them says which run it is. Set once here, refreshed on every stage entry below.
+            Core.Fleet.ProcessTitle.Set(_ctx.Plan.Repo, _ctx.Plan.Name, _ctx.State.RunId, _ctx.State.CurrentStage);
             _ctx.ProcessSupervisor?.ReapOrphans();
             SyncWorkGraphFromDeclared();
             WarnOnBranchPattern();
@@ -104,7 +109,7 @@ public sealed partial class RunLoop
                     // G3.2: the top of this loop is the session boundary — the only safe point to swap
                     // the live plan (no agent is running here; paused/idle iterations pass through too,
                     // so an edit made while parked is live before the next resume).
-                    if (Dispatcher.ConsumeReloadPending()) ApplyPlanReload();
+                    if (Dispatcher.ConsumeReloadPending() || PlanFileChangedOnDisk()) ApplyPlanReload();
 
                     if (!_ctx.Options.DryRun && _ctx.State.Status is RunStatus.Paused or RunStatus.NeedsHuman or RunStatus.AwaitingOwner)
                     {
@@ -246,6 +251,7 @@ public sealed partial class RunLoop
                     _ctx.Log($"stage → {stage.Id} {stage.Title}");
                     _ctx.Events.Emit(new StageEntered { StageId = stage.Id, Title = stage.Title, StartHead = _ctx.State.CurrentStageStartHead });
                     _ctx.Store?.InitializeStage(_ctx.State.RunId, stage.Id, stage.Title);
+                    Core.Fleet.ProcessTitle.Set(_ctx.Plan.Repo, _ctx.Plan.Name, _ctx.State.RunId, stage.Id);
                     _ctx.Save();
                 }
 
@@ -263,8 +269,20 @@ public sealed partial class RunLoop
                     continue;
                 }
 
+                // SF0.2 (bug #3): PendingVerify belongs in this guard for the same reason it belongs
+                // in the completion guard above — a queued verification is work this run still owes,
+                // and this branch `continue`s, so anything it does not stand aside for NEVER GETS A
+                // TURN. Without it a CONFIRMED last stage with a verify queued spun the run loop
+                // forever at full speed: completion declined (PendingVerify != null), the stage read
+                // done here, a phase gate was re-scheduled for a stage already in ConfirmedStages,
+                // the gate reused its green signature and re-confirmed, and round again — no session,
+                // no delay, no exit. The only outright hang the core run filed against itself.
+                // A stage already confirmed has nothing left to gate either; re-scheduling one is at
+                // best a wasted battery, and it is what made the loop tight rather than merely wrong.
                 if (_ctx.Plan.PerPhaseGates && track.StageDone(stage.Id)
-                    && _ctx.State.PendingFix == null && _ctx.State.PendingResume == null && _ctx.State.PendingAudit == null)
+                    && !_ctx.State.ConfirmedStages.Contains(stage.Id)
+                    && _ctx.State.PendingFix == null && _ctx.State.PendingResume == null
+                    && _ctx.State.PendingVerify == null && _ctx.State.PendingAudit == null)
                 {
                     if (_ctx.Options.DryRun)
                     {
@@ -386,7 +404,15 @@ public sealed partial class RunLoop
                 await _lanes.CollectLaneArtifactsAsync(stage.Id, ct).ConfigureAwait(false);
 
                 _ctx.RunCostUsd += rec.CostUsd ?? 0;
-                _ctx.RunTokens += (rec.TokensInput ?? 0) + (rec.TokensOutput ?? 0) + (rec.TokensReasoning ?? 0);
+                // B13.5: TokensTotal, which counts cache reads too. Summing only the other three made
+                // the run-level total disagree with the per-session one by roughly forty times on real
+                // work — a run that had actually read 79M tokens reported 2.9M — because a long agent
+                // session is almost entirely cache read. Every surface fed from here (the ledger, the
+                // report, doctor's headroom, and `limits.maxRunTokens`) inherited that, so a run cap
+                // set from observed numbers could never be reached. The two rails now count the same
+                // thing. Runs carried over from an older engine step up once when this first lands;
+                // that discontinuity is the correction, not a new error.
+                _ctx.RunTokens += rec.TokensTotal;
                 _ctx.PersistBudget();
                 EmitSessionFinished(rec);
                 // SC5.1: the park lands AFTER the session's finish event, so it is the last thing in

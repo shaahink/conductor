@@ -1,5 +1,6 @@
 using System.Net;
 using Conductor.Core.Events;
+using Conductor.Core.Face;
 using Conductor.Core.Planning;
 using Conductor.Core.Providers;
 using Conductor.Models;
@@ -73,6 +74,18 @@ public sealed partial class ControlPlaneServer
             // falls back to the plan's own agent rather than reporting nothing.
             Provider = AgentProviderFactory.ResolveName(
                 stageCfg is null ? _plan.Agent : _plan.ResolveAgent(stageCfg)),
+            // SF3.3: the repo's git state. Cached (GitSnapshotCache.Ttl), because this endpoint is
+            // polled once a second by every attached Face and git awareness must not cost two
+            // process spawns per second per viewer.
+            Git = GitDto.From(GitSnapshotCache.Get(_plan.Repo)),
+            // FU-OWNER-10: which build is serving this run, and which Face would it launch. The
+            // engine's half is free (assembly attributes); the Face's is a cached byte scan of the
+            // binary FaceLauncher resolves, and says "unstamped" rather than inventing a sha.
+            EngineVersion = BuildInfo.Current.Version,
+            EngineCommit = BuildInfo.Current.Dirty
+                ? BuildInfo.Current.CommitSha + ".dirty"
+                : BuildInfo.Current.CommitSha,
+            FaceBuild = FaceBuildStamp.Current(),
         };
         await WriteJsonAsync(ctx, dto, ControlPlaneJsonContext.Default.StateDto).ConfigureAwait(false);
     }
@@ -175,6 +188,19 @@ public sealed partial class ControlPlaneServer
             BudgetWindowStartedUtc = liveState.BudgetWindowStartedUtc,
             BudgetApprovals = liveState.BudgetApprovals,
         };
+    }
+
+    /// <summary>SF4.1 — <c>GET /owner/queue</c>. Reads the LIVE <see cref="RunState"/>, not the event
+    /// fold: the park, the owner approvals, the blocked-until wait and the skipped stages are run
+    /// state, and a queue derived from the fold would keep offering an approval the owner had already
+    /// given. The tracker comes from the work graph, same as <c>/state</c>, so the handoff block
+    /// (where <c>HUMAN:</c> lines live) and the board agree with every other surface.</summary>
+    private async Task WriteOwnerQueueAsync(HttpListenerContext ctx)
+    {
+        var now = DateTime.UtcNow;
+        var items = OwnerQueue.Collect(_plan, _state, GraphTrackerSnapshot(), now);
+        await WriteJsonAsync(ctx, OwnerQueueDto.From(items, now),
+            ControlPlaneJsonContext.Default.OwnerQueueDto).ConfigureAwait(false);
     }
 
     private TrackerSnapshot ReadTrackerSafe()

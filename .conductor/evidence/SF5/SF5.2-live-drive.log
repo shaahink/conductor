@@ -1,0 +1,67 @@
+=== SF5.2 live drive: the supervisor plan block ===
+build under test : C:\code\conductor\src\Conductor\bin\Debug\net10.0\conductor.exe
+build stamp      : 2026-08-01 13:12:37Z
+
+--- A: plan supervisor vs --hook, one run, two watches ---
+rig plan: C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf52a/rig.plan.json
+watch P pid 24616: no --hook, plan supervisor must run
+watch H pid 42688: --hook given, must override the block
+watch P exit 0   watch H exit 0   engine exit 0   [watch: 0=wake 10=heartbeat]
+plan supervisor received stdin : True
+--hook override received stdin: True
+fires recorded in supervisor-fires.log: 1   (2 supervisors ran; only the PLAN one spends the fuse)
+
+--- watch P stderr (the human channel) ---
+watching SF51WatchRig_sf52a (C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf52a\.conductor) ƒ?" run b50d46df, 4 event(s) of history folded, engine alive, no heartbeat ƒ?" silent until the wake set fires
+supervisor (plan.supervisor) ƒ?" running, brief on stdin, up to 2m
+supervisor exit 0 in 1.1s
+--- watch H stderr ---
+watching SF51WatchRig_sf52a (C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf52a\.conductor) ƒ?" run b50d46df, 3 event(s) of history folded, engine alive, no heartbeat ƒ?" silent until the wake set fires
+supervisor (--hook) ƒ?" running, brief on stdin, up to 10m
+supervisor exit 0 in 1.1s
+
+--- what the PLAN's supervisor actually received on stdin ---
+{
+  "reason": "run-ended",
+  "firedFrom": "event",
+  "detail": "run Completed \u2014 2/2 checkpoints over 2 session(s)",
+  "at": "2026-08-01T12:15:25.6728850Z",
+  "plan": "SF51WatchRig_sf52a",
+  "repo": "C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf52a",
+  "runId": "b50d46dff1c14a7fb460ca8770ebf6f3",
+  "status": "Completed",
+  "engineAlive": true,
+  "stage": "T1",
+  "attempt": 0,
+  "sessions": 2,
+  "checkpoints": "2/2",
+  "spendUsd": 0.01,
+  "costCapUsd": null,
+  "tokens": 3200,
+  "tokenCap": null,
+  "attention": null,
+  "whatHurt": null,
+  "standingOrders": "You MAY approve an owner gate whose checkpoint has an evidence path. You MUST escalate anything that spends money or merges to master.",
+  "stages": [
+    "T0 1/1 done",
+    "T1 1/1 done"
+  ],
+  "recentSessions": [
+    "#1 T0 Deliver Advanced $0.01",
+    "#2 T1 Deliver Advanced $0.01"
+  ],
+  "suggest": [
+    "conductor status",
+    "conductor report"
+  ]
+}
+
+standingOrders reached the supervisor on stdin: True
+
+--- B: maxPerHour 1, one fire already on the ledger from an earlier process ---
+watch R exit 0   (it must still WAKE -- the fuse silences the supervisor, not the watch)
+supervisor ran despite the cap : False   (must be False)
+brief still printed on stdout  : 34 lines
+--- watch R stderr ---
+watching SF51WatchRig_sf52b (C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf52b\.conductor) ƒ?" run 9a8c39e7, 4 event(s) of history folded, engine alive, no heartbeat ƒ?" silent until the wake set fires
+supervisor not run ƒ?" rate limited: 1 supervisor fire(s) this hour, cap 1 (raise supervisor.maxPerHour, or read the brief yourself ƒ?" a supervisor hitting this is usually a run stuck on one cause)

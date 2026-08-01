@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -119,14 +119,21 @@ public sealed partial class RunLoop
         }
     }
 
-    private void ReleaseLock() => EngineLock.Delete(_ctx.Plan.StateDir);
+    private void ReleaseLock()
+    {
+        EngineLock.Delete(_ctx.Plan.StateDir);
+        // SF5.4: a finished run must not leave its stage id sitting in a terminal tab — a stale title
+        // reads as live, which is worse than no title at all.
+        Core.Fleet.ProcessTitle.Restore();
+    }
 
     // ---------------------------------------------------------------- save, report, snapshot
 
     private void SaveAndReport()
     {
         _ctx.Save();
-        Reporter.WriteAndPublish(_ctx.Plan, _ctx.State, _ctx.ReadWork(), _ctx.LastGates, _ctx.Log, store: _ctx.Store);
+        Reporter.WriteAndPublish(_ctx.Plan, _ctx.State, _ctx.ReadWork(), _ctx.LastGates, _ctx.Log, store: _ctx.Store,
+            onNewOwnerItems: _ctx.NotifyNewOwnerQueueItems);
         PushIdleSnapshot();
     }
 
@@ -199,9 +206,27 @@ public sealed partial class RunLoop
                 // in this repo. Recording "-" for it is how sk #3's delivered work read as nothing.
                 var commit = rec.NewCommits.Count > 0 ? rec.NewCommits[^1].Split(' ')[0]
                     : SessionProgress.LastSatelliteCommitRef(rec) ?? "-";
-                var evidence = rec.GateSummary ?? "completed";
+
+                // SF0.2 (bug #10, the rider): `rec.GateSummary ?? "completed"` was dead code.
+                // SessionRecord.GateSummary is a NON-NULLABLE string that defaults to "", so `??`
+                // could never fire — and it is still "" on every session kind that returns before the
+                // battery runs, which is precisely the verify and audit sessions this change just
+                // taught to carry claims. Worse on the delivery path, where it holds a real battery
+                // token and OVERWROTE the artifact path the agent claimed with
+                // `task --done --evidence <path>` — the one field a reviewer reads, replaced by
+                // "engine-fast:OK". Precedence: the agent's own evidence wins, the battery summary
+                // stands in when the claim carried none, "completed" is the last resort.
+                var battery = string.IsNullOrWhiteSpace(rec.GateSummary) ? "completed" : rec.GateSummary;
+                var claimed = db.GetCheckpoints(_ctx.State.RunId)
+                    .ToDictionary(c => c.Id, c => c.Evidence, StringComparer.OrdinalIgnoreCase);
                 foreach (var cpId in rec.NewlyDone)
+                {
+                    var evidence = claimed.TryGetValue(cpId, out var agentEvidence)
+                        && !string.IsNullOrWhiteSpace(agentEvidence) && agentEvidence != "-"
+                        ? agentEvidence
+                        : battery;
                     db.UpdateCheckpoint(_ctx.State.RunId, cpId, "DONE", commit, evidence, source: "engine");
+                }
             }
 
             var track = ReadTrackerSafe();
@@ -220,6 +245,21 @@ public sealed partial class RunLoop
     }
 
     // ---------------------------------------------------------------- notifications
+
+    /// <summary>FU-OWNER-11 — the run says, once, which machine it is running on and which engine
+    /// build is driving it. The session-level identity rides every message (see
+    /// <c>TelegramService.IdentityLine</c>), but repo and build are run-scoped facts that would
+    /// otherwise never reach the chat at all: an owner reading a notification hours later could not
+    /// tell which checkout it came from, and could not date it to a binary. The version comes from
+    /// <see cref="BuildInfo.Current"/> — the assembly's own stamp, FU-OWNER-10's field — never from a
+    /// hand-maintained constant, which is exactly how a hand-typed message once quoted a version the
+    /// engine had already replaced.</summary>
+    private void NotifyRunStart()
+    {
+        var verb = _ctx.State.SessionCounter > 0 ? "resumed" : "started";
+        Notify($"Conductor {_ctx.Plan.Name}: run {verb} — repo {_ctx.Plan.Repo} " +
+               $"(branch {Git.Branch(_ctx.Plan.Repo)}) · engine {BuildInfo.Current.Full}");
+    }
 
     private void Notify(string message)
     {

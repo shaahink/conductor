@@ -131,6 +131,19 @@ public sealed class ClaudeProvider : IAgentProvider
         var output = Num(u, "output_tokens");
         var cacheRead = Num(u, "cache_read_input_tokens");
         if (input == 0 && output == 0 && cacheRead == 0) return;
+
+        // B13.6: fold the delta onto the session state, not just out to the event stream. Emitting
+        // alone left `TokensCacheRead` and friends NULL for the whole session — they were first set by
+        // ReadUsage, off the terminal result envelope — so every rail that asks the LIVE session what
+        // it has spent was reading zero. The soft-break and the token ceiling both ask exactly that,
+        // which is why a run with a 6M ceiling sailed to 10M+ with neither firing: the numbers were
+        // streaming past the rails rather than into them. Safe to accumulate here precisely because
+        // TryCountMessageOnce has already rejected the re-emitted content blocks that would otherwise
+        // triple-count; ReadUsage still overwrites at the end with the CLI's authoritative totals.
+        state.TokensInput = (state.TokensInput ?? 0) + input;
+        state.TokensOutput = (state.TokensOutput ?? 0) + output;
+        state.TokensCacheRead = (state.TokensCacheRead ?? 0) + cacheRead;
+
         state.EmitTokenDelta(input, output, reasoning: 0, cacheRead, costUsd: 0m);
     }
 

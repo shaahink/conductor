@@ -1,8 +1,8 @@
- ◆ conductor  ● DEMO  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42    
-  h Home  a s t o c e p r k g b d                                                                             
+ ◆ conductor  ● DEMO  …/conductor  ▶ RUNNING  F7  ⠋ s12 $0.12 41s  cp 2/40  run $0.42  ⎇ feat/gate… ↑3↓1 ●    
+  h Home  a s o e p r k g b                                                                                   
                            │                                                                                  
- ▶ PLAN                    │  Server                                                                          
- ✓ F0 3/3 Foundations      │  mode       demo  synthetic data · no engine · no spend                          
+ ▶ PLAN  n× attempts       │  Server                                                                          
+ ✓ F0 3/3 Foundations      │  engine     demo  synthetic data · no engine · no spend                          
  ✓ F6 5/5 Ink TUI v1       │                                                                                  
  ● F7 2/5 Gate … 1× $0.30  │  Run                                                                             
    ✓ F7.1 Plan import      │  plan       conductor-foreman                                                    
@@ -17,10 +17,13 @@
                            │                                                                                  
                            │  Workspace                                                                       
                            │  the working directory every session edits                                       
-                           │  repo       C:\Code\conductor                                                    
-                           │  plan file  C:\Code\conductor\plans\conductor-foreman.plan.json                  
-                           │  tracker    CONDUCTOR-VNEXT-PLAN.md                                              
-                           │  state dir  C:\Code\conductor\.conductor                                         
+                           │  repo       C:/Code/conductor                                                    
+                           │  plan file  plans/conductor-foreman.plan.json                                    
+                           │                                                                                  
+                           │  Git                                                                             
+                           │  branch     feat/gate-caching                                                    
+                           │  upstream   origin/feat/gate-caching  3 ahead · 1 behind                         
+                           │  tree       4 changes uncommitted                                                
                            │                                                                                  
                            │  Next steps                                                                      
                            │    a  watch the live agent — it is working right now                             
@@ -28,7 +31,4 @@
                            │    ?  see every key                                                              
                            │                                                                                  
                            │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   a agent · r report · : commands · ? keys          
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   a agent · r report · w owner queue · ? keys       

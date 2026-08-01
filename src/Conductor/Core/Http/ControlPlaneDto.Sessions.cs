@@ -10,8 +10,11 @@ public sealed record SessionRowDto(
     long TokensCache = 0,
     // SC7.2: what the session actually DID, from its structured tool events. Null when the session
     // predates the digest or captured no tool calls — never an empty digest standing in for one.
-    SessionDigestDto? Digest = null);
+    SessionDigestDto? Digest = null,
+    // SF3.3: the session's own commits as `<short sha> <subject>` lines — the repo's and any
+    // declared satellite's, in the order the verdict saw them. CommitCount alone answered "did
+    // anything land"; reading WHAT landed meant leaving the tool for a terminal. Empty = a session
+    // that committed nothing, or one whose SessionFinished event predates the field.
+    IReadOnlyList<string>? Commits = null);
 
 public sealed record SessionsDto(IReadOnlyList<SessionRowDto> Sessions);
-
-public sealed record QueryRowDto(IReadOnlyList<string> Values);

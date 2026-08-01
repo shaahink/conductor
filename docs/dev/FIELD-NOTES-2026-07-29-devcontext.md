@@ -678,3 +678,36 @@ the error text is discarded. A one-line change would likely close this permanent
   has neither — is what made the run economical.
 - **`conductor bg` + the process table** (`bg status` showing dead/exited children with runtimes) made
   cleanup after an abort verifiable rather than hopeful.
+
+---
+
+## Closure ledger (SF7.1, 2026-08-01)
+
+What this era actually did about each finding above. The stage column is the checkpoint that owns
+the fix; the commit is the one a reader can `git show`. Where two commits appear, the finding had
+two halves and both are named. **Measured from the commits, not from the era spec's Appendix B
+index** — the commit bodies cite these finding numbers themselves, and where the index disagreed
+with the commits the commits won (two corrections, noted in the rows).
+
+| # | Finding | Stage | Commit | What closed it |
+|---|---|---|---|---|
+| 1 | Cost counters read zero, then jump at the verdict | SC2.3 | `55da220` | `ClaudeProvider` emits a `TokenDelta` per new assistant message id; `LiveCostEstimator` prices them at the rate this run has actually been billed and labels the basis rather than shipping a price table |
+| 2 | `agent.model` dropped without `{model}` | SC3.1 | `d4c9103` | `doctor` reads the MERGED agent per stage and FAILS — never warns — on a pinned model with no substitution point; `args` and `resumeArgs` are judged separately, because a placeholder missing only on resume is correct until the first resume |
+| 3 | The default `advisor` block cannot work | SC3.4 | `abe0eb1` | `AdvisorConfig.Args` defaults to a working headless invocation, and a dead advisor key is fatal at load instead of falling back behind one grey line |
+| 4 | Unknown `RunIf`/`SkipIf` tokens are TRUE | SC3.1 | `d4c9103` | `ConditionVocabulary` mirrors the evaluator's parse and plan load refuses an expression naming a token it does not know. **Corrects this note:** bare junk is stuck TRUE, but the observed `!gatesgreen` typo strips its `!` and is stuck FALSE — so a fix step written to catch red gates never ran at all |
+| 5 | Foreground blocking; the stall line does not say so | SC5.2 + SF6.1 | `e6b15c7` + `8dd1aa3` | `SessionWatchdog.Remedy` names the likely cause and the exact `conductor bg start` command on both stall lines, and a live bg child counts as proof of life — suggestions (a) and (b) both. The built-in session template carries the same rule so the agent reads it before it stalls |
+| 6 | `plan set` strips `//` comments | SC3.2 | `587eadd` | The dropped-comment count is reported before the write and the annotated original is kept alongside as a `.bak` |
+| 7 | `/telegram/status` says `configured` for a config that cannot deliver | SC1.2 | `160f731` | `TelegramReadiness` is the single place that decides deliverability; doctor, `GET /telegram/status` and `StartAsync` all read it, and the Test button stops taking the path that works exactly when the feature does not |
+| 8 | The claim path is easy to miss | SF6.1 | `8dd1aa3` | The built-in session template says the claim verb is the only claim, puts the deferred-MCP fallback on the same line as the CLI form, and orders the claim BEFORE the handoff |
+| 9 | Nothing instructs the agent to mark work in progress | SF6.1 | `8dd1aa3` | Mark in-progress FIRST is the template's first instruction (the commit body cites this finding) |
+| 10 | Agent events stored as truncated strings | SC7.1 + SC7.2 | `33d1f81` + `6d805e1` | Capture: `ToolEventExtractor` stores name plus canonical fields, each capped on its own, so what is stored is always complete JSON (transcript schema v2). Display: `ToolLine` renders one call as the line a human reads, and every session gets the digest this finding was actually asking for |
+| 11 | An agent can write outside the repo, unseen | SC7.1 | `33d1f81` | `SessionRunner.NoteOutsideRepoWrite` records out-of-repo write paths on the session record, capped at `MaxOutsideRepoWrites`. It only became possible once the path survived capture — which is why no verdict had ever mentioned one. **Appendix B lists #11 under SC7.1 and #10 under bare SC7; the commit answers both** |
+| 12 | The battery starts ~1s after the agent exits | SC4.1 | `ba9b523` | `BatterySettler` makes the battery wait for the session's own teardown, and a red gate is retried once before it costs a fix session |
+| 13 | Telegram reports healthy and delivers nothing | SC1.1 | `b7d6eb4` | `ConductorHost`'s doc comment claimed the host ran no long-running `IHostedService`; because the claim was believed, nothing started the host. `StartRunServicesAsync`/`StopRunServicesAsync` start it on the run path and drain it on the way out |
+| 14 | Status transitions each land their own commit | SC6.1 + SC4.2 | `04e092a` + `1ce4ba7` | `ReportSubstance.Of` decides the commit trigger and excludes everything the engine says about itself by name; separately, a bookkeeping commit stops buying a green verdict (`Git.ExcludeBookkeeping`). The squash half of this finding is #20 |
+| 15 | An injected correction renders after the evidence it corrects | SC4.4 | `cfdb1ad` | The human correction is placed above the evidence it corrects |
+| 16 | `conductor run` has no detached mode | SC5.2 | `e6b15c7` | A run outlives the shell that launched it |
+| 17 | Documentation drift worth a sweep | SF7.1 | `1ebb536`, `36e406e`, `abe0eb1` | All three named drifts: `docs/tracker.md`'s runtime-files tree (`1ebb536` — five documented entries no run produces, fourteen real artifacts undocumented); the `run-conductor` SKILL.md trust model, which said the OPPOSITE of the engine (`36e406e` — a hand-edited tracker DONE is accepted via the W1.3 fallback, not discarded); and `plan-config.md`'s advisor defaults, already corrected by SC3.4 (`abe0eb1`) and now pinned by a test that reads them off `AdvisorConfig` |
+| 18 | The phase gate speaks a second grammar | SC2.2 | `603fbbb` | `GateRunner.Token` is the only place a battery verdict is spelled, on the phase-gate line, the session verdict and the reuse path that carried no verdict at all |
+| 19 | A phase-gate RED consumes a stage attempt | SC2.2 | `603fbbb` | `RunState.NextAttemptNumber` is the one source both lines read. **Remainder, stated:** the note's second suggestion — that a phase-gate RED's repair session not consume the stage's delivery budget — was considered and NOT adopted. The disagreeing numbers were the defect; the budget policy is a deliberate choice and stands |
+| 20 | `P4 squash` fails at most stage closes | SC6.2 | `5c357b2` | Squash by rebuilding rather than rebasing, and it says what it did instead of swallowing git's reason. SC6.1 (`04e092a`) fixed the ordering that exposed the cause — the engine rewrote the tracker from `run.db` after the agent had committed it, so a tracked file always had unstaged changes when the squash ran |

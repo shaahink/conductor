@@ -78,7 +78,36 @@ public sealed partial class ControlPlaneServer : IDisposable
     /// <c>/plan/edit</c> the engine and the generated tracker moved on while every Face surface kept
     /// rendering the plan the run started with. Called from the loop's reload boundary only, i.e.
     /// never while a session is running.</summary>
-    public void SwapPlan(PlanConfig fresh) => _plan = fresh;
+    public void SwapPlan(PlanConfig fresh)
+    {
+        _plan = fresh;
+        // FU-OWNER-13: the swap IS the moment the queued edit stopped being queued. Clearing here
+        // rather than on a timer means "reload pending" can never outlive the reload.
+        _queuedReloadPlan = null;
+        _reloadQueued = false;
+    }
+
+    /// <summary>FU-OWNER-13: a plan reload this server queued that the run loop has not applied yet.
+    /// <see cref="_queuedReloadPlan"/> is the plan that was actually written to disk, kept because the
+    /// only honest answer to "is my telegram block live yet?" needs to know whether the pending edit
+    /// carries one — the live <see cref="_plan"/> by design does not know, and re-reading the file on
+    /// every status poll would put disk IO on the Face's fastest loop. Null when the queued reload
+    /// came from a path with no saved plan in hand (a task edit), in which case the flag alone is
+    /// true and no telegram sentence is overridden.</summary>
+    private volatile bool _reloadQueued;
+    private volatile PlanConfig? _queuedReloadPlan;
+
+    /// <summary>True while an accepted edit is still waiting for the loop's session boundary.</summary>
+    internal bool ReloadPending => _reloadQueued;
+
+    /// <summary>Enqueue the reload AND remember that it is outstanding, in one call, so a future
+    /// enqueue site cannot add the queue write and forget the flag.</summary>
+    private void QueueReload(PlanConfig? saved = null)
+    {
+        _queuedReloadPlan = saved;
+        _reloadQueued = true;
+        _inbox.Enqueue(ControlCommand.Of(ControlAction.ReloadPlan));
+    }
 
     /// <summary>Binds and starts the accept loop, scanning forward from the preferred port so a second
     /// concurrent run lands on a free one instead of failing. Returns false (never throws) if no port in
@@ -193,11 +222,12 @@ public sealed partial class ControlPlaneServer : IDisposable
                 case ("GET", "/processes"): await WriteProcessesAsync(ctx).ConfigureAwait(false); break;
                 case ("POST", "/processes/kill"): await HandleProcessKillAsync(ctx, ct).ConfigureAwait(false); break;
                 case ("GET", "/sessions"): await WriteSessionsAsync(ctx).ConfigureAwait(false); break;
-                case ("GET", "/report/query"): await WriteQueryAsync(ctx).ConfigureAwait(false); break;
+                case ("GET", "/scores"): await WriteScoresAsync(ctx).ConfigureAwait(false); break;
                 case ("GET", "/prompt/preview"): await WritePromptPreviewAsync(ctx).ConfigureAwait(false); break;
                 case ("GET", "/timeline"): await WriteTimelineAsync(ctx).ConfigureAwait(false); break;
                 case ("GET", "/ledger"): await WriteLedgerAsync(ctx).ConfigureAwait(false); break;
                 case ("GET", "/bugs"): await WriteBugsAsync(ctx).ConfigureAwait(false); break;
+                case ("GET", "/owner/queue"): await WriteOwnerQueueAsync(ctx).ConfigureAwait(false); break;
                 case ("POST", "/note"): await HandleNotePostAsync(ctx, ct).ConfigureAwait(false); break;
                 case ("POST", "/bug"): await HandleBugPostAsync(ctx, ct).ConfigureAwait(false); break;
                 case ("POST", "/bug/resolve"): await HandleBugResolveAsync(ctx, ct).ConfigureAwait(false); break;

@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -96,7 +96,8 @@ public sealed partial class RunLoop
         {
             var cp = track.ForStage(stage.Id).FirstOrDefault(c => c.IsOpen)?.Id ?? stage.Id;
             _ctx.Log($"report refresh @ {cp} (cost ${agent.CostUsd:0.00})");
-            Reporter.WriteReport(_ctx.Plan, _ctx.State, track, _ctx.LastGates, _ctx.Log, BuildActivitySection(rec, agent), store: _ctx.Store);
+            Reporter.WriteReport(_ctx.Plan, _ctx.State, track, _ctx.LastGates, _ctx.Log, BuildActivitySection(rec, agent), store: _ctx.Store,
+                onNewOwnerItems: _ctx.NotifyNewOwnerQueueItems);
         }
         catch (Exception ex) { _ctx.Log($"report refresh failed: {ex.Message}"); }
     }

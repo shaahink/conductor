@@ -36,6 +36,48 @@ public sealed partial class SessionRunner
         _ctx.Sink.Log($"[soft-break] {liveTokens / 1000.0:0.#}k/{maxTokens / 1000.0:0.#}k tokens — agent has been nudged to hand off");
     }
 
+    /// <summary>Every token this session has been charged for so far, from the live stream.</summary>
+    internal static long LiveTokens(AgentSession agent) =>
+        (agent.TokensInput ?? 0) + (agent.TokensOutput ?? 0)
+        + (agent.TokensReasoning ?? 0) + (agent.TokensCacheRead ?? 0);
+
+    /// <summary>B13.2: true when this session has spent its whole token ceiling and must stop NOW.</summary>
+    /// <remarks>The ceiling used to be read only AFTER the agent exited, which made it a label rather
+    /// than a limit: a session ran its full length, and the engine then noted that it had been over
+    /// budget the whole time. That is the wrong shape for the cost being controlled. A session's bill is
+    /// roughly turns × context, and context only grows, so the last quarter of a long session costs
+    /// several times the first — which is exactly the part a ceiling has to be able to cut. Enforcing it
+    /// live turns a quadratic into a sequence of linear pieces.
+    /// <para>Killing here is safe in the way that matters: the agent edits the working tree directly, so
+    /// the files it has written survive, and the run's own rollover path takes it from there with a
+    /// handoff. What is lost is the agent's in-flight reasoning, which is precisely the thing that had
+    /// become expensive to keep. The cooperative nudge fires far earlier (<c>softBreakRatio</c>), so a
+    /// session that pays attention to it lands its work and ends on its own terms well before this.</para>
+    /// </remarks>
+    private bool OverSessionTokenBudget(AgentSession agent) =>
+        _ctx.EffectiveMaxSessionTokens is { } max && LiveTokens(agent) >= max;
+
+    /// <summary>B13.2: ends the session that has spent its ceiling, and says so on both surfaces.
+    /// Always returns true — the caller records that the kill was ours.</summary>
+    private bool EndOnBudget(AgentSession agent, SessionRecord rec)
+    {
+        _ctx.Log($"session #{rec.Number} hit its token ceiling ({LiveTokens(agent) / 1_000_000.0:0.##}M ≥ " +
+                 $"{_ctx.EffectiveMaxSessionTokens!.Value / 1_000_000.0:0.##}M) — ending it here; the next session starts fresh");
+        _ctx.Sink.Log("[budget] session token ceiling reached — ending the session so the next one starts on a small context");
+        agent.Kill();
+        return true;
+    }
+
+    /// <summary>B13.2: what a budget-killed session cost. A killed session never emits the result
+    /// envelope carrying <c>total_cost_usd</c>, so the one session the rail acts on would otherwise be
+    /// the one session reporting $0 — and the ledger would read as though stopping early were free.
+    /// Priced at what THIS run has actually been billed per token; null when no finished session has
+    /// set a rate yet, because inventing one is worse than admitting the gap.</summary>
+    private decimal? PriceBudgetKill(AgentSession agent) =>
+        LiveCostEstimator.ObservedRatePerToken(_ctx.State.History) is { } rate
+            ? decimal.Round(LiveTokens(agent) * rate, 4, MidpointRounding.AwayFromZero)
+            : null;
+
     private long? ComputeSoftThreshold()
     {
         if (_ctx.EffectiveMaxSessionTokens is not { } max) return null;
@@ -46,16 +88,71 @@ public sealed partial class SessionRunner
 
     private void CleanSoftBreakSignal()
     {
-        var signalFile = Path.Combine(_ctx.Plan.StateDir, "soft-break");
-        try { if (File.Exists(signalFile)) File.Delete(signalFile); }
-        catch (IOException) { }
-        catch (UnauthorizedAccessException) { }
+        // B13.3: the delivered-marker goes with the signal. Leaving it behind would make the NEXT
+        // session's nudge a no-op — the quietest possible way to lose the cooperative rail again.
+        foreach (var name in new[] { "soft-break", "soft-break.delivered" })
+        {
+            var signalFile = Path.Combine(_ctx.Plan.StateDir, name);
+            try { if (File.Exists(signalFile)) File.Delete(signalFile); }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
     }
 
     /// <summary>W2.1: the MCP wiring for one session. Both provider shapes are written every time —
     /// which one the child actually reads is decided by how it is launched (env var vs CLI flag), and
     /// writing both keeps that decision at the launch site instead of inside the config writer.</summary>
-    internal sealed record McpWiring(string OpencodeConfigPath, string ClaudeConfigPath);
+    internal sealed record McpWiring(string OpencodeConfigPath, string ClaudeConfigPath, string? ClaudeSettingsPath = null);
+
+    /// <summary>B13.3: writes the per-session claude settings file carrying the budget hook, and returns
+    /// its path (null when the session has no token ceiling, so no notice can ever be due). Written
+    /// beside the MCP configs and deleted with them.</summary>
+    private string? WriteBudgetHookSettings()
+    {
+        if (_ctx.EffectiveMaxSessionTokens is null) return null;
+        var conductorExe = Environment.ProcessPath;
+        if (string.IsNullOrEmpty(conductorExe) || !File.Exists(conductorExe)) return null;
+        try
+        {
+            // Forward slashes, on Windows, deliberately. The agent CLI runs a hook command through a
+            // shell, and that shell reads `\` as an escape: the same command with native separators
+            // parses to a mangled path, the hook silently never runs, and the only symptom is a
+            // cooperative rail that appears wired and does nothing — which is the exact failure this
+            // whole change exists to remove. Windows accepts forward slashes in both positions.
+            var exe = conductorExe.Replace('\\', '/');
+            var stateDir = _ctx.Plan.StateDir.Replace('\\', '/');
+            var settings = new
+            {
+                hooks = new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    ["PostToolUse"] = new[]
+                    {
+                        new
+                        {
+                            matcher = "*",
+                            hooks = new[]
+                            {
+                                new
+                                {
+                                    type = "command",
+                                    command = $"\"{exe}\" hook-budget --state-dir \"{stateDir}\"",
+                                    timeout = 10,
+                                },
+                            },
+                        },
+                    },
+                },
+            };
+            var path = Path.Combine(_ctx.Plan.StateDir, "settings.budget.json");
+            File.WriteAllText(path, JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true }));
+            return path;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _ctx.Log($"B13.3: could not write the budget hook settings: {ex.Message}");
+            return null;
+        }
+    }
 
     /// <summary>W2.1: emits the conductor-tasks MCP server in BOTH provider dialects. Opencode reads a
     /// <c>{mcp:{name:{type:"local",command:[exe,...args]}}}</c> file via <c>OPENCODE_CONFIG</c>; claude
@@ -119,7 +216,7 @@ public sealed partial class SessionRunner
             var claudePath = Path.Combine(_ctx.Plan.StateDir, "mcp-config.claude.json");
             File.WriteAllText(opencodePath, JsonSerializer.Serialize(opencodeConfig, opts));
             File.WriteAllText(claudePath, JsonSerializer.Serialize(claudeConfig, opts));
-            return new McpWiring(opencodePath, claudePath);
+            return new McpWiring(opencodePath, claudePath, WriteBudgetHookSettings());
         }
         catch (Exception ex)
         {
@@ -132,19 +229,31 @@ public sealed partial class SessionRunner
     /// only when the plan's own args do not already carry <c>--mcp-config</c>, so a plan that wires MCP
     /// by hand keeps full control instead of getting a second, conflicting config.</summary>
     internal static IReadOnlyList<string> McpArgsFor(string providerName, IReadOnlyList<string>? plannedArgs, string claudeConfigPath)
+        => McpArgsFor(providerName, plannedArgs, claudeConfigPath, null);
+
+    internal static IReadOnlyList<string> McpArgsFor(string providerName, IReadOnlyList<string>? plannedArgs,
+        string claudeConfigPath, string? budgetSettingsPath)
     {
         if (!string.Equals(providerName, "claude", StringComparison.Ordinal)) return [];
-        if (plannedArgs != null && plannedArgs.Any(a => a.Contains("--mcp-config", StringComparison.Ordinal))) return [];
+        var args = new List<string>();
         // --strict-mcp-config: the session gets exactly the conductor server and nothing the developer
         // happens to have in ~/.claude.json — a run must not depend on the operator's local MCP setup.
-        return ["--mcp-config", claudeConfigPath, "--strict-mcp-config"];
+        if (plannedArgs == null || !plannedArgs.Any(a => a.Contains("--mcp-config", StringComparison.Ordinal)))
+            args.AddRange(["--mcp-config", claudeConfigPath, "--strict-mcp-config"]);
+        // B13.3: same rule for the budget hook — a plan that passes its own --settings keeps full
+        // control rather than being handed a second, conflicting file.
+        if (budgetSettingsPath is { Length: > 0 }
+            && (plannedArgs == null || !plannedArgs.Any(a => a.Contains("--settings", StringComparison.Ordinal))))
+            args.AddRange(["--settings", budgetSettingsPath]);
+        return args;
     }
 
     private void CleanupMcpConfig(McpWiring? wiring)
     {
         if (wiring == null) return;
-        foreach (var path in new[] { wiring.OpencodeConfigPath, wiring.ClaudeConfigPath })
+        foreach (var path in new[] { wiring.OpencodeConfigPath, wiring.ClaudeConfigPath, wiring.ClaudeSettingsPath })
         {
+            if (string.IsNullOrEmpty(path)) continue;
             try { if (File.Exists(path)) File.Delete(path); }
             catch (IOException) { }
             catch (UnauthorizedAccessException) { }

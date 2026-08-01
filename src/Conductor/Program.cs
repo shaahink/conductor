@@ -33,6 +33,8 @@ app.Configure(c =>
         .WithDescription("Attach a Face TUI to a run that is already going (or --demo for offline synthetic data).");
     c.AddCommand<StatusCommand>("status")
         .WithDescription("Show plan, tracker, and session status.");
+    c.AddCommand<WatchCommand>("watch")
+        .WithDescription("Block silently on a live run and return only when something needs judgment: a park, a churn loop, a phase gate RED twice, the engine gone, the run ended. --json for the brief, --timeout for a heartbeat, --hook to hand it to a supervisor.");
     c.AddCommand<GateCommand>("gate")
         .WithDescription("Re-run the gate battery at HEAD (no agent spawned). --full for full battery, default fast-tier only. Clears pendingFix if all green.");
     c.AddCommand<ReportCommand>("report")
@@ -91,10 +93,14 @@ app.Configure(c =>
         .WithDescription("Post-hoc audit replay: run an audit prompt against a completed stage (read-only diagnostic). Requires --replay flag. Output written to .conductor/audits/.");
     c.AddCommand<McpServeCommand>("mcp-serve")
         .WithDescription("Run the MCP task server (JSON-RPC 2.0 over stdio) for agent task management.");
+    // Hidden: run by the agent CLI as a PostToolUse hook, not by a person.
+    c.AddCommand<HookBudgetCommand>("hook-budget").IsHidden();
     c.AddCommand<CompletionCommand>("completion")
         .WithDescription("Generate shell completion scripts (powershell or bash).");
     c.AddCommand<BgCommand>("bg")
         .WithDescription("Background process management: start|status|logs|stop.");
+    c.AddCommand<PsCommand>("ps")
+        .WithDescription("SF5.4: every conductor run on this machine — repo, plan, run id, port, pid, status. Read-only; --json for machines.");
     c.AddCommand<VersionCommand>("version")
         .WithDescription("What this binary is: semver, git sha and build date stamped at build, plus which file answered. --json for machines, --short for scripts.");
     c.AddCommand<UpdateCommand>("update")

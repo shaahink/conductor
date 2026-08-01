@@ -35,12 +35,12 @@ public sealed class SC1TelegramLateConfigRunPathTests : IDisposable
         Directory.CreateDirectory(_repo);
         _stateDir = Path.Combine(_repo, ".conductor");
 
-        GitRun("init -b main");
-        GitRun("config user.email sc13@test");
-        GitRun("config user.name \"SC13 Test\"");
+        GitRun("init", "-b", "main");
+        GitRun("config", "user.email", "sc13@test");
+        GitRun("config", "user.name", "SC13 Test");
         File.WriteAllText(Path.Combine(_repo, "README.md"), "# SC1.3 late-config repo");
-        GitRun("add README.md");
-        GitRun("commit -m \"chore: initial commit\" --no-gpg-sign");
+        GitRun("add", "README.md");
+        GitRun("commit", "-m", "chore: initial commit", "--no-gpg-sign");
 
         File.WriteAllText(Path.Combine(_repo, "TRACKER.md"),
             "# SC1.3 Plan\n\n## Handoff\nlast: none.\n\n## Checkpoints\n\n" +
@@ -53,9 +53,14 @@ public sealed class SC1TelegramLateConfigRunPathTests : IDisposable
         try { Directory.Delete(_repo, recursive: true); } catch (Exception) { }
     }
 
-    private void GitRun(string args) =>
-        Conductor.Core.ProcessRunner.Run("git", args.Split(' ', StringSplitOptions.RemoveEmptyEntries),
+    /// <summary>SF0.2 (bug #8): one argument per parameter, exit code asserted — see
+    /// <c>HarnessTests.GitRun</c> for what the space-splitting version cost.</summary>
+    private void GitRun(params string[] args)
+    {
+        var r = Conductor.Core.ProcessRunner.Run("git", args,
             _repo, TimeSpan.FromSeconds(30), CancellationToken.None);
+        Assert.True(r.ExitCode == 0, $"git {string.Join(" ", args)} failed ({r.ExitCode}): {r.Output} {r.StdErr}");
+    }
 
     /// <summary>
     /// The checkpoint's live claim: configuration that arrives after the engine started takes effect

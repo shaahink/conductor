@@ -111,10 +111,11 @@ public sealed partial class VerdictEngine
         _saveAndReport();
     }
 
-    private bool ShouldVerify(SessionRecord rec)
-    {
-        return rec.Kind == SessionKind.Deliver && _ctx.Plan.VerifyEachDelivery;
-    }
+    // SF0.1 / bug 11: ShouldVerify lived here and was called from nowhere after M3.1 gave the
+    // next-step decision to the workflow — it was the ONLY reader of plan.verifyEachDelivery, which
+    // is how that key came to be settable and inert. The key now enters the live decision at the
+    // bottom of QaPolicyExtensions.EffectiveSkipVerification; a private method nothing calls is not
+    // a reader, so it is gone rather than left to imply one.
 
 #pragma warning disable MA0045 // sync file I/O by design — fast local writes, not hot-path
     private void WriteVerifierFollowups(string stageId, VerifierVerdict verdict)

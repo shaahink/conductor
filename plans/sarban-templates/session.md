@@ -69,4 +69,5 @@ plan and `.conductor`, never this repo's — see the traps below.
 - End by printing one paragraph starting with `SESSION-RESULT:` — what landed, what is red, and what
   the next session should pick up.
 {tools}
+{packs}
 {stageNotes}{extra}

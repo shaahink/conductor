@@ -4,6 +4,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"conductor-face-go/internal/api"
+	"conductor-face-go/internal/lastrun"
 	"conductor-face-go/internal/templates"
 	"conductor-face-go/internal/widgets"
 )
@@ -17,35 +18,81 @@ const (
 	// in which directory, what does it cost, what next — answerable before pressing anything.
 	TabHome MainTab = iota
 	TabAgent
-	TabSessions
-	TabTimeline
+	// TabHistory is SF1.3's merge of the old Sessions and Timeline tabs: they were one question asked
+	// twice, because a session IS a timeline span (the spine's `session` entries carry the very
+	// SessionNumber /sessions lists). Two views, one surface — see historyView.
+	TabHistory
 	TabProcesses
-	TabConsole
 	TabTemplates
 	TabPlan
 	TabReport
 	TabKnowledge
 	TabTelegram
 	TabKanban
-	// TabDev is the developer screen (U2.3): the SQL console that used to be Report, plus run
-	// internals and per-session token/cost stats. Report answers "how is the run going"; Dev
-	// answers "what is the machine actually doing". It goes LAST on purpose — see tabKey.
-	TabDev
+	// SF1.2: TabDev is gone. It was the developer screen (U2.3) built around the SQL console that used
+	// to BE Report, and the owner's verdict was "delete this stupid sql query report and its traces".
+	// Its two non-SQL panels were not deleted with it — they were re-homed to the surfaces that already
+	// answer their question: the wiring internals to Home's Server/Workspace panels, and the per-session
+	// token/cost table to the Report tab.
+	//
+	// SF1.3: TabConsole is gone too, but FOLDED rather than deleted — the raw agent stdout it rendered
+	// is now the Agent tab's raw-stream mode (`agentRaw`), strip and all. See docs/dev/adr/0004.
 	tabCount
 )
 
-var tabNames = [tabCount]string{"Home", "Agent", "Sessions", "Timeline", "Procs", "Console", "Templates", "Plan", "Report", "Knowledge", "Telegram", "Kanban", "Dev"}
+var tabNames = [tabCount]string{"Home", "Agent", "History", "Procs", "Templates", "Plan", "Report", "Knowledge", "Telegram", "Kanban"}
 
 // tabKey is the mnemonic that jumps straight to each tab (also shown in the strip). First-letter where
 // it's free; Procs takes o and Telegram takes g (their first letters collide), Plan takes p — freed
-// by moving sidebar-collapse to `\` — and Kanban takes b ("board"; k is Knowledge). Home takes h, free
-// since the tab-mnemonic relabel moved Sessions to s. Dev takes d, freed by moving the Plan editor's
-// delete to `x` (matching Procs, where `x` is already the destructive-confirm key): a mnemonic is a
-// GLOBAL key, and handleKey runs the mnemonic loop before the pane handler whenever the tab isn't in
-// an owning sub-state, so leaving `d` on plan-delete would have made it unreachable from the list.
-// Digits 1–9 reach Home…Report and 0 reaches Knowledge; Telegram, Kanban and Dev are the three tabs
-// past the digits — mnemonic and tab-cycle only. Keep in sync with renderHelpOverlay's Tabs legend.
-var tabKey = [tabCount]string{"h", "a", "s", "t", "o", "c", "e", "p", "r", "k", "g", "b", "d"}
+// by moving sidebar-collapse to `\` — and Kanban takes b ("board"; k is Knowledge). Home takes h, and
+// History keeps Sessions' `s` rather than claiming `h`: Home is the landing page every user hits
+// first, and `s`/`t` both still reach History anyway (see foldedTabKey), which is worth more than a
+// first-letter match. At ten tabs the digit row addresses ALL of them — 1–9 then 0 — so unlike every
+// earlier version of this comment there is no "and the last few have no digit" caveat to make.
+//
+// SF1.2 freed `d` when the Dev tab went. It is deliberately left UNBOUND rather than reassigned: `d`
+// meant "the SQL console" to anyone who used this Face, and quietly landing them somewhere else is
+// worse than a keypress that does nothing. The Plan editor's delete stays on `x`, where U2.3 moved it.
+//
+// Keep in sync with renderHelpOverlay's Tabs legend — that legend is hand-maintained, so a mnemonic
+// changed here and not there makes the help lie.
+var tabKey = [tabCount]string{"h", "a", "s", "o", "e", "p", "r", "k", "g", "b"}
+
+// foldedTabKey is the second half of the mnemonic story, and the reason SF1.3 is not SF1.2. `d` went
+// dead because its surface was DELETED — landing that user anywhere would be a lie. `c` and `t` name
+// surfaces that still EXIST, one level in, so they keep their meaning: each opens the tab that
+// absorbed it, already showing the absorbed view. Nothing a user of this Face has learned stops
+// working. Declared as a map, not scattered `case` arms, so TestTabMnemonicsAreUnique can pin these
+// and tabKey as ONE namespace — an alias colliding with a tab mnemonic is unreachable in exactly the
+// way a duplicate tabKey entry is. Keep in sync with the help legend's folded row.
+var foldedTabKey = map[string]MainTab{
+	"c": TabAgent,   // the old Console tab — Agent's raw stream (and a toggle once Agent is up)
+	"t": TabHistory, // the old Timeline tab — History's spine view
+}
+
+// historyView selects which of TabHistory's two views fills the pane. `←/→` switches them, which is
+// this codebase's sub-section idiom (planTab), and `s`/`t` jump straight to one from anywhere.
+type historyView int
+
+const (
+	historySessions historyView = iota
+	historyTimeline
+)
+
+// homeView selects which of TabHome's two views fills the pane (SF4.2).
+//
+// The owner queue is the eleventh surface this Face wanted and it is NOT an eleventh tab: SF1.3 set
+// the ceiling at ten and made the next surface FOLD instead (docs/dev/adr/0004), which is what this
+// is — a second view inside Home, on the free key `w`, exactly as the spine is a second view inside
+// History. Home is the right host because the queue answers Home's own question ("what next") for
+// the one actor Home cannot instruct: the owner. Short queues never need the fold at all — they are
+// a section on the landing, and `w` is for when the list outgrows a page that cannot scroll.
+type homeView int
+
+const (
+	homeLanding homeView = iota
+	homeOwnerQueue
+)
 
 // CmdMode is a transient bottom-bar input that floats over the dashboard instead of a full modal.
 type CmdMode int
@@ -79,6 +126,12 @@ type Model struct {
 	source  api.DataSource
 	isDemo  bool
 	baseURL string
+
+	// SF2.1: where this run keeps its state on disk, and the summary the engine left there when it
+	// finished. Learned from /state while the engine lives, from discovery when it does not, and read
+	// only when the link drops — Home's answer to "what happened?" once there is nothing to poll.
+	stateDir string
+	lastRun  *lastrun.Summary
 
 	width  int
 	height int
@@ -120,6 +173,24 @@ type Model struct {
 
 	consoleScroll int
 
+	// agentRaw swaps the Agent tab's body from the parsed transcript to the raw agent stdout that used
+	// to be the Console tab (SF1.3). The strip stays in both modes — keeping mission control on screen
+	// while reading raw output is the whole reason this folded instead of staying its own tab.
+	agentRaw bool
+
+	// historyView selects TabHistory's view: the sessions list or the run's spine.
+	historyView historyView
+
+	// homeView selects TabHome's view: the landing, or SF4.2's full owner queue (`w`).
+	homeView homeView
+	// ownerQueue is the last good GET /owner/queue. Kept across a failed poll — the owner's
+	// obligations do not stop existing because one fetch timed out, and a section that blanks itself
+	// on a hiccup is how a queue teaches people to stop trusting it. ownerQueueErr says the feed went
+	// away, beside the rows it is still showing.
+	ownerQueue       *api.OwnerQueueDto
+	ownerQueueErr    string
+	ownerQueueScroll int
+
 	// Palette (bottom command bar)
 	paletteQuery      string
 	paletteSelected   int
@@ -158,23 +229,18 @@ type Model struct {
 	// Sessions tab
 	sessionSelected int
 
-	// Report tab (U2.2: the rendered run report — scroll is its only interaction)
+	// Report tab (U2.2: the rendered run report — scroll is its only interaction). SF1.2 deleted the
+	// Dev console's state that used to sit below this block (reportEditor, reportQuickSelected,
+	// reportFocusQuery, reportHScroll, reportHistory, devScroll) — the console is gone, so none of it
+	// has a reader.
 	reportScroll int
-	// reportScores holds the sanctioned canned scores query. It is deliberately NOT data.ReportResult:
-	// that field belongs to the Dev console, and sharing it would make opening Report silently wipe
-	// the developer's last query result.
-	reportScores *api.QueryResultDto
-
-	// Dev tab — the SQL console (moved here from Report in U2.2; see tab_dev.go for why these keep
-	// their report* names).
-	reportEditor        widgets.TextArea
-	reportQuickSelected int
-	reportFocusQuery    bool
-	reportHScroll       int      // horizontal scroll (steps) for wide result tables
-	reportHistory       []string // recently-run queries, most-recent-first
-	// devScroll scrolls the whole Dev pane (pgup/pgdn): the U2.3 internals + session stats sit under
-	// a result grid of unbounded height, so without this they can be pushed out of reach.
-	devScroll int
+	// reportScores holds the verifier scores from GET /scores (SF1.1). It is deliberately NOT
+	// data.ReportResult: that field belongs to the Dev console, and sharing it would make opening
+	// Report silently wipe the developer's last query result.
+	reportScores *api.ScoresDto
+	// reportScoresErr is the fetch failure, kept beside the data rather than smuggled into it — a
+	// ScoresDto has no error field, because a typed endpoint's failure is an HTTP failure.
+	reportScoresErr string
 
 	// Processes tab
 	processSelected int
@@ -278,6 +344,15 @@ func New(source api.DataSource, isDemo bool, baseURL string) Model {
 		m.data.Connection.Mode = api.ModeDemo
 		m.data.Connection.Connected = true
 	}
+	return m
+}
+
+// WithStateDir tells the Face which directory holds this run's state, discovered on disk before any
+// connection is attempted (main.go). It is how a Face started AFTER the engine exited can still read
+// the run summary — a setter rather than a New parameter so the eleven test call sites of New, and
+// anyone embedding the model, keep working unchanged.
+func (m Model) WithStateDir(dir string) Model {
+	m.stateDir = dir
 	return m
 }
 

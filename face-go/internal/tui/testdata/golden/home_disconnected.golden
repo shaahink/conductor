@@ -1,9 +1,8 @@
  ◆ conductor  ● OFFLINE  waiting for a run at http://127.0.0.1:4317                                           
-  h Home  a s t o c e p r k g b d                                                                             
+  h Home  a s o e p r k g b                                                                                   
                            │                                                                                  
  ▶ PLAN                    │  Server                                                                          
-                           │  mode       live — not connected                                                 
-                           │  url        http://127.0.0.1:4317                                                
+                           │  engine     not running — nothing is listening on http://127.0.0.1:4317          
                            │  streams    ● events   ● transcript                                              
                            │                                                                                  
                            │  No run attached. Start one:                                                     
@@ -28,7 +27,8 @@
                            │    map it first with conductor journey -p <plan>                                 
                            │    ?  see every key                                                              
                            │                                                                                  
+                           │  Wiring                                                                          
+                           │  token      present                                                              
                            │                                                                                  
                            │                                                                                  
-                           │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   a agent · r report · : commands · ? keys          
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   a agent · r report · w owner queue · ? keys       

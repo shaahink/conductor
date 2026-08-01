@@ -2,18 +2,15 @@ package widgets
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
 	"charm.land/lipgloss/v2"
 
 	"conductor-face-go/internal/api"
+	"conductor-face-go/internal/timefmt"
 )
-
-// ClockLocation is the timezone every rendered wall-clock uses (transcript and timeline). Local by
-// default so face clocks agree with the engine's log lines, which are stamped in local time; golden
-// tests pin it to time.UTC so recorded frames stay timezone-independent.
-var ClockLocation = time.Local
 
 // TranscriptModel renders the agent's live transcript. ScrollOffset counts lines back from the
 // live tail (0 = pinned to the newest line), matching how a human thinks about scrollback — one
@@ -338,6 +335,19 @@ func collapseThinking(src []api.TranscriptLineDto) []api.TranscriptLineDto {
 	return out
 }
 
+// foldToolTail is how much of the last call's one-liner survives the fold. The fold exists to get a
+// run of tool calls out of the reader's way, so the tail is a reminder of where the run got to, not
+// a second rendering of it — `f` unfolds for the rest.
+const foldToolTail = 50
+
+// foldTools collapses a run of tool calls (and the results between them) into one summary row.
+//
+// SF3.1 spends SC7.2 here twice. The summary used to be "N tools (last: <the last line, byte-cut at
+// 47>)" — two defects in one string. The cut was on BYTES: a path with an accented character or a
+// CJK glyph landing on the boundary rendered as a U+FFFD replacement char, because Go slices a
+// string by index and half a rune is not a rune. And naming only the last call was the least
+// informative thing a fold could say: the reader who folded twelve calls away wants to know they
+// were eleven greps and an Edit, which the v2 wire now tells us per line (`tool.name`).
 func foldTools(src []api.TranscriptLineDto) []api.TranscriptLineDto {
 	var result []api.TranscriptLineDto
 	i := 0
@@ -345,22 +355,25 @@ func foldTools(src []api.TranscriptLineDto) []api.TranscriptLineDto {
 		line := src[i]
 		if line.Kind == "tool" {
 			count := 1
-			tools := []string{line.Text}
+			names := []string{toolLineName(line)}
+			last := line.Text
 			j := i + 1
 			for j < len(src) && (src[j].Kind == "tool" || src[j].Kind == "result") {
 				if src[j].Kind == "tool" {
 					count++
-					tools = append(tools, src[j].Text)
+					names = append(names, toolLineName(src[j]))
+					last = src[j].Text
 				}
 				j++
 			}
-			summary := fmt.Sprintf("%d tool calls", count)
-			if count > 0 {
-				last := tools[len(tools)-1]
-				if len(last) > 50 {
-					last = last[:47] + "..."
-				}
-				summary = fmt.Sprintf("%d tools (last: %s)", count, last)
+			summary := fmt.Sprintf("%s folded", plural(count, "tool call"))
+			if mix := foldMix(names); mix != "" {
+				summary += " · " + mix
+			}
+			// truncate is rune-aware and appends its own ellipsis — the byte slice it replaces is the
+			// whole reason this line exists.
+			if tail := truncate(strings.TrimSpace(last), foldToolTail); tail != "" {
+				summary += " · last: " + tail
 			}
 			result = append(result, api.TranscriptLineDto{
 				Kind: "tool-fold",
@@ -374,6 +387,71 @@ func foldTools(src []api.TranscriptLineDto) []api.TranscriptLineDto {
 		}
 	}
 	return result
+}
+
+// toolLineName is the tool's short name for a folded line: the v2 structure when the engine sent it
+// (`mcp__conductor-tasks__bg_start` → `bg_start`, the same name the session digest counts under),
+// falling back to the first word of the rendered one-liner for a v1 line, which is exactly where the
+// name has always been.
+func toolLineName(line api.TranscriptLineDto) string {
+	if n := line.Tool.ShortName(); n != "" {
+		return n
+	}
+	if i := strings.IndexAny(line.Text, " \t"); i > 0 {
+		return line.Text[:i]
+	}
+	return strings.TrimSpace(line.Text)
+}
+
+// foldMix counts the names in a folded run and renders them most-frequent first, ties broken by
+// name so the same run always folds to the same string. Capped: a fold summary that itself needs
+// folding has missed the point.
+func foldMix(names []string) string {
+	counts := map[string]int{}
+	var order []string
+	for _, n := range names {
+		if n == "" {
+			continue
+		}
+		if _, seen := counts[n]; !seen {
+			order = append(order, n)
+		}
+		counts[n]++
+	}
+	if len(order) == 0 {
+		return ""
+	}
+	sort.SliceStable(order, func(a, b int) bool {
+		if counts[order[a]] != counts[order[b]] {
+			return counts[order[a]] > counts[order[b]]
+		}
+		return order[a] < order[b]
+	})
+	const maxCells = 4
+	shown := order
+	if len(shown) > maxCells {
+		shown = shown[:maxCells]
+	}
+	cells := make([]string, 0, len(shown)+1)
+	for _, n := range shown {
+		if counts[n] > 1 {
+			cells = append(cells, fmt.Sprintf("%s ×%d", n, counts[n]))
+			continue
+		}
+		cells = append(cells, n)
+	}
+	if rest := len(order) - len(shown); rest > 0 {
+		cells = append(cells, fmt.Sprintf("+%d more", rest))
+	}
+	return strings.Join(cells, " ")
+}
+
+// plural is this package's copy of the report's one — "1 tool call", "12 tool calls".
+func plural(n int, unit string) string {
+	if n == 1 {
+		return fmt.Sprintf("%d %s", n, unit)
+	}
+	return fmt.Sprintf("%d %ss", n, unit)
 }
 
 // splitToolCall splits a tool line's "<name> <argument>" into its two halves. The engine's adapters
@@ -433,7 +511,7 @@ func renderTranscriptLine(line api.TranscriptLineDto, width int, query string, i
 		if line.Ts.IsZero() {
 			clock = strings.Repeat(" ", len("15:04:05")+1)
 		} else {
-			clock = txTimeStyle.Render(line.Ts.In(ClockLocation).Format("15:04:05")) + " "
+			clock = txTimeStyle.Render(line.Ts.In(timefmt.Location).Format("15:04:05")) + " "
 		}
 	}
 

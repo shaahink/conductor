@@ -35,7 +35,7 @@ prints the exact `conductor plan reload` command when it does not.
 | `planDoc` | string | Path (relative to repo) to the plan/design doc. |
 | `branchPattern` | string | Regex — conductor warns if the current branch doesn't match. |
 | `pauseOnBlocked` | bool | Park at NeedsHuman when a BLOCKED row is found. Default true. |
-| `batteryCollapse` | bool | Skip agent's pre-session ritual, defer to conductor's battery. Saves ~30-50% tokens. |
+| `batteryCollapse` | bool | Skip agent's pre-session ritual, defer to conductor's battery. Saves tokens by not paying an agent to run gates the engine runs anyway; **the size of the saving has never been measured** (FU-B10-2 — it needs an A/B on the same checkpoints with only this flag flipped). |
 | `promptExtra` | string | Prepended to every session prompt (high-level context). |
 
 ### `satelliteRepos` — when the work lands next door (SC4.3)
@@ -224,8 +224,8 @@ docs-only or spike plan with no build/test surface.
 | `maxBackoffs` | int | 10 | Hard cap on consecutive backoffs. |
 | `maxRunCostUsd` | decimal | null | Total cost cap. Parks at AwaitingOwner when hit. |
 | `maxRunTokens` | long | null | Total token cap. Same parking behaviour. |
-| `maxSessionTokens` | long | null | Per-session token budget → RolledOver with handoff. |
-| `softBreakRatio` | double | 0.8 | Fraction of `maxSessionTokens` at which agent gets a cooperative "wrap up" nudge. |
+| `maxSessionTokens` | long | null | Per-session token budget, counting cache reads. Enforced live: on cross the session is ended → RolledOver with handoff, next session fresh, no attempt burned. Also puts the budget in the session prompt. |
+| `softBreakRatio` | double | 0.8 | Fraction of `maxSessionTokens` at which the agent is asked to land its sub-task and hand off. Delivered into the running session by a `PostToolUse` hook, so it arrives within one tool call. Leave room to act on it — 0.75 gives the agent the last quarter of the budget to finish and commit. |
 | `approvalMode` | bool | false | Park at AwaitingOwner before every session. |
 | `stallPatternTermination` | bool | true | 2× consecutive zero-output stall → NeedsHuman. |
 | `stallBackoffMinutes` | int | 12 | Initial stall backoff, doubles each consecutive stall. |

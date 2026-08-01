@@ -1,16 +1,16 @@
- ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42    
- h a s t o c e p r k g  b Kanban  d                                                                           
+ ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7  ⠋ s12 $0.12 41s  cp 2/40  run $0.42  ⎇ feat/gate… ↑3↓1 ●    
+ h a s o e p r k g  b Kanban                                                                                  
                            │                                                                                  
- ▶ PLAN                    │  ⚠ cannot reach /tasks: Get "http://127.0.0.1:4317/tasks": dial tcp 127.0.0.1…   
+ ▶ PLAN  n× attempts       │  ⚠ cannot reach /tasks: Get "http://127.0.0.1:4317/tasks": dial tcp 127.0.0.1…   
  ✓ F0 3/3 Foundations      │    showing the last cards fetched — not the live graph                           
  ✓ F6 5/5 Ink TUI v1       │                                                                                  
- ● F7 2/5 Gate … 1× $0.30  │  TODO (1)                  In Progress (1)           Done (1)                    
-   ✓ F7.1 Plan import      │  ────────────────────────  ────────────────────────  ────────────────────────    
-   ✓ F7.2 Re-import diff   │  ▸ F7.4 · Cache gate res…  • F7.3 · Wire RunDb.Get…  • F7.3 · Add truth-tier…    
-   ● F7.3 Truth-gate tier  │    T3 · planner · #3                                                             
- ○ F8 0/4 conductor chat…  │                                                                                  
-                           │                                                                                  
- ── GATES ──               │                                                                                  
+ ● F7 2/5 Gate … 1× $0.30  │  ▸ F7 stage 3/4 · cp 2/40 · gate test running · s12 Deliver try 1/3              
+   ✓ F7.1 Plan import      │                                                                                  
+   ✓ F7.2 Re-import diff   │  TODO 1/3                  In Progress 1/3           Done 1/3                    
+   ● F7.3 Truth-gate tier  │  ────────────────────────  ────────────────────────  ────────────────────────    
+ ○ F8 0/4 conductor chat…  │  ▸ F7                      ▸ F7                      ▸ F7                        
+                           │  ▸ F7.4 · Cache gate res…  • F7.3 · Wire RunDb.Get…  • F7.3 · Add truth-tier…    
+ ── GATES ──               │    planner                   agent                     claimed · planner         
    ✓ build                 │                                                                                  
    ● test 4s               │                                                                                  
    ○ lint                  │                                                                                  

@@ -61,7 +61,9 @@ public sealed partial class ControlPlaneServer
         // G3.2: a saved edit is dynamic by default — queue a live reload so the running loop swaps
         // the plan in at its next session boundary (no restart). Harmless when no run is active:
         // the verb is consumed at the loop's top and reloads the same file.
-        _inbox.Enqueue(ControlCommand.Of(ControlAction.ReloadPlan));
+        // FU-OWNER-13: the saved plan rides along, so every surface that must answer "is what I just
+        // saved live yet?" can say *queued* instead of *not configured* until the boundary.
+        QueueReload(plan);
         // W1.2: sync the work graph NOW, not at the next session boundary — an added stage's card
         // must be on the board when the Face re-fetches, and the engine re-syncs harmlessly later.
         SyncWorkGraph(plan);
@@ -142,7 +144,7 @@ public sealed partial class ControlPlaneServer
             plan = writable;
             applied = true;
             // G3.2: same as /plan/edit — an applied import reloads the live run at its next boundary.
-            _inbox.Enqueue(ControlCommand.Of(ControlAction.ReloadPlan));
+            QueueReload(writable);
             // W1.2: an applied import re-declares the work — sync the graph immediately.
             SyncWorkGraph(writable);
         }

@@ -77,7 +77,8 @@ public sealed class Orchestrator
         saveAndReport: () =>
         {
             _ctx.Save();
-            Reporter.WriteAndPublish(_ctx.Plan, _ctx.State, _ctx.ReadWork(), _ctx.LastGates, _ctx.Log, store: _ctx.Store);
+            Reporter.WriteAndPublish(_ctx.Plan, _ctx.State, _ctx.ReadWork(), _ctx.LastGates, _ctx.Log, store: _ctx.Store,
+                onNewOwnerItems: _ctx.NotifyNewOwnerQueueItems);
             PushIdleSnapshot();
         },
         onPlanSwapped: _onPlanSwapped);
@@ -106,7 +107,8 @@ public sealed class Orchestrator
         _ctx.Save();
         try
         {
-            Reporter.WriteAndPublish(_ctx.Plan, _ctx.State, _ctx.ReadWork(), _ctx.LastGates, _ctx.Log, store: _ctx.Store);
+            Reporter.WriteAndPublish(_ctx.Plan, _ctx.State, _ctx.ReadWork(), _ctx.LastGates, _ctx.Log, store: _ctx.Store,
+                onNewOwnerItems: _ctx.NotifyNewOwnerQueueItems);
         }
         catch (Exception) { }
         PushIdleSnapshot();

@@ -8,20 +8,25 @@ one page; fewer clicks; transparent overlays; better colour and spacing.*
 
 ```
 ┌ Top bar ─ brand · connection · plan · stage · live cost/tokens ───────────────┐  row 0 (mantle bg)
-│ Tab strip ─ Agent Sessions Timeline Procs Console Templates Plan Report Knowl…  │  row 1 (mantle bg)
+│ Tab strip ─ Home Agent History Procs Templates Plan Report Knowledge Telegram…  │  row 1 (mantle bg)
 │ Sidebar (always on, collapsible with \) │ Content pane (the active tab)        │  rows 2 … H-2
 │ Bottom bar ─ key hints, OR the command line (: / i / /)                         │  row H-1 (mantle bg)
 └────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 - **One page.** Everything the old build hid behind a modal is a **tab** in the content pane, one
-  keypress away. There are **thirteen** tabs — Home Agent Sessions Timeline Procs Console Templates Plan
-  Report Knowledge Telegram Kanban Dev — reached by `h a s t o c e p r k g b d`, or by `1`–`9`/`0` (the
-  last three, Telegram, Kanban and Dev, have no digit — mnemonic and tab-cycle only), or
-  `tab`/`shift+tab`. The plan
+  keypress away. There are **ten** tabs — Home Agent History Procs Templates Plan Report Knowledge
+  Telegram Kanban — reached by `h a s o e p r k g b`, or by `1`–`9`/`0` (ten tabs is exactly what the
+  digit row addresses, so every tab has a digit), or `tab`/`shift+tab`. The plan
   **sidebar is always visible** beside it (collapse with `\`). Never add a full-screen modal for a view
   again — add a tab (and extend `tabNames`/`tabKey`, both length `tabCount`). The tab strip is adaptive:
   full names when they fit, key-only (active tab keeps its name) when they don't — never clipped.
+- **Ten is the ceiling, and the eleventh tab folds instead** (SF1.3, `docs/dev/adr/0004`). "Add a tab,
+  never a modal" grew the strip to thirteen with no brake. Two pairs answered one question each and
+  merged: Console folded into **Agent** as a raw-stream toggle (`c`), Sessions and Timeline merged into
+  **History**, two views switched with `←/→` (`s` list, `t` spine). A folded tab's mnemonic is **not**
+  freed — it opens the fold (`foldedTabKey`), because the surface still exists one level in. Only a
+  DELETED surface's key goes dead, which is why `d` is dead and `c`/`t` are not.
 - **A tab mnemonic is a GLOBAL key — check it is free before claiming it.** `handleKey` runs the
   global switch and the `tabKey` loop *before* the active pane's handler whenever `tabHandlesAllKeys()`
   is false, so a letter taken by a tab is taken from every pane that isn't in an owning sub-state.
@@ -31,11 +36,17 @@ one page; fewer clicks; transparent overlays; better colour and spacing.*
   *pane* key it cannot see: when adding a mnemonic, grep the pane handlers for that letter, and pin it
   through `handleKey` (never through the pane handler directly — that bypasses the precedence that
   breaks it, which is exactly why `plan_test.go`'s `drive()` never caught this).
-- **Report is the owner's; Dev is the developer's.** `TabReport` is a *rendered* run report (U2.2) —
-  header, progress, stages, sessions digest, gates, verifier scores — from the `/state` + `/sessions`
-  the Face already polls, with scroll as its only interaction. The SQL console lives on `TabDev` with
-  the run internals and per-session stats. If a new surface answers "how is the run going", it belongs
-  on Report; if it answers "what is the machine doing", it belongs on Dev.
+- **Report is rendered, never queried.** `TabReport` is the owner's run report (U2.2) — header,
+  progress, stages, sessions digest, gates, verifier scores (`/scores`, SF1.1), per-session token/cost
+  — from typed endpoints the Face already polls, with scroll as its only interaction. There is no SQL
+  anywhere in the Face: SF1.2 deleted `TabDev`, `QueryReport` and `GET /report/query` on the owner's
+  "delete this stupid sql query report and its traces". Ad-hoc SQL against run.db is the MCP
+  `run_query` tool's job, behind `conductor chat` — not a Face surface.
+- **A deleted surface's honest panels get re-homed, not deleted with it.** Dev's two non-SQL panels
+  went where their question already lives: the wiring internals (token presence, seq, poll, run id) to
+  Home's `Wiring` section, the per-session token/cost table to the bottom of Report. Home cannot
+  scroll, so anything added to it declares a shed tier — and goes in a section positioned so it sheds
+  before rows Home already showed (`fitHome` sheds from the last section backwards).
 - **Home is the landing.** `TabHome` is index 0 and the tab the Face opens on (U1.1): where am I, what
   is running, in which directory, what does it cost, what next — answered before a keypress, from the
   `/state` + `/plan` the Face already polls. It fetches nothing of its own and owns no keys. `esc` still
@@ -66,11 +77,15 @@ one page; fewer clicks; transparent overlays; better colour and spacing.*
 
 ## Keys — direct, few clicks
 
-- `a s t o c e p r k g b d` jump straight to a tab; `1`–`9`/`0` and `tab`/`shift+tab` also switch. `esc`
-  from any browse pane returns to Agent.
+- `h a s o e p r k g b` jump straight to a tab; `1`–`9`/`0` and `tab`/`shift+tab` also switch. `esc`
+  from any browse pane returns to Agent. `d` is deliberately unbound since SF1.2 deleted the Dev tab:
+  it meant "the SQL console" to anyone who used this Face, and landing them somewhere else instead is
+  worse than a key that does nothing. `c` and `t` are the opposite case — SF1.3 folded their tabs into
+  another tab rather than deleting them, so both still open the surface they always named (`c` Agent's
+  raw stream, and it toggles when Agent is already up; `t` History's spine).
 - **Text entry uses one editor, not append-only strings.** `widgets.TextArea` (real caret:
-  left/right/up/down, home/end, insert/delete mid-string, pgup/pgdn) backs the template editor and the
-  Dev tab's SQL box; short single-line fields (goto, inject, plan/telegram field edits, knowledge
+  left/right/up/down, home/end, insert/delete mid-string, pgup/pgdn) backs the template editor;
+  short single-line fields (goto, inject, plan/telegram field edits, knowledge
   note/bug) may still use the light `typedChar` append path, but anything multi-line or long-lived
   should use `TextArea` so a typo in the middle is fixable.
 - A tab that is *editing text or in an interactive sub-state* owns every key

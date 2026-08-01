@@ -9,6 +9,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"conductor-face-go/internal/api"
+	"conductor-face-go/internal/timefmt"
 	"conductor-face-go/internal/widgets"
 )
 
@@ -16,21 +17,22 @@ import (
 // prompt. It replaced the SQL console, which moved to Dev (tab_dev.go) unchanged; the owner's
 // verdict on the old tab was "report being sql is stupid — show a good report visually".
 //
-// Everything here is rendered from data the Face ALREADY polls (/state + /sessions), with one
-// exception: verifier scores have no DTO on the wire, so they come from the canned query the spec
-// sanctions for exactly that gap. That result is kept in its own field (reportScores) and never in
-// data.ReportResult, which belongs to the Dev console — sharing it would make opening Report wipe
-// whatever the developer had just queried.
+// Everything here is rendered from data the Face polls over typed endpoints — /state, /sessions and
+// (SF1.1) /scores. The scores section used to be the exception: a canned SELECT through the Dev SQL
+// console's endpoint, which is why deleting that console was blocked on giving this one section a
+// wire type. That result is kept in its own field (reportScores) and never in data.ReportResult,
+// which belongs to the Dev console — sharing it would make opening Report wipe whatever the
+// developer had just queried.
 //
 // No interaction beyond scroll, by design: a report you can accidentally edit is not a report.
-
-// scoresSQL is the canned query behind the "Verifier scores" section. Kept identical in shape to the
-// Dev console's "verifier scores" quick query.
-const scoresSQL = "SELECT session_number, score, verdict FROM scores ORDER BY session_number DESC LIMIT 20"
 
 // sessionsDigestMax caps the sessions section: a report is a summary, and the Sessions tab is one
 // keypress away for the full list.
 const sessionsDigestMax = 8
+
+// scoresDigestMax caps the scores section the same way. The old canned query carried a LIMIT 20;
+// the endpoint returns everything, so the cap lives here where the reader can see it.
+const scoresDigestMax = 10
 
 func (m Model) handleReportKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
@@ -67,6 +69,10 @@ func (m Model) renderReportPane() (string, string) {
 	if sc := m.renderReportScores(); sc != "" {
 		sections = append(sections, sc)
 	}
+	// SF1.2: the per-session token/cost table, re-homed from the deleted Dev tab. It goes LAST because
+	// it is the accounting behind the numbers above, not the headline — and because the Report pane
+	// scrolls, so a long table costs the sections above it nothing.
+	sections = append(sections, m.renderReportSessionTokens())
 	body := strings.Join(sections, "\n\n")
 
 	// Clamp scroll to the real body: scrolling past the end leaves the owner staring at blank space
@@ -133,8 +139,8 @@ func (m Model) reportElapsed() string {
 // clock, which would desync the Face from the engine and make every golden frame time-dependent.
 func (m Model) sessionDuration(r api.SessionRowDto) (time.Duration, bool) {
 	if r.EndedUtc != nil {
-		start, okS := parseUTC(r.StartedUtc)
-		end, okE := parseUTC(*r.EndedUtc)
+		start, okS := timefmt.Parse(r.StartedUtc)
+		end, okE := timefmt.Parse(*r.EndedUtc)
 		if okS && okE && !end.Before(start) {
 			return end.Sub(start), true
 		}
@@ -146,31 +152,14 @@ func (m Model) sessionDuration(r api.SessionRowDto) (time.Duration, bool) {
 	return 0, false
 }
 
-func parseUTC(s string) (time.Time, bool) {
-	if s == "" {
-		return time.Time{}, false
-	}
-	t, err := time.Parse(time.RFC3339, s)
-	if err != nil {
-		return time.Time{}, false
-	}
-	return t, true
-}
-
-// fmtDuration renders a wall time the way an owner reads one: the two largest units that matter,
-// never "3724.184s".
+// fmtDuration is timefmt.Duration plus this pane's one house rule: a duration the Face does not have
+// renders as an em-dash, not as "0s". Zero seconds and "we could not work it out" are different
+// facts and the sessions table has to be able to say the second one.
 func fmtDuration(d time.Duration) string {
 	if d <= 0 {
 		return "—"
 	}
-	switch {
-	case d < time.Minute:
-		return fmt.Sprintf("%ds", int(d.Seconds()))
-	case d < time.Hour:
-		return fmt.Sprintf("%dm %02ds", int(d.Minutes()), int(d.Seconds())%60)
-	default:
-		return fmt.Sprintf("%dh %02dm", int(d.Hours()), int(d.Minutes())%60)
-	}
+	return timefmt.Duration(d)
 }
 
 func plural(n int, unit string) string {
@@ -183,12 +172,10 @@ func plural(n int, unit string) string {
 // fmtCost renders a cost the way the rest of the Face does — 2dp — with one carve-out: a real but
 // sub-cent charge must not render as "$0.00". A gate-only session genuinely costs $0.003, and
 // rounding that to zero reads as free. "<$0.01" is small AND true.
-func fmtCost(v float64) string {
-	if v > 0 && v < 0.005 {
-		return "<$0.01"
-	}
-	return fmt.Sprintf("$%.2f", v)
-}
+//
+// It is widgets.FmtMoney under the Report's own name — the sub-cent rule lives in one place now
+// (SF2.3), so a stage costing a third of a cent cannot read "$0.00" here and "<$0.01" one tab over.
+func fmtCost(v float64) string { return widgets.FmtMoney(v) }
 
 // --- stages -------------------------------------------------------------------
 
@@ -286,6 +273,11 @@ func (m Model) renderReportSessions(w int) string {
 			cost + " " +
 			textStyle.Render(fmt.Sprintf("%d", r.CommitCount))
 		rows = append(rows, "  "+lipgloss.NewStyle().MaxWidth(max(1, w-2)).Render(row))
+		// SF3.1: one compressed digest line under each row. The numbers above say what a session COST;
+		// this says what it bought — and it is the engine's own count (SC7.2), not a re-derivation.
+		if line := digestOneLine(r.Digest); line != "" {
+			rows = append(rows, "       "+subtleStyle.Render(truncate(line, max(4, w-9))))
+		}
 	}
 	if len(m.data.Sessions) > sessionsDigestMax {
 		rows = append(rows, subtleStyle.Render(fmt.Sprintf("  … %d older (Sessions tab)",
@@ -315,31 +307,107 @@ func (m Model) renderReportGates(s *api.StateDto) string {
 	return homeSection("Gates", rows...)
 }
 
+// --- per-session tokens (re-homed from the deleted Dev tab, SF1.2) -------------
+
+// renderReportSessionTokens is the per-session token/cost table. The numbers are SUMMED server-side
+// from the `costs` table (GET /sessions, U2.2) — the sessions table stores none of them.
+//
+// It answers a different question from the Sessions digest above it, which is why both exist: that one
+// is "what happened in each session" (kind, outcome, duration, commits); this one is "what did each
+// session BURN". SF1.2 re-homed it here from the Dev tab rather than deleting it with the SQL console,
+// because the token accounting was never the part the owner called stupid.
+//
+// A session showing real cost against 0 tokens is NOT a bug here: every claude-native session before
+// bug #5 (ClaudeProvider never read the `usage` object, fixed in 71fa214) recorded exactly that. This
+// table renders what the database says and lets that read as odd, rather than hiding the row or
+// back-filling a plausible number.
+func (m Model) renderReportSessionTokens() string {
+	if len(m.data.Sessions) == 0 {
+		return homeSection("Session tokens", subtleStyle.Render("no sessions yet"))
+	}
+	rows := []string{subtleStyle.Render(fmt.Sprintf("  %-4s %-5s %-8s %-8s %-8s %-9s %s",
+		"#", "stage", "in", "out", "reason", "cache-read", "cost"))}
+	var zeroTokenRows int
+	for _, r := range m.data.Sessions {
+		if r.TokensIn == 0 && r.TokensOut == 0 && r.CostUsd > 0 {
+			zeroTokenRows++
+		}
+		cost := subtleStyle.Render(pad("—", 7))
+		if r.CostUsd > 0 {
+			cost = peachStyle.Render(pad(fmtCost(r.CostUsd), 7))
+		}
+		// Every column is padded as PLAIN text and styled after (STYLE.md).
+		row := textStyle.Render(pad(fmt.Sprintf("#%d", r.Number), 4)) + " " +
+			accentStyle.Render(pad(r.StageId, 5)) + " " +
+			textStyle.Render(pad(widgets.FmtTokens(r.TokensIn), 8)) + " " +
+			textStyle.Render(pad(widgets.FmtTokens(r.TokensOut), 8)) + " " +
+			textStyle.Render(pad(widgets.FmtTokens(r.TokensThink), 8)) + " " +
+			textStyle.Render(pad(widgets.FmtTokens(r.TokensCache), 9)) + " " +
+			cost
+		rows = append(rows, "  "+lipgloss.NewStyle().MaxWidth(max(1, m.paneCols()-2)).Render(row))
+	}
+	// Name the known cause rather than letting a reader debug the Face for an engine-side gap.
+	// Hard-clipped: a note that word-wraps loses its indent and shears the section (STYLE.md).
+	if zeroTokenRows > 0 {
+		note := fmt.Sprintf("%s with cost but zero tokens — pre-bug-#5 data, not a Face bug",
+			plural(zeroTokenRows, "session"))
+		rows = append(rows, "", "  "+subtleStyle.Render(
+			lipgloss.NewStyle().MaxWidth(max(1, m.paneCols()-2)).Render(note)))
+	}
+	return homeSection("Session tokens", rows...)
+}
+
 // --- verifier scores ----------------------------------------------------------
 
-// renderReportScores renders the scores canned query if it returned anything. "When present" is
-// literal: a run with no verifier scores (QA dial off, or nothing verified yet) gets NO section
-// rather than an empty one, and a query error is shown as-is rather than swallowed into "no data".
+// renderReportScores renders GET /scores if it returned anything. "When present" is literal: a run
+// with no verifier scores (QA dial off, or nothing verified yet) gets NO section rather than an empty
+// one, and a fetch error is shown as-is rather than swallowed into "no data".
+//
+// SF1.1: the score is rendered against the bar it was judged by ("66/80") and coloured by the
+// engine's own Passed verdict. The canned-query version could do neither — the SELECT returned three
+// raw columns, so every verdict rendered the same grey (PASS, FAIL and WARN all miss
+// sessionOutcomeStyle's vocabulary and fall through to subtle), and a reader had no way to know
+// whether 66 was good.
 func (m Model) renderReportScores() string {
+	if m.reportScoresErr != "" {
+		return homeSection("Verifier scores", "  "+subtleStyle.Render("unavailable: "+m.reportScoresErr))
+	}
 	res := m.reportScores
-	if res == nil {
+	if res == nil || len(res.Scores) == 0 {
 		return ""
 	}
-	if res.Error != nil {
-		return homeSection("Verifier scores", "  "+subtleStyle.Render("unavailable: "+*res.Error))
+	rows := []string{subtleStyle.Render(fmt.Sprintf("  %-8s %-5s %-9s %-8s %s",
+		"session", "stage", "score", "verdict", "findings"))}
+
+	shown := res.Scores
+	if len(shown) > scoresDigestMax {
+		shown = shown[:scoresDigestMax]
 	}
-	if len(res.Rows) == 0 {
-		return ""
-	}
-	rows := []string{subtleStyle.Render(fmt.Sprintf("  %-8s %-6s %s", "session", "score", "verdict"))}
-	for _, r := range res.Rows {
-		v := r.Values
-		if len(v) < 3 {
-			continue
+	for _, sc := range shown {
+		stage := "—"
+		if sc.StageId != nil && *sc.StageId != "" {
+			stage = *sc.StageId
 		}
-		rows = append(rows, "  "+textStyle.Render(pad("#"+v[0], 8))+" "+
-			textStyle.Render(pad(v[1], 6))+" "+
-			sessionOutcomeStyle(v[2]).Render(v[2]))
+		verdictStyle := destructStyle
+		if sc.Passed {
+			verdictStyle = safeStyle
+		}
+		// Every column is padded as PLAIN text and styled after (STYLE.md).
+		score := fmt.Sprintf("%d/%d", sc.Score, sc.Threshold)
+		findings := subtleStyle.Render("—")
+		if n := len(sc.Findings); n > 0 {
+			findings = textStyle.Render(plural(n, "finding"))
+		}
+		rows = append(rows, "  "+
+			textStyle.Render(pad(fmt.Sprintf("#%d", sc.SessionNumber), 8))+" "+
+			accentStyle.Render(pad(stage, 5))+" "+
+			verdictStyle.Render(pad(score, 9))+" "+
+			verdictStyle.Render(pad(sc.Verdict, 8))+" "+
+			findings)
+	}
+	if len(res.Scores) > scoresDigestMax {
+		rows = append(rows, subtleStyle.Render(fmt.Sprintf("  … %d older",
+			len(res.Scores)-scoresDigestMax)))
 	}
 	return homeSection("Verifier scores", rows...)
 }

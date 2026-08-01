@@ -12,24 +12,19 @@ using Spectre.Console.Cli;
 
 namespace Conductor.Commands;
 
+// SF1.2: `--query` is gone. F1.4 added ad-hoc SQL here because run.db had no other reader; it then
+// became the CLI half of the SQL console the owner asked to delete ("delete this stupid sql query
+// report and its traces"). `conductor report` writes a report. Ad-hoc SQL lives where it is actually
+// asked for — the MCP `run_query` tool behind `conductor chat`.
 public sealed class ReportCommand : Command<ReportCommand.Settings>
 {
     public sealed class Settings : PlanSettings
     {
-        [CommandOption("--query <SQL>")]
-        [Description("F1.4: Run an ad-hoc SQL query against run.db instead of generating REPORT.md. " +
-                     "Example: --query \"SELECT stage_id, SUM(cost_usd) FROM costs GROUP BY stage_id\"")]
-        public string? Query { get; init; }
     }
 
     public override int Execute(CommandContext context, Settings settings)
     {
         var plan = PlanConfig.Load(settings.ResolvePlanPath());
-
-        if (settings.Query != null)
-        {
-            return RunQuery(plan, settings.Query);
-        }
 
         // SC2.4 — offline from run.db. This command used to build the report from state.json and the
         // declared tracker with a NULL store, so every DB-fed section (timeline, execution health, MCP
@@ -52,6 +47,13 @@ public sealed class ReportCommand : Command<ReportCommand.Settings>
             repo: Reporter.ReadRepoStrip(plan)), Reporter.Utf8Bom);
         AnsiConsole.MarkupLine($"report written to [bold]{Markup.Escape(Reporter.ReportPath(plan))}[/]" +
                                (store != null ? " [grey](from run.db)[/]" : " [yellow](no run.db — declared plan only)[/]"));
+
+        // SF4.1: the owner queue regenerates with the report on the engine's path; the hand verb must
+        // do the same, or "regenerate my surfaces" would silently leave the one the OWNER reads stale.
+        OwnerQueue.Write(plan, state, track, m => AnsiConsole.MarkupLine($"[yellow]{Markup.Escape(m)}[/]"));
+        var owed = OwnerQueue.Collect(plan, state, track, DateTime.UtcNow).Count;
+        AnsiConsole.MarkupLine($"owner queue written to [bold]{Markup.Escape(OwnerQueue.QueuePath(plan))}[/] " +
+                               (owed == 0 ? "[grey](nothing waiting on you)[/]" : $"[yellow]({owed} waiting on you)[/]"));
 
         // SC2.4: the same closing statement the engine writes on completion, regenerable by hand from
         // the database long after the process that ran the plan is gone.
@@ -95,59 +97,4 @@ public sealed class ReportCommand : Command<ReportCommand.Settings>
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return new TrackerSnapshot(); }
     }
 
-    private static int RunQuery(PlanConfig plan, string sql)
-    {
-        var runDbPath = Path.Combine(plan.StateDir, "run.db");
-        if (!File.Exists(runDbPath))
-        {
-            AnsiConsole.MarkupLine("[red]No run.db found.[/] Run the conductor at least once to initialize the database.");
-            return 1;
-        }
-
-        try
-        {
-            using var db = new SqliteRunStore(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteRunStore>.Instance);
-            var rows = db.Query(sql);
-
-            if (rows.Count == 0)
-            {
-                AnsiConsole.MarkupLine("[grey]no rows returned[/]");
-                return 0;
-            }
-
-            var table = new Table()
-                .Border(TableBorder.Rounded)
-                .Title($"[bold aqua]Query result[/] ({rows.Count} row{(rows.Count == 1 ? "" : "s")})");
-
-            var columns = rows[0].Keys;
-            foreach (var col in columns)
-                table.AddColumn(Markup.Escape(col));
-
-            foreach (var row in rows)
-            {
-                var values = columns.Select(c =>
-                {
-                    var v = row.GetValueOrDefault(c);
-                    return v switch
-                    {
-                        null => "[grey]-[/]",
-                        double d => d.ToString("F4"),
-                        float f => f.ToString("F4"),
-                        long l => l.ToString(),
-                        int i => i.ToString(),
-                        _ => Markup.Escape(v.ToString()!)
-                    };
-                }).ToArray();
-                table.AddRow(values);
-            }
-
-            AnsiConsole.Write(table);
-            return 0;
-        }
-        catch (Exception ex)
-        {
-            AnsiConsole.MarkupLine($"[red]Query failed:[/] {Markup.Escape(ex.Message)}");
-            return 1;
-        }
-    }
 }

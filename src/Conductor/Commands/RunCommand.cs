@@ -98,18 +98,14 @@ public sealed class RunCommand : AsyncCommand<RunCommand.Settings>
         // M2: the store (SqliteRunStore) is created inside ConductorHost.Build — it owns
         // the IEventSink (events table) and IRunStore (all writes).
         var opts = new RunOptions(settings.DryRun, settings.Once, settings.MaxSessions, controlPlane, settings.ControlPlanePort, settings.Paused);
-#pragma warning disable MA0045 // CancelAsync doesn't exist on CancellationTokenSource
-        Console.CancelKeyPress += (_, e) => { e.Cancel = true; cts.Cancel(); };
-#pragma warning restore MA0045
+        Console.CancelKeyPress += (_, e) => { e.Cancel = true; SyncCancellation.RequestStop(cts); };
 
         // W3.3: Ctrl+C was the only exit the engine knew about. Closing the window (or logging off)
         // killed the process mid-session with nothing saved — §7.5's accidental-✕ data loss. The
         // same cancellation now runs for those events, and the OS handler waits for the save.
         using var stopped = new ManualResetEventSlim(false);
         using var ctrlRails = ConsoleCtrlRails.Install(
-#pragma warning disable MA0045
-            gracefulStop: () => cts.Cancel(),
-#pragma warning restore MA0045
+            gracefulStop: () => SyncCancellation.RequestStop(cts),
             waitForStop: stopped.Wait,
             log: msg => AnsiConsole.MarkupLine($"[yellow]{Markup.Escape(msg)}[/]"));
 
@@ -199,9 +195,34 @@ public sealed class RunCommand : AsyncCommand<RunCommand.Settings>
                 AnsiConsole.MarkupLine($"[red]crash dump:[/] {Markup.Escape(crash)}");
         }
 
+        // SF0.4: a run that ends with open bugs says how many and where. Silence here is how eleven
+        // bugs walked out of the core run — filed, tracked, and never mentioned again by the engine
+        // that was holding them.
+        if (OpenBugsAtEnd(plan, state, planPathArg) is { } bugLine)
+            AnsiConsole.MarkupLine($"[yellow]open bugs:[/] {Markup.Escape(bugLine)}");
+
         AnsiConsole.MarkupLine($"[grey]history: {Markup.Escape(Path.Combine(plan.StateDir, "conductor.log"))} · run {Markup.Escape(Short(state.RunId))}, {state.SessionCounter} session(s)[/]");
         if (code != 4)
             AnsiConsole.MarkupLine($"resume: [yellow]conductor run -p {Markup.Escape(planPathArg)}[/]");
+    }
+
+    /// <summary>Reads the ledger back out of run.db for the epilogue. Its own connection: by the time the
+    /// epilogue prints, the host and the run loop's store are disposed. Never throws — the epilogue is the
+    /// last thing an operator sees and must not become the reason a clean run ends dirty.</summary>
+    private static string? OpenBugsAtEnd(PlanConfig plan, RunState state, string planPathArg)
+    {
+        var dbPath = Path.Combine(plan.StateDir, "run.db");
+        if (!File.Exists(dbPath) || string.IsNullOrEmpty(state.RunId)) return null;
+        try
+        {
+            using var store = new Core.Store.SqliteRunStore(dbPath,
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<Core.Store.SqliteRunStore>.Instance);
+            return OpenBugsReport.EpilogueLine(OpenBugsReport.Count(store, state.RunId), planPathArg);
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException or Microsoft.Data.Sqlite.SqliteException)
+        {
+            return null;
+        }
     }
 
     private static string Short(string id) => string.IsNullOrEmpty(id) ? "?" : id.Length >= 8 ? id[..8] : id;

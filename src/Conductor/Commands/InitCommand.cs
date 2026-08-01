@@ -71,8 +71,8 @@ public sealed class InitCommand : Command<InitCommand.Settings>
         File.WriteAllText(trackerPath, BuildTrackerMd(name), System.Text.Encoding.UTF8);
 
         Directory.CreateDirectory(templatesDir);
-        File.WriteAllText(Path.Combine(templatesDir, "session.md"), PromptBuilder.BuiltIn("session.md"), System.Text.Encoding.UTF8);
-        File.WriteAllText(Path.Combine(templatesDir, "fix.md"), PromptBuilder.BuiltIn("fix.md"), System.Text.Encoding.UTF8);
+        foreach (var (path, content) in TemplateScaffold(templatesDir))
+            File.WriteAllText(path, content, System.Text.Encoding.UTF8);
 
         // Self-check: don't leave a scaffold that won't load. Mirror NewPlanCommand's A6 discipline.
         try
@@ -91,7 +91,8 @@ public sealed class InitCommand : Command<InitCommand.Settings>
         AnsiConsole.MarkupLine($"[green]Detected[/] {kind.ToString().ToLowerInvariant()} repo");
         AnsiConsole.MarkupLine($"[green]Created[/] {Markup.Escape(planPath)}");
         AnsiConsole.MarkupLine($"[green]Created[/] {Markup.Escape(trackerPath)}");
-        AnsiConsole.MarkupLine($"[green]Created[/] {Markup.Escape(templatesDir)}{Path.DirectorySeparatorChar} (session.md, fix.md — edit these)");
+        AnsiConsole.MarkupLine($"[green]Created[/] {Markup.Escape(templatesDir)}{Path.DirectorySeparatorChar} " +
+            $"({PromptBuilder.BuiltInNames.Length} templates: {string.Join(", ", PromptBuilder.BuiltInNames)} — edit these)");
 
         if (!string.IsNullOrWhiteSpace(settings.FromIdea))
             return FromIdea(planPath, settings.FromIdea, settings.Model);
@@ -161,6 +162,14 @@ public sealed class InitCommand : Command<InitCommand.Settings>
 
     internal const string PlaceholderStageId = "S1";
 
+    /// <summary>SF6.3 — "templates as content" means ALL of them. init used to drop session.md and
+    /// fix.md and stop, which reads as "these are the templates": an operator who edited session.md
+    /// had no way to learn that verify, audit, review, resume, advisor and chat were still rendering
+    /// from C# string literals they could not see. Every name <see cref="PromptBuilder.ResolveTemplatePath"/>
+    /// honours is written here, so the directory listing IS the answer to "what can I change?".</summary>
+    internal static IReadOnlyList<(string Path, string Content)> TemplateScaffold(string templatesDir) =>
+        [.. PromptBuilder.BuiltInNames.Select(t => (Path.Combine(templatesDir, t), PromptBuilder.BuiltIn(t)))];
+
     internal static string BuildPlanJson(string name, string repo, RepoKind kind)
     {
         var repoNorm = repo.Replace("\\", "/");
@@ -200,6 +209,46 @@ public sealed class InitCommand : Command<InitCommand.Settings>
           //   "output": "json",
           //   "timeoutMinutes": 6
           // },
+
+          // SF6.3 — where the run reaches you when you are not at the desk. The bot token is read from
+          // CONDUCTOR_TELEGRAM_TOKEN (or saved from the Face's Telegram tab) and is never written here,
+          // so this block is safe to commit. Chat ids are numeric — @userinfobot tells you yours.
+          // Push-only until you list one; "enableTwoWay" then lets you approve and steer from the phone.
+          //
+          // "telegram": {
+          //   "allowedChatIds": ["123456789"],
+          //   "enableTwoWay": true,
+          //   "pollIntervalSeconds": 4
+          // },
+
+          // SF6.3 — the babysitter, named in the plan instead of remembered in a shell history. Invoked
+          // only when the run wakes something (a park, an owner gate, a circuit breaker), with the wake
+          // brief on stdin — quiet nights cost nothing. "standingOrders" rides INTO that brief, so the
+          // agent reads its authority on the same stdin as the wake; unstated reads as "escalate
+          // everything". "maxPerHour" is a cost fuse, not a nicety: a run that parks, is resumed and
+          // parks again on the same cause is a model invocation every few seconds until someone notices.
+          //
+          // "supervisor": {
+          //   "enabled": true,
+          //   "command": "claude -p \"You are the night watch. The wake brief is on stdin.\"",
+          //   "timeoutMinutes": 10,
+          //   "maxPerHour": 6,
+          //   "standingOrders": "You may: approve an owner gate whose checkpoint has evidence; inject a hint on a circuit breaker. You must escalate: anything that spends money, any merge, any plan edit."
+          // },
+
+          // A spend cap so the first run cannot surprise you: at the cap the run parks at AwaitingOwner
+          // and waits, it does not die. Raise it, swap it for "maxRunTokens", or delete the block if
+          // unbounded is deliberate — but delete it on purpose, not by never having had one.
+          "limits": {
+            "maxRunCostUsd": 25.0
+          },
+
+          // Domain packs — reusable context (house style, the mistakes agents make here) appended to
+          // every session prompt from templates/packs/<name>.md. Left off deliberately: a pack is
+          // thousands of characters on top of the prompt, and on Windows a composed prompt past ~8k
+          // hands the agent CLI a command line the OS refuses. Add one when you have measured the room.
+          //
+          // "packs": ["house-style"],
 
           "stages": [
             {

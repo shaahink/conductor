@@ -1,10 +1,10 @@
- ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42 
-  h Home  a s t o c e p r k g b d                                                                          
+ ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7  ⠋ s12 $0.12 41s  cp 2/40  run $0.42  ⎇ feat/gate… ↑3↓1 ● 
+  h Home  a s o e p r k g b                                                                                
                            │                                                                               
- ▶ PLAN                    │  Server                                                                       
- ✓ F0 3/3 Foundations      │  mode       live                                                              
- ✓ F6 5/5 Ink TUI v1       │  url        http://127.0.0.1:4317                                             
- ● F7 2/5 Gate … 1× $0.30  │  streams    ● events   ● transcript                                           
+ ▶ PLAN  n× attempts       │  Server                                                                       
+ ✓ F0 3/3 Foundations      │  engine     running — answering on http://127.0.0.1:4317                      
+ ✓ F6 5/5 Ink TUI v1       │  streams    ● events   ● transcript                                           
+ ● F7 2/5 Gate … 1× $0.30  │  build      v0.2.3-alpha.0.20  7d2b1e378ae3  ·  face d500f00a1b2c             
    ✓ F7.1 Plan import      │                                                                               
    ✓ F7.2 Re-import diff   │  Run                                                                          
    ● F7.3 Truth-gate tier  │  plan       conductor-foreman                                                 
@@ -18,15 +18,15 @@
  │   reload-plan        Swap live plan at next session boundary       │                                    
  │ Stage                                                              │                                    
  │   goto               Jump to a different stage (requires stage ID) │                                    
- │ ⚠ retry-stage        Reset attempt counter, retry stage            │                                    
+ │ ⚠ retry-stage        Reset attempt counter, retry stage            │son                                 
  │   skip               Skip current stage                            │                                    
- │   pause-after-stage  Pause once stage completes                    │tor-foreman.plan.json               
+ │   pause-after-stage  Pause once stage completes                    │                                    
  │ Danger                                                             │                                    
- │ ⚠ kill               Kill current agent session                    │                                    
+ │ ⚠ kill               Kill current agent session                    │ead · 1 behind                      
  │ ⚠ abort              Abort run immediately                         │                                    
  │ ⚠ rollback           Git reset --hard to stage start               │                                    
- │ Face                                                               │ right now                          
- │ ● theme mocha        Catppuccin Mocha - dark, the default          │                                    
+ │ Face                                                               │                                    
+ │ ● theme mocha        Catppuccin Mocha - dark, the default          │ right now                          
  │   theme latte        Catppuccin Latte - light                      │                                    
  │   theme nord         Nord - dark, cool blues                       │                                    
  │   theme gruvbox      Gruvbox - dark, warm retro                    │                                    

@@ -1,6 +1,9 @@
 package api
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 // --- DataSource interface ---
 
@@ -33,11 +36,20 @@ type DataSource interface {
 	PostBug(req BugNewRequestDto) (*KnowledgeWriteResultDto, error)
 	PostBugResolve(req BugResolveRequestDto) (*KnowledgeWriteResultDto, error)
 	FetchPromptPreview(stageId, kind string) (*PromptPreviewDto, error)
-	QueryReport(sql string) (*QueryResultDto, error)
+
+	// SF1.1: the Report tab's verifier scores, typed. This is the endpoint that let a rendered report
+	// stop depending on the SQL console — and SF1.2 then deleted that console, so there is no longer
+	// any ad-hoc SQL on this interface at all. Every read here is a typed DTO.
+	FetchScores() (*ScoresDto, error)
+
+	// SF4.2: the owner queue — every obligation only the owner can clear (HUMAN: lines, unapproved
+	// owner gates, the park it is sitting in, a blocked-until wait), each carrying what it unblocks
+	// and the command that clears it. Home surfaces it and `w` opens the full list.
+	FetchOwnerQueue() (*OwnerQueueDto, error)
 
 	// HasWriteToken reports whether this source carries the per-run write token every POST needs
-	// (U2.3). The Dev tab surfaces it because "my writes are silently refused" has exactly one
-	// common cause — attaching with --url but no token — and nothing in the Face said so.
+	// (U2.3). Home surfaces it because "my writes are silently refused" has exactly one common
+	// cause — attaching with --url but no token — and nothing in the Face said so.
 	HasWriteToken() bool
 
 	PostControl(cmd ControlRequestDto) (*ControlAcceptedDto, error)
@@ -119,7 +131,111 @@ type StateDto struct {
 	// nullable and unset on most plans. "" = an older engine that does not serve it; callers must
 	// treat that as unknown and fall back, never as "not claude".
 	Provider string `json:"provider"`
+
+	// ── SC2.3's budget block, read rather than re-derived (SF2.3). The engine has served all of
+	// these since SC2.3 (ControlPlaneDto.cs) and the Face ignored every one of them, subtracting its
+	// own numbers instead — which is precisely how "$224.21 / $125.00 · 0% headroom" got on screen.
+	// The cap is measured against the WINDOW; an owner approval past a budget park restarts that
+	// window while LifetimeCostUsd keeps counting the whole run, so the two can never be subtracted.
+	//
+	// How the in-flight session's cost is known. Closed vocabulary, defined by the engine's
+	// LiveCostEstimator: "measured" | "streamed" | "estimated-from-run-rate" | "no-rate-yet" |
+	// "none". "" = an older engine that does not serve the basis at all.
+	SessionCostBasis string `json:"sessionCostBasis"`
+	// Spend against the cap: the current budget window, in-flight session included.
+	CostSpent float64 `json:"costSpent"`
+	// limits.maxRunCostUsd, or nil when the plan sets no cost cap. A nil cap is NOT an infinite one:
+	// "this plan set no ceiling" and "there is loads left" are different facts and must not render
+	// the same. CostRemaining is nil for the same reason, and goes NEGATIVE when the window is over.
+	CostCap       *float64 `json:"costCap"`
+	CostRemaining *float64 `json:"costRemaining"`
+	// Mean cost of the run's finished, priced sessions — the honest input to "how many more fit".
+	MeanSessionCost      float64 `json:"meanSessionCost"`
+	CheckpointsRemaining int     `json:"checkpointsRemaining"`
+	// Window vs lifetime. Equal until an owner approves past a budget park; after that the window
+	// restarts at that instant and the lifetime keeps counting.
+	WindowCostUsd   float64 `json:"windowCostUsd"`
+	LifetimeCostUsd float64 `json:"lifetimeCostUsd"`
+	// When the current window opened — the instant of the approval. "" = never approved past a park.
+	BudgetWindowStartedUtc string `json:"budgetWindowStartedUtc"`
+	BudgetApprovals        int    `json:"budgetApprovals"`
+
+	// ── SF3.3: the repo's git state, served since the engine half of SF3.3.
+	//
+	// NIL AND EMPTY ARE DIFFERENT FACTS, and the whole block exists to keep them apart. A nil Git is
+	// an engine that predates SF3.3 — it knows nothing about the repo and the Face must say nothing
+	// rather than paint a wrong "clean". A non-nil Git with IsRepo false is an engine that looked and
+	// found a directory that is not a git repo at all, which is worth saying out loud.
+	Git *GitDto `json:"git"`
+
+	// ── FU-OWNER-10: which build is serving this run. The owner spent four out-of-band checks
+	// answering "did my reinstall take?" because no surface named the engine it was attached to.
+	// "" = an engine that predates the field; render nothing rather than "unknown", which reads like
+	// a failed lookup rather than an old engine.
+	EngineVersion string `json:"engineVersion"`
+	EngineCommit  string `json:"engineCommit"`
+	FaceBuild     string `json:"faceBuild"`
 }
+
+// GitDto mirrors Core/Http/ControlPlaneDto.Git.cs.
+//
+// Upstream, Ahead and Behind are POINTERS because the engine OMITS them when the branch has no
+// upstream, and nil is not zero: a never-pushed branch and a branch level with its remote are
+// different facts that must never render the same. Decoding them as plain ints would turn "you have
+// never pushed this" into a confident "↑0 ↓0 — you are in sync".
+type GitDto struct {
+	// False with the rest of the block empty = a workspace that is genuinely not a git repo. That is
+	// not the same as a nil StateDto.Git, which means an engine too old to know.
+	IsRepo bool `json:"isRepo"`
+	// "" with Detached true = a detached HEAD. The engine never serves the literal string "HEAD".
+	Branch   string  `json:"branch"`
+	Detached bool    `json:"detached"`
+	Upstream *string `json:"upstream"`
+	Ahead    *int    `json:"ahead"`
+	Behind   *int    `json:"behind"`
+	// HeadSha is the full 40; HeadShortSha is the 7 an operator pastes into `git show`.
+	HeadSha      string `json:"headSha"`
+	HeadShortSha string `json:"headShortSha"`
+	HeadSubject  string `json:"headSubject"`
+	// DirtyCount counts porcelain rows (a modified file and an untracked one are one row each), so
+	// it is what the status strip renders; DirtySummary is the human sentence Home renders.
+	Dirty         bool           `json:"dirty"`
+	DirtyCount    int            `json:"dirtyCount"`
+	DirtySummary  string         `json:"dirtySummary"`
+	RecentCommits []GitCommitDto `json:"recentCommits"`
+}
+
+// HasUpstream reports whether the branch tracks anything at all. Every ahead/behind renderer goes
+// through this rather than testing the pointers itself, so "no upstream" cannot be spelled two ways.
+func (g *GitDto) HasUpstream() bool {
+	return g != nil && g.Upstream != nil && *g.Upstream != ""
+}
+
+type GitCommitDto struct {
+	Sha     string `json:"sha"`
+	Subject string `json:"subject"`
+}
+
+// The cost-basis vocabulary, verbatim from the engine's Core/Events/LiveCostEstimator.cs. It is
+// CLOSED — the engine says so — and it lives HERE, in the package that owns the wire, so that the
+// renderer and the demo source speak the same five strings instead of two hand-copied sets.
+//
+// It exists because a dollar figure is only worth what the way it was arrived at is worth, and
+// rendering all five the same way is what put "$0.00" in the Agent footer under a pane reading
+// $13.07: the engine could not price the session yet, and the Face printed the zero as a fact.
+const (
+	// Nothing in flight — there is no session cost to state at all.
+	BasisNone = "none"
+	// The CLI's own recorded total, session over. The most trustworthy figure there is.
+	BasisMeasured = "measured"
+	// The provider put money on the wire per step (opencode). Just as trustworthy.
+	BasisStreamed = "streamed"
+	// Real tokens priced at this run's observed dollars-per-token. A number, but an inferred one.
+	BasisRunRate = "estimated-from-run-rate"
+	// Tokens are real; the cost is NOT knowable yet — no money on the wire and no rate to infer it
+	// from. The one basis whose dollar field is meaningless and must never render as a figure.
+	BasisNoRate = "no-rate-yet"
+)
 
 type StageDto struct {
 	Id          string          `json:"id"`
@@ -161,6 +277,33 @@ type TaskDto struct {
 	// W4.4: this item's QA override — "" (inherit), "verify", or "off". It beats the stage and
 	// plan dials for the session that claims this card.
 	Qa string `json:"qa"`
+	// W1.4's work-graph identity, served by the engine since W1.4 and dropped by the Face until
+	// SF3.2 — which is why the board grouped nothing and split checkpoint ids on a dot to guess a
+	// stage. Kind is "checkpoint" | "subtask"; StageId is the OWNING stage, authoritative;
+	// Confirmed is the verdict engine's flag, and the difference between a card an agent CLAIMED
+	// and one the engine agreed with.
+	Kind      string `json:"kind"`
+	StageId   string `json:"stageId"`
+	Confirmed bool   `json:"confirmed"`
+	// SF3.2's card meta, folded by the engine's TaskGraph so every reader gets one answer: the
+	// session whose work last moved this card (0 = none), when it entered its current status
+	// ("" = never moved / older engine), and how many times it has been picked up into in_progress.
+	SessionNumber  int    `json:"sessionNumber"`
+	StatusSinceUtc string `json:"statusSinceUtc"`
+	Attempts       int    `json:"attempts"`
+}
+
+// Stage returns the card's owning stage. The wire's stageId is authoritative (W1.4); the split on
+// the first dot is the LEGACY fallback for an engine that does not serve it — the convention the
+// tracker parser uses — and never overrides a served value.
+func (t TaskDto) Stage() string {
+	if t.StageId != "" {
+		return t.StageId
+	}
+	if i := strings.IndexByte(t.CheckpointId, '.'); i > 0 {
+		return t.CheckpointId[:i]
+	}
+	return t.CheckpointId
 }
 
 type TasksDto struct {
@@ -314,21 +457,57 @@ type SessionRowDto struct {
 	TokensOut   int64   `json:"tokensOut"`
 	TokensThink int64   `json:"tokensThink"`
 	TokensCache int64   `json:"tokensCache"`
+	// SC7.2/SF3.1: what the session actually DID, computed by the engine from its structured tool
+	// events and served on this same row since SC7.2. Nil on a session that predates the digest or
+	// captured no tool calls — never an empty digest standing in for one, so a pane can tell "this
+	// session did nothing we recorded" from "this engine does not send digests".
+	Digest *SessionDigestDto `json:"digest"`
+	// SF3.3: the session's own commits as `<short sha> <subject>` lines, read by the engine out of
+	// the event log (the sessions table only ever persisted CommitCount). Empty on a session that
+	// landed nothing OR predates the event — so a reader falls back to CommitCount, which is the
+	// number that was always there, rather than reporting "no commits" for an old session.
+	Commits []string `json:"commits"`
+}
+
+// SessionDigestDto mirrors Core/Http/ControlPlaneDto.Digest.cs. Mix and FilesTouched arrive ALREADY
+// RANKED (count descending, then name) — the engine flattens its maps on purpose so two readers
+// cannot sort the same session's tools into two different orders. Nothing here is re-derived here.
+type SessionDigestDto struct {
+	ToolCalls      int              `json:"toolCalls"`
+	DistinctTools  int              `json:"distinctTools"`
+	Mix            []DigestCountDto `json:"mix"`
+	FilesTouched   []DigestCountDto `json:"filesTouched"`
+	FileWrites     int              `json:"fileWrites"`
+	Claims         []string         `json:"claims"`
+	BackgroundJobs []string         `json:"backgroundJobs"`
+	Commands       []string         `json:"commands"`
+}
+
+type DigestCountDto struct {
+	Name  string `json:"name"`
+	Count int    `json:"count"`
 }
 
 type SessionsDto struct {
 	Sessions []SessionRowDto `json:"sessions"`
 }
 
-type QueryResultDto struct {
-	Columns   []string      `json:"columns"`
-	Rows      []QueryRowDto `json:"rows"`
-	Truncated bool          `json:"truncated"`
-	Error     *string       `json:"error"`
+// ScoreDto mirrors the C# record (GET /scores): one verifier verdict. Passed and Threshold are the
+// ENGINE's answer, resolved per stage from the same QA dial the run judged with — the Report tab
+// used to read these rows through a canned SELECT and had no way to know a stage's own bar, so it
+// could only show the raw number and hope the reader knew what 74 meant.
+type ScoreDto struct {
+	SessionNumber int      `json:"sessionNumber"`
+	StageId       *string  `json:"stageId"`
+	Score         int      `json:"score"`
+	Verdict       string   `json:"verdict"`
+	Passed        bool     `json:"passed"`
+	Threshold     int      `json:"threshold"`
+	Findings      []string `json:"findings"`
 }
 
-type QueryRowDto struct {
-	Values []string `json:"values"`
+type ScoresDto struct {
+	Scores []ScoreDto `json:"scores"`
 }
 
 // TimelineEntryDto mirrors the C# record (GET /timeline): one folded event on the run's spine —
@@ -375,6 +554,10 @@ type BugDto struct {
 	FixedSession *int    `json:"fixedSession"`
 	CreatedAt    string  `json:"createdAt"`
 	UpdatedAt    string  `json:"updatedAt"`
+	// CarriedFromPlan (SF0.4) names the plan of the EARLIER run that filed this bug; nil when the
+	// current run filed it. Open bugs outlive the run that found them, so the ledger no longer
+	// resets to empty every time a new plan starts in the same repo.
+	CarriedFromPlan *string `json:"carriedFromPlan"`
 }
 
 type BugsDto struct {
@@ -455,6 +638,39 @@ type TranscriptLineDto struct {
 	SessionId string    `json:"sessionId"`
 	Kind      string    `json:"kind"`
 	Text      string    `json:"text"`
+	// SC7.1/SF3.1: the transcript's schema version, and the structured payload of a `tool` line.
+	// Text is already the engine's one-liner (Providers/ToolLine.Render) — Tool is the structure
+	// BESIDE it, not a second copy to re-render from: the Face uses the name for folding and mix
+	// counting, where a rendered string would have to be parsed back apart. V is 1 on a line written
+	// before the structured era (the server upgrades those on the way out, name recovered, fields
+	// usually not) and 0 only on a line no engine sent.
+	V    int          `json:"v"`
+	Tool *ToolCallDto `json:"tool"`
+}
+
+// ToolCallDto mirrors Core/Events/ToolCall.cs: the tool's name as the wire gave it plus the fields
+// the extractor kept (`path`, `command`, `taskId`, `purpose`, `bytes`/`lines`, …), each value
+// truncated on its own so the object is always complete JSON.
+type ToolCallDto struct {
+	Name   string            `json:"name"`
+	Fields map[string]string `json:"fields"`
+}
+
+// ShortName is the tool's own name with any MCP server prefix stripped — `bg_start`, not
+// `mcp__conductor-tasks__bg_start`. It mirrors Providers/ToolLine.ShortName so a fold summary counts
+// the same logical tool under the same label the engine's digest counts it under.
+func (t *ToolCallDto) ShortName() string {
+	if t == nil {
+		return ""
+	}
+	s := strings.TrimSpace(t.Name)
+	if s == "" {
+		return ""
+	}
+	if i := strings.LastIndex(s, "__"); i >= 0 && i+2 < len(s) {
+		return s[i+2:]
+	}
+	return s
 }
 
 // --- M6.3: plan authoring DTOs (mirror Core/Http/ControlPlaneDto.Plan*.cs) ---
@@ -600,6 +816,11 @@ type TelegramStatusDto struct {
 	WillDeliver         bool     `json:"willDeliver"`
 	WillDeliverReason   *string  `json:"willDeliverReason"`
 	RestartRequired     bool     `json:"restartRequired"`
+	// FU-OWNER-13: true while a telegram block this control plane already ACCEPTED is still queued
+	// for the run loop's next session boundary. Every other field on this payload describes the
+	// in-memory PlanConfig, which is still the pre-edit one — so a just-saved block read as
+	// "not configured", and the pane advised the owner to make the edit they had just made.
+	ReloadPending bool `json:"reloadPending"`
 }
 
 // ViaQueue is what makes a green test mean anything: true = the message travelled the same send queue
@@ -634,6 +855,14 @@ const (
 	ModeDemo ConnectionMode = "demo"
 )
 
+// ConnectionState is what the Face knows about its own link to the engine.
+//
+// SF2.1: Connected has exactly ONE meaning — the engine answered our last /state poll — and exactly
+// one writer (tui.Model.setConnected). It used to have three: the state poll set it true, a fetch
+// error set it false, and either SSE stream re-derived it as events||transcript, so a live poll with
+// both streams down read "disconnected" and a dead engine with a stale stream read "connected".
+// EventsConnected and TranscriptConnected are still tracked — Home shows them as their own row —
+// but they describe the STREAMS, and no longer redefine the link.
 type ConnectionState struct {
 	Mode                ConnectionMode
 	URL                 string
@@ -641,6 +870,11 @@ type ConnectionState struct {
 	TranscriptConnected bool
 	Connected           bool
 	LastError           *string
+	// LastContactAt is when the engine last answered; zero means it never has in this session. It is
+	// what lets a disconnected surface say "since when" instead of just "not connected".
+	LastContactAt time.Time
+	// Since is when the CURRENT value of Connected began, so a banner can age itself.
+	Since time.Time
 }
 
 // --- AppState: the single source of truth for the TUI ---
@@ -658,7 +892,4 @@ type AppState struct {
 	Bugs         []BugDto
 	LastEventSeq int64
 	LastTxSeq    int64
-
-	ReportResult  *QueryResultDto
-	ReportLoading bool
 }

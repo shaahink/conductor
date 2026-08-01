@@ -1,0 +1,34 @@
+ ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7  ⠋ s12 $0.12 41s  cp 2/40  run $0.42  ⎇ feat/gate… ↑3↓1 ●    
+ h a s o e p r k  g Telegram  b                                                                               
+                           │                                                                                  
+ ▶ PLAN  n× attempts       │  ◐ saved — waiting for the next session boundary                                 
+ ✓ F0 3/3 Foundations      │                                                                                  
+ ✓ F6 5/5 Ink TUI v1       │  A plan edit is saved and queued — the engine applies it at the next session     
+ ● F7 2/5 Gate … 1× $0.30  │  boundary. The fields below are still the pre-edit plan, not a missing one.      
+   ✓ F7.1 Plan import      │                                                                                  
+   ✓ F7.2 Re-import diff   │  Guided setup                                                                    
+   ● F7.3 Truth-gate tier  │    1. Create a bot via @BotFather on Telegram, then paste the token below.       
+ ○ F8 0/4 conductor chat…  │    2. Message your bot once, then get the chat id from @userinfobot.             
+                           │       (or read it from the bot API's /getUpdates after messaging it)             
+ ── GATES ──               │    3. Send a test message — it goes through the run's own push queue.            
+   ✓ build                 │                                                                                  
+   ● test 4s               │    bot token          (not set)                                                  
+   ○ lint                  │    allowed chat ids   (none)                                                     
+                           │    poll interval      4s                                                         
+ ── TASKS ──               │    two-way control    false                                                      
+   ✓ Add truth-tier con…   │    send test          ▶ press enter to send a real message                       
+   ● Wire RunDb.GetLast…   │                                                                                  
+   ○ Cache gate results…   │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ field · enter edit/send · esc back             

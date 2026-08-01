@@ -22,14 +22,39 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"conductor-face-go/internal/api"
-	"conductor-face-go/internal/widgets"
+	"conductor-face-go/internal/timefmt"
 )
 
-// TestMain pins the render timezone: frames stamp wall-clocks in widgets.ClockLocation (local for
-// humans), which would make golden output depend on the machine running the tests.
+// goldenNow is the wall-clock every frame in this package is rendered at: a couple of minutes after
+// the newest fixture timestamp, so the ages that SF2.2 put on ledger rows, bug rows, session rows and
+// the Telegram poll line come out as small, stable, human-looking numbers.
+var goldenNow = time.Date(2026, 7, 15, 10, 8, 0, 0, time.UTC)
+
+// TestMain pins BOTH halves of the Face's clock. The timezone was already pinned — frames render
+// wall-clocks in the viewer's local zone, which would otherwise make goldens depend on the machine.
+// SF2.2 adds the second half: now that panes render ages, an unpinned timefmt.Now would re-date every
+// frame on every run.
 func TestMain(m *testing.M) {
-	widgets.ClockLocation = time.UTC
+	timefmt.Location = time.UTC
+	timefmt.Now = func() time.Time { return goldenNow }
 	os.Exit(m.Run())
+}
+
+// pinClock freezes the Face's clock so an age is a fact in a test rather than a race with wall time.
+func pinClock(t *testing.T, at time.Time) {
+	t.Helper()
+	pinClockFunc(t, func() time.Time { return at })
+}
+
+// pinClockFunc is pinClock for a test that has to MOVE the clock mid-scenario (an engine that dies
+// seven minutes in). Both put back whatever was pinned BEFORE — not time.Now. A cleanup that
+// reinstated the real wall clock would silently un-pin TestMain's pin for every test that happened to
+// run after it, which is order-dependent goldens waiting to happen.
+func pinClockFunc(t *testing.T, fn func() time.Time) {
+	t.Helper()
+	prev := timefmt.Now
+	timefmt.Now = fn
+	t.Cleanup(func() { timefmt.Now = prev })
 }
 
 var updateGolden = flag.Bool("update", false, "update golden files")
@@ -100,8 +125,12 @@ func (fakeSource) PostBugResolve(api.BugResolveRequestDto) (*api.KnowledgeWriteR
 func (fakeSource) FetchPromptPreview(_, _ string) (*api.PromptPreviewDto, error) {
 	return nil, nil
 }
-func (fakeSource) QueryReport(sql string) (*api.QueryResultDto, error) { return nil, nil }
-func (fakeSource) HasWriteToken() bool                                 { return true }
+func (fakeSource) FetchScores() (*api.ScoresDto, error) { return nil, nil }
+
+// The golden model's owner queue is empty and DATED, so recorded frames do not move: SF4.2's own
+// tests drive MsgOwnerQueueUpdated with the queue they need.
+func (fakeSource) FetchOwnerQueue() (*api.OwnerQueueDto, error) { return nil, nil }
+func (fakeSource) HasWriteToken() bool                          { return true }
 func (fakeSource) PostControl(api.ControlRequestDto) (*api.ControlAcceptedDto, error) {
 	return &api.ControlAcceptedDto{Accepted: true}, nil
 }
@@ -239,6 +268,32 @@ func fixedState() *api.StateDto {
 		SessionTokensInput:     3400,
 		SessionTokensOutput:    1900,
 		SessionTokensReasoning: 800,
+		// SF3.3. The golden fixture carries the INTERESTING git state — tracked, ahead, behind and
+		// dirty — because a fixture that is clean and in sync exercises none of the rendering: the
+		// chip's divergence mark, its dirty dot and Home's dirty summary would all be blank, and the
+		// frames would pin an empty result as if it were the feature.
+		Git: &api.GitDto{
+			IsRepo:       true,
+			Branch:       "feat/gate-caching",
+			Upstream:     strPtr("origin/feat/gate-caching"),
+			Ahead:        intPtr(3),
+			Behind:       intPtr(1),
+			HeadSha:      "9f2c1ab7d4e60b83a5c1e2f0d7b6a94c3e8f1d20",
+			HeadShortSha: "9f2c1ab",
+			HeadSubject:  "feat(gates): key the cache by (name, tier, sha)",
+			Dirty:        true,
+			DirtyCount:   4,
+			DirtySummary: "M src/Core/GateCache.cs, M src/Core/RunDb.cs, M tests/GateCacheTests.cs, ?? notes.md",
+			RecentCommits: []api.GitCommitDto{
+				{Sha: "9f2c1ab", Subject: "feat(gates): key the cache by (name, tier, sha)"},
+				{Sha: "4b81d33", Subject: "test(gates): the last-passing lookup joins attempts"},
+			},
+		},
+		// FU-OWNER-10: which build is serving this run, pinned in the frames so a change to the
+		// stamp's shape shows up as a diff rather than as a screenshot nobody compared.
+		EngineVersion: "0.2.3-alpha.0.20",
+		EngineCommit:  "7d2b1e378ae3",
+		FaceBuild:     "d500f00a1b2c",
 		Stages: []api.StageDto{
 			{Id: "F0", Title: "Foundations", Done: 3, Total: 3, State: "confirmed"},
 			{Id: "F6", Title: "Ink TUI v1", Done: 5, Total: 5, State: "confirmed"},
@@ -311,18 +366,54 @@ func fixedTasks() []api.TaskDto {
 	}
 }
 
-// kanbanFixtureTasks populates all three board columns (plus a skipped card folded into Done) —
-// the G2.2 gate wants a golden with three populated columns and the move/add affordances.
+// kanbanFixtureTasks populates all three board columns (plus a skipped card on the Done column's
+// shelf) — the G2.2 gate wants a golden with three populated columns and the move/add affordances.
+//
+// SF3.2 widened it in three ways the old fixture could not have caught: cards from a SECOND stage
+// (F8), so stage grouping and the active-stage mark are actually exercised rather than collapsing
+// into one group; a BLOCKED card, which shared the TODO column with plain todo cards and rendered
+// identically to them; and the wire's card meta (stageId/confirmed/sessionNumber/statusSinceUtc/
+// attempts), pinned against goldenNow so the ages are stable. Both done cards are here on purpose —
+// one confirmed, one only claimed — because that distinction is a rendered word, not a colour, and
+// a fixture of confirmed-only would let the claimed branch rot unseen.
 func kanbanFixtureTasks() []api.TaskDto {
 	return []api.TaskDto{
-		{TaskId: "T1", CheckpointId: "F7.3", Title: "Add truth-tier config to GateConfig", Status: "done", Source: "planner", Order: 1},
-		{TaskId: "T2", CheckpointId: "F7.3", Title: "Wire RunDb.GetLastPassingGateResult", Status: "in_progress", Source: "agent", Order: 2},
-		{TaskId: "T3", CheckpointId: "F7.4", Title: "Cache gate results by (name, tier, sha)", Status: "todo", Source: "planner", Order: 3},
+		{TaskId: "T1", CheckpointId: "F7.3", Title: "Add truth-tier config to GateConfig", Status: "done", Source: "planner", Order: 1,
+			Kind: "subtask", StageId: "F7", Confirmed: true, SessionNumber: 10, StatusSinceUtc: "2026-07-15T08:52:00Z", Attempts: 1},
+		{TaskId: "T2", CheckpointId: "F7.3", Title: "Wire RunDb.GetLastPassingGateResult", Status: "in_progress", Source: "agent", Order: 2,
+			Kind: "subtask", StageId: "F7", SessionNumber: 12, StatusSinceUtc: "2026-07-15T10:04:00Z", Attempts: 2},
+		{TaskId: "T3", CheckpointId: "F7.4", Title: "Cache gate results by (name, tier, sha)", Status: "todo", Source: "planner", Order: 3,
+			Kind: "checkpoint", StageId: "F7"},
 		{TaskId: "T4", CheckpointId: "F7.4", Title: "Add SkipIfFresh timestamp check", Status: "todo", Source: "human", Order: 4,
+			Kind: "subtask", StageId: "F7",
 			// PF3: declared paths — the detail golden shows the filled claims line.
 			Paths: []string{"src/Conductor/Core/Gating/GateCache.cs", "docs/CONDUCTOR-VNEXT-PLAN.md"}},
-		{TaskId: "T5", CheckpointId: "F7.5", Title: "Benchmark the warm path", Status: "skipped", Source: "agent", Order: 5},
+		{TaskId: "T5", CheckpointId: "F7.5", Title: "Benchmark the warm path", Status: "skipped", Source: "agent", Order: 5,
+			Kind: "subtask", StageId: "F7", SessionNumber: 11, StatusSinceUtc: "2026-07-14T10:08:00Z"},
+		{TaskId: "T6", CheckpointId: "F8.1", Title: "conductor chat over the control plane", Status: "todo", Source: "planner", Order: 6,
+			Kind: "checkpoint", StageId: "F8"},
+		{TaskId: "T7", CheckpointId: "F8.2", Title: "Telegram v2 needs a bot token", Status: "blocked", Source: "agent", Order: 7,
+			Kind: "checkpoint", StageId: "F8", SessionNumber: 12, StatusSinceUtc: "2026-07-15T09:38:00Z", Attempts: 3},
+		{TaskId: "T8", CheckpointId: "F6.5", Title: "Ink TUI parity sweep", Status: "done", Source: "agent", Order: 8,
+			Kind: "checkpoint", StageId: "F6", SessionNumber: 9, StatusSinceUtc: "2026-07-13T10:08:00Z", Attempts: 1},
 	}
+}
+
+// kanbanTallTasks is a board taller than its pane: 14 TODO cards across two stages, each two lines
+// tall, against a 34-row frame. It exists for the scroll window — the old column simply ran off the
+// bottom into the frame's height clamp, so cards disappeared with nothing on screen saying they had.
+func kanbanTallTasks() []api.TaskDto {
+	out := kanbanFixtureTasks()
+	for i := 1; i <= 10; i++ {
+		out = append(out, api.TaskDto{
+			TaskId:       fmt.Sprintf("TT%d", i),
+			CheckpointId: fmt.Sprintf("F8.%d", i+2),
+			Title:        fmt.Sprintf("deep backlog item %d", i),
+			Status:       "todo", Source: "planner", Order: 10 + i,
+			Kind: "subtask", StageId: "F8",
+		})
+	}
+	return out
 }
 
 func fixedTimeline() []api.TimelineEntryDto {
@@ -334,6 +425,18 @@ func fixedTimeline() []api.TimelineEntryDto {
 		{Utc: "2026-07-15T10:03:40Z", Kind: "gate", Description: "gate test: FAIL (4100ms)", StageId: strPtr("F7"), Outcome: strPtr("fail")},
 		{Utc: "2026-07-15T10:03:55Z", Kind: "session", Description: "session #11 finished: NeedsRetry", StageId: strPtr("F7"), SessionNumber: num(11), CostUsd: cost(0.18), Outcome: strPtr("NeedsRetry")},
 		{Utc: "2026-07-15T10:07:00Z", Kind: "attention", Description: "needs human: verifier score 74 < 80"},
+	}
+}
+
+// goldenScores is the Report tab's /scores fixture (SF1.1). Session #11 failed its stage's bar and
+// carries findings; #8 passed clean. Both cases are pinned because the score column renders against
+// the threshold and takes its colour from the engine's Passed bool — a fixture of passes only would
+// let the failing style rot unseen.
+func goldenScores() []api.ScoreDto {
+	return []api.ScoreDto{
+		{SessionNumber: 11, StageId: strPtr("F7"), Score: 66, Verdict: "WARN", Passed: false, Threshold: 80,
+			Findings: []string{"gate cache key ignores the tier", "no test covers the cache miss path"}},
+		{SessionNumber: 8, StageId: strPtr("F6"), Score: 90, Verdict: "PASS", Passed: true, Threshold: 80},
 	}
 }
 
@@ -363,14 +466,46 @@ func newGoldenModel(width, height int) tea.Model {
 	// tokens on purpose: that is what a session recorded before bug #5 honestly looks like, and the
 	// report must show it rather than dress it up.
 	m, _ = m.Update(MsgSessionsUpdated{Sessions: &api.SessionsDto{Sessions: []api.SessionRowDto{
+		// SF3.1: session 12 carries the COMMON digest (work, no claims, no bg jobs), session 11 the
+		// full one (a board claim and a two-job bg storyline), session 8 none at all — the three
+		// shapes the panel has to render, all three in one fixture.
 		{Number: 12, StageId: "F7", Kind: "Deliver", Outcome: nil, Attempt: 2, CommitCount: 0,
 			StartedUtc: "2026-07-15T10:00:00Z", CostUsd: 0.12,
-			TokensIn: 41213, TokensOut: 3187, TokensThink: 1024, TokensCache: 188420},
+			TokensIn: 41213, TokensOut: 3187, TokensThink: 1024, TokensCache: 188420,
+			Digest: &api.SessionDigestDto{
+				ToolCalls: 31, DistinctTools: 4,
+				Mix: []api.DigestCountDto{{Name: "Bash", Count: 14}, {Name: "Read", Count: 9},
+					{Name: "Edit", Count: 6}, {Name: "Grep", Count: 2}},
+				FilesTouched: []api.DigestCountDto{{Name: "src/Core/GateCache.cs", Count: 4},
+					{Name: "src/Core/RunLoop.cs", Count: 2}},
+				FileWrites: 6,
+				Commands:   []string{"dotnet build src/App"},
+			}},
 		{Number: 11, StageId: "F7", Kind: "Deliver", Outcome: strPtr("needsRetry"), Attempt: 1, CommitCount: 2,
 			GateSummary:   strPtr("build ✓ test ✗ lint ○"),
 			ResultSummary: strPtr("Wired the **caching layer** in `RunDb` but `test` still red — see gate output."),
 			StartedUtc:    "2026-07-15T09:12:30Z", EndedUtc: strPtr("2026-07-15T09:58:04Z"), CostUsd: 0.1408,
-			TokensIn: 52881, TokensOut: 4402, TokensThink: 2310, TokensCache: 201338},
+			TokensIn: 52881, TokensOut: 4402, TokensThink: 2310, TokensCache: 201338,
+			Digest: &api.SessionDigestDto{
+				ToolCalls: 104, DistinctTools: 8,
+				Mix: []api.DigestCountDto{{Name: "Bash", Count: 57}, {Name: "Edit", Count: 26},
+					{Name: "Read", Count: 9}, {Name: "PowerShell", Count: 3}, {Name: "conductor_note", Count: 3},
+					{Name: "run_query", Count: 3}, {Name: "Write", Count: 2}, {Name: "ToolSearch", Count: 1}},
+				FilesTouched: []api.DigestCountDto{{Name: "src/Core/RunDb.Gates.cs", Count: 6},
+					{Name: "src/Core/GateCache.cs", Count: 3}, {Name: "tests/GateCacheTests.cs", Count: 3},
+					{Name: "src/Core/RunLoop.cs", Count: 2}, {Name: "docs/dev/adr/0007.md", Count: 1}},
+				FileWrites:     15,
+				Claims:         []string{"F7.4 -> done"},
+				BackgroundJobs: []string{"F7.4 cache key derivation - full build", "F7.4 - gate suite after the cache lands"},
+				Commands:       []string{"dotnet build src/App", "dotnet test --filter GateCacheTests"},
+			},
+			// SF3.3: the subjects behind this row's "2 commits". Session 8 below deliberately keeps its
+			// count with NO subjects — the shape a session recorded before the engine read them out of
+			// the event log — so one fixture pins both halves of the commit block.
+			Commits: []string{
+				"4b81d33 test(gates): the last-passing lookup joins attempts",
+				"c07e5a9 refactor(store): one place that opens run.db",
+			}},
 		{Number: 8, StageId: "F6", Kind: "Deliver", Outcome: strPtr("completed"), Attempt: 1, CommitCount: 1,
 			GateSummary: strPtr("build ✓ test ✓"),
 			StartedUtc:  "2026-07-15T08:30:00Z", EndedUtc: strPtr("2026-07-15T09:11:12Z"), CostUsd: 0.0912},
@@ -383,6 +518,7 @@ func newGoldenModel(width, height int) tea.Model {
 }
 
 func strPtr(s string) *string { return &s }
+func intPtr(i int) *int       { return &i }
 
 // openKanbanDetailGolden walks to the second card and opens its detail, feeding the fixed block
 // composition the way the live poll would (commands are never executed in golden runs).
@@ -394,6 +530,34 @@ func openKanbanDetailGolden(m tea.Model) tea.Model {
 	blocks, _ := fakeSource{}.FetchPromptBlocks("T4")
 	m, _ = m.Update(MsgPromptBlocks{Blocks: blocks})
 	return m
+}
+
+// ownerQueueGoldenFixture is the SF4.1 rig's real /owner/queue payload, transcribed field for field
+// from what a live engine served (see .conductor/evidence/SF4/sf42-live-frames.txt) so the recorded
+// frames and the live capture tell the same story rather than two convenient ones. All four kinds,
+// both age branches — two dated, two the engine cannot date at all — and both command branches,
+// including the wait whose `command` is empty because the clock clears it and nobody types anything.
+func ownerQueueGoldenFixture() *api.OwnerQueueDto {
+	human, wait := int64(5175), int64(4815)
+	detail := func(s string) *string { return &s }
+	return &api.OwnerQueueDto{
+		Count: 4, GeneratedUtc: "2026-07-15T10:07:30Z",
+		Items: []api.OwnerQueueItemDto{
+			{Id: "human-1", Kind: "human", Title: "which payment provider do we sign with - Stripe or Adyen?",
+				Unblocks: "the run — every remaining session on P1 and after it", Command: "conductor resume",
+				AgeSeconds: &human, Detail: detail("answer it, delete the HUMAN: line from TRACKER.md's handoff block, then resume")},
+			{Id: "wait", Kind: "wait", Title: "waiting until 03:00:00Z — anthropic usage window resets at 03:00Z",
+				Unblocks: "nothing you can hurry — the next session spawns by itself when the window opens",
+				Command:  "", AgeSeconds: &wait,
+				Detail: detail("no command clears this; it is here so a sleeping run does not read as a dead one")},
+			{Id: "checkpoint-P1.2", Kind: "checkpoint", Title: "P1.2 is BLOCKED — Wire the payment provider",
+				Unblocks: "stage P1 — a blocked card holds it open", Command: "conductor task --todo P1.2",
+				Detail: detail("unblock it to put it back in front of an agent, or retire it with task --skipped")},
+			{Id: "gate-P2", Kind: "ownerGate", Title: "approve P2 — Publish to the registry (ahead of the run)",
+				Unblocks: "stage P2 and everything after it", Command: "conductor approve",
+				Detail: detail("not blocking yet; it will park here even when every gate is green")},
+		},
+	}
 }
 
 func TestGolden(t *testing.T) {
@@ -420,6 +584,17 @@ func TestGolden(t *testing.T) {
 		}},
 		{"sidebar_collapsed", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("\\"))
+			return m
+		}},
+		// SF3.3: the execution-order cue. The fixture plan runs in declared order, so no other frame in
+		// this file can show it — this one pushes the run past F6 (a `goto`, or a stage retried out of
+		// band) and pins BOTH halves: the ↷ on the row the run went past, and the line naming it above
+		// the active stage. F0 stays confirmed and F8 stays todo below, so the frame also pins what the
+		// cue must NOT mark: an ordinary not-yet stage.
+		{"sidebar_jumped", func(m tea.Model) tea.Model {
+			st := fixedState()
+			st.Stages[1].State, st.Stages[1].Done = "todo", 0 // F6, never run
+			m, _ = m.Update(MsgStateUpdated{State: st})
 			return m
 		}},
 		{"palette", func(m tea.Model) tea.Model {
@@ -461,21 +636,27 @@ func TestGolden(t *testing.T) {
 			}
 			return m
 		}},
-		{"sessions", func(m tea.Model) tea.Model {
+		// SF1.3: Sessions and Timeline are the two views of one History tab, so both goldens are named
+		// for the tab that holds them and BOTH pin the view switcher — the row that makes the second
+		// view discoverable instead of folklore.
+		{"history_sessions", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("s"))
 			return m
 		}},
-		// U2.2: Report is the rendered run report now. The scores section is the one part that comes
-		// off a canned query, so it is injected the way the real fetch would land it.
+		// SF3.1: the digest panel on its FULL shape — session 11 is the one fixture row carrying a
+		// board claim and a two-job background storyline, so this frame is the only place those two
+		// rows are pinned. The default selection (session 12) shows the common shape one golden up.
+		{"history_sessions_digest", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("s"))
+			m, _ = m.Update(specialKey(tea.KeyDown))
+			return m
+		}},
+		// U2.2: Report is the rendered run report now. SF1.1: its scores section comes off GET /scores,
+		// injected here the way the real fetch would land it — one failing verdict and one passing one,
+		// so a golden pins BOTH colours (the canned-query version rendered every verdict the same grey).
 		{"report", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("r"))
-			m, _ = m.Update(MsgReportScores{Result: &api.QueryResultDto{
-				Columns: []string{"session_number", "score", "verdict"},
-				Rows: []api.QueryRowDto{
-					{Values: []string{"11", "66", "WARN"}},
-					{Values: []string{"8", "90", "PASS"}},
-				},
-			}})
+			m, _ = m.Update(MsgReportScores{Result: &api.ScoresDto{Scores: goldenScores()}})
 			return m
 		}},
 		// The report is taller than the pane, so the sections the owner scrolls TO (gates, verifier
@@ -483,45 +664,22 @@ func TestGolden(t *testing.T) {
 		// below the fold in every golden and could rot unseen.
 		{"report_scrolled", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("r"))
-			m, _ = m.Update(MsgReportScores{Result: &api.QueryResultDto{
-				Columns: []string{"session_number", "score", "verdict"},
-				Rows: []api.QueryRowDto{
-					{Values: []string{"11", "66", "WARN"}},
-					{Values: []string{"8", "90", "PASS"}},
-				},
-			}})
+			m, _ = m.Update(MsgReportScores{Result: &api.ScoresDto{Scores: goldenScores()}})
 			for i := 0; i < 6; i++ {
 				m, _ = m.Update(keyMsg("down"))
 			}
 			return m
 		}},
-		// U2.2: the SQL console, unchanged, on its new tab — this scenario is the old "report" one.
-		{"dev", func(m tea.Model) tea.Model {
-			m, _ = m.Update(keyMsg("d"))
-			m, _ = m.Update(MsgReportResult{Result: &api.QueryResultDto{
-				Columns: []string{"stage_id", "cost_usd"},
-				Rows: []api.QueryRowDto{
-					{Values: []string{"F1", "0.42"}},
-					{Values: []string{"F7", "0.08"}},
-				},
-			}})
-			return m
-		}},
-		// U2.3: the run internals + per-session stats live below the console's result grid, so the
-		// bottom of the pane is the only place they can be pinned — including the note that names
-		// bug #5 for the cost-with-zero-tokens session.
-		{"dev_scrolled", func(m tea.Model) tea.Model {
-			m, _ = m.Update(keyMsg("d"))
-			m, _ = m.Update(MsgReportResult{Result: &api.QueryResultDto{
-				Columns: []string{"stage_id", "cost_usd"},
-				Rows: []api.QueryRowDto{
-					{Values: []string{"F1", "0.42"}},
-					{Values: []string{"F7", "0.08"}},
-				},
-			}})
-			mm := m.(Model)
-			mm.reportFocusQuery = false // the editor owns every key while focused
-			m, _ = mm.Update(keyMsg("pgdown"))
+		// SF1.2: the "dev" and "dev_scrolled" scenarios died with the Dev tab. What they pinned that
+		// was worth keeping — the per-session token/cost table and the bug-#5 note under it — moved to
+		// the BOTTOM of the Report tab, so "report_bottom" is what pins it now. Scroll far past the end;
+		// the renderer clamps, so this lands on the last frame whatever the body height becomes.
+		{"report_bottom", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("r"))
+			m, _ = m.Update(MsgReportScores{Result: &api.ScoresDto{Scores: goldenScores()}})
+			for i := 0; i < 40; i++ {
+				m, _ = m.Update(keyMsg("down"))
+			}
 			return m
 		}},
 		{"processes", func(m tea.Model) tea.Model {
@@ -533,14 +691,22 @@ func TestGolden(t *testing.T) {
 			m, _ = m.Update(keyMsg("x")) // kill confirm for the selected (alive) process
 			return m
 		}},
-		{"timeline", func(m tea.Model) tea.Model {
+		{"history_spine", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("t"))
+			m, _ = m.Update(MsgTimelineUpdated{Timeline: &api.TimelineDto{Entries: fixedTimeline()}})
+			return m
+		}},
+		// SF1.3: ←/→ is the documented way between History's views, and a golden reached by ← proves
+		// the switcher actually routes — the `t` scenarios above would pass even if it did not.
+		{"history_spine_via_arrow", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("s"))     // sessions list
+			m, _ = m.Update(keyMsg("right")) // …and across to the spine
 			m, _ = m.Update(MsgTimelineUpdated{Timeline: &api.TimelineDto{Entries: fixedTimeline()}})
 			return m
 		}},
 		// U3.2 / dogfood appendix 6: the attach fetch is history, everything after it is live, and
 		// the rule between them is what stops an attach reading as an event storm.
-		{"timeline_live", func(m tea.Model) tea.Model {
+		{"history_spine_live", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("t"))
 			hist := fixedTimeline()
 			m, _ = m.Update(MsgTimelineUpdated{Timeline: &api.TimelineDto{Entries: hist}})
@@ -613,7 +779,38 @@ func TestGolden(t *testing.T) {
 			}})
 			return m
 		}},
-		{"console", func(m tea.Model) tea.Model {
+		// FU-OWNER-13, the Go half. Between a saved plan edit and the next session boundary the engine's
+		// in-memory PlanConfig still has no telegram block, so every other field on this payload reads
+		// exactly as it does for a plan nobody ever configured — which is how a block saved thirty
+		// seconds ago came back as "not configured", advising the owner to add what they had just
+		// added. reloadPending is the one field that tells the two apart, and this frame is what it
+		// has to buy: WAITING, not unconfigured.
+		{"telegram_reload_pending", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("g"))
+			m, _ = m.Update(MsgTelegramStatusUpdated{Status: &api.TelegramStatusDto{
+				Configured: false, Started: false, HasToken: false,
+				AllowedChatIds: []string{}, PollIntervalSeconds: 4,
+				WillDeliver: false, ReloadPending: true,
+			}})
+			return m
+		}},
+		// SF4.2: the owner queue on the landing. Three entries and a hand-off to `w`, because Home
+		// cannot scroll and a landing that is only a queue has stopped being a landing.
+		{"home_owner_queue", func(m tea.Model) tea.Model {
+			m, _ = m.Update(MsgOwnerQueueUpdated{Queue: ownerQueueGoldenFixture()})
+			return m
+		}},
+		// SF4.2: the uncapped view behind `w`. Every kind the engine emits, both age branches, and both
+		// command branches are in one frame on purpose — this is the pane a regression would hide in.
+		{"owner_queue_pane", func(m tea.Model) tea.Model {
+			m, _ = m.Update(MsgOwnerQueueUpdated{Queue: ownerQueueGoldenFixture()})
+			m, _ = m.Update(keyMsg("w"))
+			return m
+		}},
+		// SF1.3: the Console tab folded into Agent, so this pins the RAW MODE of the Agent tab — the
+		// agent strip above undecorated stdout, which is the thing tabbing away to a console used to
+		// cost you. Reached by `c`, the key that has always meant "show me the raw output".
+		{"agent_raw", func(m tea.Model) tea.Model {
 			for i, raw := range []string{
 				`{"type":"system","subtype":"init","session_id":"s12","model":"deepseek-v4-pro"}`,
 				`{"type":"assistant","message":{"content":[{"type":"text","text":"Examining GateCache..."}]}}`,
@@ -724,6 +921,25 @@ func TestGolden(t *testing.T) {
 			m, _ = m.Update(specialKey(tea.KeyDown)) // select the second card
 			return m
 		}},
+		// SF3.2: the board answers "where are we" — a you-are-here ribbon over columns grouped by the
+		// wire's stageId with the run's stage marked, n/total headers, meta on every card, and the
+		// skipped shelf out of the Done count.
+		{"kanban_grouped", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("b"))
+			m, _ = m.Update(MsgTasksUpdated{Tasks: &api.TasksDto{Tasks: kanbanFixtureTasks()}})
+			return m
+		}},
+		// SF3.2: a column taller than the pane. The selected card is walked to the bottom of the TODO
+		// column, so the frame pins BOTH halves of the scroll contract at once — the window follows the
+		// selection, and what it hid is stated rather than the rows just going missing.
+		{"kanban_scroll", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("b"))
+			m, _ = m.Update(MsgTasksUpdated{Tasks: &api.TasksDto{Tasks: kanbanTallTasks()}})
+			for i := 0; i < 12; i++ {
+				m, _ = m.Update(specialKey(tea.KeyDown))
+			}
+			return m
+		}},
 		// U3.2 / dogfood appendix 5: a board that cannot reach /tasks must say so. This used to render
 		// the same "No tasks yet" as a genuinely empty board — a confident claim, and a false one.
 		{"kanban_unreachable", func(m tea.Model) tea.Model {
@@ -799,6 +1015,22 @@ func TestGolden(t *testing.T) {
 			m, _ = m.Update(keyMsg("?"))
 			return m
 		}},
+		// SF2.3's headline frame, pinned because it is the one the screenshot critique caught wrong:
+		// a run that has been approved past a budget park once and is over the NEW window. Both
+		// halves of the fix are visible at once — the overrun stated in dollars where "0% headroom"
+		// used to sit, and the lifetime named on its own row so the window figure above it cannot be
+		// mistaken for what the run has cost.
+		{"home_over_budget", func(m tea.Model) tea.Model {
+			st := fixedState()
+			st.TotalCostUsd, st.LifetimeCostUsd = 224.21, 224.21
+			st.CostSpent, st.WindowCostUsd = 138.40, 138.40
+			cap125, remaining := 125.0, -13.40
+			st.CostCap, st.CostRemaining = &cap125, &remaining
+			st.BudgetApprovals, st.BudgetWindowStartedUtc = 1, "2026-07-15T08:00:00Z"
+			st.SessionCostUsd, st.SessionCostBasis = 0, api.BasisNoRate
+			m, _ = m.Update(MsgStateUpdated{State: st})
+			return m
+		}},
 		{"attention", func(m tea.Model) tea.Model {
 			st := fixedState()
 			st.Status = "NeedsAttention"
@@ -826,6 +1058,45 @@ func TestGoldenHomeDisconnected(t *testing.T) {
 	var m tea.Model = New(fakeSource{}, false, "http://127.0.0.1:4317")
 	m, _ = m.Update(tea.WindowSizeMsg{Width: 110, Height: 34})
 	checkGolden(t, "home_disconnected", stripANSI(m.View().Content))
+}
+
+// TestGoldenHomeOfflineWithLastRun is the frame SF2.1 exists to produce, and the one the screenshot
+// critique's items #1, #2 and #9 all landed on: the engine has DIED under a Face that was watching
+// it. Before, that frame showed a COMPLETED run header above "No run attached. Start one:", with a
+// raw `connectex:` string between them and no clock anywhere. Now it is one engine line in English
+// with an age, the run it was watching marked as a memory, and a card built from the file the engine
+// left behind.
+//
+// The fixture under testdata/lastrun/.conductor is a VERBATIM engine-written RUN-SUMMARY.md, copied
+// out of a real completed run — a hand-written one would only pin the parser against itself. The
+// disk read happens for real here: the command MsgFetchError returns is executed and its result fed
+// back, exactly as the bubbletea loop would, so nothing in this frame comes from a poked field.
+func TestGoldenHomeOfflineWithLastRun(t *testing.T) {
+	now := time.Date(2026, 8, 1, 1, 27, 0, 0, time.UTC)
+	pinClockFunc(t, func() time.Time { return now })
+
+	var m tea.Model = New(fakeSource{}, false, "http://127.0.0.1:4317")
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 110, Height: 40})
+	state := fixedState()
+	state.StateDir = filepath.Join("testdata", "lastrun", ".conductor")
+	m, _ = m.Update(MsgStateUpdated{State: state})
+	m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
+	m, _ = m.Update(MsgEventsConnChanged{Connected: true})
+	m, _ = m.Update(MsgTxConnChanged{Connected: true})
+
+	// Seven minutes later the engine is gone: the poll fails and both streams drop behind it.
+	now = now.Add(7 * time.Minute)
+	next, cmd := m.Update(MsgFetchError{Err: "dial tcp 127.0.0.1:4317: connectex: No connection " +
+		"could be made because the target machine actively refused it."})
+	m = next
+	if cmd == nil {
+		t.Fatal("losing the engine must schedule the run-summary read")
+	}
+	m, _ = m.Update(cmd())
+	m, _ = m.Update(MsgEventsConnChanged{Connected: false})
+	m, _ = m.Update(MsgTxConnChanged{Connected: false})
+
+	checkGolden(t, "home_offline_lastrun", stripANSI(m.View().Content))
 }
 
 // TestGoldenHomeDemo is the same landing in --demo: the tour a reviewer sees with no engine and no

@@ -1,7 +1,7 @@
- ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42    
- h a s t o c e p r k g  b Kanban  d                                                                           
+ ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7  ⠋ s12 $0.12 41s  cp 2/40  run $0.42  ⎇ feat/gate… ↑3↓1 ●    
+ h a s o e p r k g  b Kanban                                                                                  
                            │                                                                                  
- ▶ PLAN                    │  T4 · F7.4 · stage F7                                                            
+ ▶ PLAN  n× attempts       │  T4 · F7.4 · stage F7                                                            
  ✓ F0 3/3 Foundations      │                                                                                  
  ✓ F6 5/5 Ink TUI v1       │  ── Persona — deliver ─────────────────────────────────────────────────────      
  ● F7 2/5 Gate … 1× $0.30  │    You are a delivery engineer.                                                  
@@ -21,7 +21,7 @@
    ○ Cache gate results…   │    src/Conductor/Core/Gating/GateCache.cs · docs/CONDUCTOR-VNEXT-PLAN.md         
    ○ Add SkipIfFresh ti…   │                                                                                  
    ○ Benchmark the warm…   │  ── ✎ qa ──────────────────────────────────────────────────────────────────      
-                           │    inherit — the stage/plan dial decides (press q to override)                   
+   ○ conductor chat ove…   │    inherit — the stage/plan dial decides (press q to override)                   
                            │                                                                                  
                            │  ✎ extra context                                                                 
                            │  cover the cache-miss path                                                       

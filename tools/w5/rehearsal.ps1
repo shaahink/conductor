@@ -12,8 +12,9 @@
   plane. W2.1's lesson is that a harness we wrote ourselves is too lenient to be evidence: every
   MCP wire test was green while a live agent could not reach a single tool. So nothing here calls
   into engine classes -- the levers go over HTTP with the run's own write token, the claims come
-  from `conductor task --done` inside the worker, and the assertions read run.db back through
-  `conductor report --query`.
+  from `conductor task --done` inside the worker, and the assertions read run.db back through the
+  MCP `run_query` tool (tools/lib/run-query.ps1). That read used to go through
+  `conductor report --query`, which SF1.2 deleted with the rest of the SQL console.
 
   Phases:
     1  scaffold a hermetic scratch git repo
@@ -326,7 +327,11 @@ A three-stage toy the rehearsal can actually finish.
     # The events table's `type` column holds the CLR event name (RunFinished), not the JSON
     # discriminator (runFinished) -- query the column, not the wire format.
     Section "assertions from run.db"
-    $q = { param($sql) (& $Exe report -p $planPath --query $sql 2>&1 | Out-String) }
+    # SF1.2: `report --query` is gone. Ad-hoc SQL against run.db survives as the MCP `run_query` tool,
+    # which is still out-of-process against the shipped binary -- the rule this rig is built on.
+    . (Join-Path $PSScriptRoot "..\lib\run-query.ps1")
+    $stateDir = Join-Path $scratch ".conductor"
+    $q = { param($sql) (Invoke-ConductorQuery -Exe $Exe -StateDir $stateDir -Sql $sql | Out-String) }
 
     $finished = & $q "SELECT payload FROM events WHERE type = 'RunFinished'"
     Write-Host $finished

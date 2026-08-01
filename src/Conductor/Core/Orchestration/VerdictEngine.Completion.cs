@@ -61,6 +61,10 @@ public sealed partial class VerdictEngine
         // next run in this state dir overwrites. RUN-SUMMARY.md is the closing statement — written
         // AFTER RecordRunEnd so it can read the run's own ended_utc back out of run.db.
         RunSummary.Write(_ctx.Plan, _ctx.State, track, _ctx.Store, _ctx.Log);
-        Notify($"Conductor: plan {_ctx.Plan.Name} COMPLETE ({_ctx.State.SessionCounter} sessions)");
+        // FU-OWNER-11: repo and engine build ride the run-end message for the same reason they ride
+        // the run-start one — this is the message an owner reads hours later, and it is the last
+        // chance to say which checkout finished and which binary finished it.
+        Notify($"Conductor: plan {_ctx.Plan.Name} COMPLETE ({_ctx.State.SessionCounter} sessions) — " +
+               $"repo {_ctx.Plan.Repo} · engine {BuildInfo.Current.Full}");
     }
 }

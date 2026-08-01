@@ -1,9 +1,9 @@
  ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7  ⠋ s12 $0.12 41s               
-  h Home  a s t o c e p r k g b d                                               
+  h Home  a s o e p r k g b                                                     
                      │                                                          
- ▶ PLAN              │  Server                                                  
- ✓ F0 3/3 Foundati…  │  mode       live                                         
- ✓ F6 5/5 Ink TUI …  │  url        http://127.0.0.1:4317                        
+ ▶ PLAN  n× attempts │  Server                                                  
+ ✓ F0 3/3 Foundati…  │  engine     running — answering on http://127.0.0.1:…    
+ ✓ F6 5/5 Ink TUI …  │  build      v0.2.3-alpha.0.20  7d2b1e378ae3  ·  face d…  
  ● F7 2/5 Gate … 1×  │                                                          
    ✓ F7.1 Plan imp…  │  Run                                                     
    ✓ F7.2 Re-impor…  │  plan       conductor-foreman                            
@@ -13,7 +13,7 @@
  ── GATES ──         │  progress   ▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱ 2/40 checkpoints    
    ✓ build           │                                                          
    ● test 4s         │  Workspace                                               
-   ○ lint            │  repo       C:\Code\conductor                            
+   ○ lint            │  repo       C:/Code/conductor                            
                      │                                                          
  ── TASKS ──         │  Next steps                                              
    ✓ Add truth-ti…   │    a  watch the live agent — it is working right now     

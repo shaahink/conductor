@@ -27,11 +27,16 @@ public sealed partial class ControlPlaneServer
         var filter = string.IsNullOrWhiteSpace(status) ? "open"
             : status.Equals("all", StringComparison.OrdinalIgnoreCase) ? null
             : status;
-        var rows = _store.QueryBugs(_state.RunId, filter);
-        var bugs = rows.Select(b => new BugDto(
-            b.Id, b.Title, b.Detail, b.Severity, b.Status,
-            b.StageId, b.FoundSession, b.FixedSession, b.CreatedAt, b.UpdatedAt)).ToList();
+        var bugs = _store.QueryBugs(_state.RunId, filter).Select(b => ToDto(b, null))
+            // SF0.4: plus the open bugs earlier runs in this repo left behind — the ledger is stored
+            // per run, so the Face went blank on every open bug the moment a new run started.
+            .Concat(_store.QueryCarriedBugs(_state.RunId).Select(c => ToDto(c.Bug, c.PlanName)))
+            .ToList();
         await WriteJsonAsync(ctx, new BugsDto(bugs), ControlPlaneJsonContext.Default.BugsDto).ConfigureAwait(false);
+
+        static BugDto ToDto(Store.BugRow b, string? carriedFromPlan) => new(
+            b.Id, b.Title, b.Detail, b.Severity, b.Status,
+            b.StageId, b.FoundSession, b.FixedSession, b.CreatedAt, b.UpdatedAt, carriedFromPlan);
     }
 
     private async Task HandleNotePostAsync(HttpListenerContext ctx, CancellationToken ct)

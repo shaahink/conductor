@@ -6,6 +6,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"conductor-face-go/internal/api"
+	"conductor-face-go/internal/lastrun"
 )
 
 // doPoll fetches the four snapshot endpoints (state, tasks, processes, sessions) independently,
@@ -17,7 +18,25 @@ func (m Model) doPoll() tea.Cmd {
 		m.cmdFetchProcesses(),
 		m.cmdFetchSessions(),
 		m.cmdFetchKnowledge(),
+		// SF4.2: polled with the rest, not fetched on open, because Home shows it and Home fetches
+		// nothing of its own (STYLE.md) — and because the point of the queue is that a new obligation
+		// is visible without anyone navigating to it.
+		m.cmdFetchOwnerQueue(),
 	)
+}
+
+// cmdFetchOwnerQueue polls GET /owner/queue (SF4.2). Unlike the other snapshot polls it REPORTS its
+// failure rather than swallowing it: an empty owner queue and an unreachable one look identical on
+// the pane, and "nothing is owed" is the more dangerous of the two to say wrongly.
+func (m Model) cmdFetchOwnerQueue() tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		q, err := source.FetchOwnerQueue()
+		if err != nil {
+			return MsgOwnerQueueUpdated{Err: err.Error()}
+		}
+		return MsgOwnerQueueUpdated{Queue: q}
+	}
 }
 
 // cmdFetchKnowledge polls the M7 ledger + bugs together (both are small snapshot endpoints). A failure
@@ -70,6 +89,21 @@ func knowledgeWriteMsg(okToast string, res *api.KnowledgeWriteResultDto, err err
 		return MsgKnowledgeWritten{Err: reason}
 	}
 	return MsgKnowledgeWritten{Toast: okToast}
+}
+
+// cmdLoadLastRun reads RUN-SUMMARY.md out of the state dir (SF2.1). It is the only disk read the
+// Face does after startup, it happens only when the control plane stops answering, and a failure is
+// silent: a missing or unreadable summary means Home shows no card, never an error about a file the
+// user did not ask for.
+func (m Model) cmdLoadLastRun() tea.Cmd {
+	dir := m.stateDir
+	return func() tea.Msg {
+		summary, err := lastrun.Load(dir)
+		if err != nil {
+			return nil
+		}
+		return MsgLastRunLoaded{Summary: summary}
+	}
 }
 
 func (m Model) cmdFetchState() tea.Cmd {
@@ -331,23 +365,13 @@ func (m Model) cmdPostTelegramSettingsEdit(edit api.PlanEditDto) tea.Cmd {
 	}
 }
 
-func (m Model) cmdQueryReport(sql string) tea.Cmd {
-	source := m.source
-	return func() tea.Msg {
-		result, err := source.QueryReport(sql)
-		if err != nil {
-			return MsgReportResult{Err: err.Error()}
-		}
-		return MsgReportResult{Result: result}
-	}
-}
-
-// cmdFetchScores runs the Report tab's canned verifier-scores query (U2.2). Verifier scores are the
-// one report section with no DTO on the wire; the spec sanctions a canned query for exactly that.
+// cmdFetchScores fetches the Report tab's verifier scores (SF1.1). This used to run a canned SELECT
+// through QueryReport — the last thing making a RENDERED report depend on the SQL console, which
+// SF1.2 then deleted along with cmdQueryReport itself.
 func (m Model) cmdFetchScores() tea.Cmd {
 	source := m.source
 	return func() tea.Msg {
-		result, err := source.QueryReport(scoresSQL)
+		result, err := source.FetchScores()
 		if err != nil {
 			return MsgReportScores{Err: err.Error()}
 		}

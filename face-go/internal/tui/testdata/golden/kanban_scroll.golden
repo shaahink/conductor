@@ -1,0 +1,34 @@
+ ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7  ⠋ s12 $0.12 41s  cp 2/40  run $0.42  ⎇ feat/gate… ↑3↓1 ●    
+ h a s o e p r k g  b Kanban                                                                                  
+                           │                                                                                  
+ ▶ PLAN  n× attempts       │  ▸ F7 stage 3/4 · cp 2/40 · gate test running · s12 Deliver try 1/3              
+ ✓ F0 3/3 Foundations      │                                                                                  
+ ✓ F6 5/5 Ink TUI v1       │  TODO 14/18                In Progress 1/18          Done 2/18                   
+ ● F7 2/5 Gate … 1× $0.30  │  ────────────────────────  ────────────────────────  ────────────────────────    
+   ✓ F7.1 Plan import      │    F8                      ▸ F7                        F6                        
+   ✓ F7.2 Re-import diff   │  • F8.1 · conductor chat…  • F7.3 · Wire RunDb.Get…  • F6.5 · Ink TUI parity…    
+   ● F7.3 Truth-gate tier  │    planner                   s12 · 4m · try 2          s9 · 2d · claimed         
+ ○ F8 0/4 conductor chat…  │  • F8.2 · Telegram v2 ne…                            ▸ F7                        
+                           │    blocked · s12 · 30m                               • F7.3 · Add truth-tier…    
+ ── GATES ──               │  • F8.3 · deep backlog i…                              s10 · 1h · confirmed      
+   ✓ build                 │    planner                                           skipped 1                   
+   ● test 4s               │  • F8.4 · deep backlog i…                            • F7.5 · Benchmark the …    
+   ○ lint                  │    planner                                             skipped · s11 · 1d        
+                           │  • F8.5 · deep backlog i…                                                        
+ ── TASKS ──               │    planner                                                                       
+   ✓ Add truth-tier con…   │  • F8.6 · deep backlog i…                                                        
+   ● Wire RunDb.GetLast…   │    planner                                                                       
+   ○ Cache gate results…   │  • F8.7 · deep backlog i…                                                        
+   ○ Add SkipIfFresh ti…   │    planner                                                                       
+   ○ Benchmark the warm…   │  • F8.8 · deep backlog i…                                                        
+   ○ conductor chat ove…   │    planner                                                                       
+                           │  • F8.9 · deep backlog i…                                                        
+                           │    planner                                                                       
+                           │  • F8.10 · deep backlog …                                                        
+                           │    planner                                                                       
+                           │  ▸ F8.11 · deep backlog …                                                        
+                           │    planner                                                                       
+                           │  ↕ 5 above · 2 below                                                             
+                           │                                                                                  
+                           │                                                                                  
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ card · ←→ move · enter detail · n add · N stage

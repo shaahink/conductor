@@ -129,11 +129,16 @@ public class AgentProviderTests
         Assert.Null(state.TokensReasoning);
     }
 
-    // The reason usage is read from `result` and not accumulated per line: claude emits the SAME
-    // message once per content block (thinking block + text block = two lines, one message.id, one
-    // identical usage). Summing per assistant line overcounted by 3-4x on real logs.
+    // claude emits the SAME message once per content block (thinking block + text block = two lines,
+    // one message.id, one identical usage), so summing per LINE overcounted by 3-4x on real logs.
+    // B13.6: the answer to that is the message-id dedupe, not refusing to count at all. This test used
+    // to assert the totals stayed null until the result envelope, and that null was load-bearing in the
+    // wrong direction: the soft-break and the token ceiling both ask the live session what it has spent,
+    // so both read zero for the whole session and a 6M ceiling was first noticed at 17M, as the session
+    // was already ending. Counted once per unique id while streaming; overwritten by the result envelope,
+    // which stays authoritative.
     [Fact]
-    public void ClaudeAdapterDoesNotAccumulateRepeatedAssistantUsage()
+    public void ClaudeAdapterCountsARepeatedAssistantMessageExactlyOnce()
     {
         var provider = new ClaudeProvider();
         var (state, _) = NewState();
@@ -144,9 +149,10 @@ public class AgentProviderTests
         provider.ParseLine(assistant, state); // same message id, re-emitted for its next content block
         provider.ParseLine(assistant, state);
 
-        Assert.Null(state.TokensInput);
-        Assert.Null(state.TokensOutput);
-        Assert.Null(state.TokensCacheRead);
+        // Live, mid-session: one message counted one time — not three, and not nothing.
+        Assert.Equal(2 + 11374, state.TokensInput);
+        Assert.Equal(1, state.TokensOutput);
+        Assert.Equal(12528, state.TokensCacheRead);
 
         provider.ParseLine(
             """{"type":"result","subtype":"success","usage":{"input_tokens":2,"cache_creation_input_tokens":11374,"cache_read_input_tokens":12528,"output_tokens":1}}""",

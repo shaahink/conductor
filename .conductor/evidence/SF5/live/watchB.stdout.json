@@ -1,0 +1,33 @@
+{
+  "reason": "run-ended",
+  "firedFrom": "event",
+  "detail": "run Completed \u2014 2/2 checkpoints over 2 session(s)",
+  "at": "2026-08-01T11:59:00.9224491Z",
+  "plan": "SF51WatchRig_sf51a",
+  "repo": "C:/Users/shahi/AppData/Local/Temp/sarban-proofs/sf51a",
+  "runId": "999853eb10524c9fa01b8f7843760a0f",
+  "status": "Completed",
+  "engineAlive": true,
+  "stage": "T1",
+  "attempt": 0,
+  "sessions": 2,
+  "checkpoints": "2/2",
+  "spendUsd": 0.01,
+  "costCapUsd": null,
+  "tokens": 3200,
+  "tokenCap": null,
+  "attention": null,
+  "whatHurt": null,
+  "stages": [
+    "T0 1/1 done",
+    "T1 1/1 done"
+  ],
+  "recentSessions": [
+    "#1 T0 Deliver Advanced $0.01",
+    "#2 T1 Deliver Advanced $0.01"
+  ],
+  "suggest": [
+    "conductor status",
+    "conductor report"
+  ]
+}

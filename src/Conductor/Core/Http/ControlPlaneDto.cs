@@ -74,7 +74,18 @@ public sealed record StateDto(
     // neither: a timestamp with no reason is the knowledge loss the verb exists to prevent, and a
     // reason with no timestamp cannot be counted down.
     DateTime? BlockedUntilUtc = null,
-    string? BlockedReason = null);
+    string? BlockedReason = null,
+    // ── SF3.3: git awareness. Branch, upstream, ahead/behind, dirtiness, HEAD and the last few
+    // subjects, read once per GitSnapshotCache.Ttl rather than once per poll. Null = an engine that
+    // predates the block; present-with-IsRepo-false = a workspace that is genuinely not a git repo.
+    GitDto? Git = null,
+    // ── FU-OWNER-10: which build am I attached to? The engine's own version and commit (the same
+    // stamp `conductor version` and GET /version print), plus the short identity of the Face binary
+    // this engine would launch. Three fields so that "did my reinstall take?" is answerable from
+    // inside the tool instead of from four out-of-band checks against the process list.
+    string EngineVersion = "",
+    string EngineCommit = "",
+    string FaceBuild = "");
 
 public static class ControlPlaneDto
 {
@@ -126,7 +137,9 @@ public static class ControlPlaneDto
 
     public static TasksDto FromTasks(IReadOnlyList<TaskItem> tasks) => new(
         [.. tasks.Select(t => new TaskDto(t.TaskId, t.CheckpointId, t.Title, t.Status, t.Source, t.Order, t.Context, t.Paths,
-            Kind: t.Kind, StageId: t.StageId, Confirmed: t.Confirmed, Qa: t.Qa))]);
+            Kind: t.Kind, StageId: t.StageId, Confirmed: t.Confirmed, Qa: t.Qa,
+            SessionNumber: t.SessionNumber, StatusSinceUtc: t.StatusSinceUtc?.ToString("O"),
+            Attempts: t.Attempts))]);
 
     public static ProcessDto FromPid(PidRow p, bool alive, string? lastOutputLine) => new(
         Pid: p.Pid, Purpose: p.Purpose, StageId: p.StageId, SessionNumber: p.SessionNumber,
@@ -157,7 +170,7 @@ public static class ControlPlaneDto
 [JsonSerializable(typeof(ProcessKillRequestDto))]
 [JsonSerializable(typeof(ProcessKillResultDto))]
 [JsonSerializable(typeof(SessionsDto))]
-[JsonSerializable(typeof(QueryResultDto))]
+[JsonSerializable(typeof(ScoresDto))]
 [JsonSerializable(typeof(InjectRequestDto))]
 [JsonSerializable(typeof(InjectAcceptedDto))]
 [JsonSerializable(typeof(PromptPreviewDto))]
@@ -179,4 +192,5 @@ public static class ControlPlaneDto
 [JsonSerializable(typeof(TelegramTestResultDto))]
 [JsonSerializable(typeof(TelegramSetTokenRequestDto))]
 [JsonSerializable(typeof(TelegramSetTokenResultDto))]
+[JsonSerializable(typeof(OwnerQueueDto))]
 public sealed partial class ControlPlaneJsonContext : JsonSerializerContext;

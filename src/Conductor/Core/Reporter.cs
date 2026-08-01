@@ -255,7 +255,10 @@ public static class Reporter
         return sb.ToString();
     }
 
-    public static void WriteAndPublish(PlanConfig plan, RunState state, TrackerSnapshot track, IReadOnlyList<GateResult>? lastGates, Action<string> log, string? liveActivity = null, string? commitMessage = null, IRunStore? store = null)
+    /// <param name="onNewOwnerItems">SF4.2 — forwarded to <see cref="OwnerQueue.Write"/>: the report
+    /// write path IS the run's session boundary, so it is where a newly-arrived owner obligation is
+    /// noticed and pushed. See <c>RunLoop.NotifyNewOwnerQueueItems</c>.</param>
+    public static void WriteAndPublish(PlanConfig plan, RunState state, TrackerSnapshot track, IReadOnlyList<GateResult>? lastGates, Action<string> log, string? liveActivity = null, string? commitMessage = null, IRunStore? store = null, Action<IReadOnlyList<OwnerQueueItem>>? onNewOwnerItems = null)
     {
         string newContent;
         string path = ReportPath(plan);
@@ -267,6 +270,11 @@ public static class Reporter
                 ReadTimeline(store, state.RunId), ReadHealth(store, state.RunId), ReadMcpMetrics(store, state.RunId), ReadRepoStrip(plan));
             old = File.Exists(path) ? File.ReadAllText(path) : null;
             File.WriteAllText(path, newContent, Utf8Bom);
+            // SF4.1: the owner queue rides the report's write path, which is the run's session
+            // boundary. It is deliberately NOT committed with the report — it is derived state that
+            // goes stale the instant an approval lands, and a committed copy would be a second
+            // source of truth to disbelieve.
+            OwnerQueue.Write(plan, state, track, log, onNewItems: onNewOwnerItems);
         }
         catch (Exception ex)
         {
@@ -335,7 +343,7 @@ public static class Reporter
 
     /// <summary>Write REPORT.md to disk only — no git commit, no push. Used for mid-session
     /// report refreshes (the report lives in .conductor/, not on the feature branch).</summary>
-    public static void WriteReport(PlanConfig plan, RunState state, TrackerSnapshot track, IReadOnlyList<GateResult>? lastGates, Action<string> log, string? liveActivity = null, IRunStore? store = null)
+    public static void WriteReport(PlanConfig plan, RunState state, TrackerSnapshot track, IReadOnlyList<GateResult>? lastGates, Action<string> log, string? liveActivity = null, IRunStore? store = null, Action<IReadOnlyList<OwnerQueueItem>>? onNewOwnerItems = null)
     {
         try
         {
@@ -343,6 +351,7 @@ public static class Reporter
             var content = Build(plan, state, track, lastGates, liveActivity,
                 ReadTimeline(store, state.RunId), ReadHealth(store, state.RunId), ReadMcpMetrics(store, state.RunId), ReadRepoStrip(plan));
             File.WriteAllText(ReportPath(plan), content, Utf8Bom);
+            OwnerQueue.Write(plan, state, track, log, onNewItems: onNewOwnerItems);   // SF4.1 — see WriteAndPublish
         }
         catch (Exception ex)
         {

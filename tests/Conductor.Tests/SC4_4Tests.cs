@@ -58,9 +58,13 @@ public sealed class SC4_4Tests : IDisposable
         Assert.StartsWith("You are one autonomous engineering session", lines[0], StringComparison.Ordinal);
         Assert.Equal(3, LineOf(prompt, Marker));                    // role line, blank, injection
         Assert.Contains("Stop chasing the flake, deliver L2.3", prompt, StringComparison.Ordinal);
-        // …and everything the prompt used to put above it is now below it.
+        // …and everything the prompt used to put above it is now below it. The anchors are headings the
+        // CURRENT built-in has: SF6.1 rewrote the template and the old "PRE-SESSION RITUAL" heading became
+        // step 1 of "Do, in order:", which turned this assertion into a -1 that read as a real regression.
         Assert.InRange(LineOf(prompt, "Required reading (in order):"), 4, int.MaxValue);
-        Assert.InRange(LineOf(prompt, "PRE-SESSION RITUAL"), 4, int.MaxValue);
+        Assert.InRange(LineOf(prompt, "Do, in order:"), 4, int.MaxValue);            // the ritual, post-SF6.1
+        Assert.InRange(LineOf(prompt, "ORIENT, THEN SAY WHAT YOU ARE TAKING"), 4, int.MaxValue);
+        Assert.InRange(LineOf(prompt, "## Conductor tools"), 4, int.MaxValue);       // the spliced tools contract
         Assert.InRange(LineOf(prompt, "watch the anchoring"), 4, int.MaxValue);
     }
 

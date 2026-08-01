@@ -190,6 +190,7 @@ var (
 	stageFailStyle    lipgloss.Style
 	stageTodoStyle    lipgloss.Style
 	stageSkippedStyle lipgloss.Style
+	stageJumpedStyle  lipgloss.Style
 
 	txThinkingStyle     lipgloss.Style
 	txThinkingMoreStyle lipgloss.Style
@@ -252,6 +253,10 @@ func rebuildStyles() {
 	stageFailStyle = lipgloss.NewStyle().Foreground(colRed)
 	stageTodoStyle = lipgloss.NewStyle().Foreground(colPending)
 	stageSkippedStyle = lipgloss.NewStyle().Foreground(colSkipped)
+	// SF3.3: the execution-order cue is YELLOW — the warn role, not the fail role. A run that jumped
+	// its declared order is a fact worth stopping on, not a failure: `goto` and `retry-stage` are
+	// verbs the owner uses on purpose, and painting their result red would cry wolf on every one.
+	stageJumpedStyle = lipgloss.NewStyle().Foreground(colYellow)
 
 	txThinkingStyle = lipgloss.NewStyle().Foreground(colSkipped).Italic(true)
 	// The collapse tail is quieter than the thought it hangs under — it is scaffolding, not content.

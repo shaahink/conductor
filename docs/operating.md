@@ -48,7 +48,7 @@ Where to look when something's off (full table in `DOGFOOD-RUNBOOK.md`):
 
 | File (under `.conductor/`) | Tells you |
 |---|---|
-| `run.db` | Everything structured. Query via `conductor log`/`report --query` or MCP `run_query`. |
+| `run.db` | Everything structured. Query via `conductor log` or the MCP `run_query` tool (behind `conductor chat`). SF1.2 deleted `report --query` with the rest of the SQL console; `conductor report` writes a report. |
 | `logs/conductor-YYYYMMDD.log` | The engine's structured log. Tail it first. |
 | `logs/crash-*.log` | A forensic dump if it crashed. Newest near the time it went quiet = root cause. |
 | `logs/session-NNN.jsonl` / `.prompt.md` | Raw agent I/O + the exact compiled prompt. |
@@ -81,6 +81,7 @@ Where to look when something's off (full table in `DOGFOOD-RUNBOOK.md`):
 | `task --list` | Checkpoint status from `run.db`. |
 | `gate [--full]` | Re-run the gate battery at HEAD (no agent). `--full` = whole battery, else fast tier. Clears `pendingFix` if green. |
 | `chat "<question>"` | Ask a model about the run; it has MCP access to `run.db`, the ledger, control verbs. |
+| `watch [--json] [--timeout M] [--hook "<cmd>"] [--notify <url>]` | Block silently until the run needs judgment, then emit a ~30-line brief (exit 0) — or exit 10 on the `--timeout` heartbeat. Runs the plan's `supervisor` command with the brief on stdin, and POSTs it to the `supervisor.remote` webhook / phone. See §3 "Unattended supervision". |
 
 ### Control a LIVE run (queue an intent the engine picks up at the next boundary)
 These write `.conductor/control.json` (or POST `/control`) — they work from any terminal while a run is
@@ -140,6 +141,128 @@ process alive? → log tail → `crash-*.log`? → `git status` (uncommitted wor
 → `conductor run -p <plan>` to resume (it reads `run.db` alone and the next prompt tells the worker to
 re-orient).
 
+### Unattended supervision — the night watch (SF5)
+
+**The problem with babysitting by polling.** An agent tailing the log every 30s spends its budget on
+*accumulation*, not on the polls: over ten hours ~95% of its ticks say "still running", and each of
+those ticks is paid for again inside every later tick's context. `conductor watch` inverts it — the
+waiting is a file-stat loop that costs nothing, and the expensive reader is invoked once, at the
+moment that actually needed judgment.
+
+```powershell
+conductor watch --json --timeout 60      # block; print a brief on wake (exit 0) or heartbeat (exit 10)
+while ($true) { conductor watch --json } # the night watch: the plan's supervisor block runs on each wake
+```
+
+**Wake set — `watch` returns (and runs the supervisor) on exactly these:**
+
+| Wake | Means | First moves |
+|---|---|---|
+| `needs-human` | Agent escalated a `HUMAN:` item, or `pauseOnBlocked` parked the run | `status` → `inject` / `resume` / `skip` |
+| `owner-gate` · `approval-park` | A stage wants owner approval before it advances | `status` → `approve` |
+| `budget-park` | Cost or token cap hit; the run stopped rather than spend past it | `status` → `approve` re-opens the window |
+| `circuit-breaker` | Repeated failures on one stage tripped the breaker | `status` → `inject "<what to try instead>"` → `pause` |
+| `phase-red-twice` | A phase gate went RED twice on the same stage — the agent is not converging | `gate --full` → `inject` → `pause` |
+| `engine-gone` | The conductor process vanished (crash, closed terminal, reboot) | `status` → `run` (resumes from `run.db`) |
+| `run-ended` | The plan finished, or the run stopped for good | `status` → `report` |
+
+**Don't-wake set — `watch` stays silent through these, and that is the point:**
+
+| Quiet event | Why it must not wake anyone |
+|---|---|
+| Usage-limit backoff | Self-resumes. On a real run these were 2 of the last 3 events — waking on them *is* the polling babysitter |
+| Stall backoff / session retry | The watchdog already handles it; a second supervisor is noise |
+| Session start / exit / rollover / `blocked-until` | Churn, not a decision |
+| Gate PASS, checkpoint confirmed, stage advance | Good news needs no night call |
+| A single phase RED | One red is work in progress; the *second* on the same stage is the signal |
+
+The `--timeout <min>` heartbeat is the long fallback for "did the watch itself die" — it returns exit
+**10** with `reason=timeout` and, deliberately, does **not** run the supervisor. A heartbeat that
+invoked the model would put back exactly the per-tick cost this verb exists to remove.
+
+**The supervisor block.** Keep the babysitter in the plan, not in a shell history — it then survives
+the terminal it was started from and gets reviewed in a diff like everything else:
+
+```json
+"supervisor": {
+  "command": "claude -p \"You are the night watch for this run. The wake brief is on stdin; your standing orders are in it. Act, then say in one line what you did.\"",
+  "timeoutMinutes": 10,
+  "maxPerHour": 6,
+  "standingOrders": "You MAY: approve an owner gate whose checkpoint has an evidence path; inject a hint on a circuit breaker; resume after a self-resolved park. You MUST escalate (notify and stop): anything that spends money, any merge or push to master, any plan edit, any second circuit breaker on the same stage."
+}
+```
+
+- It costs nothing while quiet — the command runs only when the wake set fires.
+- `--hook '<command>'` overrides the block for a one-off, and is not bound by the hourly fuse.
+- `maxPerHour` (default 6, `0` = unlimited) is a **cost fuse**, counted in
+  `.conductor/supervisor-fires.log` so it survives across the fresh process every wake starts. A
+  supervisor that hits the cap is usually a run stuck on one cause, not a busy night — read the brief
+  yourself before raising it. Whenever the supervisor does not run, `watch` says so on stderr.
+
+**The standing-order pattern.** Write the orders in the plan, not in the prompt that starts the loop:
+`standingOrders` is copied into the brief, so the agent reads its authority on the same stdin as the
+wake. An agent that cannot see its limits has none. Two rules that keep this honest: name the
+*escalation* half explicitly (silence about a limit reads as permission), and keep everything that
+spends money, merges, or edits the plan on the human's side of the line.
+
+**When the supervisor is not on this machine (SF5.3).** The two supervisors an owner actually has at
+3am are a phone and a cloud session, and neither can be a local `command`. A `remote` block inside the
+supervisor block sends the wake off-box, on the same wake set and nothing else:
+
+```json
+"supervisor": {
+  "command": "claude -p \"night watch; brief on stdin\"",
+  "remote": {
+    "webhookUrl": "https://api.github.com/repos/me/site/dispatches",
+    "headers": { "Authorization": "Bearer ${GH_WAKE_TOKEN}", "Accept": "application/vnd.github+json" },
+    "telegram": true,
+    "maxPerHour": 12
+  }
+}
+```
+
+- **The webhook body IS the brief** — byte for byte the document the local supervisor reads on stdin,
+  `standingOrders` included. A ping that only says "something happened" makes the remote reader go and
+  look, which is the polling cost this verb exists to delete, paid over a network instead of a pipe.
+- **Header values expand `${NAME}` and `%NAME%` from the environment**, so the plan names a credential
+  and never contains one. A variable that is not set **drops that header and says which one** on
+  stderr — posting a literal `${TOKEN}` earns a 401 whose cause is invisible from the far end.
+- **`telegram: true`** sends a phone-sized wake line (reason, stage, spend vs cap, first verbs) to
+  `telegram.allowedChatIds`. It is sent by the **watch** process, not the engine, so it still arrives
+  when the engine is the thing that died — the one failure the run's own push path can never report.
+- **The remote goes out first, and goes anyway.** It is dispatched before the local `command` and does
+  not care whether that command is absent, disabled, or rate limited: the hour a local babysitter has
+  burnt its fuse is exactly the hour a human off the box needs to hear. Its own fuse
+  (`maxPerHour`, default 12, in `.conductor/supervisor-remote-fires.log`) is separate from the
+  supervisor's for the same reason — one shared ledger would have each quietly spending the other.
+- **`--notify <URL>`** replaces the whole block, phone included, for a deliberate one-off, and is not
+  bound by the plan's fuse — the same bargain `--hook` makes.
+- **A dead endpoint is reported, not thrown.** Failure prints a stderr line and the watch still exits
+  on its wake code; a watch that crashed because a webhook was down would turn one parked run into two
+  outages. Delivery lines name the **host**, never the URL: a webhook path routinely carries its own
+  secret and a Telegram one always carries the bot token.
+
+**The cloud pattern**, end to end: `conductor watch` POSTs the brief to a small always-on relay (a
+`repository_dispatch` on GitHub, a Worker, any endpoint you control); the relay holds the credential
+and starts a cloud Claude Code session with repo access, handing it the brief as its prompt. The
+session reads what fired, what it cost, what the board looks like and what its standing orders permit,
+without a single polling tick having been paid for.
+
+**What stays manual — say it out loud, because the gap is where the 3am surprise lives:**
+
+1. **Conductor does not host the relay.** `watch` delivers to something on the internet; it does not
+   become that something. No relay, no cloud session — the webhook just 404s into the evidence log.
+2. **The control plane is localhost-only.** A cloud session can read the repo and push commits, but it
+   cannot `conductor approve` your run from a datacentre. Until you give it a path back to the box (a
+   tailnet, an SSH hop, an agent already running there), remote supervision is **read-and-advise**:
+   the acting is still the local supervisor's or yours.
+3. **Nothing retries.** One POST inside one timeout window. If the far end was down, that fact is on
+   stderr and in the fires ledger — it is not queued for later.
+4. **The brief is not signed.** Anything that can reach your webhook URL can post something shaped
+   like a wake; authenticating what arrives is the receiving end's job, not this one's.
+5. **The brief leaves the machine.** It carries the repo path, plan name, stage, spend and your
+   standing orders. Point it only at a channel you would paste `conductor status` into.
+
 ---
 
 ## 4. Programmatic control (when you'd rather use HTTP than the CLI)
@@ -148,10 +271,14 @@ Discover a live run's URL from `.conductor/control-plane.json` → `url` (e.g. `
 All endpoints are localhost-only.
 
 **Read:** `GET /state` (current stage/session/cost/live metrics) · `/timeline` · `/tasks` · `/ledger`
-· `/bugs` · `/sessions` · `/plan` · `/prompt/preview?stage=&kind=` · `/prompt/blocks?task=` (P3: a
-task's prompt as labeled building blocks) · `/console/current` and
-`/transcript/current` (SSE streams of the live agent) · `GET /report/query?sql=` (read-only SQL).
-Reads need no token.
+· `/bugs` · `/sessions` · `/scores` (SF1.1: the verifier's verdicts, each with the per-stage bar it
+was judged against and whether it passed) · `/plan` · `/prompt/preview?stage=&kind=` ·
+`/prompt/blocks?task=` (P3: a task's prompt as labeled building blocks) · `/console/current` and
+`/transcript/current` (SSE streams of the live agent). Reads need no token.
+
+There is no ad-hoc SQL endpoint: SF1.2 deleted `GET /report/query?sql=` along with the Face's Dev
+console, so every read above is a typed DTO. SQL against `run.db` lives in the MCP `run_query` tool,
+which is what `conductor chat` asks questions through.
 
 **Write:** `POST /control` (same verbs as §2's control commands) · `POST /inject` · `POST /tasks/update`
 · `POST /tasks/add` · `POST /tasks/edit` (P3: title/extra-context as structured task data; PF3 adds
@@ -219,44 +346,52 @@ caching, and NEEDS-HUMAN escalation. Full detail: `docs/history/maestro/M9-FINAL
 
 ---
 
-## 7. Known gaps & missing features (as of 2026-07-15, Maestro closed 30/30)
+## 7. Known gaps & missing features (as of 2026-08-01, end of the Sarban era)
+
+Re-measured at the close of the Sarban era, not carried forward. Four of the ten items on the
+2026-07-15 list are gone — closed by the two eras that ran since — and what is left is stated with
+what still owns it. The open engineering rows also live in
+[`docs/dev/NEXT-FEATURES.md`](dev/NEXT-FEATURES.md), which is where new ones should be filed.
 
 **Owner-only (credential-gated `HUMAN:` — neither blocks engine use):**
-1. **Live Telegram phone dogfood (M8.3).** Backend (`SecretsStore`, `/telegram/*`, `TestConnectionAsync`)
-   and the Face's guided-setup tab are built and tested; the actual phone-driven run needs the owner's
-   real bot token pasted into the Face. Truth gate ("toy run driven from the phone, lid closed") unmet.
-2. **Full real-model run (M9.1).** The engine, gates, escalation, history, and cost accounting are all
-   green under the token-free fake agent; the confirmation on the real DeepSeek/opencode model is a
-   paid run only the owner can start.
+1. **Live Telegram phone dogfood.** The backend is done and then some: SC1 made the readiness verdict
+   the same sentence everywhere, SF0.1 made a run *volunteer* it at startup, and SF4.2 gave the pushes
+   an identity (repo, plan, run) and a `reloadPending` answer. The phone-driven run still needs the
+   owner's real bot token — on this repo's own run the startup line reads *"telegram will NOT
+   deliver — configured but no bot token"*, which is the gap saying its own name.
+2. ~~**Full real-model run.**~~ **CLOSED by the Sarban era itself** — two self-hosted plans, 8 + 8
+   stages, driven end to end by a real model against this repo, with claims, gates, escalation and
+   cost accounting all exercised on live sessions rather than a fake agent.
 
 **Incomplete design-doc items:**
 3. **Persona kill-list residue.** The design doc's kill-list wants the 9-persona system gone; the heavy
-   system was removed but a slim `PersonaRegistry` (~83 lines) + scattered `persona` references remain.
-   Harmless (no failing test), but not the clean deletion the doc asked for.
-4. **`conductor init` is intentionally minimal.** It scaffolds plan + templates + gates + repo
-   detection, but NOT domain "packs" (the design's M8.2 mentioned packs), and leaves `advisor` /
-   `statusAgent` / `telegram` unset for the user to fill in.
+   system was removed but a slim `PersonaRegistry` + scattered `persona` references remain (`RunContext`,
+   `RunLoop.Snapshot`, the control-plane DTO). Harmless — no failing test, and SF6.2 pruned the stale
+   persona *content* out of the prompt bank — but not the clean deletion the doc asked for.
+4. ~~**`conductor init` is intentionally minimal.**~~ **CLOSED by SF6.3.** It now scaffolds the whole
+   template set rather than two of them, and writes commented `advisor` / `telegram` blocks into the
+   plan so the two settings most runs want are one uncomment away instead of one doc-read away.
 
-**Operational limitations (see `DOGFOOD-RUNBOOK.md`):**
-5. ~~**Closing the terminal window kills the run ungracefully.**~~ **FIXED (W3.3, `c8f9b56`).**
-   `ConsoleCtrlRails` wires `CTRL_CLOSE_EVENT`/logoff/shutdown into the same graceful stop as Ctrl+C
-   and blocks inside the OS handler until the run has saved. Closing the window parks the run and
-   leaves it resumable — proven from outside the process by `tools/w3/window-close.ps1`
-   (`docs/dev/workgraph/W3-WINDOW-CLOSE.md`). Ctrl+C is still the tidiest exit; the ✕ is no longer a
-   data-loss risk.
-6. **The crash-log net reports a crash but doesn't recover in-flight work** beyond what git already has.
+**Operational limitations:**
+5. **The crash-log net reports a crash but doesn't recover in-flight work** beyond what git already
+   has. Closing the terminal window is *not* in this category any more — `ConsoleCtrlRails` wires
+   `CTRL_CLOSE_EVENT`/logoff/shutdown into the same graceful stop as Ctrl+C and blocks inside the OS
+   handler until the run has saved, proven from outside the process by `tools/w3/window-close.ps1`
+   (W3.3, `c8f9b56`; `docs/dev/workgraph/W3-WINDOW-CLOSE.md`).
 
 **Ergonomics / polish (minor):**
-7. **`plan import` needs an existing valid plan to diff against** — there's no clean from-scratch
+6. **`plan import` needs an existing valid plan to diff against** — there's no clean from-scratch
    bootstrap. Workaround: `conductor init` first, then `plan import`.
-8. **A fully-done stage in a `perPhase` plan renders `gating` indefinitely** (`SnapshotBuilder`), which
+7. **A fully-done stage in a `perPhase` plan renders `gating` indefinitely** (`SnapshotBuilder`), which
    can read as "stuck" long after the phase gate passed. By-design, but easy to misread.
-9. **`status` can show `sessions 0` against a re-seeded `run.db`** — the checkpoint count (seeded from
+8. **`status` can show `sessions 0` against a re-seeded `run.db`** — the checkpoint count (seeded from
    the tracker on startup) and the recorded-session count can diverge.
-10. **No CI / release automation** (`.github/workflows` absent) and the installer publishes
-    framework-dependent (needs the .NET 10 runtime present, which it is here). Expected for a one-user
-    tool; noted for completeness.
+9. ~~**No CI / release automation.**~~ **CLOSED by SC8.** `.github/workflows/ci.yml` builds and tests
+   the tree (including a `ubuntu-latest` leg) on every push, and `release.yml` publishes a tagged
+   build whose notes are the matching `CHANGELOG.md` section — it refuses a tag that has none. The
+   installer still publishes framework-dependent (needs the .NET 10 runtime present).
 
-None of items 3–10 blocks day-to-day operation. The engine builds clean (0w/0e), the full C# suite is
-green (704), the anti-cheat ratchet is green, face-go is green, and a real `conductor run` drives a
-plan end-to-end with correct claims-vs-confirmations, gate caching, and human escalation.
+None of items 3–8 blocks day-to-day operation, and the era closed with the engine building clean
+(0w/0e), the C# suite green, the anti-cheat ratchet green, face-go green, and a real `conductor run`
+driving two full plans end to end with correct claims-vs-confirmations, gate caching and human
+escalation.

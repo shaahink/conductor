@@ -813,35 +813,133 @@ public sealed class ControlPlaneServerTests : IDisposable
         finally { server.Dispose(); }
     }
 
+    // SF1.2: the SQL endpoint is DELETED, not disabled. These two tests replace
+    // GetReportQuery_ExecutesSelectAgainstRunDb / _RejectsNonSelectStatements, which asserted the
+    // behaviour of the route that just died. A 404 here is the whole point: an arbitrary-SELECT hole in
+    // a control plane whose every other read is a typed DTO is gone, and the SELECT-only guard that
+    // used to police it is gone with it — there is nothing left to police.
     [Fact]
-    public async Task GetReportQuery_RejectsNonSelectStatements()
-    {
-        var (server, port) = StartServer();
-        try
-        {
-            var resp = await _http.GetAsync($"http://127.0.0.1:{port}/report/query?sql=DELETE FROM runs");
-            Assert.Equal(HttpStatusCode.BadRequest, resp.StatusCode);
-            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
-            Assert.Contains("SELECT", doc.RootElement.GetProperty("error").GetString());
-        }
-        finally { server.Dispose(); }
-    }
-
-    [Fact]
-    public async Task GetReportQuery_ExecutesSelectAgainstRunDb()
+    public async Task GetReportQuery_IsGone_TheSqlEndpointNoLongerExists()
     {
         _store.InitializeRun(RunId, "cps-test", _dir, null, null);
         var (server, port) = StartServer();
         try
         {
+            // The exact SELECT the deleted endpoint used to answer with a row.
             var resp = await _http.GetAsync($"http://127.0.0.1:{port}/report/query?sql=SELECT run_id, plan_name FROM runs");
+            Assert.Equal(HttpStatusCode.NotFound, resp.StatusCode);
+            // And a write attempt gets the same 404 — not a 400 from a guard that is still running.
+            var write = await _http.GetAsync($"http://127.0.0.1:{port}/report/query?sql=DELETE FROM runs");
+            Assert.Equal(HttpStatusCode.NotFound, write.StatusCode);
+        }
+        finally { server.Dispose(); }
+    }
+
+    // The endpoint's death must not take the run report's data with it: /sessions and /scores are the
+    // typed reads that replaced every canned SELECT the Face used to run.
+    [Fact]
+    public async Task TypedReadsSurviveTheSqlEndpointsDeletion()
+    {
+        _store.InitializeRun(RunId, "cps-test", _dir, null, null);
+        _store.WriteScore(RunId, 3, "S1", 91, "PASS", "");
+        var (server, port) = StartServer();
+        try
+        {
+            using var scores = JsonDocument.Parse(await _http.GetStringAsync($"http://127.0.0.1:{port}/scores"));
+            Assert.Equal(1, scores.RootElement.GetProperty("scores").GetArrayLength());
+            using var sessions = JsonDocument.Parse(await _http.GetStringAsync($"http://127.0.0.1:{port}/sessions"));
+            Assert.True(sessions.RootElement.TryGetProperty("sessions", out _));
+        }
+        finally { server.Dispose(); }
+    }
+
+    // SF1.1: the Report tab's verifier-scores section used to be a canned SELECT through
+    // /report/query — the single reason a RENDERED report still needed the SQL console. These pin the
+    // wire type that replaced it.
+    [Fact]
+    public async Task GetScores_ReturnsTypedVerdictsNewestFirstWithFindingsSplit()
+    {
+        _store.InitializeRun(RunId, "cps-test", _dir, null, null);
+        // WriteScore joins the verdict's findings with "\n" (VerdictEngine does exactly this), so the
+        // endpoint has to split them back — a client must never be handed a blob to parse.
+        _store.WriteScore(RunId, 2, "S1", 88, "PASS", "checkpoint S1.1 landed without an evidence path");
+        _store.WriteScore(RunId, 11, "S1", 66, "WARN", "gate cache key ignores the tier\nno test covers the miss path");
+        var (server, port) = StartServer();
+        try
+        {
+            var resp = await _http.GetAsync($"http://127.0.0.1:{port}/scores");
             Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
             using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
-            var rows = doc.RootElement.GetProperty("rows");
-            Assert.Equal(1, rows.GetArrayLength());
-            var values = rows[0].GetProperty("values");
-            Assert.Equal(RunId, values[0].GetString());
-            Assert.Equal("cps-test", values[1].GetString());
+            var scores = doc.RootElement.GetProperty("scores");
+            Assert.Equal(2, scores.GetArrayLength());
+
+            // Newest session first, matching /sessions.
+            var latest = scores[0];
+            Assert.Equal(11, latest.GetProperty("sessionNumber").GetInt32());
+            Assert.Equal("S1", latest.GetProperty("stageId").GetString());
+            Assert.Equal(66, latest.GetProperty("score").GetInt32());
+            Assert.Equal("WARN", latest.GetProperty("verdict").GetString());
+            Assert.Equal(80, latest.GetProperty("threshold").GetInt32());
+            Assert.False(latest.GetProperty("passed").GetBoolean());
+            var findings = latest.GetProperty("findings");
+            Assert.Equal(2, findings.GetArrayLength());
+            Assert.Equal("gate cache key ignores the tier", findings[0].GetString());
+
+            var older = scores[1];
+            Assert.Equal(2, older.GetProperty("sessionNumber").GetInt32());
+            Assert.True(older.GetProperty("passed").GetBoolean());
+            Assert.Equal(1, older.GetProperty("findings").GetArrayLength());
+        }
+        finally { server.Dispose(); }
+    }
+
+    // The bar is per stage. A client that derived "did it pass" from a hardcoded 80 — which is all the
+    // canned SELECT's three columns allowed — would disagree with the run's own verdict here.
+    [Fact]
+    public async Task GetScores_ResolvesTheThresholdFromTheStagesOwnQaDial()
+    {
+        _store.InitializeRun(RunId, "cps-test", _dir, null, null);
+        _plan.Stages.Add(new StageConfig
+        {
+            Id = "S2",
+            Title = "Strict stage",
+            Sessions = 1,
+            Qa = new Conductor.Planning.QaRule { Mode = "everySession", VerifierThreshold = 95 },
+        });
+        _store.WriteScore(RunId, 5, "S2", 88, "PASS", "");
+        _store.WriteScore(RunId, 4, "S1", 88, "PASS", "");
+        var (server, port) = StartServer();
+        try
+        {
+            using var doc = JsonDocument.Parse(
+                await _http.GetStringAsync($"http://127.0.0.1:{port}/scores"));
+            var scores = doc.RootElement.GetProperty("scores");
+
+            var strict = scores[0];
+            Assert.Equal("S2", strict.GetProperty("stageId").GetString());
+            Assert.Equal(95, strict.GetProperty("threshold").GetInt32());
+            Assert.False(strict.GetProperty("passed").GetBoolean());
+            // An empty findings column is an empty list, not a one-element list holding "".
+            Assert.Equal(0, strict.GetProperty("findings").GetArrayLength());
+
+            var lenient = scores[1];
+            Assert.Equal("S1", lenient.GetProperty("stageId").GetString());
+            Assert.Equal(80, lenient.GetProperty("threshold").GetInt32());
+            Assert.True(lenient.GetProperty("passed").GetBoolean());
+        }
+        finally { server.Dispose(); }
+    }
+
+    [Fact]
+    public async Task GetScores_ReturnsAnEmptyListWhenNothingWasVerified()
+    {
+        _store.InitializeRun(RunId, "cps-test", _dir, null, null);
+        var (server, port) = StartServer();
+        try
+        {
+            using var doc = JsonDocument.Parse(
+                await _http.GetStringAsync($"http://127.0.0.1:{port}/scores"));
+            Assert.Equal(0, doc.RootElement.GetProperty("scores").GetArrayLength());
         }
         finally { server.Dispose(); }
     }

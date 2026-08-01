@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Channels;
+using Conductor.Core.Hosting;
 using Conductor.Core.Planning;
 using Conductor.Core.Events;
 using Conductor.Core.Store;
@@ -20,6 +21,15 @@ namespace Conductor.Core.Integrations;
 /// or the bot token env-var is missing, the service is a no-op.</summary>
 public interface ITelegramService
 {
+    /// <summary>SF0.1 / FU-OWNER-12: <c>null</c> when a push from this run will actually be
+    /// delivered, else the missing half in <see cref="TelegramReadiness"/>' own words — the same
+    /// sentence <c>doctor</c> and <c>GET /telegram/status</c> print, so the surfaces cannot drift
+    /// (SC1.2's same-words requirement). Exists because a run said NOTHING about notifications at
+    /// startup: <c>grep -ci telegram .conductor/conductor.log</c> returned 0 on a live run, so an
+    /// operator watching a silent chat could not tell "nothing happened" from "nothing can be
+    /// delivered". The run log now answers that once, unasked.</summary>
+    string? DeliveryBlocker { get; }
+
     Task PushAsync(string message, CancellationToken ct = default);
     Task PushWithKeyboardAsync(string message, IReadOnlyList<(string Text, string CallbackData)> buttons,
         CancellationToken ct = default);
@@ -27,7 +37,7 @@ public interface ITelegramService
         string? resultSummary, decimal? costUsd, decimal? score, CancellationToken ct = default);
 }
 
-public sealed partial class TelegramService : IHostedService, ITelegramService, IDisposable
+public sealed partial class TelegramService : IHostedService, ITelegramService, IReportsStartOutcome, IDisposable
 {
     internal static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -116,7 +126,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
     /// <summary>Env var wins (unchanged, existing behavior); falls back to the M8.2 local secrets
     /// file (SecretsStore) so the token can also be typed into the Face's guided setup instead of
     /// set as an environment variable.</summary>
-    private static string? ResolveToken(PlanConfig plan)
+    internal static string? ResolveToken(PlanConfig plan)
     {
         var fromEnv = Environment.GetEnvironmentVariable("CONDUCTOR_TELEGRAM_TOKEN")?.Trim();
         if (fromEnv is { Length: > 0 }) return fromEnv;
@@ -124,6 +134,25 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
     }
 
     internal bool IsConfigured => _cfg != null && _token != null;
+
+    /// <inheritdoc />
+    /// <remarks>Derived, never stored, and read from the service's OWN block rather than the plan's —
+    /// after a live reload only one of those describes what the next push will do. Read outside
+    /// <c>_gate</c> like <c>GET /telegram/status</c> does: this answers one log line and one HTTP
+    /// field, and taking the gate for either would let a wedged start block a status read.</remarks>
+    public string? DeliveryBlocker => TelegramReadiness.MissingHalf(
+        hasBlock: _cfg is not null, hasToken: IsConfigured,
+        allowedChatIds: _cfg?.AllowedChatIds.Count ?? 0, started: _started);
+
+    /// <summary>SF0.1 / bug 2: whether <see cref="StartAsync"/> actually started the loops. It very
+    /// often does not — no telegram block is the ordinary case — and until this existed the host
+    /// announced <c>Run services started: TelegramService</c> either way, because it named every
+    /// service it had called StartAsync on rather than every service that had started.</summary>
+    public bool IsStarted => _started;
+
+    /// <summary>The reason the loops are not running, in <see cref="TelegramReadiness"/>' words;
+    /// null once started.</summary>
+    public string? NotStartedReason => _started ? null : DeliveryBlocker;
 
     /// <summary>SC1.3: the telegram block this service is actually running on, which after a live
     /// reload is not necessarily the one any other holder of a plan reference has. Status must report
@@ -350,13 +379,34 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
         catch (ChannelClosedException) { }
     }
 
+    /// <summary>FU-OWNER-11 — the two facts a Telegram message cannot recover on its own: WHICH plan
+    /// sent it and WHICH session it belongs to. One chat can receive two machines' runs, so an
+    /// unattributed line is unreadable; and a message read hours later has no other way to be placed
+    /// in the run's history. The observed failure was the mirror image — a hand-typed operator
+    /// message was indistinguishable from an engine push, and quoted an engine version the run had
+    /// already superseded.
+    /// <para>Read off the LIVE plan and state rather than a constructor snapshot: a reload can rename
+    /// the plan (SC1.3) and the session counter moves under every message.</para></summary>
+    internal string IdentityLine
+    {
+        get
+        {
+            var name = string.IsNullOrWhiteSpace(_plan.Name) ? "conductor" : _plan.Name.Trim();
+            return FormattableString.Invariant($"<i>{EscapeHtml(name)} · s{_state.SessionCounter}</i>");
+        }
+    }
+
     internal async Task SendAsync(string chatId, string text, CancellationToken ct,
         string? keyboardJson = null)
     {
         var payload = new Dictionary<string, object>(StringComparer.Ordinal)
         {
             ["chat_id"] = chatId,
-            ["text"] = text,
+            // FU-OWNER-11: stamped HERE, the one point every push, digest, command reply and test
+            // message passes through on its way to the wire — so no existing call site can forget it
+            // and no call site added later can either. Prefixing at PushAsync would have left the
+            // /status replies, the daily digest and the token-test message anonymous.
+            ["text"] = FormattableString.Invariant($"{IdentityLine}\n{text}"),
             ["parse_mode"] = "HTML",
         };
         if (keyboardJson != null)
@@ -411,6 +461,10 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
 /// <summary>No-op stub when Telegram is not configured.</summary>
 public sealed class NoOpTelegramService : ITelegramService
 {
+    /// <summary>This process holds no Telegram service at all, which is a state of its own and not
+    /// "configured, not started" — <c>GET /telegram/status</c> reports it with the same constant.</summary>
+    public string? DeliveryBlocker => TelegramReadiness.RestartRequired;
+
     public Task PushAsync(string message, CancellationToken ct = default) => Task.CompletedTask;
     public Task PushWithKeyboardAsync(string message,
         IReadOnlyList<(string Text, string CallbackData)> buttons, CancellationToken ct = default) => Task.CompletedTask;

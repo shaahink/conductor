@@ -53,6 +53,11 @@ public interface IRunStore : IDisposable
 
     void WriteScore(string runId, int sessionNumber, string? stageId, int score, string verdict, string findings);
 
+    /// <summary>SF1.1: every verifier verdict this run recorded, newest session first. Behind
+    /// <c>GET /scores</c>, which replaced the Report tab's canned SELECT against this table — the one
+    /// report section that had no wire type and so kept the SQL console alive.</summary>
+    IReadOnlyList<ScoreRow> QueryScores(string runId);
+
     // ---------------------------------------------------------------- ledger
 
     void WriteLedger(string runId, int? sessionNumber, string? stageId, string kind, string content);
@@ -62,6 +67,10 @@ public interface IRunStore : IDisposable
     long WriteBug(string runId, string title, string? detail, string severity, string? stageId, int? foundSession);
     IReadOnlyList<BugRow> QueryBugs(string runId, string? status = null);
     bool UpdateBugStatus(string runId, long bugId, string status, int? fixedSession);
+
+    /// <summary>SF0.4: open bugs filed by EARLIER runs in this same run.db, so a bug outlives the run that
+    /// found it and not just the session. See <see cref="CarriedBugRow"/>.</summary>
+    IReadOnlyList<CarriedBugRow> QueryCarriedBugs(string currentRunId);
 
     // ---------------------------------------------------------------- handovers
 

@@ -1,10 +1,10 @@
- ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  conductor-foreman  F7 Gate caching + truth gates + spee…  ⠋ s12 $0.12 41s 3.4k/1.9k +800r  cp 2/40  run $0.42 +$0.02 oh                                   
-  h Home   a Agent   s Sessions   t Timeline   o Procs   c Console   e Templates   p Plan   r Report   k Knowledge   g Telegram   b Kanban   d Dev                                                      
+ ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + truth gates + spee…  ⠋ s12 $0.12 41s 3.4k/1.9k +800r  cp 2/40  run $0.42 +$0.02 oh  ⎇ feat/gate-caching ↑3↓1 ●4  v0.2.3-alpha.0.20      
+  h Home   a Agent   s History   o Procs   e Templates   p Plan   r Report   k Knowledge   g Telegram   b Kanban                                                                                        
                                      │                                                                                                                                                                  
- ▶ PLAN                              │  Server                                                                                                                                                          
- ✓ F0 3/3 Foundations                │  mode       live                                                                                                                                                 
- ✓ F6 5/5 Ink TUI v1                 │  url        http://127.0.0.1:4317                                                                                                                                
- ● F7 2/5 Gate caching + … 1× $0.30  │  streams    ● events   ● transcript                                                                                                                              
+ ▶ PLAN  n× attempts                 │  Server                                                                                                                                                          
+ ✓ F0 3/3 Foundations                │  engine     running — answering on http://127.0.0.1:4317                                                                                                         
+ ✓ F6 5/5 Ink TUI v1                 │  streams    ● events   ● transcript                                                                                                                              
+ ● F7 2/5 Gate caching + … 1× $0.30  │  build      v0.2.3-alpha.0.20  7d2b1e378ae3  ·  face d500f00a1b2c                                                                                                
    ✓ F7.1 Plan import                │                                                                                                                                                                  
    ✓ F7.2 Re-import diff             │  Run                                                                                                                                                             
    ● F7.3 Truth-gate tier            │  plan       conductor-foreman                                                                                                                                    
@@ -19,32 +19,32 @@
    ✓ Add truth-tier config to Gat…   │                                                                                                                                                                  
    ● Wire RunDb.GetLastPassingGat…   │  Workspace                                                                                                                                                       
    ○ Cache gate results by (name,…   │  the working directory every session edits                                                                                                                       
-                                     │  repo       C:\Code\conductor                                                                                                                                    
-                                     │  plan file  C:\Code\conductor\plans\conductor-foreman.plan.json                                                                                                  
+                                     │  repo       C:/Code/conductor                                                                                                                                    
+                                     │  plan file  plans/conductor-foreman.plan.json                                                                                                                    
                                      │  tracker    CONDUCTOR-VNEXT-PLAN.md                                                                                                                              
-                                     │  state dir  C:\Code\conductor\.conductor                                                                                                                         
+                                     │  state dir  .conductor                                                                                                                                           
+                                     │                                                                                                                                                                  
+                                     │  Git                                                                                                                                                             
+                                     │  branch     feat/gate-caching                                                                                                                                    
+                                     │  upstream   origin/feat/gate-caching  3 ahead · 1 behind                                                                                                         
+                                     │  head       9f2c1ab  feat(gates): key the cache by (name, tier, sha)                                                                                             
+                                     │  tree       4 changes uncommitted                                                                                                                                
+                                     │  changes    M src/Core/GateCache.cs, M src/Core/RunDb.cs, M tests/GateCacheTests.cs, ?? notes.md                                                                 
                                      │                                                                                                                                                                  
                                      │  Next steps                                                                                                                                                      
                                      │    a  watch the live agent — it is working right now                                                                                                             
                                      │    r  read the run report                                                                                                                                        
                                      │    ?  see every key                                                                                                                                              
                                      │                                                                                                                                                                  
+                                     │  Wiring                                                                                                                                                          
+                                     │  token      present                                                                                                                                              
+                                     │  seq        events 0 · transcript 0 · console 0                                                                                                                  
+                                     │  poll       state 1s · spinner 120ms · toast anim 33ms                                                                                                           
+                                     │  run id     demo-run-id                                                                                                                                          
                                      │                                                                                                                                                                  
                                      │                                                                                                                                                                  
                                      │                                                                                                                                                                  
                                      │                                                                                                                                                                  
                                      │                                                                                                                                                                  
                                      │                                                                                                                                                                  
-                                     │                                                                                                                                                                  
-                                     │                                                                                                                                                                  
-                                     │                                                                                                                                                                  
-                                     │                                                                                                                                                                  
-                                     │                                                                                                                                                                  
-                                     │                                                                                                                                                                  
-                                     │                                                                                                                                                                  
-                                     │                                                                                                                                                                  
-                                     │                                                                                                                                                                  
-                                     │                                                                                                                                                                  
-                                     │                                                                                                                                                                  
-                                     │                                                                                                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   a agent · r report · : commands · ? keys                                                                                                    
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   a agent · r report · w owner queue · ? keys                                                                                                 

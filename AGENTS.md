@@ -338,7 +338,10 @@ the owner can watch and redirect. `conductor run` is NOT used for this work.
 - **`agent.tokenCeiling` is dead** — enforced nowhere; the real per-session rollover knob is
   `limits.maxSessionTokens` (null = **off by default**; on-cross → `RolledOver`, handoff written, next
   session fresh, **no attempt burned**). `softBreakRatio` (80% nudge) only fires when maxSessionTokens is
-  set. P0 deletes tokenCeiling; P5 surfaces the real knob.
+  set. P0 deletes tokenCeiling; P5 surfaces the real knob. **B13 made both rails real**: the ceiling is
+  enforced live rather than read after the agent exits, the nudge is carried into the running session by
+  a `PostToolUse` hook instead of being written to a file nobody read, and a plan edit re-applies itself
+  at the session boundary instead of waiting for someone to remember `plan reload`.
 - **The pipeline is already a data-driven workflow engine** (deliver-verify / big-dev-then-big-audit /
   docs-only / spike + RunIf/SkipIf + per-stage overrides). The P-series surfaces + decouples it.
 - **Agent↔session↔task is stage-sequential** (one session = first not-done checkpoint of the current
@@ -705,8 +708,8 @@ verify against the real thing without spending on a real LLM session:
   `store.Emit(new RunStarted{...})` / `new StageEntered{...}` / `new GateFinished{...}` for the
   event-log-derived parts of `/state`, and a `TranscriptLog` for `/transcript/current`. Note `/state`'s
   `Gates`/`TotalCostUsd` are folded from the **event log**, not the `gates`/`costs` SQL tables directly
-  — seeding only the SQL tables (for `/report/query`, `/sessions`, `/processes`) without matching
-  events will correctly leave `/state` showing zero cost / no gates. That's expected, not a bug.
+  — seeding only the SQL tables (for `/sessions`, `/scores`, `/processes`) without matching events
+  will correctly leave `/state` showing zero cost / no gates. That's expected, not a bug.
 - Write this as a throwaway xUnit `[Fact]` in `tests/Conductor.Tests/` (reuses the project's
   references — no new csproj needed) that starts the server, writes its port to a temp file, then
   `await Task.Delay(...)` for long enough to drive the Go side against it. Run it with

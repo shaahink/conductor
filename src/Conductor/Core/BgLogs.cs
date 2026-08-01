@@ -20,7 +20,7 @@ namespace Conductor.Core;
 /// the same instant is written to the pids row, so pid → log is still an exact lookup rather than a
 /// guess (<see cref="Resolve"/>). Legacy <c>{purpose}-{pid}.log</c> files still resolve.
 /// </summary>
-public static class BgLogs
+public static partial class BgLogs
 {
     /// <summary>Compact, sortable, filename-safe UTC stamp.</summary>
     public const string StampFormat = "yyyyMMdd-HHmmssfff";
@@ -116,6 +116,15 @@ public static class BgLogs
     /// A spawn whose output the OS writes to <paramref name="logPath"/> — no in-process pump, so it
     /// survives the launcher exiting a millisecond later. The tracked pid is the shell's; every
     /// kill path already tree-kills, so the real child dies with it.
+    ///
+    /// <para>SF0.3 (bug #12): the three standard streams are redirected to handles THIS process owns,
+    /// and <see cref="DetachStandardStreams"/> closes them the moment the child is up. Not to capture
+    /// anything — the log is written by the shell's own <c>&gt;</c>, which is the whole point of
+    /// W3.3's fix and is unchanged — but to stop the launcher's console handles being INHERITED by a
+    /// process that outlives it. A detached child holding the caller's stdout means a pipe on
+    /// <c>conductor bg start</c> gets no EOF until the background job finishes, so the one command
+    /// whose promise is "this returns immediately" blocked for the full length of the work. It also
+    /// stops a detached child eating keystrokes from the caller's stdin.</para>
     /// </summary>
     public static ProcessStartInfo RedirectedSpawn(string exe, IReadOnlyList<string> args, string workingDir, string logPath)
     {
@@ -125,6 +134,9 @@ public static class BgLogs
             WorkingDirectory = workingDir,
             UseShellExecute = false,
             CreateNoWindow = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            RedirectStandardInput = true,
         };
 
         if (OperatingSystem.IsWindows())
@@ -141,6 +153,23 @@ public static class BgLogs
             psi.ArgumentList.Add($"exec {PosixCommandLine(exe, args)} > {PosixQuote(logPath)} 2>&1");
         }
         return psi;
+    }
+
+    /// <summary>
+    /// SF0.3 (bug #12): let go of the pipes <see cref="RedirectedSpawn"/> created. Every caller starts
+    /// a child it deliberately does not wait for, so nothing here ever reads them — leaving them open
+    /// would only swap an inherited-handle leak for a pipe-buffer one. Closing our ends leaves the
+    /// child writing into a broken pipe, which is harmless: the shell redirects the real command's
+    /// stdout and stderr to the log file, and even the shell's own "not recognized" error goes there
+    /// (measured), so nothing an operator needs is on these streams. Stdin closes to EOF, which is the
+    /// honest answer to a detached child that asks the console a question nobody will see.
+    /// </summary>
+    public static void DetachStandardStreams(Process proc)
+    {
+        ArgumentNullException.ThrowIfNull(proc);
+        try { proc.StandardInput.Close(); } catch (InvalidOperationException) { }
+        try { proc.StandardOutput.Close(); } catch (InvalidOperationException) { }
+        try { proc.StandardError.Close(); } catch (InvalidOperationException) { }
     }
 
     internal static string WindowsCommandLine(string exe, IReadOnlyList<string> args) =>

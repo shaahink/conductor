@@ -246,3 +246,23 @@ is something I watched behave correctly.
 Items 2, 4, 6 and 7 are all small and all in the same area: **what the engine tells a person who is
 watching it**. The run's actual decision-making was sound throughout — 13 stages, 13 correct
 verdicts. The gap is between what conductor knows and what it says.
+
+---
+
+## Closure ledger (SF7.1, 2026-08-01)
+
+Every numbered finding above, and the commit that answered it. Measured from the commits — `c3e0813`
+and `1ce4ba7` both cite "sk #3" in their own bodies — not from the era spec's Appendix B index.
+
+| # | Finding | Stage | Commit | What closed it |
+|---|---|---|---|---|
+| 1 | An external rate limit burns paid sessions re-reading a clock | SC5.1 | `ac70123` | A session says `--blocked-until <iso>` with a reason and the engine sleeps until then, spawning exactly one more session; no attempt is burned and the reason is handed to the session that wakes up |
+| 2 | "FULL battery green" logged when no battery exists | SC2.2 | `603fbbb` | `GateRunner.ConfirmationBasis` decides that line from the plan's stage-scoped gate set AND the battery result, in three honest states: gates GREEN naming them, no gates configured for this stage, gates RED confirmed anyway. `doctor` now warns and names stages with no battery |
+| 3 | NoProgress on sibling-only delivery | SC4.2 + SC4.3 | `1ce4ba7` + `c3e0813` | Two halves, and **Appendix B names only the first.** The green condition now reads workCommits OR newlyDone OR stageComplete, so a session that claimed a checkpoint and committed nothing scores Advanced (`1ce4ba7`); and plans declare `satelliteRepos`, whose start heads the verdict diffs beside the primary's, so a session that committed only next door logs `commits 1 (incl. 1 in satellite repo(s): ...)` (`c3e0813`). A satellite path that is missing or is not a git repo now FAILS doctor by name |
+| 4 | The gate cache is keyed on the anchor repo | SC4.3 | `c3e0813` | The cache key is the gate's own world rather than this repo's HEAD, so a gate whose cwd is a sibling checkout is no longer served its old pass after that checkout changed |
+| 5 | `/state` cost aggregates lag until the verdict | SC2.3 | `55da220` | The live fold reads a `TokenDelta` from both providers, deduped per session, priced at the run's own learned rate — see devcontext #1 |
+| 6 | Nothing survives the engine's exit | SC2.4 | `87d7fcd` | `CompletePlan` writes `.conductor/RUN-SUMMARY.md` from `run.db` — plan, wall clock, sessions by kind, per-stage attempts and cost, spend vs cap, and every session that did not end Advanced — and `conductor report` opens `run.db` offline instead of short-circuiting to empty |
+| 7 | Budget projection against `maxRunCostUsd` is manual | SC2.3 | `55da220` | `/state` carries the budget block every surface was deriving wrongly: `costSpent`, `costCap`, `costRemaining`, `meanSessionCost`, `checkpointsRemaining`, and window vs lifetime. An owner approval stamps `budgetWindowStartedUtc` and logs what it forgave, so the window a cap is measured against is stated rather than inferred |
+
+The proposal table above scored items 2, 4, 6 and 7 as small and in the same area — what the engine
+tells a person watching it. All four landed, along with 1, 3 and 5.
