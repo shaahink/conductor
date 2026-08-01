@@ -1,10 +1,10 @@
 ﻿# Conductor — Sarban face - the watcher and the surfaces run report
 
-_Updated 2026-08-01 00:39 UTC · branch `feat/sarban` · HEAD `6d2c024`_
+_Updated 2026-08-01 00:54 UTC · branch `feat/sarban` · HEAD `3dc1cd8`_
 
 **Status:** Idle
-**Stage:** SF2 — The face tells the truth kindly - state, time, money · attempts used 0 · working ▸ SF2.2
-**Checkpoints:** 8/24 done · **Sessions run:** 10 · **Cost:** $121.8022 (agent $121.7539 + gates $0.0483) · **Tokens:** 1,884,817 in / 678,492 out
+**Stage:** SF2 — The face tells the truth kindly - state, time, money · attempts used 0 · working ▸ SF2.3
+**Checkpoints:** 9/24 done · **Sessions run:** 11 · **Cost:** $128.1099 (agent $128.0534 + gates $0.0565) · **Tokens:** 2,014,739 in / 727,681 out
 **Confirmed phases:** SF0, SF1
 
 ## Stage progress
@@ -13,7 +13,7 @@ _Updated 2026-08-01 00:39 UTC · branch `feat/sarban` · HEAD `6d2c024`_
 |---|---|---|---|
 | SF0 | The ledger closes - the core run's leftovers | ██████████ 4/4 | confirmed ✓ |
 | SF1 | The face sheds dead weight | ██████████ 3/3 | confirmed ✓ |
-| SF2 | The face tells the truth kindly - state, time, money | ███░░░░░░░ 1/3 | **← active** |
+| SF2 | The face tells the truth kindly - state, time, money | ███████░░░ 2/3 | **← active** |
 | SF3 | Reading a session becomes cheap | ░░░░░░░░░░ 0/3 | todo |
 | SF4 | The human queue is a first-class surface | ░░░░░░░░░░ 0/2 | todo |
 | SF5 | Supervision without a polling meter | ░░░░░░░░░░ 0/4 | todo |
@@ -41,12 +41,12 @@ _Updated 2026-08-01 00:39 UTC · branch `feat/sarban` · HEAD `6d2c024`_
 
 </details>
 
-<details><summary>SF2 — The face tells the truth kindly - state, time, money (1/3)</summary>
+<details><summary>SF2 — The face tells the truth kindly - state, time, money (2/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| SF2.1 | Home shows one honest connection line with age, start-a-run instructions only when no run exists, a last-run summary card when offline, one Connected definition, and consistent path casing | ✅ DONE | - |
-| SF2.2 | One shared time formatter renders local time with relative age and a date when not today; the Timeline UTC mislabel is fixed and the previously-unrendered timestamps render | ⬜ TODO | - |
+| SF2.1 | Home shows one honest connection line with age, start-a-run instructions only when no run exists, a last-run summary card when offline, one Connected definition, and consistent path casing | ✅ DONE | [`93611dd`](https://github.com/shaahink/conductor/commit/93611dd) |
+| SF2.2 | One shared time formatter renders local time with relative age and a date when not today; the Timeline UTC mislabel is fixed and the previously-unrendered timestamps render | ✅ DONE | - |
 | SF2.3 | Over-budget renders as OVER never zero-percent headroom; window and lifetime spend are distinguished; the top bar shows in-flight session cost live; the attempts marker has a legend | ⬜ TODO | - |
 
 </details>
@@ -114,16 +114,13 @@ _Updated 2026-08-01 00:39 UTC · branch `feat/sarban` · HEAD `6d2c024`_
 | 8 | SF1 | Fix | 2 | 07-31 23:41 | 0:06 | KilledByUser |  | 0 |  |  |  |  |
 | 9 | SF2 | Deliver | 1 | 08-01 00:04 | 0:15 | RolledOver |  | 0 |  | $5.5132 |  | 126,902/1,912 |
 | 10 | SF2 | Deliver | 1 | 08-01 00:20 | 0:18 | Advanced | SF2.1 | 4 | engine-fast:OK · face-fast:OK | $7.1733 | $0.0075 | 244,321/55,057 |
+| 11 | SF2 | Deliver | 1 | 08-01 00:39 | 0:13 | Advanced | SF2.2 | 3 | engine-fast:OK · face-fast:OK | $6.2995 | $0.0082 | 129,922/49,189 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-07-31 22:47:02  ▪ gate engine-fast pass [session]  (1m00s)
-07-31 22:47:02  ▪ gate face-fast pass [session]  (8.2s)
-07-31 22:47:03  • session #4 SF0 → Advanced · done SF0.4 · 3 commit(s)  (40m37s)
-07-31 22:50:35  ▪ gate engine-fast pass [phase]  (0.0s)
 07-31 22:50:35  ▪ gate face-fast pass [phase]  (0.0s)
 07-31 22:50:35  ▪ gate engine-full pass [phase]  (3m18s)
 07-31 22:50:35  ▪ gate face-full pass [phase]  (11.1s)
@@ -160,6 +157,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-01 01:20:17  • session #10 SF2 Deliver started (attempt 1/6)
 08-01 01:39:39  ▪ gate engine-fast pass [session]  (1m06s)
 08-01 01:39:39  ▪ gate face-fast pass [session]  (8.6s)
+08-01 01:39:40  • session #10 SF2 → Advanced · done SF2.1 · 4 commit(s)  (19m23s)
+08-01 01:39:40  • session #11 SF2 Deliver started (attempt 1/6)
+08-01 01:54:55  ▪ gate engine-fast pass [session]  (1m14s)
+08-01 01:54:55  ▪ gate face-fast pass [session]  (7.1s)
 ```
 
 ## Health
@@ -167,7 +168,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 10 · retries 1 (10 %) · overall Warn
+sessions 11 · retries 1 (9 %) · overall Warn
 ⚠ [context-saturation] session #3: 24,790,251 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #4: 21,397,049 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #5: 36,996,007 context tokens (≥ 20,000,000)
@@ -180,7 +181,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/sarban
-working tree: M .conductor/REPORT.md
+working tree: clean
 ```
 
 ### Commits by session
@@ -211,6 +212,10 @@ working tree: M .conductor/REPORT.md
   - [`bb58cc8`](https://github.com/shaahink/conductor/commit/bb58cc8) test(face): rebaseline every golden for the honest Home - one engine line, normalised paths, and a run that outlives its engine
   - [`2a6b1c3`](https://github.com/shaahink/conductor/commit/2a6b1c3) fix(face): the honest connection line was being truncated into a lie, and Next steps still offered a live agent with no engine
   - [`93611dd`](https://github.com/shaahink/conductor/commit/93611dd) feat(face): Home answers "what is happening and what should I do" - one honest connection line, and a run that outlives its engine
+- **s11 (SF2 Deliver)** — 3 commit(s):
+  - [`3dc1cd8`](https://github.com/shaahink/conductor/commit/3dc1cd8) docs(tracker): SF2.2 handoff - two wire time formats, one clock vocabulary, and a UTC label that was never true
+  - [`d02559c`](https://github.com/shaahink/conductor/commit/d02559c) test(face): rebaseline the nine frames the one clock vocabulary changed
+  - [`f05791b`](https://github.com/shaahink/conductor/commit/f05791b) feat(face): one clock vocabulary - a parser for both wire formats, a date when it is not today, and three timestamps that were on the wire and on no screen
 
 ## Phase handovers (audit)
 
@@ -237,26 +242,24 @@ engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: **SF2.1 is claimed DONE** with evidence at `.conductor/evidence/SF2/SF2.1-summary.md`, across four pushed commits on `feat/sarban`: `93611dd` (code+tests), `2a6b1c3` (two fixes), `bb58cc8` (14-golden rebaseline + the new `home_offline_lastrun` frame), `6d2c024` (handoff). I inherited session 9's uncommitted-but-coherent work — build/vet green, only the 4 golden tests red — and rather than restarting it I measured its gaps and closed them. The real gap was that `Model.WithStateDir` was **dead code**: `main.go:83` never called it, so the last-run card only worked if the Face happened to be watching when the engine died. Fixing the cold-start path required a measurement, not a g…
+> SESSION-RESULT: SF2.2 is claimed DONE with evidence at `.conductor/evidence/SF2/SF2.2-summary.md`, across three pushed commits on `feat/sarban` — `f05791b` (code + tests), `d02559c` (golden rebaseline of 9 frames), `3dc1cd8` (handoff). `internal/timefmt` now owns the absolute half of the Face's clock vocabulary: `Parse` accepts **both** wire formats — measured off this run's own run.db, not assumed, because ledger and bug `created_at` arrive as SQLite `datetime('now')` (`"2026-08-01 00:37:30"`, no T, no zone) while sessions/timeline are RFC3339, and an RFC3339-only reader is the likeliest reason those two columns were on the DTO and on no screen; `Stamp` shows a date only when it is not toda…
 
 ## Tracker handoff
 
 ```
-last: **SF2.1 CLAIMED** — `93611dd` code+tests, `2a6b1c3` two golden-caught fixes, `bb58cc8` rebaseline
-  (14 goldens + new `home_offline_lastrun`). Home now: ONE `Connected` writer (`setConnected`), one
-  English engine line with an age, a last-run card read from the engine's own RUN-SUMMARY.md, and
-  one path spelling. Evidence `.conductor/evidence/SF2/SF2.1-summary.md`.
-stage: **SF2 — 1 of 3 claimed.** gate: not run by me. Fast loop green: `go build/vet/test ./...` all 7
-  packages ok; `dotnet build Conductor.slnx` 0 errors (ScoreRow split to its own file).
-next: **SF2.2** — `internal/timefmt` already EXISTS and is landed (Span/Ago/Age + a pinnable `Now`
-  var); SF2.2 adds the absolute half and moves panes onto it. The Timeline UTC mislabel is
-  `tab_timeline.go:139`.
-trap: **`truncate()` silently mangles STYLED strings** — it measures with lipgloss.Width but cuts raw
-  runes, so escape bytes eat the budget. It deleted the engine line's age before I caught it in a
-  golden. Fix pattern: `homeEngineLine` in tab_home.go. Grep for `truncate(` on a `.Render()` result.
-  And: BOTH SF2.1 defects were found by READING regenerated goldens, not by a red test — the
-  rebaseline commit is the review step, so actually read the frames.
-open: same-class lies left on purpose, out of SF2.1's panels: bottom bar still offers `a agent · r
-  report` while offline (see bug **#18**), and the TOP bar shows OFFLINE beside an unqualified
-  `RUNNING` — SF2.3 touches that bar anyway. Plus **#15**, **#16**, **#17**.
+last: **SF2.2 CLAIMED** — `f05791b` code+tests, `d02559c` rebaseline (9 frames). `internal/timefmt`
+  now owns the absolute half too: `Parse`/`Clock`/`Stamp`/`StampAge`/`Duration`/`Location`. Evidence
+  `.conductor/evidence/SF2/SF2.2-summary.md`.
+stage: **SF2 — 2 of 3 claimed.** gate: not run by me. Fast loop green: `go build/vet/test ./...`
+  all 7 packages ok.
+next: **SF2.3** (money honesty). The top bar is `widgets/ticker.go` `RenderTopBar` — it already has
+  `state.SessionCostUsd` in hand at line ~103 but only renders it when `state.AgentActive`, which is
+  half of critique #4. Budget line + headroom live on Home (`tab_home.go`); the `N×` attempts marker
+  is in the sidebar (`plan.go`).
+trap: **TWO wire time formats.** ledger/bug `created_at` are SQLite `datetime('now')` —
+  `"2026-08-01 00:37:30"`, no T, no zone — while sessions/timeline are RFC3339. Always parse through
+  `timefmt.Parse`; `time.Parse(RFC3339, …)` silently renders nothing. Golden clock+zone are pinned
+  in `TestMain` now; use `pinClock`/`pinClockFunc`, never restore `timefmt.Now` to `time.Now`.
+open: bugs **#15 #16 #17 #18** still open; #18 (bottom bar offers a live agent while offline) is
+  SF2.3-adjacent since that bar is the same one showing `$0.00` beside `$13.07`.
 ```

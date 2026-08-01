@@ -4,21 +4,22 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SF2.2 CLAIMED** — `f05791b` code+tests, `d02559c` rebaseline (9 frames). `internal/timefmt`
-  now owns the absolute half too: `Parse`/`Clock`/`Stamp`/`StampAge`/`Duration`/`Location`. Evidence
-  `.conductor/evidence/SF2/SF2.2-summary.md`.
-stage: **SF2 — 2 of 3 claimed.** gate: not run by me. Fast loop green: `go build/vet/test ./...`
-  all 7 packages ok.
-next: **SF2.3** (money honesty). The top bar is `widgets/ticker.go` `RenderTopBar` — it already has
-  `state.SessionCostUsd` in hand at line ~103 but only renders it when `state.AgentActive`, which is
-  half of critique #4. Budget line + headroom live on Home (`tab_home.go`); the `N×` attempts marker
-  is in the sidebar (`plan.go`).
-trap: **TWO wire time formats.** ledger/bug `created_at` are SQLite `datetime('now')` —
-  `"2026-08-01 00:37:30"`, no T, no zone — while sessions/timeline are RFC3339. Always parse through
-  `timefmt.Parse`; `time.Parse(RFC3339, …)` silently renders nothing. Golden clock+zone are pinned
-  in `TestMain` now; use `pinClock`/`pinClockFunc`, never restore `timefmt.Now` to `time.Now`.
-open: bugs **#15 #16 #17 #18** still open; #18 (bottom bar offers a live agent while offline) is
-  SF2.3-adjacent since that bar is the same one showing `$0.00` beside `$13.07`.
+last: **SF2.3 CLAIMED** — `ef1620f` code+tests, `9cfe572` rebaseline (17 frames + 1 new).
+  Evidence `.conductor/evidence/SF2/SF2.3-summary.md`. Fast loop green: `go build/vet/test ./...`,
+  all 7 packages ok. **Stage SF2 is 3 of 3 claimed.**
+next: **SF3.1** (digest layer). Nothing in SF2 is half-done.
+finding: the Face was ignoring the ENTIRE SC2.3 budget block — ten json names on the wire since
+  SC2.3, zero hits in face-go. Before writing arithmetic on the face side, grep
+  `ControlPlaneDto.cs` for a field that already answers it; the engine computed it once on purpose.
+gap: `internal/api/demo.go` serves no budget block, so `--demo` still walks the pre-SC2.3 fallback
+  and never shows the window/lifetime/OVER rows. Golden `home_over_budget` covers them instead.
+  `meanSessionCost`/`checkpointsRemaining` are decoded but rendered nowhere yet.
+trap: one assertion was INVERTED on purpose — `over cap → 0%% headroom` was pinned as correct and
+  is the defect SF2.3 kills. It moved into `TestHomeHeadroomRendersAnOverrunAsDollarsNotZeroPercent`
+  with the opposite expectation. Nothing was skipped, relaxed or deleted.
+open: bugs **#15 #16 #17 #18** still open. **#18 is now stale-ish** — the bottom bar it complains
+  about no longer prints a $0.00 it cannot stand behind; re-read it before working it.
+
 
 ## Baseline numbers (from run.db)
 
@@ -26,7 +27,7 @@ open: bugs **#15 #16 #17 #18** still open; #18 (bottom bar offers a live agent w
 |---|---|
 | Total checkpoints | 24 |
 | Done | 1 |
-| Claimed (unconfirmed) | 7 |
+| Claimed (unconfirmed) | 8 |
 
 ## Checkpoints
 
@@ -55,7 +56,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | SF2.1 | Home shows one honest connection line with age, start-a-run instructions only when no run exists, a last-run summary card when offline, one Connected definition, and consistent path casing | DONE | 93611dd | .conductor/evidence/SF2/SF2.1-summary.md |
-| SF2.2 | One shared time formatter renders local time with relative age and a date when not today; the Timeline UTC mislabel is fixed and the previously-unrendered timestamps render | TODO | - | - |
+| SF2.2 | One shared time formatter renders local time with relative age and a date when not today; the Timeline UTC mislabel is fixed and the previously-unrendered timestamps render | DONE | f05791b | .conductor/evidence/SF2/SF2.2-summary.md |
 | SF2.3 | Over-budget renders as OVER never zero-percent headroom; window and lifetime spend are distinguished; the top bar shows in-flight session cost live; the attempts marker has a legend | TODO | - | - |
 
 ### SF3 — Reading a session becomes cheap
