@@ -2,25 +2,25 @@
 
 **Plan:** Sarban face - the watcher and the surfaces | **Branch:** `feat/sarban` | **Design doc:** docs/history/CONDUCTOR-SARBAN.md
 
-## Handoff (overwrite this block, ≤12 lines, no history)
+## Handoff (overwrite this block, ≤ 12 lines, no history)
 
-last: **SF1.3 CLAIMED** — twelve tabs are ten. `8f6b12c` ADR-0004 (the note, committed BEFORE code),
-  `378cf9c` code+tests, `8aabbd3` goldens, `bfb4947` demo drive + CLI help. Console folded into Agent
-  as a raw-stream mode (strip kept); Sessions+Timeline merged into **History**, two views on `←/→`.
-  `c`/`t` are NOT dead like `d` — they open the fold. Evidence `.conductor/evidence/SF1/SF1.3-summary.md`.
-stage: **SF1 — 3 of 3 claimed, stage complete.** gate: not run by me. Fast loop green (build/vet/test
-  all packages ok, 51/51 goldens, the eleven SF1.3 tests PASS).
-next: **SF2.1** — Home's one honest connection line. Note before you start: Home is the tab most
-  affected by SF1.3 (its Next steps still say `a`/`r`), and `historyRows()` in view.go is the pattern
-  for a pane that owes a row to a header.
-trap: **`tabKey` is no longer the whole keyboard story.** `foldedTabKey` in model.go is the second
-  half, and the help legend has a hand-maintained **folded** row. Change one of the three and
-  `TestTabMnemonicsAreUnique` / `TestHelpLegendNamesEveryTabItsRealMnemonic` will catch it — trust
-  them, do not edit them. Also: the face binary CANNOT be driven headless here (no TTY, winpty fails
-  too); use `TestDemoDriveOfTheConsolidatedTabs` as the template for face live proof.
-open: bug **#18** (new, low) — the bottom bar hard-clips a pane's contextual help with NO ellipsis, so
-  the Agent tab advertised a nonexistent `end l` key for months and a golden pinned it as correct.
-  Width-tiering fix belongs in SF2. Plus **#15**, **#16**, **#17**, none hit this session.
+last: **SF2.1 CLAIMED** — `93611dd` code+tests, `2a6b1c3` two golden-caught fixes, `bb58cc8` rebaseline
+  (14 goldens + new `home_offline_lastrun`). Home now: ONE `Connected` writer (`setConnected`), one
+  English engine line with an age, a last-run card read from the engine's own RUN-SUMMARY.md, and
+  one path spelling. Evidence `.conductor/evidence/SF2/SF2.1-summary.md`.
+stage: **SF2 — 1 of 3 claimed.** gate: not run by me. Fast loop green: `go build/vet/test ./...` all 7
+  packages ok; `dotnet build Conductor.slnx` 0 errors (ScoreRow split to its own file).
+next: **SF2.2** — `internal/timefmt` already EXISTS and is landed (Span/Ago/Age + a pinnable `Now`
+  var); SF2.2 adds the absolute half and moves panes onto it. The Timeline UTC mislabel is
+  `tab_timeline.go:139`.
+trap: **`truncate()` silently mangles STYLED strings** — it measures with lipgloss.Width but cuts raw
+  runes, so escape bytes eat the budget. It deleted the engine line's age before I caught it in a
+  golden. Fix pattern: `homeEngineLine` in tab_home.go. Grep for `truncate(` on a `.Render()` result.
+  And: BOTH SF2.1 defects were found by READING regenerated goldens, not by a red test — the
+  rebaseline commit is the review step, so actually read the frames.
+open: same-class lies left on purpose, out of SF2.1's panels: bottom bar still offers `a agent · r
+  report` while offline (see bug **#18**), and the TOP bar shows OFFLINE beside an unqualified
+  `RUNNING` — SF2.3 touches that bar anyway. Plus **#15**, **#16**, **#17**.
 
 
 ## Baseline numbers (from run.db)
@@ -28,7 +28,7 @@ open: bug **#18** (new, low) — the bottom bar hard-clips a pane's contextual h
 | Metric | Value |
 |---|---|
 | Total checkpoints | 24 |
-| Done | 0 |
+| Done | 1 |
 | Claimed (unconfirmed) | 6 |
 
 ## Checkpoints
@@ -50,14 +50,14 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | SF1.1 | Verifier scores are served by a real endpoint and the Report tab renders them without SQL | DONE | 9d993ef | engine-fast:OK · face-fast:OK |
-| SF1.2 | The Dev SQL console and its traces are gone — tab, /report/query, report --query — while MCP run_query stays for chat and the two non-SQL Dev panels are re-homed, not deleted | DONE | 8f96ef2 | engine-fast:OK · face-fast:OK |
-| SF1.3 | The face has at most ten tabs after a written consolidation note: Console folds into Agent as a raw toggle, Timeline merges with Sessions into one history surface; keys, help and goldens regenerated | TODO | - | - |
+| SF1.2 | The Dev SQL console and its traces are gone — tab, /report/query, report --query — while MCP run_query stays for chat and the two non-SQL Dev panels are re-homed, not deleted | DONE ✓ | 8f96ef2 | engine-fast:OK · face-fast:OK |
+| SF1.3 | The face has at most ten tabs after a written consolidation note: Console folds into Agent as a raw toggle, Timeline merges with Sessions into one history surface; keys, help and goldens regenerated | DONE | - | .conductor/evidence/SF1/SF1.3-summary.md |
 
 ### SF2 — The face tells the truth kindly - state, time, money
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| SF2.1 | Home shows one honest connection line with age, start-a-run instructions only when no run exists, a last-run summary card when offline, one Connected definition, and consistent path casing | TODO | - | - |
+| SF2.1 | Home shows one honest connection line with age, start-a-run instructions only when no run exists, a last-run summary card when offline, one Connected definition, and consistent path casing | IN PROGRESS | - | - |
 | SF2.2 | One shared time formatter renders local time with relative age and a date when not today; the Timeline UTC mislabel is fixed and the previously-unrendered timestamps render | TODO | - | - |
 | SF2.3 | Over-budget renders as OVER never zero-percent headroom; window and lifetime spend are distinguished; the top bar shows in-flight session cost live; the attempts marker has a legend | TODO | - | - |
 
