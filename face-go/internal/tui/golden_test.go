@@ -532,6 +532,34 @@ func openKanbanDetailGolden(m tea.Model) tea.Model {
 	return m
 }
 
+// ownerQueueGoldenFixture is the SF4.1 rig's real /owner/queue payload, transcribed field for field
+// from what a live engine served (see .conductor/evidence/SF4/sf42-live-frames.txt) so the recorded
+// frames and the live capture tell the same story rather than two convenient ones. All four kinds,
+// both age branches — two dated, two the engine cannot date at all — and both command branches,
+// including the wait whose `command` is empty because the clock clears it and nobody types anything.
+func ownerQueueGoldenFixture() *api.OwnerQueueDto {
+	human, wait := int64(5175), int64(4815)
+	detail := func(s string) *string { return &s }
+	return &api.OwnerQueueDto{
+		Count: 4, GeneratedUtc: "2026-07-15T10:07:30Z",
+		Items: []api.OwnerQueueItemDto{
+			{Id: "human-1", Kind: "human", Title: "which payment provider do we sign with - Stripe or Adyen?",
+				Unblocks: "the run — every remaining session on P1 and after it", Command: "conductor resume",
+				AgeSeconds: &human, Detail: detail("answer it, delete the HUMAN: line from TRACKER.md's handoff block, then resume")},
+			{Id: "wait", Kind: "wait", Title: "waiting until 03:00:00Z — anthropic usage window resets at 03:00Z",
+				Unblocks: "nothing you can hurry — the next session spawns by itself when the window opens",
+				Command:  "", AgeSeconds: &wait,
+				Detail: detail("no command clears this; it is here so a sleeping run does not read as a dead one")},
+			{Id: "checkpoint-P1.2", Kind: "checkpoint", Title: "P1.2 is BLOCKED — Wire the payment provider",
+				Unblocks: "stage P1 — a blocked card holds it open", Command: "conductor task --todo P1.2",
+				Detail: detail("unblock it to put it back in front of an agent, or retire it with task --skipped")},
+			{Id: "gate-P2", Kind: "ownerGate", Title: "approve P2 — Publish to the registry (ahead of the run)",
+				Unblocks: "stage P2 and everything after it", Command: "conductor approve",
+				Detail: detail("not blocking yet; it will park here even when every gate is green")},
+		},
+	}
+}
+
 func TestGolden(t *testing.T) {
 	cases := []struct {
 		name string
@@ -749,6 +777,34 @@ func TestGolden(t *testing.T) {
 				AllowedChatIds: []string{"111222333"}, PollIntervalSeconds: 4,
 				WillDeliver: false, WillDeliverReason: &reason, RestartRequired: true,
 			}})
+			return m
+		}},
+		// FU-OWNER-13, the Go half. Between a saved plan edit and the next session boundary the engine's
+		// in-memory PlanConfig still has no telegram block, so every other field on this payload reads
+		// exactly as it does for a plan nobody ever configured — which is how a block saved thirty
+		// seconds ago came back as "not configured", advising the owner to add what they had just
+		// added. reloadPending is the one field that tells the two apart, and this frame is what it
+		// has to buy: WAITING, not unconfigured.
+		{"telegram_reload_pending", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("g"))
+			m, _ = m.Update(MsgTelegramStatusUpdated{Status: &api.TelegramStatusDto{
+				Configured: false, Started: false, HasToken: false,
+				AllowedChatIds: []string{}, PollIntervalSeconds: 4,
+				WillDeliver: false, ReloadPending: true,
+			}})
+			return m
+		}},
+		// SF4.2: the owner queue on the landing. Three entries and a hand-off to `w`, because Home
+		// cannot scroll and a landing that is only a queue has stopped being a landing.
+		{"home_owner_queue", func(m tea.Model) tea.Model {
+			m, _ = m.Update(MsgOwnerQueueUpdated{Queue: ownerQueueGoldenFixture()})
+			return m
+		}},
+		// SF4.2: the uncapped view behind `w`. Every kind the engine emits, both age branches, and both
+		// command branches are in one frame on purpose — this is the pane a regression would hide in.
+		{"owner_queue_pane", func(m tea.Model) tea.Model {
+			m, _ = m.Update(MsgOwnerQueueUpdated{Queue: ownerQueueGoldenFixture()})
+			m, _ = m.Update(keyMsg("w"))
 			return m
 		}},
 		// SF1.3: the Console tab folded into Agent, so this pins the RAW MODE of the Agent tab — the

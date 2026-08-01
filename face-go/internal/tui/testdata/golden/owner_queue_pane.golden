@@ -1,0 +1,34 @@
+ ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7  ⠋ s12 $0.12 41s  cp 2/40  run $0.42  ⎇ feat/gate… ↑3↓1 ●    
+  h Home  a s o e p r k g b                                                                                   
+                           │                                                                                  
+ ▶ PLAN  n× attempts       │  Owner queue  4 items only you can clear  ·  read 30s ago                        
+ ✓ F0 3/3 Foundations      │                                                                                  
+ ✓ F6 5/5 Ink TUI v1       │   1. ◆ which payment provider do we sign with - Stripe or Adyen?                 
+ ● F7 2/5 Gate … 1× $0.30  │       human · 1h ago                                                             
+   ✓ F7.1 Plan import      │       unblocks the run — every remaining session on P1 and after it              
+   ✓ F7.2 Re-import diff   │       answer it, delete the HUMAN: line from TRACKER.md's handoff block, then r  
+   ● F7.3 Truth-gate tier  │       $ conductor resume                                                         
+ ○ F8 0/4 conductor chat…  │                                                                                  
+                           │   2. ◷ waiting until 03:00:00Z — anthropic usage window resets at 03:00Z         
+ ── GATES ──               │       wait · 1h ago                                                              
+   ✓ build                 │       unblocks nothing you can hurry — the next session spawns by itself when t  
+   ● test 4s               │       no command clears this; it is here so a sleeping run does not read as a d  
+   ○ lint                  │       clears itself — nothing to type                                            
+                           │                                                                                  
+ ── TASKS ──               │   3. ◇ P1.2 is BLOCKED — Wire the payment provider                               
+   ✓ Add truth-tier con…   │       checkpoint · age unknown                                                   
+   ● Wire RunDb.GetLast…   │       unblocks stage P1 — a blocked card holds it open                           
+   ○ Cache gate results…   │       unblock it to put it back in front of an agent, or retire it with task --  
+                           │       $ conductor task --todo P1.2                                               
+                           │                                                                                  
+                           │   4. ◆ approve P2 — Publish to the registry (ahead of the run)                   
+                           │       ownerGate · age unknown                                                    
+                           │       unblocks stage P2 and everything after it                                  
+                           │       not blocking yet; it will park here even when every gate is green          
+                           │       $ conductor approve                                                        
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+                           │                                                                                  
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   w/esc back to Home                                

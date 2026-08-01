@@ -238,6 +238,37 @@ func TestTelegramReloadPendingReadsAsWaitingNotUnconfigured(t *testing.T) {
 	}
 }
 
+// The status line was only the first layer. Underneath it sits a paragraph that reads the SAME
+// Configured=false, and it kept telling the owner to "start below; saving a token or chat id here
+// configures it for you" — the edit the engine had just accepted and was holding. The test above
+// missed it because it looked for lowercase "not configured" and the paragraph opens with a capital
+// N, which is exactly how a self-contradicting frame passes a green suite. Folded case here, and the
+// advice itself named, so neither half can drift back.
+func TestTelegramReloadPendingDropsTheConfigureItAdvice(t *testing.T) {
+	var tm tea.Model = newGoldenModel(140, 40)
+	tm, _ = tm.Update(keyMsg("g"))
+	tm, _ = tm.Update(MsgTelegramStatusUpdated{Status: &api.TelegramStatusDto{
+		Configured: false, Started: false, HasToken: false, PollIntervalSeconds: 4,
+		WillDeliver: false, ReloadPending: true,
+	}})
+	frame := stripANSI(tm.(Model).View().Content)
+
+	if strings.Contains(strings.ToLower(frame), "not configured") {
+		t.Errorf("a queued reload still renders the words \"not configured\" somewhere in the frame:\n%s", frame)
+	}
+	if strings.Contains(frame, "configures it for you") {
+		t.Errorf("the frame still advises saving the token the engine is already holding:\n%s", frame)
+	}
+	if !strings.Contains(frame, "still the pre-edit plan") {
+		t.Errorf("the frame must explain that the fields below are stale, not empty:\n%s", frame)
+	}
+	// The flag is the engine's general "a plan reload is queued" (_reloadQueued), not "your telegram
+	// edit is queued", so the copy must not claim whose edit it was.
+	if strings.Contains(frame, "Your edit") {
+		t.Errorf("reloadPending does not identify the edit; the copy must not assert it was the owner's telegram save:\n%s", frame)
+	}
+}
+
 // The same flag over a LIVE block does not become a verdict: a queued reload does not supply a
 // missing token, so "will not deliver yet" stands and only the save is acknowledged.
 func TestTelegramReloadPendingDoesNotMaskARealBlocker(t *testing.T) {

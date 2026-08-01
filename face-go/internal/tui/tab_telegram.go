@@ -187,9 +187,27 @@ func (m Model) renderTelegramPane() (string, string) {
 	lines := []string{m.renderTelegramStatusLine(s)}
 
 	if !s.Configured {
-		lines = append(lines, "",
-			subtleStyle.Render("Not configured on this plan yet — that's fine, just start below;"),
-			subtleStyle.Render("saving a token or chat id here configures it for you."))
+		// FU-OWNER-13 again, one layer down from the status line. This paragraph reads the SAME
+		// Configured=false that a queued reload leaves behind, so between a saved plan edit and the
+		// next session boundary it told the owner to save a token or chat id — the edit the engine had
+		// just accepted and was holding. Fixing only the head line above would have left the advice
+		// intact and the frame still self-contradicting; the frame is what the owner reads.
+		//
+		// The wording stays careful about what the flag actually means. reloadPending is the engine's
+		// general "a plan reload is queued" (ControlPlaneServer.ReloadPending => _reloadQueued), not
+		// "your telegram block is queued" — a reload queued by an unrelated plan edit sets it too. So
+		// this says what is certainly true (an edit is held, these fields are the pre-edit plan) and
+		// lets the owner who just pressed save draw the obvious conclusion, rather than asserting
+		// whose edit it was.
+		if s.ReloadPending {
+			lines = append(lines, "",
+				subtleStyle.Render("A plan edit is saved and queued — the engine applies it at the next session"),
+				subtleStyle.Render("boundary. The fields below are still the pre-edit plan, not a missing one."))
+		} else {
+			lines = append(lines, "",
+				subtleStyle.Render("Not configured on this plan yet — that's fine, just start below;"),
+				subtleStyle.Render("saving a token or chat id here configures it for you."))
+		}
 	}
 
 	// SC1.3: the guide stays up until the engine says it will deliver — not until the last
