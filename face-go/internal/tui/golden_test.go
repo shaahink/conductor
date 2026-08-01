@@ -336,18 +336,54 @@ func fixedTasks() []api.TaskDto {
 	}
 }
 
-// kanbanFixtureTasks populates all three board columns (plus a skipped card folded into Done) —
-// the G2.2 gate wants a golden with three populated columns and the move/add affordances.
+// kanbanFixtureTasks populates all three board columns (plus a skipped card on the Done column's
+// shelf) — the G2.2 gate wants a golden with three populated columns and the move/add affordances.
+//
+// SF3.2 widened it in three ways the old fixture could not have caught: cards from a SECOND stage
+// (F8), so stage grouping and the active-stage mark are actually exercised rather than collapsing
+// into one group; a BLOCKED card, which shared the TODO column with plain todo cards and rendered
+// identically to them; and the wire's card meta (stageId/confirmed/sessionNumber/statusSinceUtc/
+// attempts), pinned against goldenNow so the ages are stable. Both done cards are here on purpose —
+// one confirmed, one only claimed — because that distinction is a rendered word, not a colour, and
+// a fixture of confirmed-only would let the claimed branch rot unseen.
 func kanbanFixtureTasks() []api.TaskDto {
 	return []api.TaskDto{
-		{TaskId: "T1", CheckpointId: "F7.3", Title: "Add truth-tier config to GateConfig", Status: "done", Source: "planner", Order: 1},
-		{TaskId: "T2", CheckpointId: "F7.3", Title: "Wire RunDb.GetLastPassingGateResult", Status: "in_progress", Source: "agent", Order: 2},
-		{TaskId: "T3", CheckpointId: "F7.4", Title: "Cache gate results by (name, tier, sha)", Status: "todo", Source: "planner", Order: 3},
+		{TaskId: "T1", CheckpointId: "F7.3", Title: "Add truth-tier config to GateConfig", Status: "done", Source: "planner", Order: 1,
+			Kind: "subtask", StageId: "F7", Confirmed: true, SessionNumber: 10, StatusSinceUtc: "2026-07-15T08:52:00Z", Attempts: 1},
+		{TaskId: "T2", CheckpointId: "F7.3", Title: "Wire RunDb.GetLastPassingGateResult", Status: "in_progress", Source: "agent", Order: 2,
+			Kind: "subtask", StageId: "F7", SessionNumber: 12, StatusSinceUtc: "2026-07-15T10:04:00Z", Attempts: 2},
+		{TaskId: "T3", CheckpointId: "F7.4", Title: "Cache gate results by (name, tier, sha)", Status: "todo", Source: "planner", Order: 3,
+			Kind: "checkpoint", StageId: "F7"},
 		{TaskId: "T4", CheckpointId: "F7.4", Title: "Add SkipIfFresh timestamp check", Status: "todo", Source: "human", Order: 4,
+			Kind: "subtask", StageId: "F7",
 			// PF3: declared paths — the detail golden shows the filled claims line.
 			Paths: []string{"src/Conductor/Core/Gating/GateCache.cs", "docs/CONDUCTOR-VNEXT-PLAN.md"}},
-		{TaskId: "T5", CheckpointId: "F7.5", Title: "Benchmark the warm path", Status: "skipped", Source: "agent", Order: 5},
+		{TaskId: "T5", CheckpointId: "F7.5", Title: "Benchmark the warm path", Status: "skipped", Source: "agent", Order: 5,
+			Kind: "subtask", StageId: "F7", SessionNumber: 11, StatusSinceUtc: "2026-07-14T10:08:00Z"},
+		{TaskId: "T6", CheckpointId: "F8.1", Title: "conductor chat over the control plane", Status: "todo", Source: "planner", Order: 6,
+			Kind: "checkpoint", StageId: "F8"},
+		{TaskId: "T7", CheckpointId: "F8.2", Title: "Telegram v2 needs a bot token", Status: "blocked", Source: "agent", Order: 7,
+			Kind: "checkpoint", StageId: "F8", SessionNumber: 12, StatusSinceUtc: "2026-07-15T09:38:00Z", Attempts: 3},
+		{TaskId: "T8", CheckpointId: "F6.5", Title: "Ink TUI parity sweep", Status: "done", Source: "agent", Order: 8,
+			Kind: "checkpoint", StageId: "F6", SessionNumber: 9, StatusSinceUtc: "2026-07-13T10:08:00Z", Attempts: 1},
 	}
+}
+
+// kanbanTallTasks is a board taller than its pane: 14 TODO cards across two stages, each two lines
+// tall, against a 34-row frame. It exists for the scroll window — the old column simply ran off the
+// bottom into the frame's height clamp, so cards disappeared with nothing on screen saying they had.
+func kanbanTallTasks() []api.TaskDto {
+	out := kanbanFixtureTasks()
+	for i := 1; i <= 10; i++ {
+		out = append(out, api.TaskDto{
+			TaskId:       fmt.Sprintf("TT%d", i),
+			CheckpointId: fmt.Sprintf("F8.%d", i+2),
+			Title:        fmt.Sprintf("deep backlog item %d", i),
+			Status:       "todo", Source: "planner", Order: 10 + i,
+			Kind: "subtask", StageId: "F8",
+		})
+	}
+	return out
 }
 
 func fixedTimeline() []api.TimelineEntryDto {
@@ -778,6 +814,25 @@ func TestGolden(t *testing.T) {
 			m, _ = m.Update(keyMsg("b"))
 			m, _ = m.Update(MsgTasksUpdated{Tasks: &api.TasksDto{Tasks: kanbanFixtureTasks()}})
 			m, _ = m.Update(specialKey(tea.KeyDown)) // select the second card
+			return m
+		}},
+		// SF3.2: the board answers "where are we" — a you-are-here ribbon over columns grouped by the
+		// wire's stageId with the run's stage marked, n/total headers, meta on every card, and the
+		// skipped shelf out of the Done count.
+		{"kanban_grouped", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("b"))
+			m, _ = m.Update(MsgTasksUpdated{Tasks: &api.TasksDto{Tasks: kanbanFixtureTasks()}})
+			return m
+		}},
+		// SF3.2: a column taller than the pane. The selected card is walked to the bottom of the TODO
+		// column, so the frame pins BOTH halves of the scroll contract at once — the window follows the
+		// selection, and what it hid is stated rather than the rows just going missing.
+		{"kanban_scroll", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("b"))
+			m, _ = m.Update(MsgTasksUpdated{Tasks: &api.TasksDto{Tasks: kanbanTallTasks()}})
+			for i := 0; i < 12; i++ {
+				m, _ = m.Update(specialKey(tea.KeyDown))
+			}
 			return m
 		}},
 		// U3.2 / dogfood appendix 5: a board that cannot reach /tasks must say so. This used to render

@@ -65,14 +65,33 @@ func (s *demoSource) FetchTasks() (*TasksDto, error) {
 // makeFakeTasks seeds a board with all three Kanban columns populated — the state a reviewer
 // should see (and the goldens capture) by default. T3 carries owner context so the card detail
 // (P3) shows a filled extra-context block out of the box.
+//
+// SF3.2: the demo now serves the work-graph identity (kind/stageId/confirmed) and the card meta
+// (sessionNumber/statusSinceUtc/attempts) that the engine has on the wire, because `--demo` is what
+// a reviewer looks at first — a demo board that renders the OLD card is a demo that hides the
+// feature. Two stages, so grouping and the active-stage mark are visible; one blocked card, because
+// blocked shares the TODO column and used to be indistinguishable inside it; and one done card
+// confirmed against one only claimed, which is the distinction the board could not draw at all.
+// The since-stamps are relative to now so the ages read as ages rather than as an old fixture.
 func makeFakeTasks() []TaskDto {
+	ago := func(d time.Duration) string { return time.Now().UTC().Add(-d).Format(time.RFC3339) }
 	return []TaskDto{
-		{TaskId: "T1", CheckpointId: "F7.4", Title: "Implement gate caching by SHA", Status: "done", Source: "planner", Order: 1},
-		{TaskId: "T2", CheckpointId: "F7.4", Title: "Add per-stage truth gate config", Status: "done", Source: "agent", Order: 2},
+		{TaskId: "T1", CheckpointId: "F7.4", Title: "Implement gate caching by SHA", Status: "done", Source: "planner", Order: 1,
+			Kind: "subtask", StageId: "F7", Confirmed: true, SessionNumber: 10, StatusSinceUtc: ago(94 * time.Minute), Attempts: 1},
+		{TaskId: "T2", CheckpointId: "F7.4", Title: "Add per-stage truth gate config", Status: "done", Source: "agent", Order: 2,
+			Kind: "subtask", StageId: "F7", SessionNumber: 11, StatusSinceUtc: ago(38 * time.Minute), Attempts: 2},
 		{TaskId: "T3", CheckpointId: "F7.4", Title: "Wire RunDb.GetLastPassingGateResult", Status: "in_progress", Source: "agent", Order: 3,
+			Kind: "subtask", StageId: "F7", SessionNumber: 12, StatusSinceUtc: ago(4 * time.Minute), Attempts: 2,
 			Context: "Reuse the SHA cache from F7.4-a1; the miss path must stay allocation-free.",
 			Paths:   []string{"src/Conductor/Core/Gating/GateCache.cs", "src/Conductor/Core/Store/RunDb.cs"}},
-		{TaskId: "T4", CheckpointId: "F7.5", Title: "Add SkipIfFresh file-timestamp check", Status: "todo", Source: "planner", Order: 4},
+		{TaskId: "T4", CheckpointId: "F7.5", Title: "Add SkipIfFresh file-timestamp check", Status: "todo", Source: "planner", Order: 4,
+			Kind: "checkpoint", StageId: "F7"},
+		{TaskId: "T5", CheckpointId: "F7.5", Title: "Benchmark the warm path", Status: "skipped", Source: "agent", Order: 5,
+			Kind: "subtask", StageId: "F7", SessionNumber: 11, StatusSinceUtc: ago(29 * time.Hour)},
+		{TaskId: "T6", CheckpointId: "F8.1", Title: "conductor chat over the control plane", Status: "todo", Source: "planner", Order: 6,
+			Kind: "checkpoint", StageId: "F8"},
+		{TaskId: "T7", CheckpointId: "F8.2", Title: "Telegram v2 needs a bot token", Status: "blocked", Source: "agent", Order: 7,
+			Kind: "checkpoint", StageId: "F8", SessionNumber: 12, StatusSinceUtc: ago(30 * time.Minute), Attempts: 3},
 	}
 }
 
