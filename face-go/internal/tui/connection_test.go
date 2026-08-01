@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"conductor-face-go/internal/api"
-	"conductor-face-go/internal/timefmt"
 )
 
 // step runs one message through the model and hands the concrete type back, so a test can read the
@@ -61,8 +60,7 @@ func TestConnectedIsWhetherTheEngineAnswered_NotWhetherAStreamIsUp(t *testing.T)
 func TestSetConnectedStampsTheClocksTheBannersRead(t *testing.T) {
 	base := time.Date(2026, 7, 15, 10, 0, 0, 0, time.UTC)
 	now := base
-	timefmt.Now = func() time.Time { return now }
-	t.Cleanup(func() { timefmt.Now = time.Now })
+	pinClockFunc(t, func() time.Time { return now })
 
 	m := step(t, liveModel(), MsgStateUpdated{State: fixedState()})
 	if !m.data.Connection.LastContactAt.Equal(base) {
@@ -91,8 +89,7 @@ func TestSetConnectedStampsTheClocksTheBannersRead(t *testing.T) {
 func TestTheFirstDisconnectStillHasAnAge(t *testing.T) {
 	base := time.Date(2026, 7, 15, 10, 0, 0, 0, time.UTC)
 	now := base
-	timefmt.Now = func() time.Time { return now }
-	t.Cleanup(func() { timefmt.Now = time.Now })
+	pinClockFunc(t, func() time.Time { return now })
 
 	m := step(t, liveModel(), MsgFetchError{Err: "dial tcp: connectex: actively refused"})
 	if m.data.Connection.Since.IsZero() {

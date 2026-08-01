@@ -17,7 +17,6 @@ import (
 
 	"conductor-face-go/internal/api"
 	"conductor-face-go/internal/lastrun"
-	"conductor-face-go/internal/timefmt"
 )
 
 // finishedRun writes a state dir holding a real engine-shaped RUN-SUMMARY.md and returns its path.
@@ -44,13 +43,6 @@ func finishedRun(t *testing.T) string {
 		t.Fatal(err)
 	}
 	return dir
-}
-
-// pinClock freezes the Face's clock so an age is a fact in a test rather than a race with wall time.
-func pinClock(t *testing.T, at time.Time) {
-	t.Helper()
-	timefmt.Now = func() time.Time { return at }
-	t.Cleanup(func() { timefmt.Now = time.Now })
 }
 
 // The end-to-end path, through the real handlers: a Face that was watching, the engine dies, and the

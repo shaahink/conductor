@@ -3,12 +3,12 @@ package tui
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
 	"conductor-face-go/internal/api"
+	"conductor-face-go/internal/timefmt"
 	"conductor-face-go/internal/widgets"
 )
 
@@ -177,7 +177,7 @@ func (m Model) timelineDetail() string {
 	if e.CostUsd != nil && *e.CostUsd > 0 {
 		meta = append(meta, fmt.Sprintf("$%.2f", *e.CostUsd))
 	}
-	meta = append(meta, timelineClock(e.Utc)+" UTC")
+	meta = append(meta, timelineStamp(e.Utc))
 
 	title := gs.Render(glyph+" ") + accentStyle.Render(e.Kind)
 	desc := lipgloss.NewStyle().MaxWidth(m.paneCols()).Render(textStyle.Render(e.Description))
@@ -202,12 +202,31 @@ func timelineGlyph(e api.TimelineEntryDto) (string, lipgloss.Style) {
 	}
 }
 
+// timelineClock is the spine's per-row clock: seconds included, because two gate events one second
+// apart are a different story from two a minute apart, and this is the pane where that ordering is
+// the whole point. It is LOCAL time — see timelineStamp for what the detail says about it.
 func timelineClock(utc string) string {
-	t, err := time.Parse(time.RFC3339, utc)
-	if err != nil {
+	t, ok := timefmt.Parse(utc)
+	if !ok {
 		return "--:--:--"
 	}
-	return t.In(widgets.ClockLocation).Format("15:04:05")
+	return t.In(timefmt.Location).Format("15:04:05")
+}
+
+// timelineStamp is the detail line's timestamp. The row above it renders a bare clock, so an event
+// from yesterday used to be indistinguishable from one an hour ago — this one carries the date when
+// there is one to carry, plus the age.
+//
+// It also ends a two-line lie: the detail used to print `timelineClock(e.Utc) + " UTC"` over a clock
+// that timelineClock had already converted into local time, so every timestamp in the pane was
+// labelled with a timezone it was not in. The label is gone rather than corrected, because the honest
+// version ("14:32 local") is noise on every row of a face whose clocks are all local by policy.
+func timelineStamp(utc string) string {
+	t, ok := timefmt.Parse(utc)
+	if !ok {
+		return "--:--"
+	}
+	return timefmt.StampAge(t)
 }
 
 // --- sessions view (the folded Sessions tab, SF1.3) -----------------------------
@@ -237,6 +256,30 @@ func sessionOutcomeStyle(outcome string) lipgloss.Style {
 	default:
 		return subtleStyle
 	}
+}
+
+// sessionWhen is a session's span in one sentence — "14:32 · 2h ago → 15:18 (46m 12s)" for a finished
+// one, "14:32 · 2h ago → still running" for the live one. The end clock is bare on purpose: it is
+// read against the start clock three words to its left, and repeating the date there would be noise
+// on every row except the rare session that crosses midnight.
+func (m Model) sessionWhen(s api.SessionRowDto) string {
+	start, ok := timefmt.Parse(s.StartedUtc)
+	if !ok {
+		return ""
+	}
+	when := timefmt.StampAge(start)
+	if s.EndedUtc == nil {
+		return when + " → still running"
+	}
+	end, ok := timefmt.Parse(*s.EndedUtc)
+	if !ok {
+		return when
+	}
+	when += " → " + timefmt.Clock(end)
+	if d, ok := m.sessionDuration(s); ok {
+		when += "  (" + timefmt.Duration(d) + ")"
+	}
+	return when
 }
 
 func (m Model) handleSessionsKey(key string) (tea.Model, tea.Cmd) {
@@ -271,13 +314,20 @@ func (m Model) renderSessionsView() (string, string) {
 		stage := fmt.Sprintf("%-6s", s.StageId)
 		kind := fmt.Sprintf("%-8s", s.Kind)
 		out := fmt.Sprintf("%-12s", outcome)
-		commits := fmt.Sprintf("%d commits", s.CommitCount)
+		commits := fmt.Sprintf("%-10s", fmt.Sprintf("%d commits", s.CommitCount))
+		// SF2.2: WHEN each session ran, which this list never said. A history spine you cannot date is
+		// a list of anonymous rows — and started_utc has been on the wire the whole time.
+		when := ""
+		if t, ok := timefmt.Parse(s.StartedUtc); ok {
+			when = timefmt.Stamp(t)
+		}
 		if i == m.sessionSelected {
-			lines = append(lines, highlightBg.Render("› "+num+" "+stage+" "+kind+" "+out+" "+commits))
+			lines = append(lines, highlightBg.Render("› "+num+" "+stage+" "+kind+" "+out+" "+commits+" "+when))
 			continue
 		}
 		lines = append(lines, "  "+subtleStyle.Render(num)+" "+accentStyle.Render(stage)+" "+
-			textStyle.Render(kind)+" "+oStyle.Render(out)+" "+subtleStyle.Render(commits))
+			textStyle.Render(kind)+" "+oStyle.Render(out)+" "+subtleStyle.Render(commits)+" "+
+			subtleStyle.Render(when))
 	}
 
 	if m.sessionSelected < len(m.data.Sessions) {
@@ -285,6 +335,9 @@ func (m Model) renderSessionsView() (string, string) {
 		detail := fmt.Sprintf("\n%s #%d · %s %s · %s",
 			accentStyle.Render("Session"), s.Number, accentStyle.Render(s.StageId), textStyle.Render(s.Kind),
 			subtleStyle.Render(fmt.Sprintf("attempt %d, %d resumes", s.Attempt, s.ResumeCount)))
+		if when := m.sessionWhen(s); when != "" {
+			detail += "\n" + subtleStyle.Render("Ran:   ") + textStyle.Render(when)
+		}
 		if s.GateSummary != nil {
 			detail += "\n" + subtleStyle.Render("Gates: ") + textStyle.Render(*s.GateSummary)
 		}

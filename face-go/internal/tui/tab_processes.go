@@ -3,11 +3,11 @@ package tui
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	tea "charm.land/bubbletea/v2"
 
 	"conductor-face-go/internal/api"
+	"conductor-face-go/internal/timefmt"
 )
 
 func (m Model) handleProcessesKey(key string) (tea.Model, tea.Cmd) {
@@ -89,23 +89,19 @@ func (m Model) renderProcessesPane() (string, string) {
 	return strings.Join(lines, "\n"), help
 }
 
+// formatProcessRuntime is how long the process has been up, or how long it ran before it exited. The
+// arithmetic and the formatting now both live in timefmt: this used to carry its own %dm%02ds copy
+// with no hour bucket, so a gate that had been running for three hours read "184m30s".
 func formatProcessRuntime(p api.ProcessDto) string {
-	start, err := time.Parse(time.RFC3339, p.StartedUtc)
-	if err != nil {
+	start, ok := timefmt.Parse(p.StartedUtc)
+	if !ok {
 		return ""
 	}
-	end := time.Now()
+	end := timefmt.Now()
 	if p.ExitedUtc != nil {
-		if t, err := time.Parse(time.RFC3339, *p.ExitedUtc); err == nil {
+		if t, ok := timefmt.Parse(*p.ExitedUtc); ok {
 			end = t
 		}
 	}
-	sec := int(end.Sub(start).Seconds())
-	if sec < 0 {
-		sec = 0
-	}
-	if sec >= 60 {
-		return fmt.Sprintf("%dm%02ds", sec/60, sec%60)
-	}
-	return fmt.Sprintf("%ds", sec)
+	return timefmt.Duration(end.Sub(start))
 }

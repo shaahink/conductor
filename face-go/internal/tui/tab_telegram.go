@@ -9,6 +9,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"conductor-face-go/internal/api"
+	"conductor-face-go/internal/timefmt"
 )
 
 // M8.2: Telegram guided setup. Written to read like an onboarding wizard — live status up top, a
@@ -244,6 +245,14 @@ func (m Model) renderTelegramStatusLine(s *api.TelegramStatusDto) string {
 			name = "@" + *s.BotUsername
 		}
 		head = safeStyle.Render("● delivering") + " " + textStyle.Render("as "+name)
+		// SF2.2: "delivering" is a claim about a poll loop, and the age of the last poll is the only
+		// thing on this pane that can contradict it. A bot that last polled 40m ago on a 4s interval
+		// is not delivering, however green the dot is. lastPollUtc was on the DTO and rendered nowhere.
+		if s.LastPollUtc != nil {
+			if t, ok := timefmt.Parse(*s.LastPollUtc); ok {
+				head += subtleStyle.Render(" · last poll " + timefmt.Age(t))
+			}
+		}
 	case s.RestartRequired:
 		head = warnStyle.Render("◐ saved — restart required")
 	case s.Configured:

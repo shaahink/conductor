@@ -9,6 +9,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"conductor-face-go/internal/api"
+	"conductor-face-go/internal/timefmt"
 	"conductor-face-go/internal/widgets"
 )
 
@@ -140,11 +141,18 @@ func (m Model) knowledgeLines() []string {
 		if b.StageId != nil && *b.StageId != "" {
 			stage = subtleStyle.Render(" [" + *b.StageId + "]")
 		}
+		// SF2.2: how long this bug has been open. A bug ledger with no clock cannot answer the one
+		// question an owner asks it — "has this been sitting here for three sessions?" — and created_at
+		// has been on the DTO, unrendered, since the tab existed.
+		age := knowledgeAge(b.CreatedAt)
 		head := fmt.Sprintf("  %s %s%s %s",
 			peachStyle.Render(fmt.Sprintf("#%d", b.Id)),
 			severityStyle(b.Severity).Render("("+b.Severity+")"),
 			stage,
-			textStyle.Render(truncate(b.Title, width-18)))
+			textStyle.Render(truncate(b.Title, width-18-lipgloss.Width(age))))
+		if age != "" {
+			head += subtleStyle.Render(" " + age)
+		}
 		lines = append(lines, head)
 		if b.Detail != nil && strings.TrimSpace(*b.Detail) != "" {
 			detail := strings.ReplaceAll(strings.ReplaceAll(*b.Detail, "\r", " "), "\n", " ")
@@ -171,13 +179,30 @@ func (m Model) knowledgeLines() []string {
 			where = " (" + *e.StageId + ")"
 		}
 		content := strings.ReplaceAll(strings.ReplaceAll(e.Content, "\r", " "), "\n", " ")
+		age := knowledgeAge(e.CreatedAt)
 		line := fmt.Sprintf("  %s %s%s",
 			tealStyle.Render("["+e.Kind+"]"),
-			textStyle.Render(truncate(content, width-len(e.Kind)-len(where)-6)),
+			textStyle.Render(truncate(content, width-len(e.Kind)-len(where)-6-lipgloss.Width(age))),
 			subtleStyle.Render(where))
+		if age != "" {
+			line += subtleStyle.Render(" " + age)
+		}
 		lines = append(lines, line)
 	}
 	return lines
+}
+
+// knowledgeAge renders a ledger or bug created_at as its age. It goes through timefmt.Parse rather
+// than time.Parse because these two columns do NOT arrive as RFC3339: the engine writes them with
+// SQLite's datetime('now'), so they land as "2026-08-01 00:37:30". An RFC3339-only reader rejects
+// that and renders nothing, which is a fair guess at why these timestamps were never surfaced.
+// An unparseable or missing stamp renders "" and the row simply carries no clock.
+func knowledgeAge(createdAt string) string {
+	t, ok := timefmt.Parse(createdAt)
+	if !ok {
+		return ""
+	}
+	return timefmt.Age(t)
 }
 
 func severityStyle(sev string) lipgloss.Style {

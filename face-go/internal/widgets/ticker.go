@@ -3,22 +3,19 @@ package widgets
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"charm.land/lipgloss/v2"
 
 	"conductor-face-go/internal/api"
+	"conductor-face-go/internal/timefmt"
 )
 
-// FmtWall renders elapsed seconds as "2m03s" / "41s".
+// FmtWall renders elapsed seconds for the top bar. SF2.2 emptied it out into timefmt.Duration — it
+// was one of three copies of the same arithmetic, and the only reason it survives as a name is that
+// it takes the wire's float seconds rather than a time.Duration.
 func FmtWall(sec float64) string {
-	s := int(sec)
-	if s < 0 {
-		s = 0
-	}
-	if s >= 60 {
-		return fmt.Sprintf("%dm%02ds", s/60, s%60)
-	}
-	return fmt.Sprintf("%ds", s)
+	return timefmt.Duration(time.Duration(sec * float64(time.Second)))
 }
 
 // FmtTokens renders a token count as "3.4k" / "1.2M".

@@ -23,14 +23,38 @@ import (
 
 	"conductor-face-go/internal/api"
 	"conductor-face-go/internal/timefmt"
-	"conductor-face-go/internal/widgets"
 )
 
-// TestMain pins the render timezone: frames stamp wall-clocks in widgets.ClockLocation (local for
-// humans), which would make golden output depend on the machine running the tests.
+// goldenNow is the wall-clock every frame in this package is rendered at: a couple of minutes after
+// the newest fixture timestamp, so the ages that SF2.2 put on ledger rows, bug rows, session rows and
+// the Telegram poll line come out as small, stable, human-looking numbers.
+var goldenNow = time.Date(2026, 7, 15, 10, 8, 0, 0, time.UTC)
+
+// TestMain pins BOTH halves of the Face's clock. The timezone was already pinned — frames render
+// wall-clocks in the viewer's local zone, which would otherwise make goldens depend on the machine.
+// SF2.2 adds the second half: now that panes render ages, an unpinned timefmt.Now would re-date every
+// frame on every run.
 func TestMain(m *testing.M) {
-	widgets.ClockLocation = time.UTC
+	timefmt.Location = time.UTC
+	timefmt.Now = func() time.Time { return goldenNow }
 	os.Exit(m.Run())
+}
+
+// pinClock freezes the Face's clock so an age is a fact in a test rather than a race with wall time.
+func pinClock(t *testing.T, at time.Time) {
+	t.Helper()
+	pinClockFunc(t, func() time.Time { return at })
+}
+
+// pinClockFunc is pinClock for a test that has to MOVE the clock mid-scenario (an engine that dies
+// seven minutes in). Both put back whatever was pinned BEFORE — not time.Now. A cleanup that
+// reinstated the real wall clock would silently un-pin TestMain's pin for every test that happened to
+// run after it, which is order-dependent goldens waiting to happen.
+func pinClockFunc(t *testing.T, fn func() time.Time) {
+	t.Helper()
+	prev := timefmt.Now
+	timefmt.Now = fn
+	t.Cleanup(func() { timefmt.Now = prev })
 }
 
 var updateGolden = flag.Bool("update", false, "update golden files")
@@ -840,8 +864,7 @@ func TestGoldenHomeDisconnected(t *testing.T) {
 // back, exactly as the bubbletea loop would, so nothing in this frame comes from a poked field.
 func TestGoldenHomeOfflineWithLastRun(t *testing.T) {
 	now := time.Date(2026, 8, 1, 1, 27, 0, 0, time.UTC)
-	timefmt.Now = func() time.Time { return now }
-	t.Cleanup(func() { timefmt.Now = time.Now })
+	pinClockFunc(t, func() time.Time { return now })
 
 	var m tea.Model = New(fakeSource{}, false, "http://127.0.0.1:4317")
 	m, _ = m.Update(tea.WindowSizeMsg{Width: 110, Height: 40})

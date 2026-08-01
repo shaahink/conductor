@@ -9,6 +9,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"conductor-face-go/internal/api"
+	"conductor-face-go/internal/timefmt"
 	"conductor-face-go/internal/widgets"
 )
 
@@ -138,8 +139,8 @@ func (m Model) reportElapsed() string {
 // clock, which would desync the Face from the engine and make every golden frame time-dependent.
 func (m Model) sessionDuration(r api.SessionRowDto) (time.Duration, bool) {
 	if r.EndedUtc != nil {
-		start, okS := parseUTC(r.StartedUtc)
-		end, okE := parseUTC(*r.EndedUtc)
+		start, okS := timefmt.Parse(r.StartedUtc)
+		end, okE := timefmt.Parse(*r.EndedUtc)
 		if okS && okE && !end.Before(start) {
 			return end.Sub(start), true
 		}
@@ -151,31 +152,14 @@ func (m Model) sessionDuration(r api.SessionRowDto) (time.Duration, bool) {
 	return 0, false
 }
 
-func parseUTC(s string) (time.Time, bool) {
-	if s == "" {
-		return time.Time{}, false
-	}
-	t, err := time.Parse(time.RFC3339, s)
-	if err != nil {
-		return time.Time{}, false
-	}
-	return t, true
-}
-
-// fmtDuration renders a wall time the way an owner reads one: the two largest units that matter,
-// never "3724.184s".
+// fmtDuration is timefmt.Duration plus this pane's one house rule: a duration the Face does not have
+// renders as an em-dash, not as "0s". Zero seconds and "we could not work it out" are different
+// facts and the sessions table has to be able to say the second one.
 func fmtDuration(d time.Duration) string {
 	if d <= 0 {
 		return "—"
 	}
-	switch {
-	case d < time.Minute:
-		return fmt.Sprintf("%ds", int(d.Seconds()))
-	case d < time.Hour:
-		return fmt.Sprintf("%dm %02ds", int(d.Minutes()), int(d.Seconds())%60)
-	default:
-		return fmt.Sprintf("%dh %02dm", int(d.Hours()), int(d.Minutes())%60)
-	}
+	return timefmt.Duration(d)
 }
 
 func plural(n int, unit string) string {
