@@ -190,6 +190,19 @@ public sealed partial class ControlPlaneServer
         };
     }
 
+    /// <summary>SF4.1 — <c>GET /owner/queue</c>. Reads the LIVE <see cref="RunState"/>, not the event
+    /// fold: the park, the owner approvals, the blocked-until wait and the skipped stages are run
+    /// state, and a queue derived from the fold would keep offering an approval the owner had already
+    /// given. The tracker comes from the work graph, same as <c>/state</c>, so the handoff block
+    /// (where <c>HUMAN:</c> lines live) and the board agree with every other surface.</summary>
+    private async Task WriteOwnerQueueAsync(HttpListenerContext ctx)
+    {
+        var now = DateTime.UtcNow;
+        var items = OwnerQueue.Collect(_plan, _state, GraphTrackerSnapshot(), now);
+        await WriteJsonAsync(ctx, OwnerQueueDto.From(items, now),
+            ControlPlaneJsonContext.Default.OwnerQueueDto).ConfigureAwait(false);
+    }
+
     private TrackerSnapshot ReadTrackerSafe()
     {
         try { return ProgressProviderFactory.Create(_plan).Read(_plan, CancellationToken.None); }

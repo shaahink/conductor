@@ -267,6 +267,11 @@ public static class Reporter
                 ReadTimeline(store, state.RunId), ReadHealth(store, state.RunId), ReadMcpMetrics(store, state.RunId), ReadRepoStrip(plan));
             old = File.Exists(path) ? File.ReadAllText(path) : null;
             File.WriteAllText(path, newContent, Utf8Bom);
+            // SF4.1: the owner queue rides the report's write path, which is the run's session
+            // boundary. It is deliberately NOT committed with the report — it is derived state that
+            // goes stale the instant an approval lands, and a committed copy would be a second
+            // source of truth to disbelieve.
+            OwnerQueue.Write(plan, state, track, log);
         }
         catch (Exception ex)
         {
@@ -343,6 +348,7 @@ public static class Reporter
             var content = Build(plan, state, track, lastGates, liveActivity,
                 ReadTimeline(store, state.RunId), ReadHealth(store, state.RunId), ReadMcpMetrics(store, state.RunId), ReadRepoStrip(plan));
             File.WriteAllText(ReportPath(plan), content, Utf8Bom);
+            OwnerQueue.Write(plan, state, track, log);   // SF4.1 — see WriteAndPublish
         }
         catch (Exception ex)
         {

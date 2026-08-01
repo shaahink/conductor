@@ -198,6 +198,7 @@ public sealed partial class ControlPlaneServer : IDisposable
                 case ("GET", "/timeline"): await WriteTimelineAsync(ctx).ConfigureAwait(false); break;
                 case ("GET", "/ledger"): await WriteLedgerAsync(ctx).ConfigureAwait(false); break;
                 case ("GET", "/bugs"): await WriteBugsAsync(ctx).ConfigureAwait(false); break;
+                case ("GET", "/owner/queue"): await WriteOwnerQueueAsync(ctx).ConfigureAwait(false); break;
                 case ("POST", "/note"): await HandleNotePostAsync(ctx, ct).ConfigureAwait(false); break;
                 case ("POST", "/bug"): await HandleBugPostAsync(ctx, ct).ConfigureAwait(false); break;
                 case ("POST", "/bug/resolve"): await HandleBugResolveAsync(ctx, ct).ConfigureAwait(false); break;
