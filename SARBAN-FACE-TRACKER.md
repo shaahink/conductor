@@ -2,26 +2,23 @@
 
 **Plan:** Sarban face - the watcher and the surfaces | **Branch:** `feat/sarban` | **Design doc:** docs/history/CONDUCTOR-SARBAN.md
 
-## Handoff (overwrite this block, ≤ 12 lines, no history)
+## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SF2.1 CLAIMED** — `93611dd` code+tests, `2a6b1c3` two golden-caught fixes, `bb58cc8` rebaseline
-  (14 goldens + new `home_offline_lastrun`). Home now: ONE `Connected` writer (`setConnected`), one
-  English engine line with an age, a last-run card read from the engine's own RUN-SUMMARY.md, and
-  one path spelling. Evidence `.conductor/evidence/SF2/SF2.1-summary.md`.
-stage: **SF2 — 1 of 3 claimed.** gate: not run by me. Fast loop green: `go build/vet/test ./...` all 7
-  packages ok; `dotnet build Conductor.slnx` 0 errors (ScoreRow split to its own file).
-next: **SF2.2** — `internal/timefmt` already EXISTS and is landed (Span/Ago/Age + a pinnable `Now`
-  var); SF2.2 adds the absolute half and moves panes onto it. The Timeline UTC mislabel is
-  `tab_timeline.go:139`.
-trap: **`truncate()` silently mangles STYLED strings** — it measures with lipgloss.Width but cuts raw
-  runes, so escape bytes eat the budget. It deleted the engine line's age before I caught it in a
-  golden. Fix pattern: `homeEngineLine` in tab_home.go. Grep for `truncate(` on a `.Render()` result.
-  And: BOTH SF2.1 defects were found by READING regenerated goldens, not by a red test — the
-  rebaseline commit is the review step, so actually read the frames.
-open: same-class lies left on purpose, out of SF2.1's panels: bottom bar still offers `a agent · r
-  report` while offline (see bug **#18**), and the TOP bar shows OFFLINE beside an unqualified
-  `RUNNING` — SF2.3 touches that bar anyway. Plus **#15**, **#16**, **#17**.
-
+last: **SF2.2 CLAIMED** — `f05791b` code+tests, `d02559c` rebaseline (9 frames). `internal/timefmt`
+  now owns the absolute half too: `Parse`/`Clock`/`Stamp`/`StampAge`/`Duration`/`Location`. Evidence
+  `.conductor/evidence/SF2/SF2.2-summary.md`.
+stage: **SF2 — 2 of 3 claimed.** gate: not run by me. Fast loop green: `go build/vet/test ./...`
+  all 7 packages ok.
+next: **SF2.3** (money honesty). The top bar is `widgets/ticker.go` `RenderTopBar` — it already has
+  `state.SessionCostUsd` in hand at line ~103 but only renders it when `state.AgentActive`, which is
+  half of critique #4. Budget line + headroom live on Home (`tab_home.go`); the `N×` attempts marker
+  is in the sidebar (`plan.go`).
+trap: **TWO wire time formats.** ledger/bug `created_at` are SQLite `datetime('now')` —
+  `"2026-08-01 00:37:30"`, no T, no zone — while sessions/timeline are RFC3339. Always parse through
+  `timefmt.Parse`; `time.Parse(RFC3339, …)` silently renders nothing. Golden clock+zone are pinned
+  in `TestMain` now; use `pinClock`/`pinClockFunc`, never restore `timefmt.Now` to `time.Now`.
+open: bugs **#15 #16 #17 #18** still open; #18 (bottom bar offers a live agent while offline) is
+  SF2.3-adjacent since that bar is the same one showing `$0.00` beside `$13.07`.
 
 ## Baseline numbers (from run.db)
 
@@ -29,7 +26,7 @@ open: same-class lies left on purpose, out of SF2.1's panels: bottom bar still o
 |---|---|
 | Total checkpoints | 24 |
 | Done | 1 |
-| Claimed (unconfirmed) | 6 |
+| Claimed (unconfirmed) | 7 |
 
 ## Checkpoints
 
@@ -57,7 +54,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| SF2.1 | Home shows one honest connection line with age, start-a-run instructions only when no run exists, a last-run summary card when offline, one Connected definition, and consistent path casing | IN PROGRESS | - | - |
+| SF2.1 | Home shows one honest connection line with age, start-a-run instructions only when no run exists, a last-run summary card when offline, one Connected definition, and consistent path casing | DONE | 93611dd | .conductor/evidence/SF2/SF2.1-summary.md |
 | SF2.2 | One shared time formatter renders local time with relative age and a date when not today; the Timeline UTC mislabel is fixed and the previously-unrendered timestamps render | TODO | - | - |
 | SF2.3 | Over-budget renders as OVER never zero-percent headroom; window and lifetime spend are distinguished; the top bar shows in-flight session cost live; the attempts marker has a legend | TODO | - | - |
 
