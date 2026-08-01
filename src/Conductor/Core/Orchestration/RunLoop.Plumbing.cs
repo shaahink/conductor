@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -126,7 +126,8 @@ public sealed partial class RunLoop
     private void SaveAndReport()
     {
         _ctx.Save();
-        Reporter.WriteAndPublish(_ctx.Plan, _ctx.State, _ctx.ReadWork(), _ctx.LastGates, _ctx.Log, store: _ctx.Store);
+        Reporter.WriteAndPublish(_ctx.Plan, _ctx.State, _ctx.ReadWork(), _ctx.LastGates, _ctx.Log, store: _ctx.Store,
+            onNewOwnerItems: _ctx.NotifyNewOwnerQueueItems);
         PushIdleSnapshot();
     }
 

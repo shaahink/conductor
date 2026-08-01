@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text;
 using Conductor.Models;
 
@@ -286,7 +286,70 @@ public static class OwnerQueue
             sb.AppendLine();
         }
 
+        sb.AppendLine(RenderKeyMarker(items));
         return sb.ToString();
+    }
+
+    // ---- "have I already told the owner about this?" -------------------------------------------
+
+    /// <summary>SF4.2 — the marker that lets the NEXT write know what the owner has already been
+    /// told, written into the rendered file itself.
+    /// <para>Deliberately not a sidecar or a field in run state. Every entry in this queue is derived
+    /// and nothing is stored (see the type doc), and a separate seen-set file would be exactly the
+    /// second source of truth that design exists to avoid — one that can disagree with the queue and
+    /// has to be garbage-collected. Keeping the memory inside the artifact makes the failure mode
+    /// self-healing: delete the file and every open item is announced once more, which is the right
+    /// answer, not a silent gap.</para>
+    /// <para>An HTML comment, so it is invisible in every markdown renderer and in the Face.</para></summary>
+    private const string KeyMarkerPrefix = "<!-- conductor:owner-queue keys:";
+
+    private static string RenderKeyMarker(IReadOnlyList<OwnerQueueItem> items)
+        => KeyMarkerPrefix + " " + string.Join(" ", items.Select(Key)) + " -->";
+
+    /// <summary>Stable identity of one obligation, for new-vs-already-announced.
+    /// <para>Folds the TITLE in rather than keying on <see cref="OwnerQueueItem.Id"/> alone, and that
+    /// is the whole point: <c>human-1</c> is POSITIONAL. An owner who answers the first
+    /// <c>HUMAN:</c> line and an agent that then writes a different one would re-use the id, and the
+    /// new question — a different question, with a different answer — would never be announced.</para></summary>
+    internal static string Key(OwnerQueueItem item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        // FNV-1a over id + title. Not security, just a short stable token that survives a round trip
+        // through a markdown comment; hand-rolled because it must not change with a runtime upgrade
+        // the way string.GetHashCode does (randomized per process — it would re-announce everything
+        // on every restart).
+        unchecked
+        {
+            var hash = 2166136261u;
+            // The \u0001 is a real separator, not decoration: without it "human-1" + "abc" and
+            // "human-1a" + "bc" hash to the same bytes, and one obligation would go
+            // unannounced because a different one happened to concatenate identically.
+            foreach (var c in item.Id + "\u0001" + item.Title)
+            {
+                hash ^= c;
+                hash *= 16777619u;
+            }
+            return hash.ToString("x8", CultureInfo.InvariantCulture);
+        }
+    }
+
+    /// <summary>The keys the previous render recorded. An absent or unreadable file yields an empty
+    /// set — "nothing has been announced" — so the queue re-announces instead of going quiet.</summary>
+    internal static IReadOnlySet<string> ReadKnownKeys(string? previousContent)
+    {
+        var known = new HashSet<string>(StringComparer.Ordinal);
+        if (string.IsNullOrEmpty(previousContent)) return known;
+
+        var at = previousContent.LastIndexOf(KeyMarkerPrefix, StringComparison.Ordinal);
+        if (at < 0) return known;
+
+        var end = previousContent.IndexOf("-->", at, StringComparison.Ordinal);
+        if (end < 0) return known;
+
+        var body = previousContent[(at + KeyMarkerPrefix.Length)..end];
+        foreach (var token in body.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+            known.Add(token);
+        return known;
     }
 
     private static string AgeText(OwnerQueueItem item, DateTime nowUtc)
@@ -297,21 +360,42 @@ public static class OwnerQueue
 
     /// <summary>Collect + render + write <c>.conductor/OWNER-QUEUE.md</c>. Tolerant of I/O failure the
     /// same way the report is (A15): the queue is a convenience surface and must never take a run down.</summary>
-    public static void Write(PlanConfig plan, RunState state, TrackerSnapshot track, Action<string> log, DateTime? nowUtc = null)
+    /// <param name="onNewItems">SF4.2 — invoked, once, with the entries that were NOT in the previous
+    /// render. This is the away-from-keyboard case the whole surface exists for: a queue item that
+    /// arrives while the owner is not watching should reach them, and a queue item they have already
+    /// been told about must not reach them again on every report write. Never invoked with an empty
+    /// list, and never invoked for an item that CLEARED — a cleared obligation is good news the run
+    /// makes on its own.</param>
+    public static void Write(PlanConfig plan, RunState state, TrackerSnapshot track, Action<string> log,
+        DateTime? nowUtc = null, Action<IReadOnlyList<OwnerQueueItem>>? onNewItems = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(log);
         var now = nowUtc ?? DateTime.UtcNow;
+        IReadOnlyList<OwnerQueueItem> fresh;
         try
         {
             Directory.CreateDirectory(plan.StateDir);
+            var path = QueuePath(plan);
+            // Read BEFORE the write: the file about to be overwritten is the record of what the owner
+            // has already been told.
+            var previous = File.Exists(path) ? File.ReadAllText(path) : null;
+            var known = ReadKnownKeys(previous);
+
             var items = Collect(plan, state, track, now);
-            File.WriteAllText(QueuePath(plan), Render(plan, state, items, now), Reporter.Utf8Bom);
+            File.WriteAllText(path, Render(plan, state, items, now), Reporter.Utf8Bom);
+            fresh = [.. items.Where(i => !known.Contains(Key(i)))];
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             log($"owner queue write failed: {ex.Message}");
+            return;
         }
+
+        // Outside the catch, and only after the write succeeded. If the write threw, nothing was
+        // recorded as announced, so the next pass re-announces — a duplicate push is recoverable,
+        // an obligation the owner is never told about is not.
+        if (fresh.Count > 0) onNewItems?.Invoke(fresh);
     }
 
     private static string Clip(string s, int max)
