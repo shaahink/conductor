@@ -4,19 +4,23 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SF3.2 CLAIMED and complete** — rendering half landed in `3e7c4b3` (code + 11 tests) and
-  `88a966a` (goldens), evidence `.conductor/evidence/SF3/SF3.2-summary.md`. All seven acceptance
-  items are visible in one frame, `kanban_grouped.golden`. **Do not redo SF3.2.** The `--demo` gap
-  the last handoff named is CLOSED — `internal/api/demo.go` serves the full card shape now.
-next: **SF3.3, nothing started.** Git awareness on the wire and in the face: branch chip, dirty
-  state, ahead-behind, commit subjects. It also carries **FU-OWNER-10** from
-  `.conductor/followups.md` — `GET /state` names no `engineVersion`, `engineCommit` or `faceBuild`,
-  so the face cannot say which build you are attached to. Add all three to the same payload SF3.3
-  opens, plus the short form in the status strip beside the branch chip.
-traps: `truncate()` in view.go rune-slices — it is PLAIN text only; clipping a styled string with it
-  printed a raw escape sequence on the ribbon this session. See ledger note "SF3.2 rendering half".
-green: face `go build` / `go vet` / `go test ./internal/...` all ok at `88a966a`. Tree clean.
-open: bugs **#15 #16 #17 #18 #19** still open; #19 (claims empty in every digest) is engine-side.
+last: **SF3.3 ENGINE HALF landed, `d500f00`** — evidence
+  `.conductor/evidence/SF3/SF3.3-part1-engine-wire.md`. `GET /state` now serves a `git` block
+  (branch, detached, upstream, ahead/behind, headSha/headShortSha/headSubject, dirty, dirtyCount,
+  dirtySummary, recentCommits) plus **FU-OWNER-10**'s `engineVersion`/`engineCommit`/`faceBuild`;
+  `GET /sessions` rows gain `commits[]`. 22 tests green, 3 of them over a real socket.
+  **SF3.3 is still IN PROGRESS — do not re-do the engine half.**
+next: **the FACE half, nothing started.** In order: mirror the fields in `api/types.go` +
+  `api/demo.go`, then branch chip and build short form in `widgets/ticker.go RenderTopBar`, repo
+  state on Home, `commits[]` in the session detail, and the sidebar's execution-vs-declared-order
+  cue. Goldens in a separate rebaseline commit.
+traps: `ahead`/`behind`/`upstream` are **ABSENT** from the json when there is no upstream (the wire
+  omits nulls) — use `*int`/`*string` and render nil as "no upstream", never `0/0`. A `git` block
+  with `isRepo:false` means "not a git repo"; a **missing** `git` means an older engine — say
+  different things. And `truncate()` in view.go is PLAIN text only (SF3.2's ribbon bug).
+green: engine `dotnet build` clean, `--filter SF3_3` 22/22. Face untouched, green at `88a966a`.
+open: bugs **#15 #16 #17 #18 #19**; #19 (claims empty in every digest) is engine-side.
+
 
 ## Baseline numbers (from run.db)
 
@@ -24,7 +28,7 @@ open: bugs **#15 #16 #17 #18 #19** still open; #19 (claims empty in every digest
 |---|---|
 | Total checkpoints | 24 |
 | Done | 2 |
-| Claimed (unconfirmed) | 9 |
+| Claimed (unconfirmed) | 10 |
 
 ## Checkpoints
 
@@ -61,7 +65,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | SF3.1 | Tool calls render as one-liners and each session has a digest panel — tool mix, files touched, claims, bg-purpose storyline; fold is rune-safe | DONE | 352bc1a | .conductor/evidence/SF3/SF3.1-summary.md |
-| SF3.2 | The kanban groups by stage with the active stage highlighted, card meta visible unselected, column totals, skips separated from Done, in-column scroll, and a you-are-here ribbon | IN PROGRESS | - | - |
+| SF3.2 | The kanban groups by stage with the active stage highlighted, card meta visible unselected, column totals, skips separated from Done, in-column scroll, and a you-are-here ribbon | DONE | 3e7c4b3 | .conductor/evidence/SF3/SF3.2-summary.md |
 | SF3.3 | Branch, dirty state, ahead-behind and HEAD sha are on the wire and in the face; session history shows commit subjects; the sidebar cues execution-vs-declared stage order | TODO | - | - |
 
 ### SF4 — The human queue is a first-class surface
