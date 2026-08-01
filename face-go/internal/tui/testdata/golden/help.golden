@@ -1,4 +1,4 @@
- ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42 
+ ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7  ⠋ s12 $0.12 41s  cp 2/40  run $0.42  ⎇ feat/gate… ↑3↓1 ● 
   h Home  a s o e p r k g b                                                                                
                            │                                                                               
  ▶ PLAN  n× attempts       │  Server                                                                       
@@ -27,8 +27,8 @@
               │     q quit   esc close / cancel   ? this help                                  │           
               │                                                                                │           
               ╰────────────────────────────────────────────────────────────────────────────────╯           
-                           │                                                                               
-                           │                                                                               
+                           │    r  read the run report                                                     
+                           │    ?  see every key                                                           
                            │                                                                               
                            │                                                                               
  : cmd  i inject  / search  \ sidebar  ? help  q quit   │   a agent · r report · : commands · ? keys       

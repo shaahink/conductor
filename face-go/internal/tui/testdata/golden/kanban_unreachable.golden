@@ -1,4 +1,4 @@
- ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42    
+ ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7  ⠋ s12 $0.12 41s  cp 2/40  run $0.42  ⎇ feat/gate… ↑3↓1 ●    
  h a s o e p r k g  b Kanban                                                                                  
                            │                                                                                  
  ▶ PLAN  n× attempts       │  ⚠ cannot reach /tasks: Get "http://127.0.0.1:4317/tasks": dial tcp 127.0.0.1…   

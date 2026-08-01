@@ -3,14 +3,14 @@
                      │                                                          
  ▶ PLAN  n× attempts │  Server                                                  
  ✓ F0 3/3 Foundati…  │  engine     running — answering on http://127.0.0.1:…    
- ✓ F6 5/5 Ink TUI …  │                                                          
- ● F7 2/5 Gate … 1×  │  Run                                                     
-   ✓ F7.1 Plan imp…  │  plan       conductor-foreman                            
-   ✓ F7.2 Re-impor…  │  status     ▶ RUNNING                                    
-   ● F7.3 Truth-ga…  │  stage      F7 Gate caching + truth gates + speed prog…  
- ○ F8 0/4 conducto…  │  session    s12 Deliver · attempt 1/3 · opus-4-8         
-                     │  progress   ▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱ 2/40 checkpoints    
- ── GATES ──         │  cost       $0.42   +$0.02 overhead                      
+ ✓ F6 5/5 Ink TUI …  │  build      v0.2.3-alpha.0.20  7d2b1e378ae3  ·  face d…  
+ ● F7 2/5 Gate … 1×  │                                                          
+   ✓ F7.1 Plan imp…  │  Run                                                     
+   ✓ F7.2 Re-impor…  │  plan       conductor-foreman                            
+   ● F7.3 Truth-ga…  │  status     ▶ RUNNING                                    
+ ○ F8 0/4 conducto…  │  stage      F7 Gate caching + truth gates + speed prog…  
+                     │  session    s12 Deliver · attempt 1/3 · opus-4-8         
+ ── GATES ──         │  progress   ▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱ 2/40 checkpoints    
    ✓ build           │                                                          
    ● test 4s         │  Workspace                                               
    ○ lint            │  repo       C:/Code/conductor                            

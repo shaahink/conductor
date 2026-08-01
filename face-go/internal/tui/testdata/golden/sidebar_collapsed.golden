@@ -1,9 +1,10 @@
- ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42    
+ ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7  ⠋ s12 $0.12 41s  cp 2/40  run $0.42  ⎇ feat/gate… ↑3↓1 ●    
   h Home  a s o e p r k g b                                                                                   
                                                                                                               
   Server                                                                                                      
   engine     running — answering on http://127.0.0.1:4317                                                     
   streams    ● events   ● transcript                                                                          
+  build      v0.2.3-alpha.0.20  7d2b1e378ae3  ·  face d500f00a1b2c                                            
                                                                                                               
   Run                                                                                                         
   plan       conductor-foreman                                                                                
@@ -14,21 +15,20 @@
   cost       $0.42   +$0.02 overhead                                                                          
   tokens     2.5k in · 1.8k out · 900 reasoning                                                               
   budget     $0.42 / $10.00  95% headroom                                                                     
-  tokens cap 5.2k / 2.0M  99% headroom                                                                        
                                                                                                               
   Workspace                                                                                                   
-  the working directory every session edits                                                                   
   repo       C:/Code/conductor                                                                                
   plan file  plans/conductor-foreman.plan.json                                                                
-  tracker    CONDUCTOR-VNEXT-PLAN.md                                                                          
-  state dir  .conductor                                                                                       
+                                                                                                              
+  Git                                                                                                         
+  branch     feat/gate-caching                                                                                
+  upstream   origin/feat/gate-caching  3 ahead · 1 behind                                                     
+  tree       4 changes uncommitted                                                                            
                                                                                                               
   Next steps                                                                                                  
     a  watch the live agent — it is working right now                                                         
     r  read the run report                                                                                    
     ?  see every key                                                                                          
-                                                                                                              
-                                                                                                              
                                                                                                               
                                                                                                               
  : cmd  i inject  / search  \ sidebar  ? help  q quit   │   a agent · r report · : commands · ? keys          

@@ -1,9 +1,9 @@
- ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42              
+ ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7  ⠋ s12 $0.12 41s  cp 2/40  run $0.42  ⎇ feat/gate-caching ↑3↓1 ●4      
   h Home   a Agent   s History   o Procs   e Templates   p Plan   r Report   k Knowledge   g Telegram   b Kanban        
                               │                                                                                         
  ▶ PLAN  n× attempts          │  Server                                                                                 
  ✓ F0 3/3 Foundations         │  engine     running — answering on http://127.0.0.1:4317                                
- ✓ F6 5/5 Ink TUI v1          │  streams    ● events   ● transcript                                                     
+ ✓ F6 5/5 Ink TUI v1          │  build      v0.2.3-alpha.0.20  7d2b1e378ae3  ·  face d500f00a1b2c                       
  ● F7 2/5 Gate cac… 1× $0.30  │                                                                                         
    ✓ F7.1 Plan import         │  Run                                                                                    
    ✓ F7.2 Re-import diff      │  plan       conductor-foreman                                                           
@@ -12,14 +12,14 @@
                               │  session    s12 Deliver · attempt 1/3 · opus-4-8                                        
  ── GATES ──                  │  progress   ▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱ 2/40 checkpoints                                   
    ✓ build                    │  cost       $0.42   +$0.02 overhead                                                     
-   ● test 4s                  │  tokens     2.5k in · 1.8k out · 900 reasoning                                          
-   ○ lint                     │  budget     $0.42 / $10.00  95% headroom                                                
-                              │  tokens cap 5.2k / 2.0M  99% headroom                                                   
- ── TASKS ──                  │                                                                                         
-   ✓ Add truth-tier config…   │  Workspace                                                                              
-   ● Wire RunDb.GetLastPas…   │  the working directory every session edits                                              
-   ○ Cache gate results by…   │  repo       C:/Code/conductor                                                           
-                              │  plan file  plans/conductor-foreman.plan.json                                           
+   ● test 4s                  │                                                                                         
+   ○ lint                     │  Workspace                                                                              
+                              │  repo       C:/Code/conductor                                                           
+ ── TASKS ──                  │  plan file  plans/conductor-foreman.plan.json                                           
+   ✓ Add truth-tier config…   │                                                                                         
+   ● Wire RunDb.GetLastPas…   │  Git                                                                                    
+   ○ Cache gate results by…   │  branch     feat/gate-caching                                                           
+                              │  upstream   origin/feat/gate-caching  3 ahead · 1 behind                                
                               │                                                                                         
                               │  Next steps                                                                             
                               │    a  watch the live agent — it is working right now                                    

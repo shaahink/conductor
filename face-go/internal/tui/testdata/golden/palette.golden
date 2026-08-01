@@ -1,32 +1,32 @@
- ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42 
+ ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7  ⠋ s12 $0.12 41s  cp 2/40  run $0.42  ⎇ feat/gate… ↑3↓1 ● 
   h Home  a s o e p r k g b                                                                                
                            │                                                                               
  ▶ PLAN  n× attempts       │  Server                                                                       
  ✓ F0 3/3 Foundations      │  engine     running — answering on http://127.0.0.1:4317                      
  ✓ F6 5/5 Ink TUI v1       │  streams    ● events   ● transcript                                           
- ● F7 2/5 Gate … 1× $0.30  │                                                                               
-   ✓ F7.1 Plan import      │  Run                                                                          
-   ✓ F7.2 Re-import diff   │  plan       conductor-foreman                                                 
-   ● F7.3 Truth-gate tier  │  status     ▶ RUNNING                                                         
- ╭────────────────────────────────────────────────────────────────────╮+ speed program                     
- │ Run                                                                │us-4-8                              
- │   pause              Pause after current session ends              │checkpoints                         
- │   resume             Resume a paused run                           │                                    
- │   stop-after         Stop after current session                    │ning                                
- │   approve            Approve and continue                          │                                    
+ ● F7 2/5 Gate … 1× $0.30  │  build      v0.2.3-alpha.0.20  7d2b1e378ae3  ·  face d500f00a1b2c             
+   ✓ F7.1 Plan import      │                                                                               
+   ✓ F7.2 Re-import diff   │  Run                                                                          
+   ● F7.3 Truth-gate tier  │  plan       conductor-foreman                                                 
+ ╭────────────────────────────────────────────────────────────────────╮                                    
+ │ Run                                                                │+ speed program                     
+ │   pause              Pause after current session ends              │us-4-8                              
+ │   resume             Resume a paused run                           │checkpoints                         
+ │   stop-after         Stop after current session                    │                                    
+ │   approve            Approve and continue                          │ning                                
  │   heartbeat          Refresh REPORT.md snapshot now                │                                    
  │   reload-plan        Swap live plan at next session boundary       │                                    
  │ Stage                                                              │                                    
  │   goto               Jump to a different stage (requires stage ID) │                                    
- │ ⚠ retry-stage        Reset attempt counter, retry stage            │                                    
- │   skip               Skip current stage                            │son                                 
+ │ ⚠ retry-stage        Reset attempt counter, retry stage            │son                                 
+ │   skip               Skip current stage                            │                                    
  │   pause-after-stage  Pause once stage completes                    │                                    
  │ Danger                                                             │                                    
- │ ⚠ kill               Kill current agent session                    │                                    
+ │ ⚠ kill               Kill current agent session                    │ead · 1 behind                      
  │ ⚠ abort              Abort run immediately                         │                                    
- │ ⚠ rollback           Git reset --hard to stage start               │ right now                          
+ │ ⚠ rollback           Git reset --hard to stage start               │                                    
  │ Face                                                               │                                    
- │ ● theme mocha        Catppuccin Mocha - dark, the default          │                                    
+ │ ● theme mocha        Catppuccin Mocha - dark, the default          │ right now                          
  │   theme latte        Catppuccin Latte - light                      │                                    
  │   theme nord         Nord - dark, cool blues                       │                                    
  │   theme gruvbox      Gruvbox - dark, warm retro                    │                                    
