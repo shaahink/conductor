@@ -4,19 +4,20 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SF5.2 CLOSED — the babysitter is named in the plan, not in a shell history** (`4efedac`).
-  `supervisor` block: command, timeoutMinutes, maxPerHour, standingOrders. `watch` with NO `--hook`
-  runs it with the brief on stdin; `--hook` overrides and does not spend the plan's fuse.
-  **The fuse is a FILE** (`.conductor/supervisor-fires.log`): every wake is a fresh `watch` process,
-  so an in-process counter would reset on the very event it bounds. **standingOrders rides the brief**
-  — orders left in the loop's start prompt are invisible to the agent that actually wakes.
-next: **SF5.3** — remote supervision documented and proven once (a wake reaching a remote listener),
-  then **SF5.4** `conductor ps` + the face's run picker.
-green: SF5 watch+supervisor suite **49/49**; live drive of MY build against two scratch rigs proved
-  all three claims (`.conductor/evidence/SF5/SF5.2-live-drive.log`).
-tip: reusable rig — `SF5.2-supervisor-drive.ps1` text-patches a supervisor block into the SF5.1 rig
-  plan and pre-seeds the fires ledger; that pre-seed is what makes the fuse proof deterministic.
-red: nothing. open: bugs **#15 #16 #17 #18 #19 #20** (#20: set `$env:CONDUCTOR_PLAN` for any rig).
+last: **SF5.3 CLOSED - the wake leaves the machine** (`2cd9083`, `65846c6`). `supervisor.remote`:
+  `webhookUrl` + `headers` + `telegram`. The webhook body IS the brief, byte for byte. Header values
+  expand `${NAME}`/`%NAME%` at send time; an unset var **drops the header and names it** on stderr.
+  The remote fires BEFORE the local command and **regardless of the supervisor fuse** - that hour is
+  when a human off-box most needs it - so it has its own ledger (`supervisor-remote-fires.log`).
+  `--notify <URL>` replaces the WHOLE block, phone included. Failures never fail the watch; stderr
+  names the host, never the URL. operating.md carries the cloud pattern + 5 what-stays-manual notes.
+next: **SF5.4** - `conductor ps` from the control-plane discovery files, process titles carrying
+  repo + run id, and the face's run picker when more than one plane answers.
+green: SF5 suite **56/56** (SF5_3RemoteTests 24); live drive of MY build proved all five claims,
+  incl. a REAL telegram delivery (chat 200 in 0.4s): `.conductor/evidence/SF5/SF5.3-live-drive.log`.
+tip: rig `SF5.3-remote-drive.ps1` + `SF5.3-listener.ps1` - the rig plan name renders `SF51WatchRig_<n>`
+  (underscore), and PS 5.1 needs `Get-Content -Encoding UTF8` to read a .NET child's stderr.
+red: nothing. open: bugs **#15 #16 #17 #18 #19 #20**.
 
 
 ## Baseline numbers (from run.db)
@@ -25,7 +26,7 @@ red: nothing. open: bugs **#15 #16 #17 #18 #19 #20** (#20: set `$env:CONDUCTOR_P
 |---|---|
 | Total checkpoints | 24 |
 | Done | 4 |
-| Claimed (unconfirmed) | 12 |
+| Claimed (unconfirmed) | 13 |
 
 ## Checkpoints
 
@@ -77,7 +78,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | SF5.1 | conductor watch blocks silently and returns or fires a hook only on the wake set — park, circuit breaker, budget park, phase RED twice on a stage, engine gone, run ended — with a json brief of about thirty lines and a timeout heartbeat | DONE | - | .conductor/evidence/SF5/SF5.1-live-drive.log |
-| SF5.2 | A supervisor plan block runs a configured command on wake with the brief on stdin; operating.md carries the wake and dont-wake table and the standing-order pattern | TODO | - | - |
+| SF5.2 | A supervisor plan block runs a configured command on wake with the brief on stdin; operating.md carries the wake and dont-wake table and the standing-order pattern | DONE | 4efedac | .conductor/evidence/SF5/SF5.2-supervisor-block.md |
 | SF5.3 | The remote supervision pattern is documented and proven once end to end — a wake reaching a remote listener — with an honest note of what stays manual | TODO | - | - |
 | SF5.4 | conductor ps lists every run on the machine from the control-plane discovery files; process titles carry repo and run id; the face offers a run picker when more than one control plane answers | TODO | - | - |
 
