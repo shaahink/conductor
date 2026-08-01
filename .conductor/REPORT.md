@@ -1,10 +1,10 @@
 ﻿# Conductor — Sarban face - the watcher and the surfaces run report
 
-_Updated 2026-08-01 09:51 UTC · branch `feat/sarban` · HEAD `1eeda0b`_
+_Updated 2026-08-01 10:30 UTC · branch `feat/sarban` · HEAD `8580cca`_
 
-**Status:** Idle
+**Status:** Running
 **Stage:** SF4 — The human queue is a first-class surface · attempts used 0 · working ▸ SF4.2
-**Checkpoints:** 14/24 done · **Sessions run:** 21 · **Cost:** $187.5304 (agent $187.4217 + gates $0.1087) · **Tokens:** 3,255,213 in / 1,026,011 out
+**Checkpoints:** 14/24 done · **Sessions run:** 23 · **Cost:** $200.0852 (agent $199.9678 + gates $0.1173) · **Tokens:** 3,541,694 in / 1,084,263 out
 **Confirmed phases:** SF0, SF1, SF2, SF3
 
 ## Stage progress
@@ -125,18 +125,14 @@ _Updated 2026-08-01 09:51 UTC · branch `feat/sarban` · HEAD `1eeda0b`_
 | 19 | SF3 | Deliver | 1 | 08-01 03:28 | 0:14 | Advanced | SF3.3 | 3 | engine-fast:OK · face-fast:OK | $6.0631 | $0.0072 | 129,054/48,297 |
 | 20 | SF4 | Deliver | 1 | 08-01 09:00 | 0:27 | RolledOver |  | 0 |  | $5.8124 |  | 131,809/1,841 |
 | 21 | SF4 | Deliver | 1 | 08-01 09:27 | 0:21 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $6.1325 | $0.0157 | 119,875/46,987 |
+| 22 | SF4 | Deliver | 1 | 08-01 09:51 | 0:22 | Progress |  | 3 | engine-fast:OK · face-fast:OK | $6.6960 | $0.0087 | 166,359/55,772 |
+| 23 | SF4 | Deliver | 1 | 08-01 10:15 | 0:14 | RolledOver |  | 0 |  | $5.8501 |  | 120,122/2,480 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-01 02:19:45  ▪ gate engine-full pass [phase]  (3m44s)
-08-01 02:19:45  ▪ gate face-full pass [phase]  (16.9s)
-08-01 02:19:45  ✓ checkpoint SF2.3 confirmed
-08-01 02:19:45  ▸ stage SF2 confirmed  (1h14m51s)
-08-01 02:19:46  ▸ stage SF3 entered — Reading a session becomes cheap
-08-01 02:19:46  • session #13 SF3 Deliver started (attempt 1/6)
 08-01 02:40:22  • session #13 SF3 → RolledOver  (20m35s)
 08-01 02:40:22  • session #14 SF3 Deliver started (attempt 1/6)
 08-01 02:57:38  ▪ gate engine-fast pass [session]  (1m06s)
@@ -171,6 +167,12 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-01 10:27:28  • session #21 SF4 Deliver started (attempt 1/4)
 08-01 10:51:24  ▪ gate engine-fast pass [session]  (1m28s)
 08-01 10:51:24  ▪ gate face-fast pass [session]  (1m08s)
+08-01 10:51:25  • session #21 SF4 → Progress · 2 commit(s)  (23m57s)
+08-01 10:51:26  • session #22 SF4 Deliver started (attempt 1/4)
+08-01 11:15:54  ▪ gate engine-fast pass [session]  (1m14s)
+08-01 11:15:55  ▪ gate face-fast pass [session]  (11.8s)
+08-01 11:15:56  • session #22 SF4 → Progress · 3 commit(s)  (24m29s)
+08-01 11:15:56  • session #23 SF4 Deliver started (attempt 1/4)
 ```
 
 ## Health
@@ -178,7 +180,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 21 · retries 1 (5 %) · overall Warn
+sessions 23 · retries 1 (4 %) · overall Warn
 ⚠ [context-saturation] session #3: 24,790,251 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #4: 21,397,049 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #5: 36,996,007 context tokens (≥ 20,000,000)
@@ -191,16 +193,11 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/sarban
-working tree: clean
+working tree: M .conductor/REPORT.md, M SARBAN-FACE-TRACKER.md, M face-go/internal/tui/testdata/golden/attention.golden, M face-go/internal/tui/testdata/golden/default.golden, M face-go/internal/tui/testdata/golden/help.golden, M face-go/internal/tui/testdata/golden/home_demo.golden, M face-go/internal/tui/testdata/golden/home_disconnected.golden, M face-go/internal/tui/testdata/golden/home_offline_lastrun.golden (+5 more)
 ```
 
 ### Commits by session
 
-- **s10 (SF2 Deliver)** — 4 commit(s):
-  - [`6d2c024`](https://github.com/shaahink/conductor/commit/6d2c024) docs(tracker): SF2.1 handoff - one connection line, a run that outlives its engine, and a truncate() that eats meaning
-  - [`bb58cc8`](https://github.com/shaahink/conductor/commit/bb58cc8) test(face): rebaseline every golden for the honest Home - one engine line, normalised paths, and a run that outlives its engine
-  - [`2a6b1c3`](https://github.com/shaahink/conductor/commit/2a6b1c3) fix(face): the honest connection line was being truncated into a lie, and Next steps still offered a live agent with no engine
-  - [`93611dd`](https://github.com/shaahink/conductor/commit/93611dd) feat(face): Home answers "what is happening and what should I do" - one honest connection line, and a run that outlives its engine
 - **s11 (SF2 Deliver)** — 3 commit(s):
   - [`3dc1cd8`](https://github.com/shaahink/conductor/commit/3dc1cd8) docs(tracker): SF2.2 handoff - two wire time formats, one clock vocabulary, and a UTC label that was never true
   - [`d02559c`](https://github.com/shaahink/conductor/commit/d02559c) test(face): rebaseline the nine frames the one clock vocabulary changed
@@ -227,6 +224,10 @@ working tree: clean
 - **s21 (SF4 Deliver)** — 2 commit(s):
   - [`1eeda0b`](https://github.com/shaahink/conductor/commit/1eeda0b) docs(tracker): SF4.2 part 1 landed, and the disk that failed 18 tests
   - [`f0d12bb`](https://github.com/shaahink/conductor/commit/f0d12bb) fix(telegram): a queued reload says so, instead of advising the edit you just made (FU-OWNER-13)
+- **s22 (SF4 Deliver)** — 3 commit(s):
+  - [`57a79f1`](https://github.com/shaahink/conductor/commit/57a79f1) docs(tracker): SF4.2 is 3 of 4, and the last quarter is all Go
+  - [`0d2ce47`](https://github.com/shaahink/conductor/commit/0d2ce47) feat(owner): a queue item that arrives while you are away pushes to Telegram (SF4.2)
+  - [`bc7ff3f`](https://github.com/shaahink/conductor/commit/bc7ff3f) feat(telegram): every push says which plan, which session, which repo, which build (FU-OWNER-11)
 
 ## Phase handovers (audit)
 
@@ -253,24 +254,24 @@ engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: Landed **one of SF4.2's four deliverables** — FU-OWNER-13 (`f0d12bb`), which stops `GET /telegram/status` and `POST /telegram/token` from telling the owner to "add a telegram block to the plan" during the window between a saved plan edit and the run loop's next session boundary; both now say the reload is queued, and `reloadPending` rides the status payload so the face can show *waiting* rather than *unconfigured*. `ControlPlaneServer.QueueReload(saved)` replaces all three bare `_inbox.Enqueue(ReloadPlan)` sites and `SwapPlan` clears the flag, so "pending" cannot outlive its reload; two honesty rails are pinned by tests (a non-telegram edit's queued reload leaves the original…
+> SESSION-RESULT: Landed **parts 2 and 3 of SF4.2's four deliverables**, each committed with evidence. `bc7ff3f` closes **FU-OWNER-11**: every Telegram message is now stamped with plan name and session number at `TelegramService.SendAsync` — the one point every push, daily digest, `/status` reply, callback answer and test message crosses, so no existing call site can forget it and none added later can opt out (prefixing at `PushAsync`, as the previous handoff suggested, would have left the command replies and digest anonymous); a new run-start push and the existing run-end message carry repo, branch and `BuildInfo.Current.Full`, read off the assembly's own stamp rather than a hand-maintained c…
 
 ## Tracker handoff
 
 ```
-last: **SF4.2 part 1 of 4** (`f0d12bb`) - FU-OWNER-13 only. SF4.2 stays IN PROGRESS, not claimed.
-  A queued plan reload now says so: `reloadPending` on `GET /telegram/status`, and both that reply
-  and `POST /telegram/token` stop advising the telegram block the edit just added.
-  `ControlPlaneServer.QueueReload(saved)` is the only enqueue path; `SwapPlan` clears it.
-  Evidence `.conductor/evidence/SF4/SF4.2-part1-reload-pending.md`; 4/4 new tests.
-next: the other THREE quarters of SF4.2, in this order. (a) FIRST re-run the neighbour battery -
-  see red below. (b) Face owner-queue surface off `GET /owner/queue`: Home section when short,
-  full-pane view on the free key `w` when long - do NOT add an 11th tab, SF1.3 capped it at ten;
-  update the cmdbar help legend too (trap 11). (c) new queue item -> Telegram push, diffed at the
-  report write path. (d) FU-OWNER-11 identity, at the one choke point TelegramService.PushAsync.
-red: **drive C: hit 0 bytes free** - 18 tests failed on `not enough space on the disk`, NOT a
-  regression. `tools/scratch/purge-leaked-test-temp.ps1` (committed) reclaims the 24k leaked
-  `conductor-*` %TEMP% dirs; a partial pass freed 1 GB. Neighbours were never re-run after it.
-green: build clean; FuOwner13ReloadPendingTests 4/4.
+last: **SF4.2 parts 2 and 3 of 4.** `bc7ff3f` FU-OWNER-11 - every push is stamped with plan+session
+  at `TelegramService.SendAsync` (the ONE point every push, digest, /status reply and test message
+  crosses, so nothing can forget); new run-start push plus run-end carry repo + `BuildInfo.Current`.
+  `0d2ce47` - a NEW owner-queue item pushes to Telegram, diffed in `OwnerQueue.Write` against a
+  seen-set kept as an HTML comment inside OWNER-QUEUE.md itself (no second source of truth; delete
+  the file and it re-announces rather than going quiet). 12 new tests, 28/28 green.
+next: **the last quarter, and it is all Go - face-go is untouched.** (a) Face owner-queue surface
+  off `GET /owner/queue`: Home section when short, full-pane view on the free key `w` when long -
+  do NOT add an 11th tab, SF1.3 capped it at ten - each row with age ("unknown" must never render
+  as just-now) and what it unblocks; update the cmdbar help legend too (trap 11). (b) The Go half of
+  FU-OWNER-13: `reloadPending` renders as *waiting*, not *unconfigured*. Read face-go/STYLE.md first.
+green: neighbour battery **156/156** - session 21's 18 reds were the full disk, confirmed, do not
+  re-run it. C: now has 2.8 GB free. Build clean, 0 warnings.
+red: nothing.
 open: bugs **#15 #16 #17 #18 #19**.
 ```

@@ -4,22 +4,22 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SF4.2 parts 2 and 3 of 4.** `bc7ff3f` FU-OWNER-11 - every push is stamped with plan+session
-  at `TelegramService.SendAsync` (the ONE point every push, digest, /status reply and test message
-  crosses, so nothing can forget); new run-start push plus run-end carry repo + `BuildInfo.Current`.
-  `0d2ce47` - a NEW owner-queue item pushes to Telegram, diffed in `OwnerQueue.Write` against a
-  seen-set kept as an HTML comment inside OWNER-QUEUE.md itself (no second source of truth; delete
-  the file and it re-announces rather than going quiet). 12 new tests, 28/28 green.
-next: **the last quarter, and it is all Go - face-go is untouched.** (a) Face owner-queue surface
-  off `GET /owner/queue`: Home section when short, full-pane view on the free key `w` when long -
-  do NOT add an 11th tab, SF1.3 capped it at ten - each row with age ("unknown" must never render
-  as just-now) and what it unblocks; update the cmdbar help legend too (trap 11). (b) The Go half of
-  FU-OWNER-13: `reloadPending` renders as *waiting*, not *unconfigured*. Read face-go/STYLE.md first.
-green: neighbour battery **156/156** - session 21's 18 reds were the full disk, confirmed, do not
-  re-run it. C: now has 2.8 GB free. Build clean, 0 warnings.
+last: **SF4.2 is CLOSED — all four parts.** `d61da19` rebaselines the eleven goldens the `w` key
+  moved (verified in reverse first: restore the committed ones and 11 fail, so it is a rebaseline,
+  not a re-declaration). `017c8a9` proves the surface against a LIVE engine and fixes what only a
+  rendered frame could show: FU-OWNER-13 was one layer thin — the status line said *waiting* while
+  the paragraph beneath it still said "Not configured … saving a token here configures it for you",
+  advising the edit the engine was holding. The old test missed it by asserting lowercase
+  "not configured" against a capital N. Fold case in frame assertions.
+next: **SF5.1 — `conductor watch`.** Nothing in SF4 is left open.
+green: `go build` + `go vet` clean; `internal/tui` and `internal/api` both ok. Live rig served
+  `count=4`, and both undated obligations rendered "age unknown", not "just now".
 red: nothing.
-open: bugs **#15 #16 #17 #18 #19**.
-
+open: bugs **#15 #16 #17 #18 #19 #20**. #20 is new and it bites any session that spawns a rig:
+  `run` prefers `CONDUCTOR_PLAN` over the CWD, so a scratch rig launched from inside a session
+  targets THIS run's plan — set `$env:CONDUCTOR_PLAN` explicitly, `--cwd` alone is not enough.
+  Reusable proof harness: `internal/tui/owner_queue_live_test.go` (skips unless
+  `CONDUCTOR_FACE_LIVE_URL` is set; its header carries the whole rig recipe).
 
 ## Baseline numbers (from run.db)
 
