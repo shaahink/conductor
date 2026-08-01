@@ -1,12 +1,11 @@
 ﻿# Conductor — Sarban face - the watcher and the surfaces run report
 
-_Updated 2026-08-01 18:07 UTC · branch `feat/sarban` · HEAD `5a71373`_
+_Updated 2026-08-01 18:35 UTC · branch `feat/sarban` · HEAD `3d1b293`_
 
-**Status:** AwaitingOwner
-**Stage:** SF7 — Ship the era · attempts used 1
+**Status:** Completed
+**Stage:** SF7 — Ship the era · attempts used 0
 **Checkpoints:** 24/24 done · **Sessions run:** 41 · **Cost:** $297.2402 (agent $296.9826 + gates $0.2575) · **Tokens:** 5,573,400 in / 1,747,626 out
-**Confirmed phases:** SF0, SF1, SF2, SF3, SF4, SF5, SF6
-**Pending:** full-battery phase gate for SF7
+**Confirmed phases:** SF0, SF1, SF2, SF3, SF4, SF5, SF6, SF7
 
 ## Stage progress
 
@@ -19,7 +18,7 @@ _Updated 2026-08-01 18:07 UTC · branch `feat/sarban` · HEAD `5a71373`_
 | SF4 | The human queue is a first-class surface | ██████████ 2/2 | confirmed ✓ |
 | SF5 | Supervision without a polling meter | ██████████ 4/4 | confirmed ✓ |
 | SF6 | The prompt bank compounds | ██████████ 3/3 | confirmed ✓ |
-| SF7 | Ship the era | ██████████ 2/2 | gating… |
+| SF7 | Ship the era | ██████████ 2/2 | confirmed ✓ |
 
 <details> ✅<summary>SF0 — The ledger closes - the core run's leftovers (4/4)</summary>
 
@@ -141,11 +140,6 @@ _Updated 2026-08-01 18:07 UTC · branch `feat/sarban` · HEAD `5a71373`_
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-01 17:05:42  ▪ gate engine-fast pass [session]  (1m12s)
-08-01 17:05:42  ▪ gate face-fast pass [session]  (56.9s)
-08-01 17:05:43  • session #36 SF6 → Progress · 2 commit(s)  (23m06s)
-08-01 17:10:50  ▪ gate engine-fast pass [phase]  (0.0s)
-08-01 17:10:51  ▪ gate face-fast pass [phase]  (0.0s)
 08-01 17:10:51  ▪ gate engine-full pass [phase]  (4m47s)
 08-01 17:10:51  ▪ gate face-full pass [phase]  (16.2s)
 08-01 17:10:51  ✓ checkpoint SF6.2 confirmed
@@ -181,6 +175,11 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-01 19:07:06  ▪ gate engine-fast pass [phase]  (0.0s)
 08-01 19:07:06  ▪ gate face-fast pass [phase]  (0.0s)
 08-01 19:07:06  ▪ gate engine-full pass [phase]  (4m05s)
+08-01 19:07:06  ▪ gate face-full pass [phase]  (5.1s)
+08-01 19:07:07  § owner approval requested — SF7
+08-01 19:35:20  § owner approval granted — SF7
+08-01 19:35:20  ✓ checkpoint SF7.2 confirmed
+08-01 19:35:20  ▸ stage SF7 confirmed  (2h24m28s)
 ```
 
 ## Health
@@ -202,8 +201,8 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/sarban
-working tree: M .conductor/REPORT.md, M SARBAN-FACE-TRACKER.md
-vs upstream: 1 ahead
+working tree: M .conductor/REPORT.md
+vs upstream: 2 ahead
 ```
 
 ### Commits by session
