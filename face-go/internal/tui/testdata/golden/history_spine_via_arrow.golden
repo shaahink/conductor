@@ -11,7 +11,7 @@
  ○ F8 0/4 conductor chat…  │  ──────────────────────────────────────────────────────────────────────────────  
                            │  ◆ stage                                                                         
  ── GATES ──               │  stage F7 entered                                                                
-   ✓ build                 │  stage F7 · 10:00:00 UTC                                                         
+   ✓ build                 │  stage F7 · 10:00 · 8m ago                                                       
    ● test 4s               │                                                                                  
    ○ lint                  │                                                                                  
                            │                                                                                  

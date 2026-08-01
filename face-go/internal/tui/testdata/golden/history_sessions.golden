@@ -2,12 +2,12 @@
  h a  s History  o e p r k g b                                                                                
                            │                                                                                  
  ▶ PLAN                    │  ● Sessions s   ○ Spine t                                                        
- ✓ F0 3/3 Foundations      │  › #12  F7     Deliver  running      0 commits                                   
- ✓ F6 5/5 Ink TUI v1       │    #11  F7     Deliver  needsRetry   2 commits                                   
- ● F7 2/5 Gate … 1× $0.30  │    #8   F6     Deliver  completed    1 commits                                   
+ ✓ F0 3/3 Foundations      │  › #12  F7     Deliver  running      0 commits  10:00                            
+ ✓ F6 5/5 Ink TUI v1       │    #11  F7     Deliver  needsRetry   2 commits  09:12                            
+ ● F7 2/5 Gate … 1× $0.30  │    #8   F6     Deliver  completed    1 commits  08:30                            
    ✓ F7.1 Plan import      │                                                                                  
    ✓ F7.2 Re-import diff   │  Session #12 · F7 Deliver · attempt 2, 0 resumes                                 
-   ● F7.3 Truth-gate tier  │                                                                                  
+   ● F7.3 Truth-gate tier  │  Ran:   10:00 · 8m ago → still running                                           
  ○ F8 0/4 conductor chat…  │                                                                                  
                            │                                                                                  
  ── GATES ──               │                                                                                  

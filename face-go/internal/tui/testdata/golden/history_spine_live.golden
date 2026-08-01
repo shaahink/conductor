@@ -12,7 +12,7 @@
                            │  ──────────────────────────────────────────────────────────────────────────────  
  ── GATES ──               │  ◆ stage                                                                         
    ✓ build                 │  stage F7 entered                                                                
-   ● test 4s               │  stage F7 · 10:00:00 UTC                                                         
+   ● test 4s               │  stage F7 · 10:00 · 8m ago                                                       
    ○ lint                  │                                                                                  
                            │                                                                                  
  ── TASKS ──               │                                                                                  
