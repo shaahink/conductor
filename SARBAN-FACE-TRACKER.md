@@ -4,20 +4,20 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SF4.2 part 1 of 4** (`f0d12bb`) - FU-OWNER-13 only. SF4.2 stays IN PROGRESS, not claimed.
-  A queued plan reload now says so: `reloadPending` on `GET /telegram/status`, and both that reply
-  and `POST /telegram/token` stop advising the telegram block the edit just added.
-  `ControlPlaneServer.QueueReload(saved)` is the only enqueue path; `SwapPlan` clears it.
-  Evidence `.conductor/evidence/SF4/SF4.2-part1-reload-pending.md`; 4/4 new tests.
-next: the other THREE quarters of SF4.2, in this order. (a) FIRST re-run the neighbour battery -
-  see red below. (b) Face owner-queue surface off `GET /owner/queue`: Home section when short,
-  full-pane view on the free key `w` when long - do NOT add an 11th tab, SF1.3 capped it at ten;
-  update the cmdbar help legend too (trap 11). (c) new queue item -> Telegram push, diffed at the
-  report write path. (d) FU-OWNER-11 identity, at the one choke point TelegramService.PushAsync.
-red: **drive C: hit 0 bytes free** - 18 tests failed on `not enough space on the disk`, NOT a
-  regression. `tools/scratch/purge-leaked-test-temp.ps1` (committed) reclaims the 24k leaked
-  `conductor-*` %TEMP% dirs; a partial pass freed 1 GB. Neighbours were never re-run after it.
-green: build clean; FuOwner13ReloadPendingTests 4/4.
+last: **SF4.2 parts 2 and 3 of 4.** `bc7ff3f` FU-OWNER-11 - every push is stamped with plan+session
+  at `TelegramService.SendAsync` (the ONE point every push, digest, /status reply and test message
+  crosses, so nothing can forget); new run-start push plus run-end carry repo + `BuildInfo.Current`.
+  `0d2ce47` - a NEW owner-queue item pushes to Telegram, diffed in `OwnerQueue.Write` against a
+  seen-set kept as an HTML comment inside OWNER-QUEUE.md itself (no second source of truth; delete
+  the file and it re-announces rather than going quiet). 12 new tests, 28/28 green.
+next: **the last quarter, and it is all Go - face-go is untouched.** (a) Face owner-queue surface
+  off `GET /owner/queue`: Home section when short, full-pane view on the free key `w` when long -
+  do NOT add an 11th tab, SF1.3 capped it at ten - each row with age ("unknown" must never render
+  as just-now) and what it unblocks; update the cmdbar help legend too (trap 11). (b) The Go half of
+  FU-OWNER-13: `reloadPending` renders as *waiting*, not *unconfigured*. Read face-go/STYLE.md first.
+green: neighbour battery **156/156** - session 21's 18 reds were the full disk, confirmed, do not
+  re-run it. C: now has 2.8 GB free. Build clean, 0 warnings.
+red: nothing.
 open: bugs **#15 #16 #17 #18 #19**.
 
 
