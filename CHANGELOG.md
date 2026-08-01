@@ -15,6 +15,8 @@ it was built from. It orders above `0.1.0` and below `0.1.1`, and it is unique p
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-01
+
 **The Sarban face era** — the watcher and the surfaces. 0.2.0 shipped an engine that could be trusted
 to run unattended; this era is about being able to *see* what it did, and to be told when it needs
 you. It was built the way the last one was: conductor driving itself against this repo, unattended,
