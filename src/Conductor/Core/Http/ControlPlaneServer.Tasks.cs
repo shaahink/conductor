@@ -127,7 +127,7 @@ public sealed partial class ControlPlaneServer
         try
         {
             fresh.Save();
-            _inbox.Enqueue(ControlCommand.Of(ControlAction.ReloadPlan));
+            QueueReload(fresh);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

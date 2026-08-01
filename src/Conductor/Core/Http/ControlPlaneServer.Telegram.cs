@@ -27,6 +27,27 @@ public sealed partial class ControlPlaneServer
     /// the only question an operator asks — will this run actually reach my phone? WillDeliver is
     /// that answer, derived (never stored), and when it is false WillDeliverReason names the missing
     /// half in the same words doctor uses, from the same helper.</summary>
+    /// <summary>FU-OWNER-13: <see cref="TelegramReadiness.NoBlock"/> is the right answer about the LIVE
+    /// plan and the wrong thing to print when the plan on disk already has the block and the loop
+    /// simply has not swapped it in yet — it names a cause that no longer exists and gives an
+    /// instruction that would be a no-op. Rewritten only in that exact case: a reload is queued AND
+    /// the plan that reload will install carries a telegram block. Every other blocker (no token, no
+    /// chat ids, not started) is untouched, because a pending reload does not fix any of them.</summary>
+    private string? ReloadAware(string? blocker) =>
+        blocker == TelegramReadiness.NoBlock && ReloadPending && _queuedReloadPlan?.Telegram is not null
+            ? TelegramReadiness.ReloadQueued
+            : blocker;
+
+    /// <summary>The same rewrite for the token endpoint, whose reply is a whole sentence ending in the
+    /// blocker rather than the bare constant. "saved, but this run still will not deliver: not
+    /// configured — add a telegram block" becomes "saved, and a plan reload is queued": both halves
+    /// true, neither of them an instruction to redo work already accepted.</summary>
+    private string ReloadAwareMessage(string message) =>
+        message.EndsWith(TelegramReadiness.NoBlock, StringComparison.Ordinal)
+        && ReloadPending && _queuedReloadPlan?.Telegram is not null
+            ? "saved, and " + TelegramReadiness.ReloadQueued
+            : message;
+
     private TelegramStatusDto BuildTelegramStatus()
     {
         // SC1.3: no service in this process is a state of its own — the plan can be fully configured
@@ -41,8 +62,9 @@ public sealed partial class ControlPlaneServer
                 PollIntervalSeconds: block?.PollIntervalSeconds ?? 4, EnableTwoWay: block?.EnableTwoWay ?? false,
                 BotUsername: null, LastError: null, LastPollUtc: null,
                 WillDeliver: false,
-                WillDeliverReason: block is null ? TelegramReadiness.NoBlock : TelegramReadiness.RestartRequired,
-                RestartRequired: block is not null);
+                WillDeliverReason: ReloadAware(block is null ? TelegramReadiness.NoBlock : TelegramReadiness.RestartRequired),
+                RestartRequired: block is not null,
+                ReloadPending: ReloadPending);
         }
 
         // The service's OWN block, not _plan's: after a live reload those can differ for a moment,
@@ -52,7 +74,8 @@ public sealed partial class ControlPlaneServer
             return new TelegramStatusDto(
                 Configured: false, Started: false, HasToken: false, AllowedChatIds: [],
                 PollIntervalSeconds: 4, EnableTwoWay: false, BotUsername: null, LastError: null, LastPollUtc: null,
-                WillDeliver: false, WillDeliverReason: TelegramReadiness.NoBlock, RestartRequired: false);
+                WillDeliver: false, WillDeliverReason: ReloadAware(TelegramReadiness.NoBlock),
+                RestartRequired: false, ReloadPending: ReloadPending);
 
         var missing = TelegramReadiness.MissingHalf(
             hasBlock: true, hasToken: svc.IsConfigured,
@@ -69,11 +92,12 @@ public sealed partial class ControlPlaneServer
             LastError: svc._lastError,
             LastPollUtc: svc._lastPollUtc?.ToString("O"),
             WillDeliver: missing is null,
-            WillDeliverReason: missing,
+            WillDeliverReason: ReloadAware(missing),
             // A live service can take a new token or a new block without a restart — that is the
             // whole of SC1.3, and saying "restart required" here would be a lie in the other
             // direction.
-            RestartRequired: false);
+            RestartRequired: false,
+            ReloadPending: ReloadPending);
     }
 
     private async Task HandleTelegramTestAsync(HttpListenerContext ctx, CancellationToken ct)
@@ -122,8 +146,13 @@ public sealed partial class ControlPlaneServer
         if (_telegram is TelegramService svc)
         {
             var outcome = await svc.ReloadAsync(ct: ct).ConfigureAwait(false);
-            _logger.LogInformation("Telegram token saved from the control plane: {Message}", outcome.Message);
-            await WriteJsonAsync(ctx, new TelegramSetTokenResultDto(true, outcome.Message, outcome.WillDeliver),
+            // FU-OWNER-13: this is the reply that actually burned the owner — "saved, but this run
+            // still will not deliver: not configured, add a telegram block to the plan", seconds
+            // after `POST /plan/edit` had accepted exactly that block. The reload carrying it is
+            // queued, so say THAT; the token really is saved either way.
+            var message = ReloadAwareMessage(outcome.Message);
+            _logger.LogInformation("Telegram token saved from the control plane: {Message}", message);
+            await WriteJsonAsync(ctx, new TelegramSetTokenResultDto(true, message, outcome.WillDeliver),
                 ControlPlaneJsonContext.Default.TelegramSetTokenResultDto, HttpStatusCode.Accepted).ConfigureAwait(false);
             return;
         }

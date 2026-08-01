@@ -24,6 +24,16 @@ public static class TelegramReadiness
     /// unconditional "saved" used to do even when the save could never take effect.</summary>
     public const string RestartRequired =
         "no Telegram service exists in this engine process — the saved settings take effect on the next `conductor run`";
+    /// <summary>FU-OWNER-13: the window between a saved plan edit and the run loop's next session
+    /// boundary. The live <see cref="PlanConfig"/> is deliberately not mutated on the HTTP path, so
+    /// during that window every reader of it — <c>GET /telegram/status</c>, <c>POST /telegram/token</c>
+    /// — sees no telegram block and used to answer <see cref="NoBlock"/>: "add a telegram block to
+    /// the plan", advising the edit that had just been accepted seconds earlier, and instructing a
+    /// no-op. The behaviour was right and the sentence was wrong. This is the sentence for that
+    /// window. It is the SC1.3 failure one layer out — a saved thing reporting as if nothing were
+    /// saved — so it is said in the same shape as the rest of this class.</summary>
+    public const string ReloadQueued =
+        "a plan reload is queued — the telegram block you saved starts at the next session boundary";
 
     /// <summary>The missing half, in doctor's own words, or <c>null</c> when Telegram will deliver.</summary>
     /// <param name="started">The one condition only a live process can answer: <c>null</c> from
