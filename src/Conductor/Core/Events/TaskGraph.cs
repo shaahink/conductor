@@ -16,6 +16,11 @@ public sealed class TaskGraph
     private readonly List<TaskItem> _tasks = new();
     private readonly Dictionary<string, TaskItem> _byId = new(StringComparer.Ordinal);
 
+    /// <summary>SF3.2: the session in flight, folded from <c>SessionStarted</c>. A task event carries
+    /// no session number, and the board's "who is on this card" answer needs one — so the graph
+    /// tracks it. Still a pure projection: the same log replays to the same attribution.</summary>
+    private int _session;
+
     public IReadOnlyList<TaskItem> Tasks => _tasks;
     public int Count => _tasks.Count;
     public long LastEventSeq { get; private set; }
@@ -46,9 +51,17 @@ public sealed class TaskGraph
                         Order = ta.Order,
                         Kind = kind,
                         StageId = ta.StageId ?? ta.CheckpointId.Split('.')[0],
+                        // SF3.2: "todo since" is a real answer for a card nobody has picked up yet.
+                        StatusSinceUtc = ta.Ts == default ? null : ta.Ts,
                     };
                     _tasks.Add(item);
                     _byId[ta.TaskId] = item;
+                    break;
+
+                case SessionStarted ss:
+                    // SF3.2: not a task event, but the only thing in the log that says who is
+                    // working. Folded here so the card meta is computed once, by the engine.
+                    _session = ss.Number;
                     break;
 
                 case TaskStatusChanged sc:
@@ -56,7 +69,17 @@ public sealed class TaskGraph
                     {
                         if (IsValidTransition(existing.Status, sc.Status))
                         {
+                            // SF3.2: same → same is a metadata refresh (a repeated done-claim), not a
+                            // move — it must not restamp "done 3h ago" to "done just now", re-attribute
+                            // the card, or count as another pickup.
+                            var moved = !string.Equals(existing.Status, sc.Status, StringComparison.Ordinal);
                             existing.Status = sc.Status;
+                            if (moved)
+                            {
+                                if (sc.Ts != default) existing.StatusSinceUtc = sc.Ts;
+                                if (_session > 0) existing.SessionNumber = _session;
+                                if (sc.Status == "in_progress") existing.Attempts++;
+                            }
                             // A done-claim carries its attribution; keep the last non-null values so
                             // a replay reproduces the checkpoint columns byte-for-byte (W1.1).
                             if (sc.Commit is { Length: > 0 }) existing.Commit = sc.Commit;

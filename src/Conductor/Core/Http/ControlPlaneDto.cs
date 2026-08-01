@@ -126,7 +126,9 @@ public static class ControlPlaneDto
 
     public static TasksDto FromTasks(IReadOnlyList<TaskItem> tasks) => new(
         [.. tasks.Select(t => new TaskDto(t.TaskId, t.CheckpointId, t.Title, t.Status, t.Source, t.Order, t.Context, t.Paths,
-            Kind: t.Kind, StageId: t.StageId, Confirmed: t.Confirmed, Qa: t.Qa))]);
+            Kind: t.Kind, StageId: t.StageId, Confirmed: t.Confirmed, Qa: t.Qa,
+            SessionNumber: t.SessionNumber, StatusSinceUtc: t.StatusSinceUtc?.ToString("O"),
+            Attempts: t.Attempts))]);
 
     public static ProcessDto FromPid(PidRow p, bool alive, string? lastOutputLine) => new(
         Pid: p.Pid, Purpose: p.Purpose, StageId: p.StageId, SessionNumber: p.SessionNumber,

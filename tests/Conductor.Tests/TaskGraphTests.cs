@@ -179,4 +179,103 @@ public class TaskGraphTests
         Assert.Equal("Original", graph.Find("t1")!.Title);
         Assert.Equal(1, graph.Find("t1")!.Order);
     }
+
+    // ── SF3.2: the card meta a board shows without selecting the card. The Kanban had nothing to
+    // print under an unselected card because the graph knew none of this: a status change carries no
+    // session number and nothing counted pickups. All three are folded, so a replay reproduces them.
+
+    [Fact]
+    public void Fold_StatusChange_IsAttributedToTheSessionInFlight()
+    {
+        var t0 = new DateTimeOffset(2026, 8, 1, 9, 0, 0, TimeSpan.Zero);
+        var graph = new TaskGraph();
+        graph.Fold([
+            new TaskAdded { RunId = "r1", TaskId = "SF3.2", CheckpointId = "SF3.2", Title = "Kanban", Source = "planner", Order = 1, Seq = 1, Ts = t0 },
+            new SessionStarted { RunId = "r1", Number = 13, StageId = "SF3", Kind = "session", Seq = 2, Ts = t0.AddMinutes(1) },
+            new SessionStarted { RunId = "r1", Number = 14, StageId = "SF3", Kind = "session", Seq = 3, Ts = t0.AddMinutes(2) },
+            new TaskStatusChanged { RunId = "r1", TaskId = "SF3.2", Status = "in_progress", Seq = 4, Ts = t0.AddMinutes(3) },
+        ]);
+
+        var card = graph.Find("SF3.2")!;
+        Assert.Equal(14, card.SessionNumber);
+        Assert.Equal(t0.AddMinutes(3), card.StatusSinceUtc);
+        Assert.Equal(1, card.Attempts);
+    }
+
+    [Fact]
+    public void Fold_SeededCardKeepsItsAddedStampAndNoSession()
+    {
+        var t0 = new DateTimeOffset(2026, 8, 1, 9, 0, 0, TimeSpan.Zero);
+        var graph = new TaskGraph();
+        graph.Fold([
+            new TaskAdded { RunId = "r1", TaskId = "SF9.9", CheckpointId = "SF9.9", Title = "Untouched", Source = "planner", Order = 1, Seq = 1, Ts = t0 },
+        ]);
+
+        var card = graph.Find("SF9.9")!;
+        Assert.Equal(t0, card.StatusSinceUtc);
+        Assert.Equal(0, card.SessionNumber);
+        Assert.Equal(0, card.Attempts);
+    }
+
+    [Fact]
+    public void Fold_ReopenedCard_CountsEveryPickup()
+    {
+        var t0 = new DateTimeOffset(2026, 8, 1, 9, 0, 0, TimeSpan.Zero);
+        var graph = new TaskGraph();
+        graph.Fold([
+            new TaskAdded { RunId = "r1", TaskId = "t1", CheckpointId = "F1.1", Title = "Flaky", Source = "planner", Order = 1, Seq = 1, Ts = t0 },
+            new SessionStarted { RunId = "r1", Number = 3, StageId = "F1", Kind = "session", Seq = 2, Ts = t0 },
+            new TaskStatusChanged { RunId = "r1", TaskId = "t1", Status = "in_progress", Seq = 3, Ts = t0.AddMinutes(1) },
+            new TaskStatusChanged { RunId = "r1", TaskId = "t1", Status = "done", Seq = 4, Ts = t0.AddMinutes(2) },
+            // The verdict engine rejected the claim and the card went back for another go.
+            new TaskStatusChanged { RunId = "r1", TaskId = "t1", Status = "in_progress", Seq = 5, Ts = t0.AddMinutes(3) },
+            new SessionStarted { RunId = "r1", Number = 4, StageId = "F1", Kind = "fix", Seq = 6, Ts = t0.AddMinutes(4) },
+            new TaskStatusChanged { RunId = "r1", TaskId = "t1", Status = "done", Seq = 7, Ts = t0.AddMinutes(5) },
+        ]);
+
+        var card = graph.Find("t1")!;
+        Assert.Equal(2, card.Attempts);
+        Assert.Equal(4, card.SessionNumber);
+        Assert.Equal(t0.AddMinutes(5), card.StatusSinceUtc);
+    }
+
+    [Fact]
+    public void Fold_RepeatedDoneClaim_IsAMetadataRefreshNotAMove()
+    {
+        var t0 = new DateTimeOffset(2026, 8, 1, 9, 0, 0, TimeSpan.Zero);
+        var graph = new TaskGraph();
+        graph.Fold([
+            new TaskAdded { RunId = "r1", TaskId = "t1", CheckpointId = "F1.1", Title = "Done once", Source = "planner", Order = 1, Seq = 1, Ts = t0 },
+            new SessionStarted { RunId = "r1", Number = 3, StageId = "F1", Kind = "session", Seq = 2, Ts = t0 },
+            new TaskStatusChanged { RunId = "r1", TaskId = "t1", Status = "in_progress", Seq = 3, Ts = t0.AddMinutes(1) },
+            new TaskStatusChanged { RunId = "r1", TaskId = "t1", Status = "done", Seq = 4, Ts = t0.AddMinutes(2) },
+            // The engine re-asserts the same claim hours later to attach the commit it verified.
+            new SessionStarted { RunId = "r1", Number = 5, StageId = "F2", Kind = "session", Seq = 5, Ts = t0.AddHours(3) },
+            new TaskStatusChanged { RunId = "r1", TaskId = "t1", Status = "done", Commit = "abc1234", Seq = 6, Ts = t0.AddHours(4) },
+        ]);
+
+        var card = graph.Find("t1")!;
+        Assert.Equal("abc1234", card.Commit);
+        Assert.Equal(t0.AddMinutes(2), card.StatusSinceUtc);
+        Assert.Equal(3, card.SessionNumber);
+        Assert.Equal(1, card.Attempts);
+    }
+
+    [Fact]
+    public void FromTasks_CarriesTheCardMetaOntoTheWire()
+    {
+        var t0 = new DateTimeOffset(2026, 8, 1, 9, 0, 0, TimeSpan.Zero);
+        var graph = new TaskGraph();
+        graph.Fold([
+            new TaskAdded { RunId = "r1", TaskId = "SF3.2", CheckpointId = "SF3.2", Title = "Kanban", Source = "planner", Order = 1, Seq = 1, Ts = t0 },
+            new SessionStarted { RunId = "r1", Number = 14, StageId = "SF3", Kind = "session", Seq = 2, Ts = t0 },
+            new TaskStatusChanged { RunId = "r1", TaskId = "SF3.2", Status = "in_progress", Seq = 3, Ts = t0.AddMinutes(7) },
+        ]);
+
+        var dto = Conductor.Core.Http.ControlPlaneDto.FromTasks(graph.Tasks).Tasks.Single();
+        Assert.Equal(14, dto.SessionNumber);
+        Assert.Equal(1, dto.Attempts);
+        Assert.Equal(t0.AddMinutes(7).ToString("O"), dto.StatusSinceUtc);
+        Assert.Equal("SF3", dto.StageId);
+    }
 }
