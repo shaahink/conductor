@@ -4,16 +4,19 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SF4.2 is CLOSED — all four parts.** `d61da19` rebaselines the eleven goldens the `w` key
-  moved (verified in reverse first: restore the committed ones and 11 fail, so it is a rebaseline,
-  not a re-declaration). `017c8a9` proves the surface against a LIVE engine and fixes what only a
-  rendered frame could show: FU-OWNER-13 was one layer thin — the status line said *waiting* while
-  the paragraph beneath it still said "Not configured … saving a token here configures it for you",
-  advising the edit the engine was holding. The old test missed it by asserting lowercase
-  "not configured" against a capital N. Fold case in frame assertions.
-next: **SF5.1 — `conductor watch`.** Nothing in SF4 is left open.
-green: `go build` + `go vet` clean; `internal/tui` and `internal/api` both ok. Live rig served
-  `count=4`, and both undated obligations rendered "age unknown", not "just now".
+last: **`engine-full` is green — the red was a stale expectation, not a defect** (`758c2d2`).
+  SF4.2 part 2 (`bc7ff3f`) stamps identity onto every outbound message at `TelegramService.cs:409`;
+  `SC1TelegramStatusTruthTests` predates it and still pinned the *unstamped* wire text of a push.
+  Corrected to `Assert.Equal(svc.IdentityLine + "\nQUEUED-FIRST", sent[0])` — still exact equality,
+  not `Contains`, so no weaker, and it now also proves a plain push is attributable.
+  **The lesson costs more than the fix:** ledger 147 offered a *name-filtered* battery as proof for
+  part 2, and three sessions then built on a suite that was already red. A change at a universal
+  chokepoint (`SendAsync`, `Reporter.Write`, the frame renderer) has a blast radius of everything —
+  run the FULL suite for those, never a slice.
+next: **SF5.1 — `conductor watch`.** Nothing in SF4 is open; SF4.1/SF4.2 stay DONE — the deliverable
+  was real and the engine was right throughout, only an older test's expectation of it was stale.
+green: engine suite **1580/1580, skipped 0, 4m5s** — the same total the red battery counted, so
+  nothing was deleted or skipped to get here (`bg-logs/engine-full suite after SC1 fix-*.log`).
 red: nothing.
 open: bugs **#15 #16 #17 #18 #19 #20**. #20 is new and it bites any session that spawns a rig:
   `run` prefers `CONDUCTOR_PLAN` over the CWD, so a scratch rig launched from inside a session
@@ -21,13 +24,14 @@ open: bugs **#15 #16 #17 #18 #19 #20**. #20 is new and it bites any session that
   Reusable proof harness: `internal/tui/owner_queue_live_test.go` (skips unless
   `CONDUCTOR_FACE_LIVE_URL` is set; its header carries the whole rig recipe).
 
+
 ## Baseline numbers (from run.db)
 
 | Metric | Value |
 |---|---|
 | Total checkpoints | 24 |
 | Done | 3 |
-| Claimed (unconfirmed) | 11 |
+| Claimed (unconfirmed) | 12 |
 
 ## Checkpoints
 
@@ -72,7 +76,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | SF4.1 | OWNER-QUEUE.md and GET /owner/queue collect every open human item — HUMAN lines, ownerGates, parks with age, blocked-until waits — each saying what it unblocks and the command that clears it, regenerated at session boundaries | DONE | - | .conductor/evidence/SF4/SF4.1-owner-queue.md |
-| SF4.2 | The face surfaces the owner queue with age and unblocks, and a newly-arrived item pushes to Telegram | IN PROGRESS | - | - |
+| SF4.2 | The face surfaces the owner queue with age and unblocks, and a newly-arrived item pushes to Telegram | DONE | d61da19 | .conductor/evidence/SF4/SF4.2-part4-face-owner-queue.md |
 
 ### SF5 — Supervision without a polling meter
 
