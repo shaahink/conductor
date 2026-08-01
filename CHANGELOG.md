@@ -15,6 +15,80 @@ it was built from. It orders above `0.1.0` and below `0.1.1`, and it is unique p
 
 ## [Unreleased]
 
+**The Sarban face era** — the watcher and the surfaces. 0.2.0 shipped an engine that could be trusted
+to run unattended; this era is about being able to *see* what it did, and to be told when it needs
+you. It was built the way the last one was: conductor driving itself against this repo, unattended,
+with every claim verified by an independent gate battery rather than by the agent that made it.
+
+The 0.2.1 and 0.2.2 releases were cut mid-era for the token-budget rails and are not repeated here.
+
+### Added
+
+- **`conductor watch` — supervision that belongs in the plan.** A babysitter blocks on the run's own
+  file rather than polling a model, so watching a run overnight costs nothing. The wake conditions
+  are plan config, not a line of shell history, and the wake can leave the machine: it reaches a
+  remote listener over HTTP, proven end to end against a listener that is not conductor. What stays
+  manual is written down rather than implied.
+- **`conductor ps` — the fleet is visible.** Every run on the machine, read from the control-plane
+  discovery files. Engine processes now carry the repo and run id in their process title, so a stray
+  `conductor.exe` in Task Manager can be identified before it is killed. When more than one control
+  plane answers, the Face probes, leads with the likely one, and asks rather than guessing.
+- **An owner queue — the things only you can do.** Decisions that need a human are collected, served
+  on the wire, and rendered as a surface in the Face instead of being buried in a log line. A queue
+  item that arrives while you are away pushes to Telegram.
+- **A session digest, and cards that say who moved them.** What a session actually did — tool mix,
+  files touched, what it landed — rendered from the wire. The board's cards carry who moved them,
+  when, and how many times.
+- **Build identity on the wire.** `GET /state` carries the engine version, commit and Face build, and
+  the Face shows them in the top bar and on Home. "Did my reinstall take?" is now answerable from the
+  screen (`FU-OWNER-10`).
+- **A real endpoint for verifier scores**, so a rendered report no longer needs SQL to exist.
+- **`conductor init` scaffolds the whole prompt bank**, with commented advisor and telegram blocks,
+  and its output passes `doctor` clean.
+
+### Changed
+
+- **Twelve Face tabs became ten, and the SQL console is gone.** The Dev SQL console, `/report/query`
+  and `report --query` are removed; MCP `run_query` stays for chat, and the two Dev panels that were
+  never the problem were re-homed rather than deleted. Console folded into Agent as a raw toggle;
+  Sessions and Timeline merged into one History surface.
+- **One clock vocabulary.** Local time with a relative age and a date when it is not today, from a
+  single shared formatter. The Timeline's UTC mislabel is fixed, and three timestamps that were on
+  the wire and on no screen now render.
+- **Money is honest.** Over-budget renders as `OVER` in dollars rather than as zero-percent headroom,
+  window spend is distinguished from lifetime spend, and the top bar shows in-flight session cost
+  live.
+- **Telegram pushes carry identity.** Every push, digest, command reply and test message is stamped
+  with the plan name and session number at the single point they all pass through, so one chat
+  receiving two machines' runs is readable (`FU-OWNER-11`).
+- **The shipped prompt templates carry the field lessons** — claim before handoff, long commands under
+  `conductor bg`, the deferred-MCP fallback, the anchor-commit rule for multi-repo plans — and the
+  prompt bank is pruned, indexed and choosable.
+
+### Fixed
+
+- **The thirteen bugs the previous run left open.** Inert plan keys (`workflowStep.model`,
+  `stage.overrides.model`, `plan.verifyEachDelivery`) are now either wired to their documented meaning
+  or rejected at load — never readable-and-ignored. A claim made during a Verify or Audit session is
+  counted, stamped and confirmed like any other. A confirmed last stage completes instead of spinning
+  forever. One pid-liveness policy everywhere including MCP; `bg start` stops leaking the caller's
+  stdout handle; `bg logs` can read a log that is still being written.
+- **An open bug now outlives the run that found it.** `conductor bug` was run-scoped: the moment a new
+  run started in the same repo, every open bug from the last one silently vanished — no error, an
+  empty ledger that looked clean. Carried bugs now appear in `bug list` attributed to the plan that
+  filed them, reach the next session's prompt, and are counted at run end.
+- **A run says whether it can notify you at all**, once at startup, in the same sentence `doctor` and
+  `/telegram/status` give — instead of only answering when asked (`FU-OWNER-12`).
+- **A queued plan reload reads as *waiting*, not as *unconfigured*.** Telegram used to advise the plan
+  edit you had made and it had accepted seconds earlier (`FU-OWNER-13`).
+- **Home's honest connection line was being truncated into a lie**, and Next steps offered a live
+  agent when no engine was running.
+- **The docs were reconciled with the code.** `tracker.md` documented a `.conductor/` tree in which
+  five entries did not exist after thirty-six real sessions and fourteen real artifacts were missing;
+  the backlog listed ten shipped features as future work; `operating.md`'s known-gaps list was a
+  three-week-old snapshot. All three are now pinned by tests that read the source, so the next drift
+  is a red build rather than a re-read.
+
 ## [0.2.2] - 2026-08-01
 
 0.2.1 built the rails and left them reading a gauge that was wired to nothing. This is the wire.
