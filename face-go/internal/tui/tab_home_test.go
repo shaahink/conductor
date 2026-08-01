@@ -75,20 +75,51 @@ func TestHomeWorkspaceRendersEngineServedPaths(t *testing.T) {
 	m.plan = &api.PlanDto{PlanFile: `C:\Code\conductor-baton\plans\conductor-ux.plan.json`}
 
 	got := stripANSI(homeText(m.renderHomeWorkspace(m.paneCols())))
+	// SF2.1 renders every path ONE way — forward slashes, upper-case drive — and everything inside
+	// the repo relative to the repo row above it. The engine served these with backslashes; the panel
+	// must not print two spellings of one machine.
 	for _, want := range []string{
-		`C:\Code\conductor-baton`,
+		"C:/Code/conductor-baton",
 		"CONDUCTOR-UX-START.md",
-		`C:\Code\conductor-baton\.conductor`,
-		"conductor-ux.plan.json",
+		".conductor",
+		"plans/conductor-ux.plan.json",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("Workspace panel is missing %q:\n%s", want, got)
 		}
 	}
+	if strings.Contains(got, `\`) {
+		t.Errorf("no backslash may survive normalisation:\n%s", got)
+	}
 	// The state dir must not be reported as living under plans/ — that is the spec's error, and the
 	// bug this panel would ship if it derived the path instead of reading it.
-	if strings.Contains(got, `plans\.conductor`) {
+	if strings.Contains(got, "plans/.conductor") {
 		t.Errorf("state dir must be repo-rooted, not planDir-rooted:\n%s", got)
+	}
+}
+
+// The casing half of the same rule (screenshot critique #8): the engine resolved the repo as
+// `C:/code/…` while the plan file was typed `C:\Code\…`. Both open the same directory, so no string
+// rule can pick a winner — rendering repo-relative removes the disagreement instead.
+func TestHomeWorkspaceKillsTheMixedCasingOfOnePath(t *testing.T) {
+	m := newTestModel()
+	m.width, m.height = 110, 34
+	m.data.Plan = &api.StateDto{
+		Repo:     "C:/code/conductor",
+		StateDir: `C:\Code\conductor\.conductor`,
+		Tracker:  "SARBAN-FACE-TRACKER.md",
+	}
+	m.plan = &api.PlanDto{PlanFile: `c:\Code\conductor\plans\sarban.plan.json`}
+
+	got := stripANSI(homeText(m.renderHomeWorkspace(m.paneCols())))
+	if strings.Contains(got, "Code/conductor/.conductor") || strings.Contains(got, "Code/conductor/plans") {
+		t.Errorf("a second casing of the repo root leaked into a child path:\n%s", got)
+	}
+	if !strings.Contains(got, ".conductor") || !strings.Contains(got, "plans/sarban.plan.json") {
+		t.Errorf("children of the repo must render relative to it:\n%s", got)
+	}
+	if strings.Count(got, "conductor") == 0 || !strings.Contains(got, "C:/code/conductor") {
+		t.Errorf("the repo itself must still render in full, as the engine resolved it:\n%s", got)
 	}
 }
 
@@ -104,7 +135,7 @@ func TestHomeWorkspaceDegradesWhenTheEngineServesNothing(t *testing.T) {
 	if strings.Count(got, "—") != 3 { // tracker, state dir, plan file
 		t.Errorf("expected the three unknown fields to render as em-dashes:\n%s", got)
 	}
-	if !strings.Contains(got, `C:\Code\conductor-baton`) {
+	if !strings.Contains(got, "C:/Code/conductor-baton") {
 		t.Errorf("the repo it DID serve must still render:\n%s", got)
 	}
 }
@@ -155,14 +186,16 @@ func TestHomeHeadroomReportsRemainingNotSpent(t *testing.T) {
 func TestHomePathKeepsTheTail(t *testing.T) {
 	long := `C:\Users\dev\very\deep\tree\conductor-baton`
 	got := homePath(long, 30)
-	if strings.HasPrefix(got, `C:\`) {
+	if strings.HasPrefix(got, "C:/") {
 		t.Errorf("a shortened path must drop the head, not the tail: %q", got)
 	}
 	if !strings.HasSuffix(got, "conductor-baton") {
 		t.Errorf("a shortened path must keep the folder you are in: %q", got)
 	}
-	if short := homePath(`C:\Code`, 30); short != `C:\Code` {
-		t.Errorf("a path that fits must be left alone, got %q", short)
+	// "Left alone" now means left at its length: separators and drive case are normalised on every
+	// path Home prints, including the ones short enough to survive whole (SF2.1).
+	if short := homePath(`c:\Code`, 30); short != "C:/Code" {
+		t.Errorf("a path that fits must keep every segment, normalised, got %q", short)
 	}
 }
 
@@ -203,7 +236,7 @@ func TestHomeHintsAreContextual(t *testing.T) {
 // present — never what it is.
 func TestHomeWiringReportsTokenPresenceWithoutLeakingIt(t *testing.T) {
 	m := newGoldenModel(120, 30).(Model)
-	got := stripANSI(homeText(m.homeWiring()))
+	got := stripANSI(homeText(m.homeWiring(100)))
 	if !strings.Contains(got, "present") {
 		t.Errorf("token presence must be stated:\n%s", got)
 	}
@@ -231,10 +264,15 @@ func TestHomeWiringLabelsFitTheGutter(t *testing.T) {
 		}
 	}
 	// And prove it end-to-end on the rendered rows: every label must be followed by a space. The
-	// fixture's run has an id, so `run id` renders too — all four labels are covered here.
+	// fixture's run has an id, so `run id` renders too. The model is put in the DISCONNECTED state
+	// with an error, because SF2.1 made two of these rows conditional on exactly that: the engine
+	// line's wording and the raw `last error` row that moved down here from Server.
 	m := newGoldenModel(120, 30).(Model)
-	got := stripANSI(homeText(m.homeWiring()) + "\n" + homeText(m.renderHomeServer(100)))
-	for _, label := range append([]string{"mode", "url", "streams"}, homeWiringLabels...) {
+	m.data.Connection.Connected = false
+	raw := "dial tcp 127.0.0.1:4317: connectex: No connection could be made"
+	m.data.Connection.LastError = &raw
+	got := stripANSI(homeText(m.homeWiring(100)) + "\n" + homeText(m.renderHomeServer(100)))
+	for _, label := range append([]string{"engine", "streams"}, homeWiringLabels...) {
 		if !strings.Contains(got, label+" ") {
 			t.Errorf("label %q is not followed by a gap in the rendered rows:\n%s", label, got)
 		}
@@ -246,7 +284,7 @@ func TestHomeWiringLabelsFitTheGutter(t *testing.T) {
 // tier system exists to prevent.
 func TestHomeWiringRowsShedBeforeTheLandingsAnswer(t *testing.T) {
 	m := newGoldenModel(120, 30).(Model)
-	rows := m.homeWiring()
+	rows := m.homeWiring(100)
 	for _, l := range rows[1:] { // rows[0] is the section header, which homePanel makes essential
 		if l.tier == homeEssential {
 			t.Errorf("a wiring row is homeEssential (%q) — Home cannot scroll, so diagnostics must "+
@@ -271,7 +309,7 @@ func TestHomeWiringRowsShedBeforeTheLandingsAnswer(t *testing.T) {
 		return [][]homeLine{m.renderHomeServer(100), m.renderHomeRun(100), m.renderHomeWorkspace(100),
 			m.renderHomeNextSteps()}
 	}
-	with := func() [][]homeLine { return append(without(), m.homeWiring()) }
+	with := func() [][]homeLine { return append(without(), m.homeWiring(100)) }
 	for _, budget := range []int{12, 18, 22, 24, 28, 40} {
 		base := strings.Split(stripANSI(fitHome(without(), budget)), "\n")
 		got := stripANSI(fitHome(with(), budget))

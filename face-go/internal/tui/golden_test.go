@@ -22,6 +22,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"conductor-face-go/internal/api"
+	"conductor-face-go/internal/timefmt"
 	"conductor-face-go/internal/widgets"
 )
 
@@ -824,6 +825,46 @@ func TestGoldenHomeDisconnected(t *testing.T) {
 	var m tea.Model = New(fakeSource{}, false, "http://127.0.0.1:4317")
 	m, _ = m.Update(tea.WindowSizeMsg{Width: 110, Height: 34})
 	checkGolden(t, "home_disconnected", stripANSI(m.View().Content))
+}
+
+// TestGoldenHomeOfflineWithLastRun is the frame SF2.1 exists to produce, and the one the screenshot
+// critique's items #1, #2 and #9 all landed on: the engine has DIED under a Face that was watching
+// it. Before, that frame showed a COMPLETED run header above "No run attached. Start one:", with a
+// raw `connectex:` string between them and no clock anywhere. Now it is one engine line in English
+// with an age, the run it was watching marked as a memory, and a card built from the file the engine
+// left behind.
+//
+// The fixture under testdata/lastrun/.conductor is a VERBATIM engine-written RUN-SUMMARY.md, copied
+// out of a real completed run — a hand-written one would only pin the parser against itself. The
+// disk read happens for real here: the command MsgFetchError returns is executed and its result fed
+// back, exactly as the bubbletea loop would, so nothing in this frame comes from a poked field.
+func TestGoldenHomeOfflineWithLastRun(t *testing.T) {
+	now := time.Date(2026, 8, 1, 1, 27, 0, 0, time.UTC)
+	timefmt.Now = func() time.Time { return now }
+	t.Cleanup(func() { timefmt.Now = time.Now })
+
+	var m tea.Model = New(fakeSource{}, false, "http://127.0.0.1:4317")
+	m, _ = m.Update(tea.WindowSizeMsg{Width: 110, Height: 40})
+	state := fixedState()
+	state.StateDir = filepath.Join("testdata", "lastrun", ".conductor")
+	m, _ = m.Update(MsgStateUpdated{State: state})
+	m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
+	m, _ = m.Update(MsgEventsConnChanged{Connected: true})
+	m, _ = m.Update(MsgTxConnChanged{Connected: true})
+
+	// Seven minutes later the engine is gone: the poll fails and both streams drop behind it.
+	now = now.Add(7 * time.Minute)
+	next, cmd := m.Update(MsgFetchError{Err: "dial tcp 127.0.0.1:4317: connectex: No connection " +
+		"could be made because the target machine actively refused it."})
+	m = next
+	if cmd == nil {
+		t.Fatal("losing the engine must schedule the run-summary read")
+	}
+	m, _ = m.Update(cmd())
+	m, _ = m.Update(MsgEventsConnChanged{Connected: false})
+	m, _ = m.Update(MsgTxConnChanged{Connected: false})
+
+	checkGolden(t, "home_offline_lastrun", stripANSI(m.View().Content))
 }
 
 // TestGoldenHomeDemo is the same landing in --demo: the tour a reviewer sees with no engine and no

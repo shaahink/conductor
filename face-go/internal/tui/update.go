@@ -67,6 +67,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		if msg.State != nil {
 			m.data.Plan = msg.State
+			// Learn where this run keeps its state while the engine is still able to tell us: when it
+			// dies, that directory is where RUN-SUMMARY.md will be, and /state will not be answering
+			// to point at it. Discovery (main.go) covers the cold-start case; this covers the one that
+			// matters more, a Face that was watching when the run ended.
+			//
+			// The engine's answer OVERWRITES discovery's guess rather than deferring to it: discovery
+			// can only find a directory literally named `.conductor`, while PlanConfig.StateDir is
+			// configurable, so the walk-up is the fallback and /state is the fact.
+			if msg.State.StateDir != "" {
+				m.stateDir = msg.State.StateDir
+			}
 			// The transcript borrows its prefix vocabulary from the provider driving this run
 			// (U3.3). "" (older engine) stays "" here → the neutral house set, never a guess.
 			m.transcript.Provider = msg.State.Provider
@@ -77,7 +88,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmd = cmdSpinnerTick()
 			}
 		}
-		m.data.Connection.Connected = true
+		m.setConnected(true)
 		m.data.Connection.LastError = nil
 		return m, cmd
 
@@ -142,17 +153,27 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case MsgFetchError:
 		m.data.Connection.LastError = &msg.Err
-		m.data.Connection.Connected = false
+		wasConnected := m.data.Connection.Connected
+		m.setConnected(false)
+		if wasConnected || m.lastRun == nil {
+			// The engine just went away (or we have never looked): its RUN-SUMMARY.md is the only
+			// thing left that can say what happened, and it is written at completion — so the read
+			// belongs HERE, on the transition, not once at startup.
+			return m, m.cmdLoadLastRun()
+		}
 
+	// The two stream messages move their OWN indicator and nothing else. Deriving Connected from
+	// them is what made a healthy poll with a dropped SSE read as "disconnected" (SF2.1).
 	case MsgEventsConnChanged:
 		m.data.Connection.EventsConnected = msg.Connected
-		m.data.Connection.Connected = m.data.Connection.EventsConnected || m.data.Connection.TranscriptConnected
 		return m, waitForEventsConn(m.eventsConnCh)
 
 	case MsgTxConnChanged:
 		m.data.Connection.TranscriptConnected = msg.Connected
-		m.data.Connection.Connected = m.data.Connection.EventsConnected || m.data.Connection.TranscriptConnected
 		return m, waitForTxConn(m.txConnCh)
+
+	case MsgLastRunLoaded:
+		m.lastRun = msg.Summary
 
 	case MsgControlSent:
 		kind, text := widgets.ToastSuccess, fmt.Sprintf("%s accepted", msg.Verb)

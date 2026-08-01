@@ -6,6 +6,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"conductor-face-go/internal/api"
+	"conductor-face-go/internal/lastrun"
 )
 
 type MsgTick time.Time
@@ -83,6 +84,13 @@ type MsgReportScores struct {
 type MsgTimelineUpdated struct {
 	Timeline *api.TimelineDto
 	Err      string
+}
+
+// MsgLastRunLoaded carries the engine's RUN-SUMMARY.md, read off disk when the link to the control
+// plane drops (SF2.1). A nil Summary is the normal answer — most state dirs have no finished run in
+// them — and it must leave Home saying nothing rather than showing an empty card.
+type MsgLastRunLoaded struct {
+	Summary *lastrun.Summary
 }
 
 // MsgKnowledgeUpdated carries the M7 ledger + bugs snapshot (polled together).

@@ -4,6 +4,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"conductor-face-go/internal/api"
+	"conductor-face-go/internal/lastrun"
 	"conductor-face-go/internal/templates"
 	"conductor-face-go/internal/widgets"
 )
@@ -110,6 +111,12 @@ type Model struct {
 	source  api.DataSource
 	isDemo  bool
 	baseURL string
+
+	// SF2.1: where this run keeps its state on disk, and the summary the engine left there when it
+	// finished. Learned from /state while the engine lives, from discovery when it does not, and read
+	// only when the link drops — Home's answer to "what happened?" once there is nothing to poll.
+	stateDir string
+	lastRun  *lastrun.Summary
 
 	width  int
 	height int
@@ -312,6 +319,15 @@ func New(source api.DataSource, isDemo bool, baseURL string) Model {
 		m.data.Connection.Mode = api.ModeDemo
 		m.data.Connection.Connected = true
 	}
+	return m
+}
+
+// WithStateDir tells the Face which directory holds this run's state, discovered on disk before any
+// connection is attempted (main.go). It is how a Face started AFTER the engine exited can still read
+// the run summary — a setter rather than a New parameter so the eleven test call sites of New, and
+// anyone embedding the model, keep working unchanged.
+func (m Model) WithStateDir(dir string) Model {
+	m.stateDir = dir
 	return m
 }
 

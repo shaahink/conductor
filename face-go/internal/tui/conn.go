@@ -6,6 +6,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"conductor-face-go/internal/api"
+	"conductor-face-go/internal/lastrun"
 )
 
 // doPoll fetches the four snapshot endpoints (state, tasks, processes, sessions) independently,
@@ -70,6 +71,21 @@ func knowledgeWriteMsg(okToast string, res *api.KnowledgeWriteResultDto, err err
 		return MsgKnowledgeWritten{Err: reason}
 	}
 	return MsgKnowledgeWritten{Toast: okToast}
+}
+
+// cmdLoadLastRun reads RUN-SUMMARY.md out of the state dir (SF2.1). It is the only disk read the
+// Face does after startup, it happens only when the control plane stops answering, and a failure is
+// silent: a missing or unreadable summary means Home shows no card, never an error about a file the
+// user did not ask for.
+func (m Model) cmdLoadLastRun() tea.Cmd {
+	dir := m.stateDir
+	return func() tea.Msg {
+		summary, err := lastrun.Load(dir)
+		if err != nil {
+			return nil
+		}
+		return MsgLastRunLoaded{Summary: summary}
+	}
 }
 
 func (m Model) cmdFetchState() tea.Cmd {

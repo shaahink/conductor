@@ -12,6 +12,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"conductor-face-go/internal/api"
+	"conductor-face-go/internal/timefmt"
 	"conductor-face-go/internal/widgets"
 )
 
@@ -126,12 +127,15 @@ func (m Model) renderHomePane() (string, string) {
 	w := m.paneCols()
 	body := fitHome([][]homeLine{
 		m.renderHomeServer(w),
+		// Directly under the engine line, because it is the answer to the question that line raises:
+		// the engine is not running — so what happened? (SF2.1)
+		m.renderHomeLastRun(w),
 		m.renderHomeRun(w),
 		m.renderHomeWorkspace(w),
 		m.renderHomeNextSteps(),
 		// SF1.2's re-homed wiring diagnostics go last: see homeWiring for why position is what makes
 		// them shed before anything Home already showed.
-		m.homeWiring(),
+		m.homeWiring(w),
 	}, m.paneRows())
 	// Hard-clip every row to the pane. .Width() only pads short content — it never truncates — so one
 	// over-long row would WRAP and push every panel below it down and out of the pane (STYLE.md).
@@ -141,43 +145,57 @@ func (m Model) renderHomePane() (string, string) {
 
 // --- Server ------------------------------------------------------------------
 
+// renderHomeServer answers "am I attached to anything, and since when" in ONE line (SF2.1).
+//
+// It used to answer it in three that could disagree: a mode row reading "live — not connected", a
+// raw `connectex: …` dial error, and — regardless of whether a run was known — the splash's
+// start-a-run instructions, which is how a screenshot came to show a COMPLETED run header above
+// "No run attached. Start one:". The engine line below is now the only statement of the link, it
+// carries its own age, and the instructions appear only when there is genuinely no run to show.
 func (m Model) renderHomeServer(w int) []homeLine {
 	c := m.data.Connection
 
-	var mode string
-	switch {
-	case c.Mode == api.ModeDemo:
-		mode = tealStyle.Render("demo") + subtleStyle.Render("  synthetic data · no engine · no spend")
-	case c.Connected:
-		mode = safeStyle.Render("live")
-	default:
-		mode = destructStyle.Render("live — not connected")
+	if c.Mode == api.ModeDemo {
+		return homePanel("Server", hRow("engine",
+			tealStyle.Render("demo")+subtleStyle.Render("  synthetic data · no engine · no spend"), homeEssential))
 	}
-	rows := []homeLine{hRow("mode", mode, homeEssential)}
 
-	if c.Mode == api.ModeLive {
+	st := engineState(c)
+	style := safeStyle
+	if !c.Connected {
+		style = destructStyle
+	}
+	line := style.Render(st.Headline) + subtleStyle.Render(" — "+st.Detail)
+	if st.Age != "" {
+		line += subtleStyle.Render(" · " + st.Age)
+	}
+	rows := []homeLine{
+		hRow("engine", truncate(line, max(20, w-homeLabelW)), homeEssential),
+		hRow("streams", homeStream("events", c.EventsConnected)+"   "+homeStream("transcript", c.TranscriptConnected), homeDetail),
+	}
+
+	if !c.Connected && !m.knowsARun() {
+		// U1.1: a disconnected Home IS the landing page, so the old splash's how-to-start folds in
+		// here rather than living on a separate screen nobody lands on. SF2.1 narrowed WHEN: only
+		// when neither a last-known state nor a run summary exists, because telling someone to start
+		// a run while showing them the run they just watched is the same lie in two panels.
 		rows = append(rows,
-			hRow("url", tealStyle.Render(c.URL), homeUseful),
-			hRow("streams", homeStream("events", c.EventsConnected)+"   "+homeStream("transcript", c.TranscriptConnected), homeDetail))
-		if c.LastError != nil && *c.LastError != "" {
-			// An error is never detail: it is the reason the page looks wrong.
-			rows = append(rows, hRow("last error", destructStyle.Render(truncate(*c.LastError, max(10, w-homeLabelW))), homeEssential))
-		}
-		if !c.Connected {
-			// U1.1: a disconnected Home IS the landing page, so the old splash's how-to-start folds
-			// in here rather than living on a separate screen nobody lands on. It is the whole point
-			// of the page in that state, so it never sheds.
-			rows = append(rows,
-				hLine("", homeEssential),
-				hLine(subtleStyle.Render("No run attached. Start one:"), homeEssential),
-				hLine("  "+textStyle.Render("conductor run -p plans/<your>.plan.json"), homeEssential),
-				hLine("  "+subtleStyle.Render("conductor journey -p plans/<your>.plan.json")+subtleStyle.Render("  (map it first)"), homeUseful),
-				hLine("", homeDetail),
-				hLine(subtleStyle.Render("This Face finds .conductor/control-plane.json and attaches."), homeDetail),
-				hLine(subtleStyle.Render("Or explore offline:  conductor-face --demo"), homeUseful))
-		}
+			hLine("", homeEssential),
+			hLine(subtleStyle.Render("No run attached. Start one:"), homeEssential),
+			hLine("  "+textStyle.Render("conductor run -p plans/<your>.plan.json"), homeEssential),
+			hLine("  "+subtleStyle.Render("conductor journey -p plans/<your>.plan.json")+subtleStyle.Render("  (map it first)"), homeUseful),
+			hLine("", homeDetail),
+			hLine(subtleStyle.Render("This Face finds .conductor/control-plane.json and attaches."), homeDetail),
+			hLine(subtleStyle.Render("Or explore offline:  conductor-face --demo"), homeUseful))
 	}
 	return homePanel("Server", rows...)
+}
+
+// knowsARun reports whether the Face has anything to show about a run at all — a state snapshot it
+// once polled, or a summary the engine left on disk. It is the single test behind "should the
+// landing page be telling this person how to start one".
+func (m Model) knowsARun() bool {
+	return m.data.Plan != nil || m.lastRun != nil
 }
 
 func homeStream(name string, connected bool) string {
@@ -188,6 +206,42 @@ func homeStream(name string, connected bool) string {
 	return dot + " " + subtleStyle.Render(name)
 }
 
+// --- Last run (SF2.1) ---------------------------------------------------------
+
+// renderHomeLastRun is what Home can still say once the control plane is gone. Everything else on
+// this page is polled, so a dead engine used to erase the run entirely; the engine writes
+// RUN-SUMMARY.md from run.db at completion precisely so the facts outlive it, and this reads it.
+//
+// It renders ONLY while disconnected: with a live engine, /state is fresher than any file, and two
+// panels answering "what is this run" is the failure this checkpoint exists to fix.
+func (m Model) renderHomeLastRun(w int) []homeLine {
+	s := m.lastRun
+	if s == nil || m.data.Connection.Connected || m.data.Connection.Mode != api.ModeLive {
+		return homePanel("Last run")
+	}
+
+	outcome := widgets.StatusBadge(s.Outcome)
+	if age := timefmt.Age(s.EndedUtc); age != "" {
+		outcome += subtleStyle.Render("  ended " + age)
+	}
+	rows := []homeLine{hRow("outcome", outcome, homeEssential)}
+	if s.Plan != "" {
+		rows = append(rows, hRow("plan", textStyle.Render(s.Plan), homeUseful))
+	}
+	if s.Checkpoints != "" {
+		rows = append(rows, hRow("progress", textStyle.Render(s.Checkpoints), homeEssential))
+	}
+	if s.Sessions != "" {
+		rows = append(rows, hRow("sessions", subtleStyle.Render(s.Sessions), homeDetail))
+	}
+	if s.Spend != "" {
+		rows = append(rows, hRow("spend", peachStyle.Render(truncate(s.Spend, max(12, w-homeLabelW))), homeUseful))
+	}
+	// Name the source: a card that survives the engine has to say why it is allowed to.
+	rows = append(rows, hRow("from", subtleStyle.Render(m.homeRelPath(s.Path, w)), homeDetail))
+	return homePanel("Last run", rows...)
+}
+
 // --- wiring (re-homed from the deleted Dev tab, SF1.2) -------------------------
 
 // homeWiringLabels is every label the Wiring panel puts in the shared gutter. homeRow pads a label to
@@ -196,7 +250,7 @@ func homeStream(name string, connected bool) string {
 // makes the rule testable: TestHomeWiringLabelsFitTheGutter checks the whole set, so the next row
 // added can't reintroduce it. `mode`, `url` and `streams` are the Server panel's own labels, which
 // this section extends rather than repeats.
-var homeWiringLabels = []string{"token", "seq", "poll", "run id"}
+var homeWiringLabels = []string{"token", "seq", "poll", "run id", "last error"}
 
 // homeWiring answers "is the Face actually wired to anything, and how" — the question the deleted Dev
 // tab's internals pane existed for (U2.3). SF1.2 re-homed it here rather than deleting it with the SQL
@@ -212,7 +266,7 @@ var homeWiringLabels = []string{"token", "seq", "poll", "run id"}
 //
 // Every value is read from live client state. Nothing here is a constant dressed up as a reading,
 // except the poll cadences, which ARE the code's constants (messages.go) and say so.
-func (m Model) homeWiring() []homeLine {
+func (m Model) homeWiring(w int) []homeLine {
 	// Demo mode has no engine to be wired to: mode already says "synthetic data · no engine".
 	if m.data.Connection.Mode != api.ModeLive {
 		return homePanel("Wiring")
@@ -233,6 +287,14 @@ func (m Model) homeWiring() []homeLine {
 	if s := m.data.Plan; s != nil && s.RunId != "" {
 		rows = append(rows, hRow("run id", textStyle.Render(s.RunId), homeDetail))
 	}
+	// The RAW transport error, verbatim, where a developer screenshotting Home into a bug report can
+	// still find it. SF2.1 took it off the engine line — `connectex: No connection could be made
+	// because the target machine actively refused it.` is not a sentence a user can act on — but
+	// deleting it would trade one kind of dishonesty for a Face that hides what it knows.
+	if e := m.data.Connection.LastError; e != nil && *e != "" {
+		rows = append(rows, hRow("last error",
+			destructStyle.Render(truncate(firstLine(*e), max(10, w-homeLabelW))), homeDetail))
+	}
 	return homePanel("Wiring", rows...)
 }
 
@@ -246,7 +308,7 @@ func (m Model) renderHomeRun(w int) []homeLine {
 
 	rows := []homeLine{
 		hRow("plan", textStyle.Render(s.PlanName), homeUseful),
-		hRow("status", widgets.StatusBadge(s.Status), homeEssential),
+		hRow("status", m.homeRunStatus(s), homeEssential),
 		hRow("stage", accentStyle.Render(s.StageId)+" "+subtleStyle.Render(truncate(s.StageTitle, max(8, w-homeLabelW-len(s.StageId)-1))), homeEssential),
 	}
 	if s.SessionNumber > 0 {
@@ -274,6 +336,23 @@ func (m Model) renderHomeRun(w int) []homeLine {
 	// dressed up with a fake ceiling.
 	rows = append(rows, m.homeBudgets(s)...)
 	return homePanel("Run", rows...)
+}
+
+// homeRunStatus badges the run's status and, when the engine has stopped answering, says out loud
+// that the badge is a memory. Everything in this panel was polled; without the qualifier a run that
+// died mid-stage keeps rendering "RUNNING" forever, which is the same class of lie as a connection
+// line that says "live" while nothing is listening.
+func (m Model) homeRunStatus(s *api.StateDto) string {
+	badge := widgets.StatusBadge(s.Status)
+	c := m.data.Connection
+	if c.Mode != api.ModeLive || c.Connected {
+		return badge
+	}
+	stale := "as last seen"
+	if age := timefmt.Age(c.LastContactAt); age != "" {
+		stale = "as last seen " + age
+	}
+	return badge + subtleStyle.Render("  "+stale)
 }
 
 func homeProgress(s *api.StateDto) string {
@@ -335,16 +414,16 @@ func (m Model) renderHomeWorkspace(w int) []homeLine {
 			repo = textStyle.Render(homePath(s.Repo, w))
 		}
 		if s.Tracker != "" {
-			tracker = textStyle.Render(s.Tracker)
+			tracker = textStyle.Render(m.homeRelPath(s.Tracker, w))
 		}
 		// Engine-served (PlanConfig.StateDir, rooted at Repo). Never joined from PlanDir here: a plan
 		// file outside the repo root would make that a confident lie.
 		if s.StateDir != "" {
-			stateDir = subtleStyle.Render(homePath(s.StateDir, w))
+			stateDir = subtleStyle.Render(m.homeRelPath(s.StateDir, w))
 		}
 	}
 	if m.plan != nil && m.plan.PlanFile != "" {
-		planFile = subtleStyle.Render(homePath(m.plan.PlanFile, w))
+		planFile = subtleStyle.Render(m.homeRelPath(m.plan.PlanFile, w))
 	}
 
 	// repo is the answer to "which folder does this edit" — the reason U1.2 put the section here at
@@ -358,14 +437,48 @@ func (m Model) renderHomeWorkspace(w int) []homeLine {
 }
 
 // homePath keeps a path's tail when it has to be shortened — the leading drive/prefix is the part
-// you can afford to lose, the folder you are in is not.
+// you can afford to lose, the folder you are in is not. Every path Home prints goes through here, so
+// the normalisation below applies to all of them and cannot be forgotten by a new row.
 func homePath(p string, w int) string {
+	p = normPath(p)
 	avail := w - homeLabelW
 	r := []rune(p)
 	if avail < 12 || len(r) <= avail {
 		return p
 	}
 	return "…" + string(r[len(r)-avail+1:])
+}
+
+// normPath renders a path ONE way: forward slashes (the separator the engine's own JSON already
+// uses), an upper-case drive letter, no trailing slash. Home showed `C:/code/…` beside `C:\Code\…`
+// for the same machine because the two strings came from different writers — the plan file as the
+// owner typed it, the repo as the engine resolved it — and nothing normalised either.
+func normPath(p string) string {
+	p = strings.TrimSpace(strings.ReplaceAll(p, "\\", "/"))
+	if len(p) >= 2 && p[1] == ':' {
+		p = strings.ToUpper(p[:1]) + p[1:]
+	}
+	if len(p) > 1 {
+		p = strings.TrimSuffix(p, "/")
+	}
+	return p
+}
+
+// homeRelPath renders a path INSIDE the repo relative to it. Normalising separators fixes half the
+// mix; the other half is folder-name casing (`C:/code` vs `C:\Code`), which no string rule can
+// resolve because both spellings open the same directory on Windows. Dropping the shared prefix
+// removes the disagreement instead of picking a winner — and the repo row directly above already
+// states the root, so ".conductor" is more readable than a second copy of the absolute path.
+func (m Model) homeRelPath(p string, w int) string {
+	p = normPath(p)
+	repo := ""
+	if s := m.data.Plan; s != nil {
+		repo = normPath(s.Repo)
+	}
+	if repo != "" && len(p) > len(repo) && strings.EqualFold(p[:len(repo)], repo) && p[len(repo)] == '/' {
+		return p[len(repo)+1:]
+	}
+	return homePath(p, w)
 }
 
 // --- Next steps --------------------------------------------------------------

@@ -12,6 +12,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"conductor-face-go/internal/api"
+	"conductor-face-go/internal/timefmt"
 	"conductor-face-go/internal/widgets"
 )
 
@@ -264,7 +265,14 @@ func (m Model) renderAgentStrip() string {
 	// Live mode only: if the poll/stream has dropped, say so loudly — the strip below is last-known
 	// state, not "what's happening now". (Demo mode is always "connected".)
 	if m.data.Connection.Mode == api.ModeLive && !m.data.Connection.Connected {
-		rows = append(rows, peachStyle.Bold(true).Render("● disconnected")+subtleStyle.Render(" — showing last-known state; retrying…"))
+		// SF2.1: with its age. "retrying…" with no clock cannot be told apart from a Face that gave
+		// up ten minutes ago, and the strip below it is last-known state whose staleness IS this age.
+		since := ""
+		if age := timefmt.Span(timefmt.Now().Sub(m.data.Connection.Since)); !m.data.Connection.Since.IsZero() {
+			since = " for " + age
+		}
+		rows = append(rows, peachStyle.Bold(true).Render("● disconnected")+
+			subtleStyle.Render(" — showing last-known state; retrying"+since+"…"))
 	}
 
 	rule := lipgloss.NewStyle().Foreground(widgets.Surface()).Render(strings.Repeat("─", max(1, w)))

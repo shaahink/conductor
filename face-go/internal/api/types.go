@@ -649,6 +649,14 @@ const (
 	ModeDemo ConnectionMode = "demo"
 )
 
+// ConnectionState is what the Face knows about its own link to the engine.
+//
+// SF2.1: Connected has exactly ONE meaning — the engine answered our last /state poll — and exactly
+// one writer (tui.Model.setConnected). It used to have three: the state poll set it true, a fetch
+// error set it false, and either SSE stream re-derived it as events||transcript, so a live poll with
+// both streams down read "disconnected" and a dead engine with a stale stream read "connected".
+// EventsConnected and TranscriptConnected are still tracked — Home shows them as their own row —
+// but they describe the STREAMS, and no longer redefine the link.
 type ConnectionState struct {
 	Mode                ConnectionMode
 	URL                 string
@@ -656,6 +664,11 @@ type ConnectionState struct {
 	TranscriptConnected bool
 	Connected           bool
 	LastError           *string
+	// LastContactAt is when the engine last answered; zero means it never has in this session. It is
+	// what lets a disconnected surface say "since when" instead of just "not connected".
+	LastContactAt time.Time
+	// Since is when the CURRENT value of Connected began, so a banner can age itself.
+	Since time.Time
 }
 
 // --- AppState: the single source of truth for the TUI ---

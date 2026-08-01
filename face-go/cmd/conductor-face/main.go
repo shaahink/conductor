@@ -80,7 +80,15 @@ func main() {
 	}
 	defer source.Close()
 
-	if _, err := tea.NewProgram(tui.New(source, *demo, baseURL)).Run(); err != nil {
+	model := tui.New(source, *demo, baseURL)
+	if !*demo {
+		// SF2.1: find this run's state dir on disk BEFORE anything is polled, so a Face opened after
+		// the engine exited can still say what the run did. Demo mode is excluded because it has no
+		// disk state and must never read a real run's summary into a synthetic tour.
+		model = model.WithStateDir(discoverStateDir())
+	}
+
+	if _, err := tea.NewProgram(model).Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "conductor-face: %v\n", err)
 		os.Exit(1)
 	}
@@ -125,6 +133,36 @@ func discoverControlPlane() (baseURL, token string) {
 		parent := filepath.Dir(dir)
 		if parent == dir {
 			return "", ""
+		}
+		dir = parent
+	}
+}
+
+// discoverStateDir walks up from the working directory for a `.conductor` directory and returns it,
+// or "" when there is none above us.
+//
+// It deliberately does NOT look for control-plane.json, the way discoverControlPlane above does. The
+// engine DELETES that file as it shuts down (ControlPlaneServer.Dispose: "a client that reads it must
+// never be pointed at a dead port"), so keying on it would leave the Face blind in exactly the case
+// SF2.1's last-run card exists to serve — a run that has finished. The directory outlives the port;
+// the file does not.
+//
+// This is the cold-start answer, not the authoritative one: the moment /state answers, the engine's
+// own PlanConfig.StateDir replaces it (update.go), which also covers a plan whose state dir is not
+// named `.conductor` at all.
+func discoverStateDir() string {
+	dir, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+	for {
+		candidate := filepath.Join(dir, ".conductor")
+		if fi, err := os.Stat(candidate); err == nil && fi.IsDir() {
+			return candidate
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return ""
 		}
 		dir = parent
 	}
