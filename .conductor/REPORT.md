@@ -1,10 +1,10 @@
 ﻿# Conductor — Sarban face - the watcher and the surfaces run report
 
-_Updated 2026-08-01 03:48 UTC · branch `feat/sarban` · HEAD `5d88b21`_
+_Updated 2026-08-01 09:27 UTC · branch `feat/sarban` · HEAD `ea6edc7`_
 
-**Status:** NeedsHuman — agent asked for a human in the tracker handoff (HUMAN: line) — resolve, then run `conductor resume` [1s ago, 03:48:55Z]
-**Stage:** SF4 — The human queue is a first-class surface · attempts used 0 · working ▸ SF4.1
-**Checkpoints:** 13/24 done · **Sessions run:** 19 · **Cost:** $175.5699 (agent $175.4769 + gates $0.0930) · **Tokens:** 3,003,529 in / 977,183 out
+**Status:** Running
+**Stage:** SF4 — The human queue is a first-class surface · attempts used 0 · working ▸ SF4.2
+**Checkpoints:** 14/24 done · **Sessions run:** 20 · **Cost:** $181.3823 (agent $181.2893 + gates $0.0930) · **Tokens:** 3,135,338 in / 979,024 out
 **Confirmed phases:** SF0, SF1, SF2, SF3
 
 ## Stage progress
@@ -15,7 +15,7 @@ _Updated 2026-08-01 03:48 UTC · branch `feat/sarban` · HEAD `5d88b21`_
 | SF1 | The face sheds dead weight | ██████████ 3/3 | confirmed ✓ |
 | SF2 | The face tells the truth kindly - state, time, money | ██████████ 3/3 | confirmed ✓ |
 | SF3 | Reading a session becomes cheap | ██████████ 3/3 | confirmed ✓ |
-| SF4 | The human queue is a first-class surface | ░░░░░░░░░░ 0/2 | **← active** |
+| SF4 | The human queue is a first-class surface | █████░░░░░ 1/2 | **← active** |
 | SF5 | Supervision without a polling meter | ░░░░░░░░░░ 0/4 | todo |
 | SF6 | The prompt bank compounds | ░░░░░░░░░░ 0/3 | todo |
 | SF7 | Ship the era | ░░░░░░░░░░ 0/2 | todo |
@@ -61,11 +61,11 @@ _Updated 2026-08-01 03:48 UTC · branch `feat/sarban` · HEAD `5d88b21`_
 
 </details>
 
-<details><summary>SF4 — The human queue is a first-class surface (0/2)</summary>
+<details><summary>SF4 — The human queue is a first-class surface (1/2)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| SF4.1 | OWNER-QUEUE.md and GET /owner/queue collect every open human item — HUMAN lines, ownerGates, parks with age, blocked-until waits — each saying what it unblocks and the command that clears it, regenerated at session boundaries | ⬜ TODO | - |
+| SF4.1 | OWNER-QUEUE.md and GET /owner/queue collect every open human item — HUMAN lines, ownerGates, parks with age, blocked-until waits — each saying what it unblocks and the command that clears it, regenerated at session boundaries | ✅ DONE | - |
 | SF4.2 | The face surfaces the owner queue with age and unblocks, and a newly-arrived item pushes to Telegram | ⬜ TODO | - |
 
 </details>
@@ -123,15 +123,13 @@ _Updated 2026-08-01 03:48 UTC · branch `feat/sarban` · HEAD `5d88b21`_
 | 17 | SF3 | Deliver | 1 | 08-01 02:49 | 0:16 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $5.9184 | $0.0073 | 119,065/42,337 |
 | 18 | SF3 | Deliver | 1 | 08-01 03:07 | 0:21 | RolledOver |  | 0 |  | $5.8529 |  | 118,847/2,848 |
 | 19 | SF3 | Deliver | 1 | 08-01 03:28 | 0:14 | Advanced | SF3.3 | 3 | engine-fast:OK · face-fast:OK | $6.0631 | $0.0072 | 129,054/48,297 |
+| 20 | SF4 | Deliver | 1 | 08-01 09:00 | 0:27 | RolledOver |  | 0 |  | $5.8124 |  | 131,809/1,841 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-01 01:54:57  • session #11 SF2 → Advanced · done SF2.2 · 3 commit(s)  (15m16s)
-08-01 01:54:57  • session #12 SF2 Deliver started (attempt 1/6)
-08-01 02:15:39  ▪ gate engine-fast pass [session]  (1m09s)
 08-01 02:15:39  ▪ gate face-fast pass [session]  (6.5s)
 08-01 02:15:40  • session #12 SF2 → Advanced · done SF2.3 · 3 commit(s)  (20m42s)
 08-01 02:19:45  ▪ gate engine-fast pass [phase]  (0.0s)
@@ -169,6 +167,9 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-01 04:48:51  ▪ gate face-full pass [phase]  (16.0s)
 08-01 04:48:51  ✓ checkpoint SF3.3 confirmed
 08-01 04:48:54  ▸ stage SF3 confirmed  (2h29m07s)
+08-01 04:48:55  ▸ stage SF4 entered — The human queue is a first-class surface
+08-01 04:48:55  ■ needs human — agent asked for a human in the tracker handoff (HUMAN: line) — resolve, then run `conductor resume`
+08-01 10:00:13  • session #20 SF4 Deliver started (attempt 1/4)
 ```
 
 ## Health
@@ -176,7 +177,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 19 · retries 1 (5 %) · overall Warn
+sessions 20 · retries 1 (5 %) · overall Warn
 ⚠ [context-saturation] session #3: 24,790,251 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #4: 21,397,049 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #5: 36,996,007 context tokens (≥ 20,000,000)
@@ -189,7 +190,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/sarban
-working tree: M .conductor/REPORT.md, M .conductor/followups.md, M SARBAN-FACE-TRACKER.md
+working tree: clean
 ```
 
 ### Commits by session
@@ -257,18 +258,18 @@ engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
 ## Tracker handoff
 
 ```
-last: **SF3.3 DONE and claimed — SF3 is complete.** Renderers 3 and 4 landed in `f91fa5e`,
-  goldens in `1579880`, evidence `.conductor/evidence/SF3/SF3.3-part2d-renderers.md`. Session
-  history's detail now shows the session's commit subjects (between the digest and the result);
-  the sidebar marks stages the run went PAST and names them in one line above the active row.
-next: **SF4.1** — spec `docs/history/CONDUCTOR-SARBAN.md` section SF4. The engine collects
-  owner-work into `.conductor/OWNER-QUEUE.md` + `GET /owner/queue`: every open `HUMAN:` line,
-  ownerGated stage, park (reason + age), blocked-until wait, each saying what it UNBLOCKS and the
-  exact command that clears it. Regenerated at every session boundary; items clear when their
-  condition does. `SHAHIN.md` from the sk round is the voice to copy.
-traps: a handoff can be STALE — session 18 landed two commits and died before writing one, so
-  check `git log` before believing this block. Sidebar: `windowRows` anchors on the ACTIVE row,
-  so anything appended at the top of the rail scrolls off first. Goldens: separate commit, always.
-green: `go build`, `go vet`, `go test ./...` all clean in `face-go/`. Engine untouched this session.
-open: bugs **#15 #16 #17 #18 #19**; #19 (claims empty in every digest) is engine-side.
+last: **SF4.1 DONE and claimed.** `287f5e2` + this commit. `OwnerQueue.Collect` folds six live
+  sources (HUMAN lines, unapproved ownerGates, the park, a live blocked-until wait, BLOCKED cards,
+  skipped stages) into one urgency-ordered list; each entry says what it UNBLOCKS and the exact
+  command that clears it. `.conductor/OWNER-QUEUE.md` rides the report write path (every session
+  boundary) and `GET /owner/queue` serves the same entries from the LIVE RunState. Evidence
+  `.conductor/evidence/SF4/SF4.1-owner-queue.md`; 16/16 new tests, 60/60 neighbours.
+next: **SF4.2** - the face half. Home section when short, own view when not, with age and unblocks;
+  a NEW queue item pushes to Telegram. Same commit also owes FU-OWNER-11 (prefix every push with
+  plan name + session number, repo + engine version in run-start/run-end) and FU-OWNER-13
+  (`reloadPending` on /telegram/status and both replies saying a reload is queued).
+traps: null `ageSeconds` on the wire means UNKNOWN, never zero - use a pointer field. A `wait`
+  entry carries an EMPTY command on purpose: `conductor resume` does not clear a blocked-until.
+green: build clean; OwnerQueueTests 16/16; Architecture/ControlPlaneServer/Reporter 60/60.
+open: bugs **#15 #16 #17 #18 #19**.
 ```
