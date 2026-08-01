@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"charm.land/lipgloss/v2"
+
 	"conductor-face-go/internal/api"
 	"conductor-face-go/internal/lastrun"
 	"conductor-face-go/internal/timefmt"
@@ -199,6 +201,59 @@ func TestTheLastRunCardDeclaresItsShedTiers(t *testing.T) {
 	}
 	if detail == 0 {
 		t.Error("no row of the card sheds first — a non-scrolling page cannot afford that")
+	}
+}
+
+// Caught by reading the regenerated golden, not by a failing assertion: the engine row rendered
+// "not running — nothing is …" and dropped its age entirely. truncate() measures with lipgloss.Width
+// but cuts raw runes, so a styled string spends the column budget on escape bytes (STYLE.md). The age
+// is the fact SF2.1 added to this line; it is the last thing allowed to go.
+func TestTheEngineLineNeverLosesItsAgeToTruncation(t *testing.T) {
+	pinClock(t, time.Date(2026, 7, 15, 10, 0, 0, 0, time.UTC))
+	m := liveModel()
+	m = step(t, m, MsgStateUpdated{State: fixedState()})
+	pinClock(t, time.Date(2026, 7, 15, 10, 7, 0, 0, time.UTC))
+	m = step(t, m, MsgFetchError{Err: "connectex: actively refused"})
+
+	for _, w := range []int{40, 60, 80, 110, 200} {
+		st := engineState(m.data.Connection)
+		got := stripANSI(homeEngineLine(st, destructStyle, w))
+		if !strings.Contains(got, "not running") {
+			t.Errorf("w=%d: the state itself was truncated away: %q", w, got)
+		}
+		if !strings.Contains(got, "last contact 7m ago") {
+			t.Errorf("w=%d: the age was truncated away — it is the point of the line: %q", w, got)
+		}
+		if lipgloss.Width(got) > w {
+			t.Errorf("w=%d: line is %d columns wide: %q", w, lipgloss.Width(got), got)
+		}
+	}
+}
+
+// Screenshot critique #1 again, one panel further down. "Next steps" is the "what should I do" half
+// of this page, and every pane it names is fed by the control plane — so with the engine gone it was
+// telling people to watch a live agent that had stopped existing.
+func TestNextStepsStopOfferingLiveDataWhenTheEngineIsGone(t *testing.T) {
+	pinClock(t, time.Date(2026, 7, 15, 10, 0, 0, 0, time.UTC))
+	m := liveModel()
+	m.width, m.height = 110, 40
+	live := fixedState()
+	live.AgentActive = true
+	m = step(t, m, MsgStateUpdated{State: live})
+	if got := stripANSI(homeText(m.renderHomeNextSteps())); !strings.Contains(got, "working right now") {
+		t.Fatalf("a live run must still advertise its live agent:\n%s", got)
+	}
+
+	m = step(t, m, MsgFetchError{Err: "connectex: actively refused"})
+	got := stripANSI(homeText(m.renderHomeNextSteps()))
+	if strings.Contains(got, "working right now") {
+		t.Errorf("Home offered a live agent with no engine behind it:\n%s", got)
+	}
+	if !strings.Contains(got, "the engine is not answering") {
+		t.Errorf("the hints must name why they changed:\n%s", got)
+	}
+	if !strings.Contains(got, "conductor run -p") {
+		t.Errorf("the one genuinely actionable thing must be named:\n%s", got)
 	}
 }
 

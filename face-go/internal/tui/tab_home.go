@@ -12,6 +12,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"conductor-face-go/internal/api"
+	"conductor-face-go/internal/lastrun"
 	"conductor-face-go/internal/timefmt"
 	"conductor-face-go/internal/widgets"
 )
@@ -165,12 +166,8 @@ func (m Model) renderHomeServer(w int) []homeLine {
 	if !c.Connected {
 		style = destructStyle
 	}
-	line := style.Render(st.Headline) + subtleStyle.Render(" — "+st.Detail)
-	if st.Age != "" {
-		line += subtleStyle.Render(" · " + st.Age)
-	}
 	rows := []homeLine{
-		hRow("engine", truncate(line, max(20, w-homeLabelW)), homeEssential),
+		hRow("engine", homeEngineLine(st, style, max(20, w-homeLabelW)), homeEssential),
 		hRow("streams", homeStream("events", c.EventsConnected)+"   "+homeStream("transcript", c.TranscriptConnected), homeDetail),
 	}
 
@@ -196,6 +193,33 @@ func (m Model) renderHomeServer(w int) []homeLine {
 // landing page be telling this person how to start one".
 func (m Model) knowsARun() bool {
 	return m.data.Plan != nil || m.lastRun != nil
+}
+
+// homeEngineLine composes "<state> — <why> · <age>" inside a column budget, shortening the part it
+// can afford to lose rather than the end of the line.
+//
+// It shortens PLAIN text and styles afterwards. truncate() measures with lipgloss.Width but then cuts
+// raw runes, so handing it an already-styled string spends the budget on escape bytes — which is how
+// this row first rendered as "not running — nothing is …", silently dropping the very age SF2.1 added
+// to it. (STYLE.md: pad plain text then style, never width-format an ANSI string.)
+//
+// The age is last and is never cut: "since when" is the fact this line exists to carry, while the URL
+// in the middle is repeated verbatim in Wiring two panels down.
+func homeEngineLine(st engineStateText, style lipgloss.Style, avail int) string {
+	tail := ""
+	if st.Age != "" {
+		tail = " · " + st.Age
+	}
+	detail := st.Detail
+	room := avail - lipgloss.Width(st.Headline) - lipgloss.Width(tail) - len(" — ")
+	if room < lipgloss.Width(detail) {
+		detail = truncate(detail, room)
+	}
+	out := style.Render(st.Headline)
+	if detail != "" {
+		out += subtleStyle.Render(" — " + detail)
+	}
+	return out + subtleStyle.Render(tail)
 }
 
 func homeStream(name string, connected bool) string {
@@ -496,6 +520,22 @@ func (m Model) homeHints() []homeLine {
 		return hLine("  "+key(k)+"  "+subtleStyle.Render(text), homeEssential)
 	}
 	s := m.data.Plan
+
+	// SF2.1: with the engine gone, every "press this to watch it live" hint is a dead end — the Agent
+	// transcript and the Report are both fed by the control plane, so offering them is the same lie as
+	// a RUNNING badge held over from a poll that stopped answering. Say what is actually actionable.
+	// (Knowing of no run AT ALL is the s == nil branch below, which already says the right thing.)
+	if c := m.data.Connection; c.Mode == api.ModeLive && !c.Connected && m.knowsARun() {
+		out := []homeLine{hLine("  "+destructStyle.Render("the engine is not answering")+
+			subtleStyle.Render(" — nothing on this page is live"), homeEssential)}
+		if m.lastRun != nil {
+			out = append(out, hLine("  "+subtleStyle.Render("what it did is above; the full record is in ")+
+				textStyle.Render(lastrun.FileName), homeUseful))
+		}
+		return append(out,
+			hLine("  "+subtleStyle.Render("start a run with ")+textStyle.Render("conductor run -p <plan>"), homeEssential),
+			hint("?", "see every key"))
+	}
 
 	if s == nil {
 		if m.data.Connection.Mode == api.ModeDemo {
