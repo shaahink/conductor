@@ -494,6 +494,13 @@ func newGoldenModel(width, height int) tea.Model {
 				Claims:         []string{"F7.4 -> done"},
 				BackgroundJobs: []string{"F7.4 cache key derivation - full build", "F7.4 - gate suite after the cache lands"},
 				Commands:       []string{"dotnet build src/App", "dotnet test --filter GateCacheTests"},
+			},
+			// SF3.3: the subjects behind this row's "2 commits". Session 8 below deliberately keeps its
+			// count with NO subjects — the shape a session recorded before the engine read them out of
+			// the event log — so one fixture pins both halves of the commit block.
+			Commits: []string{
+				"4b81d33 test(gates): the last-passing lookup joins attempts",
+				"c07e5a9 refactor(store): one place that opens run.db",
 			}},
 		{Number: 8, StageId: "F6", Kind: "Deliver", Outcome: strPtr("completed"), Attempt: 1, CommitCount: 1,
 			GateSummary: strPtr("build ✓ test ✓"),
@@ -545,6 +552,17 @@ func TestGolden(t *testing.T) {
 		}},
 		{"sidebar_collapsed", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("\\"))
+			return m
+		}},
+		// SF3.3: the execution-order cue. The fixture plan runs in declared order, so no other frame in
+		// this file can show it — this one pushes the run past F6 (a `goto`, or a stage retried out of
+		// band) and pins BOTH halves: the ↷ on the row the run went past, and the line naming it above
+		// the active stage. F0 stays confirmed and F8 stays todo below, so the frame also pins what the
+		// cue must NOT mark: an ordinary not-yet stage.
+		{"sidebar_jumped", func(m tea.Model) tea.Model {
+			st := fixedState()
+			st.Stages[1].State, st.Stages[1].Done = "todo", 0 // F6, never run
+			m, _ = m.Update(MsgStateUpdated{State: st})
 			return m
 		}},
 		{"palette", func(m tea.Model) tea.Model {

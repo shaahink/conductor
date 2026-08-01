@@ -347,10 +347,62 @@ func (m Model) renderSessionsView() (string, string) {
 		if dg := renderSessionDigest(s.Digest, m.paneCols()); len(dg) > 0 {
 			detail += "\n" + strings.Join(dg, "\n")
 		}
+		// SF3.3: what it LANDED, between what it did and what it said. The row above this detail has
+		// carried a commit COUNT since the first version of this list, and a count is the one fact
+		// about a session's commits that cannot be checked — "2 commits" is true of a session that
+		// fixed the bug and of one that rewrote a comment twice.
+		if cm := renderSessionCommits(s, m.paneCols()); len(cm) > 0 {
+			detail += "\n" + strings.Join(cm, "\n")
+		}
 		if s.ResultSummary != nil {
 			detail += "\n" + subtleStyle.Render("Result:") + "\n" + indent(renderMarkdown(*s.ResultSummary, m.paneCols()-4), "  ")
 		}
 		lines = append(lines, detail)
 	}
 	return strings.Join(lines, "\n"), "↑↓ navigate"
+}
+
+// How many commit subjects the detail shows before it says how many it is holding back. Sessions in
+// this repo land one to three commits; a session that landed twelve is a story the reader can go read
+// in git, and the overflow line is what tells them there is one.
+const historyCommitsMax = 5
+
+// renderSessionCommits is the session's own commits as `<short sha> <subject>` lines, ready to join
+// with "\n". It takes the "Result:" shape above it — a header with the body indented under it —
+// rather than the digest's seven-wide label column, because a commit line is a sha plus a conventional
+// -commit subject and the label column would spend a fifth of a narrow pane on a word the header
+// already said.
+//
+// The empty case is deliberately two cases. A session that landed nothing renders NOTHING. A session
+// whose CommitCount says it landed something while the subjects are missing is an engine older than
+// SF3.3 (the subjects are read from an event the engine only started writing then) — and rendering
+// nothing there would silently contradict the "2 commits" on the row three lines up.
+func renderSessionCommits(s api.SessionRowDto, w int) []string {
+	body := max(4, w-2) // the two-space indent under the header
+	if len(s.Commits) == 0 {
+		if s.CommitCount <= 0 {
+			return nil
+		}
+		return []string{
+			subtleStyle.Render("Commits:"),
+			"  " + subtleStyle.Render(truncate(plural(s.CommitCount, "commit")+
+				" — subjects not recorded for this session", body)),
+		}
+	}
+	shown := s.Commits
+	if len(shown) > historyCommitsMax {
+		shown = shown[:historyCommitsMax]
+	}
+	lines := make([]string, 0, len(shown)+2)
+	lines = append(lines, subtleStyle.Render("Commits:"))
+	for _, c := range shown {
+		lines = append(lines, "  "+textStyle.Render(truncate(c, body)))
+	}
+	// The overflow counts against the COUNT, not against the list that arrived: the engine caps how
+	// many subjects it serves, so a session with twenty commits and four subjects on the wire must
+	// still say "+16 more" rather than pretending the four are all of them.
+	if rest := max(s.CommitCount, len(s.Commits)) - len(shown); rest > 0 {
+		lines = append(lines, "  "+subtleStyle.Render(fmt.Sprintf("+%d more", rest)))
+	}
+	return lines
 }

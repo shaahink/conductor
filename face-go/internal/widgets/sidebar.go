@@ -55,18 +55,43 @@ func (m SidebarModel) View() string {
 	rows := []string{sidebarTitleStyle.Render("▶ PLAN") + m.attemptsLegend()}
 	activeRow := 0 // the row to keep in view when the plan is taller than the rail
 
+	// SF3.3: the stages the run went past without running. Computed once, before the loop, because
+	// both halves of the cue — the mark on each jumped row and the line that names them — have to
+	// agree, and computing it twice is how one of them survives an edit the other doesn't.
+	jumped := stagesJumped(m.Stages)
+	jumpedSet := make(map[string]bool, len(jumped))
+	for _, id := range jumped {
+		jumpedSet[id] = true
+	}
+	cued := false
+
 	for _, stage := range m.Stages {
 		glyph, style := stageGlyph(stage.State)
 		if stage.State == "active" || stage.State == "gating" {
+			// The cue rides DIRECTLY above the active row. windowRows anchors the rail's self-scroll on
+			// that row, so a cue drawn once at the top of the tree is the first thing a tall plan
+			// scrolls away — and a plan long enough to scroll is exactly the plan a jump hides in.
+			if line := jumpedCue(jumped, m.Width); line != "" && !cued {
+				rows, cued = append(rows, line), true
+			}
 			activeRow = len(rows)
 		}
-		rows = append(rows, style.Render(m.stageLine(glyph, stage)))
+		rows = append(rows, style.Render(m.stageLine(glyph, stage, jumpedSet[stage.Id])))
 
 		if m.Expanded[stage.Id] && len(stage.Checkpoints) > 0 {
 			for _, cp := range stage.Checkpoints {
 				cg, cs := checkpointGlyph(cp.Status)
 				rows = append(rows, "  "+cs.Render(cg+cp.Id+" "+truncate(cp.Title, m.Width-10)))
 			}
+		}
+	}
+
+	// No active stage to hang it under — a run that has parked, finished or been aborted mid-plan is
+	// still a run whose order diverged, and that is precisely when someone is reading the rail asking
+	// why. Falls to the foot of the tree, which is where the eye lands when nothing is highlighted.
+	if !cued {
+		if line := jumpedCue(jumped, m.Width); line != "" {
+			rows = append(rows, line)
 		}
 	}
 
@@ -176,11 +201,82 @@ func (m SidebarModel) attemptsLegend() string {
 	return dimStyle.Render(legend)
 }
 
+// SF3.3 — the execution-order cue. The plan declares an order; a run does not have to follow it
+// (`goto`, `retry-stage`, `rollback` all move the run somewhere the declared order did not point),
+// and the rail used to render both cases identically: a grey ○ beside a stage means "not yet" whether
+// the run is about to reach it or walked past it three stages ago.
+//
+// jumpGlyph is that difference, and it is a MARK rather than a colour so it survives the row's own
+// status style, a mono theme and a screenshot.
+const jumpGlyph = "↷"
+
+// stagesJumped names the stages the run went past without running: still to-do, but sitting above a
+// stage the run has already reached. This positional reading is the only divergence the rail can see
+// honestly — the wire carries no per-stage start time, so "declared order" is the order of these rows
+// and "execution order" is which of them have been entered.
+//
+// A SKIPPED stage is never in the set. A skip is a decision someone made and the rail already renders
+// it with its own glyph; marking it as jumped would turn every deliberate retirement into a warning
+// and teach the reader to ignore the mark that matters.
+func stagesJumped(stages []api.StageDto) []string {
+	last := -1
+	for i, s := range stages {
+		if stageReached(s.State) {
+			last = i
+		}
+	}
+	if last < 1 {
+		return nil
+	}
+	var jumped []string
+	for _, s := range stages[:last] {
+		if !stageReached(s.State) && s.State != "skipped" {
+			jumped = append(jumped, s.Id)
+		}
+	}
+	return jumped
+}
+
+// stageReached reports whether the run has been INTO this stage — running it now, finished it, or
+// failed it. It is deliberately not the inverse of "todo": the engine's vocabulary has states this
+// rail renders but never anticipates ("gating" is a stage mid-battery, "confirmed" is one Conductor
+// itself signed off), and an unknown state counts as not-yet rather than as reached, so a state added
+// later downgrades the cue to silence instead of inventing a jump.
+func stageReached(state string) bool {
+	switch state {
+	case "active", "gating", "confirmed", "done", "failed":
+		return true
+	}
+	return false
+}
+
+// jumpedCue is the one line that says the run is not where the declared order says it should be. It
+// TIERS like the top bar's git chip rather than clipping: "↷ jumped: SF2, SF" reads as a stage id
+// that does not exist, so a rail too narrow for the list states the count instead and a rail too
+// narrow for that states the bare number. Every tier still carries the glyph and a digit, which is
+// what makes the marks up the rail legible.
+func jumpedCue(jumped []string, width int) string {
+	if len(jumped) == 0 {
+		return ""
+	}
+	head := "  " + jumpGlyph + " "
+	for _, tier := range []string{
+		"jumped: " + strings.Join(jumped, ", "),
+		plural(len(jumped), "stage") + " jumped",
+		fmt.Sprintf("%d jumped", len(jumped)),
+	} {
+		if line := head + tier; lipgloss.Width(line) <= width {
+			return stageJumpedStyle.Render(line)
+		}
+	}
+	return stageJumpedStyle.Render(truncate(head+fmt.Sprintf("%d", len(jumped)), max(1, width)))
+}
+
 // stageLine composes one plan row: the id and progress score (done/total) always survive; the title
 // takes whatever width is left; a cost/attempts suffix shows for stages that have actually run. The
 // whole line is later rendered in the stage's status colour, so this returns plain text — pre-truncated
 // so the caller's single Render() never slices a styled string mid-escape (M5.2: state/score/cost/attempts).
-func (m SidebarModel) stageLine(glyph string, stage api.StageDto) string {
+func (m SidebarModel) stageLine(glyph string, stage api.StageDto, jumped bool) string {
 	score := fmt.Sprintf("%d/%d", stage.Done, stage.Total)
 
 	attempts, cost := "", ""
@@ -189,6 +285,13 @@ func (m SidebarModel) stageLine(glyph string, stage api.StageDto) string {
 	}
 	if stage.CostUsd > 0 {
 		cost = fmt.Sprintf(" $%.2f", stage.CostUsd)
+	}
+	// The jump mark rides in the meta suffix so the title truncation reserves room for it, and it
+	// leads every meta variant below so the width fallback drops cost and attempts BEFORE it — a
+	// jumped stage has neither (nothing ran), and the mark is the whole reason the row differs.
+	mark := ""
+	if jumped {
+		mark = " " + jumpGlyph
 	}
 
 	// Reserve: glyph (2 cols) + id + space + score + space + meta + a little margin. When the
@@ -201,12 +304,12 @@ func (m SidebarModel) stageLine(glyph string, stage api.StageDto) string {
 		}
 		return glyph + stage.Id + " " + score + " " + truncate(stage.Title, titleW) + meta
 	}
-	for _, meta := range []string{attempts + cost, attempts, ""} {
+	for _, meta := range []string{mark + attempts + cost, mark + attempts, mark} {
 		if line := compose(meta); lipgloss.Width(line) <= m.Width {
 			return line
 		}
 	}
-	return compose("")
+	return compose(mark)
 }
 
 func stageGlyph(state string) (string, lipgloss.Style) {
