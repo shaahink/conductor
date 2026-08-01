@@ -47,6 +47,24 @@ public class SF6_1TemplateLessonsTests
         Assert.True(Math.Abs(beforeEdit - marker) < 400, "the 'before your first edit' rule is not attached to the in-progress verb");
     }
 
+    /// <summary>Session 36, measured in the engine's own output rather than reasoned about: a fix session
+    /// repairs a checkpoint an earlier session already claimed, and the board REFUSES `--in-progress` on a
+    /// DONE card — "will not reopen a claimed one; use `conductor task --todo` if you really mean to". So
+    /// step 1 of the fix template asked for a move that always fails there, and the only escape it left
+    /// unnamed, `--todo`, downgrades a real delivery to TODO if the repair dies before re-claiming.</summary>
+    [Fact]
+    public void TheFixTemplateSaysWhatToDoWhenTheBoardRefusesToReopenAClaimedCheckpoint()
+    {
+        var p = Fix();
+
+        Assert.Contains("--in-progress <id>", p, StringComparison.Ordinal);
+        Assert.Contains("already DONE", p, StringComparison.Ordinal);
+        Assert.Contains("re-claim with fresh evidence", p, StringComparison.Ordinal);
+
+        // …and a delivering session, whose checkpoint is not claimed yet, does not pay bytes for it.
+        Assert.DoesNotContain("already DONE", Deliver(), StringComparison.Ordinal);
+    }
+
     /// <summary>devcontext #8: a session wrote "CLAIMED" into the tracker at 02:13 and did not call the
     /// claim verb until 02:21. For eight minutes the run looked finished and the board was right to say TODO.</summary>
     [Theory]

@@ -89,4 +89,42 @@ Passed!  - Failed:     0, Passed:  1756, Skipped:     0, Total:  1756, Duration:
 ```
 
 Same 1756 tests the battery ran; the three it failed now pass and nothing else moved.
-Log: `.conductor/bg-logs/powershell-20260801-155303730.log`.
+Log: `.conductor/bg-logs/powershell-20260801-155303730.log`. Committed as `be0394d`.
+
+## 4. The fix template ordered a move the engine refuses (second commit)
+
+Measured here, in the engine's own output, while trying to follow this session's own step 1:
+
+```
+$ conductor task --in-progress SF6.1
+refused: SF6.1 is DONE and stayed DONE — --in-progress starts a TODO checkpoint
+and will not reopen a claimed one; use `conductor task --todo SF6.1` if you really mean to
+```
+
+A fix session by definition repairs a checkpoint an earlier session already claimed, so this
+refusal is guaranteed rather than incidental — and the escape the message offers, `--todo`,
+downgrades a real delivery to TODO, which is exactly what a fix session that dies before
+re-claiming would leave behind. `fix.md` step 1 now says what to do when the board refuses, and
+`SF6_1TemplateLessonsTests.TheFixTemplateSaysWhatToDoWhenTheBoardRefusesToReopenAClaimedCheckpoint`
+pins it, including that a delivering session does not pay bytes for a fix-only lesson.
+
+Paid for in bytes, not added to the bill: step 1's own wording, steps 3–5 and the locked-by-conductor
+paragraph were compressed, and one clause added to the tools block earlier was taken back out.
+
+| prompt | battery red | after commit 1 | after commit 2 | budget |
+|---|---|---|---|---|
+| deliver, multi-repo | 8000 | 7807 | **7803** | 7900 |
+| deliver, single-repo | — | 7404 | **7400** | 7900 |
+| fix, multi-repo | — | 7784 | **7731** | 7900 |
+| fix, single-repo | — | 7381 | **7328** | 7900 |
+| tools block, multi-repo | ~5754 | 5561 | **5557** | 6000 |
+
+Scoped verification of every suite that asserts prompt prose — `SF6_1`, `SF6_2`, `SF6_3`, `SC4_4`,
+`SF0_3`, `W2OnePrompt`, `Architecture` — plus the probe:
+
+```
+Failed!  - Failed:     1, Passed:    68, Total:    69, Duration: 7 s
+```
+
+The one failure is the scratch probe, which fails by design to print the row above; it was deleted
+after the run. Log: `.conductor/bg-logs/powershell-20260801-160114116.log`.

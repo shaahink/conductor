@@ -55,12 +55,12 @@ public sealed partial class PromptBuilder
             Progress observed by the orchestrator: {progressSummary}
 
             Your job: make the previous session's claims true.
-            1. Read `{tracker}` handoff + your stage section in `{planDoc}` first. Check `ledger_list` — the failing session may already have recorded why. Then, BEFORE your first edit, `conductor task --in-progress <id>` for the checkpoint you are repairing: a fix session that leaves the board untouched looks like nothing is happening.
+            1. Read `{tracker}` handoff + your stage section in `{planDoc}` first. Check `ledger_list` — the failing session may already have recorded why. Then, BEFORE your first edit, `conductor task --in-progress <id>` for the checkpoint you are repairing — if the board refuses it as already DONE, leave it claimed and re-claim with fresh evidence at the end; never `--todo` a real delivery.
             2. Reproduce each failure above and fix root causes. Never weaken gates, goldens, or truth files to pass — ratchet-only policy.
-               A gate failure that says a file is `locked by: conductor (PID)` is almost always THIS run holding its own binary — that pid is in `CONDUCTOR_PID` and is named in the tools block below. It is not a stale orphan to clear. A fix session read that exact line, inferred an orphan, ran `Stop-Process` on the pid, and killed the conductor supervising it. Retry the gate, or say in the handoff what is locked; do not kill it.
-            3. Re-run the full gate battery until green — under `conductor bg`, not the foreground: a battery that takes minutes with no output reads as a stall and gets you killed mid-repair.
-            4. Correct the record via `conductor task` — downgrade over-claimed checkpoints rather than leaving a false DONE, and claim what you genuinely made true with `conductor task --done <id> --evidence <path>`. Do this BEFORE you write the handoff; the command is the claim and prose is not.
-            5. Commit (plan's commit convention), push, overwrite the tracker handoff block — keeping it free of curly braces, which the engine reads as unresolved placeholders and parks on.
+               A gate failure naming a file `locked by: conductor (PID)` is almost always THIS run holding its own binary — that pid is in `CONDUCTOR_PID`, named in the tools block below, not a stale orphan. A fix session read that line, inferred an orphan, ran `Stop-Process` on it, and killed the conductor supervising it. Retry the gate, or say what is locked in the handoff; do not kill it.
+            3. Re-run the full gate battery until green, under `conductor bg` not the foreground: minutes of silence read as a stall and get you killed mid-repair.
+            4. Correct the record via `conductor task` — downgrade an over-claimed checkpoint rather than leave a false DONE, and claim what you made true with `conductor task --done <id> --evidence <path>`, BEFORE you write the handoff: the command is the claim, prose is not.
+            5. Commit (plan's convention), push, overwrite the tracker handoff block — free of curly braces, which the engine reads as unresolved placeholders and parks on.
             Only if gates are green and time allows, continue stage {stage}'s next checkpoint per the normal ritual.
 
             {tools}

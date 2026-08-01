@@ -1,11 +1,16 @@
-# Session 36 (SF6 fix) - full engine suite. Scoped filters proved the three reported reds green, but
-# this session compressed prose in ToolContract.cs, which every composed prompt carries and several
-# suites assert sentences from, so the whole suite is the honest check.
+# Session 36 (SF6 fix) - the suites that assert prompt prose, plus the scratch budget probe.
 # A script rather than an inline command because `conductor bg` hands the command to cmd.exe, which
-# eats the `|` an xunit OR-filter needs.
+# eats the `|` an xunit OR-filter needs. Pass -All to run the whole suite instead.
+param([switch]$All)
 $ErrorActionPreference = 'Continue'
-$root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$here = Split-Path -Parent $MyInvocation.MyCommand.Path
+$root = Split-Path -Parent (Split-Path -Parent $here)
 if (-not $root) { $root = (Get-Location).Path }
 Set-Location $root
-dotnet test Conductor.slnx
+if ($All) {
+    dotnet test Conductor.slnx
+} else {
+    $filter = 'FullyQualifiedName~SF6_1TemplateLessonsTests|FullyQualifiedName~SF6_2PromptBankTests|FullyQualifiedName~SF6_3InitScaffoldTests|FullyQualifiedName~SC4_4Tests|FullyQualifiedName~SF0_3PidsAndBackgroundWorkTests|FullyQualifiedName~W2OnePromptTests|FullyQualifiedName~ArchitectureTests|FullyQualifiedName~ZzBudgetProbe'
+    dotnet test Conductor.slnx --filter $filter
+}
 exit $LASTEXITCODE

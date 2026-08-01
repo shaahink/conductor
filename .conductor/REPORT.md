@@ -1,10 +1,10 @@
 ﻿# Conductor — Sarban face - the watcher and the surfaces run report
 
-_Updated 2026-08-01 15:02 UTC · branch `feat/sarban` · HEAD `09ae2f1`_
+_Updated 2026-08-01 15:42 UTC · branch `feat/sarban` · HEAD `0ead119`_
 
 **Status:** Idle
-**Stage:** SF6 — The prompt bank compounds · attempts used 0 · working ▸ SF6.3
-**Checkpoints:** 21/24 done · **Sessions run:** 34 · **Cost:** $264.0833 (agent $263.8876 + gates $0.1957) · **Tokens:** 4,837,764 in / 1,498,837 out
+**Stage:** SF6 — The prompt bank compounds · attempts used 1
+**Checkpoints:** 22/24 done · **Sessions run:** 35 · **Cost:** $270.1121 (agent $269.9164 + gates $0.1957) · **Tokens:** 4,952,200 in / 1,501,062 out
 **Confirmed phases:** SF0, SF1, SF2, SF3, SF4, SF5
 
 ## Stage progress
@@ -17,7 +17,7 @@ _Updated 2026-08-01 15:02 UTC · branch `feat/sarban` · HEAD `09ae2f1`_
 | SF3 | Reading a session becomes cheap | ██████████ 3/3 | confirmed ✓ |
 | SF4 | The human queue is a first-class surface | ██████████ 2/2 | confirmed ✓ |
 | SF5 | Supervision without a polling meter | ██████████ 4/4 | confirmed ✓ |
-| SF6 | The prompt bank compounds | ███████░░░ 2/3 | **← active** |
+| SF6 | The prompt bank compounds | ██████████ 3/3 | gating… |
 | SF7 | Ship the era | ░░░░░░░░░░ 0/2 | todo |
 
 <details> ✅<summary>SF0 — The ledger closes - the core run's leftovers (4/4)</summary>
@@ -81,13 +81,13 @@ _Updated 2026-08-01 15:02 UTC · branch `feat/sarban` · HEAD `09ae2f1`_
 
 </details>
 
-<details><summary>SF6 — The prompt bank compounds (2/3)</summary>
+<details> ✅<summary>SF6 — The prompt bank compounds (3/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
 | SF6.1 | The built-in session and fix templates carry the field lessons: in-progress first, claim before handoff, deferred-MCP fallback on one line, long commands under conductor bg, the anchor-commit rule for multi-repo plans | ✅ DONE | [`8dd1aa3`](https://github.com/shaahink/conductor/commit/8dd1aa3) |
-| SF6.2 | The prompt bank under plans/ is pruned, enriched from the rounds — proof-note pattern, owner-block alternate completions, the unblocks voice — and indexed so it is choosable | ✅ DONE | - |
-| SF6.3 | conductor init scaffolds the refreshed template set with telegram and supervisor hints, and its output passes doctor clean | ⬜ TODO | - |
+| SF6.2 | The prompt bank under plans/ is pruned, enriched from the rounds — proof-note pattern, owner-block alternate completions, the unblocks voice — and indexed so it is choosable | ✅ DONE | [`4b894c1`](https://github.com/shaahink/conductor/commit/4b894c1) |
+| SF6.3 | conductor init scaffolds the refreshed template set with telegram and supervisor hints, and its output passes doctor clean | ✅ DONE | - |
 
 </details>
 
@@ -104,7 +104,6 @@ _Updated 2026-08-01 15:02 UTC · branch `feat/sarban` · HEAD `09ae2f1`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Overhead | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 5 | SF1 | Deliver | 1 | 07-31 21:50 | 0:29 | Advanced | SF1.1 | 3 | engine-fast:OK · face-fast:OK | $23.1233 | $0.0064 | 236,481/90,307 |
 | 6 | SF1 | Deliver | 1 | 07-31 22:21 | 0:32 | Advanced | SF1.2 | 3 | engine-fast:OK · face-fast:OK | $17.5303 | $0.0054 | 248,779/107,715 |
 | 7 | SF1 | Deliver | 1 | 07-31 23:11 | 0:22 | RolledOver |  | 0 |  | $11.9132 |  | 174,960/82,162 |
 | 8 | SF1 | Fix | 2 | 07-31 23:41 | 0:06 | KilledByUser |  | 0 |  |  |  |  |
@@ -134,19 +133,13 @@ _Updated 2026-08-01 15:02 UTC · branch `feat/sarban` · HEAD `09ae2f1`_
 | 32 | SF5 | Fix | 2 | 08-01 13:45 | 0:24 | RolledOver |  | 0 |  | $5.9833 |  | 128,284/2,129 |
 | 33 | SF6 | Deliver | 1 | 08-01 14:17 | 0:22 | Advanced | SF6.1 | 1 | engine-fast:OK · face-fast:OK | $6.1405 | $0.0074 | 106,949/54,821 |
 | 34 | SF6 | Deliver | 1 | 08-01 14:41 | 0:19 | Advanced | SF6.2 | 2 | engine-fast:OK · face-fast:OK | $5.5353 | $0.0116 | 104,010/52,742 |
+| 35 | SF6 | Deliver | 1 | 08-01 15:02 | 0:25 | RolledOver |  | 0 |  | $6.0288 |  | 114,436/2,225 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-01 12:15:28  • session #26 SF5 Deliver started (attempt 1/8)
-08-01 12:33:48  • session #26 SF5 → RolledOver  (18m19s)
-08-01 12:33:48  • session #27 SF5 Deliver started (attempt 1/8)
-08-01 13:00:08  • session #27 SF5 → RolledOver  (26m20s)
-08-01 13:00:09  • session #28 SF5 Deliver started (attempt 1/8)
-08-01 13:19:45  ▪ gate engine-fast pass [session]  (1m14s)
-08-01 13:19:45  ▪ gate face-fast pass [session]  (20.3s)
 08-01 13:19:46  • session #28 SF5 → Advanced · done SF5.2 · 2 commit(s)  (19m36s)
 08-01 13:19:46  • session #29 SF5 Deliver started (attempt 1/8)
 08-01 13:43:06  ▪ gate engine-fast pass [session]  (1m19s)
@@ -180,6 +173,13 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-01 15:41:07  • session #34 SF6 Deliver started (attempt 1/4)
 08-01 16:02:19  ▪ gate engine-fast pass [session]  (1m00s)
 08-01 16:02:20  ▪ gate face-fast pass [session]  (55.1s)
+08-01 16:02:21  • session #34 SF6 → Advanced · done SF6.2 · 2 commit(s)  (21m13s)
+08-01 16:02:23  • session #35 SF6 Deliver started (attempt 1/4)
+08-01 16:27:29  • session #35 SF6 → RolledOver  (25m06s)
+08-01 16:42:35  ▪ gate engine-fast pass [phase]  (1m22s)
+08-01 16:42:35  ▪ gate face-fast pass [phase]  (52.3s)
+08-01 16:42:35  ▪ gate engine-full FAIL [phase]  (6m24s)
+08-01 16:42:35  ▪ gate face-full pass [phase]  (47.8s)
 ```
 
 ## Health
@@ -187,12 +187,12 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 34 · retries 3 (9 %) · overall Warn
+sessions 35 · retries 3 (9 %) · overall Warn
 ⚠ [context-saturation] session #3: 24,790,251 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #4: 21,397,049 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #5: 36,996,007 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #6: 24,716,690 context tokens (≥ 20,000,000)
-⚠ [gate-oscillation] gate 'engine-full' flipped pass/fail 6x
+⚠ [gate-oscillation] gate 'engine-full' flipped pass/fail 7x
 ```
 
 ## Repo
@@ -201,8 +201,8 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/sarban
-working tree: clean
-vs upstream: up to date
+working tree: M .conductor/REPORT.md, M SARBAN-FACE-TRACKER.md
+vs upstream: 1 ahead
 ```
 
 ### Commits by session
@@ -256,7 +256,51 @@ vs upstream: up to date
 
 ## Last gate run
 
-engine-fast:OK · face-fast:OK
+engine-fast:OK · face-fast:OK · engine-full:FAIL-retry · face-full:OK
+
+<details><summary>engine-full — exit 1</summary>
+
+```
+[conductor] retried once (SC4.1): the first attempt exited 1 after 334s. Below is the SECOND run.
+Determining projects to restore...
+  All projects are up-to-date for restore.
+  Conductor.Planning -> C:\code\conductor\src\Conductor.Planning\bin\Debug\net10.0\Conductor.Planning.dll
+  Conductor -> C:\code\conductor\src\Conductor\bin\Debug\net10.0\conductor.dll
+  Conductor.Tests -> C:\code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll
+Test run for C:\code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+  Failed Conductor.Tests.SF6_1TemplateLessonsTests.TheLessonsFitTheCommandLineBudgetEvenOnAMultiRepoPlan [4 ms]
+  Error Message:
+   built-in deliver prompt is 8000 chars — bug #15 drops the agent past ~8191
+  Stack Trace:
+     at Conductor.Tests.SF6_1TemplateLessonsTests.TheLessonsFitTheCommandLineBudgetEvenOnAMultiRepoPlan() in C:\code\conductor\tests\Conductor.Tests\SF6_1TemplateLessonsTests.cs:line 152
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Failed Conductor.Tests.SC4_4Tests.InjectionRendersDirectlyUnderTheRoleLineOfADeliverPrompt [125 ms]
+  Error Message:
+   Assert.InRange() Failure: Value not in range
+Range:  (4 - 2147483647)
+Actual: -1
+  Stack Trace:
+     at Conductor.Tests.SC4_4Tests.InjectionRendersDirectlyUnderTheRoleLineOfADeliverPrompt() in C:\code\conductor\tests\Conductor.Tests\SC4_4Tests.cs:line 63
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+  Failed Conductor.Tests.SF6_3InitScaffoldTests.BuiltInNamesEnumeratesEveryCaseOfTheBuiltInSwitch [6 ms]
+  Error Message:
+   System.ArgumentOutOfRangeException : startIndex ('-1') must be a non-negative value. (Parameter 'startIndex')
+Actual value was -1.
+  Stack Trace:
+     at System.ArgumentOutOfRangeException.ThrowNegative[T](T value, String paramName)
+   at System.String.ThrowSubstringArgumentOutOfRange(Int32 startIndex, Int32 length)
+   at System.String.Substring(Int32 startIndex)
+   at Conductor.Tests.SF6_3InitScaffoldTests.BuiltInNamesEnumeratesEveryCaseOfTheBuiltInSwitch() in C:\code\conductor\tests\Conductor.Tests\SF6_3InitScaffoldTests.cs:line 64
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+Failed!  - Failed:     3, Passed:  1753, Skipped:     0, Total:  1756, Duration: 4 m 54 s - Conductor.Tests.dll (net10.0)
+```
+</details>
 
 ## Last session result
 
@@ -265,19 +309,19 @@ engine-fast:OK · face-fast:OK
 ## Tracker handoff
 
 ```
-last: **session 34, SF6.2 DONE** - the bank is choosable. Two measured defects fixed: packs resolved
-  only from planDir/templatesDir/packs so both shipped packs were stranded under maestro-templates,
-  and only maestro's session.md had a packs placeholder - the feature had ONE working config in the
-  whole bank. Now era-first then shared `plans/packs`, sarban-templates renders packs, `plans/README.md`
-  is the index (resolution order, per-item char cost, budget), `SF6_2PromptBankTests` (12) pins that
-  index to the filesystem both ways so it cannot rot. Personas pruned of contract duplication and
-  enriched: proof-note in the pitfalls pack, owner-block alternate completions in planner, unblocks
-  voice in docs. Evidence `.conductor/evidence/SF6/SF6-2-prompt-bank.md`.
-next: **SF6.3** - `conductor init` scaffolds the refreshed set with telegram + supervisor hints, doctor
-  clean. READ THIS FIRST, it corrects SF6.1's number: the live rig measured the sarban FILE template at
-  **10,191 chars with no persona and no packs** - already 2,000 OVER the ~8191 ceiling. SF6.1's "~200
-  chars headroom" measured the BUILT-IN template; the plan sets templatesDir, so the file one renders.
-  Bug #15 is now REPRODUCED, not inferred - every rig session-001.jsonl is one line, `[stderr] The
-  command line is too long.`, agent never ran, run carried on. Reproducer: `tools/scratch/sf6-2-bank-rig.ps1`.
-  green: 51/51 scoped. red: nothing known. open: bugs **#15 #16 #17 #18 #19 #20 #21**.
+last: **session 35, SF6.3 DONE** - init scaffolds all EIGHT templates (was two), wires commented
+  telegram + supervisor hints and a `limits` spend cap. Live rig proof: doctor on a fresh committed
+  scaffold went 13 ok/3 warn to **15 ok/1 warn/0 fail**; the one warn wants a bot token a committed
+  plan must not carry. Uncommenting the hints is TESTED, not asserted in prose. `chat.md` was a dead
+  built-in - nothing rendered it, ChatCommand hand-rolled its own prompt - now wired to
+  `PromptBuilder.Chat`. Packs stay OFF (SF6.2's 5974-char measurement). Evidence
+  `.conductor/evidence/SF6/SF6-3-init-scaffold.md`.
+next: **SF7.1** - docs reconciled with reality. TWO REDS WERE ALREADY ON THE BRANCH, not from SF6.3:
+  (a) `tools/gates/ratchet.ps1` was FAILING on the pushed tree (suppressions 40 > ceiling 38) - fixed
+  here by collapsing three MA0045 suppressions into `SyncCancellation.RequestStop`, now 37, gate green;
+  (b) **still red**: `SC4_4Tests.InjectionRendersDirectlyUnderTheRoleLineOfADeliverPrompt` - SF6.1
+  deleted the "PRE-SESSION RITUAL" heading it anchors on, `LineOf` = -1, confirmed absent at HEAD too.
+  Re-anchor it on headings the current built-in HAS; do not delete the assertions. Bug filed.
+  TRAP: sessions carry `CONDUCTOR_PLAN` - `cd $rig; conductor doctor` measures THIS repo. Pass --plan.
+  green: 49/49 scoped + ratchet + ArchitectureTests. open: bugs **#15 #16 #17 #18 #19 #20 #21 #22**.
 ```

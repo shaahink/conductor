@@ -58,8 +58,8 @@ public static class ToolContract
             you delivered. A checkpoint not claimed through this verb did not happen, whatever you wrote
             elsewhere. There is no second mechanism to also update. Mark IN PROGRESS BEFORE your first edit:
             a session that delivered for 56 minutes without it left the owner watching a wall of TODO. Claim
-            BEFORE writing the handoff — do the work, write DONE in the tracker, run out of room before this
-            verb, and you delivered nothing that counts.
+            BEFORE writing the handoff — do the work, write DONE in the tracker, run out of room, and you
+            delivered nothing that counts.
             If the MCP tools arrive DEFERRED in your harness, `ToolSearch` for `task_update` first — or skip that and use the CLI: `conductor task --done <id> --evidence <path>`.
             You CLAIM; Conductor confirms, and only once its gate battery and the Verifier agree. `{{plan.Tracker}}`
             is a GENERATED VIEW of the database — its checkpoint rows are overwritten, so they are not where
