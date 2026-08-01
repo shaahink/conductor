@@ -4,20 +4,19 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SF3.3 FACE WIRE MIRROR landed, `7f2c4a7`** — evidence
-  `.conductor/evidence/SF3/SF3.3-part2a-face-wire.md`. `api.StateDto` now decodes `Git`,
-  `EngineVersion`, `EngineCommit`, `FaceBuild`; `SessionRowDto` decodes `Commits`; the demo repo is
-  a dirty tracked branch ahead of its remote. Two REAL `/state` captures in
-  `internal/api/testdata/` (tracked+ahead, and no-upstream) with 6 decode tests over them.
-  **SF3.3 is still IN PROGRESS: no renderer was written — nothing about git is on screen.**
-next: **the four renderers, in this order.** (1) branch chip + FU-OWNER-10 short form in
-  `widgets/ticker.go RenderTopBar`; (2) a Git section on Home + the full build line in Home's
-  Server section; (3) commit subjects in `tab_history.go renderSessionsView`, after the digest
-  block; (4) the divergence cue in `widgets/sidebar.go View`. Then goldens, separate commit.
-traps: the top bar is ALREADY crowded at 120 cols and `style.MaxWidth` **clips silently** — tier the
-  chip and READ the 80/120/200 frames before pinning. `dirtySummary` is porcelain rows joined with
-  commas, NOT prose. `ahead`/`behind`/`upstream` are absent with no upstream: nil is not zero.
-green: `go build`, `go vet`, `go test ./internal/...` all clean; goldens untouched.
+last: **SF3.3 DONE and claimed — SF3 is complete.** Renderers 3 and 4 landed in `f91fa5e`,
+  goldens in `1579880`, evidence `.conductor/evidence/SF3/SF3.3-part2d-renderers.md`. Session
+  history's detail now shows the session's commit subjects (between the digest and the result);
+  the sidebar marks stages the run went PAST and names them in one line above the active row.
+next: **SF4.1** — spec `docs/history/CONDUCTOR-SARBAN.md` section SF4. The engine collects
+  owner-work into `.conductor/OWNER-QUEUE.md` + `GET /owner/queue`: every open `HUMAN:` line,
+  ownerGated stage, park (reason + age), blocked-until wait, each saying what it UNBLOCKS and the
+  exact command that clears it. Regenerated at every session boundary; items clear when their
+  condition does. `SHAHIN.md` from the sk round is the voice to copy.
+traps: a handoff can be STALE — session 18 landed two commits and died before writing one, so
+  check `git log` before believing this block. Sidebar: `windowRows` anchors on the ACTIVE row,
+  so anything appended at the top of the rail scrolls off first. Goldens: separate commit, always.
+green: `go build`, `go vet`, `go test ./...` all clean in `face-go/`. Engine untouched this session.
 open: bugs **#15 #16 #17 #18 #19**; #19 (claims empty in every digest) is engine-side.
 
 
