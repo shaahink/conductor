@@ -230,16 +230,16 @@ public sealed partial class SessionRunner
         if (assignment.Command is { Length: > 0 }) resolvedAgent.Command = assignment.Command;
         _ctx.Events.Emit(new SessionStarted
         {
-            SessionId = rec.Number.ToString(),
-            Number = rec.Number,
-            StageId = stage.Id,
-            Kind = kind.ToString(),
-            Attempt = attempt,
-            MaxAttempts = maxAttempts,
+            SessionId = rec.Number.ToString(), Number = rec.Number,
+            StageId = stage.Id, Kind = kind.ToString(),
+            Attempt = attempt, MaxAttempts = maxAttempts,
             AgentSessionId = rec.ClaudeSessionId,
             Persona = personaName,
             Model = resolvedAgent.Model,
         });
+        // SF5: durable BEFORE the agent exists. Its seq is the boundary "claimed during this session"
+        // is measured against; SF5SessionStartSeqTests has the inversion this prevents.
+        _ctx.Store?.FlushEvents();
         _ctx.Transcript.Append(rec.Number.ToString(), "system",
             $"Session #{rec.Number} started · {kind} · Stage {stage.Id} · Attempt {attempt}/{maxAttempts}" +
             (string.IsNullOrEmpty(resolvedAgent.Model) ? "" : $" · {resolvedAgent.Model}"));
