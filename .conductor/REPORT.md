@@ -1,10 +1,10 @@
 ﻿# Conductor — Sarban face - the watcher and the surfaces run report
 
-_Updated 2026-08-01 12:19 UTC · branch `feat/sarban` · HEAD `299ae8b`_
+_Updated 2026-08-01 13:08 UTC · branch `feat/sarban` · HEAD `3365138`_
 
 **Status:** Idle
-**Stage:** SF5 — Supervision without a polling meter · attempts used 0 · working ▸ SF5.3
-**Checkpoints:** 17/24 done · **Sessions run:** 28 · **Cost:** $226.9470 (agent $226.8002 + gates $0.1468) · **Tokens:** 4,102,787 in / 1,202,739 out
+**Stage:** SF5 — Supervision without a polling meter · attempts used 0 · working ▸ SF5.4
+**Checkpoints:** 18/24 done · **Sessions run:** 30 · **Cost:** $239.7581 (agent $239.5913 + gates $0.1667) · **Tokens:** 4,356,925 in / 1,325,784 out
 **Confirmed phases:** SF0, SF1, SF2, SF3, SF4
 
 ## Stage progress
@@ -16,7 +16,7 @@ _Updated 2026-08-01 12:19 UTC · branch `feat/sarban` · HEAD `299ae8b`_
 | SF2 | The face tells the truth kindly - state, time, money | ██████████ 3/3 | confirmed ✓ |
 | SF3 | Reading a session becomes cheap | ██████████ 3/3 | confirmed ✓ |
 | SF4 | The human queue is a first-class surface | ██████████ 2/2 | confirmed ✓ |
-| SF5 | Supervision without a polling meter | █████░░░░░ 2/4 | **← active** |
+| SF5 | Supervision without a polling meter | ████████░░ 3/4 | **← active** |
 | SF6 | The prompt bank compounds | ░░░░░░░░░░ 0/3 | todo |
 | SF7 | Ship the era | ░░░░░░░░░░ 0/2 | todo |
 
@@ -70,14 +70,14 @@ _Updated 2026-08-01 12:19 UTC · branch `feat/sarban` · HEAD `299ae8b`_
 
 </details>
 
-<details><summary>SF5 — Supervision without a polling meter (2/4)</summary>
+<details><summary>SF5 — Supervision without a polling meter (3/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
 | SF5.1 | conductor watch blocks silently and returns or fires a hook only on the wake set — park, circuit breaker, budget park, phase RED twice on a stage, engine gone, run ended — with a json brief of about thirty lines and a timeout heartbeat | ✅ DONE | - |
-| SF5.2 | A supervisor plan block runs a configured command on wake with the brief on stdin; operating.md carries the wake and dont-wake table and the standing-order pattern | ✅ DONE | - |
-| SF5.3 | The remote supervision pattern is documented and proven once end to end — a wake reaching a remote listener — with an honest note of what stays manual | ⬜ TODO | - |
-| SF5.4 | conductor ps lists every run on the machine from the control-plane discovery files; process titles carry repo and run id; the face offers a run picker when more than one control plane answers | ⬜ TODO | - |
+| SF5.2 | A supervisor plan block runs a configured command on wake with the brief on stdin; operating.md carries the wake and dont-wake table and the standing-order pattern | ✅ DONE | [`4efedac`](https://github.com/shaahink/conductor/commit/4efedac) |
+| SF5.3 | The remote supervision pattern is documented and proven once end to end — a wake reaching a remote listener — with an honest note of what stays manual | ✅ DONE | [`2cd9083`](https://github.com/shaahink/conductor/commit/2cd9083) |
+| SF5.4 | conductor ps lists every run on the machine from the control-plane discovery files; process titles carry repo and run id; the face offers a run picker when more than one control plane answers | 🔄 IN PROGRESS | - |
 
 </details>
 
@@ -132,20 +132,14 @@ _Updated 2026-08-01 12:19 UTC · branch `feat/sarban` · HEAD `299ae8b`_
 | 26 | SF5 | Deliver | 1 | 08-01 11:15 | 0:18 | RolledOver |  | 0 |  | $5.9470 |  | 141,879/1,823 |
 | 27 | SF5 | Deliver | 1 | 08-01 11:33 | 0:26 | RolledOver |  | 0 |  | $5.9398 |  | 132,849/1,867 |
 | 28 | SF5 | Deliver | 1 | 08-01 12:00 | 0:17 | Advanced | SF5.2 | 2 | engine-fast:OK · face-fast:OK | $5.4927 | $0.0095 | 104,311/43,176 |
+| 29 | SF5 | Deliver | 1 | 08-01 12:19 | 0:21 | Advanced | SF5.3 | 3 | engine-fast:OK · face-fast:OK | $6.5167 | $0.0088 | 141,509/64,444 |
+| 30 | SF5 | Deliver | 1 | 08-01 12:43 | 0:23 | Progress |  | 3 | engine-fast:OK · face-fast:OK | $6.2744 | $0.0111 | 112,629/58,601 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-01 04:48:55  ▸ stage SF4 entered — The human queue is a first-class surface
-08-01 04:48:55  ■ needs human — agent asked for a human in the tracker handoff (HUMAN: line) — resolve, then run `conductor resume`
-08-01 10:00:13  • session #20 SF4 Deliver started (attempt 1/4)
-08-01 10:27:27  • session #20 SF4 → RolledOver  (27m14s)
-08-01 10:27:28  • session #21 SF4 Deliver started (attempt 1/4)
-08-01 10:51:24  ▪ gate engine-fast pass [session]  (1m28s)
-08-01 10:51:24  ▪ gate face-fast pass [session]  (1m08s)
-08-01 10:51:25  • session #21 SF4 → Progress · 2 commit(s)  (23m57s)
 08-01 10:51:26  • session #22 SF4 Deliver started (attempt 1/4)
 08-01 11:15:54  ▪ gate engine-fast pass [session]  (1m14s)
 08-01 11:15:55  ▪ gate face-fast pass [session]  (11.8s)
@@ -178,6 +172,14 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-01 13:00:09  • session #28 SF5 Deliver started (attempt 1/8)
 08-01 13:19:45  ▪ gate engine-fast pass [session]  (1m14s)
 08-01 13:19:45  ▪ gate face-fast pass [session]  (20.3s)
+08-01 13:19:46  • session #28 SF5 → Advanced · done SF5.2 · 2 commit(s)  (19m36s)
+08-01 13:19:46  • session #29 SF5 Deliver started (attempt 1/8)
+08-01 13:43:06  ▪ gate engine-fast pass [session]  (1m19s)
+08-01 13:43:06  ▪ gate face-fast pass [session]  (8.0s)
+08-01 13:43:07  • session #29 SF5 → Advanced · done SF5.3 · 3 commit(s)  (23m20s)
+08-01 13:43:07  • session #30 SF5 Deliver started (attempt 1/8)
+08-01 14:08:24  ▪ gate engine-fast pass [session]  (1m38s)
+08-01 14:08:24  ▪ gate face-fast pass [session]  (13.1s)
 ```
 
 ## Health
@@ -185,7 +187,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 28 · retries 2 (7 %) · overall Warn
+sessions 30 · retries 2 (7 %) · overall Warn
 ⚠ [context-saturation] session #3: 24,790,251 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #4: 21,397,049 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #5: 36,996,007 context tokens (≥ 20,000,000)
@@ -199,19 +201,12 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/sarban
-working tree: clean
+working tree: M .conductor/REPORT.md
 vs upstream: up to date
 ```
 
 ### Commits by session
 
-- **s15 (SF3 Deliver)** — 3 commit(s):
-  - [`3dd1b2b`](https://github.com/shaahink/conductor/commit/3dd1b2b) docs(tracker): SF3.2 claimed complete, SF3.3 is next with FU-OWNER-10 riding it
-  - [`88a966a`](https://github.com/shaahink/conductor/commit/88a966a) test(face): rebaseline the six kanban frames, plus two new ones
-  - [`3e7c4b3`](https://github.com/shaahink/conductor/commit/3e7c4b3) feat(face): the board answers where-are-we (SF3.2, part 2 - the rendering)
-- **s17 (SF3 Deliver)** — 2 commit(s):
-  - [`87a47c9`](https://github.com/shaahink/conductor/commit/87a47c9) docs(tracker): SF3.3 face wire mirror landed, the four renderers remain
-  - [`7f2c4a7`](https://github.com/shaahink/conductor/commit/7f2c4a7) feat(face): the wire's git block and build identity, decoded (SF3.3, part 2a)
 - **s19 (SF3 Deliver)** — 3 commit(s):
   - [`5d88b21`](https://github.com/shaahink/conductor/commit/5d88b21) docs(tracker): SF3.3 claimed complete, SF3 closes and SF4.1 is next
   - [`1579880`](https://github.com/shaahink/conductor/commit/1579880) test(face): rebaseline the session detail, and pin the jumped-stage rail (SF3.3)
@@ -233,6 +228,14 @@ vs upstream: up to date
 - **s28 (SF5 Deliver)** — 2 commit(s):
   - [`299ae8b`](https://github.com/shaahink/conductor/commit/299ae8b) docs(tracker): SF5.2 closes, and the fuse that had to be a file (SF5.2)
   - [`4efedac`](https://github.com/shaahink/conductor/commit/4efedac) feat(watch): the babysitter belongs in the plan, not a shell history (SF5.2)
+- **s29 (SF5 Deliver)** — 3 commit(s):
+  - [`02460a9`](https://github.com/shaahink/conductor/commit/02460a9) docs(tracker): SF5.3 closes, and the wake that had to outlive the fuse (SF5.3)
+  - [`65846c6`](https://github.com/shaahink/conductor/commit/65846c6) docs(watch): remote supervision, proven against a listener that is not us (SF5.3)
+  - [`2cd9083`](https://github.com/shaahink/conductor/commit/2cd9083) feat(watch): the wake leaves the machine (SF5.3)
+- **s30 (SF5 Deliver)** — 3 commit(s):
+  - [`3365138`](https://github.com/shaahink/conductor/commit/3365138) docs(tracker): SF5.4 parts 1+2, and the face picker that is left (SF5.4)
+  - [`9adb15f`](https://github.com/shaahink/conductor/commit/9adb15f) feat(ps): the engine says which run it is, in its title (SF5.4)
+  - [`a599d26`](https://github.com/shaahink/conductor/commit/a599d26) feat(ps): the fleet is visible, and the probe leads (SF5.4)
 
 ## Phase handovers (audit)
 
@@ -259,22 +262,23 @@ engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: **SF5.2 landed and claimed** (`conductor task --done SF5.2 --evidence .conductor/evidence/SF5/SF5.2-supervisor-block.md`), in two commits on `feat/sarban`: `4efedac` (code + tests + docs) and `299ae8b` (evidence + handoff), both pushed, tree clean. The deliverable is a `supervisor` plan block — `command`, `timeoutMinutes`, `maxPerHour`, `standingOrders` — that `conductor watch` runs on wake with the ~30-line brief on stdin, with `--hook` overriding it for a one-off. Three design points are the substance: the hourly fuse is a **file** (`.conductor/supervisor-fires.log`) because the shipped shape is a shell loop where every wake starts a fresh `watch` process, so an in-process …
+> SESSION-RESULT: Landed two of SF5.4's three parts, both committed, pushed, and green. `conductor ps` (`a599d26`) lists every conductor run on the machine — repo, plan, run id, port, pid, status, uptime — plus `--json`; a live drive of the fresh build listed **both** real runs on this box (this repo on 4317 pid 35412, `C:/Code/sk-studio` on 4318 pid 19056), evidence at `.conductor/evidence/SF5/SF5.4-ps-live.log`. The design turns on a measured finding, not the spec's assumed mechanism: this repo's live run serves its control plane with **no** `.conductor/control-plane.json`, so a discovery-file walk would have missed the very run it runs inside — the port probe of 4317-4336 leads (`GET /state…
 
 ## Tracker handoff
 
 ```
-last: **SF5.2 CLOSED — the babysitter is named in the plan, not in a shell history** (`4efedac`).
-  `supervisor` block: command, timeoutMinutes, maxPerHour, standingOrders. `watch` with NO `--hook`
-  runs it with the brief on stdin; `--hook` overrides and does not spend the plan's fuse.
-  **The fuse is a FILE** (`.conductor/supervisor-fires.log`): every wake is a fresh `watch` process,
-  so an in-process counter would reset on the very event it bounds. **standingOrders rides the brief**
-  — orders left in the loop's start prompt are invisible to the agent that actually wakes.
-next: **SF5.3** — remote supervision documented and proven once (a wake reaching a remote listener),
-  then **SF5.4** `conductor ps` + the face's run picker.
-green: SF5 watch+supervisor suite **49/49**; live drive of MY build against two scratch rigs proved
-  all three claims (`.conductor/evidence/SF5/SF5.2-live-drive.log`).
-tip: reusable rig — `SF5.2-supervisor-drive.ps1` text-patches a supervisor block into the SF5.1 rig
-  plan and pre-seeds the fires ledger; that pre-seed is what makes the fuse proof deterministic.
-red: nothing. open: bugs **#15 #16 #17 #18 #19 #20** (#20: set `$env:CONDUCTOR_PLAN` for any rig).
+last: **SF5.4 parts 1+2 landed, checkpoint still IN PROGRESS** (`a599d26`, `9adb15f`).
+  `conductor ps` lists every run on the machine; **the port probe leads, not a discovery-file walk** -
+  measured: this repo's live run serves 4317 with **no** `.conductor/control-plane.json`, so a file
+  scan would miss the run it runs inside. `GET /state` already carries plan/run id/repo/state dir;
+  the discovery file only enriches (pid), one naming another port is ignored, `conductor.lock` is the
+  fallback. Read-only: loopback GETs, no token, no POST. A lock with no plane lists as `no control
+  plane`. Engine process titles now carry repo + stage + run id, restored on exit.
+next: **the face run picker** - the last piece of SF5.4. `conductor face` reads ONLY the local
+  discovery file, so it is **broken in this repo today** (says "no live run" at a live run). Feed it
+  from `FleetScan`; when more than one plane answers, hand the fleet to the Go face for a picker
+  (suggest env `CONDUCTOR_FLEET` json, so tokens stay off the process listing). Then a live title capture.
+green: SF5_4FleetTests **45**, SF5 + harness **132**. Live drive of MY build listed both runs on this
+  box (this repo 4317 pid 35412, sk-studio 4318): `.conductor/evidence/SF5/SF5.4-ps-live.log`.
+red: nothing. open: bugs **#15 #16 #17 #18 #19 #20**.
 ```

@@ -2,21 +2,18 @@
 
 **Plan:** Sarban face - the watcher and the surfaces | **Branch:** `feat/sarban` | **Design doc:** docs/history/CONDUCTOR-SARBAN.md
 
-## Handoff (overwrite this block, <=12 lines, no history)
+## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **SF5.4 parts 1+2 landed, checkpoint still IN PROGRESS** (`a599d26`, `9adb15f`).
-  `conductor ps` lists every run on the machine; **the port probe leads, not a discovery-file walk** -
-  measured: this repo's live run serves 4317 with **no** `.conductor/control-plane.json`, so a file
-  scan would miss the run it runs inside. `GET /state` already carries plan/run id/repo/state dir;
-  the discovery file only enriches (pid), one naming another port is ignored, `conductor.lock` is the
-  fallback. Read-only: loopback GETs, no token, no POST. A lock with no plane lists as `no control
-  plane`. Engine process titles now carry repo + stage + run id, restored on exit.
-next: **the face run picker** - the last piece of SF5.4. `conductor face` reads ONLY the local
-  discovery file, so it is **broken in this repo today** (says "no live run" at a live run). Feed it
-  from `FleetScan`; when more than one plane answers, hand the fleet to the Go face for a picker
-  (suggest env `CONDUCTOR_FLEET` json, so tokens stay off the process listing). Then a live title capture.
-green: SF5_4FleetTests **45**, SF5 + harness **132**. Live drive of MY build listed both runs on this
-  box (this repo 4317 pid 35412, sk-studio 4318): `.conductor/evidence/SF5/SF5.4-ps-live.log`.
+last: **SF5.4 CLOSED** (`3f0ff2e`, `e60f380`) - the face run picker, the last piece.
+  `conductor face` no longer reads the local discovery file: it resolves through **FleetScan's port
+  probe**. Measured live - the PUBLISHED verb says "no live run" standing at a live run on 4317
+  (`discoveryFile:false`), this build attaches to it. Rule (`FaceTarget.Choose`, pure): run in THIS
+  directory -> attach; only run on the box -> attach; else or `--pick` -> hand over `CONDUCTOR_FLEET`
+  (env, never argv - it carries write tokens) and the Go pre-flight picker asks. Port-0 runs are
+  listed by `ps` but never offered. Evidence `.conductor/evidence/SF5/SF5.4-part3-run-picker.md`.
+next: **SF5 has no incomplete checkpoints** - SF5.1-SF5.4 all DONE. Move to the next stage.
+green: SF5_4 suites **64** (19 new), face-go build/vet/test green, 3 new picker goldens
+  (`testdata/golden/run_picker_*`) built from the real two-run fleet, tokens excluded.
 red: nothing. open: bugs **#15 #16 #17 #18 #19 #20**.
 
 
@@ -80,7 +77,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | SF5.1 | conductor watch blocks silently and returns or fires a hook only on the wake set — park, circuit breaker, budget park, phase RED twice on a stage, engine gone, run ended — with a json brief of about thirty lines and a timeout heartbeat | DONE | - | .conductor/evidence/SF5/SF5.1-live-drive.log |
 | SF5.2 | A supervisor plan block runs a configured command on wake with the brief on stdin; operating.md carries the wake and dont-wake table and the standing-order pattern | DONE | 4efedac | .conductor/evidence/SF5/SF5.2-supervisor-block.md |
 | SF5.3 | The remote supervision pattern is documented and proven once end to end — a wake reaching a remote listener — with an honest note of what stays manual | DONE | 2cd9083 | .conductor/evidence/SF5/SF5.3-live-drive.log |
-| SF5.4 | conductor ps lists every run on the machine from the control-plane discovery files; process titles carry repo and run id; the face offers a run picker when more than one control plane answers | TODO | - | - |
+| SF5.4 | conductor ps lists every run on the machine from the control-plane discovery files; process titles carry repo and run id; the face offers a run picker when more than one control plane answers | IN PROGRESS | - | - |
 
 ### SF6 — The prompt bank compounds
 
