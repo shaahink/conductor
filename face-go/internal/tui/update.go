@@ -105,6 +105,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.syncSidebar()
 		}
 
+	case MsgOwnerQueueUpdated:
+		// Same rule as the task board: a failed poll keeps the last good rows and says the feed went
+		// away. The owner's obligations do not stop existing because one fetch timed out.
+		if msg.Err != "" {
+			m.ownerQueueErr = msg.Err
+		} else if msg.Queue != nil {
+			m.ownerQueueErr = ""
+			m.ownerQueue = msg.Queue
+		}
+
 	case MsgProcessesUpdated:
 		if msg.Procs != nil {
 			m.data.Processes = msg.Procs.Processes
@@ -531,6 +541,13 @@ func (m Model) handleKey(key string) (tea.Model, tea.Cmd) {
 		// own handlers own esc); by here the outstanding layer is a non-Agent tab, or Agent's raw
 		// stream — which IS a layer over the parsed transcript, and the transcript is the base the
 		// dashboard rests on. On the parsed Agent view esc is a no-op — already home.
+		// SF4.2: the owner queue is a layer over Home the same way the raw stream is a layer over the
+		// transcript, so esc peels it FIRST — leaving Home rather than leaving for Agent. Checked
+		// before the tab test below, or `w` would be the only way back off a full-pane list.
+		if m.tab == TabHome && m.homeView != homeLanding {
+			m.homeView = homeLanding
+			return m, nil
+		}
 		if m.tab != TabAgent {
 			return m.openTab(TabAgent)
 		}
@@ -557,6 +574,14 @@ func (m Model) handleKey(key string) (tea.Model, tea.Cmd) {
 			m.transcript = m.transcript.Update(widgets.MsgSetSearch{Query: ""})
 		}
 		return m, nil
+	case "w":
+		// SF4.2's owner queue — a GLOBAL key, resolved here alongside the tab mnemonics and before any
+		// pane handler, because that is the precedence a letter that opens a surface has to have to be
+		// reachable from every pane. `w` was free: it is not a tab mnemonic, not a folded one, and no
+		// pane handler claimed it (STYLE.md's rule for adding a letter — grep the pane handlers first).
+		// A toggle once Home is up, like `c` on Agent: a full-pane list needs a way back that is not
+		// "go somewhere else and come back".
+		return m.openOwnerQueue()
 	case "tab":
 		return m.switchTab(1)
 	case "shift+tab":
@@ -614,6 +639,22 @@ func (m Model) openFolded(key string, t MainTab) (tea.Model, tea.Cmd) {
 	return m.openTab(t)
 }
 
+// openOwnerQueue opens Home's full owner-queue view, or closes it again if it is already up.
+//
+// It does NOT wait for a fetch: the queue is polled with everything else, so `w` renders whatever the
+// last poll left — and if that is nothing yet, the pane says so rather than showing an empty list
+// that reads as "nothing is owed".
+func (m Model) openOwnerQueue() (tea.Model, tea.Cmd) {
+	if m.tab == TabHome && m.homeView == homeOwnerQueue {
+		m.homeView = homeLanding
+		return m, nil
+	}
+	m.tab = TabHome
+	m.homeView = homeOwnerQueue
+	m.ownerQueueScroll = 0
+	return m, m.cmdFetchOwnerQueue()
+}
+
 // openHistory opens the History tab on a specific view.
 func (m Model) openHistory(v historyView) (tea.Model, tea.Cmd) {
 	m.tab = TabHistory
@@ -643,6 +684,11 @@ func (m Model) switchTab(delta int) (tea.Model, tea.Cmd) {
 func (m Model) openTab(t MainTab) (tea.Model, tea.Cmd) {
 	m.tab = t
 	switch t {
+	case TabHome:
+		// Opening Home lands on the LANDING, the way opening History lands on the sessions list: `h`
+		// means "show me where I am", and a preserved owner-queue view would answer a question the
+		// keypress did not ask. `w` is one key away and says which view it means.
+		m.homeView = homeLanding
 	case TabHistory:
 		// Opening History lands on the sessions list, the way every other tab resets what it shows on
 		// open. The spine is `t`, or `←/→` from here — both one keypress, and both say which view
@@ -699,6 +745,12 @@ func (m Model) tabHandlesAllKeys() bool {
 // handleTabKey routes navigation keys to the active pane's handler.
 func (m Model) handleTabKey(key string) (tea.Model, tea.Cmd) {
 	switch m.tab {
+	case TabHome:
+		// The landing owns no keys, by design (STYLE.md). Its owner-queue view does — it is a list
+		// that can outgrow the pane, and a full-pane view with no scroll is a clipped one.
+		if m.homeView == homeOwnerQueue {
+			return m.handleOwnerQueueKey(key)
+		}
 	case TabAgent:
 		return m.handleAgentKey(key)
 	case TabHistory:

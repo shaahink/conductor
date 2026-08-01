@@ -79,6 +79,21 @@ const (
 	historyTimeline
 )
 
+// homeView selects which of TabHome's two views fills the pane (SF4.2).
+//
+// The owner queue is the eleventh surface this Face wanted and it is NOT an eleventh tab: SF1.3 set
+// the ceiling at ten and made the next surface FOLD instead (docs/dev/adr/0004), which is what this
+// is — a second view inside Home, on the free key `w`, exactly as the spine is a second view inside
+// History. Home is the right host because the queue answers Home's own question ("what next") for
+// the one actor Home cannot instruct: the owner. Short queues never need the fold at all — they are
+// a section on the landing, and `w` is for when the list outgrows a page that cannot scroll.
+type homeView int
+
+const (
+	homeLanding homeView = iota
+	homeOwnerQueue
+)
+
 // CmdMode is a transient bottom-bar input that floats over the dashboard instead of a full modal.
 type CmdMode int
 
@@ -165,6 +180,16 @@ type Model struct {
 
 	// historyView selects TabHistory's view: the sessions list or the run's spine.
 	historyView historyView
+
+	// homeView selects TabHome's view: the landing, or SF4.2's full owner queue (`w`).
+	homeView homeView
+	// ownerQueue is the last good GET /owner/queue. Kept across a failed poll — the owner's
+	// obligations do not stop existing because one fetch timed out, and a section that blanks itself
+	// on a hiccup is how a queue teaches people to stop trusting it. ownerQueueErr says the feed went
+	// away, beside the rows it is still showing.
+	ownerQueue       *api.OwnerQueueDto
+	ownerQueueErr    string
+	ownerQueueScroll int
 
 	// Palette (bottom command bar)
 	paletteQuery      string

@@ -153,6 +153,13 @@ type MsgTaskSplit struct {
 	Err    string
 }
 
+// MsgOwnerQueueUpdated carries GET /owner/queue (SF4.2). Err is a string, and both fields can be
+// set-or-empty independently, because a failed poll must not blank a queue already on screen.
+type MsgOwnerQueueUpdated struct {
+	Queue *api.OwnerQueueDto
+	Err   string
+}
+
 // M8.2 Telegram guided setup
 type MsgTelegramStatusUpdated struct {
 	Status *api.TelegramStatusDto

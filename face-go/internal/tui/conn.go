@@ -18,7 +18,25 @@ func (m Model) doPoll() tea.Cmd {
 		m.cmdFetchProcesses(),
 		m.cmdFetchSessions(),
 		m.cmdFetchKnowledge(),
+		// SF4.2: polled with the rest, not fetched on open, because Home shows it and Home fetches
+		// nothing of its own (STYLE.md) — and because the point of the queue is that a new obligation
+		// is visible without anyone navigating to it.
+		m.cmdFetchOwnerQueue(),
 	)
+}
+
+// cmdFetchOwnerQueue polls GET /owner/queue (SF4.2). Unlike the other snapshot polls it REPORTS its
+// failure rather than swallowing it: an empty owner queue and an unreachable one look identical on
+// the pane, and "nothing is owed" is the more dangerous of the two to say wrongly.
+func (m Model) cmdFetchOwnerQueue() tea.Cmd {
+	source := m.source
+	return func() tea.Msg {
+		q, err := source.FetchOwnerQueue()
+		if err != nil {
+			return MsgOwnerQueueUpdated{Err: err.Error()}
+		}
+		return MsgOwnerQueueUpdated{Queue: q}
+	}
 }
 
 // cmdFetchKnowledge polls the M7 ledger + bugs together (both are small snapshot endpoints). A failure

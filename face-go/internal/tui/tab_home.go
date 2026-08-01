@@ -125,6 +125,11 @@ func fitHome(sections [][]homeLine, budget int) string {
 }
 
 func (m Model) renderHomePane() (string, string) {
+	// SF4.2: Home has a second view now — the full owner queue, on `w`. It is a fold, not an eleventh
+	// tab (SF1.3 capped the strip at ten), so it is dispatched here rather than from paneView's switch.
+	if m.homeView == homeOwnerQueue {
+		return m.renderOwnerQueuePane()
+	}
 	w := m.paneCols()
 	body := fitHome([][]homeLine{
 		m.renderHomeServer(w),
@@ -132,6 +137,11 @@ func (m Model) renderHomePane() (string, string) {
 		// the engine is not running — so what happened? (SF2.1)
 		m.renderHomeLastRun(w),
 		m.renderHomeRun(w),
+		// SF4.2: directly under Run, because the landing then reads "here is what the run is doing"
+		// then "here is what it needs from YOU" — and because fitHome sheds from the last section
+		// backwards, which puts Workspace, Git and the wiring diagnostics ahead of an obligation in
+		// the queue for being dropped.
+		m.renderHomeOwnerQueue(w),
 		m.renderHomeWorkspace(w),
 		// Directly under Workspace: the repo row says WHICH folder is being edited, and this says what
 		// state that folder is in. SF3.3.
@@ -144,7 +154,12 @@ func (m Model) renderHomePane() (string, string) {
 	// Hard-clip every row to the pane. .Width() only pads short content — it never truncates — so one
 	// over-long row would WRAP and push every panel below it down and out of the pane (STYLE.md).
 	body = lipgloss.NewStyle().MaxWidth(w).Render(body)
-	return body, "a agent · r report · : commands · ? keys"
+	// `w` is advertised unconditionally, including over an empty queue: a key that appears only when
+	// there is work to do is a key nobody learns, and the view it opens answers "nothing is waiting on
+	// you" honestly rather than looking broken. It costs `: commands` its slot — the pane-help half of
+	// the bottom bar is about 50 columns and a longer string does not wrap, it silently loses its
+	// TAIL (which was `? keys`, the one hint a lost user needs). `:` is still on the bar's other half.
+	return body, "a agent · r report · w owner queue · ? keys"
 }
 
 // --- Server ------------------------------------------------------------------

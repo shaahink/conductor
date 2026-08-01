@@ -126,7 +126,11 @@ func (fakeSource) FetchPromptPreview(_, _ string) (*api.PromptPreviewDto, error)
 	return nil, nil
 }
 func (fakeSource) FetchScores() (*api.ScoresDto, error) { return nil, nil }
-func (fakeSource) HasWriteToken() bool                  { return true }
+
+// The golden model's owner queue is empty and DATED, so recorded frames do not move: SF4.2's own
+// tests drive MsgOwnerQueueUpdated with the queue they need.
+func (fakeSource) FetchOwnerQueue() (*api.OwnerQueueDto, error) { return nil, nil }
+func (fakeSource) HasWriteToken() bool                          { return true }
 func (fakeSource) PostControl(api.ControlRequestDto) (*api.ControlAcceptedDto, error) {
 	return &api.ControlAcceptedDto{Accepted: true}, nil
 }
@@ -481,7 +485,7 @@ func newGoldenModel(width, height int) tea.Model {
 			GateSummary:   strPtr("build ✓ test ✗ lint ○"),
 			ResultSummary: strPtr("Wired the **caching layer** in `RunDb` but `test` still red — see gate output."),
 			StartedUtc:    "2026-07-15T09:12:30Z", EndedUtc: strPtr("2026-07-15T09:58:04Z"), CostUsd: 0.1408,
-			TokensIn:      52881, TokensOut: 4402, TokensThink: 2310, TokensCache: 201338,
+			TokensIn: 52881, TokensOut: 4402, TokensThink: 2310, TokensCache: 201338,
 			Digest: &api.SessionDigestDto{
 				ToolCalls: 104, DistinctTools: 8,
 				Mix: []api.DigestCountDto{{Name: "Bash", Count: 57}, {Name: "Edit", Count: 26},

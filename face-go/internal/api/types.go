@@ -42,6 +42,11 @@ type DataSource interface {
 	// any ad-hoc SQL on this interface at all. Every read here is a typed DTO.
 	FetchScores() (*ScoresDto, error)
 
+	// SF4.2: the owner queue — every obligation only the owner can clear (HUMAN: lines, unapproved
+	// owner gates, the park it is sitting in, a blocked-until wait), each carrying what it unblocks
+	// and the command that clears it. Home surfaces it and `w` opens the full list.
+	FetchOwnerQueue() (*OwnerQueueDto, error)
+
 	// HasWriteToken reports whether this source carries the per-run write token every POST needs
 	// (U2.3). Home surfaces it because "my writes are silently refused" has exactly one common
 	// cause — attaching with --url but no token — and nothing in the Face said so.
@@ -811,6 +816,11 @@ type TelegramStatusDto struct {
 	WillDeliver         bool     `json:"willDeliver"`
 	WillDeliverReason   *string  `json:"willDeliverReason"`
 	RestartRequired     bool     `json:"restartRequired"`
+	// FU-OWNER-13: true while a telegram block this control plane already ACCEPTED is still queued
+	// for the run loop's next session boundary. Every other field on this payload describes the
+	// in-memory PlanConfig, which is still the pre-edit one — so a just-saved block read as
+	// "not configured", and the pane advised the owner to make the edit they had just made.
+	ReloadPending bool `json:"reloadPending"`
 }
 
 // ViaQueue is what makes a green test mean anything: true = the message travelled the same send queue

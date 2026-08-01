@@ -257,6 +257,19 @@ func (m Model) renderTelegramStatusLine(s *api.TelegramStatusDto) string {
 		head = warnStyle.Render("◐ saved — restart required")
 	case s.Configured:
 		head = warnStyle.Render("◐ will not deliver yet")
+		// A queued reload does not fix a missing token or a missing chat id, so the verdict above
+		// stands and the engine's reason below it is still the right sentence. This only records that
+		// the save landed — the thing an owner who just pressed save is looking for.
+		if s.ReloadPending {
+			head += subtleStyle.Render(" · plan reload queued")
+		}
+	// FU-OWNER-13: BELOW Configured on purpose. This engine's in-memory PlanConfig has no telegram
+	// block yet, so every field above reads exactly as it would for a plan nobody ever configured —
+	// which is how a block saved thirty seconds ago came back as "not configured", under a reason
+	// telling the owner to add the block they had just added. A queued reload is the one thing that
+	// distinguishes the two, and it means WAITING, not unconfigured.
+	case s.ReloadPending:
+		head = warnStyle.Render("◐ saved — waiting for the next session boundary")
 	default:
 		head = subtleStyle.Render("○ not configured")
 	}

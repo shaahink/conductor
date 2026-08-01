@@ -333,6 +333,38 @@ func (s *demoSource) FetchScores() (*ScoresDto, error) {
 	}}, nil
 }
 
+// FetchOwnerQueue answers SF4.2's owner queue offline. Four entries, deliberately: enough that the
+// demo overflows Home's cap and shows the "+N more" hand-off to `w`, three of the six kinds so the
+// glyph column is exercised, one entry with NO timestamp — the tracker's HUMAN: line — because
+// "age unknown must not render as just-now" is the one thing about this pane that can silently lie,
+// and a demo whose every row is dated could never show it.
+func (s *demoSource) FetchOwnerQueue() (*OwnerQueueDto, error) {
+	now := time.Now().UTC()
+	since := func(d time.Duration) *string {
+		t := now.Add(-d).Format(time.RFC3339Nano)
+		return &t
+	}
+	return &OwnerQueueDto{
+		Count:        4,
+		GeneratedUtc: now.Format(time.RFC3339Nano),
+		Items: []OwnerQueueItemDto{
+			{Id: "park", Kind: "park", Title: "Run is parked: budget window exhausted",
+				Unblocks: "the whole run — nothing advances until this clears",
+				Command:  "conductor resume", SinceUtc: since(52 * time.Minute), AgeSeconds: i64Ptr(3120),
+				Detail: strPtr("window spend $18.40 of $18.00")},
+			{Id: "gate-F8", Kind: "ownerGate", Title: "Stage F8 needs owner approval before it starts",
+				Unblocks: "stage F8 and the 3 checkpoints under it",
+				Command:  "conductor approve F8", SinceUtc: since(14 * time.Minute), AgeSeconds: i64Ptr(840)},
+			{Id: "human-1", Kind: "human", Title: "HUMAN: pick the release channel before F9 publishes",
+				Unblocks: "checkpoint F9.1",
+				Command:  "edit the handoff block in TRACKER.md and delete the HUMAN: line"},
+			{Id: "wait-1", Kind: "wait", Title: "Waiting until 15:12Z — vercel deploy window is full",
+				Unblocks: "checkpoint F7.3 (the engine resumes itself)",
+				Command:  "", SinceUtc: since(3 * time.Minute), AgeSeconds: i64Ptr(180)},
+		},
+	}, nil
+}
+
 func (s *demoSource) PostControl(cmd ControlRequestDto) (*ControlAcceptedDto, error) {
 	// set-rollover mutates the demo run state (mirrors ControlDispatcher.ParseRolloverValue) so
 	// the Settings row's active-override display round-trips offline like every other demo edit.
@@ -1047,8 +1079,8 @@ func makeFakeState() *StateDto {
 			HeadSha:      "9f2c1ab7d4e60b83a5c1e2f0d7b6a94c3e8f1d20",
 			HeadShortSha: "9f2c1ab",
 			HeadSubject:  "feat(gates): key the cache by (name, tier, sha)",
-			Dirty:      true,
-			DirtyCount: 4,
+			Dirty:        true,
+			DirtyCount:   4,
 			// The engine serves porcelain rows joined with commas, not a prose summary — verified
 			// against a live `GET /state` (testdata/state_git_wire.json). The demo must carry the
 			// wire's shape, or the renderer is designed against a sentence that never arrives.
@@ -1144,7 +1176,7 @@ func makeFakeSessions() []SessionRowDto {
 		{Number: 11, StageId: "F7", Kind: "Deliver", Outcome: strPtr("needsRetry"), Attempt: 1, CommitCount: 2, GateSummary: strPtr("build ✓ test ✗ lint ○"),
 			ResultSummary: strPtr("Wired the **caching layer** in `RunDb` but `test` is still red — see the gate output."),
 			StartedUtc:    "2026-07-15T08:31:10Z", EndedUtc: strPtr("2026-07-15T09:12:55Z"), CostUsd: 0.1408,
-			TokensIn:      52881, TokensOut: 4402, TokensThink: 2310, TokensCache: 201338,
+			TokensIn: 52881, TokensOut: 4402, TokensThink: 2310, TokensCache: 201338,
 			Digest: &SessionDigestDto{
 				ToolCalls: 61, DistinctTools: 5,
 				Mix: []DigestCountDto{{Name: "Bash", Count: 24}, {Name: "Read", Count: 18},

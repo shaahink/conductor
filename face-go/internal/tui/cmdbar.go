@@ -474,7 +474,8 @@ func (m Model) renderHelpOverlay() string {
 		accentStyle.Render("Actions") + "\n" +
 		"  " + key("i") + " inject context    " + key("/") + " search transcript · " + key("f") +
 		" fold tools · " + key("T") + " fold thinking\n" +
-		"  " + key("\\") + " collapse sidebar  " + key("↑↓") + " scroll / navigate\n\n" +
+		"  " + key("\\") + " collapse sidebar  " + key("↑↓") + " scroll / navigate · " + key("w") +
+		" owner queue\n\n" +
 		accentStyle.Render("Global") + "\n" +
 		"  " + key("q") + " quit   " + key("esc") + " close / cancel   " + key("?") + " this help"
 
