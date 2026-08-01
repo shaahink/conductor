@@ -123,7 +123,56 @@ type StateDto struct {
 	// nullable and unset on most plans. "" = an older engine that does not serve it; callers must
 	// treat that as unknown and fall back, never as "not claude".
 	Provider string `json:"provider"`
+
+	// ── SC2.3's budget block, read rather than re-derived (SF2.3). The engine has served all of
+	// these since SC2.3 (ControlPlaneDto.cs) and the Face ignored every one of them, subtracting its
+	// own numbers instead — which is precisely how "$224.21 / $125.00 · 0% headroom" got on screen.
+	// The cap is measured against the WINDOW; an owner approval past a budget park restarts that
+	// window while LifetimeCostUsd keeps counting the whole run, so the two can never be subtracted.
+	//
+	// How the in-flight session's cost is known. Closed vocabulary, defined by the engine's
+	// LiveCostEstimator: "measured" | "streamed" | "estimated-from-run-rate" | "no-rate-yet" |
+	// "none". "" = an older engine that does not serve the basis at all.
+	SessionCostBasis string `json:"sessionCostBasis"`
+	// Spend against the cap: the current budget window, in-flight session included.
+	CostSpent float64 `json:"costSpent"`
+	// limits.maxRunCostUsd, or nil when the plan sets no cost cap. A nil cap is NOT an infinite one:
+	// "this plan set no ceiling" and "there is loads left" are different facts and must not render
+	// the same. CostRemaining is nil for the same reason, and goes NEGATIVE when the window is over.
+	CostCap       *float64 `json:"costCap"`
+	CostRemaining *float64 `json:"costRemaining"`
+	// Mean cost of the run's finished, priced sessions — the honest input to "how many more fit".
+	MeanSessionCost      float64 `json:"meanSessionCost"`
+	CheckpointsRemaining int     `json:"checkpointsRemaining"`
+	// Window vs lifetime. Equal until an owner approves past a budget park; after that the window
+	// restarts at that instant and the lifetime keeps counting.
+	WindowCostUsd   float64 `json:"windowCostUsd"`
+	LifetimeCostUsd float64 `json:"lifetimeCostUsd"`
+	// When the current window opened — the instant of the approval. "" = never approved past a park.
+	BudgetWindowStartedUtc string `json:"budgetWindowStartedUtc"`
+	BudgetApprovals        int    `json:"budgetApprovals"`
 }
+
+// The cost-basis vocabulary, verbatim from the engine's Core/Events/LiveCostEstimator.cs. It is
+// CLOSED — the engine says so — and it lives HERE, in the package that owns the wire, so that the
+// renderer and the demo source speak the same five strings instead of two hand-copied sets.
+//
+// It exists because a dollar figure is only worth what the way it was arrived at is worth, and
+// rendering all five the same way is what put "$0.00" in the Agent footer under a pane reading
+// $13.07: the engine could not price the session yet, and the Face printed the zero as a fact.
+const (
+	// Nothing in flight — there is no session cost to state at all.
+	BasisNone = "none"
+	// The CLI's own recorded total, session over. The most trustworthy figure there is.
+	BasisMeasured = "measured"
+	// The provider put money on the wire per step (opencode). Just as trustworthy.
+	BasisStreamed = "streamed"
+	// Real tokens priced at this run's observed dollars-per-token. A number, but an inferred one.
+	BasisRunRate = "estimated-from-run-rate"
+	// Tokens are real; the cost is NOT knowable yet — no money on the wire and no rate to infer it
+	// from. The one basis whose dollar field is meaningless and must never render as a figure.
+	BasisNoRate = "no-rate-yet"
+)
 
 type StageDto struct {
 	Id          string          `json:"id"`

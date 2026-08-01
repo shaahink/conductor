@@ -189,7 +189,12 @@ func (m Model) renderAgentFooter() string {
 		toks += " +" + widgets.FmtTokens(s.SessionTokensReasoning) + "r"
 	}
 	segs = append(segs, subtleStyle.Render(toks))
-	segs = append(segs, peachStyle.Render(fmt.Sprintf("$%.2f", s.SessionCostUsd)))
+	// Same figure, same formatter, same rules as the top bar (widgets.FmtSessionCost). These two
+	// readouts sat in one frame disagreeing — "$0.00" here beside the session's real cost above —
+	// because each did its own fmt.Sprintf on a number whose basis neither of them looked at.
+	if money := widgets.FmtSessionCost(s.SessionCostUsd, s.SessionCostBasis); money != "" {
+		segs = append(segs, peachStyle.Render(money))
+	}
 
 	sep := subtleStyle.Render(" · ")
 	line := strings.Join(segs, sep)

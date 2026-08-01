@@ -172,12 +172,10 @@ func plural(n int, unit string) string {
 // fmtCost renders a cost the way the rest of the Face does — 2dp — with one carve-out: a real but
 // sub-cent charge must not render as "$0.00". A gate-only session genuinely costs $0.003, and
 // rounding that to zero reads as free. "<$0.01" is small AND true.
-func fmtCost(v float64) string {
-	if v > 0 && v < 0.005 {
-		return "<$0.01"
-	}
-	return fmt.Sprintf("$%.2f", v)
-}
+//
+// It is widgets.FmtMoney under the Report's own name — the sub-cent rule lives in one place now
+// (SF2.3), so a stage costing a third of a cent cannot read "$0.00" here and "<$0.01" one tab over.
+func fmtCost(v float64) string { return widgets.FmtMoney(v) }
 
 // --- stages -------------------------------------------------------------------
 

@@ -52,7 +52,7 @@ func (m SidebarModel) Update(msg any) SidebarModel {
 }
 
 func (m SidebarModel) View() string {
-	rows := []string{sidebarTitleStyle.Render("▶ PLAN")}
+	rows := []string{sidebarTitleStyle.Render("▶ PLAN") + m.attemptsLegend()}
 	activeRow := 0 // the row to keep in view when the plan is taller than the rail
 
 	for _, stage := range m.Stages {
@@ -151,6 +151,29 @@ func (m SidebarModel) tasksWindow(max int) []api.TaskDto {
 		start = len(m.Tasks) - max
 	}
 	return m.Tasks[start : start+max]
+}
+
+// attemptsLegend explains the "3×" suffix stageLine hangs off a stage row. The critique that opened
+// this era named the marker "unexplained", and it is: a bare "4×" beside a stage title reads as a
+// count of SOMETHING, and the two readings a reasonable person lands on — four attempts, four
+// checkpoints — differ in whether the run is healthy. It rides the PLAN heading rather than taking a
+// row of its own (the rail is height-budgeted and self-scrolling), and it appears only once a stage
+// has actually retried: a legend for a mark that is nowhere on screen is just noise in the gutter.
+func (m SidebarModel) attemptsLegend() string {
+	// The trigger is "a marker is on screen", not "a stage retried": a legend that vanishes while a
+	// "1×" is still rendered leaves exactly the unexplained mark it exists to explain.
+	retried := false
+	for _, s := range m.Stages {
+		if s.Attempts > 0 {
+			retried = true
+			break
+		}
+	}
+	const legend = "  n× attempts"
+	if !retried || m.Width < lipgloss.Width("▶ PLAN")+lipgloss.Width(legend) {
+		return ""
+	}
+	return dimStyle.Render(legend)
 }
 
 // stageLine composes one plan row: the id and progress score (done/total) always survive; the title

@@ -169,16 +169,101 @@ func TestHomeBudgetsOnlyWhenCapped(t *testing.T) {
 // Headroom is what is LEFT — the number the owner actually acts on — and its colour has to escalate
 // as the run approaches the cap that will stop it.
 func TestHomeHeadroomReportsRemainingNotSpent(t *testing.T) {
-	if got := stripANSI(homeHeadroom("x", 0.25)); !strings.Contains(got, "75% headroom") {
+	if got := stripANSI(homeHeadroom("x", 0.25, nil)); !strings.Contains(got, "75% headroom") {
 		t.Errorf("25%% spent → 75%% headroom, got %q", got)
 	}
-	// Over-cap must clamp rather than print a negative headroom.
-	if got := stripANSI(homeHeadroom("x", 1.4)); !strings.Contains(got, "0% headroom") {
-		t.Errorf("over cap → 0%% headroom, got %q", got)
-	}
-	safe, warn, dead := homeHeadroom("x", 0.1), homeHeadroom("x", 0.75), homeHeadroom("x", 0.95)
+	safe, warn, dead := homeHeadroom("x", 0.1, nil), homeHeadroom("x", 0.75, nil), homeHeadroom("x", 0.95, nil)
 	if safe == warn || warn == dead || safe == dead {
 		t.Error("headroom colour must escalate across the safe/warn/critical bands")
+	}
+}
+
+// SF2.3. This assertion used to read the other way — it pinned "over cap → 0% headroom" as correct,
+// which is the exact frame the screenshot critique caught: "$224.21 / $125.00 · 0% headroom". Zero
+// percent headroom is what a run reads at the instant it touches the cap, and rendering an overrun
+// the same way makes one cent over and eighty dollars over indistinguishable. Past the cap there is
+// no headroom to report a percentage of; there is a debt, and its size is the decision.
+func TestHomeHeadroomRendersAnOverrunAsDollarsNotZeroPercent(t *testing.T) {
+	over := 99.21
+	got := stripANSI(homeHeadroom("$224.21 / $125.00", 1.79, &over))
+	if !strings.Contains(got, "OVER by $99.21") {
+		t.Errorf("an overrun must state its size in dollars, got %q", got)
+	}
+	if strings.Contains(got, "headroom") {
+		t.Errorf("there is no headroom past the cap; the word must not appear: %q", got)
+	}
+	// Two different overruns must not render identically — the whole failure of the clamped form.
+	small := 0.01
+	if a, b := stripANSI(homeHeadroom("x", 1.0001, &small)), stripANSI(homeHeadroom("x", 1.79, &over)); a == b {
+		t.Errorf("a one-cent overrun and a $99 overrun rendered the same: %q", a)
+	}
+}
+
+// The wire's budget block wins over the Face's own subtraction. Before SF2.3 Home compared LIFETIME
+// spend against the cap; after an owner approves past a budget park those are different questions,
+// and the run below is inside its window by $113 while looking $99 over if you subtract wrong.
+func TestHomeBudgetPrefersTheWindowOverLifetimeAfterAnApproval(t *testing.T) {
+	m := newTestModel()
+	m.plan = &api.PlanDto{Limits: api.PlanLimitsDto{}}
+	cap125, rem := 125.0, 113.0
+	state := &api.StateDto{
+		TotalCostUsd: 224.21, LifetimeCostUsd: 224.21,
+		CostSpent: 12.0, WindowCostUsd: 12.0, CostCap: &cap125, CostRemaining: &rem,
+		BudgetApprovals: 2, BudgetWindowStartedUtc: "2026-07-15T09:00:00Z",
+	}
+	rows := m.homeBudgets(state)
+	if len(rows) != 2 {
+		t.Fatalf("an approved run gets a window row AND a lifetime row, got %d", len(rows))
+	}
+	window := stripANSI(rows[0].text)
+	if !strings.Contains(window, "$12.00 / $125.00") || !strings.Contains(window, "90% headroom") {
+		t.Errorf("the cap is measured against the window, got %q", window)
+	}
+	if strings.Contains(window, "OVER") {
+		t.Errorf("this run is well inside its window; it must not read as over budget: %q", window)
+	}
+	if !strings.Contains(window, "window") {
+		t.Errorf("a row that measures the window must stop calling itself the run's budget: %q", window)
+	}
+	life := stripANSI(rows[1].text)
+	if !strings.Contains(life, "$224.21") || !strings.Contains(life, "2 approvals") {
+		t.Errorf("lifetime row must name the total and how many approvals it spans, got %q", life)
+	}
+	if !strings.Contains(life, "window since") {
+		t.Errorf("the lifetime row dates the current window, got %q", life)
+	}
+}
+
+// Genuinely over the cap — no approval in sight — is the other half: OVER, in dollars, and no
+// lifetime row, because with no approval the window IS the lifetime and a second row would say
+// the same number twice.
+func TestHomeBudgetRendersAnUncoveredOverrun(t *testing.T) {
+	m := newTestModel()
+	m.plan = &api.PlanDto{Limits: api.PlanLimitsDto{}}
+	cap125 := 125.0
+	rows := m.homeBudgets(&api.StateDto{
+		TotalCostUsd: 224.21, LifetimeCostUsd: 224.21, CostSpent: 224.21, WindowCostUsd: 224.21, CostCap: &cap125,
+	})
+	if len(rows) != 1 {
+		t.Fatalf("no approvals → one budget row, got %d", len(rows))
+	}
+	if got := stripANSI(rows[0].text); !strings.Contains(got, "OVER by $99.21") || strings.Contains(got, "headroom") {
+		t.Errorf("an over-cap run reads OVER by the overrun, got %q", got)
+	}
+}
+
+// An engine that predates SC2.3 serves none of the block. Home must still render the plan's own cap
+// rather than silently dropping the row — degraded to what that engine can honestly say, no further.
+func TestHomeBudgetFallsBackToPlanLimitsOnAnOlderEngine(t *testing.T) {
+	m := newTestModel()
+	cost := 10.0
+	m.plan = &api.PlanDto{Limits: api.PlanLimitsDto{MaxRunCostUsd: &cost}}
+	rows := m.homeBudgets(&api.StateDto{TotalCostUsd: 4})
+	if len(rows) != 1 {
+		t.Fatalf("plan cap with no wire block → one row, got %d", len(rows))
+	}
+	if got := stripANSI(rows[0].text); !strings.Contains(got, "$4.00 / $10.00") || !strings.Contains(got, "60% headroom") {
+		t.Errorf("fallback row states spend, cap and headroom, got %q", got)
 	}
 }
 

@@ -822,6 +822,22 @@ func TestGolden(t *testing.T) {
 			m, _ = m.Update(keyMsg("?"))
 			return m
 		}},
+		// SF2.3's headline frame, pinned because it is the one the screenshot critique caught wrong:
+		// a run that has been approved past a budget park once and is over the NEW window. Both
+		// halves of the fix are visible at once — the overrun stated in dollars where "0% headroom"
+		// used to sit, and the lifetime named on its own row so the window figure above it cannot be
+		// mistaken for what the run has cost.
+		{"home_over_budget", func(m tea.Model) tea.Model {
+			st := fixedState()
+			st.TotalCostUsd, st.LifetimeCostUsd = 224.21, 224.21
+			st.CostSpent, st.WindowCostUsd = 138.40, 138.40
+			cap125, remaining := 125.0, -13.40
+			st.CostCap, st.CostRemaining = &cap125, &remaining
+			st.BudgetApprovals, st.BudgetWindowStartedUtc = 1, "2026-07-15T08:00:00Z"
+			st.SessionCostUsd, st.SessionCostBasis = 0, api.BasisNoRate
+			m, _ = m.Update(MsgStateUpdated{State: st})
+			return m
+		}},
 		{"attention", func(m tea.Model) tea.Model {
 			st := fixedState()
 			st.Status = "NeedsAttention"

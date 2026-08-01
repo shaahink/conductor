@@ -392,29 +392,107 @@ func homeProgress(s *api.StateDto) string {
 		subtleStyle.Render(" checkpoints")
 }
 
+// budgetSpend is the answer to "how much is left" assembled ONCE, from the engine's numbers rather
+// than from the Face's own subtraction. SC2.3 put the whole block on the wire — spend, cap, remaining,
+// window, lifetime, approvals — precisely because every surface that subtracted for itself got it
+// wrong the moment an owner approved past a budget park: the cap is measured against the WINDOW,
+// which the approval restarts, while the lifetime keeps counting the entire run. The Face went on
+// comparing lifetime spend to the cap, which is how "$224.21 / $125.00 · 0% headroom" reached a
+// screenshot — a frame in which every number was real and the sentence they formed was false.
+type budgetSpend struct {
+	spent    float64  // spend measured against the cap: the CURRENT window, in-flight session folded in
+	cap      float64  // 0 = no cost cap; the row does not render at all
+	lifetime float64  // every session this run ever ran; == spent until the first approval
+	approved int      // budget approvals so far; > 0 means window and lifetime have diverged
+	since    string   // when the current window opened (wire timestamp), "" when never approved
+	over     *float64 // dollars past the cap, or nil when inside it. NEVER folded into a percentage.
+}
+
+// homeBudget reads the wire's budget block, falling back to the plan's own cap for an engine that
+// predates SC2.3 and does not serve one. The fallback is deliberately the OLD arithmetic: against a
+// pre-SC2.3 engine there is no window on the wire to be right about, and an approval is not
+// discoverable — so it degrades to the honest limit of what that engine can say, and no further.
+func (m Model) homeBudget(s *api.StateDto) budgetSpend {
+	b := budgetSpend{
+		spent:    s.CostSpent,
+		lifetime: s.LifetimeCostUsd,
+		approved: s.BudgetApprovals,
+		since:    s.BudgetWindowStartedUtc,
+	}
+	if s.CostCap != nil {
+		b.cap = *s.CostCap
+	}
+	// Pre-SC2.3 engine: no block on the wire at all. Fall back to plan limits + total spend.
+	if b.cap == 0 && b.spent == 0 && b.lifetime == 0 {
+		b.spent, b.lifetime = s.TotalCostUsd, s.TotalCostUsd
+		if m.plan != nil {
+			if lim := m.plan.Limits.MaxRunCostUsd; lim != nil {
+				b.cap = *lim
+			}
+		}
+	}
+	if b.lifetime < b.spent { // an engine that serves spend but not lifetime must not read as cheaper
+		b.lifetime = b.spent
+	}
+	if b.cap > 0 && b.spent > b.cap {
+		over := b.spent - b.cap
+		b.over = &over
+	}
+	return b
+}
+
 // homeBudgets renders the run's caps with remaining headroom, one row per cap that is actually set
-// (limits.maxRunCostUsd / limits.maxRunTokens). No cap set = no row.
+// (the wire's costCap / limits.maxRunTokens). No cap set = no row. A run that has been approved past
+// a budget park gets a second row naming the lifetime, because from that instant on the budget row
+// is answering a narrower question than "what has this run cost".
 func (m Model) homeBudgets(s *api.StateDto) []homeLine {
-	if m.plan == nil {
-		return nil
-	}
 	var rows []homeLine
-	if lim := m.plan.Limits.MaxRunCostUsd; lim != nil && *lim > 0 {
-		rows = append(rows, hRow("budget",
-			homeHeadroom(fmt.Sprintf("$%.2f / $%.2f", s.TotalCostUsd, *lim), s.TotalCostUsd / *lim), homeDetail))
+	b := m.homeBudget(s)
+	if b.cap > 0 {
+		label := "budget"
+		if b.approved > 0 {
+			label = "window" // the row measures the window now, and must stop calling itself the run
+		}
+		rows = append(rows, hRow(label,
+			homeHeadroom(fmt.Sprintf("$%.2f / $%.2f", b.spent, b.cap), b.spent/b.cap, b.over), homeDetail))
+		if b.approved > 0 {
+			rows = append(rows, hRow("lifetime", homeLifetime(b), homeDetail))
+		}
 	}
-	if lim := m.plan.Limits.MaxRunTokens; lim != nil && *lim > 0 {
-		used := s.TokensInput + s.TokensOutput + s.TokensReasoning
-		rows = append(rows, hRow("tokens cap",
-			homeHeadroom(fmt.Sprintf("%s / %s", widgets.FmtTokens(used), widgets.FmtTokens(*lim)),
-				float64(used)/float64(*lim)), homeDetail))
+	if m.plan != nil {
+		if lim := m.plan.Limits.MaxRunTokens; lim != nil && *lim > 0 {
+			used := s.TokensInput + s.TokensOutput + s.TokensReasoning
+			rows = append(rows, hRow("tokens cap",
+				homeHeadroom(fmt.Sprintf("%s / %s", widgets.FmtTokens(used), widgets.FmtTokens(*lim)),
+					float64(used)/float64(*lim), nil), homeDetail))
+		}
 	}
 	return rows
 }
 
+// homeLifetime names what the budget row above it deliberately excludes: everything spent before the
+// approvals. Without this row the two numbers a takeover sees — the window here and the run total in
+// the top bar — look like a contradiction; with it they are one sentence.
+func homeLifetime(b budgetSpend) string {
+	line := peachStyle.Render(fmt.Sprintf("$%.2f", b.lifetime)) +
+		subtleStyle.Render(fmt.Sprintf("  across %s", plural(b.approved, "approval")))
+	if t, ok := timefmt.Parse(b.since); ok {
+		line += subtleStyle.Render(" · window since " + timefmt.StampAge(t))
+	}
+	return line
+}
+
 // homeHeadroom states what is LEFT, not what is spent — the cap is only interesting as the distance
 // to the run stopping. Colour tracks how close that is.
-func homeHeadroom(text string, usedRatio float64) string {
+//
+// over (non-nil) is the checkpoint's whole point: past the cap there IS no headroom, and the old code
+// clamped the percentage to "0% headroom" — a phrase that reads as "just arrived at the limit" when
+// the truth was $99.21 past it, and that renders identically at one cent over and at double the cap.
+// An overrun states its size in dollars, which is the number the owner has to decide about.
+func homeHeadroom(text string, usedRatio float64, over *float64) string {
+	if over != nil {
+		return destructStyle.Render(text) + destructStyle.Render(fmt.Sprintf("  OVER by $%.2f", *over))
+	}
 	pct := int((1 - usedRatio) * 100)
 	pct = min(max(pct, 0), 100)
 	st := safeStyle

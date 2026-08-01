@@ -96,9 +96,14 @@ func RenderTopBar(conn api.ConnectionState, state *api.StateDto, width, spinnerF
 
 		if state.AgentActive {
 			seg := lipgloss.NewStyle().Foreground(colGreen).Render(Spinner(spinnerFrame)) + " " +
-				dimStyle.Render(fmt.Sprintf("s%d", state.SessionNumber)) + " " +
-				lipgloss.NewStyle().Foreground(colPeach).Render(fmt.Sprintf("$%.2f", state.SessionCostUsd)) + " " +
-				dimStyle.Render(FmtWall(state.SessionElapsedSec))
+				dimStyle.Render(fmt.Sprintf("s%d", state.SessionNumber))
+			// The live spend of the session you are watching, priced as honestly as the engine can
+			// price it — and OMITTED rather than shown as "$0.00" when it cannot price it at all.
+			// The Agent footer renders the same figure through the same function for the same reason.
+			if money := FmtSessionCost(state.SessionCostUsd, state.SessionCostBasis); money != "" {
+				seg += " " + lipgloss.NewStyle().Foreground(colPeach).Render(money)
+			}
+			seg += " " + dimStyle.Render(FmtWall(state.SessionElapsedSec))
 			if width >= 130 {
 				toks := FmtTokens(state.SessionTokensInput) + "/" + FmtTokens(state.SessionTokensOutput)
 				if state.SessionTokensReasoning > 0 {
