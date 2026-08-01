@@ -1,7 +1,7 @@
  ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42    
  h a s o  e Templates  p r k g b                                                                              
                            │                                                                                  
- ▶ PLAN                    │  • session.md              │ editing session.md                                  
+ ▶ PLAN  n× attempts       │  • session.md              │ editing session.md                                  
  ✓ F0 3/3 Foundations      │  ○ fix.md                                                                        
  ✓ F6 5/5 Ink TUI v1       │  ○ resume.md                 SESSION prompt                                      
  ● F7 2/5 Gate … 1× $0.30  │  ○ advisor.md                                                                    

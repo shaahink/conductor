@@ -1,7 +1,7 @@
  ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42    
  h a s o e p r k g  b Kanban                                                                                  
                            │                                                                                  
- ▶ PLAN                    │  TODO (2)                  In Progress (1)           Done (2)                    
+ ▶ PLAN  n× attempts       │  TODO (2)                  In Progress (1)           Done (2)                    
  ✓ F0 3/3 Foundations      │  ────────────────────────  ────────────────────────  ────────────────────────    
  ✓ F6 5/5 Ink TUI v1       │  • F7.4 · Cache gate res…  • F7.3 · Wire RunDb.Get…  • F7.3 · Add truth-tier…    
  ● F7 2/5 Gate … 1× $0.30  │  ▸ F7.4 · Add SkipIfFres…                            • F7.5 · Benchmark the …    

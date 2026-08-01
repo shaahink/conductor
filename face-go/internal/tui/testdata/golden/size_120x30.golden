@@ -1,7 +1,7 @@
  ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42              
   h Home   a Agent   s History   o Procs   e Templates   p Plan   r Report   k Knowledge   g Telegram   b Kanban        
                               │                                                                                         
- ▶ PLAN                       │  Server                                                                                 
+ ▶ PLAN  n× attempts          │  Server                                                                                 
  ✓ F0 3/3 Foundations         │  engine     running — answering on http://127.0.0.1:4317                                
  ✓ F6 5/5 Ink TUI v1          │  streams    ● events   ● transcript                                                     
  ● F7 2/5 Gate cac… 1× $0.30  │                                                                                         

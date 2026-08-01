@@ -1,7 +1,7 @@
  ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42    
  h a  s History  o e p r k g b                                                                                
                            │                                                                                  
- ▶ PLAN                    │  ○ Sessions s   ● Spine t                                                        
+ ▶ PLAN  n× attempts       │  ○ Sessions s   ● Spine t                                                        
  ✓ F0 3/3 Foundations      │  10:00:00 ◆ stage F7 entered                                                     
  ✓ F6 5/5 Ink TUI v1       │  10:00:05 ▸ session #11 Deliver started                                          
  ● F7 2/5 Gate … 1× $0.30  │  10:03:40 ✗ gate test: FAIL (4100ms)                                             

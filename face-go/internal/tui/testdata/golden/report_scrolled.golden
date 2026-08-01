@@ -1,7 +1,7 @@
  ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42    
  h a s o e p  r Report  k g b                                                                                 
                            │                                                                                  
- ▶ PLAN                    │  elapsed    1h 27m across 3 sessions                                             
+ ▶ PLAN  n× attempts       │  elapsed    1h 27m across 3 sessions                                             
  ✓ F0 3/3 Foundations      │                                                                                  
  ✓ F6 5/5 Ink TUI v1       │  Stages                                                                          
  ● F7 2/5 Gate … 1× $0.30  │    stage done   att  cost    last outcome                                        

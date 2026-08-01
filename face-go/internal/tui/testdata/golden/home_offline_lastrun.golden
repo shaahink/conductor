@@ -1,7 +1,7 @@
  ◆ conductor  ● OFFLINE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42 
   h Home  a s o e p r k g b                                                                                   
                            │                                                                                  
- ▶ PLAN                    │  Server                                                                          
+ ▶ PLAN  n× attempts       │  Server                                                                          
  ✓ F0 3/3 Foundations      │  engine     not running — nothing is listening on http… · last contact 7m ago    
  ✓ F6 5/5 Ink TUI v1       │  streams    ● events   ● transcript                                              
  ● F7 2/5 Gate … 1× $0.30  │                                                                                  

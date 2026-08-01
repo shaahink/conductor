@@ -1,7 +1,7 @@
  ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42    
  h a s o e p  r Report  k g b                                                                                 
                            │                                                                                  
- ▶ PLAN                    │  ✓ F0    3/3    —    —       —                                                   
+ ▶ PLAN  n× attempts       │  ✓ F0    3/3    —    —       —                                                   
  ✓ F0 3/3 Foundations      │  ✓ F6    5/5    —    —       —                                                   
  ✓ F6 5/5 Ink TUI v1       │  ● F7    2/5    1×   $0.30   —                                                   
  ● F7 2/5 Gate … 1× $0.30  │  ○ F8    0/4    —    —       —                                                   

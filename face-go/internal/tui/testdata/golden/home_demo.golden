@@ -1,7 +1,7 @@
  ◆ conductor  ● DEMO  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 $0.12 41s  cp 2/40  run $0.42    
   h Home  a s o e p r k g b                                                                                   
                            │                                                                                  
- ▶ PLAN                    │  Server                                                                          
+ ▶ PLAN  n× attempts       │  Server                                                                          
  ✓ F0 3/3 Foundations      │  engine     demo  synthetic data · no engine · no spend                          
  ✓ F6 5/5 Ink TUI v1       │                                                                                  
  ● F7 2/5 Gate … 1× $0.30  │  Run                                                                             
