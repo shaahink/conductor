@@ -273,6 +273,11 @@ func (m Model) renderReportSessions(w int) string {
 			cost + " " +
 			textStyle.Render(fmt.Sprintf("%d", r.CommitCount))
 		rows = append(rows, "  "+lipgloss.NewStyle().MaxWidth(max(1, w-2)).Render(row))
+		// SF3.1: one compressed digest line under each row. The numbers above say what a session COST;
+		// this says what it bought — and it is the engine's own count (SC7.2), not a re-derivation.
+		if line := digestOneLine(r.Digest); line != "" {
+			rows = append(rows, "       "+subtleStyle.Render(truncate(line, max(4, w-9))))
+		}
 	}
 	if len(m.data.Sessions) > sessionsDigestMax {
 		rows = append(rows, subtleStyle.Render(fmt.Sprintf("  … %d older (Sessions tab)",

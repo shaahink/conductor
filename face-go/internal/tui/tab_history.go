@@ -341,6 +341,12 @@ func (m Model) renderSessionsView() (string, string) {
 		if s.GateSummary != nil {
 			detail += "\n" + subtleStyle.Render("Gates: ") + textStyle.Render(*s.GateSummary)
 		}
+		// SF3.1: what the session DID, above what it SAID. The result summary below is the agent's own
+		// account of the session; this is the engine's, computed from the tool events it captured — so
+		// it is the half a reader can check the other half against.
+		if dg := renderSessionDigest(s.Digest, m.paneCols()); len(dg) > 0 {
+			detail += "\n" + strings.Join(dg, "\n")
+		}
 		if s.ResultSummary != nil {
 			detail += "\n" + subtleStyle.Render("Result:") + "\n" + indent(renderMarkdown(*s.ResultSummary, m.paneCols()-4), "  ")
 		}

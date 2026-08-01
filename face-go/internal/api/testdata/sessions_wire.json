@@ -1,0 +1,229 @@
+{
+  "sessions": [
+    {
+      "number": 12,
+      "stageId": "SF2",
+      "kind": "Deliver",
+      "startedUtc": "2026-08-01T00:54:57.8773286Z",
+      "endedUtc": "2026-08-01T01:14:19.9508806Z",
+      "outcome": "Advanced",
+      "attempt": 1,
+      "resumeCount": 0,
+      "gateSummary": "engine-fast:OK · face-fast:OK",
+      "resultSummary": "SESSION-RESULT: **SF2.3 landed and claimed** (`conductor task --done SF2.3 --evidence .conductor/evi…",
+      "commitCount": 3,
+      "costUsd": 5.977672136469999,
+      "tokensIn": 113302,
+      "tokensOut": 47111,
+      "tokensThink": 0,
+      "tokensCache": 7315912,
+      "digest": {
+        "toolCalls": 97,
+        "distinctTools": 4,
+        "mix": [
+          {
+            "name": "Bash",
+            "count": 68
+          },
+          {
+            "name": "Edit",
+            "count": 21
+          },
+          {
+            "name": "PowerShell",
+            "count": 5
+          },
+          {
+            "name": "Write",
+            "count": 3
+          }
+        ],
+        "filesTouched": [
+          {
+            "name": "face-go/internal/api/types.go",
+            "count": 4
+          },
+          {
+            "name": "face-go/internal/widgets/money_test.go",
+            "count": 4
+          },
+          {
+            "name": "face-go/internal/widgets/money.go",
+            "count": 3
+          },
+          {
+            "name": "face-go/internal/widgets/sidebar.go",
+            "count": 3
+          }
+        ],
+        "fileWrites": 24,
+        "claims": [],
+        "backgroundJobs": [],
+        "commands": [
+          "go build ./... && go vet ./... 2>&1 | head -30",
+          "go build ./... && go vet ./... && go test ./internal/widgets…",
+          "go test ./internal/widgets/... ./internal/tui/... 2>&1 | gre…"
+        ]
+      }
+    },
+    {
+      "number": 11,
+      "stageId": "SF2",
+      "kind": "Deliver",
+      "startedUtc": "2026-08-01T00:39:40.7952594Z",
+      "endedUtc": "2026-08-01T00:53:29.6529343Z",
+      "outcome": "Advanced",
+      "attempt": 1,
+      "resumeCount": 0,
+      "gateSummary": "engine-fast:OK · face-fast:OK",
+      "resultSummary": "SESSION-RESULT: SF2.2 is claimed DONE with evidence at `.conductor/evidence/SF2/SF2.2-summary.md`, a…",
+      "commitCount": 3,
+      "costUsd": 6.307659454119999,
+      "tokensIn": 129922,
+      "tokensOut": 49189,
+      "tokensThink": 0,
+      "tokensCache": 7553537,
+      "digest": {
+        "toolCalls": 104,
+        "distinctTools": 8,
+        "mix": [
+          {
+            "name": "Bash",
+            "count": 57
+          },
+          {
+            "name": "Edit",
+            "count": 26
+          },
+          {
+            "name": "Read",
+            "count": 9
+          },
+          {
+            "name": "PowerShell",
+            "count": 3
+          },
+          {
+            "name": "conductor_note",
+            "count": 3
+          },
+          {
+            "name": "run_query",
+            "count": 3
+          },
+          {
+            "name": "Write",
+            "count": 2
+          },
+          {
+            "name": "ToolSearch",
+            "count": 1
+          }
+        ],
+        "filesTouched": [
+          {
+            "name": "face-go/internal/tui/tab_history.go",
+            "count": 6
+          },
+          {
+            "name": "face-go/internal/tui/tab_knowledge.go",
+            "count": 3
+          },
+          {
+            "name": "face-go/internal/tui/tab_report.go",
+            "count": 3
+          },
+          {
+            "name": "face-go/internal/widgets/transcript.go",
+            "count": 3
+          }
+        ],
+        "fileWrites": 28,
+        "claims": [],
+        "backgroundJobs": [],
+        "commands": [
+          "python - <<'EOF' import re, io p='internal/tui/connection_te…",
+          "gofmt -d internal/widgets/ticker_test.go | head -30",
+          "go build ./... && go vet ./... 2>&1 | head -20"
+        ]
+      }
+    },
+    {
+      "number": 3,
+      "stageId": "SF0",
+      "kind": "Deliver",
+      "startedUtc": "2026-07-31T20:26:25.8118064Z",
+      "endedUtc": "2026-07-31T21:05:32.5968934Z",
+      "outcome": "Advanced",
+      "attempt": 1,
+      "resumeCount": 0,
+      "gateSummary": "engine-fast:OK · face-fast:OK",
+      "resultSummary": "SESSION-RESULT: **SF0.3 landed and is claimed** (`conductor task --done SF0.3 --evidence .conductor/…",
+      "commitCount": 3,
+      "costUsd": 17.435393649760005,
+      "tokensIn": 240056,
+      "tokensOut": 105248,
+      "tokensThink": 0,
+      "tokensCache": 24790251,
+      "digest": {
+        "toolCalls": 168,
+        "distinctTools": 7,
+        "mix": [
+          {
+            "name": "PowerShell",
+            "count": 52
+          },
+          {
+            "name": "Edit",
+            "count": 37
+          },
+          {
+            "name": "Read",
+            "count": 37
+          },
+          {
+            "name": "Grep",
+            "count": 29
+          },
+          {
+            "name": "Glob",
+            "count": 5
+          },
+          {
+            "name": "Bash",
+            "count": 4
+          },
+          {
+            "name": "Write",
+            "count": 4
+          }
+        ],
+        "filesTouched": [
+          {
+            "name": "tests/Conductor.Tests/SF0_3PidsAndBackgroundWorkTests.cs",
+            "count": 12
+          },
+          {
+            "name": "src/Conductor/Core/Integrations/McpTaskServer.Handlers.cs",
+            "count": 5
+          },
+          {
+            "name": "src/Conductor/Core/ToolContract.cs",
+            "count": 5
+          },
+          {
+            "name": ".conductor/evidence/SF0/sf0-3-pids-and-background-work.md",
+            "count": 4
+          }
+        ],
+        "fileWrites": 41,
+        "claims": [],
+        "backgroundJobs": [],
+        "commands": [
+          "$t = Join-Path $env:TEMP \"sarban-cmdprobe\"; New-Item -ItemTy…",
+          "Get-ChildItem C:\\code\\conductor\\tests\\Conductor.Tests\\bin\\De…"
+        ]
+      }
+    }
+  ]
+}

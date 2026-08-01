@@ -1,6 +1,9 @@
 package api
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 // --- DataSource interface ---
 
@@ -367,6 +370,30 @@ type SessionRowDto struct {
 	TokensOut   int64   `json:"tokensOut"`
 	TokensThink int64   `json:"tokensThink"`
 	TokensCache int64   `json:"tokensCache"`
+	// SC7.2/SF3.1: what the session actually DID, computed by the engine from its structured tool
+	// events and served on this same row since SC7.2. Nil on a session that predates the digest or
+	// captured no tool calls — never an empty digest standing in for one, so a pane can tell "this
+	// session did nothing we recorded" from "this engine does not send digests".
+	Digest *SessionDigestDto `json:"digest"`
+}
+
+// SessionDigestDto mirrors Core/Http/ControlPlaneDto.Digest.cs. Mix and FilesTouched arrive ALREADY
+// RANKED (count descending, then name) — the engine flattens its maps on purpose so two readers
+// cannot sort the same session's tools into two different orders. Nothing here is re-derived here.
+type SessionDigestDto struct {
+	ToolCalls      int              `json:"toolCalls"`
+	DistinctTools  int              `json:"distinctTools"`
+	Mix            []DigestCountDto `json:"mix"`
+	FilesTouched   []DigestCountDto `json:"filesTouched"`
+	FileWrites     int              `json:"fileWrites"`
+	Claims         []string         `json:"claims"`
+	BackgroundJobs []string         `json:"backgroundJobs"`
+	Commands       []string         `json:"commands"`
+}
+
+type DigestCountDto struct {
+	Name  string `json:"name"`
+	Count int    `json:"count"`
 }
 
 type SessionsDto struct {
@@ -519,6 +546,39 @@ type TranscriptLineDto struct {
 	SessionId string    `json:"sessionId"`
 	Kind      string    `json:"kind"`
 	Text      string    `json:"text"`
+	// SC7.1/SF3.1: the transcript's schema version, and the structured payload of a `tool` line.
+	// Text is already the engine's one-liner (Providers/ToolLine.Render) — Tool is the structure
+	// BESIDE it, not a second copy to re-render from: the Face uses the name for folding and mix
+	// counting, where a rendered string would have to be parsed back apart. V is 1 on a line written
+	// before the structured era (the server upgrades those on the way out, name recovered, fields
+	// usually not) and 0 only on a line no engine sent.
+	V    int          `json:"v"`
+	Tool *ToolCallDto `json:"tool"`
+}
+
+// ToolCallDto mirrors Core/Events/ToolCall.cs: the tool's name as the wire gave it plus the fields
+// the extractor kept (`path`, `command`, `taskId`, `purpose`, `bytes`/`lines`, …), each value
+// truncated on its own so the object is always complete JSON.
+type ToolCallDto struct {
+	Name   string            `json:"name"`
+	Fields map[string]string `json:"fields"`
+}
+
+// ShortName is the tool's own name with any MCP server prefix stripped — `bg_start`, not
+// `mcp__conductor-tasks__bg_start`. It mirrors Providers/ToolLine.ShortName so a fold summary counts
+// the same logical tool under the same label the engine's digest counts it under.
+func (t *ToolCallDto) ShortName() string {
+	if t == nil {
+		return ""
+	}
+	s := strings.TrimSpace(t.Name)
+	if s == "" {
+		return ""
+	}
+	if i := strings.LastIndex(s, "__"); i >= 0 && i+2 < len(s) {
+		return s[i+2:]
+	}
+	return s
 }
 
 // --- M6.3: plan authoring DTOs (mirror Core/Http/ControlPlaneDto.Plan*.cs) ---

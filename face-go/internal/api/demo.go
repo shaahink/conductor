@@ -803,27 +803,35 @@ func (s *demoSource) runSimulation() {
 	ticker := time.NewTicker(1200 * time.Millisecond)
 	defer ticker.Stop()
 
+	// SC7.1/SF3.1: the tool lines are v2 — the engine's readable one-liner in `text`, the structure
+	// that produced it beside it in `tool`. The demo carries both because the fold summary counts
+	// tool NAMES, and a demo whose tool lines were text-only would exercise the v1 fallback instead
+	// of the wire the Face actually reads.
+	tool := func(name string, fields map[string]string) *ToolCallDto {
+		return &ToolCallDto{Name: name, Fields: fields}
+	}
 	transcriptLines := []struct {
 		kind string
 		text string
+		tool *ToolCallDto
 	}{
-		{"system", "Session #12 started · Deliver · Stage F7 · Attempt 1"},
-		{"thinking", "Let me examine the GateCache implementation to understand the caching pattern..."},
-		{"tool", "read src/Conductor/Core/Gating/GateCache.cs"},
-		{"result", "GateCache.cs:142 lines — caches by (name, tier, sha)"},
-		{"thinking", "I see the pattern. GateResult is stored with a composite key. I need to expose the last-passing result via RunDb so the orchestrator can skip re-running green gates."},
-		{"agent", "Found the caching layer. I'll add GetLastPassingGateResult to RunDb and wire it into GateRunner.RunTrackedAsync."},
-		{"tool", "write src/Conductor/Core/Store/RunDb.Gates.cs"},
-		{"result", "Created RunDb.Gates.cs with GetLastPassingGateResult query"},
-		{"thinking", "The query needs to join gates with attempts to find the most recent pass. Let me verify with a test."},
-		{"tool", "run dotnet test --filter GateCacheTests"},
-		{"result", "12/12 tests pass. 0w/0e. 2.3s elapsed"},
-		{"agent", "All tests pass. Ready for the next checkpoint."},
-		{"system", "Gate build ✓ (2.3s)"},
-		{"tool", "run dotnet build Conductor.slnx"},
-		{"result", "Build succeeded. 0 Error(s), 0 Warning(s)"},
-		{"system", "Gate test ✓ (4.1s)"},
-		{"agent", "Running gate battery: build ✓, test ✓, lint is next."},
+		{"system", "Session #12 started · Deliver · Stage F7 · Attempt 1", nil},
+		{"thinking", "Let me examine the GateCache implementation to understand the caching pattern...", nil},
+		{"tool", "Read src/Conductor/Core/Gating/GateCache.cs", tool("Read", map[string]string{"path": "src/Conductor/Core/Gating/GateCache.cs"})},
+		{"result", "GateCache.cs:142 lines — caches by (name, tier, sha)", nil},
+		{"thinking", "I see the pattern. GateResult is stored with a composite key. I need to expose the last-passing result via RunDb so the orchestrator can skip re-running green gates.", nil},
+		{"agent", "Found the caching layer. I'll add GetLastPassingGateResult to RunDb and wire it into GateRunner.RunTrackedAsync.", nil},
+		{"tool", "Write src/Conductor/Core/Store/RunDb.Gates.cs (+84)", tool("Write", map[string]string{"path": "src/Conductor/Core/Store/RunDb.Gates.cs", "lines": "84"})},
+		{"result", "Created RunDb.Gates.cs with GetLastPassingGateResult query", nil},
+		{"thinking", "The query needs to join gates with attempts to find the most recent pass. Let me verify with a test.", nil},
+		{"tool", "Bash dotnet test --filter GateCacheTests", tool("Bash", map[string]string{"command": "dotnet test --filter GateCacheTests"})},
+		{"result", "12/12 tests pass. 0w/0e. 2.3s elapsed", nil},
+		{"agent", "All tests pass. Ready for the next checkpoint.", nil},
+		{"system", "Gate build ✓ (2.3s)", nil},
+		{"tool", "Bash dotnet build Conductor.slnx", tool("Bash", map[string]string{"command": "dotnet build Conductor.slnx"})},
+		{"result", "Build succeeded. 0 Error(s), 0 Warning(s)", nil},
+		{"system", "Gate test ✓ (4.1s)", nil},
+		{"agent", "Running gate battery: build ✓, test ✓, lint is next.", nil},
 	}
 
 	processNames := []string{"dotnet test", "dotnet build", "git status", "npm test"}
@@ -843,6 +851,8 @@ func (s *demoSource) runSimulation() {
 				SessionId: "s12",
 				Kind:      tx.kind,
 				Text:      tx.text,
+				V:         2,
+				Tool:      tx.tool,
 			}
 			s.transcripts = append(s.transcripts, line)
 
@@ -1079,11 +1089,24 @@ func makeFakeSessions() []SessionRowDto {
 	return []SessionRowDto{
 		{Number: 12, StageId: "F7", Kind: "Deliver", Outcome: nil, Attempt: 2, CommitCount: 0,
 			StartedUtc: "2026-07-15T09:14:02Z", CostUsd: 0.12,
-			TokensIn: 41213, TokensOut: 3187, TokensThink: 1024, TokensCache: 188420},
+			TokensIn: 41213, TokensOut: 3187, TokensThink: 1024, TokensCache: 188420,
+			Digest: demoDigest()},
 		{Number: 11, StageId: "F7", Kind: "Deliver", Outcome: strPtr("needsRetry"), Attempt: 1, CommitCount: 2, GateSummary: strPtr("build ✓ test ✗ lint ○"),
 			ResultSummary: strPtr("Wired the **caching layer** in `RunDb` but `test` is still red — see the gate output."),
 			StartedUtc:    "2026-07-15T08:31:10Z", EndedUtc: strPtr("2026-07-15T09:12:55Z"), CostUsd: 0.1408,
-			TokensIn: 52881, TokensOut: 4402, TokensThink: 2310, TokensCache: 201338},
+			TokensIn:      52881, TokensOut: 4402, TokensThink: 2310, TokensCache: 201338,
+			Digest: &SessionDigestDto{
+				ToolCalls: 61, DistinctTools: 5,
+				Mix: []DigestCountDto{{Name: "Bash", Count: 24}, {Name: "Read", Count: 18},
+					{Name: "Edit", Count: 12}, {Name: "bg_start", Count: 4}, {Name: "task_update", Count: 3}},
+				FilesTouched: []DigestCountDto{{Name: "src/Core/RunDb.cs", Count: 7},
+					{Name: "src/Core/GateCache.cs", Count: 3}, {Name: "tests/GateCacheTests.cs", Count: 2}},
+				FileWrites:     12,
+				BackgroundJobs: []string{"F7 gate cache - full solution build", "F7 gate cache - test sweep"},
+				Commands:       []string{"dotnet build src/App", "dotnet test --filter GateCacheTests"},
+			}},
+		// A session with NO digest, on purpose: sessions recorded before SC7.2 carry none, and the
+		// panel has to render nothing for them rather than a row of zeros.
 		{Number: 8, StageId: "F6", Kind: "Deliver", Outcome: strPtr("completed"), Attempt: 1, CommitCount: 1, GateSummary: strPtr("build ✓ test ✓"),
 			StartedUtc: "2026-07-15T07:48:20Z", EndedUtc: strPtr("2026-07-15T08:29:44Z"), CostUsd: 0.0912},
 		{Number: 2, StageId: "F1", Kind: "Deliver", Outcome: strPtr("completed"), Attempt: 1, CommitCount: 4, GateSummary: strPtr("build ✓ test ✓ lint ✓"),
@@ -1092,6 +1115,26 @@ func makeFakeSessions() []SessionRowDto {
 		{Number: 1, StageId: "F0", Kind: "Deliver", Outcome: strPtr("completed"), Attempt: 1, CommitCount: 3, GateSummary: strPtr("build ✓ test ✓"),
 			StartedUtc: "2026-07-15T06:40:12Z", EndedUtc: strPtr("2026-07-15T07:00:58Z"), CostUsd: 0.0275,
 			TokensIn: 9871, TokensOut: 1508, TokensCache: 22440},
+	}
+}
+
+// demoDigest is the CURRENT session's digest (SC7.2 on the wire, SF3.1 on the face): the shape
+// devcontext #10 asked for, including the two lists that were invisible before it — the board claims
+// and the bg-start purposes, which read end to end as the session's own narrative.
+func demoDigest() *SessionDigestDto {
+	return &SessionDigestDto{
+		ToolCalls:     47,
+		DistinctTools: 6,
+		Mix: []DigestCountDto{{Name: "Bash", Count: 18}, {Name: "Read", Count: 11},
+			{Name: "Edit", Count: 9}, {Name: "Grep", Count: 5}, {Name: "bg_start", Count: 2},
+			{Name: "task_update", Count: 2}},
+		FilesTouched: []DigestCountDto{{Name: "src/Core/GateCache.cs", Count: 5},
+			{Name: "src/Core/RunLoop.cs", Count: 2}, {Name: "tests/GateCacheTests.cs", Count: 2},
+			{Name: "docs/dev/adr/0007.md", Count: 1}},
+		FileWrites:     10,
+		Claims:         []string{"F7.2 -> done"},
+		BackgroundJobs: []string{"F7.2 cache key derivation - full build", "F7.2 - gate suite after the cache lands"},
+		Commands:       []string{"dotnet build src/App", "dotnet test --filter GateCacheTests", "tools/gates/ratchet.ps1"},
 	}
 }
 

@@ -400,14 +400,39 @@ func newGoldenModel(width, height int) tea.Model {
 	// tokens on purpose: that is what a session recorded before bug #5 honestly looks like, and the
 	// report must show it rather than dress it up.
 	m, _ = m.Update(MsgSessionsUpdated{Sessions: &api.SessionsDto{Sessions: []api.SessionRowDto{
+		// SF3.1: session 12 carries the COMMON digest (work, no claims, no bg jobs), session 11 the
+		// full one (a board claim and a two-job bg storyline), session 8 none at all — the three
+		// shapes the panel has to render, all three in one fixture.
 		{Number: 12, StageId: "F7", Kind: "Deliver", Outcome: nil, Attempt: 2, CommitCount: 0,
 			StartedUtc: "2026-07-15T10:00:00Z", CostUsd: 0.12,
-			TokensIn: 41213, TokensOut: 3187, TokensThink: 1024, TokensCache: 188420},
+			TokensIn: 41213, TokensOut: 3187, TokensThink: 1024, TokensCache: 188420,
+			Digest: &api.SessionDigestDto{
+				ToolCalls: 31, DistinctTools: 4,
+				Mix: []api.DigestCountDto{{Name: "Bash", Count: 14}, {Name: "Read", Count: 9},
+					{Name: "Edit", Count: 6}, {Name: "Grep", Count: 2}},
+				FilesTouched: []api.DigestCountDto{{Name: "src/Core/GateCache.cs", Count: 4},
+					{Name: "src/Core/RunLoop.cs", Count: 2}},
+				FileWrites: 6,
+				Commands:   []string{"dotnet build src/App"},
+			}},
 		{Number: 11, StageId: "F7", Kind: "Deliver", Outcome: strPtr("needsRetry"), Attempt: 1, CommitCount: 2,
 			GateSummary:   strPtr("build ✓ test ✗ lint ○"),
 			ResultSummary: strPtr("Wired the **caching layer** in `RunDb` but `test` still red — see gate output."),
 			StartedUtc:    "2026-07-15T09:12:30Z", EndedUtc: strPtr("2026-07-15T09:58:04Z"), CostUsd: 0.1408,
-			TokensIn: 52881, TokensOut: 4402, TokensThink: 2310, TokensCache: 201338},
+			TokensIn:      52881, TokensOut: 4402, TokensThink: 2310, TokensCache: 201338,
+			Digest: &api.SessionDigestDto{
+				ToolCalls: 104, DistinctTools: 8,
+				Mix: []api.DigestCountDto{{Name: "Bash", Count: 57}, {Name: "Edit", Count: 26},
+					{Name: "Read", Count: 9}, {Name: "PowerShell", Count: 3}, {Name: "conductor_note", Count: 3},
+					{Name: "run_query", Count: 3}, {Name: "Write", Count: 2}, {Name: "ToolSearch", Count: 1}},
+				FilesTouched: []api.DigestCountDto{{Name: "src/Core/RunDb.Gates.cs", Count: 6},
+					{Name: "src/Core/GateCache.cs", Count: 3}, {Name: "tests/GateCacheTests.cs", Count: 3},
+					{Name: "src/Core/RunLoop.cs", Count: 2}, {Name: "docs/dev/adr/0007.md", Count: 1}},
+				FileWrites:     15,
+				Claims:         []string{"F7.4 -> done"},
+				BackgroundJobs: []string{"F7.4 cache key derivation - full build", "F7.4 - gate suite after the cache lands"},
+				Commands:       []string{"dotnet build src/App", "dotnet test --filter GateCacheTests"},
+			}},
 		{Number: 8, StageId: "F6", Kind: "Deliver", Outcome: strPtr("completed"), Attempt: 1, CommitCount: 1,
 			GateSummary: strPtr("build ✓ test ✓"),
 			StartedUtc:  "2026-07-15T08:30:00Z", EndedUtc: strPtr("2026-07-15T09:11:12Z"), CostUsd: 0.0912},
@@ -503,6 +528,14 @@ func TestGolden(t *testing.T) {
 		// view discoverable instead of folklore.
 		{"history_sessions", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("s"))
+			return m
+		}},
+		// SF3.1: the digest panel on its FULL shape — session 11 is the one fixture row carrying a
+		// board claim and a two-job background storyline, so this frame is the only place those two
+		// rows are pinned. The default selection (session 12) shows the common shape one golden up.
+		{"history_sessions_digest", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("s"))
+			m, _ = m.Update(specialKey(tea.KeyDown))
 			return m
 		}},
 		// U2.2: Report is the rendered run report now. SF1.1: its scores section comes off GET /scores,
