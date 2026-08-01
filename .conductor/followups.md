@@ -235,9 +235,9 @@ newest face code that exists.
 
 | id | item | detail | owning stage | status |
 |----|------|--------|--------------|--------|
-|FU-OWNER-10|Nothing on the wire says which build you are attached to|`GET /state` carries plan, run id, repo, model, cost — and no engine version, commit or face build. The face therefore cannot show it either, so "did my reinstall take?" is unanswerable from inside the tool. Proving this run was on the new engine took `Get-CimInstance Win32_Process` for the image path, the file's mtime against the run's start, `conductor version`, and `go version -m` on the face binary — four out-of-band checks for a fact the engine already holds (`version` prints it: commit, built, runtime, os, binary). **Suggested fix:** add `engineVersion` / `engineCommit` / `faceBuild` to the `/state` payload and put the short form in the face's status strip; SF3.3 already opens that payload and that strip for branch/dirty/ahead-behind/HEAD sha, so this is the same edit, not a new one.|SF3.3| CLOSED (bFU-OWNER-10) |
-|FU-OWNER-11|Telegram pushes carry no identity — repo, plan, run id or build|A run notification reads `s2 NoProgress — P0` + gates + result + cost, with nothing naming the repo, the plan or the run. One chat receiving two machines' runs cannot attribute a line, and a message read hours later cannot be dated to a build. The corollary bit today: a hand-sent operator message ("Sarban core complete… New engine `0.1.1-alpha.0.57+2fea7032749d` installed") is indistinguishable in the chat from an engine push, and quoted a version the engine had already superseded — the engine's own pushes would have been right by construction. **Suggested fix:** prefix each push with `<planName> · s<N>` and carry repo + engine version in the run-start/run-end message; if FU-OWNER-10 lands, take the version from the same field.|SF4.2 (owns the push path)| CLOSED (bFU-OWNER-11) |
-|FU-OWNER-13|Between a saved plan edit and the next session boundary, Telegram status contradicts the plan on disk (owner: **SF4.2**)|Wiring Telegram into the live NINE STREETS run: `POST /plan/edit` returned `ok:true, planVersion:3` and the block was on disk, then `POST /telegram/token` answered *"saved, but this run still will not deliver: not configured — **add a telegram block to the plan**"* — advising the edit that had just been made and accepted seconds earlier. `GET /telegram/status` says the same, because both read the live in-memory `PlanConfig`, which by design is not mutated on the HTTP path (`ControlPlaneServer.Plan.cs:11`); the reload is queued (`control: ReloadPlan (during session)`) and applied at the next boundary. The behaviour is right; the sentence is not — it names a cause that no longer exists and gives an instruction that would be a no-op. **Suggested fix:** when a reload is pending, both replies should say so instead — "a plan reload is queued; Telegram starts at the next session boundary" — and `/telegram/status` should carry a `reloadPending` bool so the Face's Telegram tab can show *waiting*, not *unconfigured*. This is the same failure SC1.3 was written to kill (a saved thing reporting as if nothing were saved), one layer out.|SF4.2 / SC1 fix-lane| CLOSED (bFU-OWNER-13) |
+|FU-OWNER-10|Nothing on the wire says which build you are attached to|`GET /state` carries plan, run id, repo, model, cost — and no engine version, commit or face build. The face therefore cannot show it either, so "did my reinstall take?" is unanswerable from inside the tool. Proving this run was on the new engine took `Get-CimInstance Win32_Process` for the image path, the file's mtime against the run's start, `conductor version`, and `go version -m` on the face binary — four out-of-band checks for a fact the engine already holds (`version` prints it: commit, built, runtime, os, binary). **Suggested fix:** add `engineVersion` / `engineCommit` / `faceBuild` to the `/state` payload and put the short form in the face's status strip; SF3.3 already opens that payload and that strip for branch/dirty/ahead-behind/HEAD sha, so this is the same edit, not a new one.|SF3.3| **CLOSED (SF3.3, `d500f00` engine + `234dd01`/`83b432e` face)** — `GET /state` carries `EngineVersion` and `FaceBuild` (`Core/Http/ControlPlaneDto.cs:86-88`), stamped from `Core/Face/FaceBuildStamp.cs`; the Face decodes them into the top-bar build chip and the Home card, so "did my reinstall take?" is answerable from the surface. |
+|FU-OWNER-11|Telegram pushes carry no identity — repo, plan, run id or build|A run notification reads `s2 NoProgress — P0` + gates + result + cost, with nothing naming the repo, the plan or the run. One chat receiving two machines' runs cannot attribute a line, and a message read hours later cannot be dated to a build. The corollary bit today: a hand-sent operator message ("Sarban core complete… New engine `0.1.1-alpha.0.57+2fea7032749d` installed") is indistinguishable in the chat from an engine push, and quoted a version the engine had already superseded — the engine's own pushes would have been right by construction. **Suggested fix:** prefix each push with `<planName> · s<N>` and carry repo + engine version in the run-start/run-end message; if FU-OWNER-10 lands, take the version from the same field.|SF4.2 (owns the push path)| **CLOSED (SF4.2, `bc7ff3f`) — with a stated remainder.** `TelegramService.IdentityLine` (`Core/Integrations/TelegramService.cs:390`) is prefixed in `SendAsync`, the one point every push, digest, command reply and test message passes through, so no call site can forget it and none added later can either. **Measured remainder:** the line carries the plan name and `s<session>` — *not* the repo or the build, which this row also asked for (`grep EngineVersion\|BuildStamp\|repo` across `TelegramService*.cs` finds none on a push path). The commit subject claims all four; two shipped. The in-code comment argues plan+session are the two facts a message cannot recover on its own, which is a fair call — but it is a narrower closure than the row requested, and it is recorded as such rather than rounded up. |
+|FU-OWNER-13|Between a saved plan edit and the next session boundary, Telegram status contradicts the plan on disk (owner: **SF4.2**)|Wiring Telegram into the live NINE STREETS run: `POST /plan/edit` returned `ok:true, planVersion:3` and the block was on disk, then `POST /telegram/token` answered *"saved, but this run still will not deliver: not configured — **add a telegram block to the plan**"* — advising the edit that had just been made and accepted seconds earlier. `GET /telegram/status` says the same, because both read the live in-memory `PlanConfig`, which by design is not mutated on the HTTP path (`ControlPlaneServer.Plan.cs:11`); the reload is queued (`control: ReloadPlan (during session)`) and applied at the next boundary. The behaviour is right; the sentence is not — it names a cause that no longer exists and gives an instruction that would be a no-op. **Suggested fix:** when a reload is pending, both replies should say so instead — "a plan reload is queued; Telegram starts at the next session boundary" — and `/telegram/status` should carry a `reloadPending` bool so the Face's Telegram tab can show *waiting*, not *unconfigured*. This is the same failure SC1.3 was written to kill (a saved thing reporting as if nothing were saved), one layer out.|SF4.2 / SC1 fix-lane| **CLOSED (`f0d12bb` engine + `8580cca`/`017c8a9` face)** — a queued reload now says so instead of advising the edit you just made. `TelegramStatusDto.ReloadPending` (`Core/Http/ControlPlaneDto.Telegram.cs:27`) is set from the queued plan at `ControlPlaneServer.Telegram.cs:37,47,67`, so `/telegram/status` and the token reply both distinguish *waiting for the session boundary* from *unconfigured*, and the Face's Telegram tab renders the waiting state. |
 | FU-OWNER-12 | A run never says its notification path is dead (owner: **SF0.1**) | With no `telegram` block, `grep -ci telegram .conductor/conductor.log` on a live run returns **0** — startup logs nothing, so the operator watches a silent chat and cannot tell "nothing happened" from "nothing can be delivered". The verdict *is* computed and it is good: `conductor doctor` warns `⚠ telegram not configured — optional; add a telegram block to the plan, or set it up from the Face's Telegram tab`, and `GET /telegram/status` answers `willDeliver:false` with the identical sentence (SC1.2's same-words requirement, working). Both only answer when asked. **Suggested fix:** log that one sentence once at run start, at the same level as the control-plane URL. | SF0.1 | **CLOSED (SF0.1, `5217986`)** — `RunLoop.cs:77` calls `LogNotificationReadiness()`, which logs either `notifications: telegram will NOT deliver — <blocker>` or `notifications: telegram will deliver this run's pushes` (`RunLoop.Control.cs:182-186`). Seen live in SF0.4's proof run, one line under `conductor start`: *"notifications: telegram will NOT deliver — not configured — optional; add a telegram block to the plan…"* — the same sentence `doctor` and `/telegram/status` give, now volunteered instead of only answered. |
 
 ## Carried forward from the core run's bug ledger — 2026-07-31
@@ -344,3 +344,64 @@ What is left open in this file after this pass: **FU-B2-3** (`HUMAN:`), **FU-B11
 with `conductor bug new` and let them ride `run.db` — they now survive the run that found them, reach
 the next run's prompts, and are counted at run end. Transcribing them into markdown by hand was the
 workaround for a defect, not a convention worth keeping.
+
+## SF7.1 closure ledger — 2026-08-01 (the Sarban face era's final reconciliation)
+
+The era spec asked for one thing of this file at the end: **no row whose state is unstated**. Both
+ledgers are covered here — the followup rows above, and the bugs the two Sarban runs filed. Every
+line was checked against the tree or against `run.db` on 2026-08-01, and the check is pinned by
+`SF7_1DocsMatchRealityTests.Ledgers` so a row added without a disposition is a red test.
+
+**Three rows were closed by a token that named nothing.** `FU-OWNER-10`, `FU-OWNER-11` and
+`FU-OWNER-13` each carried the status `CLOSED (bFU-OWNER-NN)`. That is not a commit, not a stage and
+not a bug id — it entered at `ea6edc7` when a generated write mangled the cell. To a human skimming
+the table they read as closed; to anyone trying to verify one, they read as nothing. All three are
+genuinely closed, and now say by which stage, with which commit, and where in the tree to look.
+
+One of the three is narrower than its commit subject claims, and is written down that way rather than
+rounded up: `bc7ff3f` says every push names *plan, session, repo and build*; what ships is plan and
+session. See the row.
+
+### Followup rows — the state of every one at era end
+
+| row | state | owner from here |
+|---|---|---|
+| the 43 rows closed by the 2026-07-28 triage and the SF0.4 disposition | **CLOSED**, each with its evidence on the row | — |
+| FU-OWNER-10 | **CLOSED** — SF3.3, `d500f00` | — |
+| FU-OWNER-11 | **CLOSED with a stated remainder** — SF4.2, `bc7ff3f`; repo and build never reached the push | reopen only if a second machine's runs land in one chat |
+| FU-OWNER-13 | **CLOSED** — `f0d12bb` + `8580cca`/`017c8a9` | — |
+| FU-F1-06 | **STILL OPEN**, and its re-home premise was **wrong** | the owner, or whoever opens the next era |
+| FU-B2-3 | half implemented (`RunLoop.Control.cs:125-131`), half **`HUMAN:`** — the live gate wants a recovery lane | the owner |
+| FU-B11-2 | **PARTIAL is the final answer** — `HUMAN:`, needs a Linux host; the shipped README says so | the owner |
+| FU-B11-3 | **`HUMAN:`** — real cTrader credentials and real money | the owner |
+
+**FU-F1-06 does not close, and the reason matters more than the row.** SF0.4 re-homed it to SF2.1 on
+the premise that a stale `runs.status` would make SF2.1's own last-run card lie, so fixing it was that
+stage's prerequisite. Measured today: `IRunStore` has exactly one terminal writer, `RecordRunEnd`,
+which stamps `ended_utc` — there is no status-only writer anywhere in `src/`, and SF2.1 never added
+one. It made its Home card honest by a different route (the connection line plus `RunSummary`), so the
+prerequisite was never load-bearing and the row rode a whole stage without being touched. A run that
+ends `NeedsHuman`, `Paused` or `AwaitingOwner` still reads `status='running'` in the `runs` table.
+The fix is unchanged and small: a status-only `UpdateRunStatus` that does not stamp `ended_utc`.
+
+### Bugs — the seven this run leaves open
+
+The core run's eleven were transcribed into this file by hand because `conductor bug` was run-scoped
+and they would have vanished. **That is fixed** (SF0.4): open bugs now survive the run that filed
+them, reach the next run's prompts through `BugsBattery`, and are counted at run end. So these seven
+are *not* transcribed as rows — they live in `run.db` and the next run will see them. They are listed
+here only so this ledger is complete, with the owner each one needs.
+
+| bug | what | owner from here |
+|---|---|---|
+| #15 | a composed prompt over ~8191 chars silently stops a cmd.exe-based agent, and the run reports success | next era, engine lane — the guard exists only as a test on the shipped templates |
+| #16 | the gate battery can try to rebuild a `conductor.exe` that is running, and fails with a lock error an agent misreads as a stale orphan | next era — **no stage has ever owned `tools/gates`**, which is why this survived two eras |
+| #17 | the CLI silently accepts and ignores any unknown option — `conductor status --bogus` exits 0 | next era, CLI lane |
+| #18 | the bottom bar hard-clips a pane's contextual help with no ellipsis | next era, face lane — SF1.3 shortened the strings, which is a workaround; 80x24 is still the documented floor |
+| #19 | the session digest never records a claim: it counts MCP `task_update`, and every session claims through the CLI | next era — the digest has under-reported claims for the whole of both runs |
+| #20 | `run` resolves `CONDUCTOR_PLAN` over the CWD, so a scratch rig launched inside a session can target the driving run's plan | next era, engine lane — **the sharpest of the seven**; every live-proof rig in this era had to work around it |
+| #21 | nothing warns when a plan's packs push the composed prompt past the argv ceiling | next era — same root as #15; fix them together |
+
+**Nothing here is homeless and nothing is silently dropped.** Four rows need the owner; one row and
+seven bugs ride into the next era, and unlike last time the bugs ride in the database rather than in
+markdown, so nobody has to remember to copy them.
