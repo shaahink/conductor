@@ -57,6 +57,10 @@ public sealed class WatchCommand : AsyncCommand<WatchCommand.Settings>
         [Description("Run this command on wake with the brief on stdin, overriding the plan's supervisor block. Fires on the wake set ONLY — never on a timeout heartbeat.")]
         public string? Hook { get; init; }
 
+        [CommandOption("--notify <URL>")]
+        [Description("SF5.3: POST the brief to this URL on wake, overriding the plan's supervisor.remote block. Not bound by its hourly fuse.")]
+        public string? Notify { get; init; }
+
         [CommandOption("--hook-timeout <MINUTES>")]
         [Description("How long a --hook command may run before it is killed (default 10). The plan block uses its own supervisor.timeoutMinutes.")]
         public double HookTimeoutMinutes { get; init; } = 10;
@@ -105,6 +109,19 @@ public sealed class WatchCommand : AsyncCommand<WatchCommand.Settings>
         if (wake.Reason != WatchReason.Timeout)
         {
             var now = DateTimeOffset.UtcNow;
+
+            // SF5.3 — the remote goes first, and goes regardless of what the local supervisor is allowed
+            // to do. It is the escalation path: an hour in which the local babysitter has burnt its fuse,
+            // or a plan with no local supervisor at all, is exactly when a human off this box needs the
+            // wake. Sending it before the command also means a supervisor that hangs to its full timeout
+            // cannot sit on the notification for ten minutes.
+            var remote = await WatchRemote.DispatchAsync(plan, brief, text, settings.Notify, now).ConfigureAwait(false);
+            foreach (var d in remote.Deliveries)
+                await Console.Error.WriteLineAsync(
+                    $"remote {d.Target} — {(d.Delivered ? "delivered" : "NOT delivered")}: {d.Detail}").ConfigureAwait(false);
+            if (remote.Skipped is { } skippedWhy)
+                await Console.Error.WriteLineAsync($"remote not sent — {skippedWhy}").ConfigureAwait(false);
+
             var decision = SupervisorPolicy.Decide(plan, settings.Hook,
                 TimeSpan.FromMinutes(Math.Clamp(settings.HookTimeoutMinutes, 0.1, 1440)), now);
 

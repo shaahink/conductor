@@ -126,7 +126,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
     /// <summary>Env var wins (unchanged, existing behavior); falls back to the M8.2 local secrets
     /// file (SecretsStore) so the token can also be typed into the Face's guided setup instead of
     /// set as an environment variable.</summary>
-    private static string? ResolveToken(PlanConfig plan)
+    internal static string? ResolveToken(PlanConfig plan)
     {
         var fromEnv = Environment.GetEnvironmentVariable("CONDUCTOR_TELEGRAM_TOKEN")?.Trim();
         if (fromEnv is { Length: > 0 }) return fromEnv;

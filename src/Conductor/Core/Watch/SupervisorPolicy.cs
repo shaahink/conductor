@@ -34,6 +34,11 @@ public static class SupervisorPolicy
     /// it exists to bound.</summary>
     public const string FiresFile = "supervisor-fires.log";
 
+    /// <summary>SF5.3 — the same ledger, for remote dispatches. A separate file because the two fuses
+    /// bound different spends and must not consume each other: the hour in which the local supervisor
+    /// has hit its cap is precisely the hour the wake most needs to reach a human off the box.</summary>
+    public const string RemoteFiresFile = "supervisor-remote-fires.log";
+
     /// <summary>Decide what runs on this wake. <paramref name="hookOverride"/> is the command line's
     /// <c>--hook</c>: it wins over the plan block, unconditionally and including the rate limit, because
     /// an operator typing a hook at a live run is making a deliberate one-off decision and the plan's
@@ -69,11 +74,12 @@ public static class SupervisorPolicy
 
     /// <summary>Count fires inside the window. Unreadable ledger counts as zero fires: the fuse must
     /// never be the reason a run goes unsupervised.</summary>
-    public static int CountRecentFires(string stateDir, TimeSpan window, DateTimeOffset nowUtc)
+    public static int CountRecentFires(string stateDir, TimeSpan window, DateTimeOffset nowUtc,
+        string fileName = FiresFile)
     {
         try
         {
-            var file = Path.Combine(stateDir, FiresFile);
+            var file = Path.Combine(stateDir, fileName);
             if (!File.Exists(file)) return 0;
             var cutoff = nowUtc - window;
             return File.ReadAllLines(file).Count(line =>
@@ -90,12 +96,12 @@ public static class SupervisorPolicy
     /// <summary>Stamp a fire. Called after the supervisor is STARTED, not after it succeeds — a
     /// babysitter that crashes on every wake has still cost an invocation, and the fuse is there to
     /// bound invocations.</summary>
-    public static void RecordFire(string stateDir, DateTimeOffset nowUtc)
+    public static void RecordFire(string stateDir, DateTimeOffset nowUtc, string fileName = FiresFile)
     {
         try
         {
             Directory.CreateDirectory(stateDir);
-            var file = Path.Combine(stateDir, FiresFile);
+            var file = Path.Combine(stateDir, fileName);
             File.AppendAllText(file, nowUtc.UtcDateTime.ToString("O", CultureInfo.InvariantCulture) + Environment.NewLine);
             Trim(file, nowUtc);
         }

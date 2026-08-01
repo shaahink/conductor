@@ -49,4 +49,59 @@ public sealed class SupervisorConfig
     /// than being trusted to have been told separately. Null = no orders stated, which a careful
     /// supervisor should read as "escalate everything".</summary>
     public string? StandingOrders { get; set; }
+
+    /// <summary>SF5.3 — where the wake goes when the supervisor is not on this machine.</summary>
+    public SupervisorRemote? Remote { get; set; }
+}
+
+/// <summary>
+/// SF5.3 — remote supervision: the wake leaves the box.
+///
+/// <para><see cref="SupervisorConfig.Command"/> covers the babysitter that lives on the same machine as
+/// the run. It cannot cover the two cases the owner actually has: a phone, and a cloud Claude Code
+/// session with repo access. Both need the wake to travel, and both need the SAME brief the local
+/// supervisor reads on stdin — a "something happened" ping just makes the remote reader go and look,
+/// which is the polling cost this stage exists to delete, paid over a network.</para>
+///
+/// <code>
+///   "supervisor": {
+///     "remote": {
+///       "webhookUrl": "https://api.github.com/repos/me/site/dispatches",
+///       "headers": { "Authorization": "Bearer ${GH_WAKE_TOKEN}", "Accept": "application/vnd.github+json" },
+///       "telegram": true
+///     }
+///   }
+/// </code>
+///
+/// <para>Delivery is best-effort by design: a webhook that is down must not turn a parked run into a
+/// second outage, so a failed send is reported on stderr and the watch still exits on its wake code.</para>
+/// </summary>
+public sealed class SupervisorRemote
+{
+    /// <summary>Set false to keep the block (and its URL) in the plan while silencing delivery.</summary>
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>Endpoint that receives the wake brief as the POST body, verbatim
+    /// (<c>Content-Type: application/json</c>) — the same document the local supervisor gets on stdin.</summary>
+    public string? WebhookUrl { get; set; }
+
+    /// <summary>Headers for the webhook. Values expand <c>${NAME}</c> and <c>%NAME%</c> from the
+    /// environment, so the plan can name a credential without ever containing one.</summary>
+    public Dictionary<string, string>? Headers { get; set; }
+
+    /// <summary>Push a compact wake line to the plan's <c>telegram.allowedChatIds</c>. Uses the same
+    /// <c>CONDUCTOR_TELEGRAM_TOKEN</c> (or secrets file) as the run's own pushes — but this send is made
+    /// by the <c>watch</c> process, so it still arrives when the engine is the thing that died.</summary>
+    public bool Telegram { get; set; }
+
+    /// <summary>How long any one delivery may take. Default 20.</summary>
+    public int TimeoutSeconds { get; set; } = 20;
+
+    /// <summary>Max remote dispatches per rolling hour; 0 = unlimited. Default 12.
+    ///
+    /// <para>Its own fuse, separate from <see cref="SupervisorConfig.MaxPerHour"/>, because the two bound
+    /// different things and must not silence each other: a webhook that starts a cloud session costs
+    /// money and needs bounding, while a local supervisor that has burnt its budget is exactly when the
+    /// human most needs the wake to reach them.</para></summary>
+    public int MaxPerHour { get; set; } = 12;
 }
