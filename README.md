@@ -1,7 +1,7 @@
 # Conductor
 
 [![CI](https://github.com/shaahink/conductor/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/shaahink/conductor/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-orange.svg)](LICENSE)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4.svg)](https://dotnet.microsoft.com/)
 [![Go 1.26](https://img.shields.io/badge/Go-1.26-00ADD8.svg)](https://go.dev/)
 
@@ -216,4 +216,8 @@ the ratchet means a PR may not make the bar smaller. Security reports: [SECURITY
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+Source-available under the [PolyForm Noncommercial License 1.0.0](LICENSE): free to use, modify
+and share for any noncommercial purpose. Commercial use needs a separate licence — get in touch.
+
+Versions published before 2 August 2026 were released under the MIT License; that grant still
+stands for those versions.
