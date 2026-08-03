@@ -2,33 +2,39 @@
 
 **Plan:** CI health - the public repos go green | **Branch:** `chore/ci-health` | **Design doc:** ci-health/README.md
 
-## Handoff (overwrite this block, ≤ 12 lines, no history)
+## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: N1 COMPLETE - all three checkpoints landed with real-remote proof. Four PRs merged:
-  blog-code #1, sitekit #2, site-template #32, DevContext2 #11 (base develop, not main).
-  Default branches green: blog-code 30828796177, sitekit 30828800198, site-template
-  30829068429 + dispatch 30829094483, DevContext2 CI 30829803125 and Eval 30829813027.
-stage: majors were MEASURED from each action's latest release, not guessed - checkout v7,
-  setup-node v7, setup-dotnet v6, setup-go v7, upload-artifact v7, download-artifact v8,
-  pnpm/action-setup v6, gh-release v3. Node 20 annotations confirmed gone via the
-  check-runs annotations API on every run, before and after. dotgithub needed NO edit: both
-  its files were already on current majors, so content-request.yml's credential guard was
-  never disturbed - proven downstream by site-template's CI green against site-ci.yml@main.
-next: N1 is closed. S1.3/S1.4 stay BLOCKED on the owner on purpose; do not reopen them.
-trap: DevContext2's default branch is develop, and develop is checked out in ANOTHER
-  worktree at C:/Code/DevContext2-ui - branch off origin/develop, never check it out there.
-  Its macos-latest leg has a timing-flaky test (StageWaterfall, bug #3) that was already
-  red on main before this session; rerun --failed, never relax its percentage floor. One
-  dispatch, DevContext2 Release 30829815008 on develop, was still building at session end -
-  the identical branch dispatch 30828834858 was success. Shamshir has 6 pre-existing dirty
-  files that are the owner's, deliberately not swept into an N1 commit.
+last: N1 CLOSED and now provably green. The battery's two reds are both resolved as facts:
+  DevContext2 Release 30829815008 was a still-building Tauri job, not a failure - it
+  completed SUCCESS on develop. Sweep re-verified COMPLETE by git grep of "uses:" against
+  every remote default branch (conductor, DevContext2, sitekit, blog-code, site, dotgithub;
+  site-template only calls the reusable workflow) - every pin at the measured current major,
+  nothing missed, no composite actions anywhere. 12 of 13 active fleet workflows green.
+stage: the one remaining red is S1's, not N1's, and it needs the OWNER. Shamshir/Release on
+  main is still the pre-fix run 30765474447. PR 3 stays unmerged, correctly: its dispatch
+  gets dotnet build -c Release green for the first time ever, then 2 architecture tests fail
+  on VenueSymbolSpecEntity (no IAuditableEntity) and EngineReducer.ReconcileToVenue (exports
+  a System.DateTime). PROVED pre-existing: the fix branch is 2 workflow files wide, zero
+  product code, so those assertions read main's own source. Fixing them = engine public API
+  change + EF migration = owner decisions. Two questions are written out as a HUMAN block in
+  ci-health/evidence/s9-N1-fleet-green-except-owner-blocked-shamshir.md.
+next: fleet-green will stay RED until the owner answers those two. That is the gate reading
+  the fleet correctly, not a broken gate - do NOT clear it by excluding Shamshir's
+  Architecture suite, the owner's iteration docs call that suite a gate. Z1 is next.
+trap: DevContext2's default branch is develop, checked out in ANOTHER worktree at
+  C:/Code/DevContext2-ui - branch off origin/develop, never check it out there. Shamshir's
+  pr.yml fires only on PRs into develop with paths src/tests, so PRs into main - the default
+  branch - get ZERO checks (bug #4); that is why nobody had seen the 2 architecture
+  failures, and why "merge on green checks you read" is unsatisfiable on Shamshir today.
+  Shamshir also has 6 pre-existing dirty files that are the owner's - leave them.
+
 
 ## Baseline numbers (from run.db)
 
 | Metric | Value |
 |---|---|
 | Total checkpoints | 20 |
-| Done | 4 |
+| Done | 7 |
 | Claimed (unconfirmed) | 9 |
 
 ## Checkpoints
@@ -67,17 +73,17 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| C1.1 | The version test's merge guard covers merges anywhere between the newest tag and HEAD, not just at HEAD. The prerelease-shape assertion above it still runs in both branches of the guard | DONE | 11d8736 | ci-health/evidence/s7-C1.1-version-guard-widened.md |
-| C1.2 | The full local gate battery is green in `C:/Code/conductor-ci`, and conductor's workflow actions are on current majors | DONE | 11d8736 | ci-health/evidence/s7-C1.2-local-battery-green.md |
-| C1.3 | The pull request's `CI` run is green on both the windows and ubuntu legs, the pull request is merged, and master's own `CI` run after the merge is green too | DONE | 11d8736 | ci-health/evidence/s7-C1.3-pr-and-master-green.md |
+| C1.1 | The version test's merge guard covers merges anywhere between the newest tag and HEAD, not just at HEAD. The prerelease-shape assertion above it still runs in both branches of the guard | DONE ✓ | 11d8736 | ci-health/evidence/s7-C1.1-version-guard-widened.md |
+| C1.2 | The full local gate battery is green in `C:/Code/conductor-ci`, and conductor's workflow actions are on current majors | DONE ✓ | 11d8736 | ci-health/evidence/s7-C1.2-local-battery-green.md |
+| C1.3 | The pull request's `CI` run is green on both the windows and ubuntu legs, the pull request is merged, and master's own `CI` run after the merge is green too | DONE ✓ | 11d8736 | ci-health/evidence/s7-C1.3-pr-and-master-green.md |
 
 ### N1 — The Node 20 action sweep across the remaining repos
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| N1.1 | DevContext2, sitekit, site-template and blog-code each have a branch bumping their workflow actions off the Node 20 runtime, with CI green on the pull request | TODO | - | - |
-| N1.2 | Those four pull requests are merged and each repo's default branch is green | TODO | - | - |
-| N1.3 | The two reusable workflows in the org's dotfile-named repo are bumped, with the shared site pipeline proven by a downstream caller's CI going green. If the agent-running workflow's credential guard cannot be demonstrated to still hold, it is left alone and the reason is recorded here - that is an acceptable completion, not a failure | TODO | - | - |
+| N1.1 | DevContext2, sitekit, site-template and blog-code each have a branch bumping their workflow actions off the Node 20 runtime, with CI green on the pull request | DONE | 8175f7c | ci-health/evidence/s8-N1.1-node20-sweep-branches.md |
+| N1.2 | Those four pull requests are merged and each repo's default branch is green | DONE | 8175f7c | ci-health/evidence/s8-N1.2-merged-default-branches-green.md |
+| N1.3 | The two reusable workflows in the org's dotfile-named repo are bumped, with the shared site pipeline proven by a downstream caller's CI going green. If the agent-running workflow's credential guard cannot be demonstrated to still hold, it is left alone and the reason is recorded here - that is an acceptable completion, not a failure | DONE | 8175f7c | ci-health/evidence/s8-N1.3-dotgithub-already-current.md |
 
 ### Z1 — Close out - the whole fleet reads green
 
