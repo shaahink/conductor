@@ -1,5 +1,5 @@
 {
-  "name": "CI health — the public repos go green",
+  "name": "CI health - the public repos go green",
   "repo": "C:/Code/conductor-cihealth",
   "tracker": "ci-health/TRACKER.md",
   "planDoc": "ci-health/README.md",
@@ -66,46 +66,46 @@
 
   "stages": [
     {
-      "id": "K",
+      "id": "K1",
       "title": "Retire KataFlow",
       "sessions": 1,
       "ownerGate": false,
-      "notes": "STRAND DOC: ci-health/README.md, section K. The owner decided on 2026-08-03 to retire this repo rather than repair its vulnerable dependency chain — that decision is settled, do not reopen it or attempt the fix. Local clone is C:/Code/KataFlow-ai. Work strictly in the order K.1, K.2, K.3, K.4: everything before K.4 is reversible and K.4 is not. K.4 is the authorised irreversible step; do it only once the three before it are genuinely done. Archiving makes the repo read-only, so any commit or PR action must land before it."
+      "notes": "STRAND DOC: ci-health/README.md, section K. The owner decided on 2026-08-03 to retire this repo rather than repair its vulnerable dependency chain - that decision is settled, do not reopen it or attempt the fix. Local clone is C:/Code/KataFlow-ai. Work strictly in the order K1.1, K1.2, K1.3, K1.4: everything before K1.4 is reversible and K1.4 is not. K1.4 is the authorised irreversible step; do it only once the three before it are genuinely done. Archiving makes the repo read-only, so any commit or PR action must land before it."
     },
     {
-      "id": "B",
-      "title": "site — the link checker goes green",
+      "id": "B1",
+      "title": "site - the link checker goes green",
       "sessions": 1,
       "ownerGate": false,
-      "notes": "STRAND DOC: ci-health/README.md, section B. Local clone is C:/Code/site-blog. The 17 errors are two unrelated causes and only two of them are real broken links; the other 15 are the checker missing a root directory. Do not rewrite correct root-relative links to satisfy a misconfigured checker — that is weakening the measurement. The links workflow already has a manual-dispatch trigger, so prove the fix on the branch before merging. It is otherwise a weekly scheduled workflow, so after the merge you must dispatch it once on the default branch — the stage gate reads the latest run of each active workflow ON THE DEFAULT BRANCH, and a stale red run there will hold the stage open. Bump this repo's workflow actions off the Node 20 runtime in the same branch and the same pull request."
+      "notes": "STRAND DOC: ci-health/README.md, section B. Local clone is C:/Code/site-blog. The 17 errors are two unrelated causes and only two of them are real broken links; the other 15 are the checker missing a root directory. Do not rewrite correct root-relative links to satisfy a misconfigured checker - that is weakening the measurement. The links workflow already has a manual-dispatch trigger, so prove the fix on the branch before merging. It is otherwise a weekly scheduled workflow, so after the merge you must dispatch it once on the default branch - the stage gate reads the latest run of each active workflow ON THE DEFAULT BRANCH, and a stale red run there will hold the stage open. Bump this repo's workflow actions off the Node 20 runtime in the same branch and the same pull request."
     },
     {
-      "id": "S",
-      "title": "Shamshir — the release workflow goes green",
+      "id": "S1",
+      "title": "Shamshir - the release workflow goes green",
       "sessions": 2,
       "ownerGate": false,
-      "notes": "STRAND DOC: ci-health/README.md, section S. Local clone is C:/Code/Shamshir, which has uncommitted work in docs and tools from the owner — leave those files alone and do not sweep them into a commit. The release workflow triggers only on a push to main, so add a manual-dispatch trigger FIRST or you have no way to test anything without merging. The build dies because the web project shells out to a script that rebuilds the Angular UI and CI has no Node installed. Two honest answers exist — install Node before the .NET build, or make the target degrade when Node is absent — pick one on evidence and justify it in the commit message. Expect a second failure after that one: the final step uses an archived release action that has never once been reached, so it has never been exercised. After merging, dispatch the workflow on the default branch so a fresh run exists there; the stage gate reads the default branch."
+      "notes": "STRAND DOC: ci-health/README.md, section S. Local clone is C:/Code/Shamshir, which has uncommitted work in docs and tools from the owner - leave those files alone and do not sweep them into a commit. The release workflow triggers only on a push to main, so add a manual-dispatch trigger FIRST or you have no way to test anything without merging. The build dies because the web project shells out to a script that rebuilds the Angular UI and CI has no Node installed. Two honest answers exist - install Node before the .NET build, or make the target degrade when Node is absent - pick one on evidence and justify it in the commit message. Expect a second failure after that one: the final step uses an archived release action that has never once been reached, so it has never been exercised. After merging, dispatch the workflow on the default branch so a fresh run exists there; the stage gate reads the default branch."
     },
     {
-      "id": "C",
-      "title": "conductor — the version test stops breaking on every commit",
+      "id": "C1",
+      "title": "conductor - the version test stops breaking on every commit",
       "sessions": 2,
       "ownerGate": false,
-      "notes": "STRAND DOC: ci-health/README.md, section C. Work in C:/Code/conductor-ci on branch fix/ci-version-test. NEVER touch C:/Code/conductor — that is the owner's own worktree on another branch with uncommitted work in it. The test compares two commit heights computed by two different algorithms, and they legitimately disagree whenever a merge sits between the newest tag and HEAD. The test's own comment already explains this and even names the merge; its guard is simply too narrow, asking whether HEAD is a merge rather than whether the range contains one. Widen the guard. The shape assertion above it must keep running in both branches of the guard — that is the part with teeth. Deleting the test, skipping it, or hardcoding a number is forbidden. Do not run tools/install.ps1 at any point: it publishes over the very binaries the live engine is running from and will fail. Bump conductor's workflow actions off the Node 20 runtime on the same branch and in the same pull request."
+      "notes": "STRAND DOC: ci-health/README.md, section C. Work in C:/Code/conductor-ci on branch fix/ci-version-test. NEVER touch C:/Code/conductor - that is the owner's own worktree on another branch with uncommitted work in it. The test compares two commit heights computed by two different algorithms, and they legitimately disagree whenever a merge sits between the newest tag and HEAD. The test's own comment already explains this and even names the merge; its guard is simply too narrow, asking whether HEAD is a merge rather than whether the range contains one. Widen the guard. The shape assertion above it must keep running in both branches of the guard - that is the part with teeth. Deleting the test, skipping it, or hardcoding a number is forbidden. Do not run tools/install.ps1 at any point: it publishes over the very binaries the live engine is running from and will fail. Bump conductor's workflow actions off the Node 20 runtime on the same branch and in the same pull request."
     },
     {
-      "id": "N",
+      "id": "N1",
       "title": "The Node 20 action sweep across the remaining repos",
       "sessions": 2,
       "ownerGate": false,
-      "notes": "STRAND DOC: ci-health/README.md, section N. Four repos need a plain bump — DevContext2, sitekit, site-template, blog-code — one branch and one pull request each, merged when their checks are green. Bump to current major versions; do not switch the fleet to commit-SHA pinning, that convention change is not this plan's job. The fifth, the dotfile-named org repo cloned at C:/Code/dotgithub, is the careful one: its two files are reusable workflows that other repos call, so the shared site pipeline is proven by a downstream caller's CI going green rather than by its own. Its other file runs an agent and its safety is structural, resting on a checkout that carries no credential and a job that proves it. If you cannot demonstrate that guard still holds after a bump, leave that file untouched and record the reason in the tracker — an honest skip is an acceptable completion of that checkpoint, a bumped file nobody proved is not."
+      "notes": "STRAND DOC: ci-health/README.md, section N. Four repos need a plain bump - DevContext2, sitekit, site-template, blog-code - one branch and one pull request each, merged when their checks are green. Bump to current major versions; do not switch the fleet to commit-SHA pinning, that convention change is not this plan's job. The fifth, the dotfile-named org repo cloned at C:/Code/dotgithub, is the careful one: its two files are reusable workflows that other repos call, so the shared site pipeline is proven by a downstream caller's CI going green rather than by its own. Its other file runs an agent and its safety is structural, resting on a checkout that carries no credential and a job that proves it. If you cannot demonstrate that guard still holds after a bump, leave that file untouched and record the reason in the tracker - an honest skip is an acceptable completion of that checkpoint, a bumped file nobody proved is not."
     },
     {
-      "id": "Z",
-      "title": "Close out — the whole fleet reads green",
+      "id": "Z1",
+      "title": "Close out - the whole fleet reads green",
       "sessions": 1,
       "ownerGate": true,
-      "notes": "STRAND DOC: ci-health/README.md. Verify from the real remote, not from memory and not from this tracker: for every public repo in scope, every active workflow's latest run on the default branch. Capture that as one evidence file rather than describing it. Anything left deliberately undone gets named with its reason. This stage parks for the owner even when green — that is intentional, it is the last look before the run ends."
+      "notes": "STRAND DOC: ci-health/README.md. Verify from the real remote, not from memory and not from this tracker: for every public repo in scope, every active workflow's latest run on the default branch. Capture that as one evidence file rather than describing it. Anything left deliberately undone gets named with its reason. This stage parks for the owner even when green - that is intentional, it is the last look before the run ends."
     }
   ],
 
@@ -121,35 +121,35 @@
       "name": "kataflow-retired",
       "command": "powershell -NoProfile -ExecutionPolicy Bypass -File ci-health/gates/kataflow-retired.ps1",
       "tier": "truth",
-      "stages": ["K"],
+      "stages": ["K1"],
       "timeoutMinutes": 10
     },
     {
       "name": "site-green",
       "command": "powershell -NoProfile -ExecutionPolicy Bypass -File ci-health/gates/ci-green.ps1 -Repos site",
       "tier": "truth",
-      "stages": ["B"],
+      "stages": ["B1"],
       "timeoutMinutes": 15
     },
     {
       "name": "shamshir-green",
       "command": "powershell -NoProfile -ExecutionPolicy Bypass -File ci-health/gates/ci-green.ps1 -Repos Shamshir",
       "tier": "truth",
-      "stages": ["S"],
+      "stages": ["S1"],
       "timeoutMinutes": 15
     },
     {
       "name": "conductor-green",
       "command": "powershell -NoProfile -ExecutionPolicy Bypass -File ci-health/gates/ci-green.ps1 -Repos conductor",
       "tier": "truth",
-      "stages": ["C"],
+      "stages": ["C1"],
       "timeoutMinutes": 20
     },
     {
       "name": "fleet-green",
       "command": "powershell -NoProfile -ExecutionPolicy Bypass -File ci-health/gates/ci-green.ps1 -Repos conductor,Shamshir,site,DevContext2,sitekit,site-template,blog-code",
       "tier": "truth",
-      "stages": ["N", "Z"],
+      "stages": ["N1", "Z1"],
       "timeoutMinutes": 25
     }
   ],
@@ -172,5 +172,5 @@
     "ci-health/README.md"
   ],
 
-  "promptExtra": "TRAPS THIS RUN HAS ALREADY PAID FOR OR WILL. Read them; they are not generic advice.\n\n1. LOCAL PATHS DO NOT MATCH REPO NAMES. KataFlow is at C:/Code/KataFlow-ai. site is at C:/Code/site-blog. The org's dotfile-named repo is at C:/Code/dotgithub. conductor's fix branch is at C:/Code/conductor-ci. Guessing a path from a repo name will send you to the wrong directory or none. The full map is in the authority doc.\n\n2. NEVER TOUCH C:/Code/conductor. It is the owner's own working copy on a different branch with uncommitted work in it. This run's control room is C:/Code/conductor-cihealth and the conductor fix belongs in C:/Code/conductor-ci. All three are worktrees of the same repository, so a careless checkout in one disturbs the others.\n\n3. NEVER PASTE WORKFLOW YAML INTO THE TRACKER HANDOFF. The handoff block is composed into the next session's prompt and then validated for unresolved placeholders. GitHub workflow syntax is full of brace expressions. A single brace token that looks like a placeholder makes the engine EXIT — no log line, stderr only, and it happens to the NEXT session rather than to you. Describe workflow changes in prose. The same applies to any note you write into the plan or the tracker.\n\n4. DO NOT RUN tools/install.ps1. It publishes over the binaries the live engine is running from and fails with a file-lock error, and it is never necessary for this work.\n\n5. THE ACCEPTANCE IS ALWAYS THE REAL REMOTE. A local build passing is not the acceptance and neither is your reading of a diff. Read GitHub Actions with the gh CLI. Where a workflow is scheduled or manual rather than push-triggered, a merge does NOT produce a fresh run on the default branch — you must dispatch it. The stage gates read the latest run of each active workflow on the default branch, so a stale red run there holds the stage open no matter how good the fix was.\n\n6. MERGE ONLY ON GREEN CHECKS YOU ACTUALLY READ. The owner chose auto-merge, which means you merge — but only after reading the pull request's checks and seeing them pass. Never merge on a hunch that it will be fine, and never merge a branch whose checks have not finished.\n\n7. DO NOT WEAKEN A MEASUREMENT TO GET GREEN. No deleted or skipped test, no relaxed assertion, no removed workflow step, no correct link rewritten to please a misconfigured checker, no gate softened. Every one of the four failures in this plan has a tempting fake fix and a real one; the authority doc names both. If you believe a bar is genuinely wrong, say so in the handoff with evidence and stop.\n\n8. SATELLITE COMMITS COUNT, BUT ONLY FROM DECLARED REPOS. This plan declares nine satellite repositories, so work landing in any of them registers as progress. Work landing anywhere else does not exist as far as the verdict is concerned. Leave every repo you touch clean and pushed before you exit — the fast gate checks exactly that across all of them."
+  "promptExtra": "TRAPS THIS RUN HAS ALREADY PAID FOR OR WILL. Read them; they are not generic advice.\n\n1. LOCAL PATHS DO NOT MATCH REPO NAMES. KataFlow is at C:/Code/KataFlow-ai. site is at C:/Code/site-blog. The org's dotfile-named repo is at C:/Code/dotgithub. conductor's fix branch is at C:/Code/conductor-ci. Guessing a path from a repo name will send you to the wrong directory or none. The full map is in the authority doc.\n\n2. NEVER TOUCH C:/Code/conductor. It is the owner's own working copy on a different branch with uncommitted work in it. This run's control room is C:/Code/conductor-cihealth and the conductor fix belongs in C:/Code/conductor-ci. All three are worktrees of the same repository, so a careless checkout in one disturbs the others.\n\n3. NEVER PASTE WORKFLOW YAML INTO THE TRACKER HANDOFF. The handoff block is composed into the next session's prompt and then validated for unresolved placeholders. GitHub workflow syntax is full of brace expressions. A single brace token that looks like a placeholder makes the engine EXIT - no log line, stderr only, and it happens to the NEXT session rather than to you. Describe workflow changes in prose. The same applies to any note you write into the plan or the tracker.\n\n4. DO NOT RUN tools/install.ps1. It publishes over the binaries the live engine is running from and fails with a file-lock error, and it is never necessary for this work.\n\n5. THE ACCEPTANCE IS ALWAYS THE REAL REMOTE. A local build passing is not the acceptance and neither is your reading of a diff. Read GitHub Actions with the gh CLI. Where a workflow is scheduled or manual rather than push-triggered, a merge does NOT produce a fresh run on the default branch - you must dispatch it. The stage gates read the latest run of each active workflow on the default branch, so a stale red run there holds the stage open no matter how good the fix was.\n\n6. MERGE ONLY ON GREEN CHECKS YOU ACTUALLY READ. The owner chose auto-merge, which means you merge - but only after reading the pull request's checks and seeing them pass. Never merge on a hunch that it will be fine, and never merge a branch whose checks have not finished.\n\n7. DO NOT WEAKEN A MEASUREMENT TO GET GREEN. No deleted or skipped test, no relaxed assertion, no removed workflow step, no correct link rewritten to please a misconfigured checker, no gate softened. Every one of the four failures in this plan has a tempting fake fix and a real one; the authority doc names both. If you believe a bar is genuinely wrong, say so in the handoff with evidence and stop.\n\n8. SATELLITE COMMITS COUNT, BUT ONLY FROM DECLARED REPOS. This plan declares nine satellite repositories, so work landing in any of them registers as progress. Work landing anywhere else does not exist as far as the verdict is concerned. Leave every repo you touch clean and pushed before you exit - the fast gate checks exactly that across all of them."
 }
