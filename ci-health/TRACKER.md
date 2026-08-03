@@ -2,28 +2,26 @@
 
 **Plan:** CI health - the public repos go green | **Branch:** `chore/ci-health` | **Design doc:** ci-health/README.md
 
-## Handoff (overwrite this block, ≤12 lines, no history)
+## Handoff (overwrite this block, ≤ 12 lines, no history)
 
-last: C1 COMPLETE - all three checkpoints landed with real-remote proof. conductor PR #1
-  merged as 7e10b17; master run 30826830593 green on BOTH legs, PR run 30826459149 green
-  on both. Release's latest run on master is green too, so conductor's default branch
-  reads green for both active workflows. Nothing was skipped, relaxed or hardcoded.
-stage: the fix widened one guard in SC8_2VersioningTests from "is HEAD a merge" to "does
-  v<tag>..HEAD contain any merge" - the divergence is a property of the range, so every
-  commit stacked on a merge inherited it. Second, unrelated red found by the local
-  battery: SC3_4AdvisorTests looked for a .git DIRECTORY, but conductor-ci is a linked
-  WORKTREE where .git is a file, so that test crashed before its assertion ever ran.
-  Fixed too. Local battery in conductor-ci: all four gates green, 1773 passed, 0 skipped.
-next: N1 - DevContext2, sitekit, site-template, blog-code, then dotgithub's two reusable
-  workflows. S1.3/S1.4 stay BLOCKED on the owner on purpose; do not reopen them.
-trap: conductor needed NO action bump - it is already on checkout@v7/setup-dotnet@v6/
-  setup-go@v7/cache@v6/upload-artifact@v7 with zero deprecation annotations, so C1.2's
-  bump half was a measurement, not an edit. Expect the same to be false elsewhere. Also:
-  SC4_1's LiveRun settle test is a timing flake on hosted windows runners (filed as a
-  bug); it failed master once with the version test passing, and `gh run rerun --failed`
-  turned it green - re-run it, never relax that 2.0s assertion. And commit TRACKER.md
-  LAST, after your `conductor task` calls - claiming regenerates it.
-
+last: N1 COMPLETE - all three checkpoints landed with real-remote proof. Four PRs merged:
+  blog-code #1, sitekit #2, site-template #32, DevContext2 #11 (base develop, not main).
+  Default branches green: blog-code 30828796177, sitekit 30828800198, site-template
+  30829068429 + dispatch 30829094483, DevContext2 CI 30829803125 and Eval 30829813027.
+stage: majors were MEASURED from each action's latest release, not guessed - checkout v7,
+  setup-node v7, setup-dotnet v6, setup-go v7, upload-artifact v7, download-artifact v8,
+  pnpm/action-setup v6, gh-release v3. Node 20 annotations confirmed gone via the
+  check-runs annotations API on every run, before and after. dotgithub needed NO edit: both
+  its files were already on current majors, so content-request.yml's credential guard was
+  never disturbed - proven downstream by site-template's CI green against site-ci.yml@main.
+next: N1 is closed. S1.3/S1.4 stay BLOCKED on the owner on purpose; do not reopen them.
+trap: DevContext2's default branch is develop, and develop is checked out in ANOTHER
+  worktree at C:/Code/DevContext2-ui - branch off origin/develop, never check it out there.
+  Its macos-latest leg has a timing-flaky test (StageWaterfall, bug #3) that was already
+  red on main before this session; rerun --failed, never relax its percentage floor. One
+  dispatch, DevContext2 Release 30829815008 on develop, was still building at session end -
+  the identical branch dispatch 30828834858 was success. Shamshir has 6 pre-existing dirty
+  files that are the owner's, deliberately not swept into an N1 commit.
 
 ## Baseline numbers (from run.db)
 
@@ -31,7 +29,7 @@ trap: conductor needed NO action bump - it is already on checkout@v7/setup-dotne
 |---|---|
 | Total checkpoints | 20 |
 | Done | 4 |
-| Claimed (unconfirmed) | 6 |
+| Claimed (unconfirmed) | 9 |
 
 ## Checkpoints
 
@@ -69,9 +67,9 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| C1.1 | The version test's merge guard covers merges anywhere between the newest tag and HEAD, not just at HEAD. The prerelease-shape assertion above it still runs in both branches of the guard | TODO | - | - |
-| C1.2 | The full local gate battery is green in `C:/Code/conductor-ci`, and conductor's workflow actions are on current majors | TODO | - | - |
-| C1.3 | The pull request's `CI` run is green on both the windows and ubuntu legs, the pull request is merged, and master's own `CI` run after the merge is green too | TODO | - | - |
+| C1.1 | The version test's merge guard covers merges anywhere between the newest tag and HEAD, not just at HEAD. The prerelease-shape assertion above it still runs in both branches of the guard | DONE | 11d8736 | ci-health/evidence/s7-C1.1-version-guard-widened.md |
+| C1.2 | The full local gate battery is green in `C:/Code/conductor-ci`, and conductor's workflow actions are on current majors | DONE | 11d8736 | ci-health/evidence/s7-C1.2-local-battery-green.md |
+| C1.3 | The pull request's `CI` run is green on both the windows and ubuntu legs, the pull request is merged, and master's own `CI` run after the merge is green too | DONE | 11d8736 | ci-health/evidence/s7-C1.3-pr-and-master-green.md |
 
 ### N1 — The Node 20 action sweep across the remaining repos
 

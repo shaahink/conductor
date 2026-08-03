@@ -1,10 +1,10 @@
 ﻿# Conductor — CI health - the public repos go green run report
 
-_Updated 2026-08-03 15:36 UTC · branch `chore/ci-health` · HEAD `55c8a8b`_
+_Updated 2026-08-03 16:08 UTC · branch `chore/ci-health` · HEAD `02ec6b6`_
 
 **Status:** Idle
-**Stage:** C1 — conductor - the version test stops breaking on every commit · attempts used 0
-**Checkpoints:** 13/20 done · **Sessions run:** 7 · **Cost:** $17.9542 (agent $17.9531 + gates $0.0011) · **Tokens:** 402,090 in / 164,074 out
+**Stage:** N1 — The Node 20 action sweep across the remaining repos · attempts used 1
+**Checkpoints:** 16/20 done · **Sessions run:** 8 · **Cost:** $23.7278 (agent $23.7264 + gates $0.0014) · **Tokens:** 497,119 in / 213,750 out
 **Confirmed phases:** K1, C1
 **⚠ Skipped stages (need human review):** B1, S1
 
@@ -16,7 +16,7 @@ _Updated 2026-08-03 15:36 UTC · branch `chore/ci-health` · HEAD `55c8a8b`_
 | B1 | site - the link checker goes green | ██████████ 4/4 | SKIPPED ⚠ |
 | S1 | Shamshir - the release workflow goes green | █████░░░░░ 2/4 | SKIPPED ⚠ |
 | C1 | conductor - the version test stops breaking on every commit | ██████████ 3/3 | confirmed ✓ |
-| N1 | The Node 20 action sweep across the remaining repos | ░░░░░░░░░░ 0/3 | todo |
+| N1 | The Node 20 action sweep across the remaining repos | ██████████ 3/3 | gating… |
 | Z1 | Close out - the whole fleet reads green | ░░░░░░░░░░ 0/2 | todo |
 
 <details> ✅<summary>K1 — Retire KataFlow (4/4)</summary>
@@ -62,13 +62,13 @@ _Updated 2026-08-03 15:36 UTC · branch `chore/ci-health` · HEAD `55c8a8b`_
 
 </details>
 
-<details><summary>N1 — The Node 20 action sweep across the remaining repos (0/3)</summary>
+<details> ✅<summary>N1 — The Node 20 action sweep across the remaining repos (3/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| N1.1 | DevContext2, sitekit, site-template and blog-code each have a branch bumping their workflow actions off the Node 20 runtime, with CI green on the pull request | ⬜ TODO | - |
-| N1.2 | Those four pull requests are merged and each repo's default branch is green | ⬜ TODO | - |
-| N1.3 | The two reusable workflows in the org's dotfile-named repo are bumped, with the shared site pipeline proven by a downstream caller's CI going green. If the agent-running workflow's credential guard cannot be demonstrated to still hold, it is left alone and the reason is recorded here - that is an acceptable completion, not a failure | ⬜ TODO | - |
+| N1.1 | DevContext2, sitekit, site-template and blog-code each have a branch bumping their workflow actions off the Node 20 runtime, with CI green on the pull request | ✅ DONE | [`8175f7c`](https://github.com/shaahink/conductor/commit/8175f7c) |
+| N1.2 | Those four pull requests are merged and each repo's default branch is green | ✅ DONE | [`8175f7c`](https://github.com/shaahink/conductor/commit/8175f7c) |
+| N1.3 | The two reusable workflows in the org's dotfile-named repo are bumped, with the shared site pipeline proven by a downstream caller's CI going green. If the agent-running workflow's credential guard cannot be demonstrated to still hold, it is left alone and the reason is recorded here - that is an acceptable completion, not a failure | ✅ DONE | [`8175f7c`](https://github.com/shaahink/conductor/commit/8175f7c) |
 
 </details>
 
@@ -92,17 +92,13 @@ _Updated 2026-08-03 15:36 UTC · branch `chore/ci-health` · HEAD `55c8a8b`_
 | 5 | S1 | Deliver | 1 | 08-03 14:56 | 0:01 | KilledByUser |  | 0 |  |  |  | 20,783/75 |
 | 6 | S1 | Deliver | 1 | 08-03 14:58 | 0:00 | KilledByUser |  | 0 |  |  |  | 20,732/6 |
 | 7 | C1 | Deliver | 1 | 08-03 14:59 | 0:36 | Advanced | C1.1 C1.2 C1.3 | 2 | repos-clean:OK | $5.0127 | $0.0002 | 89,000/41,563 |
+| 8 | N1 | Deliver | 1 | 08-03 15:36 | 0:30 | Advanced | N1.1 N1.2 N1.3 | 7 | repos-clean:OK | $5.7733 | $0.0003 | 95,029/49,676 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-03 14:54:19  ◆ run resumed · CI health - the public repos go green
-08-03 14:54:26  ▪ gate repos-clean pass [phase]  (2.7s)
-08-03 14:54:26  ▪ gate kataflow-retired pass [phase]  (2.6s)
-08-03 14:54:26  ✓ checkpoint K1.1 confirmed
-08-03 14:54:26  ✓ checkpoint K1.2 confirmed
 08-03 14:54:26  ✓ checkpoint K1.3 confirmed
 08-03 14:54:26  ✓ checkpoint K1.4 confirmed
 08-03 14:54:26  ▸ stage K1 confirmed  (9m46s)
@@ -138,6 +134,11 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-03 16:36:19  ✓ checkpoint C1.1 confirmed
 08-03 16:36:19  ✓ checkpoint C1.2 confirmed
 08-03 16:36:19  ✓ checkpoint C1.3 confirmed
+08-03 16:36:19  ▸ stage C1 confirmed  (36m27s)
+08-03 16:36:22  ▸ stage N1 entered — The Node 20 action sweep across the remaining repos
+08-03 16:36:22  • session #8 N1 Deliver started (attempt 1/4)
+08-03 17:07:16  ▪ gate repos-clean pass [session]  (2.6s)
+08-03 17:07:20  • session #8 N1 → Advanced · done N1.1,N1.2,N1.3 · 7 commit(s)  (30m57s)
 ```
 
 ## Health
@@ -145,7 +146,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 7 · retries 1 (14 %) · overall Warn
+sessions 8 · retries 1 (12 %) · overall Warn
 ⚠ [gate-oscillation] gate 'repos-clean' flipped pass/fail 4x
 ```
 
@@ -188,6 +189,19 @@ vs upstream: up to date
   - [`11d8736`](https://github.com/shaahink/conductor/commit/11d8736) evidence(C1): s7 C1.1 version-test merge guard widened; C1.2 local battery green
   - `d63a8b7` fix(tests): find the repo root in a linked worktree, not just a clone [conductor-ci]
   - `b8cc0eb` fix(tests): widen SC8.2's merge guard from HEAD to the whole tag..HEAD range [conductor-ci]
+- **s8 (N1 Deliver)** — 7 commit(s) (+5 in satellite repo(s)):
+  - [`cc7e71b`](https://github.com/shaahink/conductor/commit/cc7e71b) chore(conductor): s8 N1 complete - Node 20 sweep landed across five repos
+  - [`5bef191`](https://github.com/shaahink/conductor/commit/5bef191) evidence(N1): s8 N1.2 three of four merged, default branches green (DevContext2 pending)
+  - [`399bc20`](https://github.com/shaahink/conductor/commit/399bc20) evidence(N1): s8 N1.3 dotgithub already on current majors, proven downstream
+  - [`86235ae`](https://github.com/shaahink/conductor/commit/86235ae) evidence(N1): s8 N1.1 four branches bumped, PR runs green
+  - [`78f3ad8`](https://github.com/shaahink/conductor/commit/78f3ad8) chore(conductor): s7 C1 Advanced — Idle
+  - [`55c8a8b`](https://github.com/shaahink/conductor/commit/55c8a8b) chore(conductor): s7 C1 Advanced — Idle
+  - [`8175f7c`](https://github.com/shaahink/conductor/commit/8175f7c) chore(conductor): s7 C1 complete - version guard widened, worktree repo-root fixed, master green
+  - `671dc3e` ci: move both workflows off the Node 20 action runtime (#2) [sitekit]
+  - `0b54ebc` ci: let the shared pipeline be re-proven from main on demand (#32) [site-template]
+  - `9a0a1b1` Add LICENSE: MIT [site-template]
+  - `cbe1021` ci: move build.yml off the Node 20 action runtime (#1) [blog-code]
+  - `a059eb7` Add LICENSE: MIT [blog-code]
 
 ## Phase handovers (audit)
 
@@ -210,32 +224,59 @@ vs upstream: up to date
 
 ## Last gate run
 
-repos-clean:OK · conductor-green:OK
+repos-clean:OK · fleet-green:FAIL-retry
+
+<details><summary>fleet-green — exit 1</summary>
+
+```
+[conductor] retried once (SC4.1): the first attempt exited 1 after 21s. Below is the SECOND run.
+OK   shaahink/conductor / CI - run 30826830593 success on master
+  OK   shaahink/conductor / Release - run 30385802454 success on master
+  SKIP shaahink/Shamshir / PR Build & Test - no runs on main (normal for a tag-triggered, pull-request-only or reusable workflow)
+  OK   shaahink/site / Deploy to GitHub Pages - run 30821258479 success on main
+  OK   shaahink/site / Check links - run 30821400002 success on main
+  OK   shaahink/DevContext2 / CI - run 30829803125 success on develop
+  OK   shaahink/DevContext2 / Eval - run 30829813027 success on develop
+  OK   shaahink/sitekit / CI - run 30828800198 success on main
+  SKIP shaahink/sitekit / Release - no runs on main (normal for a tag-triggered, pull-request-only or reusable workflow)
+  OK   shaahink/site-template / CI - run 30829094483 success on main
+  OK   shaahink/blog-code / build - run 30828796177 success on main
+
+checked 11 workflow(s), skipped 2 with no runs on their default branch
+
+RED - 2 workflow(s) are not green:
+  * shaahink/Shamshir / Release : latest run on main concluded 'failure' (run 30765474447) - https://github.com/shaahink/Shamshir/actions/runs/30765474447
+  * shaahink/DevContext2 / Release : latest run on develop is still 'in_progress' (run 30829815008) - it has not finished, so it is not evidence
+
+Reminder: a schedule-only or dispatch-only workflow does NOT get a fresh run from a
+merge. If the fix landed but the default branch still shows the old red run, dispatch
+the workflow on the default branch.
+```
+</details>
 
 ## Last session result
 
-> SESSION-RESULT: Stage C1 is fully delivered and green on the real remote — all three checkpoints claimed via `conductor task --done` with evidence files `ci-health/evidence/s7-C1.1-version-guard-widened.md`, `s7-C1.2-local-battery-green.md` and `s7-C1.3-pr-and-master-green.md`. conductor PR #1 merged as `7e10b17`; master CI run 30826830593 is green on both the windows and ubuntu legs, and `Release`'s latest run on master is green too, so conductor's default branch reads green for both of its active workflows. Two commits landed in `C:/Code/conductor-ci` (`b8cc0eb` version guard, `d63a8b7` worktree repo-root) and two in the control room (`11d8736` evidence, `8175f7c` tracker + handoff); both …
+> SESSION-RESULT: Stage N1 is complete — all three checkpoints claimed DONE with real-remote evidence. **N1.1**: current majors were measured from each action's own latest release rather than guessed (checkout v7, setup-node v7, setup-dotnet v6, setup-go v7, upload-artifact v7, download-artifact v8, pnpm/action-setup v6, gh-release v3), and four branches landed green PR runs — blog-code #1 (30828584094), sitekit #2 (30828661891), DevContext2 #11 based on `develop` (30828680117), site-template #32 (30828982820). The Node 20 deprecation annotations were confirmed present before and **absent after** through the check-runs annotations API; sitekit turned out never to have been on Node 20 at all, s…
 
 ## Tracker handoff
 
 ```
-last: C1 COMPLETE - all three checkpoints landed with real-remote proof. conductor PR #1
-  merged as 7e10b17; master run 30826830593 green on BOTH legs, PR run 30826459149 green
-  on both. Release's latest run on master is green too, so conductor's default branch
-  reads green for both active workflows. Nothing was skipped, relaxed or hardcoded.
-stage: the fix widened one guard in SC8_2VersioningTests from "is HEAD a merge" to "does
-  v<tag>..HEAD contain any merge" - the divergence is a property of the range, so every
-  commit stacked on a merge inherited it. Second, unrelated red found by the local
-  battery: SC3_4AdvisorTests looked for a .git DIRECTORY, but conductor-ci is a linked
-  WORKTREE where .git is a file, so that test crashed before its assertion ever ran.
-  Fixed too. Local battery in conductor-ci: all four gates green, 1773 passed, 0 skipped.
-next: N1 - DevContext2, sitekit, site-template, blog-code, then dotgithub's two reusable
-  workflows. S1.3/S1.4 stay BLOCKED on the owner on purpose; do not reopen them.
-trap: conductor needed NO action bump - it is already on checkout@v7/setup-dotnet@v6/
-  setup-go@v7/cache@v6/upload-artifact@v7 with zero deprecation annotations, so C1.2's
-  bump half was a measurement, not an edit. Expect the same to be false elsewhere. Also:
-  SC4_1's LiveRun settle test is a timing flake on hosted windows runners (filed as a
-  bug); it failed master once with the version test passing, and `gh run rerun --failed`
-  turned it green - re-run it, never relax that 2.0s assertion. And commit TRACKER.md
-  LAST, after your `conductor task` calls - claiming regenerates it.
+last: N1 COMPLETE - all three checkpoints landed with real-remote proof. Four PRs merged:
+  blog-code #1, sitekit #2, site-template #32, DevContext2 #11 (base develop, not main).
+  Default branches green: blog-code 30828796177, sitekit 30828800198, site-template
+  30829068429 + dispatch 30829094483, DevContext2 CI 30829803125 and Eval 30829813027.
+stage: majors were MEASURED from each action's latest release, not guessed - checkout v7,
+  setup-node v7, setup-dotnet v6, setup-go v7, upload-artifact v7, download-artifact v8,
+  pnpm/action-setup v6, gh-release v3. Node 20 annotations confirmed gone via the
+  check-runs annotations API on every run, before and after. dotgithub needed NO edit: both
+  its files were already on current majors, so content-request.yml's credential guard was
+  never disturbed - proven downstream by site-template's CI green against site-ci.yml@main.
+next: N1 is closed. S1.3/S1.4 stay BLOCKED on the owner on purpose; do not reopen them.
+trap: DevContext2's default branch is develop, and develop is checked out in ANOTHER
+  worktree at C:/Code/DevContext2-ui - branch off origin/develop, never check it out there.
+  Its macos-latest leg has a timing-flaky test (StageWaterfall, bug #3) that was already
+  red on main before this session; rerun --failed, never relax its percentage floor. One
+  dispatch, DevContext2 Release 30829815008 on develop, was still building at session end -
+  the identical branch dispatch 30828834858 was success. Shamshir has 6 pre-existing dirty
+  files that are the owner's, deliberately not swept into an N1 commit.
 ```
