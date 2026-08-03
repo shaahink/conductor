@@ -1,8 +1,8 @@
 ﻿# Conductor — CI health - the public repos go green run report
 
-_Updated 2026-08-03 14:52 UTC · branch `chore/ci-health` · HEAD `4d06613`_
+_Updated 2026-08-03 14:52 UTC · branch `chore/ci-health` · HEAD `b3efa80`_
 
-**Status:** Idle
+**Status:** NeedsHuman — agent asked for a human in the tracker handoff (HUMAN: line) — resolve, then run `conductor resume` [0s ago, 14:52:59Z]
 **Stage:** S1 — Shamshir - the release workflow goes green · attempts used 0 · working ▸ S1.3
 **Checkpoints:** 10/20 done · **Sessions run:** 4 · **Cost:** $12.9413 (agent $12.9404 + gates $0.0009) · **Tokens:** 271,575 in / 122,430 out
 **Confirmed phases:** K1
@@ -45,8 +45,8 @@ _Updated 2026-08-03 14:52 UTC · branch `chore/ci-health` · HEAD `4d06613`_
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| S1.1 | `release.yml` gains a manual-dispatch trigger, so the workflow can be exercised from a branch instead of only by pushing to main | ✅ DONE | - |
-| S1.2 | The Angular build succeeds in CI - either Node is set up before the .NET build, or the MSBuild target degrades honestly when Node is absent. Whichever is chosen is justified in the commit message | ✅ DONE | - |
+| S1.1 | `release.yml` gains a manual-dispatch trigger, so the workflow can be exercised from a branch instead of only by pushing to main | ✅ DONE | [`4d06613`](https://github.com/shaahink/conductor/commit/4d06613) |
+| S1.2 | The Angular build succeeds in CI - either Node is set up before the .NET build, or the MSBuild target degrades honestly when Node is absent. Whichever is chosen is justified in the commit message | ✅ DONE | [`4d06613`](https://github.com/shaahink/conductor/commit/4d06613) |
 | S1.3 | The archived release action in the final step is replaced with a maintained equivalent, and the replacement is actually exercised rather than assumed | 🚫 BLOCKED | - |
 | S1.4 | `Release`, dispatched on the fix branch, is green end to end - run id recorded - the pull request is merged, and a fresh green run exists on the default branch | 🚫 BLOCKED | - |
 
@@ -124,6 +124,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-03 15:22:28  ▸ stage S1 entered — Shamshir - the release workflow goes green
 08-03 15:22:29  • session #4 S1 Deliver started (attempt 1/4)
 08-03 15:52:56  ▪ gate repos-clean pass [session]  (2.3s)
+08-03 15:52:59  • session #4 S1 → Advanced · done S1.1,S1.2 · 1 commit(s)  (30m30s)
 ```
 
 ## Health
@@ -141,7 +142,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: chore/ci-health
-working tree: clean
+working tree: M ci-health/TRACKER.md
 vs upstream: up to date
 ```
 
