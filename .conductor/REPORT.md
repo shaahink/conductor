@@ -1,12 +1,12 @@
 ﻿# Conductor — CI health - the public repos go green run report
 
-_Updated 2026-08-03 14:59 UTC · branch `chore/ci-health` · HEAD `d546a1a`_
+_Updated 2026-08-03 14:59 UTC · branch `chore/ci-health` · HEAD `1156d40`_
 
 **Status:** Paused
 **Stage:** S1 — Shamshir - the release workflow goes green · attempts used 0 · working ▸ S1.3
 **Checkpoints:** 10/20 done · **Sessions run:** 6 · **Cost:** $12.9413 (agent $12.9404 + gates $0.0009) · **Tokens:** 313,090 in / 122,511 out
 **Confirmed phases:** K1
-**⚠ Skipped stages (need human review):** B1
+**⚠ Skipped stages (need human review):** B1, S1
 
 ## Stage progress
 
@@ -14,7 +14,7 @@ _Updated 2026-08-03 14:59 UTC · branch `chore/ci-health` · HEAD `d546a1a`_
 |---|---|---|---|
 | K1 | Retire KataFlow | ██████████ 4/4 | confirmed ✓ |
 | B1 | site - the link checker goes green | ██████████ 4/4 | SKIPPED ⚠ |
-| S1 | Shamshir - the release workflow goes green | █████░░░░░ 2/4 | **← active** |
+| S1 | Shamshir - the release workflow goes green | █████░░░░░ 2/4 | SKIPPED ⚠ |
 | C1 | conductor - the version test stops breaking on every commit | ░░░░░░░░░░ 0/3 | todo |
 | N1 | The Node 20 action sweep across the remaining repos | ░░░░░░░░░░ 0/3 | todo |
 | Z1 | Close out - the whole fleet reads green | ░░░░░░░░░░ 0/2 | todo |
@@ -132,6 +132,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-03 15:57:56  • session #5 S1 → KilledByUser  (1m04s)
 08-03 15:58:29  ▸ stage S1 entered — Shamshir - the release workflow goes green
 08-03 15:58:29  • session #6 S1 Deliver started (attempt 1/4)
+08-03 15:59:25  • session #6 S1 → KilledByUser  (55.8s)
 ```
 
 ## Health
