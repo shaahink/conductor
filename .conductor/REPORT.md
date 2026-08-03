@@ -1,12 +1,11 @@
 ﻿# Conductor — CI health - the public repos go green run report
 
-_Updated 2026-08-03 14:12 UTC · branch `chore/ci-health` · HEAD `b836308`_
+_Updated 2026-08-03 14:12 UTC · branch `chore/ci-health` · HEAD `c5cf737`_
 
 **Status:** Idle
-**Stage:** B1 — site - the link checker goes green · attempts used 0
+**Stage:** B1 — site - the link checker goes green · attempts used 1
 **Checkpoints:** 8/20 done · **Sessions run:** 2 · **Cost:** $6.0460 (agent $6.0456 + gates $0.0005) · **Tokens:** 132,803 in / 62,018 out
 **Confirmed phases:** K1
-**Pending:** full-battery phase gate for B1
 
 ## Stage progress
 
@@ -34,10 +33,10 @@ _Updated 2026-08-03 14:12 UTC · branch `chore/ci-health` · HEAD `b836308`_
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| B1.1 | The two links to the site root in the README point at the real published URL, verified by fetching it and getting a 200 rather than by assuming | ✅ DONE | - |
-| B1.2 | lychee is given a root directory so the 15 root-relative links resolve; no correct link was rewritten to make the checker happy | ✅ DONE | - |
-| B1.3 | The `Check links` workflow, dispatched manually on the fix branch, finishes with zero errors - run id recorded | ✅ DONE | - |
-| B1.4 | site's workflow actions are on current majors, the pull request is merged with checks green, and a fresh green run of `Check links` exists on the default branch | ✅ DONE | - |
+| B1.1 | The two links to the site root in the README point at the real published URL, verified by fetching it and getting a 200 rather than by assuming | ✅ DONE | [`1081e8e`](https://github.com/shaahink/conductor/commit/1081e8e) |
+| B1.2 | lychee is given a root directory so the 15 root-relative links resolve; no correct link was rewritten to make the checker happy | ✅ DONE | [`1081e8e`](https://github.com/shaahink/conductor/commit/1081e8e) |
+| B1.3 | The `Check links` workflow, dispatched manually on the fix branch, finishes with zero errors - run id recorded | ✅ DONE | [`1081e8e`](https://github.com/shaahink/conductor/commit/1081e8e) |
+| B1.4 | site's workflow actions are on current majors, the pull request is merged with checks green, and a fresh green run of `Check links` exists on the default branch | ✅ DONE | [`1081e8e`](https://github.com/shaahink/conductor/commit/1081e8e) |
 
 </details>
 
@@ -109,6 +108,8 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-03 14:54:29  ▸ stage B1 entered — site - the link checker goes green
 08-03 14:54:30  • session #2 B1 Deliver started (attempt 1/2)
 08-03 15:12:43  ▪ gate repos-clean pass [session]  (2.2s)
+08-03 15:12:46  • session #2 B1 → Advanced · done B1.1,B1.2,B1.3,B1.4 · 2 commit(s)  (18m16s)
+08-03 15:12:54  ▪ gate repos-clean FAIL [phase]  (2.4s)
 ```
 
 ## Health
@@ -126,7 +127,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: chore/ci-health
-working tree: clean
+working tree: M ci-health/TRACKER.md
 vs upstream: up to date
 ```
 
@@ -169,7 +170,27 @@ vs upstream: up to date
 
 ## Last gate run
 
-repos-clean:OK
+repos-clean:FAIL-retry · site-green:OK
+
+<details><summary>repos-clean — exit 1</summary>
+
+```
+[conductor] retried once (SC4.1): the first attempt exited 1 after 2s. Below is the SECOND run.
+OK   conductor-ci
+  OK   KataFlow-ai
+  note Shamshir - 6 pre-existing uncommitted file(s) ignored per dirty-baseline.txt
+  OK   Shamshir
+  OK   site-blog
+  OK   DevContext2
+  OK   sitekit
+  OK   site-template
+  OK   blog-code
+  OK   dotgithub
+
+RED - 1 repository problem(s):
+  * conductor-cihealth : 1 uncommitted change(s) this run did not start with - ci-health/TRACKER.md
+```
+</details>
 
 ## Last session result
 
