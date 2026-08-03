@@ -1,12 +1,11 @@
 ﻿# Conductor — CI health - the public repos go green run report
 
-_Updated 2026-08-03 17:10 UTC · branch `chore/ci-health` · HEAD `0b1d38f`_
+_Updated 2026-08-03 17:23 UTC · branch `chore/ci-health` · HEAD `a52ea10`_
 
-**Status:** AwaitingOwner
+**Status:** Idle
 **Stage:** Z1 — Close out - the whole fleet reads green · attempts used 0
 **Checkpoints:** 20/20 done · **Sessions run:** 12 · **Cost:** $37.9323 (agent $37.9297 + gates $0.0026) · **Tokens:** 819,213 in / 338,952 out
-**Confirmed phases:** K1, C1, N1
-**Pending:** full-battery phase gate for Z1
+**Confirmed phases:** K1, C1, N1, Z1
 **⚠ Skipped stages (need human review):** B1, S1
 
 ## Stage progress
@@ -18,7 +17,7 @@ _Updated 2026-08-03 17:10 UTC · branch `chore/ci-health` · HEAD `0b1d38f`_
 | S1 | Shamshir - the release workflow goes green | ██████████ 4/4 | SKIPPED ⚠ |
 | C1 | conductor - the version test stops breaking on every commit | ██████████ 3/3 | confirmed ✓ |
 | N1 | The Node 20 action sweep across the remaining repos | ██████████ 3/3 | confirmed ✓ |
-| Z1 | Close out - the whole fleet reads green | ██████████ 2/2 | gating… |
+| Z1 | Close out - the whole fleet reads green | ██████████ 2/2 | confirmed ✓ |
 
 <details> ✅<summary>K1 — Retire KataFlow (4/4)</summary>
 
@@ -104,10 +103,6 @@ _Updated 2026-08-03 17:10 UTC · branch `chore/ci-health` · HEAD `0b1d38f`_
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-03 15:59:51  ▸ stage C1 entered — conductor - the version test stops breaking on every commit
-08-03 15:59:52  • session #7 C1 Deliver started (attempt 1/4)
-08-03 16:36:11  ▪ gate repos-clean pass [session]  (2.5s)
-08-03 16:36:14  • session #7 C1 → Advanced · done C1.1,C1.2,C1.3 · 2 commit(s)  (36m21s)
 08-03 16:36:19  ▪ gate repos-clean pass [phase]  (2.1s)
 08-03 16:36:19  ▪ gate conductor-green pass [phase]  (2.8s)
 08-03 16:36:19  ✓ checkpoint C1.1 confirmed
@@ -144,6 +139,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-03 18:10:21  • session #12 Z1 → Advanced · done Z1.1,Z1.2 · 21 commit(s)  (7m09s)
 08-03 18:10:39  ▪ gate repos-clean pass [phase]  (2.5s)
 08-03 18:10:39  ▪ gate fleet-green pass [phase]  (14.7s)
+08-03 18:10:39  § owner approval requested — Z1
+08-03 18:23:26  § owner approval granted — Z1
+08-03 18:23:26  ✓ checkpoint Z1.1 confirmed
+08-03 18:23:26  ✓ checkpoint Z1.2 confirmed
 ```
 
 ## Health
