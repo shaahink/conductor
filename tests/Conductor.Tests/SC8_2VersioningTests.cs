@@ -121,18 +121,28 @@ public sealed partial class SC8_2VersioningTests
         // assembly — a real situation, and not a versioning defect. The SC8.1 commit stamp is what
         // lets the assertion know which case it is in, so the strict check runs whenever it can.
         //
-        // A merge commit is a second such case, and it needs its own guard: `git describe`'s height
-        // counts every commit unique to HEAD across ALL parents (rev-list's set-difference), while
-        // MinVer's height is the SHORTEST distance to a tagged commit found by walking those parents.
-        // When one parent sits exactly on the tag and the other is several commits past it, the two
-        // numbers legitimately disagree — v0.3.0..c4febc1 is 5 by `describe`, 1 by MinVer, because
-        // the merge's first parent WAS v0.3.0. Not a versioning defect; a merge history has no single
-        // "height" both algorithms agree on.
-        var parents = Git("log -1 --format=%P HEAD");
-        var isMergeCommit = parents is not null && parents.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length > 1;
+        // A merge ANYWHERE between the newest tag and HEAD is a second such case, and it needs its own
+        // guard: `git describe`'s height counts every commit unique to HEAD across ALL parents
+        // (rev-list's set-difference), while MinVer's height is the SHORTEST distance to a tagged commit
+        // found by walking those parents. When one parent sits exactly on the tag and the other is
+        // several commits past it, the two numbers legitimately disagree — v0.3.0..c4febc1 is 5 by
+        // `describe`, 1 by MinVer, because the merge's first parent WAS v0.3.0. Not a versioning defect;
+        // a merge history has no single "height" both algorithms agree on.
+        //
+        // Asking whether HEAD ITSELF is a merge is too narrow. The divergence is a property of the
+        // RANGE, not of the tip: once a merge is in v0.3.0..HEAD, every ordinary commit stacked on top
+        // of it inherits the gap, so the guard only fired on the merge commit and then let the strict
+        // check loose on every commit after it. That is why master went red on a docs-only commit.
+        // Ask about the range instead — one `git log --merges` over tag..HEAD.
+        var mergesInRange = Git($"log --merges --format=%H v{m.Groups["base"].Value}..HEAD");
+
+        // A failed query is "cannot tell", and cannot-tell is treated as "they may disagree": the strict
+        // height equality is the optional half of this test, and guessing wrong would fail the suite over
+        // a git problem rather than a versioning one. The shape assertion above ran either way.
+        var heightsMayDisagree = mergesInRange is null || mergesInRange.Length > 0;
 
         var head = Git("rev-parse --short=12 HEAD");
-        if (!isMergeCommit && head is not null && string.Equals(head, BuildInfo.Current.CommitSha, StringComparison.OrdinalIgnoreCase))
+        if (!heightsMayDisagree && head is not null && string.Equals(head, BuildInfo.Current.CommitSha, StringComparison.OrdinalIgnoreCase))
         {
             var expected = height == 0 ? expectedBase : $"{expectedBase}-alpha.0.{height}";
             Assert.Equal(expected, actual);
