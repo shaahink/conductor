@@ -1,10 +1,10 @@
 ﻿# Conductor — CI health - the public repos go green run report
 
-_Updated 2026-08-03 14:57 UTC · branch `chore/ci-health` · HEAD `46e3438`_
+_Updated 2026-08-03 14:59 UTC · branch `chore/ci-health` · HEAD `d546a1a`_
 
 **Status:** Paused
 **Stage:** S1 — Shamshir - the release workflow goes green · attempts used 0 · working ▸ S1.3
-**Checkpoints:** 10/20 done · **Sessions run:** 5 · **Cost:** $12.9413 (agent $12.9404 + gates $0.0009) · **Tokens:** 292,358 in / 122,505 out
+**Checkpoints:** 10/20 done · **Sessions run:** 6 · **Cost:** $12.9413 (agent $12.9404 + gates $0.0009) · **Tokens:** 313,090 in / 122,511 out
 **Confirmed phases:** K1
 **⚠ Skipped stages (need human review):** B1
 
@@ -90,6 +90,7 @@ _Updated 2026-08-03 14:57 UTC · branch `chore/ci-health` · HEAD `46e3438`_
 | 3 | B1 | Fix | 2 | 08-03 14:12 | 0:03 | Progress |  | 1 | repos-clean:OK | $0.8977 | $0.0002 | 30,961/10,352 |
 | 4 | S1 | Deliver | 1 | 08-03 14:22 | 0:30 | Advanced | S1.1 S1.2 | 1 | repos-clean:OK | $5.9972 | $0.0002 | 107,811/50,060 |
 | 5 | S1 | Deliver | 1 | 08-03 14:56 | 0:01 | KilledByUser |  | 0 |  |  |  | 20,783/75 |
+| 6 | S1 | Deliver | 1 | 08-03 14:58 | 0:00 | KilledByUser |  | 0 |  |  |  | 20,732/6 |
 
 ## Timeline
 
@@ -128,6 +129,9 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-03 15:52:59  • session #4 S1 → Advanced · done S1.1,S1.2 · 1 commit(s)  (30m30s)
 08-03 15:52:59  ■ needs human — agent asked for a human in the tracker handoff (HUMAN: line) — resolve, then run `conductor resume`
 08-03 15:56:51  • session #5 S1 Deliver started (attempt 1/4)
+08-03 15:57:56  • session #5 S1 → KilledByUser  (1m04s)
+08-03 15:58:29  ▸ stage S1 entered — Shamshir - the release workflow goes green
+08-03 15:58:29  • session #6 S1 Deliver started (attempt 1/4)
 ```
 
 ## Health
@@ -135,7 +139,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 5 · retries 1 (20 %) · overall Warn
+sessions 6 · retries 1 (17 %) · overall Warn
 ⚠ [gate-oscillation] gate 'repos-clean' flipped pass/fail 4x
 ```
 
