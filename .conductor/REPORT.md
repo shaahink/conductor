@@ -1,10 +1,10 @@
 ﻿# Conductor — CI health - the public repos go green run report
 
-_Updated 2026-08-03 14:52 UTC · branch `chore/ci-health` · HEAD `b3efa80`_
+_Updated 2026-08-03 14:57 UTC · branch `chore/ci-health` · HEAD `46e3438`_
 
-**Status:** NeedsHuman — agent asked for a human in the tracker handoff (HUMAN: line) — resolve, then run `conductor resume` [0s ago, 14:52:59Z]
+**Status:** Paused
 **Stage:** S1 — Shamshir - the release workflow goes green · attempts used 0 · working ▸ S1.3
-**Checkpoints:** 10/20 done · **Sessions run:** 4 · **Cost:** $12.9413 (agent $12.9404 + gates $0.0009) · **Tokens:** 271,575 in / 122,430 out
+**Checkpoints:** 10/20 done · **Sessions run:** 5 · **Cost:** $12.9413 (agent $12.9404 + gates $0.0009) · **Tokens:** 292,358 in / 122,505 out
 **Confirmed phases:** K1
 **⚠ Skipped stages (need human review):** B1
 
@@ -89,6 +89,7 @@ _Updated 2026-08-03 14:52 UTC · branch `chore/ci-health` · HEAD `b3efa80`_
 | 2 | B1 | Deliver | 1 | 08-03 13:54 | 0:18 | Advanced | B1.1 B1.2 B1.3 B1.4 | 2 | repos-clean:OK | $4.0980 | $0.0002 | 85,243/41,897 |
 | 3 | B1 | Fix | 2 | 08-03 14:12 | 0:03 | Progress |  | 1 | repos-clean:OK | $0.8977 | $0.0002 | 30,961/10,352 |
 | 4 | S1 | Deliver | 1 | 08-03 14:22 | 0:30 | Advanced | S1.1 S1.2 | 1 | repos-clean:OK | $5.9972 | $0.0002 | 107,811/50,060 |
+| 5 | S1 | Deliver | 1 | 08-03 14:56 | 0:01 | KilledByUser |  | 0 |  |  |  | 20,783/75 |
 
 ## Timeline
 
@@ -125,6 +126,8 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-03 15:22:29  • session #4 S1 Deliver started (attempt 1/4)
 08-03 15:52:56  ▪ gate repos-clean pass [session]  (2.3s)
 08-03 15:52:59  • session #4 S1 → Advanced · done S1.1,S1.2 · 1 commit(s)  (30m30s)
+08-03 15:52:59  ■ needs human — agent asked for a human in the tracker handoff (HUMAN: line) — resolve, then run `conductor resume`
+08-03 15:56:51  • session #5 S1 Deliver started (attempt 1/4)
 ```
 
 ## Health
@@ -132,7 +135,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 4 · retries 1 (25 %) · overall Warn
+sessions 5 · retries 1 (20 %) · overall Warn
 ⚠ [gate-oscillation] gate 'repos-clean' flipped pass/fail 4x
 ```
 
@@ -210,13 +213,15 @@ stage: Shamshir PR 3 (branch fix/release-node-and-gh-release) is OPEN and NOT me
   Node" was close but that script never invokes node at all). Then dotnet test failed:
   15 cTrader E2E (need a desktop cTrader install - now excluded via the repo's OWN
   filter from scripts/gates.ps1:22) and 2 REAL violations left red on purpose.
-gate: red, correctly. HUMAN: Release cannot go green until the owner decides on two of
+gate: red, correctly. DEFERRED (owner asked 15:55, answered: decide it separately, do
+  not block the run): Release cannot go green until the owner decides on two of
   their own architecture-test failures - EngineReducer.ReconcileToVenue (EngineReducer.cs:415)
   exports a System.DateTime the Engine purity rule forbids, and VenueSymbolSpecEntity
   lacks IAuditableEntity (needs audit columns + an EF migration). Both are product/schema
   changes, not CI. Run 30824699654 was dispatched to confirm only those 2 remain.
-next: C1 or N1 - both untouched and neither is blocked. For S1, the ONLY fake fix on
-  offer is excluding tests/TradingEngine.Tests.Architecture; refuse it, the iteration
+next: C1 or N1 as you judged - both untouched and neither is blocked. Do NOT reopen S1:
+  S1.3/S1.4 stay open on purpose until the owner rules. The ONLY fake fix on offer there
+  is excluding tests/TradingEngine.Tests.Architecture; refuse it, the iteration
   docs call that suite a gate that must stay 3/3.
 trap: a workflow_dispatch trigger added on a FEATURE BRANCH is dispatchable with
   `gh workflow run --ref <branch>` even though main's copy is still push-only - never
