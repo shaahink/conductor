@@ -1,12 +1,11 @@
 ﻿# Conductor — CI health - the public repos go green run report
 
-_Updated 2026-08-03 15:36 UTC · branch `chore/ci-health` · HEAD `8175f7c`_
+_Updated 2026-08-03 15:36 UTC · branch `chore/ci-health` · HEAD `55c8a8b`_
 
 **Status:** Idle
 **Stage:** C1 — conductor - the version test stops breaking on every commit · attempts used 0
 **Checkpoints:** 13/20 done · **Sessions run:** 7 · **Cost:** $17.9542 (agent $17.9531 + gates $0.0011) · **Tokens:** 402,090 in / 164,074 out
-**Confirmed phases:** K1
-**Pending:** full-battery phase gate for C1
+**Confirmed phases:** K1, C1
 **⚠ Skipped stages (need human review):** B1, S1
 
 ## Stage progress
@@ -16,7 +15,7 @@ _Updated 2026-08-03 15:36 UTC · branch `chore/ci-health` · HEAD `8175f7c`_
 | K1 | Retire KataFlow | ██████████ 4/4 | confirmed ✓ |
 | B1 | site - the link checker goes green | ██████████ 4/4 | SKIPPED ⚠ |
 | S1 | Shamshir - the release workflow goes green | █████░░░░░ 2/4 | SKIPPED ⚠ |
-| C1 | conductor - the version test stops breaking on every commit | ██████████ 3/3 | gating… |
+| C1 | conductor - the version test stops breaking on every commit | ██████████ 3/3 | confirmed ✓ |
 | N1 | The Node 20 action sweep across the remaining repos | ░░░░░░░░░░ 0/3 | todo |
 | Z1 | Close out - the whole fleet reads green | ░░░░░░░░░░ 0/2 | todo |
 
@@ -57,9 +56,9 @@ _Updated 2026-08-03 15:36 UTC · branch `chore/ci-health` · HEAD `8175f7c`_
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| C1.1 | The version test's merge guard covers merges anywhere between the newest tag and HEAD, not just at HEAD. The prerelease-shape assertion above it still runs in both branches of the guard | ✅ DONE | - |
-| C1.2 | The full local gate battery is green in `C:/Code/conductor-ci`, and conductor's workflow actions are on current majors | ✅ DONE | - |
-| C1.3 | The pull request's `CI` run is green on both the windows and ubuntu legs, the pull request is merged, and master's own `CI` run after the merge is green too | ✅ DONE | - |
+| C1.1 | The version test's merge guard covers merges anywhere between the newest tag and HEAD, not just at HEAD. The prerelease-shape assertion above it still runs in both branches of the guard | ✅ DONE | [`11d8736`](https://github.com/shaahink/conductor/commit/11d8736) |
+| C1.2 | The full local gate battery is green in `C:/Code/conductor-ci`, and conductor's workflow actions are on current majors | ✅ DONE | [`11d8736`](https://github.com/shaahink/conductor/commit/11d8736) |
+| C1.3 | The pull request's `CI` run is green on both the windows and ubuntu legs, the pull request is merged, and master's own `CI` run after the merge is green too | ✅ DONE | [`11d8736`](https://github.com/shaahink/conductor/commit/11d8736) |
 
 </details>
 
@@ -99,11 +98,6 @@ _Updated 2026-08-03 15:36 UTC · branch `chore/ci-health` · HEAD `8175f7c`_
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-03 14:44:39  ◆ run started · CI health - the public repos go green
-08-03 14:44:39  ▸ stage K1 entered — Retire KataFlow
-08-03 14:44:40  • session #1 K1 Deliver started (attempt 1/2)
-08-03 14:52:38  ▪ gate repos-clean pass [session]  (2.3s)
-08-03 14:52:41  • session #1 K1 → Advanced · done K1.1,K1.2,K1.3,K1.4 · 4 commit(s)  (8m00s)
 08-03 14:54:19  ◆ run resumed · CI health - the public repos go green
 08-03 14:54:26  ▪ gate repos-clean pass [phase]  (2.7s)
 08-03 14:54:26  ▪ gate kataflow-retired pass [phase]  (2.6s)
@@ -138,6 +132,12 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-03 15:59:51  ▸ stage C1 entered — conductor - the version test stops breaking on every commit
 08-03 15:59:52  • session #7 C1 Deliver started (attempt 1/4)
 08-03 16:36:11  ▪ gate repos-clean pass [session]  (2.5s)
+08-03 16:36:14  • session #7 C1 → Advanced · done C1.1,C1.2,C1.3 · 2 commit(s)  (36m21s)
+08-03 16:36:19  ▪ gate repos-clean pass [phase]  (2.1s)
+08-03 16:36:19  ▪ gate conductor-green pass [phase]  (2.8s)
+08-03 16:36:19  ✓ checkpoint C1.1 confirmed
+08-03 16:36:19  ✓ checkpoint C1.2 confirmed
+08-03 16:36:19  ✓ checkpoint C1.3 confirmed
 ```
 
 ## Health
@@ -155,7 +155,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: chore/ci-health
-working tree: clean
+working tree: M ci-health/TRACKER.md
 vs upstream: up to date
 ```
 
@@ -210,7 +210,7 @@ vs upstream: up to date
 
 ## Last gate run
 
-repos-clean:OK
+repos-clean:OK · conductor-green:OK
 
 ## Last session result
 
