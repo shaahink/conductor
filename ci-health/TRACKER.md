@@ -4,29 +4,25 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: N1 CLOSED and now provably green. The battery's two reds are both resolved as facts:
-  DevContext2 Release 30829815008 was a still-building Tauri job, not a failure - it
-  completed SUCCESS on develop. Sweep re-verified COMPLETE by git grep of "uses:" against
-  every remote default branch (conductor, DevContext2, sitekit, blog-code, site, dotgithub;
-  site-template only calls the reusable workflow) - every pin at the measured current major,
-  nothing missed, no composite actions anywhere. 12 of 13 active fleet workflows green.
-stage: the one remaining red is S1's, not N1's, and it needs the OWNER. Shamshir/Release on
-  main is still the pre-fix run 30765474447. PR 3 stays unmerged, correctly: its dispatch
-  gets dotnet build -c Release green for the first time ever, then 2 architecture tests fail
-  on VenueSymbolSpecEntity (no IAuditableEntity) and EngineReducer.ReconcileToVenue (exports
-  a System.DateTime). PROVED pre-existing: the fix branch is 2 workflow files wide, zero
-  product code, so those assertions read main's own source. Fixing them = engine public API
-  change + EF migration = owner decisions. Two questions are written out as a HUMAN block in
-  ci-health/evidence/s9-N1-fleet-green-except-owner-blocked-shamshir.md.
-next: fleet-green will stay RED until the owner answers those two. That is the gate reading
-  the fleet correctly, not a broken gate - do NOT clear it by excluding Shamshir's
-  Architecture suite, the owner's iteration docs call that suite a gate. Z1 is next.
-trap: DevContext2's default branch is develop, checked out in ANOTHER worktree at
-  C:/Code/DevContext2-ui - branch off origin/develop, never check it out there. Shamshir's
-  pr.yml fires only on PRs into develop with paths src/tests, so PRs into main - the default
-  branch - get ZERO checks (bug #4); that is why nobody had seen the 2 architecture
-  failures, and why "merge on green checks you read" is unsatisfiable on Shamshir today.
-  Shamshir also has 6 pre-existing dirty files that are the owner's - leave them.
+last: s10 STOPPED WAITING FOR THE OWNER AND FIXED SHAMSHIR'S TWO ARCHITECTURE VIOLATIONS AT
+  THE SOURCE. Neither was a design decision: IAuditableEntity.cs carries a TODO(iter-38 T1)
+  demanding exactly that retrofit and M48/M49/M50 are three prior instalments of it, and
+  EnginePurityTests' own AF6 note accepts time entering the Engine via a Domain-owned type.
+  Pushed to fix/release-node-and-gh-release as 403aced: VenueSymbolSpecEntity now implements
+  IAuditableEntity with generated migration M56_VenueSymbolSpecAudit, and ReconcileToVenue
+  takes a new Domain value object SimTime instead of a bare DateTime (one call site). Local
+  proof: Architecture suite 8/8. NOTHING under tests/ was touched. af9900c also closes bug
+  #4 - pr.yml now fires on PRs into main too, so PR 3 finally has real checks.
+next: THE ONLY THING LEFT. Read Release run 30832399158 on the fix branch and PR run
+  30832397417 (both still in_progress when s10 ran out). If green: gh pr merge 3, then read
+  Release on main and confirm green - that closes S1.3 + S1.4 and fleet-green goes green.
+  If red, read the failure; do NOT revert to the owner-block, and never exclude the
+  Architecture suite. Evidence file to finish: ci-health/evidence/s10-S1-shamshir-
+  architecture-violations-fixed.md (its RUNS_PLACEHOLDER is the only gap). Then Z1.
+trap: Shamshir has 6 pre-existing dirty files that are the owner's - leave them, never sweep
+  them into a commit. DevContext2's default branch is develop and is checked out in ANOTHER
+  worktree at C:/Code/DevContext2-ui - branch off origin/develop, never check it out there.
+  dotnet ef in Shamshir needs `dotnet restore` first AND `--context TradingDbContext`.
 
 
 ## Baseline numbers (from run.db)
@@ -82,8 +78,8 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | N1.1 | DevContext2, sitekit, site-template and blog-code each have a branch bumping their workflow actions off the Node 20 runtime, with CI green on the pull request | DONE | 8175f7c | ci-health/evidence/s8-N1.1-node20-sweep-branches.md |
-| N1.2 | Those four pull requests are merged and each repo's default branch is green | DONE | 8175f7c | ci-health/evidence/s8-N1.2-merged-default-branches-green.md |
-| N1.3 | The two reusable workflows in the org's dotfile-named repo are bumped, with the shared site pipeline proven by a downstream caller's CI going green. If the agent-running workflow's credential guard cannot be demonstrated to still hold, it is left alone and the reason is recorded here - that is an acceptable completion, not a failure | DONE | 8175f7c | ci-health/evidence/s8-N1.3-dotgithub-already-current.md |
+| N1.2 | Those four pull requests are merged and each repo's default branch is green | DONE | 8175f7c | ci-health/evidence/s9-N1-fleet-green-except-owner-blocked-shamshir.md |
+| N1.3 | The two reusable workflows in the org's dotfile-named repo are bumped, with the shared site pipeline proven by a downstream caller's CI going green. If the agent-running workflow's credential guard cannot be demonstrated to still hold, it is left alone and the reason is recorded here - that is an acceptable completion, not a failure | DONE | 8175f7c | ci-health/evidence/s9-N1-fleet-green-except-owner-blocked-shamshir.md |
 
 ### Z1 — Close out - the whole fleet reads green
 

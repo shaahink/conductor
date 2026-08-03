@@ -1,12 +1,11 @@
 ﻿# Conductor — CI health - the public repos go green run report
 
-_Updated 2026-08-03 16:16 UTC · branch `chore/ci-health` · HEAD `aa940d4`_
+_Updated 2026-08-03 16:16 UTC · branch `chore/ci-health` · HEAD `d3cdac5`_
 
 **Status:** Idle
-**Stage:** N1 — The Node 20 action sweep across the remaining repos · attempts used 1
+**Stage:** N1 — The Node 20 action sweep across the remaining repos · attempts used 2
 **Checkpoints:** 16/20 done · **Sessions run:** 9 · **Cost:** $25.9762 (agent $25.9745 + gates $0.0017) · **Tokens:** 565,568 in / 241,552 out
 **Confirmed phases:** K1, C1
-**Pending:** full-battery phase gate for N1
 **⚠ Skipped stages (need human review):** B1, S1
 
 ## Stage progress
@@ -101,9 +100,6 @@ _Updated 2026-08-03 16:16 UTC · branch `chore/ci-health` · HEAD `aa940d4`_
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-03 14:54:30  • session #2 B1 Deliver started (attempt 1/2)
-08-03 15:12:43  ▪ gate repos-clean pass [session]  (2.2s)
-08-03 15:12:46  • session #2 B1 → Advanced · done B1.1,B1.2,B1.3,B1.4 · 2 commit(s)  (18m16s)
 08-03 15:12:54  ▪ gate repos-clean FAIL [phase]  (2.4s)
 08-03 15:12:54  ▪ gate site-green pass [phase]  (2.8s)
 08-03 15:12:57  • session #3 B1 Fix started (attempt 2/2)
@@ -141,6 +137,9 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-03 17:08:00  ▪ gate fleet-green FAIL [phase]  (16.3s)
 08-03 17:08:03  • session #9 N1 Fix started (attempt 2/4)
 08-03 17:16:04  ▪ gate repos-clean pass [session]  (3.3s)
+08-03 17:16:09  • session #9 N1 → Progress · 1 commit(s)  (8m05s)
+08-03 17:16:45  ▪ gate repos-clean pass [phase]  (3.5s)
+08-03 17:16:45  ▪ gate fleet-green FAIL [phase]  (16.3s)
 ```
 
 ## Health
@@ -158,7 +157,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: chore/ci-health
-working tree: clean
+working tree: M ci-health/TRACKER.md
 vs upstream: up to date
 ```
 
@@ -228,7 +227,35 @@ vs upstream: up to date
 
 ## Last gate run
 
-repos-clean:OK
+repos-clean:OK · fleet-green:FAIL-retry
+
+<details><summary>fleet-green — exit 1</summary>
+
+```
+[conductor] retried once (SC4.1): the first attempt exited 1 after 16s. Below is the SECOND run.
+OK   shaahink/conductor / CI - run 30826830593 success on master
+  OK   shaahink/conductor / Release - run 30385802454 success on master
+  SKIP shaahink/Shamshir / PR Build & Test - no runs on main (normal for a tag-triggered, pull-request-only or reusable workflow)
+  OK   shaahink/site / Deploy to GitHub Pages - run 30821258479 success on main
+  OK   shaahink/site / Check links - run 30821400002 success on main
+  OK   shaahink/DevContext2 / CI - run 30829803125 success on develop
+  OK   shaahink/DevContext2 / Eval - run 30829813027 success on develop
+  OK   shaahink/DevContext2 / Release - run 30829815008 success on develop
+  OK   shaahink/sitekit / CI - run 30828800198 success on main
+  SKIP shaahink/sitekit / Release - no runs on main (normal for a tag-triggered, pull-request-only or reusable workflow)
+  OK   shaahink/site-template / CI - run 30829094483 success on main
+  OK   shaahink/blog-code / build - run 30828796177 success on main
+
+checked 11 workflow(s), skipped 2 with no runs on their default branch
+
+RED - 1 workflow(s) are not green:
+  * shaahink/Shamshir / Release : latest run on main concluded 'failure' (run 30765474447) - https://github.com/shaahink/Shamshir/actions/runs/30765474447
+
+Reminder: a schedule-only or dispatch-only workflow does NOT get a fresh run from a
+merge. If the fix landed but the default branch still shows the old red run, dispatch
+the workflow on the default branch.
+```
+</details>
 
 ## Last session result
 
