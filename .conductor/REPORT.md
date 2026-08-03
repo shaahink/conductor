@@ -1,102 +1,82 @@
-﻿# Conductor — Sarban face - the watcher and the surfaces run report
+﻿# Conductor — CI health - the public repos go green run report
 
-_Updated 2026-08-01 18:35 UTC · branch `feat/sarban` · HEAD `3d1b293`_
+_Updated 2026-08-03 13:52 UTC · branch `chore/ci-health` · HEAD `71b994b`_
 
-**Status:** Completed
-**Stage:** SF7 — Ship the era · attempts used 0
-**Checkpoints:** 24/24 done · **Sessions run:** 41 · **Cost:** $297.2402 (agent $296.9826 + gates $0.2575) · **Tokens:** 5,573,400 in / 1,747,626 out
-**Confirmed phases:** SF0, SF1, SF2, SF3, SF4, SF5, SF6, SF7
+**Status:** Idle
+**Stage:** K1 — Retire KataFlow · attempts used 0
+**Checkpoints:** 4/20 done · **Sessions run:** 1 · **Cost:** $1.9478 (agent $1.9476 + gates $0.0002) · **Tokens:** 47,560 in / 20,121 out
+**Pending:** full-battery phase gate for K1
 
 ## Stage progress
 
 | Stage | Title | Progress | State |
 |---|---|---|---|
-| SF0 | The ledger closes - the core run's leftovers | ██████████ 4/4 | confirmed ✓ |
-| SF1 | The face sheds dead weight | ██████████ 3/3 | confirmed ✓ |
-| SF2 | The face tells the truth kindly - state, time, money | ██████████ 3/3 | confirmed ✓ |
-| SF3 | Reading a session becomes cheap | ██████████ 3/3 | confirmed ✓ |
-| SF4 | The human queue is a first-class surface | ██████████ 2/2 | confirmed ✓ |
-| SF5 | Supervision without a polling meter | ██████████ 4/4 | confirmed ✓ |
-| SF6 | The prompt bank compounds | ██████████ 3/3 | confirmed ✓ |
-| SF7 | Ship the era | ██████████ 2/2 | confirmed ✓ |
+| K1 | Retire KataFlow | ██████████ 4/4 | gating… |
+| B1 | site - the link checker goes green | ░░░░░░░░░░ 0/4 | todo |
+| S1 | Shamshir - the release workflow goes green | ░░░░░░░░░░ 0/4 | todo |
+| C1 | conductor - the version test stops breaking on every commit | ░░░░░░░░░░ 0/3 | todo |
+| N1 | The Node 20 action sweep across the remaining repos | ░░░░░░░░░░ 0/3 | todo |
+| Z1 | Close out - the whole fleet reads green | ░░░░░░░░░░ 0/2 | todo |
 
-<details> ✅<summary>SF0 — The ledger closes - the core run's leftovers (4/4)</summary>
+<details> ✅<summary>K1 — Retire KataFlow (4/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| SF0.1 | Bugs 6 and 11 die as a class — an inert plan key is either wired to its documented meaning or rejected at load, never readable-and-ignored — and bug 2 plus FU-OWNER-12 stop the notification path lying: no start line for a service that early-returned, and one logged sentence at run start saying whether pushes can be delivered at all | ✅ DONE | [`5217986`](https://github.com/shaahink/conductor/commit/5217986) |
-| SF0.2 | Bug 10 — a claim made during a Verify or Audit session is counted, stamped and confirmed like any other, with the empty-string GateSummary evidence fallback fixed in the same change — plus bug 4 (a phase-gate RED names the session kind it actually queues), bug 3 (a confirmed last stage completes instead of spinning forever) and bug 8 (the harness git helper asserts its exit code, so NewCommits assertions stop being vacuous) | ✅ DONE | [`fdd78ae`](https://github.com/shaahink/conductor/commit/fdd78ae) |
-| SF0.3 | Bugs 9, 5, 12 and 13 — one pid-liveness policy everywhere including MCP, bg status survives an uninspectable pid, bg start stops leaking the caller's stdout handle, bg logs reads a live log — and FU-OWNER-9's self-PID guard lands with the locked-by-conductor warning in the fix prompt | ✅ DONE | [`c84ccfc`](https://github.com/shaahink/conductor/commit/c84ccfc) |
-| SF0.4 | Open bugs survive the run that found them — a new run in this repo sees the previous run's open rows, and run-ended says how many are open — and every remaining followups.md row is fixed, closed with its evidence, or re-homed to a living owner, with FU-F1-07 verified against SC8's scanning verb-parity test and FU-B10-2 measured from the core run's own sessions | ✅ DONE | [`d5b81cb`](https://github.com/shaahink/conductor/commit/d5b81cb) |
+| K1.1 | KataFlow's `CI` workflow and its Dependabot config are disabled on the remote, and no workflow other than Dependabot's synthetic entry reports itself active | ✅ DONE | - |
+| K1.2 | The 20 open Dependabot pull requests are closed with a one-line comment saying the repo is being retired, and an open-PR count returns zero | ✅ DONE | - |
+| K1.3 | KataFlow's README carries a short retirement notice at the top saying the repo is archived and why, committed to main | ✅ DONE | - |
+| K1.4 | KataFlow is archived - the repository reports archived true. This is the authorised irreversible step and archiving makes the repo read-only, so K1.1 to K1.3 must all be genuinely done first | ✅ DONE | - |
 
 </details>
 
-<details> ✅<summary>SF1 — The face sheds dead weight (3/3)</summary>
+<details><summary>B1 — site - the link checker goes green (0/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| SF1.1 | Verifier scores are served by a real endpoint and the Report tab renders them without SQL | ✅ DONE | [`9d993ef`](https://github.com/shaahink/conductor/commit/9d993ef) |
-| SF1.2 | The Dev SQL console and its traces are gone — tab, /report/query, report --query — while MCP run_query stays for chat and the two non-SQL Dev panels are re-homed, not deleted | ✅ DONE | [`8f96ef2`](https://github.com/shaahink/conductor/commit/8f96ef2) |
-| SF1.3 | The face has at most ten tabs after a written consolidation note: Console folds into Agent as a raw toggle, Timeline merges with Sessions into one history surface; keys, help and goldens regenerated | ✅ DONE | - |
+| B1.1 | The two links to the site root in the README point at the real published URL, verified by fetching it and getting a 200 rather than by assuming | ⬜ TODO | - |
+| B1.2 | lychee is given a root directory so the 15 root-relative links resolve; no correct link was rewritten to make the checker happy | ⬜ TODO | - |
+| B1.3 | The `Check links` workflow, dispatched manually on the fix branch, finishes with zero errors - run id recorded | ⬜ TODO | - |
+| B1.4 | site's workflow actions are on current majors, the pull request is merged with checks green, and a fresh green run of `Check links` exists on the default branch | ⬜ TODO | - |
 
 </details>
 
-<details> ✅<summary>SF2 — The face tells the truth kindly - state, time, money (3/3)</summary>
+<details><summary>S1 — Shamshir - the release workflow goes green (0/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| SF2.1 | Home shows one honest connection line with age, start-a-run instructions only when no run exists, a last-run summary card when offline, one Connected definition, and consistent path casing | ✅ DONE | [`93611dd`](https://github.com/shaahink/conductor/commit/93611dd) |
-| SF2.2 | One shared time formatter renders local time with relative age and a date when not today; the Timeline UTC mislabel is fixed and the previously-unrendered timestamps render | ✅ DONE | [`f05791b`](https://github.com/shaahink/conductor/commit/f05791b) |
-| SF2.3 | Over-budget renders as OVER never zero-percent headroom; window and lifetime spend are distinguished; the top bar shows in-flight session cost live; the attempts marker has a legend | ✅ DONE | [`ef1620f`](https://github.com/shaahink/conductor/commit/ef1620f) |
+| S1.1 | `release.yml` gains a manual-dispatch trigger, so the workflow can be exercised from a branch instead of only by pushing to main | ⬜ TODO | - |
+| S1.2 | The Angular build succeeds in CI - either Node is set up before the .NET build, or the MSBuild target degrades honestly when Node is absent. Whichever is chosen is justified in the commit message | ⬜ TODO | - |
+| S1.3 | The archived release action in the final step is replaced with a maintained equivalent, and the replacement is actually exercised rather than assumed | ⬜ TODO | - |
+| S1.4 | `Release`, dispatched on the fix branch, is green end to end - run id recorded - the pull request is merged, and a fresh green run exists on the default branch | ⬜ TODO | - |
 
 </details>
 
-<details> ✅<summary>SF3 — Reading a session becomes cheap (3/3)</summary>
+<details><summary>C1 — conductor - the version test stops breaking on every commit (0/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| SF3.1 | Tool calls render as one-liners and each session has a digest panel — tool mix, files touched, claims, bg-purpose storyline; fold is rune-safe | ✅ DONE | [`352bc1a`](https://github.com/shaahink/conductor/commit/352bc1a) |
-| SF3.2 | The kanban groups by stage with the active stage highlighted, card meta visible unselected, column totals, skips separated from Done, in-column scroll, and a you-are-here ribbon | ✅ DONE | [`3e7c4b3`](https://github.com/shaahink/conductor/commit/3e7c4b3) |
-| SF3.3 | Branch, dirty state, ahead-behind and HEAD sha are on the wire and in the face; session history shows commit subjects; the sidebar cues execution-vs-declared stage order | ✅ DONE | [`f91fa5e`](https://github.com/shaahink/conductor/commit/f91fa5e) |
+| C1.1 | The version test's merge guard covers merges anywhere between the newest tag and HEAD, not just at HEAD. The prerelease-shape assertion above it still runs in both branches of the guard | ⬜ TODO | - |
+| C1.2 | The full local gate battery is green in `C:/Code/conductor-ci`, and conductor's workflow actions are on current majors | ⬜ TODO | - |
+| C1.3 | The pull request's `CI` run is green on both the windows and ubuntu legs, the pull request is merged, and master's own `CI` run after the merge is green too | ⬜ TODO | - |
 
 </details>
 
-<details> ✅<summary>SF4 — The human queue is a first-class surface (2/2)</summary>
+<details><summary>N1 — The Node 20 action sweep across the remaining repos (0/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| SF4.1 | OWNER-QUEUE.md and GET /owner/queue collect every open human item — HUMAN lines, ownerGates, parks with age, blocked-until waits — each saying what it unblocks and the command that clears it, regenerated at session boundaries | ✅ DONE | - |
-| SF4.2 | The face surfaces the owner queue with age and unblocks, and a newly-arrived item pushes to Telegram | ✅ DONE | [`d61da19`](https://github.com/shaahink/conductor/commit/d61da19) |
+| N1.1 | DevContext2, sitekit, site-template and blog-code each have a branch bumping their workflow actions off the Node 20 runtime, with CI green on the pull request | ⬜ TODO | - |
+| N1.2 | Those four pull requests are merged and each repo's default branch is green | ⬜ TODO | - |
+| N1.3 | The two reusable workflows in the org's dotfile-named repo are bumped, with the shared site pipeline proven by a downstream caller's CI going green. If the agent-running workflow's credential guard cannot be demonstrated to still hold, it is left alone and the reason is recorded here - that is an acceptable completion, not a failure | ⬜ TODO | - |
 
 </details>
 
-<details> ✅<summary>SF5 — Supervision without a polling meter (4/4)</summary>
+<details><summary>Z1 — Close out - the whole fleet reads green (0/2)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| SF5.1 | conductor watch blocks silently and returns or fires a hook only on the wake set — park, circuit breaker, budget park, phase RED twice on a stage, engine gone, run ended — with a json brief of about thirty lines and a timeout heartbeat | ✅ DONE | - |
-| SF5.2 | A supervisor plan block runs a configured command on wake with the brief on stdin; operating.md carries the wake and dont-wake table and the standing-order pattern | ✅ DONE | [`4efedac`](https://github.com/shaahink/conductor/commit/4efedac) |
-| SF5.3 | The remote supervision pattern is documented and proven once end to end — a wake reaching a remote listener — with an honest note of what stays manual | ✅ DONE | [`2cd9083`](https://github.com/shaahink/conductor/commit/2cd9083) |
-| SF5.4 | conductor ps lists every run on the machine from the control-plane discovery files; process titles carry repo and run id; the face offers a run picker when more than one control plane answers | ✅ DONE | [`3f0ff2e`](https://github.com/shaahink/conductor/commit/3f0ff2e) |
-
-</details>
-
-<details> ✅<summary>SF6 — The prompt bank compounds (3/3)</summary>
-
-| # | Title | Status | Commit |
-|---|---|---|---|
-| SF6.1 | The built-in session and fix templates carry the field lessons: in-progress first, claim before handoff, deferred-MCP fallback on one line, long commands under conductor bg, the anchor-commit rule for multi-repo plans | ✅ DONE | [`8dd1aa3`](https://github.com/shaahink/conductor/commit/8dd1aa3) |
-| SF6.2 | The prompt bank under plans/ is pruned, enriched from the rounds — proof-note pattern, owner-block alternate completions, the unblocks voice — and indexed so it is choosable | ✅ DONE | [`4b894c1`](https://github.com/shaahink/conductor/commit/4b894c1) |
-| SF6.3 | conductor init scaffolds the refreshed template set with telegram and supervisor hints, and its output passes doctor clean | ✅ DONE | - |
-
-</details>
-
-<details> ✅<summary>SF7 — Ship the era (2/2)</summary>
-
-| # | Title | Status | Commit |
-|---|---|---|---|
-| SF7.1 | The docs match the code — plan-config advisor default, tracker runtime files, operating supervision section, NEXT-FEATURES refresh — the field notes carry a closure ledger, and the era CHANGELOG is written | ✅ DONE | [`37a75ef`](https://github.com/shaahink/conductor/commit/37a75ef) |
-| SF7.2 | feat/sarban is merged to master by the owner, the release is tagged through the SC8 pipeline, and the installed conductor version matches the releases page | ✅ DONE | [`7d8b327`](https://github.com/shaahink/conductor/commit/7d8b327) |
+| Z1.1 | Every public repo in scope reports a green latest run for each of its active workflows on its default branch, read from the real remote and captured as one evidence file | ⬜ TODO | - |
+| Z1.2 | A short close-out report names what was fixed, what was retired, and anything left deliberately undone with its reason | ⬜ TODO | - |
 
 </details>
 
@@ -104,82 +84,17 @@ _Updated 2026-08-01 18:35 UTC · branch `feat/sarban` · HEAD `3d1b293`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Overhead | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 12 | SF2 | Deliver | 1 | 08-01 00:54 | 0:19 | Advanced | SF2.3 | 3 | engine-fast:OK · face-fast:OK | $5.9701 | $0.0076 | 113,302/47,111 |
-| 13 | SF3 | Deliver | 1 | 08-01 01:19 | 0:20 | RolledOver |  | 0 |  | $5.6967 |  | 132,842/2,205 |
-| 14 | SF3 | Deliver | 1 | 08-01 01:40 | 0:15 | Advanced | SF3.1 | 3 | engine-fast:OK · face-fast:OK | $6.1892 | $0.0078 | 133,904/46,736 |
-| 15 | SF3 | Deliver | 1 | 08-01 01:57 | 0:18 | Advanced | SF3.2 | 3 | engine-fast:OK · face-fast:OK | $5.9556 | $0.0065 | 114,930/57,516 |
-| 16 | SF3 | Deliver | 1 | 08-01 02:17 | 0:31 | RolledOver |  | 0 |  | $5.7775 |  | 126,846/2,452 |
-| 17 | SF3 | Deliver | 1 | 08-01 02:49 | 0:16 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $5.9184 | $0.0073 | 119,065/42,337 |
-| 18 | SF3 | Deliver | 1 | 08-01 03:07 | 0:21 | RolledOver |  | 0 |  | $5.8529 |  | 118,847/2,848 |
-| 19 | SF3 | Deliver | 1 | 08-01 03:28 | 0:14 | Advanced | SF3.3 | 3 | engine-fast:OK · face-fast:OK | $6.0631 | $0.0072 | 129,054/48,297 |
-| 20 | SF4 | Deliver | 1 | 08-01 09:00 | 0:27 | RolledOver |  | 0 |  | $5.8124 |  | 131,809/1,841 |
-| 21 | SF4 | Deliver | 1 | 08-01 09:27 | 0:21 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $6.1325 | $0.0157 | 119,875/46,987 |
-| 22 | SF4 | Deliver | 1 | 08-01 09:51 | 0:22 | Progress |  | 3 | engine-fast:OK · face-fast:OK | $6.6960 | $0.0087 | 166,359/55,772 |
-| 23 | SF4 | Deliver | 1 | 08-01 10:15 | 0:14 | RolledOver |  | 0 |  | $5.8501 |  | 120,122/2,480 |
-| 24 | SF4 | Deliver | 1 | 08-01 10:30 | 0:16 | Advanced | SF4.2 | 3 | engine-fast:OK · face-fast:OK | $6.0372 | $0.0086 | 109,716/45,426 |
-| 25 | SF4 | Fix | 2 | 08-01 10:58 | 0:10 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $3.4157 | $0.0114 | 72,338/26,184 |
-| 26 | SF5 | Deliver | 1 | 08-01 11:15 | 0:18 | RolledOver |  | 0 |  | $5.9470 |  | 141,879/1,823 |
-| 27 | SF5 | Deliver | 1 | 08-01 11:33 | 0:26 | RolledOver |  | 0 |  | $5.9398 |  | 132,849/1,867 |
-| 28 | SF5 | Deliver | 1 | 08-01 12:00 | 0:17 | Advanced | SF5.2 | 2 | engine-fast:OK · face-fast:OK | $5.4927 | $0.0095 | 104,311/43,176 |
-| 29 | SF5 | Deliver | 1 | 08-01 12:19 | 0:21 | Advanced | SF5.3 | 3 | engine-fast:OK · face-fast:OK | $6.5167 | $0.0088 | 141,509/64,444 |
-| 30 | SF5 | Deliver | 1 | 08-01 12:43 | 0:23 | Progress |  | 3 | engine-fast:OK · face-fast:OK | $6.2744 | $0.0111 | 112,629/58,601 |
-| 31 | SF5 | Deliver | 1 | 08-01 13:08 | 0:22 | Advanced | SF5.4 | 3 | engine-fast:OK · face-fast:OK | $6.6372 | $0.0099 | 141,596/63,361 |
-| 32 | SF5 | Fix | 2 | 08-01 13:45 | 0:24 | RolledOver |  | 0 |  | $5.9833 |  | 128,284/2,129 |
-| 33 | SF6 | Deliver | 1 | 08-01 14:17 | 0:22 | Advanced | SF6.1 | 1 | engine-fast:OK · face-fast:OK | $6.1405 | $0.0074 | 106,949/54,821 |
-| 34 | SF6 | Deliver | 1 | 08-01 14:41 | 0:19 | Advanced | SF6.2 | 2 | engine-fast:OK · face-fast:OK | $5.5353 | $0.0116 | 104,010/52,742 |
-| 35 | SF6 | Deliver | 1 | 08-01 15:02 | 0:25 | RolledOver |  | 0 |  | $6.0288 |  | 114,436/2,225 |
-| 36 | SF6 | Fix | 2 | 08-01 15:42 | 0:20 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $6.1931 | $0.0129 | 111,458/57,499 |
-| 37 | SF7 | Deliver | 1 | 08-01 16:10 | 0:23 | Progress |  | 3 | engine-fast:OK · face-fast:OK | $6.2933 | $0.0093 | 125,335/52,531 |
-| 38 | SF7 | Deliver | 1 | 08-01 16:36 | 0:21 | Progress |  | 5 | engine-fast:OK · face-fast:OK | $5.9680 | $0.0081 | 113,825/50,135 |
-| 39 | SF7 | Deliver | 1 | 08-01 16:59 | 0:14 | Advanced | SF7.1 | 2 | engine-fast:OK · face-fast:OK | $4.2768 | $0.0075 | 94,593/42,661 |
-| 40 | SF7 | Deliver | 1 | 08-01 17:31 | 0:12 | Advanced | SF7.2 | 1 | engine-fast:OK · face-fast:OK | $2.9755 | $0.0112 | 105,342/29,627 |
-| 41 | SF7 | Fix | 2 | 08-01 17:53 | 0:07 | Progress |  | 1 | engine-fast:OK · face-fast:OK | $1.3595 | $0.0128 | 70,647/14,111 |
+| 1 | K1 | Deliver | 1 | 08-03 13:44 | 0:07 | Advanced | K1.1 K1.2 K1.3 K1.4 | 4 | repos-clean:OK | $1.9476 | $0.0002 | 47,560/20,121 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-01 17:10:51  ▪ gate engine-full pass [phase]  (4m47s)
-08-01 17:10:51  ▪ gate face-full pass [phase]  (16.2s)
-08-01 17:10:51  ✓ checkpoint SF6.2 confirmed
-08-01 17:10:51  ▸ stage SF6 confirmed  (1h53m31s)
-08-01 17:10:52  ▸ stage SF7 entered — Ship the era
-08-01 17:10:52  • session #37 SF7 Deliver started (attempt 1/4)
-08-01 17:36:23  ▪ gate engine-fast pass [session]  (1m06s)
-08-01 17:36:23  ▪ gate face-fast pass [session]  (26.0s)
-08-01 17:36:24  • session #37 SF7 → Progress · 3 commit(s)  (25m31s)
-08-01 17:36:24  • session #38 SF7 Deliver started (attempt 1/4)
-08-01 17:59:11  ▪ gate engine-fast pass [session]  (1m11s)
-08-01 17:59:12  ▪ gate face-fast pass [session]  (9.3s)
-08-01 17:59:13  • session #38 SF7 → Progress · 5 commit(s)  (22m48s)
-08-01 17:59:13  • session #39 SF7 Deliver started (attempt 1/4)
-08-01 18:14:59  ▪ gate engine-fast pass [session]  (1m08s)
-08-01 18:14:59  ▪ gate face-fast pass [session]  (7.2s)
-08-01 18:15:00  • session #39 SF7 → Advanced · done SF7.1 · 2 commit(s)  (15m46s)
-08-01 18:15:00  ■ needs human — agent asked for a human in the tracker handoff (HUMAN: line) — resolve, then run `conductor resume`
-08-01 18:28:40  ◆ plan reloaded — v2 · 8 stages · 4 gates
-08-01 18:30:42  ◆ plan reloaded — v2 · 8 stages · 4 gates
-08-01 18:31:01  • session #40 SF7 Deliver started (attempt 1/4)
-08-01 18:45:44  ▪ gate engine-fast pass [session]  (1m01s)
-08-01 18:45:44  ▪ gate face-fast pass [session]  (50.5s)
-08-01 18:45:45  • session #40 SF7 → Advanced · done SF7.2 · 1 commit(s)  (14m44s)
-08-01 18:53:31  ▪ gate engine-fast pass [phase]  (0.0s)
-08-01 18:53:31  ▪ gate face-fast pass [phase]  (0.0s)
-08-01 18:53:31  ▪ gate engine-full FAIL [phase]  (3m37s)
-08-01 18:53:31  ▪ gate face-full pass [phase]  (9.9s)
-08-01 18:53:32  • session #41 SF7 Fix started (attempt 2/4)
-08-01 19:02:50  ▪ gate engine-fast pass [session]  (1m24s)
-08-01 19:02:50  ▪ gate face-fast pass [session]  (44.1s)
-08-01 19:02:52  • session #41 SF7 → Progress · 1 commit(s)  (9m19s)
-08-01 19:07:06  ▪ gate engine-fast pass [phase]  (0.0s)
-08-01 19:07:06  ▪ gate face-fast pass [phase]  (0.0s)
-08-01 19:07:06  ▪ gate engine-full pass [phase]  (4m05s)
-08-01 19:07:06  ▪ gate face-full pass [phase]  (5.1s)
-08-01 19:07:07  § owner approval requested — SF7
-08-01 19:35:20  § owner approval granted — SF7
-08-01 19:35:20  ✓ checkpoint SF7.2 confirmed
-08-01 19:35:20  ▸ stage SF7 confirmed  (2h24m28s)
+08-03 14:44:39  ◆ run started · CI health - the public repos go green
+08-03 14:44:39  ▸ stage K1 entered — Retire KataFlow
+08-03 14:44:40  • session #1 K1 Deliver started (attempt 1/2)
+08-03 14:52:38  ▪ gate repos-clean pass [session]  (2.3s)
 ```
 
 ## Health
@@ -187,12 +102,8 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 41 · retries 5 (12 %) · overall Warn
-⚠ [context-saturation] session #3: 24,790,251 context tokens (≥ 20,000,000)
-⚠ [context-saturation] session #4: 21,397,049 context tokens (≥ 20,000,000)
-⚠ [context-saturation] session #5: 36,996,007 context tokens (≥ 20,000,000)
-⚠ [context-saturation] session #6: 24,716,690 context tokens (≥ 20,000,000)
-⚠ [gate-oscillation] gate 'engine-full' flipped pass/fail 10x
+sessions 1 · retries 0 (0 %) · overall Ok
+✓ no health concerns detected
 ```
 
 ## Repo
@@ -200,38 +111,21 @@ sessions 41 · retries 5 (12 %) · overall Warn
 _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
-branch: feat/sarban
-working tree: M .conductor/REPORT.md
-vs upstream: 2 ahead
+branch: chore/ci-health
+working tree: clean
+vs upstream: up to date
 ```
 
 ### Commits by session
 
-- **s33 (SF6 Deliver)** — 1 commit(s):
-  - [`8dd1aa3`](https://github.com/shaahink/conductor/commit/8dd1aa3) feat(prompts): the built-ins carry the field lessons, and every line is paid for (SF6.1)
-- **s34 (SF6 Deliver)** — 2 commit(s):
-  - [`09ae2f1`](https://github.com/shaahink/conductor/commit/09ae2f1) docs(tracker): SF6.2 closes, and the ceiling was never the bank's fault (SF6.2)
-  - [`4b894c1`](https://github.com/shaahink/conductor/commit/4b894c1) feat(prompts): the bank becomes choosable, and the packs that never rendered (SF6.2)
-- **s36 (SF6 Fix)** — 2 commit(s):
-  - [`d8d80f8`](https://github.com/shaahink/conductor/commit/d8d80f8) fix(prompts): the fix template stops ordering a move the board refuses (SF6)
-  - [`be0394d`](https://github.com/shaahink/conductor/commit/be0394d) fix(prompts): the budget test that a five-digit pid could fail, and two anchors that moved (SF6)
-- **s37 (SF7 Deliver)** — 3 commit(s):
-  - [`d97546c`](https://github.com/shaahink/conductor/commit/d97546c) docs(tracker): SF7.1 part 1 - the evidence, and the three parts still owed (SF7.1)
-  - [`d4f8993`](https://github.com/shaahink/conductor/commit/d4f8993) docs(operating): the known-gaps list stops being a July snapshot (SF7.1)
-  - [`1ebb536`](https://github.com/shaahink/conductor/commit/1ebb536) docs(tracker): the runtime-files tree stops describing a run that does not happen (SF7.1)
-- **s38 (SF7 Deliver)** — 5 commit(s):
-  - [`3abe51c`](https://github.com/shaahink/conductor/commit/3abe51c) docs(tracker): SF7.1 part 2 - three parts landed, one field-notes ledger owed (SF7.1)
-  - [`36e406e`](https://github.com/shaahink/conductor/commit/36e406e) docs(skill): the trust model the skill described is the opposite of the engine's (SF7.1)
-  - [`de3256f`](https://github.com/shaahink/conductor/commit/de3256f) docs(changelog): the era entry, written from the commits not from memory (SF7.1)
-  - [`65e59fa`](https://github.com/shaahink/conductor/commit/65e59fa) docs(followups): the closure ledger, and three rows that closed by naming nothing (SF7.1)
-  - [`3268e54`](https://github.com/shaahink/conductor/commit/3268e54) docs(dev): the backlog stops promising what already shipped (SF7.1)
-- **s39 (SF7 Deliver)** — 2 commit(s):
-  - [`9f1ea98`](https://github.com/shaahink/conductor/commit/9f1ea98) docs(tracker): SF7.1 closed, and what SF7.2 is not free to do (SF7.1)
-  - [`37a75ef`](https://github.com/shaahink/conductor/commit/37a75ef) docs(field-notes): every finding says which commit answered it (SF7.1)
-- **s40 (SF7 Deliver)** — 1 commit(s):
-  - [`7d8b327`](https://github.com/shaahink/conductor/commit/7d8b327) docs(tracker): SF7.2 closed - feat/sarban tagged v0.3.0 through the SC8 pipeline (SF7.2)
-- **s41 (SF7 Fix)** — 1 commit(s):
-  - [`5a71373`](https://github.com/shaahink/conductor/commit/5a71373) chore(release): cut the 0.3.0 section - the Sarban face era ships
+- **s1 (K1 Deliver)** — 4 commit(s) (+3 in satellite repo(s)):
+  - [`71b994b`](https://github.com/shaahink/conductor/commit/71b994b) ci-health: K1 complete - KataFlow retired and archived, handoff updated
+  - [`81644b2`](https://github.com/shaahink/conductor/commit/81644b2) ci-health: K1.3 evidence - KataFlow README carries the retirement notice on main (af8930a)
+  - [`c1cab59`](https://github.com/shaahink/conductor/commit/c1cab59) ci-health: K1.2 evidence - 20 Dependabot PRs closed with a retirement comment, open count zero
+  - [`9e39a36`](https://github.com/shaahink/conductor/commit/9e39a36) ci-health: K1.1 evidence - KataFlow CI disabled, Dependabot config removed
+  - `af8930a` docs: retirement notice at the top of the README [KataFlow-ai]
+  - `f47e28d` chore: retire KataFlow - disable Dependabot version updates [KataFlow-ai]
+  - `4330a7c` Add LICENSE: PolyForm Noncommercial 1.0.0 [KataFlow-ai]
 
 ## Phase handovers (audit)
 
@@ -254,27 +148,25 @@ vs upstream: 2 ahead
 
 ## Last gate run
 
-engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
+repos-clean:OK
 
 ## Last session result
 
-> I'll pause here and wait for the background test-suite monitor to notify me when it completes.
+> SESSION-RESULT: Stage K1 landed in full — KataFlow (`shaahink/KataFlow`) is retired and archived, with all four checkpoints claimed through `conductor task --done` and backed by an evidence file each in `ci-health/evidence/K1.*.md`: CI disabled on the remote and `.github/dependabot.yml` removed (commit `f47e28d`), all 20 open Dependabot pull requests closed with a one-line retirement comment leaving an open count of zero, a retirement notice committed to `main` explaining the vulnerable Aspire-transitive chain (`af8930a`), and the repository archived at `2026-08-03T13:50:54Z` after a pre-flight re-read confirmed the three reversible steps were genuinely done and nothing was unpushed. `C:/Cod…
 
 ## Tracker handoff
 
 ```
-last: **session 40 - SF7.2 CLAIMED DONE**, commit `e897c2c` (on `master`, via a scratch worktree)
-  + tag `v0.3.0`. `CHANGELOG.md` `[Unreleased]` cut to `[0.3.0] - 2026-08-01` (minor bump, same
-  pattern as the 0.2.0/0.2.2 cuts). `git push origin v0.3.0` fired `release.yml` for real: guard +
-  5 platform builds + attach-to-release all green (run 30710653729), binary self-reports
-  `tag=0.3.0 binary=0.3.0+e897c2c7e1b0`. Release live: releases/tag/v0.3.0, 6 assets.
-  Evidence: `.conductor/evidence/SF7/SF7.2-tag-release.md`.
-era status: **all 24 SF checkpoints now claimed DONE.** Merge (`8286d63`) + tag (`v0.3.0`) both
-  closed. Reinstall alone is deliberately outstanding — re-homed as `FU-OWNER-14` in
-  `.conductor/followups.md` (owner runs `tools/install.ps1` once no other conductor run is live,
-  then confirms `conductor version` matches the release page).
-next: nothing plan-owned remains in SF7. If a session opens after this, it is confirmation/gate
-  work, or the next era. red: `ci.yml` windows gate battery is flaky on
-  `SF0_3PidsAndBackgroundWorkTests...NotDead` (bug **#23**, pre-existing, not release-blocking).
-  open bugs: **#15 #16 #17 #18 #19 #20 #21 #23**.
+last: stage K1 complete - KataFlow is retired. CI disabled on the remote, Dependabot config
+  removed (commit f47e28d), all 20 Dependabot PRs closed with a retirement comment, README
+  notice on main (af8930a), repo archived 2026-08-03T13:50:54Z. Evidence in ci-health/evidence.
+stage: **K1 DONE** - all four checkpoints claimed with an evidence file each.
+gate: no battery this session. Read by hand on the real remote: KataFlow isArchived true,
+  open PRs 0, no active workflow but Dependabot's synthetic entry. Untouched and still red:
+  conductor CI, Shamshir Release, site Check links.
+next: C1, S1, B1 and N1 are all unstarted; nothing in K1 blocks any of them.
+trap: KataFlow CI run 30765473647 on main is red PERMANENTLY and correctly - the last run of
+  a now-disabled workflow in a read-only repo. Do not chase it green; an archived repo is out
+  of scope for any latest-run-green sweep. Paths still do not match names: site is
+  `C:/Code/site-blog`, conductor's fix branch is `C:/Code/conductor-ci`.
 ```
