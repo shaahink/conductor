@@ -1,18 +1,19 @@
 ﻿# Conductor — CI health - the public repos go green run report
 
-_Updated 2026-08-03 13:54 UTC · branch `chore/ci-health` · HEAD `b04f829`_
+_Updated 2026-08-03 14:12 UTC · branch `chore/ci-health` · HEAD `b836308`_
 
 **Status:** Idle
-**Stage:** K1 — Retire KataFlow · attempts used 0
-**Checkpoints:** 4/20 done · **Sessions run:** 1 · **Cost:** $1.9478 (agent $1.9476 + gates $0.0002) · **Tokens:** 47,560 in / 20,121 out
+**Stage:** B1 — site - the link checker goes green · attempts used 0
+**Checkpoints:** 8/20 done · **Sessions run:** 2 · **Cost:** $6.0460 (agent $6.0456 + gates $0.0005) · **Tokens:** 132,803 in / 62,018 out
 **Confirmed phases:** K1
+**Pending:** full-battery phase gate for B1
 
 ## Stage progress
 
 | Stage | Title | Progress | State |
 |---|---|---|---|
 | K1 | Retire KataFlow | ██████████ 4/4 | confirmed ✓ |
-| B1 | site - the link checker goes green | ░░░░░░░░░░ 0/4 | todo |
+| B1 | site - the link checker goes green | ██████████ 4/4 | gating… |
 | S1 | Shamshir - the release workflow goes green | ░░░░░░░░░░ 0/4 | todo |
 | C1 | conductor - the version test stops breaking on every commit | ░░░░░░░░░░ 0/3 | todo |
 | N1 | The Node 20 action sweep across the remaining repos | ░░░░░░░░░░ 0/3 | todo |
@@ -29,14 +30,14 @@ _Updated 2026-08-03 13:54 UTC · branch `chore/ci-health` · HEAD `b04f829`_
 
 </details>
 
-<details><summary>B1 — site - the link checker goes green (0/4)</summary>
+<details> ✅<summary>B1 — site - the link checker goes green (4/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| B1.1 | The two links to the site root in the README point at the real published URL, verified by fetching it and getting a 200 rather than by assuming | ⬜ TODO | - |
-| B1.2 | lychee is given a root directory so the 15 root-relative links resolve; no correct link was rewritten to make the checker happy | ⬜ TODO | - |
-| B1.3 | The `Check links` workflow, dispatched manually on the fix branch, finishes with zero errors - run id recorded | ⬜ TODO | - |
-| B1.4 | site's workflow actions are on current majors, the pull request is merged with checks green, and a fresh green run of `Check links` exists on the default branch | ⬜ TODO | - |
+| B1.1 | The two links to the site root in the README point at the real published URL, verified by fetching it and getting a 200 rather than by assuming | ✅ DONE | - |
+| B1.2 | lychee is given a root directory so the 15 root-relative links resolve; no correct link was rewritten to make the checker happy | ✅ DONE | - |
+| B1.3 | The `Check links` workflow, dispatched manually on the fix branch, finishes with zero errors - run id recorded | ✅ DONE | - |
+| B1.4 | site's workflow actions are on current majors, the pull request is merged with checks green, and a fresh green run of `Check links` exists on the default branch | ✅ DONE | - |
 
 </details>
 
@@ -85,6 +86,7 @@ _Updated 2026-08-03 13:54 UTC · branch `chore/ci-health` · HEAD `b04f829`_
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Overhead | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | K1 | Deliver | 1 | 08-03 13:44 | 0:07 | Advanced | K1.1 K1.2 K1.3 K1.4 | 4 | repos-clean:OK | $1.9476 | $0.0002 | 47,560/20,121 |
+| 2 | B1 | Deliver | 1 | 08-03 13:54 | 0:18 | Advanced | B1.1 B1.2 B1.3 B1.4 | 2 | repos-clean:OK | $4.0980 | $0.0002 | 85,243/41,897 |
 
 ## Timeline
 
@@ -103,6 +105,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-03 14:54:26  ✓ checkpoint K1.2 confirmed
 08-03 14:54:26  ✓ checkpoint K1.3 confirmed
 08-03 14:54:26  ✓ checkpoint K1.4 confirmed
+08-03 14:54:26  ▸ stage K1 confirmed  (9m46s)
+08-03 14:54:29  ▸ stage B1 entered — site - the link checker goes green
+08-03 14:54:30  • session #2 B1 Deliver started (attempt 1/2)
+08-03 15:12:43  ▪ gate repos-clean pass [session]  (2.2s)
 ```
 
 ## Health
@@ -110,7 +116,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 1 · retries 0 (0 %) · overall Ok
+sessions 2 · retries 0 (0 %) · overall Ok
 ✓ no health concerns detected
 ```
 
@@ -134,6 +140,13 @@ vs upstream: up to date
   - `af8930a` docs: retirement notice at the top of the README [KataFlow-ai]
   - `f47e28d` chore: retire KataFlow - disable Dependabot version updates [KataFlow-ai]
   - `4330a7c` Add LICENSE: PolyForm Noncommercial 1.0.0 [KataFlow-ai]
+- **s2 (B1 Deliver)** — 2 commit(s) (+4 in satellite repo(s)):
+  - [`b836308`](https://github.com/shaahink/conductor/commit/b836308) ci-health: B1 complete - site green on main, links 0 errors, actions off Node 20
+  - [`1081e8e`](https://github.com/shaahink/conductor/commit/1081e8e) ci-health: B1.1-B1.3 evidence - Check links green on the fix branch (30820654253)
+  - `e13507d` Bump workflow actions off the Node 20 runtime [site-blog]
+  - `131c3ea` Link check: give lychee a root dir, point README at the real site URL [site-blog]
+  - `d5dafdc` Add content licence: CC BY-NC 4.0 (posts) [site-blog]
+  - `2619c8a` Add LICENSE: MIT (code) [site-blog]
 
 ## Phase handovers (audit)
 
@@ -156,25 +169,28 @@ vs upstream: up to date
 
 ## Last gate run
 
-repos-clean:OK · kataflow-retired:OK
+repos-clean:OK
 
 ## Last session result
 
-> SESSION-RESULT: Stage K1 landed in full — KataFlow (`shaahink/KataFlow`) is retired and archived, with all four checkpoints claimed through `conductor task --done` and backed by an evidence file each in `ci-health/evidence/K1.*.md`: CI disabled on the remote and `.github/dependabot.yml` removed (commit `f47e28d`), all 20 open Dependabot pull requests closed with a one-line retirement comment leaving an open count of zero, a retirement notice committed to `main` explaining the vulnerable Aspire-transitive chain (`af8930a`), and the repository archived at `2026-08-03T13:50:54Z` after a pre-flight re-read confirmed the three reversible steps were genuinely done and nothing was unpushed. `C:/Cod…
+> SESSION-RESULT:** Stage B1 is complete — `shaahink/site` is green on its default branch, proven on the real remote. The 17 link-checker errors were three distinct problems, not seventeen broken links: 14 were lychee refusing to classify root-relative links without a root directory, so it errored *before* the workflow's pre-existing `--scheme https/http` filter could apply — passing `--root-dir` makes that filter reachable and no content link was rewritten; 2 were README pointing at `https://shaahink.github.io`, which 404s because this is a project page under `/site/` (the replacement was fetched and returned 200 before editing); and 1 more, which the authority doc did not count, was the same…
 
 ## Tracker handoff
 
 ```
-last: stage K1 complete - KataFlow is retired. CI disabled on the remote, Dependabot config
-  removed (commit f47e28d), all 20 Dependabot PRs closed with a retirement comment, README
-  notice on main (af8930a), repo archived 2026-08-03T13:50:54Z. Evidence in ci-health/evidence.
-stage: **K1 DONE** - all four checkpoints claimed with an evidence file each.
-gate: no battery this session. Read by hand on the real remote: KataFlow isArchived true,
-  open PRs 0, no active workflow but Dependabot's synthetic entry. Untouched and still red:
-  conductor CI, Shamshir Release, site Check links.
-next: C1, S1, B1 and N1 are all unstarted; nothing in K1 blocks any of them.
-trap: KataFlow CI run 30765473647 on main is red PERMANENTLY and correctly - the last run of
-  a now-disabled workflow in a read-only repo. Do not chase it green; an archived repo is out
-  of scope for any latest-run-green sweep. Paths still do not match names: site is
-  `C:/Code/site-blog`, conductor's fix branch is `C:/Code/conductor-ci`.
+last: stage B1 complete - site is green. PR shaahink/site#1 rebase-merged into main. Both
+  active workflows now pass on the default branch: Deploy run 30821258479 (push) and Check
+  links run 30821400002 (dispatched after the merge, because it is cron+dispatch only).
+stage: **B1 DONE** - four checkpoints, an evidence file each in ci-health/evidence.
+gate: no battery this session. Read by hand on the real remote. Green: site Deploy, site
+  Check links. Still red and untouched: conductor CI, Shamshir Release.
+next: C1, S1 and N1 are unstarted; nothing in B1 blocks them. N1 can reuse this repo's
+  action majors - checkout v7, setup-node v7, pnpm/action-setup v6, upload-pages-artifact v5,
+  deploy-pages v5 - all proven on a real runner here, with no Node 20 warning left.
+trap: setup-node v6 narrowed automatic package-manager cache detection to npm only, and
+  upload-pages-artifact v4 stopped putting dotfiles in the artifact - absorb both explicitly
+  when bumping elsewhere. A repo's github-pages environment may allow deployments only from
+  main, in which case deploy-pages cannot be exercised from a branch at all, only after the
+  merge; a branch dispatch fails with zero steps and that is a policy refusal, not a fault.
+  KataFlow CI run 30765473647 is still red permanently and correctly - archived, out of scope.
 ```
