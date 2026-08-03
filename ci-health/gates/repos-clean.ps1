@@ -7,8 +7,24 @@
 # The repo list is read from plan.json rather than hardcoded, so it cannot drift from the plan.
 # The control room itself is exempt from the pushed check: conductor commits the tracker there
 # every session and the plan may or may not push it.
+#
+# BASELINE: the owner had uncommitted work in some of these repos before this run started
+# (Shamshir's research drivers and iteration notes, at plan time). Sessions are told not to touch
+# those files, so failing the gate on them would be an unreachable bar - and an unreachable bar is
+# an instruction to weaken something, which here would mean committing or reverting the owner's
+# work. dirty-baseline.txt records that pre-existing set; only NEW dirt fails.
 
 $ErrorActionPreference = 'Continue'
+
+$baseline = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+$baselinePath = Join-Path $PSScriptRoot 'dirty-baseline.txt'
+if (Test-Path $baselinePath) {
+    foreach ($b in Get-Content $baselinePath) {
+        $b = $b.Trim()
+        if ([string]::IsNullOrWhiteSpace($b) -or $b.StartsWith('#')) { continue }
+        [void]$baseline.Add($b)
+    }
+}
 
 $planPath = Join-Path $PSScriptRoot '..\plan.json'
 if (-not (Test-Path $planPath)) {
@@ -43,9 +59,22 @@ foreach ($t in $targets) {
         continue
     }
     $dirtyLines = @($dirty | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
-    if ($dirtyLines.Count -gt 0) {
-        $shown = ($dirtyLines | Select-Object -First 5) -join ' ; '
-        $problems.Add("$label : $($dirtyLines.Count) uncommitted change(s) - $shown")
+
+    $newDirt = New-Object System.Collections.Generic.List[string]
+    $baselined = 0
+    foreach ($d in $dirtyLines) {
+        # porcelain: two status chars, a space, then the path (rename shows "old -> new")
+        $file = $d.Substring([Math]::Min(3, $d.Length)).Trim().Trim('"')
+        if ($file -match '->') { $file = ($file -split '->')[-1].Trim().Trim('"') }
+        if ($baseline.Contains("$label|$file")) { $baselined++; continue }
+        $newDirt.Add($file)
+    }
+    if ($baselined -gt 0) {
+        Write-Host "  note $label - $baselined pre-existing uncommitted file(s) ignored per dirty-baseline.txt"
+    }
+    if ($newDirt.Count -gt 0) {
+        $shown = ($newDirt | Select-Object -First 5) -join ' ; '
+        $problems.Add("$label : $($newDirt.Count) uncommitted change(s) this run did not start with - $shown")
     }
 
     if (-not $t.IsAnchor) {
@@ -70,7 +99,7 @@ foreach ($t in $targets) {
         }
     }
 
-    if ($dirtyLines.Count -eq 0) { Write-Host "  OK   $label" }
+    if ($newDirt.Count -eq 0) { Write-Host "  OK   $label" }
 }
 
 Write-Host ""

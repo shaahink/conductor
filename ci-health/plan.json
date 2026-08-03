@@ -166,7 +166,7 @@
     "softBreakRatio": 0.7
   },
 
-  "report": { "commit": true, "push": false },
+  "report": { "commit": true, "push": true },
 
   "readOrder": [
     "ci-health/README.md"
