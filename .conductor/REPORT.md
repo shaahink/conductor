@@ -1,11 +1,12 @@
 ﻿# Conductor — CI health - the public repos go green run report
 
-_Updated 2026-08-03 17:03 UTC · branch `chore/ci-health` · HEAD `28cb2b2`_
+_Updated 2026-08-03 17:10 UTC · branch `chore/ci-health` · HEAD `e765d7a`_
 
 **Status:** Idle
-**Stage:** N1 — The Node 20 action sweep across the remaining repos · attempts used 0
-**Checkpoints:** 18/20 done · **Sessions run:** 11 · **Cost:** $36.3910 (agent $36.3886 + gates $0.0023) · **Tokens:** 771,714 in / 320,780 out
+**Stage:** Z1 — Close out - the whole fleet reads green · attempts used 0
+**Checkpoints:** 20/20 done · **Sessions run:** 12 · **Cost:** $37.9323 (agent $37.9297 + gates $0.0026) · **Tokens:** 819,213 in / 338,952 out
 **Confirmed phases:** K1, C1, N1
+**Pending:** full-battery phase gate for Z1
 **⚠ Skipped stages (need human review):** B1, S1
 
 ## Stage progress
@@ -17,7 +18,7 @@ _Updated 2026-08-03 17:03 UTC · branch `chore/ci-health` · HEAD `28cb2b2`_
 | S1 | Shamshir - the release workflow goes green | ██████████ 4/4 | SKIPPED ⚠ |
 | C1 | conductor - the version test stops breaking on every commit | ██████████ 3/3 | confirmed ✓ |
 | N1 | The Node 20 action sweep across the remaining repos | ██████████ 3/3 | confirmed ✓ |
-| Z1 | Close out - the whole fleet reads green | ░░░░░░░░░░ 0/2 | todo |
+| Z1 | Close out - the whole fleet reads green | ██████████ 2/2 | gating… |
 
 <details> ✅<summary>K1 — Retire KataFlow (4/4)</summary>
 
@@ -72,12 +73,12 @@ _Updated 2026-08-03 17:03 UTC · branch `chore/ci-health` · HEAD `28cb2b2`_
 
 </details>
 
-<details><summary>Z1 — Close out - the whole fleet reads green (0/2)</summary>
+<details> ✅<summary>Z1 — Close out - the whole fleet reads green (2/2)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| Z1.1 | Every public repo in scope reports a green latest run for each of its active workflows on its default branch, read from the real remote and captured as one evidence file | ⬜ TODO | - |
-| Z1.2 | A short close-out report names what was fixed, what was retired, and anything left deliberately undone with its reason | ⬜ TODO | - |
+| Z1.1 | Every public repo in scope reports a green latest run for each of its active workflows on its default branch, read from the real remote and captured as one evidence file | ✅ DONE | - |
+| Z1.2 | A short close-out report names what was fixed, what was retired, and anything left deliberately undone with its reason | ✅ DONE | - |
 
 </details>
 
@@ -96,16 +97,13 @@ _Updated 2026-08-03 17:03 UTC · branch `chore/ci-health` · HEAD `28cb2b2`_
 | 9 | N1 | Fix | 2 | 08-03 16:08 | 0:07 | Progress |  | 1 | repos-clean:OK | $2.2481 | $0.0003 | 68,449/27,802 |
 | 10 | N1 | Fix | 3 | 08-03 16:16 | 0:19 | Progress |  | 3 | repos-clean:OK | $5.8694 | $0.0003 | 109,911/39,914 |
 | 11 | N1 | Fix | 4 | 08-03 16:37 | 0:25 | Advanced | S1.3 S1.4 | 2 | repos-clean:OK | $4.5448 | $0.0003 | 96,235/39,314 |
+| 12 | Z1 | Deliver | 1 | 08-03 17:03 | 0:07 | Advanced | Z1.1 Z1.2 | 21 | repos-clean:OK | $1.5411 | $0.0003 | 47,499/18,172 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-03 15:52:59  • session #4 S1 → Advanced · done S1.1,S1.2 · 1 commit(s)  (30m30s)
-08-03 15:52:59  ■ needs human — agent asked for a human in the tracker handoff (HUMAN: line) — resolve, then run `conductor resume`
-08-03 15:56:51  • session #5 S1 Deliver started (attempt 1/4)
-08-03 15:57:56  • session #5 S1 → KilledByUser  (1m04s)
 08-03 15:58:29  ▸ stage S1 entered — Shamshir - the release workflow goes green
 08-03 15:58:29  • session #6 S1 Deliver started (attempt 1/4)
 08-03 15:59:25  • session #6 S1 → KilledByUser  (55.8s)
@@ -142,6 +140,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-03 18:03:06  ▪ gate fleet-green pass [phase]  (15.4s)
 08-03 18:03:06  ✓ checkpoint S1.3 confirmed
 08-03 18:03:06  ✓ checkpoint S1.4 confirmed
+08-03 18:03:06  ▸ stage N1 confirmed  (1h26m44s)
+08-03 18:03:10  ▸ stage Z1 entered — Close out - the whole fleet reads green
+08-03 18:03:11  • session #12 Z1 Deliver started (attempt 1/2)
+08-03 18:10:18  ▪ gate repos-clean pass [session]  (2.7s)
 ```
 
 ## Health
@@ -149,7 +151,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 11 · retries 4 (36 %) · overall Alert
+sessions 12 · retries 4 (33 %) · overall Alert
 ⛔ [gate-repetition] gate 'fleet-green' failed 3x in a row
 ⚠ [gate-oscillation] gate 'repos-clean' flipped pass/fail 4x
 ```
@@ -160,19 +162,12 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: chore/ci-health
-working tree: M ci-health/TRACKER.md
+working tree: clean
 vs upstream: up to date
 ```
 
 ### Commits by session
 
-- **s2 (B1 Deliver)** — 2 commit(s) (+4 in satellite repo(s)):
-  - [`b836308`](https://github.com/shaahink/conductor/commit/b836308) ci-health: B1 complete - site green on main, links 0 errors, actions off Node 20
-  - [`1081e8e`](https://github.com/shaahink/conductor/commit/1081e8e) ci-health: B1.1-B1.3 evidence - Check links green on the fix branch (30820654253)
-  - `e13507d` Bump workflow actions off the Node 20 runtime [site-blog]
-  - `131c3ea` Link check: give lychee a root dir, point README at the real site URL [site-blog]
-  - `d5dafdc` Add content licence: CC BY-NC 4.0 (posts) [site-blog]
-  - `2619c8a` Add LICENSE: MIT (code) [site-blog]
 - **s3 (B1 Fix)** — 1 commit(s):
   - [`82e3adc`](https://github.com/shaahink/conductor/commit/82e3adc) ci-health: resolve repos-clean red - commit generated tracker, re-verify B1 green on main
 - **s4 (S1 Deliver)** — 1 commit(s) (+3 in satellite repo(s)):
@@ -211,6 +206,19 @@ vs upstream: up to date
   - [`e8c074f`](https://github.com/shaahink/conductor/commit/e8c074f) evidence(s11): Shamshir Release is green end to end on the fix branch
   - `8567898` chore: make the repo satisfy its own dotnet format gate [Shamshir]
   - `017c87c` fix: keep the worker's config out of the web app's publish output [Shamshir]
+- **s12 (Z1 Deliver)** — 21 commit(s):
+  - [`e765d7a`](https://github.com/shaahink/conductor/commit/e765d7a) chore(s12): Z1 close-out - the whole fleet reads green
+  - [`406539d`](https://github.com/shaahink/conductor/commit/406539d) evidence(s12): Z1.1 fleet sweep - all 9 repos green on their default branches
+  - [`ac6238a`](https://github.com/shaahink/conductor/commit/ac6238a) chore(conductor): s11 N1 Advanced — Idle
+  - [`28cb2b2`](https://github.com/shaahink/conductor/commit/28cb2b2) chore(conductor): s11 N1 Advanced — Idle
+  - [`944fb9f`](https://github.com/shaahink/conductor/commit/944fb9f) chore(s11): Shamshir Release green end to end, S1 closed
+  - [`e8c074f`](https://github.com/shaahink/conductor/commit/e8c074f) evidence(s11): Shamshir Release is green end to end on the fix branch
+  - [`227d0c7`](https://github.com/shaahink/conductor/commit/227d0c7) chore(conductor): s10 N1 Progress — Idle
+  - [`84a0a7c`](https://github.com/shaahink/conductor/commit/84a0a7c) chore(s10): handoff - remote proof in, one pre-existing lint red uncovered
+  - [`4b56853`](https://github.com/shaahink/conductor/commit/4b56853) chore(s10): handoff - Shamshir architecture violations fixed, verification in flight
+  - [`5604a9e`](https://github.com/shaahink/conductor/commit/5604a9e) evidence(s10): Shamshir's two architecture violations fixed at the source
+  - [`d3cdac5`](https://github.com/shaahink/conductor/commit/d3cdac5) chore(conductor): s9 N1 Progress — Idle
+  - [`aa940d4`](https://github.com/shaahink/conductor/commit/aa940d4) evidence(N1): s9 fix - both battery reds resolved, sweep verified complete
 
 ## Phase handovers (audit)
 
@@ -233,38 +241,32 @@ vs upstream: up to date
 
 ## Last gate run
 
-repos-clean:OK · fleet-green:OK
+repos-clean:OK
 
 ## Last session result
 
-> SESSION-RESULT: The one red the battery reported — `shaahink/Shamshir / Release` stuck on failure 30765474447 on `main` — is fixed and green. Reading the fix branch's own failed run rather than theorising showed it had moved past everything s9/s10 fixed and died at the next never-exercised step: `dotnet publish src/TradingEngine.Web` hit `NETSDK1152` because `TradingEngine.Web` references `TradingEngine.Host`, an executable worker whose `appsettings*.json` ride that project reference into Web's publish set at Web's own relative paths. I fixed it at the source in `TradingEngine.Web.csproj` (Shamshir `017c87c`) with a target that drops the Host-owned config from `ResolvedFileToPublish`, delibe…
+> SESSION-RESULT: Stage Z1 is closed — both checkpoints DONE with evidence and committed (406539d, e765d7a on `chore/ci-health`, pushed). Z1.1 proves from the real remote that the whole fleet reads green: 16 active workflows, 12 with a default-branch run, all 12 success, zero red anywhere; the 4 without one are structurally incapable of having one and each is named with its trigger and separate proof. Z1.2 is the close-out report covering all five stages, the KataFlow retirement, and six deliberately-undone items with reasons. Nothing is red. Every board card across B1, C1, K1, N1, S1 and Z1 is DONE, zero open PRs across all nine repos, every satellite clean and pushed (Shamshir's 6 owner-owne…
 
 ## Tracker handoff
 
 ```
-last: s11 CLOSED SHAMSHIR. `Release` is green end to end and PR 3 is merged, so the single
-  failure fleet-green was reporting is gone. The fix branch's own Release had failed at the
-  step AFTER the ones s9/s10 fixed: `dotnet publish src/TradingEngine.Web` died with
-  NETSDK1152 because Web references Host (an executable worker) and Host's appsettings*.json
-  ride that reference into Web's publish set at Web's own relative paths. Fixed in
-  TradingEngine.Web.csproj (017c87c) with a target that drops the Host-owned appsettings
-  from ResolvedFileToPublish - NOT by setting ErrorOnDuplicatePublishOutputFiles=false,
-  which would silence the diagnostic and let an arbitrary copy win. PR 3's `lint` job was
-  also red on ~150 pre-existing CHARSET errors + 2 IDE0011; fixed with plain `dotnet format`
-  (8567898, 853 files, BOM + braces + initialiser layout, no behaviour change).
-proof: Release run 30833477182 on the fix branch = success, all 16 steps, including step 12
-  `softprops/action-gh-release@v3` which produced `Release v22` (pre-release, because
-  ref != main) - so S1.3's replacement action is exercised, not assumed. Both PR 3 checks
-  read green before merging (build-and-test 5m37s, lint 6m52s). Release run 30834317700 on
-  main after the merge = success. That was the repo's first green Release after 12 straight
-  failures since 2026-07-16. Evidence: ci-health/evidence/s11-S1-shamshir-release-green-
-  end-to-end.md. S1.3 and S1.4 claimed DONE; bug #4 closed; bug #5 filed for a cosmetic
-  leftover (Host's appsettings.Backtest.json still lands in Web's bin/ at build time).
-next: every N1 and S1 card is DONE. Go to Z1 - sweep all nine repos' default branches from
-  the real remote into one evidence file (Z1.1), then write the close-out report (Z1.2).
-trap: Shamshir has 6 pre-existing dirty files that are the owner's (docs/iterations/*, 
-  tools/research/*.py) - leave them, never sweep them into a commit. DevContext2's default
-  branch is develop and is checked out in ANOTHER worktree at C:/Code/DevContext2-ui.
-  Shamshir's `PR Build & Test` correctly has no runs on main - it is pull_request-only, so
-  the gate SKIPping it is right, not a hole.
+last: s12 CLOSED Z1 - both cards done. Z1.1 is a live gh sweep of all nine repos read from the
+  real remote, not from this tracker: 16 active workflows, 12 of which can have a run on their
+  default branch, and ALL 12 are success. Zero red anywhere. The other 4 cannot produce a
+  default-branch run by trigger design and each is named with its trigger: the two reusables in
+  the org dotfile repo are workflow_call-only, Shamshir pr.yml is pull_request-only, sitekit
+  release.yml is tag-push-only. Three of those four are separately proven green (site-ci via
+  caller site-template CI 30829094483; pr.yml via PR 3's checks; sitekit Release via tag run
+  30645090630 on v0.24.0). Z1.2 is the close-out report covering all five stages, the KataFlow
+  retirement, and six items left deliberately undone with reasons.
+proof: ci-health/evidence/s12-Z1.1-fleet-sweep-default-branches.md (per-repo table, run ids and
+  timestamps) and ci-health/CLOSE-OUT.md. Zero open PRs across all nine repos. Every satellite
+  clean and pushed except Shamshir's 6 owner-owned files, which are deliberately untouched.
+next: the whole board is DONE - B1, C1, K1, N1, S1, Z1. Z1 parks for the owner by design; this
+  is the last look before the run ends. Nothing is queued. If another session starts, it should
+  re-run the Z1.1 sweep rather than trust these run ids, since a scheduled workflow can go red
+  on the default branch after this was written.
+trap: Shamshir's 6 dirty files are the owner's (docs/iterations/*, tools/research/*.py) - never
+  sweep them into a commit. Bugs 1, 2, 3 and 5 stay open on purpose and are explained in
+  CLOSE-OUT.md; do not "fix" a timing-flaky test by relaxing its threshold.
 ```
