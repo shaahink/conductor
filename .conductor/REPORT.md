@@ -1,8 +1,8 @@
 ﻿# Conductor — CI health - the public repos go green run report
 
-_Updated 2026-08-03 17:10 UTC · branch `chore/ci-health` · HEAD `e765d7a`_
+_Updated 2026-08-03 17:10 UTC · branch `chore/ci-health` · HEAD `0b1d38f`_
 
-**Status:** Idle
+**Status:** AwaitingOwner
 **Stage:** Z1 — Close out - the whole fleet reads green · attempts used 0
 **Checkpoints:** 20/20 done · **Sessions run:** 12 · **Cost:** $37.9323 (agent $37.9297 + gates $0.0026) · **Tokens:** 819,213 in / 338,952 out
 **Confirmed phases:** K1, C1, N1
@@ -77,8 +77,8 @@ _Updated 2026-08-03 17:10 UTC · branch `chore/ci-health` · HEAD `e765d7a`_
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| Z1.1 | Every public repo in scope reports a green latest run for each of its active workflows on its default branch, read from the real remote and captured as one evidence file | ✅ DONE | - |
-| Z1.2 | A short close-out report names what was fixed, what was retired, and anything left deliberately undone with its reason | ✅ DONE | - |
+| Z1.1 | Every public repo in scope reports a green latest run for each of its active workflows on its default branch, read from the real remote and captured as one evidence file | ✅ DONE | [`8175f7c`](https://github.com/shaahink/conductor/commit/8175f7c) |
+| Z1.2 | A short close-out report names what was fixed, what was retired, and anything left deliberately undone with its reason | ✅ DONE | [`8175f7c`](https://github.com/shaahink/conductor/commit/8175f7c) |
 
 </details>
 
@@ -104,9 +104,6 @@ _Updated 2026-08-03 17:10 UTC · branch `chore/ci-health` · HEAD `e765d7a`_
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-03 15:58:29  ▸ stage S1 entered — Shamshir - the release workflow goes green
-08-03 15:58:29  • session #6 S1 Deliver started (attempt 1/4)
-08-03 15:59:25  • session #6 S1 → KilledByUser  (55.8s)
 08-03 15:59:51  ▸ stage C1 entered — conductor - the version test stops breaking on every commit
 08-03 15:59:52  • session #7 C1 Deliver started (attempt 1/4)
 08-03 16:36:11  ▪ gate repos-clean pass [session]  (2.5s)
@@ -144,6 +141,9 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-03 18:03:10  ▸ stage Z1 entered — Close out - the whole fleet reads green
 08-03 18:03:11  • session #12 Z1 Deliver started (attempt 1/2)
 08-03 18:10:18  ▪ gate repos-clean pass [session]  (2.7s)
+08-03 18:10:21  • session #12 Z1 → Advanced · done Z1.1,Z1.2 · 21 commit(s)  (7m09s)
+08-03 18:10:39  ▪ gate repos-clean pass [phase]  (2.5s)
+08-03 18:10:39  ▪ gate fleet-green pass [phase]  (14.7s)
 ```
 
 ## Health
@@ -162,7 +162,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: chore/ci-health
-working tree: clean
+working tree: M ci-health/TRACKER.md
 vs upstream: up to date
 ```
 
@@ -241,7 +241,7 @@ vs upstream: up to date
 
 ## Last gate run
 
-repos-clean:OK
+repos-clean:OK · fleet-green:OK
 
 ## Last session result
 
