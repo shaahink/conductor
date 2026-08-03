@@ -35,9 +35,14 @@ step is the one that fails.
 Root cause: `TradingEngine.Web` references `TradingEngine.Host` for the engine types it
 drives. `Host` is an executable worker carrying its own `appsettings*.json`, and those
 ride the project reference into `Web`'s publish set at exactly the relative paths
-`Web`'s own configuration occupies. This was never only a build break — before the SDK
-started refusing to guess, whichever copy was written last silently became the web
-app's configuration.
+`Web`'s own configuration occupies, and the SDK refuses to guess which should win.
+
+One correction to how the commit message puts it, checked afterwards rather than
+assumed: at **build** time the copy is not in fact ambiguous here — `bin/Release/
+net10.0/win-x64/appsettings.json` hashes equal to `TradingEngine.Web`'s own, not to
+`Host`'s. What does leak at build time is `Host`'s `appsettings.Backtest.json`, which
+`Web` has no counterpart for and never reads. That leak is cosmetic, and it is filed as
+a tracked bug rather than fixed here.
 
 ## The fix (Shamshir `017c87c`)
 
@@ -124,4 +129,35 @@ changed no behaviour.
 
 ## Merge and the default branch
 
-RESULT_PLACEHOLDER
+PR 3 was merged only after both of its checks were read green:
+
+```
+gh pr checks 3 --repo shaahink/Shamshir
+build-and-test   pass   5m37s
+lint             pass   6m52s
+```
+
+The merge pushed to `main`, which is `release.yml`'s push trigger, so no dispatch was
+needed — a fresh run appeared on the default branch by itself:
+
+```
+gh run view 30834317700 --repo shaahink/Shamshir
+Release   main   9257bb3   completed   success
+```
+
+https://github.com/shaahink/Shamshir/actions/runs/30834317700
+
+That replaces run 30765474447 — the failure `fleet-green` was reporting — as the latest
+`Release` run on `main`.
+
+## Nothing was weakened
+
+- No test deleted, skipped or relaxed. `dotnet test`'s filter in `release.yml` is
+  unchanged from the one `scripts/gates.ps1` already used.
+- No workflow step removed. `release.yml` still has all four build/test/publish steps
+  plus the release step; `pr.yml` still has both jobs.
+- The duplicate-publish diagnostic was fixed, not suppressed —
+  `ErrorOnDuplicatePublishOutputFiles` is still at its default.
+- `lint` was made to pass by changing the code to match `.editorconfig`, not by
+  changing `.editorconfig` or the job.
+
