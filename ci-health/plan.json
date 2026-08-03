@@ -62,7 +62,7 @@
     }
   },
 
-  "templatesDir": "ci-health/templates",
+  "templatesDir": "templates",
 
   "stages": [
     {
