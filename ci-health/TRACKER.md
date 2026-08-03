@@ -4,31 +4,31 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: s10 STOPPED WAITING FOR THE OWNER AND FIXED SHAMSHIR'S TWO ARCHITECTURE VIOLATIONS AT
-  THE SOURCE. Neither was a design decision: IAuditableEntity.cs carries a TODO(iter-38 T1)
-  demanding exactly that retrofit and M48/M49/M50 are three prior instalments of it, and
-  EnginePurityTests' own AF6 note accepts time entering the Engine via a Domain-owned type.
-  Pushed to fix/release-node-and-gh-release as 403aced: VenueSymbolSpecEntity now implements
-  IAuditableEntity with generated migration M56_VenueSymbolSpecAudit, and ReconcileToVenue
-  takes a new Domain value object SimTime instead of a bare DateTime (one call site). Local
-  proof: Architecture suite 8/8. NOTHING under tests/ was touched. af9900c also closes bug
-  #4 - pr.yml now fires on PRs into main too, so PR 3 finally has real checks.
-proof: PR run 30832397417 job `build-and-test` = SUCCESS on a hosted runner. It runs the same
-  filter Release does, so Unit+Integration+Simulation+ARCHITECTURE all pass remotely - the
-  fix is proven, not just local. Its sibling job `lint` = FAILURE, and that is PRE-EXISTING
-  debt newly uncovered: dotnet format reports whitespace errors in
-  src/TradingEngine.Adapters.CTrader/ShamshirTradeLogger.cs (~148-190), untouched by anyone
-  here. lint is NOT in release.yml, so it cannot affect fleet-green - it only blocks PR 3.
-next: (1) run `dotnet format src/TradingEngine.Adapters.CTrader` in C:/Code/Shamshir, commit,
-  push - a formatter fixing formatting is not a weakened gate; never delete the lint job or
-  revert pr.yml to hide it. (2) Read Release run 30832399158 on the fix branch (still
-  in_progress at s10's end). (3) gh pr merge 3, then confirm Release green on main - that
-  closes S1.3 + S1.4 and fleet-green. Finish ci-health/evidence/s10-S1-shamshir-
-  architecture-violations-fixed.md (RUNS_PLACEHOLDER is the only gap). Then Z1.
-trap: Shamshir has 6 pre-existing dirty files that are the owner's - leave them, never sweep
-  them into a commit. DevContext2's default branch is develop and is checked out in ANOTHER
-  worktree at C:/Code/DevContext2-ui - branch off origin/develop, never check it out there.
-  dotnet ef in Shamshir needs `dotnet restore` first AND `--context TradingDbContext`.
+last: s11 CLOSED SHAMSHIR. `Release` is green end to end and PR 3 is merged, so the single
+  failure fleet-green was reporting is gone. The fix branch's own Release had failed at the
+  step AFTER the ones s9/s10 fixed: `dotnet publish src/TradingEngine.Web` died with
+  NETSDK1152 because Web references Host (an executable worker) and Host's appsettings*.json
+  ride that reference into Web's publish set at Web's own relative paths. Fixed in
+  TradingEngine.Web.csproj (017c87c) with a target that drops the Host-owned appsettings
+  from ResolvedFileToPublish - NOT by setting ErrorOnDuplicatePublishOutputFiles=false,
+  which would silence the diagnostic and let an arbitrary copy win. PR 3's `lint` job was
+  also red on ~150 pre-existing CHARSET errors + 2 IDE0011; fixed with plain `dotnet format`
+  (8567898, 853 files, BOM + braces + initialiser layout, no behaviour change).
+proof: Release run 30833477182 on the fix branch = success, all 16 steps, including step 12
+  `softprops/action-gh-release@v3` which produced `Release v22` (pre-release, because
+  ref != main) - so S1.3's replacement action is exercised, not assumed. Both PR 3 checks
+  read green before merging (build-and-test 5m37s, lint 6m52s). Release run 30834317700 on
+  main after the merge = success. That was the repo's first green Release after 12 straight
+  failures since 2026-07-16. Evidence: ci-health/evidence/s11-S1-shamshir-release-green-
+  end-to-end.md. S1.3 and S1.4 claimed DONE; bug #4 closed; bug #5 filed for a cosmetic
+  leftover (Host's appsettings.Backtest.json still lands in Web's bin/ at build time).
+next: every N1 and S1 card is DONE. Go to Z1 - sweep all nine repos' default branches from
+  the real remote into one evidence file (Z1.1), then write the close-out report (Z1.2).
+trap: Shamshir has 6 pre-existing dirty files that are the owner's (docs/iterations/*, 
+  tools/research/*.py) - leave them, never sweep them into a commit. DevContext2's default
+  branch is develop and is checked out in ANOTHER worktree at C:/Code/DevContext2-ui.
+  Shamshir's `PR Build & Test` correctly has no runs on main - it is pull_request-only, so
+  the gate SKIPping it is right, not a hole.
 
 
 ## Baseline numbers (from run.db)
@@ -68,8 +68,8 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | S1.1 | `release.yml` gains a manual-dispatch trigger, so the workflow can be exercised from a branch instead of only by pushing to main | DONE | 4d06613 | ci-health/evidence/s4-S1.1-release-dispatch-run.json |
 | S1.2 | The Angular build succeeds in CI - either Node is set up before the .NET build, or the MSBuild target degrades honestly when Node is absent. Whichever is chosen is justified in the commit message | DONE | 4d06613 | ci-health/evidence/s4-S1.2-angular-build-green.json |
-| S1.3 | The archived release action in the final step is replaced with a maintained equivalent, and the replacement is actually exercised rather than assumed | BLOCKED | - | - |
-| S1.4 | `Release`, dispatched on the fix branch, is green end to end - run id recorded - the pull request is merged, and a fresh green run exists on the default branch | BLOCKED | - | - |
+| S1.3 | The archived release action in the final step is replaced with a maintained equivalent, and the replacement is actually exercised rather than assumed | IN PROGRESS | - | - |
+| S1.4 | `Release`, dispatched on the fix branch, is green end to end - run id recorded - the pull request is merged, and a fresh green run exists on the default branch | IN PROGRESS | - | - |
 
 ### C1 — conductor - the version test stops breaking on every commit
 
