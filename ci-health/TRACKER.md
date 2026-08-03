@@ -4,18 +4,21 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: stage K1 complete - KataFlow is retired. CI disabled on the remote, Dependabot config
-  removed (commit f47e28d), all 20 Dependabot PRs closed with a retirement comment, README
-  notice on main (af8930a), repo archived 2026-08-03T13:50:54Z. Evidence in ci-health/evidence.
-stage: **K1 DONE** - all four checkpoints claimed with an evidence file each.
-gate: no battery this session. Read by hand on the real remote: KataFlow isArchived true,
-  open PRs 0, no active workflow but Dependabot's synthetic entry. Untouched and still red:
-  conductor CI, Shamshir Release, site Check links.
-next: C1, S1, B1 and N1 are all unstarted; nothing in K1 blocks any of them.
-trap: KataFlow CI run 30765473647 on main is red PERMANENTLY and correctly - the last run of
-  a now-disabled workflow in a read-only repo. Do not chase it green; an archived repo is out
-  of scope for any latest-run-green sweep. Paths still do not match names: site is
-  `C:/Code/site-blog`, conductor's fix branch is `C:/Code/conductor-ci`.
+last: stage B1 complete - site is green. PR shaahink/site#1 rebase-merged into main. Both
+  active workflows now pass on the default branch: Deploy run 30821258479 (push) and Check
+  links run 30821400002 (dispatched after the merge, because it is cron+dispatch only).
+stage: **B1 DONE** - four checkpoints, an evidence file each in ci-health/evidence.
+gate: no battery this session. Read by hand on the real remote. Green: site Deploy, site
+  Check links. Still red and untouched: conductor CI, Shamshir Release.
+next: C1, S1 and N1 are unstarted; nothing in B1 blocks them. N1 can reuse this repo's
+  action majors - checkout v7, setup-node v7, pnpm/action-setup v6, upload-pages-artifact v5,
+  deploy-pages v5 - all proven on a real runner here, with no Node 20 warning left.
+trap: setup-node v6 narrowed automatic package-manager cache detection to npm only, and
+  upload-pages-artifact v4 stopped putting dotfiles in the artifact - absorb both explicitly
+  when bumping elsewhere. A repo's github-pages environment may allow deployments only from
+  main, in which case deploy-pages cannot be exercised from a branch at all, only after the
+  merge; a branch dispatch fails with zero steps and that is a policy refusal, not a fault.
+  KataFlow CI run 30765473647 is still red permanently and correctly - archived, out of scope.
 
 
 ## Baseline numbers (from run.db)
