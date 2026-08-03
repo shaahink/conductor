@@ -9,13 +9,18 @@ it on 2026-08-03 - it is authorised, not open); whether to pin actions to commit
 CI to repos that have none.
 
 ## Handoff  (overwrite this block, <=12 lines, no history)
-last: nothing yet - this is the first session of the run.
-stage: **K1 not started** (attempt 1).
-gate: no battery has run yet. Verified by hand before launch: conductor red on CI, Shamshir
-  red on Release, site red on Check links, the other four green.
-next: **K1.1** - disable KataFlow's CI workflow and its Dependabot config on the remote.
-trap: the local clone of KataFlow is `C:/Code/KataFlow-ai`, not `C:/Code/KataFlow`. Never
-  paste workflow YAML into this handoff block - describe changes in prose instead.
+last: stage K1 complete - KataFlow is retired. CI disabled on the remote, Dependabot config
+  removed (commit f47e28d), all 20 Dependabot PRs closed with a retirement comment, README
+  notice on main (af8930a), repo archived 2026-08-03T13:50:54Z. Evidence in ci-health/evidence.
+stage: **K1 DONE** - all four checkpoints claimed with an evidence file each.
+gate: no battery this session. Read by hand on the real remote: KataFlow isArchived true,
+  open PRs 0, no active workflow but Dependabot's synthetic entry. Untouched and still red:
+  conductor CI, Shamshir Release, site Check links.
+next: C1, S1, B1 and N1 are all unstarted; nothing in K1 blocks any of them.
+trap: KataFlow CI run 30765473647 on main is red PERMANENTLY and correctly - the last run of
+  a now-disabled workflow in a read-only repo. Do not chase it green; an archived repo is out
+  of scope for any latest-run-green sweep. Paths still do not match names: site is
+  `C:/Code/site-blog`, conductor's fix branch is `C:/Code/conductor-ci`.
 
 ## Checkpoints
 
