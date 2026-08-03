@@ -13,12 +13,18 @@ last: s10 STOPPED WAITING FOR THE OWNER AND FIXED SHAMSHIR'S TWO ARCHITECTURE VI
   takes a new Domain value object SimTime instead of a bare DateTime (one call site). Local
   proof: Architecture suite 8/8. NOTHING under tests/ was touched. af9900c also closes bug
   #4 - pr.yml now fires on PRs into main too, so PR 3 finally has real checks.
-next: THE ONLY THING LEFT. Read Release run 30832399158 on the fix branch and PR run
-  30832397417 (both still in_progress when s10 ran out). If green: gh pr merge 3, then read
-  Release on main and confirm green - that closes S1.3 + S1.4 and fleet-green goes green.
-  If red, read the failure; do NOT revert to the owner-block, and never exclude the
-  Architecture suite. Evidence file to finish: ci-health/evidence/s10-S1-shamshir-
-  architecture-violations-fixed.md (its RUNS_PLACEHOLDER is the only gap). Then Z1.
+proof: PR run 30832397417 job `build-and-test` = SUCCESS on a hosted runner. It runs the same
+  filter Release does, so Unit+Integration+Simulation+ARCHITECTURE all pass remotely - the
+  fix is proven, not just local. Its sibling job `lint` = FAILURE, and that is PRE-EXISTING
+  debt newly uncovered: dotnet format reports whitespace errors in
+  src/TradingEngine.Adapters.CTrader/ShamshirTradeLogger.cs (~148-190), untouched by anyone
+  here. lint is NOT in release.yml, so it cannot affect fleet-green - it only blocks PR 3.
+next: (1) run `dotnet format src/TradingEngine.Adapters.CTrader` in C:/Code/Shamshir, commit,
+  push - a formatter fixing formatting is not a weakened gate; never delete the lint job or
+  revert pr.yml to hide it. (2) Read Release run 30832399158 on the fix branch (still
+  in_progress at s10's end). (3) gh pr merge 3, then confirm Release green on main - that
+  closes S1.3 + S1.4 and fleet-green. Finish ci-health/evidence/s10-S1-shamshir-
+  architecture-violations-fixed.md (RUNS_PLACEHOLDER is the only gap). Then Z1.
 trap: Shamshir has 6 pre-existing dirty files that are the owner's - leave them, never sweep
   them into a commit. DevContext2's default branch is develop and is checked out in ANOTHER
   worktree at C:/Code/DevContext2-ui - branch off origin/develop, never check it out there.
