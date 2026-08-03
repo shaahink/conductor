@@ -56,4 +56,16 @@ landed (run 30832397417), where before `gh pr checks 3` reported none at all.
 
 ## Remote verification
 
-RUNS_PLACEHOLDER
+Filled in by s11 (s10 was killed before its runs finished).
+
+| Run | Branch | Workflow / job | Conclusion |
+| --- | --- | --- | --- |
+| 30832397417 | fix/release-node-and-gh-release | `PR Build & Test` / build-and-test | success |
+| 30832399158 | fix/release-node-and-gh-release | `Release` | failure — but at `dotnet publish src/TradingEngine.Web`, i.e. PAST the architecture tests |
+| 30833477182 | fix/release-node-and-gh-release | `Release` | success, all 16 steps |
+
+`build-and-test` runs the same filter `Release` does
+(`RequiresCTrader!=true&Category!=E2E&Category!=Slow&Category!=NetMQ`), so the
+Architecture suite ran on a hosted runner and passed. Run 30832399158 reaching the
+publish step is independent confirmation: `dotnet test` at step 9 had already exited 0.
+Run 30833477182 then carried the same commit through every step green.
