@@ -1,11 +1,12 @@
 ﻿# Conductor — CI health - the public repos go green run report
 
-_Updated 2026-08-03 16:08 UTC · branch `chore/ci-health` · HEAD `02ec6b6`_
+_Updated 2026-08-03 16:16 UTC · branch `chore/ci-health` · HEAD `aa940d4`_
 
 **Status:** Idle
 **Stage:** N1 — The Node 20 action sweep across the remaining repos · attempts used 1
-**Checkpoints:** 16/20 done · **Sessions run:** 8 · **Cost:** $23.7278 (agent $23.7264 + gates $0.0014) · **Tokens:** 497,119 in / 213,750 out
+**Checkpoints:** 16/20 done · **Sessions run:** 9 · **Cost:** $25.9762 (agent $25.9745 + gates $0.0017) · **Tokens:** 565,568 in / 241,552 out
 **Confirmed phases:** K1, C1
+**Pending:** full-battery phase gate for N1
 **⚠ Skipped stages (need human review):** B1, S1
 
 ## Stage progress
@@ -93,16 +94,13 @@ _Updated 2026-08-03 16:08 UTC · branch `chore/ci-health` · HEAD `02ec6b6`_
 | 6 | S1 | Deliver | 1 | 08-03 14:58 | 0:00 | KilledByUser |  | 0 |  |  |  | 20,732/6 |
 | 7 | C1 | Deliver | 1 | 08-03 14:59 | 0:36 | Advanced | C1.1 C1.2 C1.3 | 2 | repos-clean:OK | $5.0127 | $0.0002 | 89,000/41,563 |
 | 8 | N1 | Deliver | 1 | 08-03 15:36 | 0:30 | Advanced | N1.1 N1.2 N1.3 | 7 | repos-clean:OK | $5.7733 | $0.0003 | 95,029/49,676 |
+| 9 | N1 | Fix | 2 | 08-03 16:08 | 0:07 | Progress |  | 1 | repos-clean:OK | $2.2481 | $0.0003 | 68,449/27,802 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-03 14:54:26  ✓ checkpoint K1.3 confirmed
-08-03 14:54:26  ✓ checkpoint K1.4 confirmed
-08-03 14:54:26  ▸ stage K1 confirmed  (9m46s)
-08-03 14:54:29  ▸ stage B1 entered — site - the link checker goes green
 08-03 14:54:30  • session #2 B1 Deliver started (attempt 1/2)
 08-03 15:12:43  ▪ gate repos-clean pass [session]  (2.2s)
 08-03 15:12:46  • session #2 B1 → Advanced · done B1.1,B1.2,B1.3,B1.4 · 2 commit(s)  (18m16s)
@@ -139,6 +137,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-03 16:36:22  • session #8 N1 Deliver started (attempt 1/4)
 08-03 17:07:16  ▪ gate repos-clean pass [session]  (2.6s)
 08-03 17:07:20  • session #8 N1 → Advanced · done N1.1,N1.2,N1.3 · 7 commit(s)  (30m57s)
+08-03 17:08:00  ▪ gate repos-clean pass [phase]  (2.7s)
+08-03 17:08:00  ▪ gate fleet-green FAIL [phase]  (16.3s)
+08-03 17:08:03  • session #9 N1 Fix started (attempt 2/4)
+08-03 17:16:04  ▪ gate repos-clean pass [session]  (3.3s)
 ```
 
 ## Health
@@ -146,7 +148,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 8 · retries 1 (12 %) · overall Warn
+sessions 9 · retries 2 (22 %) · overall Warn
 ⚠ [gate-oscillation] gate 'repos-clean' flipped pass/fail 4x
 ```
 
@@ -156,7 +158,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: chore/ci-health
-working tree: M ci-health/TRACKER.md
+working tree: clean
 vs upstream: up to date
 ```
 
@@ -202,6 +204,8 @@ vs upstream: up to date
   - `9a0a1b1` Add LICENSE: MIT [site-template]
   - `cbe1021` ci: move build.yml off the Node 20 action runtime (#1) [blog-code]
   - `a059eb7` Add LICENSE: MIT [blog-code]
+- **s9 (N1 Fix)** — 1 commit(s):
+  - [`aa940d4`](https://github.com/shaahink/conductor/commit/aa940d4) evidence(N1): s9 fix - both battery reds resolved, sweep verified complete
 
 ## Phase handovers (audit)
 
@@ -224,59 +228,36 @@ vs upstream: up to date
 
 ## Last gate run
 
-repos-clean:OK · fleet-green:FAIL-retry
-
-<details><summary>fleet-green — exit 1</summary>
-
-```
-[conductor] retried once (SC4.1): the first attempt exited 1 after 21s. Below is the SECOND run.
-OK   shaahink/conductor / CI - run 30826830593 success on master
-  OK   shaahink/conductor / Release - run 30385802454 success on master
-  SKIP shaahink/Shamshir / PR Build & Test - no runs on main (normal for a tag-triggered, pull-request-only or reusable workflow)
-  OK   shaahink/site / Deploy to GitHub Pages - run 30821258479 success on main
-  OK   shaahink/site / Check links - run 30821400002 success on main
-  OK   shaahink/DevContext2 / CI - run 30829803125 success on develop
-  OK   shaahink/DevContext2 / Eval - run 30829813027 success on develop
-  OK   shaahink/sitekit / CI - run 30828800198 success on main
-  SKIP shaahink/sitekit / Release - no runs on main (normal for a tag-triggered, pull-request-only or reusable workflow)
-  OK   shaahink/site-template / CI - run 30829094483 success on main
-  OK   shaahink/blog-code / build - run 30828796177 success on main
-
-checked 11 workflow(s), skipped 2 with no runs on their default branch
-
-RED - 2 workflow(s) are not green:
-  * shaahink/Shamshir / Release : latest run on main concluded 'failure' (run 30765474447) - https://github.com/shaahink/Shamshir/actions/runs/30765474447
-  * shaahink/DevContext2 / Release : latest run on develop is still 'in_progress' (run 30829815008) - it has not finished, so it is not evidence
-
-Reminder: a schedule-only or dispatch-only workflow does NOT get a fresh run from a
-merge. If the fix landed but the default branch still shows the old red run, dispatch
-the workflow on the default branch.
-```
-</details>
+repos-clean:OK
 
 ## Last session result
 
-> SESSION-RESULT: Stage N1 is complete — all three checkpoints claimed DONE with real-remote evidence. **N1.1**: current majors were measured from each action's own latest release rather than guessed (checkout v7, setup-node v7, setup-dotnet v6, setup-go v7, upload-artifact v7, download-artifact v8, pnpm/action-setup v6, gh-release v3), and four branches landed green PR runs — blog-code #1 (30828584094), sitekit #2 (30828661891), DevContext2 #11 based on `develop` (30828680117), site-template #32 (30828982820). The Node 20 deprecation annotations were confirmed present before and **absent after** through the check-runs annotations API; sitekit turned out never to have been on Node 20 at all, s…
+> SESSION-RESULT: The battery's two reds were both real readings and neither needed a measurement touched — `DevContext2 / Release` was never failing, it was a Tauri Windows-installer job still building 16 minutes after session #8 dispatched it, and run 30829815008 has since completed success on `develop`, so N1.2's "default branch is green" now holds for all four repos; I also re-verified the sweep itself against the remote rather than trusting the handoff, with `git grep "uses:" origin/<default-branch>` across conductor, DevContext2, sitekit, blog-code, site and dotgithub (site-template only calls the reusable workflow), and every pin sits at the major measured from the action's own latest r…
 
 ## Tracker handoff
 
 ```
-last: N1 COMPLETE - all three checkpoints landed with real-remote proof. Four PRs merged:
-  blog-code #1, sitekit #2, site-template #32, DevContext2 #11 (base develop, not main).
-  Default branches green: blog-code 30828796177, sitekit 30828800198, site-template
-  30829068429 + dispatch 30829094483, DevContext2 CI 30829803125 and Eval 30829813027.
-stage: majors were MEASURED from each action's latest release, not guessed - checkout v7,
-  setup-node v7, setup-dotnet v6, setup-go v7, upload-artifact v7, download-artifact v8,
-  pnpm/action-setup v6, gh-release v3. Node 20 annotations confirmed gone via the
-  check-runs annotations API on every run, before and after. dotgithub needed NO edit: both
-  its files were already on current majors, so content-request.yml's credential guard was
-  never disturbed - proven downstream by site-template's CI green against site-ci.yml@main.
-next: N1 is closed. S1.3/S1.4 stay BLOCKED on the owner on purpose; do not reopen them.
-trap: DevContext2's default branch is develop, and develop is checked out in ANOTHER
-  worktree at C:/Code/DevContext2-ui - branch off origin/develop, never check it out there.
-  Its macos-latest leg has a timing-flaky test (StageWaterfall, bug #3) that was already
-  red on main before this session; rerun --failed, never relax its percentage floor. One
-  dispatch, DevContext2 Release 30829815008 on develop, was still building at session end -
-  the identical branch dispatch 30828834858 was success. Shamshir has 6 pre-existing dirty
-  files that are the owner's, deliberately not swept into an N1 commit.
+last: N1 CLOSED and now provably green. The battery's two reds are both resolved as facts:
+  DevContext2 Release 30829815008 was a still-building Tauri job, not a failure - it
+  completed SUCCESS on develop. Sweep re-verified COMPLETE by git grep of "uses:" against
+  every remote default branch (conductor, DevContext2, sitekit, blog-code, site, dotgithub;
+  site-template only calls the reusable workflow) - every pin at the measured current major,
+  nothing missed, no composite actions anywhere. 12 of 13 active fleet workflows green.
+stage: the one remaining red is S1's, not N1's, and it needs the OWNER. Shamshir/Release on
+  main is still the pre-fix run 30765474447. PR 3 stays unmerged, correctly: its dispatch
+  gets dotnet build -c Release green for the first time ever, then 2 architecture tests fail
+  on VenueSymbolSpecEntity (no IAuditableEntity) and EngineReducer.ReconcileToVenue (exports
+  a System.DateTime). PROVED pre-existing: the fix branch is 2 workflow files wide, zero
+  product code, so those assertions read main's own source. Fixing them = engine public API
+  change + EF migration = owner decisions. Two questions are written out as a HUMAN block in
+  ci-health/evidence/s9-N1-fleet-green-except-owner-blocked-shamshir.md.
+next: fleet-green will stay RED until the owner answers those two. That is the gate reading
+  the fleet correctly, not a broken gate - do NOT clear it by excluding Shamshir's
+  Architecture suite, the owner's iteration docs call that suite a gate. Z1 is next.
+trap: DevContext2's default branch is develop, checked out in ANOTHER worktree at
+  C:/Code/DevContext2-ui - branch off origin/develop, never check it out there. Shamshir's
+  pr.yml fires only on PRs into develop with paths src/tests, so PRs into main - the default
+  branch - get ZERO checks (bug #4); that is why nobody had seen the 2 architecture
+  failures, and why "merge on green checks you read" is unsatisfiable on Shamshir today.
+  Shamshir also has 6 pre-existing dirty files that are the owner's - leave them.
 ```
