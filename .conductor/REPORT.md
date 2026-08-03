@@ -1,12 +1,11 @@
 ﻿# Conductor — CI health - the public repos go green run report
 
-_Updated 2026-08-03 17:02 UTC · branch `chore/ci-health` · HEAD `944fb9f`_
+_Updated 2026-08-03 17:03 UTC · branch `chore/ci-health` · HEAD `28cb2b2`_
 
 **Status:** Idle
 **Stage:** N1 — The Node 20 action sweep across the remaining repos · attempts used 0
 **Checkpoints:** 18/20 done · **Sessions run:** 11 · **Cost:** $36.3910 (agent $36.3886 + gates $0.0023) · **Tokens:** 771,714 in / 320,780 out
-**Confirmed phases:** K1, C1
-**Pending:** full-battery phase gate for N1
+**Confirmed phases:** K1, C1, N1
 **⚠ Skipped stages (need human review):** B1, S1
 
 ## Stage progress
@@ -17,7 +16,7 @@ _Updated 2026-08-03 17:02 UTC · branch `chore/ci-health` · HEAD `944fb9f`_
 | B1 | site - the link checker goes green | ██████████ 4/4 | SKIPPED ⚠ |
 | S1 | Shamshir - the release workflow goes green | ██████████ 4/4 | SKIPPED ⚠ |
 | C1 | conductor - the version test stops breaking on every commit | ██████████ 3/3 | confirmed ✓ |
-| N1 | The Node 20 action sweep across the remaining repos | ██████████ 3/3 | gating… |
+| N1 | The Node 20 action sweep across the remaining repos | ██████████ 3/3 | confirmed ✓ |
 | Z1 | Close out - the whole fleet reads green | ░░░░░░░░░░ 0/2 | todo |
 
 <details> ✅<summary>K1 — Retire KataFlow (4/4)</summary>
@@ -48,8 +47,8 @@ _Updated 2026-08-03 17:02 UTC · branch `chore/ci-health` · HEAD `944fb9f`_
 |---|---|---|---|
 | S1.1 | `release.yml` gains a manual-dispatch trigger, so the workflow can be exercised from a branch instead of only by pushing to main | ✅ DONE | [`4d06613`](https://github.com/shaahink/conductor/commit/4d06613) |
 | S1.2 | The Angular build succeeds in CI - either Node is set up before the .NET build, or the MSBuild target degrades honestly when Node is absent. Whichever is chosen is justified in the commit message | ✅ DONE | [`4d06613`](https://github.com/shaahink/conductor/commit/4d06613) |
-| S1.3 | The archived release action in the final step is replaced with a maintained equivalent, and the replacement is actually exercised rather than assumed | ✅ DONE | - |
-| S1.4 | `Release`, dispatched on the fix branch, is green end to end - run id recorded - the pull request is merged, and a fresh green run exists on the default branch | ✅ DONE | - |
+| S1.3 | The archived release action in the final step is replaced with a maintained equivalent, and the replacement is actually exercised rather than assumed | ✅ DONE | [`e8c074f`](https://github.com/shaahink/conductor/commit/e8c074f) |
+| S1.4 | `Release`, dispatched on the fix branch, is green end to end - run id recorded - the pull request is merged, and a fresh green run exists on the default branch | ✅ DONE | [`e8c074f`](https://github.com/shaahink/conductor/commit/e8c074f) |
 
 </details>
 
@@ -103,11 +102,6 @@ _Updated 2026-08-03 17:02 UTC · branch `chore/ci-health` · HEAD `944fb9f`_
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-03 15:17:38  ■ needs human — stage B1 used all 2 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: B1 stage is complete with commits landed and gates reported green; re-run gate battery to independently confirm green status before proceeding to unstarted stages C1, S1, N1.
-08-03 15:20:39  ■ needs human — stage B1 used all 2 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: B1 work succeeded (repos-clean gate fixed by committing TRACKER.md) but session exhausted attempt budget; validate gates are truly passing before unstarting stages C1/S1/N1.
-08-03 15:22:28  ▸ stage S1 entered — Shamshir - the release workflow goes green
-08-03 15:22:29  • session #4 S1 Deliver started (attempt 1/4)
-08-03 15:52:56  ▪ gate repos-clean pass [session]  (2.3s)
 08-03 15:52:59  • session #4 S1 → Advanced · done S1.1,S1.2 · 1 commit(s)  (30m30s)
 08-03 15:52:59  ■ needs human — agent asked for a human in the tracker handoff (HUMAN: line) — resolve, then run `conductor resume`
 08-03 15:56:51  • session #5 S1 Deliver started (attempt 1/4)
@@ -143,6 +137,11 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-03 17:37:18  ▪ gate fleet-green FAIL [phase]  (14.7s)
 08-03 17:37:19  • session #11 N1 Fix started (attempt 4/4)
 08-03 18:02:44  ▪ gate repos-clean pass [session]  (3.3s)
+08-03 18:02:47  • session #11 N1 → Advanced · done S1.3,S1.4 · 2 commit(s)  (25m28s)
+08-03 18:03:06  ▪ gate repos-clean pass [phase]  (2.8s)
+08-03 18:03:06  ▪ gate fleet-green pass [phase]  (15.4s)
+08-03 18:03:06  ✓ checkpoint S1.3 confirmed
+08-03 18:03:06  ✓ checkpoint S1.4 confirmed
 ```
 
 ## Health
@@ -161,7 +160,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: chore/ci-health
-working tree: clean
+working tree: M ci-health/TRACKER.md
 vs upstream: up to date
 ```
 
@@ -234,7 +233,7 @@ vs upstream: up to date
 
 ## Last gate run
 
-repos-clean:OK
+repos-clean:OK · fleet-green:OK
 
 ## Last session result
 
