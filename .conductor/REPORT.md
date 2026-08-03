@@ -1,11 +1,12 @@
 ﻿# Conductor — CI health - the public repos go green run report
 
-_Updated 2026-08-03 14:12 UTC · branch `chore/ci-health` · HEAD `c5cf737`_
+_Updated 2026-08-03 14:16 UTC · branch `chore/ci-health` · HEAD `82e3adc`_
 
 **Status:** Idle
 **Stage:** B1 — site - the link checker goes green · attempts used 1
-**Checkpoints:** 8/20 done · **Sessions run:** 2 · **Cost:** $6.0460 (agent $6.0456 + gates $0.0005) · **Tokens:** 132,803 in / 62,018 out
+**Checkpoints:** 8/20 done · **Sessions run:** 3 · **Cost:** $6.9439 (agent $6.9432 + gates $0.0007) · **Tokens:** 163,764 in / 72,370 out
 **Confirmed phases:** K1
+**Pending:** full-battery phase gate for B1
 
 ## Stage progress
 
@@ -86,6 +87,7 @@ _Updated 2026-08-03 14:12 UTC · branch `chore/ci-health` · HEAD `c5cf737`_
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | K1 | Deliver | 1 | 08-03 13:44 | 0:07 | Advanced | K1.1 K1.2 K1.3 K1.4 | 4 | repos-clean:OK | $1.9476 | $0.0002 | 47,560/20,121 |
 | 2 | B1 | Deliver | 1 | 08-03 13:54 | 0:18 | Advanced | B1.1 B1.2 B1.3 B1.4 | 2 | repos-clean:OK | $4.0980 | $0.0002 | 85,243/41,897 |
+| 3 | B1 | Fix | 2 | 08-03 14:12 | 0:03 | Progress |  | 1 | repos-clean:OK | $0.8977 | $0.0002 | 30,961/10,352 |
 
 ## Timeline
 
@@ -110,6 +112,9 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-03 15:12:43  ▪ gate repos-clean pass [session]  (2.2s)
 08-03 15:12:46  • session #2 B1 → Advanced · done B1.1,B1.2,B1.3,B1.4 · 2 commit(s)  (18m16s)
 08-03 15:12:54  ▪ gate repos-clean FAIL [phase]  (2.4s)
+08-03 15:12:54  ▪ gate site-green pass [phase]  (2.8s)
+08-03 15:12:57  • session #3 B1 Fix started (attempt 2/2)
+08-03 15:16:47  ▪ gate repos-clean pass [session]  (2.0s)
 ```
 
 ## Health
@@ -117,7 +122,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 2 · retries 0 (0 %) · overall Ok
+sessions 3 · retries 1 (33 %) · overall Ok
 ✓ no health concerns detected
 ```
 
@@ -127,7 +132,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: chore/ci-health
-working tree: M ci-health/TRACKER.md
+working tree: clean
 vs upstream: up to date
 ```
 
@@ -148,6 +153,8 @@ vs upstream: up to date
   - `131c3ea` Link check: give lychee a root dir, point README at the real site URL [site-blog]
   - `d5dafdc` Add content licence: CC BY-NC 4.0 (posts) [site-blog]
   - `2619c8a` Add LICENSE: MIT (code) [site-blog]
+- **s3 (B1 Fix)** — 1 commit(s):
+  - [`82e3adc`](https://github.com/shaahink/conductor/commit/82e3adc) ci-health: resolve repos-clean red - commit generated tracker, re-verify B1 green on main
 
 ## Phase handovers (audit)
 
@@ -170,48 +177,31 @@ vs upstream: up to date
 
 ## Last gate run
 
-repos-clean:FAIL-retry · site-green:OK
-
-<details><summary>repos-clean — exit 1</summary>
-
-```
-[conductor] retried once (SC4.1): the first attempt exited 1 after 2s. Below is the SECOND run.
-OK   conductor-ci
-  OK   KataFlow-ai
-  note Shamshir - 6 pre-existing uncommitted file(s) ignored per dirty-baseline.txt
-  OK   Shamshir
-  OK   site-blog
-  OK   DevContext2
-  OK   sitekit
-  OK   site-template
-  OK   blog-code
-  OK   dotgithub
-
-RED - 1 repository problem(s):
-  * conductor-cihealth : 1 uncommitted change(s) this run did not start with - ci-health/TRACKER.md
-```
-</details>
+repos-clean:OK
 
 ## Last session result
 
-> SESSION-RESULT:** Stage B1 is complete — `shaahink/site` is green on its default branch, proven on the real remote. The 17 link-checker errors were three distinct problems, not seventeen broken links: 14 were lychee refusing to classify root-relative links without a root directory, so it errored *before* the workflow's pre-existing `--scheme https/http` filter could apply — passing `--root-dir` makes that filter reachable and no content link was rewritten; 2 were README pointing at `https://shaahink.github.io`, which 404s because this is a project page under `/site/` (the replacement was fetched and returned 200 before editing); and 1 more, which the authority doc did not count, was the same…
+> SESSION-RESULT: The single red gate `repos-clean` is fixed at its root, not its symptom — `ci-health/TRACKER.md` is a generated view of `run.db` that the engine rewrote *after* session #2's final commit, so the anchor repo ended dirty with nothing substantively broken; I committed the regenerated tracker plus a new evidence artifact in `82e3adc` and pushed, and verified all nine declared satellites and the anchor are clean. Before banking it I independently re-verified stage B1 against the real remote rather than trusting the prior handoff: `shaahink/site`'s only two active workflows are both green as the latest run on the default branch — Deploy `30821258479` and Check links `30821400002` (…
 
 ## Tracker handoff
 
 ```
-last: stage B1 complete - site is green. PR shaahink/site#1 rebase-merged into main. Both
-  active workflows now pass on the default branch: Deploy run 30821258479 (push) and Check
-  links run 30821400002 (dispatched after the merge, because it is cron+dispatch only).
-stage: **B1 DONE** - four checkpoints, an evidence file each in ci-health/evidence.
-gate: no battery this session. Read by hand on the real remote. Green: site Deploy, site
-  Check links. Still red and untouched: conductor CI, Shamshir Release.
+last: fix session. The battery's only red was gate `repos-clean` - this file left uncommitted -
+  NOT a CI failure. TRACKER.md is a generated view of run.db: s2 committed it, then the regen
+  its own claims triggered flipped Done 0->4 and rewrote every status cell. Committed now.
+stage: **B1 DONE** - re-read on the real remote, not taken from s2's word. shaahink/site has
+  exactly two active workflows and both are green as the latest run on main: Deploy 30821258479
+  (push) and Check links 30821400002 (workflow_dispatch), both at sha e13507d = clean local
+  C:/Code/site-blog. No stale red holds B1 open. Five evidence files in ci-health/evidence.
+gate: expect green. Still red and untouched elsewhere: conductor CI, Shamshir Release.
 next: C1, S1 and N1 are unstarted; nothing in B1 blocks them. N1 can reuse this repo's
   action majors - checkout v7, setup-node v7, pnpm/action-setup v6, upload-pages-artifact v5,
   deploy-pages v5 - all proven on a real runner here, with no Node 20 warning left.
-trap: setup-node v6 narrowed automatic package-manager cache detection to npm only, and
-  upload-pages-artifact v4 stopped putting dotfiles in the artifact - absorb both explicitly
-  when bumping elsewhere. A repo's github-pages environment may allow deployments only from
-  main, in which case deploy-pages cannot be exercised from a branch at all, only after the
-  merge; a branch dispatch fails with zero steps and that is a policy refusal, not a fault.
-  KataFlow CI run 30765473647 is still red permanently and correctly - archived, out of scope.
+trap: COMMIT TRACKER.md LAST, after your `conductor task --done` calls - claiming regenerates
+  it, so a tracker committed before you claim goes dirty behind you and reds the battery with
+  nothing actually broken. That cost this whole session. Also: setup-node v6 narrowed cache
+  auto-detection to npm only, upload-pages-artifact v4 stopped shipping dotfiles - absorb both
+  when bumping. A github-pages environment may allow deploys only from main, so deploy-pages
+  cannot run from a branch: zero steps is a policy refusal, not a fault. KataFlow CI run
+  30765473647 is permanently red and correctly so - archived, out of scope.
 ```
