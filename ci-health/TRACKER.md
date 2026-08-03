@@ -4,24 +4,28 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: fix session. The battery's only red was gate `repos-clean` - this file left uncommitted -
-  NOT a CI failure. TRACKER.md is a generated view of run.db: s2 committed it, then the regen
-  its own claims triggered flipped Done 0->4 and rewrote every status cell. Committed now.
-stage: **B1 DONE** - re-read on the real remote, not taken from s2's word. shaahink/site has
-  exactly two active workflows and both are green as the latest run on main: Deploy 30821258479
-  (push) and Check links 30821400002 (workflow_dispatch), both at sha e13507d = clean local
-  C:/Code/site-blog. No stale red holds B1 open. Five evidence files in ci-health/evidence.
-gate: expect green. Still red and untouched elsewhere: conductor CI, Shamshir Release.
-next: C1, S1 and N1 are unstarted; nothing in B1 blocks them. N1 can reuse this repo's
-  action majors - checkout v7, setup-node v7, pnpm/action-setup v6, upload-pages-artifact v5,
-  deploy-pages v5 - all proven on a real runner here, with no Node 20 warning left.
-trap: COMMIT TRACKER.md LAST, after your `conductor task --done` calls - claiming regenerates
-  it, so a tracker committed before you claim goes dirty behind you and reds the battery with
-  nothing actually broken. That cost this whole session. Also: setup-node v6 narrowed cache
-  auto-detection to npm only, upload-pages-artifact v4 stopped shipping dotfiles - absorb both
-  when bumping. A github-pages environment may allow deploys only from main, so deploy-pages
-  cannot run from a branch: zero steps is a policy refusal, not a fault. KataFlow CI run
-  30765473647 is permanently red and correctly so - archived, out of scope.
+last: S1. S1.1+S1.2 DONE with proof; S1.3/S1.4 BLOCKED on the owner, not on CI.
+stage: Shamshir PR 3 (branch fix/release-node-and-gh-release) is OPEN and NOT merged -
+  do not merge it, it is red. Release run 30822912016 got `dotnet build -c Release`
+  green for the first time ever (setup-node 22 + npm ci --legacy-peer-deps + npm run
+  build in web-ui BEFORE dotnet; wwwroot is gitignored so the mtime check in
+  rebuild-ng-if-stale.ps1 could never pass on a fresh checkout - the doc's "CI has no
+  Node" was close but that script never invokes node at all). Then dotnet test failed:
+  15 cTrader E2E (need a desktop cTrader install - now excluded via the repo's OWN
+  filter from scripts/gates.ps1:22) and 2 REAL violations left red on purpose.
+gate: red, correctly. HUMAN: Release cannot go green until the owner decides on two of
+  their own architecture-test failures - EngineReducer.ReconcileToVenue (EngineReducer.cs:415)
+  exports a System.DateTime the Engine purity rule forbids, and VenueSymbolSpecEntity
+  lacks IAuditableEntity (needs audit columns + an EF migration). Both are product/schema
+  changes, not CI. Run 30824699654 was dispatched to confirm only those 2 remain.
+next: C1 or N1 - both untouched and neither is blocked. For S1, the ONLY fake fix on
+  offer is excluding tests/TradingEngine.Tests.Architecture; refuse it, the iteration
+  docs call that suite a gate that must stay 3/3.
+trap: a workflow_dispatch trigger added on a FEATURE BRANCH is dispatchable with
+  `gh workflow run --ref <branch>` even though main's copy is still push-only - never
+  merge just to test one. Shamshir CI is slow: npm ci ~8 min, whole run 20-25 min.
+  Leave Shamshir's docs/ and tools/ dirt alone, it is the owner's. And commit
+  TRACKER.md LAST, after your `conductor task` calls - claiming regenerates it.
 
 
 ## Baseline numbers (from run.db)
@@ -53,7 +57,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | B1.1 | The two links to the site root in the README point at the real published URL, verified by fetching it and getting a 200 rather than by assuming | DONE | 1081e8e | ci-health/evidence/B1.1-site-url-fixed.md |
 | B1.2 | lychee is given a root directory so the 15 root-relative links resolve; no correct link was rewritten to make the checker happy | DONE | 1081e8e | ci-health/evidence/B1.2-lychee-root-dir.md |
 | B1.3 | The `Check links` workflow, dispatched manually on the fix branch, finishes with zero errors - run id recorded | DONE | 1081e8e | ci-health/evidence/B1.3-links-green-on-branch.md |
-| B1.4 | site's workflow actions are on current majors, the pull request is merged with checks green, and a fresh green run of `Check links` exists on the default branch | DONE | 1081e8e | ci-health/evidence/B1.4-actions-bumped-merged-green.md |
+| B1.4 | site's workflow actions are on current majors, the pull request is merged with checks green, and a fresh green run of `Check links` exists on the default branch | DONE | 1081e8e | ci-health/evidence/B1.5-reverify-main-green-and-repos-clean.md |
 
 ### S1 — Shamshir - the release workflow goes green
 
