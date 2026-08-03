@@ -251,8 +251,15 @@ public sealed class SC3_4AdvisorTests
 
     private static string RepoRoot()
     {
+        // `.git` is a DIRECTORY in an ordinary clone and a FILE in a linked worktree (it holds a
+        // gitdir: pointer). Testing only for the directory walked past the root of every worktree
+        // checkout, hit null, and failed this test on Assert.NotNull — so the plan check below never
+        // ran there at all. Accept either form; both mark the same repo root.
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir != null && !Directory.Exists(Path.Combine(dir.FullName, ".git"))) dir = dir.Parent;
+        while (dir != null
+               && !Directory.Exists(Path.Combine(dir.FullName, ".git"))
+               && !File.Exists(Path.Combine(dir.FullName, ".git")))
+            dir = dir.Parent;
         Assert.NotNull(dir);
         return dir!.FullName;
     }
