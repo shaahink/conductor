@@ -1,10 +1,10 @@
 ﻿# Conductor — CI health - the public repos go green run report
 
-_Updated 2026-08-03 14:22 UTC · branch `chore/ci-health` · HEAD `a363e90`_
+_Updated 2026-08-03 14:52 UTC · branch `chore/ci-health` · HEAD `4d06613`_
 
 **Status:** Idle
-**Stage:** B1 — site - the link checker goes green · attempts used 0
-**Checkpoints:** 8/20 done · **Sessions run:** 3 · **Cost:** $6.9439 (agent $6.9432 + gates $0.0007) · **Tokens:** 163,764 in / 72,370 out
+**Stage:** S1 — Shamshir - the release workflow goes green · attempts used 0 · working ▸ S1.3
+**Checkpoints:** 10/20 done · **Sessions run:** 4 · **Cost:** $12.9413 (agent $12.9404 + gates $0.0009) · **Tokens:** 271,575 in / 122,430 out
 **Confirmed phases:** K1
 **⚠ Skipped stages (need human review):** B1
 
@@ -14,7 +14,7 @@ _Updated 2026-08-03 14:22 UTC · branch `chore/ci-health` · HEAD `a363e90`_
 |---|---|---|---|
 | K1 | Retire KataFlow | ██████████ 4/4 | confirmed ✓ |
 | B1 | site - the link checker goes green | ██████████ 4/4 | SKIPPED ⚠ |
-| S1 | Shamshir - the release workflow goes green | ░░░░░░░░░░ 0/4 | todo |
+| S1 | Shamshir - the release workflow goes green | █████░░░░░ 2/4 | **← active** |
 | C1 | conductor - the version test stops breaking on every commit | ░░░░░░░░░░ 0/3 | todo |
 | N1 | The Node 20 action sweep across the remaining repos | ░░░░░░░░░░ 0/3 | todo |
 | Z1 | Close out - the whole fleet reads green | ░░░░░░░░░░ 0/2 | todo |
@@ -41,14 +41,14 @@ _Updated 2026-08-03 14:22 UTC · branch `chore/ci-health` · HEAD `a363e90`_
 
 </details>
 
-<details><summary>S1 — Shamshir - the release workflow goes green (0/4)</summary>
+<details><summary>S1 — Shamshir - the release workflow goes green (2/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| S1.1 | `release.yml` gains a manual-dispatch trigger, so the workflow can be exercised from a branch instead of only by pushing to main | ⬜ TODO | - |
-| S1.2 | The Angular build succeeds in CI - either Node is set up before the .NET build, or the MSBuild target degrades honestly when Node is absent. Whichever is chosen is justified in the commit message | ⬜ TODO | - |
-| S1.3 | The archived release action in the final step is replaced with a maintained equivalent, and the replacement is actually exercised rather than assumed | ⬜ TODO | - |
-| S1.4 | `Release`, dispatched on the fix branch, is green end to end - run id recorded - the pull request is merged, and a fresh green run exists on the default branch | ⬜ TODO | - |
+| S1.1 | `release.yml` gains a manual-dispatch trigger, so the workflow can be exercised from a branch instead of only by pushing to main | ✅ DONE | - |
+| S1.2 | The Angular build succeeds in CI - either Node is set up before the .NET build, or the MSBuild target degrades honestly when Node is absent. Whichever is chosen is justified in the commit message | ✅ DONE | - |
+| S1.3 | The archived release action in the final step is replaced with a maintained equivalent, and the replacement is actually exercised rather than assumed | 🚫 BLOCKED | - |
+| S1.4 | `Release`, dispatched on the fix branch, is green end to end - run id recorded - the pull request is merged, and a fresh green run exists on the default branch | 🚫 BLOCKED | - |
 
 </details>
 
@@ -88,6 +88,7 @@ _Updated 2026-08-03 14:22 UTC · branch `chore/ci-health` · HEAD `a363e90`_
 | 1 | K1 | Deliver | 1 | 08-03 13:44 | 0:07 | Advanced | K1.1 K1.2 K1.3 K1.4 | 4 | repos-clean:OK | $1.9476 | $0.0002 | 47,560/20,121 |
 | 2 | B1 | Deliver | 1 | 08-03 13:54 | 0:18 | Advanced | B1.1 B1.2 B1.3 B1.4 | 2 | repos-clean:OK | $4.0980 | $0.0002 | 85,243/41,897 |
 | 3 | B1 | Fix | 2 | 08-03 14:12 | 0:03 | Progress |  | 1 | repos-clean:OK | $0.8977 | $0.0002 | 30,961/10,352 |
+| 4 | S1 | Deliver | 1 | 08-03 14:22 | 0:30 | Advanced | S1.1 S1.2 | 1 | repos-clean:OK | $5.9972 | $0.0002 | 107,811/50,060 |
 
 ## Timeline
 
@@ -120,6 +121,9 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-03 15:16:57  ▪ gate site-green pass [phase]  (2.9s)
 08-03 15:17:38  ■ needs human — stage B1 used all 2 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: B1 stage is complete with commits landed and gates reported green; re-run gate battery to independently confirm green status before proceeding to unstarted stages C1, S1, N1.
 08-03 15:20:39  ■ needs human — stage B1 used all 2 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: B1 work succeeded (repos-clean gate fixed by committing TRACKER.md) but session exhausted attempt budget; validate gates are truly passing before unstarting stages C1/S1/N1.
+08-03 15:22:28  ▸ stage S1 entered — Shamshir - the release workflow goes green
+08-03 15:22:29  • session #4 S1 Deliver started (attempt 1/4)
+08-03 15:52:56  ▪ gate repos-clean pass [session]  (2.3s)
 ```
 
 ## Health
@@ -127,8 +131,8 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 3 · retries 1 (33 %) · overall Warn
-⚠ [gate-oscillation] gate 'repos-clean' flipped pass/fail 3x
+sessions 4 · retries 1 (25 %) · overall Warn
+⚠ [gate-oscillation] gate 'repos-clean' flipped pass/fail 4x
 ```
 
 ## Repo
@@ -137,8 +141,8 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: chore/ci-health
-working tree: M .conductor/REPORT.md, M ci-health/TRACKER.md
-vs upstream: 1 ahead
+working tree: clean
+vs upstream: up to date
 ```
 
 ### Commits by session
@@ -160,6 +164,11 @@ vs upstream: 1 ahead
   - `2619c8a` Add LICENSE: MIT (code) [site-blog]
 - **s3 (B1 Fix)** — 1 commit(s):
   - [`82e3adc`](https://github.com/shaahink/conductor/commit/82e3adc) ci-health: resolve repos-clean red - commit generated tracker, re-verify B1 green on main
+- **s4 (S1 Deliver)** — 1 commit(s) (+3 in satellite repo(s)):
+  - [`4d06613`](https://github.com/shaahink/conductor/commit/4d06613) ci-health: S1 - Shamshir Release build fixed and proven, blocked on 2 owner-side architecture violations
+  - `afa4eb4` ci: run the repo's own credential-free test gate, not every test [Shamshir]
+  - `72d2e8f` ci: npm ci --legacy-peer-deps - the lockfile was already resolved that way [Shamshir]
+  - `27bd70c` ci: build the Angular UI before .NET so Release can pass, and make Release dispatchable [Shamshir]
 
 ## Phase handovers (audit)
 
@@ -182,51 +191,35 @@ vs upstream: 1 ahead
 
 ## Last gate run
 
-repos-clean:FAIL-retry · site-green:OK
-
-<details><summary>repos-clean — exit 1</summary>
-
-```
-[conductor] retried once (SC4.1): the first attempt exited 1 after 2s. Below is the SECOND run.
-OK   conductor-ci
-  OK   KataFlow-ai
-  note Shamshir - 6 pre-existing uncommitted file(s) ignored per dirty-baseline.txt
-  OK   Shamshir
-  OK   site-blog
-  OK   DevContext2
-  OK   sitekit
-  OK   site-template
-  OK   blog-code
-  OK   dotgithub
-
-RED - 1 repository problem(s):
-  * conductor-cihealth : 1 uncommitted change(s) this run did not start with - ci-health/TRACKER.md
-```
-</details>
+repos-clean:OK
 
 ## Last session result
 
-> SESSION-RESULT: The single red gate `repos-clean` is fixed at its root, not its symptom — `ci-health/TRACKER.md` is a generated view of `run.db` that the engine rewrote *after* session #2's final commit, so the anchor repo ended dirty with nothing substantively broken; I committed the regenerated tracker plus a new evidence artifact in `82e3adc` and pushed, and verified all nine declared satellites and the anchor are clean. Before banking it I independently re-verified stage B1 against the real remote rather than trusting the prior handoff: `shaahink/site`'s only two active workflows are both green as the latest run on the default branch — Deploy `30821258479` and Check links `30821400002` (…
+> SESSION-RESULT: S1.1 and S1.2 landed with proof on the real remote and are claimed with evidence; S1.3 and S1.4 are parked BLOCKED on an owner decision. Shamshir's Release workflow now has a manual-dispatch trigger (proven: run 30822779923 ran as `workflow_dispatch` from the feature branch — a dispatch trigger added on a branch is dispatchable via `gh workflow run --ref` even though main's copy is still push-only, so no merge-to-test is ever needed), and `dotnet build -c Release` passed for the first time in the workflow's history (run 30822912016, step 8). The doc's stated cause was close but not right: `rebuild-ng-if-stale.ps1` never invokes node — it is an mtime staleness check against `s…
 
 ## Tracker handoff
 
 ```
-last: fix session. The battery's only red was gate `repos-clean` - this file left uncommitted -
-  NOT a CI failure. TRACKER.md is a generated view of run.db: s2 committed it, then the regen
-  its own claims triggered flipped Done 0->4 and rewrote every status cell. Committed now.
-stage: **B1 DONE** - re-read on the real remote, not taken from s2's word. shaahink/site has
-  exactly two active workflows and both are green as the latest run on main: Deploy 30821258479
-  (push) and Check links 30821400002 (workflow_dispatch), both at sha e13507d = clean local
-  C:/Code/site-blog. No stale red holds B1 open. Five evidence files in ci-health/evidence.
-gate: expect green. Still red and untouched elsewhere: conductor CI, Shamshir Release.
-next: C1, S1 and N1 are unstarted; nothing in B1 blocks them. N1 can reuse this repo's
-  action majors - checkout v7, setup-node v7, pnpm/action-setup v6, upload-pages-artifact v5,
-  deploy-pages v5 - all proven on a real runner here, with no Node 20 warning left.
-trap: COMMIT TRACKER.md LAST, after your `conductor task --done` calls - claiming regenerates
-  it, so a tracker committed before you claim goes dirty behind you and reds the battery with
-  nothing actually broken. That cost this whole session. Also: setup-node v6 narrowed cache
-  auto-detection to npm only, upload-pages-artifact v4 stopped shipping dotfiles - absorb both
-  when bumping. A github-pages environment may allow deploys only from main, so deploy-pages
-  cannot run from a branch: zero steps is a policy refusal, not a fault. KataFlow CI run
-  30765473647 is permanently red and correctly so - archived, out of scope.
+last: S1. S1.1+S1.2 DONE with proof; S1.3/S1.4 BLOCKED on the owner, not on CI.
+stage: Shamshir PR 3 (branch fix/release-node-and-gh-release) is OPEN and NOT merged -
+  do not merge it, it is red. Release run 30822912016 got `dotnet build -c Release`
+  green for the first time ever (setup-node 22 + npm ci --legacy-peer-deps + npm run
+  build in web-ui BEFORE dotnet; wwwroot is gitignored so the mtime check in
+  rebuild-ng-if-stale.ps1 could never pass on a fresh checkout - the doc's "CI has no
+  Node" was close but that script never invokes node at all). Then dotnet test failed:
+  15 cTrader E2E (need a desktop cTrader install - now excluded via the repo's OWN
+  filter from scripts/gates.ps1:22) and 2 REAL violations left red on purpose.
+gate: red, correctly. HUMAN: Release cannot go green until the owner decides on two of
+  their own architecture-test failures - EngineReducer.ReconcileToVenue (EngineReducer.cs:415)
+  exports a System.DateTime the Engine purity rule forbids, and VenueSymbolSpecEntity
+  lacks IAuditableEntity (needs audit columns + an EF migration). Both are product/schema
+  changes, not CI. Run 30824699654 was dispatched to confirm only those 2 remain.
+next: C1 or N1 - both untouched and neither is blocked. For S1, the ONLY fake fix on
+  offer is excluding tests/TradingEngine.Tests.Architecture; refuse it, the iteration
+  docs call that suite a gate that must stay 3/3.
+trap: a workflow_dispatch trigger added on a FEATURE BRANCH is dispatchable with
+  `gh workflow run --ref <branch>` even though main's copy is still push-only - never
+  merge just to test one. Shamshir CI is slow: npm ci ~8 min, whole run 20-25 min.
+  Leave Shamshir's docs/ and tools/ dirt alone, it is the owner's. And commit
+  TRACKER.md LAST, after your `conductor task` calls - claiming regenerates it.
 ```
