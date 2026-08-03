@@ -4,21 +4,24 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: stage B1 complete - site is green. PR shaahink/site#1 rebase-merged into main. Both
-  active workflows now pass on the default branch: Deploy run 30821258479 (push) and Check
-  links run 30821400002 (dispatched after the merge, because it is cron+dispatch only).
-stage: **B1 DONE** - four checkpoints, an evidence file each in ci-health/evidence.
-gate: no battery this session. Read by hand on the real remote. Green: site Deploy, site
-  Check links. Still red and untouched: conductor CI, Shamshir Release.
+last: fix session. The battery's only red was gate `repos-clean` - this file left uncommitted -
+  NOT a CI failure. TRACKER.md is a generated view of run.db: s2 committed it, then the regen
+  its own claims triggered flipped Done 0->4 and rewrote every status cell. Committed now.
+stage: **B1 DONE** - re-read on the real remote, not taken from s2's word. shaahink/site has
+  exactly two active workflows and both are green as the latest run on main: Deploy 30821258479
+  (push) and Check links 30821400002 (workflow_dispatch), both at sha e13507d = clean local
+  C:/Code/site-blog. No stale red holds B1 open. Five evidence files in ci-health/evidence.
+gate: expect green. Still red and untouched elsewhere: conductor CI, Shamshir Release.
 next: C1, S1 and N1 are unstarted; nothing in B1 blocks them. N1 can reuse this repo's
   action majors - checkout v7, setup-node v7, pnpm/action-setup v6, upload-pages-artifact v5,
   deploy-pages v5 - all proven on a real runner here, with no Node 20 warning left.
-trap: setup-node v6 narrowed automatic package-manager cache detection to npm only, and
-  upload-pages-artifact v4 stopped putting dotfiles in the artifact - absorb both explicitly
-  when bumping elsewhere. A repo's github-pages environment may allow deployments only from
-  main, in which case deploy-pages cannot be exercised from a branch at all, only after the
-  merge; a branch dispatch fails with zero steps and that is a policy refusal, not a fault.
-  KataFlow CI run 30765473647 is still red permanently and correctly - archived, out of scope.
+trap: COMMIT TRACKER.md LAST, after your `conductor task --done` calls - claiming regenerates
+  it, so a tracker committed before you claim goes dirty behind you and reds the battery with
+  nothing actually broken. That cost this whole session. Also: setup-node v6 narrowed cache
+  auto-detection to npm only, upload-pages-artifact v4 stopped shipping dotfiles - absorb both
+  when bumping. A github-pages environment may allow deploys only from main, so deploy-pages
+  cannot run from a branch: zero steps is a policy refusal, not a fault. KataFlow CI run
+  30765473647 is permanently red and correctly so - archived, out of scope.
 
 
 ## Baseline numbers (from run.db)
@@ -26,7 +29,7 @@ trap: setup-node v6 narrowed automatic package-manager cache detection to npm on
 | Metric | Value |
 |---|---|
 | Total checkpoints | 20 |
-| Done | 0 |
+| Done | 4 |
 | Claimed (unconfirmed) | 4 |
 
 ## Checkpoints
@@ -38,19 +41,19 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| K1.1 | KataFlow's `CI` workflow and its Dependabot config are disabled on the remote, and no workflow other than Dependabot's synthetic entry reports itself active | DONE | 9e39a36 | ci-health/evidence/K1.1-kataflow-disabled.md |
-| K1.2 | The 20 open Dependabot pull requests are closed with a one-line comment saying the repo is being retired, and an open-PR count returns zero | DONE | 9e39a36 | ci-health/evidence/K1.2-kataflow-prs-closed.md |
-| K1.3 | KataFlow's README carries a short retirement notice at the top saying the repo is archived and why, committed to main | DONE | 9e39a36 | ci-health/evidence/K1.3-kataflow-readme-notice.md |
-| K1.4 | KataFlow is archived - the repository reports archived true. This is the authorised irreversible step and archiving makes the repo read-only, so K1.1 to K1.3 must all be genuinely done first | DONE | 9e39a36 | ci-health/evidence/K1.4-kataflow-archived.md |
+| K1.1 | KataFlow's `CI` workflow and its Dependabot config are disabled on the remote, and no workflow other than Dependabot's synthetic entry reports itself active | DONE ✓ | 9e39a36 | ci-health/evidence/K1.1-kataflow-disabled.md |
+| K1.2 | The 20 open Dependabot pull requests are closed with a one-line comment saying the repo is being retired, and an open-PR count returns zero | DONE ✓ | 9e39a36 | ci-health/evidence/K1.2-kataflow-prs-closed.md |
+| K1.3 | KataFlow's README carries a short retirement notice at the top saying the repo is archived and why, committed to main | DONE ✓ | 9e39a36 | ci-health/evidence/K1.3-kataflow-readme-notice.md |
+| K1.4 | KataFlow is archived - the repository reports archived true. This is the authorised irreversible step and archiving makes the repo read-only, so K1.1 to K1.3 must all be genuinely done first | DONE ✓ | 9e39a36 | ci-health/evidence/K1.4-kataflow-archived.md |
 
 ### B1 — site - the link checker goes green
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| B1.1 | The two links to the site root in the README point at the real published URL, verified by fetching it and getting a 200 rather than by assuming | TODO | - | - |
-| B1.2 | lychee is given a root directory so the 15 root-relative links resolve; no correct link was rewritten to make the checker happy | TODO | - | - |
-| B1.3 | The `Check links` workflow, dispatched manually on the fix branch, finishes with zero errors - run id recorded | TODO | - | - |
-| B1.4 | site's workflow actions are on current majors, the pull request is merged with checks green, and a fresh green run of `Check links` exists on the default branch | TODO | - | - |
+| B1.1 | The two links to the site root in the README point at the real published URL, verified by fetching it and getting a 200 rather than by assuming | DONE | 1081e8e | ci-health/evidence/B1.1-site-url-fixed.md |
+| B1.2 | lychee is given a root directory so the 15 root-relative links resolve; no correct link was rewritten to make the checker happy | DONE | 1081e8e | ci-health/evidence/B1.2-lychee-root-dir.md |
+| B1.3 | The `Check links` workflow, dispatched manually on the fix branch, finishes with zero errors - run id recorded | DONE | 1081e8e | ci-health/evidence/B1.3-links-green-on-branch.md |
+| B1.4 | site's workflow actions are on current majors, the pull request is merged with checks green, and a fresh green run of `Check links` exists on the default branch | DONE | 1081e8e | ci-health/evidence/B1.4-actions-bumped-merged-green.md |
 
 ### S1 — Shamshir - the release workflow goes green
 
