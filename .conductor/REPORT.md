@@ -1,17 +1,17 @@
 ﻿# Conductor — CI health - the public repos go green run report
 
-_Updated 2026-08-03 13:52 UTC · branch `chore/ci-health` · HEAD `71b994b`_
+_Updated 2026-08-03 13:54 UTC · branch `chore/ci-health` · HEAD `b04f829`_
 
 **Status:** Idle
 **Stage:** K1 — Retire KataFlow · attempts used 0
 **Checkpoints:** 4/20 done · **Sessions run:** 1 · **Cost:** $1.9478 (agent $1.9476 + gates $0.0002) · **Tokens:** 47,560 in / 20,121 out
-**Pending:** full-battery phase gate for K1
+**Confirmed phases:** K1
 
 ## Stage progress
 
 | Stage | Title | Progress | State |
 |---|---|---|---|
-| K1 | Retire KataFlow | ██████████ 4/4 | gating… |
+| K1 | Retire KataFlow | ██████████ 4/4 | confirmed ✓ |
 | B1 | site - the link checker goes green | ░░░░░░░░░░ 0/4 | todo |
 | S1 | Shamshir - the release workflow goes green | ░░░░░░░░░░ 0/4 | todo |
 | C1 | conductor - the version test stops breaking on every commit | ░░░░░░░░░░ 0/3 | todo |
@@ -22,10 +22,10 @@ _Updated 2026-08-03 13:52 UTC · branch `chore/ci-health` · HEAD `71b994b`_
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| K1.1 | KataFlow's `CI` workflow and its Dependabot config are disabled on the remote, and no workflow other than Dependabot's synthetic entry reports itself active | ✅ DONE | - |
-| K1.2 | The 20 open Dependabot pull requests are closed with a one-line comment saying the repo is being retired, and an open-PR count returns zero | ✅ DONE | - |
-| K1.3 | KataFlow's README carries a short retirement notice at the top saying the repo is archived and why, committed to main | ✅ DONE | - |
-| K1.4 | KataFlow is archived - the repository reports archived true. This is the authorised irreversible step and archiving makes the repo read-only, so K1.1 to K1.3 must all be genuinely done first | ✅ DONE | - |
+| K1.1 | KataFlow's `CI` workflow and its Dependabot config are disabled on the remote, and no workflow other than Dependabot's synthetic entry reports itself active | ✅ DONE | [`9e39a36`](https://github.com/shaahink/conductor/commit/9e39a36) |
+| K1.2 | The 20 open Dependabot pull requests are closed with a one-line comment saying the repo is being retired, and an open-PR count returns zero | ✅ DONE | [`9e39a36`](https://github.com/shaahink/conductor/commit/9e39a36) |
+| K1.3 | KataFlow's README carries a short retirement notice at the top saying the repo is archived and why, committed to main | ✅ DONE | [`9e39a36`](https://github.com/shaahink/conductor/commit/9e39a36) |
+| K1.4 | KataFlow is archived - the repository reports archived true. This is the authorised irreversible step and archiving makes the repo read-only, so K1.1 to K1.3 must all be genuinely done first | ✅ DONE | [`9e39a36`](https://github.com/shaahink/conductor/commit/9e39a36) |
 
 </details>
 
@@ -95,6 +95,14 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-03 14:44:39  ▸ stage K1 entered — Retire KataFlow
 08-03 14:44:40  • session #1 K1 Deliver started (attempt 1/2)
 08-03 14:52:38  ▪ gate repos-clean pass [session]  (2.3s)
+08-03 14:52:41  • session #1 K1 → Advanced · done K1.1,K1.2,K1.3,K1.4 · 4 commit(s)  (8m00s)
+08-03 14:54:19  ◆ run resumed · CI health - the public repos go green
+08-03 14:54:26  ▪ gate repos-clean pass [phase]  (2.7s)
+08-03 14:54:26  ▪ gate kataflow-retired pass [phase]  (2.6s)
+08-03 14:54:26  ✓ checkpoint K1.1 confirmed
+08-03 14:54:26  ✓ checkpoint K1.2 confirmed
+08-03 14:54:26  ✓ checkpoint K1.3 confirmed
+08-03 14:54:26  ✓ checkpoint K1.4 confirmed
 ```
 
 ## Health
@@ -148,7 +156,7 @@ vs upstream: up to date
 
 ## Last gate run
 
-repos-clean:OK
+repos-clean:OK · kataflow-retired:OK
 
 ## Last session result
 
