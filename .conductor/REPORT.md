@@ -1,12 +1,11 @@
 ﻿# Conductor — CI health - the public repos go green run report
 
-_Updated 2026-08-03 16:07 UTC · branch `chore/ci-health` · HEAD `cc7e71b`_
+_Updated 2026-08-03 16:08 UTC · branch `chore/ci-health` · HEAD `02ec6b6`_
 
 **Status:** Idle
-**Stage:** N1 — The Node 20 action sweep across the remaining repos · attempts used 0
+**Stage:** N1 — The Node 20 action sweep across the remaining repos · attempts used 1
 **Checkpoints:** 16/20 done · **Sessions run:** 8 · **Cost:** $23.7278 (agent $23.7264 + gates $0.0014) · **Tokens:** 497,119 in / 213,750 out
 **Confirmed phases:** K1, C1
-**Pending:** full-battery phase gate for N1
 **⚠ Skipped stages (need human review):** B1, S1
 
 ## Stage progress
@@ -67,9 +66,9 @@ _Updated 2026-08-03 16:07 UTC · branch `chore/ci-health` · HEAD `cc7e71b`_
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| N1.1 | DevContext2, sitekit, site-template and blog-code each have a branch bumping their workflow actions off the Node 20 runtime, with CI green on the pull request | ✅ DONE | - |
-| N1.2 | Those four pull requests are merged and each repo's default branch is green | ✅ DONE | - |
-| N1.3 | The two reusable workflows in the org's dotfile-named repo are bumped, with the shared site pipeline proven by a downstream caller's CI going green. If the agent-running workflow's credential guard cannot be demonstrated to still hold, it is left alone and the reason is recorded here - that is an acceptable completion, not a failure | ✅ DONE | - |
+| N1.1 | DevContext2, sitekit, site-template and blog-code each have a branch bumping their workflow actions off the Node 20 runtime, with CI green on the pull request | ✅ DONE | [`8175f7c`](https://github.com/shaahink/conductor/commit/8175f7c) |
+| N1.2 | Those four pull requests are merged and each repo's default branch is green | ✅ DONE | [`8175f7c`](https://github.com/shaahink/conductor/commit/8175f7c) |
+| N1.3 | The two reusable workflows in the org's dotfile-named repo are bumped, with the shared site pipeline proven by a downstream caller's CI going green. If the agent-running workflow's credential guard cannot be demonstrated to still hold, it is left alone and the reason is recorded here - that is an acceptable completion, not a failure | ✅ DONE | [`8175f7c`](https://github.com/shaahink/conductor/commit/8175f7c) |
 
 </details>
 
@@ -100,7 +99,6 @@ _Updated 2026-08-03 16:07 UTC · branch `chore/ci-health` · HEAD `cc7e71b`_
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-03 14:54:26  ✓ checkpoint K1.2 confirmed
 08-03 14:54:26  ✓ checkpoint K1.3 confirmed
 08-03 14:54:26  ✓ checkpoint K1.4 confirmed
 08-03 14:54:26  ▸ stage K1 confirmed  (9m46s)
@@ -140,6 +138,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-03 16:36:22  ▸ stage N1 entered — The Node 20 action sweep across the remaining repos
 08-03 16:36:22  • session #8 N1 Deliver started (attempt 1/4)
 08-03 17:07:16  ▪ gate repos-clean pass [session]  (2.6s)
+08-03 17:07:20  • session #8 N1 → Advanced · done N1.1,N1.2,N1.3 · 7 commit(s)  (30m57s)
 ```
 
 ## Health
@@ -157,7 +156,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: chore/ci-health
-working tree: clean
+working tree: M ci-health/TRACKER.md
 vs upstream: up to date
 ```
 
@@ -225,7 +224,35 @@ vs upstream: up to date
 
 ## Last gate run
 
-repos-clean:OK
+repos-clean:OK · fleet-green:FAIL-retry
+
+<details><summary>fleet-green — exit 1</summary>
+
+```
+[conductor] retried once (SC4.1): the first attempt exited 1 after 21s. Below is the SECOND run.
+OK   shaahink/conductor / CI - run 30826830593 success on master
+  OK   shaahink/conductor / Release - run 30385802454 success on master
+  SKIP shaahink/Shamshir / PR Build & Test - no runs on main (normal for a tag-triggered, pull-request-only or reusable workflow)
+  OK   shaahink/site / Deploy to GitHub Pages - run 30821258479 success on main
+  OK   shaahink/site / Check links - run 30821400002 success on main
+  OK   shaahink/DevContext2 / CI - run 30829803125 success on develop
+  OK   shaahink/DevContext2 / Eval - run 30829813027 success on develop
+  OK   shaahink/sitekit / CI - run 30828800198 success on main
+  SKIP shaahink/sitekit / Release - no runs on main (normal for a tag-triggered, pull-request-only or reusable workflow)
+  OK   shaahink/site-template / CI - run 30829094483 success on main
+  OK   shaahink/blog-code / build - run 30828796177 success on main
+
+checked 11 workflow(s), skipped 2 with no runs on their default branch
+
+RED - 2 workflow(s) are not green:
+  * shaahink/Shamshir / Release : latest run on main concluded 'failure' (run 30765474447) - https://github.com/shaahink/Shamshir/actions/runs/30765474447
+  * shaahink/DevContext2 / Release : latest run on develop is still 'in_progress' (run 30829815008) - it has not finished, so it is not evidence
+
+Reminder: a schedule-only or dispatch-only workflow does NOT get a fresh run from a
+merge. If the fix landed but the default branch still shows the old red run, dispatch
+the workflow on the default branch.
+```
+</details>
 
 ## Last session result
 
