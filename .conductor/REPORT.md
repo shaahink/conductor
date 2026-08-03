@@ -1,11 +1,11 @@
 ﻿# Conductor — CI health - the public repos go green run report
 
-_Updated 2026-08-03 14:59 UTC · branch `chore/ci-health` · HEAD `1156d40`_
+_Updated 2026-08-03 15:36 UTC · branch `chore/ci-health` · HEAD `55c8a8b`_
 
-**Status:** Paused
-**Stage:** S1 — Shamshir - the release workflow goes green · attempts used 0 · working ▸ S1.3
-**Checkpoints:** 10/20 done · **Sessions run:** 6 · **Cost:** $12.9413 (agent $12.9404 + gates $0.0009) · **Tokens:** 313,090 in / 122,511 out
-**Confirmed phases:** K1
+**Status:** Idle
+**Stage:** C1 — conductor - the version test stops breaking on every commit · attempts used 0
+**Checkpoints:** 13/20 done · **Sessions run:** 7 · **Cost:** $17.9542 (agent $17.9531 + gates $0.0011) · **Tokens:** 402,090 in / 164,074 out
+**Confirmed phases:** K1, C1
 **⚠ Skipped stages (need human review):** B1, S1
 
 ## Stage progress
@@ -15,7 +15,7 @@ _Updated 2026-08-03 14:59 UTC · branch `chore/ci-health` · HEAD `1156d40`_
 | K1 | Retire KataFlow | ██████████ 4/4 | confirmed ✓ |
 | B1 | site - the link checker goes green | ██████████ 4/4 | SKIPPED ⚠ |
 | S1 | Shamshir - the release workflow goes green | █████░░░░░ 2/4 | SKIPPED ⚠ |
-| C1 | conductor - the version test stops breaking on every commit | ░░░░░░░░░░ 0/3 | todo |
+| C1 | conductor - the version test stops breaking on every commit | ██████████ 3/3 | confirmed ✓ |
 | N1 | The Node 20 action sweep across the remaining repos | ░░░░░░░░░░ 0/3 | todo |
 | Z1 | Close out - the whole fleet reads green | ░░░░░░░░░░ 0/2 | todo |
 
@@ -52,13 +52,13 @@ _Updated 2026-08-03 14:59 UTC · branch `chore/ci-health` · HEAD `1156d40`_
 
 </details>
 
-<details><summary>C1 — conductor - the version test stops breaking on every commit (0/3)</summary>
+<details> ✅<summary>C1 — conductor - the version test stops breaking on every commit (3/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| C1.1 | The version test's merge guard covers merges anywhere between the newest tag and HEAD, not just at HEAD. The prerelease-shape assertion above it still runs in both branches of the guard | ⬜ TODO | - |
-| C1.2 | The full local gate battery is green in `C:/Code/conductor-ci`, and conductor's workflow actions are on current majors | ⬜ TODO | - |
-| C1.3 | The pull request's `CI` run is green on both the windows and ubuntu legs, the pull request is merged, and master's own `CI` run after the merge is green too | ⬜ TODO | - |
+| C1.1 | The version test's merge guard covers merges anywhere between the newest tag and HEAD, not just at HEAD. The prerelease-shape assertion above it still runs in both branches of the guard | ✅ DONE | [`11d8736`](https://github.com/shaahink/conductor/commit/11d8736) |
+| C1.2 | The full local gate battery is green in `C:/Code/conductor-ci`, and conductor's workflow actions are on current majors | ✅ DONE | [`11d8736`](https://github.com/shaahink/conductor/commit/11d8736) |
+| C1.3 | The pull request's `CI` run is green on both the windows and ubuntu legs, the pull request is merged, and master's own `CI` run after the merge is green too | ✅ DONE | [`11d8736`](https://github.com/shaahink/conductor/commit/11d8736) |
 
 </details>
 
@@ -91,17 +91,13 @@ _Updated 2026-08-03 14:59 UTC · branch `chore/ci-health` · HEAD `1156d40`_
 | 4 | S1 | Deliver | 1 | 08-03 14:22 | 0:30 | Advanced | S1.1 S1.2 | 1 | repos-clean:OK | $5.9972 | $0.0002 | 107,811/50,060 |
 | 5 | S1 | Deliver | 1 | 08-03 14:56 | 0:01 | KilledByUser |  | 0 |  |  |  | 20,783/75 |
 | 6 | S1 | Deliver | 1 | 08-03 14:58 | 0:00 | KilledByUser |  | 0 |  |  |  | 20,732/6 |
+| 7 | C1 | Deliver | 1 | 08-03 14:59 | 0:36 | Advanced | C1.1 C1.2 C1.3 | 2 | repos-clean:OK | $5.0127 | $0.0002 | 89,000/41,563 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-03 14:44:39  ◆ run started · CI health - the public repos go green
-08-03 14:44:39  ▸ stage K1 entered — Retire KataFlow
-08-03 14:44:40  • session #1 K1 Deliver started (attempt 1/2)
-08-03 14:52:38  ▪ gate repos-clean pass [session]  (2.3s)
-08-03 14:52:41  • session #1 K1 → Advanced · done K1.1,K1.2,K1.3,K1.4 · 4 commit(s)  (8m00s)
 08-03 14:54:19  ◆ run resumed · CI health - the public repos go green
 08-03 14:54:26  ▪ gate repos-clean pass [phase]  (2.7s)
 08-03 14:54:26  ▪ gate kataflow-retired pass [phase]  (2.6s)
@@ -133,6 +129,15 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-03 15:58:29  ▸ stage S1 entered — Shamshir - the release workflow goes green
 08-03 15:58:29  • session #6 S1 Deliver started (attempt 1/4)
 08-03 15:59:25  • session #6 S1 → KilledByUser  (55.8s)
+08-03 15:59:51  ▸ stage C1 entered — conductor - the version test stops breaking on every commit
+08-03 15:59:52  • session #7 C1 Deliver started (attempt 1/4)
+08-03 16:36:11  ▪ gate repos-clean pass [session]  (2.5s)
+08-03 16:36:14  • session #7 C1 → Advanced · done C1.1,C1.2,C1.3 · 2 commit(s)  (36m21s)
+08-03 16:36:19  ▪ gate repos-clean pass [phase]  (2.1s)
+08-03 16:36:19  ▪ gate conductor-green pass [phase]  (2.8s)
+08-03 16:36:19  ✓ checkpoint C1.1 confirmed
+08-03 16:36:19  ✓ checkpoint C1.2 confirmed
+08-03 16:36:19  ✓ checkpoint C1.3 confirmed
 ```
 
 ## Health
@@ -140,7 +145,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 6 · retries 1 (17 %) · overall Warn
+sessions 7 · retries 1 (14 %) · overall Warn
 ⚠ [gate-oscillation] gate 'repos-clean' flipped pass/fail 4x
 ```
 
@@ -178,6 +183,11 @@ vs upstream: up to date
   - `afa4eb4` ci: run the repo's own credential-free test gate, not every test [Shamshir]
   - `72d2e8f` ci: npm ci --legacy-peer-deps - the lockfile was already resolved that way [Shamshir]
   - `27bd70c` ci: build the Angular UI before .NET so Release can pass, and make Release dispatchable [Shamshir]
+- **s7 (C1 Deliver)** — 2 commit(s) (+2 in satellite repo(s)):
+  - [`8175f7c`](https://github.com/shaahink/conductor/commit/8175f7c) chore(conductor): s7 C1 complete - version guard widened, worktree repo-root fixed, master green
+  - [`11d8736`](https://github.com/shaahink/conductor/commit/11d8736) evidence(C1): s7 C1.1 version-test merge guard widened; C1.2 local battery green
+  - `d63a8b7` fix(tests): find the repo root in a linked worktree, not just a clone [conductor-ci]
+  - `b8cc0eb` fix(tests): widen SC8.2's merge guard from HEAD to the whole tag..HEAD range [conductor-ci]
 
 ## Phase handovers (audit)
 
@@ -200,37 +210,32 @@ vs upstream: up to date
 
 ## Last gate run
 
-repos-clean:OK
+repos-clean:OK · conductor-green:OK
 
 ## Last session result
 
-> SESSION-RESULT: S1.1 and S1.2 landed with proof on the real remote and are claimed with evidence; S1.3 and S1.4 are parked BLOCKED on an owner decision. Shamshir's Release workflow now has a manual-dispatch trigger (proven: run 30822779923 ran as `workflow_dispatch` from the feature branch — a dispatch trigger added on a branch is dispatchable via `gh workflow run --ref` even though main's copy is still push-only, so no merge-to-test is ever needed), and `dotnet build -c Release` passed for the first time in the workflow's history (run 30822912016, step 8). The doc's stated cause was close but not right: `rebuild-ng-if-stale.ps1` never invokes node — it is an mtime staleness check against `s…
+> SESSION-RESULT: Stage C1 is fully delivered and green on the real remote — all three checkpoints claimed via `conductor task --done` with evidence files `ci-health/evidence/s7-C1.1-version-guard-widened.md`, `s7-C1.2-local-battery-green.md` and `s7-C1.3-pr-and-master-green.md`. conductor PR #1 merged as `7e10b17`; master CI run 30826830593 is green on both the windows and ubuntu legs, and `Release`'s latest run on master is green too, so conductor's default branch reads green for both of its active workflows. Two commits landed in `C:/Code/conductor-ci` (`b8cc0eb` version guard, `d63a8b7` worktree repo-root) and two in the control room (`11d8736` evidence, `8175f7c` tracker + handoff); both …
 
 ## Tracker handoff
 
 ```
-last: S1. S1.1+S1.2 DONE with proof; S1.3/S1.4 BLOCKED on the owner, not on CI.
-stage: Shamshir PR 3 (branch fix/release-node-and-gh-release) is OPEN and NOT merged -
-  do not merge it, it is red. Release run 30822912016 got `dotnet build -c Release`
-  green for the first time ever (setup-node 22 + npm ci --legacy-peer-deps + npm run
-  build in web-ui BEFORE dotnet; wwwroot is gitignored so the mtime check in
-  rebuild-ng-if-stale.ps1 could never pass on a fresh checkout - the doc's "CI has no
-  Node" was close but that script never invokes node at all). Then dotnet test failed:
-  15 cTrader E2E (need a desktop cTrader install - now excluded via the repo's OWN
-  filter from scripts/gates.ps1:22) and 2 REAL violations left red on purpose.
-gate: red, correctly. DEFERRED (owner asked 15:55, answered: decide it separately, do
-  not block the run): Release cannot go green until the owner decides on two of
-  their own architecture-test failures - EngineReducer.ReconcileToVenue (EngineReducer.cs:415)
-  exports a System.DateTime the Engine purity rule forbids, and VenueSymbolSpecEntity
-  lacks IAuditableEntity (needs audit columns + an EF migration). Both are product/schema
-  changes, not CI. Run 30824699654 was dispatched to confirm only those 2 remain.
-next: C1 or N1 as you judged - both untouched and neither is blocked. Do NOT reopen S1:
-  S1.3/S1.4 stay open on purpose until the owner rules. The ONLY fake fix on offer there
-  is excluding tests/TradingEngine.Tests.Architecture; refuse it, the iteration
-  docs call that suite a gate that must stay 3/3.
-trap: a workflow_dispatch trigger added on a FEATURE BRANCH is dispatchable with
-  `gh workflow run --ref <branch>` even though main's copy is still push-only - never
-  merge just to test one. Shamshir CI is slow: npm ci ~8 min, whole run 20-25 min.
-  Leave Shamshir's docs/ and tools/ dirt alone, it is the owner's. And commit
-  TRACKER.md LAST, after your `conductor task` calls - claiming regenerates it.
+last: C1 COMPLETE - all three checkpoints landed with real-remote proof. conductor PR #1
+  merged as 7e10b17; master run 30826830593 green on BOTH legs, PR run 30826459149 green
+  on both. Release's latest run on master is green too, so conductor's default branch
+  reads green for both active workflows. Nothing was skipped, relaxed or hardcoded.
+stage: the fix widened one guard in SC8_2VersioningTests from "is HEAD a merge" to "does
+  v<tag>..HEAD contain any merge" - the divergence is a property of the range, so every
+  commit stacked on a merge inherited it. Second, unrelated red found by the local
+  battery: SC3_4AdvisorTests looked for a .git DIRECTORY, but conductor-ci is a linked
+  WORKTREE where .git is a file, so that test crashed before its assertion ever ran.
+  Fixed too. Local battery in conductor-ci: all four gates green, 1773 passed, 0 skipped.
+next: N1 - DevContext2, sitekit, site-template, blog-code, then dotgithub's two reusable
+  workflows. S1.3/S1.4 stay BLOCKED on the owner on purpose; do not reopen them.
+trap: conductor needed NO action bump - it is already on checkout@v7/setup-dotnet@v6/
+  setup-go@v7/cache@v6/upload-artifact@v7 with zero deprecation annotations, so C1.2's
+  bump half was a measurement, not an edit. Expect the same to be false elsewhere. Also:
+  SC4_1's LiveRun settle test is a timing flake on hosted windows runners (filed as a
+  bug); it failed master once with the version test passing, and `gh run rerun --failed`
+  turned it green - re-run it, never relax that 2.0s assertion. And commit TRACKER.md
+  LAST, after your `conductor task` calls - claiming regenerates it.
 ```
