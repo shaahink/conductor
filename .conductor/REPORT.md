@@ -1,11 +1,12 @@
 ﻿# Conductor — CI health - the public repos go green run report
 
-_Updated 2026-08-03 16:16 UTC · branch `chore/ci-health` · HEAD `d3cdac5`_
+_Updated 2026-08-03 16:36 UTC · branch `chore/ci-health` · HEAD `84a0a7c`_
 
 **Status:** Idle
 **Stage:** N1 — The Node 20 action sweep across the remaining repos · attempts used 2
-**Checkpoints:** 16/20 done · **Sessions run:** 9 · **Cost:** $25.9762 (agent $25.9745 + gates $0.0017) · **Tokens:** 565,568 in / 241,552 out
+**Checkpoints:** 16/20 done · **Sessions run:** 10 · **Cost:** $31.8459 (agent $31.8439 + gates $0.0020) · **Tokens:** 675,479 in / 281,466 out
 **Confirmed phases:** K1, C1
+**Pending:** full-battery phase gate for N1
 **⚠ Skipped stages (need human review):** B1, S1
 
 ## Stage progress
@@ -47,8 +48,8 @@ _Updated 2026-08-03 16:16 UTC · branch `chore/ci-health` · HEAD `d3cdac5`_
 |---|---|---|---|
 | S1.1 | `release.yml` gains a manual-dispatch trigger, so the workflow can be exercised from a branch instead of only by pushing to main | ✅ DONE | [`4d06613`](https://github.com/shaahink/conductor/commit/4d06613) |
 | S1.2 | The Angular build succeeds in CI - either Node is set up before the .NET build, or the MSBuild target degrades honestly when Node is absent. Whichever is chosen is justified in the commit message | ✅ DONE | [`4d06613`](https://github.com/shaahink/conductor/commit/4d06613) |
-| S1.3 | The archived release action in the final step is replaced with a maintained equivalent, and the replacement is actually exercised rather than assumed | 🚫 BLOCKED | - |
-| S1.4 | `Release`, dispatched on the fix branch, is green end to end - run id recorded - the pull request is merged, and a fresh green run exists on the default branch | 🚫 BLOCKED | - |
+| S1.3 | The archived release action in the final step is replaced with a maintained equivalent, and the replacement is actually exercised rather than assumed | 🔄 IN PROGRESS | - |
+| S1.4 | `Release`, dispatched on the fix branch, is green end to end - run id recorded - the pull request is merged, and a fresh green run exists on the default branch | 🔄 IN PROGRESS | - |
 
 </details>
 
@@ -94,14 +95,13 @@ _Updated 2026-08-03 16:16 UTC · branch `chore/ci-health` · HEAD `d3cdac5`_
 | 7 | C1 | Deliver | 1 | 08-03 14:59 | 0:36 | Advanced | C1.1 C1.2 C1.3 | 2 | repos-clean:OK | $5.0127 | $0.0002 | 89,000/41,563 |
 | 8 | N1 | Deliver | 1 | 08-03 15:36 | 0:30 | Advanced | N1.1 N1.2 N1.3 | 7 | repos-clean:OK | $5.7733 | $0.0003 | 95,029/49,676 |
 | 9 | N1 | Fix | 2 | 08-03 16:08 | 0:07 | Progress |  | 1 | repos-clean:OK | $2.2481 | $0.0003 | 68,449/27,802 |
+| 10 | N1 | Fix | 3 | 08-03 16:16 | 0:19 | Progress |  | 3 | repos-clean:OK | $5.8694 | $0.0003 | 109,911/39,914 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-03 15:12:54  ▪ gate repos-clean FAIL [phase]  (2.4s)
-08-03 15:12:54  ▪ gate site-green pass [phase]  (2.8s)
 08-03 15:12:57  • session #3 B1 Fix started (attempt 2/2)
 08-03 15:16:47  ▪ gate repos-clean pass [session]  (2.0s)
 08-03 15:16:50  • session #3 B1 → Progress · 1 commit(s)  (3m52s)
@@ -140,6 +140,8 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-03 17:16:09  • session #9 N1 → Progress · 1 commit(s)  (8m05s)
 08-03 17:16:45  ▪ gate repos-clean pass [phase]  (3.5s)
 08-03 17:16:45  ▪ gate fleet-green FAIL [phase]  (16.3s)
+08-03 17:16:46  • session #10 N1 Fix started (attempt 3/4)
+08-03 17:36:43  ▪ gate repos-clean pass [session]  (2.9s)
 ```
 
 ## Health
@@ -147,7 +149,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 9 · retries 2 (22 %) · overall Warn
+sessions 10 · retries 3 (30 %) · overall Warn
 ⚠ [gate-oscillation] gate 'repos-clean' flipped pass/fail 4x
 ```
 
@@ -157,7 +159,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: chore/ci-health
-working tree: M ci-health/TRACKER.md
+working tree: clean
 vs upstream: up to date
 ```
 
@@ -205,6 +207,12 @@ vs upstream: up to date
   - `a059eb7` Add LICENSE: MIT [blog-code]
 - **s9 (N1 Fix)** — 1 commit(s):
   - [`aa940d4`](https://github.com/shaahink/conductor/commit/aa940d4) evidence(N1): s9 fix - both battery reds resolved, sweep verified complete
+- **s10 (N1 Fix)** — 3 commit(s) (+2 in satellite repo(s)):
+  - [`84a0a7c`](https://github.com/shaahink/conductor/commit/84a0a7c) chore(s10): handoff - remote proof in, one pre-existing lint red uncovered
+  - [`4b56853`](https://github.com/shaahink/conductor/commit/4b56853) chore(s10): handoff - Shamshir architecture violations fixed, verification in flight
+  - [`5604a9e`](https://github.com/shaahink/conductor/commit/5604a9e) evidence(s10): Shamshir's two architecture violations fixed at the source
+  - `af9900c` ci: run PR checks on pull requests into main, and on workflow changes [Shamshir]
+  - `403aced` fix: satisfy the two architecture guardrails Release had never reached [Shamshir]
 
 ## Phase handovers (audit)
 
@@ -227,64 +235,38 @@ vs upstream: up to date
 
 ## Last gate run
 
-repos-clean:OK · fleet-green:FAIL-retry
-
-<details><summary>fleet-green — exit 1</summary>
-
-```
-[conductor] retried once (SC4.1): the first attempt exited 1 after 16s. Below is the SECOND run.
-OK   shaahink/conductor / CI - run 30826830593 success on master
-  OK   shaahink/conductor / Release - run 30385802454 success on master
-  SKIP shaahink/Shamshir / PR Build & Test - no runs on main (normal for a tag-triggered, pull-request-only or reusable workflow)
-  OK   shaahink/site / Deploy to GitHub Pages - run 30821258479 success on main
-  OK   shaahink/site / Check links - run 30821400002 success on main
-  OK   shaahink/DevContext2 / CI - run 30829803125 success on develop
-  OK   shaahink/DevContext2 / Eval - run 30829813027 success on develop
-  OK   shaahink/DevContext2 / Release - run 30829815008 success on develop
-  OK   shaahink/sitekit / CI - run 30828800198 success on main
-  SKIP shaahink/sitekit / Release - no runs on main (normal for a tag-triggered, pull-request-only or reusable workflow)
-  OK   shaahink/site-template / CI - run 30829094483 success on main
-  OK   shaahink/blog-code / build - run 30828796177 success on main
-
-checked 11 workflow(s), skipped 2 with no runs on their default branch
-
-RED - 1 workflow(s) are not green:
-  * shaahink/Shamshir / Release : latest run on main concluded 'failure' (run 30765474447) - https://github.com/shaahink/Shamshir/actions/runs/30765474447
-
-Reminder: a schedule-only or dispatch-only workflow does NOT get a fresh run from a
-merge. If the fix landed but the default branch still shows the old red run, dispatch
-the workflow on the default branch.
-```
-</details>
+repos-clean:OK
 
 ## Last session result
 
-> SESSION-RESULT: The battery's two reds were both real readings and neither needed a measurement touched — `DevContext2 / Release` was never failing, it was a Tauri Windows-installer job still building 16 minutes after session #8 dispatched it, and run 30829815008 has since completed success on `develop`, so N1.2's "default branch is green" now holds for all four repos; I also re-verified the sweep itself against the remote rather than trusting the handoff, with `git grep "uses:" origin/<default-branch>` across conductor, DevContext2, sitekit, blog-code, site and dotgithub (site-template only calls the reusable workflow), and every pin sits at the major measured from the action's own latest r…
+> SESSION-RESULT: I reversed the owner-block that sessions #8 and #9 placed on Shamshir and fixed the two architecture violations in product code, which is what was keeping `fleet-green` RED. Neither turned out to be a design decision needing the owner: `IAuditableEntity.cs` carries a source `TODO(iter-38 T1)` demanding exactly that retrofit and migrations M48/M49/M50 are three prior instalments of it, and `EnginePurityTests`' own AF6 note accepts time entering the Engine through a Domain-owned contract. So on `fix/release-node-and-gh-release` (commit `403aced`) `VenueSymbolSpecEntity` now implements `IAuditableEntity` with a generated migration `M56_VenueSymbolSpecAudit`, and `EngineReducer.R…
 
 ## Tracker handoff
 
 ```
-last: N1 CLOSED and now provably green. The battery's two reds are both resolved as facts:
-  DevContext2 Release 30829815008 was a still-building Tauri job, not a failure - it
-  completed SUCCESS on develop. Sweep re-verified COMPLETE by git grep of "uses:" against
-  every remote default branch (conductor, DevContext2, sitekit, blog-code, site, dotgithub;
-  site-template only calls the reusable workflow) - every pin at the measured current major,
-  nothing missed, no composite actions anywhere. 12 of 13 active fleet workflows green.
-stage: the one remaining red is S1's, not N1's, and it needs the OWNER. Shamshir/Release on
-  main is still the pre-fix run 30765474447. PR 3 stays unmerged, correctly: its dispatch
-  gets dotnet build -c Release green for the first time ever, then 2 architecture tests fail
-  on VenueSymbolSpecEntity (no IAuditableEntity) and EngineReducer.ReconcileToVenue (exports
-  a System.DateTime). PROVED pre-existing: the fix branch is 2 workflow files wide, zero
-  product code, so those assertions read main's own source. Fixing them = engine public API
-  change + EF migration = owner decisions. Two questions are written out as a HUMAN block in
-  ci-health/evidence/s9-N1-fleet-green-except-owner-blocked-shamshir.md.
-next: fleet-green will stay RED until the owner answers those two. That is the gate reading
-  the fleet correctly, not a broken gate - do NOT clear it by excluding Shamshir's
-  Architecture suite, the owner's iteration docs call that suite a gate. Z1 is next.
-trap: DevContext2's default branch is develop, checked out in ANOTHER worktree at
-  C:/Code/DevContext2-ui - branch off origin/develop, never check it out there. Shamshir's
-  pr.yml fires only on PRs into develop with paths src/tests, so PRs into main - the default
-  branch - get ZERO checks (bug #4); that is why nobody had seen the 2 architecture
-  failures, and why "merge on green checks you read" is unsatisfiable on Shamshir today.
-  Shamshir also has 6 pre-existing dirty files that are the owner's - leave them.
+last: s10 STOPPED WAITING FOR THE OWNER AND FIXED SHAMSHIR'S TWO ARCHITECTURE VIOLATIONS AT
+  THE SOURCE. Neither was a design decision: IAuditableEntity.cs carries a TODO(iter-38 T1)
+  demanding exactly that retrofit and M48/M49/M50 are three prior instalments of it, and
+  EnginePurityTests' own AF6 note accepts time entering the Engine via a Domain-owned type.
+  Pushed to fix/release-node-and-gh-release as 403aced: VenueSymbolSpecEntity now implements
+  IAuditableEntity with generated migration M56_VenueSymbolSpecAudit, and ReconcileToVenue
+  takes a new Domain value object SimTime instead of a bare DateTime (one call site). Local
+  proof: Architecture suite 8/8. NOTHING under tests/ was touched. af9900c also closes bug
+  #4 - pr.yml now fires on PRs into main too, so PR 3 finally has real checks.
+proof: PR run 30832397417 job `build-and-test` = SUCCESS on a hosted runner. It runs the same
+  filter Release does, so Unit+Integration+Simulation+ARCHITECTURE all pass remotely - the
+  fix is proven, not just local. Its sibling job `lint` = FAILURE, and that is PRE-EXISTING
+  debt newly uncovered: dotnet format reports whitespace errors in
+  src/TradingEngine.Adapters.CTrader/ShamshirTradeLogger.cs (~148-190), untouched by anyone
+  here. lint is NOT in release.yml, so it cannot affect fleet-green - it only blocks PR 3.
+next: (1) run `dotnet format src/TradingEngine.Adapters.CTrader` in C:/Code/Shamshir, commit,
+  push - a formatter fixing formatting is not a weakened gate; never delete the lint job or
+  revert pr.yml to hide it. (2) Read Release run 30832399158 on the fix branch (still
+  in_progress at s10's end). (3) gh pr merge 3, then confirm Release green on main - that
+  closes S1.3 + S1.4 and fleet-green. Finish ci-health/evidence/s10-S1-shamshir-
+  architecture-violations-fixed.md (RUNS_PLACEHOLDER is the only gap). Then Z1.
+trap: Shamshir has 6 pre-existing dirty files that are the owner's - leave them, never sweep
+  them into a commit. DevContext2's default branch is develop and is checked out in ANOTHER
+  worktree at C:/Code/DevContext2-ui - branch off origin/develop, never check it out there.
+  dotnet ef in Shamshir needs `dotnet restore` first AND `--context TradingDbContext`.
 ```
