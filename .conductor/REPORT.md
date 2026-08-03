@@ -1,19 +1,19 @@
 ﻿# Conductor — CI health - the public repos go green run report
 
-_Updated 2026-08-03 14:16 UTC · branch `chore/ci-health` · HEAD `82e3adc`_
+_Updated 2026-08-03 14:22 UTC · branch `chore/ci-health` · HEAD `a363e90`_
 
 **Status:** Idle
-**Stage:** B1 — site - the link checker goes green · attempts used 1
+**Stage:** B1 — site - the link checker goes green · attempts used 0
 **Checkpoints:** 8/20 done · **Sessions run:** 3 · **Cost:** $6.9439 (agent $6.9432 + gates $0.0007) · **Tokens:** 163,764 in / 72,370 out
 **Confirmed phases:** K1
-**Pending:** full-battery phase gate for B1
+**⚠ Skipped stages (need human review):** B1
 
 ## Stage progress
 
 | Stage | Title | Progress | State |
 |---|---|---|---|
 | K1 | Retire KataFlow | ██████████ 4/4 | confirmed ✓ |
-| B1 | site - the link checker goes green | ██████████ 4/4 | gating… |
+| B1 | site - the link checker goes green | ██████████ 4/4 | SKIPPED ⚠ |
 | S1 | Shamshir - the release workflow goes green | ░░░░░░░░░░ 0/4 | todo |
 | C1 | conductor - the version test stops breaking on every commit | ░░░░░░░░░░ 0/3 | todo |
 | N1 | The Node 20 action sweep across the remaining repos | ░░░░░░░░░░ 0/3 | todo |
@@ -115,6 +115,11 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-03 15:12:54  ▪ gate site-green pass [phase]  (2.8s)
 08-03 15:12:57  • session #3 B1 Fix started (attempt 2/2)
 08-03 15:16:47  ▪ gate repos-clean pass [session]  (2.0s)
+08-03 15:16:50  • session #3 B1 → Progress · 1 commit(s)  (3m52s)
+08-03 15:16:57  ▪ gate repos-clean FAIL [phase]  (1.9s)
+08-03 15:16:57  ▪ gate site-green pass [phase]  (2.9s)
+08-03 15:17:38  ■ needs human — stage B1 used all 2 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: B1 stage is complete with commits landed and gates reported green; re-run gate battery to independently confirm green status before proceeding to unstarted stages C1, S1, N1.
+08-03 15:20:39  ■ needs human — stage B1 used all 2 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: B1 work succeeded (repos-clean gate fixed by committing TRACKER.md) but session exhausted attempt budget; validate gates are truly passing before unstarting stages C1/S1/N1.
 ```
 
 ## Health
@@ -122,8 +127,8 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 3 · retries 1 (33 %) · overall Ok
-✓ no health concerns detected
+sessions 3 · retries 1 (33 %) · overall Warn
+⚠ [gate-oscillation] gate 'repos-clean' flipped pass/fail 3x
 ```
 
 ## Repo
@@ -132,8 +137,8 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: chore/ci-health
-working tree: clean
-vs upstream: up to date
+working tree: M .conductor/REPORT.md, M ci-health/TRACKER.md
+vs upstream: 1 ahead
 ```
 
 ### Commits by session
@@ -177,7 +182,27 @@ vs upstream: up to date
 
 ## Last gate run
 
-repos-clean:OK
+repos-clean:FAIL-retry · site-green:OK
+
+<details><summary>repos-clean — exit 1</summary>
+
+```
+[conductor] retried once (SC4.1): the first attempt exited 1 after 2s. Below is the SECOND run.
+OK   conductor-ci
+  OK   KataFlow-ai
+  note Shamshir - 6 pre-existing uncommitted file(s) ignored per dirty-baseline.txt
+  OK   Shamshir
+  OK   site-blog
+  OK   DevContext2
+  OK   sitekit
+  OK   site-template
+  OK   blog-code
+  OK   dotgithub
+
+RED - 1 repository problem(s):
+  * conductor-cihealth : 1 uncommitted change(s) this run did not start with - ci-health/TRACKER.md
+```
+</details>
 
 ## Last session result
 
