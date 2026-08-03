@@ -10,6 +10,12 @@
 # A workflow with ZERO runs is reported and skipped, not failed: that is the correct state for
 # a reusable workflow_call file, which only ever executes inside the repos that call it.
 #
+# NOTE ON QUOTING, learned the hard way at plan time: this script does NOT use gh's --jq flag.
+# Windows PowerShell 5.1 does not escape double quotes when it hands arguments to a native exe,
+# so a jq filter containing them - select(.state == "active") - arrives at gh mangled and the
+# call fails with a bare non-zero exit. That read as "cannot list workflows" for every repo,
+# which looks exactly like an auth problem and is not one. Fetch raw JSON, parse in-process.
+#
 # Usage: ci-green.ps1 -Repos site,conductor[,...] [-Owner shaahink]
 
 param(
@@ -22,59 +28,60 @@ $problems = New-Object System.Collections.Generic.List[string]
 $skipped = 0
 $checked = 0
 
+function Invoke-GhJson {
+    param([string[]]$GhArgs)
+    $raw = & gh @GhArgs 2>$null
+    if ($LASTEXITCODE -ne 0) { return $null }
+    $text = ($raw -join "`n").Trim()
+    if ([string]::IsNullOrWhiteSpace($text)) { return $null }
+    try { return $text | ConvertFrom-Json } catch { return $null }
+}
+
 foreach ($raw in $Repos.Split(',')) {
     $repo = $raw.Trim()
     if ([string]::IsNullOrWhiteSpace($repo)) { continue }
     $slug = "$Owner/$repo"
 
-    $default = & gh api "repos/$slug" --jq '.default_branch' 2>$null
-    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($default)) {
+    $info = Invoke-GhJson @('api', "repos/$slug")
+    if ($null -eq $info -or [string]::IsNullOrWhiteSpace($info.default_branch)) {
         $problems.Add("$slug : cannot read the repository (auth, network, or it does not exist)")
         continue
     }
-    $default = $default.Trim()
+    $default = $info.default_branch
 
-    $wf = & gh api "repos/$slug/actions/workflows" --paginate --jq '.workflows[] | select(.state == "active") | "\(.id)|\(.name)"' 2>$null
-    if ($LASTEXITCODE -ne 0) {
+    $wfDoc = Invoke-GhJson @('api', "repos/$slug/actions/workflows?per_page=100")
+    if ($null -eq $wfDoc) {
         $problems.Add("$slug : cannot list workflows")
         continue
     }
-    if ($null -eq $wf) { $wf = @() }
 
-    foreach ($line in @($wf)) {
-        if ([string]::IsNullOrWhiteSpace($line)) { continue }
-        $parts = $line.Split('|', 2)
-        $wfId = $parts[0]
-        $wfName = $parts[1]
+    foreach ($w in @($wfDoc.workflows)) {
+        if ($w.state -ne 'active') { continue }
+        # Dependabot's synthetic entry has no real runs to judge.
+        if ($w.name -eq 'Dependabot Updates') { continue }
 
-        # Dependabot's synthetic workflow has no real runs to judge.
-        if ($wfName -eq 'Dependabot Updates') { continue }
+        $runs = Invoke-GhJson @('run', 'list', '--repo', $slug, '--workflow', "$($w.id)",
+            '--branch', $default, '--limit', '1', '--json', 'databaseId,conclusion,status')
 
-        $run = & gh run list --repo $slug --workflow $wfId --branch $default --limit 1 `
-            --json databaseId, conclusion, status, headSha `
-            --jq '.[0] | "\(.databaseId)|\(.conclusion)|\(.status)|\(.headSha)"' 2>$null
-
-        if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($run) -or $run.StartsWith('|')) {
-            Write-Host "  SKIP $slug / $wfName - no runs on $default (correct for a reusable workflow)"
+        $run = @($runs)[0]
+        if ($null -eq $run) {
+            Write-Host "  SKIP $slug / $($w.name) - no runs on $default (normal for a tag-triggered, pull-request-only or reusable workflow)"
             $skipped++
             continue
         }
 
-        $rp = $run.Split('|')
-        $runId = $rp[0]
-        $concl = $rp[1]
-        $status = $rp[2]
         $checked++
+        $runId = $run.databaseId
 
-        if ($status -ne 'completed') {
-            $problems.Add("$slug / $wfName : latest run on $default is still $status (run $runId) - it has not finished, so it is not evidence")
+        if ($run.status -ne 'completed') {
+            $problems.Add("$slug / $($w.name) : latest run on $default is still '$($run.status)' (run $runId) - it has not finished, so it is not evidence")
             continue
         }
-        if ($concl -eq 'success') {
-            Write-Host "  OK   $slug / $wfName - run $runId success on $default"
+        if ($run.conclusion -eq 'success') {
+            Write-Host "  OK   $slug / $($w.name) - run $runId success on $default"
             continue
         }
-        $problems.Add("$slug / $wfName : latest run on $default concluded '$concl' (run $runId) - https://github.com/$slug/actions/runs/$runId")
+        $problems.Add("$slug / $($w.name) : latest run on $default concluded '$($run.conclusion)' (run $runId) - https://github.com/$slug/actions/runs/$runId")
     }
 }
 

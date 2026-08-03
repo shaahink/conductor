@@ -14,28 +14,42 @@ param(
     [string]$Repo = 'KataFlow'
 )
 
+# NOTE ON QUOTING: no --jq flag anywhere here. Windows PowerShell 5.1 does not escape double
+# quotes when handing arguments to a native exe, so a jq filter containing them arrives mangled
+# and gh fails with a bare non-zero exit that reads like an auth problem. Parse in-process.
+
 $ErrorActionPreference = 'Continue'
 $slug = "$Owner/$Repo"
 $problems = New-Object System.Collections.Generic.List[string]
 
+function Invoke-GhJson {
+    param([string[]]$GhArgs)
+    $raw = & gh @GhArgs 2>$null
+    if ($LASTEXITCODE -ne 0) { return $null }
+    $text = ($raw -join "`n").Trim()
+    if ([string]::IsNullOrWhiteSpace($text)) { return $null }
+    try { return $text | ConvertFrom-Json } catch { return $null }
+}
+
 # 1. archived
-$archived = & gh api "repos/$slug" --jq '.archived' 2>$null
-if ($LASTEXITCODE -ne 0) {
+$info = Invoke-GhJson @('api', "repos/$slug")
+if ($null -eq $info) {
     $problems.Add("$slug : cannot read the repository")
 }
-elseif ("$archived".Trim() -ne 'true') {
-    $problems.Add("$slug : is NOT archived (archived=$archived)")
+elseif (-not $info.archived) {
+    $problems.Add("$slug : is NOT archived")
 }
 else {
     Write-Host "  OK   $slug is archived"
 }
 
 # 2. no active workflows
-$active = & gh api "repos/$slug/actions/workflows" --paginate --jq '.workflows[] | select(.state == "active") | .name' 2>$null
-if ($LASTEXITCODE -eq 0) {
-    $names = @($active | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+$wfDoc = Invoke-GhJson @('api', "repos/$slug/actions/workflows?per_page=100")
+if ($null -ne $wfDoc) {
     # GitHub reports Dependabot's synthetic entry as active even on an archived repo; it cannot run.
-    $names = @($names | Where-Object { $_ -ne 'Dependabot Updates' })
+    $names = @(@($wfDoc.workflows) |
+        Where-Object { $_.state -eq 'active' -and $_.name -ne 'Dependabot Updates' } |
+        ForEach-Object { $_.name })
     if ($names.Count -gt 0) {
         $problems.Add("$slug : $($names.Count) workflow(s) still active: $($names -join ', ')")
     }
@@ -45,20 +59,19 @@ if ($LASTEXITCODE -eq 0) {
 }
 
 # 3. no open PRs
-$open = & gh pr list --repo $slug --state open --json number --jq 'length' 2>$null
-if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($open)) {
-    if ([int]$open.Trim() -ne 0) {
-        $problems.Add("$slug : $($open.Trim()) pull request(s) still open")
-    }
-    else {
-        Write-Host "  OK   $slug has no open pull requests"
-    }
+$prs = Invoke-GhJson @('pr', 'list', '--repo', $slug, '--state', 'open', '--limit', '100', '--json', 'number')
+$openCount = @($prs).Count
+if ($openCount -gt 0) {
+    $problems.Add("$slug : $openCount pull request(s) still open")
+}
+else {
+    Write-Host "  OK   $slug has no open pull requests"
 }
 
 # 4. README says so
-$readme = & gh api "repos/$slug/readme" --jq '.content' 2>$null
-if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($readme)) {
-    $text = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(($readme -replace '\s', '')))
+$readmeDoc = Invoke-GhJson @('api', "repos/$slug/readme")
+if ($null -ne $readmeDoc -and -not [string]::IsNullOrWhiteSpace($readmeDoc.content)) {
+    $text = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(($readmeDoc.content -replace '\s', '')))
     if ($text -match '(?i)archiv|retire|no longer maintained|unmaintained') {
         Write-Host "  OK   $slug README carries a retirement notice"
     }
