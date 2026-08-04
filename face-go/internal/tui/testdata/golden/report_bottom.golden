@@ -1,34 +1,34 @@
  ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7  ⠋ s12 $0.12 41s  cp 2/40  run $0.42  ⎇ feat/gate… ↑3↓1 ●    
  h a s o e p  r Report  k g b                                                                                 
                            │                                                                                  
- ▶ PLAN  n× attempts       │  ● F7    2/5    1×   $0.30   —                                                   
- ✓ F0 3/3 Foundations      │  ○ F8    0/4    —    —       —                                                   
- ✓ F6 5/5 Ink TUI v1       │                                                                                  
- ● F7 2/5 Gate … 1× $0.30  │  Sessions                                                                        
-   ✓ F7.1 Plan import      │    #    stage kind      outcome     duration cost    commits                     
-   ✓ F7.2 Re-import diff   │    #12  F7    Deliver   running     41s      $0.12   0                           
-   ● F7.3 Truth-gate tier  │         31 calls · Bash ×14  Read ×9  Edit ×6  +1 more · 6 edits / 2 files       
- ○ F8 0/4 conductor chat…  │    #11  F7    Deliver   needsRetry  45m 34s  $0.14   2                           
-                           │         104 calls · Bash ×57  Edit ×26  Read ×9  +5 more · 15 edits / 5 file…    
- ── GATES ──               │    #8   F6    Deliver   completed   41m 12s  $0.09   1                           
-   ✓ build                 │                                                                                  
-   ● test 4s               │  Gates                                                                           
-   ○ lint                  │    ✓ build           2s                                                          
-                           │    ● test            4s                                                          
- ── TASKS ──               │    ○ lint                                                                        
-   ✓ Add truth-tier con…   │                                                                                  
-   ● Wire RunDb.GetLast…   │  Verifier scores                                                                 
-   ○ Cache gate results…   │    session  stage score     verdict  findings                                    
-                           │    #11      F7    66/80     WARN     2 findings                                  
+ ▶ PLAN  n× attempts       │  ○ F8    0/4    —    —       —                                                   
+ ✓ F0 3/3 Foundations      │                                                                                  
+ ✓ F6 5/5 Ink TUI v1       │  Sessions                                                                        
+ ● F7 2/5 Gate … 1× $0.30  │    #    stage kind      outcome     duration cost    commits                     
+   ✓ F7.1 Plan import      │    #12  F7    Deliver   running     41s      $0.12   0                           
+   ✓ F7.2 Re-import diff   │         31 calls · Bash ×14  Read ×9  Edit ×6  +1 more · 6 edits / 2 files       
+   ● F7.3 Truth-gate tier  │    #11  F7    Deliver   needsRetry  45m 34s  $0.14   2                           
+ ○ F8 0/4 conductor chat…  │         104 calls · Bash ×57  Edit ×26  Read ×9  +5 more · 15 edits / 5 file…    
+                           │    #8   F6    Deliver   completed   41m 12s  $0.09   1                           
+ ── GATES ──               │                                                                                  
+   ✓ build                 │  Gates                                                                           
+   ● test 4s               │    ✓ build           2s                                                          
+   ○ lint                  │    ● test            4s                                                          
+                           │    ○ lint                                                                        
+ ── TASKS ──               │                                                                                  
+   ✓ Add truth-tier con…   │  Verifier scores                                                                 
+   ● Wire RunDb.GetLast…   │    session  stage score     verdict  findings                                    
+   ○ Cache gate results…   │    #11      F7    66/80     WARN     2 findings                                  
                            │    #8       F6    90/80     PASS     —                                           
                            │                                                                                  
                            │  Session tokens                                                                  
                            │    #    stage in       out      reason   cache-read cost                         
                            │    #12  F7    41.2k    3.2k     1.0k     188.4k    $0.12                         
                            │    #11  F7    52.9k    4.4k     2.3k     201.3k    $0.14                         
-                           │    #8   F6    0        0        0        0         $0.09                         
+                           │    #8   F6    0        0        n/a      0         $0.09                         
                            │                                                                                  
                            │    1 session with cost but zero tokens — pre-bug-#5 data, not a Face bug         
+                           │    reason n/a on 1 session — this run's agent provider reports no thinking toke  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ scroll (12/12) · esc back                      
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ scroll (13/13) · esc back                      
