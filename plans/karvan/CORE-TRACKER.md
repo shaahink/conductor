@@ -14,7 +14,9 @@ last: **K1.1 and K1.2 claimed.** K1.1: a rolled-over session records its commits
 next: **K1.3** — the three untruths: the thinking-token column that is zero on all 125 rows, the
   lessons file that is a diary and repeats an entry, and the `go.mod` calling a directly-imported
   package indirect while carrying two lipgloss majors.
-notes: a live harness agent must be wired `powershell -File`, never `cmd.exe` with `{prompt}` — a real
+notes: **never point the fresh build at this repo's `.conductor`** — it is schema v10 now and the
+  published engine driving this run is v9; opening migrates, and v9 then refuses. Scratch dirs only.
+  And a live harness agent must be wired `powershell -File`, never `cmd.exe` with `{prompt}`: a real
   composed prompt exceeds cmd's 8191-char argv ceiling and the child dies before running one line.
 red: nothing. Scoped suites green (143/143, then 69/69); the full battery is Conductor's to run.
 
