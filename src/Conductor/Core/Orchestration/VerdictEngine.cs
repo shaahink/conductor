@@ -319,30 +319,7 @@ public sealed partial class VerdictEngine
         var postTrack = _ctx.Progress.Read(_ctx.Plan, ct);
         CollectCommits(rec, startHead);
 
-        // W1.3: the claim signal is the WORK GRAPH — what `conductor task --done` / MCP
-        // task_update wrote during this session. The tracker diff survives as a FLAGGED
-        // transition fallback so an old-habit agent still makes progress, loudly; a tracker
-        // hand-edit is no longer a claim of its own, so the M4.1 veto has nothing left to veto.
-        var trackerFlips = postTrack.Checkpoints
-            .Where(c => c.IsDone && !(preTrack.ById(c.Id)?.IsDone ?? false))
-            .Select(c => c.Id).ToList();
-        var graphClaims = GraphClaimsDuringSession(rec);
-        if (graphClaims is null)
-        {
-            rec.NewlyDone = trackerFlips; // no store / no session-start marker — legacy signal
-        }
-        else
-        {
-            rec.NewlyDone = graphClaims;
-            var legacy = trackerFlips.Except(graphClaims, StringComparer.OrdinalIgnoreCase).ToList();
-            if (legacy.Count > 0)
-            {
-                _ctx.Log($"WARNING: {legacy.Count} checkpoint(s) flipped DONE only in the tracker markdown: [{string.Join(", ", legacy)}] — accepted via the transition fallback; claim with `conductor task --done` or MCP task_update, the tracker is a generated view", "warn");
-                _ctx.Store?.WriteLedger(_ctx.State.RunId, rec.Number, stage.Id, "legacy-claim",
-                    $"Tracker-only DONE flips accepted via the W1.3 transition fallback: [{string.Join(", ", legacy)}]. The graph heard no claim — report through 'conductor task --done' or MCP task_update.");
-                rec.NewlyDone = [.. graphClaims, .. legacy];
-            }
-        }
+        rec.NewlyDone = ResolveClaims(rec, stage.Id, preTrack, postTrack);
 
         var newlyBlocked = postTrack.Checkpoints
             .Where(c => c.IsBlocked && !(preTrack.ById(c.Id)?.IsBlocked ?? false))
@@ -389,9 +366,14 @@ public sealed partial class VerdictEngine
             rec.Outcome = rec.NewlyDone.Count > 0 ? SessionOutcome.Advanced : SessionOutcome.Progress;
             if (dirty) _ctx.Log($"note: working tree left dirty after green session: {Git.DirtySummary(_ctx.Plan.Repo)}");
 
-            // M4.1: queue checkpoints for confirmation after verifier passes (or skip)
-            if (rec.NewlyDone.Count > 0)
-                _ctx.State.PendingConfirmation = [..rec.NewlyDone];
+            // M4.1: queue checkpoints for confirmation after verifier passes (or skip).
+            // K1.1: UNION, not replace. A claim can now be queued by a session that never reaches
+            // this line — a rollover, an audit, a verify — and confirmation happens later, at the
+            // phase gate. Overwriting here dropped those on the floor the moment the next delivery
+            // session claimed anything of its own, which is the SF0.2 invisibility bug by another road.
+            foreach (var id in rec.NewlyDone)
+                if (!_ctx.State.PendingConfirmation.Contains(id, StringComparer.OrdinalIgnoreCase))
+                    _ctx.State.PendingConfirmation.Add(id);
 
             AdvanceWorkflowStep(stage, rec, gatesGreen: true, verifierScore: null,
                 verifierPassed: false, circuitBroken: false, stageComplete: stageComplete,

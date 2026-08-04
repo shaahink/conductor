@@ -14,14 +14,18 @@ public sealed partial class SF7_1DocsMatchRealityTests
     [Fact]
     public void TheRunConductorSkillDescribesTheClaimSignalTheVerdictEngineActuallyUses()
     {
-        var engine = File.ReadAllText(Path.Combine(
-            RepoRoot(), "src", "Conductor", "Core", "Orchestration", "VerdictEngine.cs"));
+        // Every partial of the verdict engine, not just VerdictEngine.cs: K1.1 lifted the claim rule
+        // into VerdictEngine.Claims.cs so the rollover path could share it, and reading one file
+        // would report the fallback as removed when it had only moved next door.
+        var engine = string.Concat(Directory.EnumerateFiles(
+                Path.Combine(RepoRoot(), "src", "Conductor", "Core", "Orchestration"), "VerdictEngine*.cs")
+            .Select(File.ReadAllText));
         var skill = Doc(".claude", "skills", "run-conductor", "SKILL.md");
 
         // The fallback is what makes "discarded" false. If it is ever removed, this test tells the
         // next author that the skill may (and must) go back to describing a hard reject.
         var fallbackLives = engine.Contains("accepted via the transition fallback", StringComparison.Ordinal)
-            && engine.Contains("rec.NewlyDone = [.. graphClaims, .. legacy]", StringComparison.Ordinal);
+            && engine.Contains("[.. graphClaims, .. legacy]", StringComparison.Ordinal);
         Assert.True(fallbackLives,
             "the W1.3 transition fallback is gone from VerdictEngine — a tracker-only DONE flip may no " +
             "longer be accepted. Re-check .claude/skills/run-conductor/SKILL.md, which now says it IS " +

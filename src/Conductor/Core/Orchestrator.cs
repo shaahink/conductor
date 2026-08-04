@@ -91,6 +91,7 @@ public sealed class Orchestrator
             pushSessionSnapshot: (a, r, s, at, m, t) => PushSessionSnapshot(a, r, s, at, m, t),
             saveAndReport: SaveAndReport,
             evaluateSession: v.EvaluateSessionAsync,
+            recordRolloverFacts: v.RecordRolloverFacts,
             queueResume: v.QueueResume,
             needsHuman: v.NeedsHuman,
             reflectionStep: v.ReflectionStep,

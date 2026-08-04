@@ -62,6 +62,61 @@ public sealed partial class VerdictEngine
                  $"[{string.Join(", ", claims)}] — counted for this session and queued for confirmation");
     }
 
+    /// <summary>W1.3's claim rule, in ONE place. The claim signal is the WORK GRAPH — what
+    /// <c>conductor task --done</c> / MCP <c>task_update</c> wrote during this session. The tracker
+    /// diff survives as a FLAGGED transition fallback so an old-habit agent still makes progress,
+    /// loudly; a tracker hand-edit is no longer a claim of its own, so the M4.1 veto has nothing
+    /// left to veto. K1.1 lifted this out of <see cref="EvaluateSessionAsync"/> so the rollover path
+    /// records claims by the same rule rather than by a second, quieter one.</summary>
+    private List<string> ResolveClaims(SessionRecord rec, string stageId,
+        TrackerSnapshot preTrack, TrackerSnapshot postTrack)
+    {
+        var trackerFlips = postTrack.Checkpoints
+            .Where(c => c.IsDone && !(preTrack.ById(c.Id)?.IsDone ?? false))
+            .Select(c => c.Id).ToList();
+        var graphClaims = GraphClaimsDuringSession(rec);
+        if (graphClaims is null) return trackerFlips; // no store / no session-start marker — legacy signal
+
+        var legacy = trackerFlips.Except(graphClaims, StringComparer.OrdinalIgnoreCase).ToList();
+        if (legacy.Count == 0) return graphClaims;
+
+        _ctx.Log($"WARNING: {legacy.Count} checkpoint(s) flipped DONE only in the tracker markdown: [{string.Join(", ", legacy)}] — accepted via the transition fallback; claim with `conductor task --done` or MCP task_update, the tracker is a generated view", "warn");
+        _ctx.Store?.WriteLedger(_ctx.State.RunId, rec.Number, stageId, "legacy-claim",
+            $"Tracker-only DONE flips accepted via the W1.3 transition fallback: [{string.Join(", ", legacy)}]. The graph heard no claim — report through 'conductor task --done' or MCP task_update.");
+        return [.. graphClaims, .. legacy];
+    }
+
+    /// <summary>K1.1: a rolled-over session's facts, recorded like any other session's.
+    /// <para>The rollover branch in <see cref="SessionRunner"/> returns before the verdict pass, so
+    /// nothing ever filled <see cref="SessionRecord.NewCommits"/> (whence <c>commit_count</c>) or
+    /// <see cref="SessionRecord.NewlyDone"/>. Measured over both Sarban runs: <c>commit_count</c> was
+    /// 0 on 100% of rollovers while git ground truth over each session's own window said 91% of them
+    /// had committed. Every board, REPORT.md row, digest and Telegram push under-reported on every
+    /// rollover; one client-site run called a session idle that had shipped a pull request.</para>
+    /// <para>This records the FACTS and nothing else. It deliberately does not touch
+    /// <c>AttemptsThisStage</c>, run no gate battery and advance no workflow step: a rollover still
+    /// costs no attempt and still defers the phase gate, which is what a rollover MEANS. The claims
+    /// are queued for confirmation because this session will never reach the verdict that would
+    /// queue them, and an unqueued claim can never reach DONE ✓ from either side (SF0.2, bug #10).</para></summary>
+    public void RecordRolloverFacts(SessionRecord rec, StageConfig stage, TrackerSnapshot preTrack,
+        string startHead, CancellationToken ct)
+    {
+        CollectCommits(rec, startHead);
+        NoteOutsideRepoWrites(rec);
+
+        var postTrack = _ctx.Progress.Read(_ctx.Plan, ct);
+        rec.NewlyDone = ResolveClaims(rec, stage.Id, preTrack, postTrack);
+        foreach (var id in rec.NewlyDone)
+            if (!_ctx.State.PendingConfirmation.Contains(id, StringComparer.OrdinalIgnoreCase))
+                _ctx.State.PendingConfirmation.Add(id);
+
+        var work = SessionProgress.WorkCommits(rec);
+        var bookkeeping = rec.NewCommits.Count + rec.SatelliteCommits.Count - work.Count;
+        _ctx.Log($"rollover facts for session #{rec.Number}: commits {work.Count}" +
+                 (bookkeeping > 0 ? $" (+{bookkeeping} conductor bookkeeping, not counted)" : "") +
+                 $" · newly DONE [{string.Join(",", rec.NewlyDone)}] — recorded without a gate or an attempt");
+    }
+
     /// <summary>All of a stage's checkpoint rows in the graph read DONE (and it has some) — so a
     /// stage whose last item was claimed only via the graph is complete NOW, not one tracker
     /// regeneration later. SC5.3: a SKIPPED row is settled too, or one `task --skipped` would leave

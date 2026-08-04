@@ -4,17 +4,19 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: nothing — this run has not started. The plan, this tracker, the spec and the templates were
-  authored on 2026-08-04 from `docs/dev/NEXT-ERA-FINDINGS-2026-08-04.md`.
-next: **K1.1** — a rolled-over session records the commits and claims it actually made.
-  `SessionRunner.cs:411-420` returns before the verdict pass that fills `NewCommits` and `newly_done`,
-  so `commit_count` is 0 on 100% of rollovers while git says 91% of them committed. Extend the
-  fake-agent harness fixtures to drive a session to its ceiling and assert a non-zero commit count.
-  Keep the semantics: a rollover still must not consume an attempt and still must not run the phase gate.
-notes: this era's token ceiling (32M, nudge 22.4M) was measured from this repo's own `run.db` — from
-  the Sarban CORE run, the one that ran on this model and ran uncapped. Read only your stage's
-  section of the spec.
-red: nothing yet.
+last: **K1.1 claimed.** A rolled-over session now records its commits and its claims:
+  `VerdictEngine.Claims.cs:101 RecordRolloverFacts`, called from `SessionRunner.cs:423`. The W1.3
+  claim rule is now one shared `ResolveClaims` (`VerdictEngine.Claims.cs:71`), and
+  `PendingConfirmation` unions instead of replacing, so a rollover's claim can still be confirmed.
+  Semantics kept: no attempt burned, no gate battery. Proof `tests/Conductor.Tests/K1_1RolloverRecordsFactsTests.cs`
+  — falsified by disabling the call: it then fails at `Assert.NotEmpty(rolled.NewCommits)` while git
+  shows the commit. Evidence `.conductor/evidence/K1/K1.1-rollover-records-facts.md`.
+next: **K1.2** — the soft break. Eleven of eleven post-cap rollovers in the Sarban face run died at
+  the hard ceiling, none stopped at the nudge: re-state it, carry the real remaining budget, state
+  the order (claim first, handoff second), record delivered/re-delivered/obeyed on the session.
+notes: a live harness agent must be wired `powershell -File`, never `cmd.exe` with `{prompt}` — a real
+  composed prompt exceeds cmd's 8191-char argv ceiling and the child dies before running one line.
+red: nothing.
 
 ## Baseline numbers
 

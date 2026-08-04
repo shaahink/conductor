@@ -21,6 +21,7 @@ public sealed partial class SessionRunner
     private readonly Action<AgentSession, SessionRecord, StageConfig, int, int, TrackerSnapshot> _pushSessionSnapshot;
     private readonly Action _saveAndReport;
     private readonly Func<SessionRecord, StageConfig, TrackerSnapshot, string, bool, bool, bool, bool, CancellationToken, Task> _evaluateSession;
+    private readonly Action<SessionRecord, StageConfig, TrackerSnapshot, string, CancellationToken> _recordRolloverFacts;
     private readonly Action<SessionRecord, string, bool, bool> _queueResume;
     private readonly Action<string> _needsHuman;
     private readonly Action<SessionRecord> _reflectionStep;
@@ -33,6 +34,7 @@ public sealed partial class SessionRunner
         Action<AgentSession, SessionRecord, StageConfig, int, int, TrackerSnapshot> pushSessionSnapshot,
         Action saveAndReport,
         Func<SessionRecord, StageConfig, TrackerSnapshot, string, bool, bool, bool, bool, CancellationToken, Task> evaluateSession,
+        Action<SessionRecord, StageConfig, TrackerSnapshot, string, CancellationToken> recordRolloverFacts,
         Action<SessionRecord, string, bool, bool> queueResume,
         Action<string> needsHuman,
         Action<SessionRecord> reflectionStep,
@@ -44,6 +46,7 @@ public sealed partial class SessionRunner
         _pushSessionSnapshot = pushSessionSnapshot;
         _saveAndReport = saveAndReport;
         _evaluateSession = evaluateSession;
+        _recordRolloverFacts = recordRolloverFacts;
         _queueResume = queueResume;
         _needsHuman = needsHuman;
         _reflectionStep = reflectionStep;
@@ -414,6 +417,10 @@ public sealed partial class SessionRunner
                 rec.ResultSummary = ExtractSessionResult(agent.ResultText, rec.Kind);
                 if (kind == SessionKind.Audit && !_ctx.State.AuditedStages.Contains(stage.Id))
                     _ctx.State.AuditedStages.Add(stage.Id);
+                // K1.1: the facts BEFORE the handoff hint, because BuildRolloverResumeHint reads the
+                // tracker and the resume line should describe a session whose commits are already on
+                // the record. Facts only — no attempt burned, no gate battery: still a rollover.
+                _recordRolloverFacts(rec, stage, preTrack, startHead, ct);
                 var resumeCtx = BuildRolloverResumeHint(preTrack);
                 _ctx.Log($"session #{rec.Number} rolled over — {rec.TokensTotal / 1000.0:0.#}k tokens ≥ {maxTok / 1000.0:0.#}k limit, handoff written{(resumeCtx != null ? $" · {resumeCtx}" : "")}");
                 _reflectionStep(rec);
