@@ -1,0 +1,247 @@
+{
+  // KARVAN plan 1 of 2 - the engine knows what it did, what it cost, and where its own code lives.
+  // Spec: docs/history/CONDUCTOR-KARVAN.md (Part I). Research: docs/dev/NEXT-ERA-FINDINGS-2026-08-04.md.
+  // Appendix C of the spec is the launch drill - follow it verbatim.
+  //
+  // TRAPS THIS FILE ITSELF CARRIES:
+  //  * `conductor plan set` round-trips this file through System.Text.Json and DROPS EVERY COMMENT.
+  //    Keep this annotated copy safe, or expect to restore the comments by hand afterwards.
+  //  * `agent.model` is dropped silently unless {model} appears in BOTH args and resumeArgs. It does.
+  //    Verify with `conductor journey` - the Model column must never read (default).
+  //  * templatesDir resolves against THIS FILE'S directory, not the repo root. "templates" therefore
+  //    means plans/karvan/templates/. tracker and planDoc below are repo-relative. They differ on
+  //    purpose; do not "fix" one to match the other.
+  //  * limits.maxSessionTokens and softBreakRatio were MEASURED from this repo's own run.db, not
+  //    copied from the Sarban era. See the spec, K4.2, and the research doc section "Setting this
+  //    era's budget". Re-measure at K7.1 with `conductor budget` and correct them.
+  //  * RE-DERIVED 2026-08-04 when this plan moved from sonnet to opus. The 12M/0.7 pair was computed
+  //    from the Sarban FACE run, which was sonnet and whose sessions ran a 7.6M median. The Sarban
+  //    CORE run was opus and UNCAPPED, and its sessions ran a 16.9M median, 22.6M p75, 30.0M p90,
+  //    35.9M max - so a 12M ceiling would have killed the MEDIAN opus session. That matters more
+  //    than it sounds: a rolled-over session returns before the verdict, so it runs no phase gate
+  //    and records neither commits nor newly-done, which is precisely the ledger corruption K1.1
+  //    exists to fix and precisely the data K4 has to measure. Ceiling 32M, nudge 22.4M: the nudge
+  //    clears the 17.5M median closing session by 28 percent and lands near p75, so roughly a
+  //    quarter of sessions exercise the cooperative rail (K1.2 needs it exercised to measure it);
+  //    the 9.6M margin above the nudge is 43 percent of it, the ratio that held at sonnet scale.
+  "version": "1.0",
+  "planVersion": 1,
+  "name": "Karvan core - the engine knows what it did and what it cost",
+  "repo": "C:/code/conductor",
+  "satelliteRepos": [],
+  "tracker": "plans/karvan/CORE-TRACKER.md",
+  "planDoc": "docs/history/CONDUCTOR-KARVAN.md",
+  "branchPattern": "^feat/karvan$",
+  "pauseOnBlocked": true,
+  "agent": {
+    "command": "claude",
+    "args": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--dangerously-skip-permissions",
+      "--model",
+      "{model}",
+      "--session-id",
+      "{sessionId}"
+    ],
+    "resumeArgs": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--dangerously-skip-permissions",
+      "--model",
+      "{model}",
+      "--resume",
+      "{claudeSessionId}"
+    ],
+    "output": "stream-json",
+    "model": "claude-opus-5"
+  },
+  "advisor": {
+    "enabled": true,
+    "command": "claude",
+    "args": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "json",
+      "--model",
+      "claude-haiku-4-5-20251001"
+    ],
+    "output": "json",
+    "timeoutMinutes": 6
+  },
+  "setup": {
+    "command": "dotnet build-server shutdown; exit 0",
+    "timeoutMinutes": 2
+  },
+  "teardown": {
+    "command": "dotnet build-server shutdown; exit 0",
+    "timeoutMinutes": 2
+  },
+  "progress": {
+    "kind": "markdown-table"
+  },
+  "stages": [
+    {
+      "id": "K1",
+      "title": "The ledger stops lying",
+      "sessions": 4,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: docs/history/CONDUCTOR-KARVAN.md section K1. This stage is first because every measurement in K4 is computed from the ledger, and the ledger currently reports zero commits on 100 percent of rollovers while git says 91 percent of them committed. K1.1 makes a rolled-over session record the commits and claims it actually made, without changing what a rollover means - it still must not consume an attempt and still must not run the phase gate. K1.2 fixes the rail that never fired: all eleven post-cap rollovers in the Sarban face run died at the hard ceiling, not one stopped at the nudge, so the nudge must be re-stated rather than announced once, must carry the actual remaining budget, must state the wrap-up order (claim first, handoff second), and must be recorded so the next tuning pass reads a measurement. K1.3 kills three small untruths as a class - the thinking-token column that is zero on all 125 rows ever written, the lessons file that is a diary and currently repeats one entry twice, and a go.mod that marks a directly-imported package indirect while carrying two lipgloss majors. K1.4 makes the MCP config MERGE the operator's own servers instead of replacing them, the engine-side half of a bug filed in SF7.1; keep the prompt-side deferred-tool fallback, because a deferred tool is the harness's choice and conductor cannot assert otherwise."
+    },
+    {
+      "id": "K2",
+      "title": "The architecture becomes navigable",
+      "sessions": 4,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: docs/history/CONDUCTOR-KARVAN.md section K2. This stage is before the memory work on purpose: K3 moves the store and touches every IRunStore caller, so deciding where the store lives afterwards costs the same work twice. The rule is assess then reshape - do NOT rewrite. 1,547 test methods are the safety net; keep them green at every step and keep each checkpoint independently revertable. K2.1 extracts Conductor.Core (domain, orchestration, store; no Spectre, no HTTP hosting) and leaves Conductor as CLI plus hosting, so the project reference direction enforces the layering that is currently only convention. K2.2 lands architecture tests in the ordinary suite that fail with the offending type named - ArchUnitNET is the maintained option, NetArchTest has had no release since 2023 - and they land WITH K2.1 so the extraction is verified rather than asserted. K2.3 splits the partial-file piles by responsibility, starting with the thirty-file DTO pile that is really per-endpoint contracts wearing one type name, and writes down one file-organisation convention. K2.4 is the front door: a real ARCHITECTURE.md, an AGENTS.md cut to current state with superseded handoffs archived and indexed, closed-era trackers moved out of the repo root, the divergent duplicate of the workgraph doc resolved to one file, and docs indexes updated so nothing becomes unfindable. If you move a file this run's readOrder or tracker points at, update the plan and reload it in the same checkpoint."
+    },
+    {
+      "id": "K3",
+      "title": "Conductor remembers",
+      "sessions": 3,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: docs/history/CONDUCTOR-KARVAN.md section K3. State is repo-local and git-ignored, so history dies with the machine: PlanConfig line 109 hard-codes the state dir under the repo and the state gitignore is a bare star. K3.1 gives state a machine-level home with one catalogue keyed by repo path plus plan, an environment override, and a migration that IMPORTS existing run.db files rather than orphaning them - idempotent, and it says what it moved. The per-run scratch and the tracked deliverables stay in the repo. Decided and not to be re-litigated: not a synced folder, because SQLite corrupts under concurrent writers and this machine already runs two engines at once. Keep the resolution path explicit enough that a second working tree can point at the same run - the lanes plan depends on exactly that. K3.2 ships history verbs plus a Face run picker over past runs, extending the existing runpicker widget rather than writing a second one, and read-only means read-only. K3.3 makes every run record which engine, which commit, whether it was dirty, and a snapshot of the limits that governed it - the reason the Sarban cap change at session 9 has to be inferred from a token curve today instead of read from the record."
+    },
+    {
+      "id": "K4",
+      "title": "Token truth - measure it before shrinking it",
+      "sessions": 4,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: docs/history/CONDUCTOR-KARVAN.md section K4. The measurement that ranks this stage: 98 percent of every token this project has spent is a cache read and cache reads are about two thirds of the bill, while output is about fifteen percent. So the instrument comes first and every lever waits for it. K4.1 measures context size per turn - the engine records integrals today and nothing anywhere tracks the prefix size that actually drives the two thirds; derive it from the cache-read delta per turn, record a high-water and a mean, and say in the evidence how close the derivation lands against a session you can estimate independently. K4.2 ships conductor budget: floor, wrap-up, current cap, nudge versus floor, rollover rate, and a prescription - and it must reproduce this repo's own two runs without being told the answers. K4.3 ships conductor money with the research doc's headline columns plus the before-and-after windows that answer what the cap bought; cross-check one row against a hand-written query and put both in the evidence. K4.4 puts live token headroom beside live money, honest when no cap is set, and composable because a lane-aware Face will have to multiply that widget."
+    },
+    {
+      "id": "K5",
+      "title": "The result contract and the channels",
+      "sessions": 4,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: docs/history/CONDUCTOR-KARVAN.md section K5. Order matters and it is deliberate. K5.1 first: the session result has no format, so four consumers each improvise their own mutilation of the same paragraph - Telegram cuts at 700 characters, the advisor at 1200, the lessons battery pastes a truncated copy into the next prompt, and the report takes another slice. Conductor takes ownership of the format (short headline, at most three outcome bullets, artefacts as links, evidence paths, explicit gaps) and the followup parser and verdict parse move in the SAME checkpoint, along with the session template that teaches it - which lives in this plan's templates directory and is read fresh every session, so this run adopts its own change mid-flight. A malformed or legacy result must degrade to today's behaviour rather than throwing. K5.2 lands the five cheap Telegram defects that make the feed unreadable today: the session number printed twice from two different sources, the stage rendered as a bare letter, the blind 700-character cut, a rollover that reports nothing, and no progress line anywhere. K5.3 makes evidence a first-class artifact - model, event, watcher, registry, Face surface - with non-text kinds first-class, because a screenshot is the case that motivated it, and the existing free-text evidence field keeps working. K5.4 is the composition layer: owner-editable per-event templates, one identity block, repo and branch and stage title and checkpoint in every push, commits and PRs as links, money with headroom, photo and document sending so K5.3's evidence actually arrives, a thread per run, severity mapped to notify or silent, and chunking against the 4096-character limit. K5.4 also records the remote-observability decision as an ADR: push-only, because the control plane is loopback with no auth story."
+    },
+    {
+      "id": "K6",
+      "title": "The surfaces read",
+      "sessions": 4,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: docs/history/CONDUCTOR-KARVAN.md section K6. The owner's long-text glitch has a root cause: bubbles is not a dependency of face-go at all, so the Face hand-rolls scrolling with one bespoke scroll integer per surface, plus its own text area, tables, lists and pagination - and can-not-read-long-text is precisely the failure a hand-rolled scroll region has and a viewport does not. K6.1 writes a short ADR of adopted conventions after actually reading glow (viewport plus glamour with pager keys), soft-serve, gh-dash and lazygit; it is short and decisive and the next two checkpoints implement it. K6.2 adopts bubbles v2 and moves Report and Knowledge onto a viewport - smallest diff, biggest relief - with the golden, frame-invariant and glitch-sweep tests as the regression net and any baseline regenerated in a SEPARATE rebaseline commit. Evidence is a captured frame of a long document scrolled to its end, the exact case that failed. K6.3 dissolves the 116-field god object: the tab files are already the right partition and only the state never followed the code, so each tab becomes its own model with its own update and view and the root 826-line 80-case update becomes a dispatch. Do it WITH K6.2, because you cannot drop a viewport into a tab whose scroll state is a shared integer on a struct four hundred lines away. Keep the tab-key map the single source for mnemonics and update the hand-maintained help legend in the same commit or the help lies. K6.4 unifies markdown rendering onto the theme system and finishes the primitive swaps the ADR calls for, naming anything deliberately left."
+    },
+    {
+      "id": "K7",
+      "title": "Ship the plan",
+      "sessions": 2,
+      "ownerGate": true,
+      "kind": "deliver",
+      "notes": "SPEC: docs/history/CONDUCTOR-KARVAN.md section K7. K7.1 reconciles the docs with the engine and writes this era's own measurements back into the token-budget doc: the 8M cap's real score, the corrected rule that the nudge and not only the cap must clear the floor, and this run's figures produced by conductor budget rather than by hand. This is the first real use of what K4.2 shipped, and if its prescription disagrees with the spec then the prescription wins and the spec gets corrected. Every claim this plan made that turned out wrong is corrected in place, not quietly dropped, and the closure ledger names every open bug and followup row with the stage that closed it or the living owner that holds it. K7.2 is the owner-signed merge of feat/karvan to master, the tagged release through the existing pipeline, and a reinstall whose reported version matches the releases page - the FIRST install of this run, and only after the owner confirms no other conductor run is live on this machine."
+    }
+  ],
+  "gates": [
+    {
+      "name": "engine-fast",
+      "command": "dotnet build Conductor.slnx -clp:ErrorsOnly",
+      "optional": false,
+      "tier": "fast",
+      "parallel": false,
+      "timeoutMinutes": 15
+    },
+    {
+      "name": "face-fast",
+      "command": "cmd /c \"cd /d C:\\code\\conductor\\face-go && go build ./... && go vet ./...\"",
+      "optional": false,
+      "tier": "fast",
+      "parallel": false,
+      "timeoutMinutes": 10
+    },
+    {
+      "name": "engine-full",
+      "command": "dotnet test Conductor.slnx",
+      "optional": false,
+      "tier": "full",
+      "parallel": false,
+      "timeoutMinutes": 40
+    },
+    {
+      "name": "face-full",
+      "command": "cmd /c \"cd /d C:\\code\\conductor\\face-go && go test ./...\"",
+      "optional": false,
+      "tier": "full",
+      "parallel": false,
+      "timeoutMinutes": 15
+    }
+  ],
+  "gatePolicy": "perPhase",
+  "verifyEachDelivery": true,
+  "limits": {
+    "stallMinutes": 15,
+    "stallGraceMinutes": 3,
+    "sessionTimeoutMinutes": 120,
+    "batterySettleSeconds": 120,
+    "authPreflight": true,
+    "maxResumesPerSession": 2,
+    "stageSlackFactor": 2,
+    "backoffMinutes": 30,
+    "maxBackoffs": 10,
+    "maxRunCostUsd": 420,
+    "approvalMode": false,
+    "maxSessionTokens": 32000000,
+    "softBreakRatio": 0.7,
+    "maxConcurrentLanes": 2,
+    "stallPatternTermination": true,
+    "sameFailureCircuitBreaker": true,
+    "stallBackoffMinutes": 12,
+    "overheadCostPerSecond": 0.0001,
+    "verifierThreshold": 80
+  },
+  "report": {
+    "commit": false,
+    "push": false,
+    "heartbeatMinutes": 0
+  },
+  "telegram": {
+    "allowedChatIds": [
+      "99205495"
+    ],
+    "pollIntervalSeconds": 4,
+    "enableTwoWay": true
+  },
+  "promptExtra": "TRAPS THIS REPO HAS ALREADY PAID FOR, in order of cost:\n0. THIS REPO'S .conductor/ IS THE LIVE STATE OF THE RUN DRIVING YOU. The claim and note verbs (conductor task, note, bug, bg) and the read-only verbs (status, task --list) are yours; NEVER aim a run-control verb (run, pause, resume, abort, approve, plan set, plan reload, goto, skip, retry-stage, rollback, kill) at this repo. Any live-run proof spawns YOUR build against a scratch repo with its own tiny plan and its own state dir - for example under the temp directory - never against C:/code/conductor.\n1. NEVER run tools/install.ps1 or overwrite the published engine. The conductor driving you runs from that published copy. The owner reinstalls at K7.2, not before.\n2. The conductor on PATH is the published engine driving you - NOT your working tree. Exercise YOUR changes through the fresh build: dotnet run --project src/Conductor -- VERB (or go run ./cmd/... in face-go). Testing a new verb through the PATH shim only proves the published engine lacks it. Exception by design: task claims go through the PATH copy, because they target the driving run.\n3. A SECOND CONDUCTOR RUN MAY SHARE THIS MACHINE, in another repo, and you can break it without touching it. Never kill a conductor.exe, conductor-face.exe or stray dotnet process by pid: check its command line with Get-CimInstance Win32_Process and leave anything whose path is not this repo alone, no matter how stale it looks. Give every scratch rig its own port and its own state dir, and read the port back from the rig's own discovery file instead of assuming a default. Usage-limit backoffs may be more frequent because both runs draw on one subscription; they self-resume and are not your problem.\n4. A literal brace token in a file under this plan's templates directory KILLS THE ENGINE - the template text is validated for unresolved placeholders, the refusal goes to stderr only, and it fires when a stage first renders that template. After any template edit, sweep it for brace tokens; only real placeholder names may appear, and a doubled brace emits a literal one. K5.1 edits the session template on purpose, so this trap is live in this run.\n5. Keep the escalation token out of the tracker's handoff block unless you are escalating right now. The match is a plain substring, so prose describing the convention parks the run as hard as raising one, and the park then hot-loops and floods Telegram. Write escalation in prose; the literal form is the word HUMAN followed by a colon.\n6. The ratchet gate is tools/gates/ratchet.ps1 - the wrong path prints an error but exits 0, a silent false green. Never raise the pragma ceiling; fix the cause.\n7. face-go: pad plain text then style, never width-format an ANSI string; clamp with MaxWidth and MaxHeight; goldens pin UTC and live in face-go/internal/tui/testdata/golden - regenerate them in a separate rebaseline commit, and read face-go/STYLE.md before any face change.\n8. Orphaned dotnet test hosts flake the full suite. Stopping one is sanctioned ONLY after trap 3's command-line check proves it belongs to this repo; never kill a conductor process, yours or anyone's.\n9. PowerShell tooling targets Windows PowerShell 5.1 and must stay ASCII-only - em-dashes have torn string literals here before.\n10. Commit per checkpoint with the repo's trailer convention and push feat/karvan. Go sources are checked out LF; keep them that way.\n11. K2 MOVES FILES. If you move a file this run depends on - the plan's readOrder target, the tracker, a template - update the plan and reload it in the same checkpoint, or the next session reads nothing. Do not move this plan's own tracker or spec.\n12. This era's token ceiling was measured, not guessed: 32M with the nudge at 22.4M, derived from the Sarban CORE run, which is the one that ran on this model and ran uncapped - its sessions came in at a 16.9M median and a 30.0M p90. The nudge sits above the median session that actually closed a checkpoint, which is the mistake the previous era made in the other direction: its nudge sat below that median and every one of its eleven rollovers died at the hard ceiling without one stopping cooperatively. If you believe the ceiling is wrong, say so with a measurement in the handoff - do not work around it by splitting a checkpoint you were not asked to split.",
+  "templatesDir": "templates",
+  "packs": [],
+  "batteryCollapse": false,
+  "readOrder": [
+    "docs/history/CONDUCTOR-KARVAN.md"
+  ],
+  "analysisLanes": [],
+  "mutatingLanes": [],
+  "workflows": {
+    "deliver": {
+      "name": "deliver",
+      "description": "Deliver until the stage's checkpoints are confirmed; fix only when gates are red.",
+      "steps": [
+        {
+          "id": "deliver",
+          "kind": "deliver",
+          "deliver": true
+        },
+        {
+          "id": "fix-if-red",
+          "kind": "fix",
+          "runIf": "!gatesGreen",
+          "deliver": true
+        }
+      ],
+      "repeat": true
+    }
+  },
+  "defaultWorkflow": "deliver"
+}

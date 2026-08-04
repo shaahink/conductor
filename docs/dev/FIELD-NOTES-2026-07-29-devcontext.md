@@ -659,6 +659,80 @@ the error text is discarded. A one-line change would likely close this permanent
 
 ---
 
+## 21. A rolled-over session's commits and closed checkpoints are never recorded
+
+**Severity:** medium — a ledger that reads as data loss on every rollover, whether or not any
+occurred. Found 2026-08-02 while tuning `maxSessionTokens` for this run.
+
+`SessionRunner.cs:411` sets `rec.Outcome = SessionOutcome.RolledOver` and returns **before** the
+verdict pass that populates `NewCommits` (whence `commit_count`) and `newly_done`. The engine never
+looks, so both are structurally 0 for every rollover:
+
+| run | RolledOver sessions | `commit_count` > 0 | `newly_done` non-empty |
+|---|---|---|---|
+| sk-studio | 34 | 0 | 0 |
+| conductor (sarban-face) | 11 | 0 | 0 |
+
+**Git says otherwise.** Counting non-`chore(conductor):` commits inside each rolled-over session's
+own `started_utc..ended_utc` window:
+
+| run | left ≥1 agent commit | agent commits the ledger reports as zero |
+|---|---|---|
+| sk-studio | **19 of 34 (56%)** | 28 |
+| conductor | **10 of 11 (91%)** | 20 |
+
+**Impact.** Forty-eight agent commits are invisible in the ledger. Three consequences, in order of
+cost: (a) an owner watching the board sees every rollover produce nothing and concludes the token
+ceiling is destroying work — the exact wrong conclusion, and the one that gets a working cap turned
+off; (b) any per-session efficiency read off `newly_done` mis-attributes a rollover's contribution to
+its successor; (c) `RolledOver` cannot be distinguished from a genuinely empty session, so the one
+case worth investigating — a rollover that really did land nothing — is unfindable.
+
+**Suggested fix.** Run the commit/tracker half of the verdict on the rollover path before returning.
+It is a read of git and the tracker; it spawns nothing and cannot fail the session. If that is
+unwanted, the cheaper version is a `NULL`/`-1` sentinel so the surfaces render "not measured" rather
+than a confident `0`.
+
+---
+
+## 22. `softBreakRatio` is a ratio, but the cost it has to cover is absolute
+
+**Severity:** medium — it makes a correctly-set cap fail in a way that looks like the cap being too
+low, so the fix people reach for (raise the cap) works by accident and for the wrong reason.
+
+The cooperative nudge fires at `softBreakRatio × maxSessionTokens`, leaving
+`headroom = (1 − ratio) × cap` for the agent to land its sub-task, commit, and write the handoff.
+That wrap-up costs an **absolute** number of tokens — it scales with the session's context size, not
+with the cap. Measured, as final tokens minus nudge threshold for sessions that ended clean:
+
+- sk-studio stage H, 5 sessions: **1.03M · 1.63M · 1.91M · 1.97M · 2.01M**
+- DevContext2 #27: **2.63M** (nudge at 12:23:12, clean exit 12:25:27, 3 commits, `G9.1` closed)
+
+Because the reserve is a ratio, it shrinks with the cap exactly when it must stay constant:
+
+| configuration | headroom | rollover rate |
+|---|---|---|
+| sk-studio 6M / 0.7 | 1.8M | **67%** (31 of 46, stages B/C/E/F) |
+| conductor 8M / 0.75 | 2.0M | 11 over the run |
+| sk-studio 9M / 0.7 | 2.7M | 22%; stage H **0 of 6** |
+| DevContext2 20M / 0.7 | 6.0M | 0 of 1 |
+
+sk-studio's 6M era cost **25–54M tokens per checkpoint against 20.0M uncapped** — stage F burned 9
+sessions and 53.8M tokens for one checkpoint. Raising to 9M did not give the agent more room to
+*work*; it gave it more room to *stop*, and stage H then rolled over zero times.
+
+**Suggested fix.** An absolute `softBreakReserveTokens` that takes precedence over the ratio when
+set, defaulted from the run's own observed wrap-up spend (the engine already has both numbers —
+nudge threshold and final tokens — for every clean session). The ratio stays as the fallback for a
+run with no history. Failing that, `doctor` could warn when `(1 − ratio) × cap` falls below ~2M.
+
+**Context, since it is the same mechanism:** the full three-run analysis behind both entries — why a
+cap must sit above the repo's *session floor*, why the tail is less productive per token rather than
+more expensive, and how to set both numbers for a new repo — is in
+`docs/dev/TOKEN-BUDGET-TUNING.md`.
+
+---
+
 ## What worked well (worth protecting in refactors)
 
 - **The verdict line is excellent.** `verdict inputs: gates green · commits 2 · newly DONE [G1.1] ·
