@@ -452,11 +452,16 @@ type SessionRowDto struct {
 	// per session, one per category). Absent on an older engine, which lands as 0 — and 0 tokens
 	// against a real cost is also what a pre-bug-#5 session honestly recorded, so neither the
 	// Report digest nor the Dev stats table may invent a number here.
-	CostUsd     float64 `json:"costUsd"`
-	TokensIn    int64   `json:"tokensIn"`
-	TokensOut   int64   `json:"tokensOut"`
-	TokensThink int64   `json:"tokensThink"`
-	TokensCache int64   `json:"tokensCache"`
+	CostUsd   float64 `json:"costUsd"`
+	TokensIn  int64   `json:"tokensIn"`
+	TokensOut int64   `json:"tokensOut"`
+	// K1.3: nil means the engine's agent provider does not report reasoning tokens AT ALL (claude
+	// bundles that spend into output; plain-text agents report no usage) — it does NOT mean the
+	// session did no thinking. Render it as not-applicable, never as 0: a 0 in a token column is a
+	// measurement, and this one would be a fabricated one. Non-nil is a real count (opencode).
+	// Also nil on an engine older than K1.3, which omitted the field's meaning rather than its value.
+	TokensThink *int64 `json:"tokensThink"`
+	TokensCache int64  `json:"tokensCache"`
 	// SC7.2/SF3.1: what the session actually DID, computed by the engine from its structured tool
 	// events and served on this same row since SC7.2. Nil on a session that predates the digest or
 	// captured no tool calls — never an empty digest standing in for one, so a pane can tell "this

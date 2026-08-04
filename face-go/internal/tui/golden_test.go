@@ -471,7 +471,7 @@ func newGoldenModel(width, height int) tea.Model {
 		// shapes the panel has to render, all three in one fixture.
 		{Number: 12, StageId: "F7", Kind: "Deliver", Outcome: nil, Attempt: 2, CommitCount: 0,
 			StartedUtc: "2026-07-15T10:00:00Z", CostUsd: 0.12,
-			TokensIn: 41213, TokensOut: 3187, TokensThink: 1024, TokensCache: 188420,
+			TokensIn: 41213, TokensOut: 3187, TokensThink: i64Ptr(1024), TokensCache: 188420,
 			Digest: &api.SessionDigestDto{
 				ToolCalls: 31, DistinctTools: 4,
 				Mix: []api.DigestCountDto{{Name: "Bash", Count: 14}, {Name: "Read", Count: 9},
@@ -485,7 +485,7 @@ func newGoldenModel(width, height int) tea.Model {
 			GateSummary:   strPtr("build ✓ test ✗ lint ○"),
 			ResultSummary: strPtr("Wired the **caching layer** in `RunDb` but `test` still red — see gate output."),
 			StartedUtc:    "2026-07-15T09:12:30Z", EndedUtc: strPtr("2026-07-15T09:58:04Z"), CostUsd: 0.1408,
-			TokensIn: 52881, TokensOut: 4402, TokensThink: 2310, TokensCache: 201338,
+			TokensIn: 52881, TokensOut: 4402, TokensThink: i64Ptr(2310), TokensCache: 201338,
 			Digest: &api.SessionDigestDto{
 				ToolCalls: 104, DistinctTools: 8,
 				Mix: []api.DigestCountDto{{Name: "Bash", Count: 57}, {Name: "Edit", Count: 26},

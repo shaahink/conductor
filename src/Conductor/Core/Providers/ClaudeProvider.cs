@@ -12,6 +12,12 @@ public sealed class ClaudeProvider : IAgentProvider
 {
     public string Name => "claude";
 
+    /// <summary>K1.3: no — claude's <c>usage</c> object has no thinking/reasoning field; that spend is
+    /// already inside <c>output_tokens</c> (see <c>ReadUsage</c>). Every one of the 125 cost rows this
+    /// project has ever written came from here, which is why <c>costs.tokens_think</c> is 0 across all
+    /// of them. Surfaces read this flag and render "n/a" rather than a 0 that claims no thinking.</summary>
+    public bool ReportsReasoningTokens => false;
+
     public bool DetectsUsageLimit(string evidence) => ProviderText.DetectsUsageLimit(evidence);
 
     public bool DetectsAuthFailure(string evidence) => ProviderText.DetectsAuthFailure(evidence);

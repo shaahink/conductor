@@ -18,6 +18,16 @@ public interface IAgentProvider
     /// invalid key). Distinct from a usage limit: no amount of backoff fixes it, so the run parks
     /// for a human instead of burning attempts.</summary>
     bool DetectsAuthFailure(string evidence);
+
+    /// <summary>K1.3: does this backend's wire format carry a reasoning/thinking token count at all?
+    /// <para>False is not "it reported zero" — it is "the question does not apply here", and the two
+    /// must not render the same. <c>costs.tokens_think</c> was 0 on all 125 rows ever written because
+    /// every one of them came from Claude, whose usage object bundles reasoning into output and has
+    /// no thinking field; a permanent 0 in a money column reads as "no thinking happened", which is
+    /// a claim conductor cannot make. The column stays, because opencode DOES report the number
+    /// (<see cref="OpencodeProvider"/> folds <c>tokens.reasoning</c>); the surfaces label it
+    /// not-applicable instead, and this flag is what they label it from.</para></summary>
+    bool ReportsReasoningTokens { get; }
 }
 
 public static class AgentProviderFactory
@@ -52,6 +62,11 @@ public static class AgentProviderFactory
             _ => "text",
         };
     }
+
+    /// <summary>K1.3: does the provider a plan resolves to report reasoning tokens? Answered through
+    /// <see cref="Create"/> so the adapter itself owns the answer and a surface cannot drift from the
+    /// parser. Used to send "not applicable" rather than 0 for a backend that never reports one.</summary>
+    public static bool ReportsReasoningTokens(AgentConfig cfg) => Create(cfg).ReportsReasoningTokens;
 
     /// <summary>Map the legacy <c>output</c> mode to a provider name (back-compat inference).</summary>
     public static string InferFromOutput(string output) => (output ?? "").ToLowerInvariant() switch

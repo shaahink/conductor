@@ -327,32 +327,54 @@ func (m Model) renderReportSessionTokens() string {
 	}
 	rows := []string{subtleStyle.Render(fmt.Sprintf("  %-4s %-5s %-8s %-8s %-8s %-9s %s",
 		"#", "stage", "in", "out", "reason", "cache-read", "cost"))}
-	var zeroTokenRows int
+	var zeroTokenRows, noReasonRows int
 	for _, r := range m.data.Sessions {
 		if r.TokensIn == 0 && r.TokensOut == 0 && r.CostUsd > 0 {
 			zeroTokenRows++
 		}
+		if r.TokensThink == nil {
+			noReasonRows++
+		}
 		cost := subtleStyle.Render(pad("—", 7))
 		if r.CostUsd > 0 {
 			cost = peachStyle.Render(pad(fmtCost(r.CostUsd), 7))
+		}
+		// K1.3: nil reasoning is "this provider has no such number", not zero. Padded plain then
+		// styled subtle, so the eye reads it as absent rather than as a measured 0.
+		think := subtleStyle.Render(pad("n/a", 8))
+		if r.TokensThink != nil {
+			think = textStyle.Render(pad(widgets.FmtTokens(*r.TokensThink), 8))
 		}
 		// Every column is padded as PLAIN text and styled after (STYLE.md).
 		row := textStyle.Render(pad(fmt.Sprintf("#%d", r.Number), 4)) + " " +
 			accentStyle.Render(pad(r.StageId, 5)) + " " +
 			textStyle.Render(pad(widgets.FmtTokens(r.TokensIn), 8)) + " " +
 			textStyle.Render(pad(widgets.FmtTokens(r.TokensOut), 8)) + " " +
-			textStyle.Render(pad(widgets.FmtTokens(r.TokensThink), 8)) + " " +
+			think + " " +
 			textStyle.Render(pad(widgets.FmtTokens(r.TokensCache), 9)) + " " +
 			cost
 		rows = append(rows, "  "+lipgloss.NewStyle().MaxWidth(max(1, m.paneCols()-2)).Render(row))
 	}
 	// Name the known cause rather than letting a reader debug the Face for an engine-side gap.
 	// Hard-clipped: a note that word-wraps loses its indent and shears the section (STYLE.md).
+	var notes []string
 	if zeroTokenRows > 0 {
-		note := fmt.Sprintf("%s with cost but zero tokens — pre-bug-#5 data, not a Face bug",
-			plural(zeroTokenRows, "session"))
-		rows = append(rows, "", "  "+subtleStyle.Render(
-			lipgloss.NewStyle().MaxWidth(max(1, m.paneCols()-2)).Render(note)))
+		notes = append(notes, fmt.Sprintf("%s with cost but zero tokens — pre-bug-#5 data, not a Face bug",
+			plural(zeroTokenRows, "session")))
+	}
+	// K1.3: say WHY a reason cell is n/a. The engine sends null when its agent provider has no
+	// reasoning-token concept (claude folds that spend into output); the alternative was a permanent
+	// 0, which reads as a measurement saying no thinking happened.
+	if noReasonRows > 0 {
+		notes = append(notes, fmt.Sprintf("reason n/a on %s — this run's agent provider reports no thinking tokens",
+			plural(noReasonRows, "session")))
+	}
+	if len(notes) > 0 {
+		rows = append(rows, "")
+		for _, note := range notes {
+			rows = append(rows, "  "+subtleStyle.Render(
+				lipgloss.NewStyle().MaxWidth(max(1, m.paneCols()-2)).Render(note)))
+		}
 	}
 	return homeSection("Session tokens", rows...)
 }

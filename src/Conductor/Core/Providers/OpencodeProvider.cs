@@ -13,6 +13,11 @@ public sealed class OpencodeProvider : IAgentProvider
 {
     public string Name => "opencode";
 
+    /// <summary>K1.3: yes — <c>step_finish</c> carries <c>tokens.reasoning</c>, folded below into
+    /// <c>state.TokensReasoning</c>. This is the one provider for which the think column is a fact
+    /// rather than a category error, which is why K1.3 labelled the column instead of dropping it.</summary>
+    public bool ReportsReasoningTokens => true;
+
     public bool DetectsUsageLimit(string evidence) => ProviderText.DetectsUsageLimit(evidence);
 
     public bool DetectsAuthFailure(string evidence) => ProviderText.DetectsAuthFailure(evidence);

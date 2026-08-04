@@ -792,6 +792,12 @@ public sealed class ControlPlaneServerTests : IDisposable
             "Advanced", "ses-1", 0, 1, "build:OK", "ok", 2, "S1.1");
         _store.RecordCost(RunId, 1, "agent", 1000, 500, 200, 4000, 0.05m, 300000);
         _store.RecordCost(RunId, 1, "gate", 0, 0, 0, 0, 0.0025m, 1500);
+        // K1.3: tokensThink is served as null for a provider that has no reasoning-token concept, so
+        // this fixture declares the one provider that DOES report it. Otherwise the think column here
+        // would be null and this test would silently stop measuring that it sums across categories —
+        // which is the thing it exists to measure. The null-for-claude contract is pinned separately,
+        // in K1_3ThinkingTokensTests.
+        _plan.Agent = new Conductor.Models.AgentConfig { Output = "opencode-json" };
 
         var (server, port) = StartServer();
         try

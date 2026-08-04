@@ -209,6 +209,10 @@ public sealed partial class ControlPlaneServer
     private async Task WriteSessionsAsync(HttpListenerContext ctx)
     {
         var rows = _store.QuerySessions(_state.RunId);
+        // K1.3: whether the think column means anything for THIS run, asked of the adapter that would
+        // have parsed the number. Resolved once per response, not per row: the provider is a property
+        // of the plan, and the sessions table has never recorded one per session.
+        var thinkReported = Providers.AgentProviderFactory.ReportsReasoningTokens(_plan.Agent);
         // SF3.3: the commit SUBJECTS, not just the count. The sessions table persists commit_count
         // and nothing else, but the event log has carried the `--oneline` strings on SessionFinished
         // since B5 — so the subjects come from the log rather than from a schema migration, and a
@@ -233,7 +237,10 @@ public sealed partial class ControlPlaneServer
             CostUsd: r.CostUsd,
             TokensIn: r.TokensIn,
             TokensOut: r.TokensOut,
-            TokensThink: r.TokensThink,
+            // K1.3: the stored column is NOT NULL DEFAULT 0, so it cannot tell "no reasoning" from
+            // "no such concept". The provider can, so ask it once per response rather than shipping a
+            // zero the Face would have to render as a number.
+            TokensThink: thinkReported ? r.TokensThink : null,
             TokensCache: r.TokensCache,
             Digest: SessionDigestDto.From(Events.SessionDigest.FromJson(r.Digest)),
             Commits: commitsByNumber.TryGetValue(r.Number, out var cs) ? cs : [])).ToList();

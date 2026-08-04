@@ -9,6 +9,9 @@ public sealed class GenericTextProvider : IAgentProvider
 {
     public string Name => "text";
 
+    /// <summary>K1.3: no — unstructured text carries no usage at all, let alone a reasoning count.</summary>
+    public bool ReportsReasoningTokens => false;
+
     public bool DetectsUsageLimit(string evidence) => ProviderText.DetectsUsageLimit(evidence);
 
     public bool DetectsAuthFailure(string evidence) => ProviderText.DetectsAuthFailure(evidence);

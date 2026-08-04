@@ -239,3 +239,22 @@ func TestReportSessionTokensIsReachableByScrolling(t *testing.T) {
 		t.Errorf("scrolling to the end never reaches the re-homed token table:\n%s", stripANSI(bottom))
 	}
 }
+
+// K1.3: the reason column must distinguish "this provider has no such number" from "it reported 0".
+// `costs.tokens_think` is 0 on every row conductor has ever written because every row came from
+// claude, which folds reasoning into output_tokens — so the engine now sends null there, and a 0 in
+// this column would be a fabricated measurement saying no thinking happened.
+func TestReportReasonColumnSaysNotApplicableRatherThanZero(t *testing.T) {
+	m := newGoldenModel(120, 40).(Model)
+	// The golden fixture carries both shapes: sessions 12/11 with a real count, session 8 with none.
+	plain := stripANSI(m.renderReportSessionTokens())
+	if !strings.Contains(plain, "n/a") {
+		t.Errorf("a session with no reasoning count must render n/a, not 0:\n%s", plain)
+	}
+	if !strings.Contains(plain, "reports no thinking tokens") {
+		t.Errorf("the n/a must be explained, not left as a bare gap:\n%s", plain)
+	}
+	if !strings.Contains(plain, "2.3k") {
+		t.Errorf("a provider that DOES report reasoning must still show the number:\n%s", plain)
+	}
+}

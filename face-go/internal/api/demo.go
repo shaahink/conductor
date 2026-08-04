@@ -1171,12 +1171,12 @@ func makeFakeSessions() []SessionRowDto {
 	return []SessionRowDto{
 		{Number: 12, StageId: "F7", Kind: "Deliver", Outcome: nil, Attempt: 2, CommitCount: 0,
 			StartedUtc: "2026-07-15T09:14:02Z", CostUsd: 0.12,
-			TokensIn: 41213, TokensOut: 3187, TokensThink: 1024, TokensCache: 188420,
+			TokensIn: 41213, TokensOut: 3187, TokensThink: i64Ptr(1024), TokensCache: 188420,
 			Digest: demoDigest()},
 		{Number: 11, StageId: "F7", Kind: "Deliver", Outcome: strPtr("needsRetry"), Attempt: 1, CommitCount: 2, GateSummary: strPtr("build ✓ test ✗ lint ○"),
 			ResultSummary: strPtr("Wired the **caching layer** in `RunDb` but `test` is still red — see the gate output."),
 			StartedUtc:    "2026-07-15T08:31:10Z", EndedUtc: strPtr("2026-07-15T09:12:55Z"), CostUsd: 0.1408,
-			TokensIn: 52881, TokensOut: 4402, TokensThink: 2310, TokensCache: 201338,
+			TokensIn: 52881, TokensOut: 4402, TokensThink: i64Ptr(2310), TokensCache: 201338,
 			Digest: &SessionDigestDto{
 				ToolCalls: 61, DistinctTools: 5,
 				Mix: []DigestCountDto{{Name: "Bash", Count: 24}, {Name: "Read", Count: 18},
