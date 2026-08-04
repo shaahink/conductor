@@ -2,19 +2,28 @@ module conductor-face-go
 
 go 1.26.0
 
+// K1.3: this block is what the Face imports itself. glamour and harmonica used to sit below marked
+// `// indirect` while `internal/tui/markdown.go` and `internal/tui/anim.go` imported them directly --
+// `go mod tidy` moved them up here, and module_intent_test.go now fails the build if the file drifts
+// back into misdescribing its own graph.
 require (
 	charm.land/bubbletea/v2 v2.0.8
 	charm.land/lipgloss/v2 v2.0.5
+	github.com/charmbracelet/glamour v1.0.0
+	github.com/charmbracelet/harmonica v0.2.0
 	github.com/charmbracelet/x/term v0.2.2
 )
+
+// The graph carries TWO lipgloss majors on purpose, and that is not a bug to "fix" by unifying them:
+// the Face styles with charm.land/lipgloss/v2 (above), while glamour v1.0.0 still renders through
+// github.com/charmbracelet/lipgloss v1 (below). v1 is therefore INDIRECT and must stay that way --
+// a direct v1 import would give the same widget two incompatible Style types. The guard test pins it.
 
 require (
 	github.com/alecthomas/chroma/v2 v2.20.0 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
-	github.com/charmbracelet/glamour v1.0.0 // indirect
-	github.com/charmbracelet/harmonica v0.2.0 // indirect
 	github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834 // indirect
 	github.com/charmbracelet/ultraviolet v0.0.0-20260703014108-f5a850f9c2b7 // indirect
 	github.com/charmbracelet/x/ansi v0.11.7 // indirect
