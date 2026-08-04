@@ -1,45 +1,42 @@
-# Karvan core - the engine knows what it did and what it cost | Phase Tracker
+﻿# Karvan core - the engine knows what it did and what it cost Phase Tracker
 
 **Plan:** Karvan core - the engine knows what it did and what it cost | **Branch:** `feat/karvan` | **Design doc:** docs/history/CONDUCTOR-KARVAN.md
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **K1.1 and K1.2 claimed.** K1.1: a rolled-over session records its commits and claims —
-  `VerdictEngine.Claims.cs RecordRolloverFacts` from `SessionRunner.cs:423`, one shared
-  `ResolveClaims`, `PendingConfirmation` unions instead of replacing; no attempt, no gate battery.
-  K1.2: the whole cooperative rail now lives in `src/Conductor/Core/SoftBreak.cs` — the signal file
-  is JSON the engine re-writes as it spends, the hook re-states on a token step or 3 minutes,
-  the notice quotes the live remaining budget and the order (CLAIM FIRST → handoff → commit), and
-  `SessionRecord.SoftBreak` + `sessions.soft_break` (migration **v10**) record delivered/restated/obeyed.
-next: **K1.3** — the three untruths: the thinking-token column that is zero on all 125 rows, the
-  lessons file that is a diary and repeats an entry, and the `go.mod` calling a directly-imported
-  package indirect while carrying two lipgloss majors.
-notes: **never point the fresh build at this repo's `.conductor`** — it is schema v10 now and the
-  published engine driving this run is v9; opening migrates, and v9 then refuses. Scratch dirs only.
-  And a live harness agent must be wired `powershell -File`, never `cmd.exe` with `{prompt}`: a real
-  composed prompt exceeds cmd's 8191-char argv ceiling and the child dies before running one line.
-red: nothing. Scoped suites green (143/143, then 69/69); the full battery is Conductor's to run.
+last: **K1.3 claimed** (`890ac38`, `58df0bc`, `44c17a0`, `6acea2c`). (1) `tokens_think` was LABELLED,
+  not dropped — measured why: `OpencodeProvider.cs:104` really folds `tokens.reasoning`, so
+  `IAgentProvider.ReportsReasoningTokens` decides, `/sessions` serves explicit `null` for a provider
+  that has none, and the Face renders `n/a` + a cause note. (2) `lessons.md` is deduped one-line
+  rules; the SF7-38 duplicate came from `TrimToCap` re-emitting the entry it had just prepended.
+  (3) `go mod tidy` + `module_intent_test.go`, which fails the build if go.mod misdescribes imports.
+next: **K1.4** — the MCP config must MERGE the operator's own servers instead of replacing them
+  (engine-side half of the bug filed in SF7.1); keep the prompt-side deferred-tool fallback.
+notes: **never point the fresh build at this repo's `.conductor`** — schema v10 here, v9 published.
+  A `/sessions` test whose plan declares no `Agent` now resolves to the text provider, so
+  `tokensThink` serves null: declare an opencode agent if you need the number.
+red: nothing. Scoped suites green (231/231 engine, 6/6 face packages); the battery is Conductor's.
 
-## Baseline numbers
+
+## Baseline numbers (from run.db)
 
 | Metric | Value |
 |---|---|
 | Total checkpoints | 25 |
 | Done | 0 |
-| Claimed (unconfirmed) | 0 |
+| Claimed (unconfirmed) | 2 |
 
 ## Checkpoints
 
-Status ∈ TODO · IN PROGRESS · DONE · DONE ✓ (confirmed) · BLOCKED · SKIPPED. Evidence = artifact path
-produced by a run this phase (a code path is not evidence). Agent claims are marked DONE; the engine
-confirms as DONE ✓ after the full battery.
+Status ∈ TODO · IN PROGRESS · DONE · DONE ✓ (confirmed) · BLOCKED · SKIPPED. Evidence = artifact path produced by a run this
+phase (a code path is not evidence). Agent claims are marked DONE; engine confirms as DONE ✓.
 
 ### K1 — The ledger stops lying
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| K1.1 | A rolled-over session records the commits and claims it actually made, proven by a harness session driven to its ceiling, with a rollover still consuming no attempt and still not running the phase gate | TODO | - | - |
-| K1.2 | The soft break is re-stated until it is obeyed, names the actual remaining budget, states the wrap-up order (claim first, handoff second), and the session record says whether it was delivered, re-delivered and obeyed | TODO | - | - |
+| K1.1 | A rolled-over session records the commits and claims it actually made, proven by a harness session driven to its ceiling, with a rollover still consuming no attempt and still not running the phase gate | DONE | 93bbae5 | .conductor/evidence/K1/K1.1-rollover-records-facts.md |
+| K1.2 | The soft break is re-stated until it is obeyed, names the actual remaining budget, states the wrap-up order (claim first, handoff second), and the session record says whether it was delivered, re-delivered and obeyed | DONE | 93bbae5 | .conductor/evidence/K1/K1.2-soft-break-restated-and-measured.md |
 | K1.3 | Three small untruths die as a class — the thinking-token column that is zero on all 125 rows, the lessons file that is a diary and repeats one entry twice, and a go.mod that calls a directly-imported package indirect while carrying two lipgloss majors | TODO | - | - |
 | K1.4 | A spawned session sees conductor's task tools and the operator's own MCP servers, because the config merges instead of replacing, with the prompt-side deferred-tool fallback kept | TODO | - | - |
 
