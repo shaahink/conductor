@@ -43,6 +43,13 @@ Do not re-plan these. Each names the thing in the tree that answers it.
 - **Lifecycle pause → redeploy → resume.** Supported and documented; `conductor doctor` prints what
   will happen on resume, and `conductor update` (SC8.3) replaces the binary and refuses to do it
   mid-run.
+- **The MCP config merges the operator's servers (K1.4).** `OperatorMcpServers` reads what the machine
+  already has — `mcpServers` from `~/.claude.json` (user and `projects[<repo>]` scopes) and the repo's
+  `.mcp.json`, the `mcp` map from `~/.config/opencode/opencode.json` and the repo's own — and
+  `SessionRunner.Mcp.cs` folds it into the per-session config beside `conductor-tasks` instead of
+  writing conductor's server alone. `agent.inheritMcpServers: false` opts out. This closes the
+  engine-side half of the item filed on 2026-08-01 below; the harness-side half stays open by
+  decision, not by omission.
 
 ## Still open — real work, none of it started
 
@@ -66,17 +73,18 @@ Do not re-plan these. Each names the thing in the tree that answers it.
 
 ## Filed 2026-08-01 (SF7.1) — the MCP config the engine writes is not the one the harness gets
 
-`SessionRunner.Mcp.cs` `WireMcpServer` writes a config containing **only** the `conductor-tasks`
-server, in both dialects. Any MCP server the operator has configured for their harness is absent from
-what conductor hands the agent, and in at least one shipped harness the conductor tools themselves
-arrive **deferred** — the agent must search for `task_update` before it can claim a checkpoint at all.
-Field evidence: `docs/dev/FIELD-NOTES-2026-07-29-devcontext.md` section 8, lines 170–172, where
-exactly that happened and the session nearly ended without a claim.
+**Engine-side half: closed by K1.4 (see the shipped list).** `WireMcpServer` used to write a config
+containing **only** the `conductor-tasks` server, in both dialects, so any MCP server the operator had
+configured was absent from what conductor handed the agent — a user-scope chrome-devtools server was
+invisible to every spawned session. `OperatorMcpServers` now merges those servers in.
 
-SF6.1 folded the fallback into the session template, so an agent that hits it now recovers in one
-line. That is the *workaround*. The engine-side fix — merge conductor's server into the harness's
-existing config rather than replacing it, and verify the tools are live before the session is told to
-depend on them — is deliberately out of the Sarban era's scope and belongs to whoever opens the next.
+**Harness-side half: open by decision, not by omission.** In at least one shipped harness conductor's
+own tools arrive **deferred** — the agent must search for `task_update` before it can claim a
+checkpoint at all. Field evidence: `docs/dev/FIELD-NOTES-2026-07-29-devcontext.md` section 8, lines
+170–172, where exactly that happened and the session nearly ended without a claim. Whether a tool is
+deferred is the harness's choice and conductor cannot assert otherwise, so the answer stays the
+prompt-side fallback SF6.1 shipped: `ToolContract` tells the agent to search for the tool and names
+the CLI that works regardless. Do not "fix" this by deleting that line.
 
 ## Research + polish (queued)
 

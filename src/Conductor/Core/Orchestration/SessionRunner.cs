@@ -251,7 +251,7 @@ public sealed partial class SessionRunner
         bool stalled = false, timedOut = false, killedByUser = false, budgetKilled = false;
         await GateRunner.RunHookAsync(_ctx.Plan, _ctx.Plan.Setup, "setup", _ctx.Log, ct).ConfigureAwait(false);
 
-        var mcpWiring = WireMcpServer(rec, stage);
+        var mcpWiring = await WireMcpServerAsync(rec, stage, ct).ConfigureAwait(false);
         // W2.1: CONDUCTOR_PLAN scopes every in-worker `conductor task/bug/note` to THIS run's plan.
         // Without it the child resolved by scanning the cwd, and a repo holding more than one
         // *.plan.json killed the verb outright ("Multiple plan files found") with output redirected —

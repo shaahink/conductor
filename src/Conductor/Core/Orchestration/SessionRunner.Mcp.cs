@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Conductor.Core.Events;
+using Conductor.Core.Integrations;
 using Conductor.Core.Lanes;
 using Conductor.Models;
 
@@ -193,8 +194,13 @@ public sealed partial class SessionRunner
     /// <c>{mcp:{name:{type:"local",command:[exe,...args]}}}</c> file via <c>OPENCODE_CONFIG</c>; claude
     /// reads a <c>{mcpServers:{name:{type:"stdio",command:exe,args:[...]}}}</c> file via
     /// <c>--mcp-config</c>. Until this wrote the second shape, every claude-provider run launched with
-    /// an empty <c>mcp_servers</c> list — the task/note/bug verbs were wired and unreachable.</summary>
-    private McpWiring? WireMcpServer(SessionRecord rec, StageConfig stage)
+    /// an empty <c>mcp_servers</c> list — the task/note/bug verbs were wired and unreachable.
+    /// <para>K1.4: the config MERGES the operator's own servers (<see cref="OperatorMcpServers"/>)
+    /// instead of replacing them. It used to write conductor-tasks alone, so a session saw the task
+    /// verbs and nothing the operator had configured. conductor-tasks is written first and the
+    /// inherited servers cannot displace it; <c>agent.inheritMcpServers: false</c> opts a plan out
+    /// when a run must not depend on the local setup at all.</para></summary>
+    private async Task<McpWiring?> WireMcpServerAsync(SessionRecord rec, StageConfig stage, CancellationToken ct)
     {
         try
         {
@@ -220,43 +226,72 @@ public sealed partial class SessionRunner
                 "--session", rec.Number.ToString(),
             };
 
-            var opencodeConfig = new
+            var opencodeServers = new Dictionary<string, object>(StringComparer.Ordinal)
             {
-                mcp = new Dictionary<string, object>(StringComparer.Ordinal)
+                ["conductor-tasks"] = new Dictionary<string, object>(StringComparer.Ordinal)
                 {
-                    ["conductor-tasks"] = new Dictionary<string, object>(StringComparer.Ordinal)
-                    {
-                        ["type"] = "local",
-                        ["command"] = new[] { conductorExe }.Concat(commandArgs).ToArray(),
-                        ["enabled"] = true,
-                    }
+                    ["type"] = "local",
+                    ["command"] = new[] { conductorExe }.Concat(commandArgs).ToArray(),
+                    ["enabled"] = true,
                 }
             };
 
-            var claudeConfig = new
+            var claudeServers = new Dictionary<string, object>(StringComparer.Ordinal)
             {
-                mcpServers = new Dictionary<string, object>(StringComparer.Ordinal)
+                ["conductor-tasks"] = new Dictionary<string, object>(StringComparer.Ordinal)
                 {
-                    ["conductor-tasks"] = new Dictionary<string, object>(StringComparer.Ordinal)
-                    {
-                        ["type"] = "stdio",
-                        ["command"] = conductorExe,
-                        ["args"] = commandArgs.ToArray(),
-                    }
+                    ["type"] = "stdio",
+                    ["command"] = conductorExe,
+                    ["args"] = commandArgs.ToArray(),
                 }
             };
+
+            await InheritOperatorMcpServersAsync(stage, repoPath, opencodeServers, claudeServers, ct).ConfigureAwait(false);
+
+            var opencodeConfig = new { mcp = opencodeServers };
+            var claudeConfig = new { mcpServers = claudeServers };
 
             var opts = new JsonSerializerOptions { WriteIndented = true };
             var opencodePath = Path.Combine(_ctx.Plan.StateDir, "mcp-config.json");
             var claudePath = Path.Combine(_ctx.Plan.StateDir, "mcp-config.claude.json");
-            File.WriteAllText(opencodePath, JsonSerializer.Serialize(opencodeConfig, opts));
-            File.WriteAllText(claudePath, JsonSerializer.Serialize(claudeConfig, opts));
+            await File.WriteAllTextAsync(opencodePath, JsonSerializer.Serialize(opencodeConfig, opts), ct).ConfigureAwait(false);
+            await File.WriteAllTextAsync(claudePath, JsonSerializer.Serialize(claudeConfig, opts), ct).ConfigureAwait(false);
             return new McpWiring(opencodePath, claudePath, WriteBudgetHookSettings());
         }
         catch (Exception ex)
         {
             _ctx.Log($"I1: failed to write MCP config: {ex.Message}");
             return null;
+        }
+    }
+
+    /// <summary>K1.4: folds the operator's configured MCP servers into the two per-session configs.
+    /// conductor-tasks is already in both maps and is never overwritten — <see cref="OperatorMcpServers"/>
+    /// drops an operator entry of that name — so the worst an inherited config can do is add a server.
+    /// A plan that must not depend on the machine's local setup sets <c>agent.inheritMcpServers: false</c>.
+    /// </summary>
+    private async Task InheritOperatorMcpServersAsync(StageConfig stage, string repoPath,
+        Dictionary<string, object> opencodeServers, Dictionary<string, object> claudeServers, CancellationToken ct)
+    {
+        if (_ctx.Plan.ResolveAgent(stage).InheritMcpServers == false)
+        {
+            _ctx.Log("K1.4: agent.inheritMcpServers is false — the session gets conductor-tasks only");
+            return;
+        }
+
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        Fold(await OperatorMcpServers.ForOpencodeAsync(repoPath, home, ct).ConfigureAwait(false), opencodeServers, "opencode");
+        Fold(await OperatorMcpServers.ForClaudeAsync(repoPath, home, ct).ConfigureAwait(false), claudeServers, "claude");
+
+        void Fold(OperatorMcpServers.Merged merged, Dictionary<string, object> into, string dialect)
+        {
+            foreach (var kv in merged.Servers)
+                into[kv.Key] = kv.Value;
+            if (merged.Sources.Count > 0)
+                _ctx.Log($"K1.4: {dialect} config inherits {merged.Servers.Count} operator MCP server(s) " +
+                         $"[{string.Join(", ", merged.Servers.Keys)}] from {string.Join(", ", merged.Sources)}");
+            foreach (var note in merged.Notes)
+                _ctx.Log($"K1.4: {dialect} MCP inheritance — {note}");
         }
     }
 
@@ -271,8 +306,11 @@ public sealed partial class SessionRunner
     {
         if (!string.Equals(providerName, "claude", StringComparison.Ordinal)) return [];
         var args = new List<string>();
-        // --strict-mcp-config: the session gets exactly the conductor server and nothing the developer
-        // happens to have in ~/.claude.json — a run must not depend on the operator's local MCP setup.
+        // --strict-mcp-config: the session gets exactly what this file says and nothing discovered
+        // behind the engine's back. K1.4 changed what that file says — it is now conductor's server
+        // MERGED with the operator's own — so strict buys determinism (one place decides, and the log
+        // names it) rather than exclusion, which is what it used to buy and what made a user-scope
+        // server invisible to every spawned session.
         if (plannedArgs == null || !plannedArgs.Any(a => a.Contains("--mcp-config", StringComparison.Ordinal)))
             args.AddRange(["--mcp-config", claudeConfigPath, "--strict-mcp-config"]);
         // B13.3: same rule for the budget hook — a plan that passes its own --settings keeps full

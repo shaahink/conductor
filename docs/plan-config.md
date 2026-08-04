@@ -75,6 +75,20 @@ whose deliverable lives partly in a sibling checkout: one such stage was deliver
 | `model` | string | Model override (e.g. `"claude-sonnet-4-20250514"`). **Only reaches the CLI where the template says `{model}`** — see below. |
 | `temperature` | double | Sampling temperature (0.0–2.0). |
 | `env` | object | Extra environment variables for the agent process. |
+| `inheritMcpServers` | bool | Default true. Whether a session also gets the MCP servers configured on this machine — see below. |
+
+**`inheritMcpServers` — the session's tools are conductor's plus the operator's.** Every session is
+launched against a config conductor writes itself, holding the `conductor-tasks` server that carries
+`task`, `note`, `bug` and `bg`. That config now also carries the MCP servers the operator has already
+configured: `mcpServers` from `~/.claude.json` (user scope), from the repo's `.mcp.json` (project
+scope) and from `projects[<repo>].mcpServers` in `~/.claude.json` (local scope), with the later scope
+winning a name collision — plus, for the opencode dialect, the `mcp` map from
+`~/.config/opencode/opencode.json` and the repo's own `opencode.json`/`.jsonc`. It used to carry
+conductor's server *only*, which is why a user-scope chrome-devtools server was invisible to every
+spawned session. `conductor-tasks` is conductor's name and an operator entry using it is dropped, so
+the claim path cannot be taken over; an unreadable or malformed operator config is skipped with a line
+in the session log rather than failing the run. Set `inheritMcpServers: false` when a run must not
+depend on the local machine's setup at all — conductor's own server is wired either way.
 
 **`model` needs a `{model}` placeholder, in both templates.** The model is substituted, never appended:
 a plan that sets `model` but whose `args` have no `{model}` runs the CLI's own default model while the

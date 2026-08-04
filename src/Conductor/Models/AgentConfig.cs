@@ -25,6 +25,12 @@ public sealed class AgentConfig
     // that looked active. The real per-session rollover knob is limits.maxSessionTokens (P5).
     /// <summary>Optional extra environment variables set on the agent process (e.g. OPENCODE_CONFIG).</summary>
     public Dictionary<string, string>? Env { get; set; }
+    /// <summary>K1.4: whether a spawned session also gets the MCP servers the operator has configured on
+    /// this machine (<c>~/.claude.json</c>, the repo's <c>.mcp.json</c>, opencode's own config) alongside
+    /// conductor's own. Default (null) is true — a session that cannot see the operator's tools was the
+    /// field bug. Set false when a run must not depend on the local setup at all; conductor-tasks is
+    /// wired either way.</summary>
+    public bool? InheritMcpServers { get; set; }
     /// <summary>Merges an optional override into this config, returning a new instance.
     /// A field whose value equals the C# default (e.g. "claude" for Command) is treated as unset
     /// and falls back to the base value — so a JSON override like {"systemPrompt":"x"} won't
@@ -43,6 +49,7 @@ public sealed class AgentConfig
             SystemPrompt = o.SystemPrompt ?? SystemPrompt,
             Model = o.Model ?? Model,
             Temperature = o.Temperature ?? Temperature,
+            InheritMcpServers = o.InheritMcpServers ?? InheritMcpServers,
         };
         return m;
     }

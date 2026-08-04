@@ -27,6 +27,7 @@ public sealed partial class SF7_1DocsMatchRealityTests
         ("HeartbeatCommand", "HeartbeatCommand"),
         ("ConsoleCtrlRails", "ConsoleCtrlRails"),
         ("InitCommand", "InitCommand"),
+        ("OperatorMcpServers", "OperatorMcpServers"),
     ];
 
     /// <summary>The load-bearing half. Each of these is named by the page as STILL OPEN; the day one
@@ -81,23 +82,33 @@ public sealed partial class SF7_1DocsMatchRealityTests
             "it — a backlog that lists finished work gets someone to build it twice.");
     }
 
-    /// <summary>The MCP item SF7.1 was ordered to file. It is only worth filing if it stays true, and
-    /// the whole point of the entry is that the written config names exactly one server: the moment
-    /// <c>WireMcpServer</c> learns to merge the harness's own servers, the entry is stale.</summary>
+    /// <summary>The MCP item SF7.1 was ordered to file. Its engine half closed in K1.4, and this test
+    /// turned over with it: it used to pin the premise that the written config names exactly one
+    /// server, and said in as many words that the entry goes stale the moment <c>WireMcpServer</c>
+    /// learns to merge. It has. So what is pinned now is the state that replaced it — the merge is
+    /// real, the page says so, and the half that is still open is still open for the stated reason
+    /// rather than because nobody crossed it off.</summary>
     [Fact]
-    public void TheFiledMcpItemStillDescribesWhatWireMcpServerActuallyWrites()
+    public void TheFiledMcpItemRecordsTheMergeThatShippedAndTheHalfThatDidNot()
     {
         var doc = Doc("docs", "dev", "NEXT-FEATURES.md");
-        Assert.Contains("WireMcpServer", doc, StringComparison.Ordinal);
         Assert.Contains("FIELD-NOTES-2026-07-29-devcontext.md", doc, StringComparison.Ordinal);
 
         // The cited evidence has to be readable, at the section the entry sends people to.
         var notes = Doc("docs", "dev", "FIELD-NOTES-2026-07-29-devcontext.md");
         Assert.Contains("deferred", notes, StringComparison.OrdinalIgnoreCase);
 
-        // And the premise: the config the engine writes carries conductor-tasks and nothing else.
+        // The engine half: the per-session config is a merge, not a replacement.
         var mcp = File.ReadAllText(Path.Combine(
             RepoRoot(), "src", "Conductor", "Core", "Orchestration", "SessionRunner.Mcp.cs"));
         Assert.Contains("conductor-tasks", mcp, StringComparison.Ordinal);
+        Assert.Contains("InheritOperatorMcpServersAsync", mcp, StringComparison.Ordinal);
+
+        // The harness half: it stays open BY DECISION, and the decision is the prompt-side fallback.
+        // Delete that line from the tool contract and this goes red — which is the point, because the
+        // fallback is the only thing standing between a deferred tool and a session that cannot claim.
+        var contract = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Conductor", "Core", "ToolContract.cs"));
+        Assert.Contains("DEFERRED", contract, StringComparison.Ordinal);
+        Assert.Contains("ToolSearch", contract, StringComparison.Ordinal);
     }
 }
