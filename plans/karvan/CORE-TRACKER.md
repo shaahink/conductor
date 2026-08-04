@@ -15,7 +15,9 @@ next: **K1.4** — the MCP config must MERGE the operator's own servers instead 
 notes: **never point the fresh build at this repo's `.conductor`** — schema v10 here, v9 published.
   A `/sessions` test whose plan declares no `Agent` now resolves to the text provider, so
   `tokensThink` serves null: declare an opencode agent if you need the number.
-red: nothing. Scoped suites green (231/231 engine, 6/6 face packages); the battery is Conductor's.
+red: **push feat/karvan first** — DNS died on this machine at session end ("could not resolve
+  host: github.com", 4 tries); all 5 commits through `07cdfe2` are local, tree clean, claim in
+  run.db. Suites green: 231/231 engine (scoped), 6/6 face packages.
 
 
 ## Baseline numbers (from run.db)
