@@ -188,7 +188,10 @@ public class PromptBuilderTests
         {
             var conductorDir = Path.Combine(tmpDir, ".conductor");
             var lessons = new LessonsManager(conductorDir);
-            lessons.Append("B7", 45, "Blindly patching concurrency without root cause understanding.");
+            // K1.3: the fixture text is rule-shaped because the file is now rules, not narrative.
+            // The assertions below are unchanged — this test measures that a configured battery
+            // reaches the prompt carrying its source tag, and it still measures exactly that.
+            lessons.Append("B7", 45, "Never patch a concurrency bug blindly without understanding the root cause.");
 
             var plan = Plan();
             typeof(PlanConfig).GetProperty("PlanFilePath")!.SetValue(plan, Path.Combine(tmpDir, "dummy.json"));
@@ -200,7 +203,7 @@ public class PromptBuilderTests
 
             Assert.Contains("### lessons", section);
             Assert.Contains("B7-45", section);
-            Assert.Contains("Blindly patching concurrency", section);
+            Assert.Contains("patch a concurrency bug blindly", section);
         }
         finally
         {
@@ -217,7 +220,7 @@ public class PromptBuilderTests
         {
             var conductorDir = Path.Combine(tmpDir, ".conductor");
             var lessons = new Conductor.Core.LessonsManager(conductorDir);
-            lessons.Append("B7", 45, "Race condition in event log file creation.");
+            lessons.Append("B7", 45, "Never create the event log file from two threads: it races.");
 
             var plan = Plan();
             typeof(PlanConfig).GetProperty("PlanFilePath")!.SetValue(plan, Path.Combine(tmpDir, "dummy.json"));
@@ -229,7 +232,7 @@ public class PromptBuilderTests
             var section = builder.BatterySection(state);
 
             Assert.Contains("### lessons", section);
-            Assert.Contains("Race condition", section);
+            Assert.Contains("event log file from two threads", section);
             Assert.DoesNotContain("### recent-failure", section);
         }
         finally

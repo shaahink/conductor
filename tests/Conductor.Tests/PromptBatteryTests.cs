@@ -24,13 +24,16 @@ public sealed class PromptBatteryTests : IDisposable
     {
         var lessonsDir = Path.Combine(_tmpDir, ".conductor");
         var mgr = new LessonsManager(lessonsDir);
-        mgr.Append("B8", 1, "Blindly patching concurrency without understanding the root cause.");
-        mgr.Append("B7", 45, "Flaky test race between async drain and ReadAll polling.");
+        // K1.3: rule-shaped fixture text, because the file holds rules now rather than narrative.
+        // The assertions are unchanged — this measures that the battery is non-empty and carries the
+        // newest rule with its source tag.
+        mgr.Append("B8", 1, "Never patch concurrency blindly without understanding the root cause.");
+        mgr.Append("B7", 45, "Never poll ReadAll while an async drain is still running: it races.");
 
         var battery = new LessonsBattery(mgr);
         Assert.Equal("lessons", battery.Name);
         Assert.False(battery.IsEmpty);
-        Assert.Contains("Flaky test race", battery.Section);
+        Assert.Contains("while an async drain is still running", battery.Section);
         Assert.Contains("B7-45", battery.Section);
     }
 

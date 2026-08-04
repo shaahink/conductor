@@ -1,54 +1,95 @@
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Conductor.Core;
 
 /// <summary>
-/// Manages a bounded, rotating lessons file at <c>.conductor/lessons.md</c>.
-/// Entries are appended newest-first; when the file exceeds <see cref="_maxBytes"/>,
-/// the oldest entries are evicted. Designed for the reflection step (B8.1):
-/// at session end, "what was hard" is distilled into a brief entry.
+/// Keeps <c>.conductor/lessons.md</c>: a bounded, deduped list of one-line RULES extracted from what
+/// sessions reported, newest first.
+/// <para>K1.3 rewrote this. Until then it was a diary — the reflection step pasted the first 500
+/// characters of each session's SESSION-RESULT under a dated heading, so the file was a set of
+/// truncated near-duplicates of the handovers, and <c>LessonsBattery</c> pasted three of them into
+/// every following prompt. That is cache-read rent on prose that teaches nothing: a status paragraph
+/// naming commits and gate counts is worth nothing to the session that reads it next week.</para>
+/// <para>It also repeated itself. <c>TrimToCap</c> re-parsed the content it had ALREADY prepended the
+/// new entry to and then emitted that entry a second time, so any append that crossed the byte cap
+/// duplicated itself — which is why the SF7-38 entry appears twice in this repo's own file. The
+/// rules format has one writer and one cap, so the shape that produced it is gone.</para>
+/// <para>What lands here now is only sentences that state a RULE (see <see cref="ExtractRules"/>).
+/// A session that reported nothing rule-shaped contributes nothing, and the file stays empty rather
+/// than filling with narrative — an empty battery is strictly better than a misleading one.</para>
+/// <para>The file is rotating runtime state, not a record: a pre-K1.3 file contributes no rules and
+/// is rewritten in the new format by the first append.</para>
 /// </summary>
 public sealed class LessonsManager
 {
     private const string FileName = "lessons.md";
-    private const string HeaderLine = "# Lessons learned (auto-rotating, newest first)";
+    private const string HeaderLine = "# Lessons (rules extracted from session results, newest first, deduped)";
     private const string UpdatedPrefix = "> **Last updated:** ";
-    private const string EntrySeparator = "---";
+    private const string RuleMarker = "- [";
+
+    /// <summary>Sentences that state a rule, as opposed to a status. Deliberately narrow: the cost of
+    /// missing one is an absent line, the cost of a false positive is prose in every later prompt.</summary>
+    private static readonly Regex RuleCue = new(
+        @"\b(never|always|must|cannot|can't|do not|don't|avoid|beware|gotcha|trap|lesson|rule|watch out|make sure|only ever)\b",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture,
+        TimeSpan.FromSeconds(1));
+
+    /// <summary>At most this many rules from one session, so a verbose result cannot flood the file.</summary>
+    private const int MaxRulesPerSession = 3;
+
+    /// <summary>A rule longer than this is not a rule; it is cut on a word boundary.</summary>
+    private const int MaxRuleChars = 200;
+
     private readonly string _dirPath;
     private readonly int _maxBytes;
+    private readonly int _maxRules;
     private readonly TimeProvider _time;
     private readonly Lock _gate = new();
 
-    public LessonsManager(string conductorDir, int maxBytes = 8192, TimeProvider? time = null)
+    public LessonsManager(string conductorDir, int maxBytes = 8192, TimeProvider? time = null, int maxRules = 20)
     {
         _dirPath = conductorDir;
         _maxBytes = Math.Max(1024, maxBytes);
+        _maxRules = Math.Max(1, maxRules);
         _time = time ?? TimeProvider.System;
     }
 
     private string FilePath => Path.Combine(_dirPath, FileName);
 
-    /// <summary>Appends a lesson entry and evicts oldest if the file exceeds the byte cap. Thread-safe.</summary>
+    /// <summary>Extracts the rules from one session's report and merges them in, newest first, capped
+    /// by count and by bytes. A rule already present is NOT written again, whichever session said it —
+    /// the same lesson learned twice is one lesson. Thread-safe. Writes nothing at all when the text
+    /// carries no rule, so a status-only session leaves the file (and the next prompt) untouched.</summary>
     public void Append(string stage, int session, string difficultyText)
     {
-        var entryDate = _time.GetUtcNow();
-        var entry = FormatEntry(stage, session, difficultyText, entryDate);
+        var fresh = ExtractRules(difficultyText);
+        if (fresh.Count == 0) return;
 
         lock (_gate)
         {
             Directory.CreateDirectory(_dirPath);
-            var existing = File.Exists(FilePath) ? File.ReadAllText(FilePath, Encoding.UTF8) : "";
+            var existing = File.Exists(FilePath) ? ParseRules(File.ReadAllText(FilePath, Encoding.UTF8)) : [];
+            var seen = new HashSet<string>(existing.Select(r => DedupKey(r.Text)), StringComparer.Ordinal);
 
-            // New entry always goes first (newest-first ordering)
-            var body = StripHeader(existing);
-            var content = $"{HeaderLine}\n\n{UpdatedPrefix}{entryDate:o}\n\n{entry}";
+            var merged = new List<Rule>();
+            foreach (var rule in fresh)
+            {
+                if (!seen.Add(DedupKey(rule))) continue;
+                merged.Add(new Rule($"{stage}-{session}", rule));
+            }
+            if (merged.Count == 0) return;   // everything this session said is already on file
+            merged.AddRange(existing);
 
-            if (body.Length > 0)
-                content += "\n" + body.TrimEnd();
-
-            // Evict oldest entries if over the byte cap
-            if (Encoding.UTF8.GetByteCount(content) > _maxBytes)
-                content = TrimToCap(content, entry, entryDate);
+            var content = Render(merged, _time.GetUtcNow());
+            // Both caps applied to the SAME list before it is written — the old code re-parsed its own
+            // output to trim it, which is how an entry ended up on file twice.
+            while (merged.Count > _maxRules
+                   || (merged.Count > 1 && Encoding.UTF8.GetByteCount(content) > _maxBytes))
+            {
+                merged.RemoveAt(merged.Count - 1);
+                content = Render(merged, _time.GetUtcNow());
+            }
 
             var tmp = FilePath + ".tmp";
             File.WriteAllText(tmp, content, Encoding.UTF8);
@@ -62,113 +103,121 @@ public sealed class LessonsManager
         if (!File.Exists(FilePath)) return "";
         try
         {
-            var content = File.ReadAllText(FilePath, Encoding.UTF8);
-            return content.Length > 0 ? content : "";
+            return File.ReadAllText(FilePath, Encoding.UTF8);
         }
         catch (IOException) { return ""; }
         catch (UnauthorizedAccessException) { return ""; }
     }
 
-    /// <summary>Returns up to N most recent entries as a rendered string for prompt injection.</summary>
+    /// <summary>The N newest rules, rendered for prompt injection. Empty when there are none, so the
+    /// battery contributes no header for an empty file.</summary>
     public string ReadRecent(int maxEntries)
     {
-        var content = ReadContent();
-        if (string.IsNullOrEmpty(content)) return "";
-
-        var entries = ParseEntries(StripHeader(content));
-        if (entries.Count == 0) return "";
+        var rules = ParseRules(ReadContent());
+        if (rules.Count == 0 || maxEntries <= 0) return "";
 
         var sb = new StringBuilder();
-        sb.AppendLine("Recent lessons from past sessions:");
-        foreach (var e in entries.Take(maxEntries))
-            sb.AppendLine(e.TrimEnd());
+        sb.AppendLine("Rules earlier sessions paid for:");
+        foreach (var r in rules.Take(maxEntries))
+            sb.AppendLine(Line(r));
         return sb.ToString().TrimEnd();
     }
 
-    /// <summary>Count of current entries (for testing).</summary>
-    internal int EntryCount()
-    {
-        var content = ReadContent();
-        return string.IsNullOrEmpty(content) ? 0 : ParseEntries(StripHeader(content)).Count;
-    }
+    /// <summary>Count of rules currently on file (for testing).</summary>
+    internal int EntryCount() => ParseRules(ReadContent()).Count;
 
-    private static string FormatEntry(string stage, int session, string text, DateTimeOffset date)
+    /// <summary>Pulls the rule-shaped sentences out of a session's report.
+    /// <para>A SESSION-RESULT is mostly status — what landed, what is red, what is next — and none of
+    /// that helps a later session. What does help is the sentence that says what NOT to do again, so
+    /// only sentences carrying a rule cue survive, one line each, at most
+    /// <see cref="MaxRulesPerSession"/> of them.</para></summary>
+    internal static IReadOnlyList<string> ExtractRules(string? text)
     {
-        var lines = text.Split('\n', StringSplitOptions.TrimEntries);
-        var sb = new StringBuilder();
-        sb.AppendLine($"## {stage}-{session} — {date:yyyy-MM-dd HH:mm} UTC");
-        foreach (var line in lines)
-        {
-            var trimmed = line.Trim();
-            if (trimmed.Length > 0) sb.AppendLine(trimmed);
-        }
-        sb.AppendLine();
-        sb.Append(EntrySeparator);
-        return sb.ToString().TrimEnd();
-    }
+        var rules = new List<string>();
+        if (string.IsNullOrWhiteSpace(text)) return rules;
 
-    private static string StripHeader(string content)
-    {
-        if (string.IsNullOrEmpty(content)) return "";
-        var lines = content.Split('\n');
-        var start = 0;
-        for (var i = 0; i < lines.Length && i < 6; i++)
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var line in text.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
         {
-            var line = lines[i].TrimEnd('\r');
-            if (line.StartsWith("# ", StringComparison.Ordinal)
-                || line.StartsWith("> **", StringComparison.Ordinal)
-                || line.Length == 0)
+            foreach (var raw in SplitSentences(line))
             {
-                start = i + 1;
+                var candidate = Tidy(raw);
+                // Short fragments are headings and list labels, not rules.
+                if (candidate.Length < 20 || !RuleCue.IsMatch(candidate)) continue;
+                candidate = Clip(candidate);
+                if (!seen.Add(DedupKey(candidate))) continue;
+                rules.Add(candidate);
+                if (rules.Count == MaxRulesPerSession) return rules;
             }
-            else
-                break;
         }
-        if (start >= lines.Length) return "";
-        return string.Join("\n", lines.Skip(start)).TrimEnd() + "\n";
+        return rules;
     }
 
-    private string TrimToCap(string content, string newestEntry, DateTimeOffset date)
-    {
-        var body = StripHeader(content);
-        var allEntries = ParseEntries(body);
-        if (allEntries.Count == 0) return content;
+    private sealed record Rule(string Source, string Text);
 
+    private static string Line(Rule r) => $"{RuleMarker}{r.Source}] {r.Text}";
+
+    private static string Render(IEnumerable<Rule> rules, DateTimeOffset now)
+    {
         var sb = new StringBuilder();
-        sb.AppendLine(HeaderLine);
-        sb.AppendLine();
-        sb.Append(UpdatedPrefix);
-        sb.Append(date.ToString("o"));
-        sb.AppendLine();
-        sb.AppendLine();
-        sb.AppendLine(newestEntry);
-
-        foreach (var entry in allEntries)
-        {
-            var candidate = sb.ToString() + "\n" + entry.TrimEnd() + "\n";
-            if (Encoding.UTF8.GetByteCount(candidate) > _maxBytes) break;
-            sb.AppendLine();
-            sb.AppendLine(entry.TrimEnd());
-        }
-
-        return sb.ToString().TrimEnd() + "\n";
+        sb.Append(HeaderLine).Append("\n\n");
+        sb.Append(UpdatedPrefix).Append(now.ToString("o")).Append("\n\n");
+        foreach (var r in rules) sb.Append(Line(r)).Append('\n');
+        return sb.ToString();
     }
 
-    private static List<string> ParseEntries(string body)
+    private static List<Rule> ParseRules(string content)
     {
-        if (string.IsNullOrWhiteSpace(body)) return new List<string>();
+        var rules = new List<Rule>();
+        if (string.IsNullOrEmpty(content)) return rules;
 
-        var entries = new List<string>();
-        var segments = body.Split(new[] { $"\n{EntrySeparator}\n", $"\n{EntrySeparator}" },
-            StringSplitOptions.RemoveEmptyEntries);
-
-        foreach (var s in segments)
+        foreach (var raw in content.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
         {
-            var trimmed = s.Trim();
-            if (trimmed.StartsWith("## ", StringComparison.Ordinal))
-                entries.Add(trimmed);
+            var line = raw.Trim();
+            if (!line.StartsWith(RuleMarker, StringComparison.Ordinal)) continue;
+            var close = line.IndexOf(']', RuleMarker.Length);
+            if (close < 0) continue;
+            var source = line[RuleMarker.Length..close];
+            var body = line[(close + 1)..].Trim();
+            if (body.Length > 0) rules.Add(new Rule(source, body));
         }
-
-        return entries;
+        return rules;
     }
+
+    /// <summary>Splits a line into sentences. Crude on purpose — an over-eager split costs a shorter
+    /// rule, an under-eager one costs a longer line, and neither is worth a sentence tokenizer.</summary>
+    private static IEnumerable<string> SplitSentences(string line)
+    {
+        var start = 0;
+        for (var i = 0; i < line.Length - 1; i++)
+        {
+            if (line[i] is not ('.' or '!' or '?') || !char.IsWhiteSpace(line[i + 1])) continue;
+            yield return line[start..(i + 1)];
+            start = i + 1;
+        }
+        if (start < line.Length) yield return line[start..];
+    }
+
+    private static string Tidy(string s)
+    {
+        // Markdown emphasis and list markers are formatting, not content; backticks stay because an
+        // identifier is the most useful thing a rule can name.
+        var t = s.Replace("**", "", StringComparison.Ordinal).Trim();
+        t = Regex.Replace(t, @"^(?:[-*+]|\d+[.)])\s+", "",
+            RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(1));
+        t = Regex.Replace(t, @"^#+\s*", "", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+        return Regex.Replace(t, @"\s+", " ", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1)).Trim();
+    }
+
+    private static string Clip(string s)
+    {
+        if (s.Length <= MaxRuleChars) return s;
+        var cut = s.LastIndexOf(' ', MaxRuleChars - 1);
+        if (cut < MaxRuleChars / 2) cut = MaxRuleChars - 1;
+        return s[..cut].TrimEnd(',', ';', ' ') + "…";
+    }
+
+    private static string DedupKey(string rule)
+        => Regex.Replace(rule.ToLowerInvariant(), @"[^a-z0-9 ]", "", RegexOptions.CultureInvariant,
+            TimeSpan.FromSeconds(1)).Trim();
 }

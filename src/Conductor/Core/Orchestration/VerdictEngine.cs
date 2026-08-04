@@ -433,9 +433,11 @@ public sealed partial class VerdictEngine
 
         var difficulty = text[(idx + "SESSION-RESULT:".Length)..].Trim();
         if (difficulty.Length == 0) return;
-        if (difficulty.Length > 500)
-            difficulty = difficulty[..497] + "\u2026";
 
+        // K1.3: the whole SESSION-RESULT goes in, un-truncated. It used to be cut at 500 characters
+        // and pasted verbatim, which is what made lessons.md a file of narratives sheared mid-word.
+        // LessonsManager extracts the rule-shaped sentences and writes nothing when there are none \u2014
+        // so a status-only result now costs the next prompt nothing instead of 500 characters of it.
         _ctx.Lessons.Append(rec.Stage, rec.Number, difficulty);
     }
 
