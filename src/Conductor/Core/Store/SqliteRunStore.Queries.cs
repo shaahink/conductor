@@ -89,7 +89,7 @@ public sealed partial class SqliteRunStore
     {
         var rows = Query(
             "SELECT number, stage_id, kind, started_utc, ended_utc, outcome, agent_session_id, " +
-            "resume_count, attempt, gate_summary, result_summary, commit_count, newly_done, digest " +
+            "resume_count, attempt, gate_summary, result_summary, commit_count, newly_done, digest, soft_break " +
             "FROM sessions WHERE run_id = @runId AND number = @num",
             ("@runId", runId), ("@num", number));
 
@@ -109,7 +109,8 @@ public sealed partial class SqliteRunStore
             ResultSummary: r["result_summary"] as string,
             CommitCount: Convert.ToInt32(r["commit_count"]),
             NewlyDone: r["newly_done"] as string,
-            Digest: r["digest"] as string
+            Digest: r["digest"] as string,
+            SoftBreak: r["soft_break"] as string
         );
     }
 

@@ -190,7 +190,10 @@ public sealed partial class RunLoop
                 rec.StartedUtc, rec.EndedUtc, rec.Outcome?.ToString(), rec.ClaudeSessionId,
                 rec.ResumeCount, rec.Attempt, rec.GateSummary, rec.ResultSummary,
                 rec.NewCommits.Count, rec.NewlyDone.Count > 0 ? string.Join(",", rec.NewlyDone) : null,
-                rec.Digest.ToJson());
+                rec.Digest.ToJson(),
+                // K1.2: null when the session had no ceiling or never crossed the soft threshold —
+                // deliberately not an empty object, which would read as "nudged, nothing happened".
+                rec.SoftBreak is { } sb ? SoftBreak.ToJson(sb) : null);
             if (rec.CostUsd is { } costUsd)
                 db.RecordCost(_ctx.State.RunId, rec.Number, "agent",
                     rec.TokensInput ?? 0, rec.TokensOutput ?? 0, rec.TokensReasoning ?? 0,

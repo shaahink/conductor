@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using System.Text.Json;
 
+using Conductor.Core;
+
 using Spectre.Console.Cli;
 
 namespace Conductor.Commands;
@@ -38,22 +40,24 @@ public sealed class HookBudgetCommand : Command<HookBudgetCommand.Settings>
     {
         try
         {
-            var signal = Path.Combine(settings.StateDir, "soft-break");
-            if (!File.Exists(signal)) return 0;
+            if (SoftBreak.ReadSignal(settings.StateDir) is not { } signal) return 0;
 
-            // One notice per session, not one per tool call: the point is to change what the agent does
-            // next, and repeating it every call would both nag and cost a few hundred tokens a turn for
-            // the rest of the session — spending budget to announce that budget is short.
-            var claimed = Path.Combine(settings.StateDir, "soft-break.delivered");
-            if (File.Exists(claimed)) return 0;
-            File.WriteAllText(claimed, DateTime.UtcNow.ToString("o"));
+            // K1.2: NOT one notice per session. It was, and across the Sarban face run's eleven
+            // post-cap rollovers not one session stopped at the nudge — every one of them ran on to
+            // the hard ceiling and was killed mid-turn. A rail announced once, hundreds of thousands
+            // of tokens before the end, is a rail an agent deep in a task reads and forgets. It is
+            // re-stated on a token step and on an interval (SoftBreak.ShouldRestate) until the session
+            // ends, and each restatement quotes the budget that is left AT THAT MOMENT.
+            var previous = SoftBreak.ReadDelivery(settings.StateDir);
+            if (!SoftBreak.ShouldRestate(signal, previous, DateTime.UtcNow, out _)) return 0;
+            var delivery = SoftBreak.RecordDelivery(settings.StateDir, previous, signal, DateTime.UtcNow);
 
             Console.Out.Write(JsonSerializer.Serialize(new
             {
                 hookSpecificOutput = new
                 {
                     hookEventName = "PostToolUse",
-                    additionalContext = Notice,
+                    additionalContext = SoftBreak.Notice(signal, delivery.Count),
                 },
             }));
             return 0;
@@ -64,29 +68,4 @@ public sealed class HookBudgetCommand : Command<HookBudgetCommand.Settings>
             return 0;
         }
     }
-
-    /// <summary>What the agent is actually told. Phrased as the next action rather than as a warning:
-    /// "you are near a limit" invites either ignoring it or downing tools immediately, and the whole
-    /// value of the cooperative rail is the third option — finish the piece in hand, write it down,
-    /// stop.</summary>
-    internal const string Notice = """
-        CONDUCTOR — SESSION TOKEN BUDGET NEARLY SPENT.
-
-        This session has used most of the tokens allotted to it and will be ended by the orchestrator
-        when they run out. Work already committed is kept; anything still only in your head is not.
-
-        Do this now, in order, and nothing else:
-        1. Finish ONLY the sub-task in your hands. Start nothing new — no new checkpoint, no refactor,
-           no "while I'm here" fix, no exploratory reading.
-        2. Land it: run the gates you would normally run, claim any finished checkpoint with
-           `conductor task --done <id> --evidence <path>`, and COMMIT. Uncommitted work is the only
-           work that can be lost here.
-        3. Overwrite the tracker handoff block so the next session can start cold: what you finished,
-           what is half-done and exactly where, what is red, and the single next action.
-        4. Print your `SESSION-RESULT:` paragraph and end the session.
-
-        Ending here is the expected outcome and costs you nothing — the next session continues from
-        your handoff with a fresh, cheap context. Stopping cleanly now is worth more than one more
-        edit made in a hurry.
-        """;
 }

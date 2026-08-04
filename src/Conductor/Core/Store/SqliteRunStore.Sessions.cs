@@ -48,13 +48,13 @@ public sealed partial class SqliteRunStore
         DateTime startedUtc, DateTime? endedUtc, string? outcome,
         string? agentSessionId, int resumeCount, int attempt,
         string? gateSummary, string? resultSummary, int commitCount, string? newlyDone,
-        string? digest = null)
+        string? digest = null, string? softBreak = null)
     {
         TryExecute(
             "INSERT INTO sessions (run_id, stage_id, number, kind, started_utc, ended_utc, outcome, " +
-            "agent_session_id, resume_count, attempt, gate_summary, result_summary, commit_count, newly_done, digest) " +
+            "agent_session_id, resume_count, attempt, gate_summary, result_summary, commit_count, newly_done, digest, soft_break) " +
             "VALUES (@runId, @stageId, @number, @kind, @started, @ended, @outcome, " +
-            "@agentSessionId, @resumeCount, @attempt, @gateSummary, @resultSummary, @commitCount, @newlyDone, @digest)",
+            "@agentSessionId, @resumeCount, @attempt, @gateSummary, @resultSummary, @commitCount, @newlyDone, @digest, @softBreak)",
             ("@runId", runId), ("@stageId", stageId), ("@number", number), ("@kind", kind),
             ("@started", startedUtc.ToString("O")),
             ("@ended", (object?)(endedUtc?.ToString("O")) ?? DBNull.Value),
@@ -65,7 +65,8 @@ public sealed partial class SqliteRunStore
             ("@resultSummary", (object?)resultSummary ?? DBNull.Value),
             ("@commitCount", commitCount),
             ("@newlyDone", (object?)newlyDone ?? DBNull.Value),
-            ("@digest", (object?)digest ?? DBNull.Value));
+            ("@digest", (object?)digest ?? DBNull.Value),
+            ("@softBreak", (object?)softBreak ?? DBNull.Value));
     }
 
     // ---------------------------------------------------------------- costs

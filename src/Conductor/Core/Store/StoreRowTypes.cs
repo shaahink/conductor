@@ -51,5 +51,8 @@ public sealed record SessionDetailRow(
     string? ResultSummary,
     int CommitCount,
     string? NewlyDone,
-    string? Digest = null
+    string? Digest = null,
+    /// <summary>K1.2: the JSON of <see cref="Core.SoftBreak.Outcome"/>, or null when the session had
+    /// no ceiling or never crossed the soft threshold.</summary>
+    string? SoftBreak = null
 );

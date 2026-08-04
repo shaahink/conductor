@@ -1,13 +1,14 @@
 using System.Text.Json;
 
 using Conductor.Commands;
+using Conductor.Core;
 using Conductor.Core.Orchestration;
 
 namespace Conductor.Tests;
 
 /// <summary>
 /// B13 gate: the rails that make a per-session token budget real rather than decorative.
-/// - the budget hook is silent with no signal, speaks once with one
+/// - the budget hook is silent with no signal, speaks with one, and (K1.2) restates as it drains
 /// - the hook command it is wired with survives the shell that runs it
 /// - --settings rides alongside --mcp-config instead of replacing it
 /// </summary>
@@ -75,20 +76,33 @@ public class BudgetRailTests
         finally { Directory.Delete(dir, recursive: true); }
     }
 
-    /// <summary>Once per session, not once per tool call — repeating it would nag the agent and spend
-    /// a few hundred tokens a turn announcing that tokens are short.</summary>
+    /// <summary>Not once per tool call — but not once per SESSION either, which is what this test
+    /// asserted until K1.2. Announcing the nudge a single time, hundreds of thousands of tokens before
+    /// the end, converted zero of the Sarban face run's eleven post-cap sessions: every one ran on to
+    /// the hard ceiling and was killed mid-turn. The contract now is "silent between statements, and
+    /// restated once the session has spent another step of its margin" — see
+    /// <see cref="K1_2SoftBreakRuleTests"/> for the rule and K1_2SoftBreakLiveTests for it end to end.</summary>
     [Fact]
-    public void HookBudget_SpeaksOncePerSession()
+    public void HookBudget_IsSilentBetweenStatements_ButSpeaksAgainAsTheBudgetDrains()
     {
         var dir = TempDir();
         try
         {
-            File.WriteAllText(Path.Combine(dir, "soft-break"), "finish-subtask-and-handoff:now");
+            void Signal(long spent) => SoftBreak.WriteSignal(dir,
+                new SoftBreak.Signal(spent, 1000, 500, "H0.1", DateTime.UtcNow));
+
+            Signal(500);
             var (_, first) = RunHook(dir);
-            var (_, second) = RunHook(dir);
+            var (_, immediatelyAgain) = RunHook(dir);
 
             Assert.NotEmpty(first);
-            Assert.Empty(second);
+            Assert.Empty(immediatelyAgain);   // nagging every tool call is still wrong
+
+            Signal(600);                      // …but another 100 of a 500-token margin is not nagging
+            var (_, restated) = RunHook(dir);
+            Assert.NotEmpty(restated);
+            Assert.Contains("notice 2", restated, StringComparison.Ordinal);
+            Assert.Contains("400 tokens", restated, StringComparison.Ordinal); // the budget that is left NOW
         }
         finally { Directory.Delete(dir, recursive: true); }
     }

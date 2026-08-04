@@ -53,11 +53,11 @@ public sealed class RunDbTests : IDisposable
     }
 
     [Fact]
-    public void Schema_version_is_nine()
+    public void Schema_version_is_ten()
     {
         var rows = _db.Query("SELECT version FROM schema_version");
         Assert.Single(rows);
-        Assert.Equal(9L, (long)rows[0]["version"]!);   // SC7.2 added sessions.digest
+        Assert.Equal(10L, (long)rows[0]["version"]!);  // K1.2 added sessions.soft_break
     }
 
     [Fact]

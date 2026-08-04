@@ -223,6 +223,7 @@ public sealed partial class SessionRunner
         _ctx.State.Status = RunStatus.Running;
         _ctx.Save();
         _ctx.SoftBreakSignalled = false;
+        _softBreakSignalledAtTokens = 0;
         CleanSoftBreakSignal();
         _ctx.Log($"session #{rec.Number} start — {kind} {stage.Id} attempt {attempt}/{maxAttempts}" +
             (kind == SessionKind.Resume ? $" (resume #{rec.ResumeCount} of {rec.ClaudeSessionId[..8]})" : ""));
@@ -343,6 +344,11 @@ public sealed partial class SessionRunner
             rec.TokensOutput = agent.TokensOutput;
             rec.TokensReasoning = agent.TokensReasoning;
             rec.TokensCacheRead = agent.TokensCacheRead;
+            // K1.2: read the cooperative rail's own record BEFORE any branch below returns — the
+            // measurement is owed on every outcome, and the rollover path is precisely the one where
+            // it matters most.
+            rec.SoftBreak = ReadSoftBreakOutcome(budgetKilled, rec.TokensTotal);
+            if (rec.SoftBreak is { } sb) _ctx.Log($"session #{rec.Number} {sb.Summary()}", sb.Obeyed ? "pass" : "warn");
             rec.ResultSummary = ExtractSessionResult(agent.ResultText, rec.Kind);
             if (kind == SessionKind.Audit && !_ctx.State.AuditedStages.Contains(stage.Id))
                 _ctx.State.AuditedStages.Add(stage.Id);

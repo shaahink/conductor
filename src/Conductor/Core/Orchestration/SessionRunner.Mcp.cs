@@ -10,21 +10,28 @@ public sealed partial class SessionRunner
 {
     // ── soft-break + MCP wiring ──
 
+    /// <summary>K1.2: the signal is written when the session crosses its soft threshold and RE-WRITTEN
+    /// as it keeps spending, because the hook quotes the remaining budget out of it. A nudge that keeps
+    /// repeating the number it saw at the crossing is telling the agent something that stopped being
+    /// true a long turn ago. The re-write step scales with the margin (see
+    /// <see cref="SoftBreak.RestateTokenStep"/>), so this is a handful of small file writes over the
+    /// tail of a session, not one per poll.</summary>
     private void CheckSoftBreak(AgentSession agent, TrackerSnapshot preTrack)
     {
-        if (_ctx.SoftBreakSignalled) return;
-        var threshold = ComputeSoftThreshold();
-        if (threshold is not { } thresh) return;
-
-        var liveTokens = (agent.TokensInput ?? 0) + (agent.TokensOutput ?? 0)
-            + (agent.TokensReasoning ?? 0) + (agent.TokensCacheRead ?? 0);
+        if (ComputeSoftThreshold() is not { } thresh) return;
+        var liveTokens = LiveTokens(agent);
         if (liveTokens < thresh) return;
 
-        _ctx.SoftBreakSignalled = true;
-        var activeCp = preTrack.Checkpoints.FirstOrDefault(c => c.IsOpen)?.Id;
         var maxTokens = _ctx.EffectiveMaxSessionTokens!.Value;
-        var signalFile = Path.Combine(_ctx.Plan.StateDir, "soft-break");
-        File.WriteAllText(signalFile, $"finish-subtask-and-handoff:{DateTime.UtcNow:o}");
+        var activeCp = preTrack.Checkpoints.FirstOrDefault(c => c.IsOpen)?.Id;
+        var signal = new SoftBreak.Signal(liveTokens, maxTokens, thresh, activeCp, DateTime.UtcNow);
+        var first = !_ctx.SoftBreakSignalled;
+        if (!first && liveTokens - _softBreakSignalledAtTokens < SoftBreak.RestateTokenStep(signal)) return;
+
+        _ctx.SoftBreakSignalled = true;
+        _softBreakSignalledAtTokens = liveTokens;
+        SoftBreak.WriteSignal(_ctx.Plan.StateDir, signal);
+        if (!first) return; // the event and both log lines belong to the crossing, not to every refresh
 
         _ctx.Events.Emit(new SoftBreakRequested
         {
@@ -32,8 +39,36 @@ public sealed partial class SessionRunner
             TokenBudget = maxTokens,
             CurrentCheckpointId = activeCp,
         });
-        _ctx.Log($"soft-break: {liveTokens / 1000.0:0.#}k tokens >= {thresh / 1000.0:0.#}k threshold — nudge written, session should hand off cleanly");
+        _ctx.Log($"soft-break: {liveTokens / 1000.0:0.#}k tokens >= {thresh / 1000.0:0.#}k threshold — nudge raised, re-stated every {SoftBreak.RestateTokenStep(signal) / 1000.0:0.#}k tokens or {SoftBreak.RestateInterval.TotalMinutes:0} minutes until the session ends");
         _ctx.Sink.Log($"[soft-break] {liveTokens / 1000.0:0.#}k/{maxTokens / 1000.0:0.#}k tokens — agent has been nudged to hand off");
+    }
+
+    /// <summary>Where the live token count stood when the signal file was last written. Reset per
+    /// session beside <see cref="RunContext.SoftBreakSignalled"/>.</summary>
+    private long _softBreakSignalledAtTokens;
+
+    /// <summary>K1.2: the measurement. Folds what the hook wrote back — how many times the notice was
+    /// actually put in front of the agent, and when — into a record the session carries, so the next
+    /// tuning pass reads whether the cooperative rail fired instead of inferring it from an outcome
+    /// column. <paramref name="budgetKilled"/> is the engine's own hard stop; a session that had to be
+    /// killed did not obey, whatever it was told.</summary>
+    private SoftBreak.Outcome? ReadSoftBreakOutcome(bool budgetKilled, long sessionTokens)
+    {
+        if (!_ctx.SoftBreakSignalled) return null;
+        if (ComputeSoftThreshold() is not { } thresh) return null;
+        var ceiling = _ctx.EffectiveMaxSessionTokens ?? 0;
+        var d = SoftBreak.ReadDelivery(_ctx.Plan.StateDir);
+        return new SoftBreak.Outcome
+        {
+            ThresholdTokens = thresh,
+            CeilingTokens = ceiling,
+            DeliveredCount = d?.Count ?? 0,
+            FirstUtc = d is { Count: > 0 } ? d.FirstUtc : null,
+            FirstAtTokens = d?.FirstAtTokens ?? 0,
+            LastUtc = d is { Count: > 0 } ? d.LastUtc : null,
+            LastAtTokens = d?.LastAtTokens ?? 0,
+            Obeyed = (d?.Count ?? 0) > 0 && !budgetKilled && (ceiling <= 0 || sessionTokens < ceiling),
+        };
     }
 
     /// <summary>Every token this session has been charged for so far, from the live stream.</summary>
@@ -90,7 +125,7 @@ public sealed partial class SessionRunner
     {
         // B13.3: the delivered-marker goes with the signal. Leaving it behind would make the NEXT
         // session's nudge a no-op — the quietest possible way to lose the cooperative rail again.
-        foreach (var name in new[] { "soft-break", "soft-break.delivered" })
+        foreach (var name in new[] { SoftBreak.SignalFileName, SoftBreak.DeliveredFileName })
         {
             var signalFile = Path.Combine(_ctx.Plan.StateDir, name);
             try { if (File.Exists(signalFile)) File.Delete(signalFile); }

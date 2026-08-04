@@ -26,7 +26,7 @@ public interface IRunStore : IDisposable
         DateTime startedUtc, DateTime? endedUtc, string? outcome,
         string? agentSessionId, int resumeCount, int attempt,
         string? gateSummary, string? resultSummary, int commitCount, string? newlyDone,
-        string? digest = null);
+        string? digest = null, string? softBreak = null);
 
     // ---------------------------------------------------------------- costs
 

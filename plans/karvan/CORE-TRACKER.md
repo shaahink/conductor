@@ -4,19 +4,19 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **K1.1 claimed.** A rolled-over session now records its commits and its claims:
-  `VerdictEngine.Claims.cs:101 RecordRolloverFacts`, called from `SessionRunner.cs:423`. The W1.3
-  claim rule is now one shared `ResolveClaims` (`VerdictEngine.Claims.cs:71`), and
-  `PendingConfirmation` unions instead of replacing, so a rollover's claim can still be confirmed.
-  Semantics kept: no attempt burned, no gate battery. Proof `tests/Conductor.Tests/K1_1RolloverRecordsFactsTests.cs`
-  — falsified by disabling the call: it then fails at `Assert.NotEmpty(rolled.NewCommits)` while git
-  shows the commit. Evidence `.conductor/evidence/K1/K1.1-rollover-records-facts.md`.
-next: **K1.2** — the soft break. Eleven of eleven post-cap rollovers in the Sarban face run died at
-  the hard ceiling, none stopped at the nudge: re-state it, carry the real remaining budget, state
-  the order (claim first, handoff second), record delivered/re-delivered/obeyed on the session.
+last: **K1.1 and K1.2 claimed.** K1.1: a rolled-over session records its commits and claims —
+  `VerdictEngine.Claims.cs RecordRolloverFacts` from `SessionRunner.cs:423`, one shared
+  `ResolveClaims`, `PendingConfirmation` unions instead of replacing; no attempt, no gate battery.
+  K1.2: the whole cooperative rail now lives in `src/Conductor/Core/SoftBreak.cs` — the signal file
+  is JSON the engine re-writes as it spends, the hook re-states on a token step or 3 minutes,
+  the notice quotes the live remaining budget and the order (CLAIM FIRST → handoff → commit), and
+  `SessionRecord.SoftBreak` + `sessions.soft_break` (migration **v10**) record delivered/restated/obeyed.
+next: **K1.3** — the three untruths: the thinking-token column that is zero on all 125 rows, the
+  lessons file that is a diary and repeats an entry, and the `go.mod` calling a directly-imported
+  package indirect while carrying two lipgloss majors.
 notes: a live harness agent must be wired `powershell -File`, never `cmd.exe` with `{prompt}` — a real
   composed prompt exceeds cmd's 8191-char argv ceiling and the child dies before running one line.
-red: nothing.
+red: nothing. Scoped suites green (143/143, then 69/69); the full battery is Conductor's to run.
 
 ## Baseline numbers
 

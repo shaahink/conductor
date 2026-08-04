@@ -46,6 +46,13 @@ public sealed class SessionRecord
     /// served on <c>/sessions</c>.</summary>
     public Conductor.Core.Events.SessionDigest Digest { get; set; } = new();
 
+    /// <summary>K1.2: whether this session's cooperative soft break was raised, how many times the
+    /// notice was actually put in front of the agent, and whether the agent obeyed it (ended under
+    /// its ceiling without the engine's hard stop). Null when the session had no token ceiling or
+    /// never crossed the threshold — which is a different fact from "was nudged and ignored it", and
+    /// the two must not read the same. Persisted to <c>sessions.soft_break</c>.</summary>
+    public Conductor.Core.SoftBreak.Outcome? SoftBreak { get; set; }
+
     [JsonIgnore] public long TokensTotal =>
         (TokensInput ?? 0) + (TokensOutput ?? 0) + (TokensReasoning ?? 0) + (TokensCacheRead ?? 0);
 }
