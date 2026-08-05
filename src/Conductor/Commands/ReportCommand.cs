@@ -44,7 +44,8 @@ public sealed class ReportCommand : Command<ReportCommand.Settings>
         File.WriteAllText(Reporter.ReportPath(plan), Reporter.Build(plan, state, track, null, null,
             Reporter.ReadTimeline(store, state.RunId), Reporter.ReadHealth(store, state.RunId),
             mcp: Reporter.ReadMcpMetrics(store, state.RunId),
-            repo: Reporter.ReadRepoStrip(plan)), Reporter.Utf8Bom);
+            repo: Reporter.ReadRepoStrip(plan),
+            money: MoneySection.Read(plan, state.RunId)), Reporter.Utf8Bom);
         AnsiConsole.MarkupLine($"report written to [bold]{Markup.Escape(Reporter.ReportPath(plan))}[/]" +
                                (store != null ? " [grey](from run.db)[/]" : " [yellow](no run.db — declared plan only)[/]"));
 

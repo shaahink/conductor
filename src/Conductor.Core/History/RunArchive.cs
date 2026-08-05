@@ -254,6 +254,28 @@ public sealed class RunArchive
         return result;
     }
 
+    /// <summary>K4.3 — every cost row of one run, in the order it was recorded. Per-row on purpose:
+    /// the agent-versus-gate-versus-advisor split and the cache-read share are both lost the moment
+    /// these are summed, and they are the two figures <c>conductor money</c> exists to print.</summary>
+    public IReadOnlyList<ArchivedCost> Costs(string runId)
+    {
+        var rows = Query(
+            "SELECT session_number, category, tokens_in, tokens_out, tokens_think, tokens_cache, " +
+            "       cost_usd, wall_ms " +
+            "FROM costs WHERE run_id = @runId ORDER BY session_number, id",
+            ("@runId", runId));
+        return rows.Select(r => new ArchivedCost(
+            SessionNumber: Convert.ToInt32(r["session_number"] ?? 0, System.Globalization.CultureInfo.InvariantCulture),
+            Category: (string)(r["category"] ?? "")!,
+            TokensIn: Convert.ToInt64(r["tokens_in"] ?? 0L, System.Globalization.CultureInfo.InvariantCulture),
+            TokensOut: Convert.ToInt64(r["tokens_out"] ?? 0L, System.Globalization.CultureInfo.InvariantCulture),
+            TokensThink: Convert.ToInt64(r["tokens_think"] ?? 0L, System.Globalization.CultureInfo.InvariantCulture),
+            TokensCacheRead: Convert.ToInt64(r["tokens_cache"] ?? 0L, System.Globalization.CultureInfo.InvariantCulture),
+            CostUsd: Convert.ToDecimal(r["cost_usd"] ?? 0m, System.Globalization.CultureInfo.InvariantCulture),
+            WallMs: Convert.ToInt64(r["wall_ms"] ?? 0L, System.Globalization.CultureInfo.InvariantCulture)))
+            .ToList();
+    }
+
     /// <summary>The declared stages of one run, in the order the engine recorded them.</summary>
     public IReadOnlyList<ArchivedStage> Stages(string runId)
     {

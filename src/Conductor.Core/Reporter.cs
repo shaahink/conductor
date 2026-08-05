@@ -15,7 +15,7 @@ public static class Reporter
 
     public static string Build(PlanConfig plan, RunState state, TrackerSnapshot track, IReadOnlyList<GateResult>? lastGates, string? liveActivity = null,
         IReadOnlyList<Timeline.TimelineEntry>? timeline = null, HealthMetrics.HealthReport? health = null,
-        McpMetrics.McpReport? mcp = null, RepoStrip.RepoInfo? repo = null)
+        McpMetrics.McpReport? mcp = null, RepoStrip.RepoInfo? repo = null, Money.MoneyRun? money = null)
     {
         var sb = new StringBuilder();
         var done = track.Checkpoints.Count(c => c.IsDone);
@@ -112,6 +112,11 @@ public static class Reporter
             sb.AppendLine($"| {h.Number} | {h.Stage} | {h.Kind} | {att} | {h.StartedUtc:MM-dd HH:mm} | {dur} | {h.Outcome?.ToString() ?? "running"} | {string.Join(" ", h.NewlyDone)} | {h.NewCommits.Count} | {h.GateSummary} | {(h.CostUsd.HasValue ? "$" + h.CostUsd.Value.ToString("0.0000") : "")} | {overhead} | {toks} |");
         }
         sb.AppendLine();
+
+        // Money (K4.3): the same rows `conductor money` prints, from the same analyzer — the report and
+        // the verb must not be able to disagree about what a checkpoint cost. Billed dollars and
+        // recorded tokens only; the engine has no price table by design.
+        MoneySection.Append(sb, money);
 
         // Timeline (B5.1): state transitions with durations, folded from the event log. Every row here
         // derives from .conductor/events.jsonl — the single source (B5 trap: no parallel store).
@@ -267,7 +272,8 @@ public static class Reporter
         {
             Directory.CreateDirectory(plan.StateDir);
             newContent = Build(plan, state, track, lastGates, liveActivity,
-                ReadTimeline(store, state.RunId), ReadHealth(store, state.RunId), ReadMcpMetrics(store, state.RunId), ReadRepoStrip(plan));
+                ReadTimeline(store, state.RunId), ReadHealth(store, state.RunId), ReadMcpMetrics(store, state.RunId),
+                ReadRepoStrip(plan), MoneySection.Read(plan, state.RunId));
             old = File.Exists(path) ? File.ReadAllText(path) : null;
             File.WriteAllText(path, newContent, Utf8Bom);
             // SF4.1: the owner queue rides the report's write path, which is the run's session
@@ -349,7 +355,8 @@ public static class Reporter
         {
             Directory.CreateDirectory(plan.StateDir);
             var content = Build(plan, state, track, lastGates, liveActivity,
-                ReadTimeline(store, state.RunId), ReadHealth(store, state.RunId), ReadMcpMetrics(store, state.RunId), ReadRepoStrip(plan));
+                ReadTimeline(store, state.RunId), ReadHealth(store, state.RunId), ReadMcpMetrics(store, state.RunId),
+                ReadRepoStrip(plan), MoneySection.Read(plan, state.RunId));
             File.WriteAllText(ReportPath(plan), content, Utf8Bom);
             OwnerQueue.Write(plan, state, track, log, onNewItems: onNewOwnerItems);   // SF4.1 — see WriteAndPublish
         }

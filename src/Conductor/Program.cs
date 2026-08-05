@@ -48,6 +48,8 @@ app.Configure(c =>
         .WithDescription("Browse past runs from this machine's catalogue, read-only. No argument lists; pass a run id, repo or slug to open one and replay its spine. Filters: --repo, --plan, --since, --limit, --json.");
     c.AddCommand<BudgetCommand>("budget")
         .WithDescription("Measure this repo's token budget from its own runs and prescribe the next one: session floor, wrap-up spend, cap, nudge-versus-floor, rollover rate. No argument profiles the current repo. Filters: --repo, --plan, --since, --json.");
+    c.AddCommand<MoneyCommand>("money")
+        .WithDescription("Price a run or a project from its own ledger: sessions, tokens, cache-read share, cost, checkpoints, tokens and dollars per checkpoint, plus the windows either side of a cap change, the per-stage split and the calendar month. Scopes: --run, --project, --since, --plan, --json.");
 
 
     c.AddCommand<PauseCommand>("pause")

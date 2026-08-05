@@ -74,7 +74,8 @@ public sealed class BudgetCommand : Command<BudgetCommand.Settings>
             repo = null;
 
         var filter = new RunHistoryFilter(repo, settings.Plan, since);
-        var sources = Sources(root, filter, settings, repo);
+        // K4.3 moved the resolution to RunSources so `money` finds a run the way `budget` does.
+        var sources = RunSources.Resolve(root, filter, settings.Run, repo);
         if (sources is null) return 1;
 
         if (sources.Count == 0)
@@ -116,67 +117,6 @@ public sealed class BudgetCommand : Command<BudgetCommand.Settings>
         }
         AnsiConsole.MarkupLine("[grey]method:[/] docs/dev/TOKEN-BUDGET-TUNING.md section 7 · [grey]every number above is measured from the run's own ledger.[/]");
         return 0;
-    }
-
-    /// <summary>Which databases to measure, in order of how explicit the operator was: a path they
-    /// typed, then the machine catalogue, then the repo-local <c>.conductor/run.db</c>. The last one
-    /// is not a nicety — a run started by an engine older than the catalogue keeps its database
-    /// beside the working tree, and this repo's own live run is one of those.</summary>
-    private static List<(string Db, ArchivedRun Run, string Label)>? Sources(
-        string root, RunHistoryFilter filter, Settings settings, string? repo)
-    {
-        var direct = AsDatabasePath(settings.Run);
-        if (direct is not null) return FromDatabase(direct, filter);
-
-        if (!string.IsNullOrWhiteSpace(settings.Run))
-        {
-            var row = RunHistory.Find(root, settings.Run, out var ambiguous, filter);
-            if (row is not null) return [(row.RunDbPath, row.Run!, row.RepoLabel)];
-            if (ambiguous.Count == 0)
-            {
-                AnsiConsole.MarkupLine(
-                    $"[red]no run matches '{Markup.Escape(settings.Run)}'.[/] try [grey]conductor history[/], " +
-                    "or pass the path to a run.db.");
-                return null;
-            }
-            AnsiConsole.MarkupLine($"[yellow]'{Markup.Escape(settings.Run)}' matches {ambiguous.Count} runs:[/]");
-            foreach (var c in ambiguous)
-                AnsiConsole.MarkupLine($"  [aqua]{Markup.Escape(c.Run!.RunId)}[/]  {Markup.Escape(c.RepoLabel)}  [grey]{Markup.Escape(c.Plan)}[/]");
-            return null;
-        }
-
-        var catalogued = RunHistory.List(root, filter)
-            .Where(r => r.Readable)
-            .Reverse()
-            .Select(r => (r.RunDbPath, r.Run!, r.RepoLabel))
-            .ToList();
-        if (catalogued.Count > 0) return catalogued;
-
-        var local = Path.Combine(repo ?? Directory.GetCurrentDirectory(), StateHome.ScratchDirName, StateHome.RunDbFileName);
-        return File.Exists(local) ? FromDatabase(local, filter) : [];
-    }
-
-    /// <summary>Every run inside one database file, oldest first.</summary>
-    private static List<(string Db, ArchivedRun Run, string Label)> FromDatabase(string dbPath, RunHistoryFilter filter)
-    {
-        var archive = RunArchive.TryOpen(dbPath);
-        if (archive is null) return [];
-        return archive.Runs()
-            .Where(r => filter.Plan is null || r.PlanName.Contains(filter.Plan, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(r => r.StartedUtc, StringComparer.Ordinal)
-            .Select(r => (dbPath, r, RunHistory.RepoLabel(r.Repo)))
-            .ToList();
-    }
-
-    /// <summary>A selector that is really a filesystem path: a run.db, or a directory holding one.</summary>
-    private static string? AsDatabasePath(string? selector)
-    {
-        if (string.IsNullOrWhiteSpace(selector)) return null;
-        if (File.Exists(selector)) return selector;
-        var nested = Path.Combine(selector, StateHome.ScratchDirName, StateHome.RunDbFileName);
-        if (File.Exists(nested)) return nested;
-        var inside = Path.Combine(selector, StateHome.RunDbFileName);
-        return File.Exists(inside) ? inside : null;
     }
 
     // ------------------------------------------------------------------ rendering
