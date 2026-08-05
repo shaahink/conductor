@@ -72,7 +72,7 @@ func TestHomeWorkspaceRendersEngineServedPaths(t *testing.T) {
 		Tracker:  "CONDUCTOR-UX-START.md",
 		StateDir: `C:\Code\conductor-baton\.conductor`,
 	}
-	m.plan = &api.PlanDto{PlanFile: `C:\Code\conductor-baton\plans\conductor-ux.plan.json`}
+	m.plan.doc = &api.PlanDto{PlanFile: `C:\Code\conductor-baton\plans\conductor-ux.plan.json`}
 
 	got := stripANSI(homeText(m.renderHomeWorkspace(m.paneCols())))
 	// SF2.1 renders every path ONE way — forward slashes, upper-case drive — and everything inside
@@ -109,7 +109,7 @@ func TestHomeWorkspaceKillsTheMixedCasingOfOnePath(t *testing.T) {
 		StateDir: `C:\Code\conductor\.conductor`,
 		Tracker:  "SARBAN-FACE-TRACKER.md",
 	}
-	m.plan = &api.PlanDto{PlanFile: `c:\Code\conductor\plans\sarban.plan.json`}
+	m.plan.doc = &api.PlanDto{PlanFile: `c:\Code\conductor\plans\sarban.plan.json`}
 
 	got := stripANSI(homeText(m.renderHomeWorkspace(m.paneCols())))
 	if strings.Contains(got, "Code/conductor/.conductor") || strings.Contains(got, "Code/conductor/plans") {
@@ -129,7 +129,7 @@ func TestHomeWorkspaceDegradesWhenTheEngineServesNothing(t *testing.T) {
 	m := newTestModel()
 	m.width, m.height = 110, 34
 	m.data.Plan = &api.StateDto{Repo: `C:\Code\conductor-baton`}
-	m.plan = nil
+	m.plan.doc = nil
 
 	got := stripANSI(homeText(m.renderHomeWorkspace(m.paneCols())))
 	if strings.Count(got, "—") != 3 { // tracker, state dir, plan file
@@ -145,18 +145,18 @@ func TestHomeBudgetsOnlyWhenCapped(t *testing.T) {
 	m := newTestModel()
 	state := &api.StateDto{TotalCostUsd: 4, TokensInput: 100, TokensOutput: 100}
 
-	m.plan = &api.PlanDto{Limits: api.PlanLimitsDto{}}
+	m.plan.doc = &api.PlanDto{Limits: api.PlanLimitsDto{}}
 	if rows := m.homeBudgets(state); len(rows) != 0 {
 		t.Errorf("no caps set → no budget rows, got %v", rows)
 	}
 
-	m.plan = nil
+	m.plan.doc = nil
 	if rows := m.homeBudgets(state); len(rows) != 0 {
 		t.Errorf("no plan loaded → no budget rows, got %v", rows)
 	}
 
 	cost := 10.0
-	m.plan = &api.PlanDto{Limits: api.PlanLimitsDto{MaxRunCostUsd: &cost}}
+	m.plan.doc = &api.PlanDto{Limits: api.PlanLimitsDto{MaxRunCostUsd: &cost}}
 	rows := m.homeBudgets(state)
 	if len(rows) != 1 {
 		t.Fatalf("a cost cap → exactly one budget row, got %d", len(rows))
@@ -204,7 +204,7 @@ func TestHomeHeadroomRendersAnOverrunAsDollarsNotZeroPercent(t *testing.T) {
 // and the run below is inside its window by $113 while looking $99 over if you subtract wrong.
 func TestHomeBudgetPrefersTheWindowOverLifetimeAfterAnApproval(t *testing.T) {
 	m := newTestModel()
-	m.plan = &api.PlanDto{Limits: api.PlanLimitsDto{}}
+	m.plan.doc = &api.PlanDto{Limits: api.PlanLimitsDto{}}
 	cap125, rem := 125.0, 113.0
 	state := &api.StateDto{
 		TotalCostUsd: 224.21, LifetimeCostUsd: 224.21,
@@ -239,7 +239,7 @@ func TestHomeBudgetPrefersTheWindowOverLifetimeAfterAnApproval(t *testing.T) {
 // the same number twice.
 func TestHomeBudgetRendersAnUncoveredOverrun(t *testing.T) {
 	m := newTestModel()
-	m.plan = &api.PlanDto{Limits: api.PlanLimitsDto{}}
+	m.plan.doc = &api.PlanDto{Limits: api.PlanLimitsDto{}}
 	cap125 := 125.0
 	rows := m.homeBudgets(&api.StateDto{
 		TotalCostUsd: 224.21, LifetimeCostUsd: 224.21, CostSpent: 224.21, WindowCostUsd: 224.21, CostCap: &cap125,
@@ -257,7 +257,7 @@ func TestHomeBudgetRendersAnUncoveredOverrun(t *testing.T) {
 func TestHomeBudgetFallsBackToPlanLimitsOnAnOlderEngine(t *testing.T) {
 	m := newTestModel()
 	cost := 10.0
-	m.plan = &api.PlanDto{Limits: api.PlanLimitsDto{MaxRunCostUsd: &cost}}
+	m.plan.doc = &api.PlanDto{Limits: api.PlanLimitsDto{MaxRunCostUsd: &cost}}
 	rows := m.homeBudgets(&api.StateDto{TotalCostUsd: 4})
 	if len(rows) != 1 {
 		t.Fatalf("plan cap with no wire block → one row, got %d", len(rows))

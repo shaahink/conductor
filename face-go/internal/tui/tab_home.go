@@ -594,8 +594,8 @@ func (m Model) homeBudget(s *api.StateDto) budgetSpend {
 	// Pre-SC2.3 engine: no block on the wire at all. Fall back to plan limits + total spend.
 	if b.cap == 0 && b.spent == 0 && b.lifetime == 0 {
 		b.spent, b.lifetime = s.TotalCostUsd, s.TotalCostUsd
-		if m.plan != nil {
-			if lim := m.plan.Limits.MaxRunCostUsd; lim != nil {
+		if m.plan.doc != nil {
+			if lim := m.plan.doc.Limits.MaxRunCostUsd; lim != nil {
 				b.cap = *lim
 			}
 		}
@@ -638,8 +638,8 @@ func (m Model) homeBudgets(s *api.StateDto) []homeLine {
 			rows = append(rows, hRow("lifetime", homeLifetime(b), homeDetail))
 		}
 	}
-	if m.plan != nil {
-		if lim := m.plan.Limits.MaxRunTokens; lim != nil && *lim > 0 {
+	if m.plan.doc != nil {
+		if lim := m.plan.doc.Limits.MaxRunTokens; lim != nil && *lim > 0 {
 			used := s.TokensInput + s.TokensOutput + s.TokensReasoning
 			rows = append(rows, hRow("tokens cap",
 				homeHeadroom(fmt.Sprintf("%s / %s", widgets.FmtTokens(used), widgets.FmtTokens(*lim)),
@@ -703,8 +703,8 @@ func (m Model) renderHomeWorkspace(w int) []homeLine {
 			stateDir = subtleStyle.Render(m.homeRelPath(s.StateDir, w))
 		}
 	}
-	if m.plan != nil && m.plan.PlanFile != "" {
-		planFile = subtleStyle.Render(m.homeRelPath(m.plan.PlanFile, w))
+	if m.plan.doc != nil && m.plan.doc.PlanFile != "" {
+		planFile = subtleStyle.Render(m.homeRelPath(m.plan.doc.PlanFile, w))
 	}
 
 	// repo is the answer to "which folder does this edit" — the reason U1.2 put the section here at

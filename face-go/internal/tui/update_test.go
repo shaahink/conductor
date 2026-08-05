@@ -197,13 +197,13 @@ func TestPlanDeleteStaysOnXNowThatTheDevMnemonicIsGone(t *testing.T) {
 	if m.tabHandlesAllKeys() {
 		t.Fatal("precondition: the plan list must NOT own all keys, or this proves nothing")
 	}
-	if got := asModel(mustHandle(m.handleKey("x"))); !got.planDeleting {
+	if got := asModel(mustHandle(m.handleKey("x"))); !got.plan.deleting {
 		t.Error("x in the Plan list must open the delete confirm through the real router")
 	}
 	// `d` must stay inert rather than silently becoming plan-delete again: a key that used to open the
 	// SQL console must never turn into a destructive one.
 	got := asModel(mustHandle(m.handleKey("d")))
-	if got.planDeleting {
+	if got.plan.deleting {
 		t.Error("d must not open the plan delete confirm — it was the SQL console's mnemonic, and a " +
 			"freed key becoming destructive is the worst possible reuse")
 	}

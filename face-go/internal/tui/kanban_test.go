@@ -87,7 +87,7 @@ func TestKanbanMoveRightAdvancesTheCard(t *testing.T) {
 
 func TestKanbanMoveLeftReopensADoneCard(t *testing.T) {
 	m, src := openKanban(t)
-	m.kanbanSelId = "T1" // done in the demo set
+	m.kanban.selId = "T1" // done in the demo set
 
 	tm, cmd := m.handleKanbanKey("left")
 	m = asModel(tm)
@@ -116,7 +116,7 @@ func TestKanbanAddCardUnderSelectedCheckpoint(t *testing.T) {
 	m, src := openKanban(t)
 
 	m = driveKanban(m, "n")
-	if !m.kanbanAdding {
+	if !m.kanban.adding {
 		t.Fatal("n should open the add form")
 	}
 	for _, ch := range "Ship the board" {
@@ -127,7 +127,7 @@ func TestKanbanAddCardUnderSelectedCheckpoint(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("submitting the add form should post the card")
 	}
-	if m.kanbanAdding {
+	if m.kanban.adding {
 		t.Error("the add form should close on submit")
 	}
 	msg := cmd().(MsgTaskWritten)
@@ -136,7 +136,7 @@ func TestKanbanAddCardUnderSelectedCheckpoint(t *testing.T) {
 	}
 	tm, _ = m.Update(msg)
 	m = asModel(tm)
-	if msg.Result.TaskId != nil && m.kanbanSelId != *msg.Result.TaskId {
+	if msg.Result.TaskId != nil && m.kanban.selId != *msg.Result.TaskId {
 		t.Error("focus should follow the newly added card")
 	}
 
@@ -159,10 +159,10 @@ func TestKanbanAddCardUnderSelectedCheckpoint(t *testing.T) {
 func openKanbanDetail(t *testing.T) (Model, api.DataSource) {
 	t.Helper()
 	m, src := openKanban(t)
-	m.kanbanSelId = "T3"
+	m.kanban.selId = "T3"
 	tm, cmd := m.handleKanbanKey("enter")
 	m = asModel(tm)
-	if !m.kanbanDetail {
+	if !m.kanban.detail {
 		t.Fatal("enter on a card should open the detail panel")
 	}
 	if cmd == nil {
@@ -170,8 +170,8 @@ func openKanbanDetail(t *testing.T) (Model, api.DataSource) {
 	}
 	tm, _ = m.Update(cmd()) // MsgPromptBlocks
 	m = asModel(tm)
-	if m.kanbanBlocks == nil || m.kanbanBlocks.TaskId != "T3" {
-		t.Fatalf("expected T3's blocks, got %+v (err %q)", m.kanbanBlocks, m.kanbanBlocksErr)
+	if m.kanban.blocks == nil || m.kanban.blocks.TaskId != "T3" {
+		t.Fatalf("expected T3's blocks, got %+v (err %q)", m.kanban.blocks, m.kanban.blocksErr)
 	}
 	return m, src
 }
@@ -179,7 +179,7 @@ func openKanbanDetail(t *testing.T) (Model, api.DataSource) {
 func TestKanbanDetailShowsLabeledBlocks(t *testing.T) {
 	m, _ := openKanbanDetail(t)
 	kinds := map[string]bool{}
-	for _, b := range m.kanbanBlocks.Blocks {
+	for _, b := range m.kanban.blocks.Blocks {
 		kinds[b.Kind] = true
 		if (b.Kind == "taskTitle" || b.Kind == "taskContext") != b.Editable {
 			t.Errorf("block %s: editable=%v — only the task-scoped blocks may be editable", b.Kind, b.Editable)
@@ -196,11 +196,11 @@ func TestKanbanDetailContextEditRoundTrip(t *testing.T) {
 	m, src := openKanbanDetail(t)
 
 	m = driveKanban(m, "c")
-	if !m.kanbanEditingCtx {
+	if !m.kanban.editingCtx {
 		t.Fatal("c should open the context editor")
 	}
 	// The editor opens seeded with the task's current context; replace it wholesale.
-	m.kanbanCtxEditor.SetValue("cover the eviction path")
+	m.kanban.ctxEditor.SetValue("cover the eviction path")
 	tm, cmd := m.handleKanbanKey("ctrl+s")
 	m = asModel(tm)
 	if cmd == nil {
@@ -229,13 +229,13 @@ func TestKanbanDetailPathsEditRoundTrip(t *testing.T) {
 	m, src := openKanbanDetail(t)
 
 	m = driveKanban(m, "p")
-	if !m.kanbanEditingPaths {
+	if !m.kanban.editingPaths {
 		t.Fatal("p should open the paths editor")
 	}
-	if !strings.Contains(m.kanbanPathsBuf, "GateCache.cs") {
-		t.Fatalf("the editor must seed from the card's current claims, got %q", m.kanbanPathsBuf)
+	if !strings.Contains(m.kanban.pathsBuf, "GateCache.cs") {
+		t.Fatalf("the editor must seed from the card's current claims, got %q", m.kanban.pathsBuf)
 	}
-	m.kanbanPathsBuf = " src/A.cs , , docs/B.md "
+	m.kanban.pathsBuf = " src/A.cs , , docs/B.md "
 	tm, cmd := m.handleKanbanKey("enter")
 	m = asModel(tm)
 	if cmd == nil {
@@ -257,7 +257,7 @@ func TestKanbanDetailPathsEditRoundTrip(t *testing.T) {
 
 	// Empty save = clear the declared claims.
 	m = driveKanban(m, "p")
-	m.kanbanPathsBuf = ""
+	m.kanban.pathsBuf = ""
 	tm, cmd = m.handleKanbanKey("enter")
 	m = asModel(tm)
 	m.Update(cmd())
@@ -280,8 +280,8 @@ func TestKanbanDetailRefineProposesThenAppliesOnlyOnConfirm(t *testing.T) {
 	}
 	tm, _ = m.Update(cmd()) // MsgTaskRefined
 	m = asModel(tm)
-	if m.kanbanProposal == nil {
-		t.Fatalf("expected a proposal, status %q", m.kanbanStatus)
+	if m.kanban.proposal == nil {
+		t.Fatalf("expected a proposal, status %q", m.kanban.status)
 	}
 
 	// The proposal alone must not have mutated anything.
@@ -321,7 +321,7 @@ func TestKanbanDetailRefineDiscardOnEsc(t *testing.T) {
 	tm, _ = m.Update(cmd())
 	m = asModel(tm)
 	m = driveKanban(m, "esc")
-	if m.kanbanProposal != nil {
+	if m.kanban.proposal != nil {
 		t.Error("esc should discard the proposal")
 	}
 	tasks, _ := src.FetchTasks()
@@ -335,7 +335,7 @@ func TestKanbanDetailRefineDiscardOnEsc(t *testing.T) {
 func TestKanbanDetailHandOffInjectsAfterConfirm(t *testing.T) {
 	m, _ := openKanbanDetail(t)
 	m = driveKanban(m, "h")
-	if !m.kanbanHandConfirm {
+	if !m.kanban.handConfirm {
 		t.Fatal("h should ask for confirmation")
 	}
 	tm, cmd := m.handleKanbanKey("y")
@@ -352,7 +352,7 @@ func TestKanbanDetailHandOffInjectsAfterConfirm(t *testing.T) {
 func TestKanbanDetailEscClosesBackToTheBoard(t *testing.T) {
 	m, _ := openKanbanDetail(t)
 	m = driveKanban(m, "esc")
-	if m.kanbanDetail {
+	if m.kanban.detail {
 		t.Error("esc should close the detail panel")
 	}
 }

@@ -179,6 +179,8 @@ type Model struct {
 	report    reportModel
 	knowledge knowledgeModel
 	telegram  telegramModel
+	plan      planModel
+	kanban    kanbanModel
 
 	// Palette (bottom command bar)
 	paletteQuery      string
@@ -192,65 +194,6 @@ type Model struct {
 	injectContent string
 	injectStageId string
 	injectField   int
-
-	// Plan tab (M6.3 editor)
-	plan             *api.PlanDto
-	planTab          planTab
-	planStageIdx     int
-	planGateIdx      int
-	planFieldIdx     int
-	planDrill        bool
-	planEditing      bool
-	planEditBuf      string
-	planEnumIdx      int
-	planEnumCustom   bool // an enum field's "✎ custom…" option is selected → free-text sub-entry
-	planStatus       string
-	planImportInput  string
-	planImportResult *api.PlanImportResultDto
-	planImportErr    string
-	planImportSource string // what was actually posted (path or prompt) — `a` re-posts it with apply:true
-	planImportBusy   bool   // a prompt is at the advisor — block re-submits, show progress
-	planPromptEditor widgets.TextArea
-	planAdding       bool // add-stage / add-gate form open (id + title/command)
-	planAddField     int  // 0 = id/name, 1 = title/command
-	planAddIdBuf     string
-	planAddValBuf    string
-	planDeleting     bool // delete-confirm prompt open for the selected stage/gate
-
-	// Kanban tab (G2.2): live board of the run's task graph. Selection is by task id so a card
-	// keeps focus while it moves between columns and across live refreshes.
-	kanbanSelId  string
-	kanbanAdding bool
-	kanbanAddBuf string
-	// W4.3: the pending add is a STAGE-level card (a checkpoint the engine will schedule),
-	// not a subtask under an existing checkpoint.
-	kanbanAddStage bool
-	kanbanStatus   string
-	// tasksErr / tasksLoaded exist so an empty board can say WHY it is empty (dogfood appendix 5).
-	// Three states read identically without them — never fetched, fetch failed, genuinely no cards —
-	// and the pane confidently claimed the third.
-	tasksErr    string
-	tasksLoaded bool
-
-	// Kanban card detail (P3): the selected card's prompt building-blocks, the structured
-	// title/context editors, and the advisor-refine preview→confirm state.
-	kanbanDetail       bool
-	kanbanBlocks       *api.PromptBlocksDto
-	kanbanBlocksErr    string
-	kanbanEditingTitle bool
-	kanbanTitleBuf     string
-	kanbanEditingCtx   bool
-	kanbanCtxEditor    widgets.TextArea
-	// PF3: the declared-paths editor (comma-separated single line; empty save clears the claims).
-	kanbanEditingPaths bool
-	kanbanPathsBuf     string
-	kanbanRefining     bool
-	kanbanProposal     *api.TaskRefineResultDto
-	// W4.3: the advisor's proposed split — a list of children, applied one /tasks/add at a time.
-	kanbanSplitting    bool
-	kanbanSplit        *api.TaskSplitResultDto
-	kanbanSplitPending []api.TaskSplitChildDto
-	kanbanHandConfirm  bool
 }
 
 func New(source api.DataSource, isDemo bool, baseURL string) Model {

@@ -16,6 +16,91 @@ import (
 // import/re-import a structured plan doc with a diff — no hand-editing JSON, no spinning up an agent
 // to tweak a workflow. Every change round-trips through POST /plan/edit or /plan/import.
 
+// planModel is the Plan tab's own state (K6.3): the plan document it edits, where the cursor is in
+// it, and the three modal sub-states (edit, add, delete) the tab captures every key for.
+type planModel struct {
+	doc      *api.PlanDto
+	tab      planTab
+	stageIdx int
+	gateIdx  int
+	fieldIdx int
+	drill    bool
+	editing  bool
+	editBuf  string
+	enumIdx  int
+	// enumCustom: an enum field's "✎ custom…" option is selected → free-text sub-entry.
+	enumCustom bool
+	status     string
+
+	importInput  string
+	importResult *api.PlanImportResultDto
+	importErr    string
+	importSource string // what was actually posted (path or prompt) — `a` re-posts it with apply:true
+	importBusy   bool   // a prompt is at the advisor — block re-submits, show progress
+	promptEditor widgets.TextArea
+
+	adding    bool // add-stage / add-gate form open (id + title/command)
+	addField  int  // 0 = id/name, 1 = title/command
+	addIdBuf  string
+	addValBuf string
+	deleting  bool // delete-confirm prompt open for the selected stage/gate
+}
+
+// updatePlan handles the load, the edit result and the import result. All three end in this tab's
+// own document or its status line, which nothing else reads.
+func (m Model) updatePlan(msg tea.Msg) (Model, tea.Cmd, bool) {
+	switch msg := msg.(type) {
+
+	case MsgPlanLoaded:
+		if msg.Err != "" {
+			m.plan.status = "load failed: " + msg.Err
+		} else {
+			m.plan.doc = msg.Plan
+		}
+		return m, nil, true
+
+	case MsgPlanEdited:
+		if msg.Err != "" {
+			m.plan.status = "✗ " + msg.Err
+			return m, nil, true
+		}
+		if msg.Result != nil && !msg.Result.Ok {
+			reason := "rejected"
+			if msg.Result.Error != nil {
+				reason = *msg.Result.Error
+			}
+			m.plan.status = "✗ " + reason
+			return m, nil, true
+		}
+		m.plan.status = fmt.Sprintf("✓ saved — plan v%d", planVersionOf(msg.Result))
+		m.plan.editing = false
+		return m, m.cmdFetchPlan(), true
+
+	case MsgPlanImported:
+		m.plan.importBusy = false
+		if msg.Err != "" {
+			m.plan.importErr, m.plan.importResult = msg.Err, nil
+			m.plan.status = ""
+			return m, nil, true
+		}
+		m.plan.importErr = ""
+		m.plan.importResult = msg.Result
+		if msg.Result != nil && !msg.Result.Ok && msg.Result.Error != nil {
+			m.plan.importErr, m.plan.importResult = *msg.Result.Error, nil
+			m.plan.status = ""
+			return m, nil, true
+		}
+		if msg.Result != nil && msg.Result.Applied {
+			m.plan.status = fmt.Sprintf("✓ imported — plan v%d", msg.Result.PlanVersion)
+			m.plan.importResult = nil
+			return m, m.cmdFetchPlan(), true
+		}
+		m.plan.status = ""
+		return m, nil, true
+	}
+	return m, nil, false
+}
+
 type planFieldKind int
 
 const (
@@ -71,15 +156,15 @@ func (m Model) stageFields() []planField {
 // modelChoices is the curated list plus the plan's own defaultModel (so it's never absent from the
 // picker), de-duplicated, in a stable order.
 func (m Model) modelChoices() []string {
-	if m.plan == nil || m.plan.DefaultModel == "" {
+	if m.plan.doc == nil || m.plan.doc.DefaultModel == "" {
 		return modelChoices
 	}
 	for _, c := range modelChoices {
-		if c == m.plan.DefaultModel {
+		if c == m.plan.doc.DefaultModel {
 			return modelChoices
 		}
 	}
-	out := append([]string{m.plan.DefaultModel}, modelChoices...)
+	out := append([]string{m.plan.doc.DefaultModel}, modelChoices...)
 	return out
 }
 
@@ -157,8 +242,8 @@ func rolloverThisRunDisplay(raw string) string {
 }
 
 func (m Model) workflowChoices() []string {
-	if m.plan != nil && len(m.plan.Workflows) > 0 {
-		return m.plan.Workflows
+	if m.plan.doc != nil && len(m.plan.doc.Workflows) > 0 {
+		return m.plan.doc.Workflows
 	}
 	return []string{"deliver-verify", "big-dev-then-big-audit", "docs-only", "spike"}
 }
@@ -171,31 +256,31 @@ func planVersionOf(r *api.PlanMutationResultDto) int {
 }
 
 func (m *Model) handlePlanKey(key string) (tea.Model, tea.Cmd) {
-	if m.planEditing {
+	if m.plan.editing {
 		return m.handlePlanFieldEdit(key)
 	}
-	if m.planAdding {
+	if m.plan.adding {
 		return m.handlePlanAddKey(key)
 	}
-	if m.planDeleting {
+	if m.plan.deleting {
 		return m.handlePlanDeleteKey(key)
 	}
 	// A returned diff owns the keys wherever it came from — the Import path box or the Prompt box
 	// both land on the same diff view with the same a-apply / esc-back contract.
-	if m.planImportResult != nil {
+	if m.plan.importResult != nil {
 		return m.handleImportDiffKey(key)
 	}
-	if m.planTab == planTabImport {
+	if m.plan.tab == planTabImport {
 		return m.handlePlanImportKey(key)
 	}
-	if m.planTab == planTabPrompt {
+	if m.plan.tab == planTabPrompt {
 		return m.handlePlanPromptKey(key)
 	}
 
 	switch key {
 	case "esc":
-		if m.planDrill {
-			m.planDrill = false
+		if m.plan.drill {
+			m.plan.drill = false
 			return m, nil
 		}
 		return m.openTab(TabAgent) // leave the Plan tab
@@ -209,17 +294,17 @@ func (m *Model) handlePlanKey(key string) (tea.Model, tea.Cmd) {
 		m.planBeginDelete()
 		return m, nil
 	case "right":
-		if !m.planDrill {
-			m.planTab = (m.planTab + 1) % planTabCount
-			m.planFieldIdx = 0
-			m.planStatus = ""
+		if !m.plan.drill {
+			m.plan.tab = (m.plan.tab + 1) % planTabCount
+			m.plan.fieldIdx = 0
+			m.plan.status = ""
 		}
 		return m, nil
 	case "left":
-		if !m.planDrill {
-			m.planTab = (m.planTab + planTabCount - 1) % planTabCount
-			m.planFieldIdx = 0
-			m.planStatus = ""
+		if !m.plan.drill {
+			m.plan.tab = (m.plan.tab + planTabCount - 1) % planTabCount
+			m.plan.fieldIdx = 0
+			m.plan.status = ""
 		}
 		return m, nil
 	case "up", "k":
@@ -236,57 +321,57 @@ func (m *Model) handlePlanKey(key string) (tea.Model, tea.Cmd) {
 
 func (m *Model) planMoveSelection(delta int) {
 	switch {
-	case m.planTab == planTabSettings:
-		m.planFieldIdx = clamp(m.planFieldIdx+delta, 0, len(m.settingsFields())-1)
-	case m.planDrill && m.planTab == planTabStages:
-		m.planFieldIdx = clamp(m.planFieldIdx+delta, 0, len(m.stageFields())-1)
-	case m.planDrill && m.planTab == planTabGates:
-		m.planFieldIdx = clamp(m.planFieldIdx+delta, 0, len(gateFields())-1)
-	case m.planTab == planTabStages && m.plan != nil:
-		m.planStageIdx = clamp(m.planStageIdx+delta, 0, len(m.plan.Stages)-1)
-	case m.planTab == planTabGates && m.plan != nil:
-		m.planGateIdx = clamp(m.planGateIdx+delta, 0, len(m.plan.Gates)-1)
+	case m.plan.tab == planTabSettings:
+		m.plan.fieldIdx = clamp(m.plan.fieldIdx+delta, 0, len(m.settingsFields())-1)
+	case m.plan.drill && m.plan.tab == planTabStages:
+		m.plan.fieldIdx = clamp(m.plan.fieldIdx+delta, 0, len(m.stageFields())-1)
+	case m.plan.drill && m.plan.tab == planTabGates:
+		m.plan.fieldIdx = clamp(m.plan.fieldIdx+delta, 0, len(gateFields())-1)
+	case m.plan.tab == planTabStages && m.plan.doc != nil:
+		m.plan.stageIdx = clamp(m.plan.stageIdx+delta, 0, len(m.plan.doc.Stages)-1)
+	case m.plan.tab == planTabGates && m.plan.doc != nil:
+		m.plan.gateIdx = clamp(m.plan.gateIdx+delta, 0, len(m.plan.doc.Gates)-1)
 	}
 }
 
 // planEnter drills into a row's fields, or begins editing the selected field.
 func (m *Model) planEnter() (tea.Model, tea.Cmd) {
-	if m.plan == nil {
+	if m.plan.doc == nil {
 		return m, nil
 	}
 	switch {
-	case m.planTab == planTabSettings:
-		m.beginFieldEdit(m.settingsFields()[m.planFieldIdx])
-	case m.planTab == planTabStages && !m.planDrill:
-		if len(m.plan.Stages) > 0 {
-			m.planDrill = true
-			m.planFieldIdx = 0
-			m.planStatus = ""
+	case m.plan.tab == planTabSettings:
+		m.beginFieldEdit(m.settingsFields()[m.plan.fieldIdx])
+	case m.plan.tab == planTabStages && !m.plan.drill:
+		if len(m.plan.doc.Stages) > 0 {
+			m.plan.drill = true
+			m.plan.fieldIdx = 0
+			m.plan.status = ""
 		}
-	case m.planTab == planTabGates && !m.planDrill:
-		if len(m.plan.Gates) > 0 {
-			m.planDrill = true
-			m.planFieldIdx = 0
-			m.planStatus = ""
+	case m.plan.tab == planTabGates && !m.plan.drill:
+		if len(m.plan.doc.Gates) > 0 {
+			m.plan.drill = true
+			m.plan.fieldIdx = 0
+			m.plan.status = ""
 		}
-	case m.planDrill && m.planTab == planTabStages:
-		m.beginFieldEdit(m.stageFields()[m.planFieldIdx])
-	case m.planDrill && m.planTab == planTabGates:
-		m.beginFieldEdit(gateFields()[m.planFieldIdx])
+	case m.plan.drill && m.plan.tab == planTabStages:
+		m.beginFieldEdit(m.stageFields()[m.plan.fieldIdx])
+	case m.plan.drill && m.plan.tab == planTabGates:
+		m.beginFieldEdit(gateFields()[m.plan.fieldIdx])
 	}
 	return m, nil
 }
 
 func (m *Model) beginFieldEdit(f planField) {
 	cur := m.currentFieldValue(f.Field)
-	m.planEditing = true
-	m.planEnumCustom = false
-	m.planStatus = ""
+	m.plan.editing = true
+	m.plan.enumCustom = false
+	m.plan.status = ""
 	if f.Kind == fieldEnum {
-		m.planEnumIdx = indexOfDefault(optionList(f), cur, 0)
-		m.planEditBuf = ""
+		m.plan.enumIdx = indexOfDefault(optionList(f), cur, 0)
+		m.plan.editBuf = ""
 	} else {
-		m.planEditBuf = cur
+		m.plan.editBuf = cur
 	}
 }
 
@@ -294,20 +379,20 @@ func (m *Model) handlePlanFieldEdit(key string) (tea.Model, tea.Cmd) {
 	f := m.currentField()
 
 	// Free-text sub-entry, reached by picking an enum's "✎ custom…" option.
-	if m.planEnumCustom {
+	if m.plan.enumCustom {
 		switch key {
 		case "esc":
-			m.planEnumCustom = false // back to the carousel, still editing
+			m.plan.enumCustom = false // back to the carousel, still editing
 		case "enter":
-			m.planEnumCustom = false
-			return m.savePlanFieldValue(f, strings.TrimSpace(m.planEditBuf))
+			m.plan.enumCustom = false
+			return m.savePlanFieldValue(f, strings.TrimSpace(m.plan.editBuf))
 		case "backspace":
-			if len(m.planEditBuf) > 0 {
-				m.planEditBuf = m.planEditBuf[:len(m.planEditBuf)-1]
+			if len(m.plan.editBuf) > 0 {
+				m.plan.editBuf = m.plan.editBuf[:len(m.plan.editBuf)-1]
 			}
 		default:
 			if ch, ok := typedChar(key); ok {
-				m.planEditBuf += ch
+				m.plan.editBuf += ch
 			}
 		}
 		return m, nil
@@ -315,13 +400,13 @@ func (m *Model) handlePlanFieldEdit(key string) (tea.Model, tea.Cmd) {
 
 	switch key {
 	case "esc":
-		m.planEditing = false
+		m.plan.editing = false
 		return m, nil
 	case "enter":
 		if f.Kind == fieldEnum {
 			opts := optionList(f)
-			if m.planEnumIdx < len(opts) && opts[m.planEnumIdx] == customSentinel {
-				m.planEnumCustom, m.planEditBuf = true, "" // drop into free-text entry
+			if m.plan.enumIdx < len(opts) && opts[m.plan.enumIdx] == customSentinel {
+				m.plan.enumCustom, m.plan.editBuf = true, "" // drop into free-text entry
 				return m, nil
 			}
 		}
@@ -332,9 +417,9 @@ func (m *Model) handlePlanFieldEdit(key string) (tea.Model, tea.Cmd) {
 		opts := optionList(f)
 		switch key {
 		case "left", "h":
-			m.planEnumIdx = (m.planEnumIdx - 1 + len(opts)) % len(opts)
+			m.plan.enumIdx = (m.plan.enumIdx - 1 + len(opts)) % len(opts)
 		case "right", "l", "space":
-			m.planEnumIdx = (m.planEnumIdx + 1) % len(opts)
+			m.plan.enumIdx = (m.plan.enumIdx + 1) % len(opts)
 		}
 		return m, nil
 	}
@@ -342,25 +427,25 @@ func (m *Model) handlePlanFieldEdit(key string) (tea.Model, tea.Cmd) {
 	// text / int
 	switch key {
 	case "backspace":
-		if len(m.planEditBuf) > 0 {
-			m.planEditBuf = m.planEditBuf[:len(m.planEditBuf)-1]
+		if len(m.plan.editBuf) > 0 {
+			m.plan.editBuf = m.plan.editBuf[:len(m.plan.editBuf)-1]
 		}
 	default:
 		if ch, ok := typedChar(key); ok {
 			if f.Kind == fieldInt && (ch < "0" || ch > "9") {
 				return m, nil // ints accept digits only
 			}
-			m.planEditBuf += ch
+			m.plan.editBuf += ch
 		}
 	}
 	return m, nil
 }
 
 func (m *Model) savePlanField(f planField) (tea.Model, tea.Cmd) {
-	value := m.planEditBuf
+	value := m.plan.editBuf
 	if f.Kind == fieldEnum {
-		if opts := optionList(f); m.planEnumIdx < len(opts) {
-			value = opts[m.planEnumIdx]
+		if opts := optionList(f); m.plan.enumIdx < len(opts) {
+			value = opts[m.plan.enumIdx]
 		}
 	}
 	return m.savePlanFieldValue(f, value)
@@ -377,10 +462,10 @@ func (m *Model) savePlanFieldValue(f planField, value string) (tea.Model, tea.Cm
 	// P5: the "rollover (run)" row is not a plan edit at all — it posts the set-rollover control
 	// verb, which flips run state at the engine and NEVER writes the plan file.
 	if target == "control" {
-		m.planStatus = "sending " + f.Field + "…"
+		m.plan.status = "sending " + f.Field + "…"
 		return m, m.cmdPostControl(api.ControlRequestDto{Command: f.Field, Value: value})
 	}
-	m.planStatus = "saving…"
+	m.plan.status = "saving…"
 	v := value
 	return m, m.cmdPostPlanEdit(api.PlanEditRequestDto{
 		Edits: []api.PlanEditDto{{Target: target, Id: id, Field: f.Field, Value: &v}},
@@ -393,13 +478,13 @@ func (m *Model) savePlanFieldValue(f planField, value string) (tea.Model, tea.Cm
 func (m *Model) handleImportDiffKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
 	case "esc":
-		m.planImportResult = nil
+		m.plan.importResult = nil
 		return m, nil
 	case "a":
-		if !m.planImportResult.Diff.IsEmpty() && !m.planImportBusy {
-			m.planStatus = "applying…"
-			m.planImportBusy = true
-			return m, m.cmdPostPlanImport(api.PlanImportRequestDto{Source: m.planImportSource, Apply: true})
+		if !m.plan.importResult.Diff.IsEmpty() && !m.plan.importBusy {
+			m.plan.status = "applying…"
+			m.plan.importBusy = true
+			return m, m.cmdPostPlanImport(api.PlanImportRequestDto{Source: m.plan.importSource, Apply: true})
 		}
 		return m, nil
 	}
@@ -409,33 +494,33 @@ func (m *Model) handleImportDiffKey(key string) (tea.Model, tea.Cmd) {
 func (m *Model) handlePlanImportKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
 	case "esc":
-		m.planTab = planTabStages // back to the Stages section, staying in the Plan tab
+		m.plan.tab = planTabStages // back to the Stages section, staying in the Plan tab
 		return m, nil
 	// The path input has no caret, so ←→ keep switching sections (the Prompt box next door needs
 	// its arrows for the real editor, so it only offers esc).
 	case "right":
-		m.planTab, m.planStatus = planTabPrompt, ""
+		m.plan.tab, m.plan.status = planTabPrompt, ""
 		return m, nil
 	case "left":
-		m.planTab, m.planStatus = planTabSettings, ""
+		m.plan.tab, m.plan.status = planTabSettings, ""
 		return m, nil
 	case "enter":
-		if strings.TrimSpace(m.planImportInput) == "" || m.planImportBusy {
+		if strings.TrimSpace(m.plan.importInput) == "" || m.plan.importBusy {
 			return m, nil
 		}
-		m.planImportErr = ""
-		m.planStatus = "parsing…"
-		m.planImportSource = strings.TrimSpace(m.planImportInput)
-		m.planImportBusy = true
-		return m, m.cmdPostPlanImport(api.PlanImportRequestDto{Source: m.planImportSource, Apply: false})
+		m.plan.importErr = ""
+		m.plan.status = "parsing…"
+		m.plan.importSource = strings.TrimSpace(m.plan.importInput)
+		m.plan.importBusy = true
+		return m, m.cmdPostPlanImport(api.PlanImportRequestDto{Source: m.plan.importSource, Apply: false})
 	case "backspace":
-		if len(m.planImportInput) > 0 {
-			m.planImportInput = m.planImportInput[:len(m.planImportInput)-1]
+		if len(m.plan.importInput) > 0 {
+			m.plan.importInput = m.plan.importInput[:len(m.plan.importInput)-1]
 		}
 		return m, nil
 	default:
 		if ch, ok := typedChar(key); ok {
-			m.planImportInput += ch
+			m.plan.importInput += ch
 		}
 		return m, nil
 	}
@@ -446,23 +531,23 @@ func (m *Model) handlePlanImportKey(key string) (tea.Model, tea.Cmd) {
 func (m *Model) handlePlanPromptKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
 	case "esc":
-		m.planTab = planTabStages
+		m.plan.tab = planTabStages
 		return m, nil
 	case "ctrl+s":
-		prompt := strings.TrimSpace(m.planPromptEditor.Value())
-		if prompt == "" || m.planImportBusy {
+		prompt := strings.TrimSpace(m.plan.promptEditor.Value())
+		if prompt == "" || m.plan.importBusy {
 			return m, nil
 		}
-		m.planImportErr = ""
-		m.planStatus = "consulting the advisor…"
-		m.planImportSource = prompt
-		m.planImportBusy = true
+		m.plan.importErr = ""
+		m.plan.status = "consulting the advisor…"
+		m.plan.importSource = prompt
+		m.plan.importBusy = true
 		return m, m.cmdPostPlanImport(api.PlanImportRequestDto{Source: prompt, Apply: false})
 	default:
-		if m.planPromptEditor.Width == 0 { // lazily sized — the pane width isn't known at construction
-			m.planPromptEditor = widgets.NewTextArea("", max(20, m.paneCols()-4), 5)
+		if m.plan.promptEditor.Width == 0 { // lazily sized — the pane width isn't known at construction
+			m.plan.promptEditor = widgets.NewTextArea("", max(20, m.paneCols()-4), 5)
 		}
-		m.planPromptEditor = m.planPromptEditor.Update(key)
+		m.plan.promptEditor = m.plan.promptEditor.Update(key)
 		return m, nil
 	}
 }
@@ -472,52 +557,52 @@ func (m *Model) handlePlanPromptKey(key string) (tea.Model, tea.Cmd) {
 // planBeginAdd opens the two-field add form, but only in a Stages/Gates list (not Settings/Import,
 // not while drilled into a row's fields).
 func (m *Model) planBeginAdd() {
-	if m.planDrill || (m.planTab != planTabStages && m.planTab != planTabGates) {
+	if m.plan.drill || (m.plan.tab != planTabStages && m.plan.tab != planTabGates) {
 		return
 	}
-	m.planAdding = true
-	m.planAddField = 0
-	m.planAddIdBuf, m.planAddValBuf = "", ""
-	m.planStatus = ""
+	m.plan.adding = true
+	m.plan.addField = 0
+	m.plan.addIdBuf, m.plan.addValBuf = "", ""
+	m.plan.status = ""
 }
 
 func (m *Model) handlePlanAddKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
 	case "esc":
-		m.planAdding = false
+		m.plan.adding = false
 		return m, nil
 	case "tab":
-		m.planAddField = 1 - m.planAddField
+		m.plan.addField = 1 - m.plan.addField
 		return m, nil
 	case "enter":
-		id := strings.TrimSpace(m.planAddIdBuf)
+		id := strings.TrimSpace(m.plan.addIdBuf)
 		if id == "" {
 			return m, nil // an id/name is required — stay in the form
 		}
 		target := "stage"
-		if m.planTab == planTabGates {
+		if m.plan.tab == planTabGates {
 			target = "gate"
 		}
-		v := strings.TrimSpace(m.planAddValBuf)
-		m.planAdding = false
-		m.planStatus = "adding…"
+		v := strings.TrimSpace(m.plan.addValBuf)
+		m.plan.adding = false
+		m.plan.status = "adding…"
 		return m, m.cmdPostPlanEdit(api.PlanEditRequestDto{
 			Edits: []api.PlanEditDto{{Target: target, Op: "add", Id: id, Value: &v}},
 		})
 	case "backspace":
-		if m.planAddField == 0 {
-			if len(m.planAddIdBuf) > 0 {
-				m.planAddIdBuf = m.planAddIdBuf[:len(m.planAddIdBuf)-1]
+		if m.plan.addField == 0 {
+			if len(m.plan.addIdBuf) > 0 {
+				m.plan.addIdBuf = m.plan.addIdBuf[:len(m.plan.addIdBuf)-1]
 			}
-		} else if len(m.planAddValBuf) > 0 {
-			m.planAddValBuf = m.planAddValBuf[:len(m.planAddValBuf)-1]
+		} else if len(m.plan.addValBuf) > 0 {
+			m.plan.addValBuf = m.plan.addValBuf[:len(m.plan.addValBuf)-1]
 		}
 	default:
 		if ch, ok := typedChar(key); ok {
-			if m.planAddField == 0 {
-				m.planAddIdBuf += ch
+			if m.plan.addField == 0 {
+				m.plan.addIdBuf += ch
 			} else {
-				m.planAddValBuf += ch
+				m.plan.addValBuf += ch
 			}
 		}
 	}
@@ -525,13 +610,13 @@ func (m *Model) handlePlanAddKey(key string) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) planBeginDelete() {
-	if m.planDrill {
+	if m.plan.drill {
 		return
 	}
-	if m.planTab == planTabStages && m.plan != nil && len(m.plan.Stages) > 0 {
-		m.planDeleting, m.planStatus = true, ""
-	} else if m.planTab == planTabGates && m.plan != nil && len(m.plan.Gates) > 0 {
-		m.planDeleting, m.planStatus = true, ""
+	if m.plan.tab == planTabStages && m.plan.doc != nil && len(m.plan.doc.Stages) > 0 {
+		m.plan.deleting, m.plan.status = true, ""
+	} else if m.plan.tab == planTabGates && m.plan.doc != nil && len(m.plan.doc.Gates) > 0 {
+		m.plan.deleting, m.plan.status = true, ""
 	}
 }
 
@@ -539,16 +624,16 @@ func (m *Model) handlePlanDeleteKey(key string) (tea.Model, tea.Cmd) {
 	switch strings.ToLower(key) {
 	case "y", "enter":
 		target, id := m.currentTarget()
-		m.planDeleting = false
+		m.plan.deleting = false
 		if id == "" {
 			return m, nil
 		}
-		m.planStatus = "deleting…"
+		m.plan.status = "deleting…"
 		return m, m.cmdPostPlanEdit(api.PlanEditRequestDto{
 			Edits: []api.PlanEditDto{{Target: target, Op: "delete", Id: id}},
 		})
 	case "n", "esc":
-		m.planDeleting = false
+		m.plan.deleting = false
 	}
 	return m, nil
 }
@@ -557,79 +642,79 @@ func (m *Model) handlePlanDeleteKey(key string) (tea.Model, tea.Cmd) {
 
 func (m Model) currentField() planField {
 	switch {
-	case m.planTab == planTabSettings:
-		return m.settingsFields()[m.planFieldIdx]
-	case m.planTab == planTabGates:
-		return gateFields()[m.planFieldIdx]
+	case m.plan.tab == planTabSettings:
+		return m.settingsFields()[m.plan.fieldIdx]
+	case m.plan.tab == planTabGates:
+		return gateFields()[m.plan.fieldIdx]
 	default:
-		return m.stageFields()[m.planFieldIdx]
+		return m.stageFields()[m.plan.fieldIdx]
 	}
 }
 
 func (m Model) currentTarget() (target, id string) {
-	switch m.planTab {
+	switch m.plan.tab {
 	case planTabSettings:
 		return "plan", ""
 	case planTabGates:
-		if m.plan != nil && m.planGateIdx < len(m.plan.Gates) {
-			return "gate", m.plan.Gates[m.planGateIdx].Name
+		if m.plan.doc != nil && m.plan.gateIdx < len(m.plan.doc.Gates) {
+			return "gate", m.plan.doc.Gates[m.plan.gateIdx].Name
 		}
 		return "gate", ""
 	default:
-		if m.plan != nil && m.planStageIdx < len(m.plan.Stages) {
-			return "stage", m.plan.Stages[m.planStageIdx].Id
+		if m.plan.doc != nil && m.plan.stageIdx < len(m.plan.doc.Stages) {
+			return "stage", m.plan.doc.Stages[m.plan.stageIdx].Id
 		}
 		return "stage", ""
 	}
 }
 
 func (m Model) currentFieldValue(field string) string {
-	if m.plan == nil {
+	if m.plan.doc == nil {
 		return ""
 	}
-	switch m.planTab {
+	switch m.plan.tab {
 	case planTabSettings:
 		switch field {
 		case "name":
-			return m.plan.Name
+			return m.plan.doc.Name
 		case "gatepolicy":
-			return m.plan.GatePolicy
+			return m.plan.doc.GatePolicy
 		case "defaultworkflow":
-			return m.plan.DefaultWorkflow
+			return m.plan.doc.DefaultWorkflow
 		case "mode":
-			if m.plan.Qa != nil {
-				return m.plan.Qa.Mode
+			if m.plan.doc.Qa != nil {
+				return m.plan.doc.Qa.Mode
 			}
 			return qaInheritValue
 		case "verifierthreshold":
-			return strconv.Itoa(m.plan.Limits.VerifierThreshold)
+			return strconv.Itoa(m.plan.doc.Limits.VerifierThreshold)
 		case "maxsessions":
-			if m.plan.Limits.MaxSessions != nil {
-				return strconv.Itoa(*m.plan.Limits.MaxSessions)
+			if m.plan.doc.Limits.MaxSessions != nil {
+				return strconv.Itoa(*m.plan.doc.Limits.MaxSessions)
 			}
 			return ""
 		case "maxruncostusd":
-			if m.plan.Limits.MaxRunCostUsd != nil {
-				return strconv.FormatFloat(*m.plan.Limits.MaxRunCostUsd, 'f', -1, 64)
+			if m.plan.doc.Limits.MaxRunCostUsd != nil {
+				return strconv.FormatFloat(*m.plan.doc.Limits.MaxRunCostUsd, 'f', -1, 64)
 			}
 			return ""
 		case "maxruntokens":
-			if m.plan.Limits.MaxRunTokens != nil {
-				return strconv.FormatInt(*m.plan.Limits.MaxRunTokens, 10)
+			if m.plan.doc.Limits.MaxRunTokens != nil {
+				return strconv.FormatInt(*m.plan.doc.Limits.MaxRunTokens, 10)
 			}
 			return ""
 		case "stallminutes":
-			return strconv.Itoa(m.plan.Limits.StallMinutes)
+			return strconv.Itoa(m.plan.doc.Limits.StallMinutes)
 		case "sessiontimeoutminutes":
-			return strconv.Itoa(m.plan.Limits.SessionTimeoutMinutes)
+			return strconv.Itoa(m.plan.doc.Limits.SessionTimeoutMinutes)
 		case "maxsessiontokens":
-			if m.plan.Limits.MaxSessionTokens != nil {
-				return strconv.FormatInt(*m.plan.Limits.MaxSessionTokens, 10)
+			if m.plan.doc.Limits.MaxSessionTokens != nil {
+				return strconv.FormatInt(*m.plan.doc.Limits.MaxSessionTokens, 10)
 			}
 			return ""
 		case "softbreakratio":
-			if m.plan.Limits.SoftBreakRatio != nil {
-				return strconv.FormatFloat(*m.plan.Limits.SoftBreakRatio, 'f', -1, 64)
+			if m.plan.doc.Limits.SoftBreakRatio != nil {
+				return strconv.FormatFloat(*m.plan.doc.Limits.SoftBreakRatio, 'f', -1, 64)
 			}
 			return ""
 		case "set-rollover":
@@ -644,10 +729,10 @@ func (m Model) currentFieldValue(field string) string {
 			return ""
 		}
 	case planTabGates:
-		if m.planGateIdx >= len(m.plan.Gates) {
+		if m.plan.gateIdx >= len(m.plan.doc.Gates) {
 			return ""
 		}
-		g := m.plan.Gates[m.planGateIdx]
+		g := m.plan.doc.Gates[m.plan.gateIdx]
 		switch field {
 		case "command":
 			return g.Command
@@ -659,10 +744,10 @@ func (m Model) currentFieldValue(field string) string {
 			return strconv.FormatBool(g.Optional)
 		}
 	default:
-		if m.planStageIdx >= len(m.plan.Stages) {
+		if m.plan.stageIdx >= len(m.plan.doc.Stages) {
 			return ""
 		}
-		s := m.plan.Stages[m.planStageIdx]
+		s := m.plan.doc.Stages[m.plan.stageIdx]
 		switch field {
 		case "title":
 			return s.Title
@@ -719,14 +804,14 @@ func derefOr(p *string, def string) string {
 // --- rendering ---
 
 func (m Model) renderPlanPane() (string, string) {
-	if m.plan == nil {
+	if m.plan.doc == nil {
 		return subtleStyle.Render("loading plan…"), "esc back"
 	}
 
 	tabs := m.renderPlanSections()
 	var body, help string
 
-	switch m.planTab {
+	switch m.plan.tab {
 	case planTabStages:
 		body, help = m.renderPlanStages()
 	case planTabGates:
@@ -740,14 +825,14 @@ func (m Model) renderPlanPane() (string, string) {
 	}
 
 	status := ""
-	if m.planStatus != "" {
+	if m.plan.status != "" {
 		st := safeStyle
-		if strings.HasPrefix(m.planStatus, "✗") {
+		if strings.HasPrefix(m.plan.status, "✗") {
 			st = destructStyle
 		}
-		status = "\n\n" + st.Render(m.planStatus)
+		status = "\n\n" + st.Render(m.plan.status)
 	}
-	meta := subtleStyle.Render(fmt.Sprintf("%s · v%d", m.plan.Name, m.plan.PlanVersion))
+	meta := subtleStyle.Render(fmt.Sprintf("%s · v%d", m.plan.doc.Name, m.plan.doc.PlanVersion))
 	return tabs + "   " + meta + "\n\n" + body + status, help
 }
 
@@ -755,7 +840,7 @@ func (m Model) renderPlanSections() string {
 	names := []string{"Stages", "Gates", "Settings", "Import", "Prompt"}
 	var parts []string
 	for i, n := range names {
-		if planTab(i) == m.planTab {
+		if planTab(i) == m.plan.tab {
 			parts = append(parts, highlightBg.Render(" "+n+" "))
 		} else {
 			parts = append(parts, subtleStyle.Render(" "+n+" "))
@@ -765,49 +850,49 @@ func (m Model) renderPlanSections() string {
 }
 
 func (m Model) renderPlanStages() (string, string) {
-	if m.planDrill {
-		return m.renderFieldList(m.stageFields(), m.plan.Stages[m.planStageIdx].Id)
+	if m.plan.drill {
+		return m.renderFieldList(m.stageFields(), m.plan.doc.Stages[m.plan.stageIdx].Id)
 	}
-	if m.planAdding {
+	if m.plan.adding {
 		return m.renderPlanAddForm("stage", "id", "title")
 	}
 	var lines []string
-	for i, s := range m.plan.Stages {
+	for i, s := range m.plan.doc.Stages {
 		id := fmt.Sprintf("%-4s", s.Id)
 		title := fmt.Sprintf("%-24s", truncate(s.Title, 24))
 		meta := fmt.Sprintf("%-10s", fmt.Sprintf("%ds·%s", s.Sessions, s.Kind))
 		model := derefOr(s.Model, "—")
-		if i == m.planStageIdx {
+		if i == m.plan.stageIdx {
 			lines = append(lines, highlightBg.Render(fmt.Sprintf("  %s %s %s %s", id, title, meta, model)))
 			continue
 		}
 		lines = append(lines, "  "+accentStyle.Render(id)+" "+textStyle.Render(title)+" "+subtleStyle.Render(meta)+" "+purpleText(model))
 	}
-	if m.planDeleting {
+	if m.plan.deleting {
 		return strings.Join(append(lines, "", m.renderPlanDeleteConfirm("stage")), "\n"), "y confirm · n cancel"
 	}
 	return strings.Join(lines, "\n"), "↑↓ select · enter edit · n add · d del · esc"
 }
 
 func (m Model) renderPlanGates() (string, string) {
-	if m.planDrill {
-		return m.renderFieldList(gateFields(), m.plan.Gates[m.planGateIdx].Name)
+	if m.plan.drill {
+		return m.renderFieldList(gateFields(), m.plan.doc.Gates[m.plan.gateIdx].Name)
 	}
-	if m.planAdding {
+	if m.plan.adding {
 		return m.renderPlanAddForm("gate", "name", "command")
 	}
 	var lines []string
-	for i, g := range m.plan.Gates {
+	for i, g := range m.plan.doc.Gates {
 		name := fmt.Sprintf("%-10s", g.Name)
 		tier := fmt.Sprintf("%-5s", g.Tier)
 		cmd := truncate(g.Command, 36)
-		if i == m.planGateIdx {
+		if i == m.plan.gateIdx {
 			lines = append(lines, highlightBg.Render(fmt.Sprintf("  %s %s %s", name, tier, cmd)))
 			continue
 		}
 		lines = append(lines, "  "+accentStyle.Render(name)+" "+tierBadge(g.Tier)+strings.Repeat(" ", max(1, 6-lipgloss.Width(g.Tier)))+subtleStyle.Render(cmd))
 	}
-	if m.planDeleting {
+	if m.plan.deleting {
 		return strings.Join(append(lines, "", m.renderPlanDeleteConfirm("gate")), "\n"), "y confirm · n cancel"
 	}
 	return strings.Join(lines, "\n"), "↑↓ select · enter edit · n add · d del · esc"
@@ -817,14 +902,14 @@ func (m Model) renderPlanGates() (string, string) {
 // the cursor. Tab switches fields, enter submits, esc cancels — handled in handlePlanAddKey.
 func (m Model) renderPlanAddForm(kind, idLabel, valLabel string) (string, string) {
 	idCur, valCur := "", ""
-	if m.planAddField == 0 {
+	if m.plan.addField == 0 {
 		idCur = "▏"
 	} else {
 		valCur = "▏"
 	}
 	body := "  " + accentStyle.Render("+ new "+kind) + "\n\n" +
-		fmt.Sprintf("  %-9s %s%s", idLabel, textStyle.Render(m.planAddIdBuf), accentStyle.Render(idCur)) + "\n" +
-		fmt.Sprintf("  %-9s %s%s", valLabel, textStyle.Render(m.planAddValBuf), accentStyle.Render(valCur))
+		fmt.Sprintf("  %-9s %s%s", idLabel, textStyle.Render(m.plan.addIdBuf), accentStyle.Render(idCur)) + "\n" +
+		fmt.Sprintf("  %-9s %s%s", valLabel, textStyle.Render(m.plan.addValBuf), accentStyle.Render(valCur))
 	return body, "type · tab field · enter add · esc cancel"
 }
 
@@ -836,7 +921,7 @@ func (m Model) renderPlanDeleteConfirm(kind string) string {
 func (m Model) renderPlanSettings() (string, string) {
 	body, _ := m.renderFieldList(m.settingsFields(), "")
 	extra := fmt.Sprintf("\n\n  %s %s",
-		subtleStyle.Render("plan file:"), subtleStyle.Render(m.plan.PlanFile))
+		subtleStyle.Render("plan file:"), subtleStyle.Render(m.plan.doc.PlanFile))
 	return body + extra, "←→ section · ↑↓ select · enter edit · esc back"
 }
 
@@ -848,7 +933,7 @@ func (m Model) renderFieldList(fields []planField, ownerLabel string) (string, s
 	}
 	for i, f := range fields {
 		val := m.currentFieldValue(f.Field)
-		if m.planEditing && i == m.planFieldIdx {
+		if m.plan.editing && i == m.plan.fieldIdx {
 			lines = append(lines, "  "+m.renderFieldEditor(f))
 			continue
 		}
@@ -863,13 +948,13 @@ func (m Model) renderFieldList(fields []planField, ownerLabel string) (string, s
 			disp = textStyle.Render(disp)
 		}
 		row := fmt.Sprintf("  %-17s %s", f.Label, disp)
-		if i == m.planFieldIdx && !m.planEditing {
+		if i == m.plan.fieldIdx && !m.plan.editing {
 			row = highlightBg.Render(fmt.Sprintf("  %-17s %s", f.Label, shown))
 		}
 		lines = append(lines, row)
 	}
 	help := "↑↓ field · enter edit · esc back"
-	if m.planEditing {
+	if m.plan.editing {
 		f := m.currentField()
 		if f.Kind == fieldEnum {
 			help = "←→ cycle · enter save · esc cancel"
@@ -881,33 +966,33 @@ func (m Model) renderFieldList(fields []planField, ownerLabel string) (string, s
 }
 
 func (m Model) renderFieldEditor(f planField) string {
-	if m.planEnumCustom {
+	if m.plan.enumCustom {
 		return fmt.Sprintf("%-17s %s", f.Label,
-			accentStyle.Render(m.planEditBuf)+accentStyle.Render("▏")+subtleStyle.Render("  type · enter save · esc back"))
+			accentStyle.Render(m.plan.editBuf)+accentStyle.Render("▏")+subtleStyle.Render("  type · enter save · esc back"))
 	}
 	if f.Kind == fieldEnum {
 		opts := optionList(f)
 		sel := ""
-		if m.planEnumIdx < len(opts) {
-			sel = opts[m.planEnumIdx]
+		if m.plan.enumIdx < len(opts) {
+			sel = opts[m.plan.enumIdx]
 		}
 		carousel := accentStyle.Render("‹") + highlightBg.Render(" "+sel+" ") + accentStyle.Render("›")
-		pos := subtleStyle.Render(fmt.Sprintf(" (%d/%d)", m.planEnumIdx+1, len(opts)))
+		pos := subtleStyle.Render(fmt.Sprintf(" (%d/%d)", m.plan.enumIdx+1, len(opts)))
 		return fmt.Sprintf("%-17s %s%s", f.Label, carousel, pos)
 	}
-	return fmt.Sprintf("%-17s %s", f.Label, accentStyle.Render(m.planEditBuf)+accentStyle.Render("▏"))
+	return fmt.Sprintf("%-17s %s", f.Label, accentStyle.Render(m.plan.editBuf)+accentStyle.Render("▏"))
 }
 
 func (m Model) renderPlanImport() (string, string) {
-	if m.planImportResult != nil {
+	if m.plan.importResult != nil {
 		return m.renderImportDiff()
 	}
 	header := "  " + textStyle.Render("Import a structured plan/tracker doc into the graph.") + "\n" +
 		"  " + subtleStyle.Render("Path (relative to repo) or inline markdown — parsed with no model call.") + "\n\n"
-	input := "  " + subtleStyle.Render("source: ") + accentStyle.Render(m.planImportInput) + accentStyle.Render("▏")
+	input := "  " + subtleStyle.Render("source: ") + accentStyle.Render(m.plan.importInput) + accentStyle.Render("▏")
 	errLine := ""
-	if m.planImportErr != "" {
-		errLine = "\n\n  " + destructStyle.Render("✗ "+m.planImportErr)
+	if m.plan.importErr != "" {
+		errLine = "\n\n  " + destructStyle.Render("✗ "+m.plan.importErr)
 	}
 	hint := "\n\n  " + subtleStyle.Render("e.g. docs/PLAN.md")
 	return header + input + errLine + hint, "type path · enter preview diff · esc back"
@@ -916,24 +1001,24 @@ func (m Model) renderPlanImport() (string, string) {
 // renderPlanPrompt is the G1.2 AI-native editor: describe the change in plain English, the plan's
 // advisor model turns it into the same diff/confirm/apply flow the Import section uses.
 func (m Model) renderPlanPrompt() (string, string) {
-	if m.planImportResult != nil {
+	if m.plan.importResult != nil {
 		return m.renderImportDiff()
 	}
 	header := "  " + textStyle.Render("Change the plan by prompt — plain English in, a reviewable diff out.") + "\n" +
 		"  " + subtleStyle.Render("The advisor model interprets it; nothing applies until you confirm.") + "\n\n"
 
-	ed := m.planPromptEditor
+	ed := m.plan.promptEditor
 	if ed.Width == 0 {
 		ed = widgets.NewTextArea("", max(20, m.paneCols()-4), 5)
 	}
 	box := indent(ed.View(), "  ")
 
 	errLine := ""
-	if m.planImportErr != "" {
-		errLine = "\n\n  " + destructStyle.Render("✗ "+m.planImportErr)
+	if m.plan.importErr != "" {
+		errLine = "\n\n  " + destructStyle.Render("✗ "+m.plan.importErr)
 	}
 	busy := ""
-	if m.planImportBusy {
+	if m.plan.importBusy {
 		busy = "\n\n  " + warnStyle.Render("● consulting the advisor model…")
 	}
 	hint := "\n\n  " + subtleStyle.Render(`e.g. "add a lint gate that runs dotnet format" · "split S1 into two stages"`)
@@ -941,10 +1026,10 @@ func (m Model) renderPlanPrompt() (string, string) {
 }
 
 func (m Model) renderImportDiff() (string, string) {
-	d := m.planImportResult.Diff
+	d := m.plan.importResult.Diff
 	interpreted := ""
-	if m.planImportResult.Interpreter != nil && *m.planImportResult.Interpreter != "structured" {
-		interpreted = "  " + subtleStyle.Render("interpreted by ") + tealStyle.Render(*m.planImportResult.Interpreter) + "\n"
+	if m.plan.importResult.Interpreter != nil && *m.plan.importResult.Interpreter != "structured" {
+		interpreted = "  " + subtleStyle.Render("interpreted by ") + tealStyle.Render(*m.plan.importResult.Interpreter) + "\n"
 	}
 	var lines []string
 	if d.IsEmpty() {

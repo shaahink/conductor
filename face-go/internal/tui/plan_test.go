@@ -25,7 +25,7 @@ func openPlanEditor(t *testing.T) (Model, api.DataSource) {
 	}
 	tm, _ = m.Update(cmd()) // MsgPlanLoaded
 	m = asModel(tm)
-	if m.plan == nil {
+	if m.plan.doc == nil {
 		t.Fatal("plan should be loaded after the fetch cmd runs")
 	}
 	return m, src
@@ -33,7 +33,7 @@ func openPlanEditor(t *testing.T) (Model, api.DataSource) {
 
 func TestPlanEditStageEnumFieldRoundTrips(t *testing.T) {
 	m, src := openPlanEditor(t)
-	firstStage := m.plan.Stages[0].Id
+	firstStage := m.plan.doc.Stages[0].Id
 
 	// Drill into the first stage's fields, move to "kind" (title,model,persona,workflow,kind → index
 	// 4), begin editing.
@@ -45,7 +45,7 @@ func TestPlanEditStageEnumFieldRoundTrips(t *testing.T) {
 		t.Fatalf("expected to be on the kind field, got %q", got)
 	}
 	m = drive(m, "enter") // begin enum edit
-	if !m.planEditing {
+	if !m.plan.editing {
 		t.Fatal("expected to be editing the enum field")
 	}
 	m = drive(m, "right") // deliver -> review
@@ -74,15 +74,15 @@ func TestPlanTabCyclesAndImportPreviewApplies(t *testing.T) {
 	m = drive(m, "right")
 	m = drive(m, "right")
 	m = drive(m, "right")
-	if m.planTab != planTabImport {
-		t.Fatalf("expected Import section, got %v", m.planTab)
+	if m.plan.tab != planTabImport {
+		t.Fatalf("expected Import section, got %v", m.plan.tab)
 	}
 
 	for _, ch := range "docs/PLAN.md" {
 		m = drive(m, string(ch))
 	}
-	if m.planImportInput != "docs/PLAN.md" {
-		t.Fatalf("import source not accumulated: %q", m.planImportInput)
+	if m.plan.importInput != "docs/PLAN.md" {
+		t.Fatalf("import source not accumulated: %q", m.plan.importInput)
 	}
 
 	// enter → preview (apply=false). Demo returns a non-empty diff.
@@ -93,10 +93,10 @@ func TestPlanTabCyclesAndImportPreviewApplies(t *testing.T) {
 	}
 	tm, _ = m.Update(cmd())
 	m = asModel(tm)
-	if m.planImportResult == nil || m.planImportResult.Diff.IsEmpty() {
+	if m.plan.importResult == nil || m.plan.importResult.Diff.IsEmpty() {
 		t.Fatal("expected a non-empty diff preview")
 	}
-	if m.planImportResult.Applied {
+	if m.plan.importResult.Applied {
 		t.Fatal("preview must not apply")
 	}
 
@@ -121,15 +121,15 @@ func TestPlanPromptSendsProseAndAppliesTheDiff(t *testing.T) {
 	for range 4 { // Stages → Gates → Settings → Import → Prompt
 		m = drive(m, "right")
 	}
-	if m.planTab != planTabPrompt {
-		t.Fatalf("expected Prompt section, got %v", m.planTab)
+	if m.plan.tab != planTabPrompt {
+		t.Fatalf("expected Prompt section, got %v", m.plan.tab)
 	}
 
 	for _, ch := range "add a lint gate" {
 		m = drive(m, string(ch))
 	}
-	if m.planPromptEditor.Value() != "add a lint gate" {
-		t.Fatalf("prompt not accumulated: %q", m.planPromptEditor.Value())
+	if m.plan.promptEditor.Value() != "add a lint gate" {
+		t.Fatalf("prompt not accumulated: %q", m.plan.promptEditor.Value())
 	}
 
 	tm, cmd := m.handlePlanKey("ctrl+s")
@@ -137,18 +137,18 @@ func TestPlanPromptSendsProseAndAppliesTheDiff(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("ctrl+s should send the prompt to the advisor")
 	}
-	if !m.planImportBusy {
+	if !m.plan.importBusy {
 		t.Error("a prompt in flight should mark the import busy")
 	}
 	tm, _ = m.Update(cmd()) // MsgPlanImported (preview)
 	m = asModel(tm)
-	if m.planImportResult == nil || m.planImportResult.Diff.IsEmpty() {
+	if m.plan.importResult == nil || m.plan.importResult.Diff.IsEmpty() {
 		t.Fatal("expected a non-empty diff from the prompt")
 	}
-	if m.planImportResult.Interpreter == nil || *m.planImportResult.Interpreter == "structured" {
+	if m.plan.importResult.Interpreter == nil || *m.plan.importResult.Interpreter == "structured" {
 		t.Error("a prose prompt should surface the interpreting model")
 	}
-	if m.planImportBusy {
+	if m.plan.importBusy {
 		t.Error("the busy flag should clear when the diff lands")
 	}
 
@@ -176,7 +176,7 @@ func TestPlanPromptEmptyOrBusyDoesNotSend(t *testing.T) {
 	for _, ch := range "do things" {
 		m = drive(m, string(ch))
 	}
-	m.planImportBusy = true
+	m.plan.importBusy = true
 	if _, cmd := m.handlePlanKey("ctrl+s"); cmd != nil {
 		t.Error("a prompt already in flight must not be re-sent")
 	}
@@ -185,11 +185,11 @@ func TestPlanPromptEmptyOrBusyDoesNotSend(t *testing.T) {
 func TestPlanEscBacksOutOneLevel(t *testing.T) {
 	m, _ := openPlanEditor(t)
 	m = drive(m, "enter") // drill into stage fields
-	if !m.planDrill {
+	if !m.plan.drill {
 		t.Fatal("expected to be drilled in")
 	}
 	m = drive(m, "esc") // back to stage list, not closed
-	if m.planDrill {
+	if m.plan.drill {
 		t.Error("esc should leave the field view")
 	}
 	if m.tab != TabPlan {
@@ -203,10 +203,10 @@ func TestPlanEscBacksOutOneLevel(t *testing.T) {
 
 func TestPlanAddStageRoundTrips(t *testing.T) {
 	m, src := openPlanEditor(t)
-	before := len(m.plan.Stages)
+	before := len(m.plan.doc.Stages)
 
 	m = drive(m, "n") // open the add-stage form (n, not a, to dodge the Agent-tab mnemonic)
-	if !m.planAdding {
+	if !m.plan.adding {
 		t.Fatal("n should open the add-stage form")
 	}
 	for _, ch := range "Z9" {
@@ -222,7 +222,7 @@ func TestPlanAddStageRoundTrips(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("submitting the add form should post an edit")
 	}
-	if m.planAdding {
+	if m.plan.adding {
 		t.Error("the add form should close on submit")
 	}
 	tm, _ = m.Update(cmd())
@@ -249,14 +249,14 @@ func TestPlanAddStageRoundTrips(t *testing.T) {
 func TestPlanDeleteGateRoundTrips(t *testing.T) {
 	m, src := openPlanEditor(t)
 	m = drive(m, "right") // → Gates section
-	if m.planTab != planTabGates {
-		t.Fatalf("expected Gates section, got %v", m.planTab)
+	if m.plan.tab != planTabGates {
+		t.Fatalf("expected Gates section, got %v", m.plan.tab)
 	}
-	target := m.plan.Gates[m.planGateIdx].Name
-	before := len(m.plan.Gates)
+	target := m.plan.doc.Gates[m.plan.gateIdx].Name
+	before := len(m.plan.doc.Gates)
 
 	m = drive(m, "x") // open the delete confirm (x, not d — d is the Dev tab mnemonic since U2.2)
-	if !m.planDeleting {
+	if !m.plan.deleting {
 		t.Fatal("x should open the delete confirm")
 	}
 	tm, cmd := m.handlePlanKey("y")
@@ -281,7 +281,7 @@ func TestPlanDeleteGateRoundTrips(t *testing.T) {
 func TestPlanDeleteCancelDoesNotPost(t *testing.T) {
 	m, _ := openPlanEditor(t)
 	m = drive(m, "x") // confirm prompt
-	if !m.planDeleting {
+	if !m.plan.deleting {
 		t.Fatal("x should open the delete confirm")
 	}
 	tm, cmd := m.handlePlanKey("n") // n = no
@@ -289,7 +289,7 @@ func TestPlanDeleteCancelDoesNotPost(t *testing.T) {
 	if cmd != nil {
 		t.Error("cancelling the delete must not post an edit")
 	}
-	if m.planDeleting {
+	if m.plan.deleting {
 		t.Error("n should close the confirm prompt")
 	}
 }
@@ -301,8 +301,8 @@ func TestPlanSettingsLimitsFieldRoundTrips(t *testing.T) {
 
 	m = drive(m, "right") // Gates
 	m = drive(m, "right") // Settings
-	if m.planTab != planTabSettings {
-		t.Fatalf("expected Settings section, got %v", m.planTab)
+	if m.plan.tab != planTabSettings {
+		t.Fatalf("expected Settings section, got %v", m.plan.tab)
 	}
 	for range 5 { // name, gatePolicy, defaultWorkflow, qa, verifierThreshold → maxSessions
 		m = drive(m, "down")
@@ -313,7 +313,7 @@ func TestPlanSettingsLimitsFieldRoundTrips(t *testing.T) {
 	}
 
 	m = drive(m, "enter")
-	if !m.planEditing {
+	if !m.plan.editing {
 		t.Fatal("expected to be editing maxSessions")
 	}
 	m = drive(m, "5")
@@ -399,7 +399,7 @@ func TestPlanSettingsQaDialRoundTrips(t *testing.T) {
 // P2: the per-stage QA dial rides the stage target (field qamode) and round-trips the source.
 func TestPlanStageQaDialRoundTrips(t *testing.T) {
 	m, src := openPlanEditor(t)
-	firstStage := m.plan.Stages[0].Id
+	firstStage := m.plan.doc.Stages[0].Id
 
 	m = drive(m, "enter") // drill into the first stage
 	for range 5 {         // title, model, persona, workflow, kind → qa
@@ -495,7 +495,7 @@ func TestPlanSettingsSessionRolloverRoundTrips(t *testing.T) {
 
 func TestPlanSettingsRolloverThisRunPostsAControlVerbNotAPlanEdit(t *testing.T) {
 	m, src := openPlanEditor(t)
-	versionBefore := m.plan.PlanVersion
+	versionBefore := m.plan.doc.PlanVersion
 
 	m = drive(m, "right") // Gates
 	m = drive(m, "right") // Settings

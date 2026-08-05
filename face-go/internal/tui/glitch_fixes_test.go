@@ -108,7 +108,7 @@ func TestKanbanEmptyStateSaysWhy(t *testing.T) {
 
 	t.Run("fetch failed", func(t *testing.T) {
 		m := base()
-		m.tasksErr = "Get \"http://127.0.0.1:4317/tasks\": connection refused"
+		m.kanban.tasksErr = "Get \"http://127.0.0.1:4317/tasks\": connection refused"
 		got := stripANSI(m.renderKanbanEmptyState())
 		if !strings.Contains(got, "cannot reach /tasks") {
 			t.Errorf("a failed fetch must say so in-pane, got %q", got)
@@ -120,7 +120,7 @@ func TestKanbanEmptyStateSaysWhy(t *testing.T) {
 
 	t.Run("genuinely empty", func(t *testing.T) {
 		m := base()
-		m.tasksLoaded = true
+		m.kanban.tasksLoaded = true
 		m.data.Connection.Connected = true
 		got := stripANSI(m.renderKanbanEmptyState())
 		if strings.Contains(got, "cannot reach") || strings.Contains(got, "Loading") {
@@ -145,7 +145,7 @@ func TestFailedTaskFetchIsReported(t *testing.T) {
 
 	tm, _ = tm.Update(MsgTasksUpdated{Err: errors.New("connection refused")})
 	m := asModel(tm)
-	if m.tasksErr == "" {
+	if m.kanban.tasksErr == "" {
 		t.Error("a failed /tasks fetch left no error on the model — the pane cannot report it")
 	}
 	// A failed poll must not blank a board that is already on screen.
@@ -155,7 +155,7 @@ func TestFailedTaskFetchIsReported(t *testing.T) {
 
 	// …and a recovered fetch clears the error rather than leaving it stuck.
 	tm, _ = tm.Update(MsgTasksUpdated{Tasks: &api.TasksDto{Tasks: kanbanFixtureTasks()}})
-	if asModel(tm).tasksErr != "" {
+	if asModel(tm).kanban.tasksErr != "" {
 		t.Error("the error survived a successful fetch")
 	}
 }

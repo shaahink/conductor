@@ -179,7 +179,7 @@ type MsgTelegramTokenSaved struct {
 }
 
 // MsgTelegramSettingsSaved wraps a /plan/edit (target "telegram") response with its own message
-// type — reusing MsgPlanEdited would route the result into the Plan tab's state (m.planStatus)
+// type — reusing MsgPlanEdited would route the result into the Plan tab's state (m.plan.status)
 // instead of the Telegram tab's, even though both endpoints are the same POST /plan/edit call.
 type MsgTelegramSettingsSaved struct {
 	Result *api.PlanMutationResultDto

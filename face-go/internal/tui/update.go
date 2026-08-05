@@ -7,7 +7,6 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"conductor-face-go/internal/api"
 	"conductor-face-go/internal/templates"
 	"conductor-face-go/internal/widgets"
 )
@@ -97,10 +96,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// and let the pane say the feed went away. Only the error text is replaced every poll, so a
 		// recovered fetch clears it.
 		if msg.Err != nil {
-			m.tasksErr = msg.Err.Error()
+			m.kanban.tasksErr = msg.Err.Error()
 		} else if msg.Tasks != nil {
-			m.tasksErr = ""
-			m.tasksLoaded = true
+			m.kanban.tasksErr = ""
+			m.kanban.tasksLoaded = true
 			m.data.Tasks = msg.Tasks.Tasks
 			m.syncSidebar()
 		}
@@ -179,11 +178,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			kind, text = widgets.ToastError, fmt.Sprintf("%s rejected: %s", msg.Verb, reason)
 		}
-		if m.tab == TabPlan && strings.HasPrefix(m.planStatus, "sending") { // P5: the rollover (run) row
+		if m.tab == TabPlan && strings.HasPrefix(m.plan.status, "sending") { // P5: the rollover (run) row
 			if msg.Success {
-				m.planStatus = "✓ " + msg.Verb + " sent (this run only — plan file untouched)"
+				m.plan.status = "✓ " + msg.Verb + " sent (this run only — plan file untouched)"
 			} else {
-				m.planStatus = "✗ " + text
+				m.plan.status = "✗ " + text
 			}
 		}
 		return m, m.addToast(text, kind)
@@ -193,148 +192,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if !msg.Success {
 			kind, text = widgets.ToastError, "Injection failed: "+msg.Error
 		}
-		if m.kanbanDetail { // P3 hand-off: reflect the result in the card detail's status line too
+		if m.kanban.detail { // P3 hand-off: reflect the result in the card detail's status line too
 			if msg.Success {
-				m.kanbanStatus = "✓ hand-off injected (next session boundary)"
+				m.kanban.status = "✓ hand-off injected (next session boundary)"
 			} else {
-				m.kanbanStatus = "✗ " + msg.Error
+				m.kanban.status = "✗ " + msg.Error
 			}
 		}
 		return m, m.addToast(text, kind)
-
-	case MsgPlanLoaded:
-		if msg.Err != "" {
-			m.planStatus = "load failed: " + msg.Err
-		} else {
-			m.plan = msg.Plan
-		}
-		return m, nil
-
-	case MsgPlanEdited:
-		if msg.Err != "" {
-			m.planStatus = "✗ " + msg.Err
-			return m, nil
-		}
-		if msg.Result != nil && !msg.Result.Ok {
-			reason := "rejected"
-			if msg.Result.Error != nil {
-				reason = *msg.Result.Error
-			}
-			m.planStatus = "✗ " + reason
-			return m, nil
-		}
-		m.planStatus = fmt.Sprintf("✓ saved — plan v%d", planVersionOf(msg.Result))
-		m.planEditing = false
-		return m, m.cmdFetchPlan()
-
-	case MsgPlanImported:
-		m.planImportBusy = false
-		if msg.Err != "" {
-			m.planImportErr, m.planImportResult = msg.Err, nil
-			m.planStatus = ""
-			return m, nil
-		}
-		m.planImportErr = ""
-		m.planImportResult = msg.Result
-		if msg.Result != nil && !msg.Result.Ok && msg.Result.Error != nil {
-			m.planImportErr, m.planImportResult = *msg.Result.Error, nil
-			m.planStatus = ""
-			return m, nil
-		}
-		if msg.Result != nil && msg.Result.Applied {
-			m.planStatus = fmt.Sprintf("✓ imported — plan v%d", msg.Result.PlanVersion)
-			m.planImportResult = nil
-			return m, m.cmdFetchPlan()
-		}
-		m.planStatus = ""
-		return m, nil
-
-	case MsgTaskWritten:
-		if msg.Err != "" {
-			m.kanbanStatus = "✗ " + msg.Err
-			return m, nil
-		}
-		if msg.Result != nil && !msg.Result.Ok {
-			reason := "rejected"
-			if msg.Result.Error != nil {
-				reason = *msg.Result.Error
-			}
-			m.kanbanStatus = "✗ " + reason
-			return m, nil
-		}
-		m.kanbanStatus = "✓ " + msg.Verb
-		if msg.Verb == "add" && msg.Result != nil && msg.Result.TaskId != nil {
-			m.kanbanSelId = *msg.Result.TaskId // focus follows the new card
-		}
-		// W4.3: a confirmed split adds its children one at a time, each through this same path —
-		// so a rejected child is visible as a rejected add, not swallowed by a batch.
-		if msg.Verb == "add" && len(m.kanbanSplitPending) > 0 {
-			next := m.kanbanSplitPending[0]
-			m.kanbanSplitPending = m.kanbanSplitPending[1:]
-			checkpointId := ""
-			if msg.Result != nil && msg.Result.CheckpointId != nil {
-				checkpointId = *msg.Result.CheckpointId
-			}
-			return m, m.cmdPostTaskAdd(api.TaskAddRequestDto{CheckpointId: checkpointId, Title: next.Title})
-		}
-		// Re-fetch so the board shows what the engine actually recorded. A detail edit (P3) also
-		// recomposes the open card's blocks — the edited block must visibly change.
-		if msg.Verb == "edit" && m.kanbanDetail && m.kanbanBlocks != nil {
-			return m, tea.Batch(m.cmdFetchTasks(), m.cmdFetchPromptBlocks(m.kanbanBlocks.TaskId))
-		}
-		return m, m.cmdFetchTasks()
-
-	case MsgPromptBlocks:
-		if msg.Err != "" {
-			m.kanbanBlocksErr = msg.Err
-			return m, nil
-		}
-		if msg.Blocks != nil && !msg.Blocks.Ok {
-			if msg.Blocks.Error != nil {
-				m.kanbanBlocksErr = *msg.Blocks.Error
-			} else {
-				m.kanbanBlocksErr = "could not load the card"
-			}
-			return m, nil
-		}
-		m.kanbanBlocks, m.kanbanBlocksErr = msg.Blocks, ""
-		return m, nil
-
-	case MsgTaskSplit:
-		m.kanbanSplitting = false
-		if msg.Err != "" {
-			m.kanbanStatus = "✗ " + msg.Err
-			return m, nil
-		}
-		if msg.Result != nil && !msg.Result.Ok {
-			reason := "split rejected"
-			if msg.Result.Error != nil {
-				reason = *msg.Result.Error
-			}
-			m.kanbanStatus = "✗ " + reason
-			return m, nil
-		}
-		m.kanbanSplit = msg.Result // proposal only — enter adds the children, esc discards
-		m.kanbanStatus = ""
-		return m, nil
-
-	case MsgTaskRefined:
-		m.kanbanRefining = false
-		if msg.Err != "" {
-			m.kanbanStatus = "✗ " + msg.Err
-			return m, nil
-		}
-		if msg.Result != nil && !msg.Result.Ok {
-			reason := "refine rejected"
-			if msg.Result.Error != nil {
-				reason = *msg.Result.Error
-			}
-			m.kanbanStatus = "✗ " + reason
-			return m, nil
-		}
-		m.kanbanProposal = msg.Result // proposal only — enter applies, esc discards
-		m.kanbanStatus = ""
-		return m, nil
 
 	default:
 		// K6.3: everything the shell does not own is offered to the tabs. Each tab handles the
@@ -362,9 +227,11 @@ var tabUpdaters = []func(Model, tea.Msg) (Model, tea.Cmd, bool){
 	Model.updateHistory,
 	Model.updateProcesses,
 	Model.updateTemplates,
+	Model.updatePlan,
 	Model.updateReport,
 	Model.updateKnowledge,
 	Model.updateTelegram,
+	Model.updateKanban,
 }
 
 // updateTabs offers a message to each tab model in turn and stops at the one that owns it.
@@ -572,7 +439,7 @@ func (m Model) openTab(t MainTab) (tea.Model, tea.Cmd) {
 		m.tmpl.selected, m.tmpl.mode, m.tmpl.previewOn = 0, PromptList, false
 		return m, nil
 	case TabPlan:
-		if m.plan == nil {
+		if m.plan.doc == nil {
 			return m, m.cmdFetchPlan()
 		}
 		return m, nil
@@ -589,7 +456,7 @@ func (m Model) openTab(t MainTab) (tea.Model, tea.Cmd) {
 		m.telegram.fieldIdx, m.telegram.editing, m.telegram.statusLine = 0, false, ""
 		return m, m.cmdFetchTelegramStatus()
 	case TabKanban:
-		m.kanbanAdding, m.kanbanStatus = false, ""
+		m.kanban.adding, m.kanban.status = false, ""
 		return m, m.cmdFetchTasks()
 	}
 	return m, nil
@@ -601,8 +468,8 @@ func (m Model) tabHandlesAllKeys() bool {
 	case TabTemplates:
 		return m.tmpl.mode == PromptEdit || m.tmpl.previewOn
 	case TabPlan:
-		return m.planDrill || m.planEditing || m.planAdding || m.planDeleting || m.planImportResult != nil ||
-			m.planTab == planTabImport || m.planTab == planTabPrompt
+		return m.plan.drill || m.plan.editing || m.plan.adding || m.plan.deleting || m.plan.importResult != nil ||
+			m.plan.tab == planTabImport || m.plan.tab == planTabPrompt
 	case TabProcesses:
 		return m.processes.killing
 	case TabTelegram:
@@ -611,7 +478,7 @@ func (m Model) tabHandlesAllKeys() bool {
 		return m.knowledge.mode != knowledgeBrowse
 	case TabKanban:
 		// The card detail (P3) owns t/c/a/h + its editors; the board itself only the add form.
-		return m.kanbanAdding || m.kanbanDetail
+		return m.kanban.adding || m.kanban.detail
 	}
 	return false
 }

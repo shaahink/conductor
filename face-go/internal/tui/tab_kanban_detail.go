@@ -18,45 +18,45 @@ import (
 )
 
 func (m *Model) kanbanOpenDetail(taskId string) tea.Cmd {
-	m.kanbanDetail = true
-	m.kanbanBlocks = nil
-	m.kanbanBlocksErr = ""
-	m.kanbanProposal = nil
-	m.kanbanRefining = false
-	m.kanbanSplit = nil
-	m.kanbanSplitting = false
-	m.kanbanSplitPending = nil
-	m.kanbanHandConfirm = false
-	m.kanbanEditingTitle = false
-	m.kanbanEditingCtx = false
-	m.kanbanEditingPaths = false
-	m.kanbanStatus = ""
+	m.kanban.detail = true
+	m.kanban.blocks = nil
+	m.kanban.blocksErr = ""
+	m.kanban.proposal = nil
+	m.kanban.refining = false
+	m.kanban.split = nil
+	m.kanban.splitting = false
+	m.kanban.splitPending = nil
+	m.kanban.handConfirm = false
+	m.kanban.editingTitle = false
+	m.kanban.editingCtx = false
+	m.kanban.editingPaths = false
+	m.kanban.status = ""
 	return m.cmdFetchPromptBlocks(taskId)
 }
 
 func (m *Model) kanbanCloseDetail() {
-	m.kanbanDetail = false
-	m.kanbanBlocks = nil
-	m.kanbanBlocksErr = ""
-	m.kanbanProposal = nil
-	m.kanbanRefining = false
-	m.kanbanSplit = nil
-	m.kanbanSplitting = false
-	m.kanbanSplitPending = nil
-	m.kanbanHandConfirm = false
-	m.kanbanEditingTitle = false
-	m.kanbanEditingCtx = false
-	m.kanbanEditingPaths = false
+	m.kanban.detail = false
+	m.kanban.blocks = nil
+	m.kanban.blocksErr = ""
+	m.kanban.proposal = nil
+	m.kanban.refining = false
+	m.kanban.split = nil
+	m.kanban.splitting = false
+	m.kanban.splitPending = nil
+	m.kanban.handConfirm = false
+	m.kanban.editingTitle = false
+	m.kanban.editingCtx = false
+	m.kanban.editingPaths = false
 }
 
 // kanbanDetailTask resolves the open card from the board data (title/context may be fresher there
 // than in the blocks snapshot after an edit round-trip).
 func (m Model) kanbanDetailTask() *api.TaskDto {
-	if m.kanbanBlocks == nil {
+	if m.kanban.blocks == nil {
 		return nil
 	}
 	for i := range m.data.Tasks {
-		if m.data.Tasks[i].TaskId == m.kanbanBlocks.TaskId {
+		if m.data.Tasks[i].TaskId == m.kanban.blocks.TaskId {
 			return &m.data.Tasks[i]
 		}
 	}
@@ -64,12 +64,12 @@ func (m Model) kanbanDetailTask() *api.TaskDto {
 }
 
 func (m Model) kanbanBlock(kind string) *api.PromptBlockDto {
-	if m.kanbanBlocks == nil {
+	if m.kanban.blocks == nil {
 		return nil
 	}
-	for i := range m.kanbanBlocks.Blocks {
-		if m.kanbanBlocks.Blocks[i].Kind == kind {
-			return &m.kanbanBlocks.Blocks[i]
+	for i := range m.kanban.blocks.Blocks {
+		if m.kanban.blocks.Blocks[i].Kind == kind {
+			return &m.kanban.blocks.Blocks[i]
 		}
 	}
 	return nil
@@ -77,22 +77,22 @@ func (m Model) kanbanBlock(kind string) *api.PromptBlockDto {
 
 func (m *Model) handleKanbanDetailKey(key string) (tea.Model, tea.Cmd) {
 	// Modal-ish sub-states first: editors, proposal, hand-off confirm.
-	if m.kanbanEditingTitle {
+	if m.kanban.editingTitle {
 		return m.handleKanbanTitleKey(key)
 	}
-	if m.kanbanEditingCtx {
+	if m.kanban.editingCtx {
 		return m.handleKanbanCtxKey(key)
 	}
-	if m.kanbanEditingPaths {
+	if m.kanban.editingPaths {
 		return m.handleKanbanPathsKey(key)
 	}
-	if m.kanbanProposal != nil {
+	if m.kanban.proposal != nil {
 		return m.handleKanbanProposalKey(key)
 	}
-	if m.kanbanSplit != nil {
+	if m.kanban.split != nil {
 		return m.handleKanbanSplitKey(key)
 	}
-	if m.kanbanHandConfirm {
+	if m.kanban.handConfirm {
 		return m.handleKanbanHandKey(key)
 	}
 
@@ -103,25 +103,25 @@ func (m *Model) handleKanbanDetailKey(key string) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "t":
 		if task != nil {
-			m.kanbanEditingTitle = true
-			m.kanbanTitleBuf = task.Title
-			m.kanbanStatus = ""
+			m.kanban.editingTitle = true
+			m.kanban.titleBuf = task.Title
+			m.kanban.status = ""
 		}
 		return m, nil
 	case "c":
 		if task != nil {
-			m.kanbanEditingCtx = true
+			m.kanban.editingCtx = true
 			w := max(10, m.paneCols()-8)
-			m.kanbanCtxEditor = widgets.NewTextArea(task.Context, w, max(3, min(8, m.paneRows()-6)))
-			m.kanbanStatus = ""
+			m.kanban.ctxEditor = widgets.NewTextArea(task.Context, w, max(3, min(8, m.paneRows()-6)))
+			m.kanban.status = ""
 		}
 		return m, nil
 	case "p":
 		// PF3: edit the card's declared paths — one line, comma-separated; empty clears.
 		if task != nil {
-			m.kanbanEditingPaths = true
-			m.kanbanPathsBuf = strings.Join(task.Paths, ", ")
-			m.kanbanStatus = ""
+			m.kanban.editingPaths = true
+			m.kanban.pathsBuf = strings.Join(task.Paths, ", ")
+			m.kanban.status = ""
 		}
 		return m, nil
 	case "q":
@@ -129,29 +129,29 @@ func (m *Model) handleKanbanDetailKey(key string) (tea.Model, tea.Cmd) {
 		// so a cycle beats a text field; it saves through the same structured edit as everything else.
 		if task != nil {
 			next := nextQa(task.Qa)
-			m.kanbanStatus = "qa: " + qaLabel(next) + "…"
+			m.kanban.status = "qa: " + qaLabel(next) + "…"
 			return m, m.cmdPostTaskEdit(api.TaskEditRequestDto{TaskId: task.TaskId, Qa: next})
 		}
 		return m, nil
 	case "a":
-		if task != nil && !m.kanbanRefining {
-			m.kanbanRefining = true
-			m.kanbanStatus = "asking the advisor…"
+		if task != nil && !m.kanban.refining {
+			m.kanban.refining = true
+			m.kanban.status = "asking the advisor…"
 			return m, m.cmdPostTaskRefine(api.TaskRefineRequestDto{TaskId: task.TaskId})
 		}
 		return m, nil
 	case "s":
 		// W4.3: ask the advisor to break this card into children. Proposal only.
-		if task != nil && !m.kanbanSplitting {
-			m.kanbanSplitting = true
-			m.kanbanStatus = "asking the advisor to split it…"
+		if task != nil && !m.kanban.splitting {
+			m.kanban.splitting = true
+			m.kanban.status = "asking the advisor to split it…"
 			return m, m.cmdPostTaskSplit(api.TaskSplitRequestDto{TaskId: task.TaskId})
 		}
 		return m, nil
 	case "h":
 		if task != nil {
-			m.kanbanHandConfirm = true
-			m.kanbanStatus = ""
+			m.kanban.handConfirm = true
+			m.kanban.status = ""
 		}
 		return m, nil
 	}
@@ -161,23 +161,23 @@ func (m *Model) handleKanbanDetailKey(key string) (tea.Model, tea.Cmd) {
 func (m *Model) handleKanbanTitleKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
 	case "esc":
-		m.kanbanEditingTitle = false
+		m.kanban.editingTitle = false
 		return m, nil
 	case "enter":
-		title := strings.TrimSpace(m.kanbanTitleBuf)
+		title := strings.TrimSpace(m.kanban.titleBuf)
 		if title == "" {
 			return m, nil // a card must stay nameable — stay in the editor
 		}
-		m.kanbanEditingTitle = false
-		m.kanbanStatus = "saving…"
-		return m, m.cmdPostTaskEdit(api.TaskEditRequestDto{TaskId: m.kanbanBlocks.TaskId, Title: &title})
+		m.kanban.editingTitle = false
+		m.kanban.status = "saving…"
+		return m, m.cmdPostTaskEdit(api.TaskEditRequestDto{TaskId: m.kanban.blocks.TaskId, Title: &title})
 	case "backspace":
-		if len(m.kanbanTitleBuf) > 0 {
-			m.kanbanTitleBuf = m.kanbanTitleBuf[:len(m.kanbanTitleBuf)-1]
+		if len(m.kanban.titleBuf) > 0 {
+			m.kanban.titleBuf = m.kanban.titleBuf[:len(m.kanban.titleBuf)-1]
 		}
 	default:
 		if ch, ok := typedChar(key); ok {
-			m.kanbanTitleBuf += ch
+			m.kanban.titleBuf += ch
 		}
 	}
 	return m, nil
@@ -186,15 +186,15 @@ func (m *Model) handleKanbanTitleKey(key string) (tea.Model, tea.Cmd) {
 func (m *Model) handleKanbanCtxKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
 	case "esc":
-		m.kanbanEditingCtx = false
+		m.kanban.editingCtx = false
 		return m, nil
 	case "ctrl+s":
-		ctx := m.kanbanCtxEditor.Value()
-		m.kanbanEditingCtx = false
-		m.kanbanStatus = "saving…"
-		return m, m.cmdPostTaskEdit(api.TaskEditRequestDto{TaskId: m.kanbanBlocks.TaskId, Context: &ctx})
+		ctx := m.kanban.ctxEditor.Value()
+		m.kanban.editingCtx = false
+		m.kanban.status = "saving…"
+		return m, m.cmdPostTaskEdit(api.TaskEditRequestDto{TaskId: m.kanban.blocks.TaskId, Context: &ctx})
 	default:
-		m.kanbanCtxEditor = m.kanbanCtxEditor.Update(key)
+		m.kanban.ctxEditor = m.kanban.ctxEditor.Update(key)
 	}
 	return m, nil
 }
@@ -204,25 +204,25 @@ func (m *Model) handleKanbanCtxKey(key string) (tea.Model, tea.Cmd) {
 func (m *Model) handleKanbanPathsKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
 	case "esc":
-		m.kanbanEditingPaths = false
+		m.kanban.editingPaths = false
 		return m, nil
 	case "enter":
-		m.kanbanEditingPaths = false
+		m.kanban.editingPaths = false
 		paths := []string{}
-		for _, p := range strings.Split(m.kanbanPathsBuf, ",") {
+		for _, p := range strings.Split(m.kanban.pathsBuf, ",") {
 			if p = strings.TrimSpace(p); p != "" {
 				paths = append(paths, p)
 			}
 		}
-		m.kanbanStatus = "saving…"
-		return m, m.cmdPostTaskEdit(api.TaskEditRequestDto{TaskId: m.kanbanBlocks.TaskId, Paths: paths})
+		m.kanban.status = "saving…"
+		return m, m.cmdPostTaskEdit(api.TaskEditRequestDto{TaskId: m.kanban.blocks.TaskId, Paths: paths})
 	case "backspace":
-		if len(m.kanbanPathsBuf) > 0 {
-			m.kanbanPathsBuf = m.kanbanPathsBuf[:len(m.kanbanPathsBuf)-1]
+		if len(m.kanban.pathsBuf) > 0 {
+			m.kanban.pathsBuf = m.kanban.pathsBuf[:len(m.kanban.pathsBuf)-1]
 		}
 	default:
 		if ch, ok := typedChar(key); ok {
-			m.kanbanPathsBuf += ch
+			m.kanban.pathsBuf += ch
 		}
 	}
 	return m, nil
@@ -234,8 +234,8 @@ func (m *Model) handleKanbanPathsKey(key string) (tea.Model, tea.Cmd) {
 func (m *Model) handleKanbanSplitKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
 	case "enter":
-		p := m.kanbanSplit
-		m.kanbanSplit = nil
+		p := m.kanban.split
+		m.kanban.split = nil
 		if p == nil || len(p.Subtasks) == 0 {
 			return m, nil
 		}
@@ -243,12 +243,12 @@ func (m *Model) handleKanbanSplitKey(key string) (tea.Model, tea.Cmd) {
 		if p.CheckpointId != nil {
 			checkpointId = *p.CheckpointId
 		}
-		m.kanbanSplitPending = p.Subtasks[1:]
-		m.kanbanStatus = fmt.Sprintf("adding %d subtask(s)…", len(p.Subtasks))
+		m.kanban.splitPending = p.Subtasks[1:]
+		m.kanban.status = fmt.Sprintf("adding %d subtask(s)…", len(p.Subtasks))
 		return m, m.cmdPostTaskAdd(api.TaskAddRequestDto{CheckpointId: checkpointId, Title: p.Subtasks[0].Title})
 	case "esc":
-		m.kanbanSplit = nil
-		m.kanbanStatus = "split discarded"
+		m.kanban.split = nil
+		m.kanban.status = "split discarded"
 		return m, nil
 	}
 	return m, nil
@@ -257,14 +257,14 @@ func (m *Model) handleKanbanSplitKey(key string) (tea.Model, tea.Cmd) {
 func (m *Model) handleKanbanProposalKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
 	case "enter":
-		p := m.kanbanProposal
-		m.kanbanProposal = nil
-		m.kanbanStatus = "applying the proposal…"
+		p := m.kanban.proposal
+		m.kanban.proposal = nil
+		m.kanban.status = "applying the proposal…"
 		// The confirm step: the proposal lands through the same structured edit as a manual one.
-		return m, m.cmdPostTaskEdit(api.TaskEditRequestDto{TaskId: m.kanbanBlocks.TaskId, Title: p.Title, Context: p.Context})
+		return m, m.cmdPostTaskEdit(api.TaskEditRequestDto{TaskId: m.kanban.blocks.TaskId, Title: p.Title, Context: p.Context})
 	case "esc":
-		m.kanbanProposal = nil
-		m.kanbanStatus = "proposal discarded"
+		m.kanban.proposal = nil
+		m.kanban.status = "proposal discarded"
 		return m, nil
 	}
 	return m, nil
@@ -273,7 +273,7 @@ func (m *Model) handleKanbanProposalKey(key string) (tea.Model, tea.Cmd) {
 func (m *Model) handleKanbanHandKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
 	case "y", "enter":
-		m.kanbanHandConfirm = false
+		m.kanban.handConfirm = false
 		task := m.kanbanDetailTask()
 		if task == nil {
 			return m, nil
@@ -282,10 +282,10 @@ func (m *Model) handleKanbanHandKey(key string) (tea.Model, tea.Cmd) {
 		if strings.TrimSpace(task.Context) != "" {
 			content += " Context: " + strings.TrimSpace(task.Context)
 		}
-		m.kanbanStatus = "injecting hand-off…"
-		return m, m.cmdPostInject(api.InjectRequestDto{Content: content, StageId: m.kanbanBlocks.StageId})
+		m.kanban.status = "injecting hand-off…"
+		return m, m.cmdPostInject(api.InjectRequestDto{Content: content, StageId: m.kanban.blocks.StageId})
 	case "n", "esc":
-		m.kanbanHandConfirm = false
+		m.kanban.handConfirm = false
 		return m, nil
 	}
 	return m, nil
@@ -294,19 +294,19 @@ func (m *Model) handleKanbanHandKey(key string) (tea.Model, tea.Cmd) {
 // --- rendering ---
 
 func (m Model) renderKanbanDetailPane() (string, string) {
-	if m.kanbanBlocksErr != "" {
-		return destructStyle.Render("✗ "+m.kanbanBlocksErr) + m.kanbanStatusLine(), "esc back"
+	if m.kanban.blocksErr != "" {
+		return destructStyle.Render("✗ "+m.kanban.blocksErr) + m.kanbanStatusLine(), "esc back"
 	}
-	if m.kanbanBlocks == nil {
+	if m.kanban.blocks == nil {
 		return subtleStyle.Render("loading card…"), "esc back"
 	}
 
 	var b strings.Builder
-	head := fmt.Sprintf("%s · %s · stage %s", m.kanbanBlocks.TaskId, m.kanbanBlocks.CheckpointId, m.kanbanBlocks.StageId)
+	head := fmt.Sprintf("%s · %s · stage %s", m.kanban.blocks.TaskId, m.kanban.blocks.CheckpointId, m.kanban.blocks.StageId)
 	b.WriteString(accentStyle.Render(head) + "\n")
 
 	width := max(20, m.paneCols()-4)
-	for _, blk := range m.kanbanBlocks.Blocks {
+	for _, blk := range m.kanban.blocks.Blocks {
 		b.WriteString("\n" + m.renderKanbanBlock(blk, width))
 	}
 
@@ -330,23 +330,23 @@ func (m Model) renderKanbanDetailPane() (string, string) {
 		}
 	}
 
-	if m.kanbanEditingPaths {
-		b.WriteString("\n\n" + accentStyle.Render("✎ paths (comma-separated): ") + textStyle.Render(m.kanbanPathsBuf) + accentStyle.Render("▏"))
+	if m.kanban.editingPaths {
+		b.WriteString("\n\n" + accentStyle.Render("✎ paths (comma-separated): ") + textStyle.Render(m.kanban.pathsBuf) + accentStyle.Render("▏"))
 		return b.String() + m.kanbanStatusLine(), "type · enter save (empty clears) · esc cancel"
 	}
-	if m.kanbanEditingCtx {
-		b.WriteString("\n\n" + accentStyle.Render("✎ extra context") + "\n" + m.kanbanCtxEditor.View())
+	if m.kanban.editingCtx {
+		b.WriteString("\n\n" + accentStyle.Render("✎ extra context") + "\n" + m.kanban.ctxEditor.View())
 		return b.String() + m.kanbanStatusLine(), "type · ctrl+s save · esc cancel"
 	}
-	if m.kanbanEditingTitle {
-		b.WriteString("\n\n" + accentStyle.Render("✎ title: ") + textStyle.Render(m.kanbanTitleBuf) + accentStyle.Render("▏"))
+	if m.kanban.editingTitle {
+		b.WriteString("\n\n" + accentStyle.Render("✎ title: ") + textStyle.Render(m.kanban.titleBuf) + accentStyle.Render("▏"))
 		return b.String() + m.kanbanStatusLine(), "type · enter save · esc cancel"
 	}
-	if m.kanbanProposal != nil {
+	if m.kanban.proposal != nil {
 		b.WriteString("\n\n" + m.renderKanbanProposal(width))
 		return b.String() + m.kanbanStatusLine(), "enter apply · esc discard"
 	}
-	if m.kanbanHandConfirm {
+	if m.kanban.handConfirm {
 		b.WriteString("\n\n  " + accentStyle.Render("hand this card to the next session (writes an injection)? ") +
 			key("y") + subtleStyle.Render(" yes · ") + key("n") + subtleStyle.Render(" no"))
 		return b.String() + m.kanbanStatusLine(), "y confirm · n cancel"
@@ -379,7 +379,7 @@ func (m Model) renderKanbanBlock(blk api.PromptBlockDto, width int) string {
 }
 
 func (m Model) renderKanbanProposal(width int) string {
-	p := m.kanbanProposal
+	p := m.kanban.proposal
 	interpreter := "advisor"
 	if p.Interpreter != nil {
 		interpreter = *p.Interpreter
@@ -418,7 +418,7 @@ func qaLabel(qa string) string {
 
 // renderKanbanSplit shows the proposed children — nothing is on the board until enter.
 func (m Model) renderKanbanSplit(width int) string {
-	p := m.kanbanSplit
+	p := m.kanban.split
 	interpreter := "advisor"
 	if p.Interpreter != nil {
 		interpreter = *p.Interpreter

@@ -18,6 +18,141 @@ import (
 	"conductor-face-go/internal/widgets"
 )
 
+// kanbanModel is the Kanban tab's own state (K6.3): the board's selection and add form, and the
+// card detail (P3) that opens over it. Selection is by task id so a card keeps focus while it moves
+// between columns and across live refreshes.
+type kanbanModel struct {
+	selId  string
+	adding bool
+	addBuf string
+	// W4.3: the pending add is a STAGE-level card (a checkpoint the engine will schedule), not a
+	// subtask under an existing checkpoint.
+	addStage bool
+	status   string
+	// tasksErr / tasksLoaded exist so an empty board can say WHY it is empty (dogfood appendix 5).
+	// Three states read identically without them — never fetched, fetch failed, genuinely no cards —
+	// and the pane confidently claimed the third. They are filled by the shell's task poll, which
+	// stays there because the sidebar reads the same cards.
+	tasksErr    string
+	tasksLoaded bool
+
+	// Card detail (P3): the selected card's prompt building-blocks, the structured title/context
+	// editors, and the advisor-refine preview→confirm state.
+	detail       bool
+	blocks       *api.PromptBlocksDto
+	blocksErr    string
+	editingTitle bool
+	titleBuf     string
+	editingCtx   bool
+	ctxEditor    widgets.TextArea
+	// PF3: the declared-paths editor (comma-separated single line; empty save clears the claims).
+	editingPaths bool
+	pathsBuf     string
+	refining     bool
+	proposal     *api.TaskRefineResultDto
+	// W4.3: the advisor's proposed split — a list of children, applied one /tasks/add at a time.
+	splitting    bool
+	split        *api.TaskSplitResultDto
+	splitPending []api.TaskSplitChildDto
+	handConfirm  bool
+}
+
+// updateKanban handles this tab's four write/advisor results. Each lands in the board's own status
+// line or the open card's detail — never in the shared task list, which the shell's poll owns
+// because the sidebar reads it too.
+func (m Model) updateKanban(msg tea.Msg) (Model, tea.Cmd, bool) {
+	switch msg := msg.(type) {
+
+	case MsgTaskWritten:
+		if msg.Err != "" {
+			m.kanban.status = "✗ " + msg.Err
+			return m, nil, true
+		}
+		if msg.Result != nil && !msg.Result.Ok {
+			reason := "rejected"
+			if msg.Result.Error != nil {
+				reason = *msg.Result.Error
+			}
+			m.kanban.status = "✗ " + reason
+			return m, nil, true
+		}
+		m.kanban.status = "✓ " + msg.Verb
+		if msg.Verb == "add" && msg.Result != nil && msg.Result.TaskId != nil {
+			m.kanban.selId = *msg.Result.TaskId // focus follows the new card
+		}
+		// W4.3: a confirmed split adds its children one at a time, each through this same path —
+		// so a rejected child is visible as a rejected add, not swallowed by a batch.
+		if msg.Verb == "add" && len(m.kanban.splitPending) > 0 {
+			next := m.kanban.splitPending[0]
+			m.kanban.splitPending = m.kanban.splitPending[1:]
+			checkpointId := ""
+			if msg.Result != nil && msg.Result.CheckpointId != nil {
+				checkpointId = *msg.Result.CheckpointId
+			}
+			return m, m.cmdPostTaskAdd(api.TaskAddRequestDto{CheckpointId: checkpointId, Title: next.Title}), true
+		}
+		// Re-fetch so the board shows what the engine actually recorded. A detail edit (P3) also
+		// recomposes the open card's blocks — the edited block must visibly change.
+		if msg.Verb == "edit" && m.kanban.detail && m.kanban.blocks != nil {
+			return m, tea.Batch(m.cmdFetchTasks(), m.cmdFetchPromptBlocks(m.kanban.blocks.TaskId)), true
+		}
+		return m, m.cmdFetchTasks(), true
+
+	case MsgPromptBlocks:
+		if msg.Err != "" {
+			m.kanban.blocksErr = msg.Err
+			return m, nil, true
+		}
+		if msg.Blocks != nil && !msg.Blocks.Ok {
+			if msg.Blocks.Error != nil {
+				m.kanban.blocksErr = *msg.Blocks.Error
+			} else {
+				m.kanban.blocksErr = "could not load the card"
+			}
+			return m, nil, true
+		}
+		m.kanban.blocks, m.kanban.blocksErr = msg.Blocks, ""
+		return m, nil, true
+
+	case MsgTaskSplit:
+		m.kanban.splitting = false
+		if msg.Err != "" {
+			m.kanban.status = "✗ " + msg.Err
+			return m, nil, true
+		}
+		if msg.Result != nil && !msg.Result.Ok {
+			reason := "split rejected"
+			if msg.Result.Error != nil {
+				reason = *msg.Result.Error
+			}
+			m.kanban.status = "✗ " + reason
+			return m, nil, true
+		}
+		m.kanban.split = msg.Result // proposal only — enter adds the children, esc discards
+		m.kanban.status = ""
+		return m, nil, true
+
+	case MsgTaskRefined:
+		m.kanban.refining = false
+		if msg.Err != "" {
+			m.kanban.status = "✗ " + msg.Err
+			return m, nil, true
+		}
+		if msg.Result != nil && !msg.Result.Ok {
+			reason := "refine rejected"
+			if msg.Result.Error != nil {
+				reason = *msg.Result.Error
+			}
+			m.kanban.status = "✗ " + reason
+			return m, nil, true
+		}
+		m.kanban.proposal = msg.Result // proposal only — enter applies, esc discards
+		m.kanban.status = ""
+		return m, nil, true
+	}
+	return m, nil, false
+}
+
 // kanbanColumns is the board order; skipped cards live in the Done column, on their own shelf.
 var kanbanColumns = [3]string{"todo", "in_progress", "done"}
 var kanbanTitles = [3]string{"TODO", "In Progress", "Done"}
@@ -124,7 +259,7 @@ func (m Model) kanbanCards() []api.TaskDto {
 // a card keeps focus while it changes columns or the poll refreshes the board underneath.
 func (m Model) kanbanSelected(cards []api.TaskDto) int {
 	for i, t := range cards {
-		if t.TaskId == m.kanbanSelId {
+		if t.TaskId == m.kanban.selId {
 			return i
 		}
 	}
@@ -132,10 +267,10 @@ func (m Model) kanbanSelected(cards []api.TaskDto) int {
 }
 
 func (m *Model) handleKanbanKey(key string) (tea.Model, tea.Cmd) {
-	if m.kanbanDetail {
+	if m.kanban.detail {
 		return m.handleKanbanDetailKey(key)
 	}
-	if m.kanbanAdding {
+	if m.kanban.adding {
 		return m.handleKanbanAddKey(key)
 	}
 
@@ -154,9 +289,9 @@ func (m *Model) handleKanbanKey(key string) (tea.Model, tea.Cmd) {
 
 	switch key {
 	case "up", "k":
-		m.kanbanSelId = cards[max(0, sel-1)].TaskId
+		m.kanban.selId = cards[max(0, sel-1)].TaskId
 	case "down", "j":
-		m.kanbanSelId = cards[min(len(cards)-1, sel+1)].TaskId
+		m.kanban.selId = cards[min(len(cards)-1, sel+1)].TaskId
 	case "left", "right":
 		return m.kanbanMove(cards[sel], key == "right")
 	case "N":
@@ -165,7 +300,7 @@ func (m *Model) handleKanbanKey(key string) (tea.Model, tea.Cmd) {
 		m.kanbanBeginAdd()
 	case "enter":
 		// P3: open the card's detail — its prompt as labeled building blocks.
-		m.kanbanSelId = cards[sel].TaskId
+		m.kanban.selId = cards[sel].TaskId
 		return m, m.kanbanOpenDetail(cards[sel].TaskId)
 	}
 	return m, nil
@@ -183,7 +318,7 @@ func (m *Model) kanbanMove(card api.TaskDto, right bool) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 	status := kanbanColumns[target]
-	m.kanbanStatus = fmt.Sprintf("moving %s → %s…", card.TaskId, status)
+	m.kanban.status = fmt.Sprintf("moving %s → %s…", card.TaskId, status)
 	return m, m.cmdPostTaskUpdate(api.TaskUpdateRequestDto{TaskId: card.TaskId, Status: status})
 }
 
@@ -191,13 +326,13 @@ func (m *Model) kanbanMove(card api.TaskDto, right bool) (tea.Model, tea.Cmd) {
 // checkpoint, or the run's current checkpoint when the board is empty.
 func (m *Model) kanbanBeginAdd() {
 	if m.kanbanAddCheckpoint() == "" {
-		m.kanbanStatus = "✗ no checkpoint to add under — press N for a stage-level card"
+		m.kanban.status = "✗ no checkpoint to add under — press N for a stage-level card"
 		return
 	}
-	m.kanbanAdding = true
-	m.kanbanAddStage = false
-	m.kanbanAddBuf = ""
-	m.kanbanStatus = ""
+	m.kanban.adding = true
+	m.kanban.addStage = false
+	m.kanban.addBuf = ""
+	m.kanban.status = ""
 }
 
 // kanbanBeginAddStage opens the same one-line input for a STAGE-level card (W4.3). The result is a
@@ -205,13 +340,13 @@ func (m *Model) kanbanBeginAdd() {
 // mid-run, which previously had nowhere to land because every add needed an existing parent.
 func (m *Model) kanbanBeginAddStage() {
 	if m.kanbanAddStageId() == "" {
-		m.kanbanStatus = "✗ no stage to add to (no cards, no active checkpoint, no plan stages)"
+		m.kanban.status = "✗ no stage to add to (no cards, no active checkpoint, no plan stages)"
 		return
 	}
-	m.kanbanAdding = true
-	m.kanbanAddStage = true
-	m.kanbanAddBuf = ""
-	m.kanbanStatus = ""
+	m.kanban.adding = true
+	m.kanban.addStage = true
+	m.kanban.addBuf = ""
+	m.kanban.status = ""
 }
 
 // kanbanAddStageId resolves the stage a new stage-level card belongs to: the selected card's stage,
@@ -251,26 +386,26 @@ func (m Model) kanbanAddCheckpoint() string {
 func (m *Model) handleKanbanAddKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
 	case "esc":
-		m.kanbanAdding = false
+		m.kanban.adding = false
 		return m, nil
 	case "enter":
-		title := strings.TrimSpace(m.kanbanAddBuf)
+		title := strings.TrimSpace(m.kanban.addBuf)
 		if title == "" {
 			return m, nil // a title is required — stay in the form
 		}
-		m.kanbanAdding = false
-		m.kanbanStatus = "adding…"
-		if m.kanbanAddStage {
+		m.kanban.adding = false
+		m.kanban.status = "adding…"
+		if m.kanban.addStage {
 			return m, m.cmdPostTaskAdd(api.TaskAddRequestDto{StageId: m.kanbanAddStageId(), Title: title})
 		}
 		return m, m.cmdPostTaskAdd(api.TaskAddRequestDto{CheckpointId: m.kanbanAddCheckpoint(), Title: title})
 	case "backspace":
-		if len(m.kanbanAddBuf) > 0 {
-			m.kanbanAddBuf = m.kanbanAddBuf[:len(m.kanbanAddBuf)-1]
+		if len(m.kanban.addBuf) > 0 {
+			m.kanban.addBuf = m.kanban.addBuf[:len(m.kanban.addBuf)-1]
 		}
 	default:
 		if ch, ok := typedChar(key); ok {
-			m.kanbanAddBuf += ch
+			m.kanban.addBuf += ch
 		}
 	}
 	return m, nil
@@ -284,7 +419,7 @@ func (m *Model) handleKanbanAddKey(key string) (tea.Model, tea.Cmd) {
 // same silent lie as appendix item 5, just with rows on it.
 func (m Model) kanbanFeedBanner() string {
 	return destructStyle.Render("⚠ cannot reach /tasks: ") +
-		textStyle.Render(truncate(m.tasksErr, max(20, m.paneCols()-24))) + "\n" +
+		textStyle.Render(truncate(m.kanban.tasksErr, max(20, m.paneCols()-24))) + "\n" +
 		subtleStyle.Render("  showing the last cards fetched — not the live graph")
 }
 
@@ -294,9 +429,9 @@ func (m Model) kanbanFeedBanner() string {
 // the pane always claimed.
 func (m Model) renderKanbanEmptyState() string {
 	switch {
-	case m.tasksErr != "":
+	case m.kanban.tasksErr != "":
 		return m.kanbanFeedBanner()
-	case !m.tasksLoaded:
+	case !m.kanban.tasksLoaded:
 		return subtleStyle.Render("Loading the task graph from /tasks…")
 	case m.data.Connection.Mode == api.ModeLive && !m.data.Connection.Connected:
 		return subtleStyle.Render("No cards, and nothing is attached — start a run, or explore with ") +
@@ -309,11 +444,11 @@ func (m Model) renderKanbanEmptyState() string {
 }
 
 func (m Model) renderKanbanPane() (string, string) {
-	if m.kanbanDetail {
+	if m.kanban.detail {
 		return m.renderKanbanDetailPane()
 	}
 	cards := m.kanbanCards()
-	if len(cards) == 0 && !m.kanbanAdding {
+	if len(cards) == 0 && !m.kanban.adding {
 		return m.renderKanbanEmptyState() + m.kanbanStatusLine(), "n add · N stage card · esc back"
 	}
 	selId := ""
@@ -329,13 +464,13 @@ func (m Model) renderKanbanPane() (string, string) {
 	if ribbon != "" {
 		rows -= 2 // the ribbon and the blank line under it
 	}
-	if m.tasksErr != "" {
+	if m.kanban.tasksErr != "" {
 		rows -= 3 // two banner lines and a blank
 	}
-	if m.kanbanStatus != "" {
+	if m.kanban.status != "" {
 		rows -= 2
 	}
-	if m.kanbanAdding {
+	if m.kanban.adding {
 		rows -= 4
 	}
 
@@ -352,27 +487,27 @@ func (m Model) renderKanbanPane() (string, string) {
 	}
 	// A dead feed over a board that still has rows: say so, or it just looks like nothing is
 	// happening. The banner goes on top — this is the first thing to know about what is below it.
-	if m.tasksErr != "" {
+	if m.kanban.tasksErr != "" {
 		body = m.kanbanFeedBanner() + "\n\n" + body
 	}
-	if m.kanbanAdding {
+	if m.kanban.adding {
 		body += "\n\n  " + accentStyle.Render("+ new card") + subtleStyle.Render(" under ") +
 			accentStyle.Render(m.kanbanAddCheckpoint()) + "\n  " +
-			subtleStyle.Render("title: ") + textStyle.Render(m.kanbanAddBuf) + accentStyle.Render("▏")
+			subtleStyle.Render("title: ") + textStyle.Render(m.kanban.addBuf) + accentStyle.Render("▏")
 		return body + m.kanbanStatusLine(), "type · enter add · esc cancel"
 	}
 	return body + m.kanbanStatusLine(), "↑↓ card · ←→ move · enter detail · n add · N stage card · esc back"
 }
 
 func (m Model) kanbanStatusLine() string {
-	if m.kanbanStatus == "" {
+	if m.kanban.status == "" {
 		return ""
 	}
 	st := safeStyle
-	if strings.HasPrefix(m.kanbanStatus, "✗") {
+	if strings.HasPrefix(m.kanban.status, "✗") {
 		st = destructStyle
 	}
-	return "\n\n  " + st.Render(m.kanbanStatus)
+	return "\n\n  " + st.Render(m.kanban.status)
 }
 
 // renderKanbanRibbon is the you-are-here line above the board: which stage of how many, how many
