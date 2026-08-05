@@ -20,7 +20,12 @@
   Path to conductor.exe. The rigs already resolve this.
 
 .PARAMETER StateDir
-  The plan's state directory -- the folder holding run.db (a scratch repo's `.conductor`).
+  The plan's state directory -- a scratch repo's `.conductor`, which holds events.jsonl. Since K3.1
+  it does NOT hold run.db; see -RunDb.
+
+.PARAMETER RunDb
+  The database file. Defaults to $env:CONDUCTOR_RUN_DB (what the rigs set for the engine they spawn),
+  then to the pre-K3.1 `<StateDir>/run.db`.
 
 .PARAMETER Sql
   A SELECT statement. run_query rejects anything else, which is the point.
@@ -42,15 +47,26 @@ function Invoke-ConductorQuery {
     param(
         [Parameter(Mandatory = $true)][string] $Exe,
         [Parameter(Mandatory = $true)][string] $StateDir,
-        [Parameter(Mandatory = $true)][string] $Sql
+        [Parameter(Mandatory = $true)][string] $Sql,
+        [string] $RunDb
     )
 
-    $runDb = Join-Path $StateDir "run.db"
-    if (-not (Test-Path $runDb)) { return "query failed: no run.db at $runDb" }
+    # K3.1 took run.db OUT of <repo>/.conductor and into a machine-level home keyed by (repo, plan),
+    # and this helper was not told. It kept asserting Test-Path "<StateDir>/run.db" and kept letting
+    # mcp-serve fall back to its pre-K3.1 default (run.db beside --events), so every rig that reads a
+    # finished run back -- w5/rehearsal, w3/window-close, sf1-2 -- answered "query failed: no run.db"
+    # on a perfectly healthy engine. No CI job runs these rigs, so nothing caught it for a whole era.
+    #
+    # Resolution order mirrors StateHome.Resolve's first rule and stops there deliberately: a rig
+    # NAMES the database it wants (its own scratch copy), so deriving a slug here would be guessing at
+    # something the caller already knows. -RunDb wins; then CONDUCTOR_RUN_DB, which is what the rigs
+    # set for the engine they spawn; then the pre-K3.1 layout, for a caller pointed at an old tree.
+    if (-not $RunDb) { $RunDb = $env:CONDUCTOR_RUN_DB }
+    if (-not $RunDb) { $RunDb = Join-Path $StateDir "run.db" }
+    if (-not (Test-Path $RunDb)) { return "query failed: no run.db at $RunDb" }
 
-    # mcp-serve derives run.db from the DIRECTORY of --events, so --events must point inside StateDir.
-    # The journal goes to a temp file: this helper is a reader, and appending to the run's own MCP
-    # journal would mean a read that edits the evidence it is reading.
+    # --events must still point inside StateDir (the event log did NOT move), but run.db is passed
+    # explicitly now rather than derived from the events directory.
     $events = Join-Path $StateDir "events.jsonl"
     $journal = Join-Path ([System.IO.Path]::GetTempPath()) ("cq-" + [Guid]::NewGuid().ToString("N") + ".jsonl")
 
@@ -69,7 +85,7 @@ function Invoke-ConductorQuery {
     Set-Content -Path $reqFile -Value $req -Encoding ascii
 
     try {
-        $out = cmd /c "`"$Exe`" mcp-serve --events `"$events`" --journal `"$journal`" < `"$reqFile`"" 2>$null
+        $out = cmd /c "`"$Exe`" mcp-serve --events `"$events`" --journal `"$journal`" --run-db `"$RunDb`" < `"$reqFile`"" 2>$null
         $out = ($out | Out-String)
     }
     finally {

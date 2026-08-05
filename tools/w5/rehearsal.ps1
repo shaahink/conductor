@@ -93,6 +93,17 @@ Write-Host ("engine: " + $Exe)
 
 $scratch = Join-Path ([IO.Path]::GetTempPath()) ("conductor-w5-" + [Guid]::NewGuid().ToString("N").Substring(0, 8))
 $runProc = $null
+
+# K3.1 moved run.db to a machine-level home keyed by (repo path + plan name). A scratch rig that says
+# nothing therefore writes its throwaway run into the OPERATOR'S real store and leaves a catalogue
+# entry pointing at a temp directory this script is about to delete -- measured, K7.2: a rehearsal
+# left `conductor-w5-<guid>-w5-rehearsal-<hash>` sitting beside this repo's live era. Naming the file
+# outright is precedence rule (1) in StateHome.Resolve, the one branch that neither migrates nor
+# catalogues, so the run lives and dies inside $scratch like everything else the rig makes.
+# Restored in `finally`: dot-source this script and a leaked value would aim every later `conductor`
+# in that shell at a database that no longer exists.
+$prevRunDb = $env:CONDUCTOR_RUN_DB
+$env:CONDUCTOR_RUN_DB = Join-Path $scratch "run.db"
 try {
     # --- 2. scratch repo --------------------------------------------------------------------------
     Section "scratch repo"
@@ -420,6 +431,7 @@ finally {
     }
     if ($Keep) { Write-Host ("scratch kept: " + $scratch) -ForegroundColor Yellow }
     else { Remove-Item -Recurse -Force $scratch -ErrorAction SilentlyContinue }
+    $env:CONDUCTOR_RUN_DB = $prevRunDb
 }
 
 if (-not $script:ok) { exit 1 }

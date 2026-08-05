@@ -104,9 +104,11 @@ Full detail, including what is and isn't proven: [`docs/platforms.md`](docs/plat
 the Face automatically. You never launch the Go binary yourself; if it dies the run continues, and
 `conductor face` attaches a fresh one.
 
-Eleven tabs (Agent · Sessions · Timeline · Procs · Console · Templates · Plan · Report · Knowledge ·
-Telegram · Kanban), an always-visible plan sidebar, and a `:` command palette for every control verb
-— destructive ones confirm first. The live keybinding and layout reference is
+Ten tabs: Home · Agent · History · Procs · Templates · Plan · Report · Knowledge · Telegram ·
+Kanban — each one keypress away on `1`–`9`/`0` — plus an always-visible plan sidebar and a `:`
+command palette for every control verb, destructive ones confirming first. Home is the landing page
+it opens on; History is the old Sessions and Timeline as a single surface; the old Console is Agent's
+raw-stream mode. The live keybinding and layout reference is
 [`face-go/STYLE.md`](face-go/STYLE.md).
 
 ```
@@ -146,8 +148,11 @@ from the sessions this repo actually ran, not guessed.
 | any required gate red | `GatesRed` | fix session with gate output embedded |
 | no output for `stallMinutes` | `Stalled` | killed, then resume same session (≤ maxResumes) |
 | over `sessionTimeoutMinutes` | `TimedOut` | same as stalled |
+| a verifier session returned no parseable score | `AgentError` | fix session, attempt burned |
+| backend rejected the credential (401 / expired OAuth) | `AuthFailed` | **NeedsHuman** at once, with a re-auth hint — no gate battery, no backoff, no retry |
 | backend says usage/rate limit | `LimitBackoff` | wait `backoffMinutes`, resume — no attempt burned |
 | session exceeded token budget | `RolledOver` | clean handoff, fresh session — no attempt burned |
+| session called `task --blocked-until <instant>` | `BlockedUntil` | loop sleeps to that instant, then spawns exactly one more session — no attempt burned |
 | handoff contains `HUMAN:` or a row flips to BLOCKED | — | **NeedsHuman**: loop parks, report + notification |
 | 2× consecutive zero-output stall | — | **NeedsHuman** (identical-stall detection) |
 
@@ -205,7 +210,7 @@ No test in this repo requires an API key.
 
 ```
 conductor demo                                   # cross-platform, seconds, a full run
-powershell -File tools/w5/rehearsal.ps1 -Keep    # Windows, ~90s, 27 checks over the live control plane
+powershell -File tools/w5/rehearsal.ps1 -Keep    # Windows, ~40s, 33 checks over the live control plane
 ```
 
 The rehearsal write-up, including the three engine defects it found, is
