@@ -48,4 +48,5 @@ namespace Conductor.Core.Http;
 [JsonSerializable(typeof(TelegramSetTokenRequestDto))]
 [JsonSerializable(typeof(TelegramSetTokenResultDto))]
 [JsonSerializable(typeof(OwnerQueueDto))]
+[JsonSerializable(typeof(EvidenceDto))]
 public sealed partial class ControlPlaneJsonContext : JsonSerializerContext;

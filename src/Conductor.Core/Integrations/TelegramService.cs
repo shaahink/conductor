@@ -40,26 +40,6 @@ public interface ITelegramService
     Task PushEvidenceAsync(IReadOnlyList<Evidence.EvidenceArtifact> artifacts, CancellationToken ct = default);
 }
 
-/// <summary>K5.2: everything the session-end push needs, in one argument, because the five defects
-/// it fixes were all "the message could not see the record". The number is the RECORD's, so a push
-/// that lands late cannot disagree with itself; the commits and claims are what K1.1 records even on
-/// the rollover path; and the result arrives WHOLE — the notifier bounds it once, rather than the
-/// caller cutting a paragraph the notifier then cuts again.</summary>
-/// <param name="Number">The session's own number, not the live counter.</param>
-/// <param name="Stage">Stage id; the title is looked up from the plan.</param>
-/// <param name="IsRollover">A rollover defers its gates by design and burns no attempt.</param>
-public sealed record SessionEndPush(
-    int Number,
-    string Stage,
-    string Outcome,
-    string? GateSummary,
-    string? ResultSummary,
-    decimal? CostUsd,
-    decimal? Score,
-    int Commits,
-    IReadOnlyList<string> NewlyDone,
-    bool IsRollover);
-
 public sealed partial class TelegramService : IHostedService, ITelegramService, IReportsStartOutcome, IDisposable
 {
     internal static readonly JsonSerializerOptions JsonOpts = new()
@@ -498,19 +478,4 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
         if (chatId == null || _cfg?.AllowedChatIds is not { Count: > 0 } ids) return false;
         return ids.Contains(chatId, StringComparer.Ordinal);
     }
-}
-
-/// <summary>No-op stub when Telegram is not configured.</summary>
-public sealed class NoOpTelegramService : ITelegramService
-{
-    /// <summary>This process holds no Telegram service at all, which is a state of its own and not
-    /// "configured, not started" — <c>GET /telegram/status</c> reports it with the same constant.</summary>
-    public string? DeliveryBlocker => TelegramReadiness.RestartRequired;
-
-    public Task PushAsync(string message, CancellationToken ct = default) => Task.CompletedTask;
-    public Task PushWithKeyboardAsync(string message,
-        IReadOnlyList<(string Text, string CallbackData)> buttons, CancellationToken ct = default) => Task.CompletedTask;
-    public Task PushSessionEndAsync(SessionEndPush push, CancellationToken ct = default) => Task.CompletedTask;
-    public Task PushEvidenceAsync(IReadOnlyList<Evidence.EvidenceArtifact> artifacts,
-        CancellationToken ct = default) => Task.CompletedTask;
 }
