@@ -4,22 +4,25 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **K7.2 part 6** (s31), commit `842adc6`, evidence `.conductor/evidence/K7/K7.2-strict-flag-parsing.md`.
-  K7.2 stays BLOCKED and owner-only; nothing here claimed it. **Closes bug #17.** The engine silently
-  accepted and ignored *every* unknown option - Spectre defaults `StrictParsing` false and Program.cs
-  never set it, so `version --shortt` exited 0 and printed the LONG form. At a public ship that means
-  a mistyped `update --check` swaps the binary and a mistyped `gate --full` reports green off the fast
-  tier. Fixed with `c.UseStrictParsing()`; test drives the real binary, red without it.
-do not re-derive: (a) the change is global so the FULL battery was run, not a filter: **2066 passed,
-  0 failed**; nothing depended on a flag being swallowed. (b) The repo-wide sweep is done - all 82
-  files carrying a `conductor <verb> --flag` were checked against declared options; the only dead
-  flags were `status --no-llm` (six sites, never existed) and the already-deleted `report --query`,
-  both fixed. `--yes` on rollback/kill/skip is real, declared on `CtlCommand.Settings`. (c) `--`
-  passthrough survives, so `bg start -- dotnet test --filter X` is safe. (d) s29-s30 still stand: the
-  ship chain has no defect, `install.ps1` builds from the working tree, era score dated.
+last: **K7.2 part 7** (s32), commits `bdf2a63` + `84c4dc4`. K7.2 stays BLOCKED and owner-only; nothing
+  here claimed it. Started as a README audit and found a live engine defect. **One root cause: K3.1
+  moved `run.db` out of `<repo>/.conductor` and three things were never told.** (a) `conductor demo` -
+  the front page's try-it-free command - deleted its throwaway repo but left the database plus a
+  permanent `conductor history` row (`RunHistory.cs:26` walks the catalogue) on the user's machine.
+  Fixed with a repo-local state pointer; proven pre/post against an isolated `CONDUCTOR_STATE_HOME`,
+  1 entry -> 0. That exposed a Windows cleanup failure ("delete it by hand") from a pooled SQLite
+  handle - `ClearAllPools()` in `ForceDelete`. (b) `tools/w5/rehearsal.ps1`, which README:208 hands to
+  contributors, was RED on a healthy engine - 5 of 33 checks, all "no run.db", blaming the engine.
+  `tools/lib/run-query.ps1` (shared by three rigs) never passed `--run-db`, the flag K3.1 added for
+  it. Re-ran: **33/33**. The rigs also wrote into the operator's real store; w5 now uses its own.
+  (c) README named eleven Face tabs incl. three merged away by SF1.3, omitted Home, and its outcome
+  table missed `AuthFailed`/`BlockedUntil`/`AgentError`. Guard test reads both off source.
+do not re-derive: no CI job runs those rigs (`grep .github/workflows` is empty) - that is why an era
+  passed unnoticed. `CHANGELOG.md` v0.4.0 Fixed already carries all three. s29-s31 still stand.
 next: owner-only, unchanged - confirm no other conductor run is live, merge, tag `v0.4.0`, let the
   pipeline publish, then the first `install.ps1` of this run. Re-run `conductor budget` and `money`
   at tag time and paste into `CHANGELOG.md`; today's figures are stamped s29 and move every session.
+  Bug #35 is the same rot in `w3/window-close.ps1` and `sf1-2-live-proof.ps1`, neither drivable here.
 
 
 ## Baseline numbers (from run.db)

@@ -1,10 +1,10 @@
 ﻿# Conductor — Karvan core - the engine knows what it did and what it cost run report
 
-_Updated 2026-08-05 12:43 UTC · branch `feat/karvan` · HEAD `a8c76cc`_
+_Updated 2026-08-05 12:57 UTC · branch `feat/karvan` · HEAD `f764904`_
 
-**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [13h 14m ago, 23:29:12Z]
+**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [13h 28m ago, 23:29:12Z]
 **Stage:** K7 — Ship the plan · attempts used 0 · working ▸ K7.2
-**Checkpoints:** 24/32 done · **Sessions run:** 30 · **Cost:** $302.4334 (agent $302.2508 + gates $0.1826) · **Tokens:** 4,420,885 in / 2,171,082 out
+**Checkpoints:** 24/32 done · **Sessions run:** 31 · **Cost:** $306.5290 (agent $306.3417 + gates $0.1874) · **Tokens:** 4,505,993 in / 2,212,621 out
 **Confirmed phases:** K1, K2, K3, K4, K5, K6
 
 ## Stage progress
@@ -97,7 +97,6 @@ _Updated 2026-08-05 12:43 UTC · branch `feat/karvan` · HEAD `a8c76cc`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Overhead | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | K1 | Deliver | 1 | 08-04 21:49 | 0:35 | Advanced | K1.1 K1.2 | 3 | engine-fast:OK · face-fast:OK | $18.0603 | $0.0083 | 219,310/95,366 |
 | 2 | K1 | Deliver | 1 | 08-04 22:27 | 0:30 | Advanced | K1.3 | 6 | engine-fast:OK · face-fast:OK | $10.2462 | $0.0055 | 147,283/76,748 |
 | 3 | K1 | Deliver | 1 | 08-04 22:59 | 0:02 | AgentError |  | 0 | engine-fast:cached · face-fast:cached | $0.0000 |  |  |
 | 4 | K1 | Fix | 2 | 08-04 23:02 | 0:02 | AgentError |  | 0 | engine-fast:cached · face-fast:cached | $0.0000 |  |  |
@@ -127,16 +126,13 @@ _Updated 2026-08-05 12:43 UTC · branch `feat/karvan` · HEAD `a8c76cc`_
 | 28 | K7 | Deliver | 1 | 08-05 11:56 | 0:12 | Progress |  | 1 | engine-fast:OK · face-fast:OK | $5.3546 | $0.0048 | 110,529/47,606 |
 | 29 | K7 | Deliver | 1 | 08-05 12:10 | 0:21 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $7.3087 | $0.0074 | 142,506/65,682 |
 | 30 | K7 | Deliver | 1 | 08-05 12:33 | 0:09 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $3.1170 | $0.0051 | 76,776/28,726 |
+| 31 | K7 | Deliver | 1 | 08-05 12:43 | 0:12 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $4.0909 | $0.0048 | 85,108/41,539 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-05 09:56:24  • session #22 K6 → Advanced · done K6.2 · 3 commit(s)  (20m31s)
-08-05 09:56:24  • session #23 K6 Deliver started (attempt 1/8)
-08-05 10:21:01  ▪ gate engine-fast pass [session]  (47.6s)
-08-05 10:21:01  ▪ gate face-fast pass [session]  (5.0s)
 08-05 10:21:01  • session #23 K6 → Advanced · done K6.3 · 5 commit(s)  (24m37s)
 08-05 10:21:02  • session #24 K6 Deliver started (attempt 1/8)
 08-05 10:52:57  ▪ gate engine-fast pass [session]  (1m03s)
@@ -173,6 +169,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-05 13:33:04  • session #30 K7 Deliver started (attempt 1/4)
 08-05 13:43:46  ▪ gate engine-fast pass [session]  (47.8s)
 08-05 13:43:46  ▪ gate face-fast pass [session]  (3.1s)
+08-05 13:43:47  • session #30 K7 → Progress · 2 commit(s)  (10m42s)
+08-05 13:43:47  • session #31 K7 Deliver started (attempt 1/4)
+08-05 13:57:20  ▪ gate engine-fast pass [session]  (44.6s)
+08-05 13:57:20  ▪ gate face-fast pass [session]  (3.1s)
 ```
 
 ## Health
@@ -180,7 +180,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 30 · retries 4 (13 %) · overall Warn
+sessions 31 · retries 4 (13 %) · overall Warn
 ⚠ [context-saturation] session #10: 23,623,416 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #18: 23,816,486 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #19: 24,146,164 context tokens (≥ 20,000,000)
@@ -203,12 +203,6 @@ vs upstream: up to date
 
 ### Commits by session
 
-- **s23 (K6 Deliver)** — 5 commit(s):
-  - [`98525b3`](https://github.com/shaahink/conductor/commit/98525b3) docs(evidence): K6.3 - the measurements and the seven driven frames
-  - [`72bc183`](https://github.com/shaahink/conductor/commit/72bc183) docs(tracker): K6.3 claimed and handed off - the state finally follows the code
-  - [`03c7eeb`](https://github.com/shaahink/conductor/commit/03c7eeb) refactor(face): K6.3 part 3 - the help card renders from the mnemonic table, so it cannot lie
-  - [`29db592`](https://github.com/shaahink/conductor/commit/29db592) refactor(face): K6.3 part 2 - Plan and Kanban own their state, and the dispatch is complete
-  - [`05beb46`](https://github.com/shaahink/conductor/commit/05beb46) refactor(face): K6.3 part 1 - eight tabs own their state, and the shell stops holding it
 - **s24 (K6 Deliver)** — 5 commit(s):
   - [`f009820`](https://github.com/shaahink/conductor/commit/f009820) docs(tracker): K6.4 claimed and handed off - K6 is complete
   - [`62f319a`](https://github.com/shaahink/conductor/commit/62f319a) docs(evidence): K6.4 - the measurement, the seven driven frames, and what is named
@@ -241,6 +235,9 @@ vs upstream: up to date
 - **s30 (K7 Deliver)** — 2 commit(s):
   - [`a8c76cc`](https://github.com/shaahink/conductor/commit/a8c76cc) docs(tracker): K7.2 part 5 handed off - the CLI reference names all 41 verbs
   - [`cfccfa5`](https://github.com/shaahink/conductor/commit/cfccfa5) docs(cli): the reference names the verbs this era shipped, and a test keeps it that way
+- **s31 (K7 Deliver)** — 2 commit(s):
+  - [`f764904`](https://github.com/shaahink/conductor/commit/f764904) docs(tracker): K7.2 part 6 handed off - a mistyped flag is now an error, bug #17 closed
+  - [`842adc6`](https://github.com/shaahink/conductor/commit/842adc6) fix(cli): a mistyped flag is an error, not silence
 
 ## Phase handovers (audit)
 
@@ -267,27 +264,30 @@ engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: docs/cli.md named 36 of 41 shipped verbs; fixed, and a test enforces it
-> - Found the era's flagship verbs `budget`/`money` — what the v0.4.0 notes lead with — documented in zero user-facing pages, alongside `history`, `ps`, `watch`; same rot SC8.3 fixed for shell completion, never aimed at the docs.
-> - Fixed cli.md (Token-and-money + Across-runs sections, flags read off captured `--help`) and README; new K7_2DocsVerbCoverageTests points SC8.3's Program.cs scan at the page.
-> - Red-first proof: against the pre-fix page the test named exactly `budget, history, money, ps, watch`; green after. Build 0 warnings/0 errors.
-> artefacts: cfccfa5, a8c76cc, docs/cli.md, README.md, tests/Condu…
+> SESSION-RESULT: Closed bug #17 - the CLI no longer swallows mistyped flags; full battery green
+> - c.UseStrictParsing() lands: unknown option now exits 1 naming the flag, was exit 0 and silent
+> - Full suite 2066 passed 0 failed; 82-file sweep found only dead flags --no-llm and report --query
+> - K7.2 still owner-only: merge, tag v0.4.0, then the first install.ps1 of this run
+> artefacts: 842adc6, f764904, src/Conductor/Program.cs, tests/Conductor.Tests/K7_2StrictFlagParsingTests.cs, docs/troubleshooting.md, tools/sf1/sf1-2-live-proof.ps1
+> evidence: .conductor/evidence/K7/K7.2-strict-flag-parsing.md
+> gaps: K7.2 is BLOCKED on the owner - merge feat/karvan, tag v0.4.0, reinstall, and re-run conductor bu…
 
 ## Tracker handoff
 
 ```
-last: **K7.2 part 5** (s30), commit `cfccfa5`, evidence `.conductor/evidence/K7/K7.2-docs-verb-inventory.md`.
-  K7.2 stays BLOCKED and owner-only; nothing here claimed it. `docs/cli.md` - the page that opens by
-  promising "the verbs you reach for daily" - named **36 of the engine's 41** visible verbs. Missing:
-  `budget`, `money`, `history`, `ps`, `watch`; four of the five appeared **zero** times in *any*
-  user-facing page. `budget`/`money` are what the v0.4.0 notes lead with. Fixed in place, and a test
-  now points SC8.3's Program.cs verb-scan at the page - red first, naming exactly those five.
-do not re-derive: (a) the ship chain has **no defect**: `v0.4.0` in a scratch clone publishes
-  `version --short` = `0.4.0+<sha>`, `update` accepts it, release guard + `changelog-section.sh` pass
-  (s29). (b) `install.ps1` builds from the working tree, so the owner installs from a CLEAN checkout
-  at the tag. (c) The era score in the release body is corrected and dated; `budget`'s `sess` is
-  COSTED sessions. (d) Closure ledger restated 11 open / 5 closed. (e) `doctor`'s red `work` check is
-  bug #32, fixed in tree but inert until the new engine regenerates the tracker.
+last: **K7.2 part 6** (s31), commit `842adc6`, evidence `.conductor/evidence/K7/K7.2-strict-flag-parsing.md`.
+  K7.2 stays BLOCKED and owner-only; nothing here claimed it. **Closes bug #17.** The engine silently
+  accepted and ignored *every* unknown option - Spectre defaults `StrictParsing` false and Program.cs
+  never set it, so `version --shortt` exited 0 and printed the LONG form. At a public ship that means
+  a mistyped `update --check` swaps the binary and a mistyped `gate --full` reports green off the fast
+  tier. Fixed with `c.UseStrictParsing()`; test drives the real binary, red without it.
+do not re-derive: (a) the change is global so the FULL battery was run, not a filter: **2066 passed,
+  0 failed**; nothing depended on a flag being swallowed. (b) The repo-wide sweep is done - all 82
+  files carrying a `conductor <verb> --flag` were checked against declared options; the only dead
+  flags were `status --no-llm` (six sites, never existed) and the already-deleted `report --query`,
+  both fixed. `--yes` on rollback/kill/skip is real, declared on `CtlCommand.Settings`. (c) `--`
+  passthrough survives, so `bg start -- dotnet test --filter X` is safe. (d) s29-s30 still stand: the
+  ship chain has no defect, `install.ps1` builds from the working tree, era score dated.
 next: owner-only, unchanged - confirm no other conductor run is live, merge, tag `v0.4.0`, let the
   pipeline publish, then the first `install.ps1` of this run. Re-run `conductor budget` and `money`
   at tag time and paste into `CHANGELOG.md`; today's figures are stamped s29 and move every session.

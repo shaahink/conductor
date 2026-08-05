@@ -100,6 +100,19 @@ session 29): **24 checkpoints at 15.5M tokens and $12.17 each, zero rollovers in
   directly-imported package indirect while carrying two lipgloss majors.
 - **Face scroll offsets no longer run away past the end of a document** — 389 keystrokes into the
   Report pane used to leave it blank. Four panes, one clamp, one idiom.
+- **`conductor demo` no longer leaves anything on your machine.** It has always deleted its throwaway
+  repo; since this era moved `run.db` to a machine-level store it had been leaving the database, and a
+  permanent `conductor history` row pointing at the directory it had just deleted, behind on every
+  run. The demo's state now lives and dies inside the throwaway directory. (Windows also used to be
+  told to "delete it by hand" — a pooled SQLite handle held the file open past cleanup.)
+- **The rehearsal the README points contributors at is green again.** Moving `run.db` broke the shared
+  helper the live-control-plane rigs read their evidence through, so five of its checks had been
+  failing on a perfectly healthy engine, with a message that blamed the engine. Those rigs also wrote
+  their throwaway runs into the operator's real store; they now keep them in their own scratch.
+- **The front page describes the Face that ships.** It advertised eleven tabs and named three that had
+  been merged away an era earlier, while omitting the one the Face opens on. Its session-outcome table
+  was missing `AuthFailed` — a dead credential parks the run for good — along with `BlockedUntil` and
+  `AgentError`. Both lists are now checked against the source by a test.
 
 ## [0.3.0] - 2026-08-01
 
