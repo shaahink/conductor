@@ -4,21 +4,20 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **K5.1 and K5.2 DONE** (s18) — `c04175d`/`ae7ada5` and `d1f55cc`; evidence
-  `.conductor/evidence/K5/K5.1-result-contract.md` and `K5.2-telegram-feed.md` (+ a verbatim wire
-  transcript). `SessionResult` is the ONE parse of a session result and six consumers render from it;
-  legacy prose and verifier JSON degrade byte-identically to the old 700-char cut. The Telegram push
-  is now built from a `SessionEndPush` record: one session number (the record's, via the send queue),
-  the stage title, the structured result rendered, a rollover that reports what it landed, and a
-  progress line on every push. Templates and built-in prompts teach the format.
-next: **K5.3 — evidence as a first-class artifact** (model, event, watcher, registry, Face surface;
-  non-text kinds first-class because a screenshot is the motivating case; free-text keeps working).
-red: none. bug #29 (K7.2 blocker) still open: on a COPY of this run.db the WRITE path dies on
-  `duplicate column name: soft_break`; the read-only `RunArchive` path opens the same file fine.
-watch: the built-in prompts sit ~12 chars under SF6.1's 7900 budget — new prose in
-  `PromptBuilder.BuiltIns.cs` must be paid for by cutting prose, and the first thing to go red is a
-  cmd.exe harness test, not the budget gate. Rig worth reusing: `K5_2TelegramFeedTests.FakeBotApi`
-  captures the exact bytes a push puts on the wire (StartAsync → push → StopAsync drains).
+last: **K5.1 + K5.2 DONE** (s18) — `c04175d`/`ae7ada5`, `d1f55cc`; evidence
+  `.conductor/evidence/K5/K5.1-result-contract.md`, `K5.2-telegram-feed.md`, `K5.2-wire-transcript.txt`.
+  `SessionResult` is the one parse of a session result (six consumers render from it; legacy prose and
+  verifier JSON degrade byte-identically to the old 700-char cut); the Telegram push is built from a
+  `SessionEndPush` — one session number, the stage title, the structured result, a rollover that
+  reports what it landed, a progress line everywhere.
+next: **K5.3, and its engine half is already committed** (`e618c06`, card amended with the detail).
+  Model + `EvidenceRegistered` event + fold-based registry + claim/watcher registration + a text
+  `PushEvidenceAsync` are in and green. Missing: **tests (none exist yet)**, `GET /evidence`, the Face
+  surface, an evidence artifact. Start with the tests, then the wire, then the Face.
+red: none. bug #29 (K7.2 blocker) still open (`duplicate column name: soft_break` on a db COPY).
+watch: the ratchet counts `#pragma warning disable` in src and the ceiling is 38 — MA0045 fires on
+  sync file reads, so make the method async instead of suppressing. Built-in prompts sit ~12 chars
+  under SF6.1's 7900 budget. `K5_2TelegramFeedTests.FakeBotApi` captures exact push bytes.
 
 
 ## Baseline numbers (from run.db)
