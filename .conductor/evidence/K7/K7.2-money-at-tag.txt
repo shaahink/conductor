@@ -1,0 +1,112 @@
+﻿what it cost · .conductor/run.db
+
+RUN                                 SESS   TOKENS  CACHE       COST  CKPT  
+TOK/CKPT   $/CKPT
+e9e21d10 Sarban core - the engine     28   504.5M  98.5%    $360.14    26     
+19.4M   $13.85
+8cefa5de Sarban face - the watcher    41   397.2M  98.2%    $297.24    20     
+19.9M   $14.86
+df9c4af8 Karvan core - the engine     32   403.9M  98.3%    $317.84    24     
+16.8M   $13.24
+--------------------------------------------------------------------------------
+----
+TOTAL                                101  1305.6M  98.3%    $975.22    70     
+18.7M   $13.93
+blended $0.75/M tokens · 1283.7M of 1305.6M tokens were cache reads (98.3%).
+
+MONTH                               SESS   TOKENS  CACHE       COST  CKPT  
+TOK/CKPT   $/CKPT
+2026-07                               36   663.4M  98.5%    $469.25    32     
+20.7M   $14.66
+2026-08                               65   642.2M  98.1%    $505.97    38     
+16.9M   $13.32
+
+where the money goes: agent $974.52 (100%, 1305.6M) · gate $0.61 (0.06%, 0M) · 
+advisor $0.09 (0.01%, 0M)
+
+by stage · Sarban core - the engine says what it knows e9e21d10
+STAGE                               SESS   TOKENS  CACHE       COST  CKPT  
+TOK/CKPT   $/CKPT
+SC1                                    4    60.4M  98.4%     $44.34     3     
+20.1M   $14.78
+SC2                                    4    90.1M  98.6%     $61.93     4     
+22.5M   $15.48
+SC3                                    4    60.3M  98.3%     $44.77     4     
+15.1M   $11.19
+SC4                                    5    75.7M  98.4%     $54.14     4     
+18.9M   $13.54
+SC5                                    4   100.1M  98.7%     $68.03     4       
+25M   $17.01
+SC6                                    2    33.2M  98.3%     $24.37     2     
+16.6M   $12.19
+SC7                                    2    36.9M  98.4%     $26.97     2     
+18.4M   $13.49
+SC8                                    3    47.8M  98.3%     $35.58     3     
+15.9M   $11.86
+
+by month · Sarban core - the engine says what it knows e9e21d10
+MONTH                               SESS   TOKENS  CACHE       COST  CKPT  
+TOK/CKPT   $/CKPT
+2026-07                               28   504.5M  98.5%    $360.14    26     
+19.4M   $13.85
+
+what the cap bought · Sarban face - the watcher and the surfaces 8cefa5de
+WINDOW                              SESS   TOKENS  CACHE       COST  CKPT  
+TOK/CKPT   $/CKPT
+1-8 no ceiling observed                8   158.9M  98.7%    $109.11     6     
+26.5M   $18.18
+9-41 8M / nudge 6.07M                 33   238.3M  97.8%    $188.13    14       
+17M   $13.44
+the change bought 1.4x better dollars per delivered checkpoint (1.6x on tokens).
+
+by stage · Sarban face - the watcher and the surfaces 8cefa5de
+STAGE                               SESS   TOKENS  CACHE       COST  CKPT  
+TOK/CKPT   $/CKPT
+SF0                                    4    80.1M  98.5%     $56.53     4       
+20M   $14.13
+SF1                                    4    78.9M  98.8%     $52.58     2     
+39.4M   $26.29
+SF2                                    4    30.2M  97.5%     $24.98     3     
+10.1M    $8.33
+SF3                                    7    53.4M  98.0%     $41.48     3     
+17.8M   $13.83
+SF4                                    6    43.1M  97.9%     $33.99     1     
+43.1M   $33.99
+SF5                                    7    53.4M  97.9%     $42.83     3     
+17.8M   $14.28
+SF6                                    4    29.6M  98.0%     $23.93     2     
+14.8M   $11.96
+SF7                                    5    28.5M  97.6%     $20.92     2     
+14.3M   $10.46
+
+by month · Sarban face - the watcher and the surfaces 8cefa5de
+MONTH                               SESS   TOKENS  CACHE       COST  CKPT  
+TOK/CKPT   $/CKPT
+2026-07                                8   158.9M  98.7%    $109.11     6     
+26.5M   $18.18
+2026-08                               33   238.3M  97.8%    $188.13    14       
+17M   $13.44
+
+by stage · Karvan core - the engine knows what it did and what it cost df9c4af8
+STAGE                               SESS   TOKENS  CACHE       COST  CKPT  
+TOK/CKPT   $/CKPT
+K1                                     6    66.3M  98.6%     $50.02     4     
+16.6M   $12.50
+K2                                     2    32.8M  98.2%     $28.67     4      
+8.2M    $7.17
+K3                                     4      53M  98.3%     $40.31     3     
+17.7M   $13.44
+K4                                     5    56.7M  98.1%     $47.06     4     
+14.2M   $11.77
+K5                                     3    74.7M  98.6%     $52.98     4     
+18.7M   $13.25
+K6                                     4    40.1M  98.0%     $34.30     4       
+10M    $8.57
+K7                                     8    80.3M  98.0%     $64.50     1     
+80.3M   $64.50
+
+by month · Karvan core - the engine knows what it did and what it cost df9c4af8
+MONTH                               SESS   TOKENS  CACHE       COST  CKPT  
+TOK/CKPT   $/CKPT
+2026-08                               32   403.9M  98.3%    $317.84    24     
+16.8M   $13.24
