@@ -1,0 +1,44 @@
+ ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  conductor-foreman  F7  ⠋ s12 $0.12 41s 3.4k/1.9k +800r  cp 2/40  run $0.42 +$0.02 oh          
+  h Home   a Agent   s History   o Procs   e Templates   p Plan   r Report   k Knowledge   g Telegram   b Kanban                            
+                                   │                                                                                                        
+ ▶ PLAN  n× attempts               │  Server                                                                                                
+ ✓ F0 3/3 Foundations              │  engine     running — answering on http://127.0.0.1:4317                                               
+ ✓ F6 5/5 Ink TUI v1               │  streams    ● events   ● transcript                                                                    
+ ● F7 2/5 Gate caching … 1× $0.30  │  build      v0.2.3-alpha.0.20  7d2b1e378ae3  ·  face d500f00a1b2c                                      
+   ✓ F7.1 Plan import              │                                                                                                        
+   ✓ F7.2 Re-import diff           │  Run                                                                                                   
+   ● F7.3 Truth-gate tier          │  plan       conductor-foreman                                                                          
+ ○ F8 0/4 conductor chat + Teleg…  │  status     ▶ RUNNING                                                                                  
+                                   │  stage      F7 Gate caching + truth gates + speed program                                              
+ ── GATES ──                       │  session    s12 Deliver · attempt 1/3 · opus-4-8                                                       
+   ✓ build                         │  progress   ▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱ 2/40 checkpoints                                                  
+   ● test 4s                       │  cost       $0.42   +$0.02 overhead                                                                    
+   ○ lint                          │  tokens     2.5k in · 1.8k out · 900 reasoning                                                         
+                                   │  ceiling    24.0M / 32.0M  nudge passed · 8.0M to ceiling · 420.0k/min · ~19m                          
+ ── TASKS ──                       │  budget     $0.42 / $10.00  95% headroom                                                               
+   ✓ Add truth-tier config to G…   │  tokens cap 5.2k / 2.0M  99% headroom                                                                  
+   ● Wire RunDb.GetLastPassingG…   │                                                                                                        
+   ○ Cache gate results by (nam…   │  Workspace                                                                                             
+                                   │  the working directory every session edits                                                             
+                                   │  repo       C:/Code/conductor                                                                          
+                                   │  plan file  plans/conductor-foreman.plan.json                                                          
+                                   │  tracker    CONDUCTOR-VNEXT-PLAN.md                                                                    
+                                   │  state dir  .conductor                                                                                 
+                                   │                                                                                                        
+                                   │  Git                                                                                                   
+                                   │  branch     feat/gate-caching                                                                          
+                                   │  upstream   origin/feat/gate-caching  3 ahead · 1 behind                                               
+                                   │  head       9f2c1ab  feat(gates): key the cache by (name, tier, sha)                                   
+                                   │  tree       4 changes uncommitted                                                                      
+                                   │  changes    M src/Core/GateCache.cs, M src/Core/RunDb.cs, M tests/GateCacheTests.cs, ?? notes.md       
+                                   │                                                                                                        
+                                   │  Next steps                                                                                            
+                                   │    a  watch the live agent — it is working right now                                                   
+                                   │    r  read the run report                                                                              
+                                   │    ?  see every key                                                                                    
+                                   │                                                                                                        
+                                   │  Wiring                                                                                                
+                                   │  token      present                                                                                    
+                                   │                                                                                                        
+                                   │                                                                                                        
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   a agent · r report · w owner queue · ? keys                                     

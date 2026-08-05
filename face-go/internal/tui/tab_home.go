@@ -584,6 +584,16 @@ func (m Model) homeBudget(s *api.StateDto) budgetSpend {
 // is answering a narrower question than "what has this run cost".
 func (m Model) homeBudgets(s *api.StateDto) []homeLine {
 	var rows []homeLine
+	// K4.4: the token ceiling goes FIRST of the cap rows, because it is the limit that actually
+	// interrupts the work — the money cap parks the run for an owner to decide about, the ceiling ends
+	// the session where it stands. Same "detail" tier as the other two rather than a rank above them:
+	// fitHome sheds from the last row backwards, so first-in-the-list already means last-to-go, and
+	// promoting it instead cost the money row AND the run-token row on a 110x34 frame that had both.
+	// It costs an uncapped run nothing — widgets.TokenGauge renders "" with no ceiling and nothing in
+	// flight.
+	if gauge := widgets.TokenGauge(s.TokenHeadroom); gauge != "" {
+		rows = append(rows, hRow("ceiling", gauge, homeDetail))
+	}
 	b := m.homeBudget(s)
 	if b.cap > 0 {
 		label := "budget"

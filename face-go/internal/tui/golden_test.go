@@ -1031,6 +1031,22 @@ func TestGolden(t *testing.T) {
 			m, _ = m.Update(MsgStateUpdated{State: st})
 			return m
 		}},
+		// K4.4's headline frame: a live session past its token nudge. The numbers are this era's real
+		// ones — a 32M ceiling with the nudge at 22.4M — because the gauge exists to be read at exactly
+		// this moment, when the limit that will actually interrupt the work is already behind.
+		//
+		// It is also the frame that shows the cost of the row: Home is fixed-height and at 110x34 there
+		// was room for exactly one cap row, so the ceiling takes the slot the money cap held. That is a
+		// deliberate ranking, not a spill — the run's cost is already on the top bar and the session's
+		// ceiling is on no other surface at all. Given the height back, both stand together; see
+		// TestGoldenHomeHeadroomBesideMoney.
+		{"home_token_headroom", func(m tea.Model) tea.Model {
+			st := fixedState()
+			st.AgentActive = true
+			st.TokenHeadroom = k44Headroom()
+			m, _ = m.Update(MsgStateUpdated{State: st})
+			return m
+		}},
 		{"attention", func(m tea.Model) tea.Model {
 			st := fixedState()
 			st.Status = "NeedsAttention"
@@ -1049,6 +1065,36 @@ func TestGolden(t *testing.T) {
 			checkGolden(t, tc.name, stripANSI(m.View().Content))
 		})
 	}
+}
+
+// k44Headroom is the wire block for a live session 24.0M into a 32M ceiling whose nudge (22.4M) is
+// already behind it — this era's own budget, so the fixture reads like the run it was built for.
+func k44Headroom() *api.TokenHeadroomDto {
+	return &api.TokenHeadroomDto{
+		Tokens:        24_000_000,
+		Cap:           i64Ptr(32_000_000),
+		NudgeAt:       i64Ptr(22_400_000),
+		ToNudge:       i64Ptr(-1_600_000),
+		ToCap:         i64Ptr(8_000_000),
+		UsedRatio:     f64Ptr(0.75),
+		BurnPerMinute: f64Ptr(420_000),
+		MinutesToCap:  f64Ptr(19.04),
+		Live:          true,
+	}
+}
+
+// TestGoldenHomeHeadroomBesideMoney is the checkpoint's own sentence as a frame: live token headroom
+// BESIDE live money, not instead of it. Given a window with the height for both cap rows, the two
+// stand together and answer different questions — the ceiling says when this SESSION stops, the
+// budget says when the RUN parks for an owner. This is the frame that proves the gauge composes into
+// the panel rather than competing with it, which is what the lane-aware Face will need of it.
+func TestGoldenHomeHeadroomBesideMoney(t *testing.T) {
+	m := newGoldenModel(140, 44)
+	st := fixedState()
+	st.AgentActive = true
+	st.TokenHeadroom = k44Headroom()
+	m, _ = m.Update(MsgStateUpdated{State: st})
+	checkGolden(t, "home_headroom_wide", stripANSI(m.View().Content))
 }
 
 // TestGoldenHomeDisconnected is the frame a person actually lands on with no engine running: Home,

@@ -160,6 +160,10 @@ type StateDto struct {
 	BudgetWindowStartedUtc string `json:"budgetWindowStartedUtc"`
 	BudgetApprovals        int    `json:"budgetApprovals"`
 
+	// ── K4.4: live token headroom — the token half of the block above. Nil = an engine older than
+	// K4.4, or a run that has not started a session yet; neither is a session sitting at zero.
+	TokenHeadroom *TokenHeadroomDto `json:"tokenHeadroom"`
+
 	// ── SF3.3: the repo's git state, served since the engine half of SF3.3.
 	//
 	// NIL AND EMPTY ARE DIFFERENT FACTS, and the whole block exists to keep them apart. A nil Git is
@@ -175,6 +179,39 @@ type StateDto struct {
 	EngineVersion string `json:"engineVersion"`
 	EngineCommit  string `json:"engineCommit"`
 	FaceBuild     string `json:"faceBuild"`
+}
+
+// TokenHeadroomDto mirrors Core/Http/Contracts/State/TokenHeadroomDto.cs — one gauge's worth of live
+// token headroom, computed by the engine so no surface has to derive it.
+//
+// Tokens is NOT SessionTokensInput+Output+Reasoning. The engine's rail counts cache-read against the
+// ceiling and those three fields exclude it; on a run whose cache reads are 98% of every token spent,
+// adding up the visible three draws a nearly empty gauge for a session about to be killed. That
+// mistake is exactly what this block exists to prevent, so never rebuild it from the other fields.
+//
+// EVERY CAP-DEPENDENT FIELD IS A POINTER and nil means "no ceiling is set", never zero: a nil
+// UsedRatio rendered as 0 is a full bar of headroom that nobody granted.
+type TokenHeadroomDto struct {
+	// Every token this session has been charged for: input + output + reasoning + cache-read.
+	Tokens int64 `json:"tokens"`
+	// The RESOLVED per-session ceiling — the this-run override when set, else limits.maxSessionTokens.
+	// nil = no ceiling (including `set rollover 0`, which switches the rail off for the run).
+	Cap *int64 `json:"cap"`
+	// Where the cooperative wrap-up nudge fires, and the distances to it and to the ceiling. ToNudge
+	// goes negative once the nudge has been raised, which is a different frame from "nearly there".
+	NudgeAt *int64 `json:"nudgeAt"`
+	ToNudge *int64 `json:"toNudge"`
+	ToCap   *int64 `json:"toCap"`
+	// Tokens over cap. nil when uncapped.
+	UsedRatio *float64 `json:"usedRatio"`
+	// Mean spend rate so far; nil until the session has run long enough for a rate to mean anything,
+	// and nil once it has ended. The projections are optimistic by construction — a session's bill is
+	// turns x context and context only grows — so they bound the time left rather than predict it.
+	BurnPerMinute  *float64 `json:"burnPerMinute"`
+	MinutesToNudge *float64 `json:"minutesToNudge"`
+	MinutesToCap   *float64 `json:"minutesToCap"`
+	// Whether a session is actually in flight. False = the last session's closing numbers.
+	Live bool `json:"live"`
 }
 
 // GitDto mirrors Core/Http/ControlPlaneDto.Git.cs.
