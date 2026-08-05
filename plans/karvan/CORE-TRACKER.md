@@ -4,20 +4,21 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **K3.1 claimed** — `707992f` the move, `1e29a13` the last two fixtures, `dd318d9` a defect the
-  rig found, `aa48c69` evidence. `run.db` now resolves to `%LOCALAPPDATA%/conductor/runs/<slug>` keyed
-  by repo path + plan; `StateDir` KEPT its meaning (scratch, discovery files, tracked deliverables), so
-  fleet/`ps`/`watch` needed no change. Precedence: `CONDUCTOR_RUN_DB` > `.conductor/state-pointer.json`
-  > derived. Import COPIES and leaves the original. Suite 1837/1837.
-next: **K3.2 — `conductor history` + the Face run picker.** The list you need is
-  `StateCatalogue.Read(StateHome.Root)`; `StateMigration.ReadReceipt` says where an entry came from.
-  Extend `runpicker.go`, do not write a second one. Read-only means read-only.
-watch: two traps this checkpoint paid for. `src/Conductor.Core/Store/**` may not touch `Console` —
-  `ArchitectureBoundaryTests` fails the build; route notices through a sink the shell installs. And the
-  pragma ceiling is 38/38, so MA0045 cannot be suppressed — note it does NOT fire inside *public*
-  methods, so inline private sync-I/O helpers into their public caller.
-red: none. Open, not blocking: **#27** fresh-db FK error on first `run_state` write, **#24**
-  `AgentConfig.Merge` drops `Env`.
+last: **K3.2 claimed** - `ec1f158` core, `f5de8a9` the CLI verb, `567b22a` the Face picker, evidence at
+  `.conductor/evidence/K3/K3.2-history.md`. `conductor history` lists the catalogue and opens one run
+  read-only (`--repo/--plan/--since/--limit/--home/--json`); `RunArchive` is `Mode=ReadOnly` and has no
+  write method, checkpoints fold through `TaskGraph`. The picker gained `WithPast` - past rows list,
+  navigate, and cannot be attached to. 23 C# + 6 Go tests green; two new goldens, no baseline moved.
+next: **K3.3 - every run records which engine, which commit, dirty flag, and the limits snapshot.**
+  `history` already prints an `engine` field and it reads `0.0.0.0` / `2.0.0.0` today: `runs.driver_ver`
+  carries the assembly version, which answers nothing. Fill that column, add commit/dirty/limits, and
+  `ArchivedRun` plus the `history` header are already wired to print them.
+watch: **bug #28, filed this session, and it will bite the K7.2 reinstall.** This repo's own
+  `.conductor/run.db` says `schema_version = 9` but already carries the v10 `soft_break` column, so any
+  v10+ engine dies in `MigrationRunner.Apply`. Also `CA2000` is a build error here and false-positives
+  on any factory returning an `IDisposable` - do not return one; hold a connection string instead.
+red: none. Open, not blocking: **#28** above, **#27** fresh-db FK error on first `run_state` write,
+  **#24** `AgentConfig.Merge` drops `Env`.
 
 
 ## Baseline numbers (from run.db)
@@ -25,7 +26,7 @@ red: none. Open, not blocking: **#27** fresh-db FK error on first `run_state` wr
 | Metric | Value |
 |---|---|
 | Total checkpoints | 32 |
-| Done | 1 |
+| Done | 2 |
 | Claimed (unconfirmed) | 7 |
 
 ## Checkpoints
@@ -49,13 +50,13 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | K2.1 | Conductor.Core holds the domain, orchestration and store with no Spectre and no HTTP hosting, Conductor is CLI plus hosting, the reference direction only points one way, and publish plus doctor plus the Face's discovery still work | DONE | b05efef | .conductor/evidence/K2/K2.1-K2.2-core-extraction.md |
 | K2.2 | Architecture tests in the ordinary suite fail the build when a boundary is crossed, each naming the offending type and the rule, landed together with K2.1 so the extraction is verified rather than asserted | DONE | b05efef | .conductor/evidence/K2/K2.1-K2.2-core-extraction.md |
 | K2.3 | The worst partial-file piles are split by responsibility — the thirty-file DTO pile becomes per-feature endpoint contracts — and one written file-organisation convention says where a new endpoint, event or partial belongs | DONE | b05efef | .conductor/evidence/K2/K2.3-partial-piles-and-the-convention.md |
-| K2.4 | The front door reads: a real ARCHITECTURE.md map, an AGENTS.md cut to current state with superseded handoffs archived and indexed, closed-era trackers out of the repo root, the divergent duplicate workgraph doc resolved to one file, and the docs indexes updated | DONE | 8b38f1b | .conductor/evidence/K2/K2.4-front-door.md |
+| K2.4 | The front door reads: a real ARCHITECTURE.md map, an AGENTS.md cut to current state with superseded handoffs archived and indexed, closed-era trackers out of the repo root, the divergent duplicate workgraph doc resolved to one file, and the docs indexes updated | DONE ✓ | 8b38f1b | .conductor/evidence/K2/K2.4-front-door.md |
 
 ### K3 — Conductor remembers
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| K3.1 | State has a machine-level home with one catalogue keyed by repo and plan, an environment override, an idempotent migration that imports existing run.db files rather than orphaning them, and a per-run scratch dir that keeps the repo's tracked deliverables | TODO | - | - |
+| K3.1 | State has a machine-level home with one catalogue keyed by repo and plan, an environment override, an idempotent migration that imports existing run.db files rather than orphaning them, and a per-run scratch dir that keeps the repo's tracked deliverables | DONE | 707992f | .conductor/evidence/K3/K3.1-state-home.md |
 | K3.2 | conductor history lists and opens past runs read-only from the catalogue, and the Face's existing run picker offers them | TODO | - | - |
 | K3.3 | Every run records the engine version, its commit, its dirty flag and a snapshot of the limits that governed it, and a dirty build warns at launch | TODO | - | - |
 
