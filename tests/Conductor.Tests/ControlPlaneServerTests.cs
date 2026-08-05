@@ -445,6 +445,76 @@ public sealed class ControlPlaneServerTests : IDisposable
         finally { server.Dispose(); }
     }
 
+    /// <summary>K4.4 — the token rail reaches a remote surface, over real HTTP and through the real
+    /// source-generated serializer. The unit tests call the projection directly and so cannot prove
+    /// the nested block survives JSON at all; this one can, and it also pins the contrast the whole
+    /// checkpoint exists for: 150k of tokens are visible in the fields a Face already had, and the
+    /// rail is acting on 10,000,000.</summary>
+    [Fact]
+    public async Task GetState_ServesTokenHeadroomCountingTheCacheReadTheRailCountsAgainstTheCeiling()
+    {
+        _plan.Limits.MaxSessionTokens = 12_000_000; // nudge lands at 9.6M on the default ratio
+        WriteEvents(
+            new RunStarted { Plan = "cps-test", Repo = _dir },
+            new StageEntered { StageId = "S1" },
+            new SessionStarted { Number = 1, StageId = "S1", Kind = "Deliver" },
+            new TokenDelta { SessionId = "1", Input = 100_000, Output = 50_000, CacheRead = 9_850_000 });
+        var (server, port) = StartServer();
+        try
+        {
+            var resp = await _http.GetAsync($"http://127.0.0.1:{port}/state");
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            var root = doc.RootElement;
+
+            // What a surface could see before this block existed.
+            Assert.Equal(100_000, root.GetProperty("sessionTokensInput").GetInt64());
+            Assert.Equal(50_000, root.GetProperty("sessionTokensOutput").GetInt64());
+
+            var h = root.GetProperty("tokenHeadroom");
+            Assert.Equal(10_000_000, h.GetProperty("tokens").GetInt64());     // 66x the visible figure
+            Assert.Equal(12_000_000, h.GetProperty("cap").GetInt64());
+            Assert.Equal(9_600_000, h.GetProperty("nudgeAt").GetInt64());
+            Assert.Equal(-400_000, h.GetProperty("toNudge").GetInt64());      // the nudge is BEHIND it
+            Assert.Equal(2_000_000, h.GetProperty("toCap").GetInt64());
+            Assert.True(h.GetProperty("live").GetBoolean());
+            // No rate and no countdown here, and that is correct rather than incidental: the store
+            // stamps an event as it writes it, so a log built in one call is a session zero seconds
+            // old, and the engine serves no rate below its own floor. The rate arithmetic itself is
+            // measured in K4_4TokenHeadroomTests against a controlled clock.
+            Assert.False(h.TryGetProperty("burnPerMinute", out _));
+            Assert.False(h.TryGetProperty("minutesToCap", out _));
+        }
+        finally { server.Dispose(); }
+    }
+
+    /// <summary>K4.4's honesty rule, checked where it actually has to hold — on the wire. A plan with
+    /// no session ceiling must serve JSON nulls, not zeros: a zero cap divides into a full gauge and a
+    /// zero usedRatio renders as 100% headroom nobody granted.</summary>
+    [Fact]
+    public async Task GetState_TokenHeadroomServesNullsNotZerosWhenThePlanSetsNoCeiling()
+    {
+        WriteEvents(
+            new RunStarted { Plan = "cps-test", Repo = _dir },
+            new StageEntered { StageId = "S1" },
+            new SessionStarted { Number = 1, StageId = "S1", Kind = "Deliver" },
+            new TokenDelta { SessionId = "1", Input = 10_000, Output = 5_000, CacheRead = 985_000 });
+        var (server, port) = StartServer();
+        try
+        {
+            var resp = await _http.GetAsync($"http://127.0.0.1:{port}/state");
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            var h = doc.RootElement.GetProperty("tokenHeadroom");
+
+            Assert.Equal(1_000_000, h.GetProperty("tokens").GetInt64()); // the spend is still a fact
+            // The serializer omits nulls rather than writing them, which is the same fact to every
+            // decoder on the other end: an absent key deserializes to a nil pointer, exactly as
+            // costCap has always done. What matters is that NO cap-dependent field arrives as 0.
+            foreach (var field in new[] { "cap", "nudgeAt", "toNudge", "toCap", "usedRatio", "minutesToNudge" })
+                Assert.False(h.TryGetProperty(field, out _), $"{field} must be absent, never 0");
+        }
+        finally { server.Dispose(); }
+    }
+
     [Fact]
     public async Task GetState_SessionFinished_DoesNotDoubleCountLiveDeltas()
     {
