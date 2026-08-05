@@ -8,7 +8,8 @@ public sealed class NoOpTelegramService : ITelegramService
     /// "configured, not started" — <c>GET /telegram/status</c> reports it with the same constant.</summary>
     public string? DeliveryBlocker => TelegramReadiness.RestartRequired;
 
-    public Task PushAsync(string message, CancellationToken ct = default) => Task.CompletedTask;
+    public Task PushAsync(string message, Messaging.PushSeverity severity = Messaging.PushSeverity.Quiet,
+        CancellationToken ct = default) => Task.CompletedTask;
     public Task PushWithKeyboardAsync(string message,
         IReadOnlyList<(string Text, string CallbackData)> buttons, CancellationToken ct = default) => Task.CompletedTask;
     public Task PushSessionEndAsync(SessionEndPush push, CancellationToken ct = default) => Task.CompletedTask;

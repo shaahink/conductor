@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Conductor.Core.Events;
 using Conductor.Core.Evidence;
+using Conductor.Core.Integrations.Messaging;
 using Conductor.Core.Store;
 
 namespace Conductor.Core.Integrations;
@@ -43,33 +44,97 @@ public sealed partial class TelegramService
 
         sb.Append($"cost: ${push.CostUsd ?? 0:0.0000}{runCost}{scoreStr}");
 
-        await EnqueueAsync(sb.ToString(), push.Number, ct).ConfigureAwait(false);
+        // K5.4: a session that advanced is informational; one that ended blocked or needing the owner
+        // is the whole reason disable_notification exists.
+        await EnqueueAsync(sb.ToString(), push.Number, SessionSeverity(push.Outcome), null, ct)
+            .ConfigureAwait(false);
     }
 
-    /// <summary>K5.3 — evidence reaches the chat. As TEXT, deliberately: sending the PNG itself is
-    /// K5.4's job (photo and document sending, chunking, per-event templates), and this is the line
-    /// that proves the path exists and carries the artifact's identity in the meantime. A screenshot
-    /// that nobody forwards is the case the whole item exists for.</summary>
+    /// <summary>Only outcomes the owner can do something about are allowed to buzz.</summary>
+    private static PushSeverity SessionSeverity(string outcome) =>
+        outcome.Contains("Attention", StringComparison.OrdinalIgnoreCase)
+        || outcome.Contains("Blocked", StringComparison.OrdinalIgnoreCase)
+        || outcome.Contains("Failed", StringComparison.OrdinalIgnoreCase)
+            ? PushSeverity.Alert : PushSeverity.Quiet;
+
+    /// <summary>K5.4 — evidence ARRIVES. K5.3 registered the artifacts and pushed their paths, which
+    /// from a phone is a list of file names on a machine the owner is not at; the case the whole item
+    /// exists for is a screenshot conductor took, and a path is not a screenshot.
+    /// <para>This is the same method with a new BODY, not a second path: every artifact is sent as
+    /// itself — <c>sendPhoto</c> for a visual kind, <c>sendDocument</c> otherwise, both decided by
+    /// <see cref="TelegramLimits.MethodFor"/> — with the text line it used to push as the caption. A
+    /// batch beyond <see cref="EvidenceFilesPerPush"/> would be a flood, so the rest are still
+    /// announced as text, which is exactly what they were before.</para></summary>
     public async Task PushEvidenceAsync(IReadOnlyList<EvidenceArtifact> artifacts, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(artifacts);
         if (!_started || artifacts.Count == 0) return;
 
-        var sb = new StringBuilder();
-        sb.AppendLine($"<b>evidence</b> — {artifacts.Count} new artifact{(artifacts.Count == 1 ? "" : "s")}");
-        foreach (var a in artifacts.Take(EvidenceLinesPerPush))
+        var sendable = artifacts.Take(EvidenceFilesPerPush).ToList();
+        foreach (var a in sendable)
         {
-            var where = a.CheckpointId is { Length: > 0 } cp ? $" — {cp}" : "";
-            sb.AppendLine($"• {EscapeHtml(a.Path)} ({a.Kind}, {Size(a.Bytes)}){EscapeHtml(where)}");
+            var absolute = ResolveArtifact(a.Path);
+            var caption = EvidenceCaption(a, artifacts.Count);
+            if (absolute is null)
+            {
+                await EnqueueAsync(caption + "\n<i>not attached — the path did not resolve to a file</i>",
+                    a.SessionNumber, PushSeverity.Quiet, null, ct).ConfigureAwait(false);
+                continue;
+            }
+
+            await EnqueueAsync(caption, a.SessionNumber, PushSeverity.Quiet,
+                new OutboundAttachment(absolute, EvidenceKinds.IsVisual(a.Kind), caption), ct).ConfigureAwait(false);
         }
-        if (artifacts.Count > EvidenceLinesPerPush)
-            sb.AppendLine($"+{artifacts.Count - EvidenceLinesPerPush} more");
 
-        var progress = ProgressLine(null);
-        if (progress.Length > 0) sb.Append(EscapeHtml(progress));
+        var rest = artifacts.Skip(EvidenceFilesPerPush).ToList();
+        if (rest.Count == 0) return;
 
-        await EnqueueAsync(sb.ToString().TrimEnd(), null, ct).ConfigureAwait(false);
+        var sb = new StringBuilder();
+        sb.AppendLine($"<b>evidence</b> — {rest.Count} further artifact{(rest.Count == 1 ? "" : "s")}, not attached");
+        foreach (var a in rest.Take(EvidenceLinesPerPush))
+            sb.AppendLine("• " + EvidenceLine(a));
+        if (rest.Count > EvidenceLinesPerPush)
+            sb.AppendLine($"+{rest.Count - EvidenceLinesPerPush} more");
+        await EnqueueAsync(sb.ToString().TrimEnd(), null, PushSeverity.Quiet, null, ct).ConfigureAwait(false);
     }
+
+    /// <summary>The caption that rides the file. Bounded by Telegram's 1024-character caption limit —
+    /// a quarter of the message limit — so it is composed short rather than clipped from a body.</summary>
+    private string EvidenceCaption(EvidenceArtifact a, int batchSize)
+    {
+        var sb = new StringBuilder();
+        var batch = batchSize > 1 ? $" ({batchSize} new)" : "";
+        sb.AppendLine($"<b>evidence</b>{batch}");
+        sb.AppendLine("• " + EvidenceLine(a));
+        var progress = ProgressLine(a.StageId);
+        if (progress.Length > 0) sb.Append(EscapeHtml(progress));
+        return sb.ToString().TrimEnd();
+    }
+
+    private static string EvidenceLine(EvidenceArtifact a)
+    {
+        var where = a.CheckpointId is { Length: > 0 } cp ? $" — {cp}" : "";
+        return $"{EscapeHtml(a.Path)} ({a.Kind}, {Size(a.Bytes)}){EscapeHtml(where)}";
+    }
+
+    /// <summary>An artifact path is repo-relative when the file is inside the repo and absolute when
+    /// it is not (K5.3). The wire needs an absolute one, and a path that no longer resolves must
+    /// degrade to the text line rather than throwing inside a fire-and-forget push.</summary>
+    private string? ResolveArtifact(string path)
+    {
+        try
+        {
+            if (Path.IsPathRooted(path)) return File.Exists(path) ? path : null;
+            var joined = Path.GetFullPath(Path.Combine(_plan.Repo, path));
+            return File.Exists(joined) ? joined : null;
+        }
+        catch (Exception ex) when (ex is ArgumentException or IOException or NotSupportedException) { return null; }
+    }
+
+    /// <summary>How many artifacts of one batch are sent as files. A watcher sweep that finds thirty
+    /// screenshots must not send thirty photos; the rest are announced exactly as K5.3 announced
+    /// them.</summary>
+    private const int EvidenceFilesPerPush = 4;
 
     private const int EvidenceLinesPerPush = 8;
 

@@ -7,6 +7,7 @@ using System.Text.Json.Serialization;
 using System.Threading.Channels;
 using Conductor.Core.Planning;
 using Conductor.Core.Events;
+using Conductor.Core.Integrations.Messaging;
 using Conductor.Core.Store;
 using Conductor.Models;
 using Microsoft.Extensions.Hosting;
@@ -29,7 +30,11 @@ public interface ITelegramService
     /// delivered". The run log now answers that once, unasked.</summary>
     string? DeliveryBlocker { get; }
 
-    Task PushAsync(string message, CancellationToken ct = default);
+    /// <summary>K5.4: <paramref name="severity"/> is how a push that the owner must ACT on gets to
+    /// buzz while a progress line does not. It is chosen by the caller — the one place that knows
+    /// what happened — rather than sniffed out of the message text here.</summary>
+    Task PushAsync(string message, Messaging.PushSeverity severity = Messaging.PushSeverity.Quiet,
+        CancellationToken ct = default);
     Task PushWithKeyboardAsync(string message, IReadOnlyList<(string Text, string CallbackData)> buttons,
         CancellationToken ct = default);
     Task PushSessionEndAsync(SessionEndPush push, CancellationToken ct = default);
@@ -64,7 +69,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
     /// SC1.3: recreated on every start, because <see cref="StopAsync"/> completes the writer and a
     /// completed channel can never carry another message — a restart on a reloaded token would
     /// otherwise come up with a queue that silently drops everything.</summary>
-    private Channel<(string ChatId, string Text, string? KeyboardJson, TaskCompletionSource<string?>? Ack, int? SessionNumber)> _sendQueue;
+    private Channel<OutboundMessage> _sendQueue;
     private readonly HttpClient _http;
     private CancellationTokenSource _cts = new();
     private Task? _pollTask;
@@ -106,9 +111,8 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
         _http = new HttpClient { Timeout = TimeSpan.FromSeconds(65) };
     }
 
-    private static Channel<(string ChatId, string Text, string? KeyboardJson, TaskCompletionSource<string?>? Ack, int? SessionNumber)> NewSendQueue() =>
-        Channel.CreateUnbounded<(string, string, string?, TaskCompletionSource<string?>?, int?)>(
-            new UnboundedChannelOptions { SingleReader = true });
+    private static Channel<OutboundMessage> NewSendQueue() =>
+        Channel.CreateUnbounded<OutboundMessage>(new UnboundedChannelOptions { SingleReader = true });
 
     /// <summary>SC1.3: take everything this service derives from the plan, from THIS plan — used by
     /// the constructor and again by every reload, so there is one derivation and the two cannot
@@ -222,7 +226,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
         var text = $"✅ Conductor test message — bot @{bot} is connected. Sent through the live push queue, "
                  + "the same path every run notification takes.";
         var queue = _sendQueue;   // SC1.3: the queue this test's ack belongs to, even if a reload swaps it
-        if (!queue.Writer.TryWrite((chatId, text, null, ack, null)))
+        if (!queue.Writer.TryWrite(new OutboundMessage(chatId, text, Ack: ack, Severity: PushSeverity.Alert)))
             return new TelegramTestOutcome(false, bot, "the send queue is closed — the service is shutting down",
                 false, TelegramReadiness.NotStarted);
 
@@ -272,7 +276,8 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
     // Every real caller is `_ = Push…(…)` fire-and-forget, so an exception here would be an
     // unobserved task exception nobody ever sees. The queue is unbounded, so TryWrite never blocks
     // and never throws — it just returns false once StopAsync has closed the channel.
-    public Task PushAsync(string message, CancellationToken ct = default)
+    public Task PushAsync(string message, PushSeverity severity = PushSeverity.Quiet,
+        CancellationToken ct = default)
     {
         // Nothing to read the tracker for if the push cannot be delivered — this guard is repeated
         // inside EnqueueAsync, which is the one that actually decides.
@@ -282,20 +287,26 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
         // carried no checkpoint count, no stage progress and no ETA between them. Appended, never
         // substituted, and empty when there is no tracker to read.
         var progress = ProgressLine(null);
-        return EnqueueAsync(progress.Length > 0 ? message + "\n" + EscapeHtml(progress) : message, null, ct);
+        return EnqueueAsync(progress.Length > 0 ? message + "\n" + EscapeHtml(progress) : message,
+            null, severity, null, ct);
     }
 
     /// <summary>The one write path onto the send queue. <paramref name="sessionNumber"/> is the
     /// number the identity line will carry: the RECORD's for a session-end push, and the live
     /// counter for everything else (K5.2 — the number used to be printed twice, from two sources).</summary>
-    private Task EnqueueAsync(string message, int? sessionNumber, CancellationToken ct = default)
+    /// <remarks>K5.4: <paramref name="severity"/> decides whether the push buzzes the owner's phone,
+    /// and <paramref name="attachment"/> makes it a file rather than text. Both are properties of the
+    /// EVENT, so they are chosen by the caller that knows what happened, not here.</remarks>
+    private Task EnqueueAsync(string message, int? sessionNumber,
+        PushSeverity severity = PushSeverity.Quiet, OutboundAttachment? attachment = null,
+        CancellationToken ct = default)
     {
         // SC1.3: read the queue field ONCE — a reload can swap it between the check and the write,
         // and a push split across two queues would be delivered twice or not at all.
         var queue = _sendQueue;
         if (!_started || _cfg?.AllowedChatIds is not { Count: > 0 } ids) return Task.CompletedTask;
         foreach (var cid in ids)
-            queue.Writer.TryWrite((cid, message, null, null, sessionNumber));
+            queue.Writer.TryWrite(new OutboundMessage(cid, message, null, null, sessionNumber, severity, attachment));
         return Task.CompletedTask;
     }
 
@@ -306,7 +317,9 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
         if (!_started || _cfg is not { EnableTwoWay: true, AllowedChatIds.Count: > 0 } cfg) return Task.CompletedTask;
         var kb = BuildInlineKeyboard(buttons);
         foreach (var cid in cfg.AllowedChatIds)
-            queue.Writer.TryWrite((cid, message, kb, null, null));
+            // A keyboard means the engine is ASKING the owner for something — that is the definition
+            // of a push that should buzz.
+            queue.Writer.TryWrite(new OutboundMessage(cid, message, kb, Severity: PushSeverity.Alert));
         return Task.CompletedTask;
     }
 
@@ -366,9 +379,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
 
     /// <summary>Reads the queue it was STARTED with, not the current field: a reload swaps in a new
     /// queue, and a loop that followed the field would end up as a second reader on it.</summary>
-    private async Task SendLoopAsync(
-        Channel<(string ChatId, string Text, string? KeyboardJson, TaskCompletionSource<string?>? Ack, int? SessionNumber)> queue,
-        CancellationToken ct)
+    private async Task SendLoopAsync(Channel<OutboundMessage> queue, CancellationToken ct)
     {
         // ReadAllAsync completes normally once the writer is closed AND the backlog is drained —
         // that is what lets StopAsync flush the final session-end push instead of dropping it.
@@ -378,7 +389,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
             {
                 try
                 {
-                    await SendAsync(item.ChatId, item.Text, ct, item.KeyboardJson, item.SessionNumber).ConfigureAwait(false);
+                    await SendAsync(item, ct).ConfigureAwait(false);
                     item.Ack?.TrySetResult(null);
                 }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -418,31 +429,9 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
             $"<i>{EscapeHtml(name)} · s{sessionNumber ?? _state.SessionCounter}</i>");
     }
 
-    internal async Task SendAsync(string chatId, string text, CancellationToken ct,
-        string? keyboardJson = null, int? sessionNumber = null)
-    {
-        var payload = new Dictionary<string, object>(StringComparer.Ordinal)
-        {
-            ["chat_id"] = chatId,
-            // FU-OWNER-11: stamped HERE, the one point every push, digest, command reply and test
-            // message passes through on its way to the wire — so no existing call site can forget it
-            // and no call site added later can either. Prefixing at PushAsync would have left the
-            // /status replies, the daily digest and the token-test message anonymous.
-            ["text"] = FormattableString.Invariant($"{IdentityFor(sessionNumber)}\n{text}"),
-            ["parse_mode"] = "HTML",
-        };
-        if (keyboardJson != null)
-        {
-            using var kbDoc = JsonDocument.Parse(keyboardJson);
-            payload["reply_markup"] = kbDoc.RootElement.Clone();
-        }
-
-        var json = JsonSerializer.Serialize(payload, JsonOpts);
-        using var content = new StringContent(json, Encoding.UTF8, "application/json");
-        var resp = await _http.PostAsync($"{_apiBase}{_token}/sendMessage", content, ct)
-            .ConfigureAwait(false);
-        resp.EnsureSuccessStatusCode();
-    }
+    // K5.4: the wire path moved to TelegramService.Transport.cs — the identity stamp is still applied
+    // at that single choke point (FU-OWNER-11), and it now also chunks at 4096, threads the run and
+    // maps severity to disable_notification, for text and attachments alike.
 
     private async Task AnswerCallbackAsync(string callbackQueryId, CancellationToken ct)
     {

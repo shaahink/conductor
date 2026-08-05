@@ -1,10 +1,10 @@
 ﻿# Conductor — Karvan core - the engine knows what it did and what it cost run report
 
-_Updated 2026-08-05 06:51 UTC · branch `feat/karvan` · HEAD `ff7812d`_
+_Updated 2026-08-05 07:33 UTC · branch `feat/karvan` · HEAD `f6900c1`_
 
-**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [7h 21m ago, 23:29:12Z]
-**Stage:** K5 — The result contract and the channels · attempts used 0 · working ▸ K5.3
-**Checkpoints:** 17/32 done · **Sessions run:** 18 · **Cost:** $183.4279 (agent $183.3210 + gates $0.1070) · **Tokens:** 2,605,752 in / 1,287,779 out
+**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [8h 03m ago, 23:29:12Z]
+**Stage:** K5 — The result contract and the channels · attempts used 0 · working ▸ K5.4
+**Checkpoints:** 18/32 done · **Sessions run:** 19 · **Cost:** $199.5446 (agent $199.4327 + gates $0.1119) · **Tokens:** 2,793,492 in / 1,374,023 out
 **Confirmed phases:** K1, K2, K3, K4
 
 ## Stage progress
@@ -15,7 +15,7 @@ _Updated 2026-08-05 06:51 UTC · branch `feat/karvan` · HEAD `ff7812d`_
 | K2 | The architecture becomes navigable | ██████████ 4/4 | confirmed ✓ |
 | K3 | Conductor remembers | ██████████ 3/3 | confirmed ✓ |
 | K4 | Token truth - measure it before shrinking it | ██████████ 4/4 | confirmed ✓ |
-| K5 | The result contract and the channels | █████░░░░░ 2/4 | **← active** |
+| K5 | The result contract and the channels | ████████░░ 3/4 | **← active** |
 | K6 | The surfaces read | ░░░░░░░░░░ 0/4 | todo |
 | K7 | Ship the plan | ░░░░░░░░░░ 0/2 | todo |
 
@@ -62,13 +62,13 @@ _Updated 2026-08-05 06:51 UTC · branch `feat/karvan` · HEAD `ff7812d`_
 
 </details>
 
-<details><summary>K5 — The result contract and the channels (2/4)</summary>
+<details><summary>K5 — The result contract and the channels (3/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| K5.1 | The session result has one format conductor owns — short headline, at most three outcome bullets, artefacts as links, evidence paths, explicit gaps — with the followup parser, the verdict parse and the session template moving in the same checkpoint and a legacy result degrading rather than throwing | ✅ DONE | - |
-| K5.2 | The five Telegram defects that make the feed unreadable are gone: one identity block from one source, the stage title beside the id, the structured result rendered instead of cut mid-word, a rollover that reports what it landed, and a progress line in every push | ✅ DONE | - |
-| K5.3 | Evidence is a first-class artifact — path, kind, checkpoint, session, sha, created-at — written as an event when an agent registers one or a watched directory gains a file, with non-text kinds first-class, a Face surface, and the existing free-text evidence field still working | ⬜ TODO | - |
+| K5.1 | The session result has one format conductor owns — short headline, at most three outcome bullets, artefacts as links, evidence paths, explicit gaps — with the followup parser, the verdict parse and the session template moving in the same checkpoint and a legacy result degrading rather than throwing | ✅ DONE | [`c04175d`](https://github.com/shaahink/conductor/commit/c04175d) |
+| K5.2 | The five Telegram defects that make the feed unreadable are gone: one identity block from one source, the stage title beside the id, the structured result rendered instead of cut mid-word, a rollover that reports what it landed, and a progress line in every push | ✅ DONE | [`c04175d`](https://github.com/shaahink/conductor/commit/c04175d) |
+| K5.3 | Evidence is a first-class artifact — path, kind, checkpoint, session, sha, created-at — written as an event when an agent registers one or a watched directory gains a file, with non-text kinds first-class, a Face surface, and the existing free-text evidence field still working | ✅ DONE | - |
 | K5.4 | The message-composition layer ships owner-editable per-event templates, repo and branch and stage title and checkpoint in every push, commits and PRs as links, money with headroom, photo and document sending so evidence arrives, a thread per run, severity mapped to notify or silent, 4096-character chunking, and an ADR recording the push-only remote posture | ⬜ TODO | - |
 
 </details>
@@ -115,16 +115,13 @@ _Updated 2026-08-05 06:51 UTC · branch `feat/karvan` · HEAD `ff7812d`_
 | 16 | K4 | Deliver | 1 | 08-05 05:05 | 0:47 | Advanced | K4.4 | 5 | engine-fast:OK · face-fast:OK | $16.7142 | $0.0046 | 201,837/111,577 |
 | 17 | K4 | Fix | 2 | 08-05 05:59 | 0:06 | Progress |  | 1 | engine-fast:OK · face-fast:OK | $1.7676 | $0.0048 | 54,483/13,809 |
 | 18 | K5 | Deliver | 1 | 08-05 06:09 | 0:41 | Advanced | K5.1 K5.2 | 7 | engine-fast:OK · face-fast:OK | $17.4525 | $0.0050 | 235,397/127,419 |
+| 19 | K5 | Deliver | 1 | 08-05 06:51 | 0:41 | Advanced | K5.3 | 5 | engine-fast:OK · face-fast:OK | $16.1117 | $0.0049 | 187,740/86,244 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-05 04:47:07  ▪ gate face-fast pass [phase]  (0.0s)
-08-05 04:47:07  ▪ gate engine-full pass [phase]  (4m01s)
-08-05 04:47:07  ▪ gate face-full pass [phase]  (20.6s)
-08-05 04:47:07  ✓ checkpoint K3.3 confirmed
 08-05 04:47:07  ▸ stage K3 confirmed  (2h04m51s)
 08-05 04:47:07  ▸ stage K4 entered — Token truth - measure it before shrinking it
 08-05 04:47:08  • session #13 K4 Deliver started (attempt 1/8)
@@ -161,6 +158,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-05 07:09:11  • session #18 K5 Deliver started (attempt 1/8)
 08-05 07:51:11  ▪ gate engine-fast pass [session]  (46.8s)
 08-05 07:51:11  ▪ gate face-fast pass [session]  (3.0s)
+08-05 07:51:11  • session #18 K5 → Advanced · done K5.1,K5.2 · 7 commit(s)  (42m00s)
+08-05 07:51:11  • session #19 K5 Deliver started (attempt 1/8)
+08-05 08:33:07  ▪ gate engine-fast pass [session]  (44.6s)
+08-05 08:33:07  ▪ gate face-fast pass [session]  (4.1s)
 ```
 
 ## Health
@@ -168,8 +169,9 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 18 · retries 4 (22 %) · overall Warn
+sessions 19 · retries 4 (21 %) · overall Warn
 ⚠ [context-saturation] session #10: 23,623,416 context tokens (≥ 20,000,000)
+⚠ [context-saturation] session #18: 23,816,486 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #1: 24,653,507 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #7: 24,094,247 context tokens (≥ 20,000,000)
 ⚠ [gate-oscillation] gate 'engine-full' flipped pass/fail 5x
@@ -187,9 +189,6 @@ vs upstream: up to date
 
 ### Commits by session
 
-- **s11 (K3 Deliver)** — 2 commit(s):
-  - [`7841cfb`](https://github.com/shaahink/conductor/commit/7841cfb) docs(evidence): K3.3 evidence artifact and the handoff to K4.1
-  - [`e45fa11`](https://github.com/shaahink/conductor/commit/e45fa11) feat(history): K3.3 - every run records which engine produced it and under which limits
 - **s12 (K3 Fix)** — 2 commit(s):
   - [`21e3f72`](https://github.com/shaahink/conductor/commit/21e3f72) docs(evidence): K3.2 fix evidence and the handoff to K4.1
   - [`398c38a`](https://github.com/shaahink/conductor/commit/398c38a) fix(arch): K3.2's files fit the type ceiling and the history verb tab-completes
@@ -218,6 +217,12 @@ vs upstream: up to date
   - [`379abc7`](https://github.com/shaahink/conductor/commit/379abc7) docs(tracker): K5.1 handoff - the result contract, and what it costs to add prompt prose
   - [`ae7ada5`](https://github.com/shaahink/conductor/commit/ae7ada5) docs(result): K5.1 - the templates teach the format the engine now parses
   - [`c04175d`](https://github.com/shaahink/conductor/commit/c04175d) feat(result): K5.1 - one format for the session result, one parser for it
+- **s19 (K5 Deliver)** — 5 commit(s):
+  - [`f6900c1`](https://github.com/shaahink/conductor/commit/f6900c1) docs(tracker): K5.3 claimed and handed off - evidence is first class end to end
+  - [`370aba1`](https://github.com/shaahink/conductor/commit/370aba1) fix(face): K5.3 - elide an evidence path from the left, and rebaseline two goldens
+  - [`f4b272f`](https://github.com/shaahink/conductor/commit/f4b272f) feat(face): K5.3 part 4 - the evidence surface, re-homed rather than an eleventh tab
+  - [`fe5ab5f`](https://github.com/shaahink/conductor/commit/fe5ab5f) feat(evidence): K5.3 part 3 - GET /evidence, and the ratchet reds the engine half left
+  - [`6df3a58`](https://github.com/shaahink/conductor/commit/6df3a58) test(evidence): K5.3 part 2 - the tests, and the defect they found
 
 ## Phase handovers (audit)
 
@@ -244,26 +249,30 @@ engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: K5.1 and K5.2 landed and claimed; K5.3's engine half is committed but unclaimed
-> - K5.1: `SessionResult` is now the one parse of a session result — six consumers render from it instead of each cutting the same paragraph at 700/700/1200/600, a seventh uncalled copy of the cut is gone, and legacy prose plus verifier JSON degrade byte-identically to the old behaviour; the plan templates and built-in prompts teach the format
-> - K5.2: all five Telegram defects fixed and proved on the wire — one session number from the record, the stage title, the structured result rendered, a rollover that reports what it landed with gates marked deferred, and a progress line on every push
-> - K5.3 is…
+> SESSION-RESULT: K5.3 landed — evidence is a first-class artifact, tested, on the wire, on the Face
+> - Tests found a real defect: the checkpoint id was never recovered — a numbered group under `ExplicitCapture` matched every evidence file name and captured nothing.
+> - Fixed three architecture-ratchet reds the engine half left (two files over 500 lines, one with 4 types) by splitting, never by raising a ceiling.
+> - Driven proof on a scratch repo with the fresh build: a PNG the agent never mentioned was registered as `image`; `GET /evidence` answered 200 from the real engine host.
+> artefacts: 6df3a58, fe5ab5f, f4b272f, 370aba1, f6900c1
+> evidence: .conductor/evidence/K5/K5.3-evidence-artifact.md
+> gaps…
 
 ## Tracker handoff
 
 ```
-last: **K5.1 + K5.2 DONE** (s18) — `c04175d`/`ae7ada5`, `d1f55cc`; evidence
-  `.conductor/evidence/K5/K5.1-result-contract.md`, `K5.2-telegram-feed.md`, `K5.2-wire-transcript.txt`.
-  `SessionResult` is the one parse of a session result (six consumers render from it; legacy prose and
-  verifier JSON degrade byte-identically to the old 700-char cut); the Telegram push is built from a
-  `SessionEndPush` — one session number, the stage title, the structured result, a rollover that
-  reports what it landed, a progress line everywhere.
-next: **K5.3, and its engine half is already committed** (`e618c06`, card amended with the detail).
-  Model + `EvidenceRegistered` event + fold-based registry + claim/watcher registration + a text
-  `PushEvidenceAsync` are in and green. Missing: **tests (none exist yet)**, `GET /evidence`, the Face
-  surface, an evidence artifact. Start with the tests, then the wire, then the Face.
-red: none. bug #29 (K7.2 blocker) still open (`duplicate column name: soft_break` on a db COPY).
-watch: the ratchet counts `#pragma warning disable` in src and the ceiling is 38 — MA0045 fires on
-  sync file reads, so make the method async instead of suppressing. Built-in prompts sit ~12 chars
-  under SF6.1's 7900 budget. `K5_2TelegramFeedTests.FakeBotApi` captures exact push bytes.
+last: **K5.3 DONE** (s19) - `6df3a58` tests, `fe5ab5f` `GET /evidence`, `f4b272f` Face, `370aba1`
+  goldens; evidence `.conductor/evidence/K5/K5.3-evidence-artifact.md`. The s18 engine half was half a
+  checkpoint: the tests found the checkpoint id was NEVER recovered (a numbered group under
+  `ExplicitCapture` matched everything and captured nothing), and s18 had left THREE architecture-
+  ratchet reds - fixed by splitting, never by raising a ceiling. Driven proof: a scratch-repo run of
+  the fresh build registered a PNG the agent never mentioned; `GET /evidence` answered from the real
+  engine host.
+next: **K5.4** - the composition layer. `PushEvidenceAsync` is text-only on purpose: replace its BODY
+  with `sendPhoto`/`sendDocument` rather than adding a second path. `visual` is already on the wire
+  (`EvidenceArtifactDto`), so the Face and the notifier cannot disagree about what a PNG is. Also
+  owed: per-event templates, links, money with headroom, chunking at 4096, and the push-only ADR.
+red: none. bug #29 (K7.2 blocker) still open.
+watch: run `dotnet test --filter Architecture` before committing any file that GREW - 0.4s, and it is
+  a gate s18 shipped three reds past. Face: ten tabs is the ceiling (adr/0004), so a new surface is
+  re-homed, not tabbed - evidence lives in Knowledge.
 ```

@@ -1,6 +1,7 @@
 using System.Text;
 using Conductor.Core.Events;
 using Conductor.Core.Integrations;
+using Conductor.Core.Integrations.Messaging;
 using Conductor.Core.Lanes;
 using Conductor.Core.Planning;
 using Conductor.Core.Store;
@@ -94,9 +95,9 @@ public sealed partial class VerdictEngine
         _gates.PersistGates(gates, scope, sessionId);
     }
 
-    private void Notify(string message)
+    private void Notify(string message, PushSeverity severity = PushSeverity.Quiet)
     {
-        _ = _telegram.PushAsync(message);
+        _ = _telegram.PushAsync(message, severity);
         _webhooks.FireAsync(message);
 
         var n = _ctx.Plan.Notify;
@@ -458,7 +459,9 @@ public sealed partial class VerdictEngine
         _ctx.Events.Emit(new AttentionRequested { Reason = reason });
         _ctx.Log($"🛑 NEEDS HUMAN: {reason}");
         _saveAndReport();
-        Notify($"Conductor {_ctx.Plan.Name}: needs attention — {reason}");
+        // K5.4: the whole point of severity. The run has stopped and cannot restart itself — this is
+        // the one message that has earned the right to buzz a phone at 3am.
+        Notify($"Conductor {_ctx.Plan.Name}: needs attention — {reason}", PushSeverity.Alert);
         _ = _telegram.PushWithKeyboardAsync(reason,
         [
             ("Resume", "resume"),

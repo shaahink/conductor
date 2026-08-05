@@ -2,7 +2,7 @@
 
 **Plan:** Karvan core - the engine knows what it did and what it cost | **Branch:** `feat/karvan` | **Design doc:** docs/history/CONDUCTOR-KARVAN.md
 
-## Handoff (overwrite this block, <=12 lines, no history)
+## Handoff (overwrite this block, ≤12 lines, no history)
 
 last: **K5.3 DONE** (s19) - `6df3a58` tests, `fe5ab5f` `GET /evidence`, `f4b272f` Face, `370aba1`
   goldens; evidence `.conductor/evidence/K5/K5.3-evidence-artifact.md`. The s18 engine half was half a
@@ -27,7 +27,7 @@ watch: run `dotnet test --filter Architecture` before committing any file that G
 |---|---|
 | Total checkpoints | 32 |
 | Done | 4 |
-| Claimed (unconfirmed) | 13 |
+| Claimed (unconfirmed) | 14 |
 
 ## Checkpoints
 
@@ -75,7 +75,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | K5.1 | The session result has one format conductor owns — short headline, at most three outcome bullets, artefacts as links, evidence paths, explicit gaps — with the followup parser, the verdict parse and the session template moving in the same checkpoint and a legacy result degrading rather than throwing | DONE | c04175d | .conductor/evidence/K5/K5.1-result-contract.md |
 | K5.2 | The five Telegram defects that make the feed unreadable are gone: one identity block from one source, the stage title beside the id, the structured result rendered instead of cut mid-word, a rollover that reports what it landed, and a progress line in every push | DONE | c04175d | .conductor/evidence/K5/K5.2-telegram-feed.md |
-| K5.3 | Evidence is a first-class artifact — path, kind, checkpoint, session, sha, created-at — written as an event when an agent registers one or a watched directory gains a file, with non-text kinds first-class, a Face surface, and the existing free-text evidence field still working | TODO | - | - |
+| K5.3 | Evidence is a first-class artifact — path, kind, checkpoint, session, sha, created-at — written as an event when an agent registers one or a watched directory gains a file, with non-text kinds first-class, a Face surface, and the existing free-text evidence field still working | DONE | 6df3a58 | .conductor/evidence/K5/K5.3-evidence-artifact.md |
 | K5.4 | The message-composition layer ships owner-editable per-event templates, repo and branch and stage title and checkpoint in every push, commits and PRs as links, money with headroom, photo and document sending so evidence arrives, a thread per run, severity mapped to notify or silent, 4096-character chunking, and an ADR recording the push-only remote posture | TODO | - | - |
 
 ### K6 — The surfaces read

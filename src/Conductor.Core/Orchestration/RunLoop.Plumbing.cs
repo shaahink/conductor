@@ -7,6 +7,7 @@ using Conductor.Core.Commands;
 using Conductor.Core.Events;
 using Conductor.Core.Evidence;
 using Conductor.Core.Integrations;
+using Conductor.Core.Integrations.Messaging;
 using Conductor.Core.Orchestration;
 using Conductor.Core.Planning;
 using Conductor.Core.Providers;
@@ -279,9 +280,9 @@ public sealed partial class RunLoop
                $"(branch {Git.Branch(_ctx.Plan.Repo)}) · engine {BuildInfo.Current.Full}");
     }
 
-    private void Notify(string message)
+    private void Notify(string message, PushSeverity severity = PushSeverity.Quiet)
     {
-        _ = _ctx.Telegram.PushAsync(message);
+        _ = _ctx.Telegram.PushAsync(message, severity);
         _ctx.Webhooks.FireAsync(message);
 
         var n = _ctx.Plan.Notify;

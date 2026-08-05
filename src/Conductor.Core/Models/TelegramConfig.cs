@@ -21,4 +21,9 @@ public sealed class TelegramConfig
     /// that lets a test stand a stub in front of the service and assert what actually went on the
     /// wire, instead of asserting that a mock of our own code was called.</summary>
     public string? ApiBaseUrl { get; set; }
+
+    /// <summary>K5.4: the forum topic every push of this run belongs to, when the chat is a forum
+    /// supergroup. Null — the ordinary case — means the run threads itself instead, by replying to
+    /// its own first message, which is the only way to group a run in a non-forum chat.</summary>
+    public long? MessageThreadId { get; set; }
 }
