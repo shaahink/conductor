@@ -474,7 +474,10 @@ func (m Model) renderHelpOverlay() string {
 		accentStyle.Render("Actions") + "\n" +
 		"  " + key("i") + " inject context    " + key("/") + " search transcript · " + key("f") +
 		" fold tools · " + key("T") + " fold thinking\n" +
-		"  " + key("\\") + " collapse sidebar  " + key("↑↓") + " scroll / navigate · " + key("w") +
+		// K6.2 / adr/0006 decision 2: the pane scroll set, spelled out once, because it is the same set
+		// on every scrollable pane. `k` is absent and must stay absent — `k` opens Knowledge, and a vim
+		// `k` here would document a key that the mnemonic loop swallows before any pane sees it.
+		"  " + key("\\") + " collapse sidebar  " + key("↑↓/j d/u pgdn G/home") + " scroll · " + key("w") +
 		" owner queue\n\n" +
 		accentStyle.Render("Global") + "\n" +
 		"  " + key("q") + " quit   " + key("esc") + " close / cancel   " + key("?") + " this help"

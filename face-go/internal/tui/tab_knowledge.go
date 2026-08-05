@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
@@ -40,14 +41,33 @@ func (m Model) handleKnowledgeKey(key string) (tea.Model, tea.Cmd) {
 		return m.beginKnowledgeInput(knowledgeBug), nil
 	case "x":
 		return m.beginKnowledgeInput(knowledgeResolve), nil
-	case "up":
-		if m.knowledgeScroll > 0 {
-			m.knowledgeScroll--
-		}
-	case "down", "j":
-		m.knowledgeScroll++ // renderer clamps to the content height
 	}
+	// Size and content FIRST, then move (adr/0006 decision 1) — see handleReportKey. This surface is
+	// the one the owner could not read: before K6.2 it bound `up` and `down`/`j` only, could not page,
+	// could not jump to either end, and its unbounded offset stranded the pane exactly like Report's.
+	m.knowledgeVP = m.knowledgeViewport()
+	applyPaneScroll(&m.knowledgeVP, key)
 	return m, nil
+}
+
+// knowledgeViewport is this model's Knowledge viewport, sized to the pane and loaded with the current
+// body — the same construction Report uses, so the two surfaces cannot drift apart again.
+func (m Model) knowledgeViewport() viewport.Model {
+	vp := m.knowledgeVP
+	vp.SetWidth(m.paneCols())
+	vp.SetHeight(m.knowledgeRows())
+	vp.SetContentLines(m.knowledgeLines())
+	return vp
+}
+
+// knowledgeRows is the body height. Two rows go to the note/bug prompt while one is open, so the body
+// shrinks rather than the prompt being pushed past the frame's MaxHeight clamp — a viewport pads to
+// its full height, where the old renderer returned a short slice and left the room by accident.
+func (m Model) knowledgeRows() int {
+	if m.knowledgeMode != knowledgeBrowse {
+		return max(3, m.paneRows()-2)
+	}
+	return m.paneRows()
 }
 
 func (m Model) beginKnowledgeInput(mode knowledgeInputMode) Model {
@@ -87,27 +107,12 @@ func (m Model) handleKnowledgeInput(key string) (tea.Model, tea.Cmd) {
 	}
 }
 
+// renderKnowledgePane has no whole-pane empty state, and that is not an omission: knowledgeLines
+// always emits its three section headers, so the "No knowledge recorded yet" branch that used to sit
+// here could never run. Each section carries its own empty line instead ("none open — clean").
 func (m Model) renderKnowledgePane() (string, string) {
-	lines := m.knowledgeLines()
-	if len(lines) == 0 {
-		return subtleStyle.Render("No knowledge recorded yet — `conductor note` and `conductor bug new` fill this in."), "r refresh"
-	}
-
-	window := m.paneRows()
-	maxScroll := len(lines) - window
-	if maxScroll < 0 {
-		maxScroll = 0
-	}
-	scroll := m.knowledgeScroll
-	if scroll > maxScroll {
-		scroll = maxScroll
-	}
-	end := scroll + window
-	if end > len(lines) {
-		end = len(lines)
-	}
-
-	shown := strings.Join(lines[scroll:end], "\n")
+	vp := m.knowledgeViewport()
+	shown := vp.View()
 
 	if m.knowledgeMode != knowledgeBrowse {
 		labels := map[knowledgeInputMode]string{
@@ -121,8 +126,8 @@ func (m Model) renderKnowledgePane() (string, string) {
 		return shown + input, "type · enter submit · esc cancel"
 	}
 
-	help := fmt.Sprintf("%d bugs · %d evidence · %d ledger · n note · b bug · x resolve · ↑↓ scroll · r refresh",
-		len(m.data.Bugs), len(m.data.Evidence), len(m.data.Ledger))
+	help := fmt.Sprintf("%d bugs · %d evidence · %d ledger · n note · b bug · x resolve · %s · r refresh",
+		len(m.data.Bugs), len(m.data.Evidence), len(m.data.Ledger), paneScrollHelp(vp))
 	return shown, help
 }
 

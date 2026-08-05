@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
@@ -35,30 +36,21 @@ const sessionsDigestMax = 8
 const scoresDigestMax = 10
 
 func (m Model) handleReportKey(key string) (tea.Model, tea.Cmd) {
-	switch key {
-	case "esc":
+	if key == "esc" {
 		return m.openTab(TabAgent)
-	case "up", "k":
-		if m.reportScroll > 0 {
-			m.reportScroll--
-		}
-	case "down", "j":
-		m.reportScroll++ // clamped by the renderer against the real body height
-	case "home":
-		m.reportScroll = 0
-	case "pgup":
-		m.reportScroll = max(0, m.reportScroll-m.paneRows())
-	case "pgdown":
-		m.reportScroll += m.paneRows()
 	}
+	// Size and content FIRST, then move: the viewport has to know the body before the offset changes,
+	// because the clamp now lives at the mutation and nowhere else (adr/0006 decision 1). This is the
+	// whole of the fix for bug #30 — `m.reportScroll++` could run away because Update did not know
+	// how tall the body was and View could not tell it.
+	m.reportVP = m.reportViewport()
+	applyPaneScroll(&m.reportVP, key)
 	return m, nil
 }
 
-func (m Model) renderReportPane() (string, string) {
-	s := m.data.Plan
-	if s == nil {
-		return subtleStyle.Render("No run attached — nothing to report yet."), "esc back"
-	}
+// reportBody is every section of the report, joined. It is built here rather than inside the
+// renderer so the key handler can load the same bytes into the viewport it is about to scroll.
+func (m Model) reportBody(s *api.StateDto) string {
 	w := m.paneCols()
 	sections := []string{
 		m.renderReportRun(s),
@@ -73,23 +65,26 @@ func (m Model) renderReportPane() (string, string) {
 	// it is the accounting behind the numbers above, not the headline — and because the Report pane
 	// scrolls, so a long table costs the sections above it nothing.
 	sections = append(sections, m.renderReportSessionTokens())
-	body := strings.Join(sections, "\n\n")
+	return strings.Join(sections, "\n\n")
+}
 
-	// Clamp scroll to the real body: scrolling past the end leaves the owner staring at blank space
-	// wondering whether the report broke.
-	lines := strings.Split(body, "\n")
-	rows := m.paneRows()
-	maxScroll := max(0, len(lines)-rows)
-	scroll := min(m.reportScroll, maxScroll)
-	if scroll > 0 || maxScroll > 0 {
-		end := min(scroll+rows, len(lines))
-		lines = lines[scroll:end]
+// reportViewport is this model's Report viewport, sized to the pane and loaded with the current body.
+// Both the key handler and the renderer go through it, so an offset that survives a resize or a data
+// refresh is re-clamped against the body that is actually on screen.
+func (m Model) reportViewport() viewport.Model {
+	vp := m.reportVP
+	vp.SetWidth(m.paneCols())
+	vp.SetHeight(m.paneRows())
+	vp.SetContent(m.reportBody(m.data.Plan))
+	return vp
+}
+
+func (m Model) renderReportPane() (string, string) {
+	if m.data.Plan == nil {
+		return subtleStyle.Render("No run attached — nothing to report yet."), "esc back"
 	}
-	help := "↑↓ scroll · esc back"
-	if maxScroll > 0 {
-		help = fmt.Sprintf("↑↓ scroll (%d/%d) · esc back", scroll, maxScroll)
-	}
-	return strings.Join(lines, "\n"), help
+	vp := m.reportViewport()
+	return vp.View(), paneScrollHelp(vp) + " · esc back"
 }
 
 // --- run header ---------------------------------------------------------------

@@ -2,11 +2,16 @@ module conductor-face-go
 
 go 1.26.0
 
+// K6.2: bubbles/v2 joins this block. v2.1.1 is the version whose module path is charm.land/bubbles/v2
+// -- the one that matches bubbletea v2 and lipgloss v2, and the one soft-serve imports. The Face uses
+// its viewport (adr/0006) and its key.Binding type; list and table are deliberately NOT adopted.
+//
 // K1.3: this block is what the Face imports itself. glamour and harmonica used to sit below marked
 // `// indirect` while `internal/tui/markdown.go` and `internal/tui/anim.go` imported them directly --
 // `go mod tidy` moved them up here, and module_intent_test.go now fails the build if the file drifts
 // back into misdescribing its own graph.
 require (
+	charm.land/bubbles/v2 v2.1.1
 	charm.land/bubbletea/v2 v2.0.8
 	charm.land/lipgloss/v2 v2.0.5
 	github.com/charmbracelet/glamour v1.0.0
@@ -37,7 +42,7 @@ require (
 	github.com/gorilla/css v1.0.1 // indirect
 	github.com/lucasb-eyer/go-colorful v1.4.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/mattn/go-runewidth v0.0.23 // indirect
+	github.com/mattn/go-runewidth v0.0.24 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.27 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect

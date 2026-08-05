@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 
 	"conductor-face-go/internal/api"
@@ -233,7 +234,10 @@ type Model struct {
 	// Dev console's state that used to sit below this block (reportEditor, reportQuickSelected,
 	// reportFocusQuery, reportHScroll, reportHistory, devScroll) — the console is gone, so none of it
 	// has a reader.
-	reportScroll int
+	// K6.2: the body scrolls through a viewport (adr/0006 decision 1), not a bare int. The offset now
+	// lives inside reportVP where every mutation is clamped; the int it replaced was clamped only by a
+	// throwaway copy in the renderer, which is bug #30.
+	reportVP viewport.Model
 	// reportScores holds the verifier scores from GET /scores (SF1.1). It is deliberately NOT
 	// data.ReportResult: that field belongs to the Dev console, and sharing it would make opening
 	// Report silently wipe the developer's last query result.
@@ -247,9 +251,11 @@ type Model struct {
 	processKilling  bool // kill-confirm prompt open for the selected process
 
 	// Knowledge tab (M7: ledger + tracked bugs; write-side: file note/bug, resolve bug)
-	knowledgeScroll int
-	knowledgeMode   knowledgeInputMode // browse, or entering a note / bug title / bug id to resolve
-	knowledgeInput  widgets.TextArea
+	// K6.2: same viewport, same reason. This is the surface the owner reported as unreadable — it
+	// could not page, could not jump, and answered `k` with nothing because `k` opens this very tab.
+	knowledgeVP    viewport.Model
+	knowledgeMode  knowledgeInputMode // browse, or entering a note / bug title / bug id to resolve
+	knowledgeInput widgets.TextArea
 
 	// Plan tab (M6.3 editor)
 	plan             *api.PlanDto
@@ -330,6 +336,8 @@ func New(source api.DataSource, isDemo bool, baseURL string) Model {
 		cmd:          CmdNone,
 		transcript:   widgets.NewTranscript(),
 		sidebar:      widgets.NewSidebar(),
+		reportVP:     newPaneViewport(),
+		knowledgeVP:  newPaneViewport(),
 		eventCh:      make(chan api.ConductorEventDto, 256),
 		txCh:         make(chan api.TranscriptLineDto, 1024),
 		consoleCh:    make(chan api.ConsoleLineDto, 1024),

@@ -710,10 +710,11 @@ func (m Model) openTab(t MainTab) (tea.Model, tea.Cmd) {
 	case TabReport:
 		// U2.2: the report is rendered, not queried. Scroll resets to the top so the run header —
 		// the answer to "how is it going" — is what opening the tab actually shows.
-		m.reportScroll = 0
+		m.reportVP.GotoTop()
 		return m, m.cmdFetchScores()
 	case TabKnowledge:
-		m.knowledgeScroll, m.knowledgeMode = 0, knowledgeBrowse
+		m.knowledgeVP.GotoTop()
+		m.knowledgeMode = knowledgeBrowse
 		return m, m.cmdFetchKnowledge()
 	case TabTelegram:
 		m.telegramFieldIdx, m.telegramEditing, m.telegramStatusLine = 0, false, ""
