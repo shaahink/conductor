@@ -4,17 +4,18 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **K7.2 part 4** (s29), commit `35d3cb6`, evidence `.conductor/evidence/K7/K7.2-ship-rehearsal.md`.
-  K7.2 stays BLOCKED and owner-only; nothing here claimed it. The local half of the ship is now
-  measured: a `v0.4.0` tag in a scratch clone publishes to `version --short` = **`0.4.0+<sha>`** (not
-  `0.0.0-alpha.0`), and `conductor update` accepts it - `SemVer` strips the `v` and ignores build
-  metadata. Release guard and `changelog-section.sh 0.4.0` both pass. **No defect in the chain.**
-do not re-derive: (a) the release plumbing is ALIGNED (s28) and `install.ps1` builds from the working
-  tree, so the owner installs from a CLEAN checkout at the tag. (b) The era score was stale in the
-  release body and is corrected + dated; `budget`'s `sess` is COSTED sessions (26 of 28; 3 and 4 were
-  AgentError with no tokens). (c) The closure ledger was pinned against a copy of itself - fixed, 11
-  open / 5 closed restated. (d) `doctor`'s red `work` check (G13, the seven F/R rows) is bug #32,
-  fixed in the tree but inert until the new engine regenerates the tracker.
+last: **K7.2 part 5** (s30), commit `cfccfa5`, evidence `.conductor/evidence/K7/K7.2-docs-verb-inventory.md`.
+  K7.2 stays BLOCKED and owner-only; nothing here claimed it. `docs/cli.md` - the page that opens by
+  promising "the verbs you reach for daily" - named **36 of the engine's 41** visible verbs. Missing:
+  `budget`, `money`, `history`, `ps`, `watch`; four of the five appeared **zero** times in *any*
+  user-facing page. `budget`/`money` are what the v0.4.0 notes lead with. Fixed in place, and a test
+  now points SC8.3's Program.cs verb-scan at the page - red first, naming exactly those five.
+do not re-derive: (a) the ship chain has **no defect**: `v0.4.0` in a scratch clone publishes
+  `version --short` = `0.4.0+<sha>`, `update` accepts it, release guard + `changelog-section.sh` pass
+  (s29). (b) `install.ps1` builds from the working tree, so the owner installs from a CLEAN checkout
+  at the tag. (c) The era score in the release body is corrected and dated; `budget`'s `sess` is
+  COSTED sessions. (d) Closure ledger restated 11 open / 5 closed. (e) `doctor`'s red `work` check is
+  bug #32, fixed in tree but inert until the new engine regenerates the tracker.
 next: owner-only, unchanged - confirm no other conductor run is live, merge, tag `v0.4.0`, let the
   pipeline publish, then the first `install.ps1` of this run. Re-run `conductor budget` and `money`
   at tag time and paste into `CHANGELOG.md`; today's figures are stamped s29 and move every session.
