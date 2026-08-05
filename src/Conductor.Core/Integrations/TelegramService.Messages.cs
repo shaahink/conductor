@@ -26,27 +26,34 @@ public sealed partial class TelegramService
         ArgumentNullException.ThrowIfNull(push);
         if (!_started) return;
 
-        var runCost = _state.TotalCostUsd > 0 ? $" | run: ${_state.TotalCostUsd:0.0000}" : "";
-        var scoreStr = push.Score.HasValue ? $" | score: {push.Score:0}/100" : "";
         var sb = new StringBuilder();
-        sb.AppendLine($"<b>{EscapeHtml(push.Outcome)}</b> — {EscapeHtml(StageLabel(push.Stage))}");
+        // K5.4: the outcome leads. The stage and its title moved to the context line the stamp
+        // applies to EVERY push, so this no longer renders them a second time.
+        sb.Append("<b>").Append(EscapeHtml(push.Outcome)).Append("</b>");
+        if (push.Duration is { } d) sb.Append(" · ").Append(EscapeHtml(Elapsed(d)));
+        sb.AppendLine();
 
         var progress = ProgressLine(push.Stage);
         if (progress.Length > 0) sb.AppendLine(EscapeHtml(progress));
 
         var landed = LandedLine(push);
-        if (landed.Length > 0) sb.AppendLine(EscapeHtml(landed));
+        if (landed.Length > 0) sb.AppendLine(landed);
 
         sb.AppendLine($"gates: {EscapeHtml(GatesLine(push))}");
 
         var result = ResultLines(push.ResultSummary);
-        if (result.Length > 0) sb.AppendLine(result);
+        if (result.Length > 0) sb.AppendLine(RemoteLinks.LinkifyPullRequests(result, Remote()));
 
-        sb.Append($"cost: ${push.CostUsd ?? 0:0.0000}{runCost}{scoreStr}");
+        // K5.4: money with headroom, not four decimals of a number with nothing to compare it to.
+        sb.Append(MoneyLine.ForSession(push.CostUsd, _state.TotalCostUsd, _plan.Limits.MaxRunCostUsd));
+        if (push.Score is { } score) sb.Append(" · score ").Append(EscapeHtml($"{score:0}/100"));
+
+        if (RemoteLinks.Report(Remote(), Branch()) is { } report)
+            sb.Append("\n<a href=\"").Append(EscapeHtml(report)).Append("\">the run's report</a>");
 
         // K5.4: a session that advanced is informational; one that ended blocked or needing the owner
         // is the whole reason disable_notification exists.
-        await EnqueueAsync(sb.ToString(), push.Number, SessionSeverity(push.Outcome), null, ct)
+        await EnqueueAsync(sb.ToString(), push.Number, SessionSeverity(push.Outcome), null, ct, push.Stage)
             .ConfigureAwait(false);
     }
 
@@ -56,6 +63,36 @@ public sealed partial class TelegramService
         || outcome.Contains("Blocked", StringComparison.OrdinalIgnoreCase)
         || outcome.Contains("Failed", StringComparison.OrdinalIgnoreCase)
             ? PushSeverity.Alert : PushSeverity.Quiet;
+
+    /// <summary>K5.4 — the run is over, said in the order the owner reads it: what happened, what it
+    /// cost against its cap, how much of the plan actually landed, how long it took, and where the
+    /// report is. The repo, the branch and the stage ride the context line like every other push, so
+    /// none of them is spelled out here a second time.</summary>
+    public async Task PushRunCompleteAsync(RunCompletePush push, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(push);
+        if (!_started) return;
+
+        var clean = push.SkippedStages.Count == 0;
+        var sb = new StringBuilder();
+        sb.Append("<b>").Append(clean ? "run complete" : "run complete, with stages skipped").Append("</b>");
+        if (push.Duration is { } d) sb.Append(" · ").Append(EscapeHtml(Elapsed(d)));
+        sb.AppendLine();
+
+        sb.AppendLine(EscapeHtml(
+            $"{push.CheckpointsDone}/{push.CheckpointsTotal} checkpoints · {push.Sessions} session"
+            + (push.Sessions == 1 ? "" : "s")));
+        if (!clean)
+            sb.AppendLine(EscapeHtml($"skipped: {string.Join(", ", push.SkippedStages)}"));
+
+        sb.Append(MoneyLine.ForRun(_state.TotalCostUsd, _plan.Limits.MaxRunCostUsd));
+
+        if (RemoteLinks.Report(Remote(), Branch()) is { } report)
+            sb.Append("\n<a href=\"").Append(EscapeHtml(report)).Append("\">the run's report</a>");
+
+        // A finished run is one of the two things worth a buzz — the other is a run that has parked.
+        await EnqueueAsync(sb.ToString(), null, PushSeverity.Alert, null, ct).ConfigureAwait(false);
+    }
 
     /// <summary>K5.4 — evidence ARRIVES. K5.3 registered the artifacts and pushed their paths, which
     /// from a phone is a list of file names on a machine the owner is not at; the case the whole item
@@ -83,7 +120,8 @@ public sealed partial class TelegramService
             }
 
             await EnqueueAsync(caption, a.SessionNumber, PushSeverity.Quiet,
-                new OutboundAttachment(absolute, EvidenceKinds.IsVisual(a.Kind), caption), ct).ConfigureAwait(false);
+                new OutboundAttachment(absolute, EvidenceKinds.IsVisual(a.Kind), caption), ct, a.StageId)
+                .ConfigureAwait(false);
         }
 
         var rest = artifacts.Skip(EvidenceFilesPerPush).ToList();
@@ -155,13 +193,32 @@ public sealed partial class TelegramService
     /// <summary>What the session actually put on disk. K1.1 records commits and claims on the
     /// rollover path too; until K5.2 nothing rendered them, so a rollover that had shipped a pull
     /// request pushed a message that said nothing at all.</summary>
-    private static string LandedLine(SessionEndPush push)
+    /// <remarks>K5.4: the commits are LINKS when the repo has a remote — a sha in a chat is a string
+    /// the owner has to carry back to a machine.</remarks>
+    private string LandedLine(SessionEndPush push)
     {
         var parts = new List<string>(2);
-        if (push.Commits > 0) parts.Add($"{push.Commits} commit{(push.Commits == 1 ? "" : "s")}");
-        if (push.NewlyDone.Count > 0) parts.Add($"claimed {string.Join(", ", push.NewlyDone)}");
+        if (push.Commits > 0)
+        {
+            var count = $"{push.Commits} commit{(push.Commits == 1 ? "" : "s")}";
+            var shas = push.CommitShas ?? [];
+            parts.Add(shas.Count == 0
+                ? count
+                : count + " (" + string.Join(", ",
+                    shas.Take(CommitLinksPerPush).Select(s => RemoteLinks.Commit(Remote(), s))) +
+                    (shas.Count > CommitLinksPerPush ? ", …)" : ")"));
+        }
+        if (push.NewlyDone.Count > 0) parts.Add($"claimed {EscapeHtml(string.Join(", ", push.NewlyDone))}");
         return parts.Count > 0 ? "landed: " + string.Join(" · ", parts) : "";
     }
+
+    private const int CommitLinksPerPush = 3;
+
+    /// <summary>A duration a human reads at a glance — <c>1h 12m</c>, not <c>01:12:34.567</c>.</summary>
+    internal static string Elapsed(TimeSpan d) =>
+        d.TotalHours >= 1 ? $"{(int)d.TotalHours}h {d.Minutes}m"
+        : d.TotalMinutes >= 1 ? $"{(int)d.TotalMinutes}m"
+        : $"{(int)d.TotalSeconds}s";
 
     /// <summary>K5.1's structure, rendered. The caller passes the record WHOLE — cutting it here,
     /// once, is the difference between a bounded message and the same paragraph cut twice.</summary>

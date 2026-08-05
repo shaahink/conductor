@@ -454,7 +454,7 @@ public static class Reporter
     {
         var sha = Short(commit);
         if (string.IsNullOrWhiteSpace(commit) || commit == "-" || commit == "?") return sha;
-        var remote = GetRemoteUrl(plan.Repo);
+        var remote = RemoteUrl(plan.Repo);
         if (remote == null) return $"`{sha}`";
         return $"[`{sha}`]({remote}/commit/{commit})";
     }
@@ -463,7 +463,9 @@ public static class Reporter
     private static string? _cachedRemoteRepo;
     private static readonly Lock _remoteUrlLock = new();
 
-    private static string? GetRemoteUrl(string repo)
+    /// <summary>K5.4: internal, not private — the notification path needs the same remote, and a
+    /// second implementation would be a second thing to get wrong.</summary>
+    internal static string? RemoteUrl(string repo)
     {
         lock (_remoteUrlLock)
         {

@@ -254,8 +254,10 @@ public sealed class SC1TelegramStatusTruthTests : IDisposable
         // identity line and then its body. Read the stamp off the live service rather than pinning
         // its shape a second time here — FuOwner11PushIdentityTests owns that — but keep the exact
         // equality, which now also proves a plain push is attributable.
+        // K5.4 added the context line — repo, branch, stage, checkpoint — to that same stamp, so the
+        // whole stamp is what is read off the service now, not the identity line alone.
         var sent = bot.Sent;
-        Assert.Equal(svc.IdentityLine + "\nQUEUED-FIRST", sent[0]);
+        Assert.Equal(svc.Stamp(null) + "\nQUEUED-FIRST", sent[0]);
         Assert.Contains("live push queue", sent[1], StringComparison.Ordinal);
     }
 

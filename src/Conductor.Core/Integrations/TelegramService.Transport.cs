@@ -78,7 +78,7 @@ public sealed partial class TelegramService
     /// is noise, and the chunks are threaded together anyway.</summary>
     private async Task SendTextAsync(OutboundMessage item, CancellationToken ct)
     {
-        var stamped = FormattableString.Invariant($"{IdentityFor(item.SessionNumber)}\n{item.Text}");
+        var stamped = FormattableString.Invariant($"{Stamp(item.SessionNumber, item.StageId)}\n{item.Text}");
         var chunks = HtmlChunker.Split(stamped);
         // The "(2/4)" counter is appended AFTER the split, so it has to be paid for BEFORE it: a
         // chunk that came back exactly at the limit was pushed 13 characters over it by its own
@@ -128,7 +128,7 @@ public sealed partial class TelegramService
         foreach (var (k, v) in BasePayload(item.ChatId, item.Severity))
             AddField(form, k, Convert.ToString(v, CultureInfo.InvariantCulture) ?? "");
 
-        var caption = FormattableString.Invariant($"{IdentityFor(item.SessionNumber)}\n{att.Caption}");
+        var caption = FormattableString.Invariant($"{Stamp(item.SessionNumber, item.StageId)}\n{att.Caption}");
         AddField(form, "caption", Clip(caption, HtmlChunker.TelegramMaxCaptionChars));
         AddField(form, "parse_mode", "HTML");
         await AddFileAsync(form, method == "sendPhoto" ? "photo" : "document", att.Path, ct).ConfigureAwait(false);

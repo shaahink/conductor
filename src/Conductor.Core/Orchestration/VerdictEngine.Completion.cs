@@ -1,4 +1,5 @@
 using Conductor.Core.Events;
+using Conductor.Core.Integrations;
 using Conductor.Models;
 
 namespace Conductor.Core.Orchestration;
@@ -63,8 +64,19 @@ public sealed partial class VerdictEngine
         RunSummary.Write(_ctx.Plan, _ctx.State, track, _ctx.Store, _ctx.Log);
         // FU-OWNER-11: repo and engine build ride the run-end message for the same reason they ride
         // the run-start one — this is the message an owner reads hours later, and it is the last
-        // chance to say which checkout finished and which binary finished it.
+        // chance to say which checkout finished and which binary finished it. K5.4: that sentence is
+        // still what the webhooks and the notify command get; Telegram gets the composed version,
+        // which leads with the outcome instead of with the build string, so the telegram leg is
+        // suppressed here rather than sending both.
         Notify($"Conductor: plan {_ctx.Plan.Name} COMPLETE ({_ctx.State.SessionCounter} sessions) — " +
-               $"repo {_ctx.Plan.Repo} · engine {BuildInfo.Current.Full}");
+               $"repo {_ctx.Plan.Repo} · engine {BuildInfo.Current.Full}", telegram: false);
+
+        var first = _ctx.State.History.Count > 0 ? _ctx.State.History[0].StartedUtc : (DateTime?)null;
+        _ = _telegram.PushRunCompleteAsync(new RunCompletePush(
+            _ctx.State.SessionCounter,
+            track.Checkpoints.Count(c => c.IsDone),
+            track.Checkpoints.Count,
+            first is { } t ? DateTime.UtcNow - t : null,
+            _ctx.State.SkippedStages.ToList()));
     }
 }

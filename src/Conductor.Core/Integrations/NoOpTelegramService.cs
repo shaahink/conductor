@@ -13,6 +13,7 @@ public sealed class NoOpTelegramService : ITelegramService
     public Task PushWithKeyboardAsync(string message,
         IReadOnlyList<(string Text, string CallbackData)> buttons, CancellationToken ct = default) => Task.CompletedTask;
     public Task PushSessionEndAsync(SessionEndPush push, CancellationToken ct = default) => Task.CompletedTask;
+    public Task PushRunCompleteAsync(RunCompletePush push, CancellationToken ct = default) => Task.CompletedTask;
     public Task PushEvidenceAsync(IReadOnlyList<Evidence.EvidenceArtifact> artifacts,
         CancellationToken ct = default) => Task.CompletedTask;
 }

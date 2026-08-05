@@ -38,6 +38,9 @@ public sealed record OutboundAttachment(string Path, bool AsPhoto, string Captio
 /// push, the live counter for everything else (K5.2).</param>
 /// <param name="Severity">Notify or silent.</param>
 /// <param name="Attachment">A file to send instead of text, or null.</param>
+/// <param name="StageId">K5.4: the stage this message is ABOUT, which is not always the stage the
+/// run is on — a session-end push composed after the run has moved on would otherwise be stamped
+/// with the wrong stage, or with none.</param>
 public sealed record OutboundMessage(
     string ChatId,
     string Text,
@@ -45,4 +48,5 @@ public sealed record OutboundMessage(
     TaskCompletionSource<string?>? Ack = null,
     int? SessionNumber = null,
     PushSeverity Severity = PushSeverity.Quiet,
-    OutboundAttachment? Attachment = null);
+    OutboundAttachment? Attachment = null,
+    string? StageId = null);

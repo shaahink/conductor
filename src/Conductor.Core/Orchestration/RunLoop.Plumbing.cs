@@ -260,7 +260,11 @@ public sealed partial class RunLoop
             rec.Number, rec.Stage, rec.Outcome?.ToString() ?? "Unknown", rec.GateSummary,
             rec.ResultSummary, rec.CostUsd, _ctx.State.PendingFix?.VerifierScore,
             SessionProgress.WorkCommits(rec).Count, rec.NewlyDone,
-            rec.Outcome == SessionOutcome.RolledOver));
+            rec.Outcome == SessionOutcome.RolledOver,
+            // K5.4: the shas themselves, so the landed line can be links, and the session's own
+            // wall-clock, which the record has always carried and no message ever rendered.
+            SessionProgress.WorkCommits(rec),
+            rec.EndedUtc is { } ended ? ended - rec.StartedUtc : null));
     }
 
     // ---------------------------------------------------------------- notifications

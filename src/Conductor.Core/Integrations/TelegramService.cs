@@ -39,6 +39,11 @@ public interface ITelegramService
         CancellationToken ct = default);
     Task PushSessionEndAsync(SessionEndPush push, CancellationToken ct = default);
 
+    /// <summary>K5.4: the run-end push, composed from facts rather than assembled as prose at the
+    /// call site — which is how it came to name the plan twice and give the engine build string more
+    /// room than anything the run had delivered.</summary>
+    Task PushRunCompleteAsync(RunCompletePush push, CancellationToken ct = default);
+
     /// <summary>K5.3: the notification path can CARRY an evidence artifact. This announces them as
     /// text — K5.4 is what actually sends a photo or a document, and it replaces the body of this
     /// method rather than adding a second path. The owner's case is a screenshot nobody forwards.</summary>
@@ -299,14 +304,14 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
     /// EVENT, so they are chosen by the caller that knows what happened, not here.</remarks>
     private Task EnqueueAsync(string message, int? sessionNumber,
         PushSeverity severity = PushSeverity.Quiet, OutboundAttachment? attachment = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default, string? stageId = null)
     {
         // SC1.3: read the queue field ONCE — a reload can swap it between the check and the write,
         // and a push split across two queues would be delivered twice or not at all.
         var queue = _sendQueue;
         if (!_started || _cfg?.AllowedChatIds is not { Count: > 0 } ids) return Task.CompletedTask;
         foreach (var cid in ids)
-            queue.Writer.TryWrite(new OutboundMessage(cid, message, null, null, sessionNumber, severity, attachment));
+            queue.Writer.TryWrite(new OutboundMessage(cid, message, null, null, sessionNumber, severity, attachment, stageId));
         return Task.CompletedTask;
     }
 

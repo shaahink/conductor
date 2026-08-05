@@ -95,9 +95,11 @@ public sealed partial class VerdictEngine
         _gates.PersistGates(gates, scope, sessionId);
     }
 
-    private void Notify(string message, PushSeverity severity = PushSeverity.Quiet)
+    /// <remarks>K5.4: <paramref name="telegram"/> is false only where a COMPOSED push replaces this
+    /// sentence on the Telegram leg — the webhooks and the notify command still get the sentence.</remarks>
+    private void Notify(string message, PushSeverity severity = PushSeverity.Quiet, bool telegram = true)
     {
-        _ = _telegram.PushAsync(message, severity);
+        if (telegram) _ = _telegram.PushAsync(message, severity);
         _webhooks.FireAsync(message);
 
         var n = _ctx.Plan.Notify;
