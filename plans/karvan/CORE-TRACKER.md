@@ -4,20 +4,20 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **K7.2 part 1** (s26), commit `f25e2cd`, evidence `.conductor/evidence/K7/K7.2-migration-guard.md`
-  (+ `-doctor-after-guard.txt`, `-reinstall-path-import-then-migrate.txt`). Ledger #277's prerequisite
-  landed: `MigrationRunner` converges a `schema_version` row that understates the file instead of dying.
-  The real artifact, v9 with v10's `soft_break` already in, came out at **v12** with 94 session rows and
-  `doctor` 16 ok. Bugs #28/#29 closed, #33 filed, 3 tests in `K7_2MigrationGuardTests`, **suite
-  2050/2050 green**, branch pushed.
-geography, do not re-derive: TWO databases. The published engine (0.3.1-alpha.0.6) reads
-  `.conductor/run.db` in place at v9 and never sees the break; the fresh build imports it ONCE
-  (`StateMigration.cs:48`) into `%LOCALAPPDATA%\conductor\runs\<slug>\` and migrates the copy - that
-  import IS the reinstall path. That directory was emptied on purpose so the install takes the current
-  file; a run.db sitting there is stale (bug #33). The fresh build's `doctor` ignores your cwd.
-next: **K7.2 is owner-only now** - merge `feat/karvan`, tag through the pipeline, then this run's first
-  `install.ps1` once no other conductor run is live. `doctor` still exits 1 on bug #32's seven stray
-  rows (F0.1..R0.2); that is board state, not a file.
+last: **K7.2 part 2** (s27), commits `81d4981` `ee16c68` `12daaf5`, evidence
+  `.conductor/evidence/K7/K7.2-owner-ship-gate.md` (+ `-stale-snapshot-live.txt`). K7.2 itself stays
+  BLOCKED - `--in-progress K7.2` is refused by the board - so nothing here claimed it. Landed: the
+  owner's ship gate MEASURED (the merge is a fast-forward, master being a strict ancestor; both
+  release-guard preconditions pass on **v0.4.0** - `changelog-section.sh` exits 0, and a scratch clone
+  tagged v0.4.0 builds a binary answering `0.4.0+<sha>`, which is what `release.yml:163` accepts),
+  plus bugs **#32 and #33 fixed and closed**. Suite **2059/2059**.
+do not re-derive: the tracker is generated FROM the graph and read back AS the declared list, and that
+  loop is what made the seven stray rows immortal. It unwinds itself once the NEW engine regenerates
+  the view and syncs, so `doctor` stays red on them until the install. And no run.db may be judged by
+  size or mtime: this run's own main file has not moved since 10:57 while its `-wal` holds everything.
+next: owner-only, unchanged - confirm no other conductor run is live, merge, tag `v0.4.0`, let the
+  pipeline publish, then the first `install.ps1` of this run.
+
 
 ## Baseline numbers (from run.db)
 
@@ -90,7 +90,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | K7.1 | The docs match the engine and this era's own measurements are written back — the cap's real score, the corrected nudge rule, and this run's figures produced by conductor budget rather than by hand — with every wrong claim corrected in place and a closure ledger naming an owner for everything still open | DONE | ee68978 | .conductor/evidence/K7/K7.1-docs-match-the-engine.md |
-| K7.2 | feat/karvan is merged to master by the owner, the release is tagged through the existing pipeline, and the installed version matches the releases page | TODO | - | - |
+| K7.2 | feat/karvan is merged to master by the owner, the release is tagged through the existing pipeline, and the installed version matches the releases page | BLOCKED | - | - |
 
 ### F0
 
