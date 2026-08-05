@@ -413,6 +413,38 @@ func tabLegendCell(k, name string) string {
 	return key(k) + " " + fmt.Sprintf("%-11s", name)
 }
 
+// tabLegendRows renders the help card's Tabs grid from tabKey and tabNames, four cells to a row.
+//
+// K6.3: this used to be three hand-typed rows, and the comment beside them admitted the hazard — a
+// mnemonic changed in tabKey and not here makes the help lie. It is now DERIVED, the way
+// verbGroupLegend is derived from allVerbs and themeLegend from the theme registry: the same two
+// arrays the strip and the mnemonic loop read. A tab added, renamed or rebound reaches the help card
+// with no second edit, so the class of drift is gone rather than guarded.
+func tabLegendRows() string {
+	const perRow = 4
+	rows := make([]string, 0, (int(tabCount)+perRow-1)/perRow)
+	for i := 0; i < int(tabCount); i += perRow {
+		row := "  "
+		for j := i; j < i+perRow && j < int(tabCount); j++ {
+			row += tabLegendCell(tabKey[j], tabNames[j])
+		}
+		rows = append(rows, row)
+	}
+	return strings.Join(rows, "\n")
+}
+
+// foldedLegend renders the help card's folded row from foldedTabs. SF1.3 merged Console into Agent
+// and Timeline into History and kept both mnemonics pointing at the surfaces they always named — so
+// the help must say where they went, or the two keys look deleted. Derived for the same reason as
+// the grid above; `←/→` is appended by hand because it is a nav key, not a folded surface.
+func foldedLegend() string {
+	out := subtleStyle.Render("folded  ")
+	for _, f := range foldedTabs {
+		out += key(f.Key) + subtleStyle.Render(" "+f.Help+" · ")
+	}
+	return out + key("←/→") + subtleStyle.Render(" History views")
+}
+
 // verbGroupLegend renders one "Group  verb · verb" row of the help card, derived from allVerbs so
 // the help can never drift from the palette it documents. Danger keys stay red.
 func verbGroupLegend(g verbGroup) string {
@@ -455,16 +487,8 @@ func (m Model) renderHelpOverlay() string {
 	body := "" +
 		accentStyle.Render("Tabs") + subtleStyle.Render("  (letter or number jumps · ") + key("tab") +
 		subtleStyle.Render(" cycles)") + "\n" +
-		"  " + tabLegendCell("h", "Home") + tabLegendCell("a", "Agent") + tabLegendCell("s", "History") + tabLegendCell("o", "Procs") + "\n" +
-		"  " + tabLegendCell("e", "Templates") + tabLegendCell("p", "Plan") + tabLegendCell("r", "Report") + tabLegendCell("k", "Knowledge") + "\n" +
-		"  " + tabLegendCell("g", "Telegram") + tabLegendCell("b", "Kanban") + "\n" +
-		// The folded row. SF1.3 merged Console into Agent and Timeline into History, and kept both
-		// mnemonics pointing at the surfaces they always named — so the help must say where they went,
-		// or the two keys look deleted. This whole legend is hand-maintained: a mnemonic changed in
-		// tabKey (or foldedTabKey) and not here makes the help lie, which is what
-		// TestHelpLegendNamesEveryTabItsRealMnemonic exists to catch.
-		"  " + subtleStyle.Render("folded  ") + key("c") + subtleStyle.Render(" Agent's raw stream · ") +
-		key("t") + subtleStyle.Render(" History's spine · ") + key("←/→") + subtleStyle.Render(" History views") + "\n\n" +
+		tabLegendRows() + "\n" +
+		"  " + foldedLegend() + "\n\n" +
 		accentStyle.Render("Palette") + subtleStyle.Render("  ") + key(":") + subtleStyle.Render("  ") +
 		destructStyle.Render("red") + subtleStyle.Render(" = confirms, and says what it will do") + "\n" +
 		"  " + verbGroupLegend(groupRun) + "\n" +

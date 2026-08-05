@@ -34,10 +34,10 @@ func TestHelpOverlayFitsSmallestTerminal(t *testing.T) {
 	}
 }
 
-// Trap 11, made testable. tabKey in model.go is the single source for tab mnemonics, but this legend
-// is hand-maintained string concatenation — so a mnemonic changed in one and not the other makes the
-// help lie, silently, until someone presses the key it advertises. SF1.2 removed a tab and had to
-// touch both; this is what keeps the next one honest.
+// Trap 11, made testable. tabKey in model.go is the single source for tab mnemonics; K6.3 made the
+// legend RENDER from it, and this asserts the two agree for every tab as the card actually draws it.
+// TestHelpLegendFollowsARebind below is the stronger claim — that it agrees for a mnemonic no one
+// has typed into the legend at all.
 func TestHelpLegendNamesEveryTabItsRealMnemonic(t *testing.T) {
 	var tm tea.Model = newGoldenModel(120, 40)
 	tm, _ = tm.Update(keyMsg("?"))
@@ -69,5 +69,38 @@ func TestHelpLegendNamesEveryTabItsRealMnemonic(t *testing.T) {
 			t.Errorf("the help card does not document the folded mnemonic %q — it still works, so a "+
 				"legend that omits it makes the surface look deleted:\n%s", k, help)
 		}
+	}
+}
+
+// The measurement that says the legend cannot lie, rather than that it currently does not.
+//
+// Before K6.3 the Tabs grid was three hand-typed rows and the folded row was a hand-typed sentence,
+// so this test would have failed: rebinding a mnemonic changed what the key DOES and left the card
+// advertising the old one. Now both are rendered from tabKey/tabNames and foldedTabs, so a rebind
+// nobody propagated by hand still reaches the help card — which is the whole point of deriving it.
+func TestHelpLegendFollowsARebind(t *testing.T) {
+	restoreKey, restoreFolded := tabKey, foldedTabs
+	tabKey[TabKnowledge] = "Z"
+	foldedTabs = []foldedTab{{"y", TabHistory, "a folded surface"}}
+	foldedTabKey = foldedTabKeyMap()
+	t.Cleanup(func() {
+		tabKey, foldedTabs = restoreKey, restoreFolded
+		foldedTabKey = foldedTabKeyMap()
+	})
+
+	var tm tea.Model = newGoldenModel(120, 40)
+	tm, _ = tm.Update(keyMsg("?"))
+	help := stripANSI(tm.(Model).View().Content)
+
+	if !strings.Contains(help, "Z Knowledge") {
+		t.Errorf("the help card does not show the rebound mnemonic %q — the Tabs grid is not derived "+
+			"from tabKey, so a rebind makes it lie:\n%s", "Z Knowledge", help)
+	}
+	if strings.Contains(help, "k Knowledge") {
+		t.Errorf("the help card still shows the OLD mnemonic %q after a rebind:\n%s", "k Knowledge", help)
+	}
+	if !strings.Contains(help, "y a folded surface") {
+		t.Errorf("the help card does not show the rebound folded mnemonic — the folded row is not "+
+			"derived from foldedTabs:\n%s", help)
 	}
 }

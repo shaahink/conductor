@@ -53,20 +53,42 @@ var tabNames = [tabCount]string{"Home", "Agent", "History", "Procs", "Templates"
 // meant "the SQL console" to anyone who used this Face, and quietly landing them somewhere else is
 // worse than a keypress that does nothing. The Plan editor's delete stays on `x`, where U2.3 moved it.
 //
-// Keep in sync with renderHelpOverlay's Tabs legend — that legend is hand-maintained, so a mnemonic
-// changed here and not there makes the help lie.
+// K6.3: the help card's Tabs grid is RENDERED from this array and tabNames (tabLegendRows), so a
+// mnemonic changed here reaches the help with no second edit. It used to be three hand-typed rows
+// beside a comment warning that changing one and not the other makes the help lie.
 var tabKey = [tabCount]string{"h", "a", "s", "o", "e", "p", "r", "k", "g", "b"}
 
-// foldedTabKey is the second half of the mnemonic story, and the reason SF1.3 is not SF1.2. `d` went
+// foldedTabs is the second half of the mnemonic story, and the reason SF1.3 is not SF1.2. `d` went
 // dead because its surface was DELETED — landing that user anywhere would be a lie. `c` and `t` name
 // surfaces that still EXIST, one level in, so they keep their meaning: each opens the tab that
 // absorbed it, already showing the absorbed view. Nothing a user of this Face has learned stops
-// working. Declared as a map, not scattered `case` arms, so TestTabMnemonicsAreUnique can pin these
-// and tabKey as ONE namespace — an alias colliding with a tab mnemonic is unreachable in exactly the
-// way a duplicate tabKey entry is. Keep in sync with the help legend's folded row.
-var foldedTabKey = map[string]MainTab{
-	"c": TabAgent,   // the old Console tab — Agent's raw stream (and a toggle once Agent is up)
-	"t": TabHistory, // the old Timeline tab — History's spine view
+// working.
+//
+// Declared in one place, not scattered `case` arms, so TestTabMnemonicsAreUnique can pin these and
+// tabKey as ONE namespace — an alias colliding with a tab mnemonic is unreachable in exactly the way
+// a duplicate tabKey entry is. K6.3 gave each entry its Help text and made it an ordered slice: the
+// help card's folded row is rendered FROM this (foldedLegend), so the row cannot drift from the
+// router, and the order it reads in is the order written here rather than a map's.
+type foldedTab struct {
+	Key  string
+	Tab  MainTab
+	Help string // what the help card says this key opens
+}
+
+var foldedTabs = []foldedTab{
+	{"c", TabAgent, "Agent's raw stream"}, // the old Console tab (and a toggle once Agent is up)
+	{"t", TabHistory, "History's spine"},  // the old Timeline tab
+}
+
+// foldedTabKey is the router's lookup, built from foldedTabs so there is one source, not two.
+var foldedTabKey = foldedTabKeyMap()
+
+func foldedTabKeyMap() map[string]MainTab {
+	m := make(map[string]MainTab, len(foldedTabs))
+	for _, f := range foldedTabs {
+		m[f.Key] = f.Tab
+	}
+	return m
 }
 
 // historyView selects which of TabHistory's two views fills the pane. `←/→` switches them, which is
