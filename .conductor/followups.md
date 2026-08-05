@@ -438,11 +438,16 @@ followup ledger and the bug ledger have quietly become one ledger with two file 
 | FU-B11-3 | **HUMAN**, unchanged — real cTrader credentials and real money | the owner |
 | FU-OWNER-14 | **re-homed to K7.2**, and that is a real move rather than a restatement: SF7.2's reinstall clause was deferred because a second conductor run was live on this machine. K7.2's spec absorbs it verbatim — first install of this run, owner confirms no other run is live, then `conductor version --short` must match the releases page. | K7.2 |
 
-### Bugs — the fourteen this era leaves open
+### Bugs — the eleven this era leaves open
 
 They live in `run.db`, not in this table; the table exists so the ledger is complete and so every one
-of them has a name against it. Seven ride in from Sarban unchanged, six were filed by this run, and
-one was filed by this checkpoint.
+of them has a name against it. Seven ride in from Sarban unchanged and four were filed by this run.
+
+**Re-measured at K7.2, session 29 (2026-08-05).** K7.1 wrote fourteen rows here. Three of them
+(#28, #29, #32) were closed by sessions 26 and 27 in the hours after, and two more (#33, #34) were
+filed and closed after this ledger existed at all. All five are restated in the closed table below
+rather than deleted from this one: a row whose state changes is restated, never dropped — that is
+the contract at the top of this section, and it applies to good news too.
 
 | bug | what | owner from here |
 |---|---|---|
@@ -456,11 +461,22 @@ one was filed by this checkpoint.
 | #23 | CI Windows gate battery flakes on `SF0_3PidsAndBackgroundWorkTests.McpBgStatus_CallsAnUninspectablePidRunning_NotDead` | next era, CI lane — a GH runner answers `Ours/Recycled` where the test expects `Unverifiable` |
 | #24 | `AgentConfig.Merge` silently drops `Env`: a stage-level agent override wipes the plan-level `agent.env` | next era, engine lane — `src/Conductor/Models/AgentConfig.cs:36-48`; bites any plan that sets `OPENCODE_CONFIG` and then overrides an agent per stage |
 | #27 | a brand-new `run.db` logs `FOREIGN KEY constraint failed` on the first `run_state` write | next era, store lane — cosmetic today, but it is the first line a new user sees |
-| #28 | `MigrationRunner` crashes on this repo's own `run.db`: `schema_version` says 9 but the v10 `sessions.soft_break` already exists | **K7.2, and it is not theoretical.** Reproduced today on the fresh build: `dotnet run --project src/Conductor -- doctor` dies with `duplicate column name: soft_break` at `MigrationRunner.cs:85` ← `SqliteRunStore.EnsureSchema:51` ← `DoctorCommand.TryReadCostFromRunDb`. The engine the owner installs at K7.2 is this engine. |
-| #29 | the same half-migration seen from the other end — any newer engine crashes on upgrade against this db | **K7.2**, with #28. `budget` and `money` survive on the same build because K3.1's catalogue copy under `%LOCALAPPDATA%/conductor/runs/` is intact and they read that; `doctor` reads the plan's own path, `C:/code/conductor/.conductor/run.db`, which is the half-migrated one. |
 | #31 | `bubbles/textarea` cannot replace `widgets.TextArea` until the face's key dispatch stops being a string | next era, face lane — named deliberately in K6.4 rather than left implicit |
-| #32 | the checkpoint board carries seven rows (`F0.1`, `F1.1`, `F1.2`, `F2.1`, `F3.1`, `R0.1`, `R0.2`) belonging to no stage of this plan | the owner — they describe face showcase work from another plan. They **cannot block this run**: the `stages` table for `df9c4af8` holds `K1`–`K7` only and this run's `run_state` contains neither `F2.1` nor `shamshir`. But they read as unfinished Karvan work on the generated tracker, and a reader cannot tell. **Deleting the stash is not the fix**: the owner removed `plans/karvan/.removed-face-items.json` at `670b2f4` during session 25, and `conductor task --list` still printed all seven afterwards. They live in the run's own state, and only a board move (`conductor task --skipped`) or a state edit will clear them. |
+
+### Bugs closed after this ledger was first written — sessions 26 to 28
+
+Every row below was open (or not yet filed) when the table above was written, and `run.db` calls all
+five `fixed` today. `fixed session` is the store's own `fixed_session` column, queried 2026-08-05 —
+not a recollection.
+
+| bug | fixed session | what closed it |
+|---|---|---|
+| #28 | 26 | `MigrationRunner` crashing on this repo's own half-migrated `run.db` (`duplicate column name: soft_break`). Re-measured at session 29: `dotnet run --project src/Conductor -- doctor` now reads the store through to `✓ state` instead of dying at `MigrationRunner.cs:85`. |
+| #29 | 26 | the same half-migration seen from the upgrade side. Closed with #28 by the same guard — which also retires the reason `K7_1ClosureLedgerTests` gave for refusing to open `run.db`. |
+| #32 | 27 | the seven face-showcase rows (`F0.1`, `F1.1`, `F1.2`, `F2.1`, `F3.1`, `R0.1`, `R0.2`) belonging to no stage of this plan. `TrackerGenerator` no longer emits them as table rows — a row was a re-declaration, which is what made them immortal — and lists them under **Not in the plan** instead (`TrackerGenerator.cs:109-130`, pinned by `K7OrphanBoardTests`). **It has not taken effect on this repo yet, and that is expected**: the tracker is regenerated by the *running* engine, which is the published one, so the rows and `doctor`'s `✗ work … (G13)` survive until the K7.2 reinstall. First regeneration by the new engine clears both. |
+| #33 | 27 | the state-home import was one-time, so a reinstall resumed from a stale snapshot of `.conductor/run.db`. The reinstall at K7.2 is exactly the event that would have fired it. |
+| #34 | 28 | `conductor budget` chose its verdict on the cap alone, so a moved `softBreakRatio` was reported as "no change needed". The verb this era leads its release notes with, contradicting the ledger it reads. |
 
 **Nothing here is homeless.** Four followup rows need the owner, one is re-homed to K7.2, one rides
-into the next era; two bugs are K7.2's, one is the owner's, and eleven ride into the next era in the
-database rather than in markdown, so nobody has to remember to copy them.
+into the next era; five bugs closed between K7.1 and the ship, and the eleven still open ride into
+the next era in the database rather than in markdown, so nobody has to remember to copy them.

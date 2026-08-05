@@ -64,7 +64,7 @@ its successor's checkpoint fall in the same bucket:
 | conductor (sarban-face) ⚠ | uncapped (sessions 1–8) | ~~58.1M ($41.9)~~ → **26.5M** | |
 | conductor (sarban-face) ⚠ | 8M / 0.76 (sessions 9–41) | ~~14.7M ($11.7)~~ → **17.0M** | ~~4.0× better~~ → **1.6× better** |
 | conductor (sarban-core) | uncapped | 19.4M ($13.85) | the run the 32M ceiling was derived from |
-| **conductor (karvan-core)** | **32M / 0.70** | **14.1M ($11.01)** | **best of the three · 0 rollovers** (§9) |
+| **conductor (karvan-core)** | **32M / 0.70** | **15.5M ($12.17)** | **best of the three · 0 rollovers** (§9) |
 | sk-studio stage A | uncapped | 20.0M | |
 | sk-studio stages C/E/F | 6M / 0.7 | **25–54M** | **worse than uncapped** |
 | sk-studio stages G/H | 9M / 0.7 | 12.8–15.3M | better; stage H **0 rollovers** |
@@ -247,31 +247,45 @@ enough to land in one session, let `batteryCollapse` stop paying an agent to run
 runs anyway — and the floor drops. Only then does a lower cap become safe, and only then does the
 1.6× that conductor got become available to a repo like this one.
 
-## 9. This era's own numbers — 32M / 0.70, measured (K7.1, 2026-08-05)
+## 9. This era's own numbers — 32M / 0.70, measured (K7.1, re-measured at K7.2 session 29)
 
 Produced by `dotnet run --project src/Conductor -- budget` against this repo's own catalogue, not by
-hand. Raw output: `.conductor/evidence/K7/K7.1-budget-raw.txt`.
+hand. Raw output: `.conductor/evidence/K7/K7.1-budget-raw.txt`, re-run at
+`.conductor/evidence/K7/K7.2-ship-rehearsal.md`.
+
+**Every karvan-core figure below is as of session 29 and moves with every session that follows it.**
+K7.1 wrote 22 sessions / 323.6M / 23 checkpoints / 14.1M; four sessions later the same command says
+26 / 371.7M / 24 / 15.5M. Nothing regressed — the run got longer. Re-run `budget` and `money` when
+the era is tagged rather than carrying these forward; the numbers here are a measurement with a date
+on it, not a constant.
 
 | run | ceiling | sess | tokens | ckpt | tok/ckpt | floor | median closer | rollover | wrap-up |
 |---|---|---|---|---|---|---|---|---|---|
 | sarban-core | uncapped | 28 | 504.5M | 26 | 19.4M | 5.52M | 17.5M | 0 | — |
 | sarban-face | uncapped (1–8) | 7 | 158.9M | 6 | 26.5M | 14.7M | 23.4M | 1/7 (14%) | — |
 | sarban-face | 8M / nudge 6.07M | 33 | 238.3M | 14 | 17.0M | 4.66M | 7.26M | **10/33 (30%)** | 1.37M (n=20) |
-| **karvan-core** | **32M / nudge 22.5M** | **22** | **323.6M** | **23** | **14.1M** | **3.27M** | **13.9M** | **0** | **1.89M (n=6)** |
+| **karvan-core** | **32M / nudge 22.5M** | **26** | **371.7M** | **24** | **15.5M** | **3.27M** | **13.8M** | **0** | **1.86M (n=7)** |
+
+`sess` is **costed** sessions — the ones that recorded agent tokens, which is the denominator every
+rate in the row uses (`BudgetCommand.cs:135`, `BudgetWindow.RolloverRate`). karvan-core has 28
+sessions in all; sessions 3 and 4 died `AgentError` at 3.0 and 2.9 minutes with zero agent tokens
+(queried 2026-08-05), so "26" is not a miscount and "zero rollovers in 26 sessions" is the honest
+form of the claim.
 
 **The 32M ceiling was the right call and the evidence is the rollover column.** It was derived from
 sarban-core — the one run that ran uncapped on this model — and set so the nudge cleared that run's
 median closer rather than merely its floor, which is the correction §7 step 4 now carries. Result:
-`nudge vs floor 6.90×`, `vs median closer 1.62×`, headroom 9.46M at 5.0× the wrap-up, and **zero
-rollovers in 22 sessions** against sarban-face's ten in thirty-three. It is also the cheapest
-per-checkpoint window of the three runs — 14.1M and $11.01 against sarban-face's 17.0M — so a *large*
+`nudge vs floor 6.90×`, `vs median closer 1.63×`, headroom 9.46M at 5.1× the wrap-up, and **zero
+rollovers in 26 sessions** against sarban-face's ten in thirty-three. It is also the cheapest
+per-checkpoint window of the three runs — 15.5M and $12.17 against sarban-face's 17.0M — so a *large*
 correctly-placed ceiling beat a small one on both churn and cost. Cost per token is not why: all
 three runs blend to ~$0.74/M and 98.3% cache reads (`conductor money`,
 `.conductor/evidence/K7/K7.1-money-raw.txt`). The saving is work per token, exactly as §2 predicted.
 
 `conductor budget`'s prescription for this run is **32M at 0.85** — the cap is where the measurements
 put it, and the ratio could rise, because 9.46M of headroom is 5× a 1.89M wrap-up and the extra 4.8M
-is more usefully spent before the nudge than after it. That is a one-line change to
+is more usefully spent before the nudge than after it (the wrap-up it is measured against is 1.86M).
+That is a one-line change to
 `plans/karvan/core.plan.json` for whoever runs the next era; it is **not** applied here, because
 changing the ceiling mid-run would re-tune the budget under the sessions still running against it.
 

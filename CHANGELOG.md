@@ -5,9 +5,14 @@ All notable changes to Conductor are recorded here. The format follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 **This file is not decoration — it is load-bearing.** The version a binary reports is derived from
-the `v*` git tags by MinVer (`src/Conductor/Conductor.csproj`), and `.github/workflows/release.yml`
-refuses to publish a tag whose section is missing from this file, using the section as the release
-body. So: add to `[Unreleased]` as you work, and rename it to the version when you tag.
+the `v*` git tags by MinVer (`src/BuildStamp.targets`, `MinVerTagPrefix` = `v`), and
+`.github/workflows/release.yml` refuses to publish a tag whose section is missing from this file,
+using the section as the release body (`tools/changelog-section.sh`). So: add to `[Unreleased]` as
+you work, and rename it to the version when you tag.
+
+A section that quotes a run's own score is quoting a **measurement with a date on it**, not a
+constant: every further session moves it. Re-run `conductor budget` and `conductor money` when you
+rename the section — the section is what the world reads on the releases page.
 
 Between releases, `conductor version` answers with a tag-height prerelease such as
 `0.1.1-alpha.0.54+1c2330f5a47e` — patch bumped, `alpha.0.<commits since the tag>`, plus the commit
@@ -25,9 +30,9 @@ wrong and nothing caught them. Built the same way as the last two: conductor dri
 this repo, unattended, with every checkpoint confirmed by an independent gate battery rather than by
 the agent that claimed it.
 
-Its own score, produced by the tool this era shipped (`conductor budget`): **23 checkpoints at 14.1M
-tokens and $11.01 each, zero rollovers in 22 sessions** — against the previous era's 17.0M, $14.86
-and 30%.
+Its own score, produced by the tools this era shipped (`conductor budget` and `conductor money`, as of
+session 29): **24 checkpoints at 15.5M tokens and $12.17 each, zero rollovers in 26 costed sessions**
+— against the previous era's 17.0M, $14.86 and 30%.
 
 ### Added
 
