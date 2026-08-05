@@ -32,7 +32,7 @@ drives it. Its `repo` is `.`, so it is the one plan here that runs where it sits
 > worked example of `conventions.stageIdPattern` — overriding the default so a `P-0` / `P3.4b` style
 > tracker parses. W6.4 tried to move it and the ratchet gate refused: relocating a plan file reads to
 > `tools/gates/ratchet.ps1` as removing its gate commands, which is a decision the gate reserves for
-> the owner. Left in place rather than worked around. See the W6.4 row in `CONDUCTOR-WORKGRAPH.md`.
+> the owner. Left in place rather than worked around. See the W6.4 row in `docs/history/archive/trackers/WORKGRAPH-TRACKER.md`.
 
 ## Where plans live
 

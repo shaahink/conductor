@@ -15,8 +15,8 @@ the watcher itself.
 
 | Plan | Stages | Checkpoints | Cap | Tracker | Driven by |
 |---|---|---|---|---|---|
-| `plans/conductor-sarban-core.plan.json` | SC1–SC8 | 26 | $260 | `SARBAN-CORE-TRACKER.md` | the engine published from this branch at launch |
-| `plans/conductor-sarban-face.plan.json` | SF0–SF7 | 24 | $350 | `SARBAN-FACE-TRACKER.md` | the engine republished after core lands |
+| `plans/conductor-sarban-core.plan.json` | SC1–SC8 | 26 | $260 | [`archive/trackers/SARBAN-CORE-TRACKER.md`](archive/trackers/SARBAN-CORE-TRACKER.md) | the engine published from this branch at launch |
+| `plans/conductor-sarban-face.plan.json` | SF0–SF7 | 24 | $350 | [`archive/trackers/SARBAN-FACE-TRACKER.md`](archive/trackers/SARBAN-FACE-TRACKER.md) | the engine republished after core lands |
 
 Core: SC1 Telegram · SC2 truthful surfaces · SC3 config traps · SC4 verdict correctness ·
 SC5 wait/detach/board · SC6 clean history · SC7 structured transcript · SC8 version + update.

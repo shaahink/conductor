@@ -67,7 +67,7 @@ because the test count may never fall. Neither is escapable without the other no
 
 Twice now, a suite that was entirely green hid a defect that only appeared when the shipped binary
 was driven from outside itself (see the W2 and W5 sections of
-[`CONDUCTOR-WORKGRAPH.md`](CONDUCTOR-WORKGRAPH.md)). A harness we wrote ourselves is too lenient to
+[`docs/history/CONDUCTOR-WORKGRAPH.md`](docs/history/CONDUCTOR-WORKGRAPH.md)). A harness we wrote ourselves is too lenient to
 be evidence for anything agent-visible or process-visible. If your change touches the wire — the MCP
 server, the control plane, the prompt an agent actually receives — prefer a test that goes through
 the real surface.

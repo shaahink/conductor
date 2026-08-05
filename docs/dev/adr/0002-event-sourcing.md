@@ -85,7 +85,7 @@ G4 (two seeds disagreeing on restart) and the `newly DONE []` claim-path split
   `conductor task` claim path); Emit-time stamps are provisional queue ordinals only.
 - Re-seeding is upsert-never-clobber: new items land with full tracker state; existing items
   refresh their declared title only — runtime status is never overwritten by a re-sync
-  (the W-series design principle; `docs/dev/CONDUCTOR-WORKGRAPH.md`).
+  (the W-series design principle; `docs/history/CONDUCTOR-WORKGRAPH.md`).
 
 ## Alternatives considered
 

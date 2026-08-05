@@ -20,7 +20,7 @@
 #            confirmed finish. It is the evidence behind docs/platforms.md. If it goes red,
 #            the honest response is to narrow that page, not to delete this step.
 #
-# Keep the windows leg's commands identical to docs/dev/CONDUCTOR-WORKGRAPH.md's gate battery.
+# Keep the windows leg's commands identical to docs/history/CONDUCTOR-WORKGRAPH.md's gate battery.
 # If they drift, CI stops being evidence for a checkpoint.
 
 name: CI

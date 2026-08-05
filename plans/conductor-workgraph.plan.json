@@ -3,8 +3,8 @@
   "planVersion": 1,
   "name": "Conductor Work Graph (W-series)",
   "repo": "C:/code/conductor-baton",
-  "tracker": "CONDUCTOR-WORKGRAPH.md",
-  "planDoc": "docs/dev/CONDUCTOR-WORKGRAPH.md",
+  "tracker": "docs/history/archive/trackers/WORKGRAPH-TRACKER.md",
+  "planDoc": "docs/history/CONDUCTOR-WORKGRAPH.md",
   "pauseOnBlocked": true,
   "agent": {
     "command": "claude",
@@ -39,8 +39,8 @@
   "readOrder": [
     "AGENTS.md",
     "docs/dev/GAP-ANALYSIS.md",
-    "docs/dev/CONDUCTOR-WORKGRAPH.md",
-    "CONDUCTOR-WORKGRAPH.md"
+    "docs/history/CONDUCTOR-WORKGRAPH.md",
+    "docs/history/archive/trackers/WORKGRAPH-TRACKER.md"
   ],
   "conventions": {
     "stageIdPattern": "(?<stage>[A-Za-z]+\\d+)(?:\\.\\d+)?[a-z]?",
@@ -58,7 +58,7 @@
       "id": "W1",
       "title": "One work graph (keystone)",
       "sessions": 5,
-      "notes": "Deliver W1 per docs/dev/CONDUCTOR-WORKGRAPH.md (W1.1 unify checkpoints+tasks into the event-sourced graph, W1.2 WorkGraphSync at every boundary, W1.3 claims from the graph + bug #6 fix, W1.4 one projection for all views). REUSE TaskGraph/TaskWrites/the G3 reload machinery — rewire, don't fork. The checkpoints table becomes a projection (ADR-0002 amended); sync is upsert-with-provenance, never clobbering runtime status. Truth gates are LIVE fake-agent tests (tools/fake-agent.ps1 pattern): mid-run /plan/edit stage add appears on the board; a task-done-only claim (no tracker edit) yields newlyDone=[item]; a post-advance verify prompt names the delivered stage.",
+      "notes": "Deliver W1 per docs/history/CONDUCTOR-WORKGRAPH.md (W1.1 unify checkpoints+tasks into the event-sourced graph, W1.2 WorkGraphSync at every boundary, W1.3 claims from the graph + bug #6 fix, W1.4 one projection for all views). REUSE TaskGraph/TaskWrites/the G3 reload machinery — rewire, don't fork. The checkpoints table becomes a projection (ADR-0002 amended); sync is upsert-with-provenance, never clobbering runtime status. Truth gates are LIVE fake-agent tests (tools/fake-agent.ps1 pattern): mid-run /plan/edit stage add appears on the board; a task-done-only claim (no tracker edit) yields newlyDone=[item]; a post-advance verify prompt names the delivered stage.",
       "agent": { "model": "claude-opus-4-8" }
     },
     {
@@ -66,14 +66,14 @@
       "title": "Real-provider claim path + honest prompts",
       "sessions": 4,
       "dependsOn": ["W1"],
-      "notes": "Deliver W2 per docs/dev/CONDUCTOR-WORKGRAPH.md (W2.1 claude-shaped --mcp-config + CONDUCTOR_PLAN in the child env so in-worker conductor verbs stop crashing on plan ambiguity; W2.2 live journal folding / direct events + single id allocator; W2.3 PromptBuilder renders PromptComposer blocks so GET /prompt/blocks IS the prompt, ToolContract rewritten to exactly one claim path). W2.1's truth gate needs one cheap real claude session — everything else is fake-agent/wire tests.",
+      "notes": "Deliver W2 per docs/history/CONDUCTOR-WORKGRAPH.md (W2.1 claude-shaped --mcp-config + CONDUCTOR_PLAN in the child env so in-worker conductor verbs stop crashing on plan ambiguity; W2.2 live journal folding / direct events + single id allocator; W2.3 PromptBuilder renders PromptComposer blocks so GET /prompt/blocks IS the prompt, ToolContract rewritten to exactly one claim path). W2.1's truth gate needs one cheap real claude session — everything else is fake-agent/wire tests.",
       "agent": { "model": "claude-opus-4-8" }
     },
     {
       "id": "W3",
       "title": "Autonomy rails",
       "sessions": 4,
-      "notes": "Deliver W3 per docs/dev/CONDUCTOR-WORKGRAPH.md (W3.1 independent watchdog timer + bg-only StallDetector liveness + clock-jump detection + hung-session notification; W3.2 401/authentication_failed classified as auth-park + doctor/preflight auth smoke test — replay session #13's raw log as the fixture; W3.3 SetConsoleCtrlHandler graceful close + ReapOrphans pid-reuse guard + unbounded-spend warning + bg start log pump fix). Independent of W1/W2 — safe to interleave.",
+      "notes": "Deliver W3 per docs/history/CONDUCTOR-WORKGRAPH.md (W3.1 independent watchdog timer + bg-only StallDetector liveness + clock-jump detection + hung-session notification; W3.2 401/authentication_failed classified as auth-park + doctor/preflight auth smoke test — replay session #13's raw log as the fixture; W3.3 SetConsoleCtrlHandler graceful close + ReapOrphans pid-reuse guard + unbounded-spend warning + bg start log pump fix). Independent of W1/W2 — safe to interleave.",
       "agent": { "model": "claude-sonnet-5" }
     },
     {
@@ -81,7 +81,7 @@
       "title": "AI-native bootstrap + per-task pipeline control",
       "sessions": 5,
       "dependsOn": ["W1", "W2"],
-      "notes": "Deliver W4 per docs/dev/CONDUCTOR-WORKGRAPH.md (W4.1 ImportResult carries checkpoints — ToImportResult already holds them and discards them at MarkdownPlanParser.cs:128; advisor contract gains the checkpoints key; apply syncs the graph; W4.2 init --from-idea + advisor block; W4.3 advisor split-into-subtasks + stage-level card add; W4.4 per-item qa inherit/verify/off honored by QaPolicy — same live-proof shape as P2QaDialLiveTests). Determinism principle holds: the advisor acts only on explicit owner invocation.",
+      "notes": "Deliver W4 per docs/history/CONDUCTOR-WORKGRAPH.md (W4.1 ImportResult carries checkpoints — ToImportResult already holds them and discards them at MarkdownPlanParser.cs:128; advisor contract gains the checkpoints key; apply syncs the graph; W4.2 init --from-idea + advisor block; W4.3 advisor split-into-subtasks + stage-level card add; W4.4 per-item qa inherit/verify/off honored by QaPolicy — same live-proof shape as P2QaDialLiveTests). Determinism principle holds: the advisor acts only on explicit owner invocation.",
       "agent": { "model": "claude-opus-4-8" }
     },
     {
@@ -97,7 +97,7 @@
       "title": "GitHub-ready",
       "sessions": 4,
       "dependsOn": ["W5"],
-      "notes": "Deliver W6 per docs/dev/CONDUCTOR-WORKGRAPH.md (W6.1 HUMAN: license choice + publish/ purge decision, .gitignore/.gitattributes; W6.2 .github/workflows/ci.yml windows full battery + ubuntu dotnet/go legs, dotnet 10.x / go 1.26, ratchet via pwsh at tools/gates/ratchet.ps1 — exact path, wrong path exits 0; W6.3 README prereqs/platform/badges + VHS demo GIF of conductor-face --demo, fix docs/quickstart.md .NET version; W6.4 archive historical trackers, scrub foreign-project refs and evidence gate logs, CONTRIBUTING/SECURITY, merge feat/foreman -> master). Runs after W5 so CI is born green on the fixed engine.",
+      "notes": "Deliver W6 per docs/history/CONDUCTOR-WORKGRAPH.md (W6.1 HUMAN: license choice + publish/ purge decision, .gitignore/.gitattributes; W6.2 .github/workflows/ci.yml windows full battery + ubuntu dotnet/go legs, dotnet 10.x / go 1.26, ratchet via pwsh at tools/gates/ratchet.ps1 — exact path, wrong path exits 0; W6.3 README prereqs/platform/badges + VHS demo GIF of conductor-face --demo, fix docs/quickstart.md .NET version; W6.4 archive historical trackers, scrub foreign-project refs and evidence gate logs, CONTRIBUTING/SECURITY, merge feat/foreman -> master). Runs after W5 so CI is born green on the fixed engine.",
       "agent": { "model": "claude-sonnet-5" }
     }
   ],

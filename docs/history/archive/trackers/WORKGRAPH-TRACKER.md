@@ -1,6 +1,6 @@
 # CONDUCTOR-WORKGRAPH — W-series tracker (One Work Graph)
 
-**Design brief:** `docs/dev/CONDUCTOR-WORKGRAPH.md` (read it + `docs/dev/GAP-ANALYSIS.md` before any
+**Design brief:** `docs/history/CONDUCTOR-WORKGRAPH.md` (read it + `docs/dev/GAP-ANALYSIS.md` before any
 checkpoint). **Plan:** `plans/conductor-workgraph.plan.json`.
 
 ## Handoff

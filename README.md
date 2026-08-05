@@ -190,8 +190,8 @@ Discord, Slack) fire on NeedsHuman and completion.
 Contributors: [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/dev/`](docs/dev/). Closed eras and their
 gate transcripts: [`docs/history/`](docs/history/).
 
-> Conductor drives itself. [`CONDUCTOR-WORKGRAPH.md`](CONDUCTOR-WORKGRAPH.md) at the repo root is a
-> **live tracker** — the same checkpoint-table format described in
+> Conductor drives itself. [`plans/karvan/CORE-TRACKER.md`](plans/karvan/CORE-TRACKER.md) is the
+> **live tracker** for the era in flight — the same checkpoint-table format described in
 > [`docs/tracker.md`](docs/tracker.md), being used on this repo by the tool in this repo.
 
 ## Testing without spending anything

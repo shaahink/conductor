@@ -3,8 +3,12 @@
 Everything here is about **using** Conductor. Two other trees exist and are deliberately kept out of
 your way:
 
-- [`dev/`](dev/) — contributor material: the current design brief, ADRs, findings, backlog.
+- [`../ARCHITECTURE.md`](../ARCHITECTURE.md) — how the engine is put together: the assemblies, one
+  session's lifecycle, the seams, the two surfaces. Read it before changing anything.
+- [`dev/`](dev/) — contributor material: ADRs, findings, backlog, and the pointer to the era in flight.
 - [`history/`](history/) — closed eras and their raw gate transcripts. Receipts, not documentation.
+  Each closed era's design brief sits directly in `history/`; the tracker it was driven against sits in
+  [`history/archive/trackers/`](history/archive/trackers/) with an index.
 
 ## Start here
 

@@ -9,12 +9,18 @@ what a good change looks like. The material here is what sits behind that page.
 
 | Doc | What it is |
 |---|---|
-| [`CONDUCTOR-WORKGRAPH.md`](CONDUCTOR-WORKGRAPH.md) | The W-series design brief — one event-sourced work graph, the real-provider claim path, autonomy rails, AI-native bootstrap, the proof runs, and GitHub-readiness. **The design authority for current work.** |
-| [`GAP-ANALYSIS.md`](GAP-ANALYSIS.md) | The owner-commissioned analysis that produced the W-series: why the loop broke and the road back. |
-| [`../../CONDUCTOR-WORKGRAPH.md`](../../CONDUCTOR-WORKGRAPH.md) | The live **tracker** at the repo root — checkpoint table + handoff block. Conductor drives itself with it. |
+| [`../../ARCHITECTURE.md`](../../ARCHITECTURE.md) | The map: the three assemblies and which way they point, one session's lifecycle end to end, the seams, the two surfaces, and where to add a new thing. Start here. |
+| [`../history/CONDUCTOR-KARVAN.md`](../history/CONDUCTOR-KARVAN.md) | The K-series design brief — the ledger, the architecture split, machine-level state, token truth, the result contract, the surfaces. **The design authority for current work.** |
+| [`../../plans/karvan/CORE-TRACKER.md`](../../plans/karvan/CORE-TRACKER.md) | The live **tracker** — checkpoint table + handoff block, beside its plan in `plans/karvan/`. Conductor drives itself with it. |
+| [`GAP-ANALYSIS.md`](GAP-ANALYSIS.md) | The owner-commissioned analysis that produced the W-series: why the loop broke and the road back. Still the reference for why the rails exist. |
 
-When the W era closes, the brief above moves to [`../history/`](../history/) and the next one takes
-its place.
+An era's brief and tracker live together while the era is open, and both move to
+[`../history/`](../history/) when it closes — the brief to `history/`, the tracker to
+[`../history/archive/trackers/`](../history/archive/trackers/). The W-series is the worked example:
+its brief is [`../history/CONDUCTOR-WORKGRAPH.md`](../history/CONDUCTOR-WORKGRAPH.md) and its tracker
+is [`../history/archive/trackers/WORKGRAPH-TRACKER.md`](../history/archive/trackers/WORKGRAPH-TRACKER.md).
+The W-series write-ups below stay here because `plans/conductor-w52.plan.json` and
+`tools/w5/start-w52.ps1` still address them by path.
 
 ## Findings and write-ups
 

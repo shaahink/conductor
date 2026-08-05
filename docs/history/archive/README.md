@@ -4,8 +4,8 @@ Finished eras. Nothing here is current, and nothing here should be edited — th
 because they are the record a claim can be checked against, not because they still describe the
 system.
 
-The live tracker is [`CONDUCTOR-WORKGRAPH.md`](../../../CONDUCTOR-WORKGRAPH.md) at the repo root, and
-its design authority is [`docs/dev/CONDUCTOR-WORKGRAPH.md`](../../dev/CONDUCTOR-WORKGRAPH.md). Start at
+The live tracker is [`plans/karvan/CORE-TRACKER.md`](../../../plans/karvan/CORE-TRACKER.md), and its
+design authority is [`docs/history/CONDUCTOR-KARVAN.md`](../CONDUCTOR-KARVAN.md). Start at
 [`docs/README.md`](../../README.md).
 
 ## `trackers/` — the checkpoint tables each era was driven against
@@ -23,6 +23,9 @@ claims to satisfy it.
 | [`CONDUCTOR-AI-NATIVE.md`](trackers/CONDUCTOR-AI-NATIVE.md) | **G — AI-native** | [`docs/history/CONDUCTOR-AI-NATIVE.md`](../CONDUCTOR-AI-NATIVE.md) |
 | [`CONDUCTOR-PLANNER.md`](trackers/CONDUCTOR-PLANNER.md) | **P — Dynamic planner** | [`docs/history/CONDUCTOR-PLANNER.md`](../CONDUCTOR-PLANNER.md) |
 | [`CONDUCTOR-UX-START.md`](trackers/CONDUCTOR-UX-START.md) | **U — UX** (the Go face) | [`docs/history/CONDUCTOR-UX.md`](../CONDUCTOR-UX.md) |
+| [`WORKGRAPH-TRACKER.md`](trackers/WORKGRAPH-TRACKER.md) | **W — One Work Graph** | [`docs/history/CONDUCTOR-WORKGRAPH.md`](../CONDUCTOR-WORKGRAPH.md) |
+| [`SARBAN-CORE-TRACKER.md`](trackers/SARBAN-CORE-TRACKER.md) | **Sarban core** (SC1–SC8) | [`docs/history/CONDUCTOR-SARBAN.md`](../CONDUCTOR-SARBAN.md) |
+| [`SARBAN-FACE-TRACKER.md`](trackers/SARBAN-FACE-TRACKER.md) | **Sarban face** (SF0–SF7) | [`docs/history/CONDUCTOR-SARBAN.md`](../CONDUCTOR-SARBAN.md) |
 
 The matching plan files are still under [`plans/`](../../../plans/) and still point here, so an old era
 can be re-read (or re-driven against a fixture repo) without reconstructing anything.

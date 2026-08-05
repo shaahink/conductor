@@ -1,6 +1,6 @@
 # W-series — One Work Graph (design brief)
 
-**Tracker:** `CONDUCTOR-WORKGRAPH.md` (root) · **Plan:** `plans/conductor-workgraph.plan.json` ·
+**Tracker:** `docs/history/archive/trackers/WORKGRAPH-TRACKER.md` · **Plan:** `plans/conductor-workgraph.plan.json` ·
 **Evidence base:** `docs/dev/GAP-ANALYSIS.md` (2026-07-27, commit `875169c`) — read it first; this
 brief does not re-derive its findings.
 

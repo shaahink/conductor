@@ -3,7 +3,7 @@
   "planVersion": 2,
   "name": "Sarban core - the engine says what it knows",
   "repo": "C:/code/conductor",
-  "tracker": "SARBAN-CORE-TRACKER.md",
+  "tracker": "docs/history/archive/trackers/SARBAN-CORE-TRACKER.md",
   "planDoc": "docs/history/CONDUCTOR-SARBAN.md",
   "branchPattern": "^feat/sarban$",
   "pauseOnBlocked": true,
