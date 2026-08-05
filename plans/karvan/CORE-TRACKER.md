@@ -2,23 +2,22 @@
 
 **Plan:** Karvan core - the engine knows what it did and what it cost | **Branch:** `feat/karvan` | **Design doc:** docs/history/CONDUCTOR-KARVAN.md
 
-## Handoff (overwrite this block, ≤12 lines, no history)
+## Handoff (overwrite this block, ≤ 12 lines, no history)
 
-last: **K5.3 DONE** (s19) - `6df3a58` tests, `fe5ab5f` `GET /evidence`, `f4b272f` Face, `370aba1`
-  goldens; evidence `.conductor/evidence/K5/K5.3-evidence-artifact.md`. The s18 engine half was half a
-  checkpoint: the tests found the checkpoint id was NEVER recovered (a numbered group under
-  `ExplicitCapture` matched everything and captured nothing), and s18 had left THREE architecture-
-  ratchet reds - fixed by splitting, never by raising a ceiling. Driven proof: a scratch-repo run of
-  the fresh build registered a PNG the agent never mentioned; `GET /evidence` answered from the real
-  engine host.
-next: **K5.4** - the composition layer. `PushEvidenceAsync` is text-only on purpose: replace its BODY
-  with `sendPhoto`/`sendDocument` rather than adding a second path. `visual` is already on the wire
-  (`EvidenceArtifactDto`), so the Face and the notifier cannot disagree about what a PNG is. Also
-  owed: per-event templates, links, money with headroom, chunking at 4096, and the push-only ADR.
-red: none. bug #29 (K7.2 blocker) still open.
-watch: run `dotnet test --filter Architecture` before committing any file that GREW - 0.4s, and it is
-  a gate s18 shipped three reds past. Face: ten tabs is the ceiling (adr/0004), so a new surface is
-  re-homed, not tabbed - evidence lives in Knowledge.
+last: **K5.4 DONE** (s20) - `43dd6d2` transport, `baa2c56` composition, `aaee340` templates + ADR 0005;
+  evidence `.conductor/evidence/K5/K5.4-composition-layer.md` plus a 304-line verbatim wire transcript.
+  Evidence now ARRIVES as `sendPhoto`/`sendDocument` (K5.3's body replaced, not supplemented); messages
+  chunk at 4096, thread onto the run's own anchor, and buzz only when the owner must act. A second
+  stamped context line carries repo@branch, stage id AND title, and the in-flight checkpoint. Money has
+  headroom, commits and PRs and the report are links, and `RunCompletePush` leads with the outcome.
+next: **K6.1** - the TUI conventions ADR, after an actual read of glow, soft-serve, gh-dash, lazygit.
+  K5 is closed. Read `face-go/STYLE.md` and adr/0004 first; K6.2 needs `bubbles` v2 declared, which
+  `face-go/go.mod` does not have at all.
+red: none. 191 tests green across the messaging and architecture suites. bug #29 (K7.2) still open.
+watch: assert on the stamp via `svc.Stamp(null)`, never `IdentityLine`, and skip past the LAST `</i>`.
+  New seam: `tests/Conductor.Tests/RecordingBotApi.cs` records method + fields + MULTIPART; the three
+  older `FakeBotApi` copies see only `sendMessage`'s text. A PowerShell here-string commit message can
+  fail SILENTLY - stage without committing - so use `git commit -F` with a heredoc-written file.
 
 
 ## Baseline numbers (from run.db)
