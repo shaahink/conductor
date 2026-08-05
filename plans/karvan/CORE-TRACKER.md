@@ -12,10 +12,13 @@ last: **K2.1, K2.2 and K2.3 all claimed** (`b05efef`, `3bc5a2a`, this commit). `
   records wearing a prefix — now `Http/Contracts/<feature>/`, mapper renamed `ControlPlaneMapper`;
   events in `Events/Kinds/`; Telegram's API records in `Integrations/TelegramApi/`. `ARCHITECTURE.md`
   is new and holds the convention plus the split/left table. Suite **1814/1814** twice.
-next: **K2.4** — the front door. `ARCHITECTURE.md` exists but only states layering + file organisation;
-  it needs the real map. **AGENTS.md is stale in ways a grep finds**: L498/L537/L591 name
-  `src/Conductor/Core/...` paths that no longer exist, L601/L905 name `ControlPlaneDto*`. No test
-  catches those, so fix them deliberately.
+next: **K2.4, half done — back on TODO, four things left.** DONE: `AGENTS.md` 978→368 lines, the nine
+  superseded handoffs archived verbatim with an index at `docs/history/handoffs/AGENTS-resume-log-`
+  `2026-07.md`. LEFT, in order: (1) `ARCHITECTURE.md` has only the layering diagram + K2.3's file
+  convention — it still owes the session lifecycle, the seams, the two surfaces and a where-do-I-add-X
+  table; (2) `SARBAN-{CORE,FACE}-TRACKER.md` → `docs/history/trackers/`; (3) root
+  `CONDUCTOR-WORKGRAPH.md` (252 lines) vs `docs/dev/` copy (197) — different hashes, resolve to one;
+  (4) `docs/README.md` + `docs/dev/README.md` indexes. None of it touches this plan's own files.
 watch: **clear `CONDUCTOR_PLAN` before running your own build's `doctor`/`run`** — the env the
   orchestrator hands you points at THIS repo, a scratch cwd is not isolation, and your build migrates
   `run.db` 9→10 and kills every claim verb. Fixed here; recipe is in the ledger.
