@@ -148,10 +148,15 @@ public sealed class RunArchive
         // the measurement was written.
         var context = Has("sessions", "context_turns")
             ? "s.context_high_water, s.context_mean_turn, s.context_turns, " : "";
+        // K4.2 reads newly_done to say which sessions closed a checkpoint. It has been in the schema
+        // since v1, so every database this engine wrote has it — but the archive also opens databases
+        // it did not write, and naming a column unconditionally is exactly what the probe exists to
+        // prevent. Absent, it degrades to "unrecorded"; it does not take the listing down.
+        var closed = Has("sessions", "newly_done") ? "s.newly_done, " : "";
         var rows = Query(
             "SELECT s.number, s.stage_id, s.kind, s.started_utc, s.ended_utc, s.outcome, s.attempt, " +
-            "  s.resume_count, s.commit_count, s.result_summary, s.gate_summary, s.newly_done, " +
-            provenance + context +
+            "  s.resume_count, s.commit_count, s.result_summary, s.gate_summary, " +
+            closed + provenance + context +
             "  (SELECT COALESCE(SUM(c.cost_usd), 0) FROM costs c " +
             "     WHERE c.run_id = s.run_id AND c.session_number = s.number) AS cost_usd, " +
             "  (SELECT COALESCE(SUM(c.tokens_in + c.tokens_out + c.tokens_think + c.tokens_cache), 0) " +
@@ -366,7 +371,7 @@ public sealed class RunArchive
         ContextHighWater: OptLong(r, "context_high_water"),
         ContextMeanTurn: OptLong(r, "context_mean_turn"),
         ContextTurns: (int?)OptLong(r, "context_turns"),
-        NewlyDone: r["newly_done"] as string,
+        NewlyDone: Opt(r, "newly_done") as string,
         AgentTokens: Convert.ToInt64(r["agent_tokens"] ?? 0L, System.Globalization.CultureInfo.InvariantCulture));
 
     /// <summary>K4.1: an optional numeric column, null for "absent OR NULL" — the two are one answer.</summary>
