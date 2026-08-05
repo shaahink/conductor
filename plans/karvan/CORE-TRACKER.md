@@ -4,26 +4,20 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **K2.1, K2.2 and K2.3 all claimed** (`b05efef`, `3bc5a2a`, this commit). `src/Conductor.Core` is
-  its own assembly (domain/orchestration/store/events/providers); `Conductor` is Program + Commands +
-  `Http/ControlPlaneServer*` + `Hosting/`. Namespaces already matched folders, so it was a rename. Two
-  reverse deps died: `HumanDuration.Format`, `ControlPlaneDiscovery.PathFor`. `ArchitectureBoundaryTests`
-  = 8 rules that name the offender. K2.3: `ControlPlaneDto` was never a type — 29 files of independent
-  records wearing a prefix — now `Http/Contracts/<feature>/`, mapper renamed `ControlPlaneMapper`;
-  events in `Events/Kinds/`; Telegram's API records in `Integrations/TelegramApi/`. `ARCHITECTURE.md`
-  is new and holds the convention plus the split/left table. Suite **1814/1814** twice.
-next: **K2.4, half done — back on TODO, four things left.** DONE: `AGENTS.md` 978→368 lines, the nine
-  superseded handoffs archived verbatim with an index at `docs/history/handoffs/AGENTS-resume-log-`
-  `2026-07.md`. LEFT, in order: (1) `ARCHITECTURE.md` has only the layering diagram + K2.3's file
-  convention — it still owes the session lifecycle, the seams, the two surfaces and a where-do-I-add-X
-  table; (2) `SARBAN-{CORE,FACE}-TRACKER.md` → `docs/history/trackers/`; (3) root
-  `CONDUCTOR-WORKGRAPH.md` (252 lines) vs `docs/dev/` copy (197) — different hashes, resolve to one;
-  (4) `docs/README.md` + `docs/dev/README.md` indexes. None of it touches this plan's own files.
-watch: **clear `CONDUCTOR_PLAN` before running your own build's `doctor`/`run`** — the env the
-  orchestrator hands you points at THIS repo, a scratch cwd is not isolation, and your build migrates
-  `run.db` 9→10 and kills every claim verb. Fixed here; recipe is in the ledger.
-red: none. Open, not blocking: **#27** fresh-db FK error on first `run_state` write, **#24**
-  `AgentConfig.Merge` drops `Env`.
+last: **K2.4 claimed — K2 is complete.** `8b38f1b` root cleanup, `aef2fb9` the map. The spec's
+  "divergent duplicate" was FALSE: root `CONDUCTOR-WORKGRAPH.md` is the W **tracker**, `docs/dev/`'s is
+  the W **design brief** — two documents sharing a name. Filed as what they are (brief →
+  `docs/history/`, tracker → `docs/history/archive/trackers/`, which is the dir that actually exists —
+  not `docs/history/trackers/`). Root is 14 files. `ARCHITECTURE.md` 91→244 lines: lifecycle, the nine
+  seams, both surfaces, where-do-I-add-X, every hop cited to file:line and each line read back first.
+next: **K3.1 — state gets a machine-level home.** It moves `run.db` and touches every `IRunStore` caller;
+  K2 was sequenced before it on purpose, so the boundary you inherit is real. `ARCHITECTURE.md` §"One
+  session, end to end" and §"The seams" are the map — read those two sections, not the whole file.
+watch: two checks are cheap and catch what no test does — walk every `tracker`/`planDoc`/`readOrder`
+  path in `plans/**` (53 refs, was 6 dangling), and link-check every `](path)` in the 128 markdown
+  files (0 broken). Also: clear `CONDUCTOR_PLAN` before running your own build's `doctor`/`run`.
+red: none; build green. Open, not blocking: **#27** fresh-db FK error on first `run_state` write,
+  **#24** `AgentConfig.Merge` drops `Env`.
 
 
 ## Baseline numbers (from run.db)

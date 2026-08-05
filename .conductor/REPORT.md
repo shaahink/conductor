@@ -1,10 +1,10 @@
 ﻿# Conductor — Karvan core - the engine knows what it did and what it cost run report
 
-_Updated 2026-08-05 00:42 UTC · branch `feat/karvan` · HEAD `bd925cf`_
+_Updated 2026-08-05 01:21 UTC · branch `feat/karvan` · HEAD `75d94a2`_
 
-**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [1h 13m ago, 23:29:12Z]
-**Stage:** K1 — The ledger stops lying · attempts used 0
-**Checkpoints:** 4/32 done · **Sessions run:** 6 · **Cost:** $49.9284 (agent $49.8931 + gates $0.0354) · **Tokens:** 642,450 in / 313,095 out
+**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [1h 51m ago, 23:29:12Z]
+**Stage:** K2 — The architecture becomes navigable · attempts used 0 · working ▸ K2.4
+**Checkpoints:** 7/32 done · **Sessions run:** 7 · **Cost:** $67.4010 (agent $67.3575 + gates $0.0435) · **Tokens:** 872,172 in / 437,715 out
 **Confirmed phases:** K1
 
 ## Stage progress
@@ -12,7 +12,7 @@ _Updated 2026-08-05 00:42 UTC · branch `feat/karvan` · HEAD `bd925cf`_
 | Stage | Title | Progress | State |
 |---|---|---|---|
 | K1 | The ledger stops lying | ██████████ 4/4 | confirmed ✓ |
-| K2 | The architecture becomes navigable | ░░░░░░░░░░ 0/4 | todo |
+| K2 | The architecture becomes navigable | ████████░░ 3/4 | **← active** |
 | K3 | Conductor remembers | ░░░░░░░░░░ 0/3 | todo |
 | K4 | Token truth - measure it before shrinking it | ░░░░░░░░░░ 0/4 | todo |
 | K5 | The result contract and the channels | ░░░░░░░░░░ 0/4 | todo |
@@ -30,13 +30,13 @@ _Updated 2026-08-05 00:42 UTC · branch `feat/karvan` · HEAD `bd925cf`_
 
 </details>
 
-<details><summary>K2 — The architecture becomes navigable (0/4)</summary>
+<details><summary>K2 — The architecture becomes navigable (3/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| K2.1 | Conductor.Core holds the domain, orchestration and store with no Spectre and no HTTP hosting, Conductor is CLI plus hosting, the reference direction only points one way, and publish plus doctor plus the Face's discovery still work | ⬜ TODO | - |
-| K2.2 | Architecture tests in the ordinary suite fail the build when a boundary is crossed, each naming the offending type and the rule, landed together with K2.1 so the extraction is verified rather than asserted | ⬜ TODO | - |
-| K2.3 | The worst partial-file piles are split by responsibility — the thirty-file DTO pile becomes per-feature endpoint contracts — and one written file-organisation convention says where a new endpoint, event or partial belongs | ⬜ TODO | - |
+| K2.1 | Conductor.Core holds the domain, orchestration and store with no Spectre and no HTTP hosting, Conductor is CLI plus hosting, the reference direction only points one way, and publish plus doctor plus the Face's discovery still work | ✅ DONE | - |
+| K2.2 | Architecture tests in the ordinary suite fail the build when a boundary is crossed, each naming the offending type and the rule, landed together with K2.1 so the extraction is verified rather than asserted | ✅ DONE | - |
+| K2.3 | The worst partial-file piles are split by responsibility — the thirty-file DTO pile becomes per-feature endpoint contracts — and one written file-organisation convention says where a new endpoint, event or partial belongs | ✅ DONE | - |
 | K2.4 | The front door reads: a real ARCHITECTURE.md map, an AGENTS.md cut to current state with superseded handoffs archived and indexed, closed-era trackers out of the repo root, the divergent duplicate workgraph doc resolved to one file, and the docs indexes updated | ⬜ TODO | - |
 
 </details>
@@ -103,17 +103,13 @@ _Updated 2026-08-05 00:42 UTC · branch `feat/karvan` · HEAD `bd925cf`_
 | 4 | K1 | Fix | 2 | 08-04 23:02 | 0:02 | AgentError |  | 0 | engine-fast:cached · face-fast:cached | $0.0000 |  |  |
 | 5 | K1 | Deliver | 1 | 08-04 23:30 | 0:37 | Advanced | K1.4 | 3 | engine-fast:OK · face-fast:OK | $14.6250 | $0.0127 | 170,772/86,424 |
 | 6 | K1 | Fix | 2 | 08-05 00:18 | 0:19 | Progress |  | 5 | engine-fast:OK · face-fast:OK | $6.9616 | $0.0089 | 105,085/54,557 |
+| 7 | K2 | Deliver | 1 | 08-05 00:42 | 0:36 | Advanced | K2.1 K2.2 K2.3 | 5 | engine-fast:OK · face-fast:OK | $17.4644 | $0.0081 | 229,722/124,620 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-04 22:49:08  ▸ stage K1 entered — The ledger stops lying
-08-04 22:49:08  • session #1 K1 Deliver started (attempt 1/8)
-08-04 23:26:15  ▪ gate engine-fast pass [session]  (46.4s)
-08-04 23:26:15  ▪ gate face-fast pass [session]  (36.2s)
-08-04 23:26:16  • session #1 K1 → Advanced · done K1.1,K1.2 · 3 commit(s)  (37m07s)
 08-04 23:27:12  ◆ run resumed · Karvan core - the engine knows what it did and what it cost
 08-04 23:27:13  • session #2 K1 Deliver started (attempt 1/8)
 08-04 23:59:01  ▪ gate engine-fast pass [session]  (48.7s)
@@ -149,6 +145,11 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-05 01:42:52  ▪ gate engine-full pass [phase]  (3m23s)
 08-05 01:42:52  ▪ gate face-full pass [phase]  (4.0s)
 08-05 01:42:52  ✓ checkpoint K1.4 confirmed
+08-05 01:42:52  ▸ stage K1 confirmed  (2h53m43s)
+08-05 01:42:53  ▸ stage K2 entered — The architecture becomes navigable
+08-05 01:42:53  • session #7 K2 Deliver started (attempt 1/8)
+08-05 02:21:10  ▪ gate engine-fast pass [session]  (49.5s)
+08-05 02:21:10  ▪ gate face-fast pass [session]  (31.7s)
 ```
 
 ## Health
@@ -156,7 +157,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 6 · retries 2 (33 %) · overall Warn
+sessions 7 · retries 2 (29 %) · overall Warn
 ⚠ [context-saturation] session #1: 24,653,507 context tokens (≥ 20,000,000)
 ```
 
@@ -166,7 +167,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/karvan
-working tree: M .conductor/REPORT.md, M plans/karvan/CORE-TRACKER.md
+working tree: clean
 vs upstream: up to date
 ```
 
@@ -193,6 +194,12 @@ vs upstream: up to date
   - [`6287f40`](https://github.com/shaahink/conductor/commit/6287f40) fix(plan): the karvan core plan drops five stages the editor added by mistake
   - [`413cb40`](https://github.com/shaahink/conductor/commit/413cb40) fix(tests): the hook-budget test owns its output writer, not the process's
   - [`115d77f`](https://github.com/shaahink/conductor/commit/115d77f) fix(tests): the versioning test compares MinVer's height, not describe's
+- **s7 (K2 Deliver)** — 5 commit(s):
+  - [`75d94a2`](https://github.com/shaahink/conductor/commit/75d94a2) docs(tracker): the handoff to K2.4's remaining four items
+  - [`6b7a418`](https://github.com/shaahink/conductor/commit/6b7a418) docs(agents): AGENTS.md is current-state only - nine superseded handoffs move to an indexed archive
+  - [`e35d034`](https://github.com/shaahink/conductor/commit/e35d034) refactor(arch): the DTO and event piles become responsibility folders, and the convention is written down
+  - [`3bc5a2a`](https://github.com/shaahink/conductor/commit/3bc5a2a) docs(tracker): K2.1 and K2.2 are claimed - the evidence and the handoff to K2.3
+  - [`b05efef`](https://github.com/shaahink/conductor/commit/b05efef) refactor(arch): Conductor.Core is its own assembly, and the direction is a link error
 
 ## Phase handovers (audit)
 
@@ -215,28 +222,33 @@ vs upstream: up to date
 
 ## Last gate run
 
-engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
+engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: I fixed both defects that kept `engine-full` red and the battery is now green at 1806/1806 with zero failures, proven twice through `conductor bg`. Bug #25 — the reported failure — was `SC8_2VersioningTests` comparing two different quantities: `git describe --long`'s height is rev-list's set difference over all parents (20) while MinVer stamps the shortest distance to the tagged commit (15), and they diverge because `v0.3.0` is `e897c2c7` and the merge `c4febc1` carries it as its first parent. The test already documented this mechanism but its guard had the condition wrong — it skipped the strict check only when HEAD *itself* was a merge, while the disagreement survives in ev…
+> SESSION-RESULT: Three of stage K2's four checkpoints are claimed with evidence and the fourth is half-landed. **K2.1** extracted `src/Conductor.Core` (domain, orchestration, store, events, providers) out of the single engine assembly, leaving `Conductor` as CLI + hosting — the direction is now a link error, not a convention. Scoping it by measurement first is what made it a one-session job: Spectre appeared under the old `Core/` in exactly three files and only in comment text, ASP.NET was referenced nowhere, and namespaces already matched folders one-for-one, so the move needed no namespace churn. Exactly two real backwards references existed and both died (`HumanDuration.Format`, `ControlPl…
 
 ## Tracker handoff
 
 ```
-last: **K1.4 claimed** (`36314be`), and **K1 is complete**. `OperatorMcpServers` reads the machine's
-  own MCP config — `~/.claude.json` user + `projects[<repo>]` scopes, the repo's `.mcp.json`, and
-  opencode's `mcp` map global + repo — and `SessionRunner.Mcp.cs` folds it in beside `conductor-tasks`,
-  which is written first and cannot be displaced. Live proof: a real run inherited `chrome-devtools`
-  (the exact server SF7.1 said was invisible) and 6 opencode servers off this machine.
-  `agent.inheritMcpServers: false` opts out; `--strict-mcp-config` stays and now means determinism.
-  `WireMcpServer` is `WireMcpServerAsync` — `src/` sits at exactly the 38-pragma ratchet ceiling, so
-  real async I/O was the only way to read a file there. Prompt-side fallback untouched, pinned twice.
-next: **K2.1** — extract `Conductor.Core`. Second commit `ec4c089` cleared its path: `SoftBreak.cs`
-  (4 types) and `SessionRunner.cs` (513 lines) had failed `ArchitectureTests` since K1.2, unseen by
-  scoped runs; both are relocations, no behaviour changed. Run the FULL suite before you trust green.
-red: full suite **1803/1804** after both commits. The one red is **bug #25** `SC8_2VersioningTests`
-  (describe height 17 vs MinVer 12 — merge topology; no build makes it pass, the guard is one level
-  too narrow). **#26** `BudgetRailTests` is an order-dependent flake (process-global `Console.SetOut`;
-  10/10 alone, did not recur). **#24**: `AgentConfig.Merge` silently drops `Env`.
+last: **K2.1, K2.2 and K2.3 all claimed** (`b05efef`, `3bc5a2a`, this commit). `src/Conductor.Core` is
+  its own assembly (domain/orchestration/store/events/providers); `Conductor` is Program + Commands +
+  `Http/ControlPlaneServer*` + `Hosting/`. Namespaces already matched folders, so it was a rename. Two
+  reverse deps died: `HumanDuration.Format`, `ControlPlaneDiscovery.PathFor`. `ArchitectureBoundaryTests`
+  = 8 rules that name the offender. K2.3: `ControlPlaneDto` was never a type — 29 files of independent
+  records wearing a prefix — now `Http/Contracts/<feature>/`, mapper renamed `ControlPlaneMapper`;
+  events in `Events/Kinds/`; Telegram's API records in `Integrations/TelegramApi/`. `ARCHITECTURE.md`
+  is new and holds the convention plus the split/left table. Suite **1814/1814** twice.
+next: **K2.4, half done — back on TODO, four things left.** DONE: `AGENTS.md` 978→368 lines, the nine
+  superseded handoffs archived verbatim with an index at `docs/history/handoffs/AGENTS-resume-log-`
+  `2026-07.md`. LEFT, in order: (1) `ARCHITECTURE.md` has only the layering diagram + K2.3's file
+  convention — it still owes the session lifecycle, the seams, the two surfaces and a where-do-I-add-X
+  table; (2) `SARBAN-{CORE,FACE}-TRACKER.md` → `docs/history/trackers/`; (3) root
+  `CONDUCTOR-WORKGRAPH.md` (252 lines) vs `docs/dev/` copy (197) — different hashes, resolve to one;
+  (4) `docs/README.md` + `docs/dev/README.md` indexes. None of it touches this plan's own files.
+watch: **clear `CONDUCTOR_PLAN` before running your own build's `doctor`/`run`** — the env the
+  orchestrator hands you points at THIS repo, a scratch cwd is not isolation, and your build migrates
+  `run.db` 9→10 and kills every claim verb. Fixed here; recipe is in the ledger.
+red: none. Open, not blocking: **#27** fresh-db FK error on first `run_state` write, **#24**
+  `AgentConfig.Merge` drops `Env`.
 ```
