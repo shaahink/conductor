@@ -15,6 +15,87 @@ it was built from. It orders above `0.1.0` and below `0.1.1`, and it is unique p
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-05
+
+**The Karvan core era** — the engine knows what it did and what it cost. 0.3.0 made a run visible;
+this era makes it *accountable*. Every claim conductor makes about itself — what a session landed,
+what it spent, where its state lives, what its own docs say — is now measured by the engine and
+checkable against the ledger, because in the run that produced 0.3.0 several of those claims were
+wrong and nothing caught them. Built the same way as the last two: conductor driving itself against
+this repo, unattended, with every checkpoint confirmed by an independent gate battery rather than by
+the agent that claimed it.
+
+Its own score, produced by the tool this era shipped (`conductor budget`): **23 checkpoints at 14.1M
+tokens and $11.01 each, zero rollovers in 22 sessions** — against the previous era's 17.0M, $14.86
+and 30%.
+
+### Added
+
+- **`conductor budget` — the token budget stops being folklore.** It reads a run's own ledger, splits
+  it at the session where a ceiling took effect, and prints floor, wrap-up, cap, nudge-versus-floor,
+  nudge-versus-median-closer and rollover rate for each window — then *prescribes* a `limits` block
+  to paste. Run against this repo it found four wrong numbers in `docs/dev/TOKEN-BUDGET-TUNING.md`
+  and one rule that was too weak; all five are corrected in place.
+- **`conductor money` — what a project cost.** Per checkpoint, per stage and per month, with the
+  cache-read share and the before-and-after windows that say what a cap bought.
+- **Context size per turn.** A high-water and a mean per session, derived from the stream, so the
+  thing everyone tunes by feel has a number. Live session tokens, the distance to the nudge, a burn
+  rate and a projection sit beside live money in the Face and on the wire — honest when no cap is set.
+- **`conductor history`, and state that outlives a repo.** State has a machine-level home with a
+  catalogue keyed by repo and plan, an environment override, and a migration that *imports* existing
+  `run.db` files rather than orphaning them. Past runs open read-only from the catalogue, and the
+  Face's run picker offers them.
+- **Run provenance.** Every run records the engine version, its commit, its dirty flag and a snapshot
+  of the limits that governed it. A dirty build warns at launch.
+- **Evidence as a first-class artifact.** Path, kind, checkpoint, session, sha, created-at — written
+  as an event when an agent registers one or a watched directory gains a file, with non-text kinds
+  first-class and a Face surface. The existing free-text evidence field still works.
+- **A message-composition layer for Telegram.** Owner-editable per-event templates, repo and branch
+  and stage title and checkpoint in every push, commits and PRs as links, money with headroom, photo
+  and document sending so evidence arrives, a thread per run, severity mapped to notify-or-silent,
+  and 4096-character chunking. ADR 0005 records the push-only remote posture.
+- **`ARCHITECTURE.md`, and tests that keep it true.** A real map of the tree with a file-organisation
+  convention, backed by architecture tests in the ordinary suite that fail the build when a boundary
+  is crossed, each naming the offending type and the rule.
+- **ADR 0006 — TUI conventions**, written after an actual read of glow, soft-serve, gh-dash and
+  lazygit: pager keys, focus model, help, one scroll idiom, viewport versus list versus table.
+
+### Changed
+
+- **`Conductor.Core` is a library.** The domain, orchestration and store moved out of the CLI with no
+  Spectre and no HTTP hosting left in them; `Conductor` is CLI plus hosting. The reference direction
+  points one way and a test says so. The thirty-file DTO pile became per-feature endpoint contracts.
+- **The session result has one format conductor owns** — short headline, at most three outcome
+  bullets, artefacts, evidence paths, explicit gaps. Five consumers used to cut the same paragraph at
+  five different lengths, mid-word; they now read fields. A legacy result degrades rather than throws.
+- **The Face's tabs own themselves.** Each tab has its own model, state, update and view, so the root
+  update is a dispatch instead of 826 lines and 80 cases; the mnemonic map and the help legend are
+  derived from one source. `bubbles` v2 is a declared dependency and four panes scroll through a real
+  viewport. One theme-aware markdown renderer serves everywhere markdown belongs, and it memoises —
+  200 frames of unchanged prose invoke glamour once.
+- **The front door reads.** `AGENTS.md` cut to current state with superseded handoffs archived and
+  indexed, closed-era trackers out of the repo root, the divergent duplicate workgraph doc resolved
+  to one file, and the docs indexes updated.
+
+### Fixed
+
+- **A rolled-over session records what it actually did.** `SessionRunner` used to set the outcome and
+  return *before* the pass that populates commit count and closed checkpoints, so every rollover
+  reported nothing landed — on this repo's own history, ten of eleven rollovers had in fact committed.
+- **The soft break is re-stated until it is obeyed**, names the actual remaining budget, and states
+  the wrap-up order (claim first, handoff second). The session record now says whether it was
+  delivered, re-delivered and obeyed. In the 0.3.0 run the rail converted **zero of ten** kills.
+- **The five Telegram defects that made the feed unreadable**: two identity blocks from two sources,
+  a stage id with no title, the structured result cut mid-word, a rollover that reported nothing, and
+  pushes with no progress line.
+- **A spawned session sees the operator's own MCP servers.** The per-session config is now a merge
+  with whatever the machine already has, not a replacement that named only `conductor-tasks`.
+- **Three small untruths died as a class**: a thinking-token column that was zero on all 125 rows, a
+  lessons file that was a diary and repeated one entry twice, and a `go.mod` that called a
+  directly-imported package indirect while carrying two lipgloss majors.
+- **Face scroll offsets no longer run away past the end of a document** — 389 keystrokes into the
+  Report pane used to leave it blank. Four panes, one clamp, one idiom.
+
 ## [0.3.0] - 2026-08-01
 
 **The Sarban face era** — the watcher and the surfaces. 0.2.0 shipped an engine that could be trusted
