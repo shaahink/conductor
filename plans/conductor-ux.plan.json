@@ -39,7 +39,7 @@
   "readOrder": [
     "AGENTS.md",
     "docs/history/CONDUCTOR-UX.md",
-    "CONDUCTOR-UX-START.md",
+    "docs/history/archive/trackers/CONDUCTOR-UX-START.md",
     "face-go/STYLE.md"
   ],
   "conventions": {

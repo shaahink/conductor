@@ -39,7 +39,7 @@
   "readOrder": [
     "AGENTS.md",
     "docs/history/CONDUCTOR-PLANNER.md",
-    "CONDUCTOR-PLANNER.md"
+    "docs/history/archive/trackers/CONDUCTOR-PLANNER.md"
   ],
   "conventions": {
     "stageIdPattern": "(?<stage>[A-Za-z]+\\d+)(?:\\.\\d+)?[a-z]?",

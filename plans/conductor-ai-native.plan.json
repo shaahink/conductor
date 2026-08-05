@@ -39,7 +39,7 @@
   "readOrder": [
     "AGENTS.md",
     "docs/history/CONDUCTOR-AI-NATIVE.md",
-    "CONDUCTOR-AI-NATIVE.md"
+    "docs/history/archive/trackers/CONDUCTOR-AI-NATIVE.md"
   ],
   "conventions": {
     "stageIdPattern": "(?<stage>[A-Za-z]+\\d+)(?:\\.\\d+)?[a-z]?",

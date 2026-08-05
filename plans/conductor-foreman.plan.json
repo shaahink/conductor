@@ -104,7 +104,7 @@
   },
 
   "readOrder": [
-    "CONDUCTOR-VNEXT-PLAN.md",
+    "docs/history/archive/trackers/CONDUCTOR-VNEXT-PLAN.md",
     "docs/history/CONDUCTOR-VNEXT-PLAN.md"
   ],
 

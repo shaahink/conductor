@@ -31,8 +31,8 @@ red: none. Open, not blocking: **#27** fresh-db FK error on first `run_state` wr
 | Metric | Value |
 |---|---|
 | Total checkpoints | 32 |
-| Done | 0 |
-| Claimed (unconfirmed) | 4 |
+| Done | 1 |
+| Claimed (unconfirmed) | 6 |
 
 ## Checkpoints
 
@@ -46,15 +46,15 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | K1.1 | A rolled-over session records the commits and claims it actually made, proven by a harness session driven to its ceiling, with a rollover still consuming no attempt and still not running the phase gate | DONE | 93bbae5 | .conductor/evidence/K1/K1.1-rollover-records-facts.md |
 | K1.2 | The soft break is re-stated until it is obeyed, names the actual remaining budget, states the wrap-up order (claim first, handoff second), and the session record says whether it was delivered, re-delivered and obeyed | DONE | 93bbae5 | .conductor/evidence/K1/K1.2-soft-break-restated-and-measured.md |
 | K1.3 | Three small untruths die as a class — the thinking-token column that is zero on all 125 rows, the lessons file that is a diary and repeats one entry twice, and a go.mod that calls a directly-imported package indirect while carrying two lipgloss majors | DONE | 890ac38 | .conductor/evidence/K1/K1.3-three-untruths.md |
-| K1.4 | A spawned session sees conductor's task tools and the operator's own MCP servers, because the config merges instead of replacing, with the prompt-side deferred-tool fallback kept | DONE | 36314be | .conductor/evidence/K1/K1.4-mcp-merge.md |
+| K1.4 | A spawned session sees conductor's task tools and the operator's own MCP servers, because the config merges instead of replacing, with the prompt-side deferred-tool fallback kept | DONE ✓ | 36314be | .conductor/evidence/K1/K1.4-mcp-merge.md |
 
 ### K2 — The architecture becomes navigable
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| K2.1 | Conductor.Core holds the domain, orchestration and store with no Spectre and no HTTP hosting, Conductor is CLI plus hosting, the reference direction only points one way, and publish plus doctor plus the Face's discovery still work | TODO | - | - |
-| K2.2 | Architecture tests in the ordinary suite fail the build when a boundary is crossed, each naming the offending type and the rule, landed together with K2.1 so the extraction is verified rather than asserted | TODO | - | - |
-| K2.3 | The worst partial-file piles are split by responsibility — the thirty-file DTO pile becomes per-feature endpoint contracts — and one written file-organisation convention says where a new endpoint, event or partial belongs | TODO | - | - |
+| K2.1 | Conductor.Core holds the domain, orchestration and store with no Spectre and no HTTP hosting, Conductor is CLI plus hosting, the reference direction only points one way, and publish plus doctor plus the Face's discovery still work | DONE | b05efef | .conductor/evidence/K2/K2.1-K2.2-core-extraction.md |
+| K2.2 | Architecture tests in the ordinary suite fail the build when a boundary is crossed, each naming the offending type and the rule, landed together with K2.1 so the extraction is verified rather than asserted | DONE | b05efef | .conductor/evidence/K2/K2.1-K2.2-core-extraction.md |
+| K2.3 | The worst partial-file piles are split by responsibility — the thirty-file DTO pile becomes per-feature endpoint contracts — and one written file-organisation convention says where a new endpoint, event or partial belongs | DONE | b05efef | .conductor/evidence/K2/K2.3-partial-piles-and-the-convention.md |
 | K2.4 | The front door reads: a real ARCHITECTURE.md map, an AGENTS.md cut to current state with superseded handoffs archived and indexed, closed-era trackers out of the repo root, the divergent duplicate workgraph doc resolved to one file, and the docs indexes updated | TODO | - | - |
 
 ### K3 — Conductor remembers
@@ -99,32 +99,32 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | K7.1 | The docs match the engine and this era's own measurements are written back — the cap's real score, the corrected nudge rule, and this run's figures produced by conductor budget rather than by hand — with every wrong claim corrected in place and a closure ledger naming an owner for everything still open | TODO | - | - |
 | K7.2 | feat/karvan is merged to master by the owner, the release is tagged through the existing pipeline, and the installed version matches the releases page | TODO | - | - |
 
-### F0 — Audit scroll and animation implementation
+### F0
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | F0.1 | Map scroll behavior, animation, and UI components in face-go | TODO | - | - |
 
-### F1 — Implement fixed scroll block for desktop
+### F1
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | F1.1 | Implement fixed scroll container component | TODO | - | - |
 | F1.2 | Add exit mechanism after list completion | TODO | - | - |
 
-### F2 — Hide shamshir from showcase lists
+### F2
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | F2.1 | Filter shamshir from showcase list display | TODO | - | - |
 
-### F3 — Reposition narration to bottom
+### F3
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | F3.1 | Move narration component to bottom placement | TODO | - | - |
 
-### R0 — Integration review and testing
+### R0
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
@@ -134,10 +134,5 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 ## Dependencies
 
 ```
-F0 → F1
-F0 → F2
-F0 → F3
-F1 → R0
-F2 → R0
-F3 → R0
+(none — stages run sequentially by plan order)
 ```

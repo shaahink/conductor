@@ -128,7 +128,7 @@
   },
 
   "readOrder": [
-    "CONDUCTOR-START.md",
+    "docs/history/archive/trackers/CONDUCTOR-START.md",
     "docs/history/baton/BATON-BRIEF.md"
   ],
   "batteries": {
