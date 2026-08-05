@@ -1,10 +1,10 @@
 ﻿# Conductor — Karvan core - the engine knows what it did and what it cost run report
 
-_Updated 2026-08-05 04:10 UTC · branch `feat/karvan` · HEAD `3fe10fe`_
+_Updated 2026-08-05 05:05 UTC · branch `feat/karvan` · HEAD `725f4de`_
 
-**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [4h 41m ago, 23:29:12Z]
-**Stage:** K4 — Token truth - measure it before shrinking it · attempts used 0 · working ▸ K4.2
-**Checkpoints:** 12/32 done · **Sessions run:** 13 · **Cost:** $128.0815 (agent $128.0011 + gates $0.0804) · **Tokens:** 1,782,973 in / 857,731 out
+**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [5h 35m ago, 23:29:12Z]
+**Stage:** K4 — Token truth - measure it before shrinking it · attempts used 0 · working ▸ K4.4
+**Checkpoints:** 14/32 done · **Sessions run:** 15 · **Cost:** $147.4793 (agent $147.3867 + gates $0.0926) · **Tokens:** 2,114,035 in / 1,034,974 out
 **Confirmed phases:** K1, K2, K3
 
 ## Stage progress
@@ -14,7 +14,7 @@ _Updated 2026-08-05 04:10 UTC · branch `feat/karvan` · HEAD `3fe10fe`_
 | K1 | The ledger stops lying | ██████████ 4/4 | confirmed ✓ |
 | K2 | The architecture becomes navigable | ██████████ 4/4 | confirmed ✓ |
 | K3 | Conductor remembers | ██████████ 3/3 | confirmed ✓ |
-| K4 | Token truth - measure it before shrinking it | ██░░░░░░░░ 1/4 | **← active** |
+| K4 | Token truth - measure it before shrinking it | ████████░░ 3/4 | **← active** |
 | K5 | The result contract and the channels | ░░░░░░░░░░ 0/4 | todo |
 | K6 | The surfaces read | ░░░░░░░░░░ 0/4 | todo |
 | K7 | Ship the plan | ░░░░░░░░░░ 0/2 | todo |
@@ -51,13 +51,13 @@ _Updated 2026-08-05 04:10 UTC · branch `feat/karvan` · HEAD `3fe10fe`_
 
 </details>
 
-<details><summary>K4 — Token truth - measure it before shrinking it (1/4)</summary>
+<details><summary>K4 — Token truth - measure it before shrinking it (3/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| K4.1 | The engine records context size per turn — a high-water and a mean per session — derived from the stream, with the derivation checked against a session that can be estimated independently | ✅ DONE | - |
-| K4.2 | conductor budget prints floor, wrap-up, cap, nudge-versus-floor and rollover rate and prescribes a correction, and it reproduces this repo's own two runs without being told the answers | ⬜ TODO | - |
-| K4.3 | conductor money answers what a project cost per checkpoint, per stage and per month, with cache-read share and the before-and-after windows that say what the cap bought, cross-checked against a hand-written query | ⬜ TODO | - |
+| K4.1 | The engine records context size per turn — a high-water and a mean per session — derived from the stream, with the derivation checked against a session that can be estimated independently | ✅ DONE | [`ea49c8d`](https://github.com/shaahink/conductor/commit/ea49c8d) |
+| K4.2 | conductor budget prints floor, wrap-up, cap, nudge-versus-floor and rollover rate and prescribes a correction, and it reproduces this repo's own two runs without being told the answers | ✅ DONE | [`1fcbd0b`](https://github.com/shaahink/conductor/commit/1fcbd0b) |
+| K4.3 | conductor money answers what a project cost per checkpoint, per stage and per month, with cache-read share and the before-and-after windows that say what the cap bought, cross-checked against a hand-written query | ✅ DONE | - |
 | K4.4 | Live session tokens, the distance to the nudge, a burn rate and a projection sit beside live money in the Face and on the wire, honest when no cap is set | ⬜ TODO | - |
 
 </details>
@@ -110,20 +110,14 @@ _Updated 2026-08-05 04:10 UTC · branch `feat/karvan` · HEAD `3fe10fe`_
 | 11 | K3 | Deliver | 1 | 08-05 03:03 | 0:20 | Advanced | K3.3 | 2 | engine-fast:OK · face-fast:OK | $8.0198 | $0.0053 | 142,261/59,401 |
 | 12 | K3 | Fix | 2 | 08-05 03:31 | 0:09 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $2.4999 | $0.0081 | 63,844/22,913 |
 | 13 | K4 | Deliver | 1 | 08-05 03:47 | 0:22 | Advanced | K4.1 | 2 | engine-fast:OK · face-fast:OK | $9.1685 | $0.0045 | 146,429/65,841 |
+| 14 | K4 | Deliver | 1 | 08-05 04:10 | 0:29 | Advanced | K4.2 | 2 | engine-fast:OK · face-fast:OK | $10.5312 | $0.0072 | 161,661/96,953 |
+| 15 | K4 | Deliver | 1 | 08-05 04:40 | 0:23 | Advanced | K4.3 | 2 | engine-fast:OK · face-fast:OK | $8.8544 | $0.0051 | 169,401/80,290 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-05 02:38:39  ▪ gate engine-fast pass [session]  (48.8s)
-08-05 02:38:39  ▪ gate face-fast pass [session]  (4.4s)
-08-05 02:38:40  • session #8 K2 → Advanced · done K2.4 · 3 commit(s)  (17m28s)
-08-05 02:42:14  ▪ gate engine-fast pass [phase]  (0.0s)
-08-05 02:42:14  ▪ gate face-fast pass [phase]  (0.0s)
-08-05 02:42:14  ▪ gate engine-full pass [phase]  (3m27s)
-08-05 02:42:14  ▪ gate face-full pass [phase]  (4.6s)
-08-05 02:42:14  ✓ checkpoint K2.4 confirmed
 08-05 02:42:14  ▸ stage K2 confirmed  (59m21s)
 08-05 02:42:15  ▸ stage K3 entered — Conductor remembers
 08-05 02:42:15  • session #9 K3 Deliver started (attempt 1/6)
@@ -156,6 +150,14 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-05 04:47:08  • session #13 K4 Deliver started (attempt 1/8)
 08-05 05:10:22  ▪ gate engine-fast pass [session]  (41.6s)
 08-05 05:10:22  ▪ gate face-fast pass [session]  (3.2s)
+08-05 05:10:23  • session #13 K4 → Advanced · done K4.1 · 2 commit(s)  (23m15s)
+08-05 05:10:23  • session #14 K4 Deliver started (attempt 1/8)
+08-05 05:40:40  ▪ gate engine-fast pass [session]  (42.3s)
+08-05 05:40:40  ▪ gate face-fast pass [session]  (29.2s)
+08-05 05:40:41  • session #14 K4 → Advanced · done K4.2 · 2 commit(s)  (30m17s)
+08-05 05:40:41  • session #15 K4 Deliver started (attempt 1/8)
+08-05 06:05:04  ▪ gate engine-fast pass [session]  (47.0s)
+08-05 06:05:04  ▪ gate face-fast pass [session]  (3.6s)
 ```
 
 ## Health
@@ -163,7 +165,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 13 · retries 3 (23 %) · overall Warn
+sessions 15 · retries 3 (20 %) · overall Warn
 ⚠ [context-saturation] session #10: 23,623,416 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #1: 24,653,507 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #7: 24,094,247 context tokens (≥ 20,000,000)
@@ -176,24 +178,12 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/karvan
-working tree: clean
+working tree: M .conductor/REPORT.md
 vs upstream: up to date
 ```
 
 ### Commits by session
 
-- **s6 (K1 Fix)** — 5 commit(s):
-  - [`bd925cf`](https://github.com/shaahink/conductor/commit/bd925cf) docs(tracker): both engine-full reds are closed - the handoff to K2.1
-  - [`184fb33`](https://github.com/shaahink/conductor/commit/184fb33) fix(status): a park stops asking for a human once a human has answered it
-  - [`6287f40`](https://github.com/shaahink/conductor/commit/6287f40) fix(plan): the karvan core plan drops five stages the editor added by mistake
-  - [`413cb40`](https://github.com/shaahink/conductor/commit/413cb40) fix(tests): the hook-budget test owns its output writer, not the process's
-  - [`115d77f`](https://github.com/shaahink/conductor/commit/115d77f) fix(tests): the versioning test compares MinVer's height, not describe's
-- **s7 (K2 Deliver)** — 5 commit(s):
-  - [`75d94a2`](https://github.com/shaahink/conductor/commit/75d94a2) docs(tracker): the handoff to K2.4's remaining four items
-  - [`6b7a418`](https://github.com/shaahink/conductor/commit/6b7a418) docs(agents): AGENTS.md is current-state only - nine superseded handoffs move to an indexed archive
-  - [`e35d034`](https://github.com/shaahink/conductor/commit/e35d034) refactor(arch): the DTO and event piles become responsibility folders, and the convention is written down
-  - [`3bc5a2a`](https://github.com/shaahink/conductor/commit/3bc5a2a) docs(tracker): K2.1 and K2.2 are claimed - the evidence and the handoff to K2.3
-  - [`b05efef`](https://github.com/shaahink/conductor/commit/b05efef) refactor(arch): Conductor.Core is its own assembly, and the direction is a link error
 - **s8 (K2 Deliver)** — 3 commit(s):
   - [`87ea264`](https://github.com/shaahink/conductor/commit/87ea264) docs(tracker): K2 closes - the handoff to K3.1
   - [`aef2fb9`](https://github.com/shaahink/conductor/commit/aef2fb9) docs(arch): ARCHITECTURE.md becomes the map - one session end to end, the seams, the surfaces
@@ -219,6 +209,12 @@ vs upstream: up to date
 - **s13 (K4 Deliver)** — 2 commit(s):
   - [`3fe10fe`](https://github.com/shaahink/conductor/commit/3fe10fe) docs(evidence): K4.1 evidence artifact and the handoff to K4.2
   - [`ea49c8d`](https://github.com/shaahink/conductor/commit/ea49c8d) feat(tokens): K4.1 - the engine measures how full the window ran, not just what it spent
+- **s14 (K4 Deliver)** — 2 commit(s):
+  - [`1ec436f`](https://github.com/shaahink/conductor/commit/1ec436f) feat(doctor): K4.2 - doctor warns when the cap is under the floor or the nudge under the median closer
+  - [`1fcbd0b`](https://github.com/shaahink/conductor/commit/1fcbd0b) feat(budget): K4.2 - the engine measures its own token ceiling and prescribes the next one
+- **s15 (K4 Deliver)** — 2 commit(s):
+  - [`725f4de`](https://github.com/shaahink/conductor/commit/725f4de) docs(evidence): K4.3 evidence artifact and the handoff to K4.4
+  - [`20842e2`](https://github.com/shaahink/conductor/commit/20842e2) feat(money): K4.3 - conductor money prices a run from its own ledger
 
 ## Phase handovers (audit)
 
@@ -245,25 +241,21 @@ engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: **K4.1 landed and is claimed** (`conductor task --done K4.1 --evidence .conductor/evidence/K4/K4.1-context-per-turn.md`), across two commits on `feat/karvan` — `ea49c8d` (implementation) and `3fe10fe` (evidence + handoff), both pushed, tree clean. The engine now measures per-turn context as `input_tokens + cache_creation_input_tokens + cache_read_input_tokens` per *deduplicated* assistant message, taken at `ClaudeProvider.cs:153` and `OpencodeProvider.cs:112` — deliberately not at the result envelope, which assigns totals and would add one phantom turn the size of the whole run. Schema **v12** adds `sessions.context_high_water / context_mean_turn / context_turns`; `LiveMetric…
+> SESSION-RESULT: K4.3 landed and is claimed with evidence at `.conductor/evidence/K4/K4.3-conductor-money.md` (commits `20842e2` code, `725f4de` handoff, pushed on `feat/karvan`). `conductor money [run] [--project|--plan|--since|--json]` ships the research doc's headline columns — sessions, tokens, cache-read share, cost, checkpoints, tok/ckpt, $/ckpt — computed by a new pure `MoneyAnalyzer` over `RunArchive.Costs()` (read-only SQLite), plus three cuts a lifetime average hides: per stage, per calendar month, per spending lane, and the before/after cap windows priced on `BudgetAnalyzer`'s borrowed split; REPORT.md carries the identical section through `MoneySection` so verb and report cannot d…
 
 ## Tracker handoff
 
 ```
-last: **K4.1 CLAIMED**, `ea49c8d` + evidence `.conductor/evidence/K4/K4.1-context-per-turn.md`.
-  Per-turn context = `input + cache_creation + cache_read` per DEDUPED assistant message, taken in
-  `ClaudeProvider.cs:153` and `OpencodeProvider.cs:112`; schema **v12** adds `sessions.context_*`;
-  `LiveMetrics.ContextForSession` + `RunArchive.ContextFromEvents` recover it from persisted TokenDeltas,
-  so every past run answers. `conductor history <run>` shows it per session and in one sentence.
-numbers: **this era runs at 123k context per turn, high water 250k** (Sarban face: 113k / 267k). The
-  32M cap and the 123k window differ by four orders of magnitude and have been conflated all along.
-  Derivation validated on 4,832 real turn pairs: turn N's context = turn N+1's reported cacheRead,
-  98.1% within 4 tokens; the 90 outliers are 58 drops / 32 grows, i.e. compaction, not a bad formula.
-next: **K4.2 - `conductor budget`.** Floor, wrap-up, cap, nudge-vs-floor, rollover rate, prescription;
-  must reproduce this repo's two runs unprompted. `sessions.limits` (v11) is the denominator; the K4.1
-  numbers above are its input. Model is NOT recorded anywhere, so "% of window" is not derivable yet.
-watch: a new verb is TWO edits - `Program.cs` and `CompletionCommand.Verbs`; the second is gate-enforced.
-  A schema bump also breaks any test that rewinds a db by version without dropping the new columns.
-  Piping the engine through `Select-Object -First N` closes the pipeline and KILLS it mid-flow; use `-Last`.
-red: none. Open, not blocking: **#28**, **#27** fresh-db FK error, **#24** `AgentConfig.Merge` drops `Env`.
+last: **K4.3 CLAIMED**, evidence `.conductor/evidence/K4/K4.3-conductor-money.md` (raw verb output,
+  `--json` and the REPORT.md section beside it). `conductor money [run] [--project|--plan|--since|--json]`
+  prints the research doc's headline columns and reproduces them from the ledger alone, plus per stage,
+  per month, per lane, and the cap windows PRICED. REPORT.md carries the same section through
+  `MoneySection` — same analyzer, so verb and report cannot drift. 20 tests, ratchet exit 0.
+numbers: the doc's $359.98 / $296.98 are **agent-lane only**; every lane is $360.14 / $297.24, and the
+  verb sums every lane. The 8M cap bought **1.4× better $/checkpoint** ($18.18 → $13.44). A hand query that
+  never touches `BudgetAnalyzer` re-confirms K4.2: 14 checkpoints in the capped window, not 17.
+next: **K4.4 — live token headroom beside live money.** `MoneyAnalyzer`/`MoneyLine` are the money side;
+  `SoftBreakRequested`'s `liveTokens`+`tokenBudget` is the honest source when no cap is configured.
+red: none. **bug #29 (K7.2 blocker) reproduced on a COPY of this run.db:** the WRITE path dies on
+  `duplicate column name: soft_break`; the read-only `RunArchive` path opens the same file fine.
 ```

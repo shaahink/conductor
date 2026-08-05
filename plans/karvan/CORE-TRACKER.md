@@ -4,18 +4,23 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **K4.3 CLAIMED**, evidence `.conductor/evidence/K4/K4.3-conductor-money.md` (raw verb output,
-  `--json` and the REPORT.md section beside it). `conductor money [run] [--project|--plan|--since|--json]`
-  prints the research doc's headline columns and reproduces them from the ledger alone, plus per stage,
-  per month, per lane, and the cap windows PRICED. REPORT.md carries the same section through
-  `MoneySection` — same analyzer, so verb and report cannot drift. 20 tests, ratchet exit 0.
-numbers: the doc's $359.98 / $296.98 are **agent-lane only**; every lane is $360.14 / $297.24, and the
-  verb sums every lane. The 8M cap bought **1.4× better $/checkpoint** ($18.18 → $13.44). A hand query that
-  never touches `BudgetAnalyzer` re-confirms K4.2: 14 checkpoints in the capped window, not 17.
-next: **K4.4 — live token headroom beside live money.** `MoneyAnalyzer`/`MoneyLine` are the money side;
-  `SoftBreakRequested`'s `liveTokens`+`tokenBudget` is the honest source when no cap is configured.
-red: none. **bug #29 (K7.2 blocker) reproduced on a COPY of this run.db:** the WRITE path dies on
+last: **K4.4 CLAIMED**, evidence `.conductor/evidence/K4/K4.4-live-token-headroom.md`. `StateDto.tokenHeadroom`
+  is a nested block (tokens, cap, nudgeAt, toNudge, toCap, usedRatio, burnPerMinute, minutesTo*, live);
+  Home renders it via `widgets.TokenGauge(*api.TokenHeadroomDto)` — a package-level func of ONE wire
+  value, so a lane-aware Face can call it per lane. 25 tests + 2 goldens, ratchet exit 0 (now 1699).
+trap closed: the rail counts **cache-read** (`SessionRunner.Mcp.cs:76`); the wire's `sessionTokens*`
+  triple does NOT. At this project's 98% cache share a Face summing the visible three draws a gauge at
+  1.25% for a session at 83% — proven on a real harness run: 150k visible vs 10.0M real vs a 12M cap.
+  The 0.8 ratio was a literal in TWO places; `SoftBreak.DefaultRatio/EffectiveCap/Threshold` are now
+  the only definitions and the rail, doctor and the wire all call them.
+next: **K5.1 — the session result contract.** Note it rewrites the SESSION-RESULT template in the same
+  commit, and trap 4 (literal brace tokens in a template kill the engine) goes live at K5.1.
+red: none. bug #29 (K7.2 blocker) still open: on a COPY of this run.db the WRITE path dies on
   `duplicate column name: soft_break`; the read-only `RunArchive` path opens the same file fine.
+gotcha for any harness test you add: a session ceiling lengthens the prompt and **cmd.exe truncates a
+  command line at 8191 chars** — a cmd fake-agent fails as `AgentError` the instant a ceiling exists.
+  Use PowerShell (K1.2's rig does). And the store drains events async, so `live` on `/state` right
+  after `RunAsync` is load-dependent — assert numbers, not liveness.
 
 
 ## Baseline numbers (from run.db)
@@ -24,7 +29,7 @@ red: none. **bug #29 (K7.2 blocker) reproduced on a COPY of this run.db:** the W
 |---|---|
 | Total checkpoints | 32 |
 | Done | 3 |
-| Claimed (unconfirmed) | 10 |
+| Claimed (unconfirmed) | 11 |
 
 ## Checkpoints
 
@@ -63,7 +68,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | K4.1 | The engine records context size per turn — a high-water and a mean per session — derived from the stream, with the derivation checked against a session that can be estimated independently | DONE | ea49c8d | .conductor/evidence/K4/K4.1-context-per-turn.md |
 | K4.2 | conductor budget prints floor, wrap-up, cap, nudge-versus-floor and rollover rate and prescribes a correction, and it reproduces this repo's own two runs without being told the answers | DONE | 1fcbd0b | .conductor/evidence/K4/K4.2-conductor-budget.md |
-| K4.3 | conductor money answers what a project cost per checkpoint, per stage and per month, with cache-read share and the before-and-after windows that say what the cap bought, cross-checked against a hand-written query | TODO | - | - |
+| K4.3 | conductor money answers what a project cost per checkpoint, per stage and per month, with cache-read share and the before-and-after windows that say what the cap bought, cross-checked against a hand-written query | DONE | 20842e2 | .conductor/evidence/K4/K4.3-conductor-money.md |
 | K4.4 | Live session tokens, the distance to the nudge, a burn rate and a projection sit beside live money in the Face and on the wire, honest when no cap is set | TODO | - | - |
 
 ### K5 — The result contract and the channels
