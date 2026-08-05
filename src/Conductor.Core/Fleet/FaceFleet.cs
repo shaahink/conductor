@@ -14,13 +14,6 @@ public sealed record FaceFleet(IReadOnlyList<FaceFleetRun> Runs)
     public IReadOnlyList<FacePastRun> Past { get; init; } = [];
 }
 
-/// <summary>One finished run as the picker lists it. No base url and no token: there is nothing to
-/// attach to and nothing to authorise. <paramref name="RunDb"/> is what <c>conductor history</c>
-/// would open.</summary>
-public sealed record FacePastRun(
-    string Repo, string PlanName, string RunId, string Status,
-    int Done, int Total, decimal CostUsd, string? LastActivityUtc, string RunDb);
-
 /// <summary>One attachable run as the Face sees it. Identical to <see cref="FleetRunDto"/> plus
 /// <paramref name="Token"/> — and the token is the whole reason this is a separate type: the shape
 /// that goes to stdout must not be able to grow one by accident.</summary>

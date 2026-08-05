@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace Conductor.Core.History;
 
 /// <summary>
@@ -29,8 +27,3 @@ public sealed record RunHistoryDetailJson(
     IReadOnlyList<ArchivedStage> Stages,
     IReadOnlyList<ArchivedCheckpoint> Checkpoints,
     IReadOnlyList<ArchivedSession> Sessions);
-
-[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, WriteIndented = true)]
-[JsonSerializable(typeof(RunHistoryListJson))]
-[JsonSerializable(typeof(RunHistoryDetailJson))]
-public sealed partial class RunHistoryJsonContext : JsonSerializerContext;
