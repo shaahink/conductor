@@ -4,20 +4,21 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **K5.1 DONE** — `c04175d` (engine+tests) and `ae7ada5` (templates), evidence
-  `.conductor/evidence/K5/K5.1-result-contract.md`. `SessionResult` (src/Conductor.Core/SessionResult.cs)
-  is now the ONLY parse of a session result; six consumers render from it instead of each cutting the
-  same paragraph at its own length (700 / 700 / 1200 / 600 / blockquote / lessons). A seventh copy of
-  the cut sat uncalled in `RunLoop.Snapshot.cs` and is gone. `IsStructured` needs marker AND a field
-  AND a headline, so legacy prose and verifier JSON degrade byte-identically to the old cut.
-next: **K5.2 — the five Telegram defects.** The result is already structured on the way to
-  `PushSessionEndAsync` (`RunLoop.Plumbing.cs:257`, `ToCompact(700)`); do not re-cut it, render it.
+last: **K5.1 and K5.2 DONE** (s18) — `c04175d`/`ae7ada5` and `d1f55cc`; evidence
+  `.conductor/evidence/K5/K5.1-result-contract.md` and `K5.2-telegram-feed.md` (+ a verbatim wire
+  transcript). `SessionResult` is the ONE parse of a session result and six consumers render from it;
+  legacy prose and verifier JSON degrade byte-identically to the old 700-char cut. The Telegram push
+  is now built from a `SessionEndPush` record: one session number (the record's, via the send queue),
+  the stage title, the structured result rendered, a rollover that reports what it landed, and a
+  progress line on every push. Templates and built-in prompts teach the format.
+next: **K5.3 — evidence as a first-class artifact** (model, event, watcher, registry, Face surface;
+  non-text kinds first-class because a screenshot is the motivating case; free-text keeps working).
 red: none. bug #29 (K7.2 blocker) still open: on a COPY of this run.db the WRITE path dies on
   `duplicate column name: soft_break`; the read-only `RunArchive` path opens the same file fine.
-watch: the built-in prompts are ~12 chars under SF6.1's 7900 budget — new prose in
-  `PromptBuilder.BuiltIns.cs` MUST be paid for by cutting prose, and the first thing to fail is a
-  cmd.exe harness test, not the budget gate. And in a PowerShell fake agent, one apostrophe inside the
-  single-quoted JSON line ends the string and the session records an EMPTY result.
+watch: the built-in prompts sit ~12 chars under SF6.1's 7900 budget — new prose in
+  `PromptBuilder.BuiltIns.cs` must be paid for by cutting prose, and the first thing to go red is a
+  cmd.exe harness test, not the budget gate. Rig worth reusing: `K5_2TelegramFeedTests.FakeBotApi`
+  captures the exact bytes a push puts on the wire (StartAsync → push → StopAsync drains).
 
 
 ## Baseline numbers (from run.db)
