@@ -427,11 +427,14 @@ public sealed partial class VerdictEngine
     {
         if (string.IsNullOrWhiteSpace(rec.ResultSummary)) return;
 
-        var text = rec.ResultSummary;
-        var idx = text.IndexOf("SESSION-RESULT:", StringComparison.OrdinalIgnoreCase);
-        if (idx < 0) return;
+        var parsed = SessionResult.Parse(rec.ResultSummary);
+        if (!parsed.HasMarker) return;
 
-        var difficulty = text[(idx + "SESSION-RESULT:".Length)..].Trim();
+        // K5.1: a structured result hands the ledger its bullets and its gaps — the parts that can
+        // carry a rule. The headline is status by construction, and status teaches nobody anything.
+        var difficulty = parsed.IsStructured
+            ? parsed.ForLessons()
+            : parsed.Raw[SessionResult.Marker.Length..].Trim();
         if (difficulty.Length == 0) return;
 
         // K1.3: the whole SESSION-RESULT goes in, un-truncated. It used to be cut at 500 characters

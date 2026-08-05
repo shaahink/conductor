@@ -21,7 +21,8 @@ public sealed partial class VerdictEngine
             rec?.GateSummary ?? "-",
             rec != null ? string.Join("; ", rec.NewCommits.Take(6)) : "-",
             Trunc(track.HandoffBlock, 1200),
-            Trunc(rec?.ResultSummary ?? "", 1200),
+            // K5.1: whole fields, dropped from the bottom, instead of 1200 characters cut mid-word.
+            SessionResult.Parse(rec?.ResultSummary).ToCompact(1200),
             _ctx.State.AttemptsThisStage, MaxAttempts(stage));
         _ctx.Log("consulting advisor\u2026");
         var started = DateTime.UtcNow;

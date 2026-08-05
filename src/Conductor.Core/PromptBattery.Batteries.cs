@@ -39,7 +39,12 @@ public sealed class RecentFailureBattery : IPromptBattery
         if (!string.IsNullOrEmpty(lastRed.GateSummary))
             sb.AppendLine($"Gates: {lastRed.GateSummary}");
         if (!string.IsNullOrEmpty(lastRed.ResultSummary))
-            sb.AppendLine($"Result: {lastRed.ResultSummary}");
+        {
+            // K5.1: a structured result is compacted by dropping whole fields, so the next prompt pays
+            // for fields rather than for half a sentence. Unstructured text takes the old byte cut below.
+            var parsed = SessionResult.Parse(lastRed.ResultSummary);
+            sb.AppendLine($"Result: {(parsed.IsStructured ? parsed.ToCompact(_maxBytes) : lastRed.ResultSummary)}");
+        }
         var s = sb.ToString().TrimEnd();
         if (s.Length > _maxBytes) s = s[.._maxBytes] + "…";
         _lastFailure = s.Length > 0 ? s : null;

@@ -460,13 +460,15 @@ public sealed partial class SessionRunner
     // got recorded as AgentError. Verify keeps the full text (generously capped, not narrative-cropped).
     internal const int VerifyResultMaxChars = 16_000;
 
+    // K5.1: a Deliver/Fix/Audit result is parsed through the one contract and stored in its canonical
+    // form — whole, with each field clipped on its own — instead of being cut blind at 700 characters
+    // mid-word. A legacy or malformed result is not structured, and SessionResult.ToCanonical then
+    // reproduces exactly the old cut, so nothing that used to be stored gets shorter.
     internal static string ExtractSessionResult(string? resultText, SessionKind kind)
     {
         if (string.IsNullOrWhiteSpace(resultText)) return "";
         if (kind == SessionKind.Verify) return Trunc(resultText.Trim(), VerifyResultMaxChars);
-        var idx = resultText.IndexOf("SESSION-RESULT:", StringComparison.OrdinalIgnoreCase);
-        var s = idx >= 0 ? resultText[idx..] : resultText;
-        return Trunc(s.Trim(), 700);
+        return SessionResult.Parse(resultText).ToCanonical();
     }
 
     private string LastRawTail(string rawLogPath)

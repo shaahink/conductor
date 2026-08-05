@@ -135,7 +135,16 @@ public sealed class FakeAgentCommand : AsyncCommand<FakeAgentCommand.Settings>
             Text(sid, $"could not claim {checkpoint}: {claim.Output.Trim()} {claim.StdErr.Trim()}");
         Step(sid, "claiming", 0.0001);
 
-        Text(sid, $"SESSION-RESULT: delivered {checkpoint} at {sha}; gates should be green.");
+        // K5.1: the demo agent reports in the contract's format, so a demo run exercises the same
+        // parse the real thing does instead of teaching the old one-paragraph habit.
+        Text(sid, $"""
+            SESSION-RESULT: delivered {checkpoint} at {sha}
+            - appended one line to work.txt and committed it
+            - claimed {checkpoint} through conductor task --done
+            artefacts: work.txt, {sha}
+            evidence: delivered by the built-in demo agent
+            gaps: none
+            """);
         return 0;
     }
 

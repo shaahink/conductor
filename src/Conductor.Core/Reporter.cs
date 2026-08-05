@@ -244,7 +244,8 @@ public static class Reporter
         {
             sb.AppendLine("## Last session result");
             sb.AppendLine();
-            sb.AppendLine("> " + lastResult.Replace("\n", "\n> "));
+            // K5.1: a structured result renders as its fields; anything else keeps the old blockquote.
+            sb.AppendLine(SessionResult.Parse(lastResult).ToMarkdown());
             sb.AppendLine();
         }
 

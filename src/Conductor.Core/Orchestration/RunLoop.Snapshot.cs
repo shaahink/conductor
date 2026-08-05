@@ -104,13 +104,8 @@ public sealed partial class RunLoop
 
     // ---------------------------------------------------------------- static helpers
 
-    private static string ExtractSessionResult(string? resultText)
-    {
-        if (string.IsNullOrWhiteSpace(resultText)) return "";
-        var idx = resultText.IndexOf("SESSION-RESULT:", StringComparison.OrdinalIgnoreCase);
-        var s = idx >= 0 ? resultText[idx..] : resultText;
-        return Trunc(s.Trim(), 700);
-    }
+    // K5.1: the second copy of ExtractSessionResult lived here, uncalled — a private duplicate of
+    // SessionRunner's, with the same 700-char blind cut. One parse, one place: SessionResult.
 
     private static string Trunc(string s, int max) => s.Length <= max ? s : s[..max] + "\u2026";
 
