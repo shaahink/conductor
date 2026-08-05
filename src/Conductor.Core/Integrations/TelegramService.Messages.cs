@@ -8,22 +8,114 @@ namespace Conductor.Core.Integrations;
 
 public sealed partial class TelegramService
 {
-    public async Task PushSessionEndAsync(int sessionNumber, string stage, string outcome, string? gateSummary,
-        string? resultSummary, decimal? costUsd, decimal? score, CancellationToken ct = default)
+    /// <summary>K5.2 — the session-end push, rebuilt from the owner's own transcribed run (15
+    /// sessions, $97.46, five defects).
+    /// <para>The session number is printed ONCE and comes from the record, not from the live
+    /// counter: the identity line stamped in <see cref="SendAsync"/> carries
+    /// <see cref="SessionEndPush.Number"/>, and this body no longer opens with a second copy that a
+    /// late push could disagree with.</para>
+    /// <para>The stage carries its title. The result is RENDERED from the K5.1 contract rather than
+    /// re-cut — the caller hands over the record whole and the bounding happens here, once. A
+    /// rollover says what it landed and that its gates are deferred, not "(not recorded)". And every
+    /// push carries a progress line, which fifteen messages of that run did not have between
+    /// them.</para></summary>
+    public async Task PushSessionEndAsync(SessionEndPush push, CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(push);
         if (!_started) return;
 
         var runCost = _state.TotalCostUsd > 0 ? $" | run: ${_state.TotalCostUsd:0.0000}" : "";
-        var scoreStr = score.HasValue ? $" | score: {score:0}/100" : "";
+        var scoreStr = push.Score.HasValue ? $" | score: {push.Score:0}/100" : "";
         var sb = new StringBuilder();
-        sb.AppendLine($"<b>s{sessionNumber} {outcome}</b> — {stage}");
-        sb.AppendLine($"gates: {(string.IsNullOrWhiteSpace(gateSummary) ? "(not recorded)" : gateSummary)}");
-        if (!string.IsNullOrWhiteSpace(resultSummary))
-            sb.AppendLine($"result: {resultSummary}");
-        sb.Append($"cost: ${costUsd ?? 0:0.0000}{runCost}{scoreStr}");
+        sb.AppendLine($"<b>{EscapeHtml(push.Outcome)}</b> — {EscapeHtml(StageLabel(push.Stage))}");
 
-        await PushAsync(sb.ToString(), ct).ConfigureAwait(false);
+        var progress = ProgressLine(push.Stage);
+        if (progress.Length > 0) sb.AppendLine(EscapeHtml(progress));
+
+        var landed = LandedLine(push);
+        if (landed.Length > 0) sb.AppendLine(EscapeHtml(landed));
+
+        sb.AppendLine($"gates: {EscapeHtml(GatesLine(push))}");
+
+        var result = ResultLines(push.ResultSummary);
+        if (result.Length > 0) sb.AppendLine(result);
+
+        sb.Append($"cost: ${push.CostUsd ?? 0:0.0000}{runCost}{scoreStr}");
+
+        await EnqueueAsync(sb.ToString(), push.Number, ct).ConfigureAwait(false);
     }
+
+    /// <summary>A rollover runs no gate battery and burns no attempt — that is what a rollover MEANS
+    /// (K1.1) — so "(not recorded)" reads as a fault where there is none.</summary>
+    private static string GatesLine(SessionEndPush push) =>
+        !string.IsNullOrWhiteSpace(push.GateSummary) ? push.GateSummary
+        : push.IsRollover ? "deferred — the session rolled over, no attempt burned"
+        : "(not recorded)";
+
+    /// <summary>What the session actually put on disk. K1.1 records commits and claims on the
+    /// rollover path too; until K5.2 nothing rendered them, so a rollover that had shipped a pull
+    /// request pushed a message that said nothing at all.</summary>
+    private static string LandedLine(SessionEndPush push)
+    {
+        var parts = new List<string>(2);
+        if (push.Commits > 0) parts.Add($"{push.Commits} commit{(push.Commits == 1 ? "" : "s")}");
+        if (push.NewlyDone.Count > 0) parts.Add($"claimed {string.Join(", ", push.NewlyDone)}");
+        return parts.Count > 0 ? "landed: " + string.Join(" · ", parts) : "";
+    }
+
+    /// <summary>K5.1's structure, rendered. The caller passes the record WHOLE — cutting it here,
+    /// once, is the difference between a bounded message and the same paragraph cut twice.</summary>
+    private static string ResultLines(string? resultSummary)
+    {
+        var parsed = SessionResult.Parse(resultSummary);
+        if (!parsed.IsStructured)
+        {
+            var raw = parsed.ToCompact(TelegramResultMaxChars);
+            return raw.Length > 0 ? "result: " + EscapeHtml(raw) : "";
+        }
+
+        var sb = new StringBuilder();
+        sb.Append("result: <b>").Append(EscapeHtml(parsed.Headline)).Append("</b>");
+        foreach (var o in parsed.Outcomes) sb.Append("\n  • ").Append(EscapeHtml(o));
+        if (parsed.Gaps.Length > 0) sb.Append("\ngaps: ").Append(EscapeHtml(parsed.Gaps));
+        if (parsed.Evidence.Count > 0) sb.Append("\nevidence: ").Append(EscapeHtml(string.Join(", ", parsed.Evidence)));
+        return Clip(sb.ToString(), TelegramResultMaxChars);
+    }
+
+    /// <summary>The stage as an id AND a title. It was rendered as a bare letter — "— G" — because
+    /// the id was passed and the title was never looked up.</summary>
+    internal string StageLabel(string stageId)
+    {
+        if (string.IsNullOrWhiteSpace(stageId)) return "-";
+        var title = _plan.Stages.FirstOrDefault(s =>
+            string.Equals(s.Id, stageId, StringComparison.OrdinalIgnoreCase))?.Title;
+        return string.IsNullOrWhiteSpace(title) ? stageId : $"{stageId} — {Clip(title.Trim(), 64)}";
+    }
+
+    /// <summary>Where the run is, in one line. Fifteen messages of the owner's run carried no
+    /// checkpoint count, no stage progress and no ETA between them.</summary>
+    internal string ProgressLine(string? stageId)
+    {
+        TrackerSnapshot track;
+        try { track = _progress.Read(_plan, CancellationToken.None); }
+        catch (IOException) { return ""; }
+        catch (InvalidOperationException) { return ""; }
+
+        if (track.Checkpoints.Count == 0) return "";
+        var line = $"progress: {track.Checkpoints.Count(c => c.IsDone)}/{track.Checkpoints.Count} checkpoints";
+
+        var stage = string.IsNullOrWhiteSpace(stageId) ? _state.CurrentStage : stageId;
+        if (!string.IsNullOrWhiteSpace(stage))
+        {
+            var rows = track.ForStage(stage).ToList();
+            if (rows.Count > 0) line += $" · {stage} {rows.Count(c => c.IsDone)}/{rows.Count}";
+        }
+        return line;
+    }
+
+    private const int TelegramResultMaxChars = 900;
+
+    private static string Clip(string s, int max) => s.Length <= max ? s : s[..max] + "…";
 
     private string BuildStatusText()
     {

@@ -32,9 +32,28 @@ public interface ITelegramService
     Task PushAsync(string message, CancellationToken ct = default);
     Task PushWithKeyboardAsync(string message, IReadOnlyList<(string Text, string CallbackData)> buttons,
         CancellationToken ct = default);
-    Task PushSessionEndAsync(int sessionNumber, string stage, string outcome, string? gateSummary,
-        string? resultSummary, decimal? costUsd, decimal? score, CancellationToken ct = default);
+    Task PushSessionEndAsync(SessionEndPush push, CancellationToken ct = default);
 }
+
+/// <summary>K5.2: everything the session-end push needs, in one argument, because the five defects
+/// it fixes were all "the message could not see the record". The number is the RECORD's, so a push
+/// that lands late cannot disagree with itself; the commits and claims are what K1.1 records even on
+/// the rollover path; and the result arrives WHOLE — the notifier bounds it once, rather than the
+/// caller cutting a paragraph the notifier then cuts again.</summary>
+/// <param name="Number">The session's own number, not the live counter.</param>
+/// <param name="Stage">Stage id; the title is looked up from the plan.</param>
+/// <param name="IsRollover">A rollover defers its gates by design and burns no attempt.</param>
+public sealed record SessionEndPush(
+    int Number,
+    string Stage,
+    string Outcome,
+    string? GateSummary,
+    string? ResultSummary,
+    decimal? CostUsd,
+    decimal? Score,
+    int Commits,
+    IReadOnlyList<string> NewlyDone,
+    bool IsRollover);
 
 public sealed partial class TelegramService : IHostedService, ITelegramService, IReportsStartOutcome, IDisposable
 {
@@ -60,7 +79,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
     /// SC1.3: recreated on every start, because <see cref="StopAsync"/> completes the writer and a
     /// completed channel can never carry another message — a restart on a reloaded token would
     /// otherwise come up with a queue that silently drops everything.</summary>
-    private Channel<(string ChatId, string Text, string? KeyboardJson, TaskCompletionSource<string?>? Ack)> _sendQueue;
+    private Channel<(string ChatId, string Text, string? KeyboardJson, TaskCompletionSource<string?>? Ack, int? SessionNumber)> _sendQueue;
     private readonly HttpClient _http;
     private CancellationTokenSource _cts = new();
     private Task? _pollTask;
@@ -102,8 +121,8 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
         _http = new HttpClient { Timeout = TimeSpan.FromSeconds(65) };
     }
 
-    private static Channel<(string ChatId, string Text, string? KeyboardJson, TaskCompletionSource<string?>? Ack)> NewSendQueue() =>
-        Channel.CreateUnbounded<(string, string, string?, TaskCompletionSource<string?>?)>(
+    private static Channel<(string ChatId, string Text, string? KeyboardJson, TaskCompletionSource<string?>? Ack, int? SessionNumber)> NewSendQueue() =>
+        Channel.CreateUnbounded<(string, string, string?, TaskCompletionSource<string?>?, int?)>(
             new UnboundedChannelOptions { SingleReader = true });
 
     /// <summary>SC1.3: take everything this service derives from the plan, from THIS plan — used by
@@ -218,7 +237,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
         var text = $"✅ Conductor test message — bot @{bot} is connected. Sent through the live push queue, "
                  + "the same path every run notification takes.";
         var queue = _sendQueue;   // SC1.3: the queue this test's ack belongs to, even if a reload swaps it
-        if (!queue.Writer.TryWrite((chatId, text, null, ack)))
+        if (!queue.Writer.TryWrite((chatId, text, null, ack, null)))
             return new TelegramTestOutcome(false, bot, "the send queue is closed — the service is shutting down",
                 false, TelegramReadiness.NotStarted);
 
@@ -270,12 +289,28 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
     // and never throws — it just returns false once StopAsync has closed the channel.
     public Task PushAsync(string message, CancellationToken ct = default)
     {
+        // Nothing to read the tracker for if the push cannot be delivered — this guard is repeated
+        // inside EnqueueAsync, which is the one that actually decides.
+        if (!_started || _cfg?.AllowedChatIds is not { Count: > 0 }) return Task.CompletedTask;
+
+        // K5.2: where the run is, on every engine push — fifteen messages of the owner's own run
+        // carried no checkpoint count, no stage progress and no ETA between them. Appended, never
+        // substituted, and empty when there is no tracker to read.
+        var progress = ProgressLine(null);
+        return EnqueueAsync(progress.Length > 0 ? message + "\n" + EscapeHtml(progress) : message, null, ct);
+    }
+
+    /// <summary>The one write path onto the send queue. <paramref name="sessionNumber"/> is the
+    /// number the identity line will carry: the RECORD's for a session-end push, and the live
+    /// counter for everything else (K5.2 — the number used to be printed twice, from two sources).</summary>
+    private Task EnqueueAsync(string message, int? sessionNumber, CancellationToken ct = default)
+    {
         // SC1.3: read the queue field ONCE — a reload can swap it between the check and the write,
         // and a push split across two queues would be delivered twice or not at all.
         var queue = _sendQueue;
         if (!_started || _cfg?.AllowedChatIds is not { Count: > 0 } ids) return Task.CompletedTask;
         foreach (var cid in ids)
-            queue.Writer.TryWrite((cid, message, null, null));
+            queue.Writer.TryWrite((cid, message, null, null, sessionNumber));
         return Task.CompletedTask;
     }
 
@@ -286,7 +321,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
         if (!_started || _cfg is not { EnableTwoWay: true, AllowedChatIds.Count: > 0 } cfg) return Task.CompletedTask;
         var kb = BuildInlineKeyboard(buttons);
         foreach (var cid in cfg.AllowedChatIds)
-            queue.Writer.TryWrite((cid, message, kb, null));
+            queue.Writer.TryWrite((cid, message, kb, null, null));
         return Task.CompletedTask;
     }
 
@@ -347,7 +382,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
     /// <summary>Reads the queue it was STARTED with, not the current field: a reload swaps in a new
     /// queue, and a loop that followed the field would end up as a second reader on it.</summary>
     private async Task SendLoopAsync(
-        Channel<(string ChatId, string Text, string? KeyboardJson, TaskCompletionSource<string?>? Ack)> queue,
+        Channel<(string ChatId, string Text, string? KeyboardJson, TaskCompletionSource<string?>? Ack, int? SessionNumber)> queue,
         CancellationToken ct)
     {
         // ReadAllAsync completes normally once the writer is closed AND the backlog is drained —
@@ -358,7 +393,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
             {
                 try
                 {
-                    await SendAsync(item.ChatId, item.Text, ct, item.KeyboardJson).ConfigureAwait(false);
+                    await SendAsync(item.ChatId, item.Text, ct, item.KeyboardJson, item.SessionNumber).ConfigureAwait(false);
                     item.Ack?.TrySetResult(null);
                 }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -386,17 +421,20 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
     /// already superseded.
     /// <para>Read off the LIVE plan and state rather than a constructor snapshot: a reload can rename
     /// the plan (SC1.3) and the session counter moves under every message.</para></summary>
-    internal string IdentityLine
+    internal string IdentityLine => IdentityFor(null);
+
+    /// <summary>K5.2: ONE source for the session number. A session-end push passes the record's own
+    /// number, which is the truthful one for a message about that session; everything else falls
+    /// back to the live counter. The body no longer prints a second copy that could disagree.</summary>
+    internal string IdentityFor(int? sessionNumber)
     {
-        get
-        {
-            var name = string.IsNullOrWhiteSpace(_plan.Name) ? "conductor" : _plan.Name.Trim();
-            return FormattableString.Invariant($"<i>{EscapeHtml(name)} · s{_state.SessionCounter}</i>");
-        }
+        var name = string.IsNullOrWhiteSpace(_plan.Name) ? "conductor" : _plan.Name.Trim();
+        return FormattableString.Invariant(
+            $"<i>{EscapeHtml(name)} · s{sessionNumber ?? _state.SessionCounter}</i>");
     }
 
     internal async Task SendAsync(string chatId, string text, CancellationToken ct,
-        string? keyboardJson = null)
+        string? keyboardJson = null, int? sessionNumber = null)
     {
         var payload = new Dictionary<string, object>(StringComparer.Ordinal)
         {
@@ -405,7 +443,7 @@ public sealed partial class TelegramService : IHostedService, ITelegramService, 
             // message passes through on its way to the wire — so no existing call site can forget it
             // and no call site added later can either. Prefixing at PushAsync would have left the
             // /status replies, the daily digest and the token-test message anonymous.
-            ["text"] = FormattableString.Invariant($"{IdentityLine}\n{text}"),
+            ["text"] = FormattableString.Invariant($"{IdentityFor(sessionNumber)}\n{text}"),
             ["parse_mode"] = "HTML",
         };
         if (keyboardJson != null)
@@ -467,6 +505,5 @@ public sealed class NoOpTelegramService : ITelegramService
     public Task PushAsync(string message, CancellationToken ct = default) => Task.CompletedTask;
     public Task PushWithKeyboardAsync(string message,
         IReadOnlyList<(string Text, string CallbackData)> buttons, CancellationToken ct = default) => Task.CompletedTask;
-    public Task PushSessionEndAsync(int sessionNumber, string stage, string outcome, string? gateSummary,
-        string? resultSummary, decimal? costUsd, decimal? score, CancellationToken ct = default) => Task.CompletedTask;
+    public Task PushSessionEndAsync(SessionEndPush push, CancellationToken ct = default) => Task.CompletedTask;
 }

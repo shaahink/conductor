@@ -249,13 +249,15 @@ public sealed partial class RunLoop
 
         WriteSessionHistory(rec);
 
-        // Verify-session ResultSummary can run to several KB (the full verdict JSON, not a cropped
-        // narrative paragraph) — bound what actually goes to Telegram, which rejects long messages.
-        // K5.1: bounded by DROPPING WHOLE FIELDS through the result contract, not by cutting the same
-        // paragraph a second time mid-word. Unstructured text still cuts exactly where it always did.
-        _ = _ctx.Telegram.PushSessionEndAsync(rec.Number, rec.Stage, rec.Outcome?.ToString() ?? "Unknown",
-            rec.GateSummary, SessionResult.Parse(rec.ResultSummary).ToCompact(700), rec.CostUsd,
-            _ctx.State.PendingFix?.VerifierScore);
+        // K5.2: the record goes over WHOLE — including what a rollover landed, which K1.1 records
+        // and nothing rendered. The notifier bounds it once (a Verify ResultSummary can run to
+        // several KB of verdict JSON); cutting it here as well is how the same paragraph came to be
+        // cut twice.
+        _ = _ctx.Telegram.PushSessionEndAsync(new SessionEndPush(
+            rec.Number, rec.Stage, rec.Outcome?.ToString() ?? "Unknown", rec.GateSummary,
+            rec.ResultSummary, rec.CostUsd, _ctx.State.PendingFix?.VerifierScore,
+            SessionProgress.WorkCommits(rec).Count, rec.NewlyDone,
+            rec.Outcome == SessionOutcome.RolledOver));
     }
 
     // ---------------------------------------------------------------- notifications
