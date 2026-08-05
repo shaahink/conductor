@@ -4,30 +4,29 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **K1.4 claimed** (`36314be`), and **K1 is complete**. `OperatorMcpServers` reads the machine's
-  own MCP config — `~/.claude.json` user + `projects[<repo>]` scopes, the repo's `.mcp.json`, and
-  opencode's `mcp` map global + repo — and `SessionRunner.Mcp.cs` folds it in beside `conductor-tasks`,
-  which is written first and cannot be displaced. Live proof: a real run inherited `chrome-devtools`
-  (the exact server SF7.1 said was invisible) and 6 opencode servers off this machine.
-  `agent.inheritMcpServers: false` opts out; `--strict-mcp-config` stays and now means determinism.
-  `WireMcpServer` is `WireMcpServerAsync` — `src/` sits at exactly the 38-pragma ratchet ceiling, so
-  real async I/O was the only way to read a file there. Prompt-side fallback untouched, pinned twice.
-next: **K2.1** — extract `Conductor.Core`. Second commit `ec4c089` cleared its path: `SoftBreak.cs`
-  (4 types) and `SessionRunner.cs` (513 lines) had failed `ArchitectureTests` since K1.2, unseen by
-  scoped runs; both are relocations, no behaviour changed. Run the FULL suite before you trust green.
-red: full suite **1803/1804** after both commits. The one red is **bug #25** `SC8_2VersioningTests`
-  (describe height 17 vs MinVer 12 — merge topology; no build makes it pass, the guard is one level
-  too narrow). **#26** `BudgetRailTests` is an order-dependent flake (process-global `Console.SetOut`;
-  10/10 alone, did not recur). **#24**: `AgentConfig.Merge` silently drops `Env`.
+last: **fix session — both bugs that kept `engine-full` red are closed.** Nothing weakened, no
+  checkpoint touched: K1.1–K1.4 were all correctly DONE and the red was never an over-claim.
+  **#25** (`115d77f`) compared `git describe`'s height (set difference over ALL parents, 20) against
+  MinVer's (SHORTEST distance to the tag, 15 — `v0.3.0` is `e897c2c7`, merge `c4febc1` holds it as
+  FIRST parent). The old guard skipped only when HEAD *itself* was a merge, but the gap survives in
+  every descendant; height is now walked MinVer's way, so the exact check runs on merge histories
+  too — the hatch is deleted, not widened. **#26** (`413cb40`) `HookBudgetCommand` writes to an
+  internal `Output` writer; process-global `Console.SetOut` is gone from the test project.
+next: **K2.1** — extract `Conductor.Core`; `ec4c089` already cleared its architecture ceilings.
+watch: **the tip moved mid-session** — owner commits `6287f40` (plan drops five editor-added stages)
+  and `184fb33` landed on top of mine. Re-read `git log` before trusting an earlier HEAD, and never
+  hand-edit the generated checkpoint table — only this block is yours.
+red: none; full suite green on the settled tree, ratchet green (pragmas 38/38, so new `src/` code
+  needs real async I/O, not a pragma). Open, not blocking: **#24** `AgentConfig.Merge` drops `Env`.
 
 
 ## Baseline numbers (from run.db)
 
 | Metric | Value |
 |---|---|
-| Total checkpoints | 25 |
+| Total checkpoints | 32 |
 | Done | 0 |
-| Claimed (unconfirmed) | 3 |
+| Claimed (unconfirmed) | 4 |
 
 ## Checkpoints
 
@@ -41,7 +40,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | K1.1 | A rolled-over session records the commits and claims it actually made, proven by a harness session driven to its ceiling, with a rollover still consuming no attempt and still not running the phase gate | DONE | 93bbae5 | .conductor/evidence/K1/K1.1-rollover-records-facts.md |
 | K1.2 | The soft break is re-stated until it is obeyed, names the actual remaining budget, states the wrap-up order (claim first, handoff second), and the session record says whether it was delivered, re-delivered and obeyed | DONE | 93bbae5 | .conductor/evidence/K1/K1.2-soft-break-restated-and-measured.md |
 | K1.3 | Three small untruths die as a class — the thinking-token column that is zero on all 125 rows, the lessons file that is a diary and repeats one entry twice, and a go.mod that calls a directly-imported package indirect while carrying two lipgloss majors | DONE | 890ac38 | .conductor/evidence/K1/K1.3-three-untruths.md |
-| K1.4 | A spawned session sees conductor's task tools and the operator's own MCP servers, because the config merges instead of replacing, with the prompt-side deferred-tool fallback kept | TODO | - | - |
+| K1.4 | A spawned session sees conductor's task tools and the operator's own MCP servers, because the config merges instead of replacing, with the prompt-side deferred-tool fallback kept | DONE | 36314be | .conductor/evidence/K1/K1.4-mcp-merge.md |
 
 ### K2 — The architecture becomes navigable
 
@@ -94,8 +93,45 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | K7.1 | The docs match the engine and this era's own measurements are written back — the cap's real score, the corrected nudge rule, and this run's figures produced by conductor budget rather than by hand — with every wrong claim corrected in place and a closure ledger naming an owner for everything still open | TODO | - | - |
 | K7.2 | feat/karvan is merged to master by the owner, the release is tagged through the existing pipeline, and the installed version matches the releases page | TODO | - | - |
 
+### F0 — Audit scroll and animation implementation
+
+| # | Checkpoint | Status | Commit | Evidence |
+|---|-----------|--------|--------|----------|
+| F0.1 | Map scroll behavior, animation, and UI components in face-go | TODO | - | - |
+
+### F1 — Implement fixed scroll block for desktop
+
+| # | Checkpoint | Status | Commit | Evidence |
+|---|-----------|--------|--------|----------|
+| F1.1 | Implement fixed scroll container component | TODO | - | - |
+| F1.2 | Add exit mechanism after list completion | TODO | - | - |
+
+### F2 — Hide shamshir from showcase lists
+
+| # | Checkpoint | Status | Commit | Evidence |
+|---|-----------|--------|--------|----------|
+| F2.1 | Filter shamshir from showcase list display | TODO | - | - |
+
+### F3 — Reposition narration to bottom
+
+| # | Checkpoint | Status | Commit | Evidence |
+|---|-----------|--------|--------|----------|
+| F3.1 | Move narration component to bottom placement | TODO | - | - |
+
+### R0 — Integration review and testing
+
+| # | Checkpoint | Status | Commit | Evidence |
+|---|-----------|--------|--------|----------|
+| R0.1 | Test scroll behavior and exit mechanism | TODO | - | - |
+| R0.2 | Verify shamshir is hidden and narration repositioned | TODO | - | - |
+
 ## Dependencies
 
 ```
-(none — stages run sequentially by plan order)
+F0 → F1
+F0 → F2
+F0 → F3
+F1 → R0
+F2 → R0
+F3 → R0
 ```
