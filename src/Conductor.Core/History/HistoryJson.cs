@@ -18,7 +18,10 @@ public sealed record RunHistoryItemJson(
     string? StartedUtc, string? EndedUtc, string? LastActivityUtc,
     int Sessions, int CheckpointsDone, int CheckpointsTotal,
     decimal CostUsd, long Tokens,
-    string RunDb, string Slug, string? ImportedFrom, bool Readable);
+    string RunDb, string Slug, string? ImportedFrom, bool Readable,
+    // K3.3. Optional with defaults so a v11 field never breaks a caller written against K3.2's
+    // shape: `engine` still carries the printable stamp, and these three add the parts of it.
+    string? EngineCommit = null, bool? EngineDirty = null, RunLimitsSnapshot? Limits = null);
 
 /// <summary>One run opened: the row, plus its spine.</summary>
 public sealed record RunHistoryDetailJson(

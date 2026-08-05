@@ -7,13 +7,31 @@ public sealed partial class SqliteRunStore
 {
     // ---------------------------------------------------------------- run lifecycle
 
-    public void InitializeRun(string runId, string planName, string repo, string? branch, string? driverVersion)
+    public void InitializeRun(string runId, string planName, string repo, string? branch,
+                              EngineStamp engine, string? limitsJson = null)
     {
-        TryExecute("INSERT OR REPLACE INTO runs (run_id, plan_name, repo, branch, driver_ver, status, started_utc) " +
-                   "VALUES (@runId, @planName, @repo, @branch, @driverVer, 'running', @now)",
+        // K3.3: ON CONFLICT rather than INSERT OR REPLACE. A run is initialized on every process
+        // start, resume included, and REPLACE rewrote the whole row — so started_utc silently became
+        // "when this process started" and a run resumed four times claimed to have begun minutes ago.
+        // The engine stamp and the limits DO get refreshed on conflict: a resume can be a different
+        // build under different limits, and the run row means "what is driving it now" while the
+        // per-session columns keep what drove each session.
+        TryExecute("INSERT INTO runs (run_id, plan_name, repo, branch, driver_ver, status, started_utc, " +
+                   "  engine_version, engine_commit, engine_dirty, limits_json) " +
+                   "VALUES (@runId, @planName, @repo, @branch, @driverVer, 'running', @now, " +
+                   "  @engineVer, @engineCommit, @engineDirty, @limits) " +
+                   "ON CONFLICT(run_id) DO UPDATE SET " +
+                   "  plan_name = excluded.plan_name, repo = excluded.repo, branch = excluded.branch, " +
+                   "  driver_ver = excluded.driver_ver, status = 'running', " +
+                   "  engine_version = excluded.engine_version, engine_commit = excluded.engine_commit, " +
+                   "  engine_dirty = excluded.engine_dirty, limits_json = excluded.limits_json",
                    ("@runId", runId), ("@planName", planName), ("@repo", repo),
                    ("@branch", (object?)branch ?? DBNull.Value),
-                   ("@driverVer", (object?)driverVersion ?? DBNull.Value),
+                   ("@driverVer", engine.Full),
+                   ("@engineVer", engine.Version),
+                   ("@engineCommit", engine.Commit),
+                   ("@engineDirty", engine.Dirty ? 1 : 0),
+                   ("@limits", (object?)limitsJson ?? DBNull.Value),
                    ("@now", _clock.GetUtcNow().ToString("O")));
     }
 
@@ -48,13 +66,16 @@ public sealed partial class SqliteRunStore
         DateTime startedUtc, DateTime? endedUtc, string? outcome,
         string? agentSessionId, int resumeCount, int attempt,
         string? gateSummary, string? resultSummary, int commitCount, string? newlyDone,
-        string? digest = null, string? softBreak = null)
+        string? digest = null, string? softBreak = null,
+        string? engine = null, string? limits = null)
     {
         TryExecute(
             "INSERT INTO sessions (run_id, stage_id, number, kind, started_utc, ended_utc, outcome, " +
-            "agent_session_id, resume_count, attempt, gate_summary, result_summary, commit_count, newly_done, digest, soft_break) " +
+            "agent_session_id, resume_count, attempt, gate_summary, result_summary, commit_count, newly_done, digest, soft_break, " +
+            "engine, limits) " +
             "VALUES (@runId, @stageId, @number, @kind, @started, @ended, @outcome, " +
-            "@agentSessionId, @resumeCount, @attempt, @gateSummary, @resultSummary, @commitCount, @newlyDone, @digest, @softBreak)",
+            "@agentSessionId, @resumeCount, @attempt, @gateSummary, @resultSummary, @commitCount, @newlyDone, @digest, @softBreak, " +
+            "@engine, @limits)",
             ("@runId", runId), ("@stageId", stageId), ("@number", number), ("@kind", kind),
             ("@started", startedUtc.ToString("O")),
             ("@ended", (object?)(endedUtc?.ToString("O")) ?? DBNull.Value),
@@ -66,7 +87,11 @@ public sealed partial class SqliteRunStore
             ("@commitCount", commitCount),
             ("@newlyDone", (object?)newlyDone ?? DBNull.Value),
             ("@digest", (object?)digest ?? DBNull.Value),
-            ("@softBreak", (object?)softBreak ?? DBNull.Value));
+            ("@softBreak", (object?)softBreak ?? DBNull.Value),
+            // K3.3: which build ran this session and under which limits. Per session because both
+            // change mid-run — a resume can pick up a new binary, and the Plan tab edits limits live.
+            ("@engine", (object?)engine ?? DBNull.Value),
+            ("@limits", (object?)limits ?? DBNull.Value));
     }
 
     // ---------------------------------------------------------------- costs

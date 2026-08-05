@@ -188,8 +188,16 @@ public sealed class HistoryCommand : Command<HistoryCommand.Settings>
         AnsiConsole.MarkupLine(
             $"[bold aqua]{Markup.Escape(run.RunId)}[/] · [bold]{Markup.Escape(run.PlanName)}[/] · {StatusMarkup(run.Status)} [grey](read-only)[/]");
         AnsiConsole.MarkupLine($"[grey]repo[/]     {Markup.Escape(run.Repo)}");
+        // K3.3: the stamp, and it says when it cannot answer. A run older than schema v11 carries the
+        // assembly version and nothing else, and "unrecorded" beside it is the honest label — the
+        // alternative is a reader trusting 2.0.0.0 as if it identified a build.
+        var dirty = run.EngineDirty == true ? " [red](dirty build)[/]" : "";
+        var provenance = run.EngineCommit is null ? "  [grey](commit unrecorded)[/]" : "";
         AnsiConsole.MarkupLine(
-            $"[grey]engine[/]   {Markup.Escape(run.EngineVersion ?? "unrecorded")}  [grey]branch[/] {Markup.Escape(run.Branch ?? "-")}");
+            $"[grey]engine[/]   {Markup.Escape(run.EngineStampText ?? "unrecorded")}{dirty}{provenance}  " +
+            $"[grey]branch[/] {Markup.Escape(run.Branch ?? "-")}");
+        if (run.Limits is { } limits)
+            AnsiConsole.MarkupLine($"[grey]limits[/]   {Markup.Escape(limits.Describe())}");
         AnsiConsole.MarkupLine(
             $"[grey]ran[/]      {Markup.Escape(Stamp(run.StartedUtc) ?? "-")} → {Markup.Escape(Stamp(run.EndedUtc) ?? "still open")}");
         AnsiConsole.MarkupLine(
@@ -239,9 +247,34 @@ public sealed class HistoryCommand : Command<HistoryCommand.Settings>
                     $"[grey]{Markup.Escape(Stamp(s.StartedUtc) ?? "-")}[/]",
                     Markup.Escape(Clip(s.ResultSummary ?? "-", 30)));
             AnsiConsole.Write(t);
+            ShowLimitChanges(sessions);
         }
 
         return 0;
+    }
+
+    /// <summary>
+    /// K3.3 — where the limits or the binary changed mid-run, and to what. This is the checkpoint's
+    /// whole reason: the Sarban run raised its session cap partway through, and with only a run-level
+    /// snapshot the change is invisible, leaving the shape of a token curve as the evidence. Printed
+    /// only when something actually changed, so an ordinary run gains no noise.
+    /// </summary>
+    private static void ShowLimitChanges(IReadOnlyList<Conductor.Core.History.ArchivedSession> sessions)
+    {
+        string? lastLimits = null, lastEngine = null;
+        var lines = new List<string>();
+        foreach (var s in sessions)
+        {
+            var limits = s.Limits?.Describe();
+            if (limits is not null && lastLimits is not null && !string.Equals(limits, lastLimits, StringComparison.Ordinal))
+                lines.Add($"[yellow]limits changed at session {s.Number}[/] [grey]{Markup.Escape(lastLimits)}[/] → {Markup.Escape(limits)}");
+            if (s.Engine is not null && lastEngine is not null && !string.Equals(s.Engine, lastEngine, StringComparison.Ordinal))
+                lines.Add($"[yellow]engine changed at session {s.Number}[/] [grey]{Markup.Escape(lastEngine)}[/] → {Markup.Escape(s.Engine)}");
+            lastLimits = limits ?? lastLimits;
+            lastEngine = s.Engine ?? lastEngine;
+        }
+        foreach (var line in lines)
+            AnsiConsole.MarkupLine(line);
     }
 
     // ------------------------------------------------------------------ shaping
@@ -254,10 +287,11 @@ public sealed class HistoryCommand : Command<HistoryCommand.Settings>
         var (done, total) = RunHistory.CheckpointCounts(r);
         return new RunHistoryItemJson(
             r.Run.RunId, r.Run.Repo, string.IsNullOrEmpty(r.Run.PlanName) ? r.Plan : r.Run.PlanName,
-            r.Run.Status, r.Run.EngineVersion, r.Run.Branch,
+            r.Run.Status, r.Run.EngineStampText, r.Run.Branch,
             r.Run.StartedUtc, r.Run.EndedUtc, r.Run.LastActivityUtc,
             r.Run.Sessions, done, total, r.Run.CostUsd, r.Run.Tokens,
-            r.RunDbPath, r.Slug, r.ImportedFrom, Readable: true);
+            r.RunDbPath, r.Slug, r.ImportedFrom, Readable: true,
+            r.Run.EngineCommit, r.Run.EngineDirty, r.Run.Limits);
     }
 
     private static string StatusMarkup(string status) => status.ToLowerInvariant() switch

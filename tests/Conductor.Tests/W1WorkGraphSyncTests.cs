@@ -34,7 +34,7 @@ public sealed class W1WorkGraphSyncTests : IDisposable
         Directory.CreateDirectory(_dir);
         _dbPath = Path.Combine(_dir, "run.db");
         _db = new SqliteRunStore(_dbPath, NullLogger<SqliteRunStore>.Instance);
-        _db.InitializeRun("r1", "p", _dir, "b", "v");
+        _db.InitializeRun("r1", "p", _dir, "b", Conductor.Core.EngineStamp.Parse("v"));
     }
 
     public void Dispose()

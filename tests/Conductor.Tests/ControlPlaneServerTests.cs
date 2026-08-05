@@ -238,7 +238,7 @@ public sealed class ControlPlaneServerTests : IDisposable
     [Fact]
     public async Task PostNote_WritesLedgerRowTheBatteriesConsume()
     {
-        _store.InitializeRun(RunId, "cps-test", _dir, null, null); // create the run row (ledger FKs to it)
+        _store.InitializeRun(RunId, "cps-test", _dir, null, Conductor.Core.EngineStamp.Parse(null)); // create the run row (ledger FKs to it)
         var (server, port) = StartServer();
         try
         {
@@ -268,7 +268,7 @@ public sealed class ControlPlaneServerTests : IDisposable
     [Fact]
     public async Task PostBug_ThenResolve_MovesItOutOfOpen()
     {
-        _store.InitializeRun(RunId, "cps-test", _dir, null, null); // create the run row (bugs FKs to it)
+        _store.InitializeRun(RunId, "cps-test", _dir, null, Conductor.Core.EngineStamp.Parse(null)); // create the run row (bugs FKs to it)
         var (server, port) = StartServer();
         try
         {
@@ -342,7 +342,7 @@ public sealed class ControlPlaneServerTests : IDisposable
     public async Task GetLedger_ReturnsRecentEntries()
     {
         // M7.1: /ledger serves the knowledge ledger to the Face (Go DTO LedgerEntryDto).
-        _store.InitializeRun(RunId, "cps-test", _dir, null, "test"); // FK parent for ledger rows
+        _store.InitializeRun(RunId, "cps-test", _dir, null, Conductor.Core.EngineStamp.Parse("test")); // FK parent for ledger rows
         _store.WriteLedger(RunId, 1, "S1", "finding", "the retry prompt must carry verifier findings");
         _store.WriteLedger(RunId, 2, "S1", "hand-edit", "engine bookkeeping — must NOT be surfaced");
         var (server, port) = StartServer();
@@ -363,7 +363,7 @@ public sealed class ControlPlaneServerTests : IDisposable
     public async Task GetBugs_ReturnsOpenBugsByDefault()
     {
         // M7.2: /bugs serves tracked bugs to the Face (Go DTO BugDto).
-        _store.InitializeRun(RunId, "cps-test", _dir, null, "test"); // FK parent for bug rows
+        _store.InitializeRun(RunId, "cps-test", _dir, null, Conductor.Core.EngineStamp.Parse("test")); // FK parent for bug rows
         var openId = _store.WriteBug(RunId, "stall breaker fires during long gate", "seen on the test gate", "high", "S1", 1);
         var closedId = _store.WriteBug(RunId, "already fixed", null, "low", "S1", 1);
         _store.UpdateBugStatus(RunId, closedId, "fixed", 2);
@@ -787,7 +787,7 @@ public sealed class ControlPlaneServerTests : IDisposable
     public async Task GetSessions_ServesPerSessionCostAndTokensSummedAcrossCategories()
     {
         var started = new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc);
-        _store.InitializeRun(RunId, "cps-test", _dir, "b", "v");
+        _store.InitializeRun(RunId, "cps-test", _dir, "b", Conductor.Core.EngineStamp.Parse("v"));
         _store.InitializeStage(RunId, "S1", "Stage One");
         _store.RecordSession(RunId, "S1", 1, "Deliver", started, started.AddMinutes(5),
             "Advanced", "ses-1", 0, 1, "build:OK", "ok", 2, "S1.1");
@@ -828,7 +828,7 @@ public sealed class ControlPlaneServerTests : IDisposable
     [Fact]
     public async Task GetReportQuery_IsGone_TheSqlEndpointNoLongerExists()
     {
-        _store.InitializeRun(RunId, "cps-test", _dir, null, null);
+        _store.InitializeRun(RunId, "cps-test", _dir, null, Conductor.Core.EngineStamp.Parse(null));
         var (server, port) = StartServer();
         try
         {
@@ -847,7 +847,7 @@ public sealed class ControlPlaneServerTests : IDisposable
     [Fact]
     public async Task TypedReadsSurviveTheSqlEndpointsDeletion()
     {
-        _store.InitializeRun(RunId, "cps-test", _dir, null, null);
+        _store.InitializeRun(RunId, "cps-test", _dir, null, Conductor.Core.EngineStamp.Parse(null));
         _store.WriteScore(RunId, 3, "S1", 91, "PASS", "");
         var (server, port) = StartServer();
         try
@@ -866,7 +866,7 @@ public sealed class ControlPlaneServerTests : IDisposable
     [Fact]
     public async Task GetScores_ReturnsTypedVerdictsNewestFirstWithFindingsSplit()
     {
-        _store.InitializeRun(RunId, "cps-test", _dir, null, null);
+        _store.InitializeRun(RunId, "cps-test", _dir, null, Conductor.Core.EngineStamp.Parse(null));
         // WriteScore joins the verdict's findings with "\n" (VerdictEngine does exactly this), so the
         // endpoint has to split them back — a client must never be handed a blob to parse.
         _store.WriteScore(RunId, 2, "S1", 88, "PASS", "checkpoint S1.1 landed without an evidence path");
@@ -905,7 +905,7 @@ public sealed class ControlPlaneServerTests : IDisposable
     [Fact]
     public async Task GetScores_ResolvesTheThresholdFromTheStagesOwnQaDial()
     {
-        _store.InitializeRun(RunId, "cps-test", _dir, null, null);
+        _store.InitializeRun(RunId, "cps-test", _dir, null, Conductor.Core.EngineStamp.Parse(null));
         _plan.Stages.Add(new StageConfig
         {
             Id = "S2",
@@ -940,7 +940,7 @@ public sealed class ControlPlaneServerTests : IDisposable
     [Fact]
     public async Task GetScores_ReturnsAnEmptyListWhenNothingWasVerified()
     {
-        _store.InitializeRun(RunId, "cps-test", _dir, null, null);
+        _store.InitializeRun(RunId, "cps-test", _dir, null, Conductor.Core.EngineStamp.Parse(null));
         var (server, port) = StartServer();
         try
         {
@@ -967,7 +967,7 @@ public sealed class ControlPlaneServerTests : IDisposable
     [Fact]
     public async Task PostInject_Valid_WritesToRunDbAndReturns202()
     {
-        _store.InitializeRun(RunId, "cps-test", _dir, null, null);
+        _store.InitializeRun(RunId, "cps-test", _dir, null, Conductor.Core.EngineStamp.Parse(null));
         var (server, port) = StartServer();
         try
         {

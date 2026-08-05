@@ -142,7 +142,7 @@ public sealed class StallDetectorTests
         Directory.CreateDirectory(dbDir);
         var runId = "test-run-empty";
         var db = new SqliteRunStore(Path.Combine(dbDir, "run.db"), NullLogger<SqliteRunStore>.Instance);
-        db.InitializeRun(runId, "test-plan", dir, "master", "1.0.0");
+        db.InitializeRun(runId, "test-plan", dir, "master", Conductor.Core.EngineStamp.Parse("1.0.0"));
 
         var alive = StallDetector.AnyBgProcessAlive(db, runId);
         Assert.False(alive);

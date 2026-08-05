@@ -34,8 +34,8 @@ public sealed class SF04BugsOutliveTheirRunTests : IDisposable
         Directory.CreateDirectory(_dir);
         _db = new SqliteRunStore(Path.Combine(_dir, "run.db"), NullLogger<SqliteRunStore>.Instance);
         // One repo, one run.db, two runs — the exact shape that lost eleven bugs.
-        _db.InitializeRun(OldRun, OldPlan, _dir, "feat/sarban", "test");
-        _db.InitializeRun(NewRun, NewPlan, _dir, "feat/sarban", "test");
+        _db.InitializeRun(OldRun, OldPlan, _dir, "feat/sarban", Conductor.Core.EngineStamp.Parse("test"));
+        _db.InitializeRun(NewRun, NewPlan, _dir, "feat/sarban", Conductor.Core.EngineStamp.Parse("test"));
     }
 
     public void Dispose()

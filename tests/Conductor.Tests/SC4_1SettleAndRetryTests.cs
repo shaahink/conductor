@@ -221,7 +221,7 @@ public sealed class SC4_1SettleAndRetryTests : IDisposable
     {
         var store = NewStore(name);
         var state = new RunState { RunId = $"run-{name}", CurrentStage = "S1" };
-        store.InitializeRun(state.RunId, name, _dir, "main", "test");
+        store.InitializeRun(state.RunId, name, _dir, "main", Conductor.Core.EngineStamp.Parse("test"));
         return (new GateOrchestrator(plan, state, new CollectingEventSink(), store), store, state);
     }
 
@@ -276,7 +276,7 @@ public sealed class SC4_1SettleAndRetryTests : IDisposable
     public void LastPassingDuration_IgnoresCachedSkippedAndFailedRows()
     {
         using var store = NewStore("last-pass-lookup");
-        store.InitializeRun("r", "lookup", _dir, "main", "test");
+        store.InitializeRun("r", "lookup", _dir, "main", Conductor.Core.EngineStamp.Parse("test"));
         store.RecordGate("r", 1, "S1", "build", "fast", "session", "s1", true, false, false, 0, 5000, "");
         store.RecordGate("r", 2, "S1", "build", "fast", "session", "s2", false, false, false, 1, 9000, "");
         store.RecordGate("r", 3, "S1", "build", "fast", "session", "s3", true, false, false, 0, 0, "");     // cached

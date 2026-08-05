@@ -33,7 +33,7 @@ public sealed class M4GatesTests : IDisposable
     public void Checkpoints_have_confirmed_column_defaults_to_zero()
     {
         var runId = "r-m41-1";
-        _db.InitializeRun(runId, "plan", _dir, "main", "1.0");
+        _db.InitializeRun(runId, "plan", _dir, "main", Conductor.Core.EngineStamp.Parse("1.0"));
         _db.SeedCheckpoints(runId, [("CP1", "S1", "First task", "TODO", "-", "-")]);
 
         var cps = _db.GetCheckpoints(runId);
@@ -45,7 +45,7 @@ public sealed class M4GatesTests : IDisposable
     public void ConfirmCheckpoints_sets_confirmed_to_one()
     {
         var runId = "r-m41-2";
-        _db.InitializeRun(runId, "plan", _dir, "main", "1.0");
+        _db.InitializeRun(runId, "plan", _dir, "main", Conductor.Core.EngineStamp.Parse("1.0"));
         _db.SeedCheckpoints(runId, [("CP1", "S1", "First task", "TODO", "-", "-")]);
         _db.UpdateCheckpoint(runId, "CP1", "DONE", "abc1234", "gate: OK");
 
@@ -60,7 +60,7 @@ public sealed class M4GatesTests : IDisposable
     public void Agent_claim_without_confirmation_is_not_counted_done()
     {
         var runId = "r-m41-3";
-        _db.InitializeRun(runId, "plan", _dir, "main", "1.0");
+        _db.InitializeRun(runId, "plan", _dir, "main", Conductor.Core.EngineStamp.Parse("1.0"));
         _db.SeedCheckpoints(runId, [("CP1", "S1", "First task", "TODO", "-", "-")]);
         _db.UpdateCheckpoint(runId, "CP1", "DONE", "abc1234", "agent claim");
 
@@ -76,7 +76,7 @@ public sealed class M4GatesTests : IDisposable
         var state = new RunState { RunId = "r-m41-4" };
         state.PendingConfirmation.AddRange(["CP1", "CP2"]);
 
-        _db.InitializeRun(state.RunId, "plan", _dir, "main", "1.0");
+        _db.InitializeRun(state.RunId, "plan", _dir, "main", Conductor.Core.EngineStamp.Parse("1.0"));
         _db.ConfirmCheckpoints(state.RunId, state.PendingConfirmation);
         state.PendingConfirmation.Clear();
 
@@ -89,7 +89,7 @@ public sealed class M4GatesTests : IDisposable
     public void GetLastPassingGateResult_returns_null_when_no_cache()
     {
         var runId = "r-m42-1";
-        _db.InitializeRun(runId, "plan", _dir, "main", "1.0");
+        _db.InitializeRun(runId, "plan", _dir, "main", Conductor.Core.EngineStamp.Parse("1.0"));
 
         var cached = _db.GetLastPassingGateResult(runId, "build", "fast", "abc1234");
         Assert.Null(cached);
@@ -99,7 +99,7 @@ public sealed class M4GatesTests : IDisposable
     public void GetLastPassingGateResult_returns_true_after_passing_gate_recorded()
     {
         var runId = "r-m42-2";
-        _db.InitializeRun(runId, "plan", _dir, "main", "1.0");
+        _db.InitializeRun(runId, "plan", _dir, "main", Conductor.Core.EngineStamp.Parse("1.0"));
 
         // Record a passing gate result
         _db.RecordGate(runId, sessionNumber: 1, stageId: "S1",
@@ -114,7 +114,7 @@ public sealed class M4GatesTests : IDisposable
     public void GetLastPassingGateResult_returns_null_for_different_sha()
     {
         var runId = "r-m42-3";
-        _db.InitializeRun(runId, "plan", _dir, "main", "1.0");
+        _db.InitializeRun(runId, "plan", _dir, "main", Conductor.Core.EngineStamp.Parse("1.0"));
 
         _db.RecordGate(runId, sessionNumber: 1, stageId: "S1",
             name: "build", tier: "fast", scope: "session", sha: "abc1234",
@@ -128,7 +128,7 @@ public sealed class M4GatesTests : IDisposable
     public void GetLastPassingGateResult_returns_null_for_different_tier()
     {
         var runId = "r-m42-4";
-        _db.InitializeRun(runId, "plan", _dir, "main", "1.0");
+        _db.InitializeRun(runId, "plan", _dir, "main", Conductor.Core.EngineStamp.Parse("1.0"));
 
         _db.RecordGate(runId, sessionNumber: 1, stageId: "S1",
             name: "build", tier: "fast", scope: "session", sha: "abc1234",
@@ -142,7 +142,7 @@ public sealed class M4GatesTests : IDisposable
     public void GetLastPassingGateResult_returns_false_for_failed_gate()
     {
         var runId = "r-m42-5";
-        _db.InitializeRun(runId, "plan", _dir, "main", "1.0");
+        _db.InitializeRun(runId, "plan", _dir, "main", Conductor.Core.EngineStamp.Parse("1.0"));
 
         _db.RecordGate(runId, sessionNumber: 1, stageId: "S1",
             name: "build", tier: "fast", scope: "session", sha: "abc1234",

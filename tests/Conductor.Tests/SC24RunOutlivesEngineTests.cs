@@ -136,7 +136,7 @@ public sealed class SC24RunOutlivesEngineTests : IDisposable
         using var store = new SqliteRunStore(db, NullLogger<SqliteRunStore>.Instance);
         const string runId = "run-tail";
         store.SetRunId(runId);
-        store.InitializeRun(runId, "TailPlan", _dir, "main", "test");
+        store.InitializeRun(runId, "TailPlan", _dir, "main", Conductor.Core.EngineStamp.Parse("test"));
         for (var i = 0; i < 5; i++)
             ((IRunStore)store).AppendEvent(new Core.Events.StageEntered { RunId = runId, StageId = $"S{i}", Title = $"stage {i}" });
         store.FlushEvents();
@@ -163,7 +163,7 @@ public sealed class SC24RunOutlivesEngineTests : IDisposable
         var clock = new FixedClock(t0);
         using var store = new SqliteRunStore(db, NullLogger<SqliteRunStore>.Instance, clock);
         store.SetRunId(runId);
-        store.InitializeRun(runId, "SummaryPlan", _dir, "feat/x", "test");
+        store.InitializeRun(runId, "SummaryPlan", _dir, "feat/x", Conductor.Core.EngineStamp.Parse("test"));
         store.RecordSession(runId, "S1", 1, "Deliver", t0, t0.AddMinutes(9), "Advanced", null, 0, 1, "gates GREEN", "did the thing", 2, "S1.1");
         store.RecordSession(runId, "S1", 2, "Fix", t0.AddMinutes(10), t0.AddMinutes(21), "GatesRed", null, 0, 2, "gates RED", "tried", 0, null);
         store.RecordSession(runId, "S2", 3, "Deliver", t0.AddMinutes(22), t0.AddMinutes(30), "Advanced", null, 0, 1, "gates GREEN", "done", 1, "S2.1");
@@ -244,7 +244,7 @@ public sealed class SC24RunOutlivesEngineTests : IDisposable
         using (var store = new SqliteRunStore(db, NullLogger<SqliteRunStore>.Instance))
         {
             store.SetRunId(runId);
-            store.InitializeRun(runId, "OfflinePlan", _dir, "main", "test");
+            store.InitializeRun(runId, "OfflinePlan", _dir, "main", Conductor.Core.EngineStamp.Parse("test"));
             ((IRunStore)store).AppendEvent(new Core.Events.StageEntered { RunId = runId, StageId = "S1", Title = "First" });
             ((IRunStore)store).AppendEvent(new Core.Events.SessionStarted { RunId = runId, Number = 1, StageId = "S1", Kind = "Deliver" });
             ((IRunStore)store).AppendEvent(new Core.Events.SessionFinished { RunId = runId, Number = 1, StageId = "S1", Outcome = "Advanced" });

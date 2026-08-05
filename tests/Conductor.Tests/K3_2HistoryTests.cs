@@ -46,7 +46,7 @@ public sealed class K3_2HistoryTests : IDisposable
         var db = Path.Combine(_root, "runs", StateHome.SlugFor(repo, plan), StateHome.RunDbFileName);
         using (var store = new SqliteRunStore(db, NullLogger<SqliteRunStore>.Instance))
         {
-            store.InitializeRun(runId, plan, repo, "master", "0.3.1-alpha+test");
+            store.InitializeRun(runId, plan, repo, "master", Conductor.Core.EngineStamp.Parse("0.3.1-alpha+test"));
             store.InitializeStage(runId, "S1", "First stage");
             for (var i = 1; i <= sessions; i++)
             {
@@ -105,7 +105,10 @@ public sealed class K3_2HistoryTests : IDisposable
         Assert.Equal(3, row.Run.Sessions);
         Assert.Equal(6m, row.Run.CostUsd);
         Assert.Equal(1800, row.Run.Tokens); // 3 sessions x (100 + 200 + 0 + 300)
-        Assert.Equal("0.3.1-alpha+test", row.Run.EngineVersion);
+        // K3.3 split the stamp: EngineVersion is the version alone, EngineStampText is the whole
+        // thing. The fixture seeds "0.3.1-alpha+test", so both halves are checked here.
+        Assert.Equal("0.3.1-alpha", row.Run.EngineVersion);
+        Assert.Equal("0.3.1-alpha+test", row.Run.EngineStampText);
         Assert.Equal("core", row.Plan);
     }
 

@@ -11,7 +11,11 @@ public interface IRunStore : IDisposable
 {
     // ---------------------------------------------------------------- run lifecycle
 
-    void InitializeRun(string runId, string planName, string repo, string? branch, string? driverVersion);
+    /// <summary>K3.3: <paramref name="engine"/> replaces the old <c>driverVersion</c> string, which
+    /// carried the assembly version — the same 2.0.0.0 for every build ever made. <paramref name="limitsJson"/>
+    /// is <see cref="RunLimitsSnapshot"/> as JSON, or null when the caller has no plan to read.</summary>
+    void InitializeRun(string runId, string planName, string repo, string? branch,
+                       EngineStamp engine, string? limitsJson = null);
     void RecordRunEnd(string runId, string status);
 
     // ---------------------------------------------------------------- stage lifecycle
@@ -26,7 +30,8 @@ public interface IRunStore : IDisposable
         DateTime startedUtc, DateTime? endedUtc, string? outcome,
         string? agentSessionId, int resumeCount, int attempt,
         string? gateSummary, string? resultSummary, int commitCount, string? newlyDone,
-        string? digest = null, string? softBreak = null);
+        string? digest = null, string? softBreak = null,
+        string? engine = null, string? limits = null);
 
     // ---------------------------------------------------------------- costs
 

@@ -598,7 +598,7 @@ public class McpTaskServerTests
     {
         var dbPath = Path.Combine(Path.GetTempPath(), $"mcp-rundb-{Guid.NewGuid():N}.db");
         var db = new SqliteRunStore(dbPath, NullLogger<SqliteRunStore>.Instance);
-        db.InitializeRun(runId ?? "r-mcp", "MCP Test", "test", null, "1.0.0");
+        db.InitializeRun(runId ?? "r-mcp", "MCP Test", "test", null, Conductor.Core.EngineStamp.Parse("1.0.0"));
         return db;
     }
 

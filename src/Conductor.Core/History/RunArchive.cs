@@ -86,12 +86,48 @@ public sealed class RunArchive
         return rows;
     }
 
+    /// <summary>
+    /// The columns a table actually has, cached per archive. An archive opens databases this engine
+    /// did not write — a v9 import, a run from a machine on last month's build — and a SELECT naming
+    /// a column that database has never heard of throws <c>SqliteException: no such column</c> and
+    /// takes the whole listing down with it. K3.3 adds four columns to <c>runs</c> and two to
+    /// <c>sessions</c>; every one of them is read through this probe, so an older database degrades
+    /// to "unrecorded" instead of "unreadable".
+    /// <para><paramref name="table"/> is only ever a literal from this file — PRAGMA does not take a
+    /// bound parameter, so it must be interpolated, and nothing user-supplied may reach it.</para>
+    /// </summary>
+    private HashSet<string> ColumnsOf(string table)
+    {
+        if (_columns.TryGetValue(table, out var known)) return known;
+        var found = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            foreach (var row in Query($"PRAGMA table_info({table})"))
+                if (row.TryGetValue("name", out var n) && n is string name)
+                    found.Add(name);
+        }
+        catch (SqliteException)
+        {
+            // No such table — every Has() below answers false, which is the right degradation.
+        }
+        _columns[table] = found;
+        return found;
+    }
+
+    private bool Has(string table, string column) => ColumnsOf(table).Contains(column);
+
+    private readonly Dictionary<string, HashSet<string>> _columns = new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>Every run in this database, newest first. A database holds more than one when a repo
     /// has been run repeatedly — which is the whole point of keeping it.</summary>
     public IReadOnlyList<ArchivedRun> Runs()
     {
+        var provenance = Has("runs", "engine_version")
+            ? "r.engine_version, r.engine_commit, r.engine_dirty, r.limits_json, "
+            : "";
         var rows = Query(
             "SELECT r.run_id, r.plan_name, r.repo, r.branch, r.driver_ver, r.status, " +
+            provenance +
             "  r.started_utc, r.ended_utc, " +
             "  (SELECT COUNT(*) FROM sessions s WHERE s.run_id = r.run_id) AS session_count, " +
             "  (SELECT COALESCE(SUM(c.cost_usd), 0) FROM costs c WHERE c.run_id = r.run_id) AS cost_usd, " +
@@ -106,9 +142,11 @@ public sealed class RunArchive
     /// order a replay reads in.</summary>
     public IReadOnlyList<ArchivedSession> Sessions(string runId)
     {
+        var provenance = Has("sessions", "engine") ? "s.engine, s.limits, " : "";
         var rows = Query(
             "SELECT s.number, s.stage_id, s.kind, s.started_utc, s.ended_utc, s.outcome, s.attempt, " +
             "  s.resume_count, s.commit_count, s.result_summary, s.gate_summary, " +
+            provenance +
             "  (SELECT COALESCE(SUM(c.cost_usd), 0) FROM costs c " +
             "     WHERE c.run_id = s.run_id AND c.session_number = s.number) AS cost_usd, " +
             "  (SELECT COALESCE(SUM(c.tokens_in + c.tokens_out + c.tokens_think + c.tokens_cache), 0) " +
@@ -166,14 +204,28 @@ public sealed class RunArchive
         PlanName: (string)(r["plan_name"] ?? "")!,
         Repo: (string)(r["repo"] ?? "")!,
         Branch: r["branch"] as string,
-        EngineVersion: r["driver_ver"] as string,
+        // K3.3: the structured column when the database has one; driver_ver is the fallback and, on a
+        // v11 row, holds the same stamp as one string — so preferring engine_version is what keeps
+        // EngineStampText from appending a commit to a version that already carries it.
+        EngineVersion: Opt(r, "engine_version") as string ?? r["driver_ver"] as string,
         Status: (string)(r["status"] ?? "unknown")!,
         StartedUtc: r["started_utc"] as string,
         EndedUtc: r["ended_utc"] as string,
         LastActivityUtc: (r["last_session_utc"] as string) ?? (r["ended_utc"] as string) ?? (r["started_utc"] as string),
         Sessions: Convert.ToInt32(r["session_count"] ?? 0, System.Globalization.CultureInfo.InvariantCulture),
         CostUsd: Convert.ToDecimal(r["cost_usd"] ?? 0m, System.Globalization.CultureInfo.InvariantCulture),
-        Tokens: Convert.ToInt64(r["tokens"] ?? 0L, System.Globalization.CultureInfo.InvariantCulture));
+        Tokens: Convert.ToInt64(r["tokens"] ?? 0L, System.Globalization.CultureInfo.InvariantCulture),
+        // K3.3 — absent on any database older than v11, hence Opt rather than the indexer.
+        EngineCommit: Opt(r, "engine_commit") as string,
+        EngineDirty: Opt(r, "engine_dirty") is { } d
+            ? Convert.ToInt64(d, System.Globalization.CultureInfo.InvariantCulture) != 0
+            : null,
+        LimitsJson: Opt(r, "limits_json") as string);
+
+    /// <summary>A column that may not exist in this database. <c>null</c> covers both "not selected"
+    /// and "selected and NULL", which are the same answer to a reader: unrecorded.</summary>
+    private static object? Opt(Dictionary<string, object?> r, string column)
+        => r.TryGetValue(column, out var v) ? v : null;
 
     private static ArchivedSession MapSession(Dictionary<string, object?> r) => new(
         Number: Convert.ToInt32(r["number"] ?? 0, System.Globalization.CultureInfo.InvariantCulture),
@@ -188,7 +240,9 @@ public sealed class RunArchive
         CostUsd: Convert.ToDecimal(r["cost_usd"] ?? 0m, System.Globalization.CultureInfo.InvariantCulture),
         Tokens: Convert.ToInt64(r["tokens"] ?? 0L, System.Globalization.CultureInfo.InvariantCulture),
         ResultSummary: r["result_summary"] as string,
-        GateSummary: r["gate_summary"] as string);
+        GateSummary: r["gate_summary"] as string,
+        Engine: Opt(r, "engine") as string,
+        LimitsJson: Opt(r, "limits") as string);
 
     private static ArchivedStage MapStage(Dictionary<string, object?> r) => new(
         Id: (string)(r["id"] ?? "")!,
@@ -203,17 +257,34 @@ public sealed class RunArchive
 public sealed record ArchivedRun(
     string RunId, string PlanName, string Repo, string? Branch, string? EngineVersion,
     string Status, string? StartedUtc, string? EndedUtc, string? LastActivityUtc,
-    int Sessions, decimal CostUsd, long Tokens)
+    int Sessions, decimal CostUsd, long Tokens,
+    string? EngineCommit = null, bool? EngineDirty = null, string? LimitsJson = null)
 {
     /// <summary>First eight of the run id — the form every other surface prints.</summary>
     public string ShortRunId => RunId.Length >= 8 ? RunId[..8] : RunId;
+
+    /// <summary>K3.3: version, commit and dirty flag as one string, or null when the run predates the
+    /// stamp. <c>EngineVersion</c> alone is what a v1..v10 row carries, and on those rows it is the
+    /// assembly version (<c>2.0.0.0</c>) — true of every build ever made, which is why it is printed
+    /// as-is rather than dressed up as provenance it never had.</summary>
+    public string? EngineStampText => EngineStamp.Format(EngineVersion, EngineCommit, EngineDirty)
+        ?? EngineVersion;
+
+    /// <summary>The limits in force at the run's last start, parsed; null on an older row.</summary>
+    public RunLimitsSnapshot? Limits => RunLimitsSnapshot.FromJson(LimitsJson);
 }
 
 /// <summary>One session of an archived run.</summary>
 public sealed record ArchivedSession(
     int Number, string StageId, string Kind, string? StartedUtc, string? EndedUtc,
     string? Outcome, int Attempt, int ResumeCount, int Commits, decimal CostUsd, long Tokens,
-    string? ResultSummary, string? GateSummary);
+    string? ResultSummary, string? GateSummary,
+    string? Engine = null, string? LimitsJson = null)
+{
+    /// <summary>The limits that governed THIS session — the answer to "the cap was raised at session
+    /// 9", which before K3.3 had to be inferred from the shape of a token curve.</summary>
+    public RunLimitsSnapshot? Limits => RunLimitsSnapshot.FromJson(LimitsJson);
+}
 
 /// <summary>One declared stage of an archived run.</summary>
 public sealed record ArchivedStage(

@@ -24,7 +24,7 @@ public sealed class M7KnowledgeTests : IDisposable
         Directory.CreateDirectory(_dir);
         _dbPath = Path.Combine(_dir, "run.db");
         _db = new SqliteRunStore(_dbPath, NullLogger<SqliteRunStore>.Instance);
-        _db.InitializeRun(RunId, "toy", @"C:\repo", "feat/toy", "test");
+        _db.InitializeRun(RunId, "toy", @"C:\repo", "feat/toy", Conductor.Core.EngineStamp.Parse("test"));
     }
 
     public void Dispose()

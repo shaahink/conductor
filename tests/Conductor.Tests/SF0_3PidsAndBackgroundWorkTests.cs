@@ -81,7 +81,7 @@ public sealed class SF0_3PidsAndBackgroundWorkTests : IDisposable
         // K3.1: `conductor bg start -p <plan>` records its pid in the database the PLAN resolves to,
         // which is no longer under the state dir. Open the same one, or the pid row is invisible here.
         _store = new SqliteRunStore(PlanConfig.Load(_planPath).RunDbPath, NullLogger<SqliteRunStore>.Instance);
-        _store.InitializeRun(RunId, PlanName, _repo, "feat/sarban", "1.0");
+        _store.InitializeRun(RunId, PlanName, _repo, "feat/sarban", Conductor.Core.EngineStamp.Parse("1.0"));
     }
 
     public void Dispose()

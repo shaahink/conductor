@@ -53,17 +53,17 @@ public sealed class RunDbTests : IDisposable
     }
 
     [Fact]
-    public void Schema_version_is_ten()
+    public void Schema_version_is_eleven()
     {
         var rows = _db.Query("SELECT version FROM schema_version");
         Assert.Single(rows);
-        Assert.Equal(10L, (long)rows[0]["version"]!);  // K1.2 added sessions.soft_break
+        Assert.Equal(11L, (long)rows[0]["version"]!);  // K3.3 added the engine stamp + limits columns
     }
 
     [Fact]
     public void InitializeRun_writes_run_row()
     {
-        _db.InitializeRun("r1", "test-plan", "/repo", "main", "1.0.0");
+        _db.InitializeRun("r1", "test-plan", "/repo", "main", Conductor.Core.EngineStamp.Parse("1.0.0"));
 
         var rows = _db.Query("SELECT * FROM runs WHERE run_id = 'r1'");
         Assert.Single(rows);
@@ -79,7 +79,7 @@ public sealed class RunDbTests : IDisposable
         var started = new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc);
         var ended = new DateTime(2026, 7, 10, 12, 5, 0, DateTimeKind.Utc);
 
-        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        _db.InitializeRun("r1", "p", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
         _db.InitializeStage("r1", "F1", "test stage");
         _db.RecordSession("r1", "F1", 1, "Deliver",
             started, ended, "Advanced", "ses-abc", 0, 1,
@@ -112,7 +112,7 @@ public sealed class RunDbTests : IDisposable
     public void QuerySessions_sums_the_many_cost_rows_per_session_instead_of_joining_them()
     {
         var started = new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc);
-        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        _db.InitializeRun("r1", "p", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
         _db.InitializeStage("r1", "F1", "test stage");
         _db.RecordSession("r1", "F1", 1, "Deliver", started, started.AddMinutes(5),
             "Advanced", "ses-abc", 0, 1, "build:OK", "ok", 2, "F1.1");
@@ -139,7 +139,7 @@ public sealed class RunDbTests : IDisposable
     public void QuerySessions_reports_zero_cost_for_a_session_with_no_cost_rows()
     {
         var started = new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc);
-        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        _db.InitializeRun("r1", "p", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
         _db.InitializeStage("r1", "F1", "test stage");
         _db.RecordSession("r1", "F1", 1, "Deliver", started, null,
             "AgentError", null, 0, 1, null, null, 0, null);
@@ -157,13 +157,13 @@ public sealed class RunDbTests : IDisposable
     public void QuerySessions_does_not_sum_another_runs_costs_into_this_run()
     {
         var started = new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc);
-        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        _db.InitializeRun("r1", "p", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
         _db.InitializeStage("r1", "F1", "test stage");
         _db.RecordSession("r1", "F1", 1, "Deliver", started, started.AddMinutes(1),
             "Advanced", null, 0, 1, null, null, 0, null);
         _db.RecordCost("r1", 1, "agent", 10, 5, 0, 0, 0.01m, 100);
         // A different run that also has a session numbered 1.
-        _db.InitializeRun("r2", "p", "/r", "b", "v");
+        _db.InitializeRun("r2", "p", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
         _db.RecordCost("r2", 1, "agent", 9999, 9999, 0, 0, 99.99m, 100);
 
         var s1 = Assert.Single(_db.QuerySessions("r1"));
@@ -174,7 +174,7 @@ public sealed class RunDbTests : IDisposable
     [Fact]
     public void Gate_record_round_trip()
     {
-        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        _db.InitializeRun("r1", "p", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
         _db.RecordGate("r1", 1, "F1", "build", "fast", "session", "abc123",
             passed: true, skipped: false, optional: false, exitCode: 0, durationMs: 1500, tail: "Build succeeded.");
 
@@ -190,7 +190,7 @@ public sealed class RunDbTests : IDisposable
     [Fact]
     public void Ledger_and_handover_round_trip()
     {
-        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        _db.InitializeRun("r1", "p", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
         _db.WriteLedger("r1", 1, "F1", "finding", "CT thread safety verified");
         _db.WriteHandover("r1", 1, "F1", "All gates green, ready for F2");
 
@@ -207,7 +207,7 @@ public sealed class RunDbTests : IDisposable
     [Fact]
     public void RecordRunEnd_updates_status()
     {
-        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        _db.InitializeRun("r1", "p", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
         _db.RecordRunEnd("r1", "Completed");
 
         var rows = _db.Query("SELECT status, ended_utc FROM runs WHERE run_id = 'r1'");
@@ -219,7 +219,7 @@ public sealed class RunDbTests : IDisposable
     [Fact]
     public void ConfirmStage_marks_done()
     {
-        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        _db.InitializeRun("r1", "p", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
         _db.InitializeStage("r1", "F1", "test");
         _db.ConfirmStage("r1", "F1");
 
@@ -231,7 +231,7 @@ public sealed class RunDbTests : IDisposable
     [Fact]
     public void Injection_write_read()
     {
-        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        _db.InitializeRun("r1", "p", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
         _db.WriteInjection("r1", "human", 1, "F1", "Check the gate caching logic");
 
         var rows = _db.Query("SELECT * FROM injections WHERE run_id = 'r1'");
@@ -243,9 +243,9 @@ public sealed class RunDbTests : IDisposable
     [Fact]
     public void GetLatestRunId_returns_latest_run()
     {
-        _db.InitializeRun("run-a", "test-plan", "/r", "b", "v");
+        _db.InitializeRun("run-a", "test-plan", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
         System.Threading.Thread.Sleep(10);
-        _db.InitializeRun("run-b", "test-plan", "/r", "b", "v");
+        _db.InitializeRun("run-b", "test-plan", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
 
         var runId = _db.GetLatestRunId("test-plan");
         Assert.Equal("run-b", runId);
@@ -275,7 +275,7 @@ public sealed class RunDbTests : IDisposable
     [Fact]
     public void Query_with_parameters_prevents_injection()
     {
-        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        _db.InitializeRun("r1", "p", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
         _db.RecordGate("r1", 1, "F1", "build", "fast", "session", "sha", true, false, false, 0, 100, "");
 
         // If this were a plain string.Format, a malicious name would break the query.
@@ -289,7 +289,7 @@ public sealed class RunDbTests : IDisposable
     [Fact]
     public void SeedCheckpoints_persists_and_re_seeds_idempotently()
     {
-        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        _db.InitializeRun("r1", "p", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
         var cps = new (string, string, string, string, string, string)[]
         {
             ("F1.1", "F1", "run.db schema", "TODO", "-", "-"),
@@ -315,7 +315,7 @@ public sealed class RunDbTests : IDisposable
     [Fact]
     public void UpdateCheckpoint_sets_status_commit_evidence()
     {
-        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        _db.InitializeRun("r1", "p", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
         _db.SeedCheckpoints("r1", [("F2.1", "F2", "process sup", "TODO", "-", "-")]);
 
         _db.UpdateCheckpoint("r1", "F2.1", "DONE", "def456", "12 tests, 0w/0e");
@@ -329,7 +329,7 @@ public sealed class RunDbTests : IDisposable
     [Fact]
     public void MarkCheckpointInProgress_transitions_from_todo_only()
     {
-        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        _db.InitializeRun("r1", "p", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
         _db.SeedCheckpoints("r1", [("F3.1", "F3", "stall v2", "TODO", "-", "-")]);
 
         _db.MarkCheckpointInProgress("r1", "F3.1");
@@ -348,7 +348,7 @@ public sealed class RunDbTests : IDisposable
     [Fact]
     public void QueryLedger_returns_entries()
     {
-        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        _db.InitializeRun("r1", "p", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
         _db.WriteLedger("r1", 1, "F1", "finding", "test note 1");
         _db.WriteLedger("r1", 1, "F1", "observation", "test note 2");
 
@@ -360,7 +360,7 @@ public sealed class RunDbTests : IDisposable
     public void QuerySessions_returns_summaries()
     {
         var started = new DateTime(2026, 7, 10, 12, 0, 0, DateTimeKind.Utc);
-        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        _db.InitializeRun("r1", "p", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
         _db.InitializeStage("r1", "F1", "test");
         _db.RecordSession("r1", "F1", 1, "Deliver", started, null, null, "ses-1", 0, 1, "ok", null, 0, null);
 
@@ -374,7 +374,7 @@ public sealed class RunDbTests : IDisposable
     [Fact]
     public void GetAllPids_returns_all_tracked_pids_for_run()
     {
-        _db.InitializeRun("r-bg", "bg-plan", "/r", "b", "v");
+        _db.InitializeRun("r-bg", "bg-plan", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
 
         _db.TrackPid(10001, "r-bg", "bg:backtest", "F2", 1, DateTime.UtcNow);
         _db.TrackPid(10002, "r-bg", "bg:build", "F2", 1, DateTime.UtcNow);
@@ -388,7 +388,7 @@ public sealed class RunDbTests : IDisposable
     [Fact]
     public void GetAllPids_returns_empty_for_unknown_run()
     {
-        _db.InitializeRun("r-bg2", "bg-plan", "/r", "b", "v");
+        _db.InitializeRun("r-bg2", "bg-plan", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
         var pids = _db.GetAllPids("r-nonexistent");
         Assert.Empty(pids);
     }
@@ -396,7 +396,7 @@ public sealed class RunDbTests : IDisposable
     [Fact]
     public void GetAllPids_includes_exited_pids()
     {
-        _db.InitializeRun("r-bg3", "bg-plan", "/r", "b", "v");
+        _db.InitializeRun("r-bg3", "bg-plan", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
 
         _db.TrackPid(20001, "r-bg3", "bg:test", "F2", 2, DateTime.UtcNow);
         _db.MarkPidExited(20001, 0);
@@ -413,7 +413,7 @@ public sealed class RunDbTests : IDisposable
     [Fact]
     public void SaveAndLoadRunState_round_trip()
     {
-        _db.InitializeRun("r-state", "state-plan", "/r", "b", "v");
+        _db.InitializeRun("r-state", "state-plan", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
         _db.SaveRunState("r-state", "state-plan", "{\"planName\":\"state-plan\"}");
 
         var json = _db.LoadRunStateJson("r-state");

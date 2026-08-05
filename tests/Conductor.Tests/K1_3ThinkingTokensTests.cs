@@ -35,7 +35,7 @@ public sealed class K1_3ThinkingTokensTests : IDisposable
         Directory.CreateDirectory(Path.Combine(_dir, ".conductor"));
         _store = new SqliteRunStore(Path.Combine(_dir, ".conductor", "run.db"), NullLogger<SqliteRunStore>.Instance);
         _store.SetRunId(RunId);
-        _store.InitializeRun(RunId, "k13", _dir, null, null);
+        _store.InitializeRun(RunId, "k13", _dir, null, Conductor.Core.EngineStamp.Parse(null));
         _store.RecordSession(RunId, "K1", 1, "Deliver", DateTime.UtcNow.AddMinutes(-5), DateTime.UtcNow,
             "Delivered", agentSessionId: null, resumeCount: 0, attempt: 1,
             gateSummary: "gates ok", resultSummary: "did the thing", commitCount: 1, newlyDone: null);

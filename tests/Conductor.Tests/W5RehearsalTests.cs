@@ -47,7 +47,7 @@ public sealed class W5RehearsalTests
         using var repo = new TempRepo("w5-proj");
         using var store = repo.OpenStore();
         var runId = "r1";
-        store.InitializeRun(runId, "p", repo.Path, "main", "1.0.0");
+        store.InitializeRun(runId, "p", repo.Path, "main", Conductor.Core.EngineStamp.Parse("1.0.0"));
         store.SeedCheckpoints(runId, [("T1.1", "T1", "first", "TODO", "", ""), ("T1.2", "T1", "second", "TODO", "", "")]);
         store.UpdateCheckpoint(runId, "T1.1", "DONE", "abc1234", "evidence.txt", source: "agent");
         store.FlushEvents();
@@ -81,7 +81,7 @@ public sealed class W5RehearsalTests
     {
         using var repo = new TempRepo("w5-proj-empty");
         using var store = repo.OpenStore();
-        store.InitializeRun("r1", "p", repo.Path, "main", "1.0.0");
+        store.InitializeRun("r1", "p", repo.Path, "main", Conductor.Core.EngineStamp.Parse("1.0.0"));
         var declared = new TrackerSnapshot
         {
             Checkpoints = [Core.CheckpointRow.Create(new ProgressConventions(), "T1.1", "first", "TODO", "", "")],

@@ -132,7 +132,7 @@ public sealed class SF5SessionStartSeqTests : IDisposable
     private SqliteRunStore Store(string runId)
     {
         var store = new SqliteRunStore(DbPath, NullLogger<SqliteRunStore>.Instance);
-        store.InitializeRun(runId, "seq-plan", _dir, "main", "1.0.0");
+        store.InitializeRun(runId, "seq-plan", _dir, "main", Conductor.Core.EngineStamp.Parse("1.0.0"));
         store.SetRunId(runId);
         return store;
     }

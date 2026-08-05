@@ -84,7 +84,8 @@ public sealed partial class RunLoop
                 Resumed = _ctx.State.SessionCounter > 0,
             });
             _ctx.Store?.InitializeRun(_ctx.State.RunId, _ctx.Plan.Name, _ctx.Plan.Repo, Git.Branch(_ctx.Plan.Repo),
-                typeof(RunLoop).Assembly.GetName().Version?.ToString());
+                EngineStamp.Current, RunLimitsSnapshot.From(_ctx.Plan.Limits).ToJson());
+            WarnOnDirtyEngine();
             NotifyRunStart();
             // SF5.4: two engines on one machine are two identical entries in a task manager until one of
             // them says which run it is. Set once here, refreshed on every stage entry below.

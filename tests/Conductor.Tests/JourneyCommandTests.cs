@@ -166,7 +166,7 @@ public sealed class JourneyCommandTests
             var plan = PlanWithScratchRepo(repo);
             using (var db = new SqliteRunStore(dbPath, NullLogger<SqliteRunStore>.Instance))
             {
-                db.InitializeRun("r1", plan.Name, repo, "b", "v");
+                db.InitializeRun("r1", plan.Name, repo, "b", Conductor.Core.EngineStamp.Parse("v"));
                 var state = new RunState { PlanName = plan.Name, RunId = "r1", CurrentStage = "S1", SessionCounter = 2 };
                 db.SaveRunState("r1", plan.Name, System.Text.Json.JsonSerializer.Serialize(state, PlanConfig.JsonOpts));
             }

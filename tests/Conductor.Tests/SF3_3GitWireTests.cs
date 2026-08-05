@@ -35,7 +35,7 @@ public sealed class SF3_3GitWireTests : IDisposable
         Directory.CreateDirectory(Path.Combine(_dir, ".conductor"));
         _store = new SqliteRunStore(Path.Combine(_dir, ".conductor", "run.db"), NullLogger<SqliteRunStore>.Instance);
         _store.SetRunId(RunId);
-        _store.InitializeRun(RunId, "sf33-wire", _dir, null, null);
+        _store.InitializeRun(RunId, "sf33-wire", _dir, null, Conductor.Core.EngineStamp.Parse(null));
         _plan = new PlanConfig
         {
             Name = "sf33-wire",

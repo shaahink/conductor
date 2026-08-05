@@ -33,7 +33,7 @@ public sealed class SC54BgMappingTests : IDisposable
         Directory.CreateDirectory(Path.Combine(_dir, "logs"));
         Directory.CreateDirectory(Path.Combine(_dir, "bg-logs"));
         _store = new SqliteRunStore(Path.Combine(_dir, "run.db"), NullLogger<SqliteRunStore>.Instance);
-        _store.InitializeRun(RunId, "sc54", _dir, "feat/sarban", "1.0");
+        _store.InitializeRun(RunId, "sc54", _dir, "feat/sarban", Conductor.Core.EngineStamp.Parse("1.0"));
     }
 
     public void Dispose()

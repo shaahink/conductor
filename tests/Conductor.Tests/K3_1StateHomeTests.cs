@@ -422,7 +422,7 @@ public sealed class K3_1StateHomeTests : IDisposable
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         using var store = new SqliteRunStore(path, NullLogger<SqliteRunStore>.Instance);
         store.SetRunId(runId);
-        store.InitializeRun(runId, "core", Path.GetDirectoryName(path)!, "main", "test");
+        store.InitializeRun(runId, "core", Path.GetDirectoryName(path)!, "main", Conductor.Core.EngineStamp.Parse("test"));
         store.InitializeStage(runId, "K1", "Stage One");
         store.RecordSession(runId, "K1", 7, "session",
             DateTime.UtcNow, null, null, null, 0, 1, null, null, 0, null);

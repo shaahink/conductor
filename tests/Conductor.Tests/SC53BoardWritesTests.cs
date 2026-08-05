@@ -39,7 +39,7 @@ public sealed class SC53BoardWritesTests : IDisposable
         Directory.CreateDirectory(_dir);
         File.WriteAllText(Path.Combine(_dir, "TRACKER.md"), "# T\n");
         _store = new SqliteRunStore(Path.Combine(_dir, "run.db"), NullLogger<SqliteRunStore>.Instance);
-        _store.InitializeRun(RunId, "sc53", _dir, "feat/sarban", "1.0");
+        _store.InitializeRun(RunId, "sc53", _dir, "feat/sarban", Conductor.Core.EngineStamp.Parse("1.0"));
         _store.SeedCheckpoints(RunId,
         [
             ("SC5.1", "SC5", "wait", "DONE", "abc1234", "evidence.md"),

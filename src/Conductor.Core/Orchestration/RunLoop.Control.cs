@@ -189,6 +189,19 @@ public sealed partial class RunLoop
     /// <summary>W3.3: an unbounded run is a policy choice, not a default anyone opted into. The
     /// U-series run had no cap and spent $139.68 before dying, so the run says so out loud at start
     /// (and `doctor` warns). Caps stay the owner's to set — nothing is invented here.</summary>
+    /// <summary>K3.3: say at launch when the engine driving this run was built from a dirty tree.
+    /// A client-site run executed on <c>0.2.3-alpha…dirty</c> and nobody knew until the machine was
+    /// asked afterwards — the binary claims a version that no commit can reproduce, so every verdict
+    /// the run produces is unattributable. The run is NOT blocked (a working-tree build is the normal
+    /// way this repo tests itself); it is only recorded, in the log and in the run row.</summary>
+    private void WarnOnDirtyEngine()
+    {
+        var engine = EngineStamp.Current;
+        if (!engine.Dirty) return;
+        _ctx.Log($"⚠ dirty engine: this run is driven by {engine.Full} — built from a working tree with " +
+                 "uncommitted changes, so its commit does not reproduce this binary");
+    }
+
     private void WarnOnUnboundedSpend()
     {
         if (_ctx.Options.DryRun) return;

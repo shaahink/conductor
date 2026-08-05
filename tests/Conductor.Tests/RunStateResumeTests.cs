@@ -40,7 +40,7 @@ public sealed class RunStateResumeTests : IDisposable
     {
         using (var db = new SqliteRunStore(_dbPath, NullLogger<SqliteRunStore>.Instance))
         {
-            db.InitializeRun("r1", "other-plan", "/r", "b", "v");
+            db.InitializeRun("r1", "other-plan", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
             db.SaveRunState("r1", "other-plan", "{\"planName\":\"other-plan\"}");
         }
 
@@ -53,7 +53,7 @@ public sealed class RunStateResumeTests : IDisposable
     {
         using (var db = new SqliteRunStore(_dbPath, NullLogger<SqliteRunStore>.Instance))
         {
-            db.InitializeRun("r1", "my-plan", "/r", "b", "v");
+            db.InitializeRun("r1", "my-plan", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
             var state = new RunState { PlanName = "my-plan", RunId = "r1", Status = RunStatus.Running, SessionCounter = 3 };
             db.SaveRunState("r1", "my-plan", System.Text.Json.JsonSerializer.Serialize(state, PlanConfig.JsonOpts));
         }
@@ -71,7 +71,7 @@ public sealed class RunStateResumeTests : IDisposable
     {
         using (var db = new SqliteRunStore(_dbPath, NullLogger<SqliteRunStore>.Instance))
         {
-            db.InitializeRun("r1", "my-plan", "/r", "b", "v");
+            db.InitializeRun("r1", "my-plan", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
             db.SaveRunState("r1", "my-plan", "{ not valid json");
         }
 

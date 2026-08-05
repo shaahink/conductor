@@ -32,7 +32,7 @@ public sealed class SF5_1WatchLoopTests : IDisposable
         _dir = Path.Combine(_root, ".conductor");
         Directory.CreateDirectory(_dir);
         _store = new SqliteRunStore(Path.Combine(_dir, "run.db"), NullLogger<SqliteRunStore>.Instance);
-        _store.InitializeRun(Run, Plan, _root, null, null);
+        _store.InitializeRun(Run, Plan, _root, null, Conductor.Core.EngineStamp.Parse(null));
         _store.SetRunId(Run);
     }
 

@@ -127,7 +127,7 @@ public sealed class SC51WaitingSurfacesTests : IDisposable
         using (var store = new SqliteRunStore(_dbPath, NullLogger<SqliteRunStore>.Instance))
         {
             store.SetRunId(RunId);
-            store.InitializeRun(RunId, PlanName, _dir, null, null);
+            store.InitializeRun(RunId, PlanName, _dir, null, Conductor.Core.EngineStamp.Parse(null));
             foreach (var e in events) store.Emit(e);
             store.FlushEvents();
         }

@@ -139,7 +139,7 @@ public sealed class W3ProcessRailsTests
             using var db = new SqliteRunStore(Path.Combine(dir, ".conductor", "run.db"),
                 NullLogger<SqliteRunStore>.Instance);
             const string runId = "w33-reap";
-            db.InitializeRun(runId, "p", dir, "main", "1.0.0");
+            db.InitializeRun(runId, "p", dir, "main", Conductor.Core.EngineStamp.Parse("1.0.0"));
 
             // A real, live process, recorded as if a PREVIOUS run had spawned it hours ago — i.e.
             // exactly what a recycled pid looks like. The old reaper tree-killed this on sight.
@@ -198,7 +198,7 @@ public sealed class W3ProcessRailsTests
             Directory.CreateDirectory(Path.Combine(repo, ".conductor"));
             // bg start tracks pids against the plan's existing run — give it one.
             using (var seed = new SqliteRunStore(plan.RunDbPath, NullLogger<SqliteRunStore>.Instance))
-                seed.InitializeRun(Guid.NewGuid().ToString("N"), plan.Name, repo, "main", "1.0.0");
+                seed.InitializeRun(Guid.NewGuid().ToString("N"), plan.Name, repo, "main", Conductor.Core.EngineStamp.Parse("1.0.0"));
 
             // Emits over ~4 seconds — a hundred times longer than the launcher lives.
             var work = Path.Combine(repo, "slow.cmd");

@@ -194,7 +194,7 @@ public sealed class W3WatchdogTests
             using var db = new SqliteRunStore(Path.Combine(dir, ".conductor", "run.db"),
                 NullLogger<SqliteRunStore>.Instance);
             const string runId = "w31-bg";
-            db.InitializeRun(runId, "p", dir, "main", "1.0.0");
+            db.InitializeRun(runId, "p", dir, "main", Conductor.Core.EngineStamp.Parse("1.0.0"));
 
             // This process is unquestionably alive. Tracked as the agent and the Face — exactly the
             // rows every real session writes — it must NOT read as bg liveness.
@@ -224,7 +224,7 @@ public sealed class W3WatchdogTests
             using var db = new SqliteRunStore(Path.Combine(dir, ".conductor", "run.db"),
                 NullLogger<SqliteRunStore>.Instance);
             const string runId = "w31-reap";
-            db.InitializeRun(runId, "p", dir, "main", "1.0.0");
+            db.InitializeRun(runId, "p", dir, "main", Conductor.Core.EngineStamp.Parse("1.0.0"));
             // A pid that cannot exist (pid 0 is never a user process on Windows/Linux).
             db.TrackPid(999_999_9, runId, "agent:stage:1:session#1", null, null, DateTime.UtcNow);
 

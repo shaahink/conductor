@@ -193,7 +193,12 @@ public sealed partial class RunLoop
                 rec.Digest.ToJson(),
                 // K1.2: null when the session had no ceiling or never crossed the soft threshold —
                 // deliberately not an empty object, which would read as "nudged, nothing happened".
-                rec.SoftBreak is { } sb ? SoftBreak.ToJson(sb) : null);
+                rec.SoftBreak is { } sb ? SoftBreak.ToJson(sb) : null,
+                // K3.3: the build and the limits AS OF THIS SESSION. The run row carries the same
+                // pair, but only the latest — limits are editable in flight and a resume can be a
+                // different binary, so "which cap governed session 9" is only answerable per session.
+                EngineStamp.Current.Full,
+                RunLimitsSnapshot.From(_ctx.Plan.Limits).ToJson());
             if (rec.CostUsd is { } costUsd)
                 db.RecordCost(_ctx.State.RunId, rec.Number, "agent",
                     rec.TokensInput ?? 0, rec.TokensOutput ?? 0, rec.TokensReasoning ?? 0,

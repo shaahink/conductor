@@ -213,7 +213,7 @@ public sealed class W4ItemQaTests
 
             // Seed the graph the way a run start would, then set each card's dial — H0.1 off,
             // H0.2 verify — before the first session picks anything up.
-            store.InitializeRun(state.RunId, plan.Name, repo, "main", "1.0.0");
+            store.InitializeRun(state.RunId, plan.Name, repo, "main", Conductor.Core.EngineStamp.Parse("1.0.0"));
             store.SeedCheckpoints(state.RunId,
             [
                 ("H0.1", "H0", "delivered one-by-one", "TODO", "", ""),

@@ -38,7 +38,7 @@ public sealed class W1WorkGraphTests : IDisposable
     [Fact]
     public void Replaying_the_log_reproduces_checkpoint_state_byte_for_byte()
     {
-        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        _db.InitializeRun("r1", "p", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
         _db.SeedCheckpoints("r1", Seed);
         _db.UpdateCheckpoint("r1", "W1.1", "DONE", "def5678", "918 tests green", source: "agent");
         _db.MarkCheckpointInProgress("r1", "W1.2"); // no-op: already in progress
@@ -67,7 +67,7 @@ public sealed class W1WorkGraphTests : IDisposable
     [Fact]
     public void Seeded_checkpoints_carry_kind_and_provenance_in_the_graph()
     {
-        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        _db.InitializeRun("r1", "p", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
         _db.SeedCheckpoints("r1", Seed);
 
         var graph = new TaskGraph();
@@ -104,7 +104,7 @@ public sealed class W1WorkGraphTests : IDisposable
     [Fact]
     public void CheckpointConfirmed_folds_into_the_graph_and_survives_replay()
     {
-        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        _db.InitializeRun("r1", "p", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
         _db.SeedCheckpoints("r1", [("W1.1", "W1", "unify", "DONE", "abc", "green")]);
         _db.ConfirmCheckpoints("r1", ["W1.1"]);
 
@@ -119,7 +119,7 @@ public sealed class W1WorkGraphTests : IDisposable
     [Fact]
     public void Repeated_done_claims_refresh_commit_and_evidence()
     {
-        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        _db.InitializeRun("r1", "p", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
         _db.SeedCheckpoints("r1", [("W1.1", "W1", "unify", "TODO", "-", "-")]);
         _db.UpdateCheckpoint("r1", "W1.1", "DONE", "aaa1111", "first claim", source: "agent");
         _db.UpdateCheckpoint("r1", "W1.1", "DONE", "bbb2222", "amended evidence", source: "agent");
@@ -133,7 +133,7 @@ public sealed class W1WorkGraphTests : IDisposable
     [Fact]
     public void Reseed_never_clobbers_runtime_status_but_refreshes_declared_titles()
     {
-        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        _db.InitializeRun("r1", "p", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
         _db.SeedCheckpoints("r1", [("W1.1", "W1", "old title", "TODO", "-", "-")]);
         _db.UpdateCheckpoint("r1", "W1.1", "DONE", "abc", "green", source: "engine");
 
@@ -148,7 +148,7 @@ public sealed class W1WorkGraphTests : IDisposable
     [Fact]
     public void A_second_writer_on_the_same_db_never_collides_on_seq()
     {
-        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        _db.InitializeRun("r1", "p", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
         _db.SeedCheckpoints("r1", Seed);
 
         // The CLI claim path is a separate process with its own store instance and its own
@@ -174,7 +174,7 @@ public sealed class W1WorkGraphTests : IDisposable
     [Fact]
     public void Subtask_adds_carry_kind_and_inherit_the_parent_stage()
     {
-        _db.InitializeRun("r1", "p", "/r", "b", "v");
+        _db.InitializeRun("r1", "p", "/r", "b", Conductor.Core.EngineStamp.Parse("v"));
         _db.SeedCheckpoints("r1", Seed);
 
         var graph = new TaskGraph();
