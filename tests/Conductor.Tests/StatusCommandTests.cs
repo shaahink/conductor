@@ -264,6 +264,42 @@ public class StatusCommandTests
         Assert.Null(report.WhatHurt);
     }
 
+    /// <summary>SC2.2. The park says "inspect and <c>conductor resume</c>". Clearing it only on
+    /// <see cref="StageConfirmed"/> meant that once the operator had done exactly that, status kept
+    /// repeating the instruction for the whole session that followed — a run visibly working, for
+    /// thirty-eight minutes, under a banner saying it was stopped and needed a human.</summary>
+    [Fact]
+    public void StatusReport_WhatHurt_Clears_OnceASessionRunsAfterThePark()
+    {
+        using var tmp = new TempRunDb();
+        tmp.Seed(
+            new RunStarted { Plan = TempRunDb.Plan, Repo = "." },
+            new StageEntered { StageId = "D1" },
+            new SessionStarted { Number = 1, StageId = "D1", Kind = "Deliver" },
+            new SessionFinished { Number = 1, StageId = "D1", Outcome = "AgentError", CostUsd = 0m },
+            new AttentionRequested { Reason = "stage D1 used all 2 attempts without completing" },
+            new SessionStarted { Number = 2, StageId = "D1", Kind = "Fix" });
+        var report = tmp.BuildReport((_, _) => false);
+        Assert.Null(report.WhatHurt);
+    }
+
+    /// <summary>The other half of the same rule: a park with no session after it has not been answered,
+    /// so it is still the complaint. Only work moving clears it — not the operator merely looking.</summary>
+    [Fact]
+    public void StatusReport_WhatHurt_Survives_WhileTheRunIsStillParked()
+    {
+        using var tmp = new TempRunDb();
+        tmp.Seed(
+            new RunStarted { Plan = TempRunDb.Plan, Repo = "." },
+            new StageEntered { StageId = "D1" },
+            new SessionStarted { Number = 1, StageId = "D1", Kind = "Deliver" },
+            new SessionFinished { Number = 1, StageId = "D1", Outcome = "AgentError", CostUsd = 0m },
+            new AttentionRequested { Reason = "stage D1 used all 2 attempts without completing" });
+        var report = tmp.BuildReport((_, _) => false);
+        Assert.StartsWith("stage D1 used all 2 attempts without completing", report.WhatHurt,
+            StringComparison.Ordinal);
+    }
+
     [Fact]
     public void SettingsDefaultsWork()
     {

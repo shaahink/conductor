@@ -140,12 +140,16 @@ public static class StatusReportBuilder
     ///   green battery and therefore clears everything older than it;</description></item>
     ///   <item><description>whatever survives carries its age and wall-clock, so a reader can tell a
     ///   four-second-old failure from a four-hour-old one without opening the log.</description></item>
+    ///   <item><description>a park clears the moment work resumes: the operator answering it is the
+    ///   event that ends it, not the stage confirming a whole session later.</description></item>
     /// </list>
     /// </summary>
     private static string? DeriveWhatHurt(IReadOnlyList<ConductorEvent> events, DateTimeOffset? now = null)
     {
         // Gates that have passed since (walking backwards, so "since" = already seen).
         var passedSince = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // Whether a session has started since — same "walking backwards" sense as passedSince.
+        var workResumedSince = false;
 
         for (var i = events.Count - 1; i >= 0; i--)
         {
@@ -155,8 +159,17 @@ public static class StatusReportBuilder
                 case StageConfirmed:
                 case OwnerApprovalGranted:
                     return null;
+                // A park is a request for a human, so it ends when the human answers it. A session
+                // running after it is that answer in its most measurable form: the run is moving, and
+                // repeating "inspect and `conductor resume`" at an operator who already did both is
+                // the stale sentence this rule exists to kill. Waiting for StageConfirmed left the
+                // park on screen for the whole session that followed it — the entire time the run was
+                // visibly working. A resume that starts no session does NOT clear it: nothing moved.
                 case AttentionRequested a:
-                    return a.Reason + Staleness.Since(a.Ts, now);
+                    return workResumedSince ? null : a.Reason + Staleness.Since(a.Ts, now);
+                case SessionStarted:
+                    workResumedSince = true;
+                    break;
                 case GateFinished { Passed: true } ok:
                     passedSince.Add(ok.Name);
                     break;
