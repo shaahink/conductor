@@ -96,7 +96,23 @@ public sealed partial class SC8_2VersioningTests
         Assert.True(m.Success, $"unexpected `git describe` output: {described}");
 
         var parts = m.Groups["base"].Value.Split('.');
-        var height = int.Parse(m.Groups["height"].Value, System.Globalization.CultureInfo.InvariantCulture);
+        var tag = $"v{m.Groups["base"].Value}";
+
+        // Deliberately NOT describe's height — see MinVerHeight. The two numbers answer different
+        // questions and only one of them is in the assembly.
+        var tagSha = Git($"rev-list -n 1 {tag}");
+        if (tagSha is null) return;
+        if (MinVerHeight(tagSha) is not int height) return;
+
+        // A history with no merges since the tag has exactly one path back to it, so the two
+        // definitions must coincide. That equality is what keeps the walk honest on a linear
+        // checkout — a fresh clone, a CI runner — where a broken walk would otherwise go unnoticed.
+        if (Git($"rev-list --count --merges {tag}..HEAD") == "0")
+        {
+            Assert.Equal(
+                int.Parse(m.Groups["height"].Value, System.Globalization.CultureInfo.InvariantCulture),
+                height);
+        }
 
         // MinVer's rule: on the tag you ARE the tag; past it you are a prerelease of the next patch,
         // which orders above the tag and below that patch.
@@ -119,24 +135,71 @@ public sealed partial class SC8_2VersioningTests
         // The exact height is only comparable when THIS binary was built from THIS commit. Building,
         // then committing, then running the suite without a rebuild moves git on without moving the
         // assembly — a real situation, and not a versioning defect. The SC8.1 commit stamp is what
-        // lets the assertion know which case it is in, so the strict check runs whenever it can.
-        //
-        // A merge commit is a second such case, and it needs its own guard: `git describe`'s height
-        // counts every commit unique to HEAD across ALL parents (rev-list's set-difference), while
-        // MinVer's height is the SHORTEST distance to a tagged commit found by walking those parents.
-        // When one parent sits exactly on the tag and the other is several commits past it, the two
-        // numbers legitimately disagree — v0.3.0..c4febc1 is 5 by `describe`, 1 by MinVer, because
-        // the merge's first parent WAS v0.3.0. Not a versioning defect; a merge history has no single
-        // "height" both algorithms agree on.
-        var parents = Git("log -1 --format=%P HEAD");
-        var isMergeCommit = parents is not null && parents.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length > 1;
-
+        // lets the assertion know which case it is in, so the strict check runs whenever it can. A
+        // merge history used to be a second such case and is no longer: the height above is computed
+        // MinVer's way, so there is nothing left for a merge to disagree about.
         var head = Git("rev-parse --short=12 HEAD");
-        if (!isMergeCommit && head is not null && string.Equals(head, BuildInfo.Current.CommitSha, StringComparison.OrdinalIgnoreCase))
+        if (head is not null && string.Equals(head, BuildInfo.Current.CommitSha, StringComparison.OrdinalIgnoreCase))
         {
             var expected = height == 0 ? expectedBase : $"{expectedBase}-alpha.0.{height}";
             Assert.Equal(expected, actual);
         }
+    }
+
+    /// <summary>
+    /// The height MinVer stamps: the SHORTEST number of commits from HEAD back to the tagged commit,
+    /// walking every parent. This is emphatically not what <c>git describe</c> prints — describe's
+    /// height is rev-list's set difference, every commit unique to HEAD across ALL parents — and the
+    /// two coincide only on a linear history. On <c>feat/karvan</c>, <c>v0.3.0..HEAD</c> is 20 by
+    /// describe and 15 by MinVer: the tag is <c>e897c2c7</c>, the merge <c>c4febc1</c> has it as its
+    /// FIRST parent, and the other five commits came in from the side branch. Both numbers are right
+    /// for their own definition; only MinVer's is the one compiled into the assembly, so only
+    /// MinVer's may be compared against it. Reading describe's number here is what made this test
+    /// fail for a topology that was never a versioning defect.
+    /// </summary>
+    /// <returns>The height, or <c>null</c> if git cannot answer — the same degrade-to-no-op the rest
+    /// of this class makes when there is no repository to ask.</returns>
+    private static int? MinVerHeight(string tagSha)
+    {
+        var head = Git("rev-parse HEAD");
+        if (head is null) return null;
+        if (string.Equals(head, tagSha, StringComparison.Ordinal)) return 0;
+
+        // Confirmed against this repo: a `A..B` range does NOT rewrite parents, so the excluded tagged
+        // commit still appears by name in its children's parent lists, which is exactly the terminator
+        // the walk needs. Bounded by the range rather than by all of history.
+        var listed = Git($"rev-list --parents {tagSha}..HEAD");
+        if (listed is null) return null;
+
+        var parents = new Dictionary<string, string[]>(StringComparer.Ordinal);
+        foreach (var line in listed.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var shas = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            parents[shas[0]] = shas[1..];
+        }
+
+        // Breadth-first over parent edges: the first arrival at the tagged commit is the shortest
+        // path, and the number of edges walked to get there IS the height. A parent missing from the
+        // map forked before the tag, and no walk backwards from there can reach a descendant — a dead
+        // end, correctly, rather than a shorter route.
+        var seen = new HashSet<string>(StringComparer.Ordinal) { head };
+        var frontier = new List<string> { head };
+        for (var distance = 1; frontier.Count > 0; distance++)
+        {
+            var next = new List<string>();
+            foreach (var commit in frontier)
+            {
+                if (!parents.TryGetValue(commit, out var ancestors)) continue;
+                foreach (var ancestor in ancestors)
+                {
+                    if (string.Equals(ancestor, tagSha, StringComparison.Ordinal)) return distance;
+                    if (seen.Add(ancestor)) next.Add(ancestor);
+                }
+            }
+            frontier = next;
+        }
+
+        return null; // the tag is not an ancestor of HEAD — describe would not have named it
     }
 
     [Fact]
