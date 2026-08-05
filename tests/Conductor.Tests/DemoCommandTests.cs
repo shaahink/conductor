@@ -1,4 +1,5 @@
 ﻿using Conductor.Commands;
+using Conductor.Core.Store;
 using Conductor.Models;
 
 namespace Conductor.Tests;
@@ -29,6 +30,30 @@ public sealed class DemoCommandTests : IDisposable
         File.WriteAllText(planPath, DemoCommand.PlanJson(_dir, "/usr/local/bin/conductor"));
         File.WriteAllText(Path.Combine(_dir, "TRACKER.md"), DemoCommand.Tracker);
         return planPath;
+    }
+
+    /// <summary>
+    /// K7.2: the throwaway run must stay in the throwaway directory. K3.1 moved <c>run.db</c> to a
+    /// machine-level home and nothing told the demo, so the README's headline "no credentials, no
+    /// spend, a throwaway directory" command left a database and a permanent <c>conductor history</c>
+    /// row on a stranger's machine — <c>RunHistory.cs:26</c> walks the catalogue, so every demo ever
+    /// run showed up there forever, pointing at a temp directory it had itself deleted.
+    /// <para>All three properties at once, because any one alone would pass while the leak stayed:
+    /// the pointer wins the resolution, the database it names is inside the demo repo, and nothing
+    /// was written to the machine catalogue.</para>
+    /// </summary>
+    [Fact]
+    public void DemoStateStaysInsideTheThrowawayRepo()
+    {
+        var home = Path.Combine(_dir, "machine-state-home");
+        DemoCommand.PinStateToTheThrowawayRepo(_dir);
+
+        var resolved = StateHome.Resolve(_dir, DemoCommand.DemoPlanName, root: home);
+
+        Assert.Equal(StateSource.Pointer, resolved.Source);
+        Assert.StartsWith(Path.GetFullPath(_dir), resolved.RunDbPath, StringComparison.OrdinalIgnoreCase);
+        Assert.False(File.Exists(StateHome.CataloguePathFor(home)),
+            "resolving a demo's state wrote to the machine catalogue - the demo is back in `conductor history`");
     }
 
     [Fact]

@@ -2,9 +2,11 @@ using System.ComponentModel;
 using System.Globalization;
 
 using Conductor.Core;
+using Conductor.Core.Store;
 using Conductor.Hosting;
 using Conductor.Models;
 
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 
 using Spectre.Console;
@@ -38,6 +40,11 @@ public sealed class DemoCommand : AsyncCommand<DemoCommand.Settings>
         [Description("Keep the demo repo afterwards so you can poke at .conductor/ — plan, run.db, prompts, logs.")]
         public bool Keep { get; init; }
     }
+
+    /// <summary>The demo plan's name. One const because it is half of the (repo, plan) key
+    /// <see cref="StateHome"/> resolves on, so the pointer written in <c>ScaffoldAsync</c> and the
+    /// plan written by <see cref="PlanJson"/> must not be able to disagree.</summary>
+    internal const string DemoPlanName = "conductor-demo";
 
     public override async Task<int> ExecuteAsync(CommandContext context, Settings settings)
     {
@@ -78,10 +85,38 @@ public sealed class DemoCommand : AsyncCommand<DemoCommand.Settings>
         }
     }
 
+    /// <summary>
+    /// K7.2: keep the throwaway run INSIDE the throwaway directory. K3.1 moved <c>run.db</c> to a
+    /// machine-level home keyed by (repo path + plan name), and this command was not told — so the one
+    /// thing the front page tells a stranger to run ("no credentials, no spend, a throwaway
+    /// directory") deleted its repo and left a database, plus a permanent <c>conductor history</c>
+    /// row, behind on their machine for a directory that no longer exists. Measured against an
+    /// isolated state home: one <c>conductor demo</c>, one catalogue entry, every time.
+    /// <para>A repo-local pointer, not <c>CONDUCTOR_RUN_DB</c>: it is precedence rule (2) in
+    /// <see cref="StateHome.Resolve"/>, which — like (1) and unlike the derived path — neither
+    /// migrates nor catalogues; and unlike an environment variable it is scoped to this directory
+    /// rather than to the process, so the agent the demo spawns as a child cannot be aimed at the
+    /// wrong database by inheritance. Best-effort by design (<c>TryWrite</c> swallows I/O errors): a
+    /// demo that cannot write a pointer should still run, exactly as it did before this.</para>
+    /// <para>Trade-off, taken deliberately: <c>conductor demo --keep</c> is therefore not catalogued
+    /// either, so a kept demo repo does not appear in <c>conductor history</c>. <c>status</c>,
+    /// <c>report</c> and the rest still read it in place through the pointer. A demo a user asked to
+    /// keep is a demo, not a project, and silently seeding their history from one is the failure this
+    /// fixes.</para>
+    /// </summary>
+    internal static void PinStateToTheThrowawayRepo(string dir) =>
+        StatePointer.TryWrite(
+            StateHome.PointerPathFor(dir),
+            Path.Combine(dir, StateHome.ScratchDirName, StateHome.RunDbFileName),
+            plan: DemoPlanName,
+            note: "conductor demo — a throwaway run; this keeps it out of the machine-level store.");
+
     /// <summary>A real git repo with a real tracker and a plan pointed at the built-in agent.</summary>
     private static async Task<bool> ScaffoldAsync(string dir, string exe)
     {
         Directory.CreateDirectory(dir);
+        PinStateToTheThrowawayRepo(dir);
+
         var init = await GitAsync(dir, "init", "--quiet").ConfigureAwait(false);
         if (init.ExitCode != 0)
         {
@@ -178,6 +213,15 @@ public sealed class DemoCommand : AsyncCommand<DemoCommand.Settings>
     private static void ForceDelete(string dir)
     {
         if (!Directory.Exists(dir)) return;
+
+        // K7.2: run.db now lives INSIDE this directory (see ScaffoldAsync), and Microsoft.Data.Sqlite
+        // pools connections — so the host being disposed is not enough to release the file handle, and
+        // on Windows the delete fails with "used by another process" and tells the user to clean up by
+        // hand. Measured the moment the pointer landed. The K3 tests hit the same wall and answer it
+        // the same way; this process is single-run and about to print its summary and exit, so there
+        // is no other pool worth preserving.
+        SqliteConnection.ClearAllPools();
+
         try
         {
             foreach (var f in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories))
@@ -218,7 +262,7 @@ public sealed class DemoCommand : AsyncCommand<DemoCommand.Settings>
         var agent = exe.Replace("\\", "/", StringComparison.Ordinal);
         return string.Create(CultureInfo.InvariantCulture, $$"""
         {
-          "name": "conductor-demo",
+          "name": "{{DemoPlanName}}",
           "repo": "{{repo}}",
           "tracker": "TRACKER.md",
           "agent": {
