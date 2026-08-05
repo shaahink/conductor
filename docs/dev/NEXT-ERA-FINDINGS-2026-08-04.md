@@ -713,6 +713,9 @@ writes a config containing *only* `conductor-tasks`, replacing rather than mergi
 MCP servers, and in at least one shipped harness conductor's own tools arrive **deferred** so the agent
 must search for `task_update` before it can claim anything. SF6.1 shipped the prompt-side workaround;
 the engine-side fix is unowned and belongs in this era.
+> **Closed 2026-08-05 by K1.4.** The finding above is left as it was written; the config now merges
+> (`OperatorMcpServers`). The deferred-tools half stays open by decision — a deferred tool is the
+> harness's choice — and the prompt-side fallback in `ToolContract` is the answer to it.
 
 **G7. The front door is not browsable, and it is the first thing a reader sees. (M) — new.**
 Measured at the repo root: `AGENTS.md` is **80KB** of append-only session handoffs — twenty-three

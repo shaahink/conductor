@@ -1,16 +1,16 @@
 ﻿# Conductor — Karvan core - the engine knows what it did and what it cost run report
 
-_Updated 2026-08-04 22:26 UTC · branch `feat/karvan` · HEAD `f4fd387`_
+_Updated 2026-08-04 23:29 UTC · branch `feat/karvan` · HEAD `2de7cca`_
 
-**Status:** Idle
-**Stage:** K1 — The ledger stops lying · attempts used 0 · working ▸ K1.3
-**Checkpoints:** 2/25 done · **Sessions run:** 1 · **Cost:** $18.0686 (agent $18.0603 + gates $0.0083) · **Tokens:** 219,310 in / 95,366 out
+**Status:** NeedsHuman — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [0s ago, 23:29:12Z]
+**Stage:** K1 — The ledger stops lying · attempts used 8 · working ▸ K1.4
+**Checkpoints:** 3/25 done · **Sessions run:** 4 · **Cost:** $28.3203 (agent $28.3065 + gates $0.0138) · **Tokens:** 366,593 in / 172,114 out
 
 ## Stage progress
 
 | Stage | Title | Progress | State |
 |---|---|---|---|
-| K1 | The ledger stops lying | █████░░░░░ 2/4 | **← active** |
+| K1 | The ledger stops lying | ████████░░ 3/4 | **← active** |
 | K2 | The architecture becomes navigable | ░░░░░░░░░░ 0/4 | todo |
 | K3 | Conductor remembers | ░░░░░░░░░░ 0/3 | todo |
 | K4 | Token truth - measure it before shrinking it | ░░░░░░░░░░ 0/4 | todo |
@@ -18,13 +18,13 @@ _Updated 2026-08-04 22:26 UTC · branch `feat/karvan` · HEAD `f4fd387`_
 | K6 | The surfaces read | ░░░░░░░░░░ 0/4 | todo |
 | K7 | Ship the plan | ░░░░░░░░░░ 0/2 | todo |
 
-<details><summary>K1 — The ledger stops lying (2/4)</summary>
+<details><summary>K1 — The ledger stops lying (3/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| K1.1 | A rolled-over session records the commits and claims it actually made, proven by a harness session driven to its ceiling, with a rollover still consuming no attempt and still not running the phase gate | ✅ DONE | - |
-| K1.2 | The soft break is re-stated until it is obeyed, names the actual remaining budget, states the wrap-up order (claim first, handoff second), and the session record says whether it was delivered, re-delivered and obeyed | ✅ DONE | - |
-| K1.3 | Three small untruths die as a class — the thinking-token column that is zero on all 125 rows, the lessons file that is a diary and repeats one entry twice, and a go.mod that calls a directly-imported package indirect while carrying two lipgloss majors | ⬜ TODO | - |
+| K1.1 | A rolled-over session records the commits and claims it actually made, proven by a harness session driven to its ceiling, with a rollover still consuming no attempt and still not running the phase gate | ✅ DONE | [`93bbae5`](https://github.com/shaahink/conductor/commit/93bbae5) |
+| K1.2 | The soft break is re-stated until it is obeyed, names the actual remaining budget, states the wrap-up order (claim first, handoff second), and the session record says whether it was delivered, re-delivered and obeyed | ✅ DONE | [`93bbae5`](https://github.com/shaahink/conductor/commit/93bbae5) |
+| K1.3 | Three small untruths die as a class — the thinking-token column that is zero on all 125 rows, the lessons file that is a diary and repeats one entry twice, and a go.mod that calls a directly-imported package indirect while carrying two lipgloss majors | ✅ DONE | [`890ac38`](https://github.com/shaahink/conductor/commit/890ac38) |
 | K1.4 | A spawned session sees conductor's task tools and the operator's own MCP servers, because the config merges instead of replacing, with the prompt-side deferred-tool fallback kept | ⬜ TODO | - |
 
 </details>
@@ -97,6 +97,9 @@ _Updated 2026-08-04 22:26 UTC · branch `feat/karvan` · HEAD `f4fd387`_
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Overhead | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 1 | K1 | Deliver | 1 | 08-04 21:49 | 0:35 | Advanced | K1.1 K1.2 | 3 | engine-fast:OK · face-fast:OK | $18.0603 | $0.0083 | 219,310/95,366 |
+| 2 | K1 | Deliver | 1 | 08-04 22:27 | 0:30 | Advanced | K1.3 | 6 | engine-fast:OK · face-fast:OK | $10.2462 | $0.0055 | 147,283/76,748 |
+| 3 | K1 | Deliver | 1 | 08-04 22:59 | 0:02 | AgentError |  | 0 | engine-fast:cached · face-fast:cached | $0.0000 |  |  |
+| 4 | K1 | Fix | 2 | 08-04 23:02 | 0:02 | AgentError |  | 0 | engine-fast:cached · face-fast:cached | $0.0000 |  |  |
 
 ## Timeline
 
@@ -108,6 +111,22 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-04 22:49:08  • session #1 K1 Deliver started (attempt 1/8)
 08-04 23:26:15  ▪ gate engine-fast pass [session]  (46.4s)
 08-04 23:26:15  ▪ gate face-fast pass [session]  (36.2s)
+08-04 23:26:16  • session #1 K1 → Advanced · done K1.1,K1.2 · 3 commit(s)  (37m07s)
+08-04 23:27:12  ◆ run resumed · Karvan core - the engine knows what it did and what it cost
+08-04 23:27:13  • session #2 K1 Deliver started (attempt 1/8)
+08-04 23:59:01  ▪ gate engine-fast pass [session]  (48.7s)
+08-04 23:59:01  ▪ gate face-fast pass [session]  (6.2s)
+08-04 23:59:02  • session #2 K1 → Advanced · done K1.3 · 6 commit(s)  (31m48s)
+08-04 23:59:02  • session #3 K1 Deliver started (attempt 1/8)
+08-05 00:02:02  ▪ gate engine-fast pass [session]  (0.0s)
+08-05 00:02:02  ▪ gate face-fast pass [session]  (0.0s)
+08-05 00:02:03  • session #3 K1 → AgentError  (3m01s)
+08-05 00:02:03  • session #4 K1 Fix started (attempt 2/8)
+08-05 00:04:58  ▪ gate engine-fast pass [session]  (0.0s)
+08-05 00:04:58  ▪ gate face-fast pass [session]  (0.0s)
+08-05 00:07:41  ■ needs human — advisor blocked retry: 2+ consecutive identical AgentError sessions (ENOTFOUND/DNS failure) with zero commits triggers stall pattern block; environment network issue must resolve or human intervene before retry.
+08-05 00:07:42  • session #4 K1 → AgentError  (5m38s)
+08-05 00:27:35  ◆ run resumed · Karvan core - the engine knows what it did and what it cost
 ```
 
 ## Health
@@ -115,8 +134,8 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 1 · retries 0 (0 %) · overall Ok
-✓ no health concerns detected
+sessions 4 · retries 1 (25 %) · overall Warn
+⚠ [context-saturation] session #1: 24,653,507 context tokens (≥ 20,000,000)
 ```
 
 ## Repo
@@ -125,8 +144,8 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/karvan
-working tree: clean
-vs upstream: up to date
+working tree: M .conductor/REPORT.md, M plans/karvan/CORE-TRACKER.md
+vs upstream: 3 ahead
 ```
 
 ### Commits by session
@@ -135,6 +154,13 @@ vs upstream: up to date
   - [`f4fd387`](https://github.com/shaahink/conductor/commit/f4fd387) docs(tracker): the handoff warns about the v10 schema, which v9 cannot reopen (K1.2)
   - [`38e202c`](https://github.com/shaahink/conductor/commit/38e202c) feat(budget): the soft break is re-stated, carries the budget left, and is measured (K1.2)
   - [`93bbae5`](https://github.com/shaahink/conductor/commit/93bbae5) fix(engine): a rolled-over session records the commits and claims it made (K1.1)
+- **s2 (K1 Deliver)** — 6 commit(s):
+  - [`2de7cca`](https://github.com/shaahink/conductor/commit/2de7cca) docs(tracker): the handoff says to push first - DNS died at session end (K1.3)
+  - [`07cdfe2`](https://github.com/shaahink/conductor/commit/07cdfe2) docs(tracker): K1.3 evidence and the handoff to K1.4
+  - [`6acea2c`](https://github.com/shaahink/conductor/commit/6acea2c) fix(lessons): lessons.md holds deduped one-line rules, not a diary (K1.3)
+  - [`44c17a0`](https://github.com/shaahink/conductor/commit/44c17a0) test(face): rebaseline the report goldens for the n/a reason column (K1.3)
+  - [`58df0bc`](https://github.com/shaahink/conductor/commit/58df0bc) fix(cost): a think column of 0 stops claiming no thinking happened (K1.3)
+  - [`890ac38`](https://github.com/shaahink/conductor/commit/890ac38) fix(face): go.mod describes its own graph, and a test keeps it that way (K1.3)
 
 ## Phase handovers (audit)
 
@@ -155,30 +181,25 @@ vs upstream: up to date
 - `.conductor/handovers/F2.md`
 - `.conductor/handovers/F4.md`
 
-## Last gate run
-
-engine-fast:OK · face-fast:OK
-
 ## Last session result
 
-> SESSION-RESULT: Landed two K1 checkpoints, each claimed with a fresh evidence artifact and committed separately. **K1.1** — a rolled-over session now records the commits and claims it actually made: `VerdictEngine.RecordRolloverFacts` (new, in `VerdictEngine.Claims.cs`) is called from the rollover branch at `SessionRunner.cs:423`, the W1.3 claim rule was lifted into one shared `ResolveClaims` so the rollover uses the same rule as the verdict path rather than a quieter second one, and `PendingConfirmation` now unions instead of replacing so a rollover's claim can still be confirmed. The semantics are unchanged and asserted: no attempt burned, no gate battery, outcome still `RolledOver`. Proof…
+> API Error: Unable to connect to API (ENOTFOUND)
 
 ## Tracker handoff
 
 ```
-last: **K1.1 and K1.2 claimed.** K1.1: a rolled-over session records its commits and claims —
-  `VerdictEngine.Claims.cs RecordRolloverFacts` from `SessionRunner.cs:423`, one shared
-  `ResolveClaims`, `PendingConfirmation` unions instead of replacing; no attempt, no gate battery.
-  K1.2: the whole cooperative rail now lives in `src/Conductor/Core/SoftBreak.cs` — the signal file
-  is JSON the engine re-writes as it spends, the hook re-states on a token step or 3 minutes,
-  the notice quotes the live remaining budget and the order (CLAIM FIRST → handoff → commit), and
-  `SessionRecord.SoftBreak` + `sessions.soft_break` (migration **v10**) record delivered/restated/obeyed.
-next: **K1.3** — the three untruths: the thinking-token column that is zero on all 125 rows, the
-  lessons file that is a diary and repeats an entry, and the `go.mod` calling a directly-imported
-  package indirect while carrying two lipgloss majors.
-notes: **never point the fresh build at this repo's `.conductor`** — it is schema v10 now and the
-  published engine driving this run is v9; opening migrates, and v9 then refuses. Scratch dirs only.
-  And a live harness agent must be wired `powershell -File`, never `cmd.exe` with `{prompt}`: a real
-  composed prompt exceeds cmd's 8191-char argv ceiling and the child dies before running one line.
-red: nothing. Scoped suites green (143/143, then 69/69); the full battery is Conductor's to run.
+last: **K1.3 claimed** (`890ac38`, `58df0bc`, `44c17a0`, `6acea2c`). (1) `tokens_think` was LABELLED,
+  not dropped — measured why: `OpencodeProvider.cs:104` really folds `tokens.reasoning`, so
+  `IAgentProvider.ReportsReasoningTokens` decides, `/sessions` serves explicit `null` for a provider
+  that has none, and the Face renders `n/a` + a cause note. (2) `lessons.md` is deduped one-line
+  rules; the SF7-38 duplicate came from `TrimToCap` re-emitting the entry it had just prepended.
+  (3) `go mod tidy` + `module_intent_test.go`, which fails the build if go.mod misdescribes imports.
+next: **K1.4** — the MCP config must MERGE the operator's own servers instead of replacing them
+  (engine-side half of the bug filed in SF7.1); keep the prompt-side deferred-tool fallback.
+notes: **never point the fresh build at this repo's `.conductor`** — schema v10 here, v9 published.
+  A `/sessions` test whose plan declares no `Agent` now resolves to the text provider, so
+  `tokensThink` serves null: declare an opencode agent if you need the number.
+red: **push feat/karvan first** — DNS died on this machine at session end ("could not resolve
+  host: github.com", 4 tries); all 5 commits through `07cdfe2` are local, tree clean, claim in
+  run.db. Suites green: 231/231 engine (scoped), 6/6 face packages.
 ```

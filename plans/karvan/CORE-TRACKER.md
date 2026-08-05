@@ -4,20 +4,21 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **K1.3 claimed** (`890ac38`, `58df0bc`, `44c17a0`, `6acea2c`). (1) `tokens_think` was LABELLED,
-  not dropped — measured why: `OpencodeProvider.cs:104` really folds `tokens.reasoning`, so
-  `IAgentProvider.ReportsReasoningTokens` decides, `/sessions` serves explicit `null` for a provider
-  that has none, and the Face renders `n/a` + a cause note. (2) `lessons.md` is deduped one-line
-  rules; the SF7-38 duplicate came from `TrimToCap` re-emitting the entry it had just prepended.
-  (3) `go mod tidy` + `module_intent_test.go`, which fails the build if go.mod misdescribes imports.
-next: **K1.4** — the MCP config must MERGE the operator's own servers instead of replacing them
-  (engine-side half of the bug filed in SF7.1); keep the prompt-side deferred-tool fallback.
-notes: **never point the fresh build at this repo's `.conductor`** — schema v10 here, v9 published.
-  A `/sessions` test whose plan declares no `Agent` now resolves to the text provider, so
-  `tokensThink` serves null: declare an opencode agent if you need the number.
-red: **push feat/karvan first** — DNS died on this machine at session end ("could not resolve
-  host: github.com", 4 tries); all 5 commits through `07cdfe2` are local, tree clean, claim in
-  run.db. Suites green: 231/231 engine (scoped), 6/6 face packages.
+last: **K1.4 claimed** (`36314be`), and **K1 is complete**. `OperatorMcpServers` reads the machine's
+  own MCP config — `~/.claude.json` user + `projects[<repo>]` scopes, the repo's `.mcp.json`, and
+  opencode's `mcp` map global + repo — and `SessionRunner.Mcp.cs` folds it in beside `conductor-tasks`,
+  which is written first and cannot be displaced. Live proof: a real run inherited `chrome-devtools`
+  (the exact server SF7.1 said was invisible) and 6 opencode servers off this machine.
+  `agent.inheritMcpServers: false` opts out; `--strict-mcp-config` stays and now means determinism.
+  `WireMcpServer` is `WireMcpServerAsync` — `src/` sits at exactly the 38-pragma ratchet ceiling, so
+  real async I/O was the only way to read a file there. Prompt-side fallback untouched, pinned twice.
+next: **K2.1** — extract `Conductor.Core`. Second commit `ec4c089` cleared its path: `SoftBreak.cs`
+  (4 types) and `SessionRunner.cs` (513 lines) had failed `ArchitectureTests` since K1.2, unseen by
+  scoped runs; both are relocations, no behaviour changed. Run the FULL suite before you trust green.
+red: full suite **1803/1804** after both commits. The one red is **bug #25** `SC8_2VersioningTests`
+  (describe height 17 vs MinVer 12 — merge topology; no build makes it pass, the guard is one level
+  too narrow). **#26** `BudgetRailTests` is an order-dependent flake (process-global `Console.SetOut`;
+  10/10 alone, did not recur). **#24**: `AgentConfig.Merge` silently drops `Env`.
 
 
 ## Baseline numbers (from run.db)
@@ -26,7 +27,7 @@ red: **push feat/karvan first** — DNS died on this machine at session end ("co
 |---|---|
 | Total checkpoints | 25 |
 | Done | 0 |
-| Claimed (unconfirmed) | 2 |
+| Claimed (unconfirmed) | 3 |
 
 ## Checkpoints
 
@@ -39,7 +40,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | K1.1 | A rolled-over session records the commits and claims it actually made, proven by a harness session driven to its ceiling, with a rollover still consuming no attempt and still not running the phase gate | DONE | 93bbae5 | .conductor/evidence/K1/K1.1-rollover-records-facts.md |
 | K1.2 | The soft break is re-stated until it is obeyed, names the actual remaining budget, states the wrap-up order (claim first, handoff second), and the session record says whether it was delivered, re-delivered and obeyed | DONE | 93bbae5 | .conductor/evidence/K1/K1.2-soft-break-restated-and-measured.md |
-| K1.3 | Three small untruths die as a class — the thinking-token column that is zero on all 125 rows, the lessons file that is a diary and repeats one entry twice, and a go.mod that calls a directly-imported package indirect while carrying two lipgloss majors | TODO | - | - |
+| K1.3 | Three small untruths die as a class — the thinking-token column that is zero on all 125 rows, the lessons file that is a diary and repeats one entry twice, and a go.mod that calls a directly-imported package indirect while carrying two lipgloss majors | DONE | 890ac38 | .conductor/evidence/K1/K1.3-three-untruths.md |
 | K1.4 | A spawned session sees conductor's task tools and the operator's own MCP servers, because the config merges instead of replacing, with the prompt-side deferred-tool fallback kept | TODO | - | - |
 
 ### K2 — The architecture becomes navigable
