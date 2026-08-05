@@ -1,7 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using Conductor.Core;
-using Conductor.Core.Hosting;
+using Conductor.Hosting;
 using Conductor.Core.Orchestration;
 using Conductor.Core.Providers;
 using Conductor.Models;

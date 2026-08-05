@@ -1,7 +1,9 @@
+using Conductor.Core;
+using Conductor.Core.Http;
 using System.Net;
 using System.Text.Json;
 
-namespace Conductor.Core.Http;
+namespace Conductor.Http;
 
 /// <summary>M7: knowledge that compounds — serves the run's knowledge ledger and tracked bugs to the
 /// Face (GET /ledger, GET /bugs), the same run.db rows the prompt batteries and the audit phase
@@ -34,7 +36,7 @@ public sealed partial class ControlPlaneServer
             .ToList();
         await WriteJsonAsync(ctx, new BugsDto(bugs), ControlPlaneJsonContext.Default.BugsDto).ConfigureAwait(false);
 
-        static BugDto ToDto(Store.BugRow b, string? carriedFromPlan) => new(
+        static BugDto ToDto(Conductor.Core.Store.BugRow b, string? carriedFromPlan) => new(
             b.Id, b.Title, b.Detail, b.Severity, b.Status,
             b.StageId, b.FoundSession, b.FixedSession, b.CreatedAt, b.UpdatedAt, carriedFromPlan);
     }

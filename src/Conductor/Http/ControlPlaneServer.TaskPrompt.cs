@@ -1,9 +1,11 @@
+using Conductor.Core;
+using Conductor.Core.Http;
 using System.Net;
 using System.Text.Json;
 using Conductor.Core.Events;
 using Microsoft.Extensions.Logging;
 
-namespace Conductor.Core.Http;
+namespace Conductor.Http;
 
 /// <summary>P3: the Kanban card detail's server side. <c>GET /prompt/blocks?task=</c> serves the
 /// task's prompt as its labeled building blocks (the pure <see cref="Conductor.Planning.PromptComposer"/>

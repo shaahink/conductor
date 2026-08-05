@@ -1,10 +1,11 @@
+using Conductor.Http;
 using System.ComponentModel;
 using System.Diagnostics;
 
 using Conductor.Core;
 using Conductor.Core.Events;
 using Conductor.Core.Face;
-using Conductor.Core.Hosting;
+using Conductor.Hosting;
 using Conductor.Core.Http;
 using Conductor.Models;
 

@@ -1,16 +1,17 @@
 ﻿# Conductor — Karvan core - the engine knows what it did and what it cost run report
 
-_Updated 2026-08-04 23:29 UTC · branch `feat/karvan` · HEAD `2de7cca`_
+_Updated 2026-08-05 00:42 UTC · branch `feat/karvan` · HEAD `bd925cf`_
 
-**Status:** NeedsHuman — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [0s ago, 23:29:12Z]
-**Stage:** K1 — The ledger stops lying · attempts used 8 · working ▸ K1.4
-**Checkpoints:** 3/25 done · **Sessions run:** 4 · **Cost:** $28.3203 (agent $28.3065 + gates $0.0138) · **Tokens:** 366,593 in / 172,114 out
+**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [1h 13m ago, 23:29:12Z]
+**Stage:** K1 — The ledger stops lying · attempts used 0
+**Checkpoints:** 4/32 done · **Sessions run:** 6 · **Cost:** $49.9284 (agent $49.8931 + gates $0.0354) · **Tokens:** 642,450 in / 313,095 out
+**Confirmed phases:** K1
 
 ## Stage progress
 
 | Stage | Title | Progress | State |
 |---|---|---|---|
-| K1 | The ledger stops lying | ████████░░ 3/4 | **← active** |
+| K1 | The ledger stops lying | ██████████ 4/4 | confirmed ✓ |
 | K2 | The architecture becomes navigable | ░░░░░░░░░░ 0/4 | todo |
 | K3 | Conductor remembers | ░░░░░░░░░░ 0/3 | todo |
 | K4 | Token truth - measure it before shrinking it | ░░░░░░░░░░ 0/4 | todo |
@@ -18,14 +19,14 @@ _Updated 2026-08-04 23:29 UTC · branch `feat/karvan` · HEAD `2de7cca`_
 | K6 | The surfaces read | ░░░░░░░░░░ 0/4 | todo |
 | K7 | Ship the plan | ░░░░░░░░░░ 0/2 | todo |
 
-<details><summary>K1 — The ledger stops lying (3/4)</summary>
+<details> ✅<summary>K1 — The ledger stops lying (4/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
 | K1.1 | A rolled-over session records the commits and claims it actually made, proven by a harness session driven to its ceiling, with a rollover still consuming no attempt and still not running the phase gate | ✅ DONE | [`93bbae5`](https://github.com/shaahink/conductor/commit/93bbae5) |
 | K1.2 | The soft break is re-stated until it is obeyed, names the actual remaining budget, states the wrap-up order (claim first, handoff second), and the session record says whether it was delivered, re-delivered and obeyed | ✅ DONE | [`93bbae5`](https://github.com/shaahink/conductor/commit/93bbae5) |
 | K1.3 | Three small untruths die as a class — the thinking-token column that is zero on all 125 rows, the lessons file that is a diary and repeats one entry twice, and a go.mod that calls a directly-imported package indirect while carrying two lipgloss majors | ✅ DONE | [`890ac38`](https://github.com/shaahink/conductor/commit/890ac38) |
-| K1.4 | A spawned session sees conductor's task tools and the operator's own MCP servers, because the config merges instead of replacing, with the prompt-side deferred-tool fallback kept | ⬜ TODO | - |
+| K1.4 | A spawned session sees conductor's task tools and the operator's own MCP servers, because the config merges instead of replacing, with the prompt-side deferred-tool fallback kept | ✅ DONE | [`36314be`](https://github.com/shaahink/conductor/commit/36314be) |
 
 </details>
 
@@ -100,13 +101,14 @@ _Updated 2026-08-04 23:29 UTC · branch `feat/karvan` · HEAD `2de7cca`_
 | 2 | K1 | Deliver | 1 | 08-04 22:27 | 0:30 | Advanced | K1.3 | 6 | engine-fast:OK · face-fast:OK | $10.2462 | $0.0055 | 147,283/76,748 |
 | 3 | K1 | Deliver | 1 | 08-04 22:59 | 0:02 | AgentError |  | 0 | engine-fast:cached · face-fast:cached | $0.0000 |  |  |
 | 4 | K1 | Fix | 2 | 08-04 23:02 | 0:02 | AgentError |  | 0 | engine-fast:cached · face-fast:cached | $0.0000 |  |  |
+| 5 | K1 | Deliver | 1 | 08-04 23:30 | 0:37 | Advanced | K1.4 | 3 | engine-fast:OK · face-fast:OK | $14.6250 | $0.0127 | 170,772/86,424 |
+| 6 | K1 | Fix | 2 | 08-05 00:18 | 0:19 | Progress |  | 5 | engine-fast:OK · face-fast:OK | $6.9616 | $0.0089 | 105,085/54,557 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-04 22:49:07  ◆ run started · Karvan core - the engine knows what it did and what it cost
 08-04 22:49:08  ▸ stage K1 entered — The ledger stops lying
 08-04 22:49:08  • session #1 K1 Deliver started (attempt 1/8)
 08-04 23:26:15  ▪ gate engine-fast pass [session]  (46.4s)
@@ -127,6 +129,26 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-05 00:07:41  ■ needs human — advisor blocked retry: 2+ consecutive identical AgentError sessions (ENOTFOUND/DNS failure) with zero commits triggers stall pattern block; environment network issue must resolve or human intervene before retry.
 08-05 00:07:42  • session #4 K1 → AgentError  (5m38s)
 08-05 00:27:35  ◆ run resumed · Karvan core - the engine knows what it did and what it cost
+08-05 00:29:12  ■ needs human — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed.
+08-05 00:30:37  • session #5 K1 Deliver started (attempt 1/8)
+08-05 01:10:17  ▪ gate engine-fast pass [session]  (1m12s)
+08-05 01:10:17  ▪ gate face-fast pass [session]  (54.5s)
+08-05 01:10:18  • session #5 K1 → Advanced · done K1.4 · 3 commit(s)  (39m41s)
+08-05 01:18:32  ▪ gate engine-fast pass [phase]  (0.0s)
+08-05 01:18:32  ▪ gate face-fast pass [phase]  (0.0s)
+08-05 01:18:32  ▪ gate engine-full FAIL [phase]  (3m52s)
+08-05 01:18:32  ▪ gate face-full pass [phase]  (24.0s)
+08-05 01:18:33  ◆ plan reloaded — v2 · 12 stages · 4 gates
+08-05 01:18:33  • session #6 K1 Fix started (attempt 2/8)
+08-05 01:39:20  ▪ gate engine-fast pass [session]  (54.0s)
+08-05 01:39:20  ▪ gate face-fast pass [session]  (35.4s)
+08-05 01:39:21  • session #6 K1 → Progress · 5 commit(s)  (20m47s)
+08-05 01:39:21  ◆ plan reloaded — v3 · 7 stages · 4 gates
+08-05 01:42:51  ▪ gate engine-fast pass [phase]  (0.0s)
+08-05 01:42:52  ▪ gate face-fast pass [phase]  (0.0s)
+08-05 01:42:52  ▪ gate engine-full pass [phase]  (3m23s)
+08-05 01:42:52  ▪ gate face-full pass [phase]  (4.0s)
+08-05 01:42:52  ✓ checkpoint K1.4 confirmed
 ```
 
 ## Health
@@ -134,7 +156,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 4 · retries 1 (25 %) · overall Warn
+sessions 6 · retries 2 (33 %) · overall Warn
 ⚠ [context-saturation] session #1: 24,653,507 context tokens (≥ 20,000,000)
 ```
 
@@ -145,7 +167,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 ```
 branch: feat/karvan
 working tree: M .conductor/REPORT.md, M plans/karvan/CORE-TRACKER.md
-vs upstream: 3 ahead
+vs upstream: up to date
 ```
 
 ### Commits by session
@@ -161,6 +183,16 @@ vs upstream: 3 ahead
   - [`44c17a0`](https://github.com/shaahink/conductor/commit/44c17a0) test(face): rebaseline the report goldens for the n/a reason column (K1.3)
   - [`58df0bc`](https://github.com/shaahink/conductor/commit/58df0bc) fix(cost): a think column of 0 stops claiming no thinking happened (K1.3)
   - [`890ac38`](https://github.com/shaahink/conductor/commit/890ac38) fix(face): go.mod describes its own graph, and a test keeps it that way (K1.3)
+- **s5 (K1 Deliver)** — 3 commit(s):
+  - [`19169c3`](https://github.com/shaahink/conductor/commit/19169c3) docs(tracker): K1 is complete - the handoff to K2.1 (K1.4)
+  - [`ec4c089`](https://github.com/shaahink/conductor/commit/ec4c089) fix(arch): restore the architecture ratchet K1.2 broke, without touching the bar
+  - [`36314be`](https://github.com/shaahink/conductor/commit/36314be) feat(mcp): the per-session config merges the operator's servers (K1.4)
+- **s6 (K1 Fix)** — 5 commit(s):
+  - [`bd925cf`](https://github.com/shaahink/conductor/commit/bd925cf) docs(tracker): both engine-full reds are closed - the handoff to K2.1
+  - [`184fb33`](https://github.com/shaahink/conductor/commit/184fb33) fix(status): a park stops asking for a human once a human has answered it
+  - [`6287f40`](https://github.com/shaahink/conductor/commit/6287f40) fix(plan): the karvan core plan drops five stages the editor added by mistake
+  - [`413cb40`](https://github.com/shaahink/conductor/commit/413cb40) fix(tests): the hook-budget test owns its output writer, not the process's
+  - [`115d77f`](https://github.com/shaahink/conductor/commit/115d77f) fix(tests): the versioning test compares MinVer's height, not describe's
 
 ## Phase handovers (audit)
 
@@ -181,25 +213,30 @@ vs upstream: 3 ahead
 - `.conductor/handovers/F2.md`
 - `.conductor/handovers/F4.md`
 
+## Last gate run
+
+engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
+
 ## Last session result
 
-> API Error: Unable to connect to API (ENOTFOUND)
+> SESSION-RESULT: I fixed both defects that kept `engine-full` red and the battery is now green at 1806/1806 with zero failures, proven twice through `conductor bg`. Bug #25 — the reported failure — was `SC8_2VersioningTests` comparing two different quantities: `git describe --long`'s height is rev-list's set difference over all parents (20) while MinVer stamps the shortest distance to the tagged commit (15), and they diverge because `v0.3.0` is `e897c2c7` and the merge `c4febc1` carries it as its first parent. The test already documented this mechanism but its guard had the condition wrong — it skipped the strict check only when HEAD *itself* was a merge, while the disagreement survives in ev…
 
 ## Tracker handoff
 
 ```
-last: **K1.3 claimed** (`890ac38`, `58df0bc`, `44c17a0`, `6acea2c`). (1) `tokens_think` was LABELLED,
-  not dropped — measured why: `OpencodeProvider.cs:104` really folds `tokens.reasoning`, so
-  `IAgentProvider.ReportsReasoningTokens` decides, `/sessions` serves explicit `null` for a provider
-  that has none, and the Face renders `n/a` + a cause note. (2) `lessons.md` is deduped one-line
-  rules; the SF7-38 duplicate came from `TrimToCap` re-emitting the entry it had just prepended.
-  (3) `go mod tidy` + `module_intent_test.go`, which fails the build if go.mod misdescribes imports.
-next: **K1.4** — the MCP config must MERGE the operator's own servers instead of replacing them
-  (engine-side half of the bug filed in SF7.1); keep the prompt-side deferred-tool fallback.
-notes: **never point the fresh build at this repo's `.conductor`** — schema v10 here, v9 published.
-  A `/sessions` test whose plan declares no `Agent` now resolves to the text provider, so
-  `tokensThink` serves null: declare an opencode agent if you need the number.
-red: **push feat/karvan first** — DNS died on this machine at session end ("could not resolve
-  host: github.com", 4 tries); all 5 commits through `07cdfe2` are local, tree clean, claim in
-  run.db. Suites green: 231/231 engine (scoped), 6/6 face packages.
+last: **K1.4 claimed** (`36314be`), and **K1 is complete**. `OperatorMcpServers` reads the machine's
+  own MCP config — `~/.claude.json` user + `projects[<repo>]` scopes, the repo's `.mcp.json`, and
+  opencode's `mcp` map global + repo — and `SessionRunner.Mcp.cs` folds it in beside `conductor-tasks`,
+  which is written first and cannot be displaced. Live proof: a real run inherited `chrome-devtools`
+  (the exact server SF7.1 said was invisible) and 6 opencode servers off this machine.
+  `agent.inheritMcpServers: false` opts out; `--strict-mcp-config` stays and now means determinism.
+  `WireMcpServer` is `WireMcpServerAsync` — `src/` sits at exactly the 38-pragma ratchet ceiling, so
+  real async I/O was the only way to read a file there. Prompt-side fallback untouched, pinned twice.
+next: **K2.1** — extract `Conductor.Core`. Second commit `ec4c089` cleared its path: `SoftBreak.cs`
+  (4 types) and `SessionRunner.cs` (513 lines) had failed `ArchitectureTests` since K1.2, unseen by
+  scoped runs; both are relocations, no behaviour changed. Run the FULL suite before you trust green.
+red: full suite **1803/1804** after both commits. The one red is **bug #25** `SC8_2VersioningTests`
+  (describe height 17 vs MinVer 12 — merge topology; no build makes it pass, the guard is one level
+  too narrow). **#26** `BudgetRailTests` is an order-dependent flake (process-global `Console.SetOut`;
+  10/10 alone, did not recur). **#24**: `AgentConfig.Merge` silently drops `Env`.
 ```

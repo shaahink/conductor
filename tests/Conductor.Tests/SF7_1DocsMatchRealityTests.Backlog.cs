@@ -42,10 +42,18 @@ public sealed partial class SF7_1DocsMatchRealityTests
 
     private static string EngineSources()
     {
-        var src = Path.Combine(RepoRoot(), "src", "Conductor");
+        // K2.1: scan src/ whole, not src/Conductor. The engine is two projects now (CLI+hosting and
+        // Core), and pinning this to one of them made "the feature was deleted" and "the feature moved
+        // to the other assembly" produce the identical failure — the first thing the extraction hit.
+        var src = Path.Combine(RepoRoot(), "src");
         var sb = new System.Text.StringBuilder();
         foreach (var file in Directory.EnumerateFiles(src, "*.cs", SearchOption.AllDirectories))
+        {
+            if (file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal) ||
+                file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+                continue;
             sb.Append(File.ReadAllText(file));
+        }
         return sb.ToString();
     }
 
@@ -100,14 +108,14 @@ public sealed partial class SF7_1DocsMatchRealityTests
 
         // The engine half: the per-session config is a merge, not a replacement.
         var mcp = File.ReadAllText(Path.Combine(
-            RepoRoot(), "src", "Conductor", "Core", "Orchestration", "SessionRunner.Mcp.cs"));
+            RepoRoot(), "src", "Conductor.Core", "Orchestration", "SessionRunner.Mcp.cs"));
         Assert.Contains("conductor-tasks", mcp, StringComparison.Ordinal);
         Assert.Contains("InheritOperatorMcpServersAsync", mcp, StringComparison.Ordinal);
 
         // The harness half: it stays open BY DECISION, and the decision is the prompt-side fallback.
         // Delete that line from the tool contract and this goes red — which is the point, because the
         // fallback is the only thing standing between a deferred tool and a session that cannot claim.
-        var contract = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Conductor", "Core", "ToolContract.cs"));
+        var contract = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Conductor.Core", "ToolContract.cs"));
         Assert.Contains("DEFERRED", contract, StringComparison.Ordinal);
         Assert.Contains("ToolSearch", contract, StringComparison.Ordinal);
     }

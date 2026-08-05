@@ -1,3 +1,4 @@
+using Conductor.Http;
 using Conductor.Core;
 using Conductor.Core.Events;
 using Conductor.Core.Http;

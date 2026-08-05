@@ -2,7 +2,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Conductor.Core;
-using Conductor.Core.Hosting;
+using Conductor.Hosting;
 using Conductor.Core.Store;
 using Conductor.Models;
 using Microsoft.Extensions.DependencyInjection;

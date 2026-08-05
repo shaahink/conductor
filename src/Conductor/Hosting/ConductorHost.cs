@@ -1,3 +1,5 @@
+using Conductor.Http;
+using Conductor.Core;
 using System.Collections.Concurrent;
 using Conductor.Core.Events;
 using Conductor.Core.Http;
@@ -12,7 +14,7 @@ using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
 
-namespace Conductor.Core.Hosting;
+namespace Conductor.Hosting;
 
 /// <summary>
 /// Composition root (B2.5, D-12): builds a <see cref="IHost"/> that wires the Orchestrator and its

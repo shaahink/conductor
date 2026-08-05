@@ -131,7 +131,7 @@ public static class RunDetach
         var stateDir = Path.GetFullPath(plan.StateDir);
         var logsDir = Path.Combine(stateDir, "logs");
         Directory.CreateDirectory(logsDir);
-        var discovery = ControlPlaneServer.DiscoveryPath(stateDir);
+        var discovery = ControlPlaneDiscovery.PathFor(stateDir);
         // One capture file PER detach, not one shared file. A shared detach.log made the failure
         // report lie by omission: the tail printed for a child that died on the plan lock was full
         // of the LIVE run's session lines, appended by the engine that already held it.

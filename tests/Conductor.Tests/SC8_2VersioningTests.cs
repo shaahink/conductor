@@ -59,29 +59,53 @@ public sealed partial class SC8_2VersioningTests
     [Fact]
     public void TheProjectFileCarriesNoHandTypedVersion()
     {
-        // Parsed as XML, not grepped: the csproj comment explains why there is no Version property,
-        // and a text search would find the word in the explanation. Elements are what MSBuild reads.
-        var doc = XDocument.Load(Path.Combine(RepoRoot(), "src", "Conductor", "Conductor.csproj"));
-        // Top-level PropertyGroups only — a PropertyGroup inside a Target is computed at build time,
-        // which is precisely the mechanism this checkpoint installs.
-        var properties = doc.Root!.Elements("PropertyGroup").Elements().ToList();
-
-        foreach (var typed in new[] { "Version", "VersionPrefix", "AssemblyVersion", "InformationalVersion" })
+        // K2.1: the engine is two assemblies now, and BOTH are stamped — `BuildInfo` moved to
+        // Conductor.Core and reads its own attributes, so stamping only the exe would leave the type
+        // that answers "which engine build is this?" reading an unstamped assembly. The deriver itself
+        // lives in src/BuildStamp.targets, imported by each; this test follows the import rather than
+        // pinning to a file, and now asserts the rule for both projects instead of one.
+        foreach (var project in new[]
+                 {
+                     Path.Combine(RepoRoot(), "src", "Conductor", "Conductor.csproj"),
+                     Path.Combine(RepoRoot(), "src", "Conductor.Core", "Conductor.Core.csproj"),
+                 })
         {
-            // InformationalVersion IS set — inside the StampBuildInfo target, from $(Version) plus the
-            // commit. What must not come back is a literal in a PropertyGroup at the top of the file.
-            Assert.DoesNotContain(properties, e => e.Name.LocalName == typed);
+            // Parsed as XML, not grepped: the comments explain why there is no Version property, and a
+            // text search would find the word in the explanation. Elements are what MSBuild reads.
+            var doc = XDocument.Load(project);
+            // Top-level PropertyGroups only — a PropertyGroup inside a Target is computed at build time,
+            // which is precisely the mechanism this checkpoint installs.
+            var properties = doc.Root!.Elements("PropertyGroup").Elements().ToList();
+
+            // Everything the project pulls in through a one-level <Import>, which is where the shared
+            // stamp actually lives. Resolved, not assumed: an import that stopped importing would make
+            // the assertions below fail rather than silently pass on an empty set.
+            var imported = doc.Root!.Elements("Import")
+                .Select(i => i.Attribute("Project")?.Value)
+                .Where(p => !string.IsNullOrEmpty(p))
+                .Select(p => XDocument.Load(Path.GetFullPath(Path.Combine(Path.GetDirectoryName(project)!, p!))))
+                .ToList();
+            Assert.NotEmpty(imported);
+
+            var allProperties = properties.Concat(imported.SelectMany(d => d.Root!.Elements("PropertyGroup").Elements())).ToList();
+            var allPackages = doc.Descendants("PackageReference").Concat(imported.SelectMany(d => d.Descendants("PackageReference"))).ToList();
+
+            foreach (var typed in new[] { "Version", "VersionPrefix", "AssemblyVersion", "InformationalVersion" })
+            {
+                // InformationalVersion IS set — inside the StampBuildInfo target, from $(Version) plus the
+                // commit. What must not come back is a literal in a PropertyGroup at the top of the file.
+                Assert.DoesNotContain(allProperties, e => e.Name.LocalName == typed);
+            }
+
+            // ...and the thing that replaced it is actually referenced. Removing the constant without
+            // wiring the deriver would leave every build claiming the SDK default 1.0.0.
+            Assert.Contains(allPackages, e => e.Attribute("Include")?.Value == "MinVer");
+            Assert.Contains(allProperties, e => e.Name.LocalName == "MinVerTagPrefix" && e.Value == "v");
+
+            // A floor would be a second, hand-maintained source of truth able to disagree with the tags
+            // in silence. The tags are the whole answer; see BuildStamp.targets.
+            Assert.DoesNotContain(allProperties, e => e.Name.LocalName == "MinVerMinimumMajorMinor");
         }
-
-        // ...and the thing that replaced it is actually referenced. Removing the constant without
-        // wiring the deriver would leave every build claiming the SDK default 1.0.0.
-        Assert.Contains(doc.Descendants("PackageReference"),
-            e => e.Attribute("Include")?.Value == "MinVer");
-        Assert.Contains(properties, e => e.Name.LocalName == "MinVerTagPrefix" && e.Value == "v");
-
-        // A floor would be a second, hand-maintained source of truth able to disagree with the tags
-        // in silence. The tags are the whole answer; see the csproj comment.
-        Assert.DoesNotContain(properties, e => e.Name.LocalName == "MinVerMinimumMajorMinor");
     }
 
     [Fact]

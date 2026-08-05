@@ -63,7 +63,7 @@ public sealed class SF6_3InitScaffoldTests : IDisposable
         // Located, not assumed: the switch has already moved once (SF6.3 split the content out of the
         // renderer at the 500-line ceiling) and a hard-coded partial name went stale the same day, failing
         // as `Substring(-1)`. A test that cannot find its subject must say which subject, in a sentence.
-        var partials = RepoFilesContaining(Path.Combine("src", "Conductor", "Core"), "PromptBuilder*.cs", BuiltInSignature);
+        var partials = RepoFilesContaining(Path.Combine("src", "Conductor.Core"), "PromptBuilder*.cs", BuiltInSignature);
         Assert.True(partials.Count == 1,
             $"expected exactly one PromptBuilder partial to declare `{BuiltInSignature}`, found {partials.Count} — has it moved or been duplicated?");
         var body = partials[0][partials[0].IndexOf(BuiltInSignature, StringComparison.Ordinal)..];

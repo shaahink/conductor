@@ -1,3 +1,4 @@
+using Conductor.Http;
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.Net;
@@ -7,7 +8,7 @@ using System.Text.Json;
 
 using Conductor.Core;
 using Conductor.Core.Events;
-using Conductor.Core.Hosting;
+using Conductor.Hosting;
 using Conductor.Core.Http;
 using Conductor.Core.Integrations;
 using Conductor.Core.Store;

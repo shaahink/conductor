@@ -1,3 +1,4 @@
+using Conductor.Http;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
@@ -6,7 +7,7 @@ using System.Text.Json;
 using Conductor.Commands;
 using Conductor.Core;
 using Conductor.Core.Events;
-using Conductor.Core.Hosting;
+using Conductor.Hosting;
 using Conductor.Core.Planning;
 using Conductor.Core.Store;
 using Conductor.Models;
@@ -241,7 +242,7 @@ public sealed class W1WorkGraphSyncTests : IDisposable
             using var host = ConductorHost.Build(plan, state, new PlainSink(),
                 new RunOptions(DryRun: false, Once: true, MaxSessions: 0,
                     ControlPlane: true, ControlPlanePort: port, StartPaused: true), consoleSink: false);
-            var server = host.Services.GetRequiredService<Conductor.Core.Http.ControlPlaneServer>();
+            var server = host.Services.GetRequiredService<Conductor.Http.ControlPlaneServer>();
             Assert.True(server.Start(), "control plane failed to bind");
             http.DefaultRequestHeaders.Add("X-Conductor-Token", server.Token);
 

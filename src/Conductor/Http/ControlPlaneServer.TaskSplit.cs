@@ -1,9 +1,11 @@
+using Conductor.Core;
+using Conductor.Core.Http;
 using System.Net;
 using System.Text.Json;
 using Conductor.Core.Events;
 using Microsoft.Extensions.Logging;
 
-namespace Conductor.Core.Http;
+namespace Conductor.Http;
 
 /// <summary>
 /// W4.3: <c>POST /tasks/split</c> — ask the plan's advisor to break ONE card into child items.

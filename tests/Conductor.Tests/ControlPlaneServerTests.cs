@@ -1,3 +1,4 @@
+using Conductor.Http;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
@@ -620,7 +621,7 @@ public sealed class ControlPlaneServerTests : IDisposable
         var server = new ControlPlaneServer(_plan, state, _store, _inbox, new NoOpTelegramService(), NullLogger.Instance, FreeLoopbackPort());
         Assert.True(server.Start());
 
-        var discovery = ControlPlaneServer.DiscoveryPath(_plan.StateDir);
+        var discovery = ControlPlaneDiscovery.PathFor(_plan.StateDir);
         Assert.True(File.Exists(discovery));
 
         var info = JsonSerializer.Deserialize(File.ReadAllText(discovery), ControlPlaneJsonContext.Default.ControlPlaneInfo);

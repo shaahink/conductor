@@ -138,7 +138,7 @@ public sealed class SC52DetachTests
         var dir = NewTempDir();
         try
         {
-            var path = ControlPlaneServer.DiscoveryPath(dir);
+            var path = ControlPlaneDiscovery.PathFor(dir);
             File.WriteAllText(path, JsonSerializer.Serialize(
                 new ControlPlaneInfo(4322, "http://127.0.0.1:4322", 4242, "rig", DateTime.UtcNow, "tok"),
                 ControlPlaneJsonContext.Default.ControlPlaneInfo));
@@ -167,7 +167,7 @@ public sealed class SC52DetachTests
         var dir = NewTempDir();
         try
         {
-            var path = ControlPlaneServer.DiscoveryPath(dir);
+            var path = ControlPlaneDiscovery.PathFor(dir);
             Assert.Null(RunDetach.ReadDiscovery(path));
             File.WriteAllText(path, "{\"port\":43");   // the child, caught mid-write
             Assert.Null(RunDetach.ReadDiscovery(path));
@@ -184,7 +184,7 @@ public sealed class SC52DetachTests
         // the banner to it so the two cannot drift back apart.
         Assert.Equal(Path.Combine(@"X:\rig\.conductor", "conductor.log"), RunDetach.RunLogPath(@"X:\rig\.conductor"));
 
-        var runContext = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Conductor", "Core", "Orchestration", "RunContext.cs"));
+        var runContext = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Conductor.Core", "Orchestration", "RunContext.cs"));
         Assert.Contains("LogPath = Path.Combine(plan.StateDir, \"conductor.log\")", runContext, StringComparison.Ordinal);
     }
 

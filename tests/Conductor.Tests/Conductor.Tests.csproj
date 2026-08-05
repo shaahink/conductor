@@ -12,7 +12,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The tests exercise both halves of the K2.1 split: the CLI/hosting shell and the core it sits on.
+         Core is referenced explicitly (not just transitively) because the architecture tests load its
+         assembly by name to assert what it links against. -->
     <ProjectReference Include="..\..\src\Conductor\Conductor.csproj" />
+    <ProjectReference Include="..\..\src\Conductor.Core\Conductor.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

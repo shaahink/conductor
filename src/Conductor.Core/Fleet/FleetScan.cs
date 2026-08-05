@@ -157,7 +157,7 @@ public static class FleetScan
         ArgumentNullException.ThrowIfNull(run);
         if (string.IsNullOrWhiteSpace(run.StateDir)) return run;
         return Enrich(run,
-            await TryReadAsync(ControlPlaneServer.DiscoveryPath(run.StateDir)).ConfigureAwait(false),
+            await TryReadAsync(ControlPlaneDiscovery.PathFor(run.StateDir)).ConfigureAwait(false),
             await TryReadAsync(EngineLock.PathFor(run.StateDir)).ConfigureAwait(false));
     }
 
@@ -181,7 +181,7 @@ public static class FleetScan
     {
         ArgumentNullException.ThrowIfNull(run);
         if (string.IsNullOrWhiteSpace(run.StateDir)) return null;
-        return TokenFrom(await TryReadAsync(ControlPlaneServer.DiscoveryPath(run.StateDir)).ConfigureAwait(false), run.Port);
+        return TokenFrom(await TryReadAsync(ControlPlaneDiscovery.PathFor(run.StateDir)).ConfigureAwait(false), run.Port);
     }
 
     private static async Task<string?> TryReadAsync(string path)

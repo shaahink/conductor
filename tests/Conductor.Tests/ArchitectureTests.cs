@@ -220,7 +220,9 @@ public class ArchitectureTests
     [Fact]
     public void CoreDoesNotDependOnTheCliOrAnyUi()
     {
-        var coreDir = Path.Combine(RepoRoot(), "src", "Conductor", "Core");
+        // K2.1: core is its own project now. This path used to be src/Conductor/Core, and leaving it stale
+        // would have left the test scanning an empty set — a green that means "found nothing to check".
+        var coreDir = Path.Combine(RepoRoot(), "src", "Conductor.Core");
         var violations = new List<string>();
 
         foreach (var file in EngineSources().Where(f => f.FullName.StartsWith(coreDir, StringComparison.Ordinal)))

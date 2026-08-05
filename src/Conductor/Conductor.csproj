@@ -13,33 +13,20 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- P0: the engine depends on the planning library, NEVER the reverse (arch-test enforced).
-         The global using keeps the moved planning vocabulary (SessionKind, Workflow*) available
-         everywhere without churning every file that already spoke it. -->
-    <ProjectReference Include="..\Conductor.Planning\Conductor.Planning.csproj" />
+    <!-- K2.1: this project is the CLI (Spectre commands, Program.cs) plus HOSTING (ConductorHost, the
+         HttpListener control plane). Everything else - domain, orchestration, store, providers - lives in
+         Conductor.Core, which does not reference this assembly. That is the whole point: the direction is
+         now a compiler error, not a review comment.
+         P0: the planning library is referenced transitively through Core and stays engine-free.
+         The global usings keep the moved vocabulary available without churning every file. -->
+    <ProjectReference Include="..\Conductor.Core\Conductor.Core.csproj" />
     <Using Include="Conductor.Planning" />
   </ItemGroup>
 
-  <!-- SC8.2: the version NUMBER is derived, not typed. There is deliberately no <Version> property
-       above and no MinVerMinimumMajorMinor floor: the `v*` tags release.yml builds from are the
-       single source of truth, and a floor is a second, hand-maintained source that can silently
-       disagree with them - the exact defect class this era exists to kill. Consequences, both
-       intended:
-
-         * at tag `v1.2.3`, HEAD == the tag  ->  1.2.3, so a downloaded release binary answers with
-           its own tag and nothing has to remember to bump anything;
-         * N commits past `v1.2.3`           ->  1.2.4-alpha.0.N, unique per commit and ordered
-           between 1.2.3 and 1.2.4 by plain semver precedence.
-
-       MinVer reads the repository directly (no `git` on PATH required) but it DOES require the tags
-       to be present: a depth-1 checkout has none and silently yields 0.0.0-alpha.0. That is why both
-       workflows check out with fetch-depth 0 - see .github/workflows/release.yml. -->
-  <PropertyGroup>
-    <MinVerTagPrefix>v</MinVerTagPrefix>
-  </PropertyGroup>
-
   <ItemGroup>
-    <PackageReference Include="MinVer" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
+    <!-- The shell's own dependencies: the CLI framework it is written in and the logging sinks the host
+         configures. SQLite and the store's migration resources moved to Conductor.Core with the store
+         itself and flow here transitively. -->
     <PackageReference Include="Spectre.Console" />
     <PackageReference Include="Spectre.Console.Cli" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
@@ -47,76 +34,14 @@
     <PackageReference Include="Serilog.Sinks.Console" />
     <PackageReference Include="Serilog.Sinks.File" />
     <PackageReference Include="Serilog.Formatting.Compact" />
-    <PackageReference Include="Microsoft.Data.Sqlite.Core" />
-    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Core\Store\Migrations\*.sql" />
   </ItemGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="Conductor.Tests" />
   </ItemGroup>
 
-  <!-- SC8.1: the version identity is produced by the BUILD, never typed into a source file.
-       The defect this answers is "is the run using stale engine code" (GAP-ANALYSIS: three sessions
-       burned on it), and a constant a human edits cannot answer it, because the human forgets. The
-       only trustworthy stamp is one the compiler puts there.
-
-       Two Execs, and deliberately no git-log format percent codes: MSBuild unescapes %XX, and on
-       Windows Exec runs the command through a generated .cmd where % is special AGAIN, so a format
-       string is two escaping layers deep for no gain. rev-parse and status porcelain need neither.
-
-       ContinueOnError: a build from a source archive (no .git) or on a machine without git must
-       still produce a working binary — it reports commit "unknown", which is honest, rather than
-       failing the build over a cosmetic field.
-
-       The UTC timestamp changes on every build, so this target defeats incremental compilation of
-       this one project. That is the price of a build date that is actually the build's date, and it
-       is paid deliberately: a stale-binary question the operator cannot answer costs far more. -->
-  <!-- DependsOnTargets="MinVer" is not decoration. MinVer sets InformationalVersion itself (to the
-       bare version, no commit), so if this target ran first its stamp would be overwritten and the
-       binary would lose its sha. Declaring the dependency makes the order explicit instead of
-       relying on GetAssemblyAttributes happening to depend on GetAssemblyVersion. -->
-  <Target Name="StampBuildInfo" BeforeTargets="GetAssemblyAttributes" DependsOnTargets="MinVer">
-    <Exec Command="git rev-parse --short=12 HEAD"
-          WorkingDirectory="$(MSBuildProjectDirectory)"
-          ConsoleToMSBuild="true" StandardOutputImportance="low" StandardErrorImportance="low"
-          ContinueOnError="true" IgnoreExitCode="true">
-      <Output TaskParameter="ConsoleOutput" PropertyName="_ConductorShaRaw" />
-    </Exec>
-    <Exec Command="git status --porcelain --untracked-files=no"
-          WorkingDirectory="$(MSBuildProjectDirectory)"
-          ConsoleToMSBuild="true" StandardOutputImportance="low" StandardErrorImportance="low"
-          ContinueOnError="true" IgnoreExitCode="true">
-      <Output TaskParameter="ConsoleOutput" PropertyName="_ConductorPorcelain" />
-    </Exec>
-    <PropertyGroup>
-      <ConductorCommitSha Condition="'$(_ConductorShaRaw)' != ''">$(_ConductorShaRaw.Trim())</ConductorCommitSha>
-      <ConductorCommitSha Condition="'$(ConductorCommitSha)' == ''">unknown</ConductorCommitSha>
-      <ConductorCommitDirty>false</ConductorCommitDirty>
-      <ConductorCommitDirty Condition="'$(_ConductorPorcelain)' != ''">true</ConductorCommitDirty>
-      <ConductorBuildDate>$([System.DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'))</ConductorBuildDate>
-      <!-- semver build metadata on top of MinVer's tag-derived $(Version):
-           0.1.1-alpha.0.54+abc123def456 , or +abc123def456.dirty when the tree was not clean. -->
-      <InformationalVersion>$(Version)+$(ConductorCommitSha)</InformationalVersion>
-      <InformationalVersion Condition="'$(ConductorCommitDirty)' == 'true'">$(Version)+$(ConductorCommitSha).dirty</InformationalVersion>
-    </PropertyGroup>
-    <ItemGroup>
-      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-        <_Parameter1>CommitSha</_Parameter1>
-        <_Parameter2>$(ConductorCommitSha)</_Parameter2>
-      </AssemblyAttribute>
-      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-        <_Parameter1>CommitDirty</_Parameter1>
-        <_Parameter2>$(ConductorCommitDirty)</_Parameter2>
-      </AssemblyAttribute>
-      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-        <_Parameter1>BuildDate</_Parameter1>
-        <_Parameter2>$(ConductorBuildDate)</_Parameter2>
-      </AssemblyAttribute>
-    </ItemGroup>
-  </Target>
+  <!-- SC8.1/SC8.2: MinVer + the commit/date stamp, shared with Conductor.Core because BuildInfo
+       lives there now and reads its own assembly's attributes. See src/BuildStamp.targets. -->
+  <Import Project="..\BuildStamp.targets" />
 
 </Project>

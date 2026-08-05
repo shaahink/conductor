@@ -1,9 +1,11 @@
+using Conductor.Core;
+using Conductor.Core.Http;
 using System.Net;
 using System.Text.Json;
 using Conductor.Core.Integrations;
 using Microsoft.Extensions.Logging;
 
-namespace Conductor.Core.Http;
+namespace Conductor.Http;
 
 /// <summary>M8.2: Telegram setup/status/test for the Face's guided onboarding tab — "configure it
 /// through the app" instead of hand-editing plan.json/env vars. Status/test read the live

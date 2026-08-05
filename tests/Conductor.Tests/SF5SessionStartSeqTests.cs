@@ -111,7 +111,7 @@ public sealed class SF5SessionStartSeqTests : IDisposable
     [Fact]
     public void SessionRunner_FlushesTheMarkerBeforeItSpawnsTheAgent()
     {
-        var source = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Conductor", "Core", "Orchestration", "SessionRunner.cs"));
+        var source = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Conductor.Core", "Orchestration", "SessionRunner.cs"));
 
         var emit = source.IndexOf("Emit(new SessionStarted", StringComparison.Ordinal);
         Assert.True(emit > 0, "SessionRunner no longer emits SessionStarted — this test needs rewriting, not deleting");

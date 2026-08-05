@@ -1,3 +1,5 @@
+using Conductor.Core;
+using Conductor.Core.Http;
 using System.Net;
 using Conductor.Core.Events;
 using Conductor.Core.Face;
@@ -5,7 +7,7 @@ using Conductor.Core.Planning;
 using Conductor.Core.Providers;
 using Conductor.Models;
 
-namespace Conductor.Core.Http;
+namespace Conductor.Http;
 
 /// <summary>
 /// The <c>GET /state</c> projection: fold the event log, layer the live RunState the fold cannot see,
@@ -217,5 +219,5 @@ public sealed partial class ControlPlaneServer
     /// now schedules on too — the projection had two implementations, and only one of them was the
     /// truth the loop acted on.</remarks>
     private TrackerSnapshot GraphTrackerSnapshot()
-        => Planning.WorkSnapshot.Read(_store, _state.RunId, ReadTrackerSafe);
+        => Conductor.Core.Planning.WorkSnapshot.Read(_store, _state.RunId, ReadTrackerSafe);
 }

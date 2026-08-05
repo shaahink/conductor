@@ -1,7 +1,8 @@
+using Conductor.Http;
 using System.Text.Json;
 using Conductor.Core;
 using Conductor.Core.Events;
-using Conductor.Core.Hosting;
+using Conductor.Hosting;
 using Conductor.Core.Http;
 using Conductor.Core.Integrations;
 using Conductor.Core.Store;

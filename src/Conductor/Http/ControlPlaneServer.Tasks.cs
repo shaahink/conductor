@@ -1,9 +1,11 @@
+using Conductor.Core;
+using Conductor.Core.Http;
 using System.Net;
 using System.Text.Json;
 using Conductor.Core.Events;
 using Microsoft.Extensions.Logging;
 
-namespace Conductor.Core.Http;
+namespace Conductor.Http;
 
 /// <summary>G2.1: task writes — the Kanban board's move/add. Validation and event shape are shared
 /// with the MCP task tools via <see cref="TaskWrites"/>; the events land in the run.db event log
@@ -114,7 +116,7 @@ public sealed partial class ControlPlaneServer
     /// re-declared without this item and ARCHIVE it. The card would not merely fail to schedule; it
     /// would vanish at the next boundary.
     /// </summary>
-    private void DeclareCheckpointInPlan(Events.TaskAdded evt)
+    private void DeclareCheckpointInPlan(Conductor.Core.Events.TaskAdded evt)
     {
         var fresh = LoadPlanFresh();
         if (fresh?.Progress is not { } progress) return;

@@ -1,0 +1,61 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- K2.1: the engine's domain, orchestration and store, extracted from the CLI so the layering is a
+       COMPILER ERROR rather than a convention. Before this project existed, `Conductor.csproj` held the
+       CLI, the orchestrator, the store, the HTTP control plane and the providers in one assembly, and
+       nothing stopped the store formatting console output or a command reaching into `SessionRunner`.
+
+       The rule, one way only:  Conductor (CLI + hosting)  ->  Conductor.Core  ->  Conductor.Planning
+       A reverse reference cannot be written here, because this project does not reference the engine.
+
+       What this assembly may NOT have, enforced by ArchitectureTests:
+         * Spectre.Console (or any UI) - the run outlives every face;
+         * an HTTP server - `ControlPlaneServer` is hosting and lives in `Conductor`. The wire CONTRACT
+           (`ControlPlaneDto`, `ControlPlaneJsonContext`, `ControlPlaneInfo`) stays here, because Core's
+           own fleet scan reads other runs' discovery files and must speak it.
+
+       Layout note: folders map to namespaces one-for-one (`Store/` -> `Conductor.Core.Store`), which is
+       why RootNamespace is `Conductor.Core` and why the move needed no namespace churn. `Models/` is the
+       one deliberate exception - it keeps the `Conductor.Models` namespace it has always had; renaming it
+       would touch every file in the repo that names a config record, for no structural gain. -->
+  <PropertyGroup>
+    <RootNamespace>Conductor.Core</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- P0: the planning library is pure decision logic and knows nothing of this assembly. -->
+    <ProjectReference Include="..\Conductor.Planning\Conductor.Planning.csproj" />
+    <Using Include="Conductor.Planning" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Microsoft.Extensions.Hosting is the GENERIC host (IHostedService, ILogger) - not a web host.
+         TelegramService is a hosted service; nothing here serves HTTP. -->
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Resource names are RootNamespace + path, so these stay `Conductor.Core.Store.Migrations.*`
+         exactly as MigrationRunner's ResourcePrefix expects. -->
+    <EmbeddedResource Include="Store\Migrations\*.sql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Conductor.Tests" />
+    <!-- K2.1: `conductor` is the CLI/hosting assembly's AssemblyName. The boundary this checkpoint
+         enforces is the DIRECTION - core cannot name the CLI, and that is a link error now, not a review
+         comment. It is deliberately NOT a visibility rewrite: promoting every member the shell already
+         touches (SyncCancellation, PromptBuilder.BuiltIns, SqliteRunStore.SetRunId, TelegramService's
+         diagnostic fields read by the control plane's /telegram endpoint) to public would be the
+         "rewrite" this stage is told not to do, and would advertise as API things that are not.
+         `internal` keeps meaning "not for outside consumers"; the shell is not an outside consumer. -->
+    <InternalsVisibleTo Include="conductor" />
+  </ItemGroup>
+
+  <!-- SC8.1/SC8.2: `BuildInfo` lives in this assembly and reads its OWN attributes, so this project must
+       carry the stamp. Both projects are built from one tree in one pass; see src/BuildStamp.targets. -->
+  <Import Project="..\BuildStamp.targets" />
+
+</Project>

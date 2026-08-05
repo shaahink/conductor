@@ -1,6 +1,8 @@
+using Conductor.Core;
+using Conductor.Core.Http;
 using System.Net;
 
-namespace Conductor.Core.Http;
+namespace Conductor.Http;
 
 /// <summary>
 /// SC8.1 — <c>GET /version</c>. The CLI verb answers for the binary you just typed; this answers for

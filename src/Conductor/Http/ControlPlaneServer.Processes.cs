@@ -1,8 +1,9 @@
+using Conductor.Core.Http;
 using System.Net;
 using System.Text.Json;
 using Conductor.Core;
 
-namespace Conductor.Core.Http;
+namespace Conductor.Http;
 
 /// <summary>Supervised-process endpoints: <c>GET /processes</c> lists this run's tracked PIDs with
 /// liveness (read from run.db), and <c>POST /processes/kill</c> terminates one from the Face's Procs

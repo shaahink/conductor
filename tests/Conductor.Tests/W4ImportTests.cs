@@ -3,7 +3,7 @@ using System.Text.Json;
 using Conductor.Commands;
 using Conductor.Core;
 using Conductor.Core.Events;
-using Conductor.Core.Hosting;
+using Conductor.Hosting;
 using Conductor.Core.Planning;
 using Conductor.Core.Store;
 using Conductor.Models;

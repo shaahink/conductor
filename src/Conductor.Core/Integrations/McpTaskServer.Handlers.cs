@@ -275,9 +275,9 @@ public partial class McpTaskServer
             // SC5.4: both operands UTC — `started` is now honestly UTC (SqliteRunStore.ParseUtc), so
             // this stopped subtracting a local clock from a UTC one and reporting a negative age.
             var runtime = r.ExitedUtc != null
-                ? Conductor.Commands.BgStatusHandler.FormatDuration(r.ExitedUtc.Value - r.StartedUtc)
+                ? HumanDuration.Format(r.ExitedUtc.Value - r.StartedUtc)
                 : alive
-                    ? Conductor.Commands.BgStatusHandler.FormatDuration(DateTime.UtcNow - r.StartedUtc)
+                    ? HumanDuration.Format(DateTime.UtcNow - r.StartedUtc)
                     : "";
             return new
             {

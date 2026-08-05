@@ -1,3 +1,5 @@
+using Conductor.Core;
+using Conductor.Core.Http;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Text;
@@ -8,7 +10,7 @@ using Conductor.Core.Store;
 using Conductor.Models;
 using Microsoft.Extensions.Logging;
 
-namespace Conductor.Core.Http;
+namespace Conductor.Http;
 
 public sealed partial class ControlPlaneServer
 {
@@ -185,7 +187,7 @@ public sealed partial class ControlPlaneServer
     /// <see cref="PidLiveness"/> is the one implementation; it treats an un-openable id as alive.</summary>
     private static bool IsProcessAlive(int pid) => PidLiveness.LooksAlive(pid, DateTime.UtcNow);
 
-    private static async Task<string?> TailBgLogAsync(string bgLogDir, int pid, Store.IRunStore? store, string? runId)
+    private static async Task<string?> TailBgLogAsync(string bgLogDir, int pid, Conductor.Core.Store.IRunStore? store, string? runId)
     {
         try
         {
@@ -212,13 +214,13 @@ public sealed partial class ControlPlaneServer
         // K1.3: whether the think column means anything for THIS run, asked of the adapter that would
         // have parsed the number. Resolved once per response, not per row: the provider is a property
         // of the plan, and the sessions table has never recorded one per session.
-        var thinkReported = Providers.AgentProviderFactory.ReportsReasoningTokens(_plan.Agent);
+        var thinkReported = Conductor.Core.Providers.AgentProviderFactory.ReportsReasoningTokens(_plan.Agent);
         // SF3.3: the commit SUBJECTS, not just the count. The sessions table persists commit_count
         // and nothing else, but the event log has carried the `--oneline` strings on SessionFinished
         // since B5 — so the subjects come from the log rather than from a schema migration, and a
         // session that predates the event (or landed nothing) simply carries an empty list.
         var commitsByNumber = _store.ReadAllEvents(_state.RunId)
-            .OfType<Events.SessionFinished>()
+            .OfType<Conductor.Core.Events.SessionFinished>()
             .GroupBy(e => e.Number)
             .ToDictionary(g => g.Key, g => (IReadOnlyList<string>)[.. g.Last().NewCommits
                 .Concat(g.Last().SatelliteCommits)]);
@@ -242,7 +244,7 @@ public sealed partial class ControlPlaneServer
             // zero the Face would have to render as a number.
             TokensThink: thinkReported ? r.TokensThink : null,
             TokensCache: r.TokensCache,
-            Digest: SessionDigestDto.From(Events.SessionDigest.FromJson(r.Digest)),
+            Digest: SessionDigestDto.From(Conductor.Core.Events.SessionDigest.FromJson(r.Digest)),
             Commits: commitsByNumber.TryGetValue(r.Number, out var cs) ? cs : [])).ToList();
         await WriteJsonAsync(ctx, new SessionsDto(dtos), ControlPlaneJsonContext.Default.SessionsDto).ConfigureAwait(false);
     }

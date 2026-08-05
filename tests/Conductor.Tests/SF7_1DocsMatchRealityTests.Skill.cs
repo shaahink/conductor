@@ -18,7 +18,7 @@ public sealed partial class SF7_1DocsMatchRealityTests
         // into VerdictEngine.Claims.cs so the rollover path could share it, and reading one file
         // would report the fallback as removed when it had only moved next door.
         var engine = string.Concat(Directory.EnumerateFiles(
-                Path.Combine(RepoRoot(), "src", "Conductor", "Core", "Orchestration"), "VerdictEngine*.cs")
+                Path.Combine(RepoRoot(), "src", "Conductor.Core", "Orchestration"), "VerdictEngine*.cs")
             .Select(File.ReadAllText));
         var skill = Doc(".claude", "skills", "run-conductor", "SKILL.md");
 

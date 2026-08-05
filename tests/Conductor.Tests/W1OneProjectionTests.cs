@@ -1,10 +1,11 @@
+using Conductor.Http;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using Conductor.Core;
 using Conductor.Core.Events;
-using Conductor.Core.Hosting;
+using Conductor.Hosting;
 using Conductor.Core.Store;
 using Conductor.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -95,7 +96,7 @@ public sealed class W1OneProjectionTests
             using var host = ConductorHost.Build(plan, state, new PlainSink(),
                 new RunOptions(DryRun: false, Once: false, MaxSessions: 0,
                     ControlPlane: true, ControlPlanePort: ProbeFreePort()), consoleSink: false);
-            var server = host.Services.GetRequiredService<Conductor.Core.Http.ControlPlaneServer>();
+            var server = host.Services.GetRequiredService<Conductor.Http.ControlPlaneServer>();
             Assert.True(server.Start(), "control plane failed to bind");
             http.DefaultRequestHeaders.Add("X-Conductor-Token", server.Token);
 
@@ -166,7 +167,7 @@ public sealed class W1OneProjectionTests
             using var host = ConductorHost.Build(plan, state, new PlainSink(),
                 new RunOptions(DryRun: false, Once: false, MaxSessions: 0,
                     ControlPlane: true, ControlPlanePort: ProbeFreePort(), StartPaused: true), consoleSink: false);
-            var server = host.Services.GetRequiredService<Conductor.Core.Http.ControlPlaneServer>();
+            var server = host.Services.GetRequiredService<Conductor.Http.ControlPlaneServer>();
             Assert.True(server.Start(), "control plane failed to bind");
             http.DefaultRequestHeaders.Add("X-Conductor-Token", server.Token);
 

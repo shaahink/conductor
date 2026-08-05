@@ -1,10 +1,12 @@
+using Conductor.Core;
+using Conductor.Core.Http;
 using System.Net;
 using System.Text.Json;
 using Conductor.Core.Planning;
 using Conductor.Models;
 using Microsoft.Extensions.Logging;
 
-namespace Conductor.Core.Http;
+namespace Conductor.Http;
 
 /// <summary>M6.3: plan authoring over the control plane. Reads are served fresh from the plan file on
 /// disk so the editor always reflects the current file; writes load fresh, apply, validate, and save

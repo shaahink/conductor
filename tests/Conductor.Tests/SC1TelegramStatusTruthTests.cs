@@ -1,3 +1,4 @@
+using Conductor.Http;
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.Net;

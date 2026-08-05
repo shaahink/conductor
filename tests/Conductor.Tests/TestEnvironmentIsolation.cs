@@ -1,3 +1,4 @@
+using Conductor.Http;
 using System.Runtime.CompilerServices;
 
 namespace Conductor.Tests;

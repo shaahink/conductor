@@ -117,7 +117,7 @@ public sealed class FaceCommand : AsyncCommand<FaceCommand.Settings>
     {
         if (localStateDir is not null)
         {
-            var discovery = ControlPlaneServer.DiscoveryPath(localStateDir);
+            var discovery = ControlPlaneDiscovery.PathFor(localStateDir);
             if (File.Exists(discovery))
             {
                 try

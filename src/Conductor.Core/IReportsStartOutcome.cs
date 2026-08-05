@@ -1,4 +1,4 @@
-namespace Conductor.Core.Hosting;
+namespace Conductor.Core;
 
 /// <summary>
 /// SF0.1 / bug 2: an <c>IHostedService</c> whose <c>StartAsync</c> may legitimately decline to start

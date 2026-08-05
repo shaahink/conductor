@@ -1,3 +1,5 @@
+using Conductor.Core;
+using Conductor.Core.Http;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Text;
@@ -9,7 +11,7 @@ using Conductor.Core.Store;
 using Conductor.Models;
 using Microsoft.Extensions.Logging;
 
-namespace Conductor.Core.Http;
+namespace Conductor.Http;
 
 /// <summary>
 /// F5: localhost-only HTTP+SSE control plane (design doc §2 AD-1). Read endpoints
@@ -159,7 +161,7 @@ public sealed partial class ControlPlaneServer : IDisposable
                 Port, $"http://127.0.0.1:{Port}", Environment.ProcessId, _plan.Name, DateTime.UtcNow, Token),
                 ControlPlaneJsonContext.Default.ControlPlaneInfo);
             Directory.CreateDirectory(_plan.StateDir); // the server can start before anything else has touched .conductor/
-            File.WriteAllText(DiscoveryPath(_plan.StateDir), payload);
+            File.WriteAllText(ControlPlaneDiscovery.PathFor(_plan.StateDir), payload);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -167,9 +169,6 @@ public sealed partial class ControlPlaneServer : IDisposable
         }
     }
 #pragma warning restore MA0045
-
-    /// <summary>Path of the discovery file for a given state dir. Public so clients resolve it the same way.</summary>
-    public static string DiscoveryPath(string stateDir) => Path.Combine(stateDir, "control-plane.json");
 
 #pragma warning disable MA0045 // dedicated background Thread (not the async run loop) — blocking accept here is correct, not sync-over-async
     private void AcceptLoop()
@@ -266,7 +265,7 @@ public sealed partial class ControlPlaneServer : IDisposable
         _running = false;
         _cts.Cancel();
         // Remove the discovery file first: a client that reads it must never be pointed at a dead port.
-        try { File.Delete(DiscoveryPath(_plan.StateDir)); } catch (Exception) { /* best effort */ }
+        try { File.Delete(ControlPlaneDiscovery.PathFor(_plan.StateDir)); } catch (Exception) { /* best effort */ }
         try { _listener.Stop(); } catch (Exception) { /* best effort */ }
         try { _listener.Close(); } catch (Exception) { /* best effort */ }
         _acceptThread?.Join(TimeSpan.FromSeconds(2));

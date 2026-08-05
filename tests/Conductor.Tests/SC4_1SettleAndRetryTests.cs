@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using Conductor.Core;
-using Conductor.Core.Hosting;
+using Conductor.Hosting;
 using Conductor.Core.Orchestration;
 using Conductor.Core.Store;
 using Conductor.Models;
