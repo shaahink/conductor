@@ -979,6 +979,7 @@ func (s *demoSource) runSimulation() {
 		s.state.TokensInput = tokIn + 2500
 		s.state.TokensOutput = tokOut + 1800
 		s.state.TokensReasoning = tokReason + 900
+		s.state.TokenHeadroom = s.fakeHeadroom(tokIn+tokOut+tokReason, elapsed)
 		s.state.CurrentCheckpoint = fmt.Sprintf("F7.%d", cp+1)
 		s.state.CurrentCheckpointTitle = fmt.Sprintf("F7 Checkpoint %d", cp+1)
 		s.state.DoneCount = cp
@@ -990,6 +991,48 @@ func (s *demoSource) runSimulation() {
 
 		s.mu.Unlock()
 	}
+}
+
+// fakeHeadroom is the demo's token rail, computed the way the engine computes it rather than typed
+// in as a frozen block — so the gauge on --demo actually moves, and so the two honesty rules can be
+// SEEN rather than taken on trust: clear the session ceiling in the demo's plan editor and the row
+// says "no cap" instead of showing a fuller bar, and it is only after twenty seconds of demo clock
+// that a burn rate appears at all.
+//
+// visible is what the ticker already shows; the ceiling is measured against visible + cache-read, and
+// the demo carries a cache multiple in the region this project actually runs at, because a demo whose
+// gauge crawls would misrepresent the one number the widget exists to show.
+func (s *demoSource) fakeHeadroom(visible int64, elapsedSec float64) *TokenHeadroomDto {
+	tokens := 240_000 + visible*50
+	h := &TokenHeadroomDto{Tokens: tokens, Live: true}
+	if elapsedSec >= 20 {
+		burn := float64(tokens) / (elapsedSec / 60)
+		h.BurnPerMinute = &burn
+	}
+
+	cap := s.plan.Limits.MaxSessionTokens
+	if cap == nil || *cap <= 0 {
+		return h // no ceiling: every cap-dependent field stays nil, exactly as the engine serves it
+	}
+	ratio := 0.8
+	if r := s.plan.Limits.SoftBreakRatio; r != nil && *r > 0 && *r <= 1 {
+		ratio = *r
+	}
+	ceiling := *cap
+	nudge := int64(float64(ceiling) * ratio)
+	toNudge, toCap, used := nudge-tokens, ceiling-tokens, float64(tokens)/float64(ceiling)
+	h.Cap, h.NudgeAt, h.ToNudge, h.ToCap, h.UsedRatio = &ceiling, &nudge, &toNudge, &toCap, &used
+	if h.BurnPerMinute != nil {
+		if toNudge > 0 {
+			eta := float64(toNudge) / *h.BurnPerMinute
+			h.MinutesToNudge = &eta
+		}
+		if toCap > 0 {
+			eta := float64(toCap) / *h.BurnPerMinute
+			h.MinutesToCap = &eta
+		}
+	}
+	return h
 }
 
 func makeFakeState() *StateDto {
