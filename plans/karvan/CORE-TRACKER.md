@@ -4,20 +4,23 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **fix session — both bugs that kept `engine-full` red are closed.** Nothing weakened, no
-  checkpoint touched: K1.1–K1.4 were all correctly DONE and the red was never an over-claim.
-  **#25** (`115d77f`) compared `git describe`'s height (set difference over ALL parents, 20) against
-  MinVer's (SHORTEST distance to the tag, 15 — `v0.3.0` is `e897c2c7`, merge `c4febc1` holds it as
-  FIRST parent). The old guard skipped only when HEAD *itself* was a merge, but the gap survives in
-  every descendant; height is now walked MinVer's way, so the exact check runs on merge histories
-  too — the hatch is deleted, not widened. **#26** (`413cb40`) `HookBudgetCommand` writes to an
-  internal `Output` writer; process-global `Console.SetOut` is gone from the test project.
-next: **K2.1** — extract `Conductor.Core`; `ec4c089` already cleared its architecture ceilings.
-watch: **the tip moved mid-session** — owner commits `6287f40` (plan drops five editor-added stages)
-  and `184fb33` landed on top of mine. Re-read `git log` before trusting an earlier HEAD, and never
-  hand-edit the generated checkpoint table — only this block is yours.
-red: none; full suite green on the settled tree, ratchet green (pragmas 38/38, so new `src/` code
-  needs real async I/O, not a pragma). Open, not blocking: **#24** `AgentConfig.Merge` drops `Env`.
+last: **K2.1 + K2.2 claimed** (`b05efef`). `src/Conductor.Core` is its own assembly — domain,
+  orchestration, store, events, providers; `Conductor` is Program + Commands + `Http/` (the 11
+  `ControlPlaneServer` partials) + `Hosting/`. Namespaces already matched folders, so the move was a
+  rename; only the hosting half left the `Conductor.Core.*` tree (`Conductor.Http`/`.Hosting`). Two
+  real reverse deps died: `HumanDuration.Format` (was `BgStatusHandler`) and `ControlPlaneDiscovery`
+  `.PathFor` (was `ControlPlaneServer.DiscoveryPath`). Wire DTOs stayed in core — FleetScan reads them.
+  `ArchitectureBoundaryTests` = 8 rules, comments stripped so doc-comments naming `SessionRunner` stay
+  legal. Full suite **1814/1814**; publish, `version`, `doctor` and a live scratch run's discovery file
+  + `/state` + `/version` all proven (evidence file has the outputs).
+next: **K2.3** — split the 30-file `ControlPlaneDto` pile (now `src/Conductor.Core/Http/`) and write the
+  file-organisation convention. `ControlPlaneServer.Telegram` reading `TelegramService`'s internals is
+  the seam that most wants fixing; `InternalsVisibleTo("conductor")` on Core is why it still compiles.
+watch: **clear `CONDUCTOR_PLAN` before running your own build's `doctor`/`run`** — the env the
+  orchestrator hands you points at THIS repo, a scratch cwd is not isolation, and your build migrates
+  `run.db` 9→10 and kills every claim verb. Fixed here; recipe is in the ledger.
+red: none. Open, not blocking: **#27** fresh-db FK error on first `run_state` write, **#24**
+  `AgentConfig.Merge` drops `Env`.
 
 
 ## Baseline numbers (from run.db)
