@@ -137,12 +137,18 @@ public static class ConductorHost
         builder.Services.AddSingleton(sp =>
         {
             if (opts.DryRun) return null!;
-            var runDbPath = plan.RunDbPath;
+            var resolved = plan.ResolveState();
+            var runDbPath = resolved.RunDbPath;
             // K3.1: the store left the working tree, so the working tree gets a breadcrumb saying
             // where it went. Written at run start (not at every plan load) and never overwritten —
             // a pointer that is already there was put there deliberately, and it outranks
             // derivation precisely so a lane worktree can be aimed at the primary tree's run.
-            if (!File.Exists(StateHome.PointerPathFor(plan.Repo)))
+            //
+            // ONLY for a derived resolution. Persisting an env override would make a deliberately
+            // temporary redirect permanent — a rig pointed at a scratch database with
+            // CONDUCTOR_RUN_DB would leave the tree pinned to it after the rig was gone. Measured:
+            // the first pass of this line wrote the pointer unconditionally and did exactly that.
+            if (resolved.Source == StateSource.Derived && !File.Exists(StateHome.PointerPathFor(plan.Repo)))
                 StatePointer.TryWrite(StateHome.PointerPathFor(plan.Repo), runDbPath, plan.Name);
             var store = new SqliteRunStore(runDbPath, sp.GetRequiredService<ILogger<SqliteRunStore>>());
             store.SetRunId(state.RunId);
