@@ -235,7 +235,7 @@ func (m Model) evidenceLines(width int) []string {
 		room := width - lipgloss.Width(kind) - len(meta) - 4 - lipgloss.Width(age)
 		line := fmt.Sprintf("  %s %s%s",
 			evidenceKindStyle(a.Visual).Render(kind),
-			textStyle.Render(truncate(a.Path, room)),
+			textStyle.Render(evidencePath(a.Path, room)),
 			subtleStyle.Render(meta))
 		if age != "" {
 			line += subtleStyle.Render(" " + age)
@@ -243,6 +243,25 @@ func (m Model) evidenceLines(width int) []string {
 		lines = append(lines, line)
 	}
 	return lines
+}
+
+// evidencePath elides from the LEFT, which is the opposite of every other truncation in this file
+// and is right for exactly one reason: the identifying part of an evidence path is its file name.
+// The ordinary truncate turns ".conductor/evidence/K5/K5.3-dashboard.png" into
+// ".conductor/evidence/K5/K5.3-d…" — a row that cannot tell the owner WHICH screenshot it is, while
+// spending its whole width on a directory every artifact shares.
+func evidencePath(p string, room int) string {
+	if room < 1 {
+		return ""
+	}
+	r := []rune(p)
+	if len(r) <= room {
+		return p
+	}
+	if room == 1 {
+		return "…"
+	}
+	return "…" + string(r[len(r)-(room-1):])
 }
 
 // evidenceKindStyle: a visual artifact is the one a chat can show inline, and the one this whole

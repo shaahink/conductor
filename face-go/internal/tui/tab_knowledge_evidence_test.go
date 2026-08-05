@@ -75,6 +75,29 @@ func TestKnowledgeHelpLineCountsEvidence(t *testing.T) {
 	}
 }
 
+// The one thing an evidence row must never lose is WHICH artifact it is. Every path in a run shares
+// the same directory prefix, so a right-truncated row spends its width saying nothing.
+func TestEvidencePathKeepsTheFileNameWhenItCannotKeepEverything(t *testing.T) {
+	const p = ".conductor/evidence/K5/K5.3-dashboard.png"
+	// Exactly `room` wide, and what survives is the tail: the file name is intact and the shared
+	// directory prefix is what got spent.
+	got := evidencePath(p, 24)
+	if len([]rune(got)) != 24 || !strings.HasSuffix(got, "K5.3-dashboard.png") || !strings.HasPrefix(got, "…") {
+		t.Errorf("evidencePath elided the wrong end: %q", got)
+	}
+	if got := evidencePath(p, 200); got != p {
+		t.Errorf("a path that fits must not be touched: %q", got)
+	}
+	if got := evidencePath(p, 0); got != "" {
+		t.Errorf("no room means no path, not a panic: %q", got)
+	}
+
+	frame := stripANSI(withEvidence(t, fixedEvidence()).View().Content)
+	if !strings.Contains(frame, "F7.2-dashboard.png") {
+		t.Errorf("the rendered row lost the file name\n%s", frame)
+	}
+}
+
 func TestEvidenceSizeReadsAtAGlance(t *testing.T) {
 	for _, c := range []struct {
 		in   int64

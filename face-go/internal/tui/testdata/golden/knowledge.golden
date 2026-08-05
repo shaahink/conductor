@@ -6,13 +6,13 @@
  ✓ F6 5/5 Ink TUI v1       │       since=0 reset re-replays the whole log                                     
  ● F7 2/5 Gate … 1× $0.30  │    #2 (high) [F7] verifier double-counts session cost on resume 7m ago           
    ✓ F7.1 Plan import      │                                                                                  
-   ✓ F7.2 Re-import diff   │  ◆ Knowledge ledger (2)                                                          
-   ● F7.3 Truth-gate tier  │    [finding] GateCache keys by (name, tier, sha) — join attemp… (s12/F7) 3m ago  
- ○ F8 0/4 conductor chat…  │    [trap] Never Stop-Process dotnet by name — use conductor bg… (s11/F7) 4m ago  
+   ✓ F7.2 Re-import diff   │  ◆ Evidence (2)                                                                  
+   ● F7.3 Truth-gate tier  │    [image] …vidence/F7/F7.2-dashboard.png 180.0 KB · watcher (s12/F7.2) 2m ago   
+ ○ F8 0/4 conductor chat…  │    [text] …ctor/evidence/F7/F7.2-gate-run.log 8.6 KB · claim (s12/F7.2) 3m ago   
                            │                                                                                  
- ── GATES ──               │                                                                                  
-   ✓ build                 │                                                                                  
-   ● test 4s               │                                                                                  
+ ── GATES ──               │  ◆ Knowledge ledger (2)                                                          
+   ✓ build                 │    [finding] GateCache keys by (name, tier, sha) — join attemp… (s12/F7) 3m ago  
+   ● test 4s               │    [trap] Never Stop-Process dotnet by name — use conductor bg… (s11/F7) 4m ago  
    ○ lint                  │                                                                                  
                            │                                                                                  
  ── TASKS ──               │                                                                                  
@@ -31,4 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   2 bugs · 2 ledger · n note · b bug · x resolve · ↑
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   2 bugs · 2 evidence · 2 ledger · n note · b bug · 
