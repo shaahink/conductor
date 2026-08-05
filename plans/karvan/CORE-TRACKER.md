@@ -4,18 +4,19 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **K7.2 part 5** (s30), commit `cfccfa5`, evidence `.conductor/evidence/K7/K7.2-docs-verb-inventory.md`.
-  K7.2 stays BLOCKED and owner-only; nothing here claimed it. `docs/cli.md` - the page that opens by
-  promising "the verbs you reach for daily" - named **36 of the engine's 41** visible verbs. Missing:
-  `budget`, `money`, `history`, `ps`, `watch`; four of the five appeared **zero** times in *any*
-  user-facing page. `budget`/`money` are what the v0.4.0 notes lead with. Fixed in place, and a test
-  now points SC8.3's Program.cs verb-scan at the page - red first, naming exactly those five.
-do not re-derive: (a) the ship chain has **no defect**: `v0.4.0` in a scratch clone publishes
-  `version --short` = `0.4.0+<sha>`, `update` accepts it, release guard + `changelog-section.sh` pass
-  (s29). (b) `install.ps1` builds from the working tree, so the owner installs from a CLEAN checkout
-  at the tag. (c) The era score in the release body is corrected and dated; `budget`'s `sess` is
-  COSTED sessions. (d) Closure ledger restated 11 open / 5 closed. (e) `doctor`'s red `work` check is
-  bug #32, fixed in tree but inert until the new engine regenerates the tracker.
+last: **K7.2 part 6** (s31), commit `842adc6`, evidence `.conductor/evidence/K7/K7.2-strict-flag-parsing.md`.
+  K7.2 stays BLOCKED and owner-only; nothing here claimed it. **Closes bug #17.** The engine silently
+  accepted and ignored *every* unknown option - Spectre defaults `StrictParsing` false and Program.cs
+  never set it, so `version --shortt` exited 0 and printed the LONG form. At a public ship that means
+  a mistyped `update --check` swaps the binary and a mistyped `gate --full` reports green off the fast
+  tier. Fixed with `c.UseStrictParsing()`; test drives the real binary, red without it.
+do not re-derive: (a) the change is global so the FULL battery was run, not a filter: **2066 passed,
+  0 failed**; nothing depended on a flag being swallowed. (b) The repo-wide sweep is done - all 82
+  files carrying a `conductor <verb> --flag` were checked against declared options; the only dead
+  flags were `status --no-llm` (six sites, never existed) and the already-deleted `report --query`,
+  both fixed. `--yes` on rollback/kill/skip is real, declared on `CtlCommand.Settings`. (c) `--`
+  passthrough survives, so `bg start -- dotnet test --filter X` is safe. (d) s29-s30 still stand: the
+  ship chain has no defect, `install.ps1` builds from the working tree, era score dated.
 next: owner-only, unchanged - confirm no other conductor run is live, merge, tag `v0.4.0`, let the
   pipeline publish, then the first `install.ps1` of this run. Re-run `conductor budget` and `money`
   at tag time and paste into `CHANGELOG.md`; today's figures are stamped s29 and move every session.

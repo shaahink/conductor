@@ -1,10 +1,10 @@
 ﻿# Conductor — Karvan core - the engine knows what it did and what it cost run report
 
-_Updated 2026-08-05 12:33 UTC · branch `feat/karvan` · HEAD `064c4df`_
+_Updated 2026-08-05 12:43 UTC · branch `feat/karvan` · HEAD `a8c76cc`_
 
-**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [13h 03m ago, 23:29:12Z]
+**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [13h 14m ago, 23:29:12Z]
 **Stage:** K7 — Ship the plan · attempts used 0 · working ▸ K7.2
-**Checkpoints:** 24/32 done · **Sessions run:** 29 · **Cost:** $299.3113 (agent $299.1338 + gates $0.1775) · **Tokens:** 4,344,109 in / 2,142,356 out
+**Checkpoints:** 24/32 done · **Sessions run:** 30 · **Cost:** $302.4334 (agent $302.2508 + gates $0.1826) · **Tokens:** 4,420,885 in / 2,171,082 out
 **Confirmed phases:** K1, K2, K3, K4, K5, K6
 
 ## Stage progress
@@ -126,16 +126,13 @@ _Updated 2026-08-05 12:33 UTC · branch `feat/karvan` · HEAD `064c4df`_
 | 27 | K7 | Deliver | 1 | 08-05 10:57 | 0:57 | Progress |  | 4 | engine-fast:OK · face-fast:OK | $18.2443 | $0.0074 | 235,837/148,885 |
 | 28 | K7 | Deliver | 1 | 08-05 11:56 | 0:12 | Progress |  | 1 | engine-fast:OK · face-fast:OK | $5.3546 | $0.0048 | 110,529/47,606 |
 | 29 | K7 | Deliver | 1 | 08-05 12:10 | 0:21 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $7.3087 | $0.0074 | 142,506/65,682 |
+| 30 | K7 | Deliver | 1 | 08-05 12:33 | 0:09 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $3.1170 | $0.0051 | 76,776/28,726 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-05 09:35:52  • session #21 K6 → Advanced · done K6.1 · 2 commit(s)  (12m25s)
-08-05 09:35:52  • session #22 K6 Deliver started (attempt 1/8)
-08-05 09:56:23  ▪ gate engine-fast pass [session]  (46.0s)
-08-05 09:56:23  ▪ gate face-fast pass [session]  (4.1s)
 08-05 09:56:24  • session #22 K6 → Advanced · done K6.2 · 3 commit(s)  (20m31s)
 08-05 09:56:24  • session #23 K6 Deliver started (attempt 1/8)
 08-05 10:21:01  ▪ gate engine-fast pass [session]  (47.6s)
@@ -172,6 +169,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-05 13:10:12  • session #29 K7 Deliver started (attempt 1/4)
 08-05 13:33:02  ▪ gate engine-fast pass [session]  (44.8s)
 08-05 13:33:02  ▪ gate face-fast pass [session]  (29.5s)
+08-05 13:33:03  • session #29 K7 → Progress · 2 commit(s)  (22m50s)
+08-05 13:33:04  • session #30 K7 Deliver started (attempt 1/4)
+08-05 13:43:46  ▪ gate engine-fast pass [session]  (47.8s)
+08-05 13:43:46  ▪ gate face-fast pass [session]  (3.1s)
 ```
 
 ## Health
@@ -179,7 +180,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 29 · retries 4 (14 %) · overall Warn
+sessions 30 · retries 4 (13 %) · overall Warn
 ⚠ [context-saturation] session #10: 23,623,416 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #18: 23,816,486 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #19: 24,146,164 context tokens (≥ 20,000,000)
@@ -202,10 +203,6 @@ vs upstream: up to date
 
 ### Commits by session
 
-- **s22 (K6 Deliver)** — 3 commit(s):
-  - [`8c9681b`](https://github.com/shaahink/conductor/commit/8c9681b) docs(tracker): K6.2 claimed and handed off - the offset cannot run away any more
-  - [`8fee399`](https://github.com/shaahink/conductor/commit/8fee399) test(face): K6.2 rebaseline - five golden frames, none of them a body row
-  - [`fa1d3a4`](https://github.com/shaahink/conductor/commit/fa1d3a4) feat(face): K6.2 - Report and Knowledge scroll through a viewport, and the offset is clamped where it changes
 - **s23 (K6 Deliver)** — 5 commit(s):
   - [`98525b3`](https://github.com/shaahink/conductor/commit/98525b3) docs(evidence): K6.3 - the measurements and the seven driven frames
   - [`72bc183`](https://github.com/shaahink/conductor/commit/72bc183) docs(tracker): K6.3 claimed and handed off - the state finally follows the code
@@ -241,6 +238,9 @@ vs upstream: up to date
 - **s29 (K7 Deliver)** — 2 commit(s):
   - [`064c4df`](https://github.com/shaahink/conductor/commit/064c4df) docs(tracker): K7.2 part 4 handed off - the ship gate is rehearsed, the release body is dated
   - [`35d3cb6`](https://github.com/shaahink/conductor/commit/35d3cb6) docs(k7): the ship gate is rehearsed, and the ledger stops pinning itself
+- **s30 (K7 Deliver)** — 2 commit(s):
+  - [`a8c76cc`](https://github.com/shaahink/conductor/commit/a8c76cc) docs(tracker): K7.2 part 5 handed off - the CLI reference names all 41 verbs
+  - [`cfccfa5`](https://github.com/shaahink/conductor/commit/cfccfa5) docs(cli): the reference names the verbs this era shipped, and a test keeps it that way
 
 ## Phase handovers (audit)
 
@@ -267,26 +267,27 @@ engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: Ship gate rehearsed at a real tag; release body and closure ledger corrected
-> - v0.4.0 in a scratch clone answers `version --short` = 0.4.0+b56d457ac0e2; update path accepts it; guard and changelog-section.sh pass. No defect in the chain.
-> - Era score in CHANGELOG (the release body) and TOKEN-BUDGET-TUNING refreshed to 24 ckpt / 15.5M / $12.17 / 26 costed of 28, now dated and re-run at tag time.
-> - Closure ledger pinned itself: green while 3 of 14 rows were fixed bugs. Eleven open, five restated closed with run.db's fixed_session; test scoped and extended.
-> artefacts: 35d3cb6, 064c4df, CHANGELOG.md, docs/dev/TOKEN-BUDGET-TUNING.md, .conductor/followups.md, tests/Conductor.Tests/K…
+> SESSION-RESULT: docs/cli.md named 36 of 41 shipped verbs; fixed, and a test enforces it
+> - Found the era's flagship verbs `budget`/`money` — what the v0.4.0 notes lead with — documented in zero user-facing pages, alongside `history`, `ps`, `watch`; same rot SC8.3 fixed for shell completion, never aimed at the docs.
+> - Fixed cli.md (Token-and-money + Across-runs sections, flags read off captured `--help`) and README; new K7_2DocsVerbCoverageTests points SC8.3's Program.cs scan at the page.
+> - Red-first proof: against the pre-fix page the test named exactly `budget, history, money, ps, watch`; green after. Build 0 warnings/0 errors.
+> artefacts: cfccfa5, a8c76cc, docs/cli.md, README.md, tests/Condu…
 
 ## Tracker handoff
 
 ```
-last: **K7.2 part 4** (s29), commit `35d3cb6`, evidence `.conductor/evidence/K7/K7.2-ship-rehearsal.md`.
-  K7.2 stays BLOCKED and owner-only; nothing here claimed it. The local half of the ship is now
-  measured: a `v0.4.0` tag in a scratch clone publishes to `version --short` = **`0.4.0+<sha>`** (not
-  `0.0.0-alpha.0`), and `conductor update` accepts it - `SemVer` strips the `v` and ignores build
-  metadata. Release guard and `changelog-section.sh 0.4.0` both pass. **No defect in the chain.**
-do not re-derive: (a) the release plumbing is ALIGNED (s28) and `install.ps1` builds from the working
-  tree, so the owner installs from a CLEAN checkout at the tag. (b) The era score was stale in the
-  release body and is corrected + dated; `budget`'s `sess` is COSTED sessions (26 of 28; 3 and 4 were
-  AgentError with no tokens). (c) The closure ledger was pinned against a copy of itself - fixed, 11
-  open / 5 closed restated. (d) `doctor`'s red `work` check (G13, the seven F/R rows) is bug #32,
-  fixed in the tree but inert until the new engine regenerates the tracker.
+last: **K7.2 part 5** (s30), commit `cfccfa5`, evidence `.conductor/evidence/K7/K7.2-docs-verb-inventory.md`.
+  K7.2 stays BLOCKED and owner-only; nothing here claimed it. `docs/cli.md` - the page that opens by
+  promising "the verbs you reach for daily" - named **36 of the engine's 41** visible verbs. Missing:
+  `budget`, `money`, `history`, `ps`, `watch`; four of the five appeared **zero** times in *any*
+  user-facing page. `budget`/`money` are what the v0.4.0 notes lead with. Fixed in place, and a test
+  now points SC8.3's Program.cs verb-scan at the page - red first, naming exactly those five.
+do not re-derive: (a) the ship chain has **no defect**: `v0.4.0` in a scratch clone publishes
+  `version --short` = `0.4.0+<sha>`, `update` accepts it, release guard + `changelog-section.sh` pass
+  (s29). (b) `install.ps1` builds from the working tree, so the owner installs from a CLEAN checkout
+  at the tag. (c) The era score in the release body is corrected and dated; `budget`'s `sess` is
+  COSTED sessions. (d) Closure ledger restated 11 open / 5 closed. (e) `doctor`'s red `work` check is
+  bug #32, fixed in tree but inert until the new engine regenerates the tracker.
 next: owner-only, unchanged - confirm no other conductor run is live, merge, tag `v0.4.0`, let the
   pipeline publish, then the first `install.ps1` of this run. Re-run `conductor budget` and `money`
   at tag time and paste into `CHANGELOG.md`; today's figures are stamped s29 and move every session.
