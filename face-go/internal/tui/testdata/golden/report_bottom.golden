@@ -31,4 +31,4 @@
                            │    reason n/a on 1 session — this run's agent provider reports no thinking toke  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ scroll (13/13) · esc back                      
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ d/u G/home scroll 100% · esc back              

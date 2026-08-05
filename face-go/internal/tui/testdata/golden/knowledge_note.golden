@@ -13,7 +13,7 @@
  ── GATES ──               │  ◆ Knowledge ledger (2)                                                          
    ✓ build                 │    [finding] GateCache keys by (name, tier, sha) — join attemp… (s12/F7) 3m ago  
    ● test 4s               │    [trap] Never Stop-Process dotnet by name — use conductor bg… (s11/F7) 4m ago  
-   ○ lint                  │  note› warm the cache first                                                      
+   ○ lint                  │                                                                                  
                            │                                                                                  
  ── TASKS ──               │                                                                                  
    ✓ Add truth-tier con…   │                                                                                  
@@ -27,7 +27,7 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
-                           │                                                                                  
+                           │  note› warm the cache first                                                      
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  

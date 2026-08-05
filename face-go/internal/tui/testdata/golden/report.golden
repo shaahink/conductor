@@ -31,4 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ scroll (0/13) · esc back                       
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ d/u G/home scroll 0% · esc back                
