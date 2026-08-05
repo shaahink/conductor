@@ -46,10 +46,16 @@ func (m Model) cmdFetchKnowledge() tea.Cmd {
 	return func() tea.Msg {
 		ledger, lerr := source.FetchLedger()
 		bugs, berr := source.FetchBugs()
-		if lerr != nil && berr != nil {
+		// K5.3: evidence rides the same poll. Its error is swallowed like the other two — an engine
+		// too old to serve /evidence answers 404, and that must cost the section, not the tab.
+		evidence, eerr := source.FetchEvidence()
+		if lerr != nil && berr != nil && eerr != nil {
 			return nil
 		}
-		return MsgKnowledgeUpdated{Ledger: ledger, Bugs: bugs}
+		if eerr != nil {
+			evidence = nil
+		}
+		return MsgKnowledgeUpdated{Ledger: ledger, Bugs: bugs, Evidence: evidence}
 	}
 }
 

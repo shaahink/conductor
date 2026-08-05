@@ -93,10 +93,12 @@ type MsgLastRunLoaded struct {
 	Summary *lastrun.Summary
 }
 
-// MsgKnowledgeUpdated carries the M7 ledger + bugs snapshot (polled together).
+// MsgKnowledgeUpdated carries the M7 ledger + bugs snapshot and (K5.3) the evidence registry,
+// polled together: what this run knows, what is wrong with it, and what it has to show for itself.
 type MsgKnowledgeUpdated struct {
-	Ledger *api.LedgerDto
-	Bugs   *api.BugsDto
+	Ledger   *api.LedgerDto
+	Bugs     *api.BugsDto
+	Evidence *api.EvidenceDto
 }
 
 // MsgKnowledgeWritten is the result of filing a note/bug or resolving a bug from the Knowledge tab.

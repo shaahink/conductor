@@ -292,6 +292,11 @@ func (s *demoSource) FetchBugs() (*BugsDto, error) {
 	return &BugsDto{Bugs: makeFakeBugs()}, nil
 }
 
+func (s *demoSource) FetchEvidence() (*EvidenceDto, error) {
+	artifacts := makeFakeEvidence()
+	return &EvidenceDto{Artifacts: artifacts, Count: len(artifacts)}, nil
+}
+
 // Demo write-side knowledge: accept the write (so the tab's success toast fires) without persisting —
 // the demo's ledger/bugs are regenerated each poll, so there's nothing durable to append to.
 func (s *demoSource) PostNote(NoteRequestDto) (*KnowledgeWriteResultDto, error) {
@@ -1172,6 +1177,18 @@ func makeFakeLedger() []LedgerEntryDto {
 		{Id: 4, SessionNumber: sess(11), StageId: strPtr("F7"), Kind: "trap", Content: "Never Stop-Process dotnet by name — it kills unrelated builds. Use conductor bg stop <pid>.", CreatedAt: "2026-07-15T10:03:10Z"},
 		{Id: 3, SessionNumber: sess(11), StageId: strPtr("F7"), Kind: "decision", Content: "Cost of the verifier session is folded into the stage total under category='verify', not the deliver cost.", CreatedAt: "2026-07-15T10:02:40Z"},
 		{Id: 2, SessionNumber: sess(8), StageId: strPtr("F6"), Kind: "observation", Content: "lipgloss v2 counts the border inside .Width(): inner content width is width−3 for a single-side border.", CreatedAt: "2026-07-15T09:40:00Z"},
+	}
+}
+
+// makeFakeEvidence mirrors GET /evidence (K5.3): what the run has to show for itself, newest first.
+// The screenshot is first on purpose — a PNG nobody mentioned is the case the registry exists for,
+// and a demo that only showed markdown would misrepresent it.
+func makeFakeEvidence() []EvidenceArtifactDto {
+	sess := func(n int) *int { return &n }
+	return []EvidenceArtifactDto{
+		{Path: ".conductor/evidence/F7/F7.2-dashboard.png", Kind: "image", CheckpointId: strPtr("F7.2"), StageId: strPtr("F7"), SessionNumber: sess(12), Sha256: "9f2c1ab4", Bytes: 184320, CreatedAt: "2026-07-15T10:05:30Z", Source: "watcher", Visual: true},
+		{Path: ".conductor/evidence/F7/F7.2-gate-run.log", Kind: "text", CheckpointId: strPtr("F7.2"), StageId: strPtr("F7"), SessionNumber: sess(12), Sha256: "40ba77de", Bytes: 8814, CreatedAt: "2026-07-15T10:04:10Z", Source: "claim"},
+		{Path: "docs/evidence/F7/F7.1-cache-keys.md", Kind: "text", CheckpointId: strPtr("F7.1"), StageId: strPtr("F7"), SessionNumber: sess(11), Sha256: "c31d05fa", Bytes: 2210, CreatedAt: "2026-07-15T09:58:00Z", Source: "claim"},
 	}
 }
 

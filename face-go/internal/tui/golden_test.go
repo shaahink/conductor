@@ -112,6 +112,7 @@ func (fakeSource) FetchSessions() (*api.SessionsDto, error)   { return nil, nil 
 func (fakeSource) FetchTimeline() (*api.TimelineDto, error)   { return nil, nil }
 func (fakeSource) FetchLedger() (*api.LedgerDto, error)       { return fixedLedger(), nil }
 func (fakeSource) FetchBugs() (*api.BugsDto, error)           { return fixedBugs(), nil }
+func (fakeSource) FetchEvidence() (*api.EvidenceDto, error)   { return fixedEvidence(), nil }
 func (fakeSource) PostNote(api.NoteRequestDto) (*api.KnowledgeWriteResultDto, error) {
 	return &api.KnowledgeWriteResultDto{Ok: true}, nil
 }
@@ -204,6 +205,17 @@ func fixedBugs() *api.BugsDto {
 	return &api.BugsDto{Bugs: []api.BugDto{
 		{Id: 3, Title: "console SSE resets line counter on new session log", Detail: d("since=0 reset re-replays the whole log"), Severity: "medium", Status: "open", StageId: st("F7"), FoundSession: s(12), CreatedAt: "2026-07-15T10:06:00Z"},
 		{Id: 2, Title: "verifier double-counts session cost on resume", Severity: "high", Status: "open", StageId: st("F7"), FoundSession: s(11), CreatedAt: "2026-07-15T10:01:00Z"},
+	}}
+}
+
+// K5.3: one visual artifact and one not, both dated relative to goldenNow, so the frame pins the
+// case the registry exists for (a PNG nobody mentioned) next to the ordinary one.
+func fixedEvidence() *api.EvidenceDto {
+	s := func(n int) *int { return &n }
+	st := func(x string) *string { return &x }
+	return &api.EvidenceDto{Count: 2, Artifacts: []api.EvidenceArtifactDto{
+		{Path: ".conductor/evidence/F7/F7.2-dashboard.png", Kind: "image", CheckpointId: st("F7.2"), StageId: st("F7"), SessionNumber: s(12), Sha256: "9f2c1ab4", Bytes: 184320, CreatedAt: "2026-07-15T10:05:30Z", Source: "watcher", Visual: true},
+		{Path: ".conductor/evidence/F7/F7.2-gate-run.log", Kind: "text", CheckpointId: st("F7.2"), StageId: st("F7"), SessionNumber: s(12), Sha256: "40ba77de", Bytes: 8814, CreatedAt: "2026-07-15T10:04:10Z", Source: "claim"},
 	}}
 }
 
@@ -717,12 +729,12 @@ func TestGolden(t *testing.T) {
 		}},
 		{"knowledge", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("k"))
-			m, _ = m.Update(MsgKnowledgeUpdated{Ledger: fixedLedger(), Bugs: fixedBugs()})
+			m, _ = m.Update(MsgKnowledgeUpdated{Ledger: fixedLedger(), Bugs: fixedBugs(), Evidence: fixedEvidence()})
 			return m
 		}},
 		{"knowledge_note", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("k"))
-			m, _ = m.Update(MsgKnowledgeUpdated{Ledger: fixedLedger(), Bugs: fixedBugs()})
+			m, _ = m.Update(MsgKnowledgeUpdated{Ledger: fixedLedger(), Bugs: fixedBugs(), Evidence: fixedEvidence()})
 			m, _ = m.Update(keyMsg("n")) // file-a-note input
 			for _, ch := range "warm the cache first" {
 				m, _ = m.Update(keyMsg(string(ch)))

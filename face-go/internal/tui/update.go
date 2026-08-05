@@ -244,6 +244,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.Bugs != nil {
 			m.data.Bugs = msg.Bugs.Bugs
 		}
+		if msg.Evidence != nil {
+			m.data.Evidence = msg.Evidence.Artifacts
+			m.data.EvidenceAll = msg.Evidence.Count
+		}
 		return m, nil
 
 	case MsgKnowledgeWritten:

@@ -121,7 +121,8 @@ func (m Model) renderKnowledgePane() (string, string) {
 		return shown + input, "type · enter submit · esc cancel"
 	}
 
-	help := fmt.Sprintf("%d bugs · %d ledger · n note · b bug · x resolve · ↑↓ scroll · r refresh", len(m.data.Bugs), len(m.data.Ledger))
+	help := fmt.Sprintf("%d bugs · %d evidence · %d ledger · n note · b bug · x resolve · ↑↓ scroll · r refresh",
+		len(m.data.Bugs), len(m.data.Evidence), len(m.data.Ledger))
 	return shown, help
 }
 
@@ -161,6 +162,8 @@ func (m Model) knowledgeLines() []string {
 	}
 
 	lines = append(lines, "")
+	lines = append(lines, m.evidenceLines(width)...)
+	lines = append(lines, "")
 
 	// ── Knowledge ledger ──
 	lines = append(lines, accentStyle.Render(fmt.Sprintf("◆ Knowledge ledger (%d)", len(m.data.Ledger))))
@@ -190,6 +193,78 @@ func (m Model) knowledgeLines() []string {
 		lines = append(lines, line)
 	}
 	return lines
+}
+
+// evidenceLines is K5.3's surface: what the run has to show for itself. It sits between the bugs and
+// the ledger deliberately — the ledger grows every session and would bury it, and the eleventh tab
+// folds rather than being added (SF1.3, adr/0004), so evidence is re-homed where its question already
+// lives: what does this run know, what is wrong with it, what did it produce.
+//
+// A visual artifact is marked, because a screenshot nobody forwards is the case the registry exists
+// for and it must not read like one more log file. `visual` comes from the engine rather than being
+// re-derived from the kind string, so this cannot disagree with what the notifier will send.
+func (m Model) evidenceLines(width int) []string {
+	total := m.data.EvidenceAll
+	if total < len(m.data.Evidence) {
+		total = len(m.data.Evidence)
+	}
+	header := fmt.Sprintf("◆ Evidence (%d)", total)
+	if total > len(m.data.Evidence) {
+		header = fmt.Sprintf("◆ Evidence (%d of %d)", len(m.data.Evidence), total)
+	}
+	lines := []string{accentStyle.Render(header)}
+	if len(m.data.Evidence) == 0 {
+		return append(lines, subtleStyle.Render("  none registered — no artifact this run"))
+	}
+	for _, a := range m.data.Evidence {
+		where := ""
+		if a.SessionNumber != nil {
+			where = fmt.Sprintf(" (s%d", *a.SessionNumber)
+			if a.CheckpointId != nil && *a.CheckpointId != "" {
+				where += "/" + *a.CheckpointId
+			}
+			where += ")"
+		} else if a.CheckpointId != nil && *a.CheckpointId != "" {
+			where = " (" + *a.CheckpointId + ")"
+		}
+		meta := fmt.Sprintf(" %s · %s%s", evidenceSize(a.Bytes), a.Source, where)
+		age := knowledgeAge(a.CreatedAt)
+		kind := "[" + a.Kind + "]"
+		// Plain text is measured and truncated BEFORE any style is applied — styling first and
+		// width-formatting after is how an ANSI string gets cut mid-escape (STYLE.md).
+		room := width - lipgloss.Width(kind) - len(meta) - 4 - lipgloss.Width(age)
+		line := fmt.Sprintf("  %s %s%s",
+			evidenceKindStyle(a.Visual).Render(kind),
+			textStyle.Render(truncate(a.Path, room)),
+			subtleStyle.Render(meta))
+		if age != "" {
+			line += subtleStyle.Render(" " + age)
+		}
+		lines = append(lines, line)
+	}
+	return lines
+}
+
+// evidenceKindStyle: a visual artifact is the one a chat can show inline, and the one this whole
+// checkpoint exists for. It gets the peach the bug ids use, not the ledger's teal.
+func evidenceKindStyle(visual bool) lipgloss.Style {
+	if visual {
+		return peachStyle
+	}
+	return tealStyle
+}
+
+// evidenceSize renders bytes the way a surface deciding whether to SEND something needs to read it:
+// two significant places under 10, none above, so 8.6 KB and 184 KB line up at the same width.
+func evidenceSize(b int64) string {
+	switch {
+	case b >= 1<<20:
+		return fmt.Sprintf("%.1f MB", float64(b)/(1<<20))
+	case b >= 1<<10:
+		return fmt.Sprintf("%.1f KB", float64(b)/(1<<10))
+	default:
+		return fmt.Sprintf("%d B", b)
+	}
 }
 
 // knowledgeAge renders a ledger or bug created_at as its age. It goes through timefmt.Parse rather

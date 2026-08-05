@@ -30,6 +30,12 @@ type DataSource interface {
 	FetchLedger() (*LedgerDto, error)
 	FetchBugs() (*BugsDto, error)
 
+	// K5.3: what the run PRODUCED — every registered artifact, with its kind, the session that made
+	// it and the checkpoint it evidences. Polled with the ledger and the bugs because it answers the
+	// third part of the same question: what does this run know, what is wrong with it, and what has
+	// it got to show for itself.
+	FetchEvidence() (*EvidenceDto, error)
+
 	// Write-side knowledge: file a note/bug and resolve a bug from the Face (POST /note, /bug,
 	// /bug/resolve) — the same run.db rows the CLI `note`/`bug` verbs write.
 	PostNote(req NoteRequestDto) (*KnowledgeWriteResultDto, error)
@@ -606,6 +612,29 @@ type BugsDto struct {
 	Bugs []BugDto `json:"bugs"`
 }
 
+// EvidenceArtifactDto is one registered artifact (K5.3), surfaced by GET /evidence. Visual is the
+// engine's own answer to "can this be shown inline, or must it be sent as a file" — it is not
+// re-derived here, so the Face and the notifier cannot disagree about what a PNG is.
+type EvidenceArtifactDto struct {
+	Path          string  `json:"path"`
+	Kind          string  `json:"kind"`
+	CheckpointId  *string `json:"checkpointId"`
+	StageId       *string `json:"stageId"`
+	SessionNumber *int    `json:"sessionNumber"`
+	Sha256        string  `json:"sha256"`
+	Bytes         int64   `json:"bytes"`
+	CreatedAt     string  `json:"createdAt"`
+	Source        string  `json:"source"`
+	Visual        bool    `json:"visual"`
+}
+
+// Count is the size of the WHOLE registry; Artifacts is the page. A surface showing five of forty
+// has to be able to say so rather than reading as if it showed everything.
+type EvidenceDto struct {
+	Artifacts []EvidenceArtifactDto `json:"artifacts"`
+	Count     int                   `json:"count"`
+}
+
 // Write-side knowledge DTOs (mirror Core/Http/ControlPlaneDto.KnowledgeWrite.cs).
 type NoteRequestDto struct {
 	Content string `json:"content"`
@@ -932,6 +961,8 @@ type AppState struct {
 	RawConsole   []ConsoleLineDto
 	Ledger       []LedgerEntryDto
 	Bugs         []BugDto
+	Evidence     []EvidenceArtifactDto
+	EvidenceAll  int // the whole registry's size, which Evidence may be a page of
 	LastEventSeq int64
 	LastTxSeq    int64
 }

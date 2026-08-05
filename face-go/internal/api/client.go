@@ -157,6 +157,14 @@ func (s *liveSource) FetchBugs() (*BugsDto, error) {
 	return &bugs, nil
 }
 
+func (s *liveSource) FetchEvidence() (*EvidenceDto, error) {
+	var evidence EvidenceDto
+	if err := s.getJSON("/evidence", &evidence); err != nil {
+		return nil, err
+	}
+	return &evidence, nil
+}
+
 func (s *liveSource) PostNote(req NoteRequestDto) (*KnowledgeWriteResultDto, error) {
 	return s.postKnowledge("/note", req)
 }
