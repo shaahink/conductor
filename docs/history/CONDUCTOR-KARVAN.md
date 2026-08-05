@@ -156,6 +156,14 @@ exceeds 500 lines, which looks healthy and is not: the *type* still owns every r
 compiler enforces no boundary, and "where does X live" needs a grep. The DTO pile in particular is
 really per-endpoint contracts wearing one type name.
 
+> ⚠ **Corrected by K2.3 (session 7), measured before the edit.** ~~"`ControlPlaneDto` is 30 **partial
+> files**"~~ — they were not partials. `ControlPlaneDto` (30), `ConductorEvent` (11) and the three
+> `TelegramService` Dto files each declared *independent top-level records*; the shared prefix was a
+> filing convention pretending to be a type, which is a different defect from a real partial pile and
+> wants a different fix. `ControlPlaneServer`, `VerdictEngine`, `SqliteRunStore`, `SessionRunner` and
+> `RunLoop` are the genuine partials. The checkpoint split both, and `ARCHITECTURE.md` says which is
+> which so the distinction survives the next reader.
+
 **Done when.** The worst piles are split by *responsibility* — a folder per feature for the endpoint
 contracts, not thirty files of one type — and the repo has **one written file-organisation convention**
 (where a new endpoint's contract goes, where a new event goes, when a partial is legitimate and when it
@@ -323,11 +331,17 @@ ways.
 
 **Done when.** Conductor owns the format: a headline of at most fifteen words, at most three outcome
 bullets, changed artefacts as links, evidence paths, and explicit gaps. Prose goes to the handover,
-where prose belongs. **`FollowupParser` and the verdict parse read this text, so their parsers move in
-the same checkpoint** — and so does the session template that teaches the format, which lives in
+where prose belongs. ~~**`FollowupParser` and the verdict parse read this text, so their parsers move in
+the same checkpoint**~~ ⚠ **the verdict parse reads this text and moved; `FollowupParser` does not and
+did not** — and so does the session template that teaches the format, which lives in
 `plans/karvan/templates/session.md` and is read fresh every session, so this run can adopt its own
 change mid-flight. A malformed or legacy result must degrade to today's behaviour rather than throwing:
 the engine cannot make an agent obey a format, only prefer one.
+
+> ⚠ **Corrected by K5.1 (session 18), measured before the edit.** `FollowupParser.cs:25-30` reads
+> pipe-table rows out of `.conductor/followups.md`; it never sees a session result. Its only callers
+> are `LaneCoordinator.cs:208/235` and `VerdictEngine.Advisor.cs:124`. So the checkpoint moved the
+> verdict parse and the session template, and left the followup parser alone — correctly.
 
 ### K5.2 — The five Telegram defects that make the feed unreadable are gone
 
@@ -435,8 +449,14 @@ update the hand-maintained legend in `cmdbar.go` in the same commit, or the help
 ### K6.4 — Markdown renders in the theme, everywhere it should
 
 **Today.** `renderMarkdown` sets `glamour.WithStandardStyle("dark")` unconditionally while
-`widgets/theme.go` already has a theme system, and Report, Knowledge and handover panes render markdown
-as plain text.
+`widgets/theme.go` already has a theme system, and ~~Report, Knowledge and handover panes render markdown
+as plain text~~ ⚠ **the Knowledge pane renders markdown unthemed; Report is a dashboard, not prose, and
+there is no handover pane at all**.
+
+> ⚠ **Corrected by K6.4 (session 24), measured before the edit.** `tab_report.go` renders a
+> stage/session/gate dashboard whose only free text is a one-line attention reason; no pane named
+> "handover" exists in `face-go`. The checkpoint delivered what the *first* clause asked for — one
+> theme-aware renderer — and named the rest rather than inventing panes to satisfy the sentence.
 
 **Done when.** One markdown renderer honours the active theme, and the panes that should render markdown
 do. Finish the remaining primitive swaps the ADR calls for (textarea for the Knowledge and Templates
@@ -466,8 +486,9 @@ the spec gets corrected.
 > are struck through above. The corrected rule is stronger than the one this spec asked for: sarban-face's
 > nudge *did* clear the floor, at 1.30×, and still converted zero of ten kills — because it sat at 0.84×
 > the median closing session. `TOKEN-BUDGET-TUNING.md` §7 step 4 now says *median closer*, not *floor*.
-> The wrong claims found by this plan's other stages are corrected in place too; the register of them is
-> `docs/history/KARVAN-CLOSURE-LEDGER.md`, which also names an owner for every bug and followup left open.
+> The wrong claims found by this plan's other stages are corrected in place too — see the ⚠ blocks at
+> K2.3, K5.1 and K6.4. The closure ledger that names an owner for every bug and followup left open is
+> the `## K7.1 closure ledger` section of `.conductor/followups.md`, where SF7.1 put its own.
 
 ### K7.2 — The branch is merged by the owner, tagged, released and installed
 
