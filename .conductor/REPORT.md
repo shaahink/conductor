@@ -1,10 +1,10 @@
 ﻿# Conductor — Karvan core - the engine knows what it did and what it cost run report
 
-_Updated 2026-08-05 08:35 UTC · branch `feat/karvan` · HEAD `5fa8150`_
+_Updated 2026-08-05 08:56 UTC · branch `feat/karvan` · HEAD `8c9681b`_
 
-**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [9h 06m ago, 23:29:12Z]
-**Stage:** K6 — The surfaces read · attempts used 0 · working ▸ K6.2
-**Checkpoints:** 20/32 done · **Sessions run:** 21 · **Cost:** $223.6584 (agent $223.5366 + gates $0.1218) · **Tokens:** 3,121,090 in / 1,537,110 out
+**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [9h 27m ago, 23:29:12Z]
+**Stage:** K6 — The surfaces read · attempts used 0 · working ▸ K6.3
+**Checkpoints:** 21/32 done · **Sessions run:** 22 · **Cost:** $231.9345 (agent $231.8077 + gates $0.1268) · **Tokens:** 3,261,729 in / 1,596,389 out
 **Confirmed phases:** K1, K2, K3, K4, K5
 
 ## Stage progress
@@ -16,7 +16,7 @@ _Updated 2026-08-05 08:35 UTC · branch `feat/karvan` · HEAD `5fa8150`_
 | K3 | Conductor remembers | ██████████ 3/3 | confirmed ✓ |
 | K4 | Token truth - measure it before shrinking it | ██████████ 4/4 | confirmed ✓ |
 | K5 | The result contract and the channels | ██████████ 4/4 | confirmed ✓ |
-| K6 | The surfaces read | ██░░░░░░░░ 1/4 | **← active** |
+| K6 | The surfaces read | █████░░░░░ 2/4 | **← active** |
 | K7 | Ship the plan | ░░░░░░░░░░ 0/2 | todo |
 
 <details> ✅<summary>K1 — The ledger stops lying (4/4)</summary>
@@ -73,12 +73,12 @@ _Updated 2026-08-05 08:35 UTC · branch `feat/karvan` · HEAD `5fa8150`_
 
 </details>
 
-<details><summary>K6 — The surfaces read (1/4)</summary>
+<details><summary>K6 — The surfaces read (2/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| K6.1 | An ADR fixes the TUI conventions — pager keys, focus model, help, one scroll idiom, viewport versus list versus table — after an actual read of glow, soft-serve, gh-dash and lazygit | ✅ DONE | - |
-| K6.2 | bubbles v2 is a declared dependency and Report and Knowledge scroll through a viewport, with the golden, frame-invariant and glitch-sweep tests green, any baseline regenerated in a separate rebaseline commit, and a captured frame of a long document scrolled to its end as evidence | ⬜ TODO | - |
+| K6.1 | An ADR fixes the TUI conventions — pager keys, focus model, help, one scroll idiom, viewport versus list versus table — after an actual read of glow, soft-serve, gh-dash and lazygit | ✅ DONE | [`76b66aa`](https://github.com/shaahink/conductor/commit/76b66aa) |
+| K6.2 | bubbles v2 is a declared dependency and Report and Knowledge scroll through a viewport, with the golden, frame-invariant and glitch-sweep tests green, any baseline regenerated in a separate rebaseline commit, and a captured frame of a long document scrolled to its end as evidence | ✅ DONE | - |
 | K6.3 | Each tab owns its own model, state, update and view, the root update becomes a dispatch instead of 826 lines and 80 cases, and the mnemonic map and the hand-maintained help legend change together | ⬜ TODO | - |
 | K6.4 | One markdown renderer honours the active theme everywhere markdown belongs, the remaining primitive swaps the ADR calls for are done as far as the goldens allow, and anything deliberately left is named | ⬜ TODO | - |
 
@@ -118,16 +118,13 @@ _Updated 2026-08-05 08:35 UTC · branch `feat/karvan` · HEAD `5fa8150`_
 | 19 | K5 | Deliver | 1 | 08-05 06:51 | 0:41 | Advanced | K5.3 | 5 | engine-fast:OK · face-fast:OK | $16.1117 | $0.0049 | 187,740/86,244 |
 | 20 | K5 | Deliver | 1 | 08-05 07:33 | 0:46 | Advanced | K5.4 | 4 | engine-fast:OK · face-fast:OK | $19.4020 | $0.0051 | 246,366/126,779 |
 | 21 | K6 | Deliver | 1 | 08-05 08:23 | 0:11 | Advanced | K6.1 | 2 | engine-fast:OK · face-fast:OK | $4.7018 | $0.0049 | 81,232/36,308 |
+| 22 | K6 | Deliver | 1 | 08-05 08:35 | 0:19 | Advanced | K6.2 | 3 | engine-fast:OK · face-fast:OK | $8.2711 | $0.0050 | 140,639/59,279 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-05 06:52:55  ▪ gate engine-fast pass [session]  (41.8s)
-08-05 06:52:55  ▪ gate face-fast pass [session]  (4.6s)
-08-05 06:52:56  • session #16 K4 → Advanced · done K4.4 · 5 commit(s)  (47m50s)
-08-05 06:59:05  ▪ gate engine-fast pass [phase]  (0.0s)
 08-05 06:59:05  ▪ gate face-fast pass [phase]  (0.0s)
 08-05 06:59:05  ▪ gate engine-full FAIL [phase]  (2m59s)
 08-05 06:59:05  ▪ gate face-full pass [phase]  (9.0s)
@@ -164,6 +161,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-05 09:23:26  • session #21 K6 Deliver started (attempt 1/8)
 08-05 09:35:52  ▪ gate engine-fast pass [session]  (46.2s)
 08-05 09:35:52  ▪ gate face-fast pass [session]  (2.9s)
+08-05 09:35:52  • session #21 K6 → Advanced · done K6.1 · 2 commit(s)  (12m25s)
+08-05 09:35:52  • session #22 K6 Deliver started (attempt 1/8)
+08-05 09:56:23  ▪ gate engine-fast pass [session]  (46.0s)
+08-05 09:56:23  ▪ gate face-fast pass [session]  (4.1s)
 ```
 
 ## Health
@@ -171,7 +172,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 21 · retries 4 (19 %) · overall Warn
+sessions 22 · retries 4 (18 %) · overall Warn
 ⚠ [context-saturation] session #10: 23,623,416 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #18: 23,816,486 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #19: 24,146,164 context tokens (≥ 20,000,000)
@@ -193,9 +194,6 @@ vs upstream: up to date
 
 ### Commits by session
 
-- **s14 (K4 Deliver)** — 2 commit(s):
-  - [`1ec436f`](https://github.com/shaahink/conductor/commit/1ec436f) feat(doctor): K4.2 - doctor warns when the cap is under the floor or the nudge under the median closer
-  - [`1fcbd0b`](https://github.com/shaahink/conductor/commit/1fcbd0b) feat(budget): K4.2 - the engine measures its own token ceiling and prescribes the next one
 - **s15 (K4 Deliver)** — 2 commit(s):
   - [`725f4de`](https://github.com/shaahink/conductor/commit/725f4de) docs(evidence): K4.3 evidence artifact and the handoff to K4.4
   - [`20842e2`](https://github.com/shaahink/conductor/commit/20842e2) feat(money): K4.3 - conductor money prices a run from its own ledger
@@ -229,6 +227,10 @@ vs upstream: up to date
 - **s21 (K6 Deliver)** — 2 commit(s):
   - [`5fa8150`](https://github.com/shaahink/conductor/commit/5fa8150) docs(tracker): K6.1 claimed and handed off - the conventions are settled
   - [`76b66aa`](https://github.com/shaahink/conductor/commit/76b66aa) docs(face): K6.1 - the TUI conventions ADR, and the measurement that settles it
+- **s22 (K6 Deliver)** — 3 commit(s):
+  - [`8c9681b`](https://github.com/shaahink/conductor/commit/8c9681b) docs(tracker): K6.2 claimed and handed off - the offset cannot run away any more
+  - [`8fee399`](https://github.com/shaahink/conductor/commit/8fee399) test(face): K6.2 rebaseline - five golden frames, none of them a body row
+  - [`fa1d3a4`](https://github.com/shaahink/conductor/commit/fa1d3a4) feat(face): K6.2 - Report and Knowledge scroll through a viewport, and the offset is clamped where it changes
 
 ## Phase handovers (audit)
 
@@ -255,26 +257,27 @@ engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: K6.1 done: ADR 0006 settles TUI conventions, backed by a measured 389-keystroke dead pane
-> - Six decisions K6.2-K6.4 implement without re-deciding, each anchored to a fetched file+symbol in glow, soft-serve, gh-dash or lazygit; bubbles v2 measured at charm.land/bubbles/v2 v2.1.1, the path K6.2 blocks on.
-> - Root cause measured not inferred: unclamped offset in Update, clamp only in a renderer-local copy. Report freezes for 389 keystrokes; Knowledge has no paging or jump keys at all. Filed bug #30, which K6.2 closes by construction.
-> - Stale ADR index (stuck at 0003) now lists 0004-0006; STYLE.md's Keys section points at the ADR so the next face change reads it before inventing a…
+> SESSION-RESULT: K6.2 landed — bubbles v2 declared, Report and Knowledge on a viewport, bug #30 dead
+> - 400 downs past the end now cost exactly ONE up; the test asserts the count, not a non-blank pane
+> - panescroll.go is the one key set as key.Binding values; two measured ADR corrections recorded in code
+> - golden rebaseline is its own commit and moved no body row at any offset
+> artefacts: fa1d3a4, 8fee399, 8c9681b, face-go/internal/tui/panescroll.go, face-go/internal/tui/panescroll_test.go, face-go/go.mod
+> evidence: .conductor/evidence/K6/K6.2-viewport.md, .conductor/evidence/K6/K6.2-frames.txt
+> gaps: none for K6.2. K6.3 (per-tab models, 826-line update → dispatch) and K6.4 untouched; bug #29 (K7.…
 
 ## Tracker handoff
 
 ```
-last: **K6.1 DONE** (s21) - `76b66aa`, evidence `.conductor/evidence/K6/K6.1-tui-conventions-adr.md`.
-  `docs/dev/adr/0006-tui-conventions.md` makes six decisions K6.2-K6.4 implement without re-deciding,
-  each anchored to a file+symbol in glow / soft-serve / gh-dash / lazygit that was actually fetched.
-  It rests on a measurement: `m.reportScroll++` (`tab_report.go:46`) has NO clamp in `Update` - the
-  only clamp is a renderer-local copy (`:83`) never written back - so 400 `down` presses left the
-  offset at 400 against a body that stops at 12, and **389 `up` presses** were needed before one line
-  moved. That is the owner's "can't read long text". Bug #30; K6.2 closes it by construction.
-next: **K6.2** - declare `charm.land/bubbles/v2 v2.1.1` (measured, matches bubbletea v2) and move
-  Report + Knowledge onto a `viewport`. Read ADR 0006 first, not the four upstream repos again.
-red: none. `go build`, `go vet`, tui + widgets suites green. bugs #29 (K7.2) and #30 (K6.2) open.
-watch: the mnemonic loop (`update.go:608`) is an EXACT-string match resolving before any pane handler,
-  so lowercase `k`/`b`/`g` are unreachable in a pane (this is why Knowledge's `k` does nothing) while
-  uppercase `G` is free. Bind `↓`/`j` `↑`, `d`/`u`, `pgdn`/`f` `pgup`, `end`/`G` `home` - and nothing
-  else. Evidence files need `git add -f`: `.conductor/.gitignore` line 1 is `*`.
+last: **K6.2 DONE** (s22) - `fa1d3a4` code, `8fee399` rebaseline, evidence
+  `.conductor/evidence/K6/K6.2-viewport.md` (+ `K6.2-frames.txt`, six real frames). bubbles v2.1.1 is
+  a direct require; Report + Knowledge are `viewport.Model`; `panescroll.go` is the ONE key set as
+  `key.Binding` values. Bug #30 closed by construction - 400 downs past the end now cost ONE up, and
+  the test asserts that count, not "the pane is not blank" (a renderer clamp already passed that).
+next: **K6.3** - per-tab models. Read ADR 0006 decisions 3 and 5 and `panescroll.go`; do not re-derive
+  the key set or re-read the four upstream repos.
+red: none. `go build`, `go vet`, all five face-go suites green. Bug #29 (K7.2) still open.
+watch: two ADR corrections are already in the code, do not re-argue them - `f` is NOT a page-down
+  alias (`tab_agent.go:36` owns it), and bubbletea v2 spells the key `pgdown`. The golden result that
+  matters for K6.3/K6.4: `viewport.View()` pads to width AND height and is byte-identical to the old
+  hand-rolled slice once `frameContent` runs - NO body row moved in any golden, only status lines.
 ```

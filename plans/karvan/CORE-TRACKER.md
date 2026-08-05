@@ -4,18 +4,20 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **K6.2 DONE** (s22) - `fa1d3a4` code, `8fee399` rebaseline, evidence
-  `.conductor/evidence/K6/K6.2-viewport.md` (+ `K6.2-frames.txt`, six real frames). bubbles v2.1.1 is
-  a direct require; Report + Knowledge are `viewport.Model`; `panescroll.go` is the ONE key set as
-  `key.Binding` values. Bug #30 closed by construction - 400 downs past the end now cost ONE up, and
-  the test asserts that count, not "the pane is not blank" (a renderer clamp already passed that).
-next: **K6.3** - per-tab models. Read ADR 0006 decisions 3 and 5 and `panescroll.go`; do not re-derive
-  the key set or re-read the four upstream repos.
-red: none. `go build`, `go vet`, all five face-go suites green. Bug #29 (K7.2) still open.
-watch: two ADR corrections are already in the code, do not re-argue them - `f` is NOT a page-down
-  alias (`tab_agent.go:36` owns it), and bubbletea v2 spells the key `pgdown`. The golden result that
-  matters for K6.3/K6.4: `viewport.View()` pads to width AND height and is byte-identical to the old
-  hand-rolled slice once `frameContent` runs - NO body row moved in any golden, only status lines.
+last: **K6.3 DONE** (s23) - `05beb46` eight tabs, `29db592` Plan+Kanban, `03c7eeb` the help legend,
+  evidence `.conductor/evidence/K6/K6.3-per-tab-models.md` (+ `K6.3-frames.txt`, seven driven frames).
+  Ten `xxxModel` structs, one per `tab_*.go`; `Model` 116 -> 45 fields; `update.go` 831 -> 567 lines;
+  root `Update` 37 -> 18 cases behind `tabUpdaters`. The Tabs grid and folded row now RENDER from
+  `tabKey`/`tabNames`/`foldedTabs`, so the legend cannot lie (`TestHelpLegendFollowsARebind`).
+next: **K6.4** - one markdown renderer in the active theme. `renderMarkdown` (markdown.go) hardcodes
+  `glamour.WithStandardStyle("dark")` while `widgets/theme.go` already has themes; Report, Knowledge
+  and the handover panes render markdown as plain text. Name whatever primitive swap you leave.
+red: none. `go build`, `go vet`, every face-go suite green; ZERO goldens regenerated all session.
+  Bug #29 (K7.2) still open.
+watch: tab state now lives in `m.<tab>.<field>` - `m.plan` is `m.plan.doc`. The tab models are plain
+  structs with an `updateXxx`, NOT `tea.Model`s, and that is deliberate (see the ledger). A message
+  moves to a tab only when the state it lands has ONE reader; `MsgSessionsUpdated`/`MsgTasksUpdated`
+  stay in the shell for that reason. `plan.go` is still 1,085 lines - state split, renderer did not.
 
 
 ## Baseline numbers (from run.db)
@@ -24,7 +26,7 @@ watch: two ADR corrections are already in the code, do not re-argue them - `f` i
 |---|---|
 | Total checkpoints | 32 |
 | Done | 5 |
-| Claimed (unconfirmed) | 15 |
+| Claimed (unconfirmed) | 16 |
 
 ## Checkpoints
 
@@ -80,7 +82,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | K6.1 | An ADR fixes the TUI conventions — pager keys, focus model, help, one scroll idiom, viewport versus list versus table — after an actual read of glow, soft-serve, gh-dash and lazygit | DONE | 76b66aa | .conductor/evidence/K6/K6.1-tui-conventions-adr.md |
-| K6.2 | bubbles v2 is a declared dependency and Report and Knowledge scroll through a viewport, with the golden, frame-invariant and glitch-sweep tests green, any baseline regenerated in a separate rebaseline commit, and a captured frame of a long document scrolled to its end as evidence | TODO | - | - |
+| K6.2 | bubbles v2 is a declared dependency and Report and Knowledge scroll through a viewport, with the golden, frame-invariant and glitch-sweep tests green, any baseline regenerated in a separate rebaseline commit, and a captured frame of a long document scrolled to its end as evidence | DONE | fa1d3a4 | .conductor/evidence/K6/K6.2-viewport.md |
 | K6.3 | Each tab owns its own model, state, update and view, the root update becomes a dispatch instead of 826 lines and 80 cases, and the mnemonic map and the hand-maintained help legend change together | TODO | - | - |
 | K6.4 | One markdown renderer honours the active theme everywhere markdown belongs, the remaining primitive swaps the ADR calls for are done as far as the goldens allow, and anything deliberately left is named | TODO | - | - |
 
