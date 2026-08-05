@@ -153,6 +153,64 @@ func TestPaneScrollStatusIsAPercentAndOnlyWhenItScrolls(t *testing.T) {
 	}
 }
 
+// K6.4. The owner queue's full view was the LAST surviving instance of bug #30's exact shape:
+// `m.home.queueScroll++` in Update with the comment "clamped by the renderer", and a throwaway
+// `min(queueScroll, maxScroll)` inside View that a value receiver could never write back. K6.2 closed
+// that on Report and Knowledge; adr/0006 §5 names this view too, and it had been left behind.
+//
+// Same measurement, same surface-independent rule: past the end, ONE key comes back.
+func TestOwnerQueuePastTheEndCostsExactlyOneKeyToComeBack(t *testing.T) {
+	m := openLongOwnerQueue(t)
+	for i := 0; i < 400; i++ {
+		m = asModel(mustHandle(m.handleOwnerQueueKey("down")))
+	}
+	vp := m.ownerQueueViewport()
+	if got, max := m.home.queueVp.YOffset(), vp.TotalLineCount()-vp.Height(); got > max {
+		t.Errorf("owner queue offset is %d against a body that stops at %d — Update let it run", got, max)
+	}
+	atEnd := paneBody(m)
+	if paneBody(asModel(mustHandle(m.handleOwnerQueueKey("up")))) == atEnd {
+		t.Error("400 downs past the end took more than one `up` before a line moved (bug #30's shape)")
+	}
+}
+
+// The whole scroll set, on the owner's own list. `end`/`G` and the half-page pair are the keys this
+// pane never had — it bound up/down/home/pgup/pgdown by hand and stopped there, so a long queue could
+// be entered but not reached the end of.
+func TestOwnerQueueBindsTheOneScrollSet(t *testing.T) {
+	for _, k := range []string{"down", "j", "up", "d", "u", "pgdown", "pgup", "end", "G", "home"} {
+		m := openLongOwnerQueue(t)
+		if strings.Contains("up u pgup home", k) {
+			m = asModel(mustHandle(m.handleOwnerQueueKey("end")))
+		}
+		before := paneBody(m)
+		if got := paneBody(asModel(mustHandle(m.handleOwnerQueueKey(k)))); got == before {
+			t.Errorf("owner queue: %q moved nothing", k)
+		}
+	}
+}
+
+// openLongOwnerQueue opens `w` through the real router with a queue longer than the pane.
+func openLongOwnerQueue(t *testing.T) Model {
+	t.Helper()
+	items := make([]api.OwnerQueueItemDto, 0, 40)
+	for i := 0; i < 40; i++ {
+		items = append(items, api.OwnerQueueItemDto{
+			Id: "g" + itoa(i), Kind: "ownerGate", Title: "Stage K" + itoa(i) + " needs approval",
+			Unblocks: "stage K" + itoa(i), Command: "conductor approve K" + itoa(i)})
+	}
+	tm, _ := newGoldenModel(120, 30).(Model).Update(MsgOwnerQueueUpdated{
+		Queue: &api.OwnerQueueDto{Count: 40, GeneratedUtc: "2026-08-01T10:00:00Z", Items: items}})
+	tm, _ = tm.(Model).Update(keyMsg("w"))
+	m := asModel(tm)
+	vp := m.ownerQueueViewport()
+	if vp.TotalLineCount() <= vp.Height() {
+		t.Fatalf("fixture queue is %d lines in a %d-row pane — it does not scroll, so this proves nothing",
+			vp.TotalLineCount(), vp.Height())
+	}
+	return m
+}
+
 // --- helpers ------------------------------------------------------------------
 
 // openScrollable opens a tab through the REAL router (so the mnemonic precedence is exercised) and

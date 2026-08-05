@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 
+	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
@@ -26,9 +27,12 @@ type homeModel struct {
 	// not stop existing because one fetch timed out, and a section that blanks itself on a hiccup is
 	// how a queue teaches people to stop trusting it. queueErr says the feed went away, beside the
 	// rows it is still showing.
-	queue       *api.OwnerQueueDto
-	queueErr    string
-	queueScroll int
+	queue    *api.OwnerQueueDto
+	queueErr string
+	// queueVp scrolls the full-pane queue (K6.4, adr/0006 §5 names this view). It replaces a bare int
+	// that Update incremented with the comment "clamped by the renderer" — the exact shape of bug #30,
+	// still live on the owner's own list after K6.2 closed it on Report.
+	queueVp viewport.Model
 }
 
 // updateHome handles the owner-queue poll — the only surface on Home that fetches for itself.

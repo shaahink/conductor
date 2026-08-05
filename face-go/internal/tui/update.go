@@ -391,7 +391,7 @@ func (m Model) openOwnerQueue() (tea.Model, tea.Cmd) {
 	}
 	m.tab = TabHome
 	m.home.view = homeOwnerQueue
-	m.home.queueScroll = 0
+	m.home.queueVp.GotoTop()
 	return m, m.cmdFetchOwnerQueue()
 }
 

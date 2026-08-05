@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
@@ -136,20 +137,12 @@ func (m Model) renderHomeOwnerQueue(w int) []homeLine {
 // --- the full-pane view (`w`) ---------------------------------------------------
 
 func (m Model) handleOwnerQueueKey(key string) (tea.Model, tea.Cmd) {
-	switch key {
-	case "up", "k":
-		if m.home.queueScroll > 0 {
-			m.home.queueScroll--
-		}
-	case "down", "j":
-		m.home.queueScroll++ // clamped by the renderer against the real body height
-	case "home":
-		m.home.queueScroll = 0
-	case "pgup":
-		m.home.queueScroll = max(0, m.home.queueScroll-m.paneRows())
-	case "pgdown":
-		m.home.queueScroll += m.paneRows()
-	}
+	// Size and content FIRST, then move (adr/0006 §1): the clamp lives at the mutation, so the viewport
+	// has to hold the list that is actually on screen before the offset changes. `k` is gone from the
+	// up set on purpose — it is the Knowledge mnemonic, the router resolves it before any pane handler,
+	// and it could never have reached here.
+	m.home.queueVp = m.ownerQueueViewport()
+	applyPaneScroll(&m.home.queueVp, key)
 	return m, nil
 }
 
@@ -157,6 +150,30 @@ func (m Model) handleOwnerQueueKey(key string) (tea.Model, tea.Cmd) {
 // the engine attached, and the exact command that clears it. Nothing is capped here — this view IS
 // the uncapped one, and it scrolls.
 func (m Model) renderOwnerQueuePane() (string, string) {
+	vp := m.ownerQueueViewport()
+	help := "w/esc back to Home"
+	// The scroll hint appears only when there is something to scroll — a permanent "↑↓ scroll" on a
+	// queue of two items is noise dressed as information, the same rule paneScrollStatus follows.
+	if paneScrollStatus(vp) != "" {
+		help = paneScrollHelp(vp) + " · " + help
+	}
+	return vp.View(), help
+}
+
+// ownerQueueViewport sizes the queue's viewport to the pane and loads the current list. Both the key
+// handler and the renderer go through it, so an offset that survives a resize or a fresh poll is
+// re-clamped against the list that is actually on screen.
+func (m Model) ownerQueueViewport() viewport.Model {
+	vp := m.home.queueVp
+	vp.SetWidth(m.paneCols())
+	vp.SetHeight(m.paneRows())
+	vp.SetContent(m.ownerQueueBody())
+	return vp
+}
+
+// ownerQueueBody is every section of the full queue, joined. Built here rather than inside the
+// renderer so the key handler can load the same bytes into the viewport it is about to scroll.
+func (m Model) ownerQueueBody() string {
 	w := m.paneCols()
 	q := m.home.queue
 
@@ -180,22 +197,7 @@ func (m Model) renderOwnerQueuePane() (string, string) {
 		}
 	}
 
-	body := strings.Join(sections, "\n\n")
-	body = lipgloss.NewStyle().MaxWidth(w).Render(body)
-
-	lines := strings.Split(body, "\n")
-	rows := m.paneRows()
-	maxScroll := max(0, len(lines)-rows)
-	scroll := min(m.home.queueScroll, maxScroll)
-	if scroll > 0 || maxScroll > 0 {
-		end := min(scroll+rows, len(lines))
-		lines = lines[scroll:end]
-	}
-	help := "w/esc back to Home"
-	if maxScroll > 0 {
-		help = fmt.Sprintf("↑↓ scroll (%d/%d) · w/esc back to Home", scroll, maxScroll)
-	}
-	return strings.Join(lines, "\n"), help
+	return lipgloss.NewStyle().MaxWidth(w).Render(strings.Join(sections, "\n\n"))
 }
 
 func (m Model) ownerQueueHeader(q *api.OwnerQueueDto) string {

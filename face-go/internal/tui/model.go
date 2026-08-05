@@ -230,6 +230,7 @@ func New(source api.DataSource, isDemo bool, baseURL string) Model {
 		report:       reportModel{vp: newPaneViewport()},
 		knowledge:    knowledgeModel{vp: newPaneViewport()},
 		tmpl:         templatesModel{previewVp: newPaneViewport()},
+		home:         homeModel{queueVp: newPaneViewport()},
 		eventCh:      make(chan api.ConductorEventDto, 256),
 		txCh:         make(chan api.TranscriptLineDto, 1024),
 		consoleCh:    make(chan api.ConsoleLineDto, 1024),
