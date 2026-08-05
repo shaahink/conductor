@@ -4,23 +4,23 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **K4.1 CLAIMED**, `ea49c8d` + evidence `.conductor/evidence/K4/K4.1-context-per-turn.md`.
-  Per-turn context = `input + cache_creation + cache_read` per DEDUPED assistant message, taken in
-  `ClaudeProvider.cs:153` and `OpencodeProvider.cs:112`; schema **v12** adds `sessions.context_*`;
-  `LiveMetrics.ContextForSession` + `RunArchive.ContextFromEvents` recover it from persisted TokenDeltas,
-  so every past run answers. `conductor history <run>` shows it per session and in one sentence.
-numbers: **this era runs at 123k context per turn, high water 250k** (Sarban face: 113k / 267k). The
-  32M cap and the 123k window differ by four orders of magnitude and have been conflated all along.
-  Derivation validated on 4,832 real turn pairs: turn N's context = turn N+1's reported cacheRead,
-  98.1% within 4 tokens; the 90 outliers are 58 drops / 32 grows, i.e. compaction, not a bad formula.
-next: **K4.2 - `conductor budget`.** Floor, wrap-up, cap, nudge-vs-floor, rollover rate, prescription;
-  must reproduce this repo's two runs unprompted. `sessions.limits` (v11) is the denominator; the K4.1
-  numbers above are its input. Model is NOT recorded anywhere, so "% of window" is not derivable yet.
-watch: a new verb is TWO edits - `Program.cs` and `CompletionCommand.Verbs`; the second is gate-enforced.
-  A schema bump also breaks any test that rewinds a db by version without dropping the new columns.
-  Piping the engine through `Select-Object -First N` closes the pipeline and KILLS it mid-flow; use `-Last`.
-red: none. Open, not blocking: **#28**, **#27** fresh-db FK error, **#24** `AgentConfig.Merge` drops `Env`.
-
+last: **K4.2 CLAIMED**, evidence `.conductor/evidence/K4/K4.2-conductor-budget.md` (+ raw verb output
+  beside it). `conductor budget [run|path/to/run.db]` measures floor, wrap-up, cap, nudge-vs-floor,
+  rollover rate and prescribes; `doctor` gained a `tokens` check that warns on cap-below-floor and
+  nudge-below-median-closer. 19 new tests, ratchet exit 0.
+unlock: **`SoftBreakRequested` events carry `liveTokens` AND `tokenBudget`** — a run states its own
+  ceiling and its real firing point at schema v9, no `runs.limits` needed. `session_id` is NULL on
+  them; attribute by walking back to the nearest `SessionStarted` by `seq`.
+numbers: face run reproduced unprompted — split at session 9, 26.5M/ckpt before, cap 8M, nudge 6.07M
+  (0.84× the 7.26M median closer), floor 4.66M, wrap-up 1.37M n=20. **Two doc corrections for K7.1:**
+  the capped window closed **14** checkpoints not 17 (so 17.0M/ckpt, cap paid **1.6×** not 1.9×), and
+  **10** sessions died on it not 11. Karvan now: cap 32M, nudge fires 22.6M, floor 8.34M, 0 rollovers.
+next: **K4.3 `conductor money`.** `BudgetAnalyzer`'s window split is the "what did the cap buy" axis;
+  reuse it. Model IS recorded (`SessionStarted` payload `model`), so %-of-window is derivable — the
+  K4.1 handoff said otherwise and was wrong.
+red: none. **bug #29 blocks K7.2:** this repo's `run.db` is half-migrated (version 9, but v10's
+  `soft_break` column exists), so any newer engine dies on `duplicate column name` — `MigrationRunner`
+  applies each `.sql` with no transaction and sets the version only after the whole loop.
 
 ## Baseline numbers (from run.db)
 

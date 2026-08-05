@@ -118,6 +118,7 @@ public sealed partial class DoctorCommand : AsyncCommand<DoctorSettings>
         checks.AddRange(preflight.Select(r => new Check(r.Name, r.Passed ? "ok" : "fail", r.Message)));
 
         checks.Add(CheckBudget(plan, currentCostUsd, hasRun));
+        checks.Add(CheckTokenBudget(plan));
         checks.Add(CheckState(plan));
         checks.Add(CheckTelegram(plan));
 

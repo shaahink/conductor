@@ -1,7 +1,9 @@
 using System.Globalization;
+using Conductor.Commands;
 using Conductor.Core.Budget;
 using Conductor.Core.History;
 using Conductor.Core.Store;
+using Conductor.Models;
 
 using Microsoft.Data.Sqlite;
 
@@ -324,6 +326,140 @@ public sealed class K4_2BudgetTests : IDisposable
         var archive = RunArchive.TryOpen(db);
         Assert.NotNull(archive);
         Assert.Empty(archive!.SoftBreaks("R1"));
+    }
+
+    // ------------------------------------------------------------------ doctor
+
+    /// <summary>A plan whose state pointer aims at a database seeded with the face run's shape, so
+    /// the check under test measures real recorded sessions rather than a stub.</summary>
+    private PlanConfig PlanOver(long cap, double ratio, bool withHistory = true)
+    {
+        var repo = Path.Combine(_tmp, "repo-" + cap);
+        Directory.CreateDirectory(Path.Combine(repo, StateHome.ScratchDirName));
+        var db = Path.Combine(_tmp, $"doctor-{cap}.db");
+        if (withHistory) SeedRunWithSessions(db);
+        File.WriteAllText(
+            Path.Combine(repo, StateHome.ScratchDirName, StateHome.PointerFileName),
+            $$"""{"runDb": {{System.Text.Json.JsonSerializer.Serialize(db)}}}""");
+        return new PlanConfig
+        {
+            Name = "k42",
+            Repo = repo,
+            Tracker = "TRACKER.md",
+            Limits = new LimitsConfig { MaxSessionTokens = cap, SoftBreakRatio = ratio },
+        };
+    }
+
+    [Fact]
+    public void Doctor_WarnsWhenTheCapSitsBelowTheMeasuredFloor()
+    {
+        // The face run's capped window has a 4.66M floor, so a 4M ceiling sits under it: sk-studio
+        // stage F's exact shape, nine sessions and one checkpoint.
+        var check = DoctorCommand.CheckTokenBudget(PlanOver(4_000_000, 0.7));
+
+        Assert.Equal("warn", check.State);
+        Assert.Contains("BELOW the measured", check.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Doctor_WarnsWhenTheNudgeSitsBelowTheMedianClosingSession()
+    {
+        // 12M cap clears the 4.66M floor, but 0.4 x 12M = 4.8M fires under the 7.26M median closer.
+        var check = DoctorCommand.CheckTokenBudget(PlanOver(12_000_000, 0.4));
+
+        Assert.Equal("warn", check.State);
+        Assert.Contains("median closing session", check.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Doctor_IsQuietWhenBothBarsAreCleared()
+    {
+        var check = DoctorCommand.CheckTokenBudget(PlanOver(12_000_000, 0.75));
+
+        Assert.Equal("ok", check.State);
+        Assert.Contains("clears the", check.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Doctor_SaysSoRatherThanGuessingWhenThereIsNoHistory()
+    {
+        var check = DoctorCommand.CheckTokenBudget(PlanOver(12_000_000, 0.75, withHistory: false));
+
+        Assert.Equal("ok", check.State);
+        Assert.Contains("no history yet", check.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Doctor_TreatsAnUncappedPlanAsFineRatherThanAsBroken()
+    {
+        var plan = PlanOver(12_000_000, 0.75);
+        plan.Limits.MaxSessionTokens = null;
+
+        var check = DoctorCommand.CheckTokenBudget(plan);
+
+        Assert.Equal("ok", check.State);
+        Assert.Contains("no session ceiling", check.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>Writes the face run's sessions, costs and nudge events into a bare database — the
+    /// tables the archive reads, no more.</summary>
+    private static void SeedRunWithSessions(string db)
+    {
+        using var c = new SqliteConnection($"Data Source={db}");
+        c.Open();
+        using (var cmd = c.CreateCommand())
+        {
+            cmd.CommandText =
+                "CREATE TABLE runs (run_id TEXT PRIMARY KEY, plan_name TEXT NOT NULL, repo TEXT NOT NULL, branch TEXT, " +
+                "  driver_ver TEXT, status TEXT NOT NULL, started_utc TEXT NOT NULL, ended_utc TEXT);" +
+                "INSERT INTO runs VALUES ('R1','k42','r',NULL,NULL,'completed','2026-08-01T00:00:00Z',NULL);" +
+                "CREATE TABLE sessions (id INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT NOT NULL, stage_id TEXT NOT NULL, " +
+                "  number INTEGER NOT NULL, kind TEXT NOT NULL, started_utc TEXT NOT NULL, ended_utc TEXT, outcome TEXT, " +
+                "  agent_session_id TEXT, resume_count INTEGER NOT NULL DEFAULT 0, attempt INTEGER NOT NULL DEFAULT 0, " +
+                "  gate_summary TEXT, result_summary TEXT, commit_count INTEGER NOT NULL DEFAULT 0, newly_done TEXT);" +
+                "CREATE TABLE costs (id INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT NOT NULL, session_number INTEGER NOT NULL, " +
+                "  category TEXT NOT NULL, tokens_in INTEGER NOT NULL DEFAULT 0, tokens_out INTEGER NOT NULL DEFAULT 0, " +
+                "  tokens_think INTEGER NOT NULL DEFAULT 0, tokens_cache INTEGER NOT NULL DEFAULT 0, " +
+                "  cost_usd REAL NOT NULL DEFAULT 0, wall_ms INTEGER NOT NULL DEFAULT 0);" +
+                "CREATE TABLE events (seq INTEGER NOT NULL, ts TEXT NOT NULL, run_id TEXT NOT NULL, session_id TEXT, " +
+                "  type TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY (seq, run_id));";
+            cmd.ExecuteNonQuery();
+        }
+
+        var seq = 0;
+        var nudges = Nudges(FaceNudges).ToDictionary(n => n.Session);
+        foreach (var s in Sessions(FaceRun))
+        {
+            using (var cmd = c.CreateCommand())
+            {
+                cmd.CommandText =
+                    "INSERT INTO sessions (run_id, stage_id, number, kind, started_utc, outcome, newly_done) " +
+                    "VALUES ('R1','SF',@n,'Deliver','2026-08-01T00:00:00Z',@o,@d);" +
+                    "INSERT INTO costs (run_id, session_number, category, tokens_in) VALUES ('R1',@n,'agent',@t);";
+                cmd.Parameters.AddWithValue("@n", s.Number);
+                cmd.Parameters.AddWithValue("@o", s.Outcome!);
+                cmd.Parameters.AddWithValue("@d", (object?)s.NewlyDone ?? DBNull.Value);
+                cmd.Parameters.AddWithValue("@t", s.AgentTokens);
+                cmd.ExecuteNonQuery();
+            }
+            using (var cmd = c.CreateCommand())
+            {
+                cmd.CommandText = "INSERT INTO events VALUES (@s,'2026-08-01T00:00:00Z','R1',@sid,'SessionStarted','{}')";
+                cmd.Parameters.AddWithValue("@s", ++seq);
+                cmd.Parameters.AddWithValue("@sid", s.Number.ToString(CultureInfo.InvariantCulture));
+                cmd.ExecuteNonQuery();
+            }
+            if (!nudges.TryGetValue(s.Number, out var n)) continue;
+            using (var cmd = c.CreateCommand())
+            {
+                cmd.CommandText = "INSERT INTO events VALUES (@s,'2026-08-01T00:00:00Z','R1',NULL,'SoftBreakRequested',@p)";
+                cmd.Parameters.AddWithValue("@s", ++seq);
+                cmd.Parameters.AddWithValue("@p",
+                    $$"""{"liveTokens":{{n.LiveTokens}},"tokenBudget":{{n.TokenBudget}}}""");
+                cmd.ExecuteNonQuery();
+            }
+        }
+        SqliteConnection.ClearAllPools();
     }
 
     private static void SeedEvents(string db)
