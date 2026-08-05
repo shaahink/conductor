@@ -416,6 +416,10 @@ public sealed partial class RunLoop
                 _ctx.RunTokens += rec.TokensTotal;
                 _ctx.PersistBudget();
                 EmitSessionFinished(rec);
+                // K5.3: awaited rather than folded into EmitSessionFinished, because reading and
+                // hashing an artifact is real I/O — a screenshot, not a status line — and this is the
+                // one place in the loop that can wait for it without blocking a thread.
+                await RegisterEvidenceAsync(rec, ct).ConfigureAwait(false);
                 // SC5.1: the park lands AFTER the session's finish event, so it is the last thing in
                 // the log and every reader that asks "what is happening now" is told "waiting", not
                 // "idle — last session finished".

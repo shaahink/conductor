@@ -33,6 +33,11 @@ public interface ITelegramService
     Task PushWithKeyboardAsync(string message, IReadOnlyList<(string Text, string CallbackData)> buttons,
         CancellationToken ct = default);
     Task PushSessionEndAsync(SessionEndPush push, CancellationToken ct = default);
+
+    /// <summary>K5.3: the notification path can CARRY an evidence artifact. This announces them as
+    /// text — K5.4 is what actually sends a photo or a document, and it replaces the body of this
+    /// method rather than adding a second path. The owner's case is a screenshot nobody forwards.</summary>
+    Task PushEvidenceAsync(IReadOnlyList<Evidence.EvidenceArtifact> artifacts, CancellationToken ct = default);
 }
 
 /// <summary>K5.2: everything the session-end push needs, in one argument, because the five defects
@@ -506,4 +511,6 @@ public sealed class NoOpTelegramService : ITelegramService
     public Task PushWithKeyboardAsync(string message,
         IReadOnlyList<(string Text, string CallbackData)> buttons, CancellationToken ct = default) => Task.CompletedTask;
     public Task PushSessionEndAsync(SessionEndPush push, CancellationToken ct = default) => Task.CompletedTask;
+    public Task PushEvidenceAsync(IReadOnlyList<Evidence.EvidenceArtifact> artifacts,
+        CancellationToken ct = default) => Task.CompletedTask;
 }

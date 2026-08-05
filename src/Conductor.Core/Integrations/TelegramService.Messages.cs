@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using Conductor.Core.Events;
+using Conductor.Core.Evidence;
 using Conductor.Core.Store;
 
 namespace Conductor.Core.Integrations;
@@ -44,6 +45,40 @@ public sealed partial class TelegramService
 
         await EnqueueAsync(sb.ToString(), push.Number, ct).ConfigureAwait(false);
     }
+
+    /// <summary>K5.3 — evidence reaches the chat. As TEXT, deliberately: sending the PNG itself is
+    /// K5.4's job (photo and document sending, chunking, per-event templates), and this is the line
+    /// that proves the path exists and carries the artifact's identity in the meantime. A screenshot
+    /// that nobody forwards is the case the whole item exists for.</summary>
+    public async Task PushEvidenceAsync(IReadOnlyList<EvidenceArtifact> artifacts, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(artifacts);
+        if (!_started || artifacts.Count == 0) return;
+
+        var sb = new StringBuilder();
+        sb.AppendLine($"<b>evidence</b> — {artifacts.Count} new artifact{(artifacts.Count == 1 ? "" : "s")}");
+        foreach (var a in artifacts.Take(EvidenceLinesPerPush))
+        {
+            var where = a.CheckpointId is { Length: > 0 } cp ? $" — {cp}" : "";
+            sb.AppendLine($"• {EscapeHtml(a.Path)} ({a.Kind}, {Size(a.Bytes)}){EscapeHtml(where)}");
+        }
+        if (artifacts.Count > EvidenceLinesPerPush)
+            sb.AppendLine($"+{artifacts.Count - EvidenceLinesPerPush} more");
+
+        var progress = ProgressLine(null);
+        if (progress.Length > 0) sb.Append(EscapeHtml(progress));
+
+        await EnqueueAsync(sb.ToString().TrimEnd(), null, ct).ConfigureAwait(false);
+    }
+
+    private const int EvidenceLinesPerPush = 8;
+
+    private static string Size(long bytes) => bytes switch
+    {
+        < 1024 => $"{bytes} B",
+        < 1024 * 1024 => $"{bytes / 1024.0:0.#} KB",
+        _ => $"{bytes / (1024.0 * 1024.0):0.#} MB",
+    };
 
     /// <summary>A rollover runs no gate battery and burns no attempt — that is what a rollover MEANS
     /// (K1.1) — so "(not recorded)" reads as a fault where there is none.</summary>
