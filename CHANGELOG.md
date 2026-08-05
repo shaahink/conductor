@@ -30,9 +30,10 @@ wrong and nothing caught them. Built the same way as the last two: conductor dri
 this repo, unattended, with every checkpoint confirmed by an independent gate battery rather than by
 the agent that claimed it.
 
-Its own score, produced by the tools this era shipped (`conductor budget` and `conductor money`, as of
-session 29): **24 checkpoints at 15.5M tokens and $12.17 each, zero rollovers in 26 costed sessions**
-— against the previous era's 17.0M, $14.86 and 30%.
+Its own score, produced by the tools this era shipped (`conductor budget` and `conductor money`, measured
+at the tag): **24 checkpoints at 16.8M tokens and $13.24 each, zero rollovers in 30 costed sessions**
+— against the previous era's 17.0M, $14.86 and 30%. The run cost $317.84 for 403.9M tokens, 98.3% of
+them cache reads.
 
 ### Added
 

@@ -1,10 +1,10 @@
 ﻿# Conductor — Karvan core - the engine knows what it did and what it cost run report
 
-_Updated 2026-08-05 12:57 UTC · branch `feat/karvan` · HEAD `f764904`_
+_Updated 2026-08-05 13:33 UTC · branch `feat/karvan` · HEAD `e935b8c`_
 
-**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [13h 28m ago, 23:29:12Z]
+**Status:** Paused — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [14h 03m ago, 23:29:12Z]
 **Stage:** K7 — Ship the plan · attempts used 0 · working ▸ K7.2
-**Checkpoints:** 24/32 done · **Sessions run:** 31 · **Cost:** $306.5290 (agent $306.3417 + gates $0.1874) · **Tokens:** 4,505,993 in / 2,212,621 out
+**Checkpoints:** 24/32 done · **Sessions run:** 32 · **Cost:** $317.7516 (agent $317.5561 + gates $0.1955) · **Tokens:** 4,665,548 in / 2,289,567 out
 **Confirmed phases:** K1, K2, K3, K4, K5, K6
 
 ## Stage progress
@@ -97,7 +97,6 @@ _Updated 2026-08-05 12:57 UTC · branch `feat/karvan` · HEAD `f764904`_
 
 | # | Stage | Kind | Att | Started (UTC) | Dur | Outcome | New DONE | Commits | Gates | Cost | Overhead | Tokens |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 2 | K1 | Deliver | 1 | 08-04 22:27 | 0:30 | Advanced | K1.3 | 6 | engine-fast:OK · face-fast:OK | $10.2462 | $0.0055 | 147,283/76,748 |
 | 3 | K1 | Deliver | 1 | 08-04 22:59 | 0:02 | AgentError |  | 0 | engine-fast:cached · face-fast:cached | $0.0000 |  |  |
 | 4 | K1 | Fix | 2 | 08-04 23:02 | 0:02 | AgentError |  | 0 | engine-fast:cached · face-fast:cached | $0.0000 |  |  |
 | 5 | K1 | Deliver | 1 | 08-04 23:30 | 0:37 | Advanced | K1.4 | 3 | engine-fast:OK · face-fast:OK | $14.6250 | $0.0127 | 170,772/86,424 |
@@ -127,17 +126,13 @@ _Updated 2026-08-05 12:57 UTC · branch `feat/karvan` · HEAD `f764904`_
 | 29 | K7 | Deliver | 1 | 08-05 12:10 | 0:21 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $7.3087 | $0.0074 | 142,506/65,682 |
 | 30 | K7 | Deliver | 1 | 08-05 12:33 | 0:09 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $3.1170 | $0.0051 | 76,776/28,726 |
 | 31 | K7 | Deliver | 1 | 08-05 12:43 | 0:12 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $4.0909 | $0.0048 | 85,108/41,539 |
+| 32 | K7 | Deliver | 1 | 08-05 12:57 | 0:34 | Progress |  | 3 | engine-fast:OK · face-fast:OK | $11.2145 | $0.0081 | 159,555/76,946 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-05 10:21:01  • session #23 K6 → Advanced · done K6.3 · 5 commit(s)  (24m37s)
-08-05 10:21:02  • session #24 K6 Deliver started (attempt 1/8)
-08-05 10:52:57  ▪ gate engine-fast pass [session]  (1m03s)
-08-05 10:52:57  ▪ gate face-fast pass [session]  (8.4s)
-08-05 10:52:58  • session #24 K6 → Advanced · done K6.4 · 5 commit(s)  (31m56s)
 08-05 10:57:06  ▪ gate engine-fast pass [phase]  (0.0s)
 08-05 10:57:06  ▪ gate face-fast pass [phase]  (0.0s)
 08-05 10:57:06  ▪ gate engine-full pass [phase]  (3m53s)
@@ -173,6 +168,11 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-05 13:43:47  • session #31 K7 Deliver started (attempt 1/4)
 08-05 13:57:20  ▪ gate engine-fast pass [session]  (44.6s)
 08-05 13:57:20  ▪ gate face-fast pass [session]  (3.1s)
+08-05 13:57:21  • session #31 K7 → Progress · 2 commit(s)  (13m34s)
+08-05 13:57:21  • session #32 K7 Deliver started (attempt 1/4)
+08-05 14:33:04  ▪ gate engine-fast pass [session]  (1m07s)
+08-05 14:33:04  ▪ gate face-fast pass [session]  (14.0s)
+08-05 14:33:05  • session #32 K7 → Progress · 3 commit(s)  (35m43s)
 ```
 
 ## Health
@@ -180,7 +180,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 31 · retries 4 (13 %) · overall Warn
+sessions 32 · retries 4 (12 %) · overall Warn
 ⚠ [context-saturation] session #10: 23,623,416 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #18: 23,816,486 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #19: 24,146,164 context tokens (≥ 20,000,000)
@@ -197,18 +197,12 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/karvan
-working tree: clean
+working tree: M .conductor/REPORT.md, M plans/karvan/CORE-TRACKER.md
 vs upstream: up to date
 ```
 
 ### Commits by session
 
-- **s24 (K6 Deliver)** — 5 commit(s):
-  - [`f009820`](https://github.com/shaahink/conductor/commit/f009820) docs(tracker): K6.4 claimed and handed off - K6 is complete
-  - [`62f319a`](https://github.com/shaahink/conductor/commit/62f319a) docs(evidence): K6.4 - the measurement, the seven driven frames, and what is named
-  - [`52d78dc`](https://github.com/shaahink/conductor/commit/52d78dc) fix(face): K6.4 - the owner queue scrolls in a viewport, bug #30's last instance
-  - [`ae4509d`](https://github.com/shaahink/conductor/commit/ae4509d) test(face): K6.4 rebaseline - two goldens follow the themed renderer
-  - [`611a8a0`](https://github.com/shaahink/conductor/commit/611a8a0) feat(face): K6.4 - markdown renders in the theme, and the prompt preview scrolls
 - **s25 (K7 Deliver)** — 9 commit(s):
   - [`5776876`](https://github.com/shaahink/conductor/commit/5776876) docs(ledger): K7.1 - bug #32's row records that deleting the stash did not clear it
   - [`7688a2b`](https://github.com/shaahink/conductor/commit/7688a2b) docs(tracker): K7.1 claimed and handed off - only the owner-gated K7.2 remains
@@ -238,6 +232,10 @@ vs upstream: up to date
 - **s31 (K7 Deliver)** — 2 commit(s):
   - [`f764904`](https://github.com/shaahink/conductor/commit/f764904) docs(tracker): K7.2 part 6 handed off - a mistyped flag is now an error, bug #17 closed
   - [`842adc6`](https://github.com/shaahink/conductor/commit/842adc6) fix(cli): a mistyped flag is an error, not silence
+- **s32 (K7 Deliver)** — 3 commit(s):
+  - [`e935b8c`](https://github.com/shaahink/conductor/commit/e935b8c) docs(changelog,tracker): K7.2 part 7 handed off - the ship stops leaving state on the user's machine
+  - [`84c4dc4`](https://github.com/shaahink/conductor/commit/84c4dc4) fix(demo): the throwaway run stays in the throwaway directory
+  - [`bdf2a63`](https://github.com/shaahink/conductor/commit/bdf2a63) fix(docs,tools): the front page describes the shipped Face, and the rig it points at is green again
 
 ## Phase handovers (audit)
 
@@ -264,31 +262,32 @@ engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: Closed bug #17 - the CLI no longer swallows mistyped flags; full battery green
-> - c.UseStrictParsing() lands: unknown option now exits 1 naming the flag, was exit 0 and silent
-> - Full suite 2066 passed 0 failed; 82-file sweep found only dead flags --no-llm and report --query
-> - K7.2 still owner-only: merge, tag v0.4.0, then the first install.ps1 of this run
-> artefacts: 842adc6, f764904, src/Conductor/Program.cs, tests/Conductor.Tests/K7_2StrictFlagParsingTests.cs, docs/troubleshooting.md, tools/sf1/sf1-2-live-proof.ps1
-> evidence: .conductor/evidence/K7/K7.2-strict-flag-parsing.md
-> gaps: K7.2 is BLOCKED on the owner - merge feat/karvan, tag v0.4.0, reinstall, and re-run conductor bu…
+> SESSION-RESULT: Fixed a state leak in demo and the rehearsal rig, plus the front page
+> - conductor demo left a run.db and a permanent history row on every user's machine; now dies with its throwaway dir. Proven 1 entry to 0 on an isolated state home
+> - tools/w5/rehearsal.ps1 was red on a healthy engine since K3.1 - 5 of 33 checks blamed the engine. Shared helper fixed, re-ran 33/33
+> - README named 11 Face tabs (3 deleted an era ago, Home missing) and omitted AuthFailed from the outcome table; guard test reads both off source
+> artefacts: bdf2a63, 84c4dc4, e935b8c, README.md, CHANGELOG.md, src/Conductor/Commands/DemoCommand.cs, tools/lib/run-query.ps1, tools/w5/rehearsal.ps1, tests/Conductor.Tests…
 
 ## Tracker handoff
 
 ```
-last: **K7.2 part 6** (s31), commit `842adc6`, evidence `.conductor/evidence/K7/K7.2-strict-flag-parsing.md`.
-  K7.2 stays BLOCKED and owner-only; nothing here claimed it. **Closes bug #17.** The engine silently
-  accepted and ignored *every* unknown option - Spectre defaults `StrictParsing` false and Program.cs
-  never set it, so `version --shortt` exited 0 and printed the LONG form. At a public ship that means
-  a mistyped `update --check` swaps the binary and a mistyped `gate --full` reports green off the fast
-  tier. Fixed with `c.UseStrictParsing()`; test drives the real binary, red without it.
-do not re-derive: (a) the change is global so the FULL battery was run, not a filter: **2066 passed,
-  0 failed**; nothing depended on a flag being swallowed. (b) The repo-wide sweep is done - all 82
-  files carrying a `conductor <verb> --flag` were checked against declared options; the only dead
-  flags were `status --no-llm` (six sites, never existed) and the already-deleted `report --query`,
-  both fixed. `--yes` on rollback/kill/skip is real, declared on `CtlCommand.Settings`. (c) `--`
-  passthrough survives, so `bg start -- dotnet test --filter X` is safe. (d) s29-s30 still stand: the
-  ship chain has no defect, `install.ps1` builds from the working tree, era score dated.
+last: **K7.2 part 7** (s32), commits `bdf2a63` + `84c4dc4`. K7.2 stays BLOCKED and owner-only; nothing
+  here claimed it. Started as a README audit and found a live engine defect. **One root cause: K3.1
+  moved `run.db` out of `<repo>/.conductor` and three things were never told.** (a) `conductor demo` -
+  the front page's try-it-free command - deleted its throwaway repo but left the database plus a
+  permanent `conductor history` row (`RunHistory.cs:26` walks the catalogue) on the user's machine.
+  Fixed with a repo-local state pointer; proven pre/post against an isolated `CONDUCTOR_STATE_HOME`,
+  1 entry -> 0. That exposed a Windows cleanup failure ("delete it by hand") from a pooled SQLite
+  handle - `ClearAllPools()` in `ForceDelete`. (b) `tools/w5/rehearsal.ps1`, which README:208 hands to
+  contributors, was RED on a healthy engine - 5 of 33 checks, all "no run.db", blaming the engine.
+  `tools/lib/run-query.ps1` (shared by three rigs) never passed `--run-db`, the flag K3.1 added for
+  it. Re-ran: **33/33**. The rigs also wrote into the operator's real store; w5 now uses its own.
+  (c) README named eleven Face tabs incl. three merged away by SF1.3, omitted Home, and its outcome
+  table missed `AuthFailed`/`BlockedUntil`/`AgentError`. Guard test reads both off source.
+do not re-derive: no CI job runs those rigs (`grep .github/workflows` is empty) - that is why an era
+  passed unnoticed. `CHANGELOG.md` v0.4.0 Fixed already carries all three. s29-s31 still stand.
 next: owner-only, unchanged - confirm no other conductor run is live, merge, tag `v0.4.0`, let the
   pipeline publish, then the first `install.ps1` of this run. Re-run `conductor budget` and `money`
   at tag time and paste into `CHANGELOG.md`; today's figures are stamped s29 and move every session.
+  Bug #35 is the same rot in `w3/window-close.ps1` and `sf1-2-live-proof.ps1`, neither drivable here.
 ```
