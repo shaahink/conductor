@@ -4,29 +4,27 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **K6.3 DONE** (s23) - `05beb46` eight tabs, `29db592` Plan+Kanban, `03c7eeb` the help legend,
-  evidence `.conductor/evidence/K6/K6.3-per-tab-models.md` (+ `K6.3-frames.txt`, seven driven frames).
-  Ten `xxxModel` structs, one per `tab_*.go`; `Model` 116 -> 45 fields; `update.go` 831 -> 567 lines;
-  root `Update` 37 -> 18 cases behind `tabUpdaters`. The Tabs grid and folded row now RENDER from
-  `tabKey`/`tabNames`/`foldedTabs`, so the legend cannot lie (`TestHelpLegendFollowsARebind`).
-next: **K6.4** - one markdown renderer in the active theme. `renderMarkdown` (markdown.go) hardcodes
-  `glamour.WithStandardStyle("dark")` while `widgets/theme.go` already has themes; Report, Knowledge
-  and the handover panes render markdown as plain text. Name whatever primitive swap you leave.
-red: none. `go build`, `go vet`, every face-go suite green; ZERO goldens regenerated all session.
-  Bug #29 (K7.2) still open.
-watch: tab state now lives in `m.<tab>.<field>` - `m.plan` is `m.plan.doc`. The tab models are plain
-  structs with an `updateXxx`, NOT `tea.Model`s, and that is deliberate (see the ledger). A message
-  moves to a tab only when the state it lands has ONE reader; `MsgSessionsUpdated`/`MsgTasksUpdated`
-  stay in the shell for that reason. `plan.go` is still 1,085 lines - state split, renderer did not.
-
+last: **K6.4 DONE** (s24) - `611a8a0` themed+memoised renderer & preview viewport, `ae4509d`
+  golden rebaseline (separate), `52d78dc` owner-queue viewport, evidence
+  `.conductor/evidence/K6/K6.4-themed-markdown.md` (+ `K6.4-frames.txt`). **K6 is complete.**
+  `markdownStyle` projects the theme's roles onto glamour (light/dark by `Theme.IsLight()`), and
+  200 frames of unchanged prose now invoke glamour ONCE. Two panes gained a viewport: the compiled
+  prompt (had no scroll at all) and the owner queue (bug #30's last live instance, verbatim).
+next: **K7.1** - docs match the engine, and this era's own numbers written back with
+  `conductor budget` (K4.2's first real use). If its prescription disagrees with the spec, the
+  prescription wins and the spec gets corrected.
+red: none. `go build`, `go vet`, every face-go suite green. Bugs #29 (K7.2) and #31 (textarea) open.
+watch: the compiled-prompt preview stays PLAIN on purpose - glamour eats `<id>`/`<path>` and that
+  pane's job is fidelity; a test skips with instructions if that ever changes. The spec's "Report,
+  Knowledge and the handover panes render markdown" was measurably false - there is no handover pane.
 
 ## Baseline numbers (from run.db)
 
 | Metric | Value |
 |---|---|
-| Total checkpoints | 32 |
+| Total checkpoints | 25 |
 | Done | 5 |
-| Claimed (unconfirmed) | 16 |
+| Claimed (unconfirmed) | 17 |
 
 ## Checkpoints
 
@@ -83,7 +81,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | K6.1 | An ADR fixes the TUI conventions — pager keys, focus model, help, one scroll idiom, viewport versus list versus table — after an actual read of glow, soft-serve, gh-dash and lazygit | DONE | 76b66aa | .conductor/evidence/K6/K6.1-tui-conventions-adr.md |
 | K6.2 | bubbles v2 is a declared dependency and Report and Knowledge scroll through a viewport, with the golden, frame-invariant and glitch-sweep tests green, any baseline regenerated in a separate rebaseline commit, and a captured frame of a long document scrolled to its end as evidence | DONE | fa1d3a4 | .conductor/evidence/K6/K6.2-viewport.md |
-| K6.3 | Each tab owns its own model, state, update and view, the root update becomes a dispatch instead of 826 lines and 80 cases, and the mnemonic map and the hand-maintained help legend change together | TODO | - | - |
+| K6.3 | Each tab owns its own model, state, update and view, the root update becomes a dispatch instead of 826 lines and 80 cases, and the mnemonic map and the hand-maintained help legend change together | DONE | 05beb46 | .conductor/evidence/K6/K6.3-per-tab-models.md |
 | K6.4 | One markdown renderer honours the active theme everywhere markdown belongs, the remaining primitive swaps the ADR calls for are done as far as the goldens allow, and anything deliberately left is named | TODO | - | - |
 
 ### K7 — Ship the plan
@@ -92,38 +90,6 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | K7.1 | The docs match the engine and this era's own measurements are written back — the cap's real score, the corrected nudge rule, and this run's figures produced by conductor budget rather than by hand — with every wrong claim corrected in place and a closure ledger naming an owner for everything still open | TODO | - | - |
 | K7.2 | feat/karvan is merged to master by the owner, the release is tagged through the existing pipeline, and the installed version matches the releases page | TODO | - | - |
-
-### F0
-
-| # | Checkpoint | Status | Commit | Evidence |
-|---|-----------|--------|--------|----------|
-| F0.1 | Map scroll behavior, animation, and UI components in face-go | TODO | - | - |
-
-### F1
-
-| # | Checkpoint | Status | Commit | Evidence |
-|---|-----------|--------|--------|----------|
-| F1.1 | Implement fixed scroll container component | TODO | - | - |
-| F1.2 | Add exit mechanism after list completion | TODO | - | - |
-
-### F2
-
-| # | Checkpoint | Status | Commit | Evidence |
-|---|-----------|--------|--------|----------|
-| F2.1 | Filter shamshir from showcase list display | TODO | - | - |
-
-### F3
-
-| # | Checkpoint | Status | Commit | Evidence |
-|---|-----------|--------|--------|----------|
-| F3.1 | Move narration component to bottom placement | TODO | - | - |
-
-### R0
-
-| # | Checkpoint | Status | Commit | Evidence |
-|---|-----------|--------|--------|----------|
-| R0.1 | Test scroll behavior and exit mechanism | TODO | - | - |
-| R0.2 | Verify shamshir is hidden and narration repositioned | TODO | - | - |
 
 ## Dependencies
 
