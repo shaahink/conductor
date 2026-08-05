@@ -139,8 +139,12 @@ public static class StateHome
 
         var r = root ?? Root;
         var target = DerivedRunDbPath(r, repo, plan);
+        // No `!File.Exists(target)` guard here: whether an existing target may be replaced is
+        // StateMigration's call, not this one's (bug #33 — a target that is still the untouched copy
+        // of a legacy file that has since moved on is refreshed, and one that has work of its own is
+        // left alone with a warning). ImportLegacy's own first act is that same File.Exists.
         StateImport? import = null;
-        if (allowMigration && !File.Exists(target))
+        if (allowMigration)
             import = StateMigration.ImportLegacy(LegacyDbPathFor(repo), target);
 
         StateCatalogue.Upsert(r, repo, plan, target, import);

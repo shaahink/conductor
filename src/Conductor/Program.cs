@@ -23,6 +23,10 @@ TaskScheduler.UnobservedTaskException += (_, e) =>
 Conductor.Core.Store.StateMigration.Announce = import =>
     Console.Error.WriteLine(Conductor.Core.Store.StateMigration.Describe(import));
 
+// Bug #33: and when the copy cannot be refreshed because it holds work of its own, the shell says
+// THAT, rather than resuming from a stale snapshot without a word.
+Conductor.Core.Store.StateMigration.Warn = Console.Error.WriteLine;
+
 var app = new CommandApp();
 app.Configure(c =>
 {

@@ -417,6 +417,36 @@ public sealed class K3_1StateHomeTests : IDisposable
 
     /// <summary>Writes a pre-K3.1 database with a real schema and a real session row, so the import
     /// is proven on a database the store can actually read back — not on a placeholder file.</summary>
+    /// <summary>Bug #33, end to end and in real SQLite: the whole reason the one-time import was
+    /// dangerous. A new build resolves state once, the engine that is actually driving the run keeps
+    /// writing the legacy database afterwards, and the next resolution — the one that happens after
+    /// the install — used to hand back the older copy without a word. Session 41 must survive it.</summary>
+    [Fact]
+    public void Resolve_RefreshesACopyTheLegacyDatabaseHasOutrun()
+    {
+        var repo = NewRepo("outrun");
+        var legacy = StateHome.LegacyDbPathFor(repo);
+        SeedLegacy(legacy, "run-outrun");
+
+        var first = StateHome.Resolve(repo, "core", Root);
+        Assert.NotNull(first.Import);
+        Assert.False(first.Import!.Refreshed);
+
+        // The published engine carries on against the legacy file, as it does for the whole of an
+        // upgrade window. Nothing touches the copy at the state home.
+        using (var live = new SqliteRunStore(legacy, NullLogger<SqliteRunStore>.Instance))
+            live.RecordSession("run-outrun", "K1", 41, "session",
+                DateTime.UtcNow, null, null, null, 0, 1, null, null, 0, null);
+
+        var second = StateHome.Resolve(repo, "core", Root);
+        Assert.NotNull(second.Import);
+        Assert.True(second.Import!.Refreshed);
+        Assert.Equal(first.RunDbPath, second.RunDbPath);
+
+        using var reread = new SqliteRunStore(second.RunDbPath, NullLogger<SqliteRunStore>.Instance);
+        Assert.Contains(reread.QuerySessions("run-outrun"), s => s.Number == 41);
+    }
+
     private static void SeedLegacy(string path, string runId)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
