@@ -1,10 +1,10 @@
 ﻿# Conductor — Karvan core - the engine knows what it did and what it cost run report
 
-_Updated 2026-08-05 11:56 UTC · branch `feat/karvan` · HEAD `8637de3`_
+_Updated 2026-08-05 12:10 UTC · branch `feat/karvan` · HEAD `b56d457`_
 
-**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [12h 27m ago, 23:29:12Z]
+**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [12h 41m ago, 23:29:12Z]
 **Stage:** K7 — Ship the plan · attempts used 0 · working ▸ K7.2
-**Checkpoints:** 24/32 done · **Sessions run:** 27 · **Cost:** $286.6357 (agent $286.4704 + gates $0.1653) · **Tokens:** 4,091,074 in / 2,029,068 out
+**Checkpoints:** 24/32 done · **Sessions run:** 28 · **Cost:** $291.9951 (agent $291.8250 + gates $0.1701) · **Tokens:** 4,201,603 in / 2,076,674 out
 **Confirmed phases:** K1, K2, K3, K4, K5, K6
 
 ## Stage progress
@@ -124,16 +124,13 @@ _Updated 2026-08-05 11:56 UTC · branch `feat/karvan` · HEAD `8637de3`_
 | 25 | K7 | Deliver | 1 | 08-05 09:57 | 0:38 | Advanced | K7.1 | 9 | engine-fast:OK · face-fast:OK | $9.5886 | $0.0097 | 145,638/72,698 |
 | 26 | K7 | Deliver | 1 | 08-05 10:36 | 0:19 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $5.5277 | $0.0089 | 103,088/55,975 |
 | 27 | K7 | Deliver | 1 | 08-05 10:57 | 0:57 | Progress |  | 4 | engine-fast:OK · face-fast:OK | $18.2443 | $0.0074 | 235,837/148,885 |
+| 28 | K7 | Deliver | 1 | 08-05 11:56 | 0:12 | Progress |  | 1 | engine-fast:OK · face-fast:OK | $5.3546 | $0.0048 | 110,529/47,606 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-05 09:23:26  ▪ gate engine-full pass [phase]  (2m59s)
-08-05 09:23:26  ▪ gate face-full pass [phase]  (9.0s)
-08-05 09:23:26  ✓ checkpoint K5.4 confirmed
-08-05 09:23:26  ▸ stage K5 confirmed  (2h14m15s)
 08-05 09:23:26  ▸ stage K6 entered — The surfaces read
 08-05 09:23:26  • session #21 K6 Deliver started (attempt 1/8)
 08-05 09:35:52  ▪ gate engine-fast pass [session]  (46.2s)
@@ -170,6 +167,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-05 11:57:34  • session #27 K7 Deliver started (attempt 1/4)
 08-05 12:56:23  ▪ gate engine-fast pass [session]  (45.6s)
 08-05 12:56:23  ▪ gate face-fast pass [session]  (28.4s)
+08-05 12:56:24  • session #27 K7 → Progress · 4 commit(s)  (58m49s)
+08-05 12:56:24  • session #28 K7 Deliver started (attempt 1/4)
+08-05 13:10:11  ▪ gate engine-fast pass [session]  (44.8s)
+08-05 13:10:11  ▪ gate face-fast pass [session]  (3.0s)
 ```
 
 ## Health
@@ -177,12 +178,13 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 27 · retries 4 (15 %) · overall Warn
+sessions 28 · retries 4 (14 %) · overall Warn
 ⚠ [context-saturation] session #10: 23,623,416 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #18: 23,816,486 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #19: 24,146,164 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #1: 24,653,507 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #20: 25,687,748 context tokens (≥ 20,000,000)
+⚠ [context-saturation] session #27: 22,272,683 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #7: 24,094,247 context tokens (≥ 20,000,000)
 ⚠ [gate-oscillation] gate 'engine-full' flipped pass/fail 5x
 ```
@@ -199,11 +201,6 @@ vs upstream: up to date
 
 ### Commits by session
 
-- **s20 (K5 Deliver)** — 4 commit(s):
-  - [`cc7ad14`](https://github.com/shaahink/conductor/commit/cc7ad14) docs(tracker): K5.4 claimed and handed off - the composition layer is closed
-  - [`aaee340`](https://github.com/shaahink/conductor/commit/aaee340) feat(telegram): K5.4 part 3 - the templates the owner edits, and the push-only ADR
-  - [`baa2c56`](https://github.com/shaahink/conductor/commit/baa2c56) feat(telegram): K5.4 part 2 - the composition, so a push says which checkout and what is left
-  - [`43dd6d2`](https://github.com/shaahink/conductor/commit/43dd6d2) feat(telegram): K5.4 part 1 - the transport, so a screenshot arrives and a long message is not dropped
 - **s21 (K6 Deliver)** — 2 commit(s):
   - [`5fa8150`](https://github.com/shaahink/conductor/commit/5fa8150) docs(tracker): K6.1 claimed and handed off - the conventions are settled
   - [`76b66aa`](https://github.com/shaahink/conductor/commit/76b66aa) docs(face): K6.1 - the TUI conventions ADR, and the measurement that settles it
@@ -241,6 +238,8 @@ vs upstream: up to date
   - [`12daaf5`](https://github.com/shaahink/conductor/commit/12daaf5) fix(store): decide a stale copy by what it remembers, not by its timestamps
   - [`ee16c68`](https://github.com/shaahink/conductor/commit/ee16c68) fix(store): a reinstall no longer resumes from a stale copy of the run history
   - [`81d4981`](https://github.com/shaahink/conductor/commit/81d4981) fix(tracker): the generated view no longer re-declares work whose stage left the plan
+- **s28 (K7 Deliver)** — 1 commit(s):
+  - [`b56d457`](https://github.com/shaahink/conductor/commit/b56d457) fix(budget): a budget is a ceiling and a nudge, so the verdict compares both
 
 ## Phase handovers (audit)
 
@@ -267,25 +266,25 @@ engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: K7.2 part 2 - owner ship gate measured, bugs #32 and #33 fixed and closed
-> - Ship gate proved, not assumed: merge is a fast-forward, and both release-guard preconditions pass on v0.4.0 - changelog section exits 0, and a clone tagged v0.4.0 builds a binary answering 0.4.0+<sha>, which release.yml:163 accepts.
-> - Bug #32: the generated tracker re-declared out-of-plan work to the reader that feeds it, so seven stray rows were immortal and doctor exited 1. Fixed at the generator; 2 tests, both red without the change.
-> - Bug #33: a reinstall resumed from a stale copy in silence. Copies are now compared by CONTENT (session+event set difference), refreshed when the source is ahead, nev…
+> SESSION-RESULT: conductor budget no longer calls a wrong nudge "already right"; bug #34 closed
+> - The verdict was chosen on the cap alone, so this repo's run at 32M/0.70 was told "already where the measurements put it - 32M at 0.85" over a paste moving the nudge +21%. Now compares cap AND ratio at half the config grain.
+> - Live before/after against this repo's own run.db via the fresh Debug build, verbatim in the evidence; 60/60 on `--filter FullyQualifiedName~Budget`. The new output matches what TOKEN-BUDGET-TUNING.md:272 already said by hand.
+> - Checked and clear, do not redo: UpdateTarget monikers, AssetName, SHA256SUMS.txt and tar's ./ prefix all match release.yml. install.ps1 builds from t…
 
 ## Tracker handoff
 
 ```
-last: **K7.2 part 2** (s27), commits `81d4981` `ee16c68` `12daaf5`, evidence
-  `.conductor/evidence/K7/K7.2-owner-ship-gate.md` (+ `-stale-snapshot-live.txt`). K7.2 itself stays
-  BLOCKED - `--in-progress K7.2` is refused by the board - so nothing here claimed it. Landed: the
-  owner's ship gate MEASURED (the merge is a fast-forward, master being a strict ancestor; both
-  release-guard preconditions pass on **v0.4.0** - `changelog-section.sh` exits 0, and a scratch clone
-  tagged v0.4.0 builds a binary answering `0.4.0+<sha>`, which is what `release.yml:163` accepts),
-  plus bugs **#32 and #33 fixed and closed**. Suite **2059/2059**.
-do not re-derive: the tracker is generated FROM the graph and read back AS the declared list, and that
-  loop is what made the seven stray rows immortal. It unwinds itself once the NEW engine regenerates
-  the view and syncs, so `doctor` stays red on them until the install. And no run.db may be judged by
-  size or mtime: this run's own main file has not moved since 10:57 while its `-wal` holds everything.
+last: **K7.2 part 3** (s28), evidence `.conductor/evidence/K7/K7.2-budget-verdict.md` (+ `-before.txt`
+  `-after.txt`). K7.2 stays BLOCKED and owner-only; nothing here claimed it. Bug **#34 fixed and
+  closed**: `conductor budget` - the verb the v0.4.0 notes lead with - contradicted itself on this
+  repo's own run. `BudgetAnalyzer.cs:262` chose the verdict on the CAP ONLY, so a run at 32M/0.70 was
+  told "already where the measurements put it - 32M at **0.85**" over a paste moving the nudge +21%.
+  Now chosen on cap AND ratio; live before/after in the evidence. 60/60 on `--filter ~Budget`.
+do not re-derive: (a) the release plumbing is ALIGNED - `UpdateTarget` monikers, `AssetName`,
+  `SHA256SUMS.txt` and tar's `./` prefix all match `release.yml`; no defect. (b) `tools/install.ps1`
+  BUILDS FROM THE WORKING TREE - it stamps the version of whatever tree it runs in, and this repo's
+  tree is never clean mid-run, so the owner installs from a clean checkout at the tag.
 next: owner-only, unchanged - confirm no other conductor run is live, merge, tag `v0.4.0`, let the
-  pipeline publish, then the first `install.ps1` of this run.
+  pipeline publish, then the first `install.ps1` of this run. Re-run `conductor budget` at tag time:
+  `CHANGELOG.md:28` still carries the K7.1 figures (23/14.1M/22 sess), now 24/15.2M/25.
 ```

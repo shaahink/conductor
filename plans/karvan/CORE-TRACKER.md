@@ -4,19 +4,20 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **K7.2 part 3** (s28), evidence `.conductor/evidence/K7/K7.2-budget-verdict.md` (+ `-before.txt`
-  `-after.txt`). K7.2 stays BLOCKED and owner-only; nothing here claimed it. Bug **#34 fixed and
-  closed**: `conductor budget` - the verb the v0.4.0 notes lead with - contradicted itself on this
-  repo's own run. `BudgetAnalyzer.cs:262` chose the verdict on the CAP ONLY, so a run at 32M/0.70 was
-  told "already where the measurements put it - 32M at **0.85**" over a paste moving the nudge +21%.
-  Now chosen on cap AND ratio; live before/after in the evidence. 60/60 on `--filter ~Budget`.
-do not re-derive: (a) the release plumbing is ALIGNED - `UpdateTarget` monikers, `AssetName`,
-  `SHA256SUMS.txt` and tar's `./` prefix all match `release.yml`; no defect. (b) `tools/install.ps1`
-  BUILDS FROM THE WORKING TREE - it stamps the version of whatever tree it runs in, and this repo's
-  tree is never clean mid-run, so the owner installs from a clean checkout at the tag.
+last: **K7.2 part 4** (s29), commit `35d3cb6`, evidence `.conductor/evidence/K7/K7.2-ship-rehearsal.md`.
+  K7.2 stays BLOCKED and owner-only; nothing here claimed it. The local half of the ship is now
+  measured: a `v0.4.0` tag in a scratch clone publishes to `version --short` = **`0.4.0+<sha>`** (not
+  `0.0.0-alpha.0`), and `conductor update` accepts it - `SemVer` strips the `v` and ignores build
+  metadata. Release guard and `changelog-section.sh 0.4.0` both pass. **No defect in the chain.**
+do not re-derive: (a) the release plumbing is ALIGNED (s28) and `install.ps1` builds from the working
+  tree, so the owner installs from a CLEAN checkout at the tag. (b) The era score was stale in the
+  release body and is corrected + dated; `budget`'s `sess` is COSTED sessions (26 of 28; 3 and 4 were
+  AgentError with no tokens). (c) The closure ledger was pinned against a copy of itself - fixed, 11
+  open / 5 closed restated. (d) `doctor`'s red `work` check (G13, the seven F/R rows) is bug #32,
+  fixed in the tree but inert until the new engine regenerates the tracker.
 next: owner-only, unchanged - confirm no other conductor run is live, merge, tag `v0.4.0`, let the
-  pipeline publish, then the first `install.ps1` of this run. Re-run `conductor budget` at tag time:
-  `CHANGELOG.md:28` still carries the K7.1 figures (23/14.1M/22 sess), now 24/15.2M/25.
+  pipeline publish, then the first `install.ps1` of this run. Re-run `conductor budget` and `money`
+  at tag time and paste into `CHANGELOG.md`; today's figures are stamped s29 and move every session.
 
 
 ## Baseline numbers (from run.db)
