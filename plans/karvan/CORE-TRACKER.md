@@ -4,19 +4,18 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **K3.3 claimed - K3 is complete.** `e45fa11`, evidence `.conductor/evidence/K3/K3.3-provenance.md`.
-  Schema **v11**: `runs.engine_version/engine_commit/engine_dirty/limits_json` plus
-  `sessions.engine/sessions.limits`. Per-session is the point - a run-level snapshot alone answers the
-  LAST cap for every session. Live rig read back `s1 cap=24M`, `s3 cap=32M` across a mid-run raise.
-  A dirty engine warns once at launch; `history` prints the stamp, the limits, and where either changed.
+last: **K3 battery is GREEN.** `398c38a`, evidence `.conductor/evidence/K3/K3.2-fix-s12-arch-and-completion.md`.
+  K3.2 had been claimed with the battery red because of it, so it was reopened and re-claimed. Two real
+  defects, no flake: three K3.2 files broke `maxTypesPerFile: 3` (both debt maps are `{}` by design, so
+  splitting was the only legal fix - six types moved to their own files, bodies unchanged); and `history`
+  was registered in `Program.cs` but missing from `CompletionCommand.Verbs`, the one const both shells read.
+  1872 pass, ratchet `archdebt base=0 now=0`. K3.1/K3.3 stand as claimed and were not touched.
 next: **K4.1 - the engine measures context size per turn, not just cumulative tokens.** Spec section K4
   in `docs/history/CONDUCTOR-KARVAN.md`. `LiveMetrics.SessionTokenTotals` folds integrals only;
-  `context_high_water` exists nowhere. Note that `sessions.limits` now gives K4 the honest denominator.
-watch: piping the engine through `Select-Object -First N` in PowerShell closes the pipeline and KILLS
-  it mid-flow - that is why the rig has no session 2. Use `-Last`, or capture to a variable. **#28**
-  (this repo's `run.db` says v9 but carries the v10 column) now blocks a v11 engine too - it bites at K7.2.
+  `context_high_water` exists nowhere. `sessions.limits` (v11) now gives K4 the honest denominator.
+watch: a new verb is TWO edits - `Program.cs` and `CompletionCommand.Verbs`; the second is gate-enforced.
+  Piping the engine through `Select-Object -First N` closes the pipeline and KILLS it mid-flow; use `-Last`.
 red: none. Open, not blocking: **#28**, **#27** fresh-db FK error, **#24** `AgentConfig.Merge` drops `Env`.
-
 
 
 ## Baseline numbers (from run.db)
@@ -25,7 +24,7 @@ red: none. Open, not blocking: **#28**, **#27** fresh-db FK error, **#24** `Agen
 |---|---|
 | Total checkpoints | 32 |
 | Done | 2 |
-| Claimed (unconfirmed) | 8 |
+| Claimed (unconfirmed) | 9 |
 
 ## Checkpoints
 
@@ -56,7 +55,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | K3.1 | State has a machine-level home with one catalogue keyed by repo and plan, an environment override, an idempotent migration that imports existing run.db files rather than orphaning them, and a per-run scratch dir that keeps the repo's tracked deliverables | DONE | 707992f | .conductor/evidence/K3/K3.1-state-home.md |
 | K3.2 | conductor history lists and opens past runs read-only from the catalogue, and the Face's existing run picker offers them | DONE | ec1f158 | .conductor/evidence/K3/K3.2-history.md |
-| K3.3 | Every run records the engine version, its commit, its dirty flag and a snapshot of the limits that governed it, and a dirty build warns at launch | TODO | - | - |
+| K3.3 | Every run records the engine version, its commit, its dirty flag and a snapshot of the limits that governed it, and a dirty build warns at launch | DONE | e45fa11 | .conductor/evidence/K3/K3.3-provenance.md |
 
 ### K4 — Token truth - measure it before shrinking it
 

@@ -1,10 +1,10 @@
 ﻿# Conductor — Karvan core - the engine knows what it did and what it cost run report
 
-_Updated 2026-08-05 03:03 UTC · branch `feat/karvan` · HEAD `ef8324c`_
+_Updated 2026-08-05 03:31 UTC · branch `feat/karvan` · HEAD `7841cfb`_
 
-**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [3h 34m ago, 23:29:12Z]
-**Stage:** K3 — Conductor remembers · attempts used 0 · working ▸ K3.3
-**Checkpoints:** 10/32 done · **Sessions run:** 10 · **Cost:** $108.3754 (agent $108.3130 + gates $0.0625) · **Tokens:** 1,430,439 in / 709,576 out
+**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [4h 02m ago, 23:29:12Z]
+**Stage:** K3 — Conductor remembers · attempts used 1
+**Checkpoints:** 11/32 done · **Sessions run:** 11 · **Cost:** $116.4005 (agent $116.3327 + gates $0.0678) · **Tokens:** 1,572,700 in / 768,977 out
 **Confirmed phases:** K1, K2
 
 ## Stage progress
@@ -13,7 +13,7 @@ _Updated 2026-08-05 03:03 UTC · branch `feat/karvan` · HEAD `ef8324c`_
 |---|---|---|---|
 | K1 | The ledger stops lying | ██████████ 4/4 | confirmed ✓ |
 | K2 | The architecture becomes navigable | ██████████ 4/4 | confirmed ✓ |
-| K3 | Conductor remembers | ███████░░░ 2/3 | **← active** |
+| K3 | Conductor remembers | ██████████ 3/3 | gating… |
 | K4 | Token truth - measure it before shrinking it | ░░░░░░░░░░ 0/4 | todo |
 | K5 | The result contract and the channels | ░░░░░░░░░░ 0/4 | todo |
 | K6 | The surfaces read | ░░░░░░░░░░ 0/4 | todo |
@@ -41,13 +41,13 @@ _Updated 2026-08-05 03:03 UTC · branch `feat/karvan` · HEAD `ef8324c`_
 
 </details>
 
-<details><summary>K3 — Conductor remembers (2/3)</summary>
+<details> ✅<summary>K3 — Conductor remembers (3/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
 | K3.1 | State has a machine-level home with one catalogue keyed by repo and plan, an environment override, an idempotent migration that imports existing run.db files rather than orphaning them, and a per-run scratch dir that keeps the repo's tracked deliverables | ✅ DONE | [`707992f`](https://github.com/shaahink/conductor/commit/707992f) |
-| K3.2 | conductor history lists and opens past runs read-only from the catalogue, and the Face's existing run picker offers them | ✅ DONE | - |
-| K3.3 | Every run records the engine version, its commit, its dirty flag and a snapshot of the limits that governed it, and a dirty build warns at launch | ⬜ TODO | - |
+| K3.2 | conductor history lists and opens past runs read-only from the catalogue, and the Face's existing run picker offers them | ✅ DONE | [`ec1f158`](https://github.com/shaahink/conductor/commit/ec1f158) |
+| K3.3 | Every run records the engine version, its commit, its dirty flag and a snapshot of the limits that governed it, and a dirty build warns at launch | ✅ DONE | [`e45fa11`](https://github.com/shaahink/conductor/commit/e45fa11) |
 
 </details>
 
@@ -107,18 +107,13 @@ _Updated 2026-08-05 03:03 UTC · branch `feat/karvan` · HEAD `ef8324c`_
 | 8 | K2 | Deliver | 1 | 08-05 01:21 | 0:16 | Advanced | K2.4 | 3 | engine-fast:OK · face-fast:OK | $11.1887 | $0.0053 | 159,355/68,728 |
 | 9 | K3 | Deliver | 1 | 08-05 01:42 | 0:42 | Advanced | K3.1 | 5 | engine-fast:OK · face-fast:OK | $12.0714 | $0.0087 | 193,864/91,429 |
 | 10 | K3 | Deliver | 1 | 08-05 02:26 | 0:36 | Advanced | K3.2 | 5 | engine-fast:OK · face-fast:OK | $17.6953 | $0.0049 | 205,048/111,704 |
+| 11 | K3 | Deliver | 1 | 08-05 03:03 | 0:20 | Advanced | K3.3 | 2 | engine-fast:OK · face-fast:OK | $8.0198 | $0.0053 | 142,261/59,401 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-05 01:10:18  • session #5 K1 → Advanced · done K1.4 · 3 commit(s)  (39m41s)
-08-05 01:18:32  ▪ gate engine-fast pass [phase]  (0.0s)
-08-05 01:18:32  ▪ gate face-fast pass [phase]  (0.0s)
-08-05 01:18:32  ▪ gate engine-full FAIL [phase]  (3m52s)
-08-05 01:18:32  ▪ gate face-full pass [phase]  (24.0s)
-08-05 01:18:33  ◆ plan reloaded — v2 · 12 stages · 4 gates
 08-05 01:18:33  • session #6 K1 Fix started (attempt 2/8)
 08-05 01:39:20  ▪ gate engine-fast pass [session]  (54.0s)
 08-05 01:39:20  ▪ gate face-fast pass [session]  (35.4s)
@@ -153,6 +148,12 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-05 03:26:06  • session #10 K3 Deliver started (attempt 1/6)
 08-05 04:03:14  ▪ gate engine-fast pass [session]  (45.3s)
 08-05 04:03:14  ▪ gate face-fast pass [session]  (4.1s)
+08-05 04:03:15  • session #10 K3 → Advanced · done K3.2 · 5 commit(s)  (37m08s)
+08-05 04:03:15  • session #11 K3 Deliver started (attempt 1/6)
+08-05 04:24:58  ▪ gate engine-fast pass [session]  (47.2s)
+08-05 04:24:58  ▪ gate face-fast pass [session]  (5.7s)
+08-05 04:24:59  • session #11 K3 → Advanced · done K3.3 · 2 commit(s)  (21m43s)
+08-05 04:31:33  ▪ gate engine-fast pass [phase]  (0.0s)
 ```
 
 ## Health
@@ -160,7 +161,8 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 10 · retries 2 (20 %) · overall Warn
+sessions 11 · retries 2 (18 %) · overall Warn
+⚠ [context-saturation] session #10: 23,623,416 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #1: 24,653,507 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #7: 24,094,247 context tokens (≥ 20,000,000)
 ```
@@ -171,16 +173,12 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/karvan
-working tree: M .conductor/REPORT.md
+working tree: M .conductor/REPORT.md, M plans/karvan/CORE-TRACKER.md
 vs upstream: up to date
 ```
 
 ### Commits by session
 
-- **s1 (K1 Deliver)** — 3 commit(s):
-  - [`f4fd387`](https://github.com/shaahink/conductor/commit/f4fd387) docs(tracker): the handoff warns about the v10 schema, which v9 cannot reopen (K1.2)
-  - [`38e202c`](https://github.com/shaahink/conductor/commit/38e202c) feat(budget): the soft break is re-stated, carries the budget left, and is measured (K1.2)
-  - [`93bbae5`](https://github.com/shaahink/conductor/commit/93bbae5) fix(engine): a rolled-over session records the commits and claims it made (K1.1)
 - **s2 (K1 Deliver)** — 6 commit(s):
   - [`2de7cca`](https://github.com/shaahink/conductor/commit/2de7cca) docs(tracker): the handoff says to push first - DNS died at session end (K1.3)
   - [`07cdfe2`](https://github.com/shaahink/conductor/commit/07cdfe2) docs(tracker): K1.3 evidence and the handoff to K1.4
@@ -220,6 +218,9 @@ vs upstream: up to date
   - [`567b22a`](https://github.com/shaahink/conductor/commit/567b22a) feat(face): K3.2 - the run picker lists what this machine remembers
   - [`f5de8a9`](https://github.com/shaahink/conductor/commit/f5de8a9) feat(cli): K3.2 - conductor history lists past runs and opens one read-only
   - [`ec1f158`](https://github.com/shaahink/conductor/commit/ec1f158) feat(history): K3.2 - a run database opens read-only, and the catalogue becomes a list
+- **s11 (K3 Deliver)** — 2 commit(s):
+  - [`7841cfb`](https://github.com/shaahink/conductor/commit/7841cfb) docs(evidence): K3.3 evidence artifact and the handoff to K4.1
+  - [`e45fa11`](https://github.com/shaahink/conductor/commit/e45fa11) feat(history): K3.3 - every run records which engine produced it and under which limits
 
 ## Phase handovers (audit)
 
@@ -242,28 +243,62 @@ vs upstream: up to date
 
 ## Last gate run
 
-engine-fast:OK · face-fast:OK
+engine-fast:cached · face-fast:cached · engine-full:FAIL-retry · face-full:OK
+
+<details><summary>engine-full — exit 1</summary>
+
+```
+[conductor] retried once (SC4.1): the first attempt exited 1 after 181s. Below is the SECOND run.
+Determining projects to restore...
+  All projects are up-to-date for restore.
+  Conductor.Planning -> C:\code\conductor\src\Conductor.Planning\bin\Debug\net10.0\Conductor.Planning.dll
+  Conductor.Core -> C:\code\conductor\src\Conductor.Core\bin\Debug\net10.0\Conductor.Core.dll
+  Conductor -> C:\code\conductor\src\Conductor\bin\Debug\net10.0\conductor.dll
+  Conductor.Tests -> C:\code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll
+Test run for C:\code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+  Failed Conductor.Tests.ArchitectureTests.NoFileGrowsPastItsTypeCeilingOrItsRecordedDebt [156 ms]
+  Error Message:
+   Architecture ratchet — type count went the wrong way:
+  FaceFleet.cs                   declares 4 types (allowed 3). Give each type its own file.
+  HistoryJson.cs                 declares 4 types (allowed 3). Give each type its own file.
+  RunArchive.cs                  declares 5 types (allowed 3). Give each type its own file.
+  Stack Trace:
+     at Conductor.Tests.ArchitectureTests.NoFileGrowsPastItsTypeCeilingOrItsRecordedDebt() in C:\code\conductor\tests\Conductor.Tests\ArchitectureTests.cs:line 108
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Failed Conductor.Tests.B11_2DoctorAndCompletionTests.Completion_ContainsAllRegisteredVerbs_Exhaustive [13 ms]
+  Error Message:
+   Assert.Contains() Failure: Item not found in collection
+Collection: ["run", "journey", "face", "status", "watch", ···]
+Not found:  "history"
+  Stack Trace:
+     at Conductor.Tests.B11_2DoctorAndCompletionTests.Completion_ContainsAllRegisteredVerbs_Exhaustive() in C:\code\conductor\tests\Conductor.Tests\B11_2Tests.cs:line 132
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+Failed!  - Failed:     2, Passed:  1870, Skipped:     0, Total:  1872, Duration: 2 m 34 s - Conductor.Tests.dll (net10.0)
+```
+</details>
 
 ## Last session result
 
-> SESSION-RESULT: K3.2 is delivered and claimed (`conductor task --done K3.2 --evidence .conductor/evidence/K3/K3.2-history.md`), landed across four commits on `feat/karvan`, pushed to `ef8324c`. `conductor history` lists every run in the machine catalogue with outcome, checkpoints, sessions and cost (`--repo/--plan/--since/--limit/--home/--json`) and opens one read-only to replay its spine — stages, checkpoints folded through `TaskGraph`, sessions with outcome/commits/cost. Read-only is enforced by the SQLite connection, not by convention: `RunArchive` opens `Mode=ReadOnly`, has no write method, and holds no handle between calls; three tests measure it (an `INSERT` and an `UPDATE` both get `S…
+> SESSION-RESULT: **K3.3 landed and is claimed** (`e45fa11` implementation, `7841cfb` evidence + handoff, branch `feat/karvan` pushed, tree clean). Schema **v11** adds `runs.engine_version/engine_commit/engine_dirty/limits_json` and — the part that actually answers the motivating question — `sessions.engine/sessions.limits`, because limits are editable in flight and a run-level snapshot alone reports the *last* cap for every session. `RunLimitsSnapshot` stores the **effective** nudge ratio (an unset `SoftBreakRatio` still nudges at 0.8, so persisting the raw null would have recorded "never nudged" for sessions that were), `EngineStamp` carries version/commit/dirty off `BuildInfo`, a dirty engi…
 
 ## Tracker handoff
 
 ```
-last: **K3.2 claimed** - `ec1f158` core, `f5de8a9` the CLI verb, `567b22a` the Face picker, evidence at
-  `.conductor/evidence/K3/K3.2-history.md`. `conductor history` lists the catalogue and opens one run
-  read-only (`--repo/--plan/--since/--limit/--home/--json`); `RunArchive` is `Mode=ReadOnly` and has no
-  write method, checkpoints fold through `TaskGraph`. The picker gained `WithPast` - past rows list,
-  navigate, and cannot be attached to. 23 C# + 6 Go tests green; two new goldens, no baseline moved.
-next: **K3.3 - every run records which engine, which commit, dirty flag, and the limits snapshot.**
-  `history` already prints an `engine` field and it reads `0.0.0.0` / `2.0.0.0` today: `runs.driver_ver`
-  carries the assembly version, which answers nothing. Fill that column, add commit/dirty/limits, and
-  `ArchivedRun` plus the `history` header are already wired to print them.
-watch: **bug #28, filed this session, and it will bite the K7.2 reinstall.** This repo's own
-  `.conductor/run.db` says `schema_version = 9` but already carries the v10 `soft_break` column, so any
-  v10+ engine dies in `MigrationRunner.Apply`. Also `CA2000` is a build error here and false-positives
-  on any factory returning an `IDisposable` - do not return one; hold a connection string instead.
-red: none. Open, not blocking: **#28** above, **#27** fresh-db FK error on first `run_state` write,
-  **#24** `AgentConfig.Merge` drops `Env`.
+last: **K3.3 claimed - K3 is complete.** `e45fa11`, evidence `.conductor/evidence/K3/K3.3-provenance.md`.
+  Schema **v11**: `runs.engine_version/engine_commit/engine_dirty/limits_json` plus
+  `sessions.engine/sessions.limits`. Per-session is the point - a run-level snapshot alone answers the
+  LAST cap for every session. Live rig read back `s1 cap=24M`, `s3 cap=32M` across a mid-run raise.
+  A dirty engine warns once at launch; `history` prints the stamp, the limits, and where either changed.
+next: **K4.1 - the engine measures context size per turn, not just cumulative tokens.** Spec section K4
+  in `docs/history/CONDUCTOR-KARVAN.md`. `LiveMetrics.SessionTokenTotals` folds integrals only;
+  `context_high_water` exists nowhere. Note that `sessions.limits` now gives K4 the honest denominator.
+watch: piping the engine through `Select-Object -First N` in PowerShell closes the pipeline and KILLS
+  it mid-flow - that is why the rig has no session 2. Use `-Last`, or capture to a variable. **#28**
+  (this repo's `run.db` says v9 but carries the v10 column) now blocks a v11 engine too - it bites at K7.2.
+red: none. Open, not blocking: **#28**, **#27** fresh-db FK error, **#24** `AgentConfig.Merge` drops `Env`.
 ```
