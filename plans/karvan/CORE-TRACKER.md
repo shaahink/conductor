@@ -4,20 +4,18 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **K6.1 DONE** (s21) - `76b66aa`, evidence `.conductor/evidence/K6/K6.1-tui-conventions-adr.md`.
-  `docs/dev/adr/0006-tui-conventions.md` makes six decisions K6.2-K6.4 implement without re-deciding,
-  each anchored to a file+symbol in glow / soft-serve / gh-dash / lazygit that was actually fetched.
-  It rests on a measurement: `m.reportScroll++` (`tab_report.go:46`) has NO clamp in `Update` - the
-  only clamp is a renderer-local copy (`:83`) never written back - so 400 `down` presses left the
-  offset at 400 against a body that stops at 12, and **389 `up` presses** were needed before one line
-  moved. That is the owner's "can't read long text". Bug #30; K6.2 closes it by construction.
-next: **K6.2** - declare `charm.land/bubbles/v2 v2.1.1` (measured, matches bubbletea v2) and move
-  Report + Knowledge onto a `viewport`. Read ADR 0006 first, not the four upstream repos again.
-red: none. `go build`, `go vet`, tui + widgets suites green. bugs #29 (K7.2) and #30 (K6.2) open.
-watch: the mnemonic loop (`update.go:608`) is an EXACT-string match resolving before any pane handler,
-  so lowercase `k`/`b`/`g` are unreachable in a pane (this is why Knowledge's `k` does nothing) while
-  uppercase `G` is free. Bind `↓`/`j` `↑`, `d`/`u`, `pgdn`/`f` `pgup`, `end`/`G` `home` - and nothing
-  else. Evidence files need `git add -f`: `.conductor/.gitignore` line 1 is `*`.
+last: **K6.2 DONE** (s22) - `fa1d3a4` code, `8fee399` rebaseline, evidence
+  `.conductor/evidence/K6/K6.2-viewport.md` (+ `K6.2-frames.txt`, six real frames). bubbles v2.1.1 is
+  a direct require; Report + Knowledge are `viewport.Model`; `panescroll.go` is the ONE key set as
+  `key.Binding` values. Bug #30 closed by construction - 400 downs past the end now cost ONE up, and
+  the test asserts that count, not "the pane is not blank" (a renderer clamp already passed that).
+next: **K6.3** - per-tab models. Read ADR 0006 decisions 3 and 5 and `panescroll.go`; do not re-derive
+  the key set or re-read the four upstream repos.
+red: none. `go build`, `go vet`, all five face-go suites green. Bug #29 (K7.2) still open.
+watch: two ADR corrections are already in the code, do not re-argue them - `f` is NOT a page-down
+  alias (`tab_agent.go:36` owns it), and bubbletea v2 spells the key `pgdown`. The golden result that
+  matters for K6.3/K6.4: `viewport.View()` pads to width AND height and is byte-identical to the old
+  hand-rolled slice once `frameContent` runs - NO body row moved in any golden, only status lines.
 
 
 ## Baseline numbers (from run.db)
@@ -25,7 +23,7 @@ watch: the mnemonic loop (`update.go:608`) is an EXACT-string match resolving be
 | Metric | Value |
 |---|---|
 | Total checkpoints | 32 |
-| Done | 4 |
+| Done | 5 |
 | Claimed (unconfirmed) | 15 |
 
 ## Checkpoints
@@ -75,13 +73,13 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | K5.1 | The session result has one format conductor owns — short headline, at most three outcome bullets, artefacts as links, evidence paths, explicit gaps — with the followup parser, the verdict parse and the session template moving in the same checkpoint and a legacy result degrading rather than throwing | DONE | c04175d | .conductor/evidence/K5/K5.1-result-contract.md |
 | K5.2 | The five Telegram defects that make the feed unreadable are gone: one identity block from one source, the stage title beside the id, the structured result rendered instead of cut mid-word, a rollover that reports what it landed, and a progress line in every push | DONE | c04175d | .conductor/evidence/K5/K5.2-telegram-feed.md |
 | K5.3 | Evidence is a first-class artifact — path, kind, checkpoint, session, sha, created-at — written as an event when an agent registers one or a watched directory gains a file, with non-text kinds first-class, a Face surface, and the existing free-text evidence field still working | DONE | 6df3a58 | .conductor/evidence/K5/K5.3-evidence-artifact.md |
-| K5.4 | The message-composition layer ships owner-editable per-event templates, repo and branch and stage title and checkpoint in every push, commits and PRs as links, money with headroom, photo and document sending so evidence arrives, a thread per run, severity mapped to notify or silent, 4096-character chunking, and an ADR recording the push-only remote posture | DONE | 43dd6d2 | .conductor/evidence/K5/K5.4-composition-layer.md |
+| K5.4 | The message-composition layer ships owner-editable per-event templates, repo and branch and stage title and checkpoint in every push, commits and PRs as links, money with headroom, photo and document sending so evidence arrives, a thread per run, severity mapped to notify or silent, 4096-character chunking, and an ADR recording the push-only remote posture | DONE ✓ | 43dd6d2 | .conductor/evidence/K5/K5.4-composition-layer.md |
 
 ### K6 — The surfaces read
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| K6.1 | An ADR fixes the TUI conventions — pager keys, focus model, help, one scroll idiom, viewport versus list versus table — after an actual read of glow, soft-serve, gh-dash and lazygit | TODO | - | - |
+| K6.1 | An ADR fixes the TUI conventions — pager keys, focus model, help, one scroll idiom, viewport versus list versus table — after an actual read of glow, soft-serve, gh-dash and lazygit | DONE | 76b66aa | .conductor/evidence/K6/K6.1-tui-conventions-adr.md |
 | K6.2 | bubbles v2 is a declared dependency and Report and Knowledge scroll through a viewport, with the golden, frame-invariant and glitch-sweep tests green, any baseline regenerated in a separate rebaseline commit, and a captured frame of a long document scrolled to its end as evidence | TODO | - | - |
 | K6.3 | Each tab owns its own model, state, update and view, the root update becomes a dispatch instead of 826 lines and 80 cases, and the mnemonic map and the hand-maintained help legend change together | TODO | - | - |
 | K6.4 | One markdown renderer honours the active theme everywhere markdown belongs, the remaining primitive swaps the ADR calls for are done as far as the goldens allow, and anything deliberately left is named | TODO | - | - |

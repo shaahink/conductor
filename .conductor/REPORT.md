@@ -1,10 +1,10 @@
 ﻿# Conductor — Karvan core - the engine knows what it did and what it cost run report
 
-_Updated 2026-08-05 08:23 UTC · branch `feat/karvan` · HEAD `cc7ad14`_
+_Updated 2026-08-05 08:35 UTC · branch `feat/karvan` · HEAD `5fa8150`_
 
-**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [8h 54m ago, 23:29:12Z]
-**Stage:** K5 — The result contract and the channels · attempts used 0
-**Checkpoints:** 19/32 done · **Sessions run:** 20 · **Cost:** $218.9517 (agent $218.8347 + gates $0.1169) · **Tokens:** 3,039,858 in / 1,500,802 out
+**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [9h 06m ago, 23:29:12Z]
+**Stage:** K6 — The surfaces read · attempts used 0 · working ▸ K6.2
+**Checkpoints:** 20/32 done · **Sessions run:** 21 · **Cost:** $223.6584 (agent $223.5366 + gates $0.1218) · **Tokens:** 3,121,090 in / 1,537,110 out
 **Confirmed phases:** K1, K2, K3, K4, K5
 
 ## Stage progress
@@ -16,7 +16,7 @@ _Updated 2026-08-05 08:23 UTC · branch `feat/karvan` · HEAD `cc7ad14`_
 | K3 | Conductor remembers | ██████████ 3/3 | confirmed ✓ |
 | K4 | Token truth - measure it before shrinking it | ██████████ 4/4 | confirmed ✓ |
 | K5 | The result contract and the channels | ██████████ 4/4 | confirmed ✓ |
-| K6 | The surfaces read | ░░░░░░░░░░ 0/4 | todo |
+| K6 | The surfaces read | ██░░░░░░░░ 1/4 | **← active** |
 | K7 | Ship the plan | ░░░░░░░░░░ 0/2 | todo |
 
 <details> ✅<summary>K1 — The ledger stops lying (4/4)</summary>
@@ -73,11 +73,11 @@ _Updated 2026-08-05 08:23 UTC · branch `feat/karvan` · HEAD `cc7ad14`_
 
 </details>
 
-<details><summary>K6 — The surfaces read (0/4)</summary>
+<details><summary>K6 — The surfaces read (1/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| K6.1 | An ADR fixes the TUI conventions — pager keys, focus model, help, one scroll idiom, viewport versus list versus table — after an actual read of glow, soft-serve, gh-dash and lazygit | ⬜ TODO | - |
+| K6.1 | An ADR fixes the TUI conventions — pager keys, focus model, help, one scroll idiom, viewport versus list versus table — after an actual read of glow, soft-serve, gh-dash and lazygit | ✅ DONE | - |
 | K6.2 | bubbles v2 is a declared dependency and Report and Knowledge scroll through a viewport, with the golden, frame-invariant and glitch-sweep tests green, any baseline regenerated in a separate rebaseline commit, and a captured frame of a long document scrolled to its end as evidence | ⬜ TODO | - |
 | K6.3 | Each tab owns its own model, state, update and view, the root update becomes a dispatch instead of 826 lines and 80 cases, and the mnemonic map and the hand-maintained help legend change together | ⬜ TODO | - |
 | K6.4 | One markdown renderer honours the active theme everywhere markdown belongs, the remaining primitive swaps the ADR calls for are done as far as the goldens allow, and anything deliberately left is named | ⬜ TODO | - |
@@ -117,17 +117,13 @@ _Updated 2026-08-05 08:23 UTC · branch `feat/karvan` · HEAD `cc7ad14`_
 | 18 | K5 | Deliver | 1 | 08-05 06:09 | 0:41 | Advanced | K5.1 K5.2 | 7 | engine-fast:OK · face-fast:OK | $17.4525 | $0.0050 | 235,397/127,419 |
 | 19 | K5 | Deliver | 1 | 08-05 06:51 | 0:41 | Advanced | K5.3 | 5 | engine-fast:OK · face-fast:OK | $16.1117 | $0.0049 | 187,740/86,244 |
 | 20 | K5 | Deliver | 1 | 08-05 07:33 | 0:46 | Advanced | K5.4 | 4 | engine-fast:OK · face-fast:OK | $19.4020 | $0.0051 | 246,366/126,779 |
+| 21 | K6 | Deliver | 1 | 08-05 08:23 | 0:11 | Advanced | K6.1 | 2 | engine-fast:OK · face-fast:OK | $4.7018 | $0.0049 | 81,232/36,308 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-05 05:40:41  • session #15 K4 Deliver started (attempt 1/8)
-08-05 06:05:04  ▪ gate engine-fast pass [session]  (47.0s)
-08-05 06:05:04  ▪ gate face-fast pass [session]  (3.6s)
-08-05 06:05:05  • session #15 K4 → Advanced · done K4.3 · 2 commit(s)  (24m23s)
-08-05 06:05:05  • session #16 K4 Deliver started (attempt 1/8)
 08-05 06:52:55  ▪ gate engine-fast pass [session]  (41.8s)
 08-05 06:52:55  ▪ gate face-fast pass [session]  (4.6s)
 08-05 06:52:56  • session #16 K4 → Advanced · done K4.4 · 5 commit(s)  (47m50s)
@@ -163,6 +159,11 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-05 09:23:26  ▪ gate engine-full pass [phase]  (2m59s)
 08-05 09:23:26  ▪ gate face-full pass [phase]  (9.0s)
 08-05 09:23:26  ✓ checkpoint K5.4 confirmed
+08-05 09:23:26  ▸ stage K5 confirmed  (2h14m15s)
+08-05 09:23:26  ▸ stage K6 entered — The surfaces read
+08-05 09:23:26  • session #21 K6 Deliver started (attempt 1/8)
+08-05 09:35:52  ▪ gate engine-fast pass [session]  (46.2s)
+08-05 09:35:52  ▪ gate face-fast pass [session]  (2.9s)
 ```
 
 ## Health
@@ -170,7 +171,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 20 · retries 4 (20 %) · overall Warn
+sessions 21 · retries 4 (19 %) · overall Warn
 ⚠ [context-saturation] session #10: 23,623,416 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #18: 23,816,486 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #19: 24,146,164 context tokens (≥ 20,000,000)
@@ -186,15 +187,12 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/karvan
-working tree: M .conductor/REPORT.md, M plans/karvan/CORE-TRACKER.md
+working tree: clean
 vs upstream: up to date
 ```
 
 ### Commits by session
 
-- **s13 (K4 Deliver)** — 2 commit(s):
-  - [`3fe10fe`](https://github.com/shaahink/conductor/commit/3fe10fe) docs(evidence): K4.1 evidence artifact and the handoff to K4.2
-  - [`ea49c8d`](https://github.com/shaahink/conductor/commit/ea49c8d) feat(tokens): K4.1 - the engine measures how full the window ran, not just what it spent
 - **s14 (K4 Deliver)** — 2 commit(s):
   - [`1ec436f`](https://github.com/shaahink/conductor/commit/1ec436f) feat(doctor): K4.2 - doctor warns when the cap is under the floor or the nudge under the median closer
   - [`1fcbd0b`](https://github.com/shaahink/conductor/commit/1fcbd0b) feat(budget): K4.2 - the engine measures its own token ceiling and prescribes the next one
@@ -228,6 +226,9 @@ vs upstream: up to date
   - [`aaee340`](https://github.com/shaahink/conductor/commit/aaee340) feat(telegram): K5.4 part 3 - the templates the owner edits, and the push-only ADR
   - [`baa2c56`](https://github.com/shaahink/conductor/commit/baa2c56) feat(telegram): K5.4 part 2 - the composition, so a push says which checkout and what is left
   - [`43dd6d2`](https://github.com/shaahink/conductor/commit/43dd6d2) feat(telegram): K5.4 part 1 - the transport, so a screenshot arrives and a long message is not dropped
+- **s21 (K6 Deliver)** — 2 commit(s):
+  - [`5fa8150`](https://github.com/shaahink/conductor/commit/5fa8150) docs(tracker): K6.1 claimed and handed off - the conventions are settled
+  - [`76b66aa`](https://github.com/shaahink/conductor/commit/76b66aa) docs(face): K6.1 - the TUI conventions ADR, and the measurement that settles it
 
 ## Phase handovers (audit)
 
@@ -250,30 +251,30 @@ vs upstream: up to date
 
 ## Last gate run
 
-engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
+engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: K5.4 landed - evidence arrives as photos, pushes chunk, thread, link and template
-> - Transport: HtmlChunker splits at 4096 without breaking a tag or entity; PushEvidenceAsync's body replaced with sendPhoto/sendDocument so a screenshot arrives; severity maps to disable_notification; a run threads onto its own anchor.
-> - Composition: a second stamped line carries repo@branch, stage title and the in-flight checkpoint; money renders against the cap with headroom; commits, PRs and the report are links; RunCompletePush leads with the outcome, not the build string.
-> - Templates at <templatesDir>/notify/<event>.md with two rules, refusing an unknown fact rather than throwing; ADR 0005 r…
+> SESSION-RESULT: K6.1 done: ADR 0006 settles TUI conventions, backed by a measured 389-keystroke dead pane
+> - Six decisions K6.2-K6.4 implement without re-deciding, each anchored to a fetched file+symbol in glow, soft-serve, gh-dash or lazygit; bubbles v2 measured at charm.land/bubbles/v2 v2.1.1, the path K6.2 blocks on.
+> - Root cause measured not inferred: unclamped offset in Update, clamp only in a renderer-local copy. Report freezes for 389 keystrokes; Knowledge has no paging or jump keys at all. Filed bug #30, which K6.2 closes by construction.
+> - Stale ADR index (stuck at 0003) now lists 0004-0006; STYLE.md's Keys section points at the ADR so the next face change reads it before inventing a…
 
 ## Tracker handoff
 
 ```
-last: **K5.4 DONE** (s20) - `43dd6d2` transport, `baa2c56` composition, `aaee340` templates + ADR 0005;
-  evidence `.conductor/evidence/K5/K5.4-composition-layer.md` plus a 304-line verbatim wire transcript.
-  Evidence now ARRIVES as `sendPhoto`/`sendDocument` (K5.3's body replaced, not supplemented); messages
-  chunk at 4096, thread onto the run's own anchor, and buzz only when the owner must act. A second
-  stamped context line carries repo@branch, stage id AND title, and the in-flight checkpoint. Money has
-  headroom, commits and PRs and the report are links, and `RunCompletePush` leads with the outcome.
-next: **K6.1** - the TUI conventions ADR, after an actual read of glow, soft-serve, gh-dash, lazygit.
-  K5 is closed. Read `face-go/STYLE.md` and adr/0004 first; K6.2 needs `bubbles` v2 declared, which
-  `face-go/go.mod` does not have at all.
-red: none. 191 tests green across the messaging and architecture suites. bug #29 (K7.2) still open.
-watch: assert on the stamp via `svc.Stamp(null)`, never `IdentityLine`, and skip past the LAST `</i>`.
-  New seam: `tests/Conductor.Tests/RecordingBotApi.cs` records method + fields + MULTIPART; the three
-  older `FakeBotApi` copies see only `sendMessage`'s text. A PowerShell here-string commit message can
-  fail SILENTLY - stage without committing - so use `git commit -F` with a heredoc-written file.
+last: **K6.1 DONE** (s21) - `76b66aa`, evidence `.conductor/evidence/K6/K6.1-tui-conventions-adr.md`.
+  `docs/dev/adr/0006-tui-conventions.md` makes six decisions K6.2-K6.4 implement without re-deciding,
+  each anchored to a file+symbol in glow / soft-serve / gh-dash / lazygit that was actually fetched.
+  It rests on a measurement: `m.reportScroll++` (`tab_report.go:46`) has NO clamp in `Update` - the
+  only clamp is a renderer-local copy (`:83`) never written back - so 400 `down` presses left the
+  offset at 400 against a body that stops at 12, and **389 `up` presses** were needed before one line
+  moved. That is the owner's "can't read long text". Bug #30; K6.2 closes it by construction.
+next: **K6.2** - declare `charm.land/bubbles/v2 v2.1.1` (measured, matches bubbletea v2) and move
+  Report + Knowledge onto a `viewport`. Read ADR 0006 first, not the four upstream repos again.
+red: none. `go build`, `go vet`, tui + widgets suites green. bugs #29 (K7.2) and #30 (K6.2) open.
+watch: the mnemonic loop (`update.go:608`) is an EXACT-string match resolving before any pane handler,
+  so lowercase `k`/`b`/`g` are unreachable in a pane (this is why Knowledge's `k` does nothing) while
+  uppercase `G` is free. Bind `↓`/`j` `↑`, `d`/`u`, `pgdn`/`f` `pgup`, `end`/`G` `home` - and nothing
+  else. Evidence files need `git add -f`: `.conductor/.gitignore` line 1 is `*`.
 ```

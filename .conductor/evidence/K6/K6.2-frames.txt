@@ -1,0 +1,210 @@
+
+==============================================================================
+FRAME 1 - Report, top of the document
+status line reads a percent, not a line count (adr/0006 decision 1)
+==============================================================================
+ ◆ conductor  ● DEMO  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 0s  cp 2/40  run $0.42  ⎇ feat/… ↑3↓1 ●    
+  h Home   a Agent   s History   o Procs   e Templates   p Plan   r Report   k Knowledge   g Telegram   b Kanban        
+                              │                                                                                         
+ ▶ PLAN  n× attempts          │  Run                                                                                    
+ ✓ F0 3/3 Foundations         │  plan       conductor-foreman                                                           
+ ✓ F1 4/4 run.db task store   │  status     ▶ RUNNING                                                                   
+ ✓ F2 4/4 ProcessSupervisor…  │  progress   ▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱ 2/40 checkpoints                                   
+ ✓ F3 4/4 Stall v2 + failur…  │  cost       $0.42                                                                       
+ ✓ F4 5/5 Verifier role       │  tokens     2.5k in · 1.8k out · 0 reasoning                                            
+ ✓ F5 3/3 Control plane       │  elapsed    2h 28m across 4 sessions                                                    
+ ✓ F6 5/5 Ink TUI v1          │                                                                                         
+ ● F7 2/5 Gate caching +… 1×  │  Stages                                                                                 
+   ✓ F7.1 Plan import         │    stage done   att  cost    last outcome                                               
+   ✓ F7.2 Re-import diff      │  ✓ F0    3/3    —    —       —                                                          
+   ● F7.3 Truth-gate tier     │  ✓ F1    4/4    —    —       —                                                          
+   ○ F7.4 Gate caching by S…  │  ✓ F2    4/4    —    —       —                                                          
+   ○ F7.5 Speed program       │  ✓ F3    4/4    —    —       —                                                          
+ ○ F8 0/4 conductor chat + …  │  ✓ F4    5/5    —    —       —                                                          
+ ○ F9 0/3 Dogfood close       │  ✓ F5    3/3    —    —       —                                                          
+                              │  ✓ F6    5/5    —    —       —                                                          
+ ── GATES ──                  │  ● F7    2/5    1×   —       —                                                          
+   ✓ build                    │  ○ F8    0/4    —    —       —                                                          
+   ● test 4s                  │  ○ F9    0/3    —    —       —                                                          
+   ○ lint                     │                                                                                         
+   ○ audit                    │  Sessions                                                                               
+                              │    #    stage kind      outcome     duration cost    commits                            
+                              │    #12  F7    Deliver   running     —        $0.12   0                                  
+                              │                                                                                         
+                              │                                                                                         
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ d/u G/home scroll 0% · esc back                          
+
+==============================================================================
+FRAME 2 - Report after 400 'j' presses: THE EXACT CASE THAT FAILED
+before K6.2 the offset field read 400 against a body that stopped at 12
+==============================================================================
+ ◆ conductor  ● DEMO  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 0s  cp 2/40  run $0.42  ⎇ feat/… ↑3↓1 ●    
+  h Home   a Agent   s History   o Procs   e Templates   p Plan   r Report   k Knowledge   g Telegram   b Kanban        
+                              │                                                                                         
+ ▶ PLAN  n× attempts          │    #1   F0    Deliver   completed   20m 46s  $0.03   3                                  
+ ✓ F0 3/3 Foundations         │                                                                                         
+ ✓ F1 4/4 run.db task store   │  Gates                                                                                  
+ ✓ F2 4/4 ProcessSupervisor…  │    ✓ build           2s                                                                 
+ ✓ F3 4/4 Stall v2 + failur…  │    ● test            4s                                                                 
+ ✓ F4 5/5 Verifier role       │    ○ lint                                                                               
+ ✓ F5 3/3 Control plane       │    ○ audit                                                                              
+ ✓ F6 5/5 Ink TUI v1          │                                                                                         
+ ● F7 2/5 Gate caching +… 1×  │  Verifier scores                                                                        
+   ✓ F7.1 Plan import         │    session  stage score     verdict  findings                                           
+   ✓ F7.2 Re-import diff      │    #11      F7    66/80     WARN     2 findings                                         
+   ● F7.3 Truth-gate tier     │    #8       F6    90/80     PASS     —                                                  
+   ○ F7.4 Gate caching by S…  │    #2       F1    88/80     PASS     1 finding                                          
+   ○ F7.5 Speed program       │                                                                                         
+ ○ F8 0/4 conductor chat + …  │  Session tokens                                                                         
+ ○ F9 0/3 Dogfood close       │    #    stage in       out      reason   cache-read cost                                
+                              │    #12  F7    41.2k    3.2k     1.0k     188.4k    $0.12                                
+ ── GATES ──                  │    #11  F7    52.9k    4.4k     2.3k     201.3k    $0.14                                
+   ✓ build                    │    #8   F6    0        0        n/a      0         $0.09                                
+   ● test 4s                  │    #2   F1    18.9k    2.7k     n/a      60.1k     $0.04                                
+   ○ lint                     │    #1   F0    9.9k     1.5k     n/a      22.4k     $0.03                                
+   ○ audit                    │                                                                                         
+                              │    1 session with cost but zero tokens — pre-bug-#5 data, not a Face bug                
+                              │    reason n/a on 3 sessions — this run's agent provider reports no thinking tokens      
+                              │                                                                                         
+                              │                                                                                         
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ d/u G/home scroll 100% · esc back                        
+
+==============================================================================
+FRAME 3 - Report, ONE press of up from the end
+the body moved on the first press; it used to take 389
+==============================================================================
+ ◆ conductor  ● DEMO  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 0s  cp 2/40  run $0.42  ⎇ feat/… ↑3↓1 ●    
+  h Home   a Agent   s History   o Procs   e Templates   p Plan   r Report   k Knowledge   g Telegram   b Kanban        
+                              │                                                                                         
+ ▶ PLAN  n× attempts          │    #2   F1    Deliver   completed   44m 26s  $0.04   4                                  
+ ✓ F0 3/3 Foundations         │    #1   F0    Deliver   completed   20m 46s  $0.03   3                                  
+ ✓ F1 4/4 run.db task store   │                                                                                         
+ ✓ F2 4/4 ProcessSupervisor…  │  Gates                                                                                  
+ ✓ F3 4/4 Stall v2 + failur…  │    ✓ build           2s                                                                 
+ ✓ F4 5/5 Verifier role       │    ● test            4s                                                                 
+ ✓ F5 3/3 Control plane       │    ○ lint                                                                               
+ ✓ F6 5/5 Ink TUI v1          │    ○ audit                                                                              
+ ● F7 2/5 Gate caching +… 1×  │                                                                                         
+   ✓ F7.1 Plan import         │  Verifier scores                                                                        
+   ✓ F7.2 Re-import diff      │    session  stage score     verdict  findings                                           
+   ● F7.3 Truth-gate tier     │    #11      F7    66/80     WARN     2 findings                                         
+   ○ F7.4 Gate caching by S…  │    #8       F6    90/80     PASS     —                                                  
+   ○ F7.5 Speed program       │    #2       F1    88/80     PASS     1 finding                                          
+ ○ F8 0/4 conductor chat + …  │                                                                                         
+ ○ F9 0/3 Dogfood close       │  Session tokens                                                                         
+                              │    #    stage in       out      reason   cache-read cost                                
+ ── GATES ──                  │    #12  F7    41.2k    3.2k     1.0k     188.4k    $0.12                                
+   ✓ build                    │    #11  F7    52.9k    4.4k     2.3k     201.3k    $0.14                                
+   ● test 4s                  │    #8   F6    0        0        n/a      0         $0.09                                
+   ○ lint                     │    #2   F1    18.9k    2.7k     n/a      60.1k     $0.04                                
+   ○ audit                    │    #1   F0    9.9k     1.5k     n/a      22.4k     $0.03                                
+                              │                                                                                         
+                              │    1 session with cost but zero tokens — pre-bug-#5 data, not a Face bug                
+                              │                                                                                         
+                              │                                                                                         
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ d/u G/home scroll 97% · esc back                         
+
+==============================================================================
+FRAME 4 - Knowledge, top of a 90-line ledger
+before K6.2 this surface had no page keys and no jump keys at all
+==============================================================================
+ ◆ conductor  ● DEMO  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 0s  cp 2/40  run $0.42  ⎇ feat/… ↑3↓1 ●    
+  h Home   a Agent   s History   o Procs   e Templates   p Plan   r Report   k Knowledge   g Telegram   b Kanban        
+                              │                                                                                         
+ ▶ PLAN  n× attempts          │  ◆ Open bugs (2)                                                                        
+ ✓ F0 3/3 Foundations         │    #3 (medium) [F7] console SSE resets line counter when a new session log appe… 20d a  
+ ✓ F1 4/4 run.db task store   │       StreamConsoleAsync resets `since=0` on path change — a reconnecting client re-…   
+ ✓ F2 4/4 ProcessSupervisor…  │    #2 (high) [F7] verifier double-counts session cost on resume 20d ago                 
+ ✓ F3 4/4 Stall v2 + failur…  │       TokenDelta folded twice when a session resumes after a stall.                     
+ ✓ F4 5/5 Verifier role       │                                                                                         
+ ✓ F5 3/3 Control plane       │  ◆ Evidence (3)                                                                         
+ ✓ F6 5/5 Ink TUI v1          │    [image] …ctor/evidence/F7/F7.2-dashboard.png 180.0 KB · watcher (s12/F7.2) 20d ago   
+ ● F7 2/5 Gate caching +… 1×  │    [text] .conductor/evidence/F7/F7.2-gate-run.log 8.6 KB · claim (s12/F7.2) 20d ago    
+   ✓ F7.1 Plan import         │    [text] docs/evidence/F7/F7.1-cache-keys.md 2.2 KB · claim (s11/F7.1) 20d ago         
+   ✓ F7.2 Re-import diff      │                                                                                         
+   ● F7.3 Truth-gate tier     │  ◆ Knowledge ledger (64)                                                                
+   ○ F7.4 Gate caching by S…  │    [finding] GateCache keys by (name, tier, sha) — the last-passing … (s12/F7) 20d ago  
+   ○ F7.5 Speed program       │    [trap] Never Stop-Process dotnet by name — it kills unrelated bui… (s11/F7) 20d ago  
+ ○ F8 0/4 conductor chat + …  │    [decision] Cost of the verifier session is folded into the stage … (s11/F7) 20d ago  
+ ○ F9 0/3 Dogfood close       │    [observation] lipgloss v2 counts the border inside .Width(): inner… (s8/F6) 20d ago  
+                              │    [note] ledger line 00 - long enough to be worth reading, which is th… (s1) just now  
+ ── GATES ──                  │    [note] ledger line 01 - long enough to be worth reading, which is th… (s2) just now  
+   ✓ build                    │    [note] ledger line 02 - long enough to be worth reading, which is th… (s3) just now  
+   ● test 4s                  │    [note] ledger line 03 - long enough to be worth reading, which is th… (s4) just now  
+   ○ lint                     │    [note] ledger line 04 - long enough to be worth reading, which is th… (s5) just now  
+   ○ audit                    │    [note] ledger line 05 - long enough to be worth reading, which is th… (s6) just now  
+                              │    [note] ledger line 06 - long enough to be worth reading, which is th… (s7) just now  
+                              │    [note] ledger line 07 - long enough to be worth reading, which is th… (s8) just now  
+                              │                                                                                         
+                              │                                                                                         
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   2 bugs · 3 evidence · 64 ledger · n note · b bug · x resolve
+
+==============================================================================
+FRAME 5 - Knowledge after one 'G': the end of a long document
+'G' did not exist before K6.2 - Knowledge bound only up, down and j
+==============================================================================
+ ◆ conductor  ● DEMO  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 0s  cp 2/40  run $0.42  ⎇ feat/… ↑3↓1 ●    
+  h Home   a Agent   s History   o Procs   e Templates   p Plan   r Report   k Knowledge   g Telegram   b Kanban        
+                              │                                                                                         
+ ▶ PLAN  n× attempts          │    [note] ledger line 36 - long enough to be worth reading, which is th… (s1) just now  
+ ✓ F0 3/3 Foundations         │    [note] ledger line 37 - long enough to be worth reading, which is th… (s2) just now  
+ ✓ F1 4/4 run.db task store   │    [note] ledger line 38 - long enough to be worth reading, which is th… (s3) just now  
+ ✓ F2 4/4 ProcessSupervisor…  │    [note] ledger line 39 - long enough to be worth reading, which is th… (s4) just now  
+ ✓ F3 4/4 Stall v2 + failur…  │    [note] ledger line 40 - long enough to be worth reading, which is th… (s5) just now  
+ ✓ F4 5/5 Verifier role       │    [note] ledger line 41 - long enough to be worth reading, which is th… (s6) just now  
+ ✓ F5 3/3 Control plane       │    [note] ledger line 42 - long enough to be worth reading, which is th… (s7) just now  
+ ✓ F6 5/5 Ink TUI v1          │    [note] ledger line 43 - long enough to be worth reading, which is th… (s8) just now  
+ ● F7 2/5 Gate caching +… 1×  │    [note] ledger line 44 - long enough to be worth reading, which is th… (s9) just now  
+   ✓ F7.1 Plan import         │    [note] ledger line 45 - long enough to be worth reading, which is th… (s1) just now  
+   ✓ F7.2 Re-import diff      │    [note] ledger line 46 - long enough to be worth reading, which is th… (s2) just now  
+   ● F7.3 Truth-gate tier     │    [note] ledger line 47 - long enough to be worth reading, which is th… (s3) just now  
+   ○ F7.4 Gate caching by S…  │    [note] ledger line 48 - long enough to be worth reading, which is th… (s4) just now  
+   ○ F7.5 Speed program       │    [note] ledger line 49 - long enough to be worth reading, which is th… (s5) just now  
+ ○ F8 0/4 conductor chat + …  │    [note] ledger line 50 - long enough to be worth reading, which is th… (s6) just now  
+ ○ F9 0/3 Dogfood close       │    [note] ledger line 51 - long enough to be worth reading, which is th… (s7) just now  
+                              │    [note] ledger line 52 - long enough to be worth reading, which is th… (s8) just now  
+ ── GATES ──                  │    [note] ledger line 53 - long enough to be worth reading, which is th… (s9) just now  
+   ✓ build                    │    [note] ledger line 54 - long enough to be worth reading, which is th… (s1) just now  
+   ● test 4s                  │    [note] ledger line 55 - long enough to be worth reading, which is th… (s2) just now  
+   ○ lint                     │    [note] ledger line 56 - long enough to be worth reading, which is th… (s3) just now  
+   ○ audit                    │    [note] ledger line 57 - long enough to be worth reading, which is th… (s4) just now  
+                              │    [note] ledger line 58 - long enough to be worth reading, which is th… (s5) just now  
+                              │    [note] ledger line 59 - long enough to be worth reading, which is th… (s6) just now  
+                              │                                                                                         
+                              │                                                                                         
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   2 bugs · 3 evidence · 64 ledger · n note · b bug · x resolve
+
+==============================================================================
+FRAME 6 - Knowledge, half a page back with 'u'
+the half-page pair is new here too
+==============================================================================
+ ◆ conductor  ● DEMO  …/conductor  ▶ RUNNING  F7 Gate caching + trut…  ⠋ s12 0s  cp 2/40  run $0.42  ⎇ feat/… ↑3↓1 ●    
+  h Home   a Agent   s History   o Procs   e Templates   p Plan   r Report   k Knowledge   g Telegram   b Kanban        
+                              │                                                                                         
+ ▶ PLAN  n× attempts          │    [note] ledger line 24 - long enough to be worth reading, which is th… (s7) just now  
+ ✓ F0 3/3 Foundations         │    [note] ledger line 25 - long enough to be worth reading, which is th… (s8) just now  
+ ✓ F1 4/4 run.db task store   │    [note] ledger line 26 - long enough to be worth reading, which is th… (s9) just now  
+ ✓ F2 4/4 ProcessSupervisor…  │    [note] ledger line 27 - long enough to be worth reading, which is th… (s1) just now  
+ ✓ F3 4/4 Stall v2 + failur…  │    [note] ledger line 28 - long enough to be worth reading, which is th… (s2) just now  
+ ✓ F4 5/5 Verifier role       │    [note] ledger line 29 - long enough to be worth reading, which is th… (s3) just now  
+ ✓ F5 3/3 Control plane       │    [note] ledger line 30 - long enough to be worth reading, which is th… (s4) just now  
+ ✓ F6 5/5 Ink TUI v1          │    [note] ledger line 31 - long enough to be worth reading, which is th… (s5) just now  
+ ● F7 2/5 Gate caching +… 1×  │    [note] ledger line 32 - long enough to be worth reading, which is th… (s6) just now  
+   ✓ F7.1 Plan import         │    [note] ledger line 33 - long enough to be worth reading, which is th… (s7) just now  
+   ✓ F7.2 Re-import diff      │    [note] ledger line 34 - long enough to be worth reading, which is th… (s8) just now  
+   ● F7.3 Truth-gate tier     │    [note] ledger line 35 - long enough to be worth reading, which is th… (s9) just now  
+   ○ F7.4 Gate caching by S…  │    [note] ledger line 36 - long enough to be worth reading, which is th… (s1) just now  
+   ○ F7.5 Speed program       │    [note] ledger line 37 - long enough to be worth reading, which is th… (s2) just now  
+ ○ F8 0/4 conductor chat + …  │    [note] ledger line 38 - long enough to be worth reading, which is th… (s3) just now  
+ ○ F9 0/3 Dogfood close       │    [note] ledger line 39 - long enough to be worth reading, which is th… (s4) just now  
+                              │    [note] ledger line 40 - long enough to be worth reading, which is th… (s5) just now  
+ ── GATES ──                  │    [note] ledger line 41 - long enough to be worth reading, which is th… (s6) just now  
+   ✓ build                    │    [note] ledger line 42 - long enough to be worth reading, which is th… (s7) just now  
+   ● test 4s                  │    [note] ledger line 43 - long enough to be worth reading, which is th… (s8) just now  
+   ○ lint                     │    [note] ledger line 44 - long enough to be worth reading, which is th… (s9) just now  
+   ○ audit                    │    [note] ledger line 45 - long enough to be worth reading, which is th… (s1) just now  
+                              │    [note] ledger line 46 - long enough to be worth reading, which is th… (s2) just now  
+                              │    [note] ledger line 47 - long enough to be worth reading, which is th… (s3) just now  
+                              │                                                                                         
+                              │                                                                                         
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   2 bugs · 3 evidence · 64 ledger · n note · b bug · x resolve
