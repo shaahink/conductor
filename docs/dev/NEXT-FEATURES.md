@@ -12,6 +12,12 @@ check is pinned by `SF7_1DocsMatchRealityTests` so the next drift is a red test 
 re-read: an item named shipped whose symbol disappears fails, and an item named open whose symbol
 appears fails too.
 
+**Re-checked 2026-08-05 (K7.1).** The Karvan era closed twenty-three checkpoints and none of them
+had reached this page, so its output is added to the shipped list below. Every item still on the
+*open* list was re-verified against `src/` on that date rather than trusted: `requireCleanTree`,
+`RepoMapBattery` and `DefinitionOfDoneBattery` return no hits, `WarnOnBranchPattern` is still the
+only enforcement of `branchPattern` (`RunLoop.Control.cs`), so all four entries stand as written.
+
 ---
 
 ## Shipped — kept as a record of what closed, not as work
@@ -50,6 +56,35 @@ Do not re-plan these. Each names the thing in the tree that answers it.
   writing conductor's server alone. `agent.inheritMcpServers: false` opts out. This closes the
   engine-side half of the item filed on 2026-08-01 below; the harness-side half stays open by
   decision, not by omission.
+
+### Added by the Karvan era (K1–K6, 2026-08-04 → 2026-08-05)
+
+- **The engine is a library again (K2.1–K2.3).** `Conductor.Core` holds the domain, orchestration
+  and store with no Spectre and no HTTP hosting; `Conductor` is CLI plus hosting. The boundary is not
+  a convention — `ArchitectureBoundaryTests` fails the build when it is crossed, naming the type and
+  the rule. `ARCHITECTURE.md` is a real map, and its *file-organisation convention* section says where
+  a new endpoint, event or partial belongs.
+- **Conductor remembers across runs (K3).** State has a machine-level home with a catalogue keyed by
+  repo and plan (`StateHome`), an environment override, and an idempotent migration that *imports*
+  existing `run.db` files instead of orphaning them. `HistoryCommand` lists and opens past runs
+  read-only, and the Face's run picker offers them. Every run records the engine version, its commit,
+  its dirty flag and a snapshot of the limits that governed it.
+- **Token truth (K4).** Context size per turn — high-water and mean — is derived from the stream.
+  `BudgetAnalyzer` behind `conductor budget` prints floor, wrap-up, cap, nudge-versus-floor and
+  rollover rate and *prescribes* a correction; `MoneyCommand` answers what a project cost per
+  checkpoint, per stage and per month with cache-read share. Live session tokens, distance to the
+  nudge, burn rate and projection sit beside live money in the Face and on the wire. This page's own
+  token doc was corrected by that tool at K7.1 — see `TOKEN-BUDGET-TUNING.md` §3 and §9.
+- **The result contract and the channels (K5).** The session result has one format conductor owns,
+  parsed once and rendered by five consumers instead of cut mid-word at five different lengths.
+  `EvidenceArtifact` makes evidence first-class — path, kind, checkpoint, session, sha, created-at —
+  written as an event and surfaced in the Face. Telegram gained owner-editable per-event templates,
+  links for commits and PRs, photo and document sending, a thread per run, and 4096-char chunking.
+- **The surfaces read (K6).** `docs/dev/adr/0006` fixes the TUI conventions after an actual read of
+  glow, soft-serve, gh-dash and lazygit; `bubbles` v2 is a declared dependency; four panes scroll
+  through a real viewport; each tab owns its own model, state, update and view so the root update is
+  a dispatch rather than 826 lines; and one theme-aware markdown renderer serves everywhere markdown
+  belongs.
 
 ## Still open — real work, none of it started
 
