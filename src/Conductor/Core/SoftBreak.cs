@@ -16,7 +16,7 @@ namespace Conductor.Core;
 /// with the reason the order is what it is, and each delivery is written back to a file the engine
 /// folds into the session record. The next tuning pass reads a measurement instead of inferring
 /// one.</para></summary>
-public static class SoftBreak
+public static partial class SoftBreak
 {
     public const string SignalFileName = "soft-break";
     public const string DeliveredFileName = "soft-break.delivered";
@@ -55,30 +55,7 @@ public static class SoftBreak
         DateTime LastUtc = default,
         long LastAtTokens = 0);
 
-    /// <summary>What the session record carries — delivered, re-delivered, and obeyed.</summary>
-    public sealed record Outcome
-    {
-        public long ThresholdTokens { get; init; }
-        public long CeilingTokens { get; init; }
-        public int DeliveredCount { get; init; }
-        public DateTime? FirstUtc { get; init; }
-        public long FirstAtTokens { get; init; }
-        public DateTime? LastUtc { get; init; }
-        public long LastAtTokens { get; init; }
-
-        /// <summary>The session was nudged, and it ended on its own terms under its ceiling — no
-        /// budget kill, no crossing. This is the number the whole checkpoint exists to make readable:
-        /// eleven of eleven were false before it could be counted.</summary>
-        public bool Obeyed { get; init; }
-
-        public bool Delivered => DeliveredCount > 0;
-        public bool Restated => DeliveredCount > 1;
-
-        public string Summary() => DeliveredCount == 0
-            ? "soft-break: signalled, never delivered"
-            : $"soft-break: delivered ×{DeliveredCount}, first at {FirstAtTokens / 1000.0:0.#}k, " +
-              $"last at {LastAtTokens / 1000.0:0.#}k, {(Obeyed ? "OBEYED" : "not obeyed")}";
-    }
+    // Outcome — the measurement the session record carries — lives in SoftBreak.Outcome.cs.
 
     // ── the re-statement rule ──────────────────────────────────────────────────────────────────
 
@@ -210,6 +187,4 @@ public static class SoftBreak
         return next;
     }
 #pragma warning restore MA0045
-
-    public static string ToJson(Outcome outcome) => JsonSerializer.Serialize(outcome, Json);
 }
