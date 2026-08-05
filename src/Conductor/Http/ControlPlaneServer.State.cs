@@ -48,6 +48,9 @@ public sealed partial class ControlPlaneServer
         // the cap is actually measured against) and the approval bookkeeping are run-state, so the
         // fold cannot see them, and every surface that tried to derive them got it wrong.
         dto = WithBudget(dto, _plan.Limits, _state);
+        // K4.4: and the token rail beside the money one. After WithLiveSessionMetrics, which is what
+        // decides AgentActive and the elapsed clock the burn rate divides by.
+        dto = WithTokenHeadroom(dto, _plan.Limits, runState, events);
 
         // The folded projection never carries run-loop status (it is runtime state, not an event):
         // SnapshotBuilder saw a perpetual Idle, so the Face's top bar read IDLE — and its kind slot
@@ -191,6 +194,67 @@ public sealed partial class ControlPlaneServer
             BudgetApprovals = liveState.BudgetApprovals,
         };
     }
+
+    /// <summary>A rate needs enough clock to be a rate. Below this, the first delta divided by a
+    /// second or two projects a burn of tens of millions a minute and a nudge "in 4 seconds" — a
+    /// number that is not wrong so much as meaningless, and it lands in the gauge that is supposed to
+    /// be the honest one.</summary>
+    private const double MinRateSeconds = 20;
+
+    /// <summary>K4.4: live token headroom — the token half of what SC2.3 did for money. The session's
+    /// spend against the ceiling that will actually end it, the distance to the cooperative nudge, a
+    /// burn rate and a projection, computed once by the engine so a remote surface renders rather than
+    /// derives.</summary>
+    /// <remarks>Two things here are deliberate and were the whole reason the block exists.
+    /// <para>First, <c>Tokens</c> is folded INCLUDING cache-read, because that is what
+    /// <c>SessionRunner.LiveTokens</c> compares against the ceiling. The wire's existing
+    /// <c>sessionTokens*</c> triple excludes it, and on this project cache reads are 98% of every
+    /// token spent — a Face adding up the three visible fields would have drawn a nearly empty gauge
+    /// for a session the engine was about to kill.</para>
+    /// <para>Second, the cap and the nudge come from <see cref="SoftBreak"/>, the rail's own
+    /// arithmetic, rather than from a fourth copy of the 0.8 fallback. Headroom measured against a
+    /// cap that is not the enforced one is worse than no headroom at all.</para></remarks>
+    internal static StateDto WithTokenHeadroom(
+        StateDto dto, LimitsConfig? limits, RunState folded, IReadOnlyList<ConductorEvent> events)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        ArgumentNullException.ThrowIfNull(folded);
+        ArgumentNullException.ThrowIfNull(events);
+        if (folded.SessionCounter <= 0) return dto;
+
+        var live = LiveMetrics.ForSession(events, folded.SessionCounter);
+        var tokens = live.Input + live.Output + live.Reasoning + live.CacheRead;
+        // The override the wire already reports, so the gauge and the field can never disagree.
+        var cap = SoftBreak.EffectiveCap(dto.MaxSessionTokensThisRun, limits?.MaxSessionTokens);
+        var nudge = SoftBreak.Threshold(cap, limits?.SoftBreakRatio);
+        var toNudge = nudge is { } n ? n - tokens : (long?)null;
+        var toCap = cap is { } c ? c - tokens : (long?)null;
+
+        double? burn = dto.AgentActive && dto.SessionElapsedSec >= MinRateSeconds && tokens > 0
+            ? tokens / (dto.SessionElapsedSec / 60.0)
+            : null;
+
+        return dto with
+        {
+            TokenHeadroom = new TokenHeadroomDto(
+                Tokens: tokens,
+                Cap: cap,
+                NudgeAt: nudge,
+                ToNudge: toNudge,
+                ToCap: toCap,
+                UsedRatio: cap is { } capped and > 0 ? (double)tokens / capped : null,
+                BurnPerMinute: burn,
+                MinutesToNudge: Eta(toNudge, burn),
+                MinutesToCap: Eta(toCap, burn),
+                Live: dto.AgentActive),
+        };
+    }
+
+    /// <summary>Minutes to close a distance at a rate. Null when there is no rate, or when the
+    /// distance is already behind — an ETA to a threshold that has been crossed is a countdown that
+    /// renders "0m" forever, which reads as "about to happen" rather than "already happened".</summary>
+    private static double? Eta(long? distance, double? perMinute) =>
+        distance is { } d and > 0 && perMinute is { } rate and > 0 ? d / rate : null;
 
     /// <summary>SF4.1 — <c>GET /owner/queue</c>. Reads the LIVE <see cref="RunState"/>, not the event
     /// fold: the park, the owner approvals, the blocked-until wait and the skipped stages are run

@@ -82,4 +82,9 @@ public sealed record StateDto(
     // inside the tool instead of from four out-of-band checks against the process list.
     string EngineVersion = "",
     string EngineCommit = "",
-    string FaceBuild = "");
+    string FaceBuild = "",
+    // K4.4: live token headroom. Money caps have been on the wire since SC2.3; the token rail that
+    // actually ends sessions was invisible to every surface. One nested block, not nine more fields
+    // here, because a lane-aware Face renders one of these PER LANE. Null = an engine that predates
+    // K4.4 (or a run with no session yet), which is not the same as a session at zero.
+    TokenHeadroomDto? TokenHeadroom = null);

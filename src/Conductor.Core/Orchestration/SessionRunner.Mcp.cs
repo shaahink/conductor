@@ -114,13 +114,8 @@ public sealed partial class SessionRunner
             ? decimal.Round(LiveTokens(agent) * rate, 4, MidpointRounding.AwayFromZero)
             : null;
 
-    private long? ComputeSoftThreshold()
-    {
-        if (_ctx.EffectiveMaxSessionTokens is not { } max) return null;
-        var ratio = _ctx.Plan.Limits.SoftBreakRatio is { } r and > 0 and <= 1.0
-            ? r : 0.8;
-        return (long)(max * ratio);
-    }
+    private long? ComputeSoftThreshold() =>
+        SoftBreak.Threshold(_ctx.EffectiveMaxSessionTokens, _ctx.Plan.Limits.SoftBreakRatio);
 
     private void CleanSoftBreakSignal()
     {

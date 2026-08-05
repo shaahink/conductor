@@ -50,10 +50,9 @@ public sealed partial class DoctorCommand
         if (cap is null)
             return new Check("tokens", "ok", "no session ceiling — sessions run until the agent stops");
 
-        // The same fallback the rail itself applies (SessionRunner.Mcp.cs:120): an unset ratio nudges
-        // at 0.8, so reading it as "no nudge" would describe a rail that does fire as one that does not.
-        var ratio = plan.Limits.SoftBreakRatio is { } r and > 0 and <= 1.0 ? r : 0.8;
-        var nudge = (long)(cap.Value * ratio);
+        // The rail's own arithmetic, not a copy of it: SoftBreak.Threshold applies the same unset-ratio
+        // fallback the session runner does, so doctor cannot describe a nudge the rail would not fire.
+        var nudge = SoftBreak.Threshold(cap, plan.Limits.SoftBreakRatio)!.Value;
         var configured = $"cap {BudgetAnalyzer.Millions(cap.Value)} / nudge {BudgetAnalyzer.Millions(nudge)}";
 
         var archive = RunArchive.TryOpen(plan.ResolveState().RunDbPath);

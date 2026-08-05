@@ -25,6 +25,37 @@ public static partial class SoftBreak
     /// stalls on one long tool call must not out-wait the only cooperative exit it has.</summary>
     public static readonly TimeSpan RestateInterval = TimeSpan.FromMinutes(3);
 
+    // ── the rail's own arithmetic ──────────────────────────────────────────────────────────────
+
+    /// <summary>The nudge ratio a plan gets when it sets none. Not arbitrary: it is the ratio every
+    /// measurement in this repo's history was taken under. It is a constant here because it was a
+    /// literal in two places at once — the rail and doctor — and a third copy was about to be added
+    /// for the wire. A surface that read an unset ratio as "no nudge" would describe a rail that
+    /// does fire as one that does not.</summary>
+    public const double DefaultRatio = 0.8;
+
+    /// <summary>The per-session ceiling the rollover machinery actually enforces: the this-run
+    /// override when it is set (0 = rollover forced OFF), else the plan's
+    /// <c>limits.maxSessionTokens</c>. null = no ceiling at all.</summary>
+    /// <remarks>One definition, called by both the rail and every surface that reports headroom. A
+    /// surface resolving this differently from the rail would report room against a cap that is not
+    /// the one the session gets killed at — which is worse than reporting nothing.</remarks>
+    public static long? EffectiveCap(long? thisRunOverride, long? planLimit) => thisRunOverride switch
+    {
+        0 => null,
+        { } thisRun => thisRun,
+        null => planLimit,
+    };
+
+    /// <summary>Where the cooperative nudge fires, given a resolved ceiling and the plan's ratio.
+    /// A null ceiling yields a null threshold: no cap means no nudge, never a nudge at zero.</summary>
+    public static long? Threshold(long? effectiveCap, double? softBreakRatio)
+    {
+        if (effectiveCap is not { } max || max <= 0) return null;
+        var ratio = softBreakRatio is { } r and > 0 and <= 1.0 ? r : DefaultRatio;
+        return (long)(max * ratio);
+    }
+
     private static readonly JsonSerializerOptions Json = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,

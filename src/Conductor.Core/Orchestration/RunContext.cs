@@ -51,12 +51,8 @@ public sealed class RunContext
     /// session-scoped this-run override when set (0 = forced off), else the plan's
     /// <c>limits.maxSessionTokens</c>. null = rollover off. Every rollover/soft-break read goes
     /// through here so the two knobs can never disagree.</summary>
-    public long? EffectiveMaxSessionTokens => State.MaxSessionTokensThisRun switch
-    {
-        0 => null,
-        { } thisRun => thisRun,
-        null => Plan.Limits.MaxSessionTokens,
-    };
+    public long? EffectiveMaxSessionTokens =>
+        SoftBreak.EffectiveCap(State.MaxSessionTokensThisRun, Plan.Limits.MaxSessionTokens);
 
     /// <summary>W4.4: the QA override of the item a session is working on — the first not-done
     /// checkpoint of the stage in the PRE-session snapshot, which is exactly the item the assignment
