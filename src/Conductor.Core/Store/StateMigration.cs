@@ -10,9 +10,12 @@ namespace Conductor.Core.Store;
 /// built, one of them is the engine driving the session), and renaming its database out from under
 /// it would hand it a fresh empty store and look exactly like data loss. The copy is also the
 /// backup — if the import is ever wrong, the original is still sitting there.</para>
-/// <para><b>Idempotent.</b> A target that already exists is never touched: the import only fires
-/// when the destination is absent, so a row written after the import survives every later
-/// resolution. See <see cref="ImportLegacy"/>.</para>
+/// <para><b>Idempotent, and never destructive.</b> Work written at the target after the import
+/// survives every later resolution. A target that is still exactly the copy this made is the one
+/// exception: if the legacy file has moved on since — the shape of an upgrade, where the old engine
+/// keeps writing its own database for hours after a new build first resolved state — the copy is
+/// refreshed rather than left behind (bug #33). A target that has a history of its own is never
+/// touched, and the divergence is said out loud instead. See <see cref="ImportLegacy"/>.</para>
 /// </summary>
 public static class StateMigration
 {
@@ -124,8 +127,12 @@ public static class StateMigration
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
             // A failed import must not take the CLI down: the caller falls through to a fresh
-            // database at the target, and the legacy file is untouched and still importable.
+            // database at the target, and the legacy file is untouched and still importable. It must
+            // not be invisible either — "your history is somewhere else" is exactly the sentence a
+            // silent failure here costs (bug #33's whole shape).
             TryCleanup(targetDb);
+            Warn?.Invoke($"conductor: could not bring {legacyDb} to {targetDb} ({e.Message}); "
+                         + "the original is untouched and still importable.");
             return null;
         }
     }
@@ -138,12 +145,15 @@ public static class StateMigration
     /// <c>&lt;repo&gt;/.conductor/run.db</c>, and then the install makes the snapshot the live
     /// database. The run silently resumes from where it stood at that first resolution, and every
     /// session since is gone from its own history.
-    /// <para>Refreshing is only safe when the target is provably STILL the copy this made — same
-    /// size, no write to it or its sidecars since the receipt — and the legacy file has moved on.
-    /// Then re-copying can lose nothing, because nothing exists at the target that is not also in the
-    /// source. Every other shape (no receipt, a different origin, a target that has been written)
-    /// keeps the old answer and never touches it; <paramref name="behind"/> reports the case that
-    /// deserves a warning instead — the copy is stale AND carries work of its own.</para>
+    /// <para>The question is asked of CONTENT, through
+    /// <see cref="SqliteRunStore.CompareHistories"/>, because timestamps and sizes cannot answer it
+    /// and were measured not answering it: the engine migrates the copy's schema the instant it lands,
+    /// so the file is "modified" before anything of substance has happened to it, and a legacy
+    /// database in WAL mode can gain a whole session while its main file and its sidecar's write time
+    /// both sit still. A copy whose history is a subset of the source's may be replaced, because
+    /// nothing is in it that is not also in the source. A copy holding history of its own is never
+    /// touched, and <paramref name="behind"/> asks for that to be said out loud rather than resumed
+    /// from in silence.</para>
     /// </summary>
     private static bool IsStaleSnapshotOf(string legacyDb, string targetDb, out bool behind)
     {
@@ -153,21 +163,36 @@ public static class StateMigration
         if (ReadReceipt(targetDb) is not { } receipt) return false;
         if (!PathsEqual(receipt.From, legacyDb)) return false;
 
+        // Take the file-level facts BEFORE asking the content question. Opening a WAL database
+        // read-only creates a -shm beside it, so the very act of reading the copy makes the copy look
+        // written-to; measured, and it cost an afternoon.
         var importedAt = receipt.ImportedAtUtc.UtcDateTime;
         var legacy = new FileInfo(legacyDb);
-
-        // Has the source moved on? File.Copy carries the source's write time across, so the receipt's
-        // instant is a clean fence for both files. A live SQLite database in WAL mode grows its
-        // sidecar long before the main file changes, so the sidecars count as writes too.
-        behind = legacy.Length != receipt.Bytes
-                 || legacy.LastWriteTimeUtc > importedAt
-                 || SideCarSuffixes.Any(s => WrittenSince(legacyDb + s, importedAt));
-        if (!behind) return false;
-
         var target = new FileInfo(targetDb);
-        return target.Length == receipt.Bytes
-               && target.LastWriteTimeUtc <= importedAt
-               && !SideCarSuffixes.Any(s => WrittenSince(targetDb + s, importedAt));
+        var sourceMoved = legacy.Length != receipt.Bytes
+                          || legacy.LastWriteTimeUtc > importedAt
+                          || SideCarSuffixes.Any(s => WrittenSince(legacyDb + s, importedAt));
+        var copyUntouched = target.Length == receipt.Bytes
+                            && target.LastWriteTimeUtc <= importedAt
+                            && !SideCarSuffixes.Any(s => WrittenSince(targetDb + s, importedAt));
+
+        switch (SqliteRunStore.CompareHistories(targetDb, legacyDb))
+        {
+            case SqliteRunStore.HistoryRelation.SourceAhead:
+                return true;                       // the copy has nothing of its own to lose
+            case SqliteRunStore.HistoryRelation.Diverged:
+                behind = true;                     // both moved: a person has to reconcile them
+                return false;
+            case SqliteRunStore.HistoryRelation.Same:
+            case SqliteRunStore.HistoryRelation.CopyAhead:
+                return false;                      // the ordinary states, and both are quiet ones
+        }
+
+        // Neither file answers as a run database. Fall back to the file-level fence, which is
+        // stricter than the content rule and never wrong in the destructive direction: refresh only
+        // an untouched copy of a file that has since changed.
+        behind = sourceMoved;
+        return sourceMoved && copyUntouched;
     }
 
     private static bool WrittenSince(string path, DateTime utc)

@@ -1,0 +1,49 @@
+﻿K7.2 part 2 / bug #33 - live proof through the fresh build (src/Conductor/bin/Debug/net10.0/conductor.exe),
+against a scratch rig in TEMP with its own plan and its own CONDUCTOR_STATE_HOME. Never this repo.
+
+The live database this run is driven by, at the moment of the proof - the whole reason a mtime
+or size test cannot work: the main file has not been touched since 10:57, every event of this
+session is in the -wal.
+
+Name        Length LastWriteTimeUtc   
+----        ------ ----------------   
+run.db     4755456 05/08/2026 10:57:34
+run.db-shm   32768 04/08/2026 23:27:34
+run.db-wal 4260112 05/08/2026 11:50:45
+
+=== 1. state home empty, legacy present (a copy of the live run.db, main file only) ===
+conductor.exe : conductor: imported existing run history -> 
+C:\Users\shahi\AppData\Local\Temp\k72-rig2\home\runs\k72-rig2-k72-rig2-88e891c6\run.db (from 
+C:\Users\shahi\AppData\Local\Temp\k72-rig2\.conductor\run.db, 4755456 bytes, 1 file(s); the original was left in place)
+At line:9 char:1
++ & $exe doctor 1>"$rig\out1.txt" 2>"$rig\err1.txt"
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (conductor: impo... left in place):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+=== 2. legacy replaced by a fresh copy of the same main file - same history, so SILENCE ===
+(stderr was empty; the receipt still reads refreshed=false)
+
+=== 3. legacy now carries the -wal too, so the source is genuinely ahead ===
+conductor.exe : conductor: refreshed a stale copy of the run history -> 
+C:\Users\shahi\AppData\Local\Temp\k72-rig2\home\runs\k72-rig2-k72-rig2-88e891c6\run.db (re-copied from 
+C:\Users\shahi\AppData\Local\Temp\k72-rig2\.conductor\run.db, 4755456 bytes, 3 file(s); the original was left in place)
+At line:6 char:1
++ & $exe doctor 1>"$rig\out3.txt" 2>"$rig\err3.txt"
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (conductor: refr... left in place):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+
+=== receipt after step 3 ===
+{
+  "from": "C:\\Users\\shahi\\AppData\\Local\\Temp\\k72-rig2\\.conductor\\run.db",
+  "to": "C:\\Users\\shahi\\AppData\\Local\\Temp\\k72-rig2\\home\\runs\\k72-rig2-k72-rig2-88e891c6\\run.db",
+  "bytes": 4755456,
+  "files": [
+    "run.db",
+    "run.db-wal",
+    "run.db-shm"
+  ],
+  "importedAtUtc": "2026-08-05T11:50:33.3589442+00:00",
+  "refreshed": true
+}

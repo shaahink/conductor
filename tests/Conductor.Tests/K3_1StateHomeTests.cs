@@ -14,6 +14,7 @@ namespace Conductor.Tests;
 /// variable and never touches the operator's real home — see <see cref="TestEnvironmentIsolation"/>,
 /// which pins the whole process to a temp home anyway.</para>
 /// </summary>
+[Collection(StateSinkCollection.Name)]
 public sealed class K3_1StateHomeTests : IDisposable
 {
     private readonly string _tmp;
@@ -445,6 +446,44 @@ public sealed class K3_1StateHomeTests : IDisposable
 
         using var reread = new SqliteRunStore(second.RunDbPath, NullLogger<SqliteRunStore>.Instance);
         Assert.Contains(reread.QuerySessions("run-outrun"), s => s.Number == 41);
+    }
+
+    /// <summary>The other half of bug #33, and the one that must never be got wrong: when BOTH files
+    /// have been written since the copy was taken, the copy is not a snapshot any more — it is a
+    /// second history. Nothing may be overwritten, and nobody may be left to find out later.
+    /// <para>Note the numbers: each database gains exactly one session, so both event logs are the
+    /// same LENGTH. Only comparing the copy's newest event against the source's log field for field
+    /// tells them apart — a count, or the per-run <c>seq</c> alone, calls this a prefix and destroys
+    /// session 50.</para></summary>
+    [Fact]
+    public void Resolve_NeverRefreshesADivergedCopy_AndSaysSo()
+    {
+        var repo = NewRepo("diverged");
+        var legacy = StateHome.LegacyDbPathFor(repo);
+        SeedLegacy(legacy, "run-diverged");
+
+        var first = StateHome.Resolve(repo, "core", Root);
+        Assert.NotNull(first.Import);
+
+        using (var mine = new SqliteRunStore(first.RunDbPath, NullLogger<SqliteRunStore>.Instance))
+            mine.RecordSession("run-diverged", "K1", 50, "session",
+                DateTime.UtcNow, null, null, null, 0, 1, null, null, 0, null);
+        using (var live = new SqliteRunStore(legacy, NullLogger<SqliteRunStore>.Instance))
+            live.RecordSession("run-diverged", "K1", 41, "session",
+                DateTime.UtcNow, null, null, null, 0, 1, null, null, 0, null);
+
+        var warnings = new List<string>();
+        StateMigration.Warn = warnings.Add;
+        StateResolution second;
+        try { second = StateHome.Resolve(repo, "core", Root); }
+        finally { StateMigration.Warn = null; }
+
+        Assert.Null(second.Import);                       // nothing was touched
+        Assert.Single(warnings);
+        Assert.Contains("reconcile", warnings[0]);
+
+        using var reread = new SqliteRunStore(second.RunDbPath, NullLogger<SqliteRunStore>.Instance);
+        Assert.Contains(reread.QuerySessions("run-diverged"), s => s.Number == 50);
     }
 
     private static void SeedLegacy(string path, string runId)

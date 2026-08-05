@@ -122,6 +122,99 @@ public sealed partial class SqliteRunStore : IRunStore, IEventSink
         }
     }
 
+    // -------------------------------------------- bug #33: behind, or genuinely diverged?
+
+    /// <summary>How one run database's history stands to another's. Answering "may this copy be
+    /// replaced by that file" from timestamps and sizes does not work and was measured not working:
+    /// SQLite in WAL mode leaves the main file untouched for whole sessions at a time, and Windows
+    /// does not refresh a sidecar's write time while its handle is open. Content is the only honest
+    /// signal.</summary>
+    public enum HistoryRelation
+    {
+        /// <summary>At least one file will not answer as a run database.</summary>
+        Unknown,
+        /// <summary>Same history in both. Nothing to do, nothing to say.</summary>
+        Same,
+        /// <summary>Everything in the copy is in the source, and the source has more.</summary>
+        SourceAhead,
+        /// <summary>Everything in the source is in the copy — the ordinary state after an install.</summary>
+        CopyAhead,
+        /// <summary>Each holds history the other does not. Only a human can merge that.</summary>
+        Diverged,
+    }
+
+    /// <summary>
+    /// Compares two run databases by what they actually remember: their sessions and their events.
+    /// Used by <see cref="StateMigration"/> to decide whether a copy at the state home may be
+    /// refreshed from the legacy file it came from (bug #33).
+    /// <para>Set difference, not counts: two databases that share an ancestor and are then both
+    /// written produce the SAME next session number and the SAME next per-run <c>seq</c> for
+    /// DIFFERENT work, so anything that compares sizes calls a diverged copy a prefix and overwrites
+    /// history that exists nowhere else.</para>
+    /// </summary>
+    public static HistoryRelation CompareHistories(string copyDb, string sourceDb)
+    {
+        var copy = HistoryKeys(copyDb);
+        var source = HistoryKeys(sourceDb);
+        if (copy is null || source is null) return HistoryRelation.Unknown;
+
+        var sourceHasMore = !source.IsSubsetOf(copy);
+        var copyHasMore = !copy.IsSubsetOf(source);
+        return (sourceHasMore, copyHasMore) switch
+        {
+            (false, false) => HistoryRelation.Same,
+            (true, false) => HistoryRelation.SourceAhead,
+            (false, true) => HistoryRelation.CopyAhead,
+            _ => HistoryRelation.Diverged,
+        };
+    }
+
+    /// <summary>Every session and every event in a database, as identity keys. Null when the file
+    /// answers as neither — not a run database, or not a database at all. Read-only and pooling-free:
+    /// this must not create a <c>-wal</c>, take a write lock, or leave a handle on a file another
+    /// engine may still be using.</summary>
+    private static HashSet<string>? HistoryKeys(string dbPath)
+    {
+        try
+        {
+            using var c = new SqliteConnection(new SqliteConnectionStringBuilder
+            {
+                DataSource = dbPath,
+                Mode = SqliteOpenMode.ReadOnly,
+                Pooling = false,
+            }.ToString());
+            c.Open();
+
+            var keys = new HashSet<string>(StringComparer.Ordinal);
+            // A database old enough to predate either table is still readable through the other.
+            var answered = ReadKeys(c, "SELECT run_id, number FROM sessions", "s", keys)
+                           | ReadKeys(c, "SELECT run_id, seq FROM events", "e", keys);
+            return answered ? keys : null;
+        }
+        catch (Exception ex) when (ex is SqliteException or InvalidOperationException
+                                       or IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    private static bool ReadKeys(SqliteConnection c, string sql, string prefix, HashSet<string> into)
+    {
+        try
+        {
+            using var cmd = c.CreateCommand();
+            cmd.CommandText = sql;
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+                into.Add($"{prefix}:{r.GetString(0)}:{r.GetInt64(1)}");
+            return true;
+        }
+        catch (SqliteException)
+        {
+            return false;   // no such table in this schema version
+        }
+    }
+
     // ---------------------------------------------------------------- dispose
 
     private int _disposed;

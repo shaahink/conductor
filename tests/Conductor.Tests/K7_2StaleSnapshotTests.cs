@@ -12,6 +12,7 @@ namespace Conductor.Tests;
 /// been written to it or its sidecars since the receipt) and the source has moved on; never touch a
 /// target that carries work of its own, but say so out loud instead of resuming from it in silence.</para>
 /// </summary>
+[Collection(StateSinkCollection.Name)]
 public sealed class K7_2StaleSnapshotTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), $"conductor-k72stale-{Guid.NewGuid():N}");
@@ -123,4 +124,6 @@ public sealed class K7_2StaleSnapshotTests : IDisposable
         Assert.NotNull(StateMigration.ImportLegacy(_legacy, _target));
         Assert.False(File.Exists(_target + "-wal"));
     }
+
+
 }
