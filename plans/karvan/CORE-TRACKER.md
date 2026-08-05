@@ -4,23 +4,19 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **K4.2 CLAIMED**, evidence `.conductor/evidence/K4/K4.2-conductor-budget.md` (+ raw verb output
-  beside it). `conductor budget [run|path/to/run.db]` measures floor, wrap-up, cap, nudge-vs-floor,
-  rollover rate and prescribes; `doctor` gained a `tokens` check that warns on cap-below-floor and
-  nudge-below-median-closer. 19 new tests, ratchet exit 0.
-unlock: **`SoftBreakRequested` events carry `liveTokens` AND `tokenBudget`** — a run states its own
-  ceiling and its real firing point at schema v9, no `runs.limits` needed. `session_id` is NULL on
-  them; attribute by walking back to the nearest `SessionStarted` by `seq`.
-numbers: face run reproduced unprompted — split at session 9, 26.5M/ckpt before, cap 8M, nudge 6.07M
-  (0.84× the 7.26M median closer), floor 4.66M, wrap-up 1.37M n=20. **Two doc corrections for K7.1:**
-  the capped window closed **14** checkpoints not 17 (so 17.0M/ckpt, cap paid **1.6×** not 1.9×), and
-  **10** sessions died on it not 11. Karvan now: cap 32M, nudge fires 22.6M, floor 8.34M, 0 rollovers.
-next: **K4.3 `conductor money`.** `BudgetAnalyzer`'s window split is the "what did the cap buy" axis;
-  reuse it. Model IS recorded (`SessionStarted` payload `model`), so %-of-window is derivable — the
-  K4.1 handoff said otherwise and was wrong.
-red: none. **bug #29 blocks K7.2:** this repo's `run.db` is half-migrated (version 9, but v10's
-  `soft_break` column exists), so any newer engine dies on `duplicate column name` — `MigrationRunner`
-  applies each `.sql` with no transaction and sets the version only after the whole loop.
+last: **K4.3 CLAIMED**, evidence `.conductor/evidence/K4/K4.3-conductor-money.md` (raw verb output,
+  `--json` and the REPORT.md section beside it). `conductor money [run] [--project|--plan|--since|--json]`
+  prints the research doc's headline columns and reproduces them from the ledger alone, plus per stage,
+  per month, per lane, and the cap windows PRICED. REPORT.md carries the same section through
+  `MoneySection` — same analyzer, so verb and report cannot drift. 20 tests, ratchet exit 0.
+numbers: the doc's $359.98 / $296.98 are **agent-lane only**; every lane is $360.14 / $297.24, and the
+  verb sums every lane. The 8M cap bought **1.4× better $/checkpoint** ($18.18 → $13.44). A hand query that
+  never touches `BudgetAnalyzer` re-confirms K4.2: 14 checkpoints in the capped window, not 17.
+next: **K4.4 — live token headroom beside live money.** `MoneyAnalyzer`/`MoneyLine` are the money side;
+  `SoftBreakRequested`'s `liveTokens`+`tokenBudget` is the honest source when no cap is configured.
+red: none. **bug #29 (K7.2 blocker) reproduced on a COPY of this run.db:** the WRITE path dies on
+  `duplicate column name: soft_break`; the read-only `RunArchive` path opens the same file fine.
+
 
 ## Baseline numbers (from run.db)
 
@@ -28,7 +24,7 @@ red: none. **bug #29 blocks K7.2:** this repo's `run.db` is half-migrated (versi
 |---|---|
 | Total checkpoints | 32 |
 | Done | 3 |
-| Claimed (unconfirmed) | 9 |
+| Claimed (unconfirmed) | 10 |
 
 ## Checkpoints
 
@@ -66,7 +62,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | K4.1 | The engine records context size per turn — a high-water and a mean per session — derived from the stream, with the derivation checked against a session that can be estimated independently | DONE | ea49c8d | .conductor/evidence/K4/K4.1-context-per-turn.md |
-| K4.2 | conductor budget prints floor, wrap-up, cap, nudge-versus-floor and rollover rate and prescribes a correction, and it reproduces this repo's own two runs without being told the answers | TODO | - | - |
+| K4.2 | conductor budget prints floor, wrap-up, cap, nudge-versus-floor and rollover rate and prescribes a correction, and it reproduces this repo's own two runs without being told the answers | DONE | 1fcbd0b | .conductor/evidence/K4/K4.2-conductor-budget.md |
 | K4.3 | conductor money answers what a project cost per checkpoint, per stage and per month, with cache-read share and the before-and-after windows that say what the cap bought, cross-checked against a hand-written query | TODO | - | - |
 | K4.4 | Live session tokens, the distance to the nudge, a burn rate and a projection sit beside live money in the Face and on the wire, honest when no cap is set | TODO | - | - |
 
