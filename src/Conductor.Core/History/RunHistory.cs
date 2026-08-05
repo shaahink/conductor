@@ -65,6 +65,50 @@ public static class RunHistory
         return null;
     }
 
+    /// <summary>
+    /// Done and total checkpoints for one row. Separate from <see cref="List"/> on purpose: this
+    /// folds the run's whole event log, which is cheap for one run and wasteful for forty. The
+    /// listing applies its limit first and only counts what it is about to print.
+    /// </summary>
+    public static (int Done, int Total) CheckpointCounts(RunHistoryRow row)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+        if (row.Run is null) return (0, 0);
+        var archive = RunArchive.TryOpen(row.RunDbPath);
+        if (archive is null) return (0, 0);
+        var checkpoints = archive.Checkpoints(row.Run.RunId);
+        return (checkpoints.Count(c => string.Equals(c.Status, "DONE", StringComparison.Ordinal)), checkpoints.Count);
+    }
+
+    /// <summary>
+    /// Parses the <c>--since</c> forms an operator actually types: a relative window (<c>7d</c>,
+    /// <c>2w</c>, <c>3mo</c>, <c>1y</c>) or any date the invariant culture understands. Null when the
+    /// text means nothing — the caller reports that rather than silently listing everything.
+    /// </summary>
+    public static DateTimeOffset? ParseSince(string? text, DateTimeOffset now)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return null;
+        var s = text.Trim();
+        var digits = s.TakeWhile(char.IsDigit).Count();
+        if (digits > 0 && digits < s.Length
+            && int.TryParse(s[..digits], NumberStyles.Integer, CultureInfo.InvariantCulture, out var n))
+        {
+            // A relative window only when the suffix is a UNIT. "2026-07-01" starts with digits too,
+            // and an early return here swallowed every absolute date the operator typed.
+            var relative = s[digits..].Trim().ToLowerInvariant() switch
+            {
+                "d" or "day" or "days" => now.AddDays(-n),
+                "w" or "week" or "weeks" => now.AddDays(-7 * n),
+                "m" or "mo" or "month" or "months" => now.AddMonths(-n),
+                "y" or "year" or "years" => now.AddYears(-n),
+                "h" or "hour" or "hours" => now.AddHours(-n),
+                _ => (DateTimeOffset?)null,
+            };
+            if (relative is not null) return relative;
+        }
+        return ParseUtc(s);
+    }
+
     private static bool Matches(RunHistoryRow r, string s)
     {
         if (r.Run is null) return false;

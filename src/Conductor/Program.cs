@@ -44,6 +44,8 @@ app.Configure(c =>
         .WithDescription("Re-run the gate battery at HEAD (no agent spawned). --full for full battery, default fast-tier only. Clears pendingFix if all green.");
     c.AddCommand<ReportCommand>("report")
         .WithDescription("Regenerate .conductor/REPORT.md from current state.");
+    c.AddCommand<HistoryCommand>("history")
+        .WithDescription("Browse past runs from this machine's catalogue, read-only. No argument lists; pass a run id, repo or slug to open one and replay its spine. Filters: --repo, --plan, --since, --limit, --json.");
 
 
     c.AddCommand<PauseCommand>("pause")

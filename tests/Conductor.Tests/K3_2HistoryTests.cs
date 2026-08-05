@@ -159,6 +159,41 @@ public sealed class K3_2HistoryTests : IDisposable
         Assert.Equal(2, ambiguous.Count);
     }
 
+    [Theory]
+    [InlineData("7d", "2026-07-29T12:00:00Z")]
+    [InlineData("2w", "2026-07-22T12:00:00Z")]
+    [InlineData("3mo", "2026-05-05T12:00:00Z")]
+    [InlineData("1y", "2025-08-05T12:00:00Z")]
+    [InlineData("12h", "2026-08-05T00:00:00Z")]
+    [InlineData("2026-07-01", "2026-07-01T00:00:00Z")]
+    public void ParseSince_understands_the_windows_an_operator_types(string text, string expected)
+    {
+        var now = new DateTimeOffset(2026, 8, 5, 12, 0, 0, TimeSpan.Zero);
+        Assert.Equal(DateTimeOffset.Parse(expected, System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal),
+            RunHistory.ParseSince(text, now));
+    }
+
+    [Theory]
+    [InlineData("banana")]
+    [InlineData("7q")]
+    [InlineData("")]
+    [InlineData(null)]
+    public void ParseSince_refuses_what_it_does_not_understand(string? text)
+    {
+        // Null rather than "everything": a --since the engine silently ignored would answer a
+        // question the operator did not ask.
+        Assert.Null(RunHistory.ParseSince(text, DateTimeOffset.UtcNow));
+    }
+
+    [Fact]
+    public void CheckpointCounts_reports_done_over_total()
+    {
+        var repo = RepoPath("counted");
+        SeedRun(repo, "core", "run-counted-0001", new DateTime(2026, 4, 1, 0, 0, 0, DateTimeKind.Utc));
+        Assert.Equal((1, 2), RunHistory.CheckpointCounts(Assert.Single(RunHistory.List(_root))));
+    }
+
     // ------------------------------------------------------------------ the spine
 
     [Fact]
