@@ -31,4 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ←→ kind · v/esc close                             
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ←→ kind · ↑↓ d/u G/home scroll · v/esc close      

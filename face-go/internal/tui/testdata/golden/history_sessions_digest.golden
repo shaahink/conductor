@@ -26,8 +26,8 @@
                            │    c07e5a9 refactor(store): one place that opens run.db                          
                            │  Result:                                                                         
                            │                                                                                  
-                           │      Wired the caching layer in  RunDb  but  test  still red — see gate          
-                           │      output.                                                                     
+                           │    Wired the caching layer in  RunDb  but  test  still red — see gate output.    
+                           │                                                                                  
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
