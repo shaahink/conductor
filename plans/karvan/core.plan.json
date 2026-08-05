@@ -25,7 +25,7 @@
   //    quarter of sessions exercise the cooperative rail (K1.2 needs it exercised to measure it);
   //    the 9.6M margin above the nudge is 43 percent of it, the ratio that held at sonnet scale.
   "version": "1.0",
-  "planVersion": 1,
+  "planVersion": 3,
   "name": "Karvan core - the engine knows what it did and what it cost",
   "repo": "C:/code/conductor",
   "satelliteRepos": [],
