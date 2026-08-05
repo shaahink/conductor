@@ -50,6 +50,10 @@ func rebuildStyles() {
 	peachStyle = lipgloss.NewStyle().Foreground(widgets.Peach())
 	infoStyle = lipgloss.NewStyle().Foreground(widgets.Blue())
 	keyStyle = lipgloss.NewStyle().Foreground(widgets.Accent()).Bold(true)
+	// Markdown is memoised per (theme, width, source) and the theme is part of that key, so a switch
+	// is already correct without this — dropping the memo just stops the old palette's renders from
+	// occupying the cap until they age out (K6.4).
+	resetMarkdownCache()
 }
 
 // key styles a keycap for hint lines.

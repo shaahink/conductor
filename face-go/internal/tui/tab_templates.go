@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
@@ -24,6 +25,11 @@ type templatesModel struct {
 	previewOn   bool
 	previewErr  string
 	previewKind int // index into previewKinds — which session kind's compiled prompt to show
+	// previewVp scrolls the compiled prompt (K6.4, adr/0006 §5: every read-not-select body is a
+	// viewport). This pane used to `truncateLines` the prompt to the pane height and stop there, so a
+	// session prompt — the longest single document this Face shows, and the one an owner most needs to
+	// read to the end before a run starts — was readable only down to its first ~25 lines.
+	previewVp viewport.Model
 }
 
 // updateTemplates handles the compiled-preview result — the tab's one async message.
@@ -36,6 +42,9 @@ func (m Model) updateTemplates(msg tea.Msg) (Model, tea.Cmd, bool) {
 		} else {
 			m.tmpl.preview, m.tmpl.previewErr = msg.Preview, ""
 		}
+		// A newly compiled prompt is a new document: start it at the top rather than wherever the
+		// previous kind was left scrolled to.
+		m.tmpl.previewVp.GotoTop()
 		return m, nil, true
 	}
 	return m, nil, false
@@ -60,6 +69,10 @@ func (m Model) handleTemplatesKey(key string) (tea.Model, tea.Cmd) {
 			m.tmpl.preview, m.tmpl.previewErr = nil, ""
 			return m, m.cmdFetchPromptPreview(m.currentStageId(), previewKinds[m.tmpl.previewKind])
 		}
+		// Size and content FIRST, then move — the clamp lives at the mutation (adr/0006 §1), so the
+		// viewport has to hold the prompt that is actually on screen before the offset changes.
+		m.tmpl.previewVp = m.templatesPreviewViewport()
+		applyPaneScroll(&m.tmpl.previewVp, key)
 		return m, nil
 	}
 	if m.tmpl.mode == PromptEdit {
@@ -142,13 +155,13 @@ func (m Model) renderTemplatesPane() (string, string) {
 		right = subtleStyle.Render("Select a template on the left.\n\n") +
 			subtleStyle.Render("● on disk   ○ built-in default\n\nSaved to planDir — the engine hot-reloads\nat the next session.\n\n") + subtleStyle.Render(hint)
 	}
-	rightCol := lipgloss.NewStyle().Width(m.paneCols() - 30).Render(right)
+	rightCol := lipgloss.NewStyle().Width(m.templatesPreviewCols()).Render(right)
 
 	body := lipgloss.JoinHorizontal(lipgloss.Top, leftCol, subtleStyle.Render("│ "), rightCol)
 	help := "↑↓ select · enter edit · v preview"
 	switch {
 	case m.tmpl.previewOn:
-		help = "←→ kind · v/esc close"
+		help = "←→ kind · " + paneScrollHelp(m.templatesPreviewViewport()) + " · v/esc close"
 	case m.tmpl.mode == PromptEdit:
 		help = "ctrl+s save · esc back · ←→↑↓ move · home/end"
 	}
@@ -178,5 +191,38 @@ func (m Model) templatesPreview() string {
 		return head + subtleStyle.Render("compiling…")
 	}
 	meta := subtleStyle.Render(fmt.Sprintf("model %s · kind %s", m.tmpl.preview.Model, m.tmpl.preview.Kind))
-	return head + meta + "\n\n" + textStyle.Render(truncateLines(m.tmpl.preview.Prompt, m.paneRows()-5))
+	return head + meta + "\n\n" + m.templatesPreviewViewport().View()
 }
+
+// templatesPreviewBody is the compiled prompt, wrapped to the preview column and then coloured —
+// plain text first, style after (STYLE.md), because the source really is plain and wrapping an ANSI
+// string is this repo's oldest layout bug.
+//
+// It stays PLAIN and is deliberately NOT run through renderMarkdown, which is the one call this
+// checkpoint considered and rejected on evidence. The compiled prompt is a FIDELITY surface — it
+// exists to show an owner the exact bytes an agent will be handed — and glamour sanitises anything
+// that parses as an HTML tag, so `task --done <id> --evidence <path>` renders as
+// `task --done  --evidence` with the two placeholders silently deleted. Prettier prose is not worth
+// a preview that lies about the prompt.
+func (m Model) templatesPreviewBody() string {
+	if m.tmpl.preview == nil {
+		return ""
+	}
+	return textStyle.Width(m.templatesPreviewCols()).Render(m.tmpl.preview.Prompt)
+}
+
+// templatesPreviewViewport sizes the preview's viewport to the column and loads the current prompt.
+// The height is the pane less the five rows the header, kind picker and meta line spend above it.
+func (m Model) templatesPreviewViewport() viewport.Model {
+	vp := m.tmpl.previewVp
+	vp.SetWidth(m.templatesPreviewCols())
+	vp.SetHeight(max(1, m.paneRows()-5))
+	vp.SetContent(m.templatesPreviewBody())
+	return vp
+}
+
+// templatesPreviewCols is the width the right-hand column gives the preview: the pane minus the
+// 26-column template list and its separator. It is a function rather than a literal because
+// renderTemplatesPane wraps the same value around the column, and the two drifting apart is how a
+// rendered block ends up wrapped twice.
+func (m Model) templatesPreviewCols() int { return max(20, m.paneCols()-30) }
