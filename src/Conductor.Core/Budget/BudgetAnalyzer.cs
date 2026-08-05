@@ -259,9 +259,23 @@ public static class BudgetAnalyzer
         if (!measured)
             findings.Add($"wrap-up is ASSUMED at {Millions(AssumedWrapUp)} (TOKEN-BUDGET-TUNING.md section 7 step 2) - no session in this window was ever nudged, so there is nothing to measure. Re-run this after one is.");
 
-        var verdict = w.CapTokens is { } cur && SameCeiling(cur, cap)
-            ? $"your budget is already where the measurements put it - {Millions(cap)} at {ratio.ToString("0.##", CultureInfo.InvariantCulture)}, nudge {Millions(prescribedNudge)}."
-            : $"set maxSessionTokens to {Millions(cap)} at softBreakRatio {ratio.ToString("0.##", CultureInfo.InvariantCulture)} - nudge {Millions(prescribedNudge)} clears the {Millions(w.ClosingMax)} largest closer, headroom {Millions(headroom)} is {(headroom / (double)wrapUp).ToString("0.0", CultureInfo.InvariantCulture)}x the {(measured ? "measured" : "assumed")} {Millions(wrapUp)} wrap-up.";
+        // A budget is a ceiling AND a nudge, so the verdict is a comparison against both. Comparing
+        // the ceiling alone said "already where the measurements put it - 32M at 0.85" to a run
+        // sitting at 32M / 0.70: the operator reads "nothing to do" off a sentence that names a ratio
+        // it is not running, above a limits block that moves the nudge 22.5M -> 27.2M. The ratio is
+        // compared at half the 0.05 config grain, because NudgeRatio is the ratio the rail actually
+        // fired at, and it lands a little past the configured one - 0.76 measured on a declared 0.75.
+        var capMatches = w.CapTokens is { } current2 && SameCeiling(current2, cap);
+        var ratioText = ratio.ToString("0.##", CultureInfo.InvariantCulture);
+        var headroomText = $"headroom {Millions(headroom)} is {(headroom / (double)wrapUp).ToString("0.0", CultureInfo.InvariantCulture)}x the {(measured ? "measured" : "assumed")} {Millions(wrapUp)} wrap-up";
+
+        string verdict;
+        if (capMatches && w.NudgeRatio is { } live && SameRatio(live, ratio))
+            verdict = $"your budget is already where the measurements put it - {Millions(cap)} at {ratioText}, nudge {Millions(prescribedNudge)}.";
+        else if (capMatches && w.NudgeRatio is { } wrong)
+            verdict = $"the ceiling is right and the nudge is not: keep maxSessionTokens at {Millions(cap)} and move softBreakRatio {wrong.ToString("0.##", CultureInfo.InvariantCulture)} -> {ratioText} - the nudge goes {Millions(w.NudgeTokens!.Value)} -> {Millions(prescribedNudge)}, which clears the {Millions(w.ClosingMax)} largest closer, {headroomText}.";
+        else
+            verdict = $"set maxSessionTokens to {Millions(cap)} at softBreakRatio {ratioText} - nudge {Millions(prescribedNudge)} clears the {Millions(w.ClosingMax)} largest closer, {headroomText}.";
 
         return new BudgetPrescription(cap, ratio, prescribedNudge, headroom, wrapUp, measured, findings, verdict);
     }
@@ -282,6 +296,11 @@ public static class BudgetAnalyzer
         tokens >= ceiling * 0.98 && tokens <= ceiling * KillBand;
 
     private static bool SameCeiling(long a, long b) => Math.Abs(a - b) <= Math.Max(a, b) * 0.02;
+
+    /// <summary>Half the 0.05 grain a softBreakRatio is typed on. Wider than exact equality because
+    /// the left side is the ratio the rail was MEASURED firing at, which lands just past the declared
+    /// one; narrower than a grain, so a real one-notch difference is never called "the same".</summary>
+    private static bool SameRatio(double a, double b) => Math.Abs(a - b) < 0.025;
 
     private static long Median(List<long> sorted) => sorted.Count == 0
         ? 0

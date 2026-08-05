@@ -4,19 +4,19 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **K7.2 part 2** (s27), commits `81d4981` `ee16c68` `12daaf5`, evidence
-  `.conductor/evidence/K7/K7.2-owner-ship-gate.md` (+ `-stale-snapshot-live.txt`). K7.2 itself stays
-  BLOCKED - `--in-progress K7.2` is refused by the board - so nothing here claimed it. Landed: the
-  owner's ship gate MEASURED (the merge is a fast-forward, master being a strict ancestor; both
-  release-guard preconditions pass on **v0.4.0** - `changelog-section.sh` exits 0, and a scratch clone
-  tagged v0.4.0 builds a binary answering `0.4.0+<sha>`, which is what `release.yml:163` accepts),
-  plus bugs **#32 and #33 fixed and closed**. Suite **2059/2059**.
-do not re-derive: the tracker is generated FROM the graph and read back AS the declared list, and that
-  loop is what made the seven stray rows immortal. It unwinds itself once the NEW engine regenerates
-  the view and syncs, so `doctor` stays red on them until the install. And no run.db may be judged by
-  size or mtime: this run's own main file has not moved since 10:57 while its `-wal` holds everything.
+last: **K7.2 part 3** (s28), evidence `.conductor/evidence/K7/K7.2-budget-verdict.md` (+ `-before.txt`
+  `-after.txt`). K7.2 stays BLOCKED and owner-only; nothing here claimed it. Bug **#34 fixed and
+  closed**: `conductor budget` - the verb the v0.4.0 notes lead with - contradicted itself on this
+  repo's own run. `BudgetAnalyzer.cs:262` chose the verdict on the CAP ONLY, so a run at 32M/0.70 was
+  told "already where the measurements put it - 32M at **0.85**" over a paste moving the nudge +21%.
+  Now chosen on cap AND ratio; live before/after in the evidence. 60/60 on `--filter ~Budget`.
+do not re-derive: (a) the release plumbing is ALIGNED - `UpdateTarget` monikers, `AssetName`,
+  `SHA256SUMS.txt` and tar's `./` prefix all match `release.yml`; no defect. (b) `tools/install.ps1`
+  BUILDS FROM THE WORKING TREE - it stamps the version of whatever tree it runs in, and this repo's
+  tree is never clean mid-run, so the owner installs from a clean checkout at the tag.
 next: owner-only, unchanged - confirm no other conductor run is live, merge, tag `v0.4.0`, let the
-  pipeline publish, then the first `install.ps1` of this run.
+  pipeline publish, then the first `install.ps1` of this run. Re-run `conductor budget` at tag time:
+  `CHANGELOG.md:28` still carries the K7.1 figures (23/14.1M/22 sess), now 24/15.2M/25.
 
 
 ## Baseline numbers (from run.db)

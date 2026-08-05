@@ -1,10 +1,10 @@
 ﻿# Conductor — Karvan core - the engine knows what it did and what it cost run report
 
-_Updated 2026-08-05 10:57 UTC · branch `feat/karvan` · HEAD `cbaa193`_
+_Updated 2026-08-05 11:56 UTC · branch `feat/karvan` · HEAD `8637de3`_
 
-**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [11h 28m ago, 23:29:12Z]
+**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [12h 27m ago, 23:29:12Z]
 **Stage:** K7 — Ship the plan · attempts used 0 · working ▸ K7.2
-**Checkpoints:** 24/32 done · **Sessions run:** 26 · **Cost:** $268.3840 (agent $268.2261 + gates $0.1579) · **Tokens:** 3,855,237 in / 1,880,183 out
+**Checkpoints:** 24/32 done · **Sessions run:** 27 · **Cost:** $286.6357 (agent $286.4704 + gates $0.1653) · **Tokens:** 4,091,074 in / 2,029,068 out
 **Confirmed phases:** K1, K2, K3, K4, K5, K6
 
 ## Stage progress
@@ -123,16 +123,13 @@ _Updated 2026-08-05 10:57 UTC · branch `feat/karvan` · HEAD `cbaa193`_
 | 24 | K6 | Deliver | 1 | 08-05 09:21 | 0:30 | Advanced | K6.4 | 5 | engine-fast:OK · face-fast:OK | $11.6658 | $0.0072 | 176,330/75,597 |
 | 25 | K7 | Deliver | 1 | 08-05 09:57 | 0:38 | Advanced | K7.1 | 9 | engine-fast:OK · face-fast:OK | $9.5886 | $0.0097 | 145,638/72,698 |
 | 26 | K7 | Deliver | 1 | 08-05 10:36 | 0:19 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $5.5277 | $0.0089 | 103,088/55,975 |
+| 27 | K7 | Deliver | 1 | 08-05 10:57 | 0:57 | Progress |  | 4 | engine-fast:OK · face-fast:OK | $18.2443 | $0.0074 | 235,837/148,885 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-05 09:20:15  ▪ gate face-fast pass [session]  (3.7s)
-08-05 09:20:16  • session #20 K5 → Advanced · done K5.4 · 4 commit(s)  (47m07s)
-08-05 09:23:26  ▪ gate engine-fast pass [phase]  (0.0s)
-08-05 09:23:26  ▪ gate face-fast pass [phase]  (0.0s)
 08-05 09:23:26  ▪ gate engine-full pass [phase]  (2m59s)
 08-05 09:23:26  ▪ gate face-full pass [phase]  (9.0s)
 08-05 09:23:26  ✓ checkpoint K5.4 confirmed
@@ -169,6 +166,10 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-05 11:36:55  • session #26 K7 Deliver started (attempt 1/4)
 08-05 11:57:33  ▪ gate engine-fast pass [session]  (59.2s)
 08-05 11:57:33  ▪ gate face-fast pass [session]  (29.8s)
+08-05 11:57:34  • session #26 K7 → Progress · 2 commit(s)  (20m38s)
+08-05 11:57:34  • session #27 K7 Deliver started (attempt 1/4)
+08-05 12:56:23  ▪ gate engine-fast pass [session]  (45.6s)
+08-05 12:56:23  ▪ gate face-fast pass [session]  (28.4s)
 ```
 
 ## Health
@@ -176,7 +177,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 26 · retries 4 (15 %) · overall Warn
+sessions 27 · retries 4 (15 %) · overall Warn
 ⚠ [context-saturation] session #10: 23,623,416 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #18: 23,816,486 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #19: 24,146,164 context tokens (≥ 20,000,000)
@@ -198,12 +199,6 @@ vs upstream: up to date
 
 ### Commits by session
 
-- **s19 (K5 Deliver)** — 5 commit(s):
-  - [`f6900c1`](https://github.com/shaahink/conductor/commit/f6900c1) docs(tracker): K5.3 claimed and handed off - evidence is first class end to end
-  - [`370aba1`](https://github.com/shaahink/conductor/commit/370aba1) fix(face): K5.3 - elide an evidence path from the left, and rebaseline two goldens
-  - [`f4b272f`](https://github.com/shaahink/conductor/commit/f4b272f) feat(face): K5.3 part 4 - the evidence surface, re-homed rather than an eleventh tab
-  - [`fe5ab5f`](https://github.com/shaahink/conductor/commit/fe5ab5f) feat(evidence): K5.3 part 3 - GET /evidence, and the ratchet reds the engine half left
-  - [`6df3a58`](https://github.com/shaahink/conductor/commit/6df3a58) test(evidence): K5.3 part 2 - the tests, and the defect they found
 - **s20 (K5 Deliver)** — 4 commit(s):
   - [`cc7ad14`](https://github.com/shaahink/conductor/commit/cc7ad14) docs(tracker): K5.4 claimed and handed off - the composition layer is closed
   - [`aaee340`](https://github.com/shaahink/conductor/commit/aaee340) feat(telegram): K5.4 part 3 - the templates the owner edits, and the push-only ADR
@@ -241,6 +236,11 @@ vs upstream: up to date
 - **s26 (K7 Deliver)** — 2 commit(s):
   - [`cbaa193`](https://github.com/shaahink/conductor/commit/cbaa193) docs(tracker): K7.2 part 1 handed off - the guard is in, the rest is the owner's
   - [`f25e2cd`](https://github.com/shaahink/conductor/commit/f25e2cd) fix(store): a schema_version row that understates the file no longer kills the engine
+- **s27 (K7 Deliver)** — 4 commit(s):
+  - [`8637de3`](https://github.com/shaahink/conductor/commit/8637de3) docs(tracker): K7.2 part 2 handed off - the ship gate is measured, the rest is the owner's
+  - [`12daaf5`](https://github.com/shaahink/conductor/commit/12daaf5) fix(store): decide a stale copy by what it remembers, not by its timestamps
+  - [`ee16c68`](https://github.com/shaahink/conductor/commit/ee16c68) fix(store): a reinstall no longer resumes from a stale copy of the run history
+  - [`81d4981`](https://github.com/shaahink/conductor/commit/81d4981) fix(tracker): the generated view no longer re-declares work whose stage left the plan
 
 ## Phase handovers (audit)
 
@@ -267,27 +267,25 @@ engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: Migration guard landed, bugs #28/#29 fixed; K7.2's remainder is owner-only and blocked
-> - MigrationRunner converges a schema_version row that understates the file: real artifact v9 with v10's soft_break already in came out at v12, 94 session rows intact, doctor 16 ok, full suite 2050/2050 green
-> - Found and defused bug #33 - the state-home import is one-time (StateMigration.cs:48), so a reinstall would have resumed from a frozen snapshot; the directory is emptied so the install takes the current file
-> - K7.2 marked BLOCKED with an amendment naming what landed and what is left; merge, tag, release and install are owner-only
-> artefacts: f25e2cd, cbaa193, src/Conductor.Core/Store/Mi…
+> SESSION-RESULT: K7.2 part 2 - owner ship gate measured, bugs #32 and #33 fixed and closed
+> - Ship gate proved, not assumed: merge is a fast-forward, and both release-guard preconditions pass on v0.4.0 - changelog section exits 0, and a clone tagged v0.4.0 builds a binary answering 0.4.0+<sha>, which release.yml:163 accepts.
+> - Bug #32: the generated tracker re-declared out-of-plan work to the reader that feeds it, so seven stray rows were immortal and doctor exited 1. Fixed at the generator; 2 tests, both red without the change.
+> - Bug #33: a reinstall resumed from a stale copy in silence. Copies are now compared by CONTENT (session+event set difference), refreshed when the source is ahead, nev…
 
 ## Tracker handoff
 
 ```
-last: **K7.2 part 1** (s26), commit `f25e2cd`, evidence `.conductor/evidence/K7/K7.2-migration-guard.md`
-  (+ `-doctor-after-guard.txt`, `-reinstall-path-import-then-migrate.txt`). Ledger #277's prerequisite
-  landed: `MigrationRunner` converges a `schema_version` row that understates the file instead of dying.
-  The real artifact, v9 with v10's `soft_break` already in, came out at **v12** with 94 session rows and
-  `doctor` 16 ok. Bugs #28/#29 closed, #33 filed, 3 tests in `K7_2MigrationGuardTests`, **suite
-  2050/2050 green**, branch pushed.
-geography, do not re-derive: TWO databases. The published engine (0.3.1-alpha.0.6) reads
-  `.conductor/run.db` in place at v9 and never sees the break; the fresh build imports it ONCE
-  (`StateMigration.cs:48`) into `%LOCALAPPDATA%\conductor\runs\<slug>\` and migrates the copy - that
-  import IS the reinstall path. That directory was emptied on purpose so the install takes the current
-  file; a run.db sitting there is stale (bug #33). The fresh build's `doctor` ignores your cwd.
-next: **K7.2 is owner-only now** - merge `feat/karvan`, tag through the pipeline, then this run's first
-  `install.ps1` once no other conductor run is live. `doctor` still exits 1 on bug #32's seven stray
-  rows (F0.1..R0.2); that is board state, not a file.
+last: **K7.2 part 2** (s27), commits `81d4981` `ee16c68` `12daaf5`, evidence
+  `.conductor/evidence/K7/K7.2-owner-ship-gate.md` (+ `-stale-snapshot-live.txt`). K7.2 itself stays
+  BLOCKED - `--in-progress K7.2` is refused by the board - so nothing here claimed it. Landed: the
+  owner's ship gate MEASURED (the merge is a fast-forward, master being a strict ancestor; both
+  release-guard preconditions pass on **v0.4.0** - `changelog-section.sh` exits 0, and a scratch clone
+  tagged v0.4.0 builds a binary answering `0.4.0+<sha>`, which is what `release.yml:163` accepts),
+  plus bugs **#32 and #33 fixed and closed**. Suite **2059/2059**.
+do not re-derive: the tracker is generated FROM the graph and read back AS the declared list, and that
+  loop is what made the seven stray rows immortal. It unwinds itself once the NEW engine regenerates
+  the view and syncs, so `doctor` stays red on them until the install. And no run.db may be judged by
+  size or mtime: this run's own main file has not moved since 10:57 while its `-wal` holds everything.
+next: owner-only, unchanged - confirm no other conductor run is live, merge, tag `v0.4.0`, let the
+  pipeline publish, then the first `install.ps1` of this run.
 ```

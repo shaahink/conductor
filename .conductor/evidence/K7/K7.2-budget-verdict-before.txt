@@ -1,0 +1,59 @@
+e9e21d10 Sarban core - the engine says what it knows · conductor
+WINDOW                             SESS   TOKENS CKPT TOK/CKPT   FLOOR MED 
+CLOSER   ROLLOVER        WRAP-UP
+1-28 no ceiling observed             28   504.5M   26    19.4M   5.52M      
+17.5M          0              -
+now: uncapped
+  ! no ceiling was in force over these 28 sessions.
+  ! wrap-up is ASSUMED at 1.5M (TOKEN-BUDGET-TUNING.md section 7 step 2) - no 
+session in this window was ever nudged, so there is nothing to measure. Re-run 
+this after one is.
+  > set maxSessionTokens to 41M at softBreakRatio 0.9 - nudge 36.9M clears the 
+35.8M largest closer, headroom 4.1M is 2.7x the assumed 1.5M wrap-up.
+    "limits": {
+      "maxSessionTokens": 41000000,
+      "softBreakRatio":   0.9
+    }
+
+8cefa5de Sarban face - the watcher and the surfaces · conductor
+WINDOW                             SESS   TOKENS CKPT TOK/CKPT   FLOOR MED 
+CLOSER   ROLLOVER        WRAP-UP
+1-8 no ceiling observed               7   158.9M    6    26.5M   14.7M      
+23.4M    1/7 14%              -
+9-41 8M / nudge 6.07M                33   238.3M   14      17M   4.66M      
+7.26M  10/33 30%   1.37M (n=20)
+what the change bought: 1.6x better tokens per delivered checkpoint.
+now: cap 8M · nudge 6.07M (0.76) · nudge vs floor 1.30x · vs median closer 0.84x
+· headroom 1.93M
+  ! NUDGE BELOW THE MEDIAN CLOSER: it fires at 6.07M, 0.84x the 7.26M median 
+closing session - every session is interrupted before it could have finished 
+naturally.
+  ! HEADROOM THIN: 1.93M after the nudge is 1.4x the measured 1.37M wrap-up; the
+rule is >= 1.5x.
+  ! THE RAIL IS DELIVERED AND IGNORED: all 10 killed sessions had already been 
+nudged and not one of them stopped. The cooperative break is the only path that 
+ends a capped session on its own terms, and here it converted zero.
+  ! ROLLOVER RATE 30% (10 of 33) - above a quarter, the cap is buying churn as 
+much as discipline.
+  > set maxSessionTokens to 11M at softBreakRatio 0.75 - nudge 8.25M clears the 
+7.75M largest closer, headroom 2.75M is 2.0x the measured 1.37M wrap-up.
+    "limits": {
+      "maxSessionTokens": 11000000,
+      "softBreakRatio":   0.75
+    }
+
+df9c4af8 Karvan core - the engine knows what it did and what it cost · conductor
+WINDOW                             SESS   TOKENS CKPT TOK/CKPT   FLOOR MED 
+CLOSER   ROLLOVER        WRAP-UP
+1-27 32M / nudge 22.5M               25   365.5M   24    15.2M   3.27M      
+13.8M          0    1.86M (n=7)
+now: cap 32M · nudge 22.5M (0.70) · nudge vs floor 6.90x · vs median closer 
+1.63x · headroom 9.46M
+  > your budget is already where the measurements put it - 32M at 0.85, nudge 
+27.2M.
+    "limits": {
+      "maxSessionTokens": 32000000,
+      "softBreakRatio":   0.85
+    }
+method: docs/dev/TOKEN-BUDGET-TUNING.md section 7 · every number above is 
+measured from the run's own ledger.

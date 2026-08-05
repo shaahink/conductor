@@ -263,6 +263,59 @@ public sealed class K4_2BudgetTests : IDisposable
         Assert.True(p.Prescription.MaxSessionTokens > p.Current.Floor);
     }
 
+    // ------------------------------------------------------------------ the verdict names both halves
+
+    /// <summary>The shape this repo's own karvan-core run was in when K7 measured it: the ceiling is
+    /// already what the measurements prescribe, the ratio is a long way from it. The verdict used to
+    /// be chosen on the ceiling alone, so it read "your budget is already where the measurements put
+    /// it - 32M at 0.85" to a run at 32M / 0.70 - a "nothing to do" over a block that moves the nudge
+    /// by a fifth. Here the same shape at 20M: prescribed 0.9, run at 0.75.</summary>
+    private static BudgetProfile RightCeilingWrongNudge() => BudgetAnalyzer.Analyze("x", "right cap, wrong nudge",
+        Sessions("""
+            1,Advanced,16000000,A.1   2,Advanced,17000000,A.2   3,Advanced,12000000,A.3
+            4,Progress,16000000,      5,Progress,15800000,      6,Advanced,14000000,A.4
+            """),
+        Nudges("1,15000000  2,15000000  4,15000000  5,15000000", 20_000_000));
+
+    [Fact]
+    public void ACeilingThatAlreadyMatchesDoesNotExcuseANudgeThatDoesNot()
+    {
+        var p = RightCeilingWrongNudge();
+        var rx = p.Prescription;
+
+        // The premise: one window, ceiling measured at 20M, the rail firing at 0.75 of it.
+        Assert.Equal(20_000_000, p.Current.CapTokens);
+        Assert.Equal(0.75, Math.Round(p.Current.NudgeRatio!.Value, 2));
+        // ...and the prescription lands on that same ceiling, which is what used to end the argument.
+        Assert.Equal(20_000_000, rx.MaxSessionTokens);
+        Assert.Equal(0.9, Math.Round(rx.SoftBreakRatio, 2));
+
+        // The regression: a differing ratio is a change, and the verdict has to say so.
+        Assert.DoesNotContain("already where the measurements put it", rx.Verdict, StringComparison.Ordinal);
+        Assert.Contains("0.75 -> 0.9", rx.Verdict, StringComparison.Ordinal);
+        Assert.Contains("15M -> 18M", rx.Verdict, StringComparison.Ordinal);
+        Assert.Contains("keep maxSessionTokens at 20M", rx.Verdict, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AMatchingCeilingAndAMatchingNudgeIsTheOneCaseThatNeedsNoChange()
+    {
+        // Same run, the rail moved onto the ratio the measurements ask for. Nothing else changes, so
+        // this pins that the fix did not simply delete the "no change needed" answer.
+        var p = BudgetAnalyzer.Analyze("x", "both right",
+            Sessions("""
+                1,Progress,19000000,      2,Progress,19000000,      3,Progress,18800000,
+                4,Progress,19200000,      5,Advanced,17000000,B.1   6,Advanced,12000000,B.2
+                7,Advanced,14000000,B.3
+                """),
+            Nudges("1,18000000  2,18000000  3,18000000  4,18000000", 20_000_000));
+
+        Assert.Equal(20_000_000, p.Current.CapTokens);
+        Assert.Equal(0.9, Math.Round(p.Current.NudgeRatio!.Value, 2));
+        Assert.Equal(20_000_000, p.Prescription.MaxSessionTokens);
+        Assert.Contains("already where the measurements put it", p.Prescription.Verdict, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void ARunWithNothingDeliveredRefusesToPrescribe()
     {
