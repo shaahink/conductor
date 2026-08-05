@@ -36,7 +36,7 @@ The W-series write-ups below stay here because `plans/conductor-w52.plan.json` a
 
 | Doc | What it is |
 |---|---|
-| [`adr/`](adr/) | Architecture decision records — **[0001](adr/0001-tooling-and-ruleset.md)** tooling/ruleset, **[0002](adr/0002-event-sourcing.md)** event sourcing (amended by W1.1 for the unified work graph), **[0003](adr/0003-cross-platform-packaging-closeout.md)** packaging. If you change something an ADR settled, amend the ADR in the same PR. |
+| [`adr/`](adr/) | Architecture decision records — **[0001](adr/0001-tooling-and-ruleset.md)** tooling/ruleset, **[0002](adr/0002-event-sourcing.md)** event sourcing (amended by W1.1 for the unified work graph), **[0003](adr/0003-cross-platform-packaging-closeout.md)** packaging, **[0004](adr/0004-face-tab-consolidation.md)** Face tab consolidation, **[0005](adr/0005-push-only-remote-observability.md)** push-only remote observability, **[0006](adr/0006-tui-conventions.md)** TUI conventions (scroll idiom, key namespace, markdown). If you change something an ADR settled, amend the ADR in the same PR. |
 | [`../../face-go/STYLE.md`](../../face-go/STYLE.md) | The Face's live keybinding + layout reference. Read it before touching the UI. |
 | [`RESEARCH.md`](RESEARCH.md) | Survey of comparable orchestrators and terminal-UX patterns. |
 | [`NEXT-FEATURES.md`](NEXT-FEATURES.md) | Backlog of captured-but-unbuilt ideas. |

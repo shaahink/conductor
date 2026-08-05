@@ -91,6 +91,13 @@ one page; fewer clicks; transparent overlays; better colour and spacing.*
 - A tab that is *editing text or in an interactive sub-state* owns every key
   (`tabHandlesAllKeys`); otherwise the dashboard globals (`:` `i` `/` `p` `?` `q`, tab switches) win.
   Plan sub-sections switch with `←/→` (so `tab` stays free for main tabs).
+- **Scrolling is one key set, everywhere, and it is settled — do not invent a fifth one.**
+  `↓`/`j` `↑` by line, `d`/`u` by half page, `pgdn`/`f` `pgup` by page, `end`/`G` `home` to the ends.
+  `k`, `b` and `g` are *tab mnemonics* and the mnemonic loop (`update.go:608`) resolves before any
+  pane handler ever sees them, so a pane key may never be a lowercase letter in `tabKey` or
+  `foldedTabKey`. The scroll offset is clamped where it is *changed*, never only in the renderer.
+  See [ADR 0006](../docs/dev/adr/0006-tui-conventions.md) for why, and for `viewport` vs `list` vs
+  `table` — read it before adding any scrollable pane.
 
 ## Colour — roles, not hexes
 
