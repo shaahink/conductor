@@ -89,8 +89,14 @@ public sealed partial class SF7_1DocsMatchRealityTests
     [Fact]
     public void TheOneRowLeftOpenIsStillOpenForTheReasonTheLedgerGives()
     {
-        var src = Path.Combine(RepoRoot(), "src", "Conductor");
+        // K7.1: widened from src/Conductor to src/. K2.1 moved the store into Conductor.Core, which is
+        // a SIBLING of src/Conductor and not a child of it, so this scan had quietly stopped covering
+        // the only assembly that could ever contain the writer - the pin was green on half a tree.
+        // The Backlog half of these tests took the same correction at K2.1; this half was missed.
+        var src = Path.Combine(RepoRoot(), "src");
         var writers = Directory.EnumerateFiles(src, "*.cs", SearchOption.AllDirectories)
+            .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
+            .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
             .Where(f => File.ReadAllText(f).Contains("UpdateRunStatus", StringComparison.Ordinal))
             .ToList();
 

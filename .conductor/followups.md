@@ -411,3 +411,56 @@ markdown, so nobody has to remember to copy them.
 | id | item | detail | owning stage | status |
 |----|------|--------|--------------|--------|
 | FU-OWNER-14 | The installed `conductor` on this machine has not been reinstalled against the v0.3.0 release | SF7.2's spec asks for "a reinstall whose conductor version matches the releases page." The other two clauses closed this session: the merge (`8286d63` on `master`) and the tag (`v0.3.0`, published, binary self-reports `0.3.0+e897c2c7e1b0`). The reinstall did not run, on the owner's own instruction (session-39 handoff, 2026-08-01): a second conductor run is live in `C:/Code/sk-studio` (NINE STREETS, mid-session) at the time of this write-up, and `tools/install.ps1` overwrites the one published binary both runs execute — running it now would swap the ground out from under the other run's live session, not just this one's. | SF7.2 | **HUMAN** — the owner runs `tools/install.ps1` once no other conductor run is live on the machine, then confirms `conductor version --short` reads `0.3.0` (or the matching commit-height prerelease) against https://github.com/shaahink/conductor/releases/tag/v0.3.0. |
+
+## K7.1 closure ledger — 2026-08-05 (the Karvan core era's final reconciliation)
+
+Same contract as SF7.1's: **no row whose state is unstated, and nothing silently dropped.** Every
+line below was checked against the tree or against `run.db` on 2026-08-05; the check is pinned by
+`K7_1ClosureLedgerTests` so a bug listed without an owner is a red test rather than a re-read.
+
+**This era added no rows to this file, and that is a finding rather than a tidy result.** `git log`
+over `.conductor/followups.md` since 2026-08-04 is empty across twenty-four sessions. `FollowupParser`
+still reads the handover's weak/deferred bullets, and `LaneCoordinator` still resolves the file at
+`Path.Combine(_plan.StateDir, "followups.md")` — but nothing wrote. The era's own loose ends went to
+`conductor bug` instead, which is the better channel (SF0.4 made bugs outlive the run that filed them
+and reach the next run's prompts through `BugsBattery`), so nothing was lost. It does mean the
+followup ledger and the bug ledger have quietly become one ledger with two file formats.
+
+### Followup rows carried in from the Sarban eras — state at Karvan's end
+
+| row | state at 2026-08-05 | owner from here |
+|---|---|---|
+| the 43 rows closed by the 2026-07-28 triage and the SF0.4 disposition | **CLOSED**, unchanged | — |
+| FU-OWNER-10, FU-OWNER-11, FU-OWNER-13 | **CLOSED** by SF7.1, unchanged | — |
+| FU-F1-06 | **STILL OPEN.** Re-verified today with the scan widened to the whole of `src/`: `UpdateRunStatus` exists nowhere, so a run that ends `NeedsHuman`, `Paused` or `AwaitingOwner` still reads `status='running'`. K2.1's extraction had silently narrowed the old check to `src/Conductor`, which no longer contains the store — the pin was passing on half a tree. Widened in this checkpoint. | next era, engine lane |
+| FU-B2-3 | **PARTIAL**, untouched by K1–K7 (`RunLoop.Control.cs` last changed at `e45fa11` for K3.3 provenance, not for this row) — the live gate still wants a recovery lane | the owner |
+| FU-B11-2 | **PARTIAL is the final answer**, unchanged — needs a Linux host | the owner |
+| FU-B11-3 | **HUMAN**, unchanged — real cTrader credentials and real money | the owner |
+| FU-OWNER-14 | **re-homed to K7.2**, and that is a real move rather than a restatement: SF7.2's reinstall clause was deferred because a second conductor run was live on this machine. K7.2's spec absorbs it verbatim — first install of this run, owner confirms no other run is live, then `conductor version --short` must match the releases page. | K7.2 |
+
+### Bugs — the fourteen this era leaves open
+
+They live in `run.db`, not in this table; the table exists so the ledger is complete and so every one
+of them has a name against it. Seven ride in from Sarban unchanged, six were filed by this run, and
+one was filed by this checkpoint.
+
+| bug | what | owner from here |
+|---|---|---|
+| #15 | a composed prompt over ~8191 chars silently stops a cmd.exe-based agent, and the run reports success | next era, engine lane — fix with #21, same root |
+| #16 | the gate battery can try to rebuild a `conductor.exe` that is running | next era — no stage has ever owned `tools/gates`, which is why this has survived three eras |
+| #17 | the CLI silently accepts and ignores any unknown option — `conductor status --bogus` exits 0 | next era, CLI lane |
+| #18 | the bottom bar hard-clips a pane's contextual help with no ellipsis | next era, face lane — K6.2's viewport work did not reach the bottom bar |
+| #19 | the session digest never records a claim: it counts MCP `task_update`, and every session claims through the CLI | next era — under-reporting claims for the whole of three runs now |
+| #20 | `run` resolves `CONDUCTOR_PLAN` over the CWD, so a scratch rig launched inside a session can target the driving run's plan | next era, engine lane — still the sharpest of the carried-in seven; every live-proof rig in this era worked around it too |
+| #21 | nothing warns when a plan's packs push the composed prompt past the argv ceiling | next era — fix with #15 |
+| #23 | CI Windows gate battery flakes on `SF0_3PidsAndBackgroundWorkTests.McpBgStatus_CallsAnUninspectablePidRunning_NotDead` | next era, CI lane — a GH runner answers `Ours/Recycled` where the test expects `Unverifiable` |
+| #24 | `AgentConfig.Merge` silently drops `Env`: a stage-level agent override wipes the plan-level `agent.env` | next era, engine lane — `src/Conductor/Models/AgentConfig.cs:36-48`; bites any plan that sets `OPENCODE_CONFIG` and then overrides an agent per stage |
+| #27 | a brand-new `run.db` logs `FOREIGN KEY constraint failed` on the first `run_state` write | next era, store lane — cosmetic today, but it is the first line a new user sees |
+| #28 | `MigrationRunner` crashes on this repo's own `run.db`: `schema_version` says 9 but the v10 `sessions.soft_break` already exists | **K7.2, and it is not theoretical.** Reproduced today on the fresh build: `dotnet run --project src/Conductor -- doctor` dies with `duplicate column name: soft_break` at `MigrationRunner.cs:85` ← `SqliteRunStore.EnsureSchema:51` ← `DoctorCommand.TryReadCostFromRunDb`. The engine the owner installs at K7.2 is this engine. |
+| #29 | the same half-migration seen from the other end — any newer engine crashes on upgrade against this db | **K7.2**, with #28. `budget` and `money` survive on the same build because K3.1's catalogue copy under `%LOCALAPPDATA%/conductor/runs/` is intact and they read that; `doctor` reads the plan's own path, `C:/code/conductor/.conductor/run.db`, which is the half-migrated one. |
+| #31 | `bubbles/textarea` cannot replace `widgets.TextArea` until the face's key dispatch stops being a string | next era, face lane — named deliberately in K6.4 rather than left implicit |
+| #32 | the checkpoint board carries seven rows (`F0.1`, `F1.1`, `F1.2`, `F2.1`, `F3.1`, `R0.1`, `R0.2`) belonging to no stage of this plan | the owner — they describe face showcase work from another plan. They **cannot block this run**: the `stages` table for `df9c4af8` holds `K1`–`K7` only and this run's `run_state` contains neither `F2.1` nor `shamshir`. But they read as unfinished Karvan work on the generated tracker, and a reader cannot tell. |
+
+**Nothing here is homeless.** Four followup rows need the owner, one is re-homed to K7.2, one rides
+into the next era; two bugs are K7.2's, one is the owner's, and eleven ride into the next era in the
+database rather than in markdown, so nobody has to remember to copy them.
