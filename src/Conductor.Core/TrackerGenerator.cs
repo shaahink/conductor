@@ -106,19 +106,26 @@ public static class TrackerGenerator
                 sb.AppendLine();
             }
 
-            // Stages in db but not in plan (e.g. imported from a different tracker format)
-            foreach (var (stageId, stageCheckpoints) in cpsByStage)
+            // Stages in db but not in plan (e.g. imported from a different tracker format). LISTED,
+            // never re-emitted as table rows. This file is generated FROM the graph and read back as
+            // the declared-work list, so a row here is indistinguishable from a human declaration —
+            // and W1.2 refuses to retire anything the declared source still declares. Rows therefore
+            // made these items immortal: bug #32's seven face-showcase checkpoints outlived the plan
+            // that created them, were re-declared by every regeneration, and failed doctor's G13 work
+            // check forever. A bullet cannot match the row regex (it anchors on '|' —
+            // ProgressConventions.BuildRowRegex), so the next sync sees the declaration gone, archives
+            // them because their stage left the plan, and this section empties itself.
+            var orphanStages = cpsByStage.Where(kv => !renderedStages.Contains(kv.Key)).ToList();
+            if (orphanStages.Count > 0)
             {
-                if (renderedStages.Contains(stageId)) continue;
-                sb.AppendLine($"### {stageId}");
+                sb.AppendLine("### Not in the plan");
                 sb.AppendLine();
-                sb.AppendLine("| # | Checkpoint | Status | Commit | Evidence |");
-                sb.AppendLine("|---|-----------|--------|--------|----------|");
-                foreach (var cp in stageCheckpoints)
-                {
-                    var statusLabel = StatusLabel(cp.Status, cp.Confirmed);
-                    sb.AppendLine($"| {cp.Id} | {cp.Title} | {statusLabel} | {cp.Commit} | {cp.Evidence} |");
-                }
+                sb.AppendLine("Work the run's history carries under stages this plan no longer has. Listed, not declared —");
+                sb.AppendLine("the next work-graph sync retires it and this section empties itself.");
+                sb.AppendLine();
+                foreach (var (stageId, stageCheckpoints) in orphanStages)
+                    foreach (var cp in stageCheckpoints)
+                        sb.AppendLine($"- {stageId} · {cp.Id} — {cp.Title} ({StatusLabel(cp.Status, cp.Confirmed)})");
                 sb.AppendLine();
             }
         }
