@@ -1,18 +1,18 @@
 ﻿# Conductor — Karvan core - the engine knows what it did and what it cost run report
 
-_Updated 2026-08-05 01:21 UTC · branch `feat/karvan` · HEAD `75d94a2`_
+_Updated 2026-08-05 01:42 UTC · branch `feat/karvan` · HEAD `87ea264`_
 
-**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [1h 51m ago, 23:29:12Z]
-**Stage:** K2 — The architecture becomes navigable · attempts used 0 · working ▸ K2.4
-**Checkpoints:** 7/32 done · **Sessions run:** 7 · **Cost:** $67.4010 (agent $67.3575 + gates $0.0435) · **Tokens:** 872,172 in / 437,715 out
-**Confirmed phases:** K1
+**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [2h 13m ago, 23:29:12Z]
+**Stage:** K2 — The architecture becomes navigable · attempts used 0
+**Checkpoints:** 8/32 done · **Sessions run:** 8 · **Cost:** $78.5950 (agent $78.5462 + gates $0.0488) · **Tokens:** 1,031,527 in / 506,443 out
+**Confirmed phases:** K1, K2
 
 ## Stage progress
 
 | Stage | Title | Progress | State |
 |---|---|---|---|
 | K1 | The ledger stops lying | ██████████ 4/4 | confirmed ✓ |
-| K2 | The architecture becomes navigable | ████████░░ 3/4 | **← active** |
+| K2 | The architecture becomes navigable | ██████████ 4/4 | confirmed ✓ |
 | K3 | Conductor remembers | ░░░░░░░░░░ 0/3 | todo |
 | K4 | Token truth - measure it before shrinking it | ░░░░░░░░░░ 0/4 | todo |
 | K5 | The result contract and the channels | ░░░░░░░░░░ 0/4 | todo |
@@ -30,14 +30,14 @@ _Updated 2026-08-05 01:21 UTC · branch `feat/karvan` · HEAD `75d94a2`_
 
 </details>
 
-<details><summary>K2 — The architecture becomes navigable (3/4)</summary>
+<details> ✅<summary>K2 — The architecture becomes navigable (4/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| K2.1 | Conductor.Core holds the domain, orchestration and store with no Spectre and no HTTP hosting, Conductor is CLI plus hosting, the reference direction only points one way, and publish plus doctor plus the Face's discovery still work | ✅ DONE | - |
-| K2.2 | Architecture tests in the ordinary suite fail the build when a boundary is crossed, each naming the offending type and the rule, landed together with K2.1 so the extraction is verified rather than asserted | ✅ DONE | - |
-| K2.3 | The worst partial-file piles are split by responsibility — the thirty-file DTO pile becomes per-feature endpoint contracts — and one written file-organisation convention says where a new endpoint, event or partial belongs | ✅ DONE | - |
-| K2.4 | The front door reads: a real ARCHITECTURE.md map, an AGENTS.md cut to current state with superseded handoffs archived and indexed, closed-era trackers out of the repo root, the divergent duplicate workgraph doc resolved to one file, and the docs indexes updated | ⬜ TODO | - |
+| K2.1 | Conductor.Core holds the domain, orchestration and store with no Spectre and no HTTP hosting, Conductor is CLI plus hosting, the reference direction only points one way, and publish plus doctor plus the Face's discovery still work | ✅ DONE | [`b05efef`](https://github.com/shaahink/conductor/commit/b05efef) |
+| K2.2 | Architecture tests in the ordinary suite fail the build when a boundary is crossed, each naming the offending type and the rule, landed together with K2.1 so the extraction is verified rather than asserted | ✅ DONE | [`b05efef`](https://github.com/shaahink/conductor/commit/b05efef) |
+| K2.3 | The worst partial-file piles are split by responsibility — the thirty-file DTO pile becomes per-feature endpoint contracts — and one written file-organisation convention says where a new endpoint, event or partial belongs | ✅ DONE | [`b05efef`](https://github.com/shaahink/conductor/commit/b05efef) |
+| K2.4 | The front door reads: a real ARCHITECTURE.md map, an AGENTS.md cut to current state with superseded handoffs archived and indexed, closed-era trackers out of the repo root, the divergent duplicate workgraph doc resolved to one file, and the docs indexes updated | ✅ DONE | [`8b38f1b`](https://github.com/shaahink/conductor/commit/8b38f1b) |
 
 </details>
 
@@ -104,22 +104,13 @@ _Updated 2026-08-05 01:21 UTC · branch `feat/karvan` · HEAD `75d94a2`_
 | 5 | K1 | Deliver | 1 | 08-04 23:30 | 0:37 | Advanced | K1.4 | 3 | engine-fast:OK · face-fast:OK | $14.6250 | $0.0127 | 170,772/86,424 |
 | 6 | K1 | Fix | 2 | 08-05 00:18 | 0:19 | Progress |  | 5 | engine-fast:OK · face-fast:OK | $6.9616 | $0.0089 | 105,085/54,557 |
 | 7 | K2 | Deliver | 1 | 08-05 00:42 | 0:36 | Advanced | K2.1 K2.2 K2.3 | 5 | engine-fast:OK · face-fast:OK | $17.4644 | $0.0081 | 229,722/124,620 |
+| 8 | K2 | Deliver | 1 | 08-05 01:21 | 0:16 | Advanced | K2.4 | 3 | engine-fast:OK · face-fast:OK | $11.1887 | $0.0053 | 159,355/68,728 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-04 23:27:12  ◆ run resumed · Karvan core - the engine knows what it did and what it cost
-08-04 23:27:13  • session #2 K1 Deliver started (attempt 1/8)
-08-04 23:59:01  ▪ gate engine-fast pass [session]  (48.7s)
-08-04 23:59:01  ▪ gate face-fast pass [session]  (6.2s)
-08-04 23:59:02  • session #2 K1 → Advanced · done K1.3 · 6 commit(s)  (31m48s)
-08-04 23:59:02  • session #3 K1 Deliver started (attempt 1/8)
-08-05 00:02:02  ▪ gate engine-fast pass [session]  (0.0s)
-08-05 00:02:02  ▪ gate face-fast pass [session]  (0.0s)
-08-05 00:02:03  • session #3 K1 → AgentError  (3m01s)
-08-05 00:02:03  • session #4 K1 Fix started (attempt 2/8)
 08-05 00:04:58  ▪ gate engine-fast pass [session]  (0.0s)
 08-05 00:04:58  ▪ gate face-fast pass [session]  (0.0s)
 08-05 00:07:41  ■ needs human — advisor blocked retry: 2+ consecutive identical AgentError sessions (ENOTFOUND/DNS failure) with zero commits triggers stall pattern block; environment network issue must resolve or human intervene before retry.
@@ -150,6 +141,16 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-05 01:42:53  • session #7 K2 Deliver started (attempt 1/8)
 08-05 02:21:10  ▪ gate engine-fast pass [session]  (49.5s)
 08-05 02:21:10  ▪ gate face-fast pass [session]  (31.7s)
+08-05 02:21:10  • session #7 K2 → Advanced · done K2.1,K2.2,K2.3 · 5 commit(s)  (38m17s)
+08-05 02:21:11  • session #8 K2 Deliver started (attempt 1/8)
+08-05 02:38:39  ▪ gate engine-fast pass [session]  (48.8s)
+08-05 02:38:39  ▪ gate face-fast pass [session]  (4.4s)
+08-05 02:38:40  • session #8 K2 → Advanced · done K2.4 · 3 commit(s)  (17m28s)
+08-05 02:42:14  ▪ gate engine-fast pass [phase]  (0.0s)
+08-05 02:42:14  ▪ gate face-fast pass [phase]  (0.0s)
+08-05 02:42:14  ▪ gate engine-full pass [phase]  (3m27s)
+08-05 02:42:14  ▪ gate face-full pass [phase]  (4.6s)
+08-05 02:42:14  ✓ checkpoint K2.4 confirmed
 ```
 
 ## Health
@@ -157,8 +158,9 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 7 · retries 2 (29 %) · overall Warn
+sessions 8 · retries 2 (25 %) · overall Warn
 ⚠ [context-saturation] session #1: 24,653,507 context tokens (≥ 20,000,000)
+⚠ [context-saturation] session #7: 24,094,247 context tokens (≥ 20,000,000)
 ```
 
 ## Repo
@@ -167,7 +169,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/karvan
-working tree: clean
+working tree: M .conductor/REPORT.md, M plans/karvan/CORE-TRACKER.md
 vs upstream: up to date
 ```
 
@@ -200,6 +202,10 @@ vs upstream: up to date
   - [`e35d034`](https://github.com/shaahink/conductor/commit/e35d034) refactor(arch): the DTO and event piles become responsibility folders, and the convention is written down
   - [`3bc5a2a`](https://github.com/shaahink/conductor/commit/3bc5a2a) docs(tracker): K2.1 and K2.2 are claimed - the evidence and the handoff to K2.3
   - [`b05efef`](https://github.com/shaahink/conductor/commit/b05efef) refactor(arch): Conductor.Core is its own assembly, and the direction is a link error
+- **s8 (K2 Deliver)** — 3 commit(s):
+  - [`87ea264`](https://github.com/shaahink/conductor/commit/87ea264) docs(tracker): K2 closes - the handoff to K3.1
+  - [`aef2fb9`](https://github.com/shaahink/conductor/commit/aef2fb9) docs(arch): ARCHITECTURE.md becomes the map - one session end to end, the seams, the surfaces
+  - [`8b38f1b`](https://github.com/shaahink/conductor/commit/8b38f1b) docs(root): the closed eras leave the root, and the workgraph "duplicate" turns out to be two documents
 
 ## Phase handovers (audit)
 
@@ -222,33 +228,27 @@ vs upstream: up to date
 
 ## Last gate run
 
-engine-fast:OK · face-fast:OK
+engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
 
 ## Last session result
 
-> SESSION-RESULT: Three of stage K2's four checkpoints are claimed with evidence and the fourth is half-landed. **K2.1** extracted `src/Conductor.Core` (domain, orchestration, store, events, providers) out of the single engine assembly, leaving `Conductor` as CLI + hosting — the direction is now a link error, not a convention. Scoping it by measurement first is what made it a one-session job: Spectre appeared under the old `Core/` in exactly three files and only in comment text, ASP.NET was referenced nowhere, and namespaces already matched folders one-for-one, so the move needed no namespace churn. Exactly two real backwards references existed and both died (`HumanDuration.Format`, `ControlPl…
+> SESSION-RESULT: **K2.4 is claimed and stage K2 is complete.** Three commits landed: `8b38f1b` moved the three closed-era trackers into `docs/history/archive/trackers/` and resolved the workgraph filename collision, `aef2fb9` turned `ARCHITECTURE.md` from 91 lines into a 244-line map, `87ea264` carries the handoff. Two of the checkpoint's premises were false and are corrected with measurements rather than worked around: the root `CONDUCTOR-WORKGRAPH.md` and `docs/dev/CONDUCTOR-WORKGRAPH.md` are **not** a divergent duplicate — one is the W-series tracker (handoff + checkpoint table) and the other the W-series design brief, sharing only a filename, with `git diff --no-index` showing 220 inserti…
 
 ## Tracker handoff
 
 ```
-last: **K2.1, K2.2 and K2.3 all claimed** (`b05efef`, `3bc5a2a`, this commit). `src/Conductor.Core` is
-  its own assembly (domain/orchestration/store/events/providers); `Conductor` is Program + Commands +
-  `Http/ControlPlaneServer*` + `Hosting/`. Namespaces already matched folders, so it was a rename. Two
-  reverse deps died: `HumanDuration.Format`, `ControlPlaneDiscovery.PathFor`. `ArchitectureBoundaryTests`
-  = 8 rules that name the offender. K2.3: `ControlPlaneDto` was never a type — 29 files of independent
-  records wearing a prefix — now `Http/Contracts/<feature>/`, mapper renamed `ControlPlaneMapper`;
-  events in `Events/Kinds/`; Telegram's API records in `Integrations/TelegramApi/`. `ARCHITECTURE.md`
-  is new and holds the convention plus the split/left table. Suite **1814/1814** twice.
-next: **K2.4, half done — back on TODO, four things left.** DONE: `AGENTS.md` 978→368 lines, the nine
-  superseded handoffs archived verbatim with an index at `docs/history/handoffs/AGENTS-resume-log-`
-  `2026-07.md`. LEFT, in order: (1) `ARCHITECTURE.md` has only the layering diagram + K2.3's file
-  convention — it still owes the session lifecycle, the seams, the two surfaces and a where-do-I-add-X
-  table; (2) `SARBAN-{CORE,FACE}-TRACKER.md` → `docs/history/trackers/`; (3) root
-  `CONDUCTOR-WORKGRAPH.md` (252 lines) vs `docs/dev/` copy (197) — different hashes, resolve to one;
-  (4) `docs/README.md` + `docs/dev/README.md` indexes. None of it touches this plan's own files.
-watch: **clear `CONDUCTOR_PLAN` before running your own build's `doctor`/`run`** — the env the
-  orchestrator hands you points at THIS repo, a scratch cwd is not isolation, and your build migrates
-  `run.db` 9→10 and kills every claim verb. Fixed here; recipe is in the ledger.
-red: none. Open, not blocking: **#27** fresh-db FK error on first `run_state` write, **#24**
-  `AgentConfig.Merge` drops `Env`.
+last: **K2.4 claimed — K2 is complete.** `8b38f1b` root cleanup, `aef2fb9` the map. The spec's
+  "divergent duplicate" was FALSE: root `CONDUCTOR-WORKGRAPH.md` is the W **tracker**, `docs/dev/`'s is
+  the W **design brief** — two documents sharing a name. Filed as what they are (brief →
+  `docs/history/`, tracker → `docs/history/archive/trackers/`, which is the dir that actually exists —
+  not `docs/history/trackers/`). Root is 14 files. `ARCHITECTURE.md` 91→244 lines: lifecycle, the nine
+  seams, both surfaces, where-do-I-add-X, every hop cited to file:line and each line read back first.
+next: **K3.1 — state gets a machine-level home.** It moves `run.db` and touches every `IRunStore` caller;
+  K2 was sequenced before it on purpose, so the boundary you inherit is real. `ARCHITECTURE.md` §"One
+  session, end to end" and §"The seams" are the map — read those two sections, not the whole file.
+watch: two checks are cheap and catch what no test does — walk every `tracker`/`planDoc`/`readOrder`
+  path in `plans/**` (53 refs, was 6 dangling), and link-check every `](path)` in the 128 markdown
+  files (0 broken). Also: clear `CONDUCTOR_PLAN` before running your own build's `doctor`/`run`.
+red: none; build green. Open, not blocking: **#27** fresh-db FK error on first `run_state` write,
+  **#24** `AgentConfig.Merge` drops `Env`.
 ```

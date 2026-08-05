@@ -4,20 +4,20 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **K2.4 claimed — K2 is complete.** `8b38f1b` root cleanup, `aef2fb9` the map. The spec's
-  "divergent duplicate" was FALSE: root `CONDUCTOR-WORKGRAPH.md` is the W **tracker**, `docs/dev/`'s is
-  the W **design brief** — two documents sharing a name. Filed as what they are (brief →
-  `docs/history/`, tracker → `docs/history/archive/trackers/`, which is the dir that actually exists —
-  not `docs/history/trackers/`). Root is 14 files. `ARCHITECTURE.md` 91→244 lines: lifecycle, the nine
-  seams, both surfaces, where-do-I-add-X, every hop cited to file:line and each line read back first.
-next: **K3.1 — state gets a machine-level home.** It moves `run.db` and touches every `IRunStore` caller;
-  K2 was sequenced before it on purpose, so the boundary you inherit is real. `ARCHITECTURE.md` §"One
-  session, end to end" and §"The seams" are the map — read those two sections, not the whole file.
-watch: two checks are cheap and catch what no test does — walk every `tracker`/`planDoc`/`readOrder`
-  path in `plans/**` (53 refs, was 6 dangling), and link-check every `](path)` in the 128 markdown
-  files (0 broken). Also: clear `CONDUCTOR_PLAN` before running your own build's `doctor`/`run`.
-red: none; build green. Open, not blocking: **#27** fresh-db FK error on first `run_state` write,
-  **#24** `AgentConfig.Merge` drops `Env`.
+last: **K3.1 claimed** — `707992f` the move, `1e29a13` the last two fixtures, `dd318d9` a defect the
+  rig found, `aa48c69` evidence. `run.db` now resolves to `%LOCALAPPDATA%/conductor/runs/<slug>` keyed
+  by repo path + plan; `StateDir` KEPT its meaning (scratch, discovery files, tracked deliverables), so
+  fleet/`ps`/`watch` needed no change. Precedence: `CONDUCTOR_RUN_DB` > `.conductor/state-pointer.json`
+  > derived. Import COPIES and leaves the original. Suite 1837/1837.
+next: **K3.2 — `conductor history` + the Face run picker.** The list you need is
+  `StateCatalogue.Read(StateHome.Root)`; `StateMigration.ReadReceipt` says where an entry came from.
+  Extend `runpicker.go`, do not write a second one. Read-only means read-only.
+watch: two traps this checkpoint paid for. `src/Conductor.Core/Store/**` may not touch `Console` —
+  `ArchitectureBoundaryTests` fails the build; route notices through a sink the shell installs. And the
+  pragma ceiling is 38/38, so MA0045 cannot be suppressed — note it does NOT fire inside *public*
+  methods, so inline private sync-I/O helpers into their public caller.
+red: none. Open, not blocking: **#27** fresh-db FK error on first `run_state` write, **#24**
+  `AgentConfig.Merge` drops `Env`.
 
 
 ## Baseline numbers (from run.db)
@@ -26,7 +26,7 @@ red: none; build green. Open, not blocking: **#27** fresh-db FK error on first `
 |---|---|
 | Total checkpoints | 32 |
 | Done | 1 |
-| Claimed (unconfirmed) | 6 |
+| Claimed (unconfirmed) | 7 |
 
 ## Checkpoints
 
@@ -49,7 +49,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | K2.1 | Conductor.Core holds the domain, orchestration and store with no Spectre and no HTTP hosting, Conductor is CLI plus hosting, the reference direction only points one way, and publish plus doctor plus the Face's discovery still work | DONE | b05efef | .conductor/evidence/K2/K2.1-K2.2-core-extraction.md |
 | K2.2 | Architecture tests in the ordinary suite fail the build when a boundary is crossed, each naming the offending type and the rule, landed together with K2.1 so the extraction is verified rather than asserted | DONE | b05efef | .conductor/evidence/K2/K2.1-K2.2-core-extraction.md |
 | K2.3 | The worst partial-file piles are split by responsibility — the thirty-file DTO pile becomes per-feature endpoint contracts — and one written file-organisation convention says where a new endpoint, event or partial belongs | DONE | b05efef | .conductor/evidence/K2/K2.3-partial-piles-and-the-convention.md |
-| K2.4 | The front door reads: a real ARCHITECTURE.md map, an AGENTS.md cut to current state with superseded handoffs archived and indexed, closed-era trackers out of the repo root, the divergent duplicate workgraph doc resolved to one file, and the docs indexes updated | TODO | - | - |
+| K2.4 | The front door reads: a real ARCHITECTURE.md map, an AGENTS.md cut to current state with superseded handoffs archived and indexed, closed-era trackers out of the repo root, the divergent duplicate workgraph doc resolved to one file, and the docs indexes updated | DONE | 8b38f1b | .conductor/evidence/K2/K2.4-front-door.md |
 
 ### K3 — Conductor remembers
 
