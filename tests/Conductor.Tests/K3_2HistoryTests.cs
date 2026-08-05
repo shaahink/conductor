@@ -1,3 +1,4 @@
+using Conductor.Core.Fleet;
 using Conductor.Core.History;
 using Conductor.Core.Store;
 
@@ -290,6 +291,44 @@ public sealed class K3_2HistoryTests : IDisposable
         Assert.Equal(2L, Convert.ToInt64(archive.Query("SELECT version FROM schema_version")[0]["version"]));
         Assert.Equal(before, File.GetLastWriteTimeUtc(db));
         Assert.False(File.Exists(db + "-wal"), "a read-only open must not create a write-ahead log");
+    }
+
+    // ------------------------------------------------------------------ the Face's picker
+
+    [Fact]
+    public void The_face_envelope_carries_past_runs_and_never_the_one_that_is_live()
+    {
+        var a = RepoPath("livest");
+        var b = RepoPath("finished");
+        SeedRun(a, "core", "run-live-000001", new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc), status: "running");
+        SeedRun(b, "core", "run-finished-01", new DateTime(2026, 5, 1, 0, 0, 0, DateTimeKind.Utc));
+
+        var past = FacePastRuns.Read(_root, ["run-live-000001"]);
+
+        var one = Assert.Single(past);
+        Assert.Equal("run-finished-01", one.RunId);
+        Assert.Equal(1, one.Done);
+        Assert.Equal(2, one.Total);
+
+        // And it reaches the Face as `past`, beside the live runs rather than mixed into them.
+        var json = FaceTarget.Serialize(
+            [new FleetRun(4317, "http://127.0.0.1:4317", "core", "run-live-000001", a, a, "Running", "S1", "First", null, 0, 2, 0m)],
+            new Dictionary<string, string>(StringComparer.Ordinal), a, past);
+        using var doc = System.Text.Json.JsonDocument.Parse(json);
+        Assert.Equal("run-live-000001", doc.RootElement.GetProperty("runs")[0].GetProperty("runId").GetString());
+        Assert.Equal("run-finished-01", doc.RootElement.GetProperty("past")[0].GetProperty("runId").GetString());
+        Assert.Equal(1, doc.RootElement.GetProperty("past").GetArrayLength());
+    }
+
+    [Fact]
+    public void The_face_envelope_caps_the_history_it_offers()
+    {
+        // The picker is a screen, not a report — beyond the cap the answer is `conductor history`.
+        for (var i = 0; i < FacePastRuns.DefaultMax + 3; i++)
+            SeedRun(RepoPath("r" + i), "core", $"run-many-{i:D6}",
+                new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddDays(i), sessions: 1);
+
+        Assert.Equal(FacePastRuns.DefaultMax, FacePastRuns.Read(_root).Count);
     }
 
     [Fact]

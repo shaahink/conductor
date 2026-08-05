@@ -297,3 +297,133 @@ func TestPickerWithOneRun(t *testing.T) {
 		t.Errorf("enter on a one-run fleet did not attach")
 	}
 }
+
+// ---------------------------------------------------------------------------------------------
+// K3.2 — the picker also lists what this machine remembers.
+
+// pastFleet is the history this machine ACTUALLY had, read back from the state catalogue with
+// `conductor history` against a scratch home holding an imported copy of this repo's run.db
+// (.conductor/evidence/K3/K3.2-history.md). Three real runs, real costs, real checkpoint counts.
+func pastFleet() []PastRun {
+	return []PastRun{
+		{
+			Repo: "C:/code/conductor", PlanName: "Sarban face - the watcher and the surfaces",
+			RunID: "8cefa5de8f164848bd42b275e14ba9cf", Status: "Completed",
+			Done: 24, Total: 24, CostUsd: 297.24,
+			LastActivityUtc: "2026-08-02T09:11:04Z",
+			RunDb:           `C:/Users/shahi/AppData/Local/conductor/runs/conductor-sarban-face-e0536519/run.db`,
+		},
+		{
+			Repo: "C:/code/conductor", PlanName: "Sarban core - the engine says what it knows",
+			RunID: "e9e21d10aedf4390a1580ac6930bac3e", Status: "Completed",
+			Done: 26, Total: 26, CostUsd: 360.14,
+			LastActivityUtc: "2026-07-31T17:20:11Z",
+			RunDb:           `C:/Users/shahi/AppData/Local/conductor/runs/conductor-sarban-core-a13f0b28/run.db`,
+		},
+	}
+}
+
+func TestParseFleetReadsPastRuns(t *testing.T) {
+	raw := `{"runs":[{"repo":"C:/code/conductor","runId":"abc","port":4317,"baseUrl":"http://127.0.0.1:4317"}],
+	         "past":[{"repo":"C:/code/old","planName":"Sarban core","runId":"e9e21d10","status":"Completed",
+	                  "done":26,"total":26,"costUsd":360.14,"runDb":"C:/home/runs/x/run.db"}]}`
+	f, err := ParseFleet(raw)
+	if err != nil {
+		t.Fatalf("ParseFleet: %v", err)
+	}
+	if len(f.Past) != 1 {
+		t.Fatalf("past runs = %d, want 1", len(f.Past))
+	}
+	p := f.Past[0]
+	if p.RunID != "e9e21d10" || p.Done != 26 || p.CostUsd != 360.14 || p.RunDb != "C:/home/runs/x/run.db" {
+		t.Errorf("past run decoded wrong: %+v", p)
+	}
+	if p.RepoLabel() != "old" {
+		t.Errorf("RepoLabel() = %q, want %q", p.RepoLabel(), "old")
+	}
+}
+
+// An envelope with no past runs is the normal case on a machine that has never had one, and it must
+// not change the screen at all.
+func TestPickerWithoutHistoryIsUnchanged(t *testing.T) {
+	plain := NewPicker(liveFleet())
+	plain.width, plain.height = 100, 24
+	withEmpty := NewPicker(liveFleet()).WithPast(nil)
+	withEmpty.width, withEmpty.height = 100, 24
+	if plain.Render() != withEmpty.Render() {
+		t.Error("an empty history changed the frame")
+	}
+}
+
+func TestPickerListsPastRunsUnderTheLiveOnes(t *testing.T) {
+	p := NewPicker(liveFleet()).WithPast(pastFleet())
+	p.width, p.height = 100, 30
+	frame := p.Render()
+
+	if !strings.Contains(frame, "2 past runs on this machine (read-only)") {
+		t.Errorf("history heading missing from frame:\n%s", frame)
+	}
+	for _, want := range []string{"24/24", "$297.24", "26/26", "$360.14"} {
+		if !strings.Contains(frame, want) {
+			t.Errorf("frame is missing %q:\n%s", want, frame)
+		}
+	}
+	// Order matters: the attachable runs come first, history after.
+	if strings.Index(frame, "past runs on this machine") < strings.Index(frame, "4317") {
+		t.Error("history section rendered above the live runs")
+	}
+}
+
+// The whole point of read-only: the cursor reaches a finished run, and enter on it attaches to
+// nothing. It says where the run CAN be read instead of failing silently.
+func TestEnterOnAPastRunAttachesToNothing(t *testing.T) {
+	p := NewPicker(liveFleet()).WithPast(pastFleet())
+	p.width, p.height = 100, 30
+
+	p = pick(t, p, "end")
+	if p.cursor != len(p.runs)+len(p.past)-1 {
+		t.Fatalf("end put the cursor at %d, want the last past row", p.cursor)
+	}
+	if !strings.Contains(p.Render(), "read-only (no engine to attach to)") {
+		t.Errorf("detail row does not say a past run cannot be attached:\n%s", p.Render())
+	}
+
+	after, cmd := p.handleKey("enter")
+	next, ok := after.(PickerModel)
+	if !ok {
+		t.Fatalf("handleKey returned %T", after)
+	}
+	if cmd != nil {
+		t.Error("enter on a past run asked the program to quit")
+	}
+	if _, chosen := next.Chosen(); chosen {
+		t.Error("enter on a past run chose a run to attach to")
+	}
+	if !strings.Contains(next.Render(), "conductor history e9e21d10") {
+		t.Errorf("frame does not name the verb that opens it:\n%s", next.Render())
+	}
+}
+
+// Number keys are the attach shortcut. They must never land on a row that cannot be attached to,
+// however far down the cursor can walk.
+func TestNumberKeysNeverReachAPastRun(t *testing.T) {
+	p := NewPicker(liveFleet()[:1]).WithPast(pastFleet())
+	p.width, p.height = 100, 30
+	for _, k := range []string{"2", "3", "9"} {
+		if _, chosen := pick(t, p, k).Chosen(); chosen {
+			t.Errorf("key %q attached to something", k)
+		}
+	}
+	if r, chosen := pick(t, p, "1").Chosen(); !chosen || r.Port != 4317 {
+		t.Error("key 1 no longer attaches to the only live run")
+	}
+}
+
+func TestGoldenRunPickerWithHistory(t *testing.T) {
+	p := NewPicker(liveFleet()).WithPast(pastFleet())
+	p.width, p.height = 100, 30
+	checkGolden(t, "run_picker_with_history", p.Render())
+
+	onPast := pick(t, p, "end")
+	checkGolden(t, "run_picker_past_row_selected", onPast.Render())
+}

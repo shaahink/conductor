@@ -53,25 +53,60 @@ type FleetRun struct {
 	Self       bool    `json:"self"`
 }
 
+// PastRun is one run this machine REMEMBERS but is not serving, read by the engine from the state
+// catalogue K3.1 built. It mirrors Conductor.Core.Fleet.FacePastRun. There is no base url and no
+// token because there is no control plane behind a finished run: the picker lists these, and cannot
+// attach to one.
+type PastRun struct {
+	Repo            string  `json:"repo"`
+	PlanName        string  `json:"planName"`
+	RunID           string  `json:"runId"`
+	Status          string  `json:"status"`
+	Done            int     `json:"done"`
+	Total           int     `json:"total"`
+	CostUsd         float64 `json:"costUsd"`
+	LastActivityUtc string  `json:"lastActivityUtc"`
+	RunDb           string  `json:"runDb"`
+}
+
 // Fleet is the CONDUCTOR_FLEET envelope.
 type Fleet struct {
 	Runs []FleetRun `json:"runs"`
+	Past []PastRun  `json:"past"`
+}
+
+// RepoLabel and ShortRunID mirror FleetRun's, so a past row is built exactly like a live one.
+func (r PastRun) RepoLabel() string {
+	return repoLeaf(r.Repo, r.PlanName, "-")
+}
+
+// ShortRunID is the first eight characters, the form every other surface prints.
+func (r PastRun) ShortRunID() string {
+	if len(r.RunID) >= 8 {
+		return r.RunID[:8]
+	}
+	return r.RunID
 }
 
 // RepoLabel is the trailing directory name of the repo — the way a human names which run they mean.
 // Falls back to the plan name, then to the port, so a row is never blank.
 func (r FleetRun) RepoLabel() string {
-	trimmed := strings.TrimRight(strings.ReplaceAll(r.Repo, "\\", "/"), "/")
+	return repoLeaf(r.Repo, r.PlanName, fmt.Sprintf("port %d", r.Port))
+}
+
+// repoLeaf is the trailing directory name, with two fallbacks so a row is never blank.
+func repoLeaf(repo, plan, last string) string {
+	trimmed := strings.TrimRight(strings.ReplaceAll(repo, "\\", "/"), "/")
 	if i := strings.LastIndex(trimmed, "/"); i >= 0 && i < len(trimmed)-1 {
 		trimmed = trimmed[i+1:]
 	}
 	if trimmed != "" {
 		return trimmed
 	}
-	if r.PlanName != "" {
-		return r.PlanName
+	if plan != "" {
+		return plan
 	}
-	return fmt.Sprintf("port %d", r.Port)
+	return last
 }
 
 // ShortRunID is the first eight characters, the form every other surface prints.
@@ -111,10 +146,12 @@ func ParseFleet(raw string) (Fleet, error) {
 // shows was measured by the engine's scan before the Face started.
 type PickerModel struct {
 	runs   []FleetRun
-	cursor int
+	past   []PastRun
+	cursor int // spans live rows then past rows: index >= len(runs) is a past row
 	width  int
 	height int
 	chosen int // -1 until enter; index into runs
+	note   string
 }
 
 // NewPicker builds the picker over a fleet. The cursor starts on the run in this directory when there
@@ -129,6 +166,19 @@ func NewPicker(runs []FleetRun) PickerModel {
 	}
 	return p
 }
+
+// WithPast adds the runs this machine remembers but is not serving (K3.2). Chained rather than a
+// second NewPicker parameter so a caller with no history — and every existing test — is unchanged.
+func (p PickerModel) WithPast(past []PastRun) PickerModel {
+	p.past = past
+	return p
+}
+
+// rowCount is every navigable row: the live runs, then the remembered ones.
+func (p PickerModel) rowCount() int { return len(p.runs) + len(p.past) }
+
+// isPast reports whether a cursor index lands in the history section.
+func (p PickerModel) isPast(i int) bool { return i >= len(p.runs) && i < p.rowCount() }
 
 func (p PickerModel) Init() tea.Cmd { return nil }
 
@@ -161,14 +211,20 @@ func (p PickerModel) handleKey(key string) (tea.Model, tea.Cmd) {
 			p.cursor--
 		}
 	case "down", "j", "tab":
-		if p.cursor < len(p.runs)-1 {
+		if p.cursor < p.rowCount()-1 {
 			p.cursor++
 		}
 	case "home", "g":
 		p.cursor = 0
 	case "end", "G":
-		p.cursor = len(p.runs) - 1
+		p.cursor = p.rowCount() - 1
 	case "enter", " ":
+		// A finished run has no control plane to attach to, so enter on one is not a refusal to be
+		// silent about — it is the moment to say where the run CAN be read.
+		if p.isPast(p.cursor) {
+			p.note = "read-only history · conductor history " + p.past[p.cursor-len(p.runs)].ShortRunID()
+			return p, nil
+		}
 		p.chosen = p.cursor
 		return p, tea.Quit
 	case "q", "esc", "ctrl+c":
@@ -209,6 +265,12 @@ func (p PickerModel) Render() string {
 	for i, r := range p.runs {
 		lines = append(lines, p.renderRow(i, r, inner))
 	}
+	if len(p.past) > 0 {
+		lines = append(lines, "", subtleStyle.Render(truncate(pastHeading(len(p.past)), inner)))
+		for i, r := range p.past {
+			lines = append(lines, p.renderPastRow(len(p.runs)+i, r, inner))
+		}
+	}
 	lines = append(lines, "", p.renderDetail(inner))
 
 	box := lipgloss.NewStyle().
@@ -223,6 +285,9 @@ func (p PickerModel) Render() string {
 		key("enter") + subtleStyle.Render(" attach"),
 		key("esc") + subtleStyle.Render(" quit"),
 	}, subtleStyle.Render(" · "))
+	if p.note != "" {
+		hint = subtleStyle.Render(truncate(p.note, p.width-2))
+	}
 
 	return lipgloss.NewStyle().MaxWidth(p.width).MaxHeight(p.height).
 		Render(box + "\n " + hint)
@@ -260,9 +325,57 @@ func (p PickerModel) renderRow(i int, r FleetRun, width int) string {
 	return textStyle.Render(" " + plain)
 }
 
+// pastHeading labels the history section. It says read-only in the heading, not only in the detail
+// row, because that is the fact which decides whether pressing enter will do anything.
+func pastHeading(n int) string {
+	if n == 1 {
+		return "— 1 past run on this machine (read-only)"
+	}
+	return fmt.Sprintf("— %d past runs on this machine (read-only)", n)
+}
+
+// renderPastRow is a live row's twin: same widths, same plain-then-style discipline, no port and no
+// number key, so the two halves read as one list of runs split by whether anything is still serving
+// them. One column carries a different fact: where a live row shows the stage it is IN, a finished
+// run shows the checkpoints it ENDED with, because there is no stage to be in any more.
+func (p PickerModel) renderPastRow(index int, r PastRun, width int) string {
+	repoW, statusW := 18, 26
+	if width < 76 {
+		repoW, statusW = 14, 16
+	}
+
+	progress := "-"
+	if r.Total > 0 {
+		progress = fmt.Sprintf("%d/%d", r.Done, r.Total)
+	}
+	plain := fmt.Sprintf("%s%s  %-*s  %-*s  %-*s  %5s  %8s",
+		"  ", " ",
+		repoW, truncate(r.RepoLabel(), repoW),
+		10, truncate(progress, 10),
+		statusW, truncate(r.Status, statusW),
+		"-",
+		fmt.Sprintf("$%.2f", r.CostUsd))
+	plain = truncate(plain, width-1)
+
+	if index == p.cursor {
+		return highlightBg.Render("▸" + plain)
+	}
+	return subtleStyle.Render(" " + plain)
+}
+
 // renderDetail is the row under the list: everything about the highlighted run that does not fit in a
 // column — where it lives on disk, which process it is, and whether the Face will be able to write.
 func (p PickerModel) renderDetail(width int) string {
+	if p.isPast(p.cursor) {
+		r := p.past[p.cursor-len(p.runs)]
+		head := fmt.Sprintf("run %s  ·  finished  ·  read-only (no engine to attach to)", r.ShortRunID())
+		tail := r.PlanName
+		if r.RunDb != "" {
+			tail += "  ·  " + r.RunDb
+		}
+		return subtleStyle.Render(truncate(head, width)) + "\n" +
+			subtleStyle.Render(truncate(tail, width))
+	}
 	if p.cursor < 0 || p.cursor >= len(p.runs) {
 		return ""
 	}

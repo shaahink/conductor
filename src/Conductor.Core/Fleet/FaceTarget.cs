@@ -66,7 +66,9 @@ public static class FaceTarget
     /// <summary>Serializes the fleet for the Face. <paramref name="tokens"/> maps a run's state dir to
     /// its write token; a run with no token still lists — the Face just marks it read-only rather than
     /// hiding a run the user can see in <c>ps</c>.</summary>
-    public static string Serialize(IReadOnlyList<FleetRun> runs, IReadOnlyDictionary<string, string> tokens, string? localStateDir)
+    public static string Serialize(
+        IReadOnlyList<FleetRun> runs, IReadOnlyDictionary<string, string> tokens, string? localStateDir,
+        IReadOnlyList<FacePastRun>? past = null)
     {
         ArgumentNullException.ThrowIfNull(runs);
         ArgumentNullException.ThrowIfNull(tokens);
@@ -75,7 +77,10 @@ public static class FaceTarget
             r.Repo, r.PlanName, r.RunId, r.Status, r.Port, r.Pid, r.StageId, r.StageTitle,
             r.AttentionReason, r.Done, r.Total, r.CostUsd, r.BaseUrl, r.StateDir,
             LookupToken(tokens, r.StateDir),
-            FleetScan.SameDir(r.StateDir, localStateDir))).ToArray());
+            FleetScan.SameDir(r.StateDir, localStateDir))).ToArray())
+        {
+            Past = past ?? [],
+        };
 
         return JsonSerializer.Serialize(envelope, FaceFleetJsonContext.Default.FaceFleet);
     }

@@ -95,7 +95,7 @@ func main() {
 	case fleetErr == nil && *url == "":
 		// The engine could not pick for us: run the picker FIRST, then attach to what came back.
 		// An explicit --url outranks it — the caller already named the run they mean.
-		chosen, ok := runPicker(fleet.Runs)
+		chosen, ok := runPicker(fleet)
 		if !ok {
 			return // looked at the fleet, attached to nothing — a normal exit, not a failure
 		}
@@ -136,8 +136,8 @@ const fleetEnv = "CONDUCTOR_FLEET"
 // runPicker shows the pre-flight run picker and returns the chosen run. A fleet of one still gets the
 // screen: the engine only hands one over when it could NOT decide (or when the user asked to choose),
 // so showing a list of one is the honest answer to "which run?" rather than a silent attach.
-func runPicker(runs []tui.FleetRun) (tui.FleetRun, bool) {
-	final, err := tea.NewProgram(tui.NewPicker(runs)).Run()
+func runPicker(fleet tui.Fleet) (tui.FleetRun, bool) {
+	final, err := tea.NewProgram(tui.NewPicker(fleet.Runs).WithPast(fleet.Past)).Run()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "conductor-face: %v\n", err)
 		os.Exit(1)

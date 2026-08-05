@@ -7,6 +7,7 @@ using Conductor.Core.Face;
 using Conductor.Core.Fleet;
 using Conductor.Core.Http;
 using Conductor.Core.Planning;
+using Conductor.Core.Store;
 using Conductor.Models;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -89,8 +90,20 @@ public sealed class FaceCommand : AsyncCommand<FaceCommand.Settings>
                 return await LaunchAsync(psi).ConfigureAwait(false);
 
             case FaceTarget.Kind.Picker:
+                // K3.2: the picker also lists what this machine remembers. Best-effort — a catalogue
+                // that cannot be read must not stop someone attaching to a live run.
+                IReadOnlyList<FacePastRun> past = [];
+                try
+                {
+                    past = FacePastRuns.Read(StateHome.Root, decision.Fleet.Select(r => r.RunId));
+                }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+                {
+                    // no history offered; the live runs still are
+                }
                 psi.Environment[FaceTarget.FleetEnvVar] =
-                    FaceTarget.Serialize(decision.Fleet, await TokensForAsync(decision.Fleet).ConfigureAwait(false), localStateDir);
+                    FaceTarget.Serialize(decision.Fleet, await TokensForAsync(decision.Fleet).ConfigureAwait(false),
+                        localStateDir, past);
                 return await LaunchAsync(psi).ConfigureAwait(false);
 
             default:
