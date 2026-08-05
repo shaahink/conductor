@@ -27,7 +27,7 @@ red: none. Open, not blocking: **#28**, **#27** fresh-db FK error, **#24** `Agen
 | Metric | Value |
 |---|---|
 | Total checkpoints | 32 |
-| Done | 2 |
+| Done | 3 |
 | Claimed (unconfirmed) | 9 |
 
 ## Checkpoints
@@ -59,13 +59,13 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 |---|-----------|--------|--------|----------|
 | K3.1 | State has a machine-level home with one catalogue keyed by repo and plan, an environment override, an idempotent migration that imports existing run.db files rather than orphaning them, and a per-run scratch dir that keeps the repo's tracked deliverables | DONE | 707992f | .conductor/evidence/K3/K3.1-state-home.md |
 | K3.2 | conductor history lists and opens past runs read-only from the catalogue, and the Face's existing run picker offers them | DONE | ec1f158 | .conductor/evidence/K3/K3.2-fix-s12-arch-and-completion.md |
-| K3.3 | Every run records the engine version, its commit, its dirty flag and a snapshot of the limits that governed it, and a dirty build warns at launch | DONE | e45fa11 | .conductor/evidence/K3/K3.3-provenance.md |
+| K3.3 | Every run records the engine version, its commit, its dirty flag and a snapshot of the limits that governed it, and a dirty build warns at launch | DONE ✓ | e45fa11 | .conductor/evidence/K3/K3.3-provenance.md |
 
 ### K4 — Token truth - measure it before shrinking it
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| K4.1 | The engine records context size per turn — a high-water and a mean per session — derived from the stream, with the derivation checked against a session that can be estimated independently | TODO | - | - |
+| K4.1 | The engine records context size per turn — a high-water and a mean per session — derived from the stream, with the derivation checked against a session that can be estimated independently | DONE | ea49c8d | .conductor/evidence/K4/K4.1-context-per-turn.md |
 | K4.2 | conductor budget prints floor, wrap-up, cap, nudge-versus-floor and rollover rate and prescribes a correction, and it reproduces this repo's own two runs without being told the answers | TODO | - | - |
 | K4.3 | conductor money answers what a project cost per checkpoint, per stage and per month, with cache-read share and the before-and-after windows that say what the cap bought, cross-checked against a hand-written query | TODO | - | - |
 | K4.4 | Live session tokens, the distance to the nudge, a burn rate and a projection sit beside live money in the Face and on the wire, honest when no cap is set | TODO | - | - |

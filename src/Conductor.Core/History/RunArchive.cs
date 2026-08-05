@@ -150,12 +150,18 @@ public sealed class RunArchive
             ? "s.context_high_water, s.context_mean_turn, s.context_turns, " : "";
         var rows = Query(
             "SELECT s.number, s.stage_id, s.kind, s.started_utc, s.ended_utc, s.outcome, s.attempt, " +
-            "  s.resume_count, s.commit_count, s.result_summary, s.gate_summary, " +
+            "  s.resume_count, s.commit_count, s.result_summary, s.gate_summary, s.newly_done, " +
             provenance + context +
             "  (SELECT COALESCE(SUM(c.cost_usd), 0) FROM costs c " +
             "     WHERE c.run_id = s.run_id AND c.session_number = s.number) AS cost_usd, " +
             "  (SELECT COALESCE(SUM(c.tokens_in + c.tokens_out + c.tokens_think + c.tokens_cache), 0) " +
-            "     FROM costs c WHERE c.run_id = s.run_id AND c.session_number = s.number) AS tokens " +
+            "     FROM costs c WHERE c.run_id = s.run_id AND c.session_number = s.number) AS tokens, " +
+            // K4.2: agent-category only, because that is the stream the session ceiling is compared
+            // against. Gate and advisor rows carry cost but no tokens today, so this equals `tokens`
+            // on every row in this repo — it stops being equal the moment an advisor lane reports.
+            "  (SELECT COALESCE(SUM(c.tokens_in + c.tokens_out + c.tokens_think + c.tokens_cache), 0) " +
+            "     FROM costs c WHERE c.run_id = s.run_id AND c.session_number = s.number " +
+            "       AND c.category = 'agent') AS agent_tokens " +
             "FROM sessions s WHERE s.run_id = @runId ORDER BY s.number",
             ("@runId", runId));
         var sessions = rows.Select(MapSession).ToList();
@@ -202,6 +208,43 @@ public sealed class RunArchive
                 var high = Convert.ToInt64(r["high"] ?? 0L, System.Globalization.CultureInfo.InvariantCulture);
                 var mean = Convert.ToInt64(r["mean"] ?? 0L, System.Globalization.CultureInfo.InvariantCulture);
                 if (turns > 0 && high > 0) result[number] = new Conductor.Core.Events.ContextWindowStats(high, mean, turns);
+            }
+        }
+        catch (Microsoft.Data.Sqlite.SqliteException)
+        {
+            // No JSON1, or an event log shaped differently. Nothing to report is a valid answer.
+        }
+        return result;
+    }
+
+    /// <summary>K4.2 — every firing of the cooperative nudge in one run, in order. Empty when the
+    /// archive has no event log or its SQLite build cannot read JSON, which is the same "nothing to
+    /// report" contract <see cref="ContextFromEvents"/> keeps: a budget with no nudge evidence still
+    /// prints, it just says so instead of inventing a threshold.</summary>
+    public IReadOnlyList<SoftBreakObservation> SoftBreaks(string runId)
+    {
+        var result = new List<SoftBreakObservation>();
+        if (!Has("events", "payload")) return result;
+        try
+        {
+            var rows = Query(
+                "SELECT json_extract(e.payload, '$.liveTokens') AS live, " +
+                "       json_extract(e.payload, '$.tokenBudget') AS budget, " +
+                "       json_extract(e.payload, '$.currentCheckpointId') AS ckpt, " +
+                "       (SELECT p.session_id FROM events p " +
+                "          WHERE p.run_id = e.run_id AND p.type = 'SessionStarted' AND p.seq < e.seq " +
+                "          ORDER BY p.seq DESC LIMIT 1) AS session_number " +
+                "FROM events e WHERE e.run_id = @runId AND e.type = 'SoftBreakRequested' ORDER BY e.seq",
+                ("@runId", runId));
+            foreach (var r in rows)
+            {
+                if (!int.TryParse(r["session_number"] as string, out var number)) continue;
+                if (r["live"] is not { } liveRaw) continue;
+                var live = Convert.ToInt64(liveRaw, System.Globalization.CultureInfo.InvariantCulture);
+                var budget = r["budget"] is { } b
+                    ? Convert.ToInt64(b, System.Globalization.CultureInfo.InvariantCulture)
+                    : (long?)null;
+                result.Add(new SoftBreakObservation(number, live, budget > 0 ? budget : null, r["ckpt"] as string));
             }
         }
         catch (Microsoft.Data.Sqlite.SqliteException)
@@ -300,7 +343,9 @@ public sealed class RunArchive
         LimitsJson: Opt(r, "limits") as string,
         ContextHighWater: OptLong(r, "context_high_water"),
         ContextMeanTurn: OptLong(r, "context_mean_turn"),
-        ContextTurns: (int?)OptLong(r, "context_turns"));
+        ContextTurns: (int?)OptLong(r, "context_turns"),
+        NewlyDone: r["newly_done"] as string,
+        AgentTokens: Convert.ToInt64(r["agent_tokens"] ?? 0L, System.Globalization.CultureInfo.InvariantCulture));
 
     /// <summary>K4.1: an optional numeric column, null for "absent OR NULL" — the two are one answer.</summary>
     private static long? OptLong(Dictionary<string, object?> r, string column)
