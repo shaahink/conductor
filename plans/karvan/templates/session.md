@@ -86,10 +86,21 @@ stop; an uncommitted handoff and an unclaimed checkpoint are both invisible to t
   block (the word HUMAN followed by a colon, then the question), `conductor note` the reason, commit,
   push, and end the session.
 - Leave the working tree clean (commit or revert leftovers) and the branch pushed.
-- End by printing one paragraph starting with `SESSION-RESULT:` — what landed, what is red, and what
-  the next session should pick up. **From the checkpoint that lands the structured result contract
-  onward, use the format that checkpoint defines** — it updates this template in the same commit, so
-  whatever this file says at the time you read it is the contract.
+- **End with your SESSION-RESULT in the format conductor owns** (K5.1). Five consumers parse this —
+  the record, the phone, the advisor, the lessons ledger and the report — and each one used to cut
+  the same paragraph at a different length, mid-word. Fields survive; paragraphs do not. Prose goes
+  in the handoff block, where prose belongs.
+
+      SESSION-RESULT: headline, at most fifteen words, what you landed
+      - outcome bullet, one line, at most three of them
+      artefacts: paths or commits you changed, comma-separated
+      evidence: the artifact path you claimed with, comma-separated
+      gaps: what is still open or red, or the word none
+
+  The headline is clipped at fifteen words, each bullet at 240 characters, gaps at 400 — so a long
+  bullet costs you that bullet, not the fields under it. Ignoring the format is not an error: an
+  unstructured result is stored and cut at 700 characters exactly as it was before this checkpoint,
+  which is worse for the next session than for you.
 {tools}
 {packs}
 {stageNotes}{extra}

@@ -38,7 +38,7 @@ public sealed partial class PromptBuilder
             - Keep the handoff, checkpoint titles and notes free of curly braces: a literal brace in prose the engine composes back into a prompt reads as an unresolved placeholder and parks the run.
             - If genuinely blocked on a human decision, add a line starting `HUMAN:` to the tracker handoff block, `conductor note` the reason, commit, push, and end the session.
             - Leave the working tree clean (commit or revert leftovers) and the branch pushed.
-            - End by printing one paragraph starting with `SESSION-RESULT:` — what landed, what is red, what the next session should do.
+            - End in conductor's result format (K5.1); prose goes in the handoff: `SESSION-RESULT:` + a headline of at most fifteen words, up to three `- outcome` bullets, then `artefacts:`, `evidence:` and `gaps:` lines.
 
             {packs}
             {stageNotes}{extra}
@@ -66,7 +66,7 @@ public sealed partial class PromptBuilder
             {tools}
 
             If genuinely blocked on a human decision, add a line starting `HUMAN:` to the tracker handoff, commit, push, and stop.
-            End by printing one paragraph starting with `SESSION-RESULT:`.
+            End in conductor's result format (K5.1): `SESSION-RESULT:` + a headline of at most fifteen words, up to three `- outcome` bullets, then `artefacts:`, `evidence:` and `gaps:` lines.
 
             {packs}
             {stageNotes}{extra}
@@ -82,7 +82,7 @@ public sealed partial class PromptBuilder
             If the interruption left half-done changes you cannot finish safely, revert to the last good state, record what happened in the tracker handoff, commit and push that.
 
             {tools}
-            End by printing one paragraph starting with `SESSION-RESULT:`.
+            End with your result in conductor's format: `SESSION-RESULT:` plus a headline of at most fifteen words, then up to three `- outcome` bullets, then `artefacts:`, `evidence:` and `gaps:` lines.
             """,
         "advisor.md" => """
             You advise an orchestrator that runs an autonomous multi-session engineering plan. A session ended badly; decide the next action. Be decisive and terse.

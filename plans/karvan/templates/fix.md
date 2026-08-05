@@ -38,7 +38,14 @@ without weakening it.
    `conductor task --done <id> --evidence <path>` (prose is not a claim), overwrite the `## Handoff`
    block in {tracker}, commit, push.
 
-End by printing one paragraph starting with `SESSION-RESULT:` — what you fixed, what is still red, why.
+End with your SESSION-RESULT in the format conductor owns (K5.1) — five consumers parse it, and prose
+belongs in the handoff:
+
+    SESSION-RESULT: headline, at most fifteen words, what you fixed
+    - outcome bullet, one line, at most three of them
+    artefacts: paths or commits you changed, comma-separated
+    evidence: the artifact path you claimed with, comma-separated
+    gaps: what is still red, or the word none
 {tools}
 {packs}
 {stageNotes}{extra}
