@@ -36,6 +36,17 @@ public sealed class HookBudgetCommand : Command<HookBudgetCommand.Settings>
         public string StateDir { get; init; } = ".conductor";
     }
 
+    /// <summary>
+    /// Where the hook's JSON goes; <see cref="Console.Out"/> when nothing is supplied, resolved at
+    /// write time so a host that redirects the console still receives it.
+    /// </summary>
+    /// <remarks>Bug #26. The test used to capture this command's output with
+    /// <c>Console.SetOut</c>, which is PROCESS-GLOBAL: under the full parallel suite another test's
+    /// console writes landed in the same buffer and <c>JsonDocument.Parse</c> failed on them, so the
+    /// test passed 10/10 alone and flaked in the battery. A writer the caller owns cannot be
+    /// contaminated by whatever is running beside it.</remarks>
+    internal TextWriter? Output { get; init; }
+
     public override int Execute(CommandContext context, Settings settings)
     {
         try
@@ -52,7 +63,7 @@ public sealed class HookBudgetCommand : Command<HookBudgetCommand.Settings>
             if (!SoftBreak.ShouldRestate(signal, previous, DateTime.UtcNow, out _)) return 0;
             var delivery = SoftBreak.RecordDelivery(settings.StateDir, previous, signal, DateTime.UtcNow);
 
-            Console.Out.Write(JsonSerializer.Serialize(new
+            (Output ?? Console.Out).Write(JsonSerializer.Serialize(new
             {
                 hookSpecificOutput = new
                 {

@@ -204,15 +204,13 @@ public class BudgetRailTests
 
     private static (int Exit, string Output) RunHook(string stateDir)
     {
+        // Bug #26: this used to capture with Console.SetOut. That is process-global, so under the
+        // full parallel suite another test's console writes landed in this buffer and the JSON parse
+        // below failed on them — 10/10 in isolation, red in the battery. The command writes to a
+        // writer THIS test owns; nothing running beside it can reach in.
         using var sw = new StringWriter();
-        var original = Console.Out;
-        Console.SetOut(sw);
-        try
-        {
-            var cmd = new HookBudgetCommand();
-            var exit = cmd.Execute(null!, new HookBudgetCommand.Settings { StateDir = stateDir });
-            return (exit, sw.ToString());
-        }
-        finally { Console.SetOut(original); }
+        var cmd = new HookBudgetCommand { Output = sw };
+        var exit = cmd.Execute(null!, new HookBudgetCommand.Settings { StateDir = stateDir });
+        return (exit, sw.ToString());
     }
 }
