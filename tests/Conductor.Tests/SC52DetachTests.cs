@@ -1,4 +1,4 @@
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using System.Text.Json;
 
 using Conductor.Commands;
@@ -254,7 +254,7 @@ public sealed class SC52DetachTests
 
     private static void TryDelete(string dir)
     {
-        try { Directory.Delete(dir, recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+        try { TestTemp.DeleteTree(dir); } catch (IOException) { } catch (UnauthorizedAccessException) { }
     }
 
     private static string ReadShared(string path)

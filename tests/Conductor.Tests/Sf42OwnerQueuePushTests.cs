@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Models;
 using CheckpointRow = Conductor.Core.CheckpointRow;
 
@@ -35,7 +35,7 @@ public sealed class Sf42OwnerQueuePushTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_dir, recursive: true); } catch (IOException) { /* best effort */ }
+        try { TestTemp.DeleteTree(_dir); } catch (IOException) { /* best effort */ }
     }
 
     private static TrackerSnapshot Track(string handoff = "", params CheckpointRow[] rows)

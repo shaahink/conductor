@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Core.Events;
 using Conductor.Models;
 using Xunit;
@@ -322,7 +322,7 @@ public sealed class B12_4Tests
                 if (Directory.Exists(gitDir))
                     foreach (var f in Directory.GetFiles(gitDir, "*", SearchOption.AllDirectories))
                         try { File.SetAttributes(f, FileAttributes.Normal); } catch { }
-                Directory.Delete(repo, recursive: true);
+                TestTemp.DeleteTree(repo);
             }
             catch { }
         }

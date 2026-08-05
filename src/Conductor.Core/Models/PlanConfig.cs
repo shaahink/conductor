@@ -1,3 +1,4 @@
+﻿using Conductor.Core.Store;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -106,7 +107,23 @@ public sealed class PlanConfig
 
     [JsonIgnore] public string PlanFilePath { get; internal set; } = "";
     [JsonIgnore] public string PlanDir => Path.GetDirectoryName(PlanFilePath) ?? ".";
-    [JsonIgnore] public string StateDir => Path.Combine(Repo, ".conductor");
+    /// <summary>The per-run scratch and discovery directory INSIDE the working tree: logs,
+    /// transcripts, evidence, <c>control-plane.json</c>, the engine lock, and the tracked
+    /// deliverables (<c>REPORT.md</c>, <c>followups.md</c>, <c>handovers/</c>). K3.1 took only
+    /// <c>run.db</c> out of it — see <see cref="RunDbPath"/>.</summary>
+    [JsonIgnore] public string StateDir => Path.Combine(Repo, StateHome.ScratchDirName);
+
+    private StateResolution? _state;
+
+    /// <summary>K3.1: where this plan's history lives — a machine-level home keyed by repo path plus
+    /// plan name, not <c>&lt;repo&gt;/.conductor/run.db</c>. Resolved once per loaded plan; the
+    /// first resolution imports a pre-K3.1 database if one is sitting in the working tree.</summary>
+    [JsonIgnore] public string RunDbPath => ResolveState().RunDbPath;
+
+    /// <summary>The full resolution — path, which precedence rule produced it, and what (if
+    /// anything) was imported. Commands that report on state (<c>doctor</c>) want all three;
+    /// everything else wants <see cref="RunDbPath"/>.</summary>
+    public StateResolution ResolveState() => _state ??= StateHome.Resolve(Repo, Name);
     [JsonIgnore] public string TrackerPath => Path.Combine(Repo, Tracker);
     [JsonIgnore] public bool PerPhaseGates => GatePolicy.Equals("perPhase", StringComparison.OrdinalIgnoreCase);
 

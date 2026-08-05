@@ -1,4 +1,4 @@
-using Conductor.Commands;
+﻿using Conductor.Commands;
 using Conductor.Core;
 using Conductor.Core.Integrations;
 using Conductor.Models;
@@ -19,7 +19,7 @@ public sealed class DoctorCommandTests : IDisposable
     {
         // Broad catch: git leaves some object files read-only on Windows, which surfaces as
         // UnauthorizedAccessException here rather than IOException (matches HarnessTests' cleanup).
-        try { Directory.Delete(_dir, recursive: true); } catch (Exception) { /* best effort */ }
+        try { TestTemp.DeleteTree(_dir); } catch (Exception) { /* best effort */ }
     }
 
     private static PlanConfig Plan(Action<PlanConfig>? configure = null)

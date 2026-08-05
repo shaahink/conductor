@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 using Conductor.Core;
 using Conductor.Core.Store;
@@ -13,7 +13,7 @@ internal static class BgStatusHandler
     public static int ExecuteStatus(BgCommand.Settings settings)
     {
         var plan = PlanConfig.Load(settings.ResolvePlanPath());
-        var runDbPath = Path.Combine(plan.StateDir, "run.db");
+        var runDbPath = plan.RunDbPath;
         if (!File.Exists(runDbPath))
         {
             AnsiConsole.MarkupLine("[grey]No run.db found — no background processes tracked.[/]");

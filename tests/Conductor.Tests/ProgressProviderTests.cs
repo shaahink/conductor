@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Core.Planning;
 using Conductor.Models;
 
@@ -48,7 +48,7 @@ public sealed class ProgressProviderTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_repo, recursive: true); } catch (IOException) { }
+        try { TestTemp.DeleteTree(_repo); } catch (IOException) { }
         GC.SuppressFinalize(this);
     }
 

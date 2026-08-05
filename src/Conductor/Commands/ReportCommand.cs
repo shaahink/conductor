@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Text.Json;
 
 using Conductor.Core;
@@ -31,7 +31,7 @@ public sealed class ReportCommand : Command<ReportCommand.Settings>
         // metrics) short-circuited to empty: a report regenerated after the engine exited silently lost
         // the history it exists to show. The engine's own path always passed a store; only the operator
         // running `conductor report` by hand got the hollow one.
-        var runDbPath = Path.Combine(plan.StateDir, "run.db");
+        var runDbPath = plan.RunDbPath;
         using var store = File.Exists(runDbPath)
             ? new SqliteRunStore(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteRunStore>.Instance)
             : null;

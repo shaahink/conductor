@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Conductor.Core;
 using Conductor.Core.Store;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -30,7 +30,7 @@ public sealed class ProcessSupervisorTests : IDisposable
     {
         _supervisor.Dispose();
         _runDb.Dispose();
-        try { Directory.Delete(_dir, recursive: true); }
+        try { TestTemp.DeleteTree(_dir); }
         catch (IOException) { /* temp dir cleanup best-effort */ }
     }
 

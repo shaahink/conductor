@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Core.Events;
 using Conductor.Hosting;
 using Conductor.Core.Store;
@@ -42,7 +42,7 @@ public sealed partial class HarnessTests : IDisposable
 
         _cleanup = () =>
         {
-            try { Directory.Delete(_repo, recursive: true); }
+            try { TestTemp.DeleteTree(_repo); }
             catch (Exception) { }
         };
     }

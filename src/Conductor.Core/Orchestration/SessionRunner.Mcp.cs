@@ -221,6 +221,10 @@ public sealed partial class SessionRunner
                 "--journal", journalPath,
                 "--run-id", runId,
                 "--state-dir", stateDir,
+                // K3.1: run.db left the state dir for the machine-level home, so the child server
+                // has to be TOLD where it is — deriving it from the events path would silently
+                // create a second, empty database beside the transcripts.
+                "--run-db", _ctx.Plan.RunDbPath,
                 "--repo", repoPath,
                 // SC4.1: whose bg children these are. The battery settle waits on this session's.
                 "--session", rec.Number.ToString(),

@@ -1,4 +1,4 @@
-using Conductor.Commands;
+﻿using Conductor.Commands;
 using Conductor.Core;
 using Conductor.Core.Store;
 using Conductor.Models;
@@ -128,7 +128,7 @@ public sealed class JourneyCommandTests
             var description = await JourneyCommand.DescribeResumeAsync(plan);
             Assert.Equal("fresh run — no saved state found", description);
         }
-        finally { Directory.Delete(repo, recursive: true); }
+        finally { TestTemp.DeleteTree(repo); }
     }
 
     [Fact]
@@ -151,7 +151,7 @@ public sealed class JourneyCommandTests
             Assert.Contains("resumes session #5", description, StringComparison.Ordinal);
             Assert.Contains("stage S2", description, StringComparison.Ordinal);
         }
-        finally { Directory.Delete(repo, recursive: true); }
+        finally { TestTemp.DeleteTree(repo); }
     }
 
     [Fact]
@@ -181,7 +181,7 @@ public sealed class JourneyCommandTests
             // Microsoft.Data.Sqlite pools native connections past Dispose, so the file can stay
             // locked briefly — best-effort cleanup only, same pattern as RunDbTests.
             foreach (var suffix in new[] { "", "-wal", "-shm" }) { try { File.Delete(dbPath + suffix); } catch { } }
-            try { Directory.Delete(repo, recursive: true); } catch { }
+            try { TestTemp.DeleteTree(repo); } catch { }
         }
     }
 }

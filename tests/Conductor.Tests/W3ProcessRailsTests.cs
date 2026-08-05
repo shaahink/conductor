@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using Conductor.Commands;
@@ -107,11 +107,11 @@ public sealed class W3ProcessRailsTests
             Assert.NotNull(rec.EndedUtc);
             // Resumable: the interrupted session is queued to continue, and run.db reopens.
             Assert.NotNull(state.PendingResume);
-            using var reopened = new SqliteRunStore(Path.Combine(repo, ".conductor", "run.db"),
+            using var reopened = new SqliteRunStore(plan.RunDbPath,
                 NullLogger<SqliteRunStore>.Instance);
             Assert.NotEmpty(reopened.ReadAllEvents(state.RunId));
         }
-        finally { try { Directory.Delete(repo, recursive: true); } catch (IOException) { } }
+        finally { try { TestTemp.DeleteTree(repo); } catch (IOException) { } }
     }
 
     // ---------------------------------------------------------------- the pid-reuse guard
@@ -162,7 +162,7 @@ public sealed class W3ProcessRailsTests
         {
             try { victim?.Kill(entireProcessTree: true); } catch (InvalidOperationException) { }
             victim?.Dispose();
-            try { Directory.Delete(dir, recursive: true); } catch (IOException) { }
+            try { TestTemp.DeleteTree(dir); } catch (IOException) { }
         }
     }
 
@@ -197,7 +197,7 @@ public sealed class W3ProcessRailsTests
             var plan = await ScaffoldAsync(repo, "@echo off\r\nexit /b 0\r\n", _ => { });
             Directory.CreateDirectory(Path.Combine(repo, ".conductor"));
             // bg start tracks pids against the plan's existing run — give it one.
-            using (var seed = new SqliteRunStore(Path.Combine(repo, ".conductor", "run.db"), NullLogger<SqliteRunStore>.Instance))
+            using (var seed = new SqliteRunStore(plan.RunDbPath, NullLogger<SqliteRunStore>.Instance))
                 seed.InitializeRun(Guid.NewGuid().ToString("N"), plan.Name, repo, "main", "1.0.0");
 
             // Emits over ~4 seconds — a hundred times longer than the launcher lives.
@@ -241,12 +241,12 @@ public sealed class W3ProcessRailsTests
             Assert.Contains("line-three", content, StringComparison.Ordinal);
 
             // …and the pid recorded in run.db still finds that log.
-            using var db = new SqliteRunStore(Path.Combine(repo, ".conductor", "run.db"), NullLogger<SqliteRunStore>.Instance);
+            using var db = new SqliteRunStore(plan.RunDbPath, NullLogger<SqliteRunStore>.Instance);
             var runId = db.GetLatestRunId(plan.Name);
             var row = Assert.Single(db.GetAllPids(runId!), p => p.Purpose == "bg:slow");
             Assert.Equal(logFile, BgLogs.Resolve(logDir, row.Pid, db, runId));
         }
-        finally { try { Directory.Delete(repo, recursive: true); } catch (IOException) { } }
+        finally { try { TestTemp.DeleteTree(repo); } catch (IOException) { } }
     }
 
     [Fact]
@@ -261,7 +261,7 @@ public sealed class W3ProcessRailsTests
             Assert.Equal(legacy, BgLogs.Resolve(dir, 4242, null, null));
             Assert.Null(BgLogs.Resolve(dir, 111, null, null));
         }
-        finally { try { Directory.Delete(dir, recursive: true); } catch (IOException) { } }
+        finally { try { TestTemp.DeleteTree(dir); } catch (IOException) { } }
     }
 
     // ---------------------------------------------------------------- unbounded spend
@@ -303,7 +303,7 @@ public sealed class W3ProcessRailsTests
             var log = await File.ReadAllTextAsync(Path.Combine(repo, ".conductor", "conductor.log"), CancellationToken.None);
             Assert.Contains("no spend cap", log, StringComparison.Ordinal);
         }
-        finally { try { Directory.Delete(repo, recursive: true); } catch (IOException) { } }
+        finally { try { TestTemp.DeleteTree(repo); } catch (IOException) { } }
     }
 
     // ---------------------------------------------------------------- helpers

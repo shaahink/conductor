@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Conductor.Models;
 using Conductor.Planning;
 
@@ -157,7 +157,7 @@ public sealed class ConditionVocabularyTests
             Assert.Contains("gatesGreen", ex.Message, StringComparison.Ordinal);      // the vocabulary is named
             Assert.Contains("verifier.score", ex.Message, StringComparison.Ordinal);
         }
-        finally { try { Directory.Delete(dir, recursive: true); } catch (Exception) { /* best effort */ } }
+        finally { try { TestTemp.DeleteTree(dir); } catch (Exception) { /* best effort */ } }
     }
 
     [Fact]
@@ -170,7 +170,7 @@ public sealed class ConditionVocabularyTests
             var plan = LoadWith("runIf", "!gatesGreen", dir);
             Assert.Equal("!gatesGreen", plan.Workflows!["custom"].Steps[1].RunIf);
         }
-        finally { try { Directory.Delete(dir, recursive: true); } catch (Exception) { /* best effort */ } }
+        finally { try { TestTemp.DeleteTree(dir); } catch (Exception) { /* best effort */ } }
     }
 
     /// <summary>Guards the blast radius of the new refusal: every plan shipped in this repo must

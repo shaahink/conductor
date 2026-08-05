@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using System.Text;
 
 namespace Conductor.Tests;
@@ -23,7 +23,7 @@ public sealed class LessonsManagerTests : IDisposable
 
     public void Dispose()
     {
-        try { if (Directory.Exists(_tmpDir)) Directory.Delete(_tmpDir, recursive: true); }
+        try { if (Directory.Exists(_tmpDir)) TestTemp.DeleteTree(_tmpDir); }
         catch (IOException) { /* best-effort cleanup */ }
     }
 

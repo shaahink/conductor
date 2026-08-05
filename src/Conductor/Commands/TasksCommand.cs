@@ -1,4 +1,4 @@
-using Conductor.Core.Events;
+﻿using Conductor.Core.Events;
 using Conductor.Core.Store;
 using Conductor.Models;
 using Spectre.Console;
@@ -15,7 +15,7 @@ public sealed class TasksCommand : Command<PlanSettings>
     public override int Execute(CommandContext context, PlanSettings settings)
     {
         var plan = PlanConfig.Load(settings.ResolvePlanPath());
-        var runDbPath = Path.Combine(plan.StateDir, "run.db");
+        var runDbPath = plan.RunDbPath;
 
         var graph = new TaskGraph();
         if (File.Exists(runDbPath))

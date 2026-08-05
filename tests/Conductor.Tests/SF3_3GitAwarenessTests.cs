@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Core.Face;
 using Conductor.Core.Http;
 
@@ -288,6 +288,6 @@ public sealed class SF3_3GitAwarenessTests : IDisposable
         if (!Directory.Exists(dir)) return;
         foreach (var f in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories))
             File.SetAttributes(f, FileAttributes.Normal);
-        Directory.Delete(dir, recursive: true);
+        TestTemp.DeleteTree(dir);
     }
 }

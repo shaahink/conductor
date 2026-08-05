@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Diagnostics;
 
 using Conductor.Core;
@@ -36,7 +36,7 @@ public sealed class StatusCommand : Command<StatusCommand.Settings>
     public override int Execute(CommandContext context, Settings settings)
     {
         var plan = PlanConfig.Load(settings.ResolvePlanPath());
-        var runDbPath = Path.Combine(plan.StateDir, "run.db");
+        var runDbPath = plan.RunDbPath;
         if (!File.Exists(runDbPath))
         {
             AnsiConsole.MarkupLine("[yellow]No run.db yet.[/] Run [bold]conductor run[/] at least once to record a run.");
@@ -146,7 +146,7 @@ public sealed class StatusCommand : Command<StatusCommand.Settings>
         }
 
         // Re-fold from the database so the narrative sees exactly what the verdict did.
-        var runDbPath = Path.Combine(plan.StateDir, "run.db");
+        var runDbPath = plan.RunDbPath;
         RunState state;
         using (var store = new SqliteRunStore(runDbPath, NullLogger<SqliteRunStore>.Instance))
         {

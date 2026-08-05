@@ -1,4 +1,4 @@
-using Conductor.Http;
+﻿using Conductor.Http;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -122,7 +122,7 @@ public sealed class W2LiveBoardTests
 
     private static void Nuke(string repo)
     {
-        try { Directory.Delete(repo, recursive: true); }
+        try { TestTemp.DeleteTree(repo); }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
     }

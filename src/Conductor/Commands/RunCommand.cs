@@ -1,4 +1,4 @@
-using Conductor.Http;
+﻿using Conductor.Http;
 using System.ComponentModel;
 using System.Diagnostics;
 
@@ -76,7 +76,7 @@ public sealed class RunCommand : AsyncCommand<RunCommand.Settings>
         // fresh run #1 every time and "run again to resume" is a lie (2026-07-17 dogfood).
         if (string.IsNullOrEmpty(state.RunId) && state.SessionCounter == 0)
         {
-            var resumed = await Core.Store.RunStateResume.TryLoadLatestAsync(Path.Combine(plan.StateDir, "run.db"), plan.Name, cts.Token).ConfigureAwait(false);
+            var resumed = await Core.Store.RunStateResume.TryLoadLatestAsync(plan.RunDbPath, plan.Name, cts.Token).ConfigureAwait(false);
             if (resumed != null)
             {
                 state = resumed;
@@ -212,7 +212,7 @@ public sealed class RunCommand : AsyncCommand<RunCommand.Settings>
     /// last thing an operator sees and must not become the reason a clean run ends dirty.</summary>
     private static string? OpenBugsAtEnd(PlanConfig plan, RunState state, string planPathArg)
     {
-        var dbPath = Path.Combine(plan.StateDir, "run.db");
+        var dbPath = plan.RunDbPath;
         if (!File.Exists(dbPath) || string.IsNullOrEmpty(state.RunId)) return null;
         try
         {

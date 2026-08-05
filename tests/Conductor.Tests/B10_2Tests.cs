@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Models;
 
 namespace Conductor.Tests;
@@ -83,7 +83,7 @@ public class B10_2HierarchyTests
             Assert.Equal("A", cfg.Stages[1].ParentId);
             Assert.Equal("B", cfg.Stages[2].ParentId);
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestTemp.DeleteTree(dir); }
     }
 
     // ── Depth computation ──────────────────────────────────────────────

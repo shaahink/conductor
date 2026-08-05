@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Conductor.Core;
 using Conductor.Hosting;
@@ -195,6 +195,6 @@ public sealed class W3AuthTests
             Assert.Contains("auth: the agent backend rejected the credential", log, StringComparison.Ordinal);
             Assert.DoesNotContain("usage limit detected", log, StringComparison.Ordinal);
         }
-        finally { try { Directory.Delete(repo, recursive: true); } catch (IOException) { } }
+        finally { try { TestTemp.DeleteTree(repo); } catch (IOException) { } }
     }
 }

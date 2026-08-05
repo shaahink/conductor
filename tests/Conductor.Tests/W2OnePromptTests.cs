@@ -1,4 +1,4 @@
-using Conductor.Http;
+﻿using Conductor.Http;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -30,7 +30,7 @@ public sealed class W2OnePromptTests
 
     private static void Nuke(string dir)
     {
-        try { Directory.Delete(dir, recursive: true); }
+        try { TestTemp.DeleteTree(dir); }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
     }

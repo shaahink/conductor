@@ -1,4 +1,4 @@
-using Conductor.Core.Planning;
+﻿using Conductor.Core.Planning;
 
 namespace Conductor.Tests;
 
@@ -22,7 +22,7 @@ public sealed class PlanDiscoveryTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_root, recursive: true); } catch { }
+        try { TestTemp.DeleteTree(_root); } catch { }
     }
 
     private string WriteFile(string relativePath, string content = "{}")

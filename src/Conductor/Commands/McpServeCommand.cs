@@ -45,6 +45,13 @@ public sealed class McpServeCommand : Command<McpServeCommand.Settings>
         [Description("Repo root for bg_start working directory. Optional.")]
         public string? Repo { get; init; }
 
+        /// <summary>K3.1: the run database, which no longer lives beside the events file. The
+        /// engine always passes it; the fallback keeps a hand-run <c>mcp-serve</c> (and any older
+        /// caller) working against a legacy repo-local store.</summary>
+        [CommandOption("--run-db <path>")]
+        [Description("K3.1: path to run.db. Defaults to run.db beside the events file (pre-K3.1 layout).")]
+        public string? RunDb { get; init; }
+
         [CommandOption("--session <number>")]
         [Description("SC4.1: conductor session number, stamped on every bg child this server starts.")]
         public int? Session { get; init; }
@@ -56,7 +63,9 @@ public sealed class McpServeCommand : Command<McpServeCommand.Settings>
         var journalPath = Path.GetFullPath(settings.Journal);
 
         // F1.3: wire store if run.db exists so conductor_note MCP tool works
-        var runDbPath = Path.Combine(Path.GetDirectoryName(eventsPath) ?? ".conductor", "run.db");
+        var runDbPath = string.IsNullOrWhiteSpace(settings.RunDb)
+            ? Path.Combine(Path.GetDirectoryName(eventsPath) ?? StateHome.ScratchDirName, StateHome.RunDbFileName)
+            : Path.GetFullPath(settings.RunDb);
         IRunStore? store = null;
         if (File.Exists(runDbPath))
         {

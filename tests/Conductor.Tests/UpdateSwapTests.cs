@@ -1,4 +1,4 @@
-using System.IO.Compression;
+﻿using System.IO.Compression;
 using Conductor.Core.Update;
 
 namespace Conductor.Tests;
@@ -15,7 +15,7 @@ public sealed class UpdateSwapTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_dir, recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+        try { TestTemp.DeleteTree(_dir); } catch (IOException) { } catch (UnauthorizedAccessException) { }
     }
 
     private string Write(string name, string content)

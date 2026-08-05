@@ -1,4 +1,4 @@
-using Conductor.Http;
+﻿using Conductor.Http;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -109,7 +109,7 @@ public sealed class W1OneProjectionTests
             while (DateTime.UtcNow < deadline
                    && !engineStore.ReadAllEvents(state.RunId).OfType<SessionStarted>().Any())
                 await Task.Delay(50, CancellationToken.None);
-            using (var cli = new SqliteRunStore(Path.Combine(repo, ".conductor", "run.db"),
+            using (var cli = new SqliteRunStore(TestState.RunDb(repo),
                        NullLogger<SqliteRunStore>.Instance))
                 cli.UpdateCheckpoint(state.RunId, "H0.1", "DONE", "fake1234", "claimed", source: "agent");
 
@@ -147,7 +147,7 @@ public sealed class W1OneProjectionTests
         }
         finally
         {
-            try { Directory.Delete(repo, recursive: true); } catch (IOException) { }
+            try { TestTemp.DeleteTree(repo); } catch (IOException) { }
         }
     }
 
@@ -202,7 +202,7 @@ public sealed class W1OneProjectionTests
         }
         finally
         {
-            try { Directory.Delete(repo, recursive: true); } catch (IOException) { }
+            try { TestTemp.DeleteTree(repo); } catch (IOException) { }
         }
     }
 }

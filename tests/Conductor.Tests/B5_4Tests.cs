@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Core.Events;
 using Conductor.Core.Planning;
 using Conductor.Models;
@@ -111,7 +111,7 @@ public class B5_4RepoTests
 
             Assert.NotNull(info.Error);
         }
-        finally { try { Directory.Delete(tmp, recursive: true); } catch { } }
+        finally { try { TestTemp.DeleteTree(tmp); } catch { } }
     }
 
     [Fact]

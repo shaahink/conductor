@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 
 using Conductor.Core;
 using Conductor.Hosting;
@@ -26,7 +26,7 @@ public sealed class SC24RunOutlivesEngineTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_dir, recursive: true); } catch (IOException) { }
+        try { TestTemp.DeleteTree(_dir); } catch (IOException) { }
         catch (UnauthorizedAccessException) { }
     }
 

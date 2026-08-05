@@ -1,4 +1,4 @@
-using Conductor.Http;
+﻿using Conductor.Http;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
@@ -65,7 +65,7 @@ public sealed class FuOwner13ReloadPendingTests : IDisposable
         foreach (var s in _services) { try { s.Dispose(); } catch (Exception) { /* best effort */ } }
         _http.Dispose();
         _store.Dispose();
-        try { Directory.Delete(_dir, recursive: true); } catch (IOException) { /* best effort */ }
+        try { TestTemp.DeleteTree(_dir); } catch (IOException) { /* best effort */ }
     }
 
     /// <summary>A live <see cref="TelegramService"/> over the block-less plan — the state the owner's

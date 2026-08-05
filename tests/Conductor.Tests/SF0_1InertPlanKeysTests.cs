@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 
 using Conductor.Core;
 using Conductor.Hosting;
@@ -36,7 +36,7 @@ public sealed class SF0_1InertPlanKeysTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_dir, recursive: true); } catch (IOException) { /* temp dir */ }
+        try { TestTemp.DeleteTree(_dir); } catch (IOException) { /* temp dir */ }
     }
 
     // ───────────────────────────────── bug 6: inert model keys

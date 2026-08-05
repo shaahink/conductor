@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.RegularExpressions;
 using Conductor.Core;
 using Conductor.Models;
@@ -226,7 +226,7 @@ public class SF6_2PromptBankTests
         public string Path { get; } = Directory.CreateTempSubdirectory("sf62-bank-").FullName;
         public void Dispose()
         {
-            try { Directory.Delete(Path, recursive: true); }
+            try { TestTemp.DeleteTree(Path); }
             catch (IOException) { /* a locked temp dir is not a test failure */ }
             catch (UnauthorizedAccessException) { /* ditto */ }
         }

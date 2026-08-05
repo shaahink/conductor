@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Conductor.Core;
@@ -131,7 +131,7 @@ public sealed class K1_2SoftBreakLiveTests : IDisposable
     public void Dispose()
     {
         if (Environment.GetEnvironmentVariable("CONDUCTOR_TEST_KEEP_SCRATCH") is { Length: > 0 }) return;
-        try { Directory.Delete(_repo, recursive: true); }
+        try { TestTemp.DeleteTree(_repo); }
         catch (Exception) { }
     }
 
@@ -264,7 +264,7 @@ public sealed class K1_2SoftBreakLiveTests : IDisposable
         Assert.True(sb.LastAtTokens > sb.FirstAtTokens);
 
         // …and it is in the ledger, which is where the next tuning pass will read it.
-        using var store = new SqliteRunStore(Path.Combine(plan.StateDir, "run.db"),
+        using var store = new SqliteRunStore(plan.RunDbPath,
             NullLogger<SqliteRunStore>.Instance);
         var row = store.QuerySessionByNumber(state.RunId, rec.Number);
         Assert.NotNull(row);

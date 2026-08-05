@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Core.Orchestration;
 using Conductor.Models;
 
@@ -43,7 +43,7 @@ public class SC62SquashTests
 
     private static void Clean(string repo)
     {
-        try { Directory.Delete(repo, recursive: true); }
+        try { TestTemp.DeleteTree(repo); }
         catch (IOException) { } catch (UnauthorizedAccessException) { }
     }
 

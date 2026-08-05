@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Globalization;
 
 using Conductor.Core.Store;
@@ -49,7 +49,7 @@ public sealed class BugCommand : Command<BugCommand.Settings>
     public override int Execute(CommandContext context, Settings settings)
     {
         var plan = PlanConfig.Load(settings.ResolvePlanPath());
-        var runDbPath = Path.Combine(plan.StateDir, "run.db");
+        var runDbPath = plan.RunDbPath;
         if (!File.Exists(runDbPath))
         {
             AnsiConsole.MarkupLine("[red]No run.db found.[/] Run the conductor at least once to initialize the database.");

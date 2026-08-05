@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Hosting;
 using Conductor.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,7 +32,7 @@ public sealed class HostLoggerIsolationTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_root, recursive: true); } catch (IOException) { /* sink handle may linger; temp dir */ }
+        try { TestTemp.DeleteTree(_root); } catch (IOException) { /* sink handle may linger; temp dir */ }
     }
 
     [Fact]

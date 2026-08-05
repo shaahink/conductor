@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 
 using Conductor.Commands;
 using Conductor.Core.Fleet;
@@ -228,7 +228,7 @@ public sealed class SF5_4FleetTests
         {
             Assert.Null(await FleetScan.UnattachedRunAsync(dir, "no engine here", []));
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestTemp.DeleteTree(dir); }
     }
 
     /// <summary>A headless engine (the control plane is opt-in) holds a lock and answers no port. It is a
@@ -255,7 +255,7 @@ public sealed class SF5_4FleetTests
             // The repo is inferred from where the state dir sits, so the row reads like every other one.
             Assert.Equal(Path.GetFileName(repo), orphan.RepoLabel);
         }
-        finally { Directory.Delete(repo, recursive: true); }
+        finally { TestTemp.DeleteTree(repo); }
     }
 
     // ── The verb's own small decisions ──────────────────────────────────────────────────────────

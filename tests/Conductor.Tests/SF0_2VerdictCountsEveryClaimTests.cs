@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Conductor.Core;
 using Conductor.Core.Events;
 using Conductor.Hosting;
@@ -83,7 +83,7 @@ public sealed class SF0_2VacuousHarnessGitTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_repo, recursive: true); }
+        try { TestTemp.DeleteTree(_repo); }
         catch (Exception) { }
     }
 
@@ -175,7 +175,7 @@ public sealed class SF0_2VerdictLiveTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_repo, recursive: true); }
+        try { TestTemp.DeleteTree(_repo); }
         catch (Exception) { }
     }
 
@@ -306,7 +306,7 @@ public sealed class SF0_2VerdictLiveTests : IDisposable
         Assert.DoesNotContain("H0.2", deliver.NewlyDone);
         Assert.Contains("H0.2", verify.NewlyDone);
 
-        using var store = new SqliteRunStore(Path.Combine(plan.StateDir, "run.db"),
+        using var store = new SqliteRunStore(plan.RunDbPath,
             NullLogger<SqliteRunStore>.Instance);
 
         // …and the session row agrees, which is what history, the report and the timeline read.

@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Conductor.Commands;
 using Conductor.Core;
@@ -74,7 +74,7 @@ public sealed class W2McpWiringTests
         {
             Environment.SetEnvironmentVariable("CONDUCTOR_PLAN", prior);
             Directory.SetCurrentDirectory(cwd);
-            try { Directory.Delete(dir, recursive: true); } catch (IOException) { }
+            try { TestTemp.DeleteTree(dir); } catch (IOException) { }
         }
     }
 
@@ -179,7 +179,7 @@ public sealed class W2McpWiringTests
         {
             // git marks pack files read-only, so a recursive delete can raise either flavour —
             // and a throwing finally would swallow the real assertion failure.
-            try { Directory.Delete(repo, recursive: true); }
+            try { TestTemp.DeleteTree(repo); }
             catch (IOException) { }
             catch (UnauthorizedAccessException) { }
         }

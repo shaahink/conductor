@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -43,7 +43,7 @@ public sealed class SF5_3RemoteTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_repo, recursive: true); } catch (IOException) { }
+        try { TestTemp.DeleteTree(_repo); } catch (IOException) { }
     }
 
     private PlanConfig Plan(SupervisorRemote? remote, TelegramConfig? telegram = null) => new()

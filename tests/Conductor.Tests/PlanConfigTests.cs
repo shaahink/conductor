@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Conductor.Models;
 
 namespace Conductor.Tests;
@@ -110,7 +110,7 @@ public class PlanConfigTests
             var cfg = PlanConfig.Load(Path.Combine(dir, "plan.json"));
             Assert.Equal("1.0", cfg.Version);
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestTemp.DeleteTree(dir); }
     }
 
     [Fact]

@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 using Conductor.Core;
 using Conductor.Core.Store;
@@ -21,7 +21,7 @@ internal static class BgStartHandler
         }
 
         var plan = PlanConfig.Load(settings.ResolvePlanPath());
-        var runDbPath = Path.Combine(plan.StateDir, "run.db");
+        var runDbPath = plan.RunDbPath;
         using var store = File.Exists(runDbPath)
             ? new SqliteRunStore(runDbPath, Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteRunStore>.Instance)
             : null;

@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Diagnostics;
 using Conductor.Core;
 using Conductor.Core.Face;
@@ -118,6 +118,7 @@ public sealed partial class DoctorCommand : AsyncCommand<DoctorSettings>
         checks.AddRange(preflight.Select(r => new Check(r.Name, r.Passed ? "ok" : "fail", r.Message)));
 
         checks.Add(CheckBudget(plan, currentCostUsd, hasRun));
+        checks.Add(CheckState(plan));
         checks.Add(CheckTelegram(plan));
 
         // W3.2: the one check that talks to the model backend. A dead token is invisible to every
@@ -451,22 +452,6 @@ public sealed partial class DoctorCommand : AsyncCommand<DoctorSettings>
         return missing is not null
             ? new Check("telegram", "warn", missing)
             : new Check("telegram", "ok", $"token present, {cfg!.AllowedChatIds.Count} allowed chat id(s)");
-    }
-
-    private static (decimal CostUsd, bool HasRun) TryReadCostFromRunDb(PlanConfig plan)
-    {
-        var runDbPath = Path.Combine(plan.StateDir, "run.db");
-        if (!File.Exists(runDbPath)) return (0m, false);
-        try
-        {
-            using var store = new SqliteRunStore(runDbPath, NullLogger<SqliteRunStore>.Instance);
-            var report = StatusReportBuilder.Build(plan, store);
-            return (report.TotalCostUsd, report.Kind != "norun");
-        }
-        catch (Exception ex) when (ex is IOException or InvalidOperationException)
-        {
-            return (0m, false);
-        }
     }
 
     private static string RenderCheck(Check c)

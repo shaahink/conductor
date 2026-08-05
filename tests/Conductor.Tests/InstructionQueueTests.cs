@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Models;
 
 namespace Conductor.Tests;
@@ -34,7 +34,7 @@ public class InstructionQueueTests
             Assert.Empty(InstructionQueue.List(plan));               // consumed → not active
             Assert.Equal("", InstructionQueue.PromptSection(plan));  // nothing to inject next time
         }
-        finally { Directory.Delete(repo, recursive: true); }
+        finally { TestTemp.DeleteTree(repo); }
     }
 
     [Fact]
@@ -42,6 +42,6 @@ public class InstructionQueueTests
     {
         var repo = Directory.CreateTempSubdirectory().FullName;
         try { Assert.Equal("", InstructionQueue.PromptSection(PlanIn(repo))); }
-        finally { Directory.Delete(repo, recursive: true); }
+        finally { TestTemp.DeleteTree(repo); }
     }
 }

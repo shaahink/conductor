@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Core.Events;
 using Conductor.Core.Store;
 using Conductor.Core.Watch;
@@ -39,7 +39,7 @@ public sealed class SF5_1WatchLoopTests : IDisposable
     public void Dispose()
     {
         _store.Dispose();
-        try { Directory.Delete(_root, recursive: true); } catch (IOException) { }
+        try { TestTemp.DeleteTree(_root); } catch (IOException) { }
         GC.SuppressFinalize(this);
     }
 

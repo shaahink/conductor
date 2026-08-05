@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Core.Orchestration;
 using Conductor.Core.Store;
 using Conductor.Models;
@@ -24,7 +24,7 @@ public sealed class M4GatesTests : IDisposable
     public void Dispose()
     {
         _db.Dispose();
-        try { Directory.Delete(_dir, recursive: true); } catch { }
+        try { TestTemp.DeleteTree(_dir); } catch { }
     }
 
     // ── M4.1: claims vs confirmations ──

@@ -1,4 +1,4 @@
-using Conductor.Http;
+﻿using Conductor.Http;
 using System.Text.Json;
 using Conductor.Core;
 using Conductor.Core.Events;
@@ -194,6 +194,6 @@ public sealed class SF3_3GitWireTests : IDisposable
         if (!Directory.Exists(dir)) return;
         foreach (var f in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories))
             File.SetAttributes(f, FileAttributes.Normal);
-        Directory.Delete(dir, recursive: true);
+        TestTemp.DeleteTree(dir);
     }
 }

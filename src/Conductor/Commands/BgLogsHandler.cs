@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Core.Providers;
 using Conductor.Core.Store;
 using Conductor.Models;
@@ -32,7 +32,7 @@ internal static class BgLogsHandler
 
         if (int.TryParse(target, out var pid))
         {
-            var runDb = Path.Combine(plan.StateDir, "run.db");
+            var runDb = plan.RunDbPath;
             if (File.Exists(runDb))
             {
                 try

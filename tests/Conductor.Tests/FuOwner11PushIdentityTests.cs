@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -69,7 +69,7 @@ public sealed class FuOwner11PushIdentityTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_repo, recursive: true); } catch (Exception) { }
+        try { TestTemp.DeleteTree(_repo); } catch (Exception) { }
     }
 
     private void GitRun(params string[] args)

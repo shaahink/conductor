@@ -1,4 +1,5 @@
-using Conductor.Core;
+﻿using Conductor.Core;
+
 using Conductor.Commands;
 using Conductor.Models;
 
@@ -13,7 +14,7 @@ public sealed class InitCommandTests : IDisposable
     private readonly string _dir = Path.Combine(Path.GetTempPath(), $"init-{Guid.NewGuid():N}");
 
     public InitCommandTests() => Directory.CreateDirectory(_dir);
-    public void Dispose() { try { Directory.Delete(_dir, recursive: true); } catch (IOException) { } }
+    public void Dispose() { try { TestTemp.DeleteTree(_dir); } catch (IOException) { } }
 
     private string Touch(string name)
     {

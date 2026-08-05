@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
@@ -85,7 +85,7 @@ public sealed class SF0_3PidsAndBackgroundWorkTests : IDisposable
     public void Dispose()
     {
         _store.Dispose();
-        try { Directory.Delete(_repo, recursive: true); } catch (IOException) { }
+        try { TestTemp.DeleteTree(_repo); } catch (IOException) { }
     }
 
     /// <summary>True only for a token with no UAC filtering — an interactive admin session's own
@@ -403,7 +403,7 @@ public sealed class SF0_3PidsAndBackgroundWorkTests : IDisposable
         }
         finally
         {
-            try { Directory.Delete(repo, recursive: true); }
+            try { TestTemp.DeleteTree(repo); }
             catch (IOException) { }
             catch (UnauthorizedAccessException) { }
         }

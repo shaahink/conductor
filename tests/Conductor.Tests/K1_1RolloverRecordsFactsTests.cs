@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Conductor.Core;
 using Conductor.Hosting;
@@ -37,7 +37,7 @@ public sealed class K1_1RolloverRecordsFactsTests : IDisposable
     public void Dispose()
     {
         if (Environment.GetEnvironmentVariable("CONDUCTOR_TEST_KEEP_SCRATCH") is { Length: > 0 }) return;
-        try { Directory.Delete(_repo, recursive: true); }
+        try { TestTemp.DeleteTree(_repo); }
         catch (Exception) { }
     }
 
@@ -151,7 +151,7 @@ public sealed class K1_1RolloverRecordsFactsTests : IDisposable
         Assert.Contains(rolled.NewCommits, c => c.Contains("work done before the ceiling", StringComparison.Ordinal));
         Assert.Contains("H0.1", rolled.NewlyDone);
 
-        using var store = new SqliteRunStore(Path.Combine(plan.StateDir, "run.db"),
+        using var store = new SqliteRunStore(plan.RunDbPath,
             NullLogger<SqliteRunStore>.Instance);
 
         // …and the LEDGER agrees, which is the column every board, report and push reads. This is

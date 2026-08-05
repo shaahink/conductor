@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -62,7 +62,7 @@ public sealed class SC1TelegramStartsOnRunPathTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_repo, recursive: true); } catch (Exception) { }
+        try { TestTemp.DeleteTree(_repo); } catch (Exception) { }
     }
 
     /// <summary>SF0.2 (bug #8): one argument per parameter, exit code asserted — see

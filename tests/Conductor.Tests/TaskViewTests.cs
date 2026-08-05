@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Conductor.Core.Events;
 using Conductor.Models;
 
@@ -49,7 +49,7 @@ public class TaskViewTests
         }
         finally
         {
-            try { Directory.Delete(dir, recursive: true); } catch { /* best-effort cleanup */ }
+            try { TestTemp.DeleteTree(dir); } catch { /* best-effort cleanup */ }
         }
     }
 
@@ -72,7 +72,7 @@ public class TaskViewTests
         }
         finally
         {
-            try { Directory.Delete(dir, recursive: true); } catch { }
+            try { TestTemp.DeleteTree(dir); } catch { }
         }
     }
 

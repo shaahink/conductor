@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 
 using Conductor.Commands;
@@ -31,7 +31,7 @@ public sealed class PlanSetCommandTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_dir, recursive: true); } catch (Exception) { /* best effort */ }
+        try { TestTemp.DeleteTree(_dir); } catch (Exception) { /* best effort */ }
     }
 
     /// <summary>An annotated plan, the shape `conductor init` invites: comments, and a `limits` block

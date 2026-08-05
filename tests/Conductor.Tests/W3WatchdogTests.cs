@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using Conductor.Core;
@@ -211,7 +211,7 @@ public sealed class W3WatchdogTests
             db.TrackPid(self, runId, "bg:backtest", "H0", 1, DateTime.UtcNow);
             Assert.True(StallDetector.AnyBgProcessAlive(db, runId));
         }
-        finally { try { Directory.Delete(dir, recursive: true); } catch (IOException) { } }
+        finally { try { TestTemp.DeleteTree(dir); } catch (IOException) { } }
     }
 
     [Fact]
@@ -232,7 +232,7 @@ public sealed class W3WatchdogTests
             // The purpose filter changed what counts as liveness, not what gets cleaned up.
             Assert.Empty(db.GetOrphanPids(runId));
         }
-        finally { try { Directory.Delete(dir, recursive: true); } catch (IOException) { } }
+        finally { try { TestTemp.DeleteTree(dir); } catch (IOException) { } }
     }
 
     // ---------------------------------------------------------------- live gates (real engine)
@@ -326,7 +326,7 @@ public sealed class W3WatchdogTests
             var notified = await File.ReadAllTextAsync(notifyPath);
             Assert.Contains("stalled", notified, StringComparison.OrdinalIgnoreCase);
         }
-        finally { try { Directory.Delete(repo, recursive: true); } catch (IOException) { } }
+        finally { try { TestTemp.DeleteTree(repo); } catch (IOException) { } }
     }
 
     [Fact]
@@ -372,6 +372,6 @@ public sealed class W3WatchdogTests
             var notified = await File.ReadAllTextAsync(Path.Combine(repo, "notify.txt"));
             Assert.Contains("hard timeout", notified, StringComparison.OrdinalIgnoreCase);
         }
-        finally { try { Directory.Delete(repo, recursive: true); } catch (IOException) { } }
+        finally { try { TestTemp.DeleteTree(repo); } catch (IOException) { } }
     }
 }

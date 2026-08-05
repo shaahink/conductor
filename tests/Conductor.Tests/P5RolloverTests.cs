@@ -1,4 +1,4 @@
-using Conductor.Http;
+﻿using Conductor.Http;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
@@ -27,7 +27,7 @@ public sealed class P5RolloverTests : IDisposable
     {
         _http.Dispose();
         _store?.Dispose();
-        try { Directory.Delete(_dir, recursive: true); } catch (IOException) { /* best effort */ }
+        try { TestTemp.DeleteTree(_dir); } catch (IOException) { /* best effort */ }
     }
 
     // ── the verb, on the wire shape every ingress shares ──

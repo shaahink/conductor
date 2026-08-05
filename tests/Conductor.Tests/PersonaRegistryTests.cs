@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Models;
 
 namespace Conductor.Tests;
@@ -46,7 +46,7 @@ public class PersonaRegistryTests
             var prompt = reg.ResolveSystemPrompt("deliver");
             Assert.Equal("DISK DELIVER PROMPT", prompt);
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestTemp.DeleteTree(dir); }
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public class PersonaRegistryTests
             Assert.NotNull(prompt);
             Assert.True(prompt!.Length > 20);
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestTemp.DeleteTree(dir); }
     }
 
     [Fact]
@@ -80,6 +80,6 @@ public class PersonaRegistryTests
             var prompt = reg.ResolveSystemPrompt("deliver");
             Assert.Equal("FROM DISK VIA PLAN", prompt);
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestTemp.DeleteTree(dir); }
     }
 }

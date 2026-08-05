@@ -1,4 +1,4 @@
-using Conductor.Commands;
+﻿using Conductor.Commands;
 using Conductor.Models;
 
 namespace Conductor.Tests;
@@ -18,7 +18,7 @@ public sealed class DemoCommandTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_dir, recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+        try { TestTemp.DeleteTree(_dir); } catch (IOException) { } catch (UnauthorizedAccessException) { }
     }
 
     /// <summary>Write exactly what ScaffoldAsync writes, and return the plan path. The plan is only

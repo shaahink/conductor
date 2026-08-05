@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 
 using Conductor.Commands;
 using Conductor.Core;
@@ -53,7 +53,7 @@ public class BudgetRailTests
             Assert.Equal(0, exit);
             Assert.Empty(output);
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestTemp.DeleteTree(dir); }
     }
 
     [Fact]
@@ -73,7 +73,7 @@ public class BudgetRailTests
             Assert.Contains("SESSION TOKEN BUDGET", ctx, StringComparison.Ordinal);
             Assert.Contains("COMMIT", ctx, StringComparison.Ordinal);
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestTemp.DeleteTree(dir); }
     }
 
     /// <summary>Not once per tool call — but not once per SESSION either, which is what this test
@@ -104,7 +104,7 @@ public class BudgetRailTests
             Assert.Contains("notice 2", restated, StringComparison.Ordinal);
             Assert.Contains("400 tokens", restated, StringComparison.Ordinal); // the budget that is left NOW
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestTemp.DeleteTree(dir); }
     }
 
     /// <summary>The delivered-marker has to go when the signal goes, or the NEXT session's nudge is a
@@ -125,7 +125,7 @@ public class BudgetRailTests
 
             Assert.NotEmpty(again);
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestTemp.DeleteTree(dir); }
     }
 
     // --------------- the live counters the rails actually read

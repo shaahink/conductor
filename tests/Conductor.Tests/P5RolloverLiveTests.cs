@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Conductor.Core;
 using Conductor.Hosting;
@@ -118,7 +118,7 @@ public sealed class P5RolloverLiveTests
         finally
         {
             await cts.CancelAsync();
-            try { Directory.Delete(repo, recursive: true); } catch (IOException) { }
+            try { TestTemp.DeleteTree(repo); } catch (IOException) { }
         }
     }
 }

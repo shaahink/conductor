@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Core.Planning;
 using Conductor.Models;
 
@@ -115,7 +115,7 @@ public class TrackerParserTests
         var repo = Path.Combine(Path.GetTempPath(), "cbaton-b12-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(repo);
         File.WriteAllText(Path.Combine(repo, "TRACKER.md"), trackerText);
-        cleanup = () => { try { Directory.Delete(repo, recursive: true); } catch (IOException) { } };
+        cleanup = () => { try { TestTemp.DeleteTree(repo); } catch (IOException) { } };
         return new PlanConfig { Repo = repo, Tracker = "TRACKER.md" };
     }
 }

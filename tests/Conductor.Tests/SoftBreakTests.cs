@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Conductor.Core.Events;
 using Conductor.Models;
 
@@ -109,7 +109,7 @@ public class SoftBreakTests
         }
         finally
         {
-            try { Directory.Delete(signalDir, recursive: true); } catch { }
+            try { TestTemp.DeleteTree(signalDir); } catch { }
         }
     }
 
@@ -130,7 +130,7 @@ public class SoftBreakTests
         }
         finally
         {
-            try { Directory.Delete(signalDir, recursive: true); } catch { }
+            try { TestTemp.DeleteTree(signalDir); } catch { }
         }
     }
 

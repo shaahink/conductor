@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 
 using Conductor.Core;
 using Conductor.Core.Store;
@@ -81,7 +81,7 @@ public sealed class WatchCommand : AsyncCommand<WatchCommand.Settings>
         }
 
         var poll = TimeSpan.FromSeconds(Math.Clamp(settings.PollSeconds, 0.1, 3600));
-        using var loop = new WatchLoop(plan.StateDir, plan.Name, poll);
+        using var loop = new WatchLoop(plan.StateDir, plan.Name, poll, plan.RunDbPath);
         var folded = loop.Arm();
 
         // The armed line goes to stderr so `conductor watch --json > brief.json` yields a file that is
@@ -164,7 +164,7 @@ public sealed class WatchCommand : AsyncCommand<WatchCommand.Settings>
     {
         try
         {
-            var dbPath = Path.Combine(plan.StateDir, "run.db");
+            var dbPath = plan.RunDbPath;
             if (!File.Exists(dbPath)) return null;
             using var store = new SqliteRunStore(dbPath, NullLogger<SqliteRunStore>.Instance);
             return StatusReportBuilder.Build(plan, store);

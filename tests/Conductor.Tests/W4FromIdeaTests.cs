@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Conductor.Commands;
 using Conductor.Core;
@@ -257,7 +257,7 @@ public sealed class W4FromIdeaTests
         {
             foreach (var f in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories))
                 try { File.SetAttributes(f, FileAttributes.Normal); } catch (IOException) { }
-            Directory.Delete(dir, recursive: true);
+            TestTemp.DeleteTree(dir);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
     }

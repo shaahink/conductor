@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Conductor.Core;
 using Conductor.Core.Commands;
@@ -133,7 +133,7 @@ public sealed class G3LiveReloadTests
         }
         finally
         {
-            try { Directory.Delete(repo, recursive: true); } catch (IOException) { }
+            try { TestTemp.DeleteTree(repo); } catch (IOException) { }
         }
     }
 
@@ -220,7 +220,7 @@ public sealed class G3LiveReloadTests
         finally
         {
             await cts.CancelAsync();
-            try { Directory.Delete(repo, recursive: true); } catch (IOException) { }
+            try { TestTemp.DeleteTree(repo); } catch (IOException) { }
         }
     }
 }

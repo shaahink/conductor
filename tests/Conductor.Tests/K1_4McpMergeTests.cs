@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Conductor.Core;
 using Conductor.Hosting;
@@ -34,7 +34,7 @@ public sealed class K1_4McpMergeTests
 
     private static void Nuke(string dir)
     {
-        try { Directory.Delete(dir, recursive: true); }
+        try { TestTemp.DeleteTree(dir); }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
     }
@@ -354,7 +354,7 @@ public sealed class K1_4McpMergeTests
         }
         finally
         {
-            try { Directory.Delete(repo, recursive: true); }
+            try { TestTemp.DeleteTree(repo); }
             catch (IOException) { }
             catch (UnauthorizedAccessException) { }
         }

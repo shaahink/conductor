@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Conductor.Core;
 using Conductor.Hosting;
@@ -124,7 +124,7 @@ public sealed class P2QaDialLiveTests
         {
             await cts.CancelAsync();
             if (Environment.GetEnvironmentVariable("P2_QA_DEBUG_REPO") is null)
-                try { Directory.Delete(repo, recursive: true); } catch (IOException) { }
+                try { TestTemp.DeleteTree(repo); } catch (IOException) { }
         }
     }
 }

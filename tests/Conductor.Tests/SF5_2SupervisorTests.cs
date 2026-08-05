@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 
 using Conductor.Core.Watch;
 using Conductor.Models;
@@ -28,7 +28,7 @@ public sealed class SF5_2SupervisorTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_repo, recursive: true); } catch (IOException) { }
+        try { TestTemp.DeleteTree(_repo); } catch (IOException) { }
     }
 
     private PlanConfig Plan(SupervisorConfig? sup) => new()

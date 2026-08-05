@@ -1,4 +1,4 @@
-using Conductor.Http;
+﻿using Conductor.Http;
 using System.Text.Json;
 using Conductor.Core;
 using Conductor.Core.Http;
@@ -45,7 +45,7 @@ public sealed class K1_3ThinkingTokensTests : IDisposable
     {
         _http.Dispose();
         _store.Dispose();
-        try { Directory.Delete(_dir, recursive: true); } catch (IOException) { /* temp dir */ }
+        try { TestTemp.DeleteTree(_dir); } catch (IOException) { /* temp dir */ }
         GC.SuppressFinalize(this);
     }
 

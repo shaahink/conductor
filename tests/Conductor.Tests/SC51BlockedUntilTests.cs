@@ -1,4 +1,4 @@
-using Conductor.Http;
+﻿using Conductor.Http;
 using System.Text.Json;
 using Conductor.Core;
 using Conductor.Core.Events;
@@ -118,7 +118,7 @@ public sealed class SC51WaitingSurfacesTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_dir, recursive: true); }
+        try { TestTemp.DeleteTree(_dir); }
         catch (Exception) { }
     }
 
@@ -300,7 +300,7 @@ public sealed class SC51StateEndpointTests : IDisposable
     {
         _http.Dispose();
         _store.Dispose();
-        try { Directory.Delete(_dir, recursive: true); } catch (IOException) { }
+        try { TestTemp.DeleteTree(_dir); } catch (IOException) { }
     }
 
     private static int FreeLoopbackPort()
@@ -406,7 +406,7 @@ public sealed class SC51BlockedUntilLiveTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_repo, recursive: true); }
+        try { TestTemp.DeleteTree(_repo); }
         catch (Exception) { }
     }
 
@@ -539,7 +539,7 @@ public sealed class SC51BlockedUntilLiveTests : IDisposable
 
         // The park is on the event spine, after the blocking session's finish event — which is what
         // makes `conductor status` answer "waiting until T" instead of "idle".
-        using var store = new SqliteRunStore(Path.Combine(plan.StateDir, "run.db"),
+        using var store = new SqliteRunStore(plan.RunDbPath,
             NullLogger<SqliteRunStore>.Instance);
         var events = store.ReadAllEvents(state.RunId);
         var request = Assert.Single(events.OfType<BlockedUntilRequested>());

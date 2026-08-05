@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Core.Store;
 using Conductor.Models;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -41,7 +41,7 @@ public sealed class SF04BugsOutliveTheirRunTests : IDisposable
     public void Dispose()
     {
         _db.Dispose();
-        try { Directory.Delete(_dir, recursive: true); } catch { }
+        try { TestTemp.DeleteTree(_dir); } catch { }
     }
 
     // ---------------------------------------------------------------- the store

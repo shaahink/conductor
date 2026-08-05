@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Models;
 
 namespace Conductor.Tests;
@@ -93,7 +93,7 @@ public class PromptBuilderTests
             var p = new PromptBuilder(plan).Deliver(Stage, 1, 1, 6);
             Assert.Equal("CUSTOM L2 TEMPLATE", p);
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestTemp.DeleteTree(dir); }
     }
 
     [Fact]
@@ -207,7 +207,7 @@ public class PromptBuilderTests
         }
         finally
         {
-            try { if (Directory.Exists(tmpDir)) Directory.Delete(tmpDir, recursive: true); }
+            try { if (Directory.Exists(tmpDir)) TestTemp.DeleteTree(tmpDir); }
             catch (IOException) { /* best-effort */ }
         }
     }
@@ -237,7 +237,7 @@ public class PromptBuilderTests
         }
         finally
         {
-            try { if (Directory.Exists(tmpDir)) Directory.Delete(tmpDir, recursive: true); }
+            try { if (Directory.Exists(tmpDir)) TestTemp.DeleteTree(tmpDir); }
             catch (IOException) { /* best-effort */ }
         }
     }
@@ -338,6 +338,6 @@ public class PromptBuilderTests
 
             Assert.StartsWith("CUSTOM TEMPLATE for L2 in Loom.", prompt, StringComparison.Ordinal);
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestTemp.DeleteTree(dir); }
     }
 }

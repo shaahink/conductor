@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Core.Orchestration;
 using Conductor.Core.Planning;
 using Conductor.Core.Store;
@@ -62,7 +62,7 @@ public sealed class JourneyCommand : AsyncCommand<PlanSettings>
         if (string.IsNullOrEmpty(state.RunId) && state.SessionCounter == 0)
         {
             var resumed = await RunStateResume.TryLoadLatestAsync(
-                Path.Combine(plan.StateDir, "run.db"), plan.Name, CancellationToken.None).ConfigureAwait(false);
+                plan.RunDbPath, plan.Name, CancellationToken.None).ConfigureAwait(false);
             if (resumed != null) state = resumed;
         }
         return string.IsNullOrEmpty(state.RunId)

@@ -1,4 +1,4 @@
-using Conductor.Commands;
+﻿using Conductor.Commands;
 using Conductor.Core;
 using Conductor.Core.Orchestration;
 using Conductor.Models;
@@ -20,7 +20,7 @@ public sealed class SC4_3Tests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_root, recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+        try { TestTemp.DeleteTree(_root); } catch (IOException) { } catch (UnauthorizedAccessException) { }
     }
 
     // ---------------------------------------------------------------- helpers

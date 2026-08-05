@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Conductor.Commands;
 using Conductor.Core;
@@ -625,7 +625,7 @@ public class StatusCommandTests
 
         public void Dispose()
         {
-            try { Directory.Delete(_dir, recursive: true); } catch (IOException) { /* best effort */ }
+            try { TestTemp.DeleteTree(_dir); } catch (IOException) { /* best effort */ }
         }
     }
 }

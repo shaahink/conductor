@@ -1,4 +1,4 @@
-using Conductor.Models;
+﻿using Conductor.Models;
 
 namespace Conductor.Tests;
 
@@ -80,7 +80,7 @@ public class B10_1DependsOnTests
             Assert.Equal(new[] { "A" }, cfg.Stages[1].DependsOn);
             Assert.Equal(new[] { "B" }, cfg.Stages[2].DependsOn);
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestTemp.DeleteTree(dir); }
     }
 
     [Fact]
@@ -110,7 +110,7 @@ public class B10_1DependsOnTests
             Assert.Equal(4, cfg.Stages.Count);
             Assert.Equal(new[] { "B", "C" }, cfg.Stages[3].DependsOn);
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestTemp.DeleteTree(dir); }
     }
 
     [Fact]

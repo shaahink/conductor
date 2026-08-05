@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 
 using Conductor.Core.Events;
 using Conductor.Core.Store;
@@ -37,6 +37,7 @@ public sealed class WatchLoop : IDisposable
     private readonly string _planName;
     private readonly TimeSpan _poll;
     private readonly WatchWakeSet _wakeSet = new();
+    private readonly string? _dbPath;
     private IRunStore? _store;
     private string? _runId;
     private long _lastSeq;
@@ -47,14 +48,19 @@ public sealed class WatchLoop : IDisposable
     /// fires. The lock file is rewritten, not held open, so a single missed read is not a death.</summary>
     public const int EngineGracePolls = 2;
 
-    public WatchLoop(string stateDir, string planName, TimeSpan poll)
+    /// <param name="stateDir">The repo-local scratch dir — where the engine lock and the
+    /// control-plane discovery file are published. Still in the working tree after K3.1.</param>
+    /// <param name="runDbPath">K3.1: the run database, which is NOT under <paramref name="stateDir"/>
+    /// any more. Null keeps the pre-K3.1 derivation for callers that have not been told otherwise.</param>
+    public WatchLoop(string stateDir, string planName, TimeSpan poll, string? runDbPath = null)
     {
         _stateDir = stateDir;
         _planName = planName;
         _poll = poll;
+        _dbPath = runDbPath;
     }
 
-    public string DbPath => Path.Combine(_stateDir, "run.db");
+    public string DbPath => _dbPath ?? Path.Combine(_stateDir, StateHome.RunDbFileName);
 
     /// <summary>The run this watch attached to, or null before <see cref="Arm"/> (or if the state dir
     /// holds no run for this plan). Surfaced so the brief can name what it is watching.</summary>

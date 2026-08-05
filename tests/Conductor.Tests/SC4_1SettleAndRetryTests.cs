@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Conductor.Core;
 using Conductor.Hosting;
 using Conductor.Core.Orchestration;
@@ -32,7 +32,7 @@ public sealed class SC4_1SettleAndRetryTests : IDisposable
             try { if (!p.HasExited) p.Kill(entireProcessTree: true); } catch (Exception) { }
             p.Dispose();
         }
-        try { Directory.Delete(_dir, recursive: true); } catch (IOException) { }
+        try { TestTemp.DeleteTree(_dir); } catch (IOException) { }
     }
 
     // ────────────────────────────────────────────────────────── settle: real processes, real run.db

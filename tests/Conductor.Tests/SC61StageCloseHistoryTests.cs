@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Hosting;
 using Conductor.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -36,7 +36,7 @@ public sealed class SC61StageCloseHistoryTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_repo, recursive: true); }
+        try { TestTemp.DeleteTree(_repo); }
         catch (IOException) { } catch (UnauthorizedAccessException) { }
     }
 

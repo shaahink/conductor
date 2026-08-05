@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Conductor.Core;
 using Conductor.Core.Planning;
 using Conductor.Models;
@@ -79,7 +79,7 @@ public sealed class ProgressConventionsTests
             Assert.Equal(5, snap.Checkpoints.Count);
             Assert.Equal("P3", snap.ById("P3.4b")!.StageId);
         }
-        finally { try { Directory.Delete(repo, recursive: true); } catch (IOException) { } }
+        finally { try { TestTemp.DeleteTree(repo); } catch (IOException) { } }
     }
 
     [Fact]

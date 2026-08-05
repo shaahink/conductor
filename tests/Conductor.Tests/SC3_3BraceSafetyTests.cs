@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using Conductor.Commands;
 using Conductor.Core;
@@ -59,7 +59,7 @@ public sealed class SC3_3BraceSafetyTests
 
             Assert.Equal("Stage L2. The variable is spelled {extra} and its value is EXTRA-MARKER.", prompt);
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestTemp.DeleteTree(dir); }
     }
 
     // ------------------------------------------------------------------ values are data
@@ -215,7 +215,7 @@ public sealed class SC3_3BraceSafetyTests
             File.WriteAllText(Path.Combine(dir, "tpl", "session.md"), "Stage {stage} of {planName}. Budget: {{stageBudget}}\n");
             Assert.Equal("ok", DoctorCommand.CheckPrompt(plan).State);
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestTemp.DeleteTree(dir); }
     }
 
     private static string NewDir()

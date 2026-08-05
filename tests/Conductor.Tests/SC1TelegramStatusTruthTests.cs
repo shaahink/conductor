@@ -1,4 +1,4 @@
-using Conductor.Http;
+﻿using Conductor.Http;
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.Net;
@@ -60,7 +60,7 @@ public sealed class SC1TelegramStatusTruthTests : IDisposable
         foreach (var d in _disposables) { try { d.Dispose(); } catch (Exception) { } }
         _http.Dispose();
         _store.Dispose();
-        try { Directory.Delete(_dir, recursive: true); } catch (IOException) { }
+        try { TestTemp.DeleteTree(_dir); } catch (IOException) { }
     }
 
     // ── fixtures ────────────────────────────────────────────────────────────────────────────────

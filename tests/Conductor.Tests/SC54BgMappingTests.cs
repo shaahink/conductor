@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Core.Providers;
 using Conductor.Core.Store;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -39,7 +39,7 @@ public sealed class SC54BgMappingTests : IDisposable
     public void Dispose()
     {
         _store.Dispose();
-        try { Directory.Delete(_dir, recursive: true); } catch (IOException) { }
+        try { TestTemp.DeleteTree(_dir); } catch (IOException) { }
     }
 
     // ---------------------------------------------------------------- one timezone

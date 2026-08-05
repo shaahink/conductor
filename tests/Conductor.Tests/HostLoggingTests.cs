@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Hosting;
 using Conductor.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,7 +17,7 @@ public sealed class HostLoggingTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_dir, recursive: true); } catch (IOException) { /* Serilog may still hold a handle briefly; temp dir is disposable */ }
+        try { TestTemp.DeleteTree(_dir); } catch (IOException) { /* Serilog may still hold a handle briefly; temp dir is disposable */ }
     }
 
     [Fact]

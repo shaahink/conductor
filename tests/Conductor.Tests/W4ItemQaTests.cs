@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Conductor.Core;
 using Conductor.Core.Events;
@@ -270,7 +270,7 @@ public sealed class W4ItemQaTests
             if (engineStore.ReadAllEvents(runId).OfType<SessionStarted>().Any(s => s.Number == sessionNumber)) break;
             await Task.Delay(100, CancellationToken.None);
         }
-        using var cli = new SqliteRunStore(Path.Combine(repo, ".conductor", "run.db"),
+        using var cli = new SqliteRunStore(TestState.RunDb(repo),
             NullLogger<SqliteRunStore>.Instance);
         cli.UpdateCheckpoint(runId, checkpointId, "DONE", "fake1234", "claimed via task --done", source: "agent");
     }
@@ -288,7 +288,7 @@ public sealed class W4ItemQaTests
         {
             foreach (var f in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories))
                 try { File.SetAttributes(f, FileAttributes.Normal); } catch (IOException) { }
-            Directory.Delete(dir, recursive: true);
+            TestTemp.DeleteTree(dir);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
     }

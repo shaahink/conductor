@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Models;
 
 namespace Conductor.Tests;
@@ -293,7 +293,7 @@ public class RunStateTests
             Assert.Null(loaded.PendingResume);           // and inherits no pending work
             Assert.Single(Directory.GetFiles(dir, "state.Foreman.*.json"));  // the old run is kept
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestTemp.DeleteTree(dir); }
     }
 
     /// <summary>The same plan resumes exactly as before — this must not become a "start over" button.</summary>
@@ -313,6 +313,6 @@ public class RunStateTests
             Assert.Equal("M2", loaded.CurrentStage);
             Assert.Equal(7, loaded.SessionCounter);
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestTemp.DeleteTree(dir); }
     }
 }

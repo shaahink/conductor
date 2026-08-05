@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Models;
 
 namespace Conductor.Tests;
@@ -316,6 +316,6 @@ public class SC61ReportCommitsTests
 
     private static void TryDelete(string dir)
     {
-        try { Directory.Delete(dir, recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+        try { TestTemp.DeleteTree(dir); } catch (IOException) { } catch (UnauthorizedAccessException) { }
     }
 }

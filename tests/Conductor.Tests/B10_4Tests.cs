@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Conductor.Core;
 using Conductor.Models;
@@ -66,7 +66,7 @@ public class B10_4BatteryCollapseTests
             Assert.Contains("battery collapse", prompt, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("Do NOT run build or test", prompt, StringComparison.OrdinalIgnoreCase);
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestTemp.DeleteTree(dir); }
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public class B10_4BatteryCollapseTests
             Assert.DoesNotContain("battery collapse", prompt, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("Run the gate battery", prompt, StringComparison.OrdinalIgnoreCase);
         }
-        finally { Directory.Delete(dir, recursive: true); }
+        finally { TestTemp.DeleteTree(dir); }
     }
 
     [Fact]

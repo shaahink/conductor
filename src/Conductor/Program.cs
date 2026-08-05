@@ -18,6 +18,11 @@ TaskScheduler.UnobservedTaskException += (_, e) =>
     e.SetObserved();
 };
 
+// K3.1: the store resolves and, on first sight of a pre-K3.1 database, imports it. The store must
+// not print (K2.2), so the shell says the sentence — on stderr, so a piped verb's stdout is clean.
+Conductor.Core.Store.StateMigration.Announce = import =>
+    Console.Error.WriteLine(Conductor.Core.Store.StateMigration.Describe(import));
+
 var app = new CommandApp();
 app.Configure(c =>
 {

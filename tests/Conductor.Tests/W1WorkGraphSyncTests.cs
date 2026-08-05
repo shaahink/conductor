@@ -1,4 +1,4 @@
-using Conductor.Http;
+﻿using Conductor.Http;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
@@ -40,7 +40,7 @@ public sealed class W1WorkGraphSyncTests : IDisposable
     public void Dispose()
     {
         _db.Dispose();
-        try { Directory.Delete(_dir, recursive: true); } catch (IOException) { }
+        try { TestTemp.DeleteTree(_dir); } catch (IOException) { }
     }
 
     private PlanConfig PlanWithTracker(string trackerBody, params StageConfig[] stages)
@@ -276,7 +276,7 @@ public sealed class W1WorkGraphSyncTests : IDisposable
         }
         finally
         {
-            try { Directory.Delete(repo, recursive: true); } catch (IOException) { }
+            try { TestTemp.DeleteTree(repo); } catch (IOException) { }
         }
     }
 }

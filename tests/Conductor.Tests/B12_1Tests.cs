@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Models;
 using Xunit;
 
@@ -72,7 +72,7 @@ public sealed class B12_1Tests
         }
         finally
         {
-            try { Directory.Delete(tmpRepo, recursive: true); } catch { }
+            try { TestTemp.DeleteTree(tmpRepo); } catch { }
         }
     }
 
@@ -101,7 +101,7 @@ public sealed class B12_1Tests
         }
         finally
         {
-            try { Directory.Delete(tmpRepo, recursive: true); } catch { }
+            try { TestTemp.DeleteTree(tmpRepo); } catch { }
         }
     }
 
@@ -118,7 +118,7 @@ public sealed class B12_1Tests
         }
         finally
         {
-            try { Directory.Delete(tmpDir, recursive: true); } catch { }
+            try { TestTemp.DeleteTree(tmpDir); } catch { }
         }
     }
 
@@ -140,7 +140,7 @@ public sealed class B12_1Tests
         }
         finally
         {
-            try { Directory.Delete(tmpRepo, recursive: true); } catch { }
+            try { TestTemp.DeleteTree(tmpRepo); } catch { }
         }
     }
 
@@ -195,7 +195,7 @@ public sealed class B12_1Tests
         }
         finally
         {
-            try { Directory.Delete(tmpRepo, recursive: true); } catch { }
+            try { TestTemp.DeleteTree(tmpRepo); } catch { }
         }
     }
 }

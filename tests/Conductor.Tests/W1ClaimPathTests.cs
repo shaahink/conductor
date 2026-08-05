@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Conductor.Core;
 using Conductor.Core.Events;
@@ -80,7 +80,7 @@ public sealed class W1ClaimPathTests
                 break;
             await Task.Delay(50, CancellationToken.None);
         }
-        using var cli = new SqliteRunStore(Path.Combine(repo, ".conductor", "run.db"),
+        using var cli = new SqliteRunStore(TestState.RunDb(repo),
             NullLogger<SqliteRunStore>.Instance);
         cli.UpdateCheckpoint(state.RunId, checkpointId, "DONE", "fake1234", "claimed via task --done", source: "agent");
     }
@@ -118,7 +118,7 @@ public sealed class W1ClaimPathTests
         }
         finally
         {
-            try { Directory.Delete(repo, recursive: true); } catch (IOException) { }
+            try { TestTemp.DeleteTree(repo); } catch (IOException) { }
         }
     }
 
@@ -162,7 +162,7 @@ public sealed class W1ClaimPathTests
         }
         finally
         {
-            try { Directory.Delete(repo, recursive: true); } catch (IOException) { }
+            try { TestTemp.DeleteTree(repo); } catch (IOException) { }
         }
     }
 
@@ -207,7 +207,7 @@ public sealed class W1ClaimPathTests
         }
         finally
         {
-            try { Directory.Delete(repo, recursive: true); } catch (IOException) { }
+            try { TestTemp.DeleteTree(repo); } catch (IOException) { }
         }
     }
 }

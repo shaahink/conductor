@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Core.Store;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -130,7 +130,7 @@ public sealed class StallDetectorTests
         Assert.False(alive);
 
         db.Dispose();
-        try { Directory.Delete(dir, recursive: true); } catch { }
+        try { TestTemp.DeleteTree(dir); } catch { }
     }
 
     [Fact]
@@ -148,6 +148,6 @@ public sealed class StallDetectorTests
         Assert.False(alive);
 
         db.Dispose();
-        try { Directory.Delete(dir, recursive: true); } catch { }
+        try { TestTemp.DeleteTree(dir); } catch { }
     }
 }

@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Models;
 
 namespace Conductor.Tests;
@@ -38,7 +38,7 @@ public sealed class SC4_4Tests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_repo, recursive: true); } catch (IOException) { /* temp dir */ }
+        try { TestTemp.DeleteTree(_repo); } catch (IOException) { /* temp dir */ }
     }
 
     // ------------------------------------------------------------------ position

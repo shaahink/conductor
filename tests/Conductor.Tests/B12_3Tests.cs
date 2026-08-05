@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Core.Events;
 using Conductor.Models;
 using Xunit;
@@ -414,7 +414,7 @@ public sealed class B12_3Tests
                         try { File.SetAttributes(f, FileAttributes.Normal); } catch { }
                     }
                 }
-                Directory.Delete(repo, recursive: true);
+                TestTemp.DeleteTree(repo);
             }
             catch { /* best effort */ }
         }

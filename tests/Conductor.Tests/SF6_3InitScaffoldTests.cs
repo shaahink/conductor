@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using Conductor.Commands;
 using Conductor.Core;
 using Conductor.Models;
@@ -26,7 +26,7 @@ public sealed class SF6_3InitScaffoldTests : IDisposable
     private readonly string _dir = Path.Combine(Path.GetTempPath(), $"sf63-{Guid.NewGuid():N}");
 
     public SF6_3InitScaffoldTests() => Directory.CreateDirectory(_dir);
-    public void Dispose() { try { Directory.Delete(_dir, recursive: true); } catch (IOException) { } }
+    public void Dispose() { try { TestTemp.DeleteTree(_dir); } catch (IOException) { } }
 
     // ---- (1) the whole bank is on disk, and it is the bank the renderer reads -------------------
 

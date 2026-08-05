@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Conductor.Core;
 using Conductor.Hosting;
@@ -102,7 +102,7 @@ public sealed class U03GatelessLiveTests
         {
             await cts.CancelAsync();
             if (Environment.GetEnvironmentVariable("U03_GATELESS_DEBUG_REPO") is null)
-                try { Directory.Delete(repo, recursive: true); } catch (IOException) { }
+                try { TestTemp.DeleteTree(repo); } catch (IOException) { }
         }
     }
 }

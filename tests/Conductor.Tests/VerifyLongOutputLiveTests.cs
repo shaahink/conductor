@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
 using Conductor.Core;
 using Conductor.Hosting;
@@ -120,7 +120,7 @@ public sealed class VerifyLongOutputLiveTests
         {
             await cts.CancelAsync();
             if (Environment.GetEnvironmentVariable("VERIFY_LONG_DEBUG_REPO") is null)
-                try { Directory.Delete(repo, recursive: true); } catch (IOException) { }
+                try { TestTemp.DeleteTree(repo); } catch (IOException) { }
         }
     }
 }

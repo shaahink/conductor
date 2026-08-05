@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using Conductor.Core;
 
 namespace Conductor.Tests;
@@ -17,7 +17,7 @@ public sealed class EngineLockTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_dir, recursive: true); } catch (IOException) { /* best effort */ }
+        try { TestTemp.DeleteTree(_dir); } catch (IOException) { /* best effort */ }
     }
 
     [Fact]

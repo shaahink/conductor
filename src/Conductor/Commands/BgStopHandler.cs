@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 
 using Conductor.Core;
 using Conductor.Core.Store;
@@ -51,7 +51,7 @@ internal static class BgStopHandler
 
         // Mark as exited in run.db
         var plan = PlanConfig.Load(settings.ResolvePlanPath());
-        var runDbPath = Path.Combine(plan.StateDir, "run.db");
+        var runDbPath = plan.RunDbPath;
         if (File.Exists(runDbPath))
         {
             try

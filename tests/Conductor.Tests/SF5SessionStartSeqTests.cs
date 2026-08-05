@@ -1,4 +1,4 @@
-using Conductor.Core.Events;
+﻿using Conductor.Core.Events;
 using Conductor.Core.Store;
 
 using Microsoft.Extensions.Logging.Abstractions;
@@ -34,7 +34,7 @@ public sealed class SF5SessionStartSeqTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_dir, recursive: true); } catch (IOException) { } catch (UnauthorizedAccessException) { }
+        try { TestTemp.DeleteTree(_dir); } catch (IOException) { } catch (UnauthorizedAccessException) { }
         GC.SuppressFinalize(this);
     }
 

@@ -1,4 +1,4 @@
-using Conductor.Core;
+﻿using Conductor.Core;
 using Conductor.Core.Events;
 using Conductor.Models;
 
@@ -133,6 +133,6 @@ public class ReporterTests
             Assert.Contains("| 2 | L1 | Fix |",
                 Git.Exec(repo, "show", "HEAD:.conductor/REPORT.md").Output, StringComparison.Ordinal);
         }
-        finally { try { Directory.Delete(repo, recursive: true); } catch { } }
+        finally { try { TestTemp.DeleteTree(repo); } catch { } }
     }
 }

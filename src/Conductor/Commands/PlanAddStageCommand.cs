@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 
 using Conductor.Models;
 using Spectre.Console;
@@ -59,7 +59,7 @@ public static class PlanAddStageCommand
 
             // W1.2: sync the work graph so the new stage is schedulable and on the board — no more
             // "don't forget the tracker" (the tracker is a generated view of the graph now).
-            var runDbPath = Path.Combine(plan.StateDir, "run.db");
+            var runDbPath = plan.RunDbPath;
             if (File.Exists(runDbPath))
             {
                 using var store = new Core.Store.SqliteRunStore(runDbPath,

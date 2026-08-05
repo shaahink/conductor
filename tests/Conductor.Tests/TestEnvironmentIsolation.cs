@@ -28,4 +28,25 @@ internal static class TestEnvironmentIsolation
         // Process-scoped only: this never touches the user or machine environment.
         Environment.SetEnvironmentVariable("CONDUCTOR_TELEGRAM_TOKEN", null);
     }
+
+    /// <summary>
+    /// K3.1: the same argument, for state. <c>run.db</c> now resolves to a machine-level home, so a
+    /// test that loads a plan and touches its store would write into the operator's REAL history —
+    /// and, worse, could import a live <c>.conductor/run.db</c> into it. The suite gets its own home
+    /// under the temp directory, and any ambient <c>CONDUCTOR_RUN_DB</c> is cleared so no outer
+    /// environment can redirect a test at a real database.
+    /// </summary>
+    [ModuleInitializer]
+    internal static void IsolateStateHome()
+    {
+        Environment.SetEnvironmentVariable(Core.Store.StateHome.RunDbEnvVar, null);
+        var home = Path.Combine(Path.GetTempPath(), "conductor-tests", "state-home",
+            Environment.ProcessId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        Directory.CreateDirectory(home);
+        Environment.SetEnvironmentVariable(Core.Store.StateHome.HomeEnvVar, home);
+    }
+
+    /// <summary>The isolated state home this process is using. Tests that assert on catalogue or
+    /// import behaviour read it from here rather than re-deriving it.</summary>
+    internal static string StateHomeRoot => Core.Store.StateHome.Root;
 }
