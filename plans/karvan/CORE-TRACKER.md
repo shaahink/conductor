@@ -4,16 +4,20 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **K3 battery is GREEN.** `398c38a`, evidence `.conductor/evidence/K3/K3.2-fix-s12-arch-and-completion.md`.
-  K3.2 had been claimed with the battery red because of it, so it was reopened and re-claimed. Two real
-  defects, no flake: three K3.2 files broke `maxTypesPerFile: 3` (both debt maps are `{}` by design, so
-  splitting was the only legal fix - six types moved to their own files, bodies unchanged); and `history`
-  was registered in `Program.cs` but missing from `CompletionCommand.Verbs`, the one const both shells read.
-  1872 pass, ratchet `archdebt base=0 now=0`. K3.1/K3.3 stand as claimed and were not touched.
-next: **K4.1 - the engine measures context size per turn, not just cumulative tokens.** Spec section K4
-  in `docs/history/CONDUCTOR-KARVAN.md`. `LiveMetrics.SessionTokenTotals` folds integrals only;
-  `context_high_water` exists nowhere. `sessions.limits` (v11) now gives K4 the honest denominator.
+last: **K4.1 CLAIMED**, `ea49c8d` + evidence `.conductor/evidence/K4/K4.1-context-per-turn.md`.
+  Per-turn context = `input + cache_creation + cache_read` per DEDUPED assistant message, taken in
+  `ClaudeProvider.cs:153` and `OpencodeProvider.cs:112`; schema **v12** adds `sessions.context_*`;
+  `LiveMetrics.ContextForSession` + `RunArchive.ContextFromEvents` recover it from persisted TokenDeltas,
+  so every past run answers. `conductor history <run>` shows it per session and in one sentence.
+numbers: **this era runs at 123k context per turn, high water 250k** (Sarban face: 113k / 267k). The
+  32M cap and the 123k window differ by four orders of magnitude and have been conflated all along.
+  Derivation validated on 4,832 real turn pairs: turn N's context = turn N+1's reported cacheRead,
+  98.1% within 4 tokens; the 90 outliers are 58 drops / 32 grows, i.e. compaction, not a bad formula.
+next: **K4.2 - `conductor budget`.** Floor, wrap-up, cap, nudge-vs-floor, rollover rate, prescription;
+  must reproduce this repo's two runs unprompted. `sessions.limits` (v11) is the denominator; the K4.1
+  numbers above are its input. Model is NOT recorded anywhere, so "% of window" is not derivable yet.
 watch: a new verb is TWO edits - `Program.cs` and `CompletionCommand.Verbs`; the second is gate-enforced.
+  A schema bump also breaks any test that rewinds a db by version without dropping the new columns.
   Piping the engine through `Select-Object -First N` closes the pipeline and KILLS it mid-flow; use `-Last`.
 red: none. Open, not blocking: **#28**, **#27** fresh-db FK error, **#24** `AgentConfig.Merge` drops `Env`.
 
