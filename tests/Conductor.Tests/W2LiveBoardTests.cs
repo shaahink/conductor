@@ -57,7 +57,10 @@ public sealed class W2LiveBoardTests
         SqliteRunStore? store = null;
         try
         {
-            store = new SqliteRunStore(Path.Combine(stateDir, "run.db"), NullLogger<SqliteRunStore>.Instance);
+            // K3.1: the scratch, the events file and the journal are still in the working tree; the
+            // DATABASE is not. The agent side has to open the one the engine actually resolved,
+            // which is exactly what `mcp-serve --run-db` now receives.
+            store = new SqliteRunStore(TestState.RunDb(repo), NullLogger<SqliteRunStore>.Instance);
             store.SetRunId(runId); // McpServeCommand does this before handing the store over
             var server = new McpTaskServer(
                 Path.Combine(stateDir, "events.jsonl"), Path.Combine(stateDir, "mcp-journal.jsonl"),

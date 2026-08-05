@@ -78,7 +78,9 @@ public sealed class SF0_3PidsAndBackgroundWorkTests : IDisposable
         File.WriteAllText(_planPath, JsonSerializer.Serialize(seed, PlanConfig.JsonOpts),
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
 
-        _store = new SqliteRunStore(Path.Combine(_stateDir, "run.db"), NullLogger<SqliteRunStore>.Instance);
+        // K3.1: `conductor bg start -p <plan>` records its pid in the database the PLAN resolves to,
+        // which is no longer under the state dir. Open the same one, or the pid row is invisible here.
+        _store = new SqliteRunStore(PlanConfig.Load(_planPath).RunDbPath, NullLogger<SqliteRunStore>.Instance);
         _store.InitializeRun(RunId, PlanName, _repo, "feat/sarban", "1.0");
     }
 
