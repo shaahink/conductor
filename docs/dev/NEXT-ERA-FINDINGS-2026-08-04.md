@@ -117,21 +117,29 @@ instrument exists.)
 | window | sessions | tokens | checkpoints closed | tok/ckpt |
 |---|---|---|---|---|
 | 1–8, ceiling not yet effective | 7 costed | 158.9M | 6 | **26.5M** |
-| 9–41, ceiling 8M / nudge 0.75 | 33 | 238.3M | 17 | **14.0M** |
+| 9–41, ceiling 8M / nudge 6.07M ⚠ | 33 | 238.3M | ~~17~~ → **14** | ~~14.0M~~ → **17.0M** |
 
-**The cap paid 1.9×.** That is the headline and it is not in doubt.
+~~**The cap paid 1.9×.**~~ ⚠ → **The cap paid 1.6×.**
+
+> ⚠ **Corrected 2026-08-05 by K7.1**, when `conductor budget` — the instrument **B2** asked for, now
+> shipped as K4.2 — re-derived this table from the ledger. Three numbers in this section were wrong,
+> and they are corrected in place rather than dropped: the capped window closed **14** checkpoints,
+> not 17 (`SF2.1-2.3, SF3.1-3.3, SF4.2, SF5.2-5.4, SF6.1-6.2, SF7.1-7.2`); **10** of its 33 sessions
+> rolled over, not 11 — the eleventh was session **7**, before the ceiling existed; and **19** of 33
+> closed nothing, not 20. The diagnosis below survives all three unchanged, because it never rested
+> on the magnitudes. See `TOKEN-BUDGET-TUNING.md` §3 and §9.
 
 The price it charged is:
 
-- **11 rollovers in 33 sessions (33%) — and all 11 died at 8.00–8.13M.** Not one of them stopped at
+- **10 rollovers in 33 sessions (30%) ⚠ — and all of them died at 8.00–8.13M.** Not one stopped at
   the 6.0M nudge. The cooperative rail is the *only* path that ends a capped session on its own terms
   (`SessionRunner.OverSessionTokenBudget` → `EndOnBudget` → `agent.Kill()` is the other), and in this
-  run it converted **zero of eleven**. → **B9**, new, cheap, and it is the difference between a cap
+  run it converted **zero of ten** ⚠. → **B9**, new, cheap, and it is the difference between a cap
   that shapes work and a cap that interrupts it.
 - **9 more sessions ended voluntarily at 7.3–7.7M having closed no checkpoint.** They took the nudge
   and wrapped up with nothing to claim.
-- So **20 of 33 post-cap sessions closed no checkpoint**, at roughly $6 each — about $120 of sessions
-  that produced work but no verified progress.
+- So **19 of 33 post-cap sessions closed no checkpoint** ⚠, at roughly $6 each — about $115 of
+  sessions that produced work but no verified progress.
 - Sessions that *did* close a checkpoint post-cap ran **4.66M–7.75M, median ≈7.3M**.
 
 Read those four facts together and the diagnosis is precise: **the nudge sat below the median session
@@ -156,6 +164,20 @@ sessions that were genuinely going long; the headroom is 2.6× the measured wrap
 the 1.5–2× rule. Expect fewer rollovers and slightly larger sessions; expect tok/ckpt to land between
 14.0M and 26.5M and **re-measure at the first stage boundary** — that re-measure is **B2**'s own
 deliverable, and the plan dogfoods it at K7.1.
+
+> ⚠ **Superseded before the era started, and the correction was right.** The block above prescribes
+> **12M / 0.7**; `plans/karvan/core.plan.json` shipped **32M / 0.7**. The reason is a sample error in
+> this section: it was derived from the *face* run, whose sessions ran a different model and a much
+> lighter unit of work. The ceiling that was actually used came from **sarban-core** — the one run
+> that ran uncapped on this era's model — whose sessions came in at a 16.9M median and a 30.0M p90.
+> A 12M cap would have sat **below that median**, i.e. exactly the stage-F inversion
+> `TOKEN-BUDGET-TUNING.md` §3 warns about, on every session.
+>
+> **The K7.1 re-measure settles it.** 32M/0.70 delivered 23 checkpoints at **14.1M** each with
+> **zero rollovers in 22 sessions** — better than the 8M run on both, and better than the
+> 14.0M–26.5M band this section predicted. The lesson generalises and is now §7 step 4 of the tuning
+> doc: **measure the floor and the median closer on the same model and the same class of work you
+> are about to cap**, or the prescription is arithmetic on someone else's run.
 
 ---
 
@@ -364,8 +386,8 @@ measurement instead of an inference.
 **Why it is worth a checkpoint on its own:** it is the difference between a cap that *shapes* work and
 a cap that *interrupts* it, and it makes every later number in theme B mean what it says.
 
-**B10. The cap's score is now known, and it belongs in the doc. (S)**
-1.9× on tok/ckpt, 33% rollover, 20-of-33 sessions closing nothing. `TOKEN-BUDGET-TUNING.md` predates
+**B10. The cap's score is now known, and it belongs in the doc. (S)** — **closed by K7.1.**
+1.6× on tok/ckpt ⚠, 30% rollover ⚠, 19-of-33 sessions closing nothing ⚠. `TOKEN-BUDGET-TUNING.md` predates
 that measurement and its conductor rows should be replaced with it, alongside the corrected rule from
 B2 (the nudge, not just the cap, must clear the floor). Bundle with the K7.1 re-measure.
 

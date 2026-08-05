@@ -450,9 +450,10 @@ anything deliberately left for later.
 ### K7.1 — The docs match the engine, and this era's own token measurements are written back
 
 **Done when.** `docs/dev/TOKEN-BUDGET-TUNING.md` carries the re-measured conductor numbers — the 8M
-cap's real score (26.5M → 14.0M tokens per checkpoint, 33% rollover, twenty of thirty-three sessions
-closing nothing), the corrected rule that the **nudge** and not only the cap must clear the floor, and
-this run's own figures produced by `conductor budget` rather than by hand. `docs/dev/NEXT-FEATURES.md`
+cap's real score (~~26.5M → 14.0M tokens per checkpoint, 33% rollover, twenty of thirty-three sessions
+closing nothing~~ ⚠ **26.5M → 17.0M, 30% rollover, nineteen of thirty-three closing nothing**), the
+corrected rule that the **nudge** and not only the cap must clear the ~~floor~~ ⚠ **median closing
+session**, and this run's own figures produced by `conductor budget` rather than by hand. `docs/dev/NEXT-FEATURES.md`
 is refreshed. Every claim this plan made that turned out wrong is corrected in place, not quietly
 dropped. The era CHANGELOG section is written. And the closure ledger names every open bug and followup
 row with the stage that closed it or the living owner that holds it.
@@ -460,6 +461,13 @@ row with the stage that closed it or the living owner that holds it.
 **Dogfooding note, and it is the point:** K4.2 shipped `conductor budget`; this checkpoint is the first
 real use of it. If its prescription disagrees with the numbers in this spec, the prescription wins and
 the spec gets corrected.
+
+> ⚠ **It disagreed, and it won (K7.1, 2026-08-05).** Four of this section's own figures were wrong and
+> are struck through above. The corrected rule is stronger than the one this spec asked for: sarban-face's
+> nudge *did* clear the floor, at 1.30×, and still converted zero of ten kills — because it sat at 0.84×
+> the median closing session. `TOKEN-BUDGET-TUNING.md` §7 step 4 now says *median closer*, not *floor*.
+> The wrong claims found by this plan's other stages are corrected in place too; the register of them is
+> `docs/history/KARVAN-CLOSURE-LEDGER.md`, which also names an owner for every bug and followup left open.
 
 ### K7.2 — The branch is merged by the owner, tagged, released and installed
 
