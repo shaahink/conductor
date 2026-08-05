@@ -4,21 +4,20 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **K4 phase red FIXED** (s17), evidence `.conductor/evidence/K4/K4-fix-s17-newly-done-probe.md`.
-  `engine-full` failed on `no such column: s.newly_done`. Cause: K4.2 (`1fcbd0b`) added `s.newly_done`
-  to `RunArchive.Sessions()`'s SELECT **unconditionally**, past the `Has()`/`PRAGMA table_info` probe
-  every other post-v9 column uses. The column is v1, so every db this engine writes has it — but the
-  archive opens dbs it did not write, and K3.3's minimal v10 fixture stops at `gate_summary`. Fixed in
-  the code (probe + `Opt()`), not the fixture. RULE: **no column is named in `RunArchive` without
-  `Has()`, not even a v1 one.** K4.1-K4.4 stand as delivered; nothing was over-claimed.
-next: **K5.1 — the session result contract.** Note it rewrites the SESSION-RESULT template in the same
-  commit, and trap 4 (literal brace tokens in a template kill the engine) goes live at K5.1.
+last: **K5.1 DONE** — `c04175d` (engine+tests) and `ae7ada5` (templates), evidence
+  `.conductor/evidence/K5/K5.1-result-contract.md`. `SessionResult` (src/Conductor.Core/SessionResult.cs)
+  is now the ONLY parse of a session result; six consumers render from it instead of each cutting the
+  same paragraph at its own length (700 / 700 / 1200 / 600 / blockquote / lessons). A seventh copy of
+  the cut sat uncalled in `RunLoop.Snapshot.cs` and is gone. `IsStructured` needs marker AND a field
+  AND a headline, so legacy prose and verifier JSON degrade byte-identically to the old cut.
+next: **K5.2 — the five Telegram defects.** The result is already structured on the way to
+  `PushSessionEndAsync` (`RunLoop.Plumbing.cs:257`, `ToCompact(700)`); do not re-cut it, render it.
 red: none. bug #29 (K7.2 blocker) still open: on a COPY of this run.db the WRITE path dies on
   `duplicate column name: soft_break`; the read-only `RunArchive` path opens the same file fine.
-carried from K4.4: the soft-break rail counts **cache-read** (`SessionRunner.Mcp.cs:76`), the wire's
-  `sessionTokens*` triple does NOT — use `StateDto.tokenHeadroom` / `widgets.TokenGauge`, never the
-  visible three. And for harness tests: a ceiling lengthens the prompt and **cmd.exe truncates at 8191
-  chars**, so a cmd fake-agent turns into `AgentError` the moment a cap exists — use PowerShell.
+watch: the built-in prompts are ~12 chars under SF6.1's 7900 budget — new prose in
+  `PromptBuilder.BuiltIns.cs` MUST be paid for by cutting prose, and the first thing to fail is a
+  cmd.exe harness test, not the budget gate. And in a PowerShell fake agent, one apostrophe inside the
+  single-quoted JSON line ends the string and the session records an EMPTY result.
 
 
 ## Baseline numbers (from run.db)
@@ -65,7 +64,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | K4.1 | The engine records context size per turn — a high-water and a mean per session — derived from the stream, with the derivation checked against a session that can be estimated independently | DONE | ea49c8d | .conductor/evidence/K4/K4.1-context-per-turn.md |
-| K4.2 | conductor budget prints floor, wrap-up, cap, nudge-versus-floor and rollover rate and prescribes a correction, and it reproduces this repo's own two runs without being told the answers | DONE | 1fcbd0b | .conductor/evidence/K4/K4.2-conductor-budget.md |
+| K4.2 | conductor budget prints floor, wrap-up, cap, nudge-versus-floor and rollover rate and prescribes a correction, and it reproduces this repo's own two runs without being told the answers | DONE | 1fcbd0b | .conductor/evidence/K4/K4-fix-s17-newly-done-probe.md |
 | K4.3 | conductor money answers what a project cost per checkpoint, per stage and per month, with cache-read share and the before-and-after windows that say what the cap bought, cross-checked against a hand-written query | DONE | 20842e2 | .conductor/evidence/K4/K4.3-conductor-money.md |
 | K4.4 | Live session tokens, the distance to the nudge, a burn rate and a projection sit beside live money in the Face and on the wire, honest when no cap is set | DONE | b4ea829 | .conductor/evidence/K4/K4.4-live-token-headroom.md |
 
