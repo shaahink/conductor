@@ -264,7 +264,7 @@ func TestTimelineHistoryCountIsSetOnceAtAttach(t *testing.T) {
 	tm, _ = tm.Update(MsgTimelineUpdated{Timeline: &api.TimelineDto{Entries: []api.TimelineEntryDto{e, e}}})
 	tm, _ = tm.Update(MsgTimelineUpdated{Timeline: &api.TimelineDto{Entries: []api.TimelineEntryDto{e, e, e, e}}})
 
-	if got := asModel(tm).timelineHistoryCount; got != 2 {
+	if got := asModel(tm).history.attachCount; got != 2 {
 		t.Errorf("history count = %d after a refetch, want 2 — it must be fixed at the attach", got)
 	}
 }

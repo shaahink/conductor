@@ -86,11 +86,11 @@ func ownerCommand(cmd string) string {
 // Before the first poll answers there is no section at all: an empty header is worse than nothing,
 // and an empty LIST would read as "nothing is owed", which is a claim this pane has not earned yet.
 func (m Model) renderHomeOwnerQueue(w int) []homeLine {
-	q := m.ownerQueue
+	q := m.home.queue
 	if q == nil {
-		if m.ownerQueueErr != "" {
+		if m.home.queueErr != "" {
 			return homePanel("Owner queue",
-				hLine(warnStyle.Render("  owner queue unavailable")+subtleStyle.Render(" — "+m.ownerQueueErr), homeDetail))
+				hLine(warnStyle.Render("  owner queue unavailable")+subtleStyle.Render(" — "+m.home.queueErr), homeDetail))
 		}
 		return nil
 	}
@@ -100,7 +100,7 @@ func (m Model) renderHomeOwnerQueue(w int) []homeLine {
 		title = fmt.Sprintf("Owner queue (%d)", q.Count)
 	}
 	rows := []homeLine{}
-	if m.ownerQueueErr != "" {
+	if m.home.queueErr != "" {
 		// Showing stale rows is right; showing them as if they were fresh is not.
 		rows = append(rows, hLine(subtleStyle.Render("  last poll failed — showing the previous queue"), homeDetail))
 	}
@@ -138,17 +138,17 @@ func (m Model) renderHomeOwnerQueue(w int) []homeLine {
 func (m Model) handleOwnerQueueKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
 	case "up", "k":
-		if m.ownerQueueScroll > 0 {
-			m.ownerQueueScroll--
+		if m.home.queueScroll > 0 {
+			m.home.queueScroll--
 		}
 	case "down", "j":
-		m.ownerQueueScroll++ // clamped by the renderer against the real body height
+		m.home.queueScroll++ // clamped by the renderer against the real body height
 	case "home":
-		m.ownerQueueScroll = 0
+		m.home.queueScroll = 0
 	case "pgup":
-		m.ownerQueueScroll = max(0, m.ownerQueueScroll-m.paneRows())
+		m.home.queueScroll = max(0, m.home.queueScroll-m.paneRows())
 	case "pgdown":
-		m.ownerQueueScroll += m.paneRows()
+		m.home.queueScroll += m.paneRows()
 	}
 	return m, nil
 }
@@ -158,13 +158,13 @@ func (m Model) handleOwnerQueueKey(key string) (tea.Model, tea.Cmd) {
 // the uncapped one, and it scrolls.
 func (m Model) renderOwnerQueuePane() (string, string) {
 	w := m.paneCols()
-	q := m.ownerQueue
+	q := m.home.queue
 
 	var sections []string
 	switch {
-	case q == nil && m.ownerQueueErr != "":
+	case q == nil && m.home.queueErr != "":
 		sections = append(sections,
-			warnStyle.Render("The owner queue is unavailable.")+"\n"+subtleStyle.Render(m.ownerQueueErr))
+			warnStyle.Render("The owner queue is unavailable.")+"\n"+subtleStyle.Render(m.home.queueErr))
 	case q == nil:
 		// Not "nothing is owed" — nothing has been ASKED yet. The distinction is the whole point.
 		sections = append(sections, subtleStyle.Render("Waiting for the first /owner/queue poll…"))
@@ -186,7 +186,7 @@ func (m Model) renderOwnerQueuePane() (string, string) {
 	lines := strings.Split(body, "\n")
 	rows := m.paneRows()
 	maxScroll := max(0, len(lines)-rows)
-	scroll := min(m.ownerQueueScroll, maxScroll)
+	scroll := min(m.home.queueScroll, maxScroll)
 	if scroll > 0 || maxScroll > 0 {
 		end := min(scroll+rows, len(lines))
 		lines = lines[scroll:end]
@@ -206,8 +206,8 @@ func (m Model) ownerQueueHeader(q *api.OwnerQueueDto) string {
 	if t, ok := timefmt.Parse(q.GeneratedUtc); ok {
 		head += subtleStyle.Render("  ·  read " + timefmt.Age(t))
 	}
-	if m.ownerQueueErr != "" {
-		head += "\n" + warnStyle.Render("last poll failed") + subtleStyle.Render(" — "+m.ownerQueueErr)
+	if m.home.queueErr != "" {
+		head += "\n" + warnStyle.Render("last poll failed") + subtleStyle.Render(" — "+m.home.queueErr)
 	}
 	return head
 }

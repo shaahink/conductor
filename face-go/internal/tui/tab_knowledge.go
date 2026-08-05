@@ -14,6 +14,46 @@ import (
 	"conductor-face-go/internal/widgets"
 )
 
+// knowledgeModel is the Knowledge tab's own state (K6.3): the ledger/bug body's viewport and the
+// one-line write mode that turns the pane into an input.
+type knowledgeModel struct {
+	// K6.2: the same viewport as Report, for the same reason. This is the surface the owner reported
+	// as unreadable — it could not page, could not jump, and answered `k` with nothing because `k`
+	// opens this very tab.
+	vp    viewport.Model
+	mode  knowledgeInputMode // browse, or entering a note / bug title / bug id to resolve
+	input widgets.TextArea
+}
+
+// updateKnowledge handles the ledger poll and the write-side result. Both land in data.Ledger /
+// data.Bugs / data.Evidence, which nothing outside this tab reads — that is why they belong here and
+// the task poll (read by the sidebar too) stays in the shell.
+func (m Model) updateKnowledge(msg tea.Msg) (Model, tea.Cmd, bool) {
+	switch msg := msg.(type) {
+
+	case MsgKnowledgeUpdated:
+		if msg.Ledger != nil {
+			m.data.Ledger = msg.Ledger.Entries
+		}
+		if msg.Bugs != nil {
+			m.data.Bugs = msg.Bugs.Bugs
+		}
+		if msg.Evidence != nil {
+			m.data.Evidence = msg.Evidence.Artifacts
+			m.data.EvidenceAll = msg.Evidence.Count
+		}
+		return m, nil, true
+
+	case MsgKnowledgeWritten:
+		if msg.Err != "" {
+			return m, m.addToast("Failed: "+msg.Err, widgets.ToastError), true
+		}
+		// Re-poll so the new note/bug (or the resolved bug dropping off) shows immediately.
+		return m, tea.Batch(m.addToast(msg.Toast, widgets.ToastSuccess), m.cmdFetchKnowledge()), true
+	}
+	return m, nil, false
+}
+
 type knowledgeInputMode int
 
 const (
@@ -29,7 +69,7 @@ const (
 // side (n/b/x): file a note, file a bug, or resolve one — captured while watching, so it compounds
 // into the next prompt without dropping to a second terminal.
 func (m Model) handleKnowledgeKey(key string) (tea.Model, tea.Cmd) {
-	if m.knowledgeMode != knowledgeBrowse {
+	if m.knowledge.mode != knowledgeBrowse {
 		return m.handleKnowledgeInput(key)
 	}
 	switch key {
@@ -45,15 +85,15 @@ func (m Model) handleKnowledgeKey(key string) (tea.Model, tea.Cmd) {
 	// Size and content FIRST, then move (adr/0006 decision 1) — see handleReportKey. This surface is
 	// the one the owner could not read: before K6.2 it bound `up` and `down`/`j` only, could not page,
 	// could not jump to either end, and its unbounded offset stranded the pane exactly like Report's.
-	m.knowledgeVP = m.knowledgeViewport()
-	applyPaneScroll(&m.knowledgeVP, key)
+	m.knowledge.vp = m.knowledgeViewport()
+	applyPaneScroll(&m.knowledge.vp, key)
 	return m, nil
 }
 
 // knowledgeViewport is this model's Knowledge viewport, sized to the pane and loaded with the current
 // body — the same construction Report uses, so the two surfaces cannot drift apart again.
 func (m Model) knowledgeViewport() viewport.Model {
-	vp := m.knowledgeVP
+	vp := m.knowledge.vp
 	vp.SetWidth(m.paneCols())
 	vp.SetHeight(m.knowledgeRows())
 	vp.SetContentLines(m.knowledgeLines())
@@ -64,27 +104,27 @@ func (m Model) knowledgeViewport() viewport.Model {
 // shrinks rather than the prompt being pushed past the frame's MaxHeight clamp — a viewport pads to
 // its full height, where the old renderer returned a short slice and left the room by accident.
 func (m Model) knowledgeRows() int {
-	if m.knowledgeMode != knowledgeBrowse {
+	if m.knowledge.mode != knowledgeBrowse {
 		return max(3, m.paneRows()-2)
 	}
 	return m.paneRows()
 }
 
 func (m Model) beginKnowledgeInput(mode knowledgeInputMode) Model {
-	m.knowledgeMode = mode
-	m.knowledgeInput = widgets.NewTextArea("", max(10, m.paneCols()-16), 1)
+	m.knowledge.mode = mode
+	m.knowledge.input = widgets.NewTextArea("", max(10, m.paneCols()-16), 1)
 	return m
 }
 
 func (m Model) handleKnowledgeInput(key string) (tea.Model, tea.Cmd) {
 	switch key {
 	case "esc":
-		m.knowledgeMode = knowledgeBrowse
+		m.knowledge.mode = knowledgeBrowse
 		return m, nil
 	case "enter":
-		val := strings.TrimSpace(m.knowledgeInput.Value())
-		mode := m.knowledgeMode
-		m.knowledgeMode = knowledgeBrowse
+		val := strings.TrimSpace(m.knowledge.input.Value())
+		mode := m.knowledge.mode
+		m.knowledge.mode = knowledgeBrowse
 		if val == "" {
 			return m, nil
 		}
@@ -102,7 +142,7 @@ func (m Model) handleKnowledgeInput(key string) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	default:
-		m.knowledgeInput = m.knowledgeInput.Update(key)
+		m.knowledge.input = m.knowledge.input.Update(key)
 		return m, nil
 	}
 }
@@ -114,15 +154,15 @@ func (m Model) renderKnowledgePane() (string, string) {
 	vp := m.knowledgeViewport()
 	shown := vp.View()
 
-	if m.knowledgeMode != knowledgeBrowse {
+	if m.knowledge.mode != knowledgeBrowse {
 		labels := map[knowledgeInputMode]string{
 			knowledgeNote:    "note",
 			knowledgeBug:     "bug title",
 			knowledgeResolve: "resolve bug #",
 		}
-		ed := m.knowledgeInput
+		ed := m.knowledge.input
 		ed.SetSize(max(10, m.paneCols()-16), 1)
-		input := "\n" + accentStyle.Render(labels[m.knowledgeMode]+"› ") + ed.View()
+		input := "\n" + accentStyle.Render(labels[m.knowledge.mode]+"› ") + ed.View()
 		return shown + input, "type · enter submit · esc cancel"
 	}
 

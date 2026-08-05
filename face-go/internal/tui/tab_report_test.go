@@ -52,13 +52,13 @@ func TestReportScoresSectionAbsentWhenNoScores(t *testing.T) {
 	if got := m.renderReportScores(); got != "" {
 		t.Errorf("no scores fetched yet must render nothing, got:\n%s", got)
 	}
-	m.reportScores = &api.ScoresDto{}
+	m.report.scores = &api.ScoresDto{}
 	if got := m.renderReportScores(); got != "" {
 		t.Errorf("an empty scores result must render nothing, got:\n%s", got)
 	}
 	// A failed fetch is surfaced, not swallowed — the owner needs to know the section is unavailable
 	// rather than conclude the run has no scores.
-	m.reportScoresErr = "GET /scores: 500"
+	m.report.scoresErr = "GET /scores: 500"
 	if got := stripANSI(m.renderReportScores()); !strings.Contains(got, "GET /scores: 500") {
 		t.Errorf("a scores fetch error must be surfaced, got:\n%s", got)
 	}
@@ -70,7 +70,7 @@ func TestReportScoresSectionAbsentWhenNoScores(t *testing.T) {
 // ENGINE judged it by, and a stage with its own QA dial must show ITS bar, not a hardcoded 80.
 func TestReportScoresShowTheBarTheEngineJudgedBy(t *testing.T) {
 	m := newGoldenModel(120, 30).(Model)
-	m.reportScores = &api.ScoresDto{Scores: []api.ScoreDto{
+	m.report.scores = &api.ScoresDto{Scores: []api.ScoreDto{
 		{SessionNumber: 11, StageId: strPtr("F7"), Score: 66, Verdict: "WARN", Passed: false, Threshold: 80,
 			Findings: []string{"one", "two"}},
 		// A stricter stage dial: 88 is a FAIL here, and a client deriving pass/fail itself would say
@@ -127,7 +127,7 @@ func TestDemoSourceRendersTheScoresSection(t *testing.T) {
 	}
 
 	m := newGoldenModel(120, 40).(Model)
-	m.reportScores = scores
+	m.report.scores = scores
 	section := m.renderReportScores()
 	plain := stripANSI(section)
 	if !strings.Contains(plain, "Verifier scores") {

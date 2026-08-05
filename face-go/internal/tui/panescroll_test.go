@@ -68,7 +68,7 @@ func TestPaneOffsetIsClampedInUpdateNotInTheRenderer(t *testing.T) {
 		m = asModel(mustHandle(m.handleReportKey("down")))
 	}
 	vp := m.reportViewport()
-	if got, max := m.reportVP.YOffset(), vp.TotalLineCount()-vp.Height(); got > max {
+	if got, max := m.report.vp.YOffset(), vp.TotalLineCount()-vp.Height(); got > max {
 		t.Errorf("Report offset is %d against a body that stops at %d — Update let it run", got, max)
 	}
 	if !m.reportViewport().AtBottom() {
@@ -79,7 +79,7 @@ func TestPaneOffsetIsClampedInUpdateNotInTheRenderer(t *testing.T) {
 	for i := 0; i < 400; i++ {
 		k = asModel(mustHandle(k.handleKnowledgeKey("down")))
 	}
-	if got, max := k.knowledgeVP.YOffset(), k.knowledgeViewport().TotalLineCount()-k.knowledgeViewport().Height(); got > max {
+	if got, max := k.knowledge.vp.YOffset(), k.knowledgeViewport().TotalLineCount()-k.knowledgeViewport().Height(); got > max {
 		t.Errorf("Knowledge offset is %d against a body that stops at %d — Update let it run", got, max)
 	}
 }
@@ -147,7 +147,7 @@ func TestPaneScrollStatusIsAPercentAndOnlyWhenItScrolls(t *testing.T) {
 
 	short := m
 	short.data.Plan = &api.StateDto{PlanName: "tiny"}
-	short.data.Sessions, short.reportScores = nil, nil
+	short.data.Sessions, short.report.scores = nil, nil
 	if got := paneScrollStatus(short.reportViewport()); got != "" {
 		t.Errorf("a body that fits its pane must carry no percent, got %q", got)
 	}

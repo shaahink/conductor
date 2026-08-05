@@ -16,10 +16,25 @@ import (
 	"conductor-face-go/internal/widgets"
 )
 
+// agentModel is the Agent tab's own state (K6.3). It has no async messages of its own — the
+// transcript and console streams land in the shell, which owns the channels — but it does own which
+// of its two bodies is up and how far each is scrolled.
+type agentModel struct {
+	// raw swaps the body from the parsed transcript to the raw agent stdout that used to be the
+	// Console tab (SF1.3). The strip stays in both modes — keeping mission control on screen while
+	// reading raw output is the whole reason this folded instead of staying its own tab.
+	raw           bool
+	consoleScroll int
+	// searchActive is the inline transcript search (non-blocking). It lives here, not on the shell,
+	// because `/` only opens it on this tab; the root Update still peels it before tab dispatch,
+	// the way it peels the command bar.
+	searchActive bool
+}
+
 func (m Model) handleAgentKey(key string) (tea.Model, tea.Cmd) {
 	// Raw mode is the old Console tab's pane, so it keeps the old Console tab's keys — the parsed
 	// stream's fold/thinking/search keys mean nothing against undecorated stdout.
-	if m.agentRaw {
+	if m.agent.raw {
 		return m.handleAgentRawKey(key)
 	}
 	switch key {
@@ -55,7 +70,7 @@ func (m Model) renderAgentPane() (string, string) {
 	// "…/ search · end live-tail" had been rendering as "end l"). `/ search` is dropped from this side
 	// because the bar's own left half already advertises it.
 	help := "↑↓ scroll · f fold · T thinking · c raw · end tail"
-	if m.agentRaw {
+	if m.agent.raw {
 		help = "↑↓ scroll · pgup/pgdn · home/end · c parsed"
 	}
 	if m.data.Plan == nil {
@@ -67,7 +82,7 @@ func (m Model) renderAgentPane() (string, string) {
 	// checkpoint, gates, the attention banner — and losing it was the actual cost of tabbing away to
 	// the old Console. The footer (model · elapsed · tokens · cost) is the PARSED view's status line;
 	// under undecorated stdout it is furniture, and the rows are better spent on output.
-	if m.agentRaw {
+	if m.agent.raw {
 		body := strip + "\n" + m.renderAgentRawBody(m.paneRows()-lipgloss.Height(strip))
 		return body, help
 	}
@@ -105,25 +120,25 @@ func (m Model) handleAgentRawKey(key string) (tea.Model, tea.Cmd) {
 	maxScroll := len(m.data.RawConsole)
 	switch key {
 	case "up", "k":
-		m.consoleScroll++
+		m.agent.consoleScroll++
 	case "down", "j":
-		if m.consoleScroll > 0 {
-			m.consoleScroll--
+		if m.agent.consoleScroll > 0 {
+			m.agent.consoleScroll--
 		}
 	case "pgup":
-		m.consoleScroll += page
+		m.agent.consoleScroll += page
 	case "pgdown":
-		m.consoleScroll -= page
-		if m.consoleScroll < 0 {
-			m.consoleScroll = 0
+		m.agent.consoleScroll -= page
+		if m.agent.consoleScroll < 0 {
+			m.agent.consoleScroll = 0
 		}
 	case "home":
-		m.consoleScroll = maxScroll // oldest line (renderer clamps)
+		m.agent.consoleScroll = maxScroll // oldest line (renderer clamps)
 	case "end":
-		m.consoleScroll = 0
+		m.agent.consoleScroll = 0
 	}
-	if m.consoleScroll > maxScroll {
-		m.consoleScroll = maxScroll
+	if m.agent.consoleScroll > maxScroll {
+		m.agent.consoleScroll = maxScroll
 	}
 	return m, nil
 }
@@ -140,7 +155,7 @@ func (m Model) renderAgentRawBody(rows int) string {
 	if window < 3 {
 		window = 3
 	}
-	end := len(lines) - m.consoleScroll
+	end := len(lines) - m.agent.consoleScroll
 	if end < 1 {
 		end = 1
 	}
@@ -156,8 +171,8 @@ func (m Model) renderAgentRawBody(rows int) string {
 		out = append(out, subtleStyle.Render(truncate(lines[i].Text, m.paneCols())))
 	}
 	pos := safeStyle.Render("● live tail")
-	if m.consoleScroll > 0 {
-		pos = warnStyle.Render(fmt.Sprintf("↕ scrolled back %d — end to live-tail", m.consoleScroll))
+	if m.agent.consoleScroll > 0 {
+		pos = warnStyle.Render(fmt.Sprintf("↕ scrolled back %d — end to live-tail", m.agent.consoleScroll))
 	}
 	out = append(out, subtleStyle.Render(fmt.Sprintf("%d raw lines · ", len(lines)))+pos)
 	return strings.Join(out, "\n")

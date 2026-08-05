@@ -123,25 +123,25 @@ func TestOwnerQueueKeyIsGlobalAndToggles(t *testing.T) {
 		t.Fatalf("precondition: r must open Report, got %v", tm.(Model).tab)
 	}
 	tm, _ = tm.Update(keyMsg("w"))
-	if m := tm.(Model); m.tab != TabHome || m.homeView != homeOwnerQueue {
-		t.Fatalf("w from Report must open Home's owner queue: tab=%v view=%v", m.tab, m.homeView)
+	if m := tm.(Model); m.tab != TabHome || m.home.view != homeOwnerQueue {
+		t.Fatalf("w from Report must open Home's owner queue: tab=%v view=%v", m.tab, m.home.view)
 	}
 	// Pressing it again closes it — a full-pane list needs a way back that is not "go somewhere else".
 	tm, _ = tm.Update(keyMsg("w"))
-	if m := tm.(Model); m.tab != TabHome || m.homeView != homeLanding {
-		t.Fatalf("w must toggle back to the landing: tab=%v view=%v", m.tab, m.homeView)
+	if m := tm.(Model); m.tab != TabHome || m.home.view != homeLanding {
+		t.Fatalf("w must toggle back to the landing: tab=%v view=%v", m.tab, m.home.view)
 	}
 	// esc peels the queue layer before it leaves Home, or `w` would be the only way off the list.
 	tm, _ = tm.Update(keyMsg("w"))
 	tm, _ = tm.Update(keyMsg("esc"))
-	if m := tm.(Model); m.tab != TabHome || m.homeView != homeLanding {
-		t.Fatalf("esc must back out of the queue to the landing, not to Agent: tab=%v view=%v", m.tab, m.homeView)
+	if m := tm.(Model); m.tab != TabHome || m.home.view != homeLanding {
+		t.Fatalf("esc must back out of the queue to the landing, not to Agent: tab=%v view=%v", m.tab, m.home.view)
 	}
 	// And `h` lands on the landing, not on whatever view was last open.
 	tm, _ = tm.Update(keyMsg("w"))
 	tm, _ = tm.Update(keyMsg("h"))
-	if m := tm.(Model); m.homeView != homeLanding {
-		t.Fatalf("h must land on the landing, got view=%v", m.homeView)
+	if m := tm.(Model); m.home.view != homeLanding {
+		t.Fatalf("h must land on the landing, got view=%v", m.home.view)
 	}
 }
 

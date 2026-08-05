@@ -38,7 +38,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.cmd != CmdNone {
 			return m.handleCmdKey(key)
 		}
-		if m.searchActive {
+		if m.agent.searchActive {
 			return m.handleSearchKey(key)
 		}
 		return m.handleKey(key)
@@ -105,26 +105,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.syncSidebar()
 		}
 
-	case MsgOwnerQueueUpdated:
-		// Same rule as the task board: a failed poll keeps the last good rows and says the feed went
-		// away. The owner's obligations do not stop existing because one fetch timed out.
-		if msg.Err != "" {
-			m.ownerQueueErr = msg.Err
-		} else if msg.Queue != nil {
-			m.ownerQueueErr = ""
-			m.ownerQueue = msg.Queue
-		}
-
-	case MsgProcessesUpdated:
-		if msg.Procs != nil {
-			m.data.Processes = msg.Procs.Processes
-		}
-
 	case MsgSessionsUpdated:
 		if msg.Sessions != nil {
 			m.data.Sessions = msg.Sessions.Sessions
-			if m.sessionSelected >= len(m.data.Sessions) {
-				m.sessionSelected = 0
+			if m.history.sessionSelected >= len(m.data.Sessions) {
+				m.history.sessionSelected = 0
 			}
 		}
 
@@ -138,8 +123,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Keep the spine live while it's on screen: any spine event refreshes it. Scoped to the
 		// VISIBLE view, not the whole History tab — sitting on the sessions list must not fetch the
 		// timeline on every event, and switching into the spine refetches anyway (applyHistoryView).
-		if m.tab == TabHistory && m.historyView == historyTimeline && !m.timelineLoading {
-			m.timelineLoading = true
+		if m.tab == TabHistory && m.history.view == historyTimeline && !m.history.loading {
+			m.history.loading = true
 			return m, tea.Batch(next, m.cmdFetchTimeline())
 		}
 		return m, next
@@ -216,76 +201,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		return m, m.addToast(text, kind)
-
-	case MsgProcessKilled:
-		if msg.Success {
-			// Re-fetch so the row flips to exited immediately, and toast alongside it.
-			return m, tea.Batch(m.addToast(fmt.Sprintf("killed pid %d", msg.Pid), widgets.ToastSuccess), m.cmdFetchProcesses())
-		}
-		reason := msg.Error
-		if reason == "" {
-			reason = "unknown reason"
-		}
-		return m, m.addToast(fmt.Sprintf("kill pid %d rejected: %s", msg.Pid, reason), widgets.ToastError)
-
-	case MsgReportScores:
-		// A failed scores fetch must not blank the whole report: the section renders the error and
-		// every other section (which came from /state + /sessions) still stands.
-		m.reportScoresErr = msg.Err
-		if msg.Err == "" {
-			m.reportScores = msg.Result
-		}
-		return m, nil
-
-	case MsgKnowledgeUpdated:
-		if msg.Ledger != nil {
-			m.data.Ledger = msg.Ledger.Entries
-		}
-		if msg.Bugs != nil {
-			m.data.Bugs = msg.Bugs.Bugs
-		}
-		if msg.Evidence != nil {
-			m.data.Evidence = msg.Evidence.Artifacts
-			m.data.EvidenceAll = msg.Evidence.Count
-		}
-		return m, nil
-
-	case MsgKnowledgeWritten:
-		if msg.Err != "" {
-			return m, m.addToast("Failed: "+msg.Err, widgets.ToastError)
-		}
-		// Re-poll so the new note/bug (or the resolved bug dropping off) shows immediately.
-		return m, tea.Batch(m.addToast(msg.Toast, widgets.ToastSuccess), m.cmdFetchKnowledge())
-
-	case MsgTimelineUpdated:
-		m.timelineLoading = false
-		if msg.Err != "" {
-			m.timelineErr = msg.Err
-		} else if msg.Timeline != nil {
-			m.timelineEntries = msg.Timeline.Entries
-			m.timelineErr = ""
-			// The FIRST fetch is the attach: everything in it already happened, and everything after
-			// it is happening now. Recording where that line falls (once) is what lets the pane draw
-			// it — see dogfood appendix item 6, where an attach poured history in and read as an
-			// event storm. The timeline refetches wholesale on every spine event, so this cannot be
-			// inferred later.
-			if !m.timelineHistorySet {
-				m.timelineHistorySet = true
-				m.timelineHistoryCount = len(m.timelineEntries)
-			}
-			if m.timelineSelected >= len(m.timelineEntries) {
-				m.timelineSelected = max(0, len(m.timelineEntries)-1)
-			}
-		}
-		return m, nil
-
-	case MsgPromptPreview:
-		if msg.Err != "" {
-			m.promptPreviewErr, m.promptPreview = msg.Err, nil
-		} else {
-			m.promptPreview, m.promptPreviewErr = msg.Preview, ""
-		}
-		return m, nil
 
 	case MsgPlanLoaded:
 		if msg.Err != "" {
@@ -421,91 +336,45 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.kanbanStatus = ""
 		return m, nil
 
-	case MsgTelegramStatusUpdated:
-		if msg.Err != "" {
-			return m, nil // status is never load-bearing — same as knowledge/tasks/processes polls
+	default:
+		// K6.3: everything the shell does not own is offered to the tabs. Each tab handles the
+		// messages whose effects only its own surface reads, in its own `tab_*.go` file — see
+		// updateTabs. A message nobody claims falls through to the toast prune below, exactly as an
+		// unknown message always did.
+		if m2, cmd, handled := m.updateTabs(msg); handled {
+			m2.toasts = widgets.PruneToasts(m2.toasts, 4*time.Second)
+			return m2, cmd
 		}
-		m.telegramStatus = msg.Status
-		return m, nil
-
-	case MsgTelegramTested:
-		if msg.Err != "" {
-			m.telegramStatusLine = "✗ " + msg.Err
-			return m, nil
-		}
-		if msg.Result != nil && !msg.Result.Ok {
-			reason := "test failed"
-			if msg.Result.Error != nil {
-				reason = *msg.Result.Error
-			}
-			m.telegramStatusLine = "✗ " + reason
-			return m, m.cmdFetchTelegramStatus()
-		}
-		name := "bot"
-		if msg.Result != nil && msg.Result.BotUsername != nil {
-			name = "@" + *msg.Result.BotUsername
-		}
-		// SC1.3: a test that bypassed the send queue proved Telegram is reachable, not that this run
-		// can notify anybody — the distinction the old always-green tick erased. Say which one it was.
-		if msg.Result != nil && !msg.Result.ViaQueue {
-			detail := "it did NOT go through the run's push queue"
-			if msg.Result.Detail != nil && *msg.Result.Detail != "" {
-				detail = *msg.Result.Detail
-			}
-			m.telegramStatusLine = "⚠ sent by " + name + ", but " + detail
-			return m, m.cmdFetchTelegramStatus()
-		}
-		m.telegramStatusLine = "✓ sent — " + name + " delivered through the run's own push queue"
-		return m, m.cmdFetchTelegramStatus()
-
-	case MsgTelegramTokenSaved:
-		if msg.Err != "" {
-			m.telegramStatusLine = "✗ " + msg.Err
-			return m, nil
-		}
-		if msg.Result != nil && !msg.Result.Ok {
-			reason := "rejected"
-			if msg.Result.Message != nil {
-				reason = *msg.Result.Message
-			}
-			m.telegramStatusLine = "✗ " + reason
-			return m, nil
-		}
-		msgText := "saved"
-		if msg.Result != nil && msg.Result.Message != nil {
-			msgText = *msg.Result.Message
-		}
-		// SC1.3: the save succeeding and the engine being able to deliver are different facts. The
-		// engine now says which it is (WillDeliver plus a sentence naming what is still missing, or
-		// that a restart is required), and the Face stops rendering both as one green tick.
-		if msg.Result != nil && !msg.Result.WillDeliver {
-			m.telegramStatusLine = "⚠ " + msgText
-		} else {
-			m.telegramStatusLine = "✓ " + msgText
-		}
-		m.telegramEditing = false
-		return m, m.cmdFetchTelegramStatus()
-
-	case MsgTelegramSettingsSaved:
-		if msg.Err != "" {
-			m.telegramStatusLine = "✗ " + msg.Err
-			return m, nil
-		}
-		if msg.Result != nil && !msg.Result.Ok {
-			reason := "rejected"
-			if msg.Result.Error != nil {
-				reason = *msg.Result.Error
-			}
-			m.telegramStatusLine = "✗ " + reason
-			return m, nil
-		}
-		m.telegramStatusLine = "✓ saved"
-		m.telegramEditing = false
-		return m, m.cmdFetchTelegramStatus()
 	}
 
 	m.toasts = widgets.PruneToasts(m.toasts, 4*time.Second)
 	return m, nil
+}
+
+// tabUpdaters is the dispatch K6.3 put where 80 `case` arms used to be. A message belongs to the
+// surface that reads its effect, so the handler lives in that surface's file and this list is just
+// the order they are offered in — order is irrelevant, because no two tabs claim the same message.
+//
+// A tab is absent from this list when it has no async messages of its own (Agent: its two bodies are
+// fed by the streams, which the shell owns because it owns the channels).
+var tabUpdaters = []func(Model, tea.Msg) (Model, tea.Cmd, bool){
+	Model.updateHome,
+	Model.updateHistory,
+	Model.updateProcesses,
+	Model.updateTemplates,
+	Model.updateReport,
+	Model.updateKnowledge,
+	Model.updateTelegram,
+}
+
+// updateTabs offers a message to each tab model in turn and stops at the one that owns it.
+func (m Model) updateTabs(msg tea.Msg) (Model, tea.Cmd, bool) {
+	for _, update := range tabUpdaters {
+		if m2, cmd, handled := update(m, msg); handled {
+			return m2, cmd, true
+		}
+	}
+	return m, nil, false
 }
 
 // syncSidebar pushes the latest stages/gates/tasks into the always-on rail.
@@ -548,14 +417,14 @@ func (m Model) handleKey(key string) (tea.Model, tea.Cmd) {
 		// SF4.2: the owner queue is a layer over Home the same way the raw stream is a layer over the
 		// transcript, so esc peels it FIRST — leaving Home rather than leaving for Agent. Checked
 		// before the tab test below, or `w` would be the only way back off a full-pane list.
-		if m.tab == TabHome && m.homeView != homeLanding {
-			m.homeView = homeLanding
+		if m.tab == TabHome && m.home.view != homeLanding {
+			m.home.view = homeLanding
 			return m, nil
 		}
 		if m.tab != TabAgent {
 			return m.openTab(TabAgent)
 		}
-		m.agentRaw = false
+		m.agent.raw = false
 		return m, nil
 	case ":":
 		m.cmd = CmdPalette
@@ -574,7 +443,7 @@ func (m Model) handleKey(key string) (tea.Model, tea.Cmd) {
 		return m, nil
 	case "/":
 		if m.tab == TabAgent {
-			m.searchActive = true
+			m.agent.searchActive = true
 			m.transcript = m.transcript.Update(widgets.MsgSetSearch{Query: ""})
 		}
 		return m, nil
@@ -629,12 +498,12 @@ func (m Model) openFolded(key string, t MainTab) (tea.Model, tea.Cmd) {
 	switch t {
 	case TabAgent:
 		if m.tab == TabAgent {
-			m.agentRaw = !m.agentRaw
+			m.agent.raw = !m.agent.raw
 		} else {
-			m.agentRaw = true
+			m.agent.raw = true
 		}
-		if m.agentRaw {
-			m.consoleScroll = 0 // land on the live tail, as opening the Console tab used to
+		if m.agent.raw {
+			m.agent.consoleScroll = 0 // land on the live tail, as opening the Console tab used to
 		}
 		return m.openTab(TabAgent)
 	case TabHistory:
@@ -649,13 +518,13 @@ func (m Model) openFolded(key string, t MainTab) (tea.Model, tea.Cmd) {
 // last poll left — and if that is nothing yet, the pane says so rather than showing an empty list
 // that reads as "nothing is owed".
 func (m Model) openOwnerQueue() (tea.Model, tea.Cmd) {
-	if m.tab == TabHome && m.homeView == homeOwnerQueue {
-		m.homeView = homeLanding
+	if m.tab == TabHome && m.home.view == homeOwnerQueue {
+		m.home.view = homeLanding
 		return m, nil
 	}
 	m.tab = TabHome
-	m.homeView = homeOwnerQueue
-	m.ownerQueueScroll = 0
+	m.home.view = homeOwnerQueue
+	m.home.queueScroll = 0
 	return m, m.cmdFetchOwnerQueue()
 }
 
@@ -670,12 +539,12 @@ func (m Model) openHistory(v historyView) (tea.Model, tea.Cmd) {
 // spine is the VISIBLE view, so arriving from the sessions list would otherwise show whatever the
 // last fetch left behind.
 func (m Model) applyHistoryView(v historyView) (tea.Model, tea.Cmd) {
-	m.historyView = v
+	m.history.view = v
 	if v == historyTimeline {
-		m.timelineSelected, m.timelineLoading, m.timelineErr = 0, true, ""
+		m.history.selected, m.history.loading, m.history.err = 0, true, ""
 		return m, m.cmdFetchTimeline()
 	}
-	m.sessionSelected = 0 // /sessions is newest-first; land on the current one
+	m.history.sessionSelected = 0 // /sessions is newest-first; land on the current one
 	return m, nil
 }
 
@@ -692,15 +561,15 @@ func (m Model) openTab(t MainTab) (tea.Model, tea.Cmd) {
 		// Opening Home lands on the LANDING, the way opening History lands on the sessions list: `h`
 		// means "show me where I am", and a preserved owner-queue view would answer a question the
 		// keypress did not ask. `w` is one key away and says which view it means.
-		m.homeView = homeLanding
+		m.home.view = homeLanding
 	case TabHistory:
 		// Opening History lands on the sessions list, the way every other tab resets what it shows on
 		// open. The spine is `t`, or `←/→` from here — both one keypress, and both say which view
 		// they mean, which a preserved-across-tab-cycle view would not.
 		return m.applyHistoryView(historySessions)
 	case TabTemplates:
-		m.promptEntries = templates.List(m.currentPlanDir())
-		m.promptSelected, m.promptMode, m.promptPreviewOn = 0, PromptList, false
+		m.tmpl.entries = templates.List(m.currentPlanDir())
+		m.tmpl.selected, m.tmpl.mode, m.tmpl.previewOn = 0, PromptList, false
 		return m, nil
 	case TabPlan:
 		if m.plan == nil {
@@ -710,14 +579,14 @@ func (m Model) openTab(t MainTab) (tea.Model, tea.Cmd) {
 	case TabReport:
 		// U2.2: the report is rendered, not queried. Scroll resets to the top so the run header —
 		// the answer to "how is it going" — is what opening the tab actually shows.
-		m.reportVP.GotoTop()
+		m.report.vp.GotoTop()
 		return m, m.cmdFetchScores()
 	case TabKnowledge:
-		m.knowledgeVP.GotoTop()
-		m.knowledgeMode = knowledgeBrowse
+		m.knowledge.vp.GotoTop()
+		m.knowledge.mode = knowledgeBrowse
 		return m, m.cmdFetchKnowledge()
 	case TabTelegram:
-		m.telegramFieldIdx, m.telegramEditing, m.telegramStatusLine = 0, false, ""
+		m.telegram.fieldIdx, m.telegram.editing, m.telegram.statusLine = 0, false, ""
 		return m, m.cmdFetchTelegramStatus()
 	case TabKanban:
 		m.kanbanAdding, m.kanbanStatus = false, ""
@@ -730,16 +599,16 @@ func (m Model) openTab(t MainTab) (tea.Model, tea.Cmd) {
 func (m Model) tabHandlesAllKeys() bool {
 	switch m.tab {
 	case TabTemplates:
-		return m.promptMode == PromptEdit || m.promptPreviewOn
+		return m.tmpl.mode == PromptEdit || m.tmpl.previewOn
 	case TabPlan:
 		return m.planDrill || m.planEditing || m.planAdding || m.planDeleting || m.planImportResult != nil ||
 			m.planTab == planTabImport || m.planTab == planTabPrompt
 	case TabProcesses:
-		return m.processKilling
+		return m.processes.killing
 	case TabTelegram:
-		return m.telegramEditing
+		return m.telegram.editing
 	case TabKnowledge:
-		return m.knowledgeMode != knowledgeBrowse
+		return m.knowledge.mode != knowledgeBrowse
 	case TabKanban:
 		// The card detail (P3) owns t/c/a/h + its editors; the board itself only the add form.
 		return m.kanbanAdding || m.kanbanDetail
@@ -753,7 +622,7 @@ func (m Model) handleTabKey(key string) (tea.Model, tea.Cmd) {
 	case TabHome:
 		// The landing owns no keys, by design (STYLE.md). Its owner-queue view does — it is a list
 		// that can outgrow the pane, and a full-pane view with no scroll is a clipped one.
-		if m.homeView == homeOwnerQueue {
+		if m.home.view == homeOwnerQueue {
 			return m.handleOwnerQueueKey(key)
 		}
 	case TabAgent:

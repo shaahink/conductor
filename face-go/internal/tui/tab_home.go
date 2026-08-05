@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 
+	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
 	"conductor-face-go/internal/api"
@@ -16,6 +17,37 @@ import (
 	"conductor-face-go/internal/timefmt"
 	"conductor-face-go/internal/widgets"
 )
+
+// homeModel is the Home tab's own state (K6.3): which of its two views is up, and SF4.2's owner
+// queue behind `w`.
+type homeModel struct {
+	view homeView
+	// queue is the last good GET /owner/queue. Kept across a failed poll — the owner's obligations do
+	// not stop existing because one fetch timed out, and a section that blanks itself on a hiccup is
+	// how a queue teaches people to stop trusting it. queueErr says the feed went away, beside the
+	// rows it is still showing.
+	queue       *api.OwnerQueueDto
+	queueErr    string
+	queueScroll int
+}
+
+// updateHome handles the owner-queue poll — the only surface on Home that fetches for itself.
+func (m Model) updateHome(msg tea.Msg) (Model, tea.Cmd, bool) {
+	switch msg := msg.(type) {
+
+	case MsgOwnerQueueUpdated:
+		// Same rule as the task board: a failed poll keeps the last good rows and says the feed went
+		// away. The owner's obligations do not stop existing because one fetch timed out.
+		if msg.Err != "" {
+			m.home.queueErr = msg.Err
+		} else if msg.Queue != nil {
+			m.home.queueErr = ""
+			m.home.queue = msg.Queue
+		}
+		return m, nil, true
+	}
+	return m, nil, false
+}
 
 // homeLabelW is the gutter every panel's labels share, so values line up down the whole page.
 const homeLabelW = 11
@@ -127,7 +159,7 @@ func fitHome(sections [][]homeLine, budget int) string {
 func (m Model) renderHomePane() (string, string) {
 	// SF4.2: Home has a second view now — the full owner queue, on `w`. It is a fold, not an eleventh
 	// tab (SF1.3 capped the strip at ten), so it is dispatched here rather than from paneView's switch.
-	if m.homeView == homeOwnerQueue {
+	if m.home.view == homeOwnerQueue {
 		return m.renderOwnerQueuePane()
 	}
 	w := m.paneCols()

@@ -14,6 +14,40 @@ import (
 	"conductor-face-go/internal/widgets"
 )
 
+// reportModel is the Report tab's own state (K6.3, adr/0006): the viewport its body scrolls through
+// and the verifier scores it fetches for itself, declared beside the update and view that read them
+// rather than as three loose fields on a 116-field root struct.
+type reportModel struct {
+	// K6.2: the body scrolls through a viewport (adr/0006 decision 1), not a bare int, so the offset
+	// is clamped where it is CHANGED. The int it replaced was clamped only by a throwaway copy in the
+	// renderer, which is bug #30.
+	vp viewport.Model
+	// scores holds the verifier scores from GET /scores (SF1.1). It is deliberately NOT
+	// data.ReportResult: that field belonged to the Dev console SF1.2 deleted, and sharing it would
+	// have made opening Report silently wipe the developer's last query result.
+	scores *api.ScoresDto
+	// scoresErr is the fetch failure, kept beside the data rather than smuggled into it — a ScoresDto
+	// has no error field, because a typed endpoint's failure is an HTTP failure.
+	scoresErr string
+}
+
+// updateReport handles the messages this tab asked for and nothing else. It reports handled=false
+// for anything that is not its own, so the root dispatch (update.go) can offer it to the next tab.
+func (m Model) updateReport(msg tea.Msg) (Model, tea.Cmd, bool) {
+	switch msg := msg.(type) {
+
+	case MsgReportScores:
+		// A failed scores fetch must not blank the whole report: the section renders the error and
+		// every other section (which came from /state + /sessions) still stands.
+		m.report.scoresErr = msg.Err
+		if msg.Err == "" {
+			m.report.scores = msg.Result
+		}
+		return m, nil, true
+	}
+	return m, nil, false
+}
+
 // The Report tab is the OWNER's run report (U2.2): "how is this run going", rendered — not a SQL
 // prompt. It replaced the SQL console, which moved to Dev (tab_dev.go) unchanged; the owner's
 // verdict on the old tab was "report being sql is stupid — show a good report visually".
@@ -43,8 +77,8 @@ func (m Model) handleReportKey(key string) (tea.Model, tea.Cmd) {
 	// because the clamp now lives at the mutation and nowhere else (adr/0006 decision 1). This is the
 	// whole of the fix for bug #30 — `m.reportScroll++` could run away because Update did not know
 	// how tall the body was and View could not tell it.
-	m.reportVP = m.reportViewport()
-	applyPaneScroll(&m.reportVP, key)
+	m.report.vp = m.reportViewport()
+	applyPaneScroll(&m.report.vp, key)
 	return m, nil
 }
 
@@ -72,7 +106,7 @@ func (m Model) reportBody(s *api.StateDto) string {
 // Both the key handler and the renderer go through it, so an offset that survives a resize or a data
 // refresh is re-clamped against the body that is actually on screen.
 func (m Model) reportViewport() viewport.Model {
-	vp := m.reportVP
+	vp := m.report.vp
 	vp.SetWidth(m.paneCols())
 	vp.SetHeight(m.paneRows())
 	vp.SetContent(m.reportBody(m.data.Plan))
@@ -386,10 +420,10 @@ func (m Model) renderReportSessionTokens() string {
 // sessionOutcomeStyle's vocabulary and fall through to subtle), and a reader had no way to know
 // whether 66 was good.
 func (m Model) renderReportScores() string {
-	if m.reportScoresErr != "" {
-		return homeSection("Verifier scores", "  "+subtleStyle.Render("unavailable: "+m.reportScoresErr))
+	if m.report.scoresErr != "" {
+		return homeSection("Verifier scores", "  "+subtleStyle.Render("unavailable: "+m.report.scoresErr))
 	}
-	res := m.reportScores
+	res := m.report.scores
 	if res == nil || len(res.Scores) == 0 {
 		return ""
 	}

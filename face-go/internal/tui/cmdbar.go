@@ -127,10 +127,10 @@ func (m Model) handleCmdKey(key string) (tea.Model, tea.Cmd) {
 func (m *Model) handleSearchKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
 	case "esc":
-		m.searchActive = false
+		m.agent.searchActive = false
 		m.transcript = m.transcript.Update(widgets.MsgSetSearch{Query: ""})
 	case "enter":
-		m.searchActive = false
+		m.agent.searchActive = false
 	case "backspace":
 		q := m.transcript.SearchQuery
 		if len(q) > 0 {
@@ -311,7 +311,7 @@ func (m Model) renderBottomBar(width int, paneHelp string) string {
 		return bar.Render(accentStyle.Render(": ") + textStyle.Render(m.paletteQuery) + accentStyle.Render("▏") + subtleStyle.Render("  ↑↓ enter esc"))
 	}
 
-	if m.searchActive || m.transcript.SearchQuery != "" {
+	if m.agent.searchActive || m.transcript.SearchQuery != "" {
 		return bar.Render(m.renderSearchLine())
 	}
 
@@ -340,7 +340,7 @@ func (m Model) renderInjectBar() string {
 func (m Model) renderSearchLine() string {
 	q := m.transcript.SearchQuery
 	cursor := ""
-	if m.searchActive {
+	if m.agent.searchActive {
 		cursor = "▏"
 	}
 	matchInfo := subtleStyle.Render("no matches")
@@ -348,7 +348,7 @@ func (m Model) renderSearchLine() string {
 		matchInfo = accentStyle.Render(fmt.Sprintf("%d/%d", m.transcript.SearchMatchIdx+1, len(m.transcript.SearchMatches)))
 	}
 	hint := "enter lock · esc clear"
-	if !m.searchActive {
+	if !m.agent.searchActive {
 		hint = "n/N next/prev · esc clear"
 	}
 	return accentStyle.Render("/") + textStyle.Render(q) + accentStyle.Render(cursor) + "  " + matchInfo + "  " + subtleStyle.Render(hint)

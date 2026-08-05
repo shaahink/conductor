@@ -12,6 +12,108 @@ import (
 	"conductor-face-go/internal/timefmt"
 )
 
+// telegramModel is the Telegram tab's own state (K6.3, M8.2): the fetched status, the in-pane field
+// editor, and the one-line result of the last write. STYLE.md: a persistent settings form, not the
+// transient bottom command bar.
+type telegramModel struct {
+	status     *api.TelegramStatusDto
+	fieldIdx   int
+	editing    bool
+	editBuf    string
+	enumIdx    int
+	statusLine string
+}
+
+// updateTelegram handles this tab's four write/poll results. Every one of them ends in a re-fetch of
+// the status the pane renders, which is why they belong to the pane and not the shell.
+func (m Model) updateTelegram(msg tea.Msg) (Model, tea.Cmd, bool) {
+	switch msg := msg.(type) {
+
+	case MsgTelegramStatusUpdated:
+		if msg.Err != "" {
+			return m, nil, true // status is never load-bearing — same as knowledge/tasks/processes polls
+		}
+		m.telegram.status = msg.Status
+		return m, nil, true
+
+	case MsgTelegramTested:
+		if msg.Err != "" {
+			m.telegram.statusLine = "✗ " + msg.Err
+			return m, nil, true
+		}
+		if msg.Result != nil && !msg.Result.Ok {
+			reason := "test failed"
+			if msg.Result.Error != nil {
+				reason = *msg.Result.Error
+			}
+			m.telegram.statusLine = "✗ " + reason
+			return m, m.cmdFetchTelegramStatus(), true
+		}
+		name := "bot"
+		if msg.Result != nil && msg.Result.BotUsername != nil {
+			name = "@" + *msg.Result.BotUsername
+		}
+		// SC1.3: a test that bypassed the send queue proved Telegram is reachable, not that this run
+		// can notify anybody — the distinction the old always-green tick erased. Say which one it was.
+		if msg.Result != nil && !msg.Result.ViaQueue {
+			detail := "it did NOT go through the run's push queue"
+			if msg.Result.Detail != nil && *msg.Result.Detail != "" {
+				detail = *msg.Result.Detail
+			}
+			m.telegram.statusLine = "⚠ sent by " + name + ", but " + detail
+			return m, m.cmdFetchTelegramStatus(), true
+		}
+		m.telegram.statusLine = "✓ sent — " + name + " delivered through the run's own push queue"
+		return m, m.cmdFetchTelegramStatus(), true
+
+	case MsgTelegramTokenSaved:
+		if msg.Err != "" {
+			m.telegram.statusLine = "✗ " + msg.Err
+			return m, nil, true
+		}
+		if msg.Result != nil && !msg.Result.Ok {
+			reason := "rejected"
+			if msg.Result.Message != nil {
+				reason = *msg.Result.Message
+			}
+			m.telegram.statusLine = "✗ " + reason
+			return m, nil, true
+		}
+		msgText := "saved"
+		if msg.Result != nil && msg.Result.Message != nil {
+			msgText = *msg.Result.Message
+		}
+		// SC1.3: the save succeeding and the engine being able to deliver are different facts. The
+		// engine now says which it is (WillDeliver plus a sentence naming what is still missing, or
+		// that a restart is required), and the Face stops rendering both as one green tick.
+		if msg.Result != nil && !msg.Result.WillDeliver {
+			m.telegram.statusLine = "⚠ " + msgText
+		} else {
+			m.telegram.statusLine = "✓ " + msgText
+		}
+		m.telegram.editing = false
+		return m, m.cmdFetchTelegramStatus(), true
+
+	case MsgTelegramSettingsSaved:
+		if msg.Err != "" {
+			m.telegram.statusLine = "✗ " + msg.Err
+			return m, nil, true
+		}
+		if msg.Result != nil && !msg.Result.Ok {
+			reason := "rejected"
+			if msg.Result.Error != nil {
+				reason = *msg.Result.Error
+			}
+			m.telegram.statusLine = "✗ " + reason
+			return m, nil, true
+		}
+		m.telegram.statusLine = "✓ saved"
+		m.telegram.editing = false
+		return m, m.cmdFetchTelegramStatus(), true
+	}
+	return m, nil, false
+}
+
 // M8.2: Telegram guided setup. Written to read like an onboarding wizard — live status up top, a
 // numbered guide while incomplete, then an editable field list (bot token, allowed chat ids, poll
 // interval, two-way control) and a one-shot "send test message" action, all in-pane per STYLE.md
@@ -45,7 +147,7 @@ func telegramFieldsList() []telegramFieldSpec {
 }
 
 func (m *Model) handleTelegramKey(key string) (tea.Model, tea.Cmd) {
-	if m.telegramEditing {
+	if m.telegram.editing {
 		return m.handleTelegramFieldEdit(key)
 	}
 	fields := telegramFieldsList()
@@ -53,10 +155,10 @@ func (m *Model) handleTelegramKey(key string) (tea.Model, tea.Cmd) {
 	case "esc":
 		return m.openTab(TabAgent)
 	case "up", "k":
-		m.telegramFieldIdx = clamp(m.telegramFieldIdx-1, 0, len(fields)-1)
+		m.telegram.fieldIdx = clamp(m.telegram.fieldIdx-1, 0, len(fields)-1)
 		return m, nil
 	case "down", "j":
-		m.telegramFieldIdx = clamp(m.telegramFieldIdx+1, 0, len(fields)-1)
+		m.telegram.fieldIdx = clamp(m.telegram.fieldIdx+1, 0, len(fields)-1)
 		return m, nil
 	case "enter":
 		return m.telegramEnter()
@@ -68,28 +170,28 @@ func (m *Model) handleTelegramKey(key string) (tea.Model, tea.Cmd) {
 // POST directly (a one-shot action, not something that needs an editor sub-state).
 func (m *Model) telegramEnter() (tea.Model, tea.Cmd) {
 	fields := telegramFieldsList()
-	if m.telegramFieldIdx >= len(fields) {
+	if m.telegram.fieldIdx >= len(fields) {
 		return m, nil
 	}
-	f := fields[m.telegramFieldIdx]
+	f := fields[m.telegram.fieldIdx]
 	if f.Kind == tgTestAction {
-		m.telegramStatusLine = "testing…"
+		m.telegram.statusLine = "testing…"
 		return m, m.cmdPostTelegramTest()
 	}
 
-	m.telegramEditing = true
-	m.telegramStatusLine = ""
+	m.telegram.editing = true
+	m.telegram.statusLine = ""
 	switch f.Kind {
 	case tgToken:
-		m.telegramEditBuf = "" // never prefilled — the server never echoes the token back
+		m.telegram.editBuf = "" // never prefilled — the server never echoes the token back
 	case tgChatIds:
-		m.telegramEditBuf = strings.Join(m.telegramChatIds(), ",")
+		m.telegram.editBuf = strings.Join(m.telegramChatIds(), ",")
 	case tgPollInterval:
-		m.telegramEditBuf = strconv.Itoa(m.telegramPollInterval())
+		m.telegram.editBuf = strconv.Itoa(m.telegramPollInterval())
 	case tgTwoWay:
-		m.telegramEnumIdx = 0
-		if m.telegramStatus != nil && m.telegramStatus.EnableTwoWay {
-			m.telegramEnumIdx = 1
+		m.telegram.enumIdx = 0
+		if m.telegram.status != nil && m.telegram.status.EnableTwoWay {
+			m.telegram.enumIdx = 1
 		}
 	}
 	return m, nil
@@ -97,10 +199,10 @@ func (m *Model) telegramEnter() (tea.Model, tea.Cmd) {
 
 func (m *Model) handleTelegramFieldEdit(key string) (tea.Model, tea.Cmd) {
 	fields := telegramFieldsList()
-	f := fields[m.telegramFieldIdx]
+	f := fields[m.telegram.fieldIdx]
 	switch key {
 	case "esc":
-		m.telegramEditing = false
+		m.telegram.editing = false
 		return m, nil
 	case "enter":
 		return m.saveTelegramField(f)
@@ -109,22 +211,22 @@ func (m *Model) handleTelegramFieldEdit(key string) (tea.Model, tea.Cmd) {
 	if f.Kind == tgTwoWay {
 		switch key {
 		case "left", "h", "right", "l", "space":
-			m.telegramEnumIdx = 1 - m.telegramEnumIdx
+			m.telegram.enumIdx = 1 - m.telegram.enumIdx
 		}
 		return m, nil
 	}
 
 	switch key {
 	case "backspace":
-		if len(m.telegramEditBuf) > 0 {
-			m.telegramEditBuf = m.telegramEditBuf[:len(m.telegramEditBuf)-1]
+		if len(m.telegram.editBuf) > 0 {
+			m.telegram.editBuf = m.telegram.editBuf[:len(m.telegram.editBuf)-1]
 		}
 	default:
 		if ch, ok := typedChar(key); ok {
 			if f.Kind == tgPollInterval && (ch < "0" || ch > "9") {
 				return m, nil // seconds accept digits only
 			}
-			m.telegramEditBuf += ch
+			m.telegram.editBuf += ch
 		}
 	}
 	return m, nil
@@ -133,56 +235,56 @@ func (m *Model) handleTelegramFieldEdit(key string) (tea.Model, tea.Cmd) {
 func (m *Model) saveTelegramField(f telegramFieldSpec) (tea.Model, tea.Cmd) {
 	switch f.Kind {
 	case tgToken:
-		token := strings.TrimSpace(m.telegramEditBuf)
+		token := strings.TrimSpace(m.telegram.editBuf)
 		if token == "" {
-			m.telegramEditing = false
+			m.telegram.editing = false
 			return m, nil
 		}
-		m.telegramStatusLine = "saving…"
+		m.telegram.statusLine = "saving…"
 		return m, m.cmdPostTelegramToken(token)
 	case tgChatIds:
-		v := m.telegramEditBuf
-		m.telegramStatusLine = "saving…"
+		v := m.telegram.editBuf
+		m.telegram.statusLine = "saving…"
 		return m, m.cmdPostTelegramSettingsEdit(api.PlanEditDto{Target: "telegram", Field: "allowedchatids", Value: &v})
 	case tgPollInterval:
-		v := m.telegramEditBuf
+		v := m.telegram.editBuf
 		if v == "" {
 			v = "4"
 		}
-		m.telegramStatusLine = "saving…"
+		m.telegram.statusLine = "saving…"
 		return m, m.cmdPostTelegramSettingsEdit(api.PlanEditDto{Target: "telegram", Field: "pollintervalseconds", Value: &v})
 	case tgTwoWay:
 		v := "false"
-		if m.telegramEnumIdx == 1 {
+		if m.telegram.enumIdx == 1 {
 			v = "true"
 		}
-		m.telegramStatusLine = "saving…"
+		m.telegram.statusLine = "saving…"
 		return m, m.cmdPostTelegramSettingsEdit(api.PlanEditDto{Target: "telegram", Field: "enabletwoway", Value: &v})
 	}
 	return m, nil
 }
 
 func (m Model) telegramChatIds() []string {
-	if m.telegramStatus == nil {
+	if m.telegram.status == nil {
 		return nil
 	}
-	return m.telegramStatus.AllowedChatIds
+	return m.telegram.status.AllowedChatIds
 }
 
 func (m Model) telegramPollInterval() int {
-	if m.telegramStatus == nil {
+	if m.telegram.status == nil {
 		return 4
 	}
-	return m.telegramStatus.PollIntervalSeconds
+	return m.telegram.status.PollIntervalSeconds
 }
 
 // --- rendering ---
 
 func (m Model) renderTelegramPane() (string, string) {
-	if m.telegramStatus == nil {
+	if m.telegram.status == nil {
 		return subtleStyle.Render("loading Telegram status…"), ""
 	}
-	s := m.telegramStatus
+	s := m.telegram.status
 
 	lines := []string{m.renderTelegramStatusLine(s)}
 
@@ -219,19 +321,19 @@ func (m Model) renderTelegramPane() (string, string) {
 	lines = append(lines, "")
 	lines = append(lines, m.renderTelegramFields()...)
 
-	if m.telegramStatusLine != "" {
+	if m.telegram.statusLine != "" {
 		st := safeStyle
 		switch {
-		case strings.HasPrefix(m.telegramStatusLine, "✗"):
+		case strings.HasPrefix(m.telegram.statusLine, "✗"):
 			st = destructStyle
 		// SC1.3: "saved, but it still cannot deliver" and "sent, but not through the queue" are
 		// warnings, not successes — rendering them in the success colour is the same lie in paint.
-		case strings.HasPrefix(m.telegramStatusLine, "⚠"):
+		case strings.HasPrefix(m.telegram.statusLine, "⚠"):
 			st = warnStyle
-		case m.telegramStatusLine == "saving…" || m.telegramStatusLine == "testing…":
+		case m.telegram.statusLine == "saving…" || m.telegram.statusLine == "testing…":
 			st = warnStyle
 		}
-		lines = append(lines, "", st.Render(m.telegramStatusLine))
+		lines = append(lines, "", st.Render(m.telegram.statusLine))
 	}
 
 	if s.LastError != nil && *s.LastError != "" {
@@ -239,8 +341,8 @@ func (m Model) renderTelegramPane() (string, string) {
 	}
 
 	help := "↑↓ field · enter edit/send · esc back"
-	if m.telegramEditing {
-		if telegramFieldsList()[m.telegramFieldIdx].Kind == tgTwoWay {
+	if m.telegram.editing {
+		if telegramFieldsList()[m.telegram.fieldIdx].Kind == tgTwoWay {
 			help = "←→ toggle · enter save · esc cancel"
 		} else {
 			help = "type · enter save · esc cancel"
@@ -334,13 +436,13 @@ func (m Model) renderTelegramFields() []string {
 	fields := telegramFieldsList()
 	var lines []string
 	for i, f := range fields {
-		if m.telegramEditing && i == m.telegramFieldIdx {
+		if m.telegram.editing && i == m.telegram.fieldIdx {
 			lines = append(lines, "  "+m.renderTelegramFieldEditor(f))
 			continue
 		}
 		disp := m.telegramFieldDisplay(f)
 		row := fmt.Sprintf("  %-18s %s", f.Label, disp)
-		if i == m.telegramFieldIdx && !m.telegramEditing {
+		if i == m.telegram.fieldIdx && !m.telegram.editing {
 			lines = append(lines, highlightBg.Render(fmt.Sprintf("  %-18s %s", f.Label, m.telegramFieldDisplayPlain(f))))
 			continue
 		}
@@ -350,7 +452,7 @@ func (m Model) renderTelegramFields() []string {
 }
 
 func (m Model) telegramFieldDisplay(f telegramFieldSpec) string {
-	s := m.telegramStatus
+	s := m.telegram.status
 	switch f.Kind {
 	case tgToken:
 		if s != nil && s.HasToken {
@@ -379,7 +481,7 @@ func (m Model) telegramFieldDisplay(f telegramFieldSpec) string {
 // row where highlightBg.Render wraps the whole line (STYLE.md: never nest ANSI styles inside a
 // background-styled row — style the plain text once, at the outer level).
 func (m Model) telegramFieldDisplayPlain(f telegramFieldSpec) string {
-	s := m.telegramStatus
+	s := m.telegram.status
 	switch f.Kind {
 	case tgToken:
 		if s != nil && s.HasToken {
@@ -407,11 +509,11 @@ func (m Model) telegramFieldDisplayPlain(f telegramFieldSpec) string {
 func (m Model) renderTelegramFieldEditor(f telegramFieldSpec) string {
 	if f.Kind == tgTwoWay {
 		opts := []string{"false", "true"}
-		sel := opts[m.telegramEnumIdx]
+		sel := opts[m.telegram.enumIdx]
 		carousel := accentStyle.Render("‹") + highlightBg.Render(" "+sel+" ") + accentStyle.Render("›")
 		return fmt.Sprintf("%-18s %s", f.Label, carousel)
 	}
-	disp := m.telegramEditBuf
+	disp := m.telegram.editBuf
 	if f.Kind == tgToken && disp != "" {
 		disp = strings.Repeat("•", len(disp))
 	}

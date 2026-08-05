@@ -1,12 +1,10 @@
 package tui
 
 import (
-	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 
 	"conductor-face-go/internal/api"
 	"conductor-face-go/internal/lastrun"
-	"conductor-face-go/internal/templates"
 	"conductor-face-go/internal/widgets"
 )
 
@@ -153,9 +151,6 @@ type Model struct {
 	spinnerFrame int
 	spinnerLive  bool
 
-	// Inline transcript search (non-blocking, Agent tab only).
-	searchActive bool
-
 	// ctrl+c is a double-tap to quit (Claude Code's convention): the first tap arms this and shows a
 	// hint toast, the second quits. Any other keypress disarms it, so a stray ctrl+c never leaves the
 	// app one keystroke from exit. `q` remains the unguarded, explicit quit.
@@ -172,25 +167,18 @@ type Model struct {
 	txSeq      int64
 	consoleSeq int64
 
-	consoleScroll int
-
-	// agentRaw swaps the Agent tab's body from the parsed transcript to the raw agent stdout that used
-	// to be the Console tab (SF1.3). The strip stays in both modes — keeping mission control on screen
-	// while reading raw output is the whole reason this folded instead of staying its own tab.
-	agentRaw bool
-
-	// historyView selects TabHistory's view: the sessions list or the run's spine.
-	historyView historyView
-
-	// homeView selects TabHome's view: the landing, or SF4.2's full owner queue (`w`).
-	homeView homeView
-	// ownerQueue is the last good GET /owner/queue. Kept across a failed poll — the owner's
-	// obligations do not stop existing because one fetch timed out, and a section that blanks itself
-	// on a hiccup is how a queue teaches people to stop trusting it. ownerQueueErr says the feed went
-	// away, beside the rows it is still showing.
-	ownerQueue       *api.OwnerQueueDto
-	ownerQueueErr    string
-	ownerQueueScroll int
+	// Per-tab state (K6.3). Each tab owns its own model, declared in its own `tab_*.go` file beside
+	// the update and view that read it — the partition the `tab_*` files always had and the state
+	// never followed. The rule: nothing outside a tab's own file reads another tab's internals, and a
+	// field added to a surface is added THERE, not here, so this list stays a list of surfaces.
+	home      homeModel
+	agent     agentModel
+	history   historyModel
+	processes processesModel
+	tmpl      templatesModel // Templates tab; `tmpl` because `templates` is also the package it calls
+	report    reportModel
+	knowledge knowledgeModel
+	telegram  telegramModel
 
 	// Palette (bottom command bar)
 	paletteQuery      string
@@ -204,58 +192,6 @@ type Model struct {
 	injectContent string
 	injectStageId string
 	injectField   int
-
-	// Templates tab (list + editor + compiled preview)
-	promptEntries     []templates.Entry
-	promptSelected    int
-	promptEditor      widgets.TextArea
-	promptMode        PromptMode
-	promptPreview     *api.PromptPreviewDto
-	promptPreviewOn   bool
-	promptPreviewErr  string
-	promptPreviewKind int // index into previewKinds — which session kind's compiled prompt to show
-
-	// Timeline tab
-	timelineEntries  []api.TimelineEntryDto
-	timelineSelected int
-	timelineLoading  bool
-	timelineErr      string
-	// timelineHistoryCount is how many events already existed when this Face attached; everything at
-	// or past that index arrived live, and the pane rules a "live" line there (dogfood appendix 6).
-	// timelineHistorySet distinguishes "attached to a run with zero events" from "never fetched" —
-	// a plain 0 count cannot.
-	timelineHistoryCount int
-	timelineHistorySet   bool
-
-	// Sessions tab
-	sessionSelected int
-
-	// Report tab (U2.2: the rendered run report — scroll is its only interaction). SF1.2 deleted the
-	// Dev console's state that used to sit below this block (reportEditor, reportQuickSelected,
-	// reportFocusQuery, reportHScroll, reportHistory, devScroll) — the console is gone, so none of it
-	// has a reader.
-	// K6.2: the body scrolls through a viewport (adr/0006 decision 1), not a bare int. The offset now
-	// lives inside reportVP where every mutation is clamped; the int it replaced was clamped only by a
-	// throwaway copy in the renderer, which is bug #30.
-	reportVP viewport.Model
-	// reportScores holds the verifier scores from GET /scores (SF1.1). It is deliberately NOT
-	// data.ReportResult: that field belongs to the Dev console, and sharing it would make opening
-	// Report silently wipe the developer's last query result.
-	reportScores *api.ScoresDto
-	// reportScoresErr is the fetch failure, kept beside the data rather than smuggled into it — a
-	// ScoresDto has no error field, because a typed endpoint's failure is an HTTP failure.
-	reportScoresErr string
-
-	// Processes tab
-	processSelected int
-	processKilling  bool // kill-confirm prompt open for the selected process
-
-	// Knowledge tab (M7: ledger + tracked bugs; write-side: file note/bug, resolve bug)
-	// K6.2: same viewport, same reason. This is the surface the owner reported as unreadable — it
-	// could not page, could not jump, and answered `k` with nothing because `k` opens this very tab.
-	knowledgeVP    viewport.Model
-	knowledgeMode  knowledgeInputMode // browse, or entering a note / bug title / bug id to resolve
-	knowledgeInput widgets.TextArea
 
 	// Plan tab (M6.3 editor)
 	plan             *api.PlanDto
@@ -280,16 +216,6 @@ type Model struct {
 	planAddIdBuf     string
 	planAddValBuf    string
 	planDeleting     bool // delete-confirm prompt open for the selected stage/gate
-
-	// Telegram tab (M8.2): guided setup — status, field editor (token/chat ids/poll
-	// interval/two-way), and a one-shot "send test message" action row, all in-pane
-	// (STYLE.md: a persistent settings form, not the transient bottom command bar).
-	telegramStatus     *api.TelegramStatusDto
-	telegramFieldIdx   int
-	telegramEditing    bool
-	telegramEditBuf    string
-	telegramEnumIdx    int
-	telegramStatusLine string
 
 	// Kanban tab (G2.2): live board of the run's task graph. Selection is by task id so a card
 	// keeps focus while it moves between columns and across live refreshes.
@@ -336,8 +262,8 @@ func New(source api.DataSource, isDemo bool, baseURL string) Model {
 		cmd:          CmdNone,
 		transcript:   widgets.NewTranscript(),
 		sidebar:      widgets.NewSidebar(),
-		reportVP:     newPaneViewport(),
-		knowledgeVP:  newPaneViewport(),
+		report:       reportModel{vp: newPaneViewport()},
+		knowledge:    knowledgeModel{vp: newPaneViewport()},
 		eventCh:      make(chan api.ConductorEventDto, 256),
 		txCh:         make(chan api.TranscriptLineDto, 1024),
 		consoleCh:    make(chan api.ConsoleLineDto, 1024),

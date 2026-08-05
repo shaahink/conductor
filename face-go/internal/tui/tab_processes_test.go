@@ -10,7 +10,7 @@ func newProcessModel(procs []api.ProcessDto) Model {
 	m := New(api.NewDemoSource(), true, "(demo)")
 	m.data.Processes = procs
 	m.tab = TabProcesses
-	m.processSelected = 0
+	m.processes.selected = 0
 	return m
 }
 
@@ -19,13 +19,13 @@ func TestProcessKillConfirmPostsForSelectedPid(t *testing.T) {
 
 	tm, _ := m.handleProcessesKey("x")
 	m = asModel(tm)
-	if !m.processKilling {
+	if !m.processes.killing {
 		t.Fatal("x should open the kill confirm for a live process")
 	}
 
 	tm, cmd := m.handleProcessesKey("y")
 	m = asModel(tm)
-	if m.processKilling {
+	if m.processes.killing {
 		t.Error("y should close the confirm")
 	}
 	if cmd == nil {
@@ -44,7 +44,7 @@ func TestProcessKillCancelPostsNothing(t *testing.T) {
 	m = asModel(tm)
 	tm, cmd := m.handleProcessesKey("n")
 	m = asModel(tm)
-	if m.processKilling {
+	if m.processes.killing {
 		t.Error("n should close the confirm")
 	}
 	if cmd != nil {
@@ -56,7 +56,7 @@ func TestProcessKillIgnoredForExitedProcess(t *testing.T) {
 	m := newProcessModel([]api.ProcessDto{{Pid: 8723, Alive: false}})
 
 	tm, _ := m.handleProcessesKey("x")
-	if asModel(tm).processKilling {
+	if asModel(tm).processes.killing {
 		t.Error("x on an already-exited process must not open the confirm")
 	}
 }

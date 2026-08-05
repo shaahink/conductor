@@ -132,7 +132,7 @@ func TestTheSessionsViewSaysWhenEachSessionRan(t *testing.T) {
 		t.Errorf("a live session's detail must say it has not ended:\n%s", got)
 	}
 
-	m.sessionSelected = 1
+	m.history.sessionSelected = 1
 	got = stripANSI(sessionsBody(m))
 	if !strings.Contains(got, "09:12 · 55m ago → 09:58  (45m 34s)") {
 		t.Errorf("a finished session's detail must render start, end and span:\n%s", got)

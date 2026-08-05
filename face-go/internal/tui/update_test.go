@@ -267,21 +267,21 @@ func TestEveryTabHasADigit(t *testing.T) {
 func TestFoldedTabKeysStillReachTheirSurface(t *testing.T) {
 	// `s` is History's real mnemonic and must land on the sessions list, not wherever it was left.
 	m := asModel(mustHandle(newTestModel().handleKey("t")))
-	if m.historyView != historyTimeline {
-		t.Fatalf("precondition: t must select the spine, got %v", m.historyView)
+	if m.history.view != historyTimeline {
+		t.Fatalf("precondition: t must select the spine, got %v", m.history.view)
 	}
 	m = asModel(mustHandle(m.handleKey("s")))
-	if m.tab != TabHistory || m.historyView != historySessions {
-		t.Errorf("s must open History's sessions list; tab=%v view=%v", m.tab, m.historyView)
+	if m.tab != TabHistory || m.history.view != historySessions {
+		t.Errorf("s must open History's sessions list; tab=%v view=%v", m.tab, m.history.view)
 	}
 	// ←/→ switches between the two views, this codebase's sub-section idiom.
 	m = asModel(mustHandle(m.handleKey("right")))
-	if m.historyView != historyTimeline {
-		t.Errorf("→ must switch to the other History view, got %v", m.historyView)
+	if m.history.view != historyTimeline {
+		t.Errorf("→ must switch to the other History view, got %v", m.history.view)
 	}
 	m = asModel(mustHandle(m.handleKey("left")))
-	if m.historyView != historySessions {
-		t.Errorf("← must switch back, got %v", m.historyView)
+	if m.history.view != historySessions {
+		t.Errorf("← must switch back, got %v", m.history.view)
 	}
 	// And `d` stays inert — its surface was DELETED, which is the case the aliases are NOT.
 	m = asModel(mustHandle(newTestModel().handleKey("r")))
@@ -383,8 +383,8 @@ func TestKnowledgeFileNote(t *testing.T) {
 		t.Fatalf("expected Knowledge tab, got %v", m.tab)
 	}
 	m = asModel(mustHandle(m.handleKnowledgeKey("n")))
-	if m.knowledgeMode != knowledgeNote {
-		t.Fatalf("expected note-input mode, got %v", m.knowledgeMode)
+	if m.knowledge.mode != knowledgeNote {
+		t.Fatalf("expected note-input mode, got %v", m.knowledge.mode)
 	}
 	if !m.tabHandlesAllKeys() {
 		t.Fatal("note input should capture all keys so 'k'/'b' type instead of switching tabs")
@@ -394,7 +394,7 @@ func TestKnowledgeFileNote(t *testing.T) {
 	}
 	tm, cmd := m.handleKnowledgeKey("enter")
 	m = asModel(tm)
-	if m.knowledgeMode != knowledgeBrowse {
+	if m.knowledge.mode != knowledgeBrowse {
 		t.Fatal("submitting should return to browse mode")
 	}
 	if cmd == nil {
@@ -453,8 +453,8 @@ func TestProcessesNavigationClamps(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		m = asModel(mustHandle(m.handleProcessesKey("down")))
 	}
-	if m.processSelected != 2 {
-		t.Errorf("expected selection to clamp at 2, got %d", m.processSelected)
+	if m.processes.selected != 2 {
+		t.Errorf("expected selection to clamp at 2, got %d", m.processes.selected)
 	}
 	m = asModel(mustHandle(m.handleKey("esc")))
 	if m.tab != TabAgent {
@@ -466,7 +466,7 @@ func TestSearchActivateTypeAndLock(t *testing.T) {
 	m := newTestModel()
 	m = asModel(mustHandle(m.handleKey("a"))) // `/` searches the transcript, so it needs the Agent tab
 	m = asModel(mustHandle(m.handleKey("/")))
-	if !m.searchActive {
+	if !m.agent.searchActive {
 		t.Fatal("expected search to activate")
 	}
 	for _, ch := range "gate" {
@@ -476,7 +476,7 @@ func TestSearchActivateTypeAndLock(t *testing.T) {
 		t.Errorf("expected query 'gate', got %q", m.transcript.SearchQuery)
 	}
 	m = asModel(mustHandle(m.handleSearchKey("enter")))
-	if m.searchActive {
+	if m.agent.searchActive {
 		t.Error("enter should stop capturing keystrokes")
 	}
 	if m.transcript.SearchQuery != "gate" {
@@ -484,7 +484,7 @@ func TestSearchActivateTypeAndLock(t *testing.T) {
 	}
 	m = asModel(mustHandle(m.handleKey("/"))) // still on Agent from above
 	m = asModel(mustHandle(m.handleSearchKey("esc")))
-	if m.searchActive || m.transcript.SearchQuery != "" {
+	if m.agent.searchActive || m.transcript.SearchQuery != "" {
 		t.Error("esc should clear search state")
 	}
 }
@@ -495,31 +495,31 @@ func TestTemplateEditorReadWriteRoundTrip(t *testing.T) {
 	m.data.Plan.PlanDir = dir
 
 	m = asModel(mustHandle(m.handleKey("e")))
-	if m.tab != TabTemplates || len(m.promptEntries) == 0 {
+	if m.tab != TabTemplates || len(m.tmpl.entries) == 0 {
 		t.Fatal("expected Templates tab with entries listed")
 	}
-	if m.promptEntries[0].Exists {
+	if m.tmpl.entries[0].Exists {
 		t.Fatal("fresh temp dir should have no templates on disk")
 	}
 
 	m = asModel(mustHandle(m.handleTemplatesKey("enter")))
-	if m.promptMode != PromptEdit || m.promptEditor.Value() != "" {
-		t.Fatalf("expected empty edit mode, got mode=%v content=%q", m.promptMode, m.promptEditor.Value())
+	if m.tmpl.mode != PromptEdit || m.tmpl.editor.Value() != "" {
+		t.Fatalf("expected empty edit mode, got mode=%v content=%q", m.tmpl.mode, m.tmpl.editor.Value())
 	}
 	for _, ch := range "hello" {
 		m = asModel(mustHandle(m.handleTemplatesKey(string(ch))))
 	}
 	m = asModel(mustHandle(m.handleTemplatesKey("ctrl+s")))
-	if !m.promptEntries[0].Exists {
+	if !m.tmpl.entries[0].Exists {
 		t.Error("entry should be marked existing after save")
 	}
-	saved := filepath.Join(dir, filepath.Base(m.promptEntries[0].Path))
+	saved := filepath.Join(dir, filepath.Base(m.tmpl.entries[0].Path))
 	if data, err := os.ReadFile(saved); err != nil || string(data) != "hello" {
 		t.Errorf("expected saved 'hello', got %q err=%v", string(data), err)
 	}
 
 	m = asModel(mustHandle(m.handleTemplatesKey("esc"))) // edit → list
-	if m.promptMode != PromptList || m.tab != TabTemplates {
+	if m.tmpl.mode != PromptList || m.tab != TabTemplates {
 		t.Error("esc from edit should return to the list, staying on the Templates tab")
 	}
 	m = asModel(mustHandle(m.handleKey("esc"))) // list → Agent
@@ -543,17 +543,17 @@ func TestRawStreamFoldsIntoTheAgentTab(t *testing.T) {
 	// Console tab used to do.
 	m = asModel(mustHandle(m.handleKey("p")))
 	m = asModel(mustHandle(m.handleKey("c")))
-	if m.tab != TabAgent || !m.agentRaw || m.consoleScroll != 0 {
+	if m.tab != TabAgent || !m.agent.raw || m.agent.consoleScroll != 0 {
 		t.Fatalf("c must open Agent's raw stream pinned to the tail; tab=%v raw=%v scroll=%d",
-			m.tab, m.agentRaw, m.consoleScroll)
+			m.tab, m.agent.raw, m.agent.consoleScroll)
 	}
 	// Raw mode owns the old Console keys, through the router.
 	m = asModel(mustHandle(m.handleKey("up")))
-	if m.consoleScroll != 1 {
-		t.Errorf("up should scroll the raw stream back, got %d", m.consoleScroll)
+	if m.agent.consoleScroll != 1 {
+		t.Errorf("up should scroll the raw stream back, got %d", m.agent.consoleScroll)
 	}
 	m = asModel(mustHandle(m.handleKey("end")))
-	if m.consoleScroll != 0 {
+	if m.agent.consoleScroll != 0 {
 		t.Error("end should re-pin to the tail")
 	}
 	// …and the parsed transcript's own keys must NOT be reachable while raw output is showing: `f`
@@ -565,15 +565,15 @@ func TestRawStreamFoldsIntoTheAgentTab(t *testing.T) {
 	}
 	// On Agent, `c` toggles back — the raw view needs a way out that is not "leave and come back".
 	m = asModel(mustHandle(m.handleKey("c")))
-	if m.tab != TabAgent || m.agentRaw {
-		t.Fatalf("c on Agent must toggle raw off; tab=%v raw=%v", m.tab, m.agentRaw)
+	if m.tab != TabAgent || m.agent.raw {
+		t.Fatalf("c on Agent must toggle raw off; tab=%v raw=%v", m.tab, m.agent.raw)
 	}
 	// esc backs out of raw mode too: it is a layer over the transcript, and esc peels layers.
 	m = asModel(mustHandle(m.handleKey("c")))
 	m = asModel(mustHandle(m.handleKey("esc")))
-	if m.tab != TabAgent || m.agentRaw {
+	if m.tab != TabAgent || m.agent.raw {
 		t.Errorf("esc should drop the raw stream and leave the parsed Agent view; tab=%v raw=%v",
-			m.tab, m.agentRaw)
+			m.tab, m.agent.raw)
 	}
 }
 
@@ -581,9 +581,9 @@ func TestTimelineOpenFetchNavigate(t *testing.T) {
 	m := newTestModel()
 	tm, cmd := m.handleKey("t")
 	m = asModel(tm)
-	if m.tab != TabHistory || m.historyView != historyTimeline || !m.timelineLoading {
+	if m.tab != TabHistory || m.history.view != historyTimeline || !m.history.loading {
 		t.Fatalf("t must open History on the spine, loading; tab=%v view=%v loading=%v",
-			m.tab, m.historyView, m.timelineLoading)
+			m.tab, m.history.view, m.history.loading)
 	}
 	if cmd == nil {
 		t.Fatal("expected a fetch command")
@@ -593,15 +593,15 @@ func TestTimelineOpenFetchNavigate(t *testing.T) {
 		t.Fatalf("expected MsgTimelineUpdated, got %T", cmd())
 	}
 	m = asModel(mustHandle2(m.Update(msg)))
-	if m.timelineLoading || len(m.timelineEntries) == 0 {
+	if m.history.loading || len(m.history.entries) == 0 {
 		t.Fatal("expected entries loaded and loading cleared")
 	}
-	n := len(m.timelineEntries)
+	n := len(m.history.entries)
 	for i := 0; i < n+3; i++ {
 		m = asModel(mustHandle(m.handleTimelineKey("down")))
 	}
-	if m.timelineSelected != n-1 {
-		t.Errorf("expected selection clamp at %d, got %d", n-1, m.timelineSelected)
+	if m.history.selected != n-1 {
+		t.Errorf("expected selection clamp at %d, got %d", n-1, m.history.selected)
 	}
 	m = asModel(mustHandle(m.handleKey("esc")))
 	if m.tab != TabAgent {
@@ -617,7 +617,7 @@ func TestPromptCompiledPreviewToggle(t *testing.T) {
 	}
 	tm, cmd := m.handleTemplatesKey("v")
 	m = asModel(tm)
-	if !m.promptPreviewOn || cmd == nil {
+	if !m.tmpl.previewOn || cmd == nil {
 		t.Fatal("expected 'v' to toggle the compiled preview with a fetch")
 	}
 	msg, ok := cmd().(MsgPromptPreview)
@@ -625,11 +625,11 @@ func TestPromptCompiledPreviewToggle(t *testing.T) {
 		t.Fatalf("expected MsgPromptPreview, got %T", cmd())
 	}
 	m = asModel(mustHandle2(m.Update(msg)))
-	if m.promptPreview == nil || m.promptPreview.Kind != "Deliver" {
-		t.Fatalf("expected Deliver preview populated, got %#v", m.promptPreview)
+	if m.tmpl.preview == nil || m.tmpl.preview.Kind != "Deliver" {
+		t.Fatalf("expected Deliver preview populated, got %#v", m.tmpl.preview)
 	}
 	m = asModel(mustHandle(m.handleTemplatesKey("esc")))
-	if m.promptPreviewOn || m.tab != TabTemplates {
+	if m.tmpl.previewOn || m.tab != TabTemplates {
 		t.Error("esc should hide the preview and stay on the Templates tab")
 	}
 }

@@ -88,8 +88,8 @@ func TestLiveOwnerQueueCapture(t *testing.T) {
 	}
 
 	tm, _ = tm.Update(keyMsg("w"))
-	if m := tm.(Model); m.homeView != homeOwnerQueue {
-		t.Fatalf("w did not open the queue against live data: view=%v", m.homeView)
+	if m := tm.(Model); m.home.view != homeOwnerQueue {
+		t.Fatalf("w did not open the queue against live data: view=%v", m.home.view)
 	}
 	pane := stripANSI(tm.(Model).View().Content)
 	for _, it := range q.Items {

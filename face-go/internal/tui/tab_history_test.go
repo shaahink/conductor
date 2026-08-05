@@ -95,8 +95,8 @@ func TestDemoDriveOfTheConsolidatedTabs(t *testing.T) {
 	// which is the thing folding bought and tabbing away used to cost.
 	raw := asModel(mustHandle(asModel(m).handleKey("c")))
 	t.Logf("--demo `c` (Agent raw stream):\n%s", indentBlock(pane(raw)))
-	if !raw.agentRaw || raw.tab != TabAgent {
-		t.Fatalf("c did not open Agent's raw stream: tab=%v raw=%v", raw.tab, raw.agentRaw)
+	if !raw.agent.raw || raw.tab != TabAgent {
+		t.Fatalf("c did not open Agent's raw stream: tab=%v raw=%v", raw.tab, raw.agent.raw)
 	}
 	rawBody := stripANSI(mustBody(raw))
 	if !strings.Contains(rawBody, `{"type":"system"`) {
@@ -113,16 +113,16 @@ func TestDemoDriveOfTheConsolidatedTabs(t *testing.T) {
 	// (3) `s` and `t` each land on their half of History, and both show the switcher.
 	sessions := asModel(mustHandle(asModel(m).handleKey("s")))
 	t.Logf("--demo `s` (History · sessions):\n%s", indentBlock(pane(sessions)))
-	if sessions.tab != TabHistory || sessions.historyView != historySessions {
-		t.Fatalf("s did not open History's sessions view: tab=%v view=%v", sessions.tab, sessions.historyView)
+	if sessions.tab != TabHistory || sessions.history.view != historySessions {
+		t.Fatalf("s did not open History's sessions view: tab=%v view=%v", sessions.tab, sessions.history.view)
 	}
 
 	var spine tea.Model = asModel(mustHandle(asModel(m).handleKey("t")))
 	spine, _ = spine.Update(MsgTimelineUpdated{Timeline: mustTimeline(t)})
 	spineM := asModel(spine)
 	t.Logf("--demo `t` (History · spine):\n%s", indentBlock(pane(spineM)))
-	if spineM.tab != TabHistory || spineM.historyView != historyTimeline {
-		t.Fatalf("t did not open History's spine view: tab=%v view=%v", spineM.tab, spineM.historyView)
+	if spineM.tab != TabHistory || spineM.history.view != historyTimeline {
+		t.Fatalf("t did not open History's spine view: tab=%v view=%v", spineM.tab, spineM.history.view)
 	}
 	for _, view := range []Model{sessions, spineM} {
 		body := stripANSI(mustBody(view))

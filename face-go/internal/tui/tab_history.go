@@ -12,6 +12,55 @@ import (
 	"conductor-face-go/internal/widgets"
 )
 
+// historyModel is the History tab's own state (K6.3): which of its two views is up, the sessions
+// list's cursor, and the spine it fetches. SF1.3 merged Sessions and Timeline into one surface —
+// this struct is that merge finally expressed in the state, instead of two field blocks four
+// hundred lines apart on the root struct.
+type historyModel struct {
+	view            historyView
+	sessionSelected int
+
+	entries  []api.TimelineEntryDto
+	selected int
+	loading  bool
+	err      string
+	// attachCount is how many events already existed when this Face attached; everything at or past
+	// that index arrived live, and the pane rules a "live" line there (dogfood appendix 6). attachSet
+	// distinguishes "attached to a run with zero events" from "never fetched" — a plain 0 cannot.
+	attachCount int
+	attachSet   bool
+}
+
+// updateHistory handles the spine fetch. The sessions poll stays in the shell: data.Sessions has a
+// second reader (the Report tab's per-session table), and shared state is the shell's to land.
+func (m Model) updateHistory(msg tea.Msg) (Model, tea.Cmd, bool) {
+	switch msg := msg.(type) {
+
+	case MsgTimelineUpdated:
+		m.history.loading = false
+		if msg.Err != "" {
+			m.history.err = msg.Err
+		} else if msg.Timeline != nil {
+			m.history.entries = msg.Timeline.Entries
+			m.history.err = ""
+			// The FIRST fetch is the attach: everything in it already happened, and everything after
+			// it is happening now. Recording where that line falls (once) is what lets the pane draw
+			// it — see dogfood appendix item 6, where an attach poured history in and read as an
+			// event storm. The timeline refetches wholesale on every spine event, so this cannot be
+			// inferred later.
+			if !m.history.attachSet {
+				m.history.attachSet = true
+				m.history.attachCount = len(m.history.entries)
+			}
+			if m.history.selected >= len(m.history.entries) {
+				m.history.selected = max(0, len(m.history.entries)-1)
+			}
+		}
+		return m, nil, true
+	}
+	return m, nil, false
+}
+
 // The History tab is the run's past, in two views of one chronology (SF1.3, docs/dev/adr/0004): the
 // SESSIONS list — every session with its outcome and result summary — and the SPINE, the timeline of
 // sessions, gates, stalls and verdicts as they happened. They were two tabs asking one question,
@@ -22,9 +71,9 @@ import (
 func (m Model) handleHistoryKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
 	case "left", "right":
-		return m.openHistory(1 - m.historyView) // two views: the other one
+		return m.openHistory(1 - m.history.view) // two views: the other one
 	}
-	if m.historyView == historyTimeline {
+	if m.history.view == historyTimeline {
 		return m.handleTimelineKey(key)
 	}
 	return m.handleSessionsKey(key)
@@ -32,7 +81,7 @@ func (m Model) handleHistoryKey(key string) (tea.Model, tea.Cmd) {
 
 // renderHistoryPane draws the view switcher, then the active view under it.
 func (m Model) renderHistoryPane() (body, help string) {
-	if m.historyView == historyTimeline {
+	if m.history.view == historyTimeline {
 		body, help = m.renderTimelineView()
 	} else {
 		body, help = m.renderSessionsView()
@@ -44,7 +93,7 @@ func (m Model) renderHistoryPane() (body, help string) {
 // a merged tab that shows one of its halves and nothing else is just the other half, deleted.
 func (m Model) historySwitcher() string {
 	cell := func(v historyView, k, name string) string {
-		if m.historyView == v {
+		if m.history.view == v {
 			return accentStyle.Render("● "+name) + subtleStyle.Render(" "+k)
 		}
 		return subtleStyle.Render("○ " + name + " " + k)
@@ -55,15 +104,15 @@ func (m Model) historySwitcher() string {
 func (m Model) handleTimelineKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
 	case "r":
-		m.timelineLoading, m.timelineErr = true, ""
+		m.history.loading, m.history.err = true, ""
 		return m, m.cmdFetchTimeline()
 	case "up", "k":
-		if m.timelineSelected > 0 {
-			m.timelineSelected--
+		if m.history.selected > 0 {
+			m.history.selected--
 		}
 	case "down", "j":
-		if m.timelineSelected < len(m.timelineEntries)-1 {
-			m.timelineSelected++
+		if m.history.selected < len(m.history.entries)-1 {
+			m.history.selected++
 		}
 	}
 	return m, nil
@@ -72,13 +121,13 @@ func (m Model) handleTimelineKey(key string) (tea.Model, tea.Cmd) {
 // renderTimelineView shows the run's spine — sessions, gates, stalls, verdicts, cost over time.
 // It refreshes itself whenever a new engine event lands (see Update), so it is live while open.
 func (m Model) renderTimelineView() (string, string) {
-	if m.timelineLoading && len(m.timelineEntries) == 0 {
+	if m.history.loading && len(m.history.entries) == 0 {
 		return subtleStyle.Render("loading…"), "r refresh"
 	}
-	if m.timelineErr != "" {
-		return destructStyle.Render("error: " + m.timelineErr), "r retry"
+	if m.history.err != "" {
+		return destructStyle.Render("error: " + m.history.err), "r retry"
 	}
-	if len(m.timelineEntries) == 0 {
+	if len(m.history.entries) == 0 {
 		return subtleStyle.Render("(no events on the run's spine yet)"), "r refresh"
 	}
 	// Reserve the bottom of the pane for the selected entry's detail (full description + meta).
@@ -89,12 +138,12 @@ func (m Model) renderTimelineView() (string, string) {
 		window = 3
 	}
 	start := 0
-	if m.timelineSelected >= window {
-		start = m.timelineSelected - window + 1
+	if m.history.selected >= window {
+		start = m.history.selected - window + 1
 	}
 	end := start + window
-	if end > len(m.timelineEntries) {
-		end = len(m.timelineEntries)
+	if end > len(m.history.entries) {
+		end = len(m.history.entries)
 	}
 	// The rule costs a row inside the window, so the window holds one fewer event. Take it from the
 	// OLDEST end: this pane is a live tail, and dropping the newest event to make room for the line
@@ -107,7 +156,7 @@ func (m Model) renderTimelineView() (string, string) {
 		if i == m.timelineLiveBoundary() {
 			lines = append(lines, m.timelineLiveRule())
 		}
-		e := m.timelineEntries[i]
+		e := m.history.entries[i]
 		glyph, gs := timelineGlyph(e)
 		clock := timelineClock(e.Utc)
 		desc := truncate(e.Description, m.paneCols()-16)
@@ -116,14 +165,14 @@ func (m Model) renderTimelineView() (string, string) {
 			cost = peachStyle.Render(fmt.Sprintf("  $%.2f", *e.CostUsd))
 		}
 		line := fmt.Sprintf("%s %s %s%s", subtleStyle.Render(clock), gs.Render(glyph), textStyle.Render(desc), cost)
-		if i == m.timelineSelected {
+		if i == m.history.selected {
 			line = highlightBg.Render(fmt.Sprintf("%s %s %s", clock, glyph, desc))
 		}
 		lines = append(lines, line)
 	}
 	// Just the count. The "· live" this used to carry now lives on the rule, where it marks WHERE
 	// live begins instead of restating it under a pane that already said it.
-	count := subtleStyle.Render(fmt.Sprintf("%d events", len(m.timelineEntries)))
+	count := subtleStyle.Render(fmt.Sprintf("%d events", len(m.history.entries)))
 	return strings.Join(lines, "\n") + "\n" + count + "\n" + detail, "↑↓ navigate · r refresh"
 }
 
@@ -131,13 +180,13 @@ func (m Model) renderTimelineView() (string, string) {
 // when there is no line worth drawing: nothing fetched yet, an attach to a run with no history (the
 // whole pane is live — a rule at the top would say nothing), or nothing live since.
 func (m Model) timelineLiveBoundary() int {
-	if !m.timelineHistorySet || m.timelineHistoryCount <= 0 {
+	if !m.history.attachSet || m.history.attachCount <= 0 {
 		return -1
 	}
-	if len(m.timelineEntries) <= m.timelineHistoryCount {
+	if len(m.history.entries) <= m.history.attachCount {
 		return -1
 	}
-	return m.timelineHistoryCount
+	return m.history.attachCount
 }
 
 // timelineLiveRule separates replayed history from the live tail. Without it, attaching to a run
@@ -157,10 +206,10 @@ func (m Model) timelineLiveRule() string {
 // timelineDetail renders the selected entry in full — the row truncates the description, so drilling
 // in shows the whole thing plus stage/session/outcome/cost/time that don't fit on one row.
 func (m Model) timelineDetail() string {
-	if m.timelineSelected >= len(m.timelineEntries) {
+	if m.history.selected >= len(m.history.entries) {
 		return ""
 	}
-	e := m.timelineEntries[m.timelineSelected]
+	e := m.history.entries[m.history.selected]
 	glyph, gs := timelineGlyph(e)
 	rule := lipgloss.NewStyle().Foreground(widgets.Surface()).Render(strings.Repeat("─", max(1, m.paneCols())))
 
@@ -285,12 +334,12 @@ func (m Model) sessionWhen(s api.SessionRowDto) string {
 func (m Model) handleSessionsKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
 	case "up", "k":
-		if m.sessionSelected > 0 {
-			m.sessionSelected--
+		if m.history.sessionSelected > 0 {
+			m.history.sessionSelected--
 		}
 	case "down", "j":
-		if m.sessionSelected < len(m.data.Sessions)-1 {
-			m.sessionSelected++
+		if m.history.sessionSelected < len(m.data.Sessions)-1 {
+			m.history.sessionSelected++
 		}
 	}
 	return m, nil
@@ -321,7 +370,7 @@ func (m Model) renderSessionsView() (string, string) {
 		if t, ok := timefmt.Parse(s.StartedUtc); ok {
 			when = timefmt.Stamp(t)
 		}
-		if i == m.sessionSelected {
+		if i == m.history.sessionSelected {
 			lines = append(lines, highlightBg.Render("› "+num+" "+stage+" "+kind+" "+out+" "+commits+" "+when))
 			continue
 		}
@@ -330,8 +379,8 @@ func (m Model) renderSessionsView() (string, string) {
 			subtleStyle.Render(when))
 	}
 
-	if m.sessionSelected < len(m.data.Sessions) {
-		s := m.data.Sessions[m.sessionSelected]
+	if m.history.sessionSelected < len(m.data.Sessions) {
+		s := m.data.Sessions[m.history.sessionSelected]
 		detail := fmt.Sprintf("\n%s #%d · %s %s · %s",
 			accentStyle.Render("Session"), s.Number, accentStyle.Render(s.StageId), textStyle.Render(s.Kind),
 			subtleStyle.Render(fmt.Sprintf("attempt %d, %d resumes", s.Attempt, s.ResumeCount)))
