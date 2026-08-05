@@ -52,6 +52,9 @@ public sealed class AgentSession : IDisposable
     public long? TokensOutput => _stream.TokensOutput;
     public long? TokensReasoning => _stream.TokensReasoning;
     public long? TokensCacheRead => _stream.TokensCacheRead;
+    /// <summary>K4.1: per-turn context high water and mean for this session — how full the window ran,
+    /// not how much the session spent in total.</summary>
+    public Conductor.Core.Events.ContextWindowStats Context => _stream.Context;
     public bool WasKilled { get; private set; }
 
     private AgentSession(Process proc, StreamWriter raw, IAgentProvider provider, IEventSink? eventSink, string? conductorSessionId, IDisposable? supervisorTrack)

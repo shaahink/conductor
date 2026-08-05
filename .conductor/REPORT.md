@@ -1,11 +1,11 @@
 ﻿# Conductor — Karvan core - the engine knows what it did and what it cost run report
 
-_Updated 2026-08-05 03:31 UTC · branch `feat/karvan` · HEAD `7841cfb`_
+_Updated 2026-08-05 03:47 UTC · branch `feat/karvan` · HEAD `21e3f72`_
 
-**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [4h 02m ago, 23:29:12Z]
-**Stage:** K3 — Conductor remembers · attempts used 1
-**Checkpoints:** 11/32 done · **Sessions run:** 11 · **Cost:** $116.4005 (agent $116.3327 + gates $0.0678) · **Tokens:** 1,572,700 in / 768,977 out
-**Confirmed phases:** K1, K2
+**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [4h 17m ago, 23:29:12Z]
+**Stage:** K3 — Conductor remembers · attempts used 0
+**Checkpoints:** 11/32 done · **Sessions run:** 12 · **Cost:** $118.9085 (agent $118.8326 + gates $0.0759) · **Tokens:** 1,636,544 in / 791,890 out
+**Confirmed phases:** K1, K2, K3
 
 ## Stage progress
 
@@ -13,7 +13,7 @@ _Updated 2026-08-05 03:31 UTC · branch `feat/karvan` · HEAD `7841cfb`_
 |---|---|---|---|
 | K1 | The ledger stops lying | ██████████ 4/4 | confirmed ✓ |
 | K2 | The architecture becomes navigable | ██████████ 4/4 | confirmed ✓ |
-| K3 | Conductor remembers | ██████████ 3/3 | gating… |
+| K3 | Conductor remembers | ██████████ 3/3 | confirmed ✓ |
 | K4 | Token truth - measure it before shrinking it | ░░░░░░░░░░ 0/4 | todo |
 | K5 | The result contract and the channels | ░░░░░░░░░░ 0/4 | todo |
 | K6 | The surfaces read | ░░░░░░░░░░ 0/4 | todo |
@@ -108,24 +108,13 @@ _Updated 2026-08-05 03:31 UTC · branch `feat/karvan` · HEAD `7841cfb`_
 | 9 | K3 | Deliver | 1 | 08-05 01:42 | 0:42 | Advanced | K3.1 | 5 | engine-fast:OK · face-fast:OK | $12.0714 | $0.0087 | 193,864/91,429 |
 | 10 | K3 | Deliver | 1 | 08-05 02:26 | 0:36 | Advanced | K3.2 | 5 | engine-fast:OK · face-fast:OK | $17.6953 | $0.0049 | 205,048/111,704 |
 | 11 | K3 | Deliver | 1 | 08-05 03:03 | 0:20 | Advanced | K3.3 | 2 | engine-fast:OK · face-fast:OK | $8.0198 | $0.0053 | 142,261/59,401 |
+| 12 | K3 | Fix | 2 | 08-05 03:31 | 0:09 | Progress |  | 2 | engine-fast:OK · face-fast:OK | $2.4999 | $0.0081 | 63,844/22,913 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-05 01:18:33  • session #6 K1 Fix started (attempt 2/8)
-08-05 01:39:20  ▪ gate engine-fast pass [session]  (54.0s)
-08-05 01:39:20  ▪ gate face-fast pass [session]  (35.4s)
-08-05 01:39:21  • session #6 K1 → Progress · 5 commit(s)  (20m47s)
-08-05 01:39:21  ◆ plan reloaded — v3 · 7 stages · 4 gates
-08-05 01:42:51  ▪ gate engine-fast pass [phase]  (0.0s)
-08-05 01:42:52  ▪ gate face-fast pass [phase]  (0.0s)
-08-05 01:42:52  ▪ gate engine-full pass [phase]  (3m23s)
-08-05 01:42:52  ▪ gate face-full pass [phase]  (4.0s)
-08-05 01:42:52  ✓ checkpoint K1.4 confirmed
-08-05 01:42:52  ▸ stage K1 confirmed  (2h53m43s)
-08-05 01:42:53  ▸ stage K2 entered — The architecture becomes navigable
 08-05 01:42:53  • session #7 K2 Deliver started (attempt 1/8)
 08-05 02:21:10  ▪ gate engine-fast pass [session]  (49.5s)
 08-05 02:21:10  ▪ gate face-fast pass [session]  (31.7s)
@@ -154,6 +143,18 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-05 04:24:58  ▪ gate face-fast pass [session]  (5.7s)
 08-05 04:24:59  • session #11 K3 → Advanced · done K3.3 · 2 commit(s)  (21m43s)
 08-05 04:31:33  ▪ gate engine-fast pass [phase]  (0.0s)
+08-05 04:31:33  ▪ gate face-fast pass [phase]  (0.0s)
+08-05 04:31:33  ▪ gate engine-full FAIL [phase]  (3m23s)
+08-05 04:31:33  ▪ gate face-full pass [phase]  (7.2s)
+08-05 04:31:33  • session #12 K3 Fix started (attempt 2/6)
+08-05 04:42:42  ▪ gate engine-fast pass [session]  (49.7s)
+08-05 04:42:42  ▪ gate face-fast pass [session]  (31.8s)
+08-05 04:42:42  • session #12 K3 → Progress · 2 commit(s)  (11m08s)
+08-05 04:47:06  ▪ gate engine-fast pass [phase]  (0.0s)
+08-05 04:47:07  ▪ gate face-fast pass [phase]  (0.0s)
+08-05 04:47:07  ▪ gate engine-full pass [phase]  (4m01s)
+08-05 04:47:07  ▪ gate face-full pass [phase]  (20.6s)
+08-05 04:47:07  ✓ checkpoint K3.3 confirmed
 ```
 
 ## Health
@@ -161,10 +162,11 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 11 · retries 2 (18 %) · overall Warn
+sessions 12 · retries 3 (25 %) · overall Warn
 ⚠ [context-saturation] session #10: 23,623,416 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #1: 24,653,507 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #7: 24,094,247 context tokens (≥ 20,000,000)
+⚠ [gate-oscillation] gate 'engine-full' flipped pass/fail 3x
 ```
 
 ## Repo
@@ -179,13 +181,6 @@ vs upstream: up to date
 
 ### Commits by session
 
-- **s2 (K1 Deliver)** — 6 commit(s):
-  - [`2de7cca`](https://github.com/shaahink/conductor/commit/2de7cca) docs(tracker): the handoff says to push first - DNS died at session end (K1.3)
-  - [`07cdfe2`](https://github.com/shaahink/conductor/commit/07cdfe2) docs(tracker): K1.3 evidence and the handoff to K1.4
-  - [`6acea2c`](https://github.com/shaahink/conductor/commit/6acea2c) fix(lessons): lessons.md holds deduped one-line rules, not a diary (K1.3)
-  - [`44c17a0`](https://github.com/shaahink/conductor/commit/44c17a0) test(face): rebaseline the report goldens for the n/a reason column (K1.3)
-  - [`58df0bc`](https://github.com/shaahink/conductor/commit/58df0bc) fix(cost): a think column of 0 stops claiming no thinking happened (K1.3)
-  - [`890ac38`](https://github.com/shaahink/conductor/commit/890ac38) fix(face): go.mod describes its own graph, and a test keeps it that way (K1.3)
 - **s5 (K1 Deliver)** — 3 commit(s):
   - [`19169c3`](https://github.com/shaahink/conductor/commit/19169c3) docs(tracker): K1 is complete - the handoff to K2.1 (K1.4)
   - [`ec4c089`](https://github.com/shaahink/conductor/commit/ec4c089) fix(arch): restore the architecture ratchet K1.2 broke, without touching the bar
@@ -221,6 +216,9 @@ vs upstream: up to date
 - **s11 (K3 Deliver)** — 2 commit(s):
   - [`7841cfb`](https://github.com/shaahink/conductor/commit/7841cfb) docs(evidence): K3.3 evidence artifact and the handoff to K4.1
   - [`e45fa11`](https://github.com/shaahink/conductor/commit/e45fa11) feat(history): K3.3 - every run records which engine produced it and under which limits
+- **s12 (K3 Fix)** — 2 commit(s):
+  - [`21e3f72`](https://github.com/shaahink/conductor/commit/21e3f72) docs(evidence): K3.2 fix evidence and the handoff to K4.1
+  - [`398c38a`](https://github.com/shaahink/conductor/commit/398c38a) fix(arch): K3.2's files fit the type ceiling and the history verb tab-completes
 
 ## Phase handovers (audit)
 
@@ -243,62 +241,25 @@ vs upstream: up to date
 
 ## Last gate run
 
-engine-fast:cached · face-fast:cached · engine-full:FAIL-retry · face-full:OK
-
-<details><summary>engine-full — exit 1</summary>
-
-```
-[conductor] retried once (SC4.1): the first attempt exited 1 after 181s. Below is the SECOND run.
-Determining projects to restore...
-  All projects are up-to-date for restore.
-  Conductor.Planning -> C:\code\conductor\src\Conductor.Planning\bin\Debug\net10.0\Conductor.Planning.dll
-  Conductor.Core -> C:\code\conductor\src\Conductor.Core\bin\Debug\net10.0\Conductor.Core.dll
-  Conductor -> C:\code\conductor\src\Conductor\bin\Debug\net10.0\conductor.dll
-  Conductor.Tests -> C:\code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll
-Test run for C:\code\conductor\tests\Conductor.Tests\bin\Debug\net10.0\Conductor.Tests.dll (.NETCoreApp,Version=v10.0)
-A total of 1 test files matched the specified pattern.
-  Failed Conductor.Tests.ArchitectureTests.NoFileGrowsPastItsTypeCeilingOrItsRecordedDebt [156 ms]
-  Error Message:
-   Architecture ratchet — type count went the wrong way:
-  FaceFleet.cs                   declares 4 types (allowed 3). Give each type its own file.
-  HistoryJson.cs                 declares 4 types (allowed 3). Give each type its own file.
-  RunArchive.cs                  declares 5 types (allowed 3). Give each type its own file.
-  Stack Trace:
-     at Conductor.Tests.ArchitectureTests.NoFileGrowsPastItsTypeCeilingOrItsRecordedDebt() in C:\code\conductor\tests\Conductor.Tests\ArchitectureTests.cs:line 108
-   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
-   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
-   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
-  Failed Conductor.Tests.B11_2DoctorAndCompletionTests.Completion_ContainsAllRegisteredVerbs_Exhaustive [13 ms]
-  Error Message:
-   Assert.Contains() Failure: Item not found in collection
-Collection: ["run", "journey", "face", "status", "watch", ···]
-Not found:  "history"
-  Stack Trace:
-     at Conductor.Tests.B11_2DoctorAndCompletionTests.Completion_ContainsAllRegisteredVerbs_Exhaustive() in C:\code\conductor\tests\Conductor.Tests\B11_2Tests.cs:line 132
-   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
-   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
-
-Failed!  - Failed:     2, Passed:  1870, Skipped:     0, Total:  1872, Duration: 2 m 34 s - Conductor.Tests.dll (net10.0)
-```
-</details>
+engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
 
 ## Last session result
 
-> SESSION-RESULT: **K3.3 landed and is claimed** (`e45fa11` implementation, `7841cfb` evidence + handoff, branch `feat/karvan` pushed, tree clean). Schema **v11** adds `runs.engine_version/engine_commit/engine_dirty/limits_json` and — the part that actually answers the motivating question — `sessions.engine/sessions.limits`, because limits are editable in flight and a run-level snapshot alone reports the *last* cap for every session. `RunLimitsSnapshot` stores the **effective** nudge ratio (an unset `SoftBreakRatio` still nudges at 0.8, so persisting the raw null would have recorded "never nudged" for sessions that were), `EngineStamp` carries version/commit/dirty off `BuildInfo`, a dirty engi…
+> SESSION-RESULT: Both gate failures were real K3.2 defects and both are fixed at the root — three files over the architecture type ceiling were split into six new single-type files (no baseline debt recorded, no ceiling raised), and the `history` verb was added to `CompletionCommand.Verbs` so tab-completion knows the verb K3.2 registered; the full suite now passes 1872/1872 with the same total as the red run and the ratchet gate exits 0 with `archdebt base=0 now=0`, K3.2 was reopened and re-claimed with a fresh evidence artifact because it had been marked DONE while the battery was red because of it, and nothing is still red — the only loose thread is that `.conductor/evidence/` is gitignored…
 
 ## Tracker handoff
 
 ```
-last: **K3.3 claimed - K3 is complete.** `e45fa11`, evidence `.conductor/evidence/K3/K3.3-provenance.md`.
-  Schema **v11**: `runs.engine_version/engine_commit/engine_dirty/limits_json` plus
-  `sessions.engine/sessions.limits`. Per-session is the point - a run-level snapshot alone answers the
-  LAST cap for every session. Live rig read back `s1 cap=24M`, `s3 cap=32M` across a mid-run raise.
-  A dirty engine warns once at launch; `history` prints the stamp, the limits, and where either changed.
+last: **K3 battery is GREEN.** `398c38a`, evidence `.conductor/evidence/K3/K3.2-fix-s12-arch-and-completion.md`.
+  K3.2 had been claimed with the battery red because of it, so it was reopened and re-claimed. Two real
+  defects, no flake: three K3.2 files broke `maxTypesPerFile: 3` (both debt maps are `{}` by design, so
+  splitting was the only legal fix - six types moved to their own files, bodies unchanged); and `history`
+  was registered in `Program.cs` but missing from `CompletionCommand.Verbs`, the one const both shells read.
+  1872 pass, ratchet `archdebt base=0 now=0`. K3.1/K3.3 stand as claimed and were not touched.
 next: **K4.1 - the engine measures context size per turn, not just cumulative tokens.** Spec section K4
   in `docs/history/CONDUCTOR-KARVAN.md`. `LiveMetrics.SessionTokenTotals` folds integrals only;
-  `context_high_water` exists nowhere. Note that `sessions.limits` now gives K4 the honest denominator.
-watch: piping the engine through `Select-Object -First N` in PowerShell closes the pipeline and KILLS
-  it mid-flow - that is why the rig has no session 2. Use `-Last`, or capture to a variable. **#28**
-  (this repo's `run.db` says v9 but carries the v10 column) now blocks a v11 engine too - it bites at K7.2.
+  `context_high_water` exists nowhere. `sessions.limits` (v11) now gives K4 the honest denominator.
+watch: a new verb is TWO edits - `Program.cs` and `CompletionCommand.Verbs`; the second is gate-enforced.
+  Piping the engine through `Select-Object -First N` closes the pipeline and KILLS it mid-flow; use `-Last`.
 red: none. Open, not blocking: **#28**, **#27** fresh-db FK error, **#24** `AgentConfig.Merge` drops `Env`.
 ```

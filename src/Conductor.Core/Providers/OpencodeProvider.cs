@@ -110,6 +110,10 @@ public sealed class OpencodeProvider : IAgentProvider
                     if (TryProp(tk, "cache", out var ca) && TryProp(ca, "read", out var cr) && cr.ValueKind == JsonValueKind.Number) { dc = cr.GetInt64(); state.TokensCacheRead = (state.TokensCacheRead ?? 0) + dc; }
                 }
                 state.NumTurns = (state.NumTurns ?? 0) + 1;
+                // K4.1: a step_finish is already one API call's usage (these are added to the running
+                // totals, not assigned), so input plus cache-read is that call's prompt — the same
+                // per-turn context reading ClaudeProvider takes, from the equivalent place.
+                state.ObserveContext(di + dc);
                 state.EmitTokenDelta(di, dout, dr, dc, dcost);
                 break;
             case "error":

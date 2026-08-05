@@ -344,6 +344,10 @@ public sealed partial class SessionRunner
             rec.TokensOutput = agent.TokensOutput;
             rec.TokensReasoning = agent.TokensReasoning;
             rec.TokensCacheRead = agent.TokensCacheRead;
+            // K4.1: only when the stream actually reported per-turn usage. `Measured` is false for a
+            // provider that never emitted one, and recording None there would put a 0k context on a
+            // session that simply was not instrumented.
+            rec.Context = agent.Context is { Measured: true } ctx ? ctx : null;
             // K1.2: read the cooperative rail's own record BEFORE any branch below returns — the
             // measurement is owed on every outcome, and the rollover path is precisely the one where
             // it matters most.

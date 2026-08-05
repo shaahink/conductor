@@ -198,7 +198,10 @@ public sealed partial class RunLoop
                 // pair, but only the latest — limits are editable in flight and a resume can be a
                 // different binary, so "which cap governed session 9" is only answerable per session.
                 EngineStamp.Current.Full,
-                RunLimitsSnapshot.From(_ctx.Plan.Limits).ToJson());
+                RunLimitsSnapshot.From(_ctx.Plan.Limits).ToJson(),
+                // K4.1: how full the window ran for this session, beside the limits that were meant to
+                // govern it — the two only mean something read together.
+                rec.Context);
             if (rec.CostUsd is { } costUsd)
                 db.RecordCost(_ctx.State.RunId, rec.Number, "agent",
                     rec.TokensInput ?? 0, rec.TokensOutput ?? 0, rec.TokensReasoning ?? 0,
@@ -351,6 +354,12 @@ public sealed partial class RunLoop
                 tokensOutput = rec.TokensOutput,
                 tokensReasoning = rec.TokensReasoning,
                 tokensCacheRead = rec.TokensCacheRead,
+                // K4.1: the four numbers above are integrals; these three say how full the window ran.
+                // Null on a session no provider instrumented, and absent from the artifact rather than
+                // recorded as zero.
+                contextHighWater = rec.Context?.HighWaterTokens,
+                contextMeanTurn = rec.Context?.MeanTurnTokens,
+                contextTurns = rec.Context?.Turns,
                 startedUtc = rec.StartedUtc,
                 endedUtc = rec.EndedUtc,
                 wallMs = (long?)(rec.EndedUtc - rec.StartedUtc)?.TotalMilliseconds,

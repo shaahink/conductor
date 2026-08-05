@@ -50,6 +50,30 @@ public static class LiveMetrics
         return new SessionTokenTotals(input, output, reasoning, cacheRead, cost);
     }
 
+    /// <summary>
+    /// K4.1 — the per-turn context profile of a session, recovered from its persisted
+    /// <see cref="TokenDelta"/> events.
+    /// </summary>
+    /// <remarks>
+    /// Each delta is one deduplicated API call, and its <see cref="TokenDelta.Input"/> already carries
+    /// cache-creation, so <c>Input + CacheRead</c> is the prompt that call re-sent. Folding the log
+    /// rather than asking the session means every run recorded before this checkpoint existed still
+    /// yields its context profile — this repo's own history is 4,800 of these events — and that a live
+    /// session's window can be read without reaching into the provider.
+    /// </remarks>
+    public static ContextWindowStats ContextForSession(IEnumerable<ConductorEvent> events, int sessionNumber)
+    {
+        ArgumentNullException.ThrowIfNull(events);
+
+        var sid = sessionNumber.ToString();
+        var meter = new ContextWindowMeter();
+        foreach (var evt in events)
+            if (evt is TokenDelta td && td.SessionId == sid)
+                meter.Observe(td.Input + td.CacheRead);
+
+        return meter.Snapshot();
+    }
+
     /// <summary>Fold token deltas across ALL sessions in the stream (run-wide total).</summary>
     public static SessionTokenTotals RunWide(IEnumerable<ConductorEvent> events)
     {

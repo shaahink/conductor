@@ -54,7 +54,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
 | K3.1 | State has a machine-level home with one catalogue keyed by repo and plan, an environment override, an idempotent migration that imports existing run.db files rather than orphaning them, and a per-run scratch dir that keeps the repo's tracked deliverables | DONE | 707992f | .conductor/evidence/K3/K3.1-state-home.md |
-| K3.2 | conductor history lists and opens past runs read-only from the catalogue, and the Face's existing run picker offers them | DONE | ec1f158 | .conductor/evidence/K3/K3.2-history.md |
+| K3.2 | conductor history lists and opens past runs read-only from the catalogue, and the Face's existing run picker offers them | DONE | ec1f158 | .conductor/evidence/K3/K3.2-fix-s12-arch-and-completion.md |
 | K3.3 | Every run records the engine version, its commit, its dirty flag and a snapshot of the limits that governed it, and a dirty build warns at launch | DONE | e45fa11 | .conductor/evidence/K3/K3.3-provenance.md |
 
 ### K4 — Token truth - measure it before shrinking it

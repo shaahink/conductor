@@ -150,6 +150,13 @@ public sealed class ClaudeProvider : IAgentProvider
         state.TokensOutput = (state.TokensOutput ?? 0) + output;
         state.TokensCacheRead = (state.TokensCacheRead ?? 0) + cacheRead;
 
+        // K4.1: the same numbers answer a second question the engine never asked. Summed, they are the
+        // session's integral; for THIS call, input (which already carries cache_creation) plus cacheRead
+        // is the prompt that was re-sent — the context size /context reports, and the quantity that
+        // drives two thirds of the bill. Observed here and nowhere else, because this is the one place
+        // a message is known to be counted exactly once.
+        state.ObserveContext(input + cacheRead);
+
         state.EmitTokenDelta(input, output, reasoning: 0, cacheRead, costUsd: 0m);
     }
 

@@ -12,6 +12,7 @@ public sealed class AgentStreamState(
     private readonly StringBuilder _buffer = new();
     private readonly HashSet<string> _countedMessageIds = new(StringComparer.Ordinal);
     private readonly Action<long, long, long, long, decimal>? _onTokenDelta = onTokenDelta;
+    private readonly ContextWindowMeter _context = new();
 
     public void Emit(string kind, string text) => emit(kind, text);
 
@@ -28,6 +29,16 @@ public sealed class AgentStreamState(
 
     public void EmitTokenDelta(long input, long output, long reasoning, long cacheRead, decimal costUsd)
         => _onTokenDelta?.Invoke(input, output, reasoning, cacheRead, costUsd);
+
+    /// <summary>K4.1 — record the prompt size of ONE deduplicated API call: everything the wire says was
+    /// sent up, cached prefix included. Separate from <see cref="EmitTokenDelta"/> because the two answer
+    /// different questions — the delta accrues an integral, this keeps a distribution — and because a
+    /// provider that cannot report a per-call prompt size must be able to accrue tokens without
+    /// fabricating a context reading.</summary>
+    public void ObserveContext(long promptTokens) => _context.Observe(promptTokens);
+
+    /// <summary>K4.1 — per-turn context high water and mean for this session so far.</summary>
+    public ContextWindowStats Context => _context.Snapshot();
 
     /// <summary>SC2.3: true the FIRST time a given wire message id is offered for live accounting,
     /// false every time after. A provider whose stream re-emits one message once per content block

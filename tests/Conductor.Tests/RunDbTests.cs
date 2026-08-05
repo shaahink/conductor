@@ -53,11 +53,11 @@ public sealed class RunDbTests : IDisposable
     }
 
     [Fact]
-    public void Schema_version_is_eleven()
+    public void Schema_version_is_twelve()
     {
         var rows = _db.Query("SELECT version FROM schema_version");
         Assert.Single(rows);
-        Assert.Equal(11L, (long)rows[0]["version"]!);  // K3.3 added the engine stamp + limits columns
+        Assert.Equal(12L, (long)rows[0]["version"]!);  // K4.1 added sessions.context_* (v11: engine stamp + limits)
     }
 
     [Fact]

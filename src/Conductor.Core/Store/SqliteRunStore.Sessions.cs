@@ -67,15 +67,16 @@ public sealed partial class SqliteRunStore
         string? agentSessionId, int resumeCount, int attempt,
         string? gateSummary, string? resultSummary, int commitCount, string? newlyDone,
         string? digest = null, string? softBreak = null,
-        string? engine = null, string? limits = null)
+        string? engine = null, string? limits = null,
+        Conductor.Core.Events.ContextWindowStats? context = null)
     {
         TryExecute(
             "INSERT INTO sessions (run_id, stage_id, number, kind, started_utc, ended_utc, outcome, " +
             "agent_session_id, resume_count, attempt, gate_summary, result_summary, commit_count, newly_done, digest, soft_break, " +
-            "engine, limits) " +
+            "engine, limits, context_high_water, context_mean_turn, context_turns) " +
             "VALUES (@runId, @stageId, @number, @kind, @started, @ended, @outcome, " +
             "@agentSessionId, @resumeCount, @attempt, @gateSummary, @resultSummary, @commitCount, @newlyDone, @digest, @softBreak, " +
-            "@engine, @limits)",
+            "@engine, @limits, @ctxHigh, @ctxMean, @ctxTurns)",
             ("@runId", runId), ("@stageId", stageId), ("@number", number), ("@kind", kind),
             ("@started", startedUtc.ToString("O")),
             ("@ended", (object?)(endedUtc?.ToString("O")) ?? DBNull.Value),
@@ -91,7 +92,12 @@ public sealed partial class SqliteRunStore
             // K3.3: which build ran this session and under which limits. Per session because both
             // change mid-run — a resume can pick up a new binary, and the Plan tab edits limits live.
             ("@engine", (object?)engine ?? DBNull.Value),
-            ("@limits", (object?)limits ?? DBNull.Value));
+            ("@limits", (object?)limits ?? DBNull.Value),
+            // K4.1: how full the window ran. All three go in together or all three stay NULL — a mean
+            // without its turn count is a figure no later prescription can weight.
+            ("@ctxHigh", context is { Measured: true } ? context.HighWaterTokens : (object)DBNull.Value),
+            ("@ctxMean", context is { Measured: true } ? context.MeanTurnTokens : (object)DBNull.Value),
+            ("@ctxTurns", context is { Measured: true } ? context.Turns : (object)DBNull.Value));
     }
 
     // ---------------------------------------------------------------- costs

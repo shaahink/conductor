@@ -293,6 +293,12 @@ public sealed class K3_3ProvenanceTests : IDisposable
                 "ALTER TABLE runs DROP COLUMN limits_json;" +
                 "ALTER TABLE sessions DROP COLUMN engine;" +
                 "ALTER TABLE sessions DROP COLUMN limits;" +
+                // K4.1: v12's columns go too. Rewinding the version without rewinding the schema
+                // replays v12 over columns that are already there, and the upgrade dies on a duplicate
+                // column — the shape of every "it worked on a fresh db" migration bug.
+                "ALTER TABLE sessions DROP COLUMN context_high_water;" +
+                "ALTER TABLE sessions DROP COLUMN context_mean_turn;" +
+                "ALTER TABLE sessions DROP COLUMN context_turns;" +
                 "UPDATE schema_version SET version = 10;";
             cmd.ExecuteNonQuery();
         }
@@ -305,7 +311,9 @@ public sealed class K3_3ProvenanceTests : IDisposable
         var archive = RunArchive.TryOpen(db)!;
         Assert.Equal((long)SqliteRunStore.CurrentSchemaVersion,
             Convert.ToInt64(archive.Query("SELECT version FROM schema_version")[0]["version"]));
-        Assert.Equal(11, SqliteRunStore.CurrentSchemaVersion);
+        // K4.1 moved the schema to v12 (sessions.context_*). The pin follows the shipped version on
+        // purpose: this test asserts the v10 -> current upgrade path lands, not that v11 is the end.
+        Assert.Equal(12, SqliteRunStore.CurrentSchemaVersion);
         var run = Assert.Single(archive.Runs());
         Assert.Equal("run-k33-0004", run.RunId);
         Assert.Equal("completed", run.Status);

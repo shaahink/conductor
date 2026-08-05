@@ -143,17 +143,72 @@ public sealed class RunArchive
     public IReadOnlyList<ArchivedSession> Sessions(string runId)
     {
         var provenance = Has("sessions", "engine") ? "s.engine, s.limits, " : "";
+        // K4.1: the recorded columns exist only from v12. Older archives answer from their event log
+        // instead (below), so `history` reports a context profile for runs that finished long before
+        // the measurement was written.
+        var context = Has("sessions", "context_turns")
+            ? "s.context_high_water, s.context_mean_turn, s.context_turns, " : "";
         var rows = Query(
             "SELECT s.number, s.stage_id, s.kind, s.started_utc, s.ended_utc, s.outcome, s.attempt, " +
             "  s.resume_count, s.commit_count, s.result_summary, s.gate_summary, " +
-            provenance +
+            provenance + context +
             "  (SELECT COALESCE(SUM(c.cost_usd), 0) FROM costs c " +
             "     WHERE c.run_id = s.run_id AND c.session_number = s.number) AS cost_usd, " +
             "  (SELECT COALESCE(SUM(c.tokens_in + c.tokens_out + c.tokens_think + c.tokens_cache), 0) " +
             "     FROM costs c WHERE c.run_id = s.run_id AND c.session_number = s.number) AS tokens " +
             "FROM sessions s WHERE s.run_id = @runId ORDER BY s.number",
             ("@runId", runId));
-        return rows.Select(MapSession).ToList();
+        var sessions = rows.Select(MapSession).ToList();
+
+        // K4.1: fill the gap from the deltas. A session recorded before v12 has no context columns, but
+        // every API call it made is still in `events` as a TokenDelta, and Input (cache-creation
+        // included) plus CacheRead is that call's prompt — the same arithmetic the live fold does. The
+        // recorded columns win where they exist; this only speaks where they are silent.
+        if (sessions.Any(s => s.Context is null))
+        {
+            var recovered = ContextFromEvents(runId);
+            for (var i = 0; i < sessions.Count; i++)
+                if (sessions[i].Context is null && recovered.TryGetValue(sessions[i].Number, out var c))
+                    sessions[i] = sessions[i] with
+                    {
+                        ContextHighWater = c.HighWaterTokens,
+                        ContextMeanTurn = c.MeanTurnTokens,
+                        ContextTurns = c.Turns,
+                    };
+        }
+        return sessions;
+    }
+
+    /// <summary>K4.1 — per-session context profile folded out of the archived TokenDelta events. Empty
+    /// when the archive has no event log, or when its SQLite build cannot read JSON: a missing profile
+    /// prints as "-", which is the truth, where a thrown query would take the whole view down.</summary>
+    private Dictionary<int, Conductor.Core.Events.ContextWindowStats> ContextFromEvents(string runId)
+    {
+        var result = new Dictionary<int, Conductor.Core.Events.ContextWindowStats>();
+        if (!Has("events", "payload")) return result;
+        try
+        {
+            var rows = Query(
+                "SELECT session_id, COUNT(*) AS turns, " +
+                "  MAX(json_extract(payload, '$.input') + json_extract(payload, '$.cacheRead')) AS high, " +
+                "  CAST(AVG(json_extract(payload, '$.input') + json_extract(payload, '$.cacheRead')) AS INTEGER) AS mean " +
+                "FROM events WHERE run_id = @runId AND type = 'TokenDelta' AND session_id IS NOT NULL " +
+                "GROUP BY session_id",
+                ("@runId", runId));
+            foreach (var r in rows)
+            {
+                if (!int.TryParse(r["session_id"] as string, out var number)) continue;
+                var turns = Convert.ToInt32(r["turns"] ?? 0, System.Globalization.CultureInfo.InvariantCulture);
+                var high = Convert.ToInt64(r["high"] ?? 0L, System.Globalization.CultureInfo.InvariantCulture);
+                var mean = Convert.ToInt64(r["mean"] ?? 0L, System.Globalization.CultureInfo.InvariantCulture);
+                if (turns > 0 && high > 0) result[number] = new Conductor.Core.Events.ContextWindowStats(high, mean, turns);
+            }
+        }
+        catch (Microsoft.Data.Sqlite.SqliteException)
+        {
+            // No JSON1, or an event log shaped differently. Nothing to report is a valid answer.
+        }
+        return result;
     }
 
     /// <summary>The declared stages of one run, in the order the engine recorded them.</summary>
@@ -242,7 +297,14 @@ public sealed class RunArchive
         ResultSummary: r["result_summary"] as string,
         GateSummary: r["gate_summary"] as string,
         Engine: Opt(r, "engine") as string,
-        LimitsJson: Opt(r, "limits") as string);
+        LimitsJson: Opt(r, "limits") as string,
+        ContextHighWater: OptLong(r, "context_high_water"),
+        ContextMeanTurn: OptLong(r, "context_mean_turn"),
+        ContextTurns: (int?)OptLong(r, "context_turns"));
+
+    /// <summary>K4.1: an optional numeric column, null for "absent OR NULL" — the two are one answer.</summary>
+    private static long? OptLong(Dictionary<string, object?> r, string column)
+        => Opt(r, column) is { } v ? Convert.ToInt64(v, System.Globalization.CultureInfo.InvariantCulture) : null;
 
     private static ArchivedStage MapStage(Dictionary<string, object?> r) => new(
         Id: (string)(r["id"] ?? "")!,

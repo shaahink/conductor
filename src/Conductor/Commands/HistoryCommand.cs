@@ -236,6 +236,9 @@ public sealed class HistoryCommand : Command<HistoryCommand.Settings>
                 .AddColumn("Stage").AddColumn("Kind").AddColumn("Outcome")
                 .AddColumn(new TableColumn("Commits").RightAligned())
                 .AddColumn(new TableColumn("Cost").RightAligned())
+                // K4.1: beside the integral, the figure that actually sets a cap — how full the window
+                // ran on the fullest turn of this session.
+                .AddColumn(new TableColumn("Context").RightAligned())
                 .AddColumn("Started").AddColumn("Result");
             foreach (var s in sessions)
                 t.AddRow(
@@ -244,14 +247,62 @@ public sealed class HistoryCommand : Command<HistoryCommand.Settings>
                     StatusMarkup(s.Outcome ?? "-"),
                     s.Commits.ToString(CultureInfo.InvariantCulture),
                     $"${s.CostUsd.ToString("0.00", CultureInfo.InvariantCulture)}",
+                    s.Context is { } ctx ? Tokens(ctx.HighWaterTokens) : "[grey]-[/]",
                     $"[grey]{Markup.Escape(Stamp(s.StartedUtc) ?? "-")}[/]",
                     Markup.Escape(Clip(s.ResultSummary ?? "-", 30)));
             AnsiConsole.Write(t);
+            ShowContextProfile(sessions);
             ShowLimitChanges(sessions);
         }
 
         return 0;
     }
+
+    /// <summary>
+    /// K4.1 — the run's context profile in one sentence an operator can act on.
+    /// </summary>
+    /// <remarks>
+    /// The sessions table above reports each session's peak; this is the run's, and it is the diagnosis
+    /// behind a badly-set cap. Weighted by turns, not a mean of means, because a 12-turn session and a
+    /// 90-turn session are not equal evidence about how full the window runs. The integral is printed
+    /// beside it deliberately: those two numbers are what everyone has been confusing — a run that
+    /// "spent 7.5M tokens" never held more than ~160k at once, and only the second figure has anything
+    /// to say about where a cap belongs.
+    /// </remarks>
+    private static void ShowContextProfile(IReadOnlyList<Conductor.Core.History.ArchivedSession> sessions)
+    {
+        var measured = sessions.Where(s => s.Context is { Measured: true }).ToList();
+        if (measured.Count == 0) return;
+
+        long turns = 0, weighted = 0, high = 0;
+        var peakSession = 0;
+        foreach (var s in measured)
+        {
+            var c = s.Context!;
+            turns += c.Turns;
+            weighted += c.MeanTurnTokens * c.Turns;
+            if (c.HighWaterTokens > high) { high = c.HighWaterTokens; peakSession = s.Number; }
+        }
+        var mean = turns > 0 ? weighted / turns : 0;
+        var integral = sessions.Sum(s => s.Tokens);
+
+        AnsiConsole.MarkupLine(
+            $"[grey]context[/]  sessions run at [bold]{Tokens(mean)}[/] per turn · high water [bold]{Tokens(high)}[/] " +
+            $"(session {peakSession.ToString(CultureInfo.InvariantCulture)}) · {turns.ToString("N0", CultureInfo.InvariantCulture)} turns over " +
+            $"{measured.Count.ToString(CultureInfo.InvariantCulture)} sessions");
+        if (high > 0 && integral > high)
+            AnsiConsole.MarkupLine(
+                $"[grey]         the {Tokens(integral)} total is an integral — no single turn carried more than {Tokens(high)}[/]");
+    }
+
+    /// <summary>Compact token count: 95k, 7.5M — the scale an operator reads, not 7,512,345.</summary>
+    private static string Tokens(long value) => value switch
+    {
+        >= 1_000_000 => (value / 1_000_000d).ToString("0.0", CultureInfo.InvariantCulture) + "M",
+        >= 10_000 => (value / 1000d).ToString("0", CultureInfo.InvariantCulture) + "k",
+        >= 1_000 => (value / 1000d).ToString("0.0", CultureInfo.InvariantCulture) + "k",
+        _ => value.ToString(CultureInfo.InvariantCulture),
+    };
 
     /// <summary>
     /// K3.3 — where the limits or the binary changed mid-run, and to what. This is the checkpoint's

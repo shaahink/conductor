@@ -32,6 +32,13 @@ public sealed class SessionRecord
     public int Attempt { get; set; }
     public string ResultSummary { get; set; } = "";
 
+    /// <summary>K4.1: how full the context window ran, per turn — high water, mean and the number of
+    /// API calls the sample is over. Null when the provider reported no per-turn usage (an old record,
+    /// a fake agent, a provider without usage on the wire), which must not read as a measured zero.
+    /// Every other token field here is an integral 30-50x larger than any window; this is the figure
+    /// that actually drives the cache-read share of the bill. Persisted to <c>sessions.context_*</c>.</summary>
+    public Conductor.Core.Events.ContextWindowStats? Context { get; set; }
+
     /// <summary>SC7.1 (devcontext #11): absolute paths this session wrote OUTSIDE the plan's repo and
     /// outside every declared satellite, deduped, capped. Collected from the structured tool events —
     /// impossible before SC7.1, because a <c>file_path</c> past the old 150-character argument cut was

@@ -31,7 +31,8 @@ public interface IRunStore : IDisposable
         string? agentSessionId, int resumeCount, int attempt,
         string? gateSummary, string? resultSummary, int commitCount, string? newlyDone,
         string? digest = null, string? softBreak = null,
-        string? engine = null, string? limits = null);
+        string? engine = null, string? limits = null,
+        Conductor.Core.Events.ContextWindowStats? context = null);
 
     // ---------------------------------------------------------------- costs
 
