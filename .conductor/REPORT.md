@@ -1,11 +1,11 @@
 ﻿# Conductor — Karvan core - the engine knows what it did and what it cost run report
 
-_Updated 2026-08-05 07:33 UTC · branch `feat/karvan` · HEAD `f6900c1`_
+_Updated 2026-08-05 08:23 UTC · branch `feat/karvan` · HEAD `cc7ad14`_
 
-**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [8h 03m ago, 23:29:12Z]
-**Stage:** K5 — The result contract and the channels · attempts used 0 · working ▸ K5.4
-**Checkpoints:** 18/32 done · **Sessions run:** 19 · **Cost:** $199.5446 (agent $199.4327 + gates $0.1119) · **Tokens:** 2,793,492 in / 1,374,023 out
-**Confirmed phases:** K1, K2, K3, K4
+**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [8h 54m ago, 23:29:12Z]
+**Stage:** K5 — The result contract and the channels · attempts used 0
+**Checkpoints:** 19/32 done · **Sessions run:** 20 · **Cost:** $218.9517 (agent $218.8347 + gates $0.1169) · **Tokens:** 3,039,858 in / 1,500,802 out
+**Confirmed phases:** K1, K2, K3, K4, K5
 
 ## Stage progress
 
@@ -15,7 +15,7 @@ _Updated 2026-08-05 07:33 UTC · branch `feat/karvan` · HEAD `f6900c1`_
 | K2 | The architecture becomes navigable | ██████████ 4/4 | confirmed ✓ |
 | K3 | Conductor remembers | ██████████ 3/3 | confirmed ✓ |
 | K4 | Token truth - measure it before shrinking it | ██████████ 4/4 | confirmed ✓ |
-| K5 | The result contract and the channels | ████████░░ 3/4 | **← active** |
+| K5 | The result contract and the channels | ██████████ 4/4 | confirmed ✓ |
 | K6 | The surfaces read | ░░░░░░░░░░ 0/4 | todo |
 | K7 | Ship the plan | ░░░░░░░░░░ 0/2 | todo |
 
@@ -62,14 +62,14 @@ _Updated 2026-08-05 07:33 UTC · branch `feat/karvan` · HEAD `f6900c1`_
 
 </details>
 
-<details><summary>K5 — The result contract and the channels (3/4)</summary>
+<details> ✅<summary>K5 — The result contract and the channels (4/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
 | K5.1 | The session result has one format conductor owns — short headline, at most three outcome bullets, artefacts as links, evidence paths, explicit gaps — with the followup parser, the verdict parse and the session template moving in the same checkpoint and a legacy result degrading rather than throwing | ✅ DONE | [`c04175d`](https://github.com/shaahink/conductor/commit/c04175d) |
 | K5.2 | The five Telegram defects that make the feed unreadable are gone: one identity block from one source, the stage title beside the id, the structured result rendered instead of cut mid-word, a rollover that reports what it landed, and a progress line in every push | ✅ DONE | [`c04175d`](https://github.com/shaahink/conductor/commit/c04175d) |
-| K5.3 | Evidence is a first-class artifact — path, kind, checkpoint, session, sha, created-at — written as an event when an agent registers one or a watched directory gains a file, with non-text kinds first-class, a Face surface, and the existing free-text evidence field still working | ✅ DONE | - |
-| K5.4 | The message-composition layer ships owner-editable per-event templates, repo and branch and stage title and checkpoint in every push, commits and PRs as links, money with headroom, photo and document sending so evidence arrives, a thread per run, severity mapped to notify or silent, 4096-character chunking, and an ADR recording the push-only remote posture | ⬜ TODO | - |
+| K5.3 | Evidence is a first-class artifact — path, kind, checkpoint, session, sha, created-at — written as an event when an agent registers one or a watched directory gains a file, with non-text kinds first-class, a Face surface, and the existing free-text evidence field still working | ✅ DONE | [`6df3a58`](https://github.com/shaahink/conductor/commit/6df3a58) |
+| K5.4 | The message-composition layer ships owner-editable per-event templates, repo and branch and stage title and checkpoint in every push, commits and PRs as links, money with headroom, photo and document sending so evidence arrives, a thread per run, severity mapped to notify or silent, 4096-character chunking, and an ADR recording the push-only remote posture | ✅ DONE | [`43dd6d2`](https://github.com/shaahink/conductor/commit/43dd6d2) |
 
 </details>
 
@@ -116,22 +116,13 @@ _Updated 2026-08-05 07:33 UTC · branch `feat/karvan` · HEAD `f6900c1`_
 | 17 | K4 | Fix | 2 | 08-05 05:59 | 0:06 | Progress |  | 1 | engine-fast:OK · face-fast:OK | $1.7676 | $0.0048 | 54,483/13,809 |
 | 18 | K5 | Deliver | 1 | 08-05 06:09 | 0:41 | Advanced | K5.1 K5.2 | 7 | engine-fast:OK · face-fast:OK | $17.4525 | $0.0050 | 235,397/127,419 |
 | 19 | K5 | Deliver | 1 | 08-05 06:51 | 0:41 | Advanced | K5.3 | 5 | engine-fast:OK · face-fast:OK | $16.1117 | $0.0049 | 187,740/86,244 |
+| 20 | K5 | Deliver | 1 | 08-05 07:33 | 0:46 | Advanced | K5.4 | 4 | engine-fast:OK · face-fast:OK | $19.4020 | $0.0051 | 246,366/126,779 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-05 04:47:07  ▸ stage K3 confirmed  (2h04m51s)
-08-05 04:47:07  ▸ stage K4 entered — Token truth - measure it before shrinking it
-08-05 04:47:08  • session #13 K4 Deliver started (attempt 1/8)
-08-05 05:10:22  ▪ gate engine-fast pass [session]  (41.6s)
-08-05 05:10:22  ▪ gate face-fast pass [session]  (3.2s)
-08-05 05:10:23  • session #13 K4 → Advanced · done K4.1 · 2 commit(s)  (23m15s)
-08-05 05:10:23  • session #14 K4 Deliver started (attempt 1/8)
-08-05 05:40:40  ▪ gate engine-fast pass [session]  (42.3s)
-08-05 05:40:40  ▪ gate face-fast pass [session]  (29.2s)
-08-05 05:40:41  • session #14 K4 → Advanced · done K4.2 · 2 commit(s)  (30m17s)
 08-05 05:40:41  • session #15 K4 Deliver started (attempt 1/8)
 08-05 06:05:04  ▪ gate engine-fast pass [session]  (47.0s)
 08-05 06:05:04  ▪ gate face-fast pass [session]  (3.6s)
@@ -162,6 +153,16 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-05 07:51:11  • session #19 K5 Deliver started (attempt 1/8)
 08-05 08:33:07  ▪ gate engine-fast pass [session]  (44.6s)
 08-05 08:33:07  ▪ gate face-fast pass [session]  (4.1s)
+08-05 08:33:08  • session #19 K5 → Advanced · done K5.3 · 5 commit(s)  (41m56s)
+08-05 08:33:08  • session #20 K5 Deliver started (attempt 1/8)
+08-05 09:20:15  ▪ gate engine-fast pass [session]  (47.0s)
+08-05 09:20:15  ▪ gate face-fast pass [session]  (3.7s)
+08-05 09:20:16  • session #20 K5 → Advanced · done K5.4 · 4 commit(s)  (47m07s)
+08-05 09:23:26  ▪ gate engine-fast pass [phase]  (0.0s)
+08-05 09:23:26  ▪ gate face-fast pass [phase]  (0.0s)
+08-05 09:23:26  ▪ gate engine-full pass [phase]  (2m59s)
+08-05 09:23:26  ▪ gate face-full pass [phase]  (9.0s)
+08-05 09:23:26  ✓ checkpoint K5.4 confirmed
 ```
 
 ## Health
@@ -169,10 +170,12 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 19 · retries 4 (21 %) · overall Warn
+sessions 20 · retries 4 (20 %) · overall Warn
 ⚠ [context-saturation] session #10: 23,623,416 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #18: 23,816,486 context tokens (≥ 20,000,000)
+⚠ [context-saturation] session #19: 24,146,164 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #1: 24,653,507 context tokens (≥ 20,000,000)
+⚠ [context-saturation] session #20: 25,687,748 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #7: 24,094,247 context tokens (≥ 20,000,000)
 ⚠ [gate-oscillation] gate 'engine-full' flipped pass/fail 5x
 ```
@@ -183,15 +186,12 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/karvan
-working tree: clean
+working tree: M .conductor/REPORT.md, M plans/karvan/CORE-TRACKER.md
 vs upstream: up to date
 ```
 
 ### Commits by session
 
-- **s12 (K3 Fix)** — 2 commit(s):
-  - [`21e3f72`](https://github.com/shaahink/conductor/commit/21e3f72) docs(evidence): K3.2 fix evidence and the handoff to K4.1
-  - [`398c38a`](https://github.com/shaahink/conductor/commit/398c38a) fix(arch): K3.2's files fit the type ceiling and the history verb tab-completes
 - **s13 (K4 Deliver)** — 2 commit(s):
   - [`3fe10fe`](https://github.com/shaahink/conductor/commit/3fe10fe) docs(evidence): K4.1 evidence artifact and the handoff to K4.2
   - [`ea49c8d`](https://github.com/shaahink/conductor/commit/ea49c8d) feat(tokens): K4.1 - the engine measures how full the window ran, not just what it spent
@@ -223,6 +223,11 @@ vs upstream: up to date
   - [`f4b272f`](https://github.com/shaahink/conductor/commit/f4b272f) feat(face): K5.3 part 4 - the evidence surface, re-homed rather than an eleventh tab
   - [`fe5ab5f`](https://github.com/shaahink/conductor/commit/fe5ab5f) feat(evidence): K5.3 part 3 - GET /evidence, and the ratchet reds the engine half left
   - [`6df3a58`](https://github.com/shaahink/conductor/commit/6df3a58) test(evidence): K5.3 part 2 - the tests, and the defect they found
+- **s20 (K5 Deliver)** — 4 commit(s):
+  - [`cc7ad14`](https://github.com/shaahink/conductor/commit/cc7ad14) docs(tracker): K5.4 claimed and handed off - the composition layer is closed
+  - [`aaee340`](https://github.com/shaahink/conductor/commit/aaee340) feat(telegram): K5.4 part 3 - the templates the owner edits, and the push-only ADR
+  - [`baa2c56`](https://github.com/shaahink/conductor/commit/baa2c56) feat(telegram): K5.4 part 2 - the composition, so a push says which checkout and what is left
+  - [`43dd6d2`](https://github.com/shaahink/conductor/commit/43dd6d2) feat(telegram): K5.4 part 1 - the transport, so a screenshot arrives and a long message is not dropped
 
 ## Phase handovers (audit)
 
@@ -245,34 +250,30 @@ vs upstream: up to date
 
 ## Last gate run
 
-engine-fast:OK · face-fast:OK
+engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
 
 ## Last session result
 
-> SESSION-RESULT: K5.3 landed — evidence is a first-class artifact, tested, on the wire, on the Face
-> - Tests found a real defect: the checkpoint id was never recovered — a numbered group under `ExplicitCapture` matched every evidence file name and captured nothing.
-> - Fixed three architecture-ratchet reds the engine half left (two files over 500 lines, one with 4 types) by splitting, never by raising a ceiling.
-> - Driven proof on a scratch repo with the fresh build: a PNG the agent never mentioned was registered as `image`; `GET /evidence` answered 200 from the real engine host.
-> artefacts: 6df3a58, fe5ab5f, f4b272f, 370aba1, f6900c1
-> evidence: .conductor/evidence/K5/K5.3-evidence-artifact.md
-> gaps…
+> SESSION-RESULT: K5.4 landed - evidence arrives as photos, pushes chunk, thread, link and template
+> - Transport: HtmlChunker splits at 4096 without breaking a tag or entity; PushEvidenceAsync's body replaced with sendPhoto/sendDocument so a screenshot arrives; severity maps to disable_notification; a run threads onto its own anchor.
+> - Composition: a second stamped line carries repo@branch, stage title and the in-flight checkpoint; money renders against the cap with headroom; commits, PRs and the report are links; RunCompletePush leads with the outcome, not the build string.
+> - Templates at <templatesDir>/notify/<event>.md with two rules, refusing an unknown fact rather than throwing; ADR 0005 r…
 
 ## Tracker handoff
 
 ```
-last: **K5.3 DONE** (s19) - `6df3a58` tests, `fe5ab5f` `GET /evidence`, `f4b272f` Face, `370aba1`
-  goldens; evidence `.conductor/evidence/K5/K5.3-evidence-artifact.md`. The s18 engine half was half a
-  checkpoint: the tests found the checkpoint id was NEVER recovered (a numbered group under
-  `ExplicitCapture` matched everything and captured nothing), and s18 had left THREE architecture-
-  ratchet reds - fixed by splitting, never by raising a ceiling. Driven proof: a scratch-repo run of
-  the fresh build registered a PNG the agent never mentioned; `GET /evidence` answered from the real
-  engine host.
-next: **K5.4** - the composition layer. `PushEvidenceAsync` is text-only on purpose: replace its BODY
-  with `sendPhoto`/`sendDocument` rather than adding a second path. `visual` is already on the wire
-  (`EvidenceArtifactDto`), so the Face and the notifier cannot disagree about what a PNG is. Also
-  owed: per-event templates, links, money with headroom, chunking at 4096, and the push-only ADR.
-red: none. bug #29 (K7.2 blocker) still open.
-watch: run `dotnet test --filter Architecture` before committing any file that GREW - 0.4s, and it is
-  a gate s18 shipped three reds past. Face: ten tabs is the ceiling (adr/0004), so a new surface is
-  re-homed, not tabbed - evidence lives in Knowledge.
+last: **K5.4 DONE** (s20) - `43dd6d2` transport, `baa2c56` composition, `aaee340` templates + ADR 0005;
+  evidence `.conductor/evidence/K5/K5.4-composition-layer.md` plus a 304-line verbatim wire transcript.
+  Evidence now ARRIVES as `sendPhoto`/`sendDocument` (K5.3's body replaced, not supplemented); messages
+  chunk at 4096, thread onto the run's own anchor, and buzz only when the owner must act. A second
+  stamped context line carries repo@branch, stage id AND title, and the in-flight checkpoint. Money has
+  headroom, commits and PRs and the report are links, and `RunCompletePush` leads with the outcome.
+next: **K6.1** - the TUI conventions ADR, after an actual read of glow, soft-serve, gh-dash, lazygit.
+  K5 is closed. Read `face-go/STYLE.md` and adr/0004 first; K6.2 needs `bubbles` v2 declared, which
+  `face-go/go.mod` does not have at all.
+red: none. 191 tests green across the messaging and architecture suites. bug #29 (K7.2) still open.
+watch: assert on the stamp via `svc.Stamp(null)`, never `IdentityLine`, and skip past the LAST `</i>`.
+  New seam: `tests/Conductor.Tests/RecordingBotApi.cs` records method + fields + MULTIPART; the three
+  older `FakeBotApi` copies see only `sendMessage`'s text. A PowerShell here-string commit message can
+  fail SILENTLY - stage without committing - so use `git commit -F` with a heredoc-written file.
 ```

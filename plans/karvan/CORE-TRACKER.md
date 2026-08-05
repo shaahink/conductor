@@ -2,22 +2,22 @@
 
 **Plan:** Karvan core - the engine knows what it did and what it cost | **Branch:** `feat/karvan` | **Design doc:** docs/history/CONDUCTOR-KARVAN.md
 
-## Handoff (overwrite this block, ≤ 12 lines, no history)
+## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **K5.4 DONE** (s20) - `43dd6d2` transport, `baa2c56` composition, `aaee340` templates + ADR 0005;
-  evidence `.conductor/evidence/K5/K5.4-composition-layer.md` plus a 304-line verbatim wire transcript.
-  Evidence now ARRIVES as `sendPhoto`/`sendDocument` (K5.3's body replaced, not supplemented); messages
-  chunk at 4096, thread onto the run's own anchor, and buzz only when the owner must act. A second
-  stamped context line carries repo@branch, stage id AND title, and the in-flight checkpoint. Money has
-  headroom, commits and PRs and the report are links, and `RunCompletePush` leads with the outcome.
-next: **K6.1** - the TUI conventions ADR, after an actual read of glow, soft-serve, gh-dash, lazygit.
-  K5 is closed. Read `face-go/STYLE.md` and adr/0004 first; K6.2 needs `bubbles` v2 declared, which
-  `face-go/go.mod` does not have at all.
-red: none. 191 tests green across the messaging and architecture suites. bug #29 (K7.2) still open.
-watch: assert on the stamp via `svc.Stamp(null)`, never `IdentityLine`, and skip past the LAST `</i>`.
-  New seam: `tests/Conductor.Tests/RecordingBotApi.cs` records method + fields + MULTIPART; the three
-  older `FakeBotApi` copies see only `sendMessage`'s text. A PowerShell here-string commit message can
-  fail SILENTLY - stage without committing - so use `git commit -F` with a heredoc-written file.
+last: **K6.1 DONE** (s21) - `76b66aa`, evidence `.conductor/evidence/K6/K6.1-tui-conventions-adr.md`.
+  `docs/dev/adr/0006-tui-conventions.md` makes six decisions K6.2-K6.4 implement without re-deciding,
+  each anchored to a file+symbol in glow / soft-serve / gh-dash / lazygit that was actually fetched.
+  It rests on a measurement: `m.reportScroll++` (`tab_report.go:46`) has NO clamp in `Update` - the
+  only clamp is a renderer-local copy (`:83`) never written back - so 400 `down` presses left the
+  offset at 400 against a body that stops at 12, and **389 `up` presses** were needed before one line
+  moved. That is the owner's "can't read long text". Bug #30; K6.2 closes it by construction.
+next: **K6.2** - declare `charm.land/bubbles/v2 v2.1.1` (measured, matches bubbletea v2) and move
+  Report + Knowledge onto a `viewport`. Read ADR 0006 first, not the four upstream repos again.
+red: none. `go build`, `go vet`, tui + widgets suites green. bugs #29 (K7.2) and #30 (K6.2) open.
+watch: the mnemonic loop (`update.go:608`) is an EXACT-string match resolving before any pane handler,
+  so lowercase `k`/`b`/`g` are unreachable in a pane (this is why Knowledge's `k` does nothing) while
+  uppercase `G` is free. Bind `↓`/`j` `↑`, `d`/`u`, `pgdn`/`f` `pgup`, `end`/`G` `home` - and nothing
+  else. Evidence files need `git add -f`: `.conductor/.gitignore` line 1 is `*`.
 
 
 ## Baseline numbers (from run.db)
@@ -26,7 +26,7 @@ watch: assert on the stamp via `svc.Stamp(null)`, never `IdentityLine`, and skip
 |---|---|
 | Total checkpoints | 32 |
 | Done | 4 |
-| Claimed (unconfirmed) | 14 |
+| Claimed (unconfirmed) | 15 |
 
 ## Checkpoints
 
@@ -75,7 +75,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | K5.1 | The session result has one format conductor owns — short headline, at most three outcome bullets, artefacts as links, evidence paths, explicit gaps — with the followup parser, the verdict parse and the session template moving in the same checkpoint and a legacy result degrading rather than throwing | DONE | c04175d | .conductor/evidence/K5/K5.1-result-contract.md |
 | K5.2 | The five Telegram defects that make the feed unreadable are gone: one identity block from one source, the stage title beside the id, the structured result rendered instead of cut mid-word, a rollover that reports what it landed, and a progress line in every push | DONE | c04175d | .conductor/evidence/K5/K5.2-telegram-feed.md |
 | K5.3 | Evidence is a first-class artifact — path, kind, checkpoint, session, sha, created-at — written as an event when an agent registers one or a watched directory gains a file, with non-text kinds first-class, a Face surface, and the existing free-text evidence field still working | DONE | 6df3a58 | .conductor/evidence/K5/K5.3-evidence-artifact.md |
-| K5.4 | The message-composition layer ships owner-editable per-event templates, repo and branch and stage title and checkpoint in every push, commits and PRs as links, money with headroom, photo and document sending so evidence arrives, a thread per run, severity mapped to notify or silent, 4096-character chunking, and an ADR recording the push-only remote posture | TODO | - | - |
+| K5.4 | The message-composition layer ships owner-editable per-event templates, repo and branch and stage title and checkpoint in every push, commits and PRs as links, money with headroom, photo and document sending so evidence arrives, a thread per run, severity mapped to notify or silent, 4096-character chunking, and an ADR recording the push-only remote posture | DONE | 43dd6d2 | .conductor/evidence/K5/K5.4-composition-layer.md |
 
 ### K6 — The surfaces read
 
