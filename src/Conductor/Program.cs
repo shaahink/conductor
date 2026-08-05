@@ -34,6 +34,15 @@ app.Configure(c =>
     // SC8.1: `conductor --version` answers the same thing the `version` verb does, because half the
     // world types the flag and a flag that prints "1.0.0" (Spectre's default) would be a lie.
     c.SetApplicationVersion(Conductor.Core.BuildInfo.Current.Full);
+    // K7.2: an unknown option is a typo, and a typo must be loud. Spectre defaults StrictParsing to
+    // false, which silently drops any flag it does not recognise: `version --shortt` exited 0 and
+    // printed the LONG form, and `status --no-llm` — a flag this engine has never had — "worked"
+    // everywhere it was written down. Silence is the wrong answer for a CLI whose flags change what
+    // happens: `update --check` mistyped INSTALLS instead of looking, and `gate --full` mistyped
+    // runs the fast tier and reports green, which is a false green on a gate. Arguments after a
+    // literal `--` are unaffected (they are remaining args, never parsed as options), so
+    // `bg start --name x -- dotnet test --filter Y` still passes its trailing flags through.
+    c.UseStrictParsing();
     c.AddCommand<RunCommand>("run")
         .WithDescription("Run the plan: engine + control plane + Face TUI, one command. Resumes from saved state; Ctrl+C is safe.");
     c.AddCommand<JourneyCommand>("journey")

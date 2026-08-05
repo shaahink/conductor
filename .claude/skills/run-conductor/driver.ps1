@@ -155,7 +155,7 @@ Status in TODO / IN PROGRESS / DONE / BLOCKED.
 
     # --- 6. read the result back -----------------------------------------------------------------
     Section "conductor status"
-    & $Exe status -p $planPath --no-llm 2>&1 | Select-Object -First 25
+    & $Exe status -p $planPath 2>&1 | Select-Object -First 25
 
     # --- 7. assertions ---------------------------------------------------------------------------
     Section "assertions"

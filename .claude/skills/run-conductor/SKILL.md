@@ -97,7 +97,7 @@ $exe = "src\Conductor\bin\Debug\net10.0\conductor.exe"
 & $exe doctor  -p plans\conductor-maestro.plan.json          # <1s health check
 & $exe run     -p <plan> --dry-run                            # print the next session prompt, spawn nothing
 & $exe run     -p <plan> --headless --max-sessions 2          # the real loop, plain line output, no TUI
-& $exe status  -p <plan> --no-llm                             # read run.db back, fast + offline
+& $exe status  -p <plan>                                      # read run.db back, fast + offline (--deep adds an LLM narrative)
 ```
 
 The authoritative verb list is `Program.cs` (or `conductor <verb> --help`) — see Gotchas, the

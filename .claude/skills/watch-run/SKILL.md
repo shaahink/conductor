@@ -39,7 +39,7 @@ the phone call, not re-implementing those rails.
 3. **Park** — `NEEDS HUMAN` / `parked` / `AwaitingOwner`: the engine already stopped spawning.
    PushNotification with the reason line. No verb needed.
 4. **Run ended** — `state saved` / `--max-sessions` / `abort`: PushNotification with a one-line
-   summary (`conductor status -p <plan> --no-llm` for checkpoint counts — it is offline and cheap).
+   summary (`conductor status -p <plan>` for checkpoint counts — it is offline and cheap by default).
 5. **Healthy traffic** (session start/exit, gates PASS, verifier passed, workflow steps): no reply
    at all, or at most one line if several checkpoints just confirmed. Silence is the correct
    output for a healthy run.
@@ -51,7 +51,7 @@ destructive (e.g. WARNING lines about mass deletions).
 ## Cost discipline
 
 - One Monitor, tight filter, no polling loops, no ScheduleWakeup.
-- Never re-read big files on a wakeup; the event line plus (rarely) `conductor status --no-llm`
+- Never re-read big files on a wakeup; the event line plus (rarely) `conductor status`
   or the last ~20 log lines is enough context to apply the rules.
 - Keep every visible reaction to 1–3 lines. No summaries of healthy traffic.
 - If the Monitor dies (file rotated / run restarted in a different repo), re-arm it once and say so.

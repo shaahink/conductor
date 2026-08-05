@@ -227,20 +227,20 @@ if ($rows.Count -ge 1) {
 # Through the FRESH build, not the conductor on PATH: testing a deleted option through the published
 # engine would only prove the published engine still HAS it.
 #
-# MEASURED, and NOT what SF1.2's declared acceptance guessed: the option is not REJECTED, because
-# Program.cs never calls Spectre's UseStrictParsing and so every verb silently accepts and ignores
-# every unknown option (`conductor status --bogus` exits 0 too). That is bug #17 - wider than this
-# checkpoint, one line to fix, and needing the full battery to land. So this asserts the claim that is
-# actually true: the SQL is INERT. `report --query <sql>` runs no query and prints no result grid; it
-# writes a report, exactly as `report` alone does.
+# SF1.2 measured this as INERT rather than REJECTED, and said why: bug #17 - Program.cs never called
+# Spectre's UseStrictParsing, so every verb silently accepted and ignored every unknown option, and
+# the deleted flag looked like it still worked. K7.2 landed that one line, so the assertion this rig
+# always wanted (see the header: "rejected by the FRESH build") is now the one it can make. The bar
+# goes UP here, not down: exit non-zero and the bad option named, instead of exit 0 doing nothing.
 $queryOut = (& $exe report -p $planPath --query $sql 2>&1 | Out-String)
 $queryExit = $LASTEXITCODE
 Write-Host ("--- fresh build: conductor report --query ---> exit {0} ---" -f $queryExit) -ForegroundColor Cyan
 Write-Host $queryOut
-Check "(3) the fresh build runs NO query for `report --query` - the SQL is inert" `
-    (($queryOut -notmatch 'Query result') -and ($queryOut -notmatch 'plan_name') -and `
-     ($queryOut -notmatch 'no rows returned') -and ($queryOut -match 'report written to')) `
-    ("exit {0} (bug #17: not rejected either - the CLI ignores every unknown option)" -f $queryExit)
+Check "(3) the fresh build REJECTS report --query - deleted, and no longer silently swallowed" `
+    (($queryExit -ne 0) -and ($queryOut -match 'query') -and `
+     ($queryOut -notmatch 'Query result') -and ($queryOut -notmatch 'plan_name') -and `
+     ($queryOut -notmatch 'report written to')) `
+    ("exit {0} - expected a non-zero exit naming the unknown option" -f $queryExit)
 
 # And the option is gone from the code, not merely unreachable: a Settings property left behind would
 # come back the moment someone re-added a branch for it.

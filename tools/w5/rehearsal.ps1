@@ -348,7 +348,7 @@ A three-stage toy the rehearsal can actually finish.
     Check "checkpoints were independently CONFIRMED, not just claimed" `
         (($confirmed -notmatch "no rows") -and ($confirmed -notmatch '\|\s*0\s*\|')) $confirmed
 
-    $status = (& $Exe status -p $planPath --no-llm 2>&1 | Out-String)
+    $status = (& $Exe status -p $planPath 2>&1 | Out-String)
     Write-Host $status
     Check "status reads the run back as complete" ($status -match "Completed") $status
 

@@ -90,8 +90,8 @@ calls and commits happening, that's DeepSeek, driven by whatever prompt `templat
 dotnet build src/Conductor/Conductor.csproj          # app only, skips a possibly-mid-edit test project
 dotnet test Conductor.slnx --no-build                # full suite
 powershell -File tools/gates/ratchet.ps1              # the anti-cheat gate, standalone
-conductor status -p plans/conductor-maestro.plan.json # cheap LLM status report
-conductor status --no-llm ...                          # instant, no model call
+conductor status -p plans/conductor-maestro.plan.json # instant, straight from run.db, no model call
+conductor status --deep -p ...                        # adds an LLM narrative on top (slow, opt-in)
 conductor doctor -p plans/conductor-maestro.plan.json # what will happen on resume, no agent spawned
 conductor task --list -p plans/conductor-maestro.plan.json
 conductor log --query "stage=M1 and outcome=fail" -p plans/conductor-maestro.plan.json
