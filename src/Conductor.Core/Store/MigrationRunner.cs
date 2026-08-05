@@ -82,7 +82,114 @@ internal static class MigrationRunner
 
         using var cmd = conn.CreateCommand();
         cmd.CommandText = sql;
-        cmd.ExecuteNonQuery();
+        try
+        {
+            cmd.ExecuteNonQuery();
+        }
+        catch (SqliteException ex) when (IsAlreadyApplied(ex))
+        {
+            // K7.2: the version row can understate what is physically in the file — this repo's own
+            // run.db carried schema_version 9 with v10's sessions.soft_break already on the table, and
+            // every newer engine died on open with "duplicate column name: soft_break". Replay the
+            // script one statement at a time and skip only the parts that are already there; anything
+            // else still throws, and the caller's SetVersion then converges the row.
+            var skipped = ReplayTolerantly(conn, sql);
+            logger.LogWarning(
+                "Migration v{Version} was already partially applied (schema_version understated it); " +
+                "replayed it statement by statement and skipped {Skipped} already-applied statement(s).",
+                version, skipped);
+        }
+    }
+
+    /// <summary>
+    /// True for the DDL errors that mean "this statement's effect is already in the database":
+    /// SQLite reports <c>duplicate column name: x</c> for a repeated ADD COLUMN and
+    /// <c>table/index x already exists</c> for a repeated CREATE.
+    /// </summary>
+    private static bool IsAlreadyApplied(SqliteException ex) =>
+        ex.Message.Contains("duplicate column name", StringComparison.OrdinalIgnoreCase) ||
+        ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Re-runs a migration script statement by statement, tolerating only already-applied DDL.
+    /// Returns how many statements were skipped. Any other failure propagates unchanged.
+    /// </summary>
+    private static int ReplayTolerantly(SqliteConnection conn, string sql)
+    {
+        var skipped = 0;
+        foreach (var statement in SplitStatements(sql))
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = statement;
+            try
+            {
+                cmd.ExecuteNonQuery();
+            }
+            catch (SqliteException ex) when (IsAlreadyApplied(ex))
+            {
+                skipped++;
+            }
+        }
+
+        return skipped;
+    }
+
+    /// <summary>
+    /// Splits a migration script on statement-terminating semicolons, ignoring the ones inside
+    /// string literals, line comments and block comments. Whitespace- and comment-only fragments
+    /// are dropped. Migration scripts are ours and contain no compound statements (no triggers).
+    /// </summary>
+    private static List<string> SplitStatements(string sql)
+    {
+        var statements = new List<string>();
+        var start = 0;
+        var inString = false;
+        var inLineComment = false;
+        var inBlockComment = false;
+
+        for (var i = 0; i < sql.Length; i++)
+        {
+            var c = sql[i];
+            var next = i + 1 < sql.Length ? sql[i + 1] : '\0';
+
+            if (inLineComment)
+            {
+                if (c is '\n') inLineComment = false;
+            }
+            else if (inBlockComment)
+            {
+                if (c is '*' && next is '/') { inBlockComment = false; i++; }
+            }
+            else if (inString)
+            {
+                // '' is an escaped quote inside a literal, not the end of one.
+                if (c is '\'' && next is '\'') i++;
+                else if (c is '\'') inString = false;
+            }
+            else if (c is '-' && next is '-') { inLineComment = true; i++; }
+            else if (c is '/' && next is '*') { inBlockComment = true; i++; }
+            else if (c is '\'') { inString = true; }
+            else if (c is ';')
+            {
+                AddIfExecutable(statements, sql[start..i]);
+                start = i + 1;
+            }
+        }
+
+        AddIfExecutable(statements, sql[start..]);
+        return statements;
+    }
+
+    private static void AddIfExecutable(List<string> statements, string fragment)
+    {
+        // A fragment of only comments and whitespace executes as a no-op; drop it so the skip
+        // count reports real statements.
+        var hasCode = fragment.Split('\n')
+            .Select(line => line.Trim())
+            .Any(line => line.Length > 0 && !line.StartsWith("--", StringComparison.Ordinal));
+
+        if (hasCode)
+            statements.Add(fragment);
     }
 
     private static void SetVersion(SqliteConnection conn, int version)
