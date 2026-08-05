@@ -24,7 +24,7 @@ public sealed partial class ControlPlaneServer
         graph.Fold(events);
         // Archived items (W1.2) left the declared plan — history stays in the log, off the board.
         var live = graph.Tasks.Where(t => t.Status != "archived").ToList();
-        await WriteJsonAsync(ctx, ControlPlaneDto.FromTasks(live), ControlPlaneJsonContext.Default.TasksDto).ConfigureAwait(false);
+        await WriteJsonAsync(ctx, ControlPlaneMapper.FromTasks(live), ControlPlaneJsonContext.Default.TasksDto).ConfigureAwait(false);
     }
 
     private async Task StreamEventsAsync(HttpListenerContext ctx, CancellationToken ct)

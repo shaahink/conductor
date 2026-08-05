@@ -22,7 +22,7 @@ public sealed partial class ControlPlaneServer
             var lastLine = p.Purpose.StartsWith("bg:", StringComparison.Ordinal)
                 ? await TailBgLogAsync(bgLogDir, p.Pid, _store, _state.RunId).ConfigureAwait(false)
                 : null;
-            dtos.Add(ControlPlaneDto.FromPid(p, alive, lastLine));
+            dtos.Add(ControlPlaneMapper.FromPid(p, alive, lastLine));
         }
         await WriteJsonAsync(ctx, new ProcessesDto(dtos), ControlPlaneJsonContext.Default.ProcessesDto).ConfigureAwait(false);
     }

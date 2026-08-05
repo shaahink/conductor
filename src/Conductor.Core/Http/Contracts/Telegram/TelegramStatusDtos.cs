@@ -2,7 +2,7 @@ namespace Conductor.Core.Http;
 
 // M8.2: Telegram guided setup/status, surfaced to the Face so it can be configured entirely
 // through the app instead of hand-editing plan.json/env vars. Token DTOs are in
-// ControlPlaneDto.TelegramToken.cs (architecture ratchet: 3 types max per file).
+// ControlPlaneMapper.TelegramToken.cs (architecture ratchet: 3 types max per file).
 
 // SC1.2: WillDeliver is the derived verdict the older fields could not express — Configured, Started
 // and HasToken were each true on runs that delivered nothing, because delivery needs all of them AND

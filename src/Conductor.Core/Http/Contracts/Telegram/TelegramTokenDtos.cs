@@ -1,7 +1,7 @@
 namespace Conductor.Core.Http;
 
 // M8.2: POST /telegram/token — saves a bot token to the local secrets store (SecretsStore), never
-// to the versioned plan file. Split from ControlPlaneDto.Telegram.cs (architecture ratchet: 3
+// to the versioned plan file. Split from ControlPlaneMapper.Telegram.cs (architecture ratchet: 3
 // types max per file).
 
 public sealed record TelegramSetTokenRequestDto(string Token);

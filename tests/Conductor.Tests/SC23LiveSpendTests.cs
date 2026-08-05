@@ -216,7 +216,7 @@ public class SC23LiveSpendTests
     }
 
     private static StateDto Dto(PlanConfig plan, RunState state, TrackerSnapshot track)
-        => ControlPlaneDto.FromSnapshot(SnapshotBuilder.Build(plan, state, track), state.RunId, plan.Repo, plan.PlanDir);
+        => ControlPlaneMapper.FromSnapshot(SnapshotBuilder.Build(plan, state, track), state.RunId, plan.Repo, plan.PlanDir);
 
     [Fact]
     public void StateReportsLiveTokensAndALabelledCostWhileTheAgentIsStillRunning()

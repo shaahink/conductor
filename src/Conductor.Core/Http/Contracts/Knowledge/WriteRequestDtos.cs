@@ -13,4 +13,4 @@ public sealed record BugNewRequestDto(string? Title, string? Detail, string? Sev
 public sealed record BugResolveRequestDto(long Id, string? Status);
 
 // KnowledgeWriteResultDto (the shared {ok,id?,error?} reply for all three writes) lives in
-// ControlPlaneDto.Bugs.cs — one file, ≤3 types, per the architecture ratchet.
+// ControlPlaneMapper.Bugs.cs — one file, ≤3 types, per the architecture ratchet.

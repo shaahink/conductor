@@ -4,18 +4,18 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: **K2.1 + K2.2 claimed** (`b05efef`). `src/Conductor.Core` is its own assembly — domain,
-  orchestration, store, events, providers; `Conductor` is Program + Commands + `Http/` (the 11
-  `ControlPlaneServer` partials) + `Hosting/`. Namespaces already matched folders, so the move was a
-  rename; only the hosting half left the `Conductor.Core.*` tree (`Conductor.Http`/`.Hosting`). Two
-  real reverse deps died: `HumanDuration.Format` (was `BgStatusHandler`) and `ControlPlaneDiscovery`
-  `.PathFor` (was `ControlPlaneServer.DiscoveryPath`). Wire DTOs stayed in core — FleetScan reads them.
-  `ArchitectureBoundaryTests` = 8 rules, comments stripped so doc-comments naming `SessionRunner` stay
-  legal. Full suite **1814/1814**; publish, `version`, `doctor` and a live scratch run's discovery file
-  + `/state` + `/version` all proven (evidence file has the outputs).
-next: **K2.3** — split the 30-file `ControlPlaneDto` pile (now `src/Conductor.Core/Http/`) and write the
-  file-organisation convention. `ControlPlaneServer.Telegram` reading `TelegramService`'s internals is
-  the seam that most wants fixing; `InternalsVisibleTo("conductor")` on Core is why it still compiles.
+last: **K2.1, K2.2 and K2.3 all claimed** (`b05efef`, `3bc5a2a`, this commit). `src/Conductor.Core` is
+  its own assembly (domain/orchestration/store/events/providers); `Conductor` is Program + Commands +
+  `Http/ControlPlaneServer*` + `Hosting/`. Namespaces already matched folders, so it was a rename. Two
+  reverse deps died: `HumanDuration.Format`, `ControlPlaneDiscovery.PathFor`. `ArchitectureBoundaryTests`
+  = 8 rules that name the offender. K2.3: `ControlPlaneDto` was never a type — 29 files of independent
+  records wearing a prefix — now `Http/Contracts/<feature>/`, mapper renamed `ControlPlaneMapper`;
+  events in `Events/Kinds/`; Telegram's API records in `Integrations/TelegramApi/`. `ARCHITECTURE.md`
+  is new and holds the convention plus the split/left table. Suite **1814/1814** twice.
+next: **K2.4** — the front door. `ARCHITECTURE.md` exists but only states layering + file organisation;
+  it needs the real map. **AGENTS.md is stale in ways a grep finds**: L498/L537/L591 name
+  `src/Conductor/Core/...` paths that no longer exist, L601/L905 name `ControlPlaneDto*`. No test
+  catches those, so fix them deliberately.
 watch: **clear `CONDUCTOR_PLAN` before running your own build's `doctor`/`run`** — the env the
   orchestrator hands you points at THIS repo, a scratch cwd is not isolation, and your build migrates
   `run.db` 9→10 and kills every claim verb. Fixed here; recipe is in the ledger.

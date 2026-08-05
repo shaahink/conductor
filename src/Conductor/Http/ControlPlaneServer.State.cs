@@ -41,7 +41,7 @@ public sealed partial class ControlPlaneServer
         var snap = SnapshotBuilder.Build(_plan, runState, track);
         // _state is the live RunState the dispatcher mutates — the set-rollover override lives only
         // there (P5: run-state, not an event), so the fold above can never see it.
-        var dto = ControlPlaneDto.FromSnapshot(snap, runState.RunId, _plan.Repo, _plan.PlanDir,
+        var dto = ControlPlaneMapper.FromSnapshot(snap, runState.RunId, _plan.Repo, _plan.PlanDir,
             _state.MaxSessionTokensThisRun, _plan.Tracker, _plan.StateDir);
         dto = WithLiveSessionMetrics(dto, events, runState);
         // SC2.3: the budget block reads the LIVE RunState, not the fold — PerRunCostUsd (the window

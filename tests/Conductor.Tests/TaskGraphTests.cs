@@ -272,7 +272,7 @@ public class TaskGraphTests
             new TaskStatusChanged { RunId = "r1", TaskId = "SF3.2", Status = "in_progress", Seq = 3, Ts = t0.AddMinutes(7) },
         ]);
 
-        var dto = Conductor.Core.Http.ControlPlaneDto.FromTasks(graph.Tasks).Tasks.Single();
+        var dto = Conductor.Core.Http.ControlPlaneMapper.FromTasks(graph.Tasks).Tasks.Single();
         Assert.Equal(14, dto.SessionNumber);
         Assert.Equal(1, dto.Attempts);
         Assert.Equal(t0.AddMinutes(7).ToString("O"), dto.StatusSinceUtc);

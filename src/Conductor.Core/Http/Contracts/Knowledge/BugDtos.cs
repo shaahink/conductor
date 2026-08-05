@@ -12,5 +12,5 @@ public sealed record BugDto(
 public sealed record BugsDto(IReadOnlyList<BugDto> Bugs);
 
 // Shared reply for the write-side knowledge endpoints (POST /note, /bug, /bug/resolve); colocated
-// here (rather than in ControlPlaneDto.KnowledgeWrite.cs) to keep each DTO file at ≤3 types.
+// here (rather than in ControlPlaneMapper.KnowledgeWrite.cs) to keep each DTO file at ≤3 types.
 public sealed record KnowledgeWriteResultDto(bool Ok, long? Id, string? Error);

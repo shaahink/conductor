@@ -200,7 +200,7 @@ public sealed class SC51WaitingSurfacesTests : IDisposable
         };
 
         var snap = SnapshotBuilder.Build(_plan, state, new TrackerSnapshot());
-        var dto = ControlPlaneDto.FromSnapshot(snap, RunId, _dir, _dir);
+        var dto = ControlPlaneMapper.FromSnapshot(snap, RunId, _dir, _dir);
 
         Assert.Equal(until, dto.BlockedUntilUtc);
         Assert.Equal("npm registry 429 until the top of the hour", dto.BlockedReason);
@@ -216,7 +216,7 @@ public sealed class SC51WaitingSurfacesTests : IDisposable
     public void State_OmitsTheWaitWhenNothingIsWaiting()
     {
         var state = new RunState { RunId = RunId, PlanName = PlanName, CurrentStage = "D1" };
-        var dto = ControlPlaneDto.FromSnapshot(
+        var dto = ControlPlaneMapper.FromSnapshot(
             SnapshotBuilder.Build(_plan, state, new TrackerSnapshot()), RunId, _dir, _dir);
 
         Assert.Null(dto.BlockedUntilUtc);
