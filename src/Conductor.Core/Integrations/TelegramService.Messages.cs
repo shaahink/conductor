@@ -5,6 +5,7 @@ using Conductor.Core.Events;
 using Conductor.Core.Evidence;
 using Conductor.Core.Integrations.Messaging;
 using Conductor.Core.Store;
+using Microsoft.Extensions.Logging;
 
 namespace Conductor.Core.Integrations;
 
@@ -26,34 +27,27 @@ public sealed partial class TelegramService
         ArgumentNullException.ThrowIfNull(push);
         if (!_started) return;
 
-        var sb = new StringBuilder();
         // K5.4: the outcome leads. The stage and its title moved to the context line the stamp
-        // applies to EVERY push, so this no longer renders them a second time.
-        sb.Append("<b>").Append(EscapeHtml(push.Outcome)).Append("</b>");
-        if (push.Duration is { } d) sb.Append(" · ").Append(EscapeHtml(Elapsed(d)));
-        sb.AppendLine();
+        // applies to EVERY push, so this no longer renders them a second time. Money carries its
+        // headroom, and the composition itself is a template the owner can replace.
+        var cost = MoneyLine.ForSession(push.CostUsd, _state.TotalCostUsd, _plan.Limits.MaxRunCostUsd)
+                 + (push.Score is { } score ? " · score " + EscapeHtml($"{score:0}/100") : "");
 
-        var progress = ProgressLine(push.Stage);
-        if (progress.Length > 0) sb.AppendLine(EscapeHtml(progress));
-
-        var landed = LandedLine(push);
-        if (landed.Length > 0) sb.AppendLine(landed);
-
-        sb.AppendLine($"gates: {EscapeHtml(GatesLine(push))}");
-
-        var result = ResultLines(push.ResultSummary);
-        if (result.Length > 0) sb.AppendLine(RemoteLinks.LinkifyPullRequests(result, Remote()));
-
-        // K5.4: money with headroom, not four decimals of a number with nothing to compare it to.
-        sb.Append(MoneyLine.ForSession(push.CostUsd, _state.TotalCostUsd, _plan.Limits.MaxRunCostUsd));
-        if (push.Score is { } score) sb.Append(" · score ").Append(EscapeHtml($"{score:0}/100"));
-
-        if (RemoteLinks.Report(Remote(), Branch()) is { } report)
-            sb.Append("\n<a href=\"").Append(EscapeHtml(report)).Append("\">the run's report</a>");
+        var body = await ComposeAsync("session-end", NotifyDefaults.SessionEnd, new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["outcome"] = EscapeHtml(push.Outcome),
+            ["duration"] = push.Duration is { } d ? " · " + EscapeHtml(Elapsed(d)) : "",
+            ["progress"] = EscapeHtml(ProgressLine(push.Stage)),
+            ["landed"] = LandedLine(push),
+            ["gates"] = EscapeHtml(GatesLine(push)),
+            ["result"] = RemoteLinks.LinkifyPullRequests(ResultLines(push.ResultSummary), Remote()),
+            ["cost"] = cost,
+            ["report"] = ReportLink(),
+        }).ConfigureAwait(false);
 
         // K5.4: a session that advanced is informational; one that ended blocked or needing the owner
         // is the whole reason disable_notification exists.
-        await EnqueueAsync(sb.ToString(), push.Number, SessionSeverity(push.Outcome), null, ct, push.Stage)
+        await EnqueueAsync(body, push.Number, SessionSeverity(push.Outcome), null, ct, push.Stage)
             .ConfigureAwait(false);
     }
 
@@ -74,24 +68,21 @@ public sealed partial class TelegramService
         if (!_started) return;
 
         var clean = push.SkippedStages.Count == 0;
-        var sb = new StringBuilder();
-        sb.Append("<b>").Append(clean ? "run complete" : "run complete, with stages skipped").Append("</b>");
-        if (push.Duration is { } d) sb.Append(" · ").Append(EscapeHtml(Elapsed(d)));
-        sb.AppendLine();
-
-        sb.AppendLine(EscapeHtml(
-            $"{push.CheckpointsDone}/{push.CheckpointsTotal} checkpoints · {push.Sessions} session"
-            + (push.Sessions == 1 ? "" : "s")));
-        if (!clean)
-            sb.AppendLine(EscapeHtml($"skipped: {string.Join(", ", push.SkippedStages)}"));
-
-        sb.Append(MoneyLine.ForRun(_state.TotalCostUsd, _plan.Limits.MaxRunCostUsd));
-
-        if (RemoteLinks.Report(Remote(), Branch()) is { } report)
-            sb.Append("\n<a href=\"").Append(EscapeHtml(report)).Append("\">the run's report</a>");
+        var body = await ComposeAsync("run-complete", NotifyDefaults.RunComplete, new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            // "COMPLETE" over three skipped stages is a lie of omission, so the headline itself says it.
+            ["outcome"] = clean ? "run complete" : "run complete, with stages skipped",
+            ["duration"] = push.Duration is { } d ? " · " + EscapeHtml(Elapsed(d)) : "",
+            ["checkpoints"] = EscapeHtml(
+                $"{push.CheckpointsDone}/{push.CheckpointsTotal} checkpoints · {push.Sessions} session"
+                + (push.Sessions == 1 ? "" : "s")),
+            ["skipped"] = clean ? "" : EscapeHtml($"skipped: {string.Join(", ", push.SkippedStages)}"),
+            ["cost"] = MoneyLine.ForRun(_state.TotalCostUsd, _plan.Limits.MaxRunCostUsd),
+            ["report"] = ReportLink(),
+        }).ConfigureAwait(false);
 
         // A finished run is one of the two things worth a buzz — the other is a run that has parked.
-        await EnqueueAsync(sb.ToString(), null, PushSeverity.Alert, null, ct).ConfigureAwait(false);
+        await EnqueueAsync(body, null, PushSeverity.Alert, null, ct).ConfigureAwait(false);
     }
 
     /// <summary>K5.4 — evidence ARRIVES. K5.3 registered the artifacts and pushed their paths, which
@@ -111,7 +102,7 @@ public sealed partial class TelegramService
         foreach (var a in sendable)
         {
             var absolute = ResolveArtifact(a.Path);
-            var caption = EvidenceCaption(a, artifacts.Count);
+            var caption = await EvidenceCaptionAsync(a, artifacts.Count).ConfigureAwait(false);
             if (absolute is null)
             {
                 await EnqueueAsync(caption + "\n<i>not attached — the path did not resolve to a file</i>",
@@ -127,27 +118,44 @@ public sealed partial class TelegramService
         var rest = artifacts.Skip(EvidenceFilesPerPush).ToList();
         if (rest.Count == 0) return;
 
-        var sb = new StringBuilder();
-        sb.AppendLine($"<b>evidence</b> — {rest.Count} further artifact{(rest.Count == 1 ? "" : "s")}, not attached");
-        foreach (var a in rest.Take(EvidenceLinesPerPush))
-            sb.AppendLine("• " + EvidenceLine(a));
-        if (rest.Count > EvidenceLinesPerPush)
-            sb.AppendLine($"+{rest.Count - EvidenceLinesPerPush} more");
-        await EnqueueAsync(sb.ToString().TrimEnd(), null, PushSeverity.Quiet, null, ct).ConfigureAwait(false);
+        var lines = new StringBuilder();
+        foreach (var a in rest.Take(EvidenceLinesPerPush)) lines.AppendLine("• " + EvidenceLine(a));
+        if (rest.Count > EvidenceLinesPerPush) lines.Append($"+{rest.Count - EvidenceLinesPerPush} more");
+
+        var body = await ComposeAsync("evidence-overflow", NotifyDefaults.EvidenceOverflow,
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["count"] = rest.Count.ToString(CultureInfo.InvariantCulture),
+                ["noun"] = rest.Count == 1 ? "artifact" : "artifacts",
+                ["lines"] = lines.ToString().TrimEnd(),
+            }).ConfigureAwait(false);
+        await EnqueueAsync(body, null, PushSeverity.Quiet, null, ct).ConfigureAwait(false);
     }
 
     /// <summary>The caption that rides the file. Bounded by Telegram's 1024-character caption limit —
     /// a quarter of the message limit — so it is composed short rather than clipped from a body.</summary>
-    private string EvidenceCaption(EvidenceArtifact a, int batchSize)
-    {
-        var sb = new StringBuilder();
-        var batch = batchSize > 1 ? $" ({batchSize} new)" : "";
-        sb.AppendLine($"<b>evidence</b>{batch}");
-        sb.AppendLine("• " + EvidenceLine(a));
-        var progress = ProgressLine(a.StageId);
-        if (progress.Length > 0) sb.Append(EscapeHtml(progress));
-        return sb.ToString().TrimEnd();
-    }
+    private Task<string> EvidenceCaptionAsync(EvidenceArtifact a, int batchSize) =>
+        ComposeAsync("evidence", NotifyDefaults.Evidence, new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["batch"] = batchSize > 1 ? $" ({batchSize.ToString(CultureInfo.InvariantCulture)} new)" : "",
+            ["artifact"] = EvidenceLine(a),
+            ["progress"] = EscapeHtml(ProgressLine(a.StageId)),
+        });
+
+    /// <summary>K5.4 — one call for every composed push: the owner's template if there is a usable
+    /// one, the built-in otherwise. A template that names a fact the event does not have is refused
+    /// and LOGGED rather than thrown: the notification path is the run's only voice, and taking it
+    /// down over a typo in an optional file would be the opposite of the point.</summary>
+    private Task<string> ComposeAsync(string eventName, string builtIn, IReadOnlyDictionary<string, string> facts) =>
+        NotifyTemplate.RenderAsync(eventName, builtIn, facts, _plan.PlanDir, _plan.TemplatesDir,
+            m => _log.LogWarning("{Message}", m));
+
+    /// <summary>The report where a phone can read it, or nothing at all — the template drops the line
+    /// rather than printing a dead link on a repo with no remote.</summary>
+    private string ReportLink() =>
+        RemoteLinks.Report(Remote(), Branch()) is { } url
+            ? $"<a href=\"{EscapeHtml(url)}\">the run's report</a>"
+            : "";
 
     private static string EvidenceLine(EvidenceArtifact a)
     {
