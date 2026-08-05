@@ -1,0 +1,131 @@
+﻿
+===== conductor watch --help =====
+DESCRIPTION:
+Block silently on a live run and return only when something needs judgment: a 
+park, a churn loop, a phase gate RED twice, the engine gone, the run ended. 
+--json for the brief, --timeout for a heartbeat, --hook to hand it to a 
+supervisor.
+
+USAGE:
+    conductor watch [OPTIONS]
+
+OPTIONS:
+    -h, --help                      Prints help information                     
+    -v, --version                   Prints version information                  
+    -p, --plan <PLAN>               Path to the plan JSON. Falls back to        
+                                    CONDUCTOR_PLAN env var, then scanning the   
+                                    cwd/./plans for *.plan.json                 
+        --json                      Emit only the JSON brief on stdout (nothing 
+                                    else) — for a hook, a pipe, or a model's    
+                                    stdin                                       
+        --timeout <MINUTES>         Long-fallback heartbeat: return with        
+                                    reason=timeout (exit 10) after N minutes of 
+                                    silence. Omit to block indefinitely         
+        --hook <COMMAND>            Run this command on wake with the brief on  
+                                    stdin, overriding the plan's supervisor     
+                                    block. Fires on the wake set ONLY — never on
+                                    a timeout heartbeat                         
+        --notify <URL>              SF5.3: POST the brief to this URL on wake,  
+                                    replacing the plan's supervisor.remote block
+                                    (phone included). Not bound by its hourly   
+                                    fuse                                        
+        --hook-timeout <MINUTES>    How long a --hook command may run before it 
+                                    is killed (default 10). The plan block uses 
+                                    its own supervisor.timeoutMinutes           
+        --poll <SECONDS>            How often the event log is checked for new  
+                                    lines (default 2). Costs a file-length read 
+
+===== conductor history --help =====
+DESCRIPTION:
+Browse past runs from this machine's catalogue, read-only. No argument lists; 
+pass a run id, repo or slug to open one and replay its spine. Filters: --repo, 
+--plan, --since, --limit, --json.
+
+USAGE:
+    conductor history [run] [OPTIONS]
+
+ARGUMENTS:
+    [run]    A run id or its prefix, a catalogue slug, or a repo name. Omit to  
+             list                                                               
+
+OPTIONS:
+    -h, --help             Prints help information                              
+    -v, --version          Prints version information                           
+    -r, --repo <PATH>      Only runs of this repo. A full path or just its      
+                           directory name                                       
+    -p, --plan <NAME>      Only runs of this plan                               
+    -s, --since <WHEN>     Only runs active since then: 7d, 2w, 3mo, 1y, or a   
+                           date                                                 
+    -n, --limit <COUNT>    How many runs to list. Default 20; 0 lists all       
+        --home <PATH>      Read a state home other than this machine's          
+        --json             Machine-readable output                              
+
+===== conductor budget --help =====
+DESCRIPTION:
+Measure this repo's token budget from its own runs and prescribe the next one: 
+session floor, wrap-up spend, cap, nudge-versus-floor, rollover rate. No 
+argument profiles the current repo. Filters: --repo, --plan, --since, --json.
+
+USAGE:
+    conductor budget [run] [OPTIONS]
+
+ARGUMENTS:
+    [run]    A run id or its prefix, a catalogue slug, or a repo name. Omit for 
+             this repo's runs                                                   
+
+OPTIONS:
+    -h, --help            Prints help information                               
+    -v, --version         Prints version information                            
+    -r, --repo <PATH>     Profile this repo's runs instead of the current       
+                          directory's. 'all' for every repo                     
+    -p, --plan <NAME>     Only runs of this plan                                
+    -s, --since <WHEN>    Only runs active since then: 7d, 2w, 3mo, 1y, or a    
+                          date                                                  
+        --home <PATH>     Read a state home other than this machine's           
+        --json            Machine-readable output                               
+
+===== conductor money --help =====
+DESCRIPTION:
+Price a run or a project from its own ledger: sessions, tokens, cache-read 
+share, cost, checkpoints, tokens and dollars per checkpoint, plus the windows 
+either side of a cap change, the per-stage split and the calendar month. Scopes:
+--run, --project, --since, --plan, --json.
+
+USAGE:
+    conductor money [run] [OPTIONS]
+
+ARGUMENTS:
+    [run]    A run id or its prefix, a catalogue slug, a repo name, or a path to
+             a run.db. Omit for this repo                                       
+
+OPTIONS:
+    -h, --help              Prints help information                             
+    -v, --version           Prints version information                          
+        --run <ID>          The run to price. Same as the positional argument   
+        --project <PATH>    Price this repo's runs instead of the current       
+                            directory's. 'all' for every repo on this machine   
+    -p, --plan <NAME>       Only runs of this plan                              
+    -s, --since <WHEN>      Only runs active since then: 7d, 2w, 3mo, 1y, or a  
+                            date                                                
+        --home <PATH>       Read a state home other than this machine's         
+        --json              Machine-readable output                             
+
+===== conductor ps --help =====
+DESCRIPTION:
+SF5.4: every conductor run on this machine — repo, plan, run id, port, pid, 
+status. Read-only; --json for machines.
+
+USAGE:
+    conductor ps [OPTIONS]
+
+OPTIONS:
+    -h, --help                  Prints help information                         
+    -v, --version               Prints version information                      
+        --json                  Emit the fleet as JSON on stdout and nothing    
+                                else                                            
+        --timeout <MS>          Per-port probe budget in milliseconds (default  
+                                2500). Raise it if a busy engine is missing from
+                                the listing                                     
+        --ports <FIRST-LAST>    Port window to scan (default 4317-4336, the     
+                                range the control plane itself binds)           
+

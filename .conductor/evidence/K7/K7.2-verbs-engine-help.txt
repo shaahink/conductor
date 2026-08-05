@@ -1,0 +1,131 @@
+﻿USAGE:
+    conductor [OPTIONS] <COMMAND>
+
+OPTIONS:
+    -h, --help       Prints help information   
+    -v, --version    Prints version information
+
+COMMANDS:
+    run                            Run the plan: engine + control plane + Face  
+                                   TUI, one command. Resumes from saved state;  
+                                   Ctrl+C is safe                               
+    journey                        Pre-flight itinerary: identity, stages,      
+                                   gates, and every human moment — no state     
+                                   written, no agent spawned. Run this before   
+                                   `conductor run [--paused]`                   
+    face                           Attach a Face TUI to a run that is already   
+                                   going (or --demo for offline synthetic data) 
+    status                         Show plan, tracker, and session status       
+    watch                          Block silently on a live run and return only 
+                                   when something needs judgment: a park, a     
+                                   churn loop, a phase gate RED twice, the      
+                                   engine gone, the run ended. --json for the   
+                                   brief, --timeout for a heartbeat, --hook to  
+                                   hand it to a supervisor                      
+    gate                           Re-run the gate battery at HEAD (no agent    
+                                   spawned). --full for full battery, default   
+                                   fast-tier only. Clears pendingFix if all     
+                                   green                                        
+    report                         Regenerate .conductor/REPORT.md from current 
+                                   state                                        
+    history                        Browse past runs from this machine's         
+                                   catalogue, read-only. No argument lists; pass
+                                   a run id, repo or slug to open one and replay
+                                   its spine. Filters: --repo, --plan, --since, 
+                                   --limit, --json                              
+    budget                         Measure this repo's token budget from its own
+                                   runs and prescribe the next one: session     
+                                   floor, wrap-up spend, cap,                   
+                                   nudge-versus-floor, rollover rate. No        
+                                   argument profiles the current repo. Filters: 
+                                   --repo, --plan, --since, --json              
+    money                          Price a run or a project from its own ledger:
+                                   sessions, tokens, cache-read share, cost,    
+                                   checkpoints, tokens and dollars per          
+                                   checkpoint, plus the windows either side of a
+                                   cap change, the per-stage split and the      
+                                   calendar month. Scopes: --run, --project,    
+                                   --since, --plan, --json                      
+    pause                          Ask the running conductor to pause after the 
+                                   current session                              
+    resume                         Resume a paused / needs-attention conductor  
+    approve                        Approve the owner-gated stage so the         
+                                   conductor advances past it (also R in the    
+                                   TUI)                                         
+    kill                           Kill the current agent session (the loop then
+                                   re-evaluates)                                
+    skip                           Skip the current stage and flag it for human 
+                                   review                                       
+    inject <INSTRUCTION>           Queue an instruction for the agent's next    
+                                   session (also available via the I key in the 
+                                   dashboard)                                   
+    abort                          Kill the session and stop the conductor      
+    retry-stage                    Reset attempt counter and re-queue a deliver 
+                                   session for the current stage                
+    rollback                       Reset the working tree to the stage start    
+                                   commit (refuses if dirty, use --yes)         
+    pause-after-stage              Park at Paused after the current stage       
+                                   completes                                    
+    goto <STAGE>                   Jump to a different stage (clears pending    
+                                   state for the old stage)                     
+    rollover <TOKENS|off|clear>    Set/clear the session-token rollover for THIS
+                                   run only: rollover <tokens|off|clear>.       
+                                   Run-state only — never writes the plan       
+    heartbeat                      Ask the running conductor to refresh         
+                                   .conductor/REPORT.md immediately (only       
+                                   meaningful during a live session; also in the
+                                   : command palette)                           
+    plan                           Plan management: set a field,                
+                                   reload+validate, or add a stage.             
+                                   Sub-commands: set <key> <value>, reload,     
+                                   add-stage <json>                             
+    tasks                          Show task graph: sub-tasks per checkpoint    
+                                   from the event log                           
+    task                           Checkpoint CRUD from run.db: --list, --done, 
+                                   --in-progress                                
+    note <TEXT>                    Write a note/finding to the knowledge ledger 
+                                   (run.db ledger table)                        
+    bug                            Tracked bugs that outlive the session that   
+                                   found them. Sub-commands: new <title>, list [
+                                   --all], fix <id>                             
+    log                            Query the structured JSON log. Filter by     
+                                   stage, gate, outcome, etc. Example: conductor
+                                   log --query "stage=P7 and gate=build and     
+                                   outcome=fail"                                
+    demo                           Drive a complete plan end to end against a   
+                                   built-in fake agent, in a throwaway repo. No 
+                                   credentials, no spend, every platform        
+    new-plan                       Scaffold a new plan + TRACKER.md             
+    init                           Scaffold a runnable plan + editable templates
+                                   + TRACKER, with gates chosen from the        
+                                   detected repo type                           
+                                   (dotnet/node/go/rust/python)                 
+    doctor                         <2s health check: agent CLI, git, face-go    
+                                   binary, DNS/disk/API reachability, budget    
+                                   headroom, Telegram — says exactly what is    
+                                   missing                                      
+    audit <STAGE>                  Post-hoc audit replay: run an audit prompt   
+                                   against a completed stage (read-only         
+                                   diagnostic). Requires --replay flag. Output  
+                                   written to .conductor/audits/                
+    mcp-serve                      Run the MCP task server (JSON-RPC 2.0 over   
+                                   stdio) for agent task management             
+    completion <SHELL>             Generate shell completion scripts (powershell
+                                   or bash)                                     
+    bg                             Background process management:               
+                                   start|status|logs|stop                       
+    ps                             SF5.4: every conductor run on this machine — 
+                                   repo, plan, run id, port, pid, status.       
+                                   Read-only; --json for machines               
+    version                        What this binary is: semver, git sha and     
+                                   build date stamped at build, plus which file 
+                                   answered. --json for machines, --short for   
+                                   scripts                                      
+    update                         Check the latest release and swap this binary
+                                   for it. Refuses while a run is live. --check 
+                                   to look without installing                   
+    chat                           F8.1: Ask questions about a running conductor
+                                   plan. The agent has MCP access to run.db, the
+                                   ledger, and control verbs. Example: conductor
+                                   chat "how did session 9 die?"                
+

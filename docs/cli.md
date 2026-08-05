@@ -78,6 +78,7 @@ command palette, and from Telegram.
 | Verb | What it does |
 |---|---|
 | `status` | Plan, tracker, and session status from the database, in under a second. `--deep` adds an LLM narrative (slower, opt-in). |
+| `watch` | Block silently on a live run and return only when something needs judgment: a park, a churn loop, a phase gate red twice, the engine gone, the run ended. `--json` for the brief, `--timeout` for a heartbeat, `--hook` to hand it to a supervisor. |
 | `gate` | Re-run the gate battery at HEAD, no agent spawned. `--full` for the full battery (default: fast tier). |
 | `report` | Regenerate `.conductor/REPORT.md` from current state. |
 | `log` | Query the structured JSON log: `-q "stage=P7 and gate=build and outcome=fail"`. |
@@ -91,6 +92,36 @@ command palette, and from Telegram.
 | `completion` | Generate shell completion scripts (`powershell` or `bash`). |
 | `version` | What this binary is: semver, git sha, build date — stamped at build — and *which file answered*. `--json` for machines, `--short` for scripts. Takes no plan and works in any directory. |
 | `update` | Check the latest release, and swap this binary for it. `--check` looks without installing. Verifies the download's checksum, then runs it and asks its version before replacing anything, and **refuses while a run is live**. |
+
+## Token and money
+
+| Verb | What it does |
+|---|---|
+| `budget` | Measure this repo's token budget **from its own runs** and prescribe the next one: session floor, wrap-up spend, cap, nudge-versus-floor, rollover rate. No argument profiles the current repo. Filters: `--repo`, `--plan`, `--since`, `--json`. |
+| `money` | Price a run or a project from its own ledger: sessions, tokens, cache-read share, cost, checkpoints, tokens and dollars per checkpoint, plus the windows either side of a cap change, the per-stage split and the calendar month. Scopes: `--run`, `--project`, `--since`, `--plan`, `--json`. |
+
+```
+conductor budget            # profile this repo's runs and prescribe the next cap
+conductor money             # what every run of this repo cost
+conductor money --run <ID>  # one run, per stage and per checkpoint
+```
+
+Both read the machine-wide run catalogue rather than the current run's state, so they answer after a
+run has ended and from any directory.
+
+`budget` prescribes **two** numbers, not one — `limits.maxSessionTokens` (the ceiling) and
+`limits.softBreakRatio` (where the wrap-up nudge lands) — and prints them as a `limits` block to paste
+into the plan. The rule it checks them against: a cap only helps if the **nudge** clears the median
+session that actually closed a checkpoint. A nudge below that converts nothing, because sessions keep
+dying at the hard ceiling mid-work instead of wrapping up cooperatively. Derivation and the measured
+numbers behind it: [`docs/dev/TOKEN-BUDGET-TUNING.md`](dev/TOKEN-BUDGET-TUNING.md).
+
+## Across runs, on this machine
+
+| Verb | What it does |
+|---|---|
+| `history` | Browse past runs from this machine's catalogue, read-only. No argument lists them; pass a run id, repo or slug to open one and replay its spine. Filters: `--repo`, `--plan`, `--since`, `--limit`, `--json`. |
+| `ps` | Every conductor run on this machine — repo, plan, run id, stage, status, port, pid, uptime. The run in the current directory is marked `*`. Read-only; `--json` for machines. |
 
 ## Overriding the defaults
 

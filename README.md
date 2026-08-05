@@ -131,6 +131,11 @@ embeds the actual failing gate output.
 **Everything is resumable.** State persists to `run.db` on every transition. Kill it, reboot, Ctrl+C
 — `conductor run` picks up where it left off.
 
+**It knows what it cost.** `conductor money` prices a run or a whole project from its own ledger:
+sessions, tokens, cache-read share, dollars, and what one checkpoint cost. `conductor budget` reads
+the same catalogue and prescribes the next run's session ceiling *and* the wrap-up nudge — measured
+from the sessions this repo actually ran, not guessed.
+
 ### What it does when a session ends
 
 | Observation | Outcome | Next |
