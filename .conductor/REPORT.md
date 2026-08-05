@@ -1,10 +1,10 @@
 ﻿# Conductor — Karvan core - the engine knows what it did and what it cost run report
 
-_Updated 2026-08-05 09:57 UTC · branch `feat/karvan` · HEAD `f009820`_
+_Updated 2026-08-05 10:36 UTC · branch `feat/karvan` · HEAD `5776876`_
 
-**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [10h 27m ago, 23:29:12Z]
-**Stage:** K6 — The surfaces read · attempts used 0
-**Checkpoints:** 23/32 done · **Sessions run:** 24 · **Cost:** $253.2491 (agent $253.1098 + gates $0.1393) · **Tokens:** 3,606,511 in / 1,751,510 out
+**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [11h 07m ago, 23:29:12Z]
+**Stage:** K7 — Ship the plan · attempts used 0 · working ▸ K7.2
+**Checkpoints:** 24/32 done · **Sessions run:** 25 · **Cost:** $262.8474 (agent $262.6984 + gates $0.1490) · **Tokens:** 3,752,149 in / 1,824,208 out
 **Confirmed phases:** K1, K2, K3, K4, K5, K6
 
 ## Stage progress
@@ -17,7 +17,7 @@ _Updated 2026-08-05 09:57 UTC · branch `feat/karvan` · HEAD `f009820`_
 | K4 | Token truth - measure it before shrinking it | ██████████ 4/4 | confirmed ✓ |
 | K5 | The result contract and the channels | ██████████ 4/4 | confirmed ✓ |
 | K6 | The surfaces read | ██████████ 4/4 | confirmed ✓ |
-| K7 | Ship the plan | ░░░░░░░░░░ 0/2 | todo |
+| K7 | Ship the plan | █████░░░░░ 1/2 | **← active** |
 
 <details> ✅<summary>K1 — The ledger stops lying (4/4)</summary>
 
@@ -84,11 +84,11 @@ _Updated 2026-08-05 09:57 UTC · branch `feat/karvan` · HEAD `f009820`_
 
 </details>
 
-<details><summary>K7 — Ship the plan (0/2)</summary>
+<details><summary>K7 — Ship the plan (1/2)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| K7.1 | The docs match the engine and this era's own measurements are written back — the cap's real score, the corrected nudge rule, and this run's figures produced by conductor budget rather than by hand — with every wrong claim corrected in place and a closure ledger naming an owner for everything still open | ⬜ TODO | - |
+| K7.1 | The docs match the engine and this era's own measurements are written back — the cap's real score, the corrected nudge rule, and this run's figures produced by conductor budget rather than by hand — with every wrong claim corrected in place and a closure ledger naming an owner for everything still open | ✅ DONE | [`ee68978`](https://github.com/shaahink/conductor/commit/ee68978) |
 | K7.2 | feat/karvan is merged to master by the owner, the release is tagged through the existing pipeline, and the installed version matches the releases page | ⬜ TODO | - |
 
 </details>
@@ -121,18 +121,13 @@ _Updated 2026-08-05 09:57 UTC · branch `feat/karvan` · HEAD `f009820`_
 | 22 | K6 | Deliver | 1 | 08-05 08:35 | 0:19 | Advanced | K6.2 | 3 | engine-fast:OK · face-fast:OK | $8.2711 | $0.0050 | 140,639/59,279 |
 | 23 | K6 | Deliver | 1 | 08-05 08:56 | 0:23 | Advanced | K6.3 | 5 | engine-fast:OK · face-fast:OK | $9.6363 | $0.0053 | 168,452/79,524 |
 | 24 | K6 | Deliver | 1 | 08-05 09:21 | 0:30 | Advanced | K6.4 | 5 | engine-fast:OK · face-fast:OK | $11.6658 | $0.0072 | 176,330/75,597 |
+| 25 | K7 | Deliver | 1 | 08-05 09:57 | 0:38 | Advanced | K7.1 | 9 | engine-fast:OK · face-fast:OK | $9.5886 | $0.0097 | 145,638/72,698 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-05 07:09:11  • session #18 K5 Deliver started (attempt 1/8)
-08-05 07:51:11  ▪ gate engine-fast pass [session]  (46.8s)
-08-05 07:51:11  ▪ gate face-fast pass [session]  (3.0s)
-08-05 07:51:11  • session #18 K5 → Advanced · done K5.1,K5.2 · 7 commit(s)  (42m00s)
-08-05 07:51:11  • session #19 K5 Deliver started (attempt 1/8)
-08-05 08:33:07  ▪ gate engine-fast pass [session]  (44.6s)
 08-05 08:33:07  ▪ gate face-fast pass [session]  (4.1s)
 08-05 08:33:08  • session #19 K5 → Advanced · done K5.3 · 5 commit(s)  (41m56s)
 08-05 08:33:08  • session #20 K5 Deliver started (attempt 1/8)
@@ -167,6 +162,12 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-05 10:57:06  ▪ gate engine-full pass [phase]  (3m53s)
 08-05 10:57:06  ▪ gate face-full pass [phase]  (11.9s)
 08-05 10:57:06  ✓ checkpoint K6.4 confirmed
+08-05 10:57:06  ▸ stage K6 confirmed  (1h33m39s)
+08-05 10:57:07  ▸ stage K7 entered — Ship the plan
+08-05 10:57:07  • session #25 K7 Deliver started (attempt 1/4)
+08-05 11:36:53  ▪ gate engine-fast pass [session]  (1m00s)
+08-05 11:36:53  ▪ gate face-fast pass [session]  (36.2s)
+08-05 11:36:54  • session #25 K7 → Advanced · done K7.1 · 9 commit(s)  (39m47s)
 ```
 
 ## Health
@@ -174,7 +175,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 24 · retries 4 (17 %) · overall Warn
+sessions 25 · retries 4 (16 %) · overall Warn
 ⚠ [context-saturation] session #10: 23,623,416 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #18: 23,816,486 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #19: 24,146,164 context tokens (≥ 20,000,000)
@@ -196,8 +197,6 @@ vs upstream: up to date
 
 ### Commits by session
 
-- **s17 (K4 Fix)** — 1 commit(s):
-  - [`1b4e87c`](https://github.com/shaahink/conductor/commit/1b4e87c) fix(history): the archive probes for newly_done like every other column
 - **s18 (K5 Deliver)** — 7 commit(s):
   - [`ff7812d`](https://github.com/shaahink/conductor/commit/ff7812d) docs(tracker): s18 handoff - K5.1 and K5.2 done, K5.3 engine half committed
   - [`e618c06`](https://github.com/shaahink/conductor/commit/e618c06) feat(evidence): K5.3 part 1 - the model, the event and the registry (no surface yet)
@@ -236,6 +235,16 @@ vs upstream: up to date
   - [`52d78dc`](https://github.com/shaahink/conductor/commit/52d78dc) fix(face): K6.4 - the owner queue scrolls in a viewport, bug #30's last instance
   - [`ae4509d`](https://github.com/shaahink/conductor/commit/ae4509d) test(face): K6.4 rebaseline - two goldens follow the themed renderer
   - [`611a8a0`](https://github.com/shaahink/conductor/commit/611a8a0) feat(face): K6.4 - markdown renders in the theme, and the prompt preview scrolls
+- **s25 (K7 Deliver)** — 9 commit(s):
+  - [`5776876`](https://github.com/shaahink/conductor/commit/5776876) docs(ledger): K7.1 - bug #32's row records that deleting the stash did not clear it
+  - [`7688a2b`](https://github.com/shaahink/conductor/commit/7688a2b) docs(tracker): K7.1 claimed and handed off - only the owner-gated K7.2 remains
+  - [`4ea6b94`](https://github.com/shaahink/conductor/commit/4ea6b94) docs(spec): K7.1 - the three remaining wrong spec claims corrected where they were made
+  - [`f51f0b5`](https://github.com/shaahink/conductor/commit/f51f0b5) docs(ledger): K7.1 - the Karvan closure ledger, and it is pinned
+  - [`6f47cff`](https://github.com/shaahink/conductor/commit/6f47cff) docs(changelog): K7.1 - the Karvan core era section
+  - [`ef79183`](https://github.com/shaahink/conductor/commit/ef79183) docs(backlog): K7.1 - NEXT-FEATURES carries the Karvan era's output
+  - [`670b2f4`](https://github.com/shaahink/conductor/commit/670b2f4) chore(plan): drop the stashed face items the editor added by mistake
+  - [`12c0e74`](https://github.com/shaahink/conductor/commit/12c0e74) docs(findings): K7.1 - the era's own research doc and spec corrected in place
+  - [`ee68978`](https://github.com/shaahink/conductor/commit/ee68978) docs(budget): K7.1 - conductor budget re-measures the doc and corrects four numbers
 
 ## Phase handovers (audit)
 
@@ -258,32 +267,32 @@ vs upstream: up to date
 
 ## Last gate run
 
-engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
+engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: K6.4 landed — themed memoised markdown, two viewports, K6 complete
-> - Renderer takes theme roles and light/dark polarity; 200 frames invoke glamour once, measured
-> - Compiled-prompt preview and owner queue gained viewports; owner queue was bug #30 unfixed
-> - Markdown rejected for the prompt preview on evidence: glamour deletes `<id>`/`<path>` placeholders
-> artefacts: 611a8a0, ae4509d, 52d78dc, 62f319a, f009820
-> evidence: .conductor/evidence/K6/K6.4-themed-markdown.md, .conductor/evidence/K6/K6.4-frames.txt
-> gaps: bug #31 (textarea swap blocked on 220 string-routed key sites); Agent raw and Kanban detail viewports deliberately left with reasons; bug #29 still open for K7.2
+> SESSION-RESULT: K7.1 done - conductor budget corrected four figures and one rule in its own docs
+> - The prescription beat the spec: 8M cap scored 17.0M/ckpt at 30% rollover, not 14.0M at 33%; the nudge must clear the median closer, not the floor. This era: 23 ckpt, 14.1M each, 0 rollovers in 22 sessions.
+> - Closure ledger names all 14 open bugs and 7 followup rows with an owner, pinned by 4 new tests; #28/#29 re-homed to K7.2 after reproducing the doctor crash live on the fresh build.
+> - CHANGELOG [0.4.0] written and verified against the release gate's own extractor, so K7.2 is a merge and a tag with no doc edit in between.
+> artefacts: docs/dev/TOKEN-BUDGET-TUNING.md, docs/dev/NEXT-ERA-FINDINGS-…
 
 ## Tracker handoff
 
 ```
-last: **K6.4 DONE** (s24) - `611a8a0` themed+memoised renderer & preview viewport, `ae4509d`
-  golden rebaseline (separate), `52d78dc` owner-queue viewport, evidence
-  `.conductor/evidence/K6/K6.4-themed-markdown.md` (+ `K6.4-frames.txt`). **K6 is complete.**
-  `markdownStyle` projects the theme's roles onto glamour (light/dark by `Theme.IsLight()`), and
-  200 frames of unchanged prose now invoke glamour ONCE. Two panes gained a viewport: the compiled
-  prompt (had no scroll at all) and the owner queue (bug #30's last live instance, verbatim).
-next: **K7.1** - docs match the engine, and this era's own numbers written back with
-  `conductor budget` (K4.2's first real use). If its prescription disagrees with the spec, the
-  prescription wins and the spec gets corrected.
-red: none. `go build`, `go vet`, every face-go suite green. Bugs #29 (K7.2) and #31 (textarea) open.
-watch: the compiled-prompt preview stays PLAIN on purpose - glamour eats `<id>`/`<path>` and that
-  pane's job is fidelity; a test skips with instructions if that ever changes. The spec's "Report,
-  Knowledge and the handover panes render markdown" was measurably false - there is no handover pane.
+last: **K7.1 DONE** (s25), 6 commits `ee68978`→`4ea6b94`, evidence
+  `.conductor/evidence/K7/K7.1-docs-match-the-engine.md` (+ `K7.1-budget-raw.txt`, `-money-raw.txt`).
+  `conductor budget` from the fresh build overturned four figures and one rule: the 8M cap scored
+  26.5M→**17.0M** (1.6x, not 4.0x) at **30%** rollover, and clearing the *floor* was never the rule -
+  sarban-face cleared it 1.30x and still converted zero of ten kills, because the nudge sat at 0.84x
+  the **median closer**. This era: 23 ckpt at 14.1M/$11.01, **0 rollovers in 22 sessions**. Corrections
+  are struck through in place at K2.3/K5.1/K6.4/K7.1; closure ledger + `K7_1ClosureLedgerTests` land in
+  `.conductor/followups.md`; CHANGELOG `[0.4.0]` verified against `tools/changelog-section.sh`.
+next: **K7.2 is owner-gated** - merge, tag, release, install. An agent session cannot close it; if you
+  are spawned onto it, verify the branch is pushed and green and hand it back with what is left.
+red: none new. Bugs #28/#29 are now K7.2's and they are LIVE: `dotnet run --project src/Conductor --
+  doctor` dies on this repo with `duplicate column name: soft_break` (MigrationRunner.cs:85). `budget`
+  and `money` work only because they read K3.1's intact catalogue copy. Fix before the reinstall.
+watch: `conductor budget` prescribes 32M at **0.85** for this run - correct, deliberately not applied,
+  because re-tuning the ceiling under live sessions changes what is being measured. Next era's call.
 ```
