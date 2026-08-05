@@ -1,10 +1,10 @@
 ﻿# Conductor — Karvan core - the engine knows what it did and what it cost run report
 
-_Updated 2026-08-05 01:42 UTC · branch `feat/karvan` · HEAD `87ea264`_
+_Updated 2026-08-05 03:03 UTC · branch `feat/karvan` · HEAD `ef8324c`_
 
-**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [2h 13m ago, 23:29:12Z]
-**Stage:** K2 — The architecture becomes navigable · attempts used 0
-**Checkpoints:** 8/32 done · **Sessions run:** 8 · **Cost:** $78.5950 (agent $78.5462 + gates $0.0488) · **Tokens:** 1,031,527 in / 506,443 out
+**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [3h 34m ago, 23:29:12Z]
+**Stage:** K3 — Conductor remembers · attempts used 0 · working ▸ K3.3
+**Checkpoints:** 10/32 done · **Sessions run:** 10 · **Cost:** $108.3754 (agent $108.3130 + gates $0.0625) · **Tokens:** 1,430,439 in / 709,576 out
 **Confirmed phases:** K1, K2
 
 ## Stage progress
@@ -13,7 +13,7 @@ _Updated 2026-08-05 01:42 UTC · branch `feat/karvan` · HEAD `87ea264`_
 |---|---|---|---|
 | K1 | The ledger stops lying | ██████████ 4/4 | confirmed ✓ |
 | K2 | The architecture becomes navigable | ██████████ 4/4 | confirmed ✓ |
-| K3 | Conductor remembers | ░░░░░░░░░░ 0/3 | todo |
+| K3 | Conductor remembers | ███████░░░ 2/3 | **← active** |
 | K4 | Token truth - measure it before shrinking it | ░░░░░░░░░░ 0/4 | todo |
 | K5 | The result contract and the channels | ░░░░░░░░░░ 0/4 | todo |
 | K6 | The surfaces read | ░░░░░░░░░░ 0/4 | todo |
@@ -41,12 +41,12 @@ _Updated 2026-08-05 01:42 UTC · branch `feat/karvan` · HEAD `87ea264`_
 
 </details>
 
-<details><summary>K3 — Conductor remembers (0/3)</summary>
+<details><summary>K3 — Conductor remembers (2/3)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| K3.1 | State has a machine-level home with one catalogue keyed by repo and plan, an environment override, an idempotent migration that imports existing run.db files rather than orphaning them, and a per-run scratch dir that keeps the repo's tracked deliverables | ⬜ TODO | - |
-| K3.2 | conductor history lists and opens past runs read-only from the catalogue, and the Face's existing run picker offers them | ⬜ TODO | - |
+| K3.1 | State has a machine-level home with one catalogue keyed by repo and plan, an environment override, an idempotent migration that imports existing run.db files rather than orphaning them, and a per-run scratch dir that keeps the repo's tracked deliverables | ✅ DONE | [`707992f`](https://github.com/shaahink/conductor/commit/707992f) |
+| K3.2 | conductor history lists and opens past runs read-only from the catalogue, and the Face's existing run picker offers them | ✅ DONE | - |
 | K3.3 | Every run records the engine version, its commit, its dirty flag and a snapshot of the limits that governed it, and a dirty build warns at launch | ⬜ TODO | - |
 
 </details>
@@ -105,21 +105,14 @@ _Updated 2026-08-05 01:42 UTC · branch `feat/karvan` · HEAD `87ea264`_
 | 6 | K1 | Fix | 2 | 08-05 00:18 | 0:19 | Progress |  | 5 | engine-fast:OK · face-fast:OK | $6.9616 | $0.0089 | 105,085/54,557 |
 | 7 | K2 | Deliver | 1 | 08-05 00:42 | 0:36 | Advanced | K2.1 K2.2 K2.3 | 5 | engine-fast:OK · face-fast:OK | $17.4644 | $0.0081 | 229,722/124,620 |
 | 8 | K2 | Deliver | 1 | 08-05 01:21 | 0:16 | Advanced | K2.4 | 3 | engine-fast:OK · face-fast:OK | $11.1887 | $0.0053 | 159,355/68,728 |
+| 9 | K3 | Deliver | 1 | 08-05 01:42 | 0:42 | Advanced | K3.1 | 5 | engine-fast:OK · face-fast:OK | $12.0714 | $0.0087 | 193,864/91,429 |
+| 10 | K3 | Deliver | 1 | 08-05 02:26 | 0:36 | Advanced | K3.2 | 5 | engine-fast:OK · face-fast:OK | $17.6953 | $0.0049 | 205,048/111,704 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-05 00:04:58  ▪ gate engine-fast pass [session]  (0.0s)
-08-05 00:04:58  ▪ gate face-fast pass [session]  (0.0s)
-08-05 00:07:41  ■ needs human — advisor blocked retry: 2+ consecutive identical AgentError sessions (ENOTFOUND/DNS failure) with zero commits triggers stall pattern block; environment network issue must resolve or human intervene before retry.
-08-05 00:07:42  • session #4 K1 → AgentError  (5m38s)
-08-05 00:27:35  ◆ run resumed · Karvan core - the engine knows what it did and what it cost
-08-05 00:29:12  ■ needs human — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed.
-08-05 00:30:37  • session #5 K1 Deliver started (attempt 1/8)
-08-05 01:10:17  ▪ gate engine-fast pass [session]  (1m12s)
-08-05 01:10:17  ▪ gate face-fast pass [session]  (54.5s)
 08-05 01:10:18  • session #5 K1 → Advanced · done K1.4 · 3 commit(s)  (39m41s)
 08-05 01:18:32  ▪ gate engine-fast pass [phase]  (0.0s)
 08-05 01:18:32  ▪ gate face-fast pass [phase]  (0.0s)
@@ -151,6 +144,15 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-05 02:42:14  ▪ gate engine-full pass [phase]  (3m27s)
 08-05 02:42:14  ▪ gate face-full pass [phase]  (4.6s)
 08-05 02:42:14  ✓ checkpoint K2.4 confirmed
+08-05 02:42:14  ▸ stage K2 confirmed  (59m21s)
+08-05 02:42:15  ▸ stage K3 entered — Conductor remembers
+08-05 02:42:15  • session #9 K3 Deliver started (attempt 1/6)
+08-05 03:26:05  ▪ gate engine-fast pass [session]  (49.0s)
+08-05 03:26:05  ▪ gate face-fast pass [session]  (38.3s)
+08-05 03:26:06  • session #9 K3 → Advanced · done K3.1 · 5 commit(s)  (43m50s)
+08-05 03:26:06  • session #10 K3 Deliver started (attempt 1/6)
+08-05 04:03:14  ▪ gate engine-fast pass [session]  (45.3s)
+08-05 04:03:14  ▪ gate face-fast pass [session]  (4.1s)
 ```
 
 ## Health
@@ -158,7 +160,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 8 · retries 2 (25 %) · overall Warn
+sessions 10 · retries 2 (20 %) · overall Warn
 ⚠ [context-saturation] session #1: 24,653,507 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #7: 24,094,247 context tokens (≥ 20,000,000)
 ```
@@ -169,7 +171,7 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/karvan
-working tree: M .conductor/REPORT.md, M plans/karvan/CORE-TRACKER.md
+working tree: M .conductor/REPORT.md
 vs upstream: up to date
 ```
 
@@ -206,6 +208,18 @@ vs upstream: up to date
   - [`87ea264`](https://github.com/shaahink/conductor/commit/87ea264) docs(tracker): K2 closes - the handoff to K3.1
   - [`aef2fb9`](https://github.com/shaahink/conductor/commit/aef2fb9) docs(arch): ARCHITECTURE.md becomes the map - one session end to end, the seams, the surfaces
   - [`8b38f1b`](https://github.com/shaahink/conductor/commit/8b38f1b) docs(root): the closed eras leave the root, and the workgraph "duplicate" turns out to be two documents
+- **s9 (K3 Deliver)** — 5 commit(s):
+  - [`e2bc072`](https://github.com/shaahink/conductor/commit/e2bc072) docs(tracker): K3.1 closes - the handoff to K3.2
+  - [`aa48c69`](https://github.com/shaahink/conductor/commit/aa48c69) docs(evidence): K3.1 evidence artifact
+  - [`dd318d9`](https://github.com/shaahink/conductor/commit/dd318d9) fix(state): the run-start pointer records a derived resolution only, plus K3.1 evidence
+  - [`1e29a13`](https://github.com/shaahink/conductor/commit/1e29a13) fix(tests): the last two fixtures open the database the plan resolves, not the one under .conductor
+  - [`707992f`](https://github.com/shaahink/conductor/commit/707992f) feat(state): K3.1 - run.db leaves the working tree for a machine-level home
+- **s10 (K3 Deliver)** — 5 commit(s):
+  - [`ef8324c`](https://github.com/shaahink/conductor/commit/ef8324c) docs(evidence): K3.2 evidence artifact
+  - [`884b3f2`](https://github.com/shaahink/conductor/commit/884b3f2) docs(evidence): K3.2 evidence artifact and the handoff to K3.3
+  - [`567b22a`](https://github.com/shaahink/conductor/commit/567b22a) feat(face): K3.2 - the run picker lists what this machine remembers
+  - [`f5de8a9`](https://github.com/shaahink/conductor/commit/f5de8a9) feat(cli): K3.2 - conductor history lists past runs and opens one read-only
+  - [`ec1f158`](https://github.com/shaahink/conductor/commit/ec1f158) feat(history): K3.2 - a run database opens read-only, and the catalogue becomes a list
 
 ## Phase handovers (audit)
 
@@ -228,27 +242,28 @@ vs upstream: up to date
 
 ## Last gate run
 
-engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
+engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: **K2.4 is claimed and stage K2 is complete.** Three commits landed: `8b38f1b` moved the three closed-era trackers into `docs/history/archive/trackers/` and resolved the workgraph filename collision, `aef2fb9` turned `ARCHITECTURE.md` from 91 lines into a 244-line map, `87ea264` carries the handoff. Two of the checkpoint's premises were false and are corrected with measurements rather than worked around: the root `CONDUCTOR-WORKGRAPH.md` and `docs/dev/CONDUCTOR-WORKGRAPH.md` are **not** a divergent duplicate — one is the W-series tracker (handoff + checkpoint table) and the other the W-series design brief, sharing only a filename, with `git diff --no-index` showing 220 inserti…
+> SESSION-RESULT: K3.2 is delivered and claimed (`conductor task --done K3.2 --evidence .conductor/evidence/K3/K3.2-history.md`), landed across four commits on `feat/karvan`, pushed to `ef8324c`. `conductor history` lists every run in the machine catalogue with outcome, checkpoints, sessions and cost (`--repo/--plan/--since/--limit/--home/--json`) and opens one read-only to replay its spine — stages, checkpoints folded through `TaskGraph`, sessions with outcome/commits/cost. Read-only is enforced by the SQLite connection, not by convention: `RunArchive` opens `Mode=ReadOnly`, has no write method, and holds no handle between calls; three tests measure it (an `INSERT` and an `UPDATE` both get `S…
 
 ## Tracker handoff
 
 ```
-last: **K2.4 claimed — K2 is complete.** `8b38f1b` root cleanup, `aef2fb9` the map. The spec's
-  "divergent duplicate" was FALSE: root `CONDUCTOR-WORKGRAPH.md` is the W **tracker**, `docs/dev/`'s is
-  the W **design brief** — two documents sharing a name. Filed as what they are (brief →
-  `docs/history/`, tracker → `docs/history/archive/trackers/`, which is the dir that actually exists —
-  not `docs/history/trackers/`). Root is 14 files. `ARCHITECTURE.md` 91→244 lines: lifecycle, the nine
-  seams, both surfaces, where-do-I-add-X, every hop cited to file:line and each line read back first.
-next: **K3.1 — state gets a machine-level home.** It moves `run.db` and touches every `IRunStore` caller;
-  K2 was sequenced before it on purpose, so the boundary you inherit is real. `ARCHITECTURE.md` §"One
-  session, end to end" and §"The seams" are the map — read those two sections, not the whole file.
-watch: two checks are cheap and catch what no test does — walk every `tracker`/`planDoc`/`readOrder`
-  path in `plans/**` (53 refs, was 6 dangling), and link-check every `](path)` in the 128 markdown
-  files (0 broken). Also: clear `CONDUCTOR_PLAN` before running your own build's `doctor`/`run`.
-red: none; build green. Open, not blocking: **#27** fresh-db FK error on first `run_state` write,
+last: **K3.2 claimed** - `ec1f158` core, `f5de8a9` the CLI verb, `567b22a` the Face picker, evidence at
+  `.conductor/evidence/K3/K3.2-history.md`. `conductor history` lists the catalogue and opens one run
+  read-only (`--repo/--plan/--since/--limit/--home/--json`); `RunArchive` is `Mode=ReadOnly` and has no
+  write method, checkpoints fold through `TaskGraph`. The picker gained `WithPast` - past rows list,
+  navigate, and cannot be attached to. 23 C# + 6 Go tests green; two new goldens, no baseline moved.
+next: **K3.3 - every run records which engine, which commit, dirty flag, and the limits snapshot.**
+  `history` already prints an `engine` field and it reads `0.0.0.0` / `2.0.0.0` today: `runs.driver_ver`
+  carries the assembly version, which answers nothing. Fill that column, add commit/dirty/limits, and
+  `ArchivedRun` plus the `history` header are already wired to print them.
+watch: **bug #28, filed this session, and it will bite the K7.2 reinstall.** This repo's own
+  `.conductor/run.db` says `schema_version = 9` but already carries the v10 `soft_break` column, so any
+  v10+ engine dies in `MigrationRunner.Apply`. Also `CA2000` is a build error here and false-positives
+  on any factory returning an `IDisposable` - do not return one; hold a connection string instead.
+red: none. Open, not blocking: **#28** above, **#27** fresh-db FK error on first `run_state` write,
   **#24** `AgentConfig.Merge` drops `Env`.
 ```
