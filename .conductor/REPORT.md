@@ -1,10 +1,10 @@
 ﻿# Conductor — Karvan core - the engine knows what it did and what it cost run report
 
-_Updated 2026-08-05 06:09 UTC · branch `feat/karvan` · HEAD `1b4e87c`_
+_Updated 2026-08-05 06:51 UTC · branch `feat/karvan` · HEAD `ff7812d`_
 
-**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [6h 39m ago, 23:29:12Z]
-**Stage:** K4 — Token truth - measure it before shrinking it · attempts used 0
-**Checkpoints:** 15/32 done · **Sessions run:** 17 · **Cost:** $165.9705 (agent $165.8685 + gates $0.1020) · **Tokens:** 2,370,355 in / 1,160,360 out
+**Status:** Idle — stage K1 used all 8 attempts without completing — inspect and `conductor resume` (or `conductor skip`) · advisor: DNS failure on machine (ENOTFOUND github.com) is blocking K1.3 push; network connectivity must be restored and commits pushed before K1.4 can proceed. [7h 21m ago, 23:29:12Z]
+**Stage:** K5 — The result contract and the channels · attempts used 0 · working ▸ K5.3
+**Checkpoints:** 17/32 done · **Sessions run:** 18 · **Cost:** $183.4279 (agent $183.3210 + gates $0.1070) · **Tokens:** 2,605,752 in / 1,287,779 out
 **Confirmed phases:** K1, K2, K3, K4
 
 ## Stage progress
@@ -15,7 +15,7 @@ _Updated 2026-08-05 06:09 UTC · branch `feat/karvan` · HEAD `1b4e87c`_
 | K2 | The architecture becomes navigable | ██████████ 4/4 | confirmed ✓ |
 | K3 | Conductor remembers | ██████████ 3/3 | confirmed ✓ |
 | K4 | Token truth - measure it before shrinking it | ██████████ 4/4 | confirmed ✓ |
-| K5 | The result contract and the channels | ░░░░░░░░░░ 0/4 | todo |
+| K5 | The result contract and the channels | █████░░░░░ 2/4 | **← active** |
 | K6 | The surfaces read | ░░░░░░░░░░ 0/4 | todo |
 | K7 | Ship the plan | ░░░░░░░░░░ 0/2 | todo |
 
@@ -62,12 +62,12 @@ _Updated 2026-08-05 06:09 UTC · branch `feat/karvan` · HEAD `1b4e87c`_
 
 </details>
 
-<details><summary>K5 — The result contract and the channels (0/4)</summary>
+<details><summary>K5 — The result contract and the channels (2/4)</summary>
 
 | # | Title | Status | Commit |
 |---|---|---|---|
-| K5.1 | The session result has one format conductor owns — short headline, at most three outcome bullets, artefacts as links, evidence paths, explicit gaps — with the followup parser, the verdict parse and the session template moving in the same checkpoint and a legacy result degrading rather than throwing | ⬜ TODO | - |
-| K5.2 | The five Telegram defects that make the feed unreadable are gone: one identity block from one source, the stage title beside the id, the structured result rendered instead of cut mid-word, a rollover that reports what it landed, and a progress line in every push | ⬜ TODO | - |
+| K5.1 | The session result has one format conductor owns — short headline, at most three outcome bullets, artefacts as links, evidence paths, explicit gaps — with the followup parser, the verdict parse and the session template moving in the same checkpoint and a legacy result degrading rather than throwing | ✅ DONE | - |
+| K5.2 | The five Telegram defects that make the feed unreadable are gone: one identity block from one source, the stage title beside the id, the structured result rendered instead of cut mid-word, a rollover that reports what it landed, and a progress line in every push | ✅ DONE | - |
 | K5.3 | Evidence is a first-class artifact — path, kind, checkpoint, session, sha, created-at — written as an event when an agent registers one or a watched directory gains a file, with non-text kinds first-class, a Face surface, and the existing free-text evidence field still working | ⬜ TODO | - |
 | K5.4 | The message-composition layer ships owner-editable per-event templates, repo and branch and stage title and checkpoint in every push, commits and PRs as links, money with headroom, photo and document sending so evidence arrives, a thread per run, severity mapped to notify or silent, 4096-character chunking, and an ADR recording the push-only remote posture | ⬜ TODO | - |
 
@@ -114,17 +114,13 @@ _Updated 2026-08-05 06:09 UTC · branch `feat/karvan` · HEAD `1b4e87c`_
 | 15 | K4 | Deliver | 1 | 08-05 04:40 | 0:23 | Advanced | K4.3 | 2 | engine-fast:OK · face-fast:OK | $8.8544 | $0.0051 | 169,401/80,290 |
 | 16 | K4 | Deliver | 1 | 08-05 05:05 | 0:47 | Advanced | K4.4 | 5 | engine-fast:OK · face-fast:OK | $16.7142 | $0.0046 | 201,837/111,577 |
 | 17 | K4 | Fix | 2 | 08-05 05:59 | 0:06 | Progress |  | 1 | engine-fast:OK · face-fast:OK | $1.7676 | $0.0048 | 54,483/13,809 |
+| 18 | K5 | Deliver | 1 | 08-05 06:09 | 0:41 | Advanced | K5.1 K5.2 | 7 | engine-fast:OK · face-fast:OK | $17.4525 | $0.0050 | 235,397/127,419 |
 
 ## Timeline
 
 _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 
 ```
-08-05 04:31:33  • session #12 K3 Fix started (attempt 2/6)
-08-05 04:42:42  ▪ gate engine-fast pass [session]  (49.7s)
-08-05 04:42:42  ▪ gate face-fast pass [session]  (31.8s)
-08-05 04:42:42  • session #12 K3 → Progress · 2 commit(s)  (11m08s)
-08-05 04:47:06  ▪ gate engine-fast pass [phase]  (0.0s)
 08-05 04:47:07  ▪ gate face-fast pass [phase]  (0.0s)
 08-05 04:47:07  ▪ gate engine-full pass [phase]  (4m01s)
 08-05 04:47:07  ▪ gate face-full pass [phase]  (20.6s)
@@ -160,6 +156,11 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 08-05 07:09:10  ▪ gate engine-full pass [phase]  (2m52s)
 08-05 07:09:10  ▪ gate face-full pass [phase]  (1.1s)
 08-05 07:09:10  ✓ checkpoint K4.4 confirmed
+08-05 07:09:10  ▸ stage K4 confirmed  (2h22m02s)
+08-05 07:09:11  ▸ stage K5 entered — The result contract and the channels
+08-05 07:09:11  • session #18 K5 Deliver started (attempt 1/8)
+08-05 07:51:11  ▪ gate engine-fast pass [session]  (46.8s)
+08-05 07:51:11  ▪ gate face-fast pass [session]  (3.0s)
 ```
 
 ## Health
@@ -167,7 +168,7 @@ _Transitions with duration, from the event log (`.conductor/events.jsonl`)._
 _Execution-health signals, folded from the event log (`.conductor/events.jsonl`)._
 
 ```
-sessions 17 · retries 4 (24 %) · overall Warn
+sessions 18 · retries 4 (22 %) · overall Warn
 ⚠ [context-saturation] session #10: 23,623,416 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #1: 24,653,507 context tokens (≥ 20,000,000)
 ⚠ [context-saturation] session #7: 24,094,247 context tokens (≥ 20,000,000)
@@ -180,18 +181,12 @@ _Live git snapshot (branch, working tree, sync vs upstream)._
 
 ```
 branch: feat/karvan
-working tree: M .conductor/REPORT.md, M plans/karvan/CORE-TRACKER.md
+working tree: clean
 vs upstream: up to date
 ```
 
 ### Commits by session
 
-- **s10 (K3 Deliver)** — 5 commit(s):
-  - [`ef8324c`](https://github.com/shaahink/conductor/commit/ef8324c) docs(evidence): K3.2 evidence artifact
-  - [`884b3f2`](https://github.com/shaahink/conductor/commit/884b3f2) docs(evidence): K3.2 evidence artifact and the handoff to K3.3
-  - [`567b22a`](https://github.com/shaahink/conductor/commit/567b22a) feat(face): K3.2 - the run picker lists what this machine remembers
-  - [`f5de8a9`](https://github.com/shaahink/conductor/commit/f5de8a9) feat(cli): K3.2 - conductor history lists past runs and opens one read-only
-  - [`ec1f158`](https://github.com/shaahink/conductor/commit/ec1f158) feat(history): K3.2 - a run database opens read-only, and the catalogue becomes a list
 - **s11 (K3 Deliver)** — 2 commit(s):
   - [`7841cfb`](https://github.com/shaahink/conductor/commit/7841cfb) docs(evidence): K3.3 evidence artifact and the handoff to K4.1
   - [`e45fa11`](https://github.com/shaahink/conductor/commit/e45fa11) feat(history): K3.3 - every run records which engine produced it and under which limits
@@ -215,6 +210,14 @@ vs upstream: up to date
   - [`b4ea829`](https://github.com/shaahink/conductor/commit/b4ea829) feat(budget): K4.4 - the token rail goes on the wire beside the money one
 - **s17 (K4 Fix)** — 1 commit(s):
   - [`1b4e87c`](https://github.com/shaahink/conductor/commit/1b4e87c) fix(history): the archive probes for newly_done like every other column
+- **s18 (K5 Deliver)** — 7 commit(s):
+  - [`ff7812d`](https://github.com/shaahink/conductor/commit/ff7812d) docs(tracker): s18 handoff - K5.1 and K5.2 done, K5.3 engine half committed
+  - [`e618c06`](https://github.com/shaahink/conductor/commit/e618c06) feat(evidence): K5.3 part 1 - the model, the event and the registry (no surface yet)
+  - [`b9a54d0`](https://github.com/shaahink/conductor/commit/b9a54d0) docs(tracker): K5.1 and K5.2 landed - handoff points at K5.3
+  - [`d1f55cc`](https://github.com/shaahink/conductor/commit/d1f55cc) feat(telegram): K5.2 - the five defects that made the feed unreadable
+  - [`379abc7`](https://github.com/shaahink/conductor/commit/379abc7) docs(tracker): K5.1 handoff - the result contract, and what it costs to add prompt prose
+  - [`ae7ada5`](https://github.com/shaahink/conductor/commit/ae7ada5) docs(result): K5.1 - the templates teach the format the engine now parses
+  - [`c04175d`](https://github.com/shaahink/conductor/commit/c04175d) feat(result): K5.1 - one format for the session result, one parser for it
 
 ## Phase handovers (audit)
 
@@ -237,28 +240,30 @@ vs upstream: up to date
 
 ## Last gate run
 
-engine-fast:cached · face-fast:cached · engine-full:OK · face-full:OK
+engine-fast:OK · face-fast:OK
 
 ## Last session result
 
-> SESSION-RESULT: The `engine-full` red is fixed at its root and pushed as `f596f01` on `feat/karvan` — `RunArchive.Sessions()` was naming `s.newly_done` unconditionally since K4.2, bypassing the `Has()`/`PRAGMA table_info` probe that lets the archive read databases this engine did not write, so K3.3's hand-built v10 fixture (whose `sessions` table stops at `gate_summary`) threw `no such column` and took the whole session listing down; the column is now probed like every other and read through `Opt()`, the fixture and every expectation untouched, with the full unit suite green at 1938/1938 versus 1937/1 before — identical total, so nothing was skipped or weakened. Nothing is still red: K4.1–K4…
+> SESSION-RESULT: K5.1 and K5.2 landed and claimed; K5.3's engine half is committed but unclaimed
+> - K5.1: `SessionResult` is now the one parse of a session result — six consumers render from it instead of each cutting the same paragraph at 700/700/1200/600, a seventh uncalled copy of the cut is gone, and legacy prose plus verifier JSON degrade byte-identically to the old behaviour; the plan templates and built-in prompts teach the format
+> - K5.2: all five Telegram defects fixed and proved on the wire — one session number from the record, the stage title, the structured result rendered, a rollover that reports what it landed with gates marked deferred, and a progress line on every push
+> - K5.3 is…
 
 ## Tracker handoff
 
 ```
-last: **K4 phase red FIXED** (s17), evidence `.conductor/evidence/K4/K4-fix-s17-newly-done-probe.md`.
-  `engine-full` failed on `no such column: s.newly_done`. Cause: K4.2 (`1fcbd0b`) added `s.newly_done`
-  to `RunArchive.Sessions()`'s SELECT **unconditionally**, past the `Has()`/`PRAGMA table_info` probe
-  every other post-v9 column uses. The column is v1, so every db this engine writes has it — but the
-  archive opens dbs it did not write, and K3.3's minimal v10 fixture stops at `gate_summary`. Fixed in
-  the code (probe + `Opt()`), not the fixture. RULE: **no column is named in `RunArchive` without
-  `Has()`, not even a v1 one.** K4.1-K4.4 stand as delivered; nothing was over-claimed.
-next: **K5.1 — the session result contract.** Note it rewrites the SESSION-RESULT template in the same
-  commit, and trap 4 (literal brace tokens in a template kill the engine) goes live at K5.1.
-red: none. bug #29 (K7.2 blocker) still open: on a COPY of this run.db the WRITE path dies on
-  `duplicate column name: soft_break`; the read-only `RunArchive` path opens the same file fine.
-carried from K4.4: the soft-break rail counts **cache-read** (`SessionRunner.Mcp.cs:76`), the wire's
-  `sessionTokens*` triple does NOT — use `StateDto.tokenHeadroom` / `widgets.TokenGauge`, never the
-  visible three. And for harness tests: a ceiling lengthens the prompt and **cmd.exe truncates at 8191
-  chars**, so a cmd fake-agent turns into `AgentError` the moment a cap exists — use PowerShell.
+last: **K5.1 + K5.2 DONE** (s18) — `c04175d`/`ae7ada5`, `d1f55cc`; evidence
+  `.conductor/evidence/K5/K5.1-result-contract.md`, `K5.2-telegram-feed.md`, `K5.2-wire-transcript.txt`.
+  `SessionResult` is the one parse of a session result (six consumers render from it; legacy prose and
+  verifier JSON degrade byte-identically to the old 700-char cut); the Telegram push is built from a
+  `SessionEndPush` — one session number, the stage title, the structured result, a rollover that
+  reports what it landed, a progress line everywhere.
+next: **K5.3, and its engine half is already committed** (`e618c06`, card amended with the detail).
+  Model + `EvidenceRegistered` event + fold-based registry + claim/watcher registration + a text
+  `PushEvidenceAsync` are in and green. Missing: **tests (none exist yet)**, `GET /evidence`, the Face
+  surface, an evidence artifact. Start with the tests, then the wire, then the Face.
+red: none. bug #29 (K7.2 blocker) still open (`duplicate column name: soft_break` on a db COPY).
+watch: the ratchet counts `#pragma warning disable` in src and the ceiling is 38 — MA0045 fires on
+  sync file reads, so make the method async instead of suppressing. Built-in prompts sit ~12 chars
+  under SF6.1's 7900 budget. `K5_2TelegramFeedTests.FakeBotApi` captures exact push bytes.
 ```

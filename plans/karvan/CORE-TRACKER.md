@@ -2,22 +2,23 @@
 
 **Plan:** Karvan core - the engine knows what it did and what it cost | **Branch:** `feat/karvan` | **Design doc:** docs/history/CONDUCTOR-KARVAN.md
 
-## Handoff (overwrite this block, ≤12 lines, no history)
+## Handoff (overwrite this block, <=12 lines, no history)
 
-last: **K5.1 + K5.2 DONE** (s18) — `c04175d`/`ae7ada5`, `d1f55cc`; evidence
-  `.conductor/evidence/K5/K5.1-result-contract.md`, `K5.2-telegram-feed.md`, `K5.2-wire-transcript.txt`.
-  `SessionResult` is the one parse of a session result (six consumers render from it; legacy prose and
-  verifier JSON degrade byte-identically to the old 700-char cut); the Telegram push is built from a
-  `SessionEndPush` — one session number, the stage title, the structured result, a rollover that
-  reports what it landed, a progress line everywhere.
-next: **K5.3, and its engine half is already committed** (`e618c06`, card amended with the detail).
-  Model + `EvidenceRegistered` event + fold-based registry + claim/watcher registration + a text
-  `PushEvidenceAsync` are in and green. Missing: **tests (none exist yet)**, `GET /evidence`, the Face
-  surface, an evidence artifact. Start with the tests, then the wire, then the Face.
-red: none. bug #29 (K7.2 blocker) still open (`duplicate column name: soft_break` on a db COPY).
-watch: the ratchet counts `#pragma warning disable` in src and the ceiling is 38 — MA0045 fires on
-  sync file reads, so make the method async instead of suppressing. Built-in prompts sit ~12 chars
-  under SF6.1's 7900 budget. `K5_2TelegramFeedTests.FakeBotApi` captures exact push bytes.
+last: **K5.3 DONE** (s19) - `6df3a58` tests, `fe5ab5f` `GET /evidence`, `f4b272f` Face, `370aba1`
+  goldens; evidence `.conductor/evidence/K5/K5.3-evidence-artifact.md`. The s18 engine half was half a
+  checkpoint: the tests found the checkpoint id was NEVER recovered (a numbered group under
+  `ExplicitCapture` matched everything and captured nothing), and s18 had left THREE architecture-
+  ratchet reds - fixed by splitting, never by raising a ceiling. Driven proof: a scratch-repo run of
+  the fresh build registered a PNG the agent never mentioned; `GET /evidence` answered from the real
+  engine host.
+next: **K5.4** - the composition layer. `PushEvidenceAsync` is text-only on purpose: replace its BODY
+  with `sendPhoto`/`sendDocument` rather than adding a second path. `visual` is already on the wire
+  (`EvidenceArtifactDto`), so the Face and the notifier cannot disagree about what a PNG is. Also
+  owed: per-event templates, links, money with headroom, chunking at 4096, and the push-only ADR.
+red: none. bug #29 (K7.2 blocker) still open.
+watch: run `dotnet test --filter Architecture` before committing any file that GREW - 0.4s, and it is
+  a gate s18 shipped three reds past. Face: ten tabs is the ceiling (adr/0004), so a new surface is
+  re-homed, not tabbed - evidence lives in Knowledge.
 
 
 ## Baseline numbers (from run.db)
@@ -25,8 +26,8 @@ watch: the ratchet counts `#pragma warning disable` in src and the ceiling is 38
 | Metric | Value |
 |---|---|
 | Total checkpoints | 32 |
-| Done | 3 |
-| Claimed (unconfirmed) | 12 |
+| Done | 4 |
+| Claimed (unconfirmed) | 13 |
 
 ## Checkpoints
 
@@ -66,14 +67,14 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | K4.1 | The engine records context size per turn — a high-water and a mean per session — derived from the stream, with the derivation checked against a session that can be estimated independently | DONE | ea49c8d | .conductor/evidence/K4/K4.1-context-per-turn.md |
 | K4.2 | conductor budget prints floor, wrap-up, cap, nudge-versus-floor and rollover rate and prescribes a correction, and it reproduces this repo's own two runs without being told the answers | DONE | 1fcbd0b | .conductor/evidence/K4/K4-fix-s17-newly-done-probe.md |
 | K4.3 | conductor money answers what a project cost per checkpoint, per stage and per month, with cache-read share and the before-and-after windows that say what the cap bought, cross-checked against a hand-written query | DONE | 20842e2 | .conductor/evidence/K4/K4.3-conductor-money.md |
-| K4.4 | Live session tokens, the distance to the nudge, a burn rate and a projection sit beside live money in the Face and on the wire, honest when no cap is set | DONE | b4ea829 | .conductor/evidence/K4/K4.4-live-token-headroom.md |
+| K4.4 | Live session tokens, the distance to the nudge, a burn rate and a projection sit beside live money in the Face and on the wire, honest when no cap is set | DONE ✓ | b4ea829 | .conductor/evidence/K4/K4.4-live-token-headroom.md |
 
 ### K5 — The result contract and the channels
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| K5.1 | The session result has one format conductor owns — short headline, at most three outcome bullets, artefacts as links, evidence paths, explicit gaps — with the followup parser, the verdict parse and the session template moving in the same checkpoint and a legacy result degrading rather than throwing | TODO | - | - |
-| K5.2 | The five Telegram defects that make the feed unreadable are gone: one identity block from one source, the stage title beside the id, the structured result rendered instead of cut mid-word, a rollover that reports what it landed, and a progress line in every push | TODO | - | - |
+| K5.1 | The session result has one format conductor owns — short headline, at most three outcome bullets, artefacts as links, evidence paths, explicit gaps — with the followup parser, the verdict parse and the session template moving in the same checkpoint and a legacy result degrading rather than throwing | DONE | c04175d | .conductor/evidence/K5/K5.1-result-contract.md |
+| K5.2 | The five Telegram defects that make the feed unreadable are gone: one identity block from one source, the stage title beside the id, the structured result rendered instead of cut mid-word, a rollover that reports what it landed, and a progress line in every push | DONE | c04175d | .conductor/evidence/K5/K5.2-telegram-feed.md |
 | K5.3 | Evidence is a first-class artifact — path, kind, checkpoint, session, sha, created-at — written as an event when an agent registers one or a watched directory gains a file, with non-text kinds first-class, a Face surface, and the existing free-text evidence field still working | TODO | - | - |
 | K5.4 | The message-composition layer ships owner-editable per-event templates, repo and branch and stage title and checkpoint in every push, commits and PRs as links, money with headroom, photo and document sending so evidence arrives, a thread per run, severity mapped to notify or silent, 4096-character chunking, and an ADR recording the push-only remote posture | TODO | - | - |
 
