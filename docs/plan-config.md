@@ -243,7 +243,7 @@ docs-only or spike plan with no build/test surface.
 | `approvalMode` | bool | false | Park at AwaitingOwner before every session. |
 | `stallPatternTermination` | bool | true | 2× consecutive zero-output stall → NeedsHuman. |
 | `stallBackoffMinutes` | int | 12 | Initial stall backoff, doubles each consecutive stall. |
-| `maxConcurrentLanes` | int | 2 | Max concurrent Tier A analysis lanes. |
+| `maxConcurrentLanes` | int | 2 | Max concurrent Tier A analysis lanes. **Lane spend is not costed** — no token or dollar accounting exists in `LaneRunner`/`LaneWorkerPool`, so lanes bill against your account without moving `maxRunCostUsd`. |
 | `dnsHealthCheck` | object | — | Pre-session DNS check (hosts, intervalSeconds). |
 | `overheadCostPerSecond` | decimal | 0.0001 | Gate runtime cost estimate rate. |
 | `batterySettleSeconds` | int | 120 | Ceiling on how long the gate battery waits for the session's own `bg:` children to exit before it judges. `0` disables the wait. |
@@ -403,6 +403,13 @@ Read-only lanes that run in a scratch directory concurrently with the primary se
 | `maxOutputLines` | int | Default 200. |
 
 ## `mutatingLanes[]` — Tier B isolated worktree lanes
+
+> **Not scheduled — declaring this block does nothing (2026-08-06).** `PlanConfig.MutatingLanes` is
+> parsed and then never read by any code path in `src/`. The runner underneath is real, but the only
+> way to reach it is a follow-up: `LaneCoordinator.RunFollowupFixLanesAsync` builds lanes from
+> `.conductor/followups.md` entries after a stage confirms, and runs them **sequentially**. The table
+> below describes the runner's inputs, not a working plan field. Filed in
+> [`docs/dev/NEXT-FEATURES.md`](dev/NEXT-FEATURES.md).
 
 Lanes that may write, isolated in a git worktree and merged behind a gate.
 

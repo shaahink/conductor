@@ -106,6 +106,32 @@ Do not re-plan these. Each names the thing in the tree that answers it.
 - **Gate on unacknowledged handover gaps.** Phase-confirm could fail when the handover lists a
   critical gap nobody acknowledged. The parse exists; the gate does not.
 
+### Filed 2026-08-06 — the two lane gaps, found reading the code to answer "what can run in parallel?"
+
+Both were found by grep over `src/` on 2026-08-06 while advising a live run, not by a failure. Neither
+is "not built" in the usual sense — the machinery exists in both cases and the gap is in what reaches
+it.
+
+- **`mutatingLanes[]` is plan config that nothing reads.** `PlanConfig.cs:93` declares
+  `List<MutatingLaneConfig> MutatingLanes` and `docs/plan-config.md` documents its seven fields, but
+  no code path in `src/` ever touches the property — the only reference anywhere outside the
+  declaration is `B12_3Tests.PlanConfig_MutatingLanes_DefaultsEmpty` asserting it defaults empty.
+  Contrast `AnalysisLanes`, read in three places (`LaneCoordinator.StartAnalysisLanes`,
+  `RunLoop.cs:375`, `PromptBuilder.cs:299`). The Tier-B machinery underneath is real and does work —
+  `MutatingLaneRunner`, `Lanes/PathClaimTracker`, worktree isolation, the merge staged in a third
+  worktree — but it is reachable from exactly one direction: `LaneCoordinator.RunFollowupFixLanesAsync`
+  turns `.conductor/followups.md` entries into lanes via `FollowupEntryToMutatingLane`, after a stage
+  confirms, in a sequential `foreach`. So a plan that declares `mutatingLanes[]` gets silence, and
+  Tier B lanes are never concurrent with anything. Either wire the config to the runner or delete the
+  field **and** its doc section — a documented field that does nothing costs a plan author a session
+  to discover.
+- **Lane spend is outside the cost cap.** `LaneRunner`, `LaneWorkerPool` and `MutatingLaneRunner`
+  contain no cost or token accounting of any kind, while `maxRunCostUsd` / `maxRunTokens` are computed
+  from session costs (`sessions/NNN/cost.json`). Every analysis lane, parallel audit and fix-lane
+  therefore spends real money the run's own cap cannot see, and `conductor status` under-reports the
+  bill by that amount. Harmless at `maxConcurrentLanes: 1` with no lanes declared, which is what most
+  plans have; it scales with exactly the feature the next era wants to promote.
+
 ## Filed 2026-08-01 (SF7.1) — the MCP config the engine writes is not the one the harness gets
 
 **Engine-side half: closed by K1.4 (see the shipped list).** `WireMcpServer` used to write a config
