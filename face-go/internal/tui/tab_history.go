@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
@@ -19,6 +20,14 @@ import (
 type historyModel struct {
 	view            historyView
 	sessionSelected int
+	// sessionsVp / spineVp are the two views' pane viewports (KS2.7). Neither view had one: the
+	// sessions list emitted EVERY row plus the selected detail with no window at all — overflow was
+	// eaten silently by frameContent's MaxHeight — and the spine hand-rolled a start/end slice around
+	// its cursor. `sessionSelected` and `selected` stay: they are SELECTION cursors, not scroll
+	// offsets (they address a row of data and survive a resize), and the viewport follows them
+	// through ensurePaneRow rather than replacing them.
+	sessionsVp viewport.Model
+	spineVp    viewport.Model
 
 	entries  []api.TimelineEntryDto
 	selected int
@@ -101,6 +110,10 @@ func (m Model) historySwitcher() string {
 	return cell(historySessions, "s", "Sessions") + subtleStyle.Render("   ") + cell(historyTimeline, "t", "Spine")
 }
 
+// handleTimelineKey: the spine's own semantic keys first (`r` refresh, ↑↓ move the SELECTION), then
+// the one pane-scroll set against a viewport that has just been sized and loaded (adr/0006 §1).
+// ↑↓ stay on the selection because the detail pane under the list renders the selected entry — this
+// is lazygit's split, where item movement and content scrolling are different key sets.
 func (m Model) handleTimelineKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
 	case "r":
@@ -109,52 +122,37 @@ func (m Model) handleTimelineKey(key string) (tea.Model, tea.Cmd) {
 	case "up", "k":
 		if m.history.selected > 0 {
 			m.history.selected--
+			m.history.spineVp = m.followSpineSelection()
+			return m, nil
 		}
 	case "down", "j":
 		if m.history.selected < len(m.history.entries)-1 {
 			m.history.selected++
+			m.history.spineVp = m.followSpineSelection()
+			return m, nil
 		}
 	}
+	m.history.spineVp = m.historySpineViewport()
+	applyPaneScroll(&m.history.spineVp, key)
 	return m, nil
 }
 
-// renderTimelineView shows the run's spine — sessions, gates, stalls, verdicts, cost over time.
-// It refreshes itself whenever a new engine event lands (see Update), so it is live while open.
-func (m Model) renderTimelineView() (string, string) {
-	if m.history.loading && len(m.history.entries) == 0 {
-		return subtleStyle.Render("loading…"), "r refresh"
-	}
-	if m.history.err != "" {
-		return destructStyle.Render("error: " + m.history.err), "r retry"
-	}
-	if len(m.history.entries) == 0 {
-		return subtleStyle.Render("(no events on the run's spine yet)"), "r refresh"
-	}
-	// Reserve the bottom of the pane for the selected entry's detail (full description + meta).
-	// historyRows, not paneRows: the view switcher above costs a row in every History view.
-	detail := m.timelineDetail()
-	window := m.historyRows() - lipgloss.Height(detail) - 1
-	if window < 3 {
-		window = 3
-	}
-	start := 0
-	if m.history.selected >= window {
-		start = m.history.selected - window + 1
-	}
-	end := start + window
-	if end > len(m.history.entries) {
-		end = len(m.history.entries)
-	}
-	// The rule costs a row inside the window, so the window holds one fewer event. Take it from the
-	// OLDEST end: this pane is a live tail, and dropping the newest event to make room for the line
-	// that says "the live ones start here" would defeat the point of drawing it.
-	if b := m.timelineLiveBoundary(); b > start && b < end && start+1 < end {
-		start++
-	}
-	var lines []string
-	for i := start; i < end; i++ {
-		if i == m.timelineLiveBoundary() {
+// spineLines is the whole spine as rendered rows, with the live rule as a row of its own, plus the
+// index of the SELECTED row inside that slice. Built here rather than inside the renderer so the key
+// handler can load the same bytes into the viewport it is about to scroll.
+//
+// The live rule is content now, not a window adjustment: it sits at the boundary index and scrolls
+// with the entries either side of it, which is what "keep the rule inside the window" has to mean
+// once the window is a viewport (dogfood appendix item 6 — an attach pours the whole spine in and
+// reads as an event storm without it).
+func (m Model) spineLines() (lines []string, selRow int) {
+	boundary := m.timelineLiveBoundary()
+	for i := range m.history.entries {
+		if i == boundary {
 			lines = append(lines, m.timelineLiveRule())
+		}
+		if i == m.history.selected {
+			selRow = len(lines)
 		}
 		e := m.history.entries[i]
 		glyph, gs := timelineGlyph(e)
@@ -170,10 +168,52 @@ func (m Model) renderTimelineView() (string, string) {
 		}
 		lines = append(lines, line)
 	}
+	return lines, selRow
+}
+
+// historySpineViewport is the spine's `<surface>Viewport()` builder. The count row and the selected
+// entry's detail render BELOW it and are subtracted from its height — a view that sized itself
+// against the whole pane would lose the detail it exists to show to the frame's height clamp.
+func (m Model) historySpineViewport() viewport.Model {
+	lines, _ := m.spineLines()
+	// historyRows, not paneRows: the view switcher above costs a row in every History view, and it
+	// has already been deducted there — do not double-deduct.
+	rows := m.historyRows() - lipgloss.Height(m.timelineDetail()) - 1
+	return loadPaneViewport(m.history.spineVp, lines, m.paneCols(), max(3, rows), false)
+}
+
+// followSpineSelection is the builder plus the cursor follow, called ONLY from the arms that moved
+// the cursor (see ensurePaneRow for why it may not live in the builder).
+func (m Model) followSpineSelection() viewport.Model {
+	_, selRow := m.spineLines()
+	vp := m.historySpineViewport()
+	ensurePaneRow(&vp, selRow)
+	return vp
+}
+
+// renderTimelineView shows the run's spine — sessions, gates, stalls, verdicts, cost over time.
+// It refreshes itself whenever a new engine event lands (see Update), so it is live while open.
+func (m Model) renderTimelineView() (string, string) {
+	if m.history.loading && len(m.history.entries) == 0 {
+		return subtleStyle.Render("loading…"), "r refresh"
+	}
+	if m.history.err != "" {
+		return destructStyle.Render("error: " + m.history.err), "r retry"
+	}
+	if len(m.history.entries) == 0 {
+		return subtleStyle.Render("(no events on the run's spine yet)"), "r refresh"
+	}
+	// The bottom of the pane is the selected entry's detail (full description + meta); the viewport
+	// above it holds the whole spine.
+	vp := m.historySpineViewport()
 	// Just the count. The "· live" this used to carry now lives on the rule, where it marks WHERE
 	// live begins instead of restating it under a pane that already said it.
 	count := subtleStyle.Render(fmt.Sprintf("%d events", len(m.history.entries)))
-	return strings.Join(lines, "\n") + "\n" + count + "\n" + detail, "↑↓ navigate · r refresh"
+	help := "↑↓ select · r refresh"
+	if hint := paneScrollHint(vp, false); hint != "" {
+		help = "↑↓ select · " + hint + " · r refresh"
+	}
+	return vp.View() + "\n" + count + "\n" + m.timelineDetail(), help
 }
 
 // timelineLiveBoundary is the index of the first event that arrived AFTER this Face attached, or -1
@@ -331,18 +371,44 @@ func (m Model) sessionWhen(s api.SessionRowDto) string {
 	return when
 }
 
+// handleSessionsKey: ↑↓ move the SELECTION (the detail under the list is the selected session), then
+// the one pane-scroll set — the same split the spine uses, applied after this view's own keys.
 func (m Model) handleSessionsKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
 	case "up", "k":
 		if m.history.sessionSelected > 0 {
 			m.history.sessionSelected--
+			m.history.sessionsVp = m.followSessionSelection()
+			return m, nil
 		}
 	case "down", "j":
 		if m.history.sessionSelected < len(m.data.Sessions)-1 {
 			m.history.sessionSelected++
+			m.history.sessionsVp = m.followSessionSelection()
+			return m, nil
 		}
 	}
+	m.history.sessionsVp = m.historySessionsViewport()
+	applyPaneScroll(&m.history.sessionsVp, key)
 	return m, nil
+}
+
+// historySessionsViewport is the sessions list's `<surface>Viewport()` builder. Before KS2.7 this
+// view emitted every row AND the selected session's whole detail — result summary, gate summary,
+// commits, digest — with no window at all, so on a run of thirty sessions everything past the pane's
+// last row was eaten silently by frameContent's MaxHeight. There was no scroll bug to fix here
+// because there was no scroll.
+func (m Model) historySessionsViewport() viewport.Model {
+	return loadPaneViewport(m.history.sessionsVp, m.sessionsLines(), m.paneCols(), m.historyRows(), false)
+}
+
+// followSessionSelection is the builder plus the cursor follow, called ONLY from the arms that moved
+// the cursor. Row index == session index: one row per session, and the selected session's detail
+// hangs below all of them.
+func (m Model) followSessionSelection() viewport.Model {
+	vp := m.historySessionsViewport()
+	ensurePaneRow(&vp, min(m.history.sessionSelected, max(0, len(m.data.Sessions)-1)))
+	return vp
 }
 
 // renderSessionsView lists sessions newest-first (the wire order) with the selected one's detail
@@ -351,6 +417,18 @@ func (m Model) renderSessionsView() (string, string) {
 	if len(m.data.Sessions) == 0 {
 		return subtleStyle.Render("(no sessions yet — they appear as the engine runs)"), ""
 	}
+	vp := m.historySessionsViewport()
+	help := "↑↓ select"
+	if hint := paneScrollHint(vp, false); hint != "" {
+		help = "↑↓ select · " + hint
+	}
+	return vp.View(), help
+}
+
+// sessionsLines is every session row followed by the selected session's detail, ready for the
+// viewport. Built here rather than inside the renderer so the key handler can load the same bytes
+// into the viewport it is about to scroll.
+func (m Model) sessionsLines() []string {
 	var lines []string
 	for i, s := range m.data.Sessions {
 		outcome, oStyle := "running", warnStyle
@@ -406,9 +484,12 @@ func (m Model) renderSessionsView() (string, string) {
 		if s.ResultSummary != nil {
 			detail += "\n" + subtleStyle.Render("Result:") + "\n" + indent(renderMarkdown(*s.ResultSummary, m.paneCols()-4), "  ")
 		}
-		lines = append(lines, detail)
+		// One entry per RENDERED row: the viewport counts lines, and a multi-line string smuggled in
+		// as one entry would make every row index after it wrong (SetContentLines splits it anyway,
+		// but the selection arithmetic above would still be counting the wrong thing).
+		lines = append(lines, strings.Split(detail, "\n")...)
 	}
-	return strings.Join(lines, "\n"), "↑↓ navigate"
+	return lines
 }
 
 // How many commit subjects the detail shows before it says how many it is holding back. Sessions in

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 
+	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
@@ -38,7 +39,14 @@ type kanbanModel struct {
 
 	// Card detail (P3): the selected card's prompt building-blocks, the structured title/context
 	// editors, and the advisor-refine preview→confirm state.
+	//
+	// detailVp is the detail's pane viewport (KS2.7). The BOARD deliberately has none — kanbanWindow
+	// is a per-COLUMN clip and three columns cannot share one scroll position (see
+	// scrollSurfacesNotConverted) — but the detail is one document: head, every prompt block, the
+	// declared paths and the QA dial. It had no window at all, which is why a card with four blocks
+	// lost its QA row to frameContent's height clamp at 80x24.
 	detail       bool
+	detailVp     viewport.Model
 	blocks       *api.PromptBlocksDto
 	blocksErr    string
 	editingTitle bool

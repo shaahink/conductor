@@ -220,17 +220,25 @@ type Model struct {
 
 func New(source api.DataSource, isDemo bool, baseURL string) Model {
 	m := Model{
-		source:       source,
-		isDemo:       isDemo,
-		baseURL:      baseURL,
-		tab:          TabHome,
-		cmd:          CmdNone,
-		transcript:   widgets.NewTranscript(),
-		sidebar:      widgets.NewSidebar(),
+		source:     source,
+		isDemo:     isDemo,
+		baseURL:    baseURL,
+		tab:        TabHome,
+		cmd:        CmdNone,
+		transcript: widgets.NewTranscript(),
+		sidebar:    widgets.NewSidebar(),
+		// KS2.7: every scrollable surface's viewport is built by the ONE constructor here, so a pane
+		// cannot come into existence with a different idea of wrapping than its neighbours.
+		agent:        agentModel{rawVp: newPaneViewport()},
 		report:       reportModel{vp: newPaneViewport()},
 		knowledge:    knowledgeModel{vp: newPaneViewport()},
 		tmpl:         templatesModel{previewVp: newPaneViewport()},
 		home:         homeModel{queueVp: newPaneViewport()},
+		history:      historyModel{sessionsVp: newPaneViewport(), spineVp: newPaneViewport()},
+		processes:    processesModel{vp: newPaneViewport()},
+		telegram:     telegramModel{vp: newPaneViewport()},
+		kanban:       kanbanModel{detailVp: newPaneViewport()},
+		plan:         planModel{vp: newPaneViewport()},
 		eventCh:      make(chan api.ConductorEventDto, 256),
 		txCh:         make(chan api.TranscriptLineDto, 1024),
 		consoleCh:    make(chan api.ConsoleLineDto, 1024),

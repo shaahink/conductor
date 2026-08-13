@@ -25,8 +25,37 @@ func filledTranscript(n, height int) TranscriptModel {
 	return m
 }
 
-// Scroll-up must step back from the tail — not teleport to the top of the buffer (the old
-// offset-from-top semantics did exactly that on the first keypress).
+// scrollUp / scrollDown drive the transcript's own viewport the way tui's applyPaneScroll does —
+// one line per press, through a clamped viewport method. KS2.7 deleted MsgScrollUp/Down/End: the
+// widget no longer owns a scroll vocabulary, because there is only one in the Face and it lives in
+// tui/panescroll.go. Loading through Viewport() first is the same "size and content FIRST, then
+// move" ordering the panes use — without it the clamp would be against a stale body.
+func scrollUp(m TranscriptModel, n int) TranscriptModel {
+	for i := 0; i < n; i++ {
+		m.Vp = m.Viewport()
+		m.Vp.ScrollUp(1)
+	}
+	return m
+}
+
+func scrollDown(m TranscriptModel, n int) TranscriptModel {
+	for i := 0; i < n; i++ {
+		m.Vp = m.Viewport()
+		m.Vp.ScrollDown(1)
+	}
+	return m
+}
+
+func gotoEnd(m TranscriptModel) TranscriptModel {
+	m.Vp = m.Viewport()
+	m.Vp.GotoBottom()
+	return m
+}
+
+// Scroll-up must step back from the tail — not teleport to the top of the buffer. KS2.7 changed the
+// MECHANISM (a viewport anchored with GotoBottom, not an inverted offset counting back from the
+// tail); the BEHAVIOUR STYLE.md pins is what this test is for, so it is unchanged apart from how the
+// keypresses are delivered.
 func TestScrollUpStepsBackFromTail(t *testing.T) {
 	m := filledTranscript(50, 10)
 
@@ -34,22 +63,22 @@ func TestScrollUpStepsBackFromTail(t *testing.T) {
 		t.Fatalf("fresh transcript should tail at the newest line, got:\n%s", v)
 	}
 
-	m = m.Update(MsgScrollUp)
+	m = scrollUp(m, 3)
 	v := plainView(m)
 	if strings.Contains(v, "line 049") {
-		t.Errorf("after one scroll-up the newest line should be out of view:\n%s", v)
+		t.Errorf("after scrolling up the newest line should be out of view:\n%s", v)
 	}
 	if strings.Contains(v, "line 000") {
-		t.Errorf("one scroll-up must NOT jump to the top of the buffer:\n%s", v)
+		t.Errorf("a few scroll-ups must NOT jump to the top of the buffer:\n%s", v)
 	}
-	if !strings.Contains(v, "line 046") {
+	if !strings.Contains(v, "line 045") {
 		t.Errorf("expected the window to sit a few lines above the tail:\n%s", v)
 	}
 	if !strings.Contains(v, "lines below") {
 		t.Errorf("expected a scrolled-back indicator:\n%s", v)
 	}
 
-	m = m.Update(MsgScrollEnd)
+	m = gotoEnd(m)
 	if v := plainView(m); !strings.Contains(v, "line 049") || strings.Contains(v, "lines below") {
 		t.Errorf("end should re-pin to the live tail:\n%s", v)
 	}
@@ -57,22 +86,54 @@ func TestScrollUpStepsBackFromTail(t *testing.T) {
 
 func TestScrollUpClampsAtTop(t *testing.T) {
 	m := filledTranscript(20, 10)
-	for i := 0; i < 100; i++ {
-		m = m.Update(MsgScrollUp)
-	}
+	m = scrollUp(m, 100)
 	v := plainView(m)
 	if !strings.Contains(v, "line 000") {
 		t.Errorf("scrolling far back should reach (and stop at) the oldest line:\n%s", v)
 	}
+	if got := m.Vp.YOffset(); got != 0 {
+		t.Errorf("100 ups against a 20-line buffer left the offset at %d — the clamp is not at the "+
+			"mutation, which is bug #30's shape", got)
+	}
 }
 
+// A9: live-tail semantics, rewritten against the viewport rather than against the AutoScroll bool.
+// The mechanism is GotoBottom + AtBottom (adr/0006 decision 1); the two facts it has to keep are
+// that a reader ON the tail stays on it as lines land, and a reader who has scrolled back is left
+// exactly where they were.
 func TestAutoScrollResumesOnNewLinesAtTail(t *testing.T) {
 	m := filledTranscript(30, 10)
-	m = m.Update(MsgScrollUp)
-	m = m.Update(MsgScrollDown) // back to the tail → autoscroll re-arms
+	m = scrollUp(m, 1)
+	if m.AtTail() {
+		t.Fatal("one scroll-up should have left the tail — the fixture proves nothing otherwise")
+	}
+	// Scrolled back: a new line must NOT drag the view forward. Compared on the ROWS only — the note
+	// row under them legitimately counts one more line below, which is the whole point of it.
+	rows := func(v string) string {
+		lines := strings.Split(strings.TrimRight(v, "\n"), "\n")
+		return strings.Join(lines[:len(lines)-1], "\n")
+	}
+	back := plainView(m)
+	m = m.Update(MsgAppendLine{Line: api.TranscriptLineDto{Seq: 98, Kind: "agent", Text: "line UNSEEN"}})
+	if v := plainView(m); strings.Contains(v, "line UNSEEN") {
+		t.Errorf("a line appended while scrolled back must not move the view:\n%s", v)
+	} else if rows(v) != rows(back) {
+		t.Errorf("the visible window changed while scrolled back:\nwas:\n%s\nnow:\n%s", back, v)
+	}
+
+	// …and stepping back down to the newest line re-arms live tailing.
+	for i := 0; i < 5 && !m.AtTail(); i++ {
+		m = scrollDown(m, 1)
+	}
+	if !m.AtTail() {
+		t.Fatal("stepping back down to the last line should land on the tail")
+	}
 	m = m.Update(MsgAppendLine{Line: api.TranscriptLineDto{Seq: 99, Kind: "agent", Text: "line NEW"}})
 	if v := plainView(m); !strings.Contains(v, "line NEW") {
 		t.Errorf("returning to the tail should re-enable live tailing:\n%s", v)
+	}
+	if !m.AtTail() {
+		t.Error("appending at the tail must keep the pane at the tail (GotoBottom + AtBottom)")
 	}
 }
 

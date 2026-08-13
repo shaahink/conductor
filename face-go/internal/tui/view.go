@@ -267,6 +267,24 @@ func truncate(s string, max int) string {
 	return s
 }
 
+// wrapPlain wraps PLAIN text to w columns and styles each resulting line afterwards — never the
+// other way round, because width-formatting an already-styled string measures its escape bytes and
+// shears the pane (STYLE.md). It is what a sentence gets instead of `truncate` when the sentence
+// names the key that acts on it: cutting "press q to override" at the pane edge deletes the
+// affordance and leaves a row that reads like a bug.
+//
+// KS2.7 added it because the pane viewport does not soft-wrap (deliberately — see newPaneViewport),
+// so an over-wide row is now CLIPPED with no ellipsis rather than wrapped by the terminal. Every
+// line handed to a viewport has to already fit.
+func wrapPlain(text string, w int) []string {
+	wrapped := lipgloss.NewStyle().Width(max(8, w)).Render(text)
+	lines := strings.Split(wrapped, "\n")
+	for i, l := range lines {
+		lines[i] = strings.TrimRight(l, " ")
+	}
+	return lines
+}
+
 func truncateLines(s string, max int) string {
 	lines := strings.Split(s, "\n")
 	if len(lines) <= max || max < 1 {

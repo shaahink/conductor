@@ -311,7 +311,7 @@ func (m Model) handleKey(key string) (tea.Model, tea.Cmd) {
 	case "/":
 		if m.tab == TabAgent {
 			m.agent.searchActive = true
-			m.transcript = m.transcript.Update(widgets.MsgSetSearch{Query: ""})
+			m.transcript = m.sizedTranscript().Update(widgets.MsgSetSearch{Query: ""})
 		}
 		return m, nil
 	case "w":
@@ -370,7 +370,11 @@ func (m Model) openFolded(key string, t MainTab) (tea.Model, tea.Cmd) {
 			m.agent.raw = true
 		}
 		if m.agent.raw {
-			m.agent.consoleScroll = 0 // land on the live tail, as opening the Console tab used to
+			// Land on the live tail, as opening the Console tab used to. GotoBottom, not `= 0`: this
+			// was the write site OUTSIDE tab_agent.go that made `consoleScroll` a field two files
+			// could disagree about (adr/0006 decision 1).
+			m.agent.rawVp = m.agentRawViewport()
+			m.agent.rawVp.GotoBottom()
 		}
 		return m.openTab(TabAgent)
 	case TabHistory:

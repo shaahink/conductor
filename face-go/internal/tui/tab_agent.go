@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
@@ -23,58 +24,89 @@ type agentModel struct {
 	// raw swaps the body from the parsed transcript to the raw agent stdout that used to be the
 	// Console tab (SF1.3). The strip stays in both modes — keeping mission control on screen while
 	// reading raw output is the whole reason this folded instead of staying its own tab.
-	raw           bool
-	consoleScroll int
+	raw bool
+	// rawVp is the raw stream's pane viewport (KS2.7). It replaced `consoleScroll int`: an INVERTED
+	// offset counting back from the tail, incremented without a bound in Update, clamped partly here
+	// and partly in the renderer, and reset from a third file (update.go's openFolded). That is bug
+	// #30's shape with a minus sign in front of it.
+	rawVp viewport.Model
 	// searchActive is the inline transcript search (non-blocking). It lives here, not on the shell,
 	// because `/` only opens it on this tab; the root Update still peels it before tab dispatch,
 	// the way it peels the command bar.
 	searchActive bool
 }
 
+// handleAgentKey is the parsed transcript's handler: this tab's own semantic keys FIRST, then the
+// one pane-scroll set. The scroll set comes last (adr/0006 §2) so a surface key can never be
+// shadowed by a pane key — and it is applied to a viewport that has just been sized and loaded, so
+// the clamp lands at the mutation.
+//
+// `k`, `l` and the old MsgScroll* vocabulary are gone. `k` was unreachable (the Knowledge mnemonic
+// resolves in update.go's loop before any pane handler ever sees it) and `l` re-pinned the tail on a
+// key the help card never mentioned — the fourth key namespace adr/0006 was written to end.
 func (m Model) handleAgentKey(key string) (tea.Model, tea.Cmd) {
-	// Raw mode is the old Console tab's pane, so it keeps the old Console tab's keys — the parsed
-	// stream's fold/thinking/search keys mean nothing against undecorated stdout.
+	// Raw mode is the old Console tab's pane, so it keeps the old Console tab's semantics — the
+	// parsed stream's fold/thinking/search keys mean nothing against undecorated stdout.
 	if m.agent.raw {
 		return m.handleAgentRawKey(key)
 	}
 	switch key {
-	case "up", "k":
-		m.transcript = m.transcript.Update(widgets.MsgScrollUp)
-	case "down", "j":
-		m.transcript = m.transcript.Update(widgets.MsgScrollDown)
-	case "pgup":
-		m.transcript = m.transcript.Update(widgets.MsgScrollPageUp)
-	case "pgdown":
-		m.transcript = m.transcript.Update(widgets.MsgScrollPageDown)
-	case "end", "l":
-		m.transcript = m.transcript.Update(widgets.MsgScrollEnd)
 	case "f":
-		m.transcript = m.transcript.Update(widgets.MsgToggleFold)
+		m.transcript = m.sizedTranscript().Update(widgets.MsgToggleFold)
+		return m, nil
 	case "T":
-		m.transcript = m.transcript.Update(widgets.MsgToggleThinking)
+		m.transcript = m.sizedTranscript().Update(widgets.MsgToggleThinking)
+		return m, nil
 	case "n":
 		if m.transcript.SearchQuery != "" {
-			m.transcript = m.transcript.Update(widgets.MsgNextMatch)
+			m.transcript = m.sizedTranscript().Update(widgets.MsgNextMatch)
 		}
+		return m, nil
 	case "N":
 		if m.transcript.SearchQuery != "" {
-			m.transcript = m.transcript.Update(widgets.MsgPrevMatch)
+			m.transcript = m.sizedTranscript().Update(widgets.MsgPrevMatch)
 		}
+		return m, nil
 	}
+	// Size and content FIRST, then move — see handleReportKey. The transcript's viewport lives on the
+	// widget (it is the thing that knows the lines and the search index), but the ordering rule is
+	// the surface's, so the builder is here.
+	m.transcript.Vp = m.agentTranscriptViewport()
+	applyPaneScroll(&m.transcript.Vp, key)
 	return m, nil
 }
 
-func (m Model) renderAgentPane() (string, string) {
-	// Kept under ~50 cols on purpose: the bottom bar HARD-CLIPS this line with no ellipsis, so the
-	// last hint in a longer string is silently deleted rather than marked (that is how the old
-	// "…/ search · end live-tail" had been rendering as "end l"). `/ search` is dropped from this side
-	// because the bar's own left half already advertises it.
-	help := "↑↓ scroll · f fold · T thinking · c raw · end tail"
-	if m.agent.raw {
-		help = "↑↓ scroll · pgup/pgdn · home/end · c parsed"
+// sizedTranscript is the transcript widget with THIS pane's geometry on it. renderAgentPane used to
+// do `m.transcript.Height -= …` on the View path against a value receiver, so the height the offset
+// was clamped against was never the height the pane was drawn at — precisely the shape that makes a
+// clamp unwritable-back (bug #30). Sizing is a pure function of the layout, so it is one, and both
+// the key handler and the renderer call it.
+func (m Model) sizedTranscript() widgets.TranscriptModel {
+	t := m.transcript
+	t.Width, t.Height = m.paneCols(), m.agentTranscriptRows()
+	return t
+}
+
+// agentTranscriptRows is what the strip and the footer leave the stream. Subtracting the footer is
+// what keeps it on screen: the pane is height-clamped by View(), so a footer the transcript did not
+// make room for would be the row that clips (owner dogfood: "I don't see the footer").
+func (m Model) agentTranscriptRows() int {
+	rows := m.paneRows()
+	if m.data.Plan != nil {
+		rows -= lipgloss.Height(m.renderAgentStrip())
+		if footer := m.renderAgentFooter(); footer != "" {
+			rows -= lipgloss.Height(footer) // the footer's own rule separates it from the stream
+		}
 	}
+	return max(3, rows)
+}
+
+// agentTranscriptViewport is the parsed stream's `<surface>Viewport()` builder.
+func (m Model) agentTranscriptViewport() viewport.Model { return m.sizedTranscript().Viewport() }
+
+func (m Model) renderAgentPane() (string, string) {
 	if m.data.Plan == nil {
-		return m.renderSplash(), help
+		return m.renderSplash(), "f fold · T thinking · c raw"
 	}
 
 	strip := m.renderAgentStrip()
@@ -83,26 +115,28 @@ func (m Model) renderAgentPane() (string, string) {
 	// the old Console. The footer (model · elapsed · tokens · cost) is the PARSED view's status line;
 	// under undecorated stdout it is furniture, and the rows are better spent on output.
 	if m.agent.raw {
-		body := strip + "\n" + m.renderAgentRawBody(m.paneRows()-lipgloss.Height(strip))
-		return body, help
+		vp := m.agentRawViewport()
+		return strip + "\n" + m.renderAgentRawBody(vp), agentHelp(vp, "c parsed")
 	}
 
-	footer := m.renderAgentFooter()
-	// The transcript takes whatever rows the strip and footer leave. Subtracting the footer here is
-	// what keeps it on screen: the pane is height-clamped by View(), so a footer the transcript did
-	// not make room for would be the row that clips (owner dogfood: "I don't see the footer").
-	m.transcript.Height -= lipgloss.Height(strip)
-	if footer != "" {
-		m.transcript.Height -= lipgloss.Height(footer) // footer's own rule separates it from the stream
-	}
-	if m.transcript.Height < 3 {
-		m.transcript.Height = 3
-	}
-	body := strip + "\n" + m.transcript.View()
-	if footer != "" {
+	t := m.sizedTranscript()
+	body := strip + "\n" + t.View()
+	if footer := m.renderAgentFooter(); footer != "" {
 		body += "\n" + footer
 	}
-	return body, help
+	return body, agentHelp(t.Viewport(), "f fold · T thinking · c raw")
+}
+
+// agentHelp is the Agent tab's bottom-bar line: the one pane-scroll hint (with its percent, only
+// when the body outgrows the pane) plus this mode's own keys. Kept under ~50 cols on purpose — the
+// bottom bar HARD-CLIPS this line with no ellipsis, so the last hint in a longer string is silently
+// deleted rather than marked (that is how the old "…/ search · end live-tail" had been rendering as
+// "end l"). `/ search` is dropped from this side because the bar's own left half advertises it.
+func agentHelp(vp viewport.Model, own string) string {
+	if hint := paneScrollHint(vp, true); hint != "" {
+		return hint + " · " + own
+	}
+	return "↑↓ scroll · " + own
 }
 
 // --- raw stream (the folded Console tab, SF1.3) ---------------------------------
@@ -110,72 +144,51 @@ func (m Model) renderAgentPane() (string, string) {
 // These two moved here whole from tab_console.go when TabConsole was folded into Agent: one file per
 // tab (STYLE.md), and the raw stream is no longer a tab of its own.
 
-// handleAgentRawKey is the old Console tab's key handler. Offsets count back FROM THE TAIL, so 0 is
-// pinned-live and `end` re-pins — never offset-from-top on a live stream (STYLE.md).
+// handleAgentRawKey is the old Console tab's key handler. It owns no semantic keys of its own — raw
+// stdout is a document, not a surface with actions — so it is the pane-scroll set and nothing else.
+// Size and content FIRST, then move (adr/0006 §1): the clamp lives at the mutation, and a live
+// stream is exactly the case where the body changed between the last keypress and this one.
 func (m Model) handleAgentRawKey(key string) (tea.Model, tea.Cmd) {
-	page := m.paneRows() - 1
-	if page < 1 {
-		page = 1
-	}
-	maxScroll := len(m.data.RawConsole)
-	switch key {
-	case "up", "k":
-		m.agent.consoleScroll++
-	case "down", "j":
-		if m.agent.consoleScroll > 0 {
-			m.agent.consoleScroll--
-		}
-	case "pgup":
-		m.agent.consoleScroll += page
-	case "pgdown":
-		m.agent.consoleScroll -= page
-		if m.agent.consoleScroll < 0 {
-			m.agent.consoleScroll = 0
-		}
-	case "home":
-		m.agent.consoleScroll = maxScroll // oldest line (renderer clamps)
-	case "end":
-		m.agent.consoleScroll = 0
-	}
-	if m.agent.consoleScroll > maxScroll {
-		m.agent.consoleScroll = maxScroll
-	}
+	m.agent.rawVp = m.agentRawViewport()
+	applyPaneScroll(&m.agent.rawVp, key)
 	return m, nil
 }
 
-// renderAgentRawBody is the native console: the agent CLI's raw stdout, exactly as it prints. `rows`
-// is what the strip left over — the pane is height-clamped by View(), so a body that sized itself
-// against the whole pane would push its own tail below the fold.
-func (m Model) renderAgentRawBody(rows int) string {
-	lines := m.data.RawConsole
-	if len(lines) == 0 {
+// agentRawViewport is the raw stream's `<surface>Viewport()` builder. It is TAIL-anchored: a reader
+// on the newest line stays there as stdout arrives, and one who has scrolled back is left where they
+// are. That is the behaviour STYLE.md pins, now expressed as GotoBottom + AtBottom rather than as an
+// inverted integer (adr/0006 decision 1).
+func (m Model) agentRawViewport() viewport.Model {
+	rows := m.paneRows()
+	if m.data.Plan != nil {
+		rows -= lipgloss.Height(m.renderAgentStrip())
+	}
+	rows-- // the counter row under the body costs one
+	lines := make([]string, 0, len(m.data.RawConsole))
+	for _, l := range m.data.RawConsole {
+		lines = append(lines, subtleStyle.Render(truncate(l.Text, m.paneCols())))
+	}
+	return loadPaneViewport(m.agent.rawVp, lines, m.paneCols(), max(3, rows), true)
+}
+
+// renderAgentRawBody is the native console: the agent CLI's raw stdout, exactly as it prints, with
+// one counter row under it.
+//
+// The position readout is the percent every other pane carries plus an at-bottom live-tail marker
+// (paneTailReadout). It used to be `↕ scrolled back 137 — end to live-tail`: an inverted line count
+// that answered neither "how much is left" nor "am I still live", and whose number came from the
+// same unclamped field the window did.
+func (m Model) renderAgentRawBody(vp viewport.Model) string {
+	if len(m.data.RawConsole) == 0 {
 		return subtleStyle.Render("(no raw output yet — the agent tees stdout to .conductor/logs/session-NNN.jsonl)")
 	}
-	window := rows - 1 // the counter row below costs one
-	if window < 3 {
-		window = 3
+	text, live := paneTailReadout(vp)
+	pos := warnStyle.Render(text)
+	if live {
+		pos = safeStyle.Render(text)
 	}
-	end := len(lines) - m.agent.consoleScroll
-	if end < 1 {
-		end = 1
-	}
-	if end > len(lines) {
-		end = len(lines)
-	}
-	start := end - window
-	if start < 0 {
-		start = 0
-	}
-	var out []string
-	for i := start; i < end; i++ {
-		out = append(out, subtleStyle.Render(truncate(lines[i].Text, m.paneCols())))
-	}
-	pos := safeStyle.Render("● live tail")
-	if m.agent.consoleScroll > 0 {
-		pos = warnStyle.Render(fmt.Sprintf("↕ scrolled back %d — end to live-tail", m.agent.consoleScroll))
-	}
-	out = append(out, subtleStyle.Render(fmt.Sprintf("%d raw lines · ", len(lines)))+pos)
-	return strings.Join(out, "\n")
+	counter := subtleStyle.Render(fmt.Sprintf("%d raw lines · ", len(m.data.RawConsole))) + pos
+	return vp.View() + "\n" + counter
 }
 
 // renderAgentFooter is the Claude-Code-style status line pinned under the transcript: which CLI +

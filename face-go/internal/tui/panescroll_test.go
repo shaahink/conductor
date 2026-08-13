@@ -4,6 +4,9 @@ import (
 	"strings"
 	"testing"
 
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
+
 	"conductor-face-go/internal/api"
 )
 
@@ -18,45 +21,98 @@ import (
 // With the offset inside a viewport, that count is ONE. This test asserts the count, not the absence
 // of a blank screen: a renderer-side clamp already passed "the pane is not blank", which is exactly
 // why the bug survived to reach the owner.
+// KS2.7 extends it to every surface converted in this checkpoint, and drives all of them through the
+// REAL router (Update(keyMsg(...))) rather than a pane handler — STYLE.md records twice that calling
+// pane handlers directly is how two regression tests came to pass on frames that could not exhibit
+// their bug.
 func TestScrollingPastTheEndCostsExactlyOneKeyToComeBack(t *testing.T) {
-	for _, tc := range []struct {
-		name string
-		open string
-		down func(Model) Model
-	}{
-		{"report", "r", func(m Model) Model { return asModel(mustHandle(m.handleReportKey("down"))) }},
-		{"knowledge", "k", func(m Model) Model { return asModel(mustHandle(m.handleKnowledgeKey("down"))) }},
-	} {
+	for _, tc := range scrollSurfaces() {
 		t.Run(tc.name, func(t *testing.T) {
-			m := openScrollable(t, tc.open)
+			m := tc.open(t)
 			for i := 0; i < 400; i++ {
-				m = tc.down(m)
+				m = press(m, "down")
 			}
-			atEnd := paneBody(m)
+			// The invariant the bug actually broke, read off the MODEL rather than the frame: after
+			// 400 presses past the end the offset is still inside the body. A frame that merely looks
+			// right passed the old renderer-side clamp too, which is why that clamp survived to reach
+			// the owner.
+			vp := tc.vp(m)
+			if got, limit := vp.YOffset(), vp.TotalLineCount()-vp.Height(); got > limit {
+				t.Errorf("%s: offset is %d against a body that stops at %d — Update let it run",
+					tc.name, got, limit)
+			}
+			if !vp.AtBottom() {
+				t.Errorf("%s: 400 downs did not reach the end of the body (%d%%)",
+					tc.name, int(vp.ScrollPercent()*100))
+			}
 
-			up := func(mm Model) Model {
-				switch tc.name {
-				case "report":
-					return asModel(mustHandle(mm.handleReportKey("up")))
-				default:
-					return asModel(mustHandle(mm.handleKnowledgeKey("up")))
-				}
-			}
-			m = up(m)
-			if paneBody(m) == atEnd {
+			// …and the cost of coming back is ONE key. Compared on the STYLED frame, because on a
+			// surface whose ↑↓ walk a cursor the first press back moves the CURSOR — the highlight is
+			// the line that moved, and stripANSI would throw away exactly the evidence.
+			atEnd := paneFrame(m)
+			m = press(m, "up")
+			if paneFrame(m) == atEnd {
 				// Keep counting so the failure reports the real cost, the way the K6.1 measurement did.
 				n := 1
 				for ; n < 500; n++ {
-					m = up(m)
-					if paneBody(m) != atEnd {
+					m = press(m, "up")
+					if paneFrame(m) != atEnd {
 						break
 					}
 				}
-				t.Fatalf("%s: 400 downs past the end took %d ups before one line moved — the offset is "+
+				t.Fatalf("%s: 400 downs past the end took %d ups before anything moved — the offset is "+
 					"running away again (bug #30)", tc.name, n+1)
 			}
 		})
 	}
+}
+
+// press sends one key through the real router, exactly as a terminal would.
+func press(m Model, key string) Model {
+	tm, _ := m.Update(keyMsg(key))
+	return asModel(tm)
+}
+
+// scrollSurface is one converted surface: how to open it with a body longer than its pane, and which
+// viewport it scrolls. It reuses the sweep's fixtures (scrollsweep_test.go), so the two acceptance
+// measurements cannot disagree about what "a long body" is.
+type scrollSurface struct {
+	name string
+	open func(*testing.T) Model
+	vp   func(Model) viewport.Model
+}
+
+// scrollSurfaces is every surface KS2.7 put on the one scroll idiom, plus the three K6.2/K6.4
+// already had. Built from the sweep's case table so a surface added there is measured here too —
+// the alternative is two lists that drift, which is the failure this whole checkpoint is about.
+func scrollSurfaces() []scrollSurface {
+	var out []scrollSurface
+	// A body a little longer than the pane is all bug #30's measurement needs — the runaway offset
+	// happens PAST the end, and 500 rows of rendered markdown per keypress would only make the test
+	// slow. The 500-line figure is the sweep's job (scrollsweep_test.go).
+	for _, c := range scrollSweepCases(60) {
+		c := c
+		out = append(out, scrollSurface{
+			name: c.name,
+			vp:   c.vp,
+			open: func(t *testing.T) Model {
+				t.Helper()
+				m := c.grow(newGoldenModel(120, 30))
+				for _, k := range c.keys {
+					tm, _ := m.Update(keyMsg(k))
+					m = tm
+				}
+				got := asModel(m)
+				vp := c.vp(got)
+				if vp.TotalLineCount() <= vp.Height() {
+					t.Fatalf("fixture body is %d lines in a %d-row pane — it does not scroll, so this "+
+						"proves nothing", vp.TotalLineCount(), vp.Height())
+				}
+				return got
+			},
+		})
+	}
+	return out
 }
 
 // The offset must be clamped where it is CHANGED, not where it is drawn (adr/0006 decision 1). Read
@@ -84,30 +140,88 @@ func TestPaneOffsetIsClampedInUpdateNotInTheRenderer(t *testing.T) {
 	}
 }
 
-// Every key the ADR's table names has to actually move the pane. `end` is the one Report never had:
-// a document you can enter but not reach the end of is the shape of the complaint.
-func TestPaneScrollSetIsBoundOnBothSurfaces(t *testing.T) {
-	for _, k := range []string{"down", "j", "up", "d", "u", "pgdown", "pgup", "end", "G", "home"} {
-		for _, tc := range []struct {
-			name  string
-			open  string
-			press func(Model, string) Model
-		}{
-			{"report", "r", func(m Model, key string) Model { return asModel(mustHandle(m.handleReportKey(key))) }},
-			{"knowledge", "k", func(m Model, key string) Model { return asModel(mustHandle(m.handleKnowledgeKey(key))) }},
-		} {
-			m := openScrollable(t, tc.open)
-			// Downward keys are checked from the top, upward keys from the bottom, or half of them
-			// would pass by doing nothing at a boundary.
-			if strings.Contains("up u pgup home", k) {
-				m = tc.press(m, "end")
+// Every key the ADR's table names has to actually move the pane, on EVERY surface. `end` is the one
+// Report never had: a document you can enter but not reach the end of is the shape of the complaint.
+//
+// KS2.7 renamed it from …OnBothSurfaces — there were two when K6.2 wrote it and there are eleven
+// now, which is the whole point of the checkpoint.
+func TestPaneScrollSetIsBoundOnEveryConvertedSurface(t *testing.T) {
+	for _, tc := range scrollSurfaces() {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, k := range []string{"down", "j", "up", "d", "u", "pgdown", "pgup", "end", "G", "home"} {
+				m := tc.open(t)
+				// Each key is checked from the OPPOSITE end, or half of them would pass by doing
+				// nothing at a boundary. `home` first for the downward keys matters: a live-tail pane
+				// (Agent's transcript, the raw stream) OPENS at the bottom, so `down` there is
+				// legitimately a no-op and testing it from the open position would prove nothing.
+				if strings.Contains("up u pgup home", k) {
+					m = press(m, "end")
+				} else {
+					m = press(m, "home")
+				}
+				before := paneFrame(m)
+				if got := paneFrame(press(m, k)); got == before {
+					t.Errorf("%s: %q moved nothing", tc.name, k)
+				}
 			}
-			before := paneBody(m)
-			if got := paneBody(tc.press(m, k)); got == before {
-				t.Errorf("%s: %q moved nothing", tc.name, k)
-			}
-		}
+		})
 	}
+}
+
+// A8. Every converted surface's bottom bar carries the position readout, and it appears ONLY when
+// the body outgrows the pane — a permanent "0%" on a pane that fits is noise dressed as information,
+// which is the rule paneScrollStatus already encodes and which each surface has to actually honour.
+func TestEveryConvertedSurfaceShowsItsScrollPercent(t *testing.T) {
+	for _, tc := range scrollSurfaces() {
+		t.Run(tc.name, func(t *testing.T) {
+			m := tc.open(t)
+			_, help := m.paneView()
+			help = stripANSI(help)
+			if !strings.Contains(help, "%") {
+				t.Errorf("%s: a body longer than its pane carries no percent readout; help = %q",
+					tc.name, help)
+			}
+			m = press(m, "end")
+			if _, help := m.paneView(); !strings.Contains(stripANSI(help), "100%") {
+				t.Errorf("%s: at the end of the body the readout should say 100%%, help = %q",
+					tc.name, stripANSI(help))
+			}
+		})
+	}
+}
+
+// A8, the raw stream's half: its `↕ scrolled back N — end to live-tail` integer is replaced by the
+// percent plus an at-bottom live-tail marker. The old readout reported an INVERTED line count taken
+// from the same unclamped field the window came from — so when the field ran away, the number the
+// pane showed was the runaway itself.
+func TestAgentRawReadsOutAPercentAndALiveTailMarker(t *testing.T) {
+	var m tea.Model = newGoldenModel(120, 30)
+	for i := 0; i < 300; i++ {
+		m, _ = m.Update(MsgConsoleLine{Line: api.ConsoleLineDto{
+			Seq: int64(i + 1), Text: "raw stdout line " + itoa(i)}})
+	}
+	m, _ = m.Update(keyMsg("c"))
+	body := stripANSI(mustPaneBody(asModel(m)))
+	if !strings.Contains(body, "● live tail") {
+		t.Errorf("opening the raw stream lands on the tail and must say so:\n%s", body)
+	}
+	if strings.Contains(body, "scrolled back") {
+		t.Errorf("the inverted integer readout is still here:\n%s", body)
+	}
+
+	m2 := press(asModel(m), "home")
+	body = stripANSI(mustPaneBody(m2))
+	if !strings.Contains(body, "0% — end to live-tail") {
+		t.Errorf("scrolled to the top the raw stream should read 0%% and name the key back:\n%s", body)
+	}
+	if strings.Contains(body, "live tail") && !strings.Contains(body, "end to live-tail") {
+		t.Errorf("a scrolled-back raw stream must not claim it is live:\n%s", body)
+	}
+}
+
+func mustPaneBody(m Model) string {
+	body, _ := m.paneView()
+	return body
 }
 
 // `k` must NOT scroll, and this is a load-bearing absence. update.go's mnemonic loop is an exact
@@ -264,4 +378,12 @@ func itoa(n int) string {
 func paneBody(m Model) string {
 	body, _ := m.paneView()
 	return stripANSI(body)
+}
+
+// paneFrame is the pane body WITH its styling. Use it when the thing that must move may be a
+// selection highlight rather than a line of text — stripANSI deletes a cursor move entirely, and a
+// test that cannot see the cursor move would call a working key broken.
+func paneFrame(m Model) string {
+	body, _ := m.paneView()
+	return body
 }

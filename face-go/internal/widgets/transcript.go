@@ -6,19 +6,29 @@ import (
 	"strings"
 	"time"
 
+	"charm.land/bubbles/v2/viewport"
 	"charm.land/lipgloss/v2"
 
 	"conductor-face-go/internal/api"
 	"conductor-face-go/internal/timefmt"
 )
 
-// TranscriptModel renders the agent's live transcript. ScrollOffset counts lines back from the
-// live tail (0 = pinned to the newest line), matching how a human thinks about scrollback — one
-// ↑ press moves one step into history, never teleports to the top of a 4000-line buffer.
+// TranscriptModel renders the agent's live transcript.
+//
+// KS2.7: the scrollback is a viewport, not a pair of bespoke fields. `ScrollOffset` counted lines
+// back from the live tail and `AutoScroll` said whether it was pinned there — an inverted offset
+// clamped in three places (scrollBack, scrollForward, and again inside View) and written raw by
+// jumpToMatch, which is bug #30's exact shape one surface further along. adr/0006 decision 1
+// supersedes the MECHANISM, not the BEHAVIOUR: tail-anchoring is now GotoBottom + AtBottom, so one
+// `↑` still steps one line into history and a live 4000-line buffer still opens on its newest line
+// rather than teleporting to its oldest (STYLE.md, "Scrollback counts from the tail").
 type TranscriptModel struct {
-	Lines          []api.TranscriptLineDto
-	ScrollOffset   int
-	AutoScroll     bool
+	Lines []api.TranscriptLineDto
+	// Vp is this transcript's pane viewport, built by NewPaneViewport like every other scrollable
+	// body in the Face. It is EXPORTED because two packages move the same position and a second copy
+	// behind a method pair is how two clamps come to disagree: the pane-scroll key set lives in
+	// tui/panescroll.go (applyPaneScroll) and the search jump lives here (jumpToMatch).
+	Vp             viewport.Model
 	SearchQuery    string
 	SearchMatchIdx int
 	SearchMatches  []int
@@ -38,7 +48,7 @@ type TranscriptModel struct {
 
 func NewTranscript() TranscriptModel {
 	return TranscriptModel{
-		AutoScroll:       true,
+		Vp:               NewPaneViewport(),
 		CollapseThinking: true,
 		Width:            80,
 		Height:           20,
@@ -89,35 +99,13 @@ func (m TranscriptModel) Update(msg any) TranscriptModel {
 
 	case WidgetMsg:
 		switch msg {
-		case MsgScrollUp:
-			m.scrollBack(3)
-			return m
-
-		case MsgScrollDown:
-			m.scrollForward(3)
-			return m
-
-		case MsgScrollPageUp:
-			m.scrollBack(m.Height)
-			return m
-
-		case MsgScrollPageDown:
-			m.scrollForward(m.Height)
-			return m
-
-		case MsgScrollEnd:
-			m.AutoScroll = true
-			m.ScrollOffset = 0
-			return m
-
 		case MsgToggleFold:
 			m.FoldTools = !m.FoldTools
-			m.ScrollOffset = 0
-			m.AutoScroll = true
 			if m.SearchQuery != "" {
 				m.SearchMatches = m.findMatches(m.SearchQuery)
 				m.SearchMatchIdx = 0
 			}
+			m.gotoTail()
 			return m
 
 		case MsgToggleThinking:
@@ -131,12 +119,11 @@ func (m TranscriptModel) Update(msg any) TranscriptModel {
 				m.HideThinking = false
 				m.CollapseThinking = true
 			}
-			m.ScrollOffset = 0
-			m.AutoScroll = true
 			if m.SearchQuery != "" {
 				m.SearchMatches = m.findMatches(m.SearchQuery)
 				m.SearchMatchIdx = 0
 			}
+			m.gotoTail()
 			return m
 
 		case MsgNextMatch:
@@ -167,95 +154,76 @@ func (m TranscriptModel) Update(msg any) TranscriptModel {
 				m.jumpToMatch()
 			}
 		} else {
-			m.ScrollOffset = 0
-			m.AutoScroll = true
+			m.gotoTail()
 		}
 		return m
 	}
 	return m
 }
 
-func (m *TranscriptModel) scrollBack(step int) {
-	m.ScrollOffset += step
-	if maxOff := m.maxScrollOffset(); m.ScrollOffset > maxOff {
-		m.ScrollOffset = maxOff
+// Viewport is this transcript's `<surface>Viewport()` builder — the same shape as the tui panes'
+// (tab_report.go's reportViewport): size FIRST, content SECOND, then re-anchor. Both the key handler
+// (through tui's applyPaneScroll) and View go through it, so an offset that survived a resize, a
+// fold toggle or a fresh stream line is re-clamped against the body that is actually on screen.
+//
+// A folded/filtered transcript is a different body of a different length, which is why the offset
+// cannot simply be carried across: the clamp lives at the mutation, and this IS the mutation.
+func (m TranscriptModel) Viewport() viewport.Model {
+	vp := m.Vp
+	atBottom := vp.AtBottom()
+	vp.SetWidth(max(1, m.Width))
+	vp.SetHeight(max(1, m.Height))
+	vp.SetContentLines(m.ContentLines())
+	// Tail-anchored, and only when the reader was already on the tail. A live stream that yanked a
+	// scrolled-back reader forward on every new line would be unreadable; one that never followed the
+	// tail would need a keypress per line to watch a run.
+	if atBottom {
+		vp.GotoBottom()
 	}
-	m.AutoScroll = m.ScrollOffset == 0
+	return vp
 }
 
-// maxScrollOffset accounts for the "N lines below" note row that appears once scrolled, so the
-// oldest line remains reachable.
-func (m TranscriptModel) maxScrollOffset() int {
-	rows := m.Height - 1
-	if rows < 1 {
-		rows = 1
-	}
-	maxOff := len(m.visibleLines()) - rows
-	if maxOff < 0 {
-		maxOff = 0
-	}
-	return maxOff
-}
-
-func (m *TranscriptModel) scrollForward(step int) {
-	m.ScrollOffset -= step
-	if m.ScrollOffset <= 0 {
-		m.ScrollOffset = 0
-	}
-	m.AutoScroll = m.ScrollOffset == 0
-}
-
-func (m TranscriptModel) View() string {
+// ContentLines renders every visible line once, at the pane's width. The viewport does the
+// windowing, so this is the whole body and not a slice of it — which is also what makes the offset
+// meaningful across a fold toggle rather than an index into a list that just changed length.
+func (m TranscriptModel) ContentLines() []string {
 	visible := m.visibleLines()
-	total := len(visible)
-
-	off := m.ScrollOffset
-	if m.AutoScroll {
-		off = 0
-	}
-	if maxOff := m.maxScrollOffset(); off > maxOff {
-		off = maxOff
-	}
-
-	// When scrolled back, the last row becomes a "N lines below" note — inside the height
-	// budget, so the pane never grows and pushes the layout down.
-	h := m.Height
-	scrolled := off > 0
-	if scrolled && h > 1 {
-		h--
-	}
-
-	end := total - off
-	start := end - h
-	if start < 0 {
-		start = 0
-	}
-	window := visible[start:end]
-
 	matchLine := -1
 	if len(m.SearchMatches) > 0 && m.SearchMatchIdx < len(m.SearchMatches) {
 		matchLine = m.SearchMatches[m.SearchMatchIdx]
 	}
-
 	g := glyphsFor(m.Provider)
-	var sb strings.Builder
-	for i, line := range window {
-		sb.WriteString(renderTranscriptLine(line, m.Width, m.SearchQuery, start+i == matchLine, g))
-		sb.WriteByte('\n')
+	out := make([]string, 0, len(visible))
+	for i, line := range visible {
+		out = append(out, renderTranscriptLine(line, m.Width, m.SearchQuery, i == matchLine, g))
 	}
+	return out
+}
 
-	content := strings.TrimRight(sb.String(), "\n")
-	linesRendered := len(strings.Split(content, "\n"))
-	for i := linesRendered; i < h; i++ {
-		content += "\n"
-	}
+// AtTail reports whether the pane is showing the newest line — the fact the Agent tab's status
+// readout is built from (tui's paneTailReadout).
+func (m TranscriptModel) AtTail() bool { return m.Viewport().AtBottom() }
 
-	if scrolled {
-		note := dimStyle.Render(fmt.Sprintf("↕ %d lines below · ", off)) +
-			lipgloss.NewStyle().Foreground(colYellow).Render("end") + dimStyle.Render(" to live-tail")
-		content += "\n" + note
+// gotoTail re-pins to the live tail. It reloads first, because GotoBottom is only meaningful against
+// the body it is about to show, and a fold toggle has just changed that body.
+func (m *TranscriptModel) gotoTail() {
+	m.Vp = m.Viewport()
+	m.Vp.GotoBottom()
+}
+
+func (m TranscriptModel) View() string {
+	vp := m.Viewport()
+	if vp.AtBottom() {
+		return vp.View()
 	}
-	return content
+	// Scrolled back: the last row becomes a "N lines below" note — inside the height budget, so the
+	// pane never grows and pushes the layout down. The count is read off the viewport rather than
+	// stored, which is the whole point: there is no second number left to disagree with the view.
+	vp.SetHeight(max(1, m.Height-1))
+	below := max(0, vp.TotalLineCount()-vp.Height()-vp.YOffset())
+	note := dimStyle.Render(fmt.Sprintf("↕ %d lines below · ", below)) +
+		lipgloss.NewStyle().Foreground(colYellow).Render("end") + dimStyle.Render(" to live-tail")
+	return vp.View() + "\n" + note
 }
 
 func (m TranscriptModel) visibleLines() []api.TranscriptLineDto {
@@ -575,19 +543,16 @@ func (m TranscriptModel) findMatches(query string) []int {
 }
 
 // jumpToMatch scrolls so the current match sits mid-window.
+//
+// KS2.7: it reloads the viewport and then moves it with SetYOffset — a CLAMPED viewport method. It
+// used to assign `m.ScrollOffset = total - end` directly, computing its own bound from its own idea
+// of the body's length; a match found in one filter state and jumped to in another left the offset
+// outside the body, and the only thing standing between that and a stranded pane was the renderer's
+// throwaway copy. That is bug #30, reached through the search key instead of the arrow key.
 func (m *TranscriptModel) jumpToMatch() {
 	if len(m.SearchMatches) == 0 || m.SearchMatchIdx >= len(m.SearchMatches) {
 		return
 	}
-	total := len(m.visibleLines())
-	matchIdx := m.SearchMatches[m.SearchMatchIdx]
-	end := matchIdx + m.Height/2
-	if end < m.Height {
-		end = m.Height
-	}
-	if end > total {
-		end = total
-	}
-	m.ScrollOffset = total - end
-	m.AutoScroll = m.ScrollOffset == 0
+	m.Vp = m.Viewport()
+	m.Vp.SetYOffset(m.SearchMatches[m.SearchMatchIdx] - m.Vp.Height()/2)
 }

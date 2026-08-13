@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
@@ -19,6 +20,13 @@ import (
 // planModel is the Plan tab's own state (K6.3): the plan document it edits, where the cursor is in
 // it, and the three modal sub-states (edit, add, delete) the tab captures every key for.
 type planModel struct {
+	// vp is the pane's viewport (KS2.7). The Plan tab was NOT in the plan's named list of surfaces to
+	// convert — but the glitch sweep reaches every tab, and this one rendered its stage, gate and
+	// settings lists with no windowing at all: a 40-stage plan at 80x24 lost everything past row 18
+	// to frameContent's height clamp, silently, in the one surface whose whole job is showing you the
+	// plan. Converting it is cheaper than documenting why not, so it is converted; `stageIdx`,
+	// `gateIdx` and `fieldIdx` stay as SELECTION cursors and the viewport follows them.
+	vp       viewport.Model
 	doc      *api.PlanDto
 	tab      planTab
 	stageIdx int
@@ -308,18 +316,57 @@ func (m *Model) handlePlanKey(key string) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	case "up", "k":
-		m.planMoveSelection(-1)
-		return m, nil
+		if m.planMoveSelection(-1) {
+			m.plan.vp = m.followPlanSelection()
+			return m, nil
+		}
 	case "down", "j":
-		m.planMoveSelection(1)
-		return m, nil
+		if m.planMoveSelection(1) {
+			m.plan.vp = m.followPlanSelection()
+			return m, nil
+		}
 	case "enter":
 		return m.planEnter()
 	}
+	// …and the one pane-scroll set last, so none of this tab's own keys can be shadowed by it
+	// (adr/0006 §2). Size and content FIRST, then move — the clamp lives at the mutation.
+	m.plan.vp = m.planViewport()
+	applyPaneScroll(&m.plan.vp, key)
 	return m, nil
 }
 
-func (m *Model) planMoveSelection(delta int) {
+// planViewport is this tab's `<surface>Viewport()` builder — the same construction Report uses. The
+// section switcher and the status line render outside it (they must not scroll away from the reader
+// they belong to), so its height is the pane minus both.
+func (m Model) planViewport() viewport.Model {
+	body, _ := m.planBody()
+	rows := m.paneRows() - 2 - blockHeight(m.planStatusBlock())
+	return loadPaneViewport(m.plan.vp, strings.Split(body, "\n"), m.paneCols(), max(3, rows), false)
+}
+
+// followPlanSelection is the builder plus the cursor follow, called ONLY from the arms that moved
+// the cursor (see ensurePaneRow). The browse lists are one row per stage / per gate from row 0, so
+// the cursor IS the row index; inside a drill or a form the body is a field list the cursor no
+// longer indexes that way, and those sub-states capture every key anyway (tabHandlesAllKeys).
+func (m Model) followPlanSelection() viewport.Model {
+	vp := m.planViewport()
+	if m.plan.drill || m.plan.adding {
+		return vp
+	}
+	switch m.plan.tab {
+	case planTabStages:
+		ensurePaneRow(&vp, m.plan.stageIdx)
+	case planTabGates:
+		ensurePaneRow(&vp, m.plan.gateIdx)
+	}
+	return vp
+}
+
+// planMoveSelection moves the cursor and reports whether it actually MOVED. The bool is what lets
+// the key fall through to the pane scroll at the ends of the list (see handlePlanKey) instead of
+// dying there.
+func (m *Model) planMoveSelection(delta int) bool {
+	before := [3]int{m.plan.fieldIdx, m.plan.stageIdx, m.plan.gateIdx}
 	switch {
 	case m.plan.tab == planTabSettings:
 		m.plan.fieldIdx = clamp(m.plan.fieldIdx+delta, 0, len(m.settingsFields())-1)
@@ -332,6 +379,7 @@ func (m *Model) planMoveSelection(delta int) {
 	case m.plan.tab == planTabGates && m.plan.doc != nil:
 		m.plan.gateIdx = clamp(m.plan.gateIdx+delta, 0, len(m.plan.doc.Gates)-1)
 	}
+	return before != [3]int{m.plan.fieldIdx, m.plan.stageIdx, m.plan.gateIdx}
 }
 
 // planEnter drills into a row's fields, or begins editing the selected field.
@@ -808,32 +856,44 @@ func (m Model) renderPlanPane() (string, string) {
 		return subtleStyle.Render("loading plan…"), "esc back"
 	}
 
-	tabs := m.renderPlanSections()
-	var body, help string
-
-	switch m.plan.tab {
-	case planTabStages:
-		body, help = m.renderPlanStages()
-	case planTabGates:
-		body, help = m.renderPlanGates()
-	case planTabSettings:
-		body, help = m.renderPlanSettings()
-	case planTabImport:
-		body, help = m.renderPlanImport()
-	case planTabPrompt:
-		body, help = m.renderPlanPrompt()
-	}
-
-	status := ""
-	if m.plan.status != "" {
-		st := safeStyle
-		if strings.HasPrefix(m.plan.status, "✗") {
-			st = destructStyle
-		}
-		status = "\n\n" + st.Render(m.plan.status)
+	_, help := m.planBody()
+	vp := m.planViewport()
+	if hint := paneScrollHint(vp, false); hint != "" && !m.tabHandlesAllKeys() {
+		help = hint + " · " + help
 	}
 	meta := subtleStyle.Render(fmt.Sprintf("%s · v%d", m.plan.doc.Name, m.plan.doc.PlanVersion))
-	return tabs + "   " + meta + "\n\n" + body + status, help
+	return m.renderPlanSections() + "   " + meta + "\n\n" + vp.View() + m.planStatusBlock(), help
+}
+
+// planBody is the active section's body and its help line, built here rather than inside the
+// renderer so the key handler can load the same bytes into the viewport it is about to scroll.
+func (m Model) planBody() (body, help string) {
+	switch m.plan.tab {
+	case planTabStages:
+		return m.renderPlanStages()
+	case planTabGates:
+		return m.renderPlanGates()
+	case planTabSettings:
+		return m.renderPlanSettings()
+	case planTabImport:
+		return m.renderPlanImport()
+	case planTabPrompt:
+		return m.renderPlanPrompt()
+	}
+	return "", ""
+}
+
+// planStatusBlock is the result of the last write, pinned under the body so it cannot scroll away
+// from the edit it is reporting on.
+func (m Model) planStatusBlock() string {
+	if m.plan.status == "" {
+		return ""
+	}
+	st := safeStyle
+	if strings.HasPrefix(m.plan.status, "✗") {
+		st = destructStyle
+	}
+	return "\n\n" + st.Render(m.plan.status)
 }
 
 func (m Model) renderPlanSections() string {

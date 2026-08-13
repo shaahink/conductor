@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
@@ -22,6 +23,12 @@ type telegramModel struct {
 	editBuf    string
 	enumIdx    int
 	statusLine string
+	// vp is the pane's viewport (KS2.7). This pane has no list and no long document, which is exactly
+	// why it was missed: its body is status line + reason paragraph + guided setup + five fields +
+	// result line + last-poll error, and the two strings the engine can make arbitrarily long
+	// (WillDeliverReason, LastError) sit at the top and the bottom of it. At 80x24 with a wrapped
+	// doctor sentence it already outgrew the pane, and the overflow was eaten by frameContent.
+	vp viewport.Model
 }
 
 // updateTelegram handles this tab's four write/poll results. Every one of them ends in a re-fetch of
@@ -146,6 +153,10 @@ func telegramFieldsList() []telegramFieldSpec {
 	}
 }
 
+// handleTelegramKey is the NON-editing branch: this pane's own semantic keys (esc, ↑↓ field
+// selection, enter), then the one pane-scroll set. The scroll set may only be applied here — the
+// edit branch below consumes every printable char through typedChar, so a `d` or a `G` typed into a
+// chat id must reach the buffer, not the pager.
 func (m *Model) handleTelegramKey(key string) (tea.Model, tea.Cmd) {
 	if m.telegram.editing {
 		return m.handleTelegramFieldEdit(key)
@@ -155,15 +166,43 @@ func (m *Model) handleTelegramKey(key string) (tea.Model, tea.Cmd) {
 	case "esc":
 		return m.openTab(TabAgent)
 	case "up", "k":
-		m.telegram.fieldIdx = clamp(m.telegram.fieldIdx-1, 0, len(fields)-1)
-		return m, nil
+		if m.telegram.fieldIdx > 0 {
+			m.telegram.fieldIdx = clamp(m.telegram.fieldIdx-1, 0, len(fields)-1)
+			m.telegram.vp = m.followTelegramField()
+			return m, nil
+		}
 	case "down", "j":
-		m.telegram.fieldIdx = clamp(m.telegram.fieldIdx+1, 0, len(fields)-1)
-		return m, nil
+		if m.telegram.fieldIdx < len(fields)-1 {
+			m.telegram.fieldIdx = clamp(m.telegram.fieldIdx+1, 0, len(fields)-1)
+			m.telegram.vp = m.followTelegramField()
+			return m, nil
+		}
 	case "enter":
 		return m.telegramEnter()
 	}
+	m.telegram.vp = m.telegramViewport()
+	applyPaneScroll(&m.telegram.vp, key)
 	return m, nil
+}
+
+// telegramViewport is this tab's `<surface>Viewport()` builder. Both the key handler and the
+// renderer go through it, so an offset that survived a resize or a fresh status poll is re-clamped
+// against the body that is actually on screen.
+// The field list is the one part of this pane the arrow keys address, so the viewport is told where
+// the selected field sits: a settings form whose selected row has scrolled away is a form you
+// cannot fill in.
+func (m Model) telegramViewport() viewport.Model {
+	lines, _ := m.telegramLines()
+	return loadPaneViewport(m.telegram.vp, lines, m.paneCols(), m.paneRows(), false)
+}
+
+// followTelegramField is the builder plus the cursor follow, called ONLY from the arms that moved
+// the field selection (see ensurePaneRow for why it may not live in the builder).
+func (m Model) followTelegramField() viewport.Model {
+	_, fieldRow := m.telegramLines()
+	vp := m.telegramViewport()
+	ensurePaneRow(&vp, fieldRow)
+	return vp
 }
 
 // telegramEnter starts editing the selected field, or — for the test-action row — fires the test
@@ -284,9 +323,39 @@ func (m Model) renderTelegramPane() (string, string) {
 	if m.telegram.status == nil {
 		return subtleStyle.Render("loading Telegram status…"), ""
 	}
-	s := m.telegram.status
+	vp := m.telegramViewport()
 
-	lines := []string{m.renderTelegramStatusLine(s)}
+	help := "↑↓ field · enter edit/send · esc back"
+	if m.telegram.editing {
+		if telegramFieldsList()[m.telegram.fieldIdx].Kind == tgTwoWay {
+			help = "←→ toggle · enter save · esc cancel"
+		} else {
+			help = "type · enter save · esc cancel"
+		}
+	} else if hint := paneScrollHint(vp, false); hint != "" {
+		help = "↑↓ field · " + hint + " · esc back"
+	}
+	return vp.View(), help
+}
+
+// telegramLines is the whole pane body, one entry per rendered row, plus the row index of the
+// SELECTED field. Built here rather than inside the renderer so the key handler can load the same
+// bytes into the viewport it is about to scroll.
+func (m Model) telegramLines() (body []string, fieldRow int) {
+	s := m.telegram.status
+	if s == nil {
+		return nil, -1
+	}
+	// One entry per RENDERED row, appended through `add`: the wrapped reason paragraph, the guide and
+	// a multi-line poll error all arrive as one string with newlines in it, and fieldRow below counts
+	// ROWS. Splitting at the end instead would put the field index at an offset nobody can compute.
+	var lines []string
+	add := func(parts ...string) {
+		for _, p := range parts {
+			lines = append(lines, strings.Split(p, "\n")...)
+		}
+	}
+	add(m.renderTelegramStatusLine(s))
 
 	if !s.Configured {
 		// FU-OWNER-13 again, one layer down from the status line. This paragraph reads the SAME
@@ -302,11 +371,11 @@ func (m Model) renderTelegramPane() (string, string) {
 		// lets the owner who just pressed save draw the obvious conclusion, rather than asserting
 		// whose edit it was.
 		if s.ReloadPending {
-			lines = append(lines, "",
+			add("",
 				subtleStyle.Render("A plan edit is saved and queued — the engine applies it at the next session"),
 				subtleStyle.Render("boundary. The fields below are still the pre-edit plan, not a missing one."))
 		} else {
-			lines = append(lines, "",
+			add("",
 				subtleStyle.Render("Not configured on this plan yet — that's fine, just start below;"),
 				subtleStyle.Render("saving a token or chat id here configures it for you."))
 		}
@@ -315,11 +384,12 @@ func (m Model) renderTelegramPane() (string, string) {
 	// SC1.3: the guide stays up until the engine says it will deliver — not until the last
 	// precondition is ticked, which is how a setup that could never notify anybody looked finished.
 	if !s.WillDeliver {
-		lines = append(lines, "", m.renderTelegramGuide(s))
+		add("", m.renderTelegramGuide(s))
 	}
 
-	lines = append(lines, "")
-	lines = append(lines, m.renderTelegramFields()...)
+	add("")
+	fieldRow = len(lines) + m.telegram.fieldIdx
+	add(m.renderTelegramFields()...)
 
 	if m.telegram.statusLine != "" {
 		st := safeStyle
@@ -333,22 +403,14 @@ func (m Model) renderTelegramPane() (string, string) {
 		case m.telegram.statusLine == "saving…" || m.telegram.statusLine == "testing…":
 			st = warnStyle
 		}
-		lines = append(lines, "", st.Render(m.telegram.statusLine))
+		add("", st.Render(m.telegram.statusLine))
 	}
 
 	if s.LastError != nil && *s.LastError != "" {
-		lines = append(lines, "", subtleStyle.Render("last poll error: ")+destructStyle.Render(*s.LastError))
+		add("", subtleStyle.Render("last poll error: ")+destructStyle.Render(*s.LastError))
 	}
 
-	help := "↑↓ field · enter edit/send · esc back"
-	if m.telegram.editing {
-		if telegramFieldsList()[m.telegram.fieldIdx].Kind == tgTwoWay {
-			help = "←→ toggle · enter save · esc cancel"
-		} else {
-			help = "type · enter save · esc cancel"
-		}
-	}
-	return strings.Join(lines, "\n"), help
+	return lines, min(fieldRow, max(0, len(lines)-1))
 }
 
 // SC1.3: this line used to say "connected" whenever Started && HasToken — a claim about two

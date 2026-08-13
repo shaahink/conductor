@@ -543,17 +543,29 @@ func TestRawStreamFoldsIntoTheAgentTab(t *testing.T) {
 	// Console tab used to do.
 	m = asModel(mustHandle(m.handleKey("p")))
 	m = asModel(mustHandle(m.handleKey("c")))
-	if m.tab != TabAgent || !m.agent.raw || m.agent.consoleScroll != 0 {
-		t.Fatalf("c must open Agent's raw stream pinned to the tail; tab=%v raw=%v scroll=%d",
-			m.tab, m.agent.raw, m.agent.consoleScroll)
+	if m.tab != TabAgent || !m.agent.raw || !m.agentRawViewport().AtBottom() {
+		t.Fatalf("c must open Agent's raw stream pinned to the tail; tab=%v raw=%v atBottom=%v",
+			m.tab, m.agent.raw, m.agentRawViewport().AtBottom())
 	}
-	// Raw mode owns the old Console keys, through the router.
-	m = asModel(mustHandle(m.handleKey("up")))
-	if m.agent.consoleScroll != 1 {
-		t.Errorf("up should scroll the raw stream back, got %d", m.agent.consoleScroll)
+	// Raw mode owns the pane-scroll set, through the router. KS2.7: the assertion reads the
+	// VIEWPORT's own position rather than a bespoke `consoleScroll` integer — there is no second
+	// number left to check, which is the point.
+	longRaw := m
+	for i := 0; i < 200; i++ {
+		longRaw = asModel(mustHandle2(longRaw.Update(MsgConsoleLine{
+			Line: api.ConsoleLineDto{Seq: int64(100 + i), Text: "raw line " + itoa(i)}})))
 	}
-	m = asModel(mustHandle(m.handleKey("end")))
-	if m.agent.consoleScroll != 0 {
+	if longRaw.agentRawViewport().TotalLineCount() <= longRaw.agentRawViewport().Height() {
+		t.Fatal("the raw fixture fits its pane — a scroll assertion on it would pass vacuously")
+	}
+	tailVp := longRaw.agentRawViewport()
+	atTail := tailVp.YOffset()
+	longRaw = asModel(mustHandle(longRaw.handleKey("up")))
+	if got := longRaw.agent.rawVp.YOffset(); got != atTail-1 {
+		t.Errorf("up should scroll the raw stream back one line, went from %d to %d", atTail, got)
+	}
+	longRaw = asModel(mustHandle(longRaw.handleKey("end")))
+	if !longRaw.agent.rawVp.AtBottom() {
 		t.Error("end should re-pin to the tail")
 	}
 	// …and the parsed transcript's own keys must NOT be reachable while raw output is showing: `f`

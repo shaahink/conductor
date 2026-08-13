@@ -125,20 +125,23 @@ func (m Model) handleCmdKey(key string) (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleSearchKey(key string) (tea.Model, tea.Cmd) {
+	// Every arm below moves the transcript's viewport (jumpToMatch, or a re-pin to the tail), so each
+	// one goes through sizedTranscript: size and content FIRST, then move (adr/0006 §1). Updating
+	// m.transcript directly would clamp the jump against whatever height the last resize left behind.
 	switch key {
 	case "esc":
 		m.agent.searchActive = false
-		m.transcript = m.transcript.Update(widgets.MsgSetSearch{Query: ""})
+		m.transcript = m.sizedTranscript().Update(widgets.MsgSetSearch{Query: ""})
 	case "enter":
 		m.agent.searchActive = false
 	case "backspace":
 		q := m.transcript.SearchQuery
 		if len(q) > 0 {
-			m.transcript = m.transcript.Update(widgets.MsgSetSearch{Query: q[:len(q)-1]})
+			m.transcript = m.sizedTranscript().Update(widgets.MsgSetSearch{Query: q[:len(q)-1]})
 		}
 	default:
 		if ch, ok := typedChar(key); ok {
-			m.transcript = m.transcript.Update(widgets.MsgSetSearch{Query: m.transcript.SearchQuery + ch})
+			m.transcript = m.sizedTranscript().Update(widgets.MsgSetSearch{Query: m.transcript.SearchQuery + ch})
 		}
 	}
 	return m, nil

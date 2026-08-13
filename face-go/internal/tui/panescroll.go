@@ -5,6 +5,8 @@ import (
 
 	bkey "charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/viewport"
+
+	"conductor-face-go/internal/widgets"
 )
 
 // The one scroll idiom (adr/0006 decision 1 and 2). Every body that can outgrow its pane is a
@@ -98,10 +100,81 @@ func applyPaneScroll(vp *viewport.Model, k string) bool {
 // wrapping or padding. SoftWrap stays off: these bodies are already clipped to the pane width by the
 // renderer that builds them (STYLE.md — pad plain, style after), and re-wrapping a styled row would
 // break its columns.
-func newPaneViewport() viewport.Model {
-	vp := viewport.New()
-	vp.SoftWrap = false
+//
+// The body lives in widgets.NewPaneViewport because the transcript widget owns a pane viewport too
+// and `widgets` cannot import `tui`. This name stays, because this file is where a reader looking
+// for the scroll idiom arrives.
+func newPaneViewport() viewport.Model { return widgets.NewPaneViewport() }
+
+// loadPaneViewport is the shared half of every `<surface>Viewport()` builder: size the viewport to
+// the pane it is about to be drawn in, load the body that is actually on screen, and — for a body
+// that grows at the BOTTOM — keep a reader who was following the live tail on it.
+//
+// The at-bottom test is taken BEFORE the new content lands, because that is the only moment at which
+// "this reader was following the tail" is still a fact rather than an accident of the new body's
+// height. That is adr/0006 decision 1's live-tail clause expressed the way the ADR asked for it:
+// GotoBottom + AtBottom, never an inverted offset counting back from the tail. STYLE.md's warning
+// still holds and is what `tail` exists for — a viewport that opened at offset 0 would teleport a
+// live 4000-line buffer to its oldest line the moment the tab is opened.
+func loadPaneViewport(vp viewport.Model, lines []string, w, h int, tail bool) viewport.Model {
+	atBottom := vp.AtBottom()
+	vp.SetWidth(max(1, w))
+	vp.SetHeight(max(1, h))
+	vp.SetContentLines(lines)
+	if tail && atBottom {
+		vp.GotoBottom()
+	}
 	return vp
+}
+
+// ensurePaneRow keeps a SELECTION visible in a pane that scrolls. History, Processes, Telegram and
+// the Plan lists all move a cursor with ↑/↓ — that cursor is not a scroll offset (it survives a
+// resize, it addresses a row not a line), so the viewport follows it rather than replacing it. It
+// scrolls by the MINIMUM that brings the row back into view: EnsureVisible parks the row at the top
+// instead, which reads as a jump when you were merely stepping past the edge.
+//
+// It belongs in the KEY HANDLER, on the arm that moved the selection, and nowhere else. Calling it
+// from the `<surface>Viewport()` builder — which the renderer also calls — would make every frame
+// re-assert the cursor's position and silently undo the pane keys: press `end` on a 500-row list and
+// the next View drags you back to row 0, which is the same class of defect as clamping in the
+// renderer. Scrolling away from the selection is a thing a reader is allowed to do.
+//
+// THE CURSOR FALLS THROUGH AT ITS ENDS. Every surface that owns ↑/↓ as a selection key returns from
+// that arm only when the cursor actually MOVED; at the top or the bottom of the list the key drops
+// past the switch to applyPaneScroll and scrolls the pane instead. Without it, ↓ simply dies on the
+// last row — and on Telegram, whose "list" is five fields above a poll error that can be hundreds of
+// lines long, that meant the arrow keys could not reach the text at all. A key that stops working
+// at a boundary is indistinguishable from a key that is broken.
+func ensurePaneRow(vp *viewport.Model, row int) {
+	if row < 0 {
+		return
+	}
+	h := max(1, vp.Height())
+	switch {
+	case row < vp.YOffset():
+		vp.SetYOffset(row)
+	case row >= vp.YOffset()+h:
+		vp.SetYOffset(row - h + 1)
+	}
+}
+
+// paneTailReadout is the position note for a live-tail pane: "● live tail" while the reader is on
+// the newest line, and the same clamped PERCENT every other pane carries plus the key back once they
+// are not. It replaces the raw stream's `↕ scrolled back N — end to live-tail`, which reported an
+// inverted integer nobody could act on — "scrolled back 137" answers neither "how much is left" nor
+// "am I live", which are the only two questions a tail pane raises.
+//
+// The caller styles it: this returns the plain text and whether it is the live case, because padding
+// or styling here would put ANSI bytes inside a string the bottom bar measures (STYLE.md).
+func paneTailReadout(vp viewport.Model) (text string, atBottom bool) {
+	if vp.AtBottom() {
+		return "● live tail", true
+	}
+	pct := paneScrollStatus(vp)
+	if pct == "" {
+		pct = "0%"
+	}
+	return "↕ " + pct + " — end to live-tail", false
 }
 
 // paneScrollStatus is the position readout: a clamped PERCENT, following glow (ui/pager.go:309),
@@ -125,4 +198,23 @@ func paneScrollHelp(vp viewport.Model) string {
 		h += " " + pct
 	}
 	return h
+}
+
+// paneScrollHint is the hint every OTHER surface carries — the ones whose bottom bar is already
+// spending most of its width on their own keys, and the ones where `↑↓` mean something else.
+//
+// `arrows` is not a style choice. On History, Processes, Telegram and Plan the arrows move a
+// SELECTION and only fall through to the pane at the ends of the list, so advertising them as the
+// scroll keys would be the same species of lie as the tab help that named `k` on Knowledge: a key
+// the legend claims and the surface spends elsewhere. It returns "" when nothing scrolls, so a pane
+// that fits never carries a permanent readout — the rule paneScrollStatus already encodes.
+func paneScrollHint(vp viewport.Model, arrows bool) string {
+	pct := paneScrollStatus(vp)
+	if pct == "" {
+		return ""
+	}
+	if arrows {
+		return "↑↓ d/u G/home " + pct
+	}
+	return "d/u G/home " + pct
 }

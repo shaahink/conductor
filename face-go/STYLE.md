@@ -92,12 +92,32 @@ one page; fewer clicks; transparent overlays; better colour and spacing.*
   (`tabHandlesAllKeys`); otherwise the dashboard globals (`:` `i` `/` `p` `?` `q`, tab switches) win.
   Plan sub-sections switch with `←/→` (so `tab` stays free for main tabs).
 - **Scrolling is one key set, everywhere, and it is settled — do not invent a fifth one.**
-  `↓`/`j` `↑` by line, `d`/`u` by half page, `pgdn`/`f` `pgup` by page, `end`/`G` `home` to the ends.
-  `k`, `b` and `g` are *tab mnemonics* and the mnemonic loop (`update.go:608`) resolves before any
-  pane handler ever sees them, so a pane key may never be a lowercase letter in `tabKey` or
-  `foldedTabKey`. The scroll offset is clamped where it is *changed*, never only in the renderer.
+  `↓`/`j` `↑` by line, `d`/`u` by half page, `pgdn` `pgup` by page, `end`/`G` `home` to the ends.
+  `k`, `b` and `g` are *tab mnemonics* and the mnemonic loop resolves before any pane handler ever
+  sees them, so a pane key may never be a lowercase letter in `tabKey` or `foldedTabKey`. The scroll
+  offset is clamped where it is *changed*, never only in the renderer.
   See [ADR 0006](../docs/dev/adr/0006-tui-conventions.md) for why, and for `viewport` vs `list` vs
   `table` — read it before adding any scrollable pane.
+- **Every scrollable body is a `viewport.Model`, and there are no exceptions left** (KS2.7). The
+  shape is fixed and copyable: a `vp` field on the tab's own model, built by `newPaneViewport()`; a
+  `<surface>Viewport()` builder that sizes it, loads the body and is called by **both** the key
+  handler and the renderer; the key handler runs the surface's own keys **first** and
+  `applyPaneScroll` **last**. Live-tail surfaces (Agent's transcript, its raw stream) pass
+  `tail: true` to `loadPaneViewport` — `GotoBottom` + `AtBottom`, never an inverted offset. The
+  position readout is `paneScrollStatus`, a clamped percent, and it is empty when the body fits.
+  `scroll_intent_test.go` walks the AST and fails any new bare scroll integer, so this is a ratchet
+  and not a convention.
+- **A selection cursor is not a scroll offset, and it falls through at its ends.** `selected`,
+  `sessionSelected`, `fieldIdx`, `stageIdx` address a ROW of data and survive a resize; the viewport
+  follows them with `ensurePaneRow` from the key arm that moved them (never from the builder — the
+  renderer calls that too, and re-asserting the cursor every frame silently undoes `end`). When the
+  cursor cannot move any further the key drops through to `applyPaneScroll` instead of dying on the
+  last row.
+- **Two surfaces deliberately have no pane viewport, and both say why in code**: the Kanban BOARD
+  (`kanbanWindow` is a per-column clip; three columns cannot share one scroll position) and Home's
+  LANDING (it owns no keys and sheds tiers via `fitHome`; its scrollable is the `w` owner queue).
+  Both are named in `scrollSurfacesNotConverted` / `scrollSweepExemptions` — an exemption that is not
+  written down is how the previous adoption pass stopped half-done.
 
 ## Colour — roles, not hexes
 
@@ -169,10 +189,15 @@ row, its `--theme` value and its help legend for free: all three are derived fro
 
 ## Semantics worth keeping
 
-- **Scrollback counts from the tail.** `TranscriptModel.ScrollOffset` is lines back from the live
-  tail (0 = pinned); one `↑` steps into history, `end`/`l` re-pins, and a scrolled pane shows a
-  "↕ N lines below" note *inside* its height budget. Never use offset-from-top for a live stream —
-  the first keypress teleports to the top of a 4000-line buffer.
+- **Scrollback counts from the tail.** A live stream opens on its NEWEST line: one `↑` steps into
+  history, `end`/`G` re-pins, a line arriving while you are scrolled back does not move the view, and
+  a scrolled pane shows a "↕ N lines below" note *inside* its height budget. Never let a live stream
+  open at offset 0 — the first frame teleports to the top of a 4000-line buffer.
+  KS2.7 kept every one of those facts and replaced the MECHANISM: `TranscriptModel.ScrollOffset` and
+  its `AutoScroll` bool are gone, and tail-anchoring is `GotoBottom()` + `AtBottom()` on
+  `TranscriptModel.Vp` (adr/0006 decision 1). The raw stream's `↕ scrolled back N` readout went with
+  them — an inverted line count answers neither "how much is left" nor "am I live"; it now reads
+  `● live tail`, or the same percent every other pane carries plus `end to live-tail`.
 - **Wire order is the truth.** `GET /sessions` is newest-first (`ORDER BY number DESC`); the demo
   source and golden fixtures must mirror the real wire, not an idealised one.
 - Transcript lines carry a dim UTC `HH:MM:SS` prefix when the pane is ≥70 cols and the line has a

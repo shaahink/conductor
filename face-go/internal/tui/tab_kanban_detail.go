@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 
+	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
@@ -96,6 +97,9 @@ func (m *Model) handleKanbanDetailKey(key string) (tea.Model, tea.Cmd) {
 		return m.handleKanbanHandKey(key)
 	}
 
+	// This surface's own semantic keys FIRST — it captures every key (tabHandlesAllKeys), so a scroll
+	// key applied before them would swallow `t`, `c`, `p`, `q`, `a`, `s`, `h` and `esc`. The one
+	// pane-scroll set goes at the bottom, against a viewport that has just been sized and loaded.
 	task := m.kanbanDetailTask()
 	switch key {
 	case "esc":
@@ -155,7 +159,29 @@ func (m *Model) handleKanbanDetailKey(key string) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	}
+	m.kanban.detailVp = m.kanbanDetailViewport()
+	applyPaneScroll(&m.kanban.detailVp, key)
 	return m, nil
+}
+
+// kanbanDetailViewport is the card detail's `<surface>Viewport()` builder. The scrollable body is
+// the card itself; the transient rows under it — an open editor, a proposal, the hand-off confirm,
+// the status line — render OUTSIDE the viewport and are deducted from its height, because a confirm
+// prompt you have to scroll to is a confirm you cannot answer.
+func (m Model) kanbanDetailViewport() viewport.Model {
+	rows := m.paneRows() - blockHeight(m.kanbanDetailTrailer())
+	return loadPaneViewport(m.kanban.detailVp, strings.Split(m.kanbanDetailBody(), "\n"),
+		m.paneCols(), max(3, rows), false)
+}
+
+// blockHeight is lipgloss.Height with the one distinction it does not make: an EMPTY block occupies
+// no rows. lipgloss.Height("") is 1, and deducting a phantom row from every pane that has no trailer
+// is how a body loses its last line for no reason.
+func blockHeight(s string) int {
+	if s == "" {
+		return 0
+	}
+	return lipgloss.Height(s)
 }
 
 func (m *Model) handleKanbanTitleKey(key string) (tea.Model, tea.Cmd) {
@@ -300,7 +326,60 @@ func (m Model) renderKanbanDetailPane() (string, string) {
 	if m.kanban.blocks == nil {
 		return subtleStyle.Render("loading card…"), "esc back"
 	}
+	vp := m.kanbanDetailViewport()
+	trailer, help := m.kanbanDetailTrailerAndHelp()
+	if hint := paneScrollHint(vp, true); hint != "" && !m.kanbanDetailIsBusy() {
+		help = hint + " · " + help
+	}
+	return vp.View() + trailer, help
+}
 
+// kanbanDetailIsBusy reports whether a sub-state owns the keys — an editor, a proposal, a confirm.
+// The scroll hint is dropped there because the scroll KEYS are dropped there: `d` and `u` are going
+// into a text buffer, and a bottom bar advertising a key the pane is eating is the drift adr/0006
+// exists to end.
+func (m Model) kanbanDetailIsBusy() bool {
+	return m.kanban.editingPaths || m.kanban.editingCtx || m.kanban.editingTitle ||
+		m.kanban.proposal != nil || m.kanban.split != nil || m.kanban.handConfirm
+}
+
+// kanbanDetailTrailer is the transient block under the card, without its help text.
+func (m Model) kanbanDetailTrailer() string {
+	t, _ := m.kanbanDetailTrailerAndHelp()
+	return t
+}
+
+// kanbanDetailTrailerAndHelp is whatever sub-state is open (editor, proposal, confirm) plus the
+// status line, and the bottom-bar help that goes with it. It is kept out of the viewport so it can
+// never scroll away from the reader it is asking a question of.
+func (m Model) kanbanDetailTrailerAndHelp() (string, string) {
+	status := m.kanbanStatusLine()
+	switch {
+	case m.kanban.editingPaths:
+		return "\n\n" + accentStyle.Render("✎ paths (comma-separated): ") + textStyle.Render(m.kanban.pathsBuf) +
+			accentStyle.Render("▏") + status, "type · enter save (empty clears) · esc cancel"
+	case m.kanban.editingCtx:
+		return "\n\n" + accentStyle.Render("✎ extra context") + "\n" + m.kanban.ctxEditor.View() + status,
+			"type · ctrl+s save · esc cancel"
+	case m.kanban.editingTitle:
+		return "\n\n" + accentStyle.Render("✎ title: ") + textStyle.Render(m.kanban.titleBuf) +
+			accentStyle.Render("▏") + status, "type · enter save · esc cancel"
+	case m.kanban.proposal != nil:
+		return "\n\n" + m.renderKanbanProposal(max(20, m.paneCols()-4)) + status, "enter apply · esc discard"
+	case m.kanban.split != nil:
+		return "\n\n" + m.renderKanbanSplit(max(20, m.paneCols()-4)) + status, "enter apply · esc discard"
+	case m.kanban.handConfirm:
+		return "\n\n  " + accentStyle.Render("hand this card to the next session (writes an injection)? ") +
+				key("y") + subtleStyle.Render(" yes · ") + key("n") + subtleStyle.Render(" no") + status,
+			"y confirm · n cancel"
+	}
+	return status, "t title · c context · p paths · q qa · a advisor refine · s split · h hand off · esc back"
+}
+
+// kanbanDetailBody is the card itself — head, every prompt block, the declared paths and the QA dial.
+// Built here rather than inside the renderer so the key handler can load the same bytes into the
+// viewport it is about to scroll.
+func (m Model) kanbanDetailBody() string {
 	var b strings.Builder
 	head := fmt.Sprintf("%s · %s · stage %s", m.kanban.blocks.TaskId, m.kanban.blocks.CheckpointId, m.kanban.blocks.StageId)
 	b.WriteString(accentStyle.Render(head) + "\n")
@@ -323,35 +402,22 @@ func (m Model) renderKanbanDetailPane() (string, string) {
 		// W4.4: the per-item QA dial — pipeline control that reaches this one card.
 		b.WriteString("\n\n" + subtleStyle.Render("── ") + accentStyle.Render("✎ qa") + subtleStyle.Render(" ") +
 			subtleStyle.Render(strings.Repeat("─", max(0, width-lipgloss.Width("qa")-6))) + "\n")
-		if task.Qa == "" {
-			b.WriteString(subtleStyle.Render("  inherit — the stage/plan dial decides (press q to override)"))
-		} else {
-			b.WriteString(textStyle.Render("  "+task.Qa) + subtleStyle.Render("  (this card only — press q to cycle)"))
+		// Wrapped plain, then styled per line: at 80 cols the pane is ~50 wide and this sentence is
+		// 60, and the viewport does not soft-wrap — an unwrapped row would be CLIPPED at the pane edge
+		// with no ellipsis, deleting the "press q" that is the only reason the row is here.
+		qa := "inherit — the stage/plan dial decides (press q to override)"
+		if task.Qa != "" {
+			qa = task.Qa + "  (this card only — press q to cycle)"
+		}
+		for i, l := range wrapPlain(qa, width-2) {
+			if i > 0 {
+				b.WriteString("\n")
+			}
+			b.WriteString(subtleStyle.Render("  " + l))
 		}
 	}
 
-	if m.kanban.editingPaths {
-		b.WriteString("\n\n" + accentStyle.Render("✎ paths (comma-separated): ") + textStyle.Render(m.kanban.pathsBuf) + accentStyle.Render("▏"))
-		return b.String() + m.kanbanStatusLine(), "type · enter save (empty clears) · esc cancel"
-	}
-	if m.kanban.editingCtx {
-		b.WriteString("\n\n" + accentStyle.Render("✎ extra context") + "\n" + m.kanban.ctxEditor.View())
-		return b.String() + m.kanbanStatusLine(), "type · ctrl+s save · esc cancel"
-	}
-	if m.kanban.editingTitle {
-		b.WriteString("\n\n" + accentStyle.Render("✎ title: ") + textStyle.Render(m.kanban.titleBuf) + accentStyle.Render("▏"))
-		return b.String() + m.kanbanStatusLine(), "type · enter save · esc cancel"
-	}
-	if m.kanban.proposal != nil {
-		b.WriteString("\n\n" + m.renderKanbanProposal(width))
-		return b.String() + m.kanbanStatusLine(), "enter apply · esc discard"
-	}
-	if m.kanban.handConfirm {
-		b.WriteString("\n\n  " + accentStyle.Render("hand this card to the next session (writes an injection)? ") +
-			key("y") + subtleStyle.Render(" yes · ") + key("n") + subtleStyle.Render(" no"))
-		return b.String() + m.kanbanStatusLine(), "y confirm · n cancel"
-	}
-	return b.String() + m.kanbanStatusLine(), "t title · c context · p paths · q qa · a advisor refine · s split · h hand off · esc back"
+	return b.String()
 }
 
 // renderKanbanBlock renders one building block: label line (✎ marks editable), then the content —
