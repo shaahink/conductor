@@ -63,7 +63,10 @@ public static class StateRepair
                 Slug: entry?.Slug is { Length: > 0 } s ? s : Path.GetFileName(Path.GetDirectoryName(db)!) ?? db,
                 Plan: entry?.Plan ?? "",
                 FirstSeenUtc: entry?.FirstSeenUtc ?? DateTimeOffset.MaxValue,
-                Live: LooksLive(db, entry?.Repo),
+                // KS1.3: the liveness rule this pass got right the expensive way now lives in
+                // RunLiveness, so the listing surfaces reconcile by the SAME rule the repair
+                // refuses to write against. One rule, two callers, no second opinion.
+                Live: RunLiveness.StoreLooksLive(db, entry?.Repo),
                 Foreign: !IsUnder(root, db),
                 Runs: runs));
         }
@@ -332,76 +335,6 @@ public static class StateRepair
                                        or IOException or UnauthorizedAccessException)
         {
             return null;
-        }
-    }
-
-    /// <summary>
-    /// Is an engine using this store right now? A run row still saying <c>running</c> proves nothing —
-    /// four of those on this machine are engines that exited without closing the record, which is
-    /// KS0.2's whole subject. Two things do prove it, and BOTH are needed.
-    /// <para>A tracked pid that is still alive: that catches a session in flight. But the pids table
-    /// tracks agents and faces, not the engine itself, so BETWEEN sessions a run that an engine is
-    /// very much still driving has no live pid at all — and a repair that believed that would write
-    /// the store out from under it. The engine lock on the repo is what answers for the gap.</para>
-    /// </summary>
-    private static bool LooksLive(string dbPath, string? repo)
-    {
-        if (HasLivePid(dbPath)) return true;
-        if (string.IsNullOrWhiteSpace(repo)) return false;
-        return HasUnfinishedRun(dbPath)
-               && EngineLock.IsHeldByLiveEngine(Path.Combine(repo, StateHome.ScratchDirName));
-    }
-
-    /// <summary>Does this store hold a run that is not over? KS0.2 widened it from
-    /// <c>status = 'running'</c>, and the widening is load-bearing rather than tidy: once parks are
-    /// written to the column (<see cref="RunRecord.StatusText"/>), a run an engine is holding open at
-    /// a <c>needs_human</c> prompt no longer says <c>running</c> — and the narrow query would have
-    /// called that store idle and let the repair write it out from under the engine. Terminal is the
-    /// short list; everything else counts as unfinished, which is the safe direction to be wrong
-    /// in.</summary>
-    private static bool HasUnfinishedRun(string dbPath)
-    {
-        try
-        {
-            using var c = StateDedup.OpenReadOnly(dbPath);
-            c.Open();
-            using var cmd = c.CreateCommand();
-            cmd.CommandText = "SELECT status FROM runs";
-            using var r = cmd.ExecuteReader();
-            while (r.Read())
-                if (!RunRecord.IsTerminal(r.IsDBNull(0) ? null : r.GetString(0)))
-                    return true;
-            return false;
-        }
-        catch (Exception ex) when (ex is SqliteException or InvalidOperationException
-                                       or IOException or UnauthorizedAccessException)
-        {
-            return false;
-        }
-    }
-
-    private static bool HasLivePid(string dbPath)
-    {
-        try
-        {
-            using var c = StateDedup.OpenReadOnly(dbPath);
-            c.Open();
-            using var cmd = c.CreateCommand();
-            cmd.CommandText = """
-                SELECT p.pid, p.started_utc FROM pids p
-                JOIN runs r ON r.run_id = p.run_id
-                WHERE r.status = 'running' AND p.exited_utc IS NULL
-                """;
-            using var r = cmd.ExecuteReader();
-            while (r.Read())
-                if (PidLiveness.LooksAlive((int)r.GetInt64(0), SqliteRunStore.ParseUtc(r.GetString(1))))
-                    return true;
-            return false;
-        }
-        catch (Exception ex) when (ex is SqliteException or InvalidOperationException
-                                       or IOException or UnauthorizedAccessException or FormatException)
-        {
-            return false;
         }
     }
 

@@ -28,9 +28,12 @@ public static class FacePastRuns
             if (past.Count >= max) break;
             if (row.Run is not { } run || live.Contains(run.RunId)) continue;
             var (done, total) = RunHistory.CheckpointCounts(row);
+            // KS1.3: the reconciled word. The picker's whole job is to tell a live run from a past
+            // one, and it was labelling engines that died months ago `running` because the column
+            // said so — the one place that lie is most likely to be acted on.
             past.Add(new FacePastRun(
                 run.Repo, string.IsNullOrEmpty(run.PlanName) ? row.Plan : run.PlanName,
-                run.RunId, run.Status, done, total, run.CostUsd, run.LastActivityUtc, row.RunDbPath));
+                run.RunId, row.Status, done, total, run.CostUsd, run.LastActivityUtc, row.RunDbPath));
         }
         return past;
     }

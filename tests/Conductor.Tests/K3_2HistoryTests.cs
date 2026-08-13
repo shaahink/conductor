@@ -132,6 +132,14 @@ public sealed class K3_2HistoryTests : IDisposable
         Assert.False(row.Readable);
         Assert.Null(row.Run);
         Assert.Equal(db, row.RunDbPath);
+
+        // KS1.3: it still lists — and in the payload it lists as what it IS. The row used to be
+        // emitted into runs[] as a run with an empty id, and six of those collided downstream.
+        var payload = RunHistoryPayload.List(RunHistory.List(_root));
+        Assert.Empty(payload.Runs);
+        var gone = Assert.Single(payload.Unreadable!);
+        Assert.Equal(db, gone.RunDb);
+        Assert.Equal(RunHistoryPayload.ReasonMissing, gone.Reason);
     }
 
     [Fact]

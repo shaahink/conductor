@@ -36,11 +36,29 @@ public sealed partial class RunArchive
     /// <para>Each read opens and closes its own connection — an archive holds no handle open between
     /// calls, so browsing never becomes a reader that a live engine's writer has to wait behind.</para>
     /// </summary>
-    public static RunArchive? TryOpen(string dbPath)
+    public static RunArchive? TryOpen(string dbPath) => TryOpen(dbPath, out _);
+
+    /// <summary>
+    /// The same open, saying WHY it failed. KS1.3: "that run's file has been deleted" and "that file
+    /// is there and is not a run database" are different answers, and a listing that spelled both
+    /// <c>unreadable</c> is what sent six blank-id rows into a consumer's parser. The caller reports
+    /// the distinction rather than inventing an empty run to hang it on.
+    /// </summary>
+    public static RunArchive? TryOpen(string dbPath, out RunDbProblem problem)
     {
-        if (string.IsNullOrWhiteSpace(dbPath) || !File.Exists(dbPath)) return null;
+        if (string.IsNullOrWhiteSpace(dbPath) || !File.Exists(dbPath))
+        {
+            problem = RunDbProblem.Missing;
+            return null;
+        }
         var archive = new RunArchive(dbPath);
-        return archive.IsRunDatabase() ? archive : null;
+        if (archive.IsRunDatabase())
+        {
+            problem = RunDbProblem.None;
+            return archive;
+        }
+        problem = RunDbProblem.NotARunDatabase;
+        return null;
     }
 
     /// <summary>True when this file is a conductor run database this engine can read.</summary>
@@ -363,4 +381,23 @@ public sealed partial class RunArchive
     /// <summary>K4.1: an optional numeric column, null for "absent OR NULL" — the two are one answer.</summary>
     private static long? OptLong(Dictionary<string, object?> r, string column)
         => Opt(r, column) is { } v ? Convert.ToInt64(v, System.Globalization.CultureInfo.InvariantCulture) : null;
+}
+
+/// <summary>
+/// KS1.3 — why a catalogued database did not open. The catalogue is an index and an index goes stale
+/// in two unrelated ways: the run's file was deleted (its history is gone), or the path names a file
+/// that is not a conductor run database at all (the index is wrong, and the run may never have been
+/// here). Reporting both as one word is what made a whole class of catalogue debris invisible.
+/// </summary>
+public enum RunDbProblem
+{
+    /// <summary>It opened. There is no problem.</summary>
+    None,
+
+    /// <summary>Nothing at that path.</summary>
+    Missing,
+
+    /// <summary>A file is there, and it does not answer as a run database
+    /// (<see cref="RunArchive.IsRunDatabase"/>).</summary>
+    NotARunDatabase,
 }

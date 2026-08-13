@@ -26,15 +26,22 @@ public static class RunHistory
         foreach (var entry in StateCatalogue.Read(root))
         {
             if (!MatchesEntry(entry, f)) continue;
-            var archive = RunArchive.TryOpen(entry.RunDb);
+            var archive = RunArchive.TryOpen(entry.RunDb, out var problem);
             if (archive is null)
             {
-                rows.Add(RunHistoryRow.Unreadable(entry));
+                rows.Add(RunHistoryRow.Unreadable(entry, problem));
                 continue;
             }
-            foreach (var run in archive.Runs().Where(run => MatchesRun(run, f)))
+            var found = archive.Runs().Where(run => MatchesRun(run, f)).ToList();
+            // KS1.3 — liveness is a property of the STORE, so it is asked once per catalogue entry and
+            // reused for every row that came out of it. Asked at all only when some row still claims to
+            // be going: a database of finished runs cannot be reconciled into anything else, and
+            // probing it would be two file opens per entry for an answer nothing reads.
+            var live = found.Any(run => !RunRecord.IsTerminal(run.Status))
+                       && RunLiveness.StoreLooksLive(entry.RunDb, entry.Repo);
+            foreach (var run in found)
                 rows.Add(new RunHistoryRow(entry.Key, entry.Slug, entry.RunDb, entry.Repo, entry.Plan,
-                    run, entry.ImportedFrom, Readable: true));
+                    run, entry.ImportedFrom, Readable: true) { StoreLooksLive = live });
         }
         return rows
             .OrderByDescending(r => SortKey(r))
@@ -182,10 +189,31 @@ public sealed record RunHistoryRow(
     /// <summary>Sort fallback for an unreadable row: the catalogue's own last-seen stamp.</summary>
     public DateTimeOffset LastSeenFallback { get; init; }
 
-    public static RunHistoryRow Unreadable(StateCatalogueEntry e) => new(
+    /// <summary>KS1.3: whether an engine is holding the STORE this row was read from, by
+    /// <see cref="RunLiveness.StoreLooksLive"/> — the same rule the repair pass obeys.</summary>
+    public bool StoreLooksLive { get; init; }
+
+    /// <summary>KS1.3: why an unreadable row is unreadable. <see cref="RunDbProblem.None"/> on a row
+    /// that opened.</summary>
+    public RunDbProblem Problem { get; init; }
+
+    /// <summary>The word the row itself carries, untouched. Kept beside <see cref="Status"/> because
+    /// reconciling is a rendering decision, not a correction: nothing here has repaired anything, and
+    /// a surface that dropped the stored value would be hiding the evidence for its own claim.</summary>
+    public string StoredStatus => Run?.Status ?? "";
+
+    /// <summary>What to PRINT. The stored word for a finished run and for a store an engine is
+    /// genuinely holding; <see cref="RunLiveness.Orphaned"/> for a row that still claims to be going
+    /// while nothing is driving it. <c>gone</c> when the database itself did not open.</summary>
+    public string Status => Run is null
+        ? "gone"
+        : RunLiveness.Reconcile(Run.Status, StoreLooksLive);
+
+    public static RunHistoryRow Unreadable(StateCatalogueEntry e, RunDbProblem problem = RunDbProblem.Missing) => new(
         e.Key, e.Slug, e.RunDb, e.Repo, e.Plan, null, e.ImportedFrom, Readable: false)
     {
         LastSeenFallback = e.LastSeenUtc,
+        Problem = problem,
     };
 
     /// <summary>Trailing directory name of the repo.</summary>

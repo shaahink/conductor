@@ -20,12 +20,18 @@
   type ceilings, layering) against architecture-baseline.json, and THIS gate makes deleting them impossible,
   because the test count may never fall. Neither is escapable without the other noticing.
 
+    THE REAL CATALOGUE MAY NOT GROW ACROSS A GATE RUN (KS1.3) - every verb that loads a plan upserts the
+    machine catalogue as a side effect, so a test, a gate or a scratch rig that forgets
+    CONDUCTOR_STATE_HOME writes into the operator's real history. Capture the count before the battery
+    with -CatalogueBaseline; a later plain run fails if it went up.
+
   ASCII only, on purpose: Windows PowerShell 5.1 reads a BOM-less UTF-8 script as ANSI, and a gate that
   fails to parse is worse than no gate at all.
 #>
 [CmdletBinding()]
 param(
-    [string]$BaseRef = ""
+    [string]$BaseRef = "",
+    [switch]$CatalogueBaseline
 )
 
 # NOT "Stop": Windows PowerShell 5.1 wraps a native command's stderr in an ErrorRecord, so a perfectly
@@ -34,6 +40,44 @@ $ErrorActionPreference = "Continue"
 $failures = New-Object System.Collections.Generic.List[string]
 $floorPath = "tools/gates/ratchet-baseline.json"
 $archPath  = "tests/Conductor.Tests/architecture-baseline.json"
+
+# --- the machine catalogue, which is not a repo file --------------------------------------------------
+# KS1.3. StateHome.Resolve upserts %LOCALAPPDATA%\conductor\catalogue.json every time anything loads a
+# plan, so a gate battery or a scratch rig that forgot CONDUCTOR_STATE_HOME quietly mints entries in the
+# operator's real history - that is where six blank-id rows came from, and a downstream consumer refused
+# the whole payload over them. The count is machine state, not repo state, so its baseline is captured
+# beside the run rather than committed.
+#
+# Every degradation is deliberately toward silence: no catalogue file counts as zero, an unreadable one
+# counts as zero, no captured baseline skips the comparison, and a count that FELL is somebody repairing
+# on purpose. Only growth is evidence, and only growth fails.
+
+function Get-CatalogueCount {
+    $stateHome = $env:CONDUCTOR_STATE_HOME
+    if (-not $stateHome -and $env:LOCALAPPDATA) { $stateHome = Join-Path $env:LOCALAPPDATA "conductor" }
+    if (-not $stateHome) { return 0 }
+    $p = Join-Path $stateHome "catalogue.json"
+    if (-not (Test-Path $p)) { return 0 }
+    try { $j = Get-Content $p -Raw -ErrorAction Stop | ConvertFrom-Json } catch { return 0 }
+    if ($null -eq $j.entries) { return 0 }
+    return @($j.entries).Count
+}
+
+function Get-CatalogueBaselinePath {
+    if ($env:CONDUCTOR_CATALOGUE_RATCHET) { return $env:CONDUCTOR_CATALOGUE_RATCHET }
+    $dir = $env:TEMP
+    if (-not $dir) { $dir = "." }
+    return (Join-Path $dir "conductor-catalogue-ratchet.json")
+}
+
+if ($CatalogueBaseline) {
+    $count = Get-CatalogueCount
+    $path = Get-CatalogueBaselinePath
+    @{ entries = $count; capturedUtc = (Get-Date).ToUniversalTime().ToString("o") } |
+        ConvertTo-Json | Set-Content -Path $path -Encoding ASCII
+    Write-Host ("ratchet: catalogue baseline captured - entries={0} -> {1}" -f $count, $path)
+    exit 0
+}
 
 function Invoke-Git {
     param([string[]]$GitArgs)
@@ -149,6 +193,26 @@ else {
     $gateToolDiff = (Invoke-Git @("diff", "--name-only", $base, "--", "tools/gates")).Text.Trim()
     if ($gateToolDiff) {
         $failures.Add("THE GATE SCRIPTS THEMSELVES WERE MODIFIED: " + ($gateToolDiff -replace "`r?`n", ", ") + ". You do not get to edit the referee.")
+    }
+}
+
+# --- 4. the operator's real catalogue may not grow across a gate run ---------------------------------
+$cataloguePath = Get-CatalogueBaselinePath
+$catalogueNow = Get-CatalogueCount
+if (-not (Test-Path $cataloguePath)) {
+    Write-Host ("ratchet: catalogue now={0} - no baseline captured, comparison skipped (run with -CatalogueBaseline first)." -f $catalogueNow)
+}
+else {
+    $captured = $null
+    try { $captured = (Get-Content $cataloguePath -Raw -ErrorAction Stop | ConvertFrom-Json).entries } catch { $captured = $null }
+    if ($null -eq $captured) {
+        Write-Host "ratchet: catalogue baseline file is unreadable - comparison skipped."
+    }
+    else {
+        Write-Host ("ratchet: catalogue base={0}   now={1}" -f $captured, $catalogueNow)
+        if ($catalogueNow -gt $captured) {
+            $failures.Add("THE MACHINE CATALOGUE GREW ($captured -> $catalogueNow entries) while this ran. Something loaded a plan without CONDUCTOR_STATE_HOME set and wrote into the operator's real history. Give every rig, fixture and out-of-process proof its own state home.")
+        }
     }
 }
 

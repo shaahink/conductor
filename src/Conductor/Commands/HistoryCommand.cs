@@ -83,7 +83,9 @@ public sealed class HistoryCommand : Command<HistoryCommand.Settings>
 
         if (settings.Json)
         {
-            var payload = new RunHistoryListJson(shown.Select(ToJson).ToList());
+            // KS1.3: the shaping lives in Core so the promise made to a parser can be tested without a
+            // console — and so `runs[]` can never again carry a run-shaped object with no run id.
+            var payload = RunHistoryPayload.List(shown);
             Console.WriteLine(JsonSerializer.Serialize(payload, RunHistoryJsonContext.Default.RunHistoryListJson));
             return 0;
         }
@@ -98,8 +100,16 @@ public sealed class HistoryCommand : Command<HistoryCommand.Settings>
             return 0;
         }
 
+        // KS1.3: the count of RUNS is the count of runs. Catalogue entries that do not open are still
+        // listed below, and still counted — separately, because calling them runs is the same conflation
+        // the payload just stopped making.
+        var runCount = rows.Count(r => r.Readable);
+        var brokenCount = rows.Count - runCount;
+        var broken = brokenCount == 0
+            ? ""
+            : $" · [grey]{brokenCount} {(brokenCount == 1 ? "entry that is not a run" : "entries that are not runs")}[/]";
         AnsiConsole.MarkupLine(
-            $"[bold aqua]Conductor[/] — history · [bold]{rows.Count}[/] {(rows.Count == 1 ? "run" : "runs")} · [grey]{Markup.Escape(root)}[/]");
+            $"[bold aqua]Conductor[/] — history · [bold]{runCount}[/] {(runCount == 1 ? "run" : "runs")}{broken} · [grey]{Markup.Escape(root)}[/]");
         AnsiConsole.MarkupLine("[grey]" + Markup.Escape(string.Join(' ', Cells(
             "RUN", "REPO", "PLAN", "STATUS", "CKPT", "SESS", "COST", "LAST"))) + "[/]");
 
@@ -112,7 +122,12 @@ public sealed class HistoryCommand : Command<HistoryCommand.Settings>
         {
             if (!r.Readable)
             {
-                var gone = Cells("-", r.RepoLabel, r.Plan, "gone", "-", "-", "-", "db missing");
+                // KS1.3: two words, because they are two facts. A deleted database is lost history; a
+                // path that is not a run database is a wrong index entry, and only one of them is a
+                // reason to reach for the backups.
+                var missing = r.Problem != RunDbProblem.NotARunDatabase;
+                var gone = Cells("-", r.RepoLabel, r.Plan, missing ? "gone" : "not a db", "-", "-", "-",
+                    missing ? "db gone" : "not a run");
                 AnsiConsole.MarkupLine("[grey]" + Markup.Escape(string.Join(' ', gone[..3])) + "[/] "
                     + "[red]" + Markup.Escape(gone[3]) + "[/] "
                     + "[grey]" + Markup.Escape(string.Join(' ', gone[4..])) + "[/]");
@@ -124,7 +139,9 @@ public sealed class HistoryCommand : Command<HistoryCommand.Settings>
                 run.ShortRunId,
                 r.RepoLabel,
                 string.IsNullOrEmpty(run.PlanName) ? r.Plan : run.PlanName,
-                run.Status,
+                // KS1.3: the reconciled word, not the column. A row nobody closed said `running` for
+                // ever, and this listing was the surface repeating it.
+                r.Status,
                 total == 0 ? "-" : $"{done}/{total}",
                 run.Sessions.ToString(CultureInfo.InvariantCulture),
                 "$" + run.CostUsd.ToString("0.00", CultureInfo.InvariantCulture),
@@ -133,7 +150,7 @@ public sealed class HistoryCommand : Command<HistoryCommand.Settings>
                 $"[aqua]{Markup.Escape(c[0])}[/]",
                 Markup.Escape(c[1]),
                 Markup.Escape(c[2]),
-                Colour(c[3], run.Status),
+                Colour(c[3], r.Status),
                 Markup.Escape(c[4]),
                 Markup.Escape(c[5]),
                 Markup.Escape(c[6]),
@@ -179,14 +196,21 @@ public sealed class HistoryCommand : Command<HistoryCommand.Settings>
 
         if (settings.Json)
         {
-            var payload = new RunHistoryDetailJson(ToJson(row), stages, checkpoints, sessions);
+            var payload = new RunHistoryDetailJson(
+                RunHistoryPayload.Item(row), stages, checkpoints, sessions);
             Console.WriteLine(JsonSerializer.Serialize(payload, RunHistoryJsonContext.Default.RunHistoryDetailJson));
             return 0;
         }
 
         var done = checkpoints.Count(c => string.Equals(c.Status, "DONE", StringComparison.Ordinal));
+        // KS1.3: when the reconciled word differs from the column, say both — the reader is owed the
+        // evidence for the claim, and "the row was never closed" is a different thing from a repair.
+        var reconciled = string.Equals(row.Status, run.Status, StringComparison.Ordinal)
+            ? ""
+            : $" [grey](row still says {Markup.Escape(run.Status)}; no engine holds this store)[/]";
         AnsiConsole.MarkupLine(
-            $"[bold aqua]{Markup.Escape(run.RunId)}[/] · [bold]{Markup.Escape(run.PlanName)}[/] · {StatusMarkup(run.Status)} [grey](read-only)[/]");
+            $"[bold aqua]{Markup.Escape(run.RunId)}[/] · [bold]{Markup.Escape(run.PlanName)}[/] · " +
+            $"{StatusMarkup(row.Status)}{reconciled} [grey](read-only)[/]");
         AnsiConsole.MarkupLine($"[grey]repo[/]     {Markup.Escape(run.Repo)}");
         // K3.3: the stamp, and it says when it cannot answer. A run older than schema v11 carries the
         // assembly version and nothing else, and "unrecorded" beside it is the honest label — the
@@ -359,22 +383,6 @@ public sealed class HistoryCommand : Command<HistoryCommand.Settings>
     }
 
     // ------------------------------------------------------------------ shaping
-
-    private static RunHistoryItemJson ToJson(RunHistoryRow r)
-    {
-        if (r.Run is null)
-            return new RunHistoryItemJson("", r.Repo, r.Plan, "unreadable", null, null, null, null, null,
-                0, 0, 0, 0m, 0, r.RunDbPath, r.Slug, r.ImportedFrom, Readable: false);
-        var (done, total) = RunHistory.CheckpointCounts(r);
-        return new RunHistoryItemJson(
-            r.Run.RunId, r.Run.Repo, string.IsNullOrEmpty(r.Run.PlanName) ? r.Plan : r.Run.PlanName,
-            r.Run.Status, r.Run.EngineStampText, r.Run.Branch,
-            r.Run.StartedUtc, r.Run.EndedUtc, r.Run.LastActivityUtc,
-            r.Run.Sessions, done, total, r.Run.CostUsd, r.Run.Tokens,
-            r.RunDbPath, r.Slug, r.ImportedFrom, Readable: true,
-            r.Run.EngineCommit, r.Run.EngineDirty, r.Run.Limits,
-            r.Run.LimitsAtLaunch, r.Run.LimitsReloads, r.Run.LimitsReloadedUtc);
-    }
 
     private static string StatusMarkup(string status) => status.ToLowerInvariant() switch
     {

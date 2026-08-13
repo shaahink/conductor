@@ -203,8 +203,13 @@ public sealed class KS1_1ReloadRunRowTests : IDisposable
             "engineCommit", "engineDirty", "limits",
         ];
         string[] added = ["limitsAtLaunch", "limitsReloads", "limitsReloadedUtc"];
+        // KS1.3 appended two more on exactly the same terms. The assertion GROWS rather than loosens:
+        // each era's keys stay pinned to their own positions, so a later checkpoint that reorders an
+        // earlier one's fields still fails here.
+        string[] addedByKs13 = ["storedStatus", "storeLive"];
         Assert.Equal(published, keys.Take(published.Length));
-        Assert.Equal(added, keys.Skip(published.Length));
+        Assert.Equal(added, keys.Skip(published.Length).Take(added.Length));
+        Assert.Equal(addedByKs13, keys.Skip(published.Length + added.Length));
 
         var atLaunch = doc.RootElement.GetProperty("runs")[0].GetProperty("limitsAtLaunch");
         Assert.Equal(LaunchCap, atLaunch.GetProperty("sessionTokenCap").GetInt64());
