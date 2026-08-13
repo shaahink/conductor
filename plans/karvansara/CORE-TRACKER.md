@@ -4,7 +4,7 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: KS0.1's engine work is landed and proven (ff88317, a53ec7b, 4ae0cf5, 6dd6a99). Import now dedups
+last: KS0.1's engine work is landed and proven (ff88317, a53ec7b, 4ae0cf5, 7d31d48). Import now dedups
   by RUN ID via StateDedup - live rig: the published engine grew a store 1-2-3 rows under three plans,
   this build 1-1-1. New verb `conductor catalogue [repair --apply]` backs up, then collapses. The real
   catalogue went 37 rows/25 distinct -> 26/25, nothing lost. Evidence:
