@@ -193,6 +193,43 @@ public sealed class KS0_1CatalogueRepairTests : IDisposable
         Assert.Equal("run-alpha", Assert.Single(RunIdsAt(firstDb)));
     }
 
+    /// <summary>
+    /// A home is repaired within its own walls. A catalogue is a list of ABSOLUTE paths and nothing
+    /// stops one pointing outside the home that holds it — copy a state home and its index still
+    /// names the original machine's stores, so a rehearsal "on a copy" plans deletions against the
+    /// live home. Measured on 2026-08-13 doing exactly that, which is why this test exists.
+    /// </summary>
+    [Fact]
+    public void AStoreOutsideTheHomeIsNeverWritten()
+    {
+        var repo = NewRepo("old-repo");
+        SeedLegacy(StateHome.LegacyDbPathFor(repo), "core plan", "run-alpha");
+        var insideDb = StateHome.Resolve(repo, "core plan", Root).RunDbPath;
+
+        // A second copy of the same history, catalogued into this home but living somewhere else -
+        // the shape a copied state home has, seen from the copy.
+        var elsewhere = Path.Combine(_tmp, "another-home", "runs", "far-away", StateHome.RunDbFileName);
+        Assert.NotNull(StateMigration.ImportLegacy(StateHome.LegacyDbPathFor(repo), elsewhere));
+        StateCatalogue.Upsert(Root, repo, "far plan", elsewhere, null);
+
+        var plan = StateRepair.Survey(Root);
+        var dup = Assert.Single(plan.Duplicates);
+
+        Assert.DoesNotContain(dup.RemoveFrom, p => StateMigration.PathsEqual(p, elsewhere));
+        Assert.Contains(plan.Deferred, d => d.Contains("outside this state home", StringComparison.Ordinal));
+
+        StateRepair.Apply(Root, plan, DateTimeOffset.UtcNow);
+        Assert.Equal("run-alpha", Assert.Single(RunIdsAt(elsewhere)));
+        Assert.Equal("run-alpha", Assert.Single(RunIdsAt(insideDb)));
+
+        // and it refuses even when handed a plan that names it outright
+        var forged = plan with
+        {
+            Duplicates = [dup with { RemoveFrom = [Path.GetFullPath(elsewhere)] }],
+        };
+        Assert.Throws<InvalidOperationException>(() => StateRepair.Apply(Root, forged, DateTimeOffset.UtcNow));
+    }
+
     /// <summary>Ownership, when nothing is live: the run goes to the store of its own plan, not to
     /// whichever store happened to be imported first.</summary>
     [Fact]

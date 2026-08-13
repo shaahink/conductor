@@ -57,6 +57,7 @@ public static class StateRepair
                 Plan: entry?.Plan ?? "",
                 FirstSeenUtc: entry?.FirstSeenUtc ?? DateTimeOffset.MaxValue,
                 Live: LooksLive(db),
+                Foreign: !IsUnder(root, db),
                 Runs: runs));
         }
 
@@ -89,13 +90,23 @@ public static class StateRepair
                     : (candidates.OrderBy(c => c.FirstSeenUtc)
                                  .ThenBy(c => c.Db, StringComparer.Ordinal).First(), "it was the first import");
 
+            var losers = candidates.Where(c => !StateMigration.PathsEqual(c.Db, owner.Db)).ToList();
+
+            // A home is repaired within its own walls. A catalogue is a list of absolute paths and
+            // nothing stops one pointing outside the home that holds it — a copied state home points
+            // at the ORIGINAL machine's stores, which is exactly how a rehearsal on a copy would
+            // quietly delete rows from the live home. Measured, on the copy that was meant to be safe.
+            var outside = losers.Where(c => c.Foreign).ToList();
+            foreach (var o in outside)
+                deferred.Add($"{Short(g.Key)} is also in {o.Db}, which is outside this state home; "
+                             + "not touching it - repair that home from its own root");
+
             duplicates.Add(new DuplicateRun(
                 RunId: g.Key,
                 PlanName: planName,
                 OwnerDb: owner.Db,
                 OwnerReason: why,
-                RemoveFrom: candidates.Where(c => !StateMigration.PathsEqual(c.Db, owner.Db))
-                                      .Select(c => c.Db).ToList()));
+                RemoveFrom: losers.Where(c => !c.Foreign).Select(c => c.Db).ToList()));
         }
 
         var rows = stores.Sum(s => s.Runs.Count);
@@ -127,9 +138,14 @@ public static class StateRepair
             return new RepairOutcome("", [], 0, ["nothing duplicated; nothing written"]);
 
         foreach (var db in byStore.Keys)
+        {
             if (plan.Stores.Any(s => StateMigration.PathsEqual(s.Db, db) && s.Live))
                 throw new InvalidOperationException(
                     $"refusing to write {db}: a live engine is using it");
+            if (!IsUnder(root, db))
+                throw new InvalidOperationException(
+                    $"refusing to write {db}: it is outside the state home being repaired ({root})");
+        }
 
         // Every backup first, then every write. A pass that backed up store 1, wrote store 1, and
         // then failed to back up store 2 would leave the operator holding half a safety net.
@@ -272,18 +288,35 @@ public static class StateRepair
     }
 
     private static string Short(string runId) => runId[..Math.Min(8, runId.Length)];
+
+    /// <summary>Is this store inside the home being repaired? The one containment rule the pass has,
+    /// and the reason a rehearsal on a copied state home cannot reach back into the real one.</summary>
+    internal static bool IsUnder(string root, string path)
+    {
+        try
+        {
+            var r = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                    + Path.DirectorySeparatorChar;
+            return Path.GetFullPath(path).StartsWith(r,
+                OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
+        }
+        catch (ArgumentException) { return false; }
+    }
 }
 
 /// <summary>One run row as the repair reads it.</summary>
 public sealed record StoreRun(string RunId, string PlanName, string Status, string StartedUtc);
 
 /// <summary>One catalogued store, and whether an engine is using it.</summary>
+/// <param name="Foreign">The catalogue names it but it does not live under the state home being
+/// repaired. It may still own a run; it is never written.</param>
 public sealed record StoreSurvey(
     string Db,
     string Slug,
     string Plan,
     DateTimeOffset FirstSeenUtc,
     bool Live,
+    bool Foreign,
     IReadOnlyList<StoreRun> Runs);
 
 /// <summary>A run that exists in more than one store, and where it is going to live.</summary>

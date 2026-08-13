@@ -59,6 +59,8 @@ app.Configure(c =>
         .WithDescription("Regenerate .conductor/REPORT.md from current state.");
     c.AddCommand<HistoryCommand>("history")
         .WithDescription("Browse past runs from this machine's catalogue, read-only. No argument lists; pass a run id, repo or slug to open one and replay its spine. Filters: --repo, --plan, --since, --limit, --json.");
+    c.AddCommand<CatalogueCommand>("catalogue")
+        .WithDescription("Show this machine's run stores, and repair a catalogue that holds the same run twice. No argument lists; 'repair' says what it would collapse and writes nothing; 'repair --apply' collapses it after backing every store it touches up. Never writes a store a live engine is using.");
     c.AddCommand<BudgetCommand>("budget")
         .WithDescription("Measure this repo's token budget from its own runs and prescribe the next one: session floor, wrap-up spend, cap, nudge-versus-floor, rollover rate. No argument profiles the current repo. Filters: --repo, --plan, --since, --json.");
     c.AddCommand<MoneyCommand>("money")
