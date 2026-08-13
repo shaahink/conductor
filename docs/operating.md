@@ -22,9 +22,10 @@ conductor approve -p <plan>           # let it past an owner-gated stage
 conductor pause  -p <plan>            # stop after the current session (safe)
 ```
 
-`-p <plan>` resolves as: `--plan` flag → `CONDUCTOR_PLAN` env → `./conductor.plan.json` in the cwd. In
-a repo scaffolded by `conductor init`, drop the flag entirely. In this repo the plans are under
-`plans/`, so pass e.g. `-p plans\conductor-maestro.plan.json`.
+`-p <plan>` resolves as: `--plan` flag → a single `*.plan.json` in the cwd (or `./plans/`) →
+`CONDUCTOR_PLAN` env. In a repo scaffolded by `conductor init`, drop the flag entirely. In this repo
+the plans are under `plans/` and there are several, so the cwd cannot decide and the variable still
+wins — pass e.g. `-p plans\conductor-maestro.plan.json` to be sure.
 
 Install the global command once with `powershell -File tools\install.ps1` (see README). Everything
 below assumes `conductor` is on PATH.

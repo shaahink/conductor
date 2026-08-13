@@ -6,9 +6,15 @@ try to duplicate every flag.
 
 ## Zero flags by default
 
-Every command resolves the plan from `-p`, else the `CONDUCTOR_PLAN` environment variable, else
-`./conductor.plan.json`. So `cd` into a repo that has one — which is what `conductor init` writes —
-and everything works with no `-p`.
+Every command resolves the plan from `-p`, else a single `*.plan.json` in the directory you are
+standing in (or in `./plans/`), else the `CONDUCTOR_PLAN` environment variable. So `cd` into a repo
+that has one — which is what `conductor init` writes — and everything works with no `-p`.
+
+The directory comes before the environment variable on purpose (bug #20): a session's environment
+carries `CONDUCTOR_PLAN` pointing at the run that spawned it, so a scratch rig launched from inside
+one used to drive that run's plan instead of its own. The override only happens when the directory
+names exactly ONE plan — a tree with several (this repo has eleven under `plans/`) still resolves
+through the variable — and it is never silent: the warning naming both files goes to stderr.
 
 ## Pre-flight
 

@@ -52,7 +52,9 @@ Era artefacts live one folder per era, as `plans/karvan/` does. Closed-era track
 - **`CONDUCTOR_PLAN` is set in a session's environment and points at THIS repo's plan.** A scratch
   working directory is not isolation: `conductor doctor` run from one still opened this repo's `run.db`
   and migrated it, after which every claim verb from the installed engine refused with
-  `schema version is newer`. Clear it and pass `--plan` explicitly.
+  `schema version is newer`. Clear it and pass `--plan` explicitly. KS0.3 put an unambiguous cwd ahead
+  of the variable and made the override warn, but the engine on PATH is the published one until the
+  owner reinstalls, so keep passing `--plan` in rigs.
 - **`conductor` on PATH is the published engine driving you, not your working tree.** Exercise your
   changes through `dotnet run --project src/Conductor -- <verb>`. Never run `tools/install.ps1`
   mid-era — the owner reinstalls between plans.
