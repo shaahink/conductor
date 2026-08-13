@@ -157,9 +157,46 @@ func (m *Model) handleKanbanDetailKey(key string) (tea.Model, tea.Cmd) {
 			m.kanban.status = ""
 		}
 		return m, nil
+	case readerOpenKey:
+		// KS2.8: open the WHOLE card in the reader — every block uncapped and unclipped. The pane's
+		// renderKanbanBlock holds each block to four rows so the card stays scannable; this is where
+		// the rest of a long context note actually lives.
+		title, body := m.kanbanReaderDoc()
+		return m.openReader(title, body, false), nil
 	}
 	m.kanbanDetailScroll(key)
 	return m, nil
+}
+
+// kanbanReaderDoc is the card as one plain document for the reader: head, every prompt block IN
+// FULL (the pane caps them at four rows each), the declared paths and the QA dial. Plain text on
+// purpose — prompt blocks are prose the reader soft-wraps, and styling here would put ANSI inside
+// the string the wrap measures.
+func (m Model) kanbanReaderDoc() (title, body string) {
+	b := m.kanban.blocks
+	if b == nil {
+		return "", ""
+	}
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("%s · %s · stage %s\n", b.TaskId, b.CheckpointId, b.StageId))
+	for _, blk := range b.Blocks {
+		sb.WriteString("\n── " + blk.Label + " ──\n")
+		if strings.TrimSpace(blk.Content) == "" {
+			sb.WriteString("(empty)\n")
+		} else {
+			sb.WriteString(blk.Content + "\n")
+		}
+	}
+	if task := m.kanbanDetailTask(); task != nil {
+		sb.WriteString("\n── declared paths ──\n")
+		if len(task.Paths) == 0 {
+			sb.WriteString("(none)\n")
+		} else {
+			sb.WriteString(strings.Join(task.Paths, "\n") + "\n")
+		}
+		sb.WriteString("\n── qa ──\n" + qaLabel(task.Qa) + "\n")
+	}
+	return "card " + b.TaskId + " · " + b.CheckpointId, sb.String()
 }
 
 // kanbanDetailScroll sizes the card viewport and applies the one scroll set to it, reporting whether
@@ -461,7 +498,7 @@ func (m Model) kanbanDetailTrailerAndHelp() (string, string) {
 				key("y") + subtleStyle.Render(" yes · ") + key("n") + subtleStyle.Render(" no") + status,
 			"y confirm · n cancel"
 	}
-	return status, "t title · c context · p paths · q qa · a advisor refine · s split · h hand off · esc back"
+	return status, "t title · c context · p paths · q qa · a advisor refine · s split · h hand off · z read · esc back"
 }
 
 // kanbanDetailBody is the card itself — head, every prompt block, the declared paths and the QA dial.
@@ -524,7 +561,10 @@ func (m Model) renderKanbanBlock(blk api.PromptBlockDto, width int) string {
 	var rows []string
 	for i, line := range strings.Split(content, "\n") {
 		if i >= 4 {
-			rows = append(rows, subtleStyle.Render("  …"))
+			// KS2.8: the cap row names the way in instead of only admitting something is hidden — a
+			// bare "…" said how much was gone and never how to see it (the silent-truncation shape
+			// this checkpoint converts).
+			rows = append(rows, subtleStyle.Render("  … "+readerOpenKey+" opens the whole card"))
 			break
 		}
 		rows = append(rows, textStyle.Render("  "+truncate(line, width-2)))

@@ -179,10 +179,39 @@ func (m *Model) handleTelegramKey(key string) (tea.Model, tea.Cmd) {
 		}
 	case "enter":
 		return m.telegramEnter()
+	case readerOpenKey:
+		// KS2.8: the two strings the engine can make arbitrarily long — doctor's delivery reason and
+		// the last poll error — read whole. Routed HERE, in the non-editing branch only: the edit
+		// branch consumes every printable char through typedChar, and a `z` typed into a chat id
+		// must reach the buffer, not the reader.
+		title, body := m.telegramReaderDoc()
+		return m.openReader(title, body, false), nil
 	}
 	m.telegram.vp = m.telegramViewport()
 	applyPaneScroll(&m.telegram.vp, key)
 	return m, nil
+}
+
+// telegramReaderDoc is this pane's long text as one plain document: the engine's delivery reason
+// (doctor's words, wrapped-but-whole) and the last poll error, which the pane renders as a single
+// width-clipped row. There is no Telegram message feed on the wire — telegramModel is a settings
+// form — so these two strings ARE the "telegram message" a reader can open.
+func (m Model) telegramReaderDoc() (title, body string) {
+	s := m.telegram.status
+	if s == nil {
+		return "", ""
+	}
+	var sb strings.Builder
+	if s.WillDeliverReason != nil && strings.TrimSpace(*s.WillDeliverReason) != "" {
+		sb.WriteString("delivery status\n\n" + *s.WillDeliverReason + "\n")
+	}
+	if s.LastError != nil && strings.TrimSpace(*s.LastError) != "" {
+		if sb.Len() > 0 {
+			sb.WriteString("\n")
+		}
+		sb.WriteString("last poll error\n\n" + *s.LastError + "\n")
+	}
+	return "telegram — status detail", sb.String()
 }
 
 // telegramViewport is this tab's `<surface>Viewport()` builder. Both the key handler and the
@@ -325,7 +354,7 @@ func (m Model) renderTelegramPane() (string, string) {
 	}
 	vp := m.telegramViewport()
 
-	help := "↑↓ field · enter edit/send · esc back"
+	help := "↑↓ field · enter edit/send · z read · esc back"
 	if m.telegram.editing {
 		if telegramFieldsList()[m.telegram.fieldIdx].Kind == tgTwoWay {
 			help = "←→ toggle · enter save · esc cancel"
@@ -333,7 +362,7 @@ func (m Model) renderTelegramPane() (string, string) {
 			help = "type · enter save · esc cancel"
 		}
 	} else if hint := paneScrollHint(vp, false); hint != "" {
-		help = "↑↓ field · " + hint + " · esc back"
+		help = "↑↓ field · " + hint + " · z read · esc back"
 	}
 	return vp.View(), help
 }

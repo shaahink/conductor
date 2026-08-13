@@ -70,6 +70,11 @@ func (m Model) View() tea.View {
 	tabs := m.renderTabStrip(m.width)
 
 	body, help := m.paneView()
+	if m.reader.open {
+		// The bottom bar speaks for the surface that owns the keys, and while the reader is up that
+		// is the reader.
+		help = m.readerBarHelp()
+	}
 	content := m.frameContent(body, layout.Content)
 
 	middle := content
@@ -83,6 +88,12 @@ func (m Model) View() tea.View {
 
 	// Transparent overlays — composited onto the live dashboard so the background stays visible.
 	switch {
+	case m.reader.open:
+		// KS2.8: the reader covers everything but the top bar and the bottom bar — full-screen for
+		// the text, while the last visible row stays the bottom bar (the frame invariant's shape,
+		// and where its keys are documented). Layered with the compositor like every float; the
+		// reader owns all keys, so no other overlay can be open at the same time.
+		screen = compositeAt(screen, m.renderReaderOverlay(), 1, 1)
 	case m.cmd == CmdHelp:
 		screen = compositeCenter(screen, m.renderHelpOverlay(), m.width, m.height)
 	case m.cmd == CmdPalette:
@@ -285,13 +296,11 @@ func wrapPlain(text string, w int) []string {
 	return lines
 }
 
-func truncateLines(s string, max int) string {
-	lines := strings.Split(s, "\n")
-	if len(lines) <= max || max < 1 {
-		return s
-	}
-	return strings.Join(lines[:max], "\n") + fmt.Sprintf("\n… %d more lines", len(lines)-max)
-}
+// truncateLines is gone (KS2.8). Its `… N more lines` row was one of the two silent-truncation
+// shapes this checkpoint set out to convert — it said how much was hidden and never how to see it —
+// and by the time the reader landed, KS2.7's viewport conversions had already retired its last
+// caller (the Templates preview). A helper whose whole behaviour is the defect stays deleted rather
+// than kept for the next surface to rediscover; the reader (`z`) is what a clipped body offers now.
 
 func indent(s, prefix string) string {
 	lines := strings.Split(s, "\n")

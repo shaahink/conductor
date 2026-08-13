@@ -143,3 +143,29 @@ optional, because a viewport cannot live in a tab whose scroll state is an integ
 hundred lines away — and the mnemonic map and help legend change in the same commit. K6.4 does the
 markdown unification and names anything left. Goldens are the regression net throughout, and any
 baseline is regenerated in a **separate rebaseline commit**.
+
+## Amendment — KS2.8: the reader
+
+KS2.7 finished decision 1 (every scrollable body a viewport, ratcheted by `scroll_intent_test.go`);
+KS2.8 adds the surface these decisions were pointing at all along — glow's actual job — as ONE
+full-screen overlay, `internal/tui/reader.go`, opened with `z` over any cell the pane clips
+(Kanban card blocks, bug details and ledger notes, session results and gate summaries, spine
+descriptions, Telegram's delivery reason and poll error, a process's last output). Each decision
+applies to it unchanged:
+
+- **Decision 1**: the reader's body is a `viewport.Model` and the offset is clamped in `Update`
+  (`readerViewport()` is a standard `<surface>Viewport()` builder; both the key handler and the
+  renderer call it). Position is the same clamped percent, in the overlay's head.
+- **Decision 2**: the pane-scroll set is the reader's ENTIRE key set, plus `esc`. Nothing else is
+  bound, so no mnemonic, global, or surface key can leak through it — and `esc` returns to the
+  exact sub-state it was opened from because opening it mutates nothing else.
+- **Decision 6**: a markdown body goes through `renderMarkdown` — memoised, theme-projected —
+  never a fresh `glamour.NewTermRenderer`.
+
+One deliberate deviation: the reader's constructor (`newReaderViewport`) sets `SoftWrap = true`,
+the only such viewport in the Face. The pane viewports carry pre-styled, pre-clipped rows, and
+re-wrapping a styled row breaks its columns; the reader is handed raw prose (or glamour output
+already wrapped to its width), and wrapping raw prose whole is the reason it exists. `z` joins the
+tab-mnemonic namespace in `TestTabMnemonicsAreUnique`, and `truncationSites`
+(`reader_test.go`) enumerates every clipping call site with its route to the full text, so a new
+truncation cannot ship silent.

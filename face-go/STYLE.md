@@ -67,8 +67,23 @@ one page; fewer clicks; transparent overlays; better colour and spacing.*
 
 ## Overlays — transparent, composited, rare
 
-- Only three things float: the **command palette** (list above the bottom bar), the **help** card, and
-  **toasts**. Everything else is a tab.
+- Only four things float: the **command palette** (list above the bottom bar), the **help** card,
+  **toasts** — and the **reader** (KS2.8, `reader.go`), the full-screen pager `z` opens over any
+  surface whose prose is clipped. Everything else is a tab.
+- **The reader is the sanctioned fourth float, and it is not a view** — which is why "never add a
+  full-screen modal for a view" still stands unbroken. A view answers a standing question, owns
+  data and fetches it; the reader owns nothing: it is handed one string at open, fetches nothing,
+  binds the one pane-scroll set plus `esc`, and `esc` returns to EXACTLY the surface and sub-state
+  it was opened from, because opening it mutates nothing but itself. It exists because a dense row
+  is the right rendering for a list and the wrong one for reading — the pane keeps its one-line
+  rows, and the whole text is one keypress away instead of silently cut. Its viewport is the ONE
+  `SoftWrap = true` in the Face (`newReaderViewport`): raw prose is the one body whose wrapping is
+  the point. Every pane viewport stays `SoftWrap = false` (`newPaneViewport`) — re-wrapping a
+  styled row breaks its columns. Markdown bodies go through `renderMarkdown`, so an agent's prose
+  arrives themed and memoised, never re-glamoured per frame. A surface that clips owner- or
+  agent-authored prose either advertises `z` or is enumerated with its route in
+  `truncationSites` (reader_test.go) — a truncation site that is not written down is how the
+  owner's "cannot read long texts" happened the first time.
 - Float with the lipgloss v2 **compositor**, never `lipgloss.Place` (which is opaque):
   `compositeAt / compositeCenter / compositeBottomRight` in `view.go` layer the box over the live
   dashboard so the background stays visible — that is the "transparent modal" the owner asked for.
@@ -91,6 +106,12 @@ one page; fewer clicks; transparent overlays; better colour and spacing.*
 - A tab that is *editing text or in an interactive sub-state* owns every key
   (`tabHandlesAllKeys`); otherwise the dashboard globals (`:` `i` `/` `p` `?` `q`, tab switches) win.
   Plan sub-sections switch with `←/→` (so `tab` stays free for main tabs).
+- `z` opens the **reader** over the active surface's clipped prose (see Overlays). It behaves as a
+  global — the same letter on every browse pane — so it is claimed in the tab-mnemonic namespace
+  (`TestTabMnemonicsAreUnique`) even though each surface binds it itself; inside a sub-state that
+  owns all keys it must be routed by that sub-state's handler, and in a text editor it stays a
+  typed character (the reader opens from Telegram's non-editing branch only, for exactly that
+  reason).
 - **Scrolling is one key set, everywhere, and it is settled — do not invent a fifth one.**
   `↓`/`j` `↑` by line, `d`/`u` by half page, `pgdn` `pgup` by page, `end`/`G` `home` to the ends.
   `k`, `b` and `g` are *tab mnemonics* and the mnemonic loop resolves before any pane handler ever

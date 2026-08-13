@@ -1015,6 +1015,14 @@ func TestGolden(t *testing.T) {
 			}}})
 			return m
 		}},
+		// KS2.8: the reader over a session result — themed markdown, soft-wrapped, percent in the
+		// head, the dashboard still visible above and below the box.
+		{"reader_markdown", func(m tea.Model) tea.Model {
+			m, _ = m.Update(keyMsg("s"))
+			m, _ = m.Update(specialKey(tea.KeyDown)) // session #11 — the fixture's markdown result
+			m, _ = m.Update(keyMsg("z"))
+			return m
+		}},
 		{"search", func(m tea.Model) tea.Model {
 			m, _ = m.Update(keyMsg("a")) // `/` searches the transcript — an Agent-tab affordance
 			m, _ = m.Update(keyMsg("/"))
@@ -1165,6 +1173,14 @@ func TestGoldenHomeDemo(t *testing.T) {
 	m, _ = m.Update(MsgStateUpdated{State: fixedState()})
 	m, _ = m.Update(MsgPlanLoaded{Plan: fixedPlan()})
 	checkGolden(t, "home_demo", stripANSI(m.View().Content))
+}
+
+// TestGoldenReaderLongNote80x24 pins KS2.8's second literal acceptance figure as a frame: a
+// 300-character single-line card note, open in the reader at the 80x24 floor, wrapped whole. The
+// invariants live in reader_test.go; this is the frame a human reads to see them.
+func TestGoldenReaderLongNote80x24(t *testing.T) {
+	m := readerOverKanbanNote(t, 80, 24, goldenReaderNote)
+	checkGolden(t, "reader_long_note_80x24", stripANSI(m.View().Content))
 }
 
 // TestGoldenSplash renders the Agent tab's empty state (no run attached) — still reachable with `a`

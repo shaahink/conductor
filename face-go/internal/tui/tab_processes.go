@@ -83,10 +83,39 @@ func (m Model) handleProcessesKey(key string) (tea.Model, tea.Cmd) {
 			m.processes.killing = true
 		}
 		return m, nil
+	case readerOpenKey:
+		// KS2.8: the selected row's `last:` line is agent output truncated to the pane; the reader
+		// is where it (and the row's own clipped purpose) reads whole.
+		title, body := m.processReaderDoc()
+		return m.openReader(title, body, false), nil
 	}
 	m.processes.vp = m.processesViewport()
 	applyPaneScroll(&m.processes.vp, key)
 	return m, nil
+}
+
+// processReaderDoc is the selected process as one plain document: the row's cells unclipped, and
+// the full last-output line the pane truncates.
+func (m Model) processReaderDoc() (title, body string) {
+	p, ok := m.selectedProcess()
+	if !ok {
+		return "", ""
+	}
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("pid %d · %s\n", p.Pid, p.Purpose))
+	state := "exited"
+	if p.Alive {
+		state = "alive"
+	}
+	stage := "-"
+	if p.StageId != nil {
+		stage = *p.StageId
+	}
+	sb.WriteString(fmt.Sprintf("\nstage %s · %s · %s\n", stage, state, formatProcessRuntime(p)))
+	if p.LastOutputLine != nil && strings.TrimSpace(*p.LastOutputLine) != "" {
+		sb.WriteString("\nlast output\n\n" + *p.LastOutputLine + "\n")
+	}
+	return fmt.Sprintf("process %d", p.Pid), sb.String()
 }
 
 // processesViewport is this tab's `<surface>Viewport()` builder — the same construction Report uses,
@@ -127,9 +156,9 @@ func (m Model) renderProcessesPane() (string, string) {
 	if m.processes.killing {
 		return vp.View(), "y confirm · n cancel"
 	}
-	help := "↑↓ select"
+	help := "↑↓ select · z read"
 	if p, ok := m.selectedProcess(); ok && p.Alive {
-		help = "↑↓ select · x kill"
+		help = "↑↓ select · x kill · z read"
 	}
 	if hint := paneScrollHint(vp, false); hint != "" {
 		help += " · " + hint

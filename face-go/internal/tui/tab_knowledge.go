@@ -81,6 +81,12 @@ func (m Model) handleKnowledgeKey(key string) (tea.Model, tea.Cmd) {
 		return m.beginKnowledgeInput(knowledgeBug), nil
 	case "x":
 		return m.beginKnowledgeInput(knowledgeResolve), nil
+	case readerOpenKey:
+		// KS2.8: the pane's rows are one line each by design (a ledger is scanned, not read), so a
+		// bug detail or a multi-line note is truncated with no way in. The reader opens the whole
+		// ledger — every bug detail, evidence path and note in full, real newlines restored.
+		title, body := m.knowledgeReaderDoc()
+		return m.openReader(title, body, false), nil
 	}
 	// Size and content FIRST, then move (adr/0006 decision 1) — see handleReportKey. This surface is
 	// the one the owner could not read: before K6.2 it bound `up` and `down`/`j` only, could not page,
@@ -166,9 +172,54 @@ func (m Model) renderKnowledgePane() (string, string) {
 		return shown + input, "type · enter submit · esc cancel"
 	}
 
-	help := fmt.Sprintf("%d bugs · %d evidence · %d ledger · n note · b bug · x resolve · %s · r refresh",
+	help := fmt.Sprintf("%d bugs · %d evidence · %d ledger · n note · b bug · x resolve · z read · %s · r refresh",
 		len(m.data.Bugs), len(m.data.Evidence), len(m.data.Ledger), paneScrollHelp(vp))
 	return shown, help
+}
+
+// knowledgeReaderDoc is the whole Knowledge surface as one plain document for the reader: the same
+// three sections the pane shows, with nothing held to one row. The pane flattens every "\n" in a
+// note or a bug detail into a space so its rows stay rows; here the newlines are the content.
+func (m Model) knowledgeReaderDoc() (title, body string) {
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("Open bugs (%d)\n", len(m.data.Bugs)))
+	for _, b := range m.data.Bugs {
+		stage := ""
+		if b.StageId != nil && *b.StageId != "" {
+			stage = ", " + *b.StageId
+		}
+		sb.WriteString(fmt.Sprintf("\n#%d (%s%s) %s\n", b.Id, b.Severity, stage, b.Title))
+		if b.Detail != nil && strings.TrimSpace(*b.Detail) != "" {
+			sb.WriteString(*b.Detail + "\n")
+		}
+	}
+	total := m.data.EvidenceAll
+	if total < len(m.data.Evidence) {
+		total = len(m.data.Evidence)
+	}
+	sb.WriteString(fmt.Sprintf("\nEvidence (%d)\n", total))
+	for _, a := range m.data.Evidence {
+		where := ""
+		if a.CheckpointId != nil && *a.CheckpointId != "" {
+			where = " · " + *a.CheckpointId
+		}
+		sb.WriteString(fmt.Sprintf("\n[%s] %s\n%s · %s%s\n", a.Kind, a.Path, evidenceSize(a.Bytes), a.Source, where))
+	}
+	sb.WriteString(fmt.Sprintf("\nKnowledge ledger (%d)\n", len(m.data.Ledger)))
+	for _, e := range m.data.Ledger {
+		where := ""
+		if e.SessionNumber != nil {
+			where = fmt.Sprintf(" (s%d", *e.SessionNumber)
+			if e.StageId != nil && *e.StageId != "" {
+				where += "/" + *e.StageId
+			}
+			where += ")"
+		} else if e.StageId != nil && *e.StageId != "" {
+			where = " (" + *e.StageId + ")"
+		}
+		sb.WriteString("\n[" + e.Kind + "]" + where + "\n" + e.Content + "\n")
+	}
+	return "knowledge — the full ledger", sb.String()
 }
 
 // knowledgeLines builds the full styled body (bugs section, then ledger) as a flat slice so the pane

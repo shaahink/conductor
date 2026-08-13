@@ -506,8 +506,13 @@ func (m Model) renderHelpOverlay() string {
 		// `k` here would document a key that the mnemonic loop swallows before any pane sees it.
 		"  " + key("\\") + " collapse sidebar  " + key("↑↓/j d/u pgdn G/home") + " scroll · " + key("w") +
 		" owner queue\n\n" +
+		// KS2.8: the reader's open key rides the Global row rather than costing a row of its own —
+		// the card must not outgrow the 80x24 floor — and its pager keys are the scroll set the
+		// Actions row above already documents (the reader binds exactly that set and no other,
+		// pinned by TestReaderBindsOnlyThePaneScrollSet).
 		accentStyle.Render("Global") + "\n" +
-		"  " + key("q") + " quit   " + key("esc") + " close / cancel   " + key("?") + " this help"
+		"  " + key("q") + " quit   " + key("esc") + " close / cancel   " + key("?") + " this help   " +
+		key(readerOpenKey) + " read long text"
 
 	title := accentStyle.Render("◆ conductor") + subtleStyle.Render("  ·  keys")
 	return lipgloss.NewStyle().

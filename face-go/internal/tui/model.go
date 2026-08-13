@@ -163,6 +163,11 @@ type Model struct {
 	cmd              CmdMode
 	sidebarCollapsed bool
 
+	// reader is the one full-screen read-only overlay (KS2.8, reader.go). It sits here beside `cmd`
+	// because it floats over every tab the way the command bar does — it is not a tab and holds no
+	// tab's state, which is what lets `esc` return to the exact sub-state it was opened from.
+	reader readerModel
+
 	transcript widgets.TranscriptModel
 	sidebar    widgets.SidebarModel
 

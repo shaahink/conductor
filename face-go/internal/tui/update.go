@@ -37,6 +37,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.cmd != CmdNone {
 			return m.handleCmdKey(key)
 		}
+		// KS2.8: the reader is peeled at the same precedence as the command bar — BEFORE the esc
+		// ladder in handleKey and before `q` can reach the quit arm. Without this, `q` inside a
+		// 2000-line document kills the Face and `esc` drops the user two layers instead of one.
+		if m.reader.open {
+			return m.handleReaderKey(key)
+		}
 		if m.agent.searchActive {
 			return m.handleSearchKey(key)
 		}
@@ -529,6 +535,11 @@ func (m Model) handleMouseWheel(msg tea.MouseWheelMsg) (tea.Model, tea.Cmd) {
 	key := "down"
 	if up {
 		key = "up"
+	}
+	// The reader floats over whatever tab is under it, so the wheel belongs to it while it is up —
+	// same precedence as the key path.
+	if m.reader.open {
+		return m.handleReaderKey(key)
 	}
 	switch m.tab {
 	case TabAgent:

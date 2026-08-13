@@ -119,6 +119,11 @@ func (m Model) handleTimelineKey(key string) (tea.Model, tea.Cmd) {
 	case "r":
 		m.history.loading, m.history.err = true, ""
 		return m, m.cmdFetchTimeline()
+	case readerOpenKey:
+		// KS2.8: the row truncates the description and the detail pane width-clips it; the reader is
+		// where a long gate line or a stall reason is read whole.
+		title, body := m.spineReaderDoc()
+		return m.openReader(title, body, false), nil
 	case "up", "k":
 		if m.history.selected > 0 {
 			m.history.selected--
@@ -209,11 +214,35 @@ func (m Model) renderTimelineView() (string, string) {
 	// Just the count. The "· live" this used to carry now lives on the rule, where it marks WHERE
 	// live begins instead of restating it under a pane that already said it.
 	count := subtleStyle.Render(fmt.Sprintf("%d events", len(m.history.entries)))
-	help := "↑↓ select · r refresh"
+	help := "↑↓ select · z read · r refresh"
 	if hint := paneScrollHint(vp, false); hint != "" {
-		help = "↑↓ select · " + hint + " · r refresh"
+		help = "↑↓ select · " + hint + " · z read · r refresh"
 	}
 	return vp.View() + "\n" + count + "\n" + m.timelineDetail(), help
+}
+
+// spineReaderDoc is the selected spine entry as one plain document for the reader: the full
+// description — the wire's one long-text field here — over the same meta the detail line carries.
+func (m Model) spineReaderDoc() (title, body string) {
+	if m.history.selected >= len(m.history.entries) {
+		return "", ""
+	}
+	e := m.history.entries[m.history.selected]
+	var meta []string
+	if e.StageId != nil && *e.StageId != "" {
+		meta = append(meta, "stage "+*e.StageId)
+	}
+	if e.SessionNumber != nil {
+		meta = append(meta, fmt.Sprintf("session #%d", *e.SessionNumber))
+	}
+	if e.Outcome != nil && *e.Outcome != "" {
+		meta = append(meta, "outcome "+*e.Outcome)
+	}
+	if e.CostUsd != nil && *e.CostUsd > 0 {
+		meta = append(meta, fmt.Sprintf("$%.2f", *e.CostUsd))
+	}
+	meta = append(meta, timelineStamp(e.Utc))
+	return "spine · " + e.Kind, e.Description + "\n\n" + strings.Join(meta, " · ") + "\n"
 }
 
 // timelineLiveBoundary is the index of the first event that arrived AFTER this Face attached, or -1
@@ -375,6 +404,11 @@ func (m Model) sessionWhen(s api.SessionRowDto) string {
 // the one pane-scroll set — the same split the spine uses, applied after this view's own keys.
 func (m Model) handleSessionsKey(key string) (tea.Model, tea.Cmd) {
 	switch key {
+	case readerOpenKey:
+		// KS2.8: the session's two long-text cells — the gate summary and the agent's own result
+		// summary (markdown) — read whole, soft-wrapped, in the theme's markdown.
+		title, body := m.sessionReaderDoc()
+		return m.openReader(title, body, true), nil
 	case "up", "k":
 		if m.history.sessionSelected > 0 {
 			m.history.sessionSelected--
@@ -418,11 +452,42 @@ func (m Model) renderSessionsView() (string, string) {
 		return subtleStyle.Render("(no sessions yet — they appear as the engine runs)"), ""
 	}
 	vp := m.historySessionsViewport()
-	help := "↑↓ select"
+	help := "↑↓ select · z read"
 	if hint := paneScrollHint(vp, false); hint != "" {
-		help = "↑↓ select · " + hint
+		help = "↑↓ select · " + hint + " · z read"
 	}
 	return vp.View(), help
+}
+
+// sessionReaderDoc is the selected session as one MARKDOWN document for the reader. Markdown
+// because its longest cell — the result summary — is markdown the agent wrote (the pane already
+// renders it through renderMarkdown); the gate summary and commits ride along as sections, so every
+// long cell this row owns is one `z` away.
+func (m Model) sessionReaderDoc() (title, body string) {
+	if m.history.sessionSelected >= len(m.data.Sessions) {
+		return "", ""
+	}
+	s := m.data.Sessions[m.history.sessionSelected]
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("# Session #%d — %s %s\n\n", s.Number, s.StageId, s.Kind))
+	sb.WriteString(fmt.Sprintf("attempt %d, %d resumes", s.Attempt, s.ResumeCount))
+	if when := m.sessionWhen(s); when != "" {
+		sb.WriteString(" · " + when)
+	}
+	sb.WriteString("\n")
+	if s.GateSummary != nil && strings.TrimSpace(*s.GateSummary) != "" {
+		sb.WriteString("\n## Gates\n\n" + *s.GateSummary + "\n")
+	}
+	if len(s.Commits) > 0 {
+		sb.WriteString("\n## Commits\n\n")
+		for _, c := range s.Commits {
+			sb.WriteString("- " + c + "\n")
+		}
+	}
+	if s.ResultSummary != nil && strings.TrimSpace(*s.ResultSummary) != "" {
+		sb.WriteString("\n## Result\n\n" + *s.ResultSummary + "\n")
+	}
+	return fmt.Sprintf("session #%d · %s %s", s.Number, s.StageId, s.Kind), sb.String()
 }
 
 // sessionsLines is every session row followed by the selected session's detail, ready for the

@@ -186,6 +186,15 @@ func TestTabMnemonicsAreUnique(t *testing.T) {
 		}
 		seen[k] = "folded → " + tabNames[tab]
 	}
+	// KS2.8: the reader's open key is bound by the browse surfaces themselves, but it behaves as a
+	// global — the same letter on every pane — so it joins the namespace: a future tab mnemonic on
+	// this letter would shadow it everywhere (the mnemonic loop resolves first), and a reader key on
+	// a tab mnemonic would never be reachable at all.
+	if prev, dup := seen[readerOpenKey]; dup {
+		t.Errorf("the reader's open key %q is already %s — the mnemonic loop resolves first, so the "+
+			"reader would be unreachable from every pane", readerOpenKey, prev)
+	}
+	seen[readerOpenKey] = "the reader"
 }
 
 // U2.2 moved the Plan editor's delete off `d` when the Dev tab claimed `d` globally. SF1.2 deleted
