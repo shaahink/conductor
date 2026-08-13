@@ -23,11 +23,11 @@
    ○ Benchmark the warm…   │  ── ✎ qa ──────────────────────────────────────────────────────────────────      
    ○ conductor chat ove…   │    inherit — the stage/plan dial decides (press q to override)                   
                            │                                                                                  
+                           │                                                                                  
                            │  proposal from fake-advisor                                                      
                            │    title:   Wire RunDb.GetLastPassingGateResult (with eviction test)             
                            │    context: Start from the smallest end-to-end slice.                            
                            │    nothing is saved until you confirm                                            
-                           │                                                                                  
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  

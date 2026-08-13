@@ -31,4 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ navigate · x kill                              
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ select · x kill                                

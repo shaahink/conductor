@@ -7,11 +7,11 @@
  ● F7 2/5 Gate … 1× $0.30  │  10:03:40 ✗ gate test: FAIL (4100ms)                                             
    ✓ F7.1 Plan import      │  10:03:55 ▸ session #11 finished: NeedsRetry  $0.18                              
    ✓ F7.2 Re-import diff   │  10:07:00 ⚠ needs human: verifier score 74 < 80                                  
-   ● F7.3 Truth-gate tier  │  5 events                                                                        
- ○ F8 0/4 conductor chat…  │  ──────────────────────────────────────────────────────────────────────────────  
-                           │  ◆ stage                                                                         
- ── GATES ──               │  stage F7 entered                                                                
-   ✓ build                 │  stage F7 · 10:00 · 8m ago                                                       
+   ● F7.3 Truth-gate tier  │                                                                                  
+ ○ F8 0/4 conductor chat…  │                                                                                  
+                           │                                                                                  
+ ── GATES ──               │                                                                                  
+   ✓ build                 │                                                                                  
    ● test 4s               │                                                                                  
    ○ lint                  │                                                                                  
                            │                                                                                  
@@ -24,11 +24,11 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
+                           │  5 events                                                                        
+                           │  ──────────────────────────────────────────────────────────────────────────────  
+                           │  ◆ stage                                                                         
+                           │  stage F7 entered                                                                
+                           │  stage F7 · 10:00 · 8m ago                                                       
                            │                                                                                  
                            │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ navigate · r refresh · ←/→ view                
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ select · r refresh · ←/→ view                  

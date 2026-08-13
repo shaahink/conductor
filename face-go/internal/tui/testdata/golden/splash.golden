@@ -31,4 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ scroll · f fold · T thinking · c raw · end tail
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   f fold · T thinking · c raw                       

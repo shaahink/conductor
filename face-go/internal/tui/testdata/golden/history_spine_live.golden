@@ -2,17 +2,17 @@
  h a  s History  o e p r k g b                                                                                
                            │                                                                                  
  ▶ PLAN  n× attempts       │  ○ Sessions s   ● Spine t                                                        
- ✓ F0 3/3 Foundations      │  10:00:05 ▸ session #11 Deliver started                                          
- ✓ F6 5/5 Ink TUI v1       │  10:03:40 ✗ gate test: FAIL (4100ms)                                             
- ● F7 2/5 Gate … 1× $0.30  │  10:03:55 ▸ session #11 finished: NeedsRetry  $0.18                              
-   ✓ F7.1 Plan import      │  10:07:00 ⚠ needs human: verifier score 74 < 80                                  
-   ✓ F7.2 Re-import diff   │  ──────────────────────────────────── live ────────────────────────────────────  
-   ● F7.3 Truth-gate tier  │  10:09:00 ▸ session #12 Deliver started                                          
- ○ F8 0/4 conductor chat…  │  6 events                                                                        
-                           │  ──────────────────────────────────────────────────────────────────────────────  
- ── GATES ──               │  ◆ stage                                                                         
-   ✓ build                 │  stage F7 entered                                                                
-   ● test 4s               │  stage F7 · 10:00 · 8m ago                                                       
+ ✓ F0 3/3 Foundations      │  10:00:00 ◆ stage F7 entered                                                     
+ ✓ F6 5/5 Ink TUI v1       │  10:00:05 ▸ session #11 Deliver started                                          
+ ● F7 2/5 Gate … 1× $0.30  │  10:03:40 ✗ gate test: FAIL (4100ms)                                             
+   ✓ F7.1 Plan import      │  10:03:55 ▸ session #11 finished: NeedsRetry  $0.18                              
+   ✓ F7.2 Re-import diff   │  10:07:00 ⚠ needs human: verifier score 74 < 80                                  
+   ● F7.3 Truth-gate tier  │  ──────────────────────────────────── live ────────────────────────────────────  
+ ○ F8 0/4 conductor chat…  │  10:09:00 ▸ session #12 Deliver started                                          
+                           │                                                                                  
+ ── GATES ──               │                                                                                  
+   ✓ build                 │                                                                                  
+   ● test 4s               │                                                                                  
    ○ lint                  │                                                                                  
                            │                                                                                  
  ── TASKS ──               │                                                                                  
@@ -24,11 +24,11 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
+                           │  6 events                                                                        
+                           │  ──────────────────────────────────────────────────────────────────────────────  
+                           │  ◆ stage                                                                         
+                           │  stage F7 entered                                                                
+                           │  stage F7 · 10:00 · 8m ago                                                       
                            │                                                                                  
                            │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
-                           │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ navigate · r refresh · ←/→ view                
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ select · r refresh · ←/→ view                  

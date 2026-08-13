@@ -27,8 +27,8 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
-                           │                                                                                  
                            │  ──────────────────────────────────────────────────────────────────────────────  
                            │  opus-4-8 · 41s · ↑3.4k ↓1.9k +800r · $0.12                                      
                            │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ scroll · f fold · T thinking · c raw · end tail
+                           │                                                                                  
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ scroll · f fold · T thinking · c raw           

@@ -7,7 +7,7 @@
  ● F7 2/5 Gate … 1× $0.30  │  {"type":"system","subtype":"init","session_id":"s12","model":"deepseek-v4-pro…  
    ✓ F7.1 Plan import      │  {"type":"assistant","message":{"content":[{"type":"text","text":"Examining Ga…  
    ✓ F7.2 Re-import diff   │  {"type":"result","subtype":"success","total_cost_usd":0.12,"num_turns":4}       
-   ● F7.3 Truth-gate tier  │  3 raw lines · ● live tail                                                       
+   ● F7.3 Truth-gate tier  │                                                                                  
  ○ F8 0/4 conductor chat…  │                                                                                  
                            │                                                                                  
  ── GATES ──               │                                                                                  
@@ -28,7 +28,7 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
+                           │  3 raw lines · ● live tail                                                       
                            │                                                                                  
                            │                                                                                  
-                           │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ scroll · pgup/pgdn · home/end · c parsed       
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ scroll · c parsed                              

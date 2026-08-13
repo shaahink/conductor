@@ -18,13 +18,13 @@
  ── TASKS ──               │    conductor note / bg / task --done                                             
    ✓ Add truth-tier con…   │                                                                                  
    ● Wire RunDb.GetLast…   │  ── ✎ declared paths ──────────────────────────────────────────────────────      
-   ○ Cache gate results…   │    src/Conductor/Core/Gating/GateCache.cs · docs/CONDUCTOR-VNEXT-PLAN.md         
-   ○ Add SkipIfFresh ti…   │                                                                                  
-   ○ Benchmark the warm…   │  ── ✎ qa ──────────────────────────────────────────────────────────────────      
-   ○ conductor chat ove…   │    inherit — the stage/plan dial decides (press q to override)                   
+   ○ Cache gate results…   │                                                                                  
+   ○ Add SkipIfFresh ti…   │  ✎ extra context                                                                 
+   ○ Benchmark the warm…   │  cover the cache-miss path                                                       
+   ○ conductor chat ove…   │                                                                                  
                            │                                                                                  
-                           │  ✎ extra context                                                                 
-                           │  cover the cache-miss path                                                       
+                           │                                                                                  
+                           │                                                                                  
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
