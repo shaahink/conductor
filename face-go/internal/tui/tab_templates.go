@@ -30,6 +30,13 @@ type templatesModel struct {
 	// session prompt — the longest single document this Face shows, and the one an owner most needs to
 	// read to the end before a run starts — was readable only down to its first ~25 lines.
 	previewVp viewport.Model
+	// listVp scrolls the template LIST. KS2.7 first exempted this surface with the reason "bounded by
+	// construction, never a long body" — which is measurably false: templates.List returns the seven
+	// fixed session templates PLUS every `*.md` under <planDir>/personas, a directory the owner fills.
+	// At 80x24 with twenty personas the list was 27 rows in an 18-row pane, the tail clipped in
+	// silence and `end` moving nothing. `selected` stays a SELECTION cursor; the viewport follows it
+	// through ensurePaneRow and takes over at the ends of the list.
+	listVp viewport.Model
 }
 
 // updateTemplates handles the compiled-preview result — the tab's one async message.
@@ -101,12 +108,18 @@ func (m Model) handleTemplatesKey(key string) (tea.Model, tea.Cmd) {
 		m.tmpl.previewOn, m.tmpl.preview, m.tmpl.previewErr = true, nil, ""
 		return m, m.cmdFetchPromptPreview(m.currentStageId(), previewKinds[m.tmpl.previewKind])
 	case "up", "k":
+		// The cursor falls through at its ends (panescroll.go, ensurePaneRow): it returns only when
+		// it actually MOVED, so on the first row `up` scrolls the list instead of dying there.
 		if m.tmpl.selected > 0 {
 			m.tmpl.selected--
+			m.tmpl.listVp = m.followTemplatesSelection()
+			return m, nil
 		}
 	case "down", "j":
 		if m.tmpl.selected < len(m.tmpl.entries)-1 {
 			m.tmpl.selected++
+			m.tmpl.listVp = m.followTemplatesSelection()
+			return m, nil
 		}
 	case "enter":
 		if m.tmpl.selected < len(m.tmpl.entries) {
@@ -118,13 +131,18 @@ func (m Model) handleTemplatesKey(key string) (tea.Model, tea.Cmd) {
 			}
 			m.tmpl.editor = widgets.NewTextArea(content, w, max(3, m.paneRows()-2))
 		}
+		return m, nil
 	}
+	// Size and content FIRST, then move — the clamp lives at the mutation (adr/0006 §1).
+	m.tmpl.listVp = m.templatesListViewport()
+	applyPaneScroll(&m.tmpl.listVp, key)
 	return m, nil
 }
 
-// renderTemplatesPane: template list on the left; editor or compiled-prompt preview on the right —
-// all on one page.
-func (m Model) renderTemplatesPane() (string, string) {
+// templatesListBody is the left-hand list: one row per entry, padded to the column width PLAIN and
+// styled after (STYLE.md), so the viewport's lines are the exact rows renderTemplatesPane used to
+// join by hand and the column beside it does not shift.
+func (m Model) templatesListBody() string {
 	var left []string
 	if len(m.tmpl.entries) == 0 {
 		left = append(left, subtleStyle.Render("(no plan dir yet)"))
@@ -140,7 +158,35 @@ func (m Model) renderTemplatesPane() (string, string) {
 		}
 		left = append(left, row)
 	}
-	leftCol := lipgloss.NewStyle().Width(26).Render(strings.Join(left, "\n"))
+	return lipgloss.NewStyle().Width(templatesListCols).Render(strings.Join(left, "\n"))
+}
+
+// templatesListCols is the width of the template list column, and the number renderTemplatesPane
+// used to spell out twice.
+const templatesListCols = 26
+
+// templatesListViewport is the list's `<surface>Viewport()` builder — the one both the key handler
+// and the renderer call.
+func (m Model) templatesListViewport() viewport.Model {
+	return loadPaneViewport(m.tmpl.listVp, strings.Split(m.templatesListBody(), "\n"),
+		templatesListCols, m.paneRows(), false)
+}
+
+// followTemplatesSelection is the builder plus the cursor follow, called ONLY from the arms that
+// moved the cursor (see ensurePaneRow: calling it from the builder would let every frame re-assert
+// the cursor and silently undo `end`). One entry renders as exactly one row, so the cursor IS the
+// row index.
+func (m Model) followTemplatesSelection() viewport.Model {
+	vp := m.templatesListViewport()
+	ensurePaneRow(&vp, m.tmpl.selected)
+	return vp
+}
+
+// renderTemplatesPane: template list on the left; editor or compiled-prompt preview on the right —
+// all on one page.
+func (m Model) renderTemplatesPane() (string, string) {
+	listVp := m.templatesListViewport()
+	leftCol := listVp.View()
 
 	var right string
 	switch {
@@ -159,6 +205,11 @@ func (m Model) renderTemplatesPane() (string, string) {
 
 	body := lipgloss.JoinHorizontal(lipgloss.Top, leftCol, subtleStyle.Render("│ "), rightCol)
 	help := "↑↓ select · enter edit · v preview"
+	if hint := paneScrollHint(listVp, false); hint != "" {
+		// `arrows: false` — ↑↓ walk the SELECTION here and only reach the pane at the list's ends, so
+		// naming them as the scroll keys would be the same lie as the tab help that claimed `k`.
+		help += " · " + hint
+	}
 	switch {
 	case m.tmpl.previewOn:
 		help = "←→ kind · " + paneScrollHelp(m.templatesPreviewViewport()) + " · v/esc close"

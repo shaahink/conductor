@@ -39,6 +39,12 @@ func (t *TextArea) SetValue(content string) {
 // Value returns the current buffer with lines rejoined by "\n".
 func (t TextArea) Value() string { return strings.Join(t.lines, "\n") }
 
+// Caret is the caret's (row, column). It exists so a caller can tell an IGNORED key from a key that
+// did something: Update swallows every key it is handed, and a caller that renders this editor over
+// a scrollable body needs to know when ↑/↓/pgup/pgdn/home/end have stopped moving the caret so the
+// key can fall through to that body instead of dying at the buffer's edge (tab_kanban_detail.go).
+func (t TextArea) Caret() (row, col int) { return t.cy, t.cx }
+
 func (t *TextArea) SetSize(width, height int) {
 	t.Width, t.Height = width, height
 	t.clampScroll()

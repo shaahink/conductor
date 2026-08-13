@@ -80,6 +80,7 @@ type scrollSurface struct {
 	name string
 	open func(*testing.T) Model
 	vp   func(Model) viewport.Model
+	raw  func(Model) viewport.Model
 }
 
 // scrollSurfaces is every surface KS2.7 put on the one scroll idiom, plus the three K6.2/K6.4
@@ -95,9 +96,10 @@ func scrollSurfaces() []scrollSurface {
 		out = append(out, scrollSurface{
 			name: c.name,
 			vp:   c.vp,
+			raw:  c.raw,
 			open: func(t *testing.T) Model {
 				t.Helper()
-				m := c.grow(newGoldenModel(120, 30))
+				m := c.grow(t, newGoldenModel(120, 30))
 				for _, k := range c.keys {
 					tm, _ := m.Update(keyMsg(k))
 					m = tm
@@ -137,6 +139,41 @@ func TestPaneOffsetIsClampedInUpdateNotInTheRenderer(t *testing.T) {
 	}
 	if got, max := k.knowledge.vp.YOffset(), k.knowledgeViewport().TotalLineCount()-k.knowledgeViewport().Height(); got > max {
 		t.Errorf("Knowledge offset is %d against a body that stops at %d — Update let it run", got, max)
+	}
+
+	// KS2.7 extends the same measurement to every converted surface, through the REAL router — and
+	// reads the STORED viewport (`raw`) rather than the builder's copy. That distinction is the whole
+	// test: `<surface>Viewport()` re-sizes and re-loads on every call, so it re-clamps, and an offset
+	// that only Update failed to bound would look perfectly sane through the builder while the field
+	// on the model ran to 400. Reading the field is how K6.1 caught it the first time.
+	for _, tc := range scrollSurfaces() {
+		t.Run(tc.name, func(t *testing.T) {
+			m := tc.open(t)
+			for i := 0; i < 400; i++ {
+				m = press(m, "down")
+			}
+			built := tc.vp(m)
+			stored := tc.raw(m)
+			limit := built.TotalLineCount() - built.Height()
+			if got := stored.YOffset(); got > limit {
+				t.Errorf("%s: the STORED offset is %d against a body that stops at %d — the clamp is "+
+					"in the renderer, not in Update", tc.name, got, limit)
+			}
+			if stored.YOffset() == 0 {
+				t.Errorf("%s: 400 downs left the stored offset at 0 — the key never reached the field, "+
+					"so this measures nothing", tc.name)
+			}
+			// …and the RENDERER may not write it back either. A View that moved the offset would make
+			// the position depend on how often the frame was drawn, which is the same defect wearing
+			// the opposite sign.
+			before := stored.YOffset()
+			_ = m.View()
+			redrawn := tc.raw(m)
+			if after := redrawn.YOffset(); after != before {
+				t.Errorf("%s: drawing a frame moved the stored offset %d → %d — View has a value "+
+					"receiver and must not be where the position lives", tc.name, before, after)
+			}
+		})
 	}
 }
 

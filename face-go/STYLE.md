@@ -112,12 +112,25 @@ one page; fewer clicks; transparent overlays; better colour and spacing.*
   follows them with `ensurePaneRow` from the key arm that moved them (never from the builder — the
   renderer calls that too, and re-asserting the cursor every frame silently undoes `end`). When the
   cursor cannot move any further the key drops through to `applyPaneScroll` instead of dying on the
-  last row.
+  last row. **A text CARET falls through the same way**: `widgets.TextArea` swallows every key it is
+  handed, so the caller compares the caret before and after (`TextArea.Caret`) and passes on anything
+  the editor ignored — that is how the Kanban card stays readable underneath its own context editor.
+- **A trailer that comes out of a pane's height must not come out of its reach.** A transient block
+  rendered OUTSIDE a viewport — an editor, a proposal, a confirm — is right (a confirm you have to
+  scroll to is a confirm you cannot answer), and it costs the body rows. Every sub-state that renders
+  one therefore applies the scroll set after its own switch, and sizes the block to what it actually
+  HOLDS rather than to a padded maximum; a `TextArea` pads to its `Height`, so eight rows over a
+  one-line note is seven rows taken from the body for nothing. KS2.7 shipped this backwards for one
+  checkpoint: pressing `c` on a Kanban card deleted its declared-paths value and its whole qa section
+  with no keystroke that brought either back.
 - **Two surfaces deliberately have no pane viewport, and both say why in code**: the Kanban BOARD
   (`kanbanWindow` is a per-column clip; three columns cannot share one scroll position) and Home's
   LANDING (it owns no keys and sheds tiers via `fitHome`; its scrollable is the `w` owner queue).
   Both are named in `scrollSurfacesNotConverted` / `scrollSweepExemptions` — an exemption that is not
-  written down is how the previous adoption pass stopped half-done.
+  written down is how the previous adoption pass stopped half-done. **And an exemption is only worth
+  keeping while its reason survives being measured**: the Templates LIST was a third entry, excused
+  as "bounded by construction", until `templates.List` was read and found to return every `*.md` the
+  owner drops into `<planDir>/personas`. It is on `tmpl.listVp` now.
 
 ## Colour — roles, not hexes
 

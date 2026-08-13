@@ -42,20 +42,26 @@ var scrollIntegerAllowlist = map[string]string{
 	"widgets.TextArea.scroll": "editor caret window — adr/0006 §5 defers it to bubbles/textarea",
 }
 
-// scrollSurfacesNotConverted records the two scrollable-ish surfaces KS2.7 deliberately did NOT put
+// scrollSurfacesNotConverted records the scrollable-ish surfaces KS2.7 deliberately did NOT put
 // behind a single pane viewport, with the reason, because an unexplained exemption is how the
-// previous adoption pass stopped half-done and produced this checkpoint. Neither holds a bare scroll
-// integer — both derive their window from a selection every frame — so the ratchet above does not
-// see them and this list is the only place the decision is written down beside the code.
+// previous adoption pass stopped half-done and produced this checkpoint. It holds no bare scroll
+// integer — its window is derived from a selection every frame — so the ratchet above does not see
+// it and this list is the only place the decision is written down beside the code.
 //
 //   - Kanban BOARD (kanbanWindow, tab_kanban.go): a per-COLUMN clip. Three columns side by side
 //     cannot share one viewport, and giving each its own would put three scroll positions behind one
 //     key set. The board's window follows the selected card; the plan named Kanban DETAIL, which is
 //     converted.
-//   - Templates LIST (tab_templates.go): the plan's fixed prompt-template set from templates.List —
-//     bounded by construction, never a long body. The surface here that CAN outgrow the pane is the
-//     preview, which has been on previewVp since K6.4.
-var scrollSurfacesNotConverted = []string{"Kanban board (per-column clip)", "Templates list (bounded set)"}
+//
+// The Templates LIST was the second entry here, on the reason "the plan's fixed prompt-template set
+// from templates.List — bounded by construction, never a long body". That reason was FALSE and the
+// entry was worse than no entry, because it told the next reader the question had been asked and
+// answered: templates.List (templates.go:30-50) returns the seven session templates PLUS every
+// `*.md` under <planDir>/personas, which the owner fills — twenty personas is 27 rows in an 18-row
+// pane at 80x24, clipped in silence, with `end` moving nothing. The list is now on `tmpl.listVp`
+// like every other selection list, and it is in the sweep as TemplatesList. An exemption is only
+// worth keeping while its reason survives being measured.
+var scrollSurfacesNotConverted = []string{"Kanban board (per-column clip)"}
 
 // TestNoSurfaceKeepsABareScrollInteger walks internal/tui and internal/widgets and fails on any
 // struct field that names itself a scroll position and types itself as a bare int.

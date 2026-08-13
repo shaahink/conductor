@@ -16,6 +16,14 @@ package tui
 // regression test for dogfood appendix item 13 has been passing on a frame that cannot exhibit the
 // bug. This sweep drives each tab by its real mnemonic through handleKey, so what it measures is
 // what a user sees.
+//
+// KS2.7's sweep (`TestEveryTabScrollsA500LineBodyToItsEnd`) is a SIBLING of this one and lives in
+// scrollsweep_test.go, not here — a deliberate deviation from the contract, which named this file.
+// The two ask opposite questions of the same frames: this one asks whether the frame OVERFLOWS its
+// window, and that one asks whether the body you came to read is REACHABLE inside it. A pane that
+// clips its tail passes every assertion in this file, which is exactly how six surfaces shipped with
+// no window at all, so keeping the two apart is what stops the answer to one being mistaken for the
+// answer to the other. Both drive the same sizes (`glitchSizes`) through the same real router.
 
 import (
 	"fmt"

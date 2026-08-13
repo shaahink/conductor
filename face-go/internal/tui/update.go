@@ -441,6 +441,7 @@ func (m Model) openTab(t MainTab) (tea.Model, tea.Cmd) {
 	case TabTemplates:
 		m.tmpl.entries = templates.List(m.currentPlanDir())
 		m.tmpl.selected, m.tmpl.mode, m.tmpl.previewOn = 0, PromptList, false
+		m.tmpl.listVp.GotoTop() // the cursor went back to row 0; the window follows it
 		return m, nil
 	case TabPlan:
 		if m.plan.doc == nil {

@@ -115,8 +115,7 @@ func (m *Model) handleKanbanDetailKey(key string) (tea.Model, tea.Cmd) {
 	case "c":
 		if task != nil {
 			m.kanban.editingCtx = true
-			w := max(10, m.paneCols()-8)
-			m.kanban.ctxEditor = widgets.NewTextArea(task.Context, w, max(3, min(8, m.paneRows()-6)))
+			m.kanban.ctxEditor = widgets.NewTextArea(task.Context, m.kanbanCtxCols(), m.kanbanCtxRows(task.Context))
 			m.kanban.status = ""
 		}
 		return m, nil
@@ -159,9 +158,24 @@ func (m *Model) handleKanbanDetailKey(key string) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	}
-	m.kanban.detailVp = m.kanbanDetailViewport()
-	applyPaneScroll(&m.kanban.detailVp, key)
+	m.kanbanDetailScroll(key)
 	return m, nil
+}
+
+// kanbanDetailScroll sizes the card viewport and applies the one scroll set to it, reporting whether
+// the key belonged to that set. It is a method rather than two lines because EVERY sub-state has to
+// call it — see the sub-state handlers below.
+//
+// The rule it enforces: the trailer's rows are deducted from the card body (kanbanDetailViewport),
+// so the instant an editor or a confirm opens, rows of the card leave the window. If the sub-state
+// also eats every scroll key, those rows are not clipped — they are DELETED, with no keystroke that
+// brings them back. That shipped: pressing `c` on a card removed its declared-paths value and its
+// whole `✎ qa` section, including the "press q to override" the row exists to advertise, and sixty
+// `down` presses and `end` could not reach either. A surface may spend a key on its own semantics;
+// it may not spend the reader's only route to the rest of the body.
+func (m *Model) kanbanDetailScroll(key string) bool {
+	m.kanban.detailVp = m.kanbanDetailViewport()
+	return applyPaneScroll(&m.kanban.detailVp, key)
 }
 
 // kanbanDetailViewport is the card detail's `<surface>Viewport()` builder. The scrollable body is
@@ -172,6 +186,18 @@ func (m Model) kanbanDetailViewport() viewport.Model {
 	rows := m.paneRows() - blockHeight(m.kanbanDetailTrailer())
 	return loadPaneViewport(m.kanban.detailVp, strings.Split(m.kanbanDetailBody(), "\n"),
 		m.paneCols(), max(3, rows), false)
+}
+
+// kanbanCtxCols/kanbanCtxRows size the extra-context editor. The rows figure is the load-bearing
+// one: a TextArea PADS to its Height, so an 8-row editor over a one-line note spends seven rows on
+// blank padding — and every one of those rows is deducted from the card above it. Sizing the editor
+// to what the buffer actually HOLDS is what keeps the card's declared-paths and qa rows on screen
+// while you type, instead of trading them for padding nobody asked for.
+func (m Model) kanbanCtxCols() int { return max(10, m.paneCols()-8) }
+
+func (m Model) kanbanCtxRows(content string) int {
+	room := max(3, m.paneRows()-6) // the old fixed budget, now only the CAP
+	return max(3, min(min(8, strings.Count(content, "\n")+1), room))
 }
 
 // blockHeight is lipgloss.Height with the one distinction it does not make: an EMPTY block occupies
@@ -204,7 +230,13 @@ func (m *Model) handleKanbanTitleKey(key string) (tea.Model, tea.Cmd) {
 	default:
 		if ch, ok := typedChar(key); ok {
 			m.kanban.titleBuf += ch
+			return m, nil
 		}
+		// Not a character a one-line field can hold, so it is not this editor's key — and the card
+		// underneath is the thing being edited ABOUT. ↑↓, the page keys and home/end reach it rather
+		// than dying here. `d`, `u`, `j` and `G` stay typed text, which is why the hint for this
+		// sub-state names the arrows and not the whole set (kanbanDetailScrollHint).
+		m.kanbanDetailScroll(key)
 	}
 	return m, nil
 }
@@ -220,9 +252,32 @@ func (m *Model) handleKanbanCtxKey(key string) (tea.Model, tea.Cmd) {
 		m.kanban.status = "saving…"
 		return m, m.cmdPostTaskEdit(api.TaskEditRequestDto{TaskId: m.kanban.blocks.TaskId, Context: &ctx})
 	default:
-		m.kanban.ctxEditor = m.kanban.ctxEditor.Update(key)
+		// THE CARET FALLS THROUGH AT ITS ENDS — the same rule the selection lists follow
+		// (panescroll.go, ensurePaneRow). The TextArea owns ↑↓/pgup/pgdn/home/end for caret
+		// navigation, so those keys cannot simply be handed to the pane; but once the caret is on the
+		// first or last line, the key is doing nothing at all, and "nothing" is how the card behind
+		// the editor became unreachable. Move the caret while it can move, then move the card.
+		before := m.kanban.ctxEditor
+		m.kanban.ctxEditor = before.Update(key)
+		m.kanban.ctxEditor.SetSize(m.kanbanCtxCols(), m.kanbanCtxRows(m.kanban.ctxEditor.Value()))
+		if textAreaMoved(before, m.kanban.ctxEditor) {
+			return m, nil
+		}
+		m.kanbanDetailScroll(key)
 	}
 	return m, nil
+}
+
+// textAreaMoved reports whether a keypress actually did something in the editor — the buffer changed
+// or the caret moved. Anything else was a key the editor ignored, and an ignored key belongs to the
+// surface underneath.
+func textAreaMoved(before, after widgets.TextArea) bool {
+	if before.Value() != after.Value() {
+		return true
+	}
+	br, bc := before.Caret()
+	ar, ac := after.Caret()
+	return br != ar || bc != ac
 }
 
 // handleKanbanPathsKey edits the PF3 declared paths as one comma-separated line. Saving posts the
@@ -249,7 +304,9 @@ func (m *Model) handleKanbanPathsKey(key string) (tea.Model, tea.Cmd) {
 	default:
 		if ch, ok := typedChar(key); ok {
 			m.kanban.pathsBuf += ch
+			return m, nil
 		}
+		m.kanbanDetailScroll(key) // the card is still readable while you retype its paths
 	}
 	return m, nil
 }
@@ -277,6 +334,10 @@ func (m *Model) handleKanbanSplitKey(key string) (tea.Model, tea.Cmd) {
 		m.kanban.status = "split discarded"
 		return m, nil
 	}
+	// The proposal is the tallest trailer this surface has — a child per line — so it takes the most
+	// rows off the card the owner is being asked to compare it against. The whole scroll set is free
+	// here (this state owns only enter and esc), so all of it applies.
+	m.kanbanDetailScroll(key)
 	return m, nil
 }
 
@@ -293,6 +354,7 @@ func (m *Model) handleKanbanProposalKey(key string) (tea.Model, tea.Cmd) {
 		m.kanban.status = "proposal discarded"
 		return m, nil
 	}
+	m.kanbanDetailScroll(key) // enter/esc are this state's only keys; the rest reach the card
 	return m, nil
 }
 
@@ -314,6 +376,9 @@ func (m *Model) handleKanbanHandKey(key string) (tea.Model, tea.Cmd) {
 		m.kanban.handConfirm = false
 		return m, nil
 	}
+	// "hand this card to the next session?" is a question about the card — being unable to re-read it
+	// while the question is on screen is the worst moment to lose it.
+	m.kanbanDetailScroll(key)
 	return m, nil
 }
 
@@ -328,17 +393,35 @@ func (m Model) renderKanbanDetailPane() (string, string) {
 	}
 	vp := m.kanbanDetailViewport()
 	trailer, help := m.kanbanDetailTrailerAndHelp()
-	if hint := paneScrollHint(vp, true); hint != "" && !m.kanbanDetailIsBusy() {
+	if hint := m.kanbanDetailScrollHint(vp); hint != "" {
 		help = hint + " · " + help
 	}
 	return vp.View() + trailer, help
 }
 
-// kanbanDetailIsBusy reports whether a sub-state owns the keys — an editor, a proposal, a confirm.
-// The scroll hint is dropped there because the scroll KEYS are dropped there: `d` and `u` are going
-// into a text buffer, and a bottom bar advertising a key the pane is eating is the drift adr/0006
-// exists to end.
-func (m Model) kanbanDetailIsBusy() bool {
+// kanbanDetailScrollHint names the keys that actually reach the card from wherever this surface
+// currently is, and names only those. In a sub-state the card is still scrollable — it has to be,
+// since the trailer's rows come out of its height — but the keys differ: the confirm states own only
+// enter/esc/y/n and pass the whole set through, while the three editors spend every printable
+// character on text and can only pass on what they cannot type. A bottom bar that advertised `d/u`
+// inside a text field would be the drift adr/0006 exists to end, and one that advertised nothing at
+// all would hide the only way back to the body.
+func (m Model) kanbanDetailScrollHint(vp viewport.Model) string {
+	pct := paneScrollStatus(vp)
+	if pct == "" {
+		return ""
+	}
+	if m.kanban.editingCtx || m.kanban.editingTitle || m.kanban.editingPaths {
+		return "↑↓ card " + pct
+	}
+	return "↑↓ d/u G/home " + pct
+}
+
+// kanbanDetailIsOpenInASubState reports whether one of the six transient states owns the keys — an
+// editor, an advisor proposal, a split, the hand-off confirm. Each of them renders a trailer whose
+// rows come out of the card's height, and each of them therefore has to pass the scroll keys it does
+// not need through to the card (kanbanDetailScroll).
+func (m Model) kanbanDetailIsOpenInASubState() bool {
 	return m.kanban.editingPaths || m.kanban.editingCtx || m.kanban.editingTitle ||
 		m.kanban.proposal != nil || m.kanban.split != nil || m.kanban.handConfirm
 }
@@ -359,7 +442,12 @@ func (m Model) kanbanDetailTrailerAndHelp() (string, string) {
 		return "\n\n" + accentStyle.Render("✎ paths (comma-separated): ") + textStyle.Render(m.kanban.pathsBuf) +
 			accentStyle.Render("▏") + status, "type · enter save (empty clears) · esc cancel"
 	case m.kanban.editingCtx:
-		return "\n\n" + accentStyle.Render("✎ extra context") + "\n" + m.kanban.ctxEditor.View() + status,
+		// Re-sized here as well as in the key handler, because a window resize changes paneRows
+		// without touching the buffer, and the trailer's height is what the card's height is measured
+		// against (tab_templates.go:150 does the same for the same reason).
+		ed := m.kanban.ctxEditor
+		ed.SetSize(m.kanbanCtxCols(), m.kanbanCtxRows(ed.Value()))
+		return "\n\n" + accentStyle.Render("✎ extra context") + "\n" + ed.View() + status,
 			"type · ctrl+s save · esc cancel"
 	case m.kanban.editingTitle:
 		return "\n\n" + accentStyle.Render("✎ title: ") + textStyle.Render(m.kanban.titleBuf) +
