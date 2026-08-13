@@ -1,3 +1,4 @@
+using Conductor.Core.Events;
 using Conductor.Core.Fleet;
 using Conductor.Core.History;
 using Conductor.Core.Store;
@@ -47,9 +48,15 @@ public sealed class K3_2HistoryTests : IDisposable
         using (var store = new SqliteRunStore(db, NullLogger<SqliteRunStore>.Instance))
         {
             store.InitializeRun(runId, plan, repo, "master", Conductor.Core.EngineStamp.Parse("0.3.1-alpha+test"));
+            store.SetRunId(runId);
             store.InitializeStage(runId, "S1", "First stage");
+            // KS1.2: the archive's stage rows fold from the log now, so the fixture emits what the
+            // engine emits beside each side-table write — RunLoop raises StageEntered where it calls
+            // InitializeStage, SessionRunner raises SessionStarted where it records the session.
+            store.Emit(new StageEntered { StageId = "S1", Title = "First stage" });
             for (var i = 1; i <= sessions; i++)
             {
+                store.Emit(new SessionStarted { Number = i, StageId = "S1", Kind = "work", Attempt = 1 });
                 store.RecordSession(runId, "S1", i, "work",
                     startedUtc.AddHours(i), startedUtc.AddHours(i).AddMinutes(30), "advance",
                     agentSessionId: null, resumeCount: 0, attempt: 1,
@@ -212,6 +219,9 @@ public sealed class K3_2HistoryTests : IDisposable
         var stage = Assert.Single(archive!.Stages("run-spine-0001"));
         Assert.Equal("S1", stage.Id);
         Assert.Equal("First stage", stage.Title);
+        // KS1.2: a real count, folded from SessionStarted — the side table's session_count column
+        // has no writer anywhere in the repo and said 0 for this very fixture.
+        Assert.Equal(2, stage.Sessions);
 
         var sessions = archive.Sessions("run-spine-0001");
         Assert.Equal(2, sessions.Count);

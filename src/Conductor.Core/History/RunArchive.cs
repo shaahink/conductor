@@ -1,6 +1,4 @@
-using System.Text.Json;
 using Conductor.Core.Events;
-using Conductor.Models;
 using Microsoft.Data.Sqlite;
 
 namespace Conductor.Core.History;
@@ -16,7 +14,7 @@ namespace Conductor.Core.History;
 /// <para>Timestamps stay the strings the schema stores, the way <c>SqliteRunStore.Queries</c> hands
 /// them out — a browse must not fail because a row from an older engine spells a date differently.</para>
 /// </summary>
-public sealed class RunArchive
+public sealed partial class RunArchive
 {
     private readonly string _connectionString;
 
@@ -287,42 +285,16 @@ public sealed class RunArchive
             .ToList();
     }
 
-    /// <summary>The declared stages of one run, in the order the engine recorded them.</summary>
-    public IReadOnlyList<ArchivedStage> Stages(string runId)
-    {
-        var rows = Query(
-            "SELECT id, title, status, session_count, started_utc, confirmed_utc " +
-            "FROM stages WHERE run_id = @runId ORDER BY COALESCE(started_utc, ''), id",
-            ("@runId", runId));
-        return rows.Select(MapStage).ToList();
-    }
-
     /// <summary>
     /// The checkpoints of one run, folded out of the event log exactly the way the live store does
     /// it — the mutable <c>checkpoints</c> table was dropped in schema v8, so this fold IS the truth
-    /// and re-deriving it here would be a second, divergent answer.
+    /// and re-deriving it here would be a second, divergent answer. The stage rows fold the same
+    /// way (KS1.2, <c>RunArchive.Stages.cs</c>); both read the log through <see cref="EventsOf"/>.
     /// </summary>
     public IReadOnlyList<ArchivedCheckpoint> Checkpoints(string runId)
     {
-        var rows = Query(
-            "SELECT type, payload FROM events WHERE run_id = @runId ORDER BY seq",
-            ("@runId", runId));
-        var events = new List<ConductorEvent>(rows.Count);
-        foreach (var row in rows)
-        {
-            try
-            {
-                if (row["payload"] is not string json) continue;
-                if (JsonSerializer.Deserialize<ConductorEvent>(json, PlanConfig.JsonOpts) is { } evt)
-                    events.Add(evt);
-            }
-            catch (JsonException)
-            {
-                // Same tolerance as SqliteRunStore.DeserializeEvents: a torn event is skipped, not fatal.
-            }
-        }
         var graph = new TaskGraph();
-        graph.Fold(events);
+        graph.Fold(EventsOf(runId));
         return graph.Checkpoints()
             .Where(t => !string.Equals(t.Status, "archived", StringComparison.Ordinal))
             .Select(t => new ArchivedCheckpoint(t.TaskId, t.StageId ?? "", t.Title,
@@ -391,12 +363,4 @@ public sealed class RunArchive
     /// <summary>K4.1: an optional numeric column, null for "absent OR NULL" — the two are one answer.</summary>
     private static long? OptLong(Dictionary<string, object?> r, string column)
         => Opt(r, column) is { } v ? Convert.ToInt64(v, System.Globalization.CultureInfo.InvariantCulture) : null;
-
-    private static ArchivedStage MapStage(Dictionary<string, object?> r) => new(
-        Id: (string)(r["id"] ?? "")!,
-        Title: (string)(r["title"] ?? "")!,
-        Status: (string)(r["status"] ?? "")!,
-        Sessions: Convert.ToInt32(r["session_count"] ?? 0, System.Globalization.CultureInfo.InvariantCulture),
-        StartedUtc: r["started_utc"] as string,
-        ConfirmedUtc: r["confirmed_utc"] as string);
 }
