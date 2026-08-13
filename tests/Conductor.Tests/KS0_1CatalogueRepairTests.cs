@@ -230,6 +230,86 @@ public sealed class KS0_1CatalogueRepairTests : IDisposable
         Assert.Throws<InvalidOperationException>(() => StateRepair.Apply(Root, forged, DateTimeOffset.UtcNow));
     }
 
+    /// <summary>
+    /// The rule the first version of this pass did not have, and the one it cost a confirmed
+    /// checkpoint to learn: copies of one legacy database are NOT interchangeable. K3.1 moved run.db
+    /// to the state home, so a run kept writing into its OWN slug store while the legacy path froze,
+    /// and every later import of that frozen file holds a TRUNCATED copy. The keeper must be the copy
+    /// that CONTAINS the others - even when that means keeping the copy in the store that is not live.
+    /// </summary>
+    [Fact]
+    public void TheFullerCopyIsKept_EvenWhenTheStaleOneIsLive()
+    {
+        var repo = NewRepo("old-repo");
+        SeedLegacy(StateHome.LegacyDbPathFor(repo), "core plan", "run-alpha");
+        var fullDb = StateHome.Resolve(repo, "core plan", Root).RunDbPath;
+        var staleDb = ImportAgainTheOldWay(repo, "edge plan");
+
+        // The run went on writing into its own store after the copy was taken.
+        using (var store = new SqliteRunStore(fullDb, NullLogger<SqliteRunStore>.Instance))
+        {
+            store.SetRunId("run-alpha");
+            store.RecordSession("run-alpha", "K1", 8, "session",
+                DateTime.UtcNow, null, null, null, 0, 1, null, null, 0, null);
+        }
+
+        // ...and the TRUNCATED copy is the one a live engine is using - so the safety rule and the
+        // ownership rule now disagree, which is exactly the case that went wrong for real.
+        var me = System.Diagnostics.Process.GetCurrentProcess();
+        Exec(staleDb, "UPDATE runs SET status = 'running' WHERE run_id = 'run-alpha'");
+        using (var c = new SqliteConnection($"Data Source={staleDb}"))
+        {
+            c.Open();
+            using var cmd = c.CreateCommand();
+            cmd.CommandText = "INSERT INTO pids(pid, purpose, started_utc, run_id) VALUES($p, 'test', $s, 'run-alpha')";
+            cmd.Parameters.AddWithValue("$p", me.Id);
+            cmd.Parameters.AddWithValue("$s", me.StartTime.ToUniversalTime().ToString("o"));
+            cmd.ExecuteNonQuery();
+        }
+
+        var plan = StateRepair.Survey(Root);
+        var dup = Assert.Single(plan.Duplicates);
+
+        Assert.Equal(Path.GetFullPath(fullDb), dup.OwnerDb);
+        Assert.Contains("fullest copy", dup.OwnerReason, StringComparison.Ordinal);
+        Assert.Empty(dup.RemoveFrom);          // the only other copy is live, so nothing can be removed
+        Assert.Contains(plan.Deferred, d => d.Contains("live engine is using", StringComparison.Ordinal));
+
+        StateRepair.Apply(Root, plan, DateTimeOffset.UtcNow);
+
+        // nothing lost: the fuller copy still has both sessions
+        using var check = new SqliteRunStore(fullDb, NullLogger<SqliteRunStore>.Instance);
+        Assert.Equal(2, check.QuerySessions("run-alpha").Count);
+    }
+
+    /// <summary>Copies that have each gained something the other lacks are not deduplicated at all.
+    /// There is no lossless choice there, so the pass says so and stops.</summary>
+    [Fact]
+    public void DivergedCopiesAreLeftForAPerson()
+    {
+        var repo = NewRepo("old-repo");
+        SeedLegacy(StateHome.LegacyDbPathFor(repo), "core plan", "run-alpha");
+        var oneDb = StateHome.Resolve(repo, "core plan", Root).RunDbPath;
+        var twoDb = ImportAgainTheOldWay(repo, "edge plan");
+
+        foreach (var (db, n) in new[] { (oneDb, 8), (twoDb, 9) })
+        {
+            using var store = new SqliteRunStore(db, NullLogger<SqliteRunStore>.Instance);
+            store.SetRunId("run-alpha");
+            store.RecordSession("run-alpha", "K1", n, "session",
+                DateTime.UtcNow, null, null, null, 0, 1, null, null, 0, null);
+        }
+
+        var plan = StateRepair.Survey(Root);
+
+        Assert.Empty(plan.Duplicates);
+        Assert.Contains(plan.Deferred, d => d.Contains("DIVERGED", StringComparison.Ordinal));
+
+        var outcome = StateRepair.Apply(Root, plan, DateTimeOffset.UtcNow);
+        Assert.Equal(0, outcome.RowsDeleted);
+        Assert.Equal(2, StateDedup.Stores(Root).Sum(s => RunIdsAt(s).Count));
+    }
+
     /// <summary>Ownership, when nothing is live: the run goes to the store of its own plan, not to
     /// whichever store happened to be imported first.</summary>
     [Fact]
