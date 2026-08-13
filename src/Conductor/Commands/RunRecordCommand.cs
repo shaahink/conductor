@@ -76,6 +76,15 @@ public sealed class RunRecordCommand : Command<RunRecordCommand.Settings>
                                   + ". Use more of the id.");
 
         var match = matches[0];
+
+        // Before anything else, including --dry-run. A dry run that answers "would close" for a store
+        // no run of this verb will ever write is not a preview, it is a wrong answer - and this is
+        // exactly the question an operator runs the dry run to ask.
+        if (match.Live)
+            return Fail(settings,
+                $"{Short(match.RunId)} lives in {match.Slug}, which a live engine is using - a record is "
+                + "never changed under the engine that owns it. Stop that run (or wait for it) and try again.");
+
         return verb == "close" ? Close(match, settings) : Adopt(match, settings);
     }
 
