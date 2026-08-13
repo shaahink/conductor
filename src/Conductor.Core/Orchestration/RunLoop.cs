@@ -66,6 +66,10 @@ public sealed partial class RunLoop
         if (!AcquireLock()) return 4;
         try
         {
+            // KS0.3, bug #27: the runs row is written before anything that can save — it is the FK
+            // target of run_state, and this loop used to save twice (start-paused, crash recovery)
+            // before it got here. Save() ensures the row too, so the ordering is no longer load-bearing.
+            _ctx.EnsureRunRow();
             PurgeStaleControlFile();
             RecoverFromCrash();
             if (ApplyStartPause(_ctx.State, _ctx.Options))
@@ -83,8 +87,6 @@ public sealed partial class RunLoop
                 DriverVersion = typeof(RunLoop).Assembly.GetName().Version?.ToString(),
                 Resumed = _ctx.State.SessionCounter > 0,
             });
-            _ctx.Store?.InitializeRun(_ctx.State.RunId, _ctx.Plan.Name, _ctx.Plan.Repo, Git.Branch(_ctx.Plan.Repo),
-                EngineStamp.Current, RunLimitsSnapshot.From(_ctx.Plan.Limits).ToJson());
             WarnOnDirtyEngine();
             NotifyRunStart();
             // SF5.4: two engines on one machine are two identical entries in a task manager until one of

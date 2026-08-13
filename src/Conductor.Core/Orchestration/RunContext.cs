@@ -236,11 +236,37 @@ public sealed class RunContext
         return scope.Count > 0 ? Logger.BeginScope(scope) : null;
     }
 
+    /// <summary>True once <see cref="EnsureRunRow"/> has written the row in this process.</summary>
+    private bool _runRowWritten;
+
+    /// <summary>
+    /// KS0.3, bug #27 — the <c>runs</c> row is the FK target of every other table, so it has to exist
+    /// before anything else is written.
+    /// <para>It did not. <c>run_state</c> declares <c>FOREIGN KEY (run_id) REFERENCES runs(run_id)</c>
+    /// and the run loop saved state before it initialised the run, so on a brand-new database the
+    /// first save was rejected: <c>SQLite Error 19</c>, swallowed by <c>TryExecute</c>, logged at
+    /// Error. Every fresh run opened with a database error in its log AND lost its first state write.
+    /// Measured live on a rig that had never run: one FK line, straight after "started paused".</para>
+    /// <para>Fixed here rather than by reordering the one call that happened to be second, because the
+    /// ordering is what was fragile: <c>Save()</c> is called from a dozen places and a new one arrives
+    /// every era. Ensuring the row at the funnel means a future early save cannot reintroduce this.
+    /// Idempotent per process; <c>InitializeRun</c> is itself an upsert that refreshes the engine stamp
+    /// and limits, so a resume still records what is driving it now.</para>
+    /// </summary>
+    public void EnsureRunRow()
+    {
+        if (_runRowWritten || Store is not { } s || string.IsNullOrEmpty(State.RunId)) return;
+        _runRowWritten = true;
+        s.InitializeRun(State.RunId, Plan.Name, Plan.Repo, Git.Branch(Plan.Repo),
+                        EngineStamp.Current, RunLimitsSnapshot.From(Plan.Limits).ToJson());
+    }
+
     /// <summary>Persist RunState through the store.</summary>
     public void Save()
     {
         if (Store is { } s)
         {
+            EnsureRunRow();
             var json = System.Text.Json.JsonSerializer.Serialize(State, Models.PlanConfig.JsonOpts);
             s.SaveRunState(State.RunId, State.PlanName, json);
             SyncRunStatus(s);

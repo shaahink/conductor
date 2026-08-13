@@ -258,10 +258,24 @@ public static class GateRunner
                 catch (UnauthorizedAccessException) { /* ditto */ }
             }
         }
-        onProgress?.Invoke($"gate {g.Name}: {g.Command}");
         var cwd = ResolveCwd(plan, g);
+
+        // KS0.3, bug #16: never rebuild the image this process is running from.
+        var command = g.Command;
+        if (ShadowBuild.For(g.Command, plan.Repo, Environment.ProcessPath, ShadowBuild.RootFor(plan.Repo))
+            is { } shadow)
+        {
+            command = shadow.Command;
+            onProgress?.Invoke($"gate {g.Name}: {shadow.Why}");
+        }
+
+        // Logged AFTER the redirect, and it is the command that actually ran — not the one the plan
+        // asked for. When the two differ the line above says why; a log that names a command the
+        // engine did not execute is how a gate failure gets debugged against the wrong command line.
+        onProgress?.Invoke($"gate {g.Name}: {command}");
+
         var shell = string.IsNullOrWhiteSpace(g.Shell) ? ProcessRunner.DefaultShell : g.Shell;
-        var r = await ProcessRunner.RunShellAsync(shell, g.Command, cwd, TimeSpan.FromMinutes(g.TimeoutMinutes), ct).ConfigureAwait(false);
+        var r = await ProcessRunner.RunShellAsync(shell, command, cwd, TimeSpan.FromMinutes(g.TimeoutMinutes), ct).ConfigureAwait(false);
         var passed = !r.TimedOut && r.ExitCode == 0;
         onProgress?.Invoke($"gate {g.Name}: {(passed ? "PASS" : $"FAIL (exit {r.ExitCode}{(r.TimedOut ? ", timeout" : "")})")} in {r.Duration.TotalSeconds:0}s");
         return new GateResult(g.Name, passed, false, g.Optional, r.ExitCode, r.Duration,
