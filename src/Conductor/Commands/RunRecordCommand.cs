@@ -199,10 +199,3 @@ public sealed class RunRecordCommand : Command<RunRecordCommand.Settings>
         return 2;
     }
 }
-
-/// <summary>The <c>--json</c> shape of a record change.</summary>
-public sealed record RunRecordJson(bool Ok, string Message);
-
-[JsonSourceGenerationOptions(WriteIndented = true, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
-[JsonSerializable(typeof(RunRecordJson))]
-internal sealed partial class RunRecordJsonContext : JsonSerializerContext;
