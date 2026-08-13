@@ -63,7 +63,7 @@ public static class StateRepair
                 Slug: entry?.Slug is { Length: > 0 } s ? s : Path.GetFileName(Path.GetDirectoryName(db)!) ?? db,
                 Plan: entry?.Plan ?? "",
                 FirstSeenUtc: entry?.FirstSeenUtc ?? DateTimeOffset.MaxValue,
-                Live: LooksLive(db),
+                Live: LooksLive(db, entry?.Repo),
                 Foreign: !IsUnder(root, db),
                 Runs: runs));
         }
@@ -335,10 +335,42 @@ public static class StateRepair
         }
     }
 
-    /// <summary>Is an engine using this store right now? A run row still saying <c>running</c> proves
-    /// nothing — four of those on this machine are engines that exited without closing the record,
-    /// which is KS0.2's whole subject. A tracked pid that is still alive proves it.</summary>
-    private static bool LooksLive(string dbPath)
+    /// <summary>
+    /// Is an engine using this store right now? A run row still saying <c>running</c> proves nothing —
+    /// four of those on this machine are engines that exited without closing the record, which is
+    /// KS0.2's whole subject. Two things do prove it, and BOTH are needed.
+    /// <para>A tracked pid that is still alive: that catches a session in flight. But the pids table
+    /// tracks agents and faces, not the engine itself, so BETWEEN sessions a run that an engine is
+    /// very much still driving has no live pid at all — and a repair that believed that would write
+    /// the store out from under it. The engine lock on the repo is what answers for the gap.</para>
+    /// </summary>
+    private static bool LooksLive(string dbPath, string? repo)
+    {
+        if (HasLivePid(dbPath)) return true;
+        if (string.IsNullOrWhiteSpace(repo)) return false;
+        return HasRunningRun(dbPath)
+               && EngineLock.IsHeldByLiveEngine(Path.Combine(repo, StateHome.ScratchDirName));
+    }
+
+    private static bool HasRunningRun(string dbPath)
+    {
+        try
+        {
+            using var c = StateDedup.OpenReadOnly(dbPath);
+            c.Open();
+            using var cmd = c.CreateCommand();
+            cmd.CommandText = "SELECT 1 FROM runs WHERE status = 'running' LIMIT 1";
+            using var r = cmd.ExecuteReader();
+            return r.Read();
+        }
+        catch (Exception ex) when (ex is SqliteException or InvalidOperationException
+                                       or IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    private static bool HasLivePid(string dbPath)
     {
         try
         {

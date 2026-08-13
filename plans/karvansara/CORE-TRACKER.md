@@ -4,14 +4,21 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: nothing - this tracker is fresh; the era launches at KS0.1.
-context: the spec is docs/dev/KARVANSARA-PLAN-2026-08-13.md section 6; each stage's notes name the
-  section that specifies it, and KS9's spec is docs/dev/GITHUB-SYNC-DESIGN-2026-08-13.md. The four
-  phantom running rows and the catalogue duplicates are KNOWN defects and are KS0's acceptance
-  criteria - do not repair either by hand, close them through the verbs KS0 builds.
-next: KS0.1 - import dedup by run id plus the repair pass with a backup. Read imported.json in the
-  state home before believing any duplicate, and keep the payesh evidence path green on the deduped
-  store.
+last: KS0.1's engine work is landed and proven (ff88317, a53ec7b, 4ae0cf5, 6dd6a99). Import now dedups
+  by RUN ID via StateDedup - live rig: the published engine grew a store 1-2-3 rows under three plans,
+  this build 1-1-1. New verb `conductor catalogue [repair --apply]` backs up, then collapses. The real
+  catalogue went 37 rows/25 distinct -> 26/25, nothing lost. Evidence:
+  .conductor/evidence/KS0/ks0-1-catalogue-dedup.md
+read this before you touch the store: copies of one legacy run.db are NOT interchangeable. K3.1 moved
+  run.db to the state home, so a run kept writing into its own slug store while the legacy path froze -
+  b4640aef holds 3724 events for df9c4af8 where the other four copies hold 3722. The first version of
+  the repair kept the live (truncated) copy and lost a confirmed checkpoint; it was restored from the
+  backup, and a copy is now only removed when the keeper provably contains it.
+open on KS0.1: one duplicate row survives - df9c4af8's truncated copy in 308cfb9b, the store THIS run
+  uses. No session can remove it (the pass never writes a live store; the engine sets no busy_timeout).
+  Bug #36 tracks it: `conductor catalogue repair --apply`, once, while no engine holds that store,
+  takes it to 25/25 and payesh green. That is the owner's one command, not a session's.
+next: KS0.2 - conductor run close|adopt, and the four phantom running rows closed through the verb.
 
 ## Checkpoints
 

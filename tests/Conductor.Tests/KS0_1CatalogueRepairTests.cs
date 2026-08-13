@@ -282,6 +282,40 @@ public sealed class KS0_1CatalogueRepairTests : IDisposable
         Assert.Equal(2, check.QuerySessions("run-alpha").Count);
     }
 
+    /// <summary>
+    /// Between sessions there is no live agent pid, but the engine is still driving the run — the
+    /// pids table tracks agents and faces, never the engine itself. A liveness test that only asked
+    /// the pids table would call that store idle and write it out from under a running engine.
+    /// </summary>
+    [Fact]
+    public void AnEngineHoldingTheRepoCountsAsLive_EvenWithNoAgentPid()
+    {
+        var repo = NewRepo("old-repo");
+        SeedLegacy(StateHome.LegacyDbPathFor(repo), "core plan", "run-alpha");
+        var firstDb = StateHome.Resolve(repo, "core plan", Root).RunDbPath;
+        var secondDb = ImportAgainTheOldWay(repo, "edge plan");
+
+        // no pid rows at all - just a run that says running and an engine lock held by a live process.
+        // The other copy is a finished run, so the engine lock alone does not make IT live.
+        Exec(firstDb, "UPDATE runs SET status = 'Completed' WHERE run_id = 'run-alpha'");
+        Exec(secondDb, "UPDATE runs SET status = 'running' WHERE run_id = 'run-alpha'");
+        var me = System.Diagnostics.Process.GetCurrentProcess();
+        var stateDir = Path.Combine(repo, StateHome.ScratchDirName);
+        Directory.CreateDirectory(stateDir);
+        File.WriteAllText(Path.Combine(stateDir, Conductor.Core.EngineLock.FileName),
+            me.Id + Environment.NewLine + me.StartTime.ToUniversalTime().ToString("o"));
+
+        var store = Assert.Single(StateRepair.Survey(Root).Stores,
+            s => StateMigration.PathsEqual(s.Db, secondDb));
+        Assert.True(store.Live, "an engine holding the repo's lock is using that store");
+
+        // and so it is never written: both copies are complete, so the live one keeps them.
+        var dup = Assert.Single(StateRepair.Survey(Root).Duplicates);
+        Assert.DoesNotContain(dup.RemoveFrom, p => StateMigration.PathsEqual(p, secondDb));
+        Assert.Equal(Path.GetFullPath(secondDb), dup.OwnerDb);
+        Assert.Equal(Path.GetFullPath(firstDb), Assert.Single(dup.RemoveFrom));
+    }
+
     /// <summary>Copies that have each gained something the other lacks are not deduplicated at all.
     /// There is no lossless choice there, so the pass says so and stops.</summary>
     [Fact]
