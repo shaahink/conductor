@@ -1,0 +1,247 @@
+{
+  // KARVANSARA plan 1 of 2 - the open door. Truth first, then the door, then GitHub as the
+  // remotest view. Spec: docs/dev/KARVANSARA-PLAN-2026-08-13.md (section 6, Plan I).
+  // GitHub stage spec: docs/dev/GITHUB-SYNC-DESIGN-2026-08-13.md. Launch drill: the closing
+  // paragraph of the era doc - follow it verbatim before `conductor run`.
+  //
+  // TRAPS THIS FILE ITSELF CARRIES (inherited from the Karvan file, all still true):
+  //  * `conductor plan set` round-trips this file through System.Text.Json and DROPS EVERY COMMENT.
+  //    Keep this annotated copy safe, or restore the comments by hand afterwards.
+  //  * `agent.model` is dropped silently unless {model} appears in BOTH args and resumeArgs. It does.
+  //    Verify with `conductor journey` - the Model column must never read (default).
+  //  * templatesDir resolves against THIS FILE'S directory, so "templates" means
+  //    plans/karvansara/templates/. tracker and planDoc below are repo-relative. They differ on
+  //    purpose; do not "fix" one to match the other.
+  //  * limits.maxSessionTokens and softBreakRatio are MEASURED, not guessed: karvan-core closed
+  //    24 checkpoints at 16.8M tokens and $13.24 each with ZERO rollovers in 30 costed sessions
+  //    at 32M / 0.70 on claude-opus-5. The pair is only valid for that model - the sonnet-to-opus
+  //    re-derivation was a measured 2.2x scale factor and doctor warns on neither direction.
+  //    Any model change re-derives from a fresh `conductor budget` BEFORE launch (KS7.4 re-measures
+  //    the lineup in edge). Cap $550 = est $424 (32 cp x $13.24) + ~29% headroom, Karvan's ratio.
+  //    The 32nd checkpoint is KS10.2, the published-surface sync added on the owner's ask
+  //    (ND-12); the cap moved 530 -> 550 with it rather than leaving the run to park $13 short.
+  "version": "1.0",
+  "planVersion": 1,
+  "name": "Karvansara core - the open door",
+  "repo": "C:/code/conductor",
+  // The field guide (payesh, shaahink/payesh) is a satellite ONLY so KS10.2's harvest-refresh
+  // commits register as progress - the verdict diffs it, nothing more. No stage before KS10 has
+  // any business there. Never push its main: that repo auto-deploys a public site.
+  "satelliteRepos": [
+    "C:/code/conductor-site"
+  ],
+  "tracker": "plans/karvansara/CORE-TRACKER.md",
+  "planDoc": "docs/dev/KARVANSARA-PLAN-2026-08-13.md",
+  "branchPattern": "^feat/karvansara$",
+  "pauseOnBlocked": true,
+  "agent": {
+    "command": "claude",
+    "args": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--dangerously-skip-permissions",
+      "--model",
+      "{model}",
+      "--session-id",
+      "{sessionId}"
+    ],
+    "resumeArgs": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--dangerously-skip-permissions",
+      "--model",
+      "{model}",
+      "--resume",
+      "{claudeSessionId}"
+    ],
+    "output": "stream-json",
+    "model": "claude-opus-5"
+  },
+  "advisor": {
+    "enabled": true,
+    "command": "claude",
+    "args": [
+      "-p",
+      "{prompt}",
+      "--output-format",
+      "json",
+      "--model",
+      "claude-haiku-4-5-20251001"
+    ],
+    "output": "json",
+    "timeoutMinutes": 6
+  },
+  "setup": {
+    "command": "dotnet build-server shutdown; exit 0",
+    "timeoutMinutes": 2
+  },
+  "teardown": {
+    "command": "dotnet build-server shutdown; exit 0",
+    "timeoutMinutes": 2
+  },
+  "progress": {
+    "kind": "markdown-table"
+  },
+  "stages": [
+    {
+      "id": "KS0",
+      "title": "Leftovers - the catalogue stops corrupting itself",
+      "sessions": 3,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: docs/dev/KARVANSARA-PLAN-2026-08-13.md section 6, stage KS0. This stage opens the era because the hub KS2 builds must not list a catalogue that corrupts itself: three read-only bug-list invocations under different plans grew it 22 to 31 rows on 2026-08-13, and payesh's harvest already refuses to run over one duplicate. KS0.1 keys legacy-db import on RUN ID, never plan slug, consults imported.json before importing, and ships a repair pass that collapses existing duplicates - BACK UP the catalogue before collapsing anything, and prove the payesh evidence path green on the deduped store. KS0.2 ships conductor run close and adopt verbs so a run record can be closed with provenance by CLI - the four phantom running rows and the hand-SQL procedure in .conductor/WATCH-HANDOFF.md are the acceptance; no runs UPDATE outside the store. KS0.3 is the sharp-small batch and every bug in it needs its reproduction script red then green: the gate battery must never rebuild the running engine (bug 16 - build to a shadow path), plan resolution prefers CWD over the CONDUCTOR_PLAN env var with a warning on override (bug 20 - the F0-R0 phantom stages in plans/karvan/CORE-TRACKER.md are the scar), the first-write FK error on a fresh run.db (bug 27), and the lessons.md duplicate-append regression with a pinned test."
+    },
+    {
+      "id": "KS1",
+      "title": "Truth - every read surface reconciles",
+      "sessions": 6,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: docs/dev/KARVANSARA-PLAN-2026-08-13.md section 6, stage KS1 - the 2026-08-07 verified plan's Epic 1 with its corrected scopes, absorbed not re-litigated; read docs/dev/NEXT-ERA-VERIFIED-PLAN-2026-08-07.md Epic 1 for the per-checkpoint detail. The invariant this stage installs: the event fold is truth, side-tables are views, and every external reader reconciles. KS1.1 makes a plan reload update the run row with limits provenance labeled at-launch versus now. KS1.2 derives stage rows from the fold and retires stages side-table reads - RunArchive.Checkpoints is the template; an architecture test forbids readers of stages.session_count. KS1.3 is render-time liveness reconciliation in history, the fleet list and json output - a killed engine's run must never list as running; this closes the read half of FU-F1-06 and KS0.2 was the write half. KS1.4 lands the doctor plan-semantics lints: gate-command path probe, checkpoint-id versus tracker cross-check, hook dry-run, plan drift, composed-prompt argv-length check for the 8191-char Windows ceiling (bugs 15 and 21), brace sweep, and the escalation-token sweep over notes and templates - doctor must go red on each of seven seeded trap plans. KS1.5 rewrites the ARCHITECTURE.md rollback paragraph to match ControlDispatcher and pins it with a docs-match-reality test. KS1.6 states the invariant as an architecture test: readers outside the engine may not consume mutable snapshot columns that have a fold-derived equivalent."
+    },
+    {
+      "id": "KS2",
+      "title": "The open door - bare conductor is the app, and every section reads",
+      "sessions": 8,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: docs/dev/KARVANSARA-PLAN-2026-08-13.md section 6, stage KS2. Face work obeys face-go/STYLE.md and adr 0006 - pad plain text then style, clamp with MaxWidth and MaxHeight, goldens pinned UTC under face-go/internal/tui/testdata/golden and regenerated only in a separate rebaseline commit. KS2.1: bare conductor on a TTY resolves the machine state home and opens the hub - recent runs live and past reconciled, plans discovered here, actions attach start plan-new history; non-TTY prints a status board and exits 0; every existing verb and --help unchanged. KS2.2: a read-only control-plane mode over the state home so the Face attaches to FINISHED runs - sessions, money, timeline, report render with no engine process. KS2.3: start a run from the hub - choose plan, journey preview, launch a DETACHED engine with stderr redirected (the field log's hard-won launch shape becomes the code path), then attach; killing the Face must leave the engine alive. KS2.4: one picker merging fleet probe and catalogue - live runs attach, past runs open read-only, across repos, write tokens never crossing runs. KS2.5: conductor status with no resolvable plan prints a machine-level board, never the multiple-plan-files error. KS2.6: park hygiene - a park emits once, notifier rate-limited with a max per incident, dry-run never notifies, a monitor listing verb; replay the 2026-08-02 escalation-token incident and demand exactly one notification. KS2.7: LONG TEXT SCROLLS EVERYWHERE - finish adr 0006 adoption: Agent console and transcript, Kanban detail, History, Telegram feed and Processes each own a pane viewport; delete the last hand-rolled scroll integers such as consoleScroll in tab_agent.go, applyPaneScroll the only key path; a module-intent test forbids new bespoke scroll fields; glitch-sweep proves a 500-line body scrolls to its end in every tab. KS2.8: THE READER - one full-screen overlay opens any truncated cell or row (checkpoint note, evidence text, session result, gate output, telegram message): soft-wrapped prose, the adr pager keys, percent readout, themed markdown where the body is markdown, esc back; a 2000-line report and a 300-char kanban note both readable to the last line at 80x24."
+    },
+    {
+      "id": "KS3",
+      "title": "Authoring - no human writes JSON",
+      "sessions": 5,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: docs/dev/KARVANSARA-PLAN-2026-08-13.md section 6, stage KS3. The contract is ND-3: JSON stays the compiled machine contract and a human never writes it by hand; a parallel markdown plan format is explicitly rejected. KS3.1: conductor plan new - an agent-assisted interview from an idea, PRD or existing tracker producing plan JSON plus tracker plus templates, doctor-clean by construction; from an empty repo one command must yield a zero-fail plan without the JSON ever opening in an editor. KS3.2: the editor stops destroying - comment header preserved across plan set, add-stage and import via parse-preserving edit or an owned header field; no more silent progress-kind or gate-timeout rewrites; replay the plan-editor trap where adding one stage changed three unrelated things and demand a diff showing only the stage. KS3.3: schema honesty - document the eight undocumented keys (supervisor, packs, pipeline, verifyEachDelivery, limits.maxSessions, stallGraceMinutes, authPreflight, sameFailureCircuitBreaker, verifierThreshold), remove or wire mutatingLanes, and make doctor warn on inert keys; plan-config.md must match PlanConfig under the docs-match-reality pin. KS3.4: conductor preflight - the launch drill as one verb: doctor, journey, dry-run compose, version-versus-release, rebuild check, escalation-block check, one verdict. KS3.5 (second cut line): import bridges - spec-kit tasks.md, Task-Master tasks.json, plain markdown checklist to plan; a spec-kit sample must convert and drive conductor demo to completion."
+    },
+    {
+      "id": "KS5",
+      "title": "Spend - every dollar the tool can spend is governed",
+      "sessions": 4,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: docs/dev/KARVANSARA-PLAN-2026-08-13.md section 6, stage KS5 - the verified plan's Epic 2 plus the uncounted paths. Billed-money-only is the house rule: no price table may appear in any diff. KS5.1: a machine-wide ledger verb answering what this machine spent this week or month, across the catalogue, cross-checked against per-run money output. KS5.2: lane, advisor and supervisor spend counted - cost rows for every spawned model process, caps see them, the advisor's flat seconds-based estimate replaced by billed rows where the provider reports; the architecture test is that any process-spawning path that takes a model must write a costs row. KS5.3: BudgetAnalyzer prescriptions surfaced at plan-reload - a reload whose ceiling contradicts the measured floor logs the disagreement at the boundary. KS5.4: approve and cap semantics - approve on a budget park RAISES THE CEILING EXPLICITLY with the amount stated instead of resetting the counter to zero, and the cap check runs after the queued reload applies; replay the field-log 2026-07-29 19:03 incident and demand no silent double-spend."
+    },
+    {
+      "id": "KS9",
+      "title": "The far door - GitHub is the remotest view",
+      "sessions": 3,
+      "ownerGate": false,
+      "kind": "deliver",
+      "notes": "SPEC: docs/dev/GITHUB-SYNC-DESIGN-2026-08-13.md - the committed design, executed as decided: ONE-WAY push, OFF BY DEFAULT, NOTHING INBOUND, the tracker stays the verified contract, two-way sync is a rejected non-goal (L6.3, D-7, ADR 0005 spirit). All live proofs go to a SCRATCH GitHub repo - never post to shaahink/conductor or any real repo during this stage; the owner does the first real backfill at KS10.3. Token comes from the new SecretsStore field or the CONDUCTOR_GITHUB_TOKEN override; raw HttpClient on the ReleaseClient pattern, no Octokit. KS9.1: token plumbing, the client, and conductor github sync --backfill posting a FINISHED run's board - one issue per TaskItem with upsert-never-clobber and retire-dont-delete semantics - plus its diary as a run issue with one comment per SessionFinished; re-running the backfill must mint zero duplicates. KS9.2: the live mirror - a reconciler over IRunStore.ReadEventsAfter, never a hot IEventSink, batched and network-failure-proof; kill the network mid-run and the run is unharmed while the board converges on reconnect; replay from cursor zero produces zero duplicates. KS9.3 (cut line inside this stage): Projects v2 board via GraphQL mirroring stage status - it needs the project scope the owner's gh token lacks; if the one-time gh auth refresh has not happened, report the precise refusal and leave the checkpoint SKIPPED rather than half-done."
+    },
+    {
+      "id": "KS10",
+      "title": "Ship core",
+      "sessions": 3,
+      "ownerGate": true,
+      "kind": "deliver",
+      "notes": "SPEC: docs/dev/KARVANSARA-PLAN-2026-08-13.md section 6, stage KS10 - the Karvan K7 pattern, plus decision ND-12 which split the published surface out of KS10.1 because a docs clause buried in a ship checkpoint is how doc drift survives an era. KS10.1 is the INTERNAL record: reconcile ARCHITECTURE.md and docs/dev with the engine for everything this plan changed; a closure ledger naming every bug and followup row closed here or its living owner; re-run conductor budget and write this run's own figures into TOKEN-BUDGET-TUNING - that number is what karvansara-edge compiles against, and if the prescription disagrees with this plan's estimate the prescription wins and the plan doc gets corrected in place. KS10.2 is the PUBLISHED surface and it is the checkpoint the owner asked for by name: README.md first, because KS2.1 changes the very first command a reader runs; then the docs user set - cli.md, operating.md, quickstart.md, troubleshooting.md, tracker.md, plan-config.md and the docs/README.md index; then .github issue and PR templates wherever a verb changed; then the Unreleased section of CHANGELOG.md written as the release body the world reads, because release.yml refuses a tag whose section is missing and uses that section verbatim - the CHANGELOG is the GitHub sync for humans exactly as KS9 is the sync for machines. The durable half is a test, not a promise: extend SF7_1DocsMatchRealityTests so every verb this era adds and every command README quotes is pinned, and prove it goes red on a seeded stale doc. Last, the field guide: payesh lives at C:/code/conductor-site and its harvest reads the run store KS0.1 rewrote, so re-run that harvest against the deduped catalogue as the end-to-end proof KS0.1 did not break its most public consumer - commit it on a branch and open a PR, NEVER push to the live site from a session, and if the harvest cannot run for a reason outside this plan record the precise refusal in the closure ledger and leave that half SKIPPED. KS10.3 is OWNER-ONLY: merge feat/karvansara to master, tag the release through the existing pipeline with KS10.2's CHANGELOG section as the body, reinstall with the reported version matching the releases page - the FIRST install of this run, only after the owner confirms no other conductor run is live on this machine - then the era's closing act, conductor github sync --backfill of THIS run, the first real use of KS9 on the run that built it, and merge the payesh PR so the field guide matches the shipped engine."
+    }
+  ],
+  "gates": [
+    {
+      "name": "engine-fast",
+      "command": "dotnet build Conductor.slnx -clp:ErrorsOnly",
+      "optional": false,
+      "tier": "fast",
+      "parallel": false,
+      "timeoutMinutes": 15
+    },
+    {
+      "name": "face-fast",
+      "command": "cmd /c \"cd /d C:\\code\\conductor\\face-go && go build ./... && go vet ./...\"",
+      "optional": false,
+      "tier": "fast",
+      "parallel": false,
+      "timeoutMinutes": 10
+    },
+    {
+      "name": "engine-full",
+      "command": "dotnet test Conductor.slnx",
+      "optional": false,
+      "tier": "full",
+      "parallel": false,
+      "timeoutMinutes": 40
+    },
+    {
+      "name": "face-full",
+      "command": "cmd /c \"cd /d C:\\code\\conductor\\face-go && go test ./...\"",
+      "optional": false,
+      "tier": "full",
+      "parallel": false,
+      "timeoutMinutes": 15
+    }
+  ],
+  "gatePolicy": "perPhase",
+  "verifyEachDelivery": true,
+  "limits": {
+    "stallMinutes": 15,
+    "stallGraceMinutes": 3,
+    "sessionTimeoutMinutes": 120,
+    "batterySettleSeconds": 120,
+    "authPreflight": true,
+    "maxResumesPerSession": 2,
+    "stageSlackFactor": 2,
+    "backoffMinutes": 30,
+    "maxBackoffs": 10,
+    "maxRunCostUsd": 550,
+    "approvalMode": false,
+    "maxSessionTokens": 32000000,
+    "softBreakRatio": 0.7,
+    "maxConcurrentLanes": 2,
+    "stallPatternTermination": true,
+    "sameFailureCircuitBreaker": true,
+    "stallBackoffMinutes": 12,
+    "overheadCostPerSecond": 0.0001,
+    "verifierThreshold": 80
+  },
+  "report": {
+    "commit": false,
+    "push": false,
+    "heartbeatMinutes": 0
+  },
+  "telegram": {
+    "allowedChatIds": [
+      "99205495"
+    ],
+    "pollIntervalSeconds": 4,
+    "enableTwoWay": true
+  },
+  "promptExtra": "TRAPS THIS REPO HAS ALREADY PAID FOR, in order of cost:\n0. THIS REPO'S .conductor/ IS THE LIVE STATE OF THE RUN DRIVING YOU. The claim and note verbs (conductor task, note, bug, bg) and the read-only verbs (status, task --list) are yours; NEVER aim a run-control verb (run, pause, resume, abort, approve, plan set, plan reload, goto, skip, retry-stage, rollback, kill) at this repo. Any live-run proof spawns YOUR build against a scratch repo with its own tiny plan and its own state dir - for example under the temp directory - never against C:/code/conductor.\n1. NEVER run tools/install.ps1 or overwrite the published engine. The conductor driving you runs from that published copy. The owner reinstalls at KS10.3, not before.\n2. The conductor on PATH is the published engine driving you - NOT your working tree. Exercise YOUR changes through the fresh build: dotnet run --project src/Conductor -- VERB (or go run ./cmd/... in face-go). Testing a new verb through the PATH shim only proves the published engine lacks it. Exception by design: task claims go through the PATH copy, because they target the driving run.\n3. A SECOND CONDUCTOR RUN MAY SHARE THIS MACHINE, in another repo, and you can break it without touching it. Never kill a conductor.exe, conductor-face.exe or stray dotnet process by pid: check its command line with Get-CimInstance Win32_Process and leave anything whose path is not this repo alone, no matter how stale it looks. Give every scratch rig its own port and its own state dir, and read the port back from the rig's own discovery file instead of assuming a default.\n4. THE CONDUCTOR_PLAN ENVIRONMENT VARIABLE BEATS THE CWD (bug 20, fixed in KS0.3 but live until that lands). Every conductor verb you run in a scratch rig must pass -p explicitly, and clear CONDUCTOR_PLAN in any shell you spawn. The F0 to R0 phantom stages sitting in plans/karvan/CORE-TRACKER.md today are the scar this trap leaves: a scratch rig quietly edited the DRIVING run's plan.\n5. THE CATALOGUE MINTS DUPLICATES UNDER NEW PLAN SLUGS (until KS0.1 lands): legacy-db import keys on plan slug, so read-only verbs in this old repo can grow the catalogue. Before diagnosing any duplicate run row, read imported.json in the state home. Never repair duplicates by hand-SQL - KS0.1 ships the repair pass, with a backup, and the payesh harvest must stay green on the deduped view.\n6. FOUR PHANTOM RUNNING ROWS exist in the catalogue until KS0.2 closes them via the new verb. They are evidence, not garbage: KS0.2's acceptance is closing them through the CLI. Do not delete them, do not hand-edit SQL - the WATCH-HANDOFF.md hand-SQL procedure is the thing KS0.2 exists to retire.\n7. NO GATE MAY REBUILD THE RUNNING ENGINE (bug 16, fixed in KS0.3 but live until that lands). This plan's gates build the solution, which is safe; never add a gate or a proof step that runs tools/install.ps1, publishes to the engine's install path, or invokes the tools/gates battery scripts that rebuild conductor.exe in place.\n8. A literal brace token in a file under this plan's templates directory KILLS THE ENGINE - the template text is validated for unresolved placeholders, the refusal goes to stderr only, and it fires when a stage first renders that template. After any template edit, sweep it: only real placeholder names may appear, and a doubled brace emits a literal one.\n9. Keep the escalation token out of the tracker's handoff block unless you are escalating right now. The match is a plain substring, so prose describing the convention parks the run as hard as raising one, and the park then hot-loops and floods Telegram (KS2.6 fixes the flood; the substring match stays). Write escalation in prose; the literal form is the word HUMAN followed by a colon.\n10. face-go: pad plain text then style, never width-format an ANSI string; clamp with MaxWidth and MaxHeight; goldens pin UTC and live in face-go/internal/tui/testdata/golden - regenerate them only in a separate rebaseline commit; read face-go/STYLE.md and adr 0006 before any face change. KS2.7 and KS2.8 are face-heavy: the pane viewport (panescroll.go) is the ONLY scroll idiom - never add a bespoke scroll integer.\n11. KS9 GITHUB WORK TARGETS A SCRATCH REPO ONLY. Never create, edit or close issues on shaahink/conductor or any real repository during proofs; the owner does the first real backfill at KS10.3. The token comes from SecretsStore or CONDUCTOR_GITHUB_TOKEN; nothing inbound, ever - no webhook, no poll of issue edits, no state read back from GitHub into the run.\n12. Orphaned dotnet test hosts flake the full suite. Stopping one is sanctioned ONLY after trap 3's command-line check proves it belongs to this repo; never kill a conductor process, yours or anyone's.\n13. PowerShell tooling targets Windows PowerShell 5.1 and must stay ASCII-only - em-dashes have torn string literals here before. Never call gh --jq from PowerShell when the filter contains double quotes; fetch raw JSON and ConvertFrom-Json.\n14. Commit per checkpoint with the repo's trailer convention and push feat/karvansara. Go sources are checked out LF; keep them that way. If you move a file this run depends on - the plan's readOrder target, the tracker, a template - update the plan and reload it in the same checkpoint, or the next session reads nothing.\n15. This era's token ceiling was measured, not guessed: 32M with the nudge at 22.4M, fitted to claude-opus-5 on karvan-core's own run.db - 16.8M tokens and 13.24 dollars per checkpoint, zero rollovers in 30 costed sessions. If you believe the ceiling is wrong, say so with a measurement in the handoff - do not work around it by splitting a checkpoint you were not asked to split. A model change invalidates the pair; that re-derivation belongs to the owner, not to a session.\n16. THE FIELD GUIDE IS A LIVE PUBLIC SITE. C:/code/conductor-site is shaahink/payesh, and a push to its main auto-deploys payesh.vercel.app to the world. It is declared as a satellite for ONE reason: KS10.2 re-runs its harvest against the deduped catalogue to prove KS0.1 did not break it. Work there on a branch, open a PR, and stop; the owner merges at KS10.3. No stage before KS10 touches that repo at all. Its figures are recomputed from the run store, never typed in, and anonymisation fails closed - if a harvest wants to emit a literal where an evidence key belongs, that is a bug to report, not a value to paste.",
+  "templatesDir": "templates",
+  "packs": [],
+  "batteryCollapse": false,
+  "readOrder": [
+    "docs/dev/KARVANSARA-PLAN-2026-08-13.md"
+  ],
+  "analysisLanes": [],
+  "workflows": {
+    "deliver": {
+      "name": "deliver",
+      "description": "Deliver until the stage's checkpoints are confirmed; fix only when gates are red.",
+      "steps": [
+        {
+          "id": "deliver",
+          "kind": "deliver",
+          "deliver": true
+        },
+        {
+          "id": "fix-if-red",
+          "kind": "fix",
+          "runIf": "!gatesGreen",
+          "deliver": true
+        }
+      ],
+      "repeat": true
+    }
+  },
+  "defaultWorkflow": "deliver"
+}
