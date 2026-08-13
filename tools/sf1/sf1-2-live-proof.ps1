@@ -194,6 +194,8 @@ Check "(1) GET /report/query is 404 on a live control plane" ($queryStatus -eq 4
 # A write attempt gets the same 404 - not a 400 from a SELECT-only guard that is still running.
 $writeStatus = 0
 try {
+    # The hostile payload, not a write: what is asserted below is that the control plane REFUSES it,
+    # because the endpoint that would once have executed it is gone. runs-write-scan:allow
     $r = Invoke-WebRequest -Uri ($base + '/report/query?sql=' + [uri]::EscapeDataString('DELETE FROM runs')) `
         -Method Get -TimeoutSec 10 -UseBasicParsing
     $writeStatus = [int]$r.StatusCode

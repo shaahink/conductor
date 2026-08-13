@@ -194,7 +194,7 @@ tests added validating failure-path stdout capture and RunState round-trip for P
 | FU-F1-03 | EmitSessionFinished commit SHA extraction | `rec.NewCommits[^1].Split(' ')[0]` assumes git log --oneline format. Advisory-only evidence field. | SF0.4 | **CLOSED as accepted-by-design (SF0.4).** Verified unchanged at `RunLoop.Plumbing.cs:200`. The "assumption" is not one: `Git.CommitsSince` produces the `git log --oneline` lines this expression parses, so the producer and the consumer are the same codebase and a format change breaks both together. The field is advisory evidence on `SessionFinished`, not a decision input. (SF0.2 fixed the genuinely broken thing two lines away — the `rec.GateSummary ?? completed` evidence fallback that stamped an empty string over the agent's.) |
 | FU-F1-04 | RunDb.Query lacked disposed-connection guard | Safe today but would fail loudly with confusing errors if F2.1 adds concurrent access. **CLOSED this session** — guard added at RunDb.cs:517. | F2 | CLOSED (sixth F1 audit) |
 | FU-F1-05 | SeedCheckpoints not transactionally atomic | Each UPSERT is a separate implicit transaction. Power failure mid-loop could leave partial state. Next SeedCheckpointsFromTracker reads intact tracker file and re-seeds, so no permanent data loss. Wrap in a single transaction for atomicity if needed. | F2 fix-lane | CLOSED (superseded by W1.1/W1.2) — the `checkpoints` table this row is about was DROPPED in migration v8. `SeedCheckpoints` now emits `TaskAdded`/`TaskStatusChanged` into the append-only event log, whose fold already tolerates a truncated tail, and W1.2's `WorkGraphSync` re-runs upsert-never-clobber at every boundary — so a partial seed self-heals instead of persisting. |
-| FU-F1-06 | run.db runs.status not updated on non-completion non-terminal states | NeedsHuman, Paused, AwaitingOwner, VerifyingGates, Backoff leave runs.status='running' in run.db. RecordRunEnd sets ended_utc which isn't warranted for resumable states. Add an UpdateRunStatus method (status-only, no ended_utc) and call from NeedsHuman + other state transitions. Low severity: state.json is authoritative; run.db is additive/best-effort; InitializeRun (INSERT OR REPLACE) fixes on resume. | **SF2.1** (re-homed by SF0.4) | **OPEN — re-homed to a stage that will open.** Verified: no `UpdateRunStatus` exists anywhere in `src/`, so the row stands exactly as written. It is no longer "low severity, run.db is best-effort": M2 moved run state INTO run.db, and **SF2.1 puts a last-run summary card on Home, read from run.db** — a run that ended `NeedsHuman` still says `status='running'` in the `runs` row, so that card would report a finished run as live. The fix (a status-only `UpdateRunStatus`, no `ended_utc`) is a prerequisite of SF2.1's own acceptance, which is why it goes there rather than to a fix-lane. |
+| FU-F1-06 | run.db runs.status not updated on non-completion non-terminal states | NeedsHuman, Paused, AwaitingOwner, VerifyingGates, Backoff leave runs.status='running' in run.db. RecordRunEnd sets ended_utc which isn't warranted for resumable states. Add an UpdateRunStatus method (status-only, no ended_utc) and call from NeedsHuman + other state transitions. Low severity: state.json is authoritative; run.db is additive/best-effort; InitializeRun (INSERT OR REPLACE) fixes on resume. | **KS0.2** (re-homed by SF0.4 to SF2.1, which never touched it) | **CLOSED (`15627b9`, KS0.2).** `IRunStore.UpdateRunStatus` writes the status and nothing else — no `ended_utc`, because a run that can still be resumed has not ended — and `RunContext.Save` calls it, so every park already routes through the writer and one invented in a later era does too. `RunRecord.StatusText` owns the vocabulary: only the parks that outlive the engine (`Paused`, `NeedsHuman`, `AwaitingOwner`) get their own word, while `Idle`, `Waiting`, `Backoff` and `VerifyingGates` stay `running` deliberately — a row that stops saying `running` under a live engine is a row `StateRepair` would believe it may write, so its liveness query was widened to terminal-vs-not in the same commit. The rows already frozen at `running` by engines that exited are closed through `conductor run close`, shipped alongside. Read-side reconciliation of a killed engine's row is KS1.3. |
 | FU-F1-07 | Completion test uses hardcoded verb list | The `Completion_ContainsAllRegisteredVerbs_Exhaustive` test hardcodes `expectedVerbs`, which allowed `task` and `note` to be missing from both the completion scripts AND the test for 9 audit sessions. Replace with a runtime reflection test that enumerates Program.cs registrations dynamically. | SF0.4 | **CLOSED (`2fea703`, SC8.3) — it had been fixed for a while and nobody came back to say so.** Verified in the tree, not read off the handoff: `Completion_ContainsAllRegisteredVerbs_Exhaustive` now opens with `var expectedVerbs = RegisteredVerbs()`, and `RegisteredVerbs()` reads `src/Conductor/Program.cs` line by line, matching `AddCommand<T>("verb")` and skipping any line carrying `.IsHidden()`. It also asserts the scan itself is not broken (`> 30` verbs parsed), rejects stale verbs the scripts declare but Program.cs does not register, and asserts exact count parity for **both** the PowerShell and bash scripts. The failure mode the row describes — add a verb, forget the hand-typed list, stay green — cannot happen: the list is no longer hand-typed. |
 
 ## Opened by owner (manual dogfooding observation, 2026-07-12)
@@ -370,19 +370,28 @@ session. See the row.
 | FU-OWNER-10 | **CLOSED** — SF3.3, `d500f00` | — |
 | FU-OWNER-11 | **CLOSED with a stated remainder** — SF4.2, `bc7ff3f`; repo and build never reached the push | reopen only if a second machine's runs land in one chat |
 | FU-OWNER-13 | **CLOSED** — `f0d12bb` + `8580cca`/`017c8a9` | — |
-| FU-F1-06 | **STILL OPEN**, and its re-home premise was **wrong** | the owner, or whoever opens the next era |
+| FU-F1-06 | **CLOSED at KS0.2** (`15627b9`) — the status-only writer exists and is called | — |
 | FU-B2-3 | half implemented (`RunLoop.Control.cs:125-131`), half **`HUMAN:`** — the live gate wants a recovery lane | the owner |
 | FU-B11-2 | **PARTIAL is the final answer** — `HUMAN:`, needs a Linux host; the shipped README says so | the owner |
 | FU-B11-3 | **`HUMAN:`** — real cTrader credentials and real money | the owner |
 
-**FU-F1-06 does not close, and the reason matters more than the row.** SF0.4 re-homed it to SF2.1 on
+**FU-F1-06 closed at KS0.2 (`15627b9`), three eras after it was filed.** The history is worth keeping
+because the row survived a whole stage by being re-homed rather than read: SF0.4 sent it to SF2.1 on
 the premise that a stale `runs.status` would make SF2.1's own last-run card lie, so fixing it was that
-stage's prerequisite. Measured today: `IRunStore` has exactly one terminal writer, `RecordRunEnd`,
-which stamps `ended_utc` — there is no status-only writer anywhere in `src/`, and SF2.1 never added
-one. It made its Home card honest by a different route (the connection line plus `RunSummary`), so the
-prerequisite was never load-bearing and the row rode a whole stage without being touched. A run that
-ends `NeedsHuman`, `Paused` or `AwaitingOwner` still reads `status='running'` in the `runs` table.
-The fix is unchanged and small: a status-only `UpdateRunStatus` that does not stamp `ended_utc`.
+stage's prerequisite. SF2.1 made its Home card honest by a different route (the connection line plus
+`RunSummary`), the premise stopped being load-bearing, and the row rode the stage untouched. What
+finally closed it was not the card but the catalogue: four rows on the operator's machine claiming to
+be live runs of engines that exited weeks ago, and no verb able to correct one.
+
+The fix is the one the row always named — `IRunStore.UpdateRunStatus`, status and nothing else, no
+`ended_utc`, because a run that can still be resumed has not ended
+(`src/Conductor.Core/Store/SqliteRunStore.Sessions.cs`). It is called from `RunContext.Save`, which
+every park already goes through, so a park invented in a later era is covered without anyone
+remembering this row exists. Vocabulary lives in `RunRecord.StatusText`, and only the parks that
+outlive the engine get their own word — `Idle`, `Waiting`, `Backoff` and `VerifyingGates` stay
+`running` on purpose, because a row that stops saying `running` under a live engine is a row
+`StateRepair` would believe it may write. The read half is KS1.3; the four existing phantoms are
+closed through `conductor run close`, which KS0.2 also ships.
 
 ### Bugs — the seven this run leaves open
 

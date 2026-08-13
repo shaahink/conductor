@@ -81,13 +81,19 @@ public sealed partial class SF7_1DocsMatchRealityTests
         }
     }
 
-    /// <summary>FU-F1-06 is the one row the era could not close, and the ledger says why in terms of
-    /// the code: there is no status-only writer for <c>runs.status</c>, only <c>RecordRunEnd</c>, which
-    /// stamps <c>ended_utc</c> — wrong for a resumable state like <c>NeedsHuman</c> or <c>Paused</c>.
-    /// The day someone adds that writer, this test goes red and the row is owed a closure. It is the
-    /// converse pin: a claim that something is MISSING, checked against the tree.</summary>
+    /// <summary>
+    /// FU-F1-06 was the one row the SF7.1 era could not close, and this test was its converse pin: a
+    /// claim that something was MISSING, checked against the tree. It said that no status-only writer
+    /// for <c>runs.status</c> existed — only <c>RecordRunEnd</c>, which stamps <c>ended_utc</c> and is
+    /// therefore wrong for a resumable state — and that the day someone added one, the row was owed a
+    /// closure.
+    /// <para>KS0.2 added it, so the pin turns over rather than being deleted: the writer must exist,
+    /// it must be called by the engine (a writer nothing calls closes nothing), and the ledger must
+    /// say so. Same shape, same scan, opposite direction — which is the only honest way to retire a
+    /// pin that has just been satisfied.</para>
+    /// </summary>
     [Fact]
-    public void TheOneRowLeftOpenIsStillOpenForTheReasonTheLedgerGives()
+    public void TheOneRowLeftOpenClosedAndTheLedgerSaysSo()
     {
         // K7.1: widened from src/Conductor to src/. K2.1 moved the store into Conductor.Core, which is
         // a SIBLING of src/Conductor and not a child of it, so this scan had quietly stopped covering
@@ -98,13 +104,17 @@ public sealed partial class SF7_1DocsMatchRealityTests
             .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
             .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
             .Where(f => File.ReadAllText(f).Contains("UpdateRunStatus", StringComparison.Ordinal))
+            .Select(f => Path.GetFileName(f))
             .ToList();
 
-        Assert.True(writers.Count == 0,
-            "a status-only run-status writer now exists (" + string.Join(", ", writers) +
-            "), so FU-F1-06's premise is finally addressable — close the row in " +
-            ".conductor/followups.md with the commit, and update the SF7.1 closure ledger.");
+        Assert.Contains("SqliteRunStore.Sessions.cs", writers);
+        Assert.Contains("IRunStore.cs", writers);
+        Assert.True(writers.Contains("RunContext.cs"),
+            "UpdateRunStatus exists but the engine never calls it, so a parked run still reads " +
+            "running - FU-F1-06 is not actually closed. The call belongs on the path every park " +
+            "already takes (RunContext.Save), not at each transition.");
 
-        Assert.Contains("FU-F1-06 does not close", Followups(), StringComparison.Ordinal);
+        Assert.Contains("FU-F1-06 closed at KS0.2", Followups(), StringComparison.Ordinal);
+        Assert.DoesNotContain("FU-F1-06 does not close", Followups(), StringComparison.Ordinal);
     }
 }
