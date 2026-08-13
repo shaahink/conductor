@@ -1,0 +1,20 @@
+# Uncommitted files that existed BEFORE this run started (2026-08-03).
+# Format: <local folder name>|<repo-relative path>
+# These belong to the owner. Sessions are told not to touch them, so the clean gate
+# ignores them rather than demanding a session commit or revert someone else's work.
+# A file listed here that later gets committed simply stops appearing - no action needed.
+
+Shamshir|docs/iterations/iter-pass-economics/LEDGER.md
+Shamshir|docs/iterations/iter-pass-economics/PLAN.md
+Shamshir|tools/research/census_driver.py
+Shamshir|tools/research/determinism_probe.py
+Shamshir|tools/research/exit_factorial_driver.py
+Shamshir|tools/research/v4_census_driver.py
+
+# Conductor's own generated files in the control room. These are not owner work and
+# not session work: conductor regenerates them from run.db between the verdict and the
+# phase gate. B1 proved it - the verdict read "dirty no" at 15:16:47 and the battery
+# found both modified at 15:16:52, five seconds later, after s3 had committed the
+# tracker (82e3adc). A session cannot win that race, so the gate must not judge it.
+conductor-cihealth|ci-health/TRACKER.md
+conductor-cihealth|.conductor/REPORT.md
