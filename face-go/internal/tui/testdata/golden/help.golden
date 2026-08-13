@@ -24,7 +24,7 @@
               │     \ collapse sidebar  ↑↓/j d/u pgdn G/home scroll · w owner queue            │           
               │                                                                                │           
               │   Global                                                                       │           
-              │     q quit   esc close / cancel   ? this help                                  │           
+              │     q quit   esc close / cancel   ? this help   z read long text               │           
               │                                                                                │           
               ╰────────────────────────────────────────────────────────────────────────────────╯           
                            │    r  read the run report                                                     

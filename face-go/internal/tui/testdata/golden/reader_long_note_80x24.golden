@@ -1,0 +1,24 @@
+ ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7  ⠋ s12 $0.12 41s              
+ ╭────────────────────────────────────────────────────────────────────────────╮
+ │  card T4 · F7.4                                            0% · esc close  │
+ │  ────────────────────────────────────────────────────────────────────────  │
+ │  T4 · F7.4 · stage F7                                                      │
+ │                                                                            │
+ │  ── Persona — deliver ──                                                   │
+ │  You are a delivery engineer.                                              │
+ │                                                                            │
+ │  ── Stage notes — F7 ──                                                    │
+ │  Gate caching stage: reuse GateRunner.                                     │
+ │                                                                            │
+ │  ── Task title ──                                                          │
+ │  Wire RunDb.GetLastPassingGateResult                                       │
+ │                                                                            │
+ │  ── Extra context (task-scoped) ──                                         │
+ │  note-segment-001 note-segment-002 note-segment-003 note-segment-004 note  │
+ │  -segment-005 note-segment-006 note-segment-007 note-segment-008 note-seg  │
+ │  ment-009 note-segment-010 note-segment-011 note-segment-012 note-segment  │
+ │  -013 note-segment-014 note-segment-015 note-segment-016 note-segment-017  │
+ │   note-segment-018                                                         │
+ │                                                                            │
+ ╰────────────────────────────────────────────────────────────────────────────╯
+ : cmd  i inject  / search  \ sidebar  ? help  q quit                          

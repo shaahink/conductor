@@ -31,4 +31,4 @@
                            │                                                                                  
                            │                                                                                  
                            │                                                                                  
- : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ field · enter edit/send · esc back             
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ field · enter edit/send · z read · esc back    

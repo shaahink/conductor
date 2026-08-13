@@ -1,0 +1,34 @@
+ ◆ conductor  ● LIVE  …/conductor  ▶ RUNNING  F7  ⠋ s12 $0.12 41s  cp 2/40  run $0.42  ⎇ feat/gate… ↑3↓1 ●   
+ ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+ │  session #11 · F7 Deliver                                                                     esc close  │
+ │  ──────────────────────────────────────────────────────────────────────────────────────────────────────  │
+ │                                                                                                          │
+ │   Session #11 — F7 Deliver                                                                               │
+ │                                                                                                          │
+ │  attempt 1, 0 resumes · 09:12 · 55m ago → 09:58  (45m 34s)                                               │
+ │                                                                                                          │
+ │  ## Gates                                                                                                │
+ │                                                                                                          │
+ │  build ✓ test ✗ lint ○                                                                                   │
+ │                                                                                                          │
+ │  ## Commits                                                                                              │
+ │                                                                                                          │
+ │  • 4b81d33 test(gates): the last-passing lookup joins attempts                                           │
+ │  • c07e5a9 refactor(store): one place that opens run.db                                                  │
+ │                                                                                                          │
+ │  ## Result                                                                                               │
+ │                                                                                                          │
+ │  Wired the caching layer in  RunDb  but  test  still red — see gate output.                              │
+ │                                                                                                          │
+ │                                                                                                          │
+ │                                                                                                          │
+ │                                                                                                          │
+ │                                                                                                          │
+ │                                                                                                          │
+ │                                                                                                          │
+ │                                                                                                          │
+ │                                                                                                          │
+ │                                                                                                          │
+ │                                                                                                          │
+ ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ : cmd  i inject  / search  \ sidebar  ? help  q quit   │   ↑↓ d/u G/home scroll · esc close                 
