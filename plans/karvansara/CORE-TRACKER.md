@@ -1,39 +1,48 @@
-# Karvansara core - the open door Phase Tracker
+﻿# Karvansara core - the open door Phase Tracker
 
 **Plan:** Karvansara core - the open door | **Branch:** `feat/karvansara` | **Design doc:** docs/dev/KARVANSARA-PLAN-2026-08-13.md
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: KS0.1's engine work is landed and proven (ff88317, a53ec7b, 4ae0cf5, 7d31d48). Import now dedups
-  by RUN ID via StateDedup - live rig: the published engine grew a store 1-2-3 rows under three plans,
-  this build 1-1-1. New verb `conductor catalogue [repair --apply]` backs up, then collapses. The real
-  catalogue went 37 rows/25 distinct -> 26/25, nothing lost. Evidence:
-  .conductor/evidence/KS0/ks0-1-catalogue-dedup.md
-read this before you touch the store: copies of one legacy run.db are NOT interchangeable. K3.1 moved
-  run.db to the state home, so a run kept writing into its own slug store while the legacy path froze -
-  b4640aef holds 3724 events for df9c4af8 where the other four copies hold 3722. The first version of
-  the repair kept the live (truncated) copy and lost a confirmed checkpoint; it was restored from the
-  backup, and a copy is now only removed when the keeper provably contains it.
-open on KS0.1: one duplicate row survives - df9c4af8's truncated copy in 308cfb9b, the store THIS run
-  uses. No session can remove it (the pass never writes a live store; the engine sets no busy_timeout).
-  Bug #36 tracks it: `conductor catalogue repair --apply`, once, while no engine holds that store,
-  takes it to 25/25 and payesh green. That is the owner's one command, not a session's.
-next: KS0.2 - conductor run close|adopt, and the four phantom running rows closed through the verb.
+last: KS0.2 landed and claimed (15627b9, ed6aab9, f82f3b1). FU-F1-06 is dead after three eras:
+  UpdateRunStatus writes status and no ended_utc, called from RunContext.Save so every park routes
+  through it. `conductor run close|adopt <id>` ships. Evidence: .conductor/evidence/KS0/ks0-2-run-close.md
+measured, do not re-derive: the catalogue held SEVEN non-terminal rows, not four. Three are LIVE -
+  9647f1b8 (this run), 8faf849d + d6fd22ba (DevContext2, another repo's conductor on this machine) -
+  and the verb refuses all three before --dry-run prints. The four real phantoms are closed through it;
+  non-terminal 7 -> 3, every survivor with a live pid in `conductor ps`.
+two traps this era must keep: only parks that OUTLIVE the engine get their own status word (Idle,
+  Waiting, Backoff, VerifyingGates stay `running`, or StateRepair thinks it may write a live store);
+  and NEVER bump the run.db schema version - the published v12 engine drives these sessions and
+  MigrationRunner throws on a newer store, so a v13 store would brick `conductor task` and the run.
+still open on KS0.1: df9c4af8's truncated copy in 308cfb9b, the live store. Bug #36 - one owner-run
+  `conductor catalogue repair --apply` while no engine holds it takes 26/25 to 25/25 and payesh green.
+next: KS0.3 - the sharp-small batch, each bug red then green by reproduction script (#16 shadow-path
+  gates, #20 CWD beats CONDUCTOR_PLAN, #27 fresh-run.db FK, lessons.md duplicate append). Bug #37 filed:
+  `history --json` missed three catalogued non-terminal rows a direct store read found - it is KS1.3's.
+
+
+## Baseline numbers (from run.db)
+
+| Metric | Value |
+|---|---|
+| Total checkpoints | 32 |
+| Done | 0 |
 
 ## Checkpoints
 
 Status ∈ TODO · IN PROGRESS · DONE · DONE ✓ (confirmed) · BLOCKED · SKIPPED. Evidence = artifact path produced by a run this
 phase (a code path is not evidence). Agent claims are marked DONE; engine confirms as DONE ✓.
 
-### KS0 — Leftovers: the catalogue stops corrupting itself
+### KS0 — Leftovers - the catalogue stops corrupting itself
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| KS0.1 | Legacy-db import dedups by run id - never plan slug - consults imported.json before importing, and a repair pass with a backup collapses the existing duplicates, leaving one row per real run and the payesh evidence path green on the deduped store | TODO | - | - |
+| KS0.1 | Legacy-db import dedups by run id - never plan slug - consults imported.json before importing, and a repair pass with a backup collapses the existing duplicates, leaving one row per real run and the payesh evidence path green on the deduped store | IN PROGRESS | - | - |
 | KS0.2 | conductor run close and adopt verbs close or annotate a run record with provenance through the store, an honest status writer covers non-terminal parks, and the four phantom running rows are closed via the verb - the WATCH-HANDOFF hand-SQL procedure retired | TODO | - | - |
 | KS0.3 | The sharp-small batch goes red to green by reproduction script: the gate battery builds to a shadow path and never rebuilds the running engine, CWD beats the CONDUCTOR_PLAN env var with a warning on override, the fresh-run.db first-write FK error dies, and lessons.md stops duplicate-appending with a pinned test | TODO | - | - |
 
-### KS1 — Truth: every read surface reconciles
+### KS1 — Truth - every read surface reconciles
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
@@ -44,7 +53,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | KS1.5 | The ARCHITECTURE.md rollback paragraph matches ControlDispatcher's actual reset and force semantics, covered by a docs-match-reality test | TODO | - | - |
 | KS1.6 | The invariant is an architecture test: readers outside the engine may not consume mutable snapshot columns that have a fold-derived equivalent - green on the tree, red on a seeded violation | TODO | - | - |
 
-### KS2 — The open door: bare conductor is the app, and every section reads
+### KS2 — The open door - bare conductor is the app, and every section reads
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
@@ -57,7 +66,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | KS2.7 | Long text scrolls everywhere: Agent console and transcript, Kanban detail, History, Telegram and Processes each own a pane viewport, the last hand-rolled scroll integers are deleted, and glitch-sweep proves a 500-line body scrolls to its end in every tab | TODO | - | - |
 | KS2.8 | The reader: one full-screen overlay opens any truncated cell or row with soft wrap, pager keys, percent readout and themed markdown - a 2000-line report and a 300-char kanban note both readable to the last line at 80x24 | TODO | - | - |
 
-### KS3 — Authoring: no human writes JSON
+### KS3 — Authoring - no human writes JSON
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
@@ -67,7 +76,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | KS3.4 | conductor preflight runs the launch drill as one verb - doctor, journey, dry-run compose, version-versus-release, rebuild check, escalation-block check - one verdict, each seeded drill failure caught | TODO | - | - |
 | KS3.5 | Import bridges: a spec-kit tasks.md, a Task-Master tasks.json and a plain markdown checklist each convert to a plan, and the spec-kit sample drives conductor demo to completion | TODO | - | - |
 
-### KS5 — Spend: every dollar the tool can spend is governed
+### KS5 — Spend - every dollar the tool can spend is governed
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
@@ -76,7 +85,7 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 | KS5.3 | BudgetAnalyzer prescriptions surface at plan-reload, logging any ceiling that contradicts the measured floor at the boundary | TODO | - | - |
 | KS5.4 | approve on a budget park raises the ceiling explicitly with the amount stated instead of resetting the counter, and the cap check runs after the queued reload applies - the 2026-07-29 replay shows no silent double-spend | TODO | - | - |
 
-### KS9 — The far door: GitHub is the remotest view
+### KS9 — The far door - GitHub is the remotest view
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
