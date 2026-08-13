@@ -21,10 +21,15 @@ public sealed partial class SqliteRunStore
         // The engine stamp and the limits DO get refreshed on conflict: a resume can be a different
         // build under different limits, and the run row means "what is driving it now" while the
         // per-session columns keep what drove each session.
+        //
+        // KS1.1: which is why `limits_json_at_launch` is written in the VALUES list and is absent from
+        // the conflict clause. It is the one column on this row that means "at launch", and a resume
+        // is not a launch — refreshing it here would erase the value on the second process start of
+        // every run, leaving two columns that both say "now" and none that says where it began.
         TryExecute("INSERT INTO runs (run_id, plan_name, repo, branch, driver_ver, status, started_utc, " +
-                   "  engine_version, engine_commit, engine_dirty, limits_json) " +
+                   "  engine_version, engine_commit, engine_dirty, limits_json, limits_json_at_launch) " +
                    "VALUES (@runId, @planName, @repo, @branch, @driverVer, 'running', @now, " +
-                   "  @engineVer, @engineCommit, @engineDirty, @limits) " +
+                   "  @engineVer, @engineCommit, @engineDirty, @limits, @limits) " +
                    "ON CONFLICT(run_id) DO UPDATE SET " +
                    "  plan_name = excluded.plan_name, repo = excluded.repo, branch = excluded.branch, " +
                    "  driver_ver = excluded.driver_ver, status = 'running', " +
@@ -36,6 +41,24 @@ public sealed partial class SqliteRunStore
                    ("@engineVer", engine.Version),
                    ("@engineCommit", engine.Commit),
                    ("@engineDirty", engine.Dirty ? 1 : 0),
+                   ("@limits", (object?)limitsJson ?? DBNull.Value),
+                   ("@now", _clock.GetUtcNow().ToString("O")));
+    }
+
+    /// <inheritdoc />
+    public void RecordLimitsReload(string runId, string limitsJson)
+    {
+        // KS1.1: the only writer of the "now" limits after the process start that opened the run. The
+        // reload path calls it once per APPLIED reload, so the count is a record of swaps that really
+        // happened rather than a diff of two snapshots — which cannot see a reload that landed back on
+        // the value it started from, and there have been two of those on this machine already.
+        // COALESCE because a row created before v13 carries NULL in a column the migration declared
+        // NOT NULL DEFAULT 0: SQLite applies the default to new rows, not to the ones already there.
+        TryExecute("UPDATE runs SET limits_json = @limits, " +
+                   "  limits_reload_count = COALESCE(limits_reload_count, 0) + 1, " +
+                   "  limits_reloaded_utc = @now " +
+                   "WHERE run_id = @runId",
+                   ("@runId", runId),
                    ("@limits", (object?)limitsJson ?? DBNull.Value),
                    ("@now", _clock.GetUtcNow().ToString("O")));
     }

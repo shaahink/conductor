@@ -299,6 +299,10 @@ public sealed class K3_3ProvenanceTests : IDisposable
                 "ALTER TABLE sessions DROP COLUMN context_high_water;" +
                 "ALTER TABLE sessions DROP COLUMN context_mean_turn;" +
                 "ALTER TABLE sessions DROP COLUMN context_turns;" +
+                // KS1.1: and v13's three, for the same reason.
+                "ALTER TABLE runs DROP COLUMN limits_json_at_launch;" +
+                "ALTER TABLE runs DROP COLUMN limits_reload_count;" +
+                "ALTER TABLE runs DROP COLUMN limits_reloaded_utc;" +
                 "UPDATE schema_version SET version = 10;";
             cmd.ExecuteNonQuery();
         }
@@ -311,13 +315,51 @@ public sealed class K3_3ProvenanceTests : IDisposable
         var archive = RunArchive.TryOpen(db)!;
         Assert.Equal((long)SqliteRunStore.CurrentSchemaVersion,
             Convert.ToInt64(archive.Query("SELECT version FROM schema_version")[0]["version"]));
-        // K4.1 moved the schema to v12 (sessions.context_*). The pin follows the shipped version on
-        // purpose: this test asserts the v10 -> current upgrade path lands, not that v11 is the end.
-        Assert.Equal(12, SqliteRunStore.CurrentSchemaVersion);
+        // K4.1 moved the schema to v12 (sessions.context_*), KS1.1 to v13 (runs.limits_json_at_launch
+        // and the reload provenance). The pin follows the shipped version on purpose: this test
+        // asserts the v10 -> current upgrade path lands, not that v11 is the end.
+        Assert.Equal(13, SqliteRunStore.CurrentSchemaVersion);
         var run = Assert.Single(archive.Runs());
         Assert.Equal("run-k33-0004", run.RunId);
         Assert.Equal("completed", run.Status);
         Assert.Null(run.EngineCommit);   // the column is back; the pre-migration row never had a value
+    }
+
+    /// <summary>KS1.1 — a database still at the pre-v13 schema must LIST, not throw. The archive opens
+    /// databases this engine did not write, and a bare SELECT naming a column that file has never heard
+    /// of takes the whole history listing down; the launch snapshot is therefore read through the same
+    /// Has() probe every K3.3 column is, and answers "unrecorded" instead of failing.</summary>
+    [Fact]
+    public void A_pre_KS1_1_database_still_reads_and_the_launch_snapshot_is_unrecorded()
+    {
+        var db = Db("prev13.db");
+        using (var store = Open(db))
+            store.InitializeRun("run-ks11-0006", "core", "C:\\repo", "master", EngineStamp.Current,
+                RunLimitsSnapshot.From(new LimitsConfig { MaxSessionTokens = 24_000_000 }).ToJson());
+        SqliteConnection.ClearAllPools();
+
+        // Take it back to v12 — the schema as it shipped before this checkpoint — and leave it there.
+        using (var conn = new SqliteConnection($"Data Source={db}"))
+        {
+            conn.Open();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText =
+                "ALTER TABLE runs DROP COLUMN limits_json_at_launch;" +
+                "ALTER TABLE runs DROP COLUMN limits_reload_count;" +
+                "ALTER TABLE runs DROP COLUMN limits_reloaded_utc;" +
+                "UPDATE schema_version SET version = 12;";
+            cmd.ExecuteNonQuery();
+        }
+        SqliteConnection.ClearAllPools();
+
+        var run = Assert.Single(RunArchive.TryOpen(db)!.Runs());
+        Assert.Equal(24_000_000, run.Limits!.SessionTokenCap);   // v11's column still answers
+        Assert.Null(run.LimitsAtLaunch);                         // v13's does not, and says so
+        Assert.Equal(0, run.LimitsReloads);
+        Assert.Null(run.LimitsReloadedUtc);
+        // "we cannot tell" is not "they were the same" — but it is also not a claim of change, and
+        // the single-line render depends on this being false.
+        Assert.False(run.LimitsChangedInFlight);
     }
 
     [Fact]
@@ -338,6 +380,10 @@ public sealed class K3_3ProvenanceTests : IDisposable
         Assert.Contains("limits_json", runCols, StringComparer.Ordinal);
         Assert.Contains("engine", sessionCols, StringComparer.Ordinal);
         Assert.Contains("limits", sessionCols, StringComparer.Ordinal);
+        // KS1.1 — the launch snapshot and its provenance, on the same fresh-database terms.
+        Assert.Contains("limits_json_at_launch", runCols, StringComparer.Ordinal);
+        Assert.Contains("limits_reload_count", runCols, StringComparer.Ordinal);
+        Assert.Contains("limits_reloaded_utc", runCols, StringComparer.Ordinal);
 
         // driver_ver survives for old readers, and now carries the whole stamp instead of 2.0.0.0.
         Assert.Equal(EngineStamp.Current.Full,

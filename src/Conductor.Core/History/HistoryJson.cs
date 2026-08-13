@@ -19,7 +19,12 @@ public sealed record RunHistoryItemJson(
     string RunDb, string Slug, string? ImportedFrom, bool Readable,
     // K3.3. Optional with defaults so a v11 field never breaks a caller written against K3.2's
     // shape: `engine` still carries the printable stamp, and these three add the parts of it.
-    string? EngineCommit = null, bool? EngineDirty = null, RunLimitsSnapshot? Limits = null);
+    string? EngineCommit = null, bool? EngineDirty = null, RunLimitsSnapshot? Limits = null,
+    // KS1.1, on the same terms. `limits` keeps its name and its meaning gets sharper rather than
+    // different — it was always the last thing written, it is now honestly labelled "now" — and the
+    // launch value arrives beside it instead of replacing it. A consumer that only knows the K3.3
+    // shape reads exactly what it read before.
+    RunLimitsSnapshot? LimitsAtLaunch = null, int LimitsReloads = 0, string? LimitsReloadedUtc = null);
 
 /// <summary>One run opened: the row, plus its spine.</summary>
 public sealed record RunHistoryDetailJson(

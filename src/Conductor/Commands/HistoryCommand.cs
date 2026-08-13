@@ -196,8 +196,7 @@ public sealed class HistoryCommand : Command<HistoryCommand.Settings>
         AnsiConsole.MarkupLine(
             $"[grey]engine[/]   {Markup.Escape(run.EngineStampText ?? "unrecorded")}{dirty}{provenance}  " +
             $"[grey]branch[/] {Markup.Escape(run.Branch ?? "-")}");
-        if (run.Limits is { } limits)
-            AnsiConsole.MarkupLine($"[grey]limits[/]   {Markup.Escape(limits.Describe())}");
+        ShowLimits(run);
         AnsiConsole.MarkupLine(
             $"[grey]ran[/]      {Markup.Escape(Stamp(run.StartedUtc) ?? "-")} → {Markup.Escape(Stamp(run.EndedUtc) ?? "still open")}");
         AnsiConsole.MarkupLine(
@@ -256,6 +255,37 @@ public sealed class HistoryCommand : Command<HistoryCommand.Settings>
         }
 
         return 0;
+    }
+
+    /// <summary>
+    /// KS1.1 — the limits, labelled. One line while the run was governed by one set of limits, which
+    /// is nearly every run; two the moment a live reload changed them, because "the cap was 32M" and
+    /// "the cap became 32M at the reload" are different facts and only the second explains a session
+    /// that overran the first. The extra line appears only when there is a change to report, so a run
+    /// that never reloaded reads exactly as it did before this existed.
+    /// </summary>
+    private static void ShowLimits(Conductor.Core.History.ArchivedRun run)
+    {
+        var now = run.Limits;
+        var launch = run.LimitsAtLaunch;
+        if (now is null && launch is null) return;
+
+        if (!run.LimitsChangedInFlight)
+        {
+            // Includes the case where only one end is recorded: an unrecorded launch is not evidence
+            // that nothing changed, so it gets the plain line rather than a claim of sameness.
+            AnsiConsole.MarkupLine($"[grey]limits[/]   {Markup.Escape((now ?? launch)!.Describe())}");
+            return;
+        }
+
+        var when = Stamp(run.LimitsReloadedUtc);
+        var reloads = run.LimitsReloads == 1 ? "1 reload" : $"{run.LimitsReloads.ToString(CultureInfo.InvariantCulture)} reloads";
+        AnsiConsole.MarkupLine($"[grey]limits[/]   [grey]at launch[/]  {Markup.Escape(launch!.Describe())}");
+        AnsiConsole.MarkupLine(
+            $"[grey]      [/]   [yellow]now[/]        {Markup.Escape(now!.Describe())}" +
+            (run.LimitsReloads > 0
+                ? $"  [grey]({reloads}{(when is null ? "" : ", last " + when)})[/]"
+                : ""));
     }
 
     /// <summary>
@@ -342,7 +372,8 @@ public sealed class HistoryCommand : Command<HistoryCommand.Settings>
             r.Run.StartedUtc, r.Run.EndedUtc, r.Run.LastActivityUtc,
             r.Run.Sessions, done, total, r.Run.CostUsd, r.Run.Tokens,
             r.RunDbPath, r.Slug, r.ImportedFrom, Readable: true,
-            r.Run.EngineCommit, r.Run.EngineDirty, r.Run.Limits);
+            r.Run.EngineCommit, r.Run.EngineDirty, r.Run.Limits,
+            r.Run.LimitsAtLaunch, r.Run.LimitsReloads, r.Run.LimitsReloadedUtc);
     }
 
     private static string StatusMarkup(string status) => status.ToLowerInvariant() switch

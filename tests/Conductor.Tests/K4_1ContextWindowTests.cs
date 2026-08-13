@@ -266,6 +266,10 @@ public sealed class K4_1ContextWindowTests : IDisposable
                 "ALTER TABLE sessions DROP COLUMN context_high_water;" +
                 "ALTER TABLE sessions DROP COLUMN context_mean_turn;" +
                 "ALTER TABLE sessions DROP COLUMN context_turns;" +
+                // KS1.1: v13's columns go with them, or the replay meets its own work on the way up.
+                "ALTER TABLE runs DROP COLUMN limits_json_at_launch;" +
+                "ALTER TABLE runs DROP COLUMN limits_reload_count;" +
+                "ALTER TABLE runs DROP COLUMN limits_reloaded_utc;" +
                 "UPDATE schema_version SET version = 11;";
             cmd.ExecuteNonQuery();
         }
@@ -276,7 +280,9 @@ public sealed class K4_1ContextWindowTests : IDisposable
         SqliteConnection.ClearAllPools();
 
         var archive = RunArchive.TryOpen(db)!;
-        Assert.Equal(12, SqliteRunStore.CurrentSchemaVersion);
+        // The pin follows the shipped version (KS1.1 took it to v13): this test asserts the
+        // v11 -> current upgrade path lands, not that v12 is the end.
+        Assert.Equal(13, SqliteRunStore.CurrentSchemaVersion);
         Assert.Equal((long)SqliteRunStore.CurrentSchemaVersion,
             Convert.ToInt64(archive.Query("SELECT version FROM schema_version")[0]["version"]));
         var session = Assert.Single(archive.Sessions("run-k41-0003"));

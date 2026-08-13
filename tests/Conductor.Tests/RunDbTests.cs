@@ -53,11 +53,15 @@ public sealed class RunDbTests : IDisposable
     }
 
     [Fact]
-    public void Schema_version_is_twelve()
+    public void Schema_version_is_thirteen()
     {
         var rows = _db.Query("SELECT version FROM schema_version");
         Assert.Single(rows);
-        Assert.Equal(12L, (long)rows[0]["version"]!);  // K4.1 added sessions.context_* (v11: engine stamp + limits)
+        // A literal on purpose: the number is what the pin is FOR. Reading it back from
+        // SqliteRunStore.CurrentSchemaVersion would assert that a constant equals itself and let a
+        // schema bump land without anyone deciding it should.
+        // v11 engine stamp + limits · v12 sessions.context_* · v13 runs.limits_json_at_launch + reload provenance
+        Assert.Equal(13L, (long)rows[0]["version"]!);
     }
 
     [Fact]

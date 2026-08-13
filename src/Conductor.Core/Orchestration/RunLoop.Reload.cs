@@ -45,8 +45,11 @@ public sealed partial class RunLoop
     /// boundary). Re-reads the plan file the run was started from, validates it (PlanConfig.Load
     /// throws on an invalid plan → reload is skipped, old plan stays), and swaps it into the context
     /// plus every satellite that caches a plan reference. A stale or deleted file never kills the
-    /// run — reload is best-effort and loud in the log either way.</summary>
-    private void ApplyPlanReload()
+    /// run — reload is best-effort and loud in the log either way.
+    /// <para>KS1.1: internal rather than private so the boundary itself can be driven from a test.
+    /// What the reload persists is now part of the run record, and a test that reproduced the write
+    /// instead of calling this would be asserting against its own copy of the rule.</para></summary>
+    internal void ApplyPlanReload()
     {
         var path = _ctx.Plan.PlanFilePath;
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
@@ -80,11 +83,21 @@ public sealed partial class RunLoop
             : "no per-session cap";
         _ctx.Log($"plan reloaded at session boundary — v{fresh.PlanVersion}, {fresh.Stages.Count} stages, {fresh.Gates.Count} gates, {tokenCap}");
 
-        // W1.2: a reloaded plan re-declares the work — sync the graph (and, when anything changed,
-        // the tracker view) so an added stage is schedulable and on the board before the next
-        // session, not after a restart.
         if (_ctx.Store is { } db)
+        {
+            // KS1.1: the run row learns the new limits here, at the boundary, and nowhere else.
+            // EnsureRunRow first because the row is this write's target and the reload can reach a
+            // boundary before anything has saved; it is guarded by its own once-flag, so on the normal
+            // path — where the loop wrote the row before its first session — this costs nothing and,
+            // being a no-op, could not have carried the new limits by itself.
+            _ctx.EnsureRunRow();
+            db.RecordLimitsReload(_ctx.State.RunId, RunLimitsSnapshot.From(fresh.Limits).ToJson());
+
+            // W1.2: a reloaded plan re-declares the work — sync the graph (and, when anything changed,
+            // the tracker view) so an added stage is schedulable and on the board before the next
+            // session, not after a restart.
             WorkGraphSync.Sync(fresh, db, _ctx.State.RunId, _ctx.Log);
+        }
 
         // P2: the session-scoped stage flags (skip-gates/commit/verification) were computed from
         // the OLD plan at stage entry and have no other writer — recompute them from the fresh

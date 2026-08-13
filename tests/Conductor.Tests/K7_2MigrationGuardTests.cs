@@ -31,7 +31,8 @@ public sealed class K7_2MigrationGuardTests : IDisposable
         // The exact shape measured on this repo on 2026-08-05: v10 applied, v11 and v12 not,
         // schema_version still reading 9.
         CreateThenRewind(9, "engine_version", "engine_commit", "engine_dirty", "limits_json",
-            "engine", "limits", "context_high_water", "context_mean_turn", "context_turns");
+            "engine", "limits", "context_high_water", "context_mean_turn", "context_turns",
+            "limits_json_at_launch", "limits_reload_count", "limits_reloaded_utc");
 
         Assert.Equal(1, ColumnCount("sessions", "soft_break"));
 
@@ -41,6 +42,38 @@ public sealed class K7_2MigrationGuardTests : IDisposable
         Assert.Equal(1, ColumnCount("sessions", "soft_break"));
         Assert.Equal(1, ColumnCount("runs", "engine_commit"));
         Assert.Equal(1, ColumnCount("sessions", "context_high_water"));
+        // KS1.1: v13 lands on the same climb.
+        Assert.Equal(1, ColumnCount("runs", "limits_json_at_launch"));
+        Assert.Equal(1, ColumnCount("runs", "limits_reload_count"));
+        Assert.Equal(1, ColumnCount("runs", "limits_reloaded_utc"));
+    }
+
+    /// <summary>KS1.1 — the rewind the archive has to survive, from the other side: a database left at
+    /// v13 minus one column, opened by the ENGINE rather than the reader. The replay fills the gap and
+    /// the row that was already there keeps its launch snapshot, which is the property that makes the
+    /// column worth having; a migration that refilled it from limits_json would pass every column-count
+    /// assertion above and still have overwritten where the run began.</summary>
+    [Fact]
+    public void A_partly_applied_v13_keeps_the_launch_snapshot_it_already_had()
+    {
+        Reopen();
+        using (var store = new SqliteRunStore(_dbPath, NullLogger<SqliteRunStore>.Instance))
+            store.InitializeRun("run-k72-v13", "core", "C:\\repo", "master",
+                new Conductor.Core.EngineStamp("0.3.1", "abcdef", false), "{\"sessionTokenCap\":24000000}");
+        SqliteConnection.ClearAllPools();
+
+        Execute("ALTER TABLE runs DROP COLUMN limits_reloaded_utc");
+        Execute("UPDATE schema_version SET version = 12");
+
+        Reopen();
+
+        Assert.Equal(SqliteRunStore.CurrentSchemaVersion, StoredVersion());
+        Assert.Equal(1, ColumnCount("runs", "limits_reloaded_utc"));
+        using var conn = new SqliteConnection($"Data Source={_dbPath}");
+        conn.Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT limits_json_at_launch FROM runs WHERE run_id = 'run-k72-v13'";
+        Assert.Equal("{\"sessionTokenCap\":24000000}", cmd.ExecuteScalar() as string);
     }
 
     [Fact]

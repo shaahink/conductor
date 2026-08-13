@@ -18,6 +18,17 @@ public interface IRunStore : IDisposable
                        EngineStamp engine, string? limitsJson = null);
     void RecordRunEnd(string runId, string status);
 
+    /// <summary>KS1.1 — record that a live plan reload swapped the limits this run is governed by.
+    /// Writes the fresh <see cref="RunLimitsSnapshot"/> into the run row's "now" field and bumps the
+    /// reload provenance; the at-launch field is never touched.
+    /// <para>It exists because the reload had no way to reach the row at all. <c>InitializeRun</c> is
+    /// the only other writer of the limits and it runs once per PROCESS, so a cap raised at the
+    /// session boundary — the thing the Plan tab exists to do — left the record still quoting the cap
+    /// the engine happened to start with. Recorded at the boundary rather than derived later: a
+    /// reload that is skipped applies nothing and so records nothing, and only the boundary knows the
+    /// difference.</para></summary>
+    void RecordLimitsReload(string runId, string limitsJson);
+
     /// <summary>KS0.2, closing FU-F1-06 — write <c>runs.status</c> and NOTHING else. The column had no
     /// status-only writer, so a run that stopped in a resumable state (<c>NeedsHuman</c>,
     /// <c>Paused</c>, <c>AwaitingOwner</c>) went on saying <c>running</c> for ever;

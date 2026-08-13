@@ -125,9 +125,15 @@ public sealed class RunArchive
         var provenance = Has("runs", "engine_version")
             ? "r.engine_version, r.engine_commit, r.engine_dirty, r.limits_json, "
             : "";
+        // KS1.1 — v13's three, probed as one group because one migration adds all three. A v11 or v12
+        // database answers "unrecorded" for the launch snapshot rather than taking the listing down,
+        // which is the whole reason Has() exists.
+        var launch = Has("runs", "limits_json_at_launch")
+            ? "r.limits_json_at_launch, r.limits_reload_count, r.limits_reloaded_utc, "
+            : "";
         var rows = Query(
             "SELECT r.run_id, r.plan_name, r.repo, r.branch, r.driver_ver, r.status, " +
-            provenance +
+            provenance + launch +
             "  r.started_utc, r.ended_utc, " +
             "  (SELECT COUNT(*) FROM sessions s WHERE s.run_id = r.run_id) AS session_count, " +
             "  (SELECT COALESCE(SUM(c.cost_usd), 0) FROM costs c WHERE c.run_id = r.run_id) AS cost_usd, " +
@@ -345,7 +351,15 @@ public sealed class RunArchive
         EngineDirty: Opt(r, "engine_dirty") is { } d
             ? Convert.ToInt64(d, System.Globalization.CultureInfo.InvariantCulture) != 0
             : null,
-        LimitsJson: Opt(r, "limits_json") as string);
+        LimitsJson: Opt(r, "limits_json") as string,
+        // KS1.1 — absent on anything older than v13, and absent is not zero for the count: a database
+        // that never recorded a reload and one that recorded none read the same here on purpose,
+        // because neither can claim the run was reloaded.
+        LimitsAtLaunchJson: Opt(r, "limits_json_at_launch") as string,
+        LimitsReloads: Opt(r, "limits_reload_count") is { } n
+            ? Convert.ToInt32(n, System.Globalization.CultureInfo.InvariantCulture)
+            : 0,
+        LimitsReloadedUtc: Opt(r, "limits_reloaded_utc") as string);
 
     /// <summary>A column that may not exist in this database. <c>null</c> covers both "not selected"
     /// and "selected and NULL", which are the same answer to a reader: unrecorded.</summary>
