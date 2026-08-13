@@ -4,27 +4,18 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: KS0.2 landed and claimed (15627b9, ed6aab9, f82f3b1). FU-F1-06 is dead after three eras:
-  UpdateRunStatus writes status and no ended_utc, called from RunContext.Save so every park routes
-  through it. `conductor run close|adopt <id>` ships. Evidence: .conductor/evidence/KS0/ks0-2-run-close.md
-measured, do not re-derive: the catalogue held SEVEN non-terminal rows, not four. Three are LIVE -
-  9647f1b8 (this run), 8faf849d + d6fd22ba (DevContext2, another repo's conductor on this machine) -
-  and the verb refuses all three before --dry-run prints. The four real phantoms are closed through it;
-  non-terminal 7 -> 3, every survivor with a live pid in `conductor ps`.
-three traps this era must keep: only parks that OUTLIVE the engine get their own status word (Idle,
-  Waiting, Backoff, VerifyingGates stay `running`, or StateRepair thinks it may write a live store);
-  NEVER bump the run.db schema version - the published v12 engine drives these sessions and
-  MigrationRunner throws on a newer store, so a v13 store would brick `conductor task` and the run;
-  and the ArchitectureTests ratchets are NOT in a scoped filter - the type ceiling had been red since
-  KS0.1 (CatalogueCommand 5 types, StateRepair 6). Split, never raised, in e4c9984. Add a file, then
-  run `--filter FullyQualifiedName~ArchitectureTests` before you claim; it takes 9 seconds.
-red/green: last full suite before the split was 2122/2123, the one failure being that ratchet; after
-  the split ArchitectureTests + all KS0_* are 60 green. A full suite was not re-run to completion.
-still open on KS0.1: df9c4af8's truncated copy in 308cfb9b, the live store. Bug #36 - one owner-run
-  `conductor catalogue repair --apply` while no engine holds it takes 26/25 to 25/25 and payesh green.
-next: KS0.3 - the sharp-small batch, each bug red then green by reproduction script (#16 shadow-path
-  gates, #20 CWD beats CONDUCTOR_PLAN, #27 fresh-run.db FK, lessons.md duplicate append). Bug #37 filed:
-  `history --json` missed three catalogued non-terminal rows a direct store read found - it is KS1.3's.
+last: KS0.3 landed COMPLETE (a8fa298, eb9778e) - four bugs, each red-then-green by a script under
+  tools/ks0/, pinned by tests/Conductor.Tests/KS0_3*.cs; bugs #16, #20, #27 closed. Evidence:
+  .conductor/evidence/KS0/ks0-3-sharp-small-batch.md. KS0 is finished bar the blocked KS0.1.
+measured: FULL suite 2156/2156 green in 6m51s on eb9778e - the whole tree, no filter. The red battery
+  that queued session #5 was no defect: session #4 died mid-work and left sound work uncommitted.
+worth reusing: `conductor gate -p <plan>` runs the battery with NO agent session - the cheap way to
+  exercise GateRunner live. A lock rig must TOUCH a source first or MSBuild skips the copy and the
+  lock never fires; an empty Directory.Build.props stops a %TEMP% csproj inheriting analyzers as
+  errors. Shadow build is a proven no-op for THIS run's gates - engine installed outside the tree.
+still open on KS0.1: bug #36 - one owner-run `conductor catalogue repair --apply` while no engine
+  holds the karvansara store takes the catalogue 26/25 to 25/25 and turns the payesh harvest green.
+next: KS1.1 - plan reload updates the run row, limits provenance labelled at-launch versus now.
 
 
 ## Baseline numbers (from run.db)
