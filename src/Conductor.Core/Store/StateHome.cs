@@ -145,7 +145,7 @@ public static class StateHome
         // left alone with a warning). ImportLegacy's own first act is that same File.Exists.
         StateImport? import = null;
         if (allowMigration)
-            import = StateMigration.ImportLegacy(LegacyDbPathFor(repo), target);
+            import = StateMigration.ImportLegacy(LegacyDbPathFor(repo), target, r);
 
         StateCatalogue.Upsert(r, repo, plan, target, import);
         return new StateResolution(target, StateSource.Derived, import);

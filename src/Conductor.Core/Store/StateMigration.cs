@@ -52,8 +52,14 @@ public static class StateMigration
     /// the legacy file has moved on since (bug #33, see <see cref="IsStaleSnapshotOf"/>). Returns
     /// null when there was nothing to import (the ordinary case for a fresh repo, and for every
     /// resolution after the first).
+    /// <para>KS0.1: <paramref name="stateRoot"/> is what makes "after the first" mean the first time
+    /// on this MACHINE rather than the first time under this PLAN SLUG. Without it the destination
+    /// existing is the only test, and the destination is keyed on the slug — so a new plan in an old
+    /// repo imports the same database again and every run in it is listed twice. Passing the root
+    /// lets <see cref="StateDedup.FindPriorImport"/> ask the question by run id instead. Null keeps
+    /// the old behaviour, which is what the tests that are about copying alone want.</para>
     /// </summary>
-    public static StateImport? ImportLegacy(string legacyDb, string targetDb)
+    public static StateImport? ImportLegacy(string legacyDb, string targetDb, string? stateRoot = null)
     {
         try
         {
@@ -75,6 +81,17 @@ public static class StateMigration
                     return null;
                 }
                 refreshing = true;
+            }
+
+            // KS0.1. Nothing is at the target, so K3.1 would copy — but the question it was asking is
+            // "has this slug seen the file", and the question that matters is "has this MACHINE seen
+            // these runs". A copy under a second slug does not add history; it adds a second listing
+            // of history that is already here, which is how 25 runs became 37 rows.
+            if (!refreshing && stateRoot is { Length: > 0 }
+                && StateDedup.FindPriorImport(stateRoot, legacyDb, targetDb) is { } prior)
+            {
+                Warn?.Invoke(StateDedup.Describe(prior, Path.GetFullPath(legacyDb)));
+                return null;
             }
 
             Directory.CreateDirectory(Path.GetDirectoryName(targetDb)!);
@@ -163,6 +180,12 @@ public static class StateMigration
         if (ReadReceipt(targetDb) is not { } receipt) return false;
         if (!PathsEqual(receipt.From, legacyDb)) return false;
 
+        // KS0.1: a copy the repair pass has deduplicated is no longer a copy of anything. Its history
+        // is deliberately a subset of the source's — that is what the repair DID — so the content
+        // rule below would read "SourceAhead" and re-import every row the repair removed, and the
+        // duplicates would grow back the next time this repo resolved.
+        if (receipt.RepairedAtUtc is not null) return false;
+
         // Take the file-level facts BEFORE asking the content question. Opening a WAL database
         // read-only creates a -shm beside it, so the very act of reading the copy makes the copy look
         // written-to; measured, and it cost an afternoon.
@@ -201,6 +224,28 @@ public static class StateMigration
         return f.Exists && f.LastWriteTimeUtc > utc;
     }
 
+    /// <summary>
+    /// KS0.1: stamps the receipt beside a store the repair pass has just deduplicated. Two jobs, both
+    /// load-bearing: it records that the store is no longer the copy its receipt describes (so bug
+    /// #33's refresh cannot undo the repair — see <see cref="IsStaleSnapshotOf"/>), and it leaves the
+    /// provenance intact so the store can still say where it came from. False when there was no
+    /// receipt to stamp, which is not an error: a store that was never imported has nothing to undo.
+    /// </summary>
+    public static bool MarkRepaired(string targetDb, DateTimeOffset at)
+    {
+        if (ReadReceipt(targetDb) is not { } receipt) return false;
+        try
+        {
+            File.WriteAllText(ReceiptPathFor(targetDb),
+                JsonSerializer.Serialize(receipt with { RepairedAtUtc = at }, ReceiptOpts));
+            return true;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
     /// <summary>Reads the receipt beside an imported database, if there is one.</summary>
     public static StateImport? ReadReceipt(string targetDb)
     {
@@ -235,7 +280,7 @@ public static class StateMigration
         catch (Exception e) when (e is IOException or UnauthorizedAccessException) { }
     }
 
-    private static bool PathsEqual(string a, string b)
+    internal static bool PathsEqual(string a, string b)
         => string.Equals(Path.GetFullPath(a), Path.GetFullPath(b),
             OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
 }
@@ -250,10 +295,14 @@ public static class StateMigration
 /// <param name="Refreshed">True when this replaced an earlier copy that the source had outrun
 /// (bug #33) rather than landing on empty ground. Absent from receipts written before that existed,
 /// which deserialise as false — correct, since those were first imports.</param>
+/// <param name="RepairedAtUtc">KS0.1. Set when the repair pass removed runs from this store because
+/// another store owns them. From that moment the store is deliberately NOT a copy of
+/// <paramref name="From"/> any more, and bug #33's refresh must leave it alone.</param>
 public sealed record StateImport(
     string From,
     string To,
     long Bytes,
     IReadOnlyList<string> Files,
     DateTimeOffset ImportedAtUtc,
-    bool Refreshed = false);
+    bool Refreshed = false,
+    DateTimeOffset? RepairedAtUtc = null);
