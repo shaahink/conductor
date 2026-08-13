@@ -6,15 +6,19 @@
 
 last: KS0.3 landed COMPLETE (a8fa298, eb9778e) - four bugs, each red-then-green by a script under
   tools/ks0/, pinned by tests/Conductor.Tests/KS0_3*.cs; bugs #16, #20, #27 closed. Evidence:
-  .conductor/evidence/KS0/ks0-3-sharp-small-batch.md. KS0 is finished bar the blocked KS0.1.
+  .conductor/evidence/KS0/ks0-3-sharp-small-batch.md. KS0 is finished.
 measured: FULL suite 2156/2156 green in 6m51s on eb9778e - the whole tree, no filter. The red battery
   that queued session #5 was no defect: session #4 died mid-work and left sound work uncommitted.
 worth reusing: `conductor gate -p <plan>` runs the battery with NO agent session - the cheap way to
   exercise GateRunner live. A lock rig must TOUCH a source first or MSBuild skips the copy and the
   lock never fires; an empty Directory.Build.props stops a %TEMP% csproj inheriting analyzers as
   errors. Shadow build is a proven no-op for THIS run's gates - engine installed outside the tree.
-still open on KS0.1: bug #36 - one owner-run `conductor catalogue repair --apply` while no engine
-  holds the karvansara store takes the catalogue 26/25 to 25/25 and turns the payesh harvest green.
+KS0.1 closed by the owner-run repair (evidence ks0-1-catalogue-repair.md): catalogue 26/25 to 25/25
+  (backup repair-20260813T200231Z), six blank-id rig debris entries dropped from catalogue.json
+  (backup catalogue-json-20260813T200511Z), payesh evidence check GREEN on the deduped store -
+  corpus refreshed on branch ks01/harvest-dedup-refresh (6e5f395), nothing pushed to the live site.
+carried forward into KS1.3: ks0-3 rigs registered scratch stores in the REAL catalogue.json
+  (state-home isolation), and history --json emits unreadable stores as blank-id run rows.
 next: KS1.1 - plan reload updates the run row, limits provenance labelled at-launch versus now.
 
 
@@ -24,7 +28,7 @@ next: KS1.1 - plan reload updates the run row, limits provenance labelled at-lau
 |---|---|
 | Total checkpoints | 32 |
 | Done | 0 |
-| Claimed (unconfirmed) | 1 |
+| Claimed (unconfirmed) | 2 |
 
 ## Checkpoints
 
@@ -35,9 +39,9 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| KS0.1 | Legacy-db import dedups by run id - never plan slug - consults imported.json before importing, and a repair pass with a backup collapses the existing duplicates, leaving one row per real run and the payesh evidence path green on the deduped store | BLOCKED | - | - |
+| KS0.1 | Legacy-db import dedups by run id - never plan slug - consults imported.json before importing, and a repair pass with a backup collapses the existing duplicates, leaving one row per real run and the payesh evidence path green on the deduped store | DONE | 4ae0cf5 | .conductor/evidence/KS0/ks0-1-catalogue-repair.md |
 | KS0.2 | conductor run close and adopt verbs close or annotate a run record with provenance through the store, an honest status writer covers non-terminal parks, and the four phantom running rows are closed via the verb - the WATCH-HANDOFF hand-SQL procedure retired | DONE | 15627b9 | .conductor/evidence/KS0/ks0-2-run-close.md |
-| KS0.3 | The sharp-small batch goes red to green by reproduction script: the gate battery builds to a shadow path and never rebuilds the running engine, CWD beats the CONDUCTOR_PLAN env var with a warning on override, the fresh-run.db first-write FK error dies, and lessons.md stops duplicate-appending with a pinned test | IN PROGRESS | - | - |
+| KS0.3 | The sharp-small batch goes red to green by reproduction script: the gate battery builds to a shadow path and never rebuilds the running engine, CWD beats the CONDUCTOR_PLAN env var with a warning on override, the fresh-run.db first-write FK error dies, and lessons.md stops duplicate-appending with a pinned test | DONE | eb9778e | .conductor/evidence/KS0/ks0-3-sharp-small-batch.md |
 
 ### KS1 — Truth - every read surface reconciles
 
