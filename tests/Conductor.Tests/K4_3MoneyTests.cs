@@ -126,6 +126,28 @@ public sealed class K4_3MoneyTests : IDisposable
         Assert.Null(gate.TokensPerCheckpoint);
     }
 
+    /// <summary>KS5.2 taught six more model-spawning paths to write rows. The category split is
+    /// computed from whatever the table holds, so they render without this verb being told their
+    /// names — and the run total still equals the sum of the lanes, which is the property that makes
+    /// "where the money goes" an account rather than a decoration.</summary>
+    [Fact]
+    public void TheCategorySplitCoversTheLanesKS52Added()
+    {
+        var costs = Costs()
+            .Append(new ArchivedCost(1, "lane", 800, 200, 0, 0, 0.20m, 900))
+            .Append(new ArchivedCost(1, "fix-lane", 400, 100, 0, 0, 0.10m, 700))
+            .Append(new ArchivedCost(2, "audit", 700, 100, 0, 0, 0.15m, 800))
+            .Append(new ArchivedCost(0, "auth-probe", 5, 2, 0, 0, 0.01m, 120))
+            .ToList();
+
+        var run = MoneyAnalyzer.AnalyzeRun("R1", "karvan", "repo", null, null, Sessions(), costs, []);
+
+        Assert.Equal(run.Total.Cost, run.Categories.Sum(c => c.Cost));
+        foreach (var label in new[] { "lane", "fix-lane", "audit", "auth-probe" })
+            Assert.Contains(run.Categories, c => string.Equals(c.Label, label, StringComparison.Ordinal));
+        Assert.Equal(32.86m, run.Total.Cost);
+    }
+
     [Fact]
     public void ACostRowWhoseSessionIsMissingStillCounts()
     {

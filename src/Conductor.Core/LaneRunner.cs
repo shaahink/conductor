@@ -1,3 +1,4 @@
+using Conductor.Core.Accounting;
 using Conductor.Models;
 
 namespace Conductor.Core;
@@ -94,6 +95,13 @@ public static class LaneRunner
                 TimedOut = result.TimedOut,
                 CompletedUtc = DateTime.UtcNow,
                 ElapsedMs = (long)(elapsed * 1000),
+                // KS5.2: the bill comes home ON THE RESULT rather than through a store threaded into
+                // the lane. A lane runs on a pool thread in a scratch directory; handing it an IRunStore
+                // would make it a second writer against the engine's own database for the sake of one
+                // row. The engine records it when it drains the pool, on the loop thread, from
+                // LaneCoordinator.PollLaneCompletion.
+                Spend = BilledSpend.Read(agent, SpendCategory.Lane, result.Output,
+                    (long)(elapsed * 1000)),
             };
         }
         catch (OperationCanceledException)
@@ -125,5 +133,10 @@ public sealed class LaneResult
     public string? Error { get; init; }
     public DateTime? CompletedUtc { get; init; }
     public long ElapsedMs { get; init; }
+
+    /// <summary>KS5.2: what the provider billed for this lane, or null when the wire reported nothing.
+    /// Read by <c>LaneCoordinator</c> when it drains the pool, and recorded there.</summary>
+    public SpendReceipt? Spend { get; init; }
+
     public bool IsSuccess => Error == null;
 }

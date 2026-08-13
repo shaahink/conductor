@@ -50,9 +50,15 @@ public static class PlanImportService
     {
         var prompt = BuildImportPrompt(plan, description);
         var restoreArgs = ApplyModelOverride(plan, model);
-        string? text;
-        try { text = await Advisor.AskTextAsync(plan, prompt, log).ConfigureAwait(false); }
+        AdvisorReply reply;
+        try { reply = await Advisor.AskAsync(plan, prompt, log).ConfigureAwait(false); }
         finally { restoreArgs?.Invoke(); }
+        // KS5.2: an import happens BEFORE there is a run — there is no run id and no session to key a
+        // costs row to, so the bill is stated to whoever asked for the import and not recorded.
+        log?.Invoke(reply.Spend is null
+            ? "plan import: the advisor reported no billed figure (unknown, not zero)"
+            : $"plan import: ${reply.Spend.CostUsd:0.0000} billed, {reply.Spend.Tokens} tokens — no run yet to record it against");
+        var text = reply.Text;
         if (text is null) return null;
 
         // The prompt demands raw JSON, but models pad — take the outermost {...} slice.

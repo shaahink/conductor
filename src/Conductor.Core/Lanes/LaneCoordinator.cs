@@ -1,3 +1,4 @@
+using Conductor.Core.Accounting;
 using Conductor.Core.Events;
 using Conductor.Models;
 
@@ -17,11 +18,18 @@ public sealed class LaneCoordinator
     private readonly IEventSink _events;
     private readonly Action<string> _log;
     private readonly PathClaimTracker _pathClaims;
+    private readonly RunSpendLedger? _ledger;
 
     private LaneWorkerPool? _lanePool;
-    private Task<ParallelAuditOutcome>? _parallelAuditTask;
+    private Task<(ParallelAuditOutcome Outcome, SpendReceipt? Spend)>? _parallelAuditTask;
 
-    public LaneCoordinator(PlanConfig plan, RunState state, IProgressSink sink, IEventSink events, Action<string> log, PathClaimTracker? pathClaims = null)
+    /// <param name="ledger">KS5.2 — where a lane's billed spend is recorded. The DESIGN FORK the
+    /// contract names, settled: the lane returns its cost ON ITS RESULT and the coordinator records it
+    /// on the caller's thread, rather than an <c>IRunStore</c> being threaded down into a pool worker
+    /// that runs in a scratch directory. A lane is not a writer to the run's database; the engine is.
+    /// Null in a rig with no store — lanes still run, and say what they could not price.</param>
+    public LaneCoordinator(PlanConfig plan, RunState state, IProgressSink sink, IEventSink events, Action<string> log,
+        PathClaimTracker? pathClaims = null, RunSpendLedger? ledger = null)
     {
         _plan = plan;
         _state = state;
@@ -29,6 +37,7 @@ public sealed class LaneCoordinator
         _events = events;
         _log = log;
         _pathClaims = pathClaims ?? new PathClaimTracker();
+        _ledger = ledger;
     }
 
     /// <summary>G3.2 live plan reload: future lanes read the freshly loaded plan. Only called from the
@@ -75,7 +84,7 @@ public sealed class LaneCoordinator
                     _log($"parallel audit: worktree creation failed — {createResult.Output.Trim()}");
                     CleanupLanePath(lanePath);
                     _pathClaims.Release(stageId);
-                    return new ParallelAuditOutcome { StageId = stageId, MaxSeverity = AuditFindingSeverity.None, Findings = "", Completed = true };
+                    return (Nothing(stageId), null);
                 }
 
                 var promptPath = Path.Combine(lanePath, ".conductor-audit-prompt.md");
@@ -87,31 +96,44 @@ public sealed class LaneCoordinator
                 var result = await ProcessRunner.RunAsync(resolvedAgent.Command, args, lanePath,
                     TimeSpan.FromMinutes(_plan.Audit?.MaxAttempts > 0 ? _plan.Audit.MaxAttempts * 30 : 30), ct).ConfigureAwait(false);
 
+                // KS5.2: the audit is a full agent against a pinned worktree and it has always been
+                // free as far as this run was concerned. The receipt rides back with the outcome and is
+                // recorded on the loop's thread by CheckParallelAuditCompletionAsync — this closure
+                // runs on a pool thread and must not write the database.
+                var spend = BilledSpend.Read(resolvedAgent, SpendCategory.Audit, result.Output,
+                    (long)result.Duration.TotalMilliseconds);
+
                 CleanupLanePath(lanePath);
                 _pathClaims.Release(stageId);
 
                 if (ct.IsCancellationRequested)
                 {
                     _log($"parallel audit for {stageId}: cancelled");
-                    return new ParallelAuditOutcome { StageId = stageId, MaxSeverity = AuditFindingSeverity.None, Findings = "", Completed = true };
+                    return (Nothing(stageId), spend);
                 }
 
                 var findings = result.Output ?? "";
                 var severity = ParseAuditSeverity(findings);
                 _log($"parallel audit for {stageId}: completed (severity={severity})");
-                return new ParallelAuditOutcome { StageId = stageId, MaxSeverity = severity, Findings = findings, Completed = true };
+                return (new ParallelAuditOutcome { StageId = stageId, MaxSeverity = severity, Findings = findings, Completed = true }, spend);
             }
             catch (Exception ex)
             {
                 CleanupLanePath(lanePath);
                 _pathClaims.Release(stageId);
                 _log($"parallel audit for {stageId}: error — {ex.Message}");
-                return new ParallelAuditOutcome { StageId = stageId, MaxSeverity = AuditFindingSeverity.None, Findings = "", Completed = true };
+                return (Nothing(stageId), null);
             }
         }, ct);
 
         _state.PendingParallelAudit = null;
     }
+
+    /// <summary>The empty audit outcome — worktree failed, cancelled, or threw. Named because it is
+    /// returned from four places and the shape (Completed: true, no findings) is the contract the run
+    /// loop reads: "this audit is over and has nothing to say".</summary>
+    private static ParallelAuditOutcome Nothing(string stageId)
+        => new() { StageId = stageId, MaxSeverity = AuditFindingSeverity.None, Findings = "", Completed = true };
 
     private static void CleanupLanePath(string path)
     {
@@ -179,9 +201,10 @@ public sealed class LaneCoordinator
         if (_parallelAuditTask is not { IsCompleted: true }) return;
         try
         {
-            var outcome = await _parallelAuditTask.ConfigureAwait(false);
+            var (outcome, spend) = await _parallelAuditTask.ConfigureAwait(false);
             _parallelAuditTask = null;
             _state.ParallelAuditOutcome = outcome;
+            _ledger?.Record(spend, _state.SessionCounter, $"parallel audit '{outcome.StageId}'");
             if (outcome.MaxSeverity == AuditFindingSeverity.High)
             {
                 _log($"parallel audit: HIGH findings detected for stage {outcome.StageId} — signal delivered to running session");
@@ -228,6 +251,9 @@ public sealed class LaneCoordinator
                 _log($"fix-lane '{entry.Id}' threw: {ex.Message}");
                 continue;
             }
+
+            // KS5.2: recorded whatever the merge gate decided. A rejected lane still ran a model.
+            _ledger?.Record(result.Spend, _state.SessionCounter, $"fix-lane '{entry.Id}'");
 
             if (result.Merged || (result.IsSuccess && !result.AgentCommitted))
             {
@@ -304,6 +330,7 @@ public sealed class LaneCoordinator
         var results = _lanePool.DrainCompleted();
         foreach (var result in results)
         {
+            RecordLaneSpend(result);
             if (result.IsSuccess)
                 _log($"analysis lane '{result.LaneId}' completed ({result.ElapsedMs}ms)" +
                     (result.ArtifactPath != null ? $" → {Path.GetFileName(result.ArtifactPath)}" : ""));
@@ -319,10 +346,17 @@ public sealed class LaneCoordinator
         if (_lanePool == null || (_lanePool.ActiveCount == 0 && _lanePool.CompletedCount == 0)) return;
 
         var remaining = await _lanePool.WaitAllAsync(TimeSpan.FromSeconds(10), ct).ConfigureAwait(false);
+        foreach (var result in remaining) RecordLaneSpend(result);
 
         var successCount = remaining.Count(r => r.IsSuccess);
         var failCount = remaining.Count - successCount;
         if (remaining.Count > 0)
             _log($"analysis lanes collected: {successCount} succeeded, {failCount} failed for stage {stageId}");
     }
+
+    /// <summary>KS5.2 — an analysis lane's bill, recorded once. The pool is drained from two places
+    /// (the poll during a session and the collect after it) and a lane arrives in exactly one of them,
+    /// because <c>DrainCompleted</c> removes what it returns.</summary>
+    private void RecordLaneSpend(LaneResult result)
+        => _ledger?.Record(result.Spend, _state.SessionCounter, $"analysis lane '{result.LaneId}'");
 }

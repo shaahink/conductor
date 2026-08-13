@@ -222,7 +222,10 @@ public sealed partial class RunLoop
         if (_ctx.Options.DryRun || !_ctx.Plan.Limits.AuthPreflight) return;
         if (!AuthSmokeTest.CanProbe(_ctx.Plan.Agent)) return;
 
-        var result = await AuthSmokeTest.RunAsync(_ctx.Plan, TimeSpan.FromSeconds(45), ct).ConfigureAwait(false);
+        // KS5.2: the probe's own bill, against session 0 — the run has not started one yet, and a row
+        // keyed to a session that does not exist is still a row, which is what the ledger is for.
+        var result = await AuthSmokeTest.RunAsync(_ctx.Plan, TimeSpan.FromSeconds(45), ct,
+            onSpend: r => _ctx.Ledger.Record(r, _ctx.State.SessionCounter, "auth preflight probe")).ConfigureAwait(false);
         if (result.Passed)
         {
             _ctx.Log($"auth preflight: {result.Message}");

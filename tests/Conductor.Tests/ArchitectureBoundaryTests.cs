@@ -200,6 +200,108 @@ public class ArchitectureBoundaryTests
             "K2.2 layering — core domain is re-growing inside the CLI:\n" + string.Join("\n", strays));
     }
 
+    // ---------------------------------------------------------------- KS5.2: no uncounted model spend
+
+    /// <summary>The configuration types that carry a model process's command line. A file that spawns a
+    /// process AND names one of these is spending money on a model.</summary>
+    private static readonly string[] ModelConfigTypes =
+        ["AgentConfig", "AdvisorConfig", "StatusAgentConfig", "SupervisorConfig"];
+
+    /// <summary>How a process gets started here. <c>WatchHook</c> is named because it is the one spawn
+    /// that could not reuse <c>ProcessRunner</c> (it needs stdin) and so hides its <c>Process.Start</c>
+    /// behind a helper.</summary>
+    /// <remarks><c>ProcessStartInfo</c> is in the list because the delivery agent's own spawn is
+    /// <c>proc.Start()</c> on an instance — a rule that only knew the static <c>Process.Start</c> would
+    /// miss the biggest spender in the engine.</remarks>
+    private static readonly string[] SpawnCalls = ["ProcessRunner.Run", "Process.Start", "ProcessStartInfo"];
+
+    /// <summary>The helpers that spawn a model on someone else's behalf. A CALLER of one of these is as
+    /// responsible for the money as the file that holds the <c>Process.Start</c>: this is what makes the
+    /// rule catch <c>chat</c> and <c>plan import</c>, which spend through <c>Advisor</c> and could
+    /// otherwise say nothing for ever.</summary>
+    private static readonly string[] ModelHelpers =
+        ["Advisor.AskAsync", "Advisor.AskTextAsync", "Advisor.ConsultAsync", "Advisor.ConsultForVerdictAsync",
+         "StatusAgent.Run", "LaneRunner.RunAsync", "MutatingLaneRunner.RunAsync",
+         "AuthSmokeTest.RunAsync", "WatchHook.RunAsync"];
+
+    /// <summary>Evidence that a file accounts for what it spent — it produces a receipt, records one, or
+    /// hands one to a caller. Deliberately broad: the rule is "this file has an answer to what it cost",
+    /// not "this file calls one blessed method".</summary>
+    private static readonly string[] AccountingMarkers =
+        ["SpendReceipt", "RunSpendLedger", "BilledSpend", "SpendCategory", "RecordCost", "Ledger.Record"];
+
+    /// <summary>KS5.2 — every path that spawns a model either accounts for what it cost or is listed
+    /// here with the reason it does not. Silence is the thing this rule exists to make impossible: seven
+    /// of the eight model-spawning paths in this engine wrote nothing at all, and the eighth wrote a
+    /// number nobody had been charged, so a run's own report could not say where its money went.</summary>
+    private static readonly Dictionary<string, string> UncountedSpendExemptions = new(StringComparer.Ordinal)
+    {
+        ["AgentSession.cs"] =
+            "the delivery agent's row is written by RunLoop.EmitSessionFinished from the session record, " +
+            "keyed to the session it belongs to — the one spender whose accounting predates KS5.2",
+        ["DoctorCommand.cs"] =
+            "runs the auth probe as a diagnostic against a plan, not a run — there is no session to key " +
+            "a row to, and doctor must stay safe to point at somebody else's plan",
+        ["AuditCommand.cs"] =
+            "`audit --replay` is an operator's question about a FINISHED stage: no live session, no live " +
+            "cap. It prints what it was billed instead of writing a row",
+        ["ChatCommand.cs"] =
+            "`chat` asks the plan's advisor a question outside any run. It prints what it was billed",
+        ["PlanImportService.cs"] =
+            "an import runs BEFORE there is a run id — nothing to key a costs row to. It logs the figure",
+        ["StatusCommand.cs"] =
+            "`status --agent` is operator-invoked between sessions; it prints the reporter's bill rather " +
+            "than making the CLI a second writer to a live run's database",
+    };
+
+    [Fact]
+    public void EveryModelSpawnAccountsForWhatItSpent()
+    {
+        var violations = new List<string>();
+        var reached = new List<string>();
+
+        var sources = SourcesUnder("src");
+        var code = sources.ToDictionary(f => f.FullName, CodeOnly, StringComparer.Ordinal);
+        // A partial type is ONE type however many files it is spread over — ControlPlaneServer is nine
+        // of them — so the accounting may live in a sibling. Keyed on the name before the first dot,
+        // which is exactly this repo's partial convention (RunLoop.Plumbing.cs, VerdictEngine.Advisor.cs).
+        var byType = sources
+            .GroupBy(f => f.Name.Split('.')[0], StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => string.Concat(g.Select(f => code[f.FullName])), StringComparer.Ordinal);
+
+        foreach (var file in sources)
+        {
+            var text = code[file.FullName];
+            var spawnsAModel = SpawnCalls.Any(s => text.Contains(s, StringComparison.Ordinal))
+                            && ModelConfigTypes.Any(t => text.Contains(t, StringComparison.Ordinal));
+            var callsAModelHelper = ModelHelpers.Any(h => text.Contains(h, StringComparison.Ordinal));
+            if (!spawnsAModel && !callsAModelHelper) continue;
+
+            reached.Add(file.Name);
+            if (UncountedSpendExemptions.ContainsKey(file.Name)) continue;
+            var whole = byType[file.Name.Split('.')[0]];
+            if (AccountingMarkers.Any(m => whole.Contains(m, StringComparison.Ordinal))) continue;
+
+            violations.Add(
+                $"  {file.Name} spawns a model and records no spend — take a receipt through " +
+                "Conductor.Core.Accounting.BilledSpend and record it (RunSpendLedger.Record), or add " +
+                "the file to UncountedSpendExemptions with the reason it cannot.");
+        }
+
+        Assert.True(violations.Count == 0,
+            "KS5.2 — a model was spawned and nobody counted the money:\n" + string.Join("\n", violations));
+
+        // The exemption list must describe reality, the way architecture-baseline.json must: a file that
+        // stopped spawning models, or was renamed, leaves a reason behind that reads as a live decision.
+        var stale = UncountedSpendExemptions.Keys
+            .Where(name => !reached.Contains(name, StringComparer.Ordinal))
+            .Select(name => $"  {name} is exempted from the spend rule but no longer reaches a model — drop the entry.")
+            .ToList();
+
+        Assert.True(stale.Count == 0,
+            "KS5.2 — the exemption list has gone stale:\n" + string.Join("\n", stale));
+    }
+
     /// <summary>The reference direction, read off the csproj files themselves. The link-level rules above
     /// prove what today's build did; this one proves the SHAPE that makes it impossible to do otherwise, so
     /// a future session that adds <c>&lt;ProjectReference Include="..\Conductor\Conductor.csproj"&gt;</c> to

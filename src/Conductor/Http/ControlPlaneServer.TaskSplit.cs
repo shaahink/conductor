@@ -42,8 +42,10 @@ public sealed partial class ControlPlaneServer
         var stageId = plan.Conventions.DeriveStageId(task.CheckpointId);
         var stage = plan.Stages.FirstOrDefault(s => s.Id.Equals(stageId, StringComparison.OrdinalIgnoreCase));
         var prompt = BuildSplitPrompt(task, stage?.Title ?? stageId, req.Instruction, req.Count);
-        var answer = await Advisor.AskTextAsync(plan, prompt,
+        var reply = await Advisor.AskAsync(plan, prompt,
             msg => _logger.LogInformation("task split: {Message}", msg)).ConfigureAwait(false);
+        RecordAdvisorSpend(reply, "task split");
+        var answer = reply.Text;
         if (answer is null)
         {
             await TaskSplitErrorAsync(ctx, $"the advisor ({advisor.Command}) did not answer").ConfigureAwait(false);

@@ -14,6 +14,16 @@ namespace Conductor.Http;
 /// confirms by posting <c>/tasks/edit</c> (the same preview→confirm contract as /plan/import).</summary>
 public sealed partial class ControlPlaneServer
 {
+    /// <summary>KS5.2 — the advisor spawns the control plane makes (<c>/tasks/refine</c>,
+    /// <c>/tasks/split</c>) cost the same money a verdict consult costs, and until now cost the run
+    /// nothing on paper. The ROW is written; the engine's in-memory budget counters are deliberately
+    /// NOT touched, because this is an HTTP thread and those belong to the run loop. The cap sees the
+    /// spend the next time the run is priced from its database.</summary>
+    private void RecordAdvisorSpend(AdvisorReply reply, string what)
+        => new Conductor.Core.Accounting.RunSpendLedger(_store, _state.RunId,
+                log: m => _logger.LogInformation("{ConductorMessage}", m))
+            .Record(reply?.Spend, _state.SessionCounter, what);
+
     private async Task WritePromptBlocksAsync(HttpListenerContext ctx)
     {
         var taskId = ctx.Request.QueryString["task"];
@@ -68,8 +78,10 @@ public sealed partial class ControlPlaneServer
         var stageId = _plan.Conventions.DeriveStageId(task.CheckpointId);
         var stage = _plan.Stages.FirstOrDefault(s => string.Equals(s.Id, stageId, StringComparison.OrdinalIgnoreCase));
         var prompt = BuildRefinePrompt(task, stage?.Title ?? stageId, req.Instruction);
-        var answer = await Advisor.AskTextAsync(_plan, prompt,
+        var reply = await Advisor.AskAsync(_plan, prompt,
             msg => _logger.LogInformation("task refine: {Message}", msg)).ConfigureAwait(false);
+        RecordAdvisorSpend(reply, "task refine");
+        var answer = reply.Text;
         if (answer is null)
         {
             await TaskRefineErrorAsync(ctx, $"the advisor ({advisor.Command}) did not answer").ConfigureAwait(false);

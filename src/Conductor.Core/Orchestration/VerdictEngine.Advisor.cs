@@ -25,16 +25,16 @@ public sealed partial class VerdictEngine
             SessionResult.Parse(rec?.ResultSummary).ToCompact(1200),
             _ctx.State.AttemptsThisStage, MaxAttempts(stage));
         _ctx.Log("consulting advisor\u2026");
-        var started = DateTime.UtcNow;
-        var v = await Advisor.ConsultAsync(_ctx.Plan, prompt, _ctx.Log).ConfigureAwait(false);
-        var elapsed = DateTime.UtcNow - started;
+        var reply = await Advisor.ConsultForVerdictAsync(_ctx.Plan, prompt, _ctx.Log).ConfigureAwait(false);
+        var v = reply.Verdict;
         _ctx.Log(v != null ? $"advisor verdict: {v.Action} — {v.Reason}" : "advisor unavailable — using deterministic default");
-        if (_ctx.Store is { } store)
-        {
-            var c = 0.0005m * (decimal)elapsed.TotalSeconds;
-            store.RecordCost(_ctx.State.RunId, _ctx.State.SessionCounter, "advisor", 0, 0, 0, 0, c, (long)elapsed.TotalMilliseconds);
-            _ctx.RunOverheadUsd += c; _ctx.PersistBudget();
-        }
+        // KS5.2: the advisor's dollars come off the provider's own result envelope now. What stood here
+        // was `0.0005m * elapsed.TotalSeconds` — a rate nobody has ever been charged, written into
+        // `costs` as though it were a bill and accrued into RunOverheadUsd, which the cap does not read.
+        // So the one model spawn that DID write a row wrote a fiction, and wrote it into the one place
+        // the ceiling could not see. The ledger writes the billed figure exactly once, into the total
+        // CheckBudgetCap compares, and says so out loud when the wire reported nothing.
+        _ctx.Ledger.Record(reply.Spend, _ctx.State.SessionCounter, "advisor consult");
         return v;
     }
 

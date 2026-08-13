@@ -65,7 +65,10 @@ public sealed class Orchestrator
             qaPolicy: qa);
 
         _gates = new GateOrchestrator(plan, state, events, store);
-        _lanes = new LaneCoordinator(plan, state, sink, events, _ctx.Log, pathClaims: new PathClaimTracker());
+        // KS5.2: the lanes get the run's ledger, so a lane's billed spend reaches the costs table and
+        // the cap total instead of evaporating with the pool thread that produced it.
+        _lanes = new LaneCoordinator(plan, state, sink, events, _ctx.Log,
+            pathClaims: new PathClaimTracker(), ledger: _ctx.Ledger);
     }
 
     private SessionRunner Sessions => _sessions ??= CreateSessions();

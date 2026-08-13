@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Text.Json;
 
 using Conductor.Core;
+using Conductor.Core.Accounting;
 using Conductor.Core.Integrations;
 using Conductor.Models;
 using Spectre.Console;
@@ -185,6 +186,13 @@ public sealed class AuditCommand : Command<AuditCommand.Settings>
             var args = cfg.Args.Select(a => a.Replace("{prompt}", prompt)).ToList();
             // If a model arg exists, ensure it's set; defaults from plan config are fine.
             var r = ProcessRunner.Run(cfg.Command, args, scratch, timeout);
+            // KS5.2: the replay is a full agent invocation and it says what it cost. Stated, not
+            // recorded: `audit --replay` is an operator's question about a FINISHED stage, keyed to no
+            // session and accruing against no live cap. See the exemption in ArchitectureBoundaryTests.
+            var spend = BilledSpend.Read(cfg, "audit-replay", r.Output, (long)r.Duration.TotalMilliseconds);
+            AnsiConsole.MarkupLine(spend is null
+                ? "[grey]audit agent: the provider reported no billed figure (unknown, not zero)[/]"
+                : $"[grey]audit agent: ${spend.CostUsd:0.0000} billed, {spend.Tokens} tokens — not recorded against the run[/]");
             var text = r.Output.Trim();
             if (r.TimedOut) text += $"\n\n(audit agent timed out after {timeout.TotalMinutes:0} minutes)";
             if (!string.IsNullOrWhiteSpace(r.StdErr)) text += $"\n\n--- stderr ---\n{r.StdErr.Trim()}";

@@ -78,8 +78,14 @@ public sealed class ChatCommand : Command<ChatCommand.Settings>
                                $"{Markup.Escape(string.Join(" ", advisorCfg.Args))} ({advisorCfg.TimeoutMinutes}m timeout)[/]");
         AnsiConsole.WriteLine();
 
-        var answer = await Advisor.AskTextAsync(plan, prompt,
+        var reply = await Advisor.AskAsync(plan, prompt,
             m => AnsiConsole.MarkupLine($"[grey]{Markup.Escape(m)}[/]")).ConfigureAwait(false);
+        // KS5.2: `chat` is an operator asking a question of the plan's advisor — no run, no session,
+        // nothing to key a costs row to. It states its bill instead of writing one.
+        AnsiConsole.MarkupLine(reply.Spend is null
+            ? "[grey]advisor: the provider reported no billed figure (unknown, not zero)[/]"
+            : $"[grey]advisor: ${reply.Spend.CostUsd:0.0000} billed, {reply.Spend.Tokens} tokens — not recorded against any run[/]");
+        var answer = reply.Text;
 
         if (string.IsNullOrWhiteSpace(answer))
         {

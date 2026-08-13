@@ -26,24 +26,31 @@ public sealed record AdvisorVerdict(AdvisorAction Action, string Reason);
 public static class Advisor
 {
     public static async Task<AdvisorVerdict?> ConsultAsync(PlanConfig plan, string prompt, Action<string>? log = null)
+        => (await ConsultForVerdictAsync(plan, prompt, log).ConfigureAwait(false)).Verdict;
+
+    /// <summary>KS5.2: the consult, with the bill attached. <see cref="ConsultAsync"/> answers the
+    /// question the verdict engine asks and throws away the one the ledger asks — and an advisor that
+    /// returns no parseable verdict has still been paid for. Callers that record spend use this;
+    /// the verdict-only overload above stays for everyone who does not.</summary>
+    public static async Task<AdvisorReply> ConsultForVerdictAsync(PlanConfig plan, string prompt, Action<string>? log = null)
     {
-        var text = await AskTextAsync(plan, prompt, log).ConfigureAwait(false);
-        if (text is null) return null;
+        var reply = await AskAsync(plan, prompt, log).ConfigureAwait(false);
+        if (reply.Text is not { } text) return reply;
         try
         {
             var m = Regex.Match(text, "\\{[^{}]*\"action\"[^{}]*\\}", RegexOptions.Singleline, ProgressConventions.RegexTimeout);
-            if (!m.Success) { log?.Invoke("advisor gave no parseable verdict"); return null; }
+            if (!m.Success) { log?.Invoke("advisor gave no parseable verdict"); return reply; }
             using var vdoc = JsonDocument.Parse(m.Value);
             var action = (vdoc.RootElement.TryGetProperty("action", out var act) ? act.GetString() : null)?.ToLowerInvariant() ?? "";
             var reason = vdoc.RootElement.TryGetProperty("reason", out var rs) ? rs.GetString() ?? "" : "";
             return TryParseAction(action) is { } parsed
-                ? new AdvisorVerdict(parsed, reason)
-                : null;
+                ? reply with { Verdict = new AdvisorVerdict(parsed, reason) }
+                : reply;
         }
         catch (Exception ex)
         {
             log?.Invoke($"advisor failed: {ex.Message}");
-            return null;
+            return reply;
         }
     }
 
@@ -52,9 +59,17 @@ public static class Advisor
     /// above and free-shape asks like plan import, where the answer is a document (a plan JSON), not
     /// an action verdict. Null when the advisor is off, times out, or fails; callers fall back.</summary>
     public static async Task<string?> AskTextAsync(PlanConfig plan, string prompt, Action<string>? log = null)
+        => (await AskAsync(plan, prompt, log).ConfigureAwait(false)).Text;
+
+    /// <summary>KS5.2: the same spawn, answering with the provider's own billed figure beside the text.
+    /// The advisor is a model process like any other and its dollars are read off the result envelope
+    /// through <see cref="Accounting.BilledSpend"/> — the same parser the delivery agent's row comes
+    /// from. A timeout still costs money, so the receipt is taken before the timeout is reported.</summary>
+    public static async Task<AdvisorReply> AskAsync(PlanConfig plan, string prompt, Action<string>? log = null)
     {
+        ArgumentNullException.ThrowIfNull(plan);
         var a = plan.Advisor;
-        if (a is not { Enabled: true } || string.IsNullOrWhiteSpace(a.Command)) return null;
+        if (a is not { Enabled: true } || string.IsNullOrWhiteSpace(a.Command)) return AdvisorReply.None;
         // SC3.4: a plan loaded from disk can no longer get here with an argless advisor — PlanConfig
         // refuses it — but a PlanConfig built in code still can. Spawning a CLI with nothing to answer
         // is how the advisor came to burn its whole timeout and return null, so say it instead.
@@ -62,19 +77,21 @@ public static class Advisor
         {
             log?.Invoke($"advisor not consulted: advisor.args is empty, so '{a.Command}' would be spawned with no question — " +
                         $"set advisor.args (default: {string.Join(" ", AdvisorConfig.DefaultArgs)})");
-            return null;
+            return AdvisorReply.None;
         }
         try
         {
             var args = ResolveArgs(a.Args, prompt);
             var r = await ProcessRunner.RunAsync(a.Command, args, plan.Repo, TimeSpan.FromMinutes(a.TimeoutMinutes)).ConfigureAwait(false);
-            if (r.TimedOut) { log?.Invoke("advisor timed out"); return null; }
-            return UnwrapEnvelope(r.Output, a.Output);
+            var spend = Accounting.BilledSpend.Read(a, Accounting.SpendCategory.Advisor, r.Output,
+                (long)r.Duration.TotalMilliseconds);
+            if (r.TimedOut) { log?.Invoke("advisor timed out"); return new AdvisorReply(null, null, spend); }
+            return new AdvisorReply(UnwrapEnvelope(r.Output, a.Output), null, spend);
         }
         catch (Exception ex)
         {
             log?.Invoke($"advisor failed: {ex.Message}");
-            return null;
+            return AdvisorReply.None;
         }
     }
 

@@ -173,8 +173,14 @@ public static class BudgetAnalyzer
 
         return new BudgetWindow(
             Label: Label(ceiling, ceilingMeasured, nudgePoint),
-            FirstSession: slice[0].Number,
-            LastSession: slice[^1].Number,
+            // KS5.2: a run can now hold cost rows before it holds a single SESSION row — the auth
+            // probe bills at run start, and a lane can finish before the first session closes. The
+            // fallback window in SplitWindows is measured over every session there is, so with none it
+            // measured an empty list and threw on slice[0], taking REPORT.md's money section (and
+            // `conductor money` on such a run) down with it. Nothing else here needs a session to
+            // exist: Closers is 0, so the prescription already says "no floor to measure".
+            FirstSession: slice.Count > 0 ? slice[0].Number : 0,
+            LastSession: slice.Count > 0 ? slice[^1].Number : 0,
             Sessions: slice.Count,
             Costed: costed.Count,
             CapTokens: ceiling,

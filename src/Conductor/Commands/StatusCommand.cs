@@ -182,7 +182,11 @@ public sealed class StatusCommand : AsyncCommand<StatusCommand.Settings>
         AnsiConsole.WriteLine();
         AnsiConsole.MarkupLine("[bold aqua]Running LLM status analysis…[/]");
         var prompt = StatusAgent.BuildCliPrompt(plan, state, track, "", gitSummary, report.DoneCount, report.TotalCount, sinceUtc);
-        var result = StatusAgent.Run(sc, prompt);
+        // KS5.2: the reporter is a model spawn and it says what it cost. Stated, not recorded — this
+        // verb belongs to the operator, not to a session, and a row needs a session to be keyed to.
+        var result = StatusAgent.Run(sc, prompt, onSpend: s => AnsiConsole.MarkupLine(s is null
+            ? "[grey]status agent: the provider reported no billed figure (unknown, not zero)[/]"
+            : $"[grey]status agent: ${s.CostUsd:0.0000} billed, {s.Tokens} tokens — not recorded against the run[/]"));
         AnsiConsole.MarkupLine("[bold aqua]── Status Report (LLM) ──[/]");
         AnsiConsole.WriteLine(result);
         RecordInvocation(plan.StateDir);

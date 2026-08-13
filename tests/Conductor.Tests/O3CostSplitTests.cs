@@ -94,6 +94,45 @@ public class O3CostSplitTests
         Assert.Equal(1.50m, loaded.PerRunCostUsd);
     }
 
+    /// <summary>KS5.2: the side ledger survives a restart the way the agent's window does. A run killed
+    /// mid-lane must not forget what the lane cost — that is the same crash-survival contract
+    /// <c>PerRunCostUsd</c> has carried since C3, and the cap now compares the sum of the two.</summary>
+    [Fact]
+    public void RunState_PerRunSideCostUsd_SerializesRoundTrip()
+    {
+        var state = new RunState
+        {
+            PlanName = "test",
+            PerRunCostUsd = 1.50m,
+            PerRunSideCostUsd = 0.25m,
+            TotalSideCostUsd = 0.75m,
+        };
+        var json = System.Text.Json.JsonSerializer.Serialize(state, PlanConfig.JsonOpts);
+        var loaded = System.Text.Json.JsonSerializer.Deserialize<RunState>(json, PlanConfig.JsonOpts)!;
+
+        Assert.Equal(0.25m, loaded.PerRunSideCostUsd);
+        Assert.Equal(0.75m, loaded.TotalSideCostUsd);
+        Assert.Equal(1.75m, loaded.BilledWindowCostUsd);
+    }
+
+    /// <summary>KS5.2: the cap total is billed money only. Gate overhead is an ESTIMATE from a
+    /// plan-set rate and stays out of it; the advisor's and the lanes' billed rows are in it. Before
+    /// this, the advisor's spend went into the overhead bucket, which the cap has never read — so the
+    /// only non-agent spend the engine recorded was also the only spend it could not park on.</summary>
+    [Fact]
+    public void TheCapTotalCountsBilledRowsAndNotTheGateEstimate()
+    {
+        var state = new RunState
+        {
+            PlanName = "test",
+            PerRunCostUsd = 2.00m,
+            PerRunSideCostUsd = 0.50m,
+            PerRunOverheadCostUsd = 9.99m,
+        };
+
+        Assert.Equal(2.50m, state.BilledWindowCostUsd);
+    }
+
     // ---- SnapshotBuilder ----
 
     [Fact]

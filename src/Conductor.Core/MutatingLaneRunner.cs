@@ -77,6 +77,11 @@ public static class MutatingLaneRunner
                  .Replace("{sessionId}", lane.Id));
             var agentResult = await ProcessRunner.RunAsync(agent.Command, args, lanePath,
                 TimeSpan.FromMinutes(lane.TimeoutMinutes), ct).ConfigureAwait(false);
+            // KS5.2: read the bill off the agent's own envelope, here, while the wall-clock still means
+            // the AGENT's time — ElapsedMs on the result goes on to include the merge gate. Recorded by
+            // LaneCoordinator when it collects the lane, not from this thread.
+            var agentSpend = Accounting.BilledSpend.Read(agent, Accounting.SpendCategory.FixLane,
+                agentResult.Output, (long)agentResult.Duration.TotalMilliseconds);
 
             if (agentResult.TimedOut)
             {
@@ -87,7 +92,7 @@ public static class MutatingLaneRunner
                     DurationMs = sw.ElapsedMilliseconds, AgentCommitted = false,
                 });
                 return new MutatingLaneResult { LaneId = lane.Id, Kind = lane.Kind,
-                    Error = $"agent timed out after {lane.TimeoutMinutes}min",
+                    Error = $"agent timed out after {lane.TimeoutMinutes}min", Spend = agentSpend,
                     CompletedUtc = DateTime.UtcNow, ElapsedMs = sw.ElapsedMilliseconds };
             }
 
@@ -99,7 +104,7 @@ public static class MutatingLaneRunner
                     DurationMs = sw.ElapsedMilliseconds, AgentCommitted = false,
                 });
                 return new MutatingLaneResult { LaneId = lane.Id, Kind = lane.Kind,
-                    Error = "cancelled",
+                    Error = "cancelled", Spend = agentSpend,
                     CompletedUtc = DateTime.UtcNow, ElapsedMs = sw.ElapsedMilliseconds };
             }
 
@@ -117,7 +122,7 @@ public static class MutatingLaneRunner
                 return new MutatingLaneResult { LaneId = lane.Id, Kind = lane.Kind,
                     Merged = false, MergeGatePassed = null, AgentOutput = agentResult.Output,
                     CompletedUtc = DateTime.UtcNow, ElapsedMs = sw.ElapsedMilliseconds,
-                    AgentCommitted = false };
+                    AgentCommitted = false, Spend = agentSpend };
             }
 
             // 5. Merge gate: create a staging worktree from the base branch, merge scratch into it,
@@ -167,7 +172,7 @@ public static class MutatingLaneRunner
                 return new MutatingLaneResult { LaneId = lane.Id, Kind = lane.Kind,
                     Merged = merged, MergeGatePassed = true, MergeGate = mergeGateResult,
                     AgentOutput = agentResult.Output, CompletedUtc = DateTime.UtcNow,
-                    ElapsedMs = sw.ElapsedMilliseconds, AgentCommitted = true,
+                    ElapsedMs = sw.ElapsedMilliseconds, AgentCommitted = true, Spend = agentSpend,
                     Error = merged ? null : "fast-forward merge failed after gate passed" };
             }
             else
@@ -176,7 +181,7 @@ public static class MutatingLaneRunner
                 return new MutatingLaneResult { LaneId = lane.Id, Kind = lane.Kind,
                     Merged = false, MergeGatePassed = false, MergeGate = mergeGateResult,
                     AgentOutput = agentResult.Output, CompletedUtc = DateTime.UtcNow,
-                    ElapsedMs = sw.ElapsedMilliseconds, AgentCommitted = true,
+                    ElapsedMs = sw.ElapsedMilliseconds, AgentCommitted = true, Spend = agentSpend,
                     Error = "merge gate rejected" };
             }
         }
@@ -326,6 +331,11 @@ public sealed class MutatingLaneResult
     public DateTime CompletedUtc { get; init; }
     public long ElapsedMs { get; init; }
     public bool AgentCommitted { get; init; }
+
+    /// <summary>KS5.2: what the provider billed for this lane's agent, or null when the wire reported
+    /// nothing. Recorded by <c>LaneCoordinator</c> once the lane returns to the run loop's thread.</summary>
+    public Accounting.SpendReceipt? Spend { get; init; }
+
     public bool IsSuccess => Error == null && MergeGatePassed != false;
 }
 

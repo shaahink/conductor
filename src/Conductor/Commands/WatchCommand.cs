@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 
 using Conductor.Core;
+using Conductor.Core.Accounting;
 using Conductor.Core.Store;
 using Conductor.Core.Watch;
 using Conductor.Models;
@@ -137,6 +138,7 @@ public sealed class WatchCommand : AsyncCommand<WatchCommand.Settings>
                 await Console.Error.WriteLineAsync(
                     $"supervisor exit {r.ExitCode}{(r.TimedOut ? " (timed out)" : "")} in {r.Duration.TotalSeconds:0.#}s"
                     + (string.IsNullOrWhiteSpace(r.StdErr) ? "" : $" — {r.StdErr.Trim()}")).ConfigureAwait(false);
+                RecordSupervisorSpend(plan, state, decision.Command!, r);
             }
             else if (decision.Skipped is { } why)
             {
@@ -155,6 +157,37 @@ public sealed class WatchCommand : AsyncCommand<WatchCommand.Settings>
         var colour = wake.Reason == WatchReason.Timeout ? "grey" : "red";
         AnsiConsole.MarkupLine($"[bold {colour}]{Markup.Escape(slug)}[/] — {Markup.Escape(wake.Detail)}");
         AnsiConsole.WriteLine(briefJson);
+    }
+
+    /// <summary>KS5.2 — the supervisor is a model invocation like any other, and it was the only one
+    /// that ran on somebody else's schedule and cost the run nothing on paper.
+    /// <para>Best-effort by construction, and it has to be: this is the <c>watch</c> PROCESS, not the
+    /// engine, so it is a second writer against a live WAL database. <c>RecordCost</c> goes through
+    /// <c>TryExecute</c>, the store is opened and closed around the one insert, and every failure is
+    /// swallowed — a supervisor's bookkeeping must never be able to break the wake it was reporting.
+    /// No accrual: the engine owns the cap counters in its own memory and this process cannot move
+    /// them, so the row is the ledger's, and the cap sees it the next time the run is priced.</para>
+    /// <para>The row is keyed to the run's CURRENT session — the supervisor fires between sessions, so
+    /// that is the last session it was watching.</para></summary>
+    private static void RecordSupervisorSpend(PlanConfig plan, RunState? state, string command, ProcResult r)
+    {
+        if (state is not { RunId.Length: > 0 }) return;
+        try
+        {
+            var spend = BilledSpend.ReadFromCommand(command, SpendCategory.Supervisor, r.Output,
+                (long)r.Duration.TotalMilliseconds);
+            if (spend is null) return;
+            var dbPath = plan.RunDbPath;
+            if (!File.Exists(dbPath)) return;
+            using var store = new SqliteRunStore(dbPath, NullLogger<SqliteRunStore>.Instance);
+            new RunSpendLedger(store, state.RunId,
+                log: m => Console.Error.WriteLine($"supervisor spend — {m}"))
+                .Record(spend, state.SessionCounter, "supervisor hook");
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException or Microsoft.Data.Sqlite.SqliteException)
+        {
+            // The wake is the deliverable; the row is a bonus.
+        }
     }
 
     // run.db is where the stage board and spend live. It is optional on purpose: a run that has not

@@ -227,14 +227,19 @@ public sealed partial class VerdictEngine
                 // opens, BEFORE the zeroing, or the run loses the only account of the spend it is
                 // forgiving. The lifetime total (History) is untouched by design: an approval raises
                 // the ceiling, it does not un-spend the money.
-                var closedWindow = _ctx.RunCostUsd;
+                // KS5.2: the window is every billed dollar, the agent's and the lanes'/advisor's alike,
+                // because that is the sum the cap was compared against. Zeroing one half would leave a
+                // "reset" window still carrying spend.
+                var closedWindow = _ctx.BilledWindowUsd;
                 var closedTokens = _ctx.RunTokens;
                 _ctx.RunCostUsd = 0;
                 _ctx.RunTokens = 0;
                 _ctx.RunOverheadUsd = 0;
+                _ctx.RunSideCostUsd = 0;
                 _ctx.State.PerRunCostUsd = 0;
                 _ctx.State.PerRunTokens = 0;
                 _ctx.State.PerRunOverheadCostUsd = 0;
+                _ctx.State.PerRunSideCostUsd = 0;
                 _ctx.State.BudgetWindowStartedUtc = DateTime.UtcNow;
                 _ctx.State.BudgetApprovals++;
                 _ctx.State.AwaitingOwnerReason = null;

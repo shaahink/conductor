@@ -121,6 +121,29 @@ public sealed class RunState
     /// Same crash-survival semantics as <see cref="PerRunCostUsd"/>.</summary>
     public decimal PerRunOverheadCostUsd { get; set; }
 
+    /// <summary>KS5.2: billed spend since the last budget reset by the model processes that are not the
+    /// delivery agent — the advisor, the analysis and fix lanes, the parallel audit, the auth probe.
+    /// Separate from <see cref="PerRunCostUsd"/> so the agent's own cost stays answerable, and summed
+    /// with it by <see cref="BilledWindowCostUsd"/>, which is the only figure a cap is compared
+    /// against.</summary>
+    public decimal PerRunSideCostUsd { get; set; }
+
+    /// <summary>KS5.2: the same spend over the LIFE of the run — never zeroed by an approval, the way
+    /// <see cref="TotalCostUsd"/> is never zeroed. Held as a running total rather than derived from
+    /// <see cref="History"/> because a lane's spend does not belong to any one session record.</summary>
+    public decimal TotalSideCostUsd { get; set; }
+
+    /// <summary>KS5.2: every billed dollar in the CURRENT budget window — the number
+    /// <c>CheckBudgetCap</c> compares with <c>limits.maxRunCostUsd</c> and the number <c>/state</c>
+    /// serves as <c>costSpent</c>. One property so the two cannot answer differently.</summary>
+    [JsonIgnore]
+    public decimal BilledWindowCostUsd => PerRunCostUsd + PerRunSideCostUsd;
+
+    /// <summary>KS5.2: every billed dollar this run has ever spent. Window spend can never exceed
+    /// it — that invariant is what makes the two figures readable side by side.</summary>
+    [JsonIgnore]
+    public decimal BilledLifetimeCostUsd => TotalCostUsd + TotalSideCostUsd;
+
     /// <summary>SC2.3: when the CURRENT budget window opened — i.e. the instant of the owner approval
     /// that last zeroed <see cref="PerRunCostUsd"/>. Null means no approval has happened, so the window
     /// IS the run and window spend equals lifetime spend. Without it, <c>PerRunCostUsd</c> is a number

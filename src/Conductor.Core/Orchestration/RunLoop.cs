@@ -96,12 +96,14 @@ public sealed partial class RunLoop
             SyncWorkGraphFromDeclared();
             WarnOnBranchPattern();
             WarnOnUnboundedSpend();
-            await AuthPreflightAsync(ct).ConfigureAwait(false);
 
             var sessionsThisRun = 0;
+            // KS5.2: restored BEFORE the auth preflight, which now records what its probe was billed —
+            // RestoreBudget overwrites the live counters from state, so a probe accrued first was wiped.
             _ctx.RestoreBudget();
-            if (_ctx.RunCostUsd > 0 || _ctx.RunTokens > 0 || _ctx.RunOverheadUsd > 0)
-                _ctx.Log($"restored budget: ${_ctx.RunCostUsd:0.00} agent / ${_ctx.RunOverheadUsd:0.00} overhead / {_ctx.RunTokens / 1000.0:0.#}k tokens (from prior process)");
+            if (_ctx.RunCostUsd > 0 || _ctx.RunTokens > 0 || _ctx.RunOverheadUsd > 0 || _ctx.RunSideCostUsd > 0)
+                _ctx.Log($"restored budget: ${_ctx.RunCostUsd:0.00} agent / ${_ctx.RunSideCostUsd:0.00} lanes+advisor / ${_ctx.RunOverheadUsd:0.00} overhead / {_ctx.RunTokens / 1000.0:0.#}k tokens (from prior process)");
+            await AuthPreflightAsync(ct).ConfigureAwait(false);
             try
             {
                 while (!ct.IsCancellationRequested)

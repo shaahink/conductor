@@ -76,12 +76,14 @@ public sealed partial class RunLoop
 
     private bool CheckBudgetCap()
     {
-        if (_ctx.Plan.Limits.MaxRunCostUsd is { } costCap && _ctx.RunCostUsd >= costCap)
+        // KS5.2: BilledWindowUsd, not RunCostUsd — a run whose spend was all lanes and advisors could
+        // never reach its own ceiling. See RunContext.BilledWindowUsd for what is in the total and why.
+        if (_ctx.Plan.Limits.MaxRunCostUsd is { } costCap && _ctx.BilledWindowUsd >= costCap)
         {
             _ctx.Events.Emit(new OwnerApprovalRequested { StageId = _ctx.State.CurrentStage ?? "?" });
             _ctx.State.Status = RunStatus.AwaitingOwner;
             _ctx.State.AwaitingOwnerReason = AwaitingOwnerReason.Budget;
-            _ctx.Log($"budget cap: ${_ctx.RunCostUsd:0.00} >= ${costCap:0.00} (limit) — awaiting owner approval to continue");
+            _ctx.Log($"budget cap: ${_ctx.BilledWindowUsd:0.00} >= ${costCap:0.00} (limit) — awaiting owner approval to continue");
             _saveAndReport();
             return true;
         }

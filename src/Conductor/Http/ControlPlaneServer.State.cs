@@ -170,8 +170,11 @@ public sealed partial class ControlPlaneServer
         ArgumentNullException.ThrowIfNull(liveState);
 
         var inFlight = dto.AgentActive ? dto.SessionCostUsd : 0m;
-        var window = liveState.PerRunCostUsd + inFlight;
-        var lifetime = dto.TotalCostUsd;
+        // KS5.2: BilledWindowCostUsd, not PerRunCostUsd — the same sum CheckBudgetCap parks on, so the
+        // spend an operator reads and the spend the run stops at are one number. The lifetime figure
+        // carries the run's side spend for the same reason: window may never exceed lifetime.
+        var window = liveState.BilledWindowCostUsd + inFlight;
+        var lifetime = dto.TotalCostUsd + liveState.TotalSideCostUsd;
         var cap = limits?.MaxRunCostUsd;
 
         var priced = liveState.History.Where(h => h.EndedUtc != null && h.CostUsd is > 0).ToList();

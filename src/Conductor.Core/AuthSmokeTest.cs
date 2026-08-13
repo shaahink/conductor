@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Conductor.Core.Accounting;
 using Conductor.Core.Providers;
 using Conductor.Models;
 
@@ -33,8 +34,13 @@ public static class AuthSmokeTest
             || exe.StartsWith("opencode", StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <param name="onSpend">KS5.2 — what the probe was billed, handed to the caller's ledger. The
+    /// probe is the plan's own invocation with a one-word prompt: cheap, but not free, and it was the
+    /// one model spawn that ran on EVERY run start while contributing nothing to any total. Null when
+    /// the wire reported no figure; the callback is invoked either way so the caller can say so.</param>
     public static async Task<PreflightHealth.CheckResult> RunAsync(
-        PlanConfig plan, TimeSpan timeout, CancellationToken ct = default)
+        PlanConfig plan, TimeSpan timeout, CancellationToken ct = default,
+        Action<SpendReceipt?>? onSpend = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
         if (!CanProbe(plan.Agent))
@@ -42,6 +48,7 @@ public static class AuthSmokeTest
                 $"skipped — no one-token probe defined for agent command '{plan.Agent?.Command}'");
 
         var provider = AgentProviderFactory.Create(plan.Agent);
+        var started = Stopwatch.GetTimestamp();
         var psi = new ProcessStartInfo(plan.Agent.Command)
         {
             WorkingDirectory = Directory.Exists(plan.Repo) ? plan.Repo : Environment.CurrentDirectory,
@@ -78,7 +85,10 @@ public static class AuthSmokeTest
                     $"inconclusive — no answer within {timeout.TotalSeconds:0}s");
             }
 
-            var evidence = (await stdout.ConfigureAwait(false)) + " " + (await stderr.ConfigureAwait(false));
+            var answer = await stdout.ConfigureAwait(false);
+            var evidence = answer + " " + (await stderr.ConfigureAwait(false));
+            onSpend?.Invoke(BilledSpend.Read(plan.Agent, SpendCategory.AuthProbe, answer,
+                (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds));
             if (provider.DetectsAuthFailure(evidence))
                 return new PreflightHealth.CheckResult(CheckName, false,
                     $"credential rejected — {Orchestration.SessionRunner.ReauthHint(provider.Name)}");

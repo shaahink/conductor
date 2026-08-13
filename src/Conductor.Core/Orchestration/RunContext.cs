@@ -92,6 +92,30 @@ public sealed class RunContext
     public decimal RunCostUsd { get; set; }
     public long RunTokens { get; set; }
     public decimal RunOverheadUsd { get; set; }
+
+    /// <summary>KS5.2 — billed spend in this budget window by the model processes that are NOT the
+    /// delivery agent: the advisor, analysis and fix lanes, the parallel audit, the auth probe. Kept
+    /// beside <see cref="RunCostUsd"/> rather than folded into it so "what did the agent cost" stays a
+    /// question with an answer.</summary>
+    public decimal RunSideCostUsd { get; set; }
+
+    /// <summary>KS5.2 — THE total. <see cref="RunCostUsd"/> alone was what
+    /// <c>CheckBudgetCap</c> compared, so a run whose spend was all lanes and advisors could never reach
+    /// its own ceiling; <see cref="RunOverheadUsd"/> is deliberately not in it, because gate overhead is
+    /// an estimate from a plan-set rate and a ceiling must be reached by money somebody was charged.
+    /// <c>/state</c> serves the same sum through <see cref="Models.RunState.BilledWindowCostUsd"/>, so
+    /// the number an operator reads and the number the run parks on cannot drift apart.</summary>
+    public decimal BilledWindowUsd => RunCostUsd + RunSideCostUsd;
+
+    private Accounting.RunSpendLedger? _ledger;
+
+    /// <summary>KS5.2 — where a model invocation outside the delivery agent turns into a
+    /// <c>costs</c> row and an accrual. One instance per run so every spender writes through the same
+    /// seam; see <see cref="Accounting.RunSpendLedger"/> for the session-key rule.</summary>
+    public Accounting.RunSpendLedger Ledger => _ledger ??= new Accounting.RunSpendLedger(
+        Store, State.RunId,
+        accrue: r => { RunSideCostUsd += r.CostUsd; State.TotalSideCostUsd += r.CostUsd; PersistBudget(); },
+        log: Log);
     // W3.1: the bg-liveness cache moved into the SessionWatchdog's closure — it is read and written
     // on the watchdog thread only, so it must not live in state the poll loop also touches.
 
@@ -199,6 +223,7 @@ public sealed class RunContext
         RunCostUsd = State.PerRunCostUsd;
         RunTokens = State.PerRunTokens;
         RunOverheadUsd = State.PerRunOverheadCostUsd;
+        RunSideCostUsd = State.PerRunSideCostUsd;
     }
 
     /// <summary>Persist current run-cost state back into RunState.</summary>
@@ -207,6 +232,7 @@ public sealed class RunContext
         State.PerRunCostUsd = RunCostUsd;
         State.PerRunTokens = RunTokens;
         State.PerRunOverheadCostUsd = RunOverheadUsd;
+        State.PerRunSideCostUsd = RunSideCostUsd;
     }
 
     /// <summary>Plain-text log line (console + file + structured).</summary>

@@ -136,7 +136,13 @@ public static class StatusAgent
     }
 
     /// <summary>Run the reporter in a scratch dir (read-only by construction). Returns its text output.</summary>
-    public static string Run(StatusAgentConfig cfg, string prompt, CancellationToken ct = default)
+    /// <param name="onSpend">KS5.2 — what the reporter was billed, or null when its provider reported
+    /// nothing. The status agent is spawned by an OPERATOR typing <c>conductor status --agent</c>, not
+    /// by a run: there is no session to key a <c>costs</c> row to and the engine's budget counters live
+    /// in another process. So this one states its bill to the person who asked for it rather than
+    /// writing a row — see the exemption in <c>ArchitectureBoundaryTests</c>.</param>
+    public static string Run(StatusAgentConfig cfg, string prompt, CancellationToken ct = default,
+        Action<Accounting.SpendReceipt?>? onSpend = null)
     {
         var scratch = Path.Combine(Path.GetTempPath(), "conductor-status-" + Guid.NewGuid().ToString("N")[..8]);
         Directory.CreateDirectory(scratch);
@@ -144,6 +150,8 @@ public static class StatusAgent
         {
             var args = ResolveArgs(cfg, prompt);
             var r = ProcessRunner.Run(cfg.Command, args, scratch, TimeSpan.FromMinutes(cfg.TimeoutMinutes), ct);
+            onSpend?.Invoke(Accounting.BilledSpend.ReadFromCommand(cfg.Command, "status", r.Output,
+                (long)r.Duration.TotalMilliseconds));
             var text = r.Output.Trim();
             return string.IsNullOrWhiteSpace(text)
                 ? $"(status agent produced no output — exit {r.ExitCode}{(r.TimedOut ? ", timed out" : "")})"
