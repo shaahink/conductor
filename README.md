@@ -1,13 +1,15 @@
 # Conductor
 
 [![CI](https://github.com/shaahink/conductor/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/shaahink/conductor/actions/workflows/ci.yml)
-[![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-orange.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4.svg)](https://dotnet.microsoft.com/)
 [![Go 1.26](https://img.shields.io/badge/Go-1.26-00ADD8.svg)](https://go.dev/)
 [![Field guide](https://img.shields.io/badge/field%20guide-payesh.vercel.app-b02f10.svg)](https://payesh.vercel.app)
 
-A minimal, resilient orchestrator that drives **mega plans** autonomously — one agent session at a
-time, while you watch from the laptop or your phone.
+An engineering tool that turns a **plan** into verified, committed work. It drives coding agents one
+session at a time, re-runs your gate battery itself after every session, and never takes an agent's
+word for what got done — which is what makes it safe to leave running, watched from the laptop or
+your phone.
 
 ![The conductor dashboard: home, agent transcript, work board, card detail, timeline, plan editor, command palette](docs/assets/demo.gif)
 
@@ -239,8 +241,4 @@ the ratchet means a PR may not make the bar smaller. Security reports: [SECURITY
 
 ## License
 
-Source-available under the [PolyForm Noncommercial License 1.0.0](LICENSE): free to use, modify
-and share for any noncommercial purpose. Commercial use needs a separate licence — get in touch.
-
-Versions published before 2 August 2026 were released under the MIT License; that grant still
-stands for those versions.
+[MIT](LICENSE). Use it, modify it, ship it — commercially or not.

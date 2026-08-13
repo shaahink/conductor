@@ -20,6 +20,15 @@ it was built from. It orders above `0.1.0` and below `0.1.1`, and it is unique p
 
 ## [Unreleased]
 
+### Changed
+
+- **Licence is MIT.** Conductor is now plain MIT — free for any use, commercial included. The
+  PolyForm Noncommercial 1.0.0 text that briefly sat in `LICENSE` was a mistake and is gone; no
+  version of this software is under a noncommercial grant.
+- **The one-line description says what Conductor is.** It is an engineering tool that turns a plan
+  into verified, committed work; running unattended is a consequence of the verification, not the
+  pitch. README badge, tagline and licence section updated to match.
+
 ## [0.4.0] - 2026-08-05
 
 **The Karvan core era** — the engine knows what it did and what it cost. 0.3.0 made a run visible;
