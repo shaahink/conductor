@@ -71,6 +71,8 @@ app.Configure(c =>
         .WithDescription("Measure this repo's token budget from its own runs and prescribe the next one: session floor, wrap-up spend, cap, nudge-versus-floor, rollover rate. No argument profiles the current repo. Filters: --repo, --plan, --since, --json.");
     c.AddCommand<MoneyCommand>("money")
         .WithDescription("Price a run or a project from its own ledger: sessions, tokens, cache-read share, cost, checkpoints, tokens and dollars per checkpoint, plus the windows either side of a cap change, the per-stage split and the calendar month. Scopes: --run, --project, --since, --plan, --json.");
+    c.AddCommand<SpendCommand>("spend")
+        .WithDescription("What this WHOLE MACHINE spent - today, this week, this month - across every catalogued store, no repo or plan argument. Billed rows only, windowed at session granularity, each run counted once. Flags: --since, --runs, --home, --json.");
 
 
     c.AddCommand<PauseCommand>("pause")

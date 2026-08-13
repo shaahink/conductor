@@ -41,8 +41,8 @@ public sealed class CompletionCommand : Command<CompletionCommand.Settings>
     private const string Verbs =
         "run journey face status watch watches gate log report pause resume approve kill skip inject abort " +
         "retry-stage rollback pause-after-stage goto rollover heartbeat plan tasks task new-plan note " +
-        "bug init doctor audit mcp-serve completion chat bg ps history catalogue budget money version " +
-        "update demo";
+        "bug init doctor audit mcp-serve completion chat bg ps history catalogue budget money spend " +
+        "version update demo";
 
     internal static string GeneratePowerShell()
     {

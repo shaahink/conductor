@@ -35,7 +35,7 @@ public static class MoneyAnalyzer
         var byNumber = new Dictionary<int, ArchivedSession>();
         foreach (var s in sessions) byNumber[s.Number] = s;
 
-        var total = Fill(new Accumulator(), sessions, costs).ToLine("run total");
+        var total = Slice(sessions, costs, "run total");
 
         var windowLines = new List<MoneyLine>();
         foreach (var w in windows)
@@ -63,6 +63,23 @@ public static class MoneyAnalyzer
         return new MoneyReport(scope, runs, total,
             Merge(runs.SelectMany(r => r.Months)).OrderBy(l => l.Label, StringComparer.Ordinal).ToList(),
             Merge(runs.SelectMany(r => r.Categories)).OrderByDescending(l => l.Cost).ToList());
+    }
+
+    /// <summary>
+    /// KS5.1 — one row over an arbitrary slice of a run. The lifetime total in
+    /// <see cref="AnalyzeRun"/> is this same call over everything, which is the point: a caller that
+    /// slices by wall-clock time (<see cref="MachineLedger"/>) adds its rows up with the function that
+    /// produced the number it will be cross-checked against, rather than with a second one that
+    /// rounds, counts sessions or treats a missing session differently.
+    /// </summary>
+    /// <param name="sessions">The sessions in the slice; they carry the delivery (checkpoints).</param>
+    /// <param name="costs">The billed rows in the slice; they carry the money and the tokens.</param>
+    public static MoneyLine Slice(
+        IReadOnlyList<ArchivedSession> sessions, IReadOnlyList<ArchivedCost> costs, string label)
+    {
+        ArgumentNullException.ThrowIfNull(sessions);
+        ArgumentNullException.ThrowIfNull(costs);
+        return Fill(new Accumulator(), sessions, costs).ToLine(label);
     }
 
     /// <summary>The calendar month a recorded timestamp falls in, or null when the string is not one.

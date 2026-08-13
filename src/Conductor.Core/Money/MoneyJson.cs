@@ -46,6 +46,50 @@ public static class MoneyJson
         return Encoding.UTF8.GetString(buffer.ToArray());
     }
 
+    /// <summary>
+    /// KS5.1 — <c>conductor spend --json</c>. Every figure goes through the same
+    /// <see cref="WriteLine"/> the money report uses, so the JSON cannot round, name or derive a
+    /// column differently from the table beside it.
+    /// </summary>
+    public static string SerializeLedger(MachineLedgerReport report)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+        var buffer = new MemoryStream();
+        using (var w = new Utf8JsonWriter(buffer, new JsonWriterOptions { Indented = true }))
+        {
+            w.WriteStartObject();
+            w.WriteString("scope", report.Scope);
+            w.WriteString("stateHome", report.Root);
+            w.WriteNumber("runs", report.Runs.Count);
+            w.WriteNumber("stores", report.Stores);
+            w.WriteNumber("duplicateRunsCollapsed", report.DuplicateRunsCollapsed);
+            w.WriteBoolean("nothingRecorded", report.NothingRecorded);
+            WriteLine(w, "total", report.Total);
+            WriteLines(w, "periods", report.Periods);
+            WriteLine(w, "undated", report.Undated);
+            WriteLines(w, "months", report.Ledger.Months);
+            WriteLines(w, "categories", report.Ledger.Categories);
+            w.WriteStartArray("perRun");
+            foreach (var r in report.Runs)
+            {
+                w.WriteStartObject();
+                w.WriteString("runId", r.Run.RunId);
+                w.WriteString("plan", r.Run.PlanName);
+                w.WriteString("repo", r.Run.RepoLabel);
+                w.WriteString("db", r.DbPath);
+                if (r.Run.StartedUtc is { } started) w.WriteString("startedUtc", started);
+                if (r.Run.LastActivityUtc is { } last) w.WriteString("lastActivityUtc", last);
+                WriteLine(w, "total", r.Run.Total);
+                WriteLines(w, "periods", r.Periods);
+                WriteLine(w, "undated", r.Undated);
+                w.WriteEndObject();
+            }
+            w.WriteEndArray();
+            w.WriteEndObject();
+        }
+        return Encoding.UTF8.GetString(buffer.ToArray());
+    }
+
     private static void WriteLines(Utf8JsonWriter w, string name, IReadOnlyList<MoneyLine> lines)
     {
         w.WriteStartArray(name);

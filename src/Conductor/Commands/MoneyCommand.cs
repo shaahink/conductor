@@ -216,11 +216,14 @@ public sealed class MoneyCommand : Command<MoneyCommand.Settings>
         }
     }
 
-    private static void Header(string first) =>
+    /// <summary>Internal from KS5.1: <c>spend</c> prints the same columns over the same records, and
+    /// two commands padding one table to two different widths is the bug this file's own
+    /// <see cref="Cells"/> comment was written about.</summary>
+    internal static void Header(string first) =>
         AnsiConsole.MarkupLine("[grey]" + Markup.Escape(string.Join(' ', Cells(
             first, "SESS", "TOKENS", "CACHE", "COST", "CKPT", "TOK/CKPT", "$/CKPT"))) + "[/]");
 
-    private static void Row(string label, MoneyLine l, bool bold = false)
+    internal static void Row(string label, MoneyLine l, bool bold = false)
     {
         var cells = Cells(label,
             l.Sessions.ToString(CultureInfo.InvariantCulture),
@@ -234,24 +237,24 @@ public sealed class MoneyCommand : Command<MoneyCommand.Settings>
         AnsiConsole.MarkupLine(bold ? $"[bold]{text}[/]" : text);
     }
 
-    private static string Short(string runId) => runId.Length > 8 ? runId[..8] : runId;
+    internal static string Short(string runId) => runId.Length > 8 ? runId[..8] : runId;
 
-    private static string Tokens(long tokens) => BudgetAnalyzer.Millions(tokens);
+    internal static string Tokens(long tokens) => BudgetAnalyzer.Millions(tokens);
 
-    private static string Money(decimal usd) => "$" + usd.ToString("0.00", CultureInfo.InvariantCulture);
+    internal static string Money(decimal usd) => "$" + usd.ToString("0.00", CultureInfo.InvariantCulture);
 
     /// <summary>The cache-read share, always to one decimal: 98.5% and 98.2% are different findings
     /// about the same run, and rounding both to "98%" throws away the only precision this column has.</summary>
-    private static string Share(double share) =>
+    internal static string Share(double share) =>
         share <= 0 ? "-" : (share * 100).ToString("0.0", CultureInfo.InvariantCulture) + "%";
 
-    private static string Percent(double share) =>
+    internal static string Percent(double share) =>
         (share * 100).ToString(share is > 0 and < 0.005 ? "0.0#" : "0", CultureInfo.InvariantCulture) + "%";
 
     /// <summary>Fixed columns padded as PLAIN text, coloured only afterwards — the rule
     /// <c>HistoryCommand</c> and <c>BudgetCommand</c> both follow, and for the same reason: padding a
     /// string that already carries escape bytes pads the escapes.</summary>
-    private static string[] Cells(params string[] values)
+    internal static string[] Cells(params string[] values)
     {
         int[] widths = [34, 5, 8, 6, 10, 5, 9, 8];
         var result = new string[values.Length];

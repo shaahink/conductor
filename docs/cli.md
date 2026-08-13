@@ -142,15 +142,26 @@ command palette, and from Telegram.
 |---|---|
 | `budget` | Measure this repo's token budget **from its own runs** and prescribe the next one: session floor, wrap-up spend, cap, nudge-versus-floor, rollover rate. No argument profiles the current repo. Filters: `--repo`, `--plan`, `--since`, `--json`. |
 | `money` | Price a run or a project from its own ledger: sessions, tokens, cache-read share, cost, checkpoints, tokens and dollars per checkpoint, plus the windows either side of a cap change, the per-stage split and the calendar month. Scopes: `--run`, `--project`, `--since`, `--plan`, `--json`. |
+| `spend` | What this **whole machine** spent — today, this week, this month — across every catalogued store, with no repo and no plan argument. Billed rows only; each real run counted once even when the catalogue holds it twice. Flags: `--since`, `--runs`, `--home`, `--json`. |
 
 ```
 conductor budget            # profile this repo's runs and prescribe the next cap
 conductor money             # what every run of this repo cost
 conductor money --run <ID>  # one run, per stage and per checkpoint
+conductor spend             # what this machine spent today / this week / this month
+conductor spend --since 1mo # one window instead of the ladder
 ```
 
-Both read the machine-wide run catalogue rather than the current run's state, so they answer after a
-run has ended and from any directory.
+All three read the machine-wide run catalogue rather than the current run's state, so they answer
+after a run has ended and from any directory.
+
+`spend` differs from `money --since` in the one way that matters. `--since` elsewhere filters **whole
+runs** by last activity, so a run that started in June and closed a checkpoint this morning puts its
+entire June bill inside "this week". `spend` windows at **session** granularity — the `costs` table
+has no timestamp of its own, and `sessions.started_utc` is the only anchor it can be joined to — so a
+run straddling the boundary contributes only the sessions inside it. Billed rows whose session has no
+start time are reported as `undated`: counted in the lifetime total, counted in no window, never
+silently dropped.
 
 `budget` prescribes **two** numbers, not one — `limits.maxSessionTokens` (the ceiling) and
 `limits.softBreakRatio` (where the wrap-up nudge lands) — and prints them as a `limits` block to paste

@@ -139,6 +139,32 @@ public sealed class K4_3MoneyTests : IDisposable
         Assert.Equal(1.25m, run.Months.Single(m => m.Label == "unknown").Cost);
     }
 
+    /// <summary>KS5.1 slices a run by wall-clock time to answer "what did this machine spend this
+    /// week". It does that through <c>MoneyAnalyzer.Slice</c> — the same call the lifetime total is —
+    /// so that windowing can subdivide a run's money but can never change how much of it there is.</summary>
+    [Fact]
+    public void SlicingAWindowDoesNotChangeTheRunsOwnTotal()
+    {
+        var sessions = Sessions();
+        var costs = Costs();
+        var total = Run().Total;
+
+        var july = MoneyAnalyzer.Slice(
+            sessions.Where(s => s.StartedUtc!.StartsWith("2026-07", StringComparison.Ordinal)).ToList(),
+            costs.Where(c => c.SessionNumber <= 2).ToList(), "2026-07");
+        var august = MoneyAnalyzer.Slice(
+            sessions.Where(s => s.StartedUtc!.StartsWith("2026-08", StringComparison.Ordinal)).ToList(),
+            costs.Where(c => c.SessionNumber > 2).ToList(), "2026-08");
+
+        Assert.Equal(total.Cost, july.Cost + august.Cost);
+        Assert.Equal(total.Tokens, july.Tokens + august.Tokens);
+        Assert.Equal(total.Checkpoints, july.Checkpoints + august.Checkpoints);
+        Assert.Equal(total.Sessions, july.Sessions + august.Sessions);
+
+        // And a slice over everything is the run total itself, not a second arithmetic that agrees.
+        Assert.Equal(total with { Label = "everything" }, MoneyAnalyzer.Slice(sessions, costs, "everything"));
+    }
+
     [Theory]
     [InlineData("2026-08-02T09:00:00Z", "2026-08")]
     [InlineData("2026-08-02 09:00:00", "2026-08")]
