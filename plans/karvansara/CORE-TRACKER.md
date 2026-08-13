@@ -11,10 +11,15 @@ measured, do not re-derive: the catalogue held SEVEN non-terminal rows, not four
   9647f1b8 (this run), 8faf849d + d6fd22ba (DevContext2, another repo's conductor on this machine) -
   and the verb refuses all three before --dry-run prints. The four real phantoms are closed through it;
   non-terminal 7 -> 3, every survivor with a live pid in `conductor ps`.
-two traps this era must keep: only parks that OUTLIVE the engine get their own status word (Idle,
+three traps this era must keep: only parks that OUTLIVE the engine get their own status word (Idle,
   Waiting, Backoff, VerifyingGates stay `running`, or StateRepair thinks it may write a live store);
-  and NEVER bump the run.db schema version - the published v12 engine drives these sessions and
-  MigrationRunner throws on a newer store, so a v13 store would brick `conductor task` and the run.
+  NEVER bump the run.db schema version - the published v12 engine drives these sessions and
+  MigrationRunner throws on a newer store, so a v13 store would brick `conductor task` and the run;
+  and the ArchitectureTests ratchets are NOT in a scoped filter - the type ceiling had been red since
+  KS0.1 (CatalogueCommand 5 types, StateRepair 6). Split, never raised, in e4c9984. Add a file, then
+  run `--filter FullyQualifiedName~ArchitectureTests` before you claim; it takes 9 seconds.
+red/green: last full suite before the split was 2122/2123, the one failure being that ratchet; after
+  the split ArchitectureTests + all KS0_* are 60 green. A full suite was not re-run to completion.
 still open on KS0.1: df9c4af8's truncated copy in 308cfb9b, the live store. Bug #36 - one owner-run
   `conductor catalogue repair --apply` while no engine holds it takes 26/25 to 25/25 and payesh green.
 next: KS0.3 - the sharp-small batch, each bug red then green by reproduction script (#16 shadow-path
