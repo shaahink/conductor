@@ -95,7 +95,19 @@ public sealed partial class DoctorCommand : AsyncCommand<DoctorSettings>
             CheckWorkCoverage(plan),
             CheckPrompt(plan),
             CheckAdvisor(plan),
+            // KS1.4 — the plan-semantics lints. Offline, read-only, and every one of them names the
+            // artifact it is unhappy about. Their bodies are the two partials named for what they
+            // read: DoctorCommand.PlanSemantics.cs and DoctorCommand.PromptSemantics.cs.
+            CheckGatePaths(plan),
+            CheckHooks(plan),
+            CheckCheckpointIds(plan),
+            CheckPlanDrift(plan),
+            CheckArgvLength(plan),
         };
+        // The two sweeps read the template files, so they are async all the way down rather than
+        // blocking here (MA0045 is an error in this tree).
+        checks.Add(await CheckTemplateBracesAsync(plan).ConfigureAwait(false));
+        checks.Add(await CheckEscalationTokenAsync(plan).ConfigureAwait(false));
 
         var (currentCostUsd, hasRun) = TryReadCostFromRunDb(plan);
 
@@ -383,23 +395,12 @@ public sealed partial class DoctorCommand : AsyncCommand<DoctorSettings>
     internal static Check CheckPrompt(PlanConfig plan)
     {
         var prompts = new PromptBuilder(plan);
-        var fix = new PendingFix { FromSession = 1, GateFailures = "(doctor)", ProgressSummary = "(doctor)" };
-        var resume = new PendingResume { FromSession = 1, Reason = "(doctor)" };
-        var verify = new PendingVerify { FromSession = 1, StageStartHead = "HEAD" };
-        var audit = new PendingAudit { StageId = plan.Stages.FirstOrDefault()?.Id ?? "", StageStartHead = "HEAD" };
 
         foreach (var stage in plan.Stages)
         {
-            var kinds = new (string Template, Func<string> Render)[]
-            {
-                ("session.md", () => prompts.Deliver(stage, 1, 1, 1)),
-                ("fix.md", () => prompts.Fix(stage, 1, 1, 1, fix)),
-                ("resume.md", () => prompts.Resume(stage, 1, 1, 1, resume)),
-                ("verify.md", () => prompts.Verify(stage, 1, verify)),
-                ("audit.md", () => prompts.Audit(stage, 1, audit, "HEAD")),
-                ("review.md", () => prompts.Review(stage, 1, 1, 1, "(doctor)")),
-            };
-            foreach (var (template, render) in kinds)
+            // KS1.4: the matrix moved to DoctorCommand.PromptSemantics.cs so the argv-length lint
+            // measures exactly the sessions this check renders — one definition of "a session kind".
+            foreach (var (template, render) in PromptMatrix(prompts, plan, stage))
             {
                 try { render(); }
                 catch (PromptCompositionException ex)

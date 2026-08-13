@@ -96,7 +96,11 @@ public sealed partial class RunArchive
     /// whose schema predates the event log (pre-v5) answers empty via the <see cref="Has"/> probe
     /// instead of throwing, and a torn payload is skipped, the same tolerance
     /// <c>SqliteRunStore.DeserializeEvents</c> keeps: one bad row must not take the history down.</summary>
-    private List<ConductorEvent> EventsOf(string runId)
+    /// <summary>The run's event log, decoded. Internal rather than private since KS1.4: doctor's
+    /// plan-drift lint folds <c>PlanReloaded</c> out of it, and folding the log is the sanctioned way
+    /// to ask this database a question — a snapshot column for the loaded plan version would be one
+    /// more view to keep true.</summary>
+    internal List<ConductorEvent> EventsOf(string runId)
     {
         if (!Has("events", "payload")) return [];
         var rows = Query("SELECT payload FROM events WHERE run_id = @runId ORDER BY seq", ("@runId", runId));
