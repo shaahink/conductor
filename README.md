@@ -4,6 +4,7 @@
 [![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-orange.svg)](LICENSE)
 [![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4.svg)](https://dotnet.microsoft.com/)
 [![Go 1.26](https://img.shields.io/badge/Go-1.26-00ADD8.svg)](https://go.dev/)
+[![Field guide](https://img.shields.io/badge/field%20guide-payesh.vercel.app-b02f10.svg)](https://payesh.vercel.app)
 
 A minimal, resilient orchestrator that drives **mega plans** autonomously — one agent session at a
 time, while you watch from the laptop or your phone.
@@ -28,6 +29,16 @@ pick next stage from the tracker
 The plan docs stay the authority — Conductor never re-plans your work. It only enforces the rituals
 (pre/post-session, QA-previous-session, evidence-or-it-didn't-happen) and keeps the loop moving
 without you.
+
+## The field guide
+
+**[Payesh](https://payesh.vercel.app)** (*پایش*, Persian for **monitoring**) is Conductor's
+companion site: a field guide to agentic engineering. Ten concepts the market is hiring for —
+orchestration, context engineering, token economics, evals and gates, independent verification —
+each explained in plain language, then shown working in Conductor's real runs, with what it cost.
+Every figure on it is recomputed from the run store rather than typed in, the failed runs are
+published beside the good ones, and the site was itself built by Conductor driving its repository
+unattended.
 
 ## Try it
 
@@ -196,6 +207,8 @@ Discord, Slack) fire on NeedsHuman and completion.
 - [`docs/operating.md`](docs/operating.md) — every control verb and when to reach for it
 - [`docs/troubleshooting.md`](docs/troubleshooting.md) — when a run looks stuck, dead, or wrong
 - [`docs/platforms.md`](docs/platforms.md) — Windows / Linux / macOS support
+- [payesh.vercel.app](https://payesh.vercel.app) — the field guide: the concepts behind the design,
+  argued from this tool's own measured runs
 
 Contributors: [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/dev/`](docs/dev/). Closed eras and their
 gate transcripts: [`docs/history/`](docs/history/).
