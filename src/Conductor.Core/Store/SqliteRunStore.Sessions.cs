@@ -1,5 +1,10 @@
 using System.Data;
+using System.Globalization;
+
 using Conductor.Core.Events;
+
+using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
 
 namespace Conductor.Core.Store;
 
@@ -40,6 +45,37 @@ public sealed partial class SqliteRunStore
         TryExecute("UPDATE runs SET status = @status, ended_utc = @now WHERE run_id = @runId",
                    ("@runId", runId), ("@status", status),
                    ("@now", _clock.GetUtcNow().ToString("O")));
+    }
+
+    /// <inheritdoc />
+    public void UpdateRunStatus(string runId, string status)
+    {
+        // No ended_utc, in either direction: a park is not an ending, and a run resumed out of one
+        // must not have an ending erased that a real completion put there.
+        TryExecute("UPDATE runs SET status = @status WHERE run_id = @runId",
+                   ("@runId", runId), ("@status", status));
+    }
+
+    /// <inheritdoc />
+    public int CloseRunRecord(string runId, string status, DateTimeOffset endedUtc)
+    {
+        try
+        {
+            lock (_persistGate)
+            {
+                using var cmd = _conn.CreateCommand();
+                cmd.CommandText = "UPDATE runs SET status = @status, ended_utc = @ended WHERE run_id = @runId";
+                cmd.Parameters.AddWithValue("@runId", runId);
+                cmd.Parameters.AddWithValue("@status", status);
+                cmd.Parameters.AddWithValue("@ended", endedUtc.ToString("O", CultureInfo.InvariantCulture));
+                return cmd.ExecuteNonQuery();
+            }
+        }
+        catch (Exception ex) when (ex is SqliteException or ObjectDisposedException or InvalidOperationException)
+        {
+            _logger.LogError(ex, "run.db close failed for {RunId}", runId);
+            return 0;
+        }
     }
 
     // ---------------------------------------------------------------- stage lifecycle

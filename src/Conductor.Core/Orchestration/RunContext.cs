@@ -243,7 +243,35 @@ public sealed class RunContext
         {
             var json = System.Text.Json.JsonSerializer.Serialize(State, Models.PlanConfig.JsonOpts);
             s.SaveRunState(State.RunId, State.PlanName, json);
+            SyncRunStatus(s);
         }
+    }
+
+    /// <summary>The last <c>runs.status</c> this process wrote. Save() is called several times per
+    /// session and every 800ms while parked; the column only needs the transitions.</summary>
+    private string? _runStatusWritten;
+
+    /// <summary>
+    /// KS0.2, closing FU-F1-06 — keep <c>runs.status</c> honest about a run that is parked.
+    /// <para>The row was written twice in a run's life: <c>running</c> at every process start, and a
+    /// terminal word at completion. A run that stopped <c>NeedsHuman</c> or <c>Paused</c> — the two
+    /// most common ways a run stops — therefore said <c>running</c> for ever, which is why four rows
+    /// on this machine claim to be live runs of engines that exited weeks ago. state.json knew; the
+    /// row did not, and the row is what every other machine reads.</para>
+    /// <para>Here rather than at each transition because there are a dozen of those and a new one
+    /// arrives every era: Save() is what they all already call, so a park invented next year is
+    /// covered without anyone remembering this. Terminal states are left to
+    /// <see cref="IRunStore.RecordRunEnd"/>, which also stamps <c>ended_utc</c>.</para>
+    /// </summary>
+    private void SyncRunStatus(IRunStore s)
+    {
+        if (string.IsNullOrEmpty(State.RunId)) return;
+        if (State.Status is RunStatus.Completed or RunStatus.Aborted) return;
+
+        var text = RunRecord.StatusText(State.Status);
+        if (string.Equals(_runStatusWritten, text, StringComparison.Ordinal)) return;
+        s.UpdateRunStatus(State.RunId, text);
+        _runStatusWritten = text;
     }
 
     /// <summary>Read tracker (defensive — returns empty snapshot on failure). This is the DECLARED

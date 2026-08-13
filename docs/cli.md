@@ -123,6 +123,8 @@ numbers behind it: [`docs/dev/TOKEN-BUDGET-TUNING.md`](dev/TOKEN-BUDGET-TUNING.m
 | `history` | Browse past runs from this machine's catalogue, read-only. No argument lists them; pass a run id, repo or slug to open one and replay its spine. Filters: `--repo`, `--plan`, `--since`, `--limit`, `--json`. |
 | `ps` | Every conductor run on this machine — repo, plan, run id, stage, status, port, pid, uptime. The run in the current directory is marked `*`. Read-only; `--json` for machines. |
 | `catalogue` | Every run store this machine has, and whether any of them hold the same run twice. `catalogue repair` says what it would collapse and writes nothing; `catalogue repair --apply` collapses it, after backing up every store it touches. It never writes a store a live engine is using, and it identifies a run by its run id — not by which store it happens to sit in. |
+| `run close <id>` | Close the record of a run whose engine never got to close it — killed, rebooted, or reaped with the shell that started it. Writes a terminal status (`--status closed`, the default, or `completed`/`aborted`) and stamps the instant the run *actually* stopped, taken from its last recorded activity unless you pass `--ended`. `--reason` goes into the run's event spine, so the change says who made it and why. `--dry-run` shows what would change. |
+| `run adopt <id>` | Annotate a run record without touching its lifecycle: `--reason` is journalled against the run, the status is left exactly where it was. For a record you mean to keep rather than close. |
 
 ## Overriding the defaults
 

@@ -59,6 +59,10 @@ app.Configure(c =>
         .WithDescription("Regenerate .conductor/REPORT.md from current state.");
     c.AddCommand<HistoryCommand>("history")
         .WithDescription("Browse past runs from this machine's catalogue, read-only. No argument lists; pass a run id, repo or slug to open one and replay its spine. Filters: --repo, --plan, --since, --limit, --json.");
+    // KS0.2: reached as `conductor run close|adopt` — hidden because the name it is registered under
+    // is a spelling nobody types (see RewriteRunRecordVerbs), not because it is not a verb to reach
+    // for. docs/cli.md documents it under `run`.
+    c.AddCommand<RunRecordCommand>("run-record").IsHidden();
     c.AddCommand<CatalogueCommand>("catalogue")
         .WithDescription("Show this machine's run stores, and repair a catalogue that holds the same run twice. No argument lists; 'repair' says what it would collapse and writes nothing; 'repair --apply' collapses it after backing every store it touches up. Never writes a store a live engine is using.");
     c.AddCommand<BudgetCommand>("budget")
@@ -143,7 +147,21 @@ app.Configure(c =>
         return 1;
     });
 });
-return await app.RunAsync(args).ConfigureAwait(false);
+return await app.RunAsync(RewriteRunRecordVerbs(args)).ConfigureAwait(false);
+
+// KS0.2: `conductor run close <id>` and `conductor run adopt <id>` read as two words and are one
+// command. Spectre cannot have both — a branch named `run` could hold subcommands but could no
+// longer BE the verb that starts a run, and `run` starting a run is the whole CLI's front door. So
+// the two record verbs are a hidden top-level command, and the only thing that knows they are
+// spelled with a space is this rewrite. Nothing else is touched: `run`, `run --paused`, and a plan
+// path that happens to be called close all reach RunCommand exactly as before, because the rewrite
+// fires only on the literal second word.
+static string[] RewriteRunRecordVerbs(string[] argv)
+{
+    if (argv.Length < 2 || !string.Equals(argv[0], "run", StringComparison.Ordinal)) return argv;
+    if (argv[1] is not ("close" or "adopt")) return argv;
+    return ["run-record", .. argv[1..]];
+}
 
 // Deliberately independent of the DI-built Serilog logger (not constructed yet at this point, and
 // this must survive even if that construction is what's failing). Best-effort: a crash-logging

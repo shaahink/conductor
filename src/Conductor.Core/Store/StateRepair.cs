@@ -348,20 +348,30 @@ public static class StateRepair
     {
         if (HasLivePid(dbPath)) return true;
         if (string.IsNullOrWhiteSpace(repo)) return false;
-        return HasRunningRun(dbPath)
+        return HasUnfinishedRun(dbPath)
                && EngineLock.IsHeldByLiveEngine(Path.Combine(repo, StateHome.ScratchDirName));
     }
 
-    private static bool HasRunningRun(string dbPath)
+    /// <summary>Does this store hold a run that is not over? KS0.2 widened it from
+    /// <c>status = 'running'</c>, and the widening is load-bearing rather than tidy: once parks are
+    /// written to the column (<see cref="RunRecord.StatusText"/>), a run an engine is holding open at
+    /// a <c>needs_human</c> prompt no longer says <c>running</c> — and the narrow query would have
+    /// called that store idle and let the repair write it out from under the engine. Terminal is the
+    /// short list; everything else counts as unfinished, which is the safe direction to be wrong
+    /// in.</summary>
+    private static bool HasUnfinishedRun(string dbPath)
     {
         try
         {
             using var c = StateDedup.OpenReadOnly(dbPath);
             c.Open();
             using var cmd = c.CreateCommand();
-            cmd.CommandText = "SELECT 1 FROM runs WHERE status = 'running' LIMIT 1";
+            cmd.CommandText = "SELECT status FROM runs";
             using var r = cmd.ExecuteReader();
-            return r.Read();
+            while (r.Read())
+                if (!RunRecord.IsTerminal(r.IsDBNull(0) ? null : r.GetString(0)))
+                    return true;
+            return false;
         }
         catch (Exception ex) when (ex is SqliteException or InvalidOperationException
                                        or IOException or UnauthorizedAccessException)

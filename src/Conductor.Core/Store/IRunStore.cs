@@ -18,6 +18,20 @@ public interface IRunStore : IDisposable
                        EngineStamp engine, string? limitsJson = null);
     void RecordRunEnd(string runId, string status);
 
+    /// <summary>KS0.2, closing FU-F1-06 — write <c>runs.status</c> and NOTHING else. The column had no
+    /// status-only writer, so a run that stopped in a resumable state (<c>NeedsHuman</c>,
+    /// <c>Paused</c>, <c>AwaitingOwner</c>) went on saying <c>running</c> for ever;
+    /// <see cref="RecordRunEnd"/> could not be used for those because it also stamps
+    /// <c>ended_utc</c>, and a run that can still be resumed has not ended. Vocabulary comes from
+    /// <see cref="RunRecord.StatusText"/>.</summary>
+    void UpdateRunStatus(string runId, string status);
+
+    /// <summary>KS0.2 — close a run record that no engine will ever close itself, with the instant it
+    /// actually stopped rather than the instant an operator noticed. Returns the number of rows
+    /// changed, so naming a run that is not in this store is an answer and not a silent success —
+    /// which is the difference between this and every other write here.</summary>
+    int CloseRunRecord(string runId, string status, DateTimeOffset endedUtc);
+
     // ---------------------------------------------------------------- stage lifecycle
 
     void InitializeStage(string runId, string stageId, string title);
