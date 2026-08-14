@@ -151,6 +151,30 @@ public static class StateHome
         return new StateResolution(target, StateSource.Derived, import);
     }
 
+    /// <summary>
+    /// KS2.3: <see cref="Resolve"/>'s read-only twin — the same precedence, ZERO side effects. It
+    /// never runs the legacy import and never writes the catalogue, so a preview (<c>journey</c>,
+    /// the hub's pre-launch itinerary) can name the database <c>run</c> would open without
+    /// registering a run that was never started. When the derived target does not exist yet but a
+    /// legacy <c>.conductor/run.db</c> does, the LEGACY file is the answer: it is the byte-for-byte
+    /// source <see cref="StateMigration.ImportLegacy"/> would copy on <c>run</c>'s first sight, so
+    /// a resume peek over it reports exactly what <c>run</c> is about to do. (When both exist the
+    /// target wins, as it does after any real resolution.)
+    /// </summary>
+    public static StateResolution Peek(string repo, string? plan, string? root = null)
+    {
+        if (Environment.GetEnvironmentVariable(RunDbEnvVar) is { Length: > 0 } explicitDb)
+            return new StateResolution(Path.GetFullPath(explicitDb), StateSource.EnvOverride, null);
+
+        if (StatePointer.TryRead(PointerPathFor(repo)) is { Length: > 0 } pointed)
+            return new StateResolution(pointed, StateSource.Pointer, null);
+
+        var target = DerivedRunDbPath(root ?? Root, repo, plan);
+        var legacy = LegacyDbPathFor(repo);
+        return new StateResolution(
+            !File.Exists(target) && File.Exists(legacy) ? legacy : target, StateSource.Derived, null);
+    }
+
     private static string Sanitize(string s)
     {
         var sb = new StringBuilder(s.Length);

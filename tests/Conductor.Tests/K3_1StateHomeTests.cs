@@ -199,6 +199,81 @@ public sealed class K3_1StateHomeTests : IDisposable
         Assert.Equal(StateSource.Derived, r.Source);
     }
 
+    // ── the peek (KS2.3) ───────────────────────────────────────────────────────────────────────
+
+    /// <summary>The read-only twin: a preview that resolves through Peek leaves the state home
+    /// EXACTLY as it found it — no root directory, no catalogue, no import. Resolve on the same
+    /// pair used to be journey's path, and one declined hub preview wrote a permanent catalogue
+    /// row for a run nobody started.</summary>
+    [Fact]
+    public void Peek_ResolvesTheDerivedPath_AndWritesNothingAtAll()
+    {
+        var repo = NewRepo("peek-clean");
+
+        var r = StateHome.Peek(repo, "core", Root);
+
+        Assert.Equal(StateSource.Derived, r.Source);
+        Assert.Equal(StateHome.DerivedRunDbPath(Root, repo, "core"), r.RunDbPath);
+        Assert.Null(r.Import);
+        Assert.False(Directory.Exists(Root), "Peek must not even create the root directory");
+        Assert.False(File.Exists(StateHome.CataloguePathFor(Root)));
+    }
+
+    /// <summary>Before the first real resolution, the legacy <c>.conductor/run.db</c> is what
+    /// <c>run</c> would import and resume from — so the peek names IT, and leaves it alone.</summary>
+    [Fact]
+    public void Peek_NamesTheLegacyDb_BeforeAnyImport_AndDoesNotImportIt()
+    {
+        var repo = NewRepo("peek-legacy");
+        var legacy = StateHome.LegacyDbPathFor(repo);
+        File.WriteAllText(legacy, "pre-K3.1 bytes");
+
+        var r = StateHome.Peek(repo, "core", Root);
+
+        Assert.Equal(legacy, r.RunDbPath);
+        Assert.False(File.Exists(StateHome.DerivedRunDbPath(Root, repo, "core")), "no import may run");
+        Assert.False(File.Exists(StateHome.CataloguePathFor(Root)));
+    }
+
+    /// <summary>Once a real resolution has produced the machine-home store, the peek answers with
+    /// the same path Resolve does — the legacy file no longer outranks it.</summary>
+    [Fact]
+    public void Peek_AgreesWithResolve_OnceTheTargetExists()
+    {
+        var repo = NewRepo("peek-agrees");
+        SeedLegacy(StateHome.LegacyDbPathFor(repo), "run-peek-1");
+        var resolved = StateHome.Resolve(repo, "core", Root);
+        Assert.True(File.Exists(resolved.RunDbPath));
+
+        Assert.Equal(resolved.RunDbPath, StateHome.Peek(repo, "core", Root).RunDbPath);
+    }
+
+    /// <summary>Peek honours the same precedence Resolve does — the pointer seam and the env
+    /// override must not make a preview describe a different database than the run would open.</summary>
+    [Fact]
+    public void Peek_HonoursPointer_AndRunDbEnvVar()
+    {
+        var repo = NewRepo("peek-precedence");
+        var pointed = Path.Combine(_tmp, "peek-pointed.db");
+        StatePointer.TryWrite(StateHome.PointerPathFor(repo), pointed, "core");
+        Assert.Equal(Path.GetFullPath(pointed), StateHome.Peek(repo, "core", Root).RunDbPath);
+        Assert.Equal(StateSource.Pointer, StateHome.Peek(repo, "core", Root).Source);
+
+        var forced = Path.Combine(_tmp, "peek-forced.db");
+        var previous = Environment.GetEnvironmentVariable(StateHome.RunDbEnvVar);
+        try
+        {
+            Environment.SetEnvironmentVariable(StateHome.RunDbEnvVar, forced);
+            var r = StateHome.Peek(repo, "core", Root);
+            Assert.Equal(StateSource.EnvOverride, r.Source);
+            Assert.Equal(Path.GetFullPath(forced), r.RunDbPath);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(StateHome.RunDbEnvVar, previous);
+        }
+    }
+
     // ── the migration ──────────────────────────────────────────────────────────────────────────
 
     /// <summary>The headline: a real pre-K3.1 database with real rows is IMPORTED, is readable

@@ -12,9 +12,12 @@ namespace Conductor.Commands;
 /// <summary>
 /// U0.2 — a pre-flight itinerary: what will run, in what order, under what model, gated by what,
 /// and every point a human might be asked to step in — all before a single token is spent or a
-/// byte of state is written. Read-only: never spawns an agent, never writes state.json/run.db (the
-/// resume peek reuses <see cref="RunStateResume"/>'s own read-only connection, the same one
-/// <c>RunCommand</c> uses to decide whether it is resuming). This is the map; <c>run --dry-run</c>
+/// byte of state is written. Read-only: never spawns an agent, never writes state.json/run.db,
+/// never registers anything. The resume peek resolves its database through
+/// <see cref="StateHome.Peek"/> — NOT <see cref="PlanConfig.RunDbPath"/>, whose resolution imports
+/// a legacy store and upserts the machine catalogue, which would make a declined preview leave a
+/// permanent catalogue row (the KS2.3 verifier caught exactly that) — and reads it over
+/// <see cref="RunStateResume"/>'s read-only connection. This is the map; <c>run --dry-run</c>
 /// stays the next-step preview.
 /// </summary>
 public sealed class JourneyCommand : AsyncCommand<PlanSettings>
@@ -53,21 +56,42 @@ public sealed class JourneyCommand : AsyncCommand<PlanSettings>
 
     /// <summary>Mirrors RunCommand's own resume detection exactly (state.json first, the run.db row
     /// when it's empty) so journey never lies about what `conductor run` is actually about to do —
-    /// and never writes either file itself. Internal (not private): unit-tested directly against
-    /// temp dirs, same shape as <see cref="Conductor.Core.Planning.PlanDiscovery"/>.</summary>
+    /// and never writes ANYTHING itself: the database is named by <see cref="StateHome.Peek"/> (no
+    /// import, no catalogue upsert) and state.json is read by <see cref="PeekStateAsync"/> (no archiving,
+    /// no .corrupt copy). Internal (not private): unit-tested directly against temp dirs, same shape
+    /// as <see cref="Conductor.Core.Planning.PlanDiscovery"/>.</summary>
     internal static async Task<string> DescribeResumeAsync(PlanConfig plan)
     {
-        var statePath = Path.Combine(plan.StateDir, "state.json");
-        var state = RunState.LoadOrNew(statePath, plan.Name);
+        var state = await PeekStateAsync(Path.Combine(plan.StateDir, "state.json"), plan.Name).ConfigureAwait(false);
         if (string.IsNullOrEmpty(state.RunId) && state.SessionCounter == 0)
         {
             var resumed = await RunStateResume.TryLoadLatestAsync(
-                plan.RunDbPath, plan.Name, CancellationToken.None).ConfigureAwait(false);
+                StateHome.Peek(plan.Repo, plan.Name).RunDbPath, plan.Name, CancellationToken.None)
+                .ConfigureAwait(false);
             if (resumed != null) state = resumed;
         }
         return string.IsNullOrEmpty(state.RunId)
             ? "fresh run — no saved state found"
             : $"resumes session #{state.SessionCounter + 1}, stage {state.CurrentStage ?? "?"} (run {Short(state.RunId)}, status {state.Status})";
+    }
+
+    /// <summary><see cref="RunState.LoadOrNew"/>'s DECISION without its housekeeping. LoadOrNew
+    /// archives a state.json that belongs to a different plan and copies a corrupt one aside —
+    /// right for <c>run</c>, which owns the file, wrong for a preview. This applies the same
+    /// belongs-to-this-plan rule and reports what <c>run</c> would conclude (fresh, in both odd
+    /// cases) while moving and writing nothing.</summary>
+    private static async Task<RunState> PeekStateAsync(string statePath, string planName)
+    {
+        try
+        {
+            if (File.Exists(statePath)
+                && System.Text.Json.JsonSerializer.Deserialize<RunState>(
+                    await File.ReadAllTextAsync(statePath).ConfigureAwait(false), PlanConfig.JsonOpts) is { } s
+                && (string.IsNullOrEmpty(s.PlanName) || string.Equals(s.PlanName, planName, StringComparison.Ordinal)))
+                return s;
+        }
+        catch (System.Text.Json.JsonException) { }
+        return new RunState { PlanName = planName };
     }
 
     private static string Short(string id) => string.IsNullOrEmpty(id) ? "?" : id.Length >= 8 ? id[..8] : id;
