@@ -425,7 +425,7 @@ public sealed class KS2_6ParkHygieneTests : IDisposable
             saveAndReport: () => { }, pushIdleSnapshot: () => { });
         var dispatcher = new ControlDispatcher(plan, state, sink, NullEventSink.Instance, log: _ => { },
             save: () => { }, deleteControlFile: () => { }, skipStage: (_, _) => { },
-            approveAwaitingOwner: _ => Task.CompletedTask);
+            approveAwaitingOwner: (_, _) => Task.CompletedTask);
         var loop = new RunLoop(ctx, sessions: null!, verdicts, gates, lanes, dispatcher, saveAndReport: () => { });
 
         return new LoopRig(ctx, loop, telegram, sink, notifyLog);
