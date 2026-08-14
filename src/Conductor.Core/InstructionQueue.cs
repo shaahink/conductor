@@ -18,7 +18,10 @@ public static class InstructionQueue
 
     public sealed record Entry(string File, string Slug, string Text, DateTime CreatedUtc, string? Prev, string? Next);
 
-    /// <summary>Write a new instruction to the queue (creates the directory if missing).</summary>
+    /// <summary>Write a new instruction to the queue (creates the directory if missing).
+    /// <para>KS2.0: <paramref name="text"/> is stored WHOLE — newlines, blank lines and all. Only the
+    /// filename is shortened (see <see cref="Sanitize"/>): a slug is a filename, an instruction is the
+    /// instruction, and the devcontext field note §23 is what one value feeding both costs.</para></summary>
     public static Entry Write(PlanConfig plan, string text, string? prev)
     {
         Directory.CreateDirectory(Dir(plan));
@@ -109,8 +112,13 @@ public static class InstructionQueue
         var sb = new StringBuilder();
         sb.AppendLine("📋 **QUEUED INSTRUCTIONS** — human-injected, and they OUTRANK everything below them in this prompt (gate output, verifier findings, batteries, prior handoff). Where this section and a block below disagree, this section wins. Consume in order:");
         sb.AppendLine();
+        // KS2.0: the text goes in verbatim — every line of it. A blank line between items so a
+        // multi-line instruction cannot read as the start of the next one.
         foreach (var (i, item) in items.Select((e, i) => (i, e)))
+        {
+            if (i > 0) sb.AppendLine();
             sb.AppendLine($"{i + 1}. [{item.Slug}] {item.Text}");
+        }
         return sb.ToString().TrimEnd();
     }
 
@@ -124,13 +132,24 @@ public static class InstructionQueue
         return $"> ⚠ **SUPERSEDED — read the QUEUED INSTRUCTIONS at the top of this prompt first.** {queuedCount} human {plural} queued for this session and they outrank this gate output: where the two disagree, the instructions win and the block below is history, not your task list.";
     }
 
+    /// <summary>The filename slug: five words from the FIRST line, so a queue directory stays
+    /// readable. KS2.0: it reads the first line and nothing else — the payload keeps the rest.</summary>
     private static string Sanitize(string text)
     {
-        var words = text.Trim().Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+        var words = FirstLine(text).Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries)
             .Take(5)
             .Select(w => new string(w.Where(char.IsLetterOrDigit).ToArray()))
             .Where(w => w.Length > 0);
         var slug = string.Join("-", words);
         return slug.Length == 0 ? "note" : slug.ToLowerInvariant();
+    }
+
+    /// <summary>The first line with anything on it — an instruction that opens with a blank line
+    /// (a here-string usually does) still names its own file after its own words.</summary>
+    private static string FirstLine(string text)
+    {
+        foreach (var line in text.Split('\n'))
+            if (line.Trim() is { Length: > 0 } content) return content;
+        return "";
     }
 }

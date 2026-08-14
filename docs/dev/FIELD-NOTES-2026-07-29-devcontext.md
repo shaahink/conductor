@@ -775,6 +775,24 @@ reject a multi-line instruction outright, or echo the stored character count in 
 and verify with `python -c "import json;print(len(json.load(open(PATH))['text']))"` against the
 queue file before trusting it.
 
+**Corrected 2026-08-14 (KS2.0), measured.** "It is the CLI, not the shell" above is wrong, and the
+correction matters because it says where the text dies. The engine never truncated: run the probe
+against `conductor.exe` directly and all 93 characters land in the queue file, from PowerShell and
+from bash alike. `conductor` on this machine is not that exe — it is `~/scoop/shims/conductor.cmd`,
+the one-line `@"…\conductor.exe" %*` batch file `tools/install.ps1` writes, and **cmd.exe ends a
+command line at the first newline**, so the exe is handed one argument holding one line. Replaying
+the probe through a `.cmd` shim of exactly that shape: `stored chars: 20` of 93; through the exe:
+93. The second-positional test proved only that the *exe* saw one argument — by then the rest was
+already gone. No batch file can fix this (the cut happens before the batch runs), so the shim itself
+is the follow-up: a real shim binary, or put the install dir on PATH and drop the `.cmd`.
+
+What KS2.0 does close: the queue stores the whole argument (pinned), the slug is derived from the
+first line alone rather than five words wherever they fall, the prompt section renders every line
+verbatim with a blank line between items, and the success line now reads
+`queued 001-… (2,919 chars) — injected into the next session prompt`. The count is the check the
+suggested fix asked for, and against a shim-cut instruction it prints `(20 chars)` — the failure
+that used to look like success now says its own size out loud.
+
 ---
 
 ## What worked well (worth protecting in refactors)

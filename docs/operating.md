@@ -132,7 +132,12 @@ either `inject "<guidance>"` and `resume`, or `approve` (if it's an owner gate),
 `goto <stage>` to move on. Never edit the tracker to fake a checkpoint DONE — the engine ignores it.
 
 **Steer without stopping.** `conductor inject "<instruction>"` — lands at the top of the next
-session's prompt. Use for "do X before Y", "the real bug is in file Z", "stop gold-plating".
+session's prompt. Use for "do X before Y", "the real bug is in file Z", "stop gold-plating". The
+whole argument is stored, newlines included, and the success line states how much of it arrived —
+`queued 001-… (2,919 chars)`. **Read that number.** On Windows the `conductor` on PATH is a `.cmd`
+shim and cmd.exe ends a command line at the first newline, so a multi-line instruction can be cut
+before the engine ever sees it; a count far below what you typed is that cut, and the fix is to pass
+one physical line or call `conductor.exe` by path.
 
 **Stop safely.** `conductor pause` (finish the current session, then idle) is the graceful stop.
 `abort --yes` is the hard stop. **Do not close the terminal window to stop a run** — see Gaps §5.
