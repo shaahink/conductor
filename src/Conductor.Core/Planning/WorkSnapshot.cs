@@ -1,5 +1,6 @@
 using Conductor.Core.Store;
 using Conductor.Models;
+using Microsoft.Data.Sqlite;
 
 namespace Conductor.Core.Planning;
 
@@ -60,6 +61,35 @@ public static class WorkSnapshot
         catch (Exception ex) when (ex is InvalidOperationException or IOException)
         {
             return declared;
+        }
+    }
+
+    /// <summary>KS3.4 round 4 — the same projection for a surface that holds NO open store:
+    /// <c>preflight</c>'s compose leg and the dry-run loop (whose host deliberately registers no
+    /// store, because a dry run must not write). Both used to read the declared snapshot bare, which
+    /// is exactly the input divergence this type exists to close: the live loop schedules on the
+    /// graph, and an imported plan's declared statuses are frozen at <c>TODO</c> for the life of the
+    /// run, so the declared read promised session N for a launch that confirms completion.
+    /// <para>Opens the SAME <c>run.db</c> the run would open (<see cref="PlanConfig.RunDbPath"/> —
+    /// the path the host's store registration resolves), read-only and pooling-free
+    /// (<see cref="SqliteRunStore.OpenReadOnly"/>), then answers through <see cref="Read"/> — one
+    /// reader, one store, one rule. Falls back to the declared snapshot whole when there is no run
+    /// yet (empty <paramref name="runId"/>, no db file) or the file cannot answer (locked mid-crash,
+    /// an older schema) — the same degradations <see cref="Read"/> already grants an open store.</para></summary>
+    public static TrackerSnapshot ReadAtRest(PlanConfig plan, string runId, Func<TrackerSnapshot> readDeclared)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        ArgumentNullException.ThrowIfNull(readDeclared);
+        if (string.IsNullOrEmpty(runId) || !File.Exists(plan.RunDbPath)) return readDeclared();
+        try
+        {
+            using var store = SqliteRunStore.OpenReadOnly(plan.RunDbPath);
+            return Read(store, runId, readDeclared);
+        }
+        catch (Exception ex) when (ex is SqliteException or InvalidOperationException
+                                       or IOException or UnauthorizedAccessException)
+        {
+            return readDeclared();
         }
     }
 }

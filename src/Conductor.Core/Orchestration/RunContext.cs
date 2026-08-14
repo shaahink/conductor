@@ -437,7 +437,14 @@ public sealed class RunContext
 
     /// <summary>W5.1: the work snapshot the engine SCHEDULES on — declared rows carrying the work
     /// graph's status, the same projection the Face's board and sidebar read. See
-    /// <see cref="Planning.WorkSnapshot"/> for why the declared statuses cannot be the answer.</summary>
+    /// <see cref="Planning.WorkSnapshot"/> for why the declared statuses cannot be the answer.
+    /// <para>KS3.4 round 4: a dry run's host registers no store (nothing may write), which used to
+    /// mean a dry run scheduled on the DECLARED statuses while the live run scheduled on the graph —
+    /// on any run whose declaration lags its graph, <c>run --dry-run</c> announced a session the live
+    /// <c>run</c> would never spawn. With no open store this now reads the same graph at rest,
+    /// read-only, through the same reader <c>preflight</c>'s compose leg uses.</para></summary>
     public TrackerSnapshot ReadWork()
-        => Planning.WorkSnapshot.Read(Store, State.RunId, ReadTrackerSafe);
+        => Store is not null
+            ? Planning.WorkSnapshot.Read(Store, State.RunId, ReadTrackerSafe)
+            : Planning.WorkSnapshot.ReadAtRest(Plan, State.RunId, ReadTrackerSafe);
 }

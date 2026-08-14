@@ -48,7 +48,7 @@ app.Configure(c =>
     c.AddCommand<JourneyCommand>("journey")
         .WithDescription("Pre-flight itinerary: identity, stages, gates, and every human moment — no state written, no agent spawned. Run this before `conductor run [[--paused]]`.");
     c.AddCommand<PreflightCommand>("preflight")
-        .WithDescription("The whole launch drill in one verb, one verdict, one exit code: doctor, journey resolution, the next session's prompt, running-versus-released engine, a stale-engine check, and the tracker handoff. No agent spawned, and nothing written under the plan's .conductor/.");
+        .WithDescription("The whole launch drill in one verb, one verdict, one exit code: doctor, journey resolution, the next session's prompt, running-versus-released engine, a stale-engine check, and the tracker handoff. Decides from the run loop's own inputs (an existing run.db is opened read-only for the work graph). No agent spawned, and nothing created under the plan's .conductor/.");
     c.AddCommand<FaceCommand>("face")
         .WithDescription("Attach a Face TUI to a run that is already going (or --demo for offline synthetic data).");
     c.AddCommand<StatusCommand>("status")

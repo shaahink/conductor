@@ -43,6 +43,45 @@ public sealed partial class SqliteRunStore : IRunStore, IEventSink
     /// query itself through its own writer — has to be able to name its own file.</summary>
     public string DbPath => _conn.DataSource;
 
+    /// <summary>KS3.4 round 4 — the READ side of the store for surfaces that promise not to write:
+    /// <c>preflight</c>'s compose leg and the dry-run loop's work-graph read
+    /// (<see cref="Planning.WorkSnapshot.ReadAtRest"/>). <c>Mode=ReadOnly</c>, pooling off, no
+    /// directory creation, no WAL pragma, no migration — opening this creates nothing and takes no
+    /// write lock, which is exactly the promise those surfaces make; a live engine's WAL readers are
+    /// undisturbed. The connection answers with whatever schema the file already has: a query against
+    /// a table this version knows and the file predates throws <see cref="SqliteException"/>, which
+    /// callers treat as "the graph cannot be read" and fall back to the declared snapshot.</summary>
+    public static SqliteRunStore OpenReadOnly(string path, ILogger<SqliteRunStore>? logger = null)
+    {
+        var conn = new SqliteConnection(new SqliteConnectionStringBuilder
+        {
+            DataSource = path,
+            Mode = SqliteOpenMode.ReadOnly,
+            Pooling = false,
+        }.ToString());
+        try
+        {
+            conn.Open();
+        }
+        catch
+        {
+            conn.Dispose();
+            throw;
+        }
+        return new SqliteRunStore(conn,
+            logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteRunStore>.Instance);
+    }
+
+    /// <summary>The read-only path in: an already-open connection, taken as-is. Private so the only
+    /// way to get here is <see cref="OpenReadOnly"/> — a writable connection must go through the
+    /// public constructor's WAL pragma and schema migration.</summary>
+    private SqliteRunStore(SqliteConnection openConnection, ILogger<SqliteRunStore> logger)
+    {
+        _conn = openConnection;
+        _logger = logger;
+        _clock = TimeProvider.System;
+    }
+
     // ---------------------------------------------------------------- schema
 
     private void EnsureSchema()

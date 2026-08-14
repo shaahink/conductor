@@ -14,13 +14,9 @@ public sealed partial class VerdictEngine
 
     public void QueueResume(SessionRecord rec, string reason, bool countResume = true, bool force = false)
     {
-        _ctx.State.PendingResume = new PendingResume
-        {
-            FromSession = rec.Number,
-            ClaudeSessionId = rec.ClaudeSessionId,
-            Reason = reason,
-            ResumeCount = rec.ResumeCount + (countResume ? 1 : 0),
-        };
+        // One construction (CrashRecovery.ResumeFor) — the startup crash recovery queues the same
+        // resume through the same code, so `preflight`'s peeked copy and this live one cannot differ.
+        _ctx.State.PendingResume = CrashRecovery.ResumeFor(rec, reason, countResume);
         if (force) _ctx.State.PendingResume.ResumeCount = Math.Min(_ctx.State.PendingResume.ResumeCount, _ctx.Plan.Limits.MaxResumesPerSession - 1);
     }
 

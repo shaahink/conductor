@@ -299,7 +299,10 @@ public sealed partial class RunLoop
                     var kind = next.Kind;
                     string prompt;
                     // SC3.3: --dry-run exists to find exactly this before a run spends anything.
-                    try { prompt = BuildPrompt(kind, stage, _ctx.State.SessionCounter + 1, _ctx.State.NextAttemptNumber, maxAttempts); }
+                    // next.AttemptNumber == State.NextAttemptNumber here (the stage-entry block above
+                    // already reset the counter when the stage changed) — read off the decision so the
+                    // number every surface renders is the decision's, not a private re-derivation.
+                    try { prompt = BuildPrompt(kind, stage, _ctx.State.SessionCounter + 1, next.AttemptNumber, maxAttempts); }
                     catch (PromptCompositionException ex) { _ctx.Sink.Log($"--- DRY RUN: prompt for stage {stage.Id} REFUSED: {ex.Message} ---"); return 1; }
                     var batterySection = _ctx.Prompts.BatterySection(_ctx.State, _ctx.Store);
                     if (batterySection.Length > 0)

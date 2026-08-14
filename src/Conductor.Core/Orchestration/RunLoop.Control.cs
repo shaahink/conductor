@@ -81,34 +81,30 @@ public sealed partial class RunLoop
 
     private void RecoverFromCrash()
     {
-        var recovered = false;
+        // KS3.4 round 4: the state-only transitions (aborted-continue; a crash's persisted status
+        // becoming a queued resume) are CrashRecovery.Apply's — shared verbatim with `preflight`'s
+        // compose leg, so a hard-killed engine drills as the Resume this loop will actually compose.
+        // This method keeps the side effects (log, save) and the store-backed orphan recovery below,
+        // which needs a live store.
+        var recovery = CrashRecovery.Apply(_ctx.State);
 
         // An aborted run is stopped, not discarded: `conductor run` on it means "continue". Without
         // this reset the loop's first status check re-exits immediately — the same silent instant
         // death as a stale abort, but persisted (2026-07-17 dogfood).
-        if (_ctx.State.Status == RunStatus.Aborted)
+        if (recovery.ContinuedAborted)
         {
-            _ctx.State.Status = RunStatus.Idle;
             _ctx.Log("previous run ended aborted — continuing it (abort again with `conductor abort` if that was not the intent)");
             _ctx.Save();
         }
 
-        if (_ctx.State.Status is RunStatus.Running or RunStatus.VerifyingGates or RunStatus.Backoff)
+        if (recovery.LiftedCrashStatus)
         {
-            var last = _ctx.State.History.LastOrDefault();
-            if (last != null && last.EndedUtc == null)
-            {
-                last.EndedUtc = DateTime.UtcNow;
-                last.Outcome = SessionOutcome.Interrupted;
-                _verdicts.QueueResume(last, "conductor crashed or was killed mid-session");
-                _ctx.Log($"recovered: session #{last.Number} was interrupted — will resume its agent session");
-                recovered = true;
-            }
-            _ctx.State.Status = RunStatus.Idle;
+            if (recovery.Interrupted is { } cut)
+                _ctx.Log($"recovered: session #{cut.Number} was interrupted — will resume its agent session");
             _ctx.Save();
         }
 
-        if (!recovered && _ctx.State.PendingResume == null)
+        if (recovery.Interrupted is null && _ctx.State.PendingResume == null)
         {
             if (_ctx.Store is { } store)
             {

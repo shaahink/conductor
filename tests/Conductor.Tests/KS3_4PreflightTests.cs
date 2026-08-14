@@ -796,6 +796,254 @@ public sealed class KS3_4PreflightTests : IDisposable
         Assert.DoesNotContain("batteries.maxBytes", Detail(legs, "compose"), StringComparison.Ordinal);
     }
 
+    // ------------------------------------------------------------------ round 4: the input, not just the decision
+
+    /// <summary>Round 4's blocking finding, seeded: the loop schedules on the WORK GRAPH
+    /// (<c>RunContext.ReadWork</c> → <see cref="WorkSnapshot"/>), and an imported plan's declared
+    /// statuses are frozen at TODO for the life of the run — so a compose leg fed the declared
+    /// tracker promised <c>next session #7 … composing to 7601 chars</c> for a launch on which the
+    /// live <c>conductor run</c> confirmed completion and spawned nothing. The leg now reads the
+    /// same run.db the run would open, read-only, through the same <see cref="WorkSnapshot"/>
+    /// projection. This fixture IS the divergence: declared rows all TODO, graph rows all DONE.</summary>
+    [Fact]
+    public async Task AGraphThatOutranTheDeclaredTrackerIsScheduledFromTheGraph()
+    {
+        var plan = GraphOutranTrackerFixture();
+
+        var legs = await RunAsync(plan);
+
+        Assert.Empty(Failing(legs));
+        Assert.Equal(
+            "every stage reads done — the next `conductor run` confirms completion rather than spawning a session",
+            Headline(legs, "compose"));
+        Assert.DoesNotContain("composing to", Headline(legs, "compose"), StringComparison.Ordinal);
+    }
+
+    /// <summary>The same fixture through the REAL STORE-BACKED loop — <c>DryRun: false</c>, the host
+    /// registers the read-write store, the loop schedules on the graph — which is the surface round 4
+    /// proved every dry-run-only agreement fact was structurally blind to (a dry run's host registers
+    /// no store). Deterministic without an agent because the fixture declares no gates: the loop's
+    /// first turn is ConfirmCompletion → an empty battery → CompletePlan, exit 0, no session.</summary>
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task TheGraphReadAgreesWithTheLiveStoreBackedLoop()
+    {
+        var plan = GraphOutranTrackerFixture();
+        var legs = await RunAsync(plan);
+
+        var (lines, state) = await LiveRunAsync(plan);
+
+        // The live loop confirmed completion and never started a session.
+        Assert.Contains(lines, l => l.Contains("running the gate battery to confirm before closing the plan", StringComparison.Ordinal));
+        Assert.Contains(lines, l => l.Contains($"plan '{plan.Name}' complete — 1/1 checkpoints done", StringComparison.Ordinal));
+        Assert.DoesNotContain(lines, l =>
+            l.Contains("session #", StringComparison.Ordinal) && l.Contains(" start — ", StringComparison.Ordinal));
+        Assert.Equal(RunStatus.Completed, state.Status);
+        Assert.Equal(6, state.SessionCounter);
+
+        // And the drill said exactly that, instead of promising a numbered session.
+        Assert.Equal(
+            "every stage reads done — the next `conductor run` confirms completion rather than spawning a session",
+            Headline(legs, "compose"));
+    }
+
+    /// <summary>And <c>run --dry-run</c> on the same fixture: with no store registered, the dry-run
+    /// loop's <c>ReadWork</c> now reads the graph at rest through the same reader, so its narration
+    /// agrees with the live loop and the drill instead of announcing the phantom session.</summary>
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task TheGraphReadAgreesWithWhatRunDryRunPrints()
+    {
+        var plan = GraphOutranTrackerFixture();
+        var legs = await RunAsync(plan);
+
+        var lines = await DryRunAsync(plan);
+
+        Assert.Contains(lines, l => l.Contains("running the gate battery to confirm before closing the plan", StringComparison.Ordinal));
+        Assert.DoesNotContain(lines, l => l.Contains("would start session #", StringComparison.Ordinal));
+        Assert.DoesNotContain("composing to", Headline(legs, "compose"), StringComparison.Ordinal);
+    }
+
+    /// <summary>The read-only promise now covers the store too: a full drill over an existing
+    /// run.db — opened read-only for the graph — leaves the store's directory byte-for-byte alone
+    /// (no migration, no WAL sidecar, no mtime change).</summary>
+    [Fact]
+    public async Task ADrillOverAnExistingStoreLeavesTheStoreUntouched()
+    {
+        var plan = GraphOutranTrackerFixture();
+        var storeDir = Path.GetDirectoryName(plan.RunDbPath)!;
+        var before = Snapshot(storeDir);
+
+        var legs = await RunAsync(plan);
+
+        Assert.Empty(Failing(legs));
+        Assert.Equal(before, Snapshot(storeDir));
+    }
+
+    /// <summary>The reader itself, at the source: at rest it answers with the graph's statuses over
+    /// the declared row set — and degrades to the declared snapshot whole when there is no run yet,
+    /// exactly as <see cref="WorkSnapshot.Read"/> does with no store.</summary>
+    [Fact]
+    public void WorkSnapshotAtRestReadsTheGraphAndFallsBackToDeclared()
+    {
+        var plan = GraphOutranTrackerFixture();
+
+        var snap = WorkSnapshot.ReadAtRest(plan, "r4graph", () => Track(plan));
+        Assert.True(snap.Checkpoints.Single(c => c.Id == "S1.1").IsDone);
+
+        // A run id the graph has never seen → the declared rows, still TODO.
+        Assert.False(WorkSnapshot.ReadAtRest(plan, "someone-else", () => Track(plan))
+            .Checkpoints.Single(c => c.Id == "S1.1").IsDone);
+
+        // No store on disk at all → declared, and no run.db is created by asking.
+        var fresh = CleanPlan();
+        Assert.False(WorkSnapshot.ReadAtRest(fresh, "r-none", () => Track(fresh))
+            .Checkpoints.Single(c => c.Id == "S1.1").IsDone);
+        Assert.False(File.Exists(fresh.RunDbPath));
+    }
+
+    // ------------------------------------------------------------------ round 4: the crash-recovered resume
+
+    /// <summary>Round 4's first minor: <c>RunLoop</c> calls <c>RecoverFromCrash</c> BEFORE the first
+    /// decision, so a persisted <c>Running</c> with an unfinished session decides with a queued
+    /// resume — the leg read the raw saved state and named a Deliver. The recovery's state-only
+    /// half is <see cref="CrashRecovery.Apply"/> now, applied by both.</summary>
+    [Theory]
+    [InlineData(RunStatus.Running)]
+    [InlineData(RunStatus.VerifyingGates)]
+    [InlineData(RunStatus.Backoff)]
+    public void CrashRecoveryQueuesTheResumeTheLoopWould(RunStatus crashed)
+    {
+        var state = new RunState { PlanName = "p", RunId = "r", CurrentStage = "S1", SessionCounter = 1, Status = crashed };
+        state.History.Add(new SessionRecord
+        {
+            Number = 1, Stage = "S1", ClaudeSessionId = "s-1", StartedUtc = DateTime.UtcNow, ResumeCount = 0,
+        });
+
+        var outcome = CrashRecovery.Apply(state);
+
+        Assert.Equal(RunStatus.Idle, state.Status);
+        Assert.True(outcome.LiftedCrashStatus);
+        Assert.Same(state.History[^1], outcome.Interrupted);
+        Assert.Equal(SessionOutcome.Interrupted, state.History[^1].Outcome);
+        Assert.NotNull(state.History[^1].EndedUtc);
+        Assert.NotNull(state.PendingResume);
+        Assert.Equal(1, state.PendingResume!.FromSession);
+        Assert.Equal("s-1", state.PendingResume.ClaudeSessionId);
+        Assert.Equal(1, state.PendingResume.ResumeCount);
+    }
+
+    /// <summary>The parked trio is deliberately NOT recovered — the loop idles on it
+    /// (<see cref="LaunchStep.ParkedStatus"/>) and only <c>conductor resume</c> lifts it.</summary>
+    [Theory]
+    [InlineData(RunStatus.Paused)]
+    [InlineData(RunStatus.NeedsHuman)]
+    [InlineData(RunStatus.AwaitingOwner)]
+    public void CrashRecoveryLeavesTheParkedTrioStanding(RunStatus parked)
+    {
+        var state = new RunState { PlanName = "p", RunId = "r", Status = parked };
+        state.History.Add(new SessionRecord { Number = 1, Stage = "S1", StartedUtc = DateTime.UtcNow });
+
+        var outcome = CrashRecovery.Apply(state);
+
+        Assert.Equal(parked, state.Status);
+        Assert.False(outcome.LiftedCrashStatus);
+        Assert.Null(state.PendingResume);
+    }
+
+    /// <summary>The leg over a hard-killed run — precisely the state an operator preflights before
+    /// relaunching: the next session is the RESUME the loop will queue at startup, not a Deliver.</summary>
+    [Fact]
+    public async Task ACrashedRunComposesTheResumeTheLoopWillQueue()
+    {
+        var plan = CrashedMidSessionFixture();
+
+        var legs = await RunAsync(plan);
+
+        Assert.Empty(Failing(legs));
+        Assert.StartsWith("next session #2 is Resume on stage 'S1', composing to ",
+            Headline(legs, "compose"), StringComparison.Ordinal);
+        Assert.Contains("session #1 was killed mid-flight", Detail(legs, "compose"), StringComparison.Ordinal);
+    }
+
+    /// <summary>To the character, against the real loop's own narration: the dry run recovers the
+    /// crash, announces the RESUME, and prints the prompt whose exact length the drill reported.</summary>
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task TheCrashRecoveredResumeAgreesWithRunDryRunToTheCharacter()
+    {
+        var plan = CrashedMidSessionFixture();
+        var legs = await RunAsync(plan);
+
+        var lines = await DryRunAsync(plan);
+
+        Assert.Contains(lines, l => l.Contains("recovered: session #1 was interrupted — will resume its agent session", StringComparison.Ordinal));
+        var announce = lines.FindIndex(l => l.Contains("DRY RUN: would start session #", StringComparison.Ordinal));
+        Assert.True(announce >= 0, "the dry run never announced a session:\n" + string.Join("\n", lines));
+        Assert.Contains("would start session #2 (Resume, stage S1)", lines[announce], StringComparison.Ordinal);
+
+        var prompt = lines[announce + 1];
+        Assert.Equal(
+            $"next session #2 is Resume on stage 'S1', composing to {prompt.Length} chars (nothing spawned)",
+            Headline(legs, "compose"));
+    }
+
+    // ------------------------------------------------------------------ round 4: the attempt number on stage entry
+
+    /// <summary>Round 4's second minor, at the source: the loop resets <c>AttemptsThisStage</c> when
+    /// it ENTERS a stage, before it composes — so the decision carries attempt 1 on a stage change,
+    /// whatever the counter said about the stage being left, and the saved counter + 1 only while
+    /// standing still. Every renderer (SessionRunner, the dry run, the drill) reads this field.</summary>
+    [Fact]
+    public void TheDecisionCarriesTheAttemptNumberTheLoopRenders()
+    {
+        var plan = CleanPlan(p =>
+            p.Stages.Add(new StageConfig { Id = "S2", Title = "the next one", Sessions = 1 }));
+        WriteTracker(plan, "nothing pending.", ("S1.1", "DONE"), ("S2.1", "TODO"));
+
+        var moved = new RunState { PlanName = plan.Name, RunId = "r1", CurrentStage = "S1", SessionCounter = 12, AttemptsThisStage = 10 };
+        var entering = StageSelection.NextAction(plan, moved, Track(plan));
+        Assert.Equal(LaunchStep.Compose, entering.Step);
+        Assert.Equal("S2", entering.StageId);
+        Assert.Equal(1, entering.AttemptNumber);
+
+        var standing = new RunState { PlanName = plan.Name, RunId = "r1", CurrentStage = "S2", SessionCounter = 12, AttemptsThisStage = 1 };
+        Assert.Equal(2, StageSelection.NextAction(plan, standing, Track(plan)).AttemptNumber);
+    }
+
+    /// <summary>And to the character against the loop: a run that burned ten attempts on a finished
+    /// stage composes <c>attempt 1/2</c> on the next stage — the old leg rendered <c>attempt 11/2</c>
+    /// off the un-entered counter, one character longer, so the whole-headline equality here goes red
+    /// on exactly that regression.</summary>
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task TheAttemptNumberOnAStageEntryAgreesWithRunDryRunToTheCharacter()
+    {
+        var plan = CleanPlan(p =>
+            p.Stages.Add(new StageConfig { Id = "S2", Title = "the next one", Sessions = 1 }));
+        WriteTracker(plan, "nothing pending.", ("S1.1", "DONE"), ("S2.1", "TODO"));
+        SaveState(plan, s =>
+        {
+            s.RunId = "r4moved";
+            s.CurrentStage = "S1";
+            s.SessionCounter = 12;
+            s.AttemptsThisStage = 10;
+        });
+        var legs = await RunAsync(plan);
+
+        var lines = await DryRunAsync(plan);
+        var announce = lines.FindIndex(l => l.Contains("DRY RUN: would start session #", StringComparison.Ordinal));
+        Assert.True(announce >= 0, "the dry run never announced a session:\n" + string.Join("\n", lines));
+        Assert.Contains("would start session #13 (Deliver, stage S2)", lines[announce], StringComparison.Ordinal);
+
+        var prompt = lines[announce + 1];
+        Assert.Contains("attempt 1/2", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("attempt 11/", prompt, StringComparison.Ordinal);
+        Assert.Equal(
+            $"next session #13 is Deliver on stage 'S2', composing to {prompt.Length} chars (nothing spawned)",
+            Headline(legs, "compose"));
+    }
+
     // ------------------------------------------------------------------ the verb pins
 
     /// <summary>Adding a top-level verb is three edits and two of them are enforced elsewhere
@@ -905,6 +1153,71 @@ public sealed class KS3_4PreflightTests : IDisposable
             s.PendingPhaseGate = new PendingPhaseGate { StageId = "S1", StageStartHead = "abc1234" };
         });
         return plan;
+    }
+
+    /// <summary>Round 4's live reproduction, seeded: the declared tracker still reads TODO while the
+    /// work graph in run.db has every checkpoint DONE — the permanent condition of any imported
+    /// (<c>plan-checkpoints</c>) plan, whose declared statuses are frozen for the life of the run.
+    /// No gates and no auth preflight, so the store-backed live loop resolves it deterministically
+    /// without ever needing an agent.</summary>
+    private PlanConfig GraphOutranTrackerFixture()
+    {
+        var plan = CleanPlan();
+        plan.Limits.AuthPreflight = false;
+        SeedGraph(plan, "r4graph", ("S1.1", "S1", "the S1.1 row", "DONE"));
+        SaveState(plan, s => { s.RunId = "r4graph"; s.CurrentStage = "S1"; s.SessionCounter = 6; });
+        return plan;
+    }
+
+    /// <summary>A hard-killed engine: persisted <c>Running</c>, session #1 still open in the history.
+    /// Exactly the state an operator preflights before relaunching.</summary>
+    private PlanConfig CrashedMidSessionFixture()
+    {
+        var plan = CleanPlan();
+        SaveState(plan, s =>
+        {
+            s.RunId = "r4crashed";
+            s.CurrentStage = "S1";
+            s.SessionCounter = 1;
+            s.Status = RunStatus.Running;
+            s.History.Add(new SessionRecord
+            {
+                Number = 1,
+                Stage = "S1",
+                Kind = SessionKind.Deliver,
+                Attempt = 1,
+                StartedUtc = DateTime.UtcNow.AddMinutes(-30),
+                ClaudeSessionId = "sess-r4-1",
+            });
+        });
+        return plan;
+    }
+
+    /// <summary>Writes graph rows into the run.db the engine would open — the write side the TEST
+    /// owns, through the same store the live run registers.</summary>
+    private static void SeedGraph(PlanConfig plan, string runId,
+        params (string Id, string StageId, string Title, string Status)[] rows)
+    {
+        using var store = new SqliteRunStore(plan.RunDbPath, NullLogger<SqliteRunStore>.Instance);
+        store.SeedCheckpoints(runId, rows.Select(r => (r.Id, r.StageId, r.Title, r.Status, "-", "-")));
+        store.FlushEvents();
+    }
+
+    /// <summary>The REAL loop, store-backed — <c>DryRun: false</c>, so <c>ConductorHost</c> registers
+    /// the read-write store and the loop schedules on the graph exactly as a launch would. Only for
+    /// fixtures that resolve WITHOUT a session (completion, a park): nothing here may spawn an agent.
+    /// Returns the narration and the final state.</summary>
+    private static async Task<(List<string> Lines, RunState State)> LiveRunAsync(PlanConfig plan)
+    {
+        var sink = new RecordingSink();
+        var state = RunState.LoadOrNew(Path.Combine(plan.StateDir, "state.json"), plan.Name);
+        if (state.RunId.Length == 0) state.RunId = Guid.NewGuid().ToString("N");
+        using var host = ConductorHost.Build(plan, state, sink,
+            new RunOptions(DryRun: false, Once: true, MaxSessions: 0), consoleSink: false);
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
+        var code = await host.Services.GetRequiredService<Orchestrator>().RunAsync(cts.Token);
+        Assert.Equal(0, code);
+        return ([.. sink.Lines], state);
     }
 
     /// <summary>The REAL loop over the fixture — ConductorHost, Orchestrator, dry run — returning

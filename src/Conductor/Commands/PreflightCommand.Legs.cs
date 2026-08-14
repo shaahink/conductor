@@ -12,9 +12,11 @@ namespace Conductor.Commands;
 /// answering here is the one this source tree would build, and whether the tracker handoff is
 /// already asking for a human.
 /// <para>Every one of them is read-only, and that is a promise, not an aspiration: preflight creates
-/// and moves nothing under <c>plan.StateDir</c>, spawns no agent, and runs no gate. The one thing it
-/// touches off the machine is the release feed, through the same six-hour user-level cache
-/// <c>doctor</c> uses.</para>
+/// and moves nothing under <c>plan.StateDir</c>, spawns no agent, and runs no gate. An existing
+/// <c>run.db</c> is opened READ-ONLY for the work graph (<see cref="WorkSnapshot.ReadAtRest"/> —
+/// no migration, no WAL pragma, no write lock); a plan with no store yet never has one created. The
+/// one thing preflight touches off the machine is the release feed, through the same six-hour
+/// user-level cache <c>doctor</c> uses.</para>
 /// </summary>
 public sealed partial class PreflightCommand
 {
@@ -76,16 +78,18 @@ public sealed partial class PreflightCommand
     /// which is not always a session. Carries doctor's three prompt-side lints (<c>prompt</c>,
     /// <c>templates</c>, <c>argv</c>) because they answer the same question one stage earlier — will
     /// this compose at all, and will it fit in an argv.
-    /// <para>Nothing is re-decided here. The resume peek is
-    /// <see cref="JourneyCommand.PeekResumeAsync"/> (state.json, then the run.db row, read-only), and
-    /// the whole branch — a persisted park, a queued phase gate, completion, an exhausted attempt
-    /// budget, the audit being scheduled, or a composed session of a given kind on a given stage —
-    /// is <see cref="StageSelection.NextAction"/>, the run loop's OWN pre-compose sequence, called,
-    /// not copied. The first delivery copied the stage rule and diverged on <c>dependsOn</c>; the
-    /// second copied the branch ORDER and diverged under <c>gatePolicy: "perPhase"</c>; the third
-    /// left the saved STATUS and the attempt BUDGET unmodelled, so the drill said READY — "Launch
-    /// with conductor run" — on a parked run that verb can only idle on. All three copies are gone;
-    /// there is nothing left here to drift.</para></summary>
+    /// <para>Nothing is re-decided here, and — round 4's lesson — nothing is re-READ here either.
+    /// The whole branch is <see cref="StageSelection.NextAction"/>, the run loop's OWN pre-compose
+    /// sequence, called, not copied; and its two inputs are the loop's two inputs, read through the
+    /// loop's own functions. The saved state is <see cref="JourneyCommand.PeekResumeAsync"/>
+    /// (state.json, then the run.db row, read-only) with <see cref="CrashRecovery.Apply"/> on top,
+    /// because the loop recovers a crash before its first decision. The work is
+    /// <see cref="WorkSnapshot.ReadAtRest"/> — the graph's statuses from the same <c>run.db</c> the
+    /// run would open, read-only — because the loop schedules on the GRAPH, and an imported plan's
+    /// declared statuses are frozen at TODO for the life of the run, so a leg fed the declared
+    /// tracker promised a numbered session for a launch that confirms completion (round 4's live
+    /// reproduction). Rounds 1–3 each removed a private copy of the DECISION; round 4 removed the
+    /// private copy of its INPUT.</para></summary>
     internal static async Task<Leg> ComposeLegAsync(PlanConfig plan, IReadOnlyList<DoctorCommand.Check> checks)
     {
         ArgumentNullException.ThrowIfNull(plan);
@@ -98,9 +102,27 @@ public sealed partial class PreflightCommand
             return FromChecks(ComposeLegName, mine, "the plan declares no stages, so no session composes");
 
         var state = await JourneyCommand.PeekResumeAsync(plan).ConfigureAwait(false);
-        var track = SafeReadWork(plan);
+        // The loop's startup recovery, applied to the peeked copy (never written back): a crash's
+        // persisted Running/VerifyingGates/Backoff becomes the queued Resume the loop will compose.
+        var recovery = CrashRecovery.Apply(state);
+        var track = WorkSnapshot.ReadAtRest(plan, state.RunId, () => SafeReadDeclared(plan));
         var next = StageSelection.NextAction(plan, state, track);
         var leg = ComposeLegFor(plan, state, next, mine);
+
+        if (recovery.Interrupted is { } cut)
+            leg = leg with
+            {
+                Detail = [.. leg.Detail,
+                    $"session #{cut.Number} was killed mid-flight — `conductor run` recovers it at startup " +
+                    "and queues a resume of its agent session"],
+            };
+        else if (recovery.ContinuedAborted)
+            leg = leg with
+            {
+                Detail = [.. leg.Detail,
+                    "the saved status is Aborted — `conductor run` continues the run " +
+                    "(abort again with `conductor abort` if that was not the intent)"],
+            };
 
         // The agent-declared wait in front of the decision (SC5.1), whatever the decision was: the
         // loop sleeps at the session boundary until the window opens and only then does what the
@@ -200,7 +222,7 @@ public sealed partial class PreflightCommand
         var kind = next.Kind;
         try
         {
-            var prompt = Compose(plan, stage, state, kind);
+            var prompt = Compose(plan, state, next);
             return FromChecks(ComposeLegName, mine,
                 $"next session #{state.SessionCounter + 1} is {kind} on stage '{stage.Id}', " +
                 $"composing to {prompt.Text.Length} chars (nothing spawned)",
@@ -224,22 +246,28 @@ public sealed partial class PreflightCommand
     }
 
     /// <summary>Renders through the real <see cref="PromptBuilder"/> — the one the run loop uses —
-    /// with the run's own session/attempt numbers, and then appends the battery section exactly as
-    /// <c>RunLoop</c>'s dry-run branch and <c>SessionRunner</c> do. The batteries are not decoration:
-    /// a recorded gate failure comes back as a whole section, and this leg carries doctor's
-    /// <c>argv</c> check precisely because prompt length is the 8191-char trap — a measurement taken
-    /// before the batteries were added would understate the number that matters.
+    /// with the run's own session number and the DECISION's attempt number, and then appends the
+    /// battery section exactly as <c>RunLoop</c>'s dry-run branch and <c>SessionRunner</c> do. The
+    /// batteries are not decoration: a recorded gate failure comes back as a whole section, and this
+    /// leg carries doctor's <c>argv</c> check precisely because prompt length is the 8191-char trap —
+    /// a measurement taken before the batteries were added would understate the number that matters.
+    /// <para>The attempt is <see cref="LaunchDecision.AttemptNumber"/>, never the saved counter: the
+    /// loop resets <c>AttemptsThisStage</c> when it ENTERS a stage, before it composes, so on a stage
+    /// change the session announces <c>attempt 1</c> whatever the counter said about the stage being
+    /// left (round 4's second minor).</para>
     /// <para>One honest gap, and it is stated in the leg's detail rather than hidden: the M7 knowledge
-    /// batteries (the ledger, the run's open bugs) are read from <c>run.db</c>, and the store opens
-    /// read-write — it migrates the schema and drops a WAL sidecar. Preflight promises to write
-    /// nothing, so it passes no store and reports the BOUND instead, which is exact because the whole
-    /// battery section is capped at <c>batteries.maxBytes</c> — see
-    /// <see cref="KnowledgeBatteryCaveat"/>.</para></summary>
-    private static ComposedPrompt Compose(PlanConfig plan, StageConfig stage, RunState state, SessionKind kind)
+    /// batteries (the ledger, the run's open bugs) render from the LIVE store at spawn. The drill
+    /// reads <c>run.db</c> read-only for the work graph, but the measured length deliberately matches
+    /// the string <c>run --dry-run</c> prints — composed without them — and reports the live argv as
+    /// a BOUND instead, which is exact because the whole battery section is capped at
+    /// <c>batteries.maxBytes</c> — see <see cref="KnowledgeBatteryCaveat"/>.</para></summary>
+    private static ComposedPrompt Compose(PlanConfig plan, RunState state, LaunchDecision next)
     {
+        var stage = next.Stage!;
+        var kind = next.Kind;
         var prompts = new PromptBuilder(plan);
         var session = state.SessionCounter + 1;
-        var attempt = state.NextAttemptNumber;
+        var attempt = next.AttemptNumber;
         var maxAttempts = StageSelection.MaxAttempts(plan, stage);
         var isReview = stage.Kind.Equals("review", StringComparison.OrdinalIgnoreCase);
         var prompt = kind switch
@@ -284,9 +312,9 @@ public sealed partial class PreflightCommand
         var ceiling = composed.Core.TrimEnd().Length + 2 + maxBytes + 2;
         return
         [
-            $"the ledger and open-bug batteries are read from run.db when the session spawns; this drill does not " +
-            $"open that store (the store opens read-write — schema migration and a WAL sidecar — and preflight " +
-            $"writes nothing), so the composed argv is at most {ceiling} chars (batteries.maxBytes {maxBytes})",
+            $"the ledger and open-bug batteries render from the live store when the session spawns; the drill " +
+            $"reads run.db read-only for the work graph, but measures the prompt without them — the same string " +
+            $"`run --dry-run` prints — so the spawned argv is at most {ceiling} chars (batteries.maxBytes {maxBytes})",
         ];
     }
 
@@ -297,7 +325,11 @@ public sealed partial class PreflightCommand
            "session boundary until then before doing any of this" +
            (state.BlockedReason is { Length: > 0 } why ? $" ({why})" : "");
 
-    private static TrackerSnapshot SafeReadWork(PlanConfig plan)
+    /// <summary>The DECLARED snapshot — the row set and the handoff block — handed to
+    /// <see cref="WorkSnapshot.ReadAtRest"/> as its fallback, exactly the role the loop's own
+    /// <c>ReadTrackerSafe</c> plays for <c>RunContext.ReadWork</c>. Never the scheduling input on its
+    /// own: the statuses that decide are the graph's (round 4).</summary>
+    private static TrackerSnapshot SafeReadDeclared(PlanConfig plan)
     {
         try { return ProgressProviderFactory.Create(plan).Read(plan, CancellationToken.None); }
         catch (Exception ex) when (ex is IOException or InvalidOperationException or UnauthorizedAccessException)

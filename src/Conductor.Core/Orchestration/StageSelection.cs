@@ -113,6 +113,15 @@ public static class StageSelection
     /// escalates (a model call when an advisor is configured, NeedsHuman when not) instead of
     /// composing. Both are modelled now. The branches live here, once, and <see cref="RunLoop"/>
     /// executes this function's answer rather than holding a private copy of it.</para>
+    /// <para>Round 4, the same lesson from the other side: sharing the FUNCTION is not sharing the
+    /// decision until the INPUTS are shared too. <paramref name="track"/> must be the work snapshot
+    /// the loop schedules on — <see cref="Planning.WorkSnapshot"/>, the graph's statuses, never the
+    /// declaration's, which an imported plan freezes at TODO for the life of the run — and
+    /// <paramref name="state"/> must be the state after <see cref="CrashRecovery.Apply"/>, because
+    /// the loop recovers a crash before its first decision. The loop reads both through
+    /// <c>RunContext.ReadWork</c> and <c>RecoverFromCrash</c>; <c>preflight</c> reads the same two
+    /// functions at rest (<see cref="Planning.WorkSnapshot.ReadAtRest"/> over the same
+    /// <c>run.db</c>, <see cref="CrashRecovery.Apply"/> over the peeked state).</para>
     /// <para>Still deliberately unmodelled, because their outcome is NOT a pure function of the
     /// saved state: the pre-hook (a subprocess whose exit code decides), approval mode (the designed
     /// launch flow — the operator is present, and `conductor approve` is the next keystroke, not a
@@ -192,7 +201,14 @@ public static class StageSelection
         var kind = state.PendingResume != null ? SessionKind.Resume
             : state.PendingAudit != null ? SessionKind.Audit
             : fix != null ? SessionKind.Fix : SessionKind.Deliver;
-        return new LaunchDecision(LaunchStep.Compose, stage, stage.Id, kind);
+
+        // The attempt the composed session announces. The loop resets AttemptsThisStage when it
+        // ENTERS a stage — before every compose — so on a stage change the number is 1, whatever the
+        // saved counter says about the stage being left. Carried on the decision (round 4) because
+        // preflight rendered `attempt {saved+1}` off the un-entered state while the loop rendered
+        // `attempt 1`, and the two measured prompts differed by exactly that.
+        var attempt = (stage.Id == state.CurrentStage ? state.AttemptsThisStage : 0) + 1;
+        return new LaunchDecision(LaunchStep.Compose, stage, stage.Id, kind, AttemptNumber: attempt);
     }
 }
 
@@ -232,9 +248,12 @@ public enum LaunchStep
 /// it acts on one (null for <see cref="LaunchStep.PhaseGate"/> when the queued gate names a stage the
 /// plan no longer declares); <paramref name="StageId"/> is always the acted-on stage's id when there
 /// is one. <paramref name="Kind"/> is meaningful only for <see cref="LaunchStep.Compose"/> — the
-/// dry-run precedence: resume, then audit, then fix, then delivery.
+/// dry-run precedence: resume, then audit, then fix, then delivery — and so is
+/// <paramref name="AttemptNumber"/>: the attempt the composed session announces, already accounting
+/// for the counter reset the loop performs on stage ENTRY, so every renderer of this decision (the
+/// live session, the dry run, preflight's compose leg) prints the same <c>attempt n/m</c>.
 /// <paramref name="SleepUntilUtc"/> is the agent-declared wait in front of the decision, when one is
 /// saved and still in the future: the loop sleeps at the session boundary until then, and only then
 /// does what the rest of this record says.</summary>
 public sealed record LaunchDecision(LaunchStep Step, StageConfig? Stage, string? StageId, SessionKind Kind,
-    DateTime? SleepUntilUtc = null);
+    DateTime? SleepUntilUtc = null, int AttemptNumber = 1);
