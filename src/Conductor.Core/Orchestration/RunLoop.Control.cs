@@ -215,13 +215,17 @@ public sealed partial class RunLoop
     /// <summary>KS2.6: what a <c>--dry-run</c> says when it walks into a park. A preview never waits,
     /// so it reports the park and stops rather than spinning the loop against an unchanged fact —
     /// which is how one handoff mentioning the escalation token produced roughly two hundred phone
-    /// notifications. The sentence carries the reason, because "parked" without it is the same
-    /// unanswerable message the flood was made of.</summary>
+    /// notifications. The first sentence carries the reason, because "parked" without it is the same
+    /// unanswerable message the flood was made of; the second carries what the next real
+    /// <c>conductor run</c> does about it (KS3.4: the same idle-at-the-boundary answer
+    /// <see cref="StageSelection.NextAction"/>'s ParkedStatus rung gives `preflight`'s drill).</summary>
     private void LogDryRunPark()
     {
         var reason = _ctx.State.AttentionReason is { Length: > 0 } r ? r : "no reason recorded";
-        _ctx.Sink.Log($"--- DRY RUN: this run is parked at {_ctx.State.Status} — {reason}. " +
-                      "Nothing would be spawned until it is cleared (`conductor resume` / `conductor approve`) ---");
+        _ctx.Sink.Log($"--- DRY RUN: this run is parked at {_ctx.State.Status} — {reason} ---");
+        _ctx.Sink.Log($"--- DRY RUN: saved status is {_ctx.State.Status} — `conductor run` idles at the session " +
+                      "boundary and spawns nothing until the park is cleared; resolve, then `conductor resume` / " +
+                      "`conductor approve` (nothing executed) ---");
         _ctx.Log($"dry run: parked at {_ctx.State.Status} — {reason}; previewing no further");
     }
 

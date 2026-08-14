@@ -139,13 +139,13 @@ public sealed partial class RunLoop
                     // it replaced (ReloadThenCheckCap).
                     if (ReloadThenCheckCap()) continue;
 
-                    if (_ctx.State.Status is RunStatus.Paused or RunStatus.NeedsHuman or RunStatus.AwaitingOwner)
+                    // KS2.6: a preview run that reached a park used to not idle — it re-parked and
+                    // re-notified at full speed (the 2026-08-02 flood). A live run idles here as
+                    // before; a dry run falls through to the DECISION (StageSelection's first rung is
+                    // exactly these three statuses), whose ParkedStatus branch below says what it
+                    // found (LogDryRunPark) and stops.
+                    if (!_ctx.Options.DryRun && _ctx.State.Status is RunStatus.Paused or RunStatus.NeedsHuman or RunStatus.AwaitingOwner)
                     {
-                        // KS2.6: the guard used to be `!DryRun && …`, so a preview run that reached a
-                        // park did not idle — it re-parked and re-notified at full speed (the
-                        // 2026-08-02 flood). A dry run is a preview and never waits, so it SAYS what
-                        // it found and stops. A live run idles as before.
-                        if (_ctx.Options.DryRun) { LogDryRunPark(); return 0; }
                         PushIdleSnapshot();
                         await Task.Delay(800, ct).ConfigureAwait(false);
                         continue;
@@ -174,12 +174,9 @@ public sealed partial class RunLoop
                 {
                     // A live run never reaches this decision parked — the idle check above `continue`s
                     // first. Dry run skips that check by design, so the truthful narration is the
-                    // park itself, not the session a real launch would never spawn.
-                    if (_ctx.Options.DryRun)
-                    {
-                        _ctx.Sink.Log($"--- DRY RUN: saved status is {_ctx.State.Status} — `conductor run` idles at the session boundary and spawns nothing; resolve, then `conductor resume` (nothing executed) ---");
-                        return 0;
-                    }
+                    // park itself, not the session a real launch would never spawn — and a preview
+                    // never waits (KS2.6): it says what it found, to nobody's phone, and stops.
+                    if (_ctx.Options.DryRun) { LogDryRunPark(); return 0; }
                     PushIdleSnapshot();
                     await Task.Delay(800, ct).ConfigureAwait(false);
                     continue;
