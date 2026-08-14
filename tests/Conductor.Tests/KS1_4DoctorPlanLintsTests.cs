@@ -31,11 +31,13 @@ public sealed class KS1_4DoctorPlanLintsTests : IDisposable
 {
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "conductor-ks14-" + Guid.NewGuid().ToString("N")[..10]);
     private readonly List<IDisposable> _open = [];
+    private readonly List<string> _held = [];
 
     public KS1_4DoctorPlanLintsTests() => Directory.CreateDirectory(_dir);
 
     public void Dispose()
     {
+        foreach (var stateDir in _held) EngineLock.Delete(stateDir);
         foreach (var d in _open) { try { d.Dispose(); } catch (ObjectDisposedException) { } }
         SqliteConnection.ClearAllPools();
         try { TestTemp.DeleteTree(_dir); } catch (Exception) { /* best effort */ }
@@ -66,8 +68,10 @@ public sealed class KS1_4DoctorPlanLintsTests : IDisposable
     }
 
     /// <summary>The probe RESOLVES, it never RUNS (bug #16: a gate that rebuilt the engine mid-run).
-    /// Proven by handing it a command that would leave a mark on disk if it were executed, and
-    /// asserting the mark is not there — the gate is reported unresolvable, and nothing ran.</summary>
+    /// The command handed to it is one that RESOLVES — <c>cmd</c> is on PATH — and would leave a mark
+    /// on disk if it were executed, so the probe reports this gate ok and the marker's absence is the
+    /// whole finding: the difference between "the program is there" and "the program has run" is
+    /// exactly what this lint may not blur.</summary>
     [Fact]
     public void GatePathProbe_NeverExecutesTheGate()
     {
@@ -77,8 +81,9 @@ public sealed class KS1_4DoctorPlanLintsTests : IDisposable
             Name = "destructive",
             Command = $"cmd /c echo ran > \"{marker}\"",
         }));
-        DoctorCommand.CheckGatePaths(plan);
-        Assert.False(File.Exists(marker));
+        var check = DoctorCommand.CheckGatePaths(plan);
+        if (OperatingSystem.IsWindows()) Assert.Equal("ok", check.State);   // cmd is on PATH: it resolved
+        Assert.False(File.Exists(marker));                                  // and that is all it did
     }
 
     [Fact]
@@ -166,6 +171,9 @@ public sealed class KS1_4DoctorPlanLintsTests : IDisposable
     public void PlanDrift_Red_WhenAnUnfinishedRunIsBehindTheFile()
     {
         var plan = SeedDriftRig(loadedVersion: 2, fileVersion: 5, runStatus: "running");
+        HoldTheEngineLock(plan);
+        Assert.True(RunLiveness.StoreLooksLive(plan.ResolveState().RunDbPath, plan.Repo));
+
         var check = DoctorCommand.CheckPlanDrift(plan);
         Assert.Equal("fail", check.State);
         Assert.Contains("v2", check.Message, StringComparison.Ordinal);
@@ -182,6 +190,40 @@ public sealed class KS1_4DoctorPlanLintsTests : IDisposable
         var plan = SeedDriftRig(loadedVersion: 2, fileVersion: 5, runStatus: "completed");
         var check = DoctorCommand.CheckPlanDrift(plan);
         Assert.Equal("ok", check.State);
+    }
+
+    /// <summary>The row this lint would have believed. A run that was killed leaves <c>runs.status</c>
+    /// saying <c>running</c> for ever — nobody was left alive to write the correction, which is the
+    /// whole of FU-F1-06 and the reason KS1.3 put <see cref="RunLiveness"/> one commit earlier in this
+    /// same lane. Nothing is scheduling from that document, so nothing is drifting from it, and a lint
+    /// that failed here would be permanently red on every repo whose last run crashed, with no
+    /// <c>plan reload</c> able to clear it.</summary>
+    [Fact]
+    public void PlanDrift_Quiet_WhenTheUnfinishedRunHasNoEngineBehindIt()
+    {
+        var plan = SeedDriftRig(loadedVersion: 2, fileVersion: 5, runStatus: "running");
+
+        // No lock, no tracked pid: the store is orphaned, exactly as the verifier's rig found it.
+        Assert.False(RunLiveness.StoreLooksLive(plan.ResolveState().RunDbPath, plan.Repo));
+
+        var check = DoctorCommand.CheckPlanDrift(plan);
+        Assert.Equal("ok", check.State);
+        Assert.Contains(RunLiveness.Orphaned, check.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>And the lint follows the shared rule rather than a copy of it: the same store, the
+    /// same stale row, answered both ways by nothing but whether an engine is holding it.</summary>
+    [Fact]
+    public void PlanDrift_TracksTheSharedLivenessRule_NotTheStoredStatus()
+    {
+        var plan = SeedDriftRig(loadedVersion: 2, fileVersion: 5, runStatus: "running");
+        Assert.Equal("ok", DoctorCommand.CheckPlanDrift(plan).State);
+
+        HoldTheEngineLock(plan);
+        Assert.Equal("fail", DoctorCommand.CheckPlanDrift(plan).State);
+
+        EngineLock.Delete(Path.Combine(plan.Repo, StateHome.ScratchDirName));
+        Assert.Equal("ok", DoctorCommand.CheckPlanDrift(plan).State);
     }
 
     // ------------------------------------------------------------------ 5. composed-prompt argv length
@@ -221,6 +263,21 @@ public sealed class KS1_4DoctorPlanLintsTests : IDisposable
         var check = DoctorCommand.CheckArgvLength(plan);
         Assert.Equal("fail", check.State);
         Assert.Contains(DoctorCommand.CmdExeCommandLineCeiling.ToString(Invariant), check.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>Clearing CreateProcess' ceiling is not clearing THE ceiling: the same argv is fatal
+    /// through a <c>.cmd</c> shim, and which of the two applies is decided by how somebody installed
+    /// the agent CLI. A lint that said nothing until it was on the shim machine would only ever warn
+    /// where the warning is too late, so the lower ceiling is reported as a warn wherever it is
+    /// already exceeded.</summary>
+    [Fact]
+    public void ArgvLength_Warns_WhenOnlyTheShimCeilingIsExceeded()
+    {
+        var plan = CleanPlan(p => p.PromptExtra = new string('x', DoctorCommand.CmdExeCommandLineCeiling + 1000));
+        var check = DoctorCommand.CheckArgvLength(plan, (DoctorCommand.CreateProcessCommandLineCeiling, "CreateProcess"));
+        Assert.Equal("warn", check.State);
+        Assert.Contains(DoctorCommand.CmdExeCommandLineCeiling.ToString(Invariant), check.Message, StringComparison.Ordinal);
+        Assert.Contains("shim", check.Message, StringComparison.Ordinal);
     }
 
     /// <summary>The measurement is the runtime's own quoting, not a guess: an argument with a space
@@ -302,7 +359,13 @@ public sealed class KS1_4DoctorPlanLintsTests : IDisposable
     /// <summary>The plans this repo ships are the worked examples, and this era's own plan is the one
     /// driving the run that writes these lints. A rule it trips is a rule that would have to be
     /// explained away rather than fixed. The repo path is re-pointed at this checkout so the check
-    /// reads the tree it belongs to rather than whatever absolute path the plan file names.</summary>
+    /// reads the tree it belongs to rather than whatever absolute path the plan file names.
+    /// <para>The argv ceiling is STATED here, not resolved. Doctor resolves it, correctly: whether
+    /// this machine's <c>agent.command</c> lands on a native binary or an npm <c>.cmd</c> shim decides
+    /// which of the two Windows ceilings the engine will hit. But that is a fact about the box, not
+    /// about the plan, and a gate whose verdict flips because a developer installed the agent CLI a
+    /// different way is a gate that reports the weather. What this pins is the plan-side fact:
+    /// composed and quoted, the longest argv this plan builds clears CreateProcess' ceiling.</para></summary>
     [Fact]
     public async Task DoctorIsGreenOnThisReposOwnPlan()
     {
@@ -320,7 +383,7 @@ public sealed class KS1_4DoctorPlanLintsTests : IDisposable
             DoctorCommand.CheckHooks(plan),
             DoctorCommand.CheckCheckpointIds(plan),
             DoctorCommand.CheckPlanDrift(plan),
-            DoctorCommand.CheckArgvLength(plan),
+            DoctorCommand.CheckArgvLength(plan, (DoctorCommand.CreateProcessCommandLineCeiling, "CreateProcess")),
             await DoctorCommand.CheckTemplateBracesAsync(plan),
             await DoctorCommand.CheckEscalationTokenAsync(plan),
         };
@@ -328,6 +391,48 @@ public sealed class KS1_4DoctorPlanLintsTests : IDisposable
         var failed = checks.Where(c => c.State == "fail").Select(c => $"{c.Name}: {c.Message}").ToList();
         Assert.True(failed.Count == 0, string.Join("\n", failed));
         Assert.Equal(7, checks.Count);
+    }
+
+    /// <summary>...and the half the pinned case above deliberately does not inherit is still measured.
+    /// This plan's packs push its longest argv well past cmd.exe's ceiling, so on a machine whose
+    /// agent CLI is the npm shim it is already over — bug #21, live, one <c>agent.command</c> away.
+    /// The lint has to SAY that on the machines where it is not yet fatal, or the only warning arrives
+    /// where it is too late to act on.</summary>
+    [Fact]
+    public void ThisReposOwnPlanIsAlreadyOverTheCmdShimCeiling()
+    {
+        var root = RepoRoot();
+        if (root is null) return;
+        var planPath = Path.Combine(root, "plans", "karvansara", "core.plan.json");
+        if (!File.Exists(planPath)) return;
+
+        var plan = PlanConfig.Load(planPath);
+        plan.Repo = root;
+
+        var check = DoctorCommand.CheckArgvLength(plan, (DoctorCommand.CreateProcessCommandLineCeiling, "CreateProcess"));
+        Assert.Equal("warn", check.State);
+        Assert.Contains(DoctorCommand.CmdExeCommandLineCeiling.ToString(Invariant), check.Message, StringComparison.Ordinal);
+        Assert.Contains("shim", check.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>The same measurement under the shim ceiling is a FAIL, not a warn — the warn is the
+    /// early word, not a softer verdict. Stated ceilings both times, so this says something about the
+    /// plan on every machine rather than about the agent install on one.</summary>
+    [Fact]
+    public void TheShimCeilingIsAFailWhenItIsTheOneThatApplies()
+    {
+        var root = RepoRoot();
+        if (root is null) return;
+        var planPath = Path.Combine(root, "plans", "karvansara", "core.plan.json");
+        if (!File.Exists(planPath)) return;
+
+        var plan = PlanConfig.Load(planPath);
+        plan.Repo = root;
+
+        var check = DoctorCommand.CheckArgvLength(
+            plan, (DoctorCommand.CmdExeCommandLineCeiling, "claude.CMD is a command-interpreter shim"));
+        Assert.Equal("fail", check.State);
+        Assert.Contains(DoctorCommand.CmdExeCommandLineCeiling.ToString(Invariant), check.Message, StringComparison.Ordinal);
     }
 
     // ------------------------------------------------------------------ fixtures
@@ -395,6 +500,19 @@ public sealed class KS1_4DoctorPlanLintsTests : IDisposable
 
         StatePointer.TryWrite(Path.Combine(plan.Repo, StateHome.ScratchDirName, StateHome.PointerFileName), dbPath, plan.Name);
         return plan;
+    }
+
+    /// <summary>Puts a live engine on this plan's store, the only way that is not a lie: the lock file
+    /// an engine writes under the repo's <c>.conductor</c>, naming THIS process and its real start
+    /// time — the <see cref="KS1_3LivenessReconciliationTests"/> idiom, so the fixture and the rule
+    /// agree by construction. Released in <see cref="Dispose"/>: a lock left behind would make the
+    /// next store in this class look driven.</summary>
+    private void HoldTheEngineLock(PlanConfig plan)
+    {
+        var stateDir = Path.Combine(plan.Repo, StateHome.ScratchDirName);
+        Directory.CreateDirectory(stateDir);
+        EngineLock.Write(stateDir);
+        _held.Add(stateDir);
     }
 
     private static string? RepoRoot()

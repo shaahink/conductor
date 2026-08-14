@@ -54,14 +54,22 @@ public sealed partial class DoctorCommand
     /// <para>Measures the real thing: every session kind for every stage, rendered by
     /// <see cref="PromptBuilder"/>, substituted by <c>AgentSession.ResolveArgs</c>, and quoted the way
     /// <c>ProcessStartInfo.ArgumentList</c> quotes. The ceiling is chosen by how the agent is spawned
-    /// — 8191 through a <c>.cmd</c>/<c>.bat</c> shim, 32767 through CreateProcess.</para></summary>
-    internal static Check CheckArgvLength(PlanConfig plan)
+    /// — 8191 through a <c>.cmd</c>/<c>.bat</c> shim, 32767 through CreateProcess — and an argv that
+    /// clears the resolved ceiling but not the shim's is a WARN rather than silence, because which of
+    /// the two applies is a property of the machine the agent was installed on, not of the plan.</para></summary>
+    internal static Check CheckArgvLength(PlanConfig plan) => CheckArgvLength(plan, ArgvCeiling(plan));
+
+    /// <summary>The same lint with the ceiling STATED rather than resolved. Doctor itself always
+    /// resolves — a diagnostic that ignored how this machine will spawn the agent would be describing
+    /// somebody else's machine. A caller that must be hermetic (a pinned test whose verdict may not
+    /// depend on whether the agent CLI here is an npm shim) states it instead.</summary>
+    internal static Check CheckArgvLength(PlanConfig plan, (int Ceiling, string Why) resolved)
     {
         ArgumentNullException.ThrowIfNull(plan);
         if (plan.Stages.Count == 0)
             return new Check("argv", "ok", "no stages — nothing composes");
 
-        var (ceiling, why) = ArgvCeiling(plan);
+        var (ceiling, why) = resolved;
         var prompts = new PromptBuilder(plan);
         var worstLength = 0;
         var worstWhere = "";
@@ -98,6 +106,14 @@ public sealed partial class DoctorCommand
             return new Check("argv", "fail",
                 $"{measured} — the agent is truncated or refused at spawn and the run scores the session as if it had read everything; " +
                 "shorten promptExtra/packs/stage notes, or pass the prompt on stdin");
+        // Bug #21: clearing CreateProcess' ceiling is not clearing the ceiling. The same plan is fatal
+        // the moment agent.command lands on a .cmd/.bat shim — which is what an npm install of an agent
+        // CLI is on Windows, and it is one `agent.command` edit or one machine away. Saying nothing
+        // here would mean the only warning arrives on the box where it is already too late.
+        if (ceiling > CmdExeCommandLineCeiling && worstLength > CmdExeCommandLineCeiling)
+            return new Check("argv", "warn",
+                $"{measured}, but {worstLength} is over the {CmdExeCommandLineCeiling}-char cmd.exe ceiling — " +
+                "this plan is fatal on any machine whose agent.command resolves to a .cmd/.bat shim (an npm-installed CLI is exactly that)");
         return worstLength * 10 > ceiling * 9
             ? new Check("argv", "warn", $"{measured} — under 10% headroom left")
             : new Check("argv", "ok", measured);
@@ -112,8 +128,13 @@ public sealed partial class DoctorCommand
         return list;
     }
 
-    private static (int Ceiling, string Why) ArgvCeiling(PlanConfig plan)
+    /// <summary>The ceiling this plan's agent will actually hit on THIS machine, and why. Internal
+    /// because it is the half of the lint that reads PATH: a caller that needs a verdict independent
+    /// of how the agent CLI happens to be installed here passes its own pair to the stated-ceiling
+    /// overload of <c>CheckArgvLength</c> instead of inheriting this one.</summary>
+    internal static (int Ceiling, string Why) ArgvCeiling(PlanConfig plan)
     {
+        ArgumentNullException.ThrowIfNull(plan);
         var resolved = ResolveProgram(plan.Agent.Command, plan.Repo);
         var ext = resolved is null ? "" : Path.GetExtension(resolved);
         return ext.Equals(".cmd", StringComparison.OrdinalIgnoreCase) || ext.Equals(".bat", StringComparison.OrdinalIgnoreCase)

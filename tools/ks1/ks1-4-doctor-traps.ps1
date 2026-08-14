@@ -5,6 +5,10 @@
 # demands two things of every answer: exit code 1, and the offending artifact named on stdout. Then
 # it asks the same doctor about a plan carrying none of them and demands exit 0.
 #
+# The drift trap is asked twice, because half of that lint is knowing when NOT to fire: once with its
+# engine live (red), and once with the same store, the same unfinished row and the same edited file
+# after that engine has been killed (green - nothing is scheduling from a document nobody is holding).
+#
 # Discipline (promptExtra traps 0, 3, 4, 7, 13):
 #   * its own CONDUCTOR_STATE_HOME and its own CONDUCTOR_RUN_DB, so no invocation can upsert the
 #     operator's real catalogue - the count is printed before and after and must not move;
@@ -198,10 +202,17 @@ Invoke-Doctor "7. escalation-token sweep" $p 1 @("stage 'S1' notes", "templates/
 $clean = New-TrapPlan "clean" { param($plan, $dir) }
 Invoke-Doctor "0. a plan carrying none of them" $clean 0 @("gate-paths", "plan-drift", "escalation")
 
-# ---------------------------------------------------------------- 4. plan drift (needs a real run)
-# Drift is defined against what a run RECORDED loading, so the fixture needs an engine that actually
-# loaded the plan: start one paused, edit the file so it reloads at the session boundary, stop it,
-# then edit the file again. The run is left unfinished, which is the only state drift matters in.
+# ---------------------------------------------------------------- 4. plan drift (needs a LIVE engine)
+# Drift is a claim about a run something is still scheduling FROM, and KS1.3's shared rule decides
+# which runs those are: an unfinished row with no engine behind it is orphaned, not drifting. So this
+# trap needs both halves - a run that recorded loading v2, AND an engine still holding the store - and
+# it proves the other half in the same breath: once that engine is gone, the same store, the same
+# stale row and the same edited file are green.
+#
+# The third edit is written with the same length and the same last-write time as the second, because
+# the engine's own boundary check is a (mtime, length) stamp (RunLoop.Reload.cs:37-38). That is not a
+# trick played on the engine; it is the state the engine cannot see by itself - and the state it is in
+# for the whole of any live session anyway, since the boundary check only runs BETWEEN sessions.
 $driftDir = Join-Path $Root "drift"
 New-Item -ItemType Directory -Force -Path $driftDir | Out-Null
 [IO.File]::WriteAllText((Join-Path $driftDir "TRACKER.md"), $tracker)
@@ -241,6 +252,9 @@ try {
     }
     Start-Sleep -Seconds 3
     Write-DriftPlan 2                     # the edit the engine picks up at the session boundary
+    $v2 = Get-Item $driftPlanPath
+    $stampV2 = $v2.LastWriteTimeUtc
+    $lengthV2 = $v2.Length
     $reloaded = $false
     for ($i = 0; $i -lt 60; $i++) {
         Start-Sleep -Milliseconds 500
@@ -248,6 +262,28 @@ try {
     }
     Write-Host "--- 4. plan drift"
     Write-Host "    engine recorded a reload: $reloaded"
+
+    Write-DriftPlan 3                     # the edit the engine's stamp check cannot see
+    $v3 = Get-Item $driftPlanPath
+    if ($v3.Length -ne $lengthV2) {
+        Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+        throw "the v3 edit changed the file length ($lengthV2 -> $($v3.Length)); the engine would reload it and there would be no drift to find"
+    }
+    [IO.File]::SetLastWriteTimeUtc($driftPlanPath, $stampV2)
+    Start-Sleep -Seconds 2                # two boundary ticks: if it were going to reload, it would have
+    # The console echo, not the structured line: every log line is written twice and counting both
+    # would double every reload.
+    $reloadLines = @(Get-Content $outFile | Where-Object { $_ -match "^\[\d{2}:\d{2}:\d{2}\] plan reloaded at session boundary" })
+    Write-Host "    reloads recorded: $($reloadLines.Count) - last: $($reloadLines[-1])"
+    $engineLock = Join-Path $driftDir ".conductor\conductor.lock"
+    Write-Host "    engine lock held: $(Test-Path $engineLock)"
+    if ($reloadLines.Count -ne 1 -or $reloadLines[-1] -notmatch "v2,") {
+        Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+        throw "the engine is not executing v2 after $($reloadLines.Count) reload(s); the v3 edit was seen after all and this trap proves nothing"
+    }
+
+    # The trap itself: engine live, run unfinished, file ahead of what that run loaded.
+    Invoke-Doctor "4. plan drift (engine live)" $driftPlanPath 1 @("v2", "v3", "plan reload")
 
     # Trap 3: prove the pid is ours from its command line before going near it.
     $cim = Get-CimInstance Win32_Process -Filter ("ProcessId = " + $proc.Id) -ErrorAction SilentlyContinue
@@ -261,8 +297,11 @@ try {
     $proc.WaitForExit(10000) | Out-Null
     Start-Sleep -Seconds 1
 
-    Write-DriftPlan 3                     # the edit nothing has loaded
-    Invoke-Doctor "4. plan drift" $driftPlanPath 1 @("v2", "v3", "plan reload")
+    # And the half the first delivery of this checkpoint got wrong: the killed engine leaves the row
+    # saying paused for ever, and NOTHING is scheduling from the stale document. Same store, same
+    # stale row, same edited file - green, and the lint says which word it reconciled to.
+    Write-Host "    engine lock after the kill: $(Test-Path $engineLock) (a killed engine cannot release it)"
+    Invoke-Doctor "4b. the same drift once the engine is gone" $driftPlanPath 0 @("orphaned")
 }
 finally {
     $env:CONDUCTOR_RUN_DB = $prevDb
@@ -282,5 +321,5 @@ if ($bad.Count -gt 0) {
     foreach ($b in $bad) { Write-Host ("FAIL: " + $b.Label) }
     exit 1
 }
-Write-Host ("PASS - " + $results.Count + " doctor invocations, seven traps red with the artifact named, the clean plan green, real catalogue untouched")
+Write-Host ("PASS - " + $results.Count + " doctor invocations, seven traps red with the artifact named, the clean plan green, drift green again once its engine is gone, real catalogue untouched")
 exit 0

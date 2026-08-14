@@ -180,14 +180,23 @@ public sealed partial class DoctorCommand
     /// Stated mechanically, with no hash nobody else computes: the version the last run RECORDED
     /// loading (<see cref="PlanReloaded"/>, folded out of that run's event log) against
     /// <see cref="PlanConfig.PlanVersion"/> on disk now.
-    /// <para>Fails only while the run is unfinished, because that is the only case where the stale
-    /// document is still being scheduled from. A run that ended under an older version is history,
-    /// not drift.</para></summary>
+    /// <para>Fails only while a run is still being scheduled FROM, because that is the only case
+    /// where the stale document is doing anything. Which runs those are is not read off
+    /// <c>runs.status</c>: KS1.3 installed <see cref="RunLiveness"/> exactly because a killed engine
+    /// never gets to correct its own row, so an unfinished row with no engine behind it means the
+    /// opposite of what it says. Asking the column raw would have made this lint red on every repo
+    /// whose last run was killed and whose plan has been edited since — a red that no reload can
+    /// clear, on the machine where four such rows are the whole of FU-F1-06.</para></summary>
     internal static Check CheckPlanDrift(PlanConfig plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
         RunArchive? archive;
-        try { archive = RunArchive.TryOpen(plan.ResolveState().RunDbPath); }
+        string dbPath;
+        try
+        {
+            dbPath = plan.ResolveState().RunDbPath;
+            archive = RunArchive.TryOpen(dbPath);
+        }
         catch (Exception ex) when (ex is IOException or InvalidOperationException or UnauthorizedAccessException)
         {
             return new Check("plan-drift", "warn", $"the run store could not be opened ({ex.Message}) — drift is unknown");
@@ -207,10 +216,13 @@ public sealed partial class DoctorCommand
             return new Check("plan-drift", "ok", $"run {run.ShortRunId} loaded plan v{loaded}, the file on disk is v{plan.PlanVersion}");
 
         var head = $"run {run.ShortRunId} last loaded plan v{loaded}, but {plan.PlanFilePath} is v{plan.PlanVersion}";
-        return RunRecord.IsTerminal(run.Status)
-            ? new Check("plan-drift", "ok", $"{head} — that run has finished, so the difference is only the edits made since")
-            : new Check("plan-drift", "fail",
-                $"{head} — that run has not finished, so it keeps scheduling from the stale document until `conductor plan reload`");
+        var live = RunLiveness.StoreLooksLive(dbPath, plan.Repo);
+        if (!RunLiveness.IsStillGoing(run.Status, live))
+            return new Check("plan-drift", "ok",
+                $"{head} — that run reads '{RunLiveness.Reconcile(run.Status, live)}' and nothing is scheduling from it, " +
+                "so the difference is only the edits made since");
+        return new Check("plan-drift", "fail",
+            $"{head} — that run has not finished and an engine is holding the store, so it keeps scheduling from the stale document until `conductor plan reload`");
     }
 
     /// <summary>The last plan version this run recorded loading. Folded from the event log — the same

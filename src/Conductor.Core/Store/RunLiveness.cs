@@ -60,6 +60,19 @@ public static class RunLiveness
         return storeLooksLive || RunRecord.IsTerminal(stored) ? stored : Orphaned;
     }
 
+    /// <summary>
+    /// Is this row a run something is still DOING work from? Both halves of the question in one
+    /// place, because the negation is where the mistake gets made: the row has to be unfinished AND
+    /// an engine has to be holding the store. An unfinished row whose engine was killed reconciles to
+    /// <see cref="Orphaned"/> — it is a claim nobody closed, not work in flight — so a caller that
+    /// decides from the raw column alone goes red on every repo whose last run died, which is the
+    /// exact population this class was written to reconcile.
+    /// <para>The complement of <see cref="Reconcile"/>: true precisely when the reconciled word is
+    /// neither terminal nor <see cref="Orphaned"/>.</para>
+    /// </summary>
+    public static bool IsStillGoing(string? storedStatus, bool storeLooksLive) =>
+        storeLooksLive && !RunRecord.IsTerminal(storedStatus);
+
     /// <summary>Does this store hold a run that is not over? KS0.2 widened it from
     /// <c>status = 'running'</c>, and the widening is load-bearing rather than tidy: once parks are
     /// written to the column (<see cref="RunRecord.StatusText"/>), a run an engine is holding open at
