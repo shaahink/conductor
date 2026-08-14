@@ -110,7 +110,15 @@ unconditionally** before the battery is called red.
 The **phase gate** — the one that confirms a stage rather than a session — is
 `VerdictEngine.Phase.cs:29`. Green runs the audit and then `ConfirmStageAsync` (`Phase.cs:140`), which is
 the only path that turns `DONE` into `DONE ✓`. Red increments the stage attempt and queues a fix.
-`rollback` squashes bookkeeping commits; it does **not** revert code.
+
+`rollback` is not bookkeeping — it is **`git reset --hard`** onto `state.CurrentStageStartHead`, the
+commit the repo sat on when the stage began
+(`src/Conductor.Core/Commands/ControlDispatcher.cs:189`). It **destroys uncommitted work and drops
+every commit made since that head**. It is refused when no stage-start head has been recorded
+(`:175-180`), and refused on a dirty working tree unless `--force` — which does not stash the tree, it
+**discards** it (`:181-188`). It applies only outside a session; arriving mid-session it is logged as
+taking effect after the session ends (`:231-232`). A rollback that ran emits
+`RollbackExecuted { StageId, FromSha, ToSha, Forced }` (`:190`) and leaves the run `Idle`.
 
 ### 6. The claim, and the tracker
 
