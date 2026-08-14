@@ -462,7 +462,7 @@ public sealed class KS3_1PlanNewTests : IDisposable
             DoctorCommand.CheckCheckpointIds(plan),
             DoctorCommand.CheckPlanDrift(plan),
             DoctorCommand.CheckArgvLength(plan, (DoctorCommand.CreateProcessCommandLineCeiling, "CreateProcess")),
-            DoctorCommand.CheckBudget(plan, 0m, hasRun: false),
+            DoctorCommand.CheckBudget(plan, 0m, hasRun: false, budgetGrantUsd: 0m, budgetGrantTokens: 0L),
             DoctorCommand.CheckTokenBudget(plan),
             await DoctorCommand.CheckTemplateBracesAsync(plan),
             await DoctorCommand.CheckEscalationTokenAsync(plan),
