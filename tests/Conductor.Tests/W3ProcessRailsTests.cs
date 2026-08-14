@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using Conductor.Commands;
@@ -270,15 +270,15 @@ public sealed class W3ProcessRailsTests
     public void Doctor_WarnsWhenNothingCapsTheSpend()
     {
         var uncapped = new PlanConfig { Name = "p", Repo = "." };
-        Assert.Equal("warn", DoctorCommand.CheckBudget(uncapped, 0m, hasRun: false).State);
+        Assert.Equal("warn", DoctorCommand.CheckBudget(uncapped, 0m, hasRun: false, budgetGrantUsd: 0m).State);
 
         var capped = new PlanConfig { Name = "p", Repo = "." };
         capped.Limits.MaxRunCostUsd = 50m;
-        Assert.Equal("ok", DoctorCommand.CheckBudget(capped, 0m, hasRun: false).State);
+        Assert.Equal("ok", DoctorCommand.CheckBudget(capped, 0m, hasRun: false, budgetGrantUsd: 0m).State);
 
         var tokenCapped = new PlanConfig { Name = "p", Repo = "." };
         tokenCapped.Limits.MaxRunTokens = 5_000_000;
-        Assert.Equal("ok", DoctorCommand.CheckBudget(tokenCapped, 0m, hasRun: false).State);
+        Assert.Equal("ok", DoctorCommand.CheckBudget(tokenCapped, 0m, hasRun: false, budgetGrantUsd: 0m).State);
     }
 
     [Fact]

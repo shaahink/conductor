@@ -62,6 +62,26 @@ public sealed partial class RunLoop
         return true;
     }
 
+    /// <summary>
+    /// KS5.4 — the pre-session health probe, asked against the ceiling in force.
+    /// <para><see cref="PreflightHealth"/> carries a budget arm of its own (a failing <c>budget</c>
+    /// result when the spend has reached the cap), and both of the run loop's call sites were handing it
+    /// the PLAN's cap and the agent-only counter. Under the old reset semantics that was invisible: the
+    /// approval zeroed <c>PerRunCostUsd</c>, so this comparison cleared itself as a side effect. KS5.4
+    /// keeps the counter and moves the ceiling, so a call site left on the plan cap fails FOREVER after
+    /// an approval — the run un-parks, this probe fails, the loop parks it on a preflight backoff (which
+    /// doubles up to an hour) and no session ever spawns again. The approval would be inert.</para>
+    /// <para>So the probe reads the same two numbers <see cref="CheckBudgetCap"/> compares, through the
+    /// same two properties: one total, one ceiling, one answer to "may this run spend".</para>
+    /// </summary>
+    internal static Task<IReadOnlyList<PreflightHealth.CheckResult>> PreflightAsync(RunContext ctx)
+    {
+        ArgumentNullException.ThrowIfNull(ctx);
+        return PreflightHealth.RunAllAsync(
+            ctx.Plan.Limits.DnsHealthCheck, ctx.Plan.Repo,
+            ctx.BilledWindowUsd, ctx.EffectiveMaxRunCostUsd);
+    }
+
     /// <summary>Says, in the park line itself, that the ceiling being quoted is not the one in the plan
     /// file. Without it an operator reading "$6.00 (limit)" against a plan that says 3.00 has to go
     /// looking for the difference.</summary>

@@ -1,4 +1,4 @@
-﻿using Conductor.Commands;
+using Conductor.Commands;
 using Conductor.Core;
 using Conductor.Core.Integrations;
 using Conductor.Models;
@@ -125,7 +125,7 @@ public sealed class DoctorCommandTests : IDisposable
     [Fact]
     public void CheckBudget_Warns_WhenNoCapConfigured()
     {
-        var check = DoctorCommand.CheckBudget(Plan(), currentCostUsd: 999m, hasRun: true);
+        var check = DoctorCommand.CheckBudget(Plan(), currentCostUsd: 999m, hasRun: true, budgetGrantUsd: 0m);
         Assert.Equal("warn", check.State);
         Assert.Contains("no spend cap", check.Message, StringComparison.Ordinal);
     }
@@ -134,7 +134,7 @@ public sealed class DoctorCommandTests : IDisposable
     public void CheckBudget_Ok_WhenNoRunYet()
     {
         var plan = Plan(p => p.Limits.MaxRunCostUsd = 10m);
-        var check = DoctorCommand.CheckBudget(plan, currentCostUsd: 0m, hasRun: false);
+        var check = DoctorCommand.CheckBudget(plan, currentCostUsd: 0m, hasRun: false, budgetGrantUsd: 0m);
         Assert.Equal("ok", check.State);
     }
 
@@ -142,7 +142,7 @@ public sealed class DoctorCommandTests : IDisposable
     public void CheckBudget_Warn_WhenApproachingCap()
     {
         var plan = Plan(p => p.Limits.MaxRunCostUsd = 10m);
-        var check = DoctorCommand.CheckBudget(plan, currentCostUsd: 9m, hasRun: true); // 90%
+        var check = DoctorCommand.CheckBudget(plan, currentCostUsd: 9m, hasRun: true, budgetGrantUsd: 0m); // 90%
         Assert.Equal("warn", check.State);
     }
 
@@ -150,7 +150,7 @@ public sealed class DoctorCommandTests : IDisposable
     public void CheckBudget_Fail_WhenAtOrOverCap()
     {
         var plan = Plan(p => p.Limits.MaxRunCostUsd = 10m);
-        var check = DoctorCommand.CheckBudget(plan, currentCostUsd: 10m, hasRun: true);
+        var check = DoctorCommand.CheckBudget(plan, currentCostUsd: 10m, hasRun: true, budgetGrantUsd: 0m);
         Assert.Equal("fail", check.State);
     }
 

@@ -506,7 +506,195 @@ public sealed class KS5_4ApproveRaisesTheCeilingTests : IDisposable
         Assert.Null(seen);
     }
 
+    // ────────────────── the ceiling every gate on the way to a session reads ──────────────────
+
+    /// <summary>
+    /// The approval has to reach EVERY comparison that can stop a session, not just the cap check.
+    /// <para><see cref="PreflightHealth"/> carries a budget arm of its own, and the run loop was still
+    /// handing it the PLAN's cap and the agent-only counter. The old reset semantics hid that: zeroing
+    /// <c>PerRunCostUsd</c> cleared this comparison as a side effect. Keeping the counter and raising the
+    /// ceiling does not — so with a <c>limits.dnsHealthCheck</c> block on the plan (and
+    /// <c>Enabled</c> defaults to true), an approved run un-parked, failed this probe, was parked again
+    /// on a preflight backoff that doubles up to an hour, and never spawned another session. The
+    /// approval was inert, and no test in this file went near it.</para>
+    /// <para>Asserted through <see cref="RunLoop.PreflightAsync"/>, which is the run loop's own call —
+    /// both of its call sites (the pre-session probe and the parked recheck) go through it.</para>
+    /// </summary>
+    [Fact]
+    public async Task TheApprovedRunPassesThePreSessionProbeThatWouldOtherwiseParkItForever()
+    {
+        var rig = Rig(costCap: 3.00m);
+        // Nothing but the budget arm: no hosts to resolve, no endpoints, no git, no disk floor — so the
+        // only thing this probe can have an opinion about is the money.
+        rig.Plan.Limits.DnsHealthCheck = new DnsHealthCheckConfig
+        {
+            Enabled = true, Hosts = [], ApiEndpoints = [], EnableGitCheck = false, MinFreeDiskMb = 0,
+        };
+        SpendPast(rig, agentUsd: 3.00m, sideUsd: 0.50m, tokens: 79_800);
+        ParkOnBudget(rig);
+
+        // Parked: the probe agrees with the park, and names the ceiling in force.
+        var parked = await RunLoop.PreflightAsync(rig.Ctx);
+        var budget = Assert.Single(parked, r => string.Equals(r.Name, "budget", StringComparison.Ordinal));
+        Assert.False(budget.Passed);
+        Assert.Contains("$3.50", budget.Message, StringComparison.Ordinal);
+        Assert.Contains("$3.00", budget.Message, StringComparison.Ordinal);
+
+        await rig.Verdicts.ApproveAwaitingOwnerAsync(null, CancellationToken.None);
+
+        // Approved: $3.50 spent under a $6.00 ceiling. The probe must stand aside, or the run backs off
+        // for an hour at a time and the approval buys nothing.
+        Assert.Equal(6.00m, rig.Ctx.EffectiveMaxRunCostUsd);
+        var after = await RunLoop.PreflightAsync(rig.Ctx);
+        Assert.DoesNotContain(after, r => string.Equals(r.Name, "budget", StringComparison.Ordinal));
+        Assert.False(PreflightHealth.AnyFailed(after));
+    }
+
+    /// <summary>The rule behind the arm above, stated as code: <c>PreflightHealth.RunAllAsync</c> has
+    /// exactly one engine caller, so there is nowhere for a second, stale spend-vs-cap comparison to
+    /// live. Doctor calls it too and is named here with its reason — it passes no cap at all, because
+    /// its budget verdict is <c>DoctorCommand.CheckBudget</c>, which reads the same effective ceiling.</summary>
+    [Fact]
+    public void ThePreflightProbeHasOneEngineCallerAndItReadsTheCeilingInForce()
+    {
+        var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "PreflightHealth.cs",          // the check itself
+            "RunLoop.Budget.cs",           // the one engine seam
+            "DoctorCommand.cs",            // offline, and deliberately passes no cap
+        };
+
+        var callers = SourceFilesUnderSrc()
+            .Where(f => File.ReadAllText(f).Contains("PreflightHealth.RunAllAsync(", StringComparison.Ordinal))
+            .Select(f => new FileInfo(f).Name)
+            .Where(n => !allowed.Contains(n))
+            .ToList();
+        Assert.True(callers.Count == 0,
+            "a second caller of the preflight probe is a second spend-vs-cap comparison, and it will be " +
+            "the one nobody rewires when the ceiling moves: " + string.Join(", ", callers));
+
+        // …and the one seam passes the ceiling in force, not the plan's figure. Read off the call
+        // itself, because that argument list is the exact thing this checkpoint got wrong.
+        var seam = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Conductor.Core", "Orchestration", "RunLoop.Budget.cs"));
+        var at = seam.IndexOf("PreflightHealth.RunAllAsync(", StringComparison.Ordinal);
+        Assert.True(at >= 0, "the engine's preflight seam moved out of RunLoop.Budget.cs");
+        var call = seam[at..seam.IndexOf(");", at, StringComparison.Ordinal)];
+        Assert.Contains("EffectiveMaxRunCostUsd", call, StringComparison.Ordinal);
+        Assert.Contains("BilledWindowUsd", call, StringComparison.Ordinal);
+    }
+
+    // ────────────── a raise that does not clear the spend is refused, not rounded ──────────────
+
+    /// <summary>
+    /// The overshoot can be bigger than the raise. A run that blew past a $3.00 cap to $10.00 — one long
+    /// session is enough — gets a default raise of $3.00, which lands the ceiling at $6.00: still under
+    /// the spend. Resuming there costs a whole session and parks again immediately, and the only way to
+    /// state that ceiling's headroom is as a negative. "$-4.00 left" is not a sentence anybody can act
+    /// on, so the approval is refused, the run stays parked, and the refusal names the number to type.
+    /// </summary>
+    [Fact]
+    public async Task ARaiseThatWouldNotClearTheSpendIsRefusedAndTheRunStaysParked()
+    {
+        var rig = Rig(costCap: 3.00m);
+        SpendPast(rig, agentUsd: 10.00m, sideUsd: 0m, tokens: 1_000);
+        ParkOnBudget(rig);
+
+        await rig.Verdicts.ApproveAwaitingOwnerAsync(null, CancellationToken.None);
+
+        Assert.Equal(RunStatus.AwaitingOwner, rig.State.Status);
+        Assert.Equal(AwaitingOwnerReason.Budget, rig.State.AwaitingOwnerReason);
+        Assert.Equal(0m, rig.State.BudgetGrantUsd);
+        Assert.Equal(0, rig.State.BudgetApprovals);
+        Assert.Empty(rig.State.BudgetRaises);
+        Assert.DoesNotContain(Log(rig), l => l.Contains("owner approved (budget)", StringComparison.Ordinal));
+
+        var refusal = Assert.Single(Log(rig), l => l.Contains("approve refused", StringComparison.Ordinal));
+        Assert.Contains("$10.00 this run has already spent", refusal, StringComparison.Ordinal);
+        Assert.Contains("an amount over $7.00", refusal, StringComparison.Ordinal);
+        Assert.DoesNotContain("$-", refusal, StringComparison.Ordinal);
+    }
+
+    /// <summary>The same rule when the operator names the amount themselves: an <c>--amount</c> under the
+    /// overshoot is a raise that parks again, and it is refused with the shortfall rather than accepted
+    /// into a ceiling below the spend.</summary>
+    [Fact]
+    public async Task AnAmountSmallerThanTheOvershootIsRefusedWithTheShortfall()
+    {
+        var rig = Rig(costCap: 3.00m);
+        SpendPast(rig, agentUsd: 10.00m, sideUsd: 0m, tokens: 1_000);
+        ParkOnBudget(rig);
+
+        await rig.Verdicts.ApproveAwaitingOwnerAsync("usd=2", CancellationToken.None);
+        Assert.Equal(0m, rig.State.BudgetGrantUsd);
+        Assert.Equal(RunStatus.AwaitingOwner, rig.State.Status);
+
+        // …and the number the refusal named does clear it.
+        await rig.Verdicts.ApproveAwaitingOwnerAsync("usd=7.50", CancellationToken.None);
+        Assert.Equal(7.50m, rig.State.BudgetGrantUsd);
+        Assert.Equal(10.50m, rig.Ctx.EffectiveMaxRunCostUsd);
+        Assert.Equal(RunStatus.Idle, rig.State.Status);
+        Assert.Contains("$0.50 left", ApprovalLine(rig), StringComparison.Ordinal);
+    }
+
+    /// <summary>The token half refuses on the same rule, so the two halves of one park cannot end up
+    /// with different ideas about what an approval is allowed to leave behind.</summary>
+    [Fact]
+    public async Task ATokenRaiseThatWouldNotClearWhatIsCountedIsRefusedToo()
+    {
+        var rig = Rig(costCap: null, tokenCap: 100_000);
+        SpendPast(rig, agentUsd: 0m, sideUsd: 0m, tokens: 500_000);
+        ParkOnBudget(rig);
+
+        await rig.Verdicts.ApproveAwaitingOwnerAsync(null, CancellationToken.None);
+
+        Assert.Equal(0L, rig.State.BudgetGrantTokens);
+        Assert.Equal(RunStatus.AwaitingOwner, rig.State.Status);
+        Assert.Contains(Log(rig), l => l.Contains("an amount over 400k", StringComparison.Ordinal));
+    }
+
+    // ────────────────────────────── doctor reads the same ceiling ──────────────────────────────
+
+    /// <summary>Doctor is an operator surface like any other, and it was still comparing the run's spend
+    /// to <c>limits.maxRunCostUsd</c>: with a grant on file it reported "fail — the run will park at
+    /// AwaitingOwner" about a run that had been approved past exactly that park and would not park at
+    /// all. It reads <see cref="BudgetCeiling.EffectiveCostCap"/> now, like every other surface, and says
+    /// where the bigger number came from.</summary>
+    [Fact]
+    public void DoctorReportsTheCeilingInForceRatherThanThePlansFigure()
+    {
+        var plan = new PlanConfig { Name = "p", Repo = "." };
+        plan.Limits.MaxRunCostUsd = 3.00m;
+
+        var stale = Conductor.Commands.DoctorCommand.CheckBudget(plan, currentCostUsd: 3.50m, hasRun: true, budgetGrantUsd: 0m);
+        Assert.Equal("fail", stale.State);
+
+        var granted = Conductor.Commands.DoctorCommand.CheckBudget(plan, currentCostUsd: 3.50m, hasRun: true, budgetGrantUsd: 3.00m);
+        Assert.Equal("ok", granted.State);
+        Assert.Contains("$6.00", granted.Message, StringComparison.Ordinal);
+        Assert.Contains("raised from $3.00", granted.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("will park", granted.Message, StringComparison.Ordinal);
+
+        // A grant cannot invent a ceiling on a plan that set none — the same rule as everywhere else.
+        var uncapped = new PlanConfig { Name = "p", Repo = "." };
+        Assert.Equal("warn", Conductor.Commands.DoctorCommand.CheckBudget(uncapped, 99m, hasRun: true, budgetGrantUsd: 25m).State);
+    }
+
     // ────────────────────────────── the rig ──────────────────────────────
+
+    private static string RepoRoot()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "Conductor.slnx")))
+            dir = dir.Parent;
+        Assert.NotNull(dir);
+        return dir!.FullName;
+    }
+
+    private static IEnumerable<string> SourceFilesUnderSrc() =>
+        Directory.EnumerateFiles(Path.Combine(RepoRoot(), "src"), "*.cs", SearchOption.AllDirectories)
+            .Where(f => !f.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
+                     && !f.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal));
+
 
     private sealed record ApprovalRig(
         string Repo, PlanConfig Plan, RunState State, RunContext Ctx, VerdictEngine Verdicts, RecordingSink Sink);

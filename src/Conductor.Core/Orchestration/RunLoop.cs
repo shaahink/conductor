@@ -181,9 +181,7 @@ public sealed partial class RunLoop
                             continue;
                         }
                         _ctx.DnsParkedUntil = null;
-                        var recheckResults = await PreflightHealth.RunAllAsync(
-                            _ctx.Plan.Limits.DnsHealthCheck, _ctx.Plan.Repo, _ctx.RunCostUsd,
-                            _ctx.Plan.Limits.MaxRunCostUsd).ConfigureAwait(false);
+                        var recheckResults = await PreflightAsync(_ctx).ConfigureAwait(false);
                         if (PreflightHealth.AllPassed(recheckResults))
                         {
                             _ctx.PreflightConsecutiveFailures = 0;
@@ -361,9 +359,9 @@ public sealed partial class RunLoop
                 }
                 _ctx.SessionApproved = false;
 
-                var preflightResults = await PreflightHealth.RunAllAsync(
-                    _ctx.Plan.Limits.DnsHealthCheck, _ctx.Plan.Repo, _ctx.RunCostUsd,
-                    _ctx.Plan.Limits.MaxRunCostUsd).ConfigureAwait(false);
+                // KS5.4: through PreflightAsync, so the ceiling this probe compares against is the one
+                // an approval has actually raised — see RunLoop.Budget.cs.
+                var preflightResults = await PreflightAsync(_ctx).ConfigureAwait(false);
                 if (PreflightHealth.AnyFailed(preflightResults))
                 {
                     _ctx.PreflightConsecutiveFailures++;

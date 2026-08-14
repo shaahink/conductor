@@ -30,7 +30,7 @@ public sealed partial class TelegramService
         // K5.4: the outcome leads. The stage and its title moved to the context line the stamp
         // applies to EVERY push, so this no longer renders them a second time. Money carries its
         // headroom, and the composition itself is a template the owner can replace.
-        var cost = MoneyLine.ForSession(push.CostUsd, _state.TotalCostUsd, _plan.Limits.MaxRunCostUsd)
+        var cost = MoneyLine.ForSession(push.CostUsd, _state.TotalCostUsd, CostCeiling())
                  + (push.Score is { } score ? " · score " + EscapeHtml($"{score:0}/100") : "");
 
         var body = await ComposeAsync("session-end", NotifyDefaults.SessionEnd, new Dictionary<string, string>(StringComparer.Ordinal)
@@ -50,6 +50,15 @@ public sealed partial class TelegramService
         await EnqueueAsync(body, push.Number, SessionSeverity(push.Outcome), null, ct, push.Stage)
             .ConfigureAwait(false);
     }
+
+    /// <summary>KS5.4 — the ceiling this run is GOVERNED by: the plan's <c>limits.maxRunCostUsd</c> plus
+    /// every dollar an owner has approved on top of it, through the one function the cap check,
+    /// <c>/state</c>, doctor and the run report all read. Pushed against the plan's own figure instead,
+    /// the phone told an owner who had just approved past a park "cap reached, the run parks for
+    /// approval" about a run that was spending happily under a $6.00 ceiling. Nothing zeroes the spend
+    /// beside it any more either, so the two numbers in this line both only ever go one way.</summary>
+    private decimal? CostCeiling() =>
+        Core.Budget.BudgetCeiling.EffectiveCostCap(_plan.Limits.MaxRunCostUsd, _state.BudgetGrantUsd);
 
     /// <summary>Only outcomes the owner can do something about are allowed to buzz.</summary>
     private static PushSeverity SessionSeverity(string outcome) =>
@@ -77,7 +86,7 @@ public sealed partial class TelegramService
                 $"{push.CheckpointsDone}/{push.CheckpointsTotal} checkpoints · {push.Sessions} session"
                 + (push.Sessions == 1 ? "" : "s")),
             ["skipped"] = clean ? "" : EscapeHtml($"skipped: {string.Join(", ", push.SkippedStages)}"),
-            ["cost"] = MoneyLine.ForRun(_state.TotalCostUsd, _plan.Limits.MaxRunCostUsd),
+            ["cost"] = MoneyLine.ForRun(_state.TotalCostUsd, CostCeiling()),
             ["report"] = ReportLink(),
         }).ConfigureAwait(false);
 
