@@ -46,14 +46,11 @@ public static class StateDedup
     }
 
     /// <summary>A read-only, pooling-free connection to a run database. Shared with
-    /// <see cref="StateRepair"/> so both surfaces read stores the same careful way.</summary>
+    /// <see cref="StateRepair"/> so both surfaces read stores the same careful way. KS3.4 round 5:
+    /// goes through <see cref="SqliteRunStore.AtRestConnectionString"/>, because a plain read-only
+    /// open recreates the WAL sidecars this type's own doc promises not to leave behind.</summary>
     internal static SqliteConnection OpenReadOnly(string dbPath)
-        => new(new SqliteConnectionStringBuilder
-        {
-            DataSource = dbPath,
-            Mode = SqliteOpenMode.ReadOnly,
-            Pooling = false,
-        }.ToString());
+        => new(SqliteRunStore.AtRestConnectionString(dbPath));
 
     /// <summary>Every run store this machine has, catalogue first and then the disk beneath it. The
     /// catalogue is an index and indexes go missing (K3.1 says so itself), so the directory sweep is

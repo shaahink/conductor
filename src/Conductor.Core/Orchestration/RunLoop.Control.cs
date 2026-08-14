@@ -108,47 +108,20 @@ public sealed partial class RunLoop
         {
             if (_ctx.Store is { } store)
             {
-                var interrupted = store.FindInterruptedSession(_ctx.State.RunId);
-                if (interrupted != null)
+                // KS3.4 round 5: the transitions live in CrashRecovery.ApplyOrphan — shared with
+                // `preflight`'s compose leg, which reads the same run.db read-only — so an orphaned
+                // SessionStarted drills as the Resume (or the NeedsHuman park) this loop enacts.
+                // This method keeps only the side effects: logging and saving.
+                var orphan = CrashRecovery.ApplyOrphan(_ctx.State, store);
+                if (orphan.ParkedOrphanNumber is { } unresumable)
                 {
-                    var rec = _ctx.State.History.FirstOrDefault(h => h.Number == interrupted.Number);
-                    if (rec != null)
-                    {
-                        if (rec.EndedUtc == null) rec.EndedUtc = DateTime.UtcNow;
-                        rec.Outcome = SessionOutcome.Interrupted;
-                        _verdicts.QueueResume(rec, "event log shows interrupted session — recovering");
-                    }
-                    else
-                    {
-                        if (string.IsNullOrEmpty(interrupted.AgentSessionId))
-                        {
-                            _ctx.Log($"recovered from event log: session #{interrupted.Number} has no AgentSessionId — marking needs-attention (cannot resume without a session id)");
-                            _ctx.State.Status = RunStatus.NeedsHuman;
-                            _ctx.State.SetAttention($"Orphaned session #{interrupted.Number} in run.db has no AgentSessionId — manual review needed.");
-                            _ctx.Save();
-                        }
-                        else
-                        {
-                            rec = new SessionRecord
-                            {
-                                Number = interrupted.Number,
-                                Stage = interrupted.StageId,
-                                Kind = SessionKind.Deliver,
-                                Attempt = 1,
-                                StartedUtc = DateTime.UtcNow,
-                                ClaudeSessionId = interrupted.AgentSessionId,
-                                Outcome = SessionOutcome.Interrupted,
-                            };
-                            _ctx.State.History.Add(rec);
-                            _verdicts.QueueResume(rec, "event log shows interrupted session — recovering from orphaned SessionStarted");
-                        }
-                    }
-                    if (_ctx.State.Status != RunStatus.NeedsHuman)
-                    {
-                        _ctx.Log($"recovered from event log: session #{interrupted.Number} was interrupted — will resume");
-                        _ctx.State.Status = RunStatus.Idle;
-                        _ctx.Save();
-                    }
+                    _ctx.Log($"recovered from event log: session #{unresumable} has no AgentSessionId — marking needs-attention (cannot resume without a session id)");
+                    _ctx.Save();
+                }
+                else if (orphan.Resumed is { } rec && _ctx.State.Status != RunStatus.NeedsHuman)
+                {
+                    _ctx.Log($"recovered from event log: session #{rec.Number} was interrupted — will resume");
+                    _ctx.Save();
                 }
 
                 var events = store.ReadAllEvents(_ctx.State.RunId);

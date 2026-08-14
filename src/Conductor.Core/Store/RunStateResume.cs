@@ -19,7 +19,9 @@ public static class RunStateResume
         if (!File.Exists(runDbPath)) return null;
         try
         {
-            var conn = new SqliteConnection($"Data Source={runDbPath};Mode=ReadOnly");
+            // KS3.4 round 5: at-rest semantics — a resume peek must not recreate WAL sidecars under
+            // a state dir (preflight promises "creates nothing"), nor hold a pooled handle open.
+            var conn = new SqliteConnection(SqliteRunStore.AtRestConnectionString(runDbPath));
             await using (conn.ConfigureAwait(false))
             {
                 await conn.OpenAsync(ct).ConfigureAwait(false);

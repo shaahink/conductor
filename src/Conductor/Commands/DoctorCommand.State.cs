@@ -65,11 +65,16 @@ public sealed partial class DoctorCommand
         if (!File.Exists(runDbPath)) return (0m, false);
         try
         {
-            using var store = new SqliteRunStore(runDbPath, NullLogger<SqliteRunStore>.Instance);
+            // KS3.4 round 5: read-only AT REST, never the writable constructor — that one creates
+            // the state dir, sets journal_mode=WAL and runs migrations, three writes (plus two WAL
+            // sidecar files) from a check that only wants to READ a cost, on the same check list
+            // `preflight` runs under a "creates nothing" promise. An old-schema file now answers
+            // with SqliteException instead of being silently migrated by a health check.
+            using var store = SqliteRunStore.OpenReadOnly(runDbPath);
             var report = StatusReportBuilder.Build(plan, store);
             return (report.TotalCostUsd, report.Kind != "norun");
         }
-        catch (Exception ex) when (ex is IOException or InvalidOperationException)
+        catch (Exception ex) when (ex is IOException or InvalidOperationException or Microsoft.Data.Sqlite.SqliteException)
         {
             return (0m, false);
         }

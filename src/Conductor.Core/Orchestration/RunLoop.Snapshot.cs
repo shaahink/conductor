@@ -27,6 +27,7 @@ public sealed partial class RunLoop
         {
             SessionKind.Resume => _ctx.Prompts.Resume(stage, sessionNumber, attempt, maxAttempts, _ctx.State.PendingResume!),
             SessionKind.Audit => _ctx.Prompts.Audit(stage, sessionNumber, _ctx.State.PendingAudit!, _ctx.State.CurrentStageStartHead ?? "HEAD~1"),
+            SessionKind.Verify => _ctx.Prompts.Verify(stage, sessionNumber, _ctx.State.PendingVerify!),
             SessionKind.Fix => _ctx.Prompts.Fix(stage, sessionNumber, attempt, maxAttempts, _ctx.State.PendingFix!),
             _ => isReview
                 ? _ctx.Prompts.Review(stage, sessionNumber, attempt, maxAttempts, reviewPath)

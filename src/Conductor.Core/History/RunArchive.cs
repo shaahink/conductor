@@ -16,15 +16,19 @@ namespace Conductor.Core.History;
 /// </summary>
 public sealed partial class RunArchive
 {
-    private readonly string _connectionString;
-
     private RunArchive(string dbPath)
     {
         DbPath = Path.GetFullPath(dbPath);
-        // Mode=ReadOnly is the guarantee. Cache=Private keeps this reader out of any shared cache a
-        // live engine in this process holds on the same file.
-        _connectionString = $"Data Source={DbPath};Mode=ReadOnly;Cache=Private";
     }
+
+    // Mode=ReadOnly is the guarantee. Cache=Private keeps this reader out of any shared cache a
+    // live engine in this process holds on the same file. KS3.4 round 5: built per open through
+    // SqliteRunStore.AtRestConnectionString — a plain read-only open recreates the WAL sidecars
+    // beside an archive it promised only to look at (doctor's token-budget check reads archives on
+    // preflight's "creates nothing" path), and the sidecar state can change while an archive object
+    // is held, so the choice is made at each read rather than once at construction.
+    private string ConnectionString =>
+        Store.SqliteRunStore.AtRestConnectionString(DbPath, Microsoft.Data.Sqlite.SqliteCacheMode.Private);
 
     /// <summary>The database this archive reads.</summary>
     public string DbPath { get; }
@@ -85,7 +89,7 @@ public sealed partial class RunArchive
     {
         ArgumentNullException.ThrowIfNull(parameters);
         var rows = new List<Dictionary<string, object?>>();
-        using var conn = new SqliteConnection(_connectionString);
+        using var conn = new SqliteConnection(ConnectionString);
         conn.Open();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = sql;

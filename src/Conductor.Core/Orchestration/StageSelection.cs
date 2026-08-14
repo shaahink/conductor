@@ -113,20 +113,30 @@ public static class StageSelection
     /// escalates (a model call when an advisor is configured, NeedsHuman when not) instead of
     /// composing. Both are modelled now. The branches live here, once, and <see cref="RunLoop"/>
     /// executes this function's answer rather than holding a private copy of it.</para>
-    /// <para>Round 4, the same lesson from the other side: sharing the FUNCTION is not sharing the
-    /// decision until the INPUTS are shared too. <paramref name="track"/> must be the work snapshot
-    /// the loop schedules on — <see cref="Planning.WorkSnapshot"/>, the graph's statuses, never the
-    /// declaration's, which an imported plan freezes at TODO for the life of the run — and
-    /// <paramref name="state"/> must be the state after <see cref="CrashRecovery.Apply"/>, because
-    /// the loop recovers a crash before its first decision. The loop reads both through
-    /// <c>RunContext.ReadWork</c> and <c>RecoverFromCrash</c>; <c>preflight</c> reads the same two
-    /// functions at rest (<see cref="Planning.WorkSnapshot.ReadAtRest"/> over the same
-    /// <c>run.db</c>, <see cref="CrashRecovery.Apply"/> over the peeked state).</para>
+    /// <para>Rounds 4 and 5, the same lesson from the other side: sharing the FUNCTION is not
+    /// sharing the decision until the INPUTS are shared too — and the loop MUTATES both inputs
+    /// before it reads them. <paramref name="track"/> must be the work snapshot the loop schedules
+    /// on AFTER its startup sync: <c>RunLoop.RunAsync</c> runs <see cref="Planning.WorkGraphSync"/>
+    /// before its first read, so the snapshot is the declared row set carrying the graph's statuses
+    /// (plus scaffolds, minus retirements) — never the declaration alone (frozen at TODO on an
+    /// imported plan, round 4) and never the graph at rest (blind to every row declared since the
+    /// last session, round 5). <paramref name="state"/> must be the state after
+    /// <see cref="CrashRecovery.Apply"/> AND, when that recovers nothing, after
+    /// <see cref="CrashRecovery.ApplyOrphan"/> — the loop's store-backed orphan recovery queues a
+    /// resume (or parks) off the event log before its first decision. The loop reads all of this
+    /// through <c>RunContext.ReadWork</c> and <c>RecoverFromCrash</c>; <c>preflight</c> reads the
+    /// same functions at rest (<see cref="Planning.WorkSnapshot.ReadAtRest"/> and
+    /// <see cref="CrashRecovery.ApplyOrphan"/> over the same <c>run.db</c>, read-only, on the
+    /// peeked state).</para>
     /// <para>Still deliberately unmodelled, because their outcome is NOT a pure function of the
     /// saved state: the pre-hook (a subprocess whose exit code decides), approval mode (the designed
     /// launch flow — the operator is present, and `conductor approve` is the next keystroke, not a
     /// failure), the DNS preflight (measures the network at spawn time), and the in-process
-    /// backoffs (not persisted, so they cannot exist at launch).</para></summary>
+    /// backoffs (not persisted, so they cannot exist at launch). One more, stated rather than
+    /// hidden: with NO pending state at all, the session runner may still start a stage mid-workflow
+    /// (<c>IWorkflowResolver.ResolveStartKind</c> over <c>state.workflowStepIndices</c> and the QA
+    /// dials) — this decision names Deliver there, which is what the recorded index resolves to in
+    /// every shipped workflow's step 0.</para></summary>
     /// <param name="nowUtc">The clock the <see cref="RunState.BlockedUntilUtc"/> comparison uses.
     /// Null means now; a test states an instant instead.</param>
     public static LaunchDecision NextAction(PlanConfig plan, RunState state, TrackerSnapshot track, DateTime? nowUtc = null)
@@ -198,8 +208,13 @@ public static class StageSelection
         if (plan.Limits.MaxSessions is { } liveCap && liveCap > 0 && state.SessionCounter >= liveCap)
             return new LaunchDecision(LaunchStep.SessionCap, stage, stage.Id, SessionKind.Deliver);
 
+        // The loop's own ladder (SessionRunner.ResolveSessionKind / PendingToKind): resume, audit,
+        // VERIFY, fix, delivery. Verify was missing here — measured live at round 5: a run stopped
+        // with `--once` right after a delivery owes that delivery's verification, and both the drill
+        // and the dry run named a Deliver for a launch that spawned `Verify D2`.
         var kind = state.PendingResume != null ? SessionKind.Resume
             : state.PendingAudit != null ? SessionKind.Audit
+            : state.PendingVerify != null ? SessionKind.Verify
             : fix != null ? SessionKind.Fix : SessionKind.Deliver;
 
         // The attempt the composed session announces. The loop resets AttemptsThisStage when it
@@ -248,7 +263,7 @@ public enum LaunchStep
 /// it acts on one (null for <see cref="LaunchStep.PhaseGate"/> when the queued gate names a stage the
 /// plan no longer declares); <paramref name="StageId"/> is always the acted-on stage's id when there
 /// is one. <paramref name="Kind"/> is meaningful only for <see cref="LaunchStep.Compose"/> — the
-/// dry-run precedence: resume, then audit, then fix, then delivery — and so is
+/// loop's precedence: resume, then audit, then verify, then fix, then delivery — and so is
 /// <paramref name="AttemptNumber"/>: the attempt the composed session announces, already accounting
 /// for the counter reset the loop performs on stage ENTRY, so every renderer of this decision (the
 /// live session, the dry run, preflight's compose leg) prints the same <c>attempt n/m</c>.

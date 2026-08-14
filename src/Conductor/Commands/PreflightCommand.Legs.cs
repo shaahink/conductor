@@ -13,10 +13,12 @@ namespace Conductor.Commands;
 /// already asking for a human.
 /// <para>Every one of them is read-only, and that is a promise, not an aspiration: preflight creates
 /// and moves nothing under <c>plan.StateDir</c>, spawns no agent, and runs no gate. An existing
-/// <c>run.db</c> is opened READ-ONLY for the work graph (<see cref="WorkSnapshot.ReadAtRest"/> —
-/// no migration, no WAL pragma, no write lock); a plan with no store yet never has one created. The
-/// one thing preflight touches off the machine is the release feed, through the same six-hour
-/// user-level cache <c>doctor</c> uses.</para>
+/// <c>run.db</c> is opened READ-ONLY at rest for the work graph and the orphan peek
+/// (<see cref="WorkSnapshot.ReadAtRest"/>, <see cref="CrashRecovery.ApplyOrphan"/> — no migration,
+/// no WAL pragma, no write lock, and no <c>-shm</c>/<c>-wal</c> sidecar either: a cleanly-closed
+/// database is opened <c>immutable</c>, see <c>SqliteRunStore.OpenReadOnly</c>); a plan with no
+/// store yet never has one created. The one thing preflight touches off the machine is the release
+/// feed, through the same six-hour user-level cache <c>doctor</c> uses.</para>
 /// </summary>
 public sealed partial class PreflightCommand
 {
@@ -78,18 +80,23 @@ public sealed partial class PreflightCommand
     /// which is not always a session. Carries doctor's three prompt-side lints (<c>prompt</c>,
     /// <c>templates</c>, <c>argv</c>) because they answer the same question one stage earlier — will
     /// this compose at all, and will it fit in an argv.
-    /// <para>Nothing is re-decided here, and — round 4's lesson — nothing is re-READ here either.
-    /// The whole branch is <see cref="StageSelection.NextAction"/>, the run loop's OWN pre-compose
-    /// sequence, called, not copied; and its two inputs are the loop's two inputs, read through the
-    /// loop's own functions. The saved state is <see cref="JourneyCommand.PeekResumeAsync"/>
-    /// (state.json, then the run.db row, read-only) with <see cref="CrashRecovery.Apply"/> on top,
-    /// because the loop recovers a crash before its first decision. The work is
-    /// <see cref="WorkSnapshot.ReadAtRest"/> — the graph's statuses from the same <c>run.db</c> the
-    /// run would open, read-only — because the loop schedules on the GRAPH, and an imported plan's
-    /// declared statuses are frozen at TODO for the life of the run, so a leg fed the declared
-    /// tracker promised a numbered session for a launch that confirms completion (round 4's live
-    /// reproduction). Rounds 1–3 each removed a private copy of the DECISION; round 4 removed the
-    /// private copy of its INPUT.</para></summary>
+    /// <para>Nothing is re-decided here, and — rounds 4 and 5's lesson — nothing is re-READ here
+    /// either. The whole branch is <see cref="StageSelection.NextAction"/>, the run loop's OWN
+    /// pre-compose sequence, called, not copied; and its two inputs are the loop's two inputs AS THE
+    /// LOOP PREPARES THEM, because the loop mutates both before it reads them. The saved state is
+    /// <see cref="JourneyCommand.PeekResumeAsync"/> (state.json, then the run.db row, read-only)
+    /// with <see cref="CrashRecovery.Apply"/> on top AND — when that recovers nothing —
+    /// <see cref="CrashRecovery.ApplyOrphan"/> over the same run.db, read-only, because the loop's
+    /// startup recovery has a store-backed second half: an orphaned <c>SessionStarted</c> in the
+    /// event log queues a Resume (or parks the run when the row carries no agent session id) before
+    /// any session composes. The work is <see cref="WorkSnapshot.ReadAtRest"/>, which models the
+    /// OTHER startup mutation: <c>RunLoop.RunAsync</c> syncs the declared plan into the work graph
+    /// before its first read, so the drill projects the same sync
+    /// (<see cref="Conductor.Core.Planning.WorkGraphSync.ProjectView"/>) over the graph at rest —
+    /// rows declared since the last session are schedulable, retired rows are not, exactly as the
+    /// launch will find them. Rounds 1–3 each removed a private copy of the DECISION; round 4
+    /// removed a private copy of an INPUT; round 5 removed the private copy of the loop's own
+    /// PRE-READ MUTATIONS.</para></summary>
     internal static async Task<Leg> ComposeLegAsync(PlanConfig plan, IReadOnlyList<DoctorCommand.Check> checks)
     {
         ArgumentNullException.ThrowIfNull(plan);
@@ -103,9 +110,21 @@ public sealed partial class PreflightCommand
 
         var state = await JourneyCommand.PeekResumeAsync(plan).ConfigureAwait(false);
         // The loop's startup recovery, applied to the peeked copy (never written back): a crash's
-        // persisted Running/VerifyingGates/Backoff becomes the queued Resume the loop will compose.
+        // persisted Running/VerifyingGates/Backoff becomes the queued Resume the loop will compose —
+        // and when state.json remembers nothing, the event log gets the same question the loop asks
+        // it (RunLoop.RecoverFromCrash's store-backed half), through the same shared transitions.
         var recovery = CrashRecovery.Apply(state);
-        var track = WorkSnapshot.ReadAtRest(plan, state.RunId, () => SafeReadDeclared(plan));
+        var orphan = recovery.Interrupted is null && state.PendingResume is null
+            ? PeekOrphan(plan, state)
+            : CrashRecovery.OrphanOutcome.Nothing;
+        if (orphan.ParkedOrphanNumber is { } unresumable)
+            return FromChecks(ComposeLegName, mine,
+                $"run.db's event log holds an orphaned session #{unresumable} with no agent session id — the next " +
+                "`conductor run` parks at NeedsHuman before spawning anything",
+                ["the loop cannot resume a session the log never attributed — review the run, then `conductor resume` " +
+                 "into it once the orphan is resolved"],
+                "fail");
+        var track = WorkSnapshot.ReadAtRest(plan, state.RunId, () => ReadDeclared(plan));
         var next = StageSelection.NextAction(plan, state, track);
         var leg = ComposeLegFor(plan, state, next, mine);
 
@@ -115,6 +134,13 @@ public sealed partial class PreflightCommand
                 Detail = [.. leg.Detail,
                     $"session #{cut.Number} was killed mid-flight — `conductor run` recovers it at startup " +
                     "and queues a resume of its agent session"],
+            };
+        else if (orphan.Resumed is { } fromLog)
+            leg = leg with
+            {
+                Detail = [.. leg.Detail,
+                    $"run.db's event log shows session #{fromLog.Number} interrupted — `conductor run` recovers it " +
+                    "at startup and queues a resume of its agent session"],
             };
         else if (recovery.ContinuedAborted)
             leg = leg with
@@ -274,6 +300,7 @@ public sealed partial class PreflightCommand
         {
             SessionKind.Resume => prompts.Resume(stage, session, attempt, maxAttempts, state.PendingResume!),
             SessionKind.Audit => prompts.Audit(stage, session, state.PendingAudit!, state.CurrentStageStartHead ?? "HEAD~1"),
+            SessionKind.Verify => prompts.Verify(stage, session, state.PendingVerify!),
             SessionKind.Fix => prompts.Fix(stage, session, attempt, maxAttempts, state.PendingFix!),
             _ => isReview
                 ? prompts.Review(stage, session, attempt, maxAttempts,
@@ -326,15 +353,31 @@ public sealed partial class PreflightCommand
            (state.BlockedReason is { Length: > 0 } why ? $" ({why})" : "");
 
     /// <summary>The DECLARED snapshot — the row set and the handoff block — handed to
-    /// <see cref="WorkSnapshot.ReadAtRest"/> as its fallback, exactly the role the loop's own
-    /// <c>ReadTrackerSafe</c> plays for <c>RunContext.ReadWork</c>. Never the scheduling input on its
-    /// own: the statuses that decide are the graph's (round 4).</summary>
-    private static TrackerSnapshot SafeReadDeclared(PlanConfig plan)
+    /// <see cref="WorkSnapshot.ReadAtRest"/> RAW, allowed to throw: the at-rest reader mirrors the
+    /// live sync, which skips on an unreadable declaration, so it must see the failure itself
+    /// rather than an empty snapshot it cannot tell from a deliberately empty one. Never the
+    /// scheduling input on its own: the statuses that decide are the graph's (round 4), and the row
+    /// set that decides is the declaration's as the startup sync projects it (round 5).</summary>
+    private static TrackerSnapshot ReadDeclared(PlanConfig plan)
+        => ProgressProviderFactory.Create(plan).Read(plan, CancellationToken.None);
+
+    /// <summary>The store-backed half of startup recovery, asked of the run.db AT REST — the same
+    /// question <c>RunLoop.RecoverFromCrash</c> asks a live store, through the same
+    /// <see cref="CrashRecovery.ApplyOrphan"/> transitions, applied to the peeked copy and never
+    /// written back. A missing or unanswerable store recovers nothing, exactly as a run with no
+    /// history has nothing to recover.</summary>
+    private static CrashRecovery.OrphanOutcome PeekOrphan(PlanConfig plan, RunState state)
     {
-        try { return ProgressProviderFactory.Create(plan).Read(plan, CancellationToken.None); }
-        catch (Exception ex) when (ex is IOException or InvalidOperationException or UnauthorizedAccessException)
+        if (state.RunId.Length == 0 || !File.Exists(plan.RunDbPath)) return CrashRecovery.OrphanOutcome.Nothing;
+        try
         {
-            return new TrackerSnapshot();
+            using var store = Conductor.Core.Store.SqliteRunStore.OpenReadOnly(plan.RunDbPath);
+            return CrashRecovery.ApplyOrphan(state, store);
+        }
+        catch (Exception ex) when (ex is Microsoft.Data.Sqlite.SqliteException or InvalidOperationException
+                                       or IOException or UnauthorizedAccessException)
+        {
+            return CrashRecovery.OrphanOutcome.Nothing;
         }
     }
 

@@ -1,3 +1,4 @@
+using Conductor.Core.Events;
 using Conductor.Core.Store;
 using Conductor.Models;
 using Microsoft.Data.Sqlite;
@@ -38,25 +39,7 @@ public static class WorkSnapshot
         try
         {
             var rows = store.GetCheckpoints(runId);
-            if (rows.Count == 0) return declared;
-            return new TrackerSnapshot
-            {
-                Checkpoints =
-                [
-                    .. rows.Select(r => new CheckpointRow(r.Id, r.Title, r.Status, r.Commit, r.Evidence)
-                    {
-                        StageId = r.StageId,
-                        // The graph's labels are canonical — no conventions round-trip, which is why
-                        // these flags are set explicitly rather than re-derived from the status text.
-                        IsDone = r.Status.StartsWith("DONE", StringComparison.OrdinalIgnoreCase),
-                        IsBlocked = r.Status.StartsWith("BLOCKED", StringComparison.OrdinalIgnoreCase),
-                        IsInProgress = r.Status.StartsWith("IN", StringComparison.OrdinalIgnoreCase),
-                        IsSkipped = r.Status.StartsWith("SKIPPED", StringComparison.OrdinalIgnoreCase),
-                    }),
-                ],
-                HandoffBlock = declared.HandoffBlock,
-                RawText = declared.RawText,
-            };
+            return rows.Count == 0 ? declared : Overlay(rows, declared);
         }
         catch (Exception ex) when (ex is InvalidOperationException or IOException)
         {
@@ -64,32 +47,80 @@ public static class WorkSnapshot
         }
     }
 
-    /// <summary>KS3.4 round 4 — the same projection for a surface that holds NO open store:
-    /// <c>preflight</c>'s compose leg and the dry-run loop (whose host deliberately registers no
-    /// store, because a dry run must not write). Both used to read the declared snapshot bare, which
-    /// is exactly the input divergence this type exists to close: the live loop schedules on the
-    /// graph, and an imported plan's declared statuses are frozen at <c>TODO</c> for the life of the
-    /// run, so the declared read promised session N for a launch that confirms completion.
-    /// <para>Opens the SAME <c>run.db</c> the run would open (<see cref="PlanConfig.RunDbPath"/> —
-    /// the path the host's store registration resolves), read-only and pooling-free
-    /// (<see cref="SqliteRunStore.OpenReadOnly"/>), then answers through <see cref="Read"/> — one
-    /// reader, one store, one rule. Falls back to the declared snapshot whole when there is no run
-    /// yet (empty <paramref name="runId"/>, no db file) or the file cannot answer (locked mid-crash,
-    /// an older schema) — the same degradations <see cref="Read"/> already grants an open store.</para></summary>
+    /// <summary>KS3.4 round 5 — what the loop will be scheduling on, for a surface that holds NO open
+    /// store: <c>preflight</c>'s compose leg and the dry-run loop (whose host deliberately registers
+    /// no store, because a dry run must not write). Neither the declaration nor the graph at rest is
+    /// that answer, because <c>RunLoop.RunAsync</c> runs <see cref="WorkGraphSync.Sync"/> BEFORE its
+    /// first <c>ReadWork()</c> — the loop mutates its scheduling input and only then reads it. Rounds
+    /// 1–4 of this checkpoint each removed a private copy of the decision or of an input; round 5
+    /// removes the last one by modelling the mutation itself: the graph is folded from the same
+    /// <c>run.db</c> the run would open (read-only, creating nothing —
+    /// <see cref="SqliteRunStore.OpenReadOnly"/>), the declaration is read through the caller's own
+    /// provider, and <see cref="WorkGraphSync.ProjectView"/> answers with the row set the synced
+    /// graph will serve: declared rows carrying the graph's status where the graph knows the id,
+    /// their declared status where it does not, retired rows out of view, zero-item-stage scaffolds
+    /// in it.</summary>
+    /// <param name="readDeclared">The DECLARED read, allowed to throw — an unreadable declaration is
+    /// the one input on which the live sync deliberately does nothing, so this reader degrades the
+    /// same way: to the graph as it lies (or, with nothing in it, to an empty snapshot, which is the
+    /// loop's EmptyTracker park).</param>
     public static TrackerSnapshot ReadAtRest(PlanConfig plan, string runId, Func<TrackerSnapshot> readDeclared)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(readDeclared);
-        if (string.IsNullOrEmpty(runId) || !File.Exists(plan.RunDbPath)) return readDeclared();
-        try
+
+        // The graph as the run would find it. No run yet (empty runId, no db file) folds nothing —
+        // the projection over an empty graph IS the first sync's outcome; an unanswerable file
+        // (locked mid-crash, an older schema) degrades the same way, and is stated as such.
+        var graph = new TaskGraph();
+        if (!string.IsNullOrEmpty(runId) && File.Exists(plan.RunDbPath))
         {
-            using var store = SqliteRunStore.OpenReadOnly(plan.RunDbPath);
-            return Read(store, runId, readDeclared);
+            try
+            {
+                using var store = SqliteRunStore.OpenReadOnly(plan.RunDbPath);
+                graph.Fold(store.ReadAllEvents(runId));
+            }
+            catch (Exception ex) when (ex is SqliteException or InvalidOperationException
+                                           or IOException or UnauthorizedAccessException)
+            {
+                graph = new TaskGraph();
+            }
         }
-        catch (Exception ex) when (ex is SqliteException or InvalidOperationException
-                                       or IOException or UnauthorizedAccessException)
+
+        TrackerSnapshot declared;
+        try { declared = readDeclared(); }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException or UnauthorizedAccessException)
         {
-            return readDeclared();
+            // The sync's own degradation, mirrored: WorkGraphSync.Sync SKIPS on an unreadable
+            // declaration (no adds, no retirements, no scaffolds) and the loop schedules on the
+            // graph as it stands.
+            declared = new TrackerSnapshot();
+            var atRest = WorkGraphSync.GraphRows(graph);
+            return atRest.Count == 0 ? declared : Overlay(atRest, declared);
         }
+
+        var rows = WorkGraphSync.ProjectView(plan, declared, graph);
+        return rows.Count == 0 ? declared : Overlay(rows, declared);
     }
+
+    /// <summary>Store-view rows rendered as the snapshot the scheduler eats. The graph's labels are
+    /// canonical — no conventions round-trip, which is why the flags are set explicitly rather than
+    /// re-derived from the status text. The handoff block is view-only prose the graph does not
+    /// model, so it always rides in from the declared read.</summary>
+    private static TrackerSnapshot Overlay(IReadOnlyList<Store.CheckpointRow> rows, TrackerSnapshot declared) => new()
+    {
+        Checkpoints =
+        [
+            .. rows.Select(r => new CheckpointRow(r.Id, r.Title, r.Status, r.Commit, r.Evidence)
+            {
+                StageId = r.StageId,
+                IsDone = r.Status.StartsWith("DONE", StringComparison.OrdinalIgnoreCase),
+                IsBlocked = r.Status.StartsWith("BLOCKED", StringComparison.OrdinalIgnoreCase),
+                IsInProgress = r.Status.StartsWith("IN", StringComparison.OrdinalIgnoreCase),
+                IsSkipped = r.Status.StartsWith("SKIPPED", StringComparison.OrdinalIgnoreCase),
+            }),
+        ],
+        HandoffBlock = declared.HandoffBlock,
+        RawText = declared.RawText,
+    };
 }

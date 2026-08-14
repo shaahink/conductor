@@ -50,15 +50,14 @@ public sealed partial class SqliteRunStore : IRunStore, IEventSink
     /// write lock, which is exactly the promise those surfaces make; a live engine's WAL readers are
     /// undisturbed. The connection answers with whatever schema the file already has: a query against
     /// a table this version knows and the file predates throws <see cref="SqliteException"/>, which
-    /// callers treat as "the graph cannot be read" and fall back to the declared snapshot.</summary>
+    /// callers treat as "the graph cannot be read" and fall back to the declared snapshot.
+    /// <para>Round 5: "creates nothing" is enforced by <see cref="AtRestConnectionString"/>, because
+    /// <c>Mode=ReadOnly</c> alone does NOT keep it — opening a WAL database recreates its
+    /// <c>-shm</c>/<c>-wal</c> sidecars even read-only, which is two new files under a state
+    /// directory the caller promised to leave alone.</para></summary>
     public static SqliteRunStore OpenReadOnly(string path, ILogger<SqliteRunStore>? logger = null)
     {
-        var conn = new SqliteConnection(new SqliteConnectionStringBuilder
-        {
-            DataSource = path,
-            Mode = SqliteOpenMode.ReadOnly,
-            Pooling = false,
-        }.ToString());
+        var conn = new SqliteConnection(AtRestConnectionString(path));
         try
         {
             conn.Open();
@@ -70,6 +69,38 @@ public sealed partial class SqliteRunStore : IRunStore, IEventSink
         }
         return new SqliteRunStore(conn,
             logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<SqliteRunStore>.Instance);
+    }
+
+    /// <summary>KS3.4 round 5 — the connection string every AT-REST reader in this assembly opens
+    /// with. A cleanly-closed WAL database has no <c>-shm</c>/<c>-wal</c> beside it, and SQLite
+    /// recreates both on ANY open — read-only included — so a "read-only" drill left two new files
+    /// under a state directory it promised not to touch. When the sidecars are absent the file is
+    /// opened as a <c>file:</c> URI with <c>immutable=1</c>: no shared-memory index, no WAL, no
+    /// locks, nothing created. When BOTH sidecars are already there (a live engine holds the store,
+    /// or a crash left them), the plain read-only open is used instead — it creates nothing new and,
+    /// unlike immutable, it sees the live WAL's committed data. Pooling is off either way: a pooled
+    /// handle outlives its <c>using</c> and keeps sidecars pinned.</summary>
+    /// <param name="cache">Optional cache mode; <see cref="RunArchive"/> passes Private.</param>
+    internal static string AtRestConnectionString(string dbPath, SqliteCacheMode cache = SqliteCacheMode.Default)
+    {
+        var sidecars = File.Exists(dbPath + "-wal") && File.Exists(dbPath + "-shm");
+        return new SqliteConnectionStringBuilder
+        {
+            DataSource = sidecars ? dbPath : ImmutableUri(dbPath),
+            Mode = SqliteOpenMode.ReadOnly,
+            Pooling = false,
+            Cache = cache,
+        }.ToString();
+    }
+
+    /// <summary>The db path as a percent-encoded <c>file:</c> URI carrying <c>immutable=1</c>.
+    /// Every segment is escaped (SQLite percent-decodes the URI path), so spaces, <c>#</c> and
+    /// <c>?</c> in a state directory cannot tear the query string.</summary>
+    private static string ImmutableUri(string dbPath)
+    {
+        var full = Path.GetFullPath(dbPath).Replace('\\', '/');
+        var escaped = string.Join("/", full.Split('/').Select(Uri.EscapeDataString));
+        return $"file:///{escaped.TrimStart('/')}?immutable=1";
     }
 
     /// <summary>The read-only path in: an already-open connection, taken as-is. Private so the only

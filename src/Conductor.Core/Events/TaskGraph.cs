@@ -156,7 +156,10 @@ public sealed class TaskGraph
         return null;
     }
 
-    private static bool IsValidTransition(string from, string to) => (from, to) switch
+    /// <summary>Internal since KS3.4 round 5: <see cref="Planning.WorkGraphSync"/>'s write-free
+    /// projection must refuse exactly the moves this fold refuses (an archived card cannot revive
+    /// straight to skipped), and a second copy of the table is how the two would drift.</summary>
+    internal static bool IsValidTransition(string from, string to) => (from, to) switch
     {
         // W1.1: same → same is a legal metadata refresh (a repeated done-claim updates its
         // commit/evidence; seed re-asserts are no-ops) — never a state change.

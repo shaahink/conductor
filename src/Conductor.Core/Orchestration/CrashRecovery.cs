@@ -1,3 +1,4 @@
+using Conductor.Core.Store;
 using Conductor.Models;
 
 namespace Conductor.Core.Orchestration;
@@ -22,6 +23,15 @@ public static class CrashRecovery
     /// the resume prompt, so both surfaces must spell it identically or their measured prompts
     /// differ by exactly these words.</summary>
     public const string CrashReason = "conductor crashed or was killed mid-session";
+
+    /// <summary>The reason a resume queued off the event log carries — the run.db knew about a
+    /// session that state.json's history had already recorded. One constant, rendered into the
+    /// resume prompt by both the loop and the drill.</summary>
+    public const string OrphanReason = "event log shows interrupted session — recovering";
+
+    /// <summary>As <see cref="OrphanReason"/>, for the orphan state.json never heard of at all —
+    /// the resume is rebuilt from the store's own <c>SessionStarted</c> row.</summary>
+    public const string OrphanFromLogReason = "event log shows interrupted session — recovering from orphaned SessionStarted";
 
     /// <summary>What <see cref="Apply"/> did, so a caller with side effects (the loop logs and
     /// saves; the drill annotates its leg) can narrate without re-deriving the decision.</summary>
@@ -87,5 +97,67 @@ public static class CrashRecovery
         }
 
         return new Outcome(continuedAborted, lifted, interrupted);
+    }
+
+    /// <summary>What <see cref="ApplyOrphan"/> did. <paramref name="Resumed"/> is the session record
+    /// a resume was queued for (from the state's history, or rebuilt from the store's own row);
+    /// <paramref name="ParkedOrphanNumber"/> is the session number whose orphaned start row carries
+    /// no agent session id — unresumable, so the run parks at NeedsHuman before spawning.</summary>
+    public sealed record OrphanOutcome(SessionRecord? Resumed, int? ParkedOrphanNumber)
+    {
+        public static readonly OrphanOutcome Nothing = new(null, null);
+    }
+
+    /// <summary>The SECOND half of startup recovery — the one <see cref="Apply"/> cannot see because
+    /// its evidence lives in the store, not in <c>state.json</c>: a <c>SessionStarted</c> row in the
+    /// event log with no matching <c>SessionFinished</c>. <see cref="RunLoop"/> has always asked
+    /// this question when the state-only half recovered nothing, and either queued a resume off the
+    /// orphan row or parked the run at NeedsHuman when the row carries no agent session id. KS3.4
+    /// round 5 moved the transitions here so <c>preflight</c>'s compose leg — which already opens
+    /// the same <c>run.db</c> read-only — applies them to its peeked copy instead of naming a
+    /// Deliver session for a launch that queues a Resume or parks; the loop keeps only the side
+    /// effects (logging, saving, its decomposed-checkpoint replay).
+    /// <para>Callers guard as the loop always has: only when <see cref="Apply"/> found no
+    /// interrupted session and no resume is already pending. The store is only ever read.</para></summary>
+    public static OrphanOutcome ApplyOrphan(RunState state, IRunStore store)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(store);
+
+        var interrupted = store.FindInterruptedSession(state.RunId);
+        if (interrupted == null) return OrphanOutcome.Nothing;
+
+        var rec = state.History.FirstOrDefault(h => h.Number == interrupted.Number);
+        if (rec != null)
+        {
+            if (rec.EndedUtc == null) rec.EndedUtc = DateTime.UtcNow;
+            rec.Outcome = SessionOutcome.Interrupted;
+            state.PendingResume = ResumeFor(rec, OrphanReason);
+            // The loop has never lifted a standing NeedsHuman here — the park outranks the resume.
+            if (state.Status != RunStatus.NeedsHuman) state.Status = RunStatus.Idle;
+            return new OrphanOutcome(rec, null);
+        }
+
+        if (string.IsNullOrEmpty(interrupted.AgentSessionId))
+        {
+            state.Status = RunStatus.NeedsHuman;
+            state.SetAttention($"Orphaned session #{interrupted.Number} in run.db has no AgentSessionId — manual review needed.");
+            return new OrphanOutcome(null, interrupted.Number);
+        }
+
+        rec = new SessionRecord
+        {
+            Number = interrupted.Number,
+            Stage = interrupted.StageId,
+            Kind = SessionKind.Deliver,
+            Attempt = 1,
+            StartedUtc = DateTime.UtcNow,
+            ClaudeSessionId = interrupted.AgentSessionId,
+            Outcome = SessionOutcome.Interrupted,
+        };
+        state.History.Add(rec);
+        state.PendingResume = ResumeFor(rec, OrphanFromLogReason);
+        if (state.Status != RunStatus.NeedsHuman) state.Status = RunStatus.Idle;
+        return new OrphanOutcome(rec, null);
     }
 }
