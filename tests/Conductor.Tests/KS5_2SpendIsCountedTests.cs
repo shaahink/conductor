@@ -58,6 +58,16 @@ public sealed class KS5_2SpendIsCountedTests : IDisposable
         {"type":"result","subtype":"success","is_error":false,"result":"the analysis","total_cost_usd":0.0731,"num_turns":2,"usage":{"input_tokens":1200,"output_tokens":300,"cache_read_input_tokens":8000}}
         """;
 
+    /// <summary>The same wire, minus the money: a successful turn whose result envelope carries no
+    /// <c>total_cost_usd</c>. A backend that reports nothing is not a backend that charged nothing, and
+    /// the engine must record no row for it — which also makes it the fixture for a run whose only
+    /// billed spend is somebody other than the delivery agent's.</summary>
+    private const string UnbilledStream = """
+        {"type":"system","subtype":"init"}
+        {"type":"assistant","message":{"id":"msg_02","usage":{"input_tokens":40,"output_tokens":12},"content":[{"type":"text","text":"delivered"}]}}
+        {"type":"result","subtype":"success","is_error":false,"result":"delivered","num_turns":1,"usage":{"input_tokens":40,"output_tokens":12}}
+        """;
+
     [Fact]
     public void BilledSpend_ReadsWhatTheProviderReported()
     {
@@ -313,88 +323,321 @@ public sealed class KS5_2SpendIsCountedTests : IDisposable
 
     // ------------------------------------------------------------------ a real run, a real lane
 
+    // ------------------------------------------------------------------ spend from another writer
+
+    /// <summary>The query the cap now reads a second writer's rows through. Billed and not the agent's:
+    /// the gate row is an estimate priced from <c>limits.overheadCostPerSecond</c>, and the agent's own
+    /// row is already in <c>PerRunCostUsd</c> — counting either here would double the total the run
+    /// parks on.</summary>
+    [Fact]
+    public void SideSpendIsEveryBilledRowThatIsNotTheAgents()
+    {
+        var db = Path.Combine(_tmp, "side", "run.db");
+        using (var store = new SqliteRunStore(db, NullLogger<SqliteRunStore>.Instance))
+        {
+            store.InitializeRun("r1", "SidePlan", _tmp, "main", EngineStamp.Parse("0.4.0+ks52"));
+            store.RecordCost("r1", 1, SpendCategory.Agent, 10, 5, 0, 0, 1.00m, 100);
+            store.RecordCost("r1", 1, SpendCategory.Gate, 0, 0, 0, 0, 0.50m, 0);
+            store.RecordCost("r1", 1, SpendCategory.Lane, 10, 5, 0, 0, 0.25m, 100);
+            store.RecordCost("r1", 1, SpendCategory.Supervisor, 10, 5, 0, 0, 0.10m, 100);
+            store.RecordCost("r1", 0, SpendCategory.AuthProbe, 1, 1, 0, 0, 0.05m, 100);
+            store.RecordCost("r2", 1, SpendCategory.Lane, 10, 5, 0, 0, 9.99m, 100);
+
+            Assert.Equal(0.40m, store.SumSideSpendUsd("r1"));
+            Assert.Equal(0m, store.SumSideSpendUsd("nobody"));
+        }
+        SqliteConnection.ClearAllPools();
+    }
+
+    /// <summary>The supervisor writes from a DIFFERENT process and the control plane from an HTTP
+    /// thread, so neither may touch the engine's in-memory counters. Both used to stop at the row and
+    /// say the cap would see it "the next time the run is priced from its database" — and nothing ever
+    /// priced a run from its database, so those dollars could not reach a ceiling at all. This is the
+    /// arithmetic that made the sentence true: the table minus what the engine has already counted.
+    /// </summary>
+    [Fact]
+    public void ARowWrittenOutsideTheLoopIsTheDifferenceTheEngineHasYetToCount()
+    {
+        var db = Path.Combine(_tmp, "external", "run.db");
+        using (var store = new SqliteRunStore(db, NullLogger<SqliteRunStore>.Instance))
+        {
+            store.InitializeRun("r1", "ExternalPlan", _tmp, "main", EngineStamp.Parse("0.4.0+ks52"));
+
+            // The engine's own ledger: row AND accrual, on the loop thread.
+            var engineAccrued = 0m;
+            var engine = new RunSpendLedger(store, "r1", r => engineAccrued += r.CostUsd);
+            engine.Record(new SpendReceipt(SpendCategory.Lane, 0.25m, 10, 20, 0, 30, 900), 1, "analysis lane 'x'");
+
+            // The `watch` supervisor's shape: no accrue callback at all — it cannot move counters that
+            // live in another process's memory.
+            new RunSpendLedger(store, "r1")
+                .Record(new SpendReceipt(SpendCategory.Supervisor, 0.10m, 5, 5, 0, 0, 400), 1, "supervisor hook");
+
+            Assert.Equal(0.25m, engineAccrued);
+            Assert.Equal(0.35m, store.SumSideSpendUsd("r1"));
+            // What the boundary absorbs: the supervisor's dime, exactly once.
+            Assert.Equal(0.10m, store.SumSideSpendUsd("r1") - engineAccrued);
+            Assert.Equal(0m, store.SumSideSpendUsd("r1") - (engineAccrued + 0.10m));
+        }
+        SqliteConnection.ClearAllPools();
+    }
+
+    // ------------------------------------------------------------------ the auth probe
+
+    /// <summary>The one-token credential ping runs on EVERY run start and was the only model spawn that
+    /// contributed to no total at all. It is also the riskiest arm of this checkpoint's diff — it is the
+    /// path that first billed before a run had a session row, which is what crashed
+    /// <c>BudgetAnalyzer.Measure</c> — so it is proved by running it, not by describing it.
+    /// <para><see cref="AuthSmokeTest.CanProbe"/> only fires for a recognised provider CLI, which is why
+    /// the fake here is NAMED <c>claude-probe.cmd</c> rather than invoked through <c>cmd.exe</c>: with
+    /// the shell in front, the probe skips and this test would assert nothing.</para></summary>
+    [Fact]
+    public async Task AuthProbe_BillsItsPingUnderItsOwnCategoryAndKeysItToSessionZero()
+    {
+        var script = WriteAgentScript("claude-probe.cmd", ClaudeStream);
+        var plan = new PlanConfig
+        {
+            Name = "ProbeSpend",
+            Repo = _tmp,
+            Agent = new AgentConfig { Command = script, Args = { "{prompt}" }, Provider = "claude" },
+        };
+        Assert.True(AuthSmokeTest.CanProbe(plan.Agent), "the fixture must be a probe-able provider CLI");
+
+        var calls = 0;
+        SpendReceipt? seen = null;
+        var result = await AuthSmokeTest.RunAsync(plan, TimeSpan.FromSeconds(60), CancellationToken.None,
+            onSpend: r => { calls++; seen = r; });
+
+        Assert.True(result.Passed, result.Message);
+        Assert.Equal(1, calls);
+        Assert.NotNull(seen);
+        Assert.Equal(SpendCategory.AuthProbe, seen!.Category);
+        Assert.Equal(0.0731m, seen.CostUsd);
+
+        // Session 0 is the key the ledger chose out loud: the probe bills BEFORE session 1 exists, and
+        // `costs.session_number` is NOT NULL, so the alternative was dropping the row.
+        var db = Path.Combine(_tmp, "probe", "run.db");
+        using (var store = new SqliteRunStore(db, NullLogger<SqliteRunStore>.Instance))
+        {
+            store.InitializeRun("r1", "ProbeSpend", _tmp, "main", EngineStamp.Parse("0.4.0+ks52"));
+            Assert.True(new RunSpendLedger(store, "r1").Record(seen, 0, "auth preflight probe"));
+        }
+        SqliteConnection.ClearAllPools();
+
+        var row = Assert.Single(RunArchive.TryOpen(db)!.Costs("r1"));
+        Assert.Equal(SpendCategory.AuthProbe, row.Category);
+        Assert.Equal(0, row.SessionNumber);
+        Assert.Equal(0.0731m, row.CostUsd);
+    }
+
+    /// <summary>The ordering, proved by a real engine rather than by a comment. <c>RestoreBudget</c>
+    /// OVERWRITES the live counters from run state, so a probe that accrued before it ran was wiped a
+    /// line later and the run started the session believing it had spent nothing. Here the run resumes
+    /// carrying $0.0200 of prior side spend: if the restore came second, the probe's bill would be gone
+    /// and the total would still read $0.0200.</summary>
+    [Fact]
+    public async Task AuthProbeSpend_SurvivesTheBudgetRestoreItUsedToBeWipedBy()
+    {
+        var repo = NewRepo("probeRig");
+        var script = WriteAgentScript("claude-agent.cmd", ClaudeStream);
+        var plan = RigPlan("ProbeRig", repo,
+            new AgentConfig { Command = script, Args = { "{sessionId}", "{prompt}" }, Provider = "claude" });
+
+        // A prior process's lane spend, exactly as RestoreBudget would find it on a resume.
+        var state = new RunState
+        {
+            RunId = Guid.NewGuid().ToString("N"),
+            PerRunSideCostUsd = 0.0200m,
+            TotalSideCostUsd = 0.0200m,
+        };
+
+        using (var host = ConductorHost.Build(plan, state, new PlainSink(),
+                   new RunOptions(DryRun: false, Once: true, MaxSessions: 0), consoleSink: false))
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(3));
+            try { await host.Services.GetRequiredService<Orchestrator>().RunAsync(cts.Token); }
+            catch (OperationCanceledException) { }
+        }
+        SqliteConnection.ClearAllPools();
+
+        var costs = RunArchive.TryOpen(plan.RunDbPath)!.Costs(state.RunId);
+        var probe = Assert.Single(costs, c => c.Category == SpendCategory.AuthProbe);
+        Assert.Equal(0, probe.SessionNumber);
+        Assert.Equal(0.0731m, probe.CostUsd);
+        Assert.True(state.PerRunSideCostUsd >= 0.0931m,
+            $"the probe's ${probe.CostUsd} was wiped by RestoreBudget — side spend is ${state.PerRunSideCostUsd}, " +
+            $"expected the restored $0.0200 plus the probe.\n{Diagnose(plan, state)}");
+    }
+
+    // ------------------------------------------------------------------ a real run, a real lane
+
     /// <summary>
     /// The one that had to be a live run: an analysis lane spawned by the engine, billed by the wire,
     /// written to <c>run.db</c> under its own category, and counted by the ceiling.
-    /// <para>The cap is set BETWEEN one invocation's bill and two: the delivery session alone stays
-    /// under it, and only when the lane's row is counted too does the run park. Before KS5.2 this run
-    /// would have finished — the lane's dollars existed, and nothing in the engine had a place to put
-    /// them.</para>
+    /// <para>The run's delivery agent bills NOTHING — its result envelope carries no
+    /// <c>total_cost_usd</c> — so what trips <c>limits.maxRunCostUsd</c> here is spend that is not the
+    /// agent's, which is the acceptance clause word for word. A supervisor row written the way
+    /// <c>conductor watch</c> writes it (another process, no accrual) is seeded into the database
+    /// before the engine starts, and the run absorbs it at the session boundary.</para>
+    /// <para>Deliberately NOT balanced on two spawns both landing. The first version of this test set
+    /// the cap between one invocation's bill and two, so it only passed when the session AND the lane
+    /// both billed — a lane that errored under load left the total under the cap, the run finished
+    /// instead of parking, and the assertion read <c>Idle</c> as a pass-shaped failure. One decisive
+    /// spawn, and every way it can go missing is named in the failure message.</para>
     /// </summary>
     [Fact]
     public async Task AnalysisLaneSpend_IsRecordedUnderItsOwnCategoryAndTripsTheRunCap()
     {
         var repo = NewRepo("laneRig");
-        var script = WriteAgentScript("claude-agent.cmd", ClaudeStream);
+        // %1 is the lane id for a lane and the session id for the delivery session: the lane's
+        // invocation reports what it was billed, the session's reports no figure at all.
+        var script = WriteBillingByCallerScript("claude-agent.cmd", billsWhenArgIs: "risk");
 
-        var plan = new PlanConfig
+        var plan = RigPlan("LaneSpend", repo,
+            new AgentConfig { Command = "cmd.exe", Args = { "/c", script, "{sessionId}", "{prompt}" }, Provider = "claude" });
+        plan.AnalysisLanes.Add(new AnalysisLaneConfig
         {
-            Name = "LaneSpend",
-            Repo = repo,
-            Tracker = "TRACKER.md",
-            Stages = { new StageConfig { Id = "L0", Title = "Lane rig", Sessions = 1 } },
-            Agent = new AgentConfig
-            {
-                Command = "cmd.exe",
-                Args = { "/c", script, "{prompt}" },
-                Provider = "claude",
-            },
-            AnalysisLanes =
-            {
-                new AnalysisLaneConfig
-                {
-                    Id = "risk", Kind = "analysis", Name = "Risk read",
-                    Prompt = "What is risky here?", StageTrigger = "L0", TimeoutMinutes = 2,
-                },
-            },
-            GatePolicy = "perSession",
-            Gates = { new GateConfig { Name = "smoke", Command = "echo ok", Tier = "fast", TimeoutMinutes = 1 } },
-        };
-        plan.Report.Commit = false;
-        // One invocation bills $0.0731. The session's own spend stays under this; the session plus the
-        // lane does not. That gap is the whole assertion.
-        plan.Limits.MaxRunCostUsd = 0.10m;
+            Id = "risk", Kind = "analysis", Name = "Risk read",
+            Prompt = "What is risky here?", StageTrigger = "L0", TimeoutMinutes = 2,
+        });
+        // Under one lane invocation's $0.0731, so the lane's row alone carries the run over.
+        plan.Limits.MaxRunCostUsd = 0.05m;
 
         var state = new RunState { RunId = Guid.NewGuid().ToString("N") };
-        using var host = ConductorHost.Build(plan, state, new PlainSink(),
-            new RunOptions(DryRun: false, Once: true, MaxSessions: 0), consoleSink: false);
+        SeedSupervisorRowFromAnotherProcess(plan, state.RunId, 0.0100m);
 
-        // The park is a park: the loop idles on it rather than returning, exactly as it does in the
-        // field, so the run is stopped by the clock and then asked what it decided.
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(90));
-        await host.Services.GetRequiredService<Orchestrator>().RunAsync(cts.Token);
-
-        Assert.Equal(RunStatus.AwaitingOwner, state.Status);
-        Assert.Equal(AwaitingOwnerReason.Budget, state.AwaitingOwnerReason);
-
-        // The agent's own spend was NOT enough to park this run — the lane's is what carried it over.
-        Assert.True(state.PerRunCostUsd < plan.Limits.MaxRunCostUsd,
-            $"agent spend ${state.PerRunCostUsd} should be under the ${plan.Limits.MaxRunCostUsd} cap on its own");
-        Assert.True(state.PerRunSideCostUsd > 0, "the lane's billed spend never reached the budget");
-        Assert.True(state.BilledWindowCostUsd >= plan.Limits.MaxRunCostUsd);
-
+        using (var host = ConductorHost.Build(plan, state, new PlainSink(),
+                   new RunOptions(DryRun: false, Once: true, MaxSessions: 0), consoleSink: false))
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(3));
+            var run = host.Services.GetRequiredService<Orchestrator>().RunAsync(cts.Token);
+            // A budget park does not RETURN — the loop idles on it, exactly as it does in the field —
+            // so the park is waited for and then cut short, rather than the run being timed out and
+            // asked afterwards what it had decided.
+            while (!run.IsCompleted && state.Status != RunStatus.AwaitingOwner && !cts.IsCancellationRequested)
+                await Task.Delay(100, CancellationToken.None);
+            await cts.CancelAsync();
+            try { await run; } catch (OperationCanceledException) { }
+        }
         SqliteConnection.ClearAllPools();
+
         var costs = RunArchive.TryOpen(plan.RunDbPath)!.Costs(state.RunId);
-        var lane = Assert.Single(costs, c => c.Category == SpendCategory.Lane);
-        Assert.Equal(0.0731m, lane.CostUsd);
+        var diag = Diagnose(plan, state, costs);
+
+        // The lane's own row, first: without it the park below would be proving something else, and a
+        // missing receipt must read as a missing receipt rather than as a run that simply finished.
+        var lane = costs.SingleOrDefault(c => c.Category == SpendCategory.Lane);
+        Assert.True(lane is not null,
+            $"the analysis lane wrote no cost row — it never ran, errored, or reported no billed figure.\n{diag}");
+        Assert.True(lane!.CostUsd == 0.0731m, $"the lane billed ${lane.CostUsd}, expected $0.0731.\n{diag}");
         Assert.Equal(8_000, lane.TokensCacheRead);
-        Assert.Contains(costs, c => c.Category == SpendCategory.Agent);
+
+        // The delivery agent contributed nothing: this run's ONLY billed spend is a lane's and a
+        // supervisor's, and it still reached the ceiling.
+        Assert.True(state.PerRunCostUsd == 0m,
+            $"the delivery agent was meant to report no figure, but billed ${state.PerRunCostUsd}.\n{diag}");
+        Assert.DoesNotContain(costs, c => c.Category == SpendCategory.Agent);
+
+        // The supervisor's row was written by another process and had no accrual of its own; the
+        // engine took it in at the boundary.
+        Assert.Contains(costs, c => c.Category == SpendCategory.Supervisor);
+        Assert.True(Math.Abs(state.PerRunSideCostUsd - 0.0831m) < 0.0005m,
+            $"side spend is ${state.PerRunSideCostUsd}, expected the lane's $0.0731 plus the supervisor's " +
+            $"$0.0100 absorbed at the boundary.\n{diag}");
+
+        Assert.True(state.Status == RunStatus.AwaitingOwner,
+            $"the run did not park on its budget — status {state.Status}.\n{diag}");
+        Assert.Equal(AwaitingOwnerReason.Budget, state.AwaitingOwnerReason);
+        Assert.True(state.BilledWindowCostUsd >= plan.Limits.MaxRunCostUsd, diag);
     }
 
     // ------------------------------------------------------------------ fixtures
 
+    /// <summary>The rig shape both live tests use: one stage, one session, a trivial gate, no report
+    /// commit. Only the agent and what the plan asks for on top of it differ between them.</summary>
+    private static PlanConfig RigPlan(string name, string repo, AgentConfig agent)
+    {
+        var plan = new PlanConfig
+        {
+            Name = name,
+            Repo = repo,
+            Tracker = "TRACKER.md",
+            Stages = { new StageConfig { Id = "L0", Title = "Lane rig", Sessions = 1 } },
+            Agent = agent,
+            GatePolicy = "perSession",
+            Gates = { new GateConfig { Name = "smoke", Command = "echo ok", Tier = "fast", TimeoutMinutes = 1 } },
+        };
+        plan.Report.Commit = false;
+        return plan;
+    }
+
+    /// <summary>Writes the row a <c>conductor watch</c> supervisor writes: into the run's database,
+    /// from outside the engine, with NO accrual — the ledger built without an accrue callback is
+    /// literally the shape <c>WatchCommand.RecordSupervisorSpend</c> constructs.</summary>
+    private static void SeedSupervisorRowFromAnotherProcess(PlanConfig plan, string runId, decimal usd)
+    {
+        Directory.CreateDirectory(plan.StateDir);
+        using (var store = new SqliteRunStore(plan.RunDbPath, NullLogger<SqliteRunStore>.Instance))
+        {
+            store.InitializeRun(runId, plan.Name, plan.Repo, "main", EngineStamp.Parse("0.4.0+ks52"));
+            new RunSpendLedger(store, runId)
+                .Record(new SpendReceipt(SpendCategory.Supervisor, usd, 40, 20, 0, 0, 1_500), 0, "supervisor hook");
+        }
+        SqliteConnection.ClearAllPools();
+    }
+
+    /// <summary>Everything a failed live assertion needs to be diagnosed without re-running it: what the
+    /// run decided, every cost row it wrote, and the tail of its own log.</summary>
+    private static string Diagnose(PlanConfig plan, RunState state, IReadOnlyList<ArchivedCost>? costs = null)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"run {state.RunId}: status={state.Status}/{state.AwaitingOwnerReason} " +
+                      $"agent=${state.PerRunCostUsd} side=${state.PerRunSideCostUsd} window=${state.BilledWindowCostUsd}");
+        try
+        {
+            costs ??= RunArchive.TryOpen(plan.RunDbPath)?.Costs(state.RunId) ?? [];
+            sb.AppendLine(costs.Count == 0 ? "costs: NO ROWS" : "costs:");
+            foreach (var c in costs) sb.AppendLine($"  s{c.SessionNumber} {c.Category} ${c.CostUsd} ({c.Tokens} tokens)");
+        }
+        catch (SqliteException ex) { sb.AppendLine("costs: unreadable — " + ex.Message); }
+        catch (InvalidOperationException ex) { sb.AppendLine("costs: unreadable — " + ex.Message); }
+
+        var log = Path.Combine(plan.StateDir, "conductor.log");
+        try
+        {
+            if (File.Exists(log))
+                sb.AppendLine("log tail:\n  " + string.Join("\n  ", File.ReadAllLines(log).TakeLast(40)));
+        }
+        catch (IOException ex) { sb.AppendLine("log: unreadable — " + ex.Message); }
+        return sb.ToString();
+    }
+
     private string WriteAgentScript(string name, string ndjson)
+        => WriteScript(name, ["@echo off", .. EchoLines(ndjson), "exit /b 0"]);
+
+    /// <summary>A fake agent that reports what it was billed for ONE caller and nothing for the other,
+    /// told apart by the id the engine substitutes into its argv (<c>{sessionId}</c> — the lane's own id
+    /// for a lane, the session's for a session). It is how a run can be given lane spend and no agent
+    /// spend, which is the acceptance clause this rig exists to prove.</summary>
+    private string WriteBillingByCallerScript(string name, string billsWhenArgIs)
+        => WriteScript(name,
+        [
+            "@echo off",
+            $"if /I \"%~1\"==\"{billsWhenArgIs}\" goto billed",
+            .. EchoLines(UnbilledStream),
+            "exit /b 0",
+            ":billed",
+            .. EchoLines(ClaudeStream),
+            "exit /b 0",
+        ]);
+
+    private static IEnumerable<string> EchoLines(string ndjson)
+        => ndjson.Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0).Select(l => "echo " + l);
+
+    private string WriteScript(string name, IEnumerable<string> lines)
     {
         var path = Path.Combine(_tmp, name);
-        var lines = new List<string> { "@echo off" };
-        foreach (var line in ndjson.Split('\n'))
-        {
-            var t = line.Trim();
-            if (t.Length > 0) lines.Add("echo " + t);
-        }
-        lines.Add("exit /b 0");
-        lines.Add("");
-        File.WriteAllText(path, string.Join("\r\n", lines));
+        File.WriteAllText(path, string.Join("\r\n", lines) + "\r\n");
         return path;
     }
 

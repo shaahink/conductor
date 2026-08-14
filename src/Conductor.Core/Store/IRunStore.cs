@@ -66,6 +66,20 @@ public interface IRunStore : IDisposable
         long tokensIn, long tokensOut, long tokensThink, long tokensCache,
         decimal costUsd, long wallMs);
 
+    /// <summary>KS5.2 — every BILLED dollar in this run's <c>costs</c> table that is not the delivery
+    /// agent's: the lanes, the advisor, the audit, the auth probe, the supervisor. Gate rows are
+    /// excluded because they are an estimate from <c>limits.overheadCostPerSecond</c>, and a ceiling
+    /// must be reached by money somebody was charged.
+    /// <para>It exists because two writers reach this table from OUTSIDE the run loop — the
+    /// <c>watch</c> supervisor, which is a different PROCESS, and the control plane's advisor spawns,
+    /// which are HTTP threads that must not touch the loop's counters. Their rows used to be invisible
+    /// to the cap for ever: nothing re-priced a run from its database, so "the cap sees it next time"
+    /// was a sentence with no mechanism behind it. <c>RunContext.AbsorbOutOfProcessSpend</c> reads this
+    /// at the session boundary and accrues the difference.</para>
+    /// <para>Returns 0 for an unknown run or an unreadable table — a reconciliation must never be able
+    /// to stop a run.</para></summary>
+    decimal SumSideSpendUsd(string runId);
+
     // ---------------------------------------------------------------- gates
 
     void RecordGate(

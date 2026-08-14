@@ -432,6 +432,7 @@ public sealed partial class RunLoop
                 // "idle — last session finished".
                 _verdicts.EmitBlockedUntilPark(rec);
 
+                _ctx.AbsorbOutOfProcessSpend(); // KS5.2: a second writer's rows become cap-visible here.
                 if (CheckBudgetCap()) continue;
 
                 if (Dispatcher.ConsumePendingSkip())

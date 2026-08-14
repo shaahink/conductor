@@ -165,8 +165,12 @@ public sealed class WatchCommand : AsyncCommand<WatchCommand.Settings>
     /// engine, so it is a second writer against a live WAL database. <c>RecordCost</c> goes through
     /// <c>TryExecute</c>, the store is opened and closed around the one insert, and every failure is
     /// swallowed — a supervisor's bookkeeping must never be able to break the wake it was reporting.
-    /// No accrual: the engine owns the cap counters in its own memory and this process cannot move
-    /// them, so the row is the ledger's, and the cap sees it the next time the run is priced.</para>
+    /// No accrual FROM HERE: the engine owns the cap counters in its own memory and this process
+    /// cannot move them. The row is what crosses the process boundary — the engine takes it in at its
+    /// next session boundary through <c>RunContext.AbsorbOutOfProcessSpend</c>, which reads
+    /// <c>IRunStore.SumSideSpendUsd</c> and accrues whatever the table holds beyond what it has already
+    /// counted. That call is the mechanism; without it this row would be a receipt no ceiling could
+    /// ever see, which is the silence this checkpoint exists to end.</para>
     /// <para>The row is keyed to the run's CURRENT session — the supervisor fires between sessions, so
     /// that is the last session it was watching.</para></summary>
     private static void RecordSupervisorSpend(PlanConfig plan, RunState? state, string command, ProcResult r)

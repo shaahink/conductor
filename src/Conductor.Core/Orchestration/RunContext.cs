@@ -226,6 +226,37 @@ public sealed class RunContext
         RunSideCostUsd = State.PerRunSideCostUsd;
     }
 
+    /// <summary>
+    /// KS5.2 — take in the billed rows this process did NOT write, so a cap governs every dollar spent
+    /// against the run and not only the ones the loop thread happened to spend itself.
+    /// <para>Two writers reach the <c>costs</c> table from outside the run loop: the <c>watch</c>
+    /// supervisor, which is a different PROCESS, and the control plane's advisor spawns
+    /// (<c>/tasks/refine</c>, <c>/tasks/split</c>), which are HTTP threads that must not touch the
+    /// loop's counters. Both wrote their row and stopped, on the belief that "the cap sees it the next
+    /// time the run is priced from its database". Nothing ever re-priced a run from its database —
+    /// <see cref="RestoreBudget"/> reads run STATE — so those dollars could never trip
+    /// <c>limits.maxRunCostUsd</c>. This is the missing half, and it is why the sentence is now true.</para>
+    /// <para>The arithmetic is a difference, not a re-derivation:
+    /// <see cref="Models.RunState.TotalSideCostUsd"/> is what this engine has already accrued over the
+    /// run's lifetime, and the table holds that plus whatever anyone else wrote. Only the excess is
+    /// taken in, so calling it every boundary is idempotent, and the window
+    /// (<see cref="RunSideCostUsd"/>) moves by exactly the same amount as the lifetime total.</para>
+    /// <para>Best-effort by construction: an unreadable table answers 0 and the run carries on. A
+    /// reconciliation must never be the reason a run stops.</para>
+    /// </summary>
+    public void AbsorbOutOfProcessSpend()
+    {
+        if (Store is not { } s || string.IsNullOrEmpty(State.RunId)) return;
+        var external = s.SumSideSpendUsd(State.RunId) - State.TotalSideCostUsd;
+        if (external <= 0m) return;
+
+        RunSideCostUsd += external;
+        State.TotalSideCostUsd += external;
+        PersistBudget();
+        Log($"side spend reconciled: ${external:0.0000} billed by a writer outside this loop " +
+            "(watch supervisor / control-plane advisor) — now counted against the run cap");
+    }
+
     /// <summary>Persist current run-cost state back into RunState.</summary>
     public void PersistBudget()
     {

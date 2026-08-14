@@ -207,6 +207,19 @@ public class ArchitectureBoundaryTests
     private static readonly string[] ModelConfigTypes =
         ["AgentConfig", "AdvisorConfig", "StatusAgentConfig", "SupervisorConfig"];
 
+    /// <summary>The OTHER half of "names a model", and the half a type-name rule cannot see: the
+    /// MEMBER access a spawn site actually writes — <c>agent.Command</c>, <c>cfg.Model</c>,
+    /// <c>plan.Advisor.Command</c>, <c>supervisor.Command</c>.
+    /// <para>KS5.2 shipped with the type-name list alone, and it was demonstrably weaker than the rule
+    /// it claimed to state: a file doing
+    /// <c>ProcessRunner.Run(plan.Agent.Command, ["--model", plan.Agent.Model], …)</c> with no accounting
+    /// passed, because the string "AgentConfig" never appears in it — while the clause's own wording
+    /// (<c>agent.Command</c> / <c>cfg.Model</c>) was right there on the line. A bare <c>.Model</c> on any
+    /// receiver counts too: nothing in this engine names a model except to run one.</para></summary>
+    private static readonly Regex ModelBearingMember = new(
+        @"\b\w*(?:[Aa]gent|[Aa]dvisor|[Ss]upervisor|cfg)\w*\s*\??\.\s*(?:Command|Model)\b|\b\w+\s*\??\.\s*Model\b",
+        RegexOptions.ExplicitCapture, TimeSpan.FromSeconds(5));
+
     /// <summary>How a process gets started here. <c>WatchHook</c> is named because it is the one spawn
     /// that could not reuse <c>ProcessRunner</c> (it needs stdin) and so hides its <c>Process.Start</c>
     /// behind a helper.</summary>
@@ -252,7 +265,30 @@ public class ArchitectureBoundaryTests
         ["StatusCommand.cs"] =
             "`status --agent` is operator-invoked between sessions; it prints the reporter's bill rather " +
             "than making the CLI a second writer to a live run's database",
+        ["StatusAgent.cs"] =
+            "the status reporter spawns a model and writes NO costs row by design — it runs outside the " +
+            "run loop, for `status --agent` and `audit --replay`. It takes a receipt through BilledSpend " +
+            "and HANDS it to the caller, which prints what it was billed; the row is refused rather than " +
+            "written, because a CLI verb must not be a second writer against a live run's database",
     };
+
+    /// <summary>A file whose accounting genuinely lives in a SIBLING partial, named — with the sibling
+    /// that does it, and the reason.
+    /// <para>This exists because the first version of the rule credited every partial of a type with
+    /// every other partial's accounting: any new <c>RunLoop.*.cs</c> could spawn a model and record
+    /// nothing, and stay green off <c>RunLoop.Control.cs</c>'s <c>Ledger.Record</c>. In an engine that is
+    /// almost entirely partial files — <c>RunLoop.*</c>, <c>VerdictEngine.*</c>,
+    /// <c>ControlPlaneServer.*</c>, <c>SqliteRunStore.*</c> — that is the SHAPE of the next real
+    /// violation, so the merge is gone and the one file that legitimately needs it is written down.</para>
+    /// <para>The entry is checked, not trusted: the named sibling must exist and must itself account for
+    /// spend, so an entry cannot outlive the accounting it points at.</para></summary>
+    private static readonly Dictionary<string, (string Sibling, string Why)> AccountedInSibling =
+        new(StringComparer.Ordinal)
+        {
+            ["ControlPlaneServer.TaskSplit.cs"] = ("ControlPlaneServer.TaskPrompt.cs",
+                "`/tasks/split` and `/tasks/refine` are the same advisor spawn behind two endpoints and " +
+                "record through the one RecordAdvisorSpend the refine file declares"),
+        };
 
     [Fact]
     public void EveryModelSpawnAccountsForWhatItSpent()
@@ -262,44 +298,51 @@ public class ArchitectureBoundaryTests
 
         var sources = SourcesUnder("src");
         var code = sources.ToDictionary(f => f.FullName, CodeOnly, StringComparer.Ordinal);
-        // A partial type is ONE type however many files it is spread over — ControlPlaneServer is nine
-        // of them — so the accounting may live in a sibling. Keyed on the name before the first dot,
-        // which is exactly this repo's partial convention (RunLoop.Plumbing.cs, VerdictEngine.Advisor.cs).
-        var byType = sources
-            .GroupBy(f => f.Name.Split('.')[0], StringComparer.Ordinal)
-            .ToDictionary(g => g.Key, g => string.Concat(g.Select(f => code[f.FullName])), StringComparer.Ordinal);
+        static bool Accounts(string text) => AccountingMarkers.Any(m => text.Contains(m, StringComparison.Ordinal));
 
         foreach (var file in sources)
         {
             var text = code[file.FullName];
             var spawnsAModel = SpawnCalls.Any(s => text.Contains(s, StringComparison.Ordinal))
-                            && ModelConfigTypes.Any(t => text.Contains(t, StringComparison.Ordinal));
+                            && (ModelConfigTypes.Any(t => text.Contains(t, StringComparison.Ordinal))
+                                || ModelBearingMember.IsMatch(text));
             var callsAModelHelper = ModelHelpers.Any(h => text.Contains(h, StringComparison.Ordinal));
             if (!spawnsAModel && !callsAModelHelper) continue;
 
             reached.Add(file.Name);
             if (UncountedSpendExemptions.ContainsKey(file.Name)) continue;
-            var whole = byType[file.Name.Split('.')[0]];
-            if (AccountingMarkers.Any(m => whole.Contains(m, StringComparison.Ordinal))) continue;
+            // The accounting must be in THIS file. A partial type is one type, but it is not one
+            // decision: crediting a file with a sibling's ledger call is how an uncounted spawn hides.
+            if (Accounts(text)) continue;
+            if (AccountedInSibling.TryGetValue(file.Name, out var delegated)
+                && sources.FirstOrDefault(f => f.Name == delegated.Sibling) is { } sib
+                && Accounts(code[sib.FullName]))
+                continue;
 
             violations.Add(
                 $"  {file.Name} spawns a model and records no spend — take a receipt through " +
-                "Conductor.Core.Accounting.BilledSpend and record it (RunSpendLedger.Record), or add " +
-                "the file to UncountedSpendExemptions with the reason it cannot.");
+                "Conductor.Core.Accounting.BilledSpend and record it (RunSpendLedger.Record), add the " +
+                "file to UncountedSpendExemptions with the reason it cannot, or — if a sibling partial " +
+                "genuinely does the accounting — name that sibling in AccountedInSibling.");
         }
 
         Assert.True(violations.Count == 0,
             "KS5.2 — a model was spawned and nobody counted the money:\n" + string.Join("\n", violations));
 
-        // The exemption list must describe reality, the way architecture-baseline.json must: a file that
-        // stopped spawning models, or was renamed, leaves a reason behind that reads as a live decision.
-        var stale = UncountedSpendExemptions.Keys
+        // Both lists must describe reality, the way architecture-baseline.json must: a file that stopped
+        // spawning models, or was renamed, leaves a reason behind that reads as a live decision.
+        var stale = UncountedSpendExemptions.Keys.Concat(AccountedInSibling.Keys)
             .Where(name => !reached.Contains(name, StringComparer.Ordinal))
-            .Select(name => $"  {name} is exempted from the spend rule but no longer reaches a model — drop the entry.")
+            .Select(name => $"  {name} is listed in the spend rule but no longer reaches a model — drop the entry.")
             .ToList();
+        stale.AddRange(AccountedInSibling
+            .Where(kv => sources.FirstOrDefault(f => f.Name == kv.Value.Sibling) is not { } s
+                      || !Accounts(code[s.FullName]))
+            .Select(kv => $"  {kv.Key} defers its accounting to {kv.Value.Sibling}, which does not account " +
+                          "for spend (or no longer exists) — the deferral is now a hole."));
 
         Assert.True(stale.Count == 0,
-            "KS5.2 — the exemption list has gone stale:\n" + string.Join("\n", stale));
+            "KS5.2 — the spend rule's lists have gone stale:\n" + string.Join("\n", stale));
     }
 
     /// <summary>The reference direction, read off the csproj files themselves. The link-level rules above

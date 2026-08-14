@@ -17,8 +17,12 @@ public sealed partial class ControlPlaneServer
     /// <summary>KS5.2 — the advisor spawns the control plane makes (<c>/tasks/refine</c>,
     /// <c>/tasks/split</c>) cost the same money a verdict consult costs, and until now cost the run
     /// nothing on paper. The ROW is written; the engine's in-memory budget counters are deliberately
-    /// NOT touched, because this is an HTTP thread and those belong to the run loop. The cap sees the
-    /// spend the next time the run is priced from its database.</summary>
+    /// NOT touched, because this is an HTTP thread and those belong to the run loop.
+    /// <para>The row still reaches the cap: the loop calls
+    /// <c>RunContext.AbsorbOutOfProcessSpend</c> at the session boundary, which accrues the difference
+    /// between what the <c>costs</c> table holds and what the engine has already counted. So the spend
+    /// is cap-visible one boundary later, on the loop's own thread — not never, which is what "the cap
+    /// sees it eventually" meant before that call existed.</para></summary>
     private void RecordAdvisorSpend(AdvisorReply reply, string what)
         => new Conductor.Core.Accounting.RunSpendLedger(_store, _state.RunId,
                 log: m => _logger.LogInformation("{ConductorMessage}", m))

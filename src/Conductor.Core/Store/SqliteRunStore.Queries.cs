@@ -1,4 +1,5 @@
 using System.Data;
+using System.Globalization;
 
 namespace Conductor.Core.Store;
 
@@ -200,5 +201,26 @@ public sealed partial class SqliteRunStore
             StageId: r["stage_id"] as string,
             Tier: (string)(r["tier"] ?? "full")!
         )).ToList();
+    }
+
+    /// <inheritdoc />
+    public decimal SumSideSpendUsd(string runId)
+    {
+        if (_disposed != 0) return 0m;
+        // The two exclusions are the vocabulary's own constants, not literals: a category invented next
+        // era is side spend by DEFAULT, because a new spender being silently outside the cap is the
+        // exact failure KS5.2 exists to end.
+        try
+        {
+            var rows = Query(
+                "SELECT COALESCE(SUM(cost_usd), 0) AS total FROM costs " +
+                "WHERE run_id = @runId AND category <> @agent AND category <> @gate",
+                ("@runId", runId),
+                ("@agent", Conductor.Core.Accounting.SpendCategory.Agent),
+                ("@gate", Conductor.Core.Accounting.SpendCategory.Gate));
+            return rows.Count == 0 ? 0m : Convert.ToDecimal(rows[0]["total"], CultureInfo.InvariantCulture);
+        }
+        catch (Microsoft.Data.Sqlite.SqliteException) { return 0m; }
+        catch (ObjectDisposedException) { return 0m; }
     }
 }
