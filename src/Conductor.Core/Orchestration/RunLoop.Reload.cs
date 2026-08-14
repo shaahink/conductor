@@ -1,8 +1,13 @@
 using System.Text.Json;
 
+using Conductor.Core.Budget;
 using Conductor.Core.Events;
+using Conductor.Core.History;
 using Conductor.Core.Planning;
+using Conductor.Core.Store;
 using Conductor.Models;
+
+using Microsoft.Data.Sqlite;
 
 namespace Conductor.Core.Orchestration;
 
@@ -20,8 +25,12 @@ public sealed partial class RunLoop
     /// past a ceiling they had already set. A budget you can set but not apply is worse than no budget —
     /// it is a setting that lies. Stamp-based rather than a FileSystemWatcher: the boundary is the only
     /// safe point to swap a plan anyway, so a watcher would only buy latency this loop cannot use, and
-    /// a stamp survives an engine restart where a watcher's pending event does not.</remarks>
-    private bool PlanFileChangedOnDisk()
+    /// a stamp survives an engine restart where a watcher's pending event does not.
+    /// <para>KS5.3: internal rather than private, on KS1.1's terms — the reload is what fires the
+    /// budget disagreement, and "it fires once per reload, not on every turn of a parked loop" is a
+    /// claim about THIS predicate. A test that re-implemented the stamp would be asserting against its
+    /// own copy of the rule.</para></remarks>
+    internal bool PlanFileChangedOnDisk()
     {
         var path = _ctx.Plan.PlanFilePath;
         if (string.IsNullOrWhiteSpace(path)) return false;
@@ -82,6 +91,7 @@ public sealed partial class RunLoop
             ? $"{mt / 1_000_000.0:0.##}M tokens/session"
             : "no per-session cap";
         _ctx.Log($"plan reloaded at session boundary — v{fresh.PlanVersion}, {fresh.Stages.Count} stages, {fresh.Gates.Count} gates, {tokenCap}");
+        ReportBudgetDisagreement(fresh);
 
         if (_ctx.Store is { } db)
         {
@@ -121,5 +131,50 @@ public sealed partial class RunLoop
             }
         }
         _saveAndReport();
+    }
+
+    /// <summary>
+    /// KS5.3 — the reloaded ceiling, checked against what THIS run's own sessions measured, and said
+    /// out loud when the two disagree.
+    /// <para><c>doctor</c> has made this comparison since K4.2, and doctor runs before a run starts.
+    /// The setting is the one most often edited mid-run: an operator parks the run, types a new
+    /// <c>maxSessionTokens</c> into the plan file, reloads — and the only answer was the line above,
+    /// which reads the number back. A ceiling under this run's floor is not a tighter budget, it is a
+    /// run that can no longer land a checkpoint in one session, and the boundary is the last moment
+    /// before it starts spending under it. Same function as doctor's
+    /// (<see cref="BudgetDisagreement.Compare"/>), so the two surfaces cannot word it differently.</para>
+    /// <para>Everything here is best-effort and quiet by default. It runs on the loop thread, so it is
+    /// one read-only open of a database the engine is writing (<c>Mode=ReadOnly;Cache=Private</c>, its
+    /// own connection, closed before this returns) and it is tied to an actual reload — this method is
+    /// reached only from <see cref="ApplyPlanReload"/>, never from the idle turn that a parked run
+    /// takes every 800ms. Agreement says nothing. Not being able to measure says nothing. A throw here
+    /// must never cost the run its reload, so every read is inside the guard.</para>
+    /// </summary>
+    private void ReportBudgetDisagreement(PlanConfig fresh)
+    {
+        var cap = _ctx.EffectiveMaxSessionTokens;
+        if (cap is null) return;                             // no ceiling: nothing to disagree with
+        // The live store is the only thing that knows where this run's database is; without one there
+        // is nothing to measure, and a dry run has no sessions to measure anyway.
+        if (_ctx.Store is not SqliteRunStore live) return;
+        try
+        {
+            var archive = RunArchive.TryOpen(live.DbPath);
+            if (archive is null) return;                     // deleted, or not a run database: silence
+            var verdict = BudgetDisagreement.Compare(
+                cap, fresh.Limits.SoftBreakRatio,
+                BudgetDisagreement.MeasureRun(archive, _ctx.State.RunId),
+                measurable: true);
+
+            if (verdict.Disagrees)
+                _ctx.Log($"the reloaded budget disagrees with this run's own sessions: {verdict.Sentence}");
+            else if (verdict.Agreement == BudgetAgreement.NoFloor)
+                _ctx.Log($"the reloaded budget cannot be checked yet: {verdict.Sentence}");
+        }
+        catch (Exception ex) when (ex is SqliteException or IOException or InvalidOperationException or UnauthorizedAccessException)
+        {
+            // "Cannot measure" is a valid answer and the only one available here. The reload has
+            // already happened; a measurement that could not be taken must not undo it or delay it.
+        }
     }
 }

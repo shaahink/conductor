@@ -38,7 +38,10 @@ public sealed partial class SqliteRunStore : IRunStore, IEventSink
         }
     }
 
-    public string ConnectionString => _conn.DataSource;
+    /// <summary>The database file this store is writing. KS5.3: the read-only browsing door
+    /// (<c>RunArchive</c>) takes a path, so a live run that wants to MEASURE itself — rather than
+    /// query itself through its own writer — has to be able to name its own file.</summary>
+    public string DbPath => _conn.DataSource;
 
     // ---------------------------------------------------------------- schema
 

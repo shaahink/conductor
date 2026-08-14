@@ -43,52 +43,20 @@ public sealed partial class DoctorCommand
     /// and the one this repo shipped.
     /// <para>Read-only throughout: <see cref="RunArchive"/> opens the database in SQLite's read-only
     /// mode, so a doctor run against a live run cannot migrate or disturb it.</para>
+    /// <para>KS5.3: the comparison itself lives in <see cref="BudgetDisagreement"/> now, because the
+    /// plan reload has to make the same one at the session boundary. What is left here is doctor's
+    /// half — which database to open and which run in it to measure — and the translation of one
+    /// verdict into one check. Two copies of "is this ceiling under the floor" would be two answers
+    /// the first time either was edited.</para>
     /// </summary>
     internal static Check CheckTokenBudget(PlanConfig plan)
     {
-        var cap = plan.Limits.MaxSessionTokens is { } c and > 0 ? c : (long?)null;
-        if (cap is null)
-            return new Check("tokens", "ok", "no session ceiling — sessions run until the agent stops");
-
-        // The rail's own arithmetic, not a copy of it: SoftBreak.Threshold applies the same unset-ratio
-        // fallback the session runner does, so doctor cannot describe a nudge the rail would not fire.
-        var nudge = SoftBreak.Threshold(cap, plan.Limits.SoftBreakRatio)!.Value;
-        var configured = $"cap {BudgetAnalyzer.Millions(cap.Value)} / nudge {BudgetAnalyzer.Millions(nudge)}";
-
         var archive = RunArchive.TryOpen(plan.ResolveState().RunDbPath);
-        if (archive is null)
-            return new Check("tokens", "ok", $"{configured} — no history yet to measure it against");
-
-        BudgetProfile? measured = null;
-        // Oldest first, and a run of THIS plan beats an unrelated one sharing the database: the check
-        // must describe the budget these sessions will run under, not whatever ran here last year.
-        var runs = archive.Runs()
-            .OrderBy(r => string.Equals(r.PlanName, plan.Name, StringComparison.OrdinalIgnoreCase) ? 1 : 0)
-            .ThenBy(r => r.StartedUtc, StringComparer.Ordinal)
-            .ToList();
-        foreach (var run in runs)
-        {
-            var sessions = archive.Sessions(run.RunId);
-            if (sessions.Count == 0) continue;
-            var profile = BudgetAnalyzer.Analyze(run.RunId, run.PlanName, sessions, archive.SoftBreaks(run.RunId));
-            if (profile.Current.Closers > 0) measured = profile;
-        }
-        if (measured is null)
-            return new Check("tokens", "ok", $"{configured} — no session has closed a checkpoint yet, so there is no floor to check it against");
-
-        var w = measured.Current;
-        if (cap.Value < w.Floor)
-            return new Check("tokens", "warn",
-                $"{configured} — the cap is BELOW the measured {BudgetAnalyzer.Millions(w.Floor)} session floor. " +
-                $"Nothing will land in one session. {measured.Prescription.Verdict}");
-        if (nudge < w.ClosingMedian)
-            return new Check("tokens", "warn",
-                $"{configured} — the nudge is {(nudge / (double)w.ClosingMedian).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}x " +
-                $"the {BudgetAnalyzer.Millions(w.ClosingMedian)} median closing session, so it fires before a typical session could have finished. " +
-                measured.Prescription.Verdict);
-        return new Check("tokens", "ok",
-            $"{configured} — clears the {BudgetAnalyzer.Millions(w.Floor)} floor and the " +
-            $"{BudgetAnalyzer.Millions(w.ClosingMedian)} median closing session ({w.Closers} measured). conductor budget for the full profile");
+        var verdict = BudgetDisagreement.Compare(
+            plan.Limits.MaxSessionTokens, plan.Limits.SoftBreakRatio,
+            BudgetDisagreement.MeasureForPlan(archive, plan.Name),
+            measurable: archive is not null);
+        return new Check("tokens", verdict.DoctorState, verdict.Sentence);
     }
 
     private static (decimal CostUsd, bool HasRun) TryReadCostFromRunDb(PlanConfig plan)
