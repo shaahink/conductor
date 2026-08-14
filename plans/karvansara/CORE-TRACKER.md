@@ -4,29 +4,27 @@
 
 ## Handoff (overwrite this block, ≤12 lines, no history)
 
-last: wave 1 landed KS1 complete (6666431..4798173) and KS2.7+KS2.8 (ebd929c..4e53d2d), every
-  checkpoint delivered then adversarially verified; KS0 closed earlier (KS0.1 by the owner-run
-  repair, evidence ks0-1-catalogue-repair.md). Delivery runs as Claude workflow lanes in worktrees
-  since the conductor run was aborted 2026-08-13 - the engine is stopped, the tracker is the board.
-measured: FULL suite 2228/2228 green in 6m10s at 4798173; face go build/vet/test green at 4e53d2d.
-  Concurrent full suites on this machine kill each other's MSBuild nodes (the DevContext runs issue
-  dotnet build-server shutdown): run batteries serially with -nodeReuse:false and
-  -p:UseSharedCompilation=false, or MSB4166 and test-host crashes lie to you about the tree.
-in flight: lane/ks5 (worktree conductor-lane-ks5) holds KS5.1 verified and KS5.2 red on clause 8 -
-  ArchivedSession.CapTokens falls back to the all-category sum when a session has no agent cost
-  row; rebase onto feat/karvansara, fix, re-verify, then KS5.3 and KS5.4.
-new bug, unplanned: conductor inject truncates a multi-line instruction to its first line
-  (FIELD-NOTES-2026-07-29-devcontext.md section 23) - queued ahead of KS2.1 in wave 2.
-next: KS2.1-KS2.6 and KS3.1-KS3.5 in parallel lanes, plus the KS5 continuation.
+last: wave 2 landed the KS2a lane (202405e..e6b80c2): the unplanned inject truncation fix (KS2.0)
+  and KS2.1-KS2.6, each delivered then adversarially verified in worktree lane/ks2a; merged
+  fast-forward, full battery on the merged tree 2343/2343 + face build/vet/test green at e6b80c2.
+  The 2026-08-14 machine restart killed the wave mid-flight; a continuation from session 5ab9932e
+  salvaged the partials (contracts live in that session's scratchpad).
+measured: concurrent full suites on this machine kill each other's MSBuild nodes: run batteries
+  serially with -nodeReuse:false -p:UseSharedCompilation=false, or MSB4166 lies about the tree.
+in flight: lane/ks3 holds KS3.1-KS3.3 verified, KS3.4 refuted twice (the compose leg re-implements
+  the run loop's stage selection; the fix extracts one shared decision), then KS3.5. lane/ks5 holds
+  KS5.1-KS5.3 verified, KS5.4 refuted twice (approve un-parks a run still over the other half's
+  ceiling; a reload converts an operator pause into a budget park) - remediation wave running.
+next: rebase + merge lane/ks3 then lane/ks5, battery per merge; wave 3 = KS9, wave 4 = KS10.1/10.2.
 
 
-## Baseline numbers (from run.db)
+## Baseline numbers (tracker-counted - the engine is stopped, the tracker is the board)
 
 | Metric | Value |
 |---|---|
 | Total checkpoints | 32 |
-| Done | 0 |
-| Claimed (unconfirmed) | 2 |
+| Done | 17 |
+| Claimed (unconfirmed) | 0 |
 
 ## Checkpoints
 
@@ -56,12 +54,12 @@ phase (a code path is not evidence). Agent claims are marked DONE; engine confir
 
 | # | Checkpoint | Status | Commit | Evidence |
 |---|-----------|--------|--------|----------|
-| KS2.1 | Bare conductor on a TTY opens the hub - recent runs reconciled, plans discovered, attach start plan-new history - non-TTY prints a status board with exit 0, and every existing verb is unchanged | TODO | - | - |
-| KS2.2 | The archive serves: the Face attaches to finished runs read-only - sessions, money, timeline and report render with no engine process for that run | TODO | - | - |
-| KS2.3 | A run starts from the hub: choose plan, journey preview, detached engine launch with stderr redirected, then attach - killing the Face leaves the engine alive | TODO | - | - |
-| KS2.4 | One picker merges fleet probe and catalogue - live runs attach, past runs open read-only, across repos, write tokens never crossing runs | TODO | - | - |
-| KS2.5 | conductor status with no resolvable plan prints a machine-level board - the multiple-plan-files error is unreachable | TODO | - | - |
-| KS2.6 | A park emits once: notifier rate-limited with a max per incident, dry-run never notifies, a monitor listing verb exists, and the 2026-08-02 incident replay produces exactly one notification | TODO | - | - |
+| KS2.1 | Bare conductor on a TTY opens the hub - recent runs reconciled, plans discovered, attach start plan-new history - non-TTY prints a status board with exit 0, and every existing verb is unchanged | DONE | 8c137b4 | .conductor/evidence/KS2/ks2-1.md |
+| KS2.2 | The archive serves: the Face attaches to finished runs read-only - sessions, money, timeline and report render with no engine process for that run | DONE | a56bae4 | .conductor/evidence/KS2/ks2-2.md |
+| KS2.3 | A run starts from the hub: choose plan, journey preview, detached engine launch with stderr redirected, then attach - killing the Face leaves the engine alive | DONE | 90fda68 | .conductor/evidence/KS2/ks2-3.md |
+| KS2.4 | One picker merges fleet probe and catalogue - live runs attach, past runs open read-only, across repos, write tokens never crossing runs | DONE | 2d05043 | .conductor/evidence/KS2/ks2-4.md |
+| KS2.5 | conductor status with no resolvable plan prints a machine-level board - the multiple-plan-files error is unreachable | DONE | 7fe1376 | .conductor/evidence/KS2/ks2-5.md |
+| KS2.6 | A park emits once: notifier rate-limited with a max per incident, dry-run never notifies, a monitor listing verb exists, and the 2026-08-02 incident replay produces exactly one notification | DONE | e6b80c2 | .conductor/evidence/KS2/ks2-6.md |
 | KS2.7 | Long text scrolls everywhere: Agent console and transcript, Kanban detail, History, Telegram and Processes each own a pane viewport, the last hand-rolled scroll integers are deleted, and glitch-sweep proves a 500-line body scrolls to its end in every tab | DONE | 82e597f | .conductor/evidence/KS2/ks2-7.md |
 | KS2.8 | The reader: one full-screen overlay opens any truncated cell or row with soft wrap, pager keys, percent readout and themed markdown - a 2000-line report and a 300-char kanban note both readable to the last line at 80x24 | DONE | d13184a | .conductor/evidence/KS2/ks2-8.md |
 
