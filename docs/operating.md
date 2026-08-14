@@ -90,7 +90,7 @@ going. Destructive ones need `--yes`.
 | Command | Does |
 |---|---|
 | `inject "<instruction>"` | Prepend an instruction to the agent's NEXT session prompt. The steering wheel. |
-| `approve [--amount <usd>] [--tokens <n>]` | Clear whatever the run is parked on (also `R` in the TUI). On an owner gate it advances the stage. On a **budget park it raises the run's spend ceiling** by the amount you name — or, with neither flag, by one more of the plan's own `limits.maxRunCostUsd` / `maxRunTokens`. The log line and the toast state the ceiling before and after and the spend it forgives nothing of. An amount on a non-budget park is refused. |
+| `approve [--amount <usd>] [--tokens <n>]` | Clear whatever the run is parked on (also `R` in the TUI). On an owner gate it advances the stage. On a **budget park it raises the run's spend ceiling** by the amount you name — or, with neither flag, by one more of the plan's own `limits.maxRunCostUsd` / `maxRunTokens`. The log line and the toast state the ceiling before and after and the spend it forgives nothing of. The run resumes only when **both** halves of the ceiling clear the spend: a raise that would leave either half still reached — too small, or aimed at the wrong half — is refused whole, naming the number to type. An amount on a non-budget park is refused. |
 | `pause` | Stop after the current session. `resume` continues. |
 | `pause-after-stage` | Park at Paused once the current stage completes. |
 | `resume` | Resume a paused / needs-attention run. |

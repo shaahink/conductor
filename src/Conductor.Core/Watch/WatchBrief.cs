@@ -100,10 +100,16 @@ public static class WatchBrief
             ["attempt"] = state?.AttemptsThisStage ?? 0,
             ["sessions"] = status?.SessionCount ?? state?.History.Count ?? 0,
             ["checkpoints"] = status is null ? null : $"{status.DoneCount}/{status.TotalCount}",
-            ["spendUsd"] = decimal.Round(state?.PerRunCostUsd ?? status?.TotalCostUsd ?? 0m, 2),
-            ["costCapUsd"] = plan.Limits?.MaxRunCostUsd is { } cap ? decimal.Round(cap, 2) : null,
+            // KS5.4: the caps are the ceilings IN FORCE — the plan's figure plus every grant an owner
+            // has approved (BudgetCeiling, the same one function every other surface reads) — and the
+            // spend is the billed total the cap is compared against. A brief quoting the plan's $3.00
+            // about a run governed by $6.00 sends the night watch to fix a park that is not there.
+            ["spendUsd"] = decimal.Round(state?.BilledWindowCostUsd ?? status?.TotalCostUsd ?? 0m, 2),
+            ["costCapUsd"] = Budget.BudgetCeiling.EffectiveCostCap(
+                plan.Limits?.MaxRunCostUsd, state?.BudgetGrantUsd ?? 0m) is { } cap ? decimal.Round(cap, 2) : null,
             ["tokens"] = state?.PerRunTokens ?? 0,
-            ["tokenCap"] = plan.Limits?.MaxRunTokens,
+            ["tokenCap"] = Budget.BudgetCeiling.EffectiveTokenCap(
+                plan.Limits?.MaxRunTokens, state?.BudgetGrantTokens ?? 0L),
             ["attention"] = state?.AttentionReason,
             ["whatHurt"] = status?.WhatHurt,
         };

@@ -348,4 +348,116 @@ public sealed class G3LiveReloadTests
             try { TestTemp.DeleteTree(repo); } catch (IOException) { }
         }
     }
+
+    /// <summary>
+    /// KS5.4 — a reload must not rewrite somebody else's park. The top-of-loop cap check runs after
+    /// EVERY applied reload, and round 2 caught it converting an operator `pause` on a
+    /// still-over-budget run into a fresh AwaitingOwner/Budget park with a second owner-approval
+    /// event pushed to the queue — against this path's own rule, "an operator pause stays paused".
+    /// The sequence is exactly the reachable one from the finding: park on budget, `pause` (applied
+    /// immediately between sessions), edit the plan to a cap the spend is still over, reload. The run
+    /// must come out of it Paused, holding the one park event it always had.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task LiveBudgetPark_PauseThenReload_StaysPausedWithNoSecondApprovalRequest()
+    {
+        var repo = Path.Combine(Path.GetTempPath(), $"conductor-pausereload-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(repo);
+        using var cts = new CancellationTokenSource();
+        try
+        {
+            ProcResult Git(string args) => ProcessRunner.Run("git",
+                args.Split(' ', StringSplitOptions.RemoveEmptyEntries), repo,
+                TimeSpan.FromSeconds(30), CancellationToken.None);
+            Git("init -b main");
+            Git("config user.email pause@test");
+            Git("config user.name Pause");
+            await File.WriteAllTextAsync(Path.Combine(repo, "README.md"), "# p", CancellationToken.None);
+            Git("add README.md");
+            Git("commit -m init --no-gpg-sign");
+            await File.WriteAllTextAsync(Path.Combine(repo, "TRACKER.md"),
+                "# Plan\n\n## Handoff\nnone.\n\n| # | Checkpoint | Status | Commit | Evidence |\n|---|---|---|---|---|\n| H0.1 | never done | TODO | | |\n",
+                CancellationToken.None);
+            var agentScript = Path.Combine(repo, "fake-agent.cmd");
+            await File.WriteAllTextAsync(agentScript, string.Join("\r\n",
+                "@echo off",
+                "echo {\"type\":\"text\",\"part\":{\"text\":\"noop session.\"}}",
+                "echo {\"type\":\"step_finish\",\"part\":{\"cost\":0.05,\"tokens\":{\"input\":10,\"output\":5}}}",
+                "exit /b 0",
+                ""), CancellationToken.None);
+
+            var planPath = Path.Combine(repo, "pause.plan.json");
+            var seed = new PlanConfig
+            {
+                Name = "pause-live",
+                Repo = repo.Replace("\\", "/"),
+                Tracker = "TRACKER.md",
+                Stages = [new StageConfig { Id = "H0", Title = "Pause", Sessions = 5 }],
+                Agent = new AgentConfig { Command = "cmd.exe", Args = ["/c", agentScript, "{prompt}"], Provider = "opencode" },
+                GatePolicy = "perSession",
+                Gates = [new GateConfig { Name = "smoke", Command = "echo ok", Tier = "fast", TimeoutMinutes = 1 }],
+            };
+            seed.Limits.MaxRunCostUsd = 0.01m;  // session 1's $0.05 parks the run
+            seed.Report.Commit = false;
+            await File.WriteAllTextAsync(planPath, JsonSerializer.Serialize(seed, PlanConfig.JsonOpts),
+                new UTF8Encoding(encoderShouldEmitUTF8Identifier: true), CancellationToken.None);
+            var plan = PlanConfig.Load(planPath);
+
+            var state = new RunState { RunId = Guid.NewGuid().ToString("N") };
+            using var host = ConductorHost.Build(plan, state, new PlainSink(),
+                new RunOptions(DryRun: false, Once: false, MaxSessions: 0), consoleSink: false);
+            var store = host.Services.GetRequiredService<Conductor.Core.Store.IRunStore>();
+            var inbox = host.Services.GetRequiredService<System.Collections.Concurrent.ConcurrentQueue<ControlCommand>>();
+            var runTask = host.Services.GetRequiredService<Orchestrator>().RunAsync(cts.Token);
+
+            // The budget park, announced once.
+            var deadline = DateTime.UtcNow.AddSeconds(90);
+            while (!(state.Status == RunStatus.AwaitingOwner && state.AwaitingOwnerReason == AwaitingOwnerReason.Budget)
+                   && DateTime.UtcNow < deadline)
+                await Task.Delay(100, CancellationToken.None);
+            Assert.Equal(RunStatus.AwaitingOwner, state.Status);
+            Assert.Equal(AwaitingOwnerReason.Budget, state.AwaitingOwnerReason);
+            // The event spine drains asynchronously (SqliteRunStore.Events), so the park's event is
+            // polled for rather than demanded the instant the status flips.
+            deadline = DateTime.UtcNow.AddSeconds(30);
+            while (!store.ReadAllEvents(state.RunId).OfType<OwnerApprovalRequested>().Any() && DateTime.UtcNow < deadline)
+                await Task.Delay(100, CancellationToken.None);
+            Assert.Single(store.ReadAllEvents(state.RunId).OfType<OwnerApprovalRequested>());
+
+            // The operator's pause — applied immediately, no session is running.
+            inbox.Enqueue(ControlCommand.Of(ControlAction.PauseAfterSession));
+            deadline = DateTime.UtcNow.AddSeconds(30);
+            while (state.Status != RunStatus.Paused && DateTime.UtcNow < deadline)
+                await Task.Delay(100, CancellationToken.None);
+            Assert.Equal(RunStatus.Paused, state.Status);
+
+            // The plan edit + reload, with the spend still over the edited cap.
+            var edited = PlanConfig.Load(planPath);
+            edited.Limits.MaxRunCostUsd = 0.02m;   // $0.05 spent stays over it
+            edited.Save();
+            inbox.Enqueue(ControlCommand.Of(ControlAction.ReloadPlan));
+            deadline = DateTime.UtcNow.AddSeconds(60);
+            while (!store.ReadAllEvents(state.RunId).OfType<PlanReloaded>().Any() && DateTime.UtcNow < deadline)
+                await Task.Delay(100, CancellationToken.None);
+            Assert.Single(store.ReadAllEvents(state.RunId).OfType<PlanReloaded>());
+
+            // A few loop turns to let a wrong implementation do the wrong thing, then the claim: the
+            // pause survived its reload, and nobody was asked to approve anything a second time.
+            await Task.Delay(2000, CancellationToken.None);
+            Assert.Equal(RunStatus.Paused, state.Status);
+            Assert.Single(store.ReadAllEvents(state.RunId).OfType<OwnerApprovalRequested>());
+            Assert.Equal(0, state.BudgetApprovals);
+            Assert.Equal(0m, state.BudgetGrantUsd);
+
+            await cts.CancelAsync();
+            var code = await runTask.WaitAsync(TimeSpan.FromSeconds(30), CancellationToken.None);
+            Assert.Equal(130, code);
+        }
+        finally
+        {
+            await cts.CancelAsync();
+            try { TestTemp.DeleteTree(repo); } catch (IOException) { }
+        }
+    }
 }

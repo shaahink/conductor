@@ -11,6 +11,16 @@ public readonly record struct BudgetRaiseRequest(decimal? Usd, long? Tokens)
     public bool IsEmpty => Usd is null && Tokens is null;
 }
 
+/// <summary>KS5.4 — which halves of the ceiling a spend has reached. Produced only by
+/// <see cref="BudgetCeiling.Standing"/>, so the spend-vs-cap comparison itself has exactly one home:
+/// the cap check parks on this, the reload un-parks on it, and the approval refuses on it (computed
+/// against the would-be ceiling), which is what makes the three agree about what "over" means.</summary>
+[StructLayout(LayoutKind.Auto)]
+public readonly record struct BudgetStanding(bool OverCost, bool OverTokens)
+{
+    public bool AnyOver => OverCost || OverTokens;
+}
+
 /// <summary>
 /// KS5.4 — the ceiling a run is actually governed by, and the arithmetic that moves it.
 /// <para>Pure and static for the same reason <see cref="BudgetAnalyzer"/> is: the run loop, the cap
@@ -35,6 +45,34 @@ public static class BudgetCeiling
     /// <summary>The token ceiling in force. Same rule as <see cref="EffectiveCostCap"/>.</summary>
     public static long? EffectiveTokenCap(long? planCap, long grantTokens)
         => planCap is { } cap ? cap + grantTokens : null;
+
+    /// <summary>
+    /// KS5.4 — the ONE spend-vs-cap comparison. Inclusive (a run that has spent exactly its ceiling is
+    /// over it), and a half with no configured cap can never be over. Every decision that hangs on
+    /// "has this run reached its ceiling" — the park, the reload's un-park, the approval's refusal —
+    /// reads this rather than re-deriving the comparison, because a second copy of a
+    /// <c>&gt;=</c> is exactly the kind of thing that agrees today and diverges on the next edit. The
+    /// round-2 verdict found that divergence live: the approval checked only the halves being raised,
+    /// so a run over BOTH ceilings un-parked on a dollar amount, bought a full session, and re-parked
+    /// on the token half nobody had been told about.
+    /// </summary>
+    public static BudgetStanding Standing(decimal? costCap, decimal spentUsd, long? tokenCap, long spentTokens)
+        => new(
+            OverCost: costCap is { } cc && spentUsd >= cc,
+            OverTokens: tokenCap is { } tc && spentTokens >= tc);
+
+    /// <summary>The park announcement's subject: every half the spend has reached, named with its
+    /// numbers — never just the first one found. The round-2 verdict caught the single-half line in the
+    /// act: a run over both ceilings printed only the money clause, so the operator typed a dollar
+    /// amount, and the token half re-parked the run a full session later.</summary>
+    public static string Overage(decimal? costCap, decimal spentUsd, long? tokenCap, long spentTokens)
+    {
+        var standing = Standing(costCap, spentUsd, tokenCap, spentTokens);
+        var clauses = new List<string>(2);
+        if (standing.OverCost) clauses.Add($"budget cap: {Usd(spentUsd)} >= {Usd(costCap!.Value)}");
+        if (standing.OverTokens) clauses.Add($"token cap: {Tokens(spentTokens)} >= {Tokens(tokenCap!.Value)}");
+        return string.Join("; ", clauses);
+    }
 
     /// <summary>
     /// Parse the amount carried by an <c>approve</c>. The accepted forms, and nothing else:

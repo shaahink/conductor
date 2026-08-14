@@ -187,6 +187,40 @@ public sealed class SF5_2SupervisorTests : IDisposable
         Assert.Equal(orders, JsonDocument.Parse(text).RootElement.GetProperty("standingOrders").GetString());
     }
 
+    /// <summary>KS5.4 — the brief hands the night watch the ceiling IN FORCE and the billed spend the
+    /// cap actually compares, through the same one function every other surface reads
+    /// (<c>BudgetCeiling</c>). Round 2 caught it still quoting the plan's raw caps: after an approval
+    /// the supervisor was told the run was governed by $3.00 while the ceiling in force was $6.00 —
+    /// a reader whose whole job is money, briefed with the one number every other surface had stopped
+    /// saying.</summary>
+    [Fact]
+    public void The_brief_quotes_the_ceiling_in_force_and_the_billed_spend_not_the_plans_figures()
+    {
+        var plan = Plan(new SupervisorConfig { Command = "c" });
+        plan.Limits.MaxRunCostUsd = 3.00m;
+        plan.Limits.MaxRunTokens = 100_000;
+        var state = new RunState
+        {
+            RunId = "r1",
+            Status = RunStatus.AwaitingOwner,
+            AwaitingOwnerReason = AwaitingOwnerReason.Budget,
+            PerRunCostUsd = 3.00m,
+            PerRunSideCostUsd = 0.50m,     // KS5.2: lanes/advisor money is cap money — the brief agrees
+            PerRunTokens = 120_000,
+            BudgetGrantUsd = 3.00m,
+            BudgetGrantTokens = 100_000,
+        };
+        var wake = new WatchWake(WatchReason.OwnerPark, "budget", "S1", 3) { FiredFrom = "ownerApprovalRequested" };
+
+        var brief = WatchBrief.Build(wake, plan, state, status: null, engineAlive: true, Now);
+
+        Assert.Equal("budget-park", brief["reason"]!.GetValue<string>());
+        Assert.Equal(6.00m, brief["costCapUsd"]!.GetValue<decimal>());
+        Assert.Equal(200_000L, brief["tokenCap"]!.GetValue<long>());
+        Assert.Equal(3.50m, brief["spendUsd"]!.GetValue<decimal>());
+        Assert.Equal(120_000L, brief["tokens"]!.GetValue<long>());
+    }
+
     [Fact]
     public void No_orders_means_no_key_rather_than_an_empty_one()
     {

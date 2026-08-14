@@ -111,12 +111,14 @@ public sealed partial class DoctorCommand : AsyncCommand<DoctorSettings>
         checks.Add(await CheckEscalationTokenAsync(plan).ConfigureAwait(false));
 
         var (currentCostUsd, hasRun) = TryReadCostFromRunDb(plan);
-        // KS5.4: the grant lives in the persisted run_state row, not on the event spine the status
-        // report folds, so it is read through the one loader that reads run state before a host exists.
-        // Missing db, missing table or torn JSON all answer "no grant", which is the plan's own cap.
-        var budgetGrantUsd = (await RunStateResume
+        // KS5.4: the grants live in the persisted run_state row, not on the event spine the status
+        // report folds, so they are read through the one loader that reads run state before a host
+        // exists. Missing db, missing table or torn JSON all answer "no grant" — the plan's own caps.
+        var resumed = await RunStateResume
             .TryLoadLatestAsync(plan.RunDbPath, plan.Name, CancellationToken.None)
-            .ConfigureAwait(false))?.BudgetGrantUsd ?? 0m;
+            .ConfigureAwait(false);
+        var budgetGrantUsd = resumed?.BudgetGrantUsd ?? 0m;
+        var budgetGrantTokens = resumed?.BudgetGrantTokens ?? 0L;
 
         // Reuse PreflightHealth for DNS/disk/API — sane defaults when the plan hasn't configured
         // DnsHealthCheck at all, so doctor is useful on a fresh plan out of the box. Git is
@@ -136,7 +138,7 @@ public sealed partial class DoctorCommand : AsyncCommand<DoctorSettings>
         var preflight = await PreflightHealth.RunAllAsync(dnsCfg, plan.Repo, currentCostUsd, null).ConfigureAwait(false);
         checks.AddRange(preflight.Select(r => new Check(r.Name, r.Passed ? "ok" : "fail", r.Message)));
 
-        checks.Add(CheckBudget(plan, currentCostUsd, hasRun, budgetGrantUsd));
+        checks.Add(CheckBudget(plan, currentCostUsd, hasRun, budgetGrantUsd, budgetGrantTokens));
         checks.Add(CheckTokenBudget(plan));
         checks.Add(CheckState(plan));
         checks.Add(CheckTelegram(plan));
@@ -425,37 +427,8 @@ public sealed partial class DoctorCommand : AsyncCommand<DoctorSettings>
             $"every session kind renders for all {plan.Stages.Count} stage(s) with no unresolved placeholder");
     }
 
-    /// <param name="budgetGrantUsd">KS5.4 — dollars an owner has already approved on top of
-    /// <c>limits.maxRunCostUsd</c> for this run (<see cref="RunState.BudgetGrantUsd"/>). Doctor reports on
-    /// the ceiling the run is GOVERNED by, which is the plan's cap plus that grant
-    /// (<see cref="BudgetCeiling.EffectiveCostCap"/> — the same function the cap check, <c>/state</c> and
-    /// the run report read). Left on the plan's figure, doctor called a run "fail — the run will park at
-    /// AwaitingOwner" about a run that had been approved past exactly that park and would not park at
-    /// all. Explicit rather than defaulted: a caller that forgets it re-introduces that.</param>
-    internal static Check CheckBudget(PlanConfig plan, decimal currentCostUsd, bool hasRun, decimal budgetGrantUsd)
-    {
-        ArgumentNullException.ThrowIfNull(plan);
-        // W3.3: unbounded is a choice, and a defensible one — but silence made it a default nobody
-        // picked. The U-series run had no cap and spent $139.68 before it died.
-        if (BudgetCeiling.EffectiveCostCap(plan.Limits.MaxRunCostUsd, budgetGrantUsd) is not { } cap)
-            return plan.Limits.MaxRunTokens.HasValue
-                ? new Check("budget", "ok", $"no cost cap, token cap {plan.Limits.MaxRunTokens / 1000.0:0.#}k")
-                : new Check("budget", "warn", "no spend cap — set limits.maxRunCostUsd (or maxRunTokens) unless unbounded is deliberate");
-
-        // Where the ceiling came from, when it is not the number in the plan file — otherwise an operator
-        // reading "cap $6.00" against a plan that says 3.00 goes looking for the difference.
-        var raised = budgetGrantUsd > 0m && plan.Limits.MaxRunCostUsd is { } configured
-            ? $" (raised from ${configured:0.00} by owner approval)" : "";
-        if (!hasRun)
-            return new Check("budget", "ok", $"cap ${cap:0.00}{raised}, no run yet");
-        if (currentCostUsd >= cap)
-            return new Check("budget", "fail", $"${currentCostUsd:0.00} ≥ cap ${cap:0.00}{raised} — raise limits.maxRunCostUsd or the run will park at AwaitingOwner");
-
-        var pct = cap > 0 ? (double)(currentCostUsd / cap) * 100 : 0;
-        return pct >= 80
-            ? new Check("budget", "warn", $"${currentCostUsd:0.00} / ${cap:0.00}{raised} ({pct:0}%) — approaching the cap")
-            : new Check("budget", "ok", $"${currentCostUsd:0.00} / ${cap:0.00}{raised} ({pct:0}%)");
-    }
+    // CheckBudget lives in DoctorCommand.Budget.cs (KS5.4 round 3: extracted, not appended — this
+    // file was at the 500-line ceiling when the check grew its token half).
 
     /// <summary>SC1.2: the sentences live in <see cref="TelegramReadiness"/>, which
     /// <c>GET /telegram/status</c> and <c>TelegramService.StartAsync</c> also read, so doctor and the

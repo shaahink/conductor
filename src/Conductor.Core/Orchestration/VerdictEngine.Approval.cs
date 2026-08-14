@@ -70,10 +70,13 @@ public sealed partial class VerdictEngine
     /// invented — and it is stated either way. The grant composes with a later <c>plan reload</c>
     /// because it is stored as a grant and not as an absolute (see
     /// <see cref="BudgetCeiling.EffectiveCostCap"/>).</para>
-    /// <para>A raise that would land the ceiling at or under the spend already made is REFUSED, and the
-    /// run stays parked: resuming there buys one more session and a second park, and a ceiling under the
-    /// spend can only state its headroom as a negative. The refusal names the shortfall, so the operator
-    /// types one number and is done.</para>
+    /// <para>A raise that would leave ANY reached half of the ceiling at or under the spend already
+    /// made is REFUSED, and the run stays parked — whether the raise addressed that half and fell
+    /// short, or named only the other one: resuming there buys one more session and a second park, and
+    /// a ceiling under the spend can only state its headroom as a negative. The refusal names the
+    /// shortfall, so the operator types one number and is done. The over-ness test is the loop's own
+    /// (<see cref="BudgetCeiling.Standing"/>), applied to the would-be ceiling — the same predicate the
+    /// reload's un-park asks, because the two doors out of a budget park must agree.</para>
     /// </summary>
     private void RaiseBudgetCeiling(string? amount, string? stageId)
     {
@@ -102,33 +105,47 @@ public sealed partial class VerdictEngine
 
         // No amount given: raise every half the run has actually reached, by the cap the operator
         // configured for it. A half that is not blocking is left alone — approving past a money park
-        // must not quietly double a token ceiling nobody complained about.
-        var raiseCost = request.Usd ?? (request.IsEmpty && fromCost is { } fc && spentUsd >= fc ? planCost : null);
-        var raiseTokens = request.Tokens ?? (request.IsEmpty && fromTokens is { } ft && spentTokens >= ft ? planTokens : null);
+        // must not quietly double a token ceiling nobody complained about. "Reached" is the loop's own
+        // standing predicate (RunContext.BudgetStanding), never a re-derived comparison.
+        var standing = _ctx.BudgetStanding;
+        var raiseCost = request.Usd ?? (request.IsEmpty && standing.OverCost ? planCost : null);
+        var raiseTokens = request.Tokens ?? (request.IsEmpty && standing.OverTokens ? planTokens : null);
 
-        // A raise that does not clear what the run has ALREADY spent is not an approval — it is a second
-        // park one session later, on a ceiling the run was over before it started. It happens whenever
-        // the overshoot is bigger than the default raise (the plan's own cap) or the operator types an
-        // --amount smaller than it. The old reset semantics could not reach this state, because zeroing
-        // the counter always cleared the park; raising the ceiling has to be able to say no.
-        // The alternative — resume anyway — costs a whole session and can only state its headroom as a
-        // negative, and "$-4.00 left" is not a sentence anybody can act on.
-        var shortfalls = new List<string>();
-        if (raiseCost is { } wantCost && fromCost is { } baseCost && baseCost + wantCost <= spentUsd)
-            shortfalls.Add(
-                $"raising the cost ceiling by {BudgetCeiling.Usd(wantCost)} would land it at " +
-                $"{BudgetCeiling.Usd(baseCost + wantCost)}, still at or under the " +
-                $"{BudgetCeiling.Usd(spentUsd)} this run has already spent — approve with an amount over " +
-                $"{BudgetCeiling.Usd(spentUsd - baseCost)} to clear it");
-        if (raiseTokens is { } wantTokens && fromTokens is { } baseTokens && baseTokens + wantTokens <= spentTokens)
-            shortfalls.Add(
-                $"raising the token ceiling by {BudgetCeiling.Tokens(wantTokens)} would land it at " +
-                $"{BudgetCeiling.Tokens(baseTokens + wantTokens)}, still at or under the " +
-                $"{BudgetCeiling.Tokens(spentTokens)} already counted — approve with an amount over " +
-                $"{BudgetCeiling.Tokens(spentTokens - baseTokens)} to clear it");
-        if (shortfalls.Count > 0)
+        // The un-park test, taken BEFORE anything is granted: would the ceiling after this raise clear
+        // the spend on BOTH halves? Same predicate as the reload's un-park (ResumeIfBudgetParkCleared)
+        // — those are the only two doors out of a budget park and they must agree. Two ways to fail it:
+        // a half this raise addresses lands at or under what is already spent (the overshoot is bigger
+        // than the default raise, or the operator typed an --amount smaller than it — resuming there
+        // can only state its headroom as a negative, and "$-4.00 left" is not a sentence anybody can
+        // act on); or a half this raise does NOT address is over too (round 2 found `approve
+        // --amount 5` on a run over both ceilings raising the money half, resuming over the token
+        // half, spending a full session and parking again). Either way nothing is granted, the run
+        // stays parked, and the refusal names the number to type.
+        var wouldBe = BudgetCeiling.Standing(
+            fromCost is { } bc ? bc + (raiseCost ?? 0m) : null, spentUsd,
+            fromTokens is { } bt ? bt + (raiseTokens ?? 0L) : null, spentTokens);
+        var blockers = new List<string>();
+        if (wouldBe.OverCost && fromCost is { } baseCost)
+            blockers.Add(raiseCost is { } wantCost
+                ? $"raising the cost ceiling by {BudgetCeiling.Usd(wantCost)} would land it at " +
+                  $"{BudgetCeiling.Usd(baseCost + wantCost)}, still at or under the " +
+                  $"{BudgetCeiling.Usd(spentUsd)} this run has already spent — approve with an amount over " +
+                  $"{BudgetCeiling.Usd(spentUsd - baseCost)} to clear it"
+                : $"the cost ceiling stays reached ({BudgetCeiling.Usd(spentUsd)} >= {BudgetCeiling.Usd(baseCost)}) " +
+                  $"because this amount does not raise it — add usd=<n> over {BudgetCeiling.Usd(spentUsd - baseCost)}, " +
+                  "or approve without an amount to raise every ceiling the run has reached");
+        if (wouldBe.OverTokens && fromTokens is { } baseTokens)
+            blockers.Add(raiseTokens is { } wantTokens
+                ? $"raising the token ceiling by {BudgetCeiling.Tokens(wantTokens)} would land it at " +
+                  $"{BudgetCeiling.Tokens(baseTokens + wantTokens)}, still at or under the " +
+                  $"{BudgetCeiling.Tokens(spentTokens)} already counted — approve with an amount over " +
+                  $"{BudgetCeiling.Tokens(spentTokens - baseTokens)} to clear it"
+                : $"the token ceiling stays reached ({BudgetCeiling.Tokens(spentTokens)} >= {BudgetCeiling.Tokens(baseTokens)}) " +
+                  $"because this amount does not raise it — add tokens=<n> over {BudgetCeiling.Tokens(spentTokens - baseTokens)}, " +
+                  "or approve without an amount to raise every ceiling the run has reached");
+        if (blockers.Count > 0)
         {
-            Refuse(string.Join("; ", shortfalls) +
+            Refuse(string.Join("; ", blockers) +
                    " — nothing was raised and the run is still parked");
             return;
         }
@@ -164,6 +181,9 @@ public sealed partial class VerdictEngine
             SpentUsd = spentUsd,
             SpentTokens = spentTokens,
         });
+        // Un-parking here is safe by construction: the guard above refused every path on which any
+        // half of the ceiling would still be reached, so this is the same both-halves-clear state
+        // ResumeIfBudgetParkCleared demands before IT un-parks.
         _ctx.State.AwaitingOwnerReason = null;
         _ctx.State.Status = RunStatus.Idle;
         _ctx.State.SetAttention(null);

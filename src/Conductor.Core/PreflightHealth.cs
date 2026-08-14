@@ -135,8 +135,9 @@ public static class PreflightHealth
             }
         }
 
-        // Budget
-        if (maxRunCostUsd.HasValue && currentCostUsd >= maxRunCostUsd.Value)
+        // Budget — through the one spend-vs-cap predicate (KS5.4), so this probe cannot hold a
+        // different opinion of "over" than the cap check that parks and the approval that refuses.
+        if (Budget.BudgetCeiling.Standing(maxRunCostUsd, currentCostUsd, null, 0L).OverCost)
         {
             results.Add(new CheckResult("budget", false,
                 $"${currentCostUsd:0.00} ≥ limit ${maxRunCostUsd:0.00}"));

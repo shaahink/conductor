@@ -73,6 +73,14 @@ public sealed class RunContext
     public long? EffectiveMaxRunTokens =>
         Budget.BudgetCeiling.EffectiveTokenCap(Plan.Limits.MaxRunTokens, State.BudgetGrantTokens);
 
+    /// <summary>KS5.4: the one answer to "which halves of its ceiling has this run reached" — the
+    /// effective caps against the billed spend, through the single comparison in
+    /// <see cref="Budget.BudgetCeiling.Standing"/>. The cap check parks on it, the reload un-parks on
+    /// it, and the approval refuses on it, so the three cannot hold different opinions about the same
+    /// run.</summary>
+    public Budget.BudgetStanding BudgetStanding =>
+        Budget.BudgetCeiling.Standing(EffectiveMaxRunCostUsd, BilledWindowUsd, EffectiveMaxRunTokens, RunTokens);
+
     /// <summary>W4.4: the QA override of the item a session is working on — the first not-done
     /// checkpoint of the stage in the PRE-session snapshot, which is exactly the item the assignment
     /// policy claims. Empty when the card has no override (the common case), so every caller

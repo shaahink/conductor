@@ -270,15 +270,15 @@ public sealed class W3ProcessRailsTests
     public void Doctor_WarnsWhenNothingCapsTheSpend()
     {
         var uncapped = new PlanConfig { Name = "p", Repo = "." };
-        Assert.Equal("warn", DoctorCommand.CheckBudget(uncapped, 0m, hasRun: false, budgetGrantUsd: 0m).State);
+        Assert.Equal("warn", DoctorCommand.CheckBudget(uncapped, 0m, hasRun: false, budgetGrantUsd: 0m, budgetGrantTokens: 0L).State);
 
         var capped = new PlanConfig { Name = "p", Repo = "." };
         capped.Limits.MaxRunCostUsd = 50m;
-        Assert.Equal("ok", DoctorCommand.CheckBudget(capped, 0m, hasRun: false, budgetGrantUsd: 0m).State);
+        Assert.Equal("ok", DoctorCommand.CheckBudget(capped, 0m, hasRun: false, budgetGrantUsd: 0m, budgetGrantTokens: 0L).State);
 
         var tokenCapped = new PlanConfig { Name = "p", Repo = "." };
         tokenCapped.Limits.MaxRunTokens = 5_000_000;
-        Assert.Equal("ok", DoctorCommand.CheckBudget(tokenCapped, 0m, hasRun: false, budgetGrantUsd: 0m).State);
+        Assert.Equal("ok", DoctorCommand.CheckBudget(tokenCapped, 0m, hasRun: false, budgetGrantUsd: 0m, budgetGrantTokens: 0L).State);
     }
 
     [Fact]

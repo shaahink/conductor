@@ -652,6 +652,123 @@ public sealed class KS5_4ApproveRaisesTheCeilingTests : IDisposable
         Assert.Contains(Log(rig), l => l.Contains("an amount over 400k", StringComparison.Ordinal));
     }
 
+    /// <summary>
+    /// Round 2's blocking finding, pinned: a run over BOTH ceilings, and an `--amount` that names only
+    /// the money half. Raising that half and un-parking would resume a run still over its token
+    /// ceiling, buy one full session, and park it again — the exact harm the refusal exists to
+    /// prevent, and the divergence clause 7 forbids. So NOTHING is granted, the run stays parked, and
+    /// the refusal names the half the amount did not touch. The un-park test is the same both-halves
+    /// predicate the reload's un-park asks (<see cref="RunLoop.ResumeIfBudgetParkCleared"/>).
+    /// </summary>
+    [Fact]
+    public async Task AnAmountThatLeavesTheOtherHalfOverIsRefusedNotResumedIntoASecondPark()
+    {
+        var rig = Rig(costCap: 3.00m, tokenCap: 100_000);
+        SpendPast(rig, agentUsd: 3.50m, sideUsd: 0m, tokens: 120_000);
+        ParkOnBudget(rig);
+
+        await rig.Verdicts.ApproveAwaitingOwnerAsync("usd=5", CancellationToken.None);
+
+        // Refused whole: not even the half the amount DID clear was granted — a half-approval would
+        // leave the park meaning two different things to its two halves.
+        Assert.Equal(RunStatus.AwaitingOwner, rig.State.Status);
+        Assert.Equal(AwaitingOwnerReason.Budget, rig.State.AwaitingOwnerReason);
+        Assert.Equal(0m, rig.State.BudgetGrantUsd);
+        Assert.Equal(0L, rig.State.BudgetGrantTokens);
+        Assert.Equal(0, rig.State.BudgetApprovals);
+        Assert.Empty(rig.State.BudgetRaises);
+
+        var refusal = Assert.Single(Log(rig), l => l.Contains("approve refused", StringComparison.Ordinal));
+        Assert.Contains("token ceiling stays reached (120k >= 100k)", refusal, StringComparison.Ordinal);
+        Assert.Contains("tokens=", refusal, StringComparison.Ordinal);
+
+        // …and the two commands the refusal offers both clear it. Here: name both halves at once.
+        await rig.Verdicts.ApproveAwaitingOwnerAsync("usd=5;tokens=50000", CancellationToken.None);
+        Assert.Equal(RunStatus.Idle, rig.State.Status);
+        Assert.Null(rig.State.AwaitingOwnerReason);
+        Assert.Equal(8.00m, rig.Ctx.EffectiveMaxRunCostUsd);
+        Assert.Equal(150_000L, rig.Ctx.EffectiveMaxRunTokens);
+        var raise = Assert.Single(rig.State.BudgetRaises);
+        Assert.Equal(8.00m, raise.ToCostUsd);
+        Assert.Equal(150_000L, raise.ToTokens);
+    }
+
+    /// <summary>The same shape from the other side: parked on tokens ALONE, approved with dollars. The
+    /// money half is not even blocking, so the raise buys nothing and the run would resume straight
+    /// into the ceiling that parked it. Refused, naming the half that actually needs the number —
+    /// then the no-amount default clears exactly that half and touches no other.</summary>
+    [Fact]
+    public async Task ADollarAmountOnATokenParkIsRefusedAndTheDefaultThenRaisesTheRightHalf()
+    {
+        var rig = Rig(costCap: 3.00m, tokenCap: 100_000);
+        SpendPast(rig, agentUsd: 1.00m, sideUsd: 0m, tokens: 120_000);
+        ParkOnBudget(rig);
+
+        await rig.Verdicts.ApproveAwaitingOwnerAsync("usd=5", CancellationToken.None);
+
+        Assert.Equal(RunStatus.AwaitingOwner, rig.State.Status);
+        Assert.Equal(0m, rig.State.BudgetGrantUsd);
+        var refusal = Assert.Single(Log(rig), l => l.Contains("approve refused", StringComparison.Ordinal));
+        Assert.Contains("token ceiling stays reached", refusal, StringComparison.Ordinal);
+
+        await rig.Verdicts.ApproveAwaitingOwnerAsync(null, CancellationToken.None);
+        Assert.Equal(RunStatus.Idle, rig.State.Status);
+        Assert.Equal(0m, rig.State.BudgetGrantUsd);            // the money half was never blocking
+        Assert.Equal(100_000L, rig.State.BudgetGrantTokens);   // the token half got its own cap's worth
+        Assert.Equal(3.00m, rig.Ctx.EffectiveMaxRunCostUsd);
+        Assert.Equal(200_000L, rig.Ctx.EffectiveMaxRunTokens);
+    }
+
+    // ────────────────────────────── one predicate, three doors ──────────────────────────────
+
+    /// <summary>The comparison itself, at its one home: inclusive (spending exactly the ceiling IS
+    /// reaching it — the loop's rule), and a half with no cap can never be over.</summary>
+    [Fact]
+    public void TheStandingPredicateIsInclusiveAndACaplessHalfIsNeverOver()
+    {
+        Assert.True(BudgetCeiling.Standing(3.00m, 3.00m, null, 0L).OverCost);
+        Assert.False(BudgetCeiling.Standing(3.00m, 2.99m, null, 0L).OverCost);
+        Assert.True(BudgetCeiling.Standing(null, 0m, 100_000L, 100_000L).OverTokens);
+        Assert.False(BudgetCeiling.Standing(null, 999m, null, 999_999L).AnyOver);
+        Assert.True(BudgetCeiling.Standing(3.00m, 3.50m, 100_000L, 120_000L) is { OverCost: true, OverTokens: true });
+    }
+
+    /// <summary>The park line names EVERY half the run is over — round 2 caught the single-half line
+    /// sending an operator to approve a dollar amount against a park that was also about tokens.</summary>
+    [Fact]
+    public void TheParkAnnouncementNamesEveryHalfTheRunIsOver()
+    {
+        Assert.Equal("budget cap: $3.50 >= $3.00", BudgetCeiling.Overage(3.00m, 3.50m, null, 0L));
+        Assert.Equal("token cap: 120k >= 100k", BudgetCeiling.Overage(null, 0m, 100_000L, 120_000L));
+        Assert.Equal("budget cap: $3.50 >= $3.00; token cap: 120k >= 100k",
+            BudgetCeiling.Overage(3.00m, 3.50m, 100_000L, 120_000L));
+    }
+
+    /// <summary>The routing, stated as code: the cap check, the reload's un-park and the approval all
+    /// read <c>BudgetStanding</c>, and none of them keeps a private copy of the spend-vs-cap
+    /// comparison. A copy agrees on the day it is written and diverges on the next edit — round 2's
+    /// blocking finding was exactly such a divergence, three months early.</summary>
+    [Fact]
+    public void TheSpendVsCapComparisonHasOneHomeAndEveryDoorReadsIt()
+    {
+        var doors = new[]
+        {
+            Path.Combine("src", "Conductor.Core", "Orchestration", "RunLoop.Budget.cs"),
+            Path.Combine("src", "Conductor.Core", "Orchestration", "VerdictEngine.Approval.cs"),
+        };
+        foreach (var door in doors)
+        {
+            var text = File.ReadAllText(Path.Combine(RepoRoot(), door));
+            Assert.Contains("BudgetStanding", text, StringComparison.Ordinal);
+            foreach (var counter in new[] { "BilledWindowUsd >=", "RunTokens >=", "spentUsd >=", "spentTokens >=" })
+                Assert.DoesNotContain(counter, text, StringComparison.Ordinal);
+        }
+        // The pre-session probe's budget arm reads the same predicate rather than keeping a fourth copy.
+        var probe = File.ReadAllText(Path.Combine(RepoRoot(), "src", "Conductor.Core", "PreflightHealth.cs"));
+        Assert.Contains("BudgetCeiling.Standing(", probe, StringComparison.Ordinal);
+        Assert.DoesNotContain("currentCostUsd >=", probe, StringComparison.Ordinal);
+    }
+
     // ────────────────────────────── doctor reads the same ceiling ──────────────────────────────
 
     /// <summary>Doctor is an operator surface like any other, and it was still comparing the run's spend
@@ -665,10 +782,10 @@ public sealed class KS5_4ApproveRaisesTheCeilingTests : IDisposable
         var plan = new PlanConfig { Name = "p", Repo = "." };
         plan.Limits.MaxRunCostUsd = 3.00m;
 
-        var stale = Conductor.Commands.DoctorCommand.CheckBudget(plan, currentCostUsd: 3.50m, hasRun: true, budgetGrantUsd: 0m);
+        var stale = Conductor.Commands.DoctorCommand.CheckBudget(plan, currentCostUsd: 3.50m, hasRun: true, budgetGrantUsd: 0m, budgetGrantTokens: 0L);
         Assert.Equal("fail", stale.State);
 
-        var granted = Conductor.Commands.DoctorCommand.CheckBudget(plan, currentCostUsd: 3.50m, hasRun: true, budgetGrantUsd: 3.00m);
+        var granted = Conductor.Commands.DoctorCommand.CheckBudget(plan, currentCostUsd: 3.50m, hasRun: true, budgetGrantUsd: 3.00m, budgetGrantTokens: 0L);
         Assert.Equal("ok", granted.State);
         Assert.Contains("$6.00", granted.Message, StringComparison.Ordinal);
         Assert.Contains("raised from $3.00", granted.Message, StringComparison.Ordinal);
@@ -676,7 +793,17 @@ public sealed class KS5_4ApproveRaisesTheCeilingTests : IDisposable
 
         // A grant cannot invent a ceiling on a plan that set none — the same rule as everywhere else.
         var uncapped = new PlanConfig { Name = "p", Repo = "." };
-        Assert.Equal("warn", Conductor.Commands.DoctorCommand.CheckBudget(uncapped, 99m, hasRun: true, budgetGrantUsd: 25m).State);
+        Assert.Equal("warn", Conductor.Commands.DoctorCommand.CheckBudget(uncapped, 99m, hasRun: true, budgetGrantUsd: 25m, budgetGrantTokens: 0L).State);
+
+        // The token half of the same rule (round 2): the no-cost-cap branch quotes the token ceiling,
+        // and it must be the ceiling in force, annotated — not the plan's raw figure.
+        var tokenOnly = new PlanConfig { Name = "p", Repo = "." };
+        tokenOnly.Limits.MaxRunTokens = 100_000;
+        var tokenGranted = Conductor.Commands.DoctorCommand.CheckBudget(
+            tokenOnly, currentCostUsd: 0m, hasRun: true, budgetGrantUsd: 0m, budgetGrantTokens: 100_000L);
+        Assert.Equal("ok", tokenGranted.State);
+        Assert.Contains("token cap 200k", tokenGranted.Message, StringComparison.Ordinal);
+        Assert.Contains("raised from 100k by owner approval", tokenGranted.Message, StringComparison.Ordinal);
     }
 
     // ────────────────────────────── the rig ──────────────────────────────

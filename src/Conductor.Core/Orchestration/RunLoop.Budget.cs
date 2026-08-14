@@ -39,25 +39,34 @@ public sealed partial class RunLoop
     /// </summary>
     private bool CheckBudgetCap()
     {
-        var costCap = _ctx.EffectiveMaxRunCostUsd;
-        var tokenCap = _ctx.EffectiveMaxRunTokens;
-        var overCost = costCap is { } cc && _ctx.BilledWindowUsd >= cc;
-        var overTokens = tokenCap is { } tc && _ctx.RunTokens >= tc;
-        if (!overCost && !overTokens) return false;
+        if (!_ctx.BudgetStanding.AnyOver) return false;
 
         // Already parked on exactly this: the reload path re-checks after every swap, and a park that
         // announces itself twice reads as two parks. Still "true" — the loop must idle, not spend.
-        if (_ctx.State.Status == RunStatus.AwaitingOwner && _ctx.State.AwaitingOwnerReason == AwaitingOwnerReason.Budget)
-            return true;
+        // Any OTHER awaiting-owner reason (an owner gate, approval mode) outranks the cap for the same
+        // reason the guard below does: that park was somebody's decision and this check must not
+        // rewrite it into a request for money.
+        if (_ctx.State.Status == RunStatus.AwaitingOwner) return true;
+
+        // A run already stopped by somebody keeps its status and its reason. The reload path calls
+        // this after EVERY applied reload, and without this guard an operator `pause` on a
+        // still-over-budget run came back from its next reload as a fresh budget park with a second
+        // owner-approval event pushed to the queue and the phone (round-2 finding). The statuses are
+        // the ones the rest of the loop protects — the pause/stop guards' NeedsHuman/Aborted, plus
+        // Paused itself: "an operator pause stays paused" (ApplyPlanReload). Still "true": whatever
+        // the reason, the loop must idle here, not spend.
+        if (_ctx.State.Status is RunStatus.Paused or RunStatus.NeedsHuman or RunStatus.Aborted) return true;
 
         _ctx.Events.Emit(new OwnerApprovalRequested { StageId = _ctx.State.CurrentStage ?? "?" });
         _ctx.State.Status = RunStatus.AwaitingOwner;
         _ctx.State.AwaitingOwnerReason = AwaitingOwnerReason.Budget;
         // KS5.2: BilledWindowUsd, not RunCostUsd — a run whose spend was all lanes and advisors could
         // never reach its own ceiling. See RunContext.BilledWindowUsd for what is in the total and why.
-        _ctx.Log(overCost
-            ? $"budget cap: {BudgetCeiling.Usd(_ctx.BilledWindowUsd)} >= {BudgetCeiling.Usd(costCap!.Value)}{RaisedNote()} — awaiting owner approval to continue"
-            : $"token cap: {BudgetCeiling.Tokens(_ctx.RunTokens)} >= {BudgetCeiling.Tokens(tokenCap!.Value)}{RaisedNote()} — awaiting owner approval to continue");
+        // Round 2: the line names EVERY half the run is over. Printing only the money clause of a
+        // two-half park sent the operator off to approve a dollar amount that could not clear it.
+        _ctx.Log(BudgetCeiling.Overage(
+                     _ctx.EffectiveMaxRunCostUsd, _ctx.BilledWindowUsd, _ctx.EffectiveMaxRunTokens, _ctx.RunTokens)
+                 + $"{RaisedNote()} — awaiting owner approval to continue");
         _saveAndReport();
         return true;
     }
@@ -109,15 +118,14 @@ public sealed partial class RunLoop
         if (ctx.State.Status != RunStatus.AwaitingOwner
             || ctx.State.AwaitingOwnerReason != AwaitingOwnerReason.Budget) return false;
 
-        var costCap = ctx.EffectiveMaxRunCostUsd;
-        var tokenCap = ctx.EffectiveMaxRunTokens;
-        if (costCap is { } cc && ctx.BilledWindowUsd >= cc) return false;
-        if (tokenCap is { } tc && ctx.RunTokens >= tc) return false;
+        // BOTH halves must be clear, through the loop's one standing predicate — un-parking on the
+        // half that was raised while the other is still over buys exactly one session and a second park.
+        if (ctx.BudgetStanding.AnyOver) return false;
 
         ctx.State.AwaitingOwnerReason = null;
         ctx.State.Status = RunStatus.Idle;
         ctx.State.SetAttention(null);
-        var ceiling = costCap is { } c ? BudgetCeiling.Usd(c) : "no cost cap";
+        var ceiling = ctx.EffectiveMaxRunCostUsd is { } c ? BudgetCeiling.Usd(c) : "no cost cap";
         ctx.Log($"spend ceiling raised by the reloaded plan to {ceiling} — " +
                 $"{BudgetCeiling.Usd(ctx.BilledWindowUsd)} spent is inside it again, resuming");
         return true;
