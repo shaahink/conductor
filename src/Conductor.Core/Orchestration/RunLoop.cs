@@ -130,78 +130,10 @@ public sealed partial class RunLoop
                         continue;
                     }
 
-                    // SC5.1: the wait an agent declared. It lives in RunState, not in a field of this
-                    // process, so an engine restarted mid-wait resumes the wait rather than paying for
-                    // a session that would only re-derive the same timestamp. Clearing it here is the
-                    // "respawn once": the next turn of this loop spawns exactly one session.
-                    if (!_ctx.Options.DryRun && _ctx.State.BlockedUntilUtc is { } blockedUntil)
-                    {
-                        if (DateTime.UtcNow < blockedUntil)
-                        {
-                            PushIdleSnapshot();
-                            await Task.Delay(1000, ct).ConfigureAwait(false);
-                            continue;
-                        }
-                        var waited = _ctx.State.BlockedSinceUtc is { } since
-                            ? $" after {(DateTime.UtcNow - since).TotalMinutes:0.#}m asleep" : "";
-                        _ctx.Log($"blocked-until window opened ({blockedUntil:HH:mm:ss}Z){waited} — resuming: {_ctx.State.BlockedReason}");
-                        _ctx.State.BlockedUntilUtc = null;
-                        _ctx.State.BlockedReason = null;
-                        _ctx.State.BlockedSinceUtc = null;
-                        if (_ctx.State.Status == RunStatus.Waiting) _ctx.State.Status = RunStatus.Idle;
-                        _ctx.Save();
-                    }
-
-                    if (!_ctx.Options.DryRun && _ctx.BackoffUntil is { } until)
-                    {
-                        if (DateTime.UtcNow < until) { PushIdleSnapshot(); await Task.Delay(1000, ct).ConfigureAwait(false); continue; }
-                        _ctx.BackoffUntil = null;
-                        _ctx.State.Status = RunStatus.Idle;
-                        _ctx.Log("backoff over — resuming");
-                    }
-
-                    if (!_ctx.Options.DryRun && _ctx.StallBackoffUntil is { } sbUntil)
-                    {
-                        if (DateTime.UtcNow < sbUntil)
-                        {
-                            PushIdleSnapshot();
-                            await Task.Delay(1000, ct).ConfigureAwait(false);
-                            continue;
-                        }
-                        _ctx.StallBackoffUntil = null;
-                        _ctx.Log("stall backoff over — resuming");
-                    }
-
-                    if (!_ctx.Options.DryRun && _ctx.DnsParkedUntil is { } dpUntil)
-                    {
-                        if (DateTime.UtcNow < dpUntil)
-                        {
-                            PushIdleSnapshot();
-                            await Task.Delay(1000, ct).ConfigureAwait(false);
-                            continue;
-                        }
-                        _ctx.DnsParkedUntil = null;
-                        var recheckResults = await PreflightAsync(_ctx).ConfigureAwait(false);
-                        if (PreflightHealth.AllPassed(recheckResults))
-                        {
-                            _ctx.PreflightConsecutiveFailures = 0;
-                            _ctx.Log("preflight recovered — resuming session");
-                        }
-                        else
-                        {
-                            _ctx.PreflightConsecutiveFailures++;
-                            var backoff = PreflightHealth.ComputeBackoff(
-                                _ctx.PreflightConsecutiveFailures,
-                                _ctx.Plan.Limits.DnsHealthCheck?.IntervalSeconds ?? 60,
-                                _ctx.Plan.Limits.DnsHealthCheck?.BackoffMultiplier ?? 2.0,
-                                _ctx.Plan.Limits.DnsHealthCheck?.MaxBackoffSeconds ?? 3600);
-                            _ctx.DnsParkedUntil = DateTime.UtcNow.AddSeconds(backoff);
-                            NotifyPreflightPark(_ctx.PreflightConsecutiveFailures, backoff, "still failing");
-                            PushIdleSnapshot();
-                            await Task.Delay(1000, ct).ConfigureAwait(false);
-                            continue;
-                        }
-                    }
+                    // The declared wait, the backoffs and the DNS park — the timers that hold this
+                    // loop at the session boundary without changing what runs next. One method
+                    // (RunLoop.Waits.cs); true means "still held, go around".
+                    if (!_ctx.Options.DryRun && await HeldAtSessionBoundaryAsync(ct).ConfigureAwait(false)) continue;
 
                 // W5.1: the graph's status, not the declaration's — an imported plan declares TODO
                 // for the life of the run, so scheduling on the declaration re-picked delivered work
@@ -213,6 +145,21 @@ public sealed partial class RunLoop
                 // and `preflight`'s compose leg reads the SAME function. This loop owns only the side
                 // effects of executing that answer; it holds no private copy of the decision.
                 var next = StageSelection.NextAction(_ctx.Plan, _ctx.State, track);
+
+                if (next.Step == LaunchStep.ParkedStatus)
+                {
+                    // A live run never reaches this decision parked — the idle check above `continue`s
+                    // first. Dry run skips that check by design, so the truthful narration is the
+                    // park itself, not the session a real launch would never spawn.
+                    if (_ctx.Options.DryRun)
+                    {
+                        _ctx.Sink.Log($"--- DRY RUN: saved status is {_ctx.State.Status} — `conductor run` idles at the session boundary and spawns nothing; resolve, then `conductor resume` (nothing executed) ---");
+                        return 0;
+                    }
+                    PushIdleSnapshot();
+                    await Task.Delay(800, ct).ConfigureAwait(false);
+                    continue;
+                }
 
                 if (next.Step == LaunchStep.EmptyTracker)
                 {
@@ -307,9 +254,21 @@ public sealed partial class RunLoop
                 }
 
                 var maxAttempts = MaxAttempts(stage);
-                if (_ctx.State.AttemptsThisStage >= maxAttempts && _ctx.State.PendingAudit == null)
+                if (next.Step == LaunchStep.ExhaustedAttempts)
                 {
-                    if (!await _verdicts.EscalateExhaustedStageAsync(stage, track, maxAttempts).ConfigureAwait(false)) continue;
+                    // KS3.4 round 3: the branch is StageSelection's now, so `preflight` sees it too.
+                    // A dry run reports it instead of escalating — the escalation consults the
+                    // advisor (a model call) and parks the run, both of which are spend and state a
+                    // dry run promises not to touch.
+                    if (_ctx.Options.DryRun)
+                    {
+                        _ctx.Sink.Log($"--- DRY RUN: stage {stage.Id} has used all {maxAttempts} attempts — would consult the advisor and, with none configured, park at NeedsHuman (nothing executed) ---");
+                        return 0;
+                    }
+                    // Whichever way the escalation went — skip, more attempts granted, NeedsHuman —
+                    // the state changed under this decision, so take the decision again.
+                    await _verdicts.EscalateExhaustedStageAsync(stage, track, maxAttempts).ConfigureAwait(false);
+                    continue;
                 }
 
                 if (_ctx.Options.MaxSessions > 0 && sessionsThisRun >= _ctx.Options.MaxSessions)
@@ -335,6 +294,8 @@ public sealed partial class RunLoop
 
                 if (_ctx.Options.DryRun)
                 {
+                    if (next.SleepUntilUtc is { } wakes)
+                        _ctx.Sink.Log($"--- DRY RUN: state.blockedUntilUtc {wakes:yyyy-MM-dd HH:mm:ss}Z is still in the future — a live run sleeps at the session boundary until then before spawning ---");
                     var kind = next.Kind;
                     string prompt;
                     // SC3.3: --dry-run exists to find exactly this before a run spends anything.

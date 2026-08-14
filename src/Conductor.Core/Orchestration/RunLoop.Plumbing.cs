@@ -29,7 +29,7 @@ public sealed partial class RunLoop
     // StageSelection.NextAction's answers now — shared verbatim with `preflight`'s compose leg, so
     // the loop keeps no private vocabulary for the decision itself.
 
-    private int MaxAttempts(StageConfig stage) => Math.Max(1, stage.Sessions * _ctx.Plan.Limits.StageSlackFactor);
+    private int MaxAttempts(StageConfig stage) => StageSelection.MaxAttempts(_ctx.Plan, stage);
 
     // ── per-stage overrides (M3.2) ──
 

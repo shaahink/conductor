@@ -463,9 +463,11 @@ public sealed class KS3_4PreflightTests : IDisposable
 
     /// <summary>A run already standing at <c>limits.maxSessions</c> parks at the session boundary
     /// without composing anything — the old leg promised a numbered session for a prompt the loop
-    /// would never build. A park-on-launch is a launch failure, so this one is red. (No dry-run
-    /// companion: the loop's dry-run mode spins on a capped plan rather than exiting — the park
-    /// branch was written for a live run — which is exactly why only this leg can say it.)</summary>
+    /// would never build. A park-on-launch is a launch failure, so this one is red. (The dry-run
+    /// companion used to spin forever on a capped plan — the park branch was written for a live
+    /// run — until round 3 modelled the persisted park itself: the cap parks on the first turn and
+    /// the second turn now reports the parked status and exits, see
+    /// <see cref="TheParkedStatusAgreesWithWhatRunDryRunPrints"/>.)</summary>
     [Fact]
     public async Task ARunAlreadyAtItsSessionCapFailsTheComposeLeg()
     {
@@ -479,6 +481,212 @@ public sealed class KS3_4PreflightTests : IDisposable
             "session cap reached (3/3) — the next `conductor run` parks at the session boundary — no session composes",
             Headline(legs, "compose"));
         Assert.Contains("limits.maxSessions", Detail(legs, "compose"), StringComparison.Ordinal);
+    }
+
+    // ------------------------------------------------------------------ round 3: the persisted parks
+
+    /// <summary>Round 3's blocking finding (1): a saved run whose status is Paused / NeedsHuman /
+    /// AwaitingOwner is the persisted residue of an escalation — <c>RunLoop</c> idles on it at the
+    /// session boundary forever, and <c>RecoverFromCrash</c> resets only a crash's statuses. The leg
+    /// used to fall through to Compose and the verdict line then prescribed <c>conductor run</c>, a
+    /// command that can only idle there; <c>conductor journey</c> on the identical fixture already
+    /// said <c>status NeedsHuman</c>. Red, and the detail names the verb that actually continues the
+    /// run: <c>conductor resume</c>.</summary>
+    [Theory]
+    [InlineData(RunStatus.Paused)]
+    [InlineData(RunStatus.NeedsHuman)]
+    [InlineData(RunStatus.AwaitingOwner)]
+    public async Task AParkedSavedStatusFailsTheComposeLeg_AndNamesResume(RunStatus parked)
+    {
+        var plan = CleanPlan();
+        SaveState(plan, s =>
+        {
+            s.RunId = "r1parked";
+            s.CurrentStage = "S1";
+            s.SessionCounter = 4;
+            s.Status = parked;
+            s.SetAttention("agent asked for a human in the tracker handoff");
+        });
+
+        var legs = await RunAsync(plan);
+
+        Assert.Equal(["compose"], Failing(legs));
+        Assert.Equal(
+            $"the saved run is parked — state.json says status {parked} — the next `conductor run` " +
+            "idles at the session boundary and spawns nothing",
+            Headline(legs, "compose"));
+        Assert.Contains("`conductor resume`", Detail(legs, "compose"), StringComparison.Ordinal);
+        Assert.DoesNotContain("composing to", Headline(legs, "compose"), StringComparison.Ordinal);
+    }
+
+    /// <summary>The rule itself, at the source: only the three statuses the loop idles on trip the
+    /// park. Aborted is CONTINUED by <c>RecoverFromCrash</c>, Waiting is the declared-wait status the
+    /// loop walks straight past, and Idle is a fresh run — a drill that flagged any of them would be
+    /// refusing launches that work.</summary>
+    [Theory]
+    [InlineData(RunStatus.Idle)]
+    [InlineData(RunStatus.Waiting)]
+    [InlineData(RunStatus.Aborted)]
+    public void OnlyTheStatusesTheLoopIdlesOnTripThePark(RunStatus status)
+    {
+        var plan = CleanPlan();
+        var state = new RunState { PlanName = plan.Name, RunId = "r1", CurrentStage = "S1", SessionCounter = 1, Status = status };
+
+        var next = StageSelection.NextAction(plan, state, Track(plan));
+
+        Assert.NotEqual(LaunchStep.ParkedStatus, next.Step);
+    }
+
+    /// <summary>The dry-run agreement for the park: the REAL loop on the same fixture narrates the
+    /// idle instead of announcing a session. (Before round 3 it said <c>would start session #5</c> —
+    /// the exact sentence the drill's READY verdict was built on.)</summary>
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task TheParkedStatusAgreesWithWhatRunDryRunPrints()
+    {
+        var plan = CleanPlan();
+        SaveState(plan, s =>
+        {
+            s.RunId = "r1parked";
+            s.CurrentStage = "S1";
+            s.SessionCounter = 4;
+            s.Status = RunStatus.NeedsHuman;
+        });
+
+        var lines = await DryRunAsync(plan);
+
+        Assert.Contains(lines, l => l.Contains(
+            "DRY RUN: saved status is NeedsHuman", StringComparison.Ordinal));
+        Assert.Contains(lines, l => l.Contains("`conductor resume`", StringComparison.Ordinal));
+        Assert.DoesNotContain(lines, l => l.Contains("would start session #", StringComparison.Ordinal));
+    }
+
+    /// <summary>Round 3's blocking finding (2): a stage that has burned its whole attempt budget
+    /// (<c>sessions × limits.stageSlackFactor</c>) never composes — the loop's escalation branch runs
+    /// FIRST, and with no advisor configured it parks the run at NeedsHuman deterministically. The
+    /// state is reachable at launch precisely because <c>conductor resume</c> does not reset the
+    /// counter (only <c>retry-stage</c> and <c>goto</c> do), so it is exactly what an operator
+    /// preflights before relaunching a parked run. Red, like the session cap: a park-on-launch is a
+    /// launch failure, and with an advisor configured the "launch" the old READY line prescribed
+    /// would begin with a model call.</summary>
+    [Fact]
+    public async Task AnExhaustedAttemptBudgetFailsTheComposeLeg()
+    {
+        var plan = CleanPlan();                          // S1 sessions: 1, stageSlackFactor default 2
+        SaveState(plan, s =>
+        {
+            s.RunId = "r1burned";
+            s.CurrentStage = "S1";
+            s.SessionCounter = 2;
+            s.AttemptsThisStage = 2;
+        });
+
+        var legs = await RunAsync(plan);
+
+        Assert.Equal(["compose"], Failing(legs));
+        Assert.Equal(
+            "stage 'S1' has used all 2 attempts (2/2) — the next `conductor run` escalates instead of " +
+            "composing — no session composes",
+            Headline(legs, "compose"));
+        Assert.Contains("`conductor retry-stage`", Detail(legs, "compose"), StringComparison.Ordinal);
+        Assert.Contains("limits.stageSlackFactor", Detail(legs, "compose"), StringComparison.Ordinal);
+    }
+
+    /// <summary>The exhaustion rule, at the source, in the loop's own terms: the counter is reset
+    /// when the loop ENTERS a stage, so exhaustion only exists on the stage the state is standing
+    /// in; and a queued audit gets its turn regardless — <c>RunLoop</c>'s own <c>PendingAudit</c>
+    /// guard, without which the audit that closes an exhausted stage could never run.</summary>
+    [Fact]
+    public void ExhaustionExistsOnlyOnTheStandingStage_AndAQueuedAuditStillGetsItsTurn()
+    {
+        var plan = CleanPlan(p =>
+            p.Stages.Add(new StageConfig { Id = "S2", Title = "the next one", Sessions = 1 }));
+        WriteTracker(plan, "nothing pending.", ("S1.1", "DONE"), ("S2.1", "TODO"));
+        var burned = new RunState { PlanName = plan.Name, RunId = "r1", CurrentStage = "S1", SessionCounter = 2, AttemptsThisStage = 2 };
+
+        // The tracker moved on: the loop enters S2 and resets the counter, so no exhaustion.
+        Assert.Equal(LaunchStep.Compose, StageSelection.NextAction(plan, burned, Track(plan)).Step);
+
+        // Standing in S1 with S1 still open: exhausted.
+        WriteTracker(plan, "nothing pending.", ("S1.1", "TODO"), ("S2.1", "TODO"));
+        var next = StageSelection.NextAction(plan, burned, Track(plan));
+        Assert.Equal(LaunchStep.ExhaustedAttempts, next.Step);
+        Assert.Equal("S1", next.StageId);
+
+        // A queued audit outranks the budget — the loop's own guard.
+        burned.PendingAudit = new PendingAudit { StageId = "S1" };
+        Assert.Equal(LaunchStep.Compose, StageSelection.NextAction(plan, burned, Track(plan)).Step);
+    }
+
+    /// <summary>The dry-run agreement for the budget: the REAL loop reports the exhaustion and
+    /// terminates — it does not announce a session, and it does not consult the advisor, because an
+    /// advisor consult is a model call and a dry run promises to spend nothing.</summary>
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task TheExhaustedBudgetAgreesWithWhatRunDryRunPrints()
+    {
+        var plan = CleanPlan();
+        SaveState(plan, s =>
+        {
+            s.RunId = "r1burned";
+            s.CurrentStage = "S1";
+            s.SessionCounter = 2;
+            s.AttemptsThisStage = 2;
+        });
+
+        var lines = await DryRunAsync(plan);
+
+        Assert.Contains(lines, l => l.Contains(
+            "DRY RUN: stage S1 has used all 2 attempts", StringComparison.Ordinal));
+        Assert.DoesNotContain(lines, l => l.Contains("would start session #", StringComparison.Ordinal));
+        Assert.DoesNotContain(lines, l => l.Contains("consulting advisor", StringComparison.Ordinal));
+    }
+
+    /// <summary>Round 3's companion pin: an agent-declared wait (<c>state.blockedUntilUtc</c> in the
+    /// future) does not change WHAT runs next, only WHEN — the loop sleeps at the session boundary
+    /// and then spawns exactly the session the leg names. So the leg stays green, still names the
+    /// session, and the detail names the sleep — a drill that promises session #2 without the hours
+    /// in front of it is lying by omission.</summary>
+    [Fact]
+    public async Task ADeclaredWaitIsNamedBesideTheSessionItDefers()
+    {
+        var plan = CleanPlan();
+        var wakes = DateTime.UtcNow.AddHours(2);
+        SaveState(plan, s =>
+        {
+            s.RunId = "r1waits";
+            s.CurrentStage = "S1";
+            s.SessionCounter = 1;
+            s.Status = RunStatus.Waiting;
+            s.BlockedUntilUtc = wakes;
+            s.BlockedReason = "quota window resets on the hour";
+        });
+
+        var legs = await RunAsync(plan);
+
+        Assert.Empty(Failing(legs));
+        Assert.Contains("next session #2", Headline(legs, "compose"), StringComparison.Ordinal);
+        Assert.Contains("state.blockedUntilUtc", Detail(legs, "compose"), StringComparison.Ordinal);
+        Assert.Contains("quota window resets on the hour", Detail(legs, "compose"), StringComparison.Ordinal);
+    }
+
+    /// <summary>And the annotation at the source: in the future it rides on the decision; once the
+    /// instant has passed the loop clears the wait and walks on, so the annotation must vanish with
+    /// it — the clock is a stated parameter for exactly this assertion.</summary>
+    [Fact]
+    public void TheWaitAnnotationRidesTheDecisionOnlyWhileTheInstantIsAhead()
+    {
+        var plan = CleanPlan();
+        var wakes = new DateTime(2026, 8, 14, 6, 0, 0, DateTimeKind.Utc);
+        var state = new RunState { PlanName = plan.Name, RunId = "r1", CurrentStage = "S1", SessionCounter = 1, BlockedUntilUtc = wakes };
+
+        var before = StageSelection.NextAction(plan, state, Track(plan), nowUtc: wakes.AddHours(-1));
+        var after = StageSelection.NextAction(plan, state, Track(plan), nowUtc: wakes.AddHours(1));
+
+        Assert.Equal(LaunchStep.Compose, before.Step);
+        Assert.Equal(wakes, before.SleepUntilUtc);
+        Assert.Equal(LaunchStep.Compose, after.Step);
+        Assert.Null(after.SleepUntilUtc);
     }
 
     /// <summary>The clean fixture's agreement, to the character: the dry-run narrates the session

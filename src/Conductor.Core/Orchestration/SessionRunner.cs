@@ -445,7 +445,7 @@ public sealed partial class SessionRunner
         }
     }
 
-    private int MaxAttempts(StageConfig stage) => Math.Max(1, stage.Sessions * _ctx.Plan.Limits.StageSlackFactor);
+    private int MaxAttempts(StageConfig stage) => StageSelection.MaxAttempts(_ctx.Plan, stage);
 
 
     // Activity tracking and out-of-repo write capture live in SessionRunner.Activity.cs.

@@ -58,7 +58,7 @@ public sealed partial class VerdictEngine
 
     // ── instance helpers ──
 
-    private int MaxAttempts(StageConfig stage) => Math.Max(1, stage.Sessions * _ctx.Plan.Limits.StageSlackFactor);
+    private int MaxAttempts(StageConfig stage) => StageSelection.MaxAttempts(_ctx.Plan, stage);
 
     /// <summary>SC4.3: the ONE place a finished session's commits are collected, primary repo and
     /// declared satellites together. Four call sites used to read <c>Git.CommitsSince</c> on the

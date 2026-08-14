@@ -78,12 +78,14 @@ public sealed partial class PreflightCommand
     /// this compose at all, and will it fit in an argv.
     /// <para>Nothing is re-decided here. The resume peek is
     /// <see cref="JourneyCommand.PeekResumeAsync"/> (state.json, then the run.db row, read-only), and
-    /// the whole branch — a queued phase gate, completion, a park, the audit being scheduled, or a
-    /// composed session of a given kind on a given stage — is
-    /// <see cref="StageSelection.NextAction"/>, the run loop's OWN pre-compose sequence, called, not
-    /// copied. The first delivery copied the stage rule and diverged on <c>dependsOn</c>; the second
-    /// copied the branch ORDER and diverged under <c>gatePolicy: "perPhase"</c>, promising a Deliver
-    /// session while the loop would have run the phase gate. There is nothing left here to drift.</para></summary>
+    /// the whole branch — a persisted park, a queued phase gate, completion, an exhausted attempt
+    /// budget, the audit being scheduled, or a composed session of a given kind on a given stage —
+    /// is <see cref="StageSelection.NextAction"/>, the run loop's OWN pre-compose sequence, called,
+    /// not copied. The first delivery copied the stage rule and diverged on <c>dependsOn</c>; the
+    /// second copied the branch ORDER and diverged under <c>gatePolicy: "perPhase"</c>; the third
+    /// left the saved STATUS and the attempt BUDGET unmodelled, so the drill said READY — "Launch
+    /// with conductor run" — on a parked run that verb can only idle on. All three copies are gone;
+    /// there is nothing left here to drift.</para></summary>
     internal static async Task<Leg> ComposeLegAsync(PlanConfig plan, IReadOnlyList<DoctorCommand.Check> checks)
     {
         ArgumentNullException.ThrowIfNull(plan);
@@ -98,8 +100,41 @@ public sealed partial class PreflightCommand
         var state = await JourneyCommand.PeekResumeAsync(plan).ConfigureAwait(false);
         var track = SafeReadWork(plan);
         var next = StageSelection.NextAction(plan, state, track);
+        var leg = ComposeLegFor(plan, state, next, mine);
+
+        // The agent-declared wait in front of the decision (SC5.1), whatever the decision was: the
+        // loop sleeps at the session boundary until the window opens and only then does what the
+        // headline says. Not a failure — launching into a declared wait is the wait working — but a
+        // drill that names the session without the hours of sleep in front of it understates launch.
+        if (next.SleepUntilUtc is { } wakes)
+            leg = leg with { Detail = [.. leg.Detail, SleepNote(state, wakes)] };
+        return leg;
+    }
+
+    /// <summary>The sentence for each of the loop's branches. Split from the async shell so the
+    /// sleep annotation above applies to every branch, not just the one whose case remembered it.</summary>
+    private static Leg ComposeLegFor(PlanConfig plan, RunState state, LaunchDecision next,
+        IReadOnlyList<DoctorCommand.Check> mine)
+    {
         switch (next.Step)
         {
+            case LaunchStep.ParkedStatus:
+            {
+                // The persisted residue of an escalation: the loop idles on Paused / NeedsHuman /
+                // AwaitingOwner at 800ms polls, forever, before it reads the tracker or composes
+                // anything — and RecoverFromCrash resets only a crash's statuses, never these. The
+                // verb that continues this run is `conductor resume`, and a drill that says
+                // "Launch with conductor run" here is prescribing an idle loop.
+                var detail = new List<string>();
+                if (state.AttentionReason is { Length: > 0 } why) detail.Add($"parked because: {why}");
+                detail.Add("resolve what parked it, then `conductor resume` into the existing run — " +
+                           "`conductor run` never lifts this status, it idles at the session boundary until something else does");
+                return FromChecks(ComposeLegName, mine,
+                    $"the saved run is parked — state.json says status {state.Status} — the next " +
+                    "`conductor run` idles at the session boundary and spawns nothing",
+                    detail, "fail");
+            }
+
             case LaunchStep.EmptyTracker:
                 return FromChecks(ComposeLegName, mine,
                     $"{plan.Tracker} has no parseable checkpoint rows — `conductor run` parks at NeedsHuman before spawning anything",
@@ -134,6 +169,24 @@ public sealed partial class PreflightCommand
                     $"stage '{next.StageId}' checkpoints all read DONE but the stage is unconfirmed — the next " +
                     "`conductor run` schedules the audit / full-battery phase gate — no session composes");
 
+            case LaunchStep.ExhaustedAttempts:
+            {
+                // The loop's escalation branch fires BEFORE its compose branch, so the session this
+                // leg would otherwise promise never composes: with no advisor configured the run
+                // parks at NeedsHuman deterministically, and with one configured the "launch" the
+                // READY line prescribes starts with a model call. Reachable at launch precisely
+                // because `conductor resume` does not reset the counter — only `retry-stage`/`goto` do.
+                var budget = StageSelection.MaxAttempts(plan, next.Stage!);
+                return FromChecks(ComposeLegName, mine,
+                    $"stage '{next.StageId}' has used all {budget} attempts ({state.AttemptsThisStage}/{budget}) — " +
+                    "the next `conductor run` escalates instead of composing — no session composes",
+                    ["with no advisor configured the run parks at NeedsHuman before spawning anything; with one, " +
+                     "its first act is a model call",
+                     "grant a fresh budget with `conductor retry-stage` (resets the counter — `conductor resume` " +
+                     "does not), raise limits.stageSlackFactor, or `conductor skip` the stage"],
+                    "fail");
+            }
+
             case LaunchStep.SessionCap:
                 return FromChecks(ComposeLegName, mine,
                     $"session cap reached ({state.SessionCounter}/{plan.Limits.MaxSessions}) — the next `conductor run` " +
@@ -157,7 +210,7 @@ public sealed partial class PreflightCommand
         {
             // Doctor's own prompt lint usually names the same template first; saying it twice under
             // one leg is noise, so the refusal is only spelled out when nothing else already did.
-            var already = mine.Exists(c => c.State == "fail");
+            var already = mine.Any(c => c.State == "fail");
             return FromChecks(ComposeLegName, mine,
                 $"the prompt for the next session ({kind} on stage '{stage.Id}') is REFUSED — nothing would spawn",
                 already ? [] : [ex.Message], "fail");
@@ -187,7 +240,7 @@ public sealed partial class PreflightCommand
         var prompts = new PromptBuilder(plan);
         var session = state.SessionCounter + 1;
         var attempt = state.NextAttemptNumber;
-        var maxAttempts = Math.Max(1, stage.Sessions * plan.Limits.StageSlackFactor);
+        var maxAttempts = StageSelection.MaxAttempts(plan, stage);
         var isReview = stage.Kind.Equals("review", StringComparison.OrdinalIgnoreCase);
         var prompt = kind switch
         {
@@ -236,6 +289,13 @@ public sealed partial class PreflightCommand
             $"writes nothing), so the composed argv is at most {ceiling} chars (batteries.maxBytes {maxBytes})",
         ];
     }
+
+    /// <summary>The declared wait, as one sentence with the timestamp and — when the session that
+    /// declared it said why — the reason, in that session's own words.</summary>
+    private static string SleepNote(RunState state, DateTime wakes)
+        => $"state.blockedUntilUtc {wakes:yyyy-MM-dd HH:mm:ss}Z is still in the future — the loop sleeps at the " +
+           "session boundary until then before doing any of this" +
+           (state.BlockedReason is { Length: > 0 } why ? $" ({why})" : "");
 
     private static TrackerSnapshot SafeReadWork(PlanConfig plan)
     {
