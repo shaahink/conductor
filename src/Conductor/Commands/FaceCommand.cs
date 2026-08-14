@@ -51,14 +51,9 @@ public sealed class FaceCommand : AsyncCommand<FaceCommand.Settings>
     {
         ArgumentNullException.ThrowIfNull(settings);
 
-        var entry = FaceLauncher.ResolveEntrypoint();
-        if (entry is null)
-        {
-            AnsiConsole.MarkupLine($"[red]error:[/] no built Face found. Run [yellow]go build -o bin/{FaceLauncher.BinaryName} ./cmd/conductor-face/[/] in [yellow]face-go/[/].");
-            return 1;
-        }
+        var psi = FaceProcess();
+        if (psi is null) return 1;
 
-        var psi = new ProcessStartInfo(entry) { UseShellExecute = false };
         if (settings.Demo)
         {
             psi.ArgumentList.Add("--demo");
@@ -82,12 +77,9 @@ public sealed class FaceCommand : AsyncCommand<FaceCommand.Settings>
                 // and now it can be another repo's, so the one line before the TUI takes the terminal
                 // is the only chance the user has to notice they are looking at the wrong website.
                 AnsiConsole.MarkupLine($"[grey]attaching to[/] [white]{Markup.Escape(string.IsNullOrWhiteSpace(run.RepoLabel) ? run.PlanName : run.RepoLabel)}[/] [grey]{Markup.Escape(run.StageId)} · {Markup.Escape(run.BaseUrl)}[/]");
-                psi.ArgumentList.Add("--url");
-                psi.ArgumentList.Add(run.BaseUrl);
                 // The write token goes via env, never argv — it must not show in a process listing.
-                if (await FleetScan.ReadTokenAsync(run).ConfigureAwait(false) is { Length: > 0 } token)
-                    psi.Environment["CONDUCTOR_TOKEN"] = token;
-                return await LaunchAsync(psi).ConfigureAwait(false);
+                return await AttachAsync(run.BaseUrl, await FleetScan.ReadTokenAsync(run).ConfigureAwait(false))
+                    .ConfigureAwait(false);
 
             case FaceTarget.Kind.Picker:
                 // K3.2: the picker also lists what this machine remembers. Best-effort — a catalogue
@@ -159,6 +151,29 @@ public sealed class FaceCommand : AsyncCommand<FaceCommand.Settings>
         AnsiConsole.MarkupLine($"[red]error:[/] no conductor run answering on ports [yellow]{FleetScan.FirstPort.ToString(CultureInfo.InvariantCulture)}-{(FleetScan.FirstPort + FleetScan.PortSpan - 1).ToString(CultureInfo.InvariantCulture)}[/].");
         AnsiConsole.MarkupLine("[grey]Start one with [/][yellow]conductor run --control-plane[/][grey], see what is live with [/][yellow]conductor ps[/][grey], or explore offline with [/][yellow]conductor face --demo[/][grey].[/]");
         return 1;
+    }
+
+    /// <summary>KS2.1: the hub attaches through this, so the front door and the verb share one
+    /// launcher and one token rule. The token goes via the environment, never argv — a process
+    /// listing is readable by every process on the machine.</summary>
+    internal static async Task<int> AttachAsync(string baseUrl, string? token)
+    {
+        var psi = FaceProcess();
+        if (psi is null) return 1;
+        psi.ArgumentList.Add("--url");
+        psi.ArgumentList.Add(baseUrl);
+        if (!string.IsNullOrEmpty(token)) psi.Environment["CONDUCTOR_TOKEN"] = token;
+        return await LaunchAsync(psi).ConfigureAwait(false);
+    }
+
+    /// <summary>The Face binary, or the one sentence that says how to build it. Null means it is not
+    /// there — every caller turns that into exit 1 rather than launching nothing quietly.</summary>
+    private static ProcessStartInfo? FaceProcess()
+    {
+        var entry = FaceLauncher.ResolveEntrypoint();
+        if (entry is not null) return new ProcessStartInfo(entry) { UseShellExecute = false };
+        AnsiConsole.MarkupLine($"[red]error:[/] no built Face found. Run [yellow]go build -o bin/{FaceLauncher.BinaryName} ./cmd/conductor-face/[/] in [yellow]face-go/[/].");
+        return null;
     }
 
     private static async Task<int> LaunchAsync(ProcessStartInfo psi)

@@ -125,6 +125,10 @@ app.Configure(c =>
         .WithDescription("Run the MCP task server (JSON-RPC 2.0 over stdio) for agent task management.");
     // Hidden: run by the agent CLI as a PostToolUse hook, not by a person.
     c.AddCommand<HookBudgetCommand>("hook-budget").IsHidden();
+    // KS2.1: what bare `conductor` reaches (see HubWhenBare). Hidden because the name is not the way
+    // in — the way in is typing nothing — and because a visible entry would move `--help`'s verb list,
+    // which every script and every doc line reads. docs/cli.md documents it under the front door.
+    c.AddCommand<HubCommand>("hub").IsHidden();
     c.AddCommand<CompletionCommand>("completion")
         .WithDescription("Generate shell completion scripts (powershell or bash).");
     c.AddCommand<BgCommand>("bg")
@@ -147,7 +151,19 @@ app.Configure(c =>
         return 1;
     });
 });
-return await app.RunAsync(RewriteRunRecordVerbs(args)).ConfigureAwait(false);
+return await app.RunAsync(RewriteRunRecordVerbs(HubWhenBare(args))).ConfigureAwait(false);
+
+// KS2.1: typing nothing is a question, and the answer used to be forty-one verbs — a table of
+// contents handed to someone who asked to come in. An empty argv now opens the hub: what is running
+// on this machine, what it remembers, what plans are here, and the four things worth doing about it.
+//
+// A REWRITE, NOT SetDefaultCommand. Spectre's default command changes how an unknown first token
+// parses: with one configured, `conductor nosuchverb` is no longer an unknown command, it is the
+// default command with a stray argument — and UseStrictParsing above cannot help, because a bare word
+// is not an option. Every scripted verb call and every typo is on the other side of that difference.
+// Rewriting only a genuinely EMPTY argv leaves the parser's behaviour byte-identical for everything
+// else: `--help`, `--version`, every verb, every mistyped flag.
+static string[] HubWhenBare(string[] argv) => argv.Length == 0 ? ["hub"] : argv;
 
 // KS0.2: `conductor run close <id>` and `conductor run adopt <id>` read as two words and are one
 // command. Spectre cannot have both — a branch named `run` could hold subcommands but could no

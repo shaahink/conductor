@@ -4,6 +4,30 @@
 from the binary. This page covers the verbs you reach for daily and what each is *for*; it does not
 try to duplicate every flag.
 
+## The front door
+
+`conductor` with no arguments is not the verb list any more — it is the **hub**: this machine's state
+home, the runs answering on the fleet ports (4317-4336), the runs the catalogue remembers, the plans
+discoverable from where you are standing, and four things to do about any of it — **attach** a Face to
+a run that is already going, **start** one from a plan here, **plan new**, or **history**.
+
+Every run's status is the *reconciled* word, not the column: an engine that was killed never wrote the
+correction, so a row that still says `running` with nothing holding its store lists as `orphaned`.
+
+Zero plans here is a normal outcome and so is eleven — the hub lists what it finds and never asks
+which one you meant. The front door of a CLI may not interrogate the person who just typed its name,
+so it discovers plans rather than *resolving* one.
+
+Redirected output is a different question: `conductor | cat` or `conductor > board.txt` prints the
+same board and exits 0, with no picker and no prompt, so a script cannot hang on a keystroke nobody is
+there to press.
+
+Nothing else moved. `conductor --help` lists exactly the verbs it listed before, `conductor --version`
+still answers the build, and `conductor <unknown-verb>` is still an error — the hub is reached by
+rewriting an *empty* argv to a hidden `hub` verb, because Spectre's default-command mechanism would
+have turned that last sentence into a lie (an unknown first token becomes the default command's
+argument). `conductor hub` reaches the same screen when you have already typed something.
+
 ## Zero flags by default
 
 Every command resolves the plan from `-p`, else a single `*.plan.json` in the directory you are
