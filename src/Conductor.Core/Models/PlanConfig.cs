@@ -1,5 +1,4 @@
 ﻿using Conductor.Core.Store;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -173,11 +172,14 @@ public sealed class PlanConfig
         return cfg;
     }
 
+    /// <summary>KS3.2 — persist through the parse-preserving writer: only what actually changed is
+    /// spliced into the file, so `//` comments, key order, formatting and defaults-the-file-never-
+    /// carried all survive every <c>add-stage</c>, import apply and Face edit. This used to be a
+    /// whole-file re-serialisation, which dropped every comment and materialised every default.</summary>
     public void Save()
     {
         BumpVersion();
-        var json = JsonSerializer.Serialize(this, JsonOpts);
-        File.WriteAllText(PlanFilePath, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+        Core.Planning.PlanDocumentEditor.Save(this);
     }
 
     public void BumpVersion() => PlanVersion++;

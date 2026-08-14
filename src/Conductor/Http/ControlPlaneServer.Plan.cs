@@ -59,6 +59,8 @@ public sealed partial class ControlPlaneServer
             return;
         }
 
+        // KS3.2: Save() is the parse-preserving writer — a Face edit splices into the file and can
+        // no longer undo the comments and formatting a CLI-preserved file carries.
         plan.Save();
         // G3.2: a saved edit is dynamic by default — queue a live reload so the running loop swaps
         // the plan in at its next session boundary (no restart). Harmless when no run is active:
@@ -142,7 +144,7 @@ public sealed partial class ControlPlaneServer
                 await PlanImportErrorAsync(ctx, "import would make the plan invalid: " + errors[0]).ConfigureAwait(false);
                 return;
             }
-            writable.Save();
+            writable.Save(); // KS3.2: the preserving writer, same as /plan/edit
             plan = writable;
             applied = true;
             // G3.2: same as /plan/edit — an applied import reloads the live run at its next boundary.

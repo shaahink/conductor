@@ -17,6 +17,10 @@ namespace Conductor.Commands;
 /// warning; and the edit reached no running engine at all, despite this doc comment once claiming
 /// "the orchestrator picks it up at next session boundary" — only `plan reload` ever queued the
 /// verb that makes that true.</para>
+///
+/// <para>KS3.2: the comment half is solved rather than apologised for. The edit is spliced into the
+/// raw file by <see cref="PlanDocumentEditor"/> — comments, key order and formatting survive, no
+/// default the file never carried is materialised, and the `.bak`-plus-warning path is gone.</para>
 /// </summary>
 public static class PlanSetCommand
 {
@@ -41,11 +45,14 @@ public static class PlanSetCommand
                 return 1;
             }
 
-            var originalText = File.ReadAllText(planPath);
+            var originalRaw = File.ReadAllBytes(planPath);
 
-            // Load+serialise roundtrip to get clean JSON (strips comments)
+            // Load+serialise roundtrip to get clean JSON (strips comments). `doc` takes the edit;
+            // `before` stays as loaded — the diff between them is exactly what reaches the file.
             var plan = PlanConfig.Load(planPath);
             var cleanJson = JsonSerializer.Serialize(plan, PlanConfig.JsonOpts);
+            var before = JsonNode.Parse(cleanJson)
+                ?? throw new InvalidOperationException("Plan file produced empty JSON on serialisation.");
             var doc = JsonNode.Parse(cleanJson, new JsonNodeOptions { PropertyNameCaseInsensitive = true })
                 ?? throw new InvalidOperationException("Plan file produced empty JSON on serialisation.");
 
@@ -148,25 +155,21 @@ public static class PlanSetCommand
                 return 1;
             }
 
-            // Comments are per-project knowledge and the loader invites them (`conductor init` writes
-            // them); the JSON round-trip cannot keep them. Say how many are about to go, and leave the
-            // file that has them beside the one that does not — devcontext #6, "lossy and irreversible".
-            var dropped = CountCommentLines(originalText);
-            if (dropped > 0)
+            // KS3.2: splice only the edited leaf (and the planVersion bump) into the raw file —
+            // comments, key order and formatting survive; nothing the file never carried appears.
+            try
             {
-                var backup = planPath + ".bak";
-                try
-                {
-                    File.WriteAllText(backup, originalText, System.Text.Encoding.UTF8);
-                    AnsiConsole.MarkupLine($"[yellow]This rewrite drops {dropped} comment line(s) — a JSON round-trip cannot keep them. Previous file saved to {Markup.Escape(backup)}[/]");
-                }
-                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-                {
-                    AnsiConsole.MarkupLine($"[yellow]This rewrite drops {dropped} comment line(s) — a JSON round-trip cannot keep them (backup failed: {Markup.Escape(ex.Message)}).[/]");
-                }
+                PlanDocumentEditor.WriteEdited(planPath, originalRaw, before, doc);
             }
-
-            File.WriteAllText(planPath, newJson, System.Text.Encoding.UTF8);
+            catch (InvalidOperationException ex)
+            {
+                // The safety valve, not the path: an edit the splicer cannot place falls back to the
+                // validated whole-document rewrite, and says what that costs instead of hiding it.
+                var dropped = PlanDocumentEditor.CountCommentLines(System.Text.Encoding.UTF8.GetString(originalRaw));
+                if (dropped > 0)
+                    AnsiConsole.MarkupLine($"[yellow]Preserving edit failed ({Markup.Escape(ex.Message)}) — rewriting the file whole drops {dropped} comment line(s).[/]");
+                File.WriteAllText(planPath, newJson, System.Text.Encoding.UTF8);
+            }
             AnsiConsole.MarkupLine($"[green]plan set[/] {Markup.Escape(string.Join('.', parts))} = [bold]{Markup.Escape(value)}[/] (was {Markup.Escape(oldValue)})");
 
             // Reach: the run loop swaps a plan only on the `reload-plan` control verb, which this verb
@@ -225,40 +228,6 @@ public static class PlanSetCommand
             ? "[yellow]--create given: writing it anyway. Nothing in the engine reads it.[/]"
             : "[grey]Nothing reads a key the plan does not declare, so this edit would look like it landed and change nothing. Use --create to write it regardless.[/]");
         return lines;
-    }
-
-    /// <summary>Lines of the plan file carrying a `//` or `/* */` comment — counted with string
-    /// awareness so a URL inside a value is not mistaken for one.</summary>
-    internal static int CountCommentLines(string text)
-    {
-        ArgumentNullException.ThrowIfNull(text);
-        var count = 0;
-        var inBlock = false;
-        foreach (var line in text.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
-        {
-            var hasComment = false;
-            var inString = false;
-            for (var i = 0; i < line.Length; i++)
-            {
-                var c = line[i];
-                var next = i + 1 < line.Length ? line[i + 1] : '\0';
-                if (inBlock)
-                {
-                    hasComment = true;
-                    if (c == '*' && next == '/') { inBlock = false; i++; }
-                }
-                else if (inString)
-                {
-                    if (c == '\\') i++;
-                    else if (c == '"') inString = false;
-                }
-                else if (c == '"') inString = true;
-                else if (c == '/' && next == '/') { hasComment = true; break; }
-                else if (c == '/' && next == '*') { hasComment = true; inBlock = true; i++; }
-            }
-            if (hasComment) count++;
-        }
-        return count;
     }
 
     /// <summary>Whether a written edit reaches a running engine — the third silent failure. The run

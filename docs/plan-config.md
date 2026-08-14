@@ -6,10 +6,13 @@ working one; this page is the full schema behind it.
 You do not need most of this. A plan with `name`, `repo`, `tracker`, `agent`, `stages` and `gates`
 runs. Everything else has a default that is chosen to be the right answer.
 
-Comments (`//`) are allowed — the loader tolerates them, and the scaffold uses them. `conductor plan
-set` cannot keep them: it re-serialises the file from the parsed model, so it says how many comment
-lines the rewrite drops and saves the annotated original next to it as `<plan>.bak`. Editing the file
-by hand keeps them.
+Comments (`//`) are allowed — the loader tolerates them, and the scaffold uses them. Every editor
+keeps them: `plan set`, `plan add-stage`, an applied `plan import` and the Face's plan editor all
+splice their change into the raw file instead of re-serialising it, so comments, key order and
+formatting survive, nothing changes but the edited values and `planVersion`, and no default you
+never wrote is materialised into the file. (Until KS3.2 the rewrite dropped every comment and kept
+the annotated original as `<plan>.bak`; that apology path is gone because there is nothing to
+apologise for.)
 
 `plan set` only writes keys this page declares. An undeclared key — a typo like
 `limits.maxRunCostUsdd`, or the right name in the wrong place like a bare `maxRunCostUsd` — is

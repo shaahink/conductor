@@ -262,27 +262,34 @@ public sealed class PlanSetCommandTests : IDisposable
         Assert.DoesNotContain("StallMinutes", File.ReadAllText(path), StringComparison.Ordinal);
     }
 
+    /// <summary>KS3.2 — the rewrite that this fact used to apologise for is gone: the edit is spliced
+    /// into the raw file, every comment line stays where it was, and no `.bak` is written because
+    /// there is nothing to lose any more.</summary>
     [Fact]
     public void Set_KeepsTheAnnotatedFileBesideTheRewrittenOne()
     {
         var path = WritePlan();
         var original = File.ReadAllText(path);
-        Assert.Equal(2, PlanSetCommand.CountCommentLines(original));
+        Assert.Equal(2, PlanDocumentEditor.CountCommentLines(original));
 
         Assert.Equal(0, PlanSetCommand.ExecuteSet(path, "limits.stallMinutes", "30"));
 
-        Assert.Equal(0, PlanSetCommand.CountCommentLines(File.ReadAllText(path)));   // the rewrite drops them
-        Assert.Equal(original, File.ReadAllText(path + ".bak"));                     // and they survive next door
+        var edited = File.ReadAllText(path);
+        Assert.Equal(2, PlanDocumentEditor.CountCommentLines(edited));   // the comments survive IN the file
+        Assert.Contains("// why this plan exists", edited, StringComparison.Ordinal);
+        Assert.Contains("// the agent CLI this project drives", edited, StringComparison.Ordinal);
+        Assert.False(File.Exists(path + ".bak"));                        // nothing was lost, so no backup
+        Assert.Equal(30, PlanConfig.Load(path).Limits.StallMinutes);
     }
 
     [Theory]
     [InlineData("{ \"a\": 1 }", 0)]
     [InlineData("// one\n// two\n", 2)]
     [InlineData("{ \"repo\": \"https://x/y\" }", 0)]           // a URL in a string is not a comment
-    [InlineData("{ \"a\": 1 } // trailing", 1)]                 // dropped by the rewrite too
+    [InlineData("{ \"a\": 1 } // trailing", 1)]
     [InlineData("/* two\n   lines */\n{ }", 2)]
-    public void CountCommentLines_CountsWhatTheRewriteWillDrop(string text, int expected) =>
-        Assert.Equal(expected, PlanSetCommand.CountCommentLines(text));
+    public void CountCommentLines_CountsWhatTheEditorMustPreserve(string text, int expected) =>
+        Assert.Equal(expected, PlanDocumentEditor.CountCommentLines(text));
 
     // ---------------------------------------------------------------- reach
 
